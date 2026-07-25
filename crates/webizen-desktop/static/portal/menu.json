@@ -111,6 +111,13 @@
       "group": "Sciences"
     },
     {
+      "label": "Knowledge Universe",
+      "href": "universe.html",
+      "icon": "fa-globe",
+      "highlight": true,
+      "group": "Sciences"
+    },
+    {
       "label": "Design Studio",
       "href": "design-studio.html",
       "icon": "fa-pen-ruler",

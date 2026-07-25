@@ -73,7 +73,7 @@ export class QualiaPortal {
      * @returns {boolean}
      */
     acoustic_enabled() {
-        const ret = wasm.hmcportal_acoustic_enabled(this.__wbg_ptr);
+        const ret = wasm.qualiaportal_acoustic_enabled(this.__wbg_ptr);
         return ret !== 0;
     }
     /**
@@ -81,7 +81,7 @@ export class QualiaPortal {
      * @returns {number}
      */
     acoustic_sab_byte_length() {
-        const ret = wasm.hmcportal_acoustic_sab_byte_length(this.__wbg_ptr);
+        const ret = wasm.qualiaportal_acoustic_sab_byte_length(this.__wbg_ptr);
         return ret >>> 0;
     }
     /**
@@ -89,7 +89,7 @@ export class QualiaPortal {
      * @returns {boolean}
      */
     acoustic_sidecar_pinned() {
-        const ret = wasm.hmcportal_acoustic_sidecar_pinned(this.__wbg_ptr);
+        const ret = wasm.qualiaportal_acoustic_sidecar_pinned(this.__wbg_ptr);
         return ret !== 0;
     }
     /**
@@ -97,7 +97,7 @@ export class QualiaPortal {
      * @returns {Uint8Array}
      */
     acoustic_uniform_bytes() {
-        const ret = wasm.hmcportal_acoustic_uniform_bytes(this.__wbg_ptr);
+        const ret = wasm.qualiaportal_acoustic_uniform_bytes(this.__wbg_ptr);
         if (ret[2]) {
             throw takeFromExternrefTable0(ret[1]);
         }
@@ -108,7 +108,7 @@ export class QualiaPortal {
      * @returns {number}
      */
     acoustic_uniform_float_count() {
-        const ret = wasm.hmcportal_acoustic_uniform_float_count(this.__wbg_ptr);
+        const ret = wasm.qualiaportal_acoustic_uniform_float_count(this.__wbg_ptr);
         return ret >>> 0;
     }
     /**
@@ -116,7 +116,7 @@ export class QualiaPortal {
      * @returns {Float32Array}
      */
     acoustic_uniform_floats() {
-        const ret = wasm.hmcportal_acoustic_uniform_floats(this.__wbg_ptr);
+        const ret = wasm.qualiaportal_acoustic_uniform_floats(this.__wbg_ptr);
         if (ret[2]) {
             throw takeFromExternrefTable0(ret[1]);
         }
@@ -135,14 +135,14 @@ export class QualiaPortal {
     animate_artefact(kind, ax, ay, az, rate) {
         const ptr0 = passStringToWasm0(kind, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
         const len0 = WASM_VECTOR_LEN;
-        wasm.hmcportal_animate_artefact(this.__wbg_ptr, ptr0, len0, ax, ay, az, rate);
+        wasm.qualiaportal_animate_artefact(this.__wbg_ptr, ptr0, len0, ax, ay, az, rate);
     }
     /**
      * Phase 2 — whether the artefact's proposed motion is currently being refused (clamped).
      * @returns {boolean}
      */
     artefact_refused() {
-        const ret = wasm.hmcportal_artefact_refused(this.__wbg_ptr);
+        const ret = wasm.qualiaportal_artefact_refused(this.__wbg_ptr);
         return ret !== 0;
     }
     /**
@@ -151,7 +151,7 @@ export class QualiaPortal {
      * @returns {Uint8Array}
      */
     bake_cqt_sidecar_demo(frames) {
-        const ret = wasm.hmcportal_bake_cqt_sidecar_demo(this.__wbg_ptr, frames);
+        const ret = wasm.qualiaportal_bake_cqt_sidecar_demo(this.__wbg_ptr, frames);
         if (ret[2]) {
             throw takeFromExternrefTable0(ret[1]);
         }
@@ -163,7 +163,7 @@ export class QualiaPortal {
      * @returns {Uint8Array}
      */
     bake_stft_sidecar_demo(frames) {
-        const ret = wasm.hmcportal_bake_stft_sidecar_demo(this.__wbg_ptr, frames);
+        const ret = wasm.qualiaportal_bake_stft_sidecar_demo(this.__wbg_ptr, frames);
         if (ret[2]) {
             throw takeFromExternrefTable0(ret[1]);
         }
@@ -177,28 +177,28 @@ export class QualiaPortal {
      * @returns {boolean}
      */
     budget_collapses_3d(mode_code) {
-        const ret = wasm.hmcportal_budget_collapses_3d(this.__wbg_ptr, mode_code);
+        const ret = wasm.qualiaportal_budget_collapses_3d(this.__wbg_ptr, mode_code);
         return ret !== 0;
     }
     /**
      * @returns {number}
      */
     camera_pitch() {
-        const ret = wasm.hmcportal_camera_pitch(this.__wbg_ptr);
+        const ret = wasm.qualiaportal_camera_pitch(this.__wbg_ptr);
         return ret;
     }
     /**
      * @returns {number}
      */
     camera_yaw() {
-        const ret = wasm.hmcportal_camera_yaw(this.__wbg_ptr);
+        const ret = wasm.qualiaportal_camera_yaw(this.__wbg_ptr);
         return ret;
     }
     /**
      * @returns {number}
      */
     camera_zoom() {
-        const ret = wasm.hmcportal_camera_zoom(this.__wbg_ptr);
+        const ret = wasm.qualiaportal_camera_zoom(this.__wbg_ptr);
         return ret;
     }
     /**
@@ -206,7 +206,7 @@ export class QualiaPortal {
      * @param {number} index
      */
     collapse_node_q(index) {
-        const ret = wasm.hmcportal_collapse_node_q(this.__wbg_ptr, index);
+        const ret = wasm.qualiaportal_collapse_node_q(this.__wbg_ptr, index);
         if (ret[1]) {
             throw takeFromExternrefTable0(ret[0]);
         }
@@ -216,7 +216,7 @@ export class QualiaPortal {
      * @returns {number}
      */
     control_pending() {
-        const ret = wasm.hmcportal_control_pending(this.__wbg_ptr);
+        const ret = wasm.qualiaportal_control_pending(this.__wbg_ptr);
         return ret >>> 0;
     }
     /**
@@ -224,7 +224,7 @@ export class QualiaPortal {
      * @returns {SharedArrayBuffer}
      */
     create_acoustic_sab() {
-        const ret = wasm.hmcportal_create_acoustic_sab(this.__wbg_ptr);
+        const ret = wasm.qualiaportal_create_acoustic_sab(this.__wbg_ptr);
         if (ret[2]) {
             throw takeFromExternrefTable0(ret[1]);
         }
@@ -236,7 +236,7 @@ export class QualiaPortal {
      * artefact deterministically halts at the wall instead of passing through.
      */
     demo_artefact_refusal() {
-        wasm.hmcportal_demo_artefact_refusal(this.__wbg_ptr);
+        wasm.qualiaportal_demo_artefact_refusal(this.__wbg_ptr);
     }
     /**
      * Drain up to `max` control commands and apply to this portal. Returns count applied.
@@ -244,7 +244,7 @@ export class QualiaPortal {
      * @returns {number}
      */
     drain_control_commands(max) {
-        const ret = wasm.hmcportal_drain_control_commands(this.__wbg_ptr, max);
+        const ret = wasm.qualiaportal_drain_control_commands(this.__wbg_ptr, max);
         return ret >>> 0;
     }
     /**
@@ -253,7 +253,7 @@ export class QualiaPortal {
      * @returns {any}
      */
     drain_sonic_tokens(max) {
-        const ret = wasm.hmcportal_drain_sonic_tokens(this.__wbg_ptr, max);
+        const ret = wasm.qualiaportal_drain_sonic_tokens(this.__wbg_ptr, max);
         if (ret[2]) {
             throw takeFromExternrefTable0(ret[1]);
         }
@@ -266,7 +266,7 @@ export class QualiaPortal {
     encode_geometry(json) {
         const ptr0 = passStringToWasm0(json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
         const len0 = WASM_VECTOR_LEN;
-        const ret = wasm.hmcportal_encode_geometry(this.__wbg_ptr, ptr0, len0);
+        const ret = wasm.qualiaportal_encode_geometry(this.__wbg_ptr, ptr0, len0);
         if (ret[2]) {
             throw takeFromExternrefTable0(ret[1]);
         }
@@ -276,14 +276,14 @@ export class QualiaPortal {
      * @returns {number}
      */
     epistemic_q() {
-        const ret = wasm.hmcportal_epistemic_q(this.__wbg_ptr);
+        const ret = wasm.qualiaportal_epistemic_q(this.__wbg_ptr);
         return ret;
     }
     /**
      * @returns {any | undefined}
      */
     last_parsed() {
-        const ret = wasm.hmcportal_last_parsed(this.__wbg_ptr);
+        const ret = wasm.qualiaportal_last_parsed(this.__wbg_ptr);
         return ret;
     }
     /**
@@ -303,7 +303,7 @@ export class QualiaPortal {
     load_10d(bytes) {
         const ptr0 = passArray8ToWasm0(bytes, wasm.__wbindgen_malloc);
         const len0 = WASM_VECTOR_LEN;
-        const ret = wasm.hmcportal_load_10d(this.__wbg_ptr, ptr0, len0);
+        const ret = wasm.qualiaportal_load_10d(this.__wbg_ptr, ptr0, len0);
         if (ret[2]) {
             throw takeFromExternrefTable0(ret[1]);
         }
@@ -327,7 +327,7 @@ export class QualiaPortal {
     load_10d_colored(bytes, r, g, b, a) {
         const ptr0 = passArray8ToWasm0(bytes, wasm.__wbindgen_malloc);
         const len0 = WASM_VECTOR_LEN;
-        const ret = wasm.hmcportal_load_10d_colored(this.__wbg_ptr, ptr0, len0, r, g, b, a);
+        const ret = wasm.qualiaportal_load_10d_colored(this.__wbg_ptr, ptr0, len0, r, g, b, a);
         if (ret[2]) {
             throw takeFromExternrefTable0(ret[1]);
         }
@@ -350,7 +350,7 @@ export class QualiaPortal {
     load_body_from_qualia_bundle(bytes) {
         const ptr0 = passArray8ToWasm0(bytes, wasm.__wbindgen_malloc);
         const len0 = WASM_VECTOR_LEN;
-        const ret = wasm.hmcportal_load_body_from_qualia_bundle(this.__wbg_ptr, ptr0, len0);
+        const ret = wasm.qualiaportal_load_body_from_qualia_bundle(this.__wbg_ptr, ptr0, len0);
         if (ret[2]) {
             throw takeFromExternrefTable0(ret[1]);
         }
@@ -371,7 +371,7 @@ export class QualiaPortal {
     load_body_from_qualia_bundle_mixed(bytes, system_levels, disabled_parts) {
         const ptr0 = passArray8ToWasm0(bytes, wasm.__wbindgen_malloc);
         const len0 = WASM_VECTOR_LEN;
-        const ret = wasm.hmcportal_load_body_from_qualia_bundle_mixed(this.__wbg_ptr, ptr0, len0, system_levels, disabled_parts);
+        const ret = wasm.qualiaportal_load_body_from_qualia_bundle_mixed(this.__wbg_ptr, ptr0, len0, system_levels, disabled_parts);
         if (ret[2]) {
             throw takeFromExternrefTable0(ret[1]);
         }
@@ -395,7 +395,7 @@ export class QualiaPortal {
      * @returns {any}
      */
     load_body_organs_colored(organs) {
-        const ret = wasm.hmcportal_load_body_organs_colored(this.__wbg_ptr, organs);
+        const ret = wasm.qualiaportal_load_body_organs_colored(this.__wbg_ptr, organs);
         if (ret[2]) {
             throw takeFromExternrefTable0(ret[1]);
         }
@@ -408,7 +408,7 @@ export class QualiaPortal {
     load_json_scene(json) {
         const ptr0 = passStringToWasm0(json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
         const len0 = WASM_VECTOR_LEN;
-        const ret = wasm.hmcportal_load_json_scene(this.__wbg_ptr, ptr0, len0);
+        const ret = wasm.qualiaportal_load_json_scene(this.__wbg_ptr, ptr0, len0);
         if (ret[2]) {
             throw takeFromExternrefTable0(ret[1]);
         }
@@ -421,7 +421,7 @@ export class QualiaPortal {
     load_q42(bytes) {
         const ptr0 = passArray8ToWasm0(bytes, wasm.__wbindgen_malloc);
         const len0 = WASM_VECTOR_LEN;
-        const ret = wasm.hmcportal_load_q42(this.__wbg_ptr, ptr0, len0);
+        const ret = wasm.qualiaportal_load_q42(this.__wbg_ptr, ptr0, len0);
         if (ret[2]) {
             throw takeFromExternrefTable0(ret[1]);
         }
@@ -433,7 +433,7 @@ export class QualiaPortal {
     mount_qapp(root_id) {
         const ptr0 = passStringToWasm0(root_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
         const len0 = WASM_VECTOR_LEN;
-        const ret = wasm.hmcportal_mount_qapp(this.__wbg_ptr, ptr0, len0);
+        const ret = wasm.qualiaportal_mount_qapp(this.__wbg_ptr, ptr0, len0);
         if (ret[1]) {
             throw takeFromExternrefTable0(ret[0]);
         }
@@ -443,7 +443,7 @@ export class QualiaPortal {
      * @param {number} index
      */
     navigate_to_node(index) {
-        const ret = wasm.hmcportal_navigate_to_node(this.__wbg_ptr, index);
+        const ret = wasm.qualiaportal_navigate_to_node(this.__wbg_ptr, index);
         if (ret[1]) {
             throw takeFromExternrefTable0(ret[0]);
         }
@@ -452,7 +452,7 @@ export class QualiaPortal {
      * @param {HTMLCanvasElement} canvas
      */
     constructor(canvas) {
-        const ret = wasm.hmcportal_new(canvas);
+        const ret = wasm.qualiaportal_new(canvas);
         if (ret[2]) {
             throw takeFromExternrefTable0(ret[1]);
         }
@@ -469,7 +469,7 @@ export class QualiaPortal {
      * @returns {number}
      */
     observe_node_at(x, y, canvas_w, canvas_h) {
-        const ret = wasm.hmcportal_observe_node_at(this.__wbg_ptr, x, y, canvas_w, canvas_h);
+        const ret = wasm.qualiaportal_observe_node_at(this.__wbg_ptr, x, y, canvas_w, canvas_h);
         if (ret[2]) {
             throw takeFromExternrefTable0(ret[1]);
         }
@@ -479,7 +479,7 @@ export class QualiaPortal {
      * @returns {number}
      */
     operational_mode() {
-        const ret = wasm.hmcportal_operational_mode(this.__wbg_ptr);
+        const ret = wasm.qualiaportal_operational_mode(this.__wbg_ptr);
         return ret;
     }
     /**
@@ -493,7 +493,7 @@ export class QualiaPortal {
     pack_manifest(bytes) {
         const ptr0 = passArray8ToWasm0(bytes, wasm.__wbindgen_malloc);
         const len0 = WASM_VECTOR_LEN;
-        const ret = wasm.hmcportal_pack_manifest(this.__wbg_ptr, ptr0, len0);
+        const ret = wasm.qualiaportal_pack_manifest(this.__wbg_ptr, ptr0, len0);
         if (ret[2]) {
             throw takeFromExternrefTable0(ret[1]);
         }
@@ -504,7 +504,7 @@ export class QualiaPortal {
      * @returns {number}
      */
     poll_selected_node() {
-        const ret = wasm.hmcportal_poll_selected_node(this.__wbg_ptr);
+        const ret = wasm.qualiaportal_poll_selected_node(this.__wbg_ptr);
         return ret;
     }
     /**
@@ -516,7 +516,7 @@ export class QualiaPortal {
      * @returns {Float32Array}
      */
     project_resident_plane2d(time) {
-        const ret = wasm.hmcportal_project_resident_plane2d(this.__wbg_ptr, time);
+        const ret = wasm.qualiaportal_project_resident_plane2d(this.__wbg_ptr, time);
         var v1 = getArrayF32FromWasm0(ret[0], ret[1]).slice();
         wasm.__wbindgen_free(ret[0], ret[1] * 4, 4);
         return v1;
@@ -526,7 +526,7 @@ export class QualiaPortal {
      * @param {SharedArrayBuffer} sab
      */
     publish_acoustic_sab(sab) {
-        const ret = wasm.hmcportal_publish_acoustic_sab(this.__wbg_ptr, sab);
+        const ret = wasm.qualiaportal_publish_acoustic_sab(this.__wbg_ptr, sab);
         if (ret[1]) {
             throw takeFromExternrefTable0(ret[0]);
         }
@@ -537,7 +537,7 @@ export class QualiaPortal {
      * @returns {boolean}
      */
     push_control_command(raw) {
-        const ret = wasm.hmcportal_push_control_command(this.__wbg_ptr, raw);
+        const ret = wasm.qualiaportal_push_control_command(this.__wbg_ptr, raw);
         return ret !== 0;
     }
     /**
@@ -545,7 +545,7 @@ export class QualiaPortal {
      * @returns {boolean}
      */
     push_sonic_token_raw(raw) {
-        const ret = wasm.hmcportal_push_sonic_token_raw(this.__wbg_ptr, raw);
+        const ret = wasm.qualiaportal_push_sonic_token_raw(this.__wbg_ptr, raw);
         return ret !== 0;
     }
     /**
@@ -554,7 +554,7 @@ export class QualiaPortal {
      * @param {number} height
      */
     resize(canvas, width, height) {
-        const ret = wasm.hmcportal_resize(this.__wbg_ptr, canvas, width, height);
+        const ret = wasm.qualiaportal_resize(this.__wbg_ptr, canvas, width, height);
         if (ret[1]) {
             throw takeFromExternrefTable0(ret[0]);
         }
@@ -563,7 +563,7 @@ export class QualiaPortal {
      * @returns {any}
      */
     sample_telemetry() {
-        const ret = wasm.hmcportal_sample_telemetry(this.__wbg_ptr);
+        const ret = wasm.qualiaportal_sample_telemetry(this.__wbg_ptr);
         if (ret[2]) {
             throw takeFromExternrefTable0(ret[1]);
         }
@@ -577,7 +577,7 @@ export class QualiaPortal {
      * @param {number} canvas_h
      */
     select_node_at(x, y, canvas_w, canvas_h) {
-        const ret = wasm.hmcportal_select_node_at(this.__wbg_ptr, x, y, canvas_w, canvas_h);
+        const ret = wasm.qualiaportal_select_node_at(this.__wbg_ptr, x, y, canvas_w, canvas_h);
         if (ret[1]) {
             throw takeFromExternrefTable0(ret[0]);
         }
@@ -586,7 +586,7 @@ export class QualiaPortal {
      * @returns {number}
      */
     selected_node_index() {
-        const ret = wasm.hmcportal_selected_node_index(this.__wbg_ptr);
+        const ret = wasm.qualiaportal_selected_node_index(this.__wbg_ptr);
         return ret;
     }
     /**
@@ -594,7 +594,7 @@ export class QualiaPortal {
      * @param {boolean} enabled
      */
     set_acoustic_enabled(enabled) {
-        wasm.hmcportal_set_acoustic_enabled(this.__wbg_ptr, enabled);
+        wasm.qualiaportal_set_acoustic_enabled(this.__wbg_ptr, enabled);
     }
     /**
      * Enable/disable the **ambient particle field** — the mixer's "ambient" channel. Off by default
@@ -603,7 +603,7 @@ export class QualiaPortal {
      * @param {boolean} on
      */
     set_ambient_enabled(on) {
-        wasm.hmcportal_set_ambient_enabled(this.__wbg_ptr, on);
+        wasm.qualiaportal_set_ambient_enabled(this.__wbg_ptr, on);
     }
     /**
      * Orbit camera IPC from the UI shell (yaw/pitch in radians, zoom = eye distance).
@@ -612,7 +612,7 @@ export class QualiaPortal {
      * @param {number} zoom
      */
     set_camera(yaw, pitch, zoom) {
-        const ret = wasm.hmcportal_set_camera(this.__wbg_ptr, yaw, pitch, zoom);
+        const ret = wasm.qualiaportal_set_camera(this.__wbg_ptr, yaw, pitch, zoom);
         if (ret[1]) {
             throw takeFromExternrefTable0(ret[0]);
         }
@@ -623,7 +623,7 @@ export class QualiaPortal {
     set_display_mode(mode) {
         const ptr0 = passStringToWasm0(mode, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
         const len0 = WASM_VECTOR_LEN;
-        const ret = wasm.hmcportal_set_display_mode(this.__wbg_ptr, ptr0, len0);
+        const ret = wasm.qualiaportal_set_display_mode(this.__wbg_ptr, ptr0, len0);
         if (ret[1]) {
             throw takeFromExternrefTable0(ret[0]);
         }
@@ -643,7 +643,7 @@ export class QualiaPortal {
     set_standpoint(standpoint_class, epistemic_q, t_slice, t_window, identifier_did) {
         const ptr0 = passStringToWasm0(identifier_did, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
         const len0 = WASM_VECTOR_LEN;
-        const ret = wasm.hmcportal_set_standpoint(this.__wbg_ptr, standpoint_class, epistemic_q, t_slice, t_window, ptr0, len0);
+        const ret = wasm.qualiaportal_set_standpoint(this.__wbg_ptr, standpoint_class, epistemic_q, t_slice, t_window, ptr0, len0);
         if (ret[1]) {
             throw takeFromExternrefTable0(ret[0]);
         }
@@ -654,7 +654,7 @@ export class QualiaPortal {
     set_telemetry(floats) {
         const ptr0 = passArrayF32ToWasm0(floats, wasm.__wbindgen_malloc);
         const len0 = WASM_VECTOR_LEN;
-        const ret = wasm.hmcportal_set_telemetry(this.__wbg_ptr, ptr0, len0);
+        const ret = wasm.qualiaportal_set_telemetry(this.__wbg_ptr, ptr0, len0);
         if (ret[1]) {
             throw takeFromExternrefTable0(ret[0]);
         }
@@ -664,13 +664,13 @@ export class QualiaPortal {
      * @param {number} t_window
      */
     set_temporal_slice(t_slice, t_window) {
-        wasm.hmcportal_set_temporal_slice(this.__wbg_ptr, t_slice, t_window);
+        wasm.qualiaportal_set_temporal_slice(this.__wbg_ptr, t_slice, t_window);
     }
     /**
      * @returns {number}
      */
     sonic_token_pending() {
-        const ret = wasm.hmcportal_sonic_token_pending(this.__wbg_ptr);
+        const ret = wasm.qualiaportal_sonic_token_pending(this.__wbg_ptr);
         return ret >>> 0;
     }
     /**
@@ -680,7 +680,7 @@ export class QualiaPortal {
     spatial_encode(json) {
         const ptr0 = passStringToWasm0(json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
         const len0 = WASM_VECTOR_LEN;
-        const ret = wasm.hmcportal_spatial_encode(this.__wbg_ptr, ptr0, len0);
+        const ret = wasm.qualiaportal_spatial_encode(this.__wbg_ptr, ptr0, len0);
         if (ret[2]) {
             throw takeFromExternrefTable0(ret[1]);
         }
@@ -690,27 +690,27 @@ export class QualiaPortal {
      * @returns {number}
      */
     standpoint_class() {
-        const ret = wasm.hmcportal_standpoint_class(this.__wbg_ptr);
+        const ret = wasm.qualiaportal_standpoint_class(this.__wbg_ptr);
         return ret >>> 0;
     }
     /**
      * Phase 2 — freeze the artefact (joint → identity, no world clamp).
      */
     stop_artefact_animation() {
-        wasm.hmcportal_stop_artefact_animation(this.__wbg_ptr);
+        wasm.qualiaportal_stop_artefact_animation(this.__wbg_ptr);
     }
     /**
      * @returns {number}
      */
     t_slice() {
-        const ret = wasm.hmcportal_t_slice(this.__wbg_ptr);
+        const ret = wasm.qualiaportal_t_slice(this.__wbg_ptr);
         return ret;
     }
     /**
      * @returns {number}
      */
     t_window() {
-        const ret = wasm.hmcportal_t_window(this.__wbg_ptr);
+        const ret = wasm.qualiaportal_t_window(this.__wbg_ptr);
         return ret;
     }
     /**
@@ -718,7 +718,7 @@ export class QualiaPortal {
      * @param {number} dt_ms
      */
     tick(canvas, dt_ms) {
-        const ret = wasm.hmcportal_tick(this.__wbg_ptr, canvas, dt_ms);
+        const ret = wasm.qualiaportal_tick(this.__wbg_ptr, canvas, dt_ms);
         if (ret[1]) {
             throw takeFromExternrefTable0(ret[0]);
         }
@@ -727,7 +727,7 @@ export class QualiaPortal {
      * @returns {number}
      */
     tier() {
-        const ret = wasm.hmcportal_tier(this.__wbg_ptr);
+        const ret = wasm.qualiaportal_tier(this.__wbg_ptr);
         return ret;
     }
     /**
@@ -745,7 +745,7 @@ export class QualiaPortal {
         const len0 = WASM_VECTOR_LEN;
         const ptr1 = passStringToWasm0(hint, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
         const len1 = WASM_VECTOR_LEN;
-        const ret = wasm.hmcportal_upload_mesh_asset(this.__wbg_ptr, ptr0, len0, ptr1, len1);
+        const ret = wasm.qualiaportal_upload_mesh_asset(this.__wbg_ptr, ptr0, len0, ptr1, len1);
         if (ret[2]) {
             throw takeFromExternrefTable0(ret[1]);
         }
@@ -757,7 +757,7 @@ export class QualiaPortal {
     upload_tensor_buffer(bytes) {
         const ptr0 = passArray8ToWasm0(bytes, wasm.__wbindgen_malloc);
         const len0 = WASM_VECTOR_LEN;
-        const ret = wasm.hmcportal_upload_tensor_buffer(this.__wbg_ptr, ptr0, len0);
+        const ret = wasm.qualiaportal_upload_tensor_buffer(this.__wbg_ptr, ptr0, len0);
         if (ret[1]) {
             throw takeFromExternrefTable0(ret[0]);
         }

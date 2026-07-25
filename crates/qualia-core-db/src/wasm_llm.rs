@@ -9,12 +9,15 @@ use crate::gguf_sharder::GgufTokenizer;
 const BROWSER_AGENT_DID: &str = "did:q42:browser-llm-demo";
 const BROWSER_MODEL_TAG: &str = "wasm-resident.gguf";
 
-/// Autoregressive decode budget for browser harness (CPU path uses same cap).
-const WASM_DECODE_TOKEN_BUDGET: usize = 32;
+/// Autoregressive decode budget for browser harness.
+/// 32 was too short for chat replies and made truncated junk look like "garbage".
+const WASM_DECODE_TOKEN_BUDGET: usize = 128;
 /// `0` = all transformer layers.
 const WASM_LAYER_CAP: u32 = 0;
 /// `0` = full vocabulary argmax sweep.
 const WASM_VOCAB_CHUNK_CAP: u32 = 0;
+/// Real LLM vocabs are thousands of tokens; the 256-entry byte fallback is never valid for chat.
+const MIN_REAL_VOCAB: usize = 1000;
 
 /// Crate semver baked in at compile time.
 #[wasm_bindgen(js_name = getEngineVersion)]
@@ -62,6 +65,17 @@ fn run_inference_streaming(
     Ok(text)
 }
 
+/// Reject the 256-byte fallback tokenizer — it "runs" but emits pure garbage on real models.
+fn require_real_tokenizer(tok: &GgufTokenizer) -> Result<(), String> {
+    let n = tok.vocab_len() as usize;
+    if n < MIN_REAL_VOCAB {
+        return Err(format!(
+            "tokenizer missing or fallback-only (vocab={n}). Re-download a release P64 with Q42T section, or load GGUF so the real SentencePiece/BPE vocab is parsed. Silent byte-level decode produces garbage text."
+        ));
+    }
+    Ok(())
+}
+
 /// Phase 2B: fully async prefill + decode via `_async` dispatchers (`map_async` + `.await`).
 async fn run_inference_async(prompt: &str, on_token: Function) -> Result<String, String> {
     let mut engine = take_engine()?;
@@ -71,33 +85,46 @@ async fn run_inference_async(prompt: &str, on_token: Function) -> Result<String,
         // Boot purely from P64 when present: synthetic tensor index +
         // tokenizer section, no GGUF parse. (gguf_mmap holds the P64 bytes; the synthetic index
         // uses tensor_data_start=0 + absolute offsets, so the rest of the path is unchanged.)
+        //
+        // Fail closed: never fall back to GgufTokenizer::default() (256-byte) — that path
+        // "succeeds" while streaming unreadable junk, which is what the online demo shows as garbage.
         let (tok, tensor_idx) = if engine.p64_resident.is_some() {
             let data = engine.p64_resident.clone().unwrap();
             match crate::p64_weight::P64TensorIndex::from_p64(&data) {
                 Ok(qi) => {
-                    let tok = GgufTokenizer::from_p64_section(qi.tokenizer_bytes(&data))
-                        .unwrap_or_default();
+                    let section = qi.tokenizer_bytes(&data);
+                    let tok = GgufTokenizer::from_p64_section(section).ok_or_else(|| {
+                        format!(
+                            "P64 has no usable Q42T tokenizer section ({} bytes). Recompile GGUF→P64 with a current engine, or load the original GGUF.",
+                            section.len()
+                        )
+                    })?;
+                    require_real_tokenizer(&tok)?;
                     (tok, Some(qi.to_gguf_index()))
                 }
                 Err(e) => {
                     crate::gguf_bridge::wlog(&format!("[P64] container parse failed: {e}"));
-                    (GgufTokenizer::default(), None)
+                    return Err(format!(
+                        "P64 container parse failed: {e}. Model bytes are not a valid P64 (or are truncated)."
+                    ));
                 }
             }
         } else {
-            let tok = engine
+            let mmap = engine
                 .gguf_mmap
                 .as_ref()
-                .map(|m| GgufTokenizer::from_gguf(m))
-                .unwrap_or_default();
-            let idx = engine
-                .gguf_mmap
-                .as_ref()
-                .map(|m| crate::gguf_sharder::GgufTensorIndex::from_gguf(m));
-            (tok, idx)
+                .ok_or_else(|| "no resident model bytes (neither P64 nor GGUF)".to_string())?;
+            // from_gguf falls back to Default on parse failure — require_real_tokenizer rejects it.
+            let tok = GgufTokenizer::from_gguf(mmap);
+            require_real_tokenizer(&tok)?;
+            let idx = crate::gguf_sharder::GgufTensorIndex::from_gguf(mmap);
+            (tok, Some(idx))
         };
 
         let mut ctx = tok.encode_prompt(&prompt_owned);
+        if ctx.is_empty() {
+            return Err("prompt tokenized to empty context".into());
+        }
         let eos = tok.eos_token_id;
         let vlen = tok.vocab_len().max(1);
 
@@ -105,7 +132,9 @@ async fn run_inference_async(prompt: &str, on_token: Function) -> Result<String,
             .as_ref()
             .map(|idx| idx.emb_dim())
             .filter(|&d| d > 0)
-            .unwrap_or(4096)
+            .ok_or_else(|| {
+                "tensor index missing embedding dim — weights did not load (cannot decode)".to_string()
+            })?
             .min(8192);
 
         const MAX_FFN_DIM: usize = 10240;
@@ -182,53 +211,49 @@ async fn run_inference_async(prompt: &str, on_token: Function) -> Result<String,
                 return Err("embedding dequant failed".into());
             }
 
-            let (top_i, _top_v) = if let Some(idx) = tensor_idx.as_ref() {
-                let token_idx = ctx.len().saturating_sub(1) as u32;
-                let _layers = engine
-                    .dispatch_transformer_forward_async(
-                        idx,
-                        &mut emb_buf[..emb_dim],
-                        emb_dim,
-                        &mut scratch_a,
-                        &mut scratch_b,
-                        token_idx,
-                        WASM_LAYER_CAP,
-                    )
-                    .await;
-                let _ = engine.apply_output_norm_inplace(idx, &mut emb_buf[..emb_dim], emb_dim);
-                if let Some(argmax) = engine
-                    .dispatch_output_argmax_chunked_async(
-                        idx,
-                        &emb_buf[..emb_dim],
-                        emb_dim,
-                        &mut chunk_logits,
-                        WASM_VOCAB_CHUNK_CAP,
-                        None,
-                    )
-                    .await
-                {
-                    if argmax.max_logit > f32::NEG_INFINITY {
-                        (argmax.best_token_id as usize, argmax.max_logit)
-                    } else {
-                        (0usize, f32::NEG_INFINITY)
-                    }
-                } else {
-                    emb_buf[..emb_dim].iter().enumerate().fold(
-                        (0usize, f32::NEG_INFINITY),
-                        |(bi, bv), (i, &v)| {
-                            if v > bv {
-                                (i, v)
-                            } else {
-                                (bi, bv)
-                            }
-                        },
-                    )
-                }
-            } else {
-                (0usize, 0.0)
-            };
+            // Fail closed: never treat the hidden state as a vocab distribution.
+            // That fold-over-emb_buf path emitted token ids in 0..emb_dim — pure garbage text.
+            let idx = tensor_idx
+                .as_ref()
+                .ok_or_else(|| "tensor index missing mid-decode".to_string())?;
+            let token_idx = ctx.len().saturating_sub(1) as u32;
+            let _layers = engine
+                .dispatch_transformer_forward_async(
+                    idx,
+                    &mut emb_buf[..emb_dim],
+                    emb_dim,
+                    &mut scratch_a,
+                    &mut scratch_b,
+                    token_idx,
+                    WASM_LAYER_CAP,
+                )
+                .await;
+            let _ = engine.apply_output_norm_inplace(idx, &mut emb_buf[..emb_dim], emb_dim);
+            let argmax = engine
+                .dispatch_output_argmax_chunked_async(
+                    idx,
+                    &emb_buf[..emb_dim],
+                    emb_dim,
+                    &mut chunk_logits,
+                    WASM_VOCAB_CHUNK_CAP,
+                    None,
+                )
+                .await
+                .ok_or_else(|| {
+                    format!("output argmax failed at step {step} (WebGPU logits path unavailable)")
+                })?;
+            if !(argmax.max_logit > f32::NEG_INFINITY) {
+                return Err(format!(
+                    "output argmax produced no finite logit at step {step} (weights/dequant likely broken)"
+                ));
+            }
+            let top_i = argmax.best_token_id as usize;
 
             let next = (top_i as u32) % vlen;
+            // Stop before appending stop/EOS so the stream does not paint control tokens.
+            if next == eos || tok.is_stop_token(next) {
+                break;
+            }
             out_ids.push(next);
             ctx.push(next);
 
@@ -237,10 +262,6 @@ async fn run_inference_async(prompt: &str, on_token: Function) -> Result<String,
                 let delta = full[streamed_len..].to_string();
                 streamed_len = full.len();
                 let _ = on_token.call1(&JsValue::UNDEFINED, &JsValue::from_str(&delta));
-            }
-
-            if next == eos {
-                break;
             }
             let _ = step;
         }
@@ -251,6 +272,34 @@ async fn run_inference_async(prompt: &str, on_token: Function) -> Result<String,
 
     restore_engine(engine);
     result
+}
+
+/// Diagnostic: vocab size of the resident model tokenizer (0 if engine empty / parse failed).
+/// Used by the online demo to show "garbage risk" before generate.
+#[wasm_bindgen(js_name = getResidentTokenizerVocab)]
+pub fn get_resident_tokenizer_vocab() -> u32 {
+    if !engine_ready() {
+        return 0;
+    }
+    // Peek without taking the engine.
+    crate::gguf_bridge::WASM_ENGINE_INSTANCE.with(|g| {
+        let borrow = g.borrow();
+        let Some(engine) = borrow.as_ref() else {
+            return 0;
+        };
+        if let Some(data) = engine.p64_resident.as_ref() {
+            if let Ok(qi) = crate::p64_weight::P64TensorIndex::from_p64(data) {
+                if let Some(tok) = GgufTokenizer::from_p64_section(qi.tokenizer_bytes(data)) {
+                    return tok.vocab_len();
+                }
+            }
+            return 0;
+        }
+        if let Some(m) = engine.gguf_mmap.as_ref() {
+            return GgufTokenizer::from_gguf(m).vocab_len();
+        }
+        0
+    })
 }
 
 /// Returns true when a GGUF or P64 model has been loaded via `initialize_webgpu_engine`.

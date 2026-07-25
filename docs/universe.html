@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Knowledge Universe · QualiaDB</title>
+  <meta name="description" content="Interactive knowledge universe: bundled ontology packs as galaxies, CODATA constants, Chora Yale bright-star shell." />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <link rel="stylesheet" href="css/site-nav.css" />
+  <style>
+    :root {
+      --bg: #020617;
+      --panel: rgba(15, 23, 42, 0.82);
+      --border: rgba(148, 163, 184, 0.22);
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+      --accent: #818cf8;
+      --ok: #34d399;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0; height: 100%;
+      background: var(--bg); color: var(--text);
+      font: 13px/1.45 system-ui, Segoe UI, sans-serif;
+      overflow: hidden;
+    }
+    #ku-sky {
+      position: absolute; inset: 0; width: 100%; height: 100%;
+      display: block; cursor: grab; touch-action: none;
+    }
+    #ku-sky:active { cursor: grabbing; }
+
+    /* Thin top bar — still uses site menu when expanded */
+    .ku-top {
+      position: absolute; top: 0; left: 0; right: 0; z-index: 20;
+      display: flex; align-items: center; gap: 0.75rem;
+      padding: 0.55rem 0.9rem;
+      background: linear-gradient(to bottom, rgba(2,6,23,0.92), rgba(2,6,23,0.55), transparent);
+      pointer-events: none;
+    }
+    .ku-top > * { pointer-events: auto; }
+    .ku-brand {
+      display: flex; align-items: center; gap: 0.5rem;
+      text-decoration: none; color: #fff; font-weight: 650;
+      letter-spacing: -0.02em; flex-shrink: 0;
+    }
+    .ku-brand .mark {
+      width: 1.65rem; height: 1.65rem; border-radius: 0.45rem;
+      background: linear-gradient(135deg, #6366f1, #22d3ee);
+      display: grid; place-items: center; color: #0f172a; font-weight: 800; font-size: 0.85rem;
+    }
+    .ku-brand span.sub { font-weight: 400; color: var(--muted); margin-left: 0.25rem; }
+    #dynamic-nav {
+      flex: 1; min-width: 0; justify-content: flex-start !important;
+      opacity: 0.92;
+    }
+    #dynamic-nav .nav-dropdown, #dynamic-nav a { font-size: 0.78rem; }
+
+    #ku-hud {
+      position: absolute; top: 3.4rem; left: 0.9rem; z-index: 15;
+      max-width: min(22rem, calc(100vw - 1.8rem));
+      display: flex; flex-direction: column; gap: 0.55rem;
+    }
+    .card {
+      background: var(--panel); border: 1px solid var(--border);
+      border-radius: 14px; padding: 0.85rem 0.95rem;
+      backdrop-filter: blur(14px);
+      box-shadow: 0 12px 40px rgba(0,0,0,0.35);
+    }
+    .card.dim { opacity: 0.92; }
+    h1 {
+      margin: 0 0 0.3rem; font-size: 1.05rem; font-weight: 650;
+      letter-spacing: -0.02em; color: #fff;
+    }
+    h1 span { font-weight: 400; color: var(--muted); }
+    p { margin: 0; color: var(--muted); font-size: 0.78rem; line-height: 1.5; }
+    #ku-info-title { color: #f8fafc; font-weight: 600; font-size: 0.92rem; margin-bottom: 0.25rem; }
+    #ku-info-body { color: var(--muted); font-size: 0.78rem; line-height: 1.45; }
+    #ku-info-meta {
+      margin-top: 0.45rem; font-size: 0.7rem; color: #64748b;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      word-break: break-all;
+    }
+    #ku-info-link {
+      display: inline-block; margin-top: 0.55rem;
+      color: #a5b4fc; font-size: 0.78rem; font-weight: 600; text-decoration: none;
+    }
+    #ku-info-link:hover { color: #c7d2fe; text-decoration: underline; }
+
+    .row { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-top: 0.55rem; }
+    button.ku-btn, button.ku-chip, button.ku-layer {
+      background: #0f172a; border: 1px solid #334155; color: var(--text);
+      border-radius: 999px; padding: 0.32rem 0.7rem; cursor: pointer;
+      font-size: 0.72rem; font-weight: 600;
+    }
+    button.ku-btn:hover, button.ku-chip:hover, button.ku-layer:hover {
+      border-color: var(--accent); color: #c7d2fe;
+    }
+    button.ku-btn.active, button.ku-layer.active {
+      border-color: var(--accent); background: rgba(99, 102, 241, 0.18); color: #c7d2fe;
+    }
+    button.ku-chip {
+      border-color: hsla(var(--chip-hue, 200), 60%, 50%, 0.45);
+      background: hsla(var(--chip-hue, 200), 50%, 20%, 0.35);
+    }
+    button.ku-chip.active {
+      border-color: hsla(var(--chip-hue, 200), 80%, 65%, 0.9);
+      box-shadow: 0 0 0 1px hsla(var(--chip-hue, 200), 80%, 60%, 0.35);
+    }
+
+    #ku-status {
+      position: absolute; top: 3.5rem; right: 1rem; z-index: 15;
+      max-width: 18rem; text-align: right;
+      font-size: 0.72rem; color: var(--muted);
+      text-shadow: 0 1px 8px #000;
+    }
+    #ku-status.err { color: #fca5a5; }
+
+    #ku-chips {
+      position: absolute; bottom: 0; left: 0; right: 0; z-index: 15;
+      padding: 0.75rem 1rem 1rem;
+      background: linear-gradient(transparent, rgba(2, 6, 23, 0.95) 42%);
+      display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: flex-end;
+    }
+
+    .ku-hint {
+      position: absolute; bottom: 3.6rem; right: 1rem; z-index: 14;
+      font-size: 0.68rem; color: #64748b; text-align: right;
+      pointer-events: none;
+    }
+    .ku-links {
+      margin-top: 0.5rem; font-size: 0.72rem;
+    }
+    .ku-links a { color: #67e8f9; text-decoration: none; margin-right: 0.65rem; }
+    .ku-links a:hover { text-decoration: underline; }
+
+    @media (max-width: 720px) {
+      #dynamic-nav { display: none !important; }
+      #ku-status { top: auto; bottom: 5.5rem; right: 0.75rem; max-width: 12rem; }
+      .ku-hint { display: none; }
+    }
+  </style>
+  <script src="js/menu-loader.js"></script>
+</head>
+<body>
+  <canvas id="ku-sky" aria-label="Knowledge universe visualization"></canvas>
+
+  <div class="ku-top">
+    <a class="ku-brand" href="index.html">
+      <div class="mark">Q</div>
+      <div>Qualia<span class="sub">· Universe</span></div>
+    </a>
+    <div id="dynamic-nav" class="relative flex items-center text-sm min-w-0"></div>
+  </div>
+
+  <div id="ku-status">Loading…</div>
+
+  <div id="ku-hud">
+    <div class="card">
+      <h1>Knowledge <span>Universe</span></h1>
+      <p>
+        Ontology packs as galaxies · mass ∝ pack size · outer shell is the Chora Yale bright-star catalog · science hub from CODATA constants.
+        Drag to orbit · scroll to zoom · click a cluster.
+      </p>
+      <div class="row">
+        <button type="button" class="ku-btn active" id="ku-auto" title="Auto-rotate">Auto</button>
+        <button type="button" class="ku-btn" id="ku-reset">Reset view</button>
+      </div>
+      <div class="row" aria-label="Layers">
+        <button type="button" class="ku-layer active" id="ku-layer-celestial">Celestial</button>
+        <button type="button" class="ku-layer active" id="ku-layer-galaxies">Galaxies</button>
+        <button type="button" class="ku-layer active" id="ku-layer-links">Links</button>
+        <button type="button" class="ku-layer active" id="ku-layer-science">Science</button>
+        <button type="button" class="ku-layer active" id="ku-layer-dust">Dust</button>
+      </div>
+      <div class="ku-links">
+        <a href="spatial.html"><i class="fas fa-cube"></i> Spatial / GeoSPARQL</a>
+        <a href="ontology.html"><i class="fas fa-project-diagram"></i> Ontology demo</a>
+        <a href="science-playground.html"><i class="fas fa-atom"></i> Sciences</a>
+      </div>
+    </div>
+    <div class="card dim" id="ku-info">
+      <div id="ku-info-title">Explore the knowledge universe</div>
+      <div id="ku-info-body">Loading manifest…</div>
+      <div id="ku-info-meta"></div>
+      <a id="ku-info-link" hidden href="#">Open →</a>
+    </div>
+  </div>
+
+  <div class="ku-hint">Real data under <code>docs/data/</code> · no WASM required</div>
+  <div id="ku-chips" aria-label="Galaxy selectors"></div>
+
+  <script type="module">
+    import { bootKnowledgeUniverse } from './js/knowledge-universe.js';
+    bootKnowledgeUniverse('ku-sky').catch((e) => {
+      const s = document.getElementById('ku-status');
+      if (s) { s.textContent = String(e.message || e); s.classList.add('err'); }
+    });
+  </script>
+</body>
+</html>

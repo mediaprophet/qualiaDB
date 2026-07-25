@@ -365,7 +365,18 @@ import init, {
     compileGgufToP64,
     p64FormatVersion,
 } from './playground/qualia_core_db.js';
+// Optional: only present after wasm rebuild that includes getResidentTokenizerVocab.
+import * as QualiaWasm from './playground/qualia_core_db.js';
 import { loadGgufCached, loadOrCompileP64 } from './js/opfs-model-cache.js';
+
+function residentTokenizerVocab() {
+    try {
+        const fn = QualiaWasm.getResidentTokenizerVocab;
+        return typeof fn === 'function' ? (fn() | 0) : 0;
+    } catch {
+        return 0;
+    }
+}
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -769,16 +780,37 @@ async function loadModel() {
         ggufBytes = null;
         if (!isWebgpuEngineReady()) throw new Error('Engine failed to initialise after model load');
 
+        // Fail closed in the UI when the resident tokenizer is the 256-byte fallback.
+        // That path used to stream pure garbage while still reporting "ready".
+        // (Requires wasm rebuild that exports getResidentTokenizerVocab; otherwise skipped.)
+        const vocab = residentTokenizerVocab();
+        if (vocab > 0 && vocab < 1000) {
+            try { await releaseWebgpuEngine(); } catch {}
+            throw new Error(
+                `Tokenizer is fallback-only (vocab=${vocab}). This produces garbage text. ` +
+                `Use a release P64 with a Q42T section, or load the original GGUF so the real vocab is parsed. ` +
+                `Clear OPFS cache if an old compile was stored.`
+            );
+        }
+        if (vocab === 0) {
+            console.warn('[loadModel] tokenizer vocab diagnostic unavailable (0) — engine may be pre-diagnostic WASM or Q42T missing');
+        }
+
         modelLoaded = true;
         document.getElementById('dl-progress-wrap').style.display = 'none';
         showDlStatus('');
-        setEngineStatus('Model ready — chat below', 'ok');
+        const vocabNote = vocab > 0 ? ` · vocab ${vocab.toLocaleString()}` : '';
+        setEngineStatus(`Model ready — chat below${vocabNote}`, 'ok');
         document.getElementById('model-badge').textContent = name;
         document.getElementById('model-badge').className = 'px-2 sm:px-3 py-1.5 rounded-2xl bg-indigo-500/15 text-indigo-300 border border-indigo-500/30 text-xs max-w-[9rem] sm:max-w-none truncate';
         document.getElementById('load-btn').classList.add('hidden');
         document.getElementById('unload-btn').classList.remove('hidden');
         document.getElementById('send-btn').disabled = false;
-        appendSystem(`Model loaded: ${name}. Qualia native pipeline active.`);
+        appendSystem(
+            `Model loaded: ${name}. Qualia native WebGPU pipeline active` +
+            (vocab > 0 ? ` (tokenizer vocab ${vocab.toLocaleString()})` : '') +
+            `. Prefer SmolLM2-360M on phones. If replies look like random symbols, clear site data/OPFS and reload GGUF (not a stale P64).`
+        );
         // Collapse setup on phones so conversation owns the screen
         if (isMobileDevice()) {
             document.getElementById('llm-config')?.classList.add('collapsed');
