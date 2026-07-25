@@ -388,4 +388,48 @@ mod tests {
         let source = "@compute @workgroup_size(64) fn broken() { let x: u32 = 1.0; }";
         assert!(validate_wgsl(source).is_err());
     }
+
+    /// Structural check: every native emitter for the newly-implemented kernels
+    /// must produce a non-empty body with the expected native-specific keywords.
+    /// This catches regressions where a dispatch falls through to an empty
+    /// generic path or an "not implemented" error.
+    #[test]
+    fn native_emitters_produce_non_empty_bodies() {
+        use crate::wgsl_forge::BuiltinKernel as K;
+        let schedule = Schedule::default();
+        let cases: &[(K, TargetBackend, &[&str])] = &[
+            // HLSL
+            (K::Gemm, TargetBackend::Hlsl, &["RWStructuredBuffer", "for (uint kk"]),
+            (K::Gemv, TargetBackend::Hlsl, &["RWStructuredBuffer", "for (uint j"]),
+            (K::Fft, TargetBackend::Hlsl, &["groupshared", "reversebits"]),
+            (K::TernaryGemv, TargetBackend::Hlsl, &["StructuredBuffer<uint>", "tern"]),
+            (K::P64Project, TargetBackend::Hlsl, &["StructuredBuffer<P64Words64>"]),
+            // MSL
+            (K::Gemm, TargetBackend::Msl, &["device", "for (uint kk"]),
+            (K::Gemv, TargetBackend::Msl, &["device", "for (uint j"]),
+            (K::Fft, TargetBackend::Msl, &["threadgroup", "reverse_bits"]),
+            (K::TernaryGemv, TargetBackend::Msl, &["device const uint", "tern"]),
+            (K::P64Project, TargetBackend::Msl, &["P64Words64", "record_count"]),
+            // CUDA-C
+            (K::TernaryGemv, TargetBackend::CudaC, &["__global__", "tern"]),
+            (K::P64Project, TargetBackend::CudaC, &["__global__", "P64Words64"]),
+            (K::Fft, TargetBackend::CudaC, &["__shared__", "__brev"]),
+        ];
+        for (kernel, target, expected) in cases {
+            let generated = generate_builtin(*kernel, schedule, *target)
+                .unwrap_or_else(|e| panic!("{kernel:?}/{target:?} emission failed: {e}"));
+            let src = &generated.source;
+            assert!(
+                src.lines().count() > 10,
+                "{kernel:?}/{target:?} body too short ({} lines)",
+                src.lines().count()
+            );
+            for kw in *expected {
+                assert!(
+                    src.contains(kw),
+                    "{kernel:?}/{target:?} missing expected keyword `{kw}`"
+                );
+            }
+        }
+    }
 }

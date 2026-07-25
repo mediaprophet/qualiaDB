@@ -49,6 +49,18 @@ fn emit_kernel_body(
     if kernel.id == "p64-project" {
         return emit_p64_hlsl(source, kernel, schedule);
     }
+    if kernel.id == "gemm" {
+        return emit_gemm_hlsl(source, kernel, schedule);
+    }
+    if kernel.id == "gemv" {
+        return emit_gemv_hlsl(source, kernel, schedule);
+    }
+    if kernel.id == "ternary-gemv" {
+        return emit_ternary_gemv_hlsl(source, kernel, schedule);
+    }
+    if kernel.id == "fft" {
+        return emit_fft_hlsl(source, kernel, schedule);
+    }
     if kernel.id == "ray-probe" {
         return Err(ForgeError::Emission(
             "ray-query is only emitted for the WGSL target (HLSL RT uses a distinct API)"
@@ -367,6 +379,211 @@ void {entry}(uint3 gid : SV_DispatchThreadID) {{
         acc += weights[w] * (float)word;
     }}
     output[r] = acc;
+}}"#,
+        wg = wg,
+        entry = kernel.entry_point
+    )
+    .map_err(|error| ForgeError::Emission(error.to_string()))?;
+    Ok(())
+}
+
+/// Dense row-major GEMM in HLSL (cs_6_0): one thread per output element
+/// `o = i*N + j` computes `C[i][j] = sum_k A[i*K+k] * B[k*N+j]`. Same binding order,
+/// params layout and accumulation order as the certified WGSL `gemm`.
+fn emit_gemm_hlsl(
+    source: &mut String,
+    kernel: &KernelSpec,
+    schedule: Schedule,
+) -> Result<(), ForgeError> {
+    let wg = schedule.workgroup_size;
+    writeln!(
+        source,
+        r#"struct GemmParams {{
+    uint m;
+    uint n;
+    uint k;
+    uint _pad;
+}};
+
+StructuredBuffer<float> a : register(t0, space0);
+StructuredBuffer<float> b : register(t1, space0);
+RWStructuredBuffer<float> c : register(u2, space0);
+ConstantBuffer<GemmParams> params : register(b3, space0);
+
+[numthreads({wg}, 1, 1)]
+void {entry}(uint3 gid : SV_DispatchThreadID) {{
+    uint o = gid.x;
+    if (o >= params.m * params.n) {{ return; }}
+    uint row = o / params.n;
+    uint col = o % params.n;
+    float acc = 0.0;
+    uint a_row = row * params.k;
+    for (uint kk = 0; kk < params.k; kk++) {{
+        acc += a[a_row + kk] * b[kk * params.n + col];
+    }}
+    c[o] = acc;
+}}"#,
+        wg = wg,
+        entry = kernel.entry_point
+    )
+    .map_err(|error| ForgeError::Emission(error.to_string()))?;
+    Ok(())
+}
+
+/// Dense row-major GEMV in HLSL (cs_6_0): one thread per output ROW `i` computes
+/// `y[i] = sum_j A[i*N+j] * x[j]` — same order as the certified WGSL `gemv`.
+fn emit_gemv_hlsl(
+    source: &mut String,
+    kernel: &KernelSpec,
+    schedule: Schedule,
+) -> Result<(), ForgeError> {
+    let wg = schedule.workgroup_size;
+    writeln!(
+        source,
+        r#"struct GemvParams {{
+    uint m;
+    uint n;
+    uint _pad0;
+    uint _pad1;
+}};
+
+StructuredBuffer<float> a : register(t0, space0);
+StructuredBuffer<float> x : register(t1, space0);
+RWStructuredBuffer<float> y : register(u2, space0);
+ConstantBuffer<GemvParams> params : register(b3, space0);
+
+[numthreads({wg}, 1, 1)]
+void {entry}(uint3 gid : SV_DispatchThreadID) {{
+    uint i = gid.x;
+    if (i >= params.m) {{ return; }}
+    float acc = 0.0;
+    uint a_row = i * params.n;
+    for (uint j = 0; j < params.n; j++) {{
+        acc += a[a_row + j] * x[j];
+    }}
+    y[i] = acc;
+}}"#,
+        wg = wg,
+        entry = kernel.entry_point
+    )
+    .map_err(|error| ForgeError::Emission(error.to_string()))?;
+    Ok(())
+}
+
+/// BitNet-style ternary GEMV in HLSL: one thread per output row `o` computes
+/// `out[o] = scale[o] * sum_i ternary(w[o,i]) * x[i]`. 2-bit codes, 16 per `uint`
+/// (low-to-high lanes; `0->0.0, 1->+1.0, 2->-1.0, 3->0.0`), `k_words` per row.
+/// `w_packed` is a `StructuredBuffer<uint>` — the generic path wrongly typed it float.
+fn emit_ternary_gemv_hlsl(
+    source: &mut String,
+    kernel: &KernelSpec,
+    schedule: Schedule,
+) -> Result<(), ForgeError> {
+    let wg = schedule.workgroup_size;
+    writeln!(
+        source,
+        r#"struct TernaryGemvParams {{
+    uint m;
+    uint k;
+    uint k_words;
+    uint _pad;
+}};
+
+StructuredBuffer<float> x : register(t0, space0);
+StructuredBuffer<uint> w_packed : register(t1, space0);
+StructuredBuffer<float> scale : register(t2, space0);
+RWStructuredBuffer<float> output : register(u3, space0);
+ConstantBuffer<TernaryGemvParams> params : register(b4, space0);
+
+[numthreads({wg}, 1, 1)]
+void {entry}(uint3 gid : SV_DispatchThreadID) {{
+    uint o = gid.x;
+    if (o >= params.m) {{ return; }}
+    float acc = 0.0;
+    uint row_base = o * params.k_words;
+    for (uint word_idx = 0; word_idx < params.k_words; word_idx++) {{
+        uint word = w_packed[row_base + word_idx];
+        uint lane_base = word_idx * 16u;
+        for (uint lane = 0; lane < 16u; lane++) {{
+            uint i = lane_base + lane;
+            if (i >= params.k) {{ break; }}
+            uint code = (word >> (lane * 2u)) & 3u;
+            float tern = 0.0;
+            if (code == 1u) {{ tern = 1.0; }} else if (code == 2u) {{ tern = -1.0; }}
+            acc += tern * x[i];
+        }}
+    }}
+    output[o] = scale[o] * acc;
+}}"#,
+        wg = wg,
+        entry = kernel.entry_point
+    )
+    .map_err(|error| ForgeError::Emission(error.to_string()))?;
+    Ok(())
+}
+
+/// Forward radix-2 DIT FFT in HLSL over ONE thread group of `N = workgroup_size`
+/// threads. Interleaved complex f32 (`input[2*j]`, `input[2*j+1]`), bit-reversal load
+/// into `groupshared`, then `log2(N)` butterfly stages with
+/// `GroupMemoryBarrierWithGroupSync()`. Same `exp(-2*pi*i*k/m)` convention as the
+/// WGSL kernel and the CPU DFT oracle. `reversebits` is the HLSL intrinsic
+/// (WGSL spells it `reverseBits`).
+fn emit_fft_hlsl(
+    source: &mut String,
+    kernel: &KernelSpec,
+    schedule: Schedule,
+) -> Result<(), ForgeError> {
+    let wg = schedule.workgroup_size;
+    writeln!(
+        source,
+        r#"struct FftParams {{
+    uint n;
+    uint log2n;
+    uint _pad0;
+    uint _pad1;
+}};
+
+StructuredBuffer<float> input : register(t0, space0);
+RWStructuredBuffer<float> output : register(u1, space0);
+ConstantBuffer<FftParams> params : register(b2, space0);
+
+groupshared float s_re[{wg}];
+groupshared float s_im[{wg}];
+
+[numthreads({wg}, 1, 1)]
+void {entry}(uint tid : SV_GroupIndex) {{
+    uint t = tid;
+    uint n = params.n;
+    uint logn = params.log2n;
+    uint rev = reversebits(t) >> (32u - logn);
+    s_re[rev] = input[2u * t];
+    s_im[rev] = input[2u * t + 1u];
+    GroupMemoryBarrierWithGroupSync();
+    for (uint s = 0u; s < logn; s++) {{
+        uint span = 1u << s;
+        uint m = span << 1u;
+        if (t < (n >> 1u)) {{
+            uint k = t & (span - 1u);
+            uint j = ((t >> s) << (s + 1u)) + k;
+            uint jp = j + span;
+            float ang = -6.28318548f * (float)k / (float)m;
+            float wr = cos(ang);
+            float wi = sin(ang);
+            float ur = s_re[j];
+            float ui = s_im[j];
+            float vr = s_re[jp];
+            float vi = s_im[jp];
+            float tr = vr * wr - vi * wi;
+            float ti = vr * wi + vi * wr;
+            s_re[j] = ur + tr;
+            s_im[j] = ui + ti;
+            s_re[jp] = ur - tr;
+            s_im[jp] = ui - ti;
+        }}
+        GroupMemoryBarrierWithGroupSync();
+    }}
+    output[2u * t] = s_re[t];
+    output[2u * t + 1u] = s_im[t];
 }}"#,
         wg = wg,
         entry = kernel.entry_point

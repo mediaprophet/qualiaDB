@@ -47,12 +47,19 @@ fn emit_kernel_body(
         return emit_ffn_msl(source, kernel, schedule);
     }
     if kernel.id == "p64-project" {
-        // Metal device buffers carry no length, so the bound would need an extra
-        // count uniform that the kernel spec does not provide; emitted for WGSL/HLSL.
-        return Err(ForgeError::Emission(
-            "p64-project needs a length uniform for Metal; emitted for WGSL/HLSL this phase"
-                .to_string(),
-        ));
+        return emit_p64_msl(source, kernel, schedule);
+    }
+    if kernel.id == "gemm" {
+        return emit_gemm_msl(source, kernel, schedule);
+    }
+    if kernel.id == "gemv" {
+        return emit_gemv_msl(source, kernel, schedule);
+    }
+    if kernel.id == "ternary-gemv" {
+        return emit_ternary_gemv_msl(source, kernel, schedule);
+    }
+    if kernel.id == "fft" {
+        return emit_fft_msl(source, kernel, schedule);
     }
     if kernel.id == "ray-probe" {
         return Err(ForgeError::Emission(
@@ -325,6 +332,263 @@ kernel void {entry}(
     }}
     output[o] = acc;
 }}"#,
+        entry = kernel.entry_point
+    )
+    .map_err(|error| ForgeError::Emission(error.to_string()))?;
+    Ok(())
+}
+
+/// P64 descriptor projection in Metal: one thread per record. Metal device buffers
+/// carry no length, so the record count travels in a `P64Params` constant (the WGSL
+/// kernel uses `arrayLength`, HLSL uses `GetDimensions`) — same math, same bindings.
+fn emit_p64_msl(
+    source: &mut String,
+    kernel: &KernelSpec,
+    schedule: Schedule,
+) -> Result<(), ForgeError> {
+    let _ = schedule;
+    writeln!(
+        source,
+        r#"#include <metal_stdlib>
+using namespace metal;
+
+struct P64Words64 {{
+    uint4 lanes[4];
+}};
+
+struct P64Params {{
+    uint record_count;
+    uint _pad0;
+    uint _pad1;
+    uint _pad2;
+}};
+
+kernel void {entry}(
+    device const P64Words64* input [[buffer(0)]],
+    device const float* weights [[buffer(1)]],
+    device float* output [[buffer(2)]],
+    constant P64Params& params [[buffer(3)]],
+    uint3 gid [[thread_position_in_grid]]
+) {{
+    uint r = gid.x;
+    if (r >= params.record_count) {{ return; }}
+    P64Words64 rec = input[r];
+    float acc = 0.0f;
+    for (uint w = 0; w < 16u; w++) {{
+        uint word = rec.lanes[w / 4u][w % 4u];
+        acc += weights[w] * (float)word;
+    }}
+    output[r] = acc;
+}}"#,
+        entry = kernel.entry_point
+    )
+    .map_err(|error| ForgeError::Emission(error.to_string()))?;
+    Ok(())
+}
+
+/// Dense row-major GEMM in Metal: one thread per output element, same binding order,
+/// params layout and accumulation order as the certified WGSL `gemm`.
+fn emit_gemm_msl(
+    source: &mut String,
+    kernel: &KernelSpec,
+    schedule: Schedule,
+) -> Result<(), ForgeError> {
+    let _ = schedule;
+    writeln!(
+        source,
+        r#"#include <metal_stdlib>
+using namespace metal;
+
+struct GemmParams {{
+    uint m;
+    uint n;
+    uint k;
+    uint _pad;
+}};
+
+kernel void {entry}(
+    device const float* a [[buffer(0)]],
+    device const float* b [[buffer(1)]],
+    device float* c [[buffer(2)]],
+    constant GemmParams& params [[buffer(3)]],
+    uint3 gid [[thread_position_in_grid]]
+) {{
+    uint o = gid.x;
+    if (o >= params.m * params.n) {{ return; }}
+    uint row = o / params.n;
+    uint col = o % params.n;
+    float acc = 0.0f;
+    uint a_row = row * params.k;
+    for (uint kk = 0; kk < params.k; kk++) {{
+        acc += a[a_row + kk] * b[kk * params.n + col];
+    }}
+    c[o] = acc;
+}}"#,
+        entry = kernel.entry_point
+    )
+    .map_err(|error| ForgeError::Emission(error.to_string()))?;
+    Ok(())
+}
+
+/// Dense row-major GEMV in Metal: one thread per output ROW, same order as WGSL `gemv`.
+fn emit_gemv_msl(
+    source: &mut String,
+    kernel: &KernelSpec,
+    schedule: Schedule,
+) -> Result<(), ForgeError> {
+    let _ = schedule;
+    writeln!(
+        source,
+        r#"#include <metal_stdlib>
+using namespace metal;
+
+struct GemvParams {{
+    uint m;
+    uint n;
+    uint _pad0;
+    uint _pad1;
+}};
+
+kernel void {entry}(
+    device const float* a [[buffer(0)]],
+    device const float* x [[buffer(1)]],
+    device float* y [[buffer(2)]],
+    constant GemvParams& params [[buffer(3)]],
+    uint3 gid [[thread_position_in_grid]]
+) {{
+    uint i = gid.x;
+    if (i >= params.m) {{ return; }}
+    float acc = 0.0f;
+    uint a_row = i * params.n;
+    for (uint j = 0; j < params.n; j++) {{
+        acc += a[a_row + j] * x[j];
+    }}
+    y[i] = acc;
+}}"#,
+        entry = kernel.entry_point
+    )
+    .map_err(|error| ForgeError::Emission(error.to_string()))?;
+    Ok(())
+}
+
+/// BitNet-style ternary GEMV in Metal: one thread per output row. 2-bit codes,
+/// 16 per `uint` (`0->0.0, 1->+1.0, 2->-1.0, 3->0.0`), `k_words` per row. `w_packed`
+/// is `device const uint*` — the generic path wrongly typed it float.
+fn emit_ternary_gemv_msl(
+    source: &mut String,
+    kernel: &KernelSpec,
+    schedule: Schedule,
+) -> Result<(), ForgeError> {
+    let _ = schedule;
+    writeln!(
+        source,
+        r#"#include <metal_stdlib>
+using namespace metal;
+
+struct TernaryGemvParams {{
+    uint m;
+    uint k;
+    uint k_words;
+    uint _pad;
+}};
+
+kernel void {entry}(
+    device const float* x [[buffer(0)]],
+    device const uint* w_packed [[buffer(1)]],
+    device const float* scale [[buffer(2)]],
+    device float* output [[buffer(3)]],
+    constant TernaryGemvParams& params [[buffer(4)]],
+    uint3 gid [[thread_position_in_grid]]
+) {{
+    uint o = gid.x;
+    if (o >= params.m) {{ return; }}
+    float acc = 0.0f;
+    uint row_base = o * params.k_words;
+    for (uint word_idx = 0; word_idx < params.k_words; word_idx++) {{
+        uint word = w_packed[row_base + word_idx];
+        uint lane_base = word_idx * 16u;
+        for (uint lane = 0; lane < 16u; lane++) {{
+            uint i = lane_base + lane;
+            if (i >= params.k) {{ break; }}
+            uint code = (word >> (lane * 2u)) & 3u;
+            float tern = 0.0f;
+            if (code == 1u) {{ tern = 1.0f; }} else if (code == 2u) {{ tern = -1.0f; }}
+            acc += tern * x[i];
+        }}
+    }}
+    output[o] = scale[o] * acc;
+}}"#,
+        entry = kernel.entry_point
+    )
+    .map_err(|error| ForgeError::Emission(error.to_string()))?;
+    Ok(())
+}
+
+/// Forward radix-2 DIT FFT in Metal over ONE threadgroup of `N = workgroup_size`
+/// threads. Interleaved complex f32, bit-reversal load into `threadgroup` arrays,
+/// then `log2(N)` butterfly stages with `threadgroup_barrier`. Same
+/// `exp(-2*pi*i*k/m)` convention as the WGSL kernel and the CPU DFT oracle;
+/// `reverse_bits` is the Metal intrinsic (WGSL spells it `reverseBits`).
+fn emit_fft_msl(
+    source: &mut String,
+    kernel: &KernelSpec,
+    schedule: Schedule,
+) -> Result<(), ForgeError> {
+    let wg = schedule.workgroup_size;
+    writeln!(
+        source,
+        r#"#include <metal_stdlib>
+using namespace metal;
+
+struct FftParams {{
+    uint n;
+    uint log2n;
+    uint _pad0;
+    uint _pad1;
+}};
+
+kernel void {entry}(
+    device const float* input [[buffer(0)]],
+    device float* output [[buffer(1)]],
+    constant FftParams& params [[buffer(2)]],
+    uint tid [[thread_position_in_threadgroup]]
+) {{
+    threadgroup float s_re[{wg}];
+    threadgroup float s_im[{wg}];
+    uint t = tid;
+    uint n = params.n;
+    uint logn = params.log2n;
+    uint rev = reverse_bits(t) >> (32u - logn);
+    s_re[rev] = input[2u * t];
+    s_im[rev] = input[2u * t + 1u];
+    threadgroup_barrier(mem_flags::mem_threadgroup);
+    for (uint s = 0u; s < logn; s++) {{
+        uint span = 1u << s;
+        uint m = span << 1u;
+        if (t < (n >> 1u)) {{
+            uint k = t & (span - 1u);
+            uint j = ((t >> s) << (s + 1u)) + k;
+            uint jp = j + span;
+            float ang = -6.28318548f * (float)k / (float)m;
+            float wr = cos(ang);
+            float wi = sin(ang);
+            float ur = s_re[j];
+            float ui = s_im[j];
+            float vr = s_re[jp];
+            float vi = s_im[jp];
+            float tr = vr * wr - vi * wi;
+            float ti = vr * wi + vi * wr;
+            s_re[j] = ur + tr;
+            s_im[j] = ui + ti;
+            s_re[jp] = ur - tr;
+            s_im[jp] = ui - ti;
+        }}
+        threadgroup_barrier(mem_flags::mem_threadgroup);
+    }}
+    output[2u * t] = s_re[t];
+    output[2u * t + 1u] = s_im[t];
+}}"#,
+        wg = wg,
         entry = kernel.entry_point
     )
     .map_err(|error| ForgeError::Emission(error.to_string()))?;

@@ -35,6 +35,9 @@ pub fn emit_cuda_c(kernel: &KernelSpec, schedule: Schedule) -> Result<GeneratedS
             };
             crate::wgsl_forge::ir::graph::lower_graph(&graph, &mut lowerer)?;
         }
+        "ternary-gemv" => emit_ternary_gemv(&mut source)?,
+        "p64-project" => emit_p64_project(&mut source)?,
+        "fft" => emit_fft(&mut source, wg)?,
         other => {
             return Err(ForgeError::Emission(format!(
                 "CUDA-C emission not implemented for kernel {other}"
@@ -895,6 +898,117 @@ extern "C" __global__ void topk(const float* input, float* output, TopKParams pa
         }}
         __syncthreads();
     }}
+}}"#
+    )
+    .map_err(|e| ForgeError::Emission(e.to_string()))
+}
+
+/// BitNet-style ternary GEMV in CUDA-C: one thread per output row. 2-bit codes,
+/// 16 per `unsigned` (`0->0.0, 1->+1.0, 2->-1.0, 3->0.0`), `k_words` per row.
+/// Mirrors the certified WGSL/HLSL math — same binding order, same dequant map.
+fn emit_ternary_gemv(source: &mut String) -> Result<(), ForgeError> {
+    writeln!(
+        source,
+        r#"struct TernaryGemvParams {{ unsigned m; unsigned k; unsigned k_words; unsigned _pad; }};
+extern "C" __global__ void ternary_gemv(const float* x,
+                                        const unsigned* w_packed,
+                                        const float* scale,
+                                        float* output,
+                                        TernaryGemvParams params) {{
+    unsigned o = blockIdx.x * blockDim.x + threadIdx.x;
+    if (o >= params.m) return;
+    float acc = 0.0f;
+    unsigned row_base = o * params.k_words;
+    for (unsigned word_idx = 0u; word_idx < params.k_words; word_idx++) {{
+        unsigned word = w_packed[row_base + word_idx];
+        unsigned lane_base = word_idx * 16u;
+        for (unsigned lane = 0u; lane < 16u; lane++) {{
+            unsigned i = lane_base + lane;
+            if (i >= params.k) break;
+            unsigned code = (word >> (lane * 2u)) & 3u;
+            float tern = 0.0f;
+            if (code == 1u) {{ tern = 1.0f; }} else if (code == 2u) {{ tern = -1.0f; }}
+            acc += tern * x[i];
+        }}
+    }}
+    output[o] = scale[o] * acc;
+}}"#
+    )
+    .map_err(|e| ForgeError::Emission(e.to_string()))
+}
+
+/// P64 descriptor projection in CUDA-C: one thread per record. The record count
+/// is passed as a scalar parameter (CUDA has no buffer-length query, unlike
+/// WGSL `arrayLength` / HLSL `GetDimensions`). Uses a flat `unsigned` array for
+/// the 16 packed words — same memory layout as WGSL `array<vec4<u32>, 4>`.
+fn emit_p64_project(source: &mut String) -> Result<(), ForgeError> {
+    writeln!(
+        source,
+        r#"struct P64Words64 {{ unsigned words[16]; }};
+extern "C" __global__ void p64_project(const P64Words64* input,
+                                       const float* weights,
+                                       float* output,
+                                       unsigned record_count) {{
+    unsigned r = blockIdx.x * blockDim.x + threadIdx.x;
+    if (r >= record_count) return;
+    P64Words64 rec = input[r];
+    float acc = 0.0f;
+    for (unsigned w = 0u; w < 16u; w++) {{
+        acc += weights[w] * (float)rec.words[w];
+    }}
+    output[r] = acc;
+}}"#
+    )
+    .map_err(|e| ForgeError::Emission(e.to_string()))
+}
+
+/// Forward radix-2 DIT FFT in CUDA-C over one thread block of `N = workgroup_size`
+/// threads. Interleaved complex f32, bit-reversal load into `__shared__` memory,
+/// then `log2(N)` butterfly stages with `__syncthreads()`. Same
+/// `exp(-2*pi*i*k/m)` convention as the WGSL kernel and the CPU DFT oracle.
+/// `__brev` is the CUDA intrinsic for 32-bit bit reversal (WGSL: `reverseBits`,
+/// HLSL: `reversebits`).
+fn emit_fft(source: &mut String, wg: u32) -> Result<(), ForgeError> {
+    writeln!(
+        source,
+        r#"struct FftParams {{ unsigned n; unsigned log2n; unsigned _pad0; unsigned _pad1; }};
+extern "C" __global__ void fft(const float* input,
+                               float* output,
+                               FftParams params) {{
+    __shared__ float s_re[{wg}];
+    __shared__ float s_im[{wg}];
+    unsigned t = threadIdx.x;
+    unsigned n = params.n;
+    unsigned logn = params.log2n;
+    unsigned rev = __brev(t) >> (32u - logn);
+    s_re[rev] = input[2u * t];
+    s_im[rev] = input[2u * t + 1u];
+    __syncthreads();
+    for (unsigned s = 0u; s < logn; s++) {{
+        unsigned span = 1u << s;
+        unsigned m = span << 1u;
+        if (t < (n >> 1u)) {{
+            unsigned k = t & (span - 1u);
+            unsigned j = ((t >> s) << (s + 1u)) + k;
+            unsigned jp = j + span;
+            float ang = -6.28318548f * (float)k / (float)m;
+            float wr = cosf(ang);
+            float wi = sinf(ang);
+            float ur = s_re[j];
+            float ui = s_im[j];
+            float vr = s_re[jp];
+            float vi = s_im[jp];
+            float tr = vr * wr - vi * wi;
+            float ti = vr * wi + vi * wr;
+            s_re[j] = ur + tr;
+            s_im[j] = ui + ti;
+            s_re[jp] = ur - tr;
+            s_im[jp] = ui - ti;
+        }}
+        __syncthreads();
+    }}
+    output[2u * t] = s_re[t];
+    output[2u * t + 1u] = s_im[t];
 }}"#
     )
     .map_err(|e| ForgeError::Emission(e.to_string()))
