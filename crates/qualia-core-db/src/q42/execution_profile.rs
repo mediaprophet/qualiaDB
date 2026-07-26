@@ -176,12 +176,19 @@ impl ExecutionProfile {
             String::new()
         };
 
-        // Snapshot ambient toggles (best-effort; campaign may pin env).
-        let kv_int8 = crate::llm_bench::kv_int8_enabled();
-        let resident_decode = crate::llm_bench::resident_decode_enabled();
-        let coop_gemv = crate::llm_bench::coop_gemv_enabled();
-        let ffn_fusion = crate::llm_bench::ffn_fusion_in_resident();
-        let ternary_ffn = crate::llm_bench::ternary_ffn_enabled();
+        // Snapshot ambient toggles (best-effort; campaign may pin env). `llm_bench` only exists
+        // natively or under `wasm-llm`; the slim wasm profiles record the toggles as OFF.
+        #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
+        let (kv_int8, resident_decode, coop_gemv, ffn_fusion, ternary_ffn) = (
+            crate::llm_bench::kv_int8_enabled(),
+            crate::llm_bench::resident_decode_enabled(),
+            crate::llm_bench::coop_gemv_enabled(),
+            crate::llm_bench::ffn_fusion_in_resident(),
+            crate::llm_bench::ternary_ffn_enabled(),
+        );
+        #[cfg(all(target_arch = "wasm32", not(feature = "wasm-llm")))]
+        let (kv_int8, resident_decode, coop_gemv, ffn_fusion, ternary_ffn) =
+            (false, false, false, false, false);
 
         Self {
             version: EXECUTION_PROFILE_VERSION,

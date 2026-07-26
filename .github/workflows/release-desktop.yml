@@ -168,7 +168,7 @@ jobs:
 
       - name: Upload tauri-build.log on failure
         if: failure()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: tauri-build-log-windows
           path: crates/webizen-desktop/tauri-build.log
@@ -212,7 +212,7 @@ jobs:
           Get-ChildItem $out, $installerOut, webizen-desktop-windows-x64.zip
 
       - name: Upload desktop artifacts to workflow
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: desktop-windows-artifacts
           path: |
@@ -220,7 +220,7 @@ jobs:
             release-assets/desktop-windows-installer/*
 
       - name: Upload desktop to release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ env.RELEASE_TAG }}
           files: |
@@ -350,7 +350,7 @@ jobs:
 
       - name: Upload tauri-build.log on failure (macOS)
         if: failure()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: tauri-build-log-macos
           path: crates/webizen-desktop/tauri-build.log
@@ -395,7 +395,7 @@ jobs:
           ls -lah "$out" "$installerOut" webizen-desktop-macos-aarch64-metal.zip
 
       - name: Upload macOS Metal artifacts to workflow
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: desktop-macos-metal-artifacts
           path: |
@@ -403,7 +403,7 @@ jobs:
             release-assets/desktop-macos-metal-installer/*
 
       - name: Upload macOS Metal desktop to release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ env.RELEASE_TAG }}
           files: |
@@ -422,7 +422,7 @@ jobs:
       - uses: actions/checkout@v5
 
       - name: Download desktop artifacts
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v7
         with:
           path: release-assets
 
@@ -436,7 +436,7 @@ jobs:
             -Notes "Webizen Desktop ${{ env.RELEASE_TAG }}"
 
       - name: Upload updater manifest to release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ env.RELEASE_TAG }}
           files: webizen-latest.json

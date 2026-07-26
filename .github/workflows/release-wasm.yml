@@ -128,7 +128,7 @@ jobs:
           tar -czf webizen-lite-wasm.tar.gz -C docs/pkg webizen-lite
 
       - name: Upload Qualia Portal WASM to release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
           files: |
@@ -194,7 +194,7 @@ jobs:
           tar -czf qualia-core-wasm.tar.gz -C docs/playground qualia_core_db.js qualia_core_db_bg.wasm
 
       - name: Upload playground WASM to release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
           files: |
@@ -238,7 +238,7 @@ jobs:
       - name: Upload anatomy packs to release
         # Each model ships as its `.hmc` bundle PLUS a byte-identical `.q42` provenance/semantics
         # sidecar (the bundle's own body.q42 entry, extracted for direct linking by the copyright panel).
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
           files: |
@@ -262,7 +262,7 @@ jobs:
       - name: Upload the BodyParts3D pack to release
         # A Release asset only — the pack exceeds GitHub Pages' 100 MB/file limit, so the demo's
         # "Complete body (BodyParts3D)" toggle fetches it on demand from the Release download URL.
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
           files: |

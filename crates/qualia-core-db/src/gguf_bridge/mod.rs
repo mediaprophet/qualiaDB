@@ -604,7 +604,10 @@ mod async_dispatch;
 mod attention;
 #[cfg(all(not(target_arch = "wasm32"), feature = "cuda"))]
 mod cuda_decode_plan;
-pub(crate) use cuda_decode_plan::context::MAX_CUDA_CONTEXT_WINDOW;
+/// Hard cap on the KV context window a decode plan may request. Declared here rather than in the
+/// `cuda`-gated plan module because the raw-decode harness and the mega-pass guard validate
+/// against it on every target, CUDA or not.
+pub(crate) const MAX_CUDA_CONTEXT_WINDOW: u32 = 4096;
 mod embedding;
 mod ffn;
 mod forward;

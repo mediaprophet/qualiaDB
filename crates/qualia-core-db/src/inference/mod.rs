@@ -138,7 +138,9 @@ pub use cuda_lane_stub as cuda_lane;
 pub mod prompt_lookup;
 // Metal mega-pass orchestrator (Apple Silicon). Stub on non-macOS.
 pub mod metal_lane;
-// Paged KV cache: block-paged KV storage (vLLM-style).
+// Paged KV cache: block-paged KV storage (vLLM-style). Re-exports `runtime::kv::paged`, so it
+// carries the same native-only gate as `runtime`.
+#[cfg(not(target_arch = "wasm32"))]
 pub mod paged_kv;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod topk_gpu;

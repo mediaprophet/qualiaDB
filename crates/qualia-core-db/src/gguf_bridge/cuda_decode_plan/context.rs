@@ -3,9 +3,7 @@
 //! The portable engine keeps its conservative 1K host arena. A prepared CUDA plan can opt into a
 //! larger dense device arena during cold construction without changing portable ABI state.
 
-use crate::gguf_bridge::{KvCacheLayout, KV_CACHE_MAX_BYTES};
-
-pub(crate) const MAX_CUDA_CONTEXT_WINDOW: u32 = 4096;
+use crate::gguf_bridge::{KvCacheLayout, KV_CACHE_MAX_BYTES, MAX_CUDA_CONTEXT_WINDOW};
 
 pub(super) fn configured_dense_layout(base: KvCacheLayout) -> Option<KvCacheLayout> {
     let mut layout = base.dense_device_layout()?;

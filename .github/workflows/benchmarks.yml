@@ -182,14 +182,14 @@ jobs:
           git push origin main
 
       - name: Upload comparative results artifact
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: comparative-benchmark-results
           path: docs/comparative_benchmark_results.json
           retention-days: 30
 
       - name: Upload LLM benchmark results artifact
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: llm-benchmark-results
           path: docs/llm_benchmark_results.json
@@ -282,7 +282,7 @@ jobs:
           git push origin main
 
       - name: Upload Schema.org comparative results artifact
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: comparative-benchmark-results-schemaorg
           path: docs/comparative_benchmark_results.schemaorg-30-current-https.json
