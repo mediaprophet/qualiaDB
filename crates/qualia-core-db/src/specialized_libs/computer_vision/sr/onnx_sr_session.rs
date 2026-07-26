@@ -62,10 +62,7 @@ pub struct SrSessionInfo {
 ///   (`LoadFailed` on failure) and `session_ready` is set to `true`.
 /// * Under `not(vision-onnx)` → `FeatureDisabled` (fail closed; the weight may
 ///   be present on disk but the runtime cannot use it).
-pub fn probe_sr_asset(
-    path: &Path,
-    backend: &'static str,
-) -> Result<SrSessionInfo, SrSessionError> {
+pub fn probe_sr_asset(path: &Path, backend: &'static str) -> Result<SrSessionInfo, SrSessionError> {
     if !path.exists() {
         return Err(SrSessionError::WeightAbsent);
     }

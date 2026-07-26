@@ -49,6 +49,28 @@ partition/reduction order → reproducible, hashable, attestable). A
 construction) and routes through `geometry_workspace` arenas for parallelism +
 boundedness + determinism. The zero-heap tests cover Tier-1 only.
 
+### 0-B. Library Structure and Temporary-Artifact Hygiene
+
+New inference capabilities are directory-backed libraries. A `mod.rs` routes modules and
+re-exports the public API; implementation belongs in focused files. New files should remain below
+500 lines and must be split earlier when they own multiple lifecycles or responsibilities. Do not
+add new behaviour to an inference file already above 1,000 lines without a tracked decomposition
+in the same programme. Cold planning, hot execution, backend-specific code, receipts, tests, and
+artifact management remain separate modules.
+
+Temporary files are owned resources, not permanent side effects:
+
+1. Default scratch uses a uniquely named `tempfile::TempDir` and RAII cleanup.
+2. Retention is explicit and promotes validated output into a caller-selected artifact directory.
+3. Every producer has a byte budget and fails closed before exceeding it.
+4. Do not create root-level logs, model variants, captures, or unscoped system-temp files.
+5. Stale cleanup may remove only marker-verified Qualia run directories under a resolved,
+   explicitly configured parent. Never recursively clean a broad temp or workspace directory.
+6. Tests cover cleanup on success, error, and unwind.
+
+The normative inference structure, tracking and cleanup requirements are in
+`docs/plans/native-inference-runtime-renewal-2026-07-26.md` §§9–11 and its tracker.
+
 ---
 
 ## 1. Universal Quin Bit Layout (reference for all new modules)

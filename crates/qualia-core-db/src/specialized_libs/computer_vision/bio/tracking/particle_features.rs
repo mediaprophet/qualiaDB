@@ -196,7 +196,14 @@ pub fn centroids_from_labels(
 
 /// Centroid of a bounding box (integer mid-point) — convenience for box→particle bridges.
 #[inline]
-pub fn centroid_from_bbox(x: u32, y: u32, w: u32, h: u32, frame: u32, area: u32) -> ParticleCentroid {
+pub fn centroid_from_bbox(
+    x: u32,
+    y: u32,
+    w: u32,
+    h: u32,
+    frame: u32,
+    area: u32,
+) -> ParticleCentroid {
     let cx = x as f32 + (w.saturating_sub(1) as f32) * 0.5;
     let cy = y as f32 + (h.saturating_sub(1) as f32) * 0.5;
     ParticleCentroid {

@@ -148,6 +148,13 @@ pub struct DecodeProxyResult {
     pub text: String,
     /// True when completion contains the expected factual anchor (e.g. "Paris").
     pub coherence_ok: bool,
+    /// Backend that actually completed measured token forwards. This is derived
+    /// from production-path counters, never from the requested env label.
+    pub execution_path: String,
+    pub resident_hits: u64,
+    pub resident_fallbacks: u64,
+    pub cuda_mega_hits: u64,
+    pub cuda_mega_fallbacks: u64,
 }
 
 /// Greedy factual gate: completion must contain "paris" (case-insensitive).
@@ -177,21 +184,38 @@ pub fn measure_decode_proxy(model: &Path, n_tokens: u32) -> Option<DecodeProxyRe
             let prompt = DECODE_PROXY_PROBE_PROMPT;
             // Warm: compile shaders + resident plan (discard rate).
             let _ = crate::llm_bench::decode_with_metrics_blocking(&path_str, prompt, 4);
-            crate::llm_bench::decode_with_metrics_blocking(&path_str, prompt, n)
+            crate::llm_bench::reset_resident_path_counts();
+            crate::llm_bench::reset_cuda_mega_path_counts();
+            let measured = crate::llm_bench::decode_with_metrics_blocking(&path_str, prompt, n);
+            let resident = crate::llm_bench::resident_path_counts();
+            let cuda = crate::llm_bench::cuda_mega_path_counts();
+            (measured, resident, cuda)
         })
         .ok()?
         .join();
     match join {
-        Ok(Ok((text, tok_s))) if tok_s > 0.0 => {
+        Ok((Ok((text, tok_s)), resident, cuda)) if tok_s > 0.0 => {
             let coherence_ok = decode_proxy_coherence_ok(&text);
+            let execution_path = match (resident.0 > 0, cuda.0 > 0) {
+                (true, false) => "wgpu-resident",
+                (false, true) => "cuda-c",
+                (true, true) => "mixed",
+                (false, false) => "legacy-or-unattributed",
+            }
+            .to_string();
             Some(DecodeProxyResult {
                 tok_s,
                 text,
                 coherence_ok,
+                execution_path,
+                resident_hits: resident.0,
+                resident_fallbacks: resident.1,
+                cuda_mega_hits: cuda.0,
+                cuda_mega_fallbacks: cuda.1,
             })
         }
-        Ok(Ok(_)) => None,
-        Ok(Err(e)) => {
+        Ok((Ok(_), _, _)) => None,
+        Ok((Err(e), _, _)) => {
             log::warn!("decode_proxy|fail|{e}");
             None
         }
@@ -300,6 +324,7 @@ pub fn parse_decode_proxy_line(stdout: &str) -> Option<f64> {
 pub struct DecodeProxyLine {
     pub tok_s: f64,
     pub coherence_ok: Option<bool>,
+    pub execution_path: Option<String>,
 }
 
 pub fn parse_decode_proxy_record(stdout: &str) -> Option<DecodeProxyLine> {
@@ -308,17 +333,21 @@ pub fn parse_decode_proxy_record(stdout: &str) -> Option<DecodeProxyLine> {
         if let Some(rest) = line.strip_prefix("DECODE_PROXY ") {
             let mut tok_s: Option<f64> = None;
             let mut coherence_ok: Option<bool> = None;
+            let mut execution_path: Option<String> = None;
             for part in rest.split_whitespace() {
                 if let Some(v) = part.strip_prefix("tok_s=") {
                     tok_s = v.parse().ok();
                 } else if let Some(v) = part.strip_prefix("coherence=") {
                     coherence_ok = Some(v == "1" || v.eq_ignore_ascii_case("true"));
+                } else if let Some(v) = part.strip_prefix("path=") {
+                    execution_path = Some(v.to_string());
                 }
             }
             if let Some(tok_s) = tok_s {
                 return Some(DecodeProxyLine {
                     tok_s,
                     coherence_ok,
+                    execution_path,
                 });
             }
         }
@@ -484,6 +513,12 @@ mod tests {
         assert!((parse_decode_proxy_line(s).unwrap() - 12.5).abs() < 1e-9);
         let r = parse_decode_proxy_record(s).unwrap();
         assert_eq!(r.coherence_ok, Some(true));
+        assert_eq!(r.execution_path, None);
+
+        let attributed =
+            "DECODE_PROXY tok_s=44.25 backend=cuda path=cuda-c coherence=1 cuda_hits=16\n";
+        let attributed = parse_decode_proxy_record(attributed).unwrap();
+        assert_eq!(attributed.execution_path.as_deref(), Some("cuda-c"));
         assert!(parse_decode_proxy_line("nope").is_none());
         assert!(decode_proxy_coherence_ok("… Paris is lovely"));
         assert!(!decode_proxy_coherence_ok("asdkfjhasdf"));

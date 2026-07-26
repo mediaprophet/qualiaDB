@@ -5,8 +5,8 @@ use std::path::PathBuf;
 use qualia_core_db::NQuin;
 
 use crate::cli::{
-    CompileAction, ExtensionAction, GovernanceAction, IngestFormat, MigrateAction,
-    ProfileAction, QueryDialect, ShaclAction,
+    CompileAction, ExtensionAction, GovernanceAction, IngestFormat, MigrateAction, ProfileAction,
+    QueryDialect, ShaclAction,
 };
 use crate::sparql::run_sparql_query;
 
@@ -70,8 +70,7 @@ pub fn handle_shacl(action: &ShaclAction) {
 pub fn handle_vault(init: bool) {
     if init {
         println!("Initializing Memory-Mapped Vault...");
-        let storage_dir =
-            std::env::var("QUALIA_DATA_DIR").unwrap_or_else(|_| ".".to_string());
+        let storage_dir = std::env::var("QUALIA_DATA_DIR").unwrap_or_else(|_| ".".to_string());
         let _vault = qualia_core_db::key_vault::KeyVault::load_or_generate(&storage_dir)
             .expect("Failed to load KeyVault");
         println!("Vault Initialization Complete!");
@@ -127,14 +126,20 @@ pub fn handle_inspect(file_path: &PathBuf) -> Result<(), Box<dyn std::error::Err
     let mut count = 0;
 
     for chunk in buffer.chunks_exact(quin_size) {
-        let quin: NQuin =
-            unsafe { std::ptr::read_unaligned(chunk.as_ptr() as *const NQuin) };
+        let quin: NQuin = unsafe { std::ptr::read_unaligned(chunk.as_ptr() as *const NQuin) };
         let lamport_clock = quin.extract_lamport_clock();
         let geometric_payload = quin.extract_clean_metadata_value();
 
         println!(
             "[Quin {}] S: {}, P: {}, O: {}, Ctx: {}, LamportClock: {}, GeoPayload: {}, Parity: {}",
-            count, quin.subject, quin.predicate, quin.object, quin.context, lamport_clock, geometric_payload, quin.parity
+            count,
+            quin.subject,
+            quin.predicate,
+            quin.object,
+            quin.context,
+            lamport_clock,
+            geometric_payload,
+            quin.parity
         );
         count += 1;
     }
@@ -283,7 +288,11 @@ pub fn handle_ingest(format: &IngestFormat) {
                 Ok(mut profile) => {
                     let path_str = file.to_string_lossy();
                     let out_path = file.with_extension("q42").to_string_lossy().into_owned();
-                    crate::ingest::csv_mapper::stream_csv_to_quins(&path_str, &out_path, &mut profile);
+                    crate::ingest::csv_mapper::stream_csv_to_quins(
+                        &path_str,
+                        &out_path,
+                        &mut profile,
+                    );
                     println!("✅ CSV Ingest Complete");
                 }
                 Err(e) => eprintln!("❌ Failed to compile SHACL mapping: {}", e),
@@ -295,7 +304,9 @@ pub fn handle_ingest(format: &IngestFormat) {
                 Ok(profile) => {
                     let path_str = file.to_string_lossy();
                     let out_path = file.with_extension("q42").to_string_lossy().into_owned();
-                    crate::ingest::json_mapper::stream_json_to_quins(&path_str, &out_path, &profile);
+                    crate::ingest::json_mapper::stream_json_to_quins(
+                        &path_str, &out_path, &profile,
+                    );
                     println!("✅ JSON Ingest Complete");
                 }
                 Err(e) => eprintln!("❌ Failed to compile SHACL mapping: {}", e),
@@ -306,7 +317,11 @@ pub fn handle_ingest(format: &IngestFormat) {
 
 pub fn handle_query(dialect: &QueryDialect) {
     match dialect {
-        QueryDialect::Sparql { vault, query_string, file } => {
+        QueryDialect::Sparql {
+            vault,
+            query_string,
+            file,
+        } => {
             let qs = if let Some(q) = query_string {
                 q.clone()
             } else if let Some(f) = file {
@@ -316,7 +331,11 @@ pub fn handle_query(dialect: &QueryDialect) {
             };
             run_sparql_query(&vault, &qs);
         }
-        QueryDialect::SparqlStar { vault, query_string, file } => {
+        QueryDialect::SparqlStar {
+            vault,
+            query_string,
+            file,
+        } => {
             let qs = if let Some(q) = query_string {
                 q.clone()
             } else if let Some(f) = file {
@@ -343,7 +362,11 @@ pub fn handle_compress(input: &PathBuf, output: &PathBuf) {
     println!("  output : {}", output.display());
     println!(
         "  mode   : {}",
-        if is_q42 { "SuperBlock → raw Quins" } else { "raw bytes" }
+        if is_q42 {
+            "SuperBlock → raw Quins"
+        } else {
+            "raw bytes"
+        }
     );
     println!("============================================================");
 
@@ -356,8 +379,14 @@ pub fn handle_compress(input: &PathBuf, output: &PathBuf) {
     match result {
         Ok(stats) => {
             println!("Done.");
-            println!("  Input  : {:.1} MB", stats.input_bytes as f64 / 1_048_576.0);
-            println!("  Output : {:.1} MB", stats.output_bytes as f64 / 1_048_576.0);
+            println!(
+                "  Input  : {:.1} MB",
+                stats.input_bytes as f64 / 1_048_576.0
+            );
+            println!(
+                "  Output : {:.1} MB",
+                stats.output_bytes as f64 / 1_048_576.0
+            );
             println!("  Blocks : {}", stats.blocks);
             println!("  Ratio  : {:.2}x", stats.ratio);
         }
@@ -386,7 +415,11 @@ pub fn handle_profile(action: &ProfileAction) {
                     chk_bytes.extend_from_slice(jsonld_src.as_bytes());
                     match std::fs::write(&out_path, &chk_bytes) {
                         Ok(_) => {
-                            println!("✅ Compiled profile 0x{:016X} ({} bytes)", profile_id, chk_bytes.len());
+                            println!(
+                                "✅ Compiled profile 0x{:016X} ({} bytes)",
+                                profile_id,
+                                chk_bytes.len()
+                            );
                             println!("   Stem  : {}", stem);
                             println!("   Output: {}", out_path.display());
                             println!("   Next  : qualia-cli ingest --input data.nt --output out --profile {}", out_path.display());
@@ -403,15 +436,38 @@ pub fn handle_profile(action: &ProfileAction) {
             println!("  (Profiles are registered when ingested via ExternalSorter)");
             println!("  Known profile ID namespaces:");
             let known = [
-                ("profile:general", "General purpose — no engine restrictions"),
-                ("profile:health", "Health/Clinical — NativeClinicalRisk, NativeBioAlignment"),
-                ("profile:chemistry", "Organic Chemistry — NativeChemicalSynthesis, NativeLipinski"),
-                ("profile:research", "Research — all scientific opcodes, no financial engines"),
-                ("profile:legal", "Legal/Deontic — OP_OBLIGATE, OP_FORBID, OP_PERMIT"),
-                ("profile:financial", "Financial — ILP dispatchers, tax schema, audit trail"),
+                (
+                    "profile:general",
+                    "General purpose — no engine restrictions",
+                ),
+                (
+                    "profile:health",
+                    "Health/Clinical — NativeClinicalRisk, NativeBioAlignment",
+                ),
+                (
+                    "profile:chemistry",
+                    "Organic Chemistry — NativeChemicalSynthesis, NativeLipinski",
+                ),
+                (
+                    "profile:research",
+                    "Research — all scientific opcodes, no financial engines",
+                ),
+                (
+                    "profile:legal",
+                    "Legal/Deontic — OP_OBLIGATE, OP_FORBID, OP_PERMIT",
+                ),
+                (
+                    "profile:financial",
+                    "Financial — ILP dispatchers, tax schema, audit trail",
+                ),
             ];
             for (name, desc) in &known {
-                println!("  0x{:016X}  {}  — {}", qualia_core_db::q_hash(name), name, desc);
+                println!(
+                    "  0x{:016X}  {}  — {}",
+                    qualia_core_db::q_hash(name),
+                    name,
+                    desc
+                );
             }
         }
         ProfileAction::Inspect { file } => {
@@ -422,11 +478,15 @@ pub fn handle_profile(action: &ProfileAction) {
                 Err(e) => eprintln!("❌ Cannot read file: {}", e),
                 Ok(bytes) => {
                     if bytes.len() < 16 || &bytes[0..4] != b"QCHK" {
-                        eprintln!("❌ Not a valid QCHK profile (.qchk or legacy .chk missing QCHK magic)");
+                        eprintln!(
+                            "❌ Not a valid QCHK profile (.qchk or legacy .chk missing QCHK magic)"
+                        );
                     } else {
                         let profile_id = u64::from_le_bytes(bytes[4..12].try_into().unwrap());
-                        let payload_len = u32::from_le_bytes(bytes[12..16].try_into().unwrap()) as usize;
-                        let payload = &bytes[16..16 + payload_len.min(bytes.len().saturating_sub(16))];
+                        let payload_len =
+                            u32::from_le_bytes(bytes[12..16].try_into().unwrap()) as usize;
+                        let payload =
+                            &bytes[16..16 + payload_len.min(bytes.len().saturating_sub(16))];
                         println!("  Profile ID : 0x{:016X}", profile_id);
                         println!("  Payload    : {} bytes (JSON-LD source)", payload_len);
                         println!("  Total file : {} bytes", bytes.len());

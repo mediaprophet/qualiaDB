@@ -186,10 +186,7 @@ pub fn shape_3d_from_voxels(
             for (nx, ny, nz) in neigh {
                 let mut found = false;
                 for j in 0..n {
-                    if voxels[j * 3] == nx
-                        && voxels[j * 3 + 1] == ny
-                        && voxels[j * 3 + 2] == nz
-                    {
+                    if voxels[j * 3] == nx && voxels[j * 3 + 1] == ny && voxels[j * 3 + 2] == nz {
                         found = true;
                         break;
                     }

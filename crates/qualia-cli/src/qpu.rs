@@ -75,7 +75,8 @@ const PROVIDERS: &[ProviderInfo] = &[
         problem_types: "gate-model",
         required: &["project_id", "processor_id"],
         optional: &["service_account_key_path", "endpoint"],
-        docs: "https://quantumai.google — requires Cloud project with Quantum Computing Service API",
+        docs:
+            "https://quantumai.google — requires Cloud project with Quantum Computing Service API",
     },
     ProviderInfo {
         id: "quantinuum",
@@ -159,7 +160,9 @@ fn save_config(data_dir: &str, store: &QpuConfigStore) {
                 eprintln!("QPU config write error: {e}");
             } else {
                 println!("Config saved to: {}", path.display());
-                println!("Note: API keys are stored in plaintext — restrict file permissions if needed.");
+                println!(
+                    "Note: API keys are stored in plaintext — restrict file permissions if needed."
+                );
             }
         }
         Err(e) => eprintln!("QPU config serialize error: {e}"),
@@ -188,7 +191,10 @@ fn display_opt(v: &Option<String>, sensitive: bool) -> String {
 
 pub fn run_list_providers() {
     println!("================================================================");
-    println!("  QualiaDB QPU — Supported Providers ({} total)", PROVIDERS.len());
+    println!(
+        "  QualiaDB QPU — Supported Providers ({} total)",
+        PROVIDERS.len()
+    );
     println!("================================================================");
     for p in PROVIDERS {
         println!("\n  [{id}]  {name}", id = p.id, name = p.name);
@@ -232,7 +238,10 @@ pub fn run_configure(
     machine: Option<&str>,
 ) {
     let Some(info) = find_provider(provider) else {
-        eprintln!("Unknown provider '{}'. Run `qpu list-providers` to see valid IDs.", provider);
+        eprintln!(
+            "Unknown provider '{}'. Run `qpu list-providers` to see valid IDs.",
+            provider
+        );
         return;
     };
 
@@ -271,22 +280,25 @@ pub fn run_configure(
     apply!(machine, machine);
 
     // Validate required fields are now set
-    let missing: Vec<&str> = info.required.iter().copied().filter(|&field| {
-        match field {
-            "api_key"         => cfg.api_key.is_none(),
+    let missing: Vec<&str> = info
+        .required
+        .iter()
+        .copied()
+        .filter(|&field| match field {
+            "api_key" => cfg.api_key.is_none(),
             "subscription_id" => cfg.subscription_id.is_none(),
-            "resource_group"  => cfg.resource_group.is_none(),
-            "workspace"       => cfg.workspace.is_none(),
-            "location"        => cfg.location.is_none(),
-            "access_key_id"   => cfg.access_key_id.is_none(),
+            "resource_group" => cfg.resource_group.is_none(),
+            "workspace" => cfg.workspace.is_none(),
+            "location" => cfg.location.is_none(),
+            "access_key_id" => cfg.access_key_id.is_none(),
             "secret_access_key" => cfg.secret_access_key.is_none(),
-            "region"          => cfg.region.is_none(),
-            "project_id"      => cfg.project_id.is_none(),
-            "processor_id"    => cfg.processor_id.is_none(),
-            "user_id"         => cfg.user_id.is_none(),
-            _                 => false,
-        }
-    }).collect();
+            "region" => cfg.region.is_none(),
+            "project_id" => cfg.project_id.is_none(),
+            "processor_id" => cfg.processor_id.is_none(),
+            "user_id" => cfg.user_id.is_none(),
+            _ => false,
+        })
+        .collect();
 
     println!("================================================================");
     println!("  QPU Configure — {}", info.name);
@@ -299,10 +311,16 @@ pub fn run_configure(
         for f in &missing {
             println!("  --{}", f.replace('_', "-"));
         }
-        println!("Run `qpu test-connection {}` after supplying all required fields.", provider);
+        println!(
+            "Run `qpu test-connection {}` after supplying all required fields.",
+            provider
+        );
     } else {
         println!("All required fields set for {}.", info.name);
-        println!("Run `qualia-cli --enable-qpu qpu test-connection {}` to validate.", provider);
+        println!(
+            "Run `qualia-cli --enable-qpu qpu test-connection {}` to validate.",
+            provider
+        );
     }
 }
 
@@ -318,7 +336,11 @@ pub fn run_show(data_dir: &str, provider: Option<&str>) {
                 return;
             }
         }
-        None => store.providers.iter().map(|(k, v)| (k.as_str(), v)).collect(),
+        None => store
+            .providers
+            .iter()
+            .map(|(k, v)| (k.as_str(), v))
+            .collect(),
     };
 
     if entries.is_empty() {
@@ -334,48 +356,108 @@ pub fn run_show(data_dir: &str, provider: Option<&str>) {
     for (id, cfg) in &entries {
         let name = find_provider(id).map(|p| p.name).unwrap_or(id);
         println!("\n  [{id}]  {name}");
-        println!("  api_key              : {}", display_opt(&cfg.api_key, true));
-        println!("  endpoint             : {}", display_opt(&cfg.endpoint, false));
+        println!(
+            "  api_key              : {}",
+            display_opt(&cfg.api_key, true)
+        );
+        println!(
+            "  endpoint             : {}",
+            display_opt(&cfg.endpoint, false)
+        );
         // IBM
-        if cfg.hub.is_some() || cfg.group.is_some() || cfg.project.is_some() || cfg.instance.is_some() {
-            println!("  hub / group / project: {} / {} / {}",
+        if cfg.hub.is_some()
+            || cfg.group.is_some()
+            || cfg.project.is_some()
+            || cfg.instance.is_some()
+        {
+            println!(
+                "  hub / group / project: {} / {} / {}",
                 display_opt(&cfg.hub, false),
                 display_opt(&cfg.group, false),
-                display_opt(&cfg.project, false));
-            println!("  instance             : {}", display_opt(&cfg.instance, false));
+                display_opt(&cfg.project, false)
+            );
+            println!(
+                "  instance             : {}",
+                display_opt(&cfg.instance, false)
+            );
         }
         // Azure
         if cfg.subscription_id.is_some() {
-            println!("  subscription_id      : {}", display_opt(&cfg.subscription_id, true));
-            println!("  resource_group       : {}", display_opt(&cfg.resource_group, false));
-            println!("  workspace            : {}", display_opt(&cfg.workspace, false));
-            println!("  location             : {}", display_opt(&cfg.location, false));
+            println!(
+                "  subscription_id      : {}",
+                display_opt(&cfg.subscription_id, true)
+            );
+            println!(
+                "  resource_group       : {}",
+                display_opt(&cfg.resource_group, false)
+            );
+            println!(
+                "  workspace            : {}",
+                display_opt(&cfg.workspace, false)
+            );
+            println!(
+                "  location             : {}",
+                display_opt(&cfg.location, false)
+            );
         }
         // Braket
         if cfg.access_key_id.is_some() {
-            println!("  access_key_id        : {}", display_opt(&cfg.access_key_id, true));
-            println!("  secret_access_key    : {}", display_opt(&cfg.secret_access_key, true));
-            println!("  region               : {}", display_opt(&cfg.region, false));
-            println!("  s3_bucket            : {}", display_opt(&cfg.s3_bucket, false));
+            println!(
+                "  access_key_id        : {}",
+                display_opt(&cfg.access_key_id, true)
+            );
+            println!(
+                "  secret_access_key    : {}",
+                display_opt(&cfg.secret_access_key, true)
+            );
+            println!(
+                "  region               : {}",
+                display_opt(&cfg.region, false)
+            );
+            println!(
+                "  s3_bucket            : {}",
+                display_opt(&cfg.s3_bucket, false)
+            );
         }
         // Google
         if cfg.project_id.is_some() {
-            println!("  project_id           : {}", display_opt(&cfg.project_id, false));
-            println!("  processor_id         : {}", display_opt(&cfg.processor_id, false));
-            println!("  service_account_key  : {}", display_opt(&cfg.service_account_key_path, false));
+            println!(
+                "  project_id           : {}",
+                display_opt(&cfg.project_id, false)
+            );
+            println!(
+                "  processor_id         : {}",
+                display_opt(&cfg.processor_id, false)
+            );
+            println!(
+                "  service_account_key  : {}",
+                display_opt(&cfg.service_account_key_path, false)
+            );
         }
         // Rigetti
         if cfg.user_id.is_some() || cfg.qpu_id.is_some() {
-            println!("  user_id              : {}", display_opt(&cfg.user_id, false));
-            println!("  qpu_id               : {}", display_opt(&cfg.qpu_id, false));
+            println!(
+                "  user_id              : {}",
+                display_opt(&cfg.user_id, false)
+            );
+            println!(
+                "  qpu_id               : {}",
+                display_opt(&cfg.qpu_id, false)
+            );
         }
         // IonQ
         if cfg.backend.is_some() {
-            println!("  backend              : {}", display_opt(&cfg.backend, false));
+            println!(
+                "  backend              : {}",
+                display_opt(&cfg.backend, false)
+            );
         }
         // Quantinuum
         if cfg.machine.is_some() {
-            println!("  machine              : {}", display_opt(&cfg.machine, false));
+            println!(
+                "  machine              : {}",
+                display_opt(&cfg.machine, false)
+            );
         }
     }
     println!("\n================================================================");
@@ -383,7 +465,10 @@ pub fn run_show(data_dir: &str, provider: Option<&str>) {
 
 pub fn run_clear(data_dir: &str, provider: &str) {
     if find_provider(provider).is_none() {
-        eprintln!("Unknown provider '{}'. Run `qpu list-providers` to see valid IDs.", provider);
+        eprintln!(
+            "Unknown provider '{}'. Run `qpu list-providers` to see valid IDs.",
+            provider
+        );
         return;
     }
     let mut store = load_config(data_dir);
@@ -391,19 +476,28 @@ pub fn run_clear(data_dir: &str, provider: &str) {
         save_config(data_dir, &store);
         println!("Cleared credentials for '{}'.", provider);
     } else {
-        println!("No stored credentials for '{}' — nothing to clear.", provider);
+        println!(
+            "No stored credentials for '{}' — nothing to clear.",
+            provider
+        );
     }
 }
 
 pub fn run_test_connection(data_dir: &str, provider: &str) {
     let Some(info) = find_provider(provider) else {
-        eprintln!("Unknown provider '{}'. Run `qpu list-providers` to see valid IDs.", provider);
+        eprintln!(
+            "Unknown provider '{}'. Run `qpu list-providers` to see valid IDs.",
+            provider
+        );
         return;
     };
 
     let store = load_config(data_dir);
     let Some(cfg) = store.providers.get(provider) else {
-        eprintln!("No credentials stored for '{}'. Run `qpu configure {}` first.", provider, provider);
+        eprintln!(
+            "No credentials stored for '{}'. Run `qpu configure {}` first.",
+            provider, provider
+        );
         return;
     };
 
@@ -412,40 +506,58 @@ pub fn run_test_connection(data_dir: &str, provider: &str) {
     println!("================================================================");
 
     // Check required fields
-    let missing: Vec<&str> = info.required.iter().copied().filter(|&field| {
-        match field {
-            "api_key"           => cfg.api_key.is_none(),
-            "subscription_id"   => cfg.subscription_id.is_none(),
-            "resource_group"    => cfg.resource_group.is_none(),
-            "workspace"         => cfg.workspace.is_none(),
-            "location"          => cfg.location.is_none(),
-            "access_key_id"     => cfg.access_key_id.is_none(),
+    let missing: Vec<&str> = info
+        .required
+        .iter()
+        .copied()
+        .filter(|&field| match field {
+            "api_key" => cfg.api_key.is_none(),
+            "subscription_id" => cfg.subscription_id.is_none(),
+            "resource_group" => cfg.resource_group.is_none(),
+            "workspace" => cfg.workspace.is_none(),
+            "location" => cfg.location.is_none(),
+            "access_key_id" => cfg.access_key_id.is_none(),
             "secret_access_key" => cfg.secret_access_key.is_none(),
-            "region"            => cfg.region.is_none(),
-            "project_id"        => cfg.project_id.is_none(),
-            "processor_id"      => cfg.processor_id.is_none(),
-            "user_id"           => cfg.user_id.is_none(),
-            _                   => false,
-        }
-    }).collect();
+            "region" => cfg.region.is_none(),
+            "project_id" => cfg.project_id.is_none(),
+            "processor_id" => cfg.processor_id.is_none(),
+            "user_id" => cfg.user_id.is_none(),
+            _ => false,
+        })
+        .collect();
 
     if !missing.is_empty() {
         eprintln!("Missing required fields: {}", missing.join(", "));
-        eprintln!("Run: qualia-cli --enable-qpu qpu configure {} [--field value ...]", provider);
+        eprintln!(
+            "Run: qualia-cli --enable-qpu qpu configure {} [--field value ...]",
+            provider
+        );
         return;
     }
 
     // Provider-specific validation hints
     let endpoint = match provider {
-        "ibm"         => "https://auth.quantum-computing.ibm.com/api",
-        "dwave"       => cfg.endpoint.as_deref().unwrap_or("https://cloud.dwavesys.com/sapi/v2"),
-        "ionq"        => cfg.endpoint.as_deref().unwrap_or("https://api.ionq.co/v0.3"),
-        "rigetti"     => cfg.endpoint.as_deref().unwrap_or("https://api.qcs.rigetti.com"),
-        "azure"       => "https://eastus.quantum.azure.com",
-        "braket"      => "https://braket.{region}.amazonaws.com (via AWS SDK)",
-        "google"      => "https://quantum.googleapis.com",
-        "quantinuum"  => cfg.endpoint.as_deref().unwrap_or("https://um.qapi.quantinuum.com"),
-        _             => "(unknown)",
+        "ibm" => "https://auth.quantum-computing.ibm.com/api",
+        "dwave" => cfg
+            .endpoint
+            .as_deref()
+            .unwrap_or("https://cloud.dwavesys.com/sapi/v2"),
+        "ionq" => cfg
+            .endpoint
+            .as_deref()
+            .unwrap_or("https://api.ionq.co/v0.3"),
+        "rigetti" => cfg
+            .endpoint
+            .as_deref()
+            .unwrap_or("https://api.qcs.rigetti.com"),
+        "azure" => "https://eastus.quantum.azure.com",
+        "braket" => "https://braket.{region}.amazonaws.com (via AWS SDK)",
+        "google" => "https://quantum.googleapis.com",
+        "quantinuum" => cfg
+            .endpoint
+            .as_deref()
+            .unwrap_or("https://um.qapi.quantinuum.com"),
+        _ => "(unknown)",
     };
 
     println!("  Provider  : {}", info.name);
@@ -457,68 +569,82 @@ pub fn run_test_connection(data_dir: &str, provider: &str) {
     println!("                test requires network access and valid credentials.");
     println!();
     println!("  To submit a test job:");
-    println!("    qualia-cli --enable-qpu qpu submit {} --problem-type annealing --qubits 4", provider);
+    println!(
+        "    qualia-cli --enable-qpu qpu submit {} --problem-type annealing --qubits 4",
+        provider
+    );
     println!("================================================================");
 }
 
 fn auth_type_for(provider: &str) -> &'static str {
     match provider {
-        "ibm"        => "IBM token (Authorization: Bearer <api_key>)",
-        "dwave"      => "Leap token (X-Auth-Token: <api_key>)",
-        "ionq"       => "IonQ API key (Authorization: apiKey <api_key>)",
-        "rigetti"    => "QCS credentials (api_key + user_id)",
-        "azure"      => "Azure AD service principal (subscription_id / workspace)",
-        "braket"     => "AWS SigV4 (access_key_id + secret_access_key)",
-        "google"     => "Google service account JSON / Application Default Credentials",
+        "ibm" => "IBM token (Authorization: Bearer <api_key>)",
+        "dwave" => "Leap token (X-Auth-Token: <api_key>)",
+        "ionq" => "IonQ API key (Authorization: apiKey <api_key>)",
+        "rigetti" => "QCS credentials (api_key + user_id)",
+        "azure" => "Azure AD service principal (subscription_id / workspace)",
+        "braket" => "AWS SigV4 (access_key_id + secret_access_key)",
+        "google" => "Google service account JSON / Application Default Credentials",
         "quantinuum" => "Quantinuum bearer token (api_key)",
-        _            => "API key",
+        _ => "API key",
     }
 }
 
-pub fn run_submit(
-    data_dir: &str,
-    provider: &str,
-    problem_type: &str,
-    qubits: u32,
-    shots: u32,
-) {
+pub fn run_submit(data_dir: &str, provider: &str, problem_type: &str, qubits: u32, shots: u32) {
     let Some(info) = find_provider(provider) else {
-        eprintln!("Unknown provider '{}'. Run `qpu list-providers` to see valid IDs.", provider);
+        eprintln!(
+            "Unknown provider '{}'. Run `qpu list-providers` to see valid IDs.",
+            provider
+        );
         return;
     };
 
     let store = load_config(data_dir);
     if store.providers.get(provider).is_none() {
-        eprintln!("No credentials for '{}'. Run `qpu configure {}` first.", provider, provider);
+        eprintln!(
+            "No credentials for '{}'. Run `qpu configure {}` first.",
+            provider, provider
+        );
         return;
     }
 
     use qualia_core_db::solvers::qpu::{JobParameters, ProblemType, QpuJob};
 
     let pt = match problem_type {
-        "annealing"   => ProblemType::Annealing,
-        "gate-model"  => ProblemType::GateModel,
-        "vqe"         => ProblemType::Vqe,
-        "qaoa"        => ProblemType::Qaoa,
+        "annealing" => ProblemType::Annealing,
+        "gate-model" => ProblemType::GateModel,
+        "vqe" => ProblemType::Vqe,
+        "qaoa" => ProblemType::Qaoa,
         other => {
-            eprintln!("Unknown problem type '{}'. Use: annealing | gate-model | vqe | qaoa", other);
+            eprintln!(
+                "Unknown problem type '{}'. Use: annealing | gate-model | vqe | qaoa",
+                other
+            );
             return;
         }
     };
 
-    let job_id = format!("q-{}-{}", provider, std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map(|d| d.as_millis())
-        .unwrap_or(0));
+    let job_id = format!(
+        "q-{}-{}",
+        provider,
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_millis())
+            .unwrap_or(0)
+    );
 
-    let job = QpuJob::new(job_id.clone(), pt, JobParameters {
-        num_qubits: qubits,
-        circuit_depth: 0,
-        shots,
-        hamiltonian: Some(r#"{"J":{},"h":{}}"#.into()),
-        circuit: None,
-        extra: serde_json::json!({"provider": provider, "cli_submit": true}),
-    });
+    let job = QpuJob::new(
+        job_id.clone(),
+        pt,
+        JobParameters {
+            num_qubits: qubits,
+            circuit_depth: 0,
+            shots,
+            hamiltonian: Some(r#"{"J":{},"h":{}}"#.into()),
+            circuit: None,
+            extra: serde_json::json!({"provider": provider, "cli_submit": true}),
+        },
+    );
 
     println!("================================================================");
     println!("  QPU Job Submission — {}", info.name);

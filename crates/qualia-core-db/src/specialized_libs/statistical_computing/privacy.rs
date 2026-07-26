@@ -1,6 +1,5 @@
 use super::*;
 
-
 /// Noise mechanisms
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum NoiseMechanism {
@@ -28,7 +27,6 @@ pub enum CompositionMethod {
     GaussianDP,
     Custom(String),
 }
-
 
 /// Sensitivity function
 #[derive(Debug, Clone)]
@@ -616,4 +614,3 @@ impl SecureAggregation {
         self.integrity_checks.len()
     }
 }
-

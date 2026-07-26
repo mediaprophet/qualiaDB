@@ -136,7 +136,10 @@ fn jsonld_term(hash: u64) -> JsonLdTerm {
         return JsonLdTerm::Iri(String::from_utf8_lossy(bytes).into_owned());
     }
     if (hash & crate::resolver::MSB_FLAG) != 0 {
-        return JsonLdTerm::Iri(format!("did:q42:ptr/{:016x}", hash & !crate::resolver::MSB_FLAG));
+        return JsonLdTerm::Iri(format!(
+            "did:q42:ptr/{:016x}",
+            hash & !crate::resolver::MSB_FLAG
+        ));
     }
     if let Some(lit) = classify_inline_literal(hash) {
         return JsonLdTerm::Literal {
@@ -315,15 +318,26 @@ mod tests {
 
     #[test]
     fn turtle_object_integer_is_typed_literal_not_iri() {
-        let quins = [quin(MSB_FLAG | 0x11, MSB_FLAG | 0x22, INLINE_TAG_INTEGER | 42)];
+        let quins = [quin(
+            MSB_FLAG | 0x11,
+            MSB_FLAG | 0x22,
+            INLINE_TAG_INTEGER | 42,
+        )];
         let out = s(&quins, serialize_to_turtle);
-        assert!(out.contains(r#""42"^^<"#), "integer object as typed literal: {out}");
+        assert!(
+            out.contains(r#""42"^^<"#),
+            "integer object as typed literal: {out}"
+        );
         assert!(out.contains("XMLSchema#integer"), "{out}");
     }
 
     #[test]
     fn jsonld_literal_object_uses_value_and_type() {
-        let quins = [quin(MSB_FLAG | 0x11, MSB_FLAG | 0x22, INLINE_TAG_INTEGER | 7)];
+        let quins = [quin(
+            MSB_FLAG | 0x11,
+            MSB_FLAG | 0x22,
+            INLINE_TAG_INTEGER | 7,
+        )];
         let out = s(&quins, serialize_to_jsonld);
         assert!(out.contains(r#""@value": "7""#), "{out}");
         assert!(out.contains(r#""@type""#), "{out}");
@@ -344,7 +358,10 @@ mod tests {
         let quins = [quin(MSB_FLAG | 0x11, MSB_FLAG | 0x22, MSB_FLAG | 0x33)];
         let out = s(&quins, serialize_to_trig);
         assert!(out.contains(" {\n"), "graph opens with '{{': {out}");
-        assert!(out.trim_end().ends_with('}'), "graph closes with '}}': {out}");
+        assert!(
+            out.trim_end().ends_with('}'),
+            "graph closes with '}}': {out}"
+        );
     }
 
     #[test]

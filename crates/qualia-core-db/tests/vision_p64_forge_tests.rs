@@ -31,10 +31,8 @@ fn test_vision_conv2d_oracle_correctness() {
     let weight = [1.0f32, 0.0, 0.0, 1.0]; // 1x1x2x2 identity-diagonal
     let bias = [0.5f32];
 
-    let output = conv2d_cpu(
-        &input, 1, 3, 3, &weight, 1, 2, 2, &bias, 1, 1, 0, 0,
-    )
-    .expect("conv2d_cpu execution");
+    let output = conv2d_cpu(&input, 1, 3, 3, &weight, 1, 2, 2, &bias, 1, 1, 0, 0)
+        .expect("conv2d_cpu execution");
 
     // 1x2x2 output expected
     assert_eq!(output.len(), 4);
@@ -46,10 +44,7 @@ fn test_vision_conv2d_oracle_correctness() {
 
 #[test]
 fn test_vision_maxpool2d_oracle_correctness() {
-    let input = [
-        1.0f32, 3.0, 2.0, 4.0,
-        5.0, 6.0, 7.0, 8.0,
-    ]; // 1x2x4
+    let input = [1.0f32, 3.0, 2.0, 4.0, 5.0, 6.0, 7.0, 8.0]; // 1x2x4
 
     let output = max_pool2d_cpu(&input, 1, 2, 4, 2, 2, 2, 2).expect("max_pool2d_cpu");
 

@@ -1,5 +1,6 @@
 [workspace]
 members = [
+    "crates/qualia-inference-kernel",
     "crates/qualia-core-db",
     "crates/qualia-cli",
     "crates/qualia-solid-bridge",

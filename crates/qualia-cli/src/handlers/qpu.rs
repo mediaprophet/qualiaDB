@@ -6,7 +6,9 @@ pub fn handle(action: &QpuAction, enable_qpu: bool) {
         eprintln!("QPU commands require the --enable-qpu flag:");
         eprintln!("  qualia-cli --enable-qpu qpu <subcommand>");
         eprintln!();
-        eprintln!("Subcommands: list-providers | configure | show | clear | test-connection | submit");
+        eprintln!(
+            "Subcommands: list-providers | configure | show | clear | test-connection | submit"
+        );
         std::process::exit(1);
     }
     let data_dir = std::env::var("QUALIA_DATA_DIR").unwrap_or_else(|_| ".".to_string());

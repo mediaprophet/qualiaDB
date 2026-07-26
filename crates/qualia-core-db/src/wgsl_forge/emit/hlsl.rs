@@ -40,10 +40,20 @@ fn emit_kernel_body(
     kernel: &KernelSpec,
     schedule: Schedule,
 ) -> Result<(), ForgeError> {
+    // Wave-intrinsic emitters: used when workgroup is a multiple of the
+    // typical wave size (32). Falls back to scalar emitters otherwise.
+    let use_wave = schedule.workgroup_size % 32 == 0 && schedule.workgroup_size >= 32;
+
     if kernel.id == "topk" {
+        if use_wave {
+            return super::hlsl_wave::emit_topk_wave_hlsl(source, kernel, schedule);
+        }
         return emit_topk_hlsl(source, kernel, schedule);
     }
     if kernel.id == "fused-ffn" {
+        if use_wave {
+            return super::hlsl_wave::emit_fused_ffn_wave_hlsl(source, kernel, schedule);
+        }
         return emit_ffn_hlsl(source, kernel, schedule);
     }
     if kernel.id == "p64-project" {
@@ -53,7 +63,13 @@ fn emit_kernel_body(
         return emit_gemm_hlsl(source, kernel, schedule);
     }
     if kernel.id == "gemv" {
+        if use_wave {
+            return super::hlsl_wave::emit_gemv_wave_hlsl(source, kernel, schedule);
+        }
         return emit_gemv_hlsl(source, kernel, schedule);
+    }
+    if kernel.id == "fused-qkv-rope" {
+        return emit_fused_qkv_rope_hlsl(source, kernel, schedule);
     }
     if kernel.id == "ternary-gemv" {
         return emit_ternary_gemv_hlsl(source, kernel, schedule);
@@ -717,4 +733,329 @@ fn emit_ops(source: &mut String, ops: &[Op], indent: &str) -> Result<(), ForgeEr
         }
     }
     Ok(())
+}
+
+/// HLSL WaveMatrix GEMV using SM 6.8+ tensor-core intrinsics.
+///
+/// Uses `WaveMatrixA` (f16), `WaveMatrixB` (f16), `WaveMatrixC` (f32) for
+/// 16×16 tile matrix multiply. DXC compiles this to SPIR-V
+/// `CooperativeMatrixKHR` when targeting `vulkan1.2`. Requires adapter
+/// support for `cooperative_matrix` — gate with `coopmat_usable()`.
+///
+/// Binding ABI: same as scalar GEMV (a, x, y, params).
+/// Dispatch: one wave per output row tile (16 rows per wave).
+pub fn emit_gemv_wavematrix_hlsl(
+    source: &mut String,
+    kernel: &KernelSpec,
+    schedule: Schedule,
+) -> Result<(), ForgeError> {
+    let wg = schedule.workgroup_size;
+    writeln!(
+        source,
+        r#"struct GemvParams {{
+    uint m;
+    uint n;
+    uint _pad0;
+    uint _pad1;
+}};
+
+RWByteAddressBuffer a : register(u0, space0);
+RWByteAddressBuffer x : register(u1, space0);
+RWByteAddressBuffer y : register(u2, space0);
+ConstantBuffer<GemvParams> params : register(b3, space0);
+
+[numthreads({wg}, 1, 1)]
+void {entry}(uint3 gid : SV_DispatchThreadID) {{
+    uint wave_size = WaveGetLaneCount();
+    uint row_tile = gid.x / wave_size;  // each wave processes 16 rows
+    uint row_base = row_tile * 16;
+    if (row_base >= params.m) {{ return; }}
+
+    // WaveMatrix fragments: 16x16 tiles
+    // A tile = 16 rows × 16 cols of matrix A (f16)
+    // B tile = 16 rows × 16 cols of vector x (f16, replicated)
+    // C tile = 16x16 accumulator (f32)
+    WaveMatrixA<float16_t> matA;
+    WaveMatrixB<float16_t> matB;
+    WaveMatrixC<float> matC;
+    WaveMatrixFill(matC, 0.0f);
+
+    uint n_tiles = (params.n + 15) / 16;
+    for (uint t = 0; t < n_tiles; t++) {{
+        uint col_base = t * 16;
+        // Load 16×16 tile of A (row_base..row_base+15, col_base..col_base+15)
+        for (uint i = WaveGetLaneIndex(); i < 256; i += wave_size) {{
+            uint local_row = i / 16;
+            uint local_col = i % 16;
+            uint global_row = row_base + local_row;
+            uint global_col = col_base + local_col;
+            float16_t val = 0.0h;
+            if (global_row < params.m && global_col < params.n) {{
+                val = float16_t(asfloat(a.Load2(global_row * params.n * 4 + global_col * 4)));
+            }}
+            WaveMatrixASetElement(matA, i, val);
+        }}
+        // Load 16×16 tile of x (replicated column vector into B tile)
+        for (uint i = WaveGetLaneIndex(); i < 256; i += wave_size) {{
+            uint local_row = i / 16;
+            uint global_col = col_base + local_row;
+            float16_t val = 0.0h;
+            if (global_col < params.n) {{
+                val = float16_t(asfloat(x.Load2(global_col * 4)));
+            }}
+            // Replicate across columns (each column of B gets same x value)
+            for (uint c = 0; c < 16; c++) {{
+                WaveMatrixBSetElement(matB, local_row * 16 + c, val);
+            }}
+        }}
+        WaveMatrixMultiply(matC, matA, matB);
+    }}
+
+    // Extract results: each lane writes its assigned output elements
+    uint lane = WaveGetLaneIndex();
+    for (uint i = lane; i < 16; i += wave_size) {{
+        uint global_row = row_base + i;
+        if (global_row < params.m) {{
+            // Sum across columns (GEMV: only one output per row)
+            float acc = 0.0f;
+            for (uint c = 0; c < 16; c++) {{
+                acc += WaveMatrixCGetElement(matC, i * 16 + c);
+            }}
+            y.Store2(global_row * 4, asuint(acc));
+        }}
+    }}
+}}"#,
+        wg = wg,
+        entry = kernel.entry_point
+    )
+    .map_err(|e| ForgeError::Emission(e.to_string()))?;
+    Ok(())
+}
+
+/// HLSL fused QKV + RoPE kernel: f32 GEMV for Q, K, V projections with
+/// RoPE rotation applied to Q and K outputs before writing to global memory.
+/// V is written without rotation. Uses `groupshared` memory for the RoPE
+/// pair buffer.
+///
+/// Bindings: x, Wq, Wk, Wv, yq, yk, yv, dims={n_in, n_q, n_kv, n_head, head_dim, pos},
+/// rope_params={base_bits, scale_bits}.
+/// Dispatch: grid = ceil(n_q / ROWS_PER_BLOCK), block = 256.
+fn emit_fused_qkv_rope_hlsl(
+    source: &mut String,
+    kernel: &KernelSpec,
+    schedule: Schedule,
+) -> Result<(), ForgeError> {
+    let wg = schedule.workgroup_size.max(32);
+    let _ = kernel;
+    writeln!(
+        source,
+        r#"#define ROWS_PER_BLOCK 16u
+#define WG {wg}u
+
+RWStructuredBuffer<float> x : register(b0);
+RWStructuredBuffer<float> Wq : register(b1);
+RWStructuredBuffer<float> Wk : register(b2);
+RWStructuredBuffer<float> Wv : register(b3);
+RWStructuredBuffer<float> yq : register(b4);
+RWStructuredBuffer<float> yk : register(b5);
+RWStructuredBuffer<float> yv : register(b6);
+RWStructuredBuffer<uint> dims : register(b7);
+RWStructuredBuffer<uint> rope_params : register(b8);
+
+groupshared float s_red[ROWS_PER_BLOCK * WG];
+groupshared float s_rope_buf[ROWS_PER_BLOCK];
+
+[numthreads(WG, 1, 1)]
+void {entry}(uint3 dtid : SV_DispatchThreadID, uint3 gtid : SV_GroupThreadID, uint3 gid : SV_GroupID) {{
+    uint n_in = dims[0];
+    uint n_q = dims[1];
+    uint n_kv = dims[2];
+    uint n_head = dims[3];
+    uint head_dim = dims[4];
+    uint pos = dims[5];
+    uint row0 = gid.x * ROWS_PER_BLOCK;
+    uint t = gtid.x;
+    if (row0 >= n_q) return;
+
+    // RoPE parameters
+    uint base_bits = rope_params[0];
+    uint scale_bits = rope_params[1];
+    float base = asfloat(base_bits);
+    float scale = asfloat(scale_bits);
+    float inv_scale = 1.0 / scale;
+    float inv_head_dim = 1.0 / (float)head_dim;
+
+    // === Q projection with RoPE ===
+    float acc_q[ROWS_PER_BLOCK];
+    [unroll] for (uint r = 0u; r < ROWS_PER_BLOCK; r++) acc_q[r] = 0.0;
+    for (uint j = t; j < n_in; j += WG) {{
+        float xv = x[j];
+        [unroll] for (uint r = 0u; r < ROWS_PER_BLOCK; r++) {{
+            uint row = row0 + r;
+            if (row < n_q)
+                acc_q[r] += Wq[row * n_in + j] * xv;
+        }}
+    }}
+    // Tree reduction
+    [unroll] for (uint r = 0u; r < ROWS_PER_BLOCK; r++)
+        s_red[r * WG + t] = acc_q[r];
+    GroupMemoryBarrierWithGroupSync();
+    for (uint s = WG / 2u; s > 0u; s >>= 1u) {{
+        if (t < s) {{
+            [unroll] for (uint r = 0u; r < ROWS_PER_BLOCK; r++)
+                s_red[r * WG + t] += s_red[r * WG + t + s];
+        }}
+        GroupMemoryBarrierWithGroupSync();
+    }}
+    // Apply RoPE to Q and write
+    if (t < ROWS_PER_BLOCK) {{
+        uint row = row0 + t;
+        if (row < n_q) {{
+            uint head = row / head_dim;
+            uint d = row % head_dim;
+            uint half = head_dim / 2u;
+            if (half > 0u && head < n_head) {{
+                float val = s_red[t * WG];
+                uint i = d / 2u;
+                float theta = (float)pos * inv_scale * pow(base, -2.0 * (float)i * inv_head_dim);
+                float s_val = sin(theta);
+                float c_val = cos(theta);
+                float pair_val;
+                if (d % 2u == 0u) {{
+                    pair_val = (t + 1u < ROWS_PER_BLOCK && (row0 + t + 1u) < n_q)
+                        ? s_red[(t + 1u) * WG] : 0.0;
+                    s_rope_buf[t] = val * c_val - pair_val * s_val;
+                }} else {{
+                    pair_val = (t >= 1u) ? s_red[(t - 1u) * WG] : 0.0;
+                    s_rope_buf[t] = pair_val * s_val + val * c_val;
+                }}
+            }} else {{
+                s_rope_buf[t] = s_red[t * WG];
+            }}
+        }}
+    }}
+    GroupMemoryBarrierWithGroupSync();
+    if (t < ROWS_PER_BLOCK) {{
+        uint row = row0 + t;
+        if (row < n_q) yq[row] = s_rope_buf[t];
+    }}
+    GroupMemoryBarrierWithGroupSync();
+
+    // === K projection with RoPE ===
+    float acc_k[ROWS_PER_BLOCK];
+    [unroll] for (uint r = 0u; r < ROWS_PER_BLOCK; r++) acc_k[r] = 0.0;
+    for (uint j = t; j < n_in; j += WG) {{
+        float xv = x[j];
+        [unroll] for (uint r = 0u; r < ROWS_PER_BLOCK; r++) {{
+            uint row = row0 + r;
+            if (row < n_kv)
+                acc_k[r] += Wk[row * n_in + j] * xv;
+        }}
+    }}
+    [unroll] for (uint r = 0u; r < ROWS_PER_BLOCK; r++)
+        s_red[r * WG + t] = acc_k[r];
+    GroupMemoryBarrierWithGroupSync();
+    for (uint s = WG / 2u; s > 0u; s >>= 1u) {{
+        if (t < s) {{
+            [unroll] for (uint r = 0u; r < ROWS_PER_BLOCK; r++)
+                s_red[r * WG + t] += s_red[r * WG + t + s];
+        }}
+        GroupMemoryBarrierWithGroupSync();
+    }}
+    if (t < ROWS_PER_BLOCK) {{
+        uint row = row0 + t;
+        if (row < n_kv) {{
+            uint head = row / head_dim;
+            uint d = row % head_dim;
+            uint half = head_dim / 2u;
+            if (half > 0u && head < n_head) {{
+                float val = s_red[t * WG];
+                uint i = d / 2u;
+                float theta = (float)pos * inv_scale * pow(base, -2.0 * (float)i * inv_head_dim);
+                float s_val = sin(theta);
+                float c_val = cos(theta);
+                float pair_val;
+                if (d % 2u == 0u) {{
+                    pair_val = (t + 1u < ROWS_PER_BLOCK && (row0 + t + 1u) < n_kv)
+                        ? s_red[(t + 1u) * WG] : 0.0;
+                    s_rope_buf[t] = val * c_val - pair_val * s_val;
+                }} else {{
+                    pair_val = (t >= 1u) ? s_red[(t - 1u) * WG] : 0.0;
+                    s_rope_buf[t] = pair_val * s_val + val * c_val;
+                }}
+            }} else {{
+                s_rope_buf[t] = s_red[t * WG];
+            }}
+        }}
+    }}
+    GroupMemoryBarrierWithGroupSync();
+    if (t < ROWS_PER_BLOCK) {{
+        uint row = row0 + t;
+        if (row < n_kv) yk[row] = s_rope_buf[t];
+    }}
+    GroupMemoryBarrierWithGroupSync();
+
+    // === V projection (no RoPE) ===
+    float acc_v[ROWS_PER_BLOCK];
+    [unroll] for (uint r = 0u; r < ROWS_PER_BLOCK; r++) acc_v[r] = 0.0;
+    for (uint j = t; j < n_in; j += WG) {{
+        float xv = x[j];
+        [unroll] for (uint r = 0u; r < ROWS_PER_BLOCK; r++) {{
+            uint row = row0 + r;
+            if (row < n_kv)
+                acc_v[r] += Wv[row * n_in + j] * xv;
+        }}
+    }}
+    [unroll] for (uint r = 0u; r < ROWS_PER_BLOCK; r++)
+        s_red[r * WG + t] = acc_v[r];
+    GroupMemoryBarrierWithGroupSync();
+    for (uint s = WG / 2u; s > 0u; s >>= 1u) {{
+        if (t < s) {{
+            [unroll] for (uint r = 0u; r < ROWS_PER_BLOCK; r++)
+                s_red[r * WG + t] += s_red[r * WG + t + s];
+        }}
+        GroupMemoryBarrierWithGroupSync();
+    }}
+    if (t < ROWS_PER_BLOCK) {{
+        uint row = row0 + t;
+        if (row < n_kv) yv[row] = s_red[t * WG];
+    }}
+}}"#,
+        wg = wg,
+        entry = kernel.entry_point,
+    )
+    .map_err(|e| ForgeError::Emission(e.to_string()))?;
+    Ok(())
+}
+
+#[cfg(test)]
+mod wavematrix_tests {
+    use super::*;
+
+    #[test]
+    fn emit_gemv_wavematrix_emits_intrinsics() {
+        let kernel = KernelSpec {
+            id: "gemv".to_string(),
+            semantic_version: 1,
+            entry_point: "gemv_wm".to_string(),
+            description: "WaveMatrix GEMV".to_string(),
+            buffers: Vec::new(),
+            ops: Vec::new(),
+            shared_memory: Vec::new(),
+        };
+        let schedule = Schedule {
+            workgroup_size: 32,
+            ..Default::default()
+        };
+        let mut source = String::new();
+        emit_gemv_wavematrix_hlsl(&mut source, &kernel, schedule).expect("wavematrix emit");
+        assert!(source.contains("WaveMatrixA"), "should use WaveMatrixA");
+        assert!(source.contains("WaveMatrixB"), "should use WaveMatrixB");
+        assert!(source.contains("WaveMatrixC"), "should use WaveMatrixC");
+        assert!(
+            source.contains("WaveMatrixMultiply"),
+            "should call WaveMatrixMultiply"
+        );
+        assert!(source.contains("gemv_wm"), "should contain entry point");
+    }
 }

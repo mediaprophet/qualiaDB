@@ -117,7 +117,11 @@ pub(crate) fn parse_group_tokens(
 /// One direct child of a group, allocated as exactly one arena node in the
 /// contiguous batch at group close (inner sub-patterns already allocated).
 enum ChildSpec {
-    Triple { s: u64, p: u64, o: u64 },
+    Triple {
+        s: u64,
+        p: u64,
+        o: u64,
+    },
     StarTriple {
         is: u64,
         ip: u64,
@@ -128,9 +132,17 @@ enum ChildSpec {
     Optional(PatternId),
     Union(PatternId, PatternId),
     Minus(PatternId),
-    Service { endpoint: u64, inner: PatternId },
-    Graph { graph_var_or_id: u64, inner: PatternId },
-    SubSelect { query_id: u16 },
+    Service {
+        endpoint: u64,
+        inner: PatternId,
+    },
+    Graph {
+        graph_var_or_id: u64,
+        inner: PatternId,
+    },
+    SubSelect {
+        query_id: u16,
+    },
 }
 
 struct PatternParser<'a> {
@@ -197,7 +209,14 @@ impl<'a> PatternParser<'a> {
     #[allow(clippy::type_complexity)]
     fn parse_group_body(
         &mut self,
-    ) -> Result<(Vec<ChildSpec>, Vec<ExpressionId>, Vec<(ExpressionId, VariableId)>), String> {
+    ) -> Result<
+        (
+            Vec<ChildSpec>,
+            Vec<ExpressionId>,
+            Vec<(ExpressionId, VariableId)>,
+        ),
+        String,
+    > {
         let mut specs: Vec<ChildSpec> = Vec::new();
         let mut filters: Vec<ExpressionId> = Vec::new();
         let mut binds: Vec<(ExpressionId, VariableId)> = Vec::new();
@@ -309,13 +328,7 @@ impl<'a> PatternParser<'a> {
                         object: o,
                     })?;
                 }
-                ChildSpec::StarTriple {
-                    is,
-                    ip,
-                    io,
-                    op,
-                    oo,
-                } => {
+                ChildSpec::StarTriple { is, ip, io, op, oo } => {
                     self.ctx.alloc_pattern(Pattern::StarTriple {
                         inner_subject: is,
                         inner_predicate: ip,
@@ -546,9 +559,7 @@ impl<'a> PatternParser<'a> {
                 None => format!("{prefix}:{local}"),
             },
             Token::Var(_) => {
-                return Err(
-                    "dynamic SERVICE endpoint (a variable) is not supported yet".to_string(),
-                )
+                return Err("dynamic SERVICE endpoint (a variable) is not supported yet".to_string())
             }
             other => return Err(format!("invalid SERVICE endpoint token: {other:?}")),
         };
@@ -579,13 +590,7 @@ impl<'a> PatternParser<'a> {
         self.pos += 1;
         let op = self.term()?;
         let oo = self.term()?;
-        Ok(ChildSpec::StarTriple {
-            is,
-            ip,
-            io,
-            op,
-            oo,
-        })
+        Ok(ChildSpec::StarTriple { is, ip, io, op, oo })
     }
 
     /// Flatten an already-built plain nested group `id` into the parent's spec
@@ -681,12 +686,14 @@ impl<'a> PatternParser<'a> {
                 Ok(crate::lexicon::generate_60bit_token(expanded.as_bytes()))
             }
             Token::Str { value, .. } => Ok(crate::lexicon::generate_60bit_token(value.as_bytes())),
-            Token::Num(text) => Ok(text.parse::<u64>().unwrap_or_else(|_| {
-                crate::lexicon::generate_60bit_token(text.as_bytes())
+            Token::Num(text) => Ok(text
+                .parse::<u64>()
+                .unwrap_or_else(|_| crate::lexicon::generate_60bit_token(text.as_bytes()))),
+            Token::Bool(b) => Ok(crate::lexicon::generate_60bit_token(if b {
+                b"true"
+            } else {
+                b"false"
             })),
-            Token::Bool(b) => Ok(crate::lexicon::generate_60bit_token(
-                if b { b"true" } else { b"false" },
-            )),
             Token::Word(w) if w == "a" => Ok(crate::lexicon::generate_60bit_token(
                 b"http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
             )),
@@ -763,8 +770,7 @@ mod tests {
 
     #[test]
     fn parses_bind_into_bind_node() {
-        let (ctx, pat) =
-            root_pattern("{ ?s ?p ?o . BIND(?o AS ?x) }");
+        let (ctx, pat) = root_pattern("{ ?s ?p ?o . BIND(?o AS ?x) }");
         // BIND wraps the group in a Pattern::Bind whose target var is registered.
         match pat {
             Pattern::Bind { var, .. } => {
@@ -783,8 +789,8 @@ mod tests {
     #[test]
     fn bind_requires_as_var_form() {
         let mut ctx = SparqlQueryContext::new();
-        let err = parse_where_group("{ ?s ?p ?o . BIND(?o) }", &mut ctx, &HashMap::new())
-            .unwrap_err();
+        let err =
+            parse_where_group("{ ?s ?p ?o . BIND(?o) }", &mut ctx, &HashMap::new()).unwrap_err();
         assert!(err.contains("AS"), "got {err}");
     }
 }

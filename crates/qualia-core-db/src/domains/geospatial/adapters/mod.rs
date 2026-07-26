@@ -1,6 +1,7 @@
 //! Geospatial data adapters for integrating external layers into the canvas.
 
 pub mod astrometry_adapter;
+pub mod ckan_adapter;
 pub mod dem_adapter;
 pub mod gbif_adapter;
 pub mod ivoa_tap_adapter;
@@ -10,7 +11,6 @@ pub mod osm_adapter;
 pub mod sparql_adapter;
 pub mod stac_adapter;
 pub mod wms_adapter;
-pub mod ckan_adapter;
 
 pub mod canvas_defaults;
 
@@ -19,6 +19,7 @@ use std::collections::HashMap;
 use crate::net::disclosure::NetworkDisclosureRegistry;
 
 pub use astrometry_adapter::AstrometryAdapter;
+pub use ckan_adapter::CkanAdapter;
 pub use dem_adapter::DemAdapter;
 pub use gbif_adapter::GbifAdapter;
 pub use ivoa_tap_adapter::IvoaTapAdapter;
@@ -28,7 +29,6 @@ pub use osm_adapter::OsmAdapter;
 pub use sparql_adapter::SparqlAdapter;
 pub use stac_adapter::StacAdapter;
 pub use wms_adapter::WmsAdapter;
-pub use ckan_adapter::CkanAdapter;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AdapterHttpMethod {
@@ -83,7 +83,11 @@ fn execute_http_request_text(request: &AdapterHttpRequest) -> Result<String, Str
 
     let resp = builder.send().map_err(|e| e.to_string())?;
     if !resp.status().is_success() {
-        return Err(format!("{} API returned error: {}", request.service_label, resp.status()));
+        return Err(format!(
+            "{} API returned error: {}",
+            request.service_label,
+            resp.status()
+        ));
     }
     resp.text().map_err(|e| e.to_string())
 }
@@ -110,7 +114,10 @@ async fn execute_http_request_text_async(request: &AdapterHttpRequest) -> Result
     let resp = builder.send().await.map_err(|e| e.to_string())?;
     let status = resp.status();
     if !status.is_success() {
-        return Err(format!("{} API returned error: {status}", request.service_label));
+        return Err(format!(
+            "{} API returned error: {status}",
+            request.service_label
+        ));
     }
     resp.text().await.map_err(|e| e.to_string())
 }
@@ -376,17 +383,15 @@ impl AdapterRegistry {
         bbox: (f64, f64, f64, f64),
         time_range: (u64, u64),
     ) -> Result<LayerFetchReport, String> {
-        let adapter = self.adapters.get(adapter_id).ok_or_else(|| {
-            format!("Adapter '{}' not registered", adapter_id)
-        })?;
+        let adapter = self
+            .adapters
+            .get(adapter_id)
+            .ok_or_else(|| format!("Adapter '{}' not registered", adapter_id))?;
 
         let endpoint = adapter.primary_endpoint().to_string();
         let tile_count = adapter.estimate_tile_count(bbox);
 
-        let status = if self
-            .disclosure
-            .check_egress_consent(adapter_id, &endpoint)
-        {
+        let status = if self.disclosure.check_egress_consent(adapter_id, &endpoint) {
             LayerFetchStatus::ReadyToFetch
         } else {
             LayerFetchStatus::ConsentDenied
@@ -417,11 +422,13 @@ fn estimate_raster_tiles(bbox: (f64, f64, f64, f64), zoom: u8) -> u32 {
     let n = 1u32 << zoom;
     let tx1 = ((x1 + 180.0) / 360.0 * n as f64).floor() as u32;
     let tx2 = ((x2 + 180.0) / 360.0 * n as f64).ceil() as u32;
-    let ty1 = ((1.0 - (y2.to_radians().tan() + 1.0 / y2.to_radians().cos()).ln() / std::f64::consts::PI)
+    let ty1 = ((1.0
+        - (y2.to_radians().tan() + 1.0 / y2.to_radians().cos()).ln() / std::f64::consts::PI)
         / 2.0
         * n as f64)
         .floor() as u32;
-    let ty2 = ((1.0 - (y1.to_radians().tan() + 1.0 / y1.to_radians().cos()).ln() / std::f64::consts::PI)
+    let ty2 = ((1.0
+        - (y1.to_radians().tan() + 1.0 / y1.to_radians().cos()).ln() / std::f64::consts::PI)
         / 2.0
         * n as f64)
         .ceil() as u32;
@@ -437,7 +444,10 @@ mod tests {
     #[test]
     fn test_adapter_registry_consent_denied() {
         let mut registry = AdapterRegistry::new();
-        registry.register_adapter(Box::new(DemAdapter::new("dem_adapter", "https://elevation.example.com")));
+        registry.register_adapter(Box::new(DemAdapter::new(
+            "dem_adapter",
+            "https://elevation.example.com",
+        )));
 
         let report = registry
             .fetch_layer("dem_adapter", (0.0, 0.0, 1.0, 1.0), (0, 0))

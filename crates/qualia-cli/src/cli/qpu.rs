@@ -6,7 +6,10 @@ pub enum QpuAction {
 
     Configure {
         provider: String,
-        #[arg(long, help = "API key / bearer token (IBM, D-Wave, IonQ, Rigetti, Quantinuum)")]
+        #[arg(
+            long,
+            help = "API key / bearer token (IBM, D-Wave, IonQ, Rigetti, Quantinuum)"
+        )]
         api_key: Option<String>,
         #[arg(long, help = "Custom API endpoint URL (overrides provider default)")]
         endpoint: Option<String>,
@@ -44,24 +47,38 @@ pub enum QpuAction {
         user_id: Option<String>,
         #[arg(long, help = "Rigetti QPU ID (e.g. Ankaa-2)")]
         qpu_id: Option<String>,
-        #[arg(long, help = "IonQ backend (ionq_sim | ionq_qpu | qpu.aria-1 | qpu.forte-1)")]
+        #[arg(
+            long,
+            help = "IonQ backend (ionq_sim | ionq_qpu | qpu.aria-1 | qpu.forte-1)"
+        )]
         backend: Option<String>,
-        #[arg(long, help = "Quantinuum machine (H1-1 | H1-2 | H2-1 | H1-1E | H1-1SC)")]
+        #[arg(
+            long,
+            help = "Quantinuum machine (H1-1 | H1-2 | H2-1 | H1-1E | H1-1SC)"
+        )]
         machine: Option<String>,
     },
 
     Show {
-        #[arg(long)] provider: Option<String>,
+        #[arg(long)]
+        provider: Option<String>,
     },
 
-    Clear { provider: String },
+    Clear {
+        provider: String,
+    },
 
-    TestConnection { provider: String },
+    TestConnection {
+        provider: String,
+    },
 
     Submit {
         provider: String,
-        #[arg(long, default_value = "annealing")] problem_type: String,
-        #[arg(long, default_value = "4")] qubits: u32,
-        #[arg(long, default_value = "1000")] shots: u32,
+        #[arg(long, default_value = "annealing")]
+        problem_type: String,
+        #[arg(long, default_value = "4")]
+        qubits: u32,
+        #[arg(long, default_value = "1000")]
+        shots: u32,
     },
 }

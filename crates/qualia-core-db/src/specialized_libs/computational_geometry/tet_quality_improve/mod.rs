@@ -65,8 +65,8 @@
 //! Tier-2 cold construction: bounded `Vec`/`BTreeMap` scratch during the
 //! build; the public output is returned as grown `Vec`s.
 
-use super::mesh_quality::{tet_mesh_quality_slice, tet_quality_points, TetMeshQualityStats};
 use super::mesh_quality::TetQuality;
+use super::mesh_quality::{tet_mesh_quality_slice, tet_quality_points, TetMeshQualityStats};
 use super::primitives::Point3;
 
 mod adjacency;
@@ -78,16 +78,16 @@ mod geom;
 mod insert;
 mod objective;
 mod smooth;
-mod types;
-mod validate;
 #[cfg(test)]
 mod tests;
+mod types;
+mod validate;
 
 // -- Public surface (external paths resolve exactly as before) --------------
+pub use driver::improve_tet_mesh;
 pub use error::TetImproveError;
 pub use objective::TetImproveObjective;
 pub use types::{TetImproveOptions, TetImproveResult};
-pub use driver::improve_tet_mesh;
 pub use validate::verify_improvement;
 
 // -- Internal helpers re-imported into the module root so sibling submodules

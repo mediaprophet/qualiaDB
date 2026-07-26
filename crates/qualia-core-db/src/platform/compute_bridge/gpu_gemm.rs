@@ -168,7 +168,10 @@ impl WgpuGemm {
         });
         let _ = dev.poll(wgpu::PollType::wait_indefinitely());
         rx.recv().ok()?.ok()?;
-        let data = staging.slice(..).get_mapped_range().expect("wgpu buffer map_range failed");
+        let data = staging
+            .slice(..)
+            .get_mapped_range()
+            .expect("wgpu buffer map_range failed");
         let result: Vec<f32> = bytemuck::cast_slice(&data).to_vec();
         drop(data);
         staging.unmap();

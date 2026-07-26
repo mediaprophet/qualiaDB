@@ -6,6 +6,9 @@ use super::gguf_skip_value;
 use std::collections::HashMap;
 use std::sync::OnceLock;
 
+mod pretokenizer;
+pub use pretokenizer::{PretokenError, PretokenSpan};
+
 /// GPT-2 `bytes_to_unicode` table — maps raw bytes to BPE merge symbols.
 fn gpt2_byte_to_unicode(byte: u8) -> char {
     static TABLE: OnceLock<[char; 256]> = OnceLock::new();
@@ -32,6 +35,12 @@ fn gpt2_byte_to_unicode(byte: u8) -> char {
     })[byte as usize]
 }
 
+fn gpt2_unicode_to_byte(symbol: char) -> Option<u8> {
+    (0u16..=255)
+        .find(|byte| gpt2_byte_to_unicode(*byte as u8) == symbol)
+        .map(|byte| byte as u8)
+}
+
 /// Max stop-token ids kept on the tokenizer (eos + chat-end family + extras).
 pub const MAX_STOP_TOKEN_IDS: usize = 8;
 
@@ -48,6 +57,10 @@ pub struct GgufTokenizer {
     pub pre_type: String,
     /// BPE merge ranks: `(left_symbol, right_symbol)` in ascending rank order.
     merge_pairs: Vec<(String, String)>,
+    /// Cold-built pair fingerprint -> rank index. A detected fingerprint collision disables the
+    /// index and preserves the exact linear oracle.
+    merge_rank_index: HashMap<u64, usize>,
+    merge_rank_collision: bool,
     /// Fast vocab lookup for BPE tail + legacy greedy path.
     pub(super) token_to_id_map: HashMap<String, u32>,
     /// Special tokens (`<|…|>`, etc.) sorted longest-first for atomic matching.
@@ -106,6 +119,8 @@ impl Default for GgufTokenizer {
             add_bos_token: true,
             pre_type: String::new(),
             merge_pairs: Vec::new(),
+            merge_rank_index: HashMap::new(),
+            merge_rank_collision: false,
             token_to_id_map,
             special_tokens: Vec::new(),
             token_to_id: t2id,
@@ -203,6 +218,7 @@ impl GgufTokenizer {
             .collect();
         special_tokens.sort_by(|a, b| b.0.len().cmp(&a.0.len()));
         let merge_pairs = Self::parse_merge_pairs(merges_raw.as_deref());
+        let (merge_rank_index, merge_rank_collision) = Self::build_merge_rank_index(&merge_pairs);
         let mut tok = Self {
             vocab: v,
             bos_token_id: bos,
@@ -210,6 +226,8 @@ impl GgufTokenizer {
             add_bos_token: add_bos.unwrap_or(true),
             pre_type: pre_type.unwrap_or_default(),
             merge_pairs,
+            merge_rank_index,
+            merge_rank_collision,
             token_to_id_map,
             special_tokens,
             token_to_id: t2id,
@@ -345,12 +363,16 @@ impl GgufTokenizer {
             add_bos_token: add_bos,
             pre_type,
             merge_pairs,
+            merge_rank_index: HashMap::new(),
+            merge_rank_collision: false,
             token_to_id_map,
             special_tokens,
             token_to_id: t2id,
             stop_token_ids: [0; MAX_STOP_TOKEN_IDS],
             stop_token_count: 0,
         };
+        (tok.merge_rank_index, tok.merge_rank_collision) =
+            Self::build_merge_rank_index(&tok.merge_pairs);
         if let Some((ids, count)) = stored_stops {
             tok.stop_token_ids = ids;
             tok.stop_token_count = count;
@@ -613,6 +635,8 @@ impl GgufTokenizer {
     /// BPE encode with special-token atomicity + smollm/gpt2 pretokenization.
     fn encode_bpe(&self, text: &str) -> Vec<u32> {
         let mut ids = Vec::new();
+        // One bounded span workspace replaces regex captures and one String per piece.
+        let mut spans = vec![PretokenSpan::default(); text.len().max(1)];
         let mut remaining = text;
         while !remaining.is_empty() {
             let mut matched_special = false;
@@ -635,8 +659,10 @@ impl GgufTokenizer {
             }
             let segment = &remaining[..next_special];
             if !segment.is_empty() {
-                for piece in self.pretokenize(segment) {
-                    ids.extend(self.bpe_piece(&piece));
+                let count = pretokenizer::pretokenize_into(segment, &mut spans)
+                    .expect("span workspace covers the segment byte length");
+                for span in &spans[..count] {
+                    ids.extend(self.bpe_piece(span.get(segment).unwrap()));
                 }
             }
             remaining = &remaining[next_special..];
@@ -644,14 +670,13 @@ impl GgufTokenizer {
         ids
     }
 
-    /// llama.cpp `LLAMA_VOCAB_PRE_TYPE_SMOLLM` regex split (cold path — heap OK).
-    fn pretokenize(&self, text: &str) -> Vec<String> {
-        static SMOLLM_RE: OnceLock<regex::Regex> = OnceLock::new();
-        let re = SMOLLM_RE.get_or_init(|| {
-            regex::Regex::new(r"'s|'t|'re|'ve|'m|'ll|'d| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+")
-                .expect("smollm pretoken regex")
-        });
-        re.find_iter(text).map(|m| m.as_str().to_string()).collect()
+    /// Regex-free llama.cpp `LLAMA_VOCAB_PRE_TYPE_SMOLLM`-compatible borrowed-span split.
+    pub fn pretokenize_into(
+        &self,
+        text: &str,
+        out: &mut [PretokenSpan],
+    ) -> Result<usize, PretokenError> {
+        pretokenizer::pretokenize_into(text, out)
     }
 
     fn bpe_piece(&self, piece: &str) -> Vec<u32> {
@@ -702,9 +727,55 @@ impl GgufTokenizer {
     }
 
     fn merge_rank_str(&self, left: &str, right: &str) -> Option<usize> {
+        if !self.merge_rank_collision {
+            let fingerprint = Self::merge_pair_fingerprint(left, right);
+            if let Some(&rank) = self.merge_rank_index.get(&fingerprint) {
+                let pair = self.merge_pairs.get(rank)?;
+                if pair.0 == left && pair.1 == right {
+                    return Some(rank);
+                }
+                // Defensive exactness if an index built by an older serialized source collides.
+                return self
+                    .merge_pairs
+                    .iter()
+                    .position(|(l, r)| l == left && r == right);
+            }
+            return None;
+        }
         self.merge_pairs
             .iter()
             .position(|(l, r)| l == left && r == right)
+    }
+
+    fn merge_pair_fingerprint(left: &str, right: &str) -> u64 {
+        let mut hash = 0xcbf29ce484222325u64;
+        for byte in (left.len() as u64)
+            .to_le_bytes()
+            .into_iter()
+            .chain(left.bytes())
+            .chain((right.len() as u64).to_le_bytes())
+            .chain(right.bytes())
+        {
+            hash ^= byte as u64;
+            hash = hash.wrapping_mul(0x100000001b3);
+        }
+        hash
+    }
+
+    fn build_merge_rank_index(pairs: &[(String, String)]) -> (HashMap<u64, usize>, bool) {
+        let mut index: HashMap<u64, usize> = HashMap::with_capacity(pairs.len());
+        let mut collision = false;
+        for (rank, (left, right)) in pairs.iter().enumerate() {
+            let fingerprint = Self::merge_pair_fingerprint(left, right);
+            if let Some(&existing) = index.get(&fingerprint) {
+                if pairs[existing].0 != *left || pairs[existing].1 != *right {
+                    collision = true;
+                }
+                continue;
+            }
+            index.insert(fingerprint, rank);
+        }
+        (index, collision)
     }
 
     fn parse_merge_pairs(merges: Option<&[String]>) -> Vec<(String, String)> {
@@ -720,7 +791,47 @@ impl GgufTokenizer {
         pairs
     }
 
+    fn uses_gpt2_byte_decoder(&self) -> bool {
+        matches!(
+            self.pre_type.to_ascii_lowercase().as_str(),
+            "gpt2"
+                | "smollm"
+                | "qwen2"
+                | "llama-bpe"
+                | "deepseek-llm"
+                | "deepseek-coder"
+                | "falcon"
+                | "starcoder"
+        )
+    }
+
+    fn append_decoded_token_bytes(&self, out: &mut Vec<u8>, s: &str) {
+        if s.len() == 6 && s.starts_with("<0x") && s.ends_with('>') {
+            if let Ok(byte) = u8::from_str_radix(&s[3..5], 16) {
+                out.push(byte);
+            }
+        } else if self.uses_gpt2_byte_decoder() {
+            for symbol in s.chars() {
+                if let Some(byte) = gpt2_unicode_to_byte(symbol) {
+                    out.push(byte);
+                } else {
+                    let mut encoded = [0u8; 4];
+                    out.extend_from_slice(symbol.encode_utf8(&mut encoded).as_bytes());
+                }
+            }
+        } else if let Some(rest) = s.strip_prefix('\u{2581}') {
+            out.push(b' ');
+            out.extend_from_slice(rest.as_bytes());
+        } else if let Some(rest) = s.strip_prefix('\u{0120}') {
+            out.push(b' ');
+            out.extend_from_slice(rest.as_bytes());
+        } else {
+            out.extend_from_slice(s.as_bytes());
+        }
+    }
+
     /// Append one vocabulary token to `out` with BPE / SentencePiece space normalization.
+    #[allow(dead_code)]
     fn append_decoded_token(out: &mut String, s: &str) {
         if let Some(rest) = s.strip_prefix('\u{2581}') {
             out.push(' ');
@@ -741,14 +852,26 @@ impl GgufTokenizer {
     /// Map token IDs → strings, joining without separator.
     /// Converts SentencePiece `▁` and GPT-2 BPE `Ġ` → space; `<0x##>` → raw byte.
     pub fn decode(&self, ids: &[u32]) -> String {
-        let mut out = String::new();
+        let mut out = Vec::new();
         for &id in ids {
             let s = self
                 .vocab
                 .get(id as usize)
                 .map(|s| s.as_str())
                 .unwrap_or("");
-            Self::append_decoded_token(&mut out, s);
+            self.append_decoded_token_bytes(&mut out, s);
+        }
+        String::from_utf8_lossy(&out).into_owned()
+    }
+
+    /// Decode one token into the exact byte piece used by comparator APIs.
+    ///
+    /// This allocates and is intended for cold diagnostics, receipts, and corpus comparison,
+    /// never for the token-forward hot path.
+    pub fn decode_token_bytes_cold(&self, id: u32) -> Vec<u8> {
+        let mut out = Vec::new();
+        if let Some(token) = self.vocab.get(id as usize) {
+            self.append_decoded_token_bytes(&mut out, token);
         }
         out
     }

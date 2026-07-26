@@ -99,7 +99,11 @@ pub fn zero_intelligence_step(
     spread_width: f64,
     rng_state: &mut u64,
 ) -> Result<(), AgentBasedError> {
-    if mid_price <= 0.0 || spread_width <= 0.0 || !mid_price.is_finite() || !spread_width.is_finite() {
+    if mid_price <= 0.0
+        || spread_width <= 0.0
+        || !mid_price.is_finite()
+        || !spread_width.is_finite()
+    {
         return Err(AgentBasedError::InvalidInput);
     }
     book.clear();
@@ -280,10 +284,7 @@ pub fn simulate_steps_into(
 }
 
 /// Total wealth = sum of cash + inventory * reference_price.
-pub fn aggregate_wealth(
-    agents: &[Agent],
-    reference_price: f64,
-) -> Result<f64, AgentBasedError> {
+pub fn aggregate_wealth(agents: &[Agent], reference_price: f64) -> Result<f64, AgentBasedError> {
     if !reference_price.is_finite() || reference_price < 0.0 {
         return Err(AgentBasedError::InvalidInput);
     }

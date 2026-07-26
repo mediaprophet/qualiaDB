@@ -530,8 +530,9 @@ pub fn solve_rhf_scf_4index<const N: usize>(
         let mut energy = 0.0;
         for mu in 0..N {
             for nu in 0..N {
-                energy +=
-                    0.5 * new_density.get(mu, nu) * (h_core.get(mu, nu) + fock_for_energy.get(mu, nu));
+                energy += 0.5
+                    * new_density.get(mu, nu)
+                    * (h_core.get(mu, nu) + fock_for_energy.get(mu, nu));
             }
         }
 

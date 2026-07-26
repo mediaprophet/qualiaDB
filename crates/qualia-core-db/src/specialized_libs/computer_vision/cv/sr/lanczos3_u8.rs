@@ -16,8 +16,12 @@ pub fn lanczos3_u8(src: RgbView<'_>, scale: u8, out: &mut [u8]) -> Result<(), Cv
     if w == 0 || h == 0 {
         return Err(CvError::EmptyInput);
     }
-    let out_w = w.checked_mul(scale as u32).ok_or(CvError::InvalidParameter)?;
-    let out_h = h.checked_mul(scale as u32).ok_or(CvError::InvalidParameter)?;
+    let out_w = w
+        .checked_mul(scale as u32)
+        .ok_or(CvError::InvalidParameter)?;
+    let out_h = h
+        .checked_mul(scale as u32)
+        .ok_or(CvError::InvalidParameter)?;
     let need = (out_w as usize)
         .checked_mul(out_h as usize)
         .and_then(|n| n.checked_mul(3))

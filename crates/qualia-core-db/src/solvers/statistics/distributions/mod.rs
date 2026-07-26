@@ -185,7 +185,8 @@ pub fn gamma_pdf(x: f64, shape: f64, scale: f64) -> f64 {
     if x <= 0.0 || shape <= 0.0 || scale <= 0.0 {
         return if x <= 0.0 { 0.0 } else { f64::NAN };
     }
-    let log_pdf = (shape - 1.0) * x.ln() - x / scale - shape * scale.ln() - special::ln_gamma(shape);
+    let log_pdf =
+        (shape - 1.0) * x.ln() - x / scale - shape * scale.ln() - special::ln_gamma(shape);
     log_pdf.exp()
 }
 
@@ -194,7 +195,8 @@ pub fn beta_pdf(x: f64, alpha: f64, beta: f64) -> f64 {
     if x <= 0.0 || x >= 1.0 || alpha <= 0.0 || beta <= 0.0 {
         return 0.0;
     }
-    let log_b = special::ln_gamma(alpha) + special::ln_gamma(beta) - special::ln_gamma(alpha + beta);
+    let log_b =
+        special::ln_gamma(alpha) + special::ln_gamma(beta) - special::ln_gamma(alpha + beta);
     ((alpha - 1.0) * x.ln() + (beta - 1.0) * (1.0 - x).ln() - log_b).exp()
 }
 

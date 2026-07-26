@@ -186,8 +186,7 @@ mod tests {
     /// entry point. Runs without a GPU — the always-on proof the shader is valid WGSL.
     #[test]
     fn mel_apply_wgsl_validates() {
-        let report =
-            validate_wgsl(MEL_APPLY_WGSL).expect("mel-apply WGSL must naga-validate");
+        let report = validate_wgsl(MEL_APPLY_WGSL).expect("mel-apply WGSL must naga-validate");
         assert!(
             report.entry_points.iter().any(|e| e == MEL_APPLY_ENTRY),
             "validated module must expose {MEL_APPLY_ENTRY}; got {:?}",
@@ -220,7 +219,9 @@ mod tests {
     #[test]
     fn mel_apply_public_matches_cpu() {
         let (n_frames, n_bins, n_mel) = (3usize, 5usize, 4usize);
-        let spectrum: Vec<f32> = (0..n_frames * n_bins).map(|k| (k as f32) * 0.5 - 3.0).collect();
+        let spectrum: Vec<f32> = (0..n_frames * n_bins)
+            .map(|k| (k as f32) * 0.5 - 3.0)
+            .collect();
         // A deterministic overlapping-triangle-ish filterbank.
         let mut mel_fb = vec![0.0f32; n_mel * n_bins];
         for m in 0..n_mel {

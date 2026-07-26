@@ -1,6 +1,5 @@
 use super::*;
 
-
 /// Financial Modeling Library Manager
 pub struct FinancialModelingLibrary {
     portfolio_manager: PortfolioManager,

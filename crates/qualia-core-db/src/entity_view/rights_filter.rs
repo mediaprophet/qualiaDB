@@ -176,7 +176,11 @@ mod tests {
         assert!(!decide_view(ObserverStatus::Peer, &e).visible);
         assert!(!decide_view(ObserverStatus::Public, &e).visible);
         assert!(decide_view(ObserverStatus::Principal, &e).visible);
-        assert!(!decide_view(ObserverStatus::Principal, &e).affordances.can_share);
+        assert!(
+            !decide_view(ObserverStatus::Principal, &e)
+                .affordances
+                .can_share
+        );
     }
 
     #[test]

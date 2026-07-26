@@ -137,7 +137,10 @@ pub fn maybe_verify_turn(prompt: &str, draft: &str) -> VerifiedTurn {
         // Identity wrap (still produce HTML if caller asks later).
         VerifiedTurn {
             final_text: draft.to_string(),
-            display_html: format!("<article class=\"q-turn\"><p>{}</p></article>", escape_html(draft)),
+            display_html: format!(
+                "<article class=\"q-turn\"><p>{}</p></article>",
+                escape_html(draft)
+            ),
             cml_turtle: String::new(),
             repaired: false,
             checks: vec![],
@@ -307,16 +310,23 @@ fn render_cml_turtle(
     ));
     out.push_str("  cml:verifyPath \"post-turn\" .\n\n");
     for (i, c) in checks.iter().enumerate() {
-        out.push_str(&format!("<urn:qualia:check:{i}> a cml:VerifyCheck, cml:Proposed ;\n"));
+        out.push_str(&format!(
+            "<urn:qualia:check:{i}> a cml:VerifyCheck, cml:Proposed ;\n"
+        ));
         out.push_str(&format!("  cml:id {} ;\n", ttl_str(&c.id)));
-        out.push_str(&format!("  cml:ok {} ;\n", if c.ok { "true" } else { "false" }));
+        out.push_str(&format!(
+            "  cml:ok {} ;\n",
+            if c.ok { "true" } else { "false" }
+        ));
         out.push_str(&format!("  cml:detail {} .\n\n", ttl_str(&c.detail)));
     }
     for (t, l) in tags {
         out.push_str(&format!(
             "<urn:qualia:tag:{}:{}> a cml:Proposed ;\n  cml:tier {} ;\n  cml:label {} .\n\n",
             t,
-            l.chars().filter(|c| c.is_alphanumeric()).collect::<String>(),
+            l.chars()
+                .filter(|c| c.is_alphanumeric())
+                .collect::<String>(),
             ttl_str(t),
             ttl_str(l)
         ));
@@ -325,7 +335,12 @@ fn render_cml_turtle(
 }
 
 fn ttl_str(s: &str) -> String {
-    format!("\"{}\"", s.replace('\\', "\\\\").replace('"', "\\\"").replace('\n', "\\n"))
+    format!(
+        "\"{}\"",
+        s.replace('\\', "\\\\")
+            .replace('"', "\\\"")
+            .replace('\n', "\\n")
+    )
 }
 
 #[cfg(test)]
@@ -341,10 +356,7 @@ mod tests {
         }
         reset_fact_store_to_defaults();
         set_inference_mode(InferenceMode::FastVerify);
-        let v = verify_and_heal_turn(
-            "What is the capital of France?",
-            "I think it is Lyon.",
-        );
+        let v = verify_and_heal_turn("What is the capital of France?", "I think it is Lyon.");
         assert!(v.repaired);
         assert!(v.final_text.to_ascii_lowercase().contains("paris"));
         assert!(v.display_html.contains("self-healed") || v.display_html.contains("q-repaired"));

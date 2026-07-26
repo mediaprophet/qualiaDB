@@ -658,7 +658,12 @@ mod tests {
         };
 
         // Slow bus → transfer dominates → overflow stays in-place on the iGPU.
-        let slow = plan_employment(&topo, &matrix_with_dgpu_upload(1.0), 20 * GB, DEFAULT_KV_RESERVE);
+        let slow = plan_employment(
+            &topo,
+            &matrix_with_dgpu_upload(1.0),
+            20 * GB,
+            DEFAULT_KV_RESERVE,
+        );
         assert_eq!(
             slow.protocol,
             ResidencyProtocol::HeterogeneousOverflow,
@@ -667,7 +672,12 @@ mod tests {
         );
 
         // Fast bus → transfer is cheap → the SAME overflow now streams to the fast primary.
-        let fast = plan_employment(&topo, &matrix_with_dgpu_upload(64.0), 20 * GB, DEFAULT_KV_RESERVE);
+        let fast = plan_employment(
+            &topo,
+            &matrix_with_dgpu_upload(64.0),
+            20 * GB,
+            DEFAULT_KV_RESERVE,
+        );
         assert_eq!(
             fast.protocol,
             ResidencyProtocol::Streaming,

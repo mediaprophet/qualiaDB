@@ -4,8 +4,8 @@ use std::str::FromStr;
 use clap::{Args, Subcommand};
 use qualia_core_db::wgsl_forge::execute::WgpuComputeContext;
 use qualia_core_db::wgsl_forge::{
-    candidate_evaluation, generate_builtin, resolve_execution_backend, tune_with, validate_wgsl,
-    validate_native, AdapterConstraints, BuiltinKernel, CertificationManifest, ForgeError,
+    candidate_evaluation, generate_builtin, resolve_execution_backend, tune_with, validate_native,
+    validate_wgsl, AdapterConstraints, BuiltinKernel, CertificationManifest, ForgeError,
     ManifestCache, Schedule, ScheduleSpace, TargetBackend, TuningConfig, TuningManifest,
 };
 
@@ -255,9 +255,15 @@ pub fn run(action: &ShaderAction) -> Result<(), Box<dyn std::error::Error>> {
             if *json {
                 println!("{}", profile.to_pretty_json()?);
             } else {
-                println!("Adapter:        {} ({})", profile.adapter.name, profile.adapter.backend);
+                println!(
+                    "Adapter:        {} ({})",
+                    profile.adapter.name, profile.adapter.backend
+                );
                 println!("Device type:    {}", profile.adapter.device_type);
-                println!("Driver:         {} {}", profile.adapter.driver, profile.adapter.driver_info);
+                println!(
+                    "Driver:         {} {}",
+                    profile.adapter.driver, profile.adapter.driver_info
+                );
                 println!("Memory class:   {}", profile.memory_class);
                 println!("Subgroups:      {}", profile.constraints.supports_subgroups);
                 println!("Tensor (coopmat): {}", profile.constraints.supports_coopmat);
@@ -265,11 +271,13 @@ pub fn run(action: &ShaderAction) -> Result<(), Box<dyn std::error::Error>> {
                 println!("Timestamp query: {}", profile.supports_timestamp_query);
                 println!(
                     "Max workgroup:  {} invocations, {} bytes shared",
-                    profile.constraints.max_invocations_per_workgroup, profile.max_compute_workgroup_storage_size
+                    profile.constraints.max_invocations_per_workgroup,
+                    profile.max_compute_workgroup_storage_size
                 );
                 println!(
                     "Bind alignment: storage {} / uniform {}",
-                    profile.min_storage_buffer_offset_alignment, profile.min_uniform_buffer_offset_alignment
+                    profile.min_storage_buffer_offset_alignment,
+                    profile.min_uniform_buffer_offset_alignment
                 );
                 println!("Topology hash:  {topology_hash}");
             }
@@ -282,7 +290,9 @@ pub fn run(action: &ShaderAction) -> Result<(), Box<dyn std::error::Error>> {
             json,
         } => {
             let builtin = parse_kernel(kernel)?;
-            let target_backend = target.parse().map_err(|e: String| ForgeError::Emission(e))?;
+            let target_backend = target
+                .parse()
+                .map_err(|e: String| ForgeError::Emission(e))?;
             let generated = generate_builtin(builtin, schedule.schedule(), target_backend)?;
             if let Some(path) = out {
                 std::fs::write(path, generated.source.as_bytes())?;
@@ -306,8 +316,9 @@ pub fn run(action: &ShaderAction) -> Result<(), Box<dyn std::error::Error>> {
             manifest,
             json,
         } => {
-            let requested_backend: TargetBackend =
-                target.parse().map_err(|e: String| ForgeError::Emission(e))?;
+            let requested_backend: TargetBackend = target
+                .parse()
+                .map_err(|e: String| ForgeError::Emission(e))?;
             // §2 automatic fallback: validation runs a real native compile (DXC for
             // HLSL, NVRTC/nvcc for PTX/CUDA-C, xcrun for MSL). If that toolchain is
             // absent on this host, drop the *validation pipeline* to WGSL (always
@@ -325,7 +336,11 @@ pub fn run(action: &ShaderAction) -> Result<(), Box<dyn std::error::Error>> {
             } else {
                 let builtin = parse_kernel(kernel)?;
                 let generated = generate_builtin(builtin, schedule.schedule(), target_backend)?;
-                (generated.source.clone(), Some(generated), Some(builtin.spec()))
+                (
+                    generated.source.clone(),
+                    Some(generated),
+                    Some(builtin.spec()),
+                )
             };
             let report = if target_backend == TargetBackend::Wgsl {
                 Some(validate_wgsl(&source)?)
@@ -376,9 +391,15 @@ pub fn run(action: &ShaderAction) -> Result<(), Box<dyn std::error::Error>> {
                         report.entry_points.join(", ")
                     );
                     if let Some(tool) = report.native_tool_validated {
-                        println!("Validation success (via {}): entry points = {:?}", tool, report.entry_points);
+                        println!(
+                            "Validation success (via {}): entry points = {:?}",
+                            tool, report.entry_points
+                        );
                     } else {
-                        println!("Validation success (via Naga): entry points = {:?}", report.entry_points);
+                        println!(
+                            "Validation success (via Naga): entry points = {:?}",
+                            report.entry_points
+                        );
                     }
                 }
             } else {
@@ -471,7 +492,9 @@ pub fn run(action: &ShaderAction) -> Result<(), Box<dyn std::error::Error>> {
                     Err(_) => AdapterConstraints::portable(),
                 };
                 let space = ScheduleSpace::default();
-                let total = space.workgroup_sizes.len() * space.items_per_invocation.len() * space.vector_widths.len();
+                let total = space.workgroup_sizes.len()
+                    * space.items_per_invocation.len()
+                    * space.vector_widths.len();
                 let candidates = space.candidates(&spec, &constraints);
                 let adapter_ok = constraints.supports_kernel(&spec);
                 let roofline = qualia_core_db::wgsl_forge::roofline_for(builtin, *length as u64);
@@ -487,10 +510,17 @@ pub fn run(action: &ShaderAction) -> Result<(), Box<dyn std::error::Error>> {
                     "  roofline @ n={}: {:.3} FLOP/byte ({:?}-bound)",
                     length, roofline.arithmetic_intensity, roofline.bound
                 );
-                println!("  warp size: {} (non-multiples pruned)", constraints.warp_size);
+                println!(
+                    "  warp size: {} (non-multiples pruned)",
+                    constraints.warp_size
+                );
                 for &wg in &space.workgroup_sizes {
                     let kept = candidates.iter().filter(|c| c.workgroup_size == wg).count();
-                    let note = if wg % constraints.warp_size == 0 { "" } else { " [warp-pruned]" };
+                    let note = if wg % constraints.warp_size == 0 {
+                        ""
+                    } else {
+                        " [warp-pruned]"
+                    };
                     println!("    workgroup {wg:>4}: {kept} kept{note}");
                 }
                 if let Err(error) = adapter_ok {
@@ -627,9 +657,7 @@ pub fn run(action: &ShaderAction) -> Result<(), Box<dyn std::error::Error>> {
                 if let Some(budget) = budget_ms {
                     let elapsed = start.elapsed().as_millis() as u64;
                     if elapsed >= *budget {
-                        println!(
-                            "  {name:<12} SKIP (budget: {elapsed} ms elapsed >= {budget} ms)"
-                        );
+                        println!("  {name:<12} SKIP (budget: {elapsed} ms elapsed >= {budget} ms)");
                         skipped_budget += 1;
                         continue;
                     }
@@ -663,7 +691,14 @@ pub fn run(action: &ShaderAction) -> Result<(), Box<dyn std::error::Error>> {
                         max_candidates: *max_candidates,
                     },
                     |schedule, sample_count| {
-                        candidate_evaluation(&mut runner, builtin, schedule, *length, *warmups, sample_count)
+                        candidate_evaluation(
+                            &mut runner,
+                            builtin,
+                            schedule,
+                            *length,
+                            *warmups,
+                            sample_count,
+                        )
                     },
                 );
                 match result {
@@ -671,7 +706,8 @@ pub fn run(action: &ShaderAction) -> Result<(), Box<dyn std::error::Error>> {
                         tuned += 1;
                         let generated =
                             generate_builtin(builtin, result.winner.schedule, TargetBackend::Wgsl)?;
-                        let record = TuningManifest::new(&generated, runner.adapter.clone(), result)?;
+                        let record =
+                            TuningManifest::new(&generated, runner.adapter.clone(), result)?;
                         let winner = &record.result.winner;
                         println!(
                             "  {name:<12} TUNED wg={} items={} vec={} -> median {} ns, p95 {} ns",
@@ -683,8 +719,11 @@ pub fn run(action: &ShaderAction) -> Result<(), Box<dyn std::error::Error>> {
                         );
                         if *update_local_manifest {
                             if let Some(cache) = &cache {
-                                let path =
-                                    cache.store_tuning_for_topology(&topology_hash, name, &record)?;
+                                let path = cache.store_tuning_for_topology(
+                                    &topology_hash,
+                                    name,
+                                    &record,
+                                )?;
                                 eprintln!("    cached {}", path.display());
                             }
                         }

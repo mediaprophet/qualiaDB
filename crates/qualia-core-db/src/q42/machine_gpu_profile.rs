@@ -17,7 +17,7 @@ pub const MACHINE_GPU_PROFILE_NAME: &str = "machine-gpu-profile.json";
 pub struct ToolchainAvailability {
     pub wgpu: bool,
     pub cuda_toolkit: bool,
-    /// DXC CLI for HLSL→SPIR-V/DXIL (`dxc` / QUALIA_DXC_PATH). Distinct from vendored dxcompiler.dll.
+    /// DXC CLI for HLSL→SPIR-V/DXIL (`dxc` / QUALIA_DXC_CLI_PATH). Distinct from QUALIA_DXC_PATH (dxcompiler.dll for wgpu).
     pub dxc_cli: bool,
     pub metal_xcrun: bool,
 }
@@ -121,14 +121,8 @@ impl MachineGpuProfile {
                     b.tok_s, b.wgpu_backend, b.inference_mode, b.p64_path
                 ),
                 env: vec![
-                    (
-                        "QUALIA_WGPU_BACKEND".into(),
-                        b.wgpu_backend.clone(),
-                    ),
-                    (
-                        "QUALIA_INFERENCE_MODE".into(),
-                        b.inference_mode.clone(),
-                    ),
+                    ("QUALIA_WGPU_BACKEND".into(), b.wgpu_backend.clone()),
+                    ("QUALIA_INFERENCE_MODE".into(), b.inference_mode.clone()),
                 ],
             };
         }
@@ -136,13 +130,18 @@ impl MachineGpuProfile {
 
     pub fn apply_env_script_ps1(&self) -> String {
         // ASCII only: Windows PowerShell 5.1 reads BOM-less files as ANSI.
-        let mut s =
-            String::from("# Machine GPU capability profile: prefer native over WGSL-only defaults\n");
+        let mut s = String::from(
+            "# Machine GPU capability profile: prefer native over WGSL-only defaults\n",
+        );
         for (k, v) in &self.recommended.env {
             s.push_str(&format!("$env:{k}='{v}'\n"));
         }
-        s.push_str("# Forge: CUDA densify decode GEMV stays lab-only unless you know the package\n");
-        s.push_str("# $env:QUALIA_LLM_CUDA_TC_DECODE='1'  # only after oracle green for that layout\n");
+        s.push_str(
+            "# Forge: CUDA densify decode GEMV stays lab-only unless you know the package\n",
+        );
+        s.push_str(
+            "# $env:QUALIA_LLM_CUDA_TC_DECODE='1'  # only after oracle green for that layout\n",
+        );
         s
     }
 }

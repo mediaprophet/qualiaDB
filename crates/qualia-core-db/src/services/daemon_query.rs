@@ -308,7 +308,11 @@ mod tests {
         let resolver = crate::sparql_ast::TextResolver::with_lexicon(&literals, &lex);
         let executor = QueryExecutor::with_resolver(&graph, resolver);
         let bindings = executor.execute(&plan, &ctx).expect("execute");
-        assert_eq!(bindings.len(), 1, "point (2,2) is within the square → 1 row");
+        assert_eq!(
+            bindings.len(),
+            1,
+            "point (2,2) is within the square → 1 row"
+        );
     }
 
     #[test]
@@ -337,7 +341,11 @@ mod tests {
         let graph = vec![synthetic_binding_quin(s, p, o)];
         let query = "SELECT ?s WHERE { SERVICE <local:graph> { ?s <knows> ?o } }";
         let (_, results) = execute_sparql_on_graph(query, &graph).expect("service query");
-        assert_eq!(results.len(), 1, "local SERVICE should run the inner pattern");
+        assert_eq!(
+            results.len(),
+            1,
+            "local SERVICE should run the inner pattern"
+        );
     }
 
     #[test]
@@ -353,10 +361,13 @@ mod tests {
             synthetic_binding_quin(s_alice, p_knows, o),
             synthetic_binding_quin(s_bob, p_likes, o),
         ];
-        let query =
-            "SELECT ?s WHERE { { ?s <knows> ?o } UNION { ?s <likes> ?o } }";
+        let query = "SELECT ?s WHERE { { ?s <knows> ?o } UNION { ?s <likes> ?o } }";
         let (_, results) = execute_sparql_on_graph(query, &graph).expect("union query");
-        assert_eq!(results.len(), 2, "UNION should return rows from both branches");
+        assert_eq!(
+            results.len(),
+            2,
+            "UNION should return rows from both branches"
+        );
     }
 
     #[test]

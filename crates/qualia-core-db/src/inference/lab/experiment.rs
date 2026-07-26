@@ -13,16 +13,15 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use serde::{Deserialize, Serialize};
 
+use crate::gpu_context::global_vram_ledger;
 use crate::inference_bench::{
-    BenchConfig, BenchResult, LlmPhaseSnapshot, run_bench,
-    set_decode_budget_override, set_gpu_topk, set_ternary_ffn, set_kv_dict,
-    set_attention_preproject, set_attention_o_fuse, set_spec_decode,
-    set_ffn_fusion, set_coop_gemv, set_kv_int8, set_resident_decode,
-    set_resident_prefill, set_resident_weights,
+    run_bench, set_attention_o_fuse, set_attention_preproject, set_coop_gemv,
+    set_decode_budget_override, set_ffn_fusion, set_gpu_topk, set_kv_dict, set_kv_int8,
+    set_resident_decode, set_resident_prefill, set_resident_weights, set_spec_decode,
+    set_ternary_ffn, BenchConfig, BenchResult, LlmPhaseSnapshot,
 };
 use crate::post_turn_verify::{verify_and_heal_turn, VerifiedTurn};
 use crate::thermal_telemetry::{sample_gpu_thermal, GpuThermalSample};
-use crate::gpu_context::global_vram_ledger;
 
 use super::config_space::{Configuration, ConfigurationSpace};
 
@@ -38,13 +37,15 @@ pub struct ThermalSnapshot {
 }
 
 impl ThermalSnapshot {
-    fn capture(before: Option<GpuThermalSample>, after: Option<GpuThermalSample>, duration_s: f64) -> Self {
-        let (before_temp_c, before_power_w) = before
-            .map(|s| (s.temp_c, s.power_w))
-            .unwrap_or((0, 0.0));
-        let (after_temp_c, after_power_w) = after
-            .map(|s| (s.temp_c, s.power_w))
-            .unwrap_or((0, 0.0));
+    fn capture(
+        before: Option<GpuThermalSample>,
+        after: Option<GpuThermalSample>,
+        duration_s: f64,
+    ) -> Self {
+        let (before_temp_c, before_power_w) =
+            before.map(|s| (s.temp_c, s.power_w)).unwrap_or((0, 0.0));
+        let (after_temp_c, after_power_w) =
+            after.map(|s| (s.temp_c, s.power_w)).unwrap_or((0, 0.0));
         let avg_power = (before_power_w + after_power_w) / 2.0;
         Self {
             before_temp_c,
@@ -415,11 +416,7 @@ pub fn run_experiment_with_quality(cfg: &ExperimentConfig) -> ExperimentResult {
             };
             (Some(bench), qs, None)
         }
-        Err(e) => (
-            None,
-            QualityScore::default(),
-            Some(e),
-        ),
+        Err(e) => (None, QualityScore::default(), Some(e)),
     };
 
     set_decode_budget_override(0);
@@ -481,15 +478,23 @@ mod tests {
 
     #[test]
     fn quality_score_from_verified() {
-        use crate::post_turn_verify::{VerifyCheck, VerifiedTurn};
+        use crate::post_turn_verify::{VerifiedTurn, VerifyCheck};
         let v = VerifiedTurn {
             final_text: "Paris".into(),
             display_html: String::new(),
             cml_turtle: String::new(),
             repaired: false,
             checks: vec![
-                VerifyCheck { id: "a".into(), ok: true, detail: "ok".into() },
-                VerifyCheck { id: "b".into(), ok: true, detail: "ok".into() },
+                VerifyCheck {
+                    id: "a".into(),
+                    ok: true,
+                    detail: "ok".into(),
+                },
+                VerifyCheck {
+                    id: "b".into(),
+                    ok: true,
+                    detail: "ok".into(),
+                },
             ],
             grounding_reason: None,
         };
@@ -501,15 +506,23 @@ mod tests {
 
     #[test]
     fn quality_score_with_repair() {
-        use crate::post_turn_verify::{VerifyCheck, VerifiedTurn};
+        use crate::post_turn_verify::{VerifiedTurn, VerifyCheck};
         let v = VerifiedTurn {
             final_text: "Paris".into(),
             display_html: String::new(),
             cml_turtle: String::new(),
             repaired: true,
             checks: vec![
-                VerifyCheck { id: "a".into(), ok: true, detail: "ok".into() },
-                VerifyCheck { id: "b".into(), ok: false, detail: "fail".into() },
+                VerifyCheck {
+                    id: "a".into(),
+                    ok: true,
+                    detail: "ok".into(),
+                },
+                VerifyCheck {
+                    id: "b".into(),
+                    ok: false,
+                    detail: "fail".into(),
+                },
             ],
             grounding_reason: Some("capital".into()),
         };
@@ -521,8 +534,7 @@ mod tests {
 
     #[test]
     fn experiment_config_builds_bench_config() {
-        let space = ConfigurationSpace::new("test")
-            .with("gpu_topk", ParameterDef::Bool);
+        let space = ConfigurationSpace::new("test").with("gpu_topk", ParameterDef::Bool);
         let cfg = space.build_from_normalized(&[1.0]);
         let ec = ExperimentConfig {
             space,
@@ -543,7 +555,8 @@ mod tests {
 
     #[test]
     fn jsonl_log_roundtrip() {
-        let tmp = std::env::temp_dir().join(format!("qualia_lab_test_{}.jsonl", std::process::id()));
+        let tmp =
+            std::env::temp_dir().join(format!("qualia_lab_test_{}.jsonl", std::process::id()));
         let result = ExperimentResult {
             config_hash: 42,
             hypothesis_id: Some("H-001".into()),

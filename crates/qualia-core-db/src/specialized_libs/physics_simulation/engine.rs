@@ -9,7 +9,6 @@ pub struct SimulationEngine {
     initial_conditions: InitialConditions,
 }
 
-
 // Supporting implementations
 
 impl SimulationEngine {

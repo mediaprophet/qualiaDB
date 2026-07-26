@@ -21,5 +21,5 @@ pub mod terrain_pipeline;
 pub mod triggers;
 
 pub use adapters::{AdapterRegistry, LayerFetchReport, LayerFetchStatus};
-pub use steward::{StewardContract, StewardVerdict, validate_steward_unlock};
+pub use steward::{validate_steward_unlock, StewardContract, StewardVerdict};
 pub use triggers::{LocationTriggerEngine, LocationTriggerRegistry};

@@ -60,11 +60,17 @@ impl QTensorEngine {
         if crate::dense_weight_cached(key) {
             return true;
         }
-        let Some(dense) = Self::dequant_weight_dense_f32(info, raw, n_in, n_out) else {
-            return false;
-        };
-        crate::cache_dense_weight(key, n_in, n_out, dense);
-        true
+        // Dequantize directly into the 2 MiB-aligned huge-page buffer — skips
+        // the intermediate Vec<f32> allocation + copy that cache_dense_weight
+        // would require. Rayon parallelizes over rows.
+        use crate::ggml_quants::dequant_matrix_row_into;
+        use rayon::prelude::*;
+        crate::inference::cuda_lane::cache_dense_weight_direct(key, n_in, n_out, |buf| {
+            buf.par_chunks_mut(n_in)
+                .enumerate()
+                .map(|(r, row)| dequant_matrix_row_into(raw, info, r, row).is_ok())
+                .all(|b| b)
+        })
     }
 
     /// Promote a 2-D quant weight (Q4_K / SoA / Q6_K / Q8_0) to a resident **f16** buffer
@@ -394,7 +400,9 @@ impl QTensorEngine {
             #[cfg(not(target_arch = "wasm32"))]
             if let Ok(handle) = tokio::runtime::Handle::try_current() {
                 if handle.block_on(rx).ok().map(|m| m.is_ok()).unwrap_or(false) {
-                    let data = slice.get_mapped_range().expect("wgpu buffer map_range failed");
+                    let data = slice
+                        .get_mapped_range()
+                        .expect("wgpu buffer map_range failed");
                     let floats: &[f32] = bytemuck::cast_slice(&data);
                     out[..n_out].copy_from_slice(&floats[..n_out]);
                     drop(data);

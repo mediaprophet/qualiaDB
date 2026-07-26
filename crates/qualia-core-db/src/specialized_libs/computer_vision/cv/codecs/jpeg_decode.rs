@@ -126,7 +126,10 @@ mod tests {
         // Solid red source (200,40,40): the centre pixel must read reddish.
         let c = ((3 * 8 + 3) * 3) as usize;
         let (r, g, b) = (rgb[c], rgb[c + 1], rgb[c + 2]);
-        assert!(r > g && r > b, "centre pixel should be reddish: {r},{g},{b}");
+        assert!(
+            r > g && r > b,
+            "centre pixel should be reddish: {r},{g},{b}"
+        );
     }
 
     #[test]

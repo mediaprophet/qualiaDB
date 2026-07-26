@@ -8,5 +8,5 @@ mod pool2d;
 mod resize2d;
 
 pub use conv2d::conv2d_nchw_f32;
-pub use pool2d::{max_pool2d_nchw_f32, avg_pool2d_nchw_f32};
+pub use pool2d::{avg_pool2d_nchw_f32, max_pool2d_nchw_f32};
 pub use resize2d::resize_nearest_nchw_f32;

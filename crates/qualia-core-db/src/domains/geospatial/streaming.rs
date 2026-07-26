@@ -116,8 +116,14 @@ impl FrustumPredictor {
     ) -> Vec<u64> {
         // Structural stub: return a few mock tile IDs around the camera position
         // In reality, this would intersect a frustum math volume with the TilePyramid.
-        let center_tile = ((camera_x / 100.0).floor() as u64) ^ ((camera_y / 100.0).floor() as u64) ^ ((camera_z / 100.0).floor() as u64);
-        vec![center_tile, center_tile.wrapping_add(1), center_tile.wrapping_sub(1)]
+        let center_tile = ((camera_x / 100.0).floor() as u64)
+            ^ ((camera_y / 100.0).floor() as u64)
+            ^ ((camera_z / 100.0).floor() as u64);
+        vec![
+            center_tile,
+            center_tile.wrapping_add(1),
+            center_tile.wrapping_sub(1),
+        ]
     }
 }
 
@@ -181,7 +187,9 @@ impl TilePyramid {
     }
 
     pub fn has_tile(&self, lod: u8, tile_id: u64) -> bool {
-        self.layers.get(&lod).map_or(false, |s| s.contains(&tile_id))
+        self.layers
+            .get(&lod)
+            .map_or(false, |s| s.contains(&tile_id))
     }
 }
 
@@ -252,12 +260,8 @@ mod tests {
         pyramid.register_tile(0, center.wrapping_add(1));
         pyramid.register_tile(0, center.wrapping_sub(1));
 
-        let mut planner = SceneStreamingPlanner::new(
-            pyramid,
-            FrustumPredictor::new(90.0, 1.0, 0.1, 500.0),
-            2,
-            0,
-        );
+        let mut planner =
+            SceneStreamingPlanner::new(pyramid, FrustumPredictor::new(90.0, 1.0, 0.1, 500.0), 2, 0);
 
         // Pre-load two tiles so the next prediction forces an eviction.
         planner.eviction.access_tile(999, 1);

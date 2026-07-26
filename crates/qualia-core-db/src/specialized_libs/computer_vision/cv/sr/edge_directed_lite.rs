@@ -39,8 +39,12 @@ pub fn edge_directed_lite(src: RgbView<'_>, scale: u8, out: &mut [u8]) -> Result
     if w == 0 || h == 0 {
         return Err(CvError::EmptyInput);
     }
-    let out_w = w.checked_mul(scale as u32).ok_or(CvError::InvalidParameter)?;
-    let out_h = h.checked_mul(scale as u32).ok_or(CvError::InvalidParameter)?;
+    let out_w = w
+        .checked_mul(scale as u32)
+        .ok_or(CvError::InvalidParameter)?;
+    let out_h = h
+        .checked_mul(scale as u32)
+        .ok_or(CvError::InvalidParameter)?;
     let need = (out_w as usize)
         .checked_mul(out_h as usize)
         .and_then(|n| n.checked_mul(3))
@@ -186,7 +190,11 @@ mod tests {
         let mut img = vec![0u8; (n * n * 3) as usize];
         for y in 0..n {
             for x in 0..n {
-                let v: u8 = if (x as i64 + y as i64) < threshold { 0 } else { 255 };
+                let v: u8 = if (x as i64 + y as i64) < threshold {
+                    0
+                } else {
+                    255
+                };
                 let o = ((y * n + x) * 3) as usize;
                 img[o] = v;
                 img[o + 1] = v;

@@ -726,7 +726,10 @@ fn star_json_escape(s: &str) -> String {
 /// match `write_object_term`.
 fn star_object_jsonld(val: u64) -> String {
     if crate::resolver::resolve_hash(val).is_some() || (val & crate::resolver::MSB_FLAG) != 0 {
-        return format!(r#"{{ "@id": "{}" }}"#, star_json_escape(&star_iri_bare(val)));
+        return format!(
+            r#"{{ "@id": "{}" }}"#,
+            star_json_escape(&star_iri_bare(val))
+        );
     }
     if let Some(lit) = crate::resolver::classify_inline_literal(val) {
         return format!(
@@ -735,7 +738,10 @@ fn star_object_jsonld(val: u64) -> String {
             star_json_escape(lit.datatype_iri())
         );
     }
-    format!(r#"{{ "@id": "{}" }}"#, star_json_escape(&star_iri_bare(val)))
+    format!(
+        r#"{{ "@id": "{}" }}"#,
+        star_json_escape(&star_iri_bare(val))
+    )
 }
 
 pub struct TurtleStarSerializer;

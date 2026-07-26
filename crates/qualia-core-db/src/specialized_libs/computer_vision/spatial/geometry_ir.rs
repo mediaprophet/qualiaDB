@@ -26,7 +26,10 @@ impl Aabb {
     }
 
     pub fn is_finite(&self) -> bool {
-        self.min.iter().chain(self.max.iter()).all(|v| v.is_finite())
+        self.min
+            .iter()
+            .chain(self.max.iter())
+            .all(|v| v.is_finite())
     }
 }
 

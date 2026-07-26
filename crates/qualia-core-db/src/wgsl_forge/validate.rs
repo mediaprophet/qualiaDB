@@ -399,20 +399,52 @@ mod tests {
         let schedule = Schedule::default();
         let cases: &[(K, TargetBackend, &[&str])] = &[
             // HLSL
-            (K::Gemm, TargetBackend::Hlsl, &["RWStructuredBuffer", "for (uint kk"]),
-            (K::Gemv, TargetBackend::Hlsl, &["RWStructuredBuffer", "for (uint j"]),
+            (
+                K::Gemm,
+                TargetBackend::Hlsl,
+                &["RWStructuredBuffer", "for (uint kk"],
+            ),
+            (
+                K::Gemv,
+                TargetBackend::Hlsl,
+                &["RWStructuredBuffer", "for (uint j"],
+            ),
             (K::Fft, TargetBackend::Hlsl, &["groupshared", "reversebits"]),
-            (K::TernaryGemv, TargetBackend::Hlsl, &["StructuredBuffer<uint>", "tern"]),
-            (K::P64Project, TargetBackend::Hlsl, &["StructuredBuffer<P64Words64>"]),
+            (
+                K::TernaryGemv,
+                TargetBackend::Hlsl,
+                &["StructuredBuffer<uint>", "tern"],
+            ),
+            (
+                K::P64Project,
+                TargetBackend::Hlsl,
+                &["StructuredBuffer<P64Words64>"],
+            ),
             // MSL
             (K::Gemm, TargetBackend::Msl, &["device", "for (uint kk"]),
             (K::Gemv, TargetBackend::Msl, &["device", "for (uint j"]),
             (K::Fft, TargetBackend::Msl, &["threadgroup", "reverse_bits"]),
-            (K::TernaryGemv, TargetBackend::Msl, &["device const uint", "tern"]),
-            (K::P64Project, TargetBackend::Msl, &["P64Words64", "record_count"]),
+            (
+                K::TernaryGemv,
+                TargetBackend::Msl,
+                &["device const uint", "tern"],
+            ),
+            (
+                K::P64Project,
+                TargetBackend::Msl,
+                &["P64Words64", "record_count"],
+            ),
             // CUDA-C
-            (K::TernaryGemv, TargetBackend::CudaC, &["__global__", "tern"]),
-            (K::P64Project, TargetBackend::CudaC, &["__global__", "P64Words64"]),
+            (
+                K::TernaryGemv,
+                TargetBackend::CudaC,
+                &["__global__", "tern"],
+            ),
+            (
+                K::P64Project,
+                TargetBackend::CudaC,
+                &["__global__", "P64Words64"],
+            ),
             (K::Fft, TargetBackend::CudaC, &["__shared__", "__brev"]),
         ];
         for (kernel, target, expected) in cases {

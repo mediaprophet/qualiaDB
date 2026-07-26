@@ -38,7 +38,11 @@ pub fn pool() -> &'static rayon::ThreadPool {
 }
 
 /// Borrow-or-reload the sticky engine for `path`, then run `f`.
-pub fn with_engine<R>(path: &str, mut load: impl FnMut(&mut QTensorEngine), f: impl FnOnce(&mut QTensorEngine) -> R) -> R {
+pub fn with_engine<R>(
+    path: &str,
+    mut load: impl FnMut(&mut QTensorEngine),
+    f: impl FnOnce(&mut QTensorEngine) -> R,
+) -> R {
     ENGINE.with(|cell| {
         let mut slot = cell.borrow_mut();
         let reload = match slot.as_ref() {

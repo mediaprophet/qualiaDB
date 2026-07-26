@@ -443,7 +443,11 @@ pub fn transcode_vision_tensors_to_p64<W: std::io::Write>(
     if tensors.is_empty() {
         return Err("p64: Vision tensor list is empty".to_string());
     }
-    let page_log2 = if page_log2 == 0 { P64_DEFAULT_PAGE_LOG2 } else { page_log2 };
+    let page_log2 = if page_log2 == 0 {
+        P64_DEFAULT_PAGE_LOG2
+    } else {
+        page_log2
+    };
     let page = 1usize << page_log2;
 
     let mut entries = Vec::with_capacity(tensors.len());
@@ -583,7 +587,8 @@ pub fn transcode_vision_tensors_to_p64<W: std::io::Write>(
     // Pad to blob_region_start
     let pad_to_blobs = blob_region_start - meta_region_bytes;
     if pad_to_blobs > 0 {
-        out.write_all(&vec![0u8; pad_to_blobs]).map_err(|e| e.to_string())?;
+        out.write_all(&vec![0u8; pad_to_blobs])
+            .map_err(|e| e.to_string())?;
     }
 
     let mut written_bytes = blob_region_start;

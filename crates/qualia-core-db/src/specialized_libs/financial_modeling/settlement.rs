@@ -1,6 +1,5 @@
 use super::*;
 
-
 /// Settlement engine
 pub struct SettlementEngine {
     settlement_methods: HashMap<String, SettlementMethod>,

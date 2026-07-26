@@ -85,7 +85,11 @@ impl ParameterValue {
                 }
             }
             (ParameterDef::Bool, ParameterValue::Bool(v)) => {
-                if *v { 1.0 } else { 0.0 }
+                if *v {
+                    1.0
+                } else {
+                    0.0
+                }
             }
             (ParameterDef::Categorical { choices }, ParameterValue::String(v)) => {
                 let idx = choices.iter().position(|c| c == v).unwrap_or(0);
@@ -107,12 +111,8 @@ impl ParameterValue {
                 let v = lo + ((t * (*hi - *lo) as f64).round() as i64);
                 ParameterValue::Int(v.clamp(*lo, *hi))
             }
-            ParameterDef::Float { lo, hi } => {
-                ParameterValue::Float(lo + t * (hi - lo))
-            }
-            ParameterDef::Bool => {
-                ParameterValue::Bool(t >= 0.5)
-            }
+            ParameterDef::Float { lo, hi } => ParameterValue::Float(lo + t * (hi - lo)),
+            ParameterDef::Bool => ParameterValue::Bool(t >= 0.5),
             ParameterDef::Categorical { choices } => {
                 if choices.is_empty() {
                     return ParameterValue::String(String::new());
@@ -171,7 +171,10 @@ impl ConfigurationSpace {
                 (name.clone(), val)
             })
             .collect();
-        Configuration { space_name: self.name.clone(), values }
+        Configuration {
+            space_name: self.name.clone(),
+            values,
+        }
     }
 
     /// Build a `Configuration` from a map of values, clamping each to its def.
@@ -179,7 +182,11 @@ impl ConfigurationSpace {
         let clamped = values
             .iter()
             .map(|(k, v)| {
-                let cv = self.params.get(k).map(|d| d.clamp(v)).unwrap_or_else(|| v.clone());
+                let cv = self
+                    .params
+                    .get(k)
+                    .map(|d| d.clamp(v))
+                    .unwrap_or_else(|| v.clone());
                 (k.clone(), cv)
             })
             .collect();
@@ -300,9 +307,12 @@ mod tests {
             .with("ngram", ParameterDef::Int { lo: 1, hi: 3 })
             .with("bias", ParameterDef::Float { lo: 0.5, hi: 5.0 })
             .with("enabled", ParameterDef::Bool)
-            .with("mode", ParameterDef::Categorical {
-                choices: vec!["fast".into(), "slow".into()],
-            });
+            .with(
+                "mode",
+                ParameterDef::Categorical {
+                    choices: vec!["fast".into(), "slow".into()],
+                },
+            );
         assert_eq!(space.dims(), 4);
 
         // BTreeMap iterates in alphabetical key order: bias, enabled, mode, ngram.
@@ -342,13 +352,7 @@ mod tests {
     #[test]
     fn clamp_works() {
         let def = ParameterDef::Int { lo: 1, hi: 5 };
-        assert_eq!(
-            def.clamp(&ParameterValue::Int(10)),
-            ParameterValue::Int(5)
-        );
-        assert_eq!(
-            def.clamp(&ParameterValue::Int(0)),
-            ParameterValue::Int(1)
-        );
+        assert_eq!(def.clamp(&ParameterValue::Int(10)), ParameterValue::Int(5));
+        assert_eq!(def.clamp(&ParameterValue::Int(0)), ParameterValue::Int(1));
     }
 }

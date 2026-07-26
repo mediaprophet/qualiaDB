@@ -62,7 +62,11 @@ mod tests {
     #[test]
     fn test_opendap_adapter_consent_denied() {
         let registry = NetworkDisclosureRegistry::new();
-        let adapter = OpendapAdapter::new("opendap_adapter", "https://cds.climate.copernicus.eu/api", "era5");
+        let adapter = OpendapAdapter::new(
+            "opendap_adapter",
+            "https://cds.climate.copernicus.eu/api",
+            "era5",
+        );
 
         let res = adapter.fetch_region((0.0, 0.0, 1.0, 1.0), (0, 0), &registry);
         assert!(res.is_err());

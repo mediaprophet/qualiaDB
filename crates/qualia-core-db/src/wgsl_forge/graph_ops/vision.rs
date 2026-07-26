@@ -226,8 +226,7 @@ pub fn conv2d_cpu(
                                 continue;
                             }
                             let iv = input[ic * h * w + ih * w + iw];
-                            let wv =
-                                weight[oc * (c_in * kh * kw) + ic * (kh * kw) + ky * kw + kx];
+                            let wv = weight[oc * (c_in * kh * kw) + ic * (kh * kw) + ky * kw + kx];
                             acc += iv * wv;
                         }
                     }

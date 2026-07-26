@@ -156,7 +156,12 @@ pub fn validate_transition_matrix(p: &[f64], n: usize) -> Result<(), MarkovError
 }
 
 /// Look up `P[from][to]` with bounds checking.
-pub fn transition_probability(p: &[f64], n: usize, from: usize, to: usize) -> Result<f64, MarkovError> {
+pub fn transition_probability(
+    p: &[f64],
+    n: usize,
+    from: usize,
+    to: usize,
+) -> Result<f64, MarkovError> {
     check_dim(n)?;
     if p.len() < n * n {
         return Err(MarkovError::InvalidInput);
@@ -781,15 +786,27 @@ mod tests {
     /// Error-to-status mapping covers every variant.
     #[test]
     fn error_to_status_mapping() {
-        assert_eq!(MarkovError::InvalidInput.to_status(), EconStatus::InvalidInput);
+        assert_eq!(
+            MarkovError::InvalidInput.to_status(),
+            EconStatus::InvalidInput
+        );
         assert_eq!(
             MarkovError::InvalidTransitionMatrix.to_status(),
             EconStatus::InvalidInput
         );
-        assert_eq!(MarkovError::InvalidState.to_status(), EconStatus::InvalidInput);
-        assert_eq!(MarkovError::BufferTooSmall.to_status(), EconStatus::BufferTooSmall);
+        assert_eq!(
+            MarkovError::InvalidState.to_status(),
+            EconStatus::InvalidInput
+        );
+        assert_eq!(
+            MarkovError::BufferTooSmall.to_status(),
+            EconStatus::BufferTooSmall
+        );
         assert_eq!(MarkovError::NonFinite.to_status(), EconStatus::NonFinite);
-        assert_eq!(MarkovError::NonConverged.to_status(), EconStatus::MaxIterations);
+        assert_eq!(
+            MarkovError::NonConverged.to_status(),
+            EconStatus::MaxIterations
+        );
     }
 
     /// `MAX_STATES` is 32.

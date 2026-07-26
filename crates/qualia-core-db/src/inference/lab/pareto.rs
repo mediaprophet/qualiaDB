@@ -64,12 +64,12 @@ impl ParetoPoint {
     /// Convert to a "higher is better" vector for dominance comparison.
     fn to_higher_better(&self) -> [f64; 6] {
         [
-            -self.latency_ms,    // lower latency → higher negated
+            -self.latency_ms, // lower latency → higher negated
             self.throughput_tok_s,
-            -self.vram_bytes,    // lower VRAM → higher negated
+            -self.vram_bytes, // lower VRAM → higher negated
             self.quality,
-            -self.energy_j,      // lower energy → higher negated
-            -self.cost,          // lower cost → higher negated
+            -self.energy_j, // lower energy → higher negated
+            -self.cost,     // lower cost → higher negated
         ]
     }
 
@@ -104,7 +104,8 @@ impl ParetoFrontier {
     /// Compute the Pareto frontier from a slice of experiment results.
     /// Returns a frontier with indices into the original slice.
     pub fn compute(results: &[ExperimentResult]) -> Self {
-        let points: Vec<Option<ParetoPoint>> = results.iter().map(ParetoPoint::from_result).collect();
+        let points: Vec<Option<ParetoPoint>> =
+            results.iter().map(ParetoPoint::from_result).collect();
 
         let mut non_dominated = Vec::new();
         let mut dominated = Vec::new();
@@ -145,7 +146,10 @@ impl ParetoFrontier {
     }
 
     /// Get the non-dominated experiment results.
-    pub fn frontier_results<'a>(&self, results: &'a [ExperimentResult]) -> Vec<&'a ExperimentResult> {
+    pub fn frontier_results<'a>(
+        &self,
+        results: &'a [ExperimentResult],
+    ) -> Vec<&'a ExperimentResult> {
         self.non_dominated
             .iter()
             .filter_map(|&i| results.get(i))
@@ -154,22 +158,29 @@ impl ParetoFrontier {
 
     /// Serialize the frontier to JSON for external dashboard export.
     pub fn to_json(&self, results: &[ExperimentResult]) -> String {
-        let frontier: Vec<&ExperimentResult> = self.non_dominated.iter()
+        let frontier: Vec<&ExperimentResult> = self
+            .non_dominated
+            .iter()
             .filter_map(|&i| results.get(i))
             .collect();
-        serde_json::to_string_pretty(&frontier.iter().map(|r| {
-            let p = ParetoPoint::from_result(r);
-            serde_json::json!({
-                "config_hash": r.config_hash,
-                "hypothesis_id": r.hypothesis_id,
-                "pareto": p,
-                "quality": r.quality,
-                "decode_tok_s": r.bench.as_ref().map(|b| b.decode_tok_s),
-                "warm_total_ms": r.bench.as_ref().map(|b| b.warm_total_ms),
-                "vram_used": r.vram_used,
-                "energy_j": r.thermal.energy_j,
-            })
-        }).collect::<Vec<_>>())
+        serde_json::to_string_pretty(
+            &frontier
+                .iter()
+                .map(|r| {
+                    let p = ParetoPoint::from_result(r);
+                    serde_json::json!({
+                        "config_hash": r.config_hash,
+                        "hypothesis_id": r.hypothesis_id,
+                        "pareto": p,
+                        "quality": r.quality,
+                        "decode_tok_s": r.bench.as_ref().map(|b| b.decode_tok_s),
+                        "warm_total_ms": r.bench.as_ref().map(|b| b.warm_total_ms),
+                        "vram_used": r.vram_used,
+                        "energy_j": r.thermal.energy_j,
+                    })
+                })
+                .collect::<Vec<_>>(),
+        )
         .unwrap_or_else(|e| format!("{{\"error\":\"{e}\"}}"))
     }
 }

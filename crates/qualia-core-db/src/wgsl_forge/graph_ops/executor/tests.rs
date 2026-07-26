@@ -79,7 +79,9 @@ fn swiglu_ffn_cpu_oracle_matches_reference() {
 #[test]
 #[serial_test::serial(gpu)]
 fn execute_graph_gpu_matches_cpu_oracle() {
-    if !crate::wgsl_forge::test_gpu_available() { return; }
+    if !crate::wgsl_forge::test_gpu_available() {
+        return;
+    }
     // softmax (1024-wide → exercises grid-stride reduce + broadcast + elementwise chain)
     {
         let n = 1024usize;
@@ -141,7 +143,9 @@ fn execute_graph_gpu_matches_cpu_oracle() {
 #[test]
 #[serial_test::serial(gpu)]
 fn shared_device_executor_matches_cpu_oracle() {
-    if !crate::wgsl_forge::test_gpu_available() { return; }
+    if !crate::wgsl_forge::test_gpu_available() {
+        return;
+    }
     let mut exec =
         ForgeGraphExecutor::on_shared_gpu().expect("forge executor on shared_gpu device");
 
@@ -216,7 +220,9 @@ fn shared_device_executor_matches_cpu_oracle() {
 #[test]
 #[serial_test::serial(gpu)]
 fn resident_weights_decode_block() {
-    if !crate::wgsl_forge::test_gpu_available() { return; }
+    if !crate::wgsl_forge::test_gpu_available() {
+        return;
+    }
     use std::time::Instant;
     let (d, kv, ffn) = (576u32, 128u32, 1536u32);
     let inv_scale = 1.0f32 / (d as f32).sqrt();
@@ -357,8 +363,7 @@ fn attention_cpu_oracle_matches_reference() {
         .map(|i| ((i * 3 % 5) as f32) * 0.15 - 0.2)
         .collect();
     let g = attention_graph(d as u32, kv as u32).unwrap();
-    let out =
-        execute_graph_cpu(&g, &[q.clone(), kt.clone(), v.clone(), vec![inv_scale]]).unwrap();
+    let out = execute_graph_cpu(&g, &[q.clone(), kt.clone(), v.clone(), vec![inv_scale]]).unwrap();
     // Reference: scores = (q·Kᵀ)/√d [1,kv]; probs = softmax(scores); out = probs·V [1,d].
     let scores: Vec<f32> = ref_mm(&q, &kt, 1, d, kv)
         .iter()
@@ -502,8 +507,8 @@ fn decode_layer_cpu_oracle_matches_reference() {
     let (pos, base) = (3u32, 10000.0f32);
     let ext = decode_layer_externals(n_heads, n_kv_heads, head_dim, seq, ffn);
     for mode in [0u32, 1u32] {
-        let g = decode_layer_graph(n_heads, n_kv_heads, head_dim, seq, ffn, pos, mode, base)
-            .unwrap();
+        let g =
+            decode_layer_graph(n_heads, n_kv_heads, head_dim, seq, ffn, pos, mode, base).unwrap();
         let cpu = execute_graph_cpu(&g, &ext).unwrap();
         let want = ref_decode_layer(
             &ext, n_heads, n_kv_heads, head_dim, seq, ffn, pos, mode, base,
@@ -523,13 +528,15 @@ fn decode_layer_cpu_oracle_matches_reference() {
 #[test]
 #[serial_test::serial(gpu)]
 fn decode_layer_gpu_matches_cpu_oracle() {
-    if !crate::wgsl_forge::test_gpu_available() { return; }
+    if !crate::wgsl_forge::test_gpu_available() {
+        return;
+    }
     let (n_heads, n_kv_heads, head_dim, seq, ffn) = (4u32, 2u32, 16u32, 8u32, 32u32);
     let (pos, base) = (5u32, 10000.0f32);
     let ext = decode_layer_externals(n_heads, n_kv_heads, head_dim, seq, ffn);
     for mode in [0u32, 1u32] {
-        let g = decode_layer_graph(n_heads, n_kv_heads, head_dim, seq, ffn, pos, mode, base)
-            .unwrap();
+        let g =
+            decode_layer_graph(n_heads, n_kv_heads, head_dim, seq, ffn, pos, mode, base).unwrap();
         let gpu = execute_graph(&g, &ext).expect("decode-layer gpu");
         let cpu = execute_graph_cpu(&g, &ext).unwrap();
         assert_eq!(gpu.len(), (n_heads * head_dim) as usize);
@@ -600,7 +607,9 @@ fn matmul_trans_b_cpu_oracle_matches_reference() {
 #[test]
 #[serial_test::serial(gpu)]
 fn matmul_trans_b_gpu_matches_plain_on_transposed() {
-    if !crate::wgsl_forge::test_gpu_available() { return; }
+    if !crate::wgsl_forge::test_gpu_available() {
+        return;
+    }
     let (m, n, k) = (3usize, 5usize, 4usize);
     let a: Vec<f32> = (0..m * k).map(|i| (i as f32) * 0.1 - 0.3).collect();
     let b_nk: Vec<f32> = (0..n * k)
@@ -748,7 +757,9 @@ fn decode_block_cpu_oracle_matches_reference() {
 #[test]
 #[serial_test::serial(gpu)]
 fn p4b_graphs_gpu_match_cpu_oracle() {
-    if !crate::wgsl_forge::test_gpu_available() { return; }
+    if !crate::wgsl_forge::test_gpu_available() {
+        return;
+    }
     use crate::wgsl_forge::graph_ops::gather_dequant::pack_ternary_as_words;
     // Attention (decode).
     {
@@ -907,7 +918,9 @@ fn decode_block_kernel_uplift_bench() {
 #[test]
 #[serial_test::serial(gpu)]
 fn pipeline_cache_amortizes_across_runs() {
-    if !crate::wgsl_forge::test_gpu_available() { return; }
+    if !crate::wgsl_forge::test_gpu_available() {
+        return;
+    }
     let (d, kv, ffn) = (64u32, 80u32, 128u32);
     let mk = |n: usize, m: u32| {
         (0..n)

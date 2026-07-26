@@ -1,4 +1,3 @@
-
 /// Physics error types
 #[derive(Debug, Clone)]
 pub enum PhysicsError {

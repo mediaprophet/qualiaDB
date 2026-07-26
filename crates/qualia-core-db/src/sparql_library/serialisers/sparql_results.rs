@@ -408,7 +408,10 @@ mod tests {
             json.contains("XMLSchema#integer"),
             "expected xsd:integer datatype, got: {json}"
         );
-        assert!(!json.contains(r#""type": "uri""#), "must not be a uri: {json}");
+        assert!(
+            !json.contains(r#""type": "uri""#),
+            "must not be a uri: {json}"
+        );
     }
 
     #[test]

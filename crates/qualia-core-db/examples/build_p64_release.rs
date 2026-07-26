@@ -26,7 +26,11 @@ fn main() -> Result<(), String> {
     std::fs::create_dir_all(&out_dir).map_err(|e| format!("create output directory: {e}"))?;
     let file = std::fs::File::open(&input).map_err(|e| format!("open input: {e}"))?;
     let mmap = unsafe { memmap2::Mmap::map(&file).map_err(|e| format!("mmap input: {e}"))? };
-    println!("Compiling {} ({:.1} MiB)", input.display(), mmap.len() as f64 / 1_048_576.0);
+    println!(
+        "Compiling {} ({:.1} MiB)",
+        input.display(),
+        mmap.len() as f64 / 1_048_576.0
+    );
 
     // Browser releases keep the source quant blocks byte-for-byte. Expanded/SoA layouts
     // are device-specific native optimizations and can exceed GitHub's asset-size ceiling.

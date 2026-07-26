@@ -204,4 +204,3 @@ fn rle_decompress(data: &[u8]) -> Result<Vec<u8>, StatisticalError> {
     }
     Ok(out)
 }
-

@@ -1,6 +1,5 @@
 use super::*;
 
-
 pub fn matrix_operation(args: &[u8]) -> Result<String, McpSystemError> {
     use crate::specialized_libs::linear_algebra::{DataType, LinearAlgebraLibrary};
 

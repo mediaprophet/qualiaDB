@@ -99,9 +99,7 @@ pub async fn handle(action: &WebizenAction) -> Result<(), Box<dyn std::error::Er
                     )?
                 }
                 "json-ld" => {
-                    println!(
-                        "🏢 Stream-parsing JSON-LD via SAX-style State Machine (Zero DOM)"
-                    );
+                    println!("🏢 Stream-parsing JSON-LD via SAX-style State Machine (Zero DOM)");
                     qualia_core_db::parsers::json_ld_stream::parse_json_ld_stream(
                         file_bytes.as_slice(),
                         context_hash,
@@ -125,7 +123,9 @@ pub async fn handle(action: &WebizenAction) -> Result<(), Box<dyn std::error::Er
                     )?
                 }
                 _ => {
-                    println!("❌ Unknown format. Use --format cbor-ld | json-ld | turtle-star | chk");
+                    println!(
+                        "❌ Unknown format. Use --format cbor-ld | json-ld | turtle-star | chk"
+                    );
                     return Ok(());
                 }
             };
@@ -262,9 +262,7 @@ pub async fn handle(action: &WebizenAction) -> Result<(), Box<dyn std::error::Er
             let mut buffer = [0u8; 8192];
             let mut total_bytes = 0;
 
-            println!(
-                "📤 Hashing file for WebTorrent Swarm (streaming to avoid memory load)..."
-            );
+            println!("📤 Hashing file for WebTorrent Swarm (streaming to avoid memory load)...");
 
             loop {
                 let count = f.read(&mut buffer)?;

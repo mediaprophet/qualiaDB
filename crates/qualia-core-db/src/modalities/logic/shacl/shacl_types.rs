@@ -251,8 +251,12 @@ pub enum ShaclConstraint {
     EconVaRPositive,
     EconConvergedModel,
     EconPositivePrice,
-    EconRiskBelowThreshold { max_risk: f64 },
-    EconWelfareAboveFloor { min_welfare: f64 },
+    EconRiskBelowThreshold {
+        max_risk: f64,
+    },
+    EconWelfareAboveFloor {
+        min_welfare: f64,
+    },
     /// ASP constraint
     AspConstraint {
         stable_model_limit: u32,

@@ -28,7 +28,7 @@ impl super::DataAdapter for CkanAdapter {
         registry: &NetworkDisclosureRegistry,
     ) -> Result<AdapterHttpRequest, String> {
         let search_endpoint = format!("{}/action/package_search", self.api_endpoint);
-        
+
         if !registry.check_egress_consent(self.adapter_id(), &search_endpoint) {
             return Err(format!(
                 "Consent denied or unregistered for CKAN endpoint {} by adapter {}",
@@ -52,16 +52,26 @@ impl super::DataAdapter for CkanAdapter {
     fn handle_fetch_body(&self, body: &str) -> Result<(), String> {
         let json: serde_json::Value = serde_json::from_str(body).map_err(|e| e.to_string())?;
 
-        let results = json.get("result")
+        let results = json
+            .get("result")
             .and_then(|r| r.get("results"))
             .and_then(|r| r.as_array())
             .ok_or_else(|| "Failed to parse CKAN results array".to_string())?;
 
         for dataset in results {
-            let title = dataset.get("title").and_then(|v| v.as_str()).unwrap_or("Untitled");
-            let license = dataset.get("license_title").and_then(|v| v.as_str()).unwrap_or("Unknown");
-            let created = dataset.get("metadata_created").and_then(|v| v.as_str()).unwrap_or("");
-            
+            let title = dataset
+                .get("title")
+                .and_then(|v| v.as_str())
+                .unwrap_or("Untitled");
+            let license = dataset
+                .get("license_title")
+                .and_then(|v| v.as_str())
+                .unwrap_or("Unknown");
+            let created = dataset
+                .get("metadata_created")
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
+
             if let Some(resources) = dataset.get("resources").and_then(|v| v.as_array()) {
                 for res in resources {
                     let format = res.get("format").and_then(|v| v.as_str()).unwrap_or("");
@@ -109,7 +119,11 @@ mod tests {
         let res2 = adapter.fetch_region((144.9, -37.9, 145.0, -37.8), (0, 0), &registry);
         // During tests, we tolerate network timeouts/DNS issues
         if let Err(e) = res2 {
-            assert!(!e.contains("Consent denied"), "Failed on consent when it should have been granted: {}", e);
+            assert!(
+                !e.contains("Consent denied"),
+                "Failed on consent when it should have been granted: {}",
+                e
+            );
         }
     }
 }

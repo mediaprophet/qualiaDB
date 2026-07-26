@@ -6,21 +6,21 @@
 
 #![cfg(not(target_arch = "wasm32"))]
 
+pub mod ablate;
 pub mod audit_path;
 pub mod auto_improve;
 pub mod device_roof;
 pub mod experiment_log;
 pub mod micro;
 pub mod timeline;
-pub mod ablate;
 
 // AI Inference Optimization Lab — new architecture layers.
+pub mod campaign;
 pub mod config_space;
 pub mod experiment;
+pub mod hypothesis;
 pub mod pareto;
 pub mod search;
-pub mod hypothesis;
-pub mod campaign;
 
 pub use ablate::{run_ablation_matrix, AblationRow};
 pub use audit_path::{audit_hot_path, HotPathAudit};
@@ -34,16 +34,18 @@ pub use micro::{run_q4k_soa_microbench, MicrobenchResult};
 pub use timeline::{run_decode_timeline, DecodeTimeline};
 
 // Re-exports for the new optimization lab.
+pub use campaign::{
+    default_toggle_space, run_optimization_campaign, save_campaign_report, CampaignConfig,
+    CampaignReport,
+};
 pub use config_space::{Configuration, ConfigurationSpace, ParameterDef, ParameterValue};
 pub use experiment::{
-    run_experiment, run_experiment_with_quality, append_experiment_jsonl,
-    load_experiment_log, ExperimentConfig, ExperimentResult, BenchResultSerde,
-    PhaseSnapshotSerde, QualityScore, ThermalSnapshot,
+    append_experiment_jsonl, load_experiment_log, run_experiment, run_experiment_with_quality,
+    BenchResultSerde, ExperimentConfig, ExperimentResult, PhaseSnapshotSerde, QualityScore,
+    ThermalSnapshot,
 };
-pub use pareto::{ParetoFrontier, ParetoPoint, ApplicationProfileWeight};
-pub use search::{SearchEngine, SobolSequence, KnnSurrogate, TrackAndStopBandit, expected_improvement};
-pub use hypothesis::{BeliefGraph, Hypothesis, ExperimentVerdict, evaluate_verdict};
-pub use campaign::{
-    run_optimization_campaign, save_campaign_report, default_toggle_space,
-    CampaignConfig, CampaignReport,
+pub use hypothesis::{evaluate_verdict, BeliefGraph, ExperimentVerdict, Hypothesis};
+pub use pareto::{ApplicationProfileWeight, ParetoFrontier, ParetoPoint};
+pub use search::{
+    expected_improvement, KnnSurrogate, SearchEngine, SobolSequence, TrackAndStopBandit,
 };

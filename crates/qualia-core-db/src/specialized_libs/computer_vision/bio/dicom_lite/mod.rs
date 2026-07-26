@@ -7,12 +7,12 @@
 //! Unsupported transfer syntaxes / implicit VR / compressed pixel data
 //! fail closed.
 
-pub mod parse_dicom_tags_basic;
 pub mod anonymize_tag_map;
+pub mod parse_dicom_tags_basic;
 pub mod suv_from_activity;
 
+pub use anonymize_tag_map::{anonymize_tag_map, AnonymizeReport, PHI_TAG_KEYS};
 pub use parse_dicom_tags_basic::{
     parse_dicom_tags_basic, DicomLiteError, DicomTagMap, ParsedDicomTags,
 };
-pub use anonymize_tag_map::{anonymize_tag_map, AnonymizeReport, PHI_TAG_KEYS};
 pub use suv_from_activity::{suv_bw, suv_from_activity};

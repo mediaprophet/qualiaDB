@@ -63,6 +63,43 @@ pub fn reset_resident_path_counts() {
     RESIDENT_FALLBACKS.store(0, Ordering::Relaxed);
 }
 
+// Native CUDA mega-pass execution counters.
+//
+// These are deliberately separate from inference mode and requested backend.
+// A mode/env label is intent; only a successful mega-pass call proves that
+// CUDA produced the token forward.
+static CUDA_MEGA_HITS: AtomicU64 = AtomicU64::new(0);
+static CUDA_MEGA_FALLBACKS: AtomicU64 = AtomicU64::new(0);
+
+/// Decode loop: the CUDA all-layer mega-pass completed this token forward.
+#[inline]
+pub fn record_cuda_mega_hit() {
+    CUDA_MEGA_HITS.fetch_add(1, Ordering::Relaxed);
+}
+
+/// Decode loop: CUDA mega-pass was explicitly requested but failed eligibility
+/// or execution and the ordinary fallback path ran.
+#[inline]
+pub fn record_cuda_mega_fallback() {
+    CUDA_MEGA_FALLBACKS.fetch_add(1, Ordering::Relaxed);
+}
+
+/// (successful CUDA mega-pass forwards, explicit CUDA fallbacks).
+#[inline]
+pub fn cuda_mega_path_counts() -> (u64, u64) {
+    (
+        CUDA_MEGA_HITS.load(Ordering::Relaxed),
+        CUDA_MEGA_FALLBACKS.load(Ordering::Relaxed),
+    )
+}
+
+/// Reset the native CUDA execution counters.
+#[inline]
+pub fn reset_cuda_mega_path_counts() {
+    CUDA_MEGA_HITS.store(0, Ordering::Relaxed);
+    CUDA_MEGA_FALLBACKS.store(0, Ordering::Relaxed);
+}
+
 // ── W2/W9: sampled-token counter ───────────────────────────────────────────────
 static SAMPLED_TOKENS: AtomicU64 = AtomicU64::new(0);
 

@@ -57,11 +57,7 @@ pub async fn handle(action: &LlmAction) -> Result<(), Box<dyn std::error::Error>
             model,
             verbose,
         } => {
-            llm_testing::run_comprehensive_llm_test(
-                vault_path.clone(),
-                model.clone(),
-                *verbose,
-            )?;
+            llm_testing::run_comprehensive_llm_test(vault_path.clone(), model.clone(), *verbose)?;
         }
         LlmAction::Benchmark {
             vault_path,
@@ -81,11 +77,7 @@ pub async fn handle(action: &LlmAction) -> Result<(), Box<dyn std::error::Error>
             output,
             format,
         } => {
-            llm_testing::run_generate_report(
-                vault_path.clone(),
-                output.clone(),
-                format.clone(),
-            )?;
+            llm_testing::run_generate_report(vault_path.clone(), output.clone(), format.clone())?;
         }
         LlmAction::Convert {
             input,
@@ -121,6 +113,27 @@ pub async fn handle(action: &LlmAction) -> Result<(), Box<dyn std::error::Error>
         }
         LlmAction::DecodeProxy { model, tokens } => {
             llm_testing::run_decode_proxy(model, *tokens)?;
+        }
+        LlmAction::RawDecodeBench {
+            model,
+            steps,
+            warmups,
+            runs,
+            quantization,
+            prompt,
+            target_prompt_tokens,
+            retain_artifacts,
+        } => {
+            crate::llm_raw_bench::run(crate::llm_raw_bench::CommandConfig {
+                model,
+                steps: *steps,
+                warmups: *warmups,
+                runs: *runs,
+                quantization,
+                prompt,
+                target_prompt_tokens: *target_prompt_tokens,
+                retain_artifacts: retain_artifacts.as_deref(),
+            })?;
         }
         LlmAction::Mode { name } => {
             llm_testing::run_inference_mode(name.as_deref())?;

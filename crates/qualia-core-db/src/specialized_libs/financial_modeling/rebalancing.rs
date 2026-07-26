@@ -1,6 +1,5 @@
 use super::*;
 
-
 /// Rebalancing engine
 pub struct RebalancingEngine {
     rebalancing_strategies: HashMap<String, RebalancingStrategy>,

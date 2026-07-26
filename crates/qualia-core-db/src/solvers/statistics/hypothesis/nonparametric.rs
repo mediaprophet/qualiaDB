@@ -126,17 +126,25 @@ pub fn mann_whitney_u(x: &[f64], y: &[f64]) -> Option<MannWhitneyResult> {
         return None;
     }
     let mut all = Vec::with_capacity(n1 + n2);
-    for &v in x { all.push((v, 0)); }
-    for &v in y { all.push((v, 1)); }
+    for &v in x {
+        all.push((v, 0));
+    }
+    for &v in y {
+        all.push((v, 1));
+    }
     all.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap_or(std::cmp::Ordering::Equal));
     let mut rank_sum1 = 0.0;
     let mut i = 0;
     while i < all.len() {
         let mut j = i;
-        while j < all.len() && (all[j].0 - all[i].0).abs() < 1e-12 { j += 1; }
+        while j < all.len() && (all[j].0 - all[i].0).abs() < 1e-12 {
+            j += 1;
+        }
         let rank = (i + j) as f64 / 2.0 + 0.5; // average rank
         for k in i..j {
-            if all[k].1 == 0 { rank_sum1 += rank; }
+            if all[k].1 == 0 {
+                rank_sum1 += rank;
+            }
         }
         i = j;
     }
@@ -147,8 +155,13 @@ pub fn mann_whitney_u(x: &[f64], y: &[f64]) -> Option<MannWhitneyResult> {
     let mu = (n1 * n2) as f64 / 2.0;
     let sigma = ((n1 * n2) as f64 * (n1 + n2 + 1) as f64 / 12.0).sqrt();
     let z = (u - mu) / sigma.max(1e-9);
-    let p = 2.0 * (1.0 - 0.5 * (1.0 + (z / (2.0f64.sqrt())).tanh() )); // rough normal cdf approx
-    Some(MannWhitneyResult { u, p_value: p.clamp(0.0, 1.0), n1, n2 })
+    let p = 2.0 * (1.0 - 0.5 * (1.0 + (z / (2.0f64.sqrt())).tanh())); // rough normal cdf approx
+    Some(MannWhitneyResult {
+        u,
+        p_value: p.clamp(0.0, 1.0),
+        n1,
+        n2,
+    })
 }
 
 /// Kolmogorov-Smirnov one-sample test vs uniform[0,1] for demo.
@@ -160,16 +173,18 @@ pub struct KolmogorovSmirnovResult {
 }
 
 pub fn ks_1sample(data: &[f64]) -> Option<KolmogorovSmirnovResult> {
-    if data.is_empty() { return None; }
+    if data.is_empty() {
+        return None;
+    }
     let mut sorted = data.to_vec();
-    sorted.sort_by(|a,b| a.partial_cmp(b).unwrap());
+    sorted.sort_by(|a, b| a.partial_cmp(b).unwrap());
     let n = sorted.len() as f64;
     let mut d = 0.0f64;
     for (i, &x) in sorted.iter().enumerate() {
         let cdf = x.clamp(0.0, 1.0);
         let i_f = i as f64;
-        d = d.max( ((i_f + 1.0)/n - cdf).abs() );
-        d = d.max( (cdf - i_f / n).abs() );
+        d = d.max(((i_f + 1.0) / n - cdf).abs());
+        d = d.max((cdf - i_f / n).abs());
     }
     // Rough p approx (not exact)
     let p = (-2.0 * n * d * d).exp().min(1.0);

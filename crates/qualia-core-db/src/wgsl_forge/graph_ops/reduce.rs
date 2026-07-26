@@ -194,7 +194,9 @@ mod tests {
     #[test]
     #[serial_test::serial(gpu)]
     fn reduce_gpu_matches_oracle() {
-        if !crate::wgsl_forge::test_gpu_available() { return; }
+        if !crate::wgsl_forge::test_gpu_available() {
+            return;
+        }
         let n = 4096usize; // > wg (256) → multiple grid-stride iterations per thread
         let input: Vec<f32> = (0..n).map(|i| ((i * 7 % 23) as f32) * 0.5 - 5.0).collect();
         for op in [RedKind::Sum, RedKind::Mean, RedKind::Max, RedKind::L2] {

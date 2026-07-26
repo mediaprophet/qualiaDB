@@ -17,6 +17,4 @@ pub mod perceptual_hash_u64;
 
 pub use color_hist_embed::{color_hist_embed_rgb, COLOR_HIST_BINS, COLOR_HIST_EMBED_DIM};
 pub use embed_distance::{cosine_distance, cosine_similarity, hamming_distance_u64};
-pub use perceptual_hash_u64::{
-    ahash_u64, dhash_u64, AHASH_SIDE, DHASH_HEIGHT, DHASH_WIDTH,
-};
+pub use perceptual_hash_u64::{ahash_u64, dhash_u64, AHASH_SIDE, DHASH_HEIGHT, DHASH_WIDTH};

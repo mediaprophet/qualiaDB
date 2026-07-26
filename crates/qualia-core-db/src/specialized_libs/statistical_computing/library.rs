@@ -875,8 +875,11 @@ impl StatisticalComputingLibrary {
         let (mat, n, _p) = self.numeric_matrix(dataset_id, &[column_x, column_y])?;
         let x: Vec<f64> = (0..n).map(|r| mat[r * 2]).collect();
         let y: Vec<f64> = (0..n).map(|r| mat[r * 2 + 1]).collect();
-        crate::solvers::statistics::simple_linear_regression(&x, &y)
-            .ok_or_else(|| StatisticalError::InvalidData("regression undefined (n<3 or zero variance in x)".to_string()))
+        crate::solvers::statistics::simple_linear_regression(&x, &y).ok_or_else(|| {
+            StatisticalError::InvalidData(
+                "regression undefined (n<3 or zero variance in x)".to_string(),
+            )
+        })
     }
 
     /// Polynomial regression `y ~ poly(x, degree)` by least squares (normal
@@ -902,7 +905,11 @@ impl StatisticalComputingLibrary {
             ss_res += (y[i] - yhat) * (y[i] - yhat);
             ss_tot += (y[i] - y_mean) * (y[i] - y_mean);
         }
-        let r_squared = if ss_tot > 0.0 { 1.0 - ss_res / ss_tot } else { 0.0 };
+        let r_squared = if ss_tot > 0.0 {
+            1.0 - ss_res / ss_tot
+        } else {
+            0.0
+        };
         Ok(PolynomialFit {
             degree,
             coefficients: coeffs,
@@ -942,8 +949,9 @@ impl StatisticalComputingLibrary {
             .map(|c| self.numeric_column(dataset_id, c))
             .collect::<Result<_, _>>()?;
         let refs: Vec<&[f64]> = groups.iter().map(|g| g.as_slice()).collect();
-        crate::solvers::statistics::one_way_anova(&refs)
-            .ok_or_else(|| StatisticalError::InvalidData("ANOVA undefined for these groups".to_string()))
+        crate::solvers::statistics::one_way_anova(&refs).ok_or_else(|| {
+            StatisticalError::InvalidData("ANOVA undefined for these groups".to_string())
+        })
     }
 
     /// Chi-square goodness-of-fit test: observed counts vs. expected counts.
@@ -963,8 +971,9 @@ impl StatisticalComputingLibrary {
                 vec![u; observed.len()]
             }
         };
-        crate::solvers::statistics::chi_square_gof(&observed, &expected)
-            .ok_or_else(|| StatisticalError::InvalidOperation("chi-square GoF undefined".to_string()))
+        crate::solvers::statistics::chi_square_gof(&observed, &expected).ok_or_else(|| {
+            StatisticalError::InvalidOperation("chi-square GoF undefined".to_string())
+        })
     }
 
     /// Chi-square test of independence over a contingency table whose columns
@@ -1011,8 +1020,9 @@ impl StatisticalComputingLibrary {
             ));
         }
         let mut out = vec![0.0; v.len() - window + 1];
-        crate::solvers::statistics::moving_average_into(&v, window, &mut out)
-            .ok_or_else(|| StatisticalError::InvalidOperation("moving average failed".to_string()))?;
+        crate::solvers::statistics::moving_average_into(&v, window, &mut out).ok_or_else(|| {
+            StatisticalError::InvalidOperation("moving average failed".to_string())
+        })?;
         Ok(out)
     }
 
@@ -1123,7 +1133,11 @@ impl StatisticalComputingLibrary {
                 ss_res += (y[i] - preds[i]) * (y[i] - preds[i]);
                 ss_tot += (y[i] - y_mean) * (y[i] - y_mean);
             }
-            let r2 = if ss_tot > 0.0 { 1.0 - ss_res / ss_tot } else { 0.0 };
+            let r2 = if ss_tot > 0.0 {
+                1.0 - ss_res / ss_tot
+            } else {
+                0.0
+            };
             (r2, preds)
         };
         let _ = model_predict;
@@ -1238,4 +1252,3 @@ impl StatisticalComputingLibrary {
 }
 
 // Supporting implementations
-

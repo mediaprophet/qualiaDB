@@ -76,12 +76,7 @@ pub fn plan_tiles(width: u32, height: u32, policy: TilePolicy) -> Result<Vec<Til
         let h = policy.tile_h.min(height - y0);
         for &x0 in &xs {
             let w = policy.tile_w.min(width - x0);
-            out.push(TileRect {
-                x: x0,
-                y: y0,
-                w,
-                h,
-            });
+            out.push(TileRect { x: x0, y: y0, w, h });
             if out.len() as u32 > policy.max_tiles {
                 return Err(CvError::InvalidParameter);
             }

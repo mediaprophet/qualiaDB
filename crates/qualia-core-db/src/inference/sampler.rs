@@ -446,7 +446,10 @@ mod tests {
     #[test]
     fn t10_chat_default_is_non_greedy_reproducible() {
         let cfg = SamplerConfig::chat_default();
-        assert!(!cfg.is_greedy(), "chat default must sample, not fall back to greedy");
+        assert!(
+            !cfg.is_greedy(),
+            "chat default must sample, not fall back to greedy"
+        );
         assert!(cfg.temperature > 0.0 && cfg.top_p <= 1.0 && cfg.repeat_penalty > 1.0);
         // Seeded ⇒ reproducible: the same config reproduces the same draw sequence.
         let base = [2.0f32, 1.0, 0.5, 3.0, 0.2, 1.5];
@@ -456,6 +459,10 @@ mod tests {
                 .map(|_| s.sample(&mut base.to_vec(), &[]))
                 .collect::<Vec<_>>()
         };
-        assert_eq!(run(), run(), "chat default must be reproducible for a fixed seed");
+        assert_eq!(
+            run(),
+            run(),
+            "chat default must be reproducible for a fixed seed"
+        );
     }
 }

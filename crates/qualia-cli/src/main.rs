@@ -1,4 +1,4 @@
-﻿mod cli;
+mod cli;
 mod handlers;
 mod sparql;
 
@@ -9,6 +9,7 @@ pub mod daemon;
 pub mod evaluate;
 pub mod ingest;
 mod llm_lifecycle;
+mod llm_raw_bench;
 mod llm_testing;
 pub mod mcp;
 pub mod mesh;
@@ -100,7 +101,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Commands::VerifyIntegrity { input, dataset } => {
             handlers::misc::handle_verify_integrity(input, dataset);
         }
-        Commands::Import { input, output, strip_literals } => {
+        Commands::Import {
+            input,
+            output,
+            strip_literals,
+        } => {
             handlers::misc::handle_import(input, output, *strip_literals);
         }
         Commands::Query { dialect } => {

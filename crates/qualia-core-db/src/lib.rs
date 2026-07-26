@@ -90,8 +90,8 @@ pub use query::resolver;
     feature = "wasm-full"
 ))]
 pub use query::shacl_compiler;
-pub use query::temporal_graph;
 pub use query::spawn_decay;
+pub use query::temporal_graph;
 pub use query::temporal_scrub;
 // --- platform/ category (reorg) ---
 pub mod platform;
@@ -116,7 +116,21 @@ pub mod inference;
 pub use inference::agent;
 #[cfg(not(target_arch = "wasm32"))]
 pub use inference::ambient_orchestration;
+pub use inference::application_profile;
+pub use inference::application_profile::{
+    active_application_profile, apply_application_profile, bootstrap_application_profile,
+    set_application_profile, ApplicationProfile,
+};
 pub use inference::compute_universe;
+#[cfg(all(not(target_arch = "wasm32"), feature = "cuda"))]
+pub use inference::cuda_lane::{
+    cache_dense_weight, clear_weight_cache, dense_weight_cached, device_kv_ready,
+    ensure_device_kv_cache, preload_q4k_soa_weights, q4k_device_weight_count, try_cuda_batch_gemv,
+    try_cuda_batch_gemv_cached, try_cuda_batch_gemv_cached_only, try_cuda_mega_pass,
+    try_q4k_soa_attention_device, try_q4k_soa_ffn_block, try_q4k_soa_ffn_block_residual,
+    try_q4k_soa_fused_swiglu, try_q4k_soa_gemv, try_q4k_soa_qkv, warm_cuda_context,
+    weight_cache_len, weight_fingerprint, MegaPassLayerDims, MegaPassLayerWeights, MAX_DENSE_ELEMS,
+};
 #[cfg(target_os = "windows")]
 pub use inference::directml_bridge;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
@@ -135,21 +149,36 @@ pub use inference::inference_bench;
 pub use inference::inference_bench as llm_bench;
 #[cfg(all(target_arch = "wasm32", feature = "wasm-llm"))]
 pub use inference::inference_bench_wasm as llm_bench;
+pub use inference::inference_eval;
+pub use inference::inference_eval as llm_eval;
+#[cfg(any(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
+pub use inference::inference_gpu_profiler;
+#[cfg(any(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
+pub use inference::inference_gpu_profiler as llm_gpu_profiler;
+pub use inference::inference_kernel_parity;
+pub use inference::inference_kernel_parity as llm_kernel_parity;
 pub use inference::inference_modes;
 pub use inference::inference_modes::{
     active_inference_mode, apply_mode_toggles, bootstrap_inference_mode, fast_verify_html_default,
     post_turn_verify_enabled, prefer_tensor_core_gemm, quant_graph_grounding_enabled,
     rights_mode_enabled, sentinel_mid_decode_enabled, set_inference_mode, InferenceMode,
 };
-pub use inference::post_turn_verify;
-pub use inference::post_turn_verify::{
-    maybe_verify_turn, return_html_as_text, verify_and_heal_turn, VerifiedTurn, VerifyCheck,
+#[cfg(not(target_arch = "wasm32"))]
+pub use inference::inference_path_selector;
+#[cfg(not(target_arch = "wasm32"))]
+pub use inference::inference_path_selector::{
+    apply_inference_path_plan, bootstrap_optimal_inference_path, format_path_plan,
+    last_inference_path_plan, path_auto_enabled, resolve_inference_path_plan, run_path_select_cli,
+    ComputeLane, InferencePathPlan, QuantProfile,
 };
-pub use inference::application_profile;
-pub use inference::application_profile::{
-    active_application_profile, apply_application_profile, bootstrap_application_profile,
-    set_application_profile, ApplicationProfile,
-};
+#[cfg(not(target_arch = "wasm32"))]
+pub use inference::kv_capture;
+#[cfg(not(target_arch = "wasm32"))]
+pub use inference::kv_dict;
+#[cfg(all(target_arch = "wasm32", feature = "wasm-llm"))]
+pub use inference::kv_dict;
+#[cfg(not(target_arch = "wasm32"))]
+pub use inference::kv_dict_runtime;
 #[cfg(not(target_arch = "wasm32"))]
 pub use inference::lab;
 #[cfg(not(target_arch = "wasm32"))]
@@ -160,13 +189,22 @@ pub use inference::lab::{
     ExperimentRun, HotPathAudit, LabConfig, LockInPackage, MicrobenchResult, TrialResult,
     CSV_HEADER,
 };
-#[cfg(not(target_arch = "wasm32"))]
-pub use inference::inference_path_selector;
-#[cfg(not(target_arch = "wasm32"))]
-pub use inference::inference_path_selector::{
-    apply_inference_path_plan, bootstrap_optimal_inference_path, format_path_plan,
-    last_inference_path_plan, path_auto_enabled, resolve_inference_path_plan, run_path_select_cli,
-    ComputeLane, InferencePathPlan, QuantProfile,
+#[cfg(any(target_os = "macos", target_os = "ios"))]
+pub use inference::metal_bridge;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
+pub use inference::neuro_symbolic_sieve;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
+pub use inference::orchestrator;
+pub use inference::post_turn_verify;
+pub use inference::post_turn_verify::{
+    maybe_verify_turn, return_html_as_text, verify_and_heal_turn, VerifiedTurn, VerifyCheck,
+};
+pub use inference::prompt_lookup;
+pub use inference::qualia_hybrid;
+pub use inference::qualia_hybrid::{
+    apply_graph_logit_bias, force_fact_tokens, graph_force_enabled, prepare_hybrid_decode,
+    propose_best_draft, propose_fact_draft, publish_graph_route_from_prompt,
+    publish_grounding_obligation, publish_prompt_query_tensor, GRAPH_LOGIT_BIAS,
 };
 pub use inference::quant_graph_grounding;
 pub use inference::quant_graph_grounding::{
@@ -174,44 +212,6 @@ pub use inference::quant_graph_grounding::{
     maybe_ground_generation, register_capital_fact, register_fact, reset_fact_store_to_defaults,
     seed_facts_from_bundled, GroundingFact, GroundingResult, CTX_GROUNDING, P_CAPITAL_OF,
 };
-pub use inference::qualia_hybrid;
-pub use inference::qualia_hybrid::{
-    apply_graph_logit_bias, force_fact_tokens, graph_force_enabled, prepare_hybrid_decode,
-    propose_best_draft, propose_fact_draft, publish_graph_route_from_prompt,
-    publish_grounding_obligation, publish_prompt_query_tensor, GRAPH_LOGIT_BIAS,
-};
-#[cfg(all(not(target_arch = "wasm32"), feature = "cuda"))]
-pub use inference::cuda_lane::{
-    cache_dense_weight, clear_weight_cache, dense_weight_cached, device_kv_ready,
-    ensure_device_kv_cache, preload_q4k_soa_weights, q4k_device_weight_count, try_cuda_batch_gemv,
-    try_cuda_batch_gemv_cached, try_cuda_batch_gemv_cached_only, try_q4k_soa_attention_device,
-    try_q4k_soa_ffn_block, try_q4k_soa_ffn_block_residual, try_q4k_soa_fused_swiglu,
-    try_q4k_soa_gemv, try_q4k_soa_qkv, warm_cuda_context, weight_cache_len, weight_fingerprint,
-    MAX_DENSE_ELEMS,
-};
-pub use inference::inference_eval;
-pub use inference::inference_eval as llm_eval;
-#[cfg(any(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
-pub use inference::inference_gpu_profiler;
-#[cfg(any(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
-pub use inference::inference_gpu_profiler as llm_gpu_profiler;
-pub use inference::inference_kernel_parity;
-pub use inference::inference_kernel_parity as llm_kernel_parity;
-#[cfg(not(target_arch = "wasm32"))]
-pub use inference::kv_capture;
-#[cfg(not(target_arch = "wasm32"))]
-pub use inference::kv_dict;
-#[cfg(all(target_arch = "wasm32", feature = "wasm-llm"))]
-pub use inference::kv_dict;
-#[cfg(not(target_arch = "wasm32"))]
-pub use inference::kv_dict_runtime;
-#[cfg(any(target_os = "macos", target_os = "ios"))]
-pub use inference::metal_bridge;
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
-pub use inference::neuro_symbolic_sieve;
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
-pub use inference::orchestrator;
-pub use inference::prompt_lookup;
 #[cfg(not(target_arch = "wasm32"))]
 pub use inference::residency_planner;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
@@ -328,15 +328,15 @@ pub use net::host_topology;
 pub use net::nym_adapter;
 pub use net::sonic_token;
 pub mod audio;
+/// `.hmc` — a transparent container-of-files bundle for shipping a set of
+/// sealed assets (`.10d` / `.q42` / `.p64`) as one attestable unit. Available to
+/// both native and WASM builds (native adds the zero-copy `BundleMmap`).
+pub mod bundle;
 /// `.10d` living-container v1 — normative header, axis-role taxonomy, and
 /// metric-completeness descriptor for the 10-D tensor substrate. P0.1 barrier
 /// task. Available to browser/WASM builds (P0.8 parity target). See
 /// `docs/plans/native-computational-geometry-EXECUTION.md` P0.1.
 pub mod container_10d;
-/// `.hmc` — a transparent container-of-files bundle for shipping a set of
-/// sealed assets (`.10d` / `.q42` / `.p64`) as one attestable unit. Available to
-/// both native and WASM builds (native adds the zero-copy `BundleMmap`).
-pub mod bundle;
 pub mod tensor;
 // geometric_algebra moved into solvers/ (it is a math solver, not a logic modality);
 // re-exported here so `crate::geometric_algebra::*` paths keep resolving. Gated to match the
@@ -415,11 +415,11 @@ pub mod clinical_engine {
         }
     }
 }
+/// Entity-view kernel: entity id, observer status, rights filter, attribution, packages (shared by whole desktop; not "mindware-only").
+pub mod entity_view;
 /// Hypermedia semantic library — asset ⊕ analytics ⊕ related-assets bound as a semantic graph (not a
 /// directory). See `docs/plans/hypermedia-semantic-library.md`.
 pub mod hypermedia;
-/// Entity-view kernel: entity id, observer status, rights filter, attribution, packages (shared by whole desktop; not "mindware-only").
-pub mod entity_view;
 pub mod qubo_compiler;
 pub mod render;
 #[cfg(all(target_arch = "wasm32", feature = "portal"))]
@@ -1600,9 +1600,8 @@ mod tests {
 
         let h3_index = 0x000a1072b59ffff; // Mock H3 cell index payload
         let context_val = embed_h3_context(h3_index, 10, 42);
-        let expected_context = ((10u64 & 0x0F) << 59)
-            | ((42u64 & 0x7F) << 52)
-            | (h3_index & 0x000F_FFFF_FFFF_FFFF);
+        let expected_context =
+            ((10u64 & 0x0F) << 59) | ((42u64 & 0x7F) << 52) | (h3_index & 0x000F_FFFF_FFFF_FFFF);
         assert_eq!(
             context_val, expected_context,
             "Failed to embed H3 index into context"

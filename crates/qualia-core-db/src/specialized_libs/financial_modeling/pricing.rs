@@ -1,6 +1,5 @@
 use super::*;
 
-
 /// Pricing engine
 pub struct PricingEngine {
     pricing_models: HashMap<String, PricingModel>,

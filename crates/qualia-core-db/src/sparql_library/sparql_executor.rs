@@ -741,28 +741,32 @@ impl<'a> QueryExecutor<'a> {
             Expression::UnaryOp {
                 op: UnaryOp::Not,
                 expr,
-            } if Self::expr_contains_exists(expr, ctx) => Ok(!self.eval_filter_bool(expr, ctx, row)?),
+            } if Self::expr_contains_exists(expr, ctx) => {
+                Ok(!self.eval_filter_bool(expr, ctx, row)?)
+            }
             Expression::BinaryOp {
                 op: BinaryOp::And,
                 left,
                 right,
-            } if Self::expr_contains_exists(left, ctx) || Self::expr_contains_exists(right, ctx) => {
-                Ok(self.eval_filter_bool(left, ctx, row)? && self.eval_filter_bool(right, ctx, row)?)
+            } if Self::expr_contains_exists(left, ctx)
+                || Self::expr_contains_exists(right, ctx) =>
+            {
+                Ok(self.eval_filter_bool(left, ctx, row)?
+                    && self.eval_filter_bool(right, ctx, row)?)
             }
             Expression::BinaryOp {
                 op: BinaryOp::Or,
                 left,
                 right,
-            } if Self::expr_contains_exists(left, ctx) || Self::expr_contains_exists(right, ctx) => {
-                Ok(self.eval_filter_bool(left, ctx, row)? || self.eval_filter_bool(right, ctx, row)?)
+            } if Self::expr_contains_exists(left, ctx)
+                || Self::expr_contains_exists(right, ctx) =>
+            {
+                Ok(self.eval_filter_bool(left, ctx, row)?
+                    || self.eval_filter_bool(right, ctx, row)?)
             }
             _ => {
-                let r = ExpressionEvaluator::evaluate_with_resolver(
-                    expr_id,
-                    ctx,
-                    row,
-                    self.resolver,
-                )?;
+                let r =
+                    ExpressionEvaluator::evaluate_with_resolver(expr_id, ctx, row, self.resolver)?;
                 Ok(r.as_bool())
             }
         }
@@ -892,10 +896,12 @@ impl<'a> QueryExecutor<'a> {
                 let expr = order_by[i];
                 let asc = ascending[i];
 
-                let val_a = ExpressionEvaluator::evaluate_with_resolver(expr, ctx, a, self.resolver)
-                    .unwrap_or(crate::sparql_filter::EvalResult::Numeric(0));
-                let val_b = ExpressionEvaluator::evaluate_with_resolver(expr, ctx, b, self.resolver)
-                    .unwrap_or(crate::sparql_filter::EvalResult::Numeric(0));
+                let val_a =
+                    ExpressionEvaluator::evaluate_with_resolver(expr, ctx, a, self.resolver)
+                        .unwrap_or(crate::sparql_filter::EvalResult::Numeric(0));
+                let val_b =
+                    ExpressionEvaluator::evaluate_with_resolver(expr, ctx, b, self.resolver)
+                        .unwrap_or(crate::sparql_filter::EvalResult::Numeric(0));
 
                 let cmp = val_a.total_cmp(&val_b);
                 if cmp != std::cmp::Ordering::Equal {

@@ -103,8 +103,7 @@ mod tests {
     fn already_isotropic_2d_identity_dims() {
         let img = [1.0f32, 2.0, 3.0, 4.0];
         let mut out = [0.0f32; 4];
-        let (ow, oh) =
-            isotropic_resample_2d_nn(&img, 2, 2, (1.0, 1.0), 1.0, &mut out).unwrap();
+        let (ow, oh) = isotropic_resample_2d_nn(&img, 2, 2, (1.0, 1.0), 1.0, &mut out).unwrap();
         assert_eq!((ow, oh), (2, 2));
         assert_eq!(out, img);
     }
@@ -114,8 +113,7 @@ mod tests {
         // 2×1 image, sx=2, sy=1 → isotropic 1 → out_w=4, out_h=1
         let img = [10.0f32, 20.0];
         let mut out = [0.0f32; 8];
-        let (ow, oh) =
-            isotropic_resample_2d_nn(&img, 2, 1, (2.0, 1.0), 1.0, &mut out).unwrap();
+        let (ow, oh) = isotropic_resample_2d_nn(&img, 2, 1, (2.0, 1.0), 1.0, &mut out).unwrap();
         assert_eq!((ow, oh), (4, 1));
         // First half ≈ 10, second ≈ 20
         assert!((out[0] - 10.0).abs() < 1e-6);

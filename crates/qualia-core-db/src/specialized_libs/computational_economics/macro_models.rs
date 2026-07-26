@@ -70,7 +70,12 @@ pub fn solow_steady_state(
     n: f64,
     g: f64,
 ) -> Result<(f64, f64), MacroError> {
-    if !(0.0..=1.0).contains(&s) || !(0.0..=1.0).contains(&alpha) || delta < 0.0 || n < 0.0 || g < 0.0 {
+    if !(0.0..=1.0).contains(&s)
+        || !(0.0..=1.0).contains(&alpha)
+        || delta < 0.0
+        || n < 0.0
+        || g < 0.0
+    {
         return Err(MacroError::InvalidInput);
     }
     let denom = n + g + delta;
@@ -141,11 +146,7 @@ pub fn ramsey_euler_residual(
 }
 
 /// Ramsey steady-state capital: `k* = ((1/beta - 1 + delta) / alpha)^(1/(alpha-1))`.
-pub fn ramsey_steady_state(
-    alpha: f64,
-    beta: f64,
-    delta: f64,
-) -> Result<f64, MacroError> {
+pub fn ramsey_steady_state(alpha: f64, beta: f64, delta: f64) -> Result<f64, MacroError> {
     if !(0.0..=1.0).contains(&alpha) || !(0.0..=1.0).contains(&beta) || delta < 0.0 {
         return Err(MacroError::InvalidInput);
     }
@@ -234,8 +235,12 @@ pub fn new_keynesian_solve(
     rho_r: f64,
     r_nat: f64,
 ) -> Result<(f64, f64, f64), MacroError> {
-    if !(0.0..=1.0).contains(&beta) || kappa < 0.0 || sigma <= 0.0
-        || phi_pi < 0.0 || phi_y < 0.0 || !(0.0..=1.0).contains(&rho_r)
+    if !(0.0..=1.0).contains(&beta)
+        || kappa < 0.0
+        || sigma <= 0.0
+        || phi_pi < 0.0
+        || phi_y < 0.0
+        || !(0.0..=1.0).contains(&rho_r)
     {
         return Err(MacroError::InvalidInput);
     }
@@ -352,8 +357,14 @@ mod tests {
         let mut z1 = [0.0f64; 100];
         let mut k2 = [0.0f64; 100];
         let mut z2 = [0.0f64; 100];
-        rbc_simulate_into(1.0, 1.0, 0.3, 0.96, 0.05, 0.2, 0.9, 0.01, 100, 42, &mut k1, &mut z1).unwrap();
-        rbc_simulate_into(1.0, 1.0, 0.3, 0.96, 0.05, 0.2, 0.9, 0.01, 100, 42, &mut k2, &mut z2).unwrap();
+        rbc_simulate_into(
+            1.0, 1.0, 0.3, 0.96, 0.05, 0.2, 0.9, 0.01, 100, 42, &mut k1, &mut z1,
+        )
+        .unwrap();
+        rbc_simulate_into(
+            1.0, 1.0, 0.3, 0.96, 0.05, 0.2, 0.9, 0.01, 100, 42, &mut k2, &mut z2,
+        )
+        .unwrap();
         for t in 0..100 {
             assert_eq!(k1[t], k2[t]);
             assert_eq!(z1[t], z2[t]);
@@ -364,7 +375,10 @@ mod tests {
     fn rbc_stays_positive() {
         let mut k = [0.0f64; 50];
         let mut z = [0.0f64; 50];
-        rbc_simulate_into(1.0, 1.0, 0.3, 0.96, 0.05, 0.2, 0.9, 0.01, 50, 7, &mut k, &mut z).unwrap();
+        rbc_simulate_into(
+            1.0, 1.0, 0.3, 0.96, 0.05, 0.2, 0.9, 0.01, 50, 7, &mut k, &mut z,
+        )
+        .unwrap();
         for t in 0..50 {
             assert!(k[t] > 0.0, "k[{}] = {}", t, k[t]);
         }

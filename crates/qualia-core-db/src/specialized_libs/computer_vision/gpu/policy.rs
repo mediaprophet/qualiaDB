@@ -52,9 +52,7 @@ mod tests {
 
     #[test]
     fn budget_refuses_huge() {
-        let b = VisionVramBudget {
-            max_bytes: 1024,
-        };
+        let b = VisionVramBudget { max_bytes: 1024 };
         assert!(!b.allows(VisionVramBudget::estimate_resize_scratch(3, 4096, 4096, 4)));
     }
 }

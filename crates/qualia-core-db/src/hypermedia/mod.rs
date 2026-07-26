@@ -674,7 +674,13 @@ impl Default for TextProcessor {
                 ),
                 kw(
                     "deontic",
-                    &["must not", "shall not", "is required to", "obligation", "prohibition"],
+                    &[
+                        "must not",
+                        "shall not",
+                        "is required to",
+                        "obligation",
+                        "prohibition",
+                    ],
                 ),
             ],
             flag_words: Vec::new(),

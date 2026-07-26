@@ -283,7 +283,10 @@ mod tests {
         let copy = d; // Copy
         assert_eq!(d, copy);
         assert_eq!(d.arg_count, 2);
-        assert_eq!(d.arg_kinds(), &[ImmersiveValueKind::AssetRef, ImmersiveValueKind::AssetRef]);
+        assert_eq!(
+            d.arg_kinds(),
+            &[ImmersiveValueKind::AssetRef, ImmersiveValueKind::AssetRef]
+        );
         assert_eq!(d.result, ImmersiveValueKind::Boolean);
     }
 
@@ -347,8 +350,12 @@ mod tests {
     fn exactness_iris_are_stable_and_namespaced() {
         use super::super::QISP_NS;
         assert!(ExactnessClass::Exact.iri().starts_with(QISP_NS));
-        assert!(ExactnessClass::DeterministicApproximate.iri().starts_with(QISP_NS));
-        assert!(ExactnessClass::InteractiveApproximate.iri().starts_with(QISP_NS));
+        assert!(ExactnessClass::DeterministicApproximate
+            .iri()
+            .starts_with(QISP_NS));
+        assert!(ExactnessClass::InteractiveApproximate
+            .iri()
+            .starts_with(QISP_NS));
         assert_eq!(
             ExactnessClass::Exact.iri(),
             "https://webizen.org/immersive/0.1#Exact"
@@ -367,12 +374,21 @@ mod tests {
     fn error_codes_are_stable() {
         assert_eq!(QispError::UnknownAsset.code(), "unknown-asset");
         assert_eq!(QispError::StaleAsset.code(), "stale-asset");
-        assert_eq!(QispError::UnsupportedCrsOrProfile.code(), "unsupported-crs-or-profile");
+        assert_eq!(
+            QispError::UnsupportedCrsOrProfile.code(),
+            "unsupported-crs-or-profile"
+        );
         assert_eq!(QispError::InvalidGeometry.code(), "invalid-geometry");
         assert_eq!(QispError::ProfileMismatch.code(), "profile-mismatch");
         assert_eq!(QispError::BudgetExceeded.code(), "budget-exceeded");
-        assert_eq!(QispError::ExactnessUnavailable.code(), "exactness-unavailable");
-        assert_eq!(QispError::AuthorizationDenied.code(), "authorization-denied");
+        assert_eq!(
+            QispError::ExactnessUnavailable.code(),
+            "exactness-unavailable"
+        );
+        assert_eq!(
+            QispError::AuthorizationDenied.code(),
+            "authorization-denied"
+        );
         assert_eq!(QispError::CancelledOrExpired.code(), "cancelled-or-expired");
         assert_eq!(
             QispError::NonDeterministicDisallowed.code(),

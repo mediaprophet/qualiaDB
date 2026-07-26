@@ -135,9 +135,11 @@ impl ExecutionProfile {
         let path = Self::path_for_p64(p64_path);
         let json = serde_json::to_string_pretty(self).map_err(|e| format!("serialize: {e}"))?;
         let tmp = path.with_extension("json.tmp");
-        std::fs::write(&tmp, json.as_bytes()).map_err(|e| format!("write {}: {e}", tmp.display()))?;
+        std::fs::write(&tmp, json.as_bytes())
+            .map_err(|e| format!("write {}: {e}", tmp.display()))?;
         std::fs::rename(&tmp, &path).or_else(|_| {
-            std::fs::write(&path, json.as_bytes()).map_err(|e| format!("write {}: {e}", path.display()))
+            std::fs::write(&path, json.as_bytes())
+                .map_err(|e| format!("write {}: {e}", path.display()))
         })?;
         Ok(path)
     }
@@ -234,7 +236,10 @@ impl ExecutionProfile {
     pub fn apply_env_script_ps1(&self) -> String {
         let mut s = String::new();
         s.push_str("# Qualia execution profile — apply before llm load / decode-proxy\n");
-        s.push_str(&format!("$env:QUALIA_INFERENCE_MODE='{}'\n", self.inference_mode));
+        s.push_str(&format!(
+            "$env:QUALIA_INFERENCE_MODE='{}'\n",
+            self.inference_mode
+        ));
         if self.backend != "auto" && !self.backend.is_empty() {
             s.push_str(&format!("$env:QUALIA_WGPU_BACKEND='{}'\n", self.backend));
         }
@@ -261,10 +266,7 @@ mod tests {
 
     #[test]
     fn round_trip_beside_p64() {
-        let dir = std::env::temp_dir().join(format!(
-            "qualia-exec-profile-{}",
-            std::process::id()
-        ));
+        let dir = std::env::temp_dir().join(format!("qualia-exec-profile-{}", std::process::id()));
         let _ = std::fs::create_dir_all(&dir);
         let p64 = dir.join("toy.p64");
         {
@@ -272,14 +274,7 @@ mod tests {
             f.write_all(b"p64\0toy").unwrap();
         }
         let mut prof = ExecutionProfile::from_explore_winner(
-            "toy.gguf",
-            &p64,
-            "f16",
-            "portable",
-            "auto",
-            12.5,
-            16,
-            "baseline",
+            "toy.gguf", &p64, "f16", "portable", "auto", 12.5, 16, "baseline",
         );
         prof.representation.ternary_158_available = true;
         let written = prof.write_beside_p64(&p64).expect("write");

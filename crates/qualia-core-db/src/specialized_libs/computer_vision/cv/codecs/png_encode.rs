@@ -31,7 +31,9 @@ pub fn encode_png(rgb: RgbView<'_>) -> Result<Vec<u8>, CvError> {
     for y in 0..height as usize {
         let src = y * stride;
         let dst = y * row_bytes;
-        let end = src.checked_add(row_bytes).ok_or(CvError::InvalidParameter)?;
+        let end = src
+            .checked_add(row_bytes)
+            .ok_or(CvError::InvalidParameter)?;
         if end > rgb.bytes.len() {
             return Err(CvError::BufferTooSmall);
         }
@@ -43,7 +45,9 @@ pub fn encode_png(rgb: RgbView<'_>) -> Result<Vec<u8>, CvError> {
         let mut encoder = png::Encoder::new(&mut out, width, height);
         encoder.set_color(png::ColorType::Rgb);
         encoder.set_depth(png::BitDepth::Eight);
-        let mut writer = encoder.write_header().map_err(|_| CvError::InvalidParameter)?;
+        let mut writer = encoder
+            .write_header()
+            .map_err(|_| CvError::InvalidParameter)?;
         writer
             .write_image_data(&packed)
             .map_err(|_| CvError::InvalidParameter)?;

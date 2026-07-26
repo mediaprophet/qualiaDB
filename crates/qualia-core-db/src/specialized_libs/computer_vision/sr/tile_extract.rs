@@ -41,8 +41,7 @@ pub fn extract_tile_rgb8(
         let sy = rect.y as usize + row;
         let src_off = sy * src_stride + (rect.x as usize) * 3;
         let dst_off = row * dst_stride;
-        out[dst_off..dst_off + dst_stride]
-            .copy_from_slice(&rgb[src_off..src_off + dst_stride]);
+        out[dst_off..dst_off + dst_stride].copy_from_slice(&rgb[src_off..src_off + dst_stride]);
     }
     Ok(())
 }

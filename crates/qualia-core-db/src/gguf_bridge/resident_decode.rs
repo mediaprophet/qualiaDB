@@ -153,6 +153,10 @@ pub(crate) struct ResidentDecodePlan {
     /// Read by lab audit via `ffn_fusion_in_resident()`; kept on plan for diagnostics.
     #[allow(dead_code)]
     use_fused_ffn: bool,
+    /// Exact compute dispatches encoded for one token on this prepared plan.
+    dispatches_per_token: u32,
+    /// Candidate bytes copied into the MAP_READ staging buffer per token.
+    readback_bytes_per_token: u32,
 }
 
 pub(crate) enum ResidentDecodeState {
@@ -169,6 +173,22 @@ enum ResidentTokenOutcome {
 }
 
 impl QTensorEngine {
+    /// Exact steady-state compute dispatch count for the prepared resident plan.
+    pub fn resident_dispatches_per_token(&self) -> Option<u32> {
+        match &self.resident_decode {
+            ResidentDecodeState::Ready(plan) => Some(plan.dispatches_per_token),
+            _ => None,
+        }
+    }
+
+    /// Exact candidate staging copy size for one resident greedy token.
+    pub fn resident_readback_bytes_per_token(&self) -> Option<u32> {
+        match &self.resident_decode {
+            ResidentDecodeState::Ready(plan) => Some(plan.readback_bytes_per_token),
+            _ => None,
+        }
+    }
+
     fn plan_key(&self, index: &crate::gguf_sharder::GgufTensorIndex) -> (u64, u64, u32) {
         let base = self
             .gguf_mmap
@@ -490,8 +510,7 @@ impl QTensorEngine {
             // multirow is off, so a single 128k dispatch stays legal.
             if !sample_path {
                 let topk = topk?;
-                let logits_mr = plan.use_coop
-                    && plan.out_chunks.iter().any(|c| c.rows > 60_000);
+                let logits_mr = plan.use_coop && plan.out_chunks.iter().any(|c| c.rows > 60_000);
                 let logits_pipe = if logits_mr {
                     &self.coop_gemv_mr_pipeline
                 } else {
@@ -525,13 +544,7 @@ impl QTensorEngine {
                 // One copy of the full candidate pack (cand_base laid them out contiguously).
                 let cand_bytes = (plan.total_cands * 4) as wgpu::BufferAddress;
                 encoder.copy_buffer_to_buffer(cand_val, 0, &plan.staging, 0, cand_bytes);
-                encoder.copy_buffer_to_buffer(
-                    cand_idx,
-                    0,
-                    &plan.staging,
-                    cand_bytes,
-                    cand_bytes,
-                );
+                encoder.copy_buffer_to_buffer(cand_idx, 0, &plan.staging, cand_bytes, cand_bytes);
             }
         }
 
@@ -560,7 +573,9 @@ impl QTensorEngine {
                 return None;
             }
             {
-                let data = slice.get_mapped_range().expect("wgpu buffer map_range failed");
+                let data = slice
+                    .get_mapped_range()
+                    .expect("wgpu buffer map_range failed");
                 let floats: &[f32] = bytemuck::cast_slice(&data[..n_embd * 4]);
                 out[..n_embd].copy_from_slice(floats);
             }
@@ -588,7 +603,9 @@ impl QTensorEngine {
         let mut best_token_id = 0u32;
         let mut max_logit = f32::NEG_INFINITY;
         {
-            let data = slice.get_mapped_range().expect("wgpu buffer map_range failed");
+            let data = slice
+                .get_mapped_range()
+                .expect("wgpu buffer map_range failed");
             let val_bytes = plan.total_cands * 4;
             let vals: &[f32] = bytemuck::cast_slice(&data[..val_bytes]);
             let idxs: &[u32] = bytemuck::cast_slice(&data[val_bytes..val_bytes * 2]);
@@ -975,20 +992,19 @@ impl QTensorEngine {
             })
         };
 
-        let gemm_params = |ggml_type: u32,
-                           n_in: usize,
-                           n_out: usize,
-                           row_elems: u32,
-                           raw_len: usize| GemmGpuParams {
-            n_in: n_in as u32,
-            n_out: n_out as u32,
-            weight_ggml_type: ggml_type,
-            weight_row_elems: row_elems,
-            weight_byte_len: raw_len as u32,
-            n_batch: 1,
-            in_row_stride: 0,
-            out_row_stride: 0,
-        };
+        let gemm_params =
+            |ggml_type: u32, n_in: usize, n_out: usize, row_elems: u32, raw_len: usize| {
+                GemmGpuParams {
+                    n_in: n_in as u32,
+                    n_out: n_out as u32,
+                    weight_ggml_type: ggml_type,
+                    weight_row_elems: row_elems,
+                    weight_byte_len: raw_len as u32,
+                    n_batch: 1,
+                    in_row_stride: 0,
+                    out_row_stride: 0,
+                }
+            };
 
         let mut layers = Vec::with_capacity(n_layer as usize);
         let mut layer_protos = Vec::with_capacity(n_layer as usize);
@@ -1110,12 +1126,14 @@ impl QTensorEngine {
                 );
                 if tc_prewarm {
                     let mut warmed = 0u32;
-                    let mut try_warm =
-                        |info: &crate::gguf_sharder::GgufTensorInfo, raw: &[u8], n_in: usize, n_out: usize| {
-                            if QTensorEngine::prewarm_cuda_weight(info, raw, n_in, n_out) {
-                                warmed += 1;
-                            }
-                        };
+                    let mut try_warm = |info: &crate::gguf_sharder::GgufTensorInfo,
+                                        raw: &[u8],
+                                        n_in: usize,
+                                        n_out: usize| {
+                        if QTensorEngine::prewarm_cuda_weight(info, raw, n_in, n_out) {
+                            warmed += 1;
+                        }
+                    };
                     if q_info.ggml_type == GGML_TYPE_Q4_K_SOA {
                         try_warm(&q_info, q_raw, q_in, q_out);
                     }
@@ -1150,13 +1168,14 @@ impl QTensorEngine {
             let (q_w, k_w, v_w) = (res(q_raw)?, res(k_raw)?, res(v_raw)?);
             let o_w = res(o_raw)?;
             // FFN quant→f16 promotion: bind f16 for gate/up/down when eligible (fast coop path).
-            let ffn_bind = |info: &GgufTensorInfo, raw: &[u8]| -> Option<(wgpu::Buffer, u32, u32, u32)> {
-                if let Some(p) = self.promote_matrix_to_f16_resident(info, raw) {
-                    return Some(p);
-                }
-                let b = res(raw)?;
-                Some((b, info.ggml_type, raw.len() as u32, info.dims[0] as u32))
-            };
+            let ffn_bind =
+                |info: &GgufTensorInfo, raw: &[u8]| -> Option<(wgpu::Buffer, u32, u32, u32)> {
+                    if let Some(p) = self.promote_matrix_to_f16_resident(info, raw) {
+                        return Some(p);
+                    }
+                    let b = res(raw)?;
+                    Some((b, info.ggml_type, raw.len() as u32, info.dims[0] as u32))
+                };
             let (g_w, g_ty, g_blen, g_row) = ffn_bind(&gate_info, g_raw)?;
             let (u_w, u_ty, u_blen, u_row) = ffn_bind(&up_info, u_raw)?;
             let (d_w, d_ty, d_blen, d_row) = ffn_bind(&down_info, d_raw)?;
@@ -1395,13 +1414,7 @@ impl QTensorEngine {
                 ),
                 triple_qkv,
                 dual_kv,
-                k_gemm: mk_gemm_bg(
-                    "ResKGemm",
-                    &normed,
-                    k_w.as_entire_binding(),
-                    gbase,
-                    &k_proj,
-                ),
+                k_gemm: mk_gemm_bg("ResKGemm", &normed, k_w.as_entire_binding(), gbase, &k_proj),
                 k_write: mk_attn_bg("ResKWrite", &k_proj, &k_w, dyn_base, l, &attn_out),
                 v_gemm: mk_gemm_bg(
                     "ResVGemm",
@@ -1720,6 +1733,10 @@ impl QTensorEngine {
             use_ffn_mr,
             use_ffn_warp,
             use_fused_ffn,
+            dispatches_per_token: passes_token as u32,
+            readback_bytes_per_token: (total_cands * std::mem::size_of::<f32>()
+                + total_cands * std::mem::size_of::<u32>())
+                as u32,
         }))
     }
 }

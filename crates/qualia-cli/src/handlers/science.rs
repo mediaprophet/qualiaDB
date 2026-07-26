@@ -1,4 +1,7 @@
-use crate::cli::{BioAction, ChemAction, ClinicalAction, EconomicsAction, GeoAction, GeometricAction, ScienceAction, ThermoAction};
+use crate::cli::{
+    BioAction, ChemAction, ClinicalAction, EconomicsAction, GeoAction, GeometricAction,
+    ScienceAction, ThermoAction,
+};
 use crate::science;
 
 pub fn handle(action: &ScienceAction) {
@@ -9,14 +12,18 @@ pub fn handle(action: &ScienceAction) {
                 science::run_chem_thermo(reaction, *a, *b, *c)
             }
             ChemAction::DrugLike { smiles } => science::run_chem_druglike(smiles),
-            ChemAction::Pka { pka, conc_base, conc_acid } => {
-                science::run_chem_pka(*pka, *conc_base, *conc_acid)
-            }
+            ChemAction::Pka {
+                pka,
+                conc_base,
+                conc_acid,
+            } => science::run_chem_pka(*pka, *conc_base, *conc_acid),
         },
         ScienceAction::Bio { action } => match action {
-            BioAction::Align { query, target, mode } => {
-                science::run_bio_align(query, target, mode)
-            }
+            BioAction::Align {
+                query,
+                target,
+                mode,
+            } => science::run_bio_align(query, target, mode),
             BioAction::Kmer { sequence, k } => science::run_bio_kmer(sequence, *k),
             BioAction::Translate { dna } => science::run_bio_translate(dna),
             BioAction::Isoelectric { protein } => science::run_bio_isoelectric(protein),
@@ -31,16 +38,18 @@ pub fn handle(action: &ScienceAction) {
             GeoAction::EmbedH3 { index } => science::run_geo_embed_h3(*index),
         },
         ScienceAction::Thermo { action } => match action {
-            ThermoAction::Gibbs { enthalpy, entropy, temp } => {
-                science::run_thermo_gibbs(*enthalpy, *entropy, *temp)
-            }
-            ThermoAction::Anneal { initial_temp, particles, proposed_energy, random } => {
-                science::run_thermo_anneal(
-                    *initial_temp,
-                    *particles,
-                    *proposed_energy,
-                    *random,
-                );
+            ThermoAction::Gibbs {
+                enthalpy,
+                entropy,
+                temp,
+            } => science::run_thermo_gibbs(*enthalpy, *entropy, *temp),
+            ThermoAction::Anneal {
+                initial_temp,
+                particles,
+                proposed_energy,
+                random,
+            } => {
+                science::run_thermo_anneal(*initial_temp, *particles, *proposed_energy, *random);
             }
         },
         ScienceAction::Geometric { action } => match action {
@@ -86,10 +95,20 @@ pub fn handle(action: &ScienceAction) {
                     *creatinine,
                 );
             }
-            ClinicalAction::Ckd { age, sex_male, weight_kg, creatinine } => {
+            ClinicalAction::Ckd {
+                age,
+                sex_male,
+                weight_kg,
+                creatinine,
+            } => {
                 science::run_clinical_ckd(*age, *sex_male, *weight_kg, *creatinine);
             }
-            ClinicalAction::Pk { dose_mg, vd_l, cl_l_hr, time_hr } => {
+            ClinicalAction::Pk {
+                dose_mg,
+                vd_l,
+                cl_l_hr,
+                time_hr,
+            } => {
                 science::run_clinical_pk(*dose_mg, *vd_l, *cl_l_hr, *time_hr);
             }
             ClinicalAction::DrugInteractions { drug_names } => {
@@ -97,16 +116,41 @@ pub fn handle(action: &ScienceAction) {
             }
         },
         ScienceAction::Economics { action } => match action {
-            EconomicsAction::Gbm { price, drift, vol, horizon, steps } => {
+            EconomicsAction::Gbm {
+                price,
+                drift,
+                vol,
+                horizon,
+                steps,
+            } => {
                 science::run_economics_gbm(*price, *drift, *vol, *horizon, *steps);
             }
-            EconomicsAction::Var { price, drift, vol, horizon, steps, paths } => {
+            EconomicsAction::Var {
+                price,
+                drift,
+                vol,
+                horizon,
+                steps,
+                paths,
+            } => {
                 science::run_economics_var(*price, *drift, *vol, *horizon, *steps, *paths);
             }
-            EconomicsAction::Macro { m0, p0, velocity, real_gdp, horizon, steps } => {
+            EconomicsAction::Macro {
+                m0,
+                p0,
+                velocity,
+                real_gdp,
+                horizon,
+                steps,
+            } => {
                 science::run_economics_macro(*m0, *p0, *velocity, *real_gdp, *horizon, *steps);
             }
-            EconomicsAction::Bond { face, coupon_rate, yield_rate, periods } => {
+            EconomicsAction::Bond {
+                face,
+                coupon_rate,
+                yield_rate,
+                periods,
+            } => {
                 science::run_economics_bond(*face, *coupon_rate, *yield_rate, *periods);
             }
             EconomicsAction::Paper { qty, last_price } => {

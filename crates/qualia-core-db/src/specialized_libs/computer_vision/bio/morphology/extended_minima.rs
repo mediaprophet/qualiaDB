@@ -147,7 +147,10 @@ mod tests {
         let img = [0u8; 4];
         let v = GrayView::new(2, 2, 2, &img).unwrap();
         let mut out = [0u8; 2];
-        assert_eq!(extended_minima(v, 1, &mut out), Err(CvError::BufferTooSmall));
+        assert_eq!(
+            extended_minima(v, 1, &mut out),
+            Err(CvError::BufferTooSmall)
+        );
     }
 
     #[test]

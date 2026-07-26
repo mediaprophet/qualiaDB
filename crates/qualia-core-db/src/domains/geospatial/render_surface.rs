@@ -41,7 +41,11 @@ pub fn build_surface_descriptor(
     }
     let backend = match backend {
         BACKEND_WEBGPU | BACKEND_CANVAS2D => backend.to_string(),
-        other => return Err(format!("unsupported render backend '{other}'; expected webgpu or canvas2d")),
+        other => {
+            return Err(format!(
+                "unsupported render backend '{other}'; expected webgpu or canvas2d"
+            ))
+        }
     };
     if active_world_id.trim().is_empty() {
         return Err("active_world_id must not be empty".into());

@@ -19,6 +19,60 @@
 use super::{emit_wgsl, GeneratedShader};
 use crate::wgsl_forge::{ForgeError, KernelSpec, Schedule};
 
+/// SPIR-V opcodes used by the workgroup-size patcher.
+///
+/// naga emits `OpExecutionMode` with `LocalSize` mode (not the deprecated
+/// `OpLocalSize` instruction) to set the workgroup size.
+const OP_EXECUTION_MODE: u32 = 16;
+const OP_EXECUTION_MODE_LOCAL_SIZE_WORD_COUNT: u32 = 6;
+const EXEC_MODE_LOCAL_SIZE: u32 = 17; // LocalSize mode value
+
+/// Patch the workgroup size in a SPIR-V binary to `(x, 1, 1)`.
+///
+/// This is the alternative to `OpSpecConstant` + `OpExecutionModeId LocalSizeId`:
+/// naga does not support specialization constants for `@workgroup_size`, and
+/// wgpu does not expose `VkSpecializationInfo`. Instead, we emit SPIR-V once
+/// with a base workgroup size, then binary-patch the `OpExecutionMode LocalSize`
+/// words to produce variants for different schedules — avoiding a full naga
+/// re-parse + validate + spv-out pass per variant.
+///
+/// Returns `Err` if `OpExecutionMode LocalSize` is not found (malformed module).
+pub fn patch_spirv_workgroup_size(
+    words: &mut [u32],
+    workgroup_size: u32,
+) -> Result<(), ForgeError> {
+    // Search for OpExecutionMode with LocalSize mode:
+    // word[0] = (6 << 16) | 16, word[2] = 17 (LocalSize),
+    // word[3..5] = x, y, z.
+    let target = (OP_EXECUTION_MODE_LOCAL_SIZE_WORD_COUNT << 16) | OP_EXECUTION_MODE;
+    for i in 0..words
+        .len()
+        .saturating_sub(OP_EXECUTION_MODE_LOCAL_SIZE_WORD_COUNT as usize)
+    {
+        if words[i] == target && words[i + 2] == EXEC_MODE_LOCAL_SIZE {
+            words[i + 3] = workgroup_size;
+            words[i + 4] = 1;
+            words[i + 5] = 1;
+            return Ok(());
+        }
+    }
+    Err(ForgeError::Emission(
+        "OpExecutionMode LocalSize not found in SPIR-V binary".to_string(),
+    ))
+}
+
+/// Encode `Vec<u32>` SPIR-V words as a `;`-joined decimal string.
+fn encode_spirv_words(words: &[u32]) -> String {
+    let mut source = String::with_capacity(words.len() * 6);
+    for (index, word) in words.iter().enumerate() {
+        if index > 0 {
+            source.push(SPIRV_WORD_SEPARATOR);
+        }
+        source.push_str(&word.to_string());
+    }
+    source
+}
+
 /// Separator between decimal SPIR-V words in [`GeneratedShader::source`].
 pub const SPIRV_WORD_SEPARATOR: char = ';';
 
@@ -61,13 +115,7 @@ pub fn emit_spirv(kernel: &KernelSpec, schedule: Schedule) -> Result<GeneratedSh
     }
 
     // 5. Encode as `;`-joined decimal words and rehash over that artifact.
-    let mut source = String::with_capacity(words.len() * 6);
-    for (index, word) in words.iter().enumerate() {
-        if index > 0 {
-            source.push(SPIRV_WORD_SEPARATOR);
-        }
-        source.push_str(&word.to_string());
-    }
+    let source = encode_spirv_words(&words);
     let source_hash = blake3::hash(source.as_bytes()).to_hex().to_string();
 
     Ok(GeneratedShader {
@@ -94,6 +142,31 @@ pub fn decode_spirv_words(source: &str) -> Result<Vec<u32>, ForgeError> {
         .collect()
 }
 
+/// Emit SPIR-V and patch the workgroup size to `schedule.workgroup_size`.
+///
+/// This is the specialization-constant alternative: emit once with naga's
+/// default, then binary-patch `OpLocalSize` to the desired size. Avoids
+/// re-running naga for each schedule variant.
+pub fn emit_spirv_patched(
+    kernel: &KernelSpec,
+    schedule: Schedule,
+) -> Result<GeneratedShader, ForgeError> {
+    let mut words = {
+        let base = emit_spirv(kernel, schedule)?;
+        decode_spirv_words(&base.source)?
+    };
+    patch_spirv_workgroup_size(&mut words, schedule.workgroup_size)?;
+    let source = encode_spirv_words(&words);
+    let source_hash = blake3::hash(source.as_bytes()).to_hex().to_string();
+    Ok(GeneratedShader {
+        kernel_id: kernel.id.clone(),
+        semantic_hash: kernel.semantic_hash()?,
+        source_hash,
+        schedule,
+        source,
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -108,5 +181,63 @@ mod tests {
         // First word of any SPIR-V module is the magic number 0x07230203.
         assert_eq!(words[0], 0x0723_0203, "SPIR-V magic number header");
         assert_eq!(generated.kernel_id, kernel.id);
+    }
+
+    #[test]
+    fn patch_workgroup_size_modifies_op_local_size() {
+        let kernel = BuiltinKernel::AffineF32.spec();
+        let base = emit_spirv(&kernel, Schedule::default()).expect("spirv emission");
+        let mut words = decode_spirv_words(&base.source).expect("decode words");
+
+        // Find the original OpExecutionMode LocalSize and record its x value.
+        let target = (OP_EXECUTION_MODE_LOCAL_SIZE_WORD_COUNT << 16) | OP_EXECUTION_MODE;
+        let mut orig_x = 0;
+        for i in 0..words.len().saturating_sub(6) {
+            if words[i] == target && words[i + 2] == EXEC_MODE_LOCAL_SIZE {
+                orig_x = words[i + 3];
+                break;
+            }
+        }
+        assert!(
+            orig_x > 0,
+            "OpExecutionMode LocalSize should exist in emitted SPIR-V"
+        );
+
+        // Patch to 128.
+        patch_spirv_workgroup_size(&mut words, 128).expect("patch");
+
+        // Verify the patch took effect.
+        for i in 0..words.len().saturating_sub(6) {
+            if words[i] == target && words[i + 2] == EXEC_MODE_LOCAL_SIZE {
+                assert_eq!(words[i + 3], 128, "workgroup x patched to 128");
+                assert_eq!(words[i + 4], 1, "workgroup y = 1");
+                assert_eq!(words[i + 5], 1, "workgroup z = 1");
+                return;
+            }
+        }
+        panic!("OpExecutionMode LocalSize disappeared after patch");
+    }
+
+    #[test]
+    fn emit_spirv_patched_produces_valid_variant() {
+        let kernel = BuiltinKernel::AffineF32.spec();
+        let schedule = Schedule {
+            workgroup_size: 128,
+            ..Default::default()
+        };
+        let generated = emit_spirv_patched(&kernel, schedule).expect("patched spirv");
+        let words = decode_spirv_words(&generated.source).expect("decode");
+        assert!(!words.is_empty());
+        assert_eq!(words[0], 0x0723_0203, "magic number preserved");
+
+        // Verify workgroup size is 128 in the binary.
+        let target = (OP_EXECUTION_MODE_LOCAL_SIZE_WORD_COUNT << 16) | OP_EXECUTION_MODE;
+        for i in 0..words.len().saturating_sub(6) {
+            if words[i] == target && words[i + 2] == EXEC_MODE_LOCAL_SIZE {
+                assert_eq!(words[i + 3], 128);
+                return;
+            }
+        }
+        panic!("OpExecutionMode LocalSize not found in patched SPIR-V");
     }
 }

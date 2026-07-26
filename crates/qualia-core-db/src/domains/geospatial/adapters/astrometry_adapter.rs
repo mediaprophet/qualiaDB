@@ -58,7 +58,10 @@ mod tests {
     #[test]
     fn test_astrometry_adapter_consent_denied() {
         let registry = NetworkDisclosureRegistry::new();
-        let adapter = AstrometryAdapter::new("astrometry_adapter", "https://ssd.jpl.nasa.gov/api/horizons.api");
+        let adapter = AstrometryAdapter::new(
+            "astrometry_adapter",
+            "https://ssd.jpl.nasa.gov/api/horizons.api",
+        );
 
         let res = adapter.fetch_region((0.0, 0.0, 1.0, 1.0), (0, 0), &registry);
         assert!(res.is_err());

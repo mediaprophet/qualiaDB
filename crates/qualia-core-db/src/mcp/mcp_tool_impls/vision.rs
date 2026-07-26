@@ -11,11 +11,11 @@ use serde_json::{json, Value};
 pub fn computer_vision(args: &[u8]) -> Result<String, McpSystemError> {
     use crate::specialized_libs::computer_vision as cvlib;
     use crate::specialized_libs::computer_vision::cv::buffer::RgbView;
-    use crate::specialized_libs::computer_vision::sr::{
-        super_resolve, ClassicalKernel, EnhancementMode, SrBackend, SrRequest,
-    };
     use crate::specialized_libs::computer_vision::spatial::{
         cleanup_mesh_ir, MeshCleanupOptions, MeshIR,
+    };
+    use crate::specialized_libs::computer_vision::sr::{
+        super_resolve, ClassicalKernel, EnhancementMode, SrBackend, SrRequest,
     };
 
     let v = parse_tool_args(args)?;

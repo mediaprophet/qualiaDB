@@ -60,8 +60,12 @@ pub fn cnn_light_super_resolve(
     if w == 0 || h == 0 {
         return Err(SrSessionError::InvalidParameter);
     }
-    let out_w = w.checked_mul(scale as u32).ok_or(SrSessionError::InvalidParameter)?;
-    let out_h = h.checked_mul(scale as u32).ok_or(SrSessionError::InvalidParameter)?;
+    let out_w = w
+        .checked_mul(scale as u32)
+        .ok_or(SrSessionError::InvalidParameter)?;
+    let out_h = h
+        .checked_mul(scale as u32)
+        .ok_or(SrSessionError::InvalidParameter)?;
     let need = (out_w as usize)
         .checked_mul(out_h as usize)
         .and_then(|n| n.checked_mul(3))

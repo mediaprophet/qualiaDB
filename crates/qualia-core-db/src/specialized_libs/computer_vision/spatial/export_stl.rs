@@ -40,7 +40,9 @@ pub fn mesh_ir_to_stl_binary(mesh: &MeshIR, out: &mut [u8]) -> Result<usize, CvE
         nx /= len;
         ny /= len;
         nz /= len;
-        for f in [nx, ny, nz, p0[0], p0[1], p0[2], p1[0], p1[1], p1[2], p2[0], p2[1], p2[2]] {
+        for f in [
+            nx, ny, nz, p0[0], p0[1], p0[2], p1[0], p1[1], p1[2], p2[0], p2[1], p2[2],
+        ] {
             out[o..o + 4].copy_from_slice(&f.to_le_bytes());
             o += 4;
         }

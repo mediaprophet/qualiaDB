@@ -94,7 +94,6 @@ pub const P64_LAYER_GLOBAL: u16 = 0xFFFF;
 
 // Metadata bitfields are handled by the q42 layer, no longer embedded in weights.
 
-
 /// Precision view flags for multi-precision `.p64` containers.
 pub const P64_VIEW_FLAG_F32: u16 = 1 << 0;
 pub const P64_VIEW_FLAG_F16: u16 = 1 << 1;
@@ -129,19 +128,19 @@ pub struct P64WeightHeader {
 #[repr(C, align(64))]
 #[derive(Clone, Copy, Debug)]
 pub struct P64TensorEntry {
-    pub name_offset: u32,            // Relative offset to string table
-    pub role_id: u16,                // Standardized enum (e.g., P64_ROLE_FFN_UP)
-    pub dtype: u16,                  // Primary data type (FP32, FP16, etc.)
-    pub manifold_idx: u32,           // Index into the 10D Manifold table
-    pub rank: u32,                   // Number of dimensions
-    pub dimensions: [u32; 4],        // Shape of the tensor
-    pub blob_offset: u32,            // Relative offset to primary tensor data
-    pub blob_size: u32,              // Size in bytes of primary blob
-    pub source_offset: u64,          // Original offset inside source container
-    pub source_name_hash: u64,       // Original tensor-name hash
-    pub alt_dtype: u16,              // Secondary/quantized view dtype (e.g. Q4_K / Ternary)
-    pub precision_views_mask: u16,   // Bitmask of available precision loading views
-    pub alt_blob_offset: u32,        // Relative offset to secondary quantized blob
+    pub name_offset: u32,          // Relative offset to string table
+    pub role_id: u16,              // Standardized enum (e.g., P64_ROLE_FFN_UP)
+    pub dtype: u16,                // Primary data type (FP32, FP16, etc.)
+    pub manifold_idx: u32,         // Index into the 10D Manifold table
+    pub rank: u32,                 // Number of dimensions
+    pub dimensions: [u32; 4],      // Shape of the tensor
+    pub blob_offset: u32,          // Relative offset to primary tensor data
+    pub blob_size: u32,            // Size in bytes of primary blob
+    pub source_offset: u64,        // Original offset inside source container
+    pub source_name_hash: u64,     // Original tensor-name hash
+    pub alt_dtype: u16,            // Secondary/quantized view dtype (e.g. Q4_K / Ternary)
+    pub precision_views_mask: u16, // Bitmask of available precision loading views
+    pub alt_blob_offset: u32,      // Relative offset to secondary quantized blob
 }
 
 #[repr(C, align(64))]

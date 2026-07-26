@@ -200,7 +200,9 @@ impl PortalGpu {
         height: u32,
         particle_cap: usize,
     ) -> Result<Self, String> {
-        use raw_window_handle::{RawDisplayHandle, RawWindowHandle, Win32WindowHandle, WindowsDisplayHandle};
+        use raw_window_handle::{
+            RawDisplayHandle, RawWindowHandle, Win32WindowHandle, WindowsDisplayHandle,
+        };
 
         // Create a DEDICATED instance/adapter/device for the surface renderer.
         // The shared GPU context is optimised for compute (LLM inference) and its
@@ -212,9 +214,8 @@ impl PortalGpu {
         desc.backends = wgpu::Backends::all();
         let instance = wgpu::Instance::new(desc);
 
-        let win32_handle = Win32WindowHandle::new(
-            std::num::NonZeroIsize::new(hwnd).ok_or("invalid HWND (zero)")?,
-        );
+        let win32_handle =
+            Win32WindowHandle::new(std::num::NonZeroIsize::new(hwnd).ok_or("invalid HWND (zero)")?);
         let raw_window = RawWindowHandle::Win32(win32_handle);
         let raw_display = RawDisplayHandle::Windows(WindowsDisplayHandle::new());
 
@@ -249,15 +250,13 @@ impl PortalGpu {
             .find(|f| f.is_srgb())
             .unwrap_or(caps.formats[0]);
 
-        let (device, queue) = pollster::block_on(adapter.request_device(
-            &wgpu::DeviceDescriptor {
-                label: Some("Webizen GPU Surface"),
-                required_features: wgpu::Features::empty(),
-                required_limits: wgpu::Limits::downlevel_defaults(),
-                memory_hints: wgpu::MemoryHints::default(),
-                ..Default::default()
-            },
-        ))
+        let (device, queue) = pollster::block_on(adapter.request_device(&wgpu::DeviceDescriptor {
+            label: Some("Webizen GPU Surface"),
+            required_features: wgpu::Features::empty(),
+            required_limits: wgpu::Limits::downlevel_defaults(),
+            memory_hints: wgpu::MemoryHints::default(),
+            ..Default::default()
+        }))
         .map_err(|e| format!("Failed to request device for surface: {e}"))?;
 
         let device = Arc::new(device);
@@ -269,7 +268,11 @@ impl PortalGpu {
             width: width.max(1),
             height: height.max(1),
             present_mode: wgpu::PresentMode::Fifo,
-            alpha_mode: caps.alpha_modes.first().copied().unwrap_or(wgpu::CompositeAlphaMode::Auto),
+            alpha_mode: caps
+                .alpha_modes
+                .first()
+                .copied()
+                .unwrap_or(wgpu::CompositeAlphaMode::Auto),
             view_formats: vec![],
             desired_maximum_frame_latency: 2,
             // wgpu 30: surfaces declare their colour space; Auto preserves the
@@ -642,7 +645,10 @@ impl PortalGpu {
                 module: &mesh_shader,
                 entry_point: Some("vertex_main"),
                 compilation_options: Default::default(),
-                buffers: &[Some(mesh_vertex_layout.clone()), Some(mesh_color_layout.clone())],
+                buffers: &[
+                    Some(mesh_vertex_layout.clone()),
+                    Some(mesh_color_layout.clone()),
+                ],
             },
             fragment: Some(wgpu::FragmentState {
                 module: &mesh_shader,
@@ -752,7 +758,10 @@ impl PortalGpu {
                         module: &mesh_shader,
                         entry_point: Some("vertex_main"),
                         compilation_options: Default::default(),
-                        buffers: &[Some(mesh_vertex_layout.clone()), Some(mesh_color_layout.clone())],
+                        buffers: &[
+                            Some(mesh_vertex_layout.clone()),
+                            Some(mesh_color_layout.clone()),
+                        ],
                     },
                     fragment: Some(wgpu::FragmentState {
                         module: &mesh_shader,
@@ -1210,7 +1219,9 @@ impl PortalGpu {
         if !matches!(rx.try_recv(), Ok(Ok(()))) {
             return None;
         }
-        let mapped = slice.get_mapped_range().expect("wgpu buffer map_range failed");
+        let mapped = slice
+            .get_mapped_range()
+            .expect("wgpu buffer map_range failed");
         let raw = if mapped.len() >= 4 {
             Some(u32::from_le_bytes(mapped[0..4].try_into().unwrap()))
         } else {
@@ -1566,7 +1577,9 @@ impl PortalGpu {
             .map_err(|e| format!("RGBA8 readback callback failed: {e}"))?
             .map_err(|e| format!("RGBA8 buffer map failed: {e}"))?;
 
-        let mapped = slice.get_mapped_range().expect("wgpu buffer map_range failed");
+        let mapped = slice
+            .get_mapped_range()
+            .expect("wgpu buffer map_range failed");
         let tight_row = self.width as usize * 4;
         let padded_row = self.readback_bytes_per_row as usize;
         for row in 0..self.height as usize {
@@ -1609,7 +1622,9 @@ mod tests {
     #[test]
     #[serial_test::serial(gpu)]
     fn native_offscreen_renders_tensor_and_mesh_on_shared_gpu() {
-        if !crate::wgsl_forge::test_gpu_available() { return; }
+        if !crate::wgsl_forge::test_gpu_available() {
+            return;
+        }
         let mut renderer =
             PortalGpu::new_offscreen(96, 96, 256).expect("native offscreen renderer");
 

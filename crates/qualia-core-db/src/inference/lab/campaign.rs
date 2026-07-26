@@ -216,7 +216,10 @@ pub fn run_optimization_campaign(cfg: &CampaignConfig) -> CampaignReport {
         // Check time budget.
         if let Some(max_dur) = cfg.max_duration {
             if t_start.elapsed() >= max_dur {
-                log::info!("campaign|time_budget_exhausted|{}s", t_start.elapsed().as_secs_f64());
+                log::info!(
+                    "campaign|time_budget_exhausted|{}s",
+                    t_start.elapsed().as_secs_f64()
+                );
                 break;
             }
         }
@@ -262,7 +265,12 @@ pub fn run_optimization_campaign(cfg: &CampaignConfig) -> CampaignReport {
 
         // After each batch: recompute frontier + update beliefs.
         if trials_run % cfg.batch_size == 0 {
-            update_beliefs(&mut beliefs, &results, baseline_tok_s, cfg.improvement_threshold);
+            update_beliefs(
+                &mut beliefs,
+                &results,
+                baseline_tok_s,
+                cfg.improvement_threshold,
+            );
             log::info!(
                 "campaign|batch_complete|trials={}|frontier={}|beliefs={}",
                 trials_run,
@@ -276,10 +284,17 @@ pub fn run_optimization_campaign(cfg: &CampaignConfig) -> CampaignReport {
     let frontier = ParetoFrontier::compute(&results);
 
     // Final belief update.
-    update_beliefs(&mut beliefs, &results, baseline_tok_s, cfg.improvement_threshold);
+    update_beliefs(
+        &mut beliefs,
+        &results,
+        baseline_tok_s,
+        cfg.improvement_threshold,
+    );
 
     // Select best result by application profile.
-    let best_index = cfg.profile.select_best(&results, &frontier)
+    let best_index = cfg
+        .profile
+        .select_best(&results, &frontier)
         .and_then(|r| results.iter().position(|x| x.config_hash == r.config_hash));
 
     let best_tok_s = best_index
@@ -297,7 +312,9 @@ pub fn run_optimization_campaign(cfg: &CampaignConfig) -> CampaignReport {
 
     // Build summary.
     let improvement = match (best_tok_s, baseline_tok_s) {
-        (Some(best), Some(base)) if base > 0.0 => format!("{:.1}% improvement", (best / base - 1.0) * 100.0),
+        (Some(best), Some(base)) if base > 0.0 => {
+            format!("{:.1}% improvement", (best / base - 1.0) * 100.0)
+        }
         _ => "no baseline".to_string(),
     };
     let summary = format!(
@@ -479,7 +496,8 @@ mod tests {
             best_tok_s: Some(60.0),
             summary: "test save".into(),
         };
-        let tmp = std::env::temp_dir().join(format!("qualia_campaign_test_{}.json", std::process::id()));
+        let tmp =
+            std::env::temp_dir().join(format!("qualia_campaign_test_{}.json", std::process::id()));
         save_campaign_report(&report, &tmp).unwrap();
         let content = std::fs::read_to_string(&tmp).unwrap();
         assert!(content.contains("trials_run"));

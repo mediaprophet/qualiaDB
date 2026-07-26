@@ -18,5 +18,8 @@ pub mod t_tests;
 
 pub use anova::{one_way_anova, AnovaResult};
 pub use chi_square::{chi_square_gof, chi_square_independence, ChiSquareResult};
-pub use nonparametric::{friedman, mann_whitney_u, mcnemar, ks_1sample, FriedmanResult, NonparametricResult, MannWhitneyResult, KolmogorovSmirnovResult};
+pub use nonparametric::{
+    friedman, ks_1sample, mann_whitney_u, mcnemar, FriedmanResult, KolmogorovSmirnovResult,
+    MannWhitneyResult, NonparametricResult,
+};
 pub use t_tests::{one_sample_t, paired_t, two_sample_t, TTest, TwoSampleTTest};

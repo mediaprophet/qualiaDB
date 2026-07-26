@@ -21,7 +21,8 @@ impl PhysicsSimulationLibrary {
             ));
         }
         let n = positions.len() / 2;
-        if velocities.len() != 2 * n || !(epsilon > 0.0 && sigma > 0.0 && mass > 0.0 && total_time > 0.0)
+        if velocities.len() != 2 * n
+            || !(epsilon > 0.0 && sigma > 0.0 && mass > 0.0 && total_time > 0.0)
         {
             return Err(PhysicsError::InvalidConfiguration(
                 "velocities length 2N; epsilon, sigma, mass, total_time > 0".to_string(),

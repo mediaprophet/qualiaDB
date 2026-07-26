@@ -299,7 +299,7 @@ fn encode_op(op: &OpNode) -> Result<(u64, u64, u64), ForgeError> {
             (m as u64) | ((n as u64) << 32),
             (k as u64) | ((tc as u64) << 32) | ((trans_b as u64) << 33),
         ),
-        OpNode::Gemv { m, n } => (OP_GEMV, (m as u64) | ((n as u64) << 32), 0),
+        OpNode::Gemv { m, n, tc } => (OP_GEMV, (m as u64) | ((n as u64) << 32), tc as u64),
         OpNode::Fft { len, inverse } => (OP_FFT, (len as u64) | ((inverse as u64) << 32), 0),
         OpNode::Reduce { op, axis } => (OP_REDUCE, redkind_code(op) | (axis_code(axis) << 16), 0),
         OpNode::GatherDequant { scheme, block } => (
@@ -410,6 +410,7 @@ fn decode_op(opcode: u64, w0: u64, w1: u64) -> Result<OpNode, ForgeError> {
         OP_GEMV => OpNode::Gemv {
             m: (w0 & 0xFFFF_FFFF) as u32,
             n: (w0 >> 32) as u32,
+            tc: w1 & 1 == 1,
         },
         OP_FFT => OpNode::Fft {
             len: (w0 & 0xFFFF_FFFF) as u32,
@@ -731,7 +732,11 @@ mod tests {
                 tc: true,
                 trans_b: true,
             },
-            OpNode::Gemv { m: 5, n: 6 },
+            OpNode::Gemv {
+                m: 5,
+                n: 6,
+                tc: true,
+            },
             OpNode::Fft {
                 len: 1024,
                 inverse: true,

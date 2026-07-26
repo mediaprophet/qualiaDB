@@ -220,6 +220,10 @@ pub enum OpNode {
     Gemv {
         m: u32,
         n: u32,
+        /// Tensor-core (WMMA) eligible — the CUDA-C lowerer emits the
+        /// `wmma` dequant-GEMV kernel when `true`, the plain f32 GEMV
+        /// when `false`. Mirrors `MatMul::tc`.
+        tc: bool,
     },
     Fft {
         len: u32,
@@ -536,7 +540,11 @@ impl KernelSpec {
                 let a = TensorRef::external(dyn2, DType::F32);
                 let x = TensorRef::external(dyn1, DType::F32);
                 let out = g.push(
-                    OpNode::Gemv { m: 0, n: 0 },
+                    OpNode::Gemv {
+                        m: 0,
+                        n: 0,
+                        tc: false,
+                    },
                     &[a, x],
                     dyn1,
                     DType::F32,

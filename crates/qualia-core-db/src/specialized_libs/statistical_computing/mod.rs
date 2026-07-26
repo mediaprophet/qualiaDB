@@ -64,30 +64,30 @@ pub struct SensitivityAnalyzer {
     sensitivity_cache: HashMap<String, f64>,
 }
 
-mod types;
-mod datasets;
+mod accelerator;
+mod analytics;
 mod catalog;
 mod compression;
-mod indexing;
 mod computation;
-mod scheduler;
-mod accelerator;
-mod privacy;
-mod analytics;
-mod library;
+mod datasets;
 mod errors;
+mod indexing;
+mod library;
+mod privacy;
+mod scheduler;
+mod types;
 
-pub use types::*;
-pub use datasets::*;
+pub use accelerator::*;
+pub use analytics::*;
 pub use catalog::*;
 pub use compression::*;
-pub use indexing::*;
 pub use computation::*;
-pub use scheduler::*;
-pub use accelerator::*;
-pub use privacy::*;
-pub use analytics::*;
+pub use datasets::*;
 pub use errors::*;
+pub use indexing::*;
+pub use privacy::*;
+pub use scheduler::*;
+pub use types::*;
 
 #[cfg(test)]
 mod tests;

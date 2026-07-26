@@ -84,7 +84,9 @@ mod tests {
 
     #[test]
     fn ahash_identical_equal() {
-        let img = [10u8, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160];
+        let img = [
+            10u8, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160,
+        ];
         let v = gray(4, 4, &img);
         let a = ahash_u64(v).unwrap();
         let b = ahash_u64(v).unwrap();
@@ -93,7 +95,9 @@ mod tests {
 
     #[test]
     fn dhash_identical_equal() {
-        let img = [0u8, 255, 0, 255, 128, 64, 192, 32, 16, 240, 80, 160, 200, 40, 90, 10];
+        let img = [
+            0u8, 255, 0, 255, 128, 64, 192, 32, 16, 240, 80, 160, 200, 40, 90, 10,
+        ];
         let v = gray(4, 4, &img);
         assert_eq!(dhash_u64(v).unwrap(), dhash_u64(v).unwrap());
     }

@@ -50,7 +50,10 @@ pub fn lucas_kanade_step(
         let (dx, dy) = if det.abs() < 1e-3 {
             (0.0, 0.0)
         } else {
-            ((iy2 * (-ixt) - ixiy * (-iyt)) / det, (ix2 * (-iyt) - ixiy * (-ixt)) / det)
+            (
+                (iy2 * (-ixt) - ixiy * (-iyt)) / det,
+                (ix2 * (-iyt) - ixiy * (-ixt)) / det,
+            )
         };
         flow_xy[i * 2] = dx;
         flow_xy[i * 2 + 1] = dy;

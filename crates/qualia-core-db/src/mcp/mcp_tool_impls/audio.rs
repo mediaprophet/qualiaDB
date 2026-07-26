@@ -73,15 +73,9 @@ pub fn audio_features(args: &[u8]) -> Result<String, McpSystemError> {
             // Cap the number of frames we retain so the response stays bounded (edge safety).
             const MAX_FRAMES: usize = 64;
             let mut out = vec![0.0f32; MAX_FRAMES * n_mel];
-            let n_frames = qualia_audio::log_mel_from_mono(
-                &samples,
-                256,
-                128,
-                sample_rate,
-                n_mel,
-                &mut out,
-            )
-            .map_err(|_| McpSystemError::InvalidParameters)?;
+            let n_frames =
+                qualia_audio::log_mel_from_mono(&samples, 256, 128, sample_rate, n_mel, &mut out)
+                    .map_err(|_| McpSystemError::InvalidParameters)?;
             // Return stats + a prefix, never the whole matrix.
             let mel_prefix: Vec<f32> = out
                 .iter()
@@ -150,7 +144,10 @@ mod tests {
     fn capability_summary_reports_real_coverage() {
         let out = audio_features(br#"{"op":"capability_summary"}"#).expect("summary ok");
         let v: Value = serde_json::from_str(&out).expect("valid json");
-        assert!(v["present"].as_u64().unwrap() >= 50, "present coverage: {out}");
+        assert!(
+            v["present"].as_u64().unwrap() >= 50,
+            "present coverage: {out}"
+        );
         assert!(v["total"].as_u64().unwrap() >= 60);
     }
 

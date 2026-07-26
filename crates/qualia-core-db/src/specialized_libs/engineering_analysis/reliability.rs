@@ -1,6 +1,5 @@
 use super::*;
 
-
 /// Reliability analyzer for reliability engineering analysis
 pub struct ReliabilityAnalyzer {
     reliability_methods: ReliabilityMethods,
@@ -1074,4 +1073,3 @@ impl MonitoringParameter {
         }
     }
 }
-

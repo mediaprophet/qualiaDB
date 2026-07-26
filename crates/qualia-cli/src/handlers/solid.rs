@@ -17,8 +17,7 @@ pub async fn handle(action: SolidAction) {
                     .map(PathBuf::from)
                     .unwrap_or_else(|_| std::env::temp_dir().join("qualia-solid-pod"))
             });
-            let public_base =
-                public_base.unwrap_or_else(|| format!("http://{host}:{port}"));
+            let public_base = public_base.unwrap_or_else(|| format!("http://{host}:{port}"));
             let cfg = qualia_solid_bridge::BridgeConfig {
                 listen: format!("{host}:{port}").parse().expect("invalid host:port"),
                 data_root,

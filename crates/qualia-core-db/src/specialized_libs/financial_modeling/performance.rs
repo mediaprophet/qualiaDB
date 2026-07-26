@@ -1,6 +1,5 @@
 use super::*;
 
-
 /// Performance tracker
 pub struct PerformanceTracker {
     performance_metrics: HashMap<String, PerformanceMetrics>,

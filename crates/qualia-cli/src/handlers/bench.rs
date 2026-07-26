@@ -1,6 +1,6 @@
-use crate::cli::BenchmarkAction;
-use crate::benchmark_env;
 use crate::bench;
+use crate::benchmark_env;
+use crate::cli::BenchmarkAction;
 use crate::telemetry_server;
 
 pub async fn handle_benchmark(action: &BenchmarkAction) {
@@ -60,18 +60,15 @@ pub async fn handle_benchmark(action: &BenchmarkAction) {
         BenchmarkAction::LazyInference { path } => {
             println!("Running Lazy Inference Benchmark on {:?}", path);
             let start = std::time::Instant::now();
-            if let Ok(telemetry) = qualia_core_db::query_engine::lazy_superblock_query(
-                path.to_str().unwrap(),
-                1,
-            ) {
+            if let Ok(telemetry) =
+                qualia_core_db::query_engine::lazy_superblock_query(path.to_str().unwrap(), 1)
+            {
                 let elapsed = start.elapsed();
                 println!(
                     "[Lazy Execution] Fetched {} SuperBlocks in {:.2?}",
                     telemetry.blocks_loaded, elapsed
                 );
-                println!(
-                    "Lazy Inference mathematically bypassed unneeded sectors of the file!"
-                );
+                println!("Lazy Inference mathematically bypassed unneeded sectors of the file!");
             }
         }
         BenchmarkAction::Incremental { path } => {
@@ -81,10 +78,9 @@ pub async fn handle_benchmark(action: &BenchmarkAction) {
         BenchmarkAction::P2pSwarm { path } => {
             println!("Running WebRTC P2P Swarm Streaming Benchmark on {:?}", path);
             let start = std::time::Instant::now();
-            if let Ok(telemetry) = qualia_core_db::query_engine::lazy_superblock_query(
-                path.to_str().unwrap(),
-                100,
-            ) {
+            if let Ok(telemetry) =
+                qualia_core_db::query_engine::lazy_superblock_query(path.to_str().unwrap(), 100)
+            {
                 let elapsed = start.elapsed();
                 let rss = telemetry_server::get_peak_rss(&mut sys);
                 println!(
@@ -106,7 +102,9 @@ pub async fn handle_bench(suite: &str) -> Result<(), Box<dyn std::error::Error>>
         suite
     );
     println!("=====================================\n");
-    println!("Running real measurements for Qualia (synthetic deterministic dataset + engine calls)...");
+    println!(
+        "Running real measurements for Qualia (synthetic deterministic dataset + engine calls)..."
+    );
 
     fn fnv1a(x: u64) -> u64 {
         let mut h: u64 = 0xcbf29ce484222325;
@@ -117,9 +115,7 @@ pub async fn handle_bench(suite: &str) -> Result<(), Box<dyn std::error::Error>>
         h
     }
 
-    fn build_synth(
-        size: usize,
-    ) -> (std::collections::HashMap<u64, Vec<(u64, u64)>>, Vec<u64>) {
+    fn build_synth(size: usize) -> (std::collections::HashMap<u64, Vec<(u64, u64)>>, Vec<u64>) {
         let mut map: std::collections::HashMap<u64, Vec<(u64, u64)>> =
             std::collections::HashMap::with_capacity(size);
         let mut subjects = Vec::with_capacity(size);
@@ -195,8 +191,7 @@ pub async fn handle_bench(suite: &str) -> Result<(), Box<dyn std::error::Error>>
             while end == start {
                 end = std::time::Instant::now();
             }
-            granularity_samples_ns
-                .push(end.duration_since(start).as_secs_f64() * 1_000_000_000.0);
+            granularity_samples_ns.push(end.duration_since(start).as_secs_f64() * 1_000_000_000.0);
         }
 
         fn summarize(mut samples: Vec<f64>) -> serde_json::Value {
@@ -317,8 +312,7 @@ pub async fn handle_bench(suite: &str) -> Result<(), Box<dyn std::error::Error>>
         times.push(t);
     }
     let mean: f64 = times.iter().sum::<f64>() / times.len() as f64;
-    let var: f64 =
-        times.iter().map(|&t| (t - mean).powi(2)).sum::<f64>() / times.len() as f64;
+    let var: f64 = times.iter().map(|&t| (t - mean).powi(2)).sum::<f64>() / times.len() as f64;
     let qualia_jitter = format!("+/- {:.2} ms (measured stddev)", var.sqrt());
 
     let qualia_sync = time_ms(|| {
@@ -376,8 +370,7 @@ pub async fn handle_bench(suite: &str) -> Result<(), Box<dyn std::error::Error>>
 
     let qualia_nym = time_ms(|| {
         let _ = qualia_core_db::query_engine::lazy_superblock_query(test_q42, 3);
-        let mut parts: std::collections::HashMap<u64, usize> =
-            std::collections::HashMap::new();
+        let mut parts: std::collections::HashMap<u64, usize> = std::collections::HashMap::new();
         for i in 0..1000 {
             let k = fnv1a(i) % 16;
             *parts.entry(k).or_default() += 1;

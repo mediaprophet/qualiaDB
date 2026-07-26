@@ -7,6 +7,7 @@ fn main() {
     println!("cargo:rerun-if-env-changed=QUALIA_BUILD_VERBOSE");
     println!("cargo:rerun-if-env-changed=DIRECTML_LIB_PATH");
     println!("cargo:rerun-if-env-changed=QUALIA_DXC_PATH");
+    println!("cargo:rerun-if-env-changed=QUALIA_DXC_CLI_PATH");
 
     match target_os.as_str() {
         "android" => {
@@ -49,7 +50,10 @@ fn main() {
                 // system DirectML, and PowerShell treated cargo:warning success spam as errors.
                 // Always stage release DLL. Debug-layer DLL only when present (dev machines).
                 copy_runtime_dlls(&dir, &["DirectML.dll", "DirectML.Debug.dll"]);
-                build_info(&format!("DirectML linked + DLL staged from {}", dir.display()));
+                build_info(&format!(
+                    "DirectML linked + DLL staged from {}",
+                    dir.display()
+                ));
             } else {
                 // Real problem only — keep as cargo warning.
                 println!(
@@ -74,6 +78,7 @@ fn main() {
                 .join(dxc_sub);
             let dxc_dll = dxc_dir.join("dxcompiler.dll");
             let dxil_dll = dxc_dir.join("dxil.dll");
+            let dxc_exe = dxc_dir.join("dxc.exe");
             if dxc_dll.exists() && dxil_dll.exists() {
                 if let Ok(out_dir) = env::var("OUT_DIR") {
                     if let Some(profile_dir) = Path::new(&out_dir).ancestors().nth(3) {
@@ -81,9 +86,16 @@ fn main() {
                             let _ = std::fs::create_dir_all(&dst_dir);
                             let _ = std::fs::copy(&dxc_dll, dst_dir.join("dxcompiler.dll"));
                             let _ = std::fs::copy(&dxil_dll, dst_dir.join("dxil.dll"));
+                            // Stage dxc.exe for HLSL→SPIR-V CLI compilation (forge HLSL backend).
+                            if dxc_exe.exists() {
+                                let _ = std::fs::copy(&dxc_exe, dst_dir.join("dxc.exe"));
+                            }
                         }
                         println!("cargo:rerun-if-changed={}", dxc_dll.display());
                         println!("cargo:rerun-if-changed={}", dxil_dll.display());
+                        if dxc_exe.exists() {
+                            println!("cargo:rerun-if-changed={}", dxc_exe.display());
+                        }
                         build_info(&format!("DXC ({dxc_sub}) staged beside binaries"));
                     }
                 }

@@ -1,6 +1,5 @@
 use super::*;
 
-
 /// Vibration analysis
 pub struct VibrationAnalysis {
     free_vibration: FreeVibration,
@@ -210,4 +209,3 @@ impl RandomVibration {
         }
     }
 }
-

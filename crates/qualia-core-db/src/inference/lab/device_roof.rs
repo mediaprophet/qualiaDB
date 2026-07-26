@@ -29,13 +29,7 @@ pub fn calibrate_device_roof(gemv_n: usize) -> DeviceRoof {
             c.gflops,
             c.upload_gbps,
         ),
-        None => (
-            "none".into(),
-            "none".into(),
-            f64::INFINITY,
-            0.0,
-            0.0,
-        ),
+        None => ("none".into(), "none".into(), f64::INFINITY, 0.0, 0.0),
     };
     // Rough balance: if we measured G FLOP/s and U GB/s, balance ≈ G / U (FLOP/byte).
     // upload_gbps is host→device; for in-pool compute use gflops as primary signal.
@@ -83,7 +77,7 @@ impl DeviceRoof {
 /// Quick CPU Q4 dequant·dot micro for intensity reference (no GPU).
 pub fn cpu_q4_intensity_probe(n_in: usize, n_out: usize) -> (f64, f64) {
     use crate::ggml_quants::{
-        dequantize_row_into, q4k_block_to_soa, GGML_TYPE_Q4_K_SOA, BLOCK_Q4K_SOA_BYTES,
+        dequantize_row_into, q4k_block_to_soa, BLOCK_Q4K_SOA_BYTES, GGML_TYPE_Q4_K_SOA,
     };
     let n_in = n_in.max(256) & !255; // multiple of 256
     let n_out = n_out.max(1).min(64);
@@ -115,7 +109,11 @@ pub fn cpu_q4_intensity_probe(n_in: usize, n_out: usize) -> (f64, f64) {
             &mut row,
         )
         .ok();
-        acc += row.iter().zip(x.iter()).map(|(a, b)| (*a as f64) * (*b as f64)).sum::<f64>();
+        acc += row
+            .iter()
+            .zip(x.iter())
+            .map(|(a, b)| (*a as f64) * (*b as f64))
+            .sum::<f64>();
     }
     let secs = t0.elapsed().as_secs_f64().max(1e-9);
     let flops = (n_in as f64) * (n_out as f64) * 2.0; // mul+add

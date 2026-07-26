@@ -16,25 +16,25 @@ use std::collections::HashMap;
 // `crate::specialized_libs::cryptographic_library::<Item>` resolves as before.
 // ---------------------------------------------------------------------------
 
-mod types;
-mod errors;
-mod library;
-mod key_management;
-mod signing;
 mod encryption;
+mod errors;
 mod hashing;
+mod key_management;
+mod library;
 mod proofs;
 mod security;
+mod signing;
+mod types;
 
 #[cfg(test)]
 mod tests;
 
-pub use types::*;
-pub use errors::*;
-pub use library::*;
-pub use key_management::*;
-pub use signing::*;
 pub use encryption::*;
+pub use errors::*;
 pub use hashing::*;
+pub use key_management::*;
+pub use library::*;
 pub use proofs::*;
 pub use security::*;
+pub use signing::*;
+pub use types::*;

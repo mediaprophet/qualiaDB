@@ -160,12 +160,7 @@ pub fn compile_mesh_to_10d_vision_with_provenance(
     nodes: &[Tensor10D],
     provenance: &ProvenanceSidecar,
 ) -> Result<Vec<u8>, Compile10dError> {
-    compile_mesh_to_10d_with_extras(
-        mesh,
-        nodes,
-        Some(provenance),
-        Compile10dExtras::VISION,
-    )
+    compile_mesh_to_10d_with_extras(mesh, nodes, Some(provenance), Compile10dExtras::VISION)
 }
 
 /// Full seal with explicit extras (topology / spatial index).
@@ -277,7 +272,9 @@ pub fn compile_mesh_to_10d_with_extras(
 
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 fn encode_topology_for_mesh(mesh: &Mesh) -> Result<Option<Vec<u8>>, Compile10dError> {
-    use crate::container_10d::topology_section::{encode_topology_section, encoded_len as topo_len};
+    use crate::container_10d::topology_section::{
+        encode_topology_section, encoded_len as topo_len,
+    };
     use crate::specialized_libs::computational_geometry::{
         build_triangle_half_edges, required_edge_slots, EdgeSlot, HalfEdge,
     };
@@ -496,7 +493,15 @@ pub fn compile_asset(
     asset_uri: &str,
     source_format: &str,
 ) -> Result<CompiledAsset, Compile10dError> {
-    compile_organ_asset(source_bytes, hint, asset_uri, source_format, None, None, None)
+    compile_organ_asset(
+        source_bytes,
+        hint,
+        asset_uri,
+        source_format,
+        None,
+        None,
+        None,
+    )
 }
 
 /// Like [`compile_asset`] but also binds the compiled asset to a 3D-body organ: its `body_system`
@@ -820,8 +825,16 @@ mod tests {
         assert!(vals.contains(&"respiratory"), "bodySystem fact present");
         assert!(vals.contains(&"male"), "anatomyModel fact present");
         // None/None path is exactly compile_asset — no phantom facts.
-        let none = compile_organ_asset(TRI_OBJ, Some("obj"), "urn:asset:organ", "obj", None, None, None)
-            .unwrap();
+        let none = compile_organ_asset(
+            TRI_OBJ,
+            Some("obj"),
+            "urn:asset:organ",
+            "obj",
+            None,
+            None,
+            None,
+        )
+        .unwrap();
         assert_eq!(none.quins.len(), plain.quins.len());
     }
 

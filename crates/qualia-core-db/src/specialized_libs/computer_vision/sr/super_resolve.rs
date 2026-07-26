@@ -70,8 +70,8 @@ pub fn super_resolve(req: &SrRequest<'_>, out: &mut [u8]) -> Result<SrReport, Cv
     }
 
     let stride = req.width.checked_mul(3).ok_or(CvError::InvalidParameter)?;
-    let view = RgbView::new(req.width, req.height, stride, req.rgb)
-        .ok_or(CvError::InvalidParameter)?;
+    let view =
+        RgbView::new(req.width, req.height, stride, req.rgb).ok_or(CvError::InvalidParameter)?;
 
     let out_w = req
         .width
@@ -119,8 +119,12 @@ pub fn super_resolve(req: &SrRequest<'_>, out: &mut [u8]) -> Result<SrReport, Cv
 fn nearest_u8(src: RgbView<'_>, scale: u8, out: &mut [u8]) -> Result<(), CvError> {
     let w = src.width;
     let h = src.height;
-    let out_w = w.checked_mul(scale as u32).ok_or(CvError::InvalidParameter)?;
-    let out_h = h.checked_mul(scale as u32).ok_or(CvError::InvalidParameter)?;
+    let out_w = w
+        .checked_mul(scale as u32)
+        .ok_or(CvError::InvalidParameter)?;
+    let out_h = h
+        .checked_mul(scale as u32)
+        .ok_or(CvError::InvalidParameter)?;
     let need = (out_w as usize)
         .checked_mul(out_h as usize)
         .and_then(|n| n.checked_mul(3))
@@ -244,7 +248,10 @@ mod tests {
             mode: EnhancementMode::Sharpen,
         };
         let mut out = [0u8; 75];
-        assert_eq!(super_resolve(&req, &mut out), Err(CvError::InvalidParameter));
+        assert_eq!(
+            super_resolve(&req, &mut out),
+            Err(CvError::InvalidParameter)
+        );
     }
 
     #[test]
@@ -259,6 +266,9 @@ mod tests {
             mode: EnhancementMode::Sharpen,
         };
         let mut out = [0u8; 12];
-        assert_eq!(super_resolve(&req, &mut out), Err(CvError::DimensionMismatch));
+        assert_eq!(
+            super_resolve(&req, &mut out),
+            Err(CvError::DimensionMismatch)
+        );
     }
 }

@@ -37,8 +37,8 @@
 use std::fmt::Write;
 
 use super::cuda_c::{
-    GEMM_F32_ENTRY, GEMM_F32_SRC, GEMV_F32_ENTRY, GEMV_F32_SRC, WMMA_GEMM_TILED_ENTRY,
-    WMMA_GEMM_TILED_SRC,
+    GEMM_F32_ENTRY, GEMM_F32_SRC, GEMV_F32_ENTRY, GEMV_F32_SRC, Q4K_SOA_WMMA_GEMV_ENTRY,
+    Q4K_SOA_WMMA_GEMV_SRC, WMMA_GEMM_TILED_ENTRY, WMMA_GEMM_TILED_SRC,
 };
 use super::GeneratedShader;
 use crate::wgsl_forge::ir::graph::{ComputeGraph, EwKind, GraphNode, Lowerer, OpNode, RedKind};
@@ -221,10 +221,20 @@ impl Lowerer for CudaCLowerer<'_> {
         }
     }
 
-    fn gemv(&mut self, _node: &GraphNode) -> Result<(), ForgeError> {
-        self.source.push_str(GEMV_F32_SRC);
-        self.source.push('\n');
-        Ok(())
+    fn gemv(&mut self, node: &GraphNode) -> Result<(), ForgeError> {
+        if let OpNode::Gemv { tc, .. } = node.op {
+            self.source.push_str(if tc {
+                Q4K_SOA_WMMA_GEMV_SRC
+            } else {
+                GEMV_F32_SRC
+            });
+            self.source.push('\n');
+            Ok(())
+        } else {
+            Err(ForgeError::Emission(
+                "CudaCLowerer::gemv received a non-Gemv node".to_string(),
+            ))
+        }
     }
 
     fn elementwise(&mut self, node: &GraphNode) -> Result<(), ForgeError> {
@@ -273,7 +283,13 @@ pub fn graph_cuda_entry(node: &GraphNode) -> Result<&'static str, ForgeError> {
                 GEMM_F32_ENTRY
             }
         }
-        OpNode::Gemv { .. } => GEMV_F32_ENTRY,
+        OpNode::Gemv { tc, .. } => {
+            if tc {
+                Q4K_SOA_WMMA_GEMV_ENTRY
+            } else {
+                GEMV_F32_ENTRY
+            }
+        }
         OpNode::Elementwise { .. } => "ewise_main",
         OpNode::Reduce { .. } => "reduce_main",
         OpNode::Broadcast { .. } => "broadcast_main",
@@ -374,6 +390,35 @@ mod tests {
                     Schedule::default(),
                 )
                 .expect("push matmul");
+            g.mark_output(out);
+            let shader = emit_graph_cuda_c(&g, Schedule::default()).expect("lower to cuda-c");
+            assert!(shader.source.contains(marker), "tc={tc}: {}", shader.source);
+            assert_eq!(graph_cuda_entry(&g.nodes[0]).unwrap(), entry);
+        }
+    }
+
+    /// A single-node Gemv graph lowers to CUDA-C: plain → `gemv_f32`, tc → `q4k_soa_wmma_gemv`.
+    /// Mirrors the MatMul test — the `tc` flag selects the kernel.
+    #[test]
+    fn gemv_graph_lowers_to_cuda_c() {
+        let dyn2 = Shape::new(&[0, 0]);
+        let dyn1 = Shape::new(&[0]);
+        for (tc, entry, marker) in [
+            (false, "gemv_f32", "float* y"),
+            (true, "q4k_soa_wmma_gemv", "wmma::"),
+        ] {
+            let mut g = ComputeGraph::new();
+            let a = TensorRef::external(dyn2, DType::F32);
+            let x = TensorRef::external(dyn1, DType::F32);
+            let out = g
+                .push(
+                    OpNode::Gemv { m: 0, n: 0, tc },
+                    &[a, x],
+                    dyn1,
+                    DType::F32,
+                    Schedule::default(),
+                )
+                .expect("push gemv");
             g.mark_output(out);
             let shader = emit_graph_cuda_c(&g, Schedule::default()).expect("lower to cuda-c");
             assert!(shader.source.contains(marker), "tc={tc}: {}", shader.source);
@@ -518,7 +563,9 @@ mod cuda_tests {
     #[test]
     #[serial_test::serial(gpu)]
     fn plain_matmul_graph_certifies_on_cuda() {
-        if !crate::wgsl_forge::test_cuda_available() { return; }
+        if !crate::wgsl_forge::test_cuda_available() {
+            return;
+        }
         let (m, k, n) = (32usize, 32usize, 32usize);
         let a: Vec<f32> = (0..m * k).map(|i| ((i % 11) as f32) * 0.3 - 1.5).collect();
         let b: Vec<f32> = (0..k * n).map(|i| ((i % 13) as f32) * 0.2 + 0.05).collect();
@@ -536,7 +583,9 @@ mod cuda_tests {
     #[test]
     #[serial_test::serial(gpu)]
     fn tc_matmul_graph_certifies_on_cuda_wmma() {
-        if !crate::wgsl_forge::test_cuda_available() { return; }
+        if !crate::wgsl_forge::test_cuda_available() {
+            return;
+        }
         // 16-multiples for WMMA; f16-rounded reference tolerance.
         let (m, k, n) = (16usize, 16usize, 16usize);
         let a: Vec<f32> = (0..m * k).map(|i| ((i % 7) as f32) * 0.25 - 0.75).collect();
@@ -562,7 +611,9 @@ mod cuda_tests {
     #[test]
     #[serial_test::serial(gpu)]
     fn kit_kernels_nvrtc_compile() {
-        if !crate::wgsl_forge::test_cuda_available() { return; }
+        if !crate::wgsl_forge::test_cuda_available() {
+            return;
+        }
         let ctx = CudaComputeContext::new(8 * 1024 * 1024).expect("cuda ctx");
         let compile = |src: &str, entry: &str, binds: &[u32]| {
             CudaPipeline::compile_cuda_c_source(&ctx, src, entry, binds)

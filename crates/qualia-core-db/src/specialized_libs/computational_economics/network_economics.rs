@@ -82,7 +82,11 @@ pub fn eigenvector_centrality_into(
         }
         norm = norm.sqrt();
         if norm < 1e-15 {
-            return Ok(EconConvergence::stalled(EconStatus::Singular, round + 1, 0.0));
+            return Ok(EconConvergence::stalled(
+                EconStatus::Singular,
+                round + 1,
+                0.0,
+            ));
         }
         let mut delta = 0.0;
         for i in 0..n {
@@ -95,7 +99,11 @@ pub fn eigenvector_centrality_into(
             return Ok(EconConvergence::converged(round + 1, delta));
         }
     }
-    Ok(EconConvergence::stalled(EconStatus::MaxIterations, max_iterations, last_residual))
+    Ok(EconConvergence::stalled(
+        EconStatus::MaxIterations,
+        max_iterations,
+        last_residual,
+    ))
 }
 
 /// Out-degree centrality: row sums of the adjacency matrix.
@@ -175,7 +183,11 @@ pub fn default_cascade_into(
         last_new = new_defaults;
     }
     let _ = last_new;
-    Ok(EconConvergence::stalled(EconStatus::MaxIterations, rounds, 0.0))
+    Ok(EconConvergence::stalled(
+        EconStatus::MaxIterations,
+        rounds,
+        0.0,
+    ))
 }
 
 /// Eisenberg-Noe interbank clearing vector.
@@ -240,7 +252,11 @@ pub fn interbank_clearing_into(
             return Ok(EconConvergence::converged(round + 1, delta));
         }
     }
-    Ok(EconConvergence::stalled(EconStatus::MaxIterations, max_rounds, last_residual))
+    Ok(EconConvergence::stalled(
+        EconStatus::MaxIterations,
+        max_rounds,
+        last_residual,
+    ))
 }
 
 #[cfg(test)]
@@ -268,10 +284,7 @@ mod tests {
     fn degree_centrality_star() {
         // Star: center (0) connected to 1, 2, 3.
         let adj = [
-            0.0, 1.0, 1.0, 1.0,
-            1.0, 0.0, 0.0, 0.0,
-            1.0, 0.0, 0.0, 0.0,
-            1.0, 0.0, 0.0, 0.0,
+            0.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0,
         ];
         let mut deg = [0.0f64; 4];
         degree_centrality_into(&adj, 4, &mut deg).unwrap();
@@ -284,11 +297,7 @@ mod tests {
         // 3 banks. Bank 0 defaults initially.
         // Bank 1 exposed 100 to bank 0, capital 50 → defaults.
         // Bank 2 exposed 100 to bank 1, capital 50 → defaults.
-        let exposures = [
-            0.0, 0.0, 0.0,
-            100.0, 0.0, 0.0,
-            0.0, 100.0, 0.0,
-        ];
+        let exposures = [0.0, 0.0, 0.0, 100.0, 0.0, 0.0, 0.0, 100.0, 0.0];
         let capital = [100.0, 50.0, 50.0];
         let initial = [true, false, false];
         let mut out = [0.0f64; 3];
@@ -300,11 +309,7 @@ mod tests {
     #[test]
     fn default_cascade_well_capitalized() {
         // No cascade: banks have enough capital.
-        let exposures = [
-            0.0, 100.0, 0.0,
-            0.0, 0.0, 0.0,
-            0.0, 100.0, 0.0,
-        ];
+        let exposures = [0.0, 100.0, 0.0, 0.0, 0.0, 0.0, 0.0, 100.0, 0.0];
         let capital = [1000.0, 1000.0, 1000.0];
         let initial = [true, false, false];
         let mut out = [0.0f64; 3];
@@ -317,13 +322,11 @@ mod tests {
         // 2 banks. Bank 0 owes 100 to bank 1. Bank 1 owes 50 to bank 0.
         // Both have capital 0. In proportional clearing, they settle at 50/50.
         // exposures[i][j] = i owes j.
-        let exposures = [
-            0.0, 100.0,
-            50.0, 0.0,
-        ];
+        let exposures = [0.0, 100.0, 50.0, 0.0];
         let capital = [0.0, 0.0];
         let mut payments = [0.0f64; 2];
-        let conv = interbank_clearing_into(&exposures, &capital, 2, 1000, 1e-9, &mut payments).unwrap();
+        let conv =
+            interbank_clearing_into(&exposures, &capital, 2, 1000, 1e-9, &mut payments).unwrap();
         assert_eq!(conv.status, EconStatus::Converged);
         // With zero capital, mutual obligations clear at the min that can be supported: 50 each.
         assert!(approx(payments[0], 50.0, 1e-3));
@@ -334,13 +337,11 @@ mod tests {
     fn interbank_clearing_partial_default() {
         // Bank 0 owes 100 to bank 1, has capital 0, receives nothing.
         // Bank 1 owes 0. Bank 0 defaults partially.
-        let exposures = [
-            0.0, 100.0,
-            0.0, 0.0,
-        ];
+        let exposures = [0.0, 100.0, 0.0, 0.0];
         let capital = [0.0, 0.0];
         let mut payments = [0.0f64; 2];
-        let conv = interbank_clearing_into(&exposures, &capital, 2, 100, 1e-9, &mut payments).unwrap();
+        let conv =
+            interbank_clearing_into(&exposures, &capital, 2, 100, 1e-9, &mut payments).unwrap();
         assert_eq!(conv.status, EconStatus::Converged);
         // Bank 0 receives 0 from bank 1 (bank 1 owes nothing), so p0 = min(100, 0) = 0.
         assert!(approx(payments[0], 0.0, 1e-6));

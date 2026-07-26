@@ -7,6 +7,9 @@
 //! the browser facade (`portal`, `portal_wasm`) remains gated to wasm + `portal`.
 
 pub mod acoustic;
+/// Shared metadata schema for a `.hmc` anatomy asset pack (per-organ system /
+/// position / neutral colour). Platform-agnostic (native + WASM consumers).
+pub mod anatomy_pack;
 /// Asset import: OBJ / STL / GLB → `Mesh` + semantic NQuins (Phase 1.3).
 pub mod assets;
 /// Authoring vocabulary + render planner (Phase 5): a qapp declares 3D + 2D views over one
@@ -28,15 +31,12 @@ pub mod authoring;
 ))]
 pub mod barrier;
 pub mod camera;
-pub mod derivation;
 /// Compile a `Mesh` into a sealed `.10d` container (the dense compiled-geometry sidecar)
 /// and read it back — the "mesh → `.10d`" step of the 3-D-anatomy asset pipeline.
 pub mod compile_10d;
-/// Shared metadata schema for a `.hmc` anatomy asset pack (per-organ system /
-/// position / neutral colour). Platform-agnostic (native + WASM consumers).
-pub mod anatomy_pack;
 pub mod contract;
 pub mod control;
+pub mod derivation;
 /// P7.2 — Gamut / object-colour solid + closest-point gamut mapping.
 pub mod gamut;
 /// P7.4 — GPU colour-projection / gamut batch kernel + CPU oracle.

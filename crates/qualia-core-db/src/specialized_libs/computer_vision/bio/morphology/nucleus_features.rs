@@ -78,23 +78,24 @@ pub fn nucleus_features(
     let mut accs = [Acc::default(); MAX_NUCLEUS_LABELS];
     let mut used = 0usize;
 
-    let find_or_insert = |lab: u16, accs: &mut [Acc; MAX_NUCLEUS_LABELS], used: &mut usize| -> Option<usize> {
-        for i in 0..*used {
-            if accs[i].label == lab {
-                return Some(i);
+    let find_or_insert =
+        |lab: u16, accs: &mut [Acc; MAX_NUCLEUS_LABELS], used: &mut usize| -> Option<usize> {
+            for i in 0..*used {
+                if accs[i].label == lab {
+                    return Some(i);
+                }
             }
-        }
-        if *used >= MAX_NUCLEUS_LABELS {
-            return None;
-        }
-        let i = *used;
-        accs[i] = Acc {
-            label: lab,
-            ..Acc::default()
+            if *used >= MAX_NUCLEUS_LABELS {
+                return None;
+            }
+            let i = *used;
+            accs[i] = Acc {
+                label: lab,
+                ..Acc::default()
+            };
+            *used += 1;
+            Some(i)
         };
-        *used += 1;
-        Some(i)
-    };
 
     for y in 0..h {
         for x in 0..w {

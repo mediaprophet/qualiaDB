@@ -62,7 +62,12 @@ pub fn gravity_flow_matrix_into(
     gamma: f64,
     out: &mut [f64],
 ) -> Result<usize, SpatialError> {
-    if n == 0 || n > MAX_LOCATIONS || masses.len() < n || distances.len() < n * n || out.len() < n * n {
+    if n == 0
+        || n > MAX_LOCATIONS
+        || masses.len() < n
+        || distances.len() < n * n
+        || out.len() < n * n
+    {
         return Err(SpatialError::InvalidInput);
     }
     for i in 0..n {
@@ -70,7 +75,14 @@ pub fn gravity_flow_matrix_into(
             if i == j {
                 out[i * n + j] = 0.0;
             } else {
-                out[i * n + j] = gravity_flow(masses[i], masses[j], distances[i * n + j], alpha, beta, gamma)?;
+                out[i * n + j] = gravity_flow(
+                    masses[i],
+                    masses[j],
+                    distances[i * n + j],
+                    alpha,
+                    beta,
+                    gamma,
+                )?;
             }
         }
     }
@@ -130,10 +142,15 @@ pub fn nearest_facility_into(
     n_facilities: usize,
     out: &mut [usize],
 ) -> Result<usize, SpatialError> {
-    if n_demands == 0 || n_facilities == 0 || n_demands > MAX_LOCATIONS || n_facilities > MAX_LOCATIONS {
+    if n_demands == 0
+        || n_facilities == 0
+        || n_demands > MAX_LOCATIONS
+        || n_facilities > MAX_LOCATIONS
+    {
         return Err(SpatialError::InvalidInput);
     }
-    if demands.len() < n_demands * 2 || facilities.len() < n_facilities * 2 || out.len() < n_demands {
+    if demands.len() < n_demands * 2 || facilities.len() < n_facilities * 2 || out.len() < n_demands
+    {
         return Err(SpatialError::BufferTooSmall);
     }
     for d in 0..n_demands {
@@ -160,11 +177,7 @@ pub fn nearest_facility_into(
 /// `I = (n / S0) * (sum_{i,j} w_ij * (x_i - x_bar) * (x_j - x_bar)) / (sum_i (x_i - x_bar)^2)`
 ///
 /// where `S0 = sum of all weights`. Returns I in approximately [-1, 1].
-pub fn morans_i(
-    values: &[f64],
-    weights: &[f64],
-    n: usize,
-) -> Result<f64, SpatialError> {
+pub fn morans_i(values: &[f64], weights: &[f64], n: usize) -> Result<f64, SpatialError> {
     if n < 2 || n > MAX_LOCATIONS || values.len() < n || weights.len() < n * n {
         return Err(SpatialError::InsufficientData);
     }
@@ -245,11 +258,7 @@ mod tests {
     fn gravity_matrix_symmetric() {
         let masses = [10.0, 20.0, 30.0];
         // Distances: symmetric matrix.
-        let distances = [
-            0.0, 1.0, 2.0,
-            1.0, 0.0, 1.5,
-            2.0, 1.5, 0.0,
-        ];
+        let distances = [0.0, 1.0, 2.0, 1.0, 0.0, 1.5, 2.0, 1.5, 0.0];
         let mut out = [0.0f64; 9];
         gravity_flow_matrix_into(&masses, &distances, 3, 1.0, 1.0, 1.0, &mut out).unwrap();
         // Check symmetry: flow[i][j] == flow[j][i] when masses and distances are symmetric.
@@ -303,13 +312,14 @@ mod tests {
         let values = [1.0, 1.0, 10.0, 10.0];
         // Weights: neighbors (adjacent in sequence).
         let weights = [
-            0.0, 1.0, 0.0, 0.0,
-            1.0, 0.0, 1.0, 0.0,
-            0.0, 1.0, 0.0, 1.0,
-            0.0, 0.0, 1.0, 0.0,
+            0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0,
         ];
         let i = morans_i(&values, &weights, 4).unwrap();
-        assert!(i > 0.0, "Moran's I should be positive for clustered data, got {}", i);
+        assert!(
+            i > 0.0,
+            "Moran's I should be positive for clustered data, got {}",
+            i
+        );
     }
 
     #[test]
@@ -317,13 +327,14 @@ mod tests {
         // Dispersed: high values next to low values.
         let values = [10.0, 1.0, 10.0, 1.0];
         let weights = [
-            0.0, 1.0, 0.0, 0.0,
-            1.0, 0.0, 1.0, 0.0,
-            0.0, 1.0, 0.0, 1.0,
-            0.0, 0.0, 1.0, 0.0,
+            0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0,
         ];
         let i = morans_i(&values, &weights, 4).unwrap();
-        assert!(i < 0.0, "Moran's I should be negative for dispersed data, got {}", i);
+        assert!(
+            i < 0.0,
+            "Moran's I should be negative for dispersed data, got {}",
+            i
+        );
     }
 
     #[test]
@@ -332,7 +343,14 @@ mod tests {
         hotelling_extraction_into(100.0, 0.1, 10, &mut path).unwrap();
         // Extraction should decline over time.
         for t in 1..10 {
-            assert!(path[t] < path[t - 1], "path[{}] = {} should be < path[{}] = {}", t, path[t], t-1, path[t-1]);
+            assert!(
+                path[t] < path[t - 1],
+                "path[{}] = {} should be < path[{}] = {}",
+                t,
+                path[t],
+                t - 1,
+                path[t - 1]
+            );
         }
         // Total extraction should approximately equal initial stock.
         let total: f64 = path.iter().sum();
@@ -350,7 +368,8 @@ mod tests {
     #[test]
     fn buffer_too_small() {
         let mut out = [0.0f64; 2];
-        let err = transport_cost_matrix_into(&[0.0, 0.0, 1.0, 1.0, 2.0, 2.0], 3, &mut out).unwrap_err();
+        let err =
+            transport_cost_matrix_into(&[0.0, 0.0, 1.0, 1.0, 2.0, 2.0], 3, &mut out).unwrap_err();
         assert_eq!(err, SpatialError::InvalidInput);
     }
 }

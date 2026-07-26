@@ -56,11 +56,11 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
     let mut out = Vec::new();
 
     while i < n {
-        let c = bytes[i] as char;
+        let (c, w) = decode_char(bytes, i);
 
-        // Whitespace.
-        if c.is_ascii_whitespace() {
-            i += 1;
+        // Whitespace (Unicode-aware, not just ASCII).
+        if c.is_whitespace() {
+            i += w;
             continue;
         }
 
@@ -99,12 +99,17 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
             // Fall through to operator handling.
         }
 
-        // Variables `?x` / `$x`.
+        // Variables `?x` / `$x` — SPARQL 1.1 allows Unicode in variable names.
         if c == '?' || c == '$' {
             let start = i;
-            i += 1;
-            while i < n && is_varname_byte(bytes[i]) {
-                i += 1;
+            i += 1; // consume sigil
+            while i < n {
+                let (ch, cw) = decode_char(bytes, i);
+                if is_varname_char(ch) {
+                    i += cw;
+                } else {
+                    break;
+                }
             }
             out.push(Token::Var(input[start..i].to_string()));
             continue;
@@ -120,7 +125,8 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
 
         // Numeric literals: an optional sign is handled by the parser as a unary
         // op, so here a number starts with a digit or a `.` followed by a digit.
-        if c.is_ascii_digit() || (c == '.' && i + 1 < n && (bytes[i + 1] as char).is_ascii_digit()) {
+        if c.is_ascii_digit() || (c == '.' && i + 1 < n && (bytes[i + 1] as char).is_ascii_digit())
+        {
             let start = i;
             i += 1;
             while i < n && {
@@ -162,11 +168,17 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
         }
 
         // Words: keywords, function names, prefixed names, `a`, `true`/`false`.
-        if is_word_start(bytes[i]) {
+        // SPARQL 1.1 allows Unicode in PN_CHARS_U and PN_CHARS.
+        if is_word_start_char(c) {
             let start = i;
-            i += 1;
-            while i < n && is_word_byte(bytes[i]) {
-                i += 1;
+            i += w;
+            while i < n {
+                let (ch, cw) = decode_char(bytes, i);
+                if is_word_char(ch) {
+                    i += cw;
+                } else {
+                    break;
+                }
             }
             let word = &input[start..i];
             // Prefixed name `prefix:local` (but not `::` or a lone trailing `:`).
@@ -174,8 +186,13 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
                 let prefix = word.to_string();
                 i += 1; // consume ':'
                 let local_start = i;
-                while i < n && is_word_byte(bytes[i]) {
-                    i += 1;
+                while i < n {
+                    let (ch, cw) = decode_char(bytes, i);
+                    if is_word_char(ch) {
+                        i += cw;
+                    } else {
+                        break;
+                    }
                 }
                 let local = input[local_start..i].to_string();
                 out.push(Token::Prefixed(prefix, local));
@@ -193,10 +210,18 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
         if c == ':' {
             let local_start = i + 1;
             let mut j = local_start;
-            while j < n && is_word_byte(bytes[j]) {
-                j += 1;
+            while j < n {
+                let (ch, cw) = decode_char(bytes, j);
+                if is_word_char(ch) {
+                    j += cw;
+                } else {
+                    break;
+                }
             }
-            out.push(Token::Prefixed(String::new(), input[local_start..j].to_string()));
+            out.push(Token::Prefixed(
+                String::new(),
+                input[local_start..j].to_string(),
+            ));
             i = j;
             continue;
         }
@@ -247,14 +272,19 @@ fn lex_string(
         }
         if b == quote {
             i += 1; // consume closing quote
-            // Optional language tag `@en` or datatype `^^<iri>` / `^^prefix:local`.
+                    // Optional language tag `@en` or datatype `^^<iri>` / `^^prefix:local`.
             let mut lang = None;
             let mut datatype = None;
             if i < n && bytes[i] == b'@' {
                 let ls = i + 1;
                 let mut j = ls;
-                while j < n && (is_word_byte(bytes[j]) || bytes[j] == b'-') {
-                    j += 1;
+                while j < n {
+                    let (ch, cw) = decode_char(bytes, j);
+                    if is_word_char(ch) || ch == '-' {
+                        j += cw;
+                    } else {
+                        break;
+                    }
                 }
                 lang = Some(input[ls..j].to_string());
                 i = j;
@@ -267,8 +297,13 @@ fn lex_string(
                     }
                 } else {
                     let ds = i;
-                    while i < n && (is_word_byte(bytes[i]) || bytes[i] == b':') {
-                        i += 1;
+                    while i < n {
+                        let (ch, cw) = decode_char(bytes, i);
+                        if is_word_char(ch) || ch == ':' {
+                            i += cw;
+                        } else {
+                            break;
+                        }
                     }
                     datatype = Some(input[ds..i].to_string());
                 }
@@ -282,8 +317,10 @@ fn lex_string(
                 i,
             ));
         }
-        value.push(b as char);
-        i += 1;
+        // Push the decoded Unicode character, not the raw byte.
+        let (ch, cw) = decode_char(bytes, i);
+        value.push(ch);
+        i += cw;
     }
     Err("unterminated string literal".to_string())
 }
@@ -316,16 +353,49 @@ fn single_char_op(c: char) -> &'static str {
     }
 }
 
-fn is_varname_byte(b: u8) -> bool {
-    b.is_ascii_alphanumeric() || b == b'_'
+/// Decode one UTF-8 character at byte offset `i`, returning (char, byte_width).
+/// Falls back to the raw byte for invalid UTF-8 (never panics).
+#[inline]
+fn decode_char(bytes: &[u8], i: usize) -> (char, usize) {
+    let b = bytes[i];
+    if b < 0x80 {
+        return (b as char, 1);
+    }
+    // Multi-byte: use str slicing for safe decode.
+    let remaining = &bytes[i..];
+    match std::str::from_utf8(remaining) {
+        Ok(s) => {
+            let c = s.chars().next().unwrap_or(b as char);
+            (c, c.len_utf8())
+        }
+        Err(e) => {
+            // Use the valid prefix length, then decode the next char.
+            let valid_len = e.valid_up_to();
+            if valid_len > 0 {
+                let s = std::str::from_utf8(&remaining[..valid_len]).unwrap();
+                let c = s.chars().next().unwrap();
+                (c, c.len_utf8())
+            } else {
+                // Invalid byte — emit as replacement, advance 1.
+                (b as char, 1)
+            }
+        }
+    }
 }
 
-fn is_word_start(b: u8) -> bool {
-    b.is_ascii_alphabetic() || b == b'_'
+/// SPARQL 1.1 variable names allow Unicode (PN_CHARS_U + PN_CHARS).
+fn is_varname_char(c: char) -> bool {
+    c.is_alphanumeric() || c == '_'
 }
 
-fn is_word_byte(b: u8) -> bool {
-    b.is_ascii_alphanumeric() || b == b'_' || b == b'-' || b == b'.'
+/// Word start: letters, underscore, and Unicode letters (SPARQL PN_CHARS_U).
+fn is_word_start_char(c: char) -> bool {
+    c.is_alphabetic() || c == '_'
+}
+
+/// Word continuation: alphanumeric, underscore, hyphen, dot (SPARQL PN_CHARS).
+fn is_word_char(c: char) -> bool {
+    c.is_alphanumeric() || c == '_' || c == '-' || c == '.'
 }
 
 #[cfg(test)]
@@ -390,7 +460,14 @@ mod tests {
     fn tokenize_lt_operator_vs_iri() {
         // A `<` not forming an IRI is the less-than operator.
         let toks = tokenize("?a < ?b").unwrap();
-        assert_eq!(toks, vec![Token::Var("?a".into()), Token::Op("<"), Token::Var("?b".into())]);
+        assert_eq!(
+            toks,
+            vec![
+                Token::Var("?a".into()),
+                Token::Op("<"),
+                Token::Var("?b".into())
+            ]
+        );
     }
 
     #[test]
@@ -417,5 +494,38 @@ mod tests {
                 datatype: None
             }
         );
+    }
+
+    #[test]
+    fn tokenize_unicode_variable_name() {
+        let toks = tokenize("?名前").unwrap();
+        assert_eq!(toks[0], Token::Var("?名前".into()));
+    }
+
+    #[test]
+    fn tokenize_unicode_prefixed_name() {
+        let toks = tokenize("日本:東京").unwrap();
+        assert_eq!(toks[0], Token::Prefixed("日本".into(), "東京".into()));
+    }
+
+    #[test]
+    fn tokenize_unicode_string_literal() {
+        let toks = tokenize("\"你好世界\"").unwrap();
+        assert_eq!(
+            toks[0],
+            Token::Str {
+                value: "你好世界".into(),
+                lang: None,
+                datatype: None
+            }
+        );
+    }
+
+    #[test]
+    fn tokenize_unicode_whitespace() {
+        // U+3000 (ideographic space) should be treated as whitespace.
+        let toks = tokenize("?x\u{3000}?y").unwrap();
+        assert_eq!(toks[0], Token::Var("?x".into()));
+        assert_eq!(toks[1], Token::Var("?y".into()));
     }
 }

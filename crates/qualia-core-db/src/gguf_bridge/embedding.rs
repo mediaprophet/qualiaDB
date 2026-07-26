@@ -162,7 +162,9 @@ impl QTensorEngine {
             return None;
         }
 
-        let data = buffer_slice.get_mapped_range().expect("wgpu buffer map_range failed");
+        let data = buffer_slice
+            .get_mapped_range()
+            .expect("wgpu buffer map_range failed");
         let result: Vec<f32> = bytemuck::cast_slice(&data).to_vec();
         drop(data);
         staging_buf.unmap();
@@ -375,7 +377,9 @@ impl QTensorEngine {
             handle.block_on(receiver).unwrap().unwrap();
         }
 
-        let data = buffer_slice.get_mapped_range().expect("wgpu buffer map_range failed");
+        let data = buffer_slice
+            .get_mapped_range()
+            .expect("wgpu buffer map_range failed");
         let result: Vec<f32> = bytemuck::cast_slice(&data).to_vec();
         drop(data);
         staging_buf.unmap();

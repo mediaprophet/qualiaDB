@@ -82,15 +82,14 @@ impl QTensorEngine {
             // still enabling f16/subgroup/timing acceleration where available.
             let required_features =
                 crate::gpu_context::requested_native_llm_features(adapter.features());
-            let experimental_features = if required_features
-                .contains(wgpu::Features::EXPERIMENTAL_COOPERATIVE_MATRIX)
-            {
-                // Safety: the feature is both explicitly opted into and advertised
-                // by the browser adapter before this token is enabled.
-                unsafe { wgpu::ExperimentalFeatures::enabled() }
-            } else {
-                wgpu::ExperimentalFeatures::disabled()
-            };
+            let experimental_features =
+                if required_features.contains(wgpu::Features::EXPERIMENTAL_COOPERATIVE_MATRIX) {
+                    // Safety: the feature is both explicitly opted into and advertised
+                    // by the browser adapter before this token is enabled.
+                    unsafe { wgpu::ExperimentalFeatures::enabled() }
+                } else {
+                    wgpu::ExperimentalFeatures::disabled()
+                };
             adapter
                 .request_device(&wgpu::DeviceDescriptor {
                     required_features,
@@ -778,7 +777,12 @@ impl QTensorEngine {
                 ],
             });
         #[cfg(not(target_arch = "wasm32"))]
-        let (ffn_fused_pipeline, ffn_fused_coop_pipeline, ffn_fused_mr_pipeline, ffn_fused_warp_pipeline) = {
+        let (
+            ffn_fused_pipeline,
+            ffn_fused_coop_pipeline,
+            ffn_fused_mr_pipeline,
+            ffn_fused_warp_pipeline,
+        ) = {
             let tpl = include_str!("../shaders/dequant_template.wgsl");
             let gate_fns = tpl.replace("$W", "gate_words").replace("$S", "_gate");
             let up_fns = tpl.replace("$W", "up_words").replace("$S", "_up");
@@ -909,9 +913,7 @@ impl QTensorEngine {
         let (dual_gemv_pipeline, dual_gemv_mr_pipeline) = {
             let module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
                 label: Some("Dual GEMV Shader"),
-                source: wgpu::ShaderSource::Wgsl(
-                    include_str!("../shaders/dual_gemv.wgsl").into(),
-                ),
+                source: wgpu::ShaderSource::Wgsl(include_str!("../shaders/dual_gemv.wgsl").into()),
             });
             let layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("DualGemvPL"),
@@ -1258,6 +1260,8 @@ impl QTensorEngine {
             ternary_ffn: None,
             #[cfg(not(target_arch = "wasm32"))]
             resident_decode: super::resident_decode::ResidentDecodeState::Unbuilt,
+            #[cfg(all(not(target_arch = "wasm32"), feature = "cuda"))]
+            cuda_decode_plan: super::cuda_decode_plan::CudaDecodePlanState::Unbuilt,
             #[cfg(not(target_arch = "wasm32"))]
             prefill_arena: super::prefill_arena::PrefillArenaState::Unbuilt,
             #[cfg(not(target_arch = "wasm32"))]
@@ -1514,7 +1518,9 @@ impl QTensorEngine {
         if handle.block_on(rx).ok()?.is_err() {
             return None;
         }
-        let data = slice.get_mapped_range().expect("wgpu buffer map_range failed");
+        let data = slice
+            .get_mapped_range()
+            .expect("wgpu buffer map_range failed");
         let out: Vec<f32> = bytemuck::cast_slice(&data).to_vec();
         drop(data);
         staging.unmap();

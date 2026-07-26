@@ -218,9 +218,9 @@ pub fn auxiliary_circuit_index() -> Option<usize> {
     let primary = primary_circuit_index();
     let is_primary = |i: usize| Some(i) == primary;
     // Prefer a non-primary integrated GPU.
-    if let Some(i) = (0..circuits.len())
-        .find(|&i| !is_primary(i) && circuits[i].caps.device_type == wgpu::DeviceType::IntegratedGpu)
-    {
+    if let Some(i) = (0..circuits.len()).find(|&i| {
+        !is_primary(i) && circuits[i].caps.device_type == wgpu::DeviceType::IntegratedGpu
+    }) {
         return Some(i);
     }
     // Else the first non-primary circuit.
@@ -249,9 +249,17 @@ mod tests {
         // (may be 0 on a headless box — we assert idempotence, not a nonzero count).
         let a = enumerate_circuits();
         let b = enumerate_circuits();
-        assert_eq!(a.len(), b.len(), "enumeration must be cached (stable length)");
+        assert_eq!(
+            a.len(),
+            b.len(),
+            "enumeration must be cached (stable length)"
+        );
         for (x, y) in a.iter().zip(b.iter()) {
-            assert_eq!(x.identity(), y.identity(), "cached identities must be stable");
+            assert_eq!(
+                x.identity(),
+                y.identity(),
+                "cached identities must be stable"
+            );
         }
     }
 
@@ -266,7 +274,10 @@ mod tests {
         }
         let first = try_device_for_adapter(0).is_some();
         let second = try_device_for_adapter(0).is_some();
-        assert_eq!(first, second, "try_device_for_adapter must be cached + consistent");
+        assert_eq!(
+            first, second,
+            "try_device_for_adapter must be cached + consistent"
+        );
         // Out-of-range never panics.
         assert!(try_device_for_adapter(n + 1000).is_none());
     }
@@ -296,7 +307,10 @@ mod tests {
             assert_ne!(p, aux, "primary and auxiliary must differ");
         } else if n == 1 {
             assert_eq!(p, Some(0), "single adapter → primary is index 0");
-            assert_eq!(aux, None, "single adapter → no auxiliary (fallback covers callers)");
+            assert_eq!(
+                aux, None,
+                "single adapter → no auxiliary (fallback covers callers)"
+            );
         } else {
             assert_eq!(p, None);
             assert_eq!(aux, None);

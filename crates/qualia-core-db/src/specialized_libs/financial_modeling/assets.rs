@@ -1,6 +1,5 @@
 use super::*;
 
-
 /// Asset manager
 pub struct AssetManager {
     asset_catalog: AssetCatalog,

@@ -37,9 +37,7 @@ pub fn color_hist_embed_rgb(src: RgbView<'_>, out: &mut [f32]) -> Result<usize, 
         }
     }
 
-    let total = (src.width as u64)
-        .saturating_mul(src.height as u64)
-        .max(1) as f32;
+    let total = (src.width as u64).saturating_mul(src.height as u64).max(1) as f32;
     let mut sum_sq = 0.0f32;
     for i in 0..COLOR_HIST_EMBED_DIM {
         let v = counts[i] as f32 / total;
@@ -66,7 +64,9 @@ fn bin_u8(v: u8, bins: u32) -> u32 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::specialized_libs::computer_vision::embeddings::embed_distance::{cosine_distance, cosine_similarity};
+    use crate::specialized_libs::computer_vision::embeddings::embed_distance::{
+        cosine_distance, cosine_similarity,
+    };
 
     fn rgb(w: u32, h: u32, bytes: &[u8]) -> RgbView<'_> {
         RgbView::new(w, h, w * 3, bytes).expect("rgb view")
@@ -82,7 +82,10 @@ mod tests {
         color_hist_embed_rgb(v, &mut a).unwrap();
         color_hist_embed_rgb(v, &mut b).unwrap();
         let d = cosine_distance(&a, &b).unwrap();
-        assert!(d.abs() < 1e-6, "identical colour embeds must have cosine distance ~0, got {d}");
+        assert!(
+            d.abs() < 1e-6,
+            "identical colour embeds must have cosine distance ~0, got {d}"
+        );
         let s = cosine_similarity(&a, &b).unwrap();
         assert!((s - 1.0).abs() < 1e-5);
     }

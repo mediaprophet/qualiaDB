@@ -39,11 +39,7 @@ pub fn mesh_ir_triangles(mesh: &MeshIR) -> Vec<[u32; 3]> {
     let mut tris = Vec::with_capacity(mesh.triangle_count());
     let mut t = 0usize;
     while t + 2 < mesh.indices.len() {
-        tris.push([
-            mesh.indices[t],
-            mesh.indices[t + 1],
-            mesh.indices[t + 2],
-        ]);
+        tris.push([mesh.indices[t], mesh.indices[t + 1], mesh.indices[t + 2]]);
         t += 3;
     }
     tris

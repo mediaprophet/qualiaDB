@@ -206,8 +206,7 @@ mod tests {
             timescale: 1000,
         };
 
-        let mut writer =
-            Mp4Writer::write_start(Cursor::new(Vec::<u8>::new()), &config).unwrap();
+        let mut writer = Mp4Writer::write_start(Cursor::new(Vec::<u8>::new()), &config).unwrap();
 
         let track = TrackConfig {
             track_type: TrackType::Video,
@@ -269,7 +268,11 @@ mod tests {
         // Two 500 ms samples => ~1000 ms total.
         assert_eq!(info.duration_ms, 1000);
         // 2 frames / 1.0 s => ~2 fps.
-        assert!((info.avg_fps - 2.0).abs() < 0.01, "avg_fps={}", info.avg_fps);
+        assert!(
+            (info.avg_fps - 2.0).abs() < 0.01,
+            "avg_fps={}",
+            info.avg_fps
+        );
     }
 
     #[test]
@@ -362,8 +365,7 @@ mod tests {
             compatible_brands: vec!["isom".parse().unwrap(), "mp41".parse().unwrap()],
             timescale: 1000,
         };
-        let mut writer =
-            Mp4Writer::write_start(Cursor::new(Vec::<u8>::new()), &config).unwrap();
+        let mut writer = Mp4Writer::write_start(Cursor::new(Vec::<u8>::new()), &config).unwrap();
         let track = TrackConfig {
             track_type: TrackType::Audio,
             timescale: 48000,

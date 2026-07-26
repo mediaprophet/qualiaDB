@@ -381,17 +381,11 @@ mod tests {
         let r = reg.insert(SectionKind::Raw, 100, 200, 0xABCD).unwrap();
 
         // Same token, tampered offset.
-        let bad_offset = DenseAssetRef {
-            offset: 101,
-            ..r
-        };
+        let bad_offset = DenseAssetRef { offset: 101, ..r };
         assert_eq!(reg.resolve(&bad_offset), Err(QispError::UnknownAsset));
 
         // Same token, tampered length.
-        let bad_length = DenseAssetRef {
-            length: 999,
-            ..r
-        };
+        let bad_length = DenseAssetRef { length: 999, ..r };
         assert_eq!(reg.resolve(&bad_length), Err(QispError::UnknownAsset));
 
         // Same token, tampered section.

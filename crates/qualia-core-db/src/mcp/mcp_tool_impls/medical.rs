@@ -1,6 +1,5 @@
 use super::*;
 
-
 pub fn medical_score(args: &[u8]) -> Result<String, McpSystemError> {
     use crate::specialized_libs::medical_computing::{
         ClinicalDataType, MedicalComputingLibrary, MedicalError, Patient,
@@ -54,14 +53,16 @@ pub fn medical_score(args: &[u8]) -> Result<String, McpSystemError> {
     //     "likelihoods":{"fever":0.9,"cough":0.8} }, ...],
     //   "unlisted_finding_likelihood": 0.5 }
     if json_str(&v, "op", "") == "differential" {
-        use crate::specialized_libs::medical_computing::{
-            ConditionModel, DiagnosticKnowledgeBase,
-        };
+        use crate::specialized_libs::medical_computing::{ConditionModel, DiagnosticKnowledgeBase};
         use std::collections::HashMap;
         let findings: Vec<String> = v
             .get("findings")
             .and_then(Value::as_array)
-            .map(|a| a.iter().filter_map(|x| x.as_str().map(str::to_string)).collect())
+            .map(|a| {
+                a.iter()
+                    .filter_map(|x| x.as_str().map(str::to_string))
+                    .collect()
+            })
             .unwrap_or_default();
         let conditions: Vec<ConditionModel> = v
             .get("knowledge_base")
@@ -78,7 +79,10 @@ pub fn medical_score(args: &[u8]) -> Result<String, McpSystemError> {
                             }
                         }
                         Some(ConditionModel {
-                            condition_id: c.get("condition_id").and_then(Value::as_str)?.to_string(),
+                            condition_id: c
+                                .get("condition_id")
+                                .and_then(Value::as_str)?
+                                .to_string(),
                             prior: c.get("prior").and_then(Value::as_f64)?,
                             likelihoods,
                         })

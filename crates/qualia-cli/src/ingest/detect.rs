@@ -29,24 +29,24 @@ pub enum SemanticFormat {
 impl SemanticFormat {
     pub fn label(self) -> &'static str {
         match self {
-            SemanticFormat::NTriples     => "N-Triples",
+            SemanticFormat::NTriples => "N-Triples",
             SemanticFormat::NTriplesStar => "N-Triples-Star",
-            SemanticFormat::NQuads       => "N-Quads",
-            SemanticFormat::NQuadsStar   => "N-Quads-Star",
-            SemanticFormat::Turtle       => "Turtle",
-            SemanticFormat::TurtleStar   => "Turtle-Star",
-            SemanticFormat::TriG         => "TriG",
-            SemanticFormat::TriGStar     => "TriG-Star",
-            SemanticFormat::N3           => "N3",
-            SemanticFormat::RdfXml       => "RDF/XML",
-            SemanticFormat::JsonLd       => "JSON-LD",
-            SemanticFormat::JsonLdStar   => "JSON-LD-Star",
-            SemanticFormat::CborLd       => "CBOR-LD",
-            SemanticFormat::Kml          => "KML",
-            SemanticFormat::Chk          => "CHK",
-            SemanticFormat::Q42          => "Q42",
+            SemanticFormat::NQuads => "N-Quads",
+            SemanticFormat::NQuadsStar => "N-Quads-Star",
+            SemanticFormat::Turtle => "Turtle",
+            SemanticFormat::TurtleStar => "Turtle-Star",
+            SemanticFormat::TriG => "TriG",
+            SemanticFormat::TriGStar => "TriG-Star",
+            SemanticFormat::N3 => "N3",
+            SemanticFormat::RdfXml => "RDF/XML",
+            SemanticFormat::JsonLd => "JSON-LD",
+            SemanticFormat::JsonLdStar => "JSON-LD-Star",
+            SemanticFormat::CborLd => "CBOR-LD",
+            SemanticFormat::Kml => "KML",
+            SemanticFormat::Chk => "CHK",
+            SemanticFormat::Q42 => "Q42",
             SemanticFormat::AgentIntentJsonl => "Agent-Intent-JSONL",
-            SemanticFormat::Mesh         => "Mesh (OBJ/STL/GLB)",
+            SemanticFormat::Mesh => "Mesh (OBJ/STL/GLB)",
         }
     }
 }
@@ -58,7 +58,8 @@ impl SemanticFormat {
 /// step that opens the file for at most 16 bytes.  Returns `None` only when
 /// neither heuristic yields a conclusive result.
 pub fn detect_format(path: &Path) -> Option<SemanticFormat> {
-    let ext = path.extension()
+    let ext = path
+        .extension()
         .and_then(|e| e.to_str())
         .map(|s| s.to_ascii_lowercase());
 
@@ -96,9 +97,8 @@ pub fn detect_format(path: &Path) -> Option<SemanticFormat> {
     }
 
     // XML envelope — distinguish KML from RDF/XML by extension
-    let starts_xml = magic.starts_with(b"<?xml")
-        || magic.starts_with(b"<rdf:")
-        || magic.starts_with(b"<RDF:");
+    let starts_xml =
+        magic.starts_with(b"<?xml") || magic.starts_with(b"<rdf:") || magic.starts_with(b"<RDF:");
     if starts_xml {
         return match ext.as_deref() {
             Some("kml") => Some(SemanticFormat::Kml),
@@ -117,27 +117,25 @@ pub fn detect_format(path: &Path) -> Option<SemanticFormat> {
 
     // ── Extension fallback ────────────────────────────────────────────────
     match ext.as_deref() {
-        Some("nt")                                  => Some(SemanticFormat::NTriples),
-        Some("nts") | Some("nt-star")               => Some(SemanticFormat::NTriplesStar),
-        Some("nq")                                  => Some(SemanticFormat::NQuads),
-        Some("nqs") | Some("nq-star")               => Some(SemanticFormat::NQuadsStar),
-        Some("ttl")                                 => Some(SemanticFormat::Turtle),
-        Some("ttls") | Some("ttl-star")             => Some(SemanticFormat::TurtleStar),
-        Some("trig")                                => Some(SemanticFormat::TriG),
-        Some("trigs") | Some("trig-star")           => Some(SemanticFormat::TriGStar),
-        Some("n3")                                  => Some(SemanticFormat::N3),
-        Some("rdf") | Some("owl")                   => Some(SemanticFormat::RdfXml),
-        Some("xml")                                 => Some(SemanticFormat::RdfXml),
-        Some("jsonld") | Some("json-ld")
-            | Some("json")                          => Some(SemanticFormat::JsonLd),
-        Some("jsonl")                               => Some(SemanticFormat::AgentIntentJsonl),
-        Some("cbor") | Some("cborld")               => Some(SemanticFormat::CborLd),
-        Some("kml")                                 => Some(SemanticFormat::Kml),
-        Some("chk") | Some("qchk")                 => Some(SemanticFormat::Chk),
-        Some("q42")                                 => Some(SemanticFormat::Q42),
-        Some("obj") | Some("stl")
-            | Some("glb") | Some("gltf")            => Some(SemanticFormat::Mesh),
-        _                                           => None,
+        Some("nt") => Some(SemanticFormat::NTriples),
+        Some("nts") | Some("nt-star") => Some(SemanticFormat::NTriplesStar),
+        Some("nq") => Some(SemanticFormat::NQuads),
+        Some("nqs") | Some("nq-star") => Some(SemanticFormat::NQuadsStar),
+        Some("ttl") => Some(SemanticFormat::Turtle),
+        Some("ttls") | Some("ttl-star") => Some(SemanticFormat::TurtleStar),
+        Some("trig") => Some(SemanticFormat::TriG),
+        Some("trigs") | Some("trig-star") => Some(SemanticFormat::TriGStar),
+        Some("n3") => Some(SemanticFormat::N3),
+        Some("rdf") | Some("owl") => Some(SemanticFormat::RdfXml),
+        Some("xml") => Some(SemanticFormat::RdfXml),
+        Some("jsonld") | Some("json-ld") | Some("json") => Some(SemanticFormat::JsonLd),
+        Some("jsonl") => Some(SemanticFormat::AgentIntentJsonl),
+        Some("cbor") | Some("cborld") => Some(SemanticFormat::CborLd),
+        Some("kml") => Some(SemanticFormat::Kml),
+        Some("chk") | Some("qchk") => Some(SemanticFormat::Chk),
+        Some("q42") => Some(SemanticFormat::Q42),
+        Some("obj") | Some("stl") | Some("glb") | Some("gltf") => Some(SemanticFormat::Mesh),
+        _ => None,
     }
 }
 
@@ -197,7 +195,10 @@ mod tests {
 
     #[test]
     fn detect_json_content_without_ld_extension() {
-        let p = tmp_file("test_detect_json.json", b"{\"@context\": {}, \"@id\": \"x\"}");
+        let p = tmp_file(
+            "test_detect_json.json",
+            b"{\"@context\": {}, \"@id\": \"x\"}",
+        );
         assert_eq!(detect_format(&p), Some(SemanticFormat::JsonLd));
     }
 

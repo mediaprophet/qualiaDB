@@ -796,7 +796,10 @@ mod tests {
 
         let (tc, bc) = alpha_shape_3d(&pts, 100.0, &tetras, &mut classes, &mut boundary).unwrap();
         assert_eq!(tc, 2);
-        assert!(classes[0] && classes[1], "both tets interior with large alpha");
+        assert!(
+            classes[0] && classes[1],
+            "both tets interior with large alpha"
+        );
         assert_eq!(bc, 6, "shared face excluded → 6 boundary faces, not 8");
         // The shared face {0,1,2} must NOT be among the boundary triangles.
         assert!(

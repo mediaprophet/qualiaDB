@@ -350,7 +350,9 @@ impl QTensorEngine {
             #[cfg(not(target_arch = "wasm32"))]
             if let Ok(handle) = tokio::runtime::Handle::try_current() {
                 if handle.block_on(rx).ok().map(|m| m.is_ok()).unwrap_or(false) {
-                    let data = slice.get_mapped_range().expect("wgpu buffer map_range failed");
+                    let data = slice
+                        .get_mapped_range()
+                        .expect("wgpu buffer map_range failed");
                     let floats: &[f32] = bytemuck::cast_slice(&data);
                     if let Some(out) = readback_out {
                         out[..readback_elems].copy_from_slice(&floats[..readback_elems]);
@@ -435,8 +437,10 @@ impl QTensorEngine {
             (None, None)
         };
         #[cfg(target_arch = "wasm32")]
-        let (k_dict, v_dict): (Option<crate::kv_dict::KvDictionary>, Option<crate::kv_dict::KvDictionary>) =
-            (None, None);
+        let (k_dict, v_dict): (
+            Option<crate::kv_dict::KvDictionary>,
+            Option<crate::kv_dict::KvDictionary>,
+        ) = (None, None);
 
         let mut proj = [0f32; MAX_STACK_GEMM_OUT];
         let mut norm_tok = [0f32; MAX_HIDDEN_DIM];
@@ -1179,10 +1183,7 @@ impl QTensorEngine {
 
         // P4: device-side RoPE + KV + SDPA + O-proj — no mid-chain QKV readback.
         // Only f32 (non-int8 / non-dict) layouts match the CUDA KV index formula.
-        if !layout.int8
-            && layout.dict_k == 0
-            && n_embd <= scratch_a.len()
-        {
+        if !layout.int8 && layout.dict_k == 0 && n_embd <= scratch_a.len() {
             if let Some(out_info) = out_info {
                 if out_info.ggml_type == crate::ggml_quants::GGML_TYPE_Q4_K_SOA {
                     let (o_in, o_out) = Self::matmul_dims(out_info);
@@ -1226,10 +1227,9 @@ impl QTensorEngine {
                             ) {
                                 static DEVICE_ATTN_LOGGED: std::sync::atomic::AtomicBool =
                                     std::sync::atomic::AtomicBool::new(false);
-                                if !DEVICE_ATTN_LOGGED.swap(
-                                    true,
-                                    std::sync::atomic::Ordering::Relaxed,
-                                ) {
+                                if !DEVICE_ATTN_LOGGED
+                                    .swap(true, std::sync::atomic::Ordering::Relaxed)
+                                {
                                     log::info!(
                                         "cuda_attn|device_sdpa|first_hit|layer={layer}|tok={token_idx}|kv_ready={}",
                                         crate::device_kv_ready()
@@ -1239,10 +1239,8 @@ impl QTensorEngine {
                             } else {
                                 static DEVICE_ATTN_MISS: std::sync::atomic::AtomicU32 =
                                     std::sync::atomic::AtomicU32::new(0);
-                                let n = DEVICE_ATTN_MISS.fetch_add(
-                                    1,
-                                    std::sync::atomic::Ordering::Relaxed,
-                                );
+                                let n = DEVICE_ATTN_MISS
+                                    .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
                                 if n < 3 {
                                     log::warn!(
                                         "cuda_attn|device_sdpa|miss|layer={layer}|tok={token_idx}|kv_ready={}|o_in={o_in}|o_out={o_out}|q_dim={q_dim}|n_embd={n_embd}",
@@ -1297,9 +1295,7 @@ impl QTensorEngine {
             return false;
         };
         // SAFETY: exclusive decode thread; layout indices are bounds-checked below.
-        let kv = unsafe {
-            core::slice::from_raw_parts_mut(kv.as_ptr() as *mut f32, kv.len())
-        };
+        let kv = unsafe { core::slice::from_raw_parts_mut(kv.as_ptr() as *mut f32, kv.len()) };
         for kvh in 0..n_kv {
             for d in 0..head_dim {
                 let idx = layout.k_index(layer, slot, kvh as u32, d as u32);
@@ -1384,14 +1380,18 @@ impl QTensorEngine {
         if o_in > q_dim || o_out > scratch_a.len() {
             return false;
         }
-        let Ok(o_raw) =
-            crate::ggml_quants::fetch_tensor_bytes(mmap, tensor_data_start, out_info)
+        let Ok(o_raw) = crate::ggml_quants::fetch_tensor_bytes(mmap, tensor_data_start, out_info)
         else {
             return false;
         };
         if out_info.ggml_type == crate::ggml_quants::GGML_TYPE_Q4_K_SOA {
-            if crate::try_q4k_soa_gemv(o_in, o_out, &attn_out[..o_in], o_raw, &mut scratch_a[..o_out])
-            {
+            if crate::try_q4k_soa_gemv(
+                o_in,
+                o_out,
+                &attn_out[..o_in],
+                o_raw,
+                &mut scratch_a[..o_out],
+            ) {
                 return true;
             }
         }

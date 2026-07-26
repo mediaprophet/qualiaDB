@@ -12,7 +12,7 @@ impl Fetch10dService {
         Self {}
     }
 
-    /// Fetches a .10d container by its hash from a specified endpoint, 
+    /// Fetches a .10d container by its hash from a specified endpoint,
     /// verifies the whole-file CRC-32C, and returns the byte payload if valid.
     pub fn fetch_10d_by_hash(
         &self,
@@ -64,7 +64,12 @@ mod tests {
         assert!(res1.unwrap_err().contains("Consent denied"));
 
         // Register the endpoint
-        registry.register_egress("fetch_10d", endpoint, "Fetch 10d asset by hash", "User requests asset");
+        registry.register_egress(
+            "fetch_10d",
+            endpoint,
+            "Fetch 10d asset by hash",
+            "User requests asset",
+        );
 
         // Now it should pass the consent check, but the mock payload might fail CRC.
         // We just assert we don't get the consent error.

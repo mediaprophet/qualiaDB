@@ -7,11 +7,7 @@ use super::HistoError;
 ///
 /// Models flat-field style correction against a measured slide background.
 /// `out` length ≥ `rgb.len()`. Channels with near-zero `bg` are left unchanged.
-pub fn apply_background_correct(
-    rgb: &[u8],
-    bg: RgbBg,
-    out: &mut [u8],
-) -> Result<(), HistoError> {
+pub fn apply_background_correct(rgb: &[u8], bg: RgbBg, out: &mut [u8]) -> Result<(), HistoError> {
     if rgb.is_empty() {
         return Err(HistoError::EmptyInput);
     }

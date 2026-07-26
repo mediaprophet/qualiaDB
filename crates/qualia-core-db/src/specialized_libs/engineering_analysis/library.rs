@@ -279,4 +279,3 @@ impl EngineeringAnalysisLibrary {
         self.structural_analyzer.get_model(model_id)
     }
 }
-

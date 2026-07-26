@@ -1,6 +1,5 @@
 use super::*;
 
-
 pub fn engineering_analysis(args: &[u8]) -> Result<String, McpSystemError> {
     use crate::specialized_libs::engineering_analysis::{
         AnalysisType, EngineeringAnalysisLibrary, EngineeringModel, Geometry, GeometryType, Load,

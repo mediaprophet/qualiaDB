@@ -45,12 +45,19 @@ pub fn cosine_distance(a: &[f32], b: &[f32]) -> Result<f32, CvError> {
 mod tests {
     use super::*;
     use crate::specialized_libs::computer_vision::cv::buffer::{GrayView, RgbView};
-    use crate::specialized_libs::computer_vision::embeddings::color_hist_embed::{color_hist_embed_rgb, COLOR_HIST_EMBED_DIM};
-    use crate::specialized_libs::computer_vision::embeddings::perceptual_hash_u64::{ahash_u64, dhash_u64};
+    use crate::specialized_libs::computer_vision::embeddings::color_hist_embed::{
+        color_hist_embed_rgb, COLOR_HIST_EMBED_DIM,
+    };
+    use crate::specialized_libs::computer_vision::embeddings::perceptual_hash_u64::{
+        ahash_u64, dhash_u64,
+    };
 
     #[test]
     fn hamming_identical_zero() {
-        assert_eq!(hamming_distance_u64(0xDEAD_BEEF_CAFE_BABE, 0xDEAD_BEEF_CAFE_BABE), 0);
+        assert_eq!(
+            hamming_distance_u64(0xDEAD_BEEF_CAFE_BABE, 0xDEAD_BEEF_CAFE_BABE),
+            0
+        );
     }
 
     #[test]
@@ -91,8 +98,8 @@ mod tests {
 
         // RGB for colour embed
         let rgb_bytes = [
-            40u8, 80, 120, 40, 80, 120, 40, 80, 120, 40, 80, 120, 40, 80, 120, 40, 80, 120, 40,
-            80, 120, 40, 80, 120, 40, 80, 120,
+            40u8, 80, 120, 40, 80, 120, 40, 80, 120, 40, 80, 120, 40, 80, 120, 40, 80, 120, 40, 80,
+            120, 40, 80, 120, 40, 80, 120,
         ];
         let r = RgbView::new(3, 3, 9, &rgb_bytes).unwrap();
         let mut e0 = [0.0f32; COLOR_HIST_EMBED_DIM];

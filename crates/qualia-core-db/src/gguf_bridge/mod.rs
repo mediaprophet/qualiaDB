@@ -483,6 +483,30 @@ impl KvCacheLayout {
         })
     }
 
+    /// Derive the dense f32 device layout used by native CUDA kernels without changing the host
+    /// cache representation. Host int8/dictionary compression and the CUDA execution arena are
+    /// independent storage decisions.
+    pub(crate) fn dense_device_layout(self) -> Option<Self> {
+        let slot_kv_elems = self.n_kv_head.checked_mul(self.head_dim)?;
+        let layer_stride = self
+            .max_context
+            .checked_mul(slot_kv_elems)?
+            .checked_mul(2)?;
+        let total_f32_elems = (self.n_layer as usize).checked_mul(layer_stride as usize)?;
+        total_f32_elems
+            .checked_mul(std::mem::size_of::<f32>())
+            .filter(|bytes| *bytes <= KV_CACHE_MAX_BYTES)?;
+        Some(Self {
+            slot_kv_elems,
+            layer_stride,
+            total_f32_elems,
+            int8: false,
+            dict_k: 0,
+            dict_n_atoms: 0,
+            ..self
+        })
+    }
+
     #[inline]
     pub fn ring_slot(&self, token_idx: u32) -> u32 {
         token_idx % self.max_context
@@ -578,6 +602,9 @@ pub(crate) use pipeline_cache::*;
 // pub(crate) so they call across modules freely; types/imports arrive via each file's `use super::*`.
 mod async_dispatch;
 mod attention;
+#[cfg(all(not(target_arch = "wasm32"), feature = "cuda"))]
+mod cuda_decode_plan;
+pub(crate) use cuda_decode_plan::context::MAX_CUDA_CONTEXT_WINDOW;
 mod embedding;
 mod ffn;
 mod forward;
@@ -1262,6 +1289,9 @@ pub struct QTensorEngine {
     /// Native GPU-resident single-fence decode plan (see `resident_decode.rs`).
     #[cfg(not(target_arch = "wasm32"))]
     resident_decode: resident_decode::ResidentDecodeState,
+    /// Cold-built host descriptor for the native CUDA all-layer plan.
+    #[cfg(all(not(target_arch = "wasm32"), feature = "cuda"))]
+    cuda_decode_plan: cuda_decode_plan::CudaDecodePlanState,
     /// W3: native GPU-resident single-fence-per-chunk prefill plan (see `prefill_arena.rs`).
     #[cfg(not(target_arch = "wasm32"))]
     prefill_arena: prefill_arena::PrefillArenaState,

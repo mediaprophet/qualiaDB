@@ -1,7 +1,9 @@
 //! P0 milestone: offline world config + sealed `.10d` with provenance passes validate-before-render.
 
 use qualia_core_db::container_10d::header::Container10dHeader;
-use qualia_core_db::container_10d::provenance_section::{decode_provenance_section, validate_provenance};
+use qualia_core_db::container_10d::provenance_section::{
+    decode_provenance_section, validate_provenance,
+};
 use qualia_core_db::container_10d::section::{parse_section_table, SectionType};
 use qualia_core_db::indexing::QuinIndex;
 use qualia_core_db::modalities::logic::geometry_asset_shacl::{

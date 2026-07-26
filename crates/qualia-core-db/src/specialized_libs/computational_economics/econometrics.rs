@@ -139,11 +139,18 @@ pub fn ols_into(
     coef_out: &mut [f64],
     resid_out: &mut [f64],
 ) -> Result<f64, EconometricsError> {
-    if n_obs == 0 || n_reg == 0 || n_obs < n_reg || n_obs > MAX_OBSERVATIONS || n_reg > MAX_REGRESSORS {
+    if n_obs == 0
+        || n_reg == 0
+        || n_obs < n_reg
+        || n_obs > MAX_OBSERVATIONS
+        || n_reg > MAX_REGRESSORS
+    {
         return Err(EconometricsError::InsufficientData);
     }
-    if x.len() < n_obs * n_reg || y.len() < n_obs
-        || coef_out.len() < n_reg || resid_out.len() < n_obs
+    if x.len() < n_obs * n_reg
+        || y.len() < n_obs
+        || coef_out.len() < n_reg
+        || resid_out.len() < n_obs
     {
         return Err(EconometricsError::BufferTooSmall);
     }
@@ -222,11 +229,19 @@ pub fn wls_into(
     coef_out: &mut [f64],
     resid_out: &mut [f64],
 ) -> Result<f64, EconometricsError> {
-    if n_obs == 0 || n_reg == 0 || n_obs < n_reg || n_obs > MAX_OBSERVATIONS || n_reg > MAX_REGRESSORS {
+    if n_obs == 0
+        || n_reg == 0
+        || n_obs < n_reg
+        || n_obs > MAX_OBSERVATIONS
+        || n_reg > MAX_REGRESSORS
+    {
         return Err(EconometricsError::InsufficientData);
     }
-    if x.len() < n_obs * n_reg || y.len() < n_obs || weights.len() < n_obs
-        || coef_out.len() < n_reg || resid_out.len() < n_obs
+    if x.len() < n_obs * n_reg
+        || y.len() < n_obs
+        || weights.len() < n_obs
+        || coef_out.len() < n_reg
+        || resid_out.len() < n_obs
     {
         return Err(EconometricsError::BufferTooSmall);
     }
@@ -269,7 +284,11 @@ pub fn wls_into(
             sw += weights[k];
             swy += weights[k] * y[k];
         }
-        if sw > 0.0 { swy / sw } else { 0.0 }
+        if sw > 0.0 {
+            swy / sw
+        } else {
+            0.0
+        }
     };
     for k in 0..n_obs {
         let mut fitted = 0.0;
@@ -375,7 +394,12 @@ pub fn logistic_mle_into(
     coef_out: &mut [f64],
 ) -> Result<EconConvergence, EconometricsError> {
     use super::error::EconStatus;
-    if n_obs == 0 || n_reg == 0 || n_obs < n_reg || n_obs > MAX_OBSERVATIONS || n_reg > MAX_REGRESSORS {
+    if n_obs == 0
+        || n_reg == 0
+        || n_obs < n_reg
+        || n_obs > MAX_OBSERVATIONS
+        || n_reg > MAX_REGRESSORS
+    {
         return Err(EconometricsError::InsufficientData);
     }
     if x.len() < n_obs * n_reg || y_binary.len() < n_obs || coef_out.len() < n_reg {
@@ -445,19 +469,31 @@ pub fn logistic_mle_into(
                 }
                 let delta_norm = delta_norm.sqrt();
                 if !delta_norm.is_finite() {
-                    return Ok(EconConvergence::stalled(EconStatus::NonFinite, iter + 1, delta_norm));
+                    return Ok(EconConvergence::stalled(
+                        EconStatus::NonFinite,
+                        iter + 1,
+                        delta_norm,
+                    ));
                 }
                 if delta_norm < tolerance {
                     return Ok(EconConvergence::converged(iter + 1, delta_norm));
                 }
             }
             Err(EconometricsError::SingularSystem) => {
-                return Ok(EconConvergence::stalled(EconStatus::Singular, iter + 1, 0.0));
+                return Ok(EconConvergence::stalled(
+                    EconStatus::Singular,
+                    iter + 1,
+                    0.0,
+                ));
             }
             Err(e) => return Err(e),
         }
     }
-    Ok(EconConvergence::stalled(EconStatus::MaxIterations, max_iter, 0.0))
+    Ok(EconConvergence::stalled(
+        EconStatus::MaxIterations,
+        max_iter,
+        0.0,
+    ))
 }
 
 /// Evaluate GMM moment conditions: `g(theta) = (1/n) sum m_i(theta)`.
@@ -472,7 +508,11 @@ pub fn gmm_moment_eval(
     n_moments: usize,
     out: &mut [f64],
 ) -> Result<usize, EconometricsError> {
-    if n_obs == 0 || n_moments == 0 || moment_values.len() < n_obs * n_moments || out.len() < n_moments {
+    if n_obs == 0
+        || n_moments == 0
+        || moment_values.len() < n_obs * n_moments
+        || out.len() < n_moments
+    {
         return Err(EconometricsError::InvalidInput);
     }
     for v in moment_values.iter().take(n_obs * n_moments) {
@@ -565,7 +605,9 @@ mod tests {
         // Perfectly separable: y=1 when x>0, y=0 when x<0
         // Design: [[1, -5], [1, -3], [1, -1], [1, 1], [1, 3], [1, 5]]
         // y = [0, 0, 0, 1, 1, 1]
-        let x = [1.0, -5.0, 1.0, -3.0, 1.0, -1.0, 1.0, 1.0, 1.0, 3.0, 1.0, 5.0];
+        let x = [
+            1.0, -5.0, 1.0, -3.0, 1.0, -1.0, 1.0, 1.0, 1.0, 3.0, 1.0, 5.0,
+        ];
         let y = [0.0, 0.0, 0.0, 1.0, 1.0, 1.0];
         let mut coef = [0.0f64; 2];
         let conv = logistic_mle_into(&x, &y, 6, 2, 100, 1e-8, &mut coef).unwrap();

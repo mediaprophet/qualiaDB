@@ -116,9 +116,17 @@ pub enum BundleError {
     /// The whole-file CRC did not match (corruption or tampering).
     CrcMismatch { expected: u32, got: u32 },
     /// The index offset/length pointed outside the file.
-    BadIndexPointer { offset: u64, length: u64, total: usize },
+    BadIndexPointer {
+        offset: u64,
+        length: u64,
+        total: usize,
+    },
     /// An entry's `[offset, length)` fell outside the payload region.
-    EntryOutOfBounds { key: String, offset: u64, length: u64 },
+    EntryOutOfBounds {
+        key: String,
+        offset: u64,
+        length: u64,
+    },
     /// The CBOR index could not be encoded/decoded.
     Cbor(String),
     /// An I/O error (mmap/open), native only.
@@ -134,16 +142,36 @@ impl std::fmt::Display for BundleError {
             BundleError::BadMagic => write!(f, "bundle: bad magic (not a .hmc bundle)"),
             BundleError::UnsupportedVersion(v) => write!(f, "bundle: unsupported version {v}"),
             BundleError::LengthMismatch { header, actual } => {
-                write!(f, "bundle: length mismatch (header {header}, actual {actual})")
+                write!(
+                    f,
+                    "bundle: length mismatch (header {header}, actual {actual})"
+                )
             }
             BundleError::CrcMismatch { expected, got } => {
-                write!(f, "bundle: CRC mismatch (expected {expected:#010x}, got {got:#010x})")
+                write!(
+                    f,
+                    "bundle: CRC mismatch (expected {expected:#010x}, got {got:#010x})"
+                )
             }
-            BundleError::BadIndexPointer { offset, length, total } => {
-                write!(f, "bundle: bad index pointer (offset {offset}, length {length}, total {total})")
+            BundleError::BadIndexPointer {
+                offset,
+                length,
+                total,
+            } => {
+                write!(
+                    f,
+                    "bundle: bad index pointer (offset {offset}, length {length}, total {total})"
+                )
             }
-            BundleError::EntryOutOfBounds { key, offset, length } => {
-                write!(f, "bundle: entry {key:?} out of bounds (offset {offset}, length {length})")
+            BundleError::EntryOutOfBounds {
+                key,
+                offset,
+                length,
+            } => {
+                write!(
+                    f,
+                    "bundle: entry {key:?} out of bounds (offset {offset}, length {length})"
+                )
             }
             BundleError::Cbor(e) => write!(f, "bundle: CBOR error: {e}"),
             BundleError::Io(e) => write!(f, "bundle: I/O error: {e}"),

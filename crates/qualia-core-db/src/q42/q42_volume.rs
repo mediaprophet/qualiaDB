@@ -899,7 +899,10 @@ doc:article-1 a values:Undertaking ;
         let quins = vol.read_all_quins().unwrap();
         assert_eq!(quins.len(), 2);
         let lexv = vol.lex_view().unwrap();
-        let vals: Vec<&str> = quins.iter().filter_map(|q| lexv.lookup_hash(q.object)).collect();
+        let vals: Vec<&str> = quins
+            .iter()
+            .filter_map(|q| lexv.lookup_hash(q.object))
+            .collect();
         assert!(vals.contains(&"circulatory") && vals.contains(&"respiratory"));
     }
 

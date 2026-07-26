@@ -631,8 +631,12 @@ impl QualiaPortal {
                     }
                 }
                 container_10d::SectionType::ProvenanceSidecar => {
-                    if let Ok(view) = crate::container_10d::provenance_section::decode_provenance_section(payload) {
-                        if crate::container_10d::provenance_section::validate_provenance(&view).is_ok() {
+                    if let Ok(view) =
+                        crate::container_10d::provenance_section::decode_provenance_section(payload)
+                    {
+                        if crate::container_10d::provenance_section::validate_provenance(&view)
+                            .is_ok()
+                        {
                             has_attestation = true;
                         }
                     }
@@ -767,8 +771,12 @@ impl QualiaPortal {
                     }
                 }
                 container_10d::SectionType::ProvenanceSidecar => {
-                    if let Ok(view) = crate::container_10d::provenance_section::decode_provenance_section(payload) {
-                        if crate::container_10d::provenance_section::validate_provenance(&view).is_ok() {
+                    if let Ok(view) =
+                        crate::container_10d::provenance_section::decode_provenance_section(payload)
+                    {
+                        if crate::container_10d::provenance_section::validate_provenance(&view)
+                            .is_ok()
+                        {
                             has_attestation = true;
                         }
                     }
@@ -857,10 +865,7 @@ impl QualiaPortal {
     /// `organs` is a JS `Array` of objects: `{ bytes: Uint8Array, r: f32, g: f32, b: f32, a: f32 }`
     /// (per-organ colour). Any `x/y/z` fields are ignored — the mesh already carries its position.
     /// Returns `{ organs_loaded, organs_refused, total_triangles }`.
-    pub fn load_body_organs_colored(
-        &mut self,
-        organs: &Array,
-    ) -> Result<JsValue, JsValue> {
+    pub fn load_body_organs_colored(&mut self, organs: &Array) -> Result<JsValue, JsValue> {
         use crate::container_10d::{
             self,
             header::{Container10dHeader, FLAG_DEFAULT_DISPOSITION_REFUSE},
@@ -932,7 +937,8 @@ impl QualiaPortal {
                         if let Ok(view) =
                             container_10d::provenance_section::decode_provenance_section(payload)
                         {
-                            if container_10d::provenance_section::validate_provenance(&view).is_ok() {
+                            if container_10d::provenance_section::validate_provenance(&view).is_ok()
+                            {
                                 has_attestation = true;
                             }
                         }
@@ -1054,10 +1060,22 @@ impl QualiaPortal {
                 continue;
             };
             let obj = js_sys::Object::new();
-            Reflect::set(&obj, &JsValue::from_str("key"), &JsValue::from_str(&entry.key))?;
-            let label = if meta.label.is_empty() { entry.key.as_str() } else { meta.label.as_str() };
+            Reflect::set(
+                &obj,
+                &JsValue::from_str("key"),
+                &JsValue::from_str(&entry.key),
+            )?;
+            let label = if meta.label.is_empty() {
+                entry.key.as_str()
+            } else {
+                meta.label.as_str()
+            };
             Reflect::set(&obj, &JsValue::from_str("label"), &JsValue::from_str(label))?;
-            Reflect::set(&obj, &JsValue::from_str("system"), &JsValue::from_str(&meta.system))?;
+            Reflect::set(
+                &obj,
+                &JsValue::from_str("system"),
+                &JsValue::from_str(&meta.system),
+            )?;
             let systems = js_sys::Array::new();
             if meta.systems.is_empty() {
                 systems.push(&JsValue::from_str(&meta.system));
@@ -1118,17 +1136,41 @@ impl QualiaPortal {
             u8.copy_from(organ_bytes);
             let obj = js_sys::Object::new();
             Reflect::set(&obj, &JsValue::from_str("bytes"), &u8)?;
-            Reflect::set(&obj, &JsValue::from_str("r"), &JsValue::from_f64(meta.rgba[0] as f64))?;
-            Reflect::set(&obj, &JsValue::from_str("g"), &JsValue::from_f64(meta.rgba[1] as f64))?;
-            Reflect::set(&obj, &JsValue::from_str("b"), &JsValue::from_f64(meta.rgba[2] as f64))?;
+            Reflect::set(
+                &obj,
+                &JsValue::from_str("r"),
+                &JsValue::from_f64(meta.rgba[0] as f64),
+            )?;
+            Reflect::set(
+                &obj,
+                &JsValue::from_str("g"),
+                &JsValue::from_f64(meta.rgba[1] as f64),
+            )?;
+            Reflect::set(
+                &obj,
+                &JsValue::from_str("b"),
+                &JsValue::from_f64(meta.rgba[2] as f64),
+            )?;
             Reflect::set(
                 &obj,
                 &JsValue::from_str("a"),
                 &JsValue::from_f64((meta.rgba[3] * level) as f64),
             )?;
-            Reflect::set(&obj, &JsValue::from_str("x"), &JsValue::from_f64(meta.position[0] as f64))?;
-            Reflect::set(&obj, &JsValue::from_str("y"), &JsValue::from_f64(meta.position[1] as f64))?;
-            Reflect::set(&obj, &JsValue::from_str("z"), &JsValue::from_f64(meta.position[2] as f64))?;
+            Reflect::set(
+                &obj,
+                &JsValue::from_str("x"),
+                &JsValue::from_f64(meta.position[0] as f64),
+            )?;
+            Reflect::set(
+                &obj,
+                &JsValue::from_str("y"),
+                &JsValue::from_f64(meta.position[1] as f64),
+            )?;
+            Reflect::set(
+                &obj,
+                &JsValue::from_str("z"),
+                &JsValue::from_f64(meta.position[2] as f64),
+            )?;
             organs.push(&obj);
         }
 

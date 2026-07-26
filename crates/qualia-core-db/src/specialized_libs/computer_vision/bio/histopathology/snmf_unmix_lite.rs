@@ -162,11 +162,7 @@ mod tests {
 
     #[test]
     fn three_stain_writes_k_channels() {
-        let basis = StainBasis::three(
-            [1.0, 0.0, 0.0],
-            [0.0, 1.0, 0.0],
-            [0.0, 0.0, 1.0],
-        );
+        let basis = StainBasis::three([1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]);
         let rgb = [100u8, 80, 60, 50, 50, 50];
         let mut conc = [0f32; 6];
         let n = snmf_unmix_lite(&rgb, &basis, 10, &mut conc).unwrap();

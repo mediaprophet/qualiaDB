@@ -86,9 +86,9 @@ pub struct LayoutInput {
 /// Wing → presentation colour (cinema-readable, not neon random).
 pub fn wing_color(wing: RepresentationWing) -> &'static str {
     match wing {
-        RepresentationWing::Private => "#a78bfa",  // violet
-        RepresentationWing::Offered => "#34d399",  // emerald
-        RepresentationWing::Commons => "#38bdf8",  // sky
+        RepresentationWing::Private => "#a78bfa", // violet
+        RepresentationWing::Offered => "#34d399", // emerald
+        RepresentationWing::Commons => "#38bdf8", // sky
     }
 }
 
@@ -122,7 +122,11 @@ pub fn layout_scene_nodes(inputs: &[LayoutInput], out: &mut [SceneNodeProj]) -> 
             let xn = 0.5 + r * theta.cos();
             let yn = 0.5 + r * theta.sin() * 0.72;
             let zn = 0.2 + (i / tot) * 0.55;
-            (xn.clamp(0.08, 0.92), yn.clamp(0.08, 0.92), zn.clamp(0.05, 0.95))
+            (
+                xn.clamp(0.08, 0.92),
+                yn.clamp(0.08, 0.92),
+                zn.clamp(0.05, 0.95),
+            )
         };
         let bits = inp.affordances.pack();
         let radius = 5.5

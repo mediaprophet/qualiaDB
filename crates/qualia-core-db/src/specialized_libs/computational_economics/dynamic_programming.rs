@@ -956,17 +956,9 @@ mod tests {
         let stop = [100.0, 100.0];
         let mut values = [0.0f64; 2];
         let mut policy = [0u32; 2];
-        let conv = optimal_stopping_into(
-            &cont,
-            &stop,
-            0.9,
-            2,
-            1000,
-            1e-12,
-            &mut values,
-            &mut policy,
-        )
-        .unwrap();
+        let conv =
+            optimal_stopping_into(&cont, &stop, 0.9, 2, 1000, 1e-12, &mut values, &mut policy)
+                .unwrap();
         assert_eq!(conv.status, EconStatus::Converged);
         assert_eq!(policy[0], 1);
         assert_eq!(policy[1], 1);
@@ -982,17 +974,9 @@ mod tests {
         let stop = [1.0, 1.0];
         let mut values = [0.0f64; 2];
         let mut policy = [0u32; 2];
-        let conv = optimal_stopping_into(
-            &cont,
-            &stop,
-            0.9,
-            2,
-            1000,
-            1e-12,
-            &mut values,
-            &mut policy,
-        )
-        .unwrap();
+        let conv =
+            optimal_stopping_into(&cont, &stop, 0.9, 2, 1000, 1e-12, &mut values, &mut policy)
+                .unwrap();
         assert_eq!(conv.status, EconStatus::Converged);
         assert_eq!(policy[0], 0);
         assert_eq!(policy[1], 0);
@@ -1007,17 +991,9 @@ mod tests {
         let stop = [10.0, 1.0];
         let mut values = [0.0f64; 2];
         let mut policy = [0u32; 2];
-        let conv = optimal_stopping_into(
-            &cont,
-            &stop,
-            0.9,
-            2,
-            1000,
-            1e-12,
-            &mut values,
-            &mut policy,
-        )
-        .unwrap();
+        let conv =
+            optimal_stopping_into(&cont, &stop, 0.9, 2, 1000, 1e-12, &mut values, &mut policy)
+                .unwrap();
         assert_eq!(conv.status, EconStatus::Converged);
         // s0: stop=10 vs 0.9*1=0.9 -> stop.
         assert_eq!(policy[0], 1);
@@ -1119,16 +1095,8 @@ mod tests {
     fn bellman_update_rejects_invalid_discount() {
         let (rewards, transitions, n_states, n_actions, _discount) = build_two_state_mdp();
         let values = [0.0, 0.0];
-        let err = bellman_update(
-            &rewards,
-            &transitions,
-            1.5,
-            &values,
-            n_states,
-            n_actions,
-            0,
-        )
-        .unwrap_err();
+        let err = bellman_update(&rewards, &transitions, 1.5, &values, n_states, n_actions, 0)
+            .unwrap_err();
         assert_eq!(err, DpError::InvalidInput);
     }
 
@@ -1321,7 +1289,10 @@ mod tests {
     #[test]
     fn dp_error_maps_to_econ_status() {
         assert_eq!(DpError::InvalidInput.to_status(), EconStatus::InvalidInput);
-        assert_eq!(DpError::BufferTooSmall.to_status(), EconStatus::BufferTooSmall);
+        assert_eq!(
+            DpError::BufferTooSmall.to_status(),
+            EconStatus::BufferTooSmall
+        );
         assert_eq!(DpError::NonFinite.to_status(), EconStatus::NonFinite);
         assert_eq!(DpError::NonConverged.to_status(), EconStatus::MaxIterations);
         assert_eq!(DpError::InvalidModel.to_status(), EconStatus::InvalidInput);

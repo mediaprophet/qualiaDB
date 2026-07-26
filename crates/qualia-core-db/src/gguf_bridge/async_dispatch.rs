@@ -170,7 +170,9 @@ impl QTensorEngine {
 
             let slice = staging.slice(..out_bytes);
             if await_wgpu_map(slice).await {
-                let data = slice.get_mapped_range().expect("wgpu buffer map_range failed");
+                let data = slice
+                    .get_mapped_range()
+                    .expect("wgpu buffer map_range failed");
                 let floats: &[f32] = bytemuck::cast_slice(&data);
                 out[..n_out].copy_from_slice(&floats[..n_out]);
                 drop(data);
@@ -286,7 +288,9 @@ impl QTensorEngine {
 
         let slice = staging.slice(..out_bytes);
         if await_wgpu_map(slice).await {
-            let data = slice.get_mapped_range().expect("wgpu buffer map_range failed");
+            let data = slice
+                .get_mapped_range()
+                .expect("wgpu buffer map_range failed");
             let floats: &[f32] = bytemuck::cast_slice(&data);
             out[..n_out].copy_from_slice(&floats[..n_out]);
             drop(data);
@@ -636,7 +640,9 @@ impl QTensorEngine {
         let out_bytes = (readback_elems * 4) as wgpu::BufferAddress;
         let slice = staging.slice(..out_bytes);
         if await_wgpu_map(slice).await {
-            let data = slice.get_mapped_range().expect("wgpu buffer map_range failed");
+            let data = slice
+                .get_mapped_range()
+                .expect("wgpu buffer map_range failed");
             let floats: &[f32] = bytemuck::cast_slice(&data);
             if let Some(out) = readback_out {
                 out[..readback_elems].copy_from_slice(&floats[..readback_elems]);

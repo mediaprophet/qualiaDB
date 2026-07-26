@@ -470,6 +470,234 @@ impl QTensorEngine {
         ffn_ok
     }
 
+    /// Attempt the CUDA mega-pass: all layers in one fenced CUDA stream.
+    /// Returns `Some(token_id)` on success, `None` to fall back to per-layer path.
+    #[cfg(all(not(target_arch = "wasm32"), feature = "cuda"))]
+    pub fn try_cuda_mega_pass_decode(
+        &mut self,
+        index: &crate::gguf_sharder::GgufTensorIndex,
+        hidden: &mut [f32],
+        emb_dim: usize,
+        token_idx: u32,
+    ) -> Option<u32> {
+        self.try_prepared_cuda_decode(index, hidden, emb_dim, token_idx)
+    }
+
+    /// Decode directly from a token id using the resident Q8 embedding table.
+    ///
+    /// This path avoids CPU embedding dequantization and the full hidden-state H2D upload.
+    #[cfg(all(not(target_arch = "wasm32"), feature = "cuda"))]
+    pub fn try_cuda_mega_pass_decode_token(
+        &mut self,
+        index: &crate::gguf_sharder::GgufTensorIndex,
+        token_id: u32,
+        hidden: &mut [f32],
+        emb_dim: usize,
+        token_idx: u32,
+    ) -> Option<u32> {
+        self.try_prepared_cuda_decode_token(index, token_id, hidden, emb_dim, token_idx)
+    }
+
+    /// Superseded unprepared implementation retained temporarily for line-by-line parity review
+    /// during R9.4 decomposition. It is excluded from compilation and will be removed after the
+    /// prepared-plan differential test is certified.
+    #[cfg(any())]
+    pub fn try_cuda_mega_pass_decode_unprepared_reference(
+        &self,
+        index: &crate::gguf_sharder::GgufTensorIndex,
+        hidden: &mut [f32],
+        emb_dim: usize,
+        token_idx: u32,
+    ) -> Option<u32> {
+        use super::RMS_NORM_EPS;
+        use crate::ggml_quants::{fetch_tensor_bytes, GGML_TYPE_Q4_K_SOA};
+        use crate::gguf_bridge::cpu_ops::dequant_norm_row_into;
+        use crate::inference::cuda_lane::{MegaPassLayerDims, MegaPassLayerWeights};
+
+        let h = index.hyperparams;
+        let n_layer = h.n_layer;
+        let n_embd = h.n_embd as usize;
+        let n_head = h.n_head as usize;
+        let n_kv = h.effective_n_kv_head() as usize;
+        let head_dim = h.head_dim() as usize;
+        if n_layer == 0 || n_embd == 0 || n_embd > 4096 || n_embd != emb_dim {
+            return None;
+        }
+        let layout = self.kv_layout?;
+        if layout.int8 || layout.dict_k > 0 {
+            return None;
+        }
+        let mmap = self.gguf_mmap.as_deref()?;
+        let tds = index.tensor_data_start;
+
+        // Phase 1: Collect raw weights, dims, and norm weights.
+        struct LayerRaw<'a> {
+            q_raw: &'a [u8],
+            k_raw: &'a [u8],
+            v_raw: &'a [u8],
+            o_raw: &'a [u8],
+            g_raw: &'a [u8],
+            u_raw: &'a [u8],
+            d_raw: &'a [u8],
+        }
+        let mut layer_raws: Vec<LayerRaw<'_>> = Vec::with_capacity(n_layer as usize);
+        let mut layer_dims: Vec<MegaPassLayerDims> = Vec::with_capacity(n_layer as usize);
+        let mut all_attn_norms: Vec<Vec<f32>> = Vec::with_capacity(n_layer as usize);
+        let mut all_ffn_norms: Vec<Vec<f32>> = Vec::with_capacity(n_layer as usize);
+
+        for l in 0..n_layer {
+            let t = index.get_layer_tensors(l);
+
+            let q_info = t.attn_q.as_ref()?;
+            let k_info = t.attn_k.as_ref()?;
+            let v_info = t.attn_v.as_ref()?;
+            let o_info = t.attn_output.as_ref()?;
+            let g_info = t.ffn_gate.as_ref()?;
+            let u_info = t.ffn_up.as_ref()?;
+            let d_info = t.ffn_down.as_ref()?;
+
+            if q_info.ggml_type != GGML_TYPE_Q4_K_SOA
+                || k_info.ggml_type != GGML_TYPE_Q4_K_SOA
+                || v_info.ggml_type != GGML_TYPE_Q4_K_SOA
+                || o_info.ggml_type != GGML_TYPE_Q4_K_SOA
+                || g_info.ggml_type != GGML_TYPE_Q4_K_SOA
+                || u_info.ggml_type != GGML_TYPE_Q4_K_SOA
+                || d_info.ggml_type != GGML_TYPE_Q4_K_SOA
+            {
+                log::debug!(
+                    "mega_pass_decode|skip|layer{l}|not_soa|q={} k={} v={} o={} g={} u={} d={}",
+                    q_info.ggml_type,
+                    k_info.ggml_type,
+                    v_info.ggml_type,
+                    o_info.ggml_type,
+                    g_info.ggml_type,
+                    u_info.ggml_type,
+                    d_info.ggml_type
+                );
+                return None;
+            }
+
+            let (q_in, q_out) = Self::matmul_dims(q_info);
+            let (k_in, k_out) = Self::matmul_dims(k_info);
+            let (_v_in, _v_out) = Self::matmul_dims(v_info);
+            let (o_in, o_out) = Self::matmul_dims(o_info);
+            let (g_in, g_out) = Self::matmul_dims(g_info);
+            let (u_in, u_out) = Self::matmul_dims(u_info);
+            let (d_in, d_out) = Self::matmul_dims(d_info);
+
+            let q_raw = fetch_tensor_bytes(mmap, tds, q_info).ok()?;
+            let k_raw = fetch_tensor_bytes(mmap, tds, k_info).ok()?;
+            let v_raw = fetch_tensor_bytes(mmap, tds, v_info).ok()?;
+            let o_raw = fetch_tensor_bytes(mmap, tds, o_info).ok()?;
+            let g_raw = fetch_tensor_bytes(mmap, tds, g_info).ok()?;
+            let u_raw = fetch_tensor_bytes(mmap, tds, u_info).ok()?;
+            let d_raw = fetch_tensor_bytes(mmap, tds, d_info).ok()?;
+
+            let mut attn_norm = vec![0.0f32; n_embd];
+            let mut ffn_norm = vec![0.0f32; n_embd];
+            if let Some(an_info) = t.attn_norm.as_ref() {
+                if dequant_norm_row_into(mmap, tds, an_info, &mut attn_norm) < n_embd {
+                    return None;
+                }
+            }
+            if let Some(fn_info) = t.ffn_norm.as_ref() {
+                if dequant_norm_row_into(mmap, tds, fn_info, &mut ffn_norm) < n_embd {
+                    return None;
+                }
+            }
+            all_attn_norms.push(attn_norm);
+            all_ffn_norms.push(ffn_norm);
+            layer_raws.push(LayerRaw {
+                q_raw,
+                k_raw,
+                v_raw,
+                o_raw,
+                g_raw,
+                u_raw,
+                d_raw,
+            });
+            layer_dims.push(MegaPassLayerDims {
+                q_in,
+                q_out,
+                kv_in: k_in,
+                kv_out: k_out,
+                o_in,
+                o_out,
+                gate_in: g_in,
+                gate_out: g_out,
+                up_in: u_in,
+                up_out: u_out,
+                down_in: d_in,
+                down_out: d_out,
+            });
+        }
+
+        // Phase 2: Build layer_weights with references into the now-stable norm vectors.
+        let layer_weights: Vec<MegaPassLayerWeights<'_>> = layer_raws
+            .iter()
+            .zip(all_attn_norms.iter().zip(all_ffn_norms.iter()))
+            .map(|(r, (an, fn_))| MegaPassLayerWeights {
+                attn_norm: &an[..n_embd],
+                q_raw: r.q_raw,
+                k_raw: r.k_raw,
+                v_raw: r.v_raw,
+                o_raw: r.o_raw,
+                ffn_norm: &fn_[..n_embd],
+                gate_raw: r.g_raw,
+                up_raw: r.u_raw,
+                down_raw: r.d_raw,
+            })
+            .collect();
+
+        // Output norm.
+        let mut output_norm_buf = vec![0.0f32; n_embd];
+        let output_norm: Option<&[f32]> = if let Some(on_info) = index.output_norm_info() {
+            if dequant_norm_row_into(mmap, tds, on_info, &mut output_norm_buf) >= n_embd {
+                Some(&output_norm_buf[..n_embd])
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+
+        // LM head.
+        let lm_info = index.logits_projection_info()?;
+        let (lm_in, lm_out) = Self::matmul_dims(lm_info);
+        let lm_raw = fetch_tensor_bytes(mmap, tds, lm_info).ok()?;
+        let lm_head_raw = if lm_info.ggml_type == GGML_TYPE_Q4_K_SOA {
+            Some(lm_raw)
+        } else {
+            None
+        };
+
+        let rope_base = h.effective_rope_freq_base();
+        let rope_scale = h.effective_rope_scale();
+        let rms_eps = RMS_NORM_EPS;
+
+        crate::try_cuda_mega_pass(
+            n_embd,
+            n_head,
+            n_kv,
+            head_dim,
+            n_layer,
+            token_idx,
+            layout.max_context,
+            layout.layer_stride,
+            layout.slot_kv_elems,
+            rope_base,
+            rope_scale,
+            rms_eps,
+            &mut hidden[..n_embd],
+            &layer_weights,
+            &layer_dims,
+            output_norm,
+            lm_head_raw,
+            lm_in,
+            lm_out,
+        )
+    }
+
     /// Sequential layer-by-layer forward (one tensor payload in VRAM at a time).
     /// `max_layers`: `0` runs all blocks; otherwise caps how many layers execute.
     pub fn dispatch_transformer_forward(

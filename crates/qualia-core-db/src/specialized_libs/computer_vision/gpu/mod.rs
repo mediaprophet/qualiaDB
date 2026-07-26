@@ -7,9 +7,9 @@
 //! choice; GPU path lands when `gpu` feature wires Forge (A2).
 
 pub mod dispatch;
-pub mod policy;
-pub mod forge_resize;
 pub mod forge_bicubic;
+pub mod forge_resize;
+pub mod policy;
 
 pub use dispatch::{
     avg_pool2d_dispatch, conv2d_nchw_dispatch, max_pool2d_dispatch, resize_nearest_nchw_dispatch,

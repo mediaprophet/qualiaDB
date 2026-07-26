@@ -51,8 +51,7 @@ fn probe_gguf_layer_names_if_exists() {
         let ggml_type = u32::from_le_bytes(mmap[pos..pos + 4].try_into().unwrap());
         let byte_off = u64::from_le_bytes(mmap[pos + 4..pos + 12].try_into().unwrap());
         pos += 12;
-        if name.starts_with("blk.0.") && (name.contains("attn_q") || name.contains("ffn_down"))
-        {
+        if name.starts_with("blk.0.") && (name.contains("attn_q") || name.contains("ffn_down")) {
             println!("tensor: {name} type={ggml_type} dims={dims:?} off={byte_off:#x}");
         }
     }
@@ -209,6 +208,16 @@ fn decode_maps_bpe_space_marker_to_ascii_space() {
 }
 
 #[test]
+fn decode_recovers_exact_gpt2_utf8_bytes() {
+    let mut tok = GgufTokenizer::default();
+    tok.pre_type = "smollm".into();
+    tok.vocab = vec!["caf\u{00c3}\u{00a9}".into(), "\u{0120}ok".into()];
+    assert_eq!(tok.decode(&[0, 1]), "café ok");
+    assert_eq!(tok.decode_token_bytes_cold(0), b"caf\xc3\xa9");
+    assert_eq!(tok.decode_token_bytes_cold(1), b" ok");
+}
+
+#[test]
 fn hyperparams_default_rope_freq_base_is_100k() {
     let h = GgufHyperparams::default();
     assert_eq!(h.effective_rope_freq_base(), DEFAULT_ROPE_FREQ_BASE);
@@ -276,8 +285,8 @@ fn smollm_tokenizer_audit_vs_hf_reference() {
     println!("[audit] chatml len={} ids={:?}", chat_ids.len(), chat_ids);
     println!("[audit] naked len={} ids={:?}", naked_ids.len(), naked_ids);
     const HF_CHATML: &[u32] = &[
-        1, 4093, 198, 1780, 314, 260, 3575, 282, 4649, 47, 19842, 281, 582, 1890, 6330, 30, 2,
-        198, 1, 520, 9531, 198,
+        1, 4093, 198, 1780, 314, 260, 3575, 282, 4649, 47, 19842, 281, 582, 1890, 6330, 30, 2, 198,
+        1, 520, 9531, 198,
     ];
     const HF_NAKED: &[u32] = &[504, 3575, 282, 4649, 314];
     assert_eq!(

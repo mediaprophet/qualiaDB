@@ -108,9 +108,11 @@ impl<'a> FederatedQueryHandler<'a> {
             .find(|e| e.did == did)
             .ok_or("DID not found in endpoint registry")?;
         if endpoint.auth_method != 0 {
-            return Err("authenticated (DID-LD/JWT) federation must be signed by the \
+            return Err(
+                "authenticated (DID-LD/JWT) federation must be signed by the \
                         identity layer; only no-auth remote endpoints are dispatched here"
-                .to_string());
+                    .to_string(),
+            );
         }
         let url = self.endpoint_urls.get(&did).ok_or(
             "no resolvable endpoint URL registered for this DID (call set_endpoint_url); \
@@ -368,12 +370,24 @@ impl<'a> FederatedQueryEngine<'a> {
             // Execute locally through the standard pipeline.
             let (sparql_query, ctx) = match sparql_parser::parse_sparql(query) {
                 Ok(parsed) => parsed,
-                Err(e) => return Ok(Self::failed(service, query, format!("Parse error: {e}"), None)),
+                Err(e) => {
+                    return Ok(Self::failed(
+                        service,
+                        query,
+                        format!("Parse error: {e}"),
+                        None,
+                    ))
+                }
             };
             let plan = match QueryPlanner::plan(&sparql_query, &ctx) {
                 Ok(plan) => plan,
                 Err(e) => {
-                    return Ok(Self::failed(service, query, format!("Planning error: {e}"), None))
+                    return Ok(Self::failed(
+                        service,
+                        query,
+                        format!("Planning error: {e}"),
+                        None,
+                    ))
                 }
             };
             let executor = QueryExecutor::new(self.local_quins);
@@ -388,7 +402,12 @@ impl<'a> FederatedQueryEngine<'a> {
                     error: None,
                     remote_query_url: None,
                 }),
-                Err(e) => Ok(Self::failed(service, query, format!("Execution error: {e}"), None)),
+                Err(e) => Ok(Self::failed(
+                    service,
+                    query,
+                    format!("Execution error: {e}"),
+                    None,
+                )),
             }
         } else {
             // Remote HTTP SPARQL endpoint: perform a real SPARQL 1.1 Protocol request and
@@ -534,7 +553,9 @@ fn fetch_remote_sparql(
         if let Some(a) = auth {
             req = req.header(reqwest::header::AUTHORIZATION, a);
         }
-        let resp = req.send().map_err(|e| format!("remote request failed: {e}"))?;
+        let resp = req
+            .send()
+            .map_err(|e| format!("remote request failed: {e}"))?;
         let status = resp.status();
         let text = resp
             .text()
@@ -583,7 +604,11 @@ fn parse_sparql_results_json(
         .get("head")
         .and_then(|h| h.get("vars"))
         .and_then(|a| a.as_array())
-        .map(|a| a.iter().filter_map(|x| x.as_str().map(String::from)).collect())
+        .map(|a| {
+            a.iter()
+                .filter_map(|x| x.as_str().map(String::from))
+                .collect()
+        })
         .unwrap_or_default();
 
     let bindings = v
@@ -633,9 +658,11 @@ impl DidCorsHelper {
         _signature: u64,
         _challenge: u64,
     ) -> Result<bool, String> {
-        Err("DID signature verification must be performed by the identity/key-vault layer \
+        Err(
+            "DID signature verification must be performed by the identity/key-vault layer \
              (the SPARQL federation layer holds no keys); refusing to fabricate a result"
-            .to_string())
+                .to_string(),
+        )
     }
 
     /// Generate DID-based challenge for CORS

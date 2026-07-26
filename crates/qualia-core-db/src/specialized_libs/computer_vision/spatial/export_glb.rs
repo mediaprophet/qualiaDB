@@ -138,7 +138,9 @@ fn build_gltf_json(
     s.push_str("{\"asset\":{\"version\":\"2.0\",\"generator\":\"qualia-vision MeshIR GLB\"},");
     s.push_str("\"scene\":0,\"scenes\":[{\"nodes\":[0]}],");
     s.push_str("\"nodes\":[{\"mesh\":0}],");
-    s.push_str("\"meshes\":[{\"primitives\":[{\"attributes\":{\"POSITION\":0},\"indices\":1,\"mode\":");
+    s.push_str(
+        "\"meshes\":[{\"primitives\":[{\"attributes\":{\"POSITION\":0},\"indices\":1,\"mode\":",
+    );
     s.push_str(&PRIMITIVE_MODE_TRIANGLES.to_string());
     s.push_str("}]}],");
 
@@ -224,7 +226,10 @@ mod tests {
         let mut buf = vec![0u8; 4096];
         let n = mesh_ir_to_glb(&m, &mut buf).expect("export");
         // (a) magic "glTF"
-        assert_eq!(u32::from_le_bytes([buf[0], buf[1], buf[2], buf[3]]), GLB_MAGIC);
+        assert_eq!(
+            u32::from_le_bytes([buf[0], buf[1], buf[2], buf[3]]),
+            GLB_MAGIC
+        );
         assert_eq!(&buf[0..4], b"glTF");
         // (b) version == 2
         assert_eq!(u32::from_le_bytes([buf[4], buf[5], buf[6], buf[7]]), 2);

@@ -104,7 +104,8 @@ impl GgufTensorIndex {
         // general.architecture = STRING
         if key == "general.architecture" && vtype == 8 {
             if *pos + 8 <= mmap.len() {
-                let n = u64::from_le_bytes(mmap[*pos..*pos + 8].try_into().unwrap_or([0; 8])) as usize;
+                let n =
+                    u64::from_le_bytes(mmap[*pos..*pos + 8].try_into().unwrap_or([0; 8])) as usize;
                 *pos += 8;
                 if *pos + n <= mmap.len() {
                     let s = std::str::from_utf8(&mmap[*pos..*pos + n]).unwrap_or("");
@@ -214,8 +215,7 @@ impl GgufTensorIndex {
             if v > 0 {
                 patch.arch_flags |= ARCH_FLAG_HAS_SWA;
             }
-        } else if key.ends_with("attention.key_length") || key.ends_with("attention.value_length")
-        {
+        } else if key.ends_with("attention.key_length") || key.ends_with("attention.value_length") {
             if !key.contains("swa") && patch.head_dim == 0 {
                 patch.head_dim = v;
             }

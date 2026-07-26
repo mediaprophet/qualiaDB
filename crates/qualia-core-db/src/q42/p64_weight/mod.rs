@@ -22,9 +22,9 @@
 mod compiler;
 mod layout;
 mod reader;
-mod transcode;
 #[cfg(test)]
 mod tests;
+mod transcode;
 // Historical tests for the pre-P64 Q42W layout are retained as migration
 // documentation only. They refer to the removed 144/80-byte API.
 #[cfg(all(test, any()))]

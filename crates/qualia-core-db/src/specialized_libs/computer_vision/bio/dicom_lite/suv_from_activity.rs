@@ -64,7 +64,10 @@ pub fn suv_bw(
 
 /// Compute radioactive decay factor `exp(-λ Δt)` for half-life `half_life_sec`
 /// and delay `delta_t_sec` (imaging time − injection time).
-pub fn decay_factor_from_half_life(half_life_sec: f64, delta_t_sec: f64) -> Result<f64, DicomLiteError> {
+pub fn decay_factor_from_half_life(
+    half_life_sec: f64,
+    delta_t_sec: f64,
+) -> Result<f64, DicomLiteError> {
     if !(half_life_sec > 0.0) || !half_life_sec.is_finite() || !delta_t_sec.is_finite() {
         return Err(DicomLiteError::InvalidParameter);
     }

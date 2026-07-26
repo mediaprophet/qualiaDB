@@ -17,10 +17,14 @@ pub enum ShaclAction {
 #[derive(Subcommand, Debug)]
 pub enum GovernanceAction {
     WalAppend {
-        #[arg(long)] quin: String,
-        #[arg(long)] sign: String,
+        #[arg(long)]
+        quin: String,
+        #[arg(long)]
+        sign: String,
     },
-    Ratify { agreement_did: String },
+    Ratify {
+        agreement_did: String,
+    },
 }
 
 #[derive(Subcommand, Debug)]
@@ -32,17 +36,21 @@ pub enum CompileAction {
 pub enum ProfileAction {
     Compile {
         input: PathBuf,
-        #[arg(long)] out: Option<PathBuf>,
+        #[arg(long)]
+        out: Option<PathBuf>,
     },
     List,
-    Inspect { file: PathBuf },
+    Inspect {
+        file: PathBuf,
+    },
 }
 
 #[derive(Subcommand, Debug)]
 pub enum MigrateAction {
     Meta {
         path: PathBuf,
-        #[arg(long)] dry_run: bool,
+        #[arg(long)]
+        dry_run: bool,
     },
 }
 
@@ -60,24 +68,30 @@ pub enum QueryDialect {
     Sparql {
         vault: PathBuf,
         query_string: Option<String>,
-        #[arg(short, long)] file: Option<PathBuf>,
+        #[arg(short, long)]
+        file: Option<PathBuf>,
     },
     SparqlStar {
         vault: PathBuf,
         query_string: Option<String>,
-        #[arg(short, long)] file: Option<PathBuf>,
+        #[arg(short, long)]
+        file: Option<PathBuf>,
     },
 }
 
 #[derive(Subcommand, Debug)]
 pub enum IngestFormat {
-    Semantic { file: PathBuf },
+    Semantic {
+        file: PathBuf,
+    },
     Csv {
         file: PathBuf,
-        #[arg(long)] map: PathBuf,
+        #[arg(long)]
+        map: PathBuf,
     },
     Json {
         file: PathBuf,
-        #[arg(long)] map: PathBuf,
+        #[arg(long)]
+        map: PathBuf,
     },
 }

@@ -208,7 +208,8 @@ pub fn parse_v2_subheader(bytes: &[u8]) -> Option<SpectralV2SubHeader> {
 pub fn sidecar_mel_frame_view(bytes: &[u8], frame_index: u32) -> Option<&[f32]> {
     let (header, sub_off) = v2_subheader_offset(bytes)?;
     let sub_size = std::mem::size_of::<SpectralV2SubHeader>();
-    let sub = bytemuck::pod_read_unaligned::<SpectralV2SubHeader>(&bytes[sub_off..sub_off + sub_size]);
+    let sub =
+        bytemuck::pod_read_unaligned::<SpectralV2SubHeader>(&bytes[sub_off..sub_off + sub_size]);
     if !sub.is_valid() || frame_index >= header.frame_count {
         return None;
     }
@@ -228,7 +229,8 @@ pub fn sidecar_mel_frame_view(bytes: &[u8], frame_index: u32) -> Option<&[f32]> 
 pub fn sidecar_mfcc_frame_view(bytes: &[u8], frame_index: u32) -> Option<&[f32]> {
     let (header, sub_off) = v2_subheader_offset(bytes)?;
     let sub_size = std::mem::size_of::<SpectralV2SubHeader>();
-    let sub = bytemuck::pod_read_unaligned::<SpectralV2SubHeader>(&bytes[sub_off..sub_off + sub_size]);
+    let sub =
+        bytemuck::pod_read_unaligned::<SpectralV2SubHeader>(&bytes[sub_off..sub_off + sub_size]);
     if !sub.is_valid() || frame_index >= header.frame_count {
         return None;
     }
@@ -341,7 +343,8 @@ pub fn bake_spectral_v2_from_samples(
         n_mel: n_mel as u32,
         n_mfcc: n_mfcc as u32,
     };
-    out[off..off + std::mem::size_of::<SpectralV2SubHeader>()].copy_from_slice(bytemuck::bytes_of(&sub));
+    out[off..off + std::mem::size_of::<SpectralV2SubHeader>()]
+        .copy_from_slice(bytemuck::bytes_of(&sub));
     off += std::mem::size_of::<SpectralV2SubHeader>();
 
     // Mel plane, then MFCC plane. Power = |X|².
@@ -355,7 +358,8 @@ pub fn bake_spectral_v2_from_samples(
         for (p, &m) in power.iter_mut().zip(frame_mags.iter()) {
             *p = m * m;
         }
-        mel_bands(&power, &bank, n_mel, &mut mel_out).map_err(|_| StftBakeError::InvalidFrameCount)?;
+        mel_bands(&power, &bank, n_mel, &mut mel_out)
+            .map_err(|_| StftBakeError::InvalidFrameCount)?;
         mfcc(&power, &bank, n_mel, n_mfcc, &mut mfcc_out, &mut scratch)
             .map_err(|_| StftBakeError::InvalidFrameCount)?;
 
@@ -496,7 +500,10 @@ mod tests {
             "tone not concentrated: peak {peak_val} vs total {total}"
         );
         // ~2 kHz on a 0..8 kHz mel axis sits in the interior, not at an edge.
-        assert!(peak_idx > 0 && peak_idx < N_MEL - 1, "peak mel band {peak_idx} at edge");
+        assert!(
+            peak_idx > 0 && peak_idx < N_MEL - 1,
+            "peak mel band {peak_idx} at edge"
+        );
     }
 
     #[cfg(not(target_arch = "wasm32"))]
@@ -520,7 +527,10 @@ mod tests {
         assert_eq!(header.bin_count as usize, bin_count);
         let frame0 = sidecar_frame_view(&buf, 0).expect("plane-0 frame 0");
         assert_eq!(frame0.len(), bin_count);
-        assert!(frame0.iter().any(|&v| v > 0.0), "plane-0 has real STFT energy");
+        assert!(
+            frame0.iter().any(|&v| v > 0.0),
+            "plane-0 has real STFT energy"
+        );
         // The last plane-0 frame is still within payload_bytes().
         let last = sidecar_frame_view(&buf, header.frame_count - 1).expect("last plane-0 frame");
         assert_eq!(last.len(), bin_count);

@@ -745,7 +745,9 @@ async fn init_shared_gpu_async() -> Result<SharedGpuContext, String> {
         // llama-3.2-3b) that the Vulkan/SPIR-V path currently HANGS on (tracked bug). Vulkan is
         // still the default off-Windows and remains selectable anywhere via QUALIA_WGPU_BACKEND=vulkan.
         desc.backends = wgpu::Backends::DX12;
-        log::info!("shared_gpu|backend_default|windows->dx12 (override with QUALIA_WGPU_BACKEND=vulkan)");
+        log::info!(
+            "shared_gpu|backend_default|windows->dx12 (override with QUALIA_WGPU_BACKEND=vulkan)"
+        );
     }
     let instance = wgpu::Instance::new(desc);
     let adapter = instance
@@ -832,8 +834,7 @@ pub(crate) async fn init_shared_gpu_for_adapter(
         ..wgpu::Limits::default()
     };
     let experimental_features = if required_features.intersects(
-        wgpu::Features::EXPERIMENTAL_COOPERATIVE_MATRIX
-            | wgpu::Features::EXPERIMENTAL_RAY_QUERY,
+        wgpu::Features::EXPERIMENTAL_COOPERATIVE_MATRIX | wgpu::Features::EXPERIMENTAL_RAY_QUERY,
     ) {
         // Safety: experimental capabilities are requested only after intersecting
         // with the selected adapter's advertised feature set. Callers must also

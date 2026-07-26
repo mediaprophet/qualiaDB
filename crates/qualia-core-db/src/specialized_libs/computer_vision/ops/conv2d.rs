@@ -63,8 +63,7 @@ pub fn conv2d_nchw_f32(
                                 continue;
                             }
                             let iv = input[ic * h * w + ih * w + iw];
-                            let wv = weight
-                                [oc * (c_in * kh * kw) + ic * (kh * kw) + ky * kw + kx];
+                            let wv = weight[oc * (c_in * kh * kw) + ic * (kh * kw) + ky * kw + kx];
                             acc += iv * wv;
                         }
                     }
@@ -86,10 +85,8 @@ mod tests {
         let input = [1.0f32, 2.0, 3.0, 4.0];
         let weight = [1.0f32];
         let mut out = [0.0f32; 4];
-        let (ho, wo) = conv2d_nchw_f32(
-            &input, 1, 2, 2, &weight, 1, 1, 1, &[], 1, 1, 0, 0, &mut out,
-        )
-        .unwrap();
+        let (ho, wo) =
+            conv2d_nchw_f32(&input, 1, 2, 2, &weight, 1, 1, 1, &[], 1, 1, 0, 0, &mut out).unwrap();
         assert_eq!((ho, wo), (2, 2));
         assert_eq!(out, input);
     }

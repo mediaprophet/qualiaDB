@@ -231,7 +231,9 @@ xmlns=\"http://schemas.microsoft.com/3dmanufacturing/core/2015/02\">",
         s.push_str(&t[2].to_string());
         s.push_str("\"/>");
     }
-    s.push_str("</triangles></mesh></object></resources><build><item objectid=\"1\"/></build></model>");
+    s.push_str(
+        "</triangles></mesh></object></resources><build><item objectid=\"1\"/></build></model>",
+    );
     s
 }
 
@@ -317,11 +319,9 @@ mod tests {
         let mut i = 0usize;
         while i + 30 <= z.len() {
             if &z[i..i + 4] == b"PK\x03\x04" {
-                let name_len =
-                    u16::from_le_bytes([z[i + 26], z[i + 27]]) as usize;
+                let name_len = u16::from_le_bytes([z[i + 26], z[i + 27]]) as usize;
                 let name_start = i + 30;
-                if name_start + name_len <= z.len()
-                    && &z[name_start..name_start + name_len] == name
+                if name_start + name_len <= z.len() && &z[name_start..name_start + name_len] == name
                 {
                     found_crc = Some(u32::from_le_bytes([
                         z[i + 14],

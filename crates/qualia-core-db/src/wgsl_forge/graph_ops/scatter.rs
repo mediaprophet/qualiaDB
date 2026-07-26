@@ -168,7 +168,9 @@ mod tests {
     #[test]
     #[serial_test::serial(gpu)]
     fn scatter_gpu_matches_oracle() {
-        if !crate::wgsl_forge::test_gpu_available() { return; }
+        if !crate::wgsl_forge::test_gpu_available() {
+            return;
+        }
         // Heavy contention: 4096 sources into 64 buckets (many collisions → exercises the CAS).
         let p = 4096usize;
         let o = 64usize;

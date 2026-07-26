@@ -76,7 +76,11 @@ mod tests {
 
         let res2 = adapter.fetch_region((0.0, 0.0, 1.0, 1.0), (0, 0), &registry);
         if let Err(e) = res2 {
-            assert!(!e.contains("Consent denied"), "Failed on consent when it should have been granted: {}", e);
+            assert!(
+                !e.contains("Consent denied"),
+                "Failed on consent when it should have been granted: {}",
+                e
+            );
         }
     }
 }

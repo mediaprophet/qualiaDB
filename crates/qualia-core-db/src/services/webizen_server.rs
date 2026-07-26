@@ -1222,11 +1222,14 @@ async fn telemetry_ingest_handler(
         payload.source, subscriber_count
     );
 
-    (StatusCode::OK, Json(json!({
-        "status": "ingested",
-        "source": payload.source,
-        "subscribers": subscriber_count,
-    })))
+    (
+        StatusCode::OK,
+        Json(json!({
+            "status": "ingested",
+            "source": payload.source,
+            "subscribers": subscriber_count,
+        })),
+    )
 }
 
 /// Request body for external telemetry ingestion

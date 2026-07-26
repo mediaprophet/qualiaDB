@@ -19,20 +19,20 @@ pub struct AnonymizeReport {
 /// Includes common patient-module keys; extend cautiously (prefer fail-closed
 /// allowlists at export boundaries rather than ever-growing deny lists alone).
 pub const PHI_TAG_KEYS: &[TagKey] = &[
-    TAG_PATIENT_NAME,       // (0010,0010)
-    TAG_PATIENT_ID,         // (0010,0020)
-    TAG_PATIENT_BIRTH,      // (0010,0030)
-    (0x0010, 0x0040),       // PatientSex
-    (0x0010, 0x1000),       // OtherPatientIDs
-    (0x0010, 0x1001),       // OtherPatientNames
-    (0x0010, 0x1040),       // PatientAddress
-    (0x0010, 0x2154),       // PatientTelephoneNumbers
-    (0x0008, 0x0080),       // InstitutionName
-    (0x0008, 0x0090),       // ReferringPhysicianName
-    (0x0008, 0x1050),       // PerformingPhysicianName
-    (0x0008, 0x1070),       // OperatorsName
-    (0x0010, 0x1010),       // PatientAge
-    (0x0032, 0x1032),       // RequestingPhysician
+    TAG_PATIENT_NAME,  // (0010,0010)
+    TAG_PATIENT_ID,    // (0010,0020)
+    TAG_PATIENT_BIRTH, // (0010,0030)
+    (0x0010, 0x0040),  // PatientSex
+    (0x0010, 0x1000),  // OtherPatientIDs
+    (0x0010, 0x1001),  // OtherPatientNames
+    (0x0010, 0x1040),  // PatientAddress
+    (0x0010, 0x2154),  // PatientTelephoneNumbers
+    (0x0008, 0x0080),  // InstitutionName
+    (0x0008, 0x0090),  // ReferringPhysicianName
+    (0x0008, 0x1050),  // PerformingPhysicianName
+    (0x0008, 0x1070),  // OperatorsName
+    (0x0010, 0x1010),  // PatientAge
+    (0x0032, 0x1032),  // RequestingPhysician
 ];
 
 /// Placeholder written over redacted string values.
@@ -79,8 +79,8 @@ pub fn scrub_patient_id(map: &mut DicomTagMap) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::super::parse_dicom_tags_basic::{TAG_COLUMNS, TAG_MODALITY, TAG_ROWS};
+    use super::*;
 
     #[test]
     fn redacts_patient_keeps_geometry() {
@@ -94,8 +94,14 @@ mod tests {
         let r = anonymize_tag_map(&mut map);
         assert_eq!(r.redacted, 2);
         assert_eq!(r.retained, 3);
-        assert_eq!(map.get(&TAG_PATIENT_ID).map(String::as_str), Some(REDACTED_PLACEHOLDER));
-        assert_eq!(map.get(&TAG_PATIENT_NAME).map(String::as_str), Some(REDACTED_PLACEHOLDER));
+        assert_eq!(
+            map.get(&TAG_PATIENT_ID).map(String::as_str),
+            Some(REDACTED_PLACEHOLDER)
+        );
+        assert_eq!(
+            map.get(&TAG_PATIENT_NAME).map(String::as_str),
+            Some(REDACTED_PLACEHOLDER)
+        );
         assert_eq!(map.get(&TAG_ROWS).map(String::as_str), Some("512"));
         assert_eq!(map.get(&TAG_MODALITY).map(String::as_str), Some("CT"));
     }
@@ -104,7 +110,13 @@ mod tests {
     fn empty_map() {
         let mut map = DicomTagMap::new();
         let r = anonymize_tag_map(&mut map);
-        assert_eq!(r, AnonymizeReport { redacted: 0, retained: 0 });
+        assert_eq!(
+            r,
+            AnonymizeReport {
+                redacted: 0,
+                retained: 0
+            }
+        );
     }
 
     #[test]

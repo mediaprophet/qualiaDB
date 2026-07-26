@@ -63,12 +63,7 @@ pub struct NodeHint {
 }
 
 /// Map a detection-like box centre (normalised 0..1) into a node hint.
-pub fn detection_center_to_node_hint(
-    cx: f32,
-    cy: f32,
-    frame_t: f32,
-    sigma: f32,
-) -> NodeHint {
+pub fn detection_center_to_node_hint(cx: f32, cy: f32, frame_t: f32, sigma: f32) -> NodeHint {
     NodeHint {
         x: cx,
         y: cy,

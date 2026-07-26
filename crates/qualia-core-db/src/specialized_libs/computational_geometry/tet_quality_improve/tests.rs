@@ -499,9 +499,7 @@ fn verify_improvement_helper_works() {
     let worst = scores.iter().copied().fold(f64::INFINITY, f64::min);
     assert!(verify_improvement(&v, &t, TetImproveObjective::MinDihedral, worst).unwrap());
     // A regressed threshold should fail.
-    assert!(
-        !verify_improvement(&v, &t, TetImproveObjective::MinDihedral, worst + 1.0).unwrap()
-    );
+    assert!(!verify_improvement(&v, &t, TetImproveObjective::MinDihedral, worst + 1.0).unwrap());
 }
 
 #[test]

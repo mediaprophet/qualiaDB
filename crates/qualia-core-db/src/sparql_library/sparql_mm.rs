@@ -6,8 +6,8 @@
 //! V6 repair: MA/C2PA constants use canonical `q_hash` (no placeholder collisions);
 //! caller-buffered region/time queries; real spatial intersection; honest C2PA status.
 
-use crate::sparql_ast::*;
 use crate::q_hash;
+use crate::sparql_ast::*;
 use crate::NQuin;
 
 /// Media Annotations Ontology predicate hashes (`q_hash` of canonical IRIs).
@@ -15,7 +15,8 @@ pub mod ma_ont {
     use crate::q_hash;
 
     pub const HAS_FRAGMENT: u64 = q_hash("http://www.w3.org/ns/ma-ont#hasFragment");
-    pub const HAS_TEMPORAL_FRAGMENT: u64 = q_hash("http://www.w3.org/ns/ma-ont#hasTemporalFragment");
+    pub const HAS_TEMPORAL_FRAGMENT: u64 =
+        q_hash("http://www.w3.org/ns/ma-ont#hasTemporalFragment");
     pub const HAS_SPATIAL_FRAGMENT: u64 = q_hash("http://www.w3.org/ns/ma-ont#hasSpatialFragment");
     pub const HAS_TRACK_FRAGMENT: u64 = q_hash("http://www.w3.org/ns/ma-ont#hasTrackFragment");
 
@@ -434,17 +435,15 @@ impl<'a> SparqlMmHandler<'a> {
             };
             match dim {
                 MediaFragmentDimension::Temporal { start, end } => {
-                    let Some(quin_time) = Self::media_time_ms(quin)
-                        .or_else(|| {
-                            if quin.predicate == ma_ont::HAS_START_TIME
-                                || quin.predicate == ma_ont::HAS_END_TIME
-                            {
-                                Some(quin.object)
-                            } else {
-                                None
-                            }
-                        })
-                    else {
+                    let Some(quin_time) = Self::media_time_ms(quin).or_else(|| {
+                        if quin.predicate == ma_ont::HAS_START_TIME
+                            || quin.predicate == ma_ont::HAS_END_TIME
+                        {
+                            Some(quin.object)
+                        } else {
+                            None
+                        }
+                    }) else {
                         // No media-time payload on this quin → temporal dim does not reject.
                         continue;
                     };
@@ -596,8 +595,7 @@ impl<'a> SparqlMmHandler<'a> {
         let status = self.c2pa_status(media_uri)?;
         Ok(matches!(
             status,
-            C2paVerificationStatus::SignatureVerified
-                | C2paVerificationStatus::TrustChainEvaluated
+            C2paVerificationStatus::SignatureVerified | C2paVerificationStatus::TrustChainEvaluated
         ))
     }
 
@@ -1008,8 +1006,12 @@ mod tests {
 
     #[test]
     fn spatial_intersection_real() {
-        assert!(SparqlMmHandler::spatial_intersects(0, 0, 10, 10, 5, 5, 10, 10));
-        assert!(!SparqlMmHandler::spatial_intersects(0, 0, 10, 10, 20, 20, 5, 5));
+        assert!(SparqlMmHandler::spatial_intersects(
+            0, 0, 10, 10, 5, 5, 10, 10
+        ));
+        assert!(!SparqlMmHandler::spatial_intersects(
+            0, 0, 10, 10, 20, 20, 5, 5
+        ));
     }
 
     #[test]

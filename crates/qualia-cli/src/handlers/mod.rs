@@ -4,6 +4,6 @@ pub mod llm;
 pub mod misc;
 pub mod qpu;
 pub mod science;
-pub mod solve;
 pub mod solid;
+pub mod solve;
 pub mod webizen;

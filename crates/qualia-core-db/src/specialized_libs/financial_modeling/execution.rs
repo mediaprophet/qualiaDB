@@ -1,6 +1,5 @@
 use super::*;
 
-
 /// Execution engine
 pub struct ExecutionEngine {
     execution_strategies: HashMap<String, ExecutionStrategy>,

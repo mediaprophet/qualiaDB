@@ -38,24 +38,24 @@ pub mod dft;
 // so every `crate::specialized_libs::chemistry_modeling::<Item>` path resolves
 // exactly as before.
 
-/// `ChemistryModelingLibrary` manager struct and its methods.
-mod library;
-/// Core molecule/result value types (`Molecule`, `Atom`, `Bond`, trajectories …).
-mod types;
-/// Exact structural / mass properties (`standard_atomic_weight`, `StructuralProperties`).
-mod structure;
-/// Molecular-dynamics simulator (force fields, integrators, interactions).
-mod simulation;
-/// Quantum chemistry calculator surface.
-mod quantum;
-/// Reaction / kinetics / thermodynamics / phase analysis.
-mod kinetics;
-/// Property prediction (QSPR / descriptors / ML models).
-mod properties;
-/// Performance monitoring metrics.
-mod metrics;
 /// Chemistry error type.
 mod errors;
+/// Reaction / kinetics / thermodynamics / phase analysis.
+mod kinetics;
+/// `ChemistryModelingLibrary` manager struct and its methods.
+mod library;
+/// Performance monitoring metrics.
+mod metrics;
+/// Property prediction (QSPR / descriptors / ML models).
+mod properties;
+/// Quantum chemistry calculator surface.
+mod quantum;
+/// Molecular-dynamics simulator (force fields, integrators, interactions).
+mod simulation;
+/// Exact structural / mass properties (`standard_atomic_weight`, `StructuralProperties`).
+mod structure;
+/// Core molecule/result value types (`Molecule`, `Atom`, `Bond`, trajectories …).
+mod types;
 
 pub use errors::*;
 pub use kinetics::*;

@@ -66,7 +66,11 @@ mod tests {
         let m = AnatomyOrganMeta {
             system: "digestive".to_string(),
             label: "pancreas".to_string(),
-            systems: vec!["digestive".to_string(), "endocrine".to_string(), "exocrine".to_string()],
+            systems: vec![
+                "digestive".to_string(),
+                "endocrine".to_string(),
+                "exocrine".to_string(),
+            ],
             position: [0.5, 0.6, 0.55],
             rgba: [0.8, 0.3, 0.3, 1.0],
         };
@@ -89,7 +93,11 @@ mod tests {
         }
         let mut bytes = Vec::new();
         ciborium::into_writer(
-            &OldMeta { system: "respiratory".to_string(), position: [0.4, 0.6, 0.5], rgba: [0.5, 0.7, 0.9, 1.0] },
+            &OldMeta {
+                system: "respiratory".to_string(),
+                position: [0.4, 0.6, 0.5],
+                rgba: [0.5, 0.7, 0.9, 1.0],
+            },
             &mut bytes,
         )
         .unwrap();

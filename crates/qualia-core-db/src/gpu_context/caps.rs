@@ -235,9 +235,7 @@ pub fn qualia_backend_override() -> Option<wgpu::Backends> {
 fn passport_backend_override() -> Option<wgpu::Backends> {
     let backend = crate::hardware_passport::cached_preferred_wgpu_backend()?;
     let token = crate::hardware_passport::backend_env_token(&backend)?;
-    log::info!(
-        "shared_gpu|backend_from_passport|{backend}|token={token}"
-    );
+    log::info!("shared_gpu|backend_from_passport|{backend}|token={token}");
     match token {
         "vulkan" => Some(wgpu::Backends::VULKAN),
         "dx12" => Some(wgpu::Backends::DX12),

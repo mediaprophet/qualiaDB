@@ -1,4 +1,3 @@
-
 /// The Opcodes for the Lightweight Warren Abstract Machine (WAM) variant.
 /// `f64` parameters require `PartialEq` only — `Eq` is not derived.
 #[derive(Debug, Clone, Copy, PartialEq)]

@@ -1,4 +1,6 @@
-use crate::cli::{LinalgAction, OdeAction, OptimizeAction, QuantumSolveAction, SolveAction, SymbolicSolveAction};
+use crate::cli::{
+    LinalgAction, OdeAction, OptimizeAction, QuantumSolveAction, SolveAction, SymbolicSolveAction,
+};
 use crate::solve;
 
 pub fn handle(action: &SolveAction) {
@@ -21,27 +23,62 @@ pub fn handle(action: &SolveAction) {
             }
         },
         SolveAction::Optimize { action } => match action {
-            OptimizeAction::Simplex { initial, iterations } => {
+            OptimizeAction::Simplex {
+                initial,
+                iterations,
+            } => {
                 solve::run_simplex(initial, *iterations);
             }
-            OptimizeAction::Root { initial, lower, upper, tolerance } => {
+            OptimizeAction::Root {
+                initial,
+                lower,
+                upper,
+                tolerance,
+            } => {
                 solve::run_root(*initial, *lower, *upper, *tolerance);
             }
-            OptimizeAction::CurveFit { initial_params, x_data, y_data } => {
+            OptimizeAction::CurveFit {
+                initial_params,
+                x_data,
+                y_data,
+            } => {
                 solve::run_curve_fit(initial_params, x_data, y_data);
             }
         },
         SolveAction::Ode { action } => match action {
-            OdeAction::Rk4 { lambda, t_start, t_end, y0, step_size } => {
+            OdeAction::Rk4 {
+                lambda,
+                t_start,
+                t_end,
+                y0,
+                step_size,
+            } => {
                 solve::run_ode_rk4(*lambda, *t_start, *t_end, *y0, *step_size);
             }
-            OdeAction::Harmonic { omega, t_start, t_end, y0, step_size } => {
+            OdeAction::Harmonic {
+                omega,
+                t_start,
+                t_end,
+                y0,
+                step_size,
+            } => {
                 solve::run_ode_harmonic(*omega, *t_start, *t_end, *y0, *step_size);
             }
-            OdeAction::Bvp { t_start, t_end, y_left, y_right, threshold } => {
+            OdeAction::Bvp {
+                t_start,
+                t_end,
+                y_left,
+                y_right,
+                threshold,
+            } => {
                 solve::run_ode_bvp(*t_start, *t_end, *y_left, *y_right, *threshold);
             }
-            OdeAction::QuantumSpectrum { planck_mass, coupling, max_n, frequency } => {
+            OdeAction::QuantumSpectrum {
+                planck_mass,
+                coupling,
+                max_n,
+                frequency,
+            } => {
                 solve::run_ode_quantum_spectrum(*planck_mass, *coupling, *max_n, *frequency);
             }
         },
@@ -49,7 +86,10 @@ pub fn handle(action: &SolveAction) {
             QuantumSolveAction::Qaoa { depth, beta, gamma } => {
                 solve::run_quantum_qaoa(*depth, beta, gamma);
             }
-            QuantumSolveAction::Spsa { num_params, initial } => {
+            QuantumSolveAction::Spsa {
+                num_params,
+                initial,
+            } => {
                 solve::run_quantum_spsa(*num_params, initial);
             }
         },

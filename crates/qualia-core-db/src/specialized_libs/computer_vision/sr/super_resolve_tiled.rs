@@ -61,7 +61,13 @@ pub fn super_resolve_tiled(
     let mut backend_id = "classical.tiled";
     for rect in &tiles {
         let need_in = (rect.w as usize) * (rect.h as usize) * 3;
-        extract_tile_rgb8(req.rgb, req.width, req.height, *rect, &mut tile_in[..need_in])?;
+        extract_tile_rgb8(
+            req.rgb,
+            req.width,
+            req.height,
+            *rect,
+            &mut tile_in[..need_in],
+        )?;
         let tile_req = SrRequest {
             rgb: &tile_in[..need_in],
             width: rect.w,
@@ -111,7 +117,9 @@ pub fn super_resolve_tiled_default(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::specialized_libs::computer_vision::sr::super_resolve::{ClassicalKernel, EnhancementMode, SrBackend, SrRequest};
+    use crate::specialized_libs::computer_vision::sr::super_resolve::{
+        ClassicalKernel, EnhancementMode, SrBackend, SrRequest,
+    };
 
     #[test]
     fn tiled_matches_full_on_flat() {

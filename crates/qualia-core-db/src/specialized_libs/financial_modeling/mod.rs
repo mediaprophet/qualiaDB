@@ -16,33 +16,33 @@ use std::sync::Mutex;
 /// against hand-computed statistics.
 pub mod portfolio_risk;
 
-mod results;
-mod portfolio;
 mod assets;
-mod risk;
-mod rebalancing;
-mod execution;
-mod settlement;
-mod performance;
-mod pricing;
-mod trading;
 mod compliance;
-mod reporting;
+mod execution;
 mod library;
+mod performance;
+mod portfolio;
+mod pricing;
+mod rebalancing;
+mod reporting;
+mod results;
+mod risk;
+mod settlement;
+mod trading;
 
-pub use results::*;
-pub use portfolio::*;
 pub use assets::*;
-pub use risk::*;
-pub use rebalancing::*;
-pub use execution::*;
-pub use settlement::*;
-pub use performance::*;
-pub use pricing::*;
-pub use trading::*;
 pub use compliance::*;
-pub use reporting::*;
+pub use execution::*;
 pub use library::*;
+pub use performance::*;
+pub use portfolio::*;
+pub use pricing::*;
+pub use rebalancing::*;
+pub use reporting::*;
+pub use results::*;
+pub use risk::*;
+pub use settlement::*;
+pub use trading::*;
 
 #[cfg(test)]
 mod tests;

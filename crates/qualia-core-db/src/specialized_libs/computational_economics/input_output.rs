@@ -122,10 +122,18 @@ pub fn leontief_inverse_into(
             return Ok(EconConvergence::converged(round + 1, l1));
         }
         if l1.is_nan() || l1 > 1e18 {
-            return Ok(EconConvergence::stalled(EconStatus::MaxIterations, round + 1, l1));
+            return Ok(EconConvergence::stalled(
+                EconStatus::MaxIterations,
+                round + 1,
+                l1,
+            ));
         }
     }
-    Ok(EconConvergence::stalled(EconStatus::MaxIterations, max_rounds, last_residual))
+    Ok(EconConvergence::stalled(
+        EconStatus::MaxIterations,
+        max_rounds,
+        last_residual,
+    ))
 }
 
 /// Compute output multipliers as column sums of the Leontief inverse.
@@ -222,11 +230,7 @@ pub fn shock_decomposition_into(
     n: usize,
     out: &mut [f64],
 ) -> Result<usize, InputOutputError> {
-    if n == 0 || n > MAX_SECTORS
-        || inverse.len() < n * n
-        || shock.len() < n
-        || out.len() < n
-    {
+    if n == 0 || n > MAX_SECTORS || inverse.len() < n * n || shock.len() < n || out.len() < n {
         return Err(InputOutputError::InvalidInput);
     }
     for v in shock.iter().take(n) {
@@ -301,7 +305,11 @@ pub fn capacity_constrained_propagation(
             return Ok(EconConvergence::converged(round + 1, l1));
         }
     }
-    Ok(EconConvergence::stalled(EconStatus::MaxIterations, max_rounds, last_residual))
+    Ok(EconConvergence::stalled(
+        EconStatus::MaxIterations,
+        max_rounds,
+        last_residual,
+    ))
 }
 
 #[cfg(test)]
@@ -396,9 +404,16 @@ mod tests {
         let shock = [10.0, 0.0];
         let capacity = [10.0, 3.0]; // sector 1's first-round inflow (5) is capped to 3
         let mut impact = [0.0f64; 2];
-        let conv =
-            capacity_constrained_propagation(&coupling, &shock, &capacity, 2, 100, 1e-9, &mut impact)
-                .unwrap();
+        let conv = capacity_constrained_propagation(
+            &coupling,
+            &shock,
+            &capacity,
+            2,
+            100,
+            1e-9,
+            &mut impact,
+        )
+        .unwrap();
         // Sector 1's uncapped round-1 inflow is 0.5·10 = 5, capped to 3 — the cap
         // bites — and its bounded cumulative impact settles near 4 (3 + 0.75 + …).
         assert_eq!(conv.status, EconStatus::Converged);

@@ -179,7 +179,10 @@ mod tests {
     #[test]
     fn istft_rejects_non_power_of_two() {
         let spec = vec![vec![[0.0f32; 2]; 48]];
-        assert_eq!(inverse_stft(&spec, 48, 16), Err(StftBakeError::InvalidFrameCount));
+        assert_eq!(
+            inverse_stft(&spec, 48, 16),
+            Err(StftBakeError::InvalidFrameCount)
+        );
     }
 
     #[test]

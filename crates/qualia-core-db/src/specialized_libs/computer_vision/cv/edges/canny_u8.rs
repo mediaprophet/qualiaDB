@@ -65,7 +65,9 @@ mod tests {
     use super::*;
     #[test]
     fn runs() {
-        let img = [0u8, 0, 255, 255, 0, 0, 255, 255, 0, 0, 255, 255, 0, 0, 255, 255];
+        let img = [
+            0u8, 0, 255, 255, 0, 0, 255, 255, 0, 0, 255, 255, 0, 0, 255, 255,
+        ];
         let v = GrayView::new(4, 4, 4, &img).unwrap();
         let mut o = [0u8; 16];
         canny_u8(v, 20, 80, &mut o).unwrap();

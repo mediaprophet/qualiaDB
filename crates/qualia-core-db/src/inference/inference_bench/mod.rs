@@ -34,6 +34,7 @@
 mod counters;
 mod metrics;
 mod probes;
+pub mod raw_decode;
 mod reporting;
 mod runner;
 mod toggles;
@@ -45,6 +46,7 @@ mod tests;
 pub use counters::*;
 pub use metrics::*;
 pub use probes::*;
+pub use raw_decode::*;
 pub use reporting::*;
 pub use runner::*;
 pub use toggles::*;

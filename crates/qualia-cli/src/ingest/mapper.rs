@@ -89,7 +89,10 @@ pub fn compile_shacl_mapping(path: &Path) -> Result<MappingProfile, String> {
         ));
     }
 
-    Ok(MappingProfile { base_class_hash, fields })
+    Ok(MappingProfile {
+        base_class_hash,
+        fields,
+    })
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -122,7 +125,11 @@ fn parse_prefixes(content: &str) -> HashMap<String, String> {
 }
 
 /// Resolve a prefixed name or bracketed IRI from the content following `predicate`.
-fn extract_iri_value(block: &str, predicate: &str, prefixes: &HashMap<String, String>) -> Option<String> {
+fn extract_iri_value(
+    block: &str,
+    predicate: &str,
+    prefixes: &HashMap<String, String>,
+) -> Option<String> {
     let pos = block.find(predicate)?;
     let after = block[pos + predicate.len()..].trim_start();
 
@@ -132,7 +139,9 @@ fn extract_iri_value(block: &str, predicate: &str, prefixes: &HashMap<String, St
     }
 
     // Prefixed name: prefix:local
-    let end = after.find(|c: char| c.is_whitespace() || c == ';' || c == ',' || c == ']').unwrap_or(after.len());
+    let end = after
+        .find(|c: char| c.is_whitespace() || c == ';' || c == ',' || c == ']')
+        .unwrap_or(after.len());
     let token = &after[..end];
     if let Some(colon) = token.find(':') {
         let pfx = &token[..colon + 1];
@@ -179,15 +188,28 @@ fn find_matching_bracket(s: &str) -> Option<usize> {
     let mut in_string = false;
     let mut escaped = false;
     for (i, ch) in s.char_indices() {
-        if escaped { escaped = false; continue; }
-        if ch == '\\' && in_string { escaped = true; continue; }
-        if ch == '"' { in_string = !in_string; continue; }
-        if in_string { continue; }
+        if escaped {
+            escaped = false;
+            continue;
+        }
+        if ch == '\\' && in_string {
+            escaped = true;
+            continue;
+        }
+        if ch == '"' {
+            in_string = !in_string;
+            continue;
+        }
+        if in_string {
+            continue;
+        }
         match ch {
             '[' => depth += 1,
             ']' => {
                 depth -= 1;
-                if depth == 0 { return Some(i); }
+                if depth == 0 {
+                    return Some(i);
+                }
             }
             _ => {}
         }
@@ -262,7 +284,11 @@ ex:HealthShape a sh:NodeShape ;
     fn shacl_field_source_keys() {
         let path = write_shacl("test_shacl_keys.ttl", SAMPLE_SHACL);
         let profile = compile_shacl_mapping(&path).expect("compile");
-        let keys: Vec<&str> = profile.fields.iter().map(|f| f.source_key.as_str()).collect();
+        let keys: Vec<&str> = profile
+            .fields
+            .iter()
+            .map(|f| f.source_key.as_str())
+            .collect();
         assert!(keys.contains(&"Step count"));
         assert!(keys.contains(&"Heart rate (bpm)"));
         assert!(keys.contains(&"Date"));
@@ -289,7 +315,11 @@ ex:HealthShape a sh:NodeShape ;
         let path = write_shacl("test_shacl_hashes.ttl", SAMPLE_SHACL);
         let profile = compile_shacl_mapping(&path).expect("compile");
         for field in &profile.fields {
-            assert_ne!(field.predicate_hash, 0, "predicate hash should be nonzero for '{}'", field.source_key);
+            assert_ne!(
+                field.predicate_hash, 0,
+                "predicate hash should be nonzero for '{}'",
+                field.source_key
+            );
         }
     }
 
@@ -301,7 +331,10 @@ ex:HealthShape a sh:NodeShape ;
 
     #[test]
     fn shacl_error_on_empty_mapping() {
-        let path = write_shacl("test_shacl_empty.ttl", "@prefix sh: <http://www.w3.org/ns/shacl#> .");
+        let path = write_shacl(
+            "test_shacl_empty.ttl",
+            "@prefix sh: <http://www.w3.org/ns/shacl#> .",
+        );
         let result = compile_shacl_mapping(&path);
         assert!(result.is_err(), "should error when no mappings found");
     }

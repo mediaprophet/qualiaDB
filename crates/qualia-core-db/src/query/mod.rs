@@ -35,7 +35,7 @@ pub mod resolver;
     feature = "wasm-full"
 ))]
 pub mod shacl_compiler;
-pub mod temporal_graph;
-pub mod visual_model_bridge;
 pub mod spawn_decay;
+pub mod temporal_graph;
 pub mod temporal_scrub;
+pub mod visual_model_bridge;

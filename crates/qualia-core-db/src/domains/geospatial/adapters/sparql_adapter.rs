@@ -151,7 +151,11 @@ impl DataAdapter for SparqlAdapter {
             bbox.0, bbox.1, bbox.2, bbox.3
         );
 
-        let url = format!("{}?query={}&format=json", self.endpoint, urlencoding::encode(&sparql_query));
+        let url = format!(
+            "{}?query={}&format=json",
+            self.endpoint,
+            urlencoding::encode(&sparql_query)
+        );
 
         Ok(AdapterHttpRequest::get(url, "SPARQL"))
     }

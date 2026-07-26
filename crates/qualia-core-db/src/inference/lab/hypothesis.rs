@@ -39,7 +39,11 @@ pub struct Hypothesis {
 }
 
 impl Hypothesis {
-    pub fn new(id: impl Into<String>, statement: impl Into<String>, space_name: impl Into<String>) -> Self {
+    pub fn new(
+        id: impl Into<String>,
+        statement: impl Into<String>,
+        space_name: impl Into<String>,
+    ) -> Self {
         let now = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .map(|d| d.as_millis() as u64)
@@ -204,7 +208,11 @@ impl BeliefGraph {
 
         for dep_id in dependents {
             // The dependent's confidence is influenced by the source's confidence.
-            let source_confidence = self.hypotheses.get(source_id).map(|s| s.confidence).unwrap_or(0.0);
+            let source_confidence = self
+                .hypotheses
+                .get(source_id)
+                .map(|s| s.confidence)
+                .unwrap_or(0.0);
             if let Some(dep) = self.hypotheses.get_mut(&dep_id) {
                 // If the source is confirmed, boost the dependent's confidence.
                 // If refuted, reduce it.
@@ -288,13 +296,12 @@ impl BeliefGraph {
 
     /// Get the next hypothesis to test (highest confidence uncertainty).
     pub fn next_to_test(&self) -> Option<&Hypothesis> {
-        self.active_hypotheses()
-            .into_iter()
-            .min_by(|a, b| {
-                a.confidence.abs()
-                    .partial_cmp(&b.confidence.abs())
-                    .unwrap_or(std::cmp::Ordering::Equal)
-            })
+        self.active_hypotheses().into_iter().min_by(|a, b| {
+            a.confidence
+                .abs()
+                .partial_cmp(&b.confidence.abs())
+                .unwrap_or(std::cmp::Ordering::Equal)
+        })
     }
 
     /// Serialize the entire belief graph to JSON.
@@ -363,8 +370,8 @@ mod tests {
         let mut graph = BeliefGraph::new();
         let h1 = Hypothesis::new("H-001", "coop_gemv improves decode", "space");
         graph.add_hypothesis(h1);
-        let h2 = Hypothesis::new("H-002", "fused_ffn improves decode", "space")
-            .with_dependency("H-001");
+        let h2 =
+            Hypothesis::new("H-002", "fused_ffn improves decode", "space").with_dependency("H-001");
         graph.add_hypothesis(h2);
 
         // Confirm H-001 strongly.
@@ -405,7 +412,8 @@ mod tests {
 
     #[test]
     fn evaluate_verdict_regression() {
-        let h = Hypothesis::new("H-001", "naive GEMV regresses tok/s", "space").expects_regression();
+        let h =
+            Hypothesis::new("H-001", "naive GEMV regresses tok/s", "space").expects_regression();
         let v = evaluate_verdict(&h, 30.0, 40.0, 0.20);
         assert_eq!(v, ExperimentVerdict::Confirmed);
 
@@ -435,7 +443,8 @@ mod tests {
         graph.add_hypothesis(Hypothesis::new("H-001", "test", "space"));
         graph.record_experiment("E-001", "H-001", 42, ExperimentVerdict::Confirmed, 0.5);
 
-        let tmp = std::env::temp_dir().join(format!("qualia_belief_test_{}.json", std::process::id()));
+        let tmp =
+            std::env::temp_dir().join(format!("qualia_belief_test_{}.json", std::process::id()));
         graph.save(&tmp).unwrap();
         let loaded = BeliefGraph::load(&tmp).unwrap();
         assert!(loaded.hypotheses.contains_key("H-001"));

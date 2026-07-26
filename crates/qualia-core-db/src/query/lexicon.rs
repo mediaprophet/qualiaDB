@@ -9,14 +9,14 @@ pub use crate::resolver::{TAG_EMBEDDED, TAG_WEBIZEN};
 /// We explicitly reject the assumption that knowledge is exclusively bound to Unicode strings.
 pub enum SemanticModality<'a> {
     Text(&'a str),
-    AudioHash(&'a [u8]),        // For mother tongues / oral traditions
-    CeremonialVisual(&'a [u8]), // For heraldry / visual concepts
-    PhoneticSchema(&'a [u8]),   // For non-western phonetics
-    Visual(&'a [u8]),           // Generalized RGB/RGBA images & video frames
-    Spatial3D(&'a [u8]),        // 3D MeshIR, STL/3MF, point clouds, volumetric grids
-    Biosignal(&'a [u8]),        // PPG/rPPG, ECG, EEG, respiratory telemetry
-    Molecular(&'a [u8]),        // SMILES, InChI, protein sequences, chemical structures
-    QuantumPhysical(&'a [u8]),  // Quantum state vectors, density functional grids, ODE fields
+    AudioHash(&'a [u8]),                  // For mother tongues / oral traditions
+    CeremonialVisual(&'a [u8]),           // For heraldry / visual concepts
+    PhoneticSchema(&'a [u8]),             // For non-western phonetics
+    Visual(&'a [u8]),                     // Generalized RGB/RGBA images & video frames
+    Spatial3D(&'a [u8]),                  // 3D MeshIR, STL/3MF, point clouds, volumetric grids
+    Biosignal(&'a [u8]),                  // PPG/rPPG, ECG, EEG, respiratory telemetry
+    Molecular(&'a [u8]),                  // SMILES, InChI, protein sequences, chemical structures
+    QuantumPhysical(&'a [u8]), // Quantum state vectors, density functional grids, ODE fields
     SpatioTemporalTrace(&'a [u8]), // LTL temporal traces, geospatial paths, motion kinematics
     Custom { tag: u32, bytes: &'a [u8] }, // Arbitrary domain modality with custom tag
 }
@@ -323,7 +323,10 @@ mod tests {
         let chem = SemanticModality::Molecular(b"CCO_ethanol_smiles");
         let qphys = SemanticModality::QuantumPhysical(b"state_vector_psi");
         let trace = SemanticModality::SpatioTemporalTrace(b"ltl_trace_ltl");
-        let custom = SemanticModality::Custom { tag: 0x42, bytes: b"custom_payload" };
+        let custom = SemanticModality::Custom {
+            tag: 0x42,
+            bytes: b"custom_payload",
+        };
 
         for m in [&spatial, &bio, &chem, &qphys, &trace, &custom] {
             let tok = lexicon.tokenize_modal(m);

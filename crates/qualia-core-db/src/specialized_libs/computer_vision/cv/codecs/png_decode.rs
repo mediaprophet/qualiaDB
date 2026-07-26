@@ -47,7 +47,9 @@ pub fn decode_png(bytes: &[u8]) -> Result<(Vec<u8>, u32, u32), CvError> {
         png::ColorType::Indexed => return Err(CvError::InvalidParameter),
     };
 
-    let need = px.checked_mul(src_channels).ok_or(CvError::InvalidParameter)?;
+    let need = px
+        .checked_mul(src_channels)
+        .ok_or(CvError::InvalidParameter)?;
     if buf.len() < need {
         return Err(CvError::BufferTooSmall);
     }

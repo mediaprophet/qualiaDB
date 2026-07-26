@@ -112,7 +112,11 @@ fn jacobi_eigen_3x3(mut a: [[f32; 3]; 3]) -> ([f32; 3], [[f32; 3]; 3]) {
 
 fn sort_eigen_desc(evals: [f32; 3], vecs: [[f32; 3]; 3]) -> ([f32; 3], [[f32; 3]; 3]) {
     let mut idx = [0usize, 1, 2];
-    idx.sort_by(|&i, &j| evals[j].partial_cmp(&evals[i]).unwrap_or(core::cmp::Ordering::Equal));
+    idx.sort_by(|&i, &j| {
+        evals[j]
+            .partial_cmp(&evals[i])
+            .unwrap_or(core::cmp::Ordering::Equal)
+    });
     let mut e = [0.0f32; 3];
     let mut v = [[0.0f32; 3]; 3];
     for (k, &i) in idx.iter().enumerate() {

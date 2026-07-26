@@ -1,0 +1,12 @@
+﻿[2026-07-24T22:16:40.6971695+10:00] === Qualia native package campaign ===
+[2026-07-24T22:16:40.7183498+10:00] Root=C:\Projects\qualia-27062026
+[2026-07-24T22:16:40.7211417+10:00] Cli=C:\Projects\qualia-27062026\target\release\qualia-cli.exe
+[2026-07-24T22:16:40.7231370+10:00] OutDir=C:\LLM_Models\P64
+[2026-07-24T22:16:40.7321121+10:00] Sources=1 Tokens=16 Layouts=auto LabHours=0 DeleteSource=False DryRun=False
+[2026-07-24T22:16:40.7341096+10:00] Framing: incremental toolchain step (P64/Q42 package + measure). QualiaDB is not solely an inference product.
+[2026-07-24T22:16:40.7452710+10:00] ---- process smollm2-360m-instruct-q8_0.gguf ----
+[2026-07-24T22:16:40.7502574+10:00] RUN: C:\Projects\qualia-27062026\target\release\qualia-cli.exe llm explore C:\LLM_Models\GGUF\smollm2-360m-instruct-q8_0.gguf --out C:\LLM_Models\P64 --tokens 16 --layouts auto
+[2026-07-24T22:17:26.9648986+10:00] PROFILE C:\LLM_Models\P64\smollm2-360m-instruct-q8_0.f16.execution-profile.json winner=C:\LLM_Models\P64\smollm2-360m-instruct-q8_0.f16.p64 tok_s=85.2766 coherence=True
+[2026-07-24T22:17:26.9728818+10:00] === campaign done ok=1 fail=0 ===
+[2026-07-24T22:17:26.9995263+10:00] CSV=experiments\inference-lab\campaigns\campaign-20260724-221640.csv
+[2026-07-24T22:17:27.0015207+10:00] LOG=experiments\inference-lab\campaigns\campaign-20260724-221640.log

@@ -15,6 +15,75 @@ use crate::wgsl_forge::{
     Schedule, TargetBackend,
 };
 
+/// Create a wgpu instance respecting `QUALIA_WGPU_BACKEND`.
+///
+/// On Windows the default is DX12, but cooperative matrix (`VK_KHR_cooperative_matrix`)
+/// is only exposed on the Vulkan backend for NVIDIA hardware. Setting
+/// `QUALIA_WGPU_BACKEND=vulkan` routes the forge through Vulkan, un-gating coopmat.
+#[cfg(not(target_arch = "wasm32"))]
+fn create_instance() -> wgpu::Instance {
+    let mut desc = wgpu::InstanceDescriptor::new_without_display_handle();
+    if let Some(backends) = crate::gpu_context::qualia_backend_override() {
+        desc.backends = backends;
+    } else if cfg!(target_os = "windows") {
+        desc.backends = wgpu::Backends::DX12;
+    }
+    wgpu::Instance::new(desc)
+}
+
+/// Like [`create_instance`] but forces Vulkan when the default backend lacks coopmat.
+///
+/// This is the un-gating path: on Windows/DX12 where `EXPERIMENTAL_COOPERATIVE_MATRIX`
+/// is not advertised, we try Vulkan explicitly. NVIDIA Vulkan drivers expose
+/// `VK_KHR_cooperative_matrix` which wgpu maps to `EXPERIMENTAL_COOPERATIVE_MATRIX`.
+#[cfg(not(target_arch = "wasm32"))]
+fn create_instance_for_coopmat() -> wgpu::Instance {
+    // First try the user's explicit backend choice.
+    let mut desc = wgpu::InstanceDescriptor::new_without_display_handle();
+    if let Some(backends) = crate::gpu_context::qualia_backend_override() {
+        desc.backends = backends;
+    } else {
+        // No explicit override: try Vulkan first (coopmat is available there),
+        // falling back to all backends if Vulkan isn't present.
+        desc.backends = wgpu::Backends::VULKAN;
+    }
+    wgpu::Instance::new(desc)
+}
+
+/// Find the best adapter for cooperative matrix work.
+///
+/// Enumerates adapters on the given instance and returns the first that
+/// advertises `EXPERIMENTAL_COOPERATIVE_MATRIX`, preferring discrete GPUs.
+/// Returns `None` if no adapter has coopmat.
+#[cfg(not(target_arch = "wasm32"))]
+fn find_coopmat_adapter(instance: &wgpu::Instance) -> Option<wgpu::Adapter> {
+    let backends = if let Some(b) = crate::gpu_context::qualia_backend_override() {
+        b
+    } else {
+        wgpu::Backends::all()
+    };
+    let adapters = pollster::block_on(instance.enumerate_adapters(backends));
+    // First pass: look for a discrete GPU with coopmat.
+    for adapter in &adapters {
+        let info = adapter.get_info();
+        if info.device_type != wgpu::DeviceType::DiscreteGpu {
+            continue;
+        }
+        let features = adapter.features();
+        if features.contains(wgpu::Features::EXPERIMENTAL_COOPERATIVE_MATRIX) {
+            return Some(adapter.clone());
+        }
+    }
+    // Second pass: any adapter with coopmat.
+    for adapter in &adapters {
+        let features = adapter.features();
+        if features.contains(wgpu::Features::EXPERIMENTAL_COOPERATIVE_MATRIX) {
+            return Some(adapter.clone());
+        }
+    }
+    None
+}
+
 pub struct WgpuComputeContext {
     pub device: wgpu::Device,
     pub queue: wgpu::Queue,
@@ -55,7 +124,9 @@ pub struct WgpuComputeContext {
 
 impl WgpuComputeContext {
     pub fn new(capacity_bytes: usize) -> Result<Self, ForgeError> {
-        let instance = wgpu::Instance::default();
+        // Respect QUALIA_WGPU_BACKEND so the forge can use Vulkan (which exposes
+        // cooperative matrix on NVIDIA) instead of the Windows DX12 default.
+        let instance = create_instance();
         let adapter = pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
             power_preference: wgpu::PowerPreference::HighPerformance,
             ..Default::default()
@@ -65,9 +136,8 @@ impl WgpuComputeContext {
         let available_features = adapter.features();
         // Request timestamp queries plus subgroup + cooperative-matrix support
         // when the adapter offers them (cooperative-matrix kernels need both).
-        let mut wanted = wgpu::Features::TIMESTAMP_QUERY
-            | wgpu::Features::SUBGROUP
-            | wgpu::Features::SHADER_F16;
+        let mut wanted =
+            wgpu::Features::TIMESTAMP_QUERY | wgpu::Features::SUBGROUP | wgpu::Features::SHADER_F16;
         if crate::gpu_context::experimental_features_allowed() {
             wanted |= wgpu::Features::EXPERIMENTAL_COOPERATIVE_MATRIX
                 | wgpu::Features::EXPERIMENTAL_RAY_QUERY;
@@ -203,6 +273,162 @@ impl WgpuComputeContext {
             timestamp_resources,
             pipeline_cache: RefCell::new(HashMap::new()),
         })
+    }
+
+    /// Like [`new`] but tries the Vulkan backend first to find a cooperative-matrix-
+    /// capable adapter. On Windows/DX12, `EXPERIMENTAL_COOPERATIVE_MATRIX` is not
+    /// advertised, but the same NVIDIA GPU exposes `VK_KHR_cooperative_matrix` via
+    /// the Vulkan driver. This constructor:
+    ///
+    /// 1. Creates a Vulkan-only instance (unless `QUALIA_WGPU_BACKEND` overrides).
+    /// 2. Enumerates adapters, looking for one with `EXPERIMENTAL_COOPERATIVE_MATRIX`.
+    /// 3. If found, builds the context on that adapter (un-gating coopmat).
+    /// 4. If not found, falls back to [`new`] (which uses the default backend).
+    ///
+    /// This is the primary un-gating path for the HLSL WaveMatrix / WGSL coopmat
+    /// tensor-core emitters on NVIDIA hardware where DX12 doesn't expose coopmat.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn new_for_coopmat(capacity_bytes: usize) -> Result<Self, ForgeError> {
+        // Step 1: Try Vulkan instance.
+        let vk_instance = create_instance_for_coopmat();
+
+        // Step 2: Find a coopmat-capable adapter.
+        if let Some(adapter) = find_coopmat_adapter(&vk_instance) {
+            let info = adapter.get_info();
+            log::info!(
+                "forge|coopmat_adapter|{}|backend={:?}|vendor=0x{:04x}:0x{:04x}",
+                info.name,
+                info.backend,
+                info.vendor,
+                info.device
+            );
+            let available_features = adapter.features();
+            let mut wanted = wgpu::Features::TIMESTAMP_QUERY
+                | wgpu::Features::SUBGROUP
+                | wgpu::Features::SHADER_F16;
+            if crate::gpu_context::experimental_features_allowed() {
+                wanted |= wgpu::Features::EXPERIMENTAL_COOPERATIVE_MATRIX
+                    | wgpu::Features::EXPERIMENTAL_RAY_QUERY;
+            }
+            let required_features = available_features & wanted;
+            let timestamp_supported = required_features.contains(wgpu::Features::TIMESTAMP_QUERY);
+            let limits = adapter.limits();
+            let mut constraints = AdapterConstraints::from_wgpu_limits(&limits);
+            constraints.supports_subgroups = available_features.contains(wgpu::Features::SUBGROUP);
+            constraints.supports_coopmat =
+                available_features.contains(wgpu::Features::EXPERIMENTAL_COOPERATIVE_MATRIX);
+            constraints.supports_rt_cores =
+                available_features.contains(wgpu::Features::EXPERIMENTAL_RAY_QUERY);
+            constraints.warp_size = if info.vendor == 0x1002 { 64 } else { 32 };
+            let required_limits = wgpu::Limits {
+                max_blas_primitive_count: limits.max_blas_primitive_count,
+                max_blas_geometry_count: limits.max_blas_geometry_count,
+                max_tlas_instance_count: limits.max_tlas_instance_count,
+                max_acceleration_structures_per_shader_stage: limits
+                    .max_acceleration_structures_per_shader_stage,
+                ..wgpu::Limits::default()
+            };
+            let (device, queue) =
+                pollster::block_on(adapter.request_device(&wgpu::DeviceDescriptor {
+                    required_features,
+                    required_limits,
+                    experimental_features: if required_features.intersects(
+                        wgpu::Features::EXPERIMENTAL_COOPERATIVE_MATRIX
+                            | wgpu::Features::EXPERIMENTAL_RAY_QUERY,
+                    ) {
+                        unsafe { wgpu::ExperimentalFeatures::enabled() }
+                    } else {
+                        wgpu::ExperimentalFeatures::disabled()
+                    },
+                    ..Default::default()
+                }))
+                .map_err(|error| ForgeError::GpuUnavailable(error.to_string()))?;
+            let timestamp_period_ns = if timestamp_supported {
+                queue.get_timestamp_period()
+            } else {
+                0.0
+            };
+            let topology = if info.device_type == wgpu::DeviceType::IntegratedGpu
+                || info.device_type == wgpu::DeviceType::Cpu
+            {
+                MemoryTopology::Unified { zero_copy: true }
+            } else {
+                MemoryTopology::Discrete {
+                    staging_required: true,
+                }
+            };
+            let memory_class = match topology {
+                MemoryTopology::Unified { .. } => "unified",
+                MemoryTopology::Discrete { .. } => "discrete",
+            }
+            .to_string();
+            let adapter_id = AdapterIdentity {
+                name: info.name,
+                vendor: info.vendor,
+                device: info.device,
+                device_type: format!("{:?}", info.device_type),
+                backend: format!("{:?}", info.backend),
+                driver: info.driver,
+                driver_info: info.driver_info,
+            };
+            let profile = HardwareProfile {
+                adapter: adapter_id.clone(),
+                constraints,
+                memory_class,
+                supports_timestamp_query: timestamp_supported,
+                max_compute_workgroup_storage_size: limits.max_compute_workgroup_storage_size,
+                max_storage_buffer_binding_size: limits.max_storage_buffer_binding_size,
+                min_storage_buffer_offset_alignment: limits.min_storage_buffer_offset_alignment,
+                min_uniform_buffer_offset_alignment: limits.min_uniform_buffer_offset_alignment,
+            };
+            let allocator = QualiaSlabAllocator::new(topology, capacity_bytes);
+            let slab = device.create_buffer(&wgpu::BufferDescriptor {
+                label: Some("forge-slab-coopmat"),
+                size: capacity_bytes as u64,
+                usage: wgpu::BufferUsages::STORAGE
+                    | wgpu::BufferUsages::UNIFORM
+                    | wgpu::BufferUsages::COPY_DST
+                    | wgpu::BufferUsages::COPY_SRC,
+                mapped_at_creation: false,
+            });
+            let out_slab = device.create_buffer(&wgpu::BufferDescriptor {
+                label: Some("forge-out-slab-coopmat"),
+                size: capacity_bytes as u64,
+                usage: wgpu::BufferUsages::STORAGE
+                    | wgpu::BufferUsages::COPY_DST
+                    | wgpu::BufferUsages::COPY_SRC,
+                mapped_at_creation: false,
+            });
+            let weight_slab = device.create_buffer(&wgpu::BufferDescriptor {
+                label: Some("forge-weight-slab-coopmat"),
+                size: capacity_bytes as u64,
+                usage: wgpu::BufferUsages::STORAGE
+                    | wgpu::BufferUsages::COPY_DST
+                    | wgpu::BufferUsages::COPY_SRC,
+                mapped_at_creation: false,
+            });
+            let timestamp_resources = timestamp_supported.then(|| TimestampResources::new(&device));
+            return Ok(Self {
+                device,
+                queue,
+                adapter: adapter_id,
+                constraints,
+                profile,
+                allocator,
+                slab,
+                out_slab,
+                weight_slab,
+                weight_cursor: 0,
+                timestamp_supported,
+                timestamp_period_ns,
+                timestamp_resources,
+                pipeline_cache: RefCell::new(HashMap::new()),
+            });
+        }
+
+        // Step 3: No coopmat adapter found — fall back to the default backend.
+        log::info!("forge|coopmat_adapter|none_found|falling_back_to_default");
+        Self::new(capacity_bytes)
     }
 
     /// Build a forge context on an **already-existing** `wgpu::Device` + `Queue` (e.g. the
@@ -567,6 +793,40 @@ impl WgpuComputeContext {
         Ok(pipeline)
     }
 
+    /// Like [`compile_pipeline`] but accepts pre-compiled SPIR-V bytes instead of
+    /// WGSL source. This is the execution bridge for native shader profiles that
+    /// compile to SPIR-V (notably HLSL via DXC `–spirv`): the forge emits HLSL,
+    /// DXC produces a SPIR-V binary, and this method feeds it into the same wgpu
+    /// pipeline (bind groups, slab, dispatch — all unchanged).
+    pub fn compile_pipeline_spirv(
+        &self,
+        spirv: &[u8],
+        entry_point: &str,
+    ) -> Result<wgpu::ComputePipeline, ForgeError> {
+        let error_scope = self.device.push_error_scope(wgpu::ErrorFilter::Validation);
+        let spirv_words: &[u32] = bytemuck::cast_slice(spirv);
+        let shader = self
+            .device
+            .create_shader_module(wgpu::ShaderModuleDescriptor {
+                label: Some("qualia-forge-spirv"),
+                source: wgpu::ShaderSource::SpirV(std::borrow::Cow::Borrowed(spirv_words)),
+            });
+        let pipeline = self
+            .device
+            .create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+                label: Some("qualia-forge-spirv-pipeline"),
+                layout: None,
+                module: &shader,
+                entry_point: Some(entry_point),
+                compilation_options: Default::default(),
+                cache: None,
+            });
+        if let Some(error) = pollster::block_on(error_scope.pop()) {
+            return Err(ForgeError::GpuValidation(error.to_string()));
+        }
+        Ok(pipeline)
+    }
+
     /// [`compile_pipeline`](Self::compile_pipeline) with a process-lifetime cache keyed by
     /// `entry\0source` — the same `(source, entry)` returns the previously-built pipeline
     /// (a cheap `Arc`-clone) instead of recompiling. This is what makes a re-run of a fixed
@@ -826,6 +1086,40 @@ impl<'a> WgpuPipeline<'a> {
     ) -> Result<Self, ForgeError> {
         let pipeline = context.compile_pipeline(source, entry_point)?;
         Ok(Self { context, pipeline })
+    }
+
+    /// Like [`compile`] but accepts pre-compiled SPIR-V bytes (from HLSL→DXC).
+    pub fn compile_spirv(
+        context: &'a WgpuComputeContext,
+        spirv: &[u8],
+        entry_point: &str,
+    ) -> Result<Self, ForgeError> {
+        let pipeline = context.compile_pipeline_spirv(spirv, entry_point)?;
+        Ok(Self { context, pipeline })
+    }
+
+    /// Compile pre-emitted MSL source through wgpu's Metal backend.
+    ///
+    /// wgpu does not expose `ShaderSource::Msl` — on macOS, wgpu transpiles
+    /// WGSL→MSL internally via naga. For pre-emitted MSL, the caller should
+    /// use a native Metal path (e.g. `metal-rs`). This method exists so the
+    /// runtime can attempt MSL compilation on macOS; on other platforms it
+    /// returns an error and the runtime falls back to WGSL.
+    pub fn compile_msl(
+        context: &'a WgpuComputeContext,
+        _source: &str,
+        _entry_point: &str,
+    ) -> Result<Self, ForgeError> {
+        // wgpu's ShaderSource enum does not have an Msl variant.
+        // On macOS, the practical path is to transpile MSL→SPIR-V via
+        // SPIRV-Cross and use compile_spirv, or use metal-rs directly.
+        // For now, return an error so the runtime falls back to WGSL.
+        let _ = context;
+        Err(ForgeError::Emission(
+            "MSL native compilation requires a metal-rs bridge (not yet implemented). \
+             Falling back to WGSL."
+                .to_string(),
+        ))
     }
 
     /// Dispatch a ray-query kernel, binding `tlas` as the `acceleration_structure`

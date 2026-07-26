@@ -865,9 +865,11 @@ pub fn run_gpu_capability_campaign(
 
     let p64 = match model {
         Some(p) => p.to_path_buf(),
-        None => qualia_core_db::hardware_passport::default_decode_proxy_model().ok_or_else(
-            || "no package: pass --model <path.p64> or set QUALIA_LLM_PROFILE_MODEL".to_string(),
-        )?,
+        None => {
+            qualia_core_db::hardware_passport::default_decode_proxy_model().ok_or_else(|| {
+                "no package: pass --model <path.p64> or set QUALIA_LLM_PROFILE_MODEL".to_string()
+            })?
+        }
     };
     if !p64.is_file() {
         return Err(format!("package not found: {}", p64.display()));
@@ -922,7 +924,10 @@ pub fn run_gpu_capability_campaign(
         adapter.coopmat,
         adapter.shader_f16
     );
-    println!("├─ Toolchain: wgpu={} cuda={cuda_toolkit} dxc_cli={dxc_cli} metal={metal_xcrun}", gpu.is_some());
+    println!(
+        "├─ Toolchain: wgpu={} cuda={cuda_toolkit} dxc_cli={dxc_cli} metal={metal_xcrun}",
+        gpu.is_some()
+    );
 
     let mut native_tiers = vec!["wgsl".to_string(), "spirv".to_string()];
     if cuda_toolkit {
@@ -954,7 +959,15 @@ pub fn run_gpu_capability_campaign(
     let self_exe = std::env::current_exe().map_err(|e| format!("current_exe: {e}"))?;
     let mut measured: Vec<MeasuredDecodePath> = Vec::new();
 
-    println!("├─ Decode matrix ({} cells)…", backends.len() * modes.len());
+    let wgpu_cells = backends.len() * modes.len();
+    let cuda_c_cells = if cuda_toolkit { 1 } else { 0 };
+    let hlsl_cells = if dxc_cli { 1 } else { 0 };
+    let spirv_cells = if dxc_cli { 1 } else { 0 };
+    let ptx_cells = if cuda_toolkit { 1 } else { 0 };
+    println!(
+        "├─ Decode matrix ({} cells)…",
+        wgpu_cells + cuda_c_cells + hlsl_cells + spirv_cells + ptx_cells
+    );
     for backend in backends {
         for mode in modes {
             print!("│   {backend:7} {mode:12} … ");
@@ -971,6 +984,8 @@ pub fn run_gpu_capability_campaign(
                 ])
                 .env("QUALIA_WGPU_BACKEND", backend)
                 .env("QUALIA_INFERENCE_MODE", mode)
+                .env_remove("QUALIA_FORGE_BACKEND")
+                .env_remove("QUALIA_DXC_PATH")
                 .output();
             let wall = t0.elapsed().as_secs_f64();
             match output {
@@ -982,7 +997,11 @@ pub fn run_gpu_capability_campaign(
                             println!(
                                 "{:.2} tok/s  {}  ({wall:.1}s)",
                                 rec.tok_s,
-                                if coherence_ok { "coherent" } else { "INCOHERENT" }
+                                if coherence_ok {
+                                    "coherent"
+                                } else {
+                                    "INCOHERENT"
+                                }
                             );
                             measured.push(MeasuredDecodePath {
                                 wgpu_backend: (*backend).to_string(),
@@ -1002,6 +1021,254 @@ pub fn run_gpu_capability_campaign(
                 }
                 Err(e) => println!("spawn failed ({wall:.1}s): {e}"),
             }
+        }
+    }
+
+    // ── CUDA-C native decode row (lab path: CUDA SoA layer) ──────────────────
+    // Exercises the actual CUDA execution lane: QUALIA_LLM_CUDA_DECODE=1 opts
+    // into the layer-by-layer CUDA SoA decode path (device RoPE/KV/SDPA +
+    // sticky Q4_K_SOA), bypassing the wgpu resident mega-pass. This is the
+    // path that uses forge CUDA-C shader emission (gemv_f32, gemm_f32_tc,
+    // ternary_gemv, p64_project, fft) via NVRTC on the NVIDIA driver.
+    if cuda_toolkit {
+        print!("│   cuda-c  native        … ");
+        use std::io::Write as _;
+        let _ = std::io::stdout().flush();
+        let t0 = std::time::Instant::now();
+        let output = Command::new(&self_exe)
+            .args([
+                "llm",
+                "decode-proxy",
+                &p64.display().to_string(),
+                "--tokens",
+                &tokens.to_string(),
+            ])
+            .env("QUALIA_INFERENCE_MODE", "cuda")
+            .env("QUALIA_LLM_CUDA_DECODE", "1")
+            .env("QUALIA_LLM_KV_INT8", "0")
+            .env_remove("QUALIA_FORGE_BACKEND")
+            .env_remove("QUALIA_DXC_PATH")
+            .output();
+        let wall = t0.elapsed().as_secs_f64();
+        match output {
+            Ok(o) => {
+                let stdout = String::from_utf8_lossy(&o.stdout);
+                match qualia_core_db::hardware_passport::parse_decode_proxy_record(&stdout) {
+                    Some(rec) => {
+                        let path_ok = rec.execution_path.as_deref() == Some("cuda-c");
+                        let coherence_ok =
+                            rec.coherence_ok.unwrap_or(o.status.success()) && path_ok;
+                        println!(
+                            "{:.2} tok/s  {}  path={}  ({wall:.1}s)",
+                            rec.tok_s,
+                            if coherence_ok { "coherent" } else { "REJECTED" },
+                            rec.execution_path.as_deref().unwrap_or("unattributed"),
+                        );
+                        if path_ok {
+                            measured.push(MeasuredDecodePath {
+                                wgpu_backend: "cuda-c".to_string(),
+                                inference_mode: "native".to_string(),
+                                p64_path: p64.display().to_string(),
+                                tok_s: rec.tok_s,
+                                coherence_ok,
+                                tokens,
+                            });
+                        }
+                    }
+                    None => {
+                        let stderr = String::from_utf8_lossy(&o.stderr);
+                        let tail: String = stderr.lines().rev().take(1).collect();
+                        println!("no DECODE_PROXY line ({wall:.1}s) {tail}");
+                    }
+                }
+            }
+            Err(e) => println!("spawn failed ({wall:.1}s): {e}"),
+        }
+    }
+
+    // ── HLSL native shader rows (forge HLSL → DXC → SPIR-V → wgpu) ────────────
+    // Exercises the forge's HLSL emitter + DXC SPIR-V compilation path. The
+    // resulting SPIR-V feeds into the same wgpu pipeline (same buffers, slab,
+    // dispatch) — only the shader compilation differs from the WGSL path.
+    // Requires the DXC CLI (`QUALIA_DXC_PATH` or `dxc` on PATH).
+    if dxc_cli {
+        // HLSL→SPIR-V→wgpu: only run with vulkan backend because
+        // QUALIA_DXC_PATH (needed for HLSL→SPIR-V via DXC CLI) also overrides
+        // wgpu's DX12 compiler path, causing dx12 to fail.
+        let hlsl_backends: &[&str] = if cfg!(target_os = "macos") {
+            &["metal"]
+        } else {
+            &["vulkan"]
+        };
+        for backend in hlsl_backends {
+            print!("│   hlsl    {backend:7}    … ");
+            use std::io::Write as _;
+            let _ = std::io::stdout().flush();
+            let t0 = std::time::Instant::now();
+            let output = Command::new(&self_exe)
+                .args([
+                    "llm",
+                    "decode-proxy",
+                    &p64.display().to_string(),
+                    "--tokens",
+                    &tokens.to_string(),
+                ])
+                .env("QUALIA_WGPU_BACKEND", backend)
+                .env("QUALIA_FORGE_BACKEND", "hlsl")
+                .output();
+            let wall = t0.elapsed().as_secs_f64();
+            match output {
+                Ok(o) => {
+                    let stdout = String::from_utf8_lossy(&o.stdout);
+                    match qualia_core_db::hardware_passport::parse_decode_proxy_record(&stdout) {
+                        Some(rec) => {
+                            let path_ok = rec.execution_path.as_deref() == Some("hlsl");
+                            let coherence_ok =
+                                rec.coherence_ok.unwrap_or(o.status.success()) && path_ok;
+                            println!(
+                                "{:.2} tok/s  {}  path={}  ({wall:.1}s)",
+                                rec.tok_s,
+                                if coherence_ok { "coherent" } else { "REJECTED" },
+                                rec.execution_path.as_deref().unwrap_or("unattributed"),
+                            );
+                            if path_ok {
+                                measured.push(MeasuredDecodePath {
+                                    wgpu_backend: format!("hlsl-{backend}"),
+                                    inference_mode: "portable".to_string(),
+                                    p64_path: p64.display().to_string(),
+                                    tok_s: rec.tok_s,
+                                    coherence_ok,
+                                    tokens,
+                                });
+                            }
+                        }
+                        None => {
+                            let stderr = String::from_utf8_lossy(&o.stderr);
+                            let tail: String = stderr.lines().rev().take(1).collect();
+                            println!("no DECODE_PROXY line ({wall:.1}s) {tail}");
+                        }
+                    }
+                }
+                Err(e) => println!("spawn failed ({wall:.1}s): {e}"),
+            }
+        }
+    }
+
+    // ── SPIR-V (DXC) native shader row (forge SPIR-V → DXC → wgpu) ──────────
+    // Exercises the forge's SPIR-V emitter with DXC-produced SPIR-V.
+    // Same wgpu pipeline, but pre-compiled SPIR-V from DXC instead of naga.
+    if dxc_cli {
+        let spirv_backends: &[&str] = if cfg!(target_os = "macos") {
+            &["metal"]
+        } else {
+            &["vulkan"]
+        };
+        for backend in spirv_backends {
+            print!("│   spirv-dxc {backend:7} … ");
+            use std::io::Write as _;
+            let _ = std::io::stdout().flush();
+            let t0 = std::time::Instant::now();
+            let output = Command::new(&self_exe)
+                .args([
+                    "llm",
+                    "decode-proxy",
+                    &p64.display().to_string(),
+                    "--tokens",
+                    &tokens.to_string(),
+                ])
+                .env("QUALIA_WGPU_BACKEND", backend)
+                .env("QUALIA_FORGE_BACKEND", "spirv")
+                .output();
+            let wall = t0.elapsed().as_secs_f64();
+            match output {
+                Ok(o) => {
+                    let stdout = String::from_utf8_lossy(&o.stdout);
+                    match qualia_core_db::hardware_passport::parse_decode_proxy_record(&stdout) {
+                        Some(rec) => {
+                            let path_ok = rec.execution_path.as_deref() == Some("spirv");
+                            let coherence_ok =
+                                rec.coherence_ok.unwrap_or(o.status.success()) && path_ok;
+                            println!(
+                                "{:.2} tok/s  {}  path={}  ({wall:.1}s)",
+                                rec.tok_s,
+                                if coherence_ok { "coherent" } else { "REJECTED" },
+                                rec.execution_path.as_deref().unwrap_or("unattributed"),
+                            );
+                            if path_ok {
+                                measured.push(MeasuredDecodePath {
+                                    wgpu_backend: format!("spirv-dxc-{backend}"),
+                                    inference_mode: "portable".to_string(),
+                                    p64_path: p64.display().to_string(),
+                                    tok_s: rec.tok_s,
+                                    coherence_ok,
+                                    tokens,
+                                });
+                            }
+                        }
+                        None => {
+                            let stderr = String::from_utf8_lossy(&o.stderr);
+                            let tail: String = stderr.lines().rev().take(1).collect();
+                            println!("no DECODE_PROXY line ({wall:.1}s) {tail}");
+                        }
+                    }
+                }
+                Err(e) => println!("spawn failed ({wall:.1}s): {e}"),
+            }
+        }
+    }
+
+    // ── PTX native shader row (forge PTX → CUDA driver) ─────────────────────
+    // Exercises the forge's PTX emitter with direct CUDA driver execution.
+    // Only available when CUDA toolkit is present.
+    if cuda_toolkit {
+        print!("│   ptx     cuda        … ");
+        use std::io::Write as _;
+        let _ = std::io::stdout().flush();
+        let t0 = std::time::Instant::now();
+        let output = Command::new(&self_exe)
+            .args([
+                "llm",
+                "decode-proxy",
+                &p64.display().to_string(),
+                "--tokens",
+                &tokens.to_string(),
+            ])
+            .env("QUALIA_FORGE_BACKEND", "ptx")
+            .output();
+        let wall = t0.elapsed().as_secs_f64();
+        match output {
+            Ok(o) => {
+                let stdout = String::from_utf8_lossy(&o.stdout);
+                match qualia_core_db::hardware_passport::parse_decode_proxy_record(&stdout) {
+                    Some(rec) => {
+                        let path_ok = rec.execution_path.as_deref() == Some("ptx");
+                        let coherence_ok =
+                            rec.coherence_ok.unwrap_or(o.status.success()) && path_ok;
+                        println!(
+                            "{:.2} tok/s  {}  path={}  ({wall:.1}s)",
+                            rec.tok_s,
+                            if coherence_ok { "coherent" } else { "REJECTED" },
+                            rec.execution_path.as_deref().unwrap_or("unattributed"),
+                        );
+                        if path_ok {
+                            measured.push(MeasuredDecodePath {
+                                wgpu_backend: "ptx-cuda".to_string(),
+                                inference_mode: "portable".to_string(),
+                                p64_path: p64.display().to_string(),
+                                tok_s: rec.tok_s,
+                                coherence_ok,
+                                tokens,
+                            });
+                        }
+                    }
+                    None => {
+                        let stderr = String::from_utf8_lossy(&o.stderr);
+                        let tail: String = stderr.lines().rev().take(1).collect();
+                        println!("no DECODE_PROXY line ({wall:.1}s) {tail}");
+                    }
+                }
+            }
+            Err(e) => println!("spawn failed ({wall:.1}s): {e}"),
         }
     }
 
@@ -1032,7 +1299,9 @@ pub fn run_gpu_capability_campaign(
     profile.recompute_recommended();
 
     if profile.recommended.wgpu_backend.is_empty() {
-        return Err("no coherent decode path measured — nothing to recommend (see rows above)".into());
+        return Err(
+            "no coherent decode path measured — nothing to recommend (see rows above)".into(),
+        );
     }
 
     let json_path = MachineGpuProfile::default_path(&out);
@@ -1118,8 +1387,13 @@ pub fn run_decode_proxy(model: &Path, tokens: u32) -> Result<(), String> {
     let coh = if r.coherence_ok { 1 } else { 0 };
     // Stable line for parent parser (`parse_decode_proxy_record`).
     println!(
-        "DECODE_PROXY tok_s={:.4} backend={backend} tokens={tokens} coherence={coh}",
-        r.tok_s
+        "DECODE_PROXY tok_s={:.4} backend={backend} path={} tokens={tokens} coherence={coh} resident_hits={} resident_fallbacks={} cuda_hits={} cuda_fallbacks={}",
+        r.tok_s,
+        r.execution_path,
+        r.resident_hits,
+        r.resident_fallbacks,
+        r.cuda_mega_hits,
+        r.cuda_mega_fallbacks,
     );
     // Human-readable sample (not parsed by campaign — for logs).
     let sample: String = r.text.chars().take(160).collect();
@@ -1387,10 +1661,7 @@ pub fn run_explore_pipeline(
                     {
                         let coh = rec.coherence_ok.unwrap_or(o.status.success());
                         let tag = if coh { "ok" } else { "INCOHERENT" };
-                        println!(
-                            "{:.2} tok/s coh={coh} [{tag}] ({wall:.1}s wall)",
-                            rec.tok_s
-                        );
+                        println!("{:.2} tok/s coh={coh} [{tag}] ({wall:.1}s wall)", rec.tok_s);
                         results.push(ExploreCandidateResult {
                             layout: layout.clone(),
                             path: path.display().to_string(),

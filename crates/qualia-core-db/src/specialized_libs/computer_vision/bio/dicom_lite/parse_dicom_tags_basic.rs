@@ -154,12 +154,8 @@ pub fn parse_dicom_tags_basic(bytes: &[u8]) -> Result<ParsedDicomTags, DicomLite
 
     let patient_id = tags.get(&TAG_PATIENT_ID).cloned();
     let modality = tags.get(&TAG_MODALITY).cloned();
-    let rows = tags
-        .get(&TAG_ROWS)
-        .and_then(|s| s.parse::<u16>().ok());
-    let columns = tags
-        .get(&TAG_COLUMNS)
-        .and_then(|s| s.parse::<u16>().ok());
+    let rows = tags.get(&TAG_ROWS).and_then(|s| s.parse::<u16>().ok());
+    let columns = tags.get(&TAG_COLUMNS).and_then(|s| s.parse::<u16>().ok());
     let transfer_syntax_uid = Some(ts_uid.trim_end_matches('\0').trim().to_string());
 
     Ok(ParsedDicomTags {
@@ -206,8 +202,23 @@ fn parse_explicit_vr_length(
 fn is_string_vr(vr: [u8; 2]) -> bool {
     matches!(
         &vr,
-        b"AE" | b"AS" | b"CS" | b"DA" | b"DS" | b"DT" | b"IS" | b"LO" | b"LT"
-            | b"PN" | b"SH" | b"ST" | b"TM" | b"UC" | b"UI" | b"UR" | b"UT"
+        b"AE"
+            | b"AS"
+            | b"CS"
+            | b"DA"
+            | b"DS"
+            | b"DT"
+            | b"IS"
+            | b"LO"
+            | b"LT"
+            | b"PN"
+            | b"SH"
+            | b"ST"
+            | b"TM"
+            | b"UC"
+            | b"UI"
+            | b"UR"
+            | b"UT"
     )
 }
 
@@ -222,12 +233,7 @@ fn decode_string(value: &[u8]) -> String {
 
 /// Build a minimal synthetic LE-explicit DICOM buffer for tests (not a full IOD).
 #[cfg(test)]
-pub fn synth_le_explicit_dicom(
-    patient_id: &str,
-    rows: u16,
-    cols: u16,
-    modality: &str,
-) -> Vec<u8> {
+pub fn synth_le_explicit_dicom(patient_id: &str, rows: u16, cols: u16, modality: &str) -> Vec<u8> {
     let mut buf = vec![0u8; 128];
     buf.extend_from_slice(b"DICM");
 

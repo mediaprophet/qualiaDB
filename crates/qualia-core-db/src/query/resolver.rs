@@ -272,7 +272,9 @@ pub fn classify_inline_literal(val: u64) -> Option<InlineLiteral> {
             Some(InlineLiteral::Decimal(raw))
         }
         INLINE_TAG_BOOLEAN => Some(InlineLiteral::Boolean((val & 1) != 0)),
-        INLINE_TAG_FLOAT => Some(InlineLiteral::Float(f32::from_bits((val & 0xFFFF_FFFF) as u32))),
+        INLINE_TAG_FLOAT => Some(InlineLiteral::Float(f32::from_bits(
+            (val & 0xFFFF_FFFF) as u32,
+        ))),
         _ => None,
     }
 }

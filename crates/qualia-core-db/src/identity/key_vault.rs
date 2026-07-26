@@ -253,7 +253,11 @@ impl KeyVault {
     }
 
     /// Verifies a qapp token's signature using the Master Key, and checks expiry and audience.
-    pub fn verify_qapp_token(&self, token: &str, expected_audience: &str) -> Result<QappSessionTokenV2, String> {
+    pub fn verify_qapp_token(
+        &self,
+        token: &str,
+        expected_audience: &str,
+    ) -> Result<QappSessionTokenV2, String> {
         let parts: Vec<&str> = token.split('.').collect();
         if parts.len() != 2 {
             return Err("Invalid semantic token format".into());
@@ -314,7 +318,9 @@ pub struct QappSessionTokenV2 {
 /// Each layer has a dedicated AES-256-GCM key derived from the node's master key.
 /// Access is gated by the deontic engine evaluating the agent's VCs against the
 /// layer's ODRL policy before releasing the key.
-#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(
+    serde::Serialize, serde::Deserialize, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord,
+)]
 #[repr(u8)]
 pub enum SubgraphLayer {
     Public = 0,

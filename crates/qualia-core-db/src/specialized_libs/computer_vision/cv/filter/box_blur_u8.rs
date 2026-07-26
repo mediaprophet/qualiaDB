@@ -25,9 +25,9 @@ pub fn box_blur_u8(src: GrayView<'_>, r: u32, out: &mut [u8]) -> Result<(), CvEr
             let mut n = 0u32;
             let yi = y as i32;
             let xi = x as i32;
-            for dy in -((r as i32))..=(r as i32) {
+            for dy in -(r as i32)..=(r as i32) {
                 let yy = (yi + dy).clamp(0, h as i32 - 1) as u32;
-                for dx in -((r as i32))..=(r as i32) {
+                for dx in -(r as i32)..=(r as i32) {
                     let xx = (xi + dx).clamp(0, w as i32 - 1) as u32;
                     s += src.pixel(xx, yy) as u32;
                     n += 1;

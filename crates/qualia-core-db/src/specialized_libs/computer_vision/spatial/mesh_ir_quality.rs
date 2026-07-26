@@ -38,7 +38,10 @@ impl Default for MeshCleanupOptions {
 /// Clean a MeshIR in place: weld (optional) then drop degenerate triangles.
 ///
 /// Fail-closed if the mesh becomes empty.
-pub fn cleanup_mesh_ir(mesh: &mut MeshIR, opts: MeshCleanupOptions) -> Result<MeshQualityReport, CvError> {
+pub fn cleanup_mesh_ir(
+    mesh: &mut MeshIR,
+    opts: MeshCleanupOptions,
+) -> Result<MeshQualityReport, CvError> {
     let vertices_in = mesh.vertex_count() as u32;
     let triangles_in = mesh.triangle_count() as u32;
     if mesh.positions.is_empty() || mesh.indices.len() < 3 {

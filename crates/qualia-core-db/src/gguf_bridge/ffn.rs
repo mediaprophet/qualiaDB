@@ -247,11 +247,7 @@ impl QTensorEngine {
                 down_raw,
                 &mut scratch_a[..emb_dim],
             ) {
-                add_residual_inplace(
-                    &mut hidden[..emb_dim],
-                    &scratch_a[..emb_dim],
-                    emb_dim,
-                );
+                add_residual_inplace(&mut hidden[..emb_dim], &scratch_a[..emb_dim], emb_dim);
                 return true;
             }
         }
@@ -539,7 +535,9 @@ impl QTensorEngine {
         self.poll_wait();
         if let Ok(handle) = tokio::runtime::Handle::try_current() {
             if handle.block_on(rx).ok().map(|m| m.is_ok()).unwrap_or(false) {
-                let data = slice.get_mapped_range().expect("wgpu buffer map_range failed");
+                let data = slice
+                    .get_mapped_range()
+                    .expect("wgpu buffer map_range failed");
                 let floats: &[f32] = bytemuck::cast_slice(&data);
                 scratch_a[..dn_out].copy_from_slice(&floats[..dn_out]);
                 drop(data);

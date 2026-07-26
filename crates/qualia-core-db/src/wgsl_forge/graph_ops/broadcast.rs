@@ -110,7 +110,9 @@ mod tests {
     #[test]
     #[serial_test::serial(gpu)]
     fn broadcast_gpu_matches_oracle() {
-        if !crate::wgsl_forge::test_gpu_available() { return; }
+        if !crate::wgsl_forge::test_gpu_available() {
+            return;
+        }
         let scale: Vec<f32> = (0..50).map(|i| (i as f32) * 0.1 - 2.0).collect();
         let out_len = 50 * 37 + 13; // not a multiple of in_len, exercises the modulo
         let gpu = broadcast_gpu(&scale, out_len).expect("broadcast_gpu");

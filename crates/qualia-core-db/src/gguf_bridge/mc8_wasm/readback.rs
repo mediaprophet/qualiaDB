@@ -18,7 +18,9 @@ impl QTensorEngine {
             let _ = staging.unmap();
             return false;
         }
-        let data = slice.get_mapped_range().expect("wgpu buffer map_range failed");
+        let data = slice
+            .get_mapped_range()
+            .expect("wgpu buffer map_range failed");
         let floats: &[f32] = bytemuck::cast_slice(&data);
         hidden[..emb_dim].copy_from_slice(&floats[..emb_dim]);
         drop(data);
@@ -48,7 +50,9 @@ impl QTensorEngine {
             let _ = staging.unmap();
             return false;
         }
-        let data = slice.get_mapped_range().expect("wgpu buffer map_range failed");
+        let data = slice
+            .get_mapped_range()
+            .expect("wgpu buffer map_range failed");
         let floats: &[f32] = bytemuck::cast_slice(&data);
         out[..batch_elems].copy_from_slice(&floats[..batch_elems]);
         drop(data);
@@ -82,7 +86,9 @@ impl QTensorEngine {
             let _ = staging.unmap();
             return false;
         }
-        let data = slice.get_mapped_range().expect("wgpu buffer map_range failed");
+        let data = slice
+            .get_mapped_range()
+            .expect("wgpu buffer map_range failed");
         out.copy_from_slice(&data);
         drop(data);
         staging.unmap();

@@ -1,6 +1,6 @@
 [package]
 name = "qualia-solid-bridge"
-version = "0.0.23"
+version = "0.0.27"
 edition = "2021"
 description = "W3C Solid personal pod server + consumer agent for Webizen/Qualia"
 license = "MIT OR Apache-2.0"

@@ -130,7 +130,12 @@ impl ProvenanceSidecar {
         self
     }
 
-    pub fn with_metadata(mut self, metadata: impl Into<Vec<u8>>, timestamp: u64, hash: [u8; 32]) -> Self {
+    pub fn with_metadata(
+        mut self,
+        metadata: impl Into<Vec<u8>>,
+        timestamp: u64,
+        hash: [u8; 32],
+    ) -> Self {
         self.semantic_metadata = metadata.into();
         self.timestamp_epoch_s = timestamp;
         self.version_hash = hash;
@@ -418,7 +423,8 @@ pub fn decode_provenance_section(
         }
     }
 
-    let expected = PROVENANCE_MINI_HEADER_SIZE + source_len + media_len + licence_len + vc_len + metadata_len;
+    let expected =
+        PROVENANCE_MINI_HEADER_SIZE + source_len + media_len + licence_len + vc_len + metadata_len;
     if payload.len() < expected {
         return Err(ProvenanceSectionError::PayloadTruncated {
             expected,
@@ -491,7 +497,11 @@ mod tests {
             "CC-BY-4.0",
         )
         .with_vc(b"{\"vc\":\"attested\"}".to_vec())
-        .with_metadata(b"\xA2\x68@context\x78\x1Dhttps://schema.org/\x65@type\x67Dataset".to_vec(), 1690000000, [0xAA; 32])
+        .with_metadata(
+            b"\xA2\x68@context\x78\x1Dhttps://schema.org/\x65@type\x67Dataset".to_vec(),
+            1690000000,
+            [0xAA; 32],
+        )
     }
 
     #[test]
@@ -506,7 +516,10 @@ mod tests {
         assert_eq!(view.source_media_type(), "model/gltf-binary");
         assert_eq!(view.licence(), "CC-BY-4.0");
         assert_eq!(view.vc(), Some(s.vc.as_slice()));
-        assert_eq!(view.semantic_metadata(), b"\xA2\x68@context\x78\x1Dhttps://schema.org/\x65@type\x67Dataset");
+        assert_eq!(
+            view.semantic_metadata(),
+            b"\xA2\x68@context\x78\x1Dhttps://schema.org/\x65@type\x67Dataset"
+        );
         assert_eq!(view.timestamp_epoch_s(), 1690000000);
         assert_eq!(view.version_hash(), &[0xAA; 32]);
         assert_eq!(view.source_digest(), crc32c(&s.source_bytes));
