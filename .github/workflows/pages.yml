@@ -101,8 +101,9 @@ jobs:
             --target web \
             --release \
             --out-dir ../../docs/pkg/webizen-lite
+          # Raw 640 KiB / gzip 200 KiB — keep in step with release-wasm.yml.
           node docs/tests/wasm-size-check.mjs \
-            docs/pkg/webizen-lite/webizen_lite_wasm_bg.wasm 524288 204800
+            docs/pkg/webizen-lite/webizen_lite_wasm_bg.wasm 655360 204800
           ls -la docs/pkg/webizen-lite/webizen_lite_wasm.js \
             docs/pkg/webizen-lite/webizen_lite_wasm_bg.wasm
 

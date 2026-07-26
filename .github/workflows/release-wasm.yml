@@ -111,8 +111,11 @@ jobs:
             --target web \
             --release \
             --out-dir ../../docs/pkg/webizen-lite
+          # Raw 640 KiB / gzip 200 KiB. Raw was raised from 512 KiB once the session query +
+          # deontic bridge + MCP discovery tools landed; gzip is the wire size and stays the
+          # binding constraint (currently ~161 KiB).
           node docs/tests/wasm-size-check.mjs \
-            docs/pkg/webizen-lite/webizen_lite_wasm_bg.wasm 524288 204800
+            docs/pkg/webizen-lite/webizen_lite_wasm_bg.wasm 655360 204800
 
       - name: Phenomenal viewport contract checklist
         run: node docs/tests/phenomenal-verify.mjs --wasm-api docs/pkg/qualia/qualia.d.ts
