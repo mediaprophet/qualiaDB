@@ -42,4 +42,3 @@ exclude:
   - "playground/wordnet.q42.lex"
   - "playground/wordnet.q42.lex.lz4"
   - "playground/wordnet.q42.bidx"
-  - "llm_benchmark_results.json"
