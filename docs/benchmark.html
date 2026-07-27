@@ -834,7 +834,9 @@ LIMIT 100</textarea>
 
         try {
             const module = await import('./playground/qualia_core_db.js');
-            await module.default();
+            const wasmResp = await fetch('./playground/qualia_core_db_bg.wasm', { cache: 'no-store' });
+            if (!wasmResp.ok) throw new Error(`WASM fetch failed: ${wasmResp.status}`);
+            await module.default(wasmResp);
             const ver = typeof module.get_engine_version === 'function'
                 ? module.get_engine_version()
                 : null;
