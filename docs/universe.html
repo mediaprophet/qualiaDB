@@ -6,6 +6,7 @@
   <title>Knowledge Universe · QualiaDB</title>
   <meta name="description" content="Interactive knowledge universe: bundled ontology packs as galaxies, CODATA constants, Chora Yale bright-star shell." />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <link rel="stylesheet" href="css/tailwind-built.css" />
   <link rel="stylesheet" href="css/site-nav.css" />
   <style>
     :root {
@@ -145,13 +146,13 @@
 <body>
   <canvas id="ku-sky" aria-label="Knowledge universe visualization"></canvas>
 
-  <div class="ku-top">
+  <nav class="ku-top">
     <a class="ku-brand" href="index.html">
       <div class="mark">Q</div>
       <div>Qualia<span class="sub">· Universe</span></div>
     </a>
     <div id="dynamic-nav" class="relative flex items-center text-sm min-w-0"></div>
-  </div>
+  </nav>
 
   <div id="ku-status">Loading…</div>
 
