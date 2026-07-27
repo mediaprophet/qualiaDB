@@ -6,33 +6,31 @@ use dioxus::prelude::*;
 use serde::{Deserialize, Serialize};
 
 #[cfg(target_arch = "wasm32")]
+use futures_util::future::{select, Either};
+#[cfg(target_arch = "wasm32")]
+use futures_util::pin_mut;
+#[cfg(target_arch = "wasm32")]
+use gloo_timers::future::TimeoutFuture;
+#[cfg(target_arch = "wasm32")]
 use serde_json::json;
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::{prelude::*, JsCast};
-
-#[cfg(target_arch = "wasm32")]
-#[wasm_bindgen]
-extern "C" {
-    #[wasm_bindgen(js_namespace = ["window", "__TAURI__", "core"], js_name = invoke, catch)]
-    async fn tauri_invoke(
-        cmd: &str,
-        args: js_sys::Object,
-    ) -> Result<wasm_bindgen::JsValue, wasm_bindgen::JsValue>;
-}
 
 #[cfg(target_arch = "wasm32")]
 async fn invoke_json<T>(cmd: &str, args: serde_json::Value) -> Result<T, String>
 where
     T: serde::de::DeserializeOwned,
 {
-    if !has_tauri_bridge() {
-        return Err("The desktop host is unavailable in this preview.".to_string());
+    let request = crate::components::qapp_engine::invoke_json(cmd, args);
+    let timeout = TimeoutFuture::new(8_000);
+    pin_mut!(request);
+    pin_mut!(timeout);
+    match select(request, timeout).await {
+        Either::Left((result, _)) => result.and_then(|value| {
+            serde_json::from_value(value).map_err(|error| format!("decode {cmd} response: {error}"))
+        }),
+        Either::Right((_, _)) => Err(format!("desktop command '{cmd}' timed out after 8 seconds")),
     }
-    let js_args = serde_wasm_bindgen::to_value(&args).map_err(|error| error.to_string())?;
-    let value = tauri_invoke(cmd, js_args.into())
-        .await
-        .map_err(|error| format!("{error:?}"))?;
-    serde_wasm_bindgen::from_value(value).map_err(|error| error.to_string())
 }
 
 #[cfg(target_arch = "wasm32")]

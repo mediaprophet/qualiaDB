@@ -191,6 +191,8 @@
         <button type="submit" title="Go">Go</button>
       </form>
       <button type="button" id="btn-bookmark" title="Bookmark to Library">🔖</button>
+      <button type="button" id="btn-remember" title="Select this page into the app-wide entity session (shared with Lived Memory)">◎</button>
+      <button type="button" id="btn-open-memory" title="Open Lived Memory in the main shell (Sync session there)" style="font-size:0.65rem;font-weight:700;padding:0.25rem 0.45rem;border-radius:999px;border:1px solid #6d28d9;background:rgba(139,92,246,0.15);color:#e9d5ff;cursor:pointer;white-space:nowrap;">Memory</button>
       <label title="Content engine preference (Servo is experimental; not linked as renderer yet)" style="display:flex;align-items:center;gap:0.25rem;font-size:0.72rem;color:var(--muted);">
         Engine
         <select id="engine-select" aria-label="Browser engine">
@@ -199,6 +201,7 @@
         </select>
       </label>
       <div id="trust" title="Trust indicator (your store + policy)">trust: —</div>
+      <span id="entity-chip" title="Entity-view selection (app-wide session · same as Lived Memory)" style="max-width:11rem;padding:0.25rem 0.45rem;border-radius:999px;border:1px solid var(--border);font-size:0.65rem;font-weight:700;color:var(--muted);background:#0f172a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">entity: —</span>
       <button type="button" id="btn-trust" title="Trust store">Trust</button>
       <button type="button" id="btn-cookies" title="Cookie jar">Cookies</button>
       <button type="button" id="btn-agent" title="Browser agent">Agent</button>
@@ -367,6 +370,72 @@ Best-effort WebView jar + graph — not complete Chromium parity. Local qualia:/
       }
     }
 
+    function shortHostOrTitle(url) {
+      if (!url) return "";
+      try {
+        const u = new URL(url);
+        return u.hostname || url.slice(0, 40);
+      } catch (_) {
+        return String(url).slice(0, 40);
+      }
+    }
+
+    function setEntityChip(card) {
+      const el = $("entity-chip");
+      if (!el) return;
+      if (!card || !card.entity_id) {
+        el.textContent = "entity: —";
+        el.title = "Entity-view selection (app-wide session shared with Lived Memory)";
+        return;
+      }
+      const idStr = String(card.entity_id);
+      const host = shortHostOrTitle(card.uri || card.url || "");
+      const label = host || ("…" + idStr.slice(-8));
+      el.textContent = host ? ("◎ " + host) : ("entity: …" + idStr.slice(-8));
+      el.title =
+        "web_locus · " + label +
+        " · entity_id=" + card.entity_id +
+        " · wing=" + (card.wing || "—") +
+        " · " + (card.uri || "") +
+        " · Shared with Lived Memory session — open Memory · Sync";
+    }
+
+    async function projectWebLocus(url, quiet) {
+      if (!url) return null;
+      try {
+        const raw = await invoke("view_project_web_locus", { url });
+        const card = typeof raw === "string" ? JSON.parse(raw) : raw;
+        // Also bind selection by URI so Library can highlight the same object.
+        try {
+          await invoke("view_select_uri", { uri: url });
+        } catch (_) { /* older host */ }
+        setEntityChip(card);
+        if (!quiet) {
+          const host = shortHostOrTitle(card.uri || url);
+          setStatus(
+            "Shared with Lived Memory session — " + (host || "page") +
+            " · wing=" + (card.wing || "—") +
+            " · open Memory · Sync"
+          );
+        }
+        return card;
+      } catch (e) {
+        if (!quiet) setStatus("Entity view: " + e);
+        return null;
+      }
+    }
+
+    // Best-effort: focus main window / navigate shell toward Memory (no hard dep).
+    function hintOpenMemory() {
+      setStatus(
+        "Shared selection is already in the app-wide session. In the main window open Memory (life domain) · Sync session to spatialize."
+      );
+      try {
+        // Some hosts expose a shell navigate command; ignore if absent.
+        invoke("shell_navigate", { route: "library" }).catch(function () {});
+      } catch (_) { /* optional */ }
+    }
+
     async function navigate(url) {
       url = (url || "").trim();
       if (!url) return;
@@ -383,6 +452,8 @@ Best-effort WebView jar + graph — not complete Chromium parity. Local qualia:/
         $("btn-back").disabled = histIdx <= 0;
         $("btn-fwd").disabled = histIdx >= history.length - 1;
         await refreshTrust(dest);
+        // Soft-project page as web_locus into app-wide entity-view session (does not bookmark).
+        await projectWebLocus(dest, true);
         setStatus("Loaded " + dest);
       } catch (e) {
         setStatus("Navigate failed: " + e);
@@ -688,10 +759,24 @@ Best-effort WebView jar + graph — not complete Chromium parity. Local qualia:/
           title: "",
           contextAssertions: null,
         });
+        // Also register as web_locus entity so Library morph can share selection.
+        await projectWebLocus(u, true);
         setStatus(typeof msg === "string" ? msg : "Bookmark saved");
       } catch (e) {
         setStatus("Bookmark failed: " + e);
       }
+    });
+    $("btn-open-memory") && $("btn-open-memory").addEventListener("click", () => {
+      hintOpenMemory();
+    });
+
+    $("btn-remember").addEventListener("click", async () => {
+      const u = ($("url").value || currentUrl || "").trim();
+      if (!u) {
+        setStatus("No URL to select as entity");
+        return;
+      }
+      await projectWebLocus(u, false);
     });
     $("btn-cookies").addEventListener("click", async () => {
       const panel = $("cookies-panel");
