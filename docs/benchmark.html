@@ -828,7 +828,7 @@ LIMIT 100</textarea>
                 const opsPerSec = Math.round(1_000_000 / point);
                 const latencies = [point, twohop, filter].filter(v => v != null);
                 const avgLatency = latencies.length ? latencies.reduce((a, b) => a + b, 0) / latencies.length / 1000 : 0;
-                const memMb = Math.round(data.resource_snapshot?.peak_rss_during_scaling_mb || 0);
+                const memMb = Math.round(data.qualia_scaling_stats?.['10000']?.rss_after_materialize_mb || 0);
                 updateMetrics(opsPerSec, avgLatency.toFixed(3), 0, memMb);
             }
         } catch (err) {
