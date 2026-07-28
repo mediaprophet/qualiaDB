@@ -298,7 +298,14 @@ impl QTensorEngine {
                 &self.pipeline
             };
             #[cfg(target_arch = "wasm32")]
-            let active_pipeline: &wgpu::ComputePipeline = &self.pipeline;
+            let use_mmv_q8_0 = info.ggml_type == crate::ggml_quants::GGML_TYPE_Q8_0
+                && (n_in % 32 == 0);
+            #[cfg(target_arch = "wasm32")]
+            let active_pipeline: &wgpu::ComputePipeline = if use_mmv_q8_0 {
+                &self.mmv_q8_0_pipeline
+            } else {
+                &self.pipeline
+            };
             #[cfg(target_arch = "wasm32")]
             let use_mr = false;
 
@@ -382,6 +389,13 @@ impl QTensorEngine {
                 } else if use_coop {
                     cpass.dispatch_workgroups(n_out as u32, 1, 1);
                 } else {
+                    #[cfg(target_arch = "wasm32")]
+                    if use_mmv_q8_0 {
+                        cpass.dispatch_workgroups((n_out as u32 + 3) / 4, 1, 1);
+                    } else {
+                        cpass.dispatch_workgroups((n_out as u32 + 63) / 64, 1, 1);
+                    }
+                    #[cfg(not(target_arch = "wasm32"))]
                     cpass.dispatch_workgroups((n_out as u32 + 63) / 64, 1, 1);
                 }
             }

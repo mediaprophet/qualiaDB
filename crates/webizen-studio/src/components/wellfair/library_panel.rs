@@ -333,13 +333,18 @@ pub fn WellfairLibraryPanel() -> Element {
     let mut share_card = use_signal(String::new);
 
     let mut ing_uri = use_signal(|| {
-        format!(
-            "urn:doc:note-{}",
-            std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .map(|d| d.as_secs() % 100_000)
-                .unwrap_or(0)
-        )
+        let secs = {
+            #[cfg(target_arch = "wasm32")]
+            { (js_sys::Date::now() as u64 / 1000) % 100_000 }
+            #[cfg(not(target_arch = "wasm32"))]
+            {
+                std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .map(|d| d.as_secs() % 100_000)
+                    .unwrap_or(0)
+            }
+        };
+        format!("urn:doc:note-{}", secs)
     });
     let mut ing_media = use_signal(|| "text/markdown".to_string());
     let mut ing_text = use_signal(String::new);

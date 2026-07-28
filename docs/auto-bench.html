@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><title>Auto Benchmark</title></head>
+<body>
+<pre id="result">Running…</pre>
+<script type="module">
+  const WLLAMA_ESM = 'https://cdn.jsdelivr.net/npm/@wllama/wllama@3.5.1/esm/index.js';
+  const WLLAMA_WASM = 'https://cdn.jsdelivr.net/npm/@wllama/wllama@3.5.1/esm/wasm/wllama.wasm';
+  const MODEL_URL = 'models/smollm2-360m-instruct-q8_0.gguf';
+  const PROMPT = 'Explain why zero-copy data layouts matter for edge inference in 3 bullet points.';
+  const MAX_TOKENS = 64;
+
+  function estimateTokens(text) {
+    const t = String(text || '').trim();
+    return t ? t.split(/\s+/).length : 0;
+  }
+
+  function report(status, data) {
+    const el = document.getElementById('result');
+    const payload = JSON.stringify({ status, ...data }, null, 2);
+    el.textContent = payload;
+    window.__benchResult = { status, ...data };
+    console.log('BENCH_RESULT:' + payload);
+  }
+
+  async function runQualia() {
+    const mod = await import('../playground/qualia_core_db.js');
+    await mod.default();
+    mod.init_panic_hook?.();
+    const cache = await import('../js/opfs-model-cache.js');
+
+    const t0 = performance.now();
+    const name = MODEL_URL.split('/').pop();
+    const r = await cache.loadGgufCached(MODEL_URL, name, undefined, (loaded, total, phase) => {
+      report('qualia_loading', { phase, progress: total ? Math.round(100 * loaded / total) : null });
+    });
+    await mod.initialize_webgpu_engine(r.bytes);
+    console.log('[bench] initialize_webgpu_engine returned OK');
+    if (!mod.isWebgpuEngineReady()) throw new Error('Qualia engine failed to initialise');
+    console.log('[bench] engine ready check passed');
+    const loadMs = performance.now() - t0;
+
+    const sys = 'You are a concise assistant.';
+    const prompt = `<|im_start|>system\n${sys}<|im_end|>\n<|im_start|>user\n${PROMPT}<|im_end|>\n<|im_start|>assistant\n`;
+    console.log('[bench] starting inference, prompt length:', prompt.length);
+    let firstAt = null;
+    let outputText = '';
+    const start = performance.now();
+    await mod.inferWasmAsync(prompt, (piece) => {
+      if (firstAt === null) firstAt = performance.now();
+      outputText += piece;
+    });
+    const end = performance.now();
+    const approxTokens = estimateTokens(outputText);
+    const generationMs = end - start;
+    const ttftMs = firstAt === null ? generationMs : firstAt - start;
+    return {
+      engine: 'qualia', loadMs, ttftMs, generationMs, outputText, approxTokens,
+      tokensPerSecond: generationMs > 0 ? (approxTokens * 1000) / generationMs : 0,
+    };
+  }
+
+  async function runWllama() {
+    const wllamaMod = await import(WLLAMA_ESM);
+    const Wllama = wllamaMod.Wllama || wllamaMod.default;
+    const wllama = new Wllama({ default: WLLAMA_WASM }, { suppressNativeLog: true });
+    const t0 = performance.now();
+    await wllama.loadModelFromUrl(MODEL_URL, { n_gpu_layers: 99, allowOffline: true });
+    const loadMs = performance.now() - t0;
+
+    let firstAt = null;
+    let outputText = '';
+    const start = performance.now();
+    await wllama.createCompletion({
+      prompt: PROMPT, max_tokens: MAX_TOKENS, temperature: 0.0,
+      stream: true,
+      onData: (chunk) => {
+        if (firstAt === null) firstAt = performance.now();
+        outputText += chunk?.choices?.[0]?.text || '';
+      },
+    });
+    const end = performance.now();
+    const approxTokens = estimateTokens(outputText);
+    const generationMs = end - start;
+    const ttftMs = firstAt === null ? generationMs : firstAt - start;
+    return {
+      engine: 'wllama', loadMs, ttftMs, generationMs, outputText, approxTokens,
+      tokensPerSecond: generationMs > 0 ? (approxTokens * 1000) / generationMs : 0,
+    };
+  }
+
+  try {
+    report('starting', { model: MODEL_URL, prompt: PROMPT });
+
+    let qualiaResult = null;
+    try {
+      report('qualia_starting', {});
+      qualiaResult = await runQualia();
+      report('qualia_done', { qualia: qualiaResult });
+    } catch (e) {
+      qualiaResult = { error: e.message };
+      report('qualia_error', { error: e.message });
+    }
+
+    let wllamaResult = null;
+    try {
+      report('wllama_starting', {});
+      wllamaResult = await runWllama();
+      report('wllama_done', { wllama: wllamaResult });
+    } catch (e) {
+      wllamaResult = { error: e.message };
+      report('wllama_error', { error: e.message });
+    }
+
+    const qTps = qualiaResult?.tokensPerSecond;
+    const wTps = wllamaResult?.tokensPerSecond;
+    const ratio = qTps && wTps ? qTps / wTps : null;
+    report('complete', {
+      qualia: qualiaResult,
+      wllama: wllamaResult,
+      ratio,
+      goal_achieved: ratio !== null && ratio >= 1,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (e) {
+    report('fatal_error', { error: e.message, stack: e.stack });
+  }
+</script>
+</body>
+</html>

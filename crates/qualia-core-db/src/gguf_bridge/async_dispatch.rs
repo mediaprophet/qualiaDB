@@ -238,7 +238,14 @@ impl QTensorEngine {
         self.gpu_queue()
             .write_buffer(params_buf, 0, bytemuck::bytes_of(&params));
 
-        let bind_layout = self.pipeline.get_bind_group_layout(0);
+        let use_mmv = weight_ggml_type == crate::ggml_quants::GGML_TYPE_Q8_0
+            && (n_in % 32 == 0);
+        let active_pipeline = if use_mmv {
+            &self.mmv_q8_0_pipeline
+        } else {
+            &self.pipeline
+        };
+        let bind_layout = active_pipeline.get_bind_group_layout(0);
         let bind_group = self
             .gpu_device()
             .create_bind_group(&wgpu::BindGroupDescriptor {
@@ -276,9 +283,13 @@ impl QTensorEngine {
                 label: None,
                 timestamp_writes: crate::llm_gpu_profiler::pass_writes_both(),
             });
-            cpass.set_pipeline(&self.pipeline);
+            cpass.set_pipeline(active_pipeline);
             cpass.set_bind_group(0, &bind_group, &[0]);
-            cpass.dispatch_workgroups((n_out as u32 + 63) / 64, 1, 1);
+            if use_mmv {
+                cpass.dispatch_workgroups((n_out as u32 + 3) / 4, 1, 1);
+            } else {
+                cpass.dispatch_workgroups((n_out as u32 + 63) / 64, 1, 1);
+            }
         }
         let out_bytes = (n_out * 4) as wgpu::BufferAddress;
         encoder.copy_buffer_to_buffer(output_buf, 0, staging, 0, out_bytes);

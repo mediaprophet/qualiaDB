@@ -86,9 +86,16 @@
 <body>
     <div class="container">
         <h1>QualiaDB Native WebGPU Inference</h1>
-        <p>SmolLM2-360M (Q4_K_M) compiled Ahead-Of-Time to QualiaDB's zero-copy <code>P64</code>
+        <p>Models compiled Ahead-Of-Time to QualiaDB's zero-copy <code>P64</code>
         container, cached in OPFS, and executed entirely in-browser via the native WebGPU + WASM
         pipeline (Phase 5: parallel Q/K/V projection, single-submit forward, resident weights).</p>
+
+        <label for="modelSelect"><strong>Model:</strong></label>
+        <select id="modelSelect" style="padding:6px; font-size:14px; margin-bottom:12px; border-radius:4px; border:1px solid #ccc;">
+            <option value="smollm2-360m">SmolLM2-360M-Instruct (Q8_0, 386 MB)</option>
+            <option value="qwen3-0.6b">Qwen3-0.6B (Q4_K_M, 484 MB)</option>
+            <option value="llama-3.2-1b">Llama-3.2-1B-Instruct (Q4_K_M, 808 MB)</option>
+        </select>
 
         <div class="status-box" id="statusBox">
             <strong>System Status:</strong> <span id="sysStatus">Checking WebGPU support...</span>
@@ -102,7 +109,7 @@
         </div>
 
         <br><br>
-        <label for="promptInput"><strong>Prompt</strong> (greedy completion; SmolLM is tiny):</label><br>
+        <label for="promptInput"><strong>Prompt</strong> (greedy completion):</label><br>
         <input id="promptInput" type="text" value="The capital of France is"
                style="width:100%; padding:8px; margin-top:6px; font-size:15px; box-sizing:border-box;"><br><br>
         <button id="btnGenerate" disabled>2. Generate</button>
@@ -137,13 +144,47 @@
         const tpsEl = document.getElementById('tps');
         const spinner = document.getElementById('spinner');
 
-        // SmolLM2-360M Q4_K_M: coherent + the Phase 5 ~5.9 tok/s model. Same-origin first (local
-        // harness / GitHub Pages mirror), HuggingFace fallback.
-        const NAME = 'SmolLM2-360M-Instruct-Q8_0';
-        const MODEL_URLS = [
-            '../models/smollm2-360m-instruct-q8_0.gguf',
-            'https://huggingface.co/HuggingFaceTB/SmolLM2-360M-Instruct-GGUF/resolve/main/smollm2-360m-instruct-q8_0.gguf',
-        ];
+        const MODELS = {
+            'smollm2-360m': {
+                name: 'SmolLM2-360M-Instruct-Q8_0',
+                urls: [
+                    '../models/smollm2-360m-instruct-q8_0.gguf',
+                    'https://huggingface.co/HuggingFaceTB/SmolLM2-360M-Instruct-GGUF/resolve/main/smollm2-360m-instruct-q8_0.gguf',
+                ],
+            },
+            'qwen2.5-0.5b': {
+                name: 'Qwen2.5-0.5B-Instruct-Q4_K_M',
+                urls: [
+                    '../models/qwen2.5-0.5b-instruct-q4_k_m.gguf',
+                    'https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/qwen2.5-0.5b-instruct-q4_k_m.gguf',
+                ],
+            },
+            'qwen3-0.6b': {
+                name: 'Qwen3-0.6B-Q4_K_M',
+                urls: [
+                    '../models/qwen3-0.6b-q4_k_m.gguf',
+                    'https://huggingface.co/QuantFactory/Qwen3-0.6B-GGUF/resolve/main/Qwen3-0.6B.Q4_K_M.gguf',
+                ],
+            },
+            'llama-3.2-1b': {
+                name: 'Llama-3.2-1B-Instruct-Q4_K_M',
+                urls: [
+                    '../models/llama-3.2-1b-instruct-q4_k_m.gguf',
+                    'https://huggingface.co/unsloth/Llama-3.2-1B-Instruct-GGUF/resolve/main/Llama-3.2-1B-Instruct-Q4_K_M.gguf',
+                ],
+            },
+        };
+
+        const modelSelect = document.getElementById('modelSelect');
+        let NAME = MODELS['smollm2-360m'].name;
+        let MODEL_URLS = MODELS['smollm2-360m'].urls;
+
+        modelSelect.addEventListener('change', () => {
+            const m = MODELS[modelSelect.value];
+            NAME = m.name;
+            MODEL_URLS = m.urls;
+            log(`Selected model: ${NAME}`);
+        });
 
         function log(msg) {
             terminal.innerHTML += `\n> ${msg}`;

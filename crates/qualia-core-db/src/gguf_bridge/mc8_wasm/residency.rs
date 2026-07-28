@@ -131,6 +131,8 @@ impl QTensorEngine {
             stride[i] = s;
             total_bytes += s * n_layer as u64;
         }
+        // Drop the placeholder arena before allocating resident buffers to minimize peak GPU memory.
+        self.mc8_weight_arena = None;
         // Allocate the 7 resident role buffers (replaces the single-layer arena).
         let usage = wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST;
         let arena = {
@@ -175,6 +177,7 @@ impl QTensorEngine {
             }
         }
         self.mc8_weights_resident = true;
+        self.mc8_bg_cache.lock().ok().map(|mut c| c.clear());
         wlog(&format!(
             "[MC8] resident weights uploaded once: {:.1} MB across {} layers (Part 3x)",
             total_bytes as f64 / (1024.0 * 1024.0),

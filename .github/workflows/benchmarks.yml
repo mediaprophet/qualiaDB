@@ -110,7 +110,7 @@ jobs:
 
       - name: Build Qualia WASM for comparative harness
         env:
-          RUSTFLAGS: "-C target-feature=+simd128"
+          RUSTFLAGS: "-C target-feature=+simd128 -C link-arg=-zstack-size=8388608 -C link-arg=--max-memory=4294967296"
         run: |
           rustup target add wasm32-unknown-unknown
           wasm-pack build crates/qualia-core-db \
@@ -236,7 +236,7 @@ jobs:
 
       - name: Install wasm-pack and build Qualia WASM
         env:
-          RUSTFLAGS: "-C target-feature=+simd128"
+          RUSTFLAGS: "-C target-feature=+simd128 -C link-arg=-zstack-size=8388608 -C link-arg=--max-memory=4294967296"
         run: |
           cargo install wasm-pack --locked --version 0.13.1 --force
           rustup target add wasm32-unknown-unknown

@@ -1515,6 +1515,298 @@ impl QTensorEngine {
         ran
     }
 
+    /// Fused forward + output norm + argmax in a single encoder/submit/readback.
+    /// Eliminates 1 of 2 GPU round-trips per token vs the separate forward+argmax path.
+    #[cfg(target_arch = "wasm32")]
+    pub async fn dispatch_forward_and_argmax_fused_async(
+        &mut self,
+        index: &crate::gguf_sharder::GgufTensorIndex,
+        hidden: &mut [f32],
+        emb_dim: usize,
+        token_idx: u32,
+        max_layers: u32,
+        chunk_logits: &mut [f32],
+        max_chunks: u32,
+    ) -> Option<StreamingArgmaxResult> {
+        let n_layer = index.hyperparams.n_layer;
+        if n_layer == 0 || !self.mc8_buffers_ready() {
+            return None;
+        }
+        if self.prefill_work_buf_a.is_none() || self.prefill_work_buf_b.is_none() {
+            return None;
+        }
+        if !self.mc8_weights_resident {
+            let _ = self.mc8_upload_all_resident_weights(index);
+        }
+        let limit = if max_layers == 0 { n_layer } else { max_layers.min(n_layer) };
+        let n_embd = index.hyperparams.n_embd as usize;
+        if emb_dim < n_embd || n_embd > hidden.len() || n_embd > self.gemm_max_input_floats {
+            return None;
+        }
+        let prefill_scratch = self.prefill_scratch_buf.as_ref()?;
+        let batch_buf = self.gemm_input_buf.as_ref().unwrap();
+        let norm_buf = self.norm_weight_buf.as_ref().unwrap();
+        let mmap = self.gguf_mmap.as_deref()?;
+        let layout = self.kv_layout?;
+
+        // Upload hidden to batch_buf
+        self.gpu_queue()
+            .write_buffer(batch_buf, 0, bytemuck::cast_slice(&hidden[..n_embd]));
+
+        // === Forward pass (same as dispatch_transformer_forward_async but without flush) ===
+        let n_tokens = 1u32;
+        let mut ran = 0u32;
+        let mut layer_uniform_cursors = Mc8ChunkUniformCursors {
+            attn: 0,
+            elem: 0,
+            gemm: 0,
+        };
+        let mut enc = WasmGpuPipeline::begin(self);
+        for layer in 0..limit {
+            if layer > 0 && (layer % MC8_LAYERS_PER_ENCODER) == 0 {
+                self.mc8_flush(&mut enc);
+                layer_uniform_cursors.reset();
+            }
+            let tensors = index.get_layer_tensors(layer);
+            let k_info = match tensors.attn_k.as_ref() { Some(i) => i, None => break };
+            let v_info = match tensors.attn_v.as_ref() { Some(i) => i, None => break };
+            let k_raw = match crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, k_info) {
+                Ok(s) => s, Err(_) => break,
+            };
+            let v_raw = match crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, v_info) {
+                Ok(s) => s, Err(_) => break,
+            };
+            let h = index.hyperparams;
+            let n_kv = h.effective_n_kv_head();
+            let used_attn_norm = tensors.attn_norm.is_some();
+            let (uniforms, geom) = match self.mc8_stage_prefill_layer_super_arena(
+                index, layer, &tensors, token_idx, n_tokens, emb_dim, used_attn_norm,
+                k_info, &k_raw, v_info, &v_raw, &mut layer_uniform_cursors,
+            ) {
+                Some(v) => v, None => break,
+            };
+            let attn_src = if used_attn_norm {
+                if let (Some(norm), Some(off)) = (tensors.attn_norm.as_ref(), uniforms.attn_norm_elem_off) {
+                    let (norm_b, norm_b_off) = match self.mc8_norm_source(mmap, index.tensor_data_start, norm, n_embd, layer, false) {
+                        Some(v) => v, None => break,
+                    };
+                    self.encode_elem_offset(
+                        &mut enc,
+                        ELEM_OP_RMS_NORM,
+                        n_embd as u32,
+                        n_tokens,
+                        batch_buf,
+                        0,
+                        geom.batch_in_bytes,
+                        norm_b,
+                        norm_b_off,
+                        geom.n_embd_bytes,
+                        prefill_scratch,
+                        0,
+                        geom.batch_in_bytes,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        off,
+                    );
+                }
+                prefill_scratch
+            } else {
+                batch_buf
+            };
+            let n_kv_wg = n_tokens.saturating_mul(n_kv);
+            let kv_dim = (n_kv * h.head_dim()) as usize;
+            let kv_proj_bytes = (kv_dim * n_tokens as usize * 4) as wgpu::BufferAddress;
+            let k_proj = self.mc8_k_proj_buf.as_ref().unwrap();
+            let v_proj = self.mc8_v_proj_buf.as_ref().unwrap();
+            if !self.encode_gemm_bufs_offset(
+                &mut enc, k_info, k_raw, n_embd, kv_dim,
+                attn_src, 0, geom.batch_in_bytes,
+                k_proj, 0, kv_proj_bytes, n_tokens,
+                n_embd as u32, kv_dim as u32, uniforms.off_k_gemm, layer, Mc8WeightRole::AttnK,
+            ) { break; }
+            if !self.encode_gemm_bufs_offset(
+                &mut enc, v_info, v_raw, n_embd, kv_dim,
+                attn_src, 0, geom.batch_in_bytes,
+                v_proj, 0, kv_proj_bytes, n_tokens,
+                n_embd as u32, kv_dim as u32, uniforms.off_v_gemm, layer, Mc8WeightRole::AttnV,
+            ) { break; }
+            if !self.encode_attention_pass_gpu(
+                &mut enc, k_proj, self.gemm_output_buf.as_ref().unwrap(), n_embd, n_tokens,
+                token_idx, &layout, layer, token_idx, &h, k_info, k_raw, 1, n_kv_wg, uniforms.k_off, Mc8WeightRole::AttnK,
+            ) { break; }
+            if !self.encode_attention_pass_gpu(
+                &mut enc, v_proj, self.gemm_output_buf.as_ref().unwrap(), n_embd, n_tokens,
+                token_idx, &layout, layer, token_idx, &h, v_info, v_raw, 2, n_kv_wg, uniforms.v_off, Mc8WeightRole::AttnV,
+            ) { break; }
+            let work_a = self.prefill_work_buf_a.as_ref().unwrap();
+            let work_b = self.prefill_work_buf_b.as_ref().unwrap();
+            if !self.encode_prefill_q_ffn_tail_fused(
+                &mut enc, index, layer, &tensors, batch_buf, attn_src, work_a, work_b,
+                n_tokens, token_idx, emb_dim, used_attn_norm, &uniforms, &geom,
+            ) { break; }
+            ran += 1;
+        }
+        if ran == 0 {
+            self.mc8_flush(&mut enc);
+            return None;
+        }
+
+        // === Output norm on GPU ===
+        let output_norm_info = match index.output_norm_info() {
+            Some(i) => i,
+            None => {
+                // No output norm — just read hidden and fall back to CPU argmax
+                self.mc8_flush(&mut enc);
+                if !self.pipeline_read_hidden(emb_dim, hidden).await {
+                    return None;
+                }
+                return None; // caller will use separate argmax
+            }
+        };
+        // Upload output norm weights to norm_weight_buf
+        let mut norm_w = [0f32; MAX_HIDDEN_DIM];
+        if dequant_norm_row_into(mmap, index.tensor_data_start, output_norm_info, &mut norm_w) < n_embd {
+            self.mc8_flush(&mut enc);
+            return None;
+        }
+        self.gpu_queue()
+            .write_buffer(norm_buf, 0, bytemuck::cast_slice(&norm_w[..n_embd]));
+        // RMS norm: read from batch_buf, write to prefill_scratch
+        let n_embd_bytes = (n_embd * 4) as wgpu::BufferAddress;
+        self.encode_elem_offset(
+            &mut enc, ELEM_OP_RMS_NORM, n_embd as u32, 1,
+            batch_buf, 0, n_embd_bytes,
+            norm_buf, 0, n_embd_bytes,
+            prefill_scratch, 0, n_embd_bytes,
+            0, 0, 0, 0, 0, 0, 0,
+        );
+        // Copy normed hidden back to batch_buf for argmax GEMM input
+        enc.encoder.copy_buffer_to_buffer(prefill_scratch, 0, batch_buf, 0, n_embd_bytes);
+
+        // === Batched argmax in same encoder ===
+        let resident_buf = self.mc8_logits_resident_buf.as_ref()?;
+        let row_bytes = self.mc8_logits_row_bytes as u64;
+        let output_buf = self.gemm_output_buf.as_ref().unwrap();
+        let params_buf = self.gemm_params_buf.as_ref().unwrap();
+        let staging = self.gemm_output_staging.as_ref().unwrap();
+        let logits_info = index.logits_projection_info()?;
+        let (n_in, vocab_size) = Self::matmul_dims(logits_info);
+        if n_in == 0 || vocab_size == 0 || n_in > emb_dim {
+            self.mc8_flush(&mut enc);
+            return None;
+        }
+        let full_chunks = vocab_size.div_ceil(VOCAB_CHUNK_ROWS);
+        let n_chunks = if max_chunks == 0 { full_chunks } else { (max_chunks as usize).min(full_chunks) };
+        let params = GemmGpuParams {
+            n_in: n_in as u32,
+            n_out: VOCAB_CHUNK_ROWS as u32,
+            weight_ggml_type: logits_info.ggml_type,
+            weight_row_elems: logits_info.dims[0] as u32,
+            weight_byte_len: (VOCAB_CHUNK_ROWS as u64 * row_bytes) as u32,
+            n_batch: 1, in_row_stride: 0, out_row_stride: 0,
+        };
+        self.gpu_queue()
+            .write_buffer(params_buf, 0, bytemuck::bytes_of(&params));
+        #[cfg(target_arch = "wasm32")]
+        let use_mmv_q8_0 = logits_info.ggml_type == crate::ggml_quants::GGML_TYPE_Q8_0
+            && (n_in % 32 == 0);
+        #[cfg(target_arch = "wasm32")]
+        let logits_pipeline: &wgpu::ComputePipeline = if use_mmv_q8_0 {
+            &self.mmv_q8_0_pipeline
+        } else {
+            &self.pipeline
+        };
+        #[cfg(not(target_arch = "wasm32"))]
+        let logits_pipeline: &wgpu::ComputePipeline = &self.pipeline;
+        let bind_layout = logits_pipeline.get_bind_group_layout(0);
+        let staging_capacity = (staging.size() / 4) as usize;
+        for chunk_idx in 0..n_chunks {
+            let row_start = chunk_idx * VOCAB_CHUNK_ROWS;
+            let chunk_rows = VOCAB_CHUNK_ROWS.min(vocab_size - row_start);
+            let weight = wgpu::BindingResource::Buffer(wgpu::BufferBinding {
+                buffer: resident_buf,
+                offset: row_start as u64 * row_bytes,
+                size: std::num::NonZeroU64::new(chunk_rows as u64 * row_bytes),
+            });
+            let key = mc8_bg_hash(&[
+                7, chunk_idx as u64, row_start as u64, row_bytes as u64,
+                chunk_rows as u64, resident_buf as *const _ as u64,
+                batch_buf as *const _ as u64, output_buf as *const _ as u64,
+            ]);
+            let bind_group = {
+                let cached = self.mc8_bg_cache.lock().ok().and_then(|c| c.get(&key).cloned());
+                match cached {
+                    Some(bg) => bg,
+                    None => {
+                        let bg = self.gpu_device().create_bind_group(&wgpu::BindGroupDescriptor {
+                            label: Some("FusedArgmaxBind"),
+                            layout: &bind_layout,
+                            entries: &[
+                                wgpu::BindGroupEntry { binding: 0, resource: batch_buf.as_entire_binding() },
+                                wgpu::BindGroupEntry { binding: 1, resource: weight },
+                                wgpu::BindGroupEntry { binding: 2, resource: Self::mc8_dynamic_uniform_binding(params_buf) },
+                                wgpu::BindGroupEntry { binding: 3, resource: output_buf.as_entire_binding() },
+                            ],
+                        });
+                        if let Ok(mut c) = self.mc8_bg_cache.lock() {
+                            c.insert(key, bg.clone());
+                        }
+                        bg
+                    }
+                }
+            };
+            {
+                let mut cpass = enc.encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+                    label: None, timestamp_writes: None,
+                });
+                cpass.set_pipeline(logits_pipeline);
+                cpass.set_bind_group(0, &bind_group, &[0]);
+                #[cfg(target_arch = "wasm32")]
+                if use_mmv_q8_0 {
+                    cpass.dispatch_workgroups((chunk_rows as u32 + 3) / 4, 1, 1);
+                } else {
+                    cpass.dispatch_workgroups((chunk_rows as u32 + 63) / 64, 1, 1);
+                }
+                #[cfg(not(target_arch = "wasm32"))]
+                cpass.dispatch_workgroups((chunk_rows as u32 + 63) / 64, 1, 1);
+            }
+            let chunk_bytes = (chunk_rows * 4) as wgpu::BufferAddress;
+            let staging_off = (chunk_idx * VOCAB_CHUNK_ROWS * 4) as wgpu::BufferAddress;
+            if staging_off + chunk_bytes <= staging.size() {
+                enc.encoder.copy_buffer_to_buffer(output_buf, 0, staging, staging_off, chunk_bytes);
+            }
+        }
+
+        // Single submit + single readback
+        self.gpu_queue().submit(Some(enc.encoder.finish()));
+
+        let total_floats = (n_chunks * VOCAB_CHUNK_ROWS).min(staging_capacity);
+        let total_bytes = (total_floats * 4) as wgpu::BufferAddress;
+        let slice = staging.slice(..total_bytes);
+        if !await_wgpu_map(slice).await {
+            let _ = staging.unmap();
+            return None;
+        }
+        let data = slice.get_mapped_range().expect("wgpu buffer map_range failed");
+        let all_floats: &[f32] = bytemuck::cast_slice(&data);
+        let mut best_token_id = 0u32;
+        let mut max_logit = f32::NEG_INFINITY;
+        for chunk_idx in 0..n_chunks {
+            let row_start = chunk_idx * VOCAB_CHUNK_ROWS;
+            let chunk_rows = VOCAB_CHUNK_ROWS.min(vocab_size - row_start);
+            let chunk_data = &all_floats[chunk_idx * VOCAB_CHUNK_ROWS..chunk_idx * VOCAB_CHUNK_ROWS + chunk_rows];
+            update_streaming_argmax(chunk_data, chunk_rows, chunk_idx, &mut best_token_id, &mut max_logit);
+        }
+        drop(data);
+        staging.unmap();
+        if max_logit == f32::NEG_INFINITY { return None; }
+        Some(StreamingArgmaxResult { best_token_id, max_logit })
+    }
+
     /// Topological speculative verify — accept longest draft prefix (B3.1d).
     pub fn verify_topology_draft_batch(
         &mut self,

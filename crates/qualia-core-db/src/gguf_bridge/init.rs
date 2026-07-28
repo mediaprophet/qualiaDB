@@ -112,6 +112,9 @@ impl QTensorEngine {
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("Fused Transformer Shader"),
             source: wgpu::ShaderSource::Wgsl(
+                #[cfg(target_arch = "wasm32")]
+                include_str!("../shaders/wasm/fused_transformer.wgsl").into(),
+                #[cfg(not(target_arch = "wasm32"))]
                 include_str!("../shaders/fused_transformer.wgsl").into(),
             ),
         });
@@ -250,10 +253,19 @@ impl QTensorEngine {
 
         #[cfg(target_arch = "wasm32")]
         let pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-            label: Some("Fused Transformer Pipeline"),
+            label: Some("Fused Transformer Pipeline (WASM)"),
             layout: Some(&mc8_gemm_pipeline_layout),
             module: &shader,
             entry_point: Some("main"),
+            compilation_options: Default::default(),
+            cache: native_pipeline_cache.as_ref(),
+        });
+        #[cfg(target_arch = "wasm32")]
+        let mmv_q8_0_pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+            label: Some("MulMatVec Q8_0 Pipeline (WASM)"),
+            layout: Some(&mc8_gemm_pipeline_layout),
+            module: &shader,
+            entry_point: Some("mul_mat_vec_q8_0"),
             compilation_options: Default::default(),
             cache: native_pipeline_cache.as_ref(),
         });
@@ -687,12 +699,13 @@ impl QTensorEngine {
         #[cfg(target_arch = "wasm32")]
         let mc8_ffn_fused_pipeline = {
             // Modular WGSL: shared scaffold + per-role dequant instances composed at runtime.
-            let tpl = include_str!("../shaders/dequant_template.wgsl");
+            let tpl = include_str!("../shaders/wasm/dequant_template.wgsl");
             let gate_fns = tpl.replace("$W", "gate_words").replace("$S", "_gate");
             let up_fns = tpl.replace("$W", "up_words").replace("$S", "_up");
-            let base = include_str!("../shaders/fused_ffn.wgsl");
+            let base = include_str!("../shaders/wasm/fused_ffn.wgsl");
             // Inject the per-role dequant math at the marker (between shared helpers and
             // the entry point) so declarations precede their uses.
+            // WASM copy already has subgroup entry points stripped — no runtime filtering needed.
             let src = base.replace("// @@DEQUANT_FUNCTIONS@@", &format!("{gate_fns}\n{up_fns}"));
             let module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
                 label: Some("FusedFFNExpansion"),
@@ -1136,6 +1149,8 @@ impl QTensorEngine {
             #[cfg(target_arch = "wasm32")]
             queue: wasm_queue,
             pipeline,
+            #[cfg(target_arch = "wasm32")]
+            mmv_q8_0_pipeline,
             #[cfg(not(target_arch = "wasm32"))]
             native_pipeline_cache,
             #[cfg(not(target_arch = "wasm32"))]
@@ -1167,6 +1182,12 @@ impl QTensorEngine {
             #[cfg(target_os = "windows")]
             dml: dml_status,
             gguf_mmap: None,
+            #[cfg(target_arch = "wasm32")]
+            cached_tokenizer: None,
+            #[cfg(target_arch = "wasm32")]
+            cached_tensor_index: None,
+            #[cfg(target_arch = "wasm32")]
+            cached_token_embd: None,
             #[cfg(target_arch = "wasm32")]
             p64_resident: None,
             #[cfg(not(target_arch = "wasm32"))]
@@ -1278,6 +1299,8 @@ impl QTensorEngine {
             mc8_norm_resident_buf: None,
             #[cfg(target_arch = "wasm32")]
             mc8_norm_stride: 0,
+            #[cfg(target_arch = "wasm32")]
+            mc8_bg_cache: std::sync::Mutex::new(std::collections::HashMap::new()),
         };
         // Exercise the CPU elementwise oracle (ReLU) once at engine init so the fallback
         // path stays linked when GPU elem kernels are unavailable.
@@ -1635,22 +1658,26 @@ impl QTensorEngine {
         #[cfg(target_arch = "wasm32")]
         {
             let weight_usage = wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST;
-            let mk = |label: &str| {
+            // Initial arena buffers are placeholders — mc8_upload_all_resident_weights replaces
+            // them with properly-sized per-role buffers. Using minimal size here avoids a
+            // transient GPU memory peak of 7 × w_bytes (~336 MB for SmolLM2-360M Q8_0) that
+            // coexists with the resident buffers during the async swap, causing WebGPU OOM.
+            let arena_min = 4u64;
+            let mk_arena = |label: &str| {
                 self.gpu_device().create_buffer(&wgpu::BufferDescriptor {
                     label: Some(label),
-                    size: w_bytes,
+                    size: arena_min,
                     usage: weight_usage,
                     mapped_at_creation: false,
                 })
             };
-            let qkv_k = mk("MC8WeightAttnK");
-            let qkv_v = mk("MC8WeightAttnV");
-            let qkv_q = mk("MC8WeightAttnQ");
-            let o_proj = mk("MC8WeightOProj");
-            let gate = mk("MC8WeightGate");
-            let up = mk("MC8WeightUp");
-            let down = mk("MC8WeightDown");
-            let weight_b = mk("LayerGemmWeightB");
+            let qkv_k = mk_arena("MC8WeightAttnK");
+            let qkv_v = mk_arena("MC8WeightAttnV");
+            let qkv_q = mk_arena("MC8WeightAttnQ");
+            let o_proj = mk_arena("MC8WeightOProj");
+            let gate = mk_arena("MC8WeightGate");
+            let up = mk_arena("MC8WeightUp");
+            let down = mk_arena("MC8WeightDown");
             self.mc8_weight_arena = Some(Mc8WeightArenaBufs {
                 qkv_k,
                 qkv_v,
@@ -1660,7 +1687,16 @@ impl QTensorEngine {
                 up,
                 down,
             });
-            self.gemm_weight_buf_b = Some(weight_b);
+            // gemm_weight_buf_b is a legacy decode-path ping-pong that is never read;
+            // allocate at minimal size to avoid wasting GPU memory.
+            self.gemm_weight_buf_b = Some(
+                self.gpu_device().create_buffer(&wgpu::BufferDescriptor {
+                    label: Some("LayerGemmWeightB"),
+                    size: arena_min,
+                    usage: weight_usage,
+                    mapped_at_creation: false,
+                }),
+            );
         }
         self.gemm_output_buf = Some(self.gpu_device().create_buffer(&wgpu::BufferDescriptor {
             label: Some("LayerGemmOutput"),

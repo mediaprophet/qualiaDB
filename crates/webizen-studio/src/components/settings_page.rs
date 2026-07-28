@@ -50,6 +50,22 @@ struct AgentConfigSnapshot {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+struct ModelInfoSnapshot {
+    name: String,
+    is_active: bool,
+    avatar_type: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+struct ProgressPayloadSnapshot {
+    id: String,
+    progress: f64,
+    downloaded_bytes: u64,
+    total_bytes: u64,
+    speed_kbps: f64,
+    status: String,
+}
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 struct QpuSettingsSnapshot {
     enabled: bool,
     providers: Vec<QpuProviderConfig>,
@@ -295,6 +311,16 @@ pub fn SettingsPage() -> Element {
     let mut is_saving = use_signal(|| false);
     let mut qpu_save_state = use_signal(String::new);
     let mut is_qpu_saving = use_signal(|| false);
+    let models = use_signal(Vec::<ModelInfoSnapshot>::new);
+    let mut _active_model = use_signal(String::new);
+    let model_status = use_signal(String::new);
+    let mut dl_url = use_signal(String::new);
+    let mut dl_filename = use_signal(String::new);
+    let mut dl_model_id = use_signal(String::new);
+    #[cfg_attr(not(target_arch = "wasm32"), allow(unused_mut))]
+    let mut downloads = use_signal(Vec::<ProgressPayloadSnapshot>::new);
+    #[cfg_attr(not(target_arch = "wasm32"), allow(unused_mut))]
+    let mut models_loaded = use_signal(|| false);
     #[cfg(not(target_arch = "wasm32"))]
     let _ = load_started;
 
@@ -698,6 +724,263 @@ pub fn SettingsPage() -> Element {
                     }
                 }
 
+                div {
+                    class: "panel-card",
+                    style: PANEL_STYLE,
+                    div { style: "display: flex; align-items: flex-start; justify-content: space-between; gap: 0.75rem; margin-bottom: 1rem;",
+                        div {
+                            h2 {
+                                style: "margin: 0 0 0.2rem 0; font-size: 0.95rem; font-weight: 650; color: var(--qualia-text);",
+                                "Models"
+                            }
+                            p {
+                                style: "margin: 0; font-size: 0.73rem; color: var(--qualia-text-muted); line-height: 1.5;",
+                                "Find GGUF/P64 models on disk, activate them, or download new ones from a URL."
+                            }
+                        }
+                        span {
+                            style: "display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.64rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--qualia-accent); background: var(--qualia-accent-glow); border: 1px solid var(--qualia-border); border-radius: 999px; padding: 0.18rem 0.45rem;",
+                            "Local"
+                        }
+                    }
+                    div { style: "display: flex; flex-direction: column; gap: 0.95rem;",
+
+                        // Model directory info
+                        div {
+                            style: "padding: 0.7rem 0.8rem; background: rgba(128,128,128,0.05); border: 1px solid var(--qualia-border); border-radius: 10px;",
+                            div {
+                                style: "font-size: 0.76rem; font-weight: 600; color: var(--qualia-text); margin-bottom: 0.25rem;",
+                                "Model directory"
+                            }
+                            p {
+                                style: "margin: 0; font-size: 0.72rem; color: var(--qualia-text-muted); line-height: 1.45;",
+                                if config_snapshot.storage_path.is_empty() {
+                                    "Set a storage path in the General panel first."
+                                } else {
+                                    "{config_snapshot.storage_path}\\Models"
+                                }
+                            }
+                        }
+
+                        // Scan local models
+                        div {
+                            style: "display: flex; align-items: center; gap: 0.6rem;",
+                            button {
+                                disabled: !desktop_surface,
+                                onclick: move |_| {
+                                    #[cfg(target_arch = "wasm32")]
+                                    {
+                                        let mut models = models;
+                                        let mut active_model = _active_model;
+                                        let mut model_status = model_status;
+                                        spawn(async move {
+                                            model_status.set("Scanning...".to_string());
+                                            match invoke_tauri_json::<Vec<ModelInfoSnapshot>>("discover_models", json!({})).await {
+                                                Ok(list) => {
+                                                    let active = list.iter().find(|m| m.is_active).map(|m| m.name.clone());
+                                                    if let Some(a) = active { _active_model.set(a); }
+                                                    model_status.set(format!("{} model(s) found.", list.len()));
+                                                    models.set(list);
+                                                }
+                                                Err(e) => model_status.set(format!("Scan failed: {e}")),
+                                            }
+                                            models_loaded.set(true);
+                                        });
+                                    }
+                                },
+                                style: "background: var(--qualia-accent); color: white; border: none; border-radius: 8px; padding: 0.5rem 0.8rem; font-size: 0.78rem; font-weight: 700; cursor: pointer;",
+                                "Scan local models"
+                            }
+                            if !model_status().is_empty() {
+                                span { style: "font-size: 0.72rem; color: var(--qualia-text-muted);", "{model_status()}" }
+                            }
+                        }
+
+                        // Model list
+                        if !models().is_empty() {
+                            div {
+                                style: "display: flex; flex-direction: column; gap: 0.4rem; max-height: 220px; overflow-y: auto;",
+                                for model in models().clone().into_iter() {
+                                    div {
+                                        style: "display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; padding: 0.5rem 0.7rem; background: rgba(128,128,128,0.04); border: 1px solid var(--qualia-border); border-radius: 8px;",
+                                        div {
+                                            style: "display: flex; align-items: center; gap: 0.4rem;",
+                                            span {
+                                                style: "font-size: 0.75rem; font-weight: 600; color: var(--qualia-text);",
+                                                "{model.name}"
+                                            }
+                                            if model.is_active {
+                                                span {
+                                                    style: "font-size: 0.6rem; font-weight: 700; color: var(--qualia-accent); background: var(--qualia-accent-glow); border-radius: 999px; padding: 0.1rem 0.35rem;",
+                                                    "ACTIVE"
+                                                }
+                                            }
+                                        }
+                                        if !model.is_active {
+                                            button {
+                                                style: "font-size: 0.68rem; font-weight: 700; background: rgba(128,128,128,0.1); border: 1px solid var(--qualia-border); border-radius: 6px; padding: 0.25rem 0.5rem; cursor: pointer; color: var(--qualia-text);",
+                                                onclick: move |_| {
+                                                    #[cfg(target_arch = "wasm32")]
+                                                    {
+                                                        let name = model.name.clone();
+                                                        let mut active_model = _active_model;
+                                                        let mut model_status = model_status;
+                                                        spawn(async move {
+                                                            match invoke_tauri_json::<()>("set_active_model", json!({ "modelName": name })).await {
+                                                                Ok(_) => {
+                                                                    active_model.set(name.clone());
+                                                                    model_status.set(format!("Activated: {name}"));
+                                                                }
+                                                                Err(e) => model_status.set(format!("Activate failed: {e}")),
+                                                            }
+                                                        });
+                                                    }
+                                                },
+                                                "Activate"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        } else if models_loaded() {
+                            p {
+                                style: "font-size: 0.72rem; color: var(--qualia-text-muted); margin: 0;",
+                                "No GGUF/P64 models found. Download one below or place a .gguf file in your Models directory."
+                            }
+                        }
+
+                        // Download from URL
+                        div {
+                            style: "border-top: 1px solid var(--qualia-border); padding-top: 0.8rem; margin-top: 0.2rem;",
+                            div {
+                                style: "font-size: 0.78rem; font-weight: 600; color: var(--qualia-text); margin-bottom: 0.5rem;",
+                                "Download a model from URL"
+                            }
+                            div {
+                                style: "display: flex; flex-direction: column; gap: 0.4rem;",
+                                input {
+                                    r#type: "text",
+                                    value: "{dl_url()}",
+                                    placeholder: "https://example.com/model.gguf",
+                                    disabled: !desktop_surface,
+                                    oninput: move |evt: Event<FormData>| dl_url.set(evt.value()),
+                                    style: FIELD_STYLE,
+                                }
+                                input {
+                                    r#type: "text",
+                                    value: "{dl_filename()}",
+                                    placeholder: "model.gguf",
+                                    disabled: !desktop_surface,
+                                    oninput: move |evt: Event<FormData>| dl_filename.set(evt.value()),
+                                    style: FIELD_STYLE,
+                                }
+                                input {
+                                    r#type: "text",
+                                    value: "{dl_model_id()}",
+                                    placeholder: "model-id (auto if blank)",
+                                    disabled: !desktop_surface,
+                                    oninput: move |evt: Event<FormData>| dl_model_id.set(evt.value()),
+                                    style: FIELD_STYLE,
+                                }
+                                button {
+                                    disabled: !desktop_surface || dl_url().trim().is_empty() || dl_filename().trim().is_empty(),
+                                    onclick: move |_| {
+                                        #[cfg(target_arch = "wasm32")]
+                                        {
+                                            let url = dl_url().clone();
+                                            let filename = dl_filename().clone();
+                                            let model_id = if dl_model_id().trim().is_empty() {
+                                                filename.clone()
+                                            } else {
+                                                dl_model_id().clone()
+                                            };
+                                            let mut model_status = model_status;
+                                            spawn(async move {
+                                                match invoke_tauri_json::<String>("download_model", json!({
+                                                    "url": url,
+                                                    "filename": filename,
+                                                    "modelId": model_id
+                                                })).await {
+                                                    Ok(msg) => model_status.set(msg),
+                                                    Err(e) => model_status.set(format!("Download failed: {e}")),
+                                                }
+                                            });
+                                        }
+                                    },
+                                    style: "background: var(--qualia-accent); color: white; border: none; border-radius: 8px; padding: 0.5rem 0.8rem; font-size: 0.78rem; font-weight: 700; cursor: pointer;",
+                                    "Start download"
+                                }
+                            }
+                        }
+
+                        // Active downloads
+                        {
+                            use_effect(move || {
+                                #[cfg(target_arch = "wasm32")]
+                                {
+                                    if !desktop_surface { return; }
+                                    spawn(async move {
+                                        loop {
+                                            if let Ok(list) = invoke_tauri_json::<Vec<ProgressPayloadSnapshot>>("get_active_downloads", json!({})).await {
+                                                downloads.set(list);
+                                            }
+                                            gloo_timers::future::sleep(std::time::Duration::from_secs(2)).await;
+                                        }
+                                    });
+                                }
+                            });
+                        }
+                        if !downloads().is_empty() {
+                            div {
+                                style: "display: flex; flex-direction: column; gap: 0.4rem;",
+                                div {
+                                    style: "font-size: 0.76rem; font-weight: 600; color: var(--qualia-text);",
+                                    "Active downloads"
+                                }
+                                for dl in downloads().clone().into_iter() {
+                                    div {
+                                        style: "padding: 0.5rem 0.7rem; background: rgba(128,128,128,0.04); border: 1px solid var(--qualia-border); border-radius: 8px;",
+                                        div {
+                                            style: "display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.3rem;",
+                                            span { style: "font-size: 0.72rem; font-weight: 600; color: var(--qualia-text);", "{dl.id}" }
+                                            span { style: "font-size: 0.68rem; color: var(--qualia-text-muted);", "{dl.status}" }
+                                        }
+                                        div {
+                                            style: "height: 6px; background: rgba(128,128,128,0.12); border-radius: 999px; overflow: hidden; margin-bottom: 0.25rem;",
+                                            div {
+                                                style: "height: 100%; width: {dl.progress}%; background: var(--qualia-accent); transition: width 0.3s ease;",
+                                            }
+                                        }
+                                        div {
+                                            style: "display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;",
+                                            span {
+                                                style: "font-size: 0.66rem; color: var(--qualia-text-muted);",
+                                                "{dl.downloaded_bytes} / {dl.total_bytes} bytes - {dl.speed_kbps} KB/s"
+                                            }
+                                            button {
+                                                style: "font-size: 0.66rem; font-weight: 700; background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.3); border-radius: 6px; padding: 0.2rem 0.45rem; cursor: pointer; color: #ef4444;",
+                                                onclick: move |_| {
+                                                    #[cfg(target_arch = "wasm32")]
+                                                    {
+                                                        let id = dl.id.clone();
+                                                        let mut model_status = model_status;
+                                                        spawn(async move {
+                                                            match invoke_tauri_json::<()>("cancel_download", json!({ "id": id })).await {
+                                                                Ok(_) => model_status.set("Download cancelled.".to_string()),
+                                                                Err(e) => model_status.set(format!("Cancel failed: {e}")),
+                                                            }
+                                                        });
+                                                    }
+                                                },
+                                                "Cancel"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
                 div {
                     class: "panel-card",
                     style: PANEL_STYLE,

@@ -159,10 +159,17 @@ pub fn WellfairSocialBookPanel() -> Element {
             .parse::<u64>()
             .ok()
             .map(|days| {
-                let now = std::time::SystemTime::now()
-                    .duration_since(std::time::UNIX_EPOCH)
-                    .map(|d| d.as_secs())
-                    .unwrap_or(0);
+                let now = {
+                    #[cfg(target_arch = "wasm32")]
+                    { js_sys::Date::now() as u64 / 1000 }
+                    #[cfg(not(target_arch = "wasm32"))]
+                    {
+                        std::time::SystemTime::now()
+                            .duration_since(std::time::UNIX_EPOCH)
+                            .map(|d| d.as_secs())
+                            .unwrap_or(0)
+                    }
+                };
                 now + days * 86_400
             });
         let draft = ConsentGrantDraft {

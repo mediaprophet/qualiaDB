@@ -88,6 +88,18 @@ pub const KV_ATTENTION_MASK_WORDS: usize = crate::compute_universe::KV_ATTENTION
 
 // ElemGpuParams + ELEM_OP_* codes moved to `gpu_params` (see submodule declarations above).
 
+/// FNV-1a hash for bind group cache keys.
+#[cfg(target_arch = "wasm32")]
+#[inline]
+pub(crate) fn mc8_bg_hash(parts: &[u64]) -> u64 {
+    let mut h: u64 = 0xcbf29ce484222325;
+    for &p in parts {
+        h ^= p;
+        h = h.wrapping_mul(0x100000001b3);
+    }
+    h
+}
+
 /// MC8 Part 3s: WebGPU dynamic uniform offsets must be multiples of 256 bytes.
 #[cfg(target_arch = "wasm32")]
 pub(crate) const MC8_UNIFORM_ALIGN: usize = 256;
@@ -1085,6 +1097,9 @@ pub struct QTensorEngine {
     #[cfg(target_arch = "wasm32")]
     queue: wgpu::Queue,
     pub pipeline: wgpu::ComputePipeline,
+    /// WASM multi-row Q8_0 GEMV (llama.cpp-style: 64 thr, 4 rows/WG, u32 packed reads).
+    #[cfg(target_arch = "wasm32")]
+    pub mmv_q8_0_pipeline: wgpu::ComputePipeline,
     #[cfg(not(target_arch = "wasm32"))]
     native_pipeline_cache: Option<wgpu::PipelineCache>,
     #[cfg(not(target_arch = "wasm32"))]
@@ -1127,6 +1142,15 @@ pub struct QTensorEngine {
     pub gguf_mmap: Option<Arc<memmap2::Mmap>>,
     #[cfg(target_arch = "wasm32")]
     pub gguf_mmap: Option<Arc<[u8]>>,
+    /// WASM: cached tokenizer extracted from gguf_mmap before dropping it.
+    #[cfg(target_arch = "wasm32")]
+    pub cached_tokenizer: Option<crate::gguf_sharder::GgufTokenizer>,
+    /// WASM: cached tensor index extracted from gguf_mmap before dropping it.
+    #[cfg(target_arch = "wasm32")]
+    pub cached_tensor_index: Option<crate::gguf_sharder::GgufTensorIndex>,
+    /// WASM: raw bytes of the token_embd tensor (for embedding lookup after dropping gguf_mmap).
+    #[cfg(target_arch = "wasm32")]
+    pub cached_token_embd: Option<Arc<[u8]>>,
     /// Resident P64 container bytes.
     #[cfg(target_arch = "wasm32")]
     pub p64_resident: Option<Arc<[u8]>>,
@@ -1301,6 +1325,12 @@ pub struct QTensorEngine {
     /// W6a: batched speculative-verify forward plan (per-position argmax; see `verify_arena.rs`).
     #[cfg(not(target_arch = "wasm32"))]
     verify_arena: verify_arena::VerifyArenaState,
+    /// Bind group cache: eliminates per-token `create_bind_group` calls by caching
+    /// bind groups keyed on (buffer addresses, offsets, weight role, layer). Bind groups
+    /// are identical across tokens for the same layer/op since only dynamic uniform
+    /// offsets change — those are passed at `set_bind_group` time, not baked into the BG.
+    #[cfg(target_arch = "wasm32")]
+    mc8_bg_cache: std::sync::Mutex<std::collections::HashMap<u64, wgpu::BindGroup>>,
 }
 
 #[cfg(target_arch = "wasm32")]
