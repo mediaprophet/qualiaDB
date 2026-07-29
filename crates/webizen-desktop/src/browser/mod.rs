@@ -177,10 +177,7 @@ pub fn open_browser_shell(app: &AppHandle, start_url: &str) -> Result<String, St
         }
     }
 
-    let chrome_path = format!(
-        "browser-chrome.html?url={}",
-        urlencoding::encode(&start)
-    );
+    let chrome_path = format!("browser-chrome.html?url={}", urlencoding::encode(&start));
 
     let window = WindowBuilder::new(app, WINDOW_LABEL)
         .title("Webizen Browser")
@@ -352,7 +349,11 @@ pub fn trust_list() -> Result<serde_json::Value, String> {
     serde_json::to_value(&s).map_err(|e| e.to_string())
 }
 
-pub fn trust_add_pem(label: String, pem: String, notes: String) -> Result<serde_json::Value, String> {
+pub fn trust_add_pem(
+    label: String,
+    pem: String,
+    notes: String,
+) -> Result<serde_json::Value, String> {
     let root = storage_root();
     let mut s = qualia_client_core::webizen_trust::TrustStore::load(&root);
     let now = std::time::SystemTime::now()
@@ -364,7 +365,11 @@ pub fn trust_add_pem(label: String, pem: String, notes: String) -> Result<serde_
     serde_json::to_value(a).map_err(|e| e.to_string())
 }
 
-pub fn trust_add_did(label: String, did: String, notes: String) -> Result<serde_json::Value, String> {
+pub fn trust_add_did(
+    label: String,
+    did: String,
+    notes: String,
+) -> Result<serde_json::Value, String> {
     let root = storage_root();
     let mut s = qualia_client_core::webizen_trust::TrustStore::load(&root);
     let now = std::time::SystemTime::now()
@@ -407,7 +412,6 @@ pub async fn agent_ask(
         question,
         ingest_to_library,
     };
-    let resp =
-        qualia_client_core::browser_agent::run_browser_agent(&storage_root(), req).await?;
+    let resp = qualia_client_core::browser_agent::run_browser_agent(&storage_root(), req).await?;
     serde_json::to_value(resp).map_err(|e| e.to_string())
 }

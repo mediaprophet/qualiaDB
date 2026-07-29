@@ -11,18 +11,24 @@ pub fn execute_local_sparql(query: &str) -> Result<Vec<(String, String, String)>
     let (sparql_query, ctx) = parse_sparql(query)?;
     let plan = QueryPlanner::plan(&sparql_query, &ctx)?;
     let executor = QueryExecutor::new(quins);
-    
+
     let raw_rows = executor.execute(&plan, &ctx)?;
-    
+
     // Map to simple 3-tuple for UI
     let mut mapped = Vec::with_capacity(raw_rows.len());
     for row in raw_rows {
-        let s = row.slots[0].map(|v| format!("{:016X}", v)).unwrap_or_else(|| "".to_string());
-        let p = row.slots[1].map(|v| format!("{:016X}", v)).unwrap_or_else(|| "".to_string());
-        let o = row.slots[2].map(|v| format!("{:016X}", v)).unwrap_or_else(|| "".to_string());
+        let s = row.slots[0]
+            .map(|v| format!("{:016X}", v))
+            .unwrap_or_else(|| "".to_string());
+        let p = row.slots[1]
+            .map(|v| format!("{:016X}", v))
+            .unwrap_or_else(|| "".to_string());
+        let o = row.slots[2]
+            .map(|v| format!("{:016X}", v))
+            .unwrap_or_else(|| "".to_string());
         mapped.push((s, p, o));
     }
-    
+
     Ok(mapped)
 }
 
@@ -48,10 +54,10 @@ pub fn validate_local_shacl(_node: u64, shape_uri: u64) -> Result<bool, String> 
 /// Executes an SLG computational VM frame locally.
 pub fn execute_slg_vm(frame_data: &[u8]) -> Result<String, String> {
     use qualia_core_db::governance::webizen::{execute_vm_frame, SlgArena, VmFrame};
-    
+
     let mut arena = SlgArena::new();
     let mut frame = VmFrame::default();
-    
+
     // Parse the JSON array into the frame
     if let Ok(value) = serde_json::from_slice::<serde_json::Value>(frame_data) {
         if let Some(payload) = value.get("payload") {
@@ -64,10 +70,13 @@ pub fn execute_slg_vm(frame_data: &[u8]) -> Result<String, String> {
             }
         }
     }
-    
+
     let bytecode = [];
     match execute_vm_frame(&mut arena, &bytecode, &mut frame) {
         Some(quin) => Ok(format!("Computed: {:016X}", quin.subject)),
-        None => Ok(format!("VM Execution Completed for Subject: {}", frame.subject_reg)),
+        None => Ok(format!(
+            "VM Execution Completed for Subject: {}",
+            frame.subject_reg
+        )),
     }
 }

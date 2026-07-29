@@ -89,7 +89,10 @@ mod tests {
     fn even_window_errors() {
         let x = [1.0f32; 8];
         let mut out = [0.0f32; 8];
-        assert_eq!(median_filter(&x, &mut out, 4), Err(AudioError::InvalidParameter));
+        assert_eq!(
+            median_filter(&x, &mut out, 4),
+            Err(AudioError::InvalidParameter)
+        );
     }
 
     #[test]

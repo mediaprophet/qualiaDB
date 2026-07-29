@@ -79,9 +79,8 @@ pub fn from_link(link: &str) -> Result<ConnectionIdentifier, String> {
 /// `mailto:?subject=<pct>&body=<pct>`
 pub fn to_mailto(id: &ConnectionIdentifier, subject: &str) -> Result<String, String> {
     let deep = to_deep_link(id)?;
-    let body = format!(
-        "You've been invited to connect. Open this link on your device:\n\n{deep}\n"
-    );
+    let body =
+        format!("You've been invited to connect. Open this link on your device:\n\n{deep}\n");
     Ok(format!(
         "mailto:?subject={}&body={}",
         pct_encode(subject),

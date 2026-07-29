@@ -107,7 +107,10 @@ pub fn default_fiduciary_binding() -> ThemeBinding {
     }
 }
 
-pub fn new_workspace_shell(name: String, panes: Vec<crate::canvas_model::PanePlacement>) -> WebizenWorkspace {
+pub fn new_workspace_shell(
+    name: String,
+    panes: Vec<crate::canvas_model::PanePlacement>,
+) -> WebizenWorkspace {
     let mut ws = WebizenWorkspace::default();
     ws.themes = builtin_theme_catalog();
     ws.environment_theme = default_fiduciary_binding();
@@ -161,13 +164,19 @@ pub fn pixel_delta_to_grid(
 pub fn clamp_pane_origin(x: i32, y: i32, w: u16, h: u16, grid_w: u16, grid_h: u16) -> (u16, u16) {
     let max_x = grid_w.saturating_sub(w.max(1));
     let max_y = grid_h.saturating_sub(h.max(1));
-    (x.clamp(0, max_x as i32) as u16, y.clamp(0, max_y as i32) as u16)
+    (
+        x.clamp(0, max_x as i32) as u16,
+        y.clamp(0, max_y as i32) as u16,
+    )
 }
 
 pub fn clamp_pane_size(w: i32, h: i32, x: u16, y: u16, grid_w: u16, grid_h: u16) -> (u16, u16) {
     let max_w = grid_w.saturating_sub(x).max(4);
     let max_h = grid_h.saturating_sub(y).max(4);
-    (w.clamp(4, max_w as i32) as u16, h.clamp(4, max_h as i32) as u16)
+    (
+        w.clamp(4, max_w as i32) as u16,
+        h.clamp(4, max_h as i32) as u16,
+    )
 }
 
 /// QPrime motion layer: elevation utilities, pane breathe, graph edge pulse.

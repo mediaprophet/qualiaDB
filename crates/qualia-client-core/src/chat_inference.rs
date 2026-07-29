@@ -124,8 +124,7 @@ pub fn run_chat_inference_full(
     );
 
     // Native GGUF path requires an active model; optional Ollama harness does not.
-    if !use_ollama
-        && crate::model_lifecycle::get_model_lifecycle_state() != ModelLifecycle::Active
+    if !use_ollama && crate::model_lifecycle::get_model_lifecycle_state() != ModelLifecycle::Active
     {
         return empty_result(
             started,
@@ -422,9 +421,8 @@ fn run_ollama_chat_turn(
     }
 
     let _ = persist_citations(session_id, storage, &output, retrieval);
-    let mut result = finalize_success_result(
-        output, retrieval, started, agent_cfg, false, 0, false, None,
-    );
+    let mut result =
+        finalize_success_result(output, retrieval, started, agent_cfg, false, 0, false, None);
     result.model_id = Some(gen.model);
     result.agent_backend = Some("ollama".into());
     result

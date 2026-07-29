@@ -1,7 +1,7 @@
 //! Web browser pane component.
 
-use super::shared::*;
 use super::dialectical::DialecticalSidebarPane;
+use super::shared::*;
 
 #[component]
 pub fn WebBrowserPane() -> Element {
@@ -104,20 +104,19 @@ pub fn WebBrowserPane() -> Element {
     let navigate_active = move |url: String| {
         spawn(async move {
             // Resolve search / shorthand through the host.
-            let resolved = match invoke_tauri("submit_omnibox_query", json!({ "query": url.clone() }))
-                .await
-            {
-                Ok(s) => {
-                    // submit returns a bare string from Tauri JSON
-                    let s = s.trim().trim_matches('"').to_string();
-                    if s.is_empty() {
-                        url
-                    } else {
-                        s
+            let resolved =
+                match invoke_tauri("submit_omnibox_query", json!({ "query": url.clone() })).await {
+                    Ok(s) => {
+                        // submit returns a bare string from Tauri JSON
+                        let s = s.trim().trim_matches('"').to_string();
+                        if s.is_empty() {
+                            url
+                        } else {
+                            s
+                        }
                     }
-                }
-                Err(_) => url,
-            };
+                    Err(_) => url,
+                };
 
             if !is_web_or_app_url(&resolved) {
                 status_err.set(true);
@@ -405,7 +404,8 @@ pub fn WebBrowserPane() -> Element {
                 }
                 Err(e) => {
                     // Graph-only fallback
-                    match invoke_tauri("browser_cookie_summary", json!({ "url": url.clone() })).await
+                    match invoke_tauri("browser_cookie_summary", json!({ "url": url.clone() }))
+                        .await
                     {
                         Ok(raw) => {
                             if let Ok(v) = serde_json::from_str::<serde_json::Value>(&raw) {
@@ -1236,4 +1236,3 @@ pub fn WebBrowserPane() -> Element {
         }
     }
 }
-

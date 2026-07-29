@@ -61,11 +61,18 @@ mod tests {
         // The person declares they're in the third trimester.
         let state = PhysiologicalState::Reproductive(ReproductiveState::Pregnant(Trimester::Third));
         save(dir.path(), &state).unwrap();
-        assert_eq!(load(dir.path()), Some(state), "the person's state is theirs, persisted");
+        assert_eq!(
+            load(dir.path()),
+            Some(state),
+            "the person's state is theirs, persisted"
+        );
 
         // They can clear it back to the implicit baseline.
         clear(dir.path()).unwrap();
-        assert!(load(dir.path()).is_none(), "cleared returns to the implicit baseline");
+        assert!(
+            load(dir.path()).is_none(),
+            "cleared returns to the implicit baseline"
+        );
     }
 
     #[test]

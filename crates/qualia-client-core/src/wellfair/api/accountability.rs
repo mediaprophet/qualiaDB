@@ -1,8 +1,6 @@
 //! Accountability fabric: ledger + consent credentials
 
-
 use sha2::{Digest, Sha256};
-
 
 use super::*;
 
@@ -17,7 +15,9 @@ impl WebizenHostApi {
     // across parties (commons replication) and real envelope encryption of the wrapped key are the deferred
     // composition steps (coordinate) — the wrapped key is carried as opaque bytes here, as the model intends.
 
-    pub(crate) fn accountability_store(&self) -> Result<crate::accountability_store::AccountabilityStore, String> {
+    pub(crate) fn accountability_store(
+        &self,
+    ) -> Result<crate::accountability_store::AccountabilityStore, String> {
         crate::accountability_store::AccountabilityStore::open(&self.storage_root)
             .map_err(|e| e.to_string())
     }
@@ -37,7 +37,10 @@ impl WebizenHostApi {
     pub fn ledger_verify(
         &self,
     ) -> Result<Option<crate::accountability_ledger::LedgerTamper>, String> {
-        let verdict = self.accountability_store()?.verify_ledger().map_err(|e| e.to_string())?;
+        let verdict = self
+            .accountability_store()?
+            .verify_ledger()
+            .map_err(|e| e.to_string())?;
         Ok(verdict.err())
     }
 
@@ -46,7 +49,9 @@ impl WebizenHostApi {
         &self,
         limit: usize,
     ) -> Result<Vec<crate::accountability_ledger::LedgerEntry>, String> {
-        self.accountability_store()?.ledger_entries(limit).map_err(|e| e.to_string())
+        self.accountability_store()?
+            .ledger_entries(limit)
+            .map_err(|e| e.to_string())
     }
 
     /// **Grant a consent credential** to an agent (e.g. a social worker) over a committed payload. The
@@ -62,8 +67,8 @@ impl WebizenHostApi {
         expiry_unix: Option<u64>,
     ) -> Result<crate::consent_credential::ConsentCredential, String> {
         let commitment = crate::accountability_store::parse_commitment_hex(commitment_hex)?;
-        let wrapped_key = hex::decode(wrapped_key_hex.trim())
-            .map_err(|e| format!("wrapped key not hex: {e}"))?;
+        let wrapped_key =
+            hex::decode(wrapped_key_hex.trim()).map_err(|e| format!("wrapped key not hex: {e}"))?;
         let now = Self::now_unix();
         let id = {
             let digest = Sha256::digest(format!("{agent_did}:{scope}:{now}").as_bytes());
@@ -97,7 +102,9 @@ impl WebizenHostApi {
     pub fn list_consent_credentials(
         &self,
     ) -> Result<Vec<crate::consent_credential::ConsentCredential>, String> {
-        self.accountability_store()?.list_credentials().map_err(|e| e.to_string())
+        self.accountability_store()?
+            .list_credentials()
+            .map_err(|e| e.to_string())
     }
 
     /// **Record an agent's conduct** under a credential — signed (attributable + court-auditable) — into the
@@ -129,7 +136,9 @@ impl WebizenHostApi {
         &self,
         credential_id: &str,
     ) -> Result<Vec<crate::consent_credential::ConductRecord>, String> {
-        self.accountability_store()?.audit_trail(credential_id).map_err(|e| e.to_string())
+        self.accountability_store()?
+            .audit_trail(credential_id)
+            .map_err(|e| e.to_string())
     }
 
     /// **Record guardian notifications** from a flagged ingest into the tamper-evident ledger — so a flagged
@@ -144,10 +153,14 @@ impl WebizenHostApi {
         for n in notifications {
             let payload = serde_json::to_string(n).map_err(|e| e.to_string())?;
             store
-                .append_ledger("guardian_notified", &payload, &self.signing_key, Self::now_unix())
+                .append_ledger(
+                    "guardian_notified",
+                    &payload,
+                    &self.signing_key,
+                    Self::now_unix(),
+                )
                 .map_err(|e| e.to_string())?;
         }
         Ok(())
     }
-
 }

@@ -59,8 +59,16 @@ mod tests {
     #[test]
     fn only_flags_at_or_above_the_threshold_notify_the_guardian() {
         let flags = vec![
-            Flag { kind: "sensitive-medical".into(), severity: FlagSeverity::Concern, detail: "x-ray".into() },
-            Flag { kind: "minor-note".into(), severity: FlagSeverity::Info, detail: String::new() },
+            Flag {
+                kind: "sensitive-medical".into(),
+                severity: FlagSeverity::Concern,
+                detail: "x-ray".into(),
+            },
+            Flag {
+                kind: "minor-note".into(),
+                severity: FlagSeverity::Info,
+                detail: String::new(),
+            },
         ];
         let ns = guardian_notifications(
             &flags,
@@ -80,7 +88,11 @@ mod tests {
 
     #[test]
     fn urgent_only_threshold_filters_out_concern() {
-        let flags = vec![Flag { kind: "x".into(), severity: FlagSeverity::Concern, detail: String::new() }];
+        let flags = vec![Flag {
+            kind: "x".into(),
+            severity: FlagSeverity::Concern,
+            detail: String::new(),
+        }];
         assert!(guardian_notifications(&flags, "u", "g", "p", FlagSeverity::Urgent, 0).is_empty());
     }
 }

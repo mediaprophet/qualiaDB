@@ -150,9 +150,7 @@ impl LocalJobScheduler {
     }
 
     pub fn global() -> Arc<Self> {
-        GLOBAL
-            .get_or_init(|| Arc::new(Self::new()))
-            .clone()
+        GLOBAL.get_or_init(|| Arc::new(Self::new())).clone()
     }
 
     /// Spawn the background worker that processes queued jobs. The worker must run on a Tokio runtime;
@@ -305,7 +303,12 @@ impl LocalJobScheduler {
     }
 
     fn persist(&self, jobs: &[LocalJob]) -> Result<(), String> {
-        let path = self.inner.store_path.lock().map_err(|e| e.to_string())?.clone();
+        let path = self
+            .inner
+            .store_path
+            .lock()
+            .map_err(|e| e.to_string())?
+            .clone();
         if let Some(parent) = path.parent() {
             fs::create_dir_all(parent).map_err(|e| e.to_string())?;
         }
@@ -418,10 +421,7 @@ fn load_jobs(path: &Path) -> Vec<LocalJob> {
 }
 
 fn check_cancel(flag: &Option<Arc<AtomicBool>>) -> Result<(), String> {
-    if flag
-        .as_ref()
-        .is_some_and(|f| f.load(Ordering::Relaxed))
-    {
+    if flag.as_ref().is_some_and(|f| f.load(Ordering::Relaxed)) {
         Err("cancelled".to_string())
     } else {
         Ok(())
@@ -436,7 +436,12 @@ async fn execute_job(
     let state = crate::state::APP_STATE
         .get()
         .ok_or("APP_STATE not initialized")?;
-    let storage_path = state.config.lock().map_err(|e| e.to_string())?.storage_path.clone();
+    let storage_path = state
+        .config
+        .lock()
+        .map_err(|e| e.to_string())?
+        .storage_path
+        .clone();
 
     match kind {
         LocalJobKind::OntologyCatalogImport { ontology_id } => {
@@ -481,8 +486,13 @@ async fn execute_job(
                     .ok_or_else(|| format!("Bundled source missing for {id}"))?;
                 let catalog = crate::api::load_workspace_catalog();
                 let ont = catalog.find_ontology(id);
-                crate::resource_import::ingest_local_rdf(&seeded, id, Path::new(&storage_path), ont)
-                    .map_err(|e| e.to_string())?;
+                crate::resource_import::ingest_local_rdf(
+                    &seeded,
+                    id,
+                    Path::new(&storage_path),
+                    ont,
+                )
+                .map_err(|e| e.to_string())?;
                 Ok(serde_json::json!({ "seeded": [id] }))
             } else {
                 let seeded = crate::bundled_ontologies::seed_bundled_ontologies()?;
@@ -517,7 +527,11 @@ async fn execute_job(
                     .unwrap_or_else(|_| "local".to_string());
                 if backend == "remote" {
                     let slug = agent_slug.clone().unwrap_or_default();
-                    return crate::api::run_remote_agent_turn(session_id.clone(), slug, prompt.clone());
+                    return crate::api::run_remote_agent_turn(
+                        session_id.clone(),
+                        slug,
+                        prompt.clone(),
+                    );
                 }
             }
             let result =

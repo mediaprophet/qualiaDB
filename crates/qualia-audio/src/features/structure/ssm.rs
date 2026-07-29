@@ -124,7 +124,11 @@ mod tests {
 
         // Diagonal is 1.
         for i in 0..n {
-            assert!((ssm[i * n + i] - 1.0).abs() < 1e-6, "diag {i}={}", ssm[i * n + i]);
+            assert!(
+                (ssm[i * n + i] - 1.0).abs() < 1e-6,
+                "diag {i}={}",
+                ssm[i * n + i]
+            );
         }
         // Within block A (0..4) and within block B (4..8): similarity 1.
         for i in 0..half {
@@ -140,7 +144,11 @@ mod tests {
         // Across blocks: similarity 0.
         for i in 0..half {
             for j in half..n {
-                assert!(ssm[i * n + j].abs() < 1e-6, "cross[{i},{j}]={}", ssm[i * n + j]);
+                assert!(
+                    ssm[i * n + j].abs() < 1e-6,
+                    "cross[{i},{j}]={}",
+                    ssm[i * n + j]
+                );
                 assert!(ssm[j * n + i].abs() < 1e-6, "cross[{j},{i}]");
             }
         }
@@ -152,7 +160,9 @@ mod tests {
         let n = 5;
         let dims = 3;
         // Distinct, non-zero rows.
-        let feat: Vec<f32> = (0..n * dims).map(|k| (k as f32 * 0.37).sin() + 1.5).collect();
+        let feat: Vec<f32> = (0..n * dims)
+            .map(|k| (k as f32 * 0.37).sin() + 1.5)
+            .collect();
         let mut ssm = vec![0.0f32; n * n];
         self_similarity(&feat, n, dims, &mut ssm).expect("ssm");
         for i in 0..n {

@@ -16,4 +16,3 @@ pub fn wellfair_list_assessment_instruments(app: AppHandle) -> Result<String, St
         serde_json::to_string(&host.list_assessment_instruments()).map_err(|e| e.to_string())
     })?
 }
-

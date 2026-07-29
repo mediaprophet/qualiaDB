@@ -6,8 +6,7 @@ use std::f64::consts::PI;
 
 use serde::Deserialize;
 use webizen_render::scene_contract::{
-    EpistemicState, RenderScene, SceneCamera, SceneEdge, SceneNode, ScenePoint,
-    Tensor10DProjection,
+    EpistemicState, RenderScene, SceneCamera, SceneEdge, SceneNode, ScenePoint, Tensor10DProjection,
 };
 use webizen_studio::render::item_color;
 use webizen_studio::render::qualia::{ItemState, SemanticScene};
@@ -81,11 +80,7 @@ pub fn entity_view_to_render_scene(
         positions.push((x, y, z));
 
         let selected = selected_entity_id != 0 && selected_entity_id == n.entity_id;
-        let radius = if selected {
-            n.radius * 1.65
-        } else {
-            n.radius
-        };
+        let radius = if selected { n.radius * 1.65 } else { n.radius };
         let color = if selected {
             "#fbbf24".to_string()
         } else {

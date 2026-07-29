@@ -4,13 +4,9 @@ use js_sys::Function;
 use wasm_bindgen::prelude::*;
 
 use crate::gguf_bridge::{
-    PREFILL_CHUNK_SIZE, PREFILL_CHUNK_STACK_FLOATS, VOCAB_CHUNK_ROWS,
-    StreamingArgmaxResult,
+    StreamingArgmaxResult, PREFILL_CHUNK_SIZE, PREFILL_CHUNK_STACK_FLOATS, VOCAB_CHUNK_ROWS,
 };
 use crate::gguf_sharder::GgufTokenizer;
-
-const BROWSER_AGENT_DID: &str = "did:q42:browser-llm-demo";
-const BROWSER_MODEL_TAG: &str = "wasm-resident.gguf";
 
 /// Autoregressive decode budget for browser harness.
 /// 32 was too short for chat replies and made truncated junk look like "garbage".
@@ -43,32 +39,6 @@ fn take_engine() -> Result<crate::gguf_bridge::QTensorEngine, String> {
         .ok_or_else(|| "WebGPU engine not initialized. Call initialize_webgpu_engine first.".into())
 }
 
-fn run_inference(prompt: &str, graph_context: &str) -> Result<String, String> {
-    if !engine_ready() {
-        return Err("WebGPU engine not initialized. Call initialize_webgpu_engine first.".into());
-    }
-    let agent = crate::llm_agent::LocalLlmAgent::new(BROWSER_AGENT_DID, BROWSER_MODEL_TAG);
-    let (text, _, _, _) =
-        agent.infer_local_model_streaming(prompt, graph_context, None::<fn(String)>);
-    Ok(text)
-}
-
-fn run_inference_streaming(
-    prompt: &str,
-    graph_context: &str,
-    on_token: Function,
-) -> Result<String, String> {
-    if !engine_ready() {
-        return Err("WebGPU engine not initialized. Call initialize_webgpu_engine first.".into());
-    }
-    let agent = crate::llm_agent::LocalLlmAgent::new(BROWSER_AGENT_DID, BROWSER_MODEL_TAG);
-    let on_token = move |piece: String| {
-        let _ = on_token.call1(&JsValue::UNDEFINED, &JsValue::from_str(&piece));
-    };
-    let (text, _, _, _) = agent.infer_local_model_streaming(prompt, graph_context, Some(on_token));
-    Ok(text)
-}
-
 /// Reject the 256-byte fallback tokenizer — it "runs" but emits pure garbage on real models.
 fn require_real_tokenizer(tok: &GgufTokenizer) -> Result<(), String> {
     let n = tok.vocab_len() as usize;
@@ -90,11 +60,18 @@ struct WasmAsyncInferenceResult {
 
 async fn run_inference_async(
     prompt: &str,
-    on_token: Function,
+    graph_context: &str,
+    on_token: Option<Function>,
     decode_token_budget: usize,
 ) -> Result<WasmAsyncInferenceResult, String> {
     let mut engine = take_engine()?;
     let prompt_owned = prompt.to_string();
+    if !graph_context.is_empty() {
+        crate::gguf_bridge::wlog(&format!(
+            "[inference] graph-context={:016x}",
+            crate::q_hash(graph_context)
+        ));
+    }
 
     let result: Result<WasmAsyncInferenceResult, String> = async {
         // Boot purely from P64 when present: synthetic tensor index +
@@ -294,7 +271,9 @@ async fn run_inference_async(
             if full.len() > streamed_len {
                 let delta = full[streamed_len..].to_string();
                 streamed_len = full.len();
-                let _ = on_token.call1(&JsValue::UNDEFINED, &JsValue::from_str(&delta));
+                if let Some(callback) = on_token.as_ref() {
+                    let _ = callback.call1(&JsValue::UNDEFINED, &JsValue::from_str(&delta));
+                }
             }
             let _ = step;
         }
@@ -375,7 +354,10 @@ pub async fn infer_wasm_with_context(
     prompt: String,
     graph_context: String,
 ) -> Result<String, JsValue> {
-    run_inference(&prompt, &graph_context).map_err(|e| JsValue::from_str(&e))
+    run_inference_async(&prompt, &graph_context, None, WASM_DECODE_TOKEN_BUDGET)
+        .await
+        .map(|result| result.text)
+        .map_err(|e| JsValue::from_str(&e))
 }
 
 /// Stream token deltas to `on_token` (UTF-8 string chunks) while decoding.
@@ -391,14 +373,22 @@ pub async fn infer_wasm_streaming_with_context(
     graph_context: String,
     on_token: Function,
 ) -> Result<String, JsValue> {
-    run_inference_streaming(&prompt, &graph_context, on_token).map_err(|e| JsValue::from_str(&e))
+    run_inference_async(
+        &prompt,
+        &graph_context,
+        Some(on_token),
+        WASM_DECODE_TOKEN_BUDGET,
+    )
+    .await
+    .map(|result| result.text)
+    .map_err(|e| JsValue::from_str(&e))
 }
 
 /// Phase 2B: async WebGPU decode — yields to the browser event loop on every `map_async`.
 /// Returns a JS `Promise`; use `await inferWasmAsync(...)` from module code.
 #[wasm_bindgen(js_name = inferWasmAsync)]
 pub async fn infer_wasm_async(prompt: String, on_token: Function) -> Result<String, JsValue> {
-    run_inference_async(&prompt, on_token, WASM_DECODE_TOKEN_BUDGET)
+    run_inference_async(&prompt, "", Some(on_token), WASM_DECODE_TOKEN_BUDGET)
         .await
         .map(|result| result.text)
         .map_err(|e| JsValue::from_str(&e))
@@ -415,7 +405,7 @@ pub async fn infer_wasm_async_measured(
     on_token: Function,
 ) -> Result<JsValue, JsValue> {
     let budget = (max_tokens as usize).clamp(1, WASM_MAX_CONFIGURED_DECODE_TOKENS);
-    let result = run_inference_async(&prompt, on_token, budget)
+    let result = run_inference_async(&prompt, "", Some(on_token), budget)
         .await
         .map_err(|e| JsValue::from_str(&e))?;
     serde_wasm_bindgen::to_value(&result).map_err(|e| JsValue::from_str(&e.to_string()))

@@ -39,6 +39,9 @@ mod tests {
     fn twenty_one_points() {
         let xy = [0.1f32; 21 * 2];
         let mut out = [HandLandmark::default(); MAX_HAND_LANDMARKS];
-        assert_eq!(pack_hand_landmarks_xy(&xy, false, 21, &mut out).unwrap(), 21);
+        assert_eq!(
+            pack_hand_landmarks_xy(&xy, false, 21, &mut out).unwrap(),
+            21
+        );
     }
 }

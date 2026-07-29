@@ -1,16 +1,16 @@
 //! QualiaDB Advanced Extensions
-//! 
+//!
 //! This crate provides the extension interface for heavy computational workloads
 //! that cannot run in the zero-allocation core QualiaDB engine.
-//! 
+//!
 //! # Architecture
-//! 
+//!
 //! - Core QualiaDB: Semantic orchestrator (48-byte Super-Quin logic)
 //! - Extensions: Heavy computational work (std, GPU, external APIs)
 //! - Communication: FFI bridge with strict memory boundaries
-//! 
+//!
 //! # Extension Types
-//! 
+//!
 //! - QPU Extension: Quantum computing via remote APIs
 //! - PINN Extension: Physics-Informed Neural Networks (uses native Qualia LLM pipeline with wgpu + WGSL)
 //! - SNN Extension: Spiking Neural Networks with CRDT synchronization
@@ -27,9 +27,9 @@
 
 #![allow(dead_code)]
 
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
-use serde::{Deserialize, Serialize};
 
 /// Extension capability descriptor
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -102,8 +102,12 @@ impl ExtensionManager {
     }
 
     pub async fn execute_job(&self, job: ExtensionJob) -> Result<ExtensionResult, ExtensionError> {
-        let extension = self.extensions.get(&job.extension_name)
-            .ok_or(ExtensionError::ExtensionNotFound(job.extension_name.clone()))?;
+        let extension =
+            self.extensions
+                .get(&job.extension_name)
+                .ok_or(ExtensionError::ExtensionNotFound(
+                    job.extension_name.clone(),
+                ))?;
 
         // Track active job
         {
@@ -117,14 +121,20 @@ impl ExtensionManager {
         // Remove from active jobs
         {
             let mut active = self.active_jobs.lock().unwrap();
-            active.remove(&result.as_ref().map(|r| r.job_id.clone()).unwrap_or_default());
+            active.remove(
+                &result
+                    .as_ref()
+                    .map(|r| r.job_id.clone())
+                    .unwrap_or_default(),
+            );
         }
 
         result
     }
 
     pub fn list_capabilities(&self) -> Vec<ExtensionCapability> {
-        self.extensions.values()
+        self.extensions
+            .values()
             .map(|ext| ext.capability())
             .collect()
     }
@@ -143,19 +153,19 @@ pub trait Extension: Send + Sync {
 pub enum ExtensionError {
     #[error("Extension '{0}' not found")]
     ExtensionNotFound(String),
-    
+
     #[error("Operation '{0}' not supported by extension")]
     OperationNotSupported(String),
-    
+
     #[error("Insufficient resources: {0}")]
     InsufficientResources(String),
-    
+
     #[error("Job execution failed: {0}")]
     ExecutionFailed(String),
-    
+
     #[error("Network error: {0}")]
     NetworkError(String),
-    
+
     #[error("GPU error: {0}")]
     GpuError(String),
 }
@@ -350,14 +360,16 @@ pub extern "C" fn extension_result_free(result: CExtensionResult) {
 #[no_mangle]
 pub extern "C" fn extension_manager_free(manager: *mut ExtensionManager) {
     if !manager.is_null() {
-        unsafe { let _ = Box::from_raw(manager); }
+        unsafe {
+            let _ = Box::from_raw(manager);
+        }
     }
 }
 
 // Module declarations
 pub mod pinn_extension;
-pub mod snn_extension;
 pub mod qpu_extension;
+pub mod snn_extension;
 pub mod webgpu_extension;
 
 /// Helper function for hashing strings to 64-bit integers
@@ -465,7 +477,9 @@ mod tests {
         let res = extension_manager_execute_job(mgr, &job);
         assert!(!res.success);
         let msg = unsafe { std::slice::from_raw_parts(res.error_msg, res.error_len) };
-        assert!(std::str::from_utf8(msg).unwrap().contains("parameters JSON"));
+        assert!(std::str::from_utf8(msg)
+            .unwrap()
+            .contains("parameters JSON"));
         extension_result_free(res);
         extension_manager_free(mgr);
     }

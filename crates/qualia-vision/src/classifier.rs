@@ -36,7 +36,11 @@ impl LinearHead {
     }
 
     /// Nearest-centroid style: set each class row to the provided centroid vector.
-    pub fn from_centroids(dim: usize, class_iris: &[&str], centroids: &[&[f32]]) -> Result<Self, VisionError> {
+    pub fn from_centroids(
+        dim: usize,
+        class_iris: &[&str],
+        centroids: &[&[f32]],
+    ) -> Result<Self, VisionError> {
         if class_iris.len() != centroids.len() {
             return Err(VisionError::MalformedImage);
         }
@@ -53,11 +57,7 @@ impl LinearHead {
     }
 
     /// Softmax-free argmax score into detection (whole-image box).
-    pub fn classify_embedding(
-        &self,
-        embed: &[f32],
-        min_score: f32,
-    ) -> Option<Detection> {
+    pub fn classify_embedding(&self, embed: &[f32], min_score: f32) -> Option<Detection> {
         if embed.len() < self.dim || self.n_classes == 0 {
             return None;
         }
@@ -136,18 +136,18 @@ impl<M: VisualModel> VisualModel for LinearProbeVision<M> {
         }
         // Base may write multiple dets; we only need embed.
         let mut scratch_dets = [Detection::empty(); MAX_DETECTIONS];
-        let base_counts =
-            self.base
-                .infer(image, &mut scratch_dets, embedding_out, workspace)?;
+        let base_counts = self
+            .base
+            .infer(image, &mut scratch_dets, embedding_out, workspace)?;
         let emb_n = base_counts.embedding_written.min(embedding_out.len());
         for d in detections_out.iter_mut() {
             *d = Detection::empty();
         }
         let mut det_n = 0usize;
         if emb_n >= self.head.dim {
-            if let Some(d) =
-                self.head
-                    .classify_embedding(&embedding_out[..emb_n], self.min_score)
+            if let Some(d) = self
+                .head
+                .classify_embedding(&embedding_out[..emb_n], self.min_score)
             {
                 detections_out[0] = d;
                 det_n = 1;
@@ -246,9 +246,7 @@ mod tests {
         )
         .unwrap();
         let mut probe = LinearProbeVision::new(base, head, 0.01);
-        let c = probe
-            .infer(img_r, &mut dets, &mut emb_r, &mut ws)
-            .unwrap();
+        let c = probe.infer(img_r, &mut dets, &mut emb_r, &mut ws).unwrap();
         assert_eq!(c.detections, 1);
         assert_eq!(dets[0].class_hash, q_hash(CLASS_MOSTLY_RED));
     }

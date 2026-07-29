@@ -20,14 +20,7 @@ pub struct PaneGenerationPlan {
     pub summary: String,
 }
 
-fn pane(
-    id: &str,
-    x: u16,
-    y: u16,
-    w: u16,
-    h: u16,
-    bindings: &[&str],
-) -> PanePlacement {
+fn pane(id: &str, x: u16, y: u16, w: u16, h: u16, bindings: &[&str]) -> PanePlacement {
     PanePlacement {
         component_id: id.to_string(),
         x,
@@ -137,9 +130,15 @@ pub fn generate_panes_from_prompt(prompt: &str, palette: &[PaneDefinition]) -> P
         palette
     };
     let p = prompt.to_ascii_lowercase();
-    let has = |ids: &[&str]| ids.iter().any(|id| palette.iter().any(|d| d.component_id == *id));
+    let has = |ids: &[&str]| {
+        ids.iter()
+            .any(|id| palette.iter().any(|d| d.component_id == *id))
+    };
 
-    if contains_any(&p, &["health", "clinical", "vital", "fhir", "dicom", "patient"]) {
+    if contains_any(
+        &p,
+        &["health", "clinical", "vital", "fhir", "dicom", "patient"],
+    ) {
         return PaneGenerationPlan {
             panes: vec![
                 pane("health-monitor", 0, 0, 48, 40, &["fhir:Patient"]),
@@ -151,7 +150,12 @@ pub fn generate_panes_from_prompt(prompt: &str, palette: &[PaneDefinition]) -> P
         };
     }
 
-    if contains_any(&p, &["legal", "guardian", "deontic", "rights", "shacl", "contract"]) {
+    if contains_any(
+        &p,
+        &[
+            "legal", "guardian", "deontic", "rights", "shacl", "contract",
+        ],
+    ) {
         return PaneGenerationPlan {
             panes: vec![
                 pane("contextual-workspace", 0, 0, 56, 62, &["n3:rules"]),
@@ -163,7 +167,10 @@ pub fn generate_panes_from_prompt(prompt: &str, palette: &[PaneDefinition]) -> P
         };
     }
 
-    if contains_any(&p, &["spatial", "manifold", "10d", "portal", "volume", "render"]) {
+    if contains_any(
+        &p,
+        &["spatial", "manifold", "10d", "portal", "volume", "render"],
+    ) {
         return PaneGenerationPlan {
             panes: vec![
                 pane("nexus", 0, 0, 40, 36, &[]),
@@ -253,10 +260,8 @@ mod tests {
 
     #[test]
     fn health_prompt_selects_clinical_panes() {
-        let plan = generate_panes_from_prompt(
-            "Health tracker with vitals chart",
-            &registry_palette(),
-        );
+        let plan =
+            generate_panes_from_prompt("Health tracker with vitals chart", &registry_palette());
         assert!(plan
             .panes
             .iter()
@@ -265,10 +270,7 @@ mod tests {
 
     #[test]
     fn spatial_prompt_sets_spatial_mode() {
-        let plan = generate_panes_from_prompt(
-            "10D manifold spatial portal",
-            &registry_palette(),
-        );
+        let plan = generate_panes_from_prompt("10D manifold spatial portal", &registry_palette());
         assert_eq!(plan.presentation, PresentationMode::Spatial);
     }
 }

@@ -10,7 +10,6 @@ use serde::Serialize;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
-
 /// Load `qapp.json` for an installed qapp.
 pub fn load_installed_qapp_package(
     qapp_name: &str,
@@ -655,7 +654,10 @@ pub fn launch_installed_qapp_with_context(
     }
     let qapp_dir = crate::qapp_paths::resolve_active_package_dir(&storage_path, &qapp_name);
 
-    if !qapp_dir.join(crate::qapp_registry::QAPP_PACKAGE_MANIFEST).is_file() {
+    if !qapp_dir
+        .join(crate::qapp_registry::QAPP_PACKAGE_MANIFEST)
+        .is_file()
+    {
         return Err(format!("Qapp directory not found: {qapp_name}"));
     }
 
@@ -691,4 +693,3 @@ pub fn launch_installed_qapp_with_context(
     let base_url = append_launch_context(base_url, source, surface, payload_json, Some(&qapp_name));
     Ok(append_hash_fragment(base_url, hash_fragment))
 }
-

@@ -32,7 +32,13 @@ pub struct AdsrEnvelope {
 impl AdsrEnvelope {
     /// Build an envelope. Times are in seconds; `sustain` is a `0..=1` level.
     /// Non-finite / negative inputs are clamped to safe values.
-    pub fn new(sample_rate: f32, attack_s: f32, decay_s: f32, sustain: f32, release_s: f32) -> Self {
+    pub fn new(
+        sample_rate: f32,
+        attack_s: f32,
+        decay_s: f32,
+        sustain: f32,
+        release_s: f32,
+    ) -> Self {
         let sr = if sample_rate.is_finite() && sample_rate > 0.0 {
             sample_rate
         } else {
@@ -148,7 +154,10 @@ mod tests {
         let mut env = AdsrEnvelope::new(SR, 0.010, 0.010, 0.5, 0.010);
         env.note_on();
         let mut prev = env.process_sample();
-        assert!(prev > 0.0 && prev < 0.01, "first attack gain ~0, got {prev}");
+        assert!(
+            prev > 0.0 && prev < 0.01,
+            "first attack gain ~0, got {prev}"
+        );
         // Stay within the attack region (< 480 samples) and assert strict rise.
         for _ in 0..460 {
             let g = env.process_sample();
@@ -167,7 +176,10 @@ mod tests {
         for _ in 0..2_000 {
             g = env.process_sample();
         }
-        assert!((g - 0.5).abs() < 1e-3, "sustain should hold at 0.5, got {g}");
+        assert!(
+            (g - 0.5).abs() < 1e-3,
+            "sustain should hold at 0.5, got {g}"
+        );
         // Continues to hold.
         for _ in 0..1_000 {
             g = env.process_sample();
@@ -189,7 +201,10 @@ mod tests {
         for _ in 0..500 {
             g = env.process_sample();
         }
-        assert!(g <= 1e-3, "release should reach ~0 within release time, got {g}");
+        assert!(
+            g <= 1e-3,
+            "release should reach ~0 within release time, got {g}"
+        );
         assert!(!env.is_active(), "envelope idle after release completes");
     }
 

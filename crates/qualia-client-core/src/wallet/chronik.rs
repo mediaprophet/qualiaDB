@@ -20,15 +20,15 @@ pub struct Outpoint {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SlpMeta {
-    pub token_type: String, 
-    pub tx_type: String,    
+    pub token_type: String,
+    pub tx_type: String,
     pub token_id: String,
     pub group_token_id: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SlpToken {
-    pub amount: String, 
+    pub amount: String,
     pub is_mint_baton: bool,
 }
 
@@ -48,7 +48,7 @@ impl ChronikClient {
     pub fn fetch_utxos_p2pkh(&self, hash160_hex: &str) -> Result<Vec<ChronikUtxo>, String> {
         let url = format!("{}/script/p2pkh/{}/utxos", self.base_url, hash160_hex);
         let resp = self.client.get(&url).send().map_err(|e| e.to_string())?;
-        
+
         if !resp.status().is_success() {
             return Err(format!("Chronik API error: {}", resp.status()));
         }
@@ -59,7 +59,7 @@ impl ChronikClient {
         }
 
         let result: Vec<ScriptUtxos> = resp.json().map_err(|e| e.to_string())?;
-        
+
         let mut all_utxos = Vec::new();
         for script_utxo in result {
             all_utxos.extend(script_utxo.utxos);
@@ -69,12 +69,15 @@ impl ChronikClient {
 
     pub fn broadcast_tx(&self, raw_tx_hex: &str) -> Result<String, String> {
         let url = format!("{}/broadcast-tx", self.base_url);
-        
-        let resp = self.client.post(&url)
+
+        let resp = self
+            .client
+            .post(&url)
             .header("Content-Type", "text/plain")
             .body(raw_tx_hex.to_string())
-            .send().map_err(|e| e.to_string())?;
-        
+            .send()
+            .map_err(|e| e.to_string())?;
+
         if !resp.status().is_success() {
             let err_text = resp.text().unwrap_or_default();
             return Err(format!("Broadcast failed: {}", err_text));
@@ -84,7 +87,7 @@ impl ChronikClient {
         struct BroadcastResponse {
             txid: String,
         }
-        
+
         let res: BroadcastResponse = resp.json().map_err(|e| e.to_string())?;
         Ok(res.txid)
     }
@@ -169,4 +172,3 @@ pub struct ChronikBlock {
     #[serde(default)]
     pub timestamp: i64,
 }
-

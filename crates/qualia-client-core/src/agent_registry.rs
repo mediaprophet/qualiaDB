@@ -169,9 +169,7 @@ impl AgentDefinition {
     /// An empty allowlist permits nothing; a `"*"` entry permits everything;
     /// otherwise the tool must be listed by exact name.
     pub fn has_tool(&self, tool: &str) -> bool {
-        self.allowed_mcp_tools
-            .iter()
-            .any(|t| t == "*" || t == tool)
+        self.allowed_mcp_tools.iter().any(|t| t == "*" || t == tool)
     }
 }
 
@@ -470,7 +468,12 @@ mod tests {
         let dir = tempdir().unwrap();
 
         // Append a new agent onto the (seeded) store.
-        let mut a = remote("worker", McpTransport::Http { url: "u".to_string() });
+        let mut a = remote(
+            "worker",
+            McpTransport::Http {
+                url: "u".to_string(),
+            },
+        );
         a.created_at_unix = 100;
         a.updated_at_unix = 100;
         upsert_agent_at(dir.path(), a, 555).unwrap();
@@ -483,7 +486,12 @@ mod tests {
         assert_eq!(stored.updated_at_unix, 555, "updated bumped to now_unix");
 
         // Replace by slug: created preserved from the stored entry, updated bumped.
-        let mut edited = remote("worker", McpTransport::Http { url: "u2".to_string() });
+        let mut edited = remote(
+            "worker",
+            McpTransport::Http {
+                url: "u2".to_string(),
+            },
+        );
         edited.display_name = "renamed".to_string();
         edited.created_at_unix = 9999; // should be ignored in favour of stored 100
         upsert_agent_at(dir.path(), edited, 777).unwrap();
@@ -505,7 +513,12 @@ mod tests {
         let dir = tempdir().unwrap();
         upsert_agent_at(
             dir.path(),
-            remote("gone", McpTransport::Http { url: "u".to_string() }),
+            remote(
+                "gone",
+                McpTransport::Http {
+                    url: "u".to_string(),
+                },
+            ),
             1,
         )
         .unwrap();

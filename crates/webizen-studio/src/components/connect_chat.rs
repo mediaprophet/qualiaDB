@@ -7,23 +7,23 @@
 //! Conduct / gate denials surface via [`ConductBanner`] (U1-B) from `block_reason`,
 //! `shield_alert`, and `chat-done` — never silent.
 
-use dioxus::prelude::*;
 use dioxus::html::input_data::keyboard_types::{Key, Modifiers};
+use dioxus::prelude::*;
 
-use crate::components::conduct_banner::{ConductBanner, ConductNotice};
 #[cfg(target_arch = "wasm32")]
 use crate::components::conduct_banner::{
     notice_from_chat_done, notice_from_chat_result, notice_from_conduct_violation,
 };
+use crate::components::conduct_banner::{ConductBanner, ConductNotice};
 use crate::components::honesty_chip::{HonestyChip, HonestyLevel};
 use crate::components::tool_use_card::ToolUseCard;
 
 #[cfg(target_arch = "wasm32")]
 use serde_json::json;
 #[cfg(target_arch = "wasm32")]
-use wasm_bindgen::prelude::*;
-#[cfg(target_arch = "wasm32")]
 use wasm_bindgen::closure::Closure;
+#[cfg(target_arch = "wasm32")]
+use wasm_bindgen::prelude::*;
 
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
@@ -95,12 +95,16 @@ const INPUT: &str = "width:100%; box-sizing:border-box; padding:8px 10px; margin
 const BTN: &str = "background:#8b5cf6; color:white; padding:8px 14px; border:none; border-radius:8px; font-weight:600; cursor:pointer; font-size:13px;";
 const BTN2: &str = "background:#334155; color:#e5e7eb; padding:7px 12px; border:none; border-radius:8px; font-weight:600; cursor:pointer; font-size:12px; margin-right:6px;";
 const THREAD: &str = "flex:1; overflow-y:auto; padding:18px; display:flex; flex-direction:column; gap:10px; scroll-behavior:smooth;";
-const COMPOSER: &str = "border-top:1px solid #1f2937; padding:12px 16px; display:flex; gap:8px; align-items:flex-end;";
+const COMPOSER: &str =
+    "border-top:1px solid #1f2937; padding:12px 16px; display:flex; gap:8px; align-items:flex-end;";
 const MSG_USER: &str = "align-self:flex-end; max-width:78%; background:#4c1d95; color:#f5f3ff; padding:8px 12px; border-radius:12px 12px 2px 12px; white-space:pre-wrap; font-size:14px;";
 const MSG_AGENT: &str = "align-self:flex-start; max-width:78%; background:#111827; border:1px solid #1f2937; color:#e5e7eb; padding:8px 12px; border-radius:12px 12px 12px 2px; white-space:pre-wrap; font-size:14px;";
 
 fn s(v: &serde_json::Value, key: &str) -> String {
-    v.get(key).and_then(|x| x.as_str()).unwrap_or_default().to_string()
+    v.get(key)
+        .and_then(|x| x.as_str())
+        .unwrap_or_default()
+        .to_string()
 }
 
 fn model_label(m: &serde_json::Value) -> String {
@@ -310,21 +314,14 @@ async fn send_chat_turn(
 
 #[component]
 pub fn ConnectChat() -> Element {
+    let experience_mode = crate::components::experience_mode::use_experience_mode();
     let status = use_signal(String::new);
     // Conduct / gate / shield deny banner (U1-B). Dismissible; re-set on next deny.
     let conduct = use_signal(|| Option::<ConductNotice>::None);
-    // Identity / profile
-    let display_name = use_signal(String::new);
-    let profile_raw = use_signal(|| serde_json::Value::Null);
-    // Invite (outbound / inbound)
-    let invite_out = use_signal(String::new);
-    let invite_code = use_signal(String::new);
-    let invite_mailto = use_signal(String::new);
-    let invite_in = use_signal(String::new);
-    // Contacts + groups + sessions + messages
+    // People, profile, invitations and group administration live in
+    // Relations → People. Chat owns only the contact/session projections it
+    // needs to open and render conversations.
     let contacts = use_signal(Vec::<serde_json::Value>::new);
-    let group_title = use_signal(String::new);
-    let group_dids = use_signal(String::new);
     let sessions = use_signal(Vec::<serde_json::Value>::new);
     let active_session = use_signal(String::new);
     let active_title = use_signal(String::new);
@@ -345,7 +342,6 @@ pub fn ConnectChat() -> Element {
     let jobs = use_signal(Vec::<serde_json::Value>::new);
     // Cooperative project scope for the session (threads through the CML #project tag).
     let active_project = use_signal(String::new);
-    let np_name = use_signal(String::new);
 
     // Mount: register the streaming listeners + load initial state (wasm/Tauri only).
     #[cfg(target_arch = "wasm32")]
@@ -368,7 +364,7 @@ pub fn ConnectChat() -> Element {
         let mut active_title = active_title;
         let mut messages = messages;
         let mut active_project = active_project;
-        let mut conduct = conduct;
+        let conduct = conduct;
         let mut status = status;
         spawn(async move {
             // chat-token → append the delta to the in-progress agent bubble.
@@ -430,19 +426,24 @@ pub fn ConnectChat() -> Element {
             cv.forget();
 
             // Initial state.
-            if let Ok(Some(m)) = invoke_json::<Option<String>>("get_active_model", json!({})).await {
+            if let Ok(Some(m)) = invoke_json::<Option<String>>("get_active_model", json!({})).await
+            {
                 active_model.set(m);
             } else {
                 // Soft discover so the model picker is ready without an extra click.
                 // Exactly one model → pre-select in dropdown (no auto-activate).
-                if let Ok(list) = invoke_json::<Vec<serde_json::Value>>("discover_models", json!({})).await {
+                if let Ok(list) =
+                    invoke_json::<Vec<serde_json::Value>>("discover_models", json!({})).await
+                {
                     if let Some(label) = auto_select_model_label(&list, &selected_model()) {
                         selected_model.set(label);
                     }
                     models.set(list);
                 }
             }
-            if let Ok(list) = invoke_json::<Vec<serde_json::Value>>("list_chat_sessions", json!({})).await {
+            if let Ok(list) =
+                invoke_json::<Vec<serde_json::Value>>("list_chat_sessions", json!({})).await
+            {
                 // Open most recent conversation so Chat is never an empty void on return.
                 if let Some(first) = list.first() {
                     let sid = s(first, "id");
@@ -455,8 +456,11 @@ pub fn ConnectChat() -> Element {
                         }
                     };
                     if !sid.is_empty() {
-                        if let Ok(full) =
-                            invoke_json::<serde_json::Value>("load_chat_session", json!({ "id": sid })).await
+                        if let Ok(full) = invoke_json::<serde_json::Value>(
+                            "load_chat_session",
+                            json!({ "id": sid }),
+                        )
+                        .await
                         {
                             let meta = full.get("meta").cloned().unwrap_or_default();
                             active_session.set(s(&meta, "id"));
@@ -475,17 +479,25 @@ pub fn ConnectChat() -> Element {
                 }
                 sessions.set(list);
             }
-            if let Ok(list) = invoke_json::<Vec<serde_json::Value>>("list_chat_contacts", json!({})).await {
+            if let Ok(list) =
+                invoke_json::<Vec<serde_json::Value>>("list_chat_contacts", json!({})).await
+            {
                 contacts.set(list);
             }
-            if let Ok(list) = invoke_json::<Vec<serde_json::Value>>("agent_roster_list", json!({})).await {
+            if let Ok(list) =
+                invoke_json::<Vec<serde_json::Value>>("agent_roster_list", json!({})).await
+            {
                 if active_agent().is_empty() {
-                    if let Some(first) = list.first() { active_agent.set(s(first, "slug")); }
+                    if let Some(first) = list.first() {
+                        active_agent.set(s(first, "slug"));
+                    }
                 }
                 agents.set(list);
             }
             if let Ok(snap) = invoke_json::<serde_json::Value>("list_local_jobs", json!({})).await {
-                if let Some(arr) = snap.get("jobs").and_then(|j| j.as_array()) { jobs.set(arr.clone()); }
+                if let Some(arr) = snap.get("jobs").and_then(|j| j.as_array()) {
+                    jobs.set(arr.clone());
+                }
             }
             // Omnibox / Projects / People handoff → composer + optional peer session.
             if let Some(win) = web_sys::window() {
@@ -507,9 +519,11 @@ pub fn ConnectChat() -> Element {
                         if !sid.is_empty() {
                             let _ = storage.remove_item("webizen_open_session_id");
                             active_session.set(sid.clone());
-                            if let Ok(list) =
-                                invoke_json::<Vec<serde_json::Value>>("list_chat_sessions", json!({}))
-                                    .await
+                            if let Ok(list) = invoke_json::<Vec<serde_json::Value>>(
+                                "list_chat_sessions",
+                                json!({}),
+                            )
+                            .await
                             {
                                 if let Some(s) = list.iter().find(|x| {
                                     x.get("id").and_then(|i| i.as_str()) == Some(sid.as_str())
@@ -548,7 +562,11 @@ pub fn ConnectChat() -> Element {
                                     .unwrap_or(false)
                             });
                             if let Some(s) = existing {
-                                let id = s.get("id").and_then(|x| x.as_str()).unwrap_or("").to_string();
+                                let id = s
+                                    .get("id")
+                                    .and_then(|x| x.as_str())
+                                    .unwrap_or("")
+                                    .to_string();
                                 if !id.is_empty() {
                                     active_session.set(id);
                                     active_title.set(title.clone());
@@ -563,12 +581,11 @@ pub fn ConnectChat() -> Element {
                                     Ok(id) => {
                                         active_session.set(id);
                                         active_title.set(title);
-                                        if let Ok(list) =
-                                            invoke_json::<Vec<serde_json::Value>>(
-                                                "list_chat_sessions",
-                                                json!({}),
-                                            )
-                                            .await
+                                        if let Ok(list) = invoke_json::<Vec<serde_json::Value>>(
+                                            "list_chat_sessions",
+                                            json!({}),
+                                        )
+                                        .await
                                         {
                                             sessions.set(list);
                                         }
@@ -587,11 +604,26 @@ pub fn ConnectChat() -> Element {
     #[cfg(not(target_arch = "wasm32"))]
     {
         let _ = (
-            &status, &conduct, &display_name, &profile_raw, &invite_out, &invite_code, &invite_mailto,
-            &invite_in, &contacts, &group_title, &group_dids, &sessions, &active_session,
-            &active_title, &messages, &draft, &streaming, &streaming_for, &active_model,
-            &models, &selected_model, &agents, &active_agent, &na_name, &na_kind, &na_endpoint,
-            &jobs, &active_project, &np_name,
+            &status,
+            &conduct,
+            &contacts,
+            &sessions,
+            &active_session,
+            &active_title,
+            &messages,
+            &draft,
+            &streaming,
+            &streaming_for,
+            &active_model,
+            &models,
+            &selected_model,
+            &agents,
+            &active_agent,
+            &na_name,
+            &na_kind,
+            &na_endpoint,
+            &jobs,
+            &active_project,
         );
     }
 
@@ -605,7 +637,13 @@ pub fn ConnectChat() -> Element {
                 .get("author_name")
                 .and_then(|v| v.as_str())
                 .map(|x| x.to_string())
-                .unwrap_or_else(|| if is_agent { "Agent".into() } else { "You".into() });
+                .unwrap_or_else(|| {
+                    if is_agent {
+                        "Agent".into()
+                    } else {
+                        "You".into()
+                    }
+                });
             (is_agent, author, s(m, "content"))
         })
         .collect();
@@ -671,7 +709,7 @@ pub fn ConnectChat() -> Element {
                     } else {
                         HonestyChip {
                             level: HonestyLevel::NeedsModel,
-                            detail: "Detect & Activate a local model in the sidebar".to_string(),
+                            detail: "Choose and test a local model in Settings → AI instruments".to_string(),
                         }
                         span {
                             style: "font-size:12px; color:#fde68a; background:#78350f; border:1px solid #b45309; padding:4px 12px; border-radius:999px;",
@@ -700,8 +738,9 @@ pub fn ConnectChat() -> Element {
                 // ---- Sidebar --------------------------------------------------
                 div { style: "{SIDEBAR}",
 
-                    // Local instrument / model
-                    div { style: "{CARD}",
+                    if experience_mode().is_advanced() {
+                        // Local instrument / model
+                        div { style: "{CARD}",
                         h3 { style: "{H3}", "Local instrument" }
                         p { style: "color:#94a3b8; font-size:12px; margin:0 0 8px; line-height:1.4;",
                             if has_model {
@@ -937,6 +976,8 @@ pub fn ConnectChat() -> Element {
                         }
                     }
 
+                    }
+
                     // Conversations
                     div { style: "{CARD}",
                         h3 { style: "{H3}", "Conversations" }
@@ -1061,7 +1102,7 @@ pub fn ConnectChat() -> Element {
                                     if has_model {
                                         "Type below and press Send (or Enter) — a chat starts automatically if needed. Open a past conversation on the left anytime."
                                     } else {
-                                        "Detect & Activate a model on the left, then type below. Send opens a chat for you."
+                                        "Choose and test a model in Settings → AI instruments, then return here."
                                     }
                                 }
                             }
@@ -1194,7 +1235,7 @@ pub fn ConnectChat() -> Element {
                             onclick: move |_| {
                                 #[cfg(target_arch = "wasm32")]
                                 {
-                                    let mut status = status;
+                                    let status = status;
                                     spawn(async move {
                                         let _ = invoke_json::<serde_json::Value>("cancel_chat_inference", json!({})).await;
                                         flash_status(status, "Cancelled.".into(), 1200);

@@ -12,8 +12,8 @@
 
 use super::host_client::{
     create_agency_delegation, evaluate_agency_access, fetch_agency_delegations,
-    fetch_agency_domains, revoke_agency_delegation, set_agency_delegation_consent, AgencyDecisionDto,
-    AgencyDelegationDto, AgencyDomainDto,
+    fetch_agency_domains, revoke_agency_delegation, set_agency_delegation_consent,
+    AgencyDecisionDto, AgencyDelegationDto, AgencyDomainDto,
 };
 use dioxus::prelude::*;
 use std::collections::HashMap;
@@ -66,7 +66,9 @@ pub fn WellfairAgencyPanel() -> Element {
     let mut init_done = use_signal(|| false);
 
     use_effect(move || {
-        if init_done() { return; }
+        if init_done() {
+            return;
+        }
         init_done.set(true);
         spawn(reload(ui));
     });

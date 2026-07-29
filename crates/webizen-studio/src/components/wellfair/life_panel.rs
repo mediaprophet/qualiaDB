@@ -30,10 +30,7 @@ pub fn WellfairLifePanel() -> Element {
                 let life: Vec<_> = list
                     .into_iter()
                     .filter(|r| {
-                        matches!(
-                            r.kind.as_str(),
-                            "life_event" | "welfare_case" | "case_task"
-                        )
+                        matches!(r.kind.as_str(), "life_event" | "welfare_case" | "case_task")
                     })
                     .collect();
                 let prev_selected = ui.read().selected_case_id.clone();
@@ -54,7 +51,9 @@ pub fn WellfairLifePanel() -> Element {
     let mut loaded = use_signal(|| false);
 
     use_effect(move || {
-        if loaded() { return; }
+        if loaded() {
+            return;
+        }
         loaded.set(true);
         reload();
     });

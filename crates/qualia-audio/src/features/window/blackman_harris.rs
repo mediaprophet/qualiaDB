@@ -52,6 +52,9 @@ mod tests {
     #[test]
     fn rejects_empty() {
         let mut w: [f32; 0] = [];
-        assert_eq!(blackman_harris_window(&mut w), Err(AudioError::InvalidParameter));
+        assert_eq!(
+            blackman_harris_window(&mut w),
+            Err(AudioError::InvalidParameter)
+        );
     }
 }

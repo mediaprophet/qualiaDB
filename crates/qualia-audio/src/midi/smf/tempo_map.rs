@@ -38,7 +38,10 @@ impl TempoMap {
     pub fn constant(division: Division, us_per_quarter: u32) -> Self {
         TempoMap {
             division,
-            entries: vec![TempoEntry { tick: 0, us_per_quarter }],
+            entries: vec![TempoEntry {
+                tick: 0,
+                us_per_quarter,
+            }],
         }
     }
 
@@ -50,7 +53,10 @@ impl TempoMap {
     /// Convert an absolute tick position to elapsed seconds from the start.
     pub fn ticks_to_seconds(&self, tick: u64) -> f64 {
         match self.division {
-            Division::Smpte { fps, ticks_per_frame } => {
+            Division::Smpte {
+                fps,
+                ticks_per_frame,
+            } => {
                 let per_second = f64::from(fps) * f64::from(ticks_per_frame);
                 if per_second == 0.0 {
                     0.0
@@ -72,7 +78,8 @@ impl TempoMap {
                         .map(|e| e.tick.min(tick))
                         .unwrap_or(tick);
                     let seg_ticks = seg_end.saturating_sub(seg_start) as f64;
-                    let sec_per_tick = (f64::from(self.entries[i].us_per_quarter) / 1_000_000.0) / ppq;
+                    let sec_per_tick =
+                        (f64::from(self.entries[i].us_per_quarter) / 1_000_000.0) / ppq;
                     seconds += seg_ticks * sec_per_tick;
                 }
                 seconds
@@ -87,7 +94,10 @@ impl TempoMap {
             return 0;
         }
         match self.division {
-            Division::Smpte { fps, ticks_per_frame } => {
+            Division::Smpte {
+                fps,
+                ticks_per_frame,
+            } => {
                 let per_second = f64::from(fps) * f64::from(ticks_per_frame);
                 (seconds * per_second).round() as u64
             }
@@ -96,7 +106,8 @@ impl TempoMap {
                 let mut remaining = seconds;
                 for i in 0..self.entries.len() {
                     let seg_start = self.entries[i].tick;
-                    let sec_per_tick = (f64::from(self.entries[i].us_per_quarter) / 1_000_000.0) / ppq;
+                    let sec_per_tick =
+                        (f64::from(self.entries[i].us_per_quarter) / 1_000_000.0) / ppq;
                     // Duration of this segment (until the next tempo change, or ∞).
                     let seg_ticks = self
                         .entries
@@ -133,7 +144,10 @@ pub fn build_tempo_map(file: &SmfFile) -> TempoMap {
         for ev in &track.events {
             abs_tick += u64::from(ev.delta_ticks);
             if let TrackEvent::Meta(MetaEvent::Tempo(us)) = &ev.event {
-                entries.push(TempoEntry { tick: abs_tick, us_per_quarter: *us });
+                entries.push(TempoEntry {
+                    tick: abs_tick,
+                    us_per_quarter: *us,
+                });
             }
         }
     }
@@ -144,11 +158,17 @@ pub fn build_tempo_map(file: &SmfFile) -> TempoMap {
     if entries.first().map(|e| e.tick) != Some(0) {
         entries.insert(
             0,
-            TempoEntry { tick: 0, us_per_quarter: DEFAULT_US_PER_QUARTER },
+            TempoEntry {
+                tick: 0,
+                us_per_quarter: DEFAULT_US_PER_QUARTER,
+            },
         );
     }
 
-    TempoMap { division: file.division, entries }
+    TempoMap {
+        division: file.division,
+        entries,
+    }
 }
 
 #[cfg(test)]
@@ -174,8 +194,14 @@ mod tests {
         let map = TempoMap {
             division: Division::Ppq(480),
             entries: vec![
-                TempoEntry { tick: 0, us_per_quarter: 500_000 },
-                TempoEntry { tick: 480, us_per_quarter: 1_000_000 },
+                TempoEntry {
+                    tick: 0,
+                    us_per_quarter: 500_000,
+                },
+                TempoEntry {
+                    tick: 480,
+                    us_per_quarter: 1_000_000,
+                },
             ],
         };
         // At tick 480: 0.5 s. At tick 960: 0.5 + (480 ticks @ 60 BPM = 1.0 s) = 1.5 s.
@@ -192,15 +218,27 @@ mod tests {
             tracks: vec![Track { events: vec![] }],
         };
         let map = build_tempo_map(&file);
-        assert_eq!(map.entries(), &[TempoEntry { tick: 0, us_per_quarter: 500_000 }]);
+        assert_eq!(
+            map.entries(),
+            &[TempoEntry {
+                tick: 0,
+                us_per_quarter: 500_000
+            }]
+        );
     }
 
     #[test]
     fn build_from_file_collects_tempo_events() {
         use super::super::read::TrackEvent;
         let events = vec![
-            Event { delta_ticks: 0, event: TrackEvent::Meta(MetaEvent::Tempo(600_000)) },
-            Event { delta_ticks: 240, event: TrackEvent::Meta(MetaEvent::Tempo(400_000)) },
+            Event {
+                delta_ticks: 0,
+                event: TrackEvent::Meta(MetaEvent::Tempo(600_000)),
+            },
+            Event {
+                delta_ticks: 240,
+                event: TrackEvent::Meta(MetaEvent::Tempo(400_000)),
+            },
         ];
         let file = SmfFile {
             format: 0,
@@ -211,8 +249,14 @@ mod tests {
         assert_eq!(
             map.entries(),
             &[
-                TempoEntry { tick: 0, us_per_quarter: 600_000 },
-                TempoEntry { tick: 240, us_per_quarter: 400_000 },
+                TempoEntry {
+                    tick: 0,
+                    us_per_quarter: 600_000
+                },
+                TempoEntry {
+                    tick: 240,
+                    us_per_quarter: 400_000
+                },
             ]
         );
     }
@@ -220,7 +264,13 @@ mod tests {
     #[test]
     fn smpte_division_is_tempo_independent() {
         // 25 fps, 40 ticks/frame → 1000 ticks/second.
-        let map = TempoMap::constant(Division::Smpte { fps: 25, ticks_per_frame: 40 }, 500_000);
+        let map = TempoMap::constant(
+            Division::Smpte {
+                fps: 25,
+                ticks_per_frame: 40,
+            },
+            500_000,
+        );
         assert!((map.ticks_to_seconds(1000) - 1.0).abs() < 1e-9);
         assert_eq!(map.seconds_to_ticks(1.0), 1000);
     }

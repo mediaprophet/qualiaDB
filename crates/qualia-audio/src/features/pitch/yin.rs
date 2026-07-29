@@ -99,7 +99,10 @@ pub fn yin_pitch(
     // Voicing gate: a lag that never approached the threshold and carries high
     // aperiodicity is not a real pitch.
     if aperiodicity > 1.0 || (scratch[tau] >= threshold && aperiodicity > 0.5) {
-        return Ok(PitchEstimate { f0_hz: 0.0, confidence });
+        return Ok(PitchEstimate {
+            f0_hz: 0.0,
+            confidence,
+        });
     }
     Ok(PitchEstimate {
         f0_hz: sample_rate / better_tau,
@@ -129,7 +132,11 @@ mod tests {
         let est = yin_pitch(&frame, SR, 80.0, 1000.0, 0.1, &mut scratch).expect("yin");
         let err = (est.f0_hz - 440.0).abs() / 440.0;
         assert!(err < 0.01, "f0={} err={err}", est.f0_hz);
-        assert!(cents(est.f0_hz, 440.0) < 10.0, "cents={}", cents(est.f0_hz, 440.0));
+        assert!(
+            cents(est.f0_hz, 440.0) < 10.0,
+            "cents={}",
+            cents(est.f0_hz, 440.0)
+        );
         assert!(est.confidence > 0.9, "conf={}", est.confidence);
     }
 

@@ -108,7 +108,10 @@ pub fn save_profile(profile: &UserProfile) -> Result<(), String> {
 /// Used by the People tab "Save + enable invites" path, which intentionally sends only
 /// `display_name` + a subset of `sharing` flags. Unknown top-level keys are ignored.
 /// Nested `sharing` objects are field-wise merged so omitted flags keep their current values.
-pub fn apply_profile_patch(base: &UserProfile, patch: &serde_json::Value) -> Result<UserProfile, String> {
+pub fn apply_profile_patch(
+    base: &UserProfile,
+    patch: &serde_json::Value,
+) -> Result<UserProfile, String> {
     if !patch.is_object() {
         return Err("profile patch must be a JSON object".into());
     }
@@ -157,7 +160,10 @@ pub fn apply_profile_patch(base: &UserProfile, patch: &serde_json::Value) -> Res
     Ok(out)
 }
 
-fn apply_sharing_patch(policy: &mut SharingPolicy, patch: &serde_json::Value) -> Result<(), String> {
+fn apply_sharing_patch(
+    policy: &mut SharingPolicy,
+    patch: &serde_json::Value,
+) -> Result<(), String> {
     let obj = patch
         .as_object()
         .ok_or_else(|| "sharing must be a JSON object".to_string())?;
@@ -264,7 +270,10 @@ mod tests {
         let out = apply_profile_patch(&base, &patch).expect("partial patch must apply");
         assert_eq!(out.display_name, "Timothy");
         assert!(out.sharing.allow_group_chat_invites);
-        assert!(out.sharing.share_active_model, "unmentioned sharing flags must be preserved");
+        assert!(
+            out.sharing.share_active_model,
+            "unmentioned sharing flags must be preserved"
+        );
         assert_eq!(out.bio.as_deref(), Some("keeps bio"));
         assert_eq!(out.public_did, "did:qualia:test:abc");
         assert_eq!(out.active_front_door_id.as_deref(), Some("door-1"));

@@ -14,8 +14,8 @@ use qualia_core_db::{q_hash, NQuin};
 use serde_json::{json, Value};
 
 use crate::{
-    optional_u64, parse_quin, parse_u64, quin_json, required_str, required_u32,
-    MAX_INPUT_QUINS, MAX_N3_EVENTS, MAX_QUERY_RESULTS,
+    optional_u64, parse_quin, parse_u64, quin_json, required_str, required_u32, MAX_INPUT_QUINS,
+    MAX_N3_EVENTS, MAX_QUERY_RESULTS,
 };
 
 const MAX_SESSION_GRAPHS: usize = 8;
@@ -274,12 +274,14 @@ pub fn query_graph(args: &Value) -> Result<Value, String> {
                 }
             }
             if let Some(ref needle) = label_contains {
-                let hit = [q.subject, q.predicate, q.object, q.context].iter().any(|h| {
-                    g.lexicon
-                        .get(h)
-                        .map(|s| s.to_ascii_lowercase().contains(needle.as_str()))
-                        .unwrap_or(false)
-                });
+                let hit = [q.subject, q.predicate, q.object, q.context]
+                    .iter()
+                    .any(|h| {
+                        g.lexicon
+                            .get(h)
+                            .map(|s| s.to_ascii_lowercase().contains(needle.as_str()))
+                            .unwrap_or(false)
+                    });
                 if !hit {
                     continue;
                 }
@@ -397,7 +399,12 @@ pub fn query_sparql(args: &Value) -> Result<Value, String> {
     result["queryMeta"]["tool"] = json!("query_sparql");
     result["queryMeta"]["sparqlSubset"] = json!("bgp-spo+optional-filter-contains-object");
     result["queryMeta"]["unsupported"] = json!([
-        "joins", "OPTIONAL", "UNION", "property paths", "named graphs", "UPDATE"
+        "joins",
+        "OPTIONAL",
+        "UNION",
+        "property paths",
+        "named graphs",
+        "UPDATE"
     ]);
     Ok(result)
 }
@@ -654,7 +661,9 @@ fn decode_q42lite(bytes: &[u8]) -> Result<(Vec<NQuin>, HashMap<u64, String>, Str
     let quin_count = u32::from_le_bytes([bytes[8], bytes[9], bytes[10], bytes[11]]) as usize;
     let lex_len = u32::from_le_bytes([bytes[12], bytes[13], bytes[14], bytes[15]]) as usize;
     if quin_count > MAX_INPUT_QUINS {
-        return Err(format!("Q42L quin_count {quin_count} exceeds {MAX_INPUT_QUINS}"));
+        return Err(format!(
+            "Q42L quin_count {quin_count} exceeds {MAX_INPUT_QUINS}"
+        ));
     }
     let mut off = 16usize;
     let mut lexicon = HashMap::new();
@@ -719,10 +728,7 @@ fn decode_base64(input: &str) -> Result<Vec<u8>, String> {
         t[b'/' as usize] = 63;
         t
     };
-    let clean: Vec<u8> = input
-        .bytes()
-        .filter(|b| !b.is_ascii_whitespace())
-        .collect();
+    let clean: Vec<u8> = input.bytes().filter(|b| !b.is_ascii_whitespace()).collect();
     if clean.len() % 4 != 0 {
         return Err("invalid base64 length".into());
     }
@@ -740,7 +746,10 @@ fn decode_base64(input: &str) -> Result<Vec<u8>, String> {
         } else {
             T[chunk[3] as usize]
         };
-        if a == 0xff || b == 0xff || (chunk[2] != b'=' && c == 0xff) || (chunk[3] != b'=' && d == 0xff)
+        if a == 0xff
+            || b == 0xff
+            || (chunk[2] != b'=' && c == 0xff)
+            || (chunk[3] != b'=' && d == 0xff)
         {
             return Err("invalid base64 character".into());
         }

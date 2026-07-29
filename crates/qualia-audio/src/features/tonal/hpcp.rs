@@ -169,6 +169,9 @@ mod tests {
         let mut out = [0.0f32; 12];
         hpcp(&freqs, &mags, 4, 440.0, 12, &mut out).expect("hpcp");
         let total: f32 = out.iter().sum();
-        assert!((total - 1.0).abs() < 1e-6, "only the 440 peak counts, total={total}");
+        assert!(
+            (total - 1.0).abs() < 1e-6,
+            "only the 440 peak counts, total={total}"
+        );
     }
 }

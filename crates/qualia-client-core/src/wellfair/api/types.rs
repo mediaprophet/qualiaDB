@@ -1,8 +1,6 @@
 //! Standalone types + free functions
 
-
 use qualia_cooperative_core::agency_delegation::ConsentState;
-
 
 pub struct SyncPullReport {
     /// Operations received from the transport.
@@ -69,15 +67,15 @@ pub fn sanctuary_retention_mode_from_str(
 
 #[cfg(test)]
 mod api_tests {
-    use super::*;
     use super::super::*;
+    use super::*;
     use crate::wellfair::host_state::SubmitOutcome;
     use crate::wellfair::policy::PolicyDecisionService;
     use crate::wellfair::vault::VaultService;
     use ed25519_dalek::SigningKey;
+    use tempfile::tempdir;
     use wellfare_core::conditions::{AllergyReport, ConditionReport};
     use wellfare_core::personal_records::{DisputedDiagnosisReport, HousingSafetyReport};
-    use tempfile::tempdir;
 
     fn test_host(dir: &std::path::Path) -> WebizenHostApi {
         let wal = dir.join("test.wal");
@@ -147,7 +145,11 @@ mod api_tests {
         host.set_agency_delegation_consent(&d.id, ConsentState::Withdrawn)
             .unwrap();
         let listed = host.list_agency_delegations(16).unwrap();
-        assert_eq!(listed.len(), 1, "supersede must not create a second logical delegation");
+        assert_eq!(
+            listed.len(),
+            1,
+            "supersede must not create a second logical delegation"
+        );
         assert_eq!(listed[0].consent, ConsentState::Withdrawn);
         assert!(!host
             .evaluate_agency_access(&d.id, "read", "diagnosis")
@@ -203,14 +205,25 @@ mod api_tests {
         let host_b = test_host(dir_b.path());
 
         // Host A commits a (Restricted) record — the vault auto-enqueues it to A's outbox.
-        host_a.add_condition(&ConditionReport::new("Asthma")).unwrap();
-        let queued_before = SyncOutbox::open(dir_a.path()).unwrap().count_queued().unwrap();
+        host_a
+            .add_condition(&ConditionReport::new("Asthma"))
+            .unwrap();
+        let queued_before = SyncOutbox::open(dir_a.path())
+            .unwrap()
+            .count_queued()
+            .unwrap();
         assert!(queued_before >= 1);
 
         // Push drains the outbox onto the relay and marks entries Sent.
         let pushed = host_a.sync_push_via(&relay, 32).unwrap();
         assert_eq!(pushed, queued_before);
-        assert_eq!(SyncOutbox::open(dir_a.path()).unwrap().count_queued().unwrap(), 0);
+        assert_eq!(
+            SyncOutbox::open(dir_a.path())
+                .unwrap()
+                .count_queued()
+                .unwrap(),
+            0
+        );
         assert_eq!(relay.len(), pushed);
 
         // Host B pulls + admits — the op lands in B's validated set.
@@ -225,7 +238,10 @@ mod api_tests {
         let again = host_b.sync_pull_via(&relay, 0).unwrap();
         assert_eq!(again.validated, 0);
         assert_eq!(again.duplicate, pushed);
-        assert_eq!(host_b.validated_sync_operations().unwrap().len(), validated.len());
+        assert_eq!(
+            host_b.validated_sync_operations().unwrap().len(),
+            validated.len()
+        );
     }
 
     #[test]
@@ -258,12 +274,16 @@ mod api_tests {
     fn diagnostics_report_reflects_node_state() {
         let dir = tempdir().unwrap();
         let mut host = test_host(dir.path());
-        host.add_condition(&ConditionReport::new("Migraine")).unwrap();
+        host.add_condition(&ConditionReport::new("Migraine"))
+            .unwrap();
 
         let report = host.diagnostics_report().unwrap();
         assert!(!report.crate_version.is_empty());
         assert!(report.journal_records >= 1);
-        assert!(report.outbox_queued >= 1, "a committed record auto-enqueues to the outbox");
+        assert!(
+            report.outbox_queued >= 1,
+            "a committed record auto-enqueues to the outbox"
+        );
         assert!(report.data_files >= 1);
         assert!(report.data_bytes > 0);
         // No Sanctuary vault set up in this test.
@@ -308,10 +328,20 @@ mod api_tests {
         let mut host = test_host(dir.path());
         host.add_ledger_entry(&LedgerEntry::new("Wage", 250_000, "AUD", 1_700_000_000))
             .unwrap();
-        host.add_ledger_entry(&LedgerEntry::new("Groceries", -42_000, "AUD", 1_700_000_100))
-            .unwrap();
-        host.add_ledger_entry(&LedgerEntry::new("Grant (USD)", 100_000, "usd", 1_700_000_200))
-            .unwrap();
+        host.add_ledger_entry(&LedgerEntry::new(
+            "Groceries",
+            -42_000,
+            "AUD",
+            1_700_000_100,
+        ))
+        .unwrap();
+        host.add_ledger_entry(&LedgerEntry::new(
+            "Grant (USD)",
+            100_000,
+            "usd",
+            1_700_000_200,
+        ))
+        .unwrap();
 
         let rows = host.list_ledger_entries(16).unwrap();
         assert_eq!(rows.len(), 3);
@@ -319,10 +349,18 @@ mod api_tests {
 
         let balance = host.ledger_balance(64).unwrap();
         assert_eq!(balance.total_entries, 3);
-        let aud = balance.by_currency.iter().find(|c| c.currency == "AUD").unwrap();
+        let aud = balance
+            .by_currency
+            .iter()
+            .find(|c| c.currency == "AUD")
+            .unwrap();
         assert_eq!(aud.net_cents, 208_000);
         assert_eq!(aud.entry_count, 2);
-        let usd = balance.by_currency.iter().find(|c| c.currency == "USD").unwrap();
+        let usd = balance
+            .by_currency
+            .iter()
+            .find(|c| c.currency == "USD")
+            .unwrap();
         assert_eq!(usd.net_cents, 100_000);
     }
 
@@ -333,10 +371,28 @@ mod api_tests {
         let mut host = test_host(dir.path());
         let p = Project::new("Community Garden", "shared beds", vec![], 1_700_000_000);
         host.add_project(&p).unwrap();
-        host.add_contribution(&Contribution::new(&p.id, "did:wf:owner", "dig", 60, 0, 1.0, wellfare_core::projects::ContributionPrivacy::Public, 1_700_000_050))
-            .unwrap();
-        host.add_contribution(&Contribution::new(&p.id, "did:wf:owner", "plant", 30, 0, 1.0, wellfare_core::projects::ContributionPrivacy::Public, 1_700_000_100))
-            .unwrap();
+        host.add_contribution(&Contribution::new(
+            &p.id,
+            "did:wf:owner",
+            "dig",
+            60,
+            0,
+            1.0,
+            wellfare_core::projects::ContributionPrivacy::Public,
+            1_700_000_050,
+        ))
+        .unwrap();
+        host.add_contribution(&Contribution::new(
+            &p.id,
+            "did:wf:owner",
+            "plant",
+            30,
+            0,
+            1.0,
+            wellfare_core::projects::ContributionPrivacy::Public,
+            1_700_000_100,
+        ))
+        .unwrap();
 
         let obligations = host.project_obligations(64).unwrap();
         let owner = obligations
@@ -401,7 +457,10 @@ mod api_tests {
             )
             .unwrap();
         let proposal_id = match outcome {
-            SubmitOutcome::Suspended { proposal_id, threshold } => {
+            SubmitOutcome::Suspended {
+                proposal_id,
+                threshold,
+            } => {
                 assert_eq!(threshold, 2);
                 proposal_id
             }
@@ -409,7 +468,10 @@ mod api_tests {
         };
 
         // The escrowed record is NOT yet committed.
-        assert!(host.list_journal_by_kind("condition", 64).unwrap().is_empty());
+        assert!(host
+            .list_journal_by_kind("condition", 64)
+            .unwrap()
+            .is_empty());
 
         // One approval → still pending.
         let v1 = host
@@ -417,7 +479,10 @@ mod api_tests {
             .unwrap();
         assert_eq!(v1.state, "pending");
         assert!(!v1.committed);
-        assert!(host.list_journal_by_kind("condition", 64).unwrap().is_empty());
+        assert!(host
+            .list_journal_by_kind("condition", 64)
+            .unwrap()
+            .is_empty());
 
         // Second distinct approval → ratified; the escrowed record commits.
         let v2 = host
@@ -468,7 +533,10 @@ mod api_tests {
         assert_eq!(denied.state, "denied");
         assert!(!denied.committed);
         assert_eq!(denied.denied_by.as_deref(), Some("did:wf:guardianB"));
-        assert!(host.list_journal_by_kind("condition", 64).unwrap().is_empty());
+        assert!(host
+            .list_journal_by_kind("condition", 64)
+            .unwrap()
+            .is_empty());
     }
 
     #[test]
@@ -578,7 +646,10 @@ mod api_tests {
         assert_eq!(in_progress.cards.len(), 1);
         assert_eq!(in_progress.cards[0].title, "Write tests");
         // No card left in the default Todo column.
-        let todo = board.iter().find(|c| c.status == WorkItemStatus::Todo).unwrap();
+        let todo = board
+            .iter()
+            .find(|c| c.status == WorkItemStatus::Todo)
+            .unwrap();
         assert!(todo.cards.is_empty());
 
         // A different project's board has no cards.
@@ -645,7 +716,16 @@ mod api_tests {
         let pa = Project::new("Shared Garden", "beds", vec![], 1_700_000_000);
         peer_a.add_project(&pa).unwrap();
         let a_entry = peer_a
-            .add_contribution(&Contribution::new(&pa.id, "did:wf:alice", "dig", 60, 0, 1.0, wellfare_core::projects::ContributionPrivacy::Public, 1_700_000_050))
+            .add_contribution(&Contribution::new(
+                &pa.id,
+                "did:wf:alice",
+                "dig",
+                60,
+                0,
+                1.0,
+                wellfare_core::projects::ContributionPrivacy::Public,
+                1_700_000_050,
+            ))
             .unwrap();
         let remote_op = peer_a.build_outbound_operation(&a_entry, 5).unwrap();
 
@@ -653,19 +733,40 @@ mod api_tests {
         let dir_b = tempdir().unwrap();
         let mut peer_b = test_host(dir_b.path());
         peer_b
-            .add_contribution(&Contribution::new(&pa.id, "did:wf:bob", "plant", 30, 0, 1.0, wellfare_core::projects::ContributionPrivacy::Public, 1_700_000_100))
+            .add_contribution(&Contribution::new(
+                &pa.id,
+                "did:wf:bob",
+                "plant",
+                30,
+                0,
+                1.0,
+                wellfare_core::projects::ContributionPrivacy::Public,
+                1_700_000_100,
+            ))
             .unwrap();
 
         // Local-only view: just Bob's 30 min.
         let local = peer_b.project_obligations(64).unwrap();
-        assert_eq!(local.iter().map(|o| o.total_effort_minutes).sum::<u64>(), 30);
+        assert_eq!(
+            local.iter().map(|o| o.total_effort_minutes).sum::<u64>(),
+            30
+        );
 
         // Admit the remote op, then the synced view includes Alice's 60 min too.
-        assert!(peer_b.admit_sync_operation(&remote_op).unwrap().is_validated());
+        assert!(peer_b
+            .admit_sync_operation(&remote_op)
+            .unwrap()
+            .is_validated());
         let synced = peer_b.synced_project_obligations(64).unwrap();
-        let alice = synced.iter().find(|o| o.contributor_did == "did:wf:alice").unwrap();
+        let alice = synced
+            .iter()
+            .find(|o| o.contributor_did == "did:wf:alice")
+            .unwrap();
         assert_eq!(alice.total_effort_minutes, 60);
-        let bob = synced.iter().find(|o| o.contributor_did == "did:wf:bob").unwrap();
+        let bob = synced
+            .iter()
+            .find(|o| o.contributor_did == "did:wf:bob")
+            .unwrap();
         assert_eq!(bob.total_effort_minutes, 30);
 
         // Replaying the remote op does not double-count: the synced view is unchanged.
@@ -684,7 +785,9 @@ mod api_tests {
         let mut host = test_host(dir.path());
         // therapy_note is a Classified, sanctuary-protected kind (the encrypted vault holds
         // free-text sanctuary notes; the journal still carries other Classified kinds).
-        let entry = host.add_therapy_note(&TherapyNote::new("private contingency")).unwrap();
+        let entry = host
+            .add_therapy_note(&TherapyNote::new("private contingency"))
+            .unwrap();
         assert_eq!(entry.sensitivity, "Classified");
         assert!(host.build_outbound_operation(&entry, 1).is_none());
     }
@@ -694,8 +797,10 @@ mod api_tests {
         use wellfare_core::mental_wellbeing::TherapyNote;
         let dir = tempdir().unwrap();
         let mut host = test_host(dir.path());
-        host.add_condition(&ConditionReport::new("Hypertension")).unwrap();
-        host.add_therapy_note(&TherapyNote::new("private contingency")).unwrap();
+        host.add_condition(&ConditionReport::new("Hypertension"))
+            .unwrap();
+        host.add_therapy_note(&TherapyNote::new("private contingency"))
+            .unwrap();
         host.finalize_batch().unwrap();
 
         // Before Sanctuary is set up, coverage lists every kind.
@@ -704,7 +809,8 @@ mod api_tests {
         assert!(unlocked.iter().any(|r| r.kind == "condition"));
 
         // Once set up and locked, the protected kind is withheld from the coverage view.
-        host.setup_sanctuary("real-pin-cov", "decoy-pin-cov").unwrap();
+        host.setup_sanctuary("real-pin-cov", "decoy-pin-cov")
+            .unwrap();
         host.lock_sanctuary().unwrap();
         let locked = host.query_graph_coverage(32).unwrap();
         assert!(locked.iter().all(|r| r.kind != "therapy_note"));

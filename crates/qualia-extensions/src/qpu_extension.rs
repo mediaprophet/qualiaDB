@@ -1,9 +1,12 @@
 //! QPU Extension for QualiaDB Advanced
-//! 
+//!
 //! Provides quantum computing capabilities through remote QPU APIs
 //! while maintaining zero-allocation principles in the core engine.
 
-use crate::{Extension, ExtensionCapability, ExtensionError, ExtensionJob, ExtensionResult, ResourceRequirements, NQuin};
+use crate::{
+    Extension, ExtensionCapability, ExtensionError, ExtensionJob, ExtensionResult, NQuin,
+    ResourceRequirements,
+};
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -94,7 +97,9 @@ impl DqcScheduler {
     /// to perfectly mitigate parallel hardware slowdowns via the QGroup heuristic.
     pub fn schedule_vqe_jobs(jobs: &mut [QpuJobParams]) {
         jobs.sort_by(|a, b| {
-            a.circuit.depth.cmp(&b.circuit.depth)
+            a.circuit
+                .depth
+                .cmp(&b.circuit.depth)
                 .then(a.shots.cmp(&b.shots))
         });
     }
@@ -103,51 +108,91 @@ impl DqcScheduler {
 impl QpuExtension {
     pub fn new() -> Self {
         let mut providers = HashMap::new();
-        
+
         // IBM Quantum
-        providers.insert("ibm".to_string(), QpuProvider {
-            name: "IBM Quantum".to_string(),
-            endpoint: "https://api.quantum-computing.ibm.com".to_string(),
-            api_key: std::env::var("IBM_QUANTUM_API_KEY").ok(),
-            max_qubits: 127,
-            supported_gates: vec![
-                "h".to_string(), "x".to_string(), "y".to_string(), "z".to_string(),
-                "cx".to_string(), "cz".to_string(), "swap".to_string(),
-                "rx".to_string(), "ry".to_string(), "rz".to_string(),
-                "u1".to_string(), "u2".to_string(), "u3".to_string(),
-            ],
-            pricing_model: PricingModel::Free { shots_per_month: 10000 },
-        });
+        providers.insert(
+            "ibm".to_string(),
+            QpuProvider {
+                name: "IBM Quantum".to_string(),
+                endpoint: "https://api.quantum-computing.ibm.com".to_string(),
+                api_key: std::env::var("IBM_QUANTUM_API_KEY").ok(),
+                max_qubits: 127,
+                supported_gates: vec![
+                    "h".to_string(),
+                    "x".to_string(),
+                    "y".to_string(),
+                    "z".to_string(),
+                    "cx".to_string(),
+                    "cz".to_string(),
+                    "swap".to_string(),
+                    "rx".to_string(),
+                    "ry".to_string(),
+                    "rz".to_string(),
+                    "u1".to_string(),
+                    "u2".to_string(),
+                    "u3".to_string(),
+                ],
+                pricing_model: PricingModel::Free {
+                    shots_per_month: 10000,
+                },
+            },
+        );
 
         // Google Quantum AI
-        providers.insert("google".to_string(), QpuProvider {
-            name: "Google Quantum AI".to_string(),
-            endpoint: "https://quantumai.googleapis.com".to_string(),
-            api_key: std::env::var("GOOGLE_QUANTUM_API_KEY").ok(),
-            max_qubits: 72,
-            supported_gates: vec![
-                "h".to_string(), "x".to_string(), "y".to_string(), "z".to_string(),
-                "cnot".to_string(), "cz".to_string(), "swap".to_string(),
-                "rx".to_string(), "ry".to_string(), "rz".to_string(),
-                "fsim".to_string(),
-            ],
-            pricing_model: PricingModel::PerShot { cost_per_shot: 0.01 },
-        });
+        providers.insert(
+            "google".to_string(),
+            QpuProvider {
+                name: "Google Quantum AI".to_string(),
+                endpoint: "https://quantumai.googleapis.com".to_string(),
+                api_key: std::env::var("GOOGLE_QUANTUM_API_KEY").ok(),
+                max_qubits: 72,
+                supported_gates: vec![
+                    "h".to_string(),
+                    "x".to_string(),
+                    "y".to_string(),
+                    "z".to_string(),
+                    "cnot".to_string(),
+                    "cz".to_string(),
+                    "swap".to_string(),
+                    "rx".to_string(),
+                    "ry".to_string(),
+                    "rz".to_string(),
+                    "fsim".to_string(),
+                ],
+                pricing_model: PricingModel::PerShot {
+                    cost_per_shot: 0.01,
+                },
+            },
+        );
 
         // Amazon Braket
-        providers.insert("aws".to_string(), QpuProvider {
-            name: "Amazon Braket".to_string(),
-            endpoint: "https://braket.amazonaws.com".to_string(),
-            api_key: std::env::var("AWS_ACCESS_KEY_ID").ok(),
-            max_qubits: 32,
-            supported_gates: vec![
-                "h".to_string(), "x".to_string(), "y".to_string(), "z".to_string(),
-                "cnot".to_string(), "cz".to_string(), "swap".to_string(),
-                "rx".to_string(), "ry".to_string(), "rz".to_string(),
-                "u1".to_string(), "u2".to_string(), "u3".to_string(),
-            ],
-            pricing_model: PricingModel::PerSecond { cost_per_second: 0.05 },
-        });
+        providers.insert(
+            "aws".to_string(),
+            QpuProvider {
+                name: "Amazon Braket".to_string(),
+                endpoint: "https://braket.amazonaws.com".to_string(),
+                api_key: std::env::var("AWS_ACCESS_KEY_ID").ok(),
+                max_qubits: 32,
+                supported_gates: vec![
+                    "h".to_string(),
+                    "x".to_string(),
+                    "y".to_string(),
+                    "z".to_string(),
+                    "cnot".to_string(),
+                    "cz".to_string(),
+                    "swap".to_string(),
+                    "rx".to_string(),
+                    "ry".to_string(),
+                    "rz".to_string(),
+                    "u1".to_string(),
+                    "u2".to_string(),
+                    "u3".to_string(),
+                ],
+                pricing_model: PricingModel::PerSecond {
+                    cost_per_second: 0.05,
+                },
+            },
+        );
 
         Self {
             api_client: QpuApiClient {
@@ -176,17 +221,30 @@ impl QpuExtension {
         }
     }
 
-    async fn execute_circuit(&self, params: QpuJobParams) -> Result<QpuExecutionResult, ExtensionError> {
-        let provider_name = params.provider.as_deref().unwrap_or(&self.api_client.default_provider);
-        let provider = self.api_client.providers.get(provider_name)
-            .ok_or_else(|| ExtensionError::ExtensionNotFound(format!("Provider '{}' not found", provider_name)))?;
+    async fn execute_circuit(
+        &self,
+        params: QpuJobParams,
+    ) -> Result<QpuExecutionResult, ExtensionError> {
+        let provider_name = params
+            .provider
+            .as_deref()
+            .unwrap_or(&self.api_client.default_provider);
+        let provider = self
+            .api_client
+            .providers
+            .get(provider_name)
+            .ok_or_else(|| {
+                ExtensionError::ExtensionNotFound(format!("Provider '{}' not found", provider_name))
+            })?;
 
         // Validate circuit against provider capabilities
         self.validate_circuit(&params.circuit, provider)?;
 
         // Execute quantum circuit
         let start_time = Instant::now();
-        let result = self.send_to_provider(provider, &params.circuit, params.shots).await?;
+        let result = self
+            .send_to_provider(provider, &params.circuit, params.shots)
+            .await?;
         let execution_time = start_time.elapsed().as_millis() as u64;
 
         Ok(QpuExecutionResult {
@@ -200,26 +258,36 @@ impl QpuExtension {
         })
     }
 
-    fn validate_circuit(&self, circuit: &QuantumCircuit, provider: &QpuProvider) -> Result<(), ExtensionError> {
+    fn validate_circuit(
+        &self,
+        circuit: &QuantumCircuit,
+        provider: &QpuProvider,
+    ) -> Result<(), ExtensionError> {
         if circuit.qubits > provider.max_qubits {
-            return Err(ExtensionError::InsufficientResources(
-                format!("Circuit requires {} qubits, but provider '{}' supports only {}",
-                    circuit.qubits, provider.name, provider.max_qubits)
-            ));
+            return Err(ExtensionError::InsufficientResources(format!(
+                "Circuit requires {} qubits, but provider '{}' supports only {}",
+                circuit.qubits, provider.name, provider.max_qubits
+            )));
         }
 
         for gate in &circuit.gates {
             if !provider.supported_gates.contains(&gate.gate_type) {
-                return Err(ExtensionError::OperationNotSupported(
-                    format!("Gate '{}' not supported by provider '{}'", gate.gate_type, provider.name)
-                ));
+                return Err(ExtensionError::OperationNotSupported(format!(
+                    "Gate '{}' not supported by provider '{}'",
+                    gate.gate_type, provider.name
+                )));
             }
         }
 
         Ok(())
     }
 
-    async fn send_to_provider(&self, provider: &QpuProvider, circuit: &QuantumCircuit, shots: u32) -> Result<QpuExecutionResult, ExtensionError> {
+    async fn send_to_provider(
+        &self,
+        provider: &QpuProvider,
+        circuit: &QuantumCircuit,
+        shots: u32,
+    ) -> Result<QpuExecutionResult, ExtensionError> {
         // Mock implementation - in real scenario, this would make HTTP calls
         match provider.name.as_str() {
             "IBM Quantum" => self.execute_ibm_quantum(circuit, shots).await,
@@ -229,12 +297,16 @@ impl QpuExtension {
         }
     }
 
-    async fn execute_ibm_quantum(&self, _circuit: &QuantumCircuit, shots: u32) -> Result<QpuExecutionResult, ExtensionError> {
+    async fn execute_ibm_quantum(
+        &self,
+        _circuit: &QuantumCircuit,
+        shots: u32,
+    ) -> Result<QpuExecutionResult, ExtensionError> {
         // Mock IBM Quantum execution
         let mut counts = HashMap::new();
         counts.insert("00".to_string(), shots / 2);
         counts.insert("11".to_string(), shots / 2);
-        
+
         let mut probabilities = HashMap::new();
         probabilities.insert("00".to_string(), 0.5);
         probabilities.insert("11".to_string(), 0.5);
@@ -250,12 +322,16 @@ impl QpuExtension {
         })
     }
 
-    async fn execute_google_quantum(&self, _circuit: &QuantumCircuit, shots: u32) -> Result<QpuExecutionResult, ExtensionError> {
+    async fn execute_google_quantum(
+        &self,
+        _circuit: &QuantumCircuit,
+        shots: u32,
+    ) -> Result<QpuExecutionResult, ExtensionError> {
         // Mock Google Quantum execution
         let mut counts = HashMap::new();
         counts.insert("00".to_string(), shots * 3 / 4);
         counts.insert("11".to_string(), shots / 4);
-        
+
         let mut probabilities = HashMap::new();
         probabilities.insert("00".to_string(), 0.75);
         probabilities.insert("11".to_string(), 0.25);
@@ -271,12 +347,16 @@ impl QpuExtension {
         })
     }
 
-    async fn execute_aws_braket(&self, _circuit: &QuantumCircuit, shots: u32) -> Result<QpuExecutionResult, ExtensionError> {
+    async fn execute_aws_braket(
+        &self,
+        _circuit: &QuantumCircuit,
+        shots: u32,
+    ) -> Result<QpuExecutionResult, ExtensionError> {
         // Mock AWS Braket execution
         let mut counts = HashMap::new();
         counts.insert("00".to_string(), shots * 2 / 3);
         counts.insert("11".to_string(), shots / 3);
-        
+
         let mut probabilities = HashMap::new();
         probabilities.insert("00".to_string(), 0.6667);
         probabilities.insert("11".to_string(), 0.3333);
@@ -301,12 +381,18 @@ impl QpuExtension {
 
         // Mock OpenQASM 3 validation via `openqasm` / `qiskit-qasm2`
         if circuit.qubits == 0 {
-            return Err(ExtensionError::ExecutionFailed("Circuit must have at least 1 qubit".to_string()));
+            return Err(ExtensionError::ExecutionFailed(
+                "Circuit must have at least 1 qubit".to_string(),
+            ));
         }
         Ok(())
     }
 
-    async fn simulate_local(&self, circuit: &QuantumCircuit, shots: u32) -> Result<QpuExecutionResult, ExtensionError> {
+    async fn simulate_local(
+        &self,
+        circuit: &QuantumCircuit,
+        shots: u32,
+    ) -> Result<QpuExecutionResult, ExtensionError> {
         let mut counts = HashMap::new();
         let mut probabilities = HashMap::new();
         let mut fidelity = None;
@@ -314,10 +400,10 @@ impl QpuExtension {
         #[cfg(feature = "qualia-q-forge")]
         {
             use qualia_q_forge::sim::{statevector::StateVectorSimulator, LocalSimulator};
-            
+
             let start_time = Instant::now();
             let simulator = StateVectorSimulator::new(circuit.qubits);
-            
+
             // Build instruction Quins
             let mut instructions = Vec::new();
             for gate in &circuit.gates {
@@ -329,14 +415,25 @@ impl QpuExtension {
                     _ => continue, // Skip unknown gates for now
                 };
                 let op1 = *gate.target_qubits.get(0).unwrap_or(&0) as u64;
-                let op2 = if opcode == 0x04 { 
-                    *gate.control_qubits.as_ref().and_then(|c| c.get(0)).unwrap_or(&0) as u64 
-                } else { 0 };
-                
+                let op2 = if opcode == 0x04 {
+                    *gate
+                        .control_qubits
+                        .as_ref()
+                        .and_then(|c| c.get(0))
+                        .unwrap_or(&0) as u64
+                } else {
+                    0
+                };
+
                 let obj = (opcode << 56) | (op1 << 40) | (op2 << 24);
-                
+
                 instructions.push(qualia_core_db::NQuin {
-                    subject: 0, predicate: 0, object: obj, context: 0, metadata: 0, parity: 0
+                    subject: 0,
+                    predicate: 0,
+                    object: obj,
+                    context: 0,
+                    metadata: 0,
+                    parity: 0,
                 });
             }
 
@@ -354,16 +451,16 @@ impl QpuExtension {
                         }
                         *counts.entry(bin).or_insert(0) += 1;
                     }
-                    
+
                     for (state_str, &count) in &counts {
                         probabilities.insert(state_str.clone(), count as f64 / shots as f64);
                     }
-                    
+
                     fidelity = Some(1.0); // Local simulation is theoretically exact
                 }
             }
             let execution_time_ms = start_time.elapsed().as_millis() as u64;
-            
+
             Ok(QpuExecutionResult {
                 counts,
                 probabilities,
@@ -381,7 +478,7 @@ impl QpuExtension {
             probabilities.insert("0".repeat(circuit.qubits as usize), 1.0);
             let execution_time_ms = 50;
             fidelity = Some(1.0);
-            
+
             Ok(QpuExecutionResult {
                 counts,
                 probabilities,
@@ -396,12 +493,13 @@ impl QpuExtension {
 
     fn result_to_quins(result: &QpuExecutionResult, job_id: &str) -> Vec<NQuin> {
         let mut quins = Vec::new();
-        
+
         // Convert execution results to NQuins
         for (state, count) in &result.counts {
             // Encode as did:q42 topological pointer by setting MSB = 1
-            let topological_object = crate::q_hash(&format!("did:q42:quantum_state:{}", state)) | (1u64 << 63);
-            
+            let topological_object =
+                crate::q_hash(&format!("did:q42:quantum_state:{}", state)) | (1u64 << 63);
+
             let quin = NQuin {
                 subject: crate::q_hash(job_id),
                 predicate: crate::q_hash("q42:hasQuantumState"),
@@ -440,8 +538,9 @@ impl QpuExtension {
         if let Some(sv) = &result.statevector {
             for (i, &(re, im)) in sv.iter().enumerate() {
                 if re.abs() > 1e-10 || im.abs() > 1e-10 {
-                    let topological_object = crate::q_hash(&format!("did:q42:quantum_basis:{}", i)) | (1u64 << 63);
-                    
+                    let topological_object =
+                        crate::q_hash(&format!("did:q42:quantum_basis:{}", i)) | (1u64 << 63);
+
                     let re_f32 = re as f32;
                     let im_f32 = im as f32;
                     let metadata = ((re_f32.to_bits() as u64) << 32) | (im_f32.to_bits() as u64);
@@ -471,18 +570,24 @@ impl Extension for QpuExtension {
 
     async fn execute(&self, job: ExtensionJob) -> Result<ExtensionResult, ExtensionError> {
         let start_time = Instant::now();
-        
+
         match job.operation.as_str() {
             "execute_circuit" => {
                 let params: QpuJobParams = serde_json::from_value(
-                    job.parameters.get("circuit_params")
-                        .ok_or_else(|| ExtensionError::ExecutionFailed("Missing circuit_params".to_string()))?
-                        .clone()
-                ).map_err(|e| ExtensionError::ExecutionFailed(format!("Invalid circuit_params: {}", e)))?;
+                    job.parameters
+                        .get("circuit_params")
+                        .ok_or_else(|| {
+                            ExtensionError::ExecutionFailed("Missing circuit_params".to_string())
+                        })?
+                        .clone(),
+                )
+                .map_err(|e| {
+                    ExtensionError::ExecutionFailed(format!("Invalid circuit_params: {}", e))
+                })?;
 
                 let result = self.execute_circuit(params).await?;
                 let quins = Self::result_to_quins(&result, &job.job_id);
-                
+
                 Ok(ExtensionResult {
                     job_id: job.job_id,
                     success: true,
@@ -491,7 +596,10 @@ impl Extension for QpuExtension {
                         let mut meta = HashMap::new();
                         meta.insert("provider".to_string(), result.provider);
                         meta.insert("shots".to_string(), result.shots_executed.to_string());
-                        meta.insert("execution_time_ms".to_string(), result.execution_time_ms.to_string());
+                        meta.insert(
+                            "execution_time_ms".to_string(),
+                            result.execution_time_ms.to_string(),
+                        );
                         if let Some(fidelity) = result.fidelity {
                             meta.insert("fidelity".to_string(), fidelity.to_string());
                         }
@@ -499,18 +607,24 @@ impl Extension for QpuExtension {
                     },
                     execution_time_ms: start_time.elapsed().as_millis() as u64,
                 })
-            },
+            }
             "simulate_circuit" => {
                 let params: QpuJobParams = serde_json::from_value(
-                    job.parameters.get("circuit_params")
-                        .ok_or_else(|| ExtensionError::ExecutionFailed("Missing circuit_params".to_string()))?
-                        .clone()
-                ).map_err(|e| ExtensionError::ExecutionFailed(format!("Invalid circuit_params: {}", e)))?;
+                    job.parameters
+                        .get("circuit_params")
+                        .ok_or_else(|| {
+                            ExtensionError::ExecutionFailed("Missing circuit_params".to_string())
+                        })?
+                        .clone(),
+                )
+                .map_err(|e| {
+                    ExtensionError::ExecutionFailed(format!("Invalid circuit_params: {}", e))
+                })?;
 
                 self.validate_openqasm(&params.circuit)?;
                 let result = self.simulate_local(&params.circuit, params.shots).await?;
                 let quins = Self::result_to_quins(&result, &job.job_id);
-                
+
                 Ok(ExtensionResult {
                     job_id: job.job_id,
                     success: true,
@@ -519,16 +633,21 @@ impl Extension for QpuExtension {
                         let mut meta = HashMap::new();
                         meta.insert("provider".to_string(), result.provider);
                         meta.insert("shots".to_string(), result.shots_executed.to_string());
-                        meta.insert("execution_time_ms".to_string(), result.execution_time_ms.to_string());
+                        meta.insert(
+                            "execution_time_ms".to_string(),
+                            result.execution_time_ms.to_string(),
+                        );
                         meta
                     },
                     execution_time_ms: start_time.elapsed().as_millis() as u64,
                 })
-            },
+            }
             "get_provider_info" => {
-                let provider_info = serde_json::to_value(&self.api_client.providers)
-                    .map_err(|e| ExtensionError::ExecutionFailed(format!("Serialization error: {}", e)))?;
-                
+                let provider_info =
+                    serde_json::to_value(&self.api_client.providers).map_err(|e| {
+                        ExtensionError::ExecutionFailed(format!("Serialization error: {}", e))
+                    })?;
+
                 Ok(ExtensionResult {
                     job_id: job.job_id,
                     success: true,
@@ -540,7 +659,7 @@ impl Extension for QpuExtension {
                     },
                     execution_time_ms: 10,
                 })
-            },
+            }
             _ => Err(ExtensionError::OperationNotSupported(job.operation)),
         }
     }
@@ -559,17 +678,19 @@ mod tests {
     async fn test_qpu_extension_creation() {
         let extension = QpuExtension::new();
         let capability = extension.capability();
-        
+
         assert_eq!(capability.name, "qpu");
         assert_eq!(capability.version, "1.0.0");
-        assert!(capability.supported_operations.contains(&"execute_circuit".to_string()));
+        assert!(capability
+            .supported_operations
+            .contains(&"execute_circuit".to_string()));
         assert!(capability.required_resources.requires_network);
     }
 
     #[tokio::test]
     async fn test_simple_circuit_execution() {
         let extension = QpuExtension::new();
-        
+
         let circuit = QuantumCircuit {
             qubits: 2,
             depth: 1,
@@ -616,7 +737,7 @@ mod tests {
     #[tokio::test]
     async fn test_extension_job_execution() {
         let extension = QpuExtension::new();
-        
+
         let job = ExtensionJob {
             job_id: "test-job-123".to_string(),
             extension_name: "qpu".to_string(),
@@ -634,28 +755,52 @@ mod tests {
     fn test_dqc_scheduler_qgroup_heuristic() {
         let mut jobs = vec![
             QpuJobParams {
-                circuit: QuantumCircuit { qubits: 2, depth: 10, gates: vec![], measurements: vec![] },
-                shots: 1000, provider: None, optimization_level: 1, timeout_seconds: 60,
+                circuit: QuantumCircuit {
+                    qubits: 2,
+                    depth: 10,
+                    gates: vec![],
+                    measurements: vec![],
+                },
+                shots: 1000,
+                provider: None,
+                optimization_level: 1,
+                timeout_seconds: 60,
             },
             QpuJobParams {
-                circuit: QuantumCircuit { qubits: 4, depth: 5, gates: vec![], measurements: vec![] },
-                shots: 500, provider: None, optimization_level: 1, timeout_seconds: 60,
+                circuit: QuantumCircuit {
+                    qubits: 4,
+                    depth: 5,
+                    gates: vec![],
+                    measurements: vec![],
+                },
+                shots: 500,
+                provider: None,
+                optimization_level: 1,
+                timeout_seconds: 60,
             },
             QpuJobParams {
-                circuit: QuantumCircuit { qubits: 2, depth: 5, gates: vec![], measurements: vec![] },
-                shots: 1000, provider: None, optimization_level: 1, timeout_seconds: 60,
+                circuit: QuantumCircuit {
+                    qubits: 2,
+                    depth: 5,
+                    gates: vec![],
+                    measurements: vec![],
+                },
+                shots: 1000,
+                provider: None,
+                optimization_level: 1,
+                timeout_seconds: 60,
             },
         ];
 
         DqcScheduler::schedule_vqe_jobs(&mut jobs);
-        
+
         // Should sort by depth (5, 5, 10), then by shots (500, 1000, 1000)
         assert_eq!(jobs[0].circuit.depth, 5);
         assert_eq!(jobs[0].shots, 500);
-        
+
         assert_eq!(jobs[1].circuit.depth, 5);
         assert_eq!(jobs[1].shots, 1000);
-        
+
         assert_eq!(jobs[2].circuit.depth, 10);
         assert_eq!(jobs[2].shots, 1000);
     }

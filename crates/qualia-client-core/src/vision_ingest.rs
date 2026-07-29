@@ -291,9 +291,8 @@ pub fn compile_native_observation_quins(
         if w + 4 > out.len() {
             break;
         }
-        let meta_score = (d.score_u16 as u64)
-            | ((d.frame_index as u64) << 16)
-            | ((d.flags as u64) << 48);
+        let meta_score =
+            (d.score_u16 as u64) | ((d.frame_index as u64) << 16) | ((d.flags as u64) << 48);
         out[w] = quin(
             media_hash,
             q_hash(P_VISUAL_OBSERVATION),
@@ -389,10 +388,7 @@ pub fn append_native_observation_quins(
 }
 
 /// Append a human reject/correct edge (provenance preserved).
-pub fn append_human_attestation(
-    storage_root: &Path,
-    quin: &NQuin,
-) -> Result<(), VisionError> {
+pub fn append_human_attestation(storage_root: &Path, quin: &NQuin) -> Result<(), VisionError> {
     let wal_path = model_lifecycle::models_dir(storage_root).join("vision_native.wal");
     if let Some(parent) = wal_path.parent() {
         std::fs::create_dir_all(parent)?;

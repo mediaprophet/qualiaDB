@@ -80,7 +80,10 @@ mod tests {
             panning(&[0.0, 0.0], &[0.0, 0.0]),
             Err(AudioError::InvalidParameter)
         );
-        assert_eq!(panning(&[1.0], &[1.0, 2.0]), Err(AudioError::InvalidParameter));
+        assert_eq!(
+            panning(&[1.0], &[1.0, 2.0]),
+            Err(AudioError::InvalidParameter)
+        );
         assert_eq!(panning(&[], &[]), Err(AudioError::InvalidParameter));
     }
 }

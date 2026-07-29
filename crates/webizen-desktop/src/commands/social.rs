@@ -2,8 +2,8 @@
 
 #![allow(non_snake_case)]
 
-use qualia_client_core::api;
 use super::mesh;
+use qualia_client_core::api;
 use tauri::{command, AppHandle, Emitter, State};
 
 // ── Social connect + group chat (P0: expose the connect → group → talk loop) ────
@@ -184,7 +184,8 @@ pub async fn stream_chat_inference(
 
     // Persist the agent's reply as a chat message — only when the VM committed a grounded output.
     if result.committed && !result.text.trim().is_empty() {
-        let _ = api::append_chat_message(session_id.clone(), "agent".to_string(), result.text.clone());
+        let _ =
+            api::append_chat_message(session_id.clone(), "agent".to_string(), result.text.clone());
     }
 
     let detail = serde_json::to_value(&result).map_err(|e| e.to_string())?;
@@ -326,4 +327,3 @@ pub fn list_local_jobs() -> Result<serde_json::Value, String> {
 pub fn cancel_local_job(id: String) -> Result<bool, String> {
     api::cancel_local_job(id)
 }
-

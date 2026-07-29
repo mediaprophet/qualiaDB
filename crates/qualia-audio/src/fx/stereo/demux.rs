@@ -9,7 +9,11 @@ use crate::types::AudioError;
 /// Processes `n = min(interleaved.len()/2, left.len(), right.len())` frames and
 /// returns the frame count. Errors if `left` or `right` cannot hold the frames
 /// available in `interleaved`.
-pub fn demux(interleaved: &[f32], left: &mut [f32], right: &mut [f32]) -> Result<usize, AudioError> {
+pub fn demux(
+    interleaved: &[f32],
+    left: &mut [f32],
+    right: &mut [f32],
+) -> Result<usize, AudioError> {
     let frames = interleaved.len() / 2;
     if left.len() < frames || right.len() < frames {
         return Err(AudioError::OutputBufferTooSmall);

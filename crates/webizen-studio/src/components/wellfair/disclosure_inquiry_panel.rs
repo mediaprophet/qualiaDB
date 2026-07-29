@@ -14,22 +14,41 @@ use super::host_client::{
 use dioxus::prelude::*;
 
 fn str_field(v: &serde_json::Value, key: &str) -> String {
-    v.get(key).and_then(|x| x.as_str()).unwrap_or("").to_string()
+    v.get(key)
+        .and_then(|x| x.as_str())
+        .unwrap_or("")
+        .to_string()
 }
 fn csv(s: &str) -> Vec<String> {
-    s.split(',').map(|x| x.trim().to_string()).filter(|x| !x.is_empty()).collect()
+    s.split(',')
+        .map(|x| x.trim().to_string())
+        .filter(|x| !x.is_empty())
+        .collect()
 }
 fn opt(s: String) -> Option<String> {
     let s = s.trim().to_string();
-    if s.is_empty() { None } else { Some(s) }
+    if s.is_empty() {
+        None
+    } else {
+        Some(s)
+    }
 }
 
 fn verdict_label(v: &str) -> (&'static str, &'static str) {
     match v {
         "diligent" => ("Diligent — every accessible means was checked", "#2a9d8f"),
-        "no_fault" => ("No fault — the means weren't accessible; couldn't have known", "#5c9a6f"),
-        "unchecked_no_harm" => ("Shortfall — accessible means unchecked, but no harm followed", "#c9a227"),
-        "negligent" => ("Negligent — unchecked accessible means, and harm followed", "#b4453a"),
+        "no_fault" => (
+            "No fault — the means weren't accessible; couldn't have known",
+            "#5c9a6f",
+        ),
+        "unchecked_no_harm" => (
+            "Shortfall — accessible means unchecked, but no harm followed",
+            "#c9a227",
+        ),
+        "negligent" => (
+            "Negligent — unchecked accessible means, and harm followed",
+            "#b4453a",
+        ),
         _ => ("—", "#999"),
     }
 }
@@ -45,7 +64,9 @@ pub fn WellfairDisclosureInquiryPanel() -> Element {
     let mut cc_credential = use_signal(|| "cc-transparency".to_string());
     let mut cc_authority = use_signal(|| "did:wf:mp".to_string());
     let mut cc_purpose = use_signal(|| "protection from serious crime".to_string());
-    let mut d_commitment = use_signal(|| "0000000000000000000000000000000000000000000000000000000000000000".to_string());
+    let mut d_commitment = use_signal(|| {
+        "0000000000000000000000000000000000000000000000000000000000000000".to_string()
+    });
     let mut d_credential = use_signal(|| "cc-transparency".to_string());
     let mut d_recipient = use_signal(|| "did:wf:mp".to_string());
     let mut d_delegate = use_signal(String::new);
@@ -73,7 +94,9 @@ pub fn WellfairDisclosureInquiryPanel() -> Element {
     let mut loaded = use_signal(|| false);
 
     use_effect(move || {
-        if loaded() { return; }
+        if loaded() {
+            return;
+        }
         loaded.set(true);
         reload();
     });
@@ -82,19 +105,31 @@ pub fn WellfairDisclosureInquiryPanel() -> Element {
         let (c, a, p) = (cc_credential(), cc_authority(), cc_purpose());
         spawn(async move {
             match record_transparency_cc(&c, &a, &p).await {
-                Ok(()) => { status.set(format!("Recorded: informed {a}.")); reload(); }
+                Ok(()) => {
+                    status.set(format!("Recorded: informed {a}."));
+                    reload();
+                }
                 Err(e) => status.set(format!("cc failed: {e}")),
             }
         });
     };
     let do_disclosure = move |_| {
-        let (c, cr, r, dele, on) = (d_commitment(), d_credential(), d_recipient(), d_delegate(), d_onward());
+        let (c, cr, r, dele, on) = (
+            d_commitment(),
+            d_credential(),
+            d_recipient(),
+            d_delegate(),
+            d_onward(),
+        );
         spawn(async move {
             match record_disclosure(&c, &cr, &r, opt(dele), opt(on)).await {
                 Ok(ev) => {
                     let fp = str_field(&ev, "fingerprint");
-                    status.set(format!("Disclosure recorded (id {}). fingerprint: {}", str_field(&ev, "id"),
-                        ev.get("fingerprint").map(|x| x.to_string()).unwrap_or(fp)));
+                    status.set(format!(
+                        "Disclosure recorded (id {}). fingerprint: {}",
+                        str_field(&ev, "id"),
+                        ev.get("fingerprint").map(|x| x.to_string()).unwrap_or(fp)
+                    ));
                 }
                 Err(e) => status.set(format!("disclosure failed: {e}")),
             }
@@ -109,7 +144,11 @@ pub fn WellfairDisclosureInquiryPanel() -> Element {
                 Err(e) => status.set(format!("chain failed: {e}")),
             }
             match actors_with_access(&c).await {
-                Ok(serde_json::Value::Array(rows)) => actors.set(rows.iter().filter_map(|v| v.as_str().map(|s| s.to_string())).collect()),
+                Ok(serde_json::Value::Array(rows)) => actors.set(
+                    rows.iter()
+                        .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                        .collect(),
+                ),
                 Ok(_) => actors.set(Vec::new()),
                 Err(e) => status.set(format!("actors failed: {e}")),
             }
@@ -124,8 +163,14 @@ pub fn WellfairDisclosureInquiryPanel() -> Element {
                     if ev.is_null() {
                         leak_result.set("No disclosure matches that fingerprint.".into());
                     } else {
-                        let actor = ev.get("acting_delegate_did").and_then(|x| x.as_str())
-                            .unwrap_or_else(|| ev.get("recipient_did").and_then(|x| x.as_str()).unwrap_or("?"));
+                        let actor = ev
+                            .get("acting_delegate_did")
+                            .and_then(|x| x.as_str())
+                            .unwrap_or_else(|| {
+                                ev.get("recipient_did")
+                                    .and_then(|x| x.as_str())
+                                    .unwrap_or("?")
+                            });
                         leak_result.set(format!("Leak traced → accountable actor: {actor}"));
                     }
                 }
@@ -134,8 +179,15 @@ pub fn WellfairDisclosureInquiryPanel() -> Element {
         });
     };
     let do_assess = move |_| {
-        let (act, actor, means, accessible, checked, acted, injury) =
-            (q_act(), q_actor(), q_means(), q_accessible(), q_checked(), q_acted(), q_injury());
+        let (act, actor, means, accessible, checked, acted, injury) = (
+            q_act(),
+            q_actor(),
+            q_means(),
+            q_accessible(),
+            q_checked(),
+            q_acted(),
+            q_injury(),
+        );
         spawn(async move {
             let means_ids = csv(&means);
             let accessible_ids = csv(&accessible);
@@ -143,7 +195,8 @@ pub fn WellfairDisclosureInquiryPanel() -> Element {
                 .iter()
                 .map(|id| serde_json::json!({ "id": id, "description": id, "accessible": accessible_ids.contains(id) }))
                 .collect();
-            let duty = serde_json::json!({ "act": act, "expected_means": expected_means }).to_string();
+            let duty =
+                serde_json::json!({ "act": act, "expected_means": expected_means }).to_string();
             let conduct = serde_json::json!({
                 "actor_did": actor,
                 "checked_means_ids": csv(&checked),

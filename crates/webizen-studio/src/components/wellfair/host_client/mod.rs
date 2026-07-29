@@ -1,10 +1,10 @@
 //! Host API client — all operating state flows through Tauri invoke, not Dioxus authority.
 
+use super::host_dto::ConsentGrantDraft;
 use super::host_dto::{
     ActorDto, ConsentGrantDto, DelegationRuleDto, GraphCoverageDto, HealthRecordDto,
     PolicyDecisionDto, ReceiptDto, WellfairHostSnapshot,
 };
-use super::host_dto::ConsentGrantDraft;
 use dioxus::prelude::*;
 use serde::{Deserialize, Serialize};
 
@@ -39,7 +39,9 @@ pub fn HostSnapshotProvider(children: Element) -> Element {
     let mut loaded = use_signal(|| false);
 
     use_effect(move || {
-        if loaded() { return; }
+        if loaded() {
+            return;
+        }
         loaded.set(true);
         spawn(async move {
             let next = fetch_host_snapshot().await;
@@ -102,8 +104,12 @@ pub async fn fetch_companion_pairing() -> Result<String, String> {
 #[cfg(target_arch = "wasm32")]
 pub async fn fetch_health_records(limit: usize) -> Result<Vec<HealthRecordDto>, String> {
     let args = js_sys::Object::new();
-    js_sys::Reflect::set(&args, &"limit".into(), &wasm_bindgen::JsValue::from(limit as u32))
-        .map_err(|_| "failed to build invoke args".to_string())?;
+    js_sys::Reflect::set(
+        &args,
+        &"limit".into(),
+        &wasm_bindgen::JsValue::from(limit as u32),
+    )
+    .map_err(|_| "failed to build invoke args".to_string())?;
     let js = tauri_invoke("wellfair_list_health_records", args.into())
         .await
         .map_err(|e| format!("{e:?}"))?;
@@ -121,8 +127,12 @@ pub async fn fetch_health_records(_limit: usize) -> Result<Vec<HealthRecordDto>,
 #[cfg(target_arch = "wasm32")]
 pub async fn fetch_receipts(limit: usize) -> Result<Vec<ReceiptDto>, String> {
     let args = js_sys::Object::new();
-    js_sys::Reflect::set(&args, &"limit".into(), &wasm_bindgen::JsValue::from(limit as u32))
-        .map_err(|_| "failed to build invoke args".to_string())?;
+    js_sys::Reflect::set(
+        &args,
+        &"limit".into(),
+        &wasm_bindgen::JsValue::from(limit as u32),
+    )
+    .map_err(|_| "failed to build invoke args".to_string())?;
     let js = tauri_invoke("wellfair_list_receipts", args.into())
         .await
         .map_err(|e| format!("{e:?}"))?;
@@ -140,8 +150,12 @@ pub async fn fetch_receipts(_limit: usize) -> Result<Vec<ReceiptDto>, String> {
 #[cfg(target_arch = "wasm32")]
 pub async fn fetch_graph_coverage(limit: usize) -> Result<Vec<GraphCoverageDto>, String> {
     let args = js_sys::Object::new();
-    js_sys::Reflect::set(&args, &"limit".into(), &wasm_bindgen::JsValue::from(limit as u32))
-        .map_err(|_| "failed to build invoke args".to_string())?;
+    js_sys::Reflect::set(
+        &args,
+        &"limit".into(),
+        &wasm_bindgen::JsValue::from(limit as u32),
+    )
+    .map_err(|_| "failed to build invoke args".to_string())?;
     let js = tauri_invoke("wellfair_query_graph_coverage", args.into())
         .await
         .map_err(|e| format!("{e:?}"))?;
@@ -159,8 +173,12 @@ pub async fn fetch_graph_coverage(_limit: usize) -> Result<Vec<GraphCoverageDto>
 #[cfg(target_arch = "wasm32")]
 pub async fn export_health_package(limit: usize) -> Result<String, String> {
     let args = js_sys::Object::new();
-    js_sys::Reflect::set(&args, &"limit".into(), &wasm_bindgen::JsValue::from(limit as u32))
-        .map_err(|_| "failed to build invoke args".to_string())?;
+    js_sys::Reflect::set(
+        &args,
+        &"limit".into(),
+        &wasm_bindgen::JsValue::from(limit as u32),
+    )
+    .map_err(|_| "failed to build invoke args".to_string())?;
     let js = tauri_invoke("wellfair_export_health_package", args.into())
         .await
         .map_err(|e| format!("{e:?}"))?;
@@ -190,11 +208,17 @@ pub async fn fetch_identity() -> Result<serde_json::Value, String> {
 }
 
 #[cfg(target_arch = "wasm32")]
-pub async fn save_accessibility(prefs: &super::host_dto::AccessibilityPreferences) -> Result<(), String> {
+pub async fn save_accessibility(
+    prefs: &super::host_dto::AccessibilityPreferences,
+) -> Result<(), String> {
     let json = serde_json::to_string(prefs).map_err(|e| e.to_string())?;
     let args = js_sys::Object::new();
-    js_sys::Reflect::set(&args, &"prefsJson".into(), &wasm_bindgen::JsValue::from_str(&json))
-        .map_err(|_| "failed to build invoke args".to_string())?;
+    js_sys::Reflect::set(
+        &args,
+        &"prefsJson".into(),
+        &wasm_bindgen::JsValue::from_str(&json),
+    )
+    .map_err(|_| "failed to build invoke args".to_string())?;
     let js = tauri_invoke("wellfair_save_accessibility", args.into())
         .await
         .map_err(|e| format!("{e:?}"))?;
@@ -206,7 +230,9 @@ pub async fn save_accessibility(prefs: &super::host_dto::AccessibilityPreference
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-pub async fn save_accessibility(_prefs: &super::host_dto::AccessibilityPreferences) -> Result<(), String> {
+pub async fn save_accessibility(
+    _prefs: &super::host_dto::AccessibilityPreferences,
+) -> Result<(), String> {
     Err("Accessibility save requires the Tauri desktop host".into())
 }
 
@@ -375,13 +401,24 @@ pub async fn evaluate_policy(
 }
 
 #[cfg(target_arch = "wasm32")]
-pub async fn grant_consent(draft: &ConsentGrantDraft, scope: &str) -> Result<ConsentGrantDto, String> {
+pub async fn grant_consent(
+    draft: &ConsentGrantDraft,
+    scope: &str,
+) -> Result<ConsentGrantDto, String> {
     let json = serde_json::to_string(draft).map_err(|e| e.to_string())?;
     let args = js_sys::Object::new();
-    js_sys::Reflect::set(&args, &"draftJson".into(), &wasm_bindgen::JsValue::from_str(&json))
-        .map_err(|_| "failed to build invoke args".to_string())?;
-    js_sys::Reflect::set(&args, &"scope".into(), &wasm_bindgen::JsValue::from_str(scope))
-        .map_err(|_| "failed to build invoke args".to_string())?;
+    js_sys::Reflect::set(
+        &args,
+        &"draftJson".into(),
+        &wasm_bindgen::JsValue::from_str(&json),
+    )
+    .map_err(|_| "failed to build invoke args".to_string())?;
+    js_sys::Reflect::set(
+        &args,
+        &"scope".into(),
+        &wasm_bindgen::JsValue::from_str(scope),
+    )
+    .map_err(|_| "failed to build invoke args".to_string())?;
     let js = tauri_invoke("wellfair_grant_consent", args.into())
         .await
         .map_err(|e| format!("{e:?}"))?;
@@ -392,7 +429,10 @@ pub async fn grant_consent(draft: &ConsentGrantDraft, scope: &str) -> Result<Con
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-pub async fn grant_consent(_draft: &ConsentGrantDraft, _scope: &str) -> Result<ConsentGrantDto, String> {
+pub async fn grant_consent(
+    _draft: &ConsentGrantDraft,
+    _scope: &str,
+) -> Result<ConsentGrantDto, String> {
     Err("Consent grant requires the Tauri desktop host".into())
 }
 
@@ -460,8 +500,12 @@ pub struct AddAllergyRequest {
 pub async fn add_condition(req: &AddConditionRequest) -> Result<HealthRecordDto, String> {
     let json = serde_json::to_string(req).map_err(|e| e.to_string())?;
     let args = js_sys::Object::new();
-    js_sys::Reflect::set(&args, &"reportJson".into(), &wasm_bindgen::JsValue::from_str(&json))
-        .map_err(|_| "failed to build invoke args".to_string())?;
+    js_sys::Reflect::set(
+        &args,
+        &"reportJson".into(),
+        &wasm_bindgen::JsValue::from_str(&json),
+    )
+    .map_err(|_| "failed to build invoke args".to_string())?;
     let js = tauri_invoke("wellfair_add_condition", args.into())
         .await
         .map_err(|e| format!("{e:?}"))?;
@@ -480,8 +524,12 @@ pub async fn add_condition(_req: &AddConditionRequest) -> Result<HealthRecordDto
 pub async fn add_allergy(req: &AddAllergyRequest) -> Result<HealthRecordDto, String> {
     let json = serde_json::to_string(req).map_err(|e| e.to_string())?;
     let args = js_sys::Object::new();
-    js_sys::Reflect::set(&args, &"reportJson".into(), &wasm_bindgen::JsValue::from_str(&json))
-        .map_err(|_| "failed to build invoke args".to_string())?;
+    js_sys::Reflect::set(
+        &args,
+        &"reportJson".into(),
+        &wasm_bindgen::JsValue::from_str(&json),
+    )
+    .map_err(|_| "failed to build invoke args".to_string())?;
     let js = tauri_invoke("wellfair_add_allergy", args.into())
         .await
         .map_err(|e| format!("{e:?}"))?;
@@ -524,11 +572,17 @@ pub struct AddHousingSafetyRequest {
 }
 
 #[cfg(target_arch = "wasm32")]
-pub async fn add_disputed_diagnosis(req: &AddDisputedDiagnosisRequest) -> Result<HealthRecordDto, String> {
+pub async fn add_disputed_diagnosis(
+    req: &AddDisputedDiagnosisRequest,
+) -> Result<HealthRecordDto, String> {
     let json = serde_json::to_string(req).map_err(|e| e.to_string())?;
     let args = js_sys::Object::new();
-    js_sys::Reflect::set(&args, &"reportJson".into(), &wasm_bindgen::JsValue::from_str(&json))
-        .map_err(|_| "failed to build invoke args".to_string())?;
+    js_sys::Reflect::set(
+        &args,
+        &"reportJson".into(),
+        &wasm_bindgen::JsValue::from_str(&json),
+    )
+    .map_err(|_| "failed to build invoke args".to_string())?;
     let js = tauri_invoke("wellfair_add_disputed_diagnosis", args.into())
         .await
         .map_err(|e| format!("{e:?}"))?;
@@ -539,7 +593,9 @@ pub async fn add_disputed_diagnosis(req: &AddDisputedDiagnosisRequest) -> Result
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-pub async fn add_disputed_diagnosis(_req: &AddDisputedDiagnosisRequest) -> Result<HealthRecordDto, String> {
+pub async fn add_disputed_diagnosis(
+    _req: &AddDisputedDiagnosisRequest,
+) -> Result<HealthRecordDto, String> {
     Err("Disputed diagnosis requires the Tauri desktop host".into())
 }
 
@@ -547,8 +603,12 @@ pub async fn add_disputed_diagnosis(_req: &AddDisputedDiagnosisRequest) -> Resul
 pub async fn add_housing_safety(req: &AddHousingSafetyRequest) -> Result<HealthRecordDto, String> {
     let json = serde_json::to_string(req).map_err(|e| e.to_string())?;
     let args = js_sys::Object::new();
-    js_sys::Reflect::set(&args, &"reportJson".into(), &wasm_bindgen::JsValue::from_str(&json))
-        .map_err(|_| "failed to build invoke args".to_string())?;
+    js_sys::Reflect::set(
+        &args,
+        &"reportJson".into(),
+        &wasm_bindgen::JsValue::from_str(&json),
+    )
+    .map_err(|_| "failed to build invoke args".to_string())?;
     let js = tauri_invoke("wellfair_add_housing_safety", args.into())
         .await
         .map_err(|e| format!("{e:?}"))?;
@@ -583,7 +643,9 @@ pub async fn fetch_med_reminder_prefs() -> Result<MedReminderPrefsDto, String> {
     let js = tauri_invoke("wellfair_med_reminder_prefs", wasm_bindgen::JsValue::NULL)
         .await
         .map_err(|e| format!("{e:?}"))?;
-    let json = js.as_string().ok_or_else(|| "prefs response not JSON".to_string())?;
+    let json = js
+        .as_string()
+        .ok_or_else(|| "prefs response not JSON".to_string())?;
     serde_json::from_str(&json).map_err(|e| e.to_string())
 }
 
@@ -598,10 +660,15 @@ pub async fn fetch_med_reminder_prefs() -> Result<MedReminderPrefsDto, String> {
 
 #[cfg(target_arch = "wasm32")]
 pub async fn grant_med_reminder_permission() -> Result<MedReminderPrefsDto, String> {
-    let js = tauri_invoke("wellfair_grant_med_reminder_permission", wasm_bindgen::JsValue::NULL)
-        .await
-        .map_err(|e| format!("{e:?}"))?;
-    let json = js.as_string().ok_or_else(|| "grant response not JSON".to_string())?;
+    let js = tauri_invoke(
+        "wellfair_grant_med_reminder_permission",
+        wasm_bindgen::JsValue::NULL,
+    )
+    .await
+    .map_err(|e| format!("{e:?}"))?;
+    let json = js
+        .as_string()
+        .ok_or_else(|| "grant response not JSON".to_string())?;
     serde_json::from_str(&json).map_err(|e| e.to_string())
 }
 
@@ -613,12 +680,18 @@ pub async fn grant_med_reminder_permission() -> Result<MedReminderPrefsDto, Stri
 #[cfg(target_arch = "wasm32")]
 pub async fn set_med_reminders_enabled(enabled: bool) -> Result<MedReminderPrefsDto, String> {
     let args = js_sys::Object::new();
-    js_sys::Reflect::set(&args, &"enabled".into(), &wasm_bindgen::JsValue::from(enabled))
-        .map_err(|_| "failed to build invoke args".to_string())?;
+    js_sys::Reflect::set(
+        &args,
+        &"enabled".into(),
+        &wasm_bindgen::JsValue::from(enabled),
+    )
+    .map_err(|_| "failed to build invoke args".to_string())?;
     let js = tauri_invoke("wellfair_set_med_reminders_enabled", args.into())
         .await
         .map_err(|e| format!("{e:?}"))?;
-    let json = js.as_string().ok_or_else(|| "set enabled response not JSON".to_string())?;
+    let json = js
+        .as_string()
+        .ok_or_else(|| "set enabled response not JSON".to_string())?;
     serde_json::from_str(&json).map_err(|e| e.to_string())
 }
 
@@ -628,7 +701,9 @@ pub async fn set_med_reminders_enabled(_enabled: bool) -> Result<MedReminderPref
 }
 
 #[cfg(target_arch = "wasm32")]
-pub async fn fetch_due_med_reminders(window_minutes: i32) -> Result<Vec<DueMedReminderDto>, String> {
+pub async fn fetch_due_med_reminders(
+    window_minutes: i32,
+) -> Result<Vec<DueMedReminderDto>, String> {
     let args = js_sys::Object::new();
     js_sys::Reflect::set(
         &args,
@@ -639,12 +714,16 @@ pub async fn fetch_due_med_reminders(window_minutes: i32) -> Result<Vec<DueMedRe
     let js = tauri_invoke("wellfair_list_due_med_reminders", args.into())
         .await
         .map_err(|e| format!("{e:?}"))?;
-    let json = js.as_string().ok_or_else(|| "due reminders response not JSON".to_string())?;
+    let json = js
+        .as_string()
+        .ok_or_else(|| "due reminders response not JSON".to_string())?;
     serde_json::from_str(&json).map_err(|e| e.to_string())
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-pub async fn fetch_due_med_reminders(_window_minutes: i32) -> Result<Vec<DueMedReminderDto>, String> {
+pub async fn fetch_due_med_reminders(
+    _window_minutes: i32,
+) -> Result<Vec<DueMedReminderDto>, String> {
     Ok(vec![])
 }
 
@@ -728,12 +807,8 @@ pub async fn record_administration(
     )
     .map_err(|_| "failed to build invoke args".to_string())?;
     if let Some(n) = notes {
-        js_sys::Reflect::set(
-            &args,
-            &"notes".into(),
-            &wasm_bindgen::JsValue::from_str(n),
-        )
-        .map_err(|_| "failed to build invoke args".to_string())?;
+        js_sys::Reflect::set(&args, &"notes".into(), &wasm_bindgen::JsValue::from_str(n))
+            .map_err(|_| "failed to build invoke args".to_string())?;
     }
     let js = tauri_invoke("wellfair_record_administration", args.into())
         .await
@@ -864,9 +939,12 @@ pub async fn add_emergency_contact(
 
 #[cfg(target_arch = "wasm32")]
 pub async fn fetch_emergency_contacts() -> Result<Vec<EmergencyContactDto>, String> {
-    let js = tauri_invoke("wellfair_list_emergency_contacts", wasm_bindgen::JsValue::NULL)
-        .await
-        .map_err(|e| format!("{e:?}"))?;
+    let js = tauri_invoke(
+        "wellfair_list_emergency_contacts",
+        wasm_bindgen::JsValue::NULL,
+    )
+    .await
+    .map_err(|e| format!("{e:?}"))?;
     let json = js
         .as_string()
         .ok_or_else(|| "contacts response was not JSON".to_string())?;
@@ -966,7 +1044,10 @@ pub async fn add_life_event(_title: &str, _notes: Option<&str>) -> Result<Health
 }
 
 #[cfg(target_arch = "wasm32")]
-pub async fn add_welfare_case(title: &str, summary: Option<&str>) -> Result<HealthRecordDto, String> {
+pub async fn add_welfare_case(
+    title: &str,
+    summary: Option<&str>,
+) -> Result<HealthRecordDto, String> {
     let wire = WelfareCaseWire {
         id: uuid::Uuid::new_v4().to_string(),
         title: title.to_string(),
@@ -977,7 +1058,10 @@ pub async fn add_welfare_case(title: &str, summary: Option<&str>) -> Result<Heal
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-pub async fn add_welfare_case(_title: &str, _summary: Option<&str>) -> Result<HealthRecordDto, String> {
+pub async fn add_welfare_case(
+    _title: &str,
+    _summary: Option<&str>,
+) -> Result<HealthRecordDto, String> {
     Err("Welfare cases require the Tauri desktop host".into())
 }
 
@@ -1020,7 +1104,10 @@ pub async fn add_wellbeing_observation(
 }
 
 #[cfg(target_arch = "wasm32")]
-pub async fn add_therapy_note(notes: &str, provider: Option<&str>) -> Result<HealthRecordDto, String> {
+pub async fn add_therapy_note(
+    notes: &str,
+    provider: Option<&str>,
+) -> Result<HealthRecordDto, String> {
     let wire = TherapyNoteWire {
         id: uuid::Uuid::new_v4().to_string(),
         notes: notes.to_string(),
@@ -1031,17 +1118,21 @@ pub async fn add_therapy_note(notes: &str, provider: Option<&str>) -> Result<Hea
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-pub async fn add_therapy_note(_notes: &str, _provider: Option<&str>) -> Result<HealthRecordDto, String> {
+pub async fn add_therapy_note(
+    _notes: &str,
+    _provider: Option<&str>,
+) -> Result<HealthRecordDto, String> {
     Err("Therapy notes require the Tauri desktop host".into())
 }
-
 
 #[cfg(target_arch = "wasm32")]
 pub async fn fetch_sanctuary_prefs() -> Result<SanctuaryPrefsDto, String> {
     let js = tauri_invoke("wellfair_sanctuary_prefs", wasm_bindgen::JsValue::NULL)
         .await
         .map_err(|e| format!("{e:?}"))?;
-    let json = js.as_string().ok_or_else(|| "sanctuary prefs response not JSON".to_string())?;
+    let json = js
+        .as_string()
+        .ok_or_else(|| "sanctuary prefs response not JSON".to_string())?;
     serde_json::from_str(&json).map_err(|e| e.to_string())
 }
 
@@ -1068,12 +1159,17 @@ pub async fn setup_sanctuary(real_pin: &str, decoy_pin: &str) -> Result<Sanctuar
     let js = tauri_invoke("wellfair_setup_sanctuary", args.into())
         .await
         .map_err(|e| format!("{e:?}"))?;
-    let json = js.as_string().ok_or_else(|| "setup sanctuary response not JSON".to_string())?;
+    let json = js
+        .as_string()
+        .ok_or_else(|| "setup sanctuary response not JSON".to_string())?;
     serde_json::from_str(&json).map_err(|e| e.to_string())
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-pub async fn setup_sanctuary(_real_pin: &str, _decoy_pin: &str) -> Result<SanctuaryPrefsDto, String> {
+pub async fn setup_sanctuary(
+    _real_pin: &str,
+    _decoy_pin: &str,
+) -> Result<SanctuaryPrefsDto, String> {
     Err("Sanctuary setup requires the Tauri desktop host".into())
 }
 
@@ -1082,7 +1178,9 @@ pub async fn lock_sanctuary() -> Result<SanctuaryPrefsDto, String> {
     let js = tauri_invoke("wellfair_lock_sanctuary", wasm_bindgen::JsValue::NULL)
         .await
         .map_err(|e| format!("{e:?}"))?;
-    let json = js.as_string().ok_or_else(|| "lock sanctuary response not JSON".to_string())?;
+    let json = js
+        .as_string()
+        .ok_or_else(|| "lock sanctuary response not JSON".to_string())?;
     serde_json::from_str(&json).map_err(|e| e.to_string())
 }
 
@@ -1099,7 +1197,9 @@ pub async fn unlock_sanctuary(pin: &str) -> Result<SanctuaryPrefsDto, String> {
     let js = tauri_invoke("wellfair_unlock_sanctuary", args.into())
         .await
         .map_err(|e| format!("{e:?}"))?;
-    let json = js.as_string().ok_or_else(|| "unlock sanctuary response not JSON".to_string())?;
+    let json = js
+        .as_string()
+        .ok_or_else(|| "unlock sanctuary response not JSON".to_string())?;
     serde_json::from_str(&json).map_err(|e| e.to_string())
 }
 
@@ -1121,8 +1221,12 @@ pub struct LiveShareRequestDto {
 #[cfg(target_arch = "wasm32")]
 pub async fn fetch_pending_live_shares(limit: usize) -> Result<Vec<LiveShareRequestDto>, String> {
     let args = js_sys::Object::new();
-    js_sys::Reflect::set(&args, &"limit".into(), &wasm_bindgen::JsValue::from(limit as u32))
-        .map_err(|_| "failed to build invoke args".to_string())?;
+    js_sys::Reflect::set(
+        &args,
+        &"limit".into(),
+        &wasm_bindgen::JsValue::from(limit as u32),
+    )
+    .map_err(|_| "failed to build invoke args".to_string())?;
     let js = tauri_invoke("wellfair_list_pending_live_shares", args.into())
         .await
         .map_err(|e| format!("{e:?}"))?;
@@ -1151,8 +1255,12 @@ async fn decide_live_share(
         &wasm_bindgen::JsValue::from_str(request_id),
     )
     .map_err(|_| "failed to build invoke args".to_string())?;
-    js_sys::Reflect::set(&args, &"approved".into(), &wasm_bindgen::JsValue::from(approved))
-        .map_err(|_| "failed to build invoke args".to_string())?;
+    js_sys::Reflect::set(
+        &args,
+        &"approved".into(),
+        &wasm_bindgen::JsValue::from(approved),
+    )
+    .map_err(|_| "failed to build invoke args".to_string())?;
     let kinds = js_sys::Array::new();
     for kind in projection_kinds {
         kinds.push(&wasm_bindgen::JsValue::from_str(kind));
@@ -1199,44 +1307,42 @@ pub async fn deny_live_share(_request_id: &str, _reason: &str) -> Result<(), Str
     Err("Live share denial requires the Tauri desktop host".into())
 }
 
-
-mod finance;
+mod accountability;
+mod agency;
+mod anatomy_qapp;
+mod anatomy_render;
 mod clinical;
-mod pwa;
-mod work_items;
+mod decoy;
+mod disclosure;
+mod encryption;
+mod finance;
 mod guardianship;
 mod keychain;
-mod decoy;
-mod agency;
-mod wellbeing;
-mod anatomy_qapp;
-mod sync_backup;
-mod accountability;
-mod physiological;
-mod anatomy_render;
 mod library;
-mod encryption;
+mod physiological;
+mod pwa;
 mod safeguards;
-mod disclosure;
+mod sync_backup;
 mod view_api;
+mod wellbeing;
+mod work_items;
 
-pub use finance::*;
+pub use accountability::*;
+pub use agency::*;
+pub use anatomy_qapp::*;
+pub use anatomy_render::*;
 pub use clinical::*;
-pub use pwa::*;
-pub use work_items::*;
+pub use decoy::*;
+pub use disclosure::*;
+pub use encryption::*;
+pub use finance::*;
 pub use guardianship::*;
 pub use keychain::*;
-pub use decoy::*;
-pub use agency::*;
-pub use wellbeing::*;
-pub use anatomy_qapp::*;
-pub use sync_backup::*;
-pub use accountability::*;
-pub use physiological::*;
-pub use anatomy_render::*;
 pub use library::*;
-pub use encryption::*;
+pub use physiological::*;
+pub use pwa::*;
 pub use safeguards::*;
-pub use disclosure::*;
+pub use sync_backup::*;
 pub use view_api::*;
-
+pub use wellbeing::*;
+pub use work_items::*;

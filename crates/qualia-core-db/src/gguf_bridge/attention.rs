@@ -97,6 +97,8 @@ impl QTensorEngine {
         norm_weight: Option<&[f32]>,
         readback_out: Option<&mut [f32]>,
     ) -> bool {
+        debug_assert!(token_idx < layout.max_context || layout.max_context == 0);
+        debug_assert!(n_workgroups > 0);
         // Heterogeneous dispatch: ternary weights are strictly routed to adder paths (FFN),
         // reserving the attention MAC units for high-precision projections.
         if info.ggml_type == crate::ternary::GGML_TYPE_TERNARY_158 {
@@ -474,7 +476,9 @@ impl QTensorEngine {
                 n_in,
                 out_dim,
             ) {
-                wlog(&format!("[cpu_attn] proj failed kind={proj_kind} n_in={n_in} out_dim={out_dim} hidden={n_embd}"));
+                wlog(&format!(
+                    "[cpu_attn] proj failed kind={proj_kind} n_in={n_in} out_dim={out_dim} hidden={n_embd}"
+                ));
                 return false;
             }
 
@@ -769,8 +773,13 @@ impl QTensorEngine {
             {
                 eprintln!(
                     "[attn-dbg] n_head={} n_kv={} head_dim={} q_dim={} qty={} kty={} vty={} ashader_q={}",
-                    n_head, n_kv, head_dim, n_head * head_dim,
-                    q_info.ggml_type, k_info.ggml_type, v_info.ggml_type,
+                    n_head,
+                    n_kv,
+                    head_dim,
+                    n_head * head_dim,
+                    q_info.ggml_type,
+                    k_info.ggml_type,
+                    v_info.ggml_type,
                     ggml_gpu_attention_shader_supported(q_info.ggml_type),
                 );
             }

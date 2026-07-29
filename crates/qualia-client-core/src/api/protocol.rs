@@ -2,9 +2,7 @@
 
 #![allow(non_snake_case)]
 
-
 use std::path::Path;
-
 
 pub fn seed_bundled_qapps() -> Result<Vec<String>, String> {
     crate::bundled_qapps::seed_bundled_qapps()
@@ -127,4 +125,3 @@ pub async fn download_and_install_update(url: String) -> Result<(), String> {
 pub fn register_qualia_uri_handler(exe_path: String) -> Result<(), String> {
     crate::qapps_protocol::register_qualia_uri_handler(&exe_path)
 }
-

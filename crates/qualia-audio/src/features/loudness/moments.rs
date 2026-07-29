@@ -59,7 +59,10 @@ pub fn moments(samples: &[f32]) -> Moments {
 
     let (skewness, kurtosis) = if m2 > 0.0 {
         let sigma = m2.sqrt();
-        ((m3 / (sigma * sigma * sigma)) as f32, (m4 / (m2 * m2)) as f32)
+        (
+            (m3 / (sigma * sigma * sigma)) as f32,
+            (m4 / (m2 * m2)) as f32,
+        )
     } else {
         (0.0, 0.0)
     };

@@ -34,11 +34,11 @@ use serde::{Deserialize, Serialize};
 use crate::record::EpistemicStatus;
 
 use super::accumulate::{
-    accumulate, interactions, systemic_implications, Interaction, InteractionKind, SystemBurden,
-    SystemicImplication,
+    Interaction, InteractionKind, SystemBurden, SystemicImplication, accumulate, interactions,
+    systemic_implications,
 };
 use super::factor::{EvidenceTier, Factor};
-use super::physiology::{state_modulator, whole_body_profile, PhysiologicalState};
+use super::physiology::{PhysiologicalState, state_modulator, whole_body_profile};
 use super::system_key;
 use super::systems::body_system;
 
@@ -354,7 +354,8 @@ pub fn score_card(
 ) -> ScoreCard {
     let raw_burdens = accumulate(factors);
     let burdens: Vec<SystemBurden> = state_modulator(state).apply_to_burdens(&raw_burdens);
-    let implications: Vec<SystemicImplication> = systemic_implications(factors, convergence_threshold);
+    let implications: Vec<SystemicImplication> =
+        systemic_implications(factors, convergence_threshold);
     let ix: Vec<Interaction> = interactions(factors);
 
     let mut aspects = Vec::new();
@@ -418,7 +419,11 @@ fn score_weighted(
 }
 
 /// Resilience: the *supportive* side, weighted. Higher = more support in play (reads as reassuring).
-fn score_resilience(burdens: &[SystemBurden], factors: &[Factor], weights: &WeightModel) -> AspectScore {
+fn score_resilience(
+    burdens: &[SystemBurden],
+    factors: &[Factor],
+    weights: &WeightModel,
+) -> AspectScore {
     let mut raw = 0u64;
     let mut contributions = Vec::new();
     for b in burdens {
@@ -455,7 +460,11 @@ fn score_convergence(implications: &[SystemicImplication]) -> AspectScore {
         contributions.push(Contribution {
             kind: ContributionKind::Convergence,
             source_id: im.system_id.clone(),
-            label: format!("{} ({} converging)", im.system_label, im.converging_factors.len()),
+            label: format!(
+                "{} ({} converging)",
+                im.system_label,
+                im.converging_factors.len()
+            ),
             weighted_milli: clamp1000(weighted),
             evidence: im.dominant_evidence,
         });
@@ -473,7 +482,12 @@ fn score_interactions(ix: &[Interaction]) -> AspectScore {
         contributions.push(Contribution {
             kind: ContributionKind::Interaction,
             source_id: format!("{}+{}", it.factor_a, it.factor_b),
-            label: format!("{} & {} on {}", it.factor_a, it.factor_b, system_label(&it.system_id)),
+            label: format!(
+                "{} & {} on {}",
+                it.factor_a,
+                it.factor_b,
+                system_label(&it.system_id)
+            ),
             weighted_milli: sev,
             // Interactions are structural detections; tier them at Mechanistic (a plausible interaction),
             // not clinical certainty.
@@ -558,7 +572,12 @@ mod tests {
             factor(
                 "cond:chronic-stress",
                 FactorKind::Condition,
-                &[("nervous", Effect::Adverse, EvidenceTier::ClinicalEvidence, 400)],
+                &[(
+                    "nervous",
+                    Effect::Adverse,
+                    EvidenceTier::ClinicalEvidence,
+                    400,
+                )],
             ),
             factor(
                 "life:poor-sleep",
@@ -576,7 +595,11 @@ mod tests {
         // Stress is weighted heavily on the nervous system → present, and traceable.
         let stress = card.aspect(Aspect::Stress).unwrap();
         assert!(stress.score_milli > 0);
-        let nervous = stress.contributions.iter().find(|c| c.source_id == "nervous").unwrap();
+        let nervous = stress
+            .contributions
+            .iter()
+            .find(|c| c.source_id == "nervous")
+            .unwrap();
         assert_eq!(nervous.kind, ContributionKind::System);
         assert!(!nervous.label.is_empty(), "human-readable linkage");
         // Dominant evidence is the strongest contributing tier (clinical here).
@@ -593,7 +616,12 @@ mod tests {
         let factors = vec![factor(
             "act:meditation-and-sleep",
             FactorKind::Lifestyle,
-            &[("nervous", Effect::Supportive, EvidenceTier::Mechanistic, 500)],
+            &[(
+                "nervous",
+                Effect::Supportive,
+                EvidenceTier::Mechanistic,
+                500,
+            )],
         )];
         let card = score_card(&factors, 1, baseline(), &seed_weight_model());
         let res = card.aspect(Aspect::Resilience).unwrap();
@@ -601,7 +629,10 @@ mod tests {
         assert!(res.contributions.iter().any(|c| c.source_id == "nervous"));
         assert!(Aspect::Resilience.higher_is_supportive());
         // Support alone leaves systemic load settled (net floors at 0).
-        assert_eq!(card.aspect(Aspect::SystemicLoad).unwrap().band, ScoreBand::Settled);
+        assert_eq!(
+            card.aspect(Aspect::SystemicLoad).unwrap().band,
+            ScoreBand::Settled
+        );
     }
 
     #[test]
@@ -610,17 +641,30 @@ mod tests {
             factor(
                 "med:warfarin",
                 FactorKind::Medication,
-                &[("circulatory", Effect::Adverse, EvidenceTier::ClinicalEvidence, 400)],
+                &[(
+                    "circulatory",
+                    Effect::Adverse,
+                    EvidenceTier::ClinicalEvidence,
+                    400,
+                )],
             ),
             factor(
                 "herb:ginkgo",
                 FactorKind::Herb,
-                &[("circulatory", Effect::Adverse, EvidenceTier::TraditionalUse, 300)],
+                &[(
+                    "circulatory",
+                    Effect::Adverse,
+                    EvidenceTier::TraditionalUse,
+                    300,
+                )],
             ),
         ];
         let card = score_card(&factors, 1, baseline(), &seed_weight_model());
         let ix = card.aspect(Aspect::InteractionLoad).unwrap();
-        assert_eq!(ix.score_milli, interaction_severity(InteractionKind::HerbDrug));
+        assert_eq!(
+            ix.score_milli,
+            interaction_severity(InteractionKind::HerbDrug)
+        );
         assert_eq!(ix.contributions.len(), 1);
         assert_eq!(ix.contributions[0].kind, ContributionKind::Interaction);
     }
@@ -631,22 +675,43 @@ mod tests {
         let med = factor(
             "med:nephrotoxic",
             FactorKind::Medication,
-            &[("urinary", Effect::Adverse, EvidenceTier::ClinicalEvidence, 400)],
+            &[(
+                "urinary",
+                Effect::Adverse,
+                EvidenceTier::ClinicalEvidence,
+                400,
+            )],
         );
         let t3 = PhysiologicalState::Reproductive(ReproductiveState::Pregnant(Trimester::Third));
-        let base_card = score_card(std::slice::from_ref(&med), 1, baseline(), &seed_weight_model());
+        let base_card = score_card(
+            std::slice::from_ref(&med),
+            1,
+            baseline(),
+            &seed_weight_model(),
+        );
         let preg_card = score_card(std::slice::from_ref(&med), 1, t3, &seed_weight_model());
 
         // Physiological demand is settled at baseline, present in pregnancy.
-        assert_eq!(base_card.aspect(Aspect::PhysiologicalDemand).unwrap().band, ScoreBand::Settled);
+        assert_eq!(
+            base_card.aspect(Aspect::PhysiologicalDemand).unwrap().band,
+            ScoreBand::Settled
+        );
         let demand = preg_card.aspect(Aspect::PhysiologicalDemand).unwrap();
         assert!(demand.score_milli > 0);
-        assert!(demand.contributions.iter().any(|c| c.source_id == "urinary"));
+        assert!(
+            demand
+                .contributions
+                .iter()
+                .any(|c| c.source_id == "urinary")
+        );
 
         // The same med lands as more systemic load in the third trimester (renal engagement scales it).
         let base_load = base_card.aspect(Aspect::SystemicLoad).unwrap().score_milli;
         let preg_load = preg_card.aspect(Aspect::SystemicLoad).unwrap().score_milli;
-        assert!(preg_load > base_load, "state modulates the load: {preg_load} > {base_load}");
+        assert!(
+            preg_load > base_load,
+            "state modulates the load: {preg_load} > {base_load}"
+        );
     }
 
     #[test]

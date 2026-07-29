@@ -4,9 +4,7 @@
 //! receives one call per scheduling round and must return one output for every item in slot order.
 
 #[repr(C)]
-#[derive(
-    Clone, Copy, Debug, Default, PartialEq, Eq, bytemuck::Pod, bytemuck::Zeroable,
-)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct RaggedBatchItem {
     pub request_id: u64,
     pub slot: u32,
@@ -18,9 +16,7 @@ pub struct RaggedBatchItem {
 }
 
 #[repr(C)]
-#[derive(
-    Clone, Copy, Debug, Default, PartialEq, Eq, bytemuck::Pod, bytemuck::Zeroable,
-)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct RaggedBatchOutput {
     pub request_id: u64,
     pub slot: u32,

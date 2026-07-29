@@ -96,7 +96,9 @@ impl VisionWeightBundle {
 
     /// Serialize to QVWT bytes (cold path).
     pub fn to_bytes(&self) -> Vec<u8> {
-        let mut out = Vec::with_capacity(64 + (self.proj.len() + self.head.weight.len() + self.head.bias.len()) * 4);
+        let mut out = Vec::with_capacity(
+            64 + (self.proj.len() + self.head.weight.len() + self.head.bias.len()) * 4,
+        );
         out.extend_from_slice(&QVWT_MAGIC.to_le_bytes());
         out.extend_from_slice(&QVWT_VERSION.to_le_bytes());
         out.extend_from_slice(&(self.embed_dim as u32).to_le_bytes());
@@ -106,7 +108,12 @@ impl VisionWeightBundle {
         while out.len() < 32 {
             out.push(0);
         }
-        for f in self.proj.iter().chain(self.head.weight.iter()).chain(self.head.bias.iter()) {
+        for f in self
+            .proj
+            .iter()
+            .chain(self.head.weight.iter())
+            .chain(self.head.bias.iter())
+        {
             out.extend_from_slice(&f.to_le_bytes());
         }
         // class hashes
@@ -165,7 +172,9 @@ impl VisionWeightBundle {
             class_iris[..n_classes].to_vec()
         } else {
             // placeholder iris; hashes overwritten from file
-            (0..n_classes).map(|_| "https://ns.webizen.org/q42/vision/class/loaded").collect()
+            (0..n_classes)
+                .map(|_| "https://ns.webizen.org/q42/vision/class/loaded")
+                .collect()
         };
         // Build head then fill
         let mut head = LinearHead::zeros(embed_dim, &names);
@@ -376,7 +385,8 @@ mod tests {
     fn qvwt_roundtrip() {
         let b = VisionWeightBundle::from_seed(42, 16, &[CLASS_MOSTLY_RED, CLASS_MOSTLY_BLUE]);
         let bytes = b.to_bytes();
-        let b2 = VisionWeightBundle::from_bytes(&bytes, &[CLASS_MOSTLY_RED, CLASS_MOSTLY_BLUE]).unwrap();
+        let b2 =
+            VisionWeightBundle::from_bytes(&bytes, &[CLASS_MOSTLY_RED, CLASS_MOSTLY_BLUE]).unwrap();
         assert_eq!(b.embed_dim, b2.embed_dim);
         assert_eq!(b.content_hash, b2.content_hash);
         assert_eq!(b.proj, b2.proj);

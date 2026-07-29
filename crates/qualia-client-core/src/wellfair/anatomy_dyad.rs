@@ -94,7 +94,13 @@ mod tests {
 
         // Host: a 2×2×2 box centred at (10,0,0). Fetal: a 4-wide box. fill=0.5 → target extent = 1.0;
         // fetal max-extent = 4 → scale 0.25; centred at the host centroid.
-        let p = place_within([9.0, -1.0, -1.0], [11.0, 1.0, 1.0], [-2.0, -2.0, -2.0], [2.0, 2.0, 2.0], 0.5);
+        let p = place_within(
+            [9.0, -1.0, -1.0],
+            [11.0, 1.0, 1.0],
+            [-2.0, -2.0, -2.0],
+            [2.0, 2.0, 2.0],
+            0.5,
+        );
         assert_eq!(p.translate, [10.0, 0.0, 0.0]);
         assert!((p.scale - 0.25).abs() < 1e-6, "scale {}", p.scale);
     }
@@ -122,7 +128,10 @@ mod tests {
         .unwrap()
         .mesh;
 
-        let stage = carnegie_series().into_iter().find(|s| s.stage == 18).unwrap();
+        let stage = carnegie_series()
+            .into_iter()
+            .find(|s| s.stage == 18)
+            .unwrap();
         let f_mesh = compile_asset(
             &fetch_glb(&stage.glb_url()).expect("fetch embryo"),
             Some("glb"),
@@ -135,7 +144,11 @@ mod tests {
         let dyad = MaternalFetalDyad::at_stage(&stage);
         let p = place_within(u_mesh.min, u_mesh.max, f_mesh.min, f_mesh.max, 0.6);
         let ext = |m: &qualia_core_db::render::assets::Mesh| {
-            [m.max[0] - m.min[0], m.max[1] - m.min[1], m.max[2] - m.min[2]]
+            [
+                m.max[0] - m.min[0],
+                m.max[1] - m.min[1],
+                m.max[2] - m.min[2],
+            ]
         };
         eprintln!(
             "DYAD {:?}: Carnegie {} (~{}d) seated in {} — translate {:?}, scale {:.5} · uterus ext {:?} · embryo ext {:?}",

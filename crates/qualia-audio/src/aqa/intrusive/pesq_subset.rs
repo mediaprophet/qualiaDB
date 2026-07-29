@@ -56,10 +56,7 @@ pub fn pesq_subset(
     degraded_mag: &[f32],
     sample_rate: f32,
 ) -> Result<f32, AudioError> {
-    if reference_mag.is_empty()
-        || reference_mag.len() != degraded_mag.len()
-        || sample_rate <= 0.0
-    {
+    if reference_mag.is_empty() || reference_mag.len() != degraded_mag.len() || sample_rate <= 0.0 {
         return Err(AudioError::InvalidParameter);
     }
 

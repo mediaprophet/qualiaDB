@@ -36,8 +36,14 @@ pub struct EncBlob {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case", tag = "algo")]
 pub enum KdfDescriptor {
-    Pbkdf2 { iterations: u32 },
-    Argon2id { m_cost_kib: u32, t_cost: u32, p_cost: u32 },
+    Pbkdf2 {
+        iterations: u32,
+    },
+    Argon2id {
+        m_cost_kib: u32,
+        t_cost: u32,
+        p_cost: u32,
+    },
 }
 
 /// The role a layer plays. `Reserved` layers exist only to keep the container shape constant.
@@ -120,7 +126,11 @@ pub struct VaultContainerV2 {
 impl VaultContainerV2 {
     /// Build a container from the in-use layers, padded to constant shape. Errors if there are more
     /// in-use layers than [`CONTAINER_SLOTS`].
-    pub fn new(layers: Vec<Layer>, keychain_wrapped: bool, vault_id: Option<String>) -> Result<Self, String> {
+    pub fn new(
+        layers: Vec<Layer>,
+        keychain_wrapped: bool,
+        vault_id: Option<String>,
+    ) -> Result<Self, String> {
         if layers.len() > CONTAINER_SLOTS {
             return Err("more in-use layers than container slots".into());
         }
@@ -174,18 +184,36 @@ mod tests {
             id: id.into(),
             role,
             salt_hex: "00112233445566778899aabbccddeeff".into(),
-            kdf: Some(KdfDescriptor::Argon2id { m_cost_kib: 65536, t_cost: 3, p_cost: 1 }),
-            verifier: EncBlob { chunk_index: u64::MAX, ct_hex: "aa".into(), tag_hex: "bb".into() },
-            records: EncBlob { chunk_index: 0, ct_hex: "cc".into(), tag_hex: "dd".into() },
+            kdf: Some(KdfDescriptor::Argon2id {
+                m_cost_kib: 65536,
+                t_cost: 3,
+                p_cost: 1,
+            }),
+            verifier: EncBlob {
+                chunk_index: u64::MAX,
+                ct_hex: "aa".into(),
+                tag_hex: "bb".into(),
+            },
+            records: EncBlob {
+                chunk_index: 0,
+                ct_hex: "cc".into(),
+                tag_hex: "dd".into(),
+            },
             next_counter: 1,
             audit_pubkey_hex: Some("ee".repeat(32)),
-            wrapped_keys: vec![WrappedKey { purpose: "decoy_lane_key".into(), blob_hex: "ff".into() }],
+            wrapped_keys: vec![WrappedKey {
+                purpose: "decoy_lane_key".into(),
+                blob_hex: "ff".into(),
+            }],
         }
     }
 
     fn sample_container() -> VaultContainerV2 {
         VaultContainerV2::new(
-            vec![sample_layer("real", LayerRole::Real), sample_layer("decoy:0", LayerRole::Decoy)],
+            vec![
+                sample_layer("real", LayerRole::Real),
+                sample_layer("decoy:0", LayerRole::Decoy),
+            ],
             false,
             None,
         )
@@ -204,10 +232,20 @@ mod tests {
     fn constant_shape_is_fixed_and_padded_with_reserved() {
         let c = sample_container();
         assert_eq!(c.layers.len(), CONTAINER_SLOTS);
-        assert_eq!(c.layers.iter().filter(|l| l.role == LayerRole::Reserved).count(), CONTAINER_SLOTS - 2);
+        assert_eq!(
+            c.layers
+                .iter()
+                .filter(|l| l.role == LayerRole::Reserved)
+                .count(),
+            CONTAINER_SLOTS - 2
+        );
         // Each reserved layer has a distinct random salt.
-        let reserved_salts: std::collections::HashSet<_> =
-            c.layers.iter().filter(|l| l.role == LayerRole::Reserved).map(|l| l.salt_hex.clone()).collect();
+        let reserved_salts: std::collections::HashSet<_> = c
+            .layers
+            .iter()
+            .filter(|l| l.role == LayerRole::Reserved)
+            .map(|l| l.salt_hex.clone())
+            .collect();
         assert_eq!(reserved_salts.len(), CONTAINER_SLOTS - 2);
     }
 
@@ -220,7 +258,9 @@ mod tests {
 
     #[test]
     fn too_many_layers_is_rejected() {
-        let many: Vec<Layer> = (0..CONTAINER_SLOTS + 1).map(|i| sample_layer(&format!("l{i}"), LayerRole::Decoy)).collect();
+        let many: Vec<Layer> = (0..CONTAINER_SLOTS + 1)
+            .map(|i| sample_layer(&format!("l{i}"), LayerRole::Decoy))
+            .collect();
         assert!(VaultContainerV2::new(many, false, None).is_err());
     }
 }

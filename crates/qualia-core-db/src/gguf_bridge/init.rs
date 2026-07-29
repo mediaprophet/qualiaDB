@@ -101,9 +101,6 @@ impl QTensorEngine {
         };
         #[cfg(target_arch = "wasm32")]
         let device = &wasm_device;
-        #[cfg(target_arch = "wasm32")]
-        let queue = &wasm_queue;
-
         #[cfg(not(target_arch = "wasm32"))]
         let native_pipeline_cache = create_native_pipeline_cache(device);
         #[cfg(target_arch = "wasm32")]
@@ -380,12 +377,14 @@ impl QTensorEngine {
                 cache: native_pipeline_cache.as_ref(),
             });
 
+        #[cfg(not(target_arch = "wasm32"))]
         let mock_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("Mock Fused Contraction Shader"),
             source: wgpu::ShaderSource::Wgsl(
                 include_str!("../shaders/fused_tensor_contraction.wgsl").into(),
             ),
         });
+        #[cfg(not(target_arch = "wasm32"))]
         let mock_pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
             label: Some("Mock Fused Contraction Pipeline"),
             layout: None,
@@ -850,7 +849,9 @@ impl QTensorEngine {
                 compilation_options: Default::default(),
                 cache: native_pipeline_cache.as_ref(),
             });
-            log::info!("LLM_LOAD|fused_ffn|coop_entry={coop_ep}|mr=coop_fused_ffn_mr|warp=coop_fused_ffn_warp");
+            log::info!(
+                "LLM_LOAD|fused_ffn|coop_entry={coop_ep}|mr=coop_fused_ffn_mr|warp=coop_fused_ffn_warp"
+            );
             (naive, coop, coop_mr, coop_warp)
         };
 
@@ -1171,6 +1172,7 @@ impl QTensorEngine {
             coop_gemv_warp_pipeline,
             #[cfg(not(target_arch = "wasm32"))]
             coop_gemv_residual_warp_pipeline,
+            #[cfg(not(target_arch = "wasm32"))]
             mock_pipeline,
             embedding_pipeline,
             #[cfg(not(target_arch = "wasm32"))]
@@ -1210,12 +1212,17 @@ impl QTensorEngine {
             gemm_output_buf: None,
             gemm_params_buf: None,
             gemm_output_staging: None,
+            #[cfg(not(target_arch = "wasm32"))]
             output_topk_pipeline: None,
             #[cfg(not(target_arch = "wasm32"))]
             output_topk_bind_layout: None,
+            #[cfg(not(target_arch = "wasm32"))]
             topk_cand_val_buf: None,
+            #[cfg(not(target_arch = "wasm32"))]
             topk_cand_idx_buf: None,
+            #[cfg(not(target_arch = "wasm32"))]
             topk_cand_staging: None,
+            #[cfg(not(target_arch = "wasm32"))]
             topk_params_buf: None,
             gemm_aux_buf: None,
             gemm_ffn_buf: None,
@@ -1689,14 +1696,13 @@ impl QTensorEngine {
             });
             // gemm_weight_buf_b is a legacy decode-path ping-pong that is never read;
             // allocate at minimal size to avoid wasting GPU memory.
-            self.gemm_weight_buf_b = Some(
-                self.gpu_device().create_buffer(&wgpu::BufferDescriptor {
+            self.gemm_weight_buf_b =
+                Some(self.gpu_device().create_buffer(&wgpu::BufferDescriptor {
                     label: Some("LayerGemmWeightB"),
                     size: arena_min,
                     usage: weight_usage,
                     mapped_at_creation: false,
-                }),
-            );
+                }));
         }
         self.gemm_output_buf = Some(self.gpu_device().create_buffer(&wgpu::BufferDescriptor {
             label: Some("LayerGemmOutput"),

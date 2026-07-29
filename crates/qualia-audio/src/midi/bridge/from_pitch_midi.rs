@@ -87,7 +87,10 @@ pub fn note_events_to_timed(
     if !frames_per_tick.is_finite() || frames_per_tick <= 0.0 {
         return Err(AudioError::InvalidParameter);
     }
-    let needed = events.len().checked_mul(2).ok_or(AudioError::InvalidParameter)?;
+    let needed = events
+        .len()
+        .checked_mul(2)
+        .ok_or(AudioError::InvalidParameter)?;
     if out.len() < needed {
         return Err(AudioError::OutputBufferTooSmall);
     }
@@ -122,7 +125,13 @@ mod tests {
     use super::*;
 
     fn note_event(note: u8, start: u32, end: u32, vel: u8) -> NoteEvent {
-        NoteEvent { note, velocity: vel, start_frame: start, end_frame: end, confidence: 0.9 }
+        NoteEvent {
+            note,
+            velocity: vel,
+            start_frame: start,
+            end_frame: end,
+            confidence: 0.9,
+        }
     }
 
     #[test]

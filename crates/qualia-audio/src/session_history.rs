@@ -201,7 +201,10 @@ impl AutomationLane {
     pub fn new(track: u8) -> Self {
         Self {
             track,
-            points: [AutomationPoint { frame: 0, value: 1.0 }; MAX_AUTO_POINTS],
+            points: [AutomationPoint {
+                frame: 0,
+                value: 1.0,
+            }; MAX_AUTO_POINTS],
             n_points: 0,
         }
     }

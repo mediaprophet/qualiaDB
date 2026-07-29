@@ -172,9 +172,19 @@ mod tests {
         let early: f32 = out[win..2 * win].iter().map(|x| x * x).sum();
         let late: f32 = out[8 * win..9 * win].iter().map(|x| x * x).sum();
         assert!(early > 0.0, "expected non-zero early tail energy");
-        assert!(late < early, "late energy {} must be < early {}", late, early);
+        assert!(
+            late < early,
+            "late energy {} must be < early {}",
+            late,
+            early
+        );
         // Meaningful decay, not a plateau.
-        assert!(late < early * 0.5, "tail did not decay enough: late {} early {}", late, early);
+        assert!(
+            late < early * 0.5,
+            "tail did not decay enough: late {} early {}",
+            late,
+            early
+        );
     }
 
     #[test]

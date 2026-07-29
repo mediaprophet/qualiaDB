@@ -10,8 +10,39 @@ use std::path::{Path, PathBuf};
 
 use crate::state::{app_meta_dir, config_file_path};
 
-pub const SETUP_STATE_VERSION: u32 = 1;
-pub const REQUIRED_SETUP_STEPS: [&str; 3] = ["welcome", "storage", "inference"];
+pub const SETUP_STATE_VERSION: u32 = 3;
+pub const REQUIRED_SETUP_STEPS: [&str; 10] = [
+    "welcome",
+    "storage",
+    "control",
+    "device",
+    "inference",
+    "relations",
+    "reachability",
+    "care",
+    "assurance",
+    "ready",
+];
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
+pub struct SetupProfile {
+    #[serde(default)]
+    pub preferred_name: String,
+    #[serde(default)]
+    pub locale: String,
+    #[serde(default)]
+    pub timezone: String,
+    #[serde(default)]
+    pub accessibility_needs: Vec<String>,
+    #[serde(default)]
+    pub interests: Vec<String>,
+    #[serde(default)]
+    pub preferred_ontologies: Vec<String>,
+    #[serde(default)]
+    pub care_priorities: Vec<String>,
+    #[serde(default)]
+    pub qapp_goals: Vec<String>,
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct SetupState {
@@ -24,6 +55,8 @@ pub struct SetupState {
     pub completed_steps: Vec<String>,
     #[serde(default)]
     pub migrated_from_legacy_config: bool,
+    #[serde(default)]
+    pub profile: SetupProfile,
 }
 
 fn default_current_step() -> String {
@@ -38,8 +71,16 @@ impl Default for SetupState {
             current_step: default_current_step(),
             completed_steps: Vec::new(),
             migrated_from_legacy_config: false,
+            profile: SetupProfile::default(),
         }
     }
+}
+
+pub fn update_setup_profile(profile: SetupProfile) -> Result<SetupState, String> {
+    let mut state = get_setup_state()?;
+    state.profile = profile;
+    save_setup_state_to(&setup_state_path(), &state)?;
+    Ok(state)
 }
 
 pub fn setup_state_path() -> PathBuf {
@@ -172,7 +213,18 @@ mod tests {
         state.completed_steps.push("welcome".into());
         assert_eq!(next_incomplete_step(&state), Some("storage"));
         state.completed_steps.push("storage".into());
-        state.completed_steps.push("inference".into());
+        for step in REQUIRED_SETUP_STEPS.iter().skip(2) {
+            state.completed_steps.push((*step).into());
+        }
         assert_eq!(next_incomplete_step(&state), None);
+    }
+
+    #[test]
+    fn older_setup_state_gets_an_empty_profile() {
+        let state: SetupState = serde_json::from_str(
+            r#"{"version":2,"completed":false,"current_step":"care","completed_steps":[]}"#,
+        )
+        .unwrap();
+        assert_eq!(state.profile, SetupProfile::default());
     }
 }

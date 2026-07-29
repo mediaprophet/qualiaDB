@@ -89,7 +89,11 @@ impl ChannelMode {
     #[inline]
     pub fn to_bytes(self) -> [u8; 3] {
         let (controller, value) = self.controller_value();
-        [STATUS_CONTROL_CHANGE | (self.channel & 0x0F), controller, value]
+        [
+            STATUS_CONTROL_CHANGE | (self.channel & 0x0F),
+            controller,
+            value,
+        ]
     }
 
     /// Parse from a slice whose first byte is a Control Change status with a
@@ -148,6 +152,9 @@ mod tests {
     #[test]
     fn non_mode_cc_rejected() {
         // Controller 7 is channel volume, not a channel-mode message.
-        assert_eq!(ChannelMode::parse(&[0xB0, 7, 100]), Err(AudioError::UnsupportedFormat));
+        assert_eq!(
+            ChannelMode::parse(&[0xB0, 7, 100]),
+            Err(AudioError::UnsupportedFormat)
+        );
     }
 }

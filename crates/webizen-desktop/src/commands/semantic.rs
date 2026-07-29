@@ -58,4 +58,3 @@ pub fn load_imported_accounts() -> Result<serde_json::Value, String> {
 pub fn save_imported_accounts(accounts: serde_json::Value) -> Result<(), String> {
     api::save_imported_accounts(accounts)
 }
-

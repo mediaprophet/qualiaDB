@@ -134,7 +134,12 @@ mod tests {
         // 120 BPM (lag 50) must beat its half-tempo 60 BPM (lag 100).
         let b60 = ((60.0 - bpm_min) / (bpm_max - bpm_min) * (bins - 1) as f32).round() as usize;
         let b120 = ((120.0 - bpm_min) / (bpm_max - bpm_min) * (bins - 1) as f32).round() as usize;
-        assert!(sal[b120] >= sal[b60], "120 BPM salience {} vs 60 BPM {}", sal[b120], sal[b60]);
+        assert!(
+            sal[b120] >= sal[b60],
+            "120 BPM salience {} vs 60 BPM {}",
+            sal[b120],
+            sal[b60]
+        );
     }
 
     #[test]

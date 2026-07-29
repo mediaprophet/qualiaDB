@@ -134,10 +134,7 @@ fn yunet_infer_ort(
         .map_err(|_| OnnxSessionError::RunFailed)?;
 
     // Best-effort: flatten first output into rows of `stride`.
-    let first = outputs
-        .iter()
-        .next()
-        .ok_or(OnnxSessionError::BadOutput)?;
+    let first = outputs.iter().next().ok_or(OnnxSessionError::BadOutput)?;
     let (_name, value) = first;
     let try_extract = value.try_extract_tensor::<f32>();
     let (shape, data) = match try_extract {

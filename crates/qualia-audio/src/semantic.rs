@@ -63,19 +63,12 @@ pub fn compile_auditory_quins(
         if w + 2 > out.len() {
             break;
         }
-        let inst = e.source_hash
-            ^ e.start_frame
-            ^ (e.end_frame.wrapping_mul(0x9e37_79b9));
+        let inst = e.source_hash ^ e.start_frame ^ (e.end_frame.wrapping_mul(0x9e37_79b9));
         let meta = (e.confidence_u16 as u64)
             | ((e.start_frame & 0xFFFF) << 16)
             | ((e.end_frame & 0xFFFF) << 32);
-        out[w] = AudioQuin::with_parity(
-            media.hash,
-            q_hash(P_AUDITORY_OBSERVATION),
-            inst,
-            ctx,
-            meta,
-        );
+        out[w] =
+            AudioQuin::with_parity(media.hash, q_hash(P_AUDITORY_OBSERVATION), inst, ctx, meta);
         w += 1;
         out[w] = AudioQuin::with_parity(
             inst,

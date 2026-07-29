@@ -103,10 +103,7 @@ fn point_series(
 }
 
 /// Evaluate jitter on nose + eye corners over the last `window_ms` ending at last frame.
-pub fn evaluate_landmark_jitter(
-    frames: &[LandmarkFrame],
-    thr: &JitterThresholds,
-) -> JitterVerdict {
+pub fn evaluate_landmark_jitter(frames: &[LandmarkFrame], thr: &JitterThresholds) -> JitterVerdict {
     if frames.len() < MIN_JITTER_SAMPLES {
         return JitterVerdict::InsufficientSamples;
     }
@@ -204,8 +201,14 @@ mod tests {
         for i in 0..16 {
             let mut f = LandmarkFrame::empty((i as u32) * 60);
             let n = (i as f32) * 0.02 + noise * ((i as f32 * 1.7).sin());
-            f.set(PadLandmarkId::NoseTip, Landmark2::new(140.0 + n, 150.0 + n * 0.5));
-            f.set(PadLandmarkId::LeftEyeOuter, Landmark2::new(100.0 + n * 0.3, 120.0));
+            f.set(
+                PadLandmarkId::NoseTip,
+                Landmark2::new(140.0 + n, 150.0 + n * 0.5),
+            );
+            f.set(
+                PadLandmarkId::LeftEyeOuter,
+                Landmark2::new(100.0 + n * 0.3, 120.0),
+            );
             f.set(
                 PadLandmarkId::RightEyeOuter,
                 Landmark2::new(180.0 + n * 0.3, 120.0),
@@ -237,7 +240,10 @@ mod tests {
         };
         let v = evaluate_landmark_jitter(&frames, &thr);
         assert!(
-            matches!(v, JitterVerdict::Natural { .. } | JitterVerdict::TooSmoothOrGlitchy { .. }),
+            matches!(
+                v,
+                JitterVerdict::Natural { .. } | JitterVerdict::TooSmoothOrGlitchy { .. }
+            ),
             "got {:?}",
             v
         );

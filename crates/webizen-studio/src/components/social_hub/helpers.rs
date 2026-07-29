@@ -226,11 +226,9 @@ pub async fn list_project_records() -> Result<Vec<(String, String)>, String> {
         }
     }
     // Merge vault/wellfair projects when host is unlocked.
-    if let Ok(raw) = invoke_json::<serde_json::Value>(
-        "wellfair_list_health_records",
-        json!({ "limit": 96 }),
-    )
-    .await
+    if let Ok(raw) =
+        invoke_json::<serde_json::Value>("wellfair_list_health_records", json!({ "limit": 96 }))
+            .await
     {
         let arr = json_list(raw, &["records", "items"]);
         for r in arr.into_iter().filter(|r| s(r, "kind") == "project") {
@@ -298,7 +296,15 @@ pub async fn create_project_record(
     if id.is_empty() {
         return Err("local project create returned no id".into());
     }
-    Ok((id, if label.is_empty() { name.to_string() } else { label }, local))
+    Ok((
+        id,
+        if label.is_empty() {
+            name.to_string()
+        } else {
+            label
+        },
+        local,
+    ))
 }
 
 // ── Lived Memory handoff (Practice → Memory) ──────────────────────────
@@ -335,20 +341,9 @@ pub async fn remember_project_to_memory(label: &str, board_id: &str) -> Result<S
         sensitivity: Some("restricted".into()),
         ..Default::default()
     };
-    let v = ingest_document(
-        &uri,
-        "text/markdown",
-        &text,
-        None,
-        &facets,
-        "restricted",
-    )
-    .await?;
+    let v = ingest_document(&uri, "text/markdown", &text, None, &facets, "restricted").await?;
     let _ = view_select_uri(&uri).await;
-    let sect = v
-        .get("section")
-        .and_then(|x| x.as_str())
-        .unwrap_or("work");
+    let sect = v.get("section").and_then(|x| x.as_str()).unwrap_or("work");
     Ok(format!(
         "Saved to Lived Memory · {sect} lane · open Memory to spatialize."
     ))
@@ -392,9 +387,7 @@ pub fn vault_state_detail(
 ) -> &'static str {
     use crate::components::wellfair::host_dto::VaultLifecycle;
     match v {
-        VaultLifecycle::Unlocked => {
-            "Project records can be listed and created from this machine."
-        }
+        VaultLifecycle::Unlocked => "Project records can be listed and created from this machine.",
         VaultLifecycle::Locked => {
             "Unlock the vault in Sanctuary before listing or creating projects."
         }
@@ -457,7 +450,8 @@ pub async fn load_dns_forms_for(
     dns_txt: Signal<String>,
     turtle: Signal<String>,
 ) -> Result<(), String> {
-    let v = invoke_json::<serde_json::Value>("front_door_forms", json!({ "domain": domain })).await?;
+    let v =
+        invoke_json::<serde_json::Value>("front_door_forms", json!({ "domain": domain })).await?;
     apply_front_door_forms(&v, dns_name, dns_txt, turtle);
     Ok(())
 }
@@ -476,7 +470,8 @@ pub async fn load_dns_forms_for_all(
     let mut ok = 0usize;
     let mut last_err = String::new();
     for domain in domain_names {
-        match invoke_json::<serde_json::Value>("front_door_forms", json!({ "domain": domain })).await
+        match invoke_json::<serde_json::Value>("front_door_forms", json!({ "domain": domain }))
+            .await
         {
             Ok(v) => {
                 if ok > 0 {

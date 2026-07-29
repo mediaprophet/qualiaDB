@@ -8,9 +8,8 @@ use crate::state::*;
 use futures_util::StreamExt;
 use std::io::Write;
 use std::path::{Path, PathBuf};
-use std::sync::{Arc, Mutex};
 use std::sync::atomic::{AtomicBool, Ordering};
-
+use std::sync::{Arc, Mutex};
 
 pub fn active_model_path() -> PathBuf {
     app_meta_dir().join("active_model.json")
@@ -214,7 +213,9 @@ pub fn try_apply_model_preference_async(task: &str) -> Result<(), String> {
     spawn_model_activation(move || try_apply_model_preference(&task))
 }
 
-fn spawn_model_activation(work: impl FnOnce() -> Result<(), String> + Send + 'static) -> Result<(), String> {
+fn spawn_model_activation(
+    work: impl FnOnce() -> Result<(), String> + Send + 'static,
+) -> Result<(), String> {
     if MODEL_ACTIVATION_IN_PROGRESS.load(Ordering::Acquire) {
         return Err("Model activation already in progress".to_string());
     }
@@ -272,7 +273,10 @@ pub fn list_ollama_models() -> Vec<crate::ollama_harness::OllamaModelInfo> {
 }
 
 /// One-shot Ollama generate using persisted settings (for smoke / ETL hooks).
-pub fn ollama_generate(system: String, prompt: String) -> Result<crate::ollama_harness::OllamaGenerateResult, String> {
+pub fn ollama_generate(
+    system: String,
+    prompt: String,
+) -> Result<crate::ollama_harness::OllamaGenerateResult, String> {
     crate::ollama_harness::OllamaHarness::from_loaded_settings().generate(&system, &prompt)
 }
 
@@ -502,4 +506,3 @@ pub async fn install_catalog_llm(id: String) -> Result<serde_json::Value, String
 
     serde_json::to_value(result).map_err(|e| e.to_string())
 }
-

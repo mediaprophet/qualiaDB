@@ -156,7 +156,10 @@ mod tests {
         );
         // Amplitude bounded by velocity gain (1.0 here).
         let max_abs = buf.iter().fold(0.0f32, |m, &x| m.max(x.abs()));
-        assert!(max_abs <= 1.0 + 1e-4, "amplitude exceeds velocity bound: {max_abs}");
+        assert!(
+            max_abs <= 1.0 + 1e-4,
+            "amplitude exceeds velocity bound: {max_abs}"
+        );
     }
 
     #[test]
@@ -168,8 +171,14 @@ mod tests {
             max_abs = max_abs.max(v.render_sample().abs());
         }
         let bound = 64.0 / 127.0;
-        assert!(max_abs <= bound + 1e-3, "saw amplitude {max_abs} exceeds velocity bound {bound}");
-        assert!(max_abs > bound - 0.05, "saw should approach velocity bound, got {max_abs}");
+        assert!(
+            max_abs <= bound + 1e-3,
+            "saw amplitude {max_abs} exceeds velocity bound {bound}"
+        );
+        assert!(
+            max_abs > bound - 0.05,
+            "saw should approach velocity bound, got {max_abs}"
+        );
     }
 
     #[test]

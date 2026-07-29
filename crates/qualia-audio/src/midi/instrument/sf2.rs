@@ -151,7 +151,9 @@ fn parse_phdr(bytes: &[u8], start: usize, end: usize) -> Result<Sf2Presets, Audi
             break;
         }
         let base = start + r * PHDR_RECORD_LEN;
-        let name_raw = bytes.get(base..base + 20).ok_or(AudioError::MalformedAudio)?;
+        let name_raw = bytes
+            .get(base..base + 20)
+            .ok_or(AudioError::MalformedAudio)?;
         let program = read_u16_le(bytes, base + 20)?;
         let bank = read_u16_le(bytes, base + 22)?;
         presets.push(Sf2Preset {
@@ -183,7 +185,7 @@ mod tests {
         phdr.extend_from_slice(&0u32.to_le_bytes()); // dwLibrary
         phdr.extend_from_slice(&0u32.to_le_bytes()); // dwGenre
         phdr.extend_from_slice(&0u32.to_le_bytes()); // dwMorphology
-        // terminal EOP record
+                                                     // terminal EOP record
         let mut eop = [0u8; 20];
         eop[..3].copy_from_slice(b"EOP");
         phdr.extend_from_slice(&eop);
@@ -233,10 +235,7 @@ mod tests {
     #[test]
     fn rejects_non_sf2() {
         let junk = b"NOTARIFFfile............";
-        assert_eq!(
-            read_sf2_presets(junk),
-            Err(AudioError::UnsupportedFormat)
-        );
+        assert_eq!(read_sf2_presets(junk), Err(AudioError::UnsupportedFormat));
     }
 
     #[test]

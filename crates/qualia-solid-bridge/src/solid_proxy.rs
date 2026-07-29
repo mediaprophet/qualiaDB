@@ -23,9 +23,7 @@ impl Default for BridgeConfig {
     fn default() -> Self {
         let data_root = std::env::var("QUALIA_SOLID_POD_ROOT")
             .map(PathBuf::from)
-            .unwrap_or_else(|_| {
-                dirs_next_fallback()
-            });
+            .unwrap_or_else(|_| dirs_next_fallback());
         let host = std::env::var("QUALIA_SOLID_HOST").unwrap_or_else(|_| "127.0.0.1".into());
         let port: u16 = std::env::var("QUALIA_SOLID_PORT")
             .ok()
@@ -143,7 +141,9 @@ pub async fn run_bridge(cfg: BridgeConfig) {
             "Link",
             "DPoP",
         ])
-        .allow_methods(vec!["GET", "HEAD", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"]);
+        .allow_methods(vec![
+            "GET", "HEAD", "POST", "PUT", "DELETE", "OPTIONS", "PATCH",
+        ]);
 
     let api = bridge_routes_for(&cfg).with(cors);
 

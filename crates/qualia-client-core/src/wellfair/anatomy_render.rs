@@ -45,12 +45,16 @@ fn system_position(system_id: &str) -> ScenePoint {
         "integumentary" => (0.50, 0.50, 0.60),
         "thermoregulatory" => (0.50, 0.50, 0.62),
         // Distributed overlays — placed at their primary host region.
-        "ens" => (0.50, 0.45, 0.52),       // enteric → digestive
+        "ens" => (0.50, 0.45, 0.52),        // enteric → digestive
         "glymphatic" => (0.50, 0.12, 0.52), // brain cleanup → nervous
-        "ecs" => (0.50, 0.50, 0.50),       // endocannabinoid → whole-body
+        "ecs" => (0.50, 0.50, 0.50),        // endocannabinoid → whole-body
         _ => (0.50, 0.50, 0.50),
     };
-    ScenePoint { x: p.0, y: p.1, z: p.2 }
+    ScenePoint {
+        x: p.0,
+        y: p.1,
+        z: p.2,
+    }
 }
 
 /// Whether a system is a distributed overlay (rendered translucently over its hosts).
@@ -91,9 +95,23 @@ pub fn body_scene(report: &AnatomyViewReport, azimuth_deg: f64, elevation_deg: f
     // If there are no percepts, render the settled baseline for every system so the body is still
     // visible (not a blank screen).
     let all_systems = [
-        "nervous", "sensory", "endocrine", "respiratory", "circulatory", "immune", "digestive",
-        "urinary", "reticuloendothelial", "hematopoietic", "reproductive", "musculoskeletal",
-        "integumentary", "thermoregulatory", "ens", "glymphatic", "ecs",
+        "nervous",
+        "sensory",
+        "endocrine",
+        "respiratory",
+        "circulatory",
+        "immune",
+        "digestive",
+        "urinary",
+        "reticuloendothelial",
+        "hematopoietic",
+        "reproductive",
+        "musculoskeletal",
+        "integumentary",
+        "thermoregulatory",
+        "ens",
+        "glymphatic",
+        "ecs",
     ];
 
     for &sys in all_systems.iter() {
@@ -176,7 +194,11 @@ mod tests {
         assert_eq!(scene.nodes.len(), 17, "every body system is rendered");
         // The circulatory system (hypertension) is under strain → bigger + pulsing.
         let circ = scene.nodes.iter().find(|n| n.id == "circulatory").unwrap();
-        assert!(circ.radius > 10.0, "burdened circulatory is enlarged: {}", circ.radius);
+        assert!(
+            circ.radius > 10.0,
+            "burdened circulatory is enlarged: {}",
+            circ.radius
+        );
         assert!(circ.is_inferencing, "burdened system is inferencing");
         assert!(circ.pulse_rate > 0.0, "under-strain pulses");
         // A settled system (e.g. respiratory) is calm.
@@ -193,11 +215,20 @@ mod tests {
         let front = orbit_camera(0.0, 0.0);
         let side = orbit_camera(90.0, 0.0);
         // At azimuth 0 the camera is in front (z > 0); at azimuth 90 it's to the side (x shifts).
-        assert!(front.position[2] > side.position[2], "front view has more z");
-        assert!((side.position[0] - 0.5).abs() > 0.01, "side view shifts x off-centre");
+        assert!(
+            front.position[2] > side.position[2],
+            "front view has more z"
+        );
+        assert!(
+            (side.position[0] - 0.5).abs() > 0.01,
+            "side view shifts x off-centre"
+        );
         // Elevation tilts the camera up/down.
         let up = orbit_camera(0.0, 45.0);
-        assert!(up.position[1] > front.position[1], "elevation raises the camera");
+        assert!(
+            up.position[1] > front.position[1],
+            "elevation raises the camera"
+        );
     }
 
     #[test]

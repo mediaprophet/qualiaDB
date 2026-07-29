@@ -362,14 +362,17 @@ impl HypermediaStore {
 
     pub fn load(&self) -> std::io::Result<Vec<LibraryEntry>> {
         match fs::read(&self.path) {
-            Ok(bytes) => serde_json::from_slice(&bytes).map_err(|e| std::io::Error::other(e.to_string())),
+            Ok(bytes) => {
+                serde_json::from_slice(&bytes).map_err(|e| std::io::Error::other(e.to_string()))
+            }
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(Vec::new()),
             Err(e) => Err(e),
         }
     }
 
     fn save(&self, entries: &[LibraryEntry]) -> std::io::Result<()> {
-        let bytes = serde_json::to_vec_pretty(entries).map_err(|e| std::io::Error::other(e.to_string()))?;
+        let bytes =
+            serde_json::to_vec_pretty(entries).map_err(|e| std::io::Error::other(e.to_string()))?;
         let tmp = self.path.with_extension("json.tmp");
         fs::write(&tmp, &bytes)?;
         fs::rename(&tmp, &self.path)?;
@@ -477,7 +480,10 @@ impl HypermediaStore {
     /// `topic` | `depicts` | `place` | `project` | `purpose`.
     pub fn search(&self, facet: &str, value: &str) -> std::io::Result<Vec<LibraryEntry>> {
         let entries = self.load()?;
-        let all: Vec<NQuin> = entries.iter().flat_map(|e| e.quins.iter().cloned()).collect();
+        let all: Vec<NQuin> = entries
+            .iter()
+            .flat_map(|e| e.quins.iter().cloned())
+            .collect();
         let subjects: HashSet<u64> = match facet {
             "topic" => hypermedia::by_topic(&all, value),
             "depicts" => hypermedia::by_depiction(&all, value),
@@ -495,8 +501,13 @@ impl HypermediaStore {
     /// The **timeline** query — entries whose event instant is within `[start, end]` (unix seconds).
     pub fn search_time_range(&self, start: i64, end: i64) -> std::io::Result<Vec<LibraryEntry>> {
         let entries = self.load()?;
-        let all: Vec<NQuin> = entries.iter().flat_map(|e| e.quins.iter().cloned()).collect();
-        let subjects: HashSet<u64> = hypermedia::in_time_range(&all, start, end).into_iter().collect();
+        let all: Vec<NQuin> = entries
+            .iter()
+            .flat_map(|e| e.quins.iter().cloned())
+            .collect();
+        let subjects: HashSet<u64> = hypermedia::in_time_range(&all, start, end)
+            .into_iter()
+            .collect();
         self.entries_for(&subjects)
     }
 
@@ -603,8 +614,10 @@ impl HypermediaStore {
     /// Library stats for the UI chrome.
     pub fn stats(&self) -> std::io::Result<LibraryStats> {
         let entries = self.load()?;
-        let mut topics: std::collections::BTreeMap<String, usize> = std::collections::BTreeMap::new();
-        let mut projects: std::collections::BTreeMap<String, usize> = std::collections::BTreeMap::new();
+        let mut topics: std::collections::BTreeMap<String, usize> =
+            std::collections::BTreeMap::new();
+        let mut projects: std::collections::BTreeMap<String, usize> =
+            std::collections::BTreeMap::new();
         let mut with_date = 0usize;
         let mut with_place = 0usize;
         let mut flags = 0usize;
@@ -638,11 +651,7 @@ impl HypermediaStore {
 
     /// Flatten all library quins for graph export / daemon inject (caller owns the slice).
     pub fn all_quins(&self) -> std::io::Result<Vec<NQuin>> {
-        Ok(self
-            .load()?
-            .into_iter()
-            .flat_map(|e| e.quins)
-            .collect())
+        Ok(self.load()?.into_iter().flat_map(|e| e.quins).collect())
     }
 }
 
@@ -730,8 +739,7 @@ impl FacetFilter {
         {
             return false;
         }
-        if !self.categories.is_empty()
-            && !self.categories.iter().any(|c| entry_has_category(e, c))
+        if !self.categories.is_empty() && !self.categories.iter().any(|c| entry_has_category(e, c))
         {
             return false;
         }
@@ -820,7 +828,8 @@ fn matches_category_slug(s: &str) -> bool {
     // Domain categories are kebab-case multi-word slugs (contain a hyphen).
     let s = s.trim();
     s.contains('-')
-        && s.chars().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-')
+        && s.chars()
+            .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-')
         && s != "qapp"
 }
 
@@ -856,7 +865,9 @@ fn sort_entries(entries: &mut [LibraryEntry], sort: LibrarySort) {
     match sort {
         LibrarySort::Newest => entries.sort_by(|a, b| b.ingested_unix.cmp(&a.ingested_unix)),
         LibrarySort::Oldest => entries.sort_by(|a, b| a.ingested_unix.cmp(&b.ingested_unix)),
-        LibrarySort::TitleAsc => entries.sort_by(|a, b| entry_title_key(a).cmp(&entry_title_key(b))),
+        LibrarySort::TitleAsc => {
+            entries.sort_by(|a, b| entry_title_key(a).cmp(&entry_title_key(b)))
+        }
         LibrarySort::TitleDesc => {
             entries.sort_by(|a, b| entry_title_key(b).cmp(&entry_title_key(a)))
         }
@@ -915,9 +926,24 @@ mod tests {
     fn ingested_documents_are_findable_by_topic_across_the_library() {
         let dir = tempfile::tempdir().unwrap();
         let store = HypermediaStore::open(dir.path()).unwrap();
-        ingest(&store, "urn:doc:liver", "The liver is an organ; hepatocytes secrete bile.", 1_000);
-        ingest(&store, "urn:doc:contract", "This contract is governed by statute and jurisdiction.", 1_100);
-        ingest(&store, "urn:doc:receipt", "Invoice for a tax-deductible expense; keep this receipt.", 1_200);
+        ingest(
+            &store,
+            "urn:doc:liver",
+            "The liver is an organ; hepatocytes secrete bile.",
+            1_000,
+        );
+        ingest(
+            &store,
+            "urn:doc:contract",
+            "This contract is governed by statute and jurisdiction.",
+            1_100,
+        );
+        ingest(
+            &store,
+            "urn:doc:receipt",
+            "Invoice for a tax-deductible expense; keep this receipt.",
+            1_200,
+        );
 
         // Search the WHOLE library by meaning — biology finds the liver, law finds the contract, finance the receipt.
         let bio = store.search("topic", "biology").unwrap();

@@ -14,6 +14,7 @@
 // below have no such dependency, so only the §26 functions are gated to native.
 #[cfg(not(target_arch = "wasm32"))]
 use crate::specialized_libs::symbolic_algebra::{differentiate, parse};
+#[cfg(not(target_arch = "wasm32"))]
 use std::collections::HashMap;
 
 // ─── §17 ZK-gated eligibility ─────────────────────────────────────────────────────

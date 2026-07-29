@@ -180,7 +180,12 @@ mod tests {
         let early: f32 = out[win..2 * win].iter().map(|x| x * x).sum();
         let late: f32 = out[9 * win..10 * win].iter().map(|x| x * x).sum();
         assert!(early > 0.0, "expected non-zero tail energy");
-        assert!(late < early, "late energy {} must be < early {}", late, early);
+        assert!(
+            late < early,
+            "late energy {} must be < early {}",
+            late,
+            early
+        );
     }
 
     #[test]
@@ -197,7 +202,12 @@ mod tests {
         // Late-window energy is greater for the longer decay.
         let es: f32 = os[30_000..].iter().map(|x| x * x).sum();
         let el: f32 = ol[30_000..].iter().map(|x| x * x).sum();
-        assert!(el > es, "long-decay late energy {} should exceed short {}", el, es);
+        assert!(
+            el > es,
+            "long-decay late energy {} should exceed short {}",
+            el,
+            es
+        );
     }
 
     #[test]

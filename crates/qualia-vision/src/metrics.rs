@@ -49,12 +49,12 @@ pub fn evaluate_synthetic<M: VisualModel>(
             row_stride: width * 3,
             format: PixelFormat::Rgb8,
         };
-        let counts = model
-            .infer(img, &mut pred, &mut emb, &mut ws)
-            .unwrap_or(crate::types::VisualOutputCounts {
+        let counts = model.infer(img, &mut pred, &mut emb, &mut ws).unwrap_or(
+            crate::types::VisualOutputCounts {
                 detections: 0,
                 embedding_written: 0,
-            });
+            },
+        );
         sum_acc += match_accuracy(&gt, n_gt, &pred, counts.detections, 0.15);
         sum_det += counts.detections as f32;
     }
@@ -87,9 +87,7 @@ pub fn evaluate_real_held_out(
     let mut emb = [0.0f32; 32];
     let mut ws = [0u8; MAX_DETECTIONS];
     for (img, gt) in pairs {
-        let counts = model
-            .infer(*img, &mut pred, &mut emb, &mut ws)
-            .ok()?;
+        let counts = model.infer(*img, &mut pred, &mut emb, &mut ws).ok()?;
         sum_acc += match_accuracy(gt, gt.len(), &pred, counts.detections, iou_thresh);
         sum_det += counts.detections as f32;
     }
@@ -133,14 +131,7 @@ mod tests {
     fn synthetic_metrics_reference() {
         let mut m = GridMultiObjectDetector::new(4, 3);
         let mh = m.model_hash();
-        let r = evaluate_synthetic(
-            &mut m,
-            VisionBackendKind::Reference,
-            mh,
-            4,
-            48,
-            32,
-        );
+        let r = evaluate_synthetic(&mut m, VisionBackendKind::Reference, mh, 4, 48, 32);
         assert!(r.is_synthetic_eval);
         assert!(!r.is_real_eval);
         assert_eq!(r.n_samples, 4);
@@ -160,6 +151,8 @@ mod tests {
     #[test]
     fn real_eval_empty_is_none() {
         let mut m = GridMultiObjectDetector::new(2, 2);
-        assert!(evaluate_real_held_out(&[], &mut m, VisionBackendKind::Reference, 0, 0.5).is_none());
+        assert!(
+            evaluate_real_held_out(&[], &mut m, VisionBackendKind::Reference, 0, 0.5).is_none()
+        );
     }
 }

@@ -58,7 +58,8 @@ fn write_track(track: &Track, out: &mut Vec<u8>) -> Result<(), AudioError> {
 fn write_event(event: &TrackEvent, out: &mut Vec<u8>) -> Result<(), AudioError> {
     match event {
         TrackEvent::Midi { status, data } => {
-            let expected = super::read::channel_data_len(*status).ok_or(AudioError::InvalidParameter)?;
+            let expected =
+                super::read::channel_data_len(*status).ok_or(AudioError::InvalidParameter)?;
             if data.len() != expected {
                 return Err(AudioError::InvalidParameter);
             }
@@ -94,11 +95,17 @@ mod tests {
             },
             Event {
                 delta_ticks: 0,
-                event: TrackEvent::Midi { status: 0x90, data: vec![60, 100] },
+                event: TrackEvent::Midi {
+                    status: 0x90,
+                    data: vec![60, 100],
+                },
             },
             Event {
                 delta_ticks: 480,
-                event: TrackEvent::Midi { status: 0x80, data: vec![60, 0] },
+                event: TrackEvent::Midi {
+                    status: 0x80,
+                    data: vec![60, 0],
+                },
             },
             Event {
                 delta_ticks: 0,
@@ -147,7 +154,10 @@ mod tests {
                 events: vec![Event {
                     delta_ticks: 0,
                     // Note-on needs 2 data bytes; give 1.
-                    event: TrackEvent::Midi { status: 0x90, data: vec![60] },
+                    event: TrackEvent::Midi {
+                        status: 0x90,
+                        data: vec![60],
+                    },
                 }],
             }],
         };

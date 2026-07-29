@@ -154,7 +154,11 @@ mod tests {
         let freqs = [semis(a4, -9), semis(a4, -5), semis(a4, -2)];
         let mags = [1.0f32; 3];
         let est = estimate_tuning(&freqs, &mags, 3, 440.0).expect("tuning");
-        assert!(est.deviation_cents.abs() < 1.0, "dev = {}", est.deviation_cents);
+        assert!(
+            est.deviation_cents.abs() < 1.0,
+            "dev = {}",
+            est.deviation_cents
+        );
         assert!((est.ref_freq_hz - 440.0).abs() < 0.5);
     }
 

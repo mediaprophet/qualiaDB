@@ -34,14 +34,20 @@ pub struct BarBeatTick {
 
 impl TimeSignature {
     /// Common time, `4/4`.
-    pub const COMMON: TimeSignature = TimeSignature { numerator: 4, denominator: 4 };
+    pub const COMMON: TimeSignature = TimeSignature {
+        numerator: 4,
+        denominator: 4,
+    };
 
     /// Construct, validating that both numbers are ≥ 1.
     pub fn new(numerator: u16, denominator: u16) -> Result<Self, AudioError> {
         if numerator == 0 || denominator == 0 {
             return Err(AudioError::InvalidParameter);
         }
-        Ok(Self { numerator, denominator })
+        Ok(Self {
+            numerator,
+            denominator,
+        })
     }
 
     /// Ticks in one beat (one denominator-note) at the given PPQ.
@@ -110,7 +116,11 @@ mod tests {
     fn bbt_round_trip() {
         let ts = TimeSignature::COMMON;
         // Bar 2, beat 3, tick 100 in 4/4 @480: 2*1920 + 3*480 + 100 = 5380
-        let pos = BarBeatTick { bar: 2, beat: 3, tick: 100 };
+        let pos = BarBeatTick {
+            bar: 2,
+            beat: 3,
+            tick: 100,
+        };
         let ticks = ts.bbt_to_ticks(pos, 480).unwrap();
         assert_eq!(ticks, 5380);
         assert_eq!(ts.ticks_to_bbt(ticks, 480).unwrap(), pos);
@@ -120,7 +130,25 @@ mod tests {
     fn rejects_out_of_range() {
         let ts = TimeSignature::COMMON;
         assert!(TimeSignature::new(0, 4).is_err());
-        assert!(ts.bbt_to_ticks(BarBeatTick { bar: 0, beat: 4, tick: 0 }, 480).is_err());
-        assert!(ts.bbt_to_ticks(BarBeatTick { bar: 0, beat: 0, tick: 480 }, 480).is_err());
+        assert!(ts
+            .bbt_to_ticks(
+                BarBeatTick {
+                    bar: 0,
+                    beat: 4,
+                    tick: 0
+                },
+                480
+            )
+            .is_err());
+        assert!(ts
+            .bbt_to_ticks(
+                BarBeatTick {
+                    bar: 0,
+                    beat: 0,
+                    tick: 480
+                },
+                480
+            )
+            .is_err());
     }
 }

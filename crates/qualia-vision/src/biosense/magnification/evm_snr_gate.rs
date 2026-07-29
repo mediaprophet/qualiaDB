@@ -18,8 +18,14 @@ pub enum EvmRefuse {
     InvalidParameter,
     EmptyInput,
     /// Band residual energy too weak / junk relative to full signal.
-    SnrTooLow { snr: f32, threshold: f32 },
-    InsufficientFrames { got: usize, need: usize },
+    SnrTooLow {
+        snr: f32,
+        threshold: f32,
+    },
+    InsufficientFrames {
+        got: usize,
+        need: usize,
+    },
 }
 
 impl From<CvError> for EvmRefuse {
@@ -50,7 +56,11 @@ impl core::fmt::Display for EvmRefuse {
 }
 
 /// Compare band energy to residual (out-of-band proxy).
-pub fn evm_snr_gate_energies(band_energy: f32, residual_energy: f32, min_snr: f32) -> EvmSnrVerdict {
+pub fn evm_snr_gate_energies(
+    band_energy: f32,
+    residual_energy: f32,
+    min_snr: f32,
+) -> EvmSnrVerdict {
     let res = residual_energy.max(1e-12);
     let snr = band_energy.max(0.0) / res;
     if snr >= min_snr {

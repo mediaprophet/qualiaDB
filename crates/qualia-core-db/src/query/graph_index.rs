@@ -9,6 +9,7 @@
 //! daemon graph today this is that one cache. Streaming a huge graph via BIDX/demand-
 //! paging — so the index need not copy the whole snapshot — remains future work.
 
+#[cfg(not(target_arch = "wasm32"))]
 use crate::indexing::QuinIndex;
 use std::sync::RwLock;
 
@@ -56,6 +57,7 @@ impl<T> Default for RevisionCache<T> {
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 static GRAPH_INDEX: RevisionCache<QuinIndex> = RevisionCache::new();
 
 /// Run `f` against a `QuinIndex` over the current daemon graph, rebuilt only when the

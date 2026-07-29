@@ -399,7 +399,7 @@ impl QTensorEngine {
             Some(l) => l,
             None => return false,
         };
-        let norm_buf = self.norm_weight_buf.as_ref().unwrap();
+        debug_assert!(batch_start_token_idx < layout.max_context || layout.max_context == 0);
         let q_info = match tensors.attn_q.as_ref() {
             Some(i) => i,
             None => return false,
@@ -862,7 +862,9 @@ impl QTensorEngine {
         }
         let batch_buf = self.gemm_input_buf.as_ref().unwrap();
         let token_buf = self.gemm_output_buf.as_ref().unwrap();
-        let norm_buf = self.norm_weight_buf.as_ref().unwrap();
+        if self.norm_weight_buf.is_none() {
+            return false;
+        }
         if batch_elems > self.gemm_max_input_floats {
             return false;
         }
@@ -1585,7 +1587,8 @@ impl QTensorEngine {
         for chunk_idx in 0..n_chunks {
             let row_start = chunk_idx * VOCAB_CHUNK_ROWS;
             let chunk_rows = VOCAB_CHUNK_ROWS.min(vocab_size - row_start);
-            let chunk_data = &all_floats[chunk_idx * VOCAB_CHUNK_ROWS..chunk_idx * VOCAB_CHUNK_ROWS + chunk_rows];
+            let chunk_data = &all_floats
+                [chunk_idx * VOCAB_CHUNK_ROWS..chunk_idx * VOCAB_CHUNK_ROWS + chunk_rows];
             if let Some(mask) = sieve_mask {
                 update_streaming_argmax_sieved(
                     chunk_data,

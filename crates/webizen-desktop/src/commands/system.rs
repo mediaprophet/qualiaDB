@@ -4,7 +4,7 @@
 
 use qualia_client_core::api;
 use qualia_client_core::api::HardwareStatus;
-use qualia_client_core::setup::SetupState;
+use qualia_client_core::setup::{SetupProfile, SetupState};
 use qualia_client_core::state::AgentConfig;
 use tauri::command;
 
@@ -67,6 +67,11 @@ pub fn get_setup_state() -> Result<SetupState, String> {
 #[command]
 pub fn complete_setup_step(step: String) -> Result<SetupState, String> {
     api::complete_setup_step(step)
+}
+
+#[command]
+pub fn update_setup_profile(profile: SetupProfile) -> Result<SetupState, String> {
+    api::update_setup_profile(profile)
 }
 
 #[command]

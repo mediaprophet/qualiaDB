@@ -18,8 +18,15 @@ const PROV: &str = "http://www.w3.org/ns/prov#";
 
 /// Keywords that begin a formal-method statement worth surfacing as a candidate.
 const METHOD_CUES: &[&str] = &[
-    "Definition", "Theorem", "Lemma", "Proposition", "Corollary",
-    "Algorithm", "Procedure", "Axiom", "Proof",
+    "Definition",
+    "Theorem",
+    "Lemma",
+    "Proposition",
+    "Corollary",
+    "Algorithm",
+    "Procedure",
+    "Axiom",
+    "Proof",
 ];
 
 /// Build a Turtle document for one source container.
@@ -31,12 +38,21 @@ pub fn build_cml(manifest: &HmcManifest, chunks: &[Chunk]) -> String {
     out.push_str(&format!("@prefix prov: <{PROV}> .\n\n"));
 
     out.push_str(&format!("<{doc_iri}> a cml:SourceDocument ;\n"));
-    out.push_str(&format!("    dct:title {} ;\n", ttl_str(&manifest.source.title)));
+    out.push_str(&format!(
+        "    dct:title {} ;\n",
+        ttl_str(&manifest.source.title)
+    ));
     out.push_str(&format!("    cml:blake3 {} ;\n", ttl_str(&manifest.doc_id)));
     if manifest.source.page_count > 0 {
-        out.push_str(&format!("    cml:pageCount {} ;\n", manifest.source.page_count));
+        out.push_str(&format!(
+            "    cml:pageCount {} ;\n",
+            manifest.source.page_count
+        ));
     }
-    out.push_str(&format!("    cml:sourceFile {} .\n\n", ttl_str(&manifest.source.filename)));
+    out.push_str(&format!(
+        "    cml:sourceFile {} .\n\n",
+        ttl_str(&manifest.source.filename)
+    ));
 
     let mut n = 0u32;
     for c in chunks {
@@ -45,9 +61,15 @@ pub fn build_cml(manifest: &HmcManifest, chunks: &[Chunk]) -> String {
             n += 1;
             out.push_str(&format!("<{m_iri}> a cml:AcquiredMethod, cml:Proposed ;\n"));
             out.push_str(&format!("    cml:cue {} ;\n", ttl_str(cue)));
-            out.push_str(&format!("    dct:description {} ;\n", ttl_str(&truncate(statement, 600))));
+            out.push_str(&format!(
+                "    dct:description {} ;\n",
+                ttl_str(&truncate(statement, 600))
+            ));
             if !c.heading_path.is_empty() {
-                out.push_str(&format!("    cml:headingPath {} ;\n", ttl_str(&c.heading_path.join(" / "))));
+                out.push_str(&format!(
+                    "    cml:headingPath {} ;\n",
+                    ttl_str(&c.heading_path.join(" / "))
+                ));
             }
             out.push_str(&format!("    prov:wasDerivedFrom <{doc_iri}> ;\n"));
             out.push_str(&format!("    cml:chunkIndex {} .\n\n", c.idx));

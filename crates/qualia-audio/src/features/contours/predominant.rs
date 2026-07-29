@@ -152,8 +152,7 @@ mod tests {
                 // Three harmonics for a tone at f0.
                 let pf = [f0, 2.0 * f0, 3.0 * f0];
                 let pm = [1.0f32, 0.6, 0.4];
-                pitch_salience(&pf, &pm, 3, F_MIN, BPS, N_BINS, &mut frame_buf)
-                    .expect("salience");
+                pitch_salience(&pf, &pm, 3, F_MIN, BPS, N_BINS, &mut frame_buf).expect("salience");
             } else {
                 for s in frame_buf.iter_mut() {
                     *s = 0.0; // silent frame
@@ -164,8 +163,7 @@ mod tests {
 
         let mut f0_out = vec![0.0f32; n_frames];
         let voiced =
-            predominant_melody(&frames, n_frames, N_BINS, F_MIN, BPS, &mut f0_out)
-                .expect("melody");
+            predominant_melody(&frames, n_frames, N_BINS, F_MIN, BPS, &mut f0_out).expect("melody");
 
         assert_eq!(voiced, 3, "three voiced frames, one abstained");
         for (f, &want) in melody.iter().enumerate() {
@@ -191,8 +189,7 @@ mod tests {
         let frames = vec![0.0f32; n_frames * N_BINS];
         let mut f0_out = vec![9.0f32; n_frames];
         let voiced =
-            predominant_melody(&frames, n_frames, N_BINS, F_MIN, BPS, &mut f0_out)
-                .expect("melody");
+            predominant_melody(&frames, n_frames, N_BINS, F_MIN, BPS, &mut f0_out).expect("melody");
         assert_eq!(voiced, 0);
         assert!(f0_out.iter().all(|&v| v == 0.0));
     }

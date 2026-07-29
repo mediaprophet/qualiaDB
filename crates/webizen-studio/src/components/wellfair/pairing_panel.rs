@@ -16,7 +16,9 @@ pub fn CompanionPairingPanel() -> Element {
     let mut loaded = use_signal(|| false);
 
     use_effect(move || {
-        if loaded() { return; }
+        if loaded() {
+            return;
+        }
         loaded.set(true);
         spawn(async move {
             match super::host_client::fetch_companion_pairing().await {

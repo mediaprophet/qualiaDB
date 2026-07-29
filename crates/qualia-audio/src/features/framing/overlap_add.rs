@@ -113,14 +113,20 @@ mod tests {
     fn rejects_ragged_frame_length() {
         let frames = [0.0f32; 10]; // not a multiple of 4
         let mut out = [0.0f32; 32];
-        assert_eq!(overlap_add(&frames, 4, 2, &mut out), Err(AudioError::InvalidParameter));
+        assert_eq!(
+            overlap_add(&frames, 4, 2, &mut out),
+            Err(AudioError::InvalidParameter)
+        );
     }
 
     #[test]
     fn rejects_short_output() {
         let frames = [0.0f32; 8]; // 2 frames of 4, hop 2 → needs 6
         let mut out = [0.0f32; 5];
-        assert_eq!(overlap_add(&frames, 4, 2, &mut out), Err(AudioError::OutputBufferTooSmall));
+        assert_eq!(
+            overlap_add(&frames, 4, 2, &mut out),
+            Err(AudioError::OutputBufferTooSmall)
+        );
     }
 
     #[test]

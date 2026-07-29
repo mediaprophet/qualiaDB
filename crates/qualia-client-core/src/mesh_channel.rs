@@ -264,7 +264,7 @@ mod tests {
     fn gives_up_after_max_attempts() {
         let mut a = ReliableEndpoint::new(10, 3);
         a.send(b"lost", 0); // attempt 1
-        // No ACK ever. Tick past the RTO repeatedly.
+                            // No ACK ever. Tick past the RTO repeatedly.
         let (_r, g) = a.on_tick(20); // attempt 2
         assert!(g.is_empty());
         let (_r, g) = a.on_tick(40); // attempt 3
@@ -297,7 +297,7 @@ mod tests {
         push(b.on_datagram(&f2, 1)); // out of order
         push(b.on_datagram(&f0, 2));
         push(b.on_datagram(&f2, 3)); // duplicate — ignored
-        // f1 "lost"; A retransmits it after RTO.
+                                     // f1 "lost"; A retransmits it after RTO.
         let (resend, _) = a.on_tick(200);
         assert!(resend.iter().any(|f| seq_of(f) == 1));
         for f in &resend {
@@ -307,6 +307,9 @@ mod tests {
         }
 
         delivered.sort();
-        assert_eq!(delivered, vec![b"m0".to_vec(), b"m1".to_vec(), b"m2".to_vec()]);
+        assert_eq!(
+            delivered,
+            vec![b"m0".to_vec(), b"m1".to_vec(), b"m2".to_vec()]
+        );
     }
 }

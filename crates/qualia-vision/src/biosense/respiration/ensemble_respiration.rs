@@ -82,23 +82,19 @@ mod tests {
 
     #[test]
     fn fuses_agreeing_estimates() {
-        let e = ensemble_respiration(
-            Some(est(15.0, 12.0, 0.7)),
-            Some(est(15.5, 10.0, 0.6)),
-            0.15,
-        )
-        .unwrap();
-        assert!((e.breaths_per_min - 15.25).abs() < 0.5, "bpm={}", e.breaths_per_min);
+        let e = ensemble_respiration(Some(est(15.0, 12.0, 0.7)), Some(est(15.5, 10.0, 0.6)), 0.15)
+            .unwrap();
+        assert!(
+            (e.breaths_per_min - 15.25).abs() < 0.5,
+            "bpm={}",
+            e.breaths_per_min
+        );
         assert!(e.confidence >= 0.15);
     }
 
     #[test]
     fn abstains_on_large_disagreement() {
-        let r = ensemble_respiration(
-            Some(est(12.0, 10.0, 0.8)),
-            Some(est(24.0, 10.0, 0.8)),
-            0.1,
-        );
+        let r = ensemble_respiration(Some(est(12.0, 10.0, 0.8)), Some(est(24.0, 10.0, 0.8)), 0.1);
         assert!(r.is_err());
     }
 

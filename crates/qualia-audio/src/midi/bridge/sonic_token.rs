@@ -137,15 +137,29 @@ pub fn flags(token: u64) -> u16 {
 /// the input message; interpret it as a note-off downstream as usual.
 pub fn midi_to_sonic_token(msg: &MidiMessage) -> Option<u64> {
     match *msg {
-        MidiMessage::NoteOn(NoteOn { channel: ch, note: n, velocity: v }) => {
-            Some(pack(0, SonicEventType::NoteOn, ch, n, v, 0, 0))
-        }
-        MidiMessage::NoteOff(NoteOff { channel: ch, note: n, velocity: v }) => {
-            Some(pack(0, SonicEventType::NoteOff, ch, n, v, 0, 0))
-        }
-        MidiMessage::ControlChange(ControlChange { channel: ch, controller, value }) => {
-            Some(pack(0, SonicEventType::ControlChange, ch, controller, value, 0, 0))
-        }
+        MidiMessage::NoteOn(NoteOn {
+            channel: ch,
+            note: n,
+            velocity: v,
+        }) => Some(pack(0, SonicEventType::NoteOn, ch, n, v, 0, 0)),
+        MidiMessage::NoteOff(NoteOff {
+            channel: ch,
+            note: n,
+            velocity: v,
+        }) => Some(pack(0, SonicEventType::NoteOff, ch, n, v, 0, 0)),
+        MidiMessage::ControlChange(ControlChange {
+            channel: ch,
+            controller,
+            value,
+        }) => Some(pack(
+            0,
+            SonicEventType::ControlChange,
+            ch,
+            controller,
+            value,
+            0,
+            0,
+        )),
         _ => None,
     }
 }
@@ -162,9 +176,9 @@ pub fn sonic_token_to_midi(token: u64) -> Option<MidiMessage> {
     match event_type(token) {
         SonicEventType::NoteOn => NoteOn::new(ch, d0, d1).ok().map(MidiMessage::NoteOn),
         SonicEventType::NoteOff => NoteOff::new(ch, d0, d1).ok().map(MidiMessage::NoteOff),
-        SonicEventType::ControlChange => {
-            ControlChange::new(ch, d0, d1).ok().map(MidiMessage::ControlChange)
-        }
+        SonicEventType::ControlChange => ControlChange::new(ch, d0, d1)
+            .ok()
+            .map(MidiMessage::ControlChange),
         SonicEventType::Parametric => None,
     }
 }
@@ -176,7 +190,11 @@ mod tests {
     #[test]
     fn golden_note_on_round_trip() {
         // midi_to_sonic_token(NoteOn ch0 note60 vel100) → u64 → same NoteOn.
-        let msg = MidiMessage::NoteOn(NoteOn { channel: 0, note: 60, velocity: 100 });
+        let msg = MidiMessage::NoteOn(NoteOn {
+            channel: 0,
+            note: 60,
+            velocity: 100,
+        });
         let token = midi_to_sonic_token(&msg).expect("encodable");
         // Fields land in the mirrored positions.
         assert_eq!(event_type(token), SonicEventType::NoteOn);
@@ -189,7 +207,11 @@ mod tests {
 
     #[test]
     fn note_off_round_trip() {
-        let msg = MidiMessage::NoteOff(NoteOff { channel: 9, note: 64, velocity: 40 });
+        let msg = MidiMessage::NoteOff(NoteOff {
+            channel: 9,
+            note: 64,
+            velocity: 40,
+        });
         let token = midi_to_sonic_token(&msg).expect("encodable");
         assert_eq!(event_type(token), SonicEventType::NoteOff);
         assert_eq!(channel(token), 9);
@@ -199,7 +221,11 @@ mod tests {
     #[test]
     fn control_change_round_trip() {
         // CC controller in the note field, value in the velocity field.
-        let msg = MidiMessage::ControlChange(ControlChange { channel: 3, controller: 7, value: 127 });
+        let msg = MidiMessage::ControlChange(ControlChange {
+            channel: 3,
+            controller: 7,
+            value: 127,
+        });
         let token = midi_to_sonic_token(&msg).expect("encodable");
         assert_eq!(event_type(token), SonicEventType::ControlChange);
         assert_eq!(channel(token), 3);

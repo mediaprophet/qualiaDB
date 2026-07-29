@@ -66,7 +66,9 @@ mod tests {
 
     #[test]
     fn square_wave_crest_is_one() {
-        let s: Vec<f32> = (0..1000).map(|i| if i % 2 == 0 { 0.5 } else { -0.5 }).collect();
+        let s: Vec<f32> = (0..1000)
+            .map(|i| if i % 2 == 0 { 0.5 } else { -0.5 })
+            .collect();
         let c = crest_factor(&s);
         assert!((c - 1.0).abs() < 1e-4, "crest {c}");
     }

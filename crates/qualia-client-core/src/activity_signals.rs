@@ -13,9 +13,11 @@ pub fn begin_ontology_job() {
 
 /// Mark an ontology job finished.
 pub fn end_ontology_job() {
-    ONTOLOGY_JOBS_RUNNING.fetch_update(Ordering::Relaxed, Ordering::Relaxed, |n| {
-        Some(n.saturating_sub(1))
-    }).ok();
+    ONTOLOGY_JOBS_RUNNING
+        .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |n| {
+            Some(n.saturating_sub(1))
+        })
+        .ok();
 }
 
 /// Normalized baking pressure for ambient shaders (0.0–1.0).

@@ -169,7 +169,9 @@ pub fn nms_class_agnostic(
 
 /// Workspace bytes for letterbox RGB8 of size `out_w × out_h`.
 pub fn letterbox_workspace_bytes(out_w: u32, out_h: u32) -> usize {
-    (out_w as usize).saturating_mul(out_h as usize).saturating_mul(3)
+    (out_w as usize)
+        .saturating_mul(out_h as usize)
+        .saturating_mul(3)
 }
 
 /// Letterbox RGB into square/out buffer with grey pad (114). Returns scale and pad (x,y) as u32 pixels.

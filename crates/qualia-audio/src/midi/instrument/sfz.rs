@@ -267,9 +267,15 @@ fn apply_opcode(r: &mut SfzRegion<'_>, name: &str, val: &str) -> Result<(), Audi
         "hivel" => r.hivel = parse_vel(val)?,
         "pitch_keycenter" => r.pitch_keycenter = parse_key(val)?,
         "tune" | "pitch" => {
-            r.tune_cents = val.parse::<i32>().map_err(|_| AudioError::InvalidParameter)?
+            r.tune_cents = val
+                .parse::<i32>()
+                .map_err(|_| AudioError::InvalidParameter)?
         }
-        "volume" => r.volume_db = val.parse::<f32>().map_err(|_| AudioError::InvalidParameter)?,
+        "volume" => {
+            r.volume_db = val
+                .parse::<f32>()
+                .map_err(|_| AudioError::InvalidParameter)?
+        }
         // Unknown opcode in the subset — ignore (forward-compatible with richer SFZ files).
         _ => {}
     }

@@ -1,4 +1,3 @@
-
 use super::*;
 
 /// Build a minimal safetensor with the given `(name, dtype, shape, nbytes)` tensors (zeroed

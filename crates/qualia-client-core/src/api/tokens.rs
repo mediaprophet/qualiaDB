@@ -4,14 +4,13 @@
 
 use super::*;
 
-use crate::state::*;
 use crate::engine::llm_offload;
+use crate::state::*;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::Ordering;
 use std::time::Duration;
 use tokio::time::sleep;
-
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct TokenEntry {
@@ -129,12 +128,17 @@ pub fn get_tokens() -> Vec<TokenEntry> {
     let state = crate::state::APP_STATE.get().unwrap();
     let storage_path = state.config.lock().unwrap().storage_path.clone();
     let mut tokens = load_tokens_from_disk(&storage_path);
-    
+
     let id = read_identity();
-    if let Some(hash160) = id.as_ref().and_then(|v| v.get("ecash_hash160")).and_then(|v| v.as_str()) {
+    if let Some(hash160) = id
+        .as_ref()
+        .and_then(|v| v.get("ecash_hash160"))
+        .and_then(|v| v.as_str())
+    {
         let client = crate::wallet::chronik::ChronikClient::new("https://chronik.be.cash");
         if let Ok(utxos) = client.fetch_utxos_p2pkh(hash160) {
-            let mut balances: std::collections::HashMap<String, u64> = std::collections::HashMap::new();
+            let mut balances: std::collections::HashMap<String, u64> =
+                std::collections::HashMap::new();
             for utxo in utxos {
                 if let Some(meta) = utxo.slp_meta {
                     if let Some(token) = utxo.slp_token {
@@ -144,7 +148,7 @@ pub fn get_tokens() -> Vec<TokenEntry> {
                     }
                 }
             }
-            
+
             for t in tokens.iter_mut() {
                 if t.chain == "eCash" {
                     // Extract token ID from contract e.g. "slp:0x123..."
@@ -157,7 +161,7 @@ pub fn get_tokens() -> Vec<TokenEntry> {
             }
         }
     }
-    
+
     tokens
 }
 
@@ -208,15 +212,20 @@ pub fn add_token(
     Ok(entry)
 }
 
-pub fn send_ecash_token(token_id: &str, destination_address: &str, amount: u64) -> Result<String, String> {
-    use crate::wallet::transaction::{Transaction, TxIn, TxOut};
-    use crate::wallet::signer::{sign_p2pkh_input, hash160};
+pub fn send_ecash_token(
+    token_id: &str,
+    destination_address: &str,
+    amount: u64,
+) -> Result<String, String> {
     use crate::wallet::coin_select;
+    use crate::wallet::signer::{hash160, sign_p2pkh_input};
+    use crate::wallet::transaction::{Transaction, TxIn, TxOut};
     use bip32::XPrv;
     use std::str::FromStr;
 
     let id = read_identity().ok_or("No identity set — generate a seed first")?;
-    let hash160_hex = id.get("ecash_hash160")
+    let hash160_hex = id
+        .get("ecash_hash160")
         .and_then(|v| v.as_str())
         .ok_or("No ecash_hash160 in identity")?;
 
@@ -226,7 +235,8 @@ pub fn send_ecash_token(token_id: &str, destination_address: &str, amount: u64) 
         .map_err(|_| "Invalid stored mnemonic")?;
     let seed_bytes = mnemonic.to_seed("");
     let master = XPrv::new(&seed_bytes).map_err(|e| e.to_string())?;
-    let xec_path = bip32::DerivationPath::from_str("m/44'/899'/0'/0/0").map_err(|e| e.to_string())?;
+    let xec_path =
+        bip32::DerivationPath::from_str("m/44'/899'/0'/0/0").map_err(|e| e.to_string())?;
     let mut child = master.clone();
     for c in xec_path.iter() {
         child = child.derive_child(c).map_err(|e| e.to_string())?;
@@ -262,7 +272,8 @@ pub fn send_ecash_token(token_id: &str, destination_address: &str, amount: u64) 
     }
 
     // Output 0: OP_RETURN with SLP SEND
-    let op_return_script = crate::wallet::semantic_tokens::generate_slp_send_op_return(token_id, &[amount]);
+    let op_return_script =
+        crate::wallet::semantic_tokens::generate_slp_send_op_return(token_id, &[amount]);
     tx.outputs.push(TxOut {
         value: 0,
         pk_script: op_return_script,
@@ -291,7 +302,8 @@ pub fn send_ecash_token(token_id: &str, destination_address: &str, amount: u64) 
     }
 
     // Sign all inputs
-    let all_utxos: Vec<&crate::wallet::chronik::ChronikUtxo> = token_utxos.iter()
+    let all_utxos: Vec<&crate::wallet::chronik::ChronikUtxo> = token_utxos
+        .iter()
         .chain(xec_selection.selected.iter())
         .collect();
     for (i, utxo) in all_utxos.iter().enumerate() {
@@ -331,9 +343,9 @@ pub struct SendPreview {
 }
 
 pub fn build_send_xec(destination_address: &str, amount_sats: i64) -> Result<SendPreview, String> {
-    use crate::wallet::transaction::{Transaction, TxIn, TxOut};
-    use crate::wallet::signer::{sign_p2pkh_input, hash160};
     use crate::wallet::coin_select;
+    use crate::wallet::signer::{hash160, sign_p2pkh_input};
+    use crate::wallet::transaction::{Transaction, TxIn, TxOut};
     use bip32::XPrv;
     use std::str::FromStr;
 
@@ -342,7 +354,8 @@ pub fn build_send_xec(destination_address: &str, amount_sats: i64) -> Result<Sen
     }
 
     let id = read_identity().ok_or("No identity set — generate a seed first")?;
-    let hash160_hex = id.get("ecash_hash160")
+    let hash160_hex = id
+        .get("ecash_hash160")
         .and_then(|v| v.as_str())
         .ok_or("No ecash_hash160 in identity")?;
 
@@ -351,7 +364,8 @@ pub fn build_send_xec(destination_address: &str, amount_sats: i64) -> Result<Sen
         .map_err(|_| "Invalid stored mnemonic")?;
     let seed_bytes = mnemonic.to_seed("");
     let master = XPrv::new(&seed_bytes).map_err(|e| e.to_string())?;
-    let xec_path = bip32::DerivationPath::from_str("m/44'/899'/0'/0/0").map_err(|e| e.to_string())?;
+    let xec_path =
+        bip32::DerivationPath::from_str("m/44'/899'/0'/0/0").map_err(|e| e.to_string())?;
     let mut child = master.clone();
     for c in xec_path.iter() {
         child = child.derive_child(c).map_err(|e| e.to_string())?;
@@ -440,7 +454,9 @@ fn decode_ecash_address(addr: &str) -> Result<Vec<u8>, String> {
         addr
     };
     // Try base58 decode (legacy format)
-    let decoded = bs58::decode(stripped).into_vec().map_err(|e| format!("Invalid address: {}", e))?;
+    let decoded = bs58::decode(stripped)
+        .into_vec()
+        .map_err(|e| format!("Invalid address: {}", e))?;
     if decoded.len() < 21 {
         return Err("Address too short".into());
     }
@@ -456,8 +472,6 @@ fn load_mnemonic_from_vault() -> Result<String, String> {
         "No mnemonic stored — please save your seed phrase via the identity setup flow".to_string()
     })
 }
-
-
 
 pub fn remove_token(id: String) -> Result<(), String> {
     let state = crate::state::APP_STATE.get().unwrap();
@@ -521,11 +535,19 @@ pub fn get_coin_balances() -> Vec<CoinBalance> {
     let zero_display = if has_identity { "0" } else { "\u{2014}" };
 
     let mut xec_balance = 0.0;
-    let mut xec_status = if has_identity { "no_adapter".to_string() } else { "awaiting_identity".to_string() };
+    let mut xec_status = if has_identity {
+        "no_adapter".to_string()
+    } else {
+        "awaiting_identity".to_string()
+    };
     let mut xec_display = zero_display.to_string();
 
     if has_identity {
-        if let Some(hash160) = id.as_ref().and_then(|v| v.get("ecash_hash160")).and_then(|v| v.as_str()) {
+        if let Some(hash160) = id
+            .as_ref()
+            .and_then(|v| v.get("ecash_hash160"))
+            .and_then(|v| v.as_str())
+        {
             let client = crate::wallet::chronik::ChronikClient::new("https://chronik.be.cash");
             if let Ok(utxos) = client.fetch_utxos_p2pkh(hash160) {
                 let mut sats = 0;
@@ -653,17 +675,22 @@ fn fetch_xec_tx_history(id: &Option<serde_json::Value>) -> Result<Vec<TxRecord>,
     for tx in page.txs {
         // Determine direction by checking if our address appears in inputs
         let is_outgoing = tx.inputs.iter().any(|inp| {
-            inp.output_script.to_lowercase().contains(&own_script_suffix)
+            inp.output_script
+                .to_lowercase()
+                .contains(&own_script_suffix)
         });
 
         // Calculate net amount
-        let own_output_sats: i64 = tx.outputs.iter()
+        let own_output_sats: i64 = tx
+            .outputs
+            .iter()
             .filter(|o| o.output_script.to_lowercase().contains(&own_script_suffix))
             .map(|o| o.value)
             .sum();
 
         let own_input_sats: i64 = if is_outgoing {
-            tx.inputs.iter()
+            tx.inputs
+                .iter()
                 .filter(|i| i.output_script.to_lowercase().contains(&own_script_suffix))
                 .map(|i| i.value)
                 .sum()
@@ -701,19 +728,33 @@ fn fetch_xec_tx_history(id: &Option<serde_json::Value>) -> Result<Vec<TxRecord>,
 
         // Counterparty: for outgoing, the first non-own output address; for incoming, first input
         let counterparty = if is_outgoing {
-            tx.outputs.iter()
-                .find(|o| !o.output_script.to_lowercase().contains(&own_script_suffix) && o.value > 0)
-                .map(|o| format!("script:{}", &o.output_script[..o.output_script.len().min(16)]))
+            tx.outputs
+                .iter()
+                .find(|o| {
+                    !o.output_script.to_lowercase().contains(&own_script_suffix) && o.value > 0
+                })
+                .map(|o| {
+                    format!(
+                        "script:{}",
+                        &o.output_script[..o.output_script.len().min(16)]
+                    )
+                })
                 .unwrap_or_else(|| "self".to_string())
         } else {
-            tx.inputs.first()
-                .map(|i| format!("script:{}", &i.output_script[..i.output_script.len().min(16)]))
+            tx.inputs
+                .first()
+                .map(|i| {
+                    format!(
+                        "script:{}",
+                        &i.output_script[..i.output_script.len().min(16)]
+                    )
+                })
                 .unwrap_or_else(|| "coinbase".to_string())
         };
 
         // Truncate txid for display
         let txid_display = if tx.txid.len() > 16 {
-            format!("{}…{}", &tx.txid[..8], &tx.txid[tx.txid.len()-4..])
+            format!("{}…{}", &tx.txid[..8], &tx.txid[tx.txid.len() - 4..])
         } else {
             tx.txid.clone()
         };
@@ -825,14 +866,15 @@ pub async fn generate_front_door_invite() -> Result<String, String> {
 }
 
 pub async fn mint_semantic_token(asset_id: String) -> Result<String, String> {
-    use crate::wallet::transaction::{Transaction, TxIn, TxOut};
-    use crate::wallet::signer::{sign_p2pkh_input, hash160};
     use crate::wallet::coin_select;
+    use crate::wallet::signer::{hash160, sign_p2pkh_input};
+    use crate::wallet::transaction::{Transaction, TxIn, TxOut};
     use bip32::XPrv;
     use std::str::FromStr;
 
     let id = read_identity().ok_or("No identity set — generate a seed first")?;
-    let hash160_hex = id.get("ecash_hash160")
+    let hash160_hex = id
+        .get("ecash_hash160")
         .and_then(|v| v.as_str())
         .ok_or("No ecash_hash160 in identity")?;
 
@@ -841,7 +883,8 @@ pub async fn mint_semantic_token(asset_id: String) -> Result<String, String> {
         .map_err(|_| "Invalid stored mnemonic")?;
     let seed_bytes = mnemonic.to_seed("");
     let master = XPrv::new(&seed_bytes).map_err(|e| e.to_string())?;
-    let xec_path = bip32::DerivationPath::from_str("m/44'/899'/0'/0/0").map_err(|e| e.to_string())?;
+    let xec_path =
+        bip32::DerivationPath::from_str("m/44'/899'/0'/0/0").map_err(|e| e.to_string())?;
     let mut child = master.clone();
     for c in xec_path.iter() {
         child = child.derive_child(c).map_err(|e| e.to_string())?;
@@ -875,7 +918,10 @@ pub async fn mint_semantic_token(asset_id: String) -> Result<String, String> {
 
     // Output 0: OP_RETURN GENESIS
     let op_return = crate::wallet::semantic_tokens::generate_slp_op_return(&metadata);
-    tx.outputs.push(TxOut { value: 0, pk_script: op_return });
+    tx.outputs.push(TxOut {
+        value: 0,
+        pk_script: op_return,
+    });
 
     // Output 1: Mint receiver (self)
     let own_pubkey_hash = hash160(&child.public_key().to_bytes());
@@ -1292,7 +1338,11 @@ pub async fn discover_models() -> Result<Vec<llm_offload::ModelInfo>, String> {
         push_model(Path::new(active));
     }
 
-    models.sort_by(|a, b| a.name.to_ascii_lowercase().cmp(&b.name.to_ascii_lowercase()));
+    models.sort_by(|a, b| {
+        a.name
+            .to_ascii_lowercase()
+            .cmp(&b.name.to_ascii_lowercase())
+    });
     Ok(models)
 }
 
@@ -1305,7 +1355,10 @@ fn paths_refer_to_same_file(left: &str, right: &Path) -> bool {
         .file_name()
         .is_some_and(|left_name| right.file_name() == Some(left_name))
         && left.replace('\\', "/").to_ascii_lowercase()
-            == right.to_string_lossy().replace('\\', "/").to_ascii_lowercase()
+            == right
+                .to_string_lossy()
+                .replace('\\', "/")
+                .to_ascii_lowercase()
 }
 
 pub async fn run_agent_inference(
@@ -1318,4 +1371,3 @@ pub async fn run_agent_inference(
     });
     Ok(())
 }
-

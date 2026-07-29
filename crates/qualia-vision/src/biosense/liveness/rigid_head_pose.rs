@@ -62,7 +62,7 @@ pub fn estimate_head_pose(frame: &LandmarkFrame) -> Option<HeadPose> {
     // Pitch: nose vs eye-chin vertical structure.
     let face_h = (chin.y - eye_c.y).abs().max(1e-4);
     let pitch_n = ((nose.y - eye_c.y) / face_h) - 0.35; // frontal bias ≈ 0
-    // Roll: eye-line angle.
+                                                        // Roll: eye-line angle.
     let roll_rad = (re.y - le.y).atan2(re.x - le.x);
 
     // Scale to degrees with stable gains (production-calibrate in MANIFEST).
@@ -158,6 +158,10 @@ mod tests {
         // Subject looks left → nose toward image-right (facing camera).
         f.set(PadLandmarkId::NoseTip, Landmark2::new(170.0, 150.0));
         let p = estimate_head_pose(&f).unwrap();
-        assert!(p.yaw_deg > 5.0, "expected positive left yaw, got {}", p.yaw_deg);
+        assert!(
+            p.yaw_deg > 5.0,
+            "expected positive left yaw, got {}",
+            p.yaw_deg
+        );
     }
 }

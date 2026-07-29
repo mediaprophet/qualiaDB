@@ -4,9 +4,7 @@
 //! Pattern mirrors `qapp_catalog.rs`. Does **not** claim foundation-model quality
 //! or A4 FEA; seed weights and reference paths are explicitly labelled.
 
-use super::hypermedia_store::{
-    CommonsVisibility, HypermediaStore, LibraryEntry, LibrarySection,
-};
+use super::hypermedia_store::{CommonsVisibility, HypermediaStore, LibraryEntry, LibrarySection};
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 
@@ -353,11 +351,7 @@ fn model_to_library(m: ModelCatalogEntry, storage_root: &Path, now: u64) -> Libr
         ingested_unix: now,
         excerpt: format!(
             "{} — role={} path={} on_disk={} — {}",
-            m.title,
-            m.role,
-            m.rel_path,
-            on_disk,
-            honesty
+            m.title, m.role, m.rel_path, on_disk, honesty
         ),
         sensitivity: "public".into(),
         section: LibrarySection::Software.as_str().into(),
@@ -381,11 +375,7 @@ fn ontology_to_library(o: OntologyCatalogEntry, now: u64) -> LibraryEntry {
         primary_subject: primary_subject_for_uri(&uri),
         media_type: ONTOLOGY_MEDIA_TYPE.into(),
         quins: Vec::new(),
-        topics: vec![
-            "ontology".into(),
-            o.domain.into(),
-            o.id.into(),
-        ],
+        topics: vec!["ontology".into(), o.domain.into(), o.id.into()],
         projects: vec![format!("ontology:{}", o.domain)],
         purposes: vec!["ontology".into(), "software".into(), "knowledge".into()],
         place: Some(o.rel_path.into()),
@@ -479,9 +469,7 @@ pub fn seed_perception_into_library(
         }
     }
 
-    store
-        .replace_all(&entries)
-        .map_err(|e| e.to_string())?;
+    store.replace_all(&entries).map_err(|e| e.to_string())?;
 
     Ok(PerceptionSeedReport {
         models_added,

@@ -52,8 +52,8 @@ pub fn compute_sleep_debt(samples: &[SleepNightSample], target_min: f64) -> Slee
             avg_duration_min: 0.0,
             avg_efficiency: None,
             chronic_sleep_debt_flag: false,
-            formula_note: "No sleep nights in journal. Debt = Σ max(0, target − duration) per night."
-                .into(),
+            formula_note:
+                "No sleep nights in journal. Debt = Σ max(0, target − duration) per night.".into(),
         };
     }
 
@@ -94,10 +94,7 @@ pub fn compute_sleep_debt(samples: &[SleepNightSample], target_min: f64) -> Slee
 }
 
 /// Build a 7-cell heatmap from the most recent samples (newest last).
-pub fn compute_weekly_heatmap(
-    samples: &[SleepNightSample],
-    target_min: f64,
-) -> SleepHeatmapReport {
+pub fn compute_weekly_heatmap(samples: &[SleepNightSample], target_min: f64) -> SleepHeatmapReport {
     let take = samples.len().min(7);
     let slice = if take > 0 {
         &samples[samples.len() - take..]

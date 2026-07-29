@@ -117,7 +117,13 @@ impl TrustStore {
         Ok(a)
     }
 
-    pub fn add_did(&mut self, label: &str, did: &str, notes: &str, now: u64) -> Result<TrustAnchor, String> {
+    pub fn add_did(
+        &mut self,
+        label: &str,
+        did: &str,
+        notes: &str,
+        now: u64,
+    ) -> Result<TrustAnchor, String> {
         let did = did.trim();
         if !did.starts_with("did:") {
             return Err("DID must start with did:".into());
@@ -211,7 +217,11 @@ pub fn evaluate_url(store: &TrustStore, url: &str) -> TrustVerdict {
     }
 
     // DID anchors: match if host or path contains the DID, or URL is a did:
-    for a in store.anchors.iter().filter(|a| a.enabled && a.kind == AnchorKind::Did) {
+    for a in store
+        .anchors
+        .iter()
+        .filter(|a| a.enabled && a.kind == AnchorKind::Did)
+    {
         if url.contains(&a.material) || host.contains(&a.material) {
             matching.push(a.label.clone());
         }
@@ -400,7 +410,11 @@ impl SuggestedTrustCatalog {
     }
 
     /// Resolve material for an entry (inline or file relative to `base_dir`).
-    pub fn resolve_material(&self, entry: &SuggestedAnchor, base_dir: &Path) -> Result<String, String> {
+    pub fn resolve_material(
+        &self,
+        entry: &SuggestedAnchor,
+        base_dir: &Path,
+    ) -> Result<String, String> {
         let inline = entry.material.trim();
         if !inline.is_empty() {
             return Ok(inline.to_string());
@@ -636,18 +650,20 @@ pub fn verify_signed_catalog(envelope: &SignedSuggestedCatalog) -> Result<(), St
     use ed25519_dalek::{Signature, Verifier, VerifyingKey};
     let algo = envelope.algorithm.trim().to_ascii_lowercase();
     if !algo.is_empty() && algo != "ed25519" {
-        return Err(format!("unsupported catalog algorithm '{algo}' (ed25519 only in this build)"));
+        return Err(format!(
+            "unsupported catalog algorithm '{algo}' (ed25519 only in this build)"
+        ));
     }
-    let pk_bytes = hex::decode(envelope.public_key_hex.trim())
-        .map_err(|e| format!("public_key_hex: {e}"))?;
+    let pk_bytes =
+        hex::decode(envelope.public_key_hex.trim()).map_err(|e| format!("public_key_hex: {e}"))?;
     if pk_bytes.len() != 32 {
         return Err("public_key_hex must be 32 bytes".into());
     }
     let mut pk_arr = [0u8; 32];
     pk_arr.copy_from_slice(&pk_bytes);
     let vk = VerifyingKey::from_bytes(&pk_arr).map_err(|e| format!("verifying key: {e}"))?;
-    let sig_bytes = hex::decode(envelope.signature_hex.trim())
-        .map_err(|e| format!("signature_hex: {e}"))?;
+    let sig_bytes =
+        hex::decode(envelope.signature_hex.trim()).map_err(|e| format!("signature_hex: {e}"))?;
     if sig_bytes.len() != 64 {
         return Err("signature must be 64 bytes".into());
     }
@@ -718,9 +734,7 @@ mod tests {
     fn disable_anchor_skips_match() {
         let dir = tempfile::tempdir().unwrap();
         let mut s = TrustStore::new();
-        let a = s
-            .add_did("Peer", "did:web:off.example", "", 1)
-            .unwrap();
+        let a = s.add_did("Peer", "did:web:off.example", "", 1).unwrap();
         s.set_enabled(&a.id, false).unwrap();
         s.save(dir.path()).unwrap();
         let loaded = TrustStore::load(dir.path());
@@ -762,15 +776,9 @@ mod tests {
             }],
         };
         let mut store = TrustStore::new();
-        let a = import_suggested_into_store(
-            &mut store,
-            &cat,
-            "sug-did-1",
-            Path::new("."),
-            1,
-            false,
-        )
-        .unwrap();
+        let a =
+            import_suggested_into_store(&mut store, &cat, "sug-did-1", Path::new("."), 1, false)
+                .unwrap();
         assert!(!a.enabled);
         assert_eq!(
             cert_override_decision(&store, "evil.example"),

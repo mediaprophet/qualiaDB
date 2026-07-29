@@ -117,7 +117,9 @@ impl AccountabilityStore {
             Ok(bytes) => {
                 serde_json::from_slice(&bytes).map_err(|e| std::io::Error::other(e.to_string()))
             }
-            Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(AccountabilityState::default()),
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+                Ok(AccountabilityState::default())
+            }
             Err(e) => Err(e),
         }
     }
@@ -180,7 +182,9 @@ impl AccountabilityStore {
             "commitment": hex::encode(cred.payload_commitment),
         })
         .to_string();
-        state.ledger.append(KIND_CONSENT_GRANTED, &note, signer, time_unix);
+        state
+            .ledger
+            .append(KIND_CONSENT_GRANTED, &note, signer, time_unix);
         state.credentials.push(cred.clone());
         self.save(&state)?;
         Ok(cred)
@@ -207,7 +211,9 @@ impl AccountabilityStore {
             "revoked_unix": time_unix,
         })
         .to_string();
-        state.ledger.append(KIND_CONSENT_REVOKED, &note, signer, time_unix);
+        state
+            .ledger
+            .append(KIND_CONSENT_REVOKED, &note, signer, time_unix);
         self.save(&state)?;
         Ok(was_active)
     }
@@ -279,8 +285,11 @@ impl AccountabilityStore {
         };
 
         let mut state = self.load()?;
-        let payload = serde_json::to_string(&record).map_err(|e| std::io::Error::other(e.to_string()))?;
-        state.ledger.append(KIND_CONDUCT, &payload, signer, time_unix);
+        let payload =
+            serde_json::to_string(&record).map_err(|e| std::io::Error::other(e.to_string()))?;
+        state
+            .ledger
+            .append(KIND_CONDUCT, &payload, signer, time_unix);
         state.conduct.push(record.clone());
         self.save(&state)?;
         Ok(record)
@@ -322,12 +331,18 @@ impl AccountabilityStore {
         time_unix: u64,
     ) -> std::io::Result<ConsentCredential> {
         use crate::envelope_encryption::{seal_payload, wrap_dek_to};
-        let (payload, dek) =
-            seal_payload(plaintext, storers).map_err(std::io::Error::other)?;
+        let (payload, dek) = seal_payload(plaintext, storers).map_err(std::io::Error::other)?;
         let wrapped = wrap_dek_to(recipient_public, &dek).map_err(std::io::Error::other)?;
         let commitment = payload.commitment;
         let cred = ConsentCredential::grant(
-            credential_id, subject_did, agent_did, scope, purpose, commitment, wrapped, time_unix,
+            credential_id,
+            subject_did,
+            agent_did,
+            scope,
+            purpose,
+            commitment,
+            wrapped,
+            time_unix,
             expiry_unix,
         );
 
@@ -343,7 +358,9 @@ impl AccountabilityStore {
             "sealed": true,
         })
         .to_string();
-        state.ledger.append(KIND_CONSENT_GRANTED, &note, signer, time_unix);
+        state
+            .ledger
+            .append(KIND_CONSENT_GRANTED, &note, signer, time_unix);
         state.credentials.push(cred.clone());
         self.save(&state)?;
         Ok(cred)
@@ -366,7 +383,9 @@ impl AccountabilityStore {
             .credentials
             .iter()
             .find(|c| c.id == credential_id)
-            .ok_or_else(|| std::io::Error::other(format!("credential '{credential_id}' not found")))?;
+            .ok_or_else(|| {
+                std::io::Error::other(format!("credential '{credential_id}' not found"))
+            })?;
         let wrapped = cred.payload_key(now_unix).ok_or_else(|| {
             std::io::Error::other(
                 "credential revoked or expired — the wrapped key is destroyed, payload unavailable",
@@ -376,7 +395,9 @@ impl AccountabilityStore {
             .payloads
             .iter()
             .find(|p| p.commitment == cred.payload_commitment)
-            .ok_or_else(|| std::io::Error::other("sealed payload for this credential not found in the commons"))?;
+            .ok_or_else(|| {
+                std::io::Error::other("sealed payload for this credential not found in the commons")
+            })?;
         open_payload_with_wrapped(payload, recipient_secret, wrapped).map_err(std::io::Error::other)
     }
 
@@ -398,7 +419,9 @@ impl AccountabilityStore {
             "parties": switch.trigger.parties,
         })
         .to_string();
-        state.ledger.append(KIND_DEAD_MANS_ARMED, &note, signer, time_unix);
+        state
+            .ledger
+            .append(KIND_DEAD_MANS_ARMED, &note, signer, time_unix);
         // Replace any existing switch for the same commitment (re-arm) or push.
         if let Some(rec) = state
             .dead_mans_switches
@@ -408,7 +431,10 @@ impl AccountabilityStore {
             rec.switch = switch;
             rec.attestations.clear();
         } else {
-            state.dead_mans_switches.push(DeadMansSwitchRecord { switch, attestations: Vec::new() });
+            state.dead_mans_switches.push(DeadMansSwitchRecord {
+                switch,
+                attestations: Vec::new(),
+            });
         }
         self.save(&state)?;
         Ok(())
@@ -432,7 +458,9 @@ impl AccountabilityStore {
         };
         rec.switch.principal_alive(time_unix);
         let note = serde_json::json!({ "commitment": hex::encode(commitment) }).to_string();
-        state.ledger.append(KIND_DEAD_MANS_ALIVE, &note, signer, time_unix);
+        state
+            .ledger
+            .append(KIND_DEAD_MANS_ALIVE, &note, signer, time_unix);
         self.save(&state)?;
         Ok(true)
     }
@@ -460,9 +488,12 @@ impl AccountabilityStore {
         })
         .to_string();
         // Keep the latest attestation per party.
-        rec.attestations.retain(|a| a.party_did != attestation.party_did);
+        rec.attestations
+            .retain(|a| a.party_did != attestation.party_did);
         rec.attestations.push(attestation);
-        state.ledger.append(KIND_DEAD_MANS_ATTESTED, &note, signer, time_unix);
+        state
+            .ledger
+            .append(KIND_DEAD_MANS_ATTESTED, &note, signer, time_unix);
         self.save(&state)?;
         Ok(true)
     }
@@ -487,7 +518,9 @@ impl AccountabilityStore {
         let disposition = rec.switch.enact(&attestations, time_unix).cloned();
         if disposition.is_some() {
             let note = serde_json::json!({ "commitment": hex::encode(commitment) }).to_string();
-            state.ledger.append(KIND_DEAD_MANS_ENACTED, &note, signer, time_unix);
+            state
+                .ledger
+                .append(KIND_DEAD_MANS_ENACTED, &note, signer, time_unix);
             self.save(&state)?;
         }
         Ok(disposition)
@@ -516,7 +549,13 @@ impl AccountabilityStore {
     ) -> std::io::Result<Option<Disposition>> {
         let mut state = self.load()?;
         let disp = Self::enact_and_release_in_state(
-            &mut state, commitment, dek, party_keys, subject_did, signer, time_unix,
+            &mut state,
+            commitment,
+            dek,
+            party_keys,
+            subject_did,
+            signer,
+            time_unix,
         )
         .map_err(std::io::Error::other)?;
         if disp.is_some() {
@@ -547,7 +586,13 @@ impl AccountabilityStore {
             .map_err(|_| std::io::Error::other("reconstructed DEK is not 32 bytes"))?;
         let mut state = self.load()?;
         let disp = Self::enact_and_release_in_state(
-            &mut state, commitment, &dek, party_keys, subject_did, signer, time_unix,
+            &mut state,
+            commitment,
+            &dek,
+            party_keys,
+            subject_did,
+            signer,
+            time_unix,
         )
         .map_err(std::io::Error::other)?;
         if disp.is_some() {
@@ -581,9 +626,11 @@ impl AccountabilityStore {
         let Some(disposition) = rec.switch.enact(&attestations, time_unix).cloned() else {
             return Ok(None);
         };
-        let enote =
-            serde_json::json!({ "commitment": hex::encode(commitment), "released": true }).to_string();
-        state.ledger.append(KIND_DEAD_MANS_ENACTED, &enote, signer, time_unix);
+        let enote = serde_json::json!({ "commitment": hex::encode(commitment), "released": true })
+            .to_string();
+        state
+            .ledger
+            .append(KIND_DEAD_MANS_ENACTED, &enote, signer, time_unix);
 
         if let Disposition::ReleaseTo { parties } = &disposition {
             for did in parties.clone() {
@@ -611,7 +658,9 @@ impl AccountabilityStore {
                     "via": "dead_mans_release",
                 })
                 .to_string();
-                state.ledger.append(KIND_CONSENT_GRANTED, &gnote, signer, time_unix);
+                state
+                    .ledger
+                    .append(KIND_CONSENT_GRANTED, &gnote, signer, time_unix);
                 state.credentials.push(cred);
             }
         }
@@ -634,7 +683,9 @@ impl AccountabilityStore {
             "threshold": switch.trigger.attestation_threshold,
         })
         .to_string();
-        state.ledger.append(KIND_INCAPACITY_ARMED, &note, signer, time_unix);
+        state
+            .ledger
+            .append(KIND_INCAPACITY_ARMED, &note, signer, time_unix);
         if let Some(existing) = state
             .incapacity_switches
             .iter_mut()
@@ -673,7 +724,9 @@ impl AccountabilityStore {
                 "official_instrument": official_instrument.is_some(),
             })
             .to_string();
-            state.ledger.append(KIND_INCAPACITY_ACTIVATED, &note, signer, time_unix);
+            state
+                .ledger
+                .append(KIND_INCAPACITY_ACTIVATED, &note, signer, time_unix);
             self.save(&state)?;
         }
         Ok(activated)
@@ -697,7 +750,9 @@ impl AccountabilityStore {
         };
         switch.regain_capacity(time_unix);
         let note = serde_json::json!({ "principal": principal_did }).to_string();
-        state.ledger.append(KIND_INCAPACITY_REVERSED, &note, signer, time_unix);
+        state
+            .ledger
+            .append(KIND_INCAPACITY_REVERSED, &note, signer, time_unix);
         self.save(&state)?;
         Ok(true)
     }
@@ -724,7 +779,9 @@ impl AccountabilityStore {
             "purpose": cc.purpose,
         })
         .to_string();
-        state.ledger.append(KIND_TRANSPARENCY_CC, &note, signer, time_unix);
+        state
+            .ledger
+            .append(KIND_TRANSPARENCY_CC, &note, signer, time_unix);
         state.disclosure_ccs.push(cc);
         self.save(&state)?;
         Ok(())
@@ -747,7 +804,9 @@ impl AccountabilityStore {
             "id": event.id,
         })
         .to_string();
-        state.ledger.append(KIND_DISCLOSURE, &note, signer, time_unix);
+        state
+            .ledger
+            .append(KIND_DISCLOSURE, &note, signer, time_unix);
         state.disclosure_events.push(event);
         self.save(&state)?;
         Ok(())
@@ -766,7 +825,10 @@ impl AccountabilityStore {
     }
 
     /// The distinct actors who had access to a payload — the set a leak **must** be within.
-    pub fn actors_with_access(&self, commitment: &PayloadCommitment) -> std::io::Result<Vec<String>> {
+    pub fn actors_with_access(
+        &self,
+        commitment: &PayloadCommitment,
+    ) -> std::io::Result<Vec<String>> {
         let state = self.load()?;
         Ok(actors_with_access(&state.disclosure_events, commitment)
             .into_iter()
@@ -811,7 +873,8 @@ fn content_signing_bytes(
 }
 
 fn conduct_id(agent_did: &str, credential_id: &str, action: &str, time_unix: u64) -> String {
-    let digest = Sha256::digest(format!("{agent_did}:{credential_id}:{action}:{time_unix}").as_bytes());
+    let digest =
+        Sha256::digest(format!("{agent_did}:{credential_id}:{action}:{time_unix}").as_bytes());
     format!("cd-{}", hex::encode(&digest[..6]))
 }
 
@@ -851,7 +914,9 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let store = AccountabilityStore::open(dir.path()).unwrap();
         let sk = signer(1);
-        store.grant_credential(cred("cc-1", [7u8; 32]), &sk, 1_000).unwrap();
+        store
+            .grant_credential(cred("cc-1", [7u8; 32]), &sk, 1_000)
+            .unwrap();
 
         // Persisted across a fresh open.
         let store2 = AccountabilityStore::open(dir.path()).unwrap();
@@ -860,7 +925,15 @@ mod tests {
         assert_eq!(creds[0].id, "cc-1");
         // The grant is in the signed chain, and the chain verifies.
         assert_eq!(store2.verify_ledger().unwrap(), Ok(()));
-        assert_eq!(store2.load().unwrap().ledger.of_kind(KIND_CONSENT_GRANTED).len(), 1);
+        assert_eq!(
+            store2
+                .load()
+                .unwrap()
+                .ledger
+                .of_kind(KIND_CONSENT_GRANTED)
+                .len(),
+            1
+        );
     }
 
     #[test]
@@ -869,24 +942,47 @@ mod tests {
         let store = AccountabilityStore::open(dir.path()).unwrap();
         let sk = signer(2);
         let commitment = [9u8; 32];
-        store.grant_credential(cred("cc-9", commitment), &sk, 1_000).unwrap();
+        store
+            .grant_credential(cred("cc-9", commitment), &sk, 1_000)
+            .unwrap();
 
         store
-            .record_conduct("did:wf:social-worker", "cc-9", "accessed housing record", "under consent", commitment, &sk, 1_100)
+            .record_conduct(
+                "did:wf:social-worker",
+                "cc-9",
+                "accessed housing record",
+                "under consent",
+                commitment,
+                &sk,
+                1_100,
+            )
             .unwrap();
         store
-            .record_conduct("did:wf:social-worker", "cc-9", "requested placement", "under consent", commitment, &sk, 1_150)
+            .record_conduct(
+                "did:wf:social-worker",
+                "cc-9",
+                "requested placement",
+                "under consent",
+                commitment,
+                &sk,
+                1_150,
+            )
             .unwrap();
 
         // The person revokes — access ends (key destroyed), but the conduct trail remains.
         assert!(store.revoke_credential("cc-9", &sk, 1_200).unwrap());
         let creds = store.list_credentials().unwrap();
-        assert!(!creds[0].payload_accessible(1_300), "revoked → payload unavailable");
+        assert!(
+            !creds[0].payload_accessible(1_300),
+            "revoked → payload unavailable"
+        );
 
         let trail = store.audit_trail("cc-9").unwrap();
         assert_eq!(trail.len(), 2, "both acts survive revocation");
         assert!(trail.iter().all(|r| r.concerns_commitment(&commitment)));
-        assert!(trail.iter().all(|r| matches!(r.attestation, Attestation::Signature { .. })));
+        assert!(trail
+            .iter()
+            .all(|r| matches!(r.attestation, Attestation::Signature { .. })));
 
         // Whole chain still verifies: grant + 2 conduct + revoke.
         assert_eq!(store.verify_ledger().unwrap(), Ok(()));
@@ -912,7 +1008,10 @@ mod tests {
         };
         store.save(&state).unwrap();
 
-        assert!(matches!(store.verify_ledger().unwrap(), Err(_)), "deletion is detectable on reload");
+        assert!(
+            matches!(store.verify_ledger().unwrap(), Err(_)),
+            "deletion is detectable on reload"
+        );
     }
 
     #[cfg(not(target_arch = "wasm32"))]
@@ -950,7 +1049,10 @@ mod tests {
         // Nothing is stored in the clear: the persisted payload is ciphertext, not the plaintext.
         let st = store.load().unwrap();
         assert_eq!(st.payloads.len(), 1);
-        assert_ne!(st.payloads[0].ciphertext.as_slice(), b"the sensitive housing record");
+        assert_ne!(
+            st.payloads[0].ciphertext.as_slice(),
+            b"the sensitive housing record"
+        );
 
         // Revoke — the wrapped key is destroyed; opening now fails (no key, no payload)…
         assert!(store.revoke_credential(&cred.id, &sk, 1_200).unwrap());
@@ -987,17 +1089,26 @@ mod tests {
                 attestation_threshold: 2,
                 parties: vec!["a".into(), "b".into()],
             },
-            disposition: Disposition::ReleaseTo { parties: vec!["trustee".into()] },
+            disposition: Disposition::ReleaseTo {
+                parties: vec!["trustee".into()],
+            },
             fired_unix: None,
         };
         store.arm_dead_mans_switch(sw, &sk, 1_000).unwrap();
 
         // One party alone can't fire it (gamified — quorum required).
-        store.attest_dead_mans(&c, att("a", 1_200), &sk, 1_200).unwrap();
+        store
+            .attest_dead_mans(&c, att("a", 1_200), &sk, 1_200)
+            .unwrap();
         assert!(store.enact_dead_mans(&c, &sk, 1_200).unwrap().is_none());
         // Two distinct parties + lapsed heartbeat → triggerable, but the principal showing up resets it.
-        store.attest_dead_mans(&c, att("b", 1_200), &sk, 1_200).unwrap();
-        assert!(store.dead_mans_alive(&c, &sk, 1_200).unwrap(), "principal alive = reversibility");
+        store
+            .attest_dead_mans(&c, att("b", 1_200), &sk, 1_200)
+            .unwrap();
+        assert!(
+            store.dead_mans_alive(&c, &sk, 1_200).unwrap(),
+            "principal alive = reversibility"
+        );
         assert!(
             store.enact_dead_mans(&c, &sk, 1_250).unwrap().is_none(),
             "alive at 1200, grace 100 → not lapsed until 1300"
@@ -1015,14 +1126,17 @@ mod tests {
         use crate::dead_mans_switch::{
             AttestationKind, DeadMansSwitch, Disposition, Heartbeat, PartyAttestation, TriggerRule,
         };
-        use crate::envelope_encryption::{open_payload_with_wrapped, seal_payload, EnvelopeKeypair};
+        use crate::envelope_encryption::{
+            open_payload_with_wrapped, seal_payload, EnvelopeKeypair,
+        };
         let dir = tempfile::tempdir().unwrap();
         let store = AccountabilityStore::open(dir.path()).unwrap();
         let sk = signer(9);
         let trustee = EnvelopeKeypair::generate().unwrap();
 
         // Seal a payload; persist the ciphertext. The DEK is what the switch will hand over on enact.
-        let (payload, dek) = seal_payload(b"the estate letter", vec!["did:wf:person".into()]).unwrap();
+        let (payload, dek) =
+            seal_payload(b"the estate letter", vec!["did:wf:person".into()]).unwrap();
         let c = payload.commitment;
         {
             let mut st = store.load().unwrap();
@@ -1046,7 +1160,9 @@ mod tests {
                         attestation_threshold: 1,
                         parties: vec!["did:wf:friend".into()],
                     },
-                    disposition: Disposition::ReleaseTo { parties: vec!["did:wf:trustee".into()] },
+                    disposition: Disposition::ReleaseTo {
+                        parties: vec!["did:wf:trustee".into()],
+                    },
                     fired_unix: None,
                 },
                 &sk,
@@ -1112,7 +1228,13 @@ mod tests {
             .unwrap());
         // Quorum → advocate activates.
         assert!(store
-            .activate_incapacity("did:wf:person", &["adv".into(), "friend".into()], None, &sk, 1_100)
+            .activate_incapacity(
+                "did:wf:person",
+                &["adv".into(), "friend".into()],
+                None,
+                &sk,
+                1_100
+            )
             .unwrap());
         assert!(store.list_incapacity_switches().unwrap()[0].advocate_active());
         // Recovery reverses it.
@@ -1127,7 +1249,9 @@ mod tests {
         use crate::dead_mans_switch::{
             AttestationKind, DeadMansSwitch, Disposition, Heartbeat, PartyAttestation, TriggerRule,
         };
-        use crate::envelope_encryption::{open_payload_with_wrapped, seal_payload, EnvelopeKeypair};
+        use crate::envelope_encryption::{
+            open_payload_with_wrapped, seal_payload, EnvelopeKeypair,
+        };
         use crate::shamir_recovery::split;
         let dir = tempfile::tempdir().unwrap();
         let store = AccountabilityStore::open(dir.path()).unwrap();
@@ -1135,7 +1259,8 @@ mod tests {
         let trustee = EnvelopeKeypair::generate().unwrap();
 
         // Owner seals a payload (while alive); the DEK is split 2-of-3 among friends and handed out.
-        let (payload, dek) = seal_payload(b"the will and testament", vec!["did:wf:person".into()]).unwrap();
+        let (payload, dek) =
+            seal_payload(b"the will and testament", vec!["did:wf:person".into()]).unwrap();
         let c = payload.commitment;
         {
             let mut st = store.load().unwrap();
@@ -1154,7 +1279,9 @@ mod tests {
                         attestation_threshold: 1,
                         parties: vec!["did:wf:friend".into()],
                     },
-                    disposition: Disposition::ReleaseTo { parties: vec!["did:wf:trustee".into()] },
+                    disposition: Disposition::ReleaseTo {
+                        parties: vec!["did:wf:trustee".into()],
+                    },
                     fired_unix: None,
                 },
                 &sk,
@@ -1185,7 +1312,11 @@ mod tests {
 
         // The trustee opens the payload — recovered entirely from friends' shares, no owner key involved.
         let st = store.load().unwrap();
-        let cred = st.credentials.iter().find(|c2| c2.agent_did == "did:wf:trustee").unwrap();
+        let cred = st
+            .credentials
+            .iter()
+            .find(|c2| c2.agent_did == "did:wf:trustee")
+            .unwrap();
         let wrapped = cred.payload_key(1_300).unwrap();
         let p = st.payloads.iter().find(|p| p.commitment == c).unwrap();
         assert_eq!(
@@ -1243,7 +1374,9 @@ mod tests {
                     acting_delegate_did: Some("did:wf:staffer".into()),
                     time_unix: 1_200,
                     fingerprint: fp_staff,
-                    kind: DisclosureKind::OnwardShare { to_did: "did:wf:perpetrator".into() },
+                    kind: DisclosureKind::OnwardShare {
+                        to_did: "did:wf:perpetrator".into(),
+                    },
                 },
                 &sk,
                 1_200,
@@ -1253,7 +1386,10 @@ mod tests {
         assert_eq!(store.disclosure_chain(&c).unwrap().len(), 2);
         let actors = store.actors_with_access(&c).unwrap();
         assert!(actors.contains(&"did:wf:mp".to_string()));
-        assert!(actors.contains(&"did:wf:staffer".to_string()), "the acting staffer is in the access set");
+        assert!(
+            actors.contains(&"did:wf:staffer".to_string()),
+            "the acting staffer is in the access set"
+        );
         // The leaked fingerprint traces to the staffer as the accountable actor — the betrayal is knowable.
         let ev = store.trace_leak(&fp_staff).unwrap().unwrap();
         assert_eq!(ev.accountable_actor(), "did:wf:staffer");
@@ -1266,6 +1402,9 @@ mod tests {
         let hexed = hex::encode(c);
         assert_eq!(parse_commitment_hex(&hexed).unwrap(), c);
         assert!(parse_commitment_hex("zz").is_err());
-        assert!(parse_commitment_hex("2a2a").is_err(), "wrong length rejected");
+        assert!(
+            parse_commitment_hex("2a2a").is_err(),
+            "wrong length rejected"
+        );
     }
 }

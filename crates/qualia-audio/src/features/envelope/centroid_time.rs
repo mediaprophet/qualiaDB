@@ -34,7 +34,10 @@ mod tests {
 
     #[test]
     fn rejects_degenerate() {
-        assert_eq!(centroid_time(&[], 8000.0), Err(AudioError::InvalidParameter));
+        assert_eq!(
+            centroid_time(&[], 8000.0),
+            Err(AudioError::InvalidParameter)
+        );
         assert_eq!(
             centroid_time(&[1.0, 1.0], 0.0),
             Err(AudioError::InvalidParameter)

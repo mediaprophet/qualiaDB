@@ -62,7 +62,11 @@ impl SpeechEncoderWeights {
         }
         let n_mel = u32::from_le_bytes([bytes[8], bytes[9], bytes[10], bytes[11]]) as usize;
         let n_phones = u32::from_le_bytes([bytes[12], bytes[13], bytes[14], bytes[15]]) as usize;
-        let model_hash = u64::from_le_bytes(bytes[16..24].try_into().map_err(|_| crate::types::AudioError::MalformedAudio)?);
+        let model_hash = u64::from_le_bytes(
+            bytes[16..24]
+                .try_into()
+                .map_err(|_| crate::types::AudioError::MalformedAudio)?,
+        );
         let need = 24 + n_mel * n_phones * 4;
         if bytes.len() < need || n_phones != PHONES.len() || n_mel == 0 || n_mel > 128 {
             return Err(AudioError::MalformedAudio);
@@ -70,7 +74,11 @@ impl SpeechEncoderWeights {
         let mut weight = vec![0.0f32; n_mel * n_phones];
         let mut off = 24usize;
         for w in weight.iter_mut() {
-            *w = f32::from_le_bytes(bytes[off..off + 4].try_into().map_err(|_| crate::types::AudioError::MalformedAudio)?);
+            *w = f32::from_le_bytes(
+                bytes[off..off + 4]
+                    .try_into()
+                    .map_err(|_| crate::types::AudioError::MalformedAudio)?,
+            );
             off += 4;
         }
         Ok(Self {
@@ -176,7 +184,14 @@ impl StreamingSpeechDecoder {
     ) -> Result<usize, AudioError> {
         let max_frames = 32;
         let mut mel = vec![0.0f32; max_frames * self.weights.n_mel];
-        let n_frames = log_mel_from_mono(mono, 256, self.hop, sample_rate, self.weights.n_mel, &mut mel)?;
+        let n_frames = log_mel_from_mono(
+            mono,
+            256,
+            self.hop,
+            sample_rate,
+            self.weights.n_mel,
+            &mut mel,
+        )?;
         let n_frames = n_frames.min(max_frames);
         let blank = self.weights.n_phones - 1;
         let mut w = 0usize;

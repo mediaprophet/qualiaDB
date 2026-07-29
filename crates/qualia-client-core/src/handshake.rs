@@ -96,8 +96,8 @@ pub fn verify_response(challenge: &Challenge, resp: &ChallengeResponse) -> Resul
         ));
     }
 
-    let pk_bytes = hex::decode(&resp.responder_pubkey_hex)
-        .map_err(|e| format!("invalid pubkey hex: {e}"))?;
+    let pk_bytes =
+        hex::decode(&resp.responder_pubkey_hex).map_err(|e| format!("invalid pubkey hex: {e}"))?;
     let pk_arr: [u8; 32] = pk_bytes
         .as_slice()
         .try_into()

@@ -2,9 +2,6 @@
 
 #![allow(non_snake_case)]
 
-
-
-
 pub fn list_pending_affirmations() -> Vec<crate::guardianship::SuspendedTxView> {
     crate::guardianship::list_pending_affirmations()
 }

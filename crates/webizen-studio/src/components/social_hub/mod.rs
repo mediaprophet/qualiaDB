@@ -7,24 +7,24 @@
 
 #![allow(non_snake_case)]
 
-pub mod types;
 pub mod helpers;
 pub mod people;
-pub mod reception;
 pub mod projects;
+pub mod reception;
+pub mod types;
 
-use dioxus::prelude::*;
 use crate::Route;
+use dioxus::prelude::*;
 
 #[cfg(target_arch = "wasm32")]
 use serde_json::json;
 
-use types::*;
 #[allow(unused_imports)]
 use helpers::*;
-use people::{PeopleSignals, render_people};
-use reception::{ReceptionSignals, render_reception};
-use projects::{ProjectsSignals, render_projects};
+use people::{render_people, PeopleSignals};
+use projects::{render_projects, ProjectsSignals};
+use reception::{render_reception, ReceptionSignals};
+use types::*;
 
 /// Relations habitat: Chat · People · Reception · Mail · Projects.
 #[component]
@@ -80,9 +80,8 @@ pub fn SocialHub() -> Element {
     let peers = use_signal(Vec::<serde_json::Value>::new);
     let magic_accept = use_signal(String::new);
     let active_model_chip = use_signal(String::new);
-    let vault_lifecycle = use_signal(|| {
-        crate::components::wellfair::host_dto::VaultLifecycle::Unconfigured
-    });
+    let vault_lifecycle =
+        use_signal(|| crate::components::wellfair::host_dto::VaultLifecycle::Unconfigured);
     let setup_banner = use_signal(String::new);
     let mesh_status_text = use_signal(String::new);
     let collab_list = use_signal(Vec::<serde_json::Value>::new);
@@ -109,7 +108,9 @@ pub fn SocialHub() -> Element {
         let mut tab = tab;
         use_effect(move || {
             spawn(async move {
-                if let Ok(prof) = invoke_json::<serde_json::Value>("get_user_profile", json!({})).await {
+                if let Ok(prof) =
+                    invoke_json::<serde_json::Value>("get_user_profile", json!({})).await
+                {
                     let n = s(&prof, "display_name");
                     if !n.is_empty() {
                         display_name.set(n);
@@ -153,7 +154,10 @@ pub fn SocialHub() -> Element {
                         .get("receiver_running")
                         .and_then(|x| x.as_bool())
                         .unwrap_or(false);
-                    let people = st.get("has_people").and_then(|x| x.as_bool()).unwrap_or(false);
+                    let people = st
+                        .get("has_people")
+                        .and_then(|x| x.as_bool())
+                        .unwrap_or(false);
                     let banner = format!(
                         "Setup: {domains_n} domain(s) · {mailboxes} mailbox(es) · receiver {} · people {}.",
                         if recv { "on" } else { "off" },
@@ -262,13 +266,43 @@ pub fn SocialHub() -> Element {
     #[cfg(not(target_arch = "wasm32"))]
     {
         let _ = (
-            &contacts, &invite_code, &invite_out, &invite_mailto, &invite_in, &display_name,
-            &group_title, &group_dids, &magic_link, &relation, &domain_name, &domain_label,
-            &domains, &front_doors, &dns_name, &dns_txt, &turtle, &project_name, &active_project,
-            &active_project_id, &project_list, &last_project_json, &peers, &magic_accept,
-            &active_model_chip, &vault_lifecycle, &status, &tab, &setup_banner,
-            &mesh_status_text, &collab_list, &collab_did, &collab_name, &collab_role,
-            &peer_endpoint_edit, &peer_endpoint_did, &coop_package_text,
+            &contacts,
+            &invite_code,
+            &invite_out,
+            &invite_mailto,
+            &invite_in,
+            &display_name,
+            &group_title,
+            &group_dids,
+            &magic_link,
+            &relation,
+            &domain_name,
+            &domain_label,
+            &domains,
+            &front_doors,
+            &dns_name,
+            &dns_txt,
+            &turtle,
+            &project_name,
+            &active_project,
+            &active_project_id,
+            &project_list,
+            &last_project_json,
+            &peers,
+            &magic_accept,
+            &active_model_chip,
+            &vault_lifecycle,
+            &status,
+            &tab,
+            &setup_banner,
+            &mesh_status_text,
+            &collab_list,
+            &collab_did,
+            &collab_name,
+            &collab_role,
+            &peer_endpoint_edit,
+            &peer_endpoint_did,
+            &coop_package_text,
         );
     }
 
@@ -363,9 +397,15 @@ pub fn SocialHub() -> Element {
     };
 
     let vault_chip = match vault_lifecycle() {
-        crate::components::wellfair::host_dto::VaultLifecycle::Unlocked => ("Vault unlocked", "#a7f3d0", "#064e3b", "#10b981"),
-        crate::components::wellfair::host_dto::VaultLifecycle::Locked => ("Vault locked", "#fde68a", "#78350f", "#b45309"),
-        crate::components::wellfair::host_dto::VaultLifecycle::Unconfigured => ("Vault not set up", "#94a3b8", "#1e293b", "#334155"),
+        crate::components::wellfair::host_dto::VaultLifecycle::Unlocked => {
+            ("Vault unlocked", "#a7f3d0", "#064e3b", "#10b981")
+        }
+        crate::components::wellfair::host_dto::VaultLifecycle::Locked => {
+            ("Vault locked", "#fde68a", "#78350f", "#b45309")
+        }
+        crate::components::wellfair::host_dto::VaultLifecycle::Unconfigured => {
+            ("Vault not set up", "#94a3b8", "#1e293b", "#334155")
+        }
     };
 
     rsx! {

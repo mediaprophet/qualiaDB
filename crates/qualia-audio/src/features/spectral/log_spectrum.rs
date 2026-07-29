@@ -14,11 +14,7 @@ use crate::types::AudioError;
 /// # Errors
 /// - [`AudioError::InvalidParameter`] if `floor_db` is not finite.
 /// - [`AudioError::OutputBufferTooSmall`] if `out_log` is shorter than `mag`.
-pub fn log_spectrum(
-    mag: &[f32],
-    floor_db: f32,
-    out_log: &mut [f32],
-) -> Result<usize, AudioError> {
+pub fn log_spectrum(mag: &[f32], floor_db: f32, out_log: &mut [f32]) -> Result<usize, AudioError> {
     if !floor_db.is_finite() {
         return Err(AudioError::InvalidParameter);
     }

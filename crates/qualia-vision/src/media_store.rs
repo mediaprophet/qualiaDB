@@ -171,9 +171,7 @@ fn parse_record_json(s: &str) -> Result<MediaRecord, String> {
     // Minimal hand parser for our fixed schema (no serde dep on vision crate).
     fn field<'a>(s: &'a str, key: &str) -> Result<&'a str, String> {
         let pat = format!("\"{key}\"");
-        let i = s
-            .find(&pat)
-            .ok_or_else(|| format!("missing {key}"))?;
+        let i = s.find(&pat).ok_or_else(|| format!("missing {key}"))?;
         let rest = &s[i + pat.len()..];
         let rest = rest.trim_start_matches(|c: char| c == ' ' || c == ':' || c == '\t');
         if rest.starts_with('"') {
@@ -198,8 +196,8 @@ fn parse_record_json(s: &str) -> Result<MediaRecord, String> {
     let height: u32 = field(s, "height")?
         .parse()
         .map_err(|e| format!("height: {e}"))?;
-    let retention = RetentionClass::parse(field(s, "retention")?)
-        .ok_or_else(|| "bad retention".to_string())?;
+    let retention =
+        RetentionClass::parse(field(s, "retention")?).ok_or_else(|| "bad retention".to_string())?;
     let imported_unix: u64 = field(s, "imported_unix")?
         .parse()
         .map_err(|e| format!("imported_unix: {e}"))?;
@@ -242,10 +240,24 @@ mod tests {
         let store = MediaStore::open(&dir).unwrap();
         let bytes = b"\x00\xff\x00hello-vision-fixture";
         let r1 = store
-            .import_bytes(bytes, "application/octet-stream", 1, 1, RetentionClass::Public, 1)
+            .import_bytes(
+                bytes,
+                "application/octet-stream",
+                1,
+                1,
+                RetentionClass::Public,
+                1,
+            )
             .unwrap();
         let r2 = store
-            .import_bytes(bytes, "application/octet-stream", 1, 1, RetentionClass::Public, 2)
+            .import_bytes(
+                bytes,
+                "application/octet-stream",
+                1,
+                1,
+                RetentionClass::Public,
+                2,
+            )
             .unwrap();
         assert_eq!(r1.digest_hex, r2.digest_hex);
         assert!(store.exists(&r1.digest_hex));

@@ -10,9 +10,7 @@ use crate::midi::message::program_change::ProgramChange;
 use crate::midi::message::MidiMessage;
 use crate::types::AudioError;
 
-use super::packet::{
-    Midi2ChannelVoice, UmpPacket, MT_MIDI1_CHANNEL_VOICE, MT_MIDI2_CHANNEL_VOICE,
-};
+use super::packet::{Midi2ChannelVoice, UmpPacket, MT_MIDI1_CHANNEL_VOICE, MT_MIDI2_CHANNEL_VOICE};
 use super::scale::scale_down;
 
 /// The decoded content of a UMP, spanning the message types this lane models.
@@ -39,15 +37,38 @@ pub fn decode_midi1_channel_voice(packet: UmpPacket) -> Result<MidiMessage, Audi
     let d1 = ((w >> 8) & 0x7F) as u8;
     let d2 = (w & 0x7F) as u8;
     let msg = match status & 0xF0 {
-        0x80 => MidiMessage::NoteOff(NoteOff { channel, note: d1, velocity: d2 }),
-        0x90 => MidiMessage::NoteOn(NoteOn { channel, note: d1, velocity: d2 }),
-        0xA0 => MidiMessage::PolyPressure(PolyPressure { channel, note: d1, pressure: d2 }),
-        0xB0 => MidiMessage::ControlChange(ControlChange { channel, controller: d1, value: d2 }),
-        0xC0 => MidiMessage::ProgramChange(ProgramChange { channel, program: d1 }),
-        0xD0 => MidiMessage::ChannelPressure(ChannelPressure { channel, pressure: d1 }),
-        0xE0 => {
-            MidiMessage::PitchBend(PitchBend { channel, value: ((d2 as u16) << 7) | (d1 as u16) })
-        }
+        0x80 => MidiMessage::NoteOff(NoteOff {
+            channel,
+            note: d1,
+            velocity: d2,
+        }),
+        0x90 => MidiMessage::NoteOn(NoteOn {
+            channel,
+            note: d1,
+            velocity: d2,
+        }),
+        0xA0 => MidiMessage::PolyPressure(PolyPressure {
+            channel,
+            note: d1,
+            pressure: d2,
+        }),
+        0xB0 => MidiMessage::ControlChange(ControlChange {
+            channel,
+            controller: d1,
+            value: d2,
+        }),
+        0xC0 => MidiMessage::ProgramChange(ProgramChange {
+            channel,
+            program: d1,
+        }),
+        0xD0 => MidiMessage::ChannelPressure(ChannelPressure {
+            channel,
+            pressure: d1,
+        }),
+        0xE0 => MidiMessage::PitchBend(PitchBend {
+            channel,
+            value: ((d2 as u16) << 7) | (d1 as u16),
+        }),
         _ => return Err(AudioError::UnsupportedFormat),
     };
     Ok(msg)
@@ -84,8 +105,16 @@ pub fn decode_midi2_channel_voice(packet: UmpPacket) -> Result<Midi2ChannelVoice
             attribute_type: (w0 & 0xFF) as u8,
             attribute_data: (w1 & 0xFFFF) as u16,
         },
-        0xA0 => Midi2ChannelVoice::PolyPressure { channel, note, pressure: w1 },
-        0xB0 => Midi2ChannelVoice::ControlChange { channel, index, value: w1 },
+        0xA0 => Midi2ChannelVoice::PolyPressure {
+            channel,
+            note,
+            pressure: w1,
+        },
+        0xB0 => Midi2ChannelVoice::ControlChange {
+            channel,
+            index,
+            value: w1,
+        },
         0xC0 => Midi2ChannelVoice::ProgramChange {
             channel,
             program: (w1 >> 24) as u8,
@@ -93,7 +122,10 @@ pub fn decode_midi2_channel_voice(packet: UmpPacket) -> Result<Midi2ChannelVoice
             bank_msb: ((w1 >> 8) & 0x7F) as u8,
             bank_lsb: (w1 & 0x7F) as u8,
         },
-        0xD0 => Midi2ChannelVoice::ChannelPressure { channel, pressure: w1 },
+        0xD0 => Midi2ChannelVoice::ChannelPressure {
+            channel,
+            pressure: w1,
+        },
         0xE0 => Midi2ChannelVoice::PitchBend { channel, value: w1 },
         _ => return Err(AudioError::UnsupportedFormat),
     };
@@ -115,31 +147,63 @@ pub fn decode(packet: UmpPacket) -> Result<UmpDecoded, AudioError> {
 /// velocity 1 so it is not misread as a MIDI 1.0 implicit note-off.
 pub fn translate_midi2_to_midi1(cv: Midi2ChannelVoice) -> Result<MidiMessage, AudioError> {
     let msg = match cv {
-        Midi2ChannelVoice::NoteOff { channel, note, velocity, .. } => MidiMessage::NoteOff(
-            NoteOff { channel, note, velocity: scale_down(velocity as u32, 16, 7) as u8 },
-        ),
-        Midi2ChannelVoice::NoteOn { channel, note, velocity, .. } => {
+        Midi2ChannelVoice::NoteOff {
+            channel,
+            note,
+            velocity,
+            ..
+        } => MidiMessage::NoteOff(NoteOff {
+            channel,
+            note,
+            velocity: scale_down(velocity as u32, 16, 7) as u8,
+        }),
+        Midi2ChannelVoice::NoteOn {
+            channel,
+            note,
+            velocity,
+            ..
+        } => {
             let mut v7 = scale_down(velocity as u32, 16, 7) as u8;
             if v7 == 0 {
                 v7 = 1; // avoid implicit note-off on down-translation
             }
-            MidiMessage::NoteOn(NoteOn { channel, note, velocity: v7 })
+            MidiMessage::NoteOn(NoteOn {
+                channel,
+                note,
+                velocity: v7,
+            })
         }
-        Midi2ChannelVoice::PolyPressure { channel, note, pressure } => MidiMessage::PolyPressure(
-            PolyPressure { channel, note, pressure: scale_down(pressure, 32, 7) as u8 },
-        ),
-        Midi2ChannelVoice::ControlChange { channel, index, value } => MidiMessage::ControlChange(
-            ControlChange { channel, controller: index, value: scale_down(value, 32, 7) as u8 },
-        ),
-        Midi2ChannelVoice::ProgramChange { channel, program, .. } => {
-            MidiMessage::ProgramChange(ProgramChange { channel, program })
+        Midi2ChannelVoice::PolyPressure {
+            channel,
+            note,
+            pressure,
+        } => MidiMessage::PolyPressure(PolyPressure {
+            channel,
+            note,
+            pressure: scale_down(pressure, 32, 7) as u8,
+        }),
+        Midi2ChannelVoice::ControlChange {
+            channel,
+            index,
+            value,
+        } => MidiMessage::ControlChange(ControlChange {
+            channel,
+            controller: index,
+            value: scale_down(value, 32, 7) as u8,
+        }),
+        Midi2ChannelVoice::ProgramChange {
+            channel, program, ..
+        } => MidiMessage::ProgramChange(ProgramChange { channel, program }),
+        Midi2ChannelVoice::ChannelPressure { channel, pressure } => {
+            MidiMessage::ChannelPressure(ChannelPressure {
+                channel,
+                pressure: scale_down(pressure, 32, 7) as u8,
+            })
         }
-        Midi2ChannelVoice::ChannelPressure { channel, pressure } => MidiMessage::ChannelPressure(
-            ChannelPressure { channel, pressure: scale_down(pressure, 32, 7) as u8 },
-        ),
-        Midi2ChannelVoice::PitchBend { channel, value } => {
-            MidiMessage::PitchBend(PitchBend { channel, value: scale_down(value, 32, 14) as u16 })
-        }
+        Midi2ChannelVoice::PitchBend { channel, value } => MidiMessage::PitchBend(PitchBend {
+            channel,
+            value: scale_down(value, 32, 14) as u16,
+        }),
     };
     Ok(msg)
 }
@@ -186,9 +250,13 @@ mod tests {
 
     #[test]
     fn decode_dispatch() {
-        let p = encode_midi1_channel_voice(0, MidiMessage::NoteOn(MsgNoteOn::new(0, 60, 100).unwrap()))
-            .unwrap();
-        assert!(matches!(decode(p).unwrap(), UmpDecoded::Midi1(MidiMessage::NoteOn(_))));
+        let p =
+            encode_midi1_channel_voice(0, MidiMessage::NoteOn(MsgNoteOn::new(0, 60, 100).unwrap()))
+                .unwrap();
+        assert!(matches!(
+            decode(p).unwrap(),
+            UmpDecoded::Midi1(MidiMessage::NoteOn(_))
+        ));
     }
 
     #[test]

@@ -135,8 +135,7 @@ mod tests {
     fn attested_permits_citable() {
         let nodes = [Tensor10D::default()];
         let prov = ProvenanceSidecar::new(b"source-rgb-stub".to_vec(), "image/rgb8", "CC0");
-        let bytes =
-            compile_mesh_to_10d_vision_with_provenance(&tri_mesh(), &nodes, &prov).unwrap();
+        let bytes = compile_mesh_to_10d_vision_with_provenance(&tri_mesh(), &nodes, &prov).unwrap();
         assert!(matches!(
             evaluate_vision_10d_barrier(&bytes, Vision10dAccess::CitableRequireProvenance),
             Vision10dBarrier::Permit

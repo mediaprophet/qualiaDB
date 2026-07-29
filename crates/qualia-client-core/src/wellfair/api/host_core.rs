@@ -5,9 +5,13 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use super::super::accessibility_prefs;
 use super::super::consent_store::ConsentGrantRecord;
+use super::super::export_package::{
+    build_export_package, export_policy_receipt, ExportReceipt, HealthExportPackage,
+};
+use super::super::graph_query::GraphCoverageRow;
+use super::super::host_state::WellfairHostSnapshot;
 use super::super::host_state::{
-    AccessibilityPreferences, ConsentGrantDraft, PolicyDecisionDto,
-    SubmitOutcome,
+    AccessibilityPreferences, ConsentGrantDraft, PolicyDecisionDto, SubmitOutcome,
 };
 use super::super::import_samsung::{
     import_samsung_folder, ingest_companion_health_bundle, SamsungImportReport,
@@ -15,14 +19,10 @@ use super::super::import_samsung::{
 use super::super::journal::JournalEntry;
 use super::super::policy::{DecisionResult, PolicyDecisionService};
 use super::super::receipt::{receipt_from_decision, ReceiptRecord};
-use super::super::export_package::{
-    build_export_package, export_policy_receipt, ExportReceipt, HealthExportPackage,
-};
-use super::super::graph_query::GraphCoverageRow;
-use super::super::sync_outbox::SyncOutboxEntry;
+use super::super::sanctuary::{apply_sanctuary_projection, load_prefs as load_sanctuary_prefs};
 use super::super::snapshot::build_host_snapshot;
+use super::super::sync_outbox::SyncOutboxEntry;
 use super::super::vault::VaultService;
-use super::super::host_state::WellfairHostSnapshot;
 use ed25519_dalek::SigningKey;
 use qualia_core_db::key_vault::KeyVault;
 use sha2::{Digest, Sha256};
@@ -31,19 +31,14 @@ use wellfare_core::conditions::{
     allergy_summary, build_allergy_envelope, build_condition_envelope, condition_summary,
     AllergyReport, ConditionReport,
 };
-use wellfare_core::personal_records::{
-    build_disputed_diagnosis_envelope, build_housing_safety_envelope,
-    disputed_diagnosis_summary, housing_safety_summary, DisputedDiagnosisReport,
-    HousingSafetyReport,
-};
-use super::super::sanctuary::{
-    apply_sanctuary_projection, load_prefs as load_sanctuary_prefs,
-};
 use wellfare_core::medication::{
     self, AdministrationStatus, DietEntry, MedicationAdministration, MedicationCatalogEntry,
 };
+use wellfare_core::personal_records::{
+    build_disputed_diagnosis_envelope, build_housing_safety_envelope, disputed_diagnosis_summary,
+    housing_safety_summary, DisputedDiagnosisReport, HousingSafetyReport,
+};
 use wellfare_core::record::RecordEnvelope;
-
 
 use super::*;
 
@@ -74,11 +69,19 @@ impl WebizenHostApi {
         accessibility_prefs::load(&self.storage_root)
     }
 
-    pub fn snapshot_from_vault(key_vault: &KeyVault, owner_label: &str, demo_mode: bool) -> WellfairHostSnapshot {
+    pub fn snapshot_from_vault(
+        key_vault: &KeyVault,
+        owner_label: &str,
+        demo_mode: bool,
+    ) -> WellfairHostSnapshot {
         build_host_snapshot(key_vault, true, owner_label, demo_mode)
     }
 
-    pub fn build_snapshot(&mut self, key_vault: &KeyVault, owner_label: &str) -> WellfairHostSnapshot {
+    pub fn build_snapshot(
+        &mut self,
+        key_vault: &KeyVault,
+        owner_label: &str,
+    ) -> WellfairHostSnapshot {
         let mut snap = super::super::snapshot::build_host_snapshot_with_storage(
             key_vault,
             true,
@@ -110,7 +113,6 @@ impl WebizenHostApi {
         snap
     }
 
-
     /// Fetches a `.10d` asset on-demand instead of loading all assets upfront.
     pub fn fetch_10d_asset_on_demand(&self, _asset_uri: &str) -> Result<Vec<u8>, String> {
         // Returns the raw asset binary. For now, it returns an empty vector.
@@ -125,6 +127,11 @@ impl WebizenHostApi {
     /// desktop can run blocking acquisition off the async runtime without holding the host lock.
     pub fn storage_root(&self) -> &std::path::Path {
         &self.storage_root
+    }
+
+    /// Stable hash used by local graph evaluators without exposing the person's DID.
+    pub fn owner_did_hash(&self) -> u64 {
+        qualia_core_db::q_hash(&self.owner_did)
     }
 
     pub(crate) fn chora_signing_key(&self) -> &SigningKey {
@@ -186,7 +193,9 @@ impl WebizenHostApi {
             &decision,
             self.vault.last_checkpoint_hash(),
         );
-        self.vault.append_receipt(&receipt).map_err(|e| e.to_string())?;
+        self.vault
+            .append_receipt(&receipt)
+            .map_err(|e| e.to_string())?;
         Ok(grant)
     }
 
@@ -207,7 +216,9 @@ impl WebizenHostApi {
                 &decision,
                 self.vault.last_checkpoint_hash(),
             );
-            self.vault.append_receipt(&receipt).map_err(|e| e.to_string())?;
+            self.vault
+                .append_receipt(&receipt)
+                .map_err(|e| e.to_string())?;
         }
         Ok(revoked)
     }
@@ -352,13 +363,11 @@ impl WebizenHostApi {
         self.finalize_batch().ok();
         let entries = self.list_health_records(limit)?;
         let exported_at = Self::now_unix() as u32;
-        let pkg = build_export_package(
-            &entries,
-            exported_at,
-            self.vault.last_checkpoint_hash(),
-        );
+        let pkg = build_export_package(&entries, exported_at, self.vault.last_checkpoint_hash());
         let receipt = export_policy_receipt(&pkg, exported_at);
-        self.vault.append_receipt(&receipt).map_err(|e| e.to_string())?;
+        self.vault
+            .append_receipt(&receipt)
+            .map_err(|e| e.to_string())?;
         let export_receipt = ExportReceipt::from_package(&pkg);
         Ok((pkg, export_receipt))
     }
@@ -595,7 +604,11 @@ impl WebizenHostApi {
             .ok_or_else(|| "diet entry committed but journal empty".into())
     }
 
-    pub fn list_journal_by_kind(&self, kind: &str, limit: usize) -> Result<Vec<JournalEntry>, String> {
+    pub fn list_journal_by_kind(
+        &self,
+        kind: &str,
+        limit: usize,
+    ) -> Result<Vec<JournalEntry>, String> {
         Ok(self
             .list_health_records(limit)?
             .into_iter()
@@ -638,7 +651,10 @@ impl WebizenHostApi {
         elevation_deg: f64,
     ) -> Result<webizen_render::scene_contract::RenderScene, String> {
         let report = self.compute_anatomy_view("person", 2)?;
-        Ok(super::super::anatomy_render::body_scene(&report, azimuth_deg, elevation_deg))
+        Ok(super::super::anatomy_render::body_scene(
+            &report,
+            azimuth_deg,
+            elevation_deg,
+        ))
     }
-
 }

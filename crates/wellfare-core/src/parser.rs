@@ -1,12 +1,14 @@
-use serde::Deserialize;
+use crate::models::{HeartRateRecord, SleepRecord, StepRecord, WeightRecord};
 use chrono::{DateTime, FixedOffset, NaiveDateTime, TimeZone};
-use crate::models::{WeightRecord, SleepRecord, HeartRateRecord, StepRecord};
+use serde::Deserialize;
 
 pub fn clean_csv_content(content: &str) -> String {
     let mut lines = content.lines();
     if let Some(first_line) = lines.next() {
         let stripped = first_line.trim();
-        if stripped.starts_with("com.samsung.health.") || stripped.starts_with("com.samsung.shealth.") {
+        if stripped.starts_with("com.samsung.health.")
+            || stripped.starts_with("com.samsung.shealth.")
+        {
             return lines.collect::<Vec<&str>>().join("\n");
         }
     }
@@ -48,7 +50,10 @@ pub fn parse_time_offset_minutes(offset_str: &str) -> i32 {
     0
 }
 
-pub fn parse_samsung_datetime(value: &str, offset_minutes: i32) -> Result<DateTime<FixedOffset>, String> {
+pub fn parse_samsung_datetime(
+    value: &str,
+    offset_minutes: i32,
+) -> Result<DateTime<FixedOffset>, String> {
     let value = value.trim();
     let offset = FixedOffset::east_opt(offset_minutes * 60)
         .ok_or_else(|| format!("Invalid timezone offset: {} minutes", offset_minutes))?;
@@ -81,7 +86,9 @@ pub fn parse_samsung_datetime(value: &str, offset_minutes: i32) -> Result<DateTi
             if let Some(local_dt) = offset.from_local_datetime(&naive).single() {
                 return Ok(local_dt);
             } else {
-                return Ok(DateTime::<FixedOffset>::from_naive_utc_and_offset(naive, offset));
+                return Ok(DateTime::<FixedOffset>::from_naive_utc_and_offset(
+                    naive, offset,
+                ));
             }
         }
     }
@@ -112,14 +119,14 @@ pub fn parse_weight_csv(content: &str) -> Result<Vec<WeightRecord>, String> {
         .flexible(true)
         .trim(csv::Trim::All)
         .from_reader(cleaned.as_bytes());
-    
+
     let mut records = Vec::new();
     for result in rdr.deserialize::<WeightCsvRow>() {
         let row = result.map_err(|e| format!("CSV deserialize error: {}", e))?;
         let offset_str = row.time_offset.unwrap_or_default();
         let offset = parse_time_offset_minutes(&offset_str);
         let start_datetime = parse_samsung_datetime(&row.start_time, offset)?;
-        
+
         records.push(WeightRecord {
             uuid: row.uuid,
             weight: row.weight,
@@ -154,7 +161,7 @@ pub fn parse_sleep_csv(content: &str) -> Result<Vec<SleepRecord>, String> {
         .flexible(true)
         .trim(csv::Trim::All)
         .from_reader(cleaned.as_bytes());
-    
+
     let mut records = Vec::new();
     for result in rdr.deserialize::<SleepCsvRow>() {
         let row = result.map_err(|e| format!("CSV deserialize error: {}", e))?;
@@ -162,7 +169,7 @@ pub fn parse_sleep_csv(content: &str) -> Result<Vec<SleepRecord>, String> {
         let offset = parse_time_offset_minutes(&offset_str);
         let start_datetime = parse_samsung_datetime(&row.start_time, offset)?;
         let end_datetime = parse_samsung_datetime(&row.end_time, offset)?;
-        
+
         records.push(SleepRecord {
             uuid: row.uuid,
             sleep_duration: row.sleep_duration,
@@ -196,14 +203,14 @@ pub fn parse_heart_rate_csv(content: &str) -> Result<Vec<HeartRateRecord>, Strin
         .flexible(true)
         .trim(csv::Trim::All)
         .from_reader(cleaned.as_bytes());
-    
+
     let mut records = Vec::new();
     for result in rdr.deserialize::<HeartRateCsvRow>() {
         let row = result.map_err(|e| format!("CSV deserialize error: {}", e))?;
         let offset_str = row.time_offset.unwrap_or_default();
         let offset = parse_time_offset_minutes(&offset_str);
         let start_datetime = parse_samsung_datetime(&row.start_time, offset)?;
-        
+
         records.push(HeartRateRecord {
             uuid: row.uuid,
             heart_rate: row.heart_rate,
@@ -234,7 +241,7 @@ pub fn parse_steps_csv(content: &str) -> Result<Vec<StepRecord>, String> {
         .flexible(true)
         .trim(csv::Trim::All)
         .from_reader(cleaned.as_bytes());
-    
+
     let mut records = Vec::new();
     for result in rdr.deserialize::<StepCsvRow>() {
         let row = result.map_err(|e| format!("CSV deserialize error: {}", e))?;
@@ -242,7 +249,7 @@ pub fn parse_steps_csv(content: &str) -> Result<Vec<StepRecord>, String> {
         let offset = parse_time_offset_minutes(&offset_str);
         let start_datetime = parse_samsung_datetime(&row.start_time, offset)?;
         let end_datetime = parse_samsung_datetime(&row.end_time, offset)?;
-        
+
         records.push(StepRecord {
             uuid: row.uuid,
             count: row.count,

@@ -15,7 +15,7 @@ use serde::{Deserialize, Serialize};
 
 use super::factor::Factor;
 use super::knowledge::KnowledgeBase;
-use super::lens::{build_view, AnatomyView, Lens};
+use super::lens::{AnatomyView, Lens, build_view};
 use super::temporal::Timeline;
 
 /// A normalized reference to one health record — the minimum the bridge needs.
@@ -36,7 +36,13 @@ pub struct RecordRef {
 
 impl RecordRef {
     pub fn new(id: impl Into<String>, kind: impl Into<String>, label: impl Into<String>) -> Self {
-        Self { id: id.into(), kind: kind.into(), label: label.into(), at_minute: None, dose_scale_pct: None }
+        Self {
+            id: id.into(),
+            kind: kind.into(),
+            label: label.into(),
+            at_minute: None,
+            dose_scale_pct: None,
+        }
     }
 
     pub fn at(mut self, at_minute: i64) -> Self {
@@ -56,7 +62,14 @@ fn key_prefixes(kind: &str) -> &'static [&'static str] {
         "condition" | "disputed_diagnosis" => &["cond"],
         "medication" | "med_administration" => &["med"],
         // A diet log could be any ingestible — try the food/botanical/supplement families.
-        "diet" | "food" | "nutrition" => &["food", "whole-food", "herb", "tea", "supplement", "nutrient"],
+        "diet" | "food" | "nutrition" => &[
+            "food",
+            "whole-food",
+            "herb",
+            "tea",
+            "supplement",
+            "nutrient",
+        ],
         "herb" => &["herb"],
         "tea" => &["tea"],
         "supplement" => &["supplement"],
@@ -71,7 +84,10 @@ pub fn knowledge_key_candidates(kind: &str, label: &str) -> Vec<String> {
     if slug.is_empty() {
         return Vec::new();
     }
-    key_prefixes(kind).iter().map(|p| format!("{p}:{slug}")).collect()
+    key_prefixes(kind)
+        .iter()
+        .map(|p| format!("{p}:{slug}"))
+        .collect()
 }
 
 /// The outcome of mapping records to factors: what resolved, and what didn't (honestly surfaced).
@@ -97,7 +113,10 @@ pub fn records_to_factors(records: &[RecordRef], kb: &KnowledgeBase) -> BridgeRe
 
 /// Map records to a temporal [`Timeline`] via the knowledge base (uses each record's `at_minute` /
 /// `dose_scale_pct`, defaulting to 0 / 100). Unmapped records are returned alongside.
-pub fn records_to_timeline(records: &[RecordRef], kb: &KnowledgeBase) -> (Timeline, Vec<(String, String)>) {
+pub fn records_to_timeline(
+    records: &[RecordRef],
+    kb: &KnowledgeBase,
+) -> (Timeline, Vec<(String, String)>) {
     let mut tl = Timeline::new();
     let mut unmapped = Vec::new();
     for r in records {
@@ -133,7 +152,9 @@ fn resolve<'a>(
     kind: &str,
     label: &str,
 ) -> Option<&'a super::knowledge::FactorKnowledge> {
-    knowledge_key_candidates(kind, label).into_iter().find_map(|k| kb.get(&k))
+    knowledge_key_candidates(kind, label)
+        .into_iter()
+        .find_map(|k| kb.get(&k))
 }
 
 #[cfg(test)]
@@ -143,8 +164,14 @@ mod tests {
 
     #[test]
     fn candidate_keys_are_kind_appropriate() {
-        assert_eq!(knowledge_key_candidates("condition", "Type 2 Diabetes"), vec!["cond:type-2-diabetes"]);
-        assert_eq!(knowledge_key_candidates("medication", "Warfarin"), vec!["med:warfarin"]);
+        assert_eq!(
+            knowledge_key_candidates("condition", "Type 2 Diabetes"),
+            vec!["cond:type-2-diabetes"]
+        );
+        assert_eq!(
+            knowledge_key_candidates("medication", "Warfarin"),
+            vec!["med:warfarin"]
+        );
         // A diet log fans out across ingestible families.
         let diet = knowledge_key_candidates("diet", "Chamomile");
         assert!(diet.contains(&"tea:chamomile".to_string()));
@@ -166,7 +193,10 @@ mod tests {
         assert_eq!(res.factors.len(), 2);
         assert!(res.factors.iter().any(|f| f.id == "rec:beer-1"));
         assert!(res.factors.iter().any(|f| f.id == "rec:mt-1"));
-        assert_eq!(res.unmapped, vec![("medication".to_string(), "Some Med We Lack".to_string())]);
+        assert_eq!(
+            res.unmapped,
+            vec![("medication".to_string(), "Some Med We Lack".to_string())]
+        );
     }
 
     #[test]
@@ -177,7 +207,11 @@ mod tests {
         let hit = records_to_factors(&[RecordRef::new("r", "diet", "Beer")], &kb);
         assert_eq!(hit.factors.len(), 1, "record label 'Beer' → food:beer");
         let miss = records_to_factors(&[RecordRef::new("r", "diet", "Beer (alcohol)")], &kb);
-        assert_eq!(miss.factors.len(), 0, "the fuller label slugs differently — honestly unmapped");
+        assert_eq!(
+            miss.factors.len(),
+            0,
+            "the fuller label slugs differently — honestly unmapped"
+        );
         assert_eq!(miss.unmapped.len(), 1);
     }
 
@@ -190,7 +224,11 @@ mod tests {
         ];
         let (tl, unmapped) = records_to_timeline(&records, &kb);
         assert!(unmapped.is_empty());
-        let dig = tl.burden_at(60).into_iter().find(|b| b.system_id == "digestive").unwrap();
+        let dig = tl
+            .burden_at(60)
+            .into_iter()
+            .find(|b| b.system_id == "digestive")
+            .unwrap();
         assert!(dig.net_milli > 0);
     }
 

@@ -49,15 +49,7 @@ pub fn eulerian_color_magnify_ex(
     let mut bi = Vec::new();
     let mut bq = Vec::new();
     colour_evm_yiq(
-        frames,
-        n_frames,
-        width,
-        height,
-        params,
-        out,
-        &mut trace,
-        &mut bi,
-        &mut bq,
+        frames, n_frames, width, height, params, out, &mut trace, &mut bi, &mut bq,
     )
 }
 

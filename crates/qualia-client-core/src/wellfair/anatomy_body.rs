@@ -9,10 +9,11 @@
 
 use std::collections::HashMap;
 
-use qualia_core_db::hypermedia::{
-    container_to_nquins, descriptors_to_nquins, AssetRef, AssetRole, Descriptors, HypermediaContainer,
-};
 use qualia_core_db::container_10d::ProvenanceSidecar;
+use qualia_core_db::hypermedia::{
+    container_to_nquins, descriptors_to_nquins, AssetRef, AssetRole, Descriptors,
+    HypermediaContainer,
+};
 use qualia_core_db::render::compile_10d::{compile_organ_asset, CompiledAsset};
 use qualia_core_db::NQuin;
 use wellfare_core::anatomy::{body_system_for_organ, AnatomyModel};
@@ -43,7 +44,13 @@ impl BodyCompileResult {
 
 /// The source-format hint for an organ key, from its extension (default `glb` — the CCF asset format).
 fn format_of(organ_key: &str) -> &'static str {
-    match organ_key.rsplit('.').next().unwrap_or("").to_ascii_lowercase().as_str() {
+    match organ_key
+        .rsplit('.')
+        .next()
+        .unwrap_or("")
+        .to_ascii_lowercase()
+        .as_str()
+    {
         "obj" => "obj",
         "stl" => "stl",
         "gltf" => "gltf",
@@ -88,7 +95,12 @@ pub fn compile_body(model: AnatomyModel, organs: &[(String, Vec<u8>)]) -> BodyCo
             Err(e) => failed.push((organ_key.clone(), e.to_string())),
         }
     }
-    BodyCompileResult { model, organs: compiled, unmapped, failed }
+    BodyCompileResult {
+        model,
+        organs: compiled,
+        unmapped,
+        failed,
+    }
 }
 
 // ── An organ / body as a HYPERMEDIA CONTAINER (not a bare .10d file) ─────────────────────────────
@@ -114,16 +126,30 @@ fn organ_uri(model: AnatomyModel, organ_key: &str) -> String {
 
 /// Turn a [`CompiledOrgan`] into a [`HypermediaContainer`]. `source_url` is the CCF/HRA CDN URL the GLB was
 /// fetched from — recorded as the immutable source with its licence/creator; pass `None` if unknown.
-pub fn organ_container(organ: &CompiledOrgan, model: AnatomyModel, source_url: Option<&str>) -> OrganContainer {
+pub fn organ_container(
+    organ: &CompiledOrgan,
+    model: AnatomyModel,
+    source_url: Option<&str>,
+) -> OrganContainer {
     let ouri = organ_uri(model, &organ.organ_key);
     let source_uri = source_url
         .map(str::to_string)
         .unwrap_or_else(|| format!("urn:hra:ccf:{}", organ.organ_key));
 
-    let primary = AssetRef::new(&ouri, organ.asset.compiled_digest as u64, "model/qualia-10d", AssetRole::Primary)
-        .derived_from(&source_uri);
-    let mut source = AssetRef::new(&source_uri, organ.asset.source_digest as u64, "model/gltf-binary", AssetRole::Source)
-        .with_licence("CC-BY-4.0");
+    let primary = AssetRef::new(
+        &ouri,
+        organ.asset.compiled_digest as u64,
+        "model/qualia-10d",
+        AssetRole::Primary,
+    )
+    .derived_from(&source_uri);
+    let mut source = AssetRef::new(
+        &source_uri,
+        organ.asset.source_digest as u64,
+        "model/gltf-binary",
+        AssetRole::Source,
+    )
+    .with_licence("CC-BY-4.0");
     source.creator = Some("Human Reference Atlas (CCF), lod.humanatlas.io".into());
     let provenance = AssetRef::new(
         format!("{ouri}#provenance"),
@@ -132,9 +158,12 @@ pub fn organ_container(organ: &CompiledOrgan, model: AnatomyModel, source_url: O
         AssetRole::Provenance,
     );
 
-    let container = HypermediaContainer::new(format!("urn:qualia:container:{}", organ.organ_key), primary.clone())
-        .with_related(source)
-        .with_related(provenance);
+    let container = HypermediaContainer::new(
+        format!("urn:qualia:container:{}", organ.organ_key),
+        primary.clone(),
+    )
+    .with_related(source)
+    .with_related(provenance);
 
     let (mut quins, mut lexicon) = container_to_nquins(&container);
     // Join the organ's own geometry manifest (same identity space) so the container edges connect to the facts.
@@ -165,7 +194,11 @@ pub fn organ_container(organ: &CompiledOrgan, model: AnatomyModel, source_url: O
         lexicon.entry(k).or_insert(v);
     }
 
-    OrganContainer { container, quins, lexicon }
+    OrganContainer {
+        container,
+        quins,
+        lexicon,
+    }
 }
 
 /// Bundle a model's organ containers into a single **body** container — one addressable unit whose members
@@ -181,7 +214,12 @@ pub fn body_container(model: AnatomyModel, organs: &[OrganContainer]) -> OrganCo
     for oc in organs {
         // Each organ's primary asset is a member of the body.
         let p = &oc.container.primary;
-        container = container.with_related(AssetRef::new(&p.uri, p.digest, &p.media_type, AssetRole::Related));
+        container = container.with_related(AssetRef::new(
+            &p.uri,
+            p.digest,
+            &p.media_type,
+            AssetRole::Related,
+        ));
     }
 
     let (mut quins, mut lexicon) = container_to_nquins(&container);
@@ -202,7 +240,11 @@ pub fn body_container(model: AnatomyModel, organs: &[OrganContainer]) -> OrganCo
     for (k, v) in dl {
         lexicon.entry(k).or_insert(v);
     }
-    OrganContainer { container, quins, lexicon }
+    OrganContainer {
+        container,
+        quins,
+        lexicon,
+    }
 }
 
 #[cfg(test)]
@@ -217,26 +259,46 @@ mod tests {
     fn compile_body_resolves_systems_binds_facts_and_reports_unmapped() {
         let organs = vec![
             ("3d-vh-m-lung.obj".to_string(), TRI_OBJ.to_vec()),
-            ("3d-vh-m-blood-vasculature.obj".to_string(), TRI_OBJ.to_vec()),
+            (
+                "3d-vh-m-blood-vasculature.obj".to_string(),
+                TRI_OBJ.to_vec(),
+            ),
             ("3d-vh-m-flux-capacitor.obj".to_string(), TRI_OBJ.to_vec()),
         ];
         let result = compile_body(AnatomyModel::Male, &organs);
         assert_eq!(result.compiled_count(), 2);
-        assert_eq!(result.unmapped, vec!["3d-vh-m-flux-capacitor.obj".to_string()]);
+        assert_eq!(
+            result.unmapped,
+            vec!["3d-vh-m-flux-capacitor.obj".to_string()]
+        );
         assert!(result.failed.is_empty());
 
         // Systems resolved from the organ keys.
-        let lung = result.organs.iter().find(|o| o.organ_key.contains("lung")).unwrap();
+        let lung = result
+            .organs
+            .iter()
+            .find(|o| o.organ_key.contains("lung"))
+            .unwrap();
         assert_eq!(lung.system_id, "respiratory");
-        let vasc = result.organs.iter().find(|o| o.organ_key.contains("vasculature")).unwrap();
+        let vasc = result
+            .organs
+            .iter()
+            .find(|o| o.organ_key.contains("vasculature"))
+            .unwrap();
         assert_eq!(vasc.system_id, "circulatory");
 
         // Each compiled organ carries its system + model facts and a sealed, larger-than-header .10d.
         for organ in &result.organs {
             let vals: Vec<&str> = organ.asset.lexicon.values().map(String::as_str).collect();
-            assert!(vals.contains(&organ.system_id.as_str()), "bodySystem fact present");
+            assert!(
+                vals.contains(&organ.system_id.as_str()),
+                "bodySystem fact present"
+            );
             assert!(vals.contains(&"male"), "anatomyModel fact present");
-            assert!(organ.asset.container_10d.len() > 64, "sealed .10d container");
+            assert!(
+                organ.asset.container_10d.len() > 64,
+                "sealed .10d container"
+            );
         }
     }
 
@@ -263,8 +325,8 @@ mod tests {
         );
         let organ = &result.organs[0];
         // The .10d round-trips back to a mesh.
-        let mesh =
-            qualia_core_db::render::compile_10d::decode_10d_mesh(&organ.asset.container_10d).unwrap();
+        let mesh = qualia_core_db::render::compile_10d::decode_10d_mesh(&organ.asset.container_10d)
+            .unwrap();
         eprintln!(
             "REAL CCF ORGAN {filename} → system={} · {} verts / {} tris · GLB {src_len} B → .10d {} B ({:.2}x)",
             organ.system_id,
@@ -289,8 +351,18 @@ mod tests {
         };
         let all = discover_ref_organs(HRA_SPARQL_ENDPOINT).expect("SPARQL discovery");
         let set = organs_for_model(&all, model);
-        eprintln!("discovered {} total organs, {} {}", all.len(), set.len(), model.as_str());
-        assert!(set.len() > 20, "expected a full {} set, got {}", model.as_str(), set.len());
+        eprintln!(
+            "discovered {} total organs, {} {}",
+            all.len(),
+            set.len(),
+            model.as_str()
+        );
+        assert!(
+            set.len() > 20,
+            "expected a full {} set, got {}",
+            model.as_str(),
+            set.len()
+        );
 
         let mut fetched = Vec::new();
         let mut total_glb = 0usize;
@@ -305,7 +377,11 @@ mod tests {
         }
 
         let result = compile_body(model, &fetched);
-        let total_10d: usize = result.organs.iter().map(|o| o.asset.container_10d.len()).sum();
+        let total_10d: usize = result
+            .organs
+            .iter()
+            .map(|o| o.asset.container_10d.len())
+            .sum();
         let mut systems: Vec<&str> = result.organs.iter().map(|o| o.system_id.as_str()).collect();
         systems.sort();
         systems.dedup();
@@ -323,8 +399,16 @@ mod tests {
             total_glb as f64 / total_10d.max(1) as f64,
         );
         // Every fetched male organ must resolve to a system — the map covers the real full set.
-        assert!(result.unmapped.is_empty(), "unmapped organs: {:?}", result.unmapped);
-        assert!(result.failed.is_empty(), "failed organs: {:?}", result.failed);
+        assert!(
+            result.unmapped.is_empty(),
+            "unmapped organs: {:?}",
+            result.unmapped
+        );
+        assert!(
+            result.failed.is_empty(),
+            "failed organs: {:?}",
+            result.failed
+        );
     }
 
     #[test]
@@ -343,19 +427,38 @@ mod tests {
         let organs = vec![("3d-vh-m-lung.obj".to_string(), TRI_OBJ.to_vec())];
         let body = compile_body(AnatomyModel::Male, &organs);
         let organ = &body.organs[0];
-        let oc = organ_container(organ, AnatomyModel::Male, Some("https://cdn.humanatlas.io/hra/lung.glb"));
+        let oc = organ_container(
+            organ,
+            AnatomyModel::Male,
+            Some("https://cdn.humanatlas.io/hra/lung.glb"),
+        );
 
         let primary = oc.container.primary.subject();
         // Findable by MEANING (its system + generic topics), not by a folder path.
-        assert!(by_topic(&oc.quins, "respiratory").contains(&primary), "found by system topic");
+        assert!(
+            by_topic(&oc.quins, "respiratory").contains(&primary),
+            "found by system topic"
+        );
         assert!(by_topic(&oc.quins, "anatomy").contains(&primary));
         // Lineage + provenance are edges on the asset.
-        assert!(!derived_from(&oc.quins, primary).is_empty(), "derived from its source GLB");
-        assert!(provenance_of(&oc.quins, primary).is_some(), "provenance record bound");
+        assert!(
+            !derived_from(&oc.quins, primary).is_empty(),
+            "derived from its source GLB"
+        );
+        assert!(
+            provenance_of(&oc.quins, primary).is_some(),
+            "provenance record bound"
+        );
         // The container joins to the organ's own geometry manifest (one identity space).
         let vals: Vec<&str> = oc.lexicon.values().map(String::as_str).collect();
-        assert!(vals.contains(&"respiratory"), "manifest system fact present in the container");
-        assert!(oc.quins.iter().all(|q| q.verify_ecc_parity()), "all quins valid parity");
+        assert!(
+            vals.contains(&"respiratory"),
+            "manifest system fact present in the container"
+        );
+        assert!(
+            oc.quins.iter().all(|q| q.verify_ecc_parity()),
+            "all quins valid parity"
+        );
     }
 
     #[test]
@@ -363,11 +466,17 @@ mod tests {
         use qualia_core_db::hypermedia::bundled;
         let organs = vec![
             ("3d-vh-m-lung.obj".to_string(), TRI_OBJ.to_vec()),
-            ("3d-vh-m-blood-vasculature.obj".to_string(), TRI_OBJ.to_vec()),
+            (
+                "3d-vh-m-blood-vasculature.obj".to_string(),
+                TRI_OBJ.to_vec(),
+            ),
         ];
         let result = compile_body(AnatomyModel::Male, &organs);
-        let ocs: Vec<_> =
-            result.organs.iter().map(|o| organ_container(o, AnatomyModel::Male, None)).collect();
+        let ocs: Vec<_> = result
+            .organs
+            .iter()
+            .map(|o| organ_container(o, AnatomyModel::Male, None))
+            .collect();
         let body = body_container(AnatomyModel::Male, &ocs);
         // The body is a semantic bundle of its organ members, not a folder of files.
         let members = bundled(&body.quins, body.container.subject());

@@ -26,7 +26,9 @@ use serde::{Deserialize, Serialize};
 
 use crate::record::EpistemicStatus;
 
-use super::accumulate::{accumulate, interactions, systemic_implications, Interaction, InteractionKind};
+use super::accumulate::{
+    Interaction, InteractionKind, accumulate, interactions, systemic_implications,
+};
 use super::factor::{EvidenceTier, Factor};
 use super::systems::body_system;
 
@@ -117,12 +119,9 @@ pub struct AnatomyView {
     pub uncertainty_note: String,
 }
 
-const PERSON_BOUNDARY: &str =
-    "This is a general picture to help you get a sense of things — it is not medical advice or a diagnosis. If anything here concerns you, it's worth discussing with a clinician.";
-const CLINICIAN_BOUNDARY: &str =
-    "Decision-support considerations only — not a diagnosis, a test order, or a prescription. Surfaced from the person's own records for the clinician's independent evaluation (OSCE-Prac aid).";
-const UNCERTAINTY_NOTE: &str =
-    "Illustrative model, not a measurement. Bodies vary; computed implications are hypotheses to explore, not facts.";
+const PERSON_BOUNDARY: &str = "This is a general picture to help you get a sense of things — it is not medical advice or a diagnosis. If anything here concerns you, it's worth discussing with a clinician.";
+const CLINICIAN_BOUNDARY: &str = "Decision-support considerations only — not a diagnosis, a test order, or a prescription. Surfaced from the person's own records for the clinician's independent evaluation (OSCE-Prac aid).";
+const UNCERTAINTY_NOTE: &str = "Illustrative model, not a measurement. Bodies vary; computed implications are hypotheses to explore, not facts.";
 
 /// Build the view for a lens from a person's factors. `convergence_threshold` is the number of distinct
 /// adverse factors on a system before it is "flagged" (see [`systemic_implications`]).
@@ -169,7 +168,9 @@ fn person_systems(
             let (label, plain) = labels_for(&b.system_id);
             let level = WellbeingLevel::from_net(b.net_milli);
             let imp = implications.iter().find(|i| i.system_id == b.system_id);
-            let converging = imp.map(|i| i.converging_factors.clone()).unwrap_or_default();
+            let converging = imp
+                .map(|i| i.converging_factors.clone())
+                .unwrap_or_default();
             SystemView {
                 headline: person_headline(&plain, level, converging.len()),
                 detail: person_detail(&label, b),
@@ -187,7 +188,11 @@ fn person_systems(
             }
         })
         .collect();
-    views.sort_by(|a, b| b.net_milli.cmp(&a.net_milli).then(a.system_id.cmp(&b.system_id)));
+    views.sort_by(|a, b| {
+        b.net_milli
+            .cmp(&a.net_milli)
+            .then(a.system_id.cmp(&b.system_id))
+    });
     views
 }
 
@@ -215,7 +220,11 @@ fn clinician_systems(
             }
         })
         .collect();
-    views.sort_by(|a, b| b.net_milli.cmp(&a.net_milli).then(a.system_id.cmp(&b.system_id)));
+    views.sort_by(|a, b| {
+        b.net_milli
+            .cmp(&a.net_milli)
+            .then(a.system_id.cmp(&b.system_id))
+    });
     views
 }
 
@@ -245,10 +254,16 @@ fn person_detail(label: &str, b: &super::accumulate::SystemBurden) -> Vec<String
     let mut d = Vec::new();
     d.push(format!("System: {label}."));
     if !b.adverse_contributors.is_empty() {
-        d.push(format!("Contributing: {}.", b.adverse_contributors.join(", ")));
+        d.push(format!(
+            "Contributing: {}.",
+            b.adverse_contributors.join(", ")
+        ));
     }
     if !b.supportive_contributors.is_empty() {
-        d.push(format!("Helping: {}.", b.supportive_contributors.join(", ")));
+        d.push(format!(
+            "Helping: {}.",
+            b.supportive_contributors.join(", ")
+        ));
     }
     d
 }
@@ -263,7 +278,10 @@ fn clinician_headline(label: &str, i: &super::accumulate::SystemicImplication) -
         evidence_word(i.dominant_evidence),
     );
     if ix > 0 {
-        h.push_str(&format!(" {ix} interaction{} to review.", if ix == 1 { "" } else { "s" }));
+        h.push_str(&format!(
+            " {ix} interaction{} to review.",
+            if ix == 1 { "" } else { "s" }
+        ));
     }
     h.push_str(" Consider whether this pattern warrants review.");
     h
@@ -271,7 +289,10 @@ fn clinician_headline(label: &str, i: &super::accumulate::SystemicImplication) -
 
 fn clinician_detail(i: &super::accumulate::SystemicImplication) -> Vec<String> {
     let mut d = Vec::new();
-    d.push(format!("Converging factors: {}.", i.converging_factors.join(", ")));
+    d.push(format!(
+        "Converging factors: {}.",
+        i.converging_factors.join(", ")
+    ));
     for it in &i.interactions {
         d.push(format!(
             "{}: {} + {} on this system — {}.",
@@ -281,16 +302,24 @@ fn clinician_detail(i: &super::accumulate::SystemicImplication) -> Vec<String> {
             interaction_note(it.kind),
         ));
     }
-    d.push(format!("Dominant evidence tier: {}.", evidence_word(i.dominant_evidence)));
+    d.push(format!(
+        "Dominant evidence tier: {}.",
+        evidence_word(i.dominant_evidence)
+    ));
     d.push("Structural considerations only — clinical specifics (tests, medications, referrals) are the clinician's own judgement.".to_string());
     d
 }
 
 fn person_summary(systems: &[SystemView]) -> String {
-    let strained = systems.iter().filter(|s| s.level == WellbeingLevel::UnderStrain).count();
+    let strained = systems
+        .iter()
+        .filter(|s| s.level == WellbeingLevel::UnderStrain)
+        .count();
     match (systems.len(), strained) {
         (0, _) => "Nothing much is adding up right now from what you've logged.".to_string(),
-        (_, 0) => "A few small things to be aware of, but nothing is standing out strongly.".to_string(),
+        (_, 0) => {
+            "A few small things to be aware of, but nothing is standing out strongly.".to_string()
+        }
         (_, n) => format!(
             "A few things seem to be adding up across {n} area{}. It may be worth a chat with a clinician.",
             if n == 1 { "" } else { "s" }
@@ -299,8 +328,10 @@ fn person_summary(systems: &[SystemView]) -> String {
 }
 
 fn clinician_summary(systems: &[SystemView], all_interactions: &[Interaction]) -> String {
-    let herb_drug =
-        all_interactions.iter().filter(|i| i.kind == InteractionKind::HerbDrug).count();
+    let herb_drug = all_interactions
+        .iter()
+        .filter(|i| i.kind == InteractionKind::HerbDrug)
+        .count();
     let mut s = format!(
         "{} system{} flagged by convergence.",
         systems.len(),
@@ -357,7 +388,10 @@ mod tests {
         assert!(strained > settled);
         // Monotonic through the band, and clamped past the ceiling (no runaway σ).
         assert!(burden_to_sigma(150) > settled && burden_to_sigma(150) < strained);
-        assert!(burden_to_sigma(5000) <= 0.93 + 1e-6, "σ clamps at the red end");
+        assert!(
+            burden_to_sigma(5000) <= 0.93 + 1e-6,
+            "σ clamps at the red end"
+        );
         // The coarse band and the continuous σ agree at the extremes.
         assert_eq!(WellbeingLevel::from_net(0), WellbeingLevel::Settled);
         assert_eq!(WellbeingLevel::from_net(1000), WellbeingLevel::UnderStrain);
@@ -372,7 +406,12 @@ mod tests {
         )
     }
     fn herb(id: &str, system: &str, effect: Effect, w: u32) -> Factor {
-        Factor::new(id, FactorKind::Herb, id).targeting(system, effect, EvidenceTier::TraditionalUse, w)
+        Factor::new(id, FactorKind::Herb, id).targeting(
+            system,
+            effect,
+            EvidenceTier::TraditionalUse,
+            w,
+        )
     }
 
     #[test]
@@ -392,7 +431,11 @@ mod tests {
         assert!(view.systems[0].headline.contains("digestion"));
         assert!(!view.systems[0].headline.to_lowercase().contains("diagnos"));
         // Everything computed is a hypothesis; the boundary says "not medical advice".
-        assert!(view.systems.iter().all(|s| s.epistemic_status == EpistemicStatus::Hypothesis));
+        assert!(
+            view.systems
+                .iter()
+                .all(|s| s.epistemic_status == EpistemicStatus::Hypothesis)
+        );
         assert!(view.boundary.contains("not medical advice"));
     }
 
@@ -410,13 +453,20 @@ mod tests {
         assert_eq!(c.interactions[0].kind, InteractionKind::HerbDrug);
         // Headline is structural, includes the review prompt, and stays a hypothesis.
         assert!(c.headline.contains("converging factor"));
-        assert!(c.headline.contains("Consider whether this pattern warrants review"));
+        assert!(
+            c.headline
+                .contains("Consider whether this pattern warrants review")
+        );
         assert_eq!(c.epistemic_status, EpistemicStatus::Hypothesis);
         // Boundary forbids diagnosis/order; summary counts the herb–drug interaction.
         assert!(view.boundary.contains("not a diagnosis"));
         assert!(view.summary.contains("herb–drug"));
         // Detail explicitly leaves clinical specifics to the clinician (no invented tests/meds).
-        assert!(c.detail.iter().any(|d| d.contains("clinician's own judgement")));
+        assert!(
+            c.detail
+                .iter()
+                .any(|d| d.contains("clinician's own judgement"))
+        );
     }
 
     #[test]

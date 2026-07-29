@@ -3,7 +3,6 @@
 use super::*;
 use tauri::{command, AppHandle, Manager};
 
-
 #[command]
 pub fn wellfair_add_credential(
     app: AppHandle,
@@ -62,4 +61,3 @@ pub fn wellfair_present_credential(
         serde_json::to_string(&presentation).map_err(|e| e.to_string())
     })?
 }
-

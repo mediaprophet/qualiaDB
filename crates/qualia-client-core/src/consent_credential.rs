@@ -73,7 +73,11 @@ pub struct EncryptedCommonsPayload {
 
 impl EncryptedCommonsPayload {
     pub fn new(commitment: PayloadCommitment, ciphertext: Vec<u8>, storers: Vec<String>) -> Self {
-        Self { commitment, ciphertext, storers }
+        Self {
+            commitment,
+            ciphertext,
+            storers,
+        }
     }
 
     /// Number of independent copies held — the anti-deletion / durability measure.
@@ -130,7 +134,10 @@ pub enum CredentialAuthority {
     /// A court / judicial order — supports court-of-law access (audit / proceedings).
     Court { order_ref: String },
     /// Another attested authoritative agent (a statutory body, a guardian, …), by its instrument.
-    Authority { authority_did: String, instrument_ref: String },
+    Authority {
+        authority_did: String,
+        instrument_ref: String,
+    },
 }
 
 /// A participating party in a multi-signature authorization.
@@ -151,7 +158,10 @@ pub enum Authorization {
     /// **Multi-signature.** An exercise must be (a) **instigated by one of the participating parties** — so
     /// no outside/authority actor can act unilaterally — AND (b) signed by at least `threshold` of the
     /// `parties`. The "unable to act without instigation of one of the participating parties" rule.
-    MultiSig { parties: Vec<Party>, threshold: usize },
+    MultiSig {
+        parties: Vec<Party>,
+        threshold: usize,
+    },
 }
 
 /// A request to exercise a credential: **who instigated it**, and the party signatures collected.
@@ -164,7 +174,10 @@ pub struct ExerciseRequest {
 
 impl ExerciseRequest {
     pub fn new(instigator_did: impl Into<String>, signatures: Vec<String>) -> Self {
-        Self { instigator_did: instigator_did.into(), signatures }
+        Self {
+            instigator_did: instigator_did.into(),
+            signatures,
+        }
     }
 }
 
@@ -380,7 +393,10 @@ pub fn audit_trail_for_credential<'a>(
     records: &'a [ConductRecord],
     credential_id: &str,
 ) -> Vec<&'a ConductRecord> {
-    records.iter().filter(|r| r.credential_id == credential_id).collect()
+    records
+        .iter()
+        .filter(|r| r.credential_id == credential_id)
+        .collect()
 }
 
 #[cfg(test)]
@@ -422,7 +438,10 @@ mod tests {
     #[test]
     fn granted_payload_is_accessible_until_revoked() {
         let c = cred();
-        assert!(c.payload_accessible(1_100), "active grant → payload accessible");
+        assert!(
+            c.payload_accessible(1_100),
+            "active grant → payload accessible"
+        );
         assert!(c.payload_key(1_100).is_some());
     }
 
@@ -432,12 +451,21 @@ mod tests {
         assert!(c.payload_accessible(1_100));
         c.revoke(1_200);
         // No key, no payload — not a flag, the wrapped key is gone.
-        assert!(!c.payload_accessible(1_300), "revoked → payload unavailable");
-        assert!(c.payload_key(1_300).is_none(), "the wrapped key is destroyed");
+        assert!(
+            !c.payload_accessible(1_300),
+            "revoked → payload unavailable"
+        );
+        assert!(
+            c.payload_key(1_300).is_none(),
+            "the wrapped key is destroyed"
+        );
         assert_eq!(c.revoked_unix, Some(1_200));
         // Even serialized, the key does not travel (it's gone / skipped).
         let json = serde_json::to_string(&c).unwrap();
-        assert!(!json.contains("wrapped"), "no key material persists after revoke");
+        assert!(
+            !json.contains("wrapped"),
+            "no key material persists after revoke"
+        );
     }
 
     #[test]
@@ -462,18 +490,26 @@ mod tests {
 
         // The conduct trail for this credential is untouched by revocation — the accountability survives.
         let audit = audit_trail_for_credential(&trail, "cc-1");
-        assert_eq!(audit.len(), 2, "both acts under cc-1 remain auditable after revoke");
+        assert_eq!(
+            audit.len(),
+            2,
+            "both acts under cc-1 remain auditable after revoke"
+        );
         // Each binds to the payload commitment, proving WHAT was acted on without holding the payload.
         assert!(audit.iter().all(|r| r.concerns_commitment(&C)));
         // And carries a court-auditable attestation.
-        assert!(audit.iter().all(|r| matches!(r.attestation, Attestation::Signature { .. })));
+        assert!(audit
+            .iter()
+            .all(|r| matches!(r.attestation, Attestation::Signature { .. })));
     }
 
     #[test]
     fn a_conduct_record_can_carry_a_zk_attestation() {
         // The ZK path: prove the agent held a valid credential for the committed payload, without the payload.
         let r = ConductRecord {
-            attestation: Attestation::ZkProof { proof_id: "zk:groth16:abc".into() },
+            attestation: Attestation::ZkProof {
+                proof_id: "zk:groth16:abc".into(),
+            },
             ..conduct("k", "cc-1", "acted")
         };
         assert!(matches!(r.attestation, Attestation::ZkProof { .. }));
@@ -485,13 +521,20 @@ mod tests {
         let mut p = EncryptedCommonsPayload::new(
             C,
             b"opaque-ciphertext".to_vec(),
-            vec!["did:wf:person".into(), "did:wf:storer-a".into(), "did:wf:storer-b".into()],
+            vec![
+                "did:wf:person".into(),
+                "did:wf:storer-a".into(),
+                "did:wf:storer-b".into(),
+            ],
         );
         assert!(p.is_durable(), "replicated across the commons");
         assert_eq!(p.replication(), 3);
 
         // A hostile party (or the agent) deleting THEIR copy does not erase the payload.
-        assert!(p.drop_storer("did:wf:storer-a"), "copies remain after one deletion");
+        assert!(
+            p.drop_storer("did:wf:storer-a"),
+            "copies remain after one deletion"
+        );
         assert_eq!(p.replication(), 2);
         assert!(p.drop_storer("did:wf:person"), "still survives");
 
@@ -509,8 +552,12 @@ mod tests {
             vec!["did:wf:person".into(), "did:wf:archive".into()],
         );
         let mut c = cred(); // the only credential granting a key to C
-        // While the credential is live, the payload is not shredded (a key exists).
-        assert!(!is_crypto_shredded(&payload, std::slice::from_ref(&c), 1_100));
+                            // While the credential is live, the payload is not shredded (a key exists).
+        assert!(!is_crypto_shredded(
+            &payload,
+            std::slice::from_ref(&c),
+            1_100
+        ));
         // Destroy the key (revoke) — no credential grants a key to C now → crypto-shredded.
         c.revoke(1_200);
         assert!(
@@ -522,13 +569,18 @@ mod tests {
     }
 
     fn party(did: &str, role: &str) -> Party {
-        Party { did: did.into(), role: role.into() }
+        Party {
+            did: did.into(),
+            role: role.into(),
+        }
     }
 
     #[test]
     fn a_court_or_authority_can_hold_a_credential() {
         // A court credential (e.g. to support proceedings / the audit case).
-        let c = cred().with_authority(CredentialAuthority::Court { order_ref: "order:2026-42".into() });
+        let c = cred().with_authority(CredentialAuthority::Court {
+            order_ref: "order:2026-42".into(),
+        });
         assert!(matches!(c.authority, CredentialAuthority::Court { .. }));
         // Single authorization by default → the holder can access while active.
         assert!(c.payload_accessible(1_100));
@@ -537,7 +589,10 @@ mod tests {
             authority_did: "did:wf:child-protection".into(),
             instrument_ref: "mandate:7".into(),
         });
-        assert!(matches!(c2.authority, CredentialAuthority::Authority { .. }));
+        assert!(matches!(
+            c2.authority,
+            CredentialAuthority::Authority { .. }
+        ));
     }
 
     #[test]
@@ -550,9 +605,15 @@ mod tests {
         let c = cred().requiring_multisig(parties, 2);
 
         // Instigated by a participating party + 2 party signatures → authorised; exercise yields the key.
-        let ok = ExerciseRequest::new("did:wf:person", vec!["did:wf:person".into(), "did:wf:advocate".into()]);
+        let ok = ExerciseRequest::new(
+            "did:wf:person",
+            vec!["did:wf:person".into(), "did:wf:advocate".into()],
+        );
         assert!(c.can_exercise(&ok, 1_100));
-        assert!(c.exercise(&ok, 1_100).is_some(), "authorised exercise yields the key");
+        assert!(
+            c.exercise(&ok, 1_100).is_some(),
+            "authorised exercise yields the key"
+        );
 
         // Below threshold (only 1 party signature) → not authorised.
         let too_few = ExerciseRequest::new("did:wf:person", vec!["did:wf:person".into()]);
@@ -564,40 +625,63 @@ mod tests {
     fn an_authority_cannot_act_unilaterally_under_multisig() {
         // A court holds a multi-sig credential. It CANNOT exercise it without a participating party
         // instigating — this is "unable to act without instigation of one of the participating parties".
-        let parties = vec![party("did:wf:person", "subject"), party("did:wf:guardian", "guardian")];
+        let parties = vec![
+            party("did:wf:person", "subject"),
+            party("did:wf:guardian", "guardian"),
+        ];
         let c = cred()
-            .with_authority(CredentialAuthority::Court { order_ref: "order:9".into() })
+            .with_authority(CredentialAuthority::Court {
+                order_ref: "order:9".into(),
+            })
             .requiring_multisig(parties, 1);
 
         // The court (NOT a participating party) tries to instigate alone → refused, even with a signature
         // it collected, because the instigator is not a participating party.
         let court_alone = ExerciseRequest::new("did:wf:court", vec!["did:wf:court".into()]);
-        assert!(!c.can_exercise(&court_alone, 1_100), "an outside authority cannot act unilaterally");
+        assert!(
+            !c.can_exercise(&court_alone, 1_100),
+            "an outside authority cannot act unilaterally"
+        );
         assert!(c.exercise(&court_alone, 1_100).is_none());
 
         // But once a participating party (the guardian) instigates and signs, the threshold is met.
-        let party_instigated = ExerciseRequest::new("did:wf:guardian", vec!["did:wf:guardian".into()]);
-        assert!(c.can_exercise(&party_instigated, 1_100), "a participating party's instigation authorises it");
+        let party_instigated =
+            ExerciseRequest::new("did:wf:guardian", vec!["did:wf:guardian".into()]);
+        assert!(
+            c.can_exercise(&party_instigated, 1_100),
+            "a participating party's instigation authorises it"
+        );
     }
 
     #[test]
     fn revocation_defeats_even_an_authorised_multisig_exercise() {
-        let parties = vec![party("did:wf:person", "subject"), party("did:wf:advocate", "advocate")];
+        let parties = vec![
+            party("did:wf:person", "subject"),
+            party("did:wf:advocate", "advocate"),
+        ];
         let mut c = cred().requiring_multisig(parties, 2);
-        let req = ExerciseRequest::new("did:wf:person", vec!["did:wf:person".into(), "did:wf:advocate".into()]);
+        let req = ExerciseRequest::new(
+            "did:wf:person",
+            vec!["did:wf:person".into(), "did:wf:advocate".into()],
+        );
         assert!(c.exercise(&req, 1_100).is_some());
         c.revoke(1_200);
         // Even a fully-signed, party-instigated exercise gets no key once revoked — the key is gone.
-        assert!(c.exercise(&req, 1_300).is_none(), "revocation (key destroyed) beats authorisation");
+        assert!(
+            c.exercise(&req, 1_300).is_none(),
+            "revocation (key destroyed) beats authorisation"
+        );
     }
 
     #[test]
     fn serde_round_trips() {
         let c = cred();
-        let back: ConsentCredential = serde_json::from_str(&serde_json::to_string(&c).unwrap()).unwrap();
+        let back: ConsentCredential =
+            serde_json::from_str(&serde_json::to_string(&c).unwrap()).unwrap();
         assert_eq!(c, back);
         let r = conduct("k", "cc-1", "acted");
-        let back_r: ConductRecord = serde_json::from_str(&serde_json::to_string(&r).unwrap()).unwrap();
+        let back_r: ConductRecord =
+            serde_json::from_str(&serde_json::to_string(&r).unwrap()).unwrap();
         assert_eq!(r, back_r);
     }
 }

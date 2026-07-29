@@ -1,13 +1,13 @@
 //! P64-style acoustic event head (QVWT-like seed weights) — COMPLETE-WITH-GATE for real P64.
 
+use crate::convert::to_mono_f32;
+use crate::events::{CLASS_NOISE, CLASS_SILENCE, CLASS_SPEECH_LIKE, CLASS_TONAL};
 use crate::features::{frame_energy, frame_zcr};
 use crate::hash::q_hash;
 use crate::types::{
-    AudioError, AudioView, AuditoryCapabilities, AuditoryEvent, AuditoryModel, AuditoryOutputCounts,
-    TranscriptToken, MAX_EVENTS,
+    AudioError, AudioView, AuditoryCapabilities, AuditoryEvent, AuditoryModel,
+    AuditoryOutputCounts, TranscriptToken, MAX_EVENTS,
 };
-use crate::convert::to_mono_f32;
-use crate::events::{CLASS_NOISE, CLASS_SILENCE, CLASS_SPEECH_LIKE, CLASS_TONAL};
 
 const MODEL: &str = "qualia-audio-aed-weight-v1";
 
@@ -79,21 +79,37 @@ impl AedWeightBundle {
         if ver != AED_VERSION {
             return Err(crate::types::AudioError::BackendUnavailable);
         }
-        let model_hash = u64::from_le_bytes(bytes[8..16].try_into().map_err(|_| crate::types::AudioError::MalformedAudio)?);
+        let model_hash = u64::from_le_bytes(
+            bytes[8..16]
+                .try_into()
+                .map_err(|_| crate::types::AudioError::MalformedAudio)?,
+        );
         let mut off = 16usize;
         let mut weight = [0.0f32; 16];
         for w in weight.iter_mut() {
-            *w = f32::from_le_bytes(bytes[off..off + 4].try_into().map_err(|_| crate::types::AudioError::MalformedAudio)?);
+            *w = f32::from_le_bytes(
+                bytes[off..off + 4]
+                    .try_into()
+                    .map_err(|_| crate::types::AudioError::MalformedAudio)?,
+            );
             off += 4;
         }
         let mut bias = [0.0f32; 4];
         for b in bias.iter_mut() {
-            *b = f32::from_le_bytes(bytes[off..off + 4].try_into().map_err(|_| crate::types::AudioError::MalformedAudio)?);
+            *b = f32::from_le_bytes(
+                bytes[off..off + 4]
+                    .try_into()
+                    .map_err(|_| crate::types::AudioError::MalformedAudio)?,
+            );
             off += 4;
         }
         let mut class_hashes = [0u64; 4];
         for c in class_hashes.iter_mut() {
-            *c = u64::from_le_bytes(bytes[off..off + 8].try_into().map_err(|_| crate::types::AudioError::MalformedAudio)?);
+            *c = u64::from_le_bytes(
+                bytes[off..off + 8]
+                    .try_into()
+                    .map_err(|_| crate::types::AudioError::MalformedAudio)?,
+            );
             off += 8;
         }
         Ok(Self {
@@ -312,7 +328,8 @@ mod tests {
         let n = 3000usize;
         let mut pcm = vec![0i16; n];
         for i in 0..n {
-            pcm[i] = (0.3 * (2.0 * core::f32::consts::PI * 300.0 * i as f32 / 16000.0).sin()
+            pcm[i] = (0.3
+                * (2.0 * core::f32::consts::PI * 300.0 * i as f32 / 16000.0).sin()
                 * 32767.0) as i16;
         }
         let mut bytes = vec![0u8; n * 2];
@@ -335,7 +352,9 @@ mod tests {
         let mut tok = [TranscriptToken::empty(); 4];
         let mut emb = [0.0f32; 4];
         let mut ws = [0u8; 8];
-        let c = m.infer_chunk(view, &mut ev, &mut tok, &mut emb, &mut ws).unwrap();
+        let c = m
+            .infer_chunk(view, &mut ev, &mut tok, &mut emb, &mut ws)
+            .unwrap();
         assert!(c.events >= 1);
     }
 }

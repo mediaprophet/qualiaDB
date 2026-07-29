@@ -84,6 +84,9 @@ mod tests {
     fn rejects_short_out() {
         let input = [1.0f32, 2.0, 3.0];
         let mut out = [0.0f32; 2];
-        assert_eq!(dct2(&input, &mut out), Err(AudioError::OutputBufferTooSmall));
+        assert_eq!(
+            dct2(&input, &mut out),
+            Err(AudioError::OutputBufferTooSmall)
+        );
     }
 }

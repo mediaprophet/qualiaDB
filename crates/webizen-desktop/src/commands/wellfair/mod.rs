@@ -18,8 +18,8 @@ pub mod finance;
 pub mod guardianship;
 pub mod health;
 pub mod ledger;
-pub mod life_records;
 pub mod library;
+pub mod life_records;
 pub mod med_reminder;
 pub mod medication;
 pub mod policy;
@@ -28,8 +28,8 @@ pub mod safeguard;
 pub mod sanctuary_basic;
 pub mod sanctuary_vault;
 pub mod sync;
-pub mod wellbeing;
 pub mod welfare_support;
+pub mod wellbeing;
 pub mod work_items;
 
 // ── Shared helpers ──────────────────────────────────────────────────────────

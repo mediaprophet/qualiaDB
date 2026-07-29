@@ -27,7 +27,11 @@ pub struct Vibrato {
 impl Vibrato {
     #[inline]
     pub const fn none() -> Self {
-        Self { rate_hz: 0.0, extent_cents: 0.0, strength: 0.0 }
+        Self {
+            rate_hz: 0.0,
+            extent_cents: 0.0,
+            strength: 0.0,
+        }
     }
 }
 
@@ -129,7 +133,13 @@ pub fn detect_vibrato(
     }
 
     // Peak bin in the vibrato band.
-    let peak = (lo..=hi).fold(lo, |best, k| if out_mags[k] > out_mags[best] { k } else { best });
+    let peak = (lo..=hi).fold(lo, |best, k| {
+        if out_mags[k] > out_mags[best] {
+            k
+        } else {
+            best
+        }
+    });
     if out_mags[peak] <= 0.0 {
         return Ok(Vibrato::none());
     }
@@ -165,7 +175,11 @@ pub fn detect_vibrato(
         0.0
     };
 
-    Ok(Vibrato { rate_hz, extent_cents, strength })
+    Ok(Vibrato {
+        rate_hz,
+        extent_cents,
+        strength,
+    })
 }
 
 /// Parabolic vertex offset and interpolated height for three ordinates centred
@@ -208,7 +222,11 @@ mod tests {
         let mut mags = vec![0.0f32; 512 / 2 + 1];
         let v = detect_vibrato(&track, track_rate, &mut scratch, &mut mags).expect("vibrato");
         assert!((v.rate_hz - rate).abs() < 0.5, "rate={}", v.rate_hz);
-        assert!((v.extent_cents - extent).abs() < 15.0, "extent={}", v.extent_cents);
+        assert!(
+            (v.extent_cents - extent).abs() < 15.0,
+            "extent={}",
+            v.extent_cents
+        );
         assert!(v.strength > 0.5, "strength={}", v.strength);
     }
 

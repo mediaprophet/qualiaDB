@@ -6,8 +6,8 @@ use super::device::{ensure_device, ensure_mega_pass_arena, multi_weight_device};
 use super::q8::{Q8_0_EMBEDDING_LOOKUP_ENTRY, Q8_0_EMBEDDING_LOOKUP_SRC, Q8_0_GEMV_ROWS};
 use super::tuning::cuda_q8_tuning_for_model;
 
-mod attention_stage;
 mod attention_sdpa;
+mod attention_stage;
 mod ffn_stage;
 mod output;
 mod parameters;
@@ -241,8 +241,7 @@ pub(crate) fn try_cuda_mega_pass_with_token(
     let wmma_rows = Q4K_SOA_WMMA_GEMV_ROWS as usize;
 
     let slot = token_idx % max_context;
-    let attention_segments =
-        super::paged_attention::segments_for_position(token_idx) as u32;
+    let attention_segments = super::paged_attention::segments_for_position(token_idx) as u32;
     let rope_base_bits = f32_bits_u32(rope_base);
     let rope_scale_bits = f32_bits_u32(if rope_scale > 0.0 && rope_scale.is_finite() {
         rope_scale
@@ -472,9 +471,9 @@ pub(crate) fn try_cuda_mega_pass_with_token(
             token: view_token,
             argmax_params: view_p_argmax,
         },
-            output::OutputSpec {
-                n_embd,
-                weight_layout,
+        output::OutputSpec {
+            n_embd,
+            weight_layout,
             output_norm_key,
             lm_head_raw,
             lm_head_key,

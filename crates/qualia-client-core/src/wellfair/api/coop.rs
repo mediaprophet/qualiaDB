@@ -1,18 +1,16 @@
 //! Cooperative projects + credentials
 
-
+use super::super::blob_store::BlobStore;
 use super::super::journal::JournalEntry;
+use wellfare_core::credentials::{
+    build_credential_envelope, build_presentation, credential_summary, CredentialRecord,
+    FieldSelectedPresentation,
+};
 use wellfare_core::projects::{
     build_contribution_envelope, build_membership_envelope, build_project_envelope,
     contribution_summary, derive_obligations, membership_summary, project_summary, Contribution,
     Obligation, Project, ProjectMembership,
 };
-use wellfare_core::credentials::{
-    build_credential_envelope, build_presentation, credential_summary, CredentialRecord,
-    FieldSelectedPresentation,
-};
-use super::super::blob_store::BlobStore;
-
 
 use super::*;
 
@@ -23,8 +21,13 @@ impl WebizenHostApi {
         let asserted = Self::now_unix() as u32;
         let hash =
             Self::payload_hash_hex(&serde_json::to_string(project).map_err(|e| e.to_string())?);
-        let envelope =
-            build_project_envelope(project, &self.owner_did, &self.author_did, asserted, Some(hash));
+        let envelope = build_project_envelope(
+            project,
+            &self.owner_did,
+            &self.author_did,
+            asserted,
+            Some(hash),
+        );
         let summary = project_summary(project);
         self.submit_record_with_summary(QAPP_PROJECTS, envelope, SOURCE_PROJECTS, Some(summary))?;
         self.finalize_batch().ok();
@@ -51,7 +54,10 @@ impl WebizenHostApi {
         self.latest_journal_entry()
     }
 
-    pub fn add_contribution(&mut self, contribution: &Contribution) -> Result<JournalEntry, String> {
+    pub fn add_contribution(
+        &mut self,
+        contribution: &Contribution,
+    ) -> Result<JournalEntry, String> {
         let asserted = Self::now_unix() as u32;
         let hash = Self::payload_hash_hex(
             &serde_json::to_string(contribution).map_err(|e| e.to_string())?,
@@ -78,7 +84,9 @@ impl WebizenHostApi {
         let mut out = Vec::new();
         for row in self.list_contributions(limit)? {
             if let Some(ref summary) = row.summary {
-                if let Some(c) = contribution_from_summary(row.id.clone(), summary, row.asserted_time_unix) {
+                if let Some(c) =
+                    contribution_from_summary(row.id.clone(), summary, row.asserted_time_unix)
+                {
                     out.push(c);
                 }
             }
@@ -102,9 +110,11 @@ impl WebizenHostApi {
         let mut contributions = self.local_contributions(limit)?;
         for op in self.validated_sync_operations()? {
             if op.kind == "contribution" {
-                if let Some(c) =
-                    contribution_from_summary(op.record_id.clone(), &op.payload_summary, op.committed_unix)
-                {
+                if let Some(c) = contribution_from_summary(
+                    op.record_id.clone(),
+                    &op.payload_summary,
+                    op.committed_unix,
+                ) {
                     contributions.push(c);
                 }
             }
@@ -114,7 +124,10 @@ impl WebizenHostApi {
 
     // --- Credentials (Phase 3/7 / CRE-01..) ---
 
-    pub fn add_credential(&mut self, credential: &CredentialRecord) -> Result<JournalEntry, String> {
+    pub fn add_credential(
+        &mut self,
+        credential: &CredentialRecord,
+    ) -> Result<JournalEntry, String> {
         let asserted = Self::now_unix() as u32;
         let json = serde_json::to_string(credential).map_err(|e| e.to_string())?;
         // Persist the full credential (incl. claims) as a content-addressed blob so a
@@ -177,5 +190,4 @@ impl WebizenHostApi {
             .ok_or_else(|| format!("credential '{record_id}' not found or blob missing"))?;
         Ok(build_presentation(&cred, selected_claim_keys))
     }
-
 }

@@ -38,7 +38,10 @@ pub struct Heartbeat {
 
 impl Heartbeat {
     pub fn new(last_seen_unix: u64, lapse_after_secs: u64) -> Self {
-        Self { last_seen_unix, lapse_after_secs }
+        Self {
+            last_seen_unix,
+            lapse_after_secs,
+        }
     }
     /// Has the liveness signal lapsed at `now`?
     pub fn is_lapsed(&self, now_unix: u64) -> bool {
@@ -134,7 +137,9 @@ impl DeadMansSwitch {
     /// Is the switch *currently triggerable* — the gamified rule satisfied and not already fired?
     pub fn is_triggered(&self, attestations: &[PartyAttestation], now_unix: u64) -> bool {
         self.fired_unix.is_none()
-            && self.trigger.is_satisfied(&self.heartbeat, attestations, now_unix)
+            && self
+                .trigger
+                .is_satisfied(&self.heartbeat, attestations, now_unix)
     }
 
     /// The principal is alive — reset the liveness signal **and un-fire** a not-yet-enacted switch. This is
@@ -147,7 +152,11 @@ impl DeadMansSwitch {
     /// **Enact** the switch if triggerable: record it fired and return the [`Disposition`] to apply (which
     /// the caller carries out — publishing the key / issuing credentials to the disposition parties). Returns
     /// `None` if the rule is not satisfied (or it already fired).
-    pub fn enact(&mut self, attestations: &[PartyAttestation], now_unix: u64) -> Option<&Disposition> {
+    pub fn enact(
+        &mut self,
+        attestations: &[PartyAttestation],
+        now_unix: u64,
+    ) -> Option<&Disposition> {
         if self.is_triggered(attestations, now_unix) {
             self.fired_unix = Some(now_unix);
             Some(&self.disposition)
@@ -165,7 +174,11 @@ mod tests {
     const DAY: u64 = 24 * 60 * 60;
 
     fn attest(did: &str, kind: AttestationKind) -> PartyAttestation {
-        PartyAttestation { party_did: did.into(), kind, time_unix: 0 }
+        PartyAttestation {
+            party_did: did.into(),
+            kind,
+            time_unix: 0,
+        }
     }
 
     /// A switch requiring: heartbeat lapsed after 90 days AND 2-of-3 friends attesting.
@@ -176,7 +189,11 @@ mod tests {
             trigger: TriggerRule {
                 require_heartbeat_lapsed: true,
                 attestation_threshold: 2,
-                parties: vec!["did:wf:alice".into(), "did:wf:bob".into(), "did:wf:carol".into()],
+                parties: vec![
+                    "did:wf:alice".into(),
+                    "did:wf:bob".into(),
+                    "did:wf:carol".into(),
+                ],
             },
             disposition: Disposition::MakePublic,
             fired_unix: None,
@@ -187,8 +204,14 @@ mod tests {
     fn does_not_fire_while_the_principal_is_alive_even_if_friends_attest() {
         let s = switch();
         let now = 1_000_000 + 10 * DAY; // heartbeat fresh (10 days < 90)
-        let attests = vec![attest("did:wf:alice", AttestationKind::BelievedDead), attest("did:wf:bob", AttestationKind::NoContact)];
-        assert!(!s.is_triggered(&attests, now), "fresh liveness signal defeats the trigger");
+        let attests = vec![
+            attest("did:wf:alice", AttestationKind::BelievedDead),
+            attest("did:wf:bob", AttestationKind::NoContact),
+        ];
+        assert!(
+            !s.is_triggered(&attests, now),
+            "fresh liveness signal defeats the trigger"
+        );
     }
 
     #[test]
@@ -196,7 +219,10 @@ mod tests {
         let s = switch();
         let now = 1_000_000 + 200 * DAY; // heartbeat lapsed
         let one = vec![attest("did:wf:alice", AttestationKind::BelievedDead)];
-        assert!(!s.is_triggered(&one, now), "a single party cannot enact it (resists false trigger)");
+        assert!(
+            !s.is_triggered(&one, now),
+            "a single party cannot enact it (resists false trigger)"
+        );
     }
 
     #[test]
@@ -224,7 +250,10 @@ mod tests {
             attest("did:wf:stranger", AttestationKind::BelievedDead),
             attest("did:wf:alice", AttestationKind::BelievedDead),
         ];
-        assert!(!s.is_triggered(&mixed, now), "only participating parties count");
+        assert!(
+            !s.is_triggered(&mixed, now),
+            "only participating parties count"
+        );
     }
 
     #[test]
@@ -239,7 +268,10 @@ mod tests {
         // The person shows up alive → reset + un-fire (reversibility).
         s.principal_alive(now + DAY);
         assert!(s.fired_unix.is_none(), "un-fired");
-        assert!(!s.is_triggered(&quorum, now + 2 * DAY), "fresh liveness defeats the same attestations");
+        assert!(
+            !s.is_triggered(&quorum, now + 2 * DAY),
+            "fresh liveness defeats the same attestations"
+        );
     }
 
     #[test]
@@ -249,13 +281,18 @@ mod tests {
         let mut s = switch();
         s.trigger.require_heartbeat_lapsed = false;
         s.trigger.attestation_threshold = 3; // all three
-        s.disposition = Disposition::SelfDefinedRules { rules_ref: "vellum:self-defined".into() };
+        s.disposition = Disposition::SelfDefinedRules {
+            rules_ref: "vellum:self-defined".into(),
+        };
         let all = vec![
             attest("did:wf:alice", AttestationKind::Abandon),
             attest("did:wf:bob", AttestationKind::Abandon),
             attest("did:wf:carol", AttestationKind::Abandon),
         ];
-        assert!(s.is_triggered(&all, 0), "all parties abandoning satisfies this rule");
+        assert!(
+            s.is_triggered(&all, 0),
+            "all parties abandoning satisfies this rule"
+        );
         // Two-of-three abandoning does not.
         assert!(!s.is_triggered(&all[..2], 0));
     }
@@ -263,7 +300,8 @@ mod tests {
     #[test]
     fn serde_round_trips() {
         let s = switch();
-        let back: DeadMansSwitch = serde_json::from_str(&serde_json::to_string(&s).unwrap()).unwrap();
+        let back: DeadMansSwitch =
+            serde_json::from_str(&serde_json::to_string(&s).unwrap()).unwrap();
         assert_eq!(s, back);
     }
 }

@@ -11,11 +11,11 @@
 //! are reused from [`crate::features::fft`] and [`crate::features::window`].
 
 pub mod frame_cutter;
-pub mod overlap_add;
-pub mod istft;
 pub mod griffin_lim;
+pub mod istft;
+pub mod overlap_add;
 
 pub use frame_cutter::{cut_frame, frame_count};
-pub use overlap_add::overlap_add;
-pub use istft::istft;
 pub use griffin_lim::griffin_lim;
+pub use istft::istft;
+pub use overlap_add::overlap_add;

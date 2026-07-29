@@ -119,7 +119,13 @@ fn decode_real_time(status: u8) -> Option<MidiMessage> {
 impl MessageParser {
     /// A fresh parser with no running status held.
     pub const fn new() -> Self {
-        Self { status: 0, data: [0; 2], data_len: 0, expected: 0, in_sysex: false }
+        Self {
+            status: 0,
+            data: [0; 2],
+            data_len: 0,
+            expected: 0,
+            in_sysex: false,
+        }
     }
 
     /// Build the message for the current (complete) status + data bytes.
@@ -128,8 +134,16 @@ impl MessageParser {
         let d0 = self.data[0];
         let d1 = self.data[1];
         match self.status & 0xF0 {
-            0x80 => Some(MidiMessage::NoteOff(NoteOff { channel: ch, note: d0, velocity: d1 })),
-            0x90 => Some(MidiMessage::NoteOn(NoteOn { channel: ch, note: d0, velocity: d1 })),
+            0x80 => Some(MidiMessage::NoteOff(NoteOff {
+                channel: ch,
+                note: d0,
+                velocity: d1,
+            })),
+            0x90 => Some(MidiMessage::NoteOn(NoteOn {
+                channel: ch,
+                note: d0,
+                velocity: d1,
+            })),
             0xA0 => Some(MidiMessage::PolyPressure(PolyPressure {
                 channel: ch,
                 note: d0,
@@ -140,17 +154,23 @@ impl MessageParser {
                 controller: d0,
                 value: d1,
             })),
-            0xC0 => Some(MidiMessage::ProgramChange(ProgramChange { channel: ch, program: d0 })),
-            0xD0 => {
-                Some(MidiMessage::ChannelPressure(ChannelPressure { channel: ch, pressure: d0 }))
-            }
+            0xC0 => Some(MidiMessage::ProgramChange(ProgramChange {
+                channel: ch,
+                program: d0,
+            })),
+            0xD0 => Some(MidiMessage::ChannelPressure(ChannelPressure {
+                channel: ch,
+                pressure: d0,
+            })),
             0xE0 => Some(MidiMessage::PitchBend(PitchBend {
                 channel: ch,
                 value: ((d1 as u16) << 7) | (d0 as u16),
             })),
             0xF0 => match self.status {
                 0xF1 => Some(MidiMessage::QuarterFrame(d0)),
-                0xF2 => Some(MidiMessage::SongPositionPointer(((d1 as u16) << 7) | (d0 as u16))),
+                0xF2 => Some(MidiMessage::SongPositionPointer(
+                    ((d1 as u16) << 7) | (d0 as u16),
+                )),
                 0xF3 => Some(MidiMessage::SongSelect(d0)),
                 _ => None,
             },
@@ -357,8 +377,20 @@ mod tests {
         let mut msgs = [MidiMessage::TuneRequest; 4];
         let n = parse_into(&[0xC0, 0x01, 0x02, 0xF2, 0x00, 0x40], &mut msgs).unwrap();
         assert_eq!(n, 3);
-        assert_eq!(msgs[0], MidiMessage::ProgramChange(ProgramChange { channel: 0, program: 1 }));
-        assert_eq!(msgs[1], MidiMessage::ProgramChange(ProgramChange { channel: 0, program: 2 }));
+        assert_eq!(
+            msgs[0],
+            MidiMessage::ProgramChange(ProgramChange {
+                channel: 0,
+                program: 1
+            })
+        );
+        assert_eq!(
+            msgs[1],
+            MidiMessage::ProgramChange(ProgramChange {
+                channel: 0,
+                program: 2
+            })
+        );
         assert_eq!(msgs[2], MidiMessage::SongPositionPointer(8192));
     }
 

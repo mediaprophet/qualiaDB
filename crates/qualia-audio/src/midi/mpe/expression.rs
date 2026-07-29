@@ -29,7 +29,11 @@ pub struct ChannelExpr {
 
 impl ChannelExpr {
     /// Neutral state: no bend, no pressure, mid timbre.
-    pub const NEUTRAL: ChannelExpr = ChannelExpr { pitch_bend: 0, pressure: 0, timbre: 64 };
+    pub const NEUTRAL: ChannelExpr = ChannelExpr {
+        pitch_bend: 0,
+        pressure: 0,
+        timbre: 64,
+    };
 }
 
 /// Per-member-channel MPE expression table.
@@ -47,7 +51,9 @@ impl Default for MpeExpression {
 impl MpeExpression {
     /// A table with every channel at [`ChannelExpr::NEUTRAL`].
     pub fn new() -> Self {
-        Self { channels: [ChannelExpr::NEUTRAL; 16] }
+        Self {
+            channels: [ChannelExpr::NEUTRAL; 16],
+        }
     }
 
     /// Set pitch-bend from the raw 14-bit MIDI value (`0..=16383`, center 8192).
@@ -62,7 +68,12 @@ impl MpeExpression {
     }
 
     /// Set pitch-bend from two 7-bit MIDI data bytes `[LSB, MSB]`.
-    pub fn set_pitch_bend_bytes(&mut self, channel: u8, lsb: u8, msb: u8) -> Result<(), AudioError> {
+    pub fn set_pitch_bend_bytes(
+        &mut self,
+        channel: u8,
+        lsb: u8,
+        msb: u8,
+    ) -> Result<(), AudioError> {
         if lsb & 0x80 != 0 || msb & 0x80 != 0 {
             return Err(AudioError::InvalidParameter);
         }
@@ -128,7 +139,8 @@ mod tests {
     fn pitch_bend_from_bytes_matches_raw() {
         let mut e = MpeExpression::new();
         // raw 10000 -> lsb = 10000 & 0x7F, msb = 10000 >> 7
-        e.set_pitch_bend_bytes(3, (10000u16 & 0x7F) as u8, (10000u16 >> 7) as u8).unwrap();
+        e.set_pitch_bend_bytes(3, (10000u16 & 0x7F) as u8, (10000u16 >> 7) as u8)
+            .unwrap();
         assert_eq!(e.get(3).unwrap().pitch_bend, 10000i16 - 8192);
     }
 

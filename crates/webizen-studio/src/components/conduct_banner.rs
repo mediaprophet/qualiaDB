@@ -87,8 +87,7 @@ pub fn notice_from_chat_result(result: &serde_json::Value) -> Option<ConductNoti
 
     if shield {
         let text = reason.unwrap_or_else(|| {
-            "Shield / Sentinel blocked this turn (axiom bounds or anomaly)."
-                .to_string()
+            "Shield / Sentinel blocked this turn (axiom bounds or anomaly).".to_string()
         });
         return Some(ConductNotice::shield_alert(text));
     }
@@ -110,10 +109,7 @@ pub fn notice_from_chat_result(result: &serde_json::Value) -> Option<ConductNoti
         } else {
             ConductKind::InferenceBlock
         };
-        return Some(ConductNotice {
-            kind,
-            reason: text,
-        });
+        return Some(ConductNotice { kind, reason: text });
     }
 
     // Uncommitted with no reason still must not be silent.
@@ -152,10 +148,7 @@ pub fn notice_from_conduct_violation(payload: &serde_json::Value) -> Option<Cond
 /// Pass `None` to hide. Dismiss only clears the current notice; the next deny
 /// re-sets the signal and the banner reappears.
 #[component]
-pub fn ConductBanner(
-    notice: Option<ConductNotice>,
-    on_dismiss: EventHandler<()>,
-) -> Element {
+pub fn ConductBanner(notice: Option<ConductNotice>, on_dismiss: EventHandler<()>) -> Element {
     let Some(n) = notice else {
         return rsx! {};
     };

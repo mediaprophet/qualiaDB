@@ -4,9 +4,8 @@
 
 use super::*;
 
-use crate::state::*;
 use crate::qapp_registry;
-
+use crate::state::*;
 
 pub fn run_engine_command(cmd: String) -> String {
     match cmd.as_str() {
@@ -180,4 +179,3 @@ pub fn add_delegation_rule(rule: DelegationRule) -> Result<(), String> {
     save_directory_state();
     Ok(())
 }
-

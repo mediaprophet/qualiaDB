@@ -105,9 +105,8 @@ pub fn observation_quin(media: MediaDigest, det: &Detection, model_hash: u64) ->
     let object = det.instance_hash;
     let context = q_hash(CTX_VISION) ^ model_hash;
     // metadata: score | frame in high bits (simple packing).
-    let metadata = (det.score_u16 as u64)
-        | ((det.frame_index as u64) << 16)
-        | ((det.flags as u64) << 48);
+    let metadata =
+        (det.score_u16 as u64) | ((det.frame_index as u64) << 16) | ((det.flags as u64) << 48);
     VisionQuin::with_parity(subject, predicate, object, context, metadata)
 }
 
@@ -378,16 +377,11 @@ pub fn query_by_frame_range(
 }
 
 /// Filter by model hash mixed into context (context = CTX_VISION ^ model_hash).
-pub fn query_by_model(
-    quins: &[VisionQuin],
-    model_hash: u64,
-    out: &mut [VisionQuin],
-) -> usize {
+pub fn query_by_model(quins: &[VisionQuin], model_hash: u64, out: &mut [VisionQuin]) -> usize {
     let ctx = q_hash(CTX_VISION) ^ model_hash;
     let mut w = 0usize;
     for q in quins {
-        if q.context == ctx || (q.predicate == q_hash(P_MODEL_DIGEST) && q.object == model_hash)
-        {
+        if q.context == ctx || (q.predicate == q_hash(P_MODEL_DIGEST) && q.object == model_hash) {
             if w >= out.len() {
                 break;
             }

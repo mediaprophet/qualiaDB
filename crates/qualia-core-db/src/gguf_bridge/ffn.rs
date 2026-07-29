@@ -597,11 +597,11 @@ impl QTensorEngine {
             || dn_in != n_ffn
             || n_ffn > MAX_STACK_GEMM_DIM
             || dn_out > scratch_a.len()
+            || n_ffn > scratch_b.len()
         {
             return false;
         }
         let mut gate_buf = [0f32; MAX_STACK_GEMM_DIM];
-        let mut up_buf = [0f32; MAX_STACK_GEMM_DIM];
         if !self
             .dispatch_gemm_into_async(
                 index,
@@ -620,7 +620,7 @@ impl QTensorEngine {
                 index,
                 up_info,
                 &ffn_input[..up_in],
-                &mut up_buf[..n_ffn],
+                &mut scratch_b[..n_ffn],
                 up_in,
                 n_ffn,
             )
@@ -630,7 +630,7 @@ impl QTensorEngine {
         }
         silu_inplace(&mut gate_buf[..n_ffn], n_ffn);
         for i in 0..n_ffn {
-            gate_buf[i] *= up_buf[i];
+            gate_buf[i] *= scratch_b[i];
         }
         if !self
             .dispatch_gemm_into_async(

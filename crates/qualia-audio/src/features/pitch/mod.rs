@@ -5,12 +5,12 @@
 //! parabolic interpolation → f0 + aperiodicity. This replaces the coarse
 //! integer-lag argmin previously in `music.rs`. Re-exports only (AU-PITCH-1).
 
-mod estimate;
-pub mod yin;
-pub mod yin_fft;
 pub mod confidence;
+mod estimate;
 pub mod pitch_filter;
 pub mod vibrato;
+pub mod yin;
+pub mod yin_fft;
 
 pub use confidence::pitch_confidence;
 pub use estimate::PitchEstimate;

@@ -109,11 +109,7 @@ pub fn track_beats(
 /// Comb-filter phase alignment + beat emission. Chooses the integer phase offset
 /// maximising summed onset strength on the pulse grid, then writes beat frame
 /// indices spaced by `period`.
-fn place_beats(
-    onset_env: &[f32],
-    period: f32,
-    out: &mut [u32],
-) -> Result<usize, AudioError> {
+fn place_beats(onset_env: &[f32], period: f32, out: &mut [u32]) -> Result<usize, AudioError> {
     let len = onset_env.len();
     let step = period.max(1.0);
     let p_round = (step.round() as usize).max(1);
@@ -179,7 +175,10 @@ mod tests {
         let env = click_train(1000, period);
         let mut beats = [0u32; 64];
         let (n_beats, bpm) = track_beats(&env, frame_rate, &mut beats).expect("track");
-        assert!((bpm - 120.0).abs() <= 120.0 * 0.05, "bpm = {bpm} (want ~120)");
+        assert!(
+            (bpm - 120.0).abs() <= 120.0 * 0.05,
+            "bpm = {bpm} (want ~120)"
+        );
         // 1000 frames / 50 -> 20 beats.
         assert_eq!(n_beats, 20, "n_beats = {n_beats}");
         // Beats land on the click grid.
@@ -196,7 +195,10 @@ mod tests {
         let env = click_train(1200, period);
         let mut beats = [0u32; 64];
         let (_n, bpm) = track_beats(&env, frame_rate, &mut beats).expect("track");
-        assert!((bpm - 100.0).abs() <= 100.0 * 0.05, "bpm = {bpm} (want ~100)");
+        assert!(
+            (bpm - 100.0).abs() <= 100.0 * 0.05,
+            "bpm = {bpm} (want ~100)"
+        );
     }
 
     /// Beats sit near real onsets even with an off-grid starting phase.

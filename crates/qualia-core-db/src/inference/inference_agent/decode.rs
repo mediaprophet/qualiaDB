@@ -93,7 +93,7 @@ impl LocalLlmAgent {
                         vec![prov_hash],
                         0,
                         None,
-                    )
+                    );
                 }
             };
             let prompt_owned = prompt.to_string();
@@ -1105,7 +1105,7 @@ impl LocalLlmAgent {
                         vec![prov_hash],
                         0,
                         None,
-                    )
+                    );
                 }
             };
 
@@ -1140,22 +1140,6 @@ impl LocalLlmAgent {
                     None
                 }
             };
-
-            // Fixed-size types keep the hot-path allocation-free in the ring buffer.
-            #[derive(Clone, Copy)]
-            struct LogitSummary {
-                _top_id: u32,
-                anomaly: u8,
-            }
-            #[derive(Clone)]
-            enum LlmMsg {
-                Logit(LogitSummary),
-                Eos,
-            }
-            #[derive(Clone)]
-            enum SentMsg {
-                DenyRollback,
-            }
 
             // Move the (optional) LoRA adapter into the inference thread.
             let lora_for_thread = lora_active_adapter;
@@ -1482,7 +1466,13 @@ impl LocalLlmAgent {
                         );
                         logits.iter().enumerate().fold(
                             (0usize, f32::NEG_INFINITY),
-                            |(bi, bv), (i, &v)| if v > bv { (i, v) } else { (bi, bv) },
+                            |(bi, bv), (i, &v)| {
+                                if v > bv {
+                                    (i, v)
+                                } else {
+                                    (bi, bv)
+                                }
+                            },
                         )
                     };
 

@@ -1,10 +1,13 @@
 //! SNN Extension for QualiaDB Advanced
-//! 
+//!
 //! Spiking Neural Networks with noisy gradient CRDT synchronization
 //! for temporal processing and event-driven computation while maintaining
 //! distributed consistency across edge deployments.
 
-use crate::{Extension, ExtensionCapability, ExtensionError, ExtensionJob, ExtensionResult, ResourceRequirements, NQuin};
+use crate::{
+    Extension, ExtensionCapability, ExtensionError, ExtensionJob, ExtensionResult, NQuin,
+    ResourceRequirements,
+};
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -48,8 +51,8 @@ pub struct SpikingNetwork {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum NetworkType {
     LIF,           // Leaky Integrate-and-Fire
-    Izhikevich,     // Izhikevich model
-    HodgkinHuxley,  // Hodgkin-Huxley model
+    Izhikevich,    // Izhikevich model
+    HodgkinHuxley, // Hodgkin-Huxley model
     SRM,           // Spike Response Model
     AdEx,          // Adaptive Exponential Integrate-and-Fire
 }
@@ -98,10 +101,10 @@ pub struct Synapse {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum PlasticityType {
     Static,
-    STDP,          // Spike-Timing Dependent Plasticity
-    RSTDP,         // Reward-Modulated STDP
-    Homeostatic,    // Homeostatic plasticity
-    CRDT,          // CRDT-synchronized plasticity
+    STDP,        // Spike-Timing Dependent Plasticity
+    RSTDP,       // Reward-Modulated STDP
+    Homeostatic, // Homeostatic plasticity
+    CRDT,        // CRDT-synchronized plasticity
 }
 
 /// CRDT-weighted synapse for distributed learning
@@ -117,7 +120,7 @@ pub struct CrdtWeight {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ConflictResolution {
     LastWriterWins,
-    NoisyGradient,   // Use noisy gradient for conflict resolution
+    NoisyGradient,    // Use noisy gradient for conflict resolution
     TemporalPriority, // Use temporal priority
     Consensus,        // Require consensus
 }
@@ -383,10 +386,11 @@ impl SnnExtension {
     pub fn new() -> Self {
         let node_id = Uuid::new_v4();
         let crdt_synchronizer = NoisyGradientCrdt::new(node_id);
-        
+
         let network_manager = SnnNetworkManager {
             loaded_networks: HashMap::new(),
-            network_cache_path: std::env::var("QUALIA_SNN_CACHE").unwrap_or_else(|_| "./snn_networks".to_string()),
+            network_cache_path: std::env::var("QUALIA_SNN_CACHE")
+                .unwrap_or_else(|_| "./snn_networks".to_string()),
             temporal_processor: TemporalProcessor::new(),
         };
 
@@ -396,7 +400,8 @@ impl SnnExtension {
             capability: ExtensionCapability {
                 name: "snn".to_string(),
                 version: "1.0.0".to_string(),
-                description: "Spiking Neural Networks with noisy gradient CRDT synchronization".to_string(),
+                description: "Spiking Neural Networks with noisy gradient CRDT synchronization"
+                    .to_string(),
                 required_resources: ResourceRequirements {
                     min_memory_mb: 512,
                     min_vram_mb: Some(256),
@@ -416,15 +421,25 @@ impl SnnExtension {
         }
     }
 
-    async fn simulate_snn(&self, params: SnnJobParams) -> Result<SnnExecutionResult, ExtensionError> {
-        let network = self.network_manager.get_network(&params.network_name)
-            .ok_or_else(|| ExtensionError::ExtensionNotFound(format!("Network '{}' not found", params.network_name)))?;
+    async fn simulate_snn(
+        &self,
+        params: SnnJobParams,
+    ) -> Result<SnnExecutionResult, ExtensionError> {
+        let network = self
+            .network_manager
+            .get_network(&params.network_name)
+            .ok_or_else(|| {
+                ExtensionError::ExtensionNotFound(format!(
+                    "Network '{}' not found",
+                    params.network_name
+                ))
+            })?;
 
         let start_time = Instant::now();
-        
+
         // Execute SNN simulation with temporal processing
         let result = self.execute_snn_simulation(network, &params).await?;
-        
+
         let sync_result = if params.crdt_sync_enabled {
             let mut sync = self.crdt_synchronizer.lock().await;
             sync.synchronize_gradients(&result).await?
@@ -444,7 +459,11 @@ impl SnnExtension {
         })
     }
 
-    async fn execute_snn_simulation(&self, network: &SpikingNetwork, params: &SnnJobParams) -> Result<SnnExecutionResult, ExtensionError> {
+    async fn execute_snn_simulation(
+        &self,
+        network: &SpikingNetwork,
+        params: &SnnJobParams,
+    ) -> Result<SnnExecutionResult, ExtensionError> {
         let mut network_sim = network.clone();
         let dt = network_sim.temporal_config.time_step;
         let mut current_time = Duration::ZERO;
@@ -472,7 +491,8 @@ impl SnnExtension {
 
         while current_time < params.simulation_time {
             // External input spikes scheduled within this step act as pre-synaptic drivers.
-            let mut external_fired: std::collections::HashSet<u32> = std::collections::HashSet::new();
+            let mut external_fired: std::collections::HashSet<u32> =
+                std::collections::HashSet::new();
             for spike_train in &params.input_spikes {
                 if spike_train
                     .spike_times
@@ -496,8 +516,13 @@ impl SnnExtension {
                 output_events.push((nid, current_time));
             }
 
-            membrane_potentials
-                .push(network_sim.neurons.iter().map(|n| n.membrane_potential).collect());
+            membrane_potentials.push(
+                network_sim
+                    .neurons
+                    .iter()
+                    .map(|n| n.membrane_potential)
+                    .collect(),
+            );
             synaptic_weights.push(network_sim.synapses.iter().map(|s| s.weight).collect());
 
             // Next step's pre-synaptic drivers = the neurons (+ external inputs) that fired this step.
@@ -506,7 +531,8 @@ impl SnnExtension {
         }
 
         let output_spikes = group_into_spike_trains(&output_events);
-        let learning_metrics = self.calculate_learning_metrics(&membrane_potentials, &synaptic_weights);
+        let learning_metrics =
+            self.calculate_learning_metrics(&membrane_potentials, &synaptic_weights);
 
         Ok(SnnExecutionResult {
             output_spikes,
@@ -555,7 +581,8 @@ impl SnnExtension {
             }
             let syn_in = input.get(&neuron.id).copied().unwrap_or(0.0);
             let noise = self.generate_noise(neuron.temporal_state.noise_amplitude);
-            neuron.membrane_potential = neuron.membrane_potential * leak_factor(dt) + syn_in + noise;
+            neuron.membrane_potential =
+                neuron.membrane_potential * leak_factor(dt) + syn_in + noise;
             if neuron.membrane_potential >= neuron.threshold {
                 fired.push(neuron.id);
                 neuron.membrane_potential = 0.0;
@@ -597,7 +624,11 @@ impl SnnExtension {
         rng.random_range(-amplitude..amplitude)
     }
 
-    fn calculate_learning_metrics(&self, potentials: &[Vec<f64>], weights: &[Vec<f64>]) -> LearningMetrics {
+    fn calculate_learning_metrics(
+        &self,
+        potentials: &[Vec<f64>],
+        weights: &[Vec<f64>],
+    ) -> LearningMetrics {
         let final_loss = if potentials.len() > 1 {
             (potentials[potentials.len() - 1][0] - potentials[potentials.len() - 2][0]).abs()
         } else {
@@ -605,7 +636,9 @@ impl SnnExtension {
         };
 
         let convergence_rate = if potentials.len() > 10 {
-            let recent_changes: Vec<f64> = potentials.iter().skip(potentials.len() - 10)
+            let recent_changes: Vec<f64> = potentials
+                .iter()
+                .skip(potentials.len() - 10)
                 .zip(potentials.iter().skip(potentials.len() - 9))
                 .map(|(curr, prev)| (curr[0] - prev[0]).abs())
                 .collect();
@@ -614,9 +647,11 @@ impl SnnExtension {
             0.0
         };
 
-        let spike_rate = potentials.iter()
+        let spike_rate = potentials
+            .iter()
             .map(|p| p.iter().filter(|&v| *v > 0.0).count() as f64 / p.len() as f64)
-            .sum::<f64>() / potentials.len() as f64;
+            .sum::<f64>()
+            / potentials.len() as f64;
 
         let synaptic_change = if weights.len() > 1 {
             let initial_sum = weights[0].iter().sum::<f64>();
@@ -644,8 +679,12 @@ impl SnnExtension {
             predicate: crate::q_hash("q42:hasLearningMetrics"),
             object: (result.learning_metrics.final_loss * 1000000.0) as u64,
             context: crate::q_hash("snn:learning"),
-            metadata: ((result.learning_metrics.convergence_rate * 1000000.0) as u64) << 32 | 
-                     (if result.learning_metrics.convergence_rate < 0.001 { 1 } else { 0 }),
+            metadata: ((result.learning_metrics.convergence_rate * 1000000.0) as u64) << 32
+                | (if result.learning_metrics.convergence_rate < 0.001 {
+                    1
+                } else {
+                    0
+                }),
             parity: 0,
         };
         quins.push(learning_quin);
@@ -656,8 +695,12 @@ impl SnnExtension {
             predicate: crate::q_hash("q42:hasCrdtSync"),
             object: result.crdt_sync_metrics.sync_rounds as u64,
             context: crate::q_hash("snn:crdt"),
-            metadata: ((result.crdt_sync_metrics.conflicts_resolved as u64) << 32) | 
-                     (if result.crdt_sync_metrics.convergence_achieved { 1 } else { 0 }),
+            metadata: ((result.crdt_sync_metrics.conflicts_resolved as u64) << 32)
+                | (if result.crdt_sync_metrics.convergence_achieved {
+                    1
+                } else {
+                    0
+                }),
             parity: 0,
         };
         quins.push(sync_quin);
@@ -698,19 +741,22 @@ impl NoisyGradientCrdt {
         }
     }
 
-    pub async fn synchronize_gradients(&mut self, result: &SnnExecutionResult) -> Result<CrdtSyncMetrics, ExtensionError> {
+    pub async fn synchronize_gradients(
+        &mut self,
+        result: &SnnExecutionResult,
+    ) -> Result<CrdtSyncMetrics, ExtensionError> {
         // Extract gradients from synaptic weights
         let gradients = self.extract_gradients(&result.synaptic_weights)?;
-        
+
         // Add noise to gradients
         let noisy_gradients = self.add_noise_to_gradients(&gradients)?;
-        
+
         // Synchronize with other nodes
         let sync_result = self.perform_sync(&noisy_gradients).await?;
-        
+
         // Resolve conflicts
         let conflicts_resolved = self.resolve_conflicts(&sync_result.conflicts)?;
-        
+
         Ok(CrdtSyncMetrics {
             sync_rounds: sync_result.rounds,
             conflicts_resolved,
@@ -720,9 +766,12 @@ impl NoisyGradientCrdt {
         })
     }
 
-    fn extract_gradients(&self, weights: &[Vec<f64>]) -> Result<HashMap<String, CrdtGradient>, ExtensionError> {
+    fn extract_gradients(
+        &self,
+        weights: &[Vec<f64>],
+    ) -> Result<HashMap<String, CrdtGradient>, ExtensionError> {
         let mut gradients = HashMap::new();
-        
+
         for (i, weight_vector) in weights.iter().enumerate() {
             for (j, &weight) in weight_vector.iter().enumerate() {
                 let gradient_id = format!("weight_{}_{}", i, j);
@@ -736,13 +785,16 @@ impl NoisyGradientCrdt {
                 gradients.insert(gradient_id, gradient);
             }
         }
-        
+
         Ok(gradients)
     }
 
-    fn add_noise_to_gradients(&mut self, gradients: &HashMap<String, CrdtGradient>) -> Result<HashMap<String, CrdtGradient>, ExtensionError> {
+    fn add_noise_to_gradients(
+        &mut self,
+        gradients: &HashMap<String, CrdtGradient>,
+    ) -> Result<HashMap<String, CrdtGradient>, ExtensionError> {
         let mut noisy_gradients = HashMap::new();
-        
+
         for (id, gradient) in gradients {
             let noise = self.noise_generator.generate_noise();
             let noisy_gradient = CrdtGradient {
@@ -754,11 +806,14 @@ impl NoisyGradientCrdt {
             };
             noisy_gradients.insert(id.clone(), noisy_gradient);
         }
-        
+
         Ok(noisy_gradients)
     }
 
-    async fn perform_sync(&mut self, gradients: &HashMap<String, CrdtGradient>) -> Result<SyncResult, ExtensionError> {
+    async fn perform_sync(
+        &mut self,
+        gradients: &HashMap<String, CrdtGradient>,
+    ) -> Result<SyncResult, ExtensionError> {
         // Real CRDT merge of the (noisy) local gradients into the persistent gradient
         // state. There is one in-process node, so there is no network round-trip — but the
         // MERGE semantics are real: advance this node's logical clock, merge each gradient,
@@ -814,7 +869,7 @@ impl NoisyGradientCrdt {
 
     fn resolve_conflicts(&mut self, conflicts: &[GradientConflict]) -> Result<u32, ExtensionError> {
         let mut resolved = 0;
-        
+
         for conflict in conflicts {
             // Use noisy gradient for conflict resolution
             let resolution = self.resolve_conflict_with_noise(conflict)?;
@@ -822,11 +877,14 @@ impl NoisyGradientCrdt {
                 resolved += 1;
             }
         }
-        
+
         Ok(resolved)
     }
 
-    fn resolve_conflict_with_noise(&mut self, conflict: &GradientConflict) -> Result<bool, ExtensionError> {
+    fn resolve_conflict_with_noise(
+        &mut self,
+        conflict: &GradientConflict,
+    ) -> Result<bool, ExtensionError> {
         // Noisy-gradient resolution: among the conflicting candidates choose the one with
         // the highest confidence; a fresh node-noise draw breaks exact ties on the noisy
         // value so symmetric cross-node conflicts converge instead of deadlocking. Returns
@@ -859,7 +917,7 @@ impl NoiseGenerator {
     pub fn generate_noise(&mut self) -> f64 {
         use rand::RngExt;
         let mut rng = rand::rng();
-        
+
         match self.noise_type {
             NoiseType::Gaussian => {
                 // Box-Muller transform for Gaussian noise
@@ -868,9 +926,7 @@ impl NoiseGenerator {
                 let noise = (-2.0 * u1.ln()).sqrt() * (2.0 * std::f64::consts::PI * u2).cos();
                 noise * self.amplitude
             }
-            NoiseType::Uniform => {
-                rng.random_range(-self.amplitude..self.amplitude)
-            }
+            NoiseType::Uniform => rng.random_range(-self.amplitude..self.amplitude),
             _ => 0.0, // Placeholder for other noise types
         }
     }
@@ -882,13 +938,11 @@ impl TemporalConfig {
             spike_queue: VecDeque::new(),
             current_time: Instant::now(),
             time_step: self.time_step,
-            event_handlers: vec![
-                SpikeEventHandler {
-                    handler_type: HandlerType::Plasticity,
-                    priority: 1,
-                    enabled: true,
-                },
-            ],
+            event_handlers: vec![SpikeEventHandler {
+                handler_type: HandlerType::Plasticity,
+                priority: 1,
+                enabled: true,
+            }],
         }
     }
 }
@@ -1002,29 +1056,50 @@ impl Extension for SnnExtension {
 
     async fn execute(&self, job: ExtensionJob) -> Result<ExtensionResult, ExtensionError> {
         let start_time = Instant::now();
-        
+
         match job.operation.as_str() {
             "simulate_snn" => {
                 let params: SnnJobParams = serde_json::from_value(
-                    job.parameters.get("snn_params")
-                        .ok_or_else(|| ExtensionError::ExecutionFailed("Missing snn_params".to_string()))?
-                        .clone()
-                ).map_err(|e| ExtensionError::ExecutionFailed(format!("Invalid snn_params: {}", e)))?;
+                    job.parameters
+                        .get("snn_params")
+                        .ok_or_else(|| {
+                            ExtensionError::ExecutionFailed("Missing snn_params".to_string())
+                        })?
+                        .clone(),
+                )
+                .map_err(|e| {
+                    ExtensionError::ExecutionFailed(format!("Invalid snn_params: {}", e))
+                })?;
 
                 let result = self.simulate_snn(params).await?;
                 let quins = Self::result_to_quins(&result, &job.job_id);
-                
+
                 Ok(ExtensionResult {
                     job_id: job.job_id,
                     success: true,
                     result_quins: quins,
                     metadata: {
                         let mut meta = HashMap::new();
-                        meta.insert("converged".to_string(), result.learning_metrics.convergence_rate.to_string());
-                        meta.insert("final_loss".to_string(), result.learning_metrics.final_loss.to_string());
-                        meta.insert("spike_rate".to_string(), result.learning_metrics.spike_rate.to_string());
-                        meta.insert("sync_rounds".to_string(), result.crdt_sync_metrics.sync_rounds.to_string());
-                        meta.insert("conflicts_resolved".to_string(), result.crdt_sync_metrics.conflicts_resolved.to_string());
+                        meta.insert(
+                            "converged".to_string(),
+                            result.learning_metrics.convergence_rate.to_string(),
+                        );
+                        meta.insert(
+                            "final_loss".to_string(),
+                            result.learning_metrics.final_loss.to_string(),
+                        );
+                        meta.insert(
+                            "spike_rate".to_string(),
+                            result.learning_metrics.spike_rate.to_string(),
+                        );
+                        meta.insert(
+                            "sync_rounds".to_string(),
+                            result.crdt_sync_metrics.sync_rounds.to_string(),
+                        );
+                        meta.insert(
+                            "conflicts_resolved".to_string(),
+                            result.crdt_sync_metrics.conflicts_resolved.to_string(),
+                        );
                         meta
                     },
                     execution_time_ms: start_time.elapsed().as_millis() as u64,
@@ -1047,17 +1122,19 @@ mod tests {
     async fn test_snn_extension_creation() {
         let extension = SnnExtension::new();
         let capability = extension.capability();
-        
+
         assert_eq!(capability.name, "snn");
         assert_eq!(capability.version, "1.0.0");
-        assert!(capability.supported_operations.contains(&"simulate_snn".to_string()));
+        assert!(capability
+            .supported_operations
+            .contains(&"simulate_snn".to_string()));
         assert!(capability.required_resources.requires_network); // CRDT sync requires network
     }
 
     #[tokio::test]
     async fn test_snn_simulation() {
         let extension = SnnExtension::new();
-        
+
         let params = SnnJobParams {
             network_name: "test_network".to_string(),
             input_spikes: vec![],
@@ -1077,7 +1154,7 @@ mod tests {
         let mut noise_gen = NoiseGenerator::new();
         let noise1 = noise_gen.generate_noise();
         let noise2 = noise_gen.generate_noise();
-        
+
         // Should generate different noise values
         assert_ne!(noise1, noise2);
 
@@ -1190,8 +1267,14 @@ mod tests {
             &sign,
             &mut last,
         );
-        assert!(fired.contains(&2), "neuron 2 should fire from the real synaptic drive");
+        assert!(
+            fired.contains(&2),
+            "neuron 2 should fire from the real synaptic drive"
+        );
         // STDP: pre (1) before post (2) → causal potentiation of the synapse.
-        assert!(net.synapses[0].weight > w0, "STDP should potentiate the 1→2 synapse");
+        assert!(
+            net.synapses[0].weight > w0,
+            "STDP should potentiate the 1→2 synapse"
+        );
     }
 }

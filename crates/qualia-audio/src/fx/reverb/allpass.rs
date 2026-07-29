@@ -84,9 +84,17 @@ mod tests {
         a.process(&input, &mut out).unwrap();
 
         // Immediate inverted feedthrough: y[0] = -x[0] + 0 = -1.
-        assert!((out[0] + 1.0).abs() < 1e-6, "y[0] should be -1, got {}", out[0]);
+        assert!(
+            (out[0] + 1.0).abs() < 1e-6,
+            "y[0] should be -1, got {}",
+            out[0]
+        );
         // First recirculation appears at the delay tap and is non-zero.
-        assert!(out[d].abs() > 1e-6, "expected energy at delay tap, got {}", out[d]);
+        assert!(
+            out[d].abs() > 1e-6,
+            "expected energy at delay tap, got {}",
+            out[d]
+        );
         assert!(out.iter().all(|x| x.is_finite()));
     }
 
@@ -102,7 +110,12 @@ mod tests {
         a.process(&input, &mut out).unwrap();
         let early: f32 = out[..500].iter().map(|x| x * x).sum();
         let late: f32 = out[1500..].iter().map(|x| x * x).sum();
-        assert!(late < early, "late energy {} should be < early {}", late, early);
+        assert!(
+            late < early,
+            "late energy {} should be < early {}",
+            late,
+            early
+        );
         assert!(out.iter().all(|x| x.abs() < 10.0));
     }
 
@@ -111,6 +124,9 @@ mod tests {
         let mut a = Allpass::new(4, 0.5).unwrap();
         let input = [0.0f32; 8];
         let mut out = [0.0f32; 4];
-        assert_eq!(a.process(&input, &mut out), Err(AudioError::OutputBufferTooSmall));
+        assert_eq!(
+            a.process(&input, &mut out),
+            Err(AudioError::OutputBufferTooSmall)
+        );
     }
 }

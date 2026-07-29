@@ -60,7 +60,7 @@ fn webmanifest() -> String {
     }
   ]
 }"###
-    .into()
+        .into()
 }
 
 fn service_worker() -> String {

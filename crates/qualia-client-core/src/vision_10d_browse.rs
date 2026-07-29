@@ -4,11 +4,8 @@
 //! Library / desktop browse. Does not invent digests; reports file facts only.
 
 use qualia_core_db::container_10d::{
-    header::Container10dHeader,
-    integrity::verify_whole_file_crc32c,
-    mesh_section::decode_mesh_section,
-    node_section::parse_node_header,
-    parse_section_table,
+    header::Container10dHeader, integrity::verify_whole_file_crc32c,
+    mesh_section::decode_mesh_section, node_section::parse_node_header, parse_section_table,
     section::SectionType,
 };
 use qualia_core_db::render::compile_10d::{compiled_digest, decode_10d_mesh};
@@ -44,11 +41,7 @@ pub fn list_vision_10d_containers(storage_root: &Path) -> Result<Vec<Vision10dEn
     Ok(out)
 }
 
-fn scan_vision_dir(
-    dir: &Path,
-    base: &Path,
-    out: &mut Vec<Vision10dEntry>,
-) -> Result<(), String> {
+fn scan_vision_dir(dir: &Path, base: &Path, out: &mut Vec<Vision10dEntry>) -> Result<(), String> {
     let rd = std::fs::read_dir(dir).map_err(|e| format!("read_dir {}: {e}", dir.display()))?;
     for ent in rd.flatten() {
         let path = ent.path();
@@ -65,7 +58,10 @@ fn scan_vision_dir(
 }
 
 /// Inspect one `.10d` path relative to storage (or absolute under storage).
-pub fn inspect_vision_10d(storage_root: &Path, relative_or_abs: &str) -> Result<Vision10dEntry, String> {
+pub fn inspect_vision_10d(
+    storage_root: &Path,
+    relative_or_abs: &str,
+) -> Result<Vision10dEntry, String> {
     let p = PathBuf::from(relative_or_abs);
     let full = if p.is_absolute() {
         p
@@ -149,7 +145,10 @@ fn inspect_vision_10d_path(path: &Path, base: &Path) -> Result<Vision10dEntry, S
     let (mesh_vertices, mesh_triangles) = if mesh_v.is_some() {
         (mesh_v, mesh_t)
     } else if let Ok(m) = decode_10d_mesh(&bytes) {
-        (Some(m.vertex_count() as u32), Some(m.triangle_count() as u32))
+        (
+            Some(m.vertex_count() as u32),
+            Some(m.triangle_count() as u32),
+        )
     } else {
         (None, None)
     };
@@ -187,10 +186,7 @@ mod tests {
 
     #[test]
     fn lists_recon_under_vision_geometry() {
-        let dir = std::env::temp_dir().join(format!(
-            "vision_10d_browse_{}",
-            std::process::id()
-        ));
+        let dir = std::env::temp_dir().join(format!("vision_10d_browse_{}", std::process::id()));
         let _ = fs::remove_dir_all(&dir);
         let digest = "aabbccddeeff0011";
         let recon = dir.join("vision_geometry").join(digest);

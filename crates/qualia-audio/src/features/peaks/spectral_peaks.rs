@@ -108,7 +108,12 @@ mod tests {
         let np = spectral_peaks(&mag, sr, 4, &mut fr, &mut mg).expect("peaks");
         assert_eq!(np, 1);
         let true_hz = center * bin_hz; // 4319.56 Hz
-        assert!((fr[0] - true_hz).abs() < 2.0, "freq={} want={}", fr[0], true_hz);
+        assert!(
+            (fr[0] - true_hz).abs() < 2.0,
+            "freq={} want={}",
+            fr[0],
+            true_hz
+        );
         assert!(mg[0] > 0.99, "peak mag={}", mg[0]);
     }
 

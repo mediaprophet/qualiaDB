@@ -3,9 +3,7 @@
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::record::{
-    EpistemicStatus, EvidenceType, RecordEnvelope, SensitivityClass,
-};
+use crate::record::{EpistemicStatus, EvidenceType, RecordEnvelope, SensitivityClass};
 
 /// Lifecycle of a self-reported condition entry.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -242,13 +240,8 @@ mod tests {
     #[test]
     fn allergy_envelope_kind() {
         let report = AllergyReport::new("Peanuts");
-        let env = build_allergy_envelope(
-            &report,
-            "did:wf:owner",
-            "did:wf:owner",
-            1_700_000_000,
-            None,
-        );
+        let env =
+            build_allergy_envelope(&report, "did:wf:owner", "did:wf:owner", 1_700_000_000, None);
         assert!(env.id.contains(":allergy:"));
         assert_eq!(journal_kind_for_record_id(&env.id), "allergy");
     }

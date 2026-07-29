@@ -6,11 +6,11 @@
 //! These tests run headless (no GPU required). They verify emission
 //! correctness, not numerical equivalence (which requires GPU execution).
 
+use qualia_core_db::wgsl_forge::emit::{emit_hlsl, emit_msl, emit_ptx, emit_wgsl};
 use qualia_core_db::wgsl_forge::{
     generate_builtin, BufferAccess, BufferElement, BufferSpec, BuiltinKernel, KernelSpec,
     ScalarType, Schedule, TargetBackend,
 };
-use qualia_core_db::wgsl_forge::emit::{emit_hlsl, emit_msl, emit_ptx, emit_wgsl};
 
 /// Helper: create a storage buffer spec.
 fn storage(name: &str, binding: u32) -> BufferSpec {
@@ -286,8 +286,8 @@ fn ptx_emits_valid_source_for_all_implemented_kernels() {
             shared_memory: Vec::new(),
         };
         let schedule = Schedule::default();
-        let shader = emit_ptx(&spec, schedule)
-            .unwrap_or_else(|e| panic!("PTX emit {} failed: {e}", id));
+        let shader =
+            emit_ptx(&spec, schedule).unwrap_or_else(|e| panic!("PTX emit {} failed: {e}", id));
         assert!(
             !shader.source.is_empty(),
             "PTX {} produced empty source",
@@ -355,7 +355,25 @@ fn metal_mega_pass_stub_returns_none_on_non_macos() {
     use qualia_core_db::inference::metal_lane;
     if !metal_lane::metal_mega_pass_available() {
         assert!(metal_lane::try_metal_mega_pass(
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0.0, 0.0, 0.0, &[], &[], &[], None, None, 0, 0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0.0,
+            0.0,
+            0.0,
+            &[],
+            &[],
+            &[],
+            None,
+            None,
+            0,
+            0,
         )
         .is_none());
     }

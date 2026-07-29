@@ -78,7 +78,10 @@ mod tests {
     fn zero_window_errors() {
         let x = [1.0f32; 4];
         let mut out = [0.0f32; 4];
-        assert_eq!(moving_average(&x, &mut out, 0), Err(AudioError::InvalidParameter));
+        assert_eq!(
+            moving_average(&x, &mut out, 0),
+            Err(AudioError::InvalidParameter)
+        );
     }
 
     #[test]

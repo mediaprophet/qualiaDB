@@ -1,9 +1,9 @@
 //! Browser panes: WebBrowserPane + DialecticalSidebarPane.
 
+mod dialectical;
 mod shared;
 mod web_browser;
-mod dialectical;
 
+pub use dialectical::DialecticalSidebarPane;
 pub use shared::*;
 pub use web_browser::WebBrowserPane;
-pub use dialectical::DialecticalSidebarPane;

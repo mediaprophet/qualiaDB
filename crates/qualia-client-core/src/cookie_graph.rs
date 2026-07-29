@@ -124,8 +124,7 @@ impl CookieGraph {
     pub fn clear_origin(&mut self, origin: &str) -> usize {
         let o = origin.trim().trim_end_matches('/');
         let before = self.nodes.len();
-        self.nodes
-            .retain(|n| n.origin.trim_end_matches('/') != o);
+        self.nodes.retain(|n| n.origin.trim_end_matches('/') != o);
         before.saturating_sub(self.nodes.len())
     }
 
@@ -306,7 +305,10 @@ pub fn summary_for_url(storage_root: &Path, url: &str) -> serde_json::Value {
 
 /// Clear cookie graph for origin and optionally log intent for site-data clear.
 /// Does **not** by itself wipe the WebView jar — pair with platform clear.
-pub fn clear_graph_for_origin(storage_root: &Path, origin_or_url: &str) -> Result<serde_json::Value, String> {
+pub fn clear_graph_for_origin(
+    storage_root: &Path,
+    origin_or_url: &str,
+) -> Result<serde_json::Value, String> {
     let host = host_of(origin_or_url);
     let origin = if origin_or_url.starts_with("https") {
         format!("https://{host}")
@@ -369,8 +371,12 @@ fn append_clear_audit(
         .append(true)
         .open(&path)
         .map_err(|e| e.to_string())?;
-    writeln!(f, "{}", serde_json::to_string(&line).map_err(|e| e.to_string())?)
-        .map_err(|e| e.to_string())?;
+    writeln!(
+        f,
+        "{}",
+        serde_json::to_string(&line).map_err(|e| e.to_string())?
+    )
+    .map_err(|e| e.to_string())?;
     Ok(())
 }
 
@@ -382,13 +388,7 @@ mod tests {
     fn parse_and_persist() {
         let dir = tempfile::tempdir().unwrap();
         let sc = "SID=abc; Domain=example.org; Path=/; Secure; SameSite=None".to_string();
-        let g = observe_set_cookies(
-            dir.path(),
-            "https://example.org/page",
-            &[sc],
-            1,
-        )
-        .unwrap();
+        let g = observe_set_cookies(dir.path(), "https://example.org/page", &[sc], 1).unwrap();
         assert_eq!(g.nodes.len(), 1);
         assert_eq!(g.nodes[0].name, "SID");
         assert_eq!(g.nodes[0].purpose, CookiePurposeHypothesis::Session);

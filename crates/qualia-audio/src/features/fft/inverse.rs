@@ -43,8 +43,9 @@ mod tests {
     #[test]
     fn forward_then_ifft_to_real_reconstructs() {
         let n = 64usize;
-        let orig: Vec<f32> =
-            (0..n).map(|i| (TAU * 3.0 * i as f32 / n as f32).cos() * 0.8).collect();
+        let orig: Vec<f32> = (0..n)
+            .map(|i| (TAU * 3.0 * i as f32 / n as f32).cos() * 0.8)
+            .collect();
         let mut spec = vec![0.0f32; 2 * n];
         for i in 0..n {
             spec[2 * i] = orig[i];
@@ -54,7 +55,12 @@ mod tests {
         let mut out = vec![0.0f32; n];
         ifft_to_real(&mut spec, &mut out).unwrap();
         for i in 0..n {
-            assert!((out[i] - orig[i]).abs() < 1e-4, "sample {i}: {} vs {}", out[i], orig[i]);
+            assert!(
+                (out[i] - orig[i]).abs() < 1e-4,
+                "sample {i}: {} vs {}",
+                out[i],
+                orig[i]
+            );
         }
     }
 

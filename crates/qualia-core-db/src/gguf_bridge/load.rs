@@ -388,6 +388,7 @@ impl QTensorEngine {
     /// so the bench can count submit→wait round-trips per token and separate synchronization stall
     /// from real kernel time. Behaviourally identical to a bare blocking poll.
     #[inline]
+    #[cfg(not(target_arch = "wasm32"))]
     pub(crate) fn poll_wait(&self) {
         let _ = self.gpu_device().poll(wgpu::PollType::wait_indefinitely());
         GPU_WAIT_COUNT.fetch_add(1, std::sync::atomic::Ordering::Relaxed);

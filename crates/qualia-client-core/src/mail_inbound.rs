@@ -76,14 +76,14 @@ pub fn accept_message(
             };
             if matches!(via, ResolutionVia::Catchall) && !verdict.quarantined {
                 verdict.quarantined = true;
-                verdict
-                    .reasons
-                    .push("catchall intake — quarantined".into());
+                verdict.reasons.push("catchall intake — quarantined".into());
             }
             if !verdict.deliver {
                 return AcceptResult {
                     accepted: false,
-                    rejected: verdict.rejected.or_else(|| Some("rejected by rules".into())),
+                    rejected: verdict
+                        .rejected
+                        .or_else(|| Some("rejected by rules".into())),
                     stored: None,
                 };
             }
@@ -199,10 +199,7 @@ pub fn start_receiver(bind: &str) -> Result<serde_json::Value, String> {
     listener
         .set_nonblocking(true)
         .map_err(|e| format!("set_nonblocking: {e}"))?;
-    let port = listener
-        .local_addr()
-        .map(|a| a.port())
-        .unwrap_or(0);
+    let port = listener.local_addr().map(|a| a.port()).unwrap_or(0);
     SMTP_STOP.store(false, Ordering::Relaxed);
     SMTP_PORT.store(port, Ordering::Relaxed);
     if let Ok(mut g) = bind_display().lock() {
@@ -279,9 +276,7 @@ fn parse_smtp_path(arg: &str) -> String {
 #[cfg(not(target_arch = "wasm32"))]
 fn handle_smtp_session(mut stream: TcpStream) -> Result<(), String> {
     // Blocking reads after accept — switch socket back to blocking for BufReader.
-    stream
-        .set_nonblocking(false)
-        .map_err(|e| e.to_string())?;
+    stream.set_nonblocking(false).map_err(|e| e.to_string())?;
     smtp_write(
         &mut stream,
         "220 webizen.local ESMTP Qualia semantic mail ready\r\n",
@@ -302,7 +297,10 @@ fn handle_smtp_session(mut stream: TcpStream) -> Result<(), String> {
         let upper = cmd.to_ascii_uppercase();
 
         if upper.starts_with("EHLO") || upper.starts_with("HELO") {
-            smtp_write(&mut stream, "250-webizen.local\r\n250-PIPELINING\r\n250 8BITMIME\r\n")?;
+            smtp_write(
+                &mut stream,
+                "250-webizen.local\r\n250-PIPELINING\r\n250 8BITMIME\r\n",
+            )?;
         } else if upper.starts_with("MAIL FROM:") {
             mail_from = parse_smtp_path(&cmd[10..]);
             smtp_write(&mut stream, "250 OK\r\n")?;
@@ -315,10 +313,7 @@ fn handle_smtp_session(mut stream: TcpStream) -> Result<(), String> {
                     smtp_write(&mut stream, "250 OK\r\n")?;
                 }
                 DeliveryResolution::Reject { reason } => {
-                    smtp_write(
-                        &mut stream,
-                        &format!("550 5.1.1 {reason}\r\n"),
-                    )?;
+                    smtp_write(&mut stream, &format!("550 5.1.1 {reason}\r\n"))?;
                 }
             }
         } else if upper == "DATA" {
@@ -326,10 +321,7 @@ fn handle_smtp_session(mut stream: TcpStream) -> Result<(), String> {
                 smtp_write(&mut stream, "503 5.5.1 No valid recipients\r\n")?;
                 continue;
             }
-            smtp_write(
-                &mut stream,
-                "354 End data with <CR><LF>.<CR><LF>\r\n",
-            )?;
+            smtp_write(&mut stream, "354 End data with <CR><LF>.<CR><LF>\r\n")?;
             let mut data = String::new();
             loop {
                 line.clear();
@@ -368,10 +360,7 @@ fn handle_smtp_session(mut stream: TcpStream) -> Result<(), String> {
             if any_ok {
                 smtp_write(&mut stream, "250 OK queued\r\n")?;
             } else {
-                smtp_write(
-                    &mut stream,
-                    &format!("550 5.7.1 rejected: {last_err}\r\n"),
-                )?;
+                smtp_write(&mut stream, &format!("550 5.7.1 rejected: {last_err}\r\n"))?;
             }
             // Reset transaction
             mail_from.clear();
@@ -483,7 +472,14 @@ mod tests {
         .unwrap();
         upsert_address(a).unwrap();
         let to = format!("frontdoor@{domain}");
-        let r = accept_message("peer@other.example", &to, "Ping", "hello world", false, None);
+        let r = accept_message(
+            "peer@other.example",
+            &to,
+            "Ping",
+            "hello world",
+            false,
+            None,
+        );
         assert!(r.accepted, "{:?}", r.rejected);
         let stored = r.stored.expect("stored");
         assert_eq!(stored.mailbox, to);

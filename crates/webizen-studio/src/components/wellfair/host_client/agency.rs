@@ -8,7 +8,6 @@ use crate::components::qapp_engine::tauri_invoke;
 #[cfg(target_arch = "wasm32")]
 use js_sys;
 
-
 /// A domain of agency (for the delegation-creation picker).
 #[derive(Debug, Clone, Default, Deserialize)]
 pub struct AgencyDomainDto {
@@ -62,7 +61,9 @@ pub async fn fetch_agency_domains() -> Result<Vec<AgencyDomainDto>, String> {
     let js = tauri_invoke("wellfair_list_agency_domains", wasm_bindgen::JsValue::NULL)
         .await
         .map_err(|e| format!("{e:?}"))?;
-    let json = js.as_string().ok_or_else(|| "agency domains not JSON".to_string())?;
+    let json = js
+        .as_string()
+        .ok_or_else(|| "agency domains not JSON".to_string())?;
     serde_json::from_str(&json).map_err(|e| e.to_string())
 }
 
@@ -73,10 +74,15 @@ pub async fn fetch_agency_domains() -> Result<Vec<AgencyDomainDto>, String> {
 
 #[cfg(target_arch = "wasm32")]
 pub async fn fetch_agency_delegations() -> Result<Vec<AgencyDelegationDto>, String> {
-    let js = tauri_invoke("wellfair_list_agency_delegations", wasm_bindgen::JsValue::NULL)
-        .await
-        .map_err(|e| format!("{e:?}"))?;
-    let json = js.as_string().ok_or_else(|| "agency delegations not JSON".to_string())?;
+    let js = tauri_invoke(
+        "wellfair_list_agency_delegations",
+        wasm_bindgen::JsValue::NULL,
+    )
+    .await
+    .map_err(|e| format!("{e:?}"))?;
+    let json = js
+        .as_string()
+        .ok_or_else(|| "agency delegations not JSON".to_string())?;
     serde_json::from_str(&json).map_err(|e| e.to_string())
 }
 
@@ -126,12 +132,23 @@ pub async fn create_agency_delegation(
 }
 
 #[cfg(target_arch = "wasm32")]
-pub async fn set_agency_delegation_consent(delegation_id: &str, consent: &str) -> Result<(), String> {
+pub async fn set_agency_delegation_consent(
+    delegation_id: &str,
+    consent: &str,
+) -> Result<(), String> {
     let args = js_sys::Object::new();
-    js_sys::Reflect::set(&args, &"delegationId".into(), &wasm_bindgen::JsValue::from_str(delegation_id))
-        .map_err(|_| "failed to build invoke args".to_string())?;
-    js_sys::Reflect::set(&args, &"consent".into(), &wasm_bindgen::JsValue::from_str(consent))
-        .map_err(|_| "failed to build invoke args".to_string())?;
+    js_sys::Reflect::set(
+        &args,
+        &"delegationId".into(),
+        &wasm_bindgen::JsValue::from_str(delegation_id),
+    )
+    .map_err(|_| "failed to build invoke args".to_string())?;
+    js_sys::Reflect::set(
+        &args,
+        &"consent".into(),
+        &wasm_bindgen::JsValue::from_str(consent),
+    )
+    .map_err(|_| "failed to build invoke args".to_string())?;
     tauri_invoke("wellfair_set_agency_delegation_consent", args.into())
         .await
         .map_err(|e| format!("{e:?}"))?;
@@ -139,15 +156,22 @@ pub async fn set_agency_delegation_consent(delegation_id: &str, consent: &str) -
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-pub async fn set_agency_delegation_consent(_delegation_id: &str, _consent: &str) -> Result<(), String> {
+pub async fn set_agency_delegation_consent(
+    _delegation_id: &str,
+    _consent: &str,
+) -> Result<(), String> {
     Err("Updating consent requires the Tauri desktop host".into())
 }
 
 #[cfg(target_arch = "wasm32")]
 pub async fn revoke_agency_delegation(delegation_id: &str) -> Result<(), String> {
     let args = js_sys::Object::new();
-    js_sys::Reflect::set(&args, &"delegationId".into(), &wasm_bindgen::JsValue::from_str(delegation_id))
-        .map_err(|_| "failed to build invoke args".to_string())?;
+    js_sys::Reflect::set(
+        &args,
+        &"delegationId".into(),
+        &wasm_bindgen::JsValue::from_str(delegation_id),
+    )
+    .map_err(|_| "failed to build invoke args".to_string())?;
     tauri_invoke("wellfair_revoke_agency_delegation", args.into())
         .await
         .map_err(|e| format!("{e:?}"))?;
@@ -166,16 +190,30 @@ pub async fn evaluate_agency_access(
     data_class: &str,
 ) -> Result<AgencyDecisionDto, String> {
     let args = js_sys::Object::new();
-    js_sys::Reflect::set(&args, &"delegationId".into(), &wasm_bindgen::JsValue::from_str(delegation_id))
-        .map_err(|_| "failed to build invoke args".to_string())?;
-    js_sys::Reflect::set(&args, &"action".into(), &wasm_bindgen::JsValue::from_str(action))
-        .map_err(|_| "failed to build invoke args".to_string())?;
-    js_sys::Reflect::set(&args, &"dataClass".into(), &wasm_bindgen::JsValue::from_str(data_class))
-        .map_err(|_| "failed to build invoke args".to_string())?;
+    js_sys::Reflect::set(
+        &args,
+        &"delegationId".into(),
+        &wasm_bindgen::JsValue::from_str(delegation_id),
+    )
+    .map_err(|_| "failed to build invoke args".to_string())?;
+    js_sys::Reflect::set(
+        &args,
+        &"action".into(),
+        &wasm_bindgen::JsValue::from_str(action),
+    )
+    .map_err(|_| "failed to build invoke args".to_string())?;
+    js_sys::Reflect::set(
+        &args,
+        &"dataClass".into(),
+        &wasm_bindgen::JsValue::from_str(data_class),
+    )
+    .map_err(|_| "failed to build invoke args".to_string())?;
     let js = tauri_invoke("wellfair_evaluate_agency_access", args.into())
         .await
         .map_err(|e| format!("{e:?}"))?;
-    let json = js.as_string().ok_or_else(|| "agency decision not JSON".to_string())?;
+    let json = js
+        .as_string()
+        .ok_or_else(|| "agency decision not JSON".to_string())?;
     serde_json::from_str(&json).map_err(|e| e.to_string())
 }
 
@@ -187,4 +225,3 @@ pub async fn evaluate_agency_access(
 ) -> Result<AgencyDecisionDto, String> {
     Err("Evaluating access requires the Tauri desktop host".into())
 }
-

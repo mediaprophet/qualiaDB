@@ -75,7 +75,10 @@ impl AudioMediaStore {
             retention,
             digest_u64: d.hash,
         };
-        let idx = self.root.join("audio/index").join(format!("{digest_hex}.txt"));
+        let idx = self
+            .root
+            .join("audio/index")
+            .join(format!("{digest_hex}.txt"));
         let line = format!(
             "digest={} rate={} ch={} frames={} len={}\n",
             rec.digest_hex, sample_rate, channels, frames, rec.byte_len

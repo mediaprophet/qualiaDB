@@ -24,11 +24,7 @@ pub async fn view_session() -> Result<serde_json::Value, String> {
 /// Set observer: principal | peer | guardian | steward | public | instrument | auditor.
 #[cfg(target_arch = "wasm32")]
 pub async fn view_set_observer(status: &str) -> Result<serde_json::Value, String> {
-    invoke_json(
-        "view_set_observer",
-        serde_json::json!({ "status": status }),
-    )
-    .await
+    invoke_json("view_set_observer", serde_json::json!({ "status": status })).await
 }
 #[cfg(not(target_arch = "wasm32"))]
 pub async fn view_set_observer(status: &str) -> Result<serde_json::Value, String> {
@@ -96,11 +92,7 @@ pub async fn view_morph(mode: &str) -> Result<serde_json::Value, String> {
 /// Pick nearest scene node (normalized 0..1 coords) → shared selection.
 #[cfg(target_arch = "wasm32")]
 pub async fn view_pick_scene(nx: f64, ny: f64) -> Result<serde_json::Value, String> {
-    invoke_json(
-        "view_pick_scene",
-        serde_json::json!({ "nx": nx, "ny": ny }),
-    )
-    .await
+    invoke_json("view_pick_scene", serde_json::json!({ "nx": nx, "ny": ny })).await
 }
 #[cfg(not(target_arch = "wasm32"))]
 pub async fn view_pick_scene(_nx: f64, _ny: f64) -> Result<serde_json::Value, String> {
@@ -110,11 +102,7 @@ pub async fn view_pick_scene(_nx: f64, _ny: f64) -> Result<serde_json::Value, St
 /// Select entity by raw id (shared across surfaces).
 #[cfg(target_arch = "wasm32")]
 pub async fn view_select(entity_id: u64) -> Result<serde_json::Value, String> {
-    invoke_json(
-        "view_select",
-        serde_json::json!({ "entityId": entity_id }),
-    )
-    .await
+    invoke_json("view_select", serde_json::json!({ "entityId": entity_id })).await
 }
 #[cfg(not(target_arch = "wasm32"))]
 pub async fn view_select(_entity_id: u64) -> Result<serde_json::Value, String> {
@@ -124,11 +112,7 @@ pub async fn view_select(_entity_id: u64) -> Result<serde_json::Value, String> {
 /// Select by URI (Library ↔ browser shared identity).
 #[cfg(target_arch = "wasm32")]
 pub async fn view_select_uri(uri: &str) -> Result<serde_json::Value, String> {
-    invoke_json(
-        "view_select_uri",
-        serde_json::json!({ "uri": uri }),
-    )
-    .await
+    invoke_json("view_select_uri", serde_json::json!({ "uri": uri })).await
 }
 #[cfg(not(target_arch = "wasm32"))]
 pub async fn view_select_uri(uri: &str) -> Result<serde_json::Value, String> {

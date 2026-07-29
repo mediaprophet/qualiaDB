@@ -1,7 +1,7 @@
-use crate::wallet::transaction::{Transaction, encode_varint};
-use sha2::{Sha256, Digest};
-use k256::ecdsa::{SigningKey, signature::Signer};
+use crate::wallet::transaction::{encode_varint, Transaction};
 use bip32::XPrv;
+use k256::ecdsa::{signature::Signer, SigningKey};
+use sha2::{Digest, Sha256};
 
 pub const SIGHASH_ALL: u32 = 0x01;
 pub const SIGHASH_FORKID: u32 = 0x40;
@@ -13,7 +13,7 @@ pub fn double_sha256(data: &[u8]) -> Vec<u8> {
 }
 
 pub fn hash160(data: &[u8]) -> Vec<u8> {
-    use ripemd::{Ripemd160, Digest as _};
+    use ripemd::{Digest as _, Ripemd160};
     let sha = Sha256::digest(data);
     let rip = Ripemd160::digest(&sha);
     rip.to_vec()
@@ -82,7 +82,7 @@ pub fn sign_p2pkh_input(
     let signing_key = SigningKey::from_slice(private_key_bytes.as_slice()).expect("Valid key");
     let signature: k256::ecdsa::Signature = signing_key.sign(&sighash);
     let mut der_sig = signature.to_der().to_bytes().to_vec();
-    
+
     // Append sighash type byte to DER signature
     der_sig.push(sighash_type as u8);
 

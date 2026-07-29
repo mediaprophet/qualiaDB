@@ -22,14 +22,33 @@ pub enum WorldStratum {
 /// A dataset layer in the ordered stack (doc 02 §3).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum CanvasLayer {
-    GeoSpatial { endpoint: String, stratum: WorldStratum },
-    Council { endpoint: String },
-    Historical { endpoint: String },
-    Celestial { endpoint: String },
-    Infosphere { endpoint: String },
-    MicroScale { endpoint: String },
-    Biosphere { endpoint: String },
-    Custom { name: String, endpoint: String, stratum: WorldStratum },
+    GeoSpatial {
+        endpoint: String,
+        stratum: WorldStratum,
+    },
+    Council {
+        endpoint: String,
+    },
+    Historical {
+        endpoint: String,
+    },
+    Celestial {
+        endpoint: String,
+    },
+    Infosphere {
+        endpoint: String,
+    },
+    MicroScale {
+        endpoint: String,
+    },
+    Biosphere {
+        endpoint: String,
+    },
+    Custom {
+        name: String,
+        endpoint: String,
+        stratum: WorldStratum,
+    },
 }
 
 impl CanvasLayer {
@@ -206,7 +225,8 @@ impl CanvasWorldConfig {
             }],
             norms: vec![CanvasNorm {
                 rule_uri: "urn:qualia:canvas:public-commons".to_string(),
-                description: "Permissive-commons read; planting requires placement right".to_string(),
+                description: "Permissive-commons read; planting requires placement right"
+                    .to_string(),
             }],
             origin_lat: -33.8688,
             origin_lon: 151.2093,

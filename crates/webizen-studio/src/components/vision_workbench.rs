@@ -18,18 +18,19 @@ use crate::Route;
 
 const SECTION: &str = "margin:0 0 1.25rem; padding:1rem 1.1rem; border-radius:12px; \
     border:1px solid var(--qualia-border); background:rgba(255,255,255,0.02);";
-const SECTION_TITLE: &str =
-    "margin:0 0 0.45rem; font-size:1rem; font-weight:650; display:flex; \
+const SECTION_TITLE: &str = "margin:0 0 0.45rem; font-size:1rem; font-weight:650; display:flex; \
      flex-wrap:wrap; gap:0.45rem; align-items:center;";
 const MUTED: &str =
     "margin:0 0 0.75rem; color:var(--qualia-text-muted); line-height:1.5; font-size:0.88rem;";
-const BTN: &str = "padding:0.45rem 0.9rem; border-radius:8px; border:1px solid var(--qualia-border); \
+const BTN: &str =
+    "padding:0.45rem 0.9rem; border-radius:8px; border:1px solid var(--qualia-border); \
     cursor:pointer; color:var(--qualia-text); font-size:0.88rem;";
 const BTN_PRIMARY: &str = "padding:0.45rem 0.9rem; border-radius:8px; border:1px solid var(--qualia-border); \
     background:rgba(0,200,160,0.15); color:var(--qualia-text); cursor:pointer; font-weight:600; font-size:0.88rem;";
 const BTN_DISABLED: &str = "padding:0.45rem 0.9rem; border-radius:8px; border:1px solid var(--qualia-border); \
     background:rgba(80,80,80,0.2); color:var(--qualia-text-muted); cursor:not-allowed; font-size:0.88rem; opacity:0.7;";
-const ROW: &str = "display:flex; flex-wrap:wrap; gap:0.65rem; align-items:center; margin-bottom:0.75rem;";
+const ROW: &str =
+    "display:flex; flex-wrap:wrap; gap:0.65rem; align-items:center; margin-bottom:0.75rem;";
 
 #[derive(Debug, Clone, Default, Deserialize, PartialEq)]
 struct OverlayBoxDto {
@@ -248,8 +249,12 @@ pub fn VisionWorkbench() -> Element {
                         mesh_info.set(format!(
                             "verts={} tris={} valid={} {}",
                             m.get("vertex_count").and_then(|x| x.as_u64()).unwrap_or(0),
-                            m.get("triangle_count").and_then(|x| x.as_u64()).unwrap_or(0),
-                            m.get("validation_ok").and_then(|x| x.as_bool()).unwrap_or(false),
+                            m.get("triangle_count")
+                                .and_then(|x| x.as_u64())
+                                .unwrap_or(0),
+                            m.get("validation_ok")
+                                .and_then(|x| x.as_bool())
+                                .unwrap_or(false),
                             m.get("note").and_then(|x| x.as_str()).unwrap_or("")
                         ));
                         status.set("Image→3D OK (heightfield recon, validated).".into());
@@ -290,11 +295,19 @@ pub fn VisionWorkbench() -> Element {
                         }
                         mesh_info.set(format!(
                             "10d={}B obj={}B quins_g={} quins_geo={} path={}",
-                            v.get("container_10d_bytes").and_then(|x| x.as_u64()).unwrap_or(0),
+                            v.get("container_10d_bytes")
+                                .and_then(|x| x.as_u64())
+                                .unwrap_or(0),
                             v.get("obj_bytes").and_then(|x| x.as_u64()).unwrap_or(0),
-                            v.get("generation_quins").and_then(|x| x.as_u64()).unwrap_or(0),
-                            v.get("geometry_quins").and_then(|x| x.as_u64()).unwrap_or(0),
-                            v.get("container_10d_path").and_then(|x| x.as_str()).unwrap_or("?")
+                            v.get("generation_quins")
+                                .and_then(|x| x.as_u64())
+                                .unwrap_or(0),
+                            v.get("geometry_quins")
+                                .and_then(|x| x.as_u64())
+                                .unwrap_or(0),
+                            v.get("container_10d_path")
+                                .and_then(|x| x.as_str())
+                                .unwrap_or("?")
                         ));
                         status.set(
                             v.get("note")
@@ -324,7 +337,12 @@ pub fn VisionWorkbench() -> Element {
             let device = sr_device();
             let scale = sr_scale();
             // Device select "auto" → GPU preference in host (device != "cpu").
-            let device_arg = if device == "auto" { "gpu" } else { device.as_str() }.to_string();
+            let device_arg = if device == "auto" {
+                "gpu"
+            } else {
+                device.as_str()
+            }
+            .to_string();
             let bytes = data_url_to_bytes(&gen_url()).unwrap_or_default();
             busy.set(true);
             status.set("Enhance (classical super-resolution)…".into());
@@ -348,13 +366,15 @@ pub fn VisionWorkbench() -> Element {
                                 r.out_width,
                                 r.out_height,
                                 r.device,
-                                if r.degraded { " (degraded → CPU)" } else { "" }
+                                if r.degraded {
+                                    " (degraded → CPU)"
+                                } else {
+                                    ""
+                                }
                             ));
                             sr_result.set(Some(r));
                         }
-                        Err(e) => status.set(format!(
-                            "Enhance reply shape unexpected: {e}"
-                        )),
+                        Err(e) => status.set(format!("Enhance reply shape unexpected: {e}")),
                     },
                     Err(e) => status.set(format!("Enhance failed: {}", humanize_vision_error(&e))),
                 }

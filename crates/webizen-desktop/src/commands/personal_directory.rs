@@ -42,4 +42,3 @@ pub fn set_directory_entry_categories(
 pub fn search_directory(query: String, facets_json: String) -> Result<serde_json::Value, String> {
     api::search_directory(query, facets_json)
 }
-

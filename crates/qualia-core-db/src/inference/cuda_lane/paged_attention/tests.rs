@@ -194,11 +194,7 @@ fn tiled_cuda_matches_scalar_paged_oracle_across_tiles_and_pages() {
                 table_view,
             ];
             segmented_partial
-                .dispatch(
-                    &partial_bindings,
-                    &schedule,
-                    N_HEAD * segments * 256,
-                )
+                .dispatch(&partial_bindings, &schedule, N_HEAD * segments * 256)
                 .expect("segmented attention partial dispatch");
             let mut merge_partial = partial_view;
             let mut merge_out = out_view;

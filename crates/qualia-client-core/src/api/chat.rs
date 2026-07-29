@@ -6,7 +6,6 @@ use super::*;
 
 use std::path::Path;
 
-
 pub fn create_chat_session(title: Option<String>) -> Result<String, String> {
     let state = crate::state::APP_STATE.get().unwrap();
     let storage = state.config.lock().unwrap().storage_path.clone();
@@ -178,4 +177,3 @@ pub fn run_chat_inference_detailed(
 pub fn cancel_chat_inference() {
     crate::chat_inference::request_cancel_inference();
 }
-

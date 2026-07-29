@@ -102,7 +102,8 @@ pub fn ListenWorkbench() -> Element {
     let mut detail = use_signal(|| String::new());
     let mut inst = use_signal(|| String::new());
     let mut tracks = use_signal(default_tracks);
-    let bounce_note = use_signal(|| String::from("Bounce offline synthetic tones through EQ/comp/delay."));
+    let bounce_note =
+        use_signal(|| String::from("Bounce offline synthetic tones through EQ/comp/delay."));
     let mut caps = use_signal(Vec::<CapabilityRow>::new);
 
     // Populate the honesty chips on mount from the audio capability registry.
@@ -124,12 +125,7 @@ pub fn ListenWorkbench() -> Element {
             busy.set(true);
             status.set("Running Ears demo…".into());
             spawn(async move {
-                match invoke_json(
-                    "audio_ears_demo",
-                    serde_json::json!({ "persist": true }),
-                )
-                .await
-                {
+                match invoke_json("audio_ears_demo", serde_json::json!({ "persist": true })).await {
                     Ok(v) => {
                         detail.set(format!("{v}"));
                         status.set(format!(
@@ -183,18 +179,15 @@ pub fn ListenWorkbench() -> Element {
             busy.set(true);
             let t = tracks();
             spawn(async move {
-                match invoke_json(
-                    "audio_mixer_bounce",
-                    serde_json::json!({ "tracks": t }),
-                )
-                .await
-                {
+                match invoke_json("audio_mixer_bounce", serde_json::json!({ "tracks": t })).await {
                     Ok(v) => {
                         bounce_note.set(format!("{v}"));
                         status.set(format!(
                             "Bounce peak={:.3} frames={} — {}",
                             v.get("peak").and_then(|x| x.as_f64()).unwrap_or(0.0),
-                            v.get("frames_written").and_then(|x| x.as_u64()).unwrap_or(0),
+                            v.get("frames_written")
+                                .and_then(|x| x.as_u64())
+                                .unwrap_or(0),
                             v.get("note").and_then(|x| x.as_str()).unwrap_or("")
                         ));
                     }

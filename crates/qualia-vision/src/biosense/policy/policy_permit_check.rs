@@ -46,13 +46,19 @@ fn reason_for(act: ProcessingAct, decision: PolicyDecision, allow_process: bool)
     match decision {
         PolicyDecision::Permit => match act {
             ProcessingAct::MotionOnly => "motion-only processing permitted",
-            ProcessingAct::FaceDetect => "face detection permitted under surveillance-policy purpose",
+            ProcessingAct::FaceDetect => {
+                "face detection permitted under surveillance-policy purpose"
+            }
             ProcessingAct::FaceEmbed | ProcessingAct::Identify1N => {
                 "identification permitted: purpose-bound security grant with template consent"
             }
             ProcessingAct::Rppg => "rPPG permitted for self-monitoring / research purpose",
-            ProcessingAct::Affect => "affect estimation permitted for self-monitoring / research purpose",
-            ProcessingAct::RecordStore => "record storage permitted by template or graph-observation consent",
+            ProcessingAct::Affect => {
+                "affect estimation permitted for self-monitoring / research purpose"
+            }
+            ProcessingAct::RecordStore => {
+                "record storage permitted by template or graph-observation consent"
+            }
         },
         PolicyDecision::Forbid => {
             if !allow_process {
@@ -62,14 +68,20 @@ fn reason_for(act: ProcessingAct, decision: PolicyDecision, allow_process: bool)
                 ProcessingAct::FaceEmbed | ProcessingAct::Identify1N => {
                     "identification requires a purpose-bound security grant"
                 }
-                ProcessingAct::FaceDetect => "face detection requires a surveillance-policy purpose",
+                ProcessingAct::FaceDetect => {
+                    "face detection requires a surveillance-policy purpose"
+                }
                 ProcessingAct::Rppg => "rPPG requires a self-monitoring or research purpose",
-                ProcessingAct::Affect => "affect estimation requires a self-monitoring or research purpose",
+                ProcessingAct::Affect => {
+                    "affect estimation requires a self-monitoring or research purpose"
+                }
                 ProcessingAct::RecordStore => {
                     "record storage requires template or graph-observation consent"
                 }
                 // MotionOnly is always permitted; unreachable in the Forbid arm.
-                ProcessingAct::MotionOnly => "motion-only processing not permitted for this consent",
+                ProcessingAct::MotionOnly => {
+                    "motion-only processing not permitted for this consent"
+                }
             }
         }
     }
@@ -86,7 +98,10 @@ mod tests {
         let a = policy_permit_check(0xCA51, ProcessingAct::FaceEmbed, consent);
         assert_eq!(a.decision, PolicyDecision::Forbid);
         assert_eq!(a.camera_id, 0xCA51);
-        assert_eq!(a.reason, "fail-closed: no processing consent for this camera");
+        assert_eq!(
+            a.reason,
+            "fail-closed: no processing consent for this camera"
+        );
         assert!(!a.reason.is_empty());
     }
 
@@ -104,7 +119,10 @@ mod tests {
         let consent = BiosenseConsent::grant_process(BiosensePurpose::SurveillancePolicy, 1);
         let a = policy_permit_check(0xCA53, ProcessingAct::FaceEmbed, consent);
         assert_eq!(a.decision, PolicyDecision::Forbid);
-        assert_eq!(a.reason, "identification requires a purpose-bound security grant");
+        assert_eq!(
+            a.reason,
+            "identification requires a purpose-bound security grant"
+        );
     }
 
     #[test]

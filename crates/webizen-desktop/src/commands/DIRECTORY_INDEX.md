@@ -1,7 +1,7 @@
 ---
 created: 2026-06-30
-updated: 2026-06-30
-update_scope: Comprehensive
+updated: 2026-07-29
+update_scope: Minor
 ---
 
 # commands Index
@@ -11,6 +11,12 @@ Comprehensive index of functionality for `commands`. This document serves as the
 
 ## File & Subdirectory Manifest
 ### Files & Exported Functionality
+- 📄 `agent_qa.rs`
+  - `struct AgentQaSnapshot`
+  - `struct AgentQaModelProbe`
+  - `fn agent_qa_snapshot`
+  - `fn agent_qa_test_active_model`
+  - reversible temporary-session cleanup and bounded inference evidence
 - 📄 `binary_registry.rs`
   - `struct BinaryNodeRegistry`
   - `impl BinaryNodeRegistry`
@@ -61,3 +67,4 @@ Comprehensive index of functionality for `commands`. This document serves as the
 
 ## Changelog
 - **2026-06-30**: Automated full index generation, extracting code definitions.
+- **2026-07-29**: Added the 0.0.28 structured diagnostics snapshot and reversible local-model probe.

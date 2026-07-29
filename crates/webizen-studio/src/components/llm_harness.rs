@@ -10,7 +10,10 @@ use wasm_bindgen::prelude::*;
 #[wasm_bindgen]
 extern "C" {
     #[wasm_bindgen(js_namespace = ["window", "__TAURI__", "core"], js_name = invoke, catch)]
-    async fn invoke(cmd: &str, args: wasm_bindgen::JsValue) -> Result<wasm_bindgen::JsValue, wasm_bindgen::JsValue>;
+    async fn invoke(
+        cmd: &str,
+        args: wasm_bindgen::JsValue,
+    ) -> Result<wasm_bindgen::JsValue, wasm_bindgen::JsValue>;
 }
 
 #[component]
@@ -40,10 +43,14 @@ pub fn LlmHarness() -> Element {
         );
         #[cfg(target_arch = "wasm32")]
         loop {
-            if let Ok(response) =
-                invoke("wellfair_get_llm_telemetry", serde_wasm_bindgen::to_value(&()).unwrap()).await
+            if let Ok(response) = invoke(
+                "wellfair_get_llm_telemetry",
+                serde_wasm_bindgen::to_value(&()).unwrap(),
+            )
+            .await
             {
-                if let Ok(telemetry) = serde_wasm_bindgen::from_value::<serde_json::Value>(response) {
+                if let Ok(telemetry) = serde_wasm_bindgen::from_value::<serde_json::Value>(response)
+                {
                     if let Some(tps) = telemetry["tokens_per_sec"].as_f64() {
                         tokens_per_sec.set(tps);
                     }

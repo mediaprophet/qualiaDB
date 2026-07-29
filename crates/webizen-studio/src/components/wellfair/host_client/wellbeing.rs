@@ -8,7 +8,6 @@ use crate::components::qapp_engine::tauri_invoke;
 #[cfg(target_arch = "wasm32")]
 use js_sys;
 
-
 /// An instrument definition (items + ordinal options + severity bands + disclaimer).
 #[derive(Debug, Clone, Default, Deserialize)]
 pub struct AssessmentInstrumentDto {
@@ -58,10 +57,15 @@ pub struct AssessmentResultDto {
 
 #[cfg(target_arch = "wasm32")]
 pub async fn fetch_assessment_instruments() -> Result<Vec<AssessmentInstrumentDto>, String> {
-    let js = tauri_invoke("wellfair_list_assessment_instruments", wasm_bindgen::JsValue::NULL)
-        .await
-        .map_err(|e| format!("{e:?}"))?;
-    let json = js.as_string().ok_or_else(|| "instruments not JSON".to_string())?;
+    let js = tauri_invoke(
+        "wellfair_list_assessment_instruments",
+        wasm_bindgen::JsValue::NULL,
+    )
+    .await
+    .map_err(|e| format!("{e:?}"))?;
+    let json = js
+        .as_string()
+        .ok_or_else(|| "instruments not JSON".to_string())?;
     serde_json::from_str(&json).map_err(|e| e.to_string())
 }
 
@@ -76,14 +80,24 @@ pub async fn record_assessment(
     responses_csv: &str,
 ) -> Result<AssessmentResultDto, String> {
     let args = js_sys::Object::new();
-    js_sys::Reflect::set(&args, &"instrumentId".into(), &wasm_bindgen::JsValue::from_str(instrument_id))
-        .map_err(|_| "failed to build invoke args".to_string())?;
-    js_sys::Reflect::set(&args, &"responses".into(), &wasm_bindgen::JsValue::from_str(responses_csv))
-        .map_err(|_| "failed to build invoke args".to_string())?;
+    js_sys::Reflect::set(
+        &args,
+        &"instrumentId".into(),
+        &wasm_bindgen::JsValue::from_str(instrument_id),
+    )
+    .map_err(|_| "failed to build invoke args".to_string())?;
+    js_sys::Reflect::set(
+        &args,
+        &"responses".into(),
+        &wasm_bindgen::JsValue::from_str(responses_csv),
+    )
+    .map_err(|_| "failed to build invoke args".to_string())?;
     let js = tauri_invoke("wellfair_record_assessment", args.into())
         .await
         .map_err(|e| format!("{e:?}"))?;
-    let json = js.as_string().ok_or_else(|| "assessment result not JSON".to_string())?;
+    let json = js
+        .as_string()
+        .ok_or_else(|| "assessment result not JSON".to_string())?;
     serde_json::from_str(&json).map_err(|e| e.to_string())
 }
 
@@ -100,7 +114,9 @@ pub async fn fetch_assessments() -> Result<Vec<AssessmentResultDto>, String> {
     let js = tauri_invoke("wellfair_list_assessments", wasm_bindgen::JsValue::NULL)
         .await
         .map_err(|e| format!("{e:?}"))?;
-    let json = js.as_string().ok_or_else(|| "assessments not JSON".to_string())?;
+    let json = js
+        .as_string()
+        .ok_or_else(|| "assessments not JSON".to_string())?;
     serde_json::from_str(&json).map_err(|e| e.to_string())
 }
 
@@ -108,4 +124,3 @@ pub async fn fetch_assessments() -> Result<Vec<AssessmentResultDto>, String> {
 pub async fn fetch_assessments() -> Result<Vec<AssessmentResultDto>, String> {
     Ok(vec![])
 }
-

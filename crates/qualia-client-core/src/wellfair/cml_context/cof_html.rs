@@ -22,7 +22,8 @@ pub const COF_PROFILE: &str = "https://ns.webcivics.net/cof/profile/html-rdfa-1"
 pub const COF_NS: &str = "https://ns.webcivics.net/cof/";
 pub const CML_NS: &str = "https://ns.webcivics.net/cml/";
 pub const VALUES_NS: &str = "https://ns.webcivics.net/values/";
-pub const MEDIA_TYPE_COF: &str = "text/html;profile=\"https://ns.webcivics.net/cof/profile/html-rdfa-1\"";
+pub const MEDIA_TYPE_COF: &str =
+    "text/html;profile=\"https://ns.webcivics.net/cof/profile/html-rdfa-1\"";
 
 /// Default agent body-segment budget (~6–8k tokens at ~4 chars/token; leave headroom).
 pub const DEFAULT_SEGMENT_MAX_CHARS: usize = 24_000;
@@ -177,23 +178,20 @@ pub fn render_unit_fragment(doc_uri: &str, unit: &ContextUnit, style: CofStyle) 
         )
     };
 
-    let logic = if matches!(
-        deontic,
-        super::extract::DeonticClass::Undertaking
-    ) && privacy.is_empty()
-    {
-        String::new()
-    } else {
-        format!(
-            "<aside class=\"logic\" typeof=\"cml:LogicApplication\" property=\"cml:asserts\" \
+    let logic =
+        if matches!(deontic, super::extract::DeonticClass::Undertaking) && privacy.is_empty() {
+            String::new()
+        } else {
+            format!(
+                "<aside class=\"logic\" typeof=\"cml:LogicApplication\" property=\"cml:asserts\" \
              about=\"{about}-norm\">\
              <span property=\"cml:modality\" resource=\"cml:Deontic\">deontic</span> \
              <span property=\"values:deonticClass\">{deontic}</span> · conf {conf} · \
              <span property=\"cml:curationStatus\" resource=\"cml:Proposed\">cml:Proposed</span>\
              </aside>",
-            deontic = deontic.as_str(),
-        )
-    };
+                deontic = deontic.as_str(),
+            )
+        };
 
     format!(
         "<section id=\"{frag}\" typeof=\"cml:Concept cof:Section\" about=\"{about}\" \
@@ -256,7 +254,9 @@ fn wrap_document(
             "<meta name=\"cof-segment\" content=\"{}\">\n\
              <meta name=\"cof-segment-total\" content=\"{}\">\n\
              <meta name=\"cof-segment-id\" content=\"{}\">\n",
-            segment.index, segment.total, esc(&segment.id)
+            segment.index,
+            segment.total,
+            esc(&segment.id)
         ));
         n
     };
@@ -523,7 +523,10 @@ mod tests {
         let units = sample_units(2, 40);
         let html = render_cof_document("urn:doc:t", "Test Act", &units, CofStyle::AgentLean);
         assert!(html.contains(COF_PROFILE));
-        assert!(html.contains("typeof=\"cof:Document\"") || html.contains("typeof=\"cml:Concept cof:Section\""));
+        assert!(
+            html.contains("typeof=\"cof:Document\"")
+                || html.contains("typeof=\"cml:Concept cof:Section\"")
+        );
         assert!(html.contains("cof:hasSection") || html.contains("property=\"cof:hasSection\""));
         assert!(html.contains("values:originalText") || html.contains("cof:Claim"));
         assert!(html.contains("cml:Proposed"));
@@ -533,14 +536,12 @@ mod tests {
     #[test]
     fn large_doc_segments_for_token_budget() {
         let units = sample_units(20, 2000);
-        let pkg = build_cof_package(
-            "urn:doc:big",
-            "Big Act",
-            &units,
-            8_000,
-            CofStyle::AgentLean,
+        let pkg = build_cof_package("urn:doc:big", "Big Act", &units, 8_000, CofStyle::AgentLean);
+        assert!(
+            pkg.segments.len() >= 3,
+            "index + ≥2 body segs, got {}",
+            pkg.segments.len()
         );
-        assert!(pkg.segments.len() >= 3, "index + ≥2 body segs, got {}", pkg.segments.len());
         assert!(pkg.segments[0].is_index);
         // Each body segment under soft ceiling (markup can exceed pack estimate slightly).
         for s in pkg.segments.iter().filter(|s| !s.is_index) {

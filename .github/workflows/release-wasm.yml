@@ -99,6 +99,7 @@ jobs:
           cp crates/qualia-core-db/pkg-qualia/qualia_core_db_bg.wasm docs/pkg/qualia/qualia_bg.wasm
           cp crates/qualia-core-db/pkg-qualia/qualia_core_db.d.ts docs/pkg/qualia/qualia.d.ts
           cp crates/qualia-core-db/pkg-qualia/qualia_core_db_bg.wasm.d.ts docs/pkg/qualia/qualia_bg.wasm.d.ts 2>/dev/null || true
+          cp crates/qualia-core-db/LICENSE docs/pkg/qualia/LICENSE
           bash scripts/patch-portal-wasm-js.sh docs/pkg/qualia/qualia.js
           printf '%s\n' '{"name":"qualia-portal","type":"module","version":"0.0.27","main":"qualia.js","types":"qualia.d.ts"}' > docs/pkg/qualia/package.json
 
@@ -127,6 +128,7 @@ jobs:
           cp docs/pkg/qualia/qualia_bg.wasm release-assets/qualia-portal/
           cp docs/pkg/qualia/qualia.d.ts release-assets/qualia-portal/
           cp docs/pkg/qualia/package.json release-assets/qualia-portal/
+          cp docs/pkg/qualia/LICENSE release-assets/qualia-portal/
           tar -czf qualia-portal-wasm.tar.gz -C release-assets qualia-portal
           tar -czf webizen-lite-wasm.tar.gz -C docs/pkg webizen-lite
 
@@ -194,7 +196,7 @@ jobs:
           cp docs/playground/qualia_core_db.js release-assets/qualia-core-wasm/
           cp docs/playground/qualia_core_db_bg.wasm release-assets/qualia-core-wasm/
           tar -czf qualia-core-wasm-pages.tar.gz -C release-assets qualia-core-wasm
-          tar -czf qualia-core-wasm.tar.gz -C docs/playground qualia_core_db.js qualia_core_db_bg.wasm
+          tar -czf qualia-core-wasm.tar.gz -C docs/playground qualia_core_db.js qualia_core_db_bg.wasm LICENSE
 
       - name: Upload playground WASM to release
         uses: softprops/action-gh-release@v3
@@ -205,6 +207,7 @@ jobs:
             qualia-core-wasm-pages.tar.gz
             docs/playground/qualia_core_db.js
             docs/playground/qualia_core_db_bg.wasm
+            docs/playground/LICENSE
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

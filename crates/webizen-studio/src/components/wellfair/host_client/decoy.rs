@@ -8,14 +8,17 @@ use crate::components::qapp_engine::tauri_invoke;
 #[cfg(target_arch = "wasm32")]
 use js_sys;
 
-
 /// Returns the current decoy-retention mode ("auto_archive" | "manual_triage"). Real-session-only:
 /// requires the real PIN (the setting lives in the real lane).
 #[cfg(target_arch = "wasm32")]
 pub async fn get_decoy_retention_mode(real_pin: &str) -> Result<String, String> {
     let args = js_sys::Object::new();
-    js_sys::Reflect::set(&args, &"realPin".into(), &wasm_bindgen::JsValue::from_str(real_pin))
-        .map_err(|_| "failed to build invoke args".to_string())?;
+    js_sys::Reflect::set(
+        &args,
+        &"realPin".into(),
+        &wasm_bindgen::JsValue::from_str(real_pin),
+    )
+    .map_err(|_| "failed to build invoke args".to_string())?;
     let js = tauri_invoke("wellfair_get_decoy_retention_mode", args.into())
         .await
         .map_err(|e| format!("{e:?}"))?;
@@ -43,10 +46,18 @@ pub async fn get_decoy_retention_mode(_real_pin: &str) -> Result<String, String>
 #[cfg(target_arch = "wasm32")]
 pub async fn set_decoy_retention_mode(real_pin: &str, mode: &str) -> Result<(), String> {
     let args = js_sys::Object::new();
-    js_sys::Reflect::set(&args, &"realPin".into(), &wasm_bindgen::JsValue::from_str(real_pin))
-        .map_err(|_| "failed to build invoke args".to_string())?;
-    js_sys::Reflect::set(&args, &"mode".into(), &wasm_bindgen::JsValue::from_str(mode))
-        .map_err(|_| "failed to build invoke args".to_string())?;
+    js_sys::Reflect::set(
+        &args,
+        &"realPin".into(),
+        &wasm_bindgen::JsValue::from_str(real_pin),
+    )
+    .map_err(|_| "failed to build invoke args".to_string())?;
+    js_sys::Reflect::set(
+        &args,
+        &"mode".into(),
+        &wasm_bindgen::JsValue::from_str(mode),
+    )
+    .map_err(|_| "failed to build invoke args".to_string())?;
     tauri_invoke("wellfair_set_decoy_retention_mode", args.into())
         .await
         .map_err(|e| format!("{e:?}"))?;
@@ -103,8 +114,12 @@ impl DecoyActivityReportDto {
 #[cfg(target_arch = "wasm32")]
 pub async fn review_decoy_activity(real_pin: &str) -> Result<DecoyActivityReportDto, String> {
     let args = js_sys::Object::new();
-    js_sys::Reflect::set(&args, &"realPin".into(), &wasm_bindgen::JsValue::from_str(real_pin))
-        .map_err(|_| "failed to build invoke args".to_string())?;
+    js_sys::Reflect::set(
+        &args,
+        &"realPin".into(),
+        &wasm_bindgen::JsValue::from_str(real_pin),
+    )
+    .map_err(|_| "failed to build invoke args".to_string())?;
     let js = tauri_invoke("wellfair_review_decoy_activity", args.into())
         .await
         .map_err(|e| format!("{e:?}"))?;
@@ -124,10 +139,18 @@ pub async fn review_decoy_activity(_real_pin: &str) -> Result<DecoyActivityRepor
 #[cfg(target_arch = "wasm32")]
 pub async fn curate_decoy_note(real_pin: &str, body: &str) -> Result<(), String> {
     let args = js_sys::Object::new();
-    js_sys::Reflect::set(&args, &"realPin".into(), &wasm_bindgen::JsValue::from_str(real_pin))
-        .map_err(|_| "failed to build invoke args".to_string())?;
-    js_sys::Reflect::set(&args, &"body".into(), &wasm_bindgen::JsValue::from_str(body))
-        .map_err(|_| "failed to build invoke args".to_string())?;
+    js_sys::Reflect::set(
+        &args,
+        &"realPin".into(),
+        &wasm_bindgen::JsValue::from_str(real_pin),
+    )
+    .map_err(|_| "failed to build invoke args".to_string())?;
+    js_sys::Reflect::set(
+        &args,
+        &"body".into(),
+        &wasm_bindgen::JsValue::from_str(body),
+    )
+    .map_err(|_| "failed to build invoke args".to_string())?;
     tauri_invoke("wellfair_curate_decoy_note", args.into())
         .await
         .map_err(|e| format!("{e:?}"))?;
@@ -138,4 +161,3 @@ pub async fn curate_decoy_note(real_pin: &str, body: &str) -> Result<(), String>
 pub async fn curate_decoy_note(_real_pin: &str, _body: &str) -> Result<(), String> {
     Err("Decoy curation requires the Tauri desktop host".into())
 }
-

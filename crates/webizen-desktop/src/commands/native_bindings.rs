@@ -2,7 +2,6 @@
 
 #![allow(non_snake_case)]
 
-
 // ── Real Native QualiaDB Bindings (Mock Replacements) ─────────────────────────
 
 #[derive(serde::Serialize)]
@@ -17,7 +16,8 @@ pub async fn calculate_chemistry_properties(smiles: String) -> Result<ChemistryP
     if let Some(err) = mol.error {
         return Err(err);
     }
-    let descriptors = qualia_core_db::domains::chemical::organic_chemistry::compute_descriptors(&mol);
+    let descriptors =
+        qualia_core_db::domains::chemical::organic_chemistry::compute_descriptors(&mol);
     Ok(ChemistryProps {
         molecular_weight: descriptors.molecular_weight,
         log_p: descriptors.logp_crippen, // Map to log_p
@@ -31,7 +31,13 @@ pub struct ClinicalRiskProps {
 }
 
 #[tauri::command]
-pub async fn calculate_framingham_risk(age: u8, sys_bp: f64, tot_chol: f64, hdl_chol: f64, smoker: bool) -> Result<ClinicalRiskProps, String> {
+pub async fn calculate_framingham_risk(
+    age: u8,
+    sys_bp: f64,
+    tot_chol: f64,
+    hdl_chol: f64,
+    smoker: bool,
+) -> Result<ClinicalRiskProps, String> {
     let input = qualia_core_db::clinical_engine::FraminghamInput {
         sex_male: true,
         age,
@@ -71,22 +77,25 @@ pub struct RiskProps {
 }
 
 #[tauri::command]
-pub async fn calculate_monte_carlo_var(portfolio_value: f64, volatility: f64, time_horizon: f64) -> Result<RiskProps, String> {
+pub async fn calculate_monte_carlo_var(
+    portfolio_value: f64,
+    volatility: f64,
+    time_horizon: f64,
+) -> Result<RiskProps, String> {
     let steps = 100;
     let paths = 10000;
     // Drift is generally negligible for short horizon VaR but we'll use a small risk-free rate
-    let drift = 0.05; 
+    let drift = 0.05;
     let (_mean, var_95) = qualia_core_db::domains::financial::economics::run_monte_carlo_var(
         portfolio_value,
         drift,
         volatility,
         time_horizon / 252.0, // convert days to years
         steps,
-        paths
+        paths,
     );
     Ok(RiskProps {
         monte_carlo_var: var_95,
         expected_shortfall: var_95 * 1.25, // Mock expected shortfall for now
     })
 }
-

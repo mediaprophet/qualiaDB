@@ -47,8 +47,13 @@ pub struct PairedNote {
 
 impl PairedNote {
     /// An all-zero placeholder for initialising a caller-owned `out` array.
-    pub const ZERO: PairedNote =
-        PairedNote { channel: 0, note: 0, velocity: 0, start_tick: 0, end_tick: 0 };
+    pub const ZERO: PairedNote = PairedNote {
+        channel: 0,
+        note: 0,
+        velocity: 0,
+        start_tick: 0,
+        end_tick: 0,
+    };
 }
 
 /// One currently-sounding note-on awaiting its note-off.
@@ -130,7 +135,12 @@ pub fn pair_note_events(
             if open_len >= MAX_OPEN_NOTES {
                 return Err(AudioError::InvalidParameter);
             }
-            open[open_len] = Some(OpenNote { channel, note, velocity, start_tick: ev.tick });
+            open[open_len] = Some(OpenNote {
+                channel,
+                note,
+                velocity,
+                start_tick: ev.tick,
+            });
             open_len += 1;
         }
         // All other events (CC, pitch-bend, meta-as-status, …) are ignored.
@@ -188,7 +198,13 @@ mod tests {
         assert_eq!(n, 1);
         assert_eq!(
             out[0],
-            PairedNote { channel: 0, note: 60, velocity: 100, start_tick: 0, end_tick: 480 }
+            PairedNote {
+                channel: 0,
+                note: 60,
+                velocity: 100,
+                start_tick: 0,
+                end_tick: 480
+            }
         );
     }
 
@@ -210,17 +226,33 @@ mod tests {
     #[test]
     fn two_overlapping_notes_on_different_channels() {
         let events = [
-            TimedEvent::new(0, 0x90, 60, 100),   // ch0 on
-            TimedEvent::new(5, 0x91, 64, 80),    // ch1 on
-            TimedEvent::new(50, 0x81, 64, 0),    // ch1 off
-            TimedEvent::new(60, 0x80, 60, 0),    // ch0 off
+            TimedEvent::new(0, 0x90, 60, 100), // ch0 on
+            TimedEvent::new(5, 0x91, 64, 80),  // ch1 on
+            TimedEvent::new(50, 0x81, 64, 0),  // ch1 off
+            TimedEvent::new(60, 0x80, 60, 0),  // ch0 off
         ];
         let mut out = [PairedNote::ZERO; 4];
         let n = pair_note_events(&events, &mut out).expect("pair");
         assert_eq!(n, 2);
         // ch1 note closes first.
-        assert_eq!((out[0].channel, out[0].note, out[0].start_tick, out[0].end_tick), (1, 64, 5, 50));
-        assert_eq!((out[1].channel, out[1].note, out[1].start_tick, out[1].end_tick), (0, 60, 0, 60));
+        assert_eq!(
+            (
+                out[0].channel,
+                out[0].note,
+                out[0].start_tick,
+                out[0].end_tick
+            ),
+            (1, 64, 5, 50)
+        );
+        assert_eq!(
+            (
+                out[1].channel,
+                out[1].note,
+                out[1].start_tick,
+                out[1].end_tick
+            ),
+            (0, 60, 0, 60)
+        );
     }
 
     #[test]
@@ -235,8 +267,14 @@ mod tests {
         let mut out = [PairedNote::ZERO; 4];
         let n = pair_note_events(&events, &mut out).expect("pair");
         assert_eq!(n, 2);
-        assert_eq!((out[0].start_tick, out[0].end_tick, out[0].velocity), (10, 20, 110));
-        assert_eq!((out[1].start_tick, out[1].end_tick, out[1].velocity), (0, 30, 100));
+        assert_eq!(
+            (out[0].start_tick, out[0].end_tick, out[0].velocity),
+            (10, 20, 110)
+        );
+        assert_eq!(
+            (out[1].start_tick, out[1].end_tick, out[1].velocity),
+            (0, 30, 100)
+        );
     }
 
     #[test]
@@ -270,6 +308,9 @@ mod tests {
             TimedEvent::new(30, 0x80, 62, 0),
         ];
         let mut out = [PairedNote::ZERO; 1];
-        assert_eq!(pair_note_events(&events, &mut out), Err(AudioError::OutputBufferTooSmall));
+        assert_eq!(
+            pair_note_events(&events, &mut out),
+            Err(AudioError::OutputBufferTooSmall)
+        );
     }
 }

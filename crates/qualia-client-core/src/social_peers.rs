@@ -203,10 +203,17 @@ mod tests {
         let peers = vec![alice, bob];
         let resolved = resolve_envelope_keys(
             &peers,
-            &["did:key:alice".to_string(), "did:key:bob".to_string(), "did:key:carol".to_string()],
+            &[
+                "did:key:alice".to_string(),
+                "did:key:bob".to_string(),
+                "did:key:carol".to_string(),
+            ],
         );
         // Only Alice has a key; Bob (no key) and Carol (not a peer) are omitted.
-        assert_eq!(resolved, vec![("did:key:alice".to_string(), "ab".repeat(32))]);
+        assert_eq!(
+            resolved,
+            vec![("did:key:alice".to_string(), "ab".repeat(32))]
+        );
     }
 
     #[test]

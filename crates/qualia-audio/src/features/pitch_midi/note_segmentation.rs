@@ -46,14 +46,24 @@ impl NoteEvent {
     /// A zeroed placeholder, useful for initialising a caller-owned `out` array.
     #[inline]
     pub const fn empty() -> Self {
-        Self { note: 0, velocity: 0, start_frame: 0, end_frame: 0, confidence: 0.0 }
+        Self {
+            note: 0,
+            velocity: 0,
+            start_frame: 0,
+            end_frame: 0,
+            confidence: 0.0,
+        }
     }
 }
 
 /// Map a mean voicing confidence in `[0, 1]` to a MIDI velocity in `1..=127`.
 #[inline]
 fn confidence_to_velocity(mean_conf: f32) -> u8 {
-    let c = if mean_conf.is_finite() { mean_conf.clamp(0.0, 1.0) } else { 0.0 };
+    let c = if mean_conf.is_finite() {
+        mean_conf.clamp(0.0, 1.0)
+    } else {
+        0.0
+    };
     // 0 → 1, 1 → 127. A voiced note always has velocity ≥ 1 (audible).
     (c * 126.0 + 1.0).round() as u8
 }
@@ -105,7 +115,8 @@ pub fn segment_notes(
     for i in 0..n_frames {
         let f0 = f0_hz[i];
         let conf = confidence[i];
-        let voiced = f0.is_finite() && f0 > 0.0 && conf.is_finite() && conf >= MIN_VOICED_CONFIDENCE;
+        let voiced =
+            f0.is_finite() && f0 > 0.0 && conf.is_finite() && conf >= MIN_VOICED_CONFIDENCE;
 
         if voiced {
             let (note, _cents) = hz_to_midi(f0, ref_a4_hz);
@@ -161,7 +172,11 @@ fn flush(
     if *count >= out.len() {
         return Err(AudioError::OutputBufferTooSmall);
     }
-    let mean_conf = if cur.conf_n > 0 { cur.conf_sum / cur.conf_n as f32 } else { 0.0 };
+    let mean_conf = if cur.conf_n > 0 {
+        cur.conf_sum / cur.conf_n as f32
+    } else {
+        0.0
+    };
     out[*count] = NoteEvent {
         note: cur.note,
         velocity: confidence_to_velocity(mean_conf),

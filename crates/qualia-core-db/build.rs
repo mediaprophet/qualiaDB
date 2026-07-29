@@ -3,11 +3,19 @@ use std::path::{Path, PathBuf};
 
 fn main() {
     let target_os = env::var("CARGO_CFG_TARGET_OS").expect("CARGO_CFG_TARGET_OS not set");
+    let target_arch = env::var("CARGO_CFG_TARGET_ARCH").expect("CARGO_CFG_TARGET_ARCH not set");
     println!("cargo:rerun-if-changed=build.rs");
     println!("cargo:rerun-if-env-changed=QUALIA_BUILD_VERBOSE");
     println!("cargo:rerun-if-env-changed=DIRECTML_LIB_PATH");
     println!("cargo:rerun-if-env-changed=QUALIA_DXC_PATH");
     println!("cargo:rerun-if-env-changed=QUALIA_DXC_CLI_PATH");
+
+    // wasm32 uses browser WebGPU / CPU fallbacks and must never be diagnosed as
+    // a host OS with a missing native accelerator.
+    if target_arch == "wasm32" {
+        build_info("WASM: browser WebGPU + deterministic CPU fallback");
+        return;
+    }
 
     match target_os.as_str() {
         "android" => {
@@ -63,8 +71,7 @@ fn main() {
             }
 
             // DXC — runtime load by wgpu for WGSL→DXIL on DX12 (FXC cannot compile attention).
-            let arch = env::var("CARGO_CFG_TARGET_ARCH").unwrap_or_default();
-            let dxc_sub = if arch == "aarch64" {
+            let dxc_sub = if target_arch == "aarch64" {
                 "arm64-win"
             } else {
                 "x64-win"

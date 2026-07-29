@@ -76,7 +76,16 @@ pub fn griffin_lim(
 
     for _ in 0..iterations {
         // Project onto the consistent-STFT set: invert to time.
-        istft(spectra, n, hop, analysis_window, synthesis_window, ifft_scratch, norm, out)?;
+        istft(
+            spectra,
+            n,
+            hop,
+            analysis_window,
+            synthesis_window,
+            ifft_scratch,
+            norm,
+            out,
+        )?;
         // Re-analyse and project onto the target-magnitude set.
         for i in 0..num_frames {
             let seg = &mut spectra[i * two_n..(i + 1) * two_n];
@@ -91,7 +100,16 @@ pub fn griffin_lim(
     }
 
     // Final inversion of the magnitude-consistent estimate.
-    istft(spectra, n, hop, analysis_window, synthesis_window, ifft_scratch, norm, out)?;
+    istft(
+        spectra,
+        n,
+        hop,
+        analysis_window,
+        synthesis_window,
+        ifft_scratch,
+        norm,
+        out,
+    )?;
     Ok(out_len)
 }
 
@@ -138,7 +156,10 @@ mod tests {
     struct Lcg(u64);
     impl Lcg {
         fn next_f32(&mut self) -> f32 {
-            self.0 = self.0.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+            self.0 = self
+                .0
+                .wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407);
             ((self.0 >> 40) as f32) / ((1u64 << 24) as f32)
         }
     }
@@ -159,9 +180,18 @@ mod tests {
     }
 
     /// Total absolute STFT-magnitude error of `signal` against `target` mags.
-    fn magnitude_error(signal: &[f32], target: &[f32], n: usize, hop: usize, window: &[f32]) -> f64 {
+    fn magnitude_error(
+        signal: &[f32],
+        target: &[f32],
+        n: usize,
+        hop: usize,
+        window: &[f32],
+    ) -> f64 {
         let (got, _) = analyse_mags(signal, n, hop, window);
-        got.iter().zip(target.iter()).map(|(a, b)| (a - b).abs() as f64).sum()
+        got.iter()
+            .zip(target.iter())
+            .map(|(a, b)| (a - b).abs() as f64)
+            .sum()
     }
 
     /// Build a Hermitian interleaved-complex seed = target magnitude × e^{jφ}.
@@ -218,8 +248,16 @@ mod tests {
             let mut norm = vec![0.0f32; out_len];
             let mut out = vec![0.0f32; out_len];
             griffin_lim(
-                &target, &mut spectra, n, hop, iters, &window, &window, &mut ifft_scratch,
-                &mut norm, &mut out,
+                &target,
+                &mut spectra,
+                n,
+                hop,
+                iters,
+                &window,
+                &window,
+                &mut ifft_scratch,
+                &mut norm,
+                &mut out,
             )
             .unwrap();
             out
@@ -246,7 +284,18 @@ mod tests {
         let mut nm = vec![0.0f32; out_len];
         let mut out = vec![0.0f32; out_len];
         assert_eq!(
-            griffin_lim(&target, &mut spectra, n, 4, 5, &w, &w, &mut sc, &mut nm, &mut out),
+            griffin_lim(
+                &target,
+                &mut spectra,
+                n,
+                4,
+                5,
+                &w,
+                &w,
+                &mut sc,
+                &mut nm,
+                &mut out
+            ),
             Err(AudioError::InvalidParameter)
         );
     }

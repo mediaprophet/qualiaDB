@@ -232,7 +232,10 @@ mod tests {
         assert_eq!(n, 1, "one line → one voice across the gap");
         assert!(semitone_err(out[0], 440.0) < 0.5);
         assert_eq!(out[1], 0.0, "abstains during the gap frame");
-        assert!(semitone_err(out[2], 442.0) < 0.5, "resumes on the same voice");
+        assert!(
+            semitone_err(out[2], 442.0) < 0.5,
+            "resumes on the same voice"
+        );
     }
 
     /// More sources than declared voices → the surplus is dropped, not forced
@@ -243,7 +246,10 @@ mod tests {
         let mut out = [0.0f32; 1 * 1];
         let n = track_multi_pitch(&frame_f0, 1, 2, 1, 2.0, &mut out).expect("track");
         assert_eq!(n, 1, "only one voice allowed");
-        assert!(semitone_err(out[0], 440.0) < 0.5, "keeps the first-listed source");
+        assert!(
+            semitone_err(out[0], 440.0) < 0.5,
+            "keeps the first-listed source"
+        );
     }
 
     /// No estimates anywhere → no voices.
@@ -253,7 +259,10 @@ mod tests {
         let mut out = [9.0f32; 3 * 2];
         let n = track_multi_pitch(&frame_f0, 2, 3, 3, 2.0, &mut out).expect("track");
         assert_eq!(n, 0);
-        assert!(out.iter().all(|&v| v == 0.0), "output cleared to abstention");
+        assert!(
+            out.iter().all(|&v| v == 0.0),
+            "output cleared to abstention"
+        );
     }
 
     #[test]

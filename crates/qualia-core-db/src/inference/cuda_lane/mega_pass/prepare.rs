@@ -2,8 +2,8 @@
 
 use super::super::device::{ensure_device, multi_weight_device};
 use super::super::paged_attention::{
-    PAGED_GQA_SEGMENTED_MERGE_ENTRY, PAGED_GQA_SEGMENTED_PARTIAL_ENTRY,
-    PAGED_GQA_SEGMENTED_SRC, PAGED_GQA_TILED_ENTRY, PAGED_GQA_TILED_SRC,
+    PAGED_GQA_SEGMENTED_MERGE_ENTRY, PAGED_GQA_SEGMENTED_PARTIAL_ENTRY, PAGED_GQA_SEGMENTED_SRC,
+    PAGED_GQA_TILED_ENTRY, PAGED_GQA_TILED_SRC,
 };
 use super::super::q8::{
     q8_dp4a_qkv_rope_source, q8_dp4a_qkv_rope_warp8_source, q8_dp4a_swiglu_source,

@@ -4,15 +4,10 @@
 //! fail-closed. σ → colour via `render::spectral`; σ → Hz via `render::acoustic`.
 //! F3: temporal scrub on node `t`. F4: optional citable provenance barrier.
 
-use crate::vision_10d_rights::{
-    evaluate_vision_10d_barrier, Vision10dAccess, Vision10dBarrier,
-};
+use crate::vision_10d_rights::{evaluate_vision_10d_barrier, Vision10dAccess, Vision10dBarrier};
 use qualia_core_db::container_10d::{
-    header::Container10dHeader,
-    integrity::verify_whole_file_crc32c,
-    node_section::parse_node_header,
-    parse_section_table,
-    section::SectionType,
+    header::Container10dHeader, integrity::verify_whole_file_crc32c,
+    node_section::parse_node_header, parse_section_table, section::SectionType,
 };
 use qualia_core_db::render::acoustic::sigma_to_center_frequency_hz;
 use qualia_core_db::render::assets::Mesh;
@@ -239,10 +234,7 @@ pub fn node_to_paint(t: &Tensor10D) -> VisionNodePaint {
 }
 
 /// Per-vertex colours for a mesh, painted by nearest vision node σ (or mean).
-pub fn mesh_vertex_colors_from_nodes(
-    mesh: &Mesh,
-    nodes: &[Tensor10D],
-) -> Vec<[f32; 4]> {
+pub fn mesh_vertex_colors_from_nodes(mesh: &Mesh, nodes: &[Tensor10D]) -> Vec<[f32; 4]> {
     let paints: Vec<_> = nodes.iter().map(node_to_paint).collect();
     if paints.is_empty() {
         let (r, g, b) = sigma_to_display_rgb(0.35);
@@ -379,13 +371,10 @@ mod tests {
         )
         .is_err());
         let prov = ProvenanceSidecar::new(b"src", "image/rgb8", "CC0");
-        let sealed =
-            compile_mesh_to_10d_vision_with_provenance(&mesh, &nodes, &prov).unwrap();
-        let (_m, loaded) = load_vision_10d_bytes_with_access(
-            &sealed,
-            Vision10dAccess::CitableRequireProvenance,
-        )
-        .unwrap();
+        let sealed = compile_mesh_to_10d_vision_with_provenance(&mesh, &nodes, &prov).unwrap();
+        let (_m, loaded) =
+            load_vision_10d_bytes_with_access(&sealed, Vision10dAccess::CitableRequireProvenance)
+                .unwrap();
         assert!(loaded.has_provenance);
     }
 }

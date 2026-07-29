@@ -1,10 +1,17 @@
 #[cfg(not(target_arch = "wasm32"))]
 use crate::q42_volume::UnifiedVolumeBuilder;
-use crate::{NQuin, QUINS_PER_BLOCK};
+use crate::NQuin;
+#[cfg(not(target_arch = "wasm32"))]
+use crate::QUINS_PER_BLOCK;
+#[cfg(not(target_arch = "wasm32"))]
 use std::cmp::Ordering;
-use std::collections::{BinaryHeap, HashMap};
+#[cfg(not(target_arch = "wasm32"))]
+use std::collections::BinaryHeap;
+use std::collections::HashMap;
 use std::fs::File;
-use std::io::{BufReader, Read, Write};
+use std::io::Write;
+#[cfg(not(target_arch = "wasm32"))]
+use std::io::{BufReader, Read};
 use std::path::{Path, PathBuf};
 
 // 50MB buffer limit: ~1 million Quins (48 bytes each -> 48MB)
@@ -200,13 +207,14 @@ impl ExternalSorter {
 
     /// Mock for WASM
     #[cfg(target_arch = "wasm32")]
-    pub fn merge(mut self, _final_q42: &Path) -> std::io::Result<u64> {
+    pub fn merge(self, _final_q42: &Path) -> std::io::Result<u64> {
         Err(std::io::Error::new(
             std::io::ErrorKind::Unsupported,
             "Not supported on WASM",
         ))
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     fn read_quin(reader: &mut BufReader<File>) -> std::io::Result<Option<NQuin>> {
         let mut bytes = [0u8; 48];
         match reader.read_exact(&mut bytes) {

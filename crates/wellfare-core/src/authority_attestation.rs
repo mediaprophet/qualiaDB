@@ -325,7 +325,10 @@ mod tests {
         assert_eq!(att.authority.jurisdiction.as_deref(), Some("AU-VIC"));
         assert_eq!(att.authority.department.as_deref(), Some("Haematology"));
         assert_eq!(att.agent, Some(agent));
-        assert_eq!(att.representation, Representation::PdfWithEmbeddedCredential);
+        assert_eq!(
+            att.representation,
+            Representation::PdfWithEmbeddedCredential
+        );
         assert_eq!(att.subject, "Blood panel result");
         assert!(att.action_required);
         assert_eq!(att.blob_hash.as_deref(), Some("blob-hash-1"));
@@ -456,8 +459,14 @@ mod tests {
         );
 
         let v = parse_authority_attestation_summary(&summary).unwrap();
-        assert_eq!(v.get("authority_label").unwrap().as_str().unwrap(), "State University");
-        assert_eq!(v.get("authority_type").unwrap().as_str().unwrap(), authority_type::EDUCATION);
+        assert_eq!(
+            v.get("authority_label").unwrap().as_str().unwrap(),
+            "State University"
+        );
+        assert_eq!(
+            v.get("authority_type").unwrap().as_str().unwrap(),
+            authority_type::EDUCATION
+        );
         assert_eq!(v.get("jurisdiction").unwrap().as_str().unwrap(), "AU-NSW");
         assert_eq!(v.get("department").unwrap().as_str().unwrap(), "Registry");
         assert_eq!(v.get("capacity").unwrap().as_str().unwrap(), "registrar");
@@ -466,7 +475,10 @@ mod tests {
             v.get("representation").unwrap().as_str().unwrap(),
             "pdf_with_embedded_credential"
         );
-        assert_eq!(v.get("subject").unwrap().as_str().unwrap(), "Degree conferral");
+        assert_eq!(
+            v.get("subject").unwrap().as_str().unwrap(),
+            "Degree conferral"
+        );
         assert_eq!(v.get("action_required").unwrap().as_bool().unwrap(), false);
     }
 

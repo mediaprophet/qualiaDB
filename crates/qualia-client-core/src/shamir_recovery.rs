@@ -96,10 +96,7 @@ pub fn split(secret: &[u8], k: usize, n: usize) -> Result<Vec<Share>, String> {
 
     let mut shares = Vec::with_capacity(n);
     for x in 1..=(n as u8) {
-        let y: Vec<u8> = coeffs
-            .iter()
-            .map(|c| eval_poly(c, x))
-            .collect();
+        let y: Vec<u8> = coeffs.iter().map(|c| eval_poly(c, x)).collect();
         shares.push(Share { x, y });
     }
     Ok(shares)
@@ -185,7 +182,11 @@ mod tests {
         // Several distinct 3-subsets all recover the exact secret.
         for subset in [[0usize, 1, 2], [0, 2, 4], [1, 3, 4], [2, 3, 4]] {
             let chosen: Vec<Share> = subset.iter().map(|&i| shares[i].clone()).collect();
-            assert_eq!(reconstruct(&chosen).unwrap(), secret, "subset {subset:?} recovers");
+            assert_eq!(
+                reconstruct(&chosen).unwrap(),
+                secret,
+                "subset {subset:?} recovers"
+            );
         }
         // More than k (all 5) also recovers.
         assert_eq!(reconstruct(&shares).unwrap(), secret);
@@ -197,7 +198,11 @@ mod tests {
         let shares = split(&secret, 3, 5).unwrap();
         // With only 2 of the 3 required shares, the interpolated value is not the secret.
         let two: Vec<Share> = vec![shares[0].clone(), shares[1].clone()];
-        assert_ne!(reconstruct(&two).unwrap(), secret, "k-1 shares must not reveal the secret");
+        assert_ne!(
+            reconstruct(&two).unwrap(),
+            secret,
+            "k-1 shares must not reveal the secret"
+        );
     }
 
     #[test]

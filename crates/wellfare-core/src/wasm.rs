@@ -1,14 +1,15 @@
-use wasm_bindgen::prelude::*;
-use wasm_bindgen::JsValue;
 use serde_wasm_bindgen;
+use wasm_bindgen::JsValue;
+use wasm_bindgen::prelude::*;
 
-use crate::parser::{parse_weight_csv, parse_sleep_csv, parse_heart_rate_csv, parse_steps_csv};
-use crate::rdf::{weight_to_turtle, sleep_to_turtle, heart_rate_to_turtle, steps_to_turtle};
+use crate::parser::{parse_heart_rate_csv, parse_sleep_csv, parse_steps_csv, parse_weight_csv};
+use crate::rdf::{heart_rate_to_turtle, sleep_to_turtle, steps_to_turtle, weight_to_turtle};
 
 #[wasm_bindgen]
 pub fn parse_weight_csv_json(content: &str) -> Result<JsValue, JsValue> {
     match parse_weight_csv(content) {
-        Ok(records) => serde_wasm_bindgen::to_value(&records).map_err(|e| JsValue::from_str(&format!("serde error: {}", e))),
+        Ok(records) => serde_wasm_bindgen::to_value(&records)
+            .map_err(|e| JsValue::from_str(&format!("serde error: {}", e))),
         Err(e) => Err(JsValue::from_str(&e)),
     }
 }
@@ -16,7 +17,8 @@ pub fn parse_weight_csv_json(content: &str) -> Result<JsValue, JsValue> {
 #[wasm_bindgen]
 pub fn parse_sleep_csv_json(content: &str) -> Result<JsValue, JsValue> {
     match parse_sleep_csv(content) {
-        Ok(records) => serde_wasm_bindgen::to_value(&records).map_err(|e| JsValue::from_str(&format!("serde error: {}", e))),
+        Ok(records) => serde_wasm_bindgen::to_value(&records)
+            .map_err(|e| JsValue::from_str(&format!("serde error: {}", e))),
         Err(e) => Err(JsValue::from_str(&e)),
     }
 }
@@ -24,7 +26,8 @@ pub fn parse_sleep_csv_json(content: &str) -> Result<JsValue, JsValue> {
 #[wasm_bindgen]
 pub fn parse_heart_rate_csv_json(content: &str) -> Result<JsValue, JsValue> {
     match parse_heart_rate_csv(content) {
-        Ok(records) => serde_wasm_bindgen::to_value(&records).map_err(|e| JsValue::from_str(&format!("serde error: {}", e))),
+        Ok(records) => serde_wasm_bindgen::to_value(&records)
+            .map_err(|e| JsValue::from_str(&format!("serde error: {}", e))),
         Err(e) => Err(JsValue::from_str(&e)),
     }
 }
@@ -32,7 +35,8 @@ pub fn parse_heart_rate_csv_json(content: &str) -> Result<JsValue, JsValue> {
 #[wasm_bindgen]
 pub fn parse_steps_csv_json(content: &str) -> Result<JsValue, JsValue> {
     match parse_steps_csv(content) {
-        Ok(records) => serde_wasm_bindgen::to_value(&records).map_err(|e| JsValue::from_str(&format!("serde error: {}", e))),
+        Ok(records) => serde_wasm_bindgen::to_value(&records)
+            .map_err(|e| JsValue::from_str(&format!("serde error: {}", e))),
         Err(e) => Err(JsValue::from_str(&e)),
     }
 }
@@ -96,7 +100,9 @@ impl WasmHealthStore {
 
     /// Load a Turtle document into the store (appends — call on a fresh store to replace).
     pub fn load_turtle(&mut self, turtle: &str) -> Result<(), JsValue> {
-        self.inner.load_turtle(turtle).map_err(|e| JsValue::from_str(&e))
+        self.inner
+            .load_turtle(turtle)
+            .map_err(|e| JsValue::from_str(&e))
     }
 
     /// Execute a SPARQL query; returns JSON SPARQL results string.
@@ -168,10 +174,7 @@ pub fn evaluate_n3_rules(turtle: &str) -> String {
 ///
 /// Returns JSON: `{"passed":bool,"routingLane":N}`
 #[wasm_bindgen]
-pub fn validate_health_quin(
-    constraint: &str,
-    s: u64, p: u64, o: u64, c: u64, m: u64,
-) -> String {
+pub fn validate_health_quin(constraint: &str, s: u64, p: u64, o: u64, c: u64, m: u64) -> String {
     let (passed, lane) = crate::webizen::evaluate_policy_constraint(constraint, s, p, o, c, m);
     format!("{{\"passed\":{},\"routingLane\":{}}}", passed, lane)
 }

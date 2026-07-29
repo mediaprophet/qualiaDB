@@ -15,7 +15,9 @@ pub fn wellfair_record_transparency_cc(
 ) -> Result<String, String> {
     let state = app.state::<HostApiState>();
     state.0.execute_sync(move |guard| {
-        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         host.record_transparency_cc(&credential_id, &informed_authority_did, &purpose)?;
         Ok("{\"recorded\":true}".into())
     })?
@@ -34,8 +36,16 @@ pub fn wellfair_record_disclosure(
 ) -> Result<String, String> {
     let state = app.state::<HostApiState>();
     state.0.execute_sync(move |guard| {
-        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-        let event = host.record_disclosure(&commitment_hex, &credential_id, &recipient_did, acting_delegate_did, onward_to)?;
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let event = host.record_disclosure(
+            &commitment_hex,
+            &credential_id,
+            &recipient_did,
+            acting_delegate_did,
+            onward_to,
+        )?;
         serde_json::to_string(&event).map_err(|e| e.to_string())
     })?
 }
@@ -45,7 +55,9 @@ pub fn wellfair_record_disclosure(
 pub fn wellfair_disclosure_chain(app: AppHandle, commitment_hex: String) -> Result<String, String> {
     let state = app.state::<HostApiState>();
     state.0.execute_sync(move |guard| {
-        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         let chain = host.disclosure_chain(&commitment_hex)?;
         serde_json::to_string(&chain).map_err(|e| e.to_string())
     })?
@@ -53,10 +65,15 @@ pub fn wellfair_disclosure_chain(app: AppHandle, commitment_hex: String) -> Resu
 
 /// The distinct actors who had access to a payload (the leak-suspect set).
 #[command]
-pub fn wellfair_actors_with_access(app: AppHandle, commitment_hex: String) -> Result<String, String> {
+pub fn wellfair_actors_with_access(
+    app: AppHandle,
+    commitment_hex: String,
+) -> Result<String, String> {
     let state = app.state::<HostApiState>();
     state.0.execute_sync(move |guard| {
-        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         let actors = host.actors_with_access(&commitment_hex)?;
         serde_json::to_string(&actors).map_err(|e| e.to_string())
     })?
@@ -67,7 +84,9 @@ pub fn wellfair_actors_with_access(app: AppHandle, commitment_hex: String) -> Re
 pub fn wellfair_trace_leak(app: AppHandle, fingerprint_hex: String) -> Result<String, String> {
     let state = app.state::<HostApiState>();
     state.0.execute_sync(move |guard| {
-        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         let event = host.trace_leak(&fingerprint_hex)?;
         serde_json::to_string(&serde_json::json!({ "event": event })).map_err(|e| e.to_string())
     })?
@@ -78,7 +97,9 @@ pub fn wellfair_trace_leak(app: AppHandle, fingerprint_hex: String) -> Result<St
 pub fn wellfair_list_transparency_ccs(app: AppHandle) -> Result<String, String> {
     let state = app.state::<HostApiState>();
     state.0.execute_sync(move |guard| {
-        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         let ccs = host.list_transparency_ccs()?;
         serde_json::to_string(&ccs).map_err(|e| e.to_string())
     })?
@@ -97,9 +118,10 @@ pub fn wellfair_assess_duty_of_inquiry(
         serde_json::from_str(&conduct_json).map_err(|e| format!("invalid conduct JSON: {e}"))?;
     let state = app.state::<HostApiState>();
     state.0.execute_sync(move |guard| {
-        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         let verdict = host.assess_duty_of_inquiry(duty, conduct);
         serde_json::to_string(&serde_json::json!({ "verdict": verdict })).map_err(|e| e.to_string())
     })?
 }
-

@@ -211,7 +211,9 @@ pub fn host_knowledge_base() -> KnowledgeBase {
     // Resolve condition→system through the default (seeded 17) registry. When the app carries an
     // extended taxonomy (ontology/pack-registered systems), pass that registry here instead so a
     // condition mapping to an extension system is evaluated, not dropped.
-    if let Ok(res) = anatomy::import_condition_map(BUNDLED_CONDITION_MAP, prov, anatomy::default_registry()) {
+    if let Ok(res) =
+        anatomy::import_condition_map(BUNDLED_CONDITION_MAP, prov, anatomy::default_registry())
+    {
         for entry in res.entries {
             kb.insert(entry);
         }
@@ -326,12 +328,8 @@ pub fn build_scorecard_report_with_weights(
     let total_records = records.len();
     let kb = host_knowledge_base();
     let bridge = anatomy::records_to_factors(&records, &kb);
-    let scorecard = anatomy::score_card(
-        &bridge.factors,
-        convergence_threshold,
-        state,
-        weight_model,
-    );
+    let scorecard =
+        anatomy::score_card(&bridge.factors, convergence_threshold, state, weight_model);
     let implications = anatomy::systemic_implications(&bridge.factors, convergence_threshold);
     let hypotheses = anatomy::hypotheses_from_implications(&implications);
     WellbeingScorecardReport {
@@ -353,7 +351,12 @@ pub fn build_scorecard_report(
     convergence_threshold: usize,
     state: PhysiologicalState,
 ) -> WellbeingScorecardReport {
-    build_scorecard_report_with_weights(records, convergence_threshold, &anatomy::seed_weight_model(), state)
+    build_scorecard_report_with_weights(
+        records,
+        convergence_threshold,
+        &anatomy::seed_weight_model(),
+        state,
+    )
 }
 
 /// One-shot: journal entries → score-card report, with the person's own weight model and declared state.
@@ -386,7 +389,10 @@ fn summary_value(entry: &JournalEntry) -> Option<serde_json::Value> {
 }
 
 fn summary_str(entry: &JournalEntry, field: &str) -> Option<String> {
-    summary_value(entry)?.get(field)?.as_str().map(|s| s.to_string())
+    summary_value(entry)?
+        .get(field)?
+        .as_str()
+        .map(|s| s.to_string())
 }
 
 fn summary_bool(entry: &JournalEntry, field: &str) -> Option<bool> {
@@ -420,13 +426,19 @@ mod tests {
         let settled = sigma_to_normalized_linear_rgba(settled_sigma);
         let strained = sigma_to_normalized_linear_rgba(strained_sigma);
         // Visual: strain is red-dominant, settled is green-leaning — the heat cue is spectral, not hex.
-        assert!(strained[0] > strained[1] && strained[0] > strained[2], "strain rgba={strained:?}");
+        assert!(
+            strained[0] > strained[1] && strained[0] > strained[2],
+            "strain rgba={strained:?}"
+        );
         assert!(settled[1] >= settled[0], "settled rgba={settled:?}");
         assert_eq!(strained[3], 1.0, "opaque");
         // Sonic parity from the SAME σ: red/strain folds to a lower pitch than green/settled.
         let f_settled = acoustic::sigma_to_center_frequency_hz(settled_sigma);
         let f_strained = acoustic::sigma_to_center_frequency_hz(strained_sigma);
-        assert!(f_strained < f_settled, "strain {f_strained}Hz should be below settled {f_settled}Hz");
+        assert!(
+            f_strained < f_settled,
+            "strain {f_strained}Hz should be below settled {f_settled}Hz"
+        );
     }
 
     #[test]
@@ -436,12 +448,23 @@ mod tests {
             "condition",
             serde_json::json!({"label": "Hypertension"}),
         )];
-        let report = build_report_from_journal(&conditions, &[], &[], Lens::Person, 2, PhysiologicalState::Baseline);
+        let report = build_report_from_journal(
+            &conditions,
+            &[],
+            &[],
+            Lens::Person,
+            2,
+            PhysiologicalState::Baseline,
+        );
         let percepts = report.system_percepts();
         // One percept per accumulated burden — nothing silently dropped.
         assert_eq!(percepts.len(), report.burdens.len());
         for p in &percepts {
-            assert!(p.sigma >= 0.50 - 1e-6 && p.sigma <= 0.93 + 1e-6, "σ in EMF band: {}", p.sigma);
+            assert!(
+                p.sigma >= 0.50 - 1e-6 && p.sigma <= 0.93 + 1e-6,
+                "σ in EMF band: {}",
+                p.sigma
+            );
             assert_eq!(p.rgba[3], 1.0);
             assert!(p.frequency_hz > 0.0);
         }
@@ -456,7 +479,14 @@ mod tests {
             "condition",
             serde_json::json!({"label": "Hypertension"}),
         )];
-        let report = build_report_from_journal(&conditions, &[], &[], Lens::Person, 2, PhysiologicalState::Baseline);
+        let report = build_report_from_journal(
+            &conditions,
+            &[],
+            &[],
+            Lens::Person,
+            2,
+            PhysiologicalState::Baseline,
+        );
         // A VH_Male organ set: a burdened organ (blood-vasculature → circulatory), an unburdened one
         // (lung → respiratory), and one not in the curated map.
         let (painted, unmapped) = report.paint_organs(&[
@@ -467,11 +497,21 @@ mod tests {
         assert_eq!(painted.len(), 2);
         assert_eq!(unmapped, vec!["3d-vh-m-flux-capacitor.glb".to_string()]);
 
-        let circ = painted.iter().find(|o| o.system_id == "circulatory").unwrap();
-        let resp = painted.iter().find(|o| o.system_id == "respiratory").unwrap();
+        let circ = painted
+            .iter()
+            .find(|o| o.system_id == "circulatory")
+            .unwrap();
+        let resp = painted
+            .iter()
+            .find(|o| o.system_id == "respiratory")
+            .unwrap();
         // The hypertension load makes circulatory redder (higher σ) than the settled respiratory organ.
         assert!(circ.percept.sigma >= resp.percept.sigma);
-        assert_eq!(resp.percept.level, WellbeingLevel::Settled, "no respiratory load → settled baseline");
+        assert_eq!(
+            resp.percept.level,
+            WellbeingLevel::Settled,
+            "no respiratory load → settled baseline"
+        );
         // Every painted organ has an opaque colour and an audible pitch (both encodings present).
         for o in &painted {
             assert_eq!(o.percept.rgba[3], 1.0);
@@ -482,19 +522,36 @@ mod tests {
     #[test]
     fn overlay_percepts_surface_only_distributed_networks_with_host_hints() {
         let burdens = vec![
-            SystemBurden { system_id: "glymphatic".to_string(), net_milli: 400, ..Default::default() },
-            SystemBurden { system_id: "circulatory".to_string(), net_milli: 200, ..Default::default() },
-            SystemBurden { system_id: "ens".to_string(), net_milli: 150, ..Default::default() },
+            SystemBurden {
+                system_id: "glymphatic".to_string(),
+                net_milli: 400,
+                ..Default::default()
+            },
+            SystemBurden {
+                system_id: "circulatory".to_string(),
+                net_milli: 200,
+                ..Default::default()
+            },
+            SystemBurden {
+                system_id: "ens".to_string(),
+                net_milli: 150,
+                ..Default::default()
+            },
         ];
         let overlays = overlay_percepts_from_burdens(&burdens);
         // Only the distributed networks appear — the discrete circulatory system is excluded (it
         // paints its own organ mesh via paint_organs instead).
         assert_eq!(overlays.len(), 2);
-        assert!(overlays.iter().all(|o| o.system_id == "glymphatic" || o.system_id == "ens"));
+        assert!(overlays
+            .iter()
+            .all(|o| o.system_id == "glymphatic" || o.system_id == "ens"));
         // Anatomical host hints for overlay placement.
         let ens = overlays.iter().find(|o| o.system_id == "ens").unwrap();
         assert_eq!(ens.host_systems, vec!["digestive".to_string()]);
-        let gly = overlays.iter().find(|o| o.system_id == "glymphatic").unwrap();
+        let gly = overlays
+            .iter()
+            .find(|o| o.system_id == "glymphatic")
+            .unwrap();
         assert_eq!(gly.host_systems, vec!["nervous".to_string()]);
         // Still a real σ percept — burdened → redder than settled and audible.
         assert!(gly.percept.sigma > 0.5 && gly.percept.frequency_hz > 0.0);
@@ -505,7 +562,10 @@ mod tests {
         let kb = host_knowledge_base();
         // A well-known bundled condition resolves to its primary system.
         assert!(kb.get("cond:hypertension").is_some());
-        assert_eq!(kb.get("cond:hypertension").unwrap().targets[0].system_id, "circulatory");
+        assert_eq!(
+            kb.get("cond:hypertension").unwrap().targets[0].system_id,
+            "circulatory"
+        );
         // Integrity holds across the whole assembled base.
         assert!(kb.verify_integrity().is_empty());
     }
@@ -513,8 +573,16 @@ mod tests {
     #[test]
     fn real_conditions_map_and_unknown_records_are_reported() {
         let conditions = vec![
-            je("did:wf:me:condition:1", "condition", serde_json::json!({"label": "Hypertension"})),
-            je("did:wf:me:condition:2", "condition", serde_json::json!({"label": "Made-Up Disease"})),
+            je(
+                "did:wf:me:condition:1",
+                "condition",
+                serde_json::json!({"label": "Hypertension"}),
+            ),
+            je(
+                "did:wf:me:condition:2",
+                "condition",
+                serde_json::json!({"label": "Made-Up Disease"}),
+            ),
         ];
         let meds = vec![je(
             "did:wf:me:medication:1",
@@ -527,7 +595,14 @@ mod tests {
             serde_json::json!({"description": "Beer", "meal_type": "drink"}),
         )];
 
-        let report = build_report_from_journal(&conditions, &meds, &diet, Lens::Person, 1, PhysiologicalState::Baseline);
+        let report = build_report_from_journal(
+            &conditions,
+            &meds,
+            &diet,
+            Lens::Person,
+            1,
+            PhysiologicalState::Baseline,
+        );
         // Hypertension → circulatory; Beer → digestive+urinary (seed). Made-Up + Warfarin(no seed) unmapped.
         assert!(report.burdens.iter().any(|b| b.system_id == "circulatory"));
         assert!(report.burdens.iter().any(|b| b.system_id == "digestive"));
@@ -547,18 +622,40 @@ mod tests {
             serde_json::json!({"name": "Warfarin", "ceased": true}),
         )];
         let refs = record_refs_from_journal(&[], &meds, &[]);
-        assert!(refs.is_empty(), "a ceased medication is not a current factor");
+        assert!(
+            refs.is_empty(),
+            "a ceased medication is not a current factor"
+        );
     }
 
     #[test]
     fn clinician_lens_flags_the_herb_drug_style_convergence() {
         // Two conditions on the circulatory system converge at threshold 2 → a clinician flag.
         let conditions = vec![
-            je("c1", "condition", serde_json::json!({"label": "Hypertension"})),
-            je("c2", "condition", serde_json::json!({"label": "Atrial Fibrillation"})),
+            je(
+                "c1",
+                "condition",
+                serde_json::json!({"label": "Hypertension"}),
+            ),
+            je(
+                "c2",
+                "condition",
+                serde_json::json!({"label": "Atrial Fibrillation"}),
+            ),
         ];
-        let report = build_report_from_journal(&conditions, &[], &[], Lens::Clinician, 2, PhysiologicalState::Baseline);
-        assert!(report.view.systems.iter().any(|s| s.system_id == "circulatory"));
+        let report = build_report_from_journal(
+            &conditions,
+            &[],
+            &[],
+            Lens::Clinician,
+            2,
+            PhysiologicalState::Baseline,
+        );
+        assert!(report
+            .view
+            .systems
+            .iter()
+            .any(|s| s.system_id == "circulatory"));
         assert!(report.view.boundary.contains("not a diagnosis"));
     }
 
@@ -573,7 +670,11 @@ mod tests {
     #[test]
     fn scorecard_at_third_trimester_scales_adverse_load_higher_than_baseline() {
         // Use a condition that maps to urinary (renal) in the seed KB — a known adverse renal load.
-        let refs = vec![RecordRef::new("r:renal-load", "condition", "Chronic Kidney Disease")];
+        let refs = vec![RecordRef::new(
+            "r:renal-load",
+            "condition",
+            "Chronic Kidney Disease",
+        )];
         let baseline_report = build_scorecard_report(refs.clone(), 1, PhysiologicalState::Baseline);
         let preg_report = build_scorecard_report(
             refs,
@@ -582,17 +683,36 @@ mod tests {
         );
         // The systemic-load aspect is computed over the state-modulated burdens. In the third trimester,
         // the renal (urinary) engagement is 130% → the same adverse load lands harder.
-        let baseline_load = baseline_report.scorecard.aspect(Aspect::SystemicLoad).unwrap().score_milli;
-        let preg_load = preg_report.scorecard.aspect(Aspect::SystemicLoad).unwrap().score_milli;
+        let baseline_load = baseline_report
+            .scorecard
+            .aspect(Aspect::SystemicLoad)
+            .unwrap()
+            .score_milli;
+        let preg_load = preg_report
+            .scorecard
+            .aspect(Aspect::SystemicLoad)
+            .unwrap()
+            .score_milli;
         assert!(
             preg_load >= baseline_load,
             "third-trimester renal engagement scales the load up or equal: {preg_load} vs {baseline_load}"
         );
         // The physiological-demand aspect is non-zero in pregnancy (whole-body engagement) and zero at baseline.
-        let baseline_demand = baseline_report.scorecard.aspect(Aspect::PhysiologicalDemand).unwrap().score_milli;
-        let preg_demand = preg_report.scorecard.aspect(Aspect::PhysiologicalDemand).unwrap().score_milli;
+        let baseline_demand = baseline_report
+            .scorecard
+            .aspect(Aspect::PhysiologicalDemand)
+            .unwrap()
+            .score_milli;
+        let preg_demand = preg_report
+            .scorecard
+            .aspect(Aspect::PhysiologicalDemand)
+            .unwrap()
+            .score_milli;
         assert_eq!(baseline_demand, 0, "baseline has no physiological demand");
-        assert!(preg_demand > 0, "pregnancy engages the whole body → demand > 0");
+        assert!(
+            preg_demand > 0,
+            "pregnancy engages the whole body → demand > 0"
+        );
     }
 
     #[test]
@@ -604,14 +724,33 @@ mod tests {
             serde_json::json!({"label": "Hypertension"}),
         )];
         let baseline_report = build_report_from_journal(
-            &conditions, &[], &[], Lens::Person, 2, PhysiologicalState::Baseline,
+            &conditions,
+            &[],
+            &[],
+            Lens::Person,
+            2,
+            PhysiologicalState::Baseline,
         );
         let preg_report = build_report_from_journal(
-            &conditions, &[], &[], Lens::Person, 2,
+            &conditions,
+            &[],
+            &[],
+            Lens::Person,
+            2,
             PhysiologicalState::Reproductive(ReproductiveState::Pregnant(Trimester::Third)),
         );
-        let baseline_circ = baseline_report.burdens.iter().find(|b| b.system_id == "circulatory").unwrap().net_milli;
-        let preg_circ = preg_report.burdens.iter().find(|b| b.system_id == "circulatory").unwrap().net_milli;
+        let baseline_circ = baseline_report
+            .burdens
+            .iter()
+            .find(|b| b.system_id == "circulatory")
+            .unwrap()
+            .net_milli;
+        let preg_circ = preg_report
+            .burdens
+            .iter()
+            .find(|b| b.system_id == "circulatory")
+            .unwrap()
+            .net_milli;
         assert!(
             preg_circ > baseline_circ,
             "third-trimester circulatory engagement (140%) scales hypertension higher: {preg_circ} > {baseline_circ}"

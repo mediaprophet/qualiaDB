@@ -1,0 +1,80 @@
+{
+  "schema_version": 1,
+  "scenarios": {
+    "contracts": {
+      "description": "Fast UI/domain contract tests for agent iteration.",
+      "steps": [
+        {
+          "id": "runner-tests",
+          "command": ["py", "-3", "-m", "unittest", "tools/agent_qa/test_runner.py"],
+          "timeout_seconds": 60
+        },
+        {
+          "id": "studio-tests",
+          "command": ["cargo", "test", "-p", "webizen-studio", "--bin", "webizen-studio"],
+          "timeout_seconds": 900
+        },
+        {
+          "id": "desktop-agent-qa-tests",
+          "command": ["cargo", "test", "-p", "webizen-desktop", "agent_qa"],
+          "timeout_seconds": 900
+        }
+      ]
+    },
+    "check": {
+      "description": "Compile the affected Studio and desktop surfaces.",
+      "steps": [
+        {
+          "id": "studio-check",
+          "command": ["cargo", "check", "-p", "webizen-studio"],
+          "timeout_seconds": 900
+        },
+        {
+          "id": "desktop-check",
+          "command": ["cargo", "check", "-p", "webizen-desktop"],
+          "timeout_seconds": 900
+        }
+      ]
+    },
+    "ui": {
+      "description": "Browser-level route, interaction and console smoke tests; requires the local portal.",
+      "steps": [
+        {
+          "id": "studio-playwright",
+          "command": ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "scripts/studio-agent-ui.ps1"],
+          "timeout_seconds": 1200
+        }
+      ]
+    },
+    "full": {
+      "description": "Formatting, contracts and compile verification for hand-off.",
+      "steps": [
+        {
+          "id": "runner-tests",
+          "command": ["py", "-3", "-m", "unittest", "tools/agent_qa/test_runner.py"],
+          "timeout_seconds": 60
+        },
+        {
+          "id": "format-check",
+          "command": ["py", "-3", "tools/agent_qa/check_scope.py"],
+          "timeout_seconds": 180
+        },
+        {
+          "id": "studio-tests",
+          "command": ["cargo", "test", "-p", "webizen-studio", "--bin", "webizen-studio"],
+          "timeout_seconds": 900
+        },
+        {
+          "id": "desktop-agent-qa-tests",
+          "command": ["cargo", "test", "-p", "webizen-desktop", "agent_qa"],
+          "timeout_seconds": 900
+        },
+        {
+          "id": "desktop-check",
+          "command": ["cargo", "check", "-p", "webizen-desktop"],
+          "timeout_seconds": 900
+        }
+      ]
+    }
+  }
+}

@@ -125,8 +125,12 @@ mod tests {
         }
         // Nearest-neighbor expand is lossy but should stay close for smooth fields.
         assert!(max_err < 25.0, "max_err={max_err}");
-        let mean_err: f32 =
-            recon.iter().zip(src.iter()).map(|(a, b)| (a - b).abs()).sum::<f32>() / n_px as f32;
+        let mean_err: f32 = recon
+            .iter()
+            .zip(src.iter())
+            .map(|(a, b)| (a - b).abs())
+            .sum::<f32>()
+            / n_px as f32;
         assert!(mean_err < 5.0, "mean_err={mean_err}");
     }
 }

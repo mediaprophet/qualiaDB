@@ -67,7 +67,10 @@ pub fn wellfair_sanctuary_vault_is_keychain_wrapped(app: AppHandle) -> Result<St
         let host = guard
             .as_ref()
             .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-        Ok(serde_json::json!({ "wrapped": host.sanctuary_vault_is_keychain_wrapped() }).to_string())
+        Ok(
+            serde_json::json!({ "wrapped": host.sanctuary_vault_is_keychain_wrapped() })
+                .to_string(),
+        )
     })?
 }
 
@@ -160,7 +163,10 @@ pub fn wellfair_review_decoy_activity(app: AppHandle, real_pin: String) -> Resul
 /// Read the decoy-audit retention policy (real-session-only; ADR §8). Returns `{ "mode": "..." }`.
 /// Requires the **real** PIN.
 #[command]
-pub fn wellfair_get_decoy_retention_mode(app: AppHandle, real_pin: String) -> Result<String, String> {
+pub fn wellfair_get_decoy_retention_mode(
+    app: AppHandle,
+    real_pin: String,
+) -> Result<String, String> {
     let state = app.state::<HostApiState>();
     state.0.execute_sync(move |guard| {
         let host = guard
@@ -190,4 +196,3 @@ pub fn wellfair_set_decoy_retention_mode(
         Ok(serde_json::json!({ "mode": mode }).to_string())
     })?
 }
-

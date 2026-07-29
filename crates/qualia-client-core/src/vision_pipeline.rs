@@ -4,46 +4,36 @@
 //! epistemic quins → overlay BMP. Plus generate + image-to-3D. No Python.
 
 use base64::{engine::general_purpose::STANDARD as B64, Engine as _};
-use qualia_core_db::sparql_library::vision_shacl::{
-    validate_vision_observation_graph, VisionShaclReport,
-};
-use qualia_core_db::NQuin;
-use qualia_vision::detector::{
-    GridMultiObjectDetector, CLASS_MOSTLY_BLUE, CLASS_MOSTLY_GREEN, CLASS_MOSTLY_RED,
-};
-use qualia_core_db::render::assets::{mesh_to_nquins_with_digests, Mesh};
 use qualia_core_db::container_10d::provenance_section::ProvenanceSidecar;
+use qualia_core_db::render::assets::{mesh_to_nquins_with_digests, Mesh};
 use qualia_core_db::render::compile_10d::{
     compile_mesh_to_10d_vision, compile_mesh_to_10d_vision_with_provenance,
+};
+use qualia_core_db::sparql_library::vision_shacl::{
+    validate_vision_observation_graph, VisionShaclReport,
 };
 use qualia_core_db::specialized_libs::computational_geometry::{
     decimate_qem, DecimateOptions, Point3,
 };
 use qualia_core_db::tensor::Tensor10D;
-use qualia_vision::generator::{
-    compile_generation_receipt_quins, NativeImageGenerator,
+use qualia_core_db::NQuin;
+use qualia_vision::detector::{
+    GridMultiObjectDetector, CLASS_MOSTLY_BLUE, CLASS_MOSTLY_GREEN, CLASS_MOSTLY_RED,
 };
+use qualia_vision::generator::{compile_generation_receipt_quins, NativeImageGenerator};
 use qualia_vision::media_store::{MediaStore, RetentionClass};
 use qualia_vision::metrics::evaluate_synthetic;
-use qualia_vision::overlay::{
-    box_css_percent, compose_rgb_overlay_rgba8, encode_bmp_rgba8,
-};
+use qualia_vision::overlay::{box_css_percent, compose_rgb_overlay_rgba8, encode_bmp_rgba8};
 use qualia_vision::query_instances_in_region;
 use qualia_vision::semantic::{compile_observation_quins_full, media_digest, VisionQuin};
 use qualia_vision::spatial::{
     cleanup_mesh_ir, detections_to_node_hints, image_to_heightfield_mesh, mesh_ir_to_export,
     mesh_ir_to_obj, pack_geometry_export_for_10d, MeshCleanupOptions, MeshIR, NodeHint,
 };
-use qualia_vision::synthetic::{
-    generate_scene_rgb8, sample_id, DatasetSplit, SyntheticSampleId,
-};
+use qualia_vision::synthetic::{generate_scene_rgb8, sample_id, DatasetSplit, SyntheticSampleId};
 use qualia_vision::tracker::BoundedTracker;
-use qualia_vision::types::{
-    Detection, ImageView, PixelFormat, VisualModel, MAX_DETECTIONS,
-};
-use qualia_vision::weights::{
-    ProductionVision, VisionBackendKind, VisionWeightBundle,
-};
+use qualia_vision::types::{Detection, ImageView, PixelFormat, VisualModel, MAX_DETECTIONS};
+use qualia_vision::weights::{ProductionVision, VisionBackendKind, VisionWeightBundle};
 use serde::Serialize;
 
 use crate::vision_ingest::{
@@ -292,19 +282,10 @@ pub fn run_sample_demo_with_backend(
         let counts = prod
             .infer(img, &mut preds, &mut emb, &mut ws)
             .map_err(|e| format!("{e:?}"))?;
-        let mut m2 = ProductionVision::new(VisionWeightBundle::from_seed(
-            0x01D1_FACE_u64,
-            16,
-            &classes,
-        ));
-        let metrics = evaluate_synthetic(
-            &mut m2,
-            VisionBackendKind::ProductionWeights,
-            mh,
-            4,
-            32,
-            24,
-        );
+        let mut m2 =
+            ProductionVision::new(VisionWeightBundle::from_seed(0x01D1_FACE_u64, 16, &classes));
+        let metrics =
+            evaluate_synthetic(&mut m2, VisionBackendKind::ProductionWeights, mh, 4, 32, 24);
         (
             counts.detections,
             mh,
@@ -320,13 +301,7 @@ pub fn run_sample_demo_with_backend(
         let mh = det.model_hash();
         let mut det2 = GridMultiObjectDetector::new(4, 3);
         let metrics = evaluate_synthetic(&mut det2, VisionBackendKind::Reference, mh, 4, 32, 24);
-        (
-            n_pred,
-            mh,
-            "reference",
-            true,
-            Some(metrics.mean_match_acc),
-        )
+        (n_pred, mh, "reference", true, Some(metrics.mean_match_acc))
     };
 
     let mut tracker = BoundedTracker::new();
@@ -343,17 +318,8 @@ pub fn run_sample_demo_with_backend(
     let report = validate_vision_observation_graph(&nquins);
 
     let mut rgba = vec![0u8; px * 4];
-    compose_rgb_overlay_rgba8(
-        w,
-        h,
-        &rgb,
-        &preds,
-        n_pred,
-        [0, 255, 180, 255],
-        2,
-        &mut rgba,
-    )
-    .map_err(|e| format!("{e:?}"))?;
+    compose_rgb_overlay_rgba8(w, h, &rgb, &preds, n_pred, [0, 255, 180, 255], 2, &mut rgba)
+        .map_err(|e| format!("{e:?}"))?;
     let mut bmp = vec![0u8; 54 + px * 4];
     let bmp_n = encode_bmp_rgba8(w, h, &rgba, &mut bmp).map_err(|e| format!("{e:?}"))?;
     let b64 = B64.encode(&bmp[..bmp_n]);
@@ -446,8 +412,7 @@ pub fn image_to_3d_from_rgb(
         row_stride: width * 3,
         format: PixelFormat::Rgb8,
     };
-    let (mesh, rec, rep) =
-        image_to_heightfield_mesh(img, grid).map_err(|e| format!("{e:?}"))?;
+    let (mesh, rec, rep) = image_to_heightfield_mesh(img, grid).map_err(|e| format!("{e:?}"))?;
     let status = format!("{:?}", rep.status);
     Ok(ImageTo3dResult {
         vertex_count: mesh.vertex_count() as u32,
@@ -494,16 +459,7 @@ pub fn run_gs_continuum(
     let mut rgb = vec![0u8; (w * h * 3) as usize];
     let gen = NativeImageGenerator::new();
     let rec = gen
-        .generate_rgb8_cancellable(
-            prompt,
-            seed,
-            steps,
-            w,
-            h,
-            &mut rgb,
-            None,
-            media_time_ms,
-        )
+        .generate_rgb8_cancellable(prompt, seed, steps, w, h, &mut rgb, None, media_time_ms)
         .map_err(|e| format!("{e:?}"))?;
 
     // Media store (no partial commit if later steps fail after store — store is deduped).
@@ -587,16 +543,7 @@ pub fn run_gs_continuum(
     // D1: seal with Tensor10DNodes from a single plane marker (heightfield centre).
     // Full detection→node path uses seal_vision_mesh_with_detections when callers have dets.
     let centre = Tensor10D::parallel_context(
-        1.0,
-        0.0,
-        0.0,
-        0.5,
-        0.5,
-        0.0,
-        0.0,
-        1.0,
-        0.0,
-        0.35, // mid-band σ for recon marker
+        1.0, 0.0, 0.0, 0.5, 0.5, 0.0, 0.0, 1.0, 0.0, 0.35, // mid-band σ for recon marker
     );
     // D4: provenance sidecar — media digest bytes + recon model hash in-envelope.
     let mut version_hash = [0u8; 32];
@@ -615,8 +562,11 @@ pub fn run_gs_continuum(
         "PermissiveReady-local", // synthetic continuum — not a third-party weight licence
     )
     .with_metadata(
-        format!(r#"{{"media_digest":"{}","model_hash":"0x{:016x}"}}"#, record.digest_hex, recon_rec.model_hash)
-            .into_bytes(),
+        format!(
+            r#"{{"media_digest":"{}","model_hash":"0x{:016x}"}}"#,
+            record.digest_hex, recon_rec.model_hash
+        )
+        .into_bytes(),
         0,
         version_hash,
     );
@@ -643,7 +593,9 @@ pub fn run_gs_continuum(
         compiled_digest,
     );
 
-    let out_dir = storage_root.join("vision_geometry").join(&record.digest_hex);
+    let out_dir = storage_root
+        .join("vision_geometry")
+        .join(&record.digest_hex);
     std::fs::create_dir_all(&out_dir).map_err(|e| e.to_string())?;
     let obj_path = out_dir.join("recon.obj");
     let c10_path = out_dir.join("recon.10d");
@@ -663,9 +615,7 @@ pub fn run_gs_continuum(
         });
     }
     nquin_buf.extend(geo_quins.iter().cloned());
-    let wal_path = storage_root
-        .join("models")
-        .join("vision_native.wal");
+    let wal_path = storage_root.join("models").join("vision_native.wal");
     if let Some(parent) = wal_path.parent() {
         let _ = std::fs::create_dir_all(parent);
     }
@@ -753,9 +703,8 @@ pub fn ingest_demo_to_wal(
         .map_err(|e| e.to_string())?;
     let mut natives = Vec::new();
     for d in &demo.detections {
-        let instance_hash =
-            u64::from_str_radix(d.instance_hash.trim_start_matches("0x"), 16)
-                .map_err(|e| e.to_string())?;
+        let instance_hash = u64::from_str_radix(d.instance_hash.trim_start_matches("0x"), 16)
+            .map_err(|e| e.to_string())?;
         let class_hash = u64::from_str_radix(d.class_hash.trim_start_matches("0x"), 16)
             .map_err(|e| e.to_string())?;
         let (x0, y0, x1, y1) = css_to_u16(d.left, d.top, d.width, d.height);
@@ -855,14 +804,8 @@ mod tests {
 
     #[test]
     fn production_backend_labelled() {
-        let r = run_synthetic_demo_with_backend(
-            DatasetSplit::Test,
-            0,
-            48,
-            32,
-            "production",
-        )
-        .expect("prod");
+        let r = run_synthetic_demo_with_backend(DatasetSplit::Test, 0, 48, 32, "production")
+            .expect("prod");
         assert_eq!(r.backend, "production_weights");
         assert!(!r.is_reference_backend);
         assert!(r.synthetic_match_acc.is_some());
@@ -1046,13 +989,7 @@ pub fn detect_from_image_file(
 }
 
 /// Query observation quins by normalized region (u16).
-pub fn query_vision_region(
-    quins: &[VisionQuin],
-    x0: u16,
-    y0: u16,
-    x1: u16,
-    y1: u16,
-) -> Vec<u64> {
+pub fn query_vision_region(quins: &[VisionQuin], x0: u16, y0: u16, x1: u16, y1: u16) -> Vec<u64> {
     let mut out = [0u64; 64];
     let n = query_instances_in_region(quins, x0, y0, x1, y1, &mut out);
     out[..n].to_vec()
@@ -1327,7 +1264,9 @@ pub fn super_resolve_image(
 
     // 3. Allocate output and run under device policy.
     let ow = w.checked_mul(scale as u32).ok_or("output width overflow")?;
-    let oh = h.checked_mul(scale as u32).ok_or("output height overflow")?;
+    let oh = h
+        .checked_mul(scale as u32)
+        .ok_or("output height overflow")?;
     let out_len = (ow as usize)
         .checked_mul(oh as usize)
         .and_then(|n| n.checked_mul(3))
@@ -1343,11 +1282,15 @@ pub fn super_resolve_image(
     .map_err(|e| format!("super_resolve: {e:?}"))?;
 
     // 4. PNG-encode both input and output.
-    let before_view =
-        RgbView::new(w, h, w.saturating_mul(3), &rgb).ok_or("bad input rgb view")?;
+    let before_view = RgbView::new(w, h, w.saturating_mul(3), &rgb).ok_or("bad input rgb view")?;
     let before_png = encode_png(before_view).map_err(|e| format!("encode before png: {e:?}"))?;
-    let after_view = RgbView::new(report.out_width, report.out_height, ow.saturating_mul(3), &out)
-        .ok_or("bad output rgb view")?;
+    let after_view = RgbView::new(
+        report.out_width,
+        report.out_height,
+        ow.saturating_mul(3),
+        &out,
+    )
+    .ok_or("bad output rgb view")?;
     let after_png = encode_png(after_view).map_err(|e| format!("encode after png: {e:?}"))?;
 
     let device = match compute.device {

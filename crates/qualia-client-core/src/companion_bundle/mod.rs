@@ -117,9 +117,16 @@ pub fn build_companion_bundle(
     output_dir: &Path,
     input: &CompanionBundleInput,
 ) -> Result<CompanionBundleManifest, BundleBuildError> {
-    for required in [&input.wasm_js, &input.wasm_binary, &input.index_html, &input.qapp_json] {
+    for required in [
+        &input.wasm_js,
+        &input.wasm_binary,
+        &input.index_html,
+        &input.qapp_json,
+    ] {
         if !required.is_file() {
-            return Err(BundleBuildError::MissingInput(required.display().to_string()));
+            return Err(BundleBuildError::MissingInput(
+                required.display().to_string(),
+            ));
         }
     }
 
@@ -131,10 +138,17 @@ pub fn build_companion_bundle(
 
     fs::copy(&input.qapp_json, output_dir.join("qapp.json"))?;
     fs::copy(&input.index_html, output_dir.join("index.html"))?;
-    fs::copy(&input.wasm_js, output_dir.join("wasm").join(input.wasm_js.file_name().unwrap()))?;
+    fs::copy(
+        &input.wasm_js,
+        output_dir
+            .join("wasm")
+            .join(input.wasm_js.file_name().unwrap()),
+    )?;
     fs::copy(
         &input.wasm_binary,
-        output_dir.join("wasm").join(input.wasm_binary.file_name().unwrap()),
+        output_dir
+            .join("wasm")
+            .join(input.wasm_binary.file_name().unwrap()),
     )?;
 
     let (content_hash, files) = hash_bundle_tree(output_dir)?;
@@ -161,10 +175,14 @@ pub fn build_companion_bundle(
 }
 
 /// Verify an on-disk bundle matches its embedded manifest hashes.
-pub fn verify_companion_bundle(bundle_dir: &Path) -> Result<CompanionBundleManifest, BundleBuildError> {
+pub fn verify_companion_bundle(
+    bundle_dir: &Path,
+) -> Result<CompanionBundleManifest, BundleBuildError> {
     let manifest_path = bundle_dir.join("package-manifest.json");
     if !manifest_path.is_file() {
-        return Err(BundleBuildError::MissingInput("package-manifest.json".into()));
+        return Err(BundleBuildError::MissingInput(
+            "package-manifest.json".into(),
+        ));
     }
     let content = fs::read_to_string(&manifest_path)?;
     let manifest: CompanionBundleManifest = serde_json::from_str(&content)
@@ -231,7 +249,11 @@ mod tests {
         let out_b = root.join("out-b");
         let src = root.join("src");
         fs::create_dir_all(&src).unwrap();
-        fs::write(src.join("qapp.json"), r#"{"name":"wellfair","version":"0.0.24","required_shapes":[]}"#).unwrap();
+        fs::write(
+            src.join("qapp.json"),
+            r#"{"name":"wellfair","version":"0.0.24","required_shapes":[]}"#,
+        )
+        .unwrap();
         fs::write(src.join("index.html"), "<html>wellfair</html>").unwrap();
         fs::write(src.join("profile.js"), "export default {}").unwrap();
         fs::write(src.join("profile_bg.wasm"), b"\0asm").unwrap();

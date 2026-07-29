@@ -58,7 +58,10 @@ mod tests {
             }
         }
         // Two voices, each gain <= 100/127 ≈ 0.787 → sum bounded well under 2.0.
-        assert!(max_abs <= 2.0, "chord sum should stay bounded, got {max_abs}");
+        assert!(
+            max_abs <= 2.0,
+            "chord sum should stay bounded, got {max_abs}"
+        );
         assert!(any_signal, "chord should produce non-zero signal");
     }
 

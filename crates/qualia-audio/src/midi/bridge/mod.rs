@@ -28,7 +28,5 @@ pub use from_pitch_midi::{
 pub use smf_provenance::{
     extract_smf_provenance, ProvenanceKey, ProvenancePair, MAX_PROV_VALUE, META_COPYRIGHT,
 };
-pub use sonic_token::{
-    midi_to_sonic_token, sonic_token_to_midi, SonicEventType, SONIC_MAGIC,
-};
+pub use sonic_token::{midi_to_sonic_token, sonic_token_to_midi, SonicEventType, SONIC_MAGIC};
 pub use to_note_events::{pair_note_events, PairedNote, MAX_OPEN_NOTES};

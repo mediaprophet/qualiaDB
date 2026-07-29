@@ -37,12 +37,7 @@ mod tests {
         assert_eq!(med.kind, "medication");
 
         let admin = host
-            .record_administration(
-                &med.id,
-                "Ibuprofen",
-                AdministrationStatus::Taken,
-                None,
-            )
+            .record_administration(&med.id, "Ibuprofen", AdministrationStatus::Taken, None)
             .expect("admin");
         assert_eq!(admin.kind, "med_administration");
 

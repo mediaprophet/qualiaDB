@@ -1,13 +1,13 @@
 //! Hypermedia asset library: ingest, search, CML, COF
 
-
 use super::*;
 
 impl WebizenHostApi {
     // --- Hypermedia asset library: ingest a document → make it searchable by meaning ---
 
     fn library(&self) -> Result<super::super::hypermedia_store::HypermediaStore, String> {
-        super::super::hypermedia_store::HypermediaStore::open(&self.storage_root).map_err(|e| e.to_string())
+        super::super::hypermedia_store::HypermediaStore::open(&self.storage_root)
+            .map_err(|e| e.to_string())
     }
 
     /// **Ingest a text document** into the library: derive its topics + searchable text, bind them into a
@@ -21,7 +21,14 @@ impl WebizenHostApi {
         text: &str,
         guardian_did: Option<String>,
     ) -> Result<serde_json::Value, String> {
-        self.ingest_bytes(uri, media_type, text.as_bytes(), text, &ManualFacets::default(), guardian_did)
+        self.ingest_bytes(
+            uri,
+            media_type,
+            text.as_bytes(),
+            text,
+            &ManualFacets::default(),
+            guardian_did,
+        )
     }
 
     /// Ingest a text document **with person-authored facets** — an optional date (→ timeline), place
@@ -70,7 +77,10 @@ impl WebizenHostApi {
         // own derivation (a photo's EXIF) takes precedence for its fields; manual facets fill / extend.
         let manual_place = match (manual.lat, manual.lon) {
             (Some(lat), Some(lon)) => Some(Place {
-                label: manual.place_label.clone().unwrap_or_else(|| format!("{lat:.5},{lon:.5}")),
+                label: manual
+                    .place_label
+                    .clone()
+                    .unwrap_or_else(|| format!("{lat:.5},{lon:.5}")),
                 lat,
                 lon,
             }),
@@ -78,8 +88,14 @@ impl WebizenHostApi {
         };
         if !manual.is_empty() {
             let extra = Descriptors {
-                occurred_at: manual.occurred_at.filter(|_| out.descriptors.occurred_at.is_none()),
-                place: if out.descriptors.place.is_none() { manual_place.clone() } else { None },
+                occurred_at: manual
+                    .occurred_at
+                    .filter(|_| out.descriptors.occurred_at.is_none()),
+                place: if out.descriptors.place.is_none() {
+                    manual_place.clone()
+                } else {
+                    None
+                },
                 projects: manual.projects.clone(),
                 purposes: manual.purposes.clone(),
                 ..Default::default()
@@ -110,16 +126,10 @@ impl WebizenHostApi {
 
         let purposes = manual.purposes.clone();
         let sensitivity = super::super::hypermedia_store::normalize_sensitivity(
-            manual
-                .sensitivity
-                .as_deref()
-                .unwrap_or("public"),
+            manual.sensitivity.as_deref().unwrap_or("public"),
         );
         let commons = super::super::hypermedia_store::CommonsVisibility::parse(
-            manual
-                .commons_visibility
-                .as_deref()
-                .unwrap_or("none"),
+            manual.commons_visibility.as_deref().unwrap_or("none"),
         );
         // Rust-native CML context graph for text-like assets (TEXT→CONCEPT→LOGIC, cml:Proposed).
         let mut cml_topics = Vec::new();
@@ -128,7 +138,9 @@ impl WebizenHostApi {
         let mut cml_concept_count = 0u32;
         let mut cml_n3 = String::new();
         let mut cml_quins = Vec::new();
-        if media_type.starts_with("text/") || media_type.contains("json") || media_type.contains("markdown")
+        if media_type.starts_with("text/")
+            || media_type.contains("json")
+            || media_type.contains("markdown")
         {
             let text = String::from_utf8_lossy(bytes);
             let units = super::super::cml_context::units_from_headings(&text);
@@ -175,10 +187,7 @@ impl WebizenHostApi {
             ingested_unix: now,
             excerpt: excerpt_source.chars().take(160).collect(),
             sensitivity: sensitivity.clone(),
-            section: manual
-                .section
-                .clone()
-                .unwrap_or_else(|| "personal".into()),
+            section: manual.section.clone().unwrap_or_else(|| "personal".into()),
             commons_visibility: commons,
             cml_signals,
             cml_concept_count,
@@ -214,11 +223,7 @@ impl WebizenHostApi {
                 entry.cof_html = first.html.clone();
                 entry.cof_segment_index = first.index;
             }
-            cof_body_segments = pkg
-                .segments
-                .into_iter()
-                .filter(|s| !s.is_index)
-                .collect();
+            cof_body_segments = pkg.segments.into_iter().filter(|s| !s.is_index).collect();
         }
 
         entry.recompute_section();
@@ -320,19 +325,40 @@ impl WebizenHostApi {
         guardian_did: Option<String>,
     ) -> Result<serde_json::Value, String> {
         let bytes = decode_hex(bytes_hex).map_err(|e| format!("bad hex: {e}"))?;
-        self.ingest_bytes(uri, media_type, &bytes, caption, &ManualFacets::default(), guardian_did)
+        self.ingest_bytes(
+            uri,
+            media_type,
+            &bytes,
+            caption,
+            &ManualFacets::default(),
+            guardian_did,
+        )
     }
 
     /// Search the library by facet (`topic` | `depicts` | `place` | `project` | `purpose`). Returns per-entry
     /// summaries (not the raw quins).
-    pub fn search_library(&self, facet: &str, value: &str) -> Result<Vec<serde_json::Value>, String> {
-        let entries = self.library()?.search(facet, value).map_err(|e| e.to_string())?;
+    pub fn search_library(
+        &self,
+        facet: &str,
+        value: &str,
+    ) -> Result<Vec<serde_json::Value>, String> {
+        let entries = self
+            .library()?
+            .search(facet, value)
+            .map_err(|e| e.to_string())?;
         Ok(entries.iter().map(library_summary).collect())
     }
 
     /// The **timeline** query — entries whose event instant falls within `[start, end]` (unix seconds).
-    pub fn search_library_time(&self, start: i64, end: i64) -> Result<Vec<serde_json::Value>, String> {
-        let entries = self.library()?.search_time_range(start, end).map_err(|e| e.to_string())?;
+    pub fn search_library_time(
+        &self,
+        start: i64,
+        end: i64,
+    ) -> Result<Vec<serde_json::Value>, String> {
+        let entries = self
+            .library()?
+            .search_time_range(start, end)
+            .map_err(|e| e.to_string())?;
         Ok(entries.iter().map(library_summary).collect())
     }
 
@@ -358,7 +384,10 @@ impl WebizenHostApi {
 
     /// Free-text search over uri / excerpt / topics / projects / place.
     pub fn search_library_text(&self, query: &str) -> Result<Vec<serde_json::Value>, String> {
-        let entries = self.library()?.search_text(query).map_err(|e| e.to_string())?;
+        let entries = self
+            .library()?
+            .search_text(query)
+            .map_err(|e| e.to_string())?;
         Ok(entries.iter().map(library_summary).collect())
     }
 
@@ -417,8 +446,7 @@ impl WebizenHostApi {
     pub fn seed_perception_library(&self) -> Result<serde_json::Value, String> {
         let store = self.library()?;
         let root = self.storage_root();
-        let report =
-            super::super::perception_catalog::seed_perception_into_library(&store, root)?;
+        let report = super::super::perception_catalog::seed_perception_into_library(&store, root)?;
         Ok(serde_json::to_value(report).map_err(|e| e.to_string())?)
     }
 
@@ -549,7 +577,8 @@ impl WebizenHostApi {
             return Err("entry has no usable text in excerpt to enrich".into());
         };
         let units = super::super::cml_context::units_from_headings(&text);
-        let g = super::super::cml_context::build_document_context(&e.asset_uri, &e.asset_uri, &units);
+        let g =
+            super::super::cml_context::build_document_context(&e.asset_uri, &e.asset_uri, &units);
         for t in &g.topics {
             if !e.topics.iter().any(|x| x == t) {
                 e.topics.push(t.clone());
@@ -638,9 +667,7 @@ impl WebizenHostApi {
             return Err("secret items cannot be offered to the commons".into());
         }
         if e.commons_visibility == super::super::hypermedia_store::CommonsVisibility::None {
-            return Err(
-                "set commons visibility to peers or commons before sharing".into(),
-            );
+            return Err("set commons visibility to peers or commons before sharing".into());
         }
         Ok(serde_json::json!({
             "qualia_library_commons": "1",
@@ -662,7 +689,10 @@ impl WebizenHostApi {
 
     /// Remove one library entry by asset URI.
     pub fn remove_library_entry(&self, asset_uri: &str) -> Result<serde_json::Value, String> {
-        let ok = self.library()?.remove(asset_uri).map_err(|e| e.to_string())?;
+        let ok = self
+            .library()?
+            .remove(asset_uri)
+            .map_err(|e| e.to_string())?;
         Ok(serde_json::json!({ "removed": ok, "asset_uri": asset_uri }))
     }
 
@@ -679,7 +709,6 @@ impl WebizenHostApi {
             "sample_subjects": entries.iter().take(8).map(|e| e.primary_subject).collect::<Vec<_>>(),
         }))
     }
-
 }
 
 // ── Vault-free path helpers (AppState storage_path; no Sanctuary HostApi) ─────
@@ -688,9 +717,7 @@ impl WebizenHostApi {
 // seeding catalogue rows must work **before** the person unlocks Sanctuary —
 // otherwise Library looks permanently empty after a perception seed.
 
-use super::super::hypermedia_store::{
-    FacetFilter, HypermediaStore, LibrarySection, LibrarySort,
-};
+use super::super::hypermedia_store::{FacetFilter, HypermediaStore, LibrarySection, LibrarySort};
 use super::library_summary;
 use std::path::Path;
 
@@ -835,8 +862,8 @@ mod vault_free_tests {
         assert_eq!(stats["total"], 1);
         assert_eq!(stats["sections"]["software"], 1);
 
-        let faceted = query_library_faceted_at(dir.path(), r#"{"section":"software"}"#, "newest")
-            .unwrap();
+        let faceted =
+            query_library_faceted_at(dir.path(), r#"{"section":"software"}"#, "newest").unwrap();
         assert_eq!(faceted["total"], 1);
         assert_eq!(faceted["entries"].as_array().unwrap().len(), 1);
     }

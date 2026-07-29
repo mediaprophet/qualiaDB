@@ -14334,7 +14334,7 @@ dependencies = [
 
 [[package]]
 name = "webizen-desktop"
-version = "0.0.27"
+version = "0.0.28"
 dependencies = [
  "axum",
  "base64 0.22.1",
@@ -14423,7 +14423,7 @@ dependencies = [
 
 [[package]]
 name = "webizen-studio"
-version = "0.0.27"
+version = "0.0.28"
 dependencies = [
  "base64 0.22.1",
  "console_error_panic_hook",

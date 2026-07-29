@@ -58,7 +58,10 @@ const AGENT_TYPES: &[(&str, &str)] = &[
 ];
 
 fn s(v: &serde_json::Value, key: &str) -> String {
-    v.get(key).and_then(|x| x.as_str()).unwrap_or_default().to_string()
+    v.get(key)
+        .and_then(|x| x.as_str())
+        .unwrap_or_default()
+        .to_string()
 }
 
 #[component]
@@ -127,20 +130,63 @@ pub fn DomainsPane() -> Element {
     let test_from = use_signal(|| "friend@elsewhere.example".to_string());
     let test_to = use_signal(String::new);
     let test_subject = use_signal(|| "Hello from a real inbox path".to_string());
-    let test_body = use_signal(|| "If you can read this in Relations → Mail, domain mail works.".to_string());
+    let test_body =
+        use_signal(|| "If you can read this in Relations → Mail, domain mail works.".to_string());
     let show_quarantine = use_signal(|| true);
 
     #[cfg(not(target_arch = "wasm32"))]
     {
         let _ = (
-            &domains, &presets, &addresses, &forms, &selected, &status, &new_name, &new_agent,
-            &new_did, &new_label, &new_parent, &preset_local, &rel_local, &rel_did, &show_turtle,
-            &show_jsonld, &cf_token, &cf_account_id, &github_token, &github_repo, &cf_status,
-            &probe_to, &probe_result, &smtp_host, &smtp_port, &smtp_user, &smtp_pass,
-            &imap_host, &imap_port, &imap_user, &imap_pass, &compose_from, &compose_to,
-            &compose_subject, &compose_body, &fetch_mailbox, &fetch_out, &transport_status,
-            &inbox, &inbox_counts, &selected_mail, &mail_body, &receiver_status, &receiver_bind,
-            &mail_dns_block, &test_from, &test_to, &test_subject, &test_body, &show_quarantine,
+            &domains,
+            &presets,
+            &addresses,
+            &forms,
+            &selected,
+            &status,
+            &new_name,
+            &new_agent,
+            &new_did,
+            &new_label,
+            &new_parent,
+            &preset_local,
+            &rel_local,
+            &rel_did,
+            &show_turtle,
+            &show_jsonld,
+            &cf_token,
+            &cf_account_id,
+            &github_token,
+            &github_repo,
+            &cf_status,
+            &probe_to,
+            &probe_result,
+            &smtp_host,
+            &smtp_port,
+            &smtp_user,
+            &smtp_pass,
+            &imap_host,
+            &imap_port,
+            &imap_user,
+            &imap_pass,
+            &compose_from,
+            &compose_to,
+            &compose_subject,
+            &compose_body,
+            &fetch_mailbox,
+            &fetch_out,
+            &transport_status,
+            &inbox,
+            &inbox_counts,
+            &selected_mail,
+            &mail_body,
+            &receiver_status,
+            &receiver_bind,
+            &mail_dns_block,
+            &test_from,
+            &test_to,
+            &test_subject,
+            &test_body,
+            &show_quarantine,
         );
     }
 
@@ -163,8 +209,18 @@ pub fn DomainsPane() -> Element {
                 mut receiver_status,
                 mut receiver_bind,
             ) = (
-                smtp_host, smtp_port, smtp_user, smtp_pass, imap_host, imap_port, imap_user,
-                imap_pass, inbox, inbox_counts, receiver_status, receiver_bind,
+                smtp_host,
+                smtp_port,
+                smtp_user,
+                smtp_pass,
+                imap_host,
+                imap_port,
+                imap_user,
+                imap_pass,
+                inbox,
+                inbox_counts,
+                receiver_status,
+                receiver_bind,
             );
             spawn(async move {
                 match invoke_json::<serde_json::Value>("list_mail_domains", json!({})).await {
@@ -1113,15 +1169,15 @@ pub fn DomainsPane() -> Element {
                                                     spawn(async move {
                                                         let token = cf_token();
                                                         let account = cf_account_id();
-                                                        if token.trim().is_empty() || account.trim().is_empty() { 
-                                                            cf_status.set("Paste Cloudflare API token and Account ID first.".into()); return; 
+                                                        if token.trim().is_empty() || account.trim().is_empty() {
+                                                            cf_status.set("Paste Cloudflare API token and Account ID first.".into()); return;
                                                         }
                                                         cf_status.set("Verifying token and fetching zones…".into());
                                                         if let Err(e) = invoke_json::<serde_json::Value>("cf_verify_token", json!({ "token": token })).await { cf_status.set(format!("Token invalid: {e}")); return; }
                                                         let zones = match invoke_json::<serde_json::Value>("cf_list_zones", json!({ "token": token })).await { Ok(z) => z, Err(e) => { cf_status.set(format!("List zones failed: {e}")); return; } };
                                                         let zone_id = zones.as_array().and_then(|zs| zs.iter().find(|z| { let n = s(z, "name"); !n.is_empty() && dom.ends_with(&n) }).map(|z| s(z, "id")));
                                                         let Some(zone_id) = zone_id else { cf_status.set("No matching Cloudflare zone for this domain.".into()); return; };
-                                                        
+
                                                         cf_status.set("Deploying full node infrastructure (R2 + Worker + Tunnel)…".into());
                                                         match invoke_json::<serde_json::Value>("cf_deploy_infrastructure", json!({ "token": token, "accountId": account, "zoneId": zone_id, "domain": dom })).await {
                                                             Ok(_) => cf_status.set("Provisioned full node infrastructure successfully! ✓".into()),
@@ -1155,10 +1211,10 @@ pub fn DomainsPane() -> Element {
                                                             let gh_r = gh_repo();
                                                             let cf_t = cf_token();
                                                             let cf_a = cf_account();
-                                                            if gh_t.trim().is_empty() || gh_r.trim().is_empty() || cf_t.trim().is_empty() || cf_a.trim().is_empty() { 
-                                                                cf_status.set("Fill GitHub Token, Repo Name, Cloudflare Token, and Account ID first.".into()); return; 
+                                                            if gh_t.trim().is_empty() || gh_r.trim().is_empty() || cf_t.trim().is_empty() || cf_a.trim().is_empty() {
+                                                                cf_status.set("Fill GitHub Token, Repo Name, Cloudflare Token, and Account ID first.".into()); return;
                                                             }
-                                                            
+
                                                             cf_status.set("Deploying static site to GitHub and CF Pages...".into());
                                                             match invoke_json::<serde_json::Value>("deploy_static_site_cf_pages", json!({ "githubToken": gh_t, "githubRepo": gh_r, "cfToken": cf_t, "cfAccount": cf_a })).await {
                                                                 Ok(res) => cf_status.set(format!("Deployed successfully to {} ✓", res["cf_project"].as_str().unwrap_or(""))),

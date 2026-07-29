@@ -32,7 +32,11 @@ const HP_Q: f64 = 0.500_327_037_323_877_3;
 /// then stage 2. `sample_rate` is clamped to `>= 1.0` so coefficients stay
 /// finite for degenerate inputs.
 pub fn k_weighting_coeffs(sample_rate: f32) -> (BiquadCoeffs, BiquadCoeffs) {
-    let fs = if sample_rate > 1.0 { sample_rate as f64 } else { 1.0 };
+    let fs = if sample_rate > 1.0 {
+        sample_rate as f64
+    } else {
+        1.0
+    };
 
     // Stage 1: high-frequency shelving filter.
     let k = (PI * SHELF_F0 / fs).tan();
@@ -76,11 +80,31 @@ mod tests {
     fn matches_bs1770_reference_at_48k() {
         // Published ITU-R BS.1770 coefficient tables at 48 kHz.
         let (shelf, hp) = k_weighting_coeffs(48_000.0);
-        assert!((shelf.b0 - 1.535_124_9).abs() < 1e-3, "shelf.b0 {}", shelf.b0);
-        assert!((shelf.b1 - (-2.691_696_2)).abs() < 1e-3, "shelf.b1 {}", shelf.b1);
-        assert!((shelf.b2 - 1.198_392_8).abs() < 1e-3, "shelf.b2 {}", shelf.b2);
-        assert!((shelf.a1 - (-1.690_659_3)).abs() < 1e-3, "shelf.a1 {}", shelf.a1);
-        assert!((shelf.a2 - 0.732_480_8).abs() < 1e-3, "shelf.a2 {}", shelf.a2);
+        assert!(
+            (shelf.b0 - 1.535_124_9).abs() < 1e-3,
+            "shelf.b0 {}",
+            shelf.b0
+        );
+        assert!(
+            (shelf.b1 - (-2.691_696_2)).abs() < 1e-3,
+            "shelf.b1 {}",
+            shelf.b1
+        );
+        assert!(
+            (shelf.b2 - 1.198_392_8).abs() < 1e-3,
+            "shelf.b2 {}",
+            shelf.b2
+        );
+        assert!(
+            (shelf.a1 - (-1.690_659_3)).abs() < 1e-3,
+            "shelf.a1 {}",
+            shelf.a1
+        );
+        assert!(
+            (shelf.a2 - 0.732_480_8).abs() < 1e-3,
+            "shelf.a2 {}",
+            shelf.a2
+        );
         assert_eq!(hp.b0, 1.0);
         assert_eq!(hp.b1, -2.0);
         assert_eq!(hp.b2, 1.0);

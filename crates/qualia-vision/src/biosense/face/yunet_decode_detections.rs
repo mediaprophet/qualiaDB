@@ -124,9 +124,7 @@ mod tests {
 
     #[test]
     fn decode_filters_score() {
-        let rows = [
-            0.1, 0.1, 0.2, 0.2, 0.9, 0.0, 0.5, 0.5, 0.1, 0.1, 0.05, 0.0,
-        ];
+        let rows = [0.1, 0.1, 0.2, 0.2, 0.9, 0.0, 0.5, 0.5, 0.1, 0.1, 0.05, 0.0];
         let mut out = [FaceBox {
             x: 0.0,
             y: 0.0,

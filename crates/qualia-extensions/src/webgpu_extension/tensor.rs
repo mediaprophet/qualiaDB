@@ -15,16 +15,22 @@ pub fn solve(params: &WebGpuJobParams) -> SolverReport {
     // Defaults (used when no input is supplied): A = identity(m×k bounded to a
     // square), B = a deterministic ramp, so C is well-defined and non-trivial.
     let sq = m.min(k).min(n);
-    let a = params.input_data.get("matrix_a").cloned().unwrap_or_else(|| {
-        let mut v = vec![0.0f32; m * k];
-        for i in 0..sq {
-            v[i * k + i] = 1.0;
-        }
-        v
-    });
-    let b = params.input_data.get("matrix_b").cloned().unwrap_or_else(|| {
-        (0..k * n).map(|i| i as f32).collect()
-    });
+    let a = params
+        .input_data
+        .get("matrix_a")
+        .cloned()
+        .unwrap_or_else(|| {
+            let mut v = vec![0.0f32; m * k];
+            for i in 0..sq {
+                v[i * k + i] = 1.0;
+            }
+            v
+        });
+    let b = params
+        .input_data
+        .get("matrix_b")
+        .cloned()
+        .unwrap_or_else(|| (0..k * n).map(|i| i as f32).collect());
 
     // Guard against malformed inputs by clamping to the declared shape.
     let a_ok = a.len() >= m * k;

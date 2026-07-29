@@ -89,7 +89,10 @@ fn agent_type_class(t: &AgentType) -> &'static str {
 }
 
 fn ecash(rec: &FrontDoorRecord) -> Option<&str> {
-    rec.services.iter().find(|s| s.kind == "ecash").map(|s| s.value.as_str())
+    rec.services
+        .iter()
+        .find(|s| s.kind == "ecash")
+        .map(|s| s.value.as_str())
 }
 
 impl FrontDoorRecord {
@@ -138,7 +141,11 @@ impl FrontDoorRecord {
                 continue;
             };
             let obj = obj.trim();
-            let uri = || obj.trim_start_matches('<').trim_end_matches('>').to_string();
+            let uri = || {
+                obj.trim_start_matches('<')
+                    .trim_end_matches('>')
+                    .to_string()
+            };
             let lit = || obj.trim_matches('"').to_string();
             match pred.trim() {
                 "qdp:signer" => rec.front_door_did = uri(),
@@ -146,7 +153,10 @@ impl FrontDoorRecord {
                 "qdp:identityKey" => rec.identity_pubkey_hex = Some(lit()),
                 "qdp:wireguard" => rec.wireguard_pubkey_hex = Some(lit()),
                 "qdp:overlay" => rec.overlay_addr = Some(lit()),
-                "qdp:ecash" => rec.services.push(QdpService { kind: "ecash".into(), value: lit() }),
+                "qdp:ecash" => rec.services.push(QdpService {
+                    kind: "ecash".into(),
+                    value: lit(),
+                }),
                 "qdp:profile" => rec.profile_url = Some(uri()),
                 _ => {}
             }
@@ -162,7 +172,10 @@ impl FrontDoorRecord {
         use std::fmt::Write as _;
         let mut t = String::new();
         let _ = writeln!(t, "@prefix QDP: <{NS_QDP}> .");
-        let _ = writeln!(t, "@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .");
+        let _ = writeln!(
+            t,
+            "@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> ."
+        );
         let _ = writeln!(t, "@prefix foaf: <http://xmlns.com/foaf/0.1/> .");
         let _ = writeln!(t, "@prefix schema: <https://schema.org/> .");
         let _ = writeln!(t);
@@ -222,7 +235,10 @@ impl FrontDoorRecord {
         if let Some(s) = self.services.iter().find(|s| s.kind == "solidpod") {
             obj.insert("QDP:hasSolidPod".into(), json!({ "@id": s.value }));
         }
-        obj.insert("QDP:hasMetadata".into(), json!({ "QDP:metadataType": "profile" }));
+        obj.insert(
+            "QDP:hasMetadata".into(),
+            json!({ "QDP:metadataType": "profile" }),
+        );
         node
     }
 
@@ -252,8 +268,14 @@ mod tests {
             name: Some("Alice".into()),
             webid: Some("https://alice.example/profile#me".into()),
             services: vec![
-                QdpService { kind: "ecash".into(), value: "ecash:qq123".into() },
-                QdpService { kind: "solidpod".into(), value: "https://alice.example/pod/".into() },
+                QdpService {
+                    kind: "ecash".into(),
+                    value: "ecash:qq123".into(),
+                },
+                QdpService {
+                    kind: "solidpod".into(),
+                    value: "https://alice.example/pod/".into(),
+                },
             ],
             identity_pubkey_hex: Some("aa".repeat(32)),
             wireguard_pubkey_hex: Some("bb".repeat(32)),
@@ -313,7 +335,11 @@ mod tests {
         let rec = sample();
         let bytes = rec.to_cbor_ld().unwrap();
         let back = FrontDoorRecord::from_cbor_ld(&bytes).unwrap();
-        assert_eq!(back, rec.to_json_ld(), "CBOR-LD is a lossless encoding of the JSON-LD");
+        assert_eq!(
+            back,
+            rec.to_json_ld(),
+            "CBOR-LD is a lossless encoding of the JSON-LD"
+        );
     }
 
     #[test]

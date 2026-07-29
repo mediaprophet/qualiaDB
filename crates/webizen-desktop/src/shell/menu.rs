@@ -396,9 +396,18 @@ pub fn dispatch_shell_action(app: &AppHandle, action: crate::shell::action::Shel
         ShellAction::SyncRelay => {
             let app_handle = app.clone();
             tauri::async_runtime::spawn(async move {
-                match crate::commands::wellfair_sync_with_relay(app_handle, "http://127.0.0.1:4242".to_string(), 0) {
-                    Ok(msg) => crate::desktop_log::record("info", format!("sync relay via tray: {msg}")),
-                    Err(e) => crate::desktop_log::record("error", format!("sync relay via tray failed: {e}")),
+                match crate::commands::wellfair_sync_with_relay(
+                    app_handle,
+                    "http://127.0.0.1:4242".to_string(),
+                    0,
+                ) {
+                    Ok(msg) => {
+                        crate::desktop_log::record("info", format!("sync relay via tray: {msg}"))
+                    }
+                    Err(e) => crate::desktop_log::record(
+                        "error",
+                        format!("sync relay via tray failed: {e}"),
+                    ),
                 }
             });
         }
@@ -421,15 +430,13 @@ pub fn dispatch_shell_action(app: &AppHandle, action: crate::shell::action::Shel
         }
         ShellAction::HelpPortal => open_settings_portal(""),
 
-        ShellAction::SanctuaryLock => {
-            match crate::commands::wellfair_lock_sanctuary(app.clone()) {
-                Ok(_) => {
-                    let _ = app.emit("sanctuary-locked", ());
-                    eprintln!("Sanctuary locked via tray");
-                }
-                Err(e) => eprintln!("Sanctuary lock via tray failed: {e}"),
+        ShellAction::SanctuaryLock => match crate::commands::wellfair_lock_sanctuary(app.clone()) {
+            Ok(_) => {
+                let _ = app.emit("sanctuary-locked", ());
+                eprintln!("Sanctuary locked via tray");
             }
-        }
+            Err(e) => eprintln!("Sanctuary lock via tray failed: {e}"),
+        },
         ShellAction::SanctuaryUnlock => {
             show_main_window(app);
             let _ = app.emit("open-sanctuary-unlock", ());

@@ -271,9 +271,7 @@ pub fn agency_domain_taxonomy() -> Taxonomy {
 /// Whether a domain is flagged high-stakes (`consequential = "true"`), needing a higher attestation
 /// bar. Reads the seeded attribute; an unknown id (or one lacking the attribute) is `false`.
 pub fn is_consequential(tax: &Taxonomy, domain_id: &str) -> bool {
-    tax.get(domain_id)
-        .and_then(|t| t.attr(ATTR_CONSEQUENTIAL))
-        == Some("true")
+    tax.get(domain_id).and_then(|t| t.attr(ATTR_CONSEQUENTIAL)) == Some("true")
 }
 
 #[cfg(test)]
@@ -323,7 +321,9 @@ mod tests {
     fn every_named_domain_id_is_present_and_categorised() {
         let tax = agency_domain_taxonomy();
         for id in ALL_DOMAINS {
-            let term = tax.get(id).unwrap_or_else(|| panic!("missing domain: {id}"));
+            let term = tax
+                .get(id)
+                .unwrap_or_else(|| panic!("missing domain: {id}"));
             assert!(
                 term.category.is_some(),
                 "domain {id} must sit in a category"
@@ -361,10 +361,7 @@ mod tests {
             "exactly five domains are consequential, got {consequential:?}"
         );
         for id in expected_consequential {
-            assert!(
-                is_consequential(&tax, id),
-                "{id} should be consequential"
-            );
+            assert!(is_consequential(&tax, id), "{id} should be consequential");
         }
         // And nothing else is.
         for id in ALL_DOMAINS {
@@ -408,7 +405,10 @@ mod tests {
     #[test]
     fn is_consequential_is_false_for_unknown_id() {
         let tax = agency_domain_taxonomy();
-        assert!(!is_consequential(&tax, "urn:qualia:agency-domain:welfare:does-not-exist"));
+        assert!(!is_consequential(
+            &tax,
+            "urn:qualia:agency-domain:welfare:does-not-exist"
+        ));
         assert!(!is_consequential(&tax, ""));
     }
 

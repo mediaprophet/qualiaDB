@@ -283,6 +283,17 @@ pub(super) fn build_sieve(
     lex_path: Option<&str>,
 ) -> Option<crate::neuro_symbolic_sieve::NeuroSymbolicSieve> {
     let spec = spec?;
+    #[cfg(target_arch = "wasm32")]
+    {
+        if spec.subjects_len == 0 || spec.predicates_len == 0 || spec.objects_len == 0 {
+            return None;
+        }
+        if let Some(path) = lex_path {
+            crate::gguf_bridge::wlog(&format!(
+                "[sieve] browser build cannot memory-map lex sidecar {path}; using tokenizer vocabulary"
+            ));
+        }
+    }
     #[cfg(not(target_arch = "wasm32"))]
     if let Some(path) = lex_path {
         let p = std::path::Path::new(path);
@@ -316,10 +327,12 @@ pub(super) fn build_sieve(
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 static PREFIX_CACHE: std::sync::OnceLock<
     std::sync::Mutex<std::collections::HashMap<u64, Box<[f32]>>>,
 > = std::sync::OnceLock::new();
 
+#[cfg(not(target_arch = "wasm32"))]
 pub(super) fn get_prefix_cache(
 ) -> &'static std::sync::Mutex<std::collections::HashMap<u64, Box<[f32]>>> {
     PREFIX_CACHE.get_or_init(|| std::sync::Mutex::new(std::collections::HashMap::new()))

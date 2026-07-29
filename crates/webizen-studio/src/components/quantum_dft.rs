@@ -10,8 +10,9 @@ struct QuantumDftProps {
 
 #[component]
 pub fn QuantumDft() -> Element {
-    let mut geometry = use_signal(|| "O 0.000 0.000 0.000\nH 0.757 0.586 0.000\nH -0.757 0.586 0.000".to_string());
-    
+    let mut geometry =
+        use_signal(|| "O 0.000 0.000 0.000\nH 0.757 0.586 0.000\nH -0.757 0.586 0.000".to_string());
+
     let energy_resource = use_resource(move || {
         let current_geometry = geometry.read().clone();
         async move {

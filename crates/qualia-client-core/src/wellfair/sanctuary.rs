@@ -11,11 +11,7 @@ use super::journal::JournalEntry;
 pub const SANCTUARY_PREFS_FILE: &str = "wellfair/sanctuary_prefs.json";
 
 /// Journal kinds hidden while Sanctuary is locked (including decoy session).
-pub const SANCTUARY_PROTECTED_KINDS: &[&str] = &[
-    "therapy_note",
-    "sanctuary_note",
-    "welfare_case",
-];
+pub const SANCTUARY_PROTECTED_KINDS: &[&str] = &["therapy_note", "sanctuary_note", "welfare_case"];
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct SanctuaryPrefs {
@@ -63,8 +59,8 @@ pub fn save_prefs(storage_root: impl AsRef<Path>, prefs: &SanctuaryPrefs) -> std
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent)?;
     }
-    let json = serde_json::to_string_pretty(prefs)
-        .map_err(|e| std::io::Error::other(e.to_string()))?;
+    let json =
+        serde_json::to_string_pretty(prefs).map_err(|e| std::io::Error::other(e.to_string()))?;
     fs::write(&path, json)
 }
 
@@ -103,7 +99,10 @@ pub fn lock_sanctuary(storage_root: impl AsRef<Path>) -> Result<SanctuaryPrefs, 
     Ok(prefs)
 }
 
-pub fn unlock_sanctuary(storage_root: impl AsRef<Path>, pin: &str) -> Result<SanctuaryPrefs, String> {
+pub fn unlock_sanctuary(
+    storage_root: impl AsRef<Path>,
+    pin: &str,
+) -> Result<SanctuaryPrefs, String> {
     let mut prefs = load_prefs(&storage_root);
     if !prefs.enabled {
         return Err("Sanctuary is not set up".into());
@@ -130,7 +129,10 @@ pub fn is_sanctuary_protected_kind(kind: &str) -> bool {
     SANCTUARY_PROTECTED_KINDS.contains(&kind)
 }
 
-pub fn apply_sanctuary_projection(prefs: &SanctuaryPrefs, entries: Vec<JournalEntry>) -> Vec<JournalEntry> {
+pub fn apply_sanctuary_projection(
+    prefs: &SanctuaryPrefs,
+    entries: Vec<JournalEntry>,
+) -> Vec<JournalEntry> {
     if !prefs.enabled || !prefs.locked {
         return entries;
     }
@@ -167,11 +169,7 @@ mod tests {
             decoy_session: false,
             ..Default::default()
         };
-        let rows = vec![
-            entry("weight"),
-            entry("therapy_note"),
-            entry("life_event"),
-        ];
+        let rows = vec![entry("weight"), entry("therapy_note"), entry("life_event")];
         let out = apply_sanctuary_projection(&prefs, rows);
         assert_eq!(out.len(), 2);
         assert!(out.iter().all(|e| !is_sanctuary_protected_kind(&e.kind)));

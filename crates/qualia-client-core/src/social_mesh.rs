@@ -139,8 +139,7 @@ mod native {
                 });
                 continue;
             }
-            let endpoint: Option<SocketAddr> =
-                p.endpoint.as_deref().and_then(|e| e.parse().ok());
+            let endpoint: Option<SocketAddr> = p.endpoint.as_deref().and_then(|e| e.parse().ok());
             match mesh.add_peer(&p.did, &p.wireguard_pubkey_hex, endpoint) {
                 Ok(local) => outcomes.push(PeerAddOutcome {
                     did: p.did.clone(),
@@ -204,9 +203,9 @@ mod tests {
     fn dialability_classifies_peers() {
         let peers = vec![
             peer("did:wf:now", GOOD_KEY, Some("203.0.113.5:51820"), true), // dialable now
-            peer("did:wf:roam", GOOD_KEY, None, true),                     // reachable, wait for roaming
+            peer("did:wf:roam", GOOD_KEY, None, true), // reachable, wait for roaming
             peer("did:wf:off", GOOD_KEY, Some("203.0.113.6:51820"), false), // inactive
-            peer("did:wf:nokey", "zz", Some("203.0.113.7:51820"), true),    // bad key
+            peer("did:wf:nokey", "zz", Some("203.0.113.7:51820"), true), // bad key
         ];
         let r = dialability(&peers);
 
@@ -238,8 +237,14 @@ mod tests {
         use std::time::Duration;
 
         // Two node identities (in-memory; distinct wg secrets).
-        let a_id = NodeIdentity { ed25519_secret: [1u8; 32], wg_secret: [2u8; 32] };
-        let b_id = NodeIdentity { ed25519_secret: [3u8; 32], wg_secret: [4u8; 32] };
+        let a_id = NodeIdentity {
+            ed25519_secret: [1u8; 32],
+            wg_secret: [2u8; 32],
+        };
+        let b_id = NodeIdentity {
+            ed25519_secret: [3u8; 32],
+            wg_secret: [4u8; 32],
+        };
         let a_wg = WgKeypair::from_secret_bytes(a_id.wg_secret).public_hex();
         let b_wg = WgKeypair::from_secret_bytes(b_id.wg_secret).public_hex();
 
@@ -251,7 +256,10 @@ mod tests {
         let ip = "127.0.0.1".parse().unwrap();
         let (mut a, a_out) = build_node_mesh(&a_id, &a_peers, ip, to).unwrap();
         let (mut b, b_out) = build_node_mesh(&b_id, &b_peers, ip, to).unwrap();
-        assert!(a_out[0].added && b_out[0].added, "both peers added to their meshes");
+        assert!(
+            a_out[0].added && b_out[0].added,
+            "both peers added to their meshes"
+        );
 
         // Exchange the bound endpoints (coordination-plane step) and connect.
         let a_local: std::net::SocketAddr = a_out[0].local_addr.clone().unwrap().parse().unwrap();
@@ -267,7 +275,10 @@ mod tests {
             let _ = b.pump_all();
             let _ = a.pump_all();
         }
-        assert!(a.has_session("did:wf:bob"), "handshake completed from the peer records");
+        assert!(
+            a.has_session("did:wf:bob"),
+            "handshake completed from the peer records"
+        );
         let _ = b.pump_all();
 
         // Carry a packet A→B, addressed by the peer's DID.
@@ -312,7 +323,10 @@ mod tests {
         use crate::social_mesh::start_node_mesh_service;
         use std::time::Duration;
 
-        let id = NodeIdentity { ed25519_secret: [5u8; 32], wg_secret: [6u8; 32] };
+        let id = NodeIdentity {
+            ed25519_secret: [5u8; 32],
+            wg_secret: [6u8; 32],
+        };
         let peers = vec![peer("did:wf:peer", GOOD_KEY, None, true)];
         let (svc, outcomes) = start_node_mesh_service(
             &id,

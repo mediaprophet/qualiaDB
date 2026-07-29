@@ -124,7 +124,14 @@ impl AccountabilityLedger {
         let prev_hash_hex = self.head_hash();
         let signer_pubkey_hex = hex::encode(signer.verifying_key().to_bytes());
 
-        let hash = content_hash(seq, &prev_hash_hex, &kind, &payload_json, &signer_pubkey_hex, time_unix);
+        let hash = content_hash(
+            seq,
+            &prev_hash_hex,
+            &kind,
+            &payload_json,
+            &signer_pubkey_hex,
+            time_unix,
+        );
         let signature = signer.sign(&hash);
 
         self.entries.push(LedgerEntry {
@@ -214,9 +221,15 @@ mod tests {
         assert_eq!(led.len(), 3);
         assert_eq!(led.verify(), Ok(()), "a well-formed chain verifies");
         // Each entry is attributed to its signer.
-        assert!(led.entries().iter().all(|e| e.signer_pubkey_hex == hex::encode(sk.verifying_key().to_bytes())));
+        assert!(led
+            .entries()
+            .iter()
+            .all(|e| e.signer_pubkey_hex == hex::encode(sk.verifying_key().to_bytes())));
         // The chain links.
-        assert_eq!(led.entries()[1].prev_hash_hex, led.entries()[0].entry_hash_hex);
+        assert_eq!(
+            led.entries()[1].prev_hash_hex,
+            led.entries()[0].entry_hash_hex
+        );
         assert_eq!(led.of_kind("conduct").len(), 2);
     }
 
@@ -257,7 +270,14 @@ mod tests {
         // claims signer = the original actor, so the signature fails under the claimed signer.
         let e = &mut led.entries[0];
         e.payload_json = r#"{"act":"forged"}"#.to_string();
-        let hash = content_hash(e.seq, &e.prev_hash_hex, &e.kind, &e.payload_json, &e.signer_pubkey_hex, e.time_unix);
+        let hash = content_hash(
+            e.seq,
+            &e.prev_hash_hex,
+            &e.kind,
+            &e.payload_json,
+            &e.signer_pubkey_hex,
+            e.time_unix,
+        );
         e.entry_hash_hex = hex::encode(hash);
         e.signature_hex = hex::encode(attacker.sign(&hash).to_bytes()); // signed by the wrong key
         assert_eq!(led.verify(), Err(LedgerTamper::BadSignature { seq: 0 }));

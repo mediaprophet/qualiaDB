@@ -27,8 +27,12 @@ impl ChallengeKind {
     ];
 
     /// Challenges that exercise non-rigid Z under rigid rotation (prefer for PAD strength).
-    pub const ROTATION: [ChallengeKind; 4] =
-        [Self::YawLeft, Self::YawRight, Self::PitchUp, Self::PitchDown];
+    pub const ROTATION: [ChallengeKind; 4] = [
+        Self::YawLeft,
+        Self::YawRight,
+        Self::PitchUp,
+        Self::PitchDown,
+    ];
 
     pub const fn as_str(self) -> &'static str {
         match self {

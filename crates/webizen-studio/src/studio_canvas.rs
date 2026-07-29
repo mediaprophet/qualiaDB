@@ -43,27 +43,25 @@ use crate::canvas_editor::{
     clamp_pane_origin, clamp_pane_size, grid_metrics, new_workspace_shell, pixel_delta_to_grid,
     qprime_elevation_css, snap_u16, CanvasEditorMode, PaneInteraction, WorkspaceHistory,
 };
-use crate::pane_generator;
-use crate::components::ontology_import_wizard::{
-    OntologyImportWizard, OntologyLayoutSuggestion,
-};
+use crate::components::ontology_import_wizard::{OntologyImportWizard, OntologyLayoutSuggestion};
 use crate::components::selection_sidebar::SelectionSidebar;
+use crate::pane_generator;
+use crate::pane_registry::{
+    builtin_pane_definitions, category_label, find_pane, PaneCategory, PaneDefinition,
+};
 use crate::render::motion::Spring;
 use crate::render::motion_loop::{
     spawn_ui_motion_loop, step_mode_pulse_spring, trigger_mode_pulse,
 };
-use crate::pane_registry::{
-    builtin_pane_definitions, category_label, find_pane, PaneCategory, PaneDefinition,
-};
+use crate::theme_engine;
 use crate::theme_engine::{
     builtin_theme_catalog, collect_stylesheets, join_theme_classes, render_scope_tokens,
     resolve_theme, theme_binding_provenance, theme_selection_pulse, ResolvedTheme, ThemeBinding,
 };
-use crate::theme_engine;
 
 pub use crate::canvas_model::{
-    CoordinateSpace, LayerBehavior, LayoutStrategy, Page, PanePlacement, PresentationMode,
-    UiMode, WebizenWorkspace,
+    CoordinateSpace, LayerBehavior, LayoutStrategy, Page, PanePlacement, PresentationMode, UiMode,
+    WebizenWorkspace,
 };
 
 // ─────────────────────────────────────────────────────────────
@@ -513,50 +511,49 @@ pub fn DynamicPage(path: Vec<String>, #[props(default)] app_id: Option<String>) 
     use_effect({
         let generate_path = generate_path.clone();
         move || {
-        if generate_nonce() == 0 {
-            return;
-        }
-        let prompt = pane_prompt();
-        if prompt.trim().is_empty() {
-            generate_status.set("Describe a pane layout first.".to_string());
-            return;
-        }
-
-        let palette_snapshot = pane_palette.read().clone();
-        let palette_ids: Vec<String> = palette_snapshot
-            .iter()
-            .map(|d| d.component_id.clone())
-            .collect();
-        let path_for_apply = generate_path.clone();
-
-        let mut apply_plan = move |plan: pane_generator::PaneGenerationPlan| {
-            history.write().push(workspace.read().clone());
-            let mut ws = workspace.write();
-            if let Some(page) = ws.pages.iter_mut().find(|p| p.url_path == path_for_apply) {
-                page.panes = plan.panes;
-                page.presentation_mode = plan.presentation;
+            if generate_nonce() == 0 {
+                return;
             }
-            generate_status.set(plan.summary);
-        };
+            let prompt = pane_prompt();
+            if prompt.trim().is_empty() {
+                generate_status.set("Describe a pane layout first.".to_string());
+                return;
+            }
 
-        if crate::endpoints::is_native_host() {
-            generate_status.set("Generating layout…".to_string());
-            spawn(async move {
-                let plan = match pane_generator::fetch_plan_from_prompt(&prompt, &palette_ids).await
-                {
-                    Ok(plan) => plan,
-                    Err(_) => pane_generator::generate_panes_from_prompt(
-                        &prompt,
-                        &palette_snapshot,
-                    ),
-                };
+            let palette_snapshot = pane_palette.read().clone();
+            let palette_ids: Vec<String> = palette_snapshot
+                .iter()
+                .map(|d| d.component_id.clone())
+                .collect();
+            let path_for_apply = generate_path.clone();
+
+            let mut apply_plan = move |plan: pane_generator::PaneGenerationPlan| {
+                history.write().push(workspace.read().clone());
+                let mut ws = workspace.write();
+                if let Some(page) = ws.pages.iter_mut().find(|p| p.url_path == path_for_apply) {
+                    page.panes = plan.panes;
+                    page.presentation_mode = plan.presentation;
+                }
+                generate_status.set(plan.summary);
+            };
+
+            if crate::endpoints::is_native_host() {
+                generate_status.set("Generating layout…".to_string());
+                spawn(async move {
+                    let plan = match pane_generator::fetch_plan_from_prompt(&prompt, &palette_ids)
+                        .await
+                    {
+                        Ok(plan) => plan,
+                        Err(_) => {
+                            pane_generator::generate_panes_from_prompt(&prompt, &palette_snapshot)
+                        }
+                    };
+                    apply_plan(plan);
+                });
+            } else {
+                let plan = pane_generator::generate_panes_from_prompt(&prompt, &palette_snapshot);
                 apply_plan(plan);
-            });
-        } else {
-            let plan =
-                pane_generator::generate_panes_from_prompt(&prompt, &palette_snapshot);
-            apply_plan(plan);
-        }
+            }
         }
     });
 
@@ -576,51 +573,52 @@ pub fn DynamicPage(path: Vec<String>, #[props(default)] app_id: Option<String>) 
                 Some(theme_class.as_str())
             };
             let selected = selected_pane_index.read().is_some();
-            let scale = theme_selection_pulse(
-                &mut selection_spring.write(),
-                selected,
-                &global_theme(),
-            );
+            let scale =
+                theme_selection_pulse(&mut selection_spring.write(), selected, &global_theme());
             selection_scale.set(scale);
             let pulse = step_mode_pulse_spring(&mut mode_pulse_spring.write(), theme_ref, dt);
             mode_pulse_scale.set(pulse);
         });
     });
 
+    #[cfg(not(target_arch = "wasm32"))]
     let mut spatial_contract_nodes =
+        use_signal(|| crate::render::render_stack_revision().saturating_sub(1));
+    #[cfg(target_arch = "wasm32")]
+    let spatial_contract_nodes =
         use_signal(|| crate::render::render_stack_revision().saturating_sub(1));
 
     #[cfg(not(target_arch = "wasm32"))]
     use_effect({
         let generate_path = generate_path.clone();
         move || {
-        let ws = workspace.read().clone();
-        let page_path = generate_path.clone();
-        let page = ws
-            .pages
-            .iter()
-            .find(|p| p.url_path == page_path || page_path == "/")
-            .or_else(|| ws.pages.first());
-        if let Some(page) = page {
-            let contract = crate::render::render_contract_from_panes(&page.panes);
-            spatial_contract_nodes.set(contract.element_count());
-            let draw_count = crate::render::rasterize_scene_draw_count(&page.panes);
-            let (_tensor_count, opacity) = crate::render::tensor_buffer_digest(&[]);
-            telemetry_logs.write().push(format!(
+            let ws = workspace.read().clone();
+            let page_path = generate_path.clone();
+            let page = ws
+                .pages
+                .iter()
+                .find(|p| p.url_path == page_path || page_path == "/")
+                .or_else(|| ws.pages.first());
+            if let Some(page) = page {
+                let contract = crate::render::render_contract_from_panes(&page.panes);
+                spatial_contract_nodes.set(contract.element_count());
+                let draw_count = crate::render::rasterize_scene_draw_count(&page.panes);
+                let (_tensor_count, opacity) = crate::render::tensor_buffer_digest(&[]);
+                telemetry_logs.write().push(format!(
                 "Spatial preview: {} elements, {draw_count} draw ops (tensor opacity {opacity:.2})",
                 contract.element_count()
             ));
-            let panes_snapshot = page.panes.clone();
-            spawn(async move {
-                if let Some(png_len) =
-                    crate::render::native_headless_png_byte_len(&panes_snapshot, 960, 540).await
-                {
-                    telemetry_logs.write().push(format!(
-                        "Native GPU preview frame: {png_len} bytes"
-                    ));
-                }
-            });
-        }
+                let panes_snapshot = page.panes.clone();
+                spawn(async move {
+                    if let Some(png_len) =
+                        crate::render::native_headless_png_byte_len(&panes_snapshot, 960, 540).await
+                    {
+                        telemetry_logs
+                            .write()
+                            .push(format!("Native GPU preview frame: {png_len} bytes"));
+                    }
+                });
+            }
         }
     });
 
@@ -669,8 +667,7 @@ pub fn DynamicPage(path: Vec<String>, #[props(default)] app_id: Option<String>) 
             if let Ok(res) = reqwest::get(crate::endpoints::manifest_undo_chain_url()).await {
                 if res.status().is_success() {
                     if let Ok(chain) = res.json::<UndoChainResponse>().await {
-                        if let Some(h) = WorkspaceHistory::from_manifest_entries(chain.manifests)
-                        {
+                        if let Some(h) = WorkspaceHistory::from_manifest_entries(chain.manifests) {
                             let current = h.current().clone();
                             workspace.set(current);
                             history.set(h);
@@ -715,9 +712,9 @@ pub fn DynamicPage(path: Vec<String>, #[props(default)] app_id: Option<String>) 
         let reachable = crate::endpoints::probe_native_handshake_port();
         is_native_llm_active.set(reachable);
         if !reachable {
-            telemetry_logs.write().push(format!(
-                "Native LLM handshake offline ({ws_url})"
-            ));
+            telemetry_logs
+                .write()
+                .push(format!("Native LLM handshake offline ({ws_url})"));
         }
     });
 
@@ -930,16 +927,14 @@ pub fn DynamicPage(path: Vec<String>, #[props(default)] app_id: Option<String>) 
                 return;
             };
             let (grid_w, grid_h, snap) = grid_metrics(page);
-            let (dx, dy) = pixel_delta_to_grid(
-                coords.x - ax,
-                coords.y - ay,
-                cw,
-                ch,
-                grid_w,
-                grid_h,
-            );
+            let (dx, dy) =
+                pixel_delta_to_grid(coords.x - ax, coords.y - ay, cw, ch, grid_w, grid_h);
             match interaction {
-                PaneInteraction::Drag { idx, orig_x, orig_y } => {
+                PaneInteraction::Drag {
+                    idx,
+                    orig_x,
+                    orig_y,
+                } => {
                     if let Some(pane) = page.panes.get_mut(idx) {
                         let (nx, ny) = clamp_pane_origin(
                             orig_x as i32 + dx,
@@ -953,7 +948,11 @@ pub fn DynamicPage(path: Vec<String>, #[props(default)] app_id: Option<String>) 
                         pane.y = snap_u16(ny, snap);
                     }
                 }
-                PaneInteraction::Resize { idx, orig_w, orig_h } => {
+                PaneInteraction::Resize {
+                    idx,
+                    orig_w,
+                    orig_h,
+                } => {
                     if let Some(pane) = page.panes.get_mut(idx) {
                         let (nw, nh) = clamp_pane_size(
                             orig_w as i32 + dx,
@@ -1005,8 +1004,10 @@ pub fn DynamicPage(path: Vec<String>, #[props(default)] app_id: Option<String>) 
                     .await
                 {
                     Ok(res) if res.status().is_success() => {
-                        if let Ok(history_res) =
-                            client.get(crate::endpoints::manifest_history_url()).send().await
+                        if let Ok(history_res) = client
+                            .get(crate::endpoints::manifest_history_url())
+                            .send()
+                            .await
                         {
                             if history_res.status().is_success() {
                                 if let Ok(rows) = history_res.json::<Vec<DeployHistoryRow>>().await
@@ -1070,9 +1071,8 @@ pub fn DynamicPage(path: Vec<String>, #[props(default)] app_id: Option<String>) 
                                 workspace.set(data.clone());
                                 history.set(WorkspaceHistory::new(data));
                                 deploy_revision.set(Some(revision));
-                                replay_status.set(format!(
-                                    "Restored WAL rev #{revision} into the editor."
-                                ));
+                                replay_status
+                                    .set(format!("Restored WAL rev #{revision} into the editor."));
                             }
                             Err(err) => {
                                 replay_status.set(format!("Restore parse failed: {err}"));
@@ -1217,9 +1217,8 @@ pub fn DynamicPage(path: Vec<String>, #[props(default)] app_id: Option<String>) 
     let node_btn_style = mode_btn_style(node_mode_active);
     let spatial_btn_style = mode_btn_style(spatial_mode_active);
     let toolbar_pulse_scale = 1.0 + mode_pulse_scale();
-    let toolbar_pulse_style = format!(
-        "transform: scale({toolbar_pulse_scale:.4}); transform-origin: right center;"
-    );
+    let toolbar_pulse_style =
+        format!("transform: scale({toolbar_pulse_scale:.4}); transform-origin: right center;");
 
     // ── Create New Page ────────────────────────────────────
     let create_new_page = {
@@ -1960,7 +1959,21 @@ pub fn DynamicPage(path: Vec<String>, #[props(default)] app_id: Option<String>) 
                     div {
                         style: "background: var(--qualia-bg, #0a0a0a); padding: 0.5rem; border-radius: 4px;",
                         p { style: "font-size: 0.75rem; color: var(--qualia-text-muted, #666);", "SPARQL / N3Logic query binding" }
-                        code { style: "font-size: 0.7rem; color: var(--qualia-success, #0f0);", "Parity: {mock_quin.read().parity}" }
+                        dl {
+                            style: "display:grid;grid-template-columns:auto 1fr;gap:0.2rem 0.5rem;margin:0;font:0.68rem/1.35 monospace;color:var(--qualia-success,#0f0);",
+                            dt { "Subject" }
+                            dd { style: "margin:0;overflow-wrap:anywhere;", "{mock_quin.read().subject:#018x}" }
+                            dt { "Predicate" }
+                            dd { style: "margin:0;overflow-wrap:anywhere;", "{mock_quin.read().predicate:#018x}" }
+                            dt { "Object" }
+                            dd { style: "margin:0;overflow-wrap:anywhere;", "{mock_quin.read().object:#018x}" }
+                            dt { "Context" }
+                            dd { style: "margin:0;overflow-wrap:anywhere;", "{mock_quin.read().context:#018x}" }
+                            dt { "Metadata" }
+                            dd { style: "margin:0;overflow-wrap:anywhere;", "{mock_quin.read().metadata:#018x}" }
+                            dt { "Parity" }
+                            dd { style: "margin:0;overflow-wrap:anywhere;", "{mock_quin.read().parity:#018x}" }
+                        }
                     }
                 }
 

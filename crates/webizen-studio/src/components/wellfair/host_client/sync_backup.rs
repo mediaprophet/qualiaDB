@@ -8,7 +8,6 @@ use crate::components::qapp_engine::tauri_invoke;
 #[cfg(target_arch = "wasm32")]
 use js_sys;
 
-
 /// The admission tally from a sync round against a relay.
 #[derive(Debug, Clone, Default, Deserialize)]
 pub struct SyncSummaryDto {
@@ -36,14 +35,24 @@ pub struct BackupSummaryDto {
 #[cfg(target_arch = "wasm32")]
 pub async fn sync_with_relay(base_url: &str, since: u64) -> Result<SyncSummaryDto, String> {
     let args = js_sys::Object::new();
-    js_sys::Reflect::set(&args, &"baseUrl".into(), &wasm_bindgen::JsValue::from_str(base_url))
-        .map_err(|_| "failed to build invoke args".to_string())?;
-    js_sys::Reflect::set(&args, &"since".into(), &wasm_bindgen::JsValue::from_f64(since as f64))
-        .map_err(|_| "failed to build invoke args".to_string())?;
+    js_sys::Reflect::set(
+        &args,
+        &"baseUrl".into(),
+        &wasm_bindgen::JsValue::from_str(base_url),
+    )
+    .map_err(|_| "failed to build invoke args".to_string())?;
+    js_sys::Reflect::set(
+        &args,
+        &"since".into(),
+        &wasm_bindgen::JsValue::from_f64(since as f64),
+    )
+    .map_err(|_| "failed to build invoke args".to_string())?;
     let js = tauri_invoke("wellfair_sync_with_relay", args.into())
         .await
         .map_err(|e| format!("{e:?}"))?;
-    let json = js.as_string().ok_or_else(|| "sync response not JSON".to_string())?;
+    let json = js
+        .as_string()
+        .ok_or_else(|| "sync response not JSON".to_string())?;
     serde_json::from_str(&json).map_err(|e| e.to_string())
 }
 
@@ -55,12 +64,18 @@ pub async fn sync_with_relay(_base_url: &str, _since: u64) -> Result<SyncSummary
 #[cfg(target_arch = "wasm32")]
 pub async fn export_backup(path: &str) -> Result<BackupSummaryDto, String> {
     let args = js_sys::Object::new();
-    js_sys::Reflect::set(&args, &"path".into(), &wasm_bindgen::JsValue::from_str(path))
-        .map_err(|_| "failed to build invoke args".to_string())?;
+    js_sys::Reflect::set(
+        &args,
+        &"path".into(),
+        &wasm_bindgen::JsValue::from_str(path),
+    )
+    .map_err(|_| "failed to build invoke args".to_string())?;
     let js = tauri_invoke("wellfair_export_backup", args.into())
         .await
         .map_err(|e| format!("{e:?}"))?;
-    let json = js.as_string().ok_or_else(|| "export response not JSON".to_string())?;
+    let json = js
+        .as_string()
+        .ok_or_else(|| "export response not JSON".to_string())?;
     serde_json::from_str(&json).map_err(|e| e.to_string())
 }
 
@@ -72,12 +87,18 @@ pub async fn export_backup(_path: &str) -> Result<BackupSummaryDto, String> {
 #[cfg(target_arch = "wasm32")]
 pub async fn import_backup(path: &str) -> Result<BackupSummaryDto, String> {
     let args = js_sys::Object::new();
-    js_sys::Reflect::set(&args, &"path".into(), &wasm_bindgen::JsValue::from_str(path))
-        .map_err(|_| "failed to build invoke args".to_string())?;
+    js_sys::Reflect::set(
+        &args,
+        &"path".into(),
+        &wasm_bindgen::JsValue::from_str(path),
+    )
+    .map_err(|_| "failed to build invoke args".to_string())?;
     let js = tauri_invoke("wellfair_import_backup", args.into())
         .await
         .map_err(|e| format!("{e:?}"))?;
-    let json = js.as_string().ok_or_else(|| "import response not JSON".to_string())?;
+    let json = js
+        .as_string()
+        .ok_or_else(|| "import response not JSON".to_string())?;
     serde_json::from_str(&json).map_err(|e| e.to_string())
 }
 
@@ -112,7 +133,9 @@ pub async fn fetch_diagnostics() -> Result<DiagnosticsDto, String> {
     let js = tauri_invoke("wellfair_diagnostics", wasm_bindgen::JsValue::NULL)
         .await
         .map_err(|e| format!("{e:?}"))?;
-    let json = js.as_string().ok_or_else(|| "diagnostics not JSON".to_string())?;
+    let json = js
+        .as_string()
+        .ok_or_else(|| "diagnostics not JSON".to_string())?;
     serde_json::from_str(&json).map_err(|e| e.to_string())
 }
 
@@ -120,4 +143,3 @@ pub async fn fetch_diagnostics() -> Result<DiagnosticsDto, String> {
 pub async fn fetch_diagnostics() -> Result<DiagnosticsDto, String> {
     Ok(DiagnosticsDto::default())
 }
-

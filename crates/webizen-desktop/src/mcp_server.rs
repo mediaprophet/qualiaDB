@@ -13,7 +13,7 @@ pub fn spawn_mcp_tcp_server(_app_state: std::sync::Arc<AppState>) {
                 return;
             }
         };
-        
+
         println!("Webizen Desktop MCP server listening on 127.0.0.1:4245");
 
         for stream in listener.incoming() {

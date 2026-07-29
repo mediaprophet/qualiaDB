@@ -94,6 +94,8 @@ pub mod studio_workspace_wal;
 pub mod system_telemetry;
 pub mod update_installer;
 pub mod user_profile;
+/// App-global entity-view host (desktop-wide session + projectors; product mindware is whole Qualia).
+pub mod view_host;
 pub mod vision_10d_browse;
 pub mod vision_10d_load;
 pub mod vision_10d_rights;
@@ -103,8 +105,6 @@ pub mod wallet;
 pub mod webizen_trust;
 pub mod webizen_x509;
 pub mod wellfair;
-/// App-global entity-view host (desktop-wide session + projectors; product mindware is whole Qualia).
-pub mod view_host;
 
 pub use api::*;
 pub use state::*;

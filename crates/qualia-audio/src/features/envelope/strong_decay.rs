@@ -59,7 +59,10 @@ mod tests {
         let got = strong_decay(&env, sr).expect("sd");
         let centroid_s = ((n - 1) as f64 / 2.0) / sr as f64;
         let expected = ((n as f64) * centroid_s).sqrt() as f32;
-        assert!((got - expected).abs() < 1e-3, "got={got} expected={expected}");
+        assert!(
+            (got - expected).abs() < 1e-3,
+            "got={got} expected={expected}"
+        );
     }
 
     /// A later-decaying envelope has a larger StrongDecay than an early one

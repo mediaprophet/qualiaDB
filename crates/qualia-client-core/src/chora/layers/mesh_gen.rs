@@ -31,7 +31,12 @@ pub fn generate_sphere_mesh(segments: u32, rings: u32) -> Mesh {
 
     let min = [-1.0, -1.0, -1.0];
     let max = [1.0, 1.0, 1.0];
-    Mesh { positions, triangles, min, max }
+    Mesh {
+        positions,
+        triangles,
+        min,
+        max,
+    }
 }
 
 pub fn generate_sphere_mesh_colored(
@@ -98,5 +103,10 @@ pub fn generate_terrain_mesh(heightfield: &[f32], width: u32, height: u32, scale
 
     let min = [-1.0, 0.0, -1.0];
     let max = [1.0, scale, 1.0];
-    Mesh { positions, triangles, min, max }
+    Mesh {
+        positions,
+        triangles,
+        min,
+        max,
+    }
 }

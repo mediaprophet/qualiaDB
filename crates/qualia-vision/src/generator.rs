@@ -234,9 +234,8 @@ fn value_noise(x: f32, y: f32, seed: u64) -> f32 {
 }
 
 fn hash2(x: i32, y: i32, seed: u64) -> f32 {
-    let mut h = seed
-        ^ ((x as u64).wrapping_mul(0x85eb_ca6b))
-        ^ ((y as u64).wrapping_mul(0xc2b2_ae35));
+    let mut h =
+        seed ^ ((x as u64).wrapping_mul(0x85eb_ca6b)) ^ ((y as u64).wrapping_mul(0xc2b2_ae35));
     h = splitmix64(h);
     (h as f32 / u64::MAX as f32) * 2.0 - 1.0
 }
@@ -281,8 +280,12 @@ mod tests {
         let g = NativeImageGenerator::new();
         let mut a = vec![0u8; 16 * 16 * 3];
         let mut b = vec![0u8; 16 * 16 * 3];
-        let ra = g.generate_rgb8("teal field", 99, 4, 16, 16, &mut a).unwrap();
-        let rb = g.generate_rgb8("teal field", 99, 4, 16, 16, &mut b).unwrap();
+        let ra = g
+            .generate_rgb8("teal field", 99, 4, 16, 16, &mut a)
+            .unwrap();
+        let rb = g
+            .generate_rgb8("teal field", 99, 4, 16, 16, &mut b)
+            .unwrap();
         assert_eq!(a, b);
         assert_eq!(ra.output_digest, rb.output_digest);
         assert!(ra.is_reference_generator);

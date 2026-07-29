@@ -52,10 +52,7 @@ impl SyncOutbox {
             fs::create_dir_all(parent)?;
         }
         if !path.exists() {
-            OpenOptions::new()
-                .create(true)
-                .write(true)
-                .open(&path)?;
+            OpenOptions::new().create(true).write(true).open(&path)?;
         }
         Ok(Self { path })
     }
@@ -143,9 +140,7 @@ impl SyncOutbox {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use wellfare_core::record::{
-        EpistemicStatus, EvidenceType, RecordEnvelope, SensitivityClass,
-    };
+    use wellfare_core::record::{EpistemicStatus, EvidenceType, RecordEnvelope, SensitivityClass};
 
     fn sample_envelope(id: &str) -> RecordEnvelope {
         RecordEnvelope {
@@ -225,10 +220,8 @@ mod tests {
     fn sync_outbox_serializes_pascal_case_state() {
         let dir = tempfile::tempdir().unwrap();
         let outbox = SyncOutbox::open(dir.path()).unwrap();
-        let entry = SyncOutboxEntry::from_envelope(
-            &sample_envelope("urn:wellfair:heart_rate:hr1"),
-            1,
-        );
+        let entry =
+            SyncOutboxEntry::from_envelope(&sample_envelope("urn:wellfair:heart_rate:hr1"), 1);
         outbox.enqueue(&entry).unwrap();
 
         let raw = fs::read_to_string(dir.path().join(SYNC_OUTBOX_FILE)).unwrap();

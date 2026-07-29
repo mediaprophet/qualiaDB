@@ -9,10 +9,13 @@ use std::collections::HashMap;
 
 /// Zero-Knowledge Proof System
 pub struct ZkProofSystem {
+    #[cfg(feature = "zk-culling")]
     proving_key: ProvingKey,
+    #[cfg(feature = "zk-culling")]
     verifying_key: VerifyingKey,
     circuit_builder: CircuitBuilder,
     pub(crate) proof_generator: ProofGenerator,
+    #[cfg(feature = "zk-culling")]
     pub(crate) proof_verifier: ProofVerifier,
     performance_monitor: ZkPerformanceMonitor,
 }
@@ -294,6 +297,7 @@ pub struct ZkGlobalMetrics {
 impl ZkProofSystem {
     pub fn new() -> Self {
         Self {
+            #[cfg(feature = "zk-culling")]
             proving_key: ProvingKey {
                 key_id: "default_pk".to_string(),
                 circuit_id: "default_circuit".to_string(),
@@ -306,6 +310,7 @@ impl ZkProofSystem {
                     curve: EllipticCurve::Bls12_381,
                 },
             },
+            #[cfg(feature = "zk-culling")]
             verifying_key: VerifyingKey {
                 key_id: "default_vk".to_string(),
                 circuit_id: "default_circuit".to_string(),
@@ -320,6 +325,7 @@ impl ZkProofSystem {
             },
             circuit_builder: CircuitBuilder::new(),
             proof_generator: ProofGenerator::new(),
+            #[cfg(feature = "zk-culling")]
             proof_verifier: ProofVerifier::new(),
             performance_monitor: ZkPerformanceMonitor::new(),
         }
@@ -420,9 +426,9 @@ impl ZkProofSystem {
         }
         #[cfg(not(feature = "zk-culling"))]
         {
-            Err(ZkError::PendingImplementation(
-                "Enable zk-culling feature".to_string(),
-            ))
+            Err(ZkError::PendingImplementation(format!(
+                "Cannot generate keys for circuit '{circuit_id}': enable the zk-culling feature"
+            )))
         }
     }
 
@@ -498,9 +504,11 @@ impl ZkProofSystem {
         }
         #[cfg(not(feature = "zk-culling"))]
         {
-            Err(ZkError::PendingImplementation(
-                "Enable zk-culling feature".to_string(),
-            ))
+            Err(ZkError::PendingImplementation(format!(
+                "Cannot generate a proof for circuit '{circuit_id}' with {} witness value(s) and {} public input(s): enable the zk-culling feature",
+                witness.len(),
+                public_inputs.len()
+            )))
         }
     }
 
@@ -547,9 +555,10 @@ impl ZkProofSystem {
         }
         #[cfg(not(feature = "zk-culling"))]
         {
-            Err(ZkError::PendingImplementation(
-                "Enable zk-culling feature".to_string(),
-            ))
+            Err(ZkError::PendingImplementation(format!(
+                "Cannot verify proof '{}': enable the zk-culling feature",
+                proof.proof_id
+            )))
         }
     }
 
@@ -913,6 +922,7 @@ impl ZkProofSystem {
     }
 
     /// Generate unique proof ID
+    #[cfg(feature = "zk-culling")]
     fn generate_proof_id(&self) -> String {
         use std::sync::atomic::{AtomicU64, Ordering};
         static COUNTER: AtomicU64 = AtomicU64::new(1);

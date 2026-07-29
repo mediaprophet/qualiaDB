@@ -185,7 +185,10 @@ mod tests {
         // after K-weighting (BS.1770 calibration; K-gain ≈ +0.7 dB at 1 kHz).
         let s = sine_at_rms(0.1, 48_000 * 3); // 3 s
         let l = integrated_lufs(&s, 48_000).expect("integrated");
-        assert!((l - (-20.0)).abs() < 1.0, "integrated {l} LUFS, expected ~ -20");
+        assert!(
+            (l - (-20.0)).abs() < 1.0,
+            "integrated {l} LUFS, expected ~ -20"
+        );
     }
 
     #[test]

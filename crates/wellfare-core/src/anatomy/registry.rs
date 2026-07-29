@@ -23,7 +23,7 @@ use std::sync::OnceLock;
 
 use serde::{Deserialize, Serialize};
 
-use super::model::{overlay_host_systems, system_representation, SystemRepresentation};
+use super::model::{SystemRepresentation, overlay_host_systems, system_representation};
 use super::systems::BODY_SYSTEMS;
 
 /// The neutral render colour for a system with no seeded/registered colour (linear RGBA). A person's
@@ -142,7 +142,9 @@ pub struct SystemRegistry {
 impl SystemRegistry {
     /// An empty registry (no systems). Use [`SystemRegistry::seed`] for the built-in 17.
     pub fn new_empty() -> Self {
-        Self { systems: Vec::new() }
+        Self {
+            systems: Vec::new(),
+        }
     }
 
     /// The built-in seed: the 17 systems from [`BODY_SYSTEMS`], each enriched with its representation
@@ -155,7 +157,10 @@ impl SystemRegistry {
                 label: s.label.to_string(),
                 plain_label: s.plain_label.to_string(),
                 representation: system_representation(s.id),
-                overlay_hosts: overlay_host_systems(s.id).iter().map(|h| h.to_string()).collect(),
+                overlay_hosts: overlay_host_systems(s.id)
+                    .iter()
+                    .map(|h| h.to_string())
+                    .collect(),
                 color_rgba: seed_color_rgba(s.id),
                 tier: seed_tier(s.id),
                 parent: seed_parent(s.id).map(str::to_string),
@@ -193,7 +198,9 @@ impl SystemRegistry {
     /// knowledge files (e.g. `condition-map.json` keys systems by `"Endocrine System"`).
     pub fn get_by_label(&self, label: &str) -> Option<&SystemDef> {
         let want = label.trim().to_ascii_lowercase();
-        self.systems.iter().find(|s| s.label.to_ascii_lowercase() == want)
+        self.systems
+            .iter()
+            .find(|s| s.label.to_ascii_lowercase() == want)
     }
 
     /// All registered systems, in registration order (the 17 seed order first).
@@ -216,39 +223,53 @@ impl SystemRegistry {
 
     /// The human label for a system id, or the id itself if unregistered (so nothing renders blank).
     pub fn label_for(&self, id: &str) -> String {
-        self.get(id).map(|s| s.label.clone()).unwrap_or_else(|| id.to_string())
+        self.get(id)
+            .map(|s| s.label.clone())
+            .unwrap_or_else(|| id.to_string())
     }
 
     /// The plain-language label for a system id, or the id itself if unregistered.
     pub fn plain_label_for(&self, id: &str) -> String {
-        self.get(id).map(|s| s.plain_label.clone()).unwrap_or_else(|| id.to_string())
+        self.get(id)
+            .map(|s| s.plain_label.clone())
+            .unwrap_or_else(|| id.to_string())
     }
 
     /// How a system is rendered — defaults to [`SystemRepresentation::DiscreteOrgans`] for an
     /// unregistered id (the safe default: try to paint an organ mesh if one turns up).
     pub fn representation_of(&self, id: &str) -> SystemRepresentation {
-        self.get(id).map(|s| s.representation).unwrap_or(SystemRepresentation::DiscreteOrgans)
+        self.get(id)
+            .map(|s| s.representation)
+            .unwrap_or(SystemRepresentation::DiscreteOrgans)
     }
 
     /// The overlay host system ids for a distributed system (empty for discrete or unregistered).
     pub fn overlay_hosts_of(&self, id: &str) -> &[String] {
-        self.get(id).map(|s| s.overlay_hosts.as_slice()).unwrap_or(&[])
+        self.get(id)
+            .map(|s| s.overlay_hosts.as_slice())
+            .unwrap_or(&[])
     }
 
     /// The default identity colour for a system id, or [`NEUTRAL_SYSTEM_RGBA`] if unregistered.
     pub fn color_of(&self, id: &str) -> [f32; 4] {
-        self.get(id).map(|s| s.color_rgba).unwrap_or(NEUTRAL_SYSTEM_RGBA)
+        self.get(id)
+            .map(|s| s.color_rgba)
+            .unwrap_or(NEUTRAL_SYSTEM_RGBA)
     }
 
     /// The canonical major organ systems (the classic 11 in the seed).
     pub fn canonical_majors(&self) -> impl Iterator<Item = &SystemDef> {
-        self.systems.iter().filter(|s| s.tier == SystemTier::CanonicalMajor)
+        self.systems
+            .iter()
+            .filter(|s| s.tier == SystemTier::CanonicalMajor)
     }
 
     /// The direct sub-systems of `parent_id` (e.g. `nervous` → sensory / vestibular / ENS / glymphatic).
     pub fn sub_systems_of(&self, parent_id: &str) -> impl Iterator<Item = &SystemDef> {
         let want = parent_id.trim().to_string();
-        self.systems.iter().filter(move |s| s.parent.as_deref() == Some(want.as_str()))
+        self.systems
+            .iter()
+            .filter(move |s| s.parent.as_deref() == Some(want.as_str()))
     }
 
     /// A system's structural links to other systems (empty for unregistered or unlinked systems).
@@ -314,12 +335,36 @@ fn seed_relations(id: &str) -> Vec<SystemRelation> {
         note: note.to_string(),
     };
     match id {
-        "muscular" => vec![rel(DependsOn, "nervous", "motor control — contraction is signalled by motor nerves")],
-        "skeletal" => vec![rel(DependsOn, "circulatory", "calcium/mineral exchange and red-marrow perfusion")],
-        "nervous" => vec![rel(DependsOn, "circulatory", "highly perfusion-dependent — needs constant oxygen + glucose")],
-        "respiratory" => vec![rel(Supplies, "circulatory", "oxygenates the blood and clears carbon dioxide")],
-        "endocrine" => vec![rel(Regulates, "reproductive", "sex hormones drive reproductive function")],
-        "urinary" => vec![rel(Regulates, "circulatory", "fluid/electrolyte balance and blood pressure (RAAS)")],
+        "muscular" => vec![rel(
+            DependsOn,
+            "nervous",
+            "motor control — contraction is signalled by motor nerves",
+        )],
+        "skeletal" => vec![rel(
+            DependsOn,
+            "circulatory",
+            "calcium/mineral exchange and red-marrow perfusion",
+        )],
+        "nervous" => vec![rel(
+            DependsOn,
+            "circulatory",
+            "highly perfusion-dependent — needs constant oxygen + glucose",
+        )],
+        "respiratory" => vec![rel(
+            Supplies,
+            "circulatory",
+            "oxygenates the blood and clears carbon dioxide",
+        )],
+        "endocrine" => vec![rel(
+            Regulates,
+            "reproductive",
+            "sex hormones drive reproductive function",
+        )],
+        "urinary" => vec![rel(
+            Regulates,
+            "circulatory",
+            "fluid/electrolyte balance and blood pressure (RAAS)",
+        )],
         _ => Vec::new(),
     }
 }
@@ -334,7 +379,11 @@ mod tests {
         assert_eq!(reg.len(), 17);
         // Every seeded system resolves to a non-empty label + plain label, and carries Seed provenance.
         for s in reg.all() {
-            assert!(!s.label.is_empty() && !s.plain_label.is_empty(), "{} labelled", s.id);
+            assert!(
+                !s.label.is_empty() && !s.plain_label.is_empty(),
+                "{} labelled",
+                s.id
+            );
             assert_eq!(s.provenance, SystemProvenance::Seed);
         }
         // Representation + overlay hosts agree with the model's free functions (single source: seeded
@@ -342,8 +391,14 @@ mod tests {
         let ecs = reg.get("ecs").unwrap();
         assert!(ecs.is_overlay());
         assert!(ecs.overlay_hosts.is_empty(), "ECS is a whole-body cue");
-        assert_eq!(reg.get("ens").unwrap().overlay_hosts, vec!["digestive".to_string()]);
-        assert_eq!(reg.representation_of("circulatory"), SystemRepresentation::DiscreteOrgans);
+        assert_eq!(
+            reg.get("ens").unwrap().overlay_hosts,
+            vec!["digestive".to_string()]
+        );
+        assert_eq!(
+            reg.representation_of("circulatory"),
+            SystemRepresentation::DiscreteOrgans
+        );
     }
 
     #[test]
@@ -354,9 +409,15 @@ mod tests {
         assert!(reg.get("circulatory").unwrap().is_canonical_major());
         assert!(!reg.get("sensory").unwrap().is_canonical_major());
         // The finer systems parent to the nervous system (sub-branches).
-        let nervous_subs: Vec<&str> = reg.sub_systems_of("nervous").map(|s| s.id.as_str()).collect();
+        let nervous_subs: Vec<&str> = reg
+            .sub_systems_of("nervous")
+            .map(|s| s.id.as_str())
+            .collect();
         for s in ["sensory", "vestibular", "ens", "glymphatic"] {
-            assert!(nervous_subs.contains(&s), "{s} should be a sub-system of nervous: {nervous_subs:?}");
+            assert!(
+                nervous_subs.contains(&s),
+                "{s} should be a sub-system of nervous: {nervous_subs:?}"
+            );
         }
         // ECS + exocrine are cross-cutting networks (no parent, not a major).
         assert_eq!(reg.get("ecs").unwrap().tier, SystemTier::CrossCutting);
@@ -366,9 +427,14 @@ mod tests {
         assert_eq!(mus.len(), 1);
         assert_eq!(mus[0].kind, SystemRelationKind::DependsOn);
         assert_eq!(mus[0].target, "nervous");
-        assert!(!mus[0].note.is_empty(), "the link carries a plain-language reason");
         assert!(
-            reg.relations_of("skeletal").iter().any(|r| r.target == "circulatory"),
+            !mus[0].note.is_empty(),
+            "the link carries a plain-language reason"
+        );
+        assert!(
+            reg.relations_of("skeletal")
+                .iter()
+                .any(|r| r.target == "circulatory"),
             "skeletal depends on circulatory (calcium)"
         );
     }
@@ -376,11 +442,20 @@ mod tests {
     #[test]
     fn default_registry_is_the_seed() {
         assert_eq!(default_registry().len(), 17);
-        assert_eq!(default_registry().label_for("digestive"), "Digestive System");
-        assert_eq!(default_registry().plain_label_for("nervous"), "brain and nerves");
+        assert_eq!(
+            default_registry().label_for("digestive"),
+            "Digestive System"
+        );
+        assert_eq!(
+            default_registry().plain_label_for("nervous"),
+            "brain and nerves"
+        );
         // An unregistered system does not render blank — it falls back to its id + safe defaults.
         assert_eq!(default_registry().label_for("fascial"), "fascial");
-        assert_eq!(default_registry().representation_of("fascial"), SystemRepresentation::DiscreteOrgans);
+        assert_eq!(
+            default_registry().representation_of("fascial"),
+            SystemRepresentation::DiscreteOrgans
+        );
         assert_eq!(default_registry().color_of("fascial"), NEUTRAL_SYSTEM_RGBA);
     }
 
@@ -392,7 +467,12 @@ mod tests {
         assert_eq!(reg.color_of("immune_lymphatic"), [0.60, 0.82, 0.70, 1.0]);
         // Every seeded system has a non-neutral identity colour.
         for s in reg.all() {
-            assert_ne!(reg.color_of(&s.id), NEUTRAL_SYSTEM_RGBA, "{} needs a colour", s.id);
+            assert_ne!(
+                reg.color_of(&s.id),
+                NEUTRAL_SYSTEM_RGBA,
+                "{} needs a colour",
+                s.id
+            );
         }
     }
 
@@ -416,20 +496,31 @@ mod tests {
                 target: "muscular".to_string(),
                 note: "force transmission and structural continuity".to_string(),
             }],
-            provenance: SystemProvenance::Ontology { iri: "http://purl.obolibrary.org/obo/UBERON_0007795".to_string() },
+            provenance: SystemProvenance::Ontology {
+                iri: "http://purl.obolibrary.org/obo/UBERON_0007795".to_string(),
+            },
         });
 
         assert_eq!(reg.len(), 18);
         assert!(reg.contains("fascial"));
         assert_eq!(reg.label_for("fascial"), "Fascial System");
         assert_eq!(reg.plain_label_for("fascial"), "connective tissue");
-        assert_eq!(reg.representation_of("fascial"), SystemRepresentation::DistributedOverlay);
-        assert_eq!(reg.overlay_hosts_of("fascial"), &["muscular".to_string(), "skeletal".to_string()]);
+        assert_eq!(
+            reg.representation_of("fascial"),
+            SystemRepresentation::DistributedOverlay
+        );
+        assert_eq!(
+            reg.overlay_hosts_of("fascial"),
+            &["muscular".to_string(), "skeletal".to_string()]
+        );
         assert_eq!(reg.color_of("fascial"), [0.70, 0.78, 0.66, 1.0]);
         // The seeded systems are untouched.
         assert_eq!(reg.label_for("digestive"), "Digestive System");
         // Provenance records the ontology source, transparently.
-        assert!(matches!(reg.get("fascial").unwrap().provenance, SystemProvenance::Ontology { .. }));
+        assert!(matches!(
+            reg.get("fascial").unwrap().provenance,
+            SystemProvenance::Ontology { .. }
+        ));
     }
 
     #[test]
@@ -447,11 +538,16 @@ mod tests {
             tier: SystemTier::CanonicalMajor,
             parent: None,
             relations: Vec::new(),
-            provenance: SystemProvenance::Pack { source_id: "curator-x".to_string() },
+            provenance: SystemProvenance::Pack {
+                source_id: "curator-x".to_string(),
+            },
         });
         assert_eq!(reg.len(), before, "refinement does not add a row");
         assert_eq!(reg.color_of("digestive"), [0.10, 0.20, 0.30, 1.0]);
-        assert!(matches!(reg.get("digestive").unwrap().provenance, SystemProvenance::Pack { .. }));
+        assert!(matches!(
+            reg.get("digestive").unwrap().provenance,
+            SystemProvenance::Pack { .. }
+        ));
     }
 
     #[test]

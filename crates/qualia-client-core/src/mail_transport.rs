@@ -228,10 +228,7 @@ pub fn fetch_unseen(
                 let size = fetch.size.unwrap_or(0) as usize;
 
                 out.push(build_inbound(
-                    &from,
-                    &to,
-                    &subject,
-                    size,
+                    &from, &to, &subject, size,
                     false, // sender_verified — IMAP does not attest identity
                     None,  // sender_did — verification is a higher-layer concern
                 ));

@@ -7,15 +7,26 @@ use crate::components::qapp_engine::tauri_invoke;
 #[cfg(target_arch = "wasm32")]
 use js_sys;
 
-
 /// Render the whole-body 3D Anatomy snapshot at `(azimuth, elevation)` degrees. The PNG is served at
 /// `webizen://localhost/anatomy/body.png`; bump the epoch query-string to refetch after this call.
 #[cfg(target_arch = "wasm32")]
 pub async fn render_body_snapshot(azimuth: f64, elevation: f64) -> Result<(), String> {
     let args = js_sys::Object::new();
-    js_sys::Reflect::set(&args, &"azimuth".into(), &wasm_bindgen::JsValue::from_f64(azimuth)).map_err(|_| "args".to_string())?;
-    js_sys::Reflect::set(&args, &"elevation".into(), &wasm_bindgen::JsValue::from_f64(elevation)).map_err(|_| "args".to_string())?;
-    tauri_invoke("wellfair_render_body_snapshot", args.into()).await.map_err(|e| format!("{e:?}"))?;
+    js_sys::Reflect::set(
+        &args,
+        &"azimuth".into(),
+        &wasm_bindgen::JsValue::from_f64(azimuth),
+    )
+    .map_err(|_| "args".to_string())?;
+    js_sys::Reflect::set(
+        &args,
+        &"elevation".into(),
+        &wasm_bindgen::JsValue::from_f64(elevation),
+    )
+    .map_err(|_| "args".to_string())?;
+    tauri_invoke("wellfair_render_body_snapshot", args.into())
+        .await
+        .map_err(|e| format!("{e:?}"))?;
     Ok(())
 }
 #[cfg(not(target_arch = "wasm32"))]
@@ -80,9 +91,18 @@ pub struct AcquireProgress {
 #[cfg(target_arch = "wasm32")]
 pub async fn body_assets_status(model: &str) -> Result<BodyAssetsStatus, String> {
     let args = js_sys::Object::new();
-    js_sys::Reflect::set(&args, &"model".into(), &wasm_bindgen::JsValue::from_str(model)).map_err(|_| "args".to_string())?;
-    let raw = tauri_invoke("wellfair_body_assets_status", args.into()).await.map_err(|e| format!("{e:?}"))?;
-    let json = raw.as_string().ok_or_else(|| "body assets status response not JSON".to_string())?;
+    js_sys::Reflect::set(
+        &args,
+        &"model".into(),
+        &wasm_bindgen::JsValue::from_str(model),
+    )
+    .map_err(|_| "args".to_string())?;
+    let raw = tauri_invoke("wellfair_body_assets_status", args.into())
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+    let json = raw
+        .as_string()
+        .ok_or_else(|| "body assets status response not JSON".to_string())?;
     serde_json::from_str::<BodyAssetsStatus>(&json).map_err(|e| e.to_string())
 }
 #[cfg(not(target_arch = "wasm32"))]
@@ -95,9 +115,18 @@ pub async fn body_assets_status(_model: &str) -> Result<BodyAssetsStatus, String
 #[cfg(target_arch = "wasm32")]
 pub async fn acquire_body_assets(model: &str) -> Result<AcquireReport, String> {
     let args = js_sys::Object::new();
-    js_sys::Reflect::set(&args, &"model".into(), &wasm_bindgen::JsValue::from_str(model)).map_err(|_| "args".to_string())?;
-    let raw = tauri_invoke("wellfair_acquire_body_assets", args.into()).await.map_err(|e| format!("{e:?}"))?;
-    let json = raw.as_string().ok_or_else(|| "acquire body assets response not JSON".to_string())?;
+    js_sys::Reflect::set(
+        &args,
+        &"model".into(),
+        &wasm_bindgen::JsValue::from_str(model),
+    )
+    .map_err(|_| "args".to_string())?;
+    let raw = tauri_invoke("wellfair_acquire_body_assets", args.into())
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+    let json = raw
+        .as_string()
+        .ok_or_else(|| "acquire body assets response not JSON".to_string())?;
     serde_json::from_str::<AcquireReport>(&json).map_err(|e| e.to_string())
 }
 #[cfg(not(target_arch = "wasm32"))]
@@ -107,18 +136,34 @@ pub async fn acquire_body_assets(_model: &str) -> Result<AcquireReport, String> 
 
 /// The per-organ percepts for the cached organ set (so the browser portal knows what colour to paint each).
 #[cfg(target_arch = "wasm32")]
-pub async fn cached_body_organ_percepts(model: &str) -> Result<(Vec<OrganPerceptDto>, Vec<String>), String> {
+pub async fn cached_body_organ_percepts(
+    model: &str,
+) -> Result<(Vec<OrganPerceptDto>, Vec<String>), String> {
     let args = js_sys::Object::new();
-    js_sys::Reflect::set(&args, &"model".into(), &wasm_bindgen::JsValue::from_str(model)).map_err(|_| "args".to_string())?;
-    let raw = tauri_invoke("wellfair_cached_body_organ_percepts", args.into()).await.map_err(|e| format!("{e:?}"))?;
-    let json = raw.as_string().ok_or_else(|| "organ percepts response not JSON".to_string())?;
+    js_sys::Reflect::set(
+        &args,
+        &"model".into(),
+        &wasm_bindgen::JsValue::from_str(model),
+    )
+    .map_err(|_| "args".to_string())?;
+    let raw = tauri_invoke("wellfair_cached_body_organ_percepts", args.into())
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+    let json = raw
+        .as_string()
+        .ok_or_else(|| "organ percepts response not JSON".to_string())?;
     #[derive(serde::Deserialize)]
-    struct Resp { painted: Vec<OrganPerceptDto>, unmapped: Vec<String> }
+    struct Resp {
+        painted: Vec<OrganPerceptDto>,
+        unmapped: Vec<String>,
+    }
     let resp: Resp = serde_json::from_str(&json).map_err(|e| e.to_string())?;
     Ok((resp.painted, resp.unmapped))
 }
 #[cfg(not(target_arch = "wasm32"))]
-pub async fn cached_body_organ_percepts(_model: &str) -> Result<(Vec<OrganPerceptDto>, Vec<String>), String> {
+pub async fn cached_body_organ_percepts(
+    _model: &str,
+) -> Result<(Vec<OrganPerceptDto>, Vec<String>), String> {
     Err("The 3D Anatomy asset cache requires the Tauri desktop host".into())
 }
 
@@ -126,12 +171,18 @@ pub async fn cached_body_organ_percepts(_model: &str) -> Result<(Vec<OrganPercep
 #[cfg(target_arch = "wasm32")]
 pub async fn clear_body_cache(model: &str) -> Result<(), String> {
     let args = js_sys::Object::new();
-    js_sys::Reflect::set(&args, &"model".into(), &wasm_bindgen::JsValue::from_str(model)).map_err(|_| "args".to_string())?;
-    tauri_invoke("wellfair_clear_body_cache", args.into()).await.map_err(|e| format!("{e:?}"))?;
+    js_sys::Reflect::set(
+        &args,
+        &"model".into(),
+        &wasm_bindgen::JsValue::from_str(model),
+    )
+    .map_err(|_| "args".to_string())?;
+    tauri_invoke("wellfair_clear_body_cache", args.into())
+        .await
+        .map_err(|e| format!("{e:?}"))?;
     Ok(())
 }
 #[cfg(not(target_arch = "wasm32"))]
 pub async fn clear_body_cache(_model: &str) -> Result<(), String> {
     Err("The 3D Anatomy asset cache requires the Tauri desktop host".into())
 }
-

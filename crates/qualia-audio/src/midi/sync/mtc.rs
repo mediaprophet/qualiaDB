@@ -85,7 +85,13 @@ impl Timecode {
         if hours > 23 || minutes > 59 || seconds > 59 || frames >= rate.frames_per_second() {
             return Err(AudioError::InvalidParameter);
         }
-        Ok(Self { hours, minutes, seconds, frames, rate })
+        Ok(Self {
+            hours,
+            minutes,
+            seconds,
+            frames,
+            rate,
+        })
     }
 }
 
@@ -93,13 +99,13 @@ impl Timecode {
 /// that follows each `0xF1` status). Element `i` has the form `(i << 4) | nibble`.
 pub fn encode_quarter_frames(tc: Timecode) -> [u8; 8] {
     let nibbles = [
-        tc.frames & 0x0F,               // 0: frame LSN
-        (tc.frames >> 4) & 0x0F,        // 1: frame MSN
-        tc.seconds & 0x0F,              // 2: seconds LSN
-        (tc.seconds >> 4) & 0x0F,       // 3: seconds MSN
-        tc.minutes & 0x0F,              // 4: minutes LSN
-        (tc.minutes >> 4) & 0x0F,       // 5: minutes MSN
-        tc.hours & 0x0F,                // 6: hours LSN
+        tc.frames & 0x0F,                                 // 0: frame LSN
+        (tc.frames >> 4) & 0x0F,                          // 1: frame MSN
+        tc.seconds & 0x0F,                                // 2: seconds LSN
+        (tc.seconds >> 4) & 0x0F,                         // 3: seconds MSN
+        tc.minutes & 0x0F,                                // 4: minutes LSN
+        (tc.minutes >> 4) & 0x0F,                         // 5: minutes MSN
+        tc.hours & 0x0F,                                  // 6: hours LSN
         ((tc.hours >> 4) & 0x01) | (tc.rate.code() << 1), // 7: hours MSN + rate
     ];
     let mut out = [0u8; 8];
@@ -160,9 +166,19 @@ mod tests {
 
     #[test]
     fn rate_preserved() {
-        for rate in [FrameRate::Fps24, FrameRate::Fps25, FrameRate::Fps2997Drop, FrameRate::Fps30] {
+        for rate in [
+            FrameRate::Fps24,
+            FrameRate::Fps25,
+            FrameRate::Fps2997Drop,
+            FrameRate::Fps30,
+        ] {
             let tc = Timecode::new(1, 2, 3, 4, rate).unwrap();
-            assert_eq!(decode_quarter_frames(&encode_quarter_frames(tc)).unwrap().rate, rate);
+            assert_eq!(
+                decode_quarter_frames(&encode_quarter_frames(tc))
+                    .unwrap()
+                    .rate,
+                rate
+            );
         }
     }
 
@@ -170,7 +186,10 @@ mod tests {
     fn rejects_duplicate_piece() {
         let mut bytes = encode_quarter_frames(Timecode::new(1, 2, 3, 4, FrameRate::Fps24).unwrap());
         bytes[1] = bytes[0]; // duplicate piece 0
-        assert_eq!(decode_quarter_frames(&bytes), Err(AudioError::InvalidParameter));
+        assert_eq!(
+            decode_quarter_frames(&bytes),
+            Err(AudioError::InvalidParameter)
+        );
     }
 
     #[test]

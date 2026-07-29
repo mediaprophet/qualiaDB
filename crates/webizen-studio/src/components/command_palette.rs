@@ -188,11 +188,7 @@ pub fn CommandPalette() -> Element {
 
     let filtered = filter_destinations(&query());
     let n = filtered.len();
-    let active_idx = if n == 0 {
-        0
-    } else {
-        active().min(n - 1)
-    };
+    let active_idx = if n == 0 { 0 } else { active().min(n - 1) };
 
     rsx! {
         // Toolbar affordance (always visible; keyboard is primary).
@@ -370,8 +366,14 @@ mod tests {
 
     #[test]
     fn route_map_covers_core_five() {
-        assert!(matches!(route_for_palette_id("relations"), Route::TalkRoute {}));
-        assert!(matches!(route_for_palette_id("memory"), Route::LibraryRoute {}));
+        assert!(matches!(
+            route_for_palette_id("relations"),
+            Route::TalkRoute {}
+        ));
+        assert!(matches!(
+            route_for_palette_id("memory"),
+            Route::LibraryRoute {}
+        ));
         assert!(matches!(
             route_for_palette_id("browser"),
             Route::BrowserRoute {}

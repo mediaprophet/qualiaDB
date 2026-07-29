@@ -96,7 +96,10 @@ mod tests {
     struct Lcg(u64);
     impl Lcg {
         fn next(&mut self) -> f32 {
-            self.0 = self.0.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+            self.0 = self
+                .0
+                .wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407);
             let u = (self.0 >> 40) as f32 / (1u64 << 24) as f32; // [0,1)
             2.0 * u - 1.0
         }
@@ -121,8 +124,16 @@ mod tests {
         let mut refl = [0.0f32; 2];
         lpc(stable, 2, &mut coeffs, &mut refl).expect("lpc");
 
-        assert!((coeffs[0] - a1).abs() < 0.1, "a1: got {} want {a1}", coeffs[0]);
-        assert!((coeffs[1] - a2).abs() < 0.1, "a2: got {} want {a2}", coeffs[1]);
+        assert!(
+            (coeffs[0] - a1).abs() < 0.1,
+            "a1: got {} want {a1}",
+            coeffs[0]
+        );
+        assert!(
+            (coeffs[1] - a2).abs() < 0.1,
+            "a2: got {} want {a2}",
+            coeffs[1]
+        );
         // Reflection coefficients of a stable AR(2) have magnitude < 1.
         assert!(refl[0].abs() < 1.0 && refl[1].abs() < 1.0, "refl={refl:?}");
         // The second reflection coefficient equals a2 for an AR(2) model.
@@ -146,7 +157,11 @@ mod tests {
             r1 += x[i] as f64 * x[i + 1] as f64;
         }
         let expect = (r1 / r0) as f32;
-        assert!((coeffs[0] - expect).abs() < 1e-5, "a1={} want {expect}", coeffs[0]);
+        assert!(
+            (coeffs[0] - expect).abs() < 1e-5,
+            "a1={} want {expect}",
+            coeffs[0]
+        );
         assert!((refl[0] - expect).abs() < 1e-5, "k1={}", refl[0]);
     }
 

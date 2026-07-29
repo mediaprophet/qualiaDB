@@ -95,10 +95,7 @@ pub fn status_json() -> serde_json::Value {
     } else {
         "unavailable"
     };
-    let n_session = session_allow_set()
-        .as_ref()
-        .map(|s| s.len())
-        .unwrap_or(0);
+    let n_session = session_allow_set().as_ref().map(|s| s.len()).unwrap_or(0);
     let n_deny = session_deny_set().as_ref().map(|s| s.len()).unwrap_or(0);
     serde_json::json!({
         "cert_override": state,
@@ -215,7 +212,7 @@ pub fn decide_for_host_with_leaf(
         cert_override_decision_full, decision_allows, AnchorKind, TrustStore,
     };
     use qualia_client_core::webizen_x509::{
-        spki_pin_matches, spki_sha256_hex, verify_chain_against_enabled_roots, pem_to_ders,
+        pem_to_ders, spki_pin_matches, spki_sha256_hex, verify_chain_against_enabled_roots,
     };
 
     if !override_enabled() {
@@ -230,7 +227,10 @@ pub fn decide_for_host_with_leaf(
 
     // SPKI pin: policy label material `spki-pin:<host>:<hex>`
     if let Some(pem) = leaf_pem {
-        for a in store.anchors.iter().filter(|a| a.enabled && a.kind == AnchorKind::PolicyLabel)
+        for a in store
+            .anchors
+            .iter()
+            .filter(|a| a.enabled && a.kind == AnchorKind::PolicyLabel)
         {
             let m = a.material.trim().to_ascii_lowercase();
             let prefix = format!("spki-pin:{host}:");
@@ -286,7 +286,9 @@ pub fn decide_for_host_with_leaf(
         }
     } else {
         match d {
-            qualia_client_core::webizen_trust::CertOverrideDecision::SoftDenied => "cancel_soft_deny",
+            qualia_client_core::webizen_trust::CertOverrideDecision::SoftDenied => {
+                "cancel_soft_deny"
+            }
             qualia_client_core::webizen_trust::CertOverrideDecision::CandidateCustomRoots => {
                 "cancel_need_chain_verify"
             }
@@ -329,10 +331,7 @@ fn attach_windows(app: &tauri::AppHandle) -> Result<bool, String> {
         })
         .map_err(|e| format!("with_webview: {e}"))?;
 
-    let attached = result
-        .lock()
-        .map_err(|e| e.to_string())?
-        .clone()?;
+    let attached = result.lock().map_err(|e| e.to_string())?.clone()?;
     HOOK_ATTACHED.store(attached, Ordering::Relaxed);
     Ok(attached)
 }
@@ -374,8 +373,8 @@ fn attach_on_platform(platform: tauri::webview::PlatformWebview) -> Result<bool,
         .cast()
         .map_err(|e| format!("cast ICoreWebView2_14: {e}"))?;
 
-    let handler = ServerCertificateErrorDetectedEventHandler::create(Box::new(
-        move |_sender, args| {
+    let handler =
+        ServerCertificateErrorDetectedEventHandler::create(Box::new(move |_sender, args| {
             if let Some(args) = args {
                 unsafe {
                     let mut uri_raw = PWSTR::null();
@@ -435,8 +434,7 @@ fn attach_on_platform(platform: tauri::webview::PlatformWebview) -> Result<bool,
                 }
             }
             Ok(())
-        },
-    ));
+        }));
 
     let mut token = 0i64;
     unsafe {
@@ -450,8 +448,8 @@ fn attach_on_platform(platform: tauri::webview::PlatformWebview) -> Result<bool,
 #[cfg(test)]
 mod tests {
     use qualia_client_core::webizen_trust::{
-        cert_override_decision, decision_allows, AnchorKind,
-        CertOverrideDecision, TrustAnchor, TrustStore,
+        cert_override_decision, decision_allows, AnchorKind, CertOverrideDecision, TrustAnchor,
+        TrustStore,
     };
 
     #[test]

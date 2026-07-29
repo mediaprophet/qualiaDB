@@ -20,11 +20,7 @@ use crate::types::AudioError;
 /// # Errors
 /// - [`AudioError::InvalidParameter`] if `sample_rate` is not a positive finite,
 ///   if `threshold` is not in `(0, 1]`, or if `mag` has fewer than 2 bins.
-pub fn spectral_rolloff(
-    mag: &[f32],
-    sample_rate: f32,
-    threshold: f32,
-) -> Result<f32, AudioError> {
+pub fn spectral_rolloff(mag: &[f32], sample_rate: f32, threshold: f32) -> Result<f32, AudioError> {
     if sample_rate <= 0.0 || !sample_rate.is_finite() {
         return Err(AudioError::InvalidParameter);
     }
@@ -92,7 +88,7 @@ mod tests {
         let sr = 8000.0f32;
         let mag = [0.0f32, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0];
         let bin_hz = sr / (2.0 * 8.0); // 500 Hz
-        // threshold 1.0 -> must include the last non-zero bin (index 8).
+                                       // threshold 1.0 -> must include the last non-zero bin (index 8).
         let r = spectral_rolloff(&mag, sr, 1.0).expect("rolloff");
         assert!((r - 8.0 * bin_hz).abs() < 1e-3, "r={r}");
     }

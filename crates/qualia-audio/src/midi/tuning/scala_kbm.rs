@@ -53,7 +53,12 @@ impl KbmMapping {
     /// with `octave_degree == map_size`. This is the implicit default when no `.kbm` accompanies
     /// a scale. The reference key/frequency and middle key are explicit parameters — nothing is
     /// hardcoded; A4=440 is only the caller's choice, not a baked assumption.
-    pub fn linear(map_size: usize, middle_note: u8, reference_note: u8, reference_freq: f64) -> KbmMapping {
+    pub fn linear(
+        map_size: usize,
+        middle_note: u8,
+        reference_note: u8,
+        reference_freq: f64,
+    ) -> KbmMapping {
         let n = map_size.min(MAX_KBM_ENTRIES).max(1);
         let mut mapping = [KBM_UNMAPPED; MAX_KBM_ENTRIES];
         for (i, m) in mapping.iter_mut().enumerate().take(n) {
@@ -173,11 +178,15 @@ fn next_token<'a>(data: &mut impl Iterator<Item = &'a str>) -> Result<&'a str, A
 }
 
 fn next_usize<'a>(data: &mut impl Iterator<Item = &'a str>) -> Result<usize, AudioError> {
-    next_token(data)?.parse().map_err(|_| AudioError::InvalidParameter)
+    next_token(data)?
+        .parse()
+        .map_err(|_| AudioError::InvalidParameter)
 }
 
 fn next_u8<'a>(data: &mut impl Iterator<Item = &'a str>) -> Result<u8, AudioError> {
-    let v: i32 = next_token(data)?.parse().map_err(|_| AudioError::InvalidParameter)?;
+    let v: i32 = next_token(data)?
+        .parse()
+        .map_err(|_| AudioError::InvalidParameter)?;
     if (0..=127).contains(&v) {
         Ok(v as u8)
     } else {
@@ -186,7 +195,9 @@ fn next_u8<'a>(data: &mut impl Iterator<Item = &'a str>) -> Result<u8, AudioErro
 }
 
 fn next_f64<'a>(data: &mut impl Iterator<Item = &'a str>) -> Result<f64, AudioError> {
-    next_token(data)?.parse().map_err(|_| AudioError::InvalidParameter)
+    next_token(data)?
+        .parse()
+        .map_err(|_| AudioError::InvalidParameter)
 }
 
 #[cfg(test)]

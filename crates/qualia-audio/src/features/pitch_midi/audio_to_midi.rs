@@ -75,7 +75,14 @@ pub fn audio_to_midi(
     for f in 0..n_frames {
         let start = f * hop_size;
         let frame = &samples[start..start + frame_size];
-        let est = yin_pitch(frame, sample_rate, min_hz, max_hz, yin_threshold, yin_scratch)?;
+        let est = yin_pitch(
+            frame,
+            sample_rate,
+            min_hz,
+            max_hz,
+            yin_threshold,
+            yin_scratch,
+        )?;
         f0_scratch[f] = est.f0_hz;
         conf_scratch[f] = est.confidence;
     }
@@ -98,7 +105,9 @@ mod tests {
 
     /// Synthesise a pure sine of `freq` Hz for `n` samples at `sr`.
     fn sine(freq: f32, sr: f32, n: usize) -> Vec<f32> {
-        (0..n).map(|i| (2.0 * PI * freq * i as f32 / sr).sin()).collect()
+        (0..n)
+            .map(|i| (2.0 * PI * freq * i as f32 / sr).sin())
+            .collect()
     }
 
     #[test]
@@ -117,8 +126,19 @@ mod tests {
         let mut out = [NoteEvent::empty(); 16];
 
         let n = audio_to_midi(
-            &samples, sr, frame_size, hop, 80.0, 1000.0, 0.15, 440.0, 3, &mut f0, &mut conf,
-            &mut yin_scratch, &mut out,
+            &samples,
+            sr,
+            frame_size,
+            hop,
+            80.0,
+            1000.0,
+            0.15,
+            440.0,
+            3,
+            &mut f0,
+            &mut conf,
+            &mut yin_scratch,
+            &mut out,
         )
         .expect("audio_to_midi");
 
@@ -136,8 +156,19 @@ mod tests {
         let mut yin_scratch = [0.0f32; 64];
         let mut out = [NoteEvent::empty(); 4];
         let err = audio_to_midi(
-            &[0.0f32; 10], 44_100.0, 2048, 512, 80.0, 1000.0, 0.15, 440.0, 3, &mut f0, &mut conf,
-            &mut yin_scratch, &mut out,
+            &[0.0f32; 10],
+            44_100.0,
+            2048,
+            512,
+            80.0,
+            1000.0,
+            0.15,
+            440.0,
+            3,
+            &mut f0,
+            &mut conf,
+            &mut yin_scratch,
+            &mut out,
         )
         .unwrap_err();
         assert_eq!(err, AudioError::InvalidParameter);
@@ -152,8 +183,19 @@ mod tests {
         let mut yin_scratch = vec![0.0f32; 1025];
         let mut out = [NoteEvent::empty(); 8];
         let err = audio_to_midi(
-            &samples, sr, 2048, 512, 80.0, 1000.0, 0.15, 440.0, 3, &mut f0, &mut conf,
-            &mut yin_scratch, &mut out,
+            &samples,
+            sr,
+            2048,
+            512,
+            80.0,
+            1000.0,
+            0.15,
+            440.0,
+            3,
+            &mut f0,
+            &mut conf,
+            &mut yin_scratch,
+            &mut out,
         )
         .unwrap_err();
         assert_eq!(err, AudioError::WorkspaceTooSmall);

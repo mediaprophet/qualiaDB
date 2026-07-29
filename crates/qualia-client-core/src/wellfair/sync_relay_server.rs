@@ -103,7 +103,9 @@ fn json_response(code: u16, body: &SyncOpsBody) -> Response<std::io::Cursor<Vec<
     let json = serde_json::to_string(body).unwrap_or_else(|_| "{\"ops\":[]}".to_string());
     let header = Header::from_bytes(&b"Content-Type"[..], &b"application/json"[..])
         .expect("static header is valid");
-    Response::from_string(json).with_status_code(code).with_header(header)
+    Response::from_string(json)
+        .with_status_code(code)
+        .with_header(header)
 }
 
 fn text_response(code: u16, msg: &str) -> Response<std::io::Cursor<Vec<u8>>> {

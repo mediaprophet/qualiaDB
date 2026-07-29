@@ -1,8 +1,8 @@
 //! Affect proposals from MediaPipe-class blendshape proxies (no AffectNet weights).
 //! Always proposal-only with high uncertainty.
 
-use crate::biosense::consent::BiosenseConsent;
 use crate::biosense::affect::valence_arousal_proposal::AffectProposal;
+use crate::biosense::consent::BiosenseConsent;
 use crate::cv::error::CvError;
 
 /// Minimal blendshape subset (filled by mesh adapter when MediaPipe is wired).

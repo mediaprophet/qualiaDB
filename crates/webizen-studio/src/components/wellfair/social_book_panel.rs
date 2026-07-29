@@ -74,7 +74,9 @@ pub fn WellfairSocialBookPanel() -> Element {
     let mut loaded = use_signal(|| false);
 
     use_effect(move || {
-        if loaded() { return; }
+        if loaded() {
+            return;
+        }
         loaded.set(true);
         reload();
     });
@@ -161,7 +163,9 @@ pub fn WellfairSocialBookPanel() -> Element {
             .map(|days| {
                 let now = {
                     #[cfg(target_arch = "wasm32")]
-                    { js_sys::Date::now() as u64 / 1000 }
+                    {
+                        js_sys::Date::now() as u64 / 1000
+                    }
                     #[cfg(not(target_arch = "wasm32"))]
                     {
                         std::time::SystemTime::now()

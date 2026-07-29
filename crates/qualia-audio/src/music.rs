@@ -70,13 +70,12 @@ pub fn detect_onsets(
 /// integer-lag argmin. Allocates a per-call difference-function scratch (this is
 /// the batch convenience path; the zero-heap path is `features::pitch::yin_pitch`
 /// with a caller-owned scratch).
-pub fn estimate_f0_hz(
-    frame: &[f32],
-    sample_rate: u32,
-    min_hz: f32,
-    max_hz: f32,
-) -> PitchEstimate {
-    let unvoiced = PitchEstimate { frame: 0, f0_hz: 0.0, confidence: 0.0 };
+pub fn estimate_f0_hz(frame: &[f32], sample_rate: u32, min_hz: f32, max_hz: f32) -> PitchEstimate {
+    let unvoiced = PitchEstimate {
+        frame: 0,
+        f0_hz: 0.0,
+        confidence: 0.0,
+    };
     if frame.len() < 32 || sample_rate == 0 {
         return unvoiced;
     }
@@ -99,7 +98,12 @@ pub fn estimate_f0_hz(
 }
 
 /// Chroma-like 12-bin energy from log-mel (only if assumes_12tet).
-pub fn chroma12_from_mel(mel: &[f32], n_mel: usize, out: &mut [f32; 12], assumptions: MusicAssumptions) {
+pub fn chroma12_from_mel(
+    mel: &[f32],
+    n_mel: usize,
+    out: &mut [f32; 12],
+    assumptions: MusicAssumptions,
+) {
     out.fill(0.0);
     if !assumptions.assumes_12tet || n_mel == 0 {
         return; // abstain — leave zeros
@@ -216,8 +220,8 @@ pub fn propose_structure_segments(
             if w < out.len() {
                 let start_f = (seg_start * hop) as u64;
                 let end_f = (e_i * hop) as u64;
-                let me: f32 = energies[seg_start..e_i].iter().sum::<f32>()
-                    / (e_i - seg_start).max(1) as f32;
+                let me: f32 =
+                    energies[seg_start..e_i].iter().sum::<f32>() / (e_i - seg_start).max(1) as f32;
                 out[w] = StructureSegment {
                     start_frame: start_f,
                     end_frame: end_f,

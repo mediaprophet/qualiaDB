@@ -62,22 +62,19 @@ pub fn segment_contour(
     // Emit the current run as a note if it is long enough.
     // Returns Err on output overflow.
     // (Inlined as a closure would borrow the out slices mutably twice; use a macro-free helper.)
-    let mut flush = |start: usize,
-                     len: usize,
-                     sum: f64,
-                     notes: &mut usize|
-     -> Result<(), AudioError> {
-        if len >= min_note_frames {
-            if *notes >= cap {
-                return Err(AudioError::OutputBufferTooSmall);
+    let mut flush =
+        |start: usize, len: usize, sum: f64, notes: &mut usize| -> Result<(), AudioError> {
+            if len >= min_note_frames {
+                if *notes >= cap {
+                    return Err(AudioError::OutputBufferTooSmall);
+                }
+                out_start[*notes] = start;
+                out_len[*notes] = len;
+                out_pitch[*notes] = (sum / len as f64) as f32;
+                *notes += 1;
             }
-            out_start[*notes] = start;
-            out_len[*notes] = len;
-            out_pitch[*notes] = (sum / len as f64) as f32;
-            *notes += 1;
-        }
-        Ok(())
-    };
+            Ok(())
+        };
 
     for i in 0..n_points {
         let p = contour_bins[i];
@@ -134,8 +131,7 @@ mod tests {
         let mut start = [0usize; 4];
         let mut len = [0usize; 4];
         let mut pitch = [0.0f32; 4];
-        let n = segment_contour(&c, 12, 0.5, 2, &mut start, &mut len, &mut pitch)
-            .expect("segment");
+        let n = segment_contour(&c, 12, 0.5, 2, &mut start, &mut len, &mut pitch).expect("segment");
         assert_eq!(n, 2);
         assert_eq!(start[0], 0);
         assert_eq!(len[0], 6);
@@ -174,8 +170,7 @@ mod tests {
         let mut start = [0usize; 16];
         let mut len = [0usize; 16];
         let mut pitch = [0.0f32; 16];
-        let n = segment_contour(&c, 8, 0.5, 1, &mut start, &mut len, &mut pitch)
-            .expect("segment");
+        let n = segment_contour(&c, 8, 0.5, 1, &mut start, &mut len, &mut pitch).expect("segment");
         assert_eq!(n, 8, "each 1-cent-step frame is its own micro-note");
     }
 

@@ -27,7 +27,10 @@ pub fn evaluate_processing_act(consent: BiosenseConsent, act: ProcessingAct) -> 
     match (consent.purpose, act) {
         (_, ProcessingAct::MotionOnly) => PolicyDecision::Permit,
         (BiosensePurpose::SurveillancePolicy, ProcessingAct::FaceDetect) => PolicyDecision::Permit,
-        (BiosensePurpose::SurveillancePolicy, ProcessingAct::FaceEmbed | ProcessingAct::Identify1N) => {
+        (
+            BiosensePurpose::SurveillancePolicy,
+            ProcessingAct::FaceEmbed | ProcessingAct::Identify1N,
+        ) => {
             PolicyDecision::Forbid // identification needs stronger grant
         }
         (BiosensePurpose::Security, ProcessingAct::FaceEmbed | ProcessingAct::Identify1N) => {
@@ -40,9 +43,10 @@ pub fn evaluate_processing_act(consent: BiosenseConsent, act: ProcessingAct) -> 
         (BiosensePurpose::WellfairSelfMonitor | BiosensePurpose::Research, ProcessingAct::Rppg) => {
             PolicyDecision::Permit
         }
-        (BiosensePurpose::Research | BiosensePurpose::WellfairSelfMonitor, ProcessingAct::Affect) => {
-            PolicyDecision::Permit
-        }
+        (
+            BiosensePurpose::Research | BiosensePurpose::WellfairSelfMonitor,
+            ProcessingAct::Affect,
+        ) => PolicyDecision::Permit,
         (_, ProcessingAct::RecordStore) => {
             if consent.allow_store_template || consent.allow_graph_observation {
                 PolicyDecision::Permit

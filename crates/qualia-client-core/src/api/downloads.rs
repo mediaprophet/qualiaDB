@@ -2,10 +2,8 @@
 
 #![allow(non_snake_case)]
 
-
 use crate::state::*;
 use std::path::PathBuf;
-
 
 pub fn get_active_downloads() -> Vec<ProgressPayload> {
     let state = crate::state::APP_STATE.get().unwrap();
@@ -50,4 +48,3 @@ pub fn save_imported_accounts(accounts: serde_json::Value) -> Result<(), String>
     let json = serde_json::to_string_pretty(&accounts).map_err(|e| e.to_string())?;
     std::fs::write(imported_accounts_path(), json).map_err(|e| e.to_string())
 }
-

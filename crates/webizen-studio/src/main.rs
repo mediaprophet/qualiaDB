@@ -4,10 +4,10 @@ pub mod canvas_editor;
 pub mod canvas_graph;
 pub mod canvas_model;
 pub mod components;
-mod endpoints;
+pub mod endpoints;
 mod pane_generator;
 mod pane_registry;
-mod render;
+pub mod render;
 mod studio_canvas;
 pub mod telemetry;
 pub mod theme_engine;
@@ -196,6 +196,9 @@ pub enum Route {
     #[route("/logs")]
     LogsRoute {},
 
+    #[route("/agent-qa")]
+    AgentQaRoute {},
+
     #[route("/about")]
     AboutRoute {},
 
@@ -214,6 +217,7 @@ pub enum Route {
     #[route("/scene-interaction")]
     SceneInteractionRoute {},
 
+    /// Knowledge Nexus — research, claims and epistemic threads.
     #[route("/nexus")]
     NexusRoute {},
 
@@ -226,6 +230,7 @@ pub enum Route {
     #[route("/listen")]
     ListenRoute {},
 
+    /// Companion live-share consent requests (not chat or mail).
     #[route("/communications")]
     CommunicationsRoute {},
 
@@ -284,7 +289,7 @@ fn TalkRoute() -> Element {
     rsx! {
         div {
             style: "flex: 1; display: flex; flex-direction: column; overflow: hidden; min-height: 0;",
-            components::social_hub::SocialHub {}
+            components::relations::RelationsShell {}
         }
     }
 }
@@ -424,7 +429,7 @@ fn route_from_omnibox(query: &str) -> Route {
     let stash_talk_tab = |_tab: &str| {};
 
     match lower.as_str() {
-        "talk" | "chat" | "agent" => {
+        "talk" | "chat" | "agent" | "inbox" | "social" | "relations" => {
             stash_talk_tab("chat");
             return Route::TalkRoute {};
         }
@@ -436,12 +441,20 @@ fn route_from_omnibox(query: &str) -> Route {
             stash_talk_tab("reception");
             return Route::TalkRoute {};
         }
-        "mail" | "email" | "inbox" => {
+        "mail" | "email" => {
             stash_talk_tab("mail");
             return Route::TalkRoute {};
         }
         "projects" | "coop" | "cooperative" => {
             stash_talk_tab("projects");
+            return Route::TalkRoute {};
+        }
+        "requests" | "live-share" => {
+            stash_talk_tab("requests");
+            return Route::TalkRoute {};
+        }
+        "agreements" | "consent" => {
+            stash_talk_tab("agreements");
             return Route::TalkRoute {};
         }
         "keep" | "vault" => return Route::KeepRoute {},
@@ -456,9 +469,10 @@ fn route_from_omnibox(query: &str) -> Route {
         "vision" | "detect" | "overlay" => return Route::VisionRoute {},
         "listen" | "audio" | "ears" => return Route::ListenRoute {},
         "health" => return Route::HealthRoute {},
-        "social" | "nexus" => return Route::NexusRoute {},
+        "nexus" | "knowledge-nexus" => return Route::NexusRoute {},
         "qapps" | "apps" => return Route::QAppsRoute {},
         "logs" => return Route::LogsRoute {},
+        "qa" | "debug" | "diagnostics" | "agent-qa" => return Route::AgentQaRoute {},
         "identity" => return Route::IdentityRoute {},
         "sanctuary" => return Route::SanctuaryRoute {},
         _ => {}
@@ -549,10 +563,18 @@ fn NexusRoute() -> Element {
 
 #[component]
 fn LibraryRoute() -> Element {
+    let mode = components::experience_mode::use_experience_mode();
     rsx! {
         div {
-            style: "flex: 1; display: flex; flex-direction: column; overflow: hidden; padding: 2rem;",
-            components::wellfair::library_panel::WellfairLibraryPanel {}
+            style: "flex: 1; display: flex; flex-direction: column; overflow: hidden;",
+            if mode().is_advanced() {
+                div {
+                    style: "height:100%;padding:1rem;box-sizing:border-box;",
+                    components::wellfair::library_panel::WellfairLibraryPanel {}
+                }
+            } else {
+                components::wellfair::semantic_library::SemanticLibrary {}
+            }
         }
     }
 }
@@ -611,6 +633,7 @@ fn AnatomyRoute() -> Element {
             style: "flex: 1; display: flex; flex-direction: column; overflow: auto; padding: 2rem; gap: 2rem;",
             components::wellfair::WellfairScorecardPanel {}
             components::wellfair::WellfairAnatomy3dPanel {}
+            components::wellfair::WellfairComorbidityPanel {}
             components::wellfair::WellfairAnatomyPanel {}
         }
     }
@@ -728,6 +751,11 @@ fn SettingsRoute() -> Element {
 #[component]
 fn LogsRoute() -> Element {
     rsx! { DesktopLogsPage {} }
+}
+
+#[component]
+fn AgentQaRoute() -> Element {
+    rsx! { components::agent_qa_panel::AgentQaPanel {} }
 }
 
 #[component]
@@ -1358,6 +1386,7 @@ fn AppLayout() -> Element {
 
                 div {
                     style: "margin-left: auto; display: flex; align-items: center; gap: 0.5rem; padding-bottom: 0.55rem; flex-wrap: wrap; justify-content: flex-end;",
+                    components::experience_mode::ExperienceModeSwitch {}
                     // Context chip: principal posture · host · instrument backend
                     div {
                         style: "display: flex; align-items: center; gap: 0.4rem; border: 1px solid var(--qualia-border); background: rgba(139,92,246,0.08); border-radius: 999px; padding: 0.3rem 0.65rem; max-width: min(420px, 48vw);",
@@ -1419,7 +1448,7 @@ fn AppLayout() -> Element {
                         span { class: "app-sidebar-label", "Life domains" }
                         Link { to: Route::IdentityRoute {}, class: "nav-item", title: "Selfhood", sl-icon { "name": "person-badge" } "Selfhood" }
                         Link { to: Route::TalkRoute {}, class: "nav-item", title: "Relations — people & conversation", sl-icon { "name": "people" } "Relations" }
-                        Link { to: Route::LibraryRoute {}, class: "nav-item", title: "Lived Memory", sl-icon { "name": "collection" } "Lived Memory" }
+                        Link { to: Route::LibraryRoute {}, class: "nav-item", title: "Semantic Library", sl-icon { "name": "collection" } "Semantic Library" }
                         Link { to: Route::WellfairRoute {}, class: "nav-item", title: "Care", sl-icon { "name": "heart-pulse" } "Care" }
                         if crate::endpoints::supports_browser_pane() {
                             Link { to: Route::BrowserRoute {}, class: "nav-item", title: "World attention", sl-icon { "name": "globe2" } "World" }
@@ -1459,10 +1488,11 @@ fn AppLayout() -> Element {
                                 Link { to: Route::KeepRoute {}, class: "nav-item", "Legacy hub (Keep)" }
                                 Link { to: Route::DashboardRoute {}, class: "nav-item", "Overview (ops)" }
                                 Link { to: Route::AgencyRoute {}, class: "nav-item", "Agency" }
-                                Link { to: Route::CommunicationsRoute {}, class: "nav-item", "Mail" }
-                                Link { to: Route::NexusRoute {}, class: "nav-item", "People (Nexus)" }
+                                Link { to: Route::CommunicationsRoute {}, class: "nav-item", "Live-share requests" }
+                                Link { to: Route::NexusRoute {}, class: "nav-item", "Knowledge Nexus" }
                                 Link { to: Route::QAppsRoute {}, class: "nav-item", "QApps catalog" }
                                 Link { to: Route::LogsRoute {}, class: "nav-item", "Desktop logs" }
+                                Link { to: Route::AgentQaRoute {}, class: "nav-item", "Agent QA" }
                                 Link { to: Route::SupervisorRoute {}, class: "nav-item", "Operations" }
                                 Link { to: Route::StudioRoute {}, class: "nav-item", "QApp Studio" }
                                 Link { to: Route::ContextStudioRoute {}, class: "nav-item", "Context Studio" }
@@ -1487,6 +1517,9 @@ fn AppLayout() -> Element {
 #[component]
 fn App() -> Element {
     telemetry::use_telemetry();
+
+    let experience_mode = use_signal(components::experience_mode::initial_experience_mode);
+    use_context_provider(|| experience_mode);
 
     let theme_state = use_signal(|| {
         let catalog = theme_engine::builtin_theme_catalog();
@@ -1563,7 +1596,19 @@ fn App() -> Element {
 
         document::Style {
             "
-            * {{ box-sizing: border-box; }}
+            * {{
+                box-sizing: border-box;
+                scrollbar-width: thin;
+                scrollbar-color: color-mix(in srgb, var(--qualia-text-muted) 48%, transparent) transparent;
+            }}
+            *::-webkit-scrollbar {{ width: 8px; height: 8px; }}
+            *::-webkit-scrollbar-track {{ background: transparent; }}
+            *::-webkit-scrollbar-thumb {{
+                background: color-mix(in srgb, var(--qualia-text-muted) 48%, transparent);
+                border-radius: 999px;
+                border: 2px solid transparent;
+                background-clip: padding-box;
+            }}
             html {{ background: var(--qualia-bg, #070b14); }}
             body {{
                 margin: 0;
@@ -1588,6 +1633,7 @@ fn App() -> Element {
                 padding: 8px 12px;
                 font-size: 0.845rem;
                 font-weight: 500;
+                color: var(--qualia-text-muted);
                 text-decoration: none;
                 cursor: pointer;
             }}
@@ -1624,9 +1670,11 @@ fn App() -> Element {
                 overscroll-behavior: contain;
                 scrollbar-gutter: stable;
                 scrollbar-width: thin;
+                scrollbar-color: color-mix(in srgb, var(--qualia-text-muted) 45%, transparent) transparent;
                 padding: 12px 10px 42px;
             }}
             .app-sidebar-nav::-webkit-scrollbar {{ width: 8px; }}
+            .app-sidebar-nav::-webkit-scrollbar-track {{ background: transparent; }}
             .app-sidebar-nav::-webkit-scrollbar-thumb {{
                 background: color-mix(in srgb, var(--qualia-text-muted) 45%, transparent);
                 border-radius: 999px;

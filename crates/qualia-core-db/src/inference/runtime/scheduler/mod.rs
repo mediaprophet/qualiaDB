@@ -7,8 +7,7 @@ mod batch;
 mod request_table;
 
 pub use batch::{
-    RaggedBackendError, RaggedBatchItem, RaggedBatchOutput, RaggedBatchReceipt,
-    RaggedDecodeBackend,
+    RaggedBackendError, RaggedBatchItem, RaggedBatchOutput, RaggedBatchReceipt, RaggedDecodeBackend,
 };
 pub use request_table::{
     Admission, DecodeRoundError, RequestScheduler, RequestState, RequestView, SchedulerError,

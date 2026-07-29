@@ -234,7 +234,14 @@ mod tests {
 
     #[test]
     fn solid_stack_sources_resolve() {
-        for id in ["ldp", "acl", "solid-terms", "solid-oidc", "pim-space", "foaf"] {
+        for id in [
+            "ldp",
+            "acl",
+            "solid-terms",
+            "solid-oidc",
+            "pim-space",
+            "foaf",
+        ] {
             let src = resolve_bundled_ontology_source(id);
             assert!(
                 src.is_some(),

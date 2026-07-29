@@ -29,7 +29,12 @@ impl VolumetricRenderer {
     /// The surface is created from a raw window handle (HWND on Windows).
     /// Call `render()` to draw a frame; the swapchain present is automatic.
     #[cfg(all(not(target_arch = "wasm32"), feature = "qualia"))]
-    pub fn new_surface(hwnd: isize, width: u32, height: u32, particle_cap: usize) -> Result<Self, String> {
+    pub fn new_surface(
+        hwnd: isize,
+        width: u32,
+        height: u32,
+        particle_cap: usize,
+    ) -> Result<Self, String> {
         Ok(Self {
             inner: PortalGpu::new_surface(hwnd, width, height, particle_cap)?,
         })
@@ -50,8 +55,8 @@ impl VolumetricRenderer {
     /// Decode/allocation occurs once at this explicit asset boundary; the
     /// resulting vertex/index buffers use the normal zero-copy GPU draw path.
     pub fn upload_10d_mesh(&mut self, bytes: &[u8]) -> Result<u32, String> {
-        let mesh = qualia_core_db::container_10d::decode_mesh_section(bytes)
-            .map_err(|e| e.to_string())?;
+        let mesh =
+            qualia_core_db::container_10d::decode_mesh_section(bytes).map_err(|e| e.to_string())?;
         let mut indices = Vec::with_capacity(mesh.triangles.len() * 3);
         for triangle in &mesh.triangles {
             indices.extend_from_slice(triangle);
@@ -118,13 +123,7 @@ impl VolumetricRenderer {
         standpoint: &qualia_core_db::render::telemetry::ObserverStandpoint,
     ) -> Option<u32> {
         qualia_core_db::render::navigation::cpu_pick_node_at(
-            tensor,
-            canvas_w,
-            canvas_h,
-            pick_x,
-            pick_y,
-            yaw,
-            standpoint,
+            tensor, canvas_w, canvas_h, pick_x, pick_y, yaw, standpoint,
         )
     }
 
@@ -142,8 +141,8 @@ impl VolumetricRenderer {
         use qualia_core_db::tensor::Tensor10D;
 
         let mut bytes_mut = bytes.to_vec();
-        let header = Container10dHeader::parse(&bytes_mut)
-            .map_err(|e| format!("10d header: {e}"))?;
+        let header =
+            Container10dHeader::parse(&bytes_mut).map_err(|e| format!("10d header: {e}"))?;
         container_10d::verify_whole_file_crc32c(&mut bytes_mut)
             .map_err(|e| format!("10d CRC: {e}"))?;
         let descs = container_10d::parse_section_table(&bytes_mut, &header)
@@ -263,11 +262,7 @@ impl VolumetricRenderer {
     /// `[t_slice - t_window/2, t_slice + t_window/2]` time window. Returns
     /// the indices of nodes in the window, byte-identical to a linear-scan
     /// oracle.
-    pub fn temporal_scrub(
-        tensor: &[u8],
-        t_slice: f32,
-        t_window: f32,
-    ) -> Result<Vec<u32>, String> {
+    pub fn temporal_scrub(tensor: &[u8], t_slice: f32, t_window: f32) -> Result<Vec<u32>, String> {
         let count = qualia_core_db::tensor::buffer_export::tensor_node_count(tensor)
             .map_err(|e| e.to_string())?;
         let half = t_window * 0.5;
@@ -607,17 +602,35 @@ mod tests {
         write_tensor_buffer(&tensors, &mut buf).unwrap();
 
         let result = VolumetricRenderer::temporal_scrub(&buf, 5.0, 0.0).unwrap();
-        assert!(result.is_empty(), "zero-width window at t=5 should match no nodes");
+        assert!(
+            result.is_empty(),
+            "zero-width window at t=5 should match no nodes"
+        );
     }
 
     #[test]
     fn temporal_scrub_matches_linear_scan_oracle() {
-        use qualia_core_db::tensor::buffer_export::{read_tensor_at, tensor_node_count, write_tensor_buffer, TensorBufferHeader};
+        use qualia_core_db::tensor::buffer_export::{
+            read_tensor_at, tensor_node_count, write_tensor_buffer, TensorBufferHeader,
+        };
         use qualia_core_db::tensor::Tensor10D;
 
-        let tensors: Vec<Tensor10D> = (0..20).map(|i| {
-            Tensor10D::new(0.0, 0.0, 0.0, i as f32 * 0.1, 0.0, 0.0, i as f32 * 0.3, 1.0, 0.0, 0.0)
-        }).collect();
+        let tensors: Vec<Tensor10D> = (0..20)
+            .map(|i| {
+                Tensor10D::new(
+                    0.0,
+                    0.0,
+                    0.0,
+                    i as f32 * 0.1,
+                    0.0,
+                    0.0,
+                    i as f32 * 0.3,
+                    1.0,
+                    0.0,
+                    0.0,
+                )
+            })
+            .collect();
         let mut buf = vec![0u8; TensorBufferHeader::total_bytes(tensors.len())];
         write_tensor_buffer(&tensors, &mut buf).unwrap();
 
@@ -638,6 +651,9 @@ mod tests {
         }
 
         let result = VolumetricRenderer::temporal_scrub(&buf, t_slice, t_window).unwrap();
-        assert_eq!(result, oracle, "temporal_scrub must match linear-scan oracle");
+        assert_eq!(
+            result, oracle,
+            "temporal_scrub must match linear-scan oracle"
+        );
     }
 }

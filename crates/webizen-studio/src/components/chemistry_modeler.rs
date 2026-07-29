@@ -39,8 +39,9 @@ pub fn ChemistryModeler() -> Element {
             match invoke_json("calculate_chemistry_properties", args).await {
                 Ok(res) => match serde_json::from_value::<ChemistryProps>(res) {
                     Ok(parsed) => phase_for_resource.set(ChemPhase::Ready(parsed)),
-                    Err(e) => phase_for_resource
-                        .set(ChemPhase::Error(format!("Bad host payload: {e}"))),
+                    Err(e) => {
+                        phase_for_resource.set(ChemPhase::Error(format!("Bad host payload: {e}")))
+                    }
                 },
                 Err(e) => phase_for_resource.set(ChemPhase::Error(e)),
             }

@@ -85,7 +85,9 @@ pub fn self_monitor_pulse_evm(
     if !consent.may_process() {
         return PulseEvmResult::abstain(PulseAbstain::NoConsent, false);
     }
-    let fb = (width as usize).saturating_mul(height as usize).saturating_mul(3);
+    let fb = (width as usize)
+        .saturating_mul(height as usize)
+        .saturating_mul(3);
     if n_frames < MIN_FRAMES || fb == 0 {
         return PulseEvmResult::abstain(PulseAbstain::InsufficientFrames, false);
     }
@@ -122,29 +124,13 @@ pub fn self_monitor_pulse_evm(
     };
 
     let (means, used_evm) = match extract_roi_means(
-        consent,
-        rgb_frames,
-        n_frames,
-        width,
-        height,
-        fb,
-        roi,
-        fps,
-        use_evm,
+        consent, rgb_frames, n_frames, width, height, fb, roi, fps, use_evm,
     ) {
         Ok(v) => v,
         Err(PulseAbstain::EvmRefused) => {
             // Fall back without EVM if magnify path hard-failed buffer geometry.
             match extract_roi_means(
-                consent,
-                rgb_frames,
-                n_frames,
-                width,
-                height,
-                fb,
-                roi,
-                fps,
-                false,
+                consent, rgb_frames, n_frames, width, height, fb, roi, fps, false,
             ) {
                 Ok((m, _)) => (m, false),
                 Err(r) => return PulseEvmResult::abstain(r, false),
@@ -179,7 +165,8 @@ fn extract_roi_means(
         let mut cropped = vec![0u8; n_frames * crop_fb];
         for i in 0..n_frames {
             let src = &rgb_frames[i * fb..(i + 1) * fb];
-            let v = RgbView::new(width, height, width * 3, src).ok_or(PulseAbstain::BufferTooSmall)?;
+            let v =
+                RgbView::new(width, height, width * 3, src).ok_or(PulseAbstain::BufferTooSmall)?;
             crop_roi_rgb(v, roi, &mut cropped[i * crop_fb..(i + 1) * crop_fb]);
         }
         let mut magnified = vec![0u8; n_frames * crop_fb];
@@ -231,7 +218,8 @@ fn extract_roi_means(
     // Unmagnified ROI means.
     for i in 0..n_frames {
         let slice = &rgb_frames[i * fb..(i + 1) * fb];
-        let v = RgbView::new(width, height, width * 3, slice).ok_or(PulseAbstain::BufferTooSmall)?;
+        let v =
+            RgbView::new(width, height, width * 3, slice).ok_or(PulseAbstain::BufferTooSmall)?;
         let mut m = [0.0f32; 3];
         roi_mean_rgb(v, roi, &mut m);
         means[i * 3] = m[0];
@@ -272,13 +260,7 @@ mod tests {
     }
 
     /// Synthetic face-like frames: central warm patch + green pulse at `hr_bpm`.
-    fn synth_pulse_frames(
-        n: usize,
-        w: u32,
-        h: u32,
-        fps: f32,
-        hr_bpm: f32,
-    ) -> Vec<u8> {
+    fn synth_pulse_frames(n: usize, w: u32, h: u32, fps: f32, hr_bpm: f32) -> Vec<u8> {
         let fb = (w * h * 3) as usize;
         let mut frames = vec![40u8; n * fb];
         let f_hr = hr_bpm / 60.0;

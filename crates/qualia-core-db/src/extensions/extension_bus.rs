@@ -206,7 +206,7 @@ impl ExtensionBus {
 
 #[cfg(target_arch = "wasm32")]
 pub mod wasm_bus {
-    use serde::{Deserialize, Serialize};
+    use serde::Serialize;
     use std::cell::RefCell;
     use wasm_bindgen::prelude::*;
     use wasm_bindgen::JsCast;

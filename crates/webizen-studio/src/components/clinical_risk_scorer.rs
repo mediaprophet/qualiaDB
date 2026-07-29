@@ -46,7 +46,11 @@ pub fn ClinicalRiskScorer() -> Element {
     });
 
     let risk_props = risk_resource.read().clone().unwrap_or_default();
-    let cvd_risk_str = format!("{:.1}% ({})", risk_props.risk_percent, risk_props.category.replace("\"", ""));
+    let cvd_risk_str = format!(
+        "{:.1}% ({})",
+        risk_props.risk_percent,
+        risk_props.category.replace("\"", "")
+    );
     let score_color = if risk_props.risk_percent > 20.0 {
         "#ff4d4d"
     } else {

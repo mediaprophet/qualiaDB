@@ -545,7 +545,10 @@ fn read_messages_jsonl(path: &Path) -> Result<Vec<ChatMessage>, ChatError> {
     Ok(messages)
 }
 
-fn load_environment_or_default(storage_root: &Path, id: &str) -> Result<ChatEnvironment, ChatError> {
+fn load_environment_or_default(
+    storage_root: &Path,
+    id: &str,
+) -> Result<ChatEnvironment, ChatError> {
     let env_path = environment_path(storage_root, id);
     if !env_path.is_file() {
         return Ok(ChatEnvironment::default_for_session(id, storage_root));

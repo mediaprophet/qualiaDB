@@ -95,7 +95,10 @@ fn stroke_rect_rgba8(
     // Horizontal edges
     for dy in 0..t {
         let yt = y0.saturating_add(dy).min(h.saturating_sub(1));
-        let yb = y1.saturating_sub(1).saturating_sub(dy).min(h.saturating_sub(1));
+        let yb = y1
+            .saturating_sub(1)
+            .saturating_sub(dy)
+            .min(h.saturating_sub(1));
         for x in x0..x1 {
             put_rgba(w, rgba, x, yt, color);
             put_rgba(w, rgba, x, yb, color);
@@ -104,7 +107,10 @@ fn stroke_rect_rgba8(
     // Vertical edges
     for dx in 0..t {
         let xl = x0.saturating_add(dx).min(w.saturating_sub(1));
-        let xr = x1.saturating_sub(1).saturating_sub(dx).min(w.saturating_sub(1));
+        let xr = x1
+            .saturating_sub(1)
+            .saturating_sub(dx)
+            .min(w.saturating_sub(1));
         for y in y0..y1 {
             put_rgba(w, rgba, xl, y, color);
             put_rgba(w, rgba, xr, y, color);

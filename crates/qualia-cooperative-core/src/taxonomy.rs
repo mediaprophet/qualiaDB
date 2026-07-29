@@ -205,7 +205,9 @@ mod tests {
         );
         assert!(tax.contains("urn:custom:role:beekeeping-steward"));
         assert_eq!(
-            tax.get("urn:custom:role:beekeeping-steward").unwrap().sphere(),
+            tax.get("urn:custom:role:beekeeping-steward")
+                .unwrap()
+                .sphere(),
             Sphere::Personhood
         );
     }
@@ -220,7 +222,9 @@ mod tests {
     fn sphere_defaults_to_personhood() {
         assert_eq!(TaxonomyTerm::new("urn:x", "X").sphere(), Sphere::Personhood);
         assert_eq!(
-            TaxonomyTerm::new("urn:x", "X").with_attr("sphere", "selfhood").sphere(),
+            TaxonomyTerm::new("urn:x", "X")
+                .with_attr("sphere", "selfhood")
+                .sphere(),
             Sphere::Selfhood
         );
     }

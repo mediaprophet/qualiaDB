@@ -293,7 +293,9 @@ mod tests {
         let bob = ChatMeshService::spawn(b_mesh);
 
         let env = envelope("hello Bob, over the SocialWebNet");
-        alice.publish(vec!["did:wf:bob".to_string()], env.clone()).unwrap();
+        alice
+            .publish(vec!["did:wf:bob".to_string()], env.clone())
+            .unwrap();
 
         let (from, got) = bob
             .recv_timeout(Duration::from_secs(3))

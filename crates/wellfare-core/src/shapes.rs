@@ -1,8 +1,8 @@
+use crate::rdf::generate_rdf_prefixes;
 /// SHACL-equivalent validation constraints expressed as SPARQL ASK queries.
 /// Each shape returns true = violation found (use RDFS/SHACL semantics,
 /// NOT OWL class membership — people are described by constraints, not ontological types).
 use crate::store::HealthStore;
-use crate::rdf::generate_rdf_prefixes;
 
 pub struct ShapeViolation {
     pub shape_id: &'static str,
@@ -70,7 +70,12 @@ impl ValidationReport {
         let v: Vec<String> = self
             .violations
             .iter()
-            .map(|v| format!("{{\"shape\":\"{}\",\"message\":\"{}\"}}", v.shape_id, v.message))
+            .map(|v| {
+                format!(
+                    "{{\"shape\":\"{}\",\"message\":\"{}\"}}",
+                    v.shape_id, v.message
+                )
+            })
             .collect();
         format!(
             "{{\"valid\":{},\"checked\":{},\"violations\":[{}]}}",
@@ -113,7 +118,12 @@ mod tests {
         let ttl = "<urn:health:sleep:ok> a <http://hl7.org/fhir/Observation> ; \
                    <https://health.example.org/ns#sleepEfficiency> 78 .";
         let report = validate_turtle(ttl);
-        assert!(!report.violations.iter().any(|v| v.shape_id == "sleep:efficiency-range"));
+        assert!(
+            !report
+                .violations
+                .iter()
+                .any(|v| v.shape_id == "sleep:efficiency-range")
+        );
     }
 
     #[test]
@@ -121,6 +131,11 @@ mod tests {
         let ttl = "<urn:health:sleep:bad> a <http://hl7.org/fhir/Observation> ; \
                    <https://health.example.org/ns#sleepEfficiency> 150 .";
         let report = validate_turtle(ttl);
-        assert!(report.violations.iter().any(|v| v.shape_id == "sleep:efficiency-range"));
+        assert!(
+            report
+                .violations
+                .iter()
+                .any(|v| v.shape_id == "sleep:efficiency-range")
+        );
     }
 }

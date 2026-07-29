@@ -13,9 +13,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use serde::{Deserialize, Serialize};
 
 use crate::webizen_trust::{self, TrustStore, TrustVerdict};
-use crate::wellfair::cml_context::{
-    build_document_context, units_from_headings, ContextUnit,
-};
+use crate::wellfair::cml_context::{build_document_context, units_from_headings, ContextUnit};
 use crate::wellfair::hypermedia_store::{
     CommonsVisibility, HypermediaStore, LibraryEntry, LibrarySection,
 };
@@ -129,7 +127,9 @@ pub fn agent_tls_status(storage_root: &Path) -> AgentTlsStatus {
 }
 
 /// Build reqwest client: custom roots when enabled PEMs present; else system default.
-pub fn build_agent_http_client(storage_root: &Path) -> Result<(reqwest::Client, AgentTlsStatus), String> {
+pub fn build_agent_http_client(
+    storage_root: &Path,
+) -> Result<(reqwest::Client, AgentTlsStatus), String> {
     use crate::webizen_x509::{agent_tls_mode, root_cert_store_from_trust, AgentTlsMode};
     let store = TrustStore::load(storage_root);
     let status = agent_tls_status(storage_root);
@@ -141,9 +141,11 @@ pub fn build_agent_http_client(storage_root: &Path) -> Result<(reqwest::Client, 
         AgentTlsMode::CustomRootsOnly { n_roots } => {
             // Custom-only: tls_certs_only() disables platform roots (reqwest 0.13).
             let mut certs: Vec<reqwest::Certificate> = Vec::new();
-            for a in store.anchors.iter().filter(|a| {
-                a.enabled && a.kind == webizen_trust::AnchorKind::PemRoot
-            }) {
+            for a in store
+                .anchors
+                .iter()
+                .filter(|a| a.enabled && a.kind == webizen_trust::AnchorKind::PemRoot)
+            {
                 match reqwest::Certificate::from_pem(a.material.as_bytes()) {
                     Ok(cert) => certs.push(cert),
                     Err(_) => {
@@ -159,9 +161,7 @@ pub fn build_agent_http_client(storage_root: &Path) -> Result<(reqwest::Client, 
                 }
             }
             if certs.is_empty() {
-                return Err(
-                    "enabled PEM roots present but none parsed into certificates".into(),
-                );
+                return Err("enabled PEM roots present but none parsed into certificates".into());
             }
             let added = certs.len();
             let _ = root_cert_store_from_trust(&store); // validate same path as B
@@ -199,10 +199,17 @@ fn der_to_pem_cert(der: &[u8]) -> String {
 
 /// Fetch page body (best-effort HTML → text). Aligns TLS policy with trust store when possible.
 pub async fn fetch_page_text(url: &str) -> Result<String, String> {
-    fetch_page_text_with_storage(url, &std::path::PathBuf::from(crate::state::dirs_default_path())).await
+    fetch_page_text_with_storage(
+        url,
+        &std::path::PathBuf::from(crate::state::dirs_default_path()),
+    )
+    .await
 }
 
-pub async fn fetch_page_text_with_storage(url: &str, storage_root: &Path) -> Result<String, String> {
+pub async fn fetch_page_text_with_storage(
+    url: &str,
+    storage_root: &Path,
+) -> Result<String, String> {
     let u = url.trim();
     if u.starts_with("qualia://") || u.starts_with("webizen://") {
         return Ok(format!(
@@ -477,7 +484,10 @@ mod tests {
 
     #[test]
     fn intent_classify() {
-        assert_eq!(classify_intent("Is this trusted?"), BrowserAgentIntent::Trust);
+        assert_eq!(
+            classify_intent("Is this trusted?"),
+            BrowserAgentIntent::Trust
+        );
         assert_eq!(
             classify_intent("Privacy signals?"),
             BrowserAgentIntent::Privacy

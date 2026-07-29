@@ -58,4 +58,3 @@ pub fn wellfair_vote_guardianship_proposal(
         serde_json::to_string(&view).map_err(|e| e.to_string())
     })?
 }
-

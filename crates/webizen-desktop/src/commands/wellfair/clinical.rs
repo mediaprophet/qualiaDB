@@ -202,8 +202,8 @@ pub fn wellfair_add_government_letter_attachment_from_path(
         let host = guard
             .as_mut()
             .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-        let entry = host.add_government_letter_attachment(&sender, &subject, action_required, &bytes)?;
+        let entry =
+            host.add_government_letter_attachment(&sender, &subject, action_required, &bytes)?;
         serde_json::to_string(&entry).map_err(|e| e.to_string())
     })?
 }
-

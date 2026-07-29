@@ -2,11 +2,11 @@
 
 pub mod browser;
 pub mod commands;
-pub mod mic_capture;
 pub mod companion_gateway;
 pub mod desktop_log;
 pub mod mcp_server;
 pub mod med_reminder_notifier;
+pub mod mic_capture;
 pub mod native_surface;
 pub mod runtime;
 pub mod settings_server;

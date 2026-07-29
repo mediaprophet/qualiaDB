@@ -45,4 +45,3 @@ pub fn wellfair_ledger_entries(app: AppHandle, limit: Option<usize>) -> Result<S
         serde_json::to_string(&entries).map_err(|e| e.to_string())
     })?
 }
-

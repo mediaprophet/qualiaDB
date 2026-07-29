@@ -320,4 +320,3 @@ pub async fn render_preview_tick(app: &AppHandle) -> Result<(), String> {
     let _ = app.emit("render-preview-ready", ());
     Ok(())
 }
-

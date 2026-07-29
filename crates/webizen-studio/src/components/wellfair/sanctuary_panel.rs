@@ -34,7 +34,12 @@ pub fn WellfairSanctuaryPanel() -> Element {
             if let Ok(list) = fetch_health_records(48).await {
                 let notes: Vec<_> = list
                     .into_iter()
-                    .filter(|r| matches!(r.kind.as_str(), "sanctuary_note" | "therapy_note" | "welfare_case"))
+                    .filter(|r| {
+                        matches!(
+                            r.kind.as_str(),
+                            "sanctuary_note" | "therapy_note" | "welfare_case"
+                        )
+                    })
                     .collect();
                 ui.write().records = notes;
             }
@@ -42,7 +47,9 @@ pub fn WellfairSanctuaryPanel() -> Element {
     };
 
     use_effect(move || {
-        if loaded() { return; }
+        if loaded() {
+            return;
+        }
         loaded.set(true);
         reload();
     });
@@ -232,7 +239,9 @@ pub fn WellfairSanctuaryVaultPanel() -> Element {
     let mut vault_loaded = use_signal(|| false);
 
     use_effect(move || {
-        if vault_loaded() { return; }
+        if vault_loaded() {
+            return;
+        }
         vault_loaded.set(true);
         spawn(async move {
             if let Ok(c) = sanctuary_vault_configured().await {

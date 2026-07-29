@@ -39,7 +39,9 @@ pub fn WellfairDecoyRetentionPanel(real_pin: String) -> Element {
     let mut init_done = use_signal(|| false);
 
     use_effect(move || {
-        if init_done() { return; }
+        if init_done() {
+            return;
+        }
         init_done.set(true);
         spawn(async move {
             let pin = real_pin();

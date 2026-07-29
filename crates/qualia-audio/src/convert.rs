@@ -53,7 +53,8 @@ fn sample_at(view: AudioView<'_>, off: usize) -> f32 {
             if off + 2 >= b.len() {
                 return 0.0;
             }
-            let v = (b[off] as i32) | ((b[off + 1] as i32) << 8) | ((b[off + 2] as i8 as i32) << 16);
+            let v =
+                (b[off] as i32) | ((b[off + 1] as i32) << 8) | ((b[off + 2] as i8 as i32) << 16);
             v as f32 / 8388608.0
         }
     }

@@ -161,10 +161,16 @@ pub fn lookup_cifar100_class_by_id(id: u32) -> Option<(&'static str, &'static st
 
 /// Resolve a CIFAR-10 or CIFAR-100 display name by its deterministic FNV-1a class hash.
 pub fn lookup_cifar_class_by_hash(class_hash: u64) -> Option<&'static str> {
-    if let Some((name, _)) = CIFAR_10_CLASSES.iter().find(|(name, _)| q_hash(name) == class_hash) {
+    if let Some((name, _)) = CIFAR_10_CLASSES
+        .iter()
+        .find(|(name, _)| q_hash(name) == class_hash)
+    {
         return Some(*name);
     }
-    if let Some((name, _, _)) = CIFAR_100_CLASSES.iter().find(|(name, _, _)| q_hash(name) == class_hash) {
+    if let Some((name, _, _)) = CIFAR_100_CLASSES
+        .iter()
+        .find(|(name, _, _)| q_hash(name) == class_hash)
+    {
         return Some(*name);
     }
     None

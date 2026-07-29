@@ -53,4 +53,3 @@ pub fn wellfair_unlock_sanctuary(app: AppHandle, pin: String) -> Result<String, 
         serde_json::to_string(&prefs).map_err(|e| e.to_string())
     })?
 }
-

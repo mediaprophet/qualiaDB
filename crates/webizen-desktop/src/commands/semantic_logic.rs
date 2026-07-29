@@ -2,13 +2,12 @@
 
 #![allow(non_snake_case)]
 
-
 // ── Handler registration ──────────────────────────────────────────────────────
 
 #[tauri::command]
 pub fn fetch_domain_ontology(domain_id: String) -> Result<String, String> {
     let compiler = qualia_semantic_library::ontology::OntologyCompiler::new(
-        std::path::PathBuf::from("c:/Projects/qualia-27062026/cache/ontologies")
+        std::path::PathBuf::from("c:/Projects/qualia-27062026/cache/ontologies"),
     );
     compiler.fetch_domain_ontology(&domain_id)
 }
@@ -60,7 +59,9 @@ pub struct EvaluateLogicRulesOutput {
 }
 
 #[tauri::command]
-pub fn evaluate_logic_rules(input: EvaluateLogicRulesInput) -> Result<EvaluateLogicRulesOutput, String> {
+pub fn evaluate_logic_rules(
+    input: EvaluateLogicRulesInput,
+) -> Result<EvaluateLogicRulesOutput, String> {
     use qualia_core_db::modalities::logic::rules::RuleEngine;
     use qualia_core_db::NQuin;
 
@@ -97,4 +98,3 @@ pub fn evaluate_logic_rules(input: EvaluateLogicRulesInput) -> Result<EvaluateLo
         results: dto_results,
     })
 }
-

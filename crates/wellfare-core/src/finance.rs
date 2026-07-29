@@ -97,7 +97,10 @@ pub fn derived_balance(entries: &[LedgerEntry]) -> BalanceReport {
     let unique = merge_ledger(entries, &[]);
     let mut by_currency: Vec<CurrencyBalance> = Vec::new();
     for entry in &unique {
-        match by_currency.iter_mut().find(|c| c.currency == entry.currency) {
+        match by_currency
+            .iter_mut()
+            .find(|c| c.currency == entry.currency)
+        {
             Some(bal) => {
                 bal.net_cents += entry.amount_cents;
                 bal.entry_count += 1;
@@ -191,7 +194,11 @@ mod tests {
         let a = vec![entry("e1", 1000, "AUD", 1), entry("e2", -500, "AUD", 2)];
         let dup = vec![entry("e1", 1000, "AUD", 1)]; // replayed frame
         let merged = merge_ledger(&a, &dup);
-        assert_eq!(merged.len(), 2, "duplicate id must not create a second entry");
+        assert_eq!(
+            merged.len(),
+            2,
+            "duplicate id must not create a second entry"
+        );
     }
 
     #[test]
@@ -211,10 +218,18 @@ mod tests {
         let merged = merge_ledger(&a, &incoming);
         let bal = derived_balance(&merged);
         assert_eq!(bal.total_entries, 3);
-        let aud = bal.by_currency.iter().find(|c| c.currency == "AUD").unwrap();
+        let aud = bal
+            .by_currency
+            .iter()
+            .find(|c| c.currency == "AUD")
+            .unwrap();
         assert_eq!(aud.net_cents, 7_500);
         assert_eq!(aud.entry_count, 2);
-        let usd = bal.by_currency.iter().find(|c| c.currency == "USD").unwrap();
+        let usd = bal
+            .by_currency
+            .iter()
+            .find(|c| c.currency == "USD")
+            .unwrap();
         assert_eq!(usd.net_cents, 5000);
 
         // Order independence: balance is identical if we merge the other way round.

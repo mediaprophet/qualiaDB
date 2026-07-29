@@ -33,7 +33,11 @@ pub fn pitch_filter(
     if window < 3 {
         return Err(AudioError::InvalidParameter);
     }
-    let win = if window.is_multiple_of(2) { window + 1 } else { window };
+    let win = if window.is_multiple_of(2) {
+        window + 1
+    } else {
+        window
+    };
     if out.len() < track.len() || scratch.len() < win {
         return Err(AudioError::OutputBufferTooSmall);
     }
@@ -111,7 +115,11 @@ mod tests {
         let mut scratch = [0.0f32; 8];
         let n = pitch_filter(&track, &mut out, 3, &mut scratch).expect("filter");
         assert_eq!(n, 5);
-        assert!((out[2] - 220.0).abs() < 1.0, "octave not removed: {}", out[2]);
+        assert!(
+            (out[2] - 220.0).abs() < 1.0,
+            "octave not removed: {}",
+            out[2]
+        );
         // Steady values untouched.
         for i in [0usize, 1, 3, 4] {
             assert!((out[i] - 220.0).abs() < 1.0, "out[{i}]={}", out[i]);
@@ -124,7 +132,11 @@ mod tests {
         let mut out = [0.0f32; 5];
         let mut scratch = [0.0f32; 8];
         pitch_filter(&track, &mut out, 3, &mut scratch).expect("filter");
-        assert!((out[2] - 330.0).abs() < 1.0, "low octave not raised: {}", out[2]);
+        assert!(
+            (out[2] - 330.0).abs() < 1.0,
+            "low octave not raised: {}",
+            out[2]
+        );
     }
 
     #[test]
@@ -134,7 +146,11 @@ mod tests {
         let mut out = [0.0f32; 5];
         let mut scratch = [0.0f32; 8];
         pitch_filter(&track, &mut out, 3, &mut scratch).expect("filter");
-        assert!((out[2] - 200.0).abs() < 1.0, "outlier not snapped: {}", out[2]);
+        assert!(
+            (out[2] - 200.0).abs() < 1.0,
+            "outlier not snapped: {}",
+            out[2]
+        );
     }
 
     #[test]

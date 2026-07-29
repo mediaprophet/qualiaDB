@@ -155,12 +155,7 @@ mod tests {
             measured_runs: 5,
             median_tok_s: 100.0,
             p95_ms_per_token: 11.0,
-            receipt: ExecutionReceipt::new(
-                BackendKind::Cuda,
-                BackendKind::Cuda,
-                "model",
-                "plan",
-            ),
+            receipt: ExecutionReceipt::new(BackendKind::Cuda, BackendKind::Cuda, "model", "plan"),
         };
         manifest.decode_policy.clear();
         assert_eq!(manifest.validate(), Err("decode policy is required"));

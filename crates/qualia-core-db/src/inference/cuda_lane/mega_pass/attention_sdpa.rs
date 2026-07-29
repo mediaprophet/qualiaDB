@@ -1,11 +1,11 @@
 //! Paged attention schedule selection for the mega pass.
 
-use super::attention_stage::{AttentionSpec, AttentionViews};
 use super::super::device::MultiWeightDevice;
 use super::super::paged_attention::{
-    PAGED_GQA_SEGMENTED_MERGE_ENTRY, PAGED_GQA_SEGMENTED_PARTIAL_ENTRY,
-    PAGED_GQA_SEGMENTED_SRC, PAGED_GQA_TILED_ENTRY, PAGED_GQA_TILED_SRC,
+    PAGED_GQA_SEGMENTED_MERGE_ENTRY, PAGED_GQA_SEGMENTED_PARTIAL_ENTRY, PAGED_GQA_SEGMENTED_SRC,
+    PAGED_GQA_TILED_ENTRY, PAGED_GQA_TILED_SRC,
 };
+use super::attention_stage::{AttentionSpec, AttentionViews};
 use crate::wgsl_forge::execute::CudaPipeline;
 use crate::wgsl_forge::Schedule;
 
@@ -87,11 +87,7 @@ pub(super) fn dispatch_sdpa(
         &[0, 1, 2],
     )?;
     if let Err(error) = merge.dispatch_async_sorted(
-        &[
-            views.attention_partials,
-            views.attention,
-            views.sdpa_params,
-        ],
+        &[views.attention_partials, views.attention, views.sdpa_params],
         schedule,
         spec.n_head.saturating_mul(256),
     ) {
@@ -109,4 +105,3 @@ fn compile<'a>(
 ) -> Option<CudaPipeline<'a>> {
     CudaPipeline::compile_cuda_c_source_cached(&dev.ctx, source, entry, bindings).ok()
 }
-

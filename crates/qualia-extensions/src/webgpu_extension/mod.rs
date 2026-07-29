@@ -20,8 +20,8 @@
 //! present.
 
 use crate::{
-    Extension, ExtensionCapability, ExtensionError, ExtensionJob, ExtensionResult,
-    NQuin, ResourceRequirements,
+    Extension, ExtensionCapability, ExtensionError, ExtensionJob, ExtensionResult, NQuin,
+    ResourceRequirements,
 };
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
@@ -316,7 +316,11 @@ impl WebGpuExtension {
                 object: (result.convergence_info.final_residual as f64 * 1_000_000.0) as u64,
                 context: crate::q_hash("webgpu:convergence"),
                 metadata: ((result.convergence_info.iterations_used as u64) << 32)
-                    | (if result.convergence_info.converged { 1 } else { 0 }),
+                    | (if result.convergence_info.converged {
+                        1
+                    } else {
+                        0
+                    }),
                 parity: 0,
             },
             NQuin {
@@ -442,7 +446,9 @@ mod tests {
         let cap = ext.capability();
         assert_eq!(cap.name, "webgpu");
         assert_eq!(cap.version, "2.0.0");
-        assert!(cap.supported_operations.contains(&"simulate_fluid".to_string()));
+        assert!(cap
+            .supported_operations
+            .contains(&"simulate_fluid".to_string()));
         // GPU is optional now: the CPU reference path runs without one.
         assert!(!cap.required_resources.requires_gpu);
     }
@@ -464,7 +470,10 @@ mod tests {
             assert!(res.success, "{op} did not succeed");
             assert!(!res.result_quins.is_empty(), "{op} produced no quins");
             assert!(
-                res.metadata.get("tflops").map(|s| s != "0").unwrap_or(false),
+                res.metadata
+                    .get("tflops")
+                    .map(|s| s != "0")
+                    .unwrap_or(false),
                 "{op} reported no measured throughput"
             );
         }

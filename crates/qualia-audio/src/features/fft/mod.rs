@@ -5,12 +5,12 @@
 //! - [`real_fft_magnitude`]: real-input forward FFT → `N/2+1` magnitudes.
 //! - [`ifft_to_real`]: inverse FFT → real time-domain samples (ISTFT helper).
 
-pub mod radix2;
-pub mod mixed_radix;
-pub mod real_fft;
 pub mod inverse;
+pub mod mixed_radix;
+pub mod radix2;
+pub mod real_fft;
 
-pub use radix2::fft_radix2;
-pub use mixed_radix::dft_direct;
-pub use real_fft::real_fft_magnitude;
 pub use inverse::ifft_to_real;
+pub use mixed_radix::dft_direct;
+pub use radix2::fft_radix2;
+pub use real_fft::real_fft_magnitude;

@@ -73,7 +73,8 @@ fn manifest_content_hash(manifest_json: &str) -> u64 {
 }
 
 pub fn undo_frame_snapshot_path(storage_path: &str, frame_seq: u64) -> std::path::PathBuf {
-    std::path::PathBuf::from(storage_path).join(format!("{UNDO_FRAME_SNAPSHOT_PREFIX}{frame_seq}.json"))
+    std::path::PathBuf::from(storage_path)
+        .join(format!("{UNDO_FRAME_SNAPSHOT_PREFIX}{frame_seq}.json"))
 }
 
 pub fn revision_snapshot_path(storage_path: &str, revision: u64) -> std::path::PathBuf {
@@ -118,10 +119,7 @@ fn count_existing_undo_frames(wal_path: &std::path::Path) -> u64 {
         return 0;
     };
     let undo_pred = q_hash(PREDICATE_UNDO_FRAME);
-    quins
-        .iter()
-        .filter(|q| q.predicate == undo_pred)
-        .count() as u64
+    quins.iter().filter(|q| q.predicate == undo_pred).count() as u64
 }
 
 fn build_undo_frame_quin(frame_seq: u64, stack_index: u16, manifest_json: &str) -> NQuin {
@@ -129,8 +127,7 @@ fn build_undo_frame_quin(frame_seq: u64, stack_index: u16, manifest_json: &str) 
     let predicate = q_hash(PREDICATE_UNDO_FRAME);
     let object = manifest_content_hash(manifest_json);
     let context = author_context_hash();
-    let metadata =
-        ((frame_seq & LAMPORT_MASK) << LAMPORT_SHIFT) | ((stack_index as u64) & 0xFFFF);
+    let metadata = ((frame_seq & LAMPORT_MASK) << LAMPORT_SHIFT) | ((stack_index as u64) & 0xFFFF);
     let parity = subject ^ predicate ^ object ^ context ^ metadata;
     NQuin {
         subject,
@@ -196,10 +193,7 @@ fn count_existing_deploys(wal_path: &std::path::Path) -> u64 {
         return 0;
     };
     let deploy_pred = q_hash(PREDICATE_DEPLOY);
-    quins
-        .iter()
-        .filter(|q| q.predicate == deploy_pred)
-        .count() as u64
+    quins.iter().filter(|q| q.predicate == deploy_pred).count() as u64
 }
 
 /// Append deploy + pane placement Quins for a saved workspace manifest.
@@ -209,8 +203,7 @@ pub fn append_workspace_deploy(storage_path: &str, manifest_json: &str) -> Resul
     let wal_path = studio_wal_path(storage_path);
     let revision = count_existing_deploys(&wal_path) + 1;
 
-    let mut wal =
-        WriteAheadLog::open(&wal_path).map_err(|e| format!("wal open: {e}"))?;
+    let mut wal = WriteAheadLog::open(&wal_path).map_err(|e| format!("wal open: {e}"))?;
     wal.append_mutation(&build_deploy_quin(revision, manifest_json))
         .map_err(|e| format!("wal deploy append: {e}"))?;
 
@@ -253,8 +246,12 @@ pub fn append_undo_frame(
     std::fs::rename(&tmp, &snap_path).map_err(|e| e.to_string())?;
 
     let mut wal = WriteAheadLog::open(&wal_path).map_err(|e| format!("wal open: {e}"))?;
-    wal.append_mutation(&build_undo_frame_quin(frame_seq, stack_index, manifest_json))
-        .map_err(|e| format!("wal undo append: {e}"))?;
+    wal.append_mutation(&build_undo_frame_quin(
+        frame_seq,
+        stack_index,
+        manifest_json,
+    ))
+    .map_err(|e| format!("wal undo append: {e}"))?;
 
     prune_old_undo_snapshots(storage_path, frame_seq)?;
     Ok(frame_seq)

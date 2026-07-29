@@ -20,7 +20,12 @@ pub fn wellfair_host_snapshot(
             })
             .unwrap_or_else(|| "Owner vault".to_string());
         let storage_root = std::path::PathBuf::from(
-            app_state_arc.config.lock().map_err(|e| e.to_string())?.storage_path.clone(),
+            app_state_arc
+                .config
+                .lock()
+                .map_err(|e| e.to_string())?
+                .storage_path
+                .clone(),
         );
         let snapshot = if let Some(host) = guard.as_mut() {
             host.build_snapshot(&kv, &owner_label)
@@ -38,10 +43,7 @@ pub fn wellfair_host_snapshot(
 }
 
 #[command]
-pub fn wellfair_save_accessibility(
-    app: AppHandle,
-    prefs_json: String,
-) -> Result<String, String> {
+pub fn wellfair_save_accessibility(app: AppHandle, prefs_json: String) -> Result<String, String> {
     let prefs: qualia_client_core::wellfair::host_state::AccessibilityPreferences =
         serde_json::from_str(&prefs_json).map_err(|e| format!("invalid prefs JSON: {e}"))?;
     let state = app.state::<HostApiState>();
@@ -138,4 +140,3 @@ pub fn wellfair_ingest_companion_health(
         serde_json::to_string(&report).map_err(|e| e.to_string())
     })?
 }
-

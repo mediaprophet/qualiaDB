@@ -1,7 +1,7 @@
 ---
 created: 2026-06-30
-updated: 2026-07-03
-update_scope: Comprehensive
+updated: 2026-07-29
+update_scope: Minor
 ---
 
 # plans Index
@@ -40,10 +40,13 @@ Webizen, inference, rendering, desktop/QApps, and supporting compute infrastruct
 - `phone-console.md`: Mobile/phone console, linking, storage, and interaction plan.
 - `sprint-inference-handover-native-viewport.md`: Inference and native viewport sprint handover.
 - `wasm-viewport-migration-plan.md`: Detailed migration plan for the WASM/native 10D viewport.
+- `webizen-0.0.28-naturalised-desktop-implementation.md`: Implemented natural/technical
+  desktop UX, setup, relations, spatial interfaces, and agent-QA verification contract.
 - `wellfair-webizen-desktop/`: Multi-document WellFair/Webizen desktop implementation plan.
 
 ## Changelog
 
+- **2026-07-29**: Added the 0.0.28 naturalised desktop implementation and verification handoff.
 - **2026-07-03**: Expanded the visual/3D plan after a repository capability audit with the
   existing GLB-to-Q42 path, compiled geometry and analysis sidecars, fidelity/assurance tiers,
   and engineering/biological digital-twin phases.

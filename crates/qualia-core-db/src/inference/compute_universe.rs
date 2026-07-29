@@ -10,7 +10,9 @@
 //! One physical `wgpu::Device` (`gpu_context::shared_gpu`); logical parallelism via queues + rings.
 
 use core::cell::UnsafeCell;
-use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
+#[cfg(not(target_arch = "wasm32"))]
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::{AtomicU32, Ordering};
 
 #[cfg(not(target_arch = "wasm32"))]
 use std::thread;

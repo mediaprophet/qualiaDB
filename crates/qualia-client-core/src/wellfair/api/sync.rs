@@ -1,12 +1,10 @@
 //! Sync-operation protocol + transport
 
-
 use super::super::journal::JournalEntry;
 use super::super::sync_outbox::{SyncOutbox, SyncOutboxEntry, SyncOutboxState};
-use super::super::sync_transport::SyncTransport;
 use super::super::sync_protocol::{AdmitOutcome, InboxRecord, SyncInbox, SyncOperation};
+use super::super::sync_transport::SyncTransport;
 use ed25519_dalek::Signer;
-
 
 use super::*;
 
@@ -181,10 +179,10 @@ impl WebizenHostApi {
         peer_addr: &str,
         since: u64,
     ) -> Result<(usize, SyncPullReport), String> {
-        let transport = super::super::sync_transport::Libp2pSyncTransport::connect(peer_id, peer_addr)?;
+        let transport =
+            super::super::sync_transport::Libp2pSyncTransport::connect(peer_id, peer_addr)?;
         let pushed = self.sync_push_via(&transport, 256)?;
         let report = self.sync_pull_via(&transport, since)?;
         Ok((pushed, report))
     }
-
 }

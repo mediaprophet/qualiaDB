@@ -132,7 +132,8 @@ fn captured_at_unix() -> u32 {
 }
 
 fn build_bundle_from_files(files: Vec<CompanionCsvFile>) -> Result<String, String> {
-    let bundle = CompanionHealthBundle::new(companion_device::device_id(), captured_at_unix(), files);
+    let bundle =
+        CompanionHealthBundle::new(companion_device::device_id(), captured_at_unix(), files);
     bundle.validate()?;
     serde_json::to_string_pretty(&bundle).map_err(|e| e.to_string())
 }
@@ -161,11 +162,9 @@ fn App() -> Element {
             }
 
             let window = web_sys::window().unwrap();
-            let has_picker = js_sys::Reflect::has(
-                &window,
-                &JsValue::from_str("showDirectoryPicker"),
-            )
-            .unwrap_or(false);
+            let has_picker =
+                js_sys::Reflect::has(&window, &JsValue::from_str("showDirectoryPicker"))
+                    .unwrap_or(false);
 
             if has_picker {
                 state.set(AppState::VaultInit);
@@ -216,10 +215,14 @@ fn App() -> Element {
                     let on_message = Closure::wrap(Box::new(move |e: MessageEvent| {
                         if let Ok(txt) = e.data().dyn_into::<js_sys::JsString>() {
                             let text: String = txt.into();
-                            web_sys::console::log_1(&format!("Received WS Message: {}", text).into());
+                            web_sys::console::log_1(
+                                &format!("Received WS Message: {}", text).into(),
+                            );
 
                             if text.contains(MSG_CHALLENGE) {
-                                web_sys::console::log_1(&"Signing Ed25519 pairing challenge...".into());
+                                web_sys::console::log_1(
+                                    &"Signing Ed25519 pairing challenge...".into(),
+                                );
                                 match companion_device::build_pairing_response(&text) {
                                     Ok(response_json) => {
                                         let _ = ws_clone.send_with_str(&response_json);
@@ -233,11 +236,11 @@ fn App() -> Element {
                                 state.set(AppState::Connected);
                                 let pending = loadOutbox(OUTBOX_KEY);
                                 if !pending.is_empty() {
-                                    let payload = format!(
-                                        r#"{{"type":"HEALTH_BUNDLE","bundle":{pending}}}"#
-                                    );
+                                    let payload =
+                                        format!(r#"{{"type":"HEALTH_BUNDLE","bundle":{pending}}}"#);
                                     let _ = ws_clone.send_with_str(&payload);
-                                    status_msg_ws.set("Sent pending health bundle to desktop.".into());
+                                    status_msg_ws
+                                        .set("Sent pending health bundle to desktop.".into());
                                 }
                             } else if text.contains("AUTH_DENIED") {
                                 status_msg_ws.set("Desktop denied pairing.".into());
@@ -246,7 +249,8 @@ fn App() -> Element {
                                 status_msg_ws.set("Desktop acknowledged health bundle.".into());
                             }
                         }
-                    }) as Box<dyn FnMut(MessageEvent)>);
+                    })
+                        as Box<dyn FnMut(MessageEvent)>);
                     ws.set_onmessage(Some(on_message.as_ref().unchecked_ref()));
                     on_message.forget();
                 }

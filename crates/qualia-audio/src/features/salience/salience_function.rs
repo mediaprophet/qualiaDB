@@ -146,8 +146,7 @@ mod tests {
         let peak_freqs = [f0, 2.0 * f0, 3.0 * f0];
         let peak_mags = [1.0f32, 0.6, 0.4];
         let mut sal = vec![0.0f32; n_bins];
-        pitch_salience(&peak_freqs, &peak_mags, 3, f_min, bps, n_bins, &mut sal)
-            .expect("salience");
+        pitch_salience(&peak_freqs, &peak_mags, 3, f_min, bps, n_bins, &mut sal).expect("salience");
 
         let want = hz_to_bin(f0, f_min, bps).round() as usize; // 240
         let got = argmax(&sal, n_bins);

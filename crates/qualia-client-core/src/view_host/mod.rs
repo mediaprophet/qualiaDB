@@ -109,7 +109,10 @@ pub fn project_library_json(
     })
 }
 
-pub fn project_web_locus_json(url: &str, observer: ObserverStatus) -> Result<serde_json::Value, String> {
+pub fn project_web_locus_json(
+    url: &str,
+    observer: ObserverStatus,
+) -> Result<serde_json::Value, String> {
     with_session(|s| {
         s.observer = observer;
         let card = project_web_locus(url, observer);
@@ -140,7 +143,9 @@ pub fn morph_json(mode: &str) -> Result<serde_json::Value, String> {
                 s.morph_mode = MorphMode::Both;
                 serde_json::to_value(proj).map_err(|e| e.to_string())
             }
-            _ => Err(format!("unknown morph mode '{mode}' (flatten|spatialize|both)")),
+            _ => Err(format!(
+                "unknown morph mode '{mode}' (flatten|spatialize|both)"
+            )),
         }
     })
 }

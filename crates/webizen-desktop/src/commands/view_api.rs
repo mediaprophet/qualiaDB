@@ -163,30 +163,27 @@ pub async fn view_render_memory_spatial(
     let proj = snap
         .last_projection
         .ok_or_else(|| "no projection yet — call view_project_library first".to_string())?;
-    let selected = snap
-        .selection
-        .first()
-        .map(|e| e.raw())
-        .unwrap_or(0);
+    let selected = snap.selection.first().map(|e| e.raw()).unwrap_or(0);
 
     let nodes = proj.scene_nodes.clone();
     let pick_slot = state.node_positions.clone();
     let png_slot = state.png.clone();
 
-    let (png, node_count) = tokio::task::spawn_blocking(move || -> Result<(Vec<u8>, usize), String> {
-        let scene = entity_view_to_render_scene(&nodes, selected);
-        let count = nodes.len();
-        let picks =
-            crate::commands::render_pipeline::compute_pick_positions(&scene, width, height);
-        let png = webizen_render::render_scene_png(&scene, width, height)
-            .ok_or_else(|| "GPU render_scene_png returned no frame".to_string())?;
-        if let Ok(mut g) = pick_slot.lock() {
-            *g = picks;
-        }
-        Ok((png, count))
-    })
-    .await
-    .map_err(|e| format!("render join: {e}"))??;
+    let (png, node_count) =
+        tokio::task::spawn_blocking(move || -> Result<(Vec<u8>, usize), String> {
+            let scene = entity_view_to_render_scene(&nodes, selected);
+            let count = nodes.len();
+            let picks =
+                crate::commands::render_pipeline::compute_pick_positions(&scene, width, height);
+            let png = webizen_render::render_scene_png(&scene, width, height)
+                .ok_or_else(|| "GPU render_scene_png returned no frame".to_string())?;
+            if let Ok(mut g) = pick_slot.lock() {
+                *g = picks;
+            }
+            Ok((png, count))
+        })
+        .await
+        .map_err(|e| format!("render join: {e}"))??;
 
     if let Ok(mut g) = png_slot.lock() {
         *g = png;

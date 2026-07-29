@@ -7,6 +7,7 @@ use super::chora_host_client::{
     canvas_navigation, download_layer, list_canvas_worlds, list_layers, query_canvas_region,
     seed_canvas_demo, set_active_canvas_world, set_canvas_temporal, set_gpu_camera_mode,
 };
+use crate::components::experience_mode::use_experience_mode;
 use dioxus::prelude::*;
 
 fn str_field(v: &serde_json::Value, key: &str) -> String {
@@ -36,6 +37,8 @@ fn layer_source(v: &serde_json::Value) -> String {
 
 #[component]
 pub fn WellfairChoraPanel() -> Element {
+    let experience_mode = use_experience_mode();
+    let advanced = experience_mode().is_advanced();
     let mut worlds = use_signal(Vec::<serde_json::Value>::new);
     let mut nav = use_signal(|| serde_json::json!({}));
     let mut region_hits = use_signal(Vec::<serde_json::Value>::new);
@@ -92,8 +95,8 @@ pub fn WellfairChoraPanel() -> Element {
                 padding: 2rem;
                 border: 1px solid var(--qualia-border, rgba(43, 108, 176, 0.15));
                 border-radius: 16px;
-                background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.95));
-                color: #e2e8f0;
+                background: linear-gradient(135deg, color-mix(in srgb, var(--qualia-bg) 96%, #15203b), color-mix(in srgb, var(--qualia-surface) 94%, #111827));
+                color: var(--qualia-text);
                 min-height: 500px;
                 font-family: 'Inter', -apple-system, sans-serif;
                 box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3), inset 0 1px 1px rgba(255, 255, 255, 0.1);
@@ -116,11 +119,11 @@ pub fn WellfairChoraPanel() -> Element {
                         style: "display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap;margin-bottom:0.35rem;",
                         span {
                             style: "font-size:0.62rem;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#67e8f9;",
-                            "World"
+                            if advanced { "Spatio-temporal world" } else { "Place through time" }
                         }
                         span {
                             style: "font-size:0.62rem;padding:0.1rem 0.4rem;border-radius:999px;border:1px solid rgba(34,211,238,0.45);background:rgba(34,211,238,0.12);color:#a5f3fc;font-weight:700;",
-                            "Life domain"
+                            if advanced { "Life domain" } else { "Shared place" }
                         }
                         span {
                             style: "font-size:0.62rem;padding:0.1rem 0.4rem;border-radius:999px;border:1px solid rgba(148,163,184,0.35);color:#cbd5e1;font-weight:600;",
@@ -129,11 +132,15 @@ pub fn WellfairChoraPanel() -> Element {
                     }
                     h2 {
                         style: "margin: 0; font-size: 1.8rem; font-weight: 600; color: #fff; letter-spacing: -0.02em; display: flex; align-items: center; gap: 0.5rem;",
-                        "Universe ", span { style: "font-weight: 300; opacity: 0.65;", "· Chora Commons" }
+                        if advanced { "Universe · Chora Commons" } else { "Places through time" }
                     }
                     p {
                         style: "margin: 0.5rem 0 0; font-size: 0.9rem; color: #94a3b8; max-width: 600px; line-height: 1.5;",
-                        "Explore the star-scape, Earth and planetary commons. NASA imagery and public star catalogs stay visibly attributed; worlds are configurations, not engine forks. Not a social feed — a shared place layer under principal control."
+                        if advanced {
+                            "Explore the star-scape, Earth and planetary commons. NASA imagery and public star catalogs stay visibly attributed; worlds are configurations, not engine forks."
+                        } else {
+                            "Move through shared places and moments. Every public layer keeps its source and licence visible, and nothing here changes your private records."
+                        }
                     }
                     p { style: "margin: 0.55rem 0 0;",
                         Link {
@@ -167,7 +174,8 @@ pub fn WellfairChoraPanel() -> Element {
                                 }
                             });
                         },
-                        span { style: "font-size: 1.1rem;", "🌱" } "Seed Demo"
+                        span { style: "font-size: 1.1rem;", "🌱" }
+                        if advanced { "Seed demo world" } else { "Add example places" }
                     }
                     button {
                         style: "padding: 0.6rem 1rem; border-radius: 8px; border: 1px solid rgba(99, 102, 241, 0.4); background: rgba(99, 102, 241, 0.1); color: #818cf8; font-size: 0.85rem; font-weight: 500; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 0.5rem;",
@@ -224,10 +232,12 @@ pub fn WellfairChoraPanel() -> Element {
                     style: "padding: 1.5rem; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; backdrop-filter: blur(10px); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);",
                     div {
                         style: "display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;",
-                        strong { style: "font-size: 1rem; color: #fff; font-weight: 500;", "Temporal Scrubber" }
+                        strong { style: "font-size: 1rem; color: var(--qualia-text); font-weight: 650;",
+                            if advanced { "Temporal coordinate" } else { "Time" }
+                        }
                         div {
                             style: "padding: 0.25rem 0.75rem; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.2); border-radius: 20px; font-size: 0.75rem; color: #34d399; font-family: monospace;",
-                            "ACTIVE: {str_field(&nav(), \"activeWorldId\")}"
+                            if advanced { "ACTIVE: {str_field(&nav(), \"activeWorldId\")}" } else { "Current place" }
                         }
                     }
                     div {
@@ -259,7 +269,9 @@ pub fn WellfairChoraPanel() -> Element {
                         }
                         div {
                             style: "display: flex; justify-content: space-between; align-items: center;",
-                            span { style: "font-size: 0.75rem; color: #64748b;", "UNIX EPOCH" }
+                            span { style: "font-size: 0.75rem; color: #94a3b8;",
+                                if advanced { "UNIX EPOCH" } else { "Selected moment" }
+                            }
                             span { style: "font-size: 1.25rem; font-family: monospace; color: #818cf8; font-weight: 600;", "{temporal_t():.0}" }
                         }
                     }
@@ -270,7 +282,9 @@ pub fn WellfairChoraPanel() -> Element {
                     style: "padding: 1.5rem; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; backdrop-filter: blur(10px); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);",
                     div {
                         style: "display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;",
-                        strong { style: "font-size: 1rem; color: #fff; font-weight: 500;", "Region Telemetry (Sydney)" }
+                        strong { style: "font-size: 1rem; color: var(--qualia-text); font-weight: 650;",
+                            if advanced { "Region telemetry (Sydney)" } else { "Material near Sydney" }
+                        }
                         button {
                             style: "padding: 0.35rem 0.75rem; border-radius: 6px; border: 1px solid rgba(56, 189, 248, 0.4); background: rgba(56, 189, 248, 0.1); color: #38bdf8; font-size: 0.75rem; font-weight: 500; cursor: pointer; transition: all 0.2s;",
                             onclick: move |_| {
@@ -284,13 +298,13 @@ pub fn WellfairChoraPanel() -> Element {
                                     }
                                 });
                             },
-                            "Execute Scan"
+                            if advanced { "Execute scan" } else { "Look here" }
                         }
                     }
                     if region_hits().is_empty() {
                         div {
                             style: "height: 60px; display: flex; align-items: center; justify-content: center; border: 1px dashed rgba(255, 255, 255, 0.1); border-radius: 8px; color: #64748b; font-size: 0.85rem;",
-                            "No targets acquired in quadrant."
+                            if advanced { "No targets acquired in quadrant." } else { "No shared material found here yet." }
                         }
                     } else {
                         ul {
@@ -314,11 +328,16 @@ pub fn WellfairChoraPanel() -> Element {
             // Worlds Panel
             div {
                 style: "z-index: 1; padding: 1.5rem; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; backdrop-filter: blur(10px); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05); flex: 1;",
-                strong { style: "font-size: 1rem; color: #fff; font-weight: 500; display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem;", "Multiverse Layers ", span { style: "padding: 0.15rem 0.5rem; background: rgba(255,255,255,0.1); border-radius: 20px; font-size: 0.75rem;", "{worlds().len()}" } }
+                strong { style: "font-size: 1rem; color: var(--qualia-text); font-weight: 650; display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem;",
+                    if advanced { "World configurations" } else { "Places" }
+                    span { style: "padding: 0.15rem 0.5rem; background: rgba(255,255,255,0.1); border-radius: 20px; font-size: 0.75rem;", "{worlds().len()}" }
+                }
                 if worlds().is_empty() {
                     div {
                         style: "padding: 3rem 1rem; text-align: center; border: 1px dashed rgba(255, 255, 255, 0.1); border-radius: 8px;",
-                        p { style: "font-size: 0.9rem; color: #64748b; margin: 0;", "Void empty. Seed a demo world to construct layers." }
+                        p { style: "font-size: 0.9rem; color: #94a3b8; margin: 0;",
+                            if advanced { "No world configurations. Seed the bounded demo set." } else { "No places yet. Add the example places to begin." }
+                        }
                     }
                 } else {
                     ul {
@@ -330,7 +349,9 @@ pub fn WellfairChoraPanel() -> Element {
                                     style: "display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem;",
                                     div {
                                         div { style: "font-size: 0.95rem; font-weight: 500; color: #fff; margin-bottom: 0.25rem;", "{str_field(&w, \"title\")}" }
-                                        div { style: "font-size: 0.7rem; font-family: monospace; color: #64748b;", "{str_field(&w, \"id\")}" }
+                                        if advanced {
+                                            div { style: "font-size: 0.7rem; font-family: monospace; color: #94a3b8;", "{str_field(&w, \"id\")}" }
+                                        }
                                     }
                                     button {
                                         style: "padding: 0.3rem 0.75rem; border-radius: 6px; border: 1px solid rgba(16, 185, 129, 0.4); background: rgba(16, 185, 129, 0.1); color: #34d399; font-size: 0.75rem; font-weight: 500; cursor: pointer; transition: all 0.2s;",
@@ -349,7 +370,7 @@ pub fn WellfairChoraPanel() -> Element {
                                                 });
                                             }
                                         },
-                                        "Jump to World"
+                                        if advanced { "Set active world" } else { "Enter place" }
                                     }
                                 }
                             }
@@ -363,8 +384,12 @@ pub fn WellfairChoraPanel() -> Element {
                 div {
                     style: "display:flex;justify-content:space-between;align-items:flex-end;gap:1rem;margin-bottom:1rem;",
                     div {
-                        h3 { style: "margin:0;color:#fff;font-size:1.05rem;", "Earth, stars & planetary layers" }
-                        p { style: "margin:0.35rem 0 0;color:#94a3b8;font-size:0.82rem;line-height:1.45;", "Download, compile and upload an attributed public-data layer to the native GPU surface." }
+                        h3 { style: "margin:0;color:var(--qualia-text);font-size:1.05rem;",
+                            if advanced { "Earth, stars & planetary layers" } else { "Public layers" }
+                        }
+                        p { style: "margin:0.35rem 0 0;color:#94a3b8;font-size:0.82rem;line-height:1.45;",
+                            if advanced { "Download, compile and upload an attributed public-data layer to the native GPU surface." } else { "Add an attributed Earth, star or planetary layer to this view. The source and licence stay attached." }
+                        }
                     }
                     span { style: "color:#64748b;font-size:0.75rem;", "{layers().len()} available" }
                 }
@@ -416,7 +441,7 @@ pub fn WellfairChoraPanel() -> Element {
                                     if downloading().as_deref() == layer.get("id").and_then(|value| value.as_str()) {
                                         "Loading…"
                                     } else {
-                                        "Load on GPU"
+                                        if advanced { "Compile and load on GPU" } else { "Add to view" }
                                     }
                                 }
                             }

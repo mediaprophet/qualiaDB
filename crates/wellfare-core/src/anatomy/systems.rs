@@ -13,23 +13,91 @@ pub struct BodySystem {
 
 /// The 17 seeded body systems (extensible — jurisdiction/ontology packs can add more later).
 pub static BODY_SYSTEMS: &[BodySystem] = &[
-    BodySystem { id: "circulatory", label: "Circulatory (Cardiovascular) System", plain_label: "heart and blood flow" },
-    BodySystem { id: "respiratory", label: "Respiratory System", plain_label: "breathing" },
-    BodySystem { id: "digestive", label: "Digestive System", plain_label: "digestion" },
-    BodySystem { id: "nervous", label: "Nervous System", plain_label: "brain and nerves" },
-    BodySystem { id: "muscular", label: "Muscular System", plain_label: "muscles" },
-    BodySystem { id: "skeletal", label: "Skeletal System", plain_label: "bones and joints" },
-    BodySystem { id: "endocrine", label: "Endocrine System", plain_label: "hormones" },
-    BodySystem { id: "immune_lymphatic", label: "Immune / Lymphatic System", plain_label: "immune defences" },
-    BodySystem { id: "integumentary", label: "Integumentary System", plain_label: "skin" },
-    BodySystem { id: "urinary", label: "Urinary (Excretory) System", plain_label: "kidneys and fluid balance" },
-    BodySystem { id: "reproductive", label: "Reproductive System", plain_label: "reproductive health" },
-    BodySystem { id: "sensory", label: "Sensory System", plain_label: "senses" },
-    BodySystem { id: "vestibular", label: "Vestibular System", plain_label: "balance" },
-    BodySystem { id: "exocrine", label: "Exocrine System", plain_label: "glands" },
-    BodySystem { id: "ecs", label: "Endocannabinoid System (ECS)", plain_label: "internal balance (ECS)" },
-    BodySystem { id: "ens", label: "Enteric Nervous System (ENS)", plain_label: "gut nerves" },
-    BodySystem { id: "glymphatic", label: "Glymphatic System", plain_label: "the brain's overnight cleaning" },
+    BodySystem {
+        id: "circulatory",
+        label: "Circulatory (Cardiovascular) System",
+        plain_label: "heart and blood flow",
+    },
+    BodySystem {
+        id: "respiratory",
+        label: "Respiratory System",
+        plain_label: "breathing",
+    },
+    BodySystem {
+        id: "digestive",
+        label: "Digestive System",
+        plain_label: "digestion",
+    },
+    BodySystem {
+        id: "nervous",
+        label: "Nervous System",
+        plain_label: "brain and nerves",
+    },
+    BodySystem {
+        id: "muscular",
+        label: "Muscular System",
+        plain_label: "muscles",
+    },
+    BodySystem {
+        id: "skeletal",
+        label: "Skeletal System",
+        plain_label: "bones and joints",
+    },
+    BodySystem {
+        id: "endocrine",
+        label: "Endocrine System",
+        plain_label: "hormones",
+    },
+    BodySystem {
+        id: "immune_lymphatic",
+        label: "Immune / Lymphatic System",
+        plain_label: "immune defences",
+    },
+    BodySystem {
+        id: "integumentary",
+        label: "Integumentary System",
+        plain_label: "skin",
+    },
+    BodySystem {
+        id: "urinary",
+        label: "Urinary (Excretory) System",
+        plain_label: "kidneys and fluid balance",
+    },
+    BodySystem {
+        id: "reproductive",
+        label: "Reproductive System",
+        plain_label: "reproductive health",
+    },
+    BodySystem {
+        id: "sensory",
+        label: "Sensory System",
+        plain_label: "senses",
+    },
+    BodySystem {
+        id: "vestibular",
+        label: "Vestibular System",
+        plain_label: "balance",
+    },
+    BodySystem {
+        id: "exocrine",
+        label: "Exocrine System",
+        plain_label: "glands",
+    },
+    BodySystem {
+        id: "ecs",
+        label: "Endocannabinoid System (ECS)",
+        plain_label: "internal balance (ECS)",
+    },
+    BodySystem {
+        id: "ens",
+        label: "Enteric Nervous System (ENS)",
+        plain_label: "gut nerves",
+    },
+    BodySystem {
+        id: "glymphatic",
+        label: "Glymphatic System",
+        plain_label: "the brain's overnight cleaning",
+    },
 ];
 
 /// Look up a body system by id.
@@ -42,7 +110,9 @@ pub fn body_system(id: &str) -> Option<&'static BodySystem> {
 /// into this id-keyed model.
 pub fn body_system_by_label(label: &str) -> Option<&'static BodySystem> {
     let want = label.trim().to_ascii_lowercase();
-    BODY_SYSTEMS.iter().find(|s| s.label.to_ascii_lowercase() == want)
+    BODY_SYSTEMS
+        .iter()
+        .find(|s| s.label.to_ascii_lowercase() == want)
 }
 
 #[cfg(test)]
@@ -62,12 +132,22 @@ mod tests {
     #[test]
     fn label_lookup_maps_bundled_knowledge_labels_to_ids() {
         // Labels exactly as they appear in bundled condition-map.json.
-        assert_eq!(body_system_by_label("Endocrine System").unwrap().id, "endocrine");
         assert_eq!(
-            body_system_by_label("Circulatory (Cardiovascular) System").unwrap().id,
+            body_system_by_label("Endocrine System").unwrap().id,
+            "endocrine"
+        );
+        assert_eq!(
+            body_system_by_label("Circulatory (Cardiovascular) System")
+                .unwrap()
+                .id,
             "circulatory"
         );
-        assert_eq!(body_system_by_label("  urinary (excretory) system  ").unwrap().id, "urinary");
+        assert_eq!(
+            body_system_by_label("  urinary (excretory) system  ")
+                .unwrap()
+                .id,
+            "urinary"
+        );
         assert!(body_system_by_label("Not A System").is_none());
     }
 }

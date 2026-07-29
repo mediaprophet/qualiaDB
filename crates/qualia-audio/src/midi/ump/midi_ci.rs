@@ -193,13 +193,22 @@ mod tests {
         let mut buf = [0u8; DISCOVERY_LEN];
         sample().encode(&mut buf).unwrap();
         buf[4] = 0x71; // not a discovery sub-id2
-        assert_eq!(MidiCiDiscovery::parse(&buf), Err(AudioError::MalformedAudio));
-        assert_eq!(MidiCiDiscovery::parse(&buf[..10]), Err(AudioError::MalformedAudio));
+        assert_eq!(
+            MidiCiDiscovery::parse(&buf),
+            Err(AudioError::MalformedAudio)
+        );
+        assert_eq!(
+            MidiCiDiscovery::parse(&buf[..10]),
+            Err(AudioError::MalformedAudio)
+        );
     }
 
     #[test]
     fn buffer_too_small() {
         let mut buf = [0u8; 8];
-        assert_eq!(sample().encode(&mut buf), Err(AudioError::OutputBufferTooSmall));
+        assert_eq!(
+            sample().encode(&mut buf),
+            Err(AudioError::OutputBufferTooSmall)
+        );
     }
 }

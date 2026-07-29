@@ -54,7 +54,6 @@ function runStep(name, cmd, args, opts = {}) {
     const result = spawnSync(cmd, args, {
         cwd: repoRoot,
         stdio: 'inherit',
-        shell: process.platform === 'win32',
         ...opts,
     });
     if (result.status !== 0) {
@@ -100,17 +99,23 @@ runStep('contract-tests', 'cargo', [
     'test',
     '-p',
     'qualia-core-db',
-    'phenomenal_contract',
+    'render::contract::tests::phenomenal_',
     '--lib',
 ]);
 
-runStep('pga-oracle', 'cargo', ['test', '-p', 'qualia-core-db', 'portal_pga', '--lib']);
+runStep('pga-oracle', 'cargo', [
+    'test',
+    '-p',
+    'qualia-core-db',
+    'render::pga::tests::',
+    '--lib',
+]);
 
 runStep('ambient-draw-step', 'cargo', [
     'test',
     '-p',
     'qualia-core-db',
-    'ambient_draw_instant_step_by_mode',
+    'gpu_context::tests::ambient_draw_instant_step_by_mode',
     '--lib',
     '--',
     '--exact',

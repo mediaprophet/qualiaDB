@@ -8,7 +8,6 @@ use crate::components::qapp_engine::tauri_invoke;
 #[cfg(target_arch = "wasm32")]
 use js_sys;
 
-
 #[derive(Debug, Clone, Deserialize)]
 pub struct GuardianshipProposalDto {
     pub proposal_id: String,
@@ -29,14 +28,23 @@ pub struct GuardianshipProposalDto {
 #[cfg(target_arch = "wasm32")]
 pub async fn propose_proxy_condition(proxy_did: &str, label: &str) -> Result<String, String> {
     let args = js_sys::Object::new();
-    js_sys::Reflect::set(&args, &"proxyDid".into(), &wasm_bindgen::JsValue::from_str(proxy_did))
-        .map_err(|_| "failed to build invoke args".to_string())?;
-    js_sys::Reflect::set(&args, &"label".into(), &wasm_bindgen::JsValue::from_str(label))
-        .map_err(|_| "failed to build invoke args".to_string())?;
+    js_sys::Reflect::set(
+        &args,
+        &"proxyDid".into(),
+        &wasm_bindgen::JsValue::from_str(proxy_did),
+    )
+    .map_err(|_| "failed to build invoke args".to_string())?;
+    js_sys::Reflect::set(
+        &args,
+        &"label".into(),
+        &wasm_bindgen::JsValue::from_str(label),
+    )
+    .map_err(|_| "failed to build invoke args".to_string())?;
     let js = tauri_invoke("wellfair_propose_proxy_condition", args.into())
         .await
         .map_err(|e| format!("{e:?}"))?;
-    js.as_string().ok_or_else(|| "proxy proposal response not JSON".to_string())
+    js.as_string()
+        .ok_or_else(|| "proxy proposal response not JSON".to_string())
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -49,8 +57,12 @@ pub async fn fetch_guardianship_proposals(
     limit: usize,
 ) -> Result<Vec<GuardianshipProposalDto>, String> {
     let args = js_sys::Object::new();
-    js_sys::Reflect::set(&args, &"limit".into(), &wasm_bindgen::JsValue::from(limit as u32))
-        .map_err(|_| "failed to build invoke args".to_string())?;
+    js_sys::Reflect::set(
+        &args,
+        &"limit".into(),
+        &wasm_bindgen::JsValue::from(limit as u32),
+    )
+    .map_err(|_| "failed to build invoke args".to_string())?;
     let js = tauri_invoke("wellfair_list_guardianship_proposals", args.into())
         .await
         .map_err(|e| format!("{e:?}"))?;
@@ -75,12 +87,24 @@ pub async fn vote_guardianship_proposal(
     reason: Option<&str>,
 ) -> Result<GuardianshipProposalDto, String> {
     let args = js_sys::Object::new();
-    js_sys::Reflect::set(&args, &"proposalId".into(), &wasm_bindgen::JsValue::from_str(proposal_id))
-        .map_err(|_| "failed to build invoke args".to_string())?;
-    js_sys::Reflect::set(&args, &"guardianDid".into(), &wasm_bindgen::JsValue::from_str(guardian_did))
-        .map_err(|_| "failed to build invoke args".to_string())?;
-    js_sys::Reflect::set(&args, &"approve".into(), &wasm_bindgen::JsValue::from_bool(approve))
-        .map_err(|_| "failed to build invoke args".to_string())?;
+    js_sys::Reflect::set(
+        &args,
+        &"proposalId".into(),
+        &wasm_bindgen::JsValue::from_str(proposal_id),
+    )
+    .map_err(|_| "failed to build invoke args".to_string())?;
+    js_sys::Reflect::set(
+        &args,
+        &"guardianDid".into(),
+        &wasm_bindgen::JsValue::from_str(guardian_did),
+    )
+    .map_err(|_| "failed to build invoke args".to_string())?;
+    js_sys::Reflect::set(
+        &args,
+        &"approve".into(),
+        &wasm_bindgen::JsValue::from_bool(approve),
+    )
+    .map_err(|_| "failed to build invoke args".to_string())?;
     if let Some(r) = reason {
         js_sys::Reflect::set(&args, &"reason".into(), &wasm_bindgen::JsValue::from_str(r))
             .map_err(|_| "failed to build invoke args".to_string())?;
@@ -111,16 +135,30 @@ pub async fn add_assistance_need(
     urgency: &str,
 ) -> Result<HealthRecordDto, String> {
     let args = js_sys::Object::new();
-    js_sys::Reflect::set(&args, &"category".into(), &wasm_bindgen::JsValue::from_str(category))
-        .map_err(|_| "failed to build invoke args".to_string())?;
-    js_sys::Reflect::set(&args, &"description".into(), &wasm_bindgen::JsValue::from_str(description))
-        .map_err(|_| "failed to build invoke args".to_string())?;
-    js_sys::Reflect::set(&args, &"urgency".into(), &wasm_bindgen::JsValue::from_str(urgency))
-        .map_err(|_| "failed to build invoke args".to_string())?;
+    js_sys::Reflect::set(
+        &args,
+        &"category".into(),
+        &wasm_bindgen::JsValue::from_str(category),
+    )
+    .map_err(|_| "failed to build invoke args".to_string())?;
+    js_sys::Reflect::set(
+        &args,
+        &"description".into(),
+        &wasm_bindgen::JsValue::from_str(description),
+    )
+    .map_err(|_| "failed to build invoke args".to_string())?;
+    js_sys::Reflect::set(
+        &args,
+        &"urgency".into(),
+        &wasm_bindgen::JsValue::from_str(urgency),
+    )
+    .map_err(|_| "failed to build invoke args".to_string())?;
     let js = tauri_invoke("wellfair_add_assistance_need", args.into())
         .await
         .map_err(|e| format!("{e:?}"))?;
-    let out = js.as_string().ok_or_else(|| "assistance response was not JSON".to_string())?;
+    let out = js
+        .as_string()
+        .ok_or_else(|| "assistance response was not JSON".to_string())?;
     serde_json::from_str(&out).map_err(|e| e.to_string())
 }
 
@@ -140,18 +178,32 @@ pub async fn add_welfare_stream(
     status: &str,
 ) -> Result<HealthRecordDto, String> {
     let args = js_sys::Object::new();
-    js_sys::Reflect::set(&args, &"programName".into(), &wasm_bindgen::JsValue::from_str(program_name))
-        .map_err(|_| "failed to build invoke args".to_string())?;
+    js_sys::Reflect::set(
+        &args,
+        &"programName".into(),
+        &wasm_bindgen::JsValue::from_str(program_name),
+    )
+    .map_err(|_| "failed to build invoke args".to_string())?;
     if let Some(r) = reference {
-        js_sys::Reflect::set(&args, &"reference".into(), &wasm_bindgen::JsValue::from_str(r))
-            .map_err(|_| "failed to build invoke args".to_string())?;
-    }
-    js_sys::Reflect::set(&args, &"status".into(), &wasm_bindgen::JsValue::from_str(status))
+        js_sys::Reflect::set(
+            &args,
+            &"reference".into(),
+            &wasm_bindgen::JsValue::from_str(r),
+        )
         .map_err(|_| "failed to build invoke args".to_string())?;
+    }
+    js_sys::Reflect::set(
+        &args,
+        &"status".into(),
+        &wasm_bindgen::JsValue::from_str(status),
+    )
+    .map_err(|_| "failed to build invoke args".to_string())?;
     let js = tauri_invoke("wellfair_add_welfare_stream", args.into())
         .await
         .map_err(|e| format!("{e:?}"))?;
-    let out = js.as_string().ok_or_else(|| "welfare stream response was not JSON".to_string())?;
+    let out = js
+        .as_string()
+        .ok_or_else(|| "welfare stream response was not JSON".to_string())?;
     serde_json::from_str(&out).map_err(|e| e.to_string())
 }
 
@@ -171,16 +223,30 @@ pub async fn add_government_letter(
     action_required: bool,
 ) -> Result<HealthRecordDto, String> {
     let args = js_sys::Object::new();
-    js_sys::Reflect::set(&args, &"sender".into(), &wasm_bindgen::JsValue::from_str(sender))
-        .map_err(|_| "failed to build invoke args".to_string())?;
-    js_sys::Reflect::set(&args, &"subject".into(), &wasm_bindgen::JsValue::from_str(subject))
-        .map_err(|_| "failed to build invoke args".to_string())?;
-    js_sys::Reflect::set(&args, &"actionRequired".into(), &wasm_bindgen::JsValue::from(action_required))
-        .map_err(|_| "failed to build invoke args".to_string())?;
+    js_sys::Reflect::set(
+        &args,
+        &"sender".into(),
+        &wasm_bindgen::JsValue::from_str(sender),
+    )
+    .map_err(|_| "failed to build invoke args".to_string())?;
+    js_sys::Reflect::set(
+        &args,
+        &"subject".into(),
+        &wasm_bindgen::JsValue::from_str(subject),
+    )
+    .map_err(|_| "failed to build invoke args".to_string())?;
+    js_sys::Reflect::set(
+        &args,
+        &"actionRequired".into(),
+        &wasm_bindgen::JsValue::from(action_required),
+    )
+    .map_err(|_| "failed to build invoke args".to_string())?;
     let js = tauri_invoke("wellfair_add_government_letter", args.into())
         .await
         .map_err(|e| format!("{e:?}"))?;
-    let out = js.as_string().ok_or_else(|| "letter response was not JSON".to_string())?;
+    let out = js
+        .as_string()
+        .ok_or_else(|| "letter response was not JSON".to_string())?;
     serde_json::from_str(&out).map_err(|e| e.to_string())
 }
 
@@ -201,18 +267,39 @@ pub async fn add_government_letter_attachment_from_path(
     path: &str,
 ) -> Result<HealthRecordDto, String> {
     let args = js_sys::Object::new();
-    js_sys::Reflect::set(&args, &"sender".into(), &wasm_bindgen::JsValue::from_str(sender))
-        .map_err(|_| "failed to build invoke args".to_string())?;
-    js_sys::Reflect::set(&args, &"subject".into(), &wasm_bindgen::JsValue::from_str(subject))
-        .map_err(|_| "failed to build invoke args".to_string())?;
-    js_sys::Reflect::set(&args, &"actionRequired".into(), &wasm_bindgen::JsValue::from(action_required))
-        .map_err(|_| "failed to build invoke args".to_string())?;
-    js_sys::Reflect::set(&args, &"path".into(), &wasm_bindgen::JsValue::from_str(path))
-        .map_err(|_| "failed to build invoke args".to_string())?;
-    let js = tauri_invoke("wellfair_add_government_letter_attachment_from_path", args.into())
-        .await
-        .map_err(|e| format!("{e:?}"))?;
-    let out = js.as_string().ok_or_else(|| "letter attachment response not JSON".to_string())?;
+    js_sys::Reflect::set(
+        &args,
+        &"sender".into(),
+        &wasm_bindgen::JsValue::from_str(sender),
+    )
+    .map_err(|_| "failed to build invoke args".to_string())?;
+    js_sys::Reflect::set(
+        &args,
+        &"subject".into(),
+        &wasm_bindgen::JsValue::from_str(subject),
+    )
+    .map_err(|_| "failed to build invoke args".to_string())?;
+    js_sys::Reflect::set(
+        &args,
+        &"actionRequired".into(),
+        &wasm_bindgen::JsValue::from(action_required),
+    )
+    .map_err(|_| "failed to build invoke args".to_string())?;
+    js_sys::Reflect::set(
+        &args,
+        &"path".into(),
+        &wasm_bindgen::JsValue::from_str(path),
+    )
+    .map_err(|_| "failed to build invoke args".to_string())?;
+    let js = tauri_invoke(
+        "wellfair_add_government_letter_attachment_from_path",
+        args.into(),
+    )
+    .await
+    .map_err(|e| format!("{e:?}"))?;
+    let out = js
+        .as_string()
+        .ok_or_else(|| "letter attachment response not JSON".to_string())?;
     serde_json::from_str(&out).map_err(|e| e.to_string())
 }
 
@@ -252,12 +339,18 @@ pub struct SyncInboxRecordDto {
 #[cfg(target_arch = "wasm32")]
 pub async fn fetch_sync_inbox(limit: usize) -> Result<Vec<SyncInboxRecordDto>, String> {
     let args = js_sys::Object::new();
-    js_sys::Reflect::set(&args, &"limit".into(), &wasm_bindgen::JsValue::from(limit as u32))
-        .map_err(|_| "failed to build invoke args".to_string())?;
+    js_sys::Reflect::set(
+        &args,
+        &"limit".into(),
+        &wasm_bindgen::JsValue::from(limit as u32),
+    )
+    .map_err(|_| "failed to build invoke args".to_string())?;
     let js = tauri_invoke("wellfair_list_sync_inbox", args.into())
         .await
         .map_err(|e| format!("{e:?}"))?;
-    let json = js.as_string().ok_or_else(|| "sync inbox response was not JSON".to_string())?;
+    let json = js
+        .as_string()
+        .ok_or_else(|| "sync inbox response was not JSON".to_string())?;
     serde_json::from_str(&json).map_err(|e| e.to_string())
 }
 
@@ -289,11 +382,17 @@ struct SanctuaryVaultConfiguredDto {
 
 #[cfg(target_arch = "wasm32")]
 pub async fn sanctuary_vault_configured() -> Result<bool, String> {
-    let js = tauri_invoke("wellfair_sanctuary_vault_configured", wasm_bindgen::JsValue::NULL)
-        .await
-        .map_err(|e| format!("{e:?}"))?;
-    let json = js.as_string().ok_or_else(|| "vault status not JSON".to_string())?;
-    let dto: SanctuaryVaultConfiguredDto = serde_json::from_str(&json).map_err(|e| e.to_string())?;
+    let js = tauri_invoke(
+        "wellfair_sanctuary_vault_configured",
+        wasm_bindgen::JsValue::NULL,
+    )
+    .await
+    .map_err(|e| format!("{e:?}"))?;
+    let json = js
+        .as_string()
+        .ok_or_else(|| "vault status not JSON".to_string())?;
+    let dto: SanctuaryVaultConfiguredDto =
+        serde_json::from_str(&json).map_err(|e| e.to_string())?;
     Ok(dto.configured)
 }
 
@@ -305,10 +404,18 @@ pub async fn sanctuary_vault_configured() -> Result<bool, String> {
 #[cfg(target_arch = "wasm32")]
 pub async fn setup_sanctuary_vault(real_pin: &str, decoy_pin: &str) -> Result<(), String> {
     let args = js_sys::Object::new();
-    js_sys::Reflect::set(&args, &"realPin".into(), &wasm_bindgen::JsValue::from_str(real_pin))
-        .map_err(|_| "failed to build invoke args".to_string())?;
-    js_sys::Reflect::set(&args, &"decoyPin".into(), &wasm_bindgen::JsValue::from_str(decoy_pin))
-        .map_err(|_| "failed to build invoke args".to_string())?;
+    js_sys::Reflect::set(
+        &args,
+        &"realPin".into(),
+        &wasm_bindgen::JsValue::from_str(real_pin),
+    )
+    .map_err(|_| "failed to build invoke args".to_string())?;
+    js_sys::Reflect::set(
+        &args,
+        &"decoyPin".into(),
+        &wasm_bindgen::JsValue::from_str(decoy_pin),
+    )
+    .map_err(|_| "failed to build invoke args".to_string())?;
     tauri_invoke("wellfair_setup_sanctuary_vault", args.into())
         .await
         .map_err(|e| format!("{e:?}"))?;
@@ -319,4 +426,3 @@ pub async fn setup_sanctuary_vault(real_pin: &str, decoy_pin: &str) -> Result<()
 pub async fn setup_sanctuary_vault(_real_pin: &str, _decoy_pin: &str) -> Result<(), String> {
     Err("Sanctuary vault requires the Tauri desktop host".into())
 }
-

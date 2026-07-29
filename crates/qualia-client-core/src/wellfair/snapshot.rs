@@ -1,9 +1,7 @@
 //! Derive `WellfairHostSnapshot` from live host services (not Dioxus signals).
 
 use super::accessibility_prefs;
-use super::host_state::{
-    NetworkExposure, SyncQueueState, VaultLifecycle, WellfairHostSnapshot,
-};
+use super::host_state::{NetworkExposure, SyncQueueState, VaultLifecycle, WellfairHostSnapshot};
 use qualia_core_db::key_vault::KeyVault;
 use std::path::Path;
 

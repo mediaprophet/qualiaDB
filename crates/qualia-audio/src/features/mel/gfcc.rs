@@ -47,7 +47,11 @@ mod tests {
 
         let c0 = out[0].abs();
         for (k, &c) in out.iter().enumerate().skip(1) {
-            assert!(c0 > c.abs(), "c0 {c0} does not dominate coeff {k} ({})", c.abs());
+            assert!(
+                c0 > c.abs(),
+                "c0 {c0} does not dominate coeff {k} ({})",
+                c.abs()
+            );
         }
     }
 }

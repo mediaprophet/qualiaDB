@@ -6,7 +6,6 @@
 
 use super::scene::{Camera, ScreenPoint, Vec3};
 use super::Renderer;
-use wasm_bindgen::JsValue;
 use web_sys::CanvasRenderingContext2d;
 
 pub struct Canvas2dRenderer {
@@ -39,7 +38,7 @@ impl Renderer for Canvas2dRenderer {
 
     fn clear(&self, color: &str) {
         self.ctx.set_global_alpha(1.0);
-        self.ctx.set_fill_style(&JsValue::from_str(color));
+        self.ctx.set_fill_style_str(color);
         self.ctx
             .fill_rect(0.0, 0.0, self.viewport.0, self.viewport.1);
     }
@@ -52,7 +51,7 @@ impl Renderer for Canvas2dRenderer {
         self.ctx.begin_path();
         self.ctx.set_global_alpha(alpha.clamp(0.04, 1.0));
         self.ctx.set_line_width(width);
-        self.ctx.set_stroke_style(&JsValue::from_str(color));
+        self.ctx.set_stroke_style_str(color);
         self.ctx.move_to(a.x, a.y);
         self.ctx.line_to(b.x, b.y);
         self.ctx.stroke();
@@ -61,7 +60,7 @@ impl Renderer for Canvas2dRenderer {
     fn point(&self, p: ScreenPoint, radius: f64, color: &str, alpha: f64) {
         self.ctx.begin_path();
         self.ctx.set_global_alpha(alpha.clamp(0.08, 1.0));
-        self.ctx.set_fill_style(&JsValue::from_str(color));
+        self.ctx.set_fill_style_str(color);
         let _ = self.ctx.arc(p.x, p.y, radius, 0.0, std::f64::consts::TAU);
         self.ctx.fill();
     }
@@ -72,7 +71,7 @@ impl Renderer for Canvas2dRenderer {
         }
         self.ctx.begin_path();
         self.ctx.set_global_alpha(alpha.clamp(0.0, 1.0));
-        self.ctx.set_fill_style(&JsValue::from_str(color));
+        self.ctx.set_fill_style_str(color);
         self.ctx.move_to(points[0].x, points[0].y);
         for p in &points[1..] {
             self.ctx.line_to(p.x, p.y);

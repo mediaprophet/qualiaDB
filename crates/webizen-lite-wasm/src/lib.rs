@@ -432,10 +432,9 @@ fn export_graph(args: &Value) -> Result<Value, String> {
     };
 
     let (media_type, body) = match format.as_str() {
-        "jsonld" | "application/ld+json" => (
-            "application/ld+json",
-            export_jsonld(&triples, context_url)?,
-        ),
+        "jsonld" | "application/ld+json" => {
+            ("application/ld+json", export_jsonld(&triples, context_url)?)
+        }
         "rdfjson" | "rdf/json" | "application/rdf+json" | "rj" => {
             ("application/rdf+json", export_rdf_json(&triples)?)
         }
@@ -443,7 +442,10 @@ fn export_graph(args: &Value) -> Result<Value, String> {
         "n3" | "text/n3" => ("text/n3", Value::String(export_n3(&triples))),
         "yamlld" | "yaml-ld" | "application/ld+yaml" => {
             let jsonld = export_jsonld(&triples, context_url)?;
-            ("application/ld+yaml", Value::String(json_to_yaml_like(&jsonld)))
+            (
+                "application/ld+yaml",
+                Value::String(json_to_yaml_like(&jsonld)),
+            )
         }
         other => {
             return Err(format!(
@@ -531,7 +533,10 @@ fn parse_export_term(value: &Value, prefer_uri: bool) -> Result<ExportTerm, Stri
                 datatype: None,
             });
         }
-        if prefer_uri || s.starts_with("http://") || s.starts_with("https://") || s.starts_with("urn:")
+        if prefer_uri
+            || s.starts_with("http://")
+            || s.starts_with("https://")
+            || s.starts_with("urn:")
         {
             return Ok(ExportTerm {
                 kind: ExportTermKind::Uri,
@@ -1737,10 +1742,12 @@ mod tests {
         );
         assert_eq!(rdfjson["mediaType"], "application/rdf+json");
         let about = &rdfjson["body"]["https://example.org/about"];
-        assert!(about["http://purl.org/dc/terms/title"].as_array().unwrap()[0]["value"]
-            .as_str()
-            .unwrap()
-            .contains("Anna"));
+        assert!(
+            about["http://purl.org/dc/terms/title"].as_array().unwrap()[0]["value"]
+                .as_str()
+                .unwrap()
+                .contains("Anna")
+        );
     }
 
     #[test]
@@ -1755,7 +1762,10 @@ mod tests {
             json!({ "triples": triples, "format": "turtle" }),
         );
         assert!(ttl["body"].as_str().unwrap().contains("<urn:s>"));
-        let n3 = call("export_graph", json!({ "triples": triples, "format": "n3" }));
+        let n3 = call(
+            "export_graph",
+            json!({ "triples": triples, "format": "n3" }),
+        );
         assert_eq!(n3["mediaType"], "text/n3");
         let yaml = call(
             "export_graph",
@@ -1888,7 +1898,10 @@ mod tests {
                 "nowUnix": 1_000_000u64
             }),
         );
-        let st2 = v2["verdicts"][0]["status"].as_str().unwrap().to_ascii_lowercase();
+        let st2 = v2["verdicts"][0]["status"]
+            .as_str()
+            .unwrap()
+            .to_ascii_lowercase();
         assert_eq!(st2, "expired");
 
         // Defeater

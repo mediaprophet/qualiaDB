@@ -615,10 +615,26 @@ impl TaskOrchestrator {
             }
         }
 
+        #[cfg(not(target_arch = "wasm32"))]
         let mut semantic_quin = output.semantic_quin;
+        #[cfg(not(target_arch = "wasm32"))]
         let mut wal_written = false;
+        #[cfg(not(target_arch = "wasm32"))]
         let mut wal_suspended = false;
+        #[cfg(not(target_arch = "wasm32"))]
         let mut suspended_agreement_id = None;
+
+        #[cfg(target_arch = "wasm32")]
+        let semantic_quin = output.semantic_quin;
+        #[cfg(target_arch = "wasm32")]
+        let (wal_written, wal_suspended, suspended_agreement_id) = {
+            if suspended.is_some() {
+                log::debug!(
+                    "WASM orchestration received a suspended queue; persistence remains delegated to the host"
+                );
+            }
+            (false, false, None)
+        };
 
         #[cfg(not(target_arch = "wasm32"))]
         if let Some(ref mut quin) = semantic_quin {
@@ -932,7 +948,10 @@ pub mod tests {
 
         // 3. IMMEDIATELY try to load a new model. The lock should reject it.
         let load_result = orch.load_model(&agent, 456);
-        assert!(load_result.is_err(), "Orchestrator violated mechanical sympathy! Mapped model while Swarm worker was still scrubbing.");
+        assert!(
+            load_result.is_err(),
+            "Orchestrator violated mechanical sympathy! Mapped model while Swarm worker was still scrubbing."
+        );
 
         // 4. Wait for the background Swarm worker to complete its duty of care
         std::thread::sleep(std::time::Duration::from_millis(50));

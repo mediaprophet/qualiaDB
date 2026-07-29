@@ -41,7 +41,11 @@ pub fn build_mel_bank(
 
     let nyquist = sample_rate * 0.5;
     let f_lo = fmin.max(0.0);
-    let f_hi = if fmax <= 0.0 || fmax > nyquist { nyquist } else { fmax };
+    let f_hi = if fmax <= 0.0 || fmax > nyquist {
+        nyquist
+    } else {
+        fmax
+    };
     if f_lo >= f_hi {
         return Err(AudioError::InvalidParameter);
     }
@@ -114,7 +118,10 @@ mod tests {
             }
             // A well-resolved filter (spanning several bins) reaches ~1.0 at its centre.
             if active >= 4 {
-                assert!(peak > 0.9, "filter {m} peak too low: {peak} (active {active})");
+                assert!(
+                    peak > 0.9,
+                    "filter {m} peak too low: {peak} (active {active})"
+                );
             }
         }
     }
@@ -128,7 +135,10 @@ mod tests {
         let mut w = vec![0.0f32; n_bins];
         build_mel_bank(n_bins, 1, sr, 0.0, 8000.0, &mut w).unwrap();
         let peak = w.iter().cloned().fold(0.0f32, f32::max);
-        assert!(peak > 0.999 && peak <= 1.0001, "centre peak not ~1.0: {peak}");
+        assert!(
+            peak > 0.999 && peak <= 1.0001,
+            "centre peak not ~1.0: {peak}"
+        );
     }
 
     #[test]

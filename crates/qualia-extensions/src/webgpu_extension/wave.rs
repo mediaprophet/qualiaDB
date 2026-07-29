@@ -78,8 +78,8 @@ pub fn solve(params: &WebGpuJobParams) -> SolverReport {
                 let w = idx(wrap(i as i64 - 1, nxi), j);
                 let nn = idx(i, wrap(j as i64 + 1, nyi));
                 let s = idx(i, wrap(j as i64 - 1, nyi));
-                let lap = (u[e] + u[w] - 2.0 * u[cc]) * inv_hx2
-                    + (u[nn] + u[s] - 2.0 * u[cc]) * inv_hy2;
+                let lap =
+                    (u[e] + u[w] - 2.0 * u[cc]) * inv_hx2 + (u[nn] + u[s] - 2.0 * u[cc]) * inv_hy2;
                 u_new[cc] = 2.0 * u[cc] - u_old[cc] + coef * lap;
                 max_abs = max_abs.max(u_new[cc].abs());
             }
@@ -123,7 +123,11 @@ mod tests {
 
     fn correlation(a: &[f32], b: &[f64]) -> f64 {
         let dot: f64 = a.iter().zip(b).map(|(&x, &y)| x as f64 * y).sum();
-        let na: f64 = a.iter().map(|&x| (x as f64) * (x as f64)).sum::<f64>().sqrt();
+        let na: f64 = a
+            .iter()
+            .map(|&x| (x as f64) * (x as f64))
+            .sum::<f64>()
+            .sqrt();
         let nb: f64 = b.iter().map(|&y| y * y).sum::<f64>().sqrt();
         dot / (na * nb)
     }
@@ -161,7 +165,11 @@ mod tests {
     #[test]
     fn leapfrog_is_stable_over_a_long_run() {
         let r = solve(&wave_params(500));
-        assert!(r.converged, "wave solver went unstable: residual {}", r.final_residual);
+        assert!(
+            r.converged,
+            "wave solver went unstable: residual {}",
+            r.final_residual
+        );
         for &x in &r.output["displacement_out"] {
             assert!(x.is_finite());
         }

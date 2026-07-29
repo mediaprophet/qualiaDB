@@ -7,7 +7,6 @@ use crate::components::qapp_engine::tauri_invoke;
 #[cfg(target_arch = "wasm32")]
 use js_sys;
 
-
 #[cfg(target_arch = "wasm32")]
 pub async fn add_clinical_report(
     title: &str,
@@ -16,23 +15,45 @@ pub async fn add_clinical_report(
     author_label: Option<&str>,
 ) -> Result<HealthRecordDto, String> {
     let args = js_sys::Object::new();
-    js_sys::Reflect::set(&args, &"title".into(), &wasm_bindgen::JsValue::from_str(title))
-        .map_err(|_| "failed to build invoke args".to_string())?;
-    js_sys::Reflect::set(&args, &"reportType".into(), &wasm_bindgen::JsValue::from_str(report_type))
-        .map_err(|_| "failed to build invoke args".to_string())?;
+    js_sys::Reflect::set(
+        &args,
+        &"title".into(),
+        &wasm_bindgen::JsValue::from_str(title),
+    )
+    .map_err(|_| "failed to build invoke args".to_string())?;
+    js_sys::Reflect::set(
+        &args,
+        &"reportType".into(),
+        &wasm_bindgen::JsValue::from_str(report_type),
+    )
+    .map_err(|_| "failed to build invoke args".to_string())?;
     // 0 → the host stamps "now".
-    js_sys::Reflect::set(&args, &"observedAtUnix".into(), &wasm_bindgen::JsValue::from(0u32))
-        .map_err(|_| "failed to build invoke args".to_string())?;
-    js_sys::Reflect::set(&args, &"body".into(), &wasm_bindgen::JsValue::from_str(body))
-        .map_err(|_| "failed to build invoke args".to_string())?;
+    js_sys::Reflect::set(
+        &args,
+        &"observedAtUnix".into(),
+        &wasm_bindgen::JsValue::from(0u32),
+    )
+    .map_err(|_| "failed to build invoke args".to_string())?;
+    js_sys::Reflect::set(
+        &args,
+        &"body".into(),
+        &wasm_bindgen::JsValue::from_str(body),
+    )
+    .map_err(|_| "failed to build invoke args".to_string())?;
     if let Some(a) = author_label {
-        js_sys::Reflect::set(&args, &"authorLabel".into(), &wasm_bindgen::JsValue::from_str(a))
-            .map_err(|_| "failed to build invoke args".to_string())?;
+        js_sys::Reflect::set(
+            &args,
+            &"authorLabel".into(),
+            &wasm_bindgen::JsValue::from_str(a),
+        )
+        .map_err(|_| "failed to build invoke args".to_string())?;
     }
     let js = tauri_invoke("wellfair_add_clinical_report", args.into())
         .await
         .map_err(|e| format!("{e:?}"))?;
-    let out = js.as_string().ok_or_else(|| "clinical response was not JSON".to_string())?;
+    let out = js
+        .as_string()
+        .ok_or_else(|| "clinical response was not JSON".to_string())?;
     serde_json::from_str(&out).map_err(|e| e.to_string())
 }
 
@@ -52,16 +73,26 @@ pub async fn add_clinical_attachment_from_path(
     media_type: Option<&str>,
 ) -> Result<HealthRecordDto, String> {
     let args = js_sys::Object::new();
-    js_sys::Reflect::set(&args, &"path".into(), &wasm_bindgen::JsValue::from_str(path))
-        .map_err(|_| "failed to build invoke args".to_string())?;
+    js_sys::Reflect::set(
+        &args,
+        &"path".into(),
+        &wasm_bindgen::JsValue::from_str(path),
+    )
+    .map_err(|_| "failed to build invoke args".to_string())?;
     if let Some(m) = media_type {
-        js_sys::Reflect::set(&args, &"mediaType".into(), &wasm_bindgen::JsValue::from_str(m))
-            .map_err(|_| "failed to build invoke args".to_string())?;
+        js_sys::Reflect::set(
+            &args,
+            &"mediaType".into(),
+            &wasm_bindgen::JsValue::from_str(m),
+        )
+        .map_err(|_| "failed to build invoke args".to_string())?;
     }
     let js = tauri_invoke("wellfair_add_clinical_attachment_from_path", args.into())
         .await
         .map_err(|e| format!("{e:?}"))?;
-    let out = js.as_string().ok_or_else(|| "attachment response not JSON".to_string())?;
+    let out = js
+        .as_string()
+        .ok_or_else(|| "attachment response not JSON".to_string())?;
     serde_json::from_str(&out).map_err(|e| e.to_string())
 }
 
@@ -77,14 +108,23 @@ pub async fn add_clinical_attachment_from_path(
 #[cfg(target_arch = "wasm32")]
 pub async fn export_attachment(record_id: &str, dest_path: &str) -> Result<String, String> {
     let args = js_sys::Object::new();
-    js_sys::Reflect::set(&args, &"recordId".into(), &wasm_bindgen::JsValue::from_str(record_id))
-        .map_err(|_| "failed to build invoke args".to_string())?;
-    js_sys::Reflect::set(&args, &"destPath".into(), &wasm_bindgen::JsValue::from_str(dest_path))
-        .map_err(|_| "failed to build invoke args".to_string())?;
+    js_sys::Reflect::set(
+        &args,
+        &"recordId".into(),
+        &wasm_bindgen::JsValue::from_str(record_id),
+    )
+    .map_err(|_| "failed to build invoke args".to_string())?;
+    js_sys::Reflect::set(
+        &args,
+        &"destPath".into(),
+        &wasm_bindgen::JsValue::from_str(dest_path),
+    )
+    .map_err(|_| "failed to build invoke args".to_string())?;
     let js = tauri_invoke("wellfair_export_attachment", args.into())
         .await
         .map_err(|e| format!("{e:?}"))?;
-    js.as_string().ok_or_else(|| "export response not JSON".to_string())
+    js.as_string()
+        .ok_or_else(|| "export response not JSON".to_string())
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -159,4 +199,3 @@ pub async fn pick_directory() -> Result<Option<String>, String> {
 pub async fn pick_directory() -> Result<Option<String>, String> {
     Ok(None)
 }
-

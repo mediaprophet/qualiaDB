@@ -1,11 +1,11 @@
 //! Client-facing auditory Ears MVP + later swarm helpers.
 
+use base64::{engine::general_purpose::STANDARD as B64, Engine as _};
+use qualia_audio::capture::{CapturePurpose, CaptureSession};
 use qualia_audio::cross_modal::{
     frames_to_media_ms, propose_temporal_correlations, TimeIntervalMs,
 };
 use qualia_audio::generation::{synthesize_reference_tone, VoiceConsent};
-use base64::{engine::general_purpose::STANDARD as B64, Engine as _};
-use qualia_audio::capture::{CapturePurpose, CaptureSession};
 use qualia_audio::pipeline::{
     run_ears_demo, run_ears_on_wav_file, run_ears_weighted, section18_smoke, sonify_demo_to_wav,
     speech_phone_demo, EarsDemoResult,
@@ -149,11 +149,7 @@ pub fn section18_smoke_dto() -> Result<String, String> {
 
 pub fn audio_reject_instance(instance_hex: &str) -> Result<String, String> {
     let inst = parse_hex(instance_hex)?;
-    let q = human_reject_quin(
-        qualia_audio::q_hash("did:webizen:local-principal"),
-        inst,
-        0,
-    );
+    let q = human_reject_quin(qualia_audio::q_hash("did:webizen:local-principal"), inst, 0);
     Ok(format!(
         "reject_quin parity=0x{:016x} instance=0x{:016x} (machine claim retained)",
         q.parity, inst
@@ -570,9 +566,7 @@ pub fn daw_fx_demo() -> Result<serde_json::Value, String> {
 
 /// TTS consent + stem separation demo.
 pub fn gen_audio_demo() -> Result<serde_json::Value, String> {
-    use qualia_audio::{
-        separate_two_stems_reference, synthesize_reference_tone, VoiceConsent,
-    };
+    use qualia_audio::{separate_two_stems_reference, synthesize_reference_tone, VoiceConsent};
     let mut consent = VoiceConsent::synthesis_only("demo-voice");
     let mut tone = [0.0f32; 512];
     let rec = synthesize_reference_tone(consent, 440.0, 16000, 512, 7, &mut tone)
@@ -595,9 +589,7 @@ pub fn gen_audio_demo() -> Result<serde_json::Value, String> {
 
 /// Shared media clock + joint window demo.
 pub fn shared_clock_demo() -> Result<serde_json::Value, String> {
-    use qualia_audio::{
-        events_overlapping_window, SharedMediaClock, TimeIntervalMs,
-    };
+    use qualia_audio::{events_overlapping_window, SharedMediaClock, TimeIntervalMs};
     let clock = SharedMediaClock::new(0xC10C, 16000, 25.0);
     let v_ms = clock.video_frame_to_ms(25);
     let a_ms = clock.audio_frame_to_ms(16000);
@@ -649,8 +641,8 @@ pub fn speech_from_disk(
         mono[i] = (2.0 * core::f32::consts::PI * 180.0 * i as f32 / 16000.0).sin() * 0.25;
     }
     let mut tok = [TranscriptToken::empty(); 32];
-    let n = decode_for_language(&w, &mono, 16000, supported, &mut tok)
-        .map_err(|e| format!("{e:?}"))?;
+    let n =
+        decode_for_language(&w, &mono, 16000, supported, &mut tok).map_err(|e| format!("{e:?}"))?;
     Ok(serde_json::json!({
         "tokens": n,
         "model_hash": format!("0x{:016x}", w.model_hash),

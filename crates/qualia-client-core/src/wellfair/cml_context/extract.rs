@@ -238,17 +238,32 @@ pub fn extract_privacy_signals(text: &str) -> Vec<SignalHit> {
     push(
         PrivacySignal::Controller,
         88,
-        &["data controller", "controller shall", "controller must", "as controller"],
+        &[
+            "data controller",
+            "controller shall",
+            "controller must",
+            "as controller",
+        ],
     );
     push(
         PrivacySignal::Processor,
         88,
-        &["data processor", "processor shall", "processor must", "as processor"],
+        &[
+            "data processor",
+            "processor shall",
+            "processor must",
+            "as processor",
+        ],
     );
     push(
         PrivacySignal::Consent,
         85,
-        &["consent", "freely given", "informed consent", "withdraw consent"],
+        &[
+            "consent",
+            "freely given",
+            "informed consent",
+            "withdraw consent",
+        ],
     );
     push(
         PrivacySignal::LawfulBasis,
@@ -266,17 +281,32 @@ pub fn extract_privacy_signals(text: &str) -> Vec<SignalHit> {
     push(
         PrivacySignal::PurposeLimitation,
         84,
-        &["purpose limitation", "specified purpose", "compatible purpose", "further processing"],
+        &[
+            "purpose limitation",
+            "specified purpose",
+            "compatible purpose",
+            "further processing",
+        ],
     );
     push(
         PrivacySignal::DataMinimisation,
         84,
-        &["data minimisation", "data minimization", "not excessive", "adequate, relevant"],
+        &[
+            "data minimisation",
+            "data minimization",
+            "not excessive",
+            "adequate, relevant",
+        ],
     );
     push(
         PrivacySignal::StorageLimitation,
         84,
-        &["storage limitation", "no longer than necessary", "retention period", "kept no longer"],
+        &[
+            "storage limitation",
+            "no longer than necessary",
+            "retention period",
+            "kept no longer",
+        ],
     );
     push(
         PrivacySignal::IntegrityConfidentiality,
@@ -295,7 +325,11 @@ pub fn extract_privacy_signals(text: &str) -> Vec<SignalHit> {
     push(
         PrivacySignal::Accountability,
         82,
-        &["accountability", "demonstrate compliance", "records of processing"],
+        &[
+            "accountability",
+            "demonstrate compliance",
+            "records of processing",
+        ],
     );
     push(
         PrivacySignal::Erasure,
@@ -311,12 +345,21 @@ pub fn extract_privacy_signals(text: &str) -> Vec<SignalHit> {
     push(
         PrivacySignal::AccessRight,
         88,
-        &["right of access", "subject access", "access to personal data", "copy of the personal"],
+        &[
+            "right of access",
+            "subject access",
+            "access to personal data",
+            "copy of the personal",
+        ],
     );
     push(
         PrivacySignal::Portability,
         88,
-        &["data portability", "structured, commonly used", "machine-readable format"],
+        &[
+            "data portability",
+            "structured, commonly used",
+            "machine-readable format",
+        ],
     );
     push(
         PrivacySignal::Objection,
@@ -326,7 +369,11 @@ pub fn extract_privacy_signals(text: &str) -> Vec<SignalHit> {
     push(
         PrivacySignal::Rectification,
         86,
-        &["right to rectification", "rectify", "inaccurate personal data"],
+        &[
+            "right to rectification",
+            "rectify",
+            "inaccurate personal data",
+        ],
     );
     push(
         PrivacySignal::Restriction,
@@ -383,12 +430,24 @@ pub fn extract_privacy_signals(text: &str) -> Vec<SignalHit> {
     push(
         PrivacySignal::Children,
         87,
-        &["child's personal data", "children's data", "under the age of 16", "parental consent"],
+        &[
+            "child's personal data",
+            "children's data",
+            "under the age of 16",
+            "parental consent",
+        ],
     );
     push(
         PrivacySignal::Surveillance,
         80,
-        &["surveillance", "intercept", "tracking", "cctv", "location data", "metadata retention"],
+        &[
+            "surveillance",
+            "intercept",
+            "tracking",
+            "cctv",
+            "location data",
+            "metadata retention",
+        ],
     );
     // Dedup by signal name (keep highest conf).
     hits.sort_by(|a, b| a.signal.cmp(&b.signal));
@@ -554,7 +613,11 @@ mod tests {
     #[test]
     fn cross_refs_captured() {
         let refs = extract_cross_refs("Subject to section 12(1) and Schedule 2, see Article 6.");
-        assert!(refs.iter().any(|r| r.to_ascii_lowercase().contains("section")));
-        assert!(refs.iter().any(|r| r.to_ascii_lowercase().contains("schedule")));
+        assert!(refs
+            .iter()
+            .any(|r| r.to_ascii_lowercase().contains("section")));
+        assert!(refs
+            .iter()
+            .any(|r| r.to_ascii_lowercase().contains("schedule")));
     }
 }

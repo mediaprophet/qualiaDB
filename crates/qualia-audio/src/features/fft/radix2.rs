@@ -147,19 +147,29 @@ mod tests {
                 data[2 * i],
                 orig[i]
             );
-            assert!(data[2 * i + 1].abs() < 1e-4, "im[{i}] leaked {}", data[2 * i + 1]);
+            assert!(
+                data[2 * i + 1].abs() < 1e-4,
+                "im[{i}] leaked {}",
+                data[2 * i + 1]
+            );
         }
     }
 
     #[test]
     fn rejects_non_power_of_two() {
         let mut data = vec![0.0f32; 2 * 6]; // N = 6
-        assert_eq!(fft_radix2(&mut data, false), Err(AudioError::InvalidParameter));
+        assert_eq!(
+            fft_radix2(&mut data, false),
+            Err(AudioError::InvalidParameter)
+        );
     }
 
     #[test]
     fn rejects_odd_length() {
         let mut data = vec![0.0f32; 7];
-        assert_eq!(fft_radix2(&mut data, false), Err(AudioError::InvalidParameter));
+        assert_eq!(
+            fft_radix2(&mut data, false),
+            Err(AudioError::InvalidParameter)
+        );
     }
 }

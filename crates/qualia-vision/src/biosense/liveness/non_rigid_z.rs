@@ -92,6 +92,10 @@ mod tests {
             poses[i] = p;
         }
         let v = evaluate_non_rigid_z(&frames, &poses, DEFAULT_MIN_NONRIGID_SCORE);
-        assert!(matches!(v, NonRigidVerdict::Live3d { score } if score > 0.6), "got {:?}", v);
+        assert!(
+            matches!(v, NonRigidVerdict::Live3d { score } if score > 0.6),
+            "got {:?}",
+            v
+        );
     }
 }

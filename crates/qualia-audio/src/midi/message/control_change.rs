@@ -26,13 +26,21 @@ impl ControlChange {
         if channel > 15 || controller > 127 || value > 127 {
             return Err(AudioError::InvalidParameter);
         }
-        Ok(Self { channel, controller, value })
+        Ok(Self {
+            channel,
+            controller,
+            value,
+        })
     }
 
     /// Serialize to `[0xBn, controller, value]`.
     #[inline]
     pub fn to_bytes(self) -> [u8; 3] {
-        [STATUS_CONTROL_CHANGE | (self.channel & 0x0F), self.controller, self.value]
+        [
+            STATUS_CONTROL_CHANGE | (self.channel & 0x0F),
+            self.controller,
+            self.value,
+        ]
     }
 
     /// Parse from a slice whose first byte is a Control Change status.
@@ -46,7 +54,11 @@ impl ControlChange {
         if bytes[1] > 127 || bytes[2] > 127 {
             return Err(AudioError::MalformedAudio);
         }
-        Ok(Self { channel: bytes[0] & 0x0F, controller: bytes[1], value: bytes[2] })
+        Ok(Self {
+            channel: bytes[0] & 0x0F,
+            controller: bytes[1],
+            value: bytes[2],
+        })
     }
 
     /// True if the controller number is in the channel-mode range (120..=127).
@@ -75,7 +87,13 @@ mod tests {
 
     #[test]
     fn rejects_bad() {
-        assert_eq!(ControlChange::new(0, 128, 0), Err(AudioError::InvalidParameter));
-        assert_eq!(ControlChange::parse(&[0x90, 7, 100]), Err(AudioError::UnsupportedFormat));
+        assert_eq!(
+            ControlChange::new(0, 128, 0),
+            Err(AudioError::InvalidParameter)
+        );
+        assert_eq!(
+            ControlChange::parse(&[0x90, 7, 100]),
+            Err(AudioError::UnsupportedFormat)
+        );
     }
 }

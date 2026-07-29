@@ -28,6 +28,8 @@ impl QTensorEngine {
         true
     }
 
+    #[cfg(feature = "wasm-llm-diagnostics")]
+    #[cfg(feature = "wasm-llm-diagnostics")]
     pub(crate) async fn pipeline_read_batch(&self, batch_elems: usize, out: &mut [f32]) -> bool {
         if batch_elems > out.len() || batch_elems > self.gemm_max_input_floats {
             return false;
@@ -60,6 +62,8 @@ impl QTensorEngine {
         true
     }
 
+    #[cfg(feature = "wasm-llm-diagnostics")]
+    #[cfg(feature = "wasm-llm-diagnostics")]
     pub(crate) async fn pipeline_read_gpu_bytes_at(
         &self,
         src: &wgpu::Buffer,
@@ -95,6 +99,8 @@ impl QTensorEngine {
         true
     }
 
+    #[cfg(feature = "wasm-llm-diagnostics")]
+    #[cfg(feature = "wasm-llm-diagnostics")]
     pub(crate) async fn pipeline_read_kv_head(
         &self,
         layout: &KvCacheLayout,

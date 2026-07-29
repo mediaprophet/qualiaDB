@@ -5,7 +5,7 @@ use dioxus::prelude::*;
 pub fn QaoaExplorer() -> Element {
     let mut is_loading = use_signal(|| false);
     let mut result_text = use_signal(|| "Approximation Ratio: 0.87 (Mocked)".to_string());
-    
+
     let optimize = move |_| {
         is_loading.set(true);
         spawn(async move {

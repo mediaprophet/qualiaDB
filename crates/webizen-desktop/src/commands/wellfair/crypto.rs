@@ -11,8 +11,10 @@ pub fn wellfair_owner_envelope_public(app: AppHandle) -> Result<String, String> 
         let host = guard
             .as_ref()
             .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-        serde_json::to_string(&serde_json::json!({ "public_hex": host.owner_envelope_public_hex() }))
-            .map_err(|e| e.to_string())
+        serde_json::to_string(
+            &serde_json::json!({ "public_hex": host.owner_envelope_public_hex() }),
+        )
+        .map_err(|e| e.to_string())
     })?
 }
 
@@ -49,14 +51,17 @@ pub fn wellfair_seal_and_grant_credential(
 
 /// Open an owner-sealed payload through a credential (works while live; fails once revoked).
 #[command]
-pub fn wellfair_open_owner_payload(app: AppHandle, credential_id: String) -> Result<String, String> {
+pub fn wellfair_open_owner_payload(
+    app: AppHandle,
+    credential_id: String,
+) -> Result<String, String> {
     let state = app.state::<HostApiState>();
     state.0.execute_sync(move |guard| {
         let host = guard
             .as_ref()
             .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         let plaintext = host.open_owner_payload(&credential_id)?;
-        serde_json::to_string(&serde_json::json!({ "plaintext": plaintext })).map_err(|e| e.to_string())
+        serde_json::to_string(&serde_json::json!({ "plaintext": plaintext }))
+            .map_err(|e| e.to_string())
     })?
 }
-

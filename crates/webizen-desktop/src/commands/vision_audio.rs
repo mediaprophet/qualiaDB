@@ -169,7 +169,9 @@ pub fn audio_pick_wav_path(app: AppHandle) -> Result<Option<String>, String> {
         .file()
         .add_filter("WAV", &["wav"])
         .blocking_pick_file();
-    Ok(picked.and_then(|p| p.into_path().ok()).map(|p| p.to_string_lossy().into_owned()))
+    Ok(picked
+        .and_then(|p| p.into_path().ok())
+        .map(|p| p.to_string_lossy().into_owned()))
 }
 
 #[command]
@@ -393,4 +395,3 @@ pub fn vision_correct_instance(
         "note": "Machine proposesClass retained; human correct edge appended."
     }))
 }
-

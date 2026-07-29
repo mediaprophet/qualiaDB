@@ -78,7 +78,12 @@ impl ProvenancePair {
         let mut value = [0u8; MAX_PROV_VALUE];
         let len = bytes.len().min(MAX_PROV_VALUE);
         value[..len].copy_from_slice(&bytes[..len]);
-        Self { track, key, value_len: len as u8, value }
+        Self {
+            track,
+            key,
+            value_len: len as u8,
+            value,
+        }
     }
 }
 
@@ -126,13 +131,11 @@ pub fn extract_smf_provenance(
                         *thirty_seconds_per_quarter,
                     ],
                 ),
-                TrackEvent::Meta(MetaEvent::KeySignature { sharps, minor }) => {
-                    ProvenancePair::new(
-                        track_idx,
-                        ProvenanceKey::KeySignature,
-                        &[*sharps as u8, u8::from(*minor)],
-                    )
-                }
+                TrackEvent::Meta(MetaEvent::KeySignature { sharps, minor }) => ProvenancePair::new(
+                    track_idx,
+                    ProvenanceKey::KeySignature,
+                    &[*sharps as u8, u8::from(*minor)],
+                ),
                 TrackEvent::Meta(MetaEvent::SequenceNumber(n)) => {
                     ProvenancePair::new(track_idx, ProvenanceKey::SequenceNumber, &n.to_be_bytes())
                 }
@@ -226,7 +229,10 @@ mod tests {
         assert_eq!(out[0].value(), b"(c)Q");
 
         assert_eq!(out[1].key, ProvenanceKey::Tempo);
-        assert_eq!(u32::from_be_bytes(out[1].value().try_into().unwrap()), 500_000);
+        assert_eq!(
+            u32::from_be_bytes(out[1].value().try_into().unwrap()),
+            500_000
+        );
 
         assert_eq!(out[2].key, ProvenanceKey::TimeSignature);
         assert_eq!(out[2].value(), &[4, 2, 24, 8]);

@@ -123,12 +123,12 @@ impl ExportReceipt {
     }
 }
 
-pub fn export_policy_receipt(
-    pkg: &HealthExportPackage,
-    timestamp_unix: u32,
-) -> ReceiptRecord {
+pub fn export_policy_receipt(pkg: &HealthExportPackage, timestamp_unix: u32) -> ReceiptRecord {
     ReceiptRecord {
-        id: format!("export-{}", pkg.content_sha256_hex.get(..8).unwrap_or("00000000")),
+        id: format!(
+            "export-{}",
+            pkg.content_sha256_hex.get(..8).unwrap_or("00000000")
+        ),
         timestamp_unix,
         qapp_id: "wellfair-shell".into(),
         record_id: format!("urn:wellfair:export:{}", pkg.exported_at_unix),
@@ -181,6 +181,8 @@ mod tests {
         let pkg = build_export_package(&entries, 99, None);
         let receipt = export_policy_receipt(&pkg, 99);
         assert_eq!(receipt.decision, "Permit");
-        assert!(receipt.obligations.contains(&"standards_readable_export".into()));
+        assert!(receipt
+            .obligations
+            .contains(&"standards_readable_export".into()));
     }
 }

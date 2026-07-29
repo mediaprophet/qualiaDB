@@ -63,12 +63,7 @@ pub fn render_people(sig: PeopleSignals) -> Element {
     // Host-only paths consume these; keep them linked on native check builds.
     #[cfg(not(target_arch = "wasm32"))]
     {
-        let _ = (
-            &active_project,
-            &active_project_id,
-            &collab_list,
-            &tab,
-        );
+        let _ = (&active_project, &active_project_id, &collab_list, &tab);
     }
 
     rsx! {
@@ -219,7 +214,7 @@ pub fn render_people(sig: PeopleSignals) -> Element {
                     onclick: move |_| {
                         #[cfg(target_arch = "wasm32")]
                         {
-                            let (mut invite_in, mut contacts, mut peers, mut status, mut active_project, mut active_project_id, mut collab_list, mut tab) =
+                            let (mut invite_in, contacts, peers, mut status, mut active_project, mut active_project_id, mut collab_list, mut tab) =
                                 (invite_in, contacts, peers, status, active_project, active_project_id, collab_list, tab);
                             spawn(async move {
                                 let input = invite_in().trim().to_string();

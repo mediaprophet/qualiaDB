@@ -52,27 +52,30 @@ pub const BP3D_DATA_DOI: &str = "https://doi.org/10.18908/lsdba.nbdc00837-000";
 /// walked until it reaches one of these; the reached root(s) are the structure's system membership(s).
 /// (Enumerated live from BodyParts3D's `parts_list_e.txt` — the 16 `*-system` nodes.)
 static SYSTEM_ROOTS: &[(&str, &str)] = &[
-    ("FMA7161", "circulatory"),        // cardiovascular system
-    ("FMA7158", "respiratory"),        // respiratory system
-    ("FMA7152", "digestive"),          // alimentary system
-    ("FMA7157", "nervous"),            // nervous system
-    ("FMA72954", "muscular"),          // muscular system
-    ("FMA23881", "skeletal"),          // skeletal system
-    ("FMA23878", "skeletal"),          // articular system (joints) → skeletal
-    ("FMA61406", "skeletal"),          // skeletal system of free upper limb → skeletal
-    ("FMA61409", "skeletal"),          // skeletal system of free lower limb → skeletal
-    ("FMA9668", "endocrine"),          // endocrine system
-    ("FMA74594", "immune_lymphatic"),  // lymphoid system
-    ("FMA72979", "integumentary"),     // integumentary system
-    ("FMA7159", "urinary"),            // urinary system
-    ("FMA7160", "reproductive"),       // genital system
-    ("FMA45664", "reproductive"),      // male genital system
-    ("FMA78499", "sensory"),           // sense organ system
+    ("FMA7161", "circulatory"),       // cardiovascular system
+    ("FMA7158", "respiratory"),       // respiratory system
+    ("FMA7152", "digestive"),         // alimentary system
+    ("FMA7157", "nervous"),           // nervous system
+    ("FMA72954", "muscular"),         // muscular system
+    ("FMA23881", "skeletal"),         // skeletal system
+    ("FMA23878", "skeletal"),         // articular system (joints) → skeletal
+    ("FMA61406", "skeletal"),         // skeletal system of free upper limb → skeletal
+    ("FMA61409", "skeletal"),         // skeletal system of free lower limb → skeletal
+    ("FMA9668", "endocrine"),         // endocrine system
+    ("FMA74594", "immune_lymphatic"), // lymphoid system
+    ("FMA72979", "integumentary"),    // integumentary system
+    ("FMA7159", "urinary"),           // urinary system
+    ("FMA7160", "reproductive"),      // genital system
+    ("FMA45664", "reproductive"),     // male genital system
+    ("FMA78499", "sensory"),          // sense organ system
 ];
 
 /// The body-system id for a system-root FMA id, if it is a known system root.
 fn system_for_root(fma_id: &str) -> Option<&'static str> {
-    SYSTEM_ROOTS.iter().find(|(f, _)| *f == fma_id).map(|(_, s)| *s)
+    SYSTEM_ROOTS
+        .iter()
+        .find(|(f, _)| *f == fma_id)
+        .map(|(_, s)| *s)
 }
 
 /// Strip surrounding double-quotes and whitespace from a TSV cell (the header cells are quoted).
@@ -112,9 +115,15 @@ impl Bp3dHierarchy {
             if whole == "id" || whole.is_empty() || part.is_empty() {
                 continue; // header / malformed
             }
-            part_to_wholes.entry(part.to_string()).or_default().push(whole.to_string());
+            part_to_wholes
+                .entry(part.to_string())
+                .or_default()
+                .push(whole.to_string());
         }
-        Self { names, part_to_wholes }
+        Self {
+            names,
+            part_to_wholes,
+        }
     }
 
     /// The English anatomical name for a structure id.
@@ -125,7 +134,10 @@ impl Bp3dHierarchy {
     /// The **direct** part-of parents (wholes) of a structure — the immediate `partOf` edges for the
     /// ontology (as opposed to [`systems_for`](Self::systems_for), which walks all the way to a system).
     pub fn wholes_of(&self, id: &str) -> &[String] {
-        self.part_to_wholes.get(id).map(Vec::as_slice).unwrap_or(&[])
+        self.part_to_wholes
+            .get(id)
+            .map(Vec::as_slice)
+            .unwrap_or(&[])
     }
 
     /// The body system(s) a structure belongs to — walk part→whole up to the system roots. A structure
@@ -219,7 +231,10 @@ mod producer {
             .map_err(|e| format!("GET {url}: {e}"))?
             .error_for_status()
             .map_err(|e| format!("status {url}: {e}"))?;
-        Ok(resp.bytes().map_err(|e| format!("body {url}: {e}"))?.to_vec())
+        Ok(resp
+            .bytes()
+            .map_err(|e| format!("body {url}: {e}"))?
+            .to_vec())
     }
 
     /// One available STL structure: its id and byte size (from the git-trees listing).
@@ -243,7 +258,10 @@ mod producer {
                 if let Some(fname) = path.strip_prefix(&prefix) {
                     if let Some(id) = fname.strip_suffix(".stl") {
                         let size = e.get("size").and_then(|s| s.as_u64()).unwrap_or(0) as usize;
-                        out.push(Bp3dAsset { id: id.to_string(), size });
+                        out.push(Bp3dAsset {
+                            id: id.to_string(),
+                            size,
+                        });
                     }
                 }
             }
@@ -343,8 +361,17 @@ mod producer {
             let uri = format!("urn:bodyparts3d:{id}");
             // Attest each mesh with the BodyParts3D licence so the `.10d` passes the renderer's
             // fail-closed governance gate and travels with its CC-BY-SA provenance.
-            let provenance = ProvenanceSidecar::new(uri.clone().into_bytes(), "model/stl", BP3D_LICENCE);
-            match compile_organ_asset(&bytes, Some("stl"), &uri, "stl", Some(primary), None, Some(&provenance)) {
+            let provenance =
+                ProvenanceSidecar::new(uri.clone().into_bytes(), "model/stl", BP3D_LICENCE);
+            match compile_organ_asset(
+                &bytes,
+                Some("stl"),
+                &uri,
+                "stl",
+                Some(primary),
+                None,
+                Some(&provenance),
+            ) {
                 Ok(asset) => {
                     let digest = asset.compiled_digest; // capture before container_10d is moved
                     let meta = AnatomyOrganMeta {
@@ -354,7 +381,12 @@ mod producer {
                         position: [0.5, 0.5, 0.5], // BodyParts3D meshes carry true coordinates; the renderer uses those
                         rgba: wellfare_core::anatomy::default_registry().color_of(primary),
                     };
-                    if let Err(e) = writer.add_file(format!("{id}.10d"), "10d", asset.container_10d, Some(meta.to_cbor())) {
+                    if let Err(e) = writer.add_file(
+                        format!("{id}.10d"),
+                        "10d",
+                        asset.container_10d,
+                        Some(meta.to_cbor()),
+                    ) {
                         failed.push((id.clone(), format!("bundle add: {e}")));
                         continue;
                     }
@@ -372,7 +404,10 @@ mod producer {
             }
         }
         if packed == 0 {
-            return Err(format!("no BodyParts3D structures compiled (all {} failed)", failed.len()));
+            return Err(format!(
+                "no BodyParts3D structures compiled (all {} failed)",
+                failed.len()
+            ));
         }
 
         // The addressable ONTOLOGY: fetch the FMA is-a table and emit the `.q42` graph (OBO IRIs + house
@@ -390,7 +425,8 @@ mod producer {
         if let Some(parent) = out_path.parent() {
             std::fs::create_dir_all(parent).map_err(|e| format!("create out dir: {e}"))?;
         }
-        std::fs::write(out_path, &bundle).map_err(|e| format!("write {}: {e}", out_path.display()))?;
+        std::fs::write(out_path, &bundle)
+            .map_err(|e| format!("write {}: {e}", out_path.display()))?;
         // A directly-linkable, byte-identical ontology `.q42` sidecar beside the bundle.
         let q42_sidecar = out_path.with_extension("q42");
         std::fs::write(&q42_sidecar, &q42_bytes)
@@ -411,7 +447,9 @@ mod producer {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-pub use producer::{build_bodyparts3d_pack, list_available_stl, Bp3dAsset, Bp3dPackReport, Bp3dSelection};
+pub use producer::{
+    build_bodyparts3d_pack, list_available_stl, Bp3dAsset, Bp3dPackReport, Bp3dSelection,
+};
 
 #[cfg(test)]
 mod tests {
@@ -462,7 +500,10 @@ mod tests {
         // Guard: each FMA system root maps to an id the registry actually knows.
         let reg = wellfare_core::anatomy::default_registry();
         for (fma, sys) in SYSTEM_ROOTS {
-            assert!(reg.get(sys).is_some(), "root {fma} → unknown system id {sys}");
+            assert!(
+                reg.get(sys).is_some(),
+                "root {fma} → unknown system id {sys}"
+            );
         }
     }
 
@@ -482,7 +523,10 @@ mod tests {
     fn wholes_of_returns_direct_part_of_parents() {
         let h = Bp3dHierarchy::from_mapping(PARTS, PART_OF);
         // The diaphragm is a direct part of both the muscular and respiratory systems (fixture row order).
-        assert_eq!(h.wholes_of("FMA13295"), &["FMA72954".to_string(), "FMA7158".to_string()]);
+        assert_eq!(
+            h.wholes_of("FMA13295"),
+            &["FMA72954".to_string(), "FMA7158".to_string()]
+        );
         assert!(h.wholes_of("FMA_UNKNOWN").is_empty());
     }
 

@@ -6,7 +6,6 @@ use super::*;
 
 use std::path::Path;
 
-
 /// All peer agreements.
 pub fn list_agreements() -> Result<serde_json::Value, String> {
     serde_json::to_value(crate::agreements::list_agreements()).map_err(|e| e.to_string())
@@ -278,4 +277,3 @@ pub fn parse_chat_file_preview(source_path: String) -> Result<serde_json::Value,
     let parsed = crate::chat_files::parse_document_bytes(name, &bytes);
     serde_json::to_value(parsed).map_err(|e| e.to_string())
 }
-

@@ -480,6 +480,12 @@ fn issue_prefetch(data: &f64) {
     {
         let _ = data; // prefetch is a no-op hint; aarch64 has no stable Rust intrinsic
     }
+
+    #[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64")))]
+    {
+        // Preserve a scheduling barrier on targets without a stable prefetch intrinsic.
+        core::hint::black_box(data);
+    }
 }
 
 // ─── Tests ─────────────────────────────────────────────────────────────────────

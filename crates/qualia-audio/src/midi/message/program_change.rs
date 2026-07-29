@@ -40,7 +40,10 @@ impl ProgramChange {
         if bytes[1] > 127 {
             return Err(AudioError::MalformedAudio);
         }
-        Ok(Self { channel: bytes[0] & 0x0F, program: bytes[1] })
+        Ok(Self {
+            channel: bytes[0] & 0x0F,
+            program: bytes[1],
+        })
     }
 }
 
@@ -57,7 +60,13 @@ mod tests {
 
     #[test]
     fn rejects_bad() {
-        assert_eq!(ProgramChange::new(0, 128), Err(AudioError::InvalidParameter));
-        assert_eq!(ProgramChange::parse(&[0xD0, 40]), Err(AudioError::UnsupportedFormat));
+        assert_eq!(
+            ProgramChange::new(0, 128),
+            Err(AudioError::InvalidParameter)
+        );
+        assert_eq!(
+            ProgramChange::parse(&[0xD0, 40]),
+            Err(AudioError::UnsupportedFormat)
+        );
     }
 }

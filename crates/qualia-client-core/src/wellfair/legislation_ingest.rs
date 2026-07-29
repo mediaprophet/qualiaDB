@@ -18,9 +18,7 @@ use super::cml_context::{
     build_cof_package, build_document_context, CofStyle, ContextUnit, DEFAULT_SEGMENT_MAX_CHARS,
     MEDIA_TYPE_COF,
 };
-use super::hypermedia_store::{
-    CommonsVisibility, HypermediaStore, LibraryEntry, LibrarySection,
-};
+use super::hypermedia_store::{CommonsVisibility, HypermediaStore, LibraryEntry, LibrarySection};
 
 /// Media type for native legislation provision entries.
 pub const LEGISLATION_MEDIA_TYPE: &str = "text/x-legislation-provision";
@@ -109,7 +107,16 @@ fn looks_like_section_heading(title: &str) -> bool {
     }
     let lower = t.to_ascii_lowercase();
     for bad in [
-        "of ", "or ", "and ", "to ", "in ", "for ", "as ", "under ", "made by", "has no effect",
+        "of ",
+        "or ",
+        "and ",
+        "to ",
+        "in ",
+        "for ",
+        "as ",
+        "under ",
+        "made by",
+        "has no effect",
     ] {
         if lower.starts_with(bad) {
             return false;
@@ -169,7 +176,12 @@ pub fn parse_pages(pages: &[(u32, String)], title_hint: Option<&str>) -> Legisla
 
     let cleaned_all: Vec<String> = pages
         .iter()
-        .flat_map(|(_, raw)| clean_page(raw).lines().map(|s| s.trim().to_string()).collect::<Vec<_>>())
+        .flat_map(|(_, raw)| {
+            clean_page(raw)
+                .lines()
+                .map(|s| s.trim().to_string())
+                .collect::<Vec<_>>()
+        })
         .collect();
     let has_enacting = cleaned_all.iter().any(|ln| re_enacting.is_match(ln));
     let has_eu_articles = cleaned_all.iter().any(|ln| re_eu_article.is_match(ln));
@@ -185,14 +197,15 @@ pub fn parse_pages(pages: &[(u32, String)], title_hint: Option<&str>) -> Legisla
     let mut buf: Vec<String> = Vec::new();
     let mut current_schedule: Option<String> = None;
 
-    let flush = |cur: &mut Option<Provision>, buf: &mut Vec<String>, provisions: &mut Vec<Provision>| {
-        if let Some(mut p) = cur.take() {
-            p.text = buf.join("\n").trim().to_string();
-            p.full_text = p.text.clone();
-            provisions.push(p);
-        }
-        buf.clear();
-    };
+    let flush =
+        |cur: &mut Option<Provision>, buf: &mut Vec<String>, provisions: &mut Vec<Provision>| {
+            if let Some(mut p) = cur.take() {
+                p.text = buf.join("\n").trim().to_string();
+                p.full_text = p.text.clone();
+                provisions.push(p);
+            }
+            buf.clear();
+        };
 
     let is_heading_title = |head: &str| {
         let h = head.trim();
@@ -400,7 +413,9 @@ pub fn parse_pages(pages: &[(u32, String)], title_hint: Option<&str>) -> Legisla
             }
             if let Some(c) = cur.as_mut() {
                 // EU article: first line after "Article N" is often the short title.
-                if c.heading.is_empty() && s.len() < 120 && !s.chars().next().unwrap_or(' ').is_ascii_digit()
+                if c.heading.is_empty()
+                    && s.len() < 120
+                    && !s.chars().next().unwrap_or(' ').is_ascii_digit()
                 {
                     c.heading = s.to_string();
                 } else {
@@ -415,7 +430,11 @@ pub fn parse_pages(pages: &[(u32, String)], title_hint: Option<&str>) -> Legisla
     provisions = decompose_provisions(provisions);
 
     let slug = {
-        let mut s = slugify(&Regex::new(r"(?i)\s*No\.\s*\d+.*$").unwrap().replace(&title, ""));
+        let mut s = slugify(
+            &Regex::new(r"(?i)\s*No\.\s*\d+.*$")
+                .unwrap()
+                .replace(&title, ""),
+        );
         let parts: Vec<_> = s.split('-').take(12).collect();
         s = parts.join("-");
         if s.len() < 3 || s.len() > 90 {
@@ -574,9 +593,7 @@ pub fn seed_instrument_into_library(
     let base = format!(
         "legislation://{}/{}",
         inst.jurisdiction.to_ascii_lowercase(),
-        inst.register_id
-            .as_deref()
-            .unwrap_or(inst.slug.as_str())
+        inst.register_id.as_deref().unwrap_or(inst.slug.as_str())
     );
 
     let mut written = 0usize;
@@ -712,7 +729,12 @@ pub fn seed_instrument_into_library(
                 seg.index + 1,
                 seg.total,
                 seg.approx_tokens,
-                seg.unit_frags.iter().take(12).cloned().collect::<Vec<_>>().join(", ")
+                seg.unit_frags
+                    .iter()
+                    .take(12)
+                    .cloned()
+                    .collect::<Vec<_>>()
+                    .join(", ")
             ),
             sensitivity: "public".into(),
             section: LibrarySection::Work.as_str().into(),
@@ -957,8 +979,14 @@ mod tests {
 The Parliament of Australia enacts:\n\
 1  Short title\nThis Act may be cited as the Demo Act 2020.\n\
 2  Commencement\nThis Act commences on the day after Royal Assent.\n";
-        let report = ingest_legislation_text(&store, text, Some("C2020A00001"), "AU", Some("Demo Act 2020"))
-            .unwrap();
+        let report = ingest_legislation_text(
+            &store,
+            text,
+            Some("C2020A00001"),
+            "AU",
+            Some("Demo Act 2020"),
+        )
+        .unwrap();
         assert!(report.sections >= 2);
         assert!(report.concepts_with_text >= 2);
         assert!(report.coverage_ok);
@@ -970,7 +998,9 @@ The Parliament of Australia enacts:\n\
             .any(|e| e.purposes.iter().any(|p| p == "legislation")));
         // CML context graph attached (deontic/privacy cues from body text when present).
         assert!(report.cml_concepts > 0);
-        assert!(work.iter().any(|e| e.cml_concept_count > 0 || !e.cml_n3.is_empty()));
+        assert!(work
+            .iter()
+            .any(|e| e.cml_concept_count > 0 || !e.cml_n3.is_empty()));
     }
 
     #[test]

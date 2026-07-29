@@ -55,7 +55,10 @@ mod tests {
         let mut out = vec![0.0f32; n_mel];
         mel_bands(&power, &bank, n_mel, &mut out).unwrap();
         for (m, &e) in out.iter().enumerate() {
-            assert!(e > 0.0, "band {m} energy should be positive under flat input");
+            assert!(
+                e > 0.0,
+                "band {m} energy should be positive under flat input"
+            );
         }
     }
 

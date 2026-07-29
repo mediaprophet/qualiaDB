@@ -2,8 +2,6 @@
 
 #![allow(non_snake_case)]
 
-
-
 use serde::Serialize;
 use std::fs;
 use std::io::Read;

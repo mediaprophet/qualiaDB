@@ -4,15 +4,42 @@ use super::*;
 use crate::Route;
 use dioxus::prelude::*;
 
+fn qapp_capabilities(id: &str) -> Vec<&'static str> {
+    let lower = id.to_ascii_lowercase();
+    let mut labels = vec!["Local execution", "Semantic Library"];
+    if lower.contains("medical")
+        || lower.contains("clinical")
+        || lower.contains("comorbid")
+        || lower.contains("anatom")
+    {
+        labels.push("Health ontologies");
+    } else if lower.contains("finance") || lower.contains("portfolio") || lower.contains("risk") {
+        labels.push("Financial ontology");
+    } else if lower.contains("ontology")
+        || lower.contains("semantic")
+        || lower.contains("sparql")
+        || lower.contains("knowledge")
+    {
+        labels.push("Ontology / graph");
+    } else if lower.contains("llm") || lower.contains("chat") || lower.contains("agent") {
+        labels.push("AI model");
+    } else {
+        labels.push("Domain graph");
+    }
+    labels
+}
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 #[component]
 pub fn QApps() -> Element {
     let all_apps = qapp_catalog();
     let mut selected_cat = use_signal(|| Cat::All);
+    let mut search = use_signal(String::new);
     // Default: only Active + Beta (full catalog incl. Soon is opt-in).
     let mut show_soon = use_signal(|| false);
     let current_cat = selected_cat();
+    let search_text = search().trim().to_ascii_lowercase();
     let cats = cat_list();
 
     let n_active = all_apps.iter().filter(|a| a.stat == Stat::Active).count();
@@ -23,6 +50,12 @@ pub fn QApps() -> Element {
         .iter()
         .filter(|a| current_cat == Cat::All || a.cat == current_cat)
         .filter(|a| show_soon() || matches!(a.stat, Stat::Active | Stat::Beta))
+        .filter(|a| {
+            search_text.is_empty()
+                || [a.id, a.name, a.tagline, a.desc]
+                    .iter()
+                    .any(|value| value.to_ascii_lowercase().contains(&search_text))
+        })
         .map(|a| {
             let (status_label, status_color, opacity) = match a.stat {
                 Stat::Active => ("Active", "#10b981", "1"),
@@ -97,6 +130,35 @@ pub fn QApps() -> Element {
             }
 
             // ── Featured Templates ──────────────────────────────────────────────
+            div {
+                style: "display:grid;grid-template-columns:minmax(240px,1fr) repeat(3,minmax(150px,.45fr));gap:.6rem;margin-bottom:1.35rem;",
+                div {
+                    style: "position:relative;",
+                    sl-icon { "name": "search", style: "position:absolute;left:.8rem;top:.72rem;color:var(--qualia-text-muted);" }
+                    input {
+                        r#type: "search",
+                        aria_label: "Search QApps",
+                        placeholder: "Search by task, domain, or capability…",
+                        value: "{search}",
+                        oninput: move |event| search.set(event.value()),
+                        style: "width:100%;box-sizing:border-box;padding:.65rem .8rem .65rem 2.35rem;border:1px solid var(--qualia-border);border-radius:11px;background:var(--qualia-surface);color:var(--qualia-text);font:inherit;font-size:.78rem;",
+                    }
+                }
+                for (number, title, detail) in [
+                    ("1", "Choose", "Find the job you want done"),
+                    ("2", "Check", "Review data and ontology needs"),
+                    ("3", "Run", "Open its working canvas"),
+                ] {
+                    div { style: "display:flex;gap:.55rem;align-items:center;border:1px solid var(--qualia-border);border-radius:11px;background:var(--qualia-surface);padding:.55rem .65rem;",
+                        span { style: "width:1.45rem;height:1.45rem;border-radius:7px;background:var(--qualia-accent-glow);color:var(--qualia-accent);display:grid;place-items:center;font-size:.65rem;font-weight:800;flex:0 0 auto;", "{number}" }
+                        div {
+                            div { style: "font-size:.7rem;font-weight:750;color:var(--qualia-text);", "{title}" }
+                            div { style: "font-size:.61rem;color:var(--qualia-text-muted);margin-top:1px;", "{detail}" }
+                        }
+                    }
+                }
+            }
+
             div { style: "margin-bottom: 1.75rem;",
                 div {
                     style: "font-size: 0.7rem; font-weight: 700; color: var(--qualia-text-muted); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 0.75rem;",
@@ -187,6 +249,12 @@ pub fn QApps() -> Element {
                             "{card.desc}"
                         }
 
+                        div { style: "display:flex;gap:.3rem;flex-wrap:wrap;",
+                            for capability in qapp_capabilities(card.id) {
+                                span { style: "font-size:.61rem;padding:.18rem .42rem;border-radius:999px;background:var(--qualia-accent-glow);color:var(--qualia-accent);", "{capability}" }
+                            }
+                        }
+
                         // Action buttons
                         {
                             let app_id_str = card.id.to_string();
@@ -235,7 +303,7 @@ pub fn QApps() -> Element {
                                                 to: Route::StudioEditRoute { app_id: app_id_str2 },
                                                 style: "display: inline-flex; align-items: center; gap: 0.35rem; background: var(--qualia-accent); color: white; border-radius: 8px; padding: 0.38rem 0.75rem; font-size: 0.76rem; font-weight: 600; text-decoration: none; transition: opacity 0.15s;",
                                                 sl-icon { "name": "layers", style: "font-size: 0.68rem;" }
-                                                "Open in Studio"
+                                                "Run QApp"
                                             }
                                         },
                                         BtnKind::ComingSoon => rsx! {
@@ -256,4 +324,3 @@ pub fn QApps() -> Element {
         }
     }
 }
-

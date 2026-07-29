@@ -89,7 +89,10 @@ pub fn mint_relationship_address(
 
 /// Enable/disable an address (the surgical per-relationship revoke).
 #[command]
-pub fn set_mail_address_enabled(address: String, enabled: bool) -> Result<serde_json::Value, String> {
+pub fn set_mail_address_enabled(
+    address: String,
+    enabled: bool,
+) -> Result<serde_json::Value, String> {
     api::set_mail_address_enabled(address, enabled)
 }
 
@@ -132,24 +135,33 @@ pub fn cf_deploy_infrastructure(
     // 1. Provision R2 Bucket
     let bucket_name = format!("qualia-offline-{}", domain.replace('.', "-"));
     api::cf_provision_r2_bucket(token.clone(), account_id.clone(), bucket_name.clone())?;
-    
+
     // 2. Provision Worker
     let script_name = format!("qualia-relay-{}", domain.replace('.', "-"));
     api::cf_provision_worker(token.clone(), account_id.clone(), script_name.clone())?;
-    
+
     // 3. Provision Tunnel
     let tunnel_name = format!("qualia-tunnel-{}", domain.replace('.', "-"));
     // Generate a secure 32-byte secret (mocked with simple random bytes for demo)
     let secret_bytes: Vec<u8> = (0..32).map(|_| rand::random::<u8>()).collect();
     use base64::{engine::general_purpose, Engine as _};
     let tunnel_secret = general_purpose::STANDARD.encode(&secret_bytes);
-    
-    let tunnel_res = api::cf_provision_tunnel(token.clone(), account_id.clone(), tunnel_name.clone(), tunnel_secret)?;
-    let tunnel_id = tunnel_res.get("tunnel_id").and_then(|v| v.as_str()).unwrap_or_default().to_string();
-    
+
+    let tunnel_res = api::cf_provision_tunnel(
+        token.clone(),
+        account_id.clone(),
+        tunnel_name.clone(),
+        tunnel_secret,
+    )?;
+    let tunnel_id = tunnel_res
+        .get("tunnel_id")
+        .and_then(|v| v.as_str())
+        .unwrap_or_default()
+        .to_string();
+
     // 4. Route Tunnel DNS
     api::cf_route_tunnel_dns(token.clone(), zone_id, domain.clone(), tunnel_id.clone())?;
-    
+
     Ok(serde_json::json!({
         "ok": true,
         "bucket": bucket_name,
@@ -175,12 +187,24 @@ pub fn deploy_static_site_cf_pages(
             ("index.html".to_string(), "<h1>Welcome to Qualia Webizen</h1><p>Static site deployed via Cloudflare Pages and GitHub.</p>".to_string()),
         ]),
     )?;
-    
-    let repo_full_name = full_name.get("full_name").and_then(|v| v.as_str()).unwrap_or_default().to_string();
+
+    let repo_full_name = full_name
+        .get("full_name")
+        .and_then(|v| v.as_str())
+        .unwrap_or_default()
+        .to_string();
 
     // 2. Provision Cloudflare Pages Project
-    let project_name = format!("qualia-site-{}", github_repo.replace('.', "-").to_lowercase());
-    api::cf_provision_pages_project(cf_token, cf_account, project_name.clone(), repo_full_name.clone())?;
+    let project_name = format!(
+        "qualia-site-{}",
+        github_repo.replace('.', "-").to_lowercase()
+    );
+    api::cf_provision_pages_project(
+        cf_token,
+        cf_account,
+        project_name.clone(),
+        repo_full_name.clone(),
+    )?;
 
     Ok(serde_json::json!({
         "ok": true,
@@ -251,7 +275,10 @@ pub fn mail_delete(id: String) -> Result<serde_json::Value, String> {
 
 /// MX/SPF DNS paste block for a domain.
 #[command]
-pub fn mail_dns_forms(domain: String, mx_host: Option<String>) -> Result<serde_json::Value, String> {
+pub fn mail_dns_forms(
+    domain: String,
+    mx_host: Option<String>,
+) -> Result<serde_json::Value, String> {
     api::mail_dns_forms(domain, mx_host)
 }
 
@@ -325,9 +352,7 @@ pub fn mesh_dialability() -> Result<serde_json::Value, String> {
 
 /// Local project collaborator roster (people + agents on a cooperative project).
 #[command]
-pub fn list_project_collaborators(
-    project_id: Option<String>,
-) -> Result<serde_json::Value, String> {
+pub fn list_project_collaborators(project_id: Option<String>) -> Result<serde_json::Value, String> {
     api::list_project_collaborators(project_id)
 }
 
@@ -524,7 +549,11 @@ pub fn submit_omnibox_query(query: String) -> String {
     if looks_like_domain {
         return format!("https://{}", q);
     }
-    if q.starts_with("http://") || q.starts_with("https://") || q.starts_with("qualia://") || q.starts_with("webizen://") {
+    if q.starts_with("http://")
+        || q.starts_with("https://")
+        || q.starts_with("qualia://")
+        || q.starts_with("webizen://")
+    {
         q.to_string()
     } else {
         format!("https://duckduckgo.com/?q={}", urlencoding::encode(q))
@@ -650,8 +679,7 @@ pub async fn save_qlink(
                 if let Ok(json_ld) = Selector::parse("script[type='application/ld+json']") {
                     for script in document.select(&json_ld) {
                         let ld_text = script.text().collect::<Vec<_>>().join("");
-                        extracted_content
-                            .push_str(&format!("\n```json\n{}\n```\n", ld_text));
+                        extracted_content.push_str(&format!("\n```json\n{}\n```\n", ld_text));
                     }
                 }
             }
@@ -746,9 +774,7 @@ pub fn compute_context_hash(url: String) -> serde_json::Value {
 /// `invoke("run_computational_geometry", { request })` in the desktop shell
 /// and the same operation through MCP in agent/development workflows.
 #[command]
-pub fn run_computational_geometry(
-    request: serde_json::Value,
-) -> Result<serde_json::Value, String> {
+pub fn run_computational_geometry(request: serde_json::Value) -> Result<serde_json::Value, String> {
     let output =
         qualia_core_db::specialized_libs::computational_geometry::execute_geometry_tool_json(
             &request.to_string(),
@@ -756,4 +782,3 @@ pub fn run_computational_geometry(
         .map_err(|error| error.to_string())?;
     serde_json::from_str(&output).map_err(|error| error.to_string())
 }
-

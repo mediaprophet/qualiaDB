@@ -268,12 +268,13 @@ mod tests {
 
         let mut out = [0.0f32; 4];
         let mut scratch = scratch_buf();
-        let n = multipitch_klapuri(
-            &mag, SR, F_MIN, F_MAX, 3, 0.5, &mut out, &mut scratch,
-        )
-        .expect("klapuri");
+        let n = multipitch_klapuri(&mag, SR, F_MIN, F_MAX, 3, 0.5, &mut out, &mut scratch)
+            .expect("klapuri");
 
-        assert_eq!(n, 2, "two tones present → exactly two F0s (no invented third)");
+        assert_eq!(
+            n, 2,
+            "two tones present → exactly two F0s (no invented third)"
+        );
 
         // The two recovered F0s must be ~440 and ~660 in some order.
         let (a, b) = (out[0], out[1]);
@@ -293,10 +294,8 @@ mod tests {
 
         let mut out = [0.0f32; 4];
         let mut scratch = scratch_buf();
-        let n = multipitch_klapuri(
-            &mag, SR, F_MIN, F_MAX, 4, 0.5, &mut out, &mut scratch,
-        )
-        .expect("klapuri");
+        let n = multipitch_klapuri(&mag, SR, F_MIN, F_MAX, 4, 0.5, &mut out, &mut scratch)
+            .expect("klapuri");
 
         assert_eq!(n, 1, "one tone → one F0");
         assert!(
@@ -312,10 +311,8 @@ mod tests {
         let mag = vec![0.1f32; N_BINS_SPEC]; // constant → no strict local maxima
         let mut out = [0.0f32; 4];
         let mut scratch = scratch_buf();
-        let n = multipitch_klapuri(
-            &mag, SR, F_MIN, F_MAX, 4, 0.5, &mut out, &mut scratch,
-        )
-        .expect("klapuri");
+        let n = multipitch_klapuri(&mag, SR, F_MIN, F_MAX, 4, 0.5, &mut out, &mut scratch)
+            .expect("klapuri");
         assert_eq!(n, 0, "flat/noise spectrum → abstain (0 F0s)");
     }
 
@@ -329,10 +326,8 @@ mod tests {
 
         let mut out = [0.0f32; 4];
         let mut scratch = scratch_buf();
-        let n = multipitch_klapuri(
-            &mag, SR, F_MIN, F_MAX, 2, 0.5, &mut out, &mut scratch,
-        )
-        .expect("klapuri");
+        let n = multipitch_klapuri(&mag, SR, F_MIN, F_MAX, 2, 0.5, &mut out, &mut scratch)
+            .expect("klapuri");
         assert_eq!(n, 2, "declared max-polyphony of 2 is honoured");
     }
 

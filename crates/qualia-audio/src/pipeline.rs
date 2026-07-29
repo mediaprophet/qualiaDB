@@ -51,7 +51,13 @@ pub fn run_ears_demo(
     if let Some(root) = storage_root {
         let store = AudioMediaStore::open(root.join("audio_media")).map_err(|e| e)?;
         let rec = store
-            .import_bytes(&wav, sample_rate, 1, frames as u32, RetentionClass::Restricted)
+            .import_bytes(
+                &wav,
+                sample_rate,
+                1,
+                frames as u32,
+                RetentionClass::Restricted,
+            )
             .map_err(|e| e)?;
         media_hash = rec.digest_u64;
     }
@@ -62,8 +68,8 @@ pub fn run_ears_demo(
     to_mono_f32(view, &mut mono2).map_err(|e| format!("{e:?}"))?;
 
     let mut mel = vec![0.0f32; 32 * 16];
-    let mel_frames =
-        log_mel_from_mono(&mono2, 256, 128, sample_rate, 16, &mut mel).map_err(|e| format!("{e:?}"))?;
+    let mel_frames = log_mel_from_mono(&mono2, 256, 128, sample_rate, 16, &mut mel)
+        .map_err(|e| format!("{e:?}"))?;
     let mut cqt = [0.0f32; 24];
     forward_cqt_mono(&mono2, sample_rate as f32, 55.0, 12, 24, &mut cqt)
         .map_err(|e| format!("{e:?}"))?;
@@ -89,7 +95,10 @@ pub fn run_ears_demo(
         &mut quins,
     );
 
-    let classes: Vec<u64> = events[..counts.events].iter().map(|e| e.class_hash).collect();
+    let classes: Vec<u64> = events[..counts.events]
+        .iter()
+        .map(|e| e.class_hash)
+        .collect();
 
     Ok(EarsDemoResult {
         sample_rate,
@@ -146,8 +155,8 @@ pub fn run_ears_on_wav_file(
         }
     };
     let mut mel = vec![0.0f32; 32 * 16];
-    let mel_frames =
-        log_mel_from_mono(&mono, 256, 128, decoded.sample_rate, 16, &mut mel).map_err(|e| format!("{e:?}"))?;
+    let mel_frames = log_mel_from_mono(&mono, 256, 128, decoded.sample_rate, 16, &mut mel)
+        .map_err(|e| format!("{e:?}"))?;
     let mut cqt = [0.0f32; 24];
     forward_cqt_mono(&mono, decoded.sample_rate as f32, 55.0, 12, 24, &mut cqt)
         .map_err(|e| format!("{e:?}"))?;
@@ -274,8 +283,8 @@ pub fn speech_phone_demo(supported: bool) -> Result<(usize, u64), String> {
         mono[i] = (2.0 * core::f32::consts::PI * 180.0 * i as f32 / 16000.0).sin() * 0.25;
     }
     let mut tok = [TranscriptToken::empty(); 32];
-    let n = decode_for_language(&w, &mono, 16000, supported, &mut tok)
-        .map_err(|e| format!("{e:?}"))?;
+    let n =
+        decode_for_language(&w, &mono, 16000, supported, &mut tok).map_err(|e| format!("{e:?}"))?;
     Ok((n, w.model_hash))
 }
 

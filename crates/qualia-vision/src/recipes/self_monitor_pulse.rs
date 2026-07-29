@@ -26,7 +26,8 @@ pub fn self_monitor_pulse(
     }
     // Quality on first frame
     let mut gray = vec![0u8; (width * height) as usize];
-    let v0 = RgbView::new(width, height, width * 3, &rgb_frames[..fb]).ok_or(CvError::EmptyInput)?;
+    let v0 =
+        RgbView::new(width, height, width * 3, &rgb_frames[..fb]).ok_or(CvError::EmptyInput)?;
     rgb_to_gray_u8(v0, &mut gray)?;
     let gv = GrayView::new(width, height, width, &gray).ok_or(CvError::EmptyInput)?;
     let blur = frame_blur_score(gv);

@@ -6,7 +6,6 @@ use super::*;
 
 use std::path::Path;
 
-
 /// Schedule one agent turn as a background job (queued, off the chat thread). Routed local-first; a
 /// remote-MCP agent's turn is sent out over MCP. Returns the created job as JSON.
 pub fn schedule_agent_job(
@@ -115,4 +114,3 @@ pub fn get_default_outcome_sharing(session_id: String) -> Result<serde_json::Val
     let policy = crate::chat_agents::default_outcome_sharing(session.meta.session_kind);
     serde_json::to_value(policy).map_err(|e| e.to_string())
 }
-

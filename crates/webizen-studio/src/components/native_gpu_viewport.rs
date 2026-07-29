@@ -18,12 +18,9 @@ use crate::components::qapp_engine::invoke_json;
 /// via `set_gpu_camera`. On unmount, calls `unmount_gpu_surface`.
 #[component]
 pub fn NativeGpuViewport(
-    #[props(default = 1200u32)]
-    width: u32,
-    #[props(default = 800u32)]
-    height: u32,
-    #[props(default = true)]
-    auto_mount: bool,
+    #[props(default = 1200u32)] width: u32,
+    #[props(default = 800u32)] height: u32,
+    #[props(default = true)] auto_mount: bool,
 ) -> Element {
     let mut mounted = use_signal(|| false);
     let mut error_msg = use_signal(|| None::<String>);

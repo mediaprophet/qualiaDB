@@ -41,8 +41,8 @@ pub fn load_meta(storage_root: impl AsRef<Path>) -> Option<CheckpointMeta> {
 pub fn save_meta(storage_root: impl AsRef<Path>, meta: &CheckpointMeta) -> std::io::Result<()> {
     let path = storage_root.as_ref().join(META_FILE);
     ensure_parent(&path)?;
-    let text = serde_json::to_string_pretty(meta)
-        .map_err(|e| std::io::Error::other(e.to_string()))?;
+    let text =
+        serde_json::to_string_pretty(meta).map_err(|e| std::io::Error::other(e.to_string()))?;
     fs::write(path, text)
 }
 

@@ -106,12 +106,7 @@ mod tests {
 
     /// Forward analysis: window each frame and FFT it into an interleaved-complex
     /// spectra buffer (`num_frames × 2N`). Test-only helper (may allocate).
-    fn analyse(
-        signal: &[f32],
-        n: usize,
-        hop: usize,
-        window: &[f32],
-    ) -> (Vec<f32>, usize) {
+    fn analyse(signal: &[f32], n: usize, hop: usize, window: &[f32]) -> (Vec<f32>, usize) {
         let frames = frame_count(signal.len(), n, hop);
         let two_n = 2 * n;
         let mut spectra = vec![0.0f32; frames * two_n];
@@ -153,8 +148,17 @@ mod tests {
         let mut ifft_scratch = vec![0.0f32; n];
         let mut norm = vec![0.0f32; out_len];
         let mut out = vec![0.0f32; out_len];
-        istft(&mut spectra, n, hop, &window, &window, &mut ifft_scratch, &mut norm, &mut out)
-            .unwrap();
+        istft(
+            &mut spectra,
+            n,
+            hop,
+            &window,
+            &window,
+            &mut ifft_scratch,
+            &mut norm,
+            &mut out,
+        )
+        .unwrap();
 
         // Steady-state region [n, out_len - n): every sample seen by full overlap.
         let (lo, hi) = (n, out_len - n);

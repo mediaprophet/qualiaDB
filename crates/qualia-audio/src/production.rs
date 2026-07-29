@@ -47,12 +47,18 @@ impl Default for TrackState {
 
 /// One-pole peaking-ish shelf via gain around centre freq (reference quality).
 #[inline]
-pub fn apply_eq_sample(s: f32, eq_gain_db: f32, _freq_hz: f32, sample_rate: u32, z: &mut f32) -> f32 {
+pub fn apply_eq_sample(
+    s: f32,
+    eq_gain_db: f32,
+    _freq_hz: f32,
+    sample_rate: u32,
+    z: &mut f32,
+) -> f32 {
     if eq_gain_db.abs() < 0.01 || sample_rate == 0 {
         return s;
     }
     let g = 10f32.powf(eq_gain_db / 40.0); // amplitude-ish
-    // Mild high-shelf: blend highpassed residual
+                                           // Mild high-shelf: blend highpassed residual
     let hp = s - *z;
     *z += 0.05 * (s - *z);
     s + hp * (g - 1.0) * 0.25
@@ -196,12 +202,18 @@ impl ProcessPlan {
     }
 
     /// Apply track FX chain to mono offline (same ops as process_block path).
-    pub fn process_mono_fx(track: &TrackState, sample_rate: u32, mono: &[f32], out: &mut [f32]) -> usize {
+    pub fn process_mono_fx(
+        track: &TrackState,
+        sample_rate: u32,
+        mono: &[f32],
+        out: &mut [f32],
+    ) -> usize {
         let n = mono.len().min(out.len());
         let mut z_lp = 0.0f32;
         let mut z_eq = 0.0f32;
         let mut env = 0.0f32;
-        let mut delay = DelayLine::new((track.delay_samples as usize).max(1).min(MAX_DELAY_SAMPLES));
+        let mut delay =
+            DelayLine::new((track.delay_samples as usize).max(1).min(MAX_DELAY_SAMPLES));
         let lp = track.lowpass.clamp(0.0, 0.99);
         for i in 0..n {
             let mut s = mono[i];
@@ -209,7 +221,13 @@ impl ProcessPlan {
                 z_lp += lp * (s - z_lp);
                 s = z_lp;
             }
-            s = apply_eq_sample(s, track.eq_gain_db, track.eq_freq_hz, sample_rate, &mut z_eq);
+            s = apply_eq_sample(
+                s,
+                track.eq_gain_db,
+                track.eq_freq_hz,
+                sample_rate,
+                &mut z_eq,
+            );
             s = apply_comp_sample(s, track.comp_threshold, track.comp_ratio, &mut env);
             s = delay.process(s, track.delay_samples as usize, track.delay_mix);
             out[i] = s * track.gain;
@@ -225,11 +243,7 @@ impl ProcessPlan {
         out: &mut [f32],
     ) -> Result<usize, &'static str> {
         let bf = self.block_frames;
-        let n_frames = inputs
-            .iter()
-            .map(|b| b.len())
-            .min()
-            .unwrap_or(0);
+        let n_frames = inputs.iter().map(|b| b.len()).min().unwrap_or(0);
         let mut written = 0usize;
         let mut pos = 0usize;
         let mut scratch_in: [&[f32]; MAX_TRACKS] = [&[]; MAX_TRACKS];
@@ -311,6 +325,9 @@ mod tests {
         tr.delay_mix = 0.3;
         let mono = [0.5f32; 128];
         let mut out = [0.0f32; 128];
-        assert_eq!(ProcessPlan::process_mono_fx(&tr, 48000, &mono, &mut out), 128);
+        assert_eq!(
+            ProcessPlan::process_mono_fx(&tr, 48000, &mono, &mut out),
+            128
+        );
     }
 }

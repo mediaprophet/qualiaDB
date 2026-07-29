@@ -27,7 +27,8 @@ pub struct OllamaConfig {
 impl Default for OllamaConfig {
     fn default() -> Self {
         OllamaConfig {
-            base_url: std::env::var("OLLAMA_HOST").unwrap_or_else(|_| "http://127.0.0.1:11434".into()),
+            base_url: std::env::var("OLLAMA_HOST")
+                .unwrap_or_else(|_| "http://127.0.0.1:11434".into()),
             // Qwen3-Embedding (June 2025) tops the MTEB retrieval leaderboards;
             // the 0.6B variant has 32k context and 1024-dim output — the best
             // quality-per-size for a large technical corpus. Override via
@@ -52,13 +53,25 @@ impl OllamaBackend {
         let client = reqwest::blocking::Client::builder()
             .timeout(std::time::Duration::from_secs(cfg.timeout_secs))
             .build()?;
-        Ok(OllamaBackend { cfg, client, embed_dim: std::cell::Cell::new(0) })
+        Ok(OllamaBackend {
+            cfg,
+            client,
+            embed_dim: std::cell::Cell::new(0),
+        })
     }
 
-    fn post_json(&self, path: &str, body: serde_json::Value) -> anyhow::Result<reqwest::blocking::Response> {
+    fn post_json(
+        &self,
+        path: &str,
+        body: serde_json::Value,
+    ) -> anyhow::Result<reqwest::blocking::Response> {
         let mut req = self
             .client
-            .post(format!("{}{}", self.cfg.base_url.trim_end_matches('/'), path))
+            .post(format!(
+                "{}{}",
+                self.cfg.base_url.trim_end_matches('/'),
+                path
+            ))
             .json(&body);
         if let Some(key) = &self.cfg.api_key {
             req = req.bearer_auth(key);

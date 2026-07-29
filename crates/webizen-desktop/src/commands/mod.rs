@@ -9,6 +9,7 @@ use crate::runtime::{RuntimeHandle, RuntimeLedgerHealth, RuntimeSnapshotRecord};
 
 // ── Sub-modules ───────────────────────────────────────────────────────────────
 
+pub mod agent_qa;
 pub mod binary_registry;
 pub mod glb_ingest;
 pub mod mesh;
@@ -16,9 +17,9 @@ pub mod render_pipeline;
 pub use mesh::MeshState;
 
 pub mod browser;
+pub mod system;
 /// App-wide mindware HID (entity projection, observer, morph) — not browser-only.
 pub mod view_api;
-pub mod system;
 pub mod wellfair;
 pub use wellfair::{
     sanctuary_basic::wellfair_lock_sanctuary, sync::wellfair_diagnostics,
@@ -338,7 +339,11 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         system::save_config,
         system::get_setup_state,
         system::complete_setup_step,
+        system::update_setup_profile,
         system::finish_setup,
+        // ── agent QA / structured diagnostics ──
+        agent_qa::agent_qa_snapshot,
+        agent_qa::agent_qa_test_active_model,
         // ── wellfair ──
         wellfair::health::wellfair_host_snapshot,
         wellfair::health::wellfair_list_health_records,
@@ -394,6 +399,7 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         wellfair::assessment::wellfair_record_assessment,
         wellfair::assessment::wellfair_list_assessments,
         wellfair::anatomy::wellfair_compute_anatomy_view,
+        wellfair::anatomy::wellfair_eval_comorbidity,
         wellfair::anatomy::wellfair_compute_scorecard,
         wellfair::anatomy::wellfair_get_weight_model,
         wellfair::anatomy::wellfair_set_weight_model,

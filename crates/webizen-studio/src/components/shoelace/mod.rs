@@ -3,17 +3,17 @@
 // Split into sub-modules by component group.
 
 mod basic;
-mod media;
-mod overlay;
 mod input;
-mod progress;
 mod layout;
+mod media;
 mod misc;
+mod overlay;
+mod progress;
 
 pub use basic::*;
-pub use media::*;
-pub use overlay::*;
 pub use input::*;
-pub use progress::*;
 pub use layout::*;
+pub use media::*;
 pub use misc::*;
+pub use overlay::*;
+pub use progress::*;

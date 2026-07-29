@@ -12,12 +12,13 @@ use warp::Filter;
 
 /// Simulated routes used by unit tests / no-store fallback.
 pub fn ldp_routes() -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
-    let get_public = warp::path!("public" / String)
-        .and(warp::get())
-        .map(|_resource_name: String| {
-            let turtle = "<urn:qualia:node:123> <urn:qualia:pred:456> <urn:qualia:node:789> .";
-            warp::reply::with_header(turtle, "content-type", "text/turtle")
-        });
+    let get_public =
+        warp::path!("public" / String)
+            .and(warp::get())
+            .map(|_resource_name: String| {
+                let turtle = "<urn:qualia:node:123> <urn:qualia:pred:456> <urn:qualia:node:789> .";
+                warp::reply::with_header(turtle, "content-type", "text/turtle")
+            });
 
     let post_private = warp::path!("private" / String)
         .and(warp::post())
@@ -59,10 +60,7 @@ pub fn pod_ldp_routes(
             match s_put.write_bytes(path, &body) {
                 Ok(()) => {
                     let mut headers = HeaderMap::new();
-                    headers.insert(
-                        "content-type",
-                        HeaderValue::from_static("application/json"),
-                    );
+                    headers.insert("content-type", HeaderValue::from_static("application/json"));
                     headers.insert(
                         "location",
                         HeaderValue::from_str(path).unwrap_or(HeaderValue::from_static("/")),
@@ -106,13 +104,10 @@ pub fn pod_ldp_routes(
                         let mut headers = HeaderMap::new();
                         headers.insert(
                             "location",
-                            HeaderValue::from_str(&target)
-                                .unwrap_or(HeaderValue::from_static("/")),
+                            HeaderValue::from_str(&target).unwrap_or(HeaderValue::from_static("/")),
                         );
-                        headers.insert(
-                            "content-type",
-                            HeaderValue::from_static("application/json"),
-                        );
+                        headers
+                            .insert("content-type", HeaderValue::from_static("application/json"));
                         json_reply(
                             StatusCode::CREATED,
                             headers,
@@ -146,11 +141,7 @@ pub fn pod_ldp_routes(
     get.or(put).or(post).or(delete)
 }
 
-fn serve_get(
-    store: &PodStore,
-    public_base: &str,
-    path: &str,
-) -> warp::reply::Response {
+fn serve_get(store: &PodStore, public_base: &str, path: &str) -> warp::reply::Response {
     let (status, headers, body) = serve_get_parts(store, public_base, path);
     let mut resp = warp::http::Response::new(body.into());
     *resp.status_mut() = status;
@@ -228,7 +219,11 @@ fn serve_get_parts(
         }
         Err(e) => {
             headers.insert("content-type", HeaderValue::from_static("text/plain"));
-            (StatusCode::INTERNAL_SERVER_ERROR, headers, e.to_string().into_bytes())
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                headers,
+                e.to_string().into_bytes(),
+            )
         }
     }
 }
@@ -255,10 +250,8 @@ fn json_reply(
         resp.headers_mut().insert(k, v.clone());
     }
     if !resp.headers().contains_key("content-type") {
-        resp.headers_mut().insert(
-            "content-type",
-            HeaderValue::from_static("application/json"),
-        );
+        resp.headers_mut()
+            .insert("content-type", HeaderValue::from_static("application/json"));
     }
     resp
 }

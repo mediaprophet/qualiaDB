@@ -71,7 +71,7 @@ fn new_id() -> String {
 pub fn append(msg: StoredMail) -> Result<StoredMail, String> {
     let mut all = load_all();
     all.insert(0, msg.clone()); // newest first
-    // Soft cap — keep last 5_000 messages so the file stays bounded.
+                                // Soft cap — keep last 5_000 messages so the file stays bounded.
     if all.len() > 5_000 {
         all.truncate(5_000);
     }

@@ -46,7 +46,10 @@ impl Division {
     pub fn to_raw(self) -> u16 {
         match self {
             Division::Ppq(ppq) => ppq & 0x7FFF,
-            Division::Smpte { fps, ticks_per_frame } => {
+            Division::Smpte {
+                fps,
+                ticks_per_frame,
+            } => {
                 let neg = (256u16 - u16::from(fps)) & 0xFF;
                 (neg << 8) | u16::from(ticks_per_frame)
             }
@@ -109,7 +112,12 @@ pub(super) fn channel_data_len(status: u8) -> Option<usize> {
 /// Read a big-endian u32 at `pos`, advancing nothing.
 fn read_u32_be(bytes: &[u8], pos: usize) -> Result<u32, AudioError> {
     let s = bytes.get(pos..pos + 4).ok_or(AudioError::MalformedAudio)?;
-    Ok((u32::from(s[0]) << 24) | (u32::from(s[1]) << 16) | (u32::from(s[2]) << 8) | u32::from(s[3]))
+    Ok(
+        (u32::from(s[0]) << 24)
+            | (u32::from(s[1]) << 16)
+            | (u32::from(s[2]) << 8)
+            | u32::from(s[3]),
+    )
 }
 
 /// Read a big-endian u16 at `pos`.
@@ -154,7 +162,9 @@ pub fn read_smf(bytes: &[u8]) -> Result<SmfFile, AudioError> {
         let body_end = body_start
             .checked_add(chunk_len)
             .ok_or(AudioError::MalformedAudio)?;
-        let body = bytes.get(body_start..body_end).ok_or(AudioError::MalformedAudio)?;
+        let body = bytes
+            .get(body_start..body_end)
+            .ok_or(AudioError::MalformedAudio)?;
 
         if id == b"MTrk" {
             tracks.push(parse_track(body)?);
@@ -165,7 +175,11 @@ pub fn read_smf(bytes: &[u8]) -> Result<SmfFile, AudioError> {
         pos = body_end;
     }
 
-    Ok(SmfFile { format, division, tracks })
+    Ok(SmfFile {
+        format,
+        division,
+        tracks,
+    })
 }
 
 /// Parse a single MTrk body (the bytes between the chunk length and its end)
@@ -204,23 +218,36 @@ fn parse_track(body: &[u8]) -> Result<Track, AudioError> {
             let len = len as usize;
             let data = body.get(pos..pos + len).ok_or(AudioError::MalformedAudio)?;
             pos += len;
-            TrackEvent::SysEx { start, data: data.to_vec() }
+            TrackEvent::SysEx {
+                start,
+                data: data.to_vec(),
+            }
         } else if first & 0x80 != 0 {
             // Explicit channel status byte.
             let status = first;
             pos += 1;
             let dlen = channel_data_len(status).ok_or(AudioError::MalformedAudio)?;
-            let data = body.get(pos..pos + dlen).ok_or(AudioError::MalformedAudio)?;
+            let data = body
+                .get(pos..pos + dlen)
+                .ok_or(AudioError::MalformedAudio)?;
             pos += dlen;
             running_status = Some(status);
-            TrackEvent::Midi { status, data: data.to_vec() }
+            TrackEvent::Midi {
+                status,
+                data: data.to_vec(),
+            }
         } else {
             // Data byte with no status → running status: reuse last channel status.
             let status = running_status.ok_or(AudioError::MalformedAudio)?;
             let dlen = channel_data_len(status).ok_or(AudioError::MalformedAudio)?;
-            let data = body.get(pos..pos + dlen).ok_or(AudioError::MalformedAudio)?;
+            let data = body
+                .get(pos..pos + dlen)
+                .ok_or(AudioError::MalformedAudio)?;
             pos += dlen;
-            TrackEvent::Midi { status, data: data.to_vec() }
+            TrackEvent::Midi {
+                status,
+                data: data.to_vec(),
+            }
         };
 
         events.push(Event { delta_ticks, event });
@@ -239,7 +266,13 @@ mod tests {
         assert_eq!(Division::Ppq(480).to_raw(), 480);
         // 25 fps, 40 ticks/frame → high byte 0xE7 (256-25), low 0x28.
         let smpte = Division::from_raw(0xE728);
-        assert_eq!(smpte, Division::Smpte { fps: 25, ticks_per_frame: 0x28 });
+        assert_eq!(
+            smpte,
+            Division::Smpte {
+                fps: 25,
+                ticks_per_frame: 0x28
+            }
+        );
         assert_eq!(smpte.to_raw(), 0xE728);
     }
 
@@ -292,9 +325,21 @@ mod tests {
         assert_eq!(smf.tracks.len(), 1);
         let evs = &smf.tracks[0].events;
         assert_eq!(evs.len(), 3);
-        assert_eq!(evs[0].event, TrackEvent::Midi { status: 0x90, data: vec![0x3C, 0x40] });
+        assert_eq!(
+            evs[0].event,
+            TrackEvent::Midi {
+                status: 0x90,
+                data: vec![0x3C, 0x40]
+            }
+        );
         // Running status expanded to explicit 0x90.
-        assert_eq!(evs[1].event, TrackEvent::Midi { status: 0x90, data: vec![0x3E, 0x40] });
+        assert_eq!(
+            evs[1].event,
+            TrackEvent::Midi {
+                status: 0x90,
+                data: vec![0x3E, 0x40]
+            }
+        );
         assert_eq!(evs[2].event, TrackEvent::Meta(MetaEvent::EndOfTrack));
     }
 }

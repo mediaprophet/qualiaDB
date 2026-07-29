@@ -4,7 +4,7 @@
 //! **Model Z is always ignored** — only \(x, y\) enter [`Landmark2`].
 
 use super::mediapipe_index::{
-    mediapipe_index_for_pad, PAD_LANDMARK_IDS, MEDIAPIPE_FACE_MESH_COUNT,
+    mediapipe_index_for_pad, MEDIAPIPE_FACE_MESH_COUNT, PAD_LANDMARK_IDS,
 };
 use crate::biosense::liveness::landmark_types::{Landmark2, LandmarkFrame};
 use crate::cv::error::CvError;
@@ -74,8 +74,8 @@ pub fn pack_landmark_frame(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::biosense::liveness::landmark_types::PadLandmarkId;
     use crate::biosense::face_mesh::mediapipe_index::PAD_MEDIAPIPE_INDICES;
+    use crate::biosense::liveness::landmark_types::PadLandmarkId;
 
     fn fill_xy() -> [f32; MEDIAPIPE_FACE_MESH_COUNT * 2] {
         let mut buf = [0.0f32; MEDIAPIPE_FACE_MESH_COUNT * 2];

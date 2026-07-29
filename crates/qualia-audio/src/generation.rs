@@ -42,7 +42,8 @@ impl VoiceConsent {
     }
 
     pub fn is_allowed_at(&self, now_epoch: u32) -> bool {
-        self.allow_synthesis && (self.revoked_before_epoch == 0 || now_epoch < self.revoked_before_epoch)
+        self.allow_synthesis
+            && (self.revoked_before_epoch == 0 || now_epoch < self.revoked_before_epoch)
     }
 }
 
@@ -99,14 +100,7 @@ mod tests {
     #[test]
     fn deny_without_consent() {
         let mut o = [0.0f32; 64];
-        let r = synthesize_reference_tone(
-            VoiceConsent::denied("v1"),
-            440.0,
-            16000,
-            64,
-            1,
-            &mut o,
-        );
+        let r = synthesize_reference_tone(VoiceConsent::denied("v1"), 440.0, 16000, 64, 1, &mut o);
         assert!(matches!(r, Err(AudioError::PermissionDenied)));
     }
 

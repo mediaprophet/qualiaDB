@@ -5,9 +5,7 @@ mod tests {
     use std::path::PathBuf;
 
     use ed25519_dalek::SigningKey;
-    use wellfare_core::record::{
-        EpistemicStatus, EvidenceType, RecordEnvelope, SensitivityClass,
-    };
+    use wellfare_core::record::{EpistemicStatus, EvidenceType, RecordEnvelope, SensitivityClass};
 
     use super::super::api::WebizenHostApi;
     use super::super::checkpoint_store;

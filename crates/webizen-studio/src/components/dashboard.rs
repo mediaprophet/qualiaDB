@@ -98,7 +98,7 @@ pub fn Dashboard() -> Element {
 
         main { class: "home-tab",
             div { class: "home-inner",
-                
+
                 header { class: "home-header",
                     h1 { "Overview" }
                     p { "Webizen is local-first. Start with Talk (your agent), Keep (records & body), or Reach (browser)." }
@@ -122,7 +122,7 @@ pub fn Dashboard() -> Element {
                             Link { to: Route::LibraryRoute {}, class: "btn-action", sl-icon { "name": "archive" } "Open Memory" }
                         }
                     }
-                    
+
                     // Health Vault Widget
                     article { class: "widget-card",
                         div { class: "widget-header",

@@ -2,6 +2,7 @@
 
 use bytemuck::{Pod, Zeroable};
 
+#[cfg(not(target_arch = "wasm32"))]
 use super::resident_substrate::{global_resident_substrate, MAX_KNN_HITS, MAX_RESIDENT_NODES};
 use super::Tensor10D;
 

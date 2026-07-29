@@ -137,10 +137,7 @@ pub fn dispatch_mcp_tool_call(tool_name: &str, arguments_json: &str) -> Result<S
         return Err(msg.to_string());
     }
     // Prefer text content array (MCP standard); fall back to whole result.
-    if let Some(content) = v
-        .pointer("/result/content")
-        .and_then(|c| c.as_array())
-    {
+    if let Some(content) = v.pointer("/result/content").and_then(|c| c.as_array()) {
         let mut texts = Vec::new();
         for item in content {
             if let Some(t) = item.get("text").and_then(|x| x.as_str()) {
@@ -230,10 +227,7 @@ pub fn ensure_safe_tool_allowlist(
     let mut agent = crate::agent_registry::get_agent(storage_root, slug)
         .ok_or_else(|| format!("no agent '{slug}' in roster"))?;
     if agent.allowed_mcp_tools.is_empty() {
-        agent.allowed_mcp_tools = SAFE_SEED_TOOLS
-            .iter()
-            .map(|s| (*s).to_string())
-            .collect();
+        agent.allowed_mcp_tools = SAFE_SEED_TOOLS.iter().map(|s| (*s).to_string()).collect();
         crate::agent_registry::upsert_agent(storage_root, agent.clone())?;
     }
     Ok(agent.allowed_mcp_tools)
@@ -261,10 +255,7 @@ mod tests {
 
     #[test]
     fn gate_deny_principal_without_dispatch() {
-        assert_eq!(
-            evaluate_tool_gate(false, true),
-            GateDecision::DenyPrincipal
-        );
+        assert_eq!(evaluate_tool_gate(false, true), GateDecision::DenyPrincipal);
         let agent = agent_with_tools(vec!["list_capabilities"]);
         let err = mcp_call_tool_gated_for_agent(&agent, "list_capabilities", "{}", false)
             .expect_err("must deny");
@@ -273,10 +264,7 @@ mod tests {
 
     #[test]
     fn gate_deny_allowlist_without_dispatch() {
-        assert_eq!(
-            evaluate_tool_gate(true, false),
-            GateDecision::DenyAllowlist
-        );
+        assert_eq!(evaluate_tool_gate(true, false), GateDecision::DenyAllowlist);
         // Empty allowlist = deny-all
         let agent = agent_with_tools(vec![]);
         let err = mcp_call_tool_gated_for_agent(&agent, "list_capabilities", "{}", true)
@@ -337,12 +325,7 @@ mod tests {
         let seeded = ensure_safe_tool_allowlist(dir.path(), "local").unwrap();
         assert_eq!(seeded, vec!["list_capabilities", "computer_vision"]);
 
-        agent_set_allowed_mcp_tools(
-            dir.path(),
-            "local",
-            vec!["list_capabilities".into()],
-        )
-        .unwrap();
+        agent_set_allowed_mcp_tools(dir.path(), "local", vec!["list_capabilities".into()]).unwrap();
         let a = crate::agent_registry::get_agent(dir.path(), "local").unwrap();
         assert_eq!(a.allowed_mcp_tools, vec!["list_capabilities"]);
 

@@ -1,40 +1,40 @@
 pub mod anatomy;
 pub mod assessment;
 pub mod authority_attestation;
+pub mod clinical;
 pub mod companion_pairing;
 pub mod companion_sync;
-pub mod clinical;
-pub mod credentials;
-pub mod live_share;
 pub mod conditions;
+pub mod credentials;
 pub mod finance;
 pub mod guardianship;
 pub mod life_records;
-pub mod projects;
-pub mod mental_wellbeing;
-pub mod personal_records;
+pub mod live_share;
 pub mod medication;
+pub mod mental_wellbeing;
 pub mod models;
-pub mod record;
-pub mod sleep_analytics;
-pub mod parser;
-pub mod rdf;
-pub mod store;
-pub mod shapes;
-pub mod webizen;
-pub mod welfare_support;
 pub mod n3_rules;
+pub mod parser;
+pub mod personal_records;
+pub mod projects;
 pub mod qualia_bindings;
+pub mod rdf;
+pub mod record;
+pub mod shapes;
+pub mod sleep_analytics;
+pub mod store;
 #[cfg(target_arch = "wasm32")]
 pub mod wasm;
+pub mod webizen;
+pub mod welfare_support;
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
+    use chrono::Timelike;
     use parser::*;
     use rdf::*;
-    use chrono::Timelike;
 
     #[test]
     fn test_parse_time_offset_minutes() {
@@ -48,7 +48,7 @@ mod tests {
     fn test_parse_samsung_datetime() {
         let dt = parse_samsung_datetime("1777632000000", 60).unwrap();
         assert_eq!(dt.timezone().local_minus_utc(), 3600);
-        
+
         let dt2 = parse_samsung_datetime("2026-05-25 12:00:00", 60).unwrap();
         assert_eq!(dt2.timezone().local_minus_utc(), 3600);
         assert_eq!(dt2.hour(), 12);
@@ -62,7 +62,7 @@ mod tests {
         assert_eq!(records.len(), 1);
         assert_eq!(records[0].weight, 72.0);
         assert_eq!(records[0].bmi, 23.1);
-        
+
         let rdf = weight_to_turtle(&records);
         assert!(rdf.contains("fhir:Observation.valueQuantity 72"));
         assert!(rdf.contains("health:bodyFatPercentage 18.5"));
@@ -76,7 +76,7 @@ mod tests {
         assert_eq!(records.len(), 1);
         assert_eq!(records[0].sleep_duration, 440.0);
         assert_eq!(records[0].efficiency, 78.0);
-        
+
         let rdf = sleep_to_turtle(&records);
         assert!(rdf.contains("health:sleepEfficiency 78"));
     }
@@ -88,7 +88,7 @@ mod tests {
         let records = parse_heart_rate_csv(csv_data).unwrap();
         assert_eq!(records.len(), 1);
         assert_eq!(records[0].heart_rate, 68);
-        
+
         let rdf = heart_rate_to_turtle(&records);
         assert!(rdf.contains("fhir:Observation.valueQuantity 68"));
     }
@@ -100,7 +100,7 @@ mod tests {
         let records = parse_steps_csv(csv_data).unwrap();
         assert_eq!(records.len(), 1);
         assert_eq!(records[0].count, 6500);
-        
+
         let rdf = steps_to_turtle(&records);
         assert!(rdf.contains("fhir:Observation.valueQuantity 6500"));
         assert!(rdf.contains("health:caloriesBurned 210"));

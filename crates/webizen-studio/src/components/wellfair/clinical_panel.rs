@@ -4,8 +4,8 @@
 //! unconfirmed report is never presented as clinician-verified.
 
 use super::host_client::{
-    add_clinical_attachment_from_path, add_clinical_report, export_attachment, fetch_health_records,
-    pick_file_path, pick_save_path,
+    add_clinical_attachment_from_path, add_clinical_report, export_attachment,
+    fetch_health_records, pick_file_path, pick_save_path,
 };
 use super::host_dto::HealthRecordDto;
 use dioxus::prelude::*;
@@ -64,7 +64,9 @@ pub fn WellfairClinicalPanel() -> Element {
     let mut loaded = use_signal(|| false);
 
     use_effect(move || {
-        if loaded() { return; }
+        if loaded() {
+            return;
+        }
         loaded.set(true);
         reload();
     });

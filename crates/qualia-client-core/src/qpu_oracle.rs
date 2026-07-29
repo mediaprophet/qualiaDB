@@ -17,8 +17,7 @@ use std::sync::Mutex;
 
 static QPU_CACHE: Mutex<Option<QpuOracleState>> = Mutex::new(None);
 
-const COMMITMENT_B64: &str =
-    "SSBBZmZpcm0gTXkgQ29tbWl0bWVudCB0byBVbml2ZXJzYWwgSHVtYW4gUmlnaHRz";
+const COMMITMENT_B64: &str = "SSBBZmZpcm0gTXkgQ29tbWl0bWVudCB0byBVbml2ZXJzYWwgSHVtYW4gUmlnaHRz";
 const COMMITMENT_TEXT: &str = "I Affirm My Commitment to Universal Human Rights";
 
 // Monthly free-tier quota estimates (minutes of QPU time)
@@ -334,10 +333,13 @@ fn base64_decode(s: &str) -> Result<String, ()> {
     let mut i = 0;
     while i + 3 < bytes.len() + 1 {
         let chunk = &bytes[i..i.min(bytes.len()).min(i + 4)];
-        if chunk.is_empty() { break; }
-        let vals: Vec<u8> = chunk.iter().map(|b| {
-            alphabet.iter().position(|a| a == b).unwrap_or(0) as u8
-        }).collect();
+        if chunk.is_empty() {
+            break;
+        }
+        let vals: Vec<u8> = chunk
+            .iter()
+            .map(|b| alphabet.iter().position(|a| a == b).unwrap_or(0) as u8)
+            .collect();
         if vals.len() >= 2 {
             out.push((vals[0] << 2) | (vals[1] >> 4));
         }
@@ -358,11 +360,9 @@ fn base64_decode(s: &str) -> Result<String, ()> {
 /// (or the base64 form). Returns the updated settings on success.
 pub fn activate_with_commitment(commitment_text: &str) -> Result<QpuOracleSettings, String> {
     if !verify_commitment(commitment_text) {
-        return Err(
-            "Commitment not recognised. Please enter: \
+        return Err("Commitment not recognised. Please enter: \
              \"I Affirm My Commitment to Universal Human Rights\""
-                .into(),
-        );
+            .into());
     }
     let now = chrono::Utc::now().to_rfc3339();
     update_state(|state| {
@@ -778,7 +778,9 @@ mod tests {
 
     #[test]
     fn commitment_text_verifies() {
-        assert!(verify_commitment("I Affirm My Commitment to Universal Human Rights"));
+        assert!(verify_commitment(
+            "I Affirm My Commitment to Universal Human Rights"
+        ));
         assert!(verify_commitment(
             "SSBBZmZpcm0gTXkgQ29tbWl0bWVudCB0byBVbml2ZXJzYWwgSHVtYW4gUmlnaHRz"
         ));

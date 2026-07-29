@@ -69,7 +69,10 @@ impl PitchBend {
             return Err(AudioError::MalformedAudio);
         }
         let value = ((bytes[2] as u16) << 7) | (bytes[1] as u16);
-        Ok(Self { channel: bytes[0] & 0x0F, value })
+        Ok(Self {
+            channel: bytes[0] & 0x0F,
+            value,
+        })
     }
 }
 
@@ -110,6 +113,9 @@ mod tests {
     #[test]
     fn rejects_bad() {
         assert_eq!(PitchBend::new(0, 16384), Err(AudioError::InvalidParameter));
-        assert_eq!(PitchBend::parse(&[0x90, 0, 0x40]), Err(AudioError::UnsupportedFormat));
+        assert_eq!(
+            PitchBend::parse(&[0x90, 0, 0x40]),
+            Err(AudioError::UnsupportedFormat)
+        );
     }
 }

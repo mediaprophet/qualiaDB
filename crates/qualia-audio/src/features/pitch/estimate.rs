@@ -22,7 +22,10 @@ impl PitchEstimate {
     /// The canonical unvoiced estimate.
     #[inline]
     pub const fn unvoiced() -> Self {
-        Self { f0_hz: 0.0, confidence: 0.0 }
+        Self {
+            f0_hz: 0.0,
+            confidence: 0.0,
+        }
     }
 }
 
@@ -95,7 +98,12 @@ pub(super) fn absolute_threshold(
 /// CMND value at the vertex (the frame's aperiodicity). Boundary lags fall back
 /// to the integer value. This is what lifts F0 accuracy from whole-sample lag
 /// steps to a few cents.
-pub(super) fn parabolic_min(cmnd: &[f32], tau: usize, min_lag: usize, max_lag: usize) -> (f32, f32) {
+pub(super) fn parabolic_min(
+    cmnd: &[f32],
+    tau: usize,
+    min_lag: usize,
+    max_lag: usize,
+) -> (f32, f32) {
     let hi = max_lag.min(cmnd.len().saturating_sub(1));
     if tau <= min_lag.max(1) || tau >= hi {
         return (tau as f32, cmnd[tau.min(cmnd.len() - 1)]);

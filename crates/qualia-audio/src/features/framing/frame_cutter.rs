@@ -73,7 +73,11 @@ mod tests {
             (48_000, 1024, 512),
         ] {
             let expected = (len - frame) / hop + 1;
-            assert_eq!(frame_count(len, frame, hop), expected, "len={len} frame={frame} hop={hop}");
+            assert_eq!(
+                frame_count(len, frame, hop),
+                expected,
+                "len={len} frame={frame} hop={hop}"
+            );
         }
     }
 
@@ -111,14 +115,20 @@ mod tests {
     fn cut_frame_past_end_is_invalid() {
         let signal = [0.0f32; 10];
         let mut out = [0.0f32; 8];
-        assert_eq!(cut_frame(&signal, 8, 4, 1, &mut out), Err(AudioError::InvalidParameter));
+        assert_eq!(
+            cut_frame(&signal, 8, 4, 1, &mut out),
+            Err(AudioError::InvalidParameter)
+        );
     }
 
     #[test]
     fn cut_frame_short_output_is_too_small() {
         let signal = [0.0f32; 16];
         let mut out = [0.0f32; 4];
-        assert_eq!(cut_frame(&signal, 8, 4, 0, &mut out), Err(AudioError::OutputBufferTooSmall));
+        assert_eq!(
+            cut_frame(&signal, 8, 4, 0, &mut out),
+            Err(AudioError::OutputBufferTooSmall)
+        );
     }
 
     #[test]
@@ -131,6 +141,9 @@ mod tests {
         for i in 0..n {
             cut_frame(&signal, frame, hop, i, &mut out).expect("frame in range");
         }
-        assert_eq!(cut_frame(&signal, frame, hop, n, &mut out), Err(AudioError::InvalidParameter));
+        assert_eq!(
+            cut_frame(&signal, frame, hop, n, &mut out),
+            Err(AudioError::InvalidParameter)
+        );
     }
 }

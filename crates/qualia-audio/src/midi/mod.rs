@@ -5,13 +5,13 @@
 //! the engine is native. Instrument/sample CONTENT is user-supplied (hypermedia library / vendor dir),
 //! never bundled. See `docs/plans/audio-algorithms-catalogue-delivery-plan-2026.md` Wave M.
 
-pub mod message;
-pub mod ump;
-pub mod smf;
-pub mod sequencer;
-pub mod sync;
-pub mod mpe;
-pub mod tuning;
-pub mod synth;
-pub mod instrument;
 pub mod bridge;
+pub mod instrument;
+pub mod message;
+pub mod mpe;
+pub mod sequencer;
+pub mod smf;
+pub mod sync;
+pub mod synth;
+pub mod tuning;
+pub mod ump;

@@ -48,7 +48,11 @@ pub enum HmcError {
     #[error("asset not found: {0}")]
     AssetNotFound(String),
     #[error("integrity: asset {path} blake3 mismatch (manifest {want}, actual {got})")]
-    Integrity { path: String, want: String, got: String },
+    Integrity {
+        path: String,
+        want: String,
+        got: String,
+    },
     #[error("invalid container: {0}")]
     Invalid(String),
 }
@@ -78,9 +82,17 @@ impl HmcWriter {
         source.size_bytes = source_bytes.len() as u64;
         let manifest = HmcManifest::new(source.clone());
 
-        let mut w = HmcWriter { manifest, members: Vec::new() };
+        let mut w = HmcWriter {
+            manifest,
+            members: Vec::new(),
+        };
         let path = format!("{}/{}", AssetKind::Source.dir(), sanitize(&source.filename));
-        w.push_asset(AssetKind::Source, &path, &source.mime.clone(), source_bytes.to_vec());
+        w.push_asset(
+            AssetKind::Source,
+            &path,
+            &source.mime.clone(),
+            source_bytes.to_vec(),
+        );
         w
     }
 
@@ -107,7 +119,13 @@ impl HmcWriter {
 
     /// Add a derived asset under its conventional directory using `name`
     /// (e.g. `document.html`). Returns the in-zip path.
-    pub fn add_derived(&mut self, kind: AssetKind, name: &str, mime: &str, bytes: Vec<u8>) -> String {
+    pub fn add_derived(
+        &mut self,
+        kind: AssetKind,
+        name: &str,
+        mime: &str,
+        bytes: Vec<u8>,
+    ) -> String {
         let path = format!("{}/{}", kind.dir(), sanitize(name));
         self.push_asset(kind, &path, mime, bytes);
         path
@@ -123,10 +141,10 @@ impl HmcWriter {
         let mut buf = Cursor::new(Vec::new());
         {
             let mut zw = zip::ZipWriter::new(&mut buf);
-            let stored = SimpleFileOptions::default()
-                .compression_method(zip::CompressionMethod::Stored);
-            let deflated = SimpleFileOptions::default()
-                .compression_method(zip::CompressionMethod::Deflated);
+            let stored =
+                SimpleFileOptions::default().compression_method(zip::CompressionMethod::Stored);
+            let deflated =
+                SimpleFileOptions::default().compression_method(zip::CompressionMethod::Deflated);
 
             // Manifest first, uncompressed, for instant header reads.
             let manifest_json = serde_json::to_vec_pretty(&self.manifest)?;
@@ -136,8 +154,8 @@ impl HmcWriter {
             for (path, bytes) in &self.members {
                 // Don't waste CPU re-compressing the source if it's already a
                 // compressed format (PDF); deflate the text-like derived assets.
-                let already_compressed = path.starts_with("source/")
-                    && is_precompressed_mime(self.member_mime(path));
+                let already_compressed =
+                    path.starts_with("source/") && is_precompressed_mime(self.member_mime(path));
                 let opts = if already_compressed { stored } else { deflated };
                 zw.start_file(path.as_str(), opts)?;
                 zw.write_all(bytes)?;
@@ -204,7 +222,10 @@ impl HmcContainer {
             serde_json::from_str(&s)?
         };
         if manifest.format != "hmc" {
-            return Err(HmcError::Invalid(format!("unexpected format `{}`", manifest.format)));
+            return Err(HmcError::Invalid(format!(
+                "unexpected format `{}`",
+                manifest.format
+            )));
         }
         Ok(HmcContainer { manifest, archive })
     }

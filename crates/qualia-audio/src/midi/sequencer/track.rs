@@ -28,12 +28,22 @@ pub struct TimedEvent {
 
 impl TimedEvent {
     /// The all-zero event, usable as a fixed-array filler.
-    pub const ZERO: TimedEvent = TimedEvent { tick: 0, status: 0, data1: 0, data2: 0 };
+    pub const ZERO: TimedEvent = TimedEvent {
+        tick: 0,
+        status: 0,
+        data1: 0,
+        data2: 0,
+    };
 
     /// Construct a timed event.
     #[inline]
     pub const fn new(tick: u64, status: u8, data1: u8, data2: u8) -> Self {
-        Self { tick, status, data1, data2 }
+        Self {
+            tick,
+            status,
+            data1,
+            data2,
+        }
     }
 }
 
@@ -53,7 +63,10 @@ impl<const N: usize> Default for Track<N> {
 impl<const N: usize> Track<N> {
     /// An empty track.
     pub const fn new() -> Self {
-        Self { events: [TimedEvent::ZERO; N], len: 0 }
+        Self {
+            events: [TimedEvent::ZERO; N],
+            len: 0,
+        }
     }
 
     /// Number of events currently stored.
@@ -115,7 +128,11 @@ impl<const N: usize> Track<N> {
                 hi = mid;
             }
         }
-        DueWindow { slice, idx: lo, end }
+        DueWindow {
+            slice,
+            idx: lo,
+            end,
+        }
     }
 }
 
@@ -164,12 +181,12 @@ mod tests {
             t.insert(TimedEvent::new(tick, 0x90, 60, 64)).unwrap();
         }
         // Window [100, 250): expect ticks 100, 150, 200 in order (250 excluded).
-        let got: heapless_vec::V = t
-            .due_window(100, 250)
-            .fold(heapless_vec::V::new(), |mut v, e| {
-                v.push(e.tick);
-                v
-            });
+        let got: heapless_vec::V =
+            t.due_window(100, 250)
+                .fold(heapless_vec::V::new(), |mut v, e| {
+                    v.push(e.tick);
+                    v
+                });
         assert_eq!(got.as_slice(), &[100, 150, 200]);
     }
 
@@ -178,7 +195,10 @@ mod tests {
         let mut t: Track<2> = Track::new();
         t.insert(TimedEvent::ZERO).unwrap();
         t.insert(TimedEvent::ZERO).unwrap();
-        assert_eq!(t.insert(TimedEvent::ZERO), Err(AudioError::OutputBufferTooSmall));
+        assert_eq!(
+            t.insert(TimedEvent::ZERO),
+            Err(AudioError::OutputBufferTooSmall)
+        );
     }
 
     /// Tiny fixed-capacity collector so the test asserts order without `Vec`.
@@ -189,7 +209,10 @@ mod tests {
         }
         impl V {
             pub fn new() -> Self {
-                Self { buf: [0; 16], len: 0 }
+                Self {
+                    buf: [0; 16],
+                    len: 0,
+                }
             }
             pub fn push(&mut self, v: u64) {
                 self.buf[self.len] = v;

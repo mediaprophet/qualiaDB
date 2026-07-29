@@ -7,7 +7,6 @@ use crate::components::qapp_engine::tauri_invoke;
 #[cfg(target_arch = "wasm32")]
 use js_sys;
 
-
 /// The person-authored facets attached at ingest — an optional date (timeline), place (map), project and
 /// purpose. All `None`/empty ⇒ ingest derives what it can from the content alone.
 #[derive(Debug, Clone, Default)]
@@ -26,67 +25,171 @@ pub struct IngestFacets {
 /// Ingest a text document (derive topics + searchable text; guardianship flag→notify), optionally placing it
 /// on the timeline/map via person-authored `facets`. Returns a summary.
 #[cfg(target_arch = "wasm32")]
-pub async fn ingest_document(uri: &str, media_type: &str, text: &str, guardian_did: Option<String>, facets: &IngestFacets, sensitivity: &str) -> Result<serde_json::Value, String> {
+pub async fn ingest_document(
+    uri: &str,
+    media_type: &str,
+    text: &str,
+    guardian_did: Option<String>,
+    facets: &IngestFacets,
+    sensitivity: &str,
+) -> Result<serde_json::Value, String> {
     let args = js_sys::Object::new();
-    for (k, v) in [("uri", uri), ("mediaType", media_type), ("text", text), ("sensitivity", sensitivity)] {
-        js_sys::Reflect::set(&args, &k.into(), &wasm_bindgen::JsValue::from_str(v)).map_err(|_| "args".to_string())?;
+    for (k, v) in [
+        ("uri", uri),
+        ("mediaType", media_type),
+        ("text", text),
+        ("sensitivity", sensitivity),
+    ] {
+        js_sys::Reflect::set(&args, &k.into(), &wasm_bindgen::JsValue::from_str(v))
+            .map_err(|_| "args".to_string())?;
     }
     if let Some(g) = guardian_did {
-        js_sys::Reflect::set(&args, &"guardianDid".into(), &wasm_bindgen::JsValue::from_str(&g)).map_err(|_| "args".to_string())?;
+        js_sys::Reflect::set(
+            &args,
+            &"guardianDid".into(),
+            &wasm_bindgen::JsValue::from_str(&g),
+        )
+        .map_err(|_| "args".to_string())?;
     }
     if let Some(t) = facets.occurred_at {
-        js_sys::Reflect::set(&args, &"occurredAt".into(), &wasm_bindgen::JsValue::from_f64(t as f64)).map_err(|_| "args".to_string())?;
+        js_sys::Reflect::set(
+            &args,
+            &"occurredAt".into(),
+            &wasm_bindgen::JsValue::from_f64(t as f64),
+        )
+        .map_err(|_| "args".to_string())?;
     }
     if let Some(l) = &facets.place_label {
-        js_sys::Reflect::set(&args, &"placeLabel".into(), &wasm_bindgen::JsValue::from_str(l)).map_err(|_| "args".to_string())?;
+        js_sys::Reflect::set(
+            &args,
+            &"placeLabel".into(),
+            &wasm_bindgen::JsValue::from_str(l),
+        )
+        .map_err(|_| "args".to_string())?;
     }
     if let Some(v) = facets.lat {
-        js_sys::Reflect::set(&args, &"lat".into(), &wasm_bindgen::JsValue::from_f64(v as f64)).map_err(|_| "args".to_string())?;
+        js_sys::Reflect::set(
+            &args,
+            &"lat".into(),
+            &wasm_bindgen::JsValue::from_f64(v as f64),
+        )
+        .map_err(|_| "args".to_string())?;
     }
     if let Some(v) = facets.lon {
-        js_sys::Reflect::set(&args, &"lon".into(), &wasm_bindgen::JsValue::from_f64(v as f64)).map_err(|_| "args".to_string())?;
+        js_sys::Reflect::set(
+            &args,
+            &"lon".into(),
+            &wasm_bindgen::JsValue::from_f64(v as f64),
+        )
+        .map_err(|_| "args".to_string())?;
     }
     if let Some(p) = &facets.project {
-        js_sys::Reflect::set(&args, &"project".into(), &wasm_bindgen::JsValue::from_str(p)).map_err(|_| "args".to_string())?;
+        js_sys::Reflect::set(
+            &args,
+            &"project".into(),
+            &wasm_bindgen::JsValue::from_str(p),
+        )
+        .map_err(|_| "args".to_string())?;
     }
     if let Some(p) = &facets.purpose {
-        js_sys::Reflect::set(&args, &"purpose".into(), &wasm_bindgen::JsValue::from_str(p)).map_err(|_| "args".to_string())?;
+        js_sys::Reflect::set(
+            &args,
+            &"purpose".into(),
+            &wasm_bindgen::JsValue::from_str(p),
+        )
+        .map_err(|_| "args".to_string())?;
     }
     if let Some(s) = &facets.sensitivity {
-        js_sys::Reflect::set(&args, &"sensitivity".into(), &wasm_bindgen::JsValue::from_str(s)).map_err(|_| "args".to_string())?;
+        js_sys::Reflect::set(
+            &args,
+            &"sensitivity".into(),
+            &wasm_bindgen::JsValue::from_str(s),
+        )
+        .map_err(|_| "args".to_string())?;
     }
     if let Some(s) = &facets.section {
-        js_sys::Reflect::set(&args, &"section".into(), &wasm_bindgen::JsValue::from_str(s)).map_err(|_| "args".to_string())?;
+        js_sys::Reflect::set(
+            &args,
+            &"section".into(),
+            &wasm_bindgen::JsValue::from_str(s),
+        )
+        .map_err(|_| "args".to_string())?;
     }
     if let Some(s) = &facets.commons_visibility {
-        js_sys::Reflect::set(&args, &"commonsVisibility".into(), &wasm_bindgen::JsValue::from_str(s)).map_err(|_| "args".to_string())?;
+        js_sys::Reflect::set(
+            &args,
+            &"commonsVisibility".into(),
+            &wasm_bindgen::JsValue::from_str(s),
+        )
+        .map_err(|_| "args".to_string())?;
     }
-    let js = tauri_invoke("wellfair_ingest_document", args.into()).await.map_err(|e| format!("{e:?}"))?;
-    let json = js.as_string().ok_or_else(|| "ingest response not JSON".to_string())?;
+    let js = tauri_invoke("wellfair_ingest_document", args.into())
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+    let json = js
+        .as_string()
+        .ok_or_else(|| "ingest response not JSON".to_string())?;
     serde_json::from_str(&json).map_err(|e| e.to_string())
 }
 #[cfg(not(target_arch = "wasm32"))]
-pub async fn ingest_document(_u: &str, _m: &str, _t: &str, _g: Option<String>, _f: &IngestFacets, _s: &str) -> Result<serde_json::Value, String> {
+pub async fn ingest_document(
+    _u: &str,
+    _m: &str,
+    _t: &str,
+    _g: Option<String>,
+    _f: &IngestFacets,
+    _s: &str,
+) -> Result<serde_json::Value, String> {
     Err("The library requires the Tauri desktop host".into())
 }
 
 /// Ingest a binary asset (photo/audio) from hex-encoded bytes — a photo's EXIF time/GPS auto-populate the
 /// timeline/map. Returns a summary.
 #[cfg(target_arch = "wasm32")]
-pub async fn ingest_file_hex(uri: &str, media_type: &str, bytes_hex: &str, caption: &str, guardian_did: Option<String>, sensitivity: &str) -> Result<serde_json::Value, String> {
+pub async fn ingest_file_hex(
+    uri: &str,
+    media_type: &str,
+    bytes_hex: &str,
+    caption: &str,
+    guardian_did: Option<String>,
+    sensitivity: &str,
+) -> Result<serde_json::Value, String> {
     let args = js_sys::Object::new();
-    for (k, v) in [("uri", uri), ("mediaType", media_type), ("bytesHex", bytes_hex), ("caption", caption), ("sensitivity", sensitivity)] {
-        js_sys::Reflect::set(&args, &k.into(), &wasm_bindgen::JsValue::from_str(v)).map_err(|_| "args".to_string())?;
+    for (k, v) in [
+        ("uri", uri),
+        ("mediaType", media_type),
+        ("bytesHex", bytes_hex),
+        ("caption", caption),
+        ("sensitivity", sensitivity),
+    ] {
+        js_sys::Reflect::set(&args, &k.into(), &wasm_bindgen::JsValue::from_str(v))
+            .map_err(|_| "args".to_string())?;
     }
     if let Some(g) = guardian_did {
-        js_sys::Reflect::set(&args, &"guardianDid".into(), &wasm_bindgen::JsValue::from_str(&g)).map_err(|_| "args".to_string())?;
+        js_sys::Reflect::set(
+            &args,
+            &"guardianDid".into(),
+            &wasm_bindgen::JsValue::from_str(&g),
+        )
+        .map_err(|_| "args".to_string())?;
     }
-    let js = tauri_invoke("wellfair_ingest_file_hex", args.into()).await.map_err(|e| format!("{e:?}"))?;
-    let json = js.as_string().ok_or_else(|| "ingest response not JSON".to_string())?;
+    let js = tauri_invoke("wellfair_ingest_file_hex", args.into())
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+    let json = js
+        .as_string()
+        .ok_or_else(|| "ingest response not JSON".to_string())?;
     serde_json::from_str(&json).map_err(|e| e.to_string())
 }
 #[cfg(not(target_arch = "wasm32"))]
-pub async fn ingest_file_hex(_u: &str, _m: &str, _b: &str, _c: &str, _g: Option<String>, _s: &str) -> Result<serde_json::Value, String> {
+pub async fn ingest_file_hex(
+    _u: &str,
+    _m: &str,
+    _b: &str,
+    _c: &str,
+    _g: Option<String>,
+    _s: &str,
+) -> Result<serde_json::Value, String> {
     Err("The library requires the Tauri desktop host".into())
 }
 
@@ -106,9 +209,7 @@ async fn invoke_library_json(
             let js = tauri_invoke(wellfair, wellfair_args.into())
                 .await
                 .map_err(|e2| {
-                    format!(
-                        "Library read failed. {vault_free}: {e1}; {wellfair}: {e2:?}"
-                    )
+                    format!("Library read failed. {vault_free}: {e1}; {wellfair}: {e2:?}")
                 })?;
             if let Some(s) = js.as_string() {
                 return serde_json::from_str(&s).map_err(|e| e.to_string());
@@ -132,8 +233,18 @@ fn normalize_library_json(v: serde_json::Value) -> serde_json::Value {
 #[cfg(target_arch = "wasm32")]
 pub async fn search_library(facet: &str, value: &str) -> Result<serde_json::Value, String> {
     let wellfair_args = js_sys::Object::new();
-    js_sys::Reflect::set(&wellfair_args, &"facet".into(), &wasm_bindgen::JsValue::from_str(facet)).map_err(|_| "args".to_string())?;
-    js_sys::Reflect::set(&wellfair_args, &"value".into(), &wasm_bindgen::JsValue::from_str(value)).map_err(|_| "args".to_string())?;
+    js_sys::Reflect::set(
+        &wellfair_args,
+        &"facet".into(),
+        &wasm_bindgen::JsValue::from_str(facet),
+    )
+    .map_err(|_| "args".to_string())?;
+    js_sys::Reflect::set(
+        &wellfair_args,
+        &"value".into(),
+        &wasm_bindgen::JsValue::from_str(value),
+    )
+    .map_err(|_| "args".to_string())?;
     invoke_library_json(
         "library_search",
         serde_json::json!({ "facet": facet, "value": value }),
@@ -172,13 +283,7 @@ pub async fn list_library_section(section: Option<&str>) -> Result<serde_json::V
         Some(s) => serde_json::json!({ "section": s }),
         None => serde_json::json!({}),
     };
-    invoke_library_json(
-        "library_list",
-        vf,
-        "wellfair_list_library",
-        wellfair_args,
-    )
-    .await
+    invoke_library_json("library_list", vf, "wellfair_list_library", wellfair_args).await
 }
 #[cfg(not(target_arch = "wasm32"))]
 pub async fn list_library_section(_s: Option<&str>) -> Result<serde_json::Value, String> {
@@ -186,16 +291,29 @@ pub async fn list_library_section(_s: Option<&str>) -> Result<serde_json::Value,
 }
 
 #[cfg(target_arch = "wasm32")]
-pub async fn set_library_commons(asset_uri: &str, visibility: &str) -> Result<serde_json::Value, String> {
+pub async fn set_library_commons(
+    asset_uri: &str,
+    visibility: &str,
+) -> Result<serde_json::Value, String> {
     let args = js_sys::Object::new();
-    js_sys::Reflect::set(&args, &"assetUri".into(), &wasm_bindgen::JsValue::from_str(asset_uri))
-        .map_err(|_| "args".to_string())?;
-    js_sys::Reflect::set(&args, &"visibility".into(), &wasm_bindgen::JsValue::from_str(visibility))
-        .map_err(|_| "args".to_string())?;
+    js_sys::Reflect::set(
+        &args,
+        &"assetUri".into(),
+        &wasm_bindgen::JsValue::from_str(asset_uri),
+    )
+    .map_err(|_| "args".to_string())?;
+    js_sys::Reflect::set(
+        &args,
+        &"visibility".into(),
+        &wasm_bindgen::JsValue::from_str(visibility),
+    )
+    .map_err(|_| "args".to_string())?;
     let js = tauri_invoke("wellfair_set_library_commons", args.into())
         .await
         .map_err(|e| format!("{e:?}"))?;
-    let json = js.as_string().ok_or_else(|| "commons response not JSON".to_string())?;
+    let json = js
+        .as_string()
+        .ok_or_else(|| "commons response not JSON".to_string())?;
     serde_json::from_str(&json).map_err(|e| e.to_string())
 }
 #[cfg(not(target_arch = "wasm32"))]
@@ -206,12 +324,18 @@ pub async fn set_library_commons(_u: &str, _v: &str) -> Result<serde_json::Value
 #[cfg(target_arch = "wasm32")]
 pub async fn library_commons_share_card(asset_uri: &str) -> Result<serde_json::Value, String> {
     let args = js_sys::Object::new();
-    js_sys::Reflect::set(&args, &"assetUri".into(), &wasm_bindgen::JsValue::from_str(asset_uri))
-        .map_err(|_| "args".to_string())?;
+    js_sys::Reflect::set(
+        &args,
+        &"assetUri".into(),
+        &wasm_bindgen::JsValue::from_str(asset_uri),
+    )
+    .map_err(|_| "args".to_string())?;
     let js = tauri_invoke("wellfair_library_commons_share_card", args.into())
         .await
         .map_err(|e| format!("{e:?}"))?;
-    let json = js.as_string().ok_or_else(|| "share card not JSON".to_string())?;
+    let json = js
+        .as_string()
+        .ok_or_else(|| "share card not JSON".to_string())?;
     serde_json::from_str(&json).map_err(|e| e.to_string())
 }
 #[cfg(not(target_arch = "wasm32"))]
@@ -312,7 +436,9 @@ pub async fn seed_studio_qapps() -> Result<serde_json::Value, String> {
     let js = tauri_invoke("wellfair_seed_studio_qapps", wasm_bindgen::JsValue::NULL)
         .await
         .map_err(|e| format!("{e:?}"))?;
-    let json = js.as_string().ok_or_else(|| "seed qapps not JSON".to_string())?;
+    let json = js
+        .as_string()
+        .ok_or_else(|| "seed qapps not JSON".to_string())?;
     serde_json::from_str(&json).map_err(|e| e.to_string())
 }
 #[cfg(not(target_arch = "wasm32"))]
@@ -329,8 +455,11 @@ pub async fn seed_perception_library() -> Result<serde_json::Value, String> {
     match invoke_json("library_seed_perception_assets", serde_json::json!({})).await {
         Ok(v) => return Ok(normalize_seed_report(v)),
         Err(e1) => {
-            let js = match tauri_invoke("wellfair_seed_perception_library", wasm_bindgen::JsValue::NULL)
-                .await
+            let js = match tauri_invoke(
+                "wellfair_seed_perception_library",
+                wasm_bindgen::JsValue::NULL,
+            )
+            .await
             {
                 Ok(js) => js,
                 Err(e2) => {
@@ -377,11 +506,19 @@ pub async fn ingest_legislation_text(
     title_hint: Option<&str>,
 ) -> Result<serde_json::Value, String> {
     let args = js_sys::Object::new();
-    js_sys::Reflect::set(&args, &"text".into(), &wasm_bindgen::JsValue::from_str(text))
-        .map_err(|_| "args".to_string())?;
+    js_sys::Reflect::set(
+        &args,
+        &"text".into(),
+        &wasm_bindgen::JsValue::from_str(text),
+    )
+    .map_err(|_| "args".to_string())?;
     if let Some(id) = register_id {
-        js_sys::Reflect::set(&args, &"registerId".into(), &wasm_bindgen::JsValue::from_str(id))
-            .map_err(|_| "args".to_string())?;
+        js_sys::Reflect::set(
+            &args,
+            &"registerId".into(),
+            &wasm_bindgen::JsValue::from_str(id),
+        )
+        .map_err(|_| "args".to_string())?;
     }
     if let Some(j) = jurisdiction {
         js_sys::Reflect::set(
@@ -392,8 +529,12 @@ pub async fn ingest_legislation_text(
         .map_err(|_| "args".to_string())?;
     }
     if let Some(t) = title_hint {
-        js_sys::Reflect::set(&args, &"titleHint".into(), &wasm_bindgen::JsValue::from_str(t))
-            .map_err(|_| "args".to_string())?;
+        js_sys::Reflect::set(
+            &args,
+            &"titleHint".into(),
+            &wasm_bindgen::JsValue::from_str(t),
+        )
+        .map_err(|_| "args".to_string())?;
     }
     let js = tauri_invoke("wellfair_ingest_legislation_text", args.into())
         .await
@@ -428,8 +569,12 @@ pub async fn ingest_legislation_pdf_hex(
     )
     .map_err(|_| "args".to_string())?;
     if let Some(id) = register_id {
-        js_sys::Reflect::set(&args, &"registerId".into(), &wasm_bindgen::JsValue::from_str(id))
-            .map_err(|_| "args".to_string())?;
+        js_sys::Reflect::set(
+            &args,
+            &"registerId".into(),
+            &wasm_bindgen::JsValue::from_str(id),
+        )
+        .map_err(|_| "args".to_string())?;
     }
     if let Some(j) = jurisdiction {
         js_sys::Reflect::set(
@@ -440,8 +585,12 @@ pub async fn ingest_legislation_pdf_hex(
         .map_err(|_| "args".to_string())?;
     }
     if let Some(t) = title_hint {
-        js_sys::Reflect::set(&args, &"titleHint".into(), &wasm_bindgen::JsValue::from_str(t))
-            .map_err(|_| "args".to_string())?;
+        js_sys::Reflect::set(
+            &args,
+            &"titleHint".into(),
+            &wasm_bindgen::JsValue::from_str(t),
+        )
+        .map_err(|_| "args".to_string())?;
     }
     let js = tauri_invoke("wellfair_ingest_legislation_pdf_hex", args.into())
         .await
@@ -507,7 +656,9 @@ pub async fn remove_library_entry(asset_uri: &str) -> Result<serde_json::Value, 
     let js = tauri_invoke("wellfair_remove_library_entry", args.into())
         .await
         .map_err(|e| format!("{e:?}"))?;
-    let json = js.as_string().ok_or_else(|| "remove not JSON".to_string())?;
+    let json = js
+        .as_string()
+        .ok_or_else(|| "remove not JSON".to_string())?;
     serde_json::from_str(&json).map_err(|e| e.to_string())
 }
 #[cfg(not(target_arch = "wasm32"))]
@@ -520,11 +671,12 @@ pub async fn export_library_graph() -> Result<serde_json::Value, String> {
     let js = tauri_invoke("wellfair_export_library_graph", wasm_bindgen::JsValue::NULL)
         .await
         .map_err(|e| format!("{e:?}"))?;
-    let json = js.as_string().ok_or_else(|| "export not JSON".to_string())?;
+    let json = js
+        .as_string()
+        .ok_or_else(|| "export not JSON".to_string())?;
     serde_json::from_str(&json).map_err(|e| e.to_string())
 }
 #[cfg(not(target_arch = "wasm32"))]
 pub async fn export_library_graph() -> Result<serde_json::Value, String> {
     Err("The library requires the Tauri desktop host".into())
 }
-

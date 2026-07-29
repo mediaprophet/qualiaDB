@@ -27,5 +27,5 @@ pub use extract::{
 };
 pub use graph::{
     build_document_context, build_unit_context, units_from_headings, units_from_paragraphs,
-    CmlContextGraph, CmlConcept, ContextUnit,
+    CmlConcept, CmlContextGraph, ContextUnit,
 };

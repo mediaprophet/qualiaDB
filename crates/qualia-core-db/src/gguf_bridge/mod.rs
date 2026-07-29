@@ -110,7 +110,7 @@ pub(crate) const MC8_MAX_ELEM_UNIFORM_SLOTS: usize = 8;
 #[cfg(target_arch = "wasm32")]
 pub(crate) const MC8_MAX_ATTN_UNIFORM_SLOTS: usize = 8;
 #[cfg(target_arch = "wasm32")]
-pub(crate) const MC8_MAX_ELEM_UNIFORM_LAYER_SLOTS: usize = 8;
+pub(crate) const MC8_MAX_ELEM_UNIFORM_LAYER_SLOTS: usize = MC8_MAX_ELEM_UNIFORM_SLOTS;
 /// MC8 Part 3v / Phase 5.4: layers encoded into one submit batch. Sizes the per-layer uniform
 /// buffers (slots_per_layer × this) and is the decode forward's chunk size — 64 → the whole
 /// ≤64-layer forward is a single submit. Per-chunk flush + reset handles deeper models.
@@ -268,6 +268,10 @@ impl Mc8ElemUniformArena {
         if self.slots == 0 {
             return;
         }
+        if base_slot == 0 {
+            self.upload(queue, buf);
+            return;
+        }
         let byte_off = (base_slot * MC8_UNIFORM_ALIGN) as wgpu::BufferAddress;
         queue.write_buffer(buf, byte_off, &self.bytes[..self.slots * MC8_UNIFORM_ALIGN]);
     }
@@ -294,6 +298,10 @@ impl Mc8AttnUniformArena {
 
     pub(crate) fn upload_at(&self, queue: &wgpu::Queue, buf: &wgpu::Buffer, base_slot: usize) {
         if self.slots == 0 {
+            return;
+        }
+        if base_slot == 0 {
+            self.upload(queue, buf);
             return;
         }
         let byte_off = (base_slot * MC8_UNIFORM_ALIGN) as wgpu::BufferAddress;
@@ -498,6 +506,7 @@ impl KvCacheLayout {
     /// Derive the dense f32 device layout used by native CUDA kernels without changing the host
     /// cache representation. Host int8/dictionary compression and the CUDA execution arena are
     /// independent storage decisions.
+    #[cfg(not(target_arch = "wasm32"))]
     pub(crate) fn dense_device_layout(self) -> Option<Self> {
         let slot_kv_elems = self.n_kv_head.checked_mul(self.head_dim)?;
         let layer_stride = self
@@ -619,6 +628,7 @@ mod cuda_decode_plan;
 /// Hard cap on the KV context window a decode plan may request. Declared here rather than in the
 /// `cuda`-gated plan module because the raw-decode harness and the mega-pass guard validate
 /// against it on every target, CUDA or not.
+#[cfg(not(target_arch = "wasm32"))]
 pub(crate) const MAX_CUDA_CONTEXT_WINDOW: u32 = 4096;
 mod embedding;
 mod ffn;
@@ -630,11 +640,12 @@ mod output;
 #[cfg(not(target_arch = "wasm32"))]
 mod prefill_arena;
 mod prefill_async;
+#[cfg(not(target_arch = "wasm32"))]
 mod resident_decode;
 mod verify_arena;
 
 /// MC8 pt3e: max abs error over the first `n` elements.
-#[cfg(target_arch = "wasm32")]
+#[cfg(all(target_arch = "wasm32", feature = "wasm-llm-diagnostics"))]
 fn probe_max_abs_diff(a: &[f32], b: &[f32], n: usize) -> f32 {
     let n = n.min(a.len()).min(b.len());
     let mut m = 0.0f32;
@@ -644,7 +655,7 @@ fn probe_max_abs_diff(a: &[f32], b: &[f32], n: usize) -> f32 {
     m
 }
 
-#[cfg(target_arch = "wasm32")]
+#[cfg(all(target_arch = "wasm32", feature = "wasm-llm-diagnostics"))]
 fn probe_log_diff(phase: &str, cpu: &[f32], gpu: &[f32], n: usize) {
     let n = n.min(8).min(cpu.len()).min(gpu.len());
     if n == 0 {
@@ -657,7 +668,7 @@ fn probe_log_diff(phase: &str, cpu: &[f32], gpu: &[f32], n: usize) {
     ));
 }
 
-#[cfg(target_arch = "wasm32")]
+#[cfg(all(target_arch = "wasm32", feature = "wasm-llm-diagnostics"))]
 fn probe_log_mid_diff(phase: &str, cpu: &[f32], gpu: &[f32], n: usize) {
     let n = n.min(8).min(cpu.len()).min(gpu.len());
     if n == 0 {
@@ -670,7 +681,7 @@ fn probe_log_mid_diff(phase: &str, cpu: &[f32], gpu: &[f32], n: usize) {
     ));
 }
 
-#[cfg(target_arch = "wasm32")]
+#[cfg(all(target_arch = "wasm32", feature = "wasm-llm-diagnostics"))]
 fn probe_log_ffn_diff(phase: &str, cpu: &[f32], gpu: &[f32], n: usize) {
     let n = n.min(8).min(cpu.len()).min(gpu.len());
     if n == 0 {
@@ -684,7 +695,7 @@ fn probe_log_ffn_diff(phase: &str, cpu: &[f32], gpu: &[f32], n: usize) {
 }
 
 /// MC8 pt3g: CPU SwiGLU stages from post-attn hidden @ L0.
-#[cfg(target_arch = "wasm32")]
+#[cfg(all(target_arch = "wasm32", feature = "wasm-llm-diagnostics"))]
 async fn mc8_cpu_l0_ffn_stages(
     engine: &QTensorEngine,
     index: &crate::gguf_sharder::GgufTensorIndex,
@@ -799,7 +810,7 @@ async fn mc8_cpu_l0_ffn_stages(
 }
 
 /// Read one KV head from the CPU mirror arena.
-#[cfg(target_arch = "wasm32")]
+#[cfg(all(target_arch = "wasm32", feature = "wasm-llm-diagnostics"))]
 fn read_kv_cpu_head(
     layout: &KvCacheLayout,
     kv: &[f32],
@@ -828,7 +839,7 @@ fn read_kv_cpu_head(
     true
 }
 
-#[cfg(target_arch = "wasm32")]
+#[cfg(all(target_arch = "wasm32", feature = "wasm-llm-diagnostics"))]
 fn probe_log_prefill_diff(phase: &str, cpu: &[f32], gpu: &[f32], n: usize) {
     let n = n.min(8).min(cpu.len()).min(gpu.len());
     if n == 0 {
@@ -842,7 +853,7 @@ fn probe_log_prefill_diff(phase: &str, cpu: &[f32], gpu: &[f32], n: usize) {
 }
 
 /// MC8 pt3f: CPU SDPA @ L0 → full `q_dim` Attn_Out (async KV readback).
-#[cfg(target_arch = "wasm32")]
+#[cfg(all(target_arch = "wasm32", feature = "wasm-llm-diagnostics"))]
 async fn mc8_cpu_l0_attn_out(
     engine: &QTensorEngine,
     index: &crate::gguf_sharder::GgufTensorIndex,
@@ -1070,7 +1081,8 @@ pub(crate) fn stack_gemm_quant(
     if n_in > input.len() || n_out > out.len() || n_in > MAX_STACK_GEMM_IN {
         wlog(&format!(
             "[stack_gemm] GUARD tripped n_in={n_in} n_out={n_out} input={} out={} MAX_IN={MAX_STACK_GEMM_IN}",
-            input.len(), out.len()
+            input.len(),
+            out.len()
         ));
         return false;
     }
@@ -1128,6 +1140,7 @@ pub struct QTensorEngine {
     #[cfg(not(target_arch = "wasm32"))]
     pub(crate) coop_gemv_residual_warp_pipeline: wgpu::ComputePipeline,
     /// Legacy f32×f32 mock block for offset-0 `QTensor` fallback (no mmap).
+    #[cfg(not(target_arch = "wasm32"))]
     mock_pipeline: wgpu::ComputePipeline,
     /// GPU-side Q6_K embedding dequant + matmul (zero CPU dequant).
     pub embedding_pipeline: wgpu::ComputePipeline,
@@ -1187,12 +1200,17 @@ pub struct QTensorEngine {
     // A1a (STELLAR §A): persistent GPU top-k output-projection pipeline + small candidate buffers.
     // Lets the output logits stay on-GPU (top-k over them, read back only K pairs) instead of the
     // 196 KB/token full-logit readback. Created once in `ensure_gemm_buffers`.
+    #[cfg(not(target_arch = "wasm32"))]
     output_topk_pipeline: Option<wgpu::ComputePipeline>,
     #[cfg(not(target_arch = "wasm32"))]
     output_topk_bind_layout: Option<wgpu::BindGroupLayout>,
+    #[cfg(not(target_arch = "wasm32"))]
     topk_cand_val_buf: Option<wgpu::Buffer>,
+    #[cfg(not(target_arch = "wasm32"))]
     topk_cand_idx_buf: Option<wgpu::Buffer>,
+    #[cfg(not(target_arch = "wasm32"))]
     topk_cand_staging: Option<wgpu::Buffer>,
+    #[cfg(not(target_arch = "wasm32"))]
     topk_params_buf: Option<wgpu::Buffer>,
     /// MC8 FFN / attention scratch (gate, up, o_proj).
     gemm_aux_buf: Option<wgpu::Buffer>,

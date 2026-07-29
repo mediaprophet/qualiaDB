@@ -21,7 +21,14 @@ pub fn bfcc(
     out: &mut [f32],
     scratch: &mut [f32],
 ) -> Result<(), AudioError> {
-    mfcc(power_spectrum, bark_weights, n_bands, n_coeffs, out, scratch)
+    mfcc(
+        power_spectrum,
+        bark_weights,
+        n_bands,
+        n_coeffs,
+        out,
+        scratch,
+    )
 }
 
 #[cfg(test)]
@@ -47,7 +54,11 @@ mod tests {
 
         let c0 = out[0].abs();
         for (k, &c) in out.iter().enumerate().skip(1) {
-            assert!(c0 > c.abs(), "c0 {c0} does not dominate coeff {k} ({})", c.abs());
+            assert!(
+                c0 > c.abs(),
+                "c0 {c0} does not dominate coeff {k} ({})",
+                c.abs()
+            );
         }
     }
 }

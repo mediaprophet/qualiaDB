@@ -84,7 +84,7 @@ mod tests {
     fn half_open_bins_land_once() {
         let sr = 8000.0f32;
         let mag = [1.0f32; 9]; // energy 1 at every bin
-        // Two adjacent bands; the shared edge (1000 Hz) belongs to the upper band.
+                               // Two adjacent bands; the shared edge (1000 Hz) belongs to the upper band.
         let edges = [0.0f32, 1000.0, 5000.0];
         let mut out = [0.0f32; 2];
         frequency_bands(&mag, sr, &edges, &mut out).expect("bands");

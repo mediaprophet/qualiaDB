@@ -261,7 +261,9 @@ pub fn make_relationship_address(
 /// Resolve a full address (case-insensitive) against a set of addresses.
 pub fn resolve<'a>(addresses: &'a [MailAddress], address: &str) -> Option<&'a MailAddress> {
     let want = address.trim().to_lowercase();
-    addresses.iter().find(|a| a.address.eq_ignore_ascii_case(&want))
+    addresses
+        .iter()
+        .find(|a| a.address.eq_ignore_ascii_case(&want))
 }
 
 /// How a delivery address was matched.
@@ -500,16 +502,22 @@ mod tests {
         let gov = p.iter().find(|x| x.local == "mygov").unwrap();
         assert!(gov.rules.require_verified_sender && gov.rules.priority > 0);
         let front = p.iter().find(|x| x.local == "frontdoor").unwrap();
-        assert!(!front.rules.quarantine, "front door is public but governed, not quarantined");
+        assert!(
+            !front.rules.quarantine,
+            "front door is public but governed, not quarantined"
+        );
     }
 
     #[test]
     fn purpose_address_is_built_correctly() {
-        let a = make_purpose_address("personal.me", "FrontDoor", MailRules::default(), 100).unwrap();
+        let a =
+            make_purpose_address("personal.me", "FrontDoor", MailRules::default(), 100).unwrap();
         assert_eq!(a.address, "frontdoor@personal.me");
         assert_eq!(a.kind, AddressKind::Purpose);
         assert!(a.relationship_did.is_none());
-        assert!(make_purpose_address("personal.me", "bad space", MailRules::default(), 100).is_err());
+        assert!(
+            make_purpose_address("personal.me", "bad space", MailRules::default(), 100).is_err()
+        );
     }
 
     #[test]
@@ -557,7 +565,9 @@ mod tests {
         let personal = make_domain(
             "personal.me",
             AgentType::NaturalPerson,
-            DomainOwner::Personal { did: "did:qualia:me".into() },
+            DomainOwner::Personal {
+                did: "did:qualia:me".into(),
+            },
             "did:qualia:me",
             "Personal",
             None,
@@ -568,19 +578,26 @@ mod tests {
         let group = make_domain(
             "project-x.coop",
             AgentType::Group,
-            DomainOwner::Group { agreement_ref: "agr:project-x".into() },
+            DomainOwner::Group {
+                agreement_ref: "agr:project-x".into(),
+            },
             "did:qualia:project-x",
             "Project X",
             None,
             1,
         )
         .unwrap();
-        assert!(matches!(group.owner, DomainOwner::Group { .. }), "group domains slot in without a refactor");
+        assert!(
+            matches!(group.owner, DomainOwner::Group { .. }),
+            "group domains slot in without a refactor"
+        );
         // A subdomain (child under a household).
         let kid = make_domain(
             "kid.family.me",
             AgentType::NaturalPerson,
-            DomainOwner::Personal { did: "did:qualia:kid".into() },
+            DomainOwner::Personal {
+                did: "did:qualia:kid".into(),
+            },
             "did:qualia:kid",
             "Kid",
             Some("family.me".into()),
@@ -592,7 +609,16 @@ mod tests {
 
     #[test]
     fn make_domain_requires_a_dotted_name() {
-        assert!(make_domain("nodots", AgentType::NaturalPerson, DomainOwner::Personal { did: "d".into() }, "d", "", None, 1).is_err());
+        assert!(make_domain(
+            "nodots",
+            AgentType::NaturalPerson,
+            DomainOwner::Personal { did: "d".into() },
+            "d",
+            "",
+            None,
+            1
+        )
+        .is_err());
     }
 
     #[test]
@@ -602,7 +628,10 @@ mod tests {
             make_relationship_address("personal.me", "bob", "did:x", 1).unwrap(),
         ];
         assert!(resolve(&addrs, "FrontDoor@Personal.ME").is_some());
-        assert_eq!(resolve(&addrs, "bob@personal.me").unwrap().kind, AddressKind::Relationship);
+        assert_eq!(
+            resolve(&addrs, "bob@personal.me").unwrap().kind,
+            AddressKind::Relationship
+        );
         assert!(resolve(&addrs, "nope@personal.me").is_none());
     }
 
@@ -629,8 +658,8 @@ mod tests {
 
     #[test]
     fn resolve_delivery_star_catchall_local() {
-        let mut star = make_purpose_address("alice.example", "catchall", MailRules::default(), 1)
-            .unwrap();
+        let mut star =
+            make_purpose_address("alice.example", "catchall", MailRules::default(), 1).unwrap();
         // Simulate minting as local_part "*" (resolve accepts either).
         star.local_part = "*".into();
         star.address = "*@alice.example".into();

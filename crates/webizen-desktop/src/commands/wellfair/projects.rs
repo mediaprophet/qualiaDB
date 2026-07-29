@@ -15,7 +15,12 @@ pub fn wellfair_add_project(
         let host = guard
             .as_mut()
             .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-        let project = wellfare_core::projects::Project::new(name, description, licensing_ontologies, wellfair_now_unix());
+        let project = wellfare_core::projects::Project::new(
+            name,
+            description,
+            licensing_ontologies,
+            wellfair_now_unix(),
+        );
         let committed = host.add_project(&project)?;
         serde_json::to_string(&committed).map_err(|e| e.to_string())
     })?
@@ -69,7 +74,7 @@ pub fn wellfair_add_contribution(
         let host = guard
             .as_mut()
             .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    
+
         let privacy = match privacy_level.as_str() {
             "Private" => wellfare_core::projects::ContributionPrivacy::Private,
             "Permissive" => wellfare_core::projects::ContributionPrivacy::Permissive,

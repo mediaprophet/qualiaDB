@@ -7,7 +7,6 @@ use super::*;
 use crate::qapp_paths::qapps_dir;
 use std::sync::atomic::{AtomicU16, Ordering};
 
-
 static ACTIVE_DAEMON_PORT: AtomicU16 = AtomicU16::new(0);
 
 /// Records the loopback port chosen when the graph daemon last started.
@@ -90,10 +89,13 @@ pub fn issue_qapp_session_token(qapp_name: &str) -> Result<String, String> {
     vault.issue_qapp_token(
         &qapp_did,
         "localhost",
-        std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs() + 86400,
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_secs()
+            + 86400,
         &uuid::Uuid::new_v4().to_string(),
         manifest.required_shapes.clone(),
         qualia_core_db::identity::key_vault::SubgraphLayer::Professional,
     )
 }
-

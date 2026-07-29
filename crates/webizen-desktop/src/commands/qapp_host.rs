@@ -2,18 +2,16 @@
 
 #![allow(non_snake_case)]
 
-use super::*;
 use super::qapp_telemetry::{
-    qapp_slug, QappAnalysisRequest, QappAnalysisResult, QualiaComputeProfile,
-    ForgePhysicsCertification, ForgeComputeProbe, ForgeKernelProbe,
+    qapp_slug, ForgeComputeProbe, ForgeKernelProbe, ForgePhysicsCertification, QappAnalysisRequest,
+    QappAnalysisResult, QualiaComputeProfile,
 };
+use super::*;
 use tauri::{command, Manager, State};
 
 // ── Webizen Host API (qApp Message Bus) ──────────────────────────────────────
 
-pub struct HostApiState(
-    pub crate::companion_gateway::HostApiHandle,
-);
+pub struct HostApiState(pub crate::companion_gateway::HostApiHandle);
 
 #[tauri::command]
 pub fn submit_record(
@@ -756,4 +754,3 @@ pub async fn probe_localhost_preview() -> LocalPreviewProbe {
         detail: last_error,
     }
 }
-

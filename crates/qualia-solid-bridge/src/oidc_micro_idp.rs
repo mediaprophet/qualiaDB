@@ -76,17 +76,13 @@ pub fn oidc_routes(
                 .unwrap_or_else(|| format!("{base_auth}/"));
             let state = q.get("state").cloned().unwrap_or_default();
             let sep = if redirect.contains('?') { "&" } else { "?" };
-            let loc = format!(
-                "{redirect}{sep}code=demo-auth-code&state={state}"
-            );
+            let loc = format!("{redirect}{sep}code=demo-auth-code&state={state}");
             warp::http::Response::builder()
                 .status(302)
                 .header("location", loc)
                 .header("content-type", "text/plain")
                 .body("demo OIDC auto-approve redirect".to_string())
-                .unwrap_or_else(|_| {
-                    warp::http::Response::new("redirect failed".to_string())
-                })
+                .unwrap_or_else(|_| warp::http::Response::new("redirect failed".to_string()))
         });
 
     // Dynamic client registration stub (many Solid clients call this).

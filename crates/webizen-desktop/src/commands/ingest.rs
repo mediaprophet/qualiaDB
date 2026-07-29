@@ -100,4 +100,3 @@ pub async fn run_agent_inference(
 ) -> Result<(), String> {
     api::run_agent_inference(prompt, model_name, intent_layout).await
 }
-

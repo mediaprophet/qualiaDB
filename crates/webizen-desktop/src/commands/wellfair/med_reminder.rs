@@ -29,10 +29,7 @@ pub fn wellfair_grant_med_reminder_permission(app: AppHandle) -> Result<String, 
 }
 
 #[command]
-pub fn wellfair_set_med_reminders_enabled(
-    app: AppHandle,
-    enabled: bool,
-) -> Result<String, String> {
+pub fn wellfair_set_med_reminders_enabled(app: AppHandle, enabled: bool) -> Result<String, String> {
     let state = app.state::<HostApiState>();
     state.0.execute_sync(move |guard| {
         let host = guard
@@ -72,4 +69,3 @@ pub fn wellfair_query_graph_coverage(
         serde_json::to_string(&rows).map_err(|e| e.to_string())
     })?
 }
-

@@ -26,19 +26,28 @@ pub fn wellfair_ingest_document(
 ) -> Result<String, String> {
     let state = app.state::<HostApiState>();
     state.0.execute_sync(move |guard| {
-        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         let manual = qualia_client_core::wellfair::api::ManualFacets {
             occurred_at,
             place_label,
             lat,
             lon,
-            projects: project.into_iter().filter(|s| !s.trim().is_empty()).collect(),
-            purposes: purpose.into_iter().filter(|s| !s.trim().is_empty()).collect(),
+            projects: project
+                .into_iter()
+                .filter(|s| !s.trim().is_empty())
+                .collect(),
+            purposes: purpose
+                .into_iter()
+                .filter(|s| !s.trim().is_empty())
+                .collect(),
             sensitivity,
             section,
             commons_visibility,
         };
-        let summary = host.ingest_document_annotated(&uri, &media_type, &text, &manual, guardian_did)?;
+        let summary =
+            host.ingest_document_annotated(&uri, &media_type, &text, &manual, guardian_did)?;
         serde_json::to_string(&summary).map_err(|e| e.to_string())
     })?
 }
@@ -56,18 +65,27 @@ pub fn wellfair_ingest_file_hex(
 ) -> Result<String, String> {
     let state = app.state::<HostApiState>();
     state.0.execute_sync(move |guard| {
-        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-        let summary = host.ingest_file_hex(&uri, &media_type, &bytes_hex, &caption, guardian_did)?;
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let summary =
+            host.ingest_file_hex(&uri, &media_type, &bytes_hex, &caption, guardian_did)?;
         serde_json::to_string(&summary).map_err(|e| e.to_string())
     })?
 }
 
 /// Search the library by facet (`topic` | `depicts` | `place` | `project` | `purpose`).
 #[command]
-pub fn wellfair_search_library(app: AppHandle, facet: String, value: String) -> Result<String, String> {
+pub fn wellfair_search_library(
+    app: AppHandle,
+    facet: String,
+    value: String,
+) -> Result<String, String> {
     let state = app.state::<HostApiState>();
     state.0.execute_sync(move |guard| {
-        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         let results = host.search_library(&facet, &value)?;
         serde_json::to_string(&results).map_err(|e| e.to_string())
     })?
@@ -75,10 +93,16 @@ pub fn wellfair_search_library(app: AppHandle, facet: String, value: String) -> 
 
 /// The timeline query — entries whose event instant falls within `[start, end]` (unix seconds).
 #[command]
-pub fn wellfair_search_library_time(app: AppHandle, start: i64, end: i64) -> Result<String, String> {
+pub fn wellfair_search_library_time(
+    app: AppHandle,
+    start: i64,
+    end: i64,
+) -> Result<String, String> {
     let state = app.state::<HostApiState>();
     state.0.execute_sync(move |guard| {
-        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         let results = host.search_library_time(start, end)?;
         serde_json::to_string(&results).map_err(|e| e.to_string())
     })?
@@ -89,7 +113,9 @@ pub fn wellfair_search_library_time(app: AppHandle, start: i64, end: i64) -> Res
 pub fn wellfair_list_library(app: AppHandle, section: Option<String>) -> Result<String, String> {
     let state = app.state::<HostApiState>();
     state.0.execute_sync(move |guard| {
-        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         let results = host.list_library_section(section.as_deref())?;
         serde_json::to_string(&results).map_err(|e| e.to_string())
     })?
@@ -231,10 +257,8 @@ pub fn library_list(
     section: Option<String>,
 ) -> Result<serde_json::Value, String> {
     let root = library_storage_root(&state);
-    let entries = qualia_client_core::wellfair::api::list_library_section_at(
-        &root,
-        section.as_deref(),
-    )?;
+    let entries =
+        qualia_client_core::wellfair::api::list_library_section_at(&root, section.as_deref())?;
     Ok(serde_json::Value::Array(entries))
 }
 
@@ -290,8 +314,7 @@ pub fn library_search_time(
     end: i64,
 ) -> Result<serde_json::Value, String> {
     let root = library_storage_root(&state);
-    let entries =
-        qualia_client_core::wellfair::api::search_library_time_at(&root, start, end)?;
+    let entries = qualia_client_core::wellfair::api::search_library_time_at(&root, start, end)?;
     Ok(serde_json::Value::Array(entries))
 }
 
@@ -442,4 +465,3 @@ pub fn wellfair_export_library_graph(app: AppHandle) -> Result<String, String> {
         serde_json::to_string(&r).map_err(|e| e.to_string())
     })?
 }
-

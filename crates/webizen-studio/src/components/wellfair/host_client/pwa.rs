@@ -7,7 +7,6 @@ use crate::components::qapp_engine::tauri_invoke;
 #[cfg(target_arch = "wasm32")]
 use js_sys;
 
-
 #[cfg(target_arch = "wasm32")]
 #[allow(clippy::too_many_arguments)]
 pub async fn publish_qapp_pwa(
@@ -35,7 +34,9 @@ pub async fn publish_qapp_pwa(
     let js = tauri_invoke("wellfair_publish_qapp_pwa", args.into())
         .await
         .map_err(|e| format!("{e:?}"))?;
-    let json = js.as_string().ok_or_else(|| "response not JSON".to_string())?;
+    let json = js
+        .as_string()
+        .ok_or_else(|| "response not JSON".to_string())?;
     serde_json::from_str(&json).map_err(|e| e.to_string())
 }
 
@@ -52,4 +53,3 @@ pub async fn publish_qapp_pwa(
 ) -> Result<Vec<String>, String> {
     Err("Package & Publish requires the Tauri desktop host".into())
 }
-

@@ -48,13 +48,7 @@ pub fn respiration_from_rppg_harmonic(
 mod tests {
     use super::*;
 
-    fn synth_pulse_with_rr(
-        hr_bpm: f32,
-        rr_bpm: f32,
-        fps: f32,
-        n: usize,
-        rr_amp: f32,
-    ) -> Vec<f32> {
+    fn synth_pulse_with_rr(hr_bpm: f32, rr_bpm: f32, fps: f32, n: usize, rr_amp: f32) -> Vec<f32> {
         let f_hr = hr_bpm / 60.0;
         let f_rr = rr_bpm / 60.0;
         let mut t = vec![0.0f32; n];

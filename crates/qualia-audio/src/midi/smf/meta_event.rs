@@ -209,7 +209,10 @@ mod tests {
         let mut out = Vec::new();
         serialize_meta(&MetaEvent::Tempo(500_000), &mut out).unwrap();
         assert_eq!(out, vec![0xFF, 0x51, 0x03, 0x07, 0xA1, 0x20]);
-        assert_eq!(parse_meta(0x51, &[0x07, 0xA1, 0x20]).unwrap(), MetaEvent::Tempo(500_000));
+        assert_eq!(
+            parse_meta(0x51, &[0x07, 0xA1, 0x20]).unwrap(),
+            MetaEvent::Tempo(500_000)
+        );
     }
 
     #[test]
@@ -237,18 +240,27 @@ mod tests {
     #[test]
     fn key_signature_a_major_and_f_minor() {
         // A major = 3 sharps, major.
-        let a_major = MetaEvent::KeySignature { sharps: 3, minor: false };
+        let a_major = MetaEvent::KeySignature {
+            sharps: 3,
+            minor: false,
+        };
         let mut out = Vec::new();
         serialize_meta(&a_major, &mut out).unwrap();
         assert_eq!(out, vec![0xFF, 0x59, 0x02, 0x03, 0x00]);
         // F minor = 4 flats, minor.
-        let f_minor = MetaEvent::KeySignature { sharps: -4, minor: true };
+        let f_minor = MetaEvent::KeySignature {
+            sharps: -4,
+            minor: true,
+        };
         let mut out2 = Vec::new();
         serialize_meta(&f_minor, &mut out2).unwrap();
         assert_eq!(out2, vec![0xFF, 0x59, 0x02, 0xFC, 0x01]);
         assert_eq!(
             parse_meta(0x59, &[0xFC, 0x01]).unwrap(),
-            MetaEvent::KeySignature { sharps: -4, minor: true }
+            MetaEvent::KeySignature {
+                sharps: -4,
+                minor: true
+            }
         );
     }
 
@@ -260,7 +272,10 @@ mod tests {
     #[test]
     fn unknown_meta_preserved() {
         // 0x01 (text) is not structurally decoded → Unknown, byte-exact.
-        let ev = MetaEvent::Unknown { meta_type: 0x01, data: b"hi".to_vec() };
+        let ev = MetaEvent::Unknown {
+            meta_type: 0x01,
+            data: b"hi".to_vec(),
+        };
         let mut out = Vec::new();
         serialize_meta(&ev, &mut out).unwrap();
         assert_eq!(out, vec![0xFF, 0x01, 0x02, b'h', b'i']);
@@ -269,9 +284,21 @@ mod tests {
 
     #[test]
     fn bad_lengths_rejected() {
-        assert_eq!(parse_meta(META_TEMPO, &[0x00, 0x00]), Err(AudioError::MalformedAudio));
-        assert_eq!(parse_meta(META_END_OF_TRACK, &[0x00]), Err(AudioError::MalformedAudio));
-        assert_eq!(parse_meta(META_KEY_SIGNATURE, &[0x00]), Err(AudioError::MalformedAudio));
-        assert_eq!(parse_meta(META_TIME_SIGNATURE, &[0x04, 0x02]), Err(AudioError::MalformedAudio));
+        assert_eq!(
+            parse_meta(META_TEMPO, &[0x00, 0x00]),
+            Err(AudioError::MalformedAudio)
+        );
+        assert_eq!(
+            parse_meta(META_END_OF_TRACK, &[0x00]),
+            Err(AudioError::MalformedAudio)
+        );
+        assert_eq!(
+            parse_meta(META_KEY_SIGNATURE, &[0x00]),
+            Err(AudioError::MalformedAudio)
+        );
+        assert_eq!(
+            parse_meta(META_TIME_SIGNATURE, &[0x04, 0x02]),
+            Err(AudioError::MalformedAudio)
+        );
     }
 }

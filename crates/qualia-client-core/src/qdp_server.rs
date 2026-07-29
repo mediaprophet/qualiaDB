@@ -36,13 +36,22 @@ pub struct QdpResponse {
 pub fn render_profile(rec: &FrontDoorRecord, accept: &str) -> Result<QdpResponse, String> {
     if accept.contains("application/ld+json") {
         let body = serde_json::to_vec(&rec.to_json_ld()).map_err(|e| e.to_string())?;
-        Ok(QdpResponse { content_type: "application/ld+json".to_string(), body })
+        Ok(QdpResponse {
+            content_type: "application/ld+json".to_string(),
+            body,
+        })
     } else if accept.contains("application/cbor") {
         let body = rec.to_cbor_ld()?;
-        Ok(QdpResponse { content_type: "application/cbor".to_string(), body })
+        Ok(QdpResponse {
+            content_type: "application/cbor".to_string(),
+            body,
+        })
     } else {
         let body = rec.to_turtle().into_bytes();
-        Ok(QdpResponse { content_type: "text/turtle".to_string(), body })
+        Ok(QdpResponse {
+            content_type: "text/turtle".to_string(),
+            body,
+        })
     }
 }
 
@@ -94,7 +103,10 @@ mod tests {
 
         let parsed: serde_json::Value =
             serde_json::from_slice(&resp.body).expect("body is valid JSON");
-        assert!(parsed.get("@type").is_some(), "JSON-LD node carries an @type");
+        assert!(
+            parsed.get("@type").is_some(),
+            "JSON-LD node carries an @type"
+        );
     }
 
     #[test]

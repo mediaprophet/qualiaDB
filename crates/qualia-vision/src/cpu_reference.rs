@@ -158,9 +158,7 @@ impl VisualModel for CpuReferenceVision {
 
                 let mut d = Detection::empty();
                 d.class_hash = q_hash(class_iri);
-                d.instance_hash = self
-                    .model_hash
-                    .wrapping_mul(0x9e37_79b9_7f4a_7c15)
+                d.instance_hash = self.model_hash.wrapping_mul(0x9e37_79b9_7f4a_7c15)
                     ^ ((cx as u64) << 32)
                     ^ (cy as u64)
                     ^ (mr << 16)
@@ -272,7 +270,12 @@ mod tests {
 
         let digest = media_digest(&px);
         let mut quins = [crate::semantic::VisionQuin::with_parity(0, 0, 0, 0, 0); 16];
-        let n = compile_observation_quins(digest, &dets[..counts.detections], model.model_hash(), &mut quins);
+        let n = compile_observation_quins(
+            digest,
+            &dets[..counts.detections],
+            model.model_hash(),
+            &mut quins,
+        );
         assert!(n >= 2);
     }
 }

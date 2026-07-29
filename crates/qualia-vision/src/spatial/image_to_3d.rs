@@ -4,11 +4,11 @@
 //! foundation image-to-3D network. Output is an **epistemic proposed mesh**;
 //! must pass [`validate_mesh_ir`] before any Q42 commit.
 
+use crate::semantic::{media_digest, q_hash, MediaDigest};
+use crate::types::{ImageView, PixelFormat, VisionError};
 use qualia_core_db::specialized_libs::computer_vision::spatial::{
     validate_mesh_ir, MeshIR, MeshValidationReport, MAX_VERTICES,
 };
-use crate::semantic::{media_digest, q_hash, MediaDigest};
-use crate::types::{ImageView, PixelFormat, VisionError};
 
 pub const RECON_MODEL_ID: &str = "qualia-vision-heightfield-recon-v1";
 
@@ -67,7 +67,8 @@ pub fn image_to_heightfield_mesh(
     mesh.positions.reserve(vc);
     mesh.normals.reserve(vc);
     mesh.uvs.reserve(vc);
-    mesh.indices.reserve((g as usize - 1) * (g as usize - 1) * 6);
+    mesh.indices
+        .reserve((g as usize - 1) * (g as usize - 1) * 6);
 
     for j in 0..g {
         for i in 0..g {
@@ -90,8 +91,7 @@ pub fn image_to_heightfield_mesh(
             let i1 = i0 + 1;
             let i2 = i0 + g;
             let i3 = i2 + 1;
-            mesh.indices
-                .extend_from_slice(&[i0, i2, i1, i1, i2, i3]);
+            mesh.indices.extend_from_slice(&[i0, i2, i1, i1, i2, i3]);
         }
     }
 

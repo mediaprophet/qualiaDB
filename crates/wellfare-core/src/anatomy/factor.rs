@@ -84,7 +84,13 @@ pub struct Factor {
 
 impl Factor {
     pub fn new(id: impl Into<String>, kind: FactorKind, label: impl Into<String>) -> Self {
-        Self { id: id.into(), kind, label: label.into(), targets: Vec::new(), source: None }
+        Self {
+            id: id.into(),
+            kind,
+            label: label.into(),
+            targets: Vec::new(),
+            source: None,
+        }
     }
 
     /// Add a (system, effect, evidence, weight) mapping. `weight_milli` is clamped to 0..=1000.
@@ -138,7 +144,12 @@ mod tests {
     #[test]
     fn model_serde_round_trips() {
         let f = Factor::new("med:x", FactorKind::Medication, "X")
-            .targeting("digestive", Effect::Adverse, EvidenceTier::ClinicalEvidence, 100)
+            .targeting(
+                "digestive",
+                Effect::Adverse,
+                EvidenceTier::ClinicalEvidence,
+                100,
+            )
             .from_source("record:123");
         let json = serde_json::to_string(&f).unwrap();
         let back: Factor = serde_json::from_str(&json).unwrap();

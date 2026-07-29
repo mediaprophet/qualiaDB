@@ -188,6 +188,9 @@ mod tests {
     #[test]
     fn buffer_too_small() {
         let mut small = [0u8; 3];
-        assert_eq!(build(0x7F, MmcCommand::Stop, &mut small), Err(AudioError::OutputBufferTooSmall));
+        assert_eq!(
+            build(0x7F, MmcCommand::Stop, &mut small),
+            Err(AudioError::OutputBufferTooSmall)
+        );
     }
 }

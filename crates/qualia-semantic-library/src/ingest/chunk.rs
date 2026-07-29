@@ -33,19 +33,20 @@ pub fn chunk_text(text: &str) -> Vec<Chunk> {
     let mut offset = 0usize;
     let mut idx = 0u32;
 
-    let flush = |buf: &mut String, start: usize, path: &[String], idx: &mut u32, out: &mut Vec<Chunk>| {
-        let t = buf.trim();
-        if !t.is_empty() {
-            out.push(Chunk {
-                idx: *idx,
-                heading_path: path.to_vec(),
-                char_start: start,
-                text: t.to_string(),
-            });
-            *idx += 1;
-        }
-        buf.clear();
-    };
+    let flush =
+        |buf: &mut String, start: usize, path: &[String], idx: &mut u32, out: &mut Vec<Chunk>| {
+            let t = buf.trim();
+            if !t.is_empty() {
+                out.push(Chunk {
+                    idx: *idx,
+                    heading_path: path.to_vec(),
+                    char_start: start,
+                    text: t.to_string(),
+                });
+                *idx += 1;
+            }
+            buf.clear();
+        };
 
     for block in split_blocks(text) {
         let block_len = block.len();
@@ -112,7 +113,10 @@ fn heading_level(s: &str) -> Option<u8> {
         return None;
     }
     // Markdown ATX
-    if let Some(hashes) = s.strip_suffix(|_: char| false).and_then(|_| s.find(|c| c != '#')) {
+    if let Some(hashes) = s
+        .strip_suffix(|_: char| false)
+        .and_then(|_| s.find(|c| c != '#'))
+    {
         if s.starts_with('#') && hashes >= 1 {
             return Some(hashes.min(6) as u8);
         }
@@ -126,7 +130,11 @@ fn heading_level(s: &str) -> Option<u8> {
     }
     // ALL CAPS short line = top-level heading.
     let alpha = s.chars().filter(|c| c.is_alphabetic()).count();
-    if alpha > 2 && s.chars().filter(|c| c.is_alphabetic()).all(|c| c.is_uppercase()) {
+    if alpha > 2
+        && s.chars()
+            .filter(|c| c.is_alphabetic())
+            .all(|c| c.is_uppercase())
+    {
         return Some(1);
     }
     None
@@ -161,7 +169,10 @@ mod tests {
         let chunks = chunk_text(text);
         assert!(!chunks.is_empty());
         // the methods chunk should carry the "2 Methods" heading in its path
-        let methods = chunks.iter().find(|c| c.text.contains("method paragraph")).unwrap();
+        let methods = chunks
+            .iter()
+            .find(|c| c.text.contains("method paragraph"))
+            .unwrap();
         assert!(methods.heading_path.iter().any(|h| h.contains("Methods")));
     }
 

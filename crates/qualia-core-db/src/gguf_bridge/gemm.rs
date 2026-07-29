@@ -3,6 +3,7 @@
 use super::*;
 
 /// XOR into the resident-weight key so f16-promoted FFN blobs never alias quant blobs.
+#[cfg(not(target_arch = "wasm32"))]
 const F16_PROMOTE_KEY_TAG: u64 = 0xF16E_F16E_0000_00F1;
 
 impl QTensorEngine {
@@ -159,6 +160,7 @@ impl QTensorEngine {
     }
 
     /// Quantized GEMM from a pre-sliced weight byte range (chunk-local row indices).
+    #[cfg(not(target_arch = "wasm32"))]
     pub(crate) fn dispatch_gemm_raw_into(
         &self,
         info: &GgufTensorInfo,
@@ -298,8 +300,8 @@ impl QTensorEngine {
                 &self.pipeline
             };
             #[cfg(target_arch = "wasm32")]
-            let use_mmv_q8_0 = info.ggml_type == crate::ggml_quants::GGML_TYPE_Q8_0
-                && (n_in % 32 == 0);
+            let use_mmv_q8_0 =
+                info.ggml_type == crate::ggml_quants::GGML_TYPE_Q8_0 && (n_in % 32 == 0);
             #[cfg(target_arch = "wasm32")]
             let active_pipeline: &wgpu::ComputePipeline = if use_mmv_q8_0 {
                 &self.mmv_q8_0_pipeline
@@ -427,6 +429,25 @@ impl QTensorEngine {
             let _ = staging.unmap();
         }
 
+        stack_gemm_quant(raw, info, input, out, n_in, n_out)
+    }
+
+    /// Browser compatibility path for synchronous callers. WebGPU mapping must
+    /// be awaited, so the public browser inference route uses the async GEMM
+    /// dispatcher and this fallback executes the deterministic CPU kernel.
+    #[cfg(target_arch = "wasm32")]
+    pub(crate) fn dispatch_gemm_raw_into(
+        &self,
+        info: &GgufTensorInfo,
+        raw: &[u8],
+        input: &[f32],
+        out: &mut [f32],
+        n_in: usize,
+        n_out: usize,
+    ) -> bool {
+        if n_in > input.len() || n_out > out.len() {
+            return false;
+        }
         stack_gemm_quant(raw, info, input, out, n_in, n_out)
     }
 

@@ -66,10 +66,7 @@ impl ConsentStore {
             fs::create_dir_all(parent)?;
         }
         if !path.exists() {
-            OpenOptions::new()
-                .create(true)
-                .write(true)
-                .open(&path)?;
+            OpenOptions::new().create(true).write(true).open(&path)?;
         }
         Ok(Self { path })
     }
@@ -101,10 +98,7 @@ impl ConsentStore {
 
     pub fn list_active(&self, now_unix: u64) -> std::io::Result<Vec<ConsentGrantRecord>> {
         let all = self.list_all()?;
-        let mut active: Vec<_> = all
-            .into_iter()
-            .filter(|g| g.is_active(now_unix))
-            .collect();
+        let mut active: Vec<_> = all.into_iter().filter(|g| g.is_active(now_unix)).collect();
         let keep = MAX_LIST.min(active.len());
         if active.len() > keep {
             active.drain(0..active.len() - keep);

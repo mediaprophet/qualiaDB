@@ -12,8 +12,7 @@ use crate::components::qapp_engine::invoke_json;
 const SAMPLE_SELECT: &str =
     "SELECT ?subject ?predicate ?object\nWHERE {\n  ?subject ?predicate ?object\n}\nLIMIT 10";
 
-const PRESET_LIMITED: &str =
-    "SELECT ?s ?p ?o\nWHERE {\n  ?s ?p ?o\n}\nLIMIT 5";
+const PRESET_LIMITED: &str = "SELECT ?s ?p ?o\nWHERE {\n  ?s ?p ?o\n}\nLIMIT 5";
 
 const PRESET_TYPE_PATTERN: &str =
     "SELECT ?s ?type\nWHERE {\n  ?s <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> ?type\n}\nLIMIT 20";

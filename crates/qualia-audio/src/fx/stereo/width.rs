@@ -78,6 +78,9 @@ mod tests {
     fn non_finite_width_errors() {
         let inp = [1.0f32, -1.0];
         let mut out = [0.0f32; 2];
-        assert_eq!(width(&inp, &mut out, f32::NAN), Err(AudioError::InvalidParameter));
+        assert_eq!(
+            width(&inp, &mut out, f32::NAN),
+            Err(AudioError::InvalidParameter)
+        );
     }
 }

@@ -4,10 +4,10 @@
 //! Host (desktop / client-core) constructs `render::assets::Mesh` and seals via
 //! `compile_mesh_to_10d_vision`.
 
+use crate::types::Detection;
 use qualia_core_db::specialized_libs::computer_vision::spatial::{
     detection_center_to_node_hint, detection_to_sigma, NodeHint, RenderMeshExport,
 };
-use crate::types::Detection;
 
 /// Geometry fields layout-compatible with `qualia_core_db::render::assets::Mesh`.
 ///

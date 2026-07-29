@@ -1,6 +1,6 @@
 //! Phenomenal viewport CI contract — WGSL bindings, binary layout, and regression oracles.
 //!
-//! Run via `cargo test -p qualia-core-db phenomenal_contract --lib` or
+//! Run via `cargo test -p qualia-core-db render::contract::tests::phenomenal_ --lib` or
 //! `node docs/tests/phenomenal-verify.mjs`.
 
 /// Rust `portal_gpu` projector camera bind group (group 0).

@@ -15,8 +15,8 @@ pub use evaluate_pad_from_mediapipe_trace::{
 };
 pub use landmarks_from_normalized::landmarks_from_normalized;
 pub use mediapipe_index::{
-    mediapipe_index_for_pad, pad_id_for_mediapipe_index, PAD_LANDMARK_IDS, PAD_MEDIAPIPE_INDICES,
-    MEDIAPIPE_FACE_MESH_COUNT,
+    mediapipe_index_for_pad, pad_id_for_mediapipe_index, MEDIAPIPE_FACE_MESH_COUNT,
+    PAD_LANDMARK_IDS, PAD_MEDIAPIPE_INDICES,
 };
 pub use pack_landmark_frame::{pack_landmark_frame, LandmarkBufferLayout};
 
@@ -95,8 +95,7 @@ mod trace_tests {
     fn pack_roundtrip_preserves_par_slots() {
         let (f, _) = synthetic_3d_par_frame(20.0, 100);
         let flat = frame_to_mp_xy(&f);
-        let packed =
-            pack_landmark_frame(100, &flat, LandmarkBufferLayout::XyInterleaved).unwrap();
+        let packed = pack_landmark_frame(100, &flat, LandmarkBufferLayout::XyInterleaved).unwrap();
         for id in [
             PadLandmarkId::NoseTip,
             PadLandmarkId::LeftCheek,
@@ -107,7 +106,11 @@ mod trace_tests {
         ] {
             let a = f.get(id).unwrap();
             let b = packed.get(id).unwrap();
-            assert!((a.x - b.x).abs() < 1e-5 && (a.y - b.y).abs() < 1e-5, "{:?}", id);
+            assert!(
+                (a.x - b.x).abs() < 1e-5 && (a.y - b.y).abs() < 1e-5,
+                "{:?}",
+                id
+            );
         }
     }
 
@@ -171,7 +174,11 @@ mod trace_tests {
             None,
         )
         .unwrap();
-        assert_ne!(r.reason, PadReason::FlatSurface, "poison Z must not fake 3D");
+        assert_ne!(
+            r.reason,
+            PadReason::FlatSurface,
+            "poison Z must not fake 3D"
+        );
         // Live synthetic may pass or hit soft gates; must not be flat-mask reject.
         assert!(
             r.passed

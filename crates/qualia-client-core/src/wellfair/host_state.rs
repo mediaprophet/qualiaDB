@@ -77,10 +77,18 @@ pub struct ConsentGrantDraft {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum PolicyDecisionDto {
-    Permit { obligations: Vec<String> },
-    Deny { reasons: Vec<String> },
-    Prompt { requested_consent: ConsentGrantDraft },
-    Suspend { required_approvals: u8 },
+    Permit {
+        obligations: Vec<String>,
+    },
+    Deny {
+        reasons: Vec<String>,
+    },
+    Prompt {
+        requested_consent: ConsentGrantDraft,
+    },
+    Suspend {
+        required_approvals: u8,
+    },
 }
 
 /// Outcome of a policy-gated write that may enter the guardianship escrow.

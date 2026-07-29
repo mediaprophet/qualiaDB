@@ -238,8 +238,7 @@ impl QTensorEngine {
         self.gpu_queue()
             .write_buffer(params_buf, 0, bytemuck::bytes_of(&params));
 
-        let use_mmv = weight_ggml_type == crate::ggml_quants::GGML_TYPE_Q8_0
-            && (n_in % 32 == 0);
+        let use_mmv = weight_ggml_type == crate::ggml_quants::GGML_TYPE_Q8_0 && (n_in % 32 == 0);
         let active_pipeline = if use_mmv {
             &self.mmv_q8_0_pipeline
         } else {
@@ -665,7 +664,7 @@ impl QTensorEngine {
         let _ = staging.unmap();
         false
     }
-    #[cfg(target_arch = "wasm32")]
+    #[cfg(all(target_arch = "wasm32", feature = "wasm-llm-diagnostics"))]
     pub(crate) async fn dispatch_attention_q_ffn_token_async(
         &mut self,
         index: &crate::gguf_sharder::GgufTensorIndex,

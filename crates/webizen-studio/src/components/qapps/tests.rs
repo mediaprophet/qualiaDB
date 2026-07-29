@@ -9,8 +9,17 @@ mod tests {
     //! and catch id drift like the historical `physics-sim` / `physics-simulator`
     //! mismatch automatically.
 
-    const QAPPS_SRC: &str = include_str!("catalog/mod.rs");
-    const DISPATCHER_SRC: &str = include_str!("../../studio_canvas.rs");
+    // Catalogue entries are split by academic domain. Keep this source-level
+    // contract aligned with that directory structure so a refactor cannot turn
+    // the test into a false "empty catalogue" failure.
+    const QAPPS_SRC: &str = concat!(
+        include_str!("catalog/academic_social.rs"),
+        include_str!("catalog/academic_sciences.rs"),
+        include_str!("catalog/academic_specialised.rs"),
+        include_str!("catalog/academic_arts.rs"),
+        include_str!("catalog/academic_critical.rs"),
+    );
+    const DISPATCHER_SRC: &str = include_str!("../qapp_dispatcher.rs");
 
     /// First double-quoted substring in `s`, if any.
     fn first_quoted(s: &str) -> Option<&str> {

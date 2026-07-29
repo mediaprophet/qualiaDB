@@ -1,6 +1,5 @@
 //! Agency layer + wellbeing assessment
 
-
 use super::super::journal::JournalEntry;
 use qualia_cooperative_core::agency_delegation::{
     agency_delegation_full_json, build_agency_delegation_envelope, delegation_permits,
@@ -14,7 +13,6 @@ use wellfare_core::assessment::{
     assessment_summary, build_assessment_envelope, instrument, instrument_dto, instruments,
     parse_assessment, score, AssessmentResult, InstrumentDto,
 };
-
 
 use super::*;
 
@@ -34,8 +32,12 @@ impl WebizenHostApi {
         delegation: &AgencyDelegation,
     ) -> Result<JournalEntry, String> {
         let asserted = Self::now_unix() as u32;
-        let envelope =
-            build_agency_delegation_envelope(delegation, &self.owner_did, &self.author_did, asserted);
+        let envelope = build_agency_delegation_envelope(
+            delegation,
+            &self.owner_did,
+            &self.author_did,
+            asserted,
+        );
         let summary = agency_delegation_full_json(delegation);
         self.submit_record_with_summary(
             QAPP_COOPERATIVE,
@@ -71,8 +73,7 @@ impl WebizenHostApi {
         } else {
             values_anchor
         };
-        let mut d =
-            AgencyDelegation::new(principal_did, domain, anchor, Self::now_unix() as u32);
+        let mut d = AgencyDelegation::new(principal_did, domain, anchor, Self::now_unix() as u32);
         d.agent_dids = agent_dids
             .into_iter()
             .map(|s| s.trim().to_string())
@@ -215,15 +216,9 @@ impl WebizenHostApi {
             .ok_or_else(|| format!("unknown assessment instrument: {instrument_id}"))?;
         let now = Self::now_unix() as u32;
         let result = score(inst, &responses, now)?;
-        let envelope =
-            build_assessment_envelope(&result, &self.owner_did, &self.author_did, now);
+        let envelope = build_assessment_envelope(&result, &self.owner_did, &self.author_did, now);
         let summary = assessment_summary(&result);
-        self.submit_record_with_summary(
-            QAPP_WELLBEING,
-            envelope,
-            SOURCE_WELLBEING,
-            Some(summary),
-        )?;
+        self.submit_record_with_summary(QAPP_WELLBEING, envelope, SOURCE_WELLBEING, Some(summary))?;
         self.finalize_batch().ok();
         Ok(result)
     }
@@ -236,5 +231,4 @@ impl WebizenHostApi {
             .filter_map(|e| e.summary.as_deref().and_then(parse_assessment))
             .collect())
     }
-
 }

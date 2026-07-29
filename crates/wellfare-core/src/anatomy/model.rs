@@ -230,18 +230,18 @@ pub fn body_system_for_organ(organ: &str) -> Option<&'static str> {
 /// also senses and secretes. Curation-grade (well-established textbook roles), extensible. Every id here
 /// is a real body system (a test asserts it). This is the data behind organ→**many** systems.
 static ORGAN_SECONDARY_SYSTEMS: &[(&str, &str)] = &[
-    ("pancreas", "endocrine"),    // islets of Langerhans → insulin/glucagon
-    ("pancreas", "exocrine"),     // acinar cells → digestive enzymes via ducts
-    ("liver", "endocrine"),       // IGF-1, angiotensinogen, thrombopoietin, hormone metabolism
-    ("liver", "exocrine"),        // bile secreted via the biliary ducts
-    ("kidney", "endocrine"),      // renin, erythropoietin, calcitriol activation
-    ("ovary", "endocrine"),       // oestrogen / progesterone
-    ("testis", "endocrine"),      // testosterone
-    ("bone", "immune_lymphatic"), // red marrow → haematopoiesis of immune cells
-    ("skin", "sensory"),          // cutaneous mechano/thermo/nociceptors
-    ("skin", "exocrine"),         // sweat + sebaceous glands
-    ("mammary-gland", "exocrine"),// milk secreted via ducts
-    ("diaphragm", "respiratory"), // the principal muscle of ventilation
+    ("pancreas", "endocrine"),     // islets of Langerhans → insulin/glucagon
+    ("pancreas", "exocrine"),      // acinar cells → digestive enzymes via ducts
+    ("liver", "endocrine"),        // IGF-1, angiotensinogen, thrombopoietin, hormone metabolism
+    ("liver", "exocrine"),         // bile secreted via the biliary ducts
+    ("kidney", "endocrine"),       // renin, erythropoietin, calcitriol activation
+    ("ovary", "endocrine"),        // oestrogen / progesterone
+    ("testis", "endocrine"),       // testosterone
+    ("bone", "immune_lymphatic"),  // red marrow → haematopoiesis of immune cells
+    ("skin", "sensory"),           // cutaneous mechano/thermo/nociceptors
+    ("skin", "exocrine"),          // sweat + sebaceous glands
+    ("mammary-gland", "exocrine"), // milk secreted via ducts
+    ("diaphragm", "respiratory"),  // the principal muscle of ventilation
 ];
 
 /// All body systems an organ participates in, as `(system_id, is_primary)` — the primary first, then any
@@ -325,7 +325,10 @@ mod tests {
         assert_eq!(Karyotype::parse("XXY"), None);
         assert_eq!(Karyotype::parse(""), None);
         // Round-trip.
-        assert_eq!(Karyotype::parse(Karyotype::Xy.as_str()), Some(Karyotype::Xy));
+        assert_eq!(
+            Karyotype::parse(Karyotype::Xy.as_str()),
+            Some(Karyotype::Xy)
+        );
     }
 
     #[test]
@@ -333,31 +336,64 @@ mod tests {
         assert_eq!(normalize_organ_key("3d-vh-m-eye-l.glb"), "eye");
         assert_eq!(normalize_organ_key("3d-vh-f-eye-r.glb"), "eye");
         assert_eq!(normalize_organ_key("eye-left"), "eye");
-        assert_eq!(normalize_organ_key("blood-vasculature"), "blood-vasculature");
+        assert_eq!(
+            normalize_organ_key("blood-vasculature"),
+            "blood-vasculature"
+        );
         assert_eq!(normalize_organ_key("  VH-M-Lung  "), "lung");
         // The provider varies across the real CCF set — strip on the sex marker, not a fixed prefix.
         assert_eq!(normalize_organ_key("3d-allen-m-brain.glb"), "brain");
-        assert_eq!(normalize_organ_key("3d-sbu-m-large-intestine.glb"), "large-intestine");
+        assert_eq!(
+            normalize_organ_key("3d-sbu-m-large-intestine.glb"),
+            "large-intestine"
+        );
         assert_eq!(normalize_organ_key("3d-nih-f-lymph-node.glb"), "lymph-node");
-        assert_eq!(normalize_organ_key("3d-vh-m-main-bronchus.glb"), "main-bronchus");
+        assert_eq!(
+            normalize_organ_key("3d-vh-m-main-bronchus.glb"),
+            "main-bronchus"
+        );
     }
 
     #[test]
     fn organs_map_to_systems_and_unknowns_are_none() {
-        assert_eq!(body_system_for_organ("3d-vh-m-lung.glb"), Some("respiratory"));
-        assert_eq!(body_system_for_organ("blood-vasculature"), Some("circulatory"));
+        assert_eq!(
+            body_system_for_organ("3d-vh-m-lung.glb"),
+            Some("respiratory")
+        );
+        assert_eq!(
+            body_system_for_organ("blood-vasculature"),
+            Some("circulatory")
+        );
         assert_eq!(body_system_for_organ("eye-left"), Some("sensory"));
         assert_eq!(body_system_for_organ("kidney-r"), Some("urinary"));
         // Model-specific reproductive organs.
         assert_eq!(body_system_for_organ("prostate"), Some("reproductive"));
         assert_eq!(body_system_for_organ("uterus"), Some("reproductive"));
         // The organs the first real full-body run surfaced (multi-provider prefixes + new tokens).
-        assert_eq!(body_system_for_organ("3d-allen-m-brain.glb"), Some("nervous"));
-        assert_eq!(body_system_for_organ("3d-nih-m-lymph-node.glb"), Some("immune_lymphatic"));
-        assert_eq!(body_system_for_organ("3d-vh-m-main-bronchus.glb"), Some("respiratory"));
-        assert_eq!(body_system_for_organ("3d-vh-m-mouth.glb"), Some("digestive"));
-        assert_eq!(body_system_for_organ("3d-vh-m-pelvis.glb"), Some("skeletal"));
-        assert_eq!(body_system_for_organ("3d-vh-m-urinary-bladder.glb"), Some("urinary"));
+        assert_eq!(
+            body_system_for_organ("3d-allen-m-brain.glb"),
+            Some("nervous")
+        );
+        assert_eq!(
+            body_system_for_organ("3d-nih-m-lymph-node.glb"),
+            Some("immune_lymphatic")
+        );
+        assert_eq!(
+            body_system_for_organ("3d-vh-m-main-bronchus.glb"),
+            Some("respiratory")
+        );
+        assert_eq!(
+            body_system_for_organ("3d-vh-m-mouth.glb"),
+            Some("digestive")
+        );
+        assert_eq!(
+            body_system_for_organ("3d-vh-m-pelvis.glb"),
+            Some("skeletal")
+        );
+        assert_eq!(
+            body_system_for_organ("3d-vh-m-urinary-bladder.glb"),
+            Some("urinary")
+        );
         // Unknown → reported as None, never guessed.
         assert_eq!(body_system_for_organ("3d-vh-m-flux-capacitor.glb"), None);
     }
@@ -369,23 +405,40 @@ mod tests {
         let m = system_memberships_for_organ("3d-vh-m-pancreas.glb");
         assert_eq!(m[0], ("digestive", true), "primary comes first");
         let ids: Vec<&str> = m.iter().map(|(s, _)| *s).collect();
-        assert!(ids.contains(&"endocrine") && ids.contains(&"exocrine"), "pancreas multi-system: {ids:?}");
+        assert!(
+            ids.contains(&"endocrine") && ids.contains(&"exocrine"),
+            "pancreas multi-system: {ids:?}"
+        );
         // The primary agrees with body_system_for_organ.
         assert_eq!(body_system_for_organ("pancreas"), Some("digestive"));
         // Skin: a barrier (primary integumentary) that also senses and secretes.
-        let skin: Vec<&str> = system_memberships_for_organ("skin").iter().map(|(s, _)| *s).collect();
+        let skin: Vec<&str> = system_memberships_for_organ("skin")
+            .iter()
+            .map(|(s, _)| *s)
+            .collect();
         assert!(
-            skin.contains(&"integumentary") && skin.contains(&"sensory") && skin.contains(&"exocrine"),
+            skin.contains(&"integumentary")
+                && skin.contains(&"sensory")
+                && skin.contains(&"exocrine"),
             "skin memberships: {skin:?}"
         );
         // A single-system organ has exactly one membership (the primary).
-        assert_eq!(system_memberships_for_organ("heart"), vec![("circulatory", true)]);
+        assert_eq!(
+            system_memberships_for_organ("heart"),
+            vec![("circulatory", true)]
+        );
         // The diaphragm is now a muscle (primary) that is also respiratory.
-        let dia: Vec<&str> = system_memberships_for_organ("diaphragm").iter().map(|(s, _)| *s).collect();
+        let dia: Vec<&str> = system_memberships_for_organ("diaphragm")
+            .iter()
+            .map(|(s, _)| *s)
+            .collect();
         assert_eq!(dia, vec!["muscular", "respiratory"]);
         // Every secondary membership names a real body system (no typo silently colouring nothing).
         for (organ, sys) in ORGAN_SECONDARY_SYSTEMS {
-            assert!(body_system(sys).is_some(), "organ {organ} secondary → unknown system {sys}");
+            assert!(
+                body_system(sys).is_some(),
+                "organ {organ} secondary → unknown system {sys}"
+            );
         }
         // An unknown organ has no memberships (reported, not guessed).
         assert!(system_memberships_for_organ("flux-capacitor").is_empty());
@@ -438,7 +491,10 @@ mod tests {
         assert_eq!(body_system_for_organ("inner-ear"), Some("vestibular"));
         assert_eq!(body_system_for_organ("salivary-gland"), Some("exocrine"));
         for &discrete in &["circulatory", "vestibular", "exocrine", "reproductive"] {
-            assert_eq!(system_representation(discrete), SystemRepresentation::DiscreteOrgans);
+            assert_eq!(
+                system_representation(discrete),
+                SystemRepresentation::DiscreteOrgans
+            );
         }
     }
 
@@ -451,8 +507,14 @@ mod tests {
         // Every host hint names a real, discrete-organ system (so the highlight has a mesh to land on).
         for &distributed in &["ens", "glymphatic", "ecs"] {
             for host in overlay_host_systems(distributed) {
-                assert!(body_system(host).is_some(), "{distributed} host {host} unknown");
-                assert_eq!(system_representation(host), SystemRepresentation::DiscreteOrgans);
+                assert!(
+                    body_system(host).is_some(),
+                    "{distributed} host {host} unknown"
+                );
+                assert_eq!(
+                    system_representation(host),
+                    SystemRepresentation::DiscreteOrgans
+                );
             }
         }
     }

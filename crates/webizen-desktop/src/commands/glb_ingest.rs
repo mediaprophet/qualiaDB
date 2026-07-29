@@ -11,7 +11,6 @@ use std::io::Read;
 /// - Binary IPC transport (u64 indices instead of String IDs)
 use std::path::Path;
 
-
 /// GLB asset metadata
 #[derive(Debug, Clone)]
 pub struct GLBMetadata {

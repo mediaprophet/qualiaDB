@@ -185,7 +185,17 @@ mod tests {
         ));
         // Spectrogram too small (needs 2*48 = 96).
         assert!(matches!(
-            inverse_cqt(&spec, 2, 48, 16000.0, 55.0, 12, 2048, 4096, &mut [0.0; 6144]),
+            inverse_cqt(
+                &spec,
+                2,
+                48,
+                16000.0,
+                55.0,
+                12,
+                2048,
+                4096,
+                &mut [0.0; 6144]
+            ),
             Err(AudioError::MalformedAudio)
         ));
         // Output too small (needs 4096).

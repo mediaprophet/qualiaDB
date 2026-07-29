@@ -121,7 +121,11 @@ impl SyncOperation {
 
     /// The bytes a signature must cover: id + record + content hash (binds identity to content).
     pub fn signing_payload(&self) -> Vec<u8> {
-        format!("{}|{}|{}", self.operation_id, self.record_id, self.content_hash).into_bytes()
+        format!(
+            "{}|{}|{}",
+            self.operation_id, self.record_id, self.content_hash
+        )
+        .into_bytes()
     }
 
     pub fn with_signature(mut self, signature_hex: impl Into<String>) -> Self {
@@ -186,7 +190,10 @@ pub fn lamport_next(local: u64, observed: u64) -> u64 {
 
 /// Merge two operation sets **add-wins by operation id** (never re-apply), returning a
 /// deterministically ordered union (by Lamport clock, then id). Idempotent and order-independent.
-pub fn merge_operations(existing: &[SyncOperation], incoming: &[SyncOperation]) -> Vec<SyncOperation> {
+pub fn merge_operations(
+    existing: &[SyncOperation],
+    incoming: &[SyncOperation],
+) -> Vec<SyncOperation> {
     let mut merged: Vec<SyncOperation> = Vec::with_capacity(existing.len() + incoming.len());
     for op in existing.iter().chain(incoming.iter()) {
         if !merged.iter().any(|e| e.operation_id == op.operation_id) {
@@ -375,7 +382,10 @@ mod tests {
 
     #[test]
     fn merge_is_idempotent_and_order_independent() {
-        let a = vec![signed("a", "ledger_entry", "1", 2), signed("b", "ledger_entry", "2", 1)];
+        let a = vec![
+            signed("a", "ledger_entry", "1", 2),
+            signed("b", "ledger_entry", "2", 1),
+        ];
         let incoming = vec![
             signed("b", "ledger_entry", "2", 1),
             signed("c", "ledger_entry", "3", 3),
@@ -414,8 +424,12 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         {
             let inbox = SyncInbox::open(dir.path()).unwrap();
-            inbox.admit(&signed("z", "ledger_entry", "z", 5), 1).unwrap();
-            inbox.admit(&signed("y", "ledger_entry", "y", 2), 1).unwrap();
+            inbox
+                .admit(&signed("z", "ledger_entry", "z", 5), 1)
+                .unwrap();
+            inbox
+                .admit(&signed("y", "ledger_entry", "y", 2), 1)
+                .unwrap();
         }
         let reopened = SyncInbox::open(dir.path()).unwrap();
         let ops = reopened.validated_operations().unwrap();

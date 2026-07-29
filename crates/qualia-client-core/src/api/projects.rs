@@ -2,9 +2,6 @@
 
 #![allow(non_snake_case)]
 
-
-
-
 pub fn list_project_collaborators(project_id: Option<String>) -> Result<serde_json::Value, String> {
     let rows = crate::project_collab::list(project_id.as_deref());
     serde_json::to_value(rows).map_err(|e| e.to_string())
@@ -60,4 +57,3 @@ pub fn answer_connection_challenge(
     let resp = crate::handshake::answer_challenge(&challenge, &my_did, &id.signing_key());
     serde_json::to_value(resp).map_err(|e| e.to_string())
 }
-

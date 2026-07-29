@@ -4,16 +4,35 @@ pub type LayerId = &'static str;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum LayerSource {
-    NasaGibs { layer: &'static str, projection: &'static str },
-    NasaHorizons { body: &'static str },
+    NasaGibs {
+        layer: &'static str,
+        projection: &'static str,
+    },
+    NasaHorizons {
+        body: &'static str,
+    },
     HipparcosCatalog,
     YaleBrightStars,
-    DemWcs { endpoint: &'static str, coverage: &'static str },
+    DemWcs {
+        endpoint: &'static str,
+        coverage: &'static str,
+    },
     OsmOverpass,
-    WmsImagery { endpoint: &'static str, layer: &'static str },
-    UsgsAstrogeology { body: &'static str, layer: &'static str },
-    StacCatalog { catalog: &'static str, collection: &'static str },
-    Generated { generator: &'static str },
+    WmsImagery {
+        endpoint: &'static str,
+        layer: &'static str,
+    },
+    UsgsAstrogeology {
+        body: &'static str,
+        layer: &'static str,
+    },
+    StacCatalog {
+        catalog: &'static str,
+        collection: &'static str,
+    },
+    Generated {
+        generator: &'static str,
+    },
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -248,7 +267,10 @@ pub static LAYER_CATALOG: &[LayerDefinition] = &[
 ];
 
 pub fn layers_by_category(category: &LayerCategory) -> Vec<&'static LayerDefinition> {
-    LAYER_CATALOG.iter().filter(|l| std::mem::discriminant(&l.category) == std::mem::discriminant(category)).collect()
+    LAYER_CATALOG
+        .iter()
+        .filter(|l| std::mem::discriminant(&l.category) == std::mem::discriminant(category))
+        .collect()
 }
 
 pub fn all_categories() -> Vec<LayerCategory> {

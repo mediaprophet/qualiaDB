@@ -6,9 +6,10 @@ use super::*;
 
 use std::path::Path;
 
-
 fn agent_roster_storage() -> Result<String, String> {
-    let state = crate::state::APP_STATE.get().ok_or("Application not initialized")?;
+    let state = crate::state::APP_STATE
+        .get()
+        .ok_or("Application not initialized")?;
     let storage = state
         .config
         .lock()
@@ -260,4 +261,3 @@ pub fn ingest_chat_cml(session_id: String, text: String) -> Result<usize, String
     let storage = agent_roster_storage()?;
     crate::cml_context::ingest_turn(Path::new(&storage), &session_id, &text).map(|v| v.len())
 }
-

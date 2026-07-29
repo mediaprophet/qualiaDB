@@ -8,7 +8,6 @@ use crate::components::qapp_engine::tauri_invoke;
 #[cfg(target_arch = "wasm32")]
 use js_sys;
 
-
 /// One system's entry in the anatomy view (mirror of the host `SystemView`).
 #[derive(Debug, Clone, Default, Deserialize, PartialEq)]
 pub struct AnatomySystemDto {
@@ -70,22 +69,77 @@ pub struct AnatomyViewReportDto {
     pub disclosure: String,
 }
 
+#[derive(Debug, Clone, Default, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct ComorbidityVerdictDto {
+    #[serde(default)]
+    pub condition_hash: String,
+    #[serde(default)]
+    pub compounded_risk_milli: u32,
+    #[serde(default)]
+    pub status: u8,
+}
+
+#[derive(Debug, Clone, Default, Deserialize, PartialEq)]
+pub struct ComorbidityReportDto {
+    #[serde(default)]
+    pub verdicts: Vec<ComorbidityVerdictDto>,
+}
+
 #[cfg(target_arch = "wasm32")]
-pub async fn fetch_anatomy_view(lens: &str, threshold: u32) -> Result<AnatomyViewReportDto, String> {
+pub async fn fetch_anatomy_view(
+    lens: &str,
+    threshold: u32,
+) -> Result<AnatomyViewReportDto, String> {
     let args = js_sys::Object::new();
-    js_sys::Reflect::set(&args, &"lens".into(), &wasm_bindgen::JsValue::from_str(lens))
-        .map_err(|_| "failed to build invoke args".to_string())?;
-    js_sys::Reflect::set(&args, &"threshold".into(), &wasm_bindgen::JsValue::from(threshold))
-        .map_err(|_| "failed to build invoke args".to_string())?;
+    js_sys::Reflect::set(
+        &args,
+        &"lens".into(),
+        &wasm_bindgen::JsValue::from_str(lens),
+    )
+    .map_err(|_| "failed to build invoke args".to_string())?;
+    js_sys::Reflect::set(
+        &args,
+        &"threshold".into(),
+        &wasm_bindgen::JsValue::from(threshold),
+    )
+    .map_err(|_| "failed to build invoke args".to_string())?;
     let js = tauri_invoke("wellfair_compute_anatomy_view", args.into())
         .await
         .map_err(|e| format!("{e:?}"))?;
-    let json = js.as_string().ok_or_else(|| "anatomy view was not a JSON string".to_string())?;
+    let json = js
+        .as_string()
+        .ok_or_else(|| "anatomy view was not a JSON string".to_string())?;
     serde_json::from_str(&json).map_err(|e| e.to_string())
 }
 
+#[cfg(target_arch = "wasm32")]
+pub async fn evaluate_comorbidity(target_organ: &str) -> Result<ComorbidityReportDto, String> {
+    let args = js_sys::Object::new();
+    js_sys::Reflect::set(
+        &args,
+        &"targetOrgan".into(),
+        &wasm_bindgen::JsValue::from_str(target_organ),
+    )
+    .map_err(|_| "failed to build comorbidity args".to_string())?;
+    let js = tauri_invoke("wellfair_eval_comorbidity", args.into())
+        .await
+        .map_err(|error| format!("{error:?}"))?;
+    let json = js
+        .as_string()
+        .ok_or_else(|| "comorbidity response was not JSON".to_string())?;
+    serde_json::from_str(&json).map_err(|error| error.to_string())
+}
+
 #[cfg(not(target_arch = "wasm32"))]
-pub async fn fetch_anatomy_view(_lens: &str, _threshold: u32) -> Result<AnatomyViewReportDto, String> {
+pub async fn fetch_anatomy_view(
+    _lens: &str,
+    _threshold: u32,
+) -> Result<AnatomyViewReportDto, String> {
     Err("The Anatomy view requires the Tauri desktop host".into())
 }
 
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn evaluate_comorbidity(_target_organ: &str) -> Result<ComorbidityReportDto, String> {
+    Err("Comorbidity evaluation requires the Tauri desktop host".into())
+}

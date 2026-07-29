@@ -191,4 +191,3 @@ pub fn qapp_slug(s: &str) -> String {
     }
     out.trim_matches('_').to_string()
 }
-

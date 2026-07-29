@@ -96,10 +96,10 @@ pub fn solve(params: &WebGpuJobParams) -> SolverReport {
                 let dvdx = (v[e] - v[w]) / (2.0 * hx);
                 let dvdy = (v[nn] - v[s]) / (2.0 * hy);
 
-                let lap_u = (u[e] + u[w] - 2.0 * u[c]) * inv_hx2
-                    + (u[nn] + u[s] - 2.0 * u[c]) * inv_hy2;
-                let lap_v = (v[e] + v[w] - 2.0 * v[c]) * inv_hx2
-                    + (v[nn] + v[s] - 2.0 * v[c]) * inv_hy2;
+                let lap_u =
+                    (u[e] + u[w] - 2.0 * u[c]) * inv_hx2 + (u[nn] + u[s] - 2.0 * u[c]) * inv_hy2;
+                let lap_v =
+                    (v[e] + v[w] - 2.0 * v[c]) * inv_hx2 + (v[nn] + v[s] - 2.0 * v[c]) * inv_hy2;
 
                 let adv_u = u[c] * dudx + v[c] * dudy;
                 let adv_v = u[c] * dvdx + v[c] * dvdy;
@@ -116,8 +116,7 @@ pub fn solve(params: &WebGpuJobParams) -> SolverReport {
                 let w = idx(wrap(i as i64 - 1, nxi), j);
                 let nn = idx(i, wrap(j as i64 + 1, nyi));
                 let s = idx(i, wrap(j as i64 - 1, nyi));
-                let div = (ustar[e] - ustar[w]) / (2.0 * hx)
-                    + (vstar[nn] - vstar[s]) / (2.0 * hy);
+                let div = (ustar[e] - ustar[w]) / (2.0 * hx) + (vstar[nn] - vstar[s]) / (2.0 * hy);
                 rhs[idx(i, j)] = div / dt;
             }
         }
@@ -131,8 +130,8 @@ pub fn solve(params: &WebGpuJobParams) -> SolverReport {
                     let w = idx(wrap(i as i64 - 1, nxi), j);
                     let nn = idx(i, wrap(j as i64 + 1, nyi));
                     let s = idx(i, wrap(j as i64 - 1, nyi));
-                    p_next[c] = ((p[e] + p[w]) * inv_hx2 + (p[nn] + p[s]) * inv_hy2 - rhs[c])
-                        / denom;
+                    p_next[c] =
+                        ((p[e] + p[w]) * inv_hx2 + (p[nn] + p[s]) * inv_hy2 - rhs[c]) / denom;
                 }
             }
             std::mem::swap(&mut p, &mut p_next);
@@ -167,8 +166,7 @@ pub fn solve(params: &WebGpuJobParams) -> SolverReport {
             let w = idx(wrap(i as i64 - 1, nxi), j);
             let nn = idx(i, wrap(j as i64 + 1, nyi));
             let s = idx(i, wrap(j as i64 - 1, nyi));
-            let div =
-                (u[e] - u[w]) / (2.0 * hx) + (v[nn] - v[s]) / (2.0 * hy);
+            let div = (u[e] - u[w]) / (2.0 * hx) + (v[nn] - v[s]) / (2.0 * hy);
             max_div = max_div.max(div.abs());
         }
     }

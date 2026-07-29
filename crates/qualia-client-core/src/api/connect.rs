@@ -4,7 +4,6 @@
 
 use super::*;
 
-
 #[cfg(not(target_arch = "wasm32"))]
 fn resolve_front_door_did(front_door_did: &str) -> Result<String, String> {
     if !front_door_did.is_empty() {
@@ -27,7 +26,10 @@ fn build_signed_identifier(
     let rendezvous = if domain.is_empty() {
         vec![]
     } else {
-        vec![crate::connection_identifier::RendezvousHint { kind: "domain".into(), value: domain.to_string() }]
+        vec![crate::connection_identifier::RendezvousHint {
+            kind: "domain".into(),
+            value: domain.to_string(),
+        }]
     };
     let now = mail_now_unix();
     let mut ci = crate::connection_identifier::ConnectionIdentifier {
@@ -132,4 +134,3 @@ pub fn mesh_dialability() -> Result<serde_json::Value, String> {
     let peers = crate::social_peers::list_peers();
     serde_json::to_value(crate::social_mesh::dialability(&peers)).map_err(|e| e.to_string())
 }
-

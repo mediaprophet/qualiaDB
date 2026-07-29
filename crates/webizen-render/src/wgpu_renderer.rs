@@ -353,7 +353,8 @@ impl<'a> WgpuRenderer<'a> {
         let render_pipeline = Self::create_render_pipeline(&device, surface_format);
         let projector_pipeline = Self::create_projector_pipeline(&device, surface_format);
 
-        let (vertex_buffer, projector_vertex_buffer, max_vertices) = Self::create_vertex_buffer(&device);
+        let (vertex_buffer, projector_vertex_buffer, max_vertices) =
+            Self::create_vertex_buffer(&device);
 
         #[cfg(not(feature = "qualia"))]
         let (
@@ -424,7 +425,8 @@ impl<'a> WgpuRenderer<'a> {
         let render_pipeline = Self::create_render_pipeline(&device, format);
         let projector_pipeline = Self::create_projector_pipeline(&device, format);
 
-        let (vertex_buffer, projector_vertex_buffer, max_vertices) = Self::create_vertex_buffer(&device);
+        let (vertex_buffer, projector_vertex_buffer, max_vertices) =
+            Self::create_vertex_buffer(&device);
 
         #[cfg(not(feature = "qualia"))]
         let (
@@ -589,19 +591,31 @@ impl<'a> WgpuRenderer<'a> {
                 wgpu::BindGroupLayoutEntry {
                     binding: 0,
                     visibility: wgpu::ShaderStages::VERTEX,
-                    ty: wgpu::BindingType::Buffer { ty: wgpu::BufferBindingType::Uniform, has_dynamic_offset: false, min_binding_size: None },
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Uniform,
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
                     count: None,
                 },
                 wgpu::BindGroupLayoutEntry {
                     binding: 1,
                     visibility: wgpu::ShaderStages::VERTEX,
-                    ty: wgpu::BindingType::Buffer { ty: wgpu::BufferBindingType::Storage { read_only: true }, has_dynamic_offset: false, min_binding_size: None },
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Storage { read_only: true },
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
                     count: None,
                 },
                 wgpu::BindGroupLayoutEntry {
                     binding: 2,
                     visibility: wgpu::ShaderStages::VERTEX,
-                    ty: wgpu::BindingType::Buffer { ty: wgpu::BufferBindingType::Uniform, has_dynamic_offset: false, min_binding_size: None },
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Uniform,
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
                     count: None,
                 },
             ],
@@ -621,11 +635,21 @@ impl<'a> WgpuRenderer<'a> {
                 entry_point: Some("vertex_main"),
                 compilation_options: Default::default(),
                 buffers: &[Some(wgpu::VertexBufferLayout {
-                    array_stride: (std::mem::size_of::<[f32; 3]>() + std::mem::size_of::<[f32; 4]>()) as wgpu::BufferAddress,
+                    array_stride: (std::mem::size_of::<[f32; 3]>()
+                        + std::mem::size_of::<[f32; 4]>())
+                        as wgpu::BufferAddress,
                     step_mode: wgpu::VertexStepMode::Vertex,
                     attributes: &[
-                        wgpu::VertexAttribute { offset: 0, shader_location: 0, format: wgpu::VertexFormat::Float32x3 },
-                        wgpu::VertexAttribute { offset: std::mem::size_of::<[f32; 3]>() as wgpu::BufferAddress, shader_location: 1, format: wgpu::VertexFormat::Float32x4 },
+                        wgpu::VertexAttribute {
+                            offset: 0,
+                            shader_location: 0,
+                            format: wgpu::VertexFormat::Float32x3,
+                        },
+                        wgpu::VertexAttribute {
+                            offset: std::mem::size_of::<[f32; 3]>() as wgpu::BufferAddress,
+                            shader_location: 1,
+                            format: wgpu::VertexFormat::Float32x4,
+                        },
                     ],
                 })],
             },
@@ -997,7 +1021,9 @@ impl<'a> WgpuRenderer<'a> {
         let _ = self.device.poll(wgpu::PollType::wait_indefinitely());
         rx.recv().ok()?.ok()?;
 
-        let mapped = slice.get_mapped_range().expect("wgpu buffer map_range failed");
+        let mapped = slice
+            .get_mapped_range()
+            .expect("wgpu buffer map_range failed");
         let mut out = Vec::with_capacity((unpadded_bytes_per_row * height) as usize);
         for row in 0..height {
             let start = (row * padded_bytes_per_row) as usize;
@@ -1704,17 +1730,18 @@ pub fn render_scene_png_with_time_and_telemetry(
                         0,
                         bytemuck::cast_slice(&clip_vertices),
                     );
-                    
+
                     if let Some(projector) = &renderer.projector_pipeline {
                         // TODO: Bind projector motor/telemetry uniforms here when ready
                         render_pass.set_pipeline(projector);
                         // Temporarily using the projector vertex buffer for the projector until the full 10D pipeline is passed
-                        render_pass.set_vertex_buffer(0, renderer.projector_vertex_buffer.slice(..));
+                        render_pass
+                            .set_vertex_buffer(0, renderer.projector_vertex_buffer.slice(..));
                     } else {
                         render_pass.set_pipeline(&renderer.render_pipeline);
                         render_pass.set_vertex_buffer(0, renderer.vertex_buffer.slice(..));
                     }
-                    
+
                     render_pass.draw(0..clip_vertices.len() as u32, 0..1);
                 }
             }

@@ -2225,7 +2225,10 @@ function __wbg_get_imports() {
         __wbg_set_fail_op_92f716dbc88b6973: function(arg0, arg1) {
             arg0.failOp = __wbindgen_enum_GpuStencilOperation[arg1];
         },
-        __wbg_set_fillStyle_01152e00b5737643: function(arg0, arg1) {
+        __wbg_set_fillStyle_35471aa9a10a6686: function(arg0, arg1, arg2) {
+            arg0.fillStyle = getStringFromWasm0(arg1, arg2);
+        },
+        __wbg_set_fillStyle_f1c2f1fa8e51c4d8: function(arg0, arg1) {
             arg0.fillStyle = arg1;
         },
         __wbg_set_font_e2bce6175ef42bc3: function(arg0, arg1, arg2) {
@@ -2489,8 +2492,8 @@ function __wbg_get_imports() {
         __wbg_set_strip_index_format_9f787be6c5fc9e87: function(arg0, arg1) {
             arg0.stripIndexFormat = __wbindgen_enum_GpuIndexFormat[arg1];
         },
-        __wbg_set_strokeStyle_77f54c809146a711: function(arg0, arg1) {
-            arg0.strokeStyle = arg1;
+        __wbg_set_strokeStyle_d494db5851ff0dbd: function(arg0, arg1, arg2) {
+            arg0.strokeStyle = getStringFromWasm0(arg1, arg2);
         },
         __wbg_set_targets_c38bd200c836d66f: function(arg0, arg1, arg2) {
             arg0.targets = getArrayJsValueViewFromWasm0(arg1, arg2);
@@ -3201,7 +3204,7 @@ async function __wbg_init(module_or_path) {
     }
 
     if (module_or_path === undefined) {
-        module_or_path = new URL('qualia_core_db_bg.wasm', import.meta.url);
+        module_or_path = new URL('qualia_bg.wasm', import.meta.url);
     }
     const imports = __wbg_get_imports();
 

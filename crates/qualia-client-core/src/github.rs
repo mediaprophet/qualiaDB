@@ -35,7 +35,9 @@ fn github_client(token: &str) -> Result<Client, String> {
 /// Helper to parse GitHub API errors
 fn handle_response(resp: reqwest::blocking::Response) -> Result<Value, String> {
     let status = resp.status();
-    let text = resp.text().map_err(|e| format!("Failed to read response: {}", e))?;
+    let text = resp
+        .text()
+        .map_err(|e| format!("Failed to read response: {}", e))?;
     if !status.is_success() {
         return Err(format!("GitHub API error ({}): {}", status, text));
     }
@@ -45,7 +47,9 @@ fn handle_response(resp: reqwest::blocking::Response) -> Result<Value, String> {
 /// Verifies a GitHub Personal Access Token (PAT).
 pub fn verify_github_token(token: &str) -> Result<String, String> {
     let client = github_client(token)?;
-    let resp = client.get(&format!("{}/user", GITHUB_API_URL)).send()
+    let resp = client
+        .get(&format!("{}/user", GITHUB_API_URL))
+        .send()
         .map_err(|e| format!("Failed to send request: {}", e))?;
     let json = handle_response(resp)?;
     let login = json["login"].as_str().unwrap_or("unknown").to_string();
@@ -55,7 +59,7 @@ pub fn verify_github_token(token: &str) -> Result<String, String> {
 /// Creates a new public GitHub repository. Returns the repository full name (e.g., "username/repo").
 pub fn create_repository(token: &str, name: &str) -> Result<String, String> {
     let client = github_client(token)?;
-    
+
     // First, verify the user to get their login so we can return the full name if auto_init takes time.
     let _login = verify_github_token(token)?;
 
@@ -72,25 +76,37 @@ pub fn create_repository(token: &str, name: &str) -> Result<String, String> {
         .map_err(|e| format!("Request failed: {}", e))?;
 
     let status = resp.status();
-    let text = resp.text().map_err(|e| format!("Failed to read text: {}", e))?;
-    
+    let text = resp
+        .text()
+        .map_err(|e| format!("Failed to read text: {}", e))?;
+
     // 422 usually means the repository already exists
     if status.as_u16() == 422 && text.contains("already exists") {
         return Ok(format!("{}/{}", _login, name));
     }
 
     if !status.is_success() {
-        return Err(format!("GitHub API error creating repo ({}): {}", status, text));
+        return Err(format!(
+            "GitHub API error creating repo ({}): {}",
+            status, text
+        ));
     }
 
-    let result_json: Value = serde_json::from_str(&text).map_err(|e| format!("Invalid JSON: {}", e))?;
-    let full_name = result_json["full_name"].as_str().ok_or_else(|| "No full_name in response".to_string())?;
+    let result_json: Value =
+        serde_json::from_str(&text).map_err(|e| format!("Invalid JSON: {}", e))?;
+    let full_name = result_json["full_name"]
+        .as_str()
+        .ok_or_else(|| "No full_name in response".to_string())?;
     Ok(full_name.to_string())
 }
 
 /// Pushes a directory of files to a GitHub repository using the Git Data API.
 /// `files` is a map of file path (e.g. "index.html") to its string content.
-pub fn push_static_site(token: &str, full_name: &str, files: HashMap<String, String>) -> Result<(), String> {
+pub fn push_static_site(
+    token: &str,
+    full_name: &str,
+    files: HashMap<String, String>,
+) -> Result<(), String> {
     if files.is_empty() {
         return Ok(());
     }
@@ -99,12 +115,18 @@ pub fn push_static_site(token: &str, full_name: &str, files: HashMap<String, Str
     let base_url = format!("{}/repos/{}", GITHUB_API_URL, full_name);
 
     // 1. Get the current commit SHA for the default branch (usually 'main' or 'master')
-    let ref_resp = client.get(&format!("{}/git/ref/heads/main", base_url)).send().map_err(|e| format!("Req failed: {}", e))?;
+    let ref_resp = client
+        .get(&format!("{}/git/ref/heads/main", base_url))
+        .send()
+        .map_err(|e| format!("Req failed: {}", e))?;
     let ref_json = if ref_resp.status().is_success() {
         handle_response(ref_resp)?
     } else {
         // Fallback to master if main doesn't exist
-        let master_resp = client.get(&format!("{}/git/ref/heads/master", base_url)).send().map_err(|e| format!("Req failed: {}", e))?;
+        let master_resp = client
+            .get(&format!("{}/git/ref/heads/master", base_url))
+            .send()
+            .map_err(|e| format!("Req failed: {}", e))?;
         handle_response(master_resp)?
     };
 
@@ -112,7 +134,10 @@ pub fn push_static_site(token: &str, full_name: &str, files: HashMap<String, Str
     let ref_name = ref_json["ref"].as_str().unwrap_or_default();
 
     // 2. Get the base tree SHA
-    let commit_resp = client.get(&format!("{}/git/commits/{}", base_url, latest_commit_sha)).send().map_err(|e| format!("Req failed: {}", e))?;
+    let commit_resp = client
+        .get(&format!("{}/git/commits/{}", base_url, latest_commit_sha))
+        .send()
+        .map_err(|e| format!("Req failed: {}", e))?;
     let commit_json = handle_response(commit_resp)?;
     let base_tree_sha = commit_json["tree"]["sha"].as_str().unwrap_or_default();
 

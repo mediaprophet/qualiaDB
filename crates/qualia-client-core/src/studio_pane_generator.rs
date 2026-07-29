@@ -61,8 +61,7 @@ fn contains_any(haystack: &str, needles: &[&str]) -> bool {
 }
 
 fn has_palette_id(palette_ids: &[String], ids: &[&str]) -> bool {
-    ids.iter()
-        .any(|id| palette_ids.iter().any(|p| p == *id))
+    ids.iter().any(|id| palette_ids.iter().any(|p| p == *id))
 }
 
 /// Domain presets aligned with `ontology_import_wizard::builtin_layout_suggestions`.
@@ -121,7 +120,10 @@ pub fn generate_panes_from_request(req: &GeneratePaneRequest) -> PaneGenerationP
     let p = req.prompt.to_ascii_lowercase();
     let palette = &req.palette_ids;
 
-    if contains_any(&p, &["health", "clinical", "vital", "fhir", "dicom", "patient"]) {
+    if contains_any(
+        &p,
+        &["health", "clinical", "vital", "fhir", "dicom", "patient"],
+    ) {
         return PaneGenerationPlan {
             panes: vec![
                 pane("health-monitor", 0, 0, 48, 40, &["fhir:Patient"]),
@@ -133,7 +135,12 @@ pub fn generate_panes_from_request(req: &GeneratePaneRequest) -> PaneGenerationP
         };
     }
 
-    if contains_any(&p, &["legal", "guardian", "deontic", "rights", "shacl", "contract"]) {
+    if contains_any(
+        &p,
+        &[
+            "legal", "guardian", "deontic", "rights", "shacl", "contract",
+        ],
+    ) {
         return PaneGenerationPlan {
             panes: vec![
                 pane("contextual-workspace", 0, 0, 56, 62, &["n3:rules"]),
@@ -145,7 +152,12 @@ pub fn generate_panes_from_request(req: &GeneratePaneRequest) -> PaneGenerationP
         };
     }
 
-    if contains_any(&p, &["spatial", "manifold", "10d", "portal", "volume", "render", "commons"]) {
+    if contains_any(
+        &p,
+        &[
+            "spatial", "manifold", "10d", "portal", "volume", "render", "commons",
+        ],
+    ) {
         return PaneGenerationPlan {
             panes: vec![
                 pane("nexus", 0, 0, 40, 36, &[]),
@@ -181,7 +193,18 @@ pub fn generate_panes_from_request(req: &GeneratePaneRequest) -> PaneGenerationP
         };
     }
 
-    if contains_any(&p, &["sparql", "rdf", "ontology", "triple", "knowledge", "wordnet", "semantics"]) {
+    if contains_any(
+        &p,
+        &[
+            "sparql",
+            "rdf",
+            "ontology",
+            "triple",
+            "knowledge",
+            "wordnet",
+            "semantics",
+        ],
+    ) {
         return PaneGenerationPlan {
             panes: vec![
                 pane("sparql-explorer", 0, 0, 62, 62, &[]),

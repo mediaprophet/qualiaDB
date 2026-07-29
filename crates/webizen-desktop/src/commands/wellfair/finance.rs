@@ -39,4 +39,3 @@ pub fn wellfair_ledger_balance(app: AppHandle, limit: usize) -> Result<String, S
         serde_json::to_string(&balance).map_err(|e| e.to_string())
     })?
 }
-

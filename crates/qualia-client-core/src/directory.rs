@@ -130,7 +130,13 @@ pub fn list_categories() -> Vec<DirectoryCategory> {
 
 fn slugify(s: &str) -> String {
     s.chars()
-        .map(|c| if c.is_ascii_alphanumeric() { c.to_ascii_lowercase() } else { '-' })
+        .map(|c| {
+            if c.is_ascii_alphanumeric() {
+                c.to_ascii_lowercase()
+            } else {
+                '-'
+            }
+        })
         .collect::<String>()
         .split('-')
         .filter(|x| !x.is_empty())
@@ -190,7 +196,11 @@ fn infer_categories(kinds: &[String], organization: &Option<String>) -> Vec<Stri
     if has("agent") {
         cats.push("agents".into());
     }
-    if has("clinician") || has("practitioner") || has("doctor") || has("health") || has("nurse")
+    if has("clinician")
+        || has("practitioner")
+        || has("doctor")
+        || has("health")
+        || has("nurse")
         || has("therapist")
     {
         cats.push("health".into());
@@ -266,17 +276,19 @@ pub fn build_view_core(
     }
 
     for c in contacts {
-        let entry = by_did.entry(c.did.clone()).or_insert_with(|| DirectoryEntry {
-            did: c.did.clone(),
-            display_name: c.display_name.clone(),
-            kinds: vec![],
-            organization: None,
-            verification_status: "INVITE_ACCEPTED".into(),
-            front_door_did: None,
-            sources: vec![],
-            categories: vec![],
-            agreement_ids: vec![],
-        });
+        let entry = by_did
+            .entry(c.did.clone())
+            .or_insert_with(|| DirectoryEntry {
+                did: c.did.clone(),
+                display_name: c.display_name.clone(),
+                kinds: vec![],
+                organization: None,
+                verification_status: "INVITE_ACCEPTED".into(),
+                front_door_did: None,
+                sources: vec![],
+                categories: vec![],
+                agreement_ids: vec![],
+            });
         if entry.display_name.is_empty() {
             entry.display_name = c.display_name.clone();
         }
@@ -301,9 +313,16 @@ pub fn build_view_core(
             e
         })
         .collect();
-    entries.sort_by(|a, b| a.display_name.to_lowercase().cmp(&b.display_name.to_lowercase()));
+    entries.sort_by(|a, b| {
+        a.display_name
+            .to_lowercase()
+            .cmp(&b.display_name.to_lowercase())
+    });
 
-    DirectoryView { categories, entries }
+    DirectoryView {
+        categories,
+        entries,
+    }
 }
 
 /// Build the unified, categorised directory view over the persisted directory-actor + chat-contact stores,
@@ -359,12 +378,39 @@ const FACET_IDS: [&str; 5] = ["category", "kind", "source", "verification", "agr
 fn concept_clusters() -> &'static [&'static [&'static str]] {
     &[
         &[
-            "doctor", "clinician", "physician", "gp", "practitioner", "medic", "medical", "health",
-            "nurse", "therapist", "care", "psychiatrist", "psychologist", "counsellor",
+            "doctor",
+            "clinician",
+            "physician",
+            "gp",
+            "practitioner",
+            "medic",
+            "medical",
+            "health",
+            "nurse",
+            "therapist",
+            "care",
+            "psychiatrist",
+            "psychologist",
+            "counsellor",
         ],
-        &["cooperative", "coop", "co-op", "member", "collective", "union"],
+        &[
+            "cooperative",
+            "coop",
+            "co-op",
+            "member",
+            "collective",
+            "union",
+        ],
         &["friend", "family", "personal", "kin", "mate"],
-        &["organization", "organisation", "org", "company", "institution", "business", "ngo"],
+        &[
+            "organization",
+            "organisation",
+            "org",
+            "company",
+            "institution",
+            "business",
+            "ngo",
+        ],
         &["agent", "ai", "bot", "assistant", "subagent", "sub-agent"],
     ]
 }
@@ -514,7 +560,10 @@ pub fn search_core(
     let mut facets = Vec::new();
     for fid in FACET_IDS {
         let mut counts: BTreeMap<String, usize> = BTreeMap::new();
-        for (e, _) in scored.iter().filter(|(e, _)| passes_facets(e, selected, Some(fid))) {
+        for (e, _) in scored
+            .iter()
+            .filter(|(e, _)| passes_facets(e, selected, Some(fid)))
+        {
             for v in entry_facet_values(e, fid) {
                 *counts.entry(v).or_insert(0) += 1;
             }
@@ -525,7 +574,12 @@ pub fn search_core(
             .map(|(value, count)| {
                 let label = value_label(fid, &value, &categories);
                 let is_sel = sel.iter().any(|x| x == &value);
-                FacetValue { value, label, count, selected: is_sel }
+                FacetValue {
+                    value,
+                    label,
+                    count,
+                    selected: is_sel,
+                }
             })
             .collect();
         values.sort_by(|a, b| {
@@ -548,8 +602,11 @@ pub fn search_core(
         .filter(|(e, _)| passes_facets(e, selected, None))
         .collect();
     narrowed.sort_by(|a, b| {
-        b.1.cmp(&a.1)
-            .then(a.0.display_name.to_lowercase().cmp(&b.0.display_name.to_lowercase()))
+        b.1.cmp(&a.1).then(
+            a.0.display_name
+                .to_lowercase()
+                .cmp(&b.0.display_name.to_lowercase()),
+        )
     });
     let entries: Vec<DirectoryEntry> = narrowed.into_iter().map(|(e, _)| e).collect();
     let total = entries.len();
@@ -624,10 +681,26 @@ mod tests {
 
     #[test]
     fn same_did_in_both_stores_merges_to_one_entry() {
-        let actors = vec![actor("a1", "Dr Smith", "did:wf:smith", "PRACTITIONER", &["clinician"])];
+        let actors = vec![actor(
+            "a1",
+            "Dr Smith",
+            "did:wf:smith",
+            "PRACTITIONER",
+            &["clinician"],
+        )];
         let contacts = vec![contact("Dr Smith", "did:wf:smith", &["health"])];
-        let view = build_view_core(&actors, &contacts, &BTreeMap::new(), builtin_categories(), &[]);
-        assert_eq!(view.entries.len(), 1, "one DID → one entry across both stores");
+        let view = build_view_core(
+            &actors,
+            &contacts,
+            &BTreeMap::new(),
+            builtin_categories(),
+            &[],
+        );
+        assert_eq!(
+            view.entries.len(),
+            1,
+            "one DID → one entry across both stores"
+        );
         let e = &view.entries[0];
         assert!(e.sources.contains(&"directory-actor".to_string()));
         assert!(e.sources.contains(&"contact".to_string()));
@@ -656,7 +729,14 @@ mod tests {
     }
 
     fn entries_of(actors: &[Actor], contacts: &[ChatContact]) -> Vec<DirectoryEntry> {
-        build_view_core(actors, contacts, &BTreeMap::new(), builtin_categories(), &[]).entries
+        build_view_core(
+            actors,
+            contacts,
+            &BTreeMap::new(),
+            builtin_categories(),
+            &[],
+        )
+        .entries
     }
 
     fn agreement(id: &str, relationship_did: &str, parties: &[&str]) -> Agreement {
@@ -680,35 +760,85 @@ mod tests {
     #[test]
     fn agreements_join_onto_the_governed_party() {
         let actors = vec![
-            actor("a1", "Dr Smith", "did:wf:smith", "PRACTITIONER", &["clinician"]),
+            actor(
+                "a1",
+                "Dr Smith",
+                "did:wf:smith",
+                "PRACTITIONER",
+                &["clinician"],
+            ),
             actor("a2", "Bob", "did:wf:bob", "FRIEND", &[]),
         ];
         // One agreement governs the relationship with Dr Smith (as relationship_did AND as a party);
         // none touches Bob.
-        let ags = vec![agreement("ag-1", "did:wf:smith", &["did:wf:me", "did:wf:smith"])];
+        let ags = vec![agreement(
+            "ag-1",
+            "did:wf:smith",
+            &["did:wf:me", "did:wf:smith"],
+        )];
         let view = build_view_core(&actors, &[], &BTreeMap::new(), builtin_categories(), &ags);
 
-        let smith = view.entries.iter().find(|e| e.did == "did:wf:smith").unwrap();
-        assert_eq!(smith.agreement_ids, vec!["ag-1".to_string()], "agreement joins onto its party");
+        let smith = view
+            .entries
+            .iter()
+            .find(|e| e.did == "did:wf:smith")
+            .unwrap();
+        assert_eq!(
+            smith.agreement_ids,
+            vec!["ag-1".to_string()],
+            "agreement joins onto its party"
+        );
         let bob = view.entries.iter().find(|e| e.did == "did:wf:bob").unwrap();
-        assert!(bob.agreement_ids.is_empty(), "unrelated party has no agreements");
+        assert!(
+            bob.agreement_ids.is_empty(),
+            "unrelated party has no agreements"
+        );
 
         // The 'agreements' facet now distinguishes with/without.
         let r = search_core(view.entries, builtin_categories(), "", &BTreeMap::new());
-        let facet = r.facets.iter().find(|f| f.id == "agreements").expect("agreements facet");
-        assert!(facet.values.iter().any(|v| v.value == "with" && v.count == 1));
-        assert!(facet.values.iter().any(|v| v.value == "without" && v.count == 1));
+        let facet = r
+            .facets
+            .iter()
+            .find(|f| f.id == "agreements")
+            .expect("agreements facet");
+        assert!(facet
+            .values
+            .iter()
+            .any(|v| v.value == "with" && v.count == 1));
+        assert!(facet
+            .values
+            .iter()
+            .any(|v| v.value == "without" && v.count == 1));
     }
 
     #[test]
     fn concept_search_matches_by_meaning() {
-        let actors = vec![actor("a1", "Dr Smith", "did:wf:smith", "PRACTITIONER", &["clinician"])];
+        let actors = vec![actor(
+            "a1",
+            "Dr Smith",
+            "did:wf:smith",
+            "PRACTITIONER",
+            &["clinician"],
+        )];
         let entries = entries_of(&actors, &[]);
         // "doctor" is not a literal token on the entry, but it shares a concept cluster with "clinician".
-        let hit = search_core(entries.clone(), builtin_categories(), "doctor", &BTreeMap::new());
-        assert_eq!(hit.total, 1, "concept expansion: 'doctor' finds a 'clinician'");
+        let hit = search_core(
+            entries.clone(),
+            builtin_categories(),
+            "doctor",
+            &BTreeMap::new(),
+        );
+        assert_eq!(
+            hit.total, 1,
+            "concept expansion: 'doctor' finds a 'clinician'"
+        );
         // An unrelated concept does not match.
-        let miss = search_core(entries, builtin_categories(), "cooperative", &BTreeMap::new());
+        let miss = search_core(
+            entries,
+            builtin_categories(),
+            "cooperative",
+            &BTreeMap::new(),
+        );
         assert_eq!(miss.total, 0);
     }
 
@@ -727,13 +857,27 @@ mod tests {
     #[test]
     fn facets_count_and_narrow() {
         let actors = vec![
-            actor("a1", "Dr Smith", "did:wf:smith", "PRACTITIONER", &["clinician"]), // → health
-            actor("a2", "Bob", "did:wf:bob", "FRIEND", &[]),                          // → family-friends
+            actor(
+                "a1",
+                "Dr Smith",
+                "did:wf:smith",
+                "PRACTITIONER",
+                &["clinician"],
+            ), // → health
+            actor("a2", "Bob", "did:wf:bob", "FRIEND", &[]), // → family-friends
         ];
         let entries = entries_of(&actors, &[]);
         let all = search_core(entries.clone(), builtin_categories(), "", &BTreeMap::new());
-        let cat_facet = all.facets.iter().find(|f| f.id == "category").expect("category facet");
-        let health = cat_facet.values.iter().find(|v| v.value == "health").expect("health value");
+        let cat_facet = all
+            .facets
+            .iter()
+            .find(|f| f.id == "category")
+            .expect("category facet");
+        let health = cat_facet
+            .values
+            .iter()
+            .find(|v| v.value == "health")
+            .expect("health value");
         assert_eq!(health.count, 1);
 
         // Selecting the health category narrows to just the clinician.
@@ -744,6 +888,9 @@ mod tests {
         assert_eq!(narrowed.entries[0].display_name, "Dr Smith");
         // The category facet still reports drill-down counts (health selected, count preserved).
         let cat_facet = narrowed.facets.iter().find(|f| f.id == "category").unwrap();
-        assert!(cat_facet.values.iter().any(|v| v.value == "health" && v.selected));
+        assert!(cat_facet
+            .values
+            .iter()
+            .any(|v| v.value == "health" && v.selected));
     }
 }

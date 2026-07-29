@@ -108,7 +108,10 @@ pub fn dispatch_tax_payment(gross_amount_micro_cents: u64) -> Result<DispatchRes
 // ── Wallet send ───────────────────────────────────────────────────────────────
 
 #[command]
-pub fn build_send_xec(destination_address: String, amount_sats: i64) -> Result<SendPreview, String> {
+pub fn build_send_xec(
+    destination_address: String,
+    amount_sats: i64,
+) -> Result<SendPreview, String> {
     api::build_send_xec(&destination_address, amount_sats)
 }
 
@@ -118,7 +121,11 @@ pub fn confirm_send_xec(raw_hex: String) -> Result<String, String> {
 }
 
 #[command]
-pub fn send_ecash_token(token_id: String, destination_address: String, amount: u64) -> Result<String, String> {
+pub fn send_ecash_token(
+    token_id: String,
+    destination_address: String,
+    amount: u64,
+) -> Result<String, String> {
     api::send_ecash_token(&token_id, &destination_address, amount)
 }
 
@@ -137,4 +144,3 @@ pub fn receive_vault_job(
 ) -> Result<String, String> {
     api::receive_vault_job(job_id, task_type, data_blob_cbor_ld)
 }
-

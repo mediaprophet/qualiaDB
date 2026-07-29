@@ -65,10 +65,9 @@ impl EngineKind {
             "os_web_view" | "os_webview" | "os-webview" | "webview" | "os" | "default" => {
                 Some(EngineKind::OsWebView)
             }
-            "servo_experimental"
-            | "servo-experimental"
-            | "servo"
-            | "experimental" => Some(EngineKind::ServoExperimental),
+            "servo_experimental" | "servo-experimental" | "servo" | "experimental" => {
+                Some(EngineKind::ServoExperimental)
+            }
             _ => None,
         }
     }
@@ -238,13 +237,19 @@ mod tests {
 
     #[test]
     fn parse_engine_ids() {
-        assert_eq!(EngineKind::parse("os_web_view"), Some(EngineKind::OsWebView));
+        assert_eq!(
+            EngineKind::parse("os_web_view"),
+            Some(EngineKind::OsWebView)
+        );
         assert_eq!(EngineKind::parse("webview"), Some(EngineKind::OsWebView));
         assert_eq!(
             EngineKind::parse("servo_experimental"),
             Some(EngineKind::ServoExperimental)
         );
-        assert_eq!(EngineKind::parse("servo"), Some(EngineKind::ServoExperimental));
+        assert_eq!(
+            EngineKind::parse("servo"),
+            Some(EngineKind::ServoExperimental)
+        );
         assert_eq!(EngineKind::parse("nope"), None);
     }
 

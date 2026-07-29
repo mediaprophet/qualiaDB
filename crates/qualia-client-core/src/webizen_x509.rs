@@ -262,7 +262,10 @@ mod tests {
 
     #[test]
     fn agent_mode_system_when_no_pem() {
-        assert_eq!(agent_tls_mode(&TrustStore::new()), AgentTlsMode::SystemDefault);
+        assert_eq!(
+            agent_tls_mode(&TrustStore::new()),
+            AgentTlsMode::SystemDefault
+        );
     }
 
     #[test]

@@ -4,6 +4,7 @@ version = "0.0.27"
 edition = "2021"
 description = "Ontology-site MCP JSON-RPC endpoint backed by Qualia's WASM-safe reasoning kernel."
 license-file = "LICENSE"
+repository = "https://github.com/mediaprophet/qualiaDB"
 authors = ["Timothy Charles Holborn <timothy.holborn@gmail.com>"]
 # Technical work: CC BY-NC-ND 4.0 (Attribution-NonCommercial-NoDerivatives).
 # Aligns with the Webizen / ns.webcivics.net technical-work rights scope.

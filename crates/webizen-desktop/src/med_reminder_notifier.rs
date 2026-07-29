@@ -6,8 +6,8 @@ use std::time::Duration;
 
 use chrono::Local;
 use qualia_client_core::wellfair::med_reminders::DueMedReminder;
-use tauri::{AppHandle, Manager};
 use tauri::plugin::PermissionState;
+use tauri::{AppHandle, Manager};
 use tauri_plugin_notification::NotificationExt;
 
 use crate::commands::HostApiState;
@@ -25,7 +25,10 @@ impl MedReminderNotifierState {
         let mut day = self.day_key.lock().expect("notifier day lock");
         if *day != today {
             *day = today;
-            self.notified_slots.lock().expect("notifier slots lock").clear();
+            self.notified_slots
+                .lock()
+                .expect("notifier slots lock")
+                .clear();
         }
     }
 
@@ -81,7 +84,9 @@ fn slot_key(due: &DueMedReminder) -> String {
 }
 
 pub fn poll_and_notify(app: &AppHandle) -> Result<usize, String> {
-    let host_state = app.try_state::<HostApiState>().ok_or("HostApiState missing")?;
+    let host_state = app
+        .try_state::<HostApiState>()
+        .ok_or("HostApiState missing")?;
     let due_list = host_state.0.execute_sync(|guard| {
         let host = guard
             .as_ref()

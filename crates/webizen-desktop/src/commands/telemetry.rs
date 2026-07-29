@@ -2,8 +2,8 @@
 
 #![allow(non_snake_case)]
 
-use super::*;
 use super::render::ActiveAnchor;
+use super::*;
 use tauri::{command, State};
 
 // ── Telemetry Bridge ───────────────────────────────────────────────────────────
@@ -407,4 +407,3 @@ pub async fn register_browser_capabilities(
 
     Ok(format!("Registered: Tier {} ({})", tier, adapter_name))
 }
-

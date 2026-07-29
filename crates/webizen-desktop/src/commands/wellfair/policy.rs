@@ -36,7 +36,8 @@ pub fn wellfair_evaluate_policy(
             host.evaluate_policy(&qapp_id, &scope, sens, ep)?
         } else {
             let svc = qualia_client_core::wellfair::policy::PolicyDecisionService::new();
-            svc.evaluate_access(&qapp_id, &scope, sens, ep, &[], 0, false).to_dto()
+            svc.evaluate_access(&qapp_id, &scope, sens, ep, &[], 0, false)
+                .to_dto()
         };
         serde_json::to_string(&decision).map_err(|e| e.to_string())
     })?
@@ -189,10 +190,7 @@ pub fn wellfair_add_disputed_diagnosis(
 }
 
 #[command]
-pub fn wellfair_add_housing_safety(
-    app: AppHandle,
-    report_json: String,
-) -> Result<String, String> {
+pub fn wellfair_add_housing_safety(app: AppHandle, report_json: String) -> Result<String, String> {
     let input: HousingSafetyInput =
         serde_json::from_str(&report_json).map_err(|e| format!("invalid housing JSON: {e}"))?;
     let mut report = wellfare_core::personal_records::HousingSafetyReport::new();
@@ -221,4 +219,3 @@ pub fn wellfair_add_housing_safety(
         serde_json::to_string(&entry).map_err(|e| e.to_string())
     })?
 }
-

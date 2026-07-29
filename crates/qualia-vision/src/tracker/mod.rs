@@ -411,7 +411,7 @@ mod tests {
         let mut t = BoundedTracker::new();
         t.max_miss = 100;
         t.min_hits = 1; // keep all slots Confirmed so empty frames do not purge tentative
-        // Fill all tracks with non-overlapping boxes (distinct classes, high score).
+                        // Fill all tracks with non-overlapping boxes (distinct classes, high score).
         for i in 0..MAX_TRACKS {
             let x = (i as u16).wrapping_mul(2000);
             let mut f = [box_at(

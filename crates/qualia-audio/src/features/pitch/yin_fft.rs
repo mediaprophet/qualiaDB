@@ -141,7 +141,10 @@ pub fn yin_fft_pitch(
     }
     let confidence = pitch_confidence(aperiodicity);
     if aperiodicity > 1.0 || (diff[tau] >= threshold && aperiodicity > 0.5) {
-        return Ok(PitchEstimate { f0_hz: 0.0, confidence });
+        return Ok(PitchEstimate {
+            f0_hz: 0.0,
+            confidence,
+        });
     }
     Ok(PitchEstimate {
         f0_hz: sample_rate / better_tau,
@@ -171,7 +174,11 @@ mod tests {
         let est = yin_fft_pitch(&frame, SR, 80.0, 1000.0, 0.1, &mut scratch).expect("yinfft");
         let err = (est.f0_hz - 440.0).abs() / 440.0;
         assert!(err < 0.01, "f0={} err={err}", est.f0_hz);
-        assert!(cents(est.f0_hz, 440.0) < 10.0, "cents={}", cents(est.f0_hz, 440.0));
+        assert!(
+            cents(est.f0_hz, 440.0) < 10.0,
+            "cents={}",
+            cents(est.f0_hz, 440.0)
+        );
         assert!(est.confidence > 0.9, "conf={}", est.confidence);
     }
 
@@ -207,7 +214,12 @@ mod tests {
         let mut s2 = vec![0.0f32; yin_fft_scratch_len(2048, 551)];
         let a = yin_pitch(&frame, SR, 80.0, 1000.0, 0.1, &mut s1).expect("yin");
         let b = yin_fft_pitch(&frame, SR, 80.0, 1000.0, 0.1, &mut s2).expect("yinfft");
-        assert!(cents(a.f0_hz, b.f0_hz) < 2.0, "yin={} yinfft={}", a.f0_hz, b.f0_hz);
+        assert!(
+            cents(a.f0_hz, b.f0_hz) < 2.0,
+            "yin={} yinfft={}",
+            a.f0_hz,
+            b.f0_hz
+        );
     }
 
     #[test]

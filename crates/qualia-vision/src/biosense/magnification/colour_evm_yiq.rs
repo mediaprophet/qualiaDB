@@ -99,11 +99,8 @@ pub fn colour_evm_yiq(
         let mut si = 0.0f32;
         for p in 0..px {
             let o = base + p * 3;
-            let (_y, i, _q) = rgb_to_yiq(
-                frames[o] as f32,
-                frames[o + 1] as f32,
-                frames[o + 2] as f32,
-            );
+            let (_y, i, _q) =
+                rgb_to_yiq(frames[o] as f32, frames[o + 1] as f32, frames[o + 2] as f32);
             si += i;
         }
         trace_scratch[t] = si / px as f32;
@@ -128,7 +125,16 @@ pub fn colour_evm_yiq(
 
     if use_pixel {
         colour_evm_pixel_path(
-            frames, n_frames, px, frame_bytes, &bp, a_c, a_y, out, band_i, band_q,
+            frames,
+            n_frames,
+            px,
+            frame_bytes,
+            &bp,
+            a_c,
+            a_y,
+            out,
+            band_i,
+            band_q,
         )?;
     } else {
         colour_evm_mean_path(
@@ -163,11 +169,8 @@ fn colour_evm_mean_path(
         let mut sq = 0.0f32;
         for p in 0..px {
             let o = base + p * 3;
-            let (_y, _i, q) = rgb_to_yiq(
-                frames[o] as f32,
-                frames[o + 1] as f32,
-                frames[o + 2] as f32,
-            );
+            let (_y, _i, q) =
+                rgb_to_yiq(frames[o] as f32, frames[o + 1] as f32, frames[o + 2] as f32);
             sq += q;
         }
         mean_q[t] = sq / px as f32;
@@ -181,11 +184,8 @@ fn colour_evm_mean_path(
         let dq = alpha * band_q[t];
         for p in 0..px {
             let o = base + p * 3;
-            let (y, i, q) = rgb_to_yiq(
-                frames[o] as f32,
-                frames[o + 1] as f32,
-                frames[o + 2] as f32,
-            );
+            let (y, i, q) =
+                rgb_to_yiq(frames[o] as f32, frames[o + 1] as f32, frames[o + 2] as f32);
             let (r, g, b) = yiq_to_rgb(y, i + di, q + dq);
             out[o] = clamp_u8(r);
             out[o + 1] = clamp_u8(g);
@@ -213,11 +213,8 @@ fn colour_evm_pixel_path(
         let pbase = t * px;
         for p in 0..px {
             let o = base + p * 3;
-            let (_y, i, q) = rgb_to_yiq(
-                frames[o] as f32,
-                frames[o + 1] as f32,
-                frames[o + 2] as f32,
-            );
+            let (_y, i, q) =
+                rgb_to_yiq(frames[o] as f32, frames[o + 1] as f32, frames[o + 2] as f32);
             band_i[pbase + p] = i;
             band_q[pbase + p] = q;
         }
@@ -253,11 +250,8 @@ fn colour_evm_pixel_path(
         let pbase = t * px;
         for p in 0..px {
             let o = base + p * 3;
-            let (y, i, q) = rgb_to_yiq(
-                frames[o] as f32,
-                frames[o + 1] as f32,
-                frames[o + 2] as f32,
-            );
+            let (y, i, q) =
+                rgb_to_yiq(frames[o] as f32, frames[o + 1] as f32, frames[o + 2] as f32);
             let (r, g, b) = yiq_to_rgb(
                 y + a_y * 0.0,
                 i + a_c * band_i[pbase + p],

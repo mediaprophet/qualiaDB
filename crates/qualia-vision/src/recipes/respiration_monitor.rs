@@ -148,16 +148,7 @@ mod tests {
         let target = 16.0f32;
         let motion = synth_motion(target, fps, n);
         let rgb = synth_rgb_with_rr(72.0, target, fps, n);
-        let e = respiration_monitor(
-            grant(),
-            &motion,
-            Some(&rgb),
-            n,
-            fps,
-            0.1,
-            Some(2.0),
-        )
-        .unwrap();
+        let e = respiration_monitor(grant(), &motion, Some(&rgb), n, fps, 0.1, Some(2.0)).unwrap();
         assert!(
             (e.breaths_per_min - target).abs() < 2.5,
             "bpm={}",

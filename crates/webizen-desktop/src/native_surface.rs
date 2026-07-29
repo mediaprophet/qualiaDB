@@ -6,8 +6,8 @@
 //! creates a `wgpu::Surface` from it, and drives a render loop that presents
 //! frames directly to the GPU swapchain.
 
-use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 use std::sync::Mutex;
 use tauri::{AppHandle, Emitter, Manager, WebviewWindow};
 use webizen_render::scene_contract::RenderScene;
@@ -61,35 +61,45 @@ impl Default for NativeSurfaceState {
 
 #[cfg(windows)]
 mod win {
+    use windows::core::PCSTR;
     use windows::Win32::Foundation::{HWND, LPARAM, LRESULT, WPARAM};
     use windows::Win32::Graphics::Gdi::ValidateRect;
-    use windows::Win32::UI::WindowsAndMessaging::{
-        DefWindowProcA, RegisterClassA, WNDCLASSA, CS_HREDRAW, CS_VREDRAW,
-        WM_DESTROY, WM_PAINT, WS_CHILD, WS_VISIBLE, WS_CLIPSIBLINGS,
-        SW_SHOW, ShowWindow, DestroyWindow, MoveWindow,
-        CreateWindowExA, WS_EX_NOPARENTNOTIFY,
-    };
-    use windows::core::PCSTR;
     use windows::Win32::System::LibraryLoader::GetModuleHandleA;
+    use windows::Win32::UI::WindowsAndMessaging::{
+        CreateWindowExA, DefWindowProcA, DestroyWindow, MoveWindow, RegisterClassA, ShowWindow,
+        CS_HREDRAW, CS_VREDRAW, SW_SHOW, WM_DESTROY, WM_PAINT, WNDCLASSA, WS_CHILD,
+        WS_CLIPSIBLINGS, WS_EX_NOPARENTNOTIFY, WS_VISIBLE,
+    };
 
     static mut CHILD_CLASS_REGISTERED: bool = false;
 
     /// Create a child HWND inside the parent window at the given position.
     /// Returns the HWND as an isize for wgpu surface creation.
-    pub fn create_child_hwnd(parent: HWND, x: i32, y: i32, width: i32, height: i32) -> Result<isize, String> {
+    pub fn create_child_hwnd(
+        parent: HWND,
+        x: i32,
+        y: i32,
+        width: i32,
+        height: i32,
+    ) -> Result<isize, String> {
         unsafe {
             if !CHILD_CLASS_REGISTERED {
                 let class_name = b"WebizenGpuChild\0";
                 let wc = WNDCLASSA {
                     style: CS_HREDRAW | CS_VREDRAW,
                     lpfnWndProc: Some(child_wnd_proc),
-                    hInstance: GetModuleHandleA(None).map_err(|e| format!("GetModuleHandle: {e}"))?.into(),
+                    hInstance: GetModuleHandleA(None)
+                        .map_err(|e| format!("GetModuleHandle: {e}"))?
+                        .into(),
                     lpszClassName: PCSTR(class_name.as_ptr()),
                     ..Default::default()
                 };
                 let atom = RegisterClassA(&wc);
                 if atom == 0 {
-                    return Err(format!("RegisterClass failed: {}", windows::core::Error::from_thread()));
+                    return Err(format!(
+                        "RegisterClass failed: {}",
+                        windows::core::Error::from_thread()
+                    ));
                 }
                 CHILD_CLASS_REGISTERED = true;
             }
@@ -100,12 +110,20 @@ mod win {
                 PCSTR(class_name.as_ptr()),
                 PCSTR(b"Webizen GPU\0".as_ptr()),
                 WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS,
-                x, y, width, height,
+                x,
+                y,
+                width,
+                height,
                 Some(parent),
                 None,
-                Some(GetModuleHandleA(None).map_err(|e| format!("GetModuleHandle: {e}"))?.into()),
+                Some(
+                    GetModuleHandleA(None)
+                        .map_err(|e| format!("GetModuleHandle: {e}"))?
+                        .into(),
+                ),
                 None,
-            ).map_err(|e| format!("CreateWindowEx: {e}"))?;
+            )
+            .map_err(|e| format!("CreateWindowEx: {e}"))?;
 
             let _ = ShowWindow(hwnd, SW_SHOW);
             Ok(hwnd.0 as isize)
@@ -147,9 +165,13 @@ mod win {
 #[cfg(windows)]
 pub fn init_native_surface(
     parent_window: &WebviewWindow,
-    x: i32, y: i32, width: u32, height: u32,
+    x: i32,
+    y: i32,
+    width: u32,
+    height: u32,
 ) -> Result<(isize, webizen_render::VolumetricRenderer), String> {
-    let tauri_parent_hwnd = parent_window.hwnd()
+    let tauri_parent_hwnd = parent_window
+        .hwnd()
         .map_err(|e| format!("failed to get parent HWND: {e}"))?;
     // Tauri currently exposes the same raw HWND through windows 0.61 while
     // the renderer/wgpu stack uses windows 0.62. Re-wrap the pointer at the
@@ -210,13 +232,17 @@ pub fn spawn_render_loop(
 #[tauri::command]
 pub fn mount_gpu_surface(
     app: AppHandle,
-    x: i32, y: i32, width: u32, height: u32,
+    x: i32,
+    y: i32,
+    width: u32,
+    height: u32,
 ) -> Result<(), String> {
     let state = app.state::<std::sync::Arc<NativeSurfaceState>>();
 
     #[cfg(windows)]
     {
-        let window = app.get_webview_window("main")
+        let window = app
+            .get_webview_window("main")
             .ok_or("main window not found")?;
 
         let mut renderer_guard = state.renderer.lock().unwrap();
@@ -260,10 +286,7 @@ pub fn mount_gpu_surface(
 
 /// Set the render scene for the native surface.
 #[tauri::command]
-pub fn set_gpu_scene(
-    app: AppHandle,
-    scene: RenderScene,
-) -> Result<(), String> {
+pub fn set_gpu_scene(app: AppHandle, scene: RenderScene) -> Result<(), String> {
     let state = app.state::<std::sync::Arc<NativeSurfaceState>>();
     *state.scene.lock().unwrap() = Some(scene);
     Ok(())
@@ -271,12 +294,7 @@ pub fn set_gpu_scene(
 
 /// Update camera position.
 #[tauri::command]
-pub fn set_gpu_camera(
-    app: AppHandle,
-    yaw: f32,
-    pitch: f32,
-    zoom: f32,
-) -> Result<(), String> {
+pub fn set_gpu_camera(app: AppHandle, yaw: f32, pitch: f32, zoom: f32) -> Result<(), String> {
     let state = app.state::<std::sync::Arc<NativeSurfaceState>>();
     *state.camera_yaw.lock().unwrap() = yaw;
     *state.camera_pitch.lock().unwrap() = pitch;
@@ -287,10 +305,7 @@ pub fn set_gpu_camera(
 /// Set camera mode: "earth" (close-up), "space" (far out, stars visible), "free" (manual).
 /// In "earth" mode, zoom is set to 1.0 (close). In "space" mode, zoom is set to 0.1 (far).
 #[tauri::command]
-pub fn set_gpu_camera_mode(
-    app: AppHandle,
-    mode: String,
-) -> Result<(), String> {
+pub fn set_gpu_camera_mode(app: AppHandle, mode: String) -> Result<(), String> {
     let state = app.state::<std::sync::Arc<NativeSurfaceState>>();
     *state.camera_mode.lock().unwrap() = mode.clone();
     match mode.as_str() {
@@ -346,10 +361,7 @@ pub fn upload_gpu_mesh_colored(
 
 /// Upload a .10d mesh section to the GPU surface renderer.
 #[tauri::command]
-pub fn upload_gpu_10d_mesh(
-    app: AppHandle,
-    bytes: Vec<u8>,
-) -> Result<u32, String> {
+pub fn upload_gpu_10d_mesh(app: AppHandle, bytes: Vec<u8>) -> Result<u32, String> {
     let state = app.state::<std::sync::Arc<NativeSurfaceState>>();
     let mut renderer_guard = state.renderer.lock().unwrap();
     if let Some(ref mut renderer) = *renderer_guard {
@@ -363,10 +375,7 @@ pub fn upload_gpu_10d_mesh(
 
 /// Load a full .10d container asset (mesh + tensor nodes + provenance).
 #[tauri::command]
-pub fn load_gpu_10d_asset(
-    app: AppHandle,
-    bytes: Vec<u8>,
-) -> Result<(u32, u32, f32), String> {
+pub fn load_gpu_10d_asset(app: AppHandle, bytes: Vec<u8>) -> Result<(u32, u32, f32), String> {
     let state = app.state::<std::sync::Arc<NativeSurfaceState>>();
     let mut renderer_guard = state.renderer.lock().unwrap();
     if let Some(ref mut renderer) = *renderer_guard {

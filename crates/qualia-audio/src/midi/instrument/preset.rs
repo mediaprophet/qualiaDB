@@ -120,7 +120,10 @@ mod tests {
         let p = InstrumentPreset::from_sfz("Test Kit", &instr);
         assert_eq!(p.name, "Test Kit");
         assert_eq!(p.format, PresetFormat::Sfz);
-        assert_eq!(p.external_refs(), &["a.wav".to_string(), "b.wav".to_string()]);
+        assert_eq!(
+            p.external_refs(),
+            &["a.wav".to_string(), "b.wav".to_string()]
+        );
     }
 
     #[test]

@@ -18,8 +18,16 @@ impl DcBlocker {
     /// Create with an explicit pole radius `r` in `[0, 1)`. Values are clamped
     /// into a stable range. `0.995` is a good default for audio rates.
     pub fn new(r: f32) -> Self {
-        let r = if r.is_finite() { r.clamp(0.0, 0.999_99) } else { 0.995 };
-        Self { r, x1: 0.0, y1: 0.0 }
+        let r = if r.is_finite() {
+            r.clamp(0.0, 0.999_99)
+        } else {
+            0.995
+        };
+        Self {
+            r,
+            x1: 0.0,
+            y1: 0.0,
+        }
     }
 
     /// Default DC blocker (`R = 0.995`).
@@ -90,6 +98,9 @@ mod tests {
         let mut b = DcBlocker::default_audio();
         let x = [1.0f32; 8];
         let mut out = [0.0f32; 4];
-        assert_eq!(b.process(&x, &mut out), Err(AudioError::OutputBufferTooSmall));
+        assert_eq!(
+            b.process(&x, &mut out),
+            Err(AudioError::OutputBufferTooSmall)
+        );
     }
 }

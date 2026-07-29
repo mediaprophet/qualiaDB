@@ -4,8 +4,6 @@
 
 use super::*;
 
-
-
 pub fn mail_now_unix() -> u64 {
     std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
@@ -38,7 +36,9 @@ pub fn add_mail_domain(
     label: String,
     parent: Option<String>,
 ) -> Result<serde_json::Value, String> {
-    let owner = crate::domains::DomainOwner::Personal { did: front_door_did.clone() };
+    let owner = crate::domains::DomainOwner::Personal {
+        did: front_door_did.clone(),
+    };
     let d = crate::domains::make_domain(
         &name,
         agent_type_from_token(&agent_type),
@@ -99,10 +99,20 @@ pub fn onboard_mail_domain(domain: String) -> Result<serde_json::Value, String> 
     let mint_msg = if minted.is_empty() {
         "Mail already onboarded for this domain.".to_string()
     } else {
-        format!("Minted {} mailbox(es): {}.", minted.len(), minted.join(", "))
+        format!(
+            "Minted {} mailbox(es): {}.",
+            minted.len(),
+            minted.join(", ")
+        )
     };
-    let recv_msg = if receiver.get("started").and_then(|x| x.as_bool()).unwrap_or(false)
-        || receiver.get("already_running").and_then(|x| x.as_bool()).unwrap_or(false)
+    let recv_msg = if receiver
+        .get("started")
+        .and_then(|x| x.as_bool())
+        .unwrap_or(false)
+        || receiver
+            .get("already_running")
+            .and_then(|x| x.as_bool())
+            .unwrap_or(false)
     {
         " Local SMTP receiver running — inbox can accept mail.".to_string()
     } else if let Some(err) = receiver.get("error").and_then(|e| e.as_str()) {
@@ -299,8 +309,7 @@ pub fn accept_coop_share_package(package_or_invite: String) -> Result<serde_json
     if raw.is_empty() {
         return Err("paste a coop share package or invite JSON".into());
     }
-    let v: serde_json::Value =
-        serde_json::from_str(raw).map_err(|e| format!("not JSON: {e}"))?;
+    let v: serde_json::Value = serde_json::from_str(raw).map_err(|e| format!("not JSON: {e}"))?;
 
     let invite_str = extract_invite_json_from_package(&v).or_else(|e| {
         // Bare invite string body already parsed as object without qualia_coop_share.
@@ -539,7 +548,10 @@ pub fn resolve_mail_delivery(to_address: String) -> Result<serde_json::Value, St
 }
 
 /// Persist SMTP/IMAP prefs (app_meta_dir). Passwords stored locally — same trust as desktop secrets.
-pub fn save_mail_transport_config(smtp_json: String, imap_json: String) -> Result<serde_json::Value, String> {
+pub fn save_mail_transport_config(
+    smtp_json: String,
+    imap_json: String,
+) -> Result<serde_json::Value, String> {
     let path = crate::state::app_meta_dir().join("mail_transport.json");
     if let Some(p) = path.parent() {
         std::fs::create_dir_all(p).map_err(|e| e.to_string())?;
@@ -577,7 +589,12 @@ pub fn mint_relationship_address(
     local: String,
     relationship_did: String,
 ) -> Result<serde_json::Value, String> {
-    let a = crate::domains::make_relationship_address(&domain, &local, &relationship_did, mail_now_unix())?;
+    let a = crate::domains::make_relationship_address(
+        &domain,
+        &local,
+        &relationship_did,
+        mail_now_unix(),
+    )?;
     crate::domains::upsert_address(a)?;
     list_mail_addresses(Some(domain))
 }
@@ -603,7 +620,11 @@ pub fn front_door_forms(domain: String) -> Result<serde_json::Value, String> {
         domain: d.name.clone(),
         agent_type: d.agent_type.clone(),
         front_door_did: d.front_door_did.clone(),
-        name: if d.label.is_empty() { None } else { Some(d.label.clone()) },
+        name: if d.label.is_empty() {
+            None
+        } else {
+            Some(d.label.clone())
+        },
         webid: None,
         services: vec![],
         identity_pubkey_hex: None,
@@ -631,7 +652,11 @@ fn build_front_door_record(domain: &str) -> Result<crate::front_door::FrontDoorR
         domain: d.name.clone(),
         agent_type: d.agent_type.clone(),
         front_door_did: d.front_door_did.clone(),
-        name: if d.label.is_empty() { None } else { Some(d.label.clone()) },
+        name: if d.label.is_empty() {
+            None
+        } else {
+            Some(d.label.clone())
+        },
         webid: None,
         services: vec![],
         identity_pubkey_hex: None,
@@ -666,7 +691,10 @@ pub fn cf_publish_front_door(
     domain: String,
 ) -> Result<serde_json::Value, String> {
     let rec = build_front_door_record(&domain)?;
-    let cfg = crate::cloudflare::CfConfig { api_token: token, zone_id };
+    let cfg = crate::cloudflare::CfConfig {
+        api_token: token,
+        zone_id,
+    };
     let id = crate::cloudflare::publish_front_door(&cfg, &rec)?;
     Ok(serde_json::json!({
         "record_id": id,
@@ -697,7 +725,7 @@ pub fn cf_provision_worker(
         .join("../../vendor/cloudflare-worker/worker.js");
     let script_content = std::fs::read_to_string(&script_path)
         .map_err(|e| format!("Failed to read worker.js: {e}"))?;
-        
+
     crate::cloudflare::provision_worker(&token, &account_id, &script_name, &script_content)?;
     Ok(serde_json::json!({ "ok": true, "script": script_name }))
 }
@@ -710,7 +738,8 @@ pub fn cf_provision_tunnel(
     tunnel_name: String,
     tunnel_secret: String,
 ) -> Result<serde_json::Value, String> {
-    let tunnel_id = crate::cloudflare::provision_tunnel(&token, &account_id, &tunnel_name, &tunnel_secret)?;
+    let tunnel_id =
+        crate::cloudflare::provision_tunnel(&token, &account_id, &tunnel_name, &tunnel_secret)?;
     Ok(serde_json::json!({ "ok": true, "tunnel_id": tunnel_id }))
 }
 
@@ -722,7 +751,8 @@ pub fn cf_route_tunnel_dns(
     record_name: String,
     tunnel_id: String,
 ) -> Result<serde_json::Value, String> {
-    let record_id = crate::cloudflare::route_tunnel_dns(&token, &zone_id, &record_name, &tunnel_id)?;
+    let record_id =
+        crate::cloudflare::route_tunnel_dns(&token, &zone_id, &record_name, &tunnel_id)?;
     Ok(serde_json::json!({ "ok": true, "record_id": record_id }))
 }
 
@@ -740,7 +770,8 @@ pub fn github_deploy_static_site(
     repo_name: String,
     files: std::collections::HashMap<String, String>,
 ) -> Result<serde_json::Value, String> {
-    let full_name = crate::github::create_repository(&token, &repo_name).map_err(|e| e.to_string())?;
+    let full_name =
+        crate::github::create_repository(&token, &repo_name).map_err(|e| e.to_string())?;
     crate::github::push_static_site(&token, &full_name, files).map_err(|e| e.to_string())?;
     Ok(serde_json::json!({ "ok": true, "full_name": full_name }))
 }
@@ -827,4 +858,3 @@ pub fn mail_fetch(imap_json: String, mailbox: String) -> Result<serde_json::Valu
         "stored_count": stored_ids.len(),
     }))
 }
-

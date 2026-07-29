@@ -119,10 +119,26 @@ mod tests {
 
         // Echoes land at D, 2D, 3D with amplitude 1, g, g^2 (Freeverb comb delays
         // the impulse by D, then recirculates with gain g each pass).
-        assert!((out[d] - 1.0).abs() < 1e-6, "first echo at D should be ~1.0, got {}", out[d]);
-        assert!((out[2 * d] - g).abs() < 1e-6, "second echo ~g, got {}", out[2 * d]);
-        assert!((out[3 * d] - g * g).abs() < 1e-6, "third echo ~g^2, got {}", out[3 * d]);
-        assert!((out[4 * d] - g * g * g).abs() < 1e-6, "fourth echo ~g^3, got {}", out[4 * d]);
+        assert!(
+            (out[d] - 1.0).abs() < 1e-6,
+            "first echo at D should be ~1.0, got {}",
+            out[d]
+        );
+        assert!(
+            (out[2 * d] - g).abs() < 1e-6,
+            "second echo ~g, got {}",
+            out[2 * d]
+        );
+        assert!(
+            (out[3 * d] - g * g).abs() < 1e-6,
+            "third echo ~g^2, got {}",
+            out[3 * d]
+        );
+        assert!(
+            (out[4 * d] - g * g * g).abs() < 1e-6,
+            "fourth echo ~g^3, got {}",
+            out[4 * d]
+        );
 
         // Between taps the output is silent.
         assert!(out[1].abs() < 1e-9);
@@ -151,7 +167,12 @@ mod tests {
 
         let eb: f32 = ob.iter().map(|x| x * x).sum();
         let ed: f32 = od.iter().map(|x| x * x).sum();
-        assert!(ed < eb, "damped tail energy {} should be < undamped {}", ed, eb);
+        assert!(
+            ed < eb,
+            "damped tail energy {} should be < undamped {}",
+            ed,
+            eb
+        );
         assert!(eb.is_finite() && ed.is_finite());
     }
 
@@ -171,6 +192,9 @@ mod tests {
         let mut c = CombFilter::new(4, 0.5, 0.0).unwrap();
         let input = [0.0f32; 8];
         let mut out = [0.0f32; 4];
-        assert_eq!(c.process(&input, &mut out), Err(AudioError::OutputBufferTooSmall));
+        assert_eq!(
+            c.process(&input, &mut out),
+            Err(AudioError::OutputBufferTooSmall)
+        );
     }
 }

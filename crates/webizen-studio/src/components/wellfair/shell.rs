@@ -1,39 +1,39 @@
 use super::accountability_panel::WellfairAccountabilityPanel;
-use super::disclosure_inquiry_panel::WellfairDisclosureInquiryPanel;
-use super::chora_panel::WellfairChoraPanel;
-use super::library_panel::WellfairLibraryPanel;
 use super::agency_panel::WellfairAgencyPanel;
-use super::anatomy_panel::WellfairAnatomyPanel;
 use super::anatomy_3d_panel::WellfairAnatomy3dPanel;
-use super::safeguards_panel::WellfairSafeguardsPanel;
-use super::scorecard_panel::WellfairScorecardPanel;
+use super::anatomy_panel::WellfairAnatomyPanel;
 use super::assessment_panel::WellfairAssessmentPanel;
+use super::audit_panel::WellfairAuditPanel;
+use super::chora_panel::WellfairChoraPanel;
 use super::clinical_panel::WellfairClinicalPanel;
+use super::communications_panel::WellfairCommunicationsPanel;
 use super::consent_panel::WellfairConsentPanel;
 use super::credentials_panel::WellfairCredentialsPanel;
+use super::disclosure_inquiry_panel::WellfairDisclosureInquiryPanel;
 use super::finance_panel::WellfairFinancePanel;
 use super::guardianship_panel::WellfairGuardianshipPanel;
 use super::health_panel::WellfairHealthPanel;
-use super::qapp_publish_panel::WellfairQappPublishPanel;
-use super::life_panel::WellfairLifePanel;
-use super::projects_panel::WellfairProjectsPanel;
-use super::sync_panel::WellfairSyncPanel;
-use super::work_board_panel::WellfairWorkBoardPanel;
-use super::welfare_panel::WellfairWelfarePanel;
-use super::medication_panel::WellfairMedicationPanel;
-use super::personal_panel::WellfairPersonalPanel;
-use super::sanctuary_panel::{WellfairSanctuaryPanel, WellfairSanctuaryVaultPanel};
-use super::sleep_panel::WellfairSleepPanel;
-use super::social_book_panel::WellfairSocialBookPanel;
-use super::wellbeing_panel::WellfairWellbeingPanel;
 use super::host_client::use_host_snapshot;
 use super::host_dto::{ProvenanceHop, SensitivityClassDto, VaultLifecycle};
-use super::shared::{OfflineState, ProvenanceTrail, SensitivityBadge, SyncState};
+use super::library_panel::WellfairLibraryPanel;
+use super::life_panel::WellfairLifePanel;
+use super::medication_panel::WellfairMedicationPanel;
 use super::pairing_panel::CompanionPairingPanel;
-use super::communications_panel::WellfairCommunicationsPanel;
-use super::audit_panel::WellfairAuditPanel;
-use super::tools_panel::WellfairToolsPanel;
+use super::personal_panel::WellfairPersonalPanel;
+use super::projects_panel::WellfairProjectsPanel;
+use super::qapp_publish_panel::WellfairQappPublishPanel;
+use super::safeguards_panel::WellfairSafeguardsPanel;
+use super::sanctuary_panel::{WellfairSanctuaryPanel, WellfairSanctuaryVaultPanel};
+use super::scorecard_panel::WellfairScorecardPanel;
+use super::shared::{OfflineState, ProvenanceTrail, SensitivityBadge, SyncState};
+use super::sleep_panel::WellfairSleepPanel;
+use super::social_book_panel::WellfairSocialBookPanel;
 use super::sync_backup_panel::WellfairSyncBackupPanel;
+use super::sync_panel::WellfairSyncPanel;
+use super::tools_panel::WellfairToolsPanel;
+use super::welfare_panel::WellfairWelfarePanel;
+use super::wellbeing_panel::WellfairWellbeingPanel;
+use super::work_board_panel::WellfairWorkBoardPanel;
 use crate::Route;
 use dioxus::prelude::*;
 
@@ -112,13 +112,11 @@ pub fn WellfairShell() -> Element {
         rsx! {}
     };
 
-    let sample_hops = vec![
-        ProvenanceHop {
-            label: "Host fixture".into(),
-            evidence_type: "local_receipt".into(),
-            hash_prefix: "a1b2c3…".into(),
-        },
-    ];
+    let sample_hops = vec![ProvenanceHop {
+        label: "Host fixture".into(),
+        evidence_type: "local_receipt".into(),
+        hash_prefix: "a1b2c3…".into(),
+    }];
     let area_content = match active_area().as_str() {
         "Personal" => rsx! { WellfairPersonalPanel {} },
         "Health" => rsx! {

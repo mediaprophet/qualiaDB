@@ -2,9 +2,6 @@
 
 #![allow(non_snake_case)]
 
-
-
-
 /// Accept a message into the local inbox (same path as SMTP DATA) — for tests and mesh inject.
 pub fn mail_accept(
     from: String,
@@ -13,14 +10,7 @@ pub fn mail_accept(
     body: String,
     sender_verified: bool,
 ) -> Result<serde_json::Value, String> {
-    let r = crate::mail_inbound::accept_message(
-        &from,
-        &to,
-        &subject,
-        &body,
-        sender_verified,
-        None,
-    );
+    let r = crate::mail_inbound::accept_message(&from, &to, &subject, &body, sender_verified, None);
     serde_json::to_value(r).map_err(|e| e.to_string())
 }
 
@@ -54,7 +44,10 @@ pub fn mail_delete(id: String) -> Result<serde_json::Value, String> {
 }
 
 /// MX/SPF paste block + local receiver status for a domain.
-pub fn mail_dns_forms(domain: String, mx_host: Option<String>) -> Result<serde_json::Value, String> {
+pub fn mail_dns_forms(
+    domain: String,
+    mx_host: Option<String>,
+) -> Result<serde_json::Value, String> {
     Ok(crate::mail_inbound::mail_dns_forms(
         &domain,
         mx_host.as_deref(),
@@ -76,4 +69,3 @@ pub fn mail_receiver_start(bind: Option<String>) -> Result<serde_json::Value, St
 pub fn mail_receiver_stop() -> Result<serde_json::Value, String> {
     crate::mail_inbound::stop_receiver()
 }
-

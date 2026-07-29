@@ -3,7 +3,6 @@
 use super::*;
 use tauri::{command, AppHandle, Manager};
 
-
 /// The 17 seeded domains of agency (id/label/description/consequential/selfhood) for the picker.
 #[command]
 pub fn wellfair_list_agency_domains(app: AppHandle) -> Result<String, String> {
@@ -121,4 +120,3 @@ pub fn wellfair_evaluate_agency_access(
         Ok(serde_json::json!({ "permit": permit, "reason": reason }).to_string())
     })?
 }
-

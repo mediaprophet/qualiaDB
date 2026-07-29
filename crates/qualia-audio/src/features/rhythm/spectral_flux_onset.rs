@@ -55,7 +55,9 @@ pub fn onset_detection(
     if n_bins == 0 {
         return Err(AudioError::InvalidParameter);
     }
-    let needed = n_frames.checked_mul(n_bins).ok_or(AudioError::InvalidParameter)?;
+    let needed = n_frames
+        .checked_mul(n_bins)
+        .ok_or(AudioError::InvalidParameter)?;
     if needed > mags.len() {
         return Err(AudioError::InvalidParameter);
     }

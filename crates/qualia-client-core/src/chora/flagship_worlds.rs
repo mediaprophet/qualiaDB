@@ -22,7 +22,7 @@ const SYDNEY_LON: f64 = 151.2093;
 /// historical years is preserved under `u64`.
 fn year_mid(y: u32) -> u64 {
     const FIRST_UNIX: u64 = 0; // 1970-01-01
-    // ~ mid 1970
+                               // ~ mid 1970
     const YEAR_1970_MID: u64 = 15_778_800;
     match Utc.with_ymd_and_hms(y as i32, 7, 1, 0, 0, 0).single() {
         Some(dt) => {
@@ -113,7 +113,8 @@ pub fn history_world() -> CanvasWorldConfig {
         norms: vec![
             CanvasNorm {
                 rule_uri: "urn:qualia:canvas:public-commons".to_string(),
-                description: "Historical commons read; HGIS attribution required on export".to_string(),
+                description: "Historical commons read; HGIS attribution required on export"
+                    .to_string(),
             },
             CanvasNorm {
                 rule_uri: "urn:qualia:canvas:temporal-scrub".to_string(),
@@ -145,7 +146,8 @@ pub fn biosphere_world() -> CanvasWorldConfig {
         assets: vec![],
         norms: vec![CanvasNorm {
             rule_uri: "urn:qualia:canvas:world-of-god".to_string(),
-            description: "Biosphere outputs are Hypothesis under F/A — never ground truth".to_string(),
+            description: "Biosphere outputs are Hypothesis under F/A — never ground truth"
+                .to_string(),
         }],
         origin_lat: 0.0,
         origin_lon: 0.0,
@@ -172,7 +174,8 @@ pub fn council_world() -> CanvasWorldConfig {
         assets: vec![],
         norms: vec![CanvasNorm {
             rule_uri: "urn:qualia:canvas:council-commons".to_string(),
-            description: "Municipal open data; placement requires council placement right".to_string(),
+            description: "Municipal open data; placement requires council placement right"
+                .to_string(),
         }],
         origin_lat: SYDNEY_LAT,
         origin_lon: SYDNEY_LON,
@@ -207,7 +210,8 @@ pub fn sdg_world() -> CanvasWorldConfig {
         norms: vec![
             CanvasNorm {
                 rule_uri: "urn:qualia:canvas:sdg-alignment".to_string(),
-                description: "Constructed-vs-natural interaction metrics for SDG walkthrough".to_string(),
+                description: "Constructed-vs-natural interaction metrics for SDG walkthrough"
+                    .to_string(),
             },
             CanvasNorm {
                 rule_uri: "urn:qualia:canvas:public-commons".to_string(),

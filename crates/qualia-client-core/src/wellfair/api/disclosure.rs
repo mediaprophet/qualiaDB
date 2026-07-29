@@ -1,19 +1,18 @@
 //! Disclosure traceability + encrypted sanctuary vault
 
-
-use sha2::{Digest, Sha256};
 use super::super::med_reminders::{
     compute_due_reminders, load_prefs, save_prefs, DueMedReminder, MedReminderPrefs,
 };
 use super::super::sanctuary::{
-    load_prefs as load_sanctuary_prefs, lock_sanctuary, setup_sanctuary,
-    unlock_sanctuary, SanctuaryPrefs,
+    load_prefs as load_sanctuary_prefs, lock_sanctuary, setup_sanctuary, unlock_sanctuary,
+    SanctuaryPrefs,
 };
+use sha2::{Digest, Sha256};
 use wellfare_core::sleep_analytics::{
     self, SleepDebtReport, SleepHeatmapReport, SleepNightSample, DEFAULT_TARGET_SLEEP_MIN,
 };
 
-use super::super::personal_profile::{EmergencyContact, EmergencyContactStore, new_contact_id};
+use super::super::personal_profile::{new_contact_id, EmergencyContact, EmergencyContactStore};
 
 use super::*;
 
@@ -84,13 +83,17 @@ impl WebizenHostApi {
         commitment_hex: &str,
     ) -> Result<Vec<crate::disclosure_trace::DisclosureEvent>, String> {
         let c = crate::accountability_store::parse_commitment_hex(commitment_hex)?;
-        self.accountability_store()?.disclosure_chain(&c).map_err(|e| e.to_string())
+        self.accountability_store()?
+            .disclosure_chain(&c)
+            .map_err(|e| e.to_string())
     }
 
     /// The distinct actors who had access to a payload — the set a leak must be within.
     pub fn actors_with_access(&self, commitment_hex: &str) -> Result<Vec<String>, String> {
         let c = crate::accountability_store::parse_commitment_hex(commitment_hex)?;
-        self.accountability_store()?.actors_with_access(&c).map_err(|e| e.to_string())
+        self.accountability_store()?
+            .actors_with_access(&c)
+            .map_err(|e| e.to_string())
     }
 
     /// **Trace a leak** by its fingerprint (hex, 16 bytes) → the disclosure + accountable actor.
@@ -98,19 +101,24 @@ impl WebizenHostApi {
         &self,
         fingerprint_hex: &str,
     ) -> Result<Option<crate::disclosure_trace::DisclosureEvent>, String> {
-        let bytes = hex::decode(fingerprint_hex.trim()).map_err(|e| format!("fingerprint not hex: {e}"))?;
+        let bytes =
+            hex::decode(fingerprint_hex.trim()).map_err(|e| format!("fingerprint not hex: {e}"))?;
         let fp: crate::disclosure_trace::DisclosureFingerprint = bytes
             .as_slice()
             .try_into()
             .map_err(|_| "fingerprint must be 16 bytes".to_string())?;
-        self.accountability_store()?.trace_leak(&fp).map_err(|e| e.to_string())
+        self.accountability_store()?
+            .trace_leak(&fp)
+            .map_err(|e| e.to_string())
     }
 
     /// List transparency cc records.
     pub fn list_transparency_ccs(
         &self,
     ) -> Result<Vec<crate::disclosure_trace::TransparencyCc>, String> {
-        self.accountability_store()?.list_transparency_ccs().map_err(|e| e.to_string())
+        self.accountability_store()?
+            .list_transparency_ccs()
+            .map_err(|e| e.to_string())
     }
 
     /// **Assess a duty of inquiry** — classify conduct against the duty (the fair negligence classifier: was
@@ -123,7 +131,10 @@ impl WebizenHostApi {
         crate::duty_of_inquiry::assess(&duty, &conduct)
     }
 
-    pub fn sleep_analytics(&self, target_min: f64) -> Result<(SleepDebtReport, SleepHeatmapReport), String> {
+    pub fn sleep_analytics(
+        &self,
+        target_min: f64,
+    ) -> Result<(SleepDebtReport, SleepHeatmapReport), String> {
         let sleep_rows = self.list_journal_by_kind("sleep", 128)?;
         let mut samples = Vec::new();
         for row in sleep_rows {
@@ -197,7 +208,10 @@ impl WebizenHostApi {
         Ok(prefs)
     }
 
-    pub fn list_due_med_reminders(&self, window_minutes: i32) -> Result<Vec<DueMedReminder>, String> {
+    pub fn list_due_med_reminders(
+        &self,
+        window_minutes: i32,
+    ) -> Result<Vec<DueMedReminder>, String> {
         let prefs = load_prefs(&self.storage_root);
         if !prefs.enabled || !prefs.permission_granted {
             return Ok(Vec::new());
@@ -214,8 +228,17 @@ impl WebizenHostApi {
         load_sanctuary_prefs(&self.storage_root)
     }
 
-    pub fn setup_sanctuary(&self, real_pin: &str, decoy_pin: &str) -> Result<SanctuaryPrefs, String> {
-        setup_sanctuary(&self.storage_root, real_pin, decoy_pin, Self::now_unix() as u32)
+    pub fn setup_sanctuary(
+        &self,
+        real_pin: &str,
+        decoy_pin: &str,
+    ) -> Result<SanctuaryPrefs, String> {
+        setup_sanctuary(
+            &self.storage_root,
+            real_pin,
+            decoy_pin,
+            Self::now_unix() as u32,
+        )
     }
 
     pub fn lock_sanctuary(&self) -> Result<SanctuaryPrefs, String> {
@@ -257,15 +280,25 @@ impl WebizenHostApi {
         pin: &str,
         body: &str,
     ) -> Result<super::super::sanctuary_vault::SanctuaryLane, String> {
-        super::super::sanctuary_vault::add_note(&self.storage_root, pin, body, Self::now_unix() as u32)
+        super::super::sanctuary_vault::add_note(
+            &self.storage_root,
+            pin,
+            body,
+            Self::now_unix() as u32,
+        )
     }
 
     #[cfg(not(target_arch = "wasm32"))]
     pub fn list_sanctuary_vault_notes(
         &self,
         pin: &str,
-    ) -> Result<(super::super::sanctuary_vault::SanctuaryLane, Vec<super::super::sanctuary_vault::SanctuaryVaultNote>), String> {
+    ) -> Result<
+        (
+            super::super::sanctuary_vault::SanctuaryLane,
+            Vec<super::super::sanctuary_vault::SanctuaryVaultNote>,
+        ),
+        String,
+    > {
         super::super::sanctuary_vault::list_notes(&self.storage_root, pin)
     }
-
 }

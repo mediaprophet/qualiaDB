@@ -10,18 +10,17 @@
 ///
 /// The "person" is implicit: we aggregate over all observations in the loaded Turtle.
 /// Aggregation strategy: AVG over available records. Rules only fire when data is present.
-
 use crate::store::HealthStore;
 use crate::webizen::{LANE_BILATERAL, LANE_PASSTHROUGH};
 
 /// One triggered clinical pattern.
 #[derive(Debug)]
 pub struct N3RuleMatch {
-    pub pattern:            &'static str,
-    pub confidence:         &'static str,
-    pub routing_lane:       u8,
+    pub pattern: &'static str,
+    pub confidence: &'static str,
+    pub routing_lane: u8,
     /// The original N3 source file this came from.
-    pub n3_source:          &'static str,
+    pub n3_source: &'static str,
     /// Optional recommended action (present for safety-critical rules).
     pub recommended_action: Option<&'static str>,
 }
@@ -58,12 +57,12 @@ fn query_avg(store: &HealthStore, sparql: &str) -> Option<f64> {
 }
 
 const HEALTH: &str = "https://health.example.org/ns#";
-const FHIR:   &str = "http://hl7.org/fhir/";
+const FHIR: &str = "http://hl7.org/fhir/";
 const SNOMED: &str = "http://snomed.info/id/";
 
 // SNOMED codes used in the Turtle serialisers (rdf.rs).
 const SNOMED_HEART_RATE: &str = "364075005";
-const SNOMED_STEPS:      &str = "256235009";
+const SNOMED_STEPS: &str = "256235009";
 
 /// Evaluate all 7 N3 clinical rules against a pre-loaded `HealthStore`.
 /// Returns only the rules that fire (empty vec = no concerns found).
@@ -73,38 +72,62 @@ pub fn evaluate_n3_rules(store: &HealthStore) -> Vec<N3RuleMatch> {
     // ── Aggregate health metrics ───────────────────────────────────────────────
 
     // Average sleep efficiency (health:sleepEfficiency)
-    let avg_sleep_eff = query_avg(store, &format!(
-        "SELECT (AVG(?e) AS ?avg) WHERE {{ ?obs <{}sleepEfficiency> ?e }}", HEALTH
-    ));
+    let avg_sleep_eff = query_avg(
+        store,
+        &format!(
+            "SELECT (AVG(?e) AS ?avg) WHERE {{ ?obs <{}sleepEfficiency> ?e }}",
+            HEALTH
+        ),
+    );
 
     // Average sleep hours (health:sleepHours — added by rdf.rs update)
-    let avg_sleep_hrs = query_avg(store, &format!(
-        "SELECT (AVG(?h) AS ?avg) WHERE {{ ?obs <{}sleepHours> ?h }}", HEALTH
-    ));
+    let avg_sleep_hrs = query_avg(
+        store,
+        &format!(
+            "SELECT (AVG(?h) AS ?avg) WHERE {{ ?obs <{}sleepHours> ?h }}",
+            HEALTH
+        ),
+    );
 
     // Average resting heart rate (fhir:Observation.valueQuantity on HR records)
-    let avg_hr = query_avg(store, &format!(
-        "SELECT (AVG(?hr) AS ?avg) WHERE {{ \
+    let avg_hr = query_avg(
+        store,
+        &format!(
+            "SELECT (AVG(?hr) AS ?avg) WHERE {{ \
            ?obs <{}snomedConcept> <{}{}>  ; \
                 <{}Observation.valueQuantity> ?hr \
-         }}", HEALTH, SNOMED, SNOMED_HEART_RATE, FHIR
-    ));
+         }}",
+            HEALTH, SNOMED, SNOMED_HEART_RATE, FHIR
+        ),
+    );
 
     // Average daily steps (fhir:Observation.valueQuantity on steps records)
-    let avg_steps = query_avg(store, &format!(
-        "SELECT (AVG(?s) AS ?avg) WHERE {{ \
+    let avg_steps = query_avg(
+        store,
+        &format!(
+            "SELECT (AVG(?s) AS ?avg) WHERE {{ \
            ?obs <{}snomedConcept> <{}{}>  ; \
                 <{}Observation.valueQuantity> ?s \
-         }}", HEALTH, SNOMED, SNOMED_STEPS, FHIR
-    ));
+         }}",
+            HEALTH, SNOMED, SNOMED_STEPS, FHIR
+        ),
+    );
 
     // Stress score and Maslow safety score (vault-level data, may not be present).
-    let avg_stress = query_avg(store, &format!(
-        "SELECT (AVG(?s) AS ?avg) WHERE {{ ?obs <{}stressScore> ?s }}", HEALTH
-    ));
-    let avg_maslow = query_avg(store, &format!(
-        "SELECT (AVG(?m) AS ?avg) WHERE {{ ?obs <{}maslowSafetyScore> ?m }}", HEALTH
-    ));
+    let avg_stress = query_avg(
+        store,
+        &format!(
+            "SELECT (AVG(?s) AS ?avg) WHERE {{ ?obs <{}stressScore> ?s }}",
+            HEALTH
+        ),
+    );
+    let avg_maslow = query_avg(
+        store,
+        &format!(
+            "SELECT (AVG(?m) AS ?avg) WHERE {{ ?obs <{}maslowSafetyScore> ?m }}",
+            HEALTH
+        ),
+    );
 
     // ── sleep_debt.n3 ─────────────────────────────────────────────────────────
     // { ?person health:sleepEfficiency ?e . ?e math:lessThan 70 .
@@ -113,10 +136,10 @@ pub fn evaluate_n3_rules(store: &HealthStore) -> Vec<N3RuleMatch> {
     if let (Some(eff), Some(hrs)) = (avg_sleep_eff, avg_sleep_hrs) {
         if eff < 70.0 && hrs < 6.0 {
             matches.push(N3RuleMatch {
-                pattern:            "ChronicSleepDebt",
-                confidence:         "high",
-                routing_lane:       LANE_BILATERAL,
-                n3_source:          "sleep_debt.n3",
+                pattern: "ChronicSleepDebt",
+                confidence: "high",
+                routing_lane: LANE_BILATERAL,
+                n3_source: "sleep_debt.n3",
                 recommended_action: None,
             });
         }
@@ -128,10 +151,10 @@ pub fn evaluate_n3_rules(store: &HealthStore) -> Vec<N3RuleMatch> {
     if let Some(hr) = avg_hr {
         if hr > 100.0 {
             matches.push(N3RuleMatch {
-                pattern:            "TachycardiaFlag",
-                confidence:         "high",
-                routing_lane:       LANE_BILATERAL,
-                n3_source:          "cardiovascular_risk.n3",
+                pattern: "TachycardiaFlag",
+                confidence: "high",
+                routing_lane: LANE_BILATERAL,
+                n3_source: "cardiovascular_risk.n3",
                 recommended_action: None,
             });
         }
@@ -143,10 +166,10 @@ pub fn evaluate_n3_rules(store: &HealthStore) -> Vec<N3RuleMatch> {
         if let Some(steps) = avg_steps {
             if steps < 3000.0 && hr > 80.0 {
                 matches.push(N3RuleMatch {
-                    pattern:            "DeconditioningRisk",
-                    confidence:         "moderate",
-                    routing_lane:       LANE_BILATERAL,
-                    n3_source:          "cardiovascular_risk.n3",
+                    pattern: "DeconditioningRisk",
+                    confidence: "moderate",
+                    routing_lane: LANE_BILATERAL,
+                    n3_source: "cardiovascular_risk.n3",
                     recommended_action: None,
                 });
             }
@@ -160,10 +183,10 @@ pub fn evaluate_n3_rules(store: &HealthStore) -> Vec<N3RuleMatch> {
     if let (Some(hrs), Some(hr)) = (avg_sleep_hrs, avg_hr) {
         if hrs < 5.0 && hr > 90.0 {
             matches.push(N3RuleMatch {
-                pattern:            "AdrenalFatigueSuspected",
-                confidence:         "moderate",
-                routing_lane:       LANE_BILATERAL,
-                n3_source:          "adrenal_fatigue.n3",
+                pattern: "AdrenalFatigueSuspected",
+                confidence: "moderate",
+                routing_lane: LANE_BILATERAL,
+                n3_source: "adrenal_fatigue.n3",
                 recommended_action: None,
             });
         }
@@ -178,10 +201,10 @@ pub fn evaluate_n3_rules(store: &HealthStore) -> Vec<N3RuleMatch> {
     if let (Some(stress), Some(maslow), Some(hrs)) = (avg_stress, avg_maslow, avg_sleep_hrs) {
         if stress > 75.0 && maslow < 40.0 && hrs < 5.0 {
             matches.push(N3RuleMatch {
-                pattern:            "TraumaCascadeActive",
-                confidence:         "high",
-                routing_lane:       LANE_BILATERAL,
-                n3_source:          "trauma_cascade.n3",
+                pattern: "TraumaCascadeActive",
+                confidence: "high",
+                routing_lane: LANE_BILATERAL,
+                n3_source: "trauma_cascade.n3",
                 recommended_action: Some("urgent-welfare-review"),
             });
         }
@@ -194,10 +217,10 @@ pub fn evaluate_n3_rules(store: &HealthStore) -> Vec<N3RuleMatch> {
     if let (Some(steps), Some(hr)) = (avg_steps, avg_hr) {
         if steps < 2000.0 && hr > 85.0 {
             matches.push(N3RuleMatch {
-                pattern:            "SystemicFrailty",
-                confidence:         "moderate",
-                routing_lane:       LANE_BILATERAL,
-                n3_source:          "trauma_cascade.n3",
+                pattern: "SystemicFrailty",
+                confidence: "moderate",
+                routing_lane: LANE_BILATERAL,
+                n3_source: "trauma_cascade.n3",
                 recommended_action: None,
             });
         }
@@ -210,10 +233,10 @@ pub fn evaluate_n3_rules(store: &HealthStore) -> Vec<N3RuleMatch> {
     if let Some(steps) = avg_steps {
         if steps < 5000.0 {
             matches.push(N3RuleMatch {
-                pattern:            "LowActivityFlag",
-                confidence:         "low",
-                routing_lane:       LANE_PASSTHROUGH,
-                n3_source:          "cardiovascular_risk.n3",
+                pattern: "LowActivityFlag",
+                confidence: "low",
+                routing_lane: LANE_PASSTHROUGH,
+                n3_source: "cardiovascular_risk.n3",
                 recommended_action: None,
             });
         }
@@ -262,8 +285,10 @@ mod tests {
         );
         let store = store_with(&data);
         let matches = evaluate_n3_rules(&store);
-        assert!(matches.iter().any(|m| m.pattern == "TachycardiaFlag"),
-            "TachycardiaFlag should fire for HR 110");
+        assert!(
+            matches.iter().any(|m| m.pattern == "TachycardiaFlag"),
+            "TachycardiaFlag should fire for HR 110"
+        );
     }
 
     #[test]
@@ -276,8 +301,10 @@ mod tests {
         );
         let store = store_with(&data);
         let matches = evaluate_n3_rules(&store);
-        assert!(matches.iter().any(|m| m.pattern == "ChronicSleepDebt"),
-            "ChronicSleepDebt should fire for eff=60, hrs=5.0");
+        assert!(
+            matches.iter().any(|m| m.pattern == "ChronicSleepDebt"),
+            "ChronicSleepDebt should fire for eff=60, hrs=5.0"
+        );
     }
 
     #[test]
@@ -296,11 +323,12 @@ mod tests {
         );
         let store = store_with(&data);
         let matches = evaluate_n3_rules(&store);
-        let critical: Vec<_> = matches.iter()
-            .filter(|m| m.routing_lane == 2)
-            .collect();
-        assert!(critical.is_empty(), "No BilateralMicroCommons rules should fire for normal data. Got: {:?}",
-            critical.iter().map(|m| m.pattern).collect::<Vec<_>>());
+        let critical: Vec<_> = matches.iter().filter(|m| m.routing_lane == 2).collect();
+        assert!(
+            critical.is_empty(),
+            "No BilateralMicroCommons rules should fire for normal data. Got: {:?}",
+            critical.iter().map(|m| m.pattern).collect::<Vec<_>>()
+        );
     }
 
     #[test]
@@ -315,7 +343,11 @@ mod tests {
         );
         let store = store_with(&data);
         let matches = evaluate_n3_rules(&store);
-        assert!(matches.iter().any(|m| m.pattern == "AdrenalFatigueSuspected"),
-            "AdrenalFatigueSuspected should fire for sleep=4.5h, HR=95");
+        assert!(
+            matches
+                .iter()
+                .any(|m| m.pattern == "AdrenalFatigueSuspected"),
+            "AdrenalFatigueSuspected should fire for sleep=4.5h, HR=95"
+        );
     }
 }

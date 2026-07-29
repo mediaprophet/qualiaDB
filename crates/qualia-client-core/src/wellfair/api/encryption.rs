@@ -1,8 +1,6 @@
 //! Envelope encryption + safeguard switches (dead-man, incapacity)
 
-
 use sha2::{Digest, Sha256};
-
 
 use super::*;
 
@@ -137,7 +135,9 @@ impl WebizenHostApi {
     pub fn list_dead_mans_switches(
         &self,
     ) -> Result<Vec<crate::accountability_store::DeadMansSwitchRecord>, String> {
-        self.accountability_store()?.list_dead_mans_switches().map_err(|e| e.to_string())
+        self.accountability_store()?
+            .list_dead_mans_switches()
+            .map_err(|e| e.to_string())
     }
 
     /// **Enact a dead-man switch AND release the keys** (ADR 0011 D6, key-release-on-enact). Recovers the
@@ -161,12 +161,14 @@ impl WebizenHostApi {
             .wrapped_key_for(&c, &self.owner_did, now)
             .map_err(|e| e.to_string())?
             .ok_or_else(|| {
-                "no owner credential holds the DEK for this payload (seal it to yourself first)".to_string()
+                "no owner credential holds the DEK for this payload (seal it to yourself first)"
+                    .to_string()
             })?;
         let dek = unwrap_dek(&owner.secret, &wrapped)?;
         let mut party_keys: Vec<(String, [u8; 32])> = Vec::new();
         for (did, pk_hex) in party_keys_hex {
-            let bytes = hex::decode(pk_hex.trim()).map_err(|e| format!("party key not hex: {e}"))?;
+            let bytes =
+                hex::decode(pk_hex.trim()).map_err(|e| format!("party key not hex: {e}"))?;
             let pk: [u8; 32] = bytes
                 .as_slice()
                 .try_into()
@@ -174,7 +176,14 @@ impl WebizenHostApi {
             party_keys.push((did, pk));
         }
         let disposition = store
-            .enact_dead_mans_release(&c, &dek, &party_keys, &self.owner_did, &self.signing_key, now)
+            .enact_dead_mans_release(
+                &c,
+                &dek,
+                &party_keys,
+                &self.owner_did,
+                &self.signing_key,
+                now,
+            )
             .map_err(|e| e.to_string())?;
         Ok(serde_json::json!({ "enacted": disposition.is_some(), "disposition": disposition }))
     }
@@ -222,7 +231,8 @@ impl WebizenHostApi {
         let now = Self::now_unix();
         let mut party_keys: Vec<(String, [u8; 32])> = Vec::new();
         for (did, pk_hex) in party_keys_hex {
-            let bytes = hex::decode(pk_hex.trim()).map_err(|e| format!("party key not hex: {e}"))?;
+            let bytes =
+                hex::decode(pk_hex.trim()).map_err(|e| format!("party key not hex: {e}"))?;
             let pk: [u8; 32] = bytes
                 .as_slice()
                 .try_into()
@@ -231,7 +241,14 @@ impl WebizenHostApi {
         }
         let disposition = self
             .accountability_store()?
-            .reconstruct_and_release(&c, &shares, &party_keys, &self.owner_did, &self.signing_key, now)
+            .reconstruct_and_release(
+                &c,
+                &shares,
+                &party_keys,
+                &self.owner_did,
+                &self.signing_key,
+                now,
+            )
             .map_err(|e| e.to_string())?;
         Ok(serde_json::json!({ "enacted": disposition.is_some(), "disposition": disposition }))
     }
@@ -267,9 +284,13 @@ impl WebizenHostApi {
         };
         let peers = crate::social_peers::list_peers();
         let resolved = crate::social_peers::resolve_envelope_keys(&peers, &parties);
-        let have: std::collections::BTreeSet<&str> = resolved.iter().map(|(d, _)| d.as_str()).collect();
-        let missing: Vec<String> =
-            parties.iter().filter(|d| !have.contains(d.as_str())).cloned().collect();
+        let have: std::collections::BTreeSet<&str> =
+            resolved.iter().map(|(d, _)| d.as_str()).collect();
+        let missing: Vec<String> = parties
+            .iter()
+            .filter(|d| !have.contains(d.as_str()))
+            .cloned()
+            .collect();
         let result = self.enact_dead_mans_release(commitment_hex, resolved)?;
         Ok(serde_json::json!({ "result": result, "missing_keys_for": missing }))
     }
@@ -313,7 +334,8 @@ impl WebizenHostApi {
     pub fn list_incapacity_switches(
         &self,
     ) -> Result<Vec<crate::incapacity_switch::IncapacitySwitch>, String> {
-        self.accountability_store()?.list_incapacity_switches().map_err(|e| e.to_string())
+        self.accountability_store()?
+            .list_incapacity_switches()
+            .map_err(|e| e.to_string())
     }
-
 }

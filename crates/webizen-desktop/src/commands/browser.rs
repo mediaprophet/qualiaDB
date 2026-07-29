@@ -80,9 +80,9 @@ pub fn list_qlinks() -> Result<serde_json::Value, String> {
     } else {
         qualia_client_core::state::dirs_default_path()
     };
-    let list = qualia_client_core::wellfair::bookmarks::list_all_bookmarks(
-        std::path::Path::new(&storage_path),
-    )?;
+    let list = qualia_client_core::wellfair::bookmarks::list_all_bookmarks(std::path::Path::new(
+        &storage_path,
+    ))?;
     Ok(serde_json::json!({ "bookmarks": list, "count": list.len() }))
 }
 
@@ -90,12 +90,17 @@ pub fn list_qlinks() -> Result<serde_json::Value, String> {
 #[command]
 pub fn browser_cookie_summary(url: String) -> Result<serde_json::Value, String> {
     let root = std::path::PathBuf::from(qualia_client_core::state::dirs_default_path());
-    Ok(qualia_client_core::cookie_graph::summary_for_url(&root, &url))
+    Ok(qualia_client_core::cookie_graph::summary_for_url(
+        &root, &url,
+    ))
 }
 
 /// Record observed Set-Cookie lines (agent / host) into the cookie graph.
 #[command]
-pub fn browser_cookie_observe(url: String, set_cookies: Vec<String>) -> Result<serde_json::Value, String> {
+pub fn browser_cookie_observe(
+    url: String,
+    set_cookies: Vec<String>,
+) -> Result<serde_json::Value, String> {
     let root = std::path::PathBuf::from(qualia_client_core::state::dirs_default_path());
     let now = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
@@ -107,7 +112,10 @@ pub fn browser_cookie_observe(url: String, set_cookies: Vec<String>) -> Result<s
 
 /// Refresh cookie graph from the content webview jar (K1 — Tauri cookies_for_url).
 #[command]
-pub fn browser_cookies_refresh(app: AppHandle, url: Option<String>) -> Result<serde_json::Value, String> {
+pub fn browser_cookies_refresh(
+    app: AppHandle,
+    url: Option<String>,
+) -> Result<serde_json::Value, String> {
     let url = url
         .filter(|u| !u.trim().is_empty())
         .unwrap_or_else(|| crate::browser::last_url());
@@ -124,9 +132,8 @@ pub fn browser_clear_site_data(
     let root = std::path::PathBuf::from(qualia_client_core::state::dirs_default_path());
     if all.unwrap_or(false) {
         let g = qualia_client_core::cookie_graph::clear_graph_all(&root)?;
-        let jar = crate::browser::cookies::clear_jar_all(&app).unwrap_or_else(|e| {
-            serde_json::json!({ "jar_clear": "error", "detail": e })
-        });
+        let jar = crate::browser::cookies::clear_jar_all(&app)
+            .unwrap_or_else(|e| serde_json::json!({ "jar_clear": "error", "detail": e }));
         return Ok(serde_json::json!({
             "graph": g,
             "jar": jar,
@@ -137,9 +144,8 @@ pub fn browser_clear_site_data(
         .filter(|u| !u.trim().is_empty())
         .unwrap_or_else(|| crate::browser::last_url());
     let g = qualia_client_core::cookie_graph::clear_graph_for_origin(&root, &url)?;
-    let jar = crate::browser::cookies::clear_jar_for_url(&app, &url).unwrap_or_else(|e| {
-        serde_json::json!({ "jar_clear": "error", "detail": e })
-    });
+    let jar = crate::browser::cookies::clear_jar_for_url(&app, &url)
+        .unwrap_or_else(|e| serde_json::json!({ "jar_clear": "error", "detail": e }));
     Ok(serde_json::json!({
         "url": url,
         "graph": g,
@@ -168,7 +174,11 @@ pub fn browser_cert_escape_hatch(
     match act.as_str() {
         "allow_once" | "once" => {
             crate::browser::cert_override::session_allow_once(&host);
-            crate::browser::cert_override::record_public(&host, "allow_once", "escape_hatch_session");
+            crate::browser::cert_override::record_public(
+                &host,
+                "allow_once",
+                "escape_hatch_session",
+            );
             Ok(serde_json::json!({
                 "host": host,
                 "action": "allow_once",
@@ -192,7 +202,11 @@ pub fn browser_cert_escape_hatch(
             let root = std::path::PathBuf::from(qualia_client_core::state::dirs_default_path());
             let mut store = qualia_client_core::webizen_trust::TrustStore::load(&root);
             let material = qualia_client_core::webizen_trust::host_deny_material(&host);
-            if !store.anchors.iter().any(|a| a.material.eq_ignore_ascii_case(&material)) {
+            if !store
+                .anchors
+                .iter()
+                .any(|a| a.material.eq_ignore_ascii_case(&material))
+            {
                 let now = std::time::SystemTime::now()
                     .duration_since(std::time::UNIX_EPOCH)
                     .map(|d| d.as_secs())
@@ -292,9 +306,8 @@ pub fn browser_engine_status() -> Result<serde_json::Value, String> {
 #[command]
 pub fn browser_set_engine(engine: String) -> Result<serde_json::Value, String> {
     use crate::browser::engine::EngineKind;
-    let kind = EngineKind::parse(&engine).ok_or_else(|| {
-        format!("unknown engine '{engine}' (os_web_view|servo_experimental)")
-    })?;
+    let kind = EngineKind::parse(&engine)
+        .ok_or_else(|| format!("unknown engine '{engine}' (os_web_view|servo_experimental)"))?;
     let _pref = crate::browser::engine::set_engine(kind)?;
     // Return full status (includes banner / active_renderer) so chrome can update in one call.
     Ok(crate::browser::engine::status_json())
@@ -310,7 +323,10 @@ pub fn browser_trust_list_suggested() -> Result<serde_json::Value, String> {
 
 /// Import a suggested catalog entry into the live trust store.
 #[command]
-pub fn browser_trust_import_suggested(id: String, enable: Option<bool>) -> Result<serde_json::Value, String> {
+pub fn browser_trust_import_suggested(
+    id: String,
+    enable: Option<bool>,
+) -> Result<serde_json::Value, String> {
     let root = std::path::PathBuf::from(qualia_client_core::state::dirs_default_path());
     let cat = qualia_client_core::webizen_trust::SuggestedTrustCatalog::load_for_storage(&root)?;
     let base = qualia_client_core::webizen_trust::bundled_catalog_path()
@@ -339,12 +355,20 @@ pub fn browser_trust_list() -> Result<serde_json::Value, String> {
 }
 
 #[command]
-pub fn browser_trust_add_pem(label: String, pem: String, notes: Option<String>) -> Result<serde_json::Value, String> {
+pub fn browser_trust_add_pem(
+    label: String,
+    pem: String,
+    notes: Option<String>,
+) -> Result<serde_json::Value, String> {
     crate::browser::trust_add_pem(label, pem, notes.unwrap_or_default())
 }
 
 #[command]
-pub fn browser_trust_add_did(label: String, did: String, notes: Option<String>) -> Result<serde_json::Value, String> {
+pub fn browser_trust_add_did(
+    label: String,
+    did: String,
+    notes: Option<String>,
+) -> Result<serde_json::Value, String> {
     crate::browser::trust_add_did(label, did, notes.unwrap_or_default())
 }
 
@@ -371,4 +395,3 @@ pub async fn browser_agent_ask(
 ) -> Result<serde_json::Value, String> {
     crate::browser::agent_ask(url, question, ingest_to_library.unwrap_or(true)).await
 }
-

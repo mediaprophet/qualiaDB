@@ -31,7 +31,11 @@ impl MpeZone {
         if member_count == 0 || member_count > 15 {
             return Err(AudioError::InvalidParameter);
         }
-        Ok(Self { master_channel: 0, member_low: 1, member_high: member_count })
+        Ok(Self {
+            master_channel: 0,
+            member_low: 1,
+            member_high: member_count,
+        })
     }
 
     /// Build an **upper** zone: master = channel 16 (index 15), `member_count`
@@ -43,7 +47,11 @@ impl MpeZone {
         if member_count == 0 || member_count > 15 {
             return Err(AudioError::InvalidParameter);
         }
-        Ok(Self { master_channel: 15, member_low: 15 - member_count, member_high: 14 })
+        Ok(Self {
+            master_channel: 15,
+            member_low: 15 - member_count,
+            member_high: 14,
+        })
     }
 
     /// Number of member channels in the zone.

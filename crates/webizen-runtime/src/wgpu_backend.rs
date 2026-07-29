@@ -443,7 +443,9 @@ impl<'a> WgpuDiffusionBackend<'a> {
         let map_result = rx.recv().map_err(|_| RuntimeError::ChannelClosed)?;
         map_result.map_err(|err| RuntimeError::BufferMapFailed(err.to_string()))?;
 
-        let mapped = slice.get_mapped_range().expect("wgpu buffer map_range failed");
+        let mapped = slice
+            .get_mapped_range()
+            .expect("wgpu buffer map_range failed");
         let hash = compute_state_hash(&mapped);
         let field = bytemuck::cast_slice::<u8, f32>(&mapped);
         let _ = self.frames.overwrite_slot(slot, |rgba| {

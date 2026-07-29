@@ -74,11 +74,11 @@ impl MeshState {
             return;
         };
         let storage_root = resolve_storage_root(app_state);
-        let session = match qualia_client_core::chat_session::load_session(&storage_root, session_id)
-        {
-            Ok(s) => s,
-            Err(_) => return,
-        };
+        let session =
+            match qualia_client_core::chat_session::load_session(&storage_root, session_id) {
+                Ok(s) => s,
+                Err(_) => return,
+            };
         let Some(msg) = session.messages.iter().find(|m| m.lamport == lamport) else {
             return;
         };

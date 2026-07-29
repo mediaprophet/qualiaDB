@@ -12,7 +12,6 @@ pub enum HostSurface {
     DesktopWebview,
 }
 
-
 const DEFAULT_DAEMON_PORT: u16 = 8080;
 /// Local native-LLM / handshake WebSocket.
 pub const NATIVE_WS: &str = "ws://127.0.0.1:4242";
@@ -82,15 +81,16 @@ pub fn manifest_undo_chain_url() -> String {
 }
 
 pub fn manifest_undo_frame_url(stack_index: u16) -> String {
-    format!("{}/manifest/undo-frame?stack_index={stack_index}", daemon_http())
+    format!(
+        "{}/manifest/undo-frame?stack_index={stack_index}",
+        daemon_http()
+    )
 }
 
 /// `{DAEMON_HTTP}/telemetry` — server-sent telemetry stream.
 pub fn telemetry_url() -> String {
     format!("{}/telemetry", daemon_http())
 }
-
-
 
 pub fn logs_page_url() -> String {
     format!("{}/logs", daemon_http())

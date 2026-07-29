@@ -26,7 +26,10 @@ impl ChannelPressure {
     /// Serialize to the 2 bytes `[0xDn, pressure]`.
     #[inline]
     pub fn to_bytes(self) -> [u8; 2] {
-        [STATUS_CHANNEL_PRESSURE | (self.channel & 0x0F), self.pressure]
+        [
+            STATUS_CHANNEL_PRESSURE | (self.channel & 0x0F),
+            self.pressure,
+        ]
     }
 
     /// Parse from a slice whose first byte is a Channel Pressure status.
@@ -40,7 +43,10 @@ impl ChannelPressure {
         if bytes[1] > 127 {
             return Err(AudioError::MalformedAudio);
         }
-        Ok(Self { channel: bytes[0] & 0x0F, pressure: bytes[1] })
+        Ok(Self {
+            channel: bytes[0] & 0x0F,
+            pressure: bytes[1],
+        })
     }
 }
 
@@ -57,8 +63,17 @@ mod tests {
 
     #[test]
     fn rejects_bad() {
-        assert_eq!(ChannelPressure::new(0, 128), Err(AudioError::InvalidParameter));
-        assert_eq!(ChannelPressure::parse(&[0xE0, 10]), Err(AudioError::UnsupportedFormat));
-        assert_eq!(ChannelPressure::parse(&[0xD0]), Err(AudioError::MalformedAudio));
+        assert_eq!(
+            ChannelPressure::new(0, 128),
+            Err(AudioError::InvalidParameter)
+        );
+        assert_eq!(
+            ChannelPressure::parse(&[0xE0, 10]),
+            Err(AudioError::UnsupportedFormat)
+        );
+        assert_eq!(
+            ChannelPressure::parse(&[0xD0]),
+            Err(AudioError::MalformedAudio)
+        );
     }
 }

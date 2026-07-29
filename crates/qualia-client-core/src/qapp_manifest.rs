@@ -291,50 +291,57 @@ pub fn install_qapp_capabilities(manifest: &QappPackageManifest) -> Result<u64, 
     let endpoints = qapp.capability_claims.optional_remote_endpoints.clone();
     let app_id_hash = compile_and_register_qapp(qapp)?;
     cache_remote_endpoints(app_id_hash, endpoints);
-    
+
     // Validate PINN model requirements if specified
-    if let Some(pinn_config) = manifest.x_qualia.as_ref().and_then(|ext| ext.pinn_model.as_ref()) {
+    if let Some(pinn_config) = manifest
+        .x_qualia
+        .as_ref()
+        .and_then(|ext| ext.pinn_model.as_ref())
+    {
         validate_pinn_model_config(pinn_config)?;
     }
-    
+
     Ok(app_id_hash)
 }
 
 /// Validate PINN model configuration for 1.58-bit ternary quantization
-pub fn validate_pinn_model_config(config: &crate::qapp_registry::QappPinnModelConfig) -> Result<(), QappInstallError> {
+pub fn validate_pinn_model_config(
+    config: &crate::qapp_registry::QappPinnModelConfig,
+) -> Result<(), QappInstallError> {
     // Check quantization bits
     if config.quantization_bits != "1.58" && !config.quantization_bits.is_empty() {
-        return Err(QappInstallError::InvalidPinnConfig(
-            format!("Unsupported quantization bits: {}. Only 1.58-bit ternary quantization is supported.", 
-                    config.quantization_bits)
-        ));
+        return Err(QappInstallError::InvalidPinnConfig(format!(
+            "Unsupported quantization bits: {}. Only 1.58-bit ternary quantization is supported.",
+            config.quantization_bits
+        )));
     }
 
     // Validate compression ratio (should be > 1.0 for effective compression)
     if config.compression_ratio <= 1.0 && config.uses_ternary_quantization {
         return Err(QappInstallError::InvalidPinnConfig(
-            "Compression ratio must be > 1.0 for ternary quantization".to_string()
+            "Compression ratio must be > 1.0 for ternary quantization".to_string(),
         ));
     }
 
     // Check memory requirements
     if config.memory_requirement_mb > 512 {
         return Err(QappInstallError::InvalidPinnConfig(
-            "Memory requirement exceeds 512MB limit for edge deployment".to_string()
+            "Memory requirement exceeds 512MB limit for edge deployment".to_string(),
         ));
     }
 
     // Validate SMX version
     if !config.smx_version.is_empty() && config.smx_version != "1.0" {
-        return Err(QappInstallError::InvalidPinnConfig(
-            format!("Unsupported SMX version: {}. Only version 1.0 is supported.", config.smx_version)
-        ));
+        return Err(QappInstallError::InvalidPinnConfig(format!(
+            "Unsupported SMX version: {}. Only version 1.0 is supported.",
+            config.smx_version
+        )));
     }
 
     // Check required operations
     if config.supported_operations.is_empty() {
         return Err(QappInstallError::InvalidPinnConfig(
-            "At least one supported operation must be specified".to_string()
+            "At least one supported operation must be specified".to_string(),
         ));
     }
 
@@ -343,8 +350,8 @@ pub fn validate_pinn_model_config(config: &crate::qapp_registry::QappPinnModelCo
 
 /// Check if manifest supports 1.58-bit ternary PINN models
 pub fn supports_ternary_pinn_models(manifest: &QappManifest) -> bool {
-    manifest.capability_claims.supports_ternary_quantization &&
-    !manifest.capability_claims.required_pinn_models.is_empty()
+    manifest.capability_claims.supports_ternary_quantization
+        && !manifest.capability_claims.required_pinn_models.is_empty()
 }
 
 /// Get PINN model memory requirements from manifest
@@ -364,28 +371,38 @@ pub fn validate_pinn_compatibility(
     model_config: &crate::qapp_registry::QappPinnModelConfig,
 ) -> Result<(), QappInstallError> {
     // Check if app supports ternary quantization when model requires it
-    if model_config.uses_ternary_quantization && !app_manifest.capability_claims.supports_ternary_quantization {
+    if model_config.uses_ternary_quantization
+        && !app_manifest.capability_claims.supports_ternary_quantization
+    {
         return Err(QappInstallError::IncompatiblePinnModel(
-            "App does not support ternary quantization required by model".to_string()
+            "App does not support ternary quantization required by model".to_string(),
         ));
     }
 
     // Check memory requirements
     if let Some(app_memory_limit) = get_pinn_memory_requirements(app_manifest) {
         if model_config.memory_requirement_mb > app_memory_limit {
-            return Err(QappInstallError::IncompatiblePinnModel(
-                format!("Model requires {}MB, app limit is {}MB", 
-                        model_config.memory_requirement_mb, app_memory_limit)
-            ));
+            return Err(QappInstallError::IncompatiblePinnModel(format!(
+                "Model requires {}MB, app limit is {}MB",
+                model_config.memory_requirement_mb, app_memory_limit
+            )));
         }
     }
 
     // Check required models
-    if !app_manifest.capability_claims.required_pinn_models.is_empty() &&
-       !app_manifest.capability_claims.required_pinn_models.contains(&model_config.model_name) {
-        return Err(QappInstallError::IncompatiblePinnModel(
-            format!("Model '{}' not in app's required models list", model_config.model_name)
-        ));
+    if !app_manifest
+        .capability_claims
+        .required_pinn_models
+        .is_empty()
+        && !app_manifest
+            .capability_claims
+            .required_pinn_models
+            .contains(&model_config.model_name)
+    {
+        return Err(QappInstallError::IncompatiblePinnModel(format!(
+            "Model '{}' not in app's required models list",
+            model_config.model_name
+        )));
     }
 
     Ok(())

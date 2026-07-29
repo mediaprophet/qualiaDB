@@ -60,11 +60,17 @@ impl Library {
                 continue;
             }
             match HmcContainer::open(p) {
-                Ok(c) => entries.push(Entry { path: p.to_path_buf(), manifest: c.manifest().clone() }),
+                Ok(c) => entries.push(Entry {
+                    path: p.to_path_buf(),
+                    manifest: c.manifest().clone(),
+                }),
                 Err(err) => eprintln!("[library] skip {}: {err}", p.display()),
             }
         }
-        Ok(Library { root: root.to_path_buf(), entries })
+        Ok(Library {
+            root: root.to_path_buf(),
+            entries,
+        })
     }
 
     pub fn len(&self) -> usize {
@@ -81,7 +87,10 @@ impl Library {
         use std::collections::BTreeMap;
         let mut by_id: BTreeMap<String, Vec<PathBuf>> = BTreeMap::new();
         for e in &self.entries {
-            by_id.entry(e.manifest.doc_id.clone()).or_default().push(e.path.clone());
+            by_id
+                .entry(e.manifest.doc_id.clone())
+                .or_default()
+                .push(e.path.clone());
         }
         by_id.into_iter().filter(|(_, v)| v.len() > 1).collect()
     }
@@ -99,7 +108,12 @@ impl Library {
         let texts: Vec<String> = String::from_utf8_lossy(&chunks_raw)
             .lines()
             .filter_map(|l| serde_json::from_str::<serde_json::Value>(l).ok())
-            .map(|v| v.get("text").and_then(|t| t.as_str()).unwrap_or("").to_string())
+            .map(|v| {
+                v.get("text")
+                    .and_then(|t| t.as_str())
+                    .unwrap_or("")
+                    .to_string()
+            })
             .collect();
         Some((texts, vectors))
     }
@@ -122,7 +136,10 @@ impl Library {
         let cents: Vec<(String, Vec<f32>)> = self
             .entries
             .iter()
-            .filter_map(|e| self.document_centroid(e).map(|c| (e.manifest.doc_id.clone(), c)))
+            .filter_map(|e| {
+                self.document_centroid(e)
+                    .map(|c| (e.manifest.doc_id.clone(), c))
+            })
             .collect();
         let mut out = Vec::new();
         for i in 0..cents.len() {
@@ -142,7 +159,9 @@ impl Library {
     pub fn search(&self, query: &[f32], k: usize) -> Vec<Hit> {
         let mut hits: Vec<Hit> = Vec::new();
         for e in &self.entries {
-            let Some((texts, vectors)) = self.load_vectors(e) else { continue };
+            let Some((texts, vectors)) = self.load_vectors(e) else {
+                continue;
+            };
             for (i, v) in vectors.iter().enumerate() {
                 let score = cosine(query, v);
                 let snippet = texts.get(i).map(|t| snippet(t)).unwrap_or_default();
@@ -166,9 +185,15 @@ impl Library {
     pub fn novelty_ranking(&self, known: &[Vec<f32>]) -> Vec<(String, String, f32)> {
         let mut out = Vec::new();
         for e in &self.entries {
-            let Some(c) = self.document_centroid(e) else { continue };
+            let Some(c) = self.document_centroid(e) else {
+                continue;
+            };
             let max_sim = known.iter().map(|k| cosine(&c, k)).fold(0.0f32, f32::max);
-            out.push((e.manifest.doc_id.clone(), e.title().to_string(), 1.0 - max_sim));
+            out.push((
+                e.manifest.doc_id.clone(),
+                e.title().to_string(),
+                1.0 - max_sim,
+            ));
         }
         out.sort_by(|a, b| b.2.total_cmp(&a.2));
         out

@@ -1,9 +1,7 @@
-
 use super::policy::PolicyDecisionService;
 use super::vault::VaultService;
 use ed25519_dalek::SigningKey;
 use wellfare_core::projects::Contribution;
-
 
 const QAPP_SHELL: &str = "wellfair-shell";
 const QAPP_LIFE: &str = "wellfair-life";
@@ -29,7 +27,11 @@ const SOURCE_GUARDIANSHIP: &str = "wellfair:guardianship";
 /// Reconstruct a `Contribution` from a stored/transmitted summary JSON. The record id (which
 /// is the dedup anchor for obligation derivation) is supplied by the caller — the journal row
 /// id locally, or the sync operation's `record_id` for an inbound op.
-fn contribution_from_summary(id: String, summary: &str, occurred_at_unix: u32) -> Option<Contribution> {
+fn contribution_from_summary(
+    id: String,
+    summary: &str,
+    occurred_at_unix: u32,
+) -> Option<Contribution> {
     let v: serde_json::Value = serde_json::from_str(summary).ok()?;
     Some(Contribution {
         id,
@@ -44,7 +46,10 @@ fn contribution_from_summary(id: String, summary: &str, occurred_at_unix: u32) -
             .unwrap_or_default()
             .to_string(),
         description: String::new(),
-        effort_minutes: v.get("effort_minutes").and_then(|x| x.as_u64()).unwrap_or(0) as u32,
+        effort_minutes: v
+            .get("effort_minutes")
+            .and_then(|x| x.as_u64())
+            .unwrap_or(0) as u32,
         capital_cents: v.get("capital_cents").and_then(|x| x.as_u64()).unwrap_or(0),
         roi_multiplier: v
             .get("roi_multiplier")
@@ -151,7 +156,9 @@ pub fn parse_anatomy_model(s: &str) -> Result<wellfare_core::anatomy::AnatomyMod
     match s.trim().to_ascii_lowercase().as_str() {
         "male" | "m" | "xy" => Ok(wellfare_core::anatomy::AnatomyModel::Male),
         "female" | "f" | "xx" => Ok(wellfare_core::anatomy::AnatomyModel::Female),
-        _ => Err(format!("unknown anatomy model '{s}' (expected male/female)")),
+        _ => Err(format!(
+            "unknown anatomy model '{s}' (expected male/female)"
+        )),
     }
 }
 
@@ -165,26 +172,25 @@ pub struct WebizenHostApi {
     storage_root: std::path::PathBuf,
 }
 
-mod host_core;
-mod anatomy;
 mod accountability;
+mod anatomy;
+mod host_core;
 mod library;
 /// Vault-free hypermedia library reads (storage path; no Sanctuary HostApi required).
 pub use library::{
     library_stats_at, list_library_section_at, query_library_faceted_at, search_library_at,
     search_library_text_at, search_library_time_at,
 };
-mod encryption;
-mod disclosure;
-mod sanctuary_vault;
-mod pwa;
-mod coop;
-mod sync;
-mod backup_clinical;
-mod welfare_work;
 mod agency;
+mod backup_clinical;
+mod coop;
+mod disclosure;
+mod encryption;
 mod guardianship;
+mod pwa;
+mod sanctuary_vault;
+mod sync;
 mod types;
+mod welfare_work;
 
 pub use types::*;
-

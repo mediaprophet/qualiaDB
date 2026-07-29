@@ -58,7 +58,7 @@ pub fn resample_sinc(
     // Sinc time-scale: 1.0 when upsampling (full band), < 1.0 when downsampling
     // (bandwidth compressed to the destination Nyquist).
     let filt_scale = (2.0 * antialias_cutoff(src_rate, dst_rate)) as f64; // = min(1, dst/src)
-    // Source samples per output sample (step through the input).
+                                                                          // Source samples per output sample (step through the input).
     let step = src_rate as f64 / dst_rate as f64;
     // Kernel support half-width in *source* samples (widens on downsample).
     let radius = half_taps as f64 / filt_scale;

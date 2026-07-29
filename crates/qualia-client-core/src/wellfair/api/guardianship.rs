@@ -1,29 +1,21 @@
 //! Guardianship + transparency + disclosure
 
-
-use super::super::host_state::{
-    GuardianshipProposalView,
-    SubmitOutcome,
-};
+use super::super::host_state::{GuardianshipProposalView, SubmitOutcome};
 use super::super::journal::JournalEntry;
-use super::super::policy::DecisionResult;
-use wellfare_core::live_share::{LiveSectionRequest, UsageAgreement};
-use wellfare_core::conditions::{
-    build_condition_envelope, condition_summary,
-};
 use super::super::live_share::{
-    append_live_share_journal, live_share_decision_journal_entry,
-    live_share_request_journal_entry, sanctuary_allows_classified_projection, validate_live_share_decision,
-    LiveShareStore,
+    append_live_share_journal, live_share_decision_journal_entry, live_share_request_journal_entry,
+    sanctuary_allows_classified_projection, validate_live_share_decision, LiveShareStore,
 };
+use super::super::policy::DecisionResult;
 use super::super::sanctuary::load_prefs as load_sanctuary_prefs;
+use wellfare_core::conditions::{build_condition_envelope, condition_summary};
 use wellfare_core::guardianship::{
     build_proposal_envelope, build_vote_envelope, derive_status, parse_proposal_summary,
     parse_vote_summary, proposal_summary, vote_summary, GuardianshipProposal, GuardianshipVote,
     ProposalState,
 };
+use wellfare_core::live_share::{LiveSectionRequest, UsageAgreement};
 use wellfare_core::record::RecordEnvelope;
-
 
 use super::*;
 
@@ -112,7 +104,9 @@ impl WebizenHostApi {
         let mut proposals = Vec::new();
         let mut votes = Vec::new();
         for row in &rows {
-            let Some(ref summary) = row.summary else { continue };
+            let Some(ref summary) = row.summary else {
+                continue;
+            };
             match row.kind.as_str() {
                 "guardianship_proposal" => {
                     if let Some(p) = parse_proposal_summary(summary) {
@@ -182,10 +176,7 @@ impl WebizenHostApi {
         if status.state == ProposalState::Ratified && !committed {
             if let Some(escrowed) = proposal.escrowed_envelope() {
                 let decision = DecisionResult::Permit {
-                    obligations: vec![
-                        "guardianship_ratified".into(),
-                        "emit_wal_receipt".into(),
-                    ],
+                    obligations: vec!["guardianship_ratified".into(), "emit_wal_receipt".into()],
                 };
                 // Already M-of-N approved: commit through the signed path, bypassing re-escrow.
                 self.commit_permitted(
@@ -205,19 +196,21 @@ impl WebizenHostApi {
         ))
     }
 
-    pub(crate) fn find_proposal(&self, proposal_id: &str) -> Result<Option<GuardianshipProposal>, String> {
-        let rows = self.list_journal_by_kind("guardianship_proposal", super::super::journal::MAX_LIST)?;
+    pub(crate) fn find_proposal(
+        &self,
+        proposal_id: &str,
+    ) -> Result<Option<GuardianshipProposal>, String> {
+        let rows =
+            self.list_journal_by_kind("guardianship_proposal", super::super::journal::MAX_LIST)?;
         Ok(rows
             .into_iter()
             .filter_map(|r| r.summary.as_deref().and_then(parse_proposal_summary))
             .find(|p| p.id == proposal_id))
     }
 
-    fn list_guardianship_votes(
-        &self,
-        proposal_id: &str,
-    ) -> Result<Vec<GuardianshipVote>, String> {
-        let rows = self.list_journal_by_kind("guardianship_vote", super::super::journal::MAX_LIST)?;
+    fn list_guardianship_votes(&self, proposal_id: &str) -> Result<Vec<GuardianshipVote>, String> {
+        let rows =
+            self.list_journal_by_kind("guardianship_vote", super::super::journal::MAX_LIST)?;
         Ok(rows
             .into_iter()
             .filter_map(|r| r.summary.as_deref().and_then(parse_vote_summary))
@@ -225,10 +218,7 @@ impl WebizenHostApi {
             .collect())
     }
 
-    fn escrowed_already_committed(
-        &self,
-        proposal: &GuardianshipProposal,
-    ) -> Result<bool, String> {
+    fn escrowed_already_committed(&self, proposal: &GuardianshipProposal) -> Result<bool, String> {
         let Some(escrowed_id) = proposal.escrowed_record_id() else {
             return Ok(false);
         };
@@ -283,13 +273,7 @@ impl WebizenHostApi {
             )
         };
         let updated = store
-            .decide(
-                request_id,
-                approved,
-                projection_kinds,
-                now,
-                deny.as_deref(),
-            )
+            .decide(request_id, approved, projection_kinds, now, deny.as_deref())
             .map_err(|e| e.to_string())?;
         let committed_unix = now as u32;
         let entry = live_share_decision_journal_entry(&updated, committed_unix);

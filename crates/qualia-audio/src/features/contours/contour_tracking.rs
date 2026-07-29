@@ -149,8 +149,7 @@ mod tests {
         bins[2 * max_p] = 102.0; // f2
         let counts = [1usize, 1, 1];
         let mut ids = vec![0i32; n * max_p];
-        let n_contours =
-            track_contours(&bins, &counts, n, max_p, 3.0, &mut ids).expect("track");
+        let n_contours = track_contours(&bins, &counts, n, max_p, 3.0, &mut ids).expect("track");
         assert_eq!(n_contours, 1);
         assert_eq!(ids[0], 0);
         assert_eq!(ids[max_p], 0);
@@ -165,8 +164,7 @@ mod tests {
         let bins = [100.0f32, 200.0, 201.0]; // big jump at frame 1
         let counts = [1usize, 1, 1];
         let mut ids = vec![0i32; n];
-        let n_contours =
-            track_contours(&bins, &counts, n, max_p, 3.0, &mut ids).expect("track");
+        let n_contours = track_contours(&bins, &counts, n, max_p, 3.0, &mut ids).expect("track");
         assert_eq!(n_contours, 2);
         assert_eq!(ids[0], 0);
         assert_eq!(ids[1], 1);
@@ -186,8 +184,7 @@ mod tests {
         }
         let counts = [2usize, 2, 2];
         let mut ids = vec![0i32; n * max_p];
-        let n_contours =
-            track_contours(&bins, &counts, n, max_p, 3.0, &mut ids).expect("track");
+        let n_contours = track_contours(&bins, &counts, n, max_p, 3.0, &mut ids).expect("track");
         assert_eq!(n_contours, 2);
         // Each voice keeps a stable contour id across frames.
         assert_eq!(ids[0], ids[max_p]);

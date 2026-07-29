@@ -37,4 +37,3 @@ pub fn get_delegation_rules() -> Result<Vec<DelegationRule>, String> {
 pub fn add_delegation_rule(rule: DelegationRule) -> Result<(), String> {
     api::add_delegation_rule(rule)
 }
-

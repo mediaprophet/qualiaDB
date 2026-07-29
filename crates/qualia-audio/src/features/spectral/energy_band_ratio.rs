@@ -45,7 +45,7 @@ mod tests {
         let mut mag = [0.0f32; 9];
         mag[1] = 2.0; // 500 Hz  (low band)  -> E = 4
         mag[6] = 4.0; // 3000 Hz (high band) -> E = 16
-        // high/low = 16/4 = 4.0
+                      // high/low = 16/4 = 4.0
         let r = energy_band_ratio(&mag, sr, 2500.0, 3500.0, 250.0, 750.0).expect("ratio");
         assert!((r - 4.0).abs() < 1e-4, "ratio={r}");
     }

@@ -77,9 +77,15 @@ mod tests {
         assert_eq!(meta.bytes, 128);
 
         let small = vec![0u8; 10];
-        assert_eq!(validate_litert_bytes(&small), Err(LiteRtLoadError::TooSmall));
+        assert_eq!(
+            validate_litert_bytes(&small),
+            Err(LiteRtLoadError::TooSmall)
+        );
 
         let invalid = vec![0u8; 128];
-        assert_eq!(validate_litert_bytes(&invalid), Err(LiteRtLoadError::NotLiteRtLike));
+        assert_eq!(
+            validate_litert_bytes(&invalid),
+            Err(LiteRtLoadError::NotLiteRtLike)
+        );
     }
 }

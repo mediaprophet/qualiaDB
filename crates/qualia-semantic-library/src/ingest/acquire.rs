@@ -62,7 +62,10 @@ pub fn detect_kind(path: &Path, bytes: &[u8]) -> SourceKind {
                 SourceKind::Html
             } else if bytes.is_empty() {
                 SourceKind::Unknown
-            } else if head.iter().all(|&b| b == b'\n' || b == b'\r' || b == b'\t' || b >= 0x20) {
+            } else if head
+                .iter()
+                .all(|&b| b == b'\n' || b == b'\r' || b == b'\t' || b >= 0x20)
+            {
                 SourceKind::Text
             } else {
                 SourceKind::Unknown
@@ -92,5 +95,9 @@ pub fn acquire(path: &Path) -> std::io::Result<Acquired> {
         title,
         page_count: 0,
     };
-    Ok(Acquired { bytes, kind, source })
+    Ok(Acquired {
+        bytes,
+        kind,
+        source,
+    })
 }

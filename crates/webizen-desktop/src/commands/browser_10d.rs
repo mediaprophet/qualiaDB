@@ -2,7 +2,6 @@
 
 #![allow(non_snake_case)]
 
-
 // ── 10D Container Browser commands ──────────────────────────────────────────
 
 #[derive(serde::Serialize)]
@@ -73,9 +72,8 @@ pub fn browse_10d_containers(_app: tauri::AppHandle) -> Result<Vec<TenDContainer
                 let (section_count, has_mesh, has_tensor_nodes, has_provenance) =
                     if let Ok(bytes) = fs::read(&path) {
                         if let Ok(header) = Container10dHeader::parse(&bytes) {
-                            let descs = qualia_core_db::container_10d::parse_section_table(
-                                &bytes, &header,
-                            );
+                            let descs =
+                                qualia_core_db::container_10d::parse_section_table(&bytes, &header);
                             let (mut hm, mut ht, mut hp) = (false, false, false);
                             if let Ok(ref descs) = descs {
                                 for d in descs.iter() {
@@ -140,7 +138,11 @@ pub fn browse_10d_containers(_app: tauri::AppHandle) -> Result<Vec<TenDContainer
     // Also scan the assets directory if it exists
     let assets_dir = std::path::Path::new(&storage_root).join("assets");
     if assets_dir.exists() {
-        scan_dir(&assets_dir, std::path::Path::new(&storage_root), &mut entries);
+        scan_dir(
+            &assets_dir,
+            std::path::Path::new(&storage_root),
+            &mut entries,
+        );
     }
 
     // Vision recon continuum writes under vision_geometry/
@@ -153,14 +155,18 @@ pub fn browse_10d_containers(_app: tauri::AppHandle) -> Result<Vec<TenDContainer
         );
     }
 
-    entries.sort_by(|a, b| a.category.cmp(&b.category).then(a.filename.cmp(&b.filename)));
+    entries.sort_by(|a, b| {
+        a.category
+            .cmp(&b.category)
+            .then(a.filename.cmp(&b.filename))
+    });
     Ok(entries)
 }
 
 /// F1 — list sealed vision `.10d` assets only (under vision_geometry/).
 #[tauri::command]
-pub fn browse_vision_10d() -> Result<Vec<qualia_client_core::vision_10d_browse::Vision10dEntry>, String>
-{
+pub fn browse_vision_10d(
+) -> Result<Vec<qualia_client_core::vision_10d_browse::Vision10dEntry>, String> {
     let storage_root = qualia_client_core::state::dirs_default_path();
     qualia_client_core::vision_10d_browse::list_vision_10d_containers(std::path::Path::new(
         &storage_root,
@@ -209,35 +215,24 @@ pub fn scrub_vision_10d_paint(
     } else {
         Vision10dAccess::BrowseAllowUnattested
     };
-    let (_mesh, loaded) = load_vision_10d_path_with_access(
-        std::path::Path::new(&storage_root),
-        &path,
-        access,
-    )?;
-    Ok(temporal_scrub_paint_vec(
-        &loaded.paint,
-        t_slice,
-        t_window,
-    ))
+    let (_mesh, loaded) =
+        load_vision_10d_path_with_access(std::path::Path::new(&storage_root), &path, access)?;
+    Ok(temporal_scrub_paint_vec(&loaded.paint, t_slice, t_window))
 }
 
 /// Inspect a single .10d container file in detail.
 #[tauri::command]
 pub fn inspect_10d_container(path: String) -> Result<TenDContainerInspection, String> {
     use qualia_core_db::container_10d::{
-        header::Container10dHeader,
-        section::SectionType,
-        mesh_section, provenance_section,
+        header::Container10dHeader, mesh_section, provenance_section, section::SectionType,
     };
 
     let storage_root = qualia_client_core::state::dirs_default_path();
     let full_path = std::path::Path::new(&storage_root).join(&path);
-    let bytes = std::fs::read(&full_path)
-        .map_err(|e| format!("Failed to read {path}: {e}"))?;
+    let bytes = std::fs::read(&full_path).map_err(|e| format!("Failed to read {path}: {e}"))?;
 
     let mut bytes_mut = bytes.clone();
-    let header = Container10dHeader::parse(&bytes_mut)
-        .map_err(|e| format!("Header parse: {e}"))?;
+    let header = Container10dHeader::parse(&bytes_mut).map_err(|e| format!("Header parse: {e}"))?;
 
     let crc_valid = qualia_core_db::container_10d::verify_whole_file_crc32c(&mut bytes_mut).is_ok();
 
@@ -277,9 +272,8 @@ pub fn inspect_10d_container(path: String) -> Result<TenDContainerInspection, St
                 }
                 SectionType::ProvenanceSidecar => {
                     if let Ok(view) = provenance_section::decode_provenance_section(payload) {
-                        provenance_source = Some(
-                            String::from_utf8_lossy(view.source_bytes()).to_string(),
-                        );
+                        provenance_source =
+                            Some(String::from_utf8_lossy(view.source_bytes()).to_string());
                         provenance_licence = Some(view.licence().to_string());
                         provenance_timestamp = Some(view.timestamp_epoch_s());
                     }
@@ -321,11 +315,11 @@ pub async fn open_10d_file_picker(app: tauri::AppHandle) -> Result<Option<String
         .file()
         .add_filter("10D Container", &["10d"])
         .pick_file(move |path| {
-            let result = path.and_then(|p| p.into_path().ok()).map(|p| p.to_string_lossy().to_string());
+            let result = path
+                .and_then(|p| p.into_path().ok())
+                .map(|p| p.to_string_lossy().to_string());
             let _ = tx.send(result);
         });
 
-    rx.recv()
-        .map_err(|e| format!("File picker channel: {e}"))
+    rx.recv().map_err(|e| format!("File picker channel: {e}"))
 }
-

@@ -4,9 +4,9 @@
 //! (not a replacement for WellFair). Canvas state is reached via [`crate::wellfair::api::WebizenHostApi`].
 
 pub mod api;
+pub mod asset_pipeline;
 pub mod flagship_worlds;
 pub mod layers;
-pub mod asset_pipeline;
 
 pub use crate::canvas_state;
 pub use crate::canvas_store;

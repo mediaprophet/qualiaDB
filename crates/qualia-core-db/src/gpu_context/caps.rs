@@ -5,6 +5,7 @@
 //! and future feature negotiation can agree on the same facts.
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[cfg(not(target_arch = "wasm32"))]
 pub struct GpuFeatureCaps {
     pub timestamp_query: bool,
     pub timestamp_query_inside_passes: bool,
@@ -18,6 +19,7 @@ pub struct GpuFeatureCaps {
     pub ray_query: bool,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl GpuFeatureCaps {
     pub fn from_features(features: wgpu::Features) -> Self {
         Self {
@@ -75,6 +77,7 @@ pub fn experimental_features_allowed() -> bool {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[cfg(not(target_arch = "wasm32"))]
 pub struct GpuLimitCaps {
     pub max_buffer_size: u64,
     pub max_storage_buffer_binding_size: u64,
@@ -84,6 +87,7 @@ pub struct GpuLimitCaps {
     pub max_compute_workgroups_per_dimension: u32,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl GpuLimitCaps {
     pub fn from_limits(limits: &wgpu::Limits) -> Self {
         Self {
@@ -98,6 +102,7 @@ impl GpuLimitCaps {
 }
 
 #[derive(Debug, Clone)]
+#[cfg(not(target_arch = "wasm32"))]
 pub struct GpuAdapterCaps {
     pub name: String,
     pub backend: wgpu::Backend,
@@ -113,6 +118,7 @@ pub struct GpuAdapterCaps {
     pub limits: GpuLimitCaps,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl GpuAdapterCaps {
     pub fn from_adapter(adapter: &wgpu::Adapter) -> Self {
         let info = adapter.get_info();
@@ -188,6 +194,7 @@ impl GpuAdapterCaps {
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 fn push_flag(out: &mut String, label: &str, enabled: bool) {
     if !out.is_empty() {
         out.push(' ');

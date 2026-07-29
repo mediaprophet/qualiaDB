@@ -2,9 +2,6 @@
 
 #![allow(non_snake_case)]
 
-
-
-
 pub struct PrerequisiteStatus {
     pub platform_requires_check: bool,
     pub webview2_ready: bool,
@@ -35,4 +32,3 @@ pub fn configure_webview2_runtime() -> bool {
 pub async fn install_prerequisite(kind: String) -> Result<(), String> {
     crate::prerequisites::install_prerequisite(kind).await
 }
-

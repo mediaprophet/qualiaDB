@@ -70,4 +70,3 @@ pub fn wellfair_diagnostics(app: AppHandle) -> Result<String, String> {
         serde_json::to_string(&host.diagnostics_report()?).map_err(|e| e.to_string())
     })?
 }
-

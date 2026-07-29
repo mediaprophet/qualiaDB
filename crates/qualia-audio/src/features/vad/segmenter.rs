@@ -20,8 +20,8 @@
 //! EPISTEMIC RULE: output segments are *proposals*. Frames at or below the
 //! adaptive floor stay unvoiced — silence is never coerced into a segment.
 
-use crate::features::vad::frame_vad::frame_is_voiced;
 use crate::features::energy::frame_energy;
+use crate::features::vad::frame_vad::frame_is_voiced;
 use crate::features::vad::noise_estimate::noise_floor_min_stat;
 use crate::types::AudioError;
 
@@ -142,7 +142,12 @@ pub fn segment_voiced(
 
     // Flush an open segment at end-of-signal (closes at the last frame).
     if in_speech {
-        write_segment(out_segments, &mut count, seg_start as u32, num_frames as u32)?;
+        write_segment(
+            out_segments,
+            &mut count,
+            seg_start as u32,
+            num_frames as u32,
+        )?;
     }
 
     Ok(count)
@@ -184,7 +189,11 @@ mod tests {
     }
 
     fn frames_for(len: usize) -> usize {
-        if len < FRAME { 0 } else { (len - FRAME) / HOP + 1 }
+        if len < FRAME {
+            0
+        } else {
+            (len - FRAME) / HOP + 1
+        }
     }
 
     #[test]
@@ -194,7 +203,12 @@ mod tests {
         let mut segs = [(0u32, 0u32); 8];
         let c = segment_voiced(&sig, FRAME, HOP, SR, &mut segs).expect("segment");
 
-        assert_eq!(c, 1, "expected exactly one voiced segment, got {c}: {:?}", &segs[..c]);
+        assert_eq!(
+            c,
+            1,
+            "expected exactly one voiced segment, got {c}: {:?}",
+            &segs[..c]
+        );
         let (start, end) = segs[0];
 
         // Expected onset/offset in frame indices (a frame at sample s spans
@@ -212,8 +226,14 @@ mod tests {
             "end {end} should reach offset {offset_frame} and exclude trailing silence (n={n_frames})"
         );
         // The burst body is inside the segment; lead/trail silence frames are not.
-        assert!(start < onset_frame + 2 && end > offset_frame - 2, "segment must cover the burst");
-        assert!(start > 2, "early silence frame 2 must be outside the segment");
+        assert!(
+            start < onset_frame + 2 && end > offset_frame - 2,
+            "segment must cover the burst"
+        );
+        assert!(
+            start > 2,
+            "early silence frame 2 must be outside the segment"
+        );
     }
 
     #[test]
@@ -227,7 +247,12 @@ mod tests {
         }
         let mut segs = [(0u32, 0u32); 8];
         let c = segment_voiced(&sig, FRAME, HOP, SR, &mut segs).expect("segment");
-        assert_eq!(c, 1, "a 1-frame dropout must not split the burst, got {c}: {:?}", &segs[..c]);
+        assert_eq!(
+            c,
+            1,
+            "a 1-frame dropout must not split the burst, got {c}: {:?}",
+            &segs[..c]
+        );
     }
 
     #[test]

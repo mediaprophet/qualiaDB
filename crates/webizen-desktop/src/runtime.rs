@@ -273,8 +273,8 @@ pub fn spawn_runtime(
                 let next_fingerprint = ledger_metrics_thread.fingerprint();
                 if next_fingerprint != last_ledger_fingerprint {
                     last_ledger_fingerprint = next_fingerprint;
-                    let _ = app_handle_thread
-                        .emit(LEDGER_EVENT_NAME, ledger_metrics_thread.snapshot());
+                    let _ =
+                        app_handle_thread.emit(LEDGER_EVENT_NAME, ledger_metrics_thread.snapshot());
                 }
 
                 thread::sleep(DEFAULT_LOOP_SLEEP);

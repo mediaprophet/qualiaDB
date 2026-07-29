@@ -120,14 +120,18 @@ fn call_tcp(host: &str, port: u16, req: &serde_json::Value) -> Result<serde_json
     let mut writer = stream.try_clone().map_err(|e| e.to_string())?;
     let mut reader = BufReader::new(stream);
     let line = serde_json::to_string(req).map_err(|e| e.to_string())?;
-    writer.write_all(line.as_bytes()).map_err(|e| e.to_string())?;
+    writer
+        .write_all(line.as_bytes())
+        .map_err(|e| e.to_string())?;
     writer.write_all(b"\n").map_err(|e| e.to_string())?;
     writer.flush().ok();
     // Read JSON-RPC response lines until one carries our result/error (skip any notifications).
     let mut buf = String::new();
     for _ in 0..100 {
         buf.clear();
-        let n = reader.read_line(&mut buf).map_err(|e| format!("read: {e}"))?;
+        let n = reader
+            .read_line(&mut buf)
+            .map_err(|e| format!("read: {e}"))?;
         if n == 0 {
             break;
         }
@@ -160,7 +164,9 @@ fn call_stdio(
     {
         let stdin = child.stdin.as_mut().ok_or("no stdin on MCP child")?;
         let line = serde_json::to_string(req).map_err(|e| e.to_string())?;
-        stdin.write_all(line.as_bytes()).map_err(|e| e.to_string())?;
+        stdin
+            .write_all(line.as_bytes())
+            .map_err(|e| e.to_string())?;
         stdin.write_all(b"\n").map_err(|e| e.to_string())?;
         stdin.flush().ok();
     }
@@ -170,7 +176,9 @@ fn call_stdio(
     let mut found = None;
     for _ in 0..200 {
         buf.clear();
-        let n = reader.read_line(&mut buf).map_err(|e| format!("read: {e}"))?;
+        let n = reader
+            .read_line(&mut buf)
+            .map_err(|e| format!("read: {e}"))?;
         if n == 0 {
             break;
         }

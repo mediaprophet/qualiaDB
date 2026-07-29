@@ -12,7 +12,7 @@ pub(super) fn paint_background(
     let gradient = ctx.create_linear_gradient(0.0, 0.0, w, h);
     let _ = gradient.add_color_stop(0.0, "#05070b");
     let _ = gradient.add_color_stop(1.0, "#000000");
-    ctx.set_fill_style(&JsValue::from(gradient));
+    ctx.set_fill_style_canvas_gradient(&gradient);
     ctx.fill_rect(0.0, 0.0, w, h);
 }
 
@@ -42,7 +42,7 @@ pub(super) fn paint_ambient_field(
         let sigma = ((fi * 0.017 + telemetry.spectral_shift as f64) % 1.0) as f32;
         let (r, g, b) = sigma_to_display_rgb(sigma);
         let alpha = 0.08 + (fi * 0.001 + heat).sin().abs() * 0.35;
-        ctx.set_fill_style(&JsValue::from_str(&format!("rgba({r},{g},{b},{alpha:.2})")));
+        ctx.set_fill_style_str(&format!("rgba({r},{g},{b},{alpha:.2})"));
         ctx.begin_path();
         let _ = ctx.arc(
             px,
@@ -124,19 +124,16 @@ pub(super) fn paint_tensor_projection(
                 DisplayMode::Solid => node.alpha * 0.85,
                 _ => node.alpha,
             };
-            ctx.set_fill_style(&JsValue::from_str(&format!(
+            ctx.set_fill_style_str(&format!(
                 "rgba({},{},{},{fill_alpha:.2})",
                 node.r, node.g, node.b
-            )));
+            ));
             ctx.begin_path();
             let _ = ctx.arc(node.px, node.py, node.radius, 0.0, std::f64::consts::TAU);
             ctx.fill();
 
             if node.epistemic_ring {
-                ctx.set_stroke_style(&JsValue::from_str(&format!(
-                    "rgba({},{},{},0.55)",
-                    node.r, node.g, node.b
-                )));
+                ctx.set_stroke_style_str(&format!("rgba({},{},{},0.55)", node.r, node.g, node.b));
                 ctx.begin_path();
                 let _ = ctx.arc(
                     node.px,
@@ -157,10 +154,7 @@ pub(super) fn stroke_segment(
     b: ProjectedNode,
     alpha: f32,
 ) {
-    ctx.set_stroke_style(&JsValue::from_str(&format!(
-        "rgba({},{},{},{alpha:.2})",
-        a.r, a.g, a.b
-    )));
+    ctx.set_stroke_style_str(&format!("rgba({},{},{},{alpha:.2})", a.r, a.g, a.b));
     ctx.begin_path();
     ctx.move_to(a.px, a.py);
     ctx.line_to(b.px, b.py);
@@ -184,7 +178,7 @@ pub(super) fn paint_hud(
     portal: &QualiaPortal,
     mode: OperationalMode,
 ) {
-    ctx.set_fill_style(&JsValue::from_str("#67e8f9"));
+    ctx.set_fill_style_str("#67e8f9");
     ctx.set_font("14px Inter, system-ui, sans-serif");
     let tier_label = match portal.tier {
         2 => "T2 · Phenomenal",

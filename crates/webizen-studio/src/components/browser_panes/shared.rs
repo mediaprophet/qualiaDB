@@ -69,22 +69,27 @@ pub fn apply_cookie_summary(
         .and_then(|x| x.as_u64())
         .map(|n| n.to_string())
         .unwrap_or_else(|| "—".into());
-    let source = v
-        .get("source")
-        .and_then(|x| x.as_str())
-        .unwrap_or("—");
+    let source = v.get("source").and_then(|x| x.as_str()).unwrap_or("—");
     let note = v
         .get("coverage_note")
         .and_then(|x| x.as_str())
         .unwrap_or("Best-effort jar visibility — not complete Chromium parity.");
     let fp: Vec<serde_json::Value> = cookies
         .iter()
-        .filter(|c| !c.get("third_party").and_then(|x| x.as_bool()).unwrap_or(false))
+        .filter(|c| {
+            !c.get("third_party")
+                .and_then(|x| x.as_bool())
+                .unwrap_or(false)
+        })
         .cloned()
         .collect();
     let tp: Vec<serde_json::Value> = cookies
         .iter()
-        .filter(|c| c.get("third_party").and_then(|x| x.as_bool()).unwrap_or(false))
+        .filter(|c| {
+            c.get("third_party")
+                .and_then(|x| x.as_bool())
+                .unwrap_or(false)
+        })
         .cloned()
         .collect();
     summary_text.set(format!(
@@ -200,4 +205,3 @@ pub async fn navigate_native(url: &str) -> Result<String, String> {
         }
     }
 }
-

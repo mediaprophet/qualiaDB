@@ -2,9 +2,9 @@
 
 #![allow(non_snake_case)]
 
-use super::*;
-use super::qapp_telemetry::{qapp_slug, QappAnalysisRequest};
 use super::qapp_host::qapp_analyze;
+use super::qapp_telemetry::{qapp_slug, QappAnalysisRequest};
+use super::*;
 use tauri::command;
 
 // ── Standalone QApp Export (WASM + QR + LAN server) ──────────────────────────────
@@ -132,4 +132,3 @@ engine.render_to_canvas(document.getElementById('viewport'));
         note,
     })
 }
-

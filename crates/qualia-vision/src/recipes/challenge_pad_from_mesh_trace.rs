@@ -4,12 +4,12 @@
 //! Delegates packing + evaluation to `evaluate_pad_from_mediapipe_trace`, or
 //! directly to `evaluate_landmark_pad` when frames are already packed.
 
+use crate::biosense::liveness::BlendRow;
 use crate::biosense::{
     evaluate_landmark_pad, evaluate_pad_from_mediapipe_trace, BiosenseConsent,
     CameraStreamAttestation, ChallengeKind, LandmarkBufferLayout, LandmarkFrame, PadResult,
     PadThresholds, MAX_MEDIAPIPE_PAD_FRAMES,
 };
-use crate::biosense::liveness::BlendRow;
 use crate::cv::error::CvError;
 
 /// Challenge PAD from a MediaPipe-layout flat landmark trajectory.
@@ -76,14 +76,14 @@ pub fn challenge_pad_from_landmark_frames(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::biosense::{
-        landmarks_from_normalized, pack_landmark_frame, BiosensePurpose, MEDIAPIPE_FACE_MESH_COUNT,
-        PAD_LANDMARK_IDS, PadLandmarkId, PadReason,
-    };
+    use crate::biosense::liveness::landmark_types::Landmark2;
     use crate::biosense::liveness::profile_asymmetry_ratio::{
         synthetic_3d_par_frame, synthetic_flat_par_frame,
     };
-    use crate::biosense::liveness::landmark_types::Landmark2;
+    use crate::biosense::{
+        landmarks_from_normalized, pack_landmark_frame, BiosensePurpose, PadLandmarkId, PadReason,
+        MEDIAPIPE_FACE_MESH_COUNT, PAD_LANDMARK_IDS,
+    };
 
     fn security_consent() -> BiosenseConsent {
         BiosenseConsent::grant_security_template(42)

@@ -297,7 +297,7 @@ pub fn spawn_loopback_server(
                 let app = Router::new()
                     // UI & Static
                     .fallback_service(ServeDir::new(ui_static_dir).precompressed_gzip())
-                    
+
                     // WebSockets
                     .route("/qualia-bridge", get(bridge_handler))
                     .route("/telemetry", get(telemetry_handler))
@@ -305,7 +305,7 @@ pub fn spawn_loopback_server(
                     // (phones, browser tabs, other machines) POST their
                     // SystemTelemetry here for local processing.
                     .route("/telemetry/ingest", post(telemetry_ingest_handler).options(preflight_handler))
-                    
+
                     // REST
                     .route("/health", get(health_handler).options(preflight_handler))
                     .route(
@@ -328,22 +328,22 @@ pub fn spawn_loopback_server(
                     .route("/api/v1/system/storage/commons", get(storage_commons_handler))
                     .route("/api/v1/permissions/compile", post(permissions_compile_handler))
                     .route("/api/v1/webizen/rpc", post(webizen_rpc_handler))
-                    
+
                     // Manifest
                     .route("/manifest", post(manifest_handler))
                     .route("/manifest/current", get(current_manifest_handler))
-                    
+
                     // Extensions
                     .route("/extensions/list", get(list_extensions_handler))
                     .route("/extensions/query/{interface}", get(query_extensions_handler))
                     .route("/extensions/register", post(register_extension_handler))
-                    
+
                     // Mobile
                     .route("/mobile/qr", get(mobile_qr_handler))
                     .route("/mobile/stream", get(mobile_ws_handler))
                     .route("/generate_pane", post(mobile_generate_pane_handler))
                     .nest_service("/mobile/app", tower_http::services::ServeDir::new("bootstrap_gateway/mobile"))
-                    
+
                     // External Routers
                     .with_state(server_state.clone())
                     .merge(crate::chat_relay_daemon::chat_relay_routes(server_state.storage_path.clone(), server_state.vault.clone()))
@@ -836,7 +836,7 @@ async fn bridge_handler(
     ws.on_upgrade(move |mut socket| async move {
         let handshake = json!({ "type": "HANDSHAKE_SUCCESS", "payload": { "mode": "NATIVE", "version": crate::ENGINE_VERSION } });
         let _ = socket.send(Message::Text(handshake.to_string().into())).await;
-        
+
         let mut pending_bench_id: Option<u64> = None;
         while let Some(Ok(msg)) = socket.recv().await {
             match msg {

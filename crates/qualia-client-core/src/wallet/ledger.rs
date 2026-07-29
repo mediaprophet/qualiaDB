@@ -29,9 +29,9 @@ pub enum LedgerEntryKind {
     },
     /// A transaction was signed and broadcast on-chain.
     TxBroadcast {
-        chain: String,    // "XEC" | "BTC" | etc.
+        chain: String, // "XEC" | "BTC" | etc.
         txid: String,
-        amount_sats: u64, // in chain-native smallest unit
+        amount_sats: u64,  // in chain-native smallest unit
         direction: String, // "out"
     },
     /// A token mint (GENESIS) was broadcast.
@@ -84,7 +84,12 @@ pub fn total_ilp_sent_micro_cents(storage_path: &Path) -> u64 {
     let entries = read_entries(storage_path);
     let mut total = 0u64;
     for entry in entries {
-        if let LedgerEntryKind::IlpDispatch { amount_micro_cents, status, .. } = entry.kind {
+        if let LedgerEntryKind::IlpDispatch {
+            amount_micro_cents,
+            status,
+            ..
+        } = entry.kind
+        {
             if status == "sent" {
                 total = total.saturating_add(amount_micro_cents);
             }
@@ -146,7 +151,9 @@ mod tests {
 
     #[test]
     fn test_ledger_round_trip() {
-        let tmp = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("target").join("test_ledger_rt");
+        let tmp = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("target")
+            .join("test_ledger_rt");
         let _ = std::fs::remove_dir_all(&tmp);
         std::fs::create_dir_all(&tmp).unwrap();
 
@@ -177,7 +184,9 @@ mod tests {
 
     #[test]
     fn test_empty_ledger_returns_zero() {
-        let tmp = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("target").join("test_ledger_empty");
+        let tmp = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("target")
+            .join("test_ledger_empty");
         let _ = std::fs::remove_dir_all(&tmp);
         assert_eq!(total_ilp_sent_micro_cents(&tmp), 0);
         assert!(read_entries(&tmp).is_empty());

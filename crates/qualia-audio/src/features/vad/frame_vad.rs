@@ -129,7 +129,9 @@ mod tests {
     use core::f32::consts::TAU;
 
     fn tone(n: usize, freq: f32, sr: f32, amp: f32) -> Vec<f32> {
-        (0..n).map(|i| amp * (TAU * freq * i as f32 / sr).sin()).collect()
+        (0..n)
+            .map(|i| amp * (TAU * freq * i as f32 / sr).sin())
+            .collect()
     }
 
     #[test]
@@ -155,7 +157,10 @@ mod tests {
         // Tone energy sits essentially at the floor → within onset margin → unvoiced.
         let frame = tone(512, 440.0, 16_000.0, 0.5);
         let e = frame_energy(&frame);
-        assert!(!frame_is_voiced(&frame, e), "must not force a floor-level frame voiced");
+        assert!(
+            !frame_is_voiced(&frame, e),
+            "must not force a floor-level frame voiced"
+        );
         assert_eq!(frame_voicing_score(&frame, e), 0.0);
     }
 
@@ -169,7 +174,10 @@ mod tests {
                 ((state >> 8) as f32 / 8_388_608.0) - 1.0 // ~[-1,1)
             })
             .collect();
-        assert!(frame_is_voiced(&frame, 0.001), "noise burst should be detected as active");
+        assert!(
+            frame_is_voiced(&frame, 0.001),
+            "noise burst should be detected as active"
+        );
     }
 
     #[test]
@@ -184,7 +192,10 @@ mod tests {
     fn tonality_available_for_power_of_two() {
         let frame = tone(512, 440.0, 16_000.0, 0.5);
         let t = frame_tonality(&frame).expect("tonality for power-of-two frame");
-        assert!(t > 0.5, "a pure tone should read as strongly tonal, got {t}");
+        assert!(
+            t > 0.5,
+            "a pure tone should read as strongly tonal, got {t}"
+        );
     }
 
     #[test]

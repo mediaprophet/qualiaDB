@@ -36,21 +36,16 @@ impl std::fmt::Display for ConsumerError {
 impl std::error::Error for ConsumerError {}
 
 /// GET a Solid resource (Turtle preferred). Optional Bearer access token.
-pub async fn fetch_resource(
-    url: &str,
-    bearer: Option<&str>,
-) -> Result<FetchResult, ConsumerError> {
+pub async fn fetch_resource(url: &str, bearer: Option<&str>) -> Result<FetchResult, ConsumerError> {
     let client = reqwest::Client::builder()
         .user_agent("QualiaSolidBridge/0.0.23 (Webizen consumer agent)")
         .build()
         .map_err(|e| ConsumerError::Http(e.to_string()))?;
 
-    let mut req = client
-        .get(url)
-        .header(
-            "Accept",
-            "text/turtle, application/ld+json;q=0.9, application/rdf+xml;q=0.8, */*;q=0.1",
-        );
+    let mut req = client.get(url).header(
+        "Accept",
+        "text/turtle, application/ld+json;q=0.9, application/rdf+xml;q=0.8, */*;q=0.1",
+    );
     if let Some(tok) = bearer {
         req = req.bearer_auth(tok);
     }
@@ -119,10 +114,7 @@ pub async fn put_resource(
     let status = resp.status().as_u16();
     if !(200..300).contains(&status) {
         let t = resp.text().await.unwrap_or_default();
-        return Err(ConsumerError::Status(
-            status,
-            t.chars().take(400).collect(),
-        ));
+        return Err(ConsumerError::Status(status, t.chars().take(400).collect()));
     }
     Ok(status)
 }
@@ -143,10 +135,7 @@ pub async fn post_to_container(
     let mut req = client
         .post(container_url)
         .header("Content-Type", content_type)
-        .header(
-            "Link",
-            r#"<http://www.w3.org/ns/ldp#Resource>; rel="type""#,
-        )
+        .header("Link", r#"<http://www.w3.org/ns/ldp#Resource>; rel="type""#)
         .body(body.to_vec());
     if let Some(s) = slug {
         req = req.header("Slug", s);
@@ -167,10 +156,7 @@ pub async fn post_to_container(
         .map(|s| s.to_string());
     if !(200..300).contains(&status) {
         let t = resp.text().await.unwrap_or_default();
-        return Err(ConsumerError::Status(
-            status,
-            t.chars().take(400).collect(),
-        ));
+        return Err(ConsumerError::Status(status, t.chars().take(400).collect()));
     }
     Ok((status, location))
 }

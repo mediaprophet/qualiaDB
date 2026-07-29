@@ -232,7 +232,11 @@ mod tests {
         let c = note_frequency(&table, 60);
         let g = note_frequency(&table, 67);
         assert!((c - 264.0).abs() < 1e-3);
-        assert!((g / c - 1.5).abs() < 1e-9, "just fifth must be exactly 3/2, got {}", g / c);
+        assert!(
+            (g / c - 1.5).abs() < 1e-9,
+            "just fifth must be exactly 3/2, got {}",
+            g / c
+        );
         // And it differs from 12-TET's tempered fifth.
         let tempered = 2.0_f64.powf(7.0 / 12.0);
         assert!((g / c - tempered).abs() > 1e-3);
@@ -261,7 +265,12 @@ mod tests {
         let back = decode_single_note_tuning(&m).unwrap();
         assert_eq!(back.device_id, 3);
         assert_eq!(back.program, 5);
-        assert!((back.freq - f).abs() < 0.02, "roundtrip {} vs {}", back.freq, f);
+        assert!(
+            (back.freq - f).abs() < 0.02,
+            "roundtrip {} vs {}",
+            back.freq,
+            f
+        );
     }
 
     #[test]

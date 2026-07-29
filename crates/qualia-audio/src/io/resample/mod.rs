@@ -8,8 +8,8 @@
 //! - [`resample_polyphase`] — exact rational-ratio polyphase, zero-heap.
 
 pub mod anti_alias;
-pub mod windowed_sinc;
 pub mod polyphase;
+pub mod windowed_sinc;
 
 pub use anti_alias::antialias_cutoff;
 pub use polyphase::resample_polyphase;

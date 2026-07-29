@@ -152,7 +152,10 @@ mod tests {
         // weighting the A tonic/dominant. Both score 1.0 for coverage, so this
         // asserts a diatonic Major/Minor result rather than a specific mode.
         let est = estimate_scale(&hpcp, true, 0.9).expect("scale");
-        assert!(matches!(est.scale, ScaleProposal::Major | ScaleProposal::Minor));
+        assert!(matches!(
+            est.scale,
+            ScaleProposal::Major | ScaleProposal::Minor
+        ));
         assert!(est.score > 0.99);
     }
 

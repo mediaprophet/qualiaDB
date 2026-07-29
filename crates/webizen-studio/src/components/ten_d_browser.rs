@@ -142,16 +142,15 @@ fn humanize_host_error(raw: &str) -> String {
             "Citable FORBID — provenance present but invalid. Load denied (fail-closed). ({raw})"
         );
     }
-    if lower.contains("barrier") && (lower.contains("deny") || lower.contains("forbid") || lower.contains("crc"))
+    if lower.contains("barrier")
+        && (lower.contains("deny") || lower.contains("forbid") || lower.contains("crc"))
     {
         return format!(
             "Citable / rights barrier denied load (fail-closed — not a silent success). ({raw})"
         );
     }
     if lower.contains("vision .10d barrier") {
-        return format!(
-            "Vision load blocked by rights barrier (fail-closed). ({raw})"
-        );
+        return format!("Vision load blocked by rights barrier (fail-closed). ({raw})");
     }
     raw.to_string()
 }
@@ -215,9 +214,8 @@ pub fn TenDBrowser() -> Element {
                             }
                             Err(e) => {
                                 containers.set(Vec::new());
-                                error_msg.set(Some(format!(
-                                    "Could not parse vision .10d list: {e}"
-                                )));
+                                error_msg
+                                    .set(Some(format!("Could not parse vision .10d list: {e}")));
                             }
                         }
                     } else {
@@ -225,9 +223,8 @@ pub fn TenDBrowser() -> Element {
                             Ok(entries) => containers.set(entries),
                             Err(e) => {
                                 containers.set(Vec::new());
-                                error_msg.set(Some(format!(
-                                    "Could not parse .10d container list: {e}"
-                                )));
+                                error_msg
+                                    .set(Some(format!("Could not parse .10d container list: {e}")));
                             }
                         }
                     }
@@ -260,21 +257,14 @@ pub fn TenDBrowser() -> Element {
         vision_action_error.set(None);
         error_msg.set(None);
         spawn(async move {
-            match invoke_json(
-                "inspect_10d_container",
-                serde_json::json!({ "path": path }),
-            )
-            .await
-            {
-                Ok(val) => {
-                    match serde_json::from_value::<TenDContainerInspection>(val) {
-                        Ok(info) => inspection.set(Some(info)),
-                        Err(e) => {
-                            inspection.set(None);
-                            error_msg.set(Some(format!("Could not parse inspection: {e}")));
-                        }
+            match invoke_json("inspect_10d_container", serde_json::json!({ "path": path })).await {
+                Ok(val) => match serde_json::from_value::<TenDContainerInspection>(val) {
+                    Ok(info) => inspection.set(Some(info)),
+                    Err(e) => {
+                        inspection.set(None);
+                        error_msg.set(Some(format!("Could not parse inspection: {e}")));
                     }
-                }
+                },
                 Err(e) => {
                     inspection.set(None);
                     error_msg.set(Some(humanize_host_error(&format!("{e}"))));
@@ -287,8 +277,7 @@ pub fn TenDBrowser() -> Element {
         spawn(async move {
             match invoke_json("open_10d_file_picker", serde_json::json!({})).await {
                 Ok(val) => {
-                    if let Some(path) =
-                        serde_json::from_value::<Option<String>>(val).ok().flatten()
+                    if let Some(path) = serde_json::from_value::<Option<String>>(val).ok().flatten()
                     {
                         inspect(path);
                     }

@@ -61,8 +61,17 @@ mod tests {
 
     #[test]
     fn rejects_overflow_and_bad_bytes() {
-        assert_eq!(encode_song_position(16384), Err(AudioError::InvalidParameter));
-        assert_eq!(decode_song_position(0x80, 0), Err(AudioError::InvalidParameter));
-        assert_eq!(decode_song_position(0, 0x80), Err(AudioError::InvalidParameter));
+        assert_eq!(
+            encode_song_position(16384),
+            Err(AudioError::InvalidParameter)
+        );
+        assert_eq!(
+            decode_song_position(0x80, 0),
+            Err(AudioError::InvalidParameter)
+        );
+        assert_eq!(
+            decode_song_position(0, 0x80),
+            Err(AudioError::InvalidParameter)
+        );
     }
 }

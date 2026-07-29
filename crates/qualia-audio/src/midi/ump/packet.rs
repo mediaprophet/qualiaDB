@@ -47,25 +47,37 @@ impl UmpPacket {
     /// A 32-bit (1-word) packet.
     #[inline]
     pub const fn new32(word0: u32) -> Self {
-        Self { words: [word0, 0, 0, 0], word_count: 1 }
+        Self {
+            words: [word0, 0, 0, 0],
+            word_count: 1,
+        }
     }
 
     /// A 64-bit (2-word) packet.
     #[inline]
     pub const fn new64(word0: u32, word1: u32) -> Self {
-        Self { words: [word0, word1, 0, 0], word_count: 2 }
+        Self {
+            words: [word0, word1, 0, 0],
+            word_count: 2,
+        }
     }
 
     /// A 96-bit (3-word) packet.
     #[inline]
     pub const fn new96(word0: u32, word1: u32, word2: u32) -> Self {
-        Self { words: [word0, word1, word2, 0], word_count: 3 }
+        Self {
+            words: [word0, word1, word2, 0],
+            word_count: 3,
+        }
     }
 
     /// A 128-bit (4-word) packet.
     #[inline]
     pub const fn new128(word0: u32, word1: u32, word2: u32, word3: u32) -> Self {
-        Self { words: [word0, word1, word2, word3], word_count: 4 }
+        Self {
+            words: [word0, word1, word2, word3],
+            word_count: 4,
+        }
     }
 
     /// The Message Type (top nibble of word 0), 0x0..=0xF.
@@ -204,6 +216,9 @@ mod tests {
         assert_eq!(p.to_be_bytes(&mut buf).unwrap(), 4);
         assert_eq!(buf, [0x20, 0x90, 0x3C, 0x64]);
         let mut small = [0u8; 3];
-        assert_eq!(p.to_be_bytes(&mut small), Err(AudioError::OutputBufferTooSmall));
+        assert_eq!(
+            p.to_be_bytes(&mut small),
+            Err(AudioError::OutputBufferTooSmall)
+        );
     }
 }

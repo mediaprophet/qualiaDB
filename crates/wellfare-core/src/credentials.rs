@@ -335,12 +335,7 @@ mod tests {
 
     #[test]
     fn evaluate_state_unverified_when_no_claims_and_untrusted() {
-        let cred = CredentialRecord::new(
-            "did:wf:issuer",
-            "did:wf:subject",
-            "Empty",
-            1_700_000_000,
-        );
+        let cred = CredentialRecord::new("did:wf:issuer", "did:wf:subject", "Empty", 1_700_000_000);
         assert_eq!(
             evaluate_state(&cred, &[], 1_700_000_000),
             VerificationState::Unverified

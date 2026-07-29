@@ -68,6 +68,33 @@ pub fn theme_label(id: &str) -> String {
         .join(" ")
 }
 
+/// WCAG relative contrast for opaque `#RRGGBB` colours.
+pub fn contrast_ratio(foreground: &str, background: &str) -> Option<f64> {
+    fn luminance(value: &str) -> Option<f64> {
+        let hex = value.strip_prefix('#')?;
+        if hex.len() != 6 {
+            return None;
+        }
+        let channel = |offset: usize| -> Option<f64> {
+            let raw = u8::from_str_radix(&hex[offset..offset + 2], 16).ok()? as f64 / 255.0;
+            Some(if raw <= 0.04045 {
+                raw / 12.92
+            } else {
+                ((raw + 0.055) / 1.055).powf(2.4)
+            })
+        };
+        Some(0.2126 * channel(0)? + 0.7152 * channel(2)? + 0.0722 * channel(4)?)
+    }
+    let foreground = luminance(foreground)?;
+    let background = luminance(background)?;
+    let (light, dark) = if foreground >= background {
+        (foreground, background)
+    } else {
+        (background, foreground)
+    };
+    Some((light + 0.05) / (dark + 0.05))
+}
+
 /// Split catalog into QPrime presets (ordered) and everything else.
 pub fn theme_picker_sections(
     catalog: &[ThemeDefinition],
@@ -106,8 +133,8 @@ pub fn builtin_theme_catalog() -> Vec<ThemeDefinition> {
                 ("surface".to_string(), "rgba(255, 255, 255, 0.72)".to_string()),
                 ("border".to_string(), "rgba(220, 210, 200, 0.55)".to_string()),
                 ("text".to_string(), "#2d2824".to_string()),
-                ("text-muted".to_string(), "#8b8178".to_string()),
-                ("accent".to_string(), "#e07a5f".to_string()),
+                ("text-muted".to_string(), "#6f655d".to_string()),
+                ("accent".to_string(), "#a7432c".to_string()),
                 ("accent-glow".to_string(), "rgba(224, 122, 95, 0.18)".to_string()),
                 ("bg-gradient".to_string(), "radial-gradient(ellipse at 20% 15%, rgba(240,175,145,0.38) 0%, transparent 55%), radial-gradient(ellipse at 80% 75%, rgba(230,195,155,0.28) 0%, transparent 50%), linear-gradient(160deg, #fdf6f0 0%, #f5e8da 100%)".to_string()),
             ]),
@@ -170,7 +197,7 @@ pub fn builtin_theme_catalog() -> Vec<ThemeDefinition> {
                 ("surface".to_string(), "rgba(255, 255, 255, 0.75)".to_string()),
                 ("border".to_string(), "rgba(163, 177, 161, 0.4)".to_string()), // Sage-tinted border
                 ("text".to_string(), "#2d3748".to_string()),
-                ("text-muted".to_string(), "#718096".to_string()),
+                ("text-muted".to_string(), "#596579".to_string()),
                 ("accent".to_string(), "#4a5568".to_string()), // Accessible slate/sage
                 ("accent-glow".to_string(), "rgba(74, 85, 104, 0.15)".to_string()),
                 ("bg-gradient".to_string(), "radial-gradient(ellipse at 20% 20%, rgba(163,177,161,0.15) 0%, transparent 50%), linear-gradient(160deg, #ffffff 0%, #f4f5f0 100%)".to_string()),
@@ -268,9 +295,7 @@ pub fn resolve_theme(binding: Option<&ThemeBinding>, catalog: &[ThemeDefinition]
     }
     if let Some(g) = binding.spatial_grammar.as_ref() {
         resolved.spatial_grammar = g.clone();
-        resolved
-            .tokens
-            .insert("spatial-grammar".into(), g.clone());
+        resolved.tokens.insert("spatial-grammar".into(), g.clone());
     } else if let Some(g) = resolved.tokens.get("spatial-grammar") {
         resolved.spatial_grammar = g.clone();
     }
@@ -541,6 +566,23 @@ mod tests {
         assert_eq!(presentation_level(&theme), 2);
         assert_eq!(theme.spatial_grammar, "board");
         assert!(!spatialize_allowed(&theme));
+    }
+
+    #[test]
+    fn builtin_theme_text_and_muted_text_meet_wcag_aa() {
+        for theme in builtin_theme_catalog() {
+            let background = theme.tokens.get("bg").expect("theme background");
+            for token in ["text", "text-muted"] {
+                let foreground = theme.tokens.get(token).expect("theme text token");
+                let ratio = contrast_ratio(foreground, background)
+                    .unwrap_or_else(|| panic!("opaque colours required for {} {token}", theme.id));
+                assert!(
+                    ratio >= 4.5,
+                    "{} {token} contrast {ratio:.2}:1 is below WCAG AA",
+                    theme.id
+                );
+            }
+        }
     }
 }
 

@@ -42,8 +42,8 @@ use crate::render::telemetry::{
 use crate::sonic_token::SonicToken;
 use crate::tensor::buffer_export::{read_tensor_at, tensor_node_count, write_tensor_q_at};
 use crate::{
-    export_tensor_buffer_wasm, geosparql_operation_wasm, parse_cbor_ld_wasm, parse_json_wasm,
-    sample_browser_telemetry_wasm, spatial_encode_wasm,
+    export_tensor_buffer_wasm, parse_cbor_ld_wasm, parse_json_wasm, sample_browser_telemetry_wasm,
+    spatial_encode_wasm,
 };
 
 #[cfg(target_arch = "wasm32")]
@@ -1596,7 +1596,7 @@ impl QualiaPortal {
     }
 }
 
-/// A PortalGpu created asynchronously by `portal_init_webgpu`, handed to the next `paint_frame`.
+// A PortalGpu created asynchronously by `portal_init_webgpu`, handed to the next `paint_frame`.
 #[cfg(target_arch = "wasm32")]
 thread_local! {
     static PENDING_GPU: std::cell::RefCell<Option<PortalGpu>> = std::cell::RefCell::new(None);

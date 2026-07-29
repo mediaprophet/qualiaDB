@@ -248,8 +248,7 @@ pub fn merge_status_events(
     existing: &[WorkItemStatusEvent],
     incoming: &[WorkItemStatusEvent],
 ) -> Vec<WorkItemStatusEvent> {
-    let mut merged: Vec<WorkItemStatusEvent> =
-        Vec::with_capacity(existing.len() + incoming.len());
+    let mut merged: Vec<WorkItemStatusEvent> = Vec::with_capacity(existing.len() + incoming.len());
     for ev in existing.iter().chain(incoming.iter()) {
         if !merged.iter().any(|e| e.id == ev.id) {
             merged.push(ev.clone());
@@ -403,7 +402,10 @@ mod tests {
             .unwrap();
         assert_eq!(in_progress.cards.len(), 1);
         assert_eq!(in_progress.cards[0].work_item_id, "wi-1");
-        let done = board.iter().find(|c| c.status == WorkItemStatus::Done).unwrap();
+        let done = board
+            .iter()
+            .find(|c| c.status == WorkItemStatus::Done)
+            .unwrap();
         assert_eq!(done.cards[0].work_item_id, "wi-2");
     }
 

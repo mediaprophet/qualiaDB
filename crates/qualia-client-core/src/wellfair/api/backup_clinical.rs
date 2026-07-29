@@ -1,15 +1,14 @@
 //! Backup/restore + clinical documents
 
-
-use super::super::journal::JournalEntry;
 use super::super::backup::{self, BackupReport};
-use super::super::sync_outbox::SyncOutbox;
 use super::super::blob_store::BlobStore;
+use super::super::journal::JournalEntry;
+use super::super::sync_outbox::SyncOutbox;
 use wellfare_core::clinical::{
-    build_clinical_attachment_envelope, build_clinical_report_envelope, clinical_attachment_summary,
-    clinical_report_summary, AttachmentMeta, ClinicalReport, ClinicalReportType,
+    build_clinical_attachment_envelope, build_clinical_report_envelope,
+    clinical_attachment_summary, clinical_report_summary, AttachmentMeta, ClinicalReport,
+    ClinicalReportType,
 };
-
 
 use super::*;
 
@@ -82,7 +81,8 @@ impl WebizenHostApi {
     ) -> Result<JournalEntry, String> {
         let mut report = ClinicalReport::new(title, report_type, observed_at_unix, body);
         report.author_label = author_label.filter(|s| !s.is_empty());
-        let hash = Self::payload_hash_hex(&serde_json::to_string(&report).map_err(|e| e.to_string())?);
+        let hash =
+            Self::payload_hash_hex(&serde_json::to_string(&report).map_err(|e| e.to_string())?);
         let asserted = Self::now_unix() as u32;
         let envelope = build_clinical_report_envelope(
             &report,
@@ -143,5 +143,4 @@ impl WebizenHostApi {
             .get(&hash)
             .map_err(|e| e.to_string())
     }
-
 }

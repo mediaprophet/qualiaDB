@@ -1,6 +1,5 @@
 //! 3D anatomy asset cache + physiological state
 
-
 use super::*;
 
 impl WebizenHostApi {
@@ -24,16 +23,15 @@ impl WebizenHostApi {
     /// The cached organ keys for a model (empty if not cached).
     pub fn cached_organ_keys(&self, model: &str) -> Result<Vec<String>, String> {
         let m = parse_anatomy_model(model)?;
-        Ok(super::super::anatomy_assets::cached_organ_keys(&self.storage_root, m))
+        Ok(super::super::anatomy_assets::cached_organ_keys(
+            &self.storage_root,
+            m,
+        ))
     }
 
     /// Load a cached `.10d` for one organ. Returns the raw container bytes (for the browser portal's
     /// `load_10d_colored`).
-    pub fn load_cached_organ_10d(
-        &self,
-        model: &str,
-        organ_key: &str,
-    ) -> Result<Vec<u8>, String> {
+    pub fn load_cached_organ_10d(&self, model: &str, organ_key: &str) -> Result<Vec<u8>, String> {
         let m = parse_anatomy_model(model)?;
         super::super::anatomy_assets::load_cached_10d(&self.storage_root, m, organ_key)
     }
@@ -78,14 +76,16 @@ impl WebizenHostApi {
         // Read the person at **their declared physiological state** — their own statement of where they are
         // on the reproductive continuum — falling back to Baseline if they have not declared one.
         let state = self.get_physiological_state();
-        Ok(super::super::anatomy_view::build_scorecard_report_from_journal_with_weights(
-            &conditions,
-            &medications,
-            &diet,
-            convergence_threshold,
-            &weights,
-            state,
-        ))
+        Ok(
+            super::super::anatomy_view::build_scorecard_report_from_journal_with_weights(
+                &conditions,
+                &medications,
+                &diet,
+                convergence_threshold,
+                &weights,
+                state,
+            ),
+        )
     }
 
     /// The person's own score-card **weight model** — the interpretive lens the card uses — or the seed
@@ -130,7 +130,8 @@ impl WebizenHostApi {
     /// The person's **declared** physiological state, or [`PhysiologicalState::Baseline`] if they have not
     /// declared one. Their own statement; the software never assumes.
     pub fn get_physiological_state(&self) -> wellfare_core::anatomy::PhysiologicalState {
-        super::super::physiology_prefs::load(&self.storage_root).unwrap_or(wellfare_core::anatomy::PhysiologicalState::Baseline)
+        super::super::physiology_prefs::load(&self.storage_root)
+            .unwrap_or(wellfare_core::anatomy::PhysiologicalState::Baseline)
     }
 
     /// Whether the person has **declared** their physiological state (vs. still at the implicit baseline).
@@ -151,5 +152,4 @@ impl WebizenHostApi {
     pub fn reset_physiological_state(&self) -> Result<(), String> {
         super::super::physiology_prefs::clear(&self.storage_root)
     }
-
 }

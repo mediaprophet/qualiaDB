@@ -3,7 +3,14 @@
 
 $ErrorActionPreference = "Stop"
 
-$initialStatus = git -C "$PSScriptRoot/.." status --porcelain
+$repositoryRoot = "$PSScriptRoot/.."
+# Release builds must not depend on a machine-specific global excludes file.
+# In restricted agent environments Git may be unable to read that file, and
+# PowerShell promotes the resulting native stderr warning to a terminating
+# error before the actual frontend build can start.
+$repositoryExcludeFile = Join-Path (Resolve-Path $repositoryRoot) ".git\info\exclude"
+$releaseGitArgs = @("-c", "core.excludesFile=$repositoryExcludeFile", "-C", $repositoryRoot)
+$initialStatus = git @releaseGitArgs status --porcelain
 if ($LASTEXITCODE -ne 0) {
     throw "Could not inspect the source tree before the frontend build."
 }
@@ -32,8 +39,24 @@ if ($needWbInstall) {
     cargo install wasm-bindgen-cli --version $WasmBindgenCliVersion --locked --force
 }
 $cargoBin = if ($env:CARGO_HOME) { Join-Path $env:CARGO_HOME "bin" } else { Join-Path $env:USERPROFILE ".cargo\bin" }
-$env:Path = "$cargoBin;$env:Path"
+$managedToolDirs = @()
+$dxTools = Join-Path $env:USERPROFILE ".dx\tools"
+if (Test-Path -LiteralPath $dxTools) {
+    $managedToolDirs += Get-ChildItem -LiteralPath $dxTools -Directory -Filter "esbuild-*" -ErrorAction SilentlyContinue |
+        Sort-Object Name -Descending |
+        Select-Object -First 1 -ExpandProperty FullName
+    $managedToolDirs += Get-ChildItem -LiteralPath $dxTools -Directory -Filter "binaryen-*" -ErrorAction SilentlyContinue |
+        Sort-Object Name -Descending |
+        Select-Object -First 1 |
+        ForEach-Object { Join-Path $_.FullName "bin" }
+}
+$toolPath = (@($cargoBin) + @($managedToolDirs) + @($env:Path)) -join ";"
+$env:Path = $toolPath
 Write-Host "Using wasm-bindgen: $((Get-Command wasm-bindgen).Source) $(wasm-bindgen --version)"
+# Dioxus 0.8 otherwise ignores the verified PATH binary and attempts to
+# redownload a managed wasm-bindgen on every invocation. Agents and offline
+# builds must use the exact pinned local CLI established above.
+$env:NO_DOWNLOADS = "1"
 # Host-cpu RUSTFLAGS break wasm32 + wasm-bindgen; clear for frontend only.
 if ($env:RUSTFLAGS_WASM) { $env:RUSTFLAGS = $env:RUSTFLAGS_WASM } else { Remove-Item Env:RUSTFLAGS -ErrorAction SilentlyContinue }
 Remove-Item Env:CARGO_ENCODED_RUSTFLAGS -ErrorAction SilentlyContinue
@@ -49,12 +72,13 @@ if (Test-Path $wasmOut) {
     Remove-Item -LiteralPath $wasmOut -Recurse -Force -ErrorAction SilentlyContinue
 }
 Push-Location "$PSScriptRoot/../crates/webizen-studio"
-dx build --web --release
-
-if ($LASTEXITCODE -ne 0) {
+$dxBuildCommand = "dx build --web --release 2>&1"
+cmd.exe /d /s /c $dxBuildCommand
+$dxBuildExitCode = $LASTEXITCODE
+if ($dxBuildExitCode -ne 0) {
     Write-Error "Dioxus build failed."
     Pop-Location
-    exit 1
+    exit $dxBuildExitCode
 }
 Pop-Location
 
@@ -74,7 +98,7 @@ Copy-Item -LiteralPath (Join-Path $public "index.html") -Destination (Join-Path 
 Copy-Item -Path (Join-Path $public "assets\*") -Destination $assets -Force
 Copy-Item -LiteralPath (Join-Path $browserSource "chrome.html") -Destination (Join-Path $dist "browser-chrome.html") -Force
 Copy-Item -LiteralPath (Join-Path $browserSource "universe.html") -Destination (Join-Path $dist "chora-universe.html") -Force
-$sourceRevision = (git -C "$PSScriptRoot/.." rev-parse HEAD).Trim()
+$sourceRevision = (git @releaseGitArgs rev-parse HEAD).Trim()
 if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($sourceRevision)) {
     throw "Could not determine the source revision for the frontend build."
 }

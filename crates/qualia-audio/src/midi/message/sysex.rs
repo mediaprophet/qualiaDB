@@ -104,15 +104,27 @@ mod tests {
     #[test]
     fn buffer_too_small() {
         let mut buf = [0u8; 2];
-        assert_eq!(frame_sysex(&[1, 2, 3], &mut buf), Err(AudioError::OutputBufferTooSmall));
+        assert_eq!(
+            frame_sysex(&[1, 2, 3], &mut buf),
+            Err(AudioError::OutputBufferTooSmall)
+        );
     }
 
     #[test]
     fn rejects_status_in_payload() {
         let mut buf = [0u8; 8];
-        assert_eq!(frame_sysex(&[0x80], &mut buf), Err(AudioError::InvalidParameter));
-        assert_eq!(sysex_payload(&[0xF0, 0x80, 0xF7]), Err(AudioError::MalformedAudio));
-        assert_eq!(sysex_payload(&[0x00, 0xF7]), Err(AudioError::MalformedAudio));
+        assert_eq!(
+            frame_sysex(&[0x80], &mut buf),
+            Err(AudioError::InvalidParameter)
+        );
+        assert_eq!(
+            sysex_payload(&[0xF0, 0x80, 0xF7]),
+            Err(AudioError::MalformedAudio)
+        );
+        assert_eq!(
+            sysex_payload(&[0x00, 0xF7]),
+            Err(AudioError::MalformedAudio)
+        );
     }
 
     #[test]

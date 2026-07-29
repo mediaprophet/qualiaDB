@@ -38,4 +38,3 @@ pub fn wellfair_list_assessments(app: AppHandle) -> Result<String, String> {
         serde_json::to_string(&host.list_assessments(64)?).map_err(|e| e.to_string())
     })?
 }
-

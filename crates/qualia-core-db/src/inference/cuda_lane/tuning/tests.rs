@@ -27,32 +27,30 @@ fn named_profile_fails_closed_on_shape_mismatch() {
 #[test]
 fn incumbent_auto_promotes_only_for_certified_adapter_and_shape() {
     let incumbent = CudaQ8Tuning::incumbent();
-    let promoted =
-        incumbent.for_model_on_adapter(
-            960,
-            15,
-            5,
-            64,
-            32,
-            49_152,
-            0x10de,
-            0x2571,
-            "NVIDIA RTX A2000 12GB",
-        );
+    let promoted = incumbent.for_model_on_adapter(
+        960,
+        15,
+        5,
+        64,
+        32,
+        49_152,
+        0x10de,
+        0x2571,
+        "NVIDIA RTX A2000 12GB",
+    );
     assert_eq!(promoted.profile, CudaQ8Profile::A2000SmolLm2Q8V1);
 
-    let wrong_adapter =
-        incumbent.for_model_on_adapter(
-            960,
-            15,
-            5,
-            64,
-            32,
-            49_152,
-            0x10de,
-            0x2684,
-            "NVIDIA RTX 4090",
-        );
+    let wrong_adapter = incumbent.for_model_on_adapter(
+        960,
+        15,
+        5,
+        64,
+        32,
+        49_152,
+        0x10de,
+        0x2684,
+        "NVIDIA RTX 4090",
+    );
     assert_eq!(wrong_adapter.profile, CudaQ8Profile::Incumbent);
 
     let wrong_shape = incumbent.for_model_on_adapter(

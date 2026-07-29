@@ -1,8 +1,8 @@
 #![allow(non_snake_case)]
 
 use super::*;
-use tauri::{command, AppHandle, Emitter, Manager, State};
 use crate::render::AnatomyBodyState;
+use tauri::{command, AppHandle, Emitter, Manager, State};
 
 /// 3D Anatomy Qapp — compute a body-system view for a given audience ("person"/"clinician").
 /// Read-only: no clinical data is persisted and no diagnosis is performed.
@@ -38,13 +38,41 @@ pub fn wellfair_compute_scorecard(
     })?
 }
 
+/// Evaluate the person's imported condition graph against an Anatomy concept.
+///
+/// The DID stays inside the host; callers supply only a human-readable organ
+/// concept (for example `Heart`). The response comes from the real zero-heap
+/// comorbidity evaluator over the in-process Qualia graph.
+#[command]
+pub fn wellfair_eval_comorbidity(
+    app: AppHandle,
+    target_organ: Option<String>,
+) -> Result<String, String> {
+    let state = app.state::<HostApiState>();
+    let patient_hash = state.0.execute_sync(|guard| {
+        let host = guard.as_ref().ok_or_else(|| {
+            "Host API not initialized — unlock the health vault first".to_string()
+        })?;
+        Ok::<u64, String>(host.owner_did_hash())
+    })??;
+    let organ_hash = target_organ
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(qualia_core_db::q_hash)
+        .unwrap_or(0);
+    qualia_client_core::qapp_api::eval_comorbidity_json_from_daemon(patient_hash, organ_hash)
+}
+
 /// The person's own score-card weight model (how their body is read) + the seed suggestion + whether they've
 /// authored their own. Returns `{ model, seed, authored }`.
 #[command]
 pub fn wellfair_get_weight_model(app: AppHandle) -> Result<String, String> {
     let state = app.state::<HostApiState>();
     state.0.execute_sync(move |guard| {
-        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         serde_json::to_string(&serde_json::json!({
             "model": host.get_weight_model(),
             "seed": host.seed_weight_model(),
@@ -61,7 +89,9 @@ pub fn wellfair_set_weight_model(app: AppHandle, model_json: String) -> Result<S
         serde_json::from_str(&model_json).map_err(|e| format!("invalid weight model JSON: {e}"))?;
     let state = app.state::<HostApiState>();
     state.0.execute_sync(move |guard| {
-        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         host.set_weight_model(&model)?;
         Ok("{\"set\":true}".into())
     })?
@@ -72,7 +102,9 @@ pub fn wellfair_set_weight_model(app: AppHandle, model_json: String) -> Result<S
 pub fn wellfair_reset_weight_model(app: AppHandle) -> Result<String, String> {
     let state = app.state::<HostApiState>();
     state.0.execute_sync(move |guard| {
-        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         host.reset_weight_model()?;
         Ok("{\"reset\":true}".into())
     })?
@@ -90,7 +122,9 @@ pub fn wellfair_reset_weight_model(app: AppHandle) -> Result<String, String> {
 pub fn wellfair_get_physiological_state(app: AppHandle) -> Result<String, String> {
     let state = app.state::<HostApiState>();
     state.0.execute_sync(move |guard| {
-        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         serde_json::to_string(&serde_json::json!({
             "state": host.get_physiological_state(),
             "declared": host.physiological_state_is_declared(),
@@ -102,12 +136,17 @@ pub fn wellfair_get_physiological_state(app: AppHandle) -> Result<String, String
 /// Set the person's declared physiological state (JSON = `PhysiologicalState`) — their own statement of
 /// where they are on the reproductive continuum. Forum-internum / Sanctuary-class.
 #[command]
-pub fn wellfair_set_physiological_state(app: AppHandle, state_json: String) -> Result<String, String> {
-    let state: wellfare_core::anatomy::PhysiologicalState =
-        serde_json::from_str(&state_json).map_err(|e| format!("invalid physiological state JSON: {e}"))?;
+pub fn wellfair_set_physiological_state(
+    app: AppHandle,
+    state_json: String,
+) -> Result<String, String> {
+    let state: wellfare_core::anatomy::PhysiologicalState = serde_json::from_str(&state_json)
+        .map_err(|e| format!("invalid physiological state JSON: {e}"))?;
     let app_state = app.state::<HostApiState>();
     app_state.0.execute_sync(move |guard| {
-        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         host.set_physiological_state(&state)?;
         Ok("{\"set\":true}".into())
     })?
@@ -118,7 +157,9 @@ pub fn wellfair_set_physiological_state(app: AppHandle, state_json: String) -> R
 pub fn wellfair_reset_physiological_state(app: AppHandle) -> Result<String, String> {
     let state = app.state::<HostApiState>();
     state.0.execute_sync(move |guard| {
-        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         host.reset_physiological_state()?;
         Ok("{\"reset\":true}".into())
     })?
@@ -173,13 +214,12 @@ pub async fn wellfair_render_body_snapshot(
 /// Whether the body assets for a model are cached + complete. `model` = `"male"` / `"female"`.
 /// Returns `{ model, cached, organ_count, total_ten_d_bytes, acquired_at_unix }`.
 #[command]
-pub fn wellfair_body_assets_status(
-    app: AppHandle,
-    model: String,
-) -> Result<String, String> {
+pub fn wellfair_body_assets_status(app: AppHandle, model: String) -> Result<String, String> {
     let state = app.state::<HostApiState>();
     state.0.execute_sync(move |guard| {
-        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         let status = host.body_assets_status(&model)?;
         serde_json::to_string(&status).map_err(|e| e.to_string())
     })?
@@ -198,22 +238,27 @@ pub async fn wellfair_acquire_body_assets(
     // Resolve the model + storage_root while holding the lock, then drop the guard before the await.
     let (model_enum, storage_root) = {
         host_state.0.execute_sync(move |guard| {
-            let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-            let m = qualia_client_core::wellfair::api::parse_anatomy_model(&model).map_err(|e| e.to_string())?;
+            let host = guard
+                .as_ref()
+                .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+            let m = qualia_client_core::wellfair::api::parse_anatomy_model(&model)
+                .map_err(|e| e.to_string())?;
             Ok::<_, String>((m, host.storage_root().to_path_buf()))
         })??
     };
 
     let app_for_progress = app.clone();
-    let report = tokio::task::spawn_blocking(move || -> Result<qualia_client_core::wellfair::anatomy_assets::AcquireReport, String> {
-        qualia_client_core::wellfair::anatomy_assets::acquire_body_assets(
-            &storage_root,
-            model_enum,
-            |p| {
-                let _ = app_for_progress.emit("anatomy-acquire-progress", &p);
-            },
-        )
-    })
+    let report = tokio::task::spawn_blocking(
+        move || -> Result<qualia_client_core::wellfair::anatomy_assets::AcquireReport, String> {
+            qualia_client_core::wellfair::anatomy_assets::acquire_body_assets(
+                &storage_root,
+                model_enum,
+                |p| {
+                    let _ = app_for_progress.emit("anatomy-acquire-progress", &p);
+                },
+            )
+        },
+    )
     .await
     .map_err(|e| format!("acquire task join failed: {e}"))??;
 
@@ -231,7 +276,9 @@ pub fn wellfair_load_cached_organ_10d(
 ) -> Result<Vec<u8>, String> {
     let state = app.state::<HostApiState>();
     state.0.execute_sync(move |guard| {
-        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         host.load_cached_organ_10d(&model, &organ_key)
     })?
 }
@@ -245,7 +292,9 @@ pub fn wellfair_cached_body_organ_percepts(
 ) -> Result<String, String> {
     let state = app.state::<HostApiState>();
     state.0.execute_sync(move |guard| {
-        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         let (painted, unmapped) = host.cached_body_organ_percepts(&model)?;
         serde_json::to_string(&serde_json::json!({ "painted": painted, "unmapped": unmapped }))
             .map_err(|e| e.to_string())
@@ -254,15 +303,13 @@ pub fn wellfair_cached_body_organ_percepts(
 
 /// Clear the cache for a model (idempotent). The person can re-acquire later.
 #[command]
-pub fn wellfair_clear_body_cache(
-    app: AppHandle,
-    model: String,
-) -> Result<String, String> {
+pub fn wellfair_clear_body_cache(app: AppHandle, model: String) -> Result<String, String> {
     let state = app.state::<HostApiState>();
     state.0.execute_sync(move |guard| {
-        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         host.clear_body_cache(&model)?;
         Ok("{\"ok\":true}".into())
     })?
 }
-

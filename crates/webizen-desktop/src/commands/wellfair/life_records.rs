@@ -19,8 +19,8 @@ pub fn wellfair_add_life_event(app: AppHandle, report_json: String) -> Result<St
 
 #[command]
 pub fn wellfair_add_welfare_case(app: AppHandle, report_json: String) -> Result<String, String> {
-    let report: wellfare_core::life_records::WelfareCaseReport =
-        serde_json::from_str(&report_json).map_err(|e| format!("invalid welfare case JSON: {e}"))?;
+    let report: wellfare_core::life_records::WelfareCaseReport = serde_json::from_str(&report_json)
+        .map_err(|e| format!("invalid welfare case JSON: {e}"))?;
     let state = app.state::<HostApiState>();
     state.0.execute_sync(move |guard| {
         let host = guard
@@ -44,4 +44,3 @@ pub fn wellfair_add_case_task(app: AppHandle, report_json: String) -> Result<Str
         serde_json::to_string(&entry).map_err(|e| e.to_string())
     })?
 }
-

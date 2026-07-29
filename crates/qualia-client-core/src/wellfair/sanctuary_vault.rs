@@ -32,16 +32,16 @@ use std::path::{Path, PathBuf};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 
-use qualia_core_db::crypto::sanctuary_crypto::{
-    decrypt_sanctuary_chunk, derive_sanctuary_key_material, derive_sanctuary_key_material_argon2,
-    encrypt_sanctuary_chunk, SanctuaryAeadAlgorithm, SanctuaryKeyMaterial, ARGON2_M_COST_KIB,
-    ARGON2_P_COST, ARGON2_T_COST, SANCTUARY_TAG_BYTES,
-};
 use qualia_core_db::crypto::sanctuary_audit::{
     open_sealed, seal_to, unwrap_key, wrap_key, AuditKeypair, GENESIS_PARENT,
 };
 use qualia_core_db::crypto::sanctuary_audit_dag::{
     derive_sessions, verify_chain, AuditAction, AuditRecord, ChainStatus, RetentionMode,
+};
+use qualia_core_db::crypto::sanctuary_crypto::{
+    decrypt_sanctuary_chunk, derive_sanctuary_key_material, derive_sanctuary_key_material_argon2,
+    encrypt_sanctuary_chunk, SanctuaryAeadAlgorithm, SanctuaryKeyMaterial, ARGON2_M_COST_KIB,
+    ARGON2_P_COST, ARGON2_T_COST, SANCTUARY_TAG_BYTES,
 };
 use qualia_core_db::crypto::sanctuary_keychain;
 use sha2::{Digest, Sha256};
@@ -793,7 +793,10 @@ fn decoy_audit_pubkey(container: &VaultContainerV2) -> Result<[u8; 32], String> 
 
 /// The id of the last record on `branch_ref` in append order (the branch head), if any.
 fn last_head_for_branch(log: &[AuditRecord], branch_ref: &str) -> Option<[u8; 32]> {
-    log.iter().rev().find(|r| r.branch_ref == branch_ref).map(|r| r.id)
+    log.iter()
+        .rev()
+        .find(|r| r.branch_ref == branch_ref)
+        .map(|r| r.id)
 }
 
 /// Append one sealed audit record for a decoy action. On the first record of a branch, an
@@ -960,7 +963,8 @@ pub fn review_decoy_activity(
     let mut audit_secret = [0u8; 32];
     audit_secret.copy_from_slice(&secret_bytes);
 
-    let mut data: LaneData = cbor_decode(&open(&real_key, &real_records, SanctuaryLane::Real.aad())?)?;
+    let mut data: LaneData =
+        cbor_decode(&open(&real_key, &real_records, SanctuaryLane::Real.aad())?)?;
     let prior: HashMap<String, BranchAnchor> = data
         .anchors
         .iter()
@@ -1061,10 +1065,7 @@ pub fn review_decoy_activity(
 
 /// Read the decoy-audit retention policy (real-lane setting). Requires the **real** PIN; defaults to
 /// [`RetentionMode::AutoArchive`] when never set.
-pub fn get_retention_mode(
-    root: impl AsRef<Path>,
-    real_pin: &str,
-) -> Result<RetentionMode, String> {
+pub fn get_retention_mode(root: impl AsRef<Path>, real_pin: &str) -> Result<RetentionMode, String> {
     let container = load_container(root.as_ref())?.ok_or("Sanctuary vault is not set up")?;
     let pepper = pepper_for(&container, None)?;
     let (lane, real_key) = open_lane(&container, real_pin, pepper.as_ref())?;
@@ -1124,8 +1125,14 @@ mod tests {
     fn real_and_decoy_pins_open_distinct_lanes() {
         let dir = tempfile::tempdir().unwrap();
         setup_with_iterations(dir.path(), "real-pin-1", "decoy-pin-2", 1_000).unwrap();
-        assert_eq!(resolve_lane(dir.path(), "real-pin-1").unwrap(), SanctuaryLane::Real);
-        assert_eq!(resolve_lane(dir.path(), "decoy-pin-2").unwrap(), SanctuaryLane::Decoy);
+        assert_eq!(
+            resolve_lane(dir.path(), "real-pin-1").unwrap(),
+            SanctuaryLane::Real
+        );
+        assert_eq!(
+            resolve_lane(dir.path(), "decoy-pin-2").unwrap(),
+            SanctuaryLane::Decoy
+        );
         assert!(resolve_lane(dir.path(), "wrong-pin").is_err());
     }
 
@@ -1134,10 +1141,19 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         setup_with_iterations(dir.path(), "real-pin-1", "decoy-pin-2", 1_000).unwrap();
 
-        assert_eq!(add_note(dir.path(), "real-pin-1", "real secret", 10).unwrap(), SanctuaryLane::Real);
-        assert_eq!(add_note(dir.path(), "decoy-pin-2", "decoy filler", 11).unwrap(), SanctuaryLane::Decoy);
+        assert_eq!(
+            add_note(dir.path(), "real-pin-1", "real secret", 10).unwrap(),
+            SanctuaryLane::Real
+        );
+        assert_eq!(
+            add_note(dir.path(), "decoy-pin-2", "decoy filler", 11).unwrap(),
+            SanctuaryLane::Decoy
+        );
         // A duress note must never land in the real lane.
-        assert_eq!(add_note(dir.path(), "decoy-pin-2", "more decoy", 12).unwrap(), SanctuaryLane::Decoy);
+        assert_eq!(
+            add_note(dir.path(), "decoy-pin-2", "more decoy", 12).unwrap(),
+            SanctuaryLane::Decoy
+        );
 
         let (lane, real_notes) = list_notes(dir.path(), "real-pin-1").unwrap();
         assert_eq!(lane, SanctuaryLane::Real);
@@ -1233,10 +1249,28 @@ mod tests {
     fn argon2_vault_opens_and_isolates_lanes() {
         // Fast Argon2id params for the test; production uses 64 MiB (ADR D1).
         let dir = tempfile::tempdir().unwrap();
-        let kdf = KdfDescriptor::Argon2id { m_cost_kib: 16, t_cost: 1, p_cost: 1 };
-        build_vault(dir.path(), "real-pass-alpha", "decoy-pass-beta", kdf, None, None).unwrap();
-        assert_eq!(resolve_lane(dir.path(), "real-pass-alpha").unwrap(), SanctuaryLane::Real);
-        assert_eq!(resolve_lane(dir.path(), "decoy-pass-beta").unwrap(), SanctuaryLane::Decoy);
+        let kdf = KdfDescriptor::Argon2id {
+            m_cost_kib: 16,
+            t_cost: 1,
+            p_cost: 1,
+        };
+        build_vault(
+            dir.path(),
+            "real-pass-alpha",
+            "decoy-pass-beta",
+            kdf,
+            None,
+            None,
+        )
+        .unwrap();
+        assert_eq!(
+            resolve_lane(dir.path(), "real-pass-alpha").unwrap(),
+            SanctuaryLane::Real
+        );
+        assert_eq!(
+            resolve_lane(dir.path(), "decoy-pass-beta").unwrap(),
+            SanctuaryLane::Decoy
+        );
         assert!(resolve_lane(dir.path(), "wrong-pass-xyz").is_err());
         let container = load_container(dir.path()).unwrap().unwrap();
         assert!(matches!(
@@ -1266,16 +1300,31 @@ mod tests {
         // A PBKDF2-configured vault (fast test factor) opens on its PINs.
         let dir = tempfile::tempdir().unwrap();
         setup_with_iterations(dir.path(), "real-pin-1", "decoy-pin-2", 1_000).unwrap();
-        assert_eq!(resolve_lane(dir.path(), "real-pin-1").unwrap(), SanctuaryLane::Real);
+        assert_eq!(
+            resolve_lane(dir.path(), "real-pin-1").unwrap(),
+            SanctuaryLane::Real
+        );
     }
 
     #[test]
     fn pin_policy_rejects_weak_pins() {
         let dir = tempfile::tempdir().unwrap();
-        assert!(setup(dir.path(), "a1b2", "decoy-strong-1").is_err(), "too short");
-        assert!(setup(dir.path(), "aaaaaa", "decoy-strong-1").is_err(), "all identical");
-        assert!(setup(dir.path(), "123456", "decoy-strong-1").is_err(), "sequential");
-        assert!(setup(dir.path(), "password", "decoy-strong-1").is_err(), "common");
+        assert!(
+            setup(dir.path(), "a1b2", "decoy-strong-1").is_err(),
+            "too short"
+        );
+        assert!(
+            setup(dir.path(), "aaaaaa", "decoy-strong-1").is_err(),
+            "all identical"
+        );
+        assert!(
+            setup(dir.path(), "123456", "decoy-strong-1").is_err(),
+            "sequential"
+        );
+        assert!(
+            setup(dir.path(), "password", "decoy-strong-1").is_err(),
+            "common"
+        );
         // None of the rejected attempts created a vault (they fail before derivation).
         assert!(!is_configured(dir.path()));
     }
@@ -1354,7 +1403,10 @@ mod tests {
 
         let (_, notes) = list_notes(dir.path(), "decoy-pin-2").unwrap();
         let bodies: Vec<&str> = notes.iter().map(|n| n.body.as_str()).collect();
-        assert_eq!(bodies, ["seeded-by-real", "written-by-coercer", "seeded-again"]);
+        assert_eq!(
+            bodies,
+            ["seeded-by-real", "written-by-coercer", "seeded-again"]
+        );
     }
 
     #[test]
@@ -1380,15 +1432,24 @@ mod tests {
         let pub_hex = decoy.audit_pubkey_hex.as_ref().unwrap();
         let mut audit_pub = [0u8; 32];
         audit_pub.copy_from_slice(&hex::decode(pub_hex).unwrap());
-        let sealed = seal_to(&audit_pub, b"coercer wrote a note under duress", b"branch:test").unwrap();
+        let sealed = seal_to(
+            &audit_pub,
+            b"coercer wrote a note under duress",
+            b"branch:test",
+        )
+        .unwrap();
 
         // The real lane unwraps the audit secret and opens the record; the decoy never can.
         let (_lane, real_key) = open_lane(&container, "real-pin-1", None).unwrap();
         let real = container.layer_by_role(LayerRole::Real).unwrap();
         let wrapped = real.wrapped_key(WK_AUDIT_SECRET).unwrap();
         let real_wrap = wrapping_key_from(&real_key);
-        let secret_bytes =
-            unwrap_key(&real_wrap, &hex::decode(&wrapped.blob_hex).unwrap(), WRAP_AAD_AUDIT).unwrap();
+        let secret_bytes = unwrap_key(
+            &real_wrap,
+            &hex::decode(&wrapped.blob_hex).unwrap(),
+            WRAP_AAD_AUDIT,
+        )
+        .unwrap();
         let mut audit_secret = [0u8; 32];
         audit_secret.copy_from_slice(&secret_bytes);
 
@@ -1432,10 +1493,7 @@ mod tests {
         let report = review_decoy_activity(dir.path(), "real-pin-1").unwrap();
         assert_eq!(report.integrity, AuditIntegrity::Ok);
         assert_eq!(report.session_count, 1);
-        assert!(report
-            .actions
-            .iter()
-            .any(|a| a.action == "open_session"));
+        assert!(report.actions.iter().any(|a| a.action == "open_session"));
         assert!(report
             .actions
             .iter()
@@ -1486,7 +1544,9 @@ mod tests {
         add_note_in_session(dir.path(), "decoy-pin-2", "note B", 11, "s1").unwrap();
         // First review witnesses + anchors branch s1 (open_session + 2 add_note = 3 records).
         assert_eq!(
-            review_decoy_activity(dir.path(), "real-pin-1").unwrap().integrity,
+            review_decoy_activity(dir.path(), "real-pin-1")
+                .unwrap()
+                .integrity,
             AuditIntegrity::Ok
         );
 
@@ -1498,7 +1558,9 @@ mod tests {
         let report = review_decoy_activity(dir.path(), "real-pin-1").unwrap();
         assert_eq!(
             report.integrity,
-            AuditIntegrity::WitnessedPrefixAltered { branch_ref: "s1".into() }
+            AuditIntegrity::WitnessedPrefixAltered {
+                branch_ref: "s1".into()
+            }
         );
     }
 
@@ -1509,7 +1571,9 @@ mod tests {
         add_note_in_session(dir.path(), "decoy-pin-2", "coercer note A", 10, "s1").unwrap();
         add_note_in_session(dir.path(), "decoy-pin-2", "coercer note B", 11, "s1").unwrap();
         assert_eq!(
-            review_decoy_activity(dir.path(), "real-pin-1").unwrap().integrity,
+            review_decoy_activity(dir.path(), "real-pin-1")
+                .unwrap()
+                .integrity,
             AuditIntegrity::Ok
         );
 
@@ -1540,7 +1604,9 @@ mod tests {
         let report = review_decoy_activity(dir.path(), "real-pin-1").unwrap();
         assert_eq!(
             report.integrity,
-            AuditIntegrity::WitnessedPrefixAltered { branch_ref: "s1".into() }
+            AuditIntegrity::WitnessedPrefixAltered {
+                branch_ref: "s1".into()
+            }
         );
     }
 
@@ -1574,7 +1640,9 @@ mod tests {
         setup_with_iterations(dir.path(), "real-pin-1", "decoy-pin-2", 1_000).unwrap();
         // The decoy session can neither read nor set the retention policy.
         assert!(get_retention_mode(dir.path(), "decoy-pin-2").is_err());
-        assert!(set_retention_mode(dir.path(), "decoy-pin-2", RetentionMode::ManualTriage).is_err());
+        assert!(
+            set_retention_mode(dir.path(), "decoy-pin-2", RetentionMode::ManualTriage).is_err()
+        );
     }
 
     #[test]

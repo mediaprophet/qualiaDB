@@ -38,6 +38,22 @@ impl KvDictionary {
         &self.atoms[a * self.dim..(a + 1) * self.dim]
     }
 
+    /// Normalize every dictionary atom in place after loading or training.
+    /// Returns `false` when the declared shape is inconsistent or an atom has
+    /// effectively zero magnitude.
+    pub fn normalize_atoms(&mut self) -> bool {
+        if self.dim == 0 || self.atoms.len() != self.dim.saturating_mul(self.n_atoms) {
+            return false;
+        }
+        for atom in self.atoms.chunks_exact_mut(self.dim) {
+            if l2(atom) <= 1e-12 {
+                return false;
+            }
+            normalize(atom);
+        }
+        true
+    }
+
     /// Reconstruct a vector from its sparse code: `Σ coeffs[i] · atom(indices[i])`. The read-path
     /// operation the attention shader mirrors.
     pub fn reconstruct(&self, code: &SparseCode) -> Vec<f32> {

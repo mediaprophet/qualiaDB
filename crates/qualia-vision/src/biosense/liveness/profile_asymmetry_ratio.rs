@@ -62,7 +62,9 @@ pub enum ParVerdict {
         par_t1: f32,
         yaw_span_deg: f32,
     },
-    InsufficientYaw { yaw_span_deg: f32 },
+    InsufficientYaw {
+        yaw_span_deg: f32,
+    },
     InsufficientSamples,
     MissingLandmarks,
 }
@@ -208,8 +210,14 @@ pub fn synthetic_flat_par_frame(yaw_deg: f32, t_ms: u32) -> (LandmarkFrame, Head
     f.set(PadLandmarkId::NoseTip, Landmark2::new(nose_x, 150.0));
     // Equal horizontal distances after accounting for nose offset: place edges
     // so d_L == d_R == half (PAR = 1 for all yaw).
-    f.set(PadLandmarkId::LeftCheek, Landmark2::new(nose_x - half, 160.0));
-    f.set(PadLandmarkId::RightCheek, Landmark2::new(nose_x + half, 160.0));
+    f.set(
+        PadLandmarkId::LeftCheek,
+        Landmark2::new(nose_x - half, 160.0),
+    );
+    f.set(
+        PadLandmarkId::RightCheek,
+        Landmark2::new(nose_x + half, 160.0),
+    );
     f.set(PadLandmarkId::LeftEyeOuter, Landmark2::new(eye_l, 120.0));
     f.set(PadLandmarkId::RightEyeOuter, Landmark2::new(eye_r, 120.0));
     f.set(PadLandmarkId::Chin, Landmark2::new(nose_x, 210.0));
@@ -246,11 +254,20 @@ pub fn synthetic_3d_par_frame(yaw_deg: f32, t_ms: u32) -> (LandmarkFrame, HeadPo
         (d_advance, d_recede)
     };
     f.set(PadLandmarkId::NoseTip, Landmark2::new(nose_x, 150.0));
-    f.set(PadLandmarkId::LeftCheek, Landmark2::new(nose_x - d_l, 160.0));
-    f.set(PadLandmarkId::RightCheek, Landmark2::new(nose_x + d_r, 160.0));
+    f.set(
+        PadLandmarkId::LeftCheek,
+        Landmark2::new(nose_x - d_l, 160.0),
+    );
+    f.set(
+        PadLandmarkId::RightCheek,
+        Landmark2::new(nose_x + d_r, 160.0),
+    );
     f.set(PadLandmarkId::LeftEyeOuter, Landmark2::new(eye_l, 120.0));
     f.set(PadLandmarkId::RightEyeOuter, Landmark2::new(eye_r, 120.0));
-    f.set(PadLandmarkId::Chin, Landmark2::new(nose_x * 0.15 + eye_c * 0.85, 210.0));
+    f.set(
+        PadLandmarkId::Chin,
+        Landmark2::new(nose_x * 0.15 + eye_c * 0.85, 210.0),
+    );
     (
         f,
         HeadPose {
@@ -345,7 +362,11 @@ mod tests {
             poses[i] = p;
         }
         let v = evaluate_profile_asymmetry(&frames, &poses, DEFAULT_PAR_TAU);
-        assert!(matches!(v, ParVerdict::InsufficientYaw { .. }), "got {:?}", v);
+        assert!(
+            matches!(v, ParVerdict::InsufficientYaw { .. }),
+            "got {:?}",
+            v
+        );
     }
 
     #[test]

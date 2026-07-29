@@ -128,7 +128,13 @@ pub fn units_from_paragraphs(text: &str) -> Vec<ContextUnit> {
         if body.is_empty() {
             continue;
         }
-        let label = body.lines().next().unwrap_or("¶").chars().take(80).collect();
+        let label = body
+            .lines()
+            .next()
+            .unwrap_or("¶")
+            .chars()
+            .take(80)
+            .collect();
         units.push(ContextUnit {
             frag: format!("p-{}", i + 1),
             kind: "paragraph".into(),
@@ -211,7 +217,10 @@ pub fn build_document_context(
 
     for unit in units {
         let body = unit.text.trim();
-        if body.is_empty() && unit.kind != "part" && unit.kind != "division" && unit.kind != "schedule"
+        if body.is_empty()
+            && unit.kind != "part"
+            && unit.kind != "division"
+            && unit.kind != "schedule"
         {
             continue;
         }
@@ -322,10 +331,7 @@ pub fn build_document_context(
         // Real deontic NQuin when class is actionable.
         if let Some(op) = deontic_opcode(deontic) {
             let action = fnv60_str(&format!("{concept_id}#action"));
-            let path = fnv60_str(&format!(
-                "q42:cml:{}",
-                deontic.as_str()
-            ));
+            let path = fnv60_str(&format!("q42:cml:{}", deontic.as_str()));
             let quin = compile_norm_quin(party, op, path, action, ctx_hash, 0, false);
             graph.quins.push(quin);
             graph.deontic_norms += 1;
@@ -371,7 +377,10 @@ fn signal_quin(doc_uri: &str, unit: &ContextUnit, hit: &SignalHit) -> NQuin {
     // Lightweight edge: subject = unit, predicate = signal family, object = signal name hash.
     let subject = fnv60_str(&format!("{doc_uri}#{}", unit.frag));
     let predicate = fnv60_str(&format!("urn:qualia:cml:signal:{}", hit.family));
-    let object = fnv60_str(&format!("urn:qualia:cml:signal:{}:{}", hit.family, hit.signal));
+    let object = fnv60_str(&format!(
+        "urn:qualia:cml:signal:{}:{}",
+        hit.family, hit.signal
+    ));
     let context = fnv60_str(doc_uri);
     let metadata = hit.confidence as u64;
     NQuin {
@@ -407,7 +416,10 @@ mod tests {
         assert!(g.n3.contains("values:originalText"));
         assert!(g.n3.contains("cml:Proposed"));
         assert!(g.signal_tags.iter().any(|t| t.starts_with("privacy:")));
-        assert!(g.topics.iter().any(|t| t == "gdpr-family" || t.starts_with("privacy:")));
+        assert!(g
+            .topics
+            .iter()
+            .any(|t| t == "gdpr-family" || t.starts_with("privacy:")));
         assert!(!g.quins.is_empty());
     }
 

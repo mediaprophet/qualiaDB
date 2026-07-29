@@ -10,8 +10,8 @@
 //! storage path). Sanctuary unlock is only required for secret-shelf UX and vault-gated writes.
 
 use super::host_client::{
-    export_library_graph, ingest_document, ingest_file_hex, library_commons_share_card,
-    ingest_legislation_text, library_stats, list_library_section, query_library_faceted,
+    export_library_graph, ingest_document, ingest_file_hex, ingest_legislation_text,
+    library_commons_share_card, library_stats, list_library_section, query_library_faceted,
     remove_library_entry, search_library, search_library_time, seed_perception_library,
     seed_studio_qapps, set_library_commons, view_morph, view_pick_scene, view_project_library,
     view_render_memory_spatial, view_select, view_select_uri, view_session, view_set_observer,
@@ -78,7 +78,9 @@ fn is_computer_vision_row(r: &serde_json::Value) -> bool {
             || t.contains("computer_vision")
             || t == "vision"
             || t.contains("specialized-lib")
-    }) || projects.iter().any(|p| p.to_ascii_lowercase().contains("perception:vision"))
+    }) || projects
+        .iter()
+        .any(|p| p.to_ascii_lowercase().contains("perception:vision"))
         || excerpt.contains("computer_vision")
 }
 
@@ -162,14 +164,17 @@ const HEADER: &str = "padding:1.1rem 1.35rem 0.85rem;border-bottom:1px solid #1f
 const STATS: &str = "display:flex;flex-wrap:wrap;gap:0.45rem;margin-top:0.75rem;";
 const STAT_CHIP: &str = "display:inline-flex;align-items:center;gap:0.35rem;padding:0.28rem 0.65rem;border-radius:999px;background:#0f172a;border:1px solid #334155;font-size:0.72rem;color:#94a3b8;";
 const STAT_NUM: &str = "color:#a78bfa;font-weight:700;font-variant-numeric:tabular-nums;";
-const BODY: &str = "flex:1;min-height:0;display:grid;grid-template-columns:minmax(280px,340px) 1fr;gap:0;";
-const SIDE: &str = "border-right:1px solid #1f2937;overflow-y:auto;padding:1rem;background:#0f172a;min-height:0;";
+const BODY: &str =
+    "flex:1;min-height:0;display:grid;grid-template-columns:minmax(280px,340px) 1fr;gap:0;";
+const SIDE: &str =
+    "border-right:1px solid #1f2937;overflow-y:auto;padding:1rem;background:#0f172a;min-height:0;";
 const MAIN: &str = "overflow-y:auto;padding:1rem 1.25rem;min-height:0;";
 const CARD: &str = "background:#111827;border:1px solid #1f2937;border-radius:14px;padding:0.95rem 1.05rem;margin-bottom:0.85rem;";
 const H3: &str = "margin:0 0 0.4rem;font-size:0.82rem;font-weight:700;color:#c4b5fd;letter-spacing:0.04em;text-transform:uppercase;";
 const MUTED: &str = "margin:0 0 0.75rem;font-size:0.78rem;color:#94a3b8;line-height:1.45;";
 const INPUT: &str = "width:100%;box-sizing:border-box;padding:0.5rem 0.65rem;margin-bottom:0.45rem;background:#0b1220;color:#f3f4f6;border:1px solid #334155;border-radius:9px;font-family:inherit;font-size:0.8rem;";
-const LABEL: &str = "display:block;font-size:0.68rem;color:#64748b;margin:0 0 0.2rem;font-weight:600;";
+const LABEL: &str =
+    "display:block;font-size:0.68rem;color:#64748b;margin:0 0 0.2rem;font-weight:600;";
 const BTN: &str = "background:#8b5cf6;color:#fff;padding:0.5rem 0.9rem;border:none;border-radius:9px;font-weight:600;cursor:pointer;font-size:0.8rem;";
 const BTN2: &str = "background:#1e293b;color:#e2e8f0;padding:0.45rem 0.75rem;border:1px solid #334155;border-radius:9px;font-weight:600;cursor:pointer;font-size:0.75rem;";
 const TAB: &str = "padding:0.4rem 0.85rem;border-radius:9px;border:1px solid #334155;background:transparent;color:#94a3b8;font-size:0.78rem;font-weight:600;cursor:pointer;";
@@ -335,7 +340,9 @@ pub fn WellfairLibraryPanel() -> Element {
     let mut ing_uri = use_signal(|| {
         let secs = {
             #[cfg(target_arch = "wasm32")]
-            { (js_sys::Date::now() as u64 / 1000) % 100_000 }
+            {
+                (js_sys::Date::now() as u64 / 1000) % 100_000
+            }
             #[cfg(not(target_arch = "wasm32"))]
             {
                 std::time::SystemTime::now()
@@ -441,10 +448,7 @@ pub fn WellfairLibraryPanel() -> Element {
             };
             match view_project_library(sect, Some(obs.as_str()), Some(level)).await {
                 Ok(v) => {
-                    let hidden = v
-                        .get("hidden_count")
-                        .and_then(|x| x.as_u64())
-                        .unwrap_or(0) as u32;
+                    let hidden = v.get("hidden_count").and_then(|x| x.as_u64()).unwrap_or(0) as u32;
                     let flat = v
                         .get("flat")
                         .and_then(|a| a.as_array())
@@ -501,19 +505,13 @@ pub fn WellfairLibraryPanel() -> Element {
                 filter.insert("section".into(), serde_json::Value::String(sec.clone()));
             }
             if !cat.trim().is_empty() {
-                filter.insert(
-                    "categories".into(),
-                    serde_json::json!([cat.trim()]),
-                );
+                filter.insert("categories".into(), serde_json::json!([cat.trim()]));
             }
             if !text.trim().is_empty() {
                 filter.insert("text".into(), serde_json::Value::String(text));
             }
             if bm {
-                filter.insert(
-                    "purposes".into(),
-                    serde_json::json!([BOOKMARK_PURPOSE]),
-                );
+                filter.insert("purposes".into(), serde_json::json!([BOOKMARK_PURPOSE]));
             }
             let filter = serde_json::Value::Object(filter);
             match query_library_faceted(&filter, &sort).await {
@@ -541,7 +539,11 @@ pub fn WellfairLibraryPanel() -> Element {
                 }
                 Err(e) => {
                     // Fallback to plain section list if faceted path unavailable.
-                    let want = if sec == "all" { None } else { Some(sec.as_str()) };
+                    let want = if sec == "all" {
+                        None
+                    } else {
+                        Some(sec.as_str())
+                    };
                     match list_library_section(want).await {
                         Ok(serde_json::Value::Array(mut rows)) => {
                             apply_perception_from_rows(&rows);
@@ -603,22 +605,18 @@ pub fn WellfairLibraryPanel() -> Element {
                 status.set("Add some content (or hex bytes for a photo) before ingesting.".into());
                 return;
             }
-            let guardian = if g.trim().is_empty() {
-                None
-            } else {
-                Some(g)
-            };
+            let guardian = if g.trim().is_empty() { None } else { Some(g) };
             // Section secret forces classified sensitivity.
-            let sens = if sec == "secret" || sensitivity == "classified" || sensitivity == "restricted"
-            {
-                if sensitivity == "public" {
-                    "classified".to_string()
+            let sens =
+                if sec == "secret" || sensitivity == "classified" || sensitivity == "restricted" {
+                    if sensitivity == "public" {
+                        "classified".to_string()
+                    } else {
+                        sensitivity.clone()
+                    }
                 } else {
                     sensitivity.clone()
-                }
-            } else {
-                sensitivity.clone()
-            };
+                };
             let commons = if sec == "secret" || sens != "public" {
                 "none".to_string()
             } else {

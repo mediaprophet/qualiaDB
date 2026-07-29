@@ -39,7 +39,11 @@ pub fn build_erb_bank(
 
     let nyquist = sample_rate * 0.5;
     let f_lo = fmin.max(0.0);
-    let f_hi = if fmax <= 0.0 || fmax > nyquist { nyquist } else { fmax };
+    let f_hi = if fmax <= 0.0 || fmax > nyquist {
+        nyquist
+    } else {
+        fmax
+    };
     if f_lo >= f_hi {
         return Err(AudioError::InvalidParameter);
     }
@@ -95,8 +99,16 @@ mod tests {
         let sr = 22_050.0;
         let mut w = vec![0.0f32; n_bands * n_bins];
         build_erb_bank(n_bins, n_bands, sr, 50.0, 0.0, &mut w).unwrap();
-        let width = |m: usize| w[m * n_bins..(m + 1) * n_bins].iter().filter(|&&v| v > 1e-4).count();
-        assert!(width(n_bands - 2) > width(1), "ERB bands do not widen with freq");
+        let width = |m: usize| {
+            w[m * n_bins..(m + 1) * n_bins]
+                .iter()
+                .filter(|&&v| v > 1e-4)
+                .count()
+        };
+        assert!(
+            width(n_bands - 2) > width(1),
+            "ERB bands do not widen with freq"
+        );
     }
 
     #[test]
@@ -115,7 +127,10 @@ mod tests {
             assert!(peak <= 1.0001, "band {m} peak exceeds 1: {peak}");
             assert!(row.iter().all(|&v| v >= 0.0));
             if active >= 4 {
-                assert!(peak > 0.9, "band {m} peak too low: {peak} (active {active})");
+                assert!(
+                    peak > 0.9,
+                    "band {m} peak too low: {peak} (active {active})"
+                );
             }
         }
     }

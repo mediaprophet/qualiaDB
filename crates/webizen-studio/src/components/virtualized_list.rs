@@ -77,9 +77,8 @@ pub fn VirtualizedListFrame(
     let offset = offset_top_px(start, row_height);
     let _ = end; // window end is for parent filter; children own the visible slice
 
-    let base = format!(
-        "overflow-y: auto; height: {viewport_height}px; position: relative; {style}"
-    );
+    let base =
+        format!("overflow-y: auto; height: {viewport_height}px; position: relative; {style}");
 
     rsx! {
         div {

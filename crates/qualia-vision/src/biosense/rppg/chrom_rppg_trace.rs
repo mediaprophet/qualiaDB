@@ -2,7 +2,11 @@
 
 use crate::cv::error::CvError;
 
-pub fn chrom_rppg_trace(rgb_means: &[f32], n_frames: usize, out: &mut [f32]) -> Result<(), CvError> {
+pub fn chrom_rppg_trace(
+    rgb_means: &[f32],
+    n_frames: usize,
+    out: &mut [f32],
+) -> Result<(), CvError> {
     if n_frames == 0 || rgb_means.len() < n_frames * 3 || out.len() < n_frames {
         return Err(CvError::BufferTooSmall);
     }

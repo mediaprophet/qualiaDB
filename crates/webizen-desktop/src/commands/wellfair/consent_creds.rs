@@ -76,7 +76,13 @@ pub fn wellfair_record_conduct(
         let host = guard
             .as_ref()
             .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-        let record = host.record_conduct(&agent_did, &credential_id, &action, &reason, &commitment_hex)?;
+        let record = host.record_conduct(
+            &agent_did,
+            &credential_id,
+            &action,
+            &reason,
+            &commitment_hex,
+        )?;
         serde_json::to_string(&record).map_err(|e| e.to_string())
     })?
 }
@@ -96,4 +102,3 @@ pub fn wellfair_conduct_audit_trail(
         serde_json::to_string(&trail).map_err(|e| e.to_string())
     })?
 }
-

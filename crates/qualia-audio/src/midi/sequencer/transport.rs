@@ -171,7 +171,11 @@ mod tests {
         let mut t = Transport::new(480, 120.0).unwrap();
         t.play();
         t.advance(0.5).unwrap();
-        assert!((t.position_ticks_f64() - 480.0).abs() < 1e-6, "got {}", t.position_ticks_f64());
+        assert!(
+            (t.position_ticks_f64() - 480.0).abs() < 1e-6,
+            "got {}",
+            t.position_ticks_f64()
+        );
         assert_eq!(t.position_ticks(), 480);
     }
 
@@ -200,6 +204,10 @@ mod tests {
         t.set_loop(0, 480).unwrap();
         t.play();
         t.advance(0.6).unwrap(); // 576 ticks -> wraps to 96
-        assert!((t.position_ticks_f64() - 96.0).abs() < 1e-6, "got {}", t.position_ticks_f64());
+        assert!(
+            (t.position_ticks_f64() - 96.0).abs() < 1e-6,
+            "got {}",
+            t.position_ticks_f64()
+        );
     }
 }

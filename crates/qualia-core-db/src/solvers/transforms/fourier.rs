@@ -79,13 +79,15 @@ fn dft_cpu(x: &[Cplx]) -> Vec<Cplx> {
 /// ([`dft`]'s exact math). The result is always a valid forward DFT; only the
 /// precision (f32 vs f64) and the compute device differ between the two paths.
 pub fn dft_accelerated(x: &[Cplx]) -> Vec<Cplx> {
-    let n = x.len();
-
     // ── Accelerated fast path: WGSL forge forward FFT (f32), same convention. ──
     // Eligible only for a power-of-two N in [2, 1024] on a machine with a wgpu
     // adapter; any forge error falls straight through to the exact CPU DFT.
     #[cfg(all(not(target_arch = "wasm32"), feature = "wgsl-forge"))]
-    if n.is_power_of_two() && (2..=1024).contains(&n) && crate::wgsl_forge::dispatch::caps().wgpu {
+    if {
+        let n = x.len();
+        n.is_power_of_two() && (2..=1024).contains(&n) && crate::wgsl_forge::dispatch::caps().wgpu
+    } {
+        let n = x.len();
         // f64 (re, im) -> interleaved f32 [re0, im0, re1, im1, …].
         let mut interleaved = Vec::with_capacity(2 * n);
         for &(re, im) in x {

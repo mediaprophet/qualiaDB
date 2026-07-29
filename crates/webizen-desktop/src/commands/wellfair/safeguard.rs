@@ -18,12 +18,17 @@ pub fn wellfair_arm_dead_mans_switch(
     disposition: String,
     disposition_parties: Vec<String>,
 ) -> Result<String, String> {
-    use qualia_client_core::dead_mans_switch::{DeadMansSwitch, Disposition, Heartbeat, TriggerRule};
-    let commitment = qualia_client_core::accountability_store::parse_commitment_hex(&commitment_hex)?;
+    use qualia_client_core::dead_mans_switch::{
+        DeadMansSwitch, Disposition, Heartbeat, TriggerRule,
+    };
+    let commitment =
+        qualia_client_core::accountability_store::parse_commitment_hex(&commitment_hex)?;
     let now = wellfair_now_unix() as u64;
     let disposition = match disposition.as_str() {
         "make_public" => Disposition::MakePublic,
-        _ => Disposition::ReleaseTo { parties: disposition_parties },
+        _ => Disposition::ReleaseTo {
+            parties: disposition_parties,
+        },
     };
     let switch = DeadMansSwitch {
         payload_commitment: commitment,
@@ -38,7 +43,9 @@ pub fn wellfair_arm_dead_mans_switch(
     };
     let state = app.state::<HostApiState>();
     state.0.execute_sync(move |guard| {
-        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         host.arm_dead_mans_switch(switch)?;
         Ok("{\"armed\":true}".into())
     })?
@@ -49,7 +56,9 @@ pub fn wellfair_arm_dead_mans_switch(
 pub fn wellfair_dead_mans_alive(app: AppHandle, commitment_hex: String) -> Result<String, String> {
     let state = app.state::<HostApiState>();
     state.0.execute_sync(move |guard| {
-        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         let found = host.dead_mans_alive(&commitment_hex)?;
         serde_json::to_string(&serde_json::json!({ "found": found })).map_err(|e| e.to_string())
     })?
@@ -69,10 +78,16 @@ pub fn wellfair_attest_dead_mans(
         "abandon" => AttestationKind::Abandon,
         _ => AttestationKind::BelievedDead,
     };
-    let attestation = PartyAttestation { party_did, kind, time_unix: wellfair_now_unix() as u64 };
+    let attestation = PartyAttestation {
+        party_did,
+        kind,
+        time_unix: wellfair_now_unix() as u64,
+    };
     let state = app.state::<HostApiState>();
     state.0.execute_sync(move |guard| {
-        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         let found = host.attest_dead_mans(&commitment_hex, attestation)?;
         serde_json::to_string(&serde_json::json!({ "found": found })).map_err(|e| e.to_string())
     })?
@@ -83,9 +98,12 @@ pub fn wellfair_attest_dead_mans(
 pub fn wellfair_enact_dead_mans(app: AppHandle, commitment_hex: String) -> Result<String, String> {
     let state = app.state::<HostApiState>();
     state.0.execute_sync(move |guard| {
-        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         let disposition = host.enact_dead_mans(&commitment_hex)?;
-        serde_json::to_string(&serde_json::json!({ "disposition": disposition })).map_err(|e| e.to_string())
+        serde_json::to_string(&serde_json::json!({ "disposition": disposition }))
+            .map_err(|e| e.to_string())
     })?
 }
 
@@ -94,7 +112,9 @@ pub fn wellfair_enact_dead_mans(app: AppHandle, commitment_hex: String) -> Resul
 pub fn wellfair_list_dead_mans_switches(app: AppHandle) -> Result<String, String> {
     let state = app.state::<HostApiState>();
     state.0.execute_sync(move |guard| {
-        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         let list = host.list_dead_mans_switches()?;
         serde_json::to_string(&list).map_err(|e| e.to_string())
     })?
@@ -110,7 +130,9 @@ pub fn wellfair_enact_dead_mans_release(
 ) -> Result<String, String> {
     let state = app.state::<HostApiState>();
     state.0.execute_sync(move |guard| {
-        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         let result = host.enact_dead_mans_release(&commitment_hex, party_keys)?;
         serde_json::to_string(&result).map_err(|e| e.to_string())
     })?
@@ -127,7 +149,9 @@ pub fn wellfair_split_dek_recovery(
 ) -> Result<String, String> {
     let state = app.state::<HostApiState>();
     state.0.execute_sync(move |guard| {
-        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         let result = host.split_dek_recovery(&commitment_hex, threshold, parties)?;
         serde_json::to_string(&result).map_err(|e| e.to_string())
     })?
@@ -144,7 +168,9 @@ pub fn wellfair_reconstruct_and_release(
 ) -> Result<String, String> {
     let state = app.state::<HostApiState>();
     state.0.execute_sync(move |guard| {
-        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         let result = host.reconstruct_and_release(&commitment_hex, shares, party_keys)?;
         serde_json::to_string(&result).map_err(|e| e.to_string())
     })?
@@ -159,7 +185,9 @@ pub fn wellfair_set_peer_envelope_key(
 ) -> Result<String, String> {
     let state = app.state::<HostApiState>();
     state.0.execute_sync(move |guard| {
-        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         host.set_peer_envelope_key(&did, &pubkey_hex)?;
         Ok("{\"set\":true}".into())
     })?
@@ -174,7 +202,9 @@ pub fn wellfair_enact_dead_mans_release_via_peers(
 ) -> Result<String, String> {
     let state = app.state::<HostApiState>();
     state.0.execute_sync(move |guard| {
-        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         let result = host.enact_dead_mans_release_via_peers(&commitment_hex)?;
         serde_json::to_string(&result).map_err(|e| e.to_string())
     })?
@@ -193,7 +223,9 @@ pub fn wellfair_arm_incapacity_switch(
     threshold: usize,
     require_official_instrument: bool,
 ) -> Result<String, String> {
-    use qualia_client_core::incapacity_switch::{IncapacityKind, IncapacitySwitch, IncapacityTrigger};
+    use qualia_client_core::incapacity_switch::{
+        IncapacityKind, IncapacitySwitch, IncapacityTrigger,
+    };
     let kind = match kind.as_str() {
         "involuntary_psychiatric" => IncapacityKind::InvoluntaryPsychiatric,
         "serious_injury" => IncapacityKind::SeriousInjury,
@@ -202,13 +234,19 @@ pub fn wellfair_arm_incapacity_switch(
     let switch = IncapacitySwitch {
         principal_did,
         kind,
-        trigger: IncapacityTrigger { parties, attestation_threshold: threshold, require_official_instrument },
+        trigger: IncapacityTrigger {
+            parties,
+            attestation_threshold: threshold,
+            require_official_instrument,
+        },
         advocate_did,
         active_since_unix: None,
     };
     let state = app.state::<HostApiState>();
     state.0.execute_sync(move |guard| {
-        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         host.arm_incapacity_switch(switch)?;
         Ok("{\"armed\":true}".into())
     })?
@@ -224,9 +262,13 @@ pub fn wellfair_activate_incapacity(
 ) -> Result<String, String> {
     let state = app.state::<HostApiState>();
     state.0.execute_sync(move |guard| {
-        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-        let activated = host.activate_incapacity(&principal_did, attesting_parties, official_instrument)?;
-        serde_json::to_string(&serde_json::json!({ "activated": activated })).map_err(|e| e.to_string())
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let activated =
+            host.activate_incapacity(&principal_did, attesting_parties, official_instrument)?;
+        serde_json::to_string(&serde_json::json!({ "activated": activated }))
+            .map_err(|e| e.to_string())
     })?
 }
 
@@ -235,7 +277,9 @@ pub fn wellfair_activate_incapacity(
 pub fn wellfair_regain_capacity(app: AppHandle, principal_did: String) -> Result<String, String> {
     let state = app.state::<HostApiState>();
     state.0.execute_sync(move |guard| {
-        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         let found = host.regain_capacity(&principal_did)?;
         serde_json::to_string(&serde_json::json!({ "found": found })).map_err(|e| e.to_string())
     })?
@@ -246,9 +290,10 @@ pub fn wellfair_regain_capacity(app: AppHandle, principal_did: String) -> Result
 pub fn wellfair_list_incapacity_switches(app: AppHandle) -> Result<String, String> {
     let state = app.state::<HostApiState>();
     state.0.execute_sync(move |guard| {
-        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         let list = host.list_incapacity_switches()?;
         serde_json::to_string(&list).map_err(|e| e.to_string())
     })?
 }
-

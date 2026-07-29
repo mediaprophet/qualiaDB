@@ -42,7 +42,11 @@ pub fn build_bark_bank(
 
     let nyquist = sample_rate * 0.5;
     let f_lo = fmin.max(0.0);
-    let f_hi = if fmax <= 0.0 || fmax > nyquist { nyquist } else { fmax };
+    let f_hi = if fmax <= 0.0 || fmax > nyquist {
+        nyquist
+    } else {
+        fmax
+    };
     if f_lo >= f_hi {
         return Err(AudioError::InvalidParameter);
     }

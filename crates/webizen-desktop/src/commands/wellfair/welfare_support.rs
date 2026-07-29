@@ -32,7 +32,8 @@ pub fn wellfair_add_welfare_stream(
         let host = guard
             .as_mut()
             .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-        let entry = host.add_welfare_stream(&program_name, reference, parse_stream_status(&status))?;
+        let entry =
+            host.add_welfare_stream(&program_name, reference, parse_stream_status(&status))?;
         serde_json::to_string(&entry).map_err(|e| e.to_string())
     })?
 }
@@ -65,4 +66,3 @@ pub fn wellfair_list_sync_inbox(app: AppHandle, limit: usize) -> Result<String, 
         serde_json::to_string(&inbox).map_err(|e| e.to_string())
     })?
 }
-

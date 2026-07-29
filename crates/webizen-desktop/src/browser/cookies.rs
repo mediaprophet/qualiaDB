@@ -5,7 +5,7 @@
 
 use tauri::{AppHandle, Manager, Url};
 
-use super::{CONTENT_LABEL, last_url};
+use super::{last_url, CONTENT_LABEL};
 use qualia_client_core::cookie_graph::{hypothesize_purpose, CookieGraph, CookieNode};
 
 fn storage_root() -> std::path::PathBuf {

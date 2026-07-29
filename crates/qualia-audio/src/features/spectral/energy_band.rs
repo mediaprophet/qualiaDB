@@ -16,12 +16,7 @@ use crate::types::AudioError;
 /// - [`AudioError::InvalidParameter`] if `sample_rate` is not a positive finite,
 ///   if `mag` has fewer than 2 bins, if `f_lo` is negative, or if
 ///   `f_hi < f_lo`.
-pub fn energy_band(
-    mag: &[f32],
-    sample_rate: f32,
-    f_lo: f32,
-    f_hi: f32,
-) -> Result<f32, AudioError> {
+pub fn energy_band(mag: &[f32], sample_rate: f32, f_lo: f32, f_hi: f32) -> Result<f32, AudioError> {
     if sample_rate <= 0.0 || !sample_rate.is_finite() {
         return Err(AudioError::InvalidParameter);
     }
@@ -55,7 +50,7 @@ mod tests {
         mag[2] = 2.0; // 1000 Hz -> in band
         mag[4] = 3.0; // 2000 Hz -> in band
         mag[7] = 5.0; // 3500 Hz -> out of band
-        // Band [900, 2100] Hz captures bins 2 and 4 -> 4 + 9 = 13.
+                      // Band [900, 2100] Hz captures bins 2 and 4 -> 4 + 9 = 13.
         let e = energy_band(&mag, sr, 900.0, 2100.0).expect("energy");
         assert!((e - 13.0).abs() < 1e-4, "energy={e}");
     }

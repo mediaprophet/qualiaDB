@@ -3,6 +3,9 @@ name = "qualia-core-db"
 version = "0.0.27"
 edition = "2021"
 authors = ["Timothy Charles Holborn <timothy.holborn@gmail.com>"]
+description = "QualiaDB semantic graph, inference, ontology, spatial, and browser-WASM runtime"
+repository = "https://github.com/mediaprophet/qualiaDB"
+license-file = "LICENSE"
 
 [features]
 default = ["profile_target_1024", "zk-culling", "gpu-runtime", "wgsl-forge", "privacy-he"]
@@ -31,6 +34,9 @@ wasm-ontology = []
 wasm-logic = []
 wasm-scientific = ["gpu-runtime"]
 wasm-llm = ["gpu-runtime", "wasm-logic", "wasm-scientific"]
+# Optional browser GPU differential probes and legacy readback experiments.
+# Kept out of release bundles; enable explicitly while developing MC8 kernels.
+wasm-llm-diagnostics = ["wasm-llm"]
 wasm-playground = ["wasm-logic", "wasm-scientific"]
 wasm-full = ["portal", "wasm-logic", "wasm-scientific", "wasm-llm", "wasm-playground"]
 

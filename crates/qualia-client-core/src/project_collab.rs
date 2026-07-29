@@ -87,10 +87,7 @@ fn now() -> u64 {
 pub fn list(project_id: Option<&str>) -> Vec<ProjectCollaborator> {
     let all = load();
     match project_id {
-        Some(id) if !id.is_empty() => all
-            .into_iter()
-            .filter(|c| c.project_id == id)
-            .collect(),
+        Some(id) if !id.is_empty() => all.into_iter().filter(|c| c.project_id == id).collect(),
         _ => all,
     }
 }
@@ -192,7 +189,11 @@ pub fn create_local_project(name: &str, description: &str) -> Result<LocalProjec
 }
 
 /// Register a wellfair-backed project id into the local registry (after vault create).
-pub fn register_wellfair_project(id: &str, name: &str, description: &str) -> Result<LocalProject, String> {
+pub fn register_wellfair_project(
+    id: &str,
+    name: &str,
+    description: &str,
+) -> Result<LocalProject, String> {
     let id = id.trim();
     let name = name.trim();
     if id.is_empty() || name.is_empty() {

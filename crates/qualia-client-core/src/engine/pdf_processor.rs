@@ -1,7 +1,7 @@
-use std::path::Path;
-use std::fs;
-use uuid::Uuid;
 use pdf_extract::extract_text;
+use std::fs;
+use std::path::Path;
+use uuid::Uuid;
 
 /// Extracts text from a PDF file and stores it into the local library,
 /// supporting underlying systems like LLMs, graph schemas, and ontological CML assertions.
@@ -33,8 +33,11 @@ pub async fn ingest_pdf_to_library(file_path: &str) -> Result<String, String> {
 
     let file_id = Uuid::new_v4().to_string();
     let txt_path = library_dir.join(format!("{}.txt", file_id));
-    
+
     fs::write(&txt_path, &text).map_err(|e| format!("Failed to write text to library: {}", e))?;
 
-    Ok(format!("PDF ingested successfully. Text saved to {:?}", txt_path))
+    Ok(format!(
+        "PDF ingested successfully. Text saved to {:?}",
+        txt_path
+    ))
 }

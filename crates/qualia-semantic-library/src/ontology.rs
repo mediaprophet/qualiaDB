@@ -20,7 +20,7 @@ impl OntologyCompiler {
 
         // MOCK: If it was already compiled, we'd open the HmcContainer and return the shape.
         // For now, we return a generic dynamic form schema mapping to the domain.
-        
+
         let mock_shape = serde_json::json!({
             "domain": domain_id,
             "shapes": [

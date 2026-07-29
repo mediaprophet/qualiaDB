@@ -1,22 +1,21 @@
 //! Welfare support + cooperative work items
 
-
-use super::super::journal::JournalEntry;
 use super::super::blob_store::BlobStore;
+use super::super::journal::JournalEntry;
 use qualia_cooperative_core::work_item::{
     build_work_item_envelope, build_work_item_status_envelope, derive_board,
     parse_work_item_status_summary, parse_work_item_summary, work_item_status_summary,
     work_item_summary, BoardColumn, WorkItem, WorkItemStatusEvent,
 };
 use wellfare_core::authority_attestation::{
-    authority_attestation_summary, build_authority_attestation_envelope, AgentInCapacity, Authority,
-    AuthorityAttestation, Representation,
+    authority_attestation_summary, build_authority_attestation_envelope, AgentInCapacity,
+    Authority, AuthorityAttestation, Representation,
 };
 use wellfare_core::welfare_support::{
-    build_assistance_need_envelope, build_government_letter_envelope, build_welfare_stream_envelope,
-    AssistanceNeed, GovernmentLetter, StreamStatus, Urgency, WelfareStream,
+    build_assistance_need_envelope, build_government_letter_envelope,
+    build_welfare_stream_envelope, AssistanceNeed, GovernmentLetter, StreamStatus, Urgency,
+    WelfareStream,
 };
-
 
 use super::*;
 
@@ -31,7 +30,8 @@ impl WebizenHostApi {
     ) -> Result<JournalEntry, String> {
         let mut need = AssistanceNeed::new(category, description, Self::now_unix() as u32);
         need.urgency = urgency;
-        let hash = Self::payload_hash_hex(&serde_json::to_string(&need).map_err(|e| e.to_string())?);
+        let hash =
+            Self::payload_hash_hex(&serde_json::to_string(&need).map_err(|e| e.to_string())?);
         let asserted = Self::now_unix() as u32;
         let envelope = build_assistance_need_envelope(
             &need,
@@ -55,7 +55,8 @@ impl WebizenHostApi {
         let mut stream = WelfareStream::new(program_name, Self::now_unix() as u32);
         stream.reference = reference.filter(|s| !s.is_empty());
         stream.status = status;
-        let hash = Self::payload_hash_hex(&serde_json::to_string(&stream).map_err(|e| e.to_string())?);
+        let hash =
+            Self::payload_hash_hex(&serde_json::to_string(&stream).map_err(|e| e.to_string())?);
         let asserted = Self::now_unix() as u32;
         let envelope = build_welfare_stream_envelope(
             &stream,
@@ -79,12 +80,8 @@ impl WebizenHostApi {
         let mut letter = GovernmentLetter::new(sender, subject, Self::now_unix() as u32);
         letter.action_required = action_required;
         let asserted = Self::now_unix() as u32;
-        let envelope = build_government_letter_envelope(
-            &letter,
-            &self.owner_did,
-            &self.author_did,
-            asserted,
-        );
+        let envelope =
+            build_government_letter_envelope(&letter, &self.owner_did, &self.author_did, asserted);
         let summary = wellfare_core::welfare_support::government_letter_summary(&letter);
         self.submit_record_with_summary(QAPP_WELFARE, envelope, SOURCE_WELFARE, Some(summary))?;
         self.finalize_batch().ok();
@@ -128,12 +125,8 @@ impl WebizenHostApi {
         if let (Some(n), Some(c)) = (agent_name, agent_capacity) {
             att = att.with_agent(AgentInCapacity::new(n, c));
         }
-        let envelope = build_authority_attestation_envelope(
-            &att,
-            &self.owner_did,
-            &self.author_did,
-            issued,
-        );
+        let envelope =
+            build_authority_attestation_envelope(&att, &self.owner_did, &self.author_did, issued);
         let summary = authority_attestation_summary(&att);
         self.submit_record_with_summary(QAPP_WELFARE, envelope, SOURCE_WELFARE, Some(summary))?;
         self.finalize_batch().ok();
@@ -156,12 +149,8 @@ impl WebizenHostApi {
         letter.action_required = action_required;
         letter.attachment_blob_hash = Some(hash);
         let asserted = Self::now_unix() as u32;
-        let envelope = build_government_letter_envelope(
-            &letter,
-            &self.owner_did,
-            &self.author_did,
-            asserted,
-        );
+        let envelope =
+            build_government_letter_envelope(&letter, &self.owner_did, &self.author_did, asserted);
         let summary = wellfare_core::welfare_support::government_letter_summary(&letter);
         self.submit_record_with_summary(QAPP_WELFARE, envelope, SOURCE_WELFARE, Some(summary))?;
         self.finalize_batch().ok();
@@ -191,8 +180,7 @@ impl WebizenHostApi {
 
     pub fn add_work_item(&mut self, item: &WorkItem) -> Result<JournalEntry, String> {
         let asserted = Self::now_unix() as u32;
-        let envelope =
-            build_work_item_envelope(item, &self.owner_did, &self.author_did, asserted);
+        let envelope = build_work_item_envelope(item, &self.owner_did, &self.author_did, asserted);
         let summary = work_item_summary(item);
         self.submit_record_with_summary(
             QAPP_COOPERATIVE,
@@ -239,7 +227,9 @@ impl WebizenHostApi {
         let mut items = Vec::new();
         let mut events = Vec::new();
         for row in rows {
-            let Some(ref summary) = row.summary else { continue };
+            let Some(ref summary) = row.summary else {
+                continue;
+            };
             match row.kind.as_str() {
                 "work_item" => {
                     if let Some(item) = parse_work_item_summary(summary) {
@@ -258,5 +248,4 @@ impl WebizenHostApi {
         }
         Ok(derive_board(&items, &events))
     }
-
 }

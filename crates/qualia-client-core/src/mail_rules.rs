@@ -195,10 +195,7 @@ mod tests {
         assert!(verdict.deliver, "quarantined mail is still delivered");
         assert!(verdict.quarantined);
         assert_eq!(verdict.rejected, None);
-        assert!(verdict
-            .reasons
-            .iter()
-            .any(|r| r == "quarantined by rule"));
+        assert!(verdict.reasons.iter().any(|r| r == "quarantined by rule"));
     }
 
     #[test]
@@ -211,7 +208,10 @@ mod tests {
         let verdict = evaluate(&rules, &msg(true));
         assert_eq!(verdict.priority, 7);
         assert!(verdict.notify);
-        assert!(verdict.reasons.iter().any(|r| r.contains("priority set to 7")));
+        assert!(verdict
+            .reasons
+            .iter()
+            .any(|r| r.contains("priority set to 7")));
     }
 
     #[test]
@@ -245,7 +245,10 @@ mod tests {
         assert!(verdict.quarantined);
         assert_eq!(verdict.priority, 9);
         assert!(verdict.notify);
-        assert!(verdict.reasons.iter().any(|r| r.starts_with("semantic_route:")));
+        assert!(verdict
+            .reasons
+            .iter()
+            .any(|r| r.starts_with("semantic_route:")));
     }
 
     #[test]

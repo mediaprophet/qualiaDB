@@ -12,7 +12,6 @@ use wasm_bindgen::closure::Closure;
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::JsCast;
 #[cfg(target_arch = "wasm32")]
-use wasm_bindgen::JsValue;
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen_futures::spawn_local;
 #[cfg(target_arch = "wasm32")]
@@ -114,9 +113,9 @@ fn draw_scene(
     renderer.clear("#040712");
 
     // Backend-specific atmosphere wash (kept on the raw context).
-    context.set_fill_style(&JsValue::from_str("rgba(24, 76, 123, 0.18)"));
+    context.set_fill_style_str("rgba(24, 76, 123, 0.18)");
     context.fill_rect(0.0, height * 0.48, width, height * 0.52);
-    context.set_fill_style(&JsValue::from_str("rgba(255, 214, 102, 0.035)"));
+    context.set_fill_style_str("rgba(255, 214, 102, 0.035)");
     context.fill_rect(0.0, height * 0.18, width, height * 0.32);
 
     let orbit_angle = phase * orbit_speed * 0.55 + 0.25;
@@ -236,7 +235,7 @@ fn draw_scene(
     }
 
     context.set_global_alpha(0.9);
-    context.set_fill_style(&JsValue::from_str("rgba(226, 232, 240, 0.9)"));
+    context.set_fill_style_str("rgba(226, 232, 240, 0.9)");
     context.set_font("600 14px 'Segoe UI', sans-serif");
     let _ = context.fill_text("Webizen Spatial Physics Surface", 18.0, 28.0);
     context.set_global_alpha(0.55);

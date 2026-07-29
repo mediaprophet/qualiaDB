@@ -11,9 +11,7 @@
 //! No RGB texture / screen-glare ML. Fail closed. Not identity alone —
 //! combine with 1:1 template + consent.
 
-use super::action_threshold::{
-    action_met_at_frame, action_onset_at_frame, ActionThresholds,
-};
+use super::action_threshold::{action_met_at_frame, action_onset_at_frame, ActionThresholds};
 use super::camera_stream_integrity::{
     check_camera_stream_integrity, CameraStreamAttestation, StreamIntegrityVerdict,
 };

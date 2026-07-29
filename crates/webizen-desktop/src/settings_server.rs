@@ -340,10 +340,7 @@ async fn run_settings_server(state: SettingsServerState, port: u16) -> Result<()
         // Installable remote Surface Controller (phone PWA) + view session API
         .route("/remote-controller", get(remote_controller_index))
         .route("/remote-controller/", get(remote_controller_index))
-        .route(
-            "/remote-controller/{*path}",
-            get(remote_controller_asset),
-        )
+        .route("/remote-controller/{*path}", get(remote_controller_asset))
         .route("/api/view/session", get(view_session_handler))
         .route("/api/view/set_observer", post(view_set_observer_handler))
         .route("/api/view/morph", post(view_morph_handler))
@@ -436,9 +433,18 @@ async fn run_companion_server(
 ) -> Result<(), String> {
     let app = Router::new()
         .route("/mobile/stream", get(companion_ws_route))
-        .route("/wellfair/companion/ingest", post(crate::companion_gateway::companion_ingest_post))
-        .route("/mobile/qr", get(crate::companion_gateway::companion_qr_route))
-        .route("/api/wellfair/companion/pairing", get(crate::companion_gateway::companion_pairing_route))
+        .route(
+            "/wellfair/companion/ingest",
+            post(crate::companion_gateway::companion_ingest_post),
+        )
+        .route(
+            "/mobile/qr",
+            get(crate::companion_gateway::companion_qr_route),
+        )
+        .route(
+            "/api/wellfair/companion/pairing",
+            get(crate::companion_gateway::companion_pairing_route),
+        )
         // LAN phone controller (installable PWA shell; same view_* session as desktop)
         .route("/remote-controller", get(remote_controller_index))
         .route("/remote-controller/", get(remote_controller_index))
@@ -498,7 +504,10 @@ async fn remote_controller_index() -> Response {
     match remote_controller_file("index.html") {
         Some((body, ctype)) => (
             StatusCode::OK,
-            [(header::CONTENT_TYPE, ctype), (header::CACHE_CONTROL, "no-cache")],
+            [
+                (header::CONTENT_TYPE, ctype),
+                (header::CACHE_CONTROL, "no-cache"),
+            ],
             body,
         )
             .into_response(),
@@ -510,7 +519,10 @@ async fn remote_controller_asset(Path(path): Path<String>) -> Response {
     match remote_controller_file(&path) {
         Some((body, ctype)) => (
             StatusCode::OK,
-            [(header::CONTENT_TYPE, ctype), (header::CACHE_CONTROL, "no-cache")],
+            [
+                (header::CONTENT_TYPE, ctype),
+                (header::CACHE_CONTROL, "no-cache"),
+            ],
             body,
         )
             .into_response(),
@@ -702,7 +714,6 @@ async fn shell_handler() -> Response {
         .body(crate::shell::shell_html::SHELL_HTML.to_string().into())
         .unwrap()
 }
-
 
 pub static APP_HANDLE: std::sync::OnceLock<tauri::AppHandle> = std::sync::OnceLock::new();
 

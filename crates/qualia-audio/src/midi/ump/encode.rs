@@ -29,9 +29,11 @@ pub fn encode_midi1_channel_voice(group: u8, msg: MidiMessage) -> Result<UmpPack
         MidiMessage::ControlChange(c) => (0xB0 | c.channel, c.controller, c.value),
         MidiMessage::ProgramChange(p) => (0xC0 | p.channel, p.program, 0),
         MidiMessage::ChannelPressure(p) => (0xD0 | p.channel, p.pressure, 0),
-        MidiMessage::PitchBend(b) => {
-            (0xE0 | b.channel, (b.value & 0x7F) as u8, ((b.value >> 7) & 0x7F) as u8)
-        }
+        MidiMessage::PitchBend(b) => (
+            0xE0 | b.channel,
+            (b.value & 0x7F) as u8,
+            ((b.value >> 7) & 0x7F) as u8,
+        ),
         _ => return Err(AudioError::UnsupportedFormat),
     };
     let word = word0_head(0x2, group, status) | ((d1 as u32) << 8) | (d2 as u32);
@@ -48,20 +50,42 @@ pub fn encode_midi2_channel_voice(
         return Err(AudioError::InvalidParameter);
     }
     let (word0, word1) = match cv {
-        Midi2ChannelVoice::NoteOff { channel, note, velocity, attribute_type, attribute_data } => (
+        Midi2ChannelVoice::NoteOff {
+            channel,
+            note,
+            velocity,
+            attribute_type,
+            attribute_data,
+        } => (
             word0_head(0x4, group, 0x80 | channel) | ((note as u32) << 8) | attribute_type as u32,
             ((velocity as u32) << 16) | attribute_data as u32,
         ),
-        Midi2ChannelVoice::NoteOn { channel, note, velocity, attribute_type, attribute_data } => (
+        Midi2ChannelVoice::NoteOn {
+            channel,
+            note,
+            velocity,
+            attribute_type,
+            attribute_data,
+        } => (
             word0_head(0x4, group, 0x90 | channel) | ((note as u32) << 8) | attribute_type as u32,
             ((velocity as u32) << 16) | attribute_data as u32,
         ),
-        Midi2ChannelVoice::PolyPressure { channel, note, pressure } => {
-            (word0_head(0x4, group, 0xA0 | channel) | ((note as u32) << 8), pressure)
-        }
-        Midi2ChannelVoice::ControlChange { channel, index, value } => {
-            (word0_head(0x4, group, 0xB0 | channel) | ((index as u32) << 8), value)
-        }
+        Midi2ChannelVoice::PolyPressure {
+            channel,
+            note,
+            pressure,
+        } => (
+            word0_head(0x4, group, 0xA0 | channel) | ((note as u32) << 8),
+            pressure,
+        ),
+        Midi2ChannelVoice::ControlChange {
+            channel,
+            index,
+            value,
+        } => (
+            word0_head(0x4, group, 0xB0 | channel) | ((index as u32) << 8),
+            value,
+        ),
         Midi2ChannelVoice::ProgramChange {
             channel,
             program,
@@ -160,7 +184,12 @@ mod tests {
     fn golden_velocity_scale_7_to_16() {
         let msg = MidiMessage::NoteOn(NoteOn::new(0, 60, 100).unwrap());
         match translate_midi1_to_midi2(msg).unwrap() {
-            Midi2ChannelVoice::NoteOn { velocity, note, channel, .. } => {
+            Midi2ChannelVoice::NoteOn {
+                velocity,
+                note,
+                channel,
+                ..
+            } => {
                 assert_eq!(channel, 0);
                 assert_eq!(note, 60);
                 assert_eq!(velocity, 0xC924);
@@ -174,7 +203,11 @@ mod tests {
         let msg = MidiMessage::NoteOn(NoteOn::new(3, 40, 0).unwrap());
         assert!(matches!(
             translate_midi1_to_midi2(msg).unwrap(),
-            Midi2ChannelVoice::NoteOff { channel: 3, note: 40, .. }
+            Midi2ChannelVoice::NoteOff {
+                channel: 3,
+                note: 40,
+                ..
+            }
         ));
     }
 

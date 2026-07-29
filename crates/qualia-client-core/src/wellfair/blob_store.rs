@@ -90,9 +90,7 @@ impl BlobStore {
     }
 
     pub fn exists(&self, hash_hex: &str) -> bool {
-        self.path_for(hash_hex)
-            .map(|p| p.exists())
-            .unwrap_or(false)
+        self.path_for(hash_hex).map(|p| p.exists()).unwrap_or(false)
     }
 }
 

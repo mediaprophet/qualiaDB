@@ -146,11 +146,20 @@ mod tests {
             }
             arr
         };
-        assert!(!notes.contains(&60), "oldest note 60 should have been stolen: {notes:?}");
-        assert!(notes.contains(&67), "new note 67 should be present: {notes:?}");
+        assert!(
+            !notes.contains(&60),
+            "oldest note 60 should have been stolen: {notes:?}"
+        );
+        assert!(
+            notes.contains(&67),
+            "new note 67 should be present: {notes:?}"
+        );
         // The three younger notes survive.
         for n in [62u8, 64, 65] {
-            assert!(notes.contains(&n), "younger note {n} should survive: {notes:?}");
+            assert!(
+                notes.contains(&n),
+                "younger note {n} should survive: {notes:?}"
+            );
         }
     }
 

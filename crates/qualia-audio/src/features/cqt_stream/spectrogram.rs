@@ -113,8 +113,7 @@ mod tests {
         let s = tone(440.0, sr, n);
 
         // Expected bin index: 12 * log2(440/55) = 36.
-        let expected_bin =
-            (bpo as f32 * (440.0f32 / f_min).log2()).round() as usize;
+        let expected_bin = (bpo as f32 * (440.0f32 / f_min).log2()).round() as usize;
         assert_eq!(expected_bin, 36);
 
         let n_frames_expected = 1 + (n - frame_len) / hop; // 3

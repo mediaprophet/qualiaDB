@@ -17,7 +17,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use sysinfo::System;
 
-pub use crate::setup::SetupState;
+pub use crate::setup::{SetupProfile, SetupState};
 
 pub fn get_setup_state() -> Result<SetupState, String> {
     crate::setup::get_setup_state()
@@ -25,6 +25,10 @@ pub fn get_setup_state() -> Result<SetupState, String> {
 
 pub fn complete_setup_step(step: String) -> Result<SetupState, String> {
     crate::setup::complete_setup_step(step)
+}
+
+pub fn update_setup_profile(profile: SetupProfile) -> Result<SetupState, String> {
+    crate::setup::update_setup_profile(profile)
 }
 
 pub fn finish_setup() -> Result<SetupState, String> {

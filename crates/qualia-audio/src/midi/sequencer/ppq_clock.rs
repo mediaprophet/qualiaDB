@@ -62,8 +62,17 @@ mod tests {
 
     #[test]
     fn rejects_bad_params() {
-        assert_eq!(ticks_to_seconds(1, 0, 120.0), Err(AudioError::InvalidParameter));
-        assert_eq!(ticks_to_seconds(1, 480, 0.0), Err(AudioError::InvalidParameter));
-        assert_eq!(seconds_to_ticks(-1.0, 480, 120.0), Err(AudioError::InvalidParameter));
+        assert_eq!(
+            ticks_to_seconds(1, 0, 120.0),
+            Err(AudioError::InvalidParameter)
+        );
+        assert_eq!(
+            ticks_to_seconds(1, 480, 0.0),
+            Err(AudioError::InvalidParameter)
+        );
+        assert_eq!(
+            seconds_to_ticks(-1.0, 480, 120.0),
+            Err(AudioError::InvalidParameter)
+        );
     }
 }

@@ -40,13 +40,21 @@ impl NoteOn {
         if channel > 15 || note > 127 || velocity > 127 {
             return Err(AudioError::InvalidParameter);
         }
-        Ok(Self { channel, note, velocity })
+        Ok(Self {
+            channel,
+            note,
+            velocity,
+        })
     }
 
     /// Serialize to the 3 status/data bytes `[0x9n, note, velocity]`.
     #[inline]
     pub fn to_bytes(self) -> [u8; 3] {
-        [STATUS_NOTE_ON | (self.channel & 0x0F), self.note, self.velocity]
+        [
+            STATUS_NOTE_ON | (self.channel & 0x0F),
+            self.note,
+            self.velocity,
+        ]
     }
 
     /// Parse from a byte slice whose first byte is a Note On status.
@@ -63,7 +71,11 @@ impl NoteOn {
         if bytes[1] > 127 || bytes[2] > 127 {
             return Err(AudioError::MalformedAudio);
         }
-        Ok(Self { channel: bytes[0] & 0x0F, note: bytes[1], velocity: bytes[2] })
+        Ok(Self {
+            channel: bytes[0] & 0x0F,
+            note: bytes[1],
+            velocity: bytes[2],
+        })
     }
 
     /// True if this is a running-status "note off" (velocity 0).
@@ -79,13 +91,21 @@ impl NoteOff {
         if channel > 15 || note > 127 || velocity > 127 {
             return Err(AudioError::InvalidParameter);
         }
-        Ok(Self { channel, note, velocity })
+        Ok(Self {
+            channel,
+            note,
+            velocity,
+        })
     }
 
     /// Serialize to `[0x8n, note, velocity]`.
     #[inline]
     pub fn to_bytes(self) -> [u8; 3] {
-        [STATUS_NOTE_OFF | (self.channel & 0x0F), self.note, self.velocity]
+        [
+            STATUS_NOTE_OFF | (self.channel & 0x0F),
+            self.note,
+            self.velocity,
+        ]
     }
 
     /// Parse from a byte slice whose first byte is a Note Off status.
@@ -99,7 +119,11 @@ impl NoteOff {
         if bytes[1] > 127 || bytes[2] > 127 {
             return Err(AudioError::MalformedAudio);
         }
-        Ok(Self { channel: bytes[0] & 0x0F, note: bytes[1], velocity: bytes[2] })
+        Ok(Self {
+            channel: bytes[0] & 0x0F,
+            note: bytes[1],
+            velocity: bytes[2],
+        })
     }
 }
 
@@ -140,7 +164,13 @@ mod tests {
     fn out_of_range_rejected() {
         assert_eq!(NoteOn::new(16, 0, 0), Err(AudioError::InvalidParameter));
         assert_eq!(NoteOn::new(0, 128, 0), Err(AudioError::InvalidParameter));
-        assert_eq!(NoteOn::parse(&[0x90, 0x3C]), Err(AudioError::MalformedAudio));
-        assert_eq!(NoteOn::parse(&[0x80, 0x3C, 0x64]), Err(AudioError::UnsupportedFormat));
+        assert_eq!(
+            NoteOn::parse(&[0x90, 0x3C]),
+            Err(AudioError::MalformedAudio)
+        );
+        assert_eq!(
+            NoteOn::parse(&[0x80, 0x3C, 0x64]),
+            Err(AudioError::UnsupportedFormat)
+        );
     }
 }

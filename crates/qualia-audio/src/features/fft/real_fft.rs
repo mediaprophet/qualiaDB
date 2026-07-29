@@ -61,8 +61,7 @@ mod tests {
         let k0 = (440.0 * n as f32 / fs).round() as usize; // ≈ bin 10
         let freq = k0 as f32 * fs / n as f32; // exact bin-centre freq (~430.7 Hz)
 
-        let input: Vec<f32> =
-            (0..n).map(|i| (TAU * freq * i as f32 / fs).cos()).collect();
+        let input: Vec<f32> = (0..n).map(|i| (TAU * freq * i as f32 / fs).cos()).collect();
         let mut scratch = vec![0.0f32; 2 * n];
         let mut mags = vec![0.0f32; n / 2 + 1];
         real_fft_magnitude(&input, &mut scratch, &mut mags).unwrap();

@@ -4,14 +4,13 @@
 
 use super::*;
 
-use crate::state::*;
 use crate::qapp_paths::qapps_dir;
 use crate::qapp_registry;
+use crate::state::*;
 use serde::Serialize;
 use std::path::PathBuf;
 use std::sync::atomic::Ordering;
 use sysinfo::Disks;
-
 
 pub fn list_installed_qapps() -> Vec<String> {
     let state = crate::state::APP_STATE.get().unwrap();
@@ -76,7 +75,8 @@ pub fn verify_and_install_qapp(target_path: String) -> Result<String, String> {
     )
     .map_err(|e| e.to_string())?;
 
-    let package_dir = crate::qapp_paths::resolve_active_package_dir(&storage_path, &entry.package_id);
+    let package_dir =
+        crate::qapp_paths::resolve_active_package_dir(&storage_path, &entry.package_id);
     let manifest = load_qapp_package_from_dir(&package_dir)?;
     let qapp_did = format!(
         "did:qualia:qapp:{}",
@@ -94,9 +94,7 @@ pub fn verify_and_install_qapp(target_path: String) -> Result<String, String> {
 
     {
         let mut installed = state.installed_qapps.lock().unwrap();
-        installed.retain(|q| {
-            q.manifest.name != entry.package_id && q.did != qapp_did
-        });
+        installed.retain(|q| q.manifest.name != entry.package_id && q.did != qapp_did);
         installed.push(registered_qapp);
     }
     save_directory_state();
@@ -131,9 +129,8 @@ pub fn get_wallet_status() -> WalletStatus {
         .unwrap_or_default();
 
     // Read ILP dispatched total from persistent ledger
-    let ilp_dispatched = crate::wallet::ledger::total_ilp_sent_micro_cents(
-        &std::path::Path::new(&storage_path),
-    );
+    let ilp_dispatched =
+        crate::wallet::ledger::total_ilp_sent_micro_cents(&std::path::Path::new(&storage_path));
 
     // Query live XEC balance from Chronik if identity is set
     let id = read_identity();
@@ -212,4 +209,3 @@ pub fn save_config(new_config: AgentConfig) -> Result<(), String> {
     *state.config.lock().unwrap() = new_config;
     Ok(())
 }
-

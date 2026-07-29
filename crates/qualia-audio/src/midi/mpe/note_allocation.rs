@@ -25,7 +25,11 @@ pub struct MpeNoteAllocator {
 impl MpeNoteAllocator {
     /// Create an allocator over `zone` with all member channels free.
     pub fn new(zone: MpeZone) -> Self {
-        Self { zone, active: [None; 16], cursor: zone.member_low }
+        Self {
+            zone,
+            active: [None; 16],
+            cursor: zone.member_low,
+        }
     }
 
     /// Allocate a member channel for `note`, rotating from the current cursor.
@@ -72,7 +76,10 @@ impl MpeNoteAllocator {
     pub fn active_count(&self) -> usize {
         let low = self.zone.member_low as usize;
         let high = self.zone.member_high as usize;
-        self.active[low..=high].iter().filter(|c| c.is_some()).count()
+        self.active[low..=high]
+            .iter()
+            .filter(|c| c.is_some())
+            .count()
     }
 }
 

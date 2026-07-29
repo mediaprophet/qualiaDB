@@ -1,12 +1,12 @@
 //! A5 — reference VAD + energy event classifier (honest reference backend).
 
+use crate::convert::to_mono_f32;
 use crate::features::{frame_energy, frame_zcr};
 use crate::hash::q_hash;
 use crate::types::{
-    AudioError, AudioView, AuditoryCapabilities, AuditoryEvent, AuditoryModel, AuditoryOutputCounts,
-    TranscriptToken, MAX_EVENTS,
+    AudioError, AudioView, AuditoryCapabilities, AuditoryEvent, AuditoryModel,
+    AuditoryOutputCounts, TranscriptToken, MAX_EVENTS,
 };
-use crate::convert::to_mono_f32;
 
 pub const CLASS_SILENCE: &str = "https://ns.webizen.org/q42/audio/class/silence";
 pub const CLASS_SPEECH_LIKE: &str = "https://ns.webizen.org/q42/audio/class/speech-like";
@@ -148,9 +148,7 @@ impl AuditoryModel for ReferenceEventModel {
 }
 
 fn media_src(audio: AudioView<'_>) -> u64 {
-    crate::hash::q_hash_bytes(
-        &audio.bytes[..audio.bytes.len().min(1024)],
-    ) ^ (audio.frames as u64)
+    crate::hash::q_hash_bytes(&audio.bytes[..audio.bytes.len().min(1024)]) ^ (audio.frames as u64)
 }
 
 fn classify_segment(

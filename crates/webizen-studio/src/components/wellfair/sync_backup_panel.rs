@@ -75,9 +75,9 @@ pub fn WellfairSyncBackupPanel() -> Element {
                     match import_backup(&path).await {
                         Ok(s) => {
                             ui.write().status = format!(
-                                "Restored {} files ({} bytes). Reopen the app to see restored data.",
-                                s.files, s.bytes
-                            )
+                            "Restored {} files ({} bytes). Reopen the app to see restored data.",
+                            s.files, s.bytes
+                        )
                         }
                         Err(e) => ui.write().status = format!("Restore failed: {e}"),
                     }

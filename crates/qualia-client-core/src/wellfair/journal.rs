@@ -63,16 +63,14 @@ impl WellfairJournal {
             fs::create_dir_all(parent)?;
         }
         if !path.exists() {
-            OpenOptions::new()
-                .create(true)
-                .write(true)
-                .open(&path)?;
+            OpenOptions::new().create(true).write(true).open(&path)?;
         }
         Ok(Self { path })
     }
 
     pub fn append(&self, entry: &JournalEntry) -> std::io::Result<()> {
-        let line = serde_json::to_string(entry).map_err(|e| std::io::Error::other(e.to_string()))?;
+        let line =
+            serde_json::to_string(entry).map_err(|e| std::io::Error::other(e.to_string()))?;
         let mut file = OpenOptions::new().append(true).open(&self.path)?;
         writeln!(file, "{line}")?;
         file.sync_all()?;
@@ -112,9 +110,7 @@ impl WellfairJournal {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use wellfare_core::record::{
-        EpistemicStatus, EvidenceType, RecordEnvelope, SensitivityClass,
-    };
+    use wellfare_core::record::{EpistemicStatus, EvidenceType, RecordEnvelope, SensitivityClass};
 
     #[test]
     fn journal_round_trip() {
@@ -135,7 +131,8 @@ mod tests {
             blob_hash: Some("deadbeef".into()),
             tombstone: false,
         };
-        let entry = JournalEntry::from_envelope(&envelope, "companion:phone-1", 1_700_000_100, None);
+        let entry =
+            JournalEntry::from_envelope(&envelope, "companion:phone-1", 1_700_000_100, None);
         journal.append(&entry).unwrap();
         let listed = journal.list_recent(10).unwrap();
         assert_eq!(listed.len(), 1);

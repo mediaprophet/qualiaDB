@@ -96,7 +96,8 @@ pub fn wellfair_add_emergency_contact(
         let host = guard
             .as_ref()
             .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-        let contact = host.add_emergency_contact(&display_name, &relationship, phone, email, None)?;
+        let contact =
+            host.add_emergency_contact(&display_name, &relationship, phone, email, None)?;
         serde_json::to_string(&contact).map_err(|e| e.to_string())
     })?
 }
@@ -112,5 +113,3 @@ pub fn wellfair_list_emergency_contacts(app: AppHandle) -> Result<String, String
         serde_json::to_string(&contacts).map_err(|e| e.to_string())
     })?
 }
-
-

@@ -347,7 +347,7 @@ async fn run_benchmark_sweep() -> Result<BenchmarkReport, String> {
 pub fn BenchmarkHarness() -> Element {
     let running = use_signal(|| false);
     #[cfg(target_arch = "wasm32")]
-    let mut status = use_signal(|| {
+    let status = use_signal(|| {
         if is_tauri() {
             "Ready to benchmark the local runtime path.".to_string()
         } else {

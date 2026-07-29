@@ -5,8 +5,7 @@ use crate::inference::runtime::kv::paged::{
 use crate::inference::runtime::kv::prefix::{PrefixKvError, PrefixKvStore};
 
 use super::batch::{
-    RaggedBackendError, RaggedBatchItem, RaggedBatchOutput, RaggedBatchReceipt,
-    RaggedDecodeBackend,
+    RaggedBackendError, RaggedBatchItem, RaggedBatchOutput, RaggedBatchReceipt, RaggedDecodeBackend,
 };
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

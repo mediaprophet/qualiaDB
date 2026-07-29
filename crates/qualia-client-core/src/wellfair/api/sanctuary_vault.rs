@@ -1,6 +1,5 @@
 //! Vault v2 decoy audit + OS-keychain wrapping
 
-
 use super::*;
 
 impl WebizenHostApi {
@@ -99,7 +98,10 @@ impl WebizenHostApi {
         pin: &str,
         recovery_code_hex: &str,
     ) -> Result<super::super::sanctuary_vault::SanctuaryLane, String> {
-        super::super::sanctuary_vault::unlock_with_recovery(&self.storage_root, pin, recovery_code_hex)
+        super::super::sanctuary_vault::unlock_with_recovery(
+            &self.storage_root,
+            pin,
+            recovery_code_hex,
+        )
     }
-
 }
