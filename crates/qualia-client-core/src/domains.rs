@@ -6,9 +6,11 @@
 //! M:N agreement** — modelled now so group domains slot in later without a refactor.
 //!
 //! Addresses on a domain are **rule-bearing mailboxes** — **purpose inboxes** (`frontdoor@`/`junkmail@`/
-//! `mygov@`) or **per-relationship** (`bob@alice.example`). This module is the data model + presets + pure
-//! helpers; the QDP profile generation, the semantic mail client (SMTP/IMAP), and the rules-execution engine
-//! are follow-on slices.
+//! `mygov@`/`newsletters@`) or **per-relationship** (`bob@alice.example`), plus optional deliberate
+//! **catchall@** for fail-closed wild-card intake (quarantine, not open relay). This module owns the data
+//! model, presets, `resolve_delivery`, and `onboard_purpose_inboxes`. Rules evaluation is
+//! [`crate::mail_rules`]; SMTP/IMAP is [`crate::mail_transport`]; QDP front-door forms are
+//! [`crate::front_door`] / `api::front_door_forms`.
 
 use std::collections::BTreeMap;
 use std::fs;
@@ -134,12 +136,22 @@ pub fn purpose_presets() -> Vec<PurposePreset> {
         PurposePreset {
             local: "frontdoor".into(),
             label: "Front door (public intake)".into(),
-            rules: MailRules { notify: true, ..Default::default() },
+            rules: MailRules {
+                notify: true,
+                semantic_route: Some("notify purpose:frontdoor".into()),
+                ..Default::default()
+            },
         },
         PurposePreset {
             local: "junkmail".into(),
             label: "Junk (untrusted sign-ups)".into(),
-            rules: MailRules { quarantine: true, notify: false, retention_days: 30, ..Default::default() },
+            rules: MailRules {
+                quarantine: true,
+                notify: false,
+                retention_days: 30,
+                semantic_route: Some("quarantine silent purpose:junkmail".into()),
+                ..Default::default()
+            },
         },
         PurposePreset {
             local: "mygov".into(),
@@ -149,13 +161,19 @@ pub fn purpose_presets() -> Vec<PurposePreset> {
                 priority: 5,
                 retention_days: 3650,
                 notify: true,
+                semantic_route: Some("require_verified priority:5 notify purpose:mygov".into()),
                 ..Default::default()
             },
         },
         PurposePreset {
             local: "newsletters".into(),
             label: "Newsletters".into(),
-            rules: MailRules { notify: false, retention_days: 90, ..Default::default() },
+            rules: MailRules {
+                notify: false,
+                retention_days: 90,
+                semantic_route: Some("silent purpose:newsletters".into()),
+                ..Default::default()
+            },
         },
     ]
 }
@@ -243,7 +261,146 @@ pub fn make_relationship_address(
 /// Resolve a full address (case-insensitive) against a set of addresses.
 pub fn resolve<'a>(addresses: &'a [MailAddress], address: &str) -> Option<&'a MailAddress> {
     let want = address.trim().to_lowercase();
-    addresses.iter().find(|a| a.address.eq_ignore_ascii_case(&want))
+    addresses
+        .iter()
+        .find(|a| a.address.eq_ignore_ascii_case(&want))
+}
+
+/// How a delivery address was matched.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ResolutionVia {
+    /// Exact full-address match (`bob@alice.example`).
+    Exact,
+    /// Domain catch-all (`*@domain` / `catchall@domain`) for deliberately open intake.
+    Catchall,
+    /// Unknown local part with no catch-all — fail closed.
+    Unsolicited,
+}
+
+/// Outcome of semantic delivery resolution for an inbound `to` address.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum DeliveryResolution<'a> {
+    /// Deliver under this mailbox (apply its rules).
+    Deliver {
+        address: &'a MailAddress,
+        via: ResolutionVia,
+    },
+    /// Reject — no surface for strangers when fail-closed.
+    Reject { reason: String },
+}
+
+/// Parse `local@domain` (lowercase). Returns `None` if not a dotted domain form.
+pub fn split_address(address: &str) -> Option<(String, String)> {
+    let a = address.trim().to_lowercase();
+    let (local, domain) = a.split_once('@')?;
+    if local.is_empty() || domain.is_empty() || !domain.contains('.') {
+        return None;
+    }
+    Some((local.to_string(), domain.to_string()))
+}
+
+/// Resolve inbound delivery for `to_address` against minted mailboxes.
+///
+/// Order (structural anti-spam):
+/// 1. Exact enabled address match.
+/// 2. Domain catch-all: `*@domain` or `catchall@domain` if enabled (deliberate public intake).
+/// 3. Otherwise **reject** — no open wildcard to every local part (strangers have no surface).
+///
+/// Disabled exact matches reject with "address disabled". Unknown domain rejects.
+pub fn resolve_delivery<'a>(
+    addresses: &'a [MailAddress],
+    to_address: &str,
+) -> DeliveryResolution<'a> {
+    let Some((local, domain)) = split_address(to_address) else {
+        return DeliveryResolution::Reject {
+            reason: "malformed address".into(),
+        };
+    };
+
+    // Exact match first.
+    if let Some(a) = addresses
+        .iter()
+        .find(|a| a.address.eq_ignore_ascii_case(&format!("{local}@{domain}")))
+    {
+        if !a.enabled {
+            return DeliveryResolution::Reject {
+                reason: "address disabled".into(),
+            };
+        }
+        return DeliveryResolution::Deliver {
+            address: a,
+            via: ResolutionVia::Exact,
+        };
+    }
+
+    // Deliberate catch-all only (not silent open relay).
+    let catchall = addresses.iter().find(|a| {
+        a.domain.eq_ignore_ascii_case(&domain)
+            && a.enabled
+            && (a.local_part == "*" || a.local_part == "catchall")
+    });
+    if let Some(a) = catchall {
+        return DeliveryResolution::Deliver {
+            address: a,
+            via: ResolutionVia::Catchall,
+        };
+    }
+
+    // Fail closed: unsolicited local parts have no mailbox.
+    let _ = ResolutionVia::Unsolicited;
+    DeliveryResolution::Reject {
+        reason: format!("no such address ({local}@{domain}) — unsolicited"),
+    }
+}
+
+/// Mint every built-in purpose preset for `domain` that is not already present.
+/// Returns the list of newly minted full addresses (empty if already onboarded).
+pub fn onboard_purpose_inboxes(domain: &str) -> Result<Vec<String>, String> {
+    let domain = domain.trim().to_lowercase();
+    if !list_domains().iter().any(|d| d.name == domain) {
+        return Err(format!("unknown domain '{domain}' — register it first"));
+    }
+    let existing = list_addresses(Some(&domain));
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+    let mut minted = Vec::new();
+    for preset in purpose_presets() {
+        let full = format!("{}@{}", preset.local, domain);
+        if existing
+            .iter()
+            .any(|a| a.address.eq_ignore_ascii_case(&full))
+        {
+            continue;
+        }
+        let a = make_purpose_address(&domain, &preset.local, preset.rules.clone(), now)?;
+        upsert_address(a)?;
+        minted.push(full);
+    }
+    // Optional deliberate catch-all for public wild-card intake (quarantine by default).
+    let catch_full = format!("catchall@{domain}");
+    if !existing
+        .iter()
+        .any(|a| a.address.eq_ignore_ascii_case(&catch_full))
+        && !list_addresses(Some(&domain))
+            .iter()
+            .any(|a| a.address.eq_ignore_ascii_case(&catch_full))
+    {
+        let mut rules = MailRules {
+            quarantine: true,
+            notify: true,
+            retention_days: 30,
+            ..Default::default()
+        };
+        // DSL tokens force quarantine+notify; catchall:public_intake is audit trail for rights engines.
+        rules.semantic_route = Some("quarantine notify catchall:public_intake".into());
+        let a = make_purpose_address(&domain, "catchall", rules, now)?;
+        upsert_address(a)?;
+        minted.push(catch_full);
+    }
+    Ok(minted)
 }
 
 // --- Thin persistence (additive JSON under app_meta_dir; mirrors directory.rs) ---
@@ -345,16 +502,22 @@ mod tests {
         let gov = p.iter().find(|x| x.local == "mygov").unwrap();
         assert!(gov.rules.require_verified_sender && gov.rules.priority > 0);
         let front = p.iter().find(|x| x.local == "frontdoor").unwrap();
-        assert!(!front.rules.quarantine, "front door is public but governed, not quarantined");
+        assert!(
+            !front.rules.quarantine,
+            "front door is public but governed, not quarantined"
+        );
     }
 
     #[test]
     fn purpose_address_is_built_correctly() {
-        let a = make_purpose_address("personal.me", "FrontDoor", MailRules::default(), 100).unwrap();
+        let a =
+            make_purpose_address("personal.me", "FrontDoor", MailRules::default(), 100).unwrap();
         assert_eq!(a.address, "frontdoor@personal.me");
         assert_eq!(a.kind, AddressKind::Purpose);
         assert!(a.relationship_did.is_none());
-        assert!(make_purpose_address("personal.me", "bad space", MailRules::default(), 100).is_err());
+        assert!(
+            make_purpose_address("personal.me", "bad space", MailRules::default(), 100).is_err()
+        );
     }
 
     #[test]
@@ -367,11 +530,44 @@ mod tests {
     }
 
     #[test]
+    fn resolve_delivery_exact_and_fail_closed() {
+        let exact = make_purpose_address("alice.example", "bob", MailRules::default(), 1).unwrap();
+        let catch = make_purpose_address(
+            "alice.example",
+            "catchall",
+            MailRules {
+                quarantine: true,
+                ..Default::default()
+            },
+            1,
+        )
+        .unwrap();
+        let addrs = vec![exact, catch];
+        match resolve_delivery(&addrs, "bob@alice.example") {
+            DeliveryResolution::Deliver { via, .. } => assert_eq!(via, ResolutionVia::Exact),
+            _ => panic!("expected exact"),
+        }
+        match resolve_delivery(&addrs, "stranger@alice.example") {
+            DeliveryResolution::Deliver { via, address } => {
+                assert_eq!(via, ResolutionVia::Catchall);
+                assert_eq!(address.local_part, "catchall");
+            }
+            _ => panic!("expected catchall"),
+        }
+        match resolve_delivery(&addrs[..1], "nobody@alice.example") {
+            DeliveryResolution::Reject { reason } => assert!(reason.contains("unsolicited")),
+            _ => panic!("expected reject without catchall"),
+        }
+    }
+
+    #[test]
     fn group_ownership_is_modelled_not_precluded() {
         let personal = make_domain(
             "personal.me",
             AgentType::NaturalPerson,
-            DomainOwner::Personal { did: "did:qualia:me".into() },
+            DomainOwner::Personal {
+                did: "did:qualia:me".into(),
+            },
             "did:qualia:me",
             "Personal",
             None,
@@ -382,19 +578,26 @@ mod tests {
         let group = make_domain(
             "project-x.coop",
             AgentType::Group,
-            DomainOwner::Group { agreement_ref: "agr:project-x".into() },
+            DomainOwner::Group {
+                agreement_ref: "agr:project-x".into(),
+            },
             "did:qualia:project-x",
             "Project X",
             None,
             1,
         )
         .unwrap();
-        assert!(matches!(group.owner, DomainOwner::Group { .. }), "group domains slot in without a refactor");
+        assert!(
+            matches!(group.owner, DomainOwner::Group { .. }),
+            "group domains slot in without a refactor"
+        );
         // A subdomain (child under a household).
         let kid = make_domain(
             "kid.family.me",
             AgentType::NaturalPerson,
-            DomainOwner::Personal { did: "did:qualia:kid".into() },
+            DomainOwner::Personal {
+                did: "did:qualia:kid".into(),
+            },
             "did:qualia:kid",
             "Kid",
             Some("family.me".into()),
@@ -406,7 +609,16 @@ mod tests {
 
     #[test]
     fn make_domain_requires_a_dotted_name() {
-        assert!(make_domain("nodots", AgentType::NaturalPerson, DomainOwner::Personal { did: "d".into() }, "d", "", None, 1).is_err());
+        assert!(make_domain(
+            "nodots",
+            AgentType::NaturalPerson,
+            DomainOwner::Personal { did: "d".into() },
+            "d",
+            "",
+            None,
+            1
+        )
+        .is_err());
     }
 
     #[test]
@@ -416,7 +628,58 @@ mod tests {
             make_relationship_address("personal.me", "bob", "did:x", 1).unwrap(),
         ];
         assert!(resolve(&addrs, "FrontDoor@Personal.ME").is_some());
-        assert_eq!(resolve(&addrs, "bob@personal.me").unwrap().kind, AddressKind::Relationship);
+        assert_eq!(
+            resolve(&addrs, "bob@personal.me").unwrap().kind,
+            AddressKind::Relationship
+        );
         assert!(resolve(&addrs, "nope@personal.me").is_none());
+    }
+
+    #[test]
+    fn split_address_requires_local_at_dotted_domain() {
+        assert_eq!(
+            split_address("  Bob@Alice.Example  "),
+            Some(("bob".into(), "alice.example".into()))
+        );
+        assert!(split_address("nodomain").is_none());
+        assert!(split_address("@only.domain").is_none());
+        assert!(split_address("local@nodots").is_none());
+    }
+
+    #[test]
+    fn resolve_delivery_rejects_disabled_exact() {
+        let mut a = make_purpose_address("alice.example", "bob", MailRules::default(), 1).unwrap();
+        a.enabled = false;
+        match resolve_delivery(&[a], "bob@alice.example") {
+            DeliveryResolution::Reject { reason } => assert!(reason.contains("disabled")),
+            _ => panic!("disabled exact must reject"),
+        }
+    }
+
+    #[test]
+    fn resolve_delivery_star_catchall_local() {
+        let mut star =
+            make_purpose_address("alice.example", "catchall", MailRules::default(), 1).unwrap();
+        // Simulate minting as local_part "*" (resolve accepts either).
+        star.local_part = "*".into();
+        star.address = "*@alice.example".into();
+        match resolve_delivery(&[star], "anyone@alice.example") {
+            DeliveryResolution::Deliver { via, address } => {
+                assert_eq!(via, ResolutionVia::Catchall);
+                assert_eq!(address.local_part, "*");
+            }
+            _ => panic!("expected star catchall"),
+        }
+    }
+
+    #[test]
+    fn purpose_presets_carry_semantic_routes() {
+        for p in purpose_presets() {
+            assert!(
+                p.rules.semantic_route.is_some(),
+                "preset {} should tag semantic_route for audit/routing",
+                p.local
+            );
+        }
     }
 }

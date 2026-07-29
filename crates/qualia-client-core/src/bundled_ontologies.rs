@@ -48,11 +48,44 @@ const BUNDLED_ONTOLOGIES: &[BundledOntologySpec] = &[
         id: "foaf",
         rel_path: "bundled/ontologies/w3c-archives/foaf.ttl",
     },
+    // Core W3C + perception-adjacent (offline Index seed)
+    BundledOntologySpec {
+        id: "prov",
+        rel_path: "bundled/ontologies/w3c/prov.ttl",
+    },
+    BundledOntologySpec {
+        id: "skos",
+        rel_path: "bundled/ontologies/w3c/skos.ttl",
+    },
+    BundledOntologySpec {
+        id: "owl",
+        rel_path: "bundled/ontologies/w3c/owl.ttl",
+    },
+    BundledOntologySpec {
+        id: "rdfs",
+        rel_path: "bundled/ontologies/w3c/rdfs.ttl",
+    },
+    BundledOntologySpec {
+        id: "time",
+        rel_path: "bundled/ontologies/w3c/time.ttl",
+    },
+    BundledOntologySpec {
+        id: "sosa",
+        rel_path: "bundled/ontologies/w3c/sosa.ttl",
+    },
+    BundledOntologySpec {
+        id: "music",
+        rel_path: "bundled/ontologies/purl/music.ttl",
+    },
+    BundledOntologySpec {
+        id: "consent",
+        rel_path: "bundled/ontologies/purl/consent.ttl",
+    },
 ];
 
 /// Ontologies seeded into local storage when absent.
 ///
-/// SHACL (validation) + Solid LDP stack for the hackathon personal pod / consumer path.
+/// SHACL + Solid stack + core W3C vocabularies used by perception / provenance paths.
 pub const DEFAULT_BUNDLED_ONTOLOGIES: &[&str] = &[
     "shacl",
     "ldp",
@@ -61,6 +94,14 @@ pub const DEFAULT_BUNDLED_ONTOLOGIES: &[&str] = &[
     "solid-oidc",
     "pim-space",
     "foaf",
+    "prov",
+    "skos",
+    "owl",
+    "rdfs",
+    "time",
+    "sosa",
+    "music",
+    "consent",
 ];
 
 fn exe_dir() -> Option<PathBuf> {
@@ -193,7 +234,14 @@ mod tests {
 
     #[test]
     fn solid_stack_sources_resolve() {
-        for id in ["ldp", "acl", "solid-terms", "solid-oidc", "pim-space", "foaf"] {
+        for id in [
+            "ldp",
+            "acl",
+            "solid-terms",
+            "solid-oidc",
+            "pim-space",
+            "foaf",
+        ] {
             let src = resolve_bundled_ontology_source(id);
             assert!(
                 src.is_some(),

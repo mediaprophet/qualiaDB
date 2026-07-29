@@ -46,6 +46,13 @@ pub struct SceneNode {
     /// Temporal version (t value)
     #[serde(default)]
     pub version: f64,
+    /// Entity id for multi-observer view kernel (fnv60 / EntityId raw). 0 = unset.
+    /// Serde alias keeps older `portal_object_id` JSON working.
+    #[serde(default, alias = "portal_object_id")]
+    pub entity_id: u64,
+    /// Affordance bitfield (open/share/enter/edit) from observer rights filter.
+    #[serde(default)]
+    pub affordance_bits: u8,
 }
 
 impl Default for SceneNode {
@@ -65,6 +72,8 @@ impl Default for SceneNode {
             tensor: Tensor10DProjection::default(),
             epistemic_state: EpistemicState::Collapsed,
             version: 0.0,
+            entity_id: 0,
+            affordance_bits: 0,
         }
     }
 }

@@ -61,17 +61,34 @@ pub struct Instrument {
 impl Instrument {
     /// The maximum attainable total: the largest option value × item count.
     pub fn max_score(&self) -> u32 {
-        let max_opt = self.options.iter().map(|o| o.value as u32).max().unwrap_or(0);
+        let max_opt = self
+            .options
+            .iter()
+            .map(|o| o.value as u32)
+            .max()
+            .unwrap_or(0);
         max_opt * self.items.len() as u32
     }
 }
 
 /// The shared 0–3 frequency scale used by PHQ-9 and GAD-7.
 const FREQ_0_3: &[ResponseOption] = &[
-    ResponseOption { value: 0, label: "Not at all" },
-    ResponseOption { value: 1, label: "Several days" },
-    ResponseOption { value: 2, label: "More than half the days" },
-    ResponseOption { value: 3, label: "Nearly every day" },
+    ResponseOption {
+        value: 0,
+        label: "Not at all",
+    },
+    ResponseOption {
+        value: 1,
+        label: "Several days",
+    },
+    ResponseOption {
+        value: 2,
+        label: "More than half the days",
+    },
+    ResponseOption {
+        value: 3,
+        label: "Nearly every day",
+    },
 ];
 
 const DISCLAIMER: &str = "This is a self-monitoring aid, not a diagnosis — a score can't diagnose a \
@@ -98,11 +115,36 @@ pub static PHQ9: Instrument = Instrument {
     ],
     options: FREQ_0_3,
     bands: &[
-        SeverityBand { min: 0, max: 4, label: "Minimal", interpretation: "Your responses suggest minimal depressive symptoms right now." },
-        SeverityBand { min: 5, max: 9, label: "Mild", interpretation: "Mild depressive symptoms. It can help to keep an eye on how you're doing and re-check in a couple of weeks." },
-        SeverityBand { min: 10, max: 14, label: "Moderate", interpretation: "Moderate symptoms. A conversation with a clinician or counsellor may help." },
-        SeverityBand { min: 15, max: 19, label: "Moderately severe", interpretation: "Moderately severe symptoms. Support from a clinician is recommended." },
-        SeverityBand { min: 20, max: 27, label: "Severe", interpretation: "Severe symptoms. Please consider reaching out to a clinician or someone you trust soon." },
+        SeverityBand {
+            min: 0,
+            max: 4,
+            label: "Minimal",
+            interpretation: "Your responses suggest minimal depressive symptoms right now.",
+        },
+        SeverityBand {
+            min: 5,
+            max: 9,
+            label: "Mild",
+            interpretation: "Mild depressive symptoms. It can help to keep an eye on how you're doing and re-check in a couple of weeks.",
+        },
+        SeverityBand {
+            min: 10,
+            max: 14,
+            label: "Moderate",
+            interpretation: "Moderate symptoms. A conversation with a clinician or counsellor may help.",
+        },
+        SeverityBand {
+            min: 15,
+            max: 19,
+            label: "Moderately severe",
+            interpretation: "Moderately severe symptoms. Support from a clinician is recommended.",
+        },
+        SeverityBand {
+            min: 20,
+            max: 27,
+            label: "Severe",
+            interpretation: "Severe symptoms. Please consider reaching out to a clinician or someone you trust soon.",
+        },
     ],
     flags: &[FlagRule {
         item_index: 8,
@@ -130,10 +172,30 @@ pub static GAD7: Instrument = Instrument {
     ],
     options: FREQ_0_3,
     bands: &[
-        SeverityBand { min: 0, max: 4, label: "Minimal", interpretation: "Your responses suggest minimal anxiety symptoms right now." },
-        SeverityBand { min: 5, max: 9, label: "Mild", interpretation: "Mild anxiety symptoms. Keeping an eye on how you're doing can help." },
-        SeverityBand { min: 10, max: 14, label: "Moderate", interpretation: "Moderate symptoms. A conversation with a clinician or counsellor may help." },
-        SeverityBand { min: 15, max: 21, label: "Severe", interpretation: "Severe symptoms. Support from a clinician is recommended." },
+        SeverityBand {
+            min: 0,
+            max: 4,
+            label: "Minimal",
+            interpretation: "Your responses suggest minimal anxiety symptoms right now.",
+        },
+        SeverityBand {
+            min: 5,
+            max: 9,
+            label: "Mild",
+            interpretation: "Mild anxiety symptoms. Keeping an eye on how you're doing can help.",
+        },
+        SeverityBand {
+            min: 10,
+            max: 14,
+            label: "Moderate",
+            interpretation: "Moderate symptoms. A conversation with a clinician or counsellor may help.",
+        },
+        SeverityBand {
+            min: 15,
+            max: 21,
+            label: "Severe",
+            interpretation: "Severe symptoms. Support from a clinician is recommended.",
+        },
     ],
     flags: &[],
     disclaimer: DISCLAIMER,
@@ -183,7 +245,12 @@ pub fn score(
             responses.len()
         ));
     }
-    let max_val = instrument.options.iter().map(|o| o.value).max().unwrap_or(0);
+    let max_val = instrument
+        .options
+        .iter()
+        .map(|o| o.value)
+        .max()
+        .unwrap_or(0);
     for (i, &r) in responses.iter().enumerate() {
         if r > max_val {
             return Err(format!(
@@ -201,7 +268,11 @@ pub fn score(
     let flags: Vec<String> = instrument
         .flags
         .iter()
-        .filter(|f| responses.get(f.item_index).is_some_and(|&r| r >= f.min_value))
+        .filter(|f| {
+            responses
+                .get(f.item_index)
+                .is_some_and(|&r| r >= f.min_value)
+        })
         .map(|f| f.message.to_string())
         .collect();
     Ok(AssessmentResult {
@@ -282,11 +353,22 @@ pub fn instrument_dto(inst: &Instrument) -> InstrumentDto {
         attribution: inst.attribution.to_string(),
         prompt: inst.prompt.to_string(),
         items: inst.items.iter().map(|s| s.to_string()).collect(),
-        options: inst.options.iter().map(|o| (o.value, o.label.to_string())).collect(),
+        options: inst
+            .options
+            .iter()
+            .map(|o| (o.value, o.label.to_string()))
+            .collect(),
         bands: inst
             .bands
             .iter()
-            .map(|b| (b.min, b.max, b.label.to_string(), b.interpretation.to_string()))
+            .map(|b| {
+                (
+                    b.min,
+                    b.max,
+                    b.label.to_string(),
+                    b.interpretation.to_string(),
+                )
+            })
             .collect(),
         max_score: inst.max_score(),
         disclaimer: inst.disclaimer.to_string(),
@@ -313,7 +395,11 @@ mod tests {
     fn phq9_bands_cover_every_possible_total_without_gaps() {
         // Every total 0..=27 must fall in exactly one band.
         for total in 0..=PHQ9.max_score() {
-            let hits: Vec<_> = PHQ9.bands.iter().filter(|b| total >= b.min && total <= b.max).collect();
+            let hits: Vec<_> = PHQ9
+                .bands
+                .iter()
+                .filter(|b| total >= b.min && total <= b.max)
+                .collect();
             assert_eq!(hits.len(), 1, "total {total} must map to exactly one band");
         }
     }
@@ -321,7 +407,11 @@ mod tests {
     #[test]
     fn gad7_bands_cover_every_possible_total_without_gaps() {
         for total in 0..=GAD7.max_score() {
-            let hits: Vec<_> = GAD7.bands.iter().filter(|b| total >= b.min && total <= b.max).collect();
+            let hits: Vec<_> = GAD7
+                .bands
+                .iter()
+                .filter(|b| total >= b.min && total <= b.max)
+                .collect();
             assert_eq!(hits.len(), 1, "total {total} must map to exactly one band");
         }
     }
@@ -341,12 +431,36 @@ mod tests {
         assert_eq!(r.flags.len(), 1);
 
         // Boundary: total 10 → Moderate; total 14 → Moderate; total 15 → Moderately severe.
-        assert_eq!(score(&PHQ9, &[2, 2, 2, 2, 2, 0, 0, 0, 0], 1).unwrap().total, 10);
-        assert_eq!(score(&PHQ9, &[2, 2, 2, 2, 2, 0, 0, 0, 0], 1).unwrap().band_label, "Moderate");
-        assert_eq!(score(&PHQ9, &[3, 3, 3, 3, 2, 0, 0, 0, 0], 1).unwrap().total, 14);
-        assert_eq!(score(&PHQ9, &[3, 3, 3, 3, 2, 0, 0, 0, 0], 1).unwrap().band_label, "Moderate");
-        assert_eq!(score(&PHQ9, &[3, 3, 3, 3, 3, 0, 0, 0, 0], 1).unwrap().total, 15);
-        assert_eq!(score(&PHQ9, &[3, 3, 3, 3, 3, 0, 0, 0, 0], 1).unwrap().band_label, "Moderately severe");
+        assert_eq!(
+            score(&PHQ9, &[2, 2, 2, 2, 2, 0, 0, 0, 0], 1).unwrap().total,
+            10
+        );
+        assert_eq!(
+            score(&PHQ9, &[2, 2, 2, 2, 2, 0, 0, 0, 0], 1)
+                .unwrap()
+                .band_label,
+            "Moderate"
+        );
+        assert_eq!(
+            score(&PHQ9, &[3, 3, 3, 3, 2, 0, 0, 0, 0], 1).unwrap().total,
+            14
+        );
+        assert_eq!(
+            score(&PHQ9, &[3, 3, 3, 3, 2, 0, 0, 0, 0], 1)
+                .unwrap()
+                .band_label,
+            "Moderate"
+        );
+        assert_eq!(
+            score(&PHQ9, &[3, 3, 3, 3, 3, 0, 0, 0, 0], 1).unwrap().total,
+            15
+        );
+        assert_eq!(
+            score(&PHQ9, &[3, 3, 3, 3, 3, 0, 0, 0, 0], 1)
+                .unwrap()
+                .band_label,
+            "Moderately severe"
+        );
     }
 
     #[test]
@@ -357,7 +471,11 @@ mod tests {
         let r = score(&PHQ9, &resp, 1).unwrap();
         assert_eq!(r.total, 1);
         assert_eq!(r.band_label, "Minimal");
-        assert_eq!(r.flags.len(), 1, "self-harm flag must fire regardless of total");
+        assert_eq!(
+            r.flags.len(),
+            1,
+            "self-harm flag must fire regardless of total"
+        );
     }
 
     #[test]
@@ -365,7 +483,10 @@ mod tests {
         assert_eq!(score(&GAD7, &[0; 7], 1).unwrap().band_label, "Minimal");
         assert_eq!(score(&GAD7, &[3; 7], 1).unwrap().band_label, "Severe");
         assert_eq!(score(&GAD7, &[2, 2, 2, 2, 2, 0, 0], 1).unwrap().total, 10);
-        assert_eq!(score(&GAD7, &[2, 2, 2, 2, 2, 0, 0], 1).unwrap().band_label, "Moderate");
+        assert_eq!(
+            score(&GAD7, &[2, 2, 2, 2, 2, 0, 0], 1).unwrap().band_label,
+            "Moderate"
+        );
     }
 
     #[test]

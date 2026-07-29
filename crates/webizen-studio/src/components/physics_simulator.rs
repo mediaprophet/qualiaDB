@@ -1,6 +1,8 @@
 use dioxus::prelude::*;
 use serde::Deserialize;
 
+use crate::components::honesty_chip::{HonestyChip, HonestyLevel};
+
 #[cfg(target_arch = "wasm32")]
 use std::cell::{Cell, RefCell};
 #[cfg(target_arch = "wasm32")]
@@ -10,7 +12,6 @@ use wasm_bindgen::closure::Closure;
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::JsCast;
 #[cfg(target_arch = "wasm32")]
-use wasm_bindgen::JsValue;
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen_futures::spawn_local;
 #[cfg(target_arch = "wasm32")]
@@ -112,9 +113,9 @@ fn draw_scene(
     renderer.clear("#040712");
 
     // Backend-specific atmosphere wash (kept on the raw context).
-    context.set_fill_style(&JsValue::from_str("rgba(24, 76, 123, 0.18)"));
+    context.set_fill_style_str("rgba(24, 76, 123, 0.18)");
     context.fill_rect(0.0, height * 0.48, width, height * 0.52);
-    context.set_fill_style(&JsValue::from_str("rgba(255, 214, 102, 0.035)"));
+    context.set_fill_style_str("rgba(255, 214, 102, 0.035)");
     context.fill_rect(0.0, height * 0.18, width, height * 0.32);
 
     let orbit_angle = phase * orbit_speed * 0.55 + 0.25;
@@ -234,7 +235,7 @@ fn draw_scene(
     }
 
     context.set_global_alpha(0.9);
-    context.set_fill_style(&JsValue::from_str("rgba(226, 232, 240, 0.9)"));
+    context.set_fill_style_str("rgba(226, 232, 240, 0.9)");
     context.set_font("600 14px 'Segoe UI', sans-serif");
     let _ = context.fill_text("Webizen Spatial Physics Surface", 18.0, 28.0);
     context.set_global_alpha(0.55);
@@ -364,7 +365,11 @@ pub fn PhysicsSimulator() -> Element {
                         style: "display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; margin-bottom: 0.8rem;",
                         div {
                             h2 { style: "margin: 0 0 0.28rem 0; font-size: 1.05rem; font-weight: 700; color: #f8fafc;", "Physics Simulator" }
-                            p { style: "margin: 0; font-size: 0.82rem; line-height: 1.5; color: rgba(226,232,240,0.72);", "A procedural manifold viewport paired with an explicit QualiaDB Forge kinematics certification probe. Preview pixels never cross the Dioxus VDOM." }
+                            p { style: "margin: 0 0 0.45rem 0; font-size: 0.82rem; line-height: 1.5; color: rgba(226,232,240,0.72);", "A procedural manifold viewport paired with an explicit QualiaDB Forge kinematics certification probe. Preview pixels never cross the Dioxus VDOM." }
+                            HonestyChip {
+                                level: HonestyLevel::Partial,
+                                detail: "Forge certify_forge_physics real · viewport procedural".to_string(),
+                            }
                         }
                         div {
                             style: "display: flex; flex-direction: column; align-items: flex-end; gap: 0.35rem; min-width: 140px;",
@@ -486,6 +491,8 @@ pub fn PhysicsSimulator() -> Element {
                             {probe_metric("Momentum drift", format!("{:.3e}", result.momentum_drift))}
                             {probe_metric("Particles", result.particle_count.to_string())}
                             {probe_metric("Elapsed", format!("{:.2} ms", result.elapsed_ms))}
+                            {probe_metric("Sample p0 x", format!("{:.4}", result.sample_positions.first().map(|p| p[0]).unwrap_or(0.0)))}
+                            {probe_metric("Sample p0 y", format!("{:.4}", result.sample_positions.first().map(|p| p[1]).unwrap_or(0.0)))}
                         }
                         div {
                             style: "padding: 0.55rem 0.65rem; border-radius: 10px; background: rgba(2,6,23,0.65); border: 1px solid rgba(148,163,184,0.12);",

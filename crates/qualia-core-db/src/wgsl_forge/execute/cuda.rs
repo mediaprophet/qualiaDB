@@ -29,7 +29,7 @@ use crate::wgsl_forge::{
 };
 #[cfg(feature = "cuda")]
 use cudarc::driver::{
-    CudaContext, CudaFunction, CudaModule, CudaSlice, CudaStream, DevicePtr, DeviceRepr,
+    CudaContext, CudaFunction, CudaGraph, CudaModule, CudaSlice, CudaStream, DevicePtr, DeviceRepr,
     LaunchConfig, PushKernelArg,
 };
 
@@ -53,18 +53,78 @@ unsafe impl DeviceRepr for AffineParamsRaw {}
 pub struct CudaComputeContext {
     pub ctx: Arc<CudaContext>,
     pub stream: Arc<CudaStream>,
+    /// Secondary stream for overlapping H2D parameter writes with compute.
+    /// Lazily created on first `write_view_prefetch` call to avoid overhead
+    /// when double-buffering is not used.
+    pub prefetch_stream: Option<Arc<CudaStream>>,
+    /// Cache of loaded CUDA functions keyed by (source_hash, entry_point).
+    /// Avoids redundant `load_module` JIT on every `compile_pipe!` call —
+    /// the PTX text is already cached in `NVRTC_PTX_CACHE`, but the driver
+    /// module load is a separate JIT step that was repeated per token.
+    pub module_cache:
+        Mutex<std::collections::HashMap<u64, (CudaFunction, Arc<CudaModule>, Arc<KernelSpec>)>>,
     pub adapter: AdapterIdentity,
     pub constraints: AdapterConstraints,
     pub allocator: QualiaSlabAllocator,
     pub slab: CudaSlice<u8>,
 }
 
+/// Instantiated CUDA graph owned by a prepared runtime.
+///
+/// CUDA graph objects require external serialization. Qualia stores this wrapper only inside
+/// the `MultiWeightDevice` mutex, so moving it with that device is safe while concurrent access
+/// remains impossible.
+#[cfg(feature = "cuda")]
+pub struct CapturedCudaGraph {
+    graph: CudaGraph,
+}
+
+#[cfg(feature = "cuda")]
+impl CapturedCudaGraph {
+    /// Exact number of nodes retained by the captured CUDA graph.
+    pub fn node_count(&self) -> Result<usize, ForgeError> {
+        let mut count = 0usize;
+        let status = unsafe {
+            cudarc::driver::sys::cuGraphGetNodes(
+                self.graph.cu_graph(),
+                core::ptr::null_mut(),
+                &mut count,
+            )
+        };
+        if status == cudarc::driver::sys::CUresult::CUDA_SUCCESS {
+            Ok(count)
+        } else {
+            Err(ForgeError::GpuValidation(format!(
+                "CUDA graph node query failed: {status:?}"
+            )))
+        }
+    }
+}
+
+// SAFETY: all access is serialized by `multi_weight_device()`'s mutex; cudarc's graph retains
+// the stream and context that own the captured operations.
+#[cfg(feature = "cuda")]
+unsafe impl Send for CapturedCudaGraph {}
+
 #[cfg(feature = "cuda")]
 impl CudaComputeContext {
     pub fn new(capacity_bytes: usize) -> Result<Self, ForgeError> {
         let ctx = CudaContext::new(0)
             .map_err(|e| ForgeError::GpuUnavailable(format!("CUDA init failed: {:?}", e)))?;
-        let stream = ctx.default_stream();
+        // Forge owns stream ordering explicitly (`join_prefetch` before every dependent launch).
+        // cudarc's cross-stream event injection is therefore redundant and cannot be introduced
+        // while a CUDA stream is being captured.
+        //
+        // SAFETY: the slab outlives both streams; every prefetch write is joined before compute;
+        // final readback synchronizes the compute stream before the context can be dropped.
+        unsafe {
+            ctx.disable_event_tracking();
+        }
+        // CUDA graph capture is unsupported on the legacy default stream. A dedicated
+        // non-blocking stream also makes ordering ownership explicit for prepared inference.
+        let stream = ctx
+            .new_stream()
+            .map_err(|e| ForgeError::GpuUnavailable(format!("CUDA stream init failed: {e:?}")))?;
 
         let adapter = AdapterIdentity {
             name: "CUDA Device".to_string(),
@@ -106,11 +166,47 @@ impl CudaComputeContext {
         Ok(Self {
             ctx,
             stream,
+            prefetch_stream: None,
+            module_cache: Mutex::new(std::collections::HashMap::new()),
             adapter,
             constraints,
             allocator,
             slab,
         })
+    }
+
+    /// Begin thread-local capture on the prepared compute stream.
+    pub fn begin_graph_capture(&self) -> Result<(), ForgeError> {
+        // Capture may not inherit event-tracked dependencies from setup work. Drain all cold
+        // uploads/module preparation before establishing the graph boundary.
+        self.stream.synchronize().map_err(|e| {
+            ForgeError::GpuValidation(format!("CUDA graph pre-capture sync: {e:?}"))
+        })?;
+        self.stream
+            .begin_capture(
+                cudarc::driver::sys::CUstreamCaptureMode::CU_STREAM_CAPTURE_MODE_THREAD_LOCAL,
+            )
+            .map_err(|e| ForgeError::GpuValidation(format!("CUDA graph begin capture: {e:?}")))
+    }
+
+    /// Finish, instantiate and upload the current compute-stream capture.
+    pub fn end_graph_capture(&self) -> Result<CapturedCudaGraph, ForgeError> {
+        let graph = self
+            .stream
+            .end_capture(
+                cudarc::driver::sys::CUgraphInstantiate_flags::CUDA_GRAPH_INSTANTIATE_FLAG_USE_NODE_PRIORITY,
+            )
+            .map_err(|e| ForgeError::GpuValidation(format!("CUDA graph end capture: {e:?}")))?
+            .ok_or_else(|| ForgeError::GpuValidation("CUDA capture produced no graph".into()))?;
+        Ok(CapturedCudaGraph { graph })
+    }
+
+    /// Enqueue one replay on the graph's retained compute stream.
+    pub fn launch_graph(&self, graph: &CapturedCudaGraph) -> Result<(), ForgeError> {
+        graph
+            .graph
+            .launch()
+            .map_err(|e| ForgeError::GpuValidation(format!("CUDA graph launch: {e:?}")))
     }
 
     pub fn allocate_and_write(
@@ -138,6 +234,55 @@ impl CudaComputeContext {
         Ok(view)
     }
 
+    /// Lazily create the prefetch stream if it doesn't exist yet.
+    fn ensure_prefetch_stream(&mut self) -> Result<&Arc<CudaStream>, ForgeError> {
+        if self.prefetch_stream.is_none() {
+            let s = self
+                .ctx
+                .new_stream()
+                .map_err(|e| ForgeError::GpuUnavailable(format!("prefetch stream: {:?}", e)))?;
+            self.prefetch_stream = Some(s);
+        }
+        Ok(self.prefetch_stream.as_ref().unwrap())
+    }
+
+    /// Overwrite a device view with host bytes on the **prefetch stream**,
+    /// overlapping with compute on the primary stream. Caller must invoke
+    /// [`join_prefetch`] before launching a kernel that reads this data.
+    pub fn write_view_prefetch(
+        &mut self,
+        view: &BufferView,
+        data: &[u8],
+    ) -> Result<(), ForgeError> {
+        if data.len() > view.length_bytes {
+            return Err(ForgeError::GpuValidation(format!(
+                "write_view_prefetch overflow: {} > {}",
+                data.len(),
+                view.length_bytes
+            )));
+        }
+        if data.is_empty() {
+            return Ok(());
+        }
+        let pf_stream = self.ensure_prefetch_stream()?.clone();
+        let mut dst = self.slab.slice_mut(view.offset..view.offset + data.len());
+        pf_stream
+            .memcpy_htod(data, &mut dst)
+            .map_err(|e| ForgeError::GpuValidation(format!("prefetch H2D: {:?}", e)))?;
+        Ok(())
+    }
+
+    /// Make the compute stream wait for all outstanding prefetch-stream work.
+    /// Call this before launching a kernel that depends on prefetched data.
+    pub fn join_prefetch(&self) -> Result<(), ForgeError> {
+        if let Some(ref pf) = self.prefetch_stream {
+            self.stream
+                .join(pf)
+                .map_err(|e| ForgeError::GpuValidation(format!("join_prefetch: {:?}", e)))?;
+        }
+        Ok(())
+    }
+
     /// Overwrite an existing device view with host bytes (no new allocation).
     /// `data.len()` must be ≤ `view.length_bytes`.
     pub fn write_view(&mut self, view: &BufferView, data: &[u8]) -> Result<(), ForgeError> {
@@ -151,9 +296,7 @@ impl CudaComputeContext {
         if data.is_empty() {
             return Ok(());
         }
-        let mut dst = self
-            .slab
-            .slice_mut(view.offset..view.offset + data.len());
+        let mut dst = self.slab.slice_mut(view.offset..view.offset + data.len());
         self.stream
             .memcpy_htod(data, &mut dst)
             .map_err(|e| ForgeError::GpuValidation(format!("H2D write_view failed: {:?}", e)))?;
@@ -206,6 +349,29 @@ impl CudaComputeContext {
         Ok(output)
     }
 
+    /// Copy a device view into a caller-owned `u32` slice.
+    ///
+    /// Unlike [`Self::read_buffer_f32`], this performs no host allocation. It is the decode
+    /// token-readback boundary: the four-byte copy also synchronizes all preceding stream work.
+    pub fn read_buffer_u32_into(
+        &self,
+        view: &BufferView,
+        output: &mut [u32],
+    ) -> Result<(), ForgeError> {
+        let bytes = bytemuck::cast_slice_mut(output);
+        if bytes.len() > view.length_bytes {
+            return Err(ForgeError::GpuValidation(format!(
+                "u32 readback overflow: {} > {}",
+                bytes.len(),
+                view.length_bytes
+            )));
+        }
+        let src = self.slab.slice(view.offset..view.offset + bytes.len());
+        self.stream
+            .memcpy_dtoh(&src, bytes)
+            .map_err(|e| ForgeError::GpuValidation(format!("D2H transfer failed: {e:?}")))
+    }
+
     /// Double-precision readback, the `f64` mirror of [`Self::read_buffer_f32`]
     /// (8 bytes/elem). Used by the native CUDA-f64 GEMM path — WGSL has no `f64`,
     /// so this is CUDA-only by construction.
@@ -228,7 +394,7 @@ impl CudaComputeContext {
 pub struct CudaPipeline<'a> {
     context: &'a CudaComputeContext,
     func: CudaFunction,
-    spec: KernelSpec,
+    spec: Arc<KernelSpec>,
     // Kept alive so the loaded function's backing module is not unloaded.
     _module: Arc<CudaModule>,
 }
@@ -314,7 +480,7 @@ impl<'a> CudaPipeline<'a> {
         Ok(Self {
             context,
             func,
-            spec,
+            spec: Arc::new(spec),
             _module: module,
         })
     }
@@ -328,6 +494,23 @@ impl<'a> CudaPipeline<'a> {
         entry_point: &str,
         storage_buffer_bindings: &[u32],
     ) -> Result<Self, ForgeError> {
+        let src_hash = fnv1a64_bytes(source.as_bytes());
+        let cache_key = src_hash ^ fnv1a64_bytes(entry_point.as_bytes()).rotate_left(1);
+
+        // Fast path: function already loaded — skip NVRTC + load_module entirely.
+        // Zero allocations: just Arc clones (atomic increments).
+        if let Ok(guard) = context.module_cache.lock() {
+            if let Some((func, module, spec)) = guard.get(&cache_key) {
+                return Ok(Self {
+                    context,
+                    func: func.clone(),
+                    spec: spec.clone(),
+                    _module: module.clone(),
+                });
+            }
+        }
+
+        // Slow path: NVRTC compile + load_module — construct full KernelSpec.
         let buffers: Vec<BufferSpec> = storage_buffer_bindings
             .iter()
             .map(|&binding| BufferSpec {
@@ -348,7 +531,76 @@ impl<'a> CudaPipeline<'a> {
             shared_memory: Vec::new(),
         };
         let ptx = nvrtc_compile_to_ptx_cached(context, source)?;
-        Self::from_ptx(context, &ptx, entry_point, spec)
+        let pipe = Self::from_ptx(context, &ptx, entry_point, spec)?;
+
+        // Store the loaded function + spec so subsequent calls skip load_module.
+        if let Ok(mut guard) = context.module_cache.lock() {
+            guard.insert(
+                cache_key,
+                (pipe.func.clone(), pipe._module.clone(), pipe.spec.clone()),
+            );
+        }
+        Ok(pipe)
+    }
+
+    /// Load a hand-emitted PTX module (from `emit/ptx.rs`) directly into the CUDA
+    /// driver — no NVRTC compilation step. This is the PTX execution bridge:
+    /// the emitter produces complete PTX text with `.version`, `.target`,
+    /// `.address_size`, entry point, and full kernel body; the driver JITs it
+    /// to the actual GPU ISA.
+    ///
+    /// Shared-memory size is passed via `LaunchConfig.shared_mem_bytes` at
+    /// dispatch time, not at compile time.
+    pub fn compile_ptx(
+        context: &'a CudaComputeContext,
+        ptx_source: &str,
+        entry_point: &str,
+        storage_buffer_bindings: &[u32],
+    ) -> Result<Self, ForgeError> {
+        let src_hash = fnv1a64_bytes(ptx_source.as_bytes());
+        let cache_key = src_hash ^ fnv1a64_bytes(entry_point.as_bytes()).rotate_left(1);
+
+        // Fast path: function already loaded — skip load_module entirely.
+        if let Ok(guard) = context.module_cache.lock() {
+            if let Some((func, module, spec)) = guard.get(&cache_key) {
+                return Ok(Self {
+                    context,
+                    func: func.clone(),
+                    spec: spec.clone(),
+                    _module: module.clone(),
+                });
+            }
+        }
+
+        let buffers: Vec<BufferSpec> = storage_buffer_bindings
+            .iter()
+            .map(|&binding| BufferSpec {
+                group: 0,
+                binding,
+                name: format!("buf{binding}"),
+                element: BufferElement::Scalar(ScalarType::F32),
+                access: BufferAccess::StorageReadWrite,
+            })
+            .collect();
+        let spec = KernelSpec {
+            id: entry_point.to_string(),
+            semantic_version: 1,
+            entry_point: entry_point.to_string(),
+            description: "hand-emitted PTX kernel".to_string(),
+            buffers,
+            ops: Vec::new(),
+            shared_memory: Vec::new(),
+        };
+        let ptx = cudarc::nvrtc::Ptx::from_src(ptx_source.to_string());
+        let pipe = Self::from_ptx(context, &ptx, entry_point, spec)?;
+
+        if let Ok(mut guard) = context.module_cache.lock() {
+            guard.insert(
+                cache_key,
+                (pipe.func.clone(), pipe._module.clone(), pipe.spec.clone()),
+            );
+        }
+        Ok(pipe)
     }
 }
 
@@ -476,6 +728,129 @@ impl<'a> CudaPipeline<'a> {
     ) -> Result<(), ForgeError> {
         self.launch_inner(buffers, schedule, element_count, false)
             .map(|_| ())
+    }
+
+    /// Launch a PTX kernel with shared-memory size and a 3D grid/block config.
+    /// Used by hand-emitted PTX kernels (RMSNorm, Q4K GEMV, WMMA GEMV, SDPA)
+    /// that need `shared_mem_bytes` and multi-dimensional dispatch.
+    pub fn dispatch_ptx(
+        &self,
+        buffers: &[BufferView],
+        grid: (u32, u32, u32),
+        block: (u32, u32, u32),
+        shared_mem_bytes: u32,
+    ) -> Result<(), ForgeError> {
+        let cfg = LaunchConfig {
+            grid_dim: grid,
+            block_dim: block,
+            shared_mem_bytes,
+        };
+
+        let (base, _guard) = self.context.slab.device_ptr(&self.context.stream);
+        let base = base as u64;
+
+        let mut ptr_args: [u64; 16] = [0; 16];
+        let n_bufs = buffers.len().min(16);
+        for i in 0..n_bufs {
+            ptr_args[i] = base + buffers[i].offset as u64;
+        }
+
+        let mut builder = self.context.stream.launch_builder(&self.func);
+        for i in 0..n_bufs {
+            builder.arg(&ptr_args[i]);
+        }
+        unsafe {
+            builder
+                .launch(cfg)
+                .map_err(|e| ForgeError::GpuValidation(format!("PTX launch failed: {:?}", e)))?;
+        }
+        Ok(())
+    }
+
+    /// Fast-path async dispatch for pre-sorted buffer views.
+    ///
+    /// Assumes `buffers` are already in ascending binding order (as the mega-pass
+    /// always provides). Skips `spec.buffers.clone()` + sort + linear search —
+    /// eliminating 2 Vec allocations and O(n²) search per dispatch.
+    pub fn dispatch_async_sorted(
+        &self,
+        buffers: &[BufferView],
+        schedule: &Schedule,
+        element_count: usize,
+    ) -> Result<(), ForgeError> {
+        let dispatch_x = schedule.dispatch_workgroups(element_count);
+        let cfg = LaunchConfig {
+            grid_dim: (dispatch_x, 1, 1),
+            block_dim: (schedule.workgroup_size, 1, 1),
+            shared_mem_bytes: 0,
+        };
+
+        let (base, _guard) = self.context.slab.device_ptr(&self.context.stream);
+        let base = base as u64;
+
+        // Build pointer args directly from pre-sorted buffer views — no clone,
+        // no sort, no linear search. Stack array for typical binding counts.
+        let mut ptr_args: [u64; 16] = [0; 16];
+        let n_bufs = buffers.len().min(16);
+        for i in 0..n_bufs {
+            ptr_args[i] = base + buffers[i].offset as u64;
+        }
+
+        let mut builder = self.context.stream.launch_builder(&self.func);
+        for i in 0..n_bufs {
+            builder.arg(&ptr_args[i]);
+        }
+        unsafe {
+            builder
+                .launch(cfg)
+                .map_err(|e| ForgeError::GpuValidation(format!("CUDA launch failed: {:?}", e)))?;
+        }
+        Ok(())
+    }
+
+    /// Measure one pre-sorted kernel launch with CUDA events.
+    ///
+    /// This is a lab/profiling operation, not a decode hot-path primitive: creating and
+    /// synchronizing timing events intentionally fences the stream. It remains useful when
+    /// hardware performance counters are unavailable because the elapsed value is device time
+    /// rather than host submission/synchronization wall time.
+    pub fn dispatch_gpu_timed_ms_sorted(
+        &self,
+        buffers: &[BufferView],
+        schedule: &Schedule,
+        element_count: usize,
+    ) -> Result<f32, ForgeError> {
+        let dispatch_x = schedule.dispatch_workgroups(element_count);
+        let cfg = LaunchConfig {
+            grid_dim: (dispatch_x, 1, 1),
+            block_dim: (schedule.workgroup_size, 1, 1),
+            shared_mem_bytes: 0,
+        };
+
+        let (base, _guard) = self.context.slab.device_ptr(&self.context.stream);
+        let base = base as u64;
+        let mut ptr_args: [u64; 16] = [0; 16];
+        let n_bufs = buffers.len().min(16);
+        for index in 0..n_bufs {
+            ptr_args[index] = base + buffers[index].offset as u64;
+        }
+
+        let mut builder = self.context.stream.launch_builder(&self.func);
+        for ptr in ptr_args.iter().take(n_bufs) {
+            builder.arg(ptr);
+        }
+        builder.record_kernel_launch(cudarc::driver::sys::CUevent_flags::CU_EVENT_DEFAULT);
+        let events = unsafe {
+            builder.launch(cfg).map_err(|error| {
+                ForgeError::GpuValidation(format!("CUDA timed launch failed: {error:?}"))
+            })?
+        }
+        .ok_or_else(|| {
+            ForgeError::GpuValidation("CUDA timed launch returned no events".to_string())
+        })?;
+        events.0.elapsed_ms(&events.1).map_err(|error| {
+            ForgeError::GpuValidation(format!("CUDA event timing failed: {error:?}"))
+        })
     }
 
     fn launch_inner(
@@ -640,5 +1015,62 @@ impl OracleContext for CudaComputeContext {
             timing_samples.push(pipeline.dispatch(buffers, schedule, element_count)?);
         }
         Ok(timing_samples)
+    }
+}
+
+#[cfg(all(test, feature = "cuda"))]
+mod graph_tests {
+    use super::*;
+    use crate::specialized_libs::computational_geometry::allocation_counter::assert_zero_alloc;
+
+    #[test]
+    fn captured_kernel_replays_without_host_redispatch() {
+        let Ok(mut context) = CudaComputeContext::new(16 * 1024 * 1024) else {
+            eprintln!("CUDA graph test skipped: CUDA context unavailable");
+            return;
+        };
+        let Ok(mut value) = context.allocate_and_write(bytemuck::cast_slice(&[0u32; 1]), 0, 0)
+        else {
+            return;
+        };
+        let source = r#"
+extern "C" __global__ void increment(unsigned *value) {
+    if (blockIdx.x == 0u && threadIdx.x == 0u) value[0] += 1u;
+}
+"#;
+        let Ok(pipeline) =
+            CudaPipeline::compile_cuda_c_source_cached(&context, source, "increment", &[0])
+        else {
+            eprintln!("CUDA graph test skipped: NVRTC unavailable");
+            return;
+        };
+        value.binding = 0;
+        let schedule = Schedule {
+            workgroup_size: 32,
+            ..Default::default()
+        };
+        context.begin_graph_capture().unwrap();
+        pipeline
+            .dispatch_async_sorted(&[value], &schedule, 32)
+            .unwrap();
+        let graph = context.end_graph_capture().unwrap();
+        assert_eq!(graph.node_count().unwrap(), 1);
+        context.launch_graph(&graph).unwrap();
+        context.launch_graph(&graph).unwrap();
+        let mut output = [0u32; 1];
+        context.read_buffer_u32_into(&value, &mut output).unwrap();
+        assert_eq!(output[0], 2);
+
+        assert_zero_alloc("cuda_graph_dynamic_h2d", || {
+            context
+                .write_view(&value, bytemuck::cast_slice(&[0u32; 1]))
+                .unwrap();
+        });
+        assert_zero_alloc("cuda_graph_launch", || {
+            context.launch_graph(&graph).unwrap();
+        });
+        assert_zero_alloc("cuda_graph_token_d2h", || {
+            context.read_buffer_u32_into(&value, &mut output).unwrap();
+        });
     }
 }

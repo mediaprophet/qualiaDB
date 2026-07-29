@@ -163,3 +163,54 @@ pub fn try_q4k_soa_attention_device(
 ) -> bool {
     false
 }
+
+pub struct MegaPassLayerWeights<'a> {
+    pub attn_norm: &'a [f32],
+    pub q_raw: &'a [u8],
+    pub k_raw: &'a [u8],
+    pub v_raw: &'a [u8],
+    pub o_raw: &'a [u8],
+    pub ffn_norm: &'a [f32],
+    pub gate_raw: &'a [u8],
+    pub up_raw: &'a [u8],
+    pub down_raw: &'a [u8],
+}
+
+pub struct MegaPassLayerDims {
+    pub q_in: usize,
+    pub q_out: usize,
+    pub kv_in: usize,
+    pub kv_out: usize,
+    pub o_in: usize,
+    pub o_out: usize,
+    pub gate_in: usize,
+    pub gate_out: usize,
+    pub up_in: usize,
+    pub up_out: usize,
+    pub down_in: usize,
+    pub down_out: usize,
+}
+
+pub fn try_cuda_mega_pass(
+    _n_embd: usize,
+    _n_head: usize,
+    _n_kv: usize,
+    _head_dim: usize,
+    _n_layer: u32,
+    _token_idx: u32,
+    _max_context: u32,
+    _layer_stride: u32,
+    _slot_kv_elems: u32,
+    _rope_base: f32,
+    _rope_scale: f32,
+    _rms_eps: f32,
+    _hidden: &mut [f32],
+    _layers: &[MegaPassLayerWeights<'_>],
+    _layer_dims: &[MegaPassLayerDims],
+    _output_norm: Option<&[f32]>,
+    _lm_head_raw: Option<&[u8]>,
+    _lm_head_in: usize,
+    _lm_head_out: usize,
+) -> Option<u32> {
+    None
+}

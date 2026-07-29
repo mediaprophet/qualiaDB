@@ -388,8 +388,14 @@ mod tests {
             .expect("B's sub-provenance should be present");
         assert_eq!(b_prov.responsible_agent.id, "did:example:b");
         assert_eq!(b_prov.informed_by.len(), 1);
-        assert_eq!(b_prov.informed_by[0].agent.agent_type, AgentType::SoftwareAgent);
-        assert_eq!(b_prov.epistemic_horizon.as_deref(), Some("merkle:b-info-state"));
+        assert_eq!(
+            b_prov.informed_by[0].agent.agent_type,
+            AgentType::SoftwareAgent
+        );
+        assert_eq!(
+            b_prov.epistemic_horizon.as_deref(),
+            Some("merkle:b-info-state")
+        );
     }
 
     #[test]
@@ -422,12 +428,10 @@ mod tests {
     fn detects_undeclared_ai_deep_in_the_dag() {
         // The AI tool used two levels down is NOT covered by the declaration → integrity breach.
         let jp = two_level_dag(AgentRef::software_agent("did:tool:secret-llm"));
-        let declaration = RelianceDeclaration::new(
-            AgentRef::natural_person("did:example:a"),
-            1_700_000_000,
-        )
-        .with_capacity("urn:cap:psychologist")
-        .permit(AgentRef::software_agent("did:tool:approved-llm"));
+        let declaration =
+            RelianceDeclaration::new(AgentRef::natural_person("did:example:a"), 1_700_000_000)
+                .with_capacity("urn:cap:psychologist")
+                .permit(AgentRef::software_agent("did:tool:approved-llm"));
 
         assert!(
             has_undeclared_ai(&jp, &declaration),
@@ -439,11 +443,9 @@ mod tests {
     fn returns_false_when_ai_is_declared() {
         // Same DAG, but now the tool used deep in the DAG IS permitted → no breach.
         let jp = two_level_dag(AgentRef::software_agent("did:tool:llm-x"));
-        let declaration = RelianceDeclaration::new(
-            AgentRef::natural_person("did:example:a"),
-            1_700_000_000,
-        )
-        .permit(AgentRef::software_agent("did:tool:llm-x"));
+        let declaration =
+            RelianceDeclaration::new(AgentRef::natural_person("did:example:a"), 1_700_000_000)
+                .permit(AgentRef::software_agent("did:tool:llm-x"));
 
         assert!(
             !has_undeclared_ai(&jp, &declaration),

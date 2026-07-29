@@ -101,6 +101,9 @@ async fn invoke_tauri_json<T>(cmd: &str, args: serde_json::Value) -> Result<T, S
 where
     T: DeserializeOwned,
 {
+    if !crate::endpoints::is_native_host() {
+        return Err("The desktop host is unavailable in this preview.".to_string());
+    }
     let js_args = serde_wasm_bindgen::to_value(&args).map_err(|e| e.to_string())?;
     let value = tauri_invoke(cmd, js_args.into())
         .await
@@ -344,7 +347,7 @@ async fn run_benchmark_sweep() -> Result<BenchmarkReport, String> {
 pub fn BenchmarkHarness() -> Element {
     let running = use_signal(|| false);
     #[cfg(target_arch = "wasm32")]
-    let mut status = use_signal(|| {
+    let status = use_signal(|| {
         if is_tauri() {
             "Ready to benchmark the local runtime path.".to_string()
         } else {

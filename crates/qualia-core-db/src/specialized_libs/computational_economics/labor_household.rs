@@ -40,7 +40,11 @@ pub fn labor_supply_cobb_douglas(
     require_finite(time_endowment)?;
     require_finite(non_labor_income)?;
     require_finite(alpha)?;
-    if wage <= 0.0 || time_endowment <= 0.0 || non_labor_income < 0.0 || !(0.0..=1.0).contains(&alpha) {
+    if wage <= 0.0
+        || time_endowment <= 0.0
+        || non_labor_income < 0.0
+        || !(0.0..=1.0).contains(&alpha)
+    {
         return Err(LaborHouseholdError::InvalidInput);
     }
     let h_raw = alpha * time_endowment - (1.0 - alpha) * non_labor_income / wage;

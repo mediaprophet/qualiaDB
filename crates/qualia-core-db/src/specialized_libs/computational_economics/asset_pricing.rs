@@ -47,10 +47,7 @@ pub fn capm_expected_return(
 /// CAPM beta: `beta = Cov(Ra, Rm) / Var(Rm)`.
 ///
 /// Zero-heap over caller slices. Returns error if `Var(Rm) == 0`.
-pub fn capm_beta(
-    asset_returns: &[f64],
-    market_returns: &[f64],
-) -> Result<f64, AssetPricingError> {
+pub fn capm_beta(asset_returns: &[f64], market_returns: &[f64]) -> Result<f64, AssetPricingError> {
     if asset_returns.len() != market_returns.len() || asset_returns.len() < 2 {
         return Err(AssetPricingError::InsufficientData);
     }

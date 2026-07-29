@@ -90,7 +90,8 @@ impl MedicalComputingLibrary {
             Gender::Other | Gender::Unknown => {
                 return Err(MedicalError::ValidationError(
                     "ideal_body_weight_devine: Devine coefficients are defined only for \
-                     male/female; sex Other/Unknown has no validated coefficient".to_string(),
+                     male/female; sex Other/Unknown has no validated coefficient"
+                        .to_string(),
                 ))
             }
         };
@@ -176,7 +177,8 @@ impl MedicalComputingLibrary {
         if !(weight_kg > 0.0) || !(scr_mg_dl > 0.0) || !(age_years > 0.0) {
             return Err(MedicalError::ValidationError(
                 "creatinine_clearance_cockcroft_gault: age_years, weight_kg and scr_mg_dl \
-                 must be positive".to_string(),
+                 must be positive"
+                    .to_string(),
             ));
         }
         let sex_factor = match sex {
@@ -185,7 +187,8 @@ impl MedicalComputingLibrary {
             Gender::Other | Gender::Unknown => {
                 return Err(MedicalError::ValidationError(
                     "creatinine_clearance_cockcroft_gault: sex factor is defined only for \
-                     male/female".to_string(),
+                     male/female"
+                        .to_string(),
                 ))
             }
         };
@@ -289,11 +292,7 @@ impl MedicalComputingLibrary {
     // -- Drug dosing math --------------------------------------------------
 
     /// Weight-based dose: `dose = dose_per_kg × weight_kg` (units follow dose_per_kg).
-    pub fn weight_based_dose(
-        &self,
-        dose_per_kg: f64,
-        weight_kg: f64,
-    ) -> Result<f64, MedicalError> {
+    pub fn weight_based_dose(&self, dose_per_kg: f64, weight_kg: f64) -> Result<f64, MedicalError> {
         if !(dose_per_kg >= 0.0) || !(weight_kg > 0.0) {
             return Err(MedicalError::ValidationError(
                 "weight_based_dose: dose_per_kg must be non-negative and weight_kg positive"
@@ -317,7 +316,8 @@ impl MedicalComputingLibrary {
         if !(normal_dose >= 0.0) || !(crcl_patient >= 0.0) || !(crcl_normal > 0.0) {
             return Err(MedicalError::ValidationError(
                 "giusti_hayton_adjusted_dose: doses/clearances must be non-negative and \
-                 crcl_normal positive".to_string(),
+                 crcl_normal positive"
+                    .to_string(),
             ));
         }
         if !(0.0..=1.0).contains(&fraction_renally_excreted) {
@@ -363,7 +363,8 @@ impl MedicalComputingLibrary {
         if !(dose_per_kg_per_min >= 0.0) || !(weight_kg > 0.0) || !(concentration_per_ml > 0.0) {
             return Err(MedicalError::ValidationError(
                 "infusion_rate_ml_per_hr: dose/weight non-negative-or-positive and \
-                 concentration_per_ml must be positive".to_string(),
+                 concentration_per_ml must be positive"
+                    .to_string(),
             ));
         }
         Ok((dose_per_kg_per_min * weight_kg * 60.0) / concentration_per_ml)
@@ -382,10 +383,7 @@ impl MedicalComputingLibrary {
     }
 
     /// Half-life from first-order rate constant: `t½ = ln(2) / k`.
-    pub fn half_life_from_rate_constant(
-        &self,
-        rate_constant: f64,
-    ) -> Result<f64, MedicalError> {
+    pub fn half_life_from_rate_constant(&self, rate_constant: f64) -> Result<f64, MedicalError> {
         if !(rate_constant > 0.0) {
             return Err(MedicalError::ValidationError(
                 "half_life_from_rate_constant: rate_constant must be positive".to_string(),

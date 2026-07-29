@@ -8,10 +8,10 @@ use wasm_bindgen::prelude::*;
 #[cfg(target_arch = "wasm32")]
 use crate::gpu_context::{global_vram_ledger, record_bake_pulse, sample_ambient_telemetry};
 #[cfg(target_arch = "wasm32")]
+use crate::q_hash;
+#[cfg(target_arch = "wasm32")]
 use crate::tensor::buffer_export::write_tensor_buffer;
 use crate::tensor::Tensor10D;
-#[cfg(target_arch = "wasm32")]
-use crate::{q_hash, NQuin};
 
 // geometry_wasm.rs lives at the crate root (sibling of this file), not under spatial_wasm/.
 // Needs `specialized_libs` (wasm-scientific / native) — not available on portal-slim.
@@ -189,8 +189,10 @@ pub fn spatial_encode_wasm(json: &str) -> Result<JsValue, JsValue> {
 #[cfg(target_arch = "wasm32")]
 #[derive(Deserialize)]
 pub struct GeosparqlRequest {
-    pub geoA: String,
-    pub geoB: String,
+    #[serde(rename = "geoA")]
+    pub geo_a: String,
+    #[serde(rename = "geoB")]
+    pub geo_b: String,
     pub op: String,
     #[serde(default = "default_crs")]
     pub crs: String,
@@ -269,8 +271,8 @@ fn point_in_polygon(x: f64, y: f64, ring: &[(f64, f64)]) -> bool {
 pub fn geosparql_operation_wasm(json: &str) -> Result<JsValue, JsValue> {
     let req: GeosparqlRequest =
         serde_json::from_str(json).map_err(|e| JsValue::from_str(&e.to_string()))?;
-    let poly = parse_polygon(&req.geoA).map_err(|e| JsValue::from_str(&e))?;
-    let (px, py) = parse_point(&req.geoB).map_err(|e| JsValue::from_str(&e))?;
+    let poly = parse_polygon(&req.geo_a).map_err(|e| JsValue::from_str(&e))?;
+    let (px, py) = parse_point(&req.geo_b).map_err(|e| JsValue::from_str(&e))?;
     let within = point_in_polygon(px, py, &poly);
     let dist = ((px - poly[0].0).powi(2) + (py - poly[0].1).powi(2)).sqrt();
 
@@ -303,8 +305,8 @@ pub fn geosparql_operation_wasm(json: &str) -> Result<JsValue, JsValue> {
     let out = GeoResult {
         operation: req.op,
         crs: format!("EPSG:{}", req.crs),
-        geometry_a: req.geoA,
-        geometry_b: req.geoB,
+        geometry_a: req.geo_a,
+        geometry_b: req.geo_b,
         result,
         predicate: predicate.to_string(),
         elapsed_ms: 0.0,

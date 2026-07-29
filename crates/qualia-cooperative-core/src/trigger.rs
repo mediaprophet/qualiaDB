@@ -47,7 +47,10 @@ pub enum Trigger {
 
     /// Liveness / deadman switch: fires once at least `timeout_secs` have elapsed since the principal
     /// was last seen (`last_seen_unix`). Used for posthumous / incapacity fallbacks.
-    DeadmanSwitch { last_seen_unix: u32, timeout_secs: u32 },
+    DeadmanSwitch {
+        last_seen_unix: u32,
+        timeout_secs: u32,
+    },
 
     /// `m`-of-`n` **signed** human attestations meeting an optional required capacity/role credential
     /// (e.g. 2-of-N `registered_physician` attesting incapacity). `n` is advisory metadata describing
@@ -88,17 +91,26 @@ pub struct Attestation {
 impl Attestation {
     /// A signed attestation made under a specific capacity/role credential.
     pub fn signed(capacity: impl Into<String>) -> Self {
-        Self { capacity: Some(capacity.into()), signed: true }
+        Self {
+            capacity: Some(capacity.into()),
+            signed: true,
+        }
     }
 
     /// A signed attestation with no specific declared capacity.
     pub fn signed_anon() -> Self {
-        Self { capacity: None, signed: true }
+        Self {
+            capacity: None,
+            signed: true,
+        }
     }
 
     /// An unsigned attestation (does not count toward consensus).
     pub fn unsigned(capacity: impl Into<String>) -> Self {
-        Self { capacity: Some(capacity.into()), signed: false }
+        Self {
+            capacity: Some(capacity.into()),
+            signed: false,
+        }
     }
 }
 
@@ -123,7 +135,10 @@ pub struct TriggerContext {
 impl TriggerContext {
     /// A context anchored at `now_unix` with no events, attestations, or liveness signal.
     pub fn at(now_unix: u32) -> Self {
-        Self { now_unix, ..Default::default() }
+        Self {
+            now_unix,
+            ..Default::default()
+        }
     }
 
     pub fn with_event(mut self, event_id: impl Into<String>) -> Self {
@@ -171,13 +186,14 @@ fn count_matching_attestations(required_capacity: Option<&str>, ctx: &TriggerCon
 /// - `All` — every child fires. `Any` — some child fires. `Not` — the inner trigger does not.
 pub fn evaluate(trigger: &Trigger, ctx: &TriggerContext) -> bool {
     match trigger {
-        Trigger::VerifiableEvent { event_id } => {
-            ctx.occurred_events.iter().any(|e| e == event_id)
-        }
+        Trigger::VerifiableEvent { event_id } => ctx.occurred_events.iter().any(|e| e == event_id),
         Trigger::TemporalWindow { from_unix, to_unix } => {
             ctx.now_unix >= *from_unix && to_unix.map_or(true, |t| ctx.now_unix <= t)
         }
-        Trigger::DeadmanSwitch { last_seen_unix, timeout_secs } => ctx
+        Trigger::DeadmanSwitch {
+            last_seen_unix,
+            timeout_secs,
+        } => ctx
             .last_liveness_unix
             .map(|ls| ls.max(*last_seen_unix))
             .or(Some(*last_seen_unix))
@@ -185,9 +201,11 @@ pub fn evaluate(trigger: &Trigger, ctx: &TriggerContext) -> bool {
                 // Fires only once the elapsed time since last-seen reaches the timeout.
                 ctx.now_unix.saturating_sub(seen) >= *timeout_secs
             }),
-        Trigger::HumanConsensus { required_capacity, m, .. } => {
-            count_matching_attestations(required_capacity.as_deref(), ctx) >= *m
-        }
+        Trigger::HumanConsensus {
+            required_capacity,
+            m,
+            ..
+        } => count_matching_attestations(required_capacity.as_deref(), ctx) >= *m,
         Trigger::All(children) => children.iter().all(|c| evaluate(c, ctx)),
         Trigger::Any(children) => children.iter().any(|c| evaluate(c, ctx)),
         Trigger::Not(inner) => !evaluate(inner, ctx),
@@ -206,7 +224,9 @@ mod tests {
 
     #[test]
     fn verifiable_event_true_when_present_false_when_absent() {
-        let t = Trigger::VerifiableEvent { event_id: ER_ADMISSION.into() };
+        let t = Trigger::VerifiableEvent {
+            event_id: ER_ADMISSION.into(),
+        };
         let present = TriggerContext::at(1000).with_event(ER_ADMISSION);
         let absent = TriggerContext::at(1000).with_event("unrelated_event");
         assert!(evaluate(&t, &present));
@@ -219,7 +239,10 @@ mod tests {
 
     #[test]
     fn temporal_window_bounded_range() {
-        let t = Trigger::TemporalWindow { from_unix: 100, to_unix: Some(200) };
+        let t = Trigger::TemporalWindow {
+            from_unix: 100,
+            to_unix: Some(200),
+        };
         assert!(!evaluate(&t, &TriggerContext::at(99))); // before
         assert!(evaluate(&t, &TriggerContext::at(100))); // inclusive lower
         assert!(evaluate(&t, &TriggerContext::at(150))); // inside
@@ -229,7 +252,10 @@ mod tests {
 
     #[test]
     fn temporal_window_open_upper_bound_is_indefinite() {
-        let t = Trigger::TemporalWindow { from_unix: 100, to_unix: None };
+        let t = Trigger::TemporalWindow {
+            from_unix: 100,
+            to_unix: None,
+        };
         assert!(!evaluate(&t, &TriggerContext::at(99)));
         assert!(evaluate(&t, &TriggerContext::at(100)));
         assert!(evaluate(&t, &TriggerContext::at(u32::MAX)));
@@ -239,7 +265,10 @@ mod tests {
 
     #[test]
     fn deadman_switch_fires_only_after_timeout() {
-        let t = Trigger::DeadmanSwitch { last_seen_unix: 1000, timeout_secs: 3600 };
+        let t = Trigger::DeadmanSwitch {
+            last_seen_unix: 1000,
+            timeout_secs: 3600,
+        };
         // No liveness in context: falls back to last_seen_unix baked into the trigger.
         assert!(!evaluate(&t, &TriggerContext::at(1000))); // 0 elapsed
         assert!(!evaluate(&t, &TriggerContext::at(4599))); // 3599 elapsed, just short
@@ -249,7 +278,10 @@ mod tests {
 
     #[test]
     fn deadman_switch_uses_latest_liveness_ping() {
-        let t = Trigger::DeadmanSwitch { last_seen_unix: 1000, timeout_secs: 3600 };
+        let t = Trigger::DeadmanSwitch {
+            last_seen_unix: 1000,
+            timeout_secs: 3600,
+        };
         // A fresher liveness ping resets the clock: last seen at 5000, now 6000 → only 1000 elapsed.
         let fresh = TriggerContext::at(6000).with_liveness(5000);
         assert!(!evaluate(&t, &fresh));
@@ -288,7 +320,11 @@ mod tests {
 
     #[test]
     fn human_consensus_below_threshold_fails() {
-        let t = Trigger::HumanConsensus { required_capacity: Some(PHYSICIAN.into()), m: 3, n: 5 };
+        let t = Trigger::HumanConsensus {
+            required_capacity: Some(PHYSICIAN.into()),
+            m: 3,
+            n: 5,
+        };
         let two = TriggerContext::at(0)
             .with_attestation(Attestation::signed(PHYSICIAN))
             .with_attestation(Attestation::signed(PHYSICIAN));
@@ -297,12 +333,16 @@ mod tests {
 
     #[test]
     fn human_consensus_without_required_capacity_accepts_any_signed() {
-        let t = Trigger::HumanConsensus { required_capacity: None, m: 2, n: 2 };
+        let t = Trigger::HumanConsensus {
+            required_capacity: None,
+            m: 2,
+            n: 2,
+        };
         let mixed = TriggerContext::at(0)
             .with_attestation(Attestation::signed(PHYSICIAN))
             .with_attestation(Attestation::signed(NURSE));
         assert!(evaluate(&t, &mixed)); // any two signed count
-        // But unsigned still never counts.
+                                       // But unsigned still never counts.
         let one_signed = TriggerContext::at(0)
             .with_attestation(Attestation::signed(PHYSICIAN))
             .with_attestation(Attestation::unsigned(NURSE));
@@ -312,7 +352,11 @@ mod tests {
     #[test]
     fn human_consensus_n_is_advisory_only() {
         // n smaller than the number present, or than m, must not affect activation — only m gates.
-        let t = Trigger::HumanConsensus { required_capacity: None, m: 1, n: 0 };
+        let t = Trigger::HumanConsensus {
+            required_capacity: None,
+            m: 1,
+            n: 0,
+        };
         let ctx = TriggerContext::at(0).with_attestation(Attestation::signed_anon());
         assert!(evaluate(&t, &ctx));
     }
@@ -327,7 +371,9 @@ mod tests {
 
     #[test]
     fn not_inverts_child() {
-        let ev = Trigger::VerifiableEvent { event_id: ER_ADMISSION.into() };
+        let ev = Trigger::VerifiableEvent {
+            event_id: ER_ADMISSION.into(),
+        };
         let not_ev = Trigger::Not(Box::new(ev.clone()));
         let with = TriggerContext::at(0).with_event(ER_ADMISSION);
         let without = TriggerContext::at(0);
@@ -337,8 +383,12 @@ mod tests {
 
     #[test]
     fn any_and_all_compose() {
-        let a = Trigger::VerifiableEvent { event_id: "a".into() };
-        let b = Trigger::VerifiableEvent { event_id: "b".into() };
+        let a = Trigger::VerifiableEvent {
+            event_id: "a".into(),
+        };
+        let b = Trigger::VerifiableEvent {
+            event_id: "b".into(),
+        };
         let all = Trigger::All(vec![a.clone(), b.clone()]);
         let any = Trigger::Any(vec![a.clone(), b.clone()]);
 
@@ -357,8 +407,14 @@ mod tests {
     fn crisis_composite_verifiable_event_and_two_of_n_physicians() {
         // The canonical ADR example: fire on ER admission AND 2-of-N registered physicians attesting.
         let crisis = Trigger::All(vec![
-            Trigger::VerifiableEvent { event_id: ER_ADMISSION.into() },
-            Trigger::HumanConsensus { required_capacity: Some(PHYSICIAN.into()), m: 2, n: 5 },
+            Trigger::VerifiableEvent {
+                event_id: ER_ADMISSION.into(),
+            },
+            Trigger::HumanConsensus {
+                required_capacity: Some(PHYSICIAN.into()),
+                m: 2,
+                n: 5,
+            },
         ]);
 
         // Full crisis: admitted + two physicians attest → activates.
@@ -385,12 +441,22 @@ mod tests {
     fn deeply_nested_composite_evaluates() {
         // (window AND (event OR deadman)) AND NOT(revocation event)
         let trigger = Trigger::All(vec![
-            Trigger::TemporalWindow { from_unix: 100, to_unix: Some(1000) },
+            Trigger::TemporalWindow {
+                from_unix: 100,
+                to_unix: Some(1000),
+            },
             Trigger::Any(vec![
-                Trigger::VerifiableEvent { event_id: "consent".into() },
-                Trigger::DeadmanSwitch { last_seen_unix: 100, timeout_secs: 500 },
+                Trigger::VerifiableEvent {
+                    event_id: "consent".into(),
+                },
+                Trigger::DeadmanSwitch {
+                    last_seen_unix: 100,
+                    timeout_secs: 500,
+                },
             ]),
-            Trigger::Not(Box::new(Trigger::VerifiableEvent { event_id: "revoked".into() })),
+            Trigger::Not(Box::new(Trigger::VerifiableEvent {
+                event_id: "revoked".into(),
+            })),
         ]);
 
         // now=200: in window; consent present; not revoked → fires.
@@ -398,7 +464,9 @@ mod tests {
         assert!(evaluate(&trigger, &ok));
 
         // Revocation present → NOT clause fails the whole All.
-        let revoked = TriggerContext::at(200).with_event("consent").with_event("revoked");
+        let revoked = TriggerContext::at(200)
+            .with_event("consent")
+            .with_event("revoked");
         assert!(!evaluate(&trigger, &revoked));
 
         // now=700: consent absent, but deadman fired (700-100=600 >= 500) → Any still true → fires.
@@ -415,9 +483,18 @@ mod tests {
     #[test]
     fn trigger_serde_round_trips() {
         let trigger = Trigger::All(vec![
-            Trigger::VerifiableEvent { event_id: ER_ADMISSION.into() },
-            Trigger::HumanConsensus { required_capacity: Some(PHYSICIAN.into()), m: 2, n: 5 },
-            Trigger::Not(Box::new(Trigger::TemporalWindow { from_unix: 0, to_unix: None })),
+            Trigger::VerifiableEvent {
+                event_id: ER_ADMISSION.into(),
+            },
+            Trigger::HumanConsensus {
+                required_capacity: Some(PHYSICIAN.into()),
+                m: 2,
+                n: 5,
+            },
+            Trigger::Not(Box::new(Trigger::TemporalWindow {
+                from_unix: 0,
+                to_unix: None,
+            })),
         ]);
         let json = serde_json::to_string(&trigger).expect("serialize");
         // Externally tagged: variant name is the key, e.g. {"all":[{"human_consensus":{...}}]}.
@@ -443,15 +520,24 @@ mod tests {
     fn attestation_constructors_are_correct() {
         assert_eq!(
             Attestation::signed(PHYSICIAN),
-            Attestation { capacity: Some(PHYSICIAN.to_string()), signed: true }
+            Attestation {
+                capacity: Some(PHYSICIAN.to_string()),
+                signed: true
+            }
         );
         assert_eq!(
             Attestation::signed_anon(),
-            Attestation { capacity: None, signed: true }
+            Attestation {
+                capacity: None,
+                signed: true
+            }
         );
         assert_eq!(
             Attestation::unsigned(NURSE),
-            Attestation { capacity: Some(NURSE.to_string()), signed: false }
+            Attestation {
+                capacity: Some(NURSE.to_string()),
+                signed: false
+            }
         );
     }
 }

@@ -259,10 +259,7 @@ impl QueryPlanner {
         // silently returned duplicates.) Eliminating all duplicates is also a
         // conformant realisation of REDUCED.
         let distinct_op = if select.distinct || select.reduced {
-            plan.add_operator(
-                PhysicalOperatorType::Distinct { input: project_op },
-                0,
-            )?
+            plan.add_operator(PhysicalOperatorType::Distinct { input: project_op }, 0)?
         } else {
             project_op
         };

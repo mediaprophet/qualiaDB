@@ -219,7 +219,9 @@ mod tests {
     #[test]
     #[serial_test::serial(gpu)]
     fn gather_dequant_gpu_matches_oracle() {
-        if !crate::wgsl_forge::test_gpu_available() { return; }
+        if !crate::wgsl_forge::test_gpu_available() {
+            return;
+        }
         let (rows, cols) = (4usize, 40usize);
         let vals: Vec<f32> = (0..rows * cols)
             .map(|i| match (i * 7) % 3 {

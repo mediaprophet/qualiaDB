@@ -1,9 +1,9 @@
+use std::sync::Arc;
 use webrtc::api::APIBuilder;
 use webrtc::data_channel::RTCDataChannel;
 use webrtc::peer_connection::configuration::RTCConfiguration;
 use webrtc::peer_connection::peer_connection_state::RTCPeerConnectionState;
 use webrtc::peer_connection::sdp::session_description::RTCSessionDescription;
-use std::sync::Arc;
 
 pub async fn handle_webrtc_offer(offer_sdp: &str) -> Result<String, String> {
     let api = APIBuilder::new().build();
@@ -11,7 +11,11 @@ pub async fn handle_webrtc_offer(offer_sdp: &str) -> Result<String, String> {
         ..Default::default()
     };
 
-    let peer_connection = Arc::new(api.new_peer_connection(config).await.map_err(|e| e.to_string())?);
+    let peer_connection = Arc::new(
+        api.new_peer_connection(config)
+            .await
+            .map_err(|e| e.to_string())?,
+    );
 
     peer_connection.on_peer_connection_state_change(Box::new(move |s: RTCPeerConnectionState| {
         println!("Peer Connection State has changed: {s}");
@@ -38,10 +42,19 @@ pub async fn handle_webrtc_offer(offer_sdp: &str) -> Result<String, String> {
     }));
 
     let offer = RTCSessionDescription::offer(offer_sdp.to_string()).map_err(|e| e.to_string())?;
-    peer_connection.set_remote_description(offer).await.map_err(|e| e.to_string())?;
+    peer_connection
+        .set_remote_description(offer)
+        .await
+        .map_err(|e| e.to_string())?;
 
-    let answer = peer_connection.create_answer(None).await.map_err(|e| e.to_string())?;
-    peer_connection.set_local_description(answer.clone()).await.map_err(|e| e.to_string())?;
+    let answer = peer_connection
+        .create_answer(None)
+        .await
+        .map_err(|e| e.to_string())?;
+    peer_connection
+        .set_local_description(answer.clone())
+        .await
+        .map_err(|e| e.to_string())?;
 
     Ok(answer.sdp)
 }

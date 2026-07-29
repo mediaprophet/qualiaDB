@@ -117,7 +117,10 @@ impl OllamaHarness {
         )
     }
 
-    fn apply_auth(&self, mut req: reqwest::blocking::RequestBuilder) -> reqwest::blocking::RequestBuilder {
+    fn apply_auth(
+        &self,
+        mut req: reqwest::blocking::RequestBuilder,
+    ) -> reqwest::blocking::RequestBuilder {
         if let Some(key) = &self.api_key {
             req = req.bearer_auth(key);
         }
@@ -176,8 +179,14 @@ impl OllamaHarness {
                             .map(|m| OllamaModelInfo {
                                 name: m.name,
                                 size_bytes: m.size,
-                                parameter_size: m.details.as_ref().and_then(|d| d.parameter_size.clone()),
-                                quantization: m.details.as_ref().and_then(|d| d.quantization_level.clone()),
+                                parameter_size: m
+                                    .details
+                                    .as_ref()
+                                    .and_then(|d| d.parameter_size.clone()),
+                                quantization: m
+                                    .details
+                                    .as_ref()
+                                    .and_then(|d| d.quantization_level.clone()),
                                 family: m.details.as_ref().and_then(|d| d.family.clone()),
                             })
                             .collect(),
@@ -244,8 +253,14 @@ impl OllamaHarness {
                             .map(|m| OllamaModelInfo {
                                 name: m.name,
                                 size_bytes: m.size,
-                                parameter_size: m.details.as_ref().and_then(|d| d.parameter_size.clone()),
-                                quantization: m.details.as_ref().and_then(|d| d.quantization_level.clone()),
+                                parameter_size: m
+                                    .details
+                                    .as_ref()
+                                    .and_then(|d| d.parameter_size.clone()),
+                                quantization: m
+                                    .details
+                                    .as_ref()
+                                    .and_then(|d| d.quantization_level.clone()),
                                 family: m.details.as_ref().and_then(|d| d.family.clone()),
                             })
                             .collect(),
@@ -375,14 +390,9 @@ impl OllamaHarness {
             let body = resp.text().unwrap_or_default();
             return Err(format!("ollama chat HTTP {status}: {body}"));
         }
-        let parsed: ChatResponse = resp
-            .json()
-            .map_err(|e| format!("ollama chat parse: {e}"))?;
+        let parsed: ChatResponse = resp.json().map_err(|e| format!("ollama chat parse: {e}"))?;
         Ok(OllamaGenerateResult {
-            text: parsed
-                .message
-                .map(|m| m.content)
-                .unwrap_or_default(),
+            text: parsed.message.map(|m| m.content).unwrap_or_default(),
             model: parsed.model.unwrap_or_else(|| self.gen_model.clone()),
             total_duration_ns: parsed.total_duration,
             eval_count: parsed.eval_count,

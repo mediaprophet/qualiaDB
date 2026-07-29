@@ -45,8 +45,6 @@ impl RenderCameraState {
     }
 }
 
-
-
 /// Renders a headless GPU frame in the native host and shows it via `<img>`.
 #[component]
 pub fn RenderPreview(width: u32, height: u32) -> Element {

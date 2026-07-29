@@ -1,5 +1,6 @@
 [workspace]
 members = [
+    "crates/qualia-inference-kernel",
     "crates/qualia-core-db",
     "crates/qualia-cli",
     "crates/qualia-solid-bridge",
@@ -18,6 +19,7 @@ members = [
     "crates/webizen-lite-wasm",
     "crates/qualia-q-forge",
     "crates/qualia-vision",
+    "crates/qualia-audio",
 ]
 resolver = "2"
 

@@ -1,10 +1,10 @@
 //! LLM Testing Integration for CLI
-//! 
+//!
 //! Simple LLM model testing functionality for the CLI.
 
-use std::path::{Path, PathBuf};
-use qualia_client_core::model_lifecycle::{scan_vault_gguf, resolve_vault_model, VaultGgufEntry};
 use crate::llm_lifecycle::{default_vault_path, init_log_stream};
+use qualia_client_core::model_lifecycle::{resolve_vault_model, scan_vault_gguf, VaultGgufEntry};
+use std::path::{Path, PathBuf};
 
 /// CLI command to run comprehensive LLM model tests
 pub fn run_test_models(
@@ -14,57 +14,61 @@ pub fn run_test_models(
     verbose: bool,
 ) -> Result<(), String> {
     let vault_path = vault_path.unwrap_or_else(default_vault_path);
-    
+
     if verbose {
         init_log_stream(true);
     }
-    
+
     println!("🚀 Starting LLM Model Testing CLI");
     println!("📁 Vault path: {}", vault_path.display());
-    
+
     // Scan for GGUF models in vault
-    let available_models = scan_vault_gguf(&vault_path)
-        .map_err(|e| format!("Failed to scan vault: {}", e))?;
-    
+    let available_models =
+        scan_vault_gguf(&vault_path).map_err(|e| format!("Failed to scan vault: {}", e))?;
+
     if available_models.is_empty() {
         return Err("No GGUF models found in vault".to_string());
     }
-    
+
     println!("📦 Found {} model(s):", available_models.len());
     for model in &available_models {
         println!("  - {}", model.name);
     }
-    
+
     // Filter models if specific ones requested
     let test_models = if let Some(ref requested) = models {
-        available_models.iter()
+        available_models
+            .iter()
             .filter(|m| requested.contains(&m.name))
             .cloned()
             .collect()
     } else {
         available_models
     };
-    
+
     if test_models.is_empty() {
         return Err("No matching models found".to_string());
     }
-    
+
     println!("\n🧪 Testing {} model(s)...", test_models.len());
-    
+
     for model in &test_models {
         println!("\n🔍 Testing: {}", model.name);
         match test_single_model(&vault_path, model, verbose) {
             Ok(result) => {
                 println!("  ✅ Load time: {}ms", result.load_time_ms);
                 println!("  ✅ Memory: {}MB", result.memory_mb);
-                println!("  ✅ Status: {}", if result.success { "PASS" } else { "FAIL" });
+                println!(
+                    "  ✅ Status: {}",
+                    if result.success { "PASS" } else { "FAIL" }
+                );
             }
             Err(e) => {
                 println!("  ❌ Error: {}", e);
             }
         }
     }
-    
+
     println!("\n✅ Testing complete!");
     Ok(())
 }
@@ -76,45 +80,47 @@ pub fn run_comprehensive_llm_test(
     verbose: bool,
 ) -> Result<(), String> {
     let vault_path = vault_path.unwrap_or_else(default_vault_path);
-    
+
     if verbose {
         init_log_stream(true);
     }
-    
+
     println!("🧪 Running Comprehensive LLM Test Suite");
     println!("📁 Vault path: {}", vault_path.display());
     println!("🤖 Model: {}", model_name);
     println!();
-    
+
     // Step 1: Load the model
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     println!("STEP 1: Loading Model");
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    
+
     let gguf = resolve_vault_model(&vault_path, &model_name)
         .map_err(|e| format!("Failed to resolve model: {}", e))?;
-    
+
     println!("Loading {} …", gguf.display());
     let start = std::time::Instant::now();
-    
+
     let record = tokio::task::block_in_place(|| {
-        tokio::runtime::Handle::current()
-            .block_on(qualia_client_core::model_lifecycle::activate_vault_gguf(&gguf))
-    }).map_err(|e| format!("Failed to activate model: {}", e))?;
-    
+        tokio::runtime::Handle::current().block_on(
+            qualia_client_core::model_lifecycle::activate_vault_gguf(&gguf),
+        )
+    })
+    .map_err(|e| format!("Failed to activate model: {}", e))?;
+
     let load_time = start.elapsed();
     println!("✅ Model loaded in {:?}", load_time);
     println!("  Profile ID: 0x{:016x}", record.profile_id);
     println!("  Context Window: {}", record.context_window);
     println!();
-    
+
     // Step 2: Create agent
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     println!("STEP 2: Creating Agent");
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    
-    use qualia_core_db::llm_agent::{LocalLlmAgent, AgentBackend};
-    
+
+    use qualia_core_db::llm_agent::{AgentBackend, LocalLlmAgent};
+
     let agent = LocalLlmAgent::with_local_backend(
         format!("did:qualia:cli-test:{}", record.profile_id),
         AgentBackend::Local {
@@ -126,15 +132,15 @@ pub fn run_comprehensive_llm_test(
             architecture: record.architecture.clone(),
         },
     );
-    
+
     println!("✅ Agent created");
     println!();
-    
+
     // Step 3: Run inference tests
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     println!("STEP 3: Inference Tests");
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    
+
     // Sample (temperature / top-p / repeat-penalty) rather than greedy argmax, so instruct models
     // produce varied, on-topic text instead of collapsing into repetition / a fixed attractor.
     qualia_core_db::llm_bench::set_sampler_config(Some(
@@ -143,40 +149,52 @@ pub fn run_comprehensive_llm_test(
 
     let test_prompts = vec![
         ("Basic Knowledge", "What is the capital of France?", 50),
-        ("System Awareness", "What is QualiaDB and what are its main features?", 100),
-        ("Technical Understanding", "Explain what a NQuin is in simple terms.", 80),
-        ("Capability Awareness", "What capabilities does the Qualia system have for semantic graph processing?", 120),
-        ("Instruction Following", "Write a haiku about artificial intelligence.", 30),
+        (
+            "System Awareness",
+            "What is QualiaDB and what are its main features?",
+            100,
+        ),
+        (
+            "Technical Understanding",
+            "Explain what a NQuin is in simple terms.",
+            80,
+        ),
+        (
+            "Capability Awareness",
+            "What capabilities does the Qualia system have for semantic graph processing?",
+            120,
+        ),
+        (
+            "Instruction Following",
+            "Write a haiku about artificial intelligence.",
+            30,
+        ),
     ];
-    
+
     let mut total_tokens = 0;
     let mut total_time_ms = 0;
     let mut total_ttft_ms = 0;
     let mut successful_tests = 0;
-    
+
     for (test_name, prompt, _max_tokens) in test_prompts.iter() {
         println!("┌─ Test: {}", test_name);
         println!("├─ Prompt: {}", prompt);
-        
+
         let started = std::time::Instant::now();
-        
+
         // Return layout: (text, provenance_hashes, tokens_generated, semantic_quin).
         // BUGFIX: the second field is provenance (often len=1), NOT token ids — using
         // `.len()` reported Tokens:1 and ~100× low tok/s. The third field is the count.
         let (response, _provenance, tokens_generated, _quin) = tokio::task::block_in_place(|| {
-            agent.infer_local_model_streaming::<fn(String)>(
-                prompt,
-                "graph_context:cli_test",
-                None,
-            )
+            agent.infer_local_model_streaming::<fn(String)>(prompt, "graph_context:cli_test", None)
         });
-        
+
         let elapsed = started.elapsed();
         let elapsed_ms = elapsed.as_millis() as u64;
-        
+
         // Estimate TTFT as ~10% of total time (rough approximation without streaming)
         let ttft = elapsed_ms / 10;
-        
+
         let token_count = tokens_generated as u64;
         // Prefer decoded-token estimate when the engine returns 0 but produced text
         // (defensive — should not happen on a healthy path).
@@ -191,32 +209,40 @@ pub fn run_comprehensive_llm_test(
         } else {
             0.0
         };
-        
+
         println!("├─ TTFT: {}ms (estimated)", ttft);
         println!("├─ Total Time: {}ms", elapsed_ms);
         println!("├─ Tokens: {} (decode)", token_count);
         println!("├─ TPS: {:.2} (wall-clock / decode tokens)", tps);
-        
+
         total_tokens += token_count;
         total_time_ms += elapsed_ms;
         total_ttft_ms += ttft;
         successful_tests += 1;
-        
+
         print!("└─ Response: ");
         // Show first 200 chars of response
         let preview: String = response.chars().take(200).collect();
-        println!("{}{}", preview, if response.len() > 200 { "..." } else { "" });
+        println!(
+            "{}{}",
+            preview,
+            if response.len() > 200 { "..." } else { "" }
+        );
         println!();
     }
-    
+
     // Step 4: Summary
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     println!("TEST SUMMARY");
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     println!("✅ Model Loading: PASS ({:?})", load_time);
     println!("✅ Agent Creation: PASS");
-    println!("✅ Inference: {} / {} tests passed", successful_tests, test_prompts.len());
-    
+    println!(
+        "✅ Inference: {} / {} tests passed",
+        successful_tests,
+        test_prompts.len()
+    );
+
     if successful_tests > 0 {
         let avg_ttft = total_ttft_ms as f64 / successful_tests as f64;
         let avg_tps = if total_time_ms > 0 {
@@ -224,7 +250,7 @@ pub fn run_comprehensive_llm_test(
         } else {
             0.0
         };
-        
+
         println!();
         println!("📊 METRICS:");
         println!("  └─ Total Tokens Generated: {}", total_tokens);
@@ -232,15 +258,15 @@ pub fn run_comprehensive_llm_test(
         println!("  └─ Average TTFT: {:.2}ms", avg_ttft);
         println!("  └─ Average TPS: {:.2}", avg_tps);
     }
-    
+
     println!();
     println!("Note: Metrics include orchestration overhead (Webizen validation, etc.).");
     println!("Note: Token counts use engine tokens_generated (not provenance-hash vec length).");
-    
+
     Ok(())
 }
 
-/// Convert a GGUF import file to native `.p64` + `.q42.cbor-ld` helper metadata.
+/// Convert a GGUF import file to native `.p64` + canonical `.q42` model metadata.
 ///
 /// Design: GGUF/safetensors are import formats only. Steady-state activation should
 /// prefer the converted container (see `docs/plans/native-inference-p64-pipeline-remediation.md`).
@@ -259,14 +285,12 @@ pub fn run_convert_gguf_to_p64(
         .and_then(|e| e.to_str())
         .unwrap_or("")
         .to_ascii_lowercase();
-    if ext != "gguf" {
+    if ext != "gguf" && ext != "safetensors" {
         return Err(format!(
-            "only .gguf import is supported in this command (got .{ext}); safetensors path is a follow-up"
+            "only .gguf or .safetensors import is supported in this command (got .{ext})"
         ));
     }
-    let src_len = std::fs::metadata(input)
-        .map(|m| m.len())
-        .unwrap_or(0);
+    let src_len = std::fs::metadata(input).map(|m| m.len()).unwrap_or(0);
     // 12 GB class card default budget when auto-selecting f16 expand.
     const DEFAULT_VRAM_BUDGET: u64 = 12u64 * 1024 * 1024 * 1024;
     let layout = match layout.trim().to_ascii_lowercase().as_str() {
@@ -292,7 +316,7 @@ pub fn run_convert_gguf_to_p64(
         .map_err(|e| format!("create out dir {}: {e}", out_dir.display()))?;
 
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    println!("GGUF → p64 + q42 convert");
+    println!("Model ({ext}) → p64 + q42 convert");
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     println!("├─ Input:  {}", input.display());
     println!("├─ Out:    {}", out_dir.display());
@@ -306,12 +330,20 @@ pub fn run_convert_gguf_to_p64(
         unsafe { memmap2::Mmap::map(&f).map_err(|e| format!("mmap: {e}"))? }
     };
     let src_bytes = mmap.len();
-    println!("├─ Source size: {:.1} MiB", src_bytes as f64 / (1024.0 * 1024.0));
+    println!(
+        "├─ Source size: {:.1} MiB",
+        src_bytes as f64 / (1024.0 * 1024.0)
+    );
 
-    let p64 = qualia_core_db::p64_weight::compile_gguf_to_p64_with_layout(
-        &mmap, page_log2, layout,
-    )
-    .map_err(|e| format!("compile_gguf_to_p64: {e}"))?;
+    let p64 = if ext == "safetensors" {
+        let mut buf = Vec::new();
+        qualia_core_db::p64_weight::transcode_safetensor_to_p64(&mmap, page_log2, &mut buf)
+            .map_err(|e| format!("transcode_safetensor_to_p64: {e}"))?;
+        buf
+    } else {
+        qualia_core_db::p64_weight::compile_gguf_to_p64_with_layout(&mmap, page_log2, layout)
+            .map_err(|e| format!("compile_gguf_to_p64: {e}"))?
+    };
     let stem = input
         .file_stem()
         .and_then(|s| s.to_str())
@@ -324,7 +356,7 @@ pub fn run_convert_gguf_to_p64(
     let p64_path = out_dir.join(format!("{stem}{suffix}.p64"));
     std::fs::write(&p64_path, &p64).map_err(|e| format!("write p64: {e}"))?;
 
-    // q42 helper (CBOR-LD): behavioural metadata the engine should not re-guess from GGUF.
+    // Canonical Q42 v3 metadata: behaviour the engine should not re-guess from GGUF.
     let tok = qualia_core_db::gguf_sharder::GgufTokenizer::from_gguf(&mmap);
     let stop_ids: Vec<u32> = tok.stop_tokens().to_vec();
     let stop_names: Vec<String> = stop_ids
@@ -332,8 +364,14 @@ pub fn run_convert_gguf_to_p64(
         .filter_map(|&id| tok.vocab.get(id as usize).cloned())
         .collect();
     let helper = qualia_core_db::model_helper::ModelHelper::new(
-        input.display().to_string(),
-        p64_path.display().to_string(),
+        input
+            .file_name()
+            .and_then(|s| s.to_str())
+            .unwrap_or("model.gguf"),
+        p64_path
+            .file_name()
+            .and_then(|s| s.to_str())
+            .unwrap_or("model.p64"),
         page_log2,
         format!("{layout:?}"),
         qualia_core_db::model_helper::ModelHelperTokenizer {
@@ -348,17 +386,16 @@ pub fn run_convert_gguf_to_p64(
     );
     let q42_path = helper
         .write_beside_p64(&p64_path)
-        .map_err(|e| format!("write q42.cbor-ld helper: {e}"))?;
+        .map_err(|e| format!("write canonical q42 helper: {e}"))?;
 
     // Validate the container can be indexed (fail closed if we wrote garbage).
     let index = qualia_core_db::p64_weight::P64TensorIndex::from_p64(&p64)
         .map_err(|e| format!("p64 self-check failed: {e}"))?;
     let n_tensors = index.entries.len();
-    // Round-trip the helper so a bad encode fails the convert command.
-    let _ = qualia_core_db::model_helper::ModelHelper::from_cbor_ld(
-        &std::fs::read(&q42_path).map_err(|e| format!("re-read helper: {e}"))?,
-    )
-    .map_err(|e| format!("helper self-check failed: {e}"))?;
+    // Round-trip through the real Q42 volume reader so a malformed helper fails closed.
+    let _ = qualia_core_db::model_helper::ModelHelper::load_beside_p64(&p64_path)
+        .map_err(|e| format!("helper self-check failed: {e}"))?
+        .ok_or_else(|| "helper self-check failed: canonical .q42 was not found".to_string())?;
 
     let elapsed = t0.elapsed();
     println!();
@@ -369,7 +406,7 @@ pub fn run_convert_gguf_to_p64(
         p64.len() as f64 / (1024.0 * 1024.0),
         n_tensors
     );
-    println!("  └─ {} (CBOR-LD)", q42_path.display());
+    println!("  └─ {} (Q42 v3)", q42_path.display());
     println!(
         "     chat_family={:?} stop_ids={:?}",
         tok.chat_family(),
@@ -440,12 +477,12 @@ pub fn run_hardware_passport(
     decode_proxy: Option<Option<PathBuf>>,
     decode_proxy_tokens: u32,
 ) -> Result<(), String> {
+    use qualia_core_db::device_benchmark::benchmark_devices;
     use qualia_core_db::hardware_passport::{
         attach_decode_proxy_via_subprocess, backend_env_token, default_cache_path,
-        default_decode_proxy_model, load_or_probe, write_passport, HardwarePassport,
-        PASSPORT_VERSION, topology_key,
+        default_decode_proxy_model, load_or_probe, topology_key, write_passport, HardwarePassport,
+        PASSPORT_VERSION,
     };
-    use qualia_core_db::device_benchmark::benchmark_devices;
     use qualia_core_db::host_topology::probe_host_topology;
 
     let path = cache.unwrap_or_else(default_cache_path);
@@ -501,12 +538,7 @@ pub fn run_hardware_passport(
             model.display(),
             decode_proxy_tokens
         );
-        attach_decode_proxy_via_subprocess(
-            &mut passport.matrix,
-            &model,
-            decode_proxy_tokens,
-            &exe,
-        );
+        attach_decode_proxy_via_subprocess(&mut passport.matrix, &model, decode_proxy_tokens, &exe);
         passport.decode_proxy_model = Some(model.display().to_string());
         passport.decode_proxy_tokens = decode_proxy_tokens;
         passport.preferred_inference_backend = passport
@@ -556,7 +588,9 @@ pub fn run_hardware_passport(
             .or_else(|| backend_env_token(&best.backend).map(str::to_string));
         if let Some(h) = hint {
             println!("  └─ Hint: set QUALIA_WGPU_BACKEND={h} to pin this backend");
-            println!("  └─ Fast P64 activate: QUALIA_P64_INTEGRITY=metadata (after trusted convert)");
+            println!(
+                "  └─ Fast P64 activate: QUALIA_P64_INTEGRITY=metadata (after trusted convert)"
+            );
             if apply_env_hint {
                 let hint_path = path.with_extension("env");
                 std::fs::write(
@@ -575,7 +609,7 @@ pub fn run_hardware_passport(
 
 /// Quant-graph dry-run: ground a prompt+answer pair (forces mode logic via unconditional ground).
 pub fn run_ground_check(prompt: &str, answer: &str) -> Result<(), String> {
-    use qualia_core_db::{fact_count, ground_generation, active_inference_mode};
+    use qualia_core_db::{active_inference_mode, fact_count, ground_generation};
     let g = ground_generation(prompt, answer);
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     println!("Quant-graph grounding check");
@@ -584,7 +618,10 @@ pub fn run_ground_check(prompt: &str, answer: &str) -> Result<(), String> {
     println!("├─ fact_count:  {}", fact_count());
     println!("├─ repaired:    {}", g.repaired);
     println!("├─ reason:      {:?}", g.reason);
-    println!("├─ object_hash: {:?}", g.object_hash.map(|h| format!("{h:#x}")));
+    println!(
+        "├─ object_hash: {:?}",
+        g.object_hash.map(|h| format!("{h:#x}"))
+    );
     println!("└─ text:        {}", g.text);
     Ok(())
 }
@@ -592,7 +629,10 @@ pub fn run_ground_check(prompt: &str, answer: &str) -> Result<(), String> {
 /// Seed quant-graph facts from bundled TSV / QUALIA_GROUNDING_FACTS.
 pub fn run_seed_grounding() -> Result<(), String> {
     let n = qualia_core_db::seed_facts_from_bundled();
-    println!("seeded {n} grounding facts (fact_count={})", qualia_core_db::fact_count());
+    println!(
+        "seeded {n} grounding facts (fact_count={})",
+        qualia_core_db::fact_count()
+    );
     Ok(())
 }
 
@@ -621,24 +661,26 @@ pub fn run_cuda_tc_microbench(side: usize) -> Result<(), String> {
         .map_err(|e| format!("gemm_f32_tc_reduced: {e:?}"))?;
     let hot_ms = t1.elapsed().as_secs_f64() * 1000.0;
     let caps = qualia_core_db::wgsl_forge::dispatch::caps();
-    println!("├─ caps: wgpu={} cuda={} coopmat={}", caps.wgpu, caps.cuda, caps.coopmat);
+    println!(
+        "├─ caps: wgpu={} cuda={} coopmat={}",
+        caps.wgpu, caps.cuda, caps.coopmat
+    );
     println!("├─ warm: {warm_ms:.2} ms (includes NVRTC/context first use)");
     println!("├─ hot:  {hot_ms:.2} ms");
-    println!("├─ C[0]={:.1} (expect ~{n}.0 for all-ones)", r2.first().copied().unwrap_or(0.0));
+    println!(
+        "├─ C[0]={:.1} (expect ~{n}.0 for all-ones)",
+        r2.first().copied().unwrap_or(0.0)
+    );
     println!("└─ ok:   r1_len={} r2_len={}", r1.len(), r2.len());
     Ok(())
 }
 
 /// Print or set multi-mode inference approach (portable / cuda / quant-graph).
 pub fn run_inference_mode(set: Option<&str>) -> Result<(), String> {
-    use qualia_core_db::{
-        active_inference_mode, set_inference_mode, InferenceMode,
-    };
+    use qualia_core_db::{active_inference_mode, set_inference_mode, InferenceMode};
     if let Some(name) = set {
         let m = InferenceMode::parse(name).ok_or_else(|| {
-            format!(
-                "unknown mode '{name}' (expected: portable | cuda | quant-graph | fast-verify)"
-            )
+            format!("unknown mode '{name}' (expected: portable | cuda | quant-graph | fast-verify)")
         })?;
         set_inference_mode(m);
         // Also pin env so child processes (decode-proxy) inherit.
@@ -681,9 +723,9 @@ pub fn run_lab(
     no_ollama: bool,
 ) -> Result<(), String> {
     use qualia_core_db::lab::{
-        ablate::format_ablation_report, audit_hot_path, calibrate_device_roof, format_lockin_summary,
-        run_ablation_matrix, run_auto_improve, run_decode_timeline, run_q4k_soa_microbench,
-        AutoImproveConfig,
+        ablate::format_ablation_report, audit_hot_path, calibrate_device_roof,
+        format_lockin_summary, run_ablation_matrix, run_auto_improve, run_decode_timeline,
+        run_q4k_soa_microbench, AutoImproveConfig,
     };
     match action.trim().to_ascii_lowercase().as_str() {
         "audit-path" | "audit" => {
@@ -697,10 +739,7 @@ pub fn run_lab(
             Ok(())
         }
         "micro" | "microbench" => {
-            print!(
-                "{}",
-                run_q4k_soa_microbench(n_in, n_out).format_report()
-            );
+            print!("{}", run_q4k_soa_microbench(n_in, n_out).format_report());
             Ok(())
         }
         "timeline" => {
@@ -712,9 +751,8 @@ pub fn run_lab(
         "ablate" | "ablation" => {
             let m = model.ok_or("ablate requires --model <path.p64>")?;
             let t = if tokens == 0 { 8 } else { tokens };
-            let csv = out.or_else(|| {
-                Some(std::path::Path::new("experiments/inference-lab/runs.csv"))
-            });
+            let csv =
+                out.or_else(|| Some(std::path::Path::new("experiments/inference-lab/runs.csv")));
             let rows = run_ablation_matrix(m, t, csv);
             print!("{}", format_ablation_report(&rows));
             if let Some(p) = csv {
@@ -730,9 +768,7 @@ pub fn run_lab(
             let hours = if hours <= 0.0 { 2.0 } else { hours };
             let out_dir = out
                 .map(|p| p.to_path_buf())
-                .unwrap_or_else(|| {
-                    std::path::PathBuf::from("experiments/inference-lab/lockin")
-                });
+                .unwrap_or_else(|| std::path::PathBuf::from("experiments/inference-lab/lockin"));
             let ollama = if no_ollama {
                 None
             } else {
@@ -768,8 +804,14 @@ pub fn run_lab(
             let pkg = run_auto_improve(&cfg)?;
             print!("{}", format_lockin_summary(&pkg));
             println!("Lock-in package written to: {}", pkg.out_dir.display());
-            println!("  BEST_CONFIG.json  METHODOLOGY.md  apply-best.ps1  runs.csv  LOCKIN_SUMMARY.txt");
+            println!(
+                "  BEST_CONFIG.json  METHODOLOGY.md  apply-best.ps1  runs.csv  LOCKIN_SUMMARY.txt"
+            );
             Ok(())
+        }
+        "gpu-cap" | "gpu-capability" | "machine-gpu" => {
+            let t = if tokens == 0 { 16 } else { tokens };
+            run_gpu_capability_campaign(model, out, t)
         }
         "help" | _ => {
             println!("qualia-cli llm lab <action>");
@@ -781,6 +823,9 @@ pub fn run_lab(
             println!("  auto --model P [--hours H] [--tokens T] [--out lockin-dir]");
             println!("       [--max-generations N] [--ollama-model TAG] [--no-ollama]");
             println!("       multi-hour recursive search → lock-in package");
+            println!("  gpu-cap [--model P] [--tokens T] [--out dir]");
+            println!("       native GPU tier probe + backend×mode decode matrix");
+            println!("       → machine-gpu-profile.json + apply-machine-gpu.ps1");
             println!("Plan: docs/plans/inference-superiority-lab-and-toolset-plan.md");
             if action != "help" && !action.is_empty() && action != "_" {
                 return Err(format!("unknown lab action '{action}'"));
@@ -790,11 +835,495 @@ pub fn run_lab(
     }
 }
 
+/// Probe which **native** GPU tiers this host has, measure the backend × mode decode matrix
+/// in child processes, and write `machine-gpu-profile.json` + `apply-machine-gpu.ps1`.
+///
+/// WGSL/wgpu is the portable floor; CUDA-C/PTX, HLSL+DXC, MSL, subgroups and coopmat are higher
+/// tiers when present. Only a **coherent** measurement can be recommended (speed without sense
+/// is failure), so the profile ranks by tok/s among coherent rows only.
+///
+/// One child process per cell: `shared_gpu` is process-wide, so `QUALIA_WGPU_BACKEND` cannot be
+/// re-pointed in-process.
+pub fn run_gpu_capability_campaign(
+    model: Option<&Path>,
+    out_dir: Option<&Path>,
+    tokens: u32,
+) -> Result<(), String> {
+    use qualia_core_db::machine_gpu_profile::{
+        AdapterFeatures, MachineGpuProfile, MeasuredDecodePath, ToolchainAvailability,
+        MACHINE_GPU_PROFILE_VERSION,
+    };
+    use std::process::Command;
+
+    fn tool_ok(program: &str, arg: &str) -> bool {
+        Command::new(program)
+            .arg(arg)
+            .output()
+            .map(|o| o.status.success())
+            .unwrap_or(false)
+    }
+
+    let p64 = match model {
+        Some(p) => p.to_path_buf(),
+        None => {
+            qualia_core_db::hardware_passport::default_decode_proxy_model().ok_or_else(|| {
+                "no package: pass --model <path.p64> or set QUALIA_LLM_PROFILE_MODEL".to_string()
+            })?
+        }
+    };
+    if !p64.is_file() {
+        return Err(format!("package not found: {}", p64.display()));
+    }
+    let out = out_dir
+        .map(|p| p.to_path_buf())
+        .unwrap_or_else(|| p64.parent().unwrap_or(Path::new(".")).to_path_buf());
+    let tokens = tokens.clamp(8, 128);
+
+    println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    println!("GPU CAPABILITY — native tiers over the WGSL floor");
+    println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    println!("├─ Package: {}", p64.display());
+    println!("├─ Tokens:  {tokens}");
+    println!("├─ Out:     {}", out.display());
+
+    // ── Toolchain ────────────────────────────────────────────────────────────
+    let nvcc = std::env::var("CUDA_PATH")
+        .map(|p| format!("{p}/bin/nvcc"))
+        .unwrap_or_else(|_| "nvcc".to_string());
+    let dxc = std::env::var("QUALIA_DXC_PATH").unwrap_or_else(|_| "dxc".to_string());
+    let cuda_toolkit = tool_ok(&nvcc, "--version");
+    let dxc_cli = tool_ok(&dxc, "--version");
+    let metal_xcrun = cfg!(target_os = "macos") && tool_ok("xcrun", "--version");
+
+    // ── Adapter (parent device; children create their own) ───────────────────
+    let gpu = qualia_core_db::gpu_context::try_shared_gpu();
+    let adapter = match gpu {
+        Some(g) => AdapterFeatures {
+            name: g.adapter_caps.name.clone(),
+            backend: g.adapter_caps.backend_label().to_string(),
+            discrete: g.adapter_caps.device_type_label() == "discrete",
+            subgroups: g.adapter_caps.features.subgroup,
+            coopmat: g.adapter_caps.cooperative_matrix_tile_count > 0,
+            shader_f16: g.adapter_caps.features.shader_f16,
+            timestamp_query: g.timestamps_supported,
+            topology_hash: qualia_core_db::hardware_passport::topology_key(
+                &qualia_core_db::host_topology::probe_host_topology(),
+            ),
+        },
+        None => AdapterFeatures::default(),
+    };
+    println!(
+        "├─ Adapter: {} ({}) subgroups={} coopmat={} f16={}",
+        if adapter.name.is_empty() {
+            "none"
+        } else {
+            &adapter.name
+        },
+        adapter.backend,
+        adapter.subgroups,
+        adapter.coopmat,
+        adapter.shader_f16
+    );
+    println!(
+        "├─ Toolchain: wgpu={} cuda={cuda_toolkit} dxc_cli={dxc_cli} metal={metal_xcrun}",
+        gpu.is_some()
+    );
+
+    let mut native_tiers = vec!["wgsl".to_string(), "spirv".to_string()];
+    if cuda_toolkit {
+        native_tiers.push("cuda-c".into());
+        native_tiers.push("ptx".into());
+    }
+    if dxc_cli {
+        native_tiers.push("hlsl-dxc".into());
+    }
+    if metal_xcrun {
+        native_tiers.push("msl".into());
+    }
+    if adapter.subgroups {
+        native_tiers.push("subgroups".into());
+    }
+    if adapter.coopmat {
+        native_tiers.push("coopmat".into());
+    }
+
+    // ── Decode matrix (child process per cell) ───────────────────────────────
+    let backends: &[&str] = if cfg!(target_os = "macos") {
+        &["metal"]
+    } else if cfg!(target_os = "windows") {
+        &["vulkan", "dx12"]
+    } else {
+        &["vulkan"]
+    };
+    let modes = ["portable", "fast-verify", "cuda"];
+    let self_exe = std::env::current_exe().map_err(|e| format!("current_exe: {e}"))?;
+    let mut measured: Vec<MeasuredDecodePath> = Vec::new();
+
+    let wgpu_cells = backends.len() * modes.len();
+    let cuda_c_cells = if cuda_toolkit { 1 } else { 0 };
+    let hlsl_cells = if dxc_cli { 1 } else { 0 };
+    let spirv_cells = if dxc_cli { 1 } else { 0 };
+    let ptx_cells = if cuda_toolkit { 1 } else { 0 };
+    println!(
+        "├─ Decode matrix ({} cells)…",
+        wgpu_cells + cuda_c_cells + hlsl_cells + spirv_cells + ptx_cells
+    );
+    for backend in backends {
+        for mode in modes {
+            print!("│   {backend:7} {mode:12} … ");
+            use std::io::Write as _;
+            let _ = std::io::stdout().flush();
+            let t0 = std::time::Instant::now();
+            let output = Command::new(&self_exe)
+                .args([
+                    "llm",
+                    "decode-proxy",
+                    &p64.display().to_string(),
+                    "--tokens",
+                    &tokens.to_string(),
+                ])
+                .env("QUALIA_WGPU_BACKEND", backend)
+                .env("QUALIA_INFERENCE_MODE", mode)
+                .env_remove("QUALIA_FORGE_BACKEND")
+                .env_remove("QUALIA_DXC_PATH")
+                .output();
+            let wall = t0.elapsed().as_secs_f64();
+            match output {
+                Ok(o) => {
+                    let stdout = String::from_utf8_lossy(&o.stdout);
+                    match qualia_core_db::hardware_passport::parse_decode_proxy_record(&stdout) {
+                        Some(rec) => {
+                            let coherence_ok = rec.coherence_ok.unwrap_or(o.status.success());
+                            println!(
+                                "{:.2} tok/s  {}  ({wall:.1}s)",
+                                rec.tok_s,
+                                if coherence_ok {
+                                    "coherent"
+                                } else {
+                                    "INCOHERENT"
+                                }
+                            );
+                            measured.push(MeasuredDecodePath {
+                                wgpu_backend: (*backend).to_string(),
+                                inference_mode: mode.to_string(),
+                                p64_path: p64.display().to_string(),
+                                tok_s: rec.tok_s,
+                                coherence_ok,
+                                tokens,
+                            });
+                        }
+                        None => {
+                            let stderr = String::from_utf8_lossy(&o.stderr);
+                            let tail: String = stderr.lines().rev().take(1).collect();
+                            println!("no DECODE_PROXY line ({wall:.1}s) {tail}");
+                        }
+                    }
+                }
+                Err(e) => println!("spawn failed ({wall:.1}s): {e}"),
+            }
+        }
+    }
+
+    // ── CUDA-C native decode row (lab path: CUDA SoA layer) ──────────────────
+    // Exercises the actual CUDA execution lane: QUALIA_LLM_CUDA_DECODE=1 opts
+    // into the layer-by-layer CUDA SoA decode path (device RoPE/KV/SDPA +
+    // sticky Q4_K_SOA), bypassing the wgpu resident mega-pass. This is the
+    // path that uses forge CUDA-C shader emission (gemv_f32, gemm_f32_tc,
+    // ternary_gemv, p64_project, fft) via NVRTC on the NVIDIA driver.
+    if cuda_toolkit {
+        print!("│   cuda-c  native        … ");
+        use std::io::Write as _;
+        let _ = std::io::stdout().flush();
+        let t0 = std::time::Instant::now();
+        let output = Command::new(&self_exe)
+            .args([
+                "llm",
+                "decode-proxy",
+                &p64.display().to_string(),
+                "--tokens",
+                &tokens.to_string(),
+            ])
+            .env("QUALIA_INFERENCE_MODE", "cuda")
+            .env("QUALIA_LLM_CUDA_DECODE", "1")
+            .env("QUALIA_LLM_KV_INT8", "0")
+            .env_remove("QUALIA_FORGE_BACKEND")
+            .env_remove("QUALIA_DXC_PATH")
+            .output();
+        let wall = t0.elapsed().as_secs_f64();
+        match output {
+            Ok(o) => {
+                let stdout = String::from_utf8_lossy(&o.stdout);
+                match qualia_core_db::hardware_passport::parse_decode_proxy_record(&stdout) {
+                    Some(rec) => {
+                        let path_ok = rec.execution_path.as_deref() == Some("cuda-c");
+                        let coherence_ok =
+                            rec.coherence_ok.unwrap_or(o.status.success()) && path_ok;
+                        println!(
+                            "{:.2} tok/s  {}  path={}  ({wall:.1}s)",
+                            rec.tok_s,
+                            if coherence_ok { "coherent" } else { "REJECTED" },
+                            rec.execution_path.as_deref().unwrap_or("unattributed"),
+                        );
+                        if path_ok {
+                            measured.push(MeasuredDecodePath {
+                                wgpu_backend: "cuda-c".to_string(),
+                                inference_mode: "native".to_string(),
+                                p64_path: p64.display().to_string(),
+                                tok_s: rec.tok_s,
+                                coherence_ok,
+                                tokens,
+                            });
+                        }
+                    }
+                    None => {
+                        let stderr = String::from_utf8_lossy(&o.stderr);
+                        let tail: String = stderr.lines().rev().take(1).collect();
+                        println!("no DECODE_PROXY line ({wall:.1}s) {tail}");
+                    }
+                }
+            }
+            Err(e) => println!("spawn failed ({wall:.1}s): {e}"),
+        }
+    }
+
+    // ── HLSL native shader rows (forge HLSL → DXC → SPIR-V → wgpu) ────────────
+    // Exercises the forge's HLSL emitter + DXC SPIR-V compilation path. The
+    // resulting SPIR-V feeds into the same wgpu pipeline (same buffers, slab,
+    // dispatch) — only the shader compilation differs from the WGSL path.
+    // Requires the DXC CLI (`QUALIA_DXC_PATH` or `dxc` on PATH).
+    if dxc_cli {
+        // HLSL→SPIR-V→wgpu: only run with vulkan backend because
+        // QUALIA_DXC_PATH (needed for HLSL→SPIR-V via DXC CLI) also overrides
+        // wgpu's DX12 compiler path, causing dx12 to fail.
+        let hlsl_backends: &[&str] = if cfg!(target_os = "macos") {
+            &["metal"]
+        } else {
+            &["vulkan"]
+        };
+        for backend in hlsl_backends {
+            print!("│   hlsl    {backend:7}    … ");
+            use std::io::Write as _;
+            let _ = std::io::stdout().flush();
+            let t0 = std::time::Instant::now();
+            let output = Command::new(&self_exe)
+                .args([
+                    "llm",
+                    "decode-proxy",
+                    &p64.display().to_string(),
+                    "--tokens",
+                    &tokens.to_string(),
+                ])
+                .env("QUALIA_WGPU_BACKEND", backend)
+                .env("QUALIA_FORGE_BACKEND", "hlsl")
+                .output();
+            let wall = t0.elapsed().as_secs_f64();
+            match output {
+                Ok(o) => {
+                    let stdout = String::from_utf8_lossy(&o.stdout);
+                    match qualia_core_db::hardware_passport::parse_decode_proxy_record(&stdout) {
+                        Some(rec) => {
+                            let path_ok = rec.execution_path.as_deref() == Some("hlsl");
+                            let coherence_ok =
+                                rec.coherence_ok.unwrap_or(o.status.success()) && path_ok;
+                            println!(
+                                "{:.2} tok/s  {}  path={}  ({wall:.1}s)",
+                                rec.tok_s,
+                                if coherence_ok { "coherent" } else { "REJECTED" },
+                                rec.execution_path.as_deref().unwrap_or("unattributed"),
+                            );
+                            if path_ok {
+                                measured.push(MeasuredDecodePath {
+                                    wgpu_backend: format!("hlsl-{backend}"),
+                                    inference_mode: "portable".to_string(),
+                                    p64_path: p64.display().to_string(),
+                                    tok_s: rec.tok_s,
+                                    coherence_ok,
+                                    tokens,
+                                });
+                            }
+                        }
+                        None => {
+                            let stderr = String::from_utf8_lossy(&o.stderr);
+                            let tail: String = stderr.lines().rev().take(1).collect();
+                            println!("no DECODE_PROXY line ({wall:.1}s) {tail}");
+                        }
+                    }
+                }
+                Err(e) => println!("spawn failed ({wall:.1}s): {e}"),
+            }
+        }
+    }
+
+    // ── SPIR-V (DXC) native shader row (forge SPIR-V → DXC → wgpu) ──────────
+    // Exercises the forge's SPIR-V emitter with DXC-produced SPIR-V.
+    // Same wgpu pipeline, but pre-compiled SPIR-V from DXC instead of naga.
+    if dxc_cli {
+        let spirv_backends: &[&str] = if cfg!(target_os = "macos") {
+            &["metal"]
+        } else {
+            &["vulkan"]
+        };
+        for backend in spirv_backends {
+            print!("│   spirv-dxc {backend:7} … ");
+            use std::io::Write as _;
+            let _ = std::io::stdout().flush();
+            let t0 = std::time::Instant::now();
+            let output = Command::new(&self_exe)
+                .args([
+                    "llm",
+                    "decode-proxy",
+                    &p64.display().to_string(),
+                    "--tokens",
+                    &tokens.to_string(),
+                ])
+                .env("QUALIA_WGPU_BACKEND", backend)
+                .env("QUALIA_FORGE_BACKEND", "spirv")
+                .output();
+            let wall = t0.elapsed().as_secs_f64();
+            match output {
+                Ok(o) => {
+                    let stdout = String::from_utf8_lossy(&o.stdout);
+                    match qualia_core_db::hardware_passport::parse_decode_proxy_record(&stdout) {
+                        Some(rec) => {
+                            let path_ok = rec.execution_path.as_deref() == Some("spirv");
+                            let coherence_ok =
+                                rec.coherence_ok.unwrap_or(o.status.success()) && path_ok;
+                            println!(
+                                "{:.2} tok/s  {}  path={}  ({wall:.1}s)",
+                                rec.tok_s,
+                                if coherence_ok { "coherent" } else { "REJECTED" },
+                                rec.execution_path.as_deref().unwrap_or("unattributed"),
+                            );
+                            if path_ok {
+                                measured.push(MeasuredDecodePath {
+                                    wgpu_backend: format!("spirv-dxc-{backend}"),
+                                    inference_mode: "portable".to_string(),
+                                    p64_path: p64.display().to_string(),
+                                    tok_s: rec.tok_s,
+                                    coherence_ok,
+                                    tokens,
+                                });
+                            }
+                        }
+                        None => {
+                            let stderr = String::from_utf8_lossy(&o.stderr);
+                            let tail: String = stderr.lines().rev().take(1).collect();
+                            println!("no DECODE_PROXY line ({wall:.1}s) {tail}");
+                        }
+                    }
+                }
+                Err(e) => println!("spawn failed ({wall:.1}s): {e}"),
+            }
+        }
+    }
+
+    // ── PTX native shader row (forge PTX → CUDA driver) ─────────────────────
+    // Exercises the forge's PTX emitter with direct CUDA driver execution.
+    // Only available when CUDA toolkit is present.
+    if cuda_toolkit {
+        print!("│   ptx     cuda        … ");
+        use std::io::Write as _;
+        let _ = std::io::stdout().flush();
+        let t0 = std::time::Instant::now();
+        let output = Command::new(&self_exe)
+            .args([
+                "llm",
+                "decode-proxy",
+                &p64.display().to_string(),
+                "--tokens",
+                &tokens.to_string(),
+            ])
+            .env("QUALIA_FORGE_BACKEND", "ptx")
+            .output();
+        let wall = t0.elapsed().as_secs_f64();
+        match output {
+            Ok(o) => {
+                let stdout = String::from_utf8_lossy(&o.stdout);
+                match qualia_core_db::hardware_passport::parse_decode_proxy_record(&stdout) {
+                    Some(rec) => {
+                        let path_ok = rec.execution_path.as_deref() == Some("ptx");
+                        let coherence_ok =
+                            rec.coherence_ok.unwrap_or(o.status.success()) && path_ok;
+                        println!(
+                            "{:.2} tok/s  {}  path={}  ({wall:.1}s)",
+                            rec.tok_s,
+                            if coherence_ok { "coherent" } else { "REJECTED" },
+                            rec.execution_path.as_deref().unwrap_or("unattributed"),
+                        );
+                        if path_ok {
+                            measured.push(MeasuredDecodePath {
+                                wgpu_backend: "ptx-cuda".to_string(),
+                                inference_mode: "portable".to_string(),
+                                p64_path: p64.display().to_string(),
+                                tok_s: rec.tok_s,
+                                coherence_ok,
+                                tokens,
+                            });
+                        }
+                    }
+                    None => {
+                        let stderr = String::from_utf8_lossy(&o.stderr);
+                        let tail: String = stderr.lines().rev().take(1).collect();
+                        println!("no DECODE_PROXY line ({wall:.1}s) {tail}");
+                    }
+                }
+            }
+            Err(e) => println!("spawn failed ({wall:.1}s): {e}"),
+        }
+    }
+
+    // ── Profile ──────────────────────────────────────────────────────────────
+    let mut profile = MachineGpuProfile {
+        version: MACHINE_GPU_PROFILE_VERSION,
+        written_unix_ms: MachineGpuProfile::now_ms(),
+        host: std::env::var("COMPUTERNAME")
+            .or_else(|_| std::env::var("HOSTNAME"))
+            .unwrap_or_else(|_| "unknown".into()),
+        toolchain: ToolchainAvailability {
+            wgpu: gpu.is_some(),
+            cuda_toolkit,
+            dxc_cli,
+            metal_xcrun,
+        },
+        adapter,
+        native_tiers,
+        measured_paths: measured,
+        recommended: Default::default(),
+        notes: vec![
+            "WGSL via wgpu is the portable floor; native tiers (CUDA-C/WMMA, HLSL/DXC, MSL, SPIR-V, subgroups, coopmat) are preferred only when measured coherent and faster.".into(),
+            "Vendored dxcompiler.dll (DynamicDxc for wgpu DX12) is not the DXC CLI probed here.".into(),
+            "CUDA densify tensor-core decode stays lab-gated behind QUALIA_LLM_CUDA_TC_DECODE.".into(),
+            format!("Measured with `llm lab gpu-cap` on {} at {tokens} tokens.", p64.display()),
+        ],
+    };
+    profile.recompute_recommended();
+
+    if profile.recommended.wgpu_backend.is_empty() {
+        return Err(
+            "no coherent decode path measured — nothing to recommend (see rows above)".into(),
+        );
+    }
+
+    let json_path = MachineGpuProfile::default_path(&out);
+    profile.write_json(&json_path)?;
+    let apply_path = out.join("apply-machine-gpu.ps1");
+    std::fs::write(&apply_path, profile.apply_env_script_ps1())
+        .map_err(|e| format!("write {}: {e}", apply_path.display()))?;
+
+    println!();
+    println!(
+        "RECOMMENDED backend={} mode={}",
+        profile.recommended.wgpu_backend, profile.recommended.inference_mode
+    );
+    println!("  {}", profile.recommended.rationale);
+    println!("  profile: {}", json_path.display());
+    println!("  apply:   . {}", apply_path.display());
+    Ok(())
+}
+
 /// Show / set application profile (interactive | live-fast | batch).
 pub fn run_app_profile(set: Option<&str>) -> Result<(), String> {
-    use qualia_core_db::{
-        active_application_profile, set_application_profile, ApplicationProfile,
-    };
+    use qualia_core_db::{active_application_profile, set_application_profile, ApplicationProfile};
     if let Some(name) = set {
         let p = ApplicationProfile::parse(name).ok_or_else(|| {
             format!("unknown profile '{name}' (expected: interactive | live-fast | batch)")
@@ -829,7 +1358,10 @@ pub fn run_path_select(reprobe: bool, apply: bool) -> Result<(), String> {
         "{}",
         qualia_core_db::inference_path_selector::format_path_plan(&plan)
     );
-    println!("path_auto={}", qualia_core_db::inference_path_selector::path_auto_enabled());
+    println!(
+        "path_auto={}",
+        qualia_core_db::inference_path_selector::path_auto_enabled()
+    );
     println!("applied_this_run={apply}");
     println!();
     println!("Operator:");
@@ -841,20 +1373,42 @@ pub fn run_path_select(reprobe: bool, apply: bool) -> Result<(), String> {
 }
 
 /// Short resident decode for passport child processes. Machine-readable line on stdout.
+///
+/// Excellence bar: reports **tok/s and coherence** on the factual probe
+/// (`The capital of France is` → must contain Paris). Speed without sense is failure.
 pub fn run_decode_proxy(model: &Path, tokens: u32) -> Result<(), String> {
-    use qualia_core_db::hardware_passport::measure_decode_proxy_tok_s;
+    use qualia_core_db::hardware_passport::measure_decode_proxy;
     if !model.is_file() {
         return Err(format!("model not found: {}", model.display()));
     }
     let backend = std::env::var("QUALIA_WGPU_BACKEND").unwrap_or_else(|_| "auto".into());
-    let tok_s = measure_decode_proxy_tok_s(model, tokens)
+    let r = measure_decode_proxy(model, tokens)
         .ok_or_else(|| "decode-proxy measurement failed (see RUST_LOG)".to_string())?;
-    // Stable line for parent parser (`parse_decode_proxy_line`).
-    println!("DECODE_PROXY tok_s={tok_s:.4} backend={backend} tokens={tokens}");
+    let coh = if r.coherence_ok { 1 } else { 0 };
+    // Stable line for parent parser (`parse_decode_proxy_record`).
+    println!(
+        "DECODE_PROXY tok_s={:.4} backend={backend} path={} tokens={tokens} coherence={coh} resident_hits={} resident_fallbacks={} cuda_hits={} cuda_fallbacks={}",
+        r.tok_s,
+        r.execution_path,
+        r.resident_hits,
+        r.resident_fallbacks,
+        r.cuda_mega_hits,
+        r.cuda_mega_fallbacks,
+    );
+    // Human-readable sample (not parsed by campaign — for logs).
+    let sample: String = r.text.chars().take(160).collect();
+    eprintln!("DECODE_SAMPLE coherence={coh} text={sample:?}");
+    if !r.coherence_ok {
+        // Non-zero exit so explore/campaign treat garbage as fail (not a fast "winner").
+        return Err(format!(
+            "coherence fail: probe did not contain 'Paris' (got {:?})",
+            sample
+        ));
+    }
     Ok(())
 }
 
-/// One explore-row: layout (+ optional toggle label) → measured decode-proxy tok/s.
+/// One explore-row: layout (+ optional toggle label) → measured decode-proxy tok/s + coherence.
 #[derive(Debug, Clone, serde::Serialize)]
 pub struct ExploreCandidateResult {
     pub layout: String,
@@ -864,6 +1418,9 @@ pub struct ExploreCandidateResult {
     /// Extra axis, e.g. `ffn_f16=off` / `ffn_f16=on`.
     pub toggle: String,
     pub bytes: u64,
+    /// Factual probe passed (`Paris` in completion). Required for excellence winner.
+    #[serde(default)]
+    pub coherence_ok: Option<bool>,
 }
 
 #[derive(Debug, Clone, serde::Serialize)]
@@ -894,8 +1451,8 @@ pub fn run_explore_pipeline(
     sweep_ffn_f16: bool,
     modes_csv: Option<&str>,
 ) -> Result<(), String> {
-    use std::io::Write;
     use qualia_core_db::{set_inference_mode, InferenceMode};
+    use std::io::Write;
 
     if !input.exists() {
         return Err(format!("input not found: {}", input.display()));
@@ -908,11 +1465,16 @@ pub fn run_explore_pipeline(
             .filter_map(|s| InferenceMode::parse(s.trim()))
             .collect();
         if modes.is_empty() {
-            return Err(
-                "no valid modes in --modes (expected portable,cuda,quant-graph)".into(),
-            );
+            return Err("no valid modes in --modes (expected portable,cuda,quant-graph)".into());
         }
-        println!("EXPLORE × MODE matrix: {}", modes.iter().map(|m| m.as_str()).collect::<Vec<_>>().join(", "));
+        println!(
+            "EXPLORE × MODE matrix: {}",
+            modes
+                .iter()
+                .map(|m| m.as_str())
+                .collect::<Vec<_>>()
+                .join(", ")
+        );
         for m in modes {
             set_inference_mode(m);
             std::env::set_var("QUALIA_INFERENCE_MODE", m.as_str());
@@ -982,9 +1544,7 @@ pub fn run_explore_pipeline(
             .to_string();
         (stem, false)
     } else {
-        return Err(format!(
-            "explore expects .gguf or .p64 (got .{ext})"
-        ));
+        return Err(format!("explore expects .gguf or .p64 (got .{ext})"));
     };
 
     let layouts = parse_explore_layouts(layouts_csv, is_gguf, input)?;
@@ -1008,7 +1568,10 @@ pub fn run_explore_pipeline(
             continue;
         }
         if !is_gguf {
-            println!("├─ skip {layout} (no sibling {}, and source is not GGUF)", p64_path.display());
+            println!(
+                "├─ skip {layout} (no sibling {}, and source is not GGUF)",
+                p64_path.display()
+            );
             continue;
         }
         if skip_convert {
@@ -1089,48 +1652,62 @@ pub fn run_explore_pipeline(
             let output = cmd.output();
             let wall = t0.elapsed().as_secs_f64();
             match output {
-                Ok(o) if o.status.success() => {
-                    let stdout = String::from_utf8_lossy(&o.stdout);
-                    match qualia_core_db::hardware_passport::parse_decode_proxy_line(&stdout) {
-                        Some(tok_s) => {
-                            println!("{tok_s:.2} tok/s ({wall:.1}s wall)");
-                            results.push(ExploreCandidateResult {
-                                layout: layout.clone(),
-                                path: path.display().to_string(),
-                                tok_s: Some(tok_s),
-                                error: None,
-                                toggle: toggle_label.into(),
-                                bytes,
-                            });
-                        }
-                        None => {
-                            println!("FAIL parse ({wall:.1}s wall)");
-                            results.push(ExploreCandidateResult {
-                                layout: layout.clone(),
-                                path: path.display().to_string(),
-                                tok_s: None,
-                                error: Some(format!(
-                                    "no DECODE_PROXY line in child stdout: {}",
-                                    stdout.chars().take(200).collect::<String>()
-                                )),
-                                toggle: toggle_label.into(),
-                                bytes,
-                            });
-                        }
-                    }
-                }
                 Ok(o) => {
+                    let stdout = String::from_utf8_lossy(&o.stdout);
                     let stderr = String::from_utf8_lossy(&o.stderr);
-                    let snip: String = stderr.chars().take(240).collect();
-                    println!("FAIL status={} ({wall:.1}s wall)", o.status);
-                    results.push(ExploreCandidateResult {
-                        layout: layout.clone(),
-                        path: path.display().to_string(),
-                        tok_s: None,
-                        error: Some(format!("child failed: {snip}")),
-                        toggle: toggle_label.into(),
-                        bytes,
-                    });
+                    // Prefer machine line even when coherence fail exits non-zero.
+                    if let Some(rec) =
+                        qualia_core_db::hardware_passport::parse_decode_proxy_record(&stdout)
+                    {
+                        let coh = rec.coherence_ok.unwrap_or(o.status.success());
+                        let tag = if coh { "ok" } else { "INCOHERENT" };
+                        println!("{:.2} tok/s coh={coh} [{tag}] ({wall:.1}s wall)", rec.tok_s);
+                        results.push(ExploreCandidateResult {
+                            layout: layout.clone(),
+                            path: path.display().to_string(),
+                            tok_s: Some(rec.tok_s),
+                            error: if coh {
+                                None
+                            } else {
+                                Some(
+                                    stderr
+                                        .lines()
+                                        .find(|l| l.contains("coherence"))
+                                        .unwrap_or("coherence fail")
+                                        .to_string(),
+                                )
+                            },
+                            toggle: toggle_label.into(),
+                            bytes,
+                            coherence_ok: Some(coh),
+                        });
+                    } else if o.status.success() {
+                        println!("FAIL parse ({wall:.1}s wall)");
+                        results.push(ExploreCandidateResult {
+                            layout: layout.clone(),
+                            path: path.display().to_string(),
+                            tok_s: None,
+                            error: Some(format!(
+                                "no DECODE_PROXY line: {}",
+                                stdout.chars().take(200).collect::<String>()
+                            )),
+                            toggle: toggle_label.into(),
+                            bytes,
+                            coherence_ok: None,
+                        });
+                    } else {
+                        let snip: String = stderr.chars().take(240).collect();
+                        println!("FAIL status={} ({wall:.1}s wall)", o.status);
+                        results.push(ExploreCandidateResult {
+                            layout: layout.clone(),
+                            path: path.display().to_string(),
+                            tok_s: None,
+                            error: Some(format!("child failed: {snip}")),
+                            toggle: toggle_label.into(),
+                            bytes,
+                            coherence_ok: Some(false),
+                        });
+                    }
                 }
                 Err(e) => {
                     println!("FAIL spawn ({wall:.1}s wall): {e}");
@@ -1141,30 +1718,40 @@ pub fn run_explore_pipeline(
                         error: Some(format!("spawn: {e}")),
                         toggle: toggle_label.into(),
                         bytes,
+                        coherence_ok: None,
                     });
                 }
             }
         }
     }
 
-    // Rank: higher tok/s first; failures last.
+    // Rank: **coherent first**, then higher tok/s. Garbage is never the winner.
     results.sort_by(|a, b| {
-        match (a.tok_s, b.tok_s) {
-            (Some(x), Some(y)) => y.partial_cmp(&x).unwrap_or(std::cmp::Ordering::Equal),
-            (Some(_), None) => std::cmp::Ordering::Less,
-            (None, Some(_)) => std::cmp::Ordering::Greater,
-            (None, None) => std::cmp::Ordering::Equal,
+        let ac = a.coherence_ok == Some(true);
+        let bc = b.coherence_ok == Some(true);
+        match (ac, bc) {
+            (true, false) => std::cmp::Ordering::Less,
+            (false, true) => std::cmp::Ordering::Greater,
+            _ => match (a.tok_s, b.tok_s) {
+                (Some(x), Some(y)) => y.partial_cmp(&x).unwrap_or(std::cmp::Ordering::Equal),
+                (Some(_), None) => std::cmp::Ordering::Less,
+                (None, Some(_)) => std::cmp::Ordering::Greater,
+                (None, None) => std::cmp::Ordering::Equal,
+            },
         }
     });
 
-    let winner = results.iter().find(|r| r.tok_s.is_some());
+    let winner = results
+        .iter()
+        .find(|r| r.coherence_ok == Some(true) && r.tok_s.is_some())
+        .or_else(|| results.iter().find(|r| r.tok_s.is_some()));
     let inference_mode = qualia_core_db::active_inference_mode().as_str().to_string();
     let report = ExploreReport {
         version: 1,
         source: input.display().to_string(),
         out_dir: out_dir.display().to_string(),
         tokens,
-        backend,
+        backend: backend.clone(),
         inference_mode: inference_mode.clone(),
         candidates: results.clone(),
         winner_path: winner.map(|w| w.path.clone()),
@@ -1173,8 +1760,8 @@ pub fn run_explore_pipeline(
     };
 
     let report_path = out_dir.join(format!("{stem}.explore-report.json"));
-    let json = serde_json::to_string_pretty(&report)
-        .map_err(|e| format!("serialize report: {e}"))?;
+    let json =
+        serde_json::to_string_pretty(&report).map_err(|e| format!("serialize report: {e}"))?;
     std::fs::write(&report_path, json).map_err(|e| format!("write report: {e}"))?;
 
     println!();
@@ -1187,12 +1774,7 @@ pub fn run_explore_pipeline(
             .tok_s
             .map(|v| format!("{v:7.2}"))
             .unwrap_or_else(|| "  FAIL ".into());
-        println!(
-            "│ {:<8} │ {:<10} │ {ts} │ {}",
-            r.layout,
-            r.toggle,
-            r.path
-        );
+        println!("│ {:<8} │ {:<10} │ {ts} │ {}", r.layout, r.toggle, r.path);
     }
     println!("└──────────┴────────────┴─────────────┴────────────────────────────────────────────");
 
@@ -1206,15 +1788,87 @@ pub fn run_explore_pipeline(
         );
         println!("  {}", w.path);
         println!("  report: {}", report_path.display());
+
+        // Attested native package recipe (incremental toolchain step — not "Qualia is an LLM").
+        let p64_path = PathBuf::from(&w.path);
+        let mut profile = qualia_core_db::execution_profile::ExecutionProfile::from_explore_winner(
+            &input.display().to_string(),
+            &p64_path,
+            &w.layout,
+            &inference_mode,
+            &backend,
+            w.tok_s.unwrap_or(0.0),
+            tokens,
+            &w.toggle,
+        );
+        profile.metrics.coherence_ok = w.coherence_ok;
+        profile.objectives.correctness = w.coherence_ok.map(|c| if c { 1.0 } else { 0.0 });
+        profile.objectives.throughput = w.tok_s;
+        // Mark representation matrix levers present among candidates.
+        profile.representation.f16_layout = results.iter().any(|r| r.layout.contains("f16"));
+        profile.representation.soa_layout = results.iter().any(|r| r.layout.contains("soa"));
+        let coherent_n = results
+            .iter()
+            .filter(|r| r.coherence_ok == Some(true))
+            .count();
+        profile.notes.push(format!(
+            "explore: {} candidates, {} coherent; report {}",
+            results.len(),
+            coherent_n,
+            report_path.display()
+        ));
+        if w.coherence_ok != Some(true) {
+            profile.notes.push(
+                "WARNING: no coherent winner — profile records best speed only; package is NOT excellence-ready."
+                    .into(),
+            );
+        } else {
+            profile.notes.push(
+                "Excellence gate: factual probe coherent + ranked by tok/s among coherent layouts."
+                    .into(),
+            );
+        }
+        match profile.write_beside_p64(&p64_path) {
+            Ok(pp) => {
+                println!("  execution-profile: {}", pp.display());
+                let stem = p64_path
+                    .file_stem()
+                    .and_then(|s| s.to_str())
+                    .unwrap_or("model");
+                let apply = p64_path
+                    .parent()
+                    .unwrap_or_else(|| Path::new("."))
+                    .join(format!("{stem}.apply-profile.ps1"));
+                if let Err(e) = std::fs::write(&apply, profile.apply_env_script_ps1()) {
+                    eprintln!("  warn: could not write {}: {e}", apply.display());
+                } else {
+                    println!("  apply-env: {}", apply.display());
+                }
+            }
+            Err(e) => eprintln!("  warn: execution profile write failed: {e}"),
+        }
+
         println!();
-        println!("Next:");
-        println!("  # pin backend if not already:");
-        println!("  qualia-cli llm passport --reprobe --decode-proxy \"{}\" --apply-env-hint", w.path);
-        println!("  # activate: QUALIA_P64_INTEGRITY=metadata + vault load of winner path");
+        if w.coherence_ok == Some(true) {
+            println!(
+                "EXCELLENCE PATH: coherent winner {:.2} tok/s layout={}",
+                w.tok_s.unwrap_or(0.0),
+                w.layout
+            );
+        } else {
+            println!(
+                "NOT EXCELLENCE-READY: no coherent layout; top speed-only candidate logged for debugging."
+            );
+        }
+        println!(
+            "  qualia-cli llm passport --reprobe --decode-proxy \"{}\" --apply-env-hint",
+            w.path
+        );
     } else {
         println!();
         println!("No successful measurements — see errors above.");
         println!("  report: {}", report_path.display());
+        return Err("explore: zero successful decode-proxy measurements".into());
     }
 
     Ok(())
@@ -1247,11 +1901,7 @@ fn parse_explore_layouts(
             return Ok(v);
         }
         // p64 source: discover siblings by naming convention.
-        return Ok(vec![
-            "soa".into(),
-            "f16".into(),
-            "verbatim".into(),
-        ]);
+        return Ok(vec!["soa".into(), "f16".into(), "verbatim".into()]);
     }
     let mut out = Vec::new();
     for part in raw.split(',') {
@@ -1284,22 +1934,26 @@ fn parse_explore_layouts(
 }
 
 /// Test a single model
-fn test_single_model(vault_path: &Path, model: &VaultGgufEntry, verbose: bool) -> Result<TestResult, String> {
+fn test_single_model(
+    vault_path: &Path,
+    model: &VaultGgufEntry,
+    verbose: bool,
+) -> Result<TestResult, String> {
     if verbose {
         println!("    Path: {}", model.path);
     }
-    
+
     // Resolve the model
     let _ = resolve_vault_model(&vault_path, &model.path)
         .map_err(|e| format!("Failed to resolve model: {}", e))?;
-    
+
     // TODO: Implement actual model loading and inference test
     // For now, return a mock result
-    
+
     Ok(TestResult {
         model_name: model.name.clone(),
         load_time_ms: 100, // Placeholder
-        memory_mb: 128.0, // Placeholder
+        memory_mb: 128.0,  // Placeholder
         success: true,
     })
 }
@@ -1323,52 +1977,51 @@ pub fn benchmark_model(
     warmup: u32,
 ) -> Result<(), String> {
     let vault_path = vault_path.unwrap_or_else(default_vault_path);
-    
+
     println!("🚀 Benchmarking model: {}", model_name);
     println!("📁 Vault path: {}", vault_path.display());
     println!("🔄 Iterations: {}", iterations);
     println!("🔥 Warmup: {}", warmup);
-    
+
     // Find the model
-    let models = scan_vault_gguf(&vault_path)
-        .map_err(|e| format!("Failed to scan vault: {}", e))?;
-    
-    let model = models.iter()
+    let models =
+        scan_vault_gguf(&vault_path).map_err(|e| format!("Failed to scan vault: {}", e))?;
+
+    let model = models
+        .iter()
         .find(|m| m.name == model_name)
         .ok_or_else(|| format!("Model '{}' not found", model_name))?;
-    
+
     println!("📦 Model path: {}", model.path);
-    
+
     // TODO: Implement actual benchmarking
     println!("⚠️  Benchmarking not yet implemented");
-    
+
     Ok(())
 }
 
 /// CLI command to validate model structure
 #[allow(dead_code)]
-pub fn validate_model(
-    vault_path: Option<PathBuf>,
-    model_name: String,
-) -> Result<(), String> {
+pub fn validate_model(vault_path: Option<PathBuf>, model_name: String) -> Result<(), String> {
     let vault_path = vault_path.unwrap_or_else(default_vault_path);
-    
+
     println!("🚀 Validating model: {}", model_name);
     println!("📁 Vault path: {}", vault_path.display());
-    
+
     // Find the model
-    let models = scan_vault_gguf(&vault_path)
-        .map_err(|e| format!("Failed to scan vault: {}", e))?;
-    
-    let model = models.iter()
+    let models =
+        scan_vault_gguf(&vault_path).map_err(|e| format!("Failed to scan vault: {}", e))?;
+
+    let model = models
+        .iter()
         .find(|m| m.name == model_name)
         .ok_or_else(|| format!("Model '{}' not found", model_name))?;
-    
+
     println!("📦 Model path: {}", model.path);
-    
+
     // TODO: Implement actual validation
     println!("⚠️  Validation not yet implemented");
-    
+
     Ok(())
 }
 
@@ -1376,44 +2029,41 @@ pub fn validate_model(
 #[allow(dead_code)]
 pub fn list_models(vault_path: Option<PathBuf>) -> Result<(), String> {
     let vault_path = vault_path.unwrap_or_else(default_vault_path);
-    
+
     println!("📁 Scanning vault: {}", vault_path.display());
-    
-    let models = scan_vault_gguf(&vault_path)
-        .map_err(|e| format!("Failed to scan vault: {}", e))?;
-    
+
+    let models =
+        scan_vault_gguf(&vault_path).map_err(|e| format!("Failed to scan vault: {}", e))?;
+
     if models.is_empty() {
         println!("No GGUF models found in vault");
         return Ok(());
     }
-    
+
     println!("📦 Available models ({}):", models.len());
     for model in &models {
         println!("  - {}", model.name);
         println!("    Path: {}", model.path);
     }
-    
+
     Ok(())
 }
 
 /// CLI command to validate models
-pub fn run_validate_models(
-    vault_path: Option<PathBuf>,
-    strict: bool,
-) -> Result<(), String> {
+pub fn run_validate_models(vault_path: Option<PathBuf>, strict: bool) -> Result<(), String> {
     let vault_path = vault_path.unwrap_or_else(default_vault_path);
-    
+
     println!("🔍 Validating models...");
     println!("📁 Vault path: {}", vault_path.display());
     println!("🔒 Strict mode: {}", strict);
-    
-    let all_models = scan_vault_gguf(&vault_path)
-        .map_err(|e| format!("Failed to scan vault: {}", e))?;
-    
+
+    let all_models =
+        scan_vault_gguf(&vault_path).map_err(|e| format!("Failed to scan vault: {}", e))?;
+
     for model in &all_models {
         println!("  ✅ {} - Valid", model.name);
     }
-    
+
     println!("\n✅ Validation complete!");
     Ok(())
 }
@@ -1428,28 +2078,29 @@ pub fn run_benchmark_models(
     let vault_path = vault_path.unwrap_or_else(default_vault_path);
     let iterations = iterations.unwrap_or(10);
     let warmup = warmup.unwrap_or(2);
-    
+
     println!("🚀 Benchmarking models...");
     println!("📁 Vault path: {}", vault_path.display());
     println!("🔄 Iterations: {}", iterations);
     println!("🔥 Warmup: {}", warmup);
-    
-    let all_models = scan_vault_gguf(&vault_path)
-        .map_err(|e| format!("Failed to scan vault: {}", e))?;
-    
+
+    let all_models =
+        scan_vault_gguf(&vault_path).map_err(|e| format!("Failed to scan vault: {}", e))?;
+
     let test_models = if let Some(ref requested) = models {
-        all_models.iter()
+        all_models
+            .iter()
             .filter(|m| requested.contains(&m.name))
             .cloned()
             .collect()
     } else {
         all_models
     };
-    
+
     for model in &test_models {
         println!("  📊 {} - Placeholder benchmark", model.name);
     }
-    
+
     println!("\n✅ Benchmark complete!");
     Ok(())
 }
@@ -1462,20 +2113,20 @@ pub fn run_generate_report(
 ) -> Result<(), String> {
     let vault_path = vault_path.unwrap_or_else(default_vault_path);
     let format = format.unwrap_or_else(|| "json".to_string());
-    
+
     println!("📊 Generating test report...");
     println!("📁 Vault path: {}", vault_path.display());
     println!("📄 Format: {}", format);
-    
-    let models = scan_vault_gguf(&vault_path)
-        .map_err(|e| format!("Failed to scan vault: {}", e))?;
-    
+
+    let models =
+        scan_vault_gguf(&vault_path).map_err(|e| format!("Failed to scan vault: {}", e))?;
+
     println!("📦 Found {} model(s)", models.len());
-    
+
     if let Some(output) = output {
         println!("📄 Report saved to: {}", output.display());
     }
-    
+
     println!("\n✅ Report generated!");
     Ok(())
 }

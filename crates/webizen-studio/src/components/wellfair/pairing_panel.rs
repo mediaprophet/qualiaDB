@@ -16,7 +16,9 @@ pub fn CompanionPairingPanel() -> Element {
     let mut loaded = use_signal(|| false);
 
     use_effect(move || {
-        if loaded() { return; }
+        if loaded() {
+            return;
+        }
         loaded.set(true);
         spawn(async move {
             match super::host_client::fetch_companion_pairing().await {
@@ -42,6 +44,7 @@ pub fn CompanionPairingPanel() -> Element {
         section {
             aria_label: "Companion pairing",
             style: "padding:0.85rem;border:1px solid var(--qualia-border,#ddd);border-radius:10px;background:var(--qualia-surface,#fafafa);",
+            super::shared::DomainChrome { domain: "Instruments", chip: "Phone remote · installable controller", show_memory: false }
             h2 { style: "margin:0 0 0.5rem;font-size:1rem;", "Pair your phone" }
             p {
                 style: "margin:0 0 0.75rem;font-size:0.78rem;color:var(--qualia-text-muted,#666);",

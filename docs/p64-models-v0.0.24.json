@@ -1,0 +1,45 @@
+{
+  "format": "qualia.p64.release-manifest.v1",
+  "release": "v0.0.24",
+  "release_base_url": "https://github.com/mediaprophet/qualiaDB/releases/download/v0.0.24/",
+  "p64_version": 4,
+  "q42_version": 3,
+  "layout": "Verbatim",
+  "models": [
+    {
+      "name": "SmolLM2-360M-Instruct-Q4_K_M",
+      "family": "chatml",
+      "source": "https://huggingface.co/bartowski/SmolLM2-360M-Instruct-GGUF/resolve/main/SmolLM2-360M-Instruct-Q4_K_M.gguf",
+      "p64": { "asset": "SmolLM2-360M-Instruct-Q4_K_M.p64", "bytes": 270388992, "sha256": "ce327315fb7d14292c62e863c4fedb6d58e6c15ab24c17b6af61712f65b3336a" },
+      "q42": { "asset": "SmolLM2-360M-Instruct-Q4_K_M.q42", "bytes": 2153, "sha256": "c7874be24490f48112956d2a2ee1cf0ce8dea15f2bd7f6bff5eeca63beeb810e" }
+    },
+    {
+      "name": "SmolLM2-1.7B-Instruct-Q4_K_M",
+      "family": "chatml",
+      "source": "https://huggingface.co/HuggingFaceTB/SmolLM2-1.7B-Instruct-GGUF/resolve/main/smollm2-1.7b-instruct-q4_k_m.gguf",
+      "p64": { "asset": "smollm2-1.7b-instruct-q4_k_m.p64", "bytes": 1055186944, "sha256": "1bb20a2c71613b53994ccab30882c0c90f14a2f39af657dd4a266fc65f86d9de" },
+      "q42": { "asset": "smollm2-1.7b-instruct-q4_k_m.q42", "bytes": 2155, "sha256": "f8d783436927af57a4e2a3e0d4d528756148115bc6b69067ae61fda4ec498f80" }
+    },
+    {
+      "name": "Qwen2.5-1.5B-Instruct-Q4_K_M",
+      "family": "chatml",
+      "source": "https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct-GGUF/resolve/main/qwen2.5-1.5b-instruct-q4_k_m.gguf",
+      "p64": { "asset": "qwen2.5-1.5b-instruct-q4_k_m.p64", "bytes": 1116146176, "sha256": "7e79a949ec7368e0a8fb6c9a87f74696890d558369ed819e8a8082fe6668e8be" },
+      "q42": { "asset": "qwen2.5-1.5b-instruct-q4_k_m.q42", "bytes": 2239, "sha256": "2dc083b4ade1fc2f012f674dd35e01c2a7b24751155daaee89a67dbcf6d0ac58" }
+    },
+    {
+      "name": "Llama-3.2-1B-Instruct-Q4_K_M",
+      "family": "llama3",
+      "source": "https://huggingface.co/bartowski/Llama-3.2-1B-Instruct-GGUF/resolve/main/Llama-3.2-1B-Instruct-Q4_K_M.gguf",
+      "p64": { "asset": "Llama-3.2-1B-Instruct-Q4_K_M.p64", "bytes": 806465664, "sha256": "606f2b42b113f2fc6b415fce151598a2186c7e2f8a2f2bcd6e36502e00c13fad" },
+      "q42": { "asset": "Llama-3.2-1B-Instruct-Q4_K_M.q42", "bytes": 2246, "sha256": "34ccedca9c3e5f852e2d39966c094d8e4687fc6508027c11c3c8dc645ecc8009" }
+    },
+    {
+      "name": "Llama-3.2-3B-Instruct-Q4_K_M",
+      "family": "llama3",
+      "source": "https://huggingface.co/hugging-quants/Llama-3.2-3B-Instruct-Q4_K_M-GGUF",
+      "p64": { "asset": "llama-3.2-3b-instruct-q4_k_m.p64", "bytes": 2018208000, "sha256": "17e006669c226dd0d5ee84a86797729d8a0ff93bfa2a70e5b3a7fcf628b4ce54" },
+      "q42": { "asset": "llama-3.2-3b-instruct-q4_k_m.q42", "bytes": 2246, "sha256": "026c01f4a3037c8b4fc34805d4ff19cafc086b7e1a28d624f9e73768216ef476" }
+    }
+  ]
+}

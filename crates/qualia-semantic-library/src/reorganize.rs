@@ -37,7 +37,11 @@ pub fn plan(library: &Library, out_root: &Path) -> Vec<PlacementOp> {
             let id8: String = e.manifest.doc_id.chars().take(8).collect();
             let filename = format!("{}__{}.{}", safe_title(e.title()), id8, HMC_EXTENSION);
             let to = out_root.join(&category).join(filename);
-            PlacementOp { from: e.path.clone(), to, category }
+            PlacementOp {
+                from: e.path.clone(),
+                to,
+                category,
+            }
         })
         .collect()
 }
@@ -77,13 +81,75 @@ fn category_for(e: &Entry) -> String {
     }
     let t = e.title().to_ascii_lowercase();
     const BUCKETS: &[(&str, &[&str])] = &[
-        ("logic", &["logic", "modal", "deontic", "defeasible", "proof", "inference", "argument"]),
-        ("algebra", &["algebra", "category", "tensor", "matrix", "group", "lattice", "topology"]),
-        ("optimization", &["optim", "convex", "gradient", "linear program", "newton"]),
-        ("ml", &["neural", "transformer", "attention", "embedding", "learning", "nlp", "language model"]),
-        ("crypto", &["zero-knowledge", "zk", "snark", "elliptic", "lattice-based", "signature", "homomorphic"]),
-        ("semantic-web", &["ontology", "rdf", "shacl", "owl", "sparql", "knowledge graph"]),
-        ("numerics", &["numerical", "finite element", "spectral", "interpolation", "quadrature", "ode", "pde"]),
+        (
+            "logic",
+            &[
+                "logic",
+                "modal",
+                "deontic",
+                "defeasible",
+                "proof",
+                "inference",
+                "argument",
+            ],
+        ),
+        (
+            "algebra",
+            &[
+                "algebra", "category", "tensor", "matrix", "group", "lattice", "topology",
+            ],
+        ),
+        (
+            "optimization",
+            &["optim", "convex", "gradient", "linear program", "newton"],
+        ),
+        (
+            "ml",
+            &[
+                "neural",
+                "transformer",
+                "attention",
+                "embedding",
+                "learning",
+                "nlp",
+                "language model",
+            ],
+        ),
+        (
+            "crypto",
+            &[
+                "zero-knowledge",
+                "zk",
+                "snark",
+                "elliptic",
+                "lattice-based",
+                "signature",
+                "homomorphic",
+            ],
+        ),
+        (
+            "semantic-web",
+            &[
+                "ontology",
+                "rdf",
+                "shacl",
+                "owl",
+                "sparql",
+                "knowledge graph",
+            ],
+        ),
+        (
+            "numerics",
+            &[
+                "numerical",
+                "finite element",
+                "spectral",
+                "interpolation",
+                "quadrature",
+                "ode",
+                "pde",
+            ],
+        ),
     ];
     for (bucket, kws) in BUCKETS {
         if kws.iter().any(|k| t.contains(k)) {
@@ -106,7 +172,13 @@ fn safe_title(title: &str) -> String {
 
 fn safe_component(s: &str) -> String {
     s.chars()
-        .map(|c| if c.is_alphanumeric() || c == '-' || c == '_' { c } else { '_' })
+        .map(|c| {
+            if c.is_alphanumeric() || c == '-' || c == '_' {
+                c
+            } else {
+                '_'
+            }
+        })
         .collect::<String>()
         .trim_matches('_')
         .to_string()

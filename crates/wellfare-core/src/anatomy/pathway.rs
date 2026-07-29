@@ -136,7 +136,11 @@ pub fn investigative_pathway(
         })
         .filter(|r| r.voi_milli > 0)
         .collect();
-    ranked.sort_by(|a, b| b.voi_milli.cmp(&a.voi_milli).then(a.step.id.cmp(&b.step.id)));
+    ranked.sort_by(|a, b| {
+        b.voi_milli
+            .cmp(&a.voi_milli)
+            .then(a.step.id.cmp(&b.step.id))
+    });
     InvestigativePathway {
         hypotheses,
         steps: ranked,
@@ -218,7 +222,11 @@ mod tests {
         assert_eq!(path.epistemic_status, EpistemicStatus::Hypothesis);
         // The zero-VOI step is dropped; the strong step ranks first.
         let ids: Vec<&str> = path.steps.iter().map(|r| r.step.id.as_str()).collect();
-        assert_eq!(ids, vec!["strong", "weak"], "ranked by VOI, useless dropped");
+        assert_eq!(
+            ids,
+            vec!["strong", "weak"],
+            "ranked by VOI, useless dropped"
+        );
         assert!(path.steps[0].voi_milli > path.steps[1].voi_milli);
     }
 

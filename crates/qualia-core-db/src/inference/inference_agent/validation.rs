@@ -19,7 +19,10 @@ impl LocalLlmAgent {
     // NOTE: `pub(super)` widening (was a private associated fn) so the
     // `AgentRuntime` impl in `runtime.rs` can call it via `Self::` across the
     // new submodule boundary. Visibility stays crate-internal.
-    pub(super) fn evaluate_intent_frame(agent: &LocalLlmAgent, frame: &AgentIntentFrame) -> WebizenVerdict {
+    pub(super) fn evaluate_intent_frame(
+        agent: &LocalLlmAgent,
+        frame: &AgentIntentFrame,
+    ) -> WebizenVerdict {
         // Rule 1: No outbound network calls allowed from a Local backend.
         if frame.requires_network {
             return WebizenVerdict::Deny {

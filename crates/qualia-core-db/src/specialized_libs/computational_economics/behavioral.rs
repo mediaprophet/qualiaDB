@@ -30,12 +30,7 @@ fn require_finite(x: f64) -> Result<(), BehavioralError> {
 ///
 /// Typical parameters: `alpha = beta = 0.88`, `lambda = 2.25`.
 /// `x` is measured relative to a reference point.
-pub fn prospect_value(
-    x: f64,
-    alpha: f64,
-    beta: f64,
-    lambda: f64,
-) -> Result<f64, BehavioralError> {
+pub fn prospect_value(x: f64, alpha: f64, beta: f64, lambda: f64) -> Result<f64, BehavioralError> {
     require_finite(x)?;
     require_finite(alpha)?;
     require_finite(beta)?;
@@ -53,10 +48,7 @@ pub fn prospect_value(
 /// Probability weighting function (Prelec): `w(p) = exp(-(-ln(p))^gamma)`.
 ///
 /// Overweights small probabilities, underweights moderate probabilities.
-pub fn probability_weight(
-    p: f64,
-    gamma: f64,
-) -> Result<f64, BehavioralError> {
+pub fn probability_weight(p: f64, gamma: f64) -> Result<f64, BehavioralError> {
     require_finite(p)?;
     require_finite(gamma)?;
     if !(0.0..=1.0).contains(&p) || p == 0.0 || gamma <= 0.0 {
@@ -71,11 +63,7 @@ pub fn probability_weight(
 ///
 /// `beta` is the present-bias parameter (0 < beta < 1 for present bias),
 /// `delta` is the long-run discount factor.
-pub fn hyperbolic_discount(
-    t: u32,
-    beta: f64,
-    delta: f64,
-) -> Result<f64, BehavioralError> {
+pub fn hyperbolic_discount(t: u32, beta: f64, delta: f64) -> Result<f64, BehavioralError> {
     require_finite(beta)?;
     require_finite(delta)?;
     if !(0.0..=1.0).contains(&beta) || !(0.0..=1.0).contains(&delta) {
@@ -112,10 +100,7 @@ pub fn present_biased_utility(
 /// by a factor of `lambda` (loss aversion coefficient).
 ///
 /// `wta = wtp * lambda`.
-pub fn endowment_effect_wta(
-    wtp: f64,
-    lambda: f64,
-) -> Result<f64, BehavioralError> {
+pub fn endowment_effect_wta(wtp: f64, lambda: f64) -> Result<f64, BehavioralError> {
     require_finite(wtp)?;
     require_finite(lambda)?;
     if wtp < 0.0 || lambda <= 0.0 {

@@ -58,7 +58,10 @@ impl EnvelopeKeypair {
     /// Generate a fresh keypair (real X25519, OS randomness).
     pub fn generate() -> Result<Self, String> {
         let kp = AuditKeypair::generate().map_err(|e| format!("keypair generate: {e:?}"))?;
-        Ok(Self { public: kp.public, secret: *kp.secret_bytes() })
+        Ok(Self {
+            public: kp.public,
+            secret: *kp.secret_bytes(),
+        })
     }
 
     pub fn public_hex(&self) -> String {
@@ -87,7 +90,10 @@ impl EnvelopeKeypair {
         h.update(root_secret);
         let derived: [u8; 32] = h.finalize().into();
         let kp = AuditKeypair::from_secret(derived);
-        Self { public: kp.public, secret: *kp.secret_bytes() }
+        Self {
+            public: kp.public,
+            secret: *kp.secret_bytes(),
+        }
     }
 }
 
@@ -120,9 +126,13 @@ pub fn seal_payload(
     storers: Vec<String>,
 ) -> Result<(EncryptedCommonsPayload, DataKey), String> {
     let dek = random_dek();
-    let ciphertext = wrap_key(&dek, plaintext, PAYLOAD_AAD).map_err(|e| format!("seal payload: {e:?}"))?;
+    let ciphertext =
+        wrap_key(&dek, plaintext, PAYLOAD_AAD).map_err(|e| format!("seal payload: {e:?}"))?;
     let commitment: PayloadCommitment = Sha256::digest(&ciphertext).into();
-    Ok((EncryptedCommonsPayload::new(commitment, ciphertext, storers), dek))
+    Ok((
+        EncryptedCommonsPayload::new(commitment, ciphertext, storers),
+        dek,
+    ))
 }
 
 /// **Seal (wrap) a DEK to a recipient's public key** — the credential's `wrapped_key`. Only the holder of
@@ -133,7 +143,8 @@ pub fn wrap_dek_to(recipient_public: &[u8; 32], dek: &DataKey) -> Result<Vec<u8>
 
 /// **Unwrap a DEK** with the recipient's secret key. Fails for the wrong recipient or a tampered blob.
 pub fn unwrap_dek(recipient_secret: &[u8; 32], wrapped: &[u8]) -> Result<DataKey, String> {
-    let opened = open_sealed(recipient_secret, wrapped, DEK_AAD).map_err(|e| format!("unwrap DEK: {e:?}"))?;
+    let opened = open_sealed(recipient_secret, wrapped, DEK_AAD)
+        .map_err(|e| format!("unwrap DEK: {e:?}"))?;
     opened
         .as_slice()
         .try_into()
@@ -174,17 +185,27 @@ mod tests {
 
         // Owner seals the payload and seals the DEK to the agent.
         let (payload, dek) = seal_payload(plaintext, vec!["did:wf:person".into()]).unwrap();
-        assert_ne!(payload.ciphertext.as_slice(), plaintext, "payload is really encrypted");
+        assert_ne!(
+            payload.ciphertext.as_slice(),
+            plaintext,
+            "payload is really encrypted"
+        );
         let wrapped = wrap_dek_to(&agent.public, &dek).unwrap();
 
         // The agent (their secret) recovers the DEK and opens the payload.
         let opened = open_payload_with_wrapped(&payload, &agent.secret, &wrapped).unwrap();
-        assert_eq!(opened.as_slice(), plaintext, "agent decrypts the exact plaintext");
+        assert_eq!(
+            opened.as_slice(),
+            plaintext,
+            "agent decrypts the exact plaintext"
+        );
 
         // The owner can also seal-to-self and open (data returns to the person).
         let wrapped_self = wrap_dek_to(&owner.public, &dek).unwrap();
         assert_eq!(
-            open_payload_with_wrapped(&payload, &owner.secret, &wrapped_self).unwrap().as_slice(),
+            open_payload_with_wrapped(&payload, &owner.secret, &wrapped_self)
+                .unwrap()
+                .as_slice(),
             plaintext
         );
     }
@@ -196,7 +217,10 @@ mod tests {
         let (_payload, dek) = seal_payload(b"secret", vec![]).unwrap();
         let wrapped = wrap_dek_to(&agent.public, &dek).unwrap();
         // A different secret cannot open the sealed DEK.
-        assert!(unwrap_dek(&attacker.secret, &wrapped).is_err(), "only the intended recipient unwraps");
+        assert!(
+            unwrap_dek(&attacker.secret, &wrapped).is_err(),
+            "only the intended recipient unwraps"
+        );
     }
 
     #[test]
@@ -204,19 +228,31 @@ mod tests {
         // Model the credential holding the wrapped DEK; revocation drops it. Without it there is no path to
         // the DEK, so the ciphertext (however replicated) cannot be opened.
         let agent = EnvelopeKeypair::generate().unwrap();
-        let (payload, dek) = seal_payload(b"the record", vec!["did:wf:person".into(), "did:wf:archive".into()]).unwrap();
+        let (payload, dek) = seal_payload(
+            b"the record",
+            vec!["did:wf:person".into(), "did:wf:archive".into()],
+        )
+        .unwrap();
         let wrapped = Some(wrap_dek_to(&agent.public, &dek).unwrap());
 
         // Live: the agent opens it.
-        assert!(open_payload_with_wrapped(&payload, &agent.secret, wrapped.as_ref().unwrap()).is_ok());
+        assert!(
+            open_payload_with_wrapped(&payload, &agent.secret, wrapped.as_ref().unwrap()).is_ok()
+        );
 
         // Revoke: the wrapped DEK is destroyed. The payload bytes survive (still replicated) but there is
         // nothing to unwrap — the DEK cannot be recovered, so the payload is crypto-shredded for this holder.
         let wrapped: Option<Vec<u8>> = None;
         assert!(wrapped.is_none());
-        assert!(payload.is_durable(), "the commons bytes are NOT chased down — they survive");
+        assert!(
+            payload.is_durable(),
+            "the commons bytes are NOT chased down — they survive"
+        );
         // With no wrapped DEK and no other key, an attempt with a guessed/zero DEK fails (AEAD).
-        assert!(open_payload(&payload, &[0u8; 32]).is_err(), "no key, no payload");
+        assert!(
+            open_payload(&payload, &[0u8; 32]).is_err(),
+            "no key, no payload"
+        );
     }
 
     #[test]
@@ -228,7 +264,10 @@ mod tests {
         // the AEAD tag would fail.
         let mid = payload.ciphertext.len() / 2;
         payload.ciphertext[mid] ^= 0xFF;
-        assert!(open_payload_with_wrapped(&payload, &agent.secret, &wrapped).is_err(), "tamper is detected");
+        assert!(
+            open_payload_with_wrapped(&payload, &agent.secret, &wrapped).is_err(),
+            "tamper is detected"
+        );
     }
 
     #[test]
@@ -237,7 +276,10 @@ mod tests {
         let (b, _dek_b) = seal_payload(b"record B", vec![]).unwrap();
         // Substitute B's ciphertext under A's commitment — the content-address check catches it.
         a.ciphertext = b.ciphertext;
-        assert!(open_payload(&a, &[0u8; 32]).is_err(), "commitment binds the ciphertext");
+        assert!(
+            open_payload(&a, &[0u8; 32]).is_err(),
+            "commitment binds the ciphertext"
+        );
     }
 
     #[test]
@@ -245,16 +287,24 @@ mod tests {
         let seed = [42u8; 32]; // stands in for the owner's ed25519 signing-key seed
         let a = EnvelopeKeypair::derive(&seed, OWNER_ENVELOPE_DOMAIN);
         let b = EnvelopeKeypair::derive(&seed, OWNER_ENVELOPE_DOMAIN);
-        assert_eq!(a, b, "same seed + domain ⇒ same keypair (re-derivable, nothing stored)");
+        assert_eq!(
+            a, b,
+            "same seed + domain ⇒ same keypair (re-derivable, nothing stored)"
+        );
         // A different domain (or seed) gives an independent keypair.
         assert_ne!(a, EnvelopeKeypair::derive(&seed, b"other:domain"));
-        assert_ne!(a, EnvelopeKeypair::derive(&[7u8; 32], OWNER_ENVELOPE_DOMAIN));
+        assert_ne!(
+            a,
+            EnvelopeKeypair::derive(&[7u8; 32], OWNER_ENVELOPE_DOMAIN)
+        );
         // And it actually works as an envelope key: seal to it, re-derive, open.
         let (payload, dek) = seal_payload(b"owner-held record", vec![]).unwrap();
         let wrapped = wrap_dek_to(&a.public, &dek).unwrap();
         let rederived = EnvelopeKeypair::derive(&seed, OWNER_ENVELOPE_DOMAIN);
         assert_eq!(
-            open_payload_with_wrapped(&payload, &rederived.secret, &wrapped).unwrap().as_slice(),
+            open_payload_with_wrapped(&payload, &rederived.secret, &wrapped)
+                .unwrap()
+                .as_slice(),
             b"owner-held record"
         );
     }

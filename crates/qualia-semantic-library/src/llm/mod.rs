@@ -40,10 +40,7 @@ struct StoredChunk {
 
 /// Enrichment pass: open a container, embed its chunks with `backend`, and write
 /// the embedding matrix + updated manifest back into the same container.
-pub fn embed_container(
-    path: &std::path::Path,
-    backend: &dyn LlmBackend,
-) -> anyhow::Result<usize> {
+pub fn embed_container(path: &std::path::Path, backend: &dyn LlmBackend) -> anyhow::Result<usize> {
     let mut writer = HmcWriter::reopen(path)?;
 
     let texts: Vec<String> = {
@@ -63,7 +60,12 @@ pub fn embed_container(
     let dim = vectors.first().map(|v| v.len()).unwrap_or(0) as u32;
 
     let bytes = encode_f32_matrix(&vectors);
-    writer.add_derived(AssetKind::Embeddings, "vectors.f32", "application/octet-stream", bytes);
+    writer.add_derived(
+        AssetKind::Embeddings,
+        "vectors.f32",
+        "application/octet-stream",
+        bytes,
+    );
 
     let pipeline = &mut writer.manifest_mut().pipeline;
     pipeline.embedder = backend.model_id();
@@ -84,7 +86,10 @@ semantic-web, ontology, graph-theory, probability.";
 
 /// Analysis pass: ask the backend for topical tags from the document's leading
 /// chunks and write them into the container manifest (drives reorganise/route).
-pub fn analyze_container(path: &std::path::Path, backend: &dyn LlmBackend) -> anyhow::Result<Vec<String>> {
+pub fn analyze_container(
+    path: &std::path::Path,
+    backend: &dyn LlmBackend,
+) -> anyhow::Result<Vec<String>> {
     let excerpt: String = {
         let mut c = crate::container::HmcContainer::open(path)?;
         let jsonl = c.read_kind(AssetKind::Chunks)?;

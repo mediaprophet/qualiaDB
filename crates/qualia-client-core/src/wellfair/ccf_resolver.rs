@@ -59,14 +59,22 @@ pub fn parse_ref_organs(sparql_json: &str) -> Vec<RefOrgan> {
     let mut out = Vec::new();
     if let Some(bindings) = bindings {
         for b in bindings {
-            let Some(url) = b.get("glb").and_then(|g| g.get("value")).and_then(|v| v.as_str()) else {
+            let Some(url) = b
+                .get("glb")
+                .and_then(|g| g.get("value"))
+                .and_then(|v| v.as_str())
+            else {
                 continue;
             };
             let filename = url.rsplit('/').next().unwrap_or(url).to_string();
             let Some(model) = model_from_filename(&filename) else {
                 continue;
             };
-            out.push(RefOrgan { filename, glb_url: url.to_string(), model });
+            out.push(RefOrgan {
+                filename,
+                glb_url: url.to_string(),
+                model,
+            });
         }
     }
     out
@@ -85,7 +93,11 @@ fn model_from_filename(filename: &str) -> Option<AnatomyModel> {
 
 /// The organs of a single model, in discovery order.
 pub fn organs_for_model(organs: &[RefOrgan], model: AnatomyModel) -> Vec<RefOrgan> {
-    organs.iter().filter(|o| o.model == model).cloned().collect()
+    organs
+        .iter()
+        .filter(|o| o.model == model)
+        .cloned()
+        .collect()
 }
 
 /// A live CCF discovery / fetch error.
@@ -195,9 +207,15 @@ mod tests {
         // The whole point: a SPARQL-discovered filename feeds straight into the organ→system map.
         use wellfare_core::anatomy::body_system_for_organ;
         let organs = parse_ref_organs(SAMPLE_JSON);
-        assert_eq!(body_system_for_organ(&organs[0].filename), Some("digestive")); // liver
+        assert_eq!(
+            body_system_for_organ(&organs[0].filename),
+            Some("digestive")
+        ); // liver
         assert_eq!(body_system_for_organ(&organs[1].filename), Some("urinary")); // kidney
-        assert_eq!(body_system_for_organ(&organs[2].filename), Some("reproductive")); // uterus
+        assert_eq!(
+            body_system_for_organ(&organs[2].filename),
+            Some("reproductive")
+        ); // uterus
     }
 
     #[test]

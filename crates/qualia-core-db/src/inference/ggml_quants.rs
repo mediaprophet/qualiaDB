@@ -295,9 +295,13 @@ pub fn expand_q4k_tensor_to_soa(
     n_rows: usize,
     out: &mut [u8],
 ) -> Result<(), GgmlDequantError> {
-    let src_row = ggml_row_bytes(GGML_TYPE_Q4_K, n_row_elems).ok_or(GgmlDequantError::UnsupportedType)?;
-    let dst_row = ggml_row_bytes(GGML_TYPE_Q4_K_SOA, n_row_elems).ok_or(GgmlDequantError::UnsupportedType)?;
-    let need = dst_row.checked_mul(n_rows).ok_or(GgmlDequantError::TruncatedInput)?;
+    let src_row =
+        ggml_row_bytes(GGML_TYPE_Q4_K, n_row_elems).ok_or(GgmlDequantError::UnsupportedType)?;
+    let dst_row =
+        ggml_row_bytes(GGML_TYPE_Q4_K_SOA, n_row_elems).ok_or(GgmlDequantError::UnsupportedType)?;
+    let need = dst_row
+        .checked_mul(n_rows)
+        .ok_or(GgmlDequantError::TruncatedInput)?;
     if out.len() < need || raw.len() < src_row.saturating_mul(n_rows) {
         return Err(GgmlDequantError::TruncatedInput);
     }
@@ -317,7 +321,11 @@ pub fn expand_q4k_tensor_to_soa(
     Ok(())
 }
 
-fn dequant_q4_k_soa(raw: &[u8], n_elems: usize, out: &mut [f32]) -> Result<usize, GgmlDequantError> {
+fn dequant_q4_k_soa(
+    raw: &[u8],
+    n_elems: usize,
+    out: &mut [f32],
+) -> Result<usize, GgmlDequantError> {
     let n_blocks = n_elems.div_ceil(BLOCK_Q4K_SOA_ELEMS);
     if raw.len() < n_blocks * BLOCK_Q4K_SOA_BYTES {
         return Err(GgmlDequantError::TruncatedInput);
@@ -598,6 +606,126 @@ fn dequant_q6_k(raw: &[u8], n_elems: usize, out: &mut [f32]) -> Result<usize, Gg
     Ok(written)
 }
 
+/// Quantize 256 f32 weights into one Q4_K_SOA superblock (160 bytes).
+///
+/// Layout produced:
+/// - `[0..128)`: nibbles (same as Q4_K: 4 groups × 32 bytes, low=even sub, high=odd sub)
+/// - `[128..144)`: 8 × f16 effective scale (d_sub[j])
+/// - `[144..160)`: 8 × f16 effective min (m_sub[j])
+///
+/// Dequant formula: `w = d_sub[j] * nibble - m_sub[j]`
+/// So: `d_sub[j] = (max_j - min_j) / 15`, `m_sub[j] = -min_j`
+/// And: `nibble = round((w + m_sub[j]) / d_sub[j])` clamped to [0, 15].
+fn quantize_block_f32_to_q4_k_soa(src: &[f32], out: &mut [u8]) {
+    debug_assert!(out.len() >= BLOCK_Q4K_SOA_BYTES);
+    // Zero qs region so unused nibbles are 0.
+    out[..128].fill(0);
+
+    for j in 0..8 {
+        let sub_start = j * 32;
+        let sub_end = (sub_start + 32).min(src.len());
+
+        // Find min/max for this sub-block.
+        let mut min_val = 0.0f32;
+        let mut max_val = 0.0f32;
+        if sub_start < sub_end {
+            min_val = src[sub_start];
+            max_val = src[sub_start];
+            for i in sub_start + 1..sub_end {
+                let w = src[i];
+                if w < min_val {
+                    min_val = w;
+                }
+                if w > max_val {
+                    max_val = w;
+                }
+            }
+        }
+
+        let scale = if max_val > min_val {
+            (max_val - min_val) / 15.0
+        } else {
+            1.0
+        };
+        // Dequant: w = d_sub * nibble - m_sub
+        //   nibble=0 → w = -m_sub = min_val  →  m_sub = -min_val
+        //   nibble=15 → w = d_sub*15 - m_sub = max_val  →  d_sub = (max_val - min_val)/15 = scale
+        let d_sub = half::f16::from_f32(scale);
+        let m_sub = half::f16::from_f32(-min_val);
+        let d_actual = d_sub.to_f32();
+        let m_actual = m_sub.to_f32();
+
+        // Store f16 scale/min in SoA region.
+        let d_bytes = d_sub.to_le_bytes();
+        let m_bytes = m_sub.to_le_bytes();
+        out[128 + j * 2] = d_bytes[0];
+        out[128 + j * 2 + 1] = d_bytes[1];
+        out[144 + j * 2] = m_bytes[0];
+        out[144 + j * 2 + 1] = m_bytes[1];
+
+        // Quantize and pack nibbles.
+        // Group g = j / 2; low nibble if j even, high if j odd.
+        let g = j / 2;
+        let q_off = g * 32;
+        let is_high = j % 2 == 1;
+        for l in 0..32 {
+            let nibble: u8 = if sub_start + l < sub_end {
+                let w = src[sub_start + l];
+                let q = ((w + m_actual) / d_actual).round();
+                q.clamp(0.0, 15.0) as u8
+            } else {
+                0
+            };
+            let bi = q_off + l;
+            if is_high {
+                out[bi] = (out[bi] & 0x0F) | (nibble << 4);
+            } else {
+                out[bi] = (out[bi] & 0xF0) | (nibble & 0x0F);
+            }
+        }
+    }
+}
+
+/// Quantize a full f32 weight matrix to Q4_K_SOA layout.
+///
+/// `src`: row-major f32 weights, `n_row_elems × n_rows` elements.
+/// `out`: destination buffer, must be at least `ggml_row_bytes(Q4_K_SOA, n_row_elems) * n_rows` bytes.
+pub fn quantize_f32_to_q4_k_soa_tensor(
+    src: &[f32],
+    n_row_elems: usize,
+    n_rows: usize,
+    out: &mut [u8],
+) -> Result<(), GgmlDequantError> {
+    let dst_row =
+        ggml_row_bytes(GGML_TYPE_Q4_K_SOA, n_row_elems).ok_or(GgmlDequantError::UnsupportedType)?;
+    let need = dst_row
+        .checked_mul(n_rows)
+        .ok_or(GgmlDequantError::TruncatedInput)?;
+    if out.len() < need {
+        return Err(GgmlDequantError::BufferTooSmall);
+    }
+    if src.len() < n_row_elems * n_rows {
+        return Err(GgmlDequantError::TruncatedInput);
+    }
+
+    let n_blocks = n_row_elems.div_ceil(BLOCK_Q4K_SOA_ELEMS);
+    for r in 0..n_rows {
+        let src_base = r * n_row_elems;
+        let dst_base = r * dst_row;
+        for b in 0..n_blocks {
+            let block_start = src_base + b * BLOCK_Q4K_SOA_ELEMS;
+            let block_end = (block_start + BLOCK_Q4K_SOA_ELEMS).min(src_base + n_row_elems);
+            let block_src = &src[block_start..block_end];
+            let dst_off = dst_base + b * BLOCK_Q4K_SOA_BYTES;
+            quantize_block_f32_to_q4_k_soa(
+                block_src,
+                &mut out[dst_off..dst_off + BLOCK_Q4K_SOA_BYTES],
+            );
+        }
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -629,10 +757,88 @@ mod tests {
         dequant_q4_k_soa(&soa, 256, &mut out_soa).unwrap();
         for i in 0..256 {
             let d = (out_aos[i] - out_soa[i]).abs();
-            assert!(d < 1e-3, "elem {i}: aos={} soa={} δ={d}", out_aos[i], out_soa[i]);
+            assert!(
+                d < 1e-3,
+                "elem {i}: aos={} soa={} δ={d}",
+                out_aos[i],
+                out_soa[i]
+            );
         }
         assert_eq!(ggml_row_bytes(GGML_TYPE_Q4_K_SOA, 256), Some(160));
         assert_eq!(ggml_row_bytes(GGML_TYPE_Q4_K_SOA, 512), Some(320));
+    }
+
+    #[test]
+    fn quantize_f32_to_soa_roundtrip() {
+        // Synthetic weights: 256 values with varied ranges per sub-block.
+        let mut src = [0f32; 256];
+        for j in 0..8 {
+            let base = j as f32 * 0.1 - 0.4;
+            let amp = (j as f32 + 1.0) * 0.05;
+            for l in 0..32 {
+                src[j * 32 + l] = base + amp * (l as f32 / 31.0);
+            }
+        }
+        let mut soa = [0u8; BLOCK_Q4K_SOA_BYTES];
+        quantize_block_f32_to_q4_k_soa(&src, &mut soa);
+        let mut deq = [0f32; 256];
+        dequant_q4_k_soa(&soa, 256, &mut deq).unwrap();
+        // Q4_K has 4-bit precision (~1/15 of the sub-block range). Check that
+        // the round-trip error is within the quantization step size.
+        for j in 0..8 {
+            let sub_min = src[j * 32..j * 32 + 32]
+                .iter()
+                .cloned()
+                .fold(f32::MAX, f32::min);
+            let sub_max = src[j * 32..j * 32 + 32]
+                .iter()
+                .cloned()
+                .fold(f32::MIN, f32::max);
+            let step = (sub_max - sub_min) / 15.0;
+            for l in 0..32 {
+                let i = j * 32 + l;
+                let err = (src[i] - deq[i]).abs();
+                assert!(
+                    err <= step + 1e-4,
+                    "elem {i}: src={} deq={} err={} step={}",
+                    src[i],
+                    deq[i],
+                    err,
+                    step
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn quantize_f32_to_soa_tensor_roundtrip() {
+        // 2 rows × 512 elements (2 blocks per row).
+        let n_row_elems = 512;
+        let n_rows = 2;
+        let mut src = vec![0f32; n_row_elems * n_rows];
+        for i in 0..src.len() {
+            src[i] = ((i as f32) * 0.01 - 5.0).sin() * 0.5;
+        }
+        let dst_row = ggml_row_bytes(GGML_TYPE_Q4_K_SOA, n_row_elems).unwrap();
+        let mut out = vec![0u8; dst_row * n_rows];
+        quantize_f32_to_q4_k_soa_tensor(&src, n_row_elems, n_rows, &mut out).unwrap();
+        let mut deq = vec![0f32; n_row_elems * n_rows];
+        for r in 0..n_rows {
+            let off = r * dst_row;
+            dequant_q4_k_soa(
+                &out[off..off + dst_row],
+                n_row_elems,
+                &mut deq[r * n_row_elems..(r + 1) * n_row_elems],
+            )
+            .unwrap();
+        }
+        // Check average error is reasonable for 4-bit quantization.
+        let mut total_err = 0.0;
+        for i in 0..src.len() {
+            total_err += (src[i] - deq[i]).abs();
+        }
+        let avg_err = total_err / src.len() as f32;
+        assert!(avg_err < 0.05, "avg quantization error too high: {avg_err}");
     }
 
     #[test]
@@ -642,7 +848,10 @@ mod tests {
         // 1.0_bf16 = 0x3F80, -2.0_bf16 = 0xC000
         let raw: [u8; 4] = [0x80, 0x3F, 0x00, 0xC0];
         let mut out = [0.0f32; 2];
-        assert_eq!(dequantize_row_into(&raw, GGML_TYPE_BF16, 2, &mut out), Ok(2));
+        assert_eq!(
+            dequantize_row_into(&raw, GGML_TYPE_BF16, 2, &mut out),
+            Ok(2)
+        );
         assert!((out[0] - 1.0).abs() < 1e-6, "got {}", out[0]);
         assert!((out[1] + 2.0).abs() < 1e-6, "got {}", out[1]);
         let info = GgufTensorInfo {

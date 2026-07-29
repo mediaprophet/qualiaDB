@@ -231,9 +231,8 @@ impl<'a> ExprParser<'a> {
         // the group-graph-pattern parser over the current token slice.
         let is_exists =
             matches!(self.peek(), Some(Token::Word(w)) if w.eq_ignore_ascii_case("EXISTS"));
-        let is_not_exists =
-            matches!(self.peek(), Some(Token::Word(w)) if w.eq_ignore_ascii_case("NOT"))
-                && matches!(self.tokens.get(self.pos + 1),
+        let is_not_exists = matches!(self.peek(), Some(Token::Word(w)) if w.eq_ignore_ascii_case("NOT"))
+            && matches!(self.tokens.get(self.pos + 1),
                     Some(Token::Word(w)) if w.eq_ignore_ascii_case("EXISTS"));
         if is_exists || is_not_exists {
             let mut negated = false;
@@ -242,12 +241,8 @@ impl<'a> ExprParser<'a> {
                 negated = true;
             }
             self.pos += 1; // consume EXISTS; self.pos now indexes '{'
-            let (pattern, new_pos) = super::pattern::parse_group_tokens(
-                self.tokens,
-                self.pos,
-                self.ctx,
-                self.prefixes,
-            )?;
+            let (pattern, new_pos) =
+                super::pattern::parse_group_tokens(self.tokens, self.pos, self.ctx, self.prefixes)?;
             self.pos = new_pos;
             return self.alloc(Expression::Exists { pattern, negated });
         }
@@ -267,7 +262,11 @@ impl<'a> ExprParser<'a> {
                 self.alloc(Expression::Literal(value))
             }
             Token::Bool(b) => self.alloc(Expression::Literal(if b { 1 } else { 0 })),
-            Token::Str { value, lang, datatype } => {
+            Token::Str {
+                value,
+                lang,
+                datatype,
+            } => {
                 // Expand a prefixed datatype (e.g. `xsd:integer`) against the prefix map
                 // so DATATYPE(?x) is comparable to the query's own datatype IRI term.
                 let dt = datatype.as_ref().map(|d| {
@@ -284,7 +283,8 @@ impl<'a> ExprParser<'a> {
                 });
                 // A plain, lang-tagged, and datatyped literal of the same text are
                 // distinct terms — hash accordingly so LANG/DATATYPE read the tag back.
-                let h = crate::sparql_ast::literal_term_hash(&value, lang.as_deref(), dt.as_deref());
+                let h =
+                    crate::sparql_ast::literal_term_hash(&value, lang.as_deref(), dt.as_deref());
                 record_parse_literal_tagged(h, &value, lang.as_deref(), dt.as_deref());
                 self.alloc(Expression::Literal(h))
             }
@@ -541,7 +541,10 @@ mod tests {
                 left,
                 right,
             } => {
-                assert!(matches!(ctx.expressions[left as usize], Expression::Variable(_)));
+                assert!(matches!(
+                    ctx.expressions[left as usize],
+                    Expression::Variable(_)
+                ));
                 assert_eq!(ctx.expressions[right as usize], Expression::Literal(18));
             }
             other => panic!("expected >= comparison, got {other:?}"),
@@ -601,7 +604,10 @@ mod tests {
             } => {
                 assert_eq!(args_len, 2);
                 let a0 = ctx.function_args[args_start as usize];
-                assert!(matches!(ctx.expressions[a0 as usize], Expression::Variable(_)));
+                assert!(matches!(
+                    ctx.expressions[a0 as usize],
+                    Expression::Variable(_)
+                ));
             }
             other => panic!("expected REGEX function, got {other:?}"),
         }

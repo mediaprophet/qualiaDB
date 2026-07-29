@@ -155,7 +155,8 @@ mod tests {
 
     #[test]
     fn live_section_decision_round_trips_json() {
-        let approved = LiveSectionDecision::approved("req-001", vec!["conditions".into()], 1_700_000_100);
+        let approved =
+            LiveSectionDecision::approved("req-001", vec!["conditions".into()], 1_700_000_100);
         let json = serde_json::to_string(&approved).unwrap();
         let back: LiveSectionDecision = serde_json::from_str(&json).unwrap();
         assert_eq!(approved, back);

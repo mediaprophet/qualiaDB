@@ -521,8 +521,7 @@ mod tests {
             use_exact_coplanarity: false,
             ..SimplifyOptions::default()
         };
-        let merged =
-            simplify_coplanar_regions(&vertices, &triangles, &labels, &tol_opts).unwrap();
+        let merged = simplify_coplanar_regions(&vertices, &triangles, &labels, &tol_opts).unwrap();
         assert!(
             merged.merged_count > 0 && merged.triangles.len() == 2,
             "near-coplanar patch should merge under float tolerance (got {} tris, merged {})",
@@ -550,8 +549,7 @@ mod tests {
             use_exact_coplanarity: false,
             ..SimplifyOptions::default()
         };
-        let result =
-            simplify_coplanar_regions(&vertices, &triangles, &labels, &tol_opts).unwrap();
+        let result = simplify_coplanar_regions(&vertices, &triangles, &labels, &tol_opts).unwrap();
         assert!(
             result.triangles.len() > 2,
             "a corner beyond tolerance must not fully merge (got {} tris)",

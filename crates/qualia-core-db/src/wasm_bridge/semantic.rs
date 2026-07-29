@@ -10,9 +10,6 @@ use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 
 // ─── Economics: Monte Carlo VaR ──────────────────────────────────────────────
-#[cfg(target_arch = "wasm32")]
-use super::*;
-
 // ─── SHACL: inline constraint validation ─────────────────────────────────────
 
 #[cfg(target_arch = "wasm32")]
@@ -37,7 +34,7 @@ pub fn validate_shacl_constraint_wasm(val: JsValue) -> Result<JsValue, JsValue> 
         other => {
             return Err(JsValue::from_str(&format!(
                 "unsupported numeric SHACL constraint: {other}"
-            )))
+            )));
         }
     };
     #[derive(Serialize)]
@@ -310,7 +307,7 @@ pub fn forward_chain_wasm(val: JsValue) -> Result<JsValue, JsValue> {
     // Variable index 0 is reserved as antecedent terminator in ForwardChainingDefeasible.
     let mut atom_map: HashMap<String, u8> = HashMap::new();
     let mut next_idx: u8 = 1;
-    let mut get_idx = |s: &str, map: &mut HashMap<String, u8>, nxt: &mut u8| -> u8 {
+    let get_idx = |s: &str, map: &mut HashMap<String, u8>, nxt: &mut u8| -> u8 {
         if let Some(&i) = map.get(s) {
             return i;
         }

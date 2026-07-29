@@ -23,7 +23,7 @@ use serde::{Deserialize, Serialize};
 
 use super::factor::{Effect, Factor, FactorTarget};
 use super::system_key;
-use super::{accumulate::accumulate, accumulate::SystemBurden};
+use super::{accumulate::SystemBurden, accumulate::accumulate};
 
 /// How a factor-event's contribution to a system rises to a peak, then clears.
 ///
@@ -38,10 +38,16 @@ pub struct Kinetics {
 
 impl Kinetics {
     /// Immediate onset, never clears (chronic / standing).
-    pub const CHRONIC: Kinetics = Kinetics { onset_minutes: 0, half_life_minutes: 0 };
+    pub const CHRONIC: Kinetics = Kinetics {
+        onset_minutes: 0,
+        half_life_minutes: 0,
+    };
 
     pub fn new(onset_minutes: u32, half_life_minutes: u32) -> Self {
-        Self { onset_minutes, half_life_minutes }
+        Self {
+            onset_minutes,
+            half_life_minutes,
+        }
     }
 
     /// Effective magnitude of a `base_milli` contribution `elapsed_minutes` after the event, given a
@@ -310,7 +316,11 @@ pub enum RecoveryBand {
 /// implies a fitness-to-operate judgement. The trajectory must be sampled finely enough to catch the
 /// crossing; a load still above threshold at the last sample is [`RecoveryBand::Extended`].
 pub fn recovery_band(points: &[TrajectoryPoint]) -> Option<RecoveryBand> {
-    let peak_idx = points.iter().enumerate().max_by_key(|(_, p)| p.net_milli).map(|(i, _)| i)?;
+    let peak_idx = points
+        .iter()
+        .enumerate()
+        .max_by_key(|(_, p)| p.net_milli)
+        .map(|(i, _)| i)?;
     let peak = points[peak_idx].net_milli;
     if peak == 0 {
         return None; // nothing adverse to recover from
@@ -335,7 +345,9 @@ mod tests {
     use crate::anatomy::{EvidenceTier, FactorKind};
 
     fn minutes_over(hours_end: i64, step_min: i64) -> Vec<i64> {
-        (0..=(hours_end * 60 / step_min)).map(|i| i * step_min).collect()
+        (0..=(hours_end * 60 / step_min))
+            .map(|i| i * step_min)
+            .collect()
     }
 
     #[test]
@@ -374,14 +386,16 @@ mod tests {
             EvidenceTier::Mechanistic,
             300,
         );
-        let tl = Timeline::new().with_event(
-            FactorEvent::new(beer, 0).with_default_kinetics(Kinetics::new(30, 240)),
-        );
+        let tl = Timeline::new()
+            .with_event(FactorEvent::new(beer, 0).with_default_kinetics(Kinetics::new(30, 240)));
         // At peak the snapshot has one loaded factor; far in the future it has cleared away.
         let at_peak = tl.snapshot_at(30);
         assert_eq!(at_peak.len(), 1);
         assert!(at_peak[0].targets[0].weight_milli > 0);
-        assert!(tl.snapshot_at(100_000).is_empty(), "fully-cleared event drops out of the snapshot");
+        assert!(
+            tl.snapshot_at(100_000).is_empty(),
+            "fully-cleared event drops out of the snapshot"
+        );
     }
 
     #[test]
@@ -392,8 +406,9 @@ mod tests {
             EvidenceTier::Mechanistic,
             300,
         );
-        let base = Timeline::new()
-            .with_event(FactorEvent::new(sweat.clone(), 0).with_default_kinetics(Kinetics::CHRONIC));
+        let base = Timeline::new().with_event(
+            FactorEvent::new(sweat.clone(), 0).with_default_kinetics(Kinetics::CHRONIC),
+        );
         let hot = base.clone().with_environment(EnvironmentModulator {
             label: "heatwave".into(),
             from_minute: 0,
@@ -402,8 +417,18 @@ mod tests {
             target_effect: Some(Effect::Adverse),
             scale_pct: 150,
         });
-        let cool_net = base.burden_at(60).into_iter().find(|b| b.system_id == "urinary").unwrap().net_milli;
-        let hot_net = hot.burden_at(60).into_iter().find(|b| b.system_id == "urinary").unwrap().net_milli;
+        let cool_net = base
+            .burden_at(60)
+            .into_iter()
+            .find(|b| b.system_id == "urinary")
+            .unwrap()
+            .net_milli;
+        let hot_net = hot
+            .burden_at(60)
+            .into_iter()
+            .find(|b| b.system_id == "urinary")
+            .unwrap()
+            .net_milli;
         assert_eq!(cool_net, 300);
         assert_eq!(hot_net, 450, "heat amplifies the renal/fluid load by 50%");
     }
@@ -423,22 +448,32 @@ mod tests {
             .with_system_kinetics("urinary", Kinetics::new(60, 180)); // fluid turns over faster
 
         // Rehydration intervention 2h in: supportive on the renal/urinary system only.
-        let water = Factor::new("act:water-electrolytes", FactorKind::Lifestyle, "water + electrolytes")
-            .targeting("urinary", Effect::Supportive, EvidenceTier::Mechanistic, 600);
+        let water = Factor::new(
+            "act:water-electrolytes",
+            FactorKind::Lifestyle,
+            "water + electrolytes",
+        )
+        .targeting(
+            "urinary",
+            Effect::Supportive,
+            EvidenceTier::Mechanistic,
+            600,
+        );
         let water_event =
             FactorEvent::new(water, 120).with_default_kinetics(Kinetics::new(20, 240));
 
         // A week-long heatwave amplifies the renal fluid load (worse dehydration in the heat).
-        let tl = Timeline::new().with_event(beer_event).with_event(water_event).with_environment(
-            EnvironmentModulator {
+        let tl = Timeline::new()
+            .with_event(beer_event)
+            .with_event(water_event)
+            .with_environment(EnvironmentModulator {
                 label: "summer heatwave".into(),
                 from_minute: 0,
                 to_minute: 7 * 24 * 60,
                 target_system: Some("urinary".into()),
                 target_effect: Some(Effect::Adverse),
                 scale_pct: 140,
-            },
-        );
+            });
 
         let samples = minutes_over(48, 15); // 48h, every 15 min
         let renal = tl.system_trajectory("urinary", &samples);
@@ -448,22 +483,44 @@ mod tests {
         let hepatic_band = recovery_band(&hepatic).unwrap();
 
         // Renal recovers within hours (water offsets it); hepatic takes longer (no offset).
-        assert_eq!(renal_band, RecoveryBand::Hours, "rehydration bends the renal curve down fast");
-        assert_ne!(hepatic_band, RecoveryBand::Hours, "alcohol clearance is not sped by water");
+        assert_eq!(
+            renal_band,
+            RecoveryBand::Hours,
+            "rehydration bends the renal curve down fast"
+        );
+        assert_ne!(
+            hepatic_band,
+            RecoveryBand::Hours,
+            "alcohol clearance is not sped by water"
+        );
 
         // Concretely: by 12h the renal net is near baseline while the hepatic net is still loaded.
-        let at_12h = |pts: &[TrajectoryPoint]| pts.iter().find(|p| p.minute == 12 * 60).unwrap().net_milli;
+        let at_12h =
+            |pts: &[TrajectoryPoint]| pts.iter().find(|p| p.minute == 12 * 60).unwrap().net_milli;
         let renal_12h = at_12h(&renal);
         let hepatic_12h = at_12h(&hepatic);
         assert!(renal_12h < 60, "renal recovered by 12h: {renal_12h}");
-        assert!(hepatic_12h > renal_12h, "hepatic still more loaded than renal at 12h: {hepatic_12h} vs {renal_12h}");
+        assert!(
+            hepatic_12h > renal_12h,
+            "hepatic still more loaded than renal at 12h: {hepatic_12h} vs {renal_12h}"
+        );
     }
 
     #[test]
     fn recovery_band_none_when_no_adverse_load() {
         let pts = vec![
-            TrajectoryPoint { minute: 0, net_milli: 0, adverse_milli: 0, supportive_milli: 0 },
-            TrajectoryPoint { minute: 60, net_milli: 0, adverse_milli: 0, supportive_milli: 0 },
+            TrajectoryPoint {
+                minute: 0,
+                net_milli: 0,
+                adverse_milli: 0,
+                supportive_milli: 0,
+            },
+            TrajectoryPoint {
+                minute: 60,
+                net_milli: 0,
+                adverse_milli: 0,
+                supportive_milli: 0,
+            },
         ];
         assert!(recovery_band(&pts).is_none());
     }

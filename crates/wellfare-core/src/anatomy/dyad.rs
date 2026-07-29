@@ -337,7 +337,9 @@ mod tests {
         MaternalFetalDyad {
             maternal: MaternalBody {
                 principal: PrincipalRef::new("did:wf:mother"),
-                state: PhysiologicalState::Reproductive(ReproductiveState::Pregnant(Trimester::Second)),
+                state: PhysiologicalState::Reproductive(ReproductiveState::Pregnant(
+                    Trimester::Second,
+                )),
             },
             child: EmergingChild {
                 pairwise_did: "did:wf:child-pairwise-1".into(),
@@ -380,7 +382,10 @@ mod tests {
         d.child.parentage = Parentage {
             ovum_source: Progenitor::Donor,
             sperm_source: Progenitor::Donor,
-            intended_parents: vec![PrincipalRef::new("did:wf:parent-a"), PrincipalRef::new("did:wf:parent-b")],
+            intended_parents: vec![
+                PrincipalRef::new("did:wf:parent-a"),
+                PrincipalRef::new("did:wf:parent-b"),
+            ],
         };
         assert_eq!(d.validate(), Ok(()));
         // Guardian during gestation is the one carrying — the surrogate — not the intended parents.
@@ -454,10 +459,16 @@ mod tests {
     fn considerations_are_structural_science_and_rights_proposals_never_determinations() {
         let d = dyad();
         let cons = d.considerations();
-        assert!(cons.iter().all(|c| c.epistemic_status == EpistemicStatus::Hypothesis));
+        assert!(
+            cons.iter()
+                .all(|c| c.epistemic_status == EpistemicStatus::Hypothesis)
+        );
         assert!(cons.iter().any(|c| c.kind == ConsiderationKind::Science));
         assert!(cons.iter().any(|c| c.kind == ConsiderationKind::Rights));
-        assert!(cons.iter().any(|c| c.kind == ConsiderationKind::CurationDeferred));
+        assert!(
+            cons.iter()
+                .any(|c| c.kind == ConsiderationKind::CurationDeferred)
+        );
     }
 
     #[test]

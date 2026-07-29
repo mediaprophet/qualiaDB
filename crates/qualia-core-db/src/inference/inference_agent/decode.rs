@@ -93,7 +93,7 @@ impl LocalLlmAgent {
                         vec![prov_hash],
                         0,
                         None,
-                    )
+                    );
                 }
             };
             let prompt_owned = prompt.to_string();
@@ -232,7 +232,7 @@ impl LocalLlmAgent {
                         .map(|m| GgufTokenizer::from_gguf(m))
                         .unwrap_or_default()
                 };
-                // Sibling `.q42.cbor-ld` helper (convert-time stop set / chat metadata).
+                // Sibling canonical `.q42` metadata (convert-time stop set / chat metadata).
                 apply_model_helper_stops(&model_path, &mut tok);
 
                 let tensor_idx = engine.tensor_index_cache.clone().or_else(|| {
@@ -681,29 +681,75 @@ impl LocalLlmAgent {
                                 bool,
                             ) = (None, false);
 
-                            if resident_hit.is_none() && !resident_hidden_ok {
-                                // Decode-profiler: time the 32-layer forward (legacy path).
-                                let t_fwd = std::time::Instant::now();
-                                let _layers = engine.dispatch_transformer_forward(
+                            // CUDA mega-pass: attempt single-fence all-layer forward.
+                            // Returns Some(token_id) when fully done (including logits).
+                            // Returns Some(u32::MAX) when forward is done but logits projection
+                            // is still needed (hidden state has been read back into emb_buf).
+                            // Returns None to fall back to per-layer path.
+                            #[cfg(all(not(target_arch = "wasm32"), feature = "cuda"))]
+                            let mega_token: Option<u32> = if resident_hit.is_none() && !resident_hidden_ok {
+                                engine.try_cuda_mega_pass_decode(
                                     idx,
                                     &mut emb_buf[..emb_dim],
                                     emb_dim,
-                                    &mut scratch_a,
-                                    &mut scratch_b,
                                     token_idx,
-                                    TEST_TRANSFORMER_LAYER_CAP,
-                                );
-                                // Final output_norm before the vocab projection — REQUIRED on all
-                                // targets.
-                                let _ = engine.apply_output_norm_inplace(
-                                    idx,
-                                    &mut emb_buf[..emb_dim],
-                                    emb_dim,
-                                );
-                                crate::llm_bench::add_decode_forward_ns(
-                                    t_fwd.elapsed().as_nanos() as u64
-                                );
+                                )
+                            } else {
+                                None
+                            };
+                            #[cfg(any(target_arch = "wasm32", not(feature = "cuda")))]
+                            let mega_token: Option<u32> = None;
+
+                            // mega_forward_done = mega-pass completed the 32-layer forward
+                            // (either fully or just the forward — sentinel u32::MAX means
+                            // forward done but logits still needed).
+                            let mega_forward_done = mega_token.is_some();
+                            let mega_full_token = mega_token.filter(|&t| t != u32::MAX);
+                            #[cfg(all(not(target_arch = "wasm32"), feature = "cuda"))]
+                            {
+                                if mega_forward_done {
+                                    crate::llm_bench::record_cuda_mega_hit();
+                                } else if matches!(
+                                    std::env::var("QUALIA_LLM_CUDA_DECODE").ok().as_deref(),
+                                    Some("1") | Some("true") | Some("on")
+                                ) {
+                                    crate::llm_bench::record_cuda_mega_fallback();
+                                }
                             }
+
+                            if resident_hit.is_none() && !resident_hidden_ok {
+                                if mega_forward_done {
+                                    crate::llm_bench::add_decode_forward_ns(0);
+                                    // Skip forward — mega-pass did it. If mega_full_token is
+                                    // Some, logits are also done. If None (sentinel), logits
+                                    // projection still runs below.
+                                } else {
+                                    // Decode-profiler: time the 32-layer forward (legacy path).
+                                    let t_fwd = std::time::Instant::now();
+                                    let _layers = engine.dispatch_transformer_forward(
+                                        idx,
+                                        &mut emb_buf[..emb_dim],
+                                        emb_dim,
+                                        &mut scratch_a,
+                                        &mut scratch_b,
+                                        token_idx,
+                                        TEST_TRANSFORMER_LAYER_CAP,
+                                    );
+                                    let _ = engine.apply_output_norm_inplace(
+                                        idx,
+                                        &mut emb_buf[..emb_dim],
+                                        emb_dim,
+                                    );
+                                    crate::llm_bench::add_decode_forward_ns(
+                                        t_fwd.elapsed().as_nanos() as u64
+                                    );
+                                }
+                            }
+                            // If mega-pass produced a full token, use it directly and skip projection.
+                            // mega_full_token is None when the sentinel was returned (forward done,
+                            // logits still needed) — in that case the output projection runs normally.
+                            let mega_pass_done = mega_full_token.is_some();
+                            let mega_pass_tok = mega_full_token.unwrap_or(0) as usize;
                             // Decode-profiler: time the output projection (argmax / top-k).
                             let t_out = std::time::Instant::now();
                             // W2: exact sampling — read back the FULL logit vector for this token and
@@ -771,7 +817,10 @@ impl LocalLlmAgent {
                             } else {
                                 None
                             };
-                            let out_sel = if let Some(sel) = sampled {
+                            let out_sel = if mega_pass_done {
+                                crate::llm_bench::add_decode_output_ns(0);
+                                (mega_pass_tok, 0.0f32)
+                            } else if let Some(sel) = sampled {
                                 crate::llm_bench::record_sampled_token();
                                 sel
                             } else if let Some(item) = topk_hit {
@@ -1024,8 +1073,9 @@ impl LocalLlmAgent {
 
             drain_tokens();
 
-            let (text, tokens, semantic_quin, sieve_failed) =
-                done_rx.recv().unwrap_or_else(|_| (String::new(), 0, None, false));
+            let (text, tokens, semantic_quin, sieve_failed) = done_rx
+                .recv()
+                .unwrap_or_else(|_| (String::new(), 0, None, false));
             let mut prov = vec![prov_hash];
             if prov_hash == 0 {
                 prov.push(q_hash("qualia:grounded"));
@@ -1055,7 +1105,7 @@ impl LocalLlmAgent {
                         vec![prov_hash],
                         0,
                         None,
-                    )
+                    );
                 }
             };
 
@@ -1091,22 +1141,6 @@ impl LocalLlmAgent {
                 }
             };
 
-            // Fixed-size types keep the hot-path allocation-free in the ring buffer.
-            #[derive(Clone, Copy)]
-            struct LogitSummary {
-                _top_id: u32,
-                anomaly: u8,
-            }
-            #[derive(Clone)]
-            enum LlmMsg {
-                Logit(LogitSummary),
-                Eos,
-            }
-            #[derive(Clone)]
-            enum SentMsg {
-                DenyRollback,
-            }
-
             // Move the (optional) LoRA adapter into the inference thread.
             let lora_for_thread = lora_active_adapter;
 
@@ -1140,17 +1174,16 @@ impl LocalLlmAgent {
                 } else {
                     None
                 };
-                let mut tok = if let (Some(qi), Some(m)) =
-                    (p64_index.as_ref(), engine.gguf_mmap.as_ref())
-                {
-                    GgufTokenizer::from_p64_section(qi.tokenizer_bytes(m)).unwrap_or_default()
-                } else {
-                    engine
-                        .gguf_mmap
-                        .as_ref()
-                        .map(|m| GgufTokenizer::from_gguf(m))
-                        .unwrap_or_default()
-                };
+                let mut tok =
+                    if let (Some(qi), Some(m)) = (p64_index.as_ref(), engine.gguf_mmap.as_ref()) {
+                        GgufTokenizer::from_p64_section(qi.tokenizer_bytes(m)).unwrap_or_default()
+                    } else {
+                        engine
+                            .gguf_mmap
+                            .as_ref()
+                            .map(|m| GgufTokenizer::from_gguf(m))
+                            .unwrap_or_default()
+                    };
                 apply_model_helper_stops(&model_path, &mut tok);
 
                 let tensor_idx = if let Some(qi) = p64_index {
@@ -1330,47 +1363,92 @@ impl LocalLlmAgent {
                     let (top_i, top_v) = if hidden_ok > 0 {
                         if let Some(idx) = tensor_idx.as_ref() {
                             let token_idx = ctx.len().saturating_sub(1) as u32;
-                            let _layers = engine.dispatch_transformer_forward(
+                            // CUDA mega-pass: attempt single-fence all-layer forward.
+                            // Returns Some(u32::MAX) sentinel when forward is done but logits
+                            // still needed (hidden state read back into emb_buf).
+                            #[cfg(all(not(target_arch = "wasm32"), feature = "cuda"))]
+                            let mega_token: Option<u32> = engine.try_cuda_mega_pass_decode(
                                 idx,
                                 &mut emb_buf[..emb_dim],
                                 emb_dim,
-                                &mut scratch_a,
-                                &mut scratch_b,
                                 token_idx,
-                                TEST_TRANSFORMER_LAYER_CAP,
                             );
-                            // Final output_norm before the vocab projection — REQUIRED on all targets.
-                            let _ = engine.apply_output_norm_inplace(
-                                idx,
-                                &mut emb_buf[..emb_dim],
-                                emb_dim,
-                            );
-                            let sieve_mask = sieve.as_ref().map(|s| s.current_mask());
-                            if let Some(argmax) = engine.dispatch_output_argmax_chunked(
-                                idx,
-                                &emb_buf[..emb_dim],
-                                emb_dim,
-                                &mut scratch_a[..],
-                                TEST_VOCAB_CHUNK_CAP,
-                                sieve_mask,
-                            ) {
-                                if argmax.max_logit > f32::NEG_INFINITY {
-                                    (argmax.best_token_id as usize, argmax.max_logit)
+                            #[cfg(any(target_arch = "wasm32", not(feature = "cuda")))]
+                            let mega_token: Option<u32> = None;
+
+                            if let Some(mt) = mega_token.filter(|&t| t != u32::MAX) {
+                                (mt as usize, 0.0f32)
+                            } else if mega_token.is_some() {
+                                // Sentinel: forward done, logits needed.
+                                let sieve_mask = sieve.as_ref().map(|s| s.current_mask());
+                                if let Some(argmax) = engine.dispatch_output_argmax_chunked(
+                                    idx,
+                                    &emb_buf[..emb_dim],
+                                    emb_dim,
+                                    &mut scratch_a[..],
+                                    TEST_VOCAB_CHUNK_CAP,
+                                    sieve_mask,
+                                ) {
+                                    if argmax.max_logit > f32::NEG_INFINITY {
+                                        (argmax.best_token_id as usize, argmax.max_logit)
+                                    } else {
+                                        sieve_failed = true;
+                                        (0usize, f32::NEG_INFINITY)
+                                    }
                                 } else {
-                                    sieve_failed = true;
-                                    (0usize, f32::NEG_INFINITY)
+                                    emb_buf[..emb_dim].iter().enumerate().fold(
+                                        (0usize, f32::NEG_INFINITY),
+                                        |(bi, bv), (i, &v)| {
+                                            if v > bv {
+                                                (i, v)
+                                            } else {
+                                                (bi, bv)
+                                            }
+                                        },
+                                    )
                                 }
                             } else {
-                                emb_buf[..emb_dim].iter().enumerate().fold(
-                                    (0usize, f32::NEG_INFINITY),
-                                    |(bi, bv), (i, &v)| {
-                                        if v > bv {
-                                            (i, v)
-                                        } else {
-                                            (bi, bv)
-                                        }
-                                    },
-                                )
+                                let _layers = engine.dispatch_transformer_forward(
+                                    idx,
+                                    &mut emb_buf[..emb_dim],
+                                    emb_dim,
+                                    &mut scratch_a,
+                                    &mut scratch_b,
+                                    token_idx,
+                                    TEST_TRANSFORMER_LAYER_CAP,
+                                );
+                                let _ = engine.apply_output_norm_inplace(
+                                    idx,
+                                    &mut emb_buf[..emb_dim],
+                                    emb_dim,
+                                );
+                                let sieve_mask = sieve.as_ref().map(|s| s.current_mask());
+                                if let Some(argmax) = engine.dispatch_output_argmax_chunked(
+                                    idx,
+                                    &emb_buf[..emb_dim],
+                                    emb_dim,
+                                    &mut scratch_a[..],
+                                    TEST_VOCAB_CHUNK_CAP,
+                                    sieve_mask,
+                                ) {
+                                    if argmax.max_logit > f32::NEG_INFINITY {
+                                        (argmax.best_token_id as usize, argmax.max_logit)
+                                    } else {
+                                        sieve_failed = true;
+                                        (0usize, f32::NEG_INFINITY)
+                                    }
+                                } else {
+                                    emb_buf[..emb_dim].iter().enumerate().fold(
+                                        (0usize, f32::NEG_INFINITY),
+                                        |(bi, bv), (i, &v)| {
+                                            if v > bv {
+                                                (i, v)
+                                            } else {
+                                                (bi, bv)
+                                            }
+                                        },
+                                    )
+                                }
                             }
                         } else {
                             (0usize, 0.0)
@@ -1388,7 +1466,13 @@ impl LocalLlmAgent {
                         );
                         logits.iter().enumerate().fold(
                             (0usize, f32::NEG_INFINITY),
-                            |(bi, bv), (i, &v)| if v > bv { (i, v) } else { (bi, bv) },
+                            |(bi, bv), (i, &v)| {
+                                if v > bv {
+                                    (i, v)
+                                } else {
+                                    (bi, bv)
+                                }
+                            },
                         )
                     };
 
@@ -1436,9 +1520,7 @@ impl LocalLlmAgent {
                             }
                         }
                         let fixed = crate::llm_bench::decode_budget_fixed_tokens();
-                        if out_ids.len() >= gen_budget
-                            || (!fixed && tok.is_stop_token(next))
-                        {
+                        if out_ids.len() >= gen_budget || (!fixed && tok.is_stop_token(next)) {
                             break;
                         }
                     }

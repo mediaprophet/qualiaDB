@@ -64,9 +64,7 @@ pub fn check_individual_rationality(
 ///
 /// Convention: balanced if `sum(payments) == 0` (budget balanced); no deficit
 /// if `sum(payments) >= 0`. Returns `is_balanced = (net_transfer >= 0.0)`.
-pub fn check_budget_balance(
-    payments: &[f64],
-) -> Result<(bool, f64), MechanismError> {
+pub fn check_budget_balance(payments: &[f64]) -> Result<(bool, f64), MechanismError> {
     if payments.is_empty() {
         return Err(MechanismError::InvalidInput);
     }
@@ -191,7 +189,10 @@ pub fn mechanism_report(
     payments: &[f64],
     allocations: &[bool],
 ) -> Result<MechanismReport, MechanismError> {
-    if valuations.is_empty() || valuations.len() != payments.len() || valuations.len() != allocations.len() {
+    if valuations.is_empty()
+        || valuations.len() != payments.len()
+        || valuations.len() != allocations.len()
+    {
         return Err(MechanismError::InvalidInput);
     }
     if valuations.len() > MAX_AGENTS {
@@ -292,11 +293,11 @@ mod tests {
         // type_i=0 (agent 0 reports 10): opponent=15 → agent 0 loses, payment=0
         // type_i=1 (agent 0 reports 20): opponent=15 → agent 0 wins, payment=15
         let val_matrix = [10.0, 20.0, 15.0, 15.0]; // [agent0_type0, agent0_type1, agent1_type0, agent1_type1]
-        // allocation_rule[type_i][type_j] for agent 0:
-        // [0][0]: report 10, opp 15 → lose → false
-        // [0][1]: report 10, opp 15 → lose → false
-        // [1][0]: report 20, opp 15 → win → true
-        // [1][1]: report 20, opp 15 → win → true
+                                                   // allocation_rule[type_i][type_j] for agent 0:
+                                                   // [0][0]: report 10, opp 15 → lose → false
+                                                   // [0][1]: report 10, opp 15 → lose → false
+                                                   // [1][0]: report 20, opp 15 → win → true
+                                                   // [1][1]: report 20, opp 15 → win → true
         let alloc = [false, false, true, true];
         // payment_rule[type_i][type_j] for agent 0:
         // [0][*]: lose → 0

@@ -50,7 +50,9 @@ pub fn WellfairCommunicationsPanel() -> Element {
     let mut loaded = use_signal(|| false);
 
     use_effect(move || {
-        if loaded() { return; }
+        if loaded() {
+            return;
+        }
         loaded.set(true);
         reload();
     });
@@ -78,12 +80,13 @@ pub fn WellfairCommunicationsPanel() -> Element {
                 ".comm-card:hover {{ transform: translateY(-2px); box-shadow: 0 8px 24px rgba(43, 108, 176, 0.12); border-color: rgba(43, 108, 176, 0.3) !important; }}"
             }
 
+            super::shared::DomainChrome { domain: "Care", chip: "Commons · live-share · not chat", show_memory: false }
             div {
                 style: "display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid rgba(43, 108, 176, 0.1); padding-bottom: 1rem; margin-bottom: 1.5rem;",
                 div {
-                    h2 { 
-                        style: "margin: 0 0 0.4rem; font-size: 1.4rem; font-weight: 600; letter-spacing: -0.01em; color: #2b6cb0;", 
-                        "Live Share Consent" 
+                    h2 {
+                        style: "margin: 0 0 0.4rem; font-size: 1.4rem; font-weight: 600; letter-spacing: -0.01em; color: #2b6cb0;",
+                        "Live Share Consent"
                     }
                     p {
                         style: "margin: 0; font-size: 0.85rem; color: #718096; max-width: 500px;",
@@ -121,10 +124,10 @@ pub fn WellfairCommunicationsPanel() -> Element {
 
             if ui().requests.is_empty() {
                 div {
-                    style: "display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 4rem 2rem; background: rgba(247, 250, 252, 0.5); border-radius: 12px; border: 1px dashed rgba(203, 213, 224, 0.8);",
+                    style: "display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 4rem 2rem; background: color-mix(in srgb, var(--qualia-surface) 82%, transparent); border-radius: 12px; border: 1px dashed var(--qualia-border);",
                     div { style: "font-size: 3rem; margin-bottom: 1rem; opacity: 0.5;", "📬" }
                     p {
-                        style: "font-size: 0.95rem; color: #718096; margin: 0; text-align: center; max-width: 400px;",
+                        style: "font-size: 0.95rem; color: var(--qualia-text-muted); margin: 0; text-align: center; max-width: 400px;",
                         "Inbox zero. When your phone companion asks for a live section preview, it will appear here for your explicit authorization."
                     }
                 }
@@ -139,17 +142,17 @@ pub fn WellfairCommunicationsPanel() -> Element {
                                 padding: 1.25rem;
                                 border: 1px solid rgba(226, 232, 240, 0.8);
                                 border-radius: 12px;
-                                background: #ffffff;
+                                background: color-mix(in srgb, var(--qualia-surface) 96%, var(--qualia-bg));
                                 animation: slide-up 0.4s ease-out forwards;
                                 animation-delay: {}ms;
                                 opacity: 0;
                             ", i * 100),
-                            
+
                             div {
                                 style: "display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;",
                                 div {
-                                    p { style: "margin: 0 0 0.25rem; font-size: 1.05rem; font-weight: 600; color: #2d3748;", "{req.purpose}" }
-                                    p { style: "margin: 0; font-size: 0.75rem; font-family: monospace; color: #a0aec0;", "REQ_ID: {req.id}" }
+                                    p { style: "margin: 0 0 0.25rem; font-size: 1.05rem; font-weight: 600; color: var(--qualia-text);", "{req.purpose}" }
+                                    p { style: "margin: 0; font-size: 0.75rem; font-family: monospace; color: var(--qualia-text-muted);", "REQ_ID: {req.id}" }
                                 }
                                 div {
                                     style: "display: flex; gap: 0.5rem; font-size: 0.75rem; font-weight: 500;",
@@ -163,10 +166,10 @@ pub fn WellfairCommunicationsPanel() -> Element {
                                     }
                                 }
                             }
-                            
+
                             div {
-                                style: "padding: 1rem; background: rgba(247, 250, 252, 0.8); border-radius: 8px; margin-bottom: 1.25rem; border: 1px solid rgba(226, 232, 240, 0.5);",
-                                p { style: "margin: 0 0 0.5rem; font-size: 0.8rem; font-weight: 600; color: #4a5568;", "Requested Projections" }
+                                style: "padding: 1rem; background: color-mix(in srgb, var(--qualia-bg) 62%, transparent); border-radius: 8px; margin-bottom: 1.25rem; border: 1px solid var(--qualia-border);",
+                                p { style: "margin: 0 0 0.5rem; font-size: 0.8rem; font-weight: 600; color: var(--qualia-text);", "Requested Projections" }
                                 div {
                                     style: "display: flex; flex-wrap: wrap; gap: 0.75rem;",
                                     for kind in req.requested_kinds.clone() {
@@ -184,7 +187,7 @@ pub fn WellfairCommunicationsPanel() -> Element {
                                                     style: if checked {
                                                         "display: flex; align-items: center; gap: 0.4rem; padding: 0.4rem 0.8rem; background: rgba(43, 108, 176, 0.08); border: 1px solid rgba(43, 108, 176, 0.3); border-radius: 6px; font-size: 0.8rem; color: #2b6cb0; cursor: pointer; transition: all 0.2s; font-weight: 500;"
                                                     } else {
-                                                        "display: flex; align-items: center; gap: 0.4rem; padding: 0.4rem 0.8rem; background: #fff; border: 1px solid #cbd5e0; border-radius: 6px; font-size: 0.8rem; color: #718096; cursor: pointer; transition: all 0.2s;"
+                                                        "display: flex; align-items: center; gap: 0.4rem; padding: 0.4rem 0.8rem; background: var(--qualia-surface); border: 1px solid var(--qualia-border); border-radius: 6px; font-size: 0.8rem; color: var(--qualia-text-muted); cursor: pointer; transition: all 0.2s;"
                                                     },
                                                     input {
                                                         r#type: "checkbox",
@@ -212,7 +215,7 @@ pub fn WellfairCommunicationsPanel() -> Element {
                                     }
                                 }
                             }
-                            
+
                             div {
                                 style: "display: flex; justify-content: space-between; align-items: center; gap: 1rem; border-top: 1px dashed rgba(226, 232, 240, 0.8); padding-top: 1rem;",
                                 div {
@@ -221,7 +224,7 @@ pub fn WellfairCommunicationsPanel() -> Element {
                                         value: "{ui().deny_reason}",
                                         placeholder: "Optional denial reason (e.g., 'Not right now')",
                                         oninput: move |e| ui.write().deny_reason = e.value(),
-                                        style: "flex: 1; max-width: 300px; padding: 0.5rem 0.75rem; border-radius: 8px; border: 1px solid #cbd5e0; font-size: 0.8rem; background: #fff; outline: none;",
+                                        style: "flex: 1; max-width: 300px; padding: 0.5rem 0.75rem; border-radius: 8px; border: 1px solid var(--qualia-border); color: var(--qualia-text); font-size: 0.8rem; background: var(--qualia-bg); outline: none;",
                                     }
                                 }
                                 div {

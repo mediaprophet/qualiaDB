@@ -1,6 +1,5 @@
 use super::*;
 
-
 /// Structural analyzer for structural engineering analysis
 pub struct StructuralAnalyzer {
     pub(super) finite_element_solver: FiniteElementSolver,
@@ -1349,4 +1348,3 @@ impl ReportGenerator {
         }
     }
 }
-

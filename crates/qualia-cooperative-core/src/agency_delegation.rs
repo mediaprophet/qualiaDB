@@ -279,12 +279,10 @@ pub fn delegation_permits(
     if request.is_judgement() && is_consequential(domains, &request.domain) {
         match &request.provenance {
             Some(p) if p.epistemic_horizon.is_some() => {}
-            _ => {
-                return AccessDecision::Deny(
-                    "consequential judgement requires declared provenance with an epistemic horizon"
-                        .into(),
-                )
-            }
+            _ => return AccessDecision::Deny(
+                "consequential judgement requires declared provenance with an epistemic horizon"
+                    .into(),
+            ),
         }
     }
     // Jurisdiction, if both are specified, must match (the backpacker case: a LocalTemporary
@@ -329,7 +327,9 @@ mod tests {
     fn permits_within_scope_when_valid_and_consented() {
         let tax = agency_domain_taxonomy();
         let d = granted(dom::PERSONAL_WELFARE);
-        assert!(delegation_permits(&d, &tax, &read_req(dom::PERSONAL_WELFARE), &ctx(200)).is_permit());
+        assert!(
+            delegation_permits(&d, &tax, &read_req(dom::PERSONAL_WELFARE), &ctx(200)).is_permit()
+        );
     }
 
     #[test]
@@ -371,8 +371,14 @@ mod tests {
         let mut d = granted(dom::MEDICAL);
         // Crisis: needs an ER-admission event AND 2 signed physician attestations.
         d.trigger = Some(Trigger::All(vec![
-            Trigger::VerifiableEvent { event_id: "er".into() },
-            Trigger::HumanConsensus { required_capacity: Some("physician".into()), m: 2, n: 5 },
+            Trigger::VerifiableEvent {
+                event_id: "er".into(),
+            },
+            Trigger::HumanConsensus {
+                required_capacity: Some("physician".into()),
+                m: 2,
+                n: 5,
+            },
         ]));
         // A read on a consequential domain still needs the trigger active.
         let req = read_req(dom::MEDICAL);
@@ -399,7 +405,9 @@ mod tests {
 
         // Only an explicit selfhood grant permits it.
         let mut explicit = d.clone();
-        explicit.scope.push(("selfhood_grant".into(), "explicit".into()));
+        explicit
+            .scope
+            .push(("selfhood_grant".into(), "explicit".into()));
         assert!(delegation_permits(&explicit, &tax, &req, &ctx(200)).is_permit());
     }
 
@@ -420,8 +428,9 @@ mod tests {
 
         // Provenance WITH a horizon is permitted.
         let mut with_horizon = decide.clone();
-        with_horizon.provenance =
-            Some(JudgementProvenance::new(AgentRef::natural_person("did:dr")).with_horizon("merkle:abc"));
+        with_horizon.provenance = Some(
+            JudgementProvenance::new(AgentRef::natural_person("did:dr")).with_horizon("merkle:abc"),
+        );
         assert!(delegation_permits(&d, &tax, &with_horizon, &ctx(200)).is_permit());
     }
 
@@ -458,11 +467,17 @@ mod tests {
         let mut d = granted(dom::MEDICAL);
         d.agent_dids = vec!["did:wf:carer".into()];
         d.scope = vec![("data_class".into(), "medication".into())];
-        d.trigger = Some(Trigger::TemporalWindow { from_unix: 10, to_unix: Some(20) });
+        d.trigger = Some(Trigger::TemporalWindow {
+            from_unix: 10,
+            to_unix: Some(20),
+        });
         d.transfer_schedule = vec![TransferStage {
             domain: dom::MEDICAL.into(),
             to_stage: ControlStage::CoSigned,
-            trigger: Trigger::TemporalWindow { from_unix: 1_000, to_unix: None },
+            trigger: Trigger::TemporalWindow {
+                from_unix: 1_000,
+                to_unix: None,
+            },
         }];
         let json = agency_delegation_full_json(&d);
         let back = parse_agency_delegation(&json).expect("reconstructs");
@@ -478,12 +493,18 @@ mod tests {
             TransferStage {
                 domain: dom::COMMUNICATION.into(),
                 to_stage: ControlStage::CoSigned,
-                trigger: Trigger::TemporalWindow { from_unix: 1_000, to_unix: None },
+                trigger: Trigger::TemporalWindow {
+                    from_unix: 1_000,
+                    to_unix: None,
+                },
             },
             TransferStage {
                 domain: dom::COMMUNICATION.into(),
                 to_stage: ControlStage::PrincipalSole,
-                trigger: Trigger::TemporalWindow { from_unix: 2_000, to_unix: None },
+                trigger: Trigger::TemporalWindow {
+                    from_unix: 2_000,
+                    to_unix: None,
+                },
             },
         ];
         // Monotonic toward principal autonomy.

@@ -22,16 +22,26 @@ jobs:
     name: Desktop (Windows Webizen)
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
 
       - name: Install Tauri CLI
         run: cargo install tauri-cli --version "^2" --locked
 
+      - name: Install Dioxus CLI
+        run: cargo install dioxus-cli --version 0.8.0-alpha.0 --locked
+
+      # Match crates/webizen-studio wasm-bindgen pin (0.2.125). Prevents mac/linux
+      # dx failures: failed to find `__wbindgen_externref_table_dealloc`.
+      - name: Install matching wasm-bindgen-cli
+        run: cargo install wasm-bindgen-cli --version 0.2.125 --locked --force
+
       - name: Cache Cargo
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/.cargo/registry
@@ -40,9 +50,10 @@ jobs:
           key: ${{ runner.os }}-cargo-desktop-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: ${{ runner.os }}-cargo-desktop-
 
-      - name: Verify packaged webizen-studio dist
+      - name: Build and verify packaged webizen-studio dist
         shell: pwsh
         run: |
+          .\scripts\build_frontend.ps1
           $dist = "crates/webizen-studio/dist"
           $portal = "crates/webizen-desktop/static/portal"
           if (-not (Test-Path "$dist/index.html")) {
@@ -60,9 +71,14 @@ jobs:
           if (-not (Test-Path "$portal/design-studio.html")) {
             throw "$portal/design-studio.html missing"
           }
+          $expectedRevision = (git rev-parse HEAD).Trim()
+          $builtRevision = (Get-Content "$dist/source-revision.txt" -Raw).Trim()
+          if ($builtRevision -ne $expectedRevision) {
+            throw "Frontend revision $builtRevision does not match source revision $expectedRevision"
+          }
           Get-ChildItem $dist, "$dist/assets"
 
-      - name: Verify updater signing key
+      - name: Normalize updater signing key
         shell: pwsh
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
@@ -70,23 +86,93 @@ jobs:
           if ([string]::IsNullOrWhiteSpace($env:TAURI_SIGNING_PRIVATE_KEY)) {
             throw "TAURI_SIGNING_PRIVATE_KEY secret is required to produce signed updater artifacts"
           }
+          # Tauri expects TAURI_SIGNING_PRIVATE_KEY = base64(UTF-8 private key text).
+          # Accept either that form or a raw minisign key body (starts with "untrusted comment").
+          $raw = $env:TAURI_SIGNING_PRIVATE_KEY
+          $normalized = $null
+          if ($raw -match 'untrusted comment') {
+            $bytes = [System.Text.Encoding]::UTF8.GetBytes($raw)
+            $normalized = [Convert]::ToBase64String($bytes)
+            Write-Host "Normalized raw minisign key text → base64 for Tauri"
+          } else {
+            $compact = ($raw -replace '[\r\n\s]', '')
+            try {
+              $decoded = [Convert]::FromBase64String($compact)
+              $text = [System.Text.Encoding]::UTF8.GetString($decoded)
+              # Round-trip: if UTF-8 decode produced replacement chars / invalid, fail.
+              $round = [System.Text.Encoding]::UTF8.GetBytes($text)
+              if ($decoded.Length -ne $round.Length -and -not ($text -match 'untrusted comment|RWT')) {
+                # still accept if decoded text looks like a key
+              }
+              if ($text.Contains([char]0xFFFD) -and -not ($text -match 'untrusted comment')) {
+                throw "base64 payload is not valid UTF-8 key text"
+              }
+              $normalized = $compact
+              Write-Host "Using secret as base64(UTF-8 key text)"
+            } catch {
+              $msg = "TAURI_SIGNING_PRIVATE_KEY is malformed: $($_.Exception.Message). Generate with: cargo tauri signer generate -w webizen.key then store raw key text or base64(UTF-8 key text) as the secret."
+              throw $msg
+            }
+          }
+          "TAURI_SIGNING_PRIVATE_KEY=$normalized" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      # NSIS is required for `cargo tauri build --bundles nsis` (not preinstalled on windows-latest).
+      - name: Install NSIS
+        shell: pwsh
+        run: |
+          choco install nsis -y --no-progress
+          $nsis = @(
+            "${env:ProgramFiles(x86)}\NSIS",
+            "${env:ProgramFiles}\NSIS"
+          ) | Where-Object { Test-Path $_ } | Select-Object -First 1
+          if (-not $nsis) { throw "NSIS install path not found after chocolatey install" }
+          Add-Content -Path $env:GITHUB_PATH -Value $nsis
+          Write-Host "NSIS at $nsis"
+          & (Join-Path $nsis "makensis.exe") /VERSION
 
       - name: Build installer and signed updater artifacts
         working-directory: crates/webizen-desktop
         shell: pwsh
         env:
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          # TAURI_SIGNING_PRIVATE_KEY comes from GITHUB_ENV after normalize step.
+          # Empty string is fine for unencrypted keys; encrypted keys need the secret set.
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: |
-          $buildLog = cargo tauri build --ci --bundles nsis 2>&1 | Tee-Object -Variable lines
+          # Do NOT use `$x = cargo ... 2>&1 | Tee-Object -Variable ...`.
+          # That PowerShell pipeline swallows native stdout/stderr in Actions and
+          # can report a false exit code. Use cmd redirection so the real log is kept.
+          $log = Join-Path (Get-Location) "tauri-build.log"
+          if (Test-Path $log) { Remove-Item $log -Force }
+          cmd /c "cargo tauri build --ci --bundles nsis > tauri-build.log 2>&1"
           $exitCode = $LASTEXITCODE
-          $lines | Set-Content -Path tauri-build.log
+          if (Test-Path $log) {
+            # Stream full log to the job console (truncate only if enormous).
+            $size = (Get-Item $log).Length
+            if ($size -gt 4MB) {
+              Write-Host "tauri-build.log is $size bytes; showing last 400 lines"
+              Get-Content $log -Tail 400 | Write-Host
+            } else {
+              Get-Content $log | Write-Host
+            }
+          } else {
+            Write-Host "WARNING: tauri-build.log was not created"
+          }
           if ($exitCode -ne 0) {
+            Write-Host "==== cargo tauri build FAILED (exit $exitCode); last 120 lines ===="
+            if (Test-Path $log) { Get-Content $log -Tail 120 | Write-Host }
             throw "cargo tauri build failed with exit code $exitCode"
           }
-          if (Select-String -Path tauri-build.log -Pattern "does not match the public key") {
+          if (Select-String -Path $log -Pattern "does not match the public key" -Quiet) {
             throw "TAURI_SIGNING_PRIVATE_KEY does not match the updater pubkey in tauri.conf.json"
           }
+
+      - name: Upload tauri-build.log on failure
+        if: failure()
+        uses: actions/upload-artifact@v6
+        with:
+          name: tauri-build-log-windows
+          path: crates/webizen-desktop/tauri-build.log
+          if-no-files-found: ignore
 
       - name: Stage desktop bundle
         shell: pwsh
@@ -126,7 +212,7 @@ jobs:
           Get-ChildItem $out, $installerOut, webizen-desktop-windows-x64.zip
 
       - name: Upload desktop artifacts to workflow
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: desktop-windows-artifacts
           path: |
@@ -134,7 +220,7 @@ jobs:
             release-assets/desktop-windows-installer/*
 
       - name: Upload desktop to release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ env.RELEASE_TAG }}
           files: |
@@ -149,20 +235,35 @@ jobs:
     env:
       WGPU_BACKEND: metal
       WGPU_POWER_PREF: high
-      RUSTFLAGS: "-C target-cpu=apple-m1"
+      # Do NOT set RUSTFLAGS at job level: it is inherited by the wasm32
+      # webizen-studio build and breaks wasm-bindgen
+      # (`__wbindgen_externref_table_dealloc` / missing .wasm on mac runners).
+      # Apple Silicon flags are applied only on the native Tauri step below.
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: aarch64-apple-darwin
+          targets: aarch64-apple-darwin, wasm32-unknown-unknown
 
       - name: Install Tauri CLI
         run: cargo install tauri-cli --version "^2" --locked
 
+      - name: Install Dioxus CLI
+        run: cargo install dioxus-cli --version 0.8.0-alpha.0 --locked
+
+      # Match crates/webizen-studio wasm-bindgen pin (0.2.125). Prevents macOS
+      # dx failures: failed to find `__wbindgen_externref_table_dealloc`.
+      - name: Install matching wasm-bindgen-cli
+        run: |
+          export PATH="$HOME/.cargo/bin:$PATH"
+          cargo install wasm-bindgen-cli --version 0.2.125 --locked --force
+          which -a wasm-bindgen
+          wasm-bindgen --version
+
       - name: Cache Cargo
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/.cargo/registry
@@ -171,9 +272,15 @@ jobs:
           key: ${{ runner.os }}-cargo-desktop-metal-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: ${{ runner.os }}-cargo-desktop-metal-
 
-      - name: Verify packaged webizen-studio dist
+      - name: Build and verify packaged webizen-studio dist
         shell: bash
+        env:
+          # Explicitly clear any host-cpu RUSTFLAGS for the wasm frontend.
+          RUSTFLAGS: ""
+          CARGO_TARGET_WASM32_UNKNOWN_UNKNOWN_RUSTFLAGS: ""
         run: |
+          export PATH="$HOME/.cargo/bin:$PATH"
+          bash scripts/build_frontend.sh
           dist="crates/webizen-studio/dist"
           portal="crates/webizen-desktop/static/portal"
           test -f "$dist/index.html"
@@ -181,31 +288,73 @@ jobs:
           find "$dist/assets" -maxdepth 1 -type f -name '*.wasm' | grep -q .
           test -f "$portal/index.html"
           test -f "$portal/design-studio.html"
+          test "$(cat "$dist/source-revision.txt")" = "$(git rev-parse HEAD)"
           ls -lah "$dist" "$dist/assets"
 
-      - name: Verify updater signing key
+      - name: Normalize updater signing key
         shell: bash
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
         run: |
-          if [ -z "$TAURI_SIGNING_PRIVATE_KEY" ]; then
+          set -euo pipefail
+          if [ -z "${TAURI_SIGNING_PRIVATE_KEY:-}" ]; then
             echo "::error::TAURI_SIGNING_PRIVATE_KEY secret is required to produce signed updater artifacts"
             exit 1
           fi
+          # Tauri expects the env var to be base64(UTF-8 private key text).
+          # Accept either already-base64 material or a raw minisign key body.
+          key_file="$RUNNER_TEMP/tauri_signing.key.b64"
+          raw="$TAURI_SIGNING_PRIVATE_KEY"
+          if printf '%s' "$raw" | grep -q 'untrusted comment'; then
+            printf '%s' "$raw" | base64 | tr -d '\n' > "$key_file"
+            echo "Normalized raw minisign key text → base64 for Tauri"
+          else
+            # Strip CR/LF/spaces; validate it base64-decodes to UTF-8 text.
+            compact=$(printf '%s' "$raw" | tr -d '\r\n \t')
+            if decoded=$(printf '%s' "$compact" | base64 --decode 2>/dev/null); then
+              if printf '%s' "$decoded" | iconv -f UTF-8 -t UTF-8 >/dev/null 2>&1; then
+                printf '%s' "$compact" > "$key_file"
+                echo "Using secret as base64(UTF-8 key text)"
+              else
+                echo "::error::TAURI_SIGNING_PRIVATE_KEY base64-decodes to non-UTF-8 bytes (index corruption or binary key)."
+                echo "Generate with: cargo tauri signer generate -w ~/.tauri/webizen.key"
+                echo "Store either the raw key file contents, or base64 of that UTF-8 text, as the secret."
+                exit 1
+              fi
+            else
+              echo "::error::TAURI_SIGNING_PRIVATE_KEY is not valid base64 and does not look like a minisign key."
+              exit 1
+            fi
+          fi
+          echo "TAURI_SIGNING_PRIVATE_KEY=$(cat "$key_file")" >> "$GITHUB_ENV"
 
       - name: Build macOS Metal installer and signed updater artifacts
         working-directory: crates/webizen-desktop
         shell: bash
         env:
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          RUSTFLAGS: "-C target-cpu=apple-m1"
         run: |
           set -o pipefail
           cargo tauri build --ci --target aarch64-apple-darwin --bundles app,dmg 2>&1 | tee tauri-build.log
+          status=${PIPESTATUS[0]}
+          if [ "$status" -ne 0 ]; then
+            echo "==== cargo tauri build FAILED (exit $status); last 120 lines ===="
+            tail -n 120 tauri-build.log || true
+            exit "$status"
+          fi
           if grep -q "does not match the public key" tauri-build.log; then
             echo "::error::TAURI_SIGNING_PRIVATE_KEY does not match the updater pubkey in tauri.conf.json"
             exit 1
           fi
+
+      - name: Upload tauri-build.log on failure (macOS)
+        if: failure()
+        uses: actions/upload-artifact@v6
+        with:
+          name: tauri-build-log-macos
+          path: crates/webizen-desktop/tauri-build.log
+          if-no-files-found: ignore
 
       - name: Stage macOS Metal desktop bundle
         shell: bash
@@ -246,7 +395,7 @@ jobs:
           ls -lah "$out" "$installerOut" webizen-desktop-macos-aarch64-metal.zip
 
       - name: Upload macOS Metal artifacts to workflow
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: desktop-macos-metal-artifacts
           path: |
@@ -254,7 +403,7 @@ jobs:
             release-assets/desktop-macos-metal-installer/*
 
       - name: Upload macOS Metal desktop to release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ env.RELEASE_TAG }}
           files: |
@@ -270,10 +419,10 @@ jobs:
       - build-desktop-windows
       - build-desktop-macos-metal
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Download desktop artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           path: release-assets
 
@@ -287,7 +436,7 @@ jobs:
             -Notes "Webizen Desktop ${{ env.RELEASE_TAG }}"
 
       - name: Upload updater manifest to release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ env.RELEASE_TAG }}
           files: webizen-latest.json

@@ -1,8 +1,8 @@
 use crate::sim::LocalSimulator;
-use qualia_core_db::NQuin;
 use core::f64::consts::FRAC_1_SQRT_2;
+use qualia_core_db::NQuin;
 
-use qualia_core_db::specialized_libs::category_theory::{Object, Morphism, Endomorphism};
+use qualia_core_db::specialized_libs::category_theory::{Endomorphism, Morphism, Object};
 use qualia_core_db::specialized_libs::shared::ZeroHeapMatrix;
 
 /// Quantum State representation (The Object in our Category)
@@ -27,7 +27,7 @@ pub struct GateApplication {
 impl<'a> Morphism<HilbertSpace<'a>, HilbertSpace<'a>> for GateApplication {
     fn apply(&self, state: &mut HilbertSpace<'a>) -> Result<(), &'static str> {
         let bit = 1 << self.target;
-        
+
         if let Some(control) = self.control {
             // CNOT logic
             let control_bit = 1 << control;
@@ -66,7 +66,7 @@ impl<'a> Morphism<HilbertSpace<'a>, HilbertSpace<'a>> for GateApplication {
                 }
             }
         }
-        
+
         Ok(())
     }
 }
@@ -102,8 +102,14 @@ impl LocalSimulator for StateVectorSimulator {
             let operand1 = ((quin.object >> 40) & 0xFFFF) as usize;
             let operand2 = ((quin.object >> 24) & 0xFFFF) as usize;
 
-            let mut space = HilbertSpace { amplitudes: state_vector };
-            let mut morphism = GateApplication { target: operand1, control: None, matrix_2x2: None };
+            let mut space = HilbertSpace {
+                amplitudes: state_vector,
+            };
+            let mut morphism = GateApplication {
+                target: operand1,
+                control: None,
+                matrix_2x2: None,
+            };
 
             match opcode {
                 // OP_X
@@ -157,12 +163,12 @@ impl LocalSimulator for StateVectorSimulator {
         // but since we are `#![no_std]` and pure, we expect a provided PRNG or simple hashing.
         // For demonstration, we simply deterministically pick based on probabilities.
         // In a real simulator, we'd pass in a PRNG state or similar.
-        
+
         // This is a stub for deterministic output to fit zero-alloc requirements
         let mut sum = 0.0;
         let mut cdf = [0.0; 32]; // Small static buffer for small qubits only
         let limit = state_vector.len().min(32);
-        
+
         for i in 0..limit {
             let p = state_vector[i].0 * state_vector[i].0 + state_vector[i].1 * state_vector[i].1;
             sum += p;
@@ -176,7 +182,7 @@ impl LocalSimulator for StateVectorSimulator {
             seed ^= seed >> 7;
             seed ^= seed << 17;
             let pseudo_rand = (seed % 1000) as f64 / 1000.0;
-            
+
             let mut outcome = 0;
             for j in 0..limit {
                 if pseudo_rand <= cdf[j] {

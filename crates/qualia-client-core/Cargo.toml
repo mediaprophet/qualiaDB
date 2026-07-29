@@ -1,6 +1,6 @@
 [package]
 name = "qualia-client-core"
-version = "0.0.23"
+version = "0.0.27"
 edition = "2021"
 
 [dependencies]
@@ -12,6 +12,8 @@ sysinfo = "0.39.3"
 tokio = { version = "1", features = ["full"] }
 reqwest = { version = "0.13", default-features = false, features = ["rustls", "json", "stream", "blocking"] }
 qualia-core-db = { path = "../qualia-core-db", features = ["sanctuary-crypto"] }
+qualia-vision = { path = "../qualia-vision" }
+qualia-audio = { path = "../qualia-audio" }
 qualia-solid-bridge = { path = "../qualia-solid-bridge" }
 wellfare-core = { path = "../wellfare-core" }
 webizen-render = { path = "../webizen-render" }
@@ -27,6 +29,7 @@ sha2 = { version = "0.11", default-features = false }
 hmac = { version = "0.13", default-features = false }
 byteorder = "1.5.0"
 pdf-extract = "0.12"
+regex = "1"
 image = { version = "0.25", default-features = false, features = ["png", "jpeg", "webp", "gif"] }
 sha1 = "0.11"
 url = "2.5"
@@ -49,6 +52,9 @@ imap = "2.4"
 native-tls = "0.2"
 bech32 = "0.12.0"
 scraper = "0.27.0"
+x509-parser = { version = "0.16", features = ["verify"] }
+rustls-pemfile = "2"
+rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"] }
 
 [target.'cfg(windows)'.dependencies]
 winreg = "0.56"

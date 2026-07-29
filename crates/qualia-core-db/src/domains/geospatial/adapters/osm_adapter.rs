@@ -54,7 +54,11 @@ impl OsmAdapter {
             e = bbox.2
         );
 
-        Ok(AdapterHttpRequest::post_form(primary.clone(), query, "OSM Overpass"))
+        Ok(AdapterHttpRequest::post_form(
+            primary.clone(),
+            query,
+            "OSM Overpass",
+        ))
     }
 
     pub fn fetch_region(
@@ -118,15 +122,18 @@ impl OsmAdapter {
 
             let el_iri = format!("https://www.openstreetmap.org/{el_type}/{id}");
             let subject = generate_60bit_token(el_iri.as_bytes());
-            let kind = generate_60bit_token(
-                format!("https://www.openstreetmap.org/{el_type}").as_bytes(),
-            );
+            let kind =
+                generate_60bit_token(format!("https://www.openstreetmap.org/{el_type}").as_bytes());
 
             // rdf:type -> osm element kind (always).
             quins.push(quin(subject, ty, kind));
 
             // dcterms:source -> the element IRI (always).
-            quins.push(quin(subject, source, generate_60bit_token(el_iri.as_bytes())));
+            quins.push(quin(
+                subject,
+                source,
+                generate_60bit_token(el_iri.as_bytes()),
+            ));
 
             // node lat/lon -> WGS84 geo (f64 bits stored as u64).
             if let Some(lat) = el.get("lat").and_then(|v| v.as_f64()) {
@@ -185,7 +192,11 @@ mod tests {
 
         let res2 = adapter.fetch_region((0.0, 0.0, 1.0, 1.0), (0, 0), &registry);
         if let Err(e) = res2 {
-            assert!(!e.contains("Consent denied"), "Failed on consent when it should have been granted: {}", e);
+            assert!(
+                !e.contains("Consent denied"),
+                "Failed on consent when it should have been granted: {}",
+                e
+            );
         }
     }
 
@@ -227,7 +238,9 @@ mod tests {
             ]
         }"#;
 
-        let quins = adapter.parse_features(body).expect("valid JSON should parse");
+        let quins = adapter
+            .parse_features(body)
+            .expect("valid JSON should parse");
 
         // Node emits: rdf:type, source, lat, long, title, amenity tag = 6.
         // Way emits: rdf:type, source, title, waterway tag = 4.
@@ -235,8 +248,7 @@ mod tests {
 
         // Recompute the node's dcterms:title quin and assert it is present.
         let title = generate_60bit_token(b"http://purl.org/dc/terms/title");
-        let node_subject =
-            generate_60bit_token(b"https://www.openstreetmap.org/node/1");
+        let node_subject = generate_60bit_token(b"https://www.openstreetmap.org/node/1");
         let node_name = generate_60bit_token(b"Flinders Street Station");
 
         assert!(

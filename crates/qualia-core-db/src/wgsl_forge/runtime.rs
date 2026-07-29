@@ -25,6 +25,8 @@
 
 use std::path::PathBuf;
 
+#[cfg(feature = "dxc")]
+use super::emit::{compile_hlsl_to_spirv, compile_hlsl_to_spirv_cached};
 use super::execute::{BindingUsage, QualiaCompute, WgpuComputeContext, WgpuPipeline};
 use super::oracle::{
     FftParams, GemmParams, GemvParams, TernaryGemvParams, TopKParams, TERNARY_CODES_PER_WORD,
@@ -48,6 +50,10 @@ pub struct ForgeRuntime {
     /// Stable fingerprint of this adapter/topology, used to key cache lookups.
     /// Computed once at construction from the context's [`HardwareProfile`].
     topology_hash: Option<String>,
+    /// Which shader backend to emit + compile. `Wgsl` is the default; `Hlsl`
+    /// emits HLSL, compiles to SPIR-V via DXC, then feeds the SPIR-V into the
+    /// same wgpu pipeline. Controlled by `QUALIA_FORGE_BACKEND` env var.
+    backend: TargetBackend,
 }
 
 impl ForgeRuntime {
@@ -75,11 +81,87 @@ impl ForgeRuntime {
         // rather than failing construction.
         let topology_hash = context.profile.topology_hash().ok();
         let cache = cache_dir.map(ManifestCache::new);
+        let backend = forge_backend_from_env();
         Ok(Self {
             context,
             cache,
             topology_hash,
+            backend,
         })
+    }
+
+    /// Emit + compile a kernel using the configured backend. When `backend` is
+    /// `Wgsl` this is the standard path (emit WGSL → naga validate → wgpu
+    /// pipeline). When `backend` is `Hlsl` this emits HLSL, compiles to SPIR-V
+    /// via DXC, and feeds the SPIR-V into the same wgpu pipeline — reusing the
+    /// entire buffer/slab/dispatch bridge.
+    fn compile_kernel_pipeline(
+        &self,
+        kernel: &super::KernelSpec,
+        schedule: Schedule,
+    ) -> Result<WgpuPipeline<'_>, ForgeError> {
+        let generated = emit_shader(kernel, schedule, self.backend)?;
+        match self.backend {
+            TargetBackend::Wgsl => {
+                validate_wgsl(&generated.source)?;
+                WgpuPipeline::compile(&self.context, &generated.source, &kernel.entry_point)
+            }
+            TargetBackend::Hlsl => {
+                #[cfg(feature = "dxc")]
+                {
+                    let spirv = compile_hlsl_to_spirv_cached(
+                        &generated.source,
+                        &kernel.entry_point,
+                        compile_hlsl_to_spirv,
+                    )?;
+                    WgpuPipeline::compile_spirv(&self.context, &spirv, &kernel.entry_point)
+                }
+                #[cfg(not(feature = "dxc"))]
+                {
+                    Err(ForgeError::Emission(
+                        "HLSL backend requires the 'dxc' feature".to_string(),
+                    ))
+                }
+            }
+            // SPIR-V: emit via naga → patch workgroup size → compile through
+            // wgpu's ShaderSource::SpirV path. This skips the naga parse +
+            // validate at runtime (the SPIR-V is pre-compiled) and enables
+            // workgroup-size specialization via binary patching.
+            TargetBackend::Spirv => {
+                let generated = emit_shader(kernel, schedule, TargetBackend::Spirv)?;
+                let words = super::emit::decode_spirv_words(&generated.source)?;
+                let spirv_bytes: Vec<u8> = words.iter().flat_map(|&w| w.to_le_bytes()).collect();
+                WgpuPipeline::compile_spirv(&self.context, &spirv_bytes, &kernel.entry_point)
+            }
+            // MSL: compile through wgpu's Metal backend. wgpu on macOS accepts
+            // MSL source directly via ShaderSource::Wgsl (naga transpiles WGSL→MSL),
+            // but for pre-emitted MSL we use the Metal-specific path. On non-Apple
+            // platforms MSL falls back to WGSL.
+            TargetBackend::Msl => {
+                #[cfg(target_os = "macos")]
+                {
+                    // On macOS, compile MSL source through wgpu's Metal pipeline.
+                    // The MSL source is already valid Metal Shading Language —
+                    // wgpu's Metal backend can consume it directly as a native shader.
+                    let msl_source = &generated.source;
+                    WgpuPipeline::compile_msl(&self.context, msl_source, &kernel.entry_point)
+                }
+                #[cfg(not(target_os = "macos"))]
+                {
+                    // Non-Apple: fall back to WGSL.
+                    let wgsl = emit_shader(kernel, schedule, TargetBackend::Wgsl)?;
+                    validate_wgsl(&wgsl.source)?;
+                    WgpuPipeline::compile(&self.context, &wgsl.source, &kernel.entry_point)
+                }
+            }
+            // Other backends (CUDA-C, PTX) are not yet wired into
+            // the wgpu execution bridge — fall back to WGSL.
+            _ => {
+                let wgsl = emit_shader(kernel, schedule, TargetBackend::Wgsl)?;
+                validate_wgsl(&wgsl.source)?;
+                WgpuPipeline::compile(&self.context, &wgsl.source, &kernel.entry_point)
+            }
+        }
     }
 
     /// The tuned [`Schedule`] for `builtin` on this hardware.
@@ -168,8 +250,6 @@ impl ForgeRuntime {
         let kernel = BuiltinKernel::TopK.spec();
         schedule.validate(&kernel, &self.context.constraints)?;
         self.context.constraints.supports_kernel(&kernel)?;
-        let generated = emit_shader(&kernel, schedule, TargetBackend::Wgsl)?;
-        validate_wgsl(&generated.source)?;
 
         // Output sizing mirrors evaluate_topk: one (k)-tuple per block.
         let num_blocks = length.div_ceil(block_size.max(1));
@@ -200,8 +280,7 @@ impl ForgeRuntime {
         )?;
 
         let buffers = vec![view_input, view_output, view_params];
-        let pipeline =
-            WgpuPipeline::compile(&self.context, &generated.source, &kernel.entry_point)?;
+        let pipeline = self.compile_kernel_pipeline(&kernel, schedule)?;
         pipeline.dispatch(&buffers, &schedule, length)?;
         let mut out = self.context.read_buffer_f32(&view_output)?;
         out.truncate(output_len);
@@ -271,8 +350,6 @@ impl ForgeRuntime {
         let kernel = BuiltinKernel::TernaryGemv.spec();
         schedule.validate(&kernel, &self.context.constraints)?;
         self.context.constraints.supports_kernel(&kernel)?;
-        let generated = emit_shader(&kernel, schedule, TargetBackend::Wgsl)?;
-        validate_wgsl(&generated.source)?;
 
         let view_x = self.context.allocate_and_write(
             bytemuck::cast_slice(x),
@@ -313,8 +390,7 @@ impl ForgeRuntime {
         )?;
 
         let buffers = vec![view_x, view_w, view_scale, view_output, view_params];
-        let pipeline =
-            WgpuPipeline::compile(&self.context, &generated.source, &kernel.entry_point)?;
+        let pipeline = self.compile_kernel_pipeline(&kernel, schedule)?;
         pipeline.dispatch(&buffers, &schedule, m)?;
         let mut out = self.context.read_buffer_f32(&view_output)?;
         out.truncate(m);
@@ -380,8 +456,6 @@ impl ForgeRuntime {
         let kernel = BuiltinKernel::P64Project.spec();
         schedule.validate(&kernel, &self.context.constraints)?;
         self.context.constraints.supports_kernel(&kernel)?;
-        let generated = emit_shader(&kernel, schedule, TargetBackend::Wgsl)?;
-        validate_wgsl(&generated.source)?;
 
         let view_input =
             self.context
@@ -401,8 +475,7 @@ impl ForgeRuntime {
         )?;
 
         let buffers = vec![view_input, view_weights, view_output];
-        let pipeline =
-            WgpuPipeline::compile(&self.context, &generated.source, &kernel.entry_point)?;
+        let pipeline = self.compile_kernel_pipeline(&kernel, schedule)?;
         pipeline.dispatch(&buffers, &schedule, record_count)?;
         let mut out = self.context.read_buffer_f32(&view_output)?;
         out.truncate(record_count);
@@ -465,8 +538,6 @@ impl ForgeRuntime {
         let kernel = BuiltinKernel::Gemm.spec();
         schedule.validate(&kernel, &self.context.constraints)?;
         self.context.constraints.supports_kernel(&kernel)?;
-        let generated = emit_shader(&kernel, schedule, TargetBackend::Wgsl)?;
-        validate_wgsl(&generated.source)?;
 
         let element_count = m * n;
         let view_a = self.context.allocate_and_write(
@@ -502,8 +573,7 @@ impl ForgeRuntime {
         )?;
 
         let buffers = vec![view_a, view_b, view_c, view_params];
-        let pipeline =
-            WgpuPipeline::compile(&self.context, &generated.source, &kernel.entry_point)?;
+        let pipeline = self.compile_kernel_pipeline(&kernel, schedule)?;
         pipeline.dispatch(&buffers, &schedule, element_count)?;
         let mut out = self.context.read_buffer_f32(&view_c)?;
         out.truncate(element_count);
@@ -565,8 +635,6 @@ impl ForgeRuntime {
         let kernel = BuiltinKernel::Gemv.spec();
         schedule.validate(&kernel, &self.context.constraints)?;
         self.context.constraints.supports_kernel(&kernel)?;
-        let generated = emit_shader(&kernel, schedule, TargetBackend::Wgsl)?;
-        validate_wgsl(&generated.source)?;
 
         let element_count = m;
         let view_a = self.context.allocate_and_write(
@@ -602,8 +670,7 @@ impl ForgeRuntime {
         )?;
 
         let buffers = vec![view_a, view_x, view_y, view_params];
-        let pipeline =
-            WgpuPipeline::compile(&self.context, &generated.source, &kernel.entry_point)?;
+        let pipeline = self.compile_kernel_pipeline(&kernel, schedule)?;
         pipeline.dispatch(&buffers, &schedule, element_count)?;
         let mut out = self.context.read_buffer_f32(&view_y)?;
         out.truncate(element_count);
@@ -671,8 +738,6 @@ impl ForgeRuntime {
         let kernel = BuiltinKernel::Fft.spec();
         schedule.validate(&kernel, &self.context.constraints)?;
         self.context.constraints.supports_kernel(&kernel)?;
-        let generated = emit_shader(&kernel, schedule, TargetBackend::Wgsl)?;
-        validate_wgsl(&generated.source)?;
 
         let view_input = self.context.allocate_and_write(
             bytemuck::cast_slice(complex_interleaved),
@@ -701,8 +766,7 @@ impl ForgeRuntime {
         )?;
 
         let buffers = vec![view_input, view_output, view_params];
-        let pipeline =
-            WgpuPipeline::compile(&self.context, &generated.source, &kernel.entry_point)?;
+        let pipeline = self.compile_kernel_pipeline(&kernel, schedule)?;
         pipeline.dispatch(&buffers, &schedule, n)?;
         let mut out = self.context.read_buffer_f32(&view_output)?;
         out.truncate(2 * n);
@@ -710,6 +774,28 @@ impl ForgeRuntime {
         drop(pipeline);
         self.context.clear_transient_allocations();
         Ok(out)
+    }
+}
+
+/// Resolve the forge shader backend from `QUALIA_FORGE_BACKEND` env var.
+///
+/// Supported values: `wgsl` (default), `hlsl`, `spirv`, `ptx`, `msl`, `cuda-c`.
+/// HLSL has a wired execution bridge (HLSL → DXC → SPIR-V → wgpu).
+/// SPIR-V emits via naga's spv-out. PTX and CUDA-C emit source for CUDA driver
+/// execution. MSL emits Metal Shading Language for Apple Silicon.
+/// Unrecognised values fall back to `wgsl`.
+fn forge_backend_from_env() -> TargetBackend {
+    match std::env::var("QUALIA_FORGE_BACKEND")
+        .ok()
+        .map(|s| s.trim().to_ascii_lowercase())
+        .as_deref()
+    {
+        Some("hlsl") => TargetBackend::Hlsl,
+        Some("spirv") => TargetBackend::Spirv,
+        Some("ptx") => TargetBackend::Ptx,
+        Some("msl") => TargetBackend::Msl,
+        Some("cuda-c") | Some("cudac") => TargetBackend::CudaC,
+        _ => TargetBackend::Wgsl,
     }
 }
 

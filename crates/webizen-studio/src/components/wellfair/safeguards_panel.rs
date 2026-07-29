@@ -23,23 +23,35 @@ fn party_keys(s: &str) -> Vec<(String, String)> {
         .filter_map(|pair| {
             let (did, pk) = pair.split_once('=')?;
             let (did, pk) = (did.trim(), pk.trim());
-            if did.is_empty() || pk.is_empty() { None } else { Some((did.to_string(), pk.to_string())) }
+            if did.is_empty() || pk.is_empty() {
+                None
+            } else {
+                Some((did.to_string(), pk.to_string()))
+            }
         })
         .collect()
 }
 
 fn str_field(v: &serde_json::Value, key: &str) -> String {
-    v.get(key).and_then(|x| x.as_str()).unwrap_or("").to_string()
+    v.get(key)
+        .and_then(|x| x.as_str())
+        .unwrap_or("")
+        .to_string()
 }
 
 /// Parse a comma-separated list into trimmed, non-empty entries.
 fn csv(s: &str) -> Vec<String> {
-    s.split(',').map(|x| x.trim().to_string()).filter(|x| !x.is_empty()).collect()
+    s.split(',')
+        .map(|x| x.trim().to_string())
+        .filter(|x| !x.is_empty())
+        .collect()
 }
 
 /// Render a JSON byte-array (`[u8;N]`) as a short hex prefix for display.
 fn arr_hex_short(v: &serde_json::Value, key: &str) -> String {
-    let Some(arr) = v.get(key).and_then(|x| x.as_array()) else { return "—".into() };
+    let Some(arr) = v.get(key).and_then(|x| x.as_array()) else {
+        return "—".into();
+    };
     let hex: String = arr
         .iter()
         .take(6)
@@ -55,7 +67,9 @@ pub fn WellfairSafeguardsPanel() -> Element {
     let mut status = use_signal(String::new);
 
     // Dead-man form (the commitment field is shared across arm / alive / attest / enact).
-    let mut dm_commitment = use_signal(|| "0000000000000000000000000000000000000000000000000000000000000000".to_string());
+    let mut dm_commitment = use_signal(|| {
+        "0000000000000000000000000000000000000000000000000000000000000000".to_string()
+    });
     let mut dm_grace = use_signal(|| "86400".to_string());
     let mut dm_parties = use_signal(|| "did:wf:friend-a, did:wf:friend-b".to_string());
     let mut dm_threshold = use_signal(|| "2".to_string());
@@ -66,7 +80,8 @@ pub fn WellfairSafeguardsPanel() -> Element {
     let mut dm_release_keys = use_signal(String::new);
     // Social recovery (Shamir).
     let mut sr_threshold = use_signal(|| "2".to_string());
-    let mut sr_parties = use_signal(|| "did:wf:friend-a, did:wf:friend-b, did:wf:friend-c".to_string());
+    let mut sr_parties =
+        use_signal(|| "did:wf:friend-a, did:wf:friend-b, did:wf:friend-c".to_string());
     let mut sr_shares_out = use_signal(String::new);
     let mut sr_shares_in = use_signal(String::new);
 
@@ -96,20 +111,30 @@ pub fn WellfairSafeguardsPanel() -> Element {
     let mut loaded = use_signal(|| false);
 
     use_effect(move || {
-        if loaded() { return; }
+        if loaded() {
+            return;
+        }
         loaded.set(true);
         reload();
     });
 
     let do_arm_dm = move |_| {
         let (c, grace, parties, thr, disp, dparties) = (
-            dm_commitment(), dm_grace(), dm_parties(), dm_threshold(), dm_disposition(), dm_disp_parties(),
+            dm_commitment(),
+            dm_grace(),
+            dm_parties(),
+            dm_threshold(),
+            dm_disposition(),
+            dm_disp_parties(),
         );
         spawn(async move {
             let grace = grace.parse::<u64>().unwrap_or(86400);
             let thr = thr.parse::<usize>().unwrap_or(2);
             match arm_dead_mans_switch(&c, grace, csv(&parties), thr, &disp, csv(&dparties)).await {
-                Ok(()) => { status.set("Dead-man switch armed.".into()); reload(); }
+                Ok(()) => {
+                    status.set("Dead-man switch armed.".into());
+                    reload();
+                }
                 Err(e) => status.set(format!("Arm failed: {e}")),
             }
         });
@@ -118,7 +143,10 @@ pub fn WellfairSafeguardsPanel() -> Element {
         let c = dm_commitment();
         spawn(async move {
             match dead_mans_alive(&c).await {
-                Ok(true) => { status.set("Heartbeat touched — you're alive, switch reset.".into()); reload(); }
+                Ok(true) => {
+                    status.set("Heartbeat touched — you're alive, switch reset.".into());
+                    reload();
+                }
                 Ok(false) => status.set("No dead-man switch for that commitment.".into()),
                 Err(e) => status.set(format!("Alive failed: {e}")),
             }
@@ -128,7 +156,10 @@ pub fn WellfairSafeguardsPanel() -> Element {
         let (c, party, kind) = (dm_commitment(), dm_attest_party(), dm_attest_kind());
         spawn(async move {
             match attest_dead_mans(&c, &party, &kind).await {
-                Ok(true) => { status.set(format!("Attestation recorded from {party}.")); reload(); }
+                Ok(true) => {
+                    status.set(format!("Attestation recorded from {party}."));
+                    reload();
+                }
                 Ok(false) => status.set("No dead-man switch for that commitment.".into()),
                 Err(e) => status.set(format!("Attest failed: {e}")),
             }
@@ -139,9 +170,14 @@ pub fn WellfairSafeguardsPanel() -> Element {
         spawn(async move {
             match enact_dead_mans(&c).await {
                 Ok(v) => {
-                    let d = v.get("disposition").cloned().unwrap_or(serde_json::Value::Null);
+                    let d = v
+                        .get("disposition")
+                        .cloned()
+                        .unwrap_or(serde_json::Value::Null);
                     if d.is_null() {
-                        status.set("Not triggerable yet (heartbeat not lapsed, or quorum not met).".into());
+                        status.set(
+                            "Not triggerable yet (heartbeat not lapsed, or quorum not met).".into(),
+                        );
                     } else {
                         status.set(format!("Enacted. Disposition: {d}"));
                     }
@@ -166,7 +202,9 @@ pub fn WellfairSafeguardsPanel() -> Element {
                         status.set("Enacted + released — disposition parties granted access to the payload.".into());
                         reload();
                     } else {
-                        status.set("Not triggerable yet (heartbeat not lapsed, or quorum not met).".into());
+                        status.set(
+                            "Not triggerable yet (heartbeat not lapsed, or quorum not met).".into(),
+                        );
                     }
                 }
                 Err(e) => status.set(format!("Release failed: {e}")),
@@ -179,8 +217,16 @@ pub fn WellfairSafeguardsPanel() -> Element {
         spawn(async move {
             match enact_dead_mans_release_via_peers(&c).await {
                 Ok(v) => {
-                    let enacted = v.get("result").and_then(|r| r.get("enacted")).and_then(|x| x.as_bool()).unwrap_or(false);
-                    let missing = v.get("missing_keys_for").and_then(|x| x.as_array()).map(|a| a.len()).unwrap_or(0);
+                    let enacted = v
+                        .get("result")
+                        .and_then(|r| r.get("enacted"))
+                        .and_then(|x| x.as_bool())
+                        .unwrap_or(false);
+                    let missing = v
+                        .get("missing_keys_for")
+                        .and_then(|x| x.as_array())
+                        .map(|a| a.len())
+                        .unwrap_or(0);
                     if enacted {
                         status.set(if missing > 0 {
                             format!("Released to peers with known keys — {missing} party(ies) still missing a published key.")
@@ -203,7 +249,10 @@ pub fn WellfairSafeguardsPanel() -> Element {
             let thr = thr.parse::<usize>().unwrap_or(2);
             match split_dek_recovery(&c, thr, csv(&parties)).await {
                 Ok(v) => {
-                    sr_shares_out.set(serde_json::to_string(&v.get("shares").cloned().unwrap_or(v)).unwrap_or_default());
+                    sr_shares_out.set(
+                        serde_json::to_string(&v.get("shares").cloned().unwrap_or(v))
+                            .unwrap_or_default(),
+                    );
                     status.set("Split — hand each share to its friend (off-device).".into());
                 }
                 Err(e) => status.set(format!("Split failed: {e}")),
@@ -215,12 +264,17 @@ pub fn WellfairSafeguardsPanel() -> Element {
         spawn(async move {
             let shares: serde_json::Value = match serde_json::from_str(&shares_in) {
                 Ok(v) => v,
-                Err(e) => { status.set(format!("Shares JSON invalid: {e}")); return; }
+                Err(e) => {
+                    status.set(format!("Shares JSON invalid: {e}"));
+                    return;
+                }
             };
             match reconstruct_and_release(&c, shares, party_keys(&keys)).await {
                 Ok(v) => {
                     if v.get("enacted").and_then(|x| x.as_bool()).unwrap_or(false) {
-                        status.set("Reconstructed from friends' shares (no owner key) + released.".into());
+                        status.set(
+                            "Reconstructed from friends' shares (no owner key) + released.".into(),
+                        );
                         reload();
                     } else {
                         status.set("Not triggerable yet, or shares insufficient.".into());
@@ -233,23 +287,45 @@ pub fn WellfairSafeguardsPanel() -> Element {
 
     let do_arm_ic = move |_| {
         let (p, k, adv, parties, thr, req) = (
-            ic_principal(), ic_kind(), ic_advocate(), ic_parties(), ic_threshold(), ic_require_official(),
+            ic_principal(),
+            ic_kind(),
+            ic_advocate(),
+            ic_parties(),
+            ic_threshold(),
+            ic_require_official(),
         );
         spawn(async move {
             let thr = thr.parse::<usize>().unwrap_or(2);
             match arm_incapacity_switch(&p, &k, &adv, csv(&parties), thr, req).await {
-                Ok(()) => { status.set("Incapacity switch armed.".into()); reload(); }
+                Ok(()) => {
+                    status.set("Incapacity switch armed.".into());
+                    reload();
+                }
                 Err(e) => status.set(format!("Arm failed: {e}")),
             }
         });
     };
     let do_activate = move |_| {
-        let (p, parties, official, req) = (ic_principal(), ic_parties(), ic_official(), ic_require_official());
+        let (p, parties, official, req) = (
+            ic_principal(),
+            ic_parties(),
+            ic_official(),
+            ic_require_official(),
+        );
         spawn(async move {
-            let official = if req && !official.trim().is_empty() { Some(official) } else { None };
+            let official = if req && !official.trim().is_empty() {
+                Some(official)
+            } else {
+                None
+            };
             match activate_incapacity(&p, csv(&parties), official).await {
-                Ok(true) => { status.set("Advocate activated (trigger satisfied).".into()); reload(); }
-                Ok(false) => status.set("Trigger not satisfied (quorum / official instrument).".into()),
+                Ok(true) => {
+                    status.set("Advocate activated (trigger satisfied).".into());
+                    reload();
+                }
+                Ok(false) => {
+                    status.set("Trigger not satisfied (quorum / official instrument).".into())
+                }
                 Err(e) => status.set(format!("Activate failed: {e}")),
             }
         });
@@ -258,7 +334,10 @@ pub fn WellfairSafeguardsPanel() -> Element {
         let p = ic_principal();
         spawn(async move {
             match regain_capacity(&p).await {
-                Ok(true) => { status.set("Capacity regained — advocate stood down.".into()); reload(); }
+                Ok(true) => {
+                    status.set("Capacity regained — advocate stood down.".into());
+                    reload();
+                }
                 Ok(false) => status.set("No incapacity switch for that principal.".into()),
                 Err(e) => status.set(format!("Regain failed: {e}")),
             }
@@ -269,6 +348,7 @@ pub fn WellfairSafeguardsPanel() -> Element {
         section {
             aria_label: "WellFair safeguards",
             style: "padding:0.85rem;border:1px solid var(--qualia-border,#ddd);border-radius:10px;background:var(--qualia-surface,#fafafa);display:flex;flex-direction:column;gap:0.9rem;",
+            super::shared::DomainChrome { domain: "Care", chip: "Rights · safeguards · fail-closed", show_memory: true }
             div {
                 style: "display:flex;align-items:center;justify-content:space-between;gap:0.5rem;",
                 h2 { style: "margin:0;font-size:1rem;", "Safeguards — dead-man & incapacity switches" }

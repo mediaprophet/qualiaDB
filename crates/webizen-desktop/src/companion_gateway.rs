@@ -60,7 +60,8 @@ impl HostApiHandle {
                 let _ = tx.send(f(host));
             }))
             .map_err(|err| format!("HostService actor unavailable: {err}"))?;
-        rx.await.map_err(|_| "HostService dropped the request".to_string())
+        rx.await
+            .map_err(|_| "HostService dropped the request".to_string())
     }
 
     pub fn execute_sync<T: Send + 'static>(
@@ -73,7 +74,8 @@ impl HostApiHandle {
                 let _ = tx.send(f(host));
             }))
             .map_err(|err| format!("HostService actor unavailable: {err}"))?;
-        rx.recv().map_err(|_| "HostService dropped the request".to_string())
+        rx.recv()
+            .map_err(|_| "HostService dropped the request".to_string())
     }
 }
 
@@ -123,13 +125,11 @@ pub fn companion_pairing_info(port: u16) -> CompanionPairingInfo {
 }
 
 pub fn companion_qr_svg(ws_url: &str) -> String {
-    let qr = fast_qr::QRBuilder::new(ws_url)
-        .build()
-        .unwrap_or_else(|_| {
-            fast_qr::QRBuilder::new("ws://127.0.0.1:8080/mobile/stream")
-                .build()
-                .unwrap()
-        });
+    let qr = fast_qr::QRBuilder::new(ws_url).build().unwrap_or_else(|_| {
+        fast_qr::QRBuilder::new("ws://127.0.0.1:8080/mobile/stream")
+            .build()
+            .unwrap()
+    });
     fast_qr::convert::svg::SvgBuilder::default().to_str(&qr)
 }
 
@@ -182,8 +182,8 @@ fn verify_pairing_response(
         .try_into()
         .map_err(|_| "signature must be 64 bytes".to_string())?;
 
-    let verifying_key =
-        VerifyingKey::from_bytes(&pk_bytes).map_err(|_| "invalid Ed25519 public key".to_string())?;
+    let verifying_key = VerifyingKey::from_bytes(&pk_bytes)
+        .map_err(|_| "invalid Ed25519 public key".to_string())?;
     let signature = Signature::from_bytes(&sig_bytes);
 
     let mut payload = Vec::with_capacity(challenge.context.len() + 1 + nonce.len());
@@ -196,43 +196,56 @@ fn verify_pairing_response(
         .map_err(|_| "signature verification failed".to_string())
 }
 
-async fn register_usage_agreement_json(host_api: &HostApiHandle, agreement: UsageAgreement) -> Result<(), String> {
-    host_api.execute(move |guard| {
-        let host = guard
-            .as_ref()
-            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-        host.register_usage_agreement(&agreement)
-    }).await?
+async fn register_usage_agreement_json(
+    host_api: &HostApiHandle,
+    agreement: UsageAgreement,
+) -> Result<(), String> {
+    host_api
+        .execute(move |guard| {
+            let host = guard
+                .as_ref()
+                .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+            host.register_usage_agreement(&agreement)
+        })
+        .await?
 }
 
 async fn submit_live_share_request_json(
     host_api: &HostApiHandle,
     request: LiveSectionRequest,
 ) -> Result<String, String> {
-    host_api.execute(move |guard| {
-        let host = guard
-            .as_ref()
-            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-        let entry = host.submit_live_share_request(&request)?;
-        Ok(entry.id)
-    }).await?
+    host_api
+        .execute(move |guard| {
+            let host = guard
+                .as_ref()
+                .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+            let entry = host.submit_live_share_request(&request)?;
+            Ok(entry.id)
+        })
+        .await?
 }
 
-async fn ingest_bundle_json(host_api: &HostApiHandle, bundle_json: String) -> Result<IngestAck, String> {
-    host_api.execute(move |guard| {
-        let bundle: wellfare_core::companion_sync::CompanionHealthBundle =
-            serde_json::from_str(&bundle_json).map_err(|e| format!("invalid bundle JSON: {e}"))?;
-        let host = guard
-            .as_mut()
-            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-        let report = host.ingest_companion_health_bundle(&bundle);
-        Ok(IngestAck {
-            ok: report.errors.is_empty(),
-            records_committed: report.records_committed,
-            records_skipped: report.records_skipped,
-            errors: report.errors,
+async fn ingest_bundle_json(
+    host_api: &HostApiHandle,
+    bundle_json: String,
+) -> Result<IngestAck, String> {
+    host_api
+        .execute(move |guard| {
+            let bundle: wellfare_core::companion_sync::CompanionHealthBundle =
+                serde_json::from_str(&bundle_json)
+                    .map_err(|e| format!("invalid bundle JSON: {e}"))?;
+            let host = guard
+                .as_mut()
+                .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+            let report = host.ingest_companion_health_bundle(&bundle);
+            Ok(IngestAck {
+                ok: report.errors.is_empty(),
+                records_committed: report.records_committed,
+                records_skipped: report.records_skipped,
+                errors: report.errors,
+            })
         })
-    }).await?
+        .await?
 }
 
 pub async fn companion_ingest_post(
@@ -340,7 +353,11 @@ async fn companion_ws_session(mut socket: WebSocket, host_api: HostApiHandle) {
                             "error": e,
                         }),
                     };
-                    if socket.send(Message::Text(ack.to_string().into())).await.is_err() {
+                    if socket
+                        .send(Message::Text(ack.to_string().into()))
+                        .await
+                        .is_err()
+                    {
                         break;
                     }
                 }
@@ -390,7 +407,11 @@ async fn companion_ws_session(mut socket: WebSocket, host_api: HostApiHandle) {
                         "errors": [e],
                     }),
                 };
-                if socket.send(Message::Text(ack.to_string().into())).await.is_err() {
+                if socket
+                    .send(Message::Text(ack.to_string().into()))
+                    .await
+                    .is_err()
+                {
                     break;
                 }
                 continue;
@@ -414,7 +435,11 @@ async fn companion_ws_session(mut socket: WebSocket, host_api: HostApiHandle) {
                         "errors": [e],
                     }),
                 };
-                if socket.send(Message::Text(ack.to_string().into())).await.is_err() {
+                if socket
+                    .send(Message::Text(ack.to_string().into()))
+                    .await
+                    .is_err()
+                {
                     break;
                 }
                 continue;
@@ -431,7 +456,11 @@ async fn companion_ws_session(mut socket: WebSocket, host_api: HostApiHandle) {
                     "ok": true,
                     "note": "WebRTC scaffold active. PWA delivery channel pending integration."
                 });
-                if socket.send(Message::Text(ack.to_string().into())).await.is_err() {
+                if socket
+                    .send(Message::Text(ack.to_string().into()))
+                    .await
+                    .is_err()
+                {
                     break;
                 }
             }

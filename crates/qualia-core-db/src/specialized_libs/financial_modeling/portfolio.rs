@@ -1,6 +1,5 @@
 use super::*;
 
-
 /// Portfolio manager for investment portfolio management
 pub struct PortfolioManager {
     portfolio_storage: PortfolioStorage,

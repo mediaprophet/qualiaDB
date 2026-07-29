@@ -158,9 +158,7 @@ impl VisualModel for CpuReferenceVision {
 
                 let mut d = Detection::empty();
                 d.class_hash = q_hash(class_iri);
-                d.instance_hash = self
-                    .model_hash
-                    .wrapping_mul(0x9e37_79b9_7f4a_7c15)
+                d.instance_hash = self.model_hash.wrapping_mul(0x9e37_79b9_7f4a_7c15)
                     ^ ((cx as u64) << 32)
                     ^ (cy as u64)
                     ^ (mr << 16)
@@ -223,6 +221,27 @@ mod tests {
     use crate::semantic::{compile_observation_quins, media_digest};
 
     #[test]
+    fn fixture_solid_red_loads() {
+        let px = include_bytes!("../fixtures/solid_red_8x8.rgb");
+        assert_eq!(px.len(), 8 * 8 * 3);
+        let img = ImageView {
+            bytes: px,
+            width: 8,
+            height: 8,
+            row_stride: 24,
+            format: PixelFormat::Rgb8,
+        };
+        let mut model = CpuReferenceVision::new();
+        let mut dets = [Detection::empty(); 8];
+        let mut emb = [0.0f32; 16];
+        let mut ws = [0u8; 64];
+        let counts = model.infer(img, &mut dets, &mut emb, &mut ws).unwrap();
+        assert!(counts.detections >= 1);
+        // Solid red → mostly-red class
+        assert_eq!(dets[0].class_hash, q_hash(CLASS_MOSTLY_RED));
+    }
+
+    #[test]
     fn red_cell_emits_detection() {
         // 4×4 solid red RGB
         let mut px = vec![0u8; 4 * 4 * 3];
@@ -251,7 +270,12 @@ mod tests {
 
         let digest = media_digest(&px);
         let mut quins = [crate::semantic::VisionQuin::with_parity(0, 0, 0, 0, 0); 16];
-        let n = compile_observation_quins(digest, &dets[..counts.detections], model.model_hash(), &mut quins);
+        let n = compile_observation_quins(
+            digest,
+            &dets[..counts.detections],
+            model.model_hash(),
+            &mut quins,
+        );
         assert!(n >= 2);
     }
 }

@@ -1,20 +1,18 @@
 use qualia_core_db::solvers::linear_algebra::{
-    Matrix4x4, Vector4, Tensor3x3x3,
-    StaticLuDecomposition, FixedLanczosEigensolver, ConstTensorContractor,
+    ConstTensorContractor, FixedLanczosEigensolver, Matrix4x4, StaticLuDecomposition, Tensor3x3x3,
+    Vector4,
 };
 use qualia_core_db::solvers::optimization::{
-    NelderMeadSimplex, BoundedNewtonRaphson, LevenbergMarquardtStack,
-    ObjectiveFunction, RootFunction, CurveFitFunction,
+    BoundedNewtonRaphson, CurveFitFunction, LevenbergMarquardtStack, NelderMeadSimplex,
+    ObjectiveFunction, RootFunction,
 };
-use qualia_core_db::solvers::SolverConfig;
 use qualia_core_db::solvers::quantum_optimizers::{
-    QAOAAngleOptimizer, SpsaOptimizer, QAOAAngles,
-    QuantumCostFunction, SpsaCostFunction,
+    QAOAAngleOptimizer, QAOAAngles, QuantumCostFunction, SpsaCostFunction, SpsaOptimizer,
 };
 use qualia_core_db::solvers::symbolic_logic::{
-    ForwardChainingDefeasible, BoundedSatSolver,
-    DefeasibleRule, Fact, Clause, Literal, RuleType,
+    BoundedSatSolver, Clause, DefeasibleRule, Fact, ForwardChainingDefeasible, Literal, RuleType,
 };
+use qualia_core_db::solvers::SolverConfig;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -37,7 +35,10 @@ fn build_matrix4x4(v: &[f64]) -> Matrix4x4 {
 fn parse_matrix4x4(s: &str) -> Option<Matrix4x4> {
     let v = parse_f64s(s);
     if v.len() < 16 {
-        eprintln!("Need 16 comma-separated values for a 4×4 matrix, got {}.", v.len());
+        eprintln!(
+            "Need 16 comma-separated values for a 4×4 matrix, got {}.",
+            v.len()
+        );
         return None;
     }
     Some(build_matrix4x4(&v))
@@ -46,7 +47,10 @@ fn parse_matrix4x4(s: &str) -> Option<Matrix4x4> {
 fn parse_vector4(s: &str) -> Option<Vector4> {
     let v = parse_f64s(s);
     if v.len() < 4 {
-        eprintln!("Need 4 comma-separated values for a Vector4, got {}.", v.len());
+        eprintln!(
+            "Need 4 comma-separated values for a Vector4, got {}.",
+            v.len()
+        );
         return None;
     }
     Some(Vector4::from_array([v[0], v[1], v[2], v[3]]))
@@ -67,7 +71,10 @@ fn build_tensor3x3x3(v: &[f64]) -> Tensor3x3x3 {
 fn parse_tensor3x3x3(s: &str) -> Option<Tensor3x3x3> {
     let v = parse_f64s(s);
     if v.len() < 27 {
-        eprintln!("Need 27 comma-separated values for a 3×3×3 tensor, got {}.", v.len());
+        eprintln!(
+            "Need 27 comma-separated values for a 3×3×3 tensor, got {}.",
+            v.len()
+        );
         return None;
     }
     Some(build_tensor3x3x3(&v))
@@ -83,38 +90,54 @@ fn parse_params4(s: &str) -> Option<[f64; 4]> {
 }
 
 fn default_config(max_iters: u32, tol: f64) -> SolverConfig {
-    SolverConfig { max_iterations: max_iters, tolerance: tol, step_size: 0.01, verbose: false }
+    SolverConfig {
+        max_iterations: max_iters,
+        tolerance: tol,
+        step_size: 0.01,
+        verbose: false,
+    }
 }
 
 // ── Linear algebra runners ────────────────────────────────────────────────────
 
 pub fn run_matrix_multiply(a_str: &str, b_str: &str) {
-    let (Some(a), Some(b)) = (parse_matrix4x4(a_str), parse_matrix4x4(b_str)) else { return; };
+    let (Some(a), Some(b)) = (parse_matrix4x4(a_str), parse_matrix4x4(b_str)) else {
+        return;
+    };
     let result = a.multiply_matrix(&b);
     println!("Matrix A × B:");
     print_matrix4x4(&result);
 }
 
 pub fn run_determinant(m_str: &str) {
-    let Some(m) = parse_matrix4x4(m_str) else { return; };
+    let Some(m) = parse_matrix4x4(m_str) else {
+        return;
+    };
     let det = m.determinant();
     println!("Determinant: {det:.10e}");
 }
 
 pub fn run_solve_system(m_str: &str, v_str: &str) {
-    let (Some(a), Some(b)) = (parse_matrix4x4(m_str), parse_vector4(v_str)) else { return; };
+    let (Some(a), Some(b)) = (parse_matrix4x4(m_str), parse_vector4(v_str)) else {
+        return;
+    };
     let mut lu = StaticLuDecomposition::new(default_config(100, 1e-12));
     match lu.solve(&a, &b) {
         Ok(x) => {
             println!("Solution x for Ax = b:");
-            println!("  [{:.6}, {:.6}, {:.6}, {:.6}]", x.data[0], x.data[1], x.data[2], x.data[3]);
+            println!(
+                "  [{:.6}, {:.6}, {:.6}, {:.6}]",
+                x.data[0], x.data[1], x.data[2], x.data[3]
+            );
         }
         Err(e) => eprintln!("Solve failed: {e:?}"),
     }
 }
 
 pub fn run_eigenvalues(m_str: &str, count: usize) {
-    let Some(m) = parse_matrix4x4(m_str) else { return; };
+    let Some(m) = parse_matrix4x4(m_str) else {
+        return;
+    };
     let mut solver = FixedLanczosEigensolver::new(default_config(100, 1e-8));
     match solver.find_lowest_eigenvalues(&m, count) {
         Ok(eigs) => {
@@ -129,14 +152,17 @@ pub fn run_eigenvalues(m_str: &str, count: usize) {
 }
 
 pub fn run_tensor_contract(t_str: &str) {
-    let Some(ta) = parse_tensor3x3x3(t_str) else { return; };
+    let Some(ta) = parse_tensor3x3x3(t_str) else {
+        return;
+    };
     let tb = Tensor3x3x3::zero();
     let indices: [(usize, usize); 3] = [(0, 0), (1, 1), (2, 2)];
     let mut contractor = ConstTensorContractor::new(default_config(1, 1e-10));
     match contractor.contract(&ta, &tb, &indices) {
         Ok(result) => {
             // Sum all elements as a scalar trace equivalent
-            let scalar: f64 = (0..3).flat_map(|i| (0..3).flat_map(move |j| (0..3).map(move |k| (i, j, k))))
+            let scalar: f64 = (0..3)
+                .flat_map(|i| (0..3).flat_map(move |j| (0..3).map(move |k| (i, j, k))))
                 .map(|(i, j, k)| result.data[i][j][k])
                 .sum();
             println!("Tensor contraction A⊗0 trace-sum: {scalar:.10e}");
@@ -148,8 +174,10 @@ pub fn run_tensor_contract(t_str: &str) {
 
 fn print_matrix4x4(m: &Matrix4x4) {
     for row in 0..4 {
-        println!("  [{:12.6}, {:12.6}, {:12.6}, {:12.6}]",
-            m.data[row][0], m.data[row][1], m.data[row][2], m.data[row][3]);
+        println!(
+            "  [{:12.6}, {:12.6}, {:12.6}, {:12.6}]",
+            m.data[row][0], m.data[row][1], m.data[row][2], m.data[row][3]
+        );
     }
 }
 
@@ -157,13 +185,19 @@ fn print_matrix4x4(m: &Matrix4x4) {
 
 struct ClosureFn<F: Fn(&[f64; 4]) -> f64>(F);
 impl<F: Fn(&[f64; 4]) -> f64> ObjectiveFunction for ClosureFn<F> {
-    fn evaluate(&self, params: &[f64; 4]) -> f64 { (self.0)(params) }
+    fn evaluate(&self, params: &[f64; 4]) -> f64 {
+        (self.0)(params)
+    }
 }
 
 struct RootClosureFn<F: Fn(f64) -> f64, D: Fn(f64) -> f64>(F, D);
 impl<F: Fn(f64) -> f64, D: Fn(f64) -> f64> RootFunction for RootClosureFn<F, D> {
-    fn evaluate(&self, x: f64) -> f64 { (self.0)(x) }
-    fn derivative(&self, x: f64) -> f64 { (self.1)(x) }
+    fn evaluate(&self, x: f64) -> f64 {
+        (self.0)(x)
+    }
+    fn derivative(&self, x: f64) -> f64 {
+        (self.1)(x)
+    }
 }
 
 struct CurveFn;
@@ -180,7 +214,9 @@ impl CurveFitFunction for CurveFn {
 // ── Optimization runners ──────────────────────────────────────────────────────
 
 pub fn run_simplex(initial_str: &str, iterations: u32) {
-    let Some(x0) = parse_params4(initial_str) else { return; };
+    let Some(x0) = parse_params4(initial_str) else {
+        return;
+    };
     let cfg = default_config(iterations, 1e-8);
     let mut solver = NelderMeadSimplex::new(x0, cfg);
     // Rosenbrock 4D: f(x,y,z,w) = (1-x)² + 100(y-x²)² + (1-z)² + 100(w-z²)²
@@ -193,7 +229,10 @@ pub fn run_simplex(initial_str: &str, iterations: u32) {
         Ok(state) => {
             let bp = solver.best_point;
             println!("Nelder-Mead simplex (Rosenbrock 4D, {iterations} iters):");
-            println!("  x = [{:.6}, {:.6}, {:.6}, {:.6}]", bp[0], bp[1], bp[2], bp[3]);
+            println!(
+                "  x = [{:.6}, {:.6}, {:.6}, {:.6}]",
+                bp[0], bp[1], bp[2], bp[3]
+            );
             println!("  f(x) = {:.10e}", state.objective_value);
             println!("  Converged: {}", state.converged);
         }
@@ -203,28 +242,37 @@ pub fn run_simplex(initial_str: &str, iterations: u32) {
 
 pub fn run_root(initial: f64, lower: f64, upper: f64, tolerance: f64) {
     // f(x) = x³ − x − 1  (plastic constant, root ≈ 1.32472)
-    let cfg = SolverConfig { max_iterations: 200, tolerance, step_size: 0.01, verbose: false };
+    let cfg = SolverConfig {
+        max_iterations: 200,
+        tolerance,
+        step_size: 0.01,
+        verbose: false,
+    };
     let mut solver = BoundedNewtonRaphson::new(initial, lower, upper, cfg);
-    let f = RootClosureFn(
-        |x: f64| x * x * x - x - 1.0,
-        |x: f64| 3.0 * x * x - 1.0,
-    );
+    let f = RootClosureFn(|x: f64| x * x * x - x - 1.0, |x: f64| 3.0 * x * x - 1.0);
     match solver.find_root(&f) {
         Ok(state) => {
             let root = solver.get_root();
             println!("Newton-Raphson root of f(x) = x³ − x − 1:");
             println!("  root ≈ {root:.10e}");
             println!("  f(root) = {:.4e}", x_cubed_minus_x_minus_one(root));
-            println!("  Converged: {} ({} iters)", state.converged, state.iteration);
+            println!(
+                "  Converged: {} ({} iters)",
+                state.converged, state.iteration
+            );
         }
         Err(e) => eprintln!("Root finder failed: {e:?}"),
     }
 }
 
-fn x_cubed_minus_x_minus_one(x: f64) -> f64 { x * x * x - x - 1.0 }
+fn x_cubed_minus_x_minus_one(x: f64) -> f64 {
+    x * x * x - x - 1.0
+}
 
 pub fn run_curve_fit(params_str: &str, x_str: &str, y_str: &str) {
-    let Some(p0) = parse_params4(params_str) else { return; };
+    let Some(p0) = parse_params4(params_str) else {
+        return;
+    };
     let xs = parse_f64s(x_str);
     let ys = parse_f64s(y_str);
     if xs.is_empty() || ys.is_empty() || xs.len() != ys.len() {
@@ -246,9 +294,15 @@ pub fn run_curve_fit(params_str: &str, x_str: &str, y_str: &str) {
         Ok(state) => {
             let p = lm.parameters;
             println!("Levenberg-Marquardt curve fit (cubic: p0·x³+p1·x²+p2·x+p3):");
-            println!("  params = [{:.6}, {:.6}, {:.6}, {:.6}]", p[0], p[1], p[2], p[3]);
+            println!(
+                "  params = [{:.6}, {:.6}, {:.6}, {:.6}]",
+                p[0], p[1], p[2], p[3]
+            );
             println!("  χ²     = {:.6e}", state.chi_squared);
-            println!("  Converged: {} ({} iters)", state.converged, state.iteration);
+            println!(
+                "  Converged: {} ({} iters)",
+                state.converged, state.iteration
+            );
         }
         Err(e) => eprintln!("Curve fit failed: {e:?}"),
     }
@@ -264,7 +318,10 @@ pub fn run_ode_rk4(lambda: f64, t_start: f64, t_end: f64, y0: f64, step_size: f6
     println!("RK4 ODE (exponential decay λ={lambda}):");
     println!("  t ∈ [{t_start}, {t_end}],  y(0)={y0},  h={step_size}");
     println!("  y(t_end) ≈ {result:.10e}");
-    println!("  exact    = {:.10e}", y0 * (-lambda * (t_end - t_start)).exp());
+    println!(
+        "  exact    = {:.10e}",
+        y0 * (-lambda * (t_end - t_start)).exp()
+    );
 }
 
 pub fn run_ode_harmonic(omega: f64, t_start: f64, t_end: f64, y0: f64, step_size: f64) {
@@ -278,20 +335,25 @@ pub fn run_ode_harmonic(omega: f64, t_start: f64, t_end: f64, y0: f64, step_size
 }
 
 pub fn run_ode_bvp(t_start: f64, t_end: f64, y_left: f64, y_right: f64, threshold: f64) {
-    use qualia_core_db::modalities::calculus::ode_solver::{
-        ShootingMethod, BvpSystem,
-    };
+    use qualia_core_db::modalities::calculus::ode_solver::{BvpSystem, ShootingMethod};
 
-    struct SimpleBvp { lambda: f64 }
+    struct SimpleBvp {
+        lambda: f64,
+    }
     impl BvpSystem for SimpleBvp {
-        fn derivative(&self, _t: f64, y: f64) -> f64 { -self.lambda * y }
-        fn boundary_left(&self, _a: f64) -> f64 { 0.0 }
-        fn boundary_right(&self, _b: f64) -> f64 { 0.0 }
+        fn derivative(&self, _t: f64, y: f64) -> f64 {
+            -self.lambda * y
+        }
+        fn boundary_left(&self, _a: f64) -> f64 {
+            0.0
+        }
+        fn boundary_right(&self, _b: f64) -> f64 {
+            0.0
+        }
     }
 
     let system = SimpleBvp { lambda: 1.0 };
-    let mut solver = ShootingMethod::new(system, threshold)
-        .with_max_iterations(500);
+    let mut solver = ShootingMethod::new(system, threshold).with_max_iterations(500);
     match solver.solve(t_start, t_end, y_left, y_right) {
         Ok((ic, residual)) => {
             println!("BVP shooting method (f'=-y):");
@@ -323,8 +385,14 @@ struct DemoQaoa(u8);
 impl QuantumCostFunction for DemoQaoa {
     fn evaluate_quantum(&self, angles: &QAOAAngles) -> qualia_core_db::solvers::SolverResult<f64> {
         // Demo MaxCut-like cost: minimize sum of angle squares
-        let cost: f64 = angles.beta[..self.0 as usize].iter().map(|x| x * x).sum::<f64>()
-                      + angles.gamma[..self.0 as usize].iter().map(|x| x * x).sum::<f64>();
+        let cost: f64 = angles.beta[..self.0 as usize]
+            .iter()
+            .map(|x| x * x)
+            .sum::<f64>()
+            + angles.gamma[..self.0 as usize]
+                .iter()
+                .map(|x| x * x)
+                .sum::<f64>();
         Ok(cost)
     }
     fn evaluate_perturbed(
@@ -332,25 +400,37 @@ impl QuantumCostFunction for DemoQaoa {
         angles: &QAOAAngles,
         perturbation: &QAOAAngles,
     ) -> qualia_core_db::solvers::SolverResult<(f64, f64)> {
-        let mut plus  = *angles;
+        let mut plus = *angles;
         let mut minus = *angles;
         for i in 0..self.0 as usize {
-            plus.beta[i]  += perturbation.beta[i];
+            plus.beta[i] += perturbation.beta[i];
             minus.beta[i] -= perturbation.beta[i];
         }
-        Ok((self.evaluate_quantum(&plus)?, self.evaluate_quantum(&minus)?))
+        Ok((
+            self.evaluate_quantum(&plus)?,
+            self.evaluate_quantum(&minus)?,
+        ))
     }
-    fn problem_size(&self) -> u8 { self.0 }
+    fn problem_size(&self) -> u8 {
+        self.0
+    }
 }
 
 pub fn run_quantum_qaoa(depth: u8, beta_str: &str, gamma_str: &str) {
     let cfg = default_config(100, 1e-6);
     let mut opt = QAOAAngleOptimizer::new(depth, cfg);
-    let betas  = parse_f64s(beta_str);
+    let betas = parse_f64s(beta_str);
     let gammas = parse_f64s(gamma_str);
-    let mut init = QAOAAngles { beta: [0.0; 10], gamma: [0.0; 10] };
-    for (i, &b) in betas.iter().take(10).enumerate()  { init.beta[i]  = b; }
-    for (i, &g) in gammas.iter().take(10).enumerate() { init.gamma[i] = g; }
+    let mut init = QAOAAngles {
+        beta: [0.0; 10],
+        gamma: [0.0; 10],
+    };
+    for (i, &b) in betas.iter().take(10).enumerate() {
+        init.beta[i] = b;
+    }
+    for (i, &g) in gammas.iter().take(10).enumerate() {
+        init.gamma[i] = g;
+    }
     let cost_fn = DemoQaoa(depth.min(10));
     match opt.optimize(&cost_fn, init) {
         Ok(state) => {
@@ -370,14 +450,12 @@ pub fn run_quantum_qaoa(depth: u8, beta_str: &str, gamma_str: &str) {
 struct DemoSpsa(#[allow(dead_code)] u8);
 
 impl SpsaCostFunction for DemoSpsa {
-    fn evaluate(
-        &self,
-        params: &[f64; 20],
-        n: u8,
-    ) -> qualia_core_db::solvers::SolverResult<f64> {
+    fn evaluate(&self, params: &[f64; 20], n: u8) -> qualia_core_db::solvers::SolverResult<f64> {
         Ok(params[..n as usize].iter().map(|x| x * x).sum())
     }
-    fn valid_parameters(&self, _p: &[f64; 20], _n: u8) -> bool { true }
+    fn valid_parameters(&self, _p: &[f64; 20], _n: u8) -> bool {
+        true
+    }
 }
 
 pub fn run_quantum_spsa(num_params: u8, initial_str: &str) {
@@ -404,7 +482,9 @@ pub fn run_quantum_spsa(num_params: u8, initial_str: &str) {
 // ── Symbolic logic runners ────────────────────────────────────────────────────
 
 fn parse_u8s(s: &str) -> Vec<u8> {
-    s.split(',').filter_map(|t| t.trim().parse::<u8>().ok()).collect()
+    s.split(',')
+        .filter_map(|t| t.trim().parse::<u8>().ok())
+        .collect()
 }
 
 pub fn run_symbolic_defeasible(facts_str: &str, rules_str: &str) {
@@ -415,7 +495,10 @@ pub fn run_symbolic_defeasible(facts_str: &str, rules_str: &str) {
     for (idx, var) in parse_u8s(facts_str).into_iter().enumerate() {
         let fact = Fact {
             id: (idx as u32) + 1,
-            literal: Literal { variable: var, negated: false },
+            literal: Literal {
+                variable: var,
+                negated: false,
+            },
             supporting_rules: [0; 3],
             defeated: false,
             confidence: 1.0,
@@ -429,18 +512,29 @@ pub fn run_symbolic_defeasible(facts_str: &str, rules_str: &str) {
     // Parse rules: "ant1,ant2:cons" pairs separated by ';'
     for (rid, rule_str) in rules_str.split(';').enumerate() {
         let parts: Vec<&str> = rule_str.splitn(2, ':').collect();
-        if parts.len() != 2 { continue; }
+        if parts.len() != 2 {
+            continue;
+        }
         let ants: Vec<u8> = parse_u8s(parts[0]);
         let cons = parts[1].trim().parse::<u8>().unwrap_or(0);
-        let mut antecedents = [Literal { variable: 0, negated: false }; 5];
+        let mut antecedents = [Literal {
+            variable: 0,
+            negated: false,
+        }; 5];
         for (i, &a) in ants.iter().take(5).enumerate() {
-            antecedents[i] = Literal { variable: a, negated: false };
+            antecedents[i] = Literal {
+                variable: a,
+                negated: false,
+            };
         }
         let rule = DefeasibleRule {
             id: (rid as u32) + 1,
             rule_type: RuleType::Defeasible,
             antecedents,
-            consequent: Literal { variable: cons, negated: false },
+            consequent: Literal {
+                variable: cons,
+                negated: false,
+            },
             priority: 500,
             active: true,
             fire_count: 0,
@@ -459,7 +553,8 @@ pub fn run_symbolic_defeasible(facts_str: &str, rules_str: &str) {
             println!("  Rules fired    : {}", state.rules_fired);
             println!("  Iterations     : {}", state.iteration);
             println!("  Converged      : {}", state.converged);
-            let active: Vec<u8> = solver.get_facts()
+            let active: Vec<u8> = solver
+                .get_facts()
                 .iter()
                 .filter(|f| f.id != 0 && !f.defeated)
                 .map(|f| f.literal.variable)
@@ -476,7 +571,8 @@ pub fn run_symbolic_sat(clauses_str: &str) {
 
     // Parse clauses: "1,-2,3|4,-5" — pipe-separated clauses, comma-separated literals
     for (cid, clause_str) in clauses_str.split('|').enumerate() {
-        let lits: Vec<Literal> = clause_str.split(',')
+        let lits: Vec<Literal> = clause_str
+            .split(',')
             .filter_map(|tok| {
                 let tok = tok.trim();
                 let (neg, var_str) = if tok.starts_with('-') {
@@ -484,12 +580,20 @@ pub fn run_symbolic_sat(clauses_str: &str) {
                 } else {
                     (false, tok)
                 };
-                var_str.parse::<u8>().ok().map(|v| Literal { variable: v, negated: neg })
+                var_str.parse::<u8>().ok().map(|v| Literal {
+                    variable: v,
+                    negated: neg,
+                })
             })
             .collect();
-        let mut literals = [Literal { variable: 0, negated: false }; 5];
+        let mut literals = [Literal {
+            variable: 0,
+            negated: false,
+        }; 5];
         let n = lits.len().min(5) as u8;
-        for (i, l) in lits.iter().take(5).enumerate() { literals[i] = *l; }
+        for (i, l) in lits.iter().take(5).enumerate() {
+            literals[i] = *l;
+        }
         let clause = Clause {
             id: (cid as u32) + 1,
             literals,
@@ -509,9 +613,17 @@ pub fn run_symbolic_sat(clauses_str: &str) {
             println!("SAT solver (DPLL):");
             println!("  Iterations  : {}", state.iteration);
             println!("  Decisions   : {}", state.num_decisions);
-            println!("  Satisfiable : {}", match state.satisfiable { Some(true) => "yes", Some(false) => "no", None => "unknown" });
+            println!(
+                "  Satisfiable : {}",
+                match state.satisfiable {
+                    Some(true) => "yes",
+                    Some(false) => "no",
+                    None => "unknown",
+                }
+            );
             let assignments = solver.get_assignments();
-            let assigned: Vec<_> = assignments.iter()
+            let assigned: Vec<_> = assignments
+                .iter()
                 .filter(|a| a.level != 0 || a.antecedent.is_some())
                 .map(|a| {
                     let v = match a.value {

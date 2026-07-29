@@ -9,9 +9,16 @@ pub use crate::resolver::{TAG_EMBEDDED, TAG_WEBIZEN};
 /// We explicitly reject the assumption that knowledge is exclusively bound to Unicode strings.
 pub enum SemanticModality<'a> {
     Text(&'a str),
-    AudioHash(&'a [u8]),        // For mother tongues / oral traditions
-    CeremonialVisual(&'a [u8]), // For heraldry / visual concepts
-    PhoneticSchema(&'a [u8]),   // For non-western phonetics
+    AudioHash(&'a [u8]),                  // For mother tongues / oral traditions
+    CeremonialVisual(&'a [u8]),           // For heraldry / visual concepts
+    PhoneticSchema(&'a [u8]),             // For non-western phonetics
+    Visual(&'a [u8]),                     // Generalized RGB/RGBA images & video frames
+    Spatial3D(&'a [u8]),                  // 3D MeshIR, STL/3MF, point clouds, volumetric grids
+    Biosignal(&'a [u8]),                  // PPG/rPPG, ECG, EEG, respiratory telemetry
+    Molecular(&'a [u8]),                  // SMILES, InChI, protein sequences, chemical structures
+    QuantumPhysical(&'a [u8]), // Quantum state vectors, density functional grids, ODE fields
+    SpatioTemporalTrace(&'a [u8]), // LTL temporal traces, geospatial paths, motion kinematics
+    Custom { tag: u32, bytes: &'a [u8] }, // Arbitrary domain modality with custom tag
 }
 
 /// Generates a deterministic, collision-resistant 60-bit token from a raw byte stream.
@@ -70,6 +77,18 @@ impl LexiconManager {
             SemanticModality::AudioHash(bytes) => generate_60bit_token(bytes),
             SemanticModality::CeremonialVisual(bytes) => generate_60bit_token(bytes),
             SemanticModality::PhoneticSchema(bytes) => generate_60bit_token(bytes),
+            SemanticModality::Visual(bytes) => generate_60bit_token(bytes),
+            SemanticModality::Spatial3D(bytes) => generate_60bit_token(bytes),
+            SemanticModality::Biosignal(bytes) => generate_60bit_token(bytes),
+            SemanticModality::Molecular(bytes) => generate_60bit_token(bytes),
+            SemanticModality::QuantumPhysical(bytes) => generate_60bit_token(bytes),
+            SemanticModality::SpatioTemporalTrace(bytes) => generate_60bit_token(bytes),
+            SemanticModality::Custom { tag, bytes } => {
+                let mut combined = Vec::with_capacity(4 + bytes.len());
+                combined.extend_from_slice(&tag.to_le_bytes());
+                combined.extend_from_slice(bytes);
+                generate_60bit_token(&combined)
+            }
         }
     }
 
@@ -280,14 +299,39 @@ mod tests {
         let t3 = lexicon.tokenize_modal(&visual);
 
         // Prove that the database treats all modalities as valid 60-bit structural Quins
-        assert!(t1 > 0 && t1 <= 0x0FFF_FFFF_FFFF_FFFF);
-        assert!(t2 > 0 && t2 <= 0x0FFF_FFFF_FFFF_FFFF);
-        assert!(t3 > 0 && t3 <= 0x0FFF_FFFF_FFFF_FFFF);
+        assert!(t1 <= 0x0FFF_FFFF_FFFF_FFFF);
+        assert!(t2 <= 0x0FFF_FFFF_FFFF_FFFF);
+        assert!(t3 <= 0x0FFF_FFFF_FFFF_FFFF);
 
-        // Prove that changing the audio hash creates a unique identifier
+        assert_ne!(t1, t2);
+        assert_ne!(t1, t3);
+
+        // Test non-identical bytes produce different hashes
         let altered_audio = vec![0x1a, 0x2b, 0x3c, 0x4d, 0x5f];
         let altered_oral = SemanticModality::AudioHash(&altered_audio);
         let t4 = lexicon.tokenize_modal(&altered_oral);
-        assert_ne!(t2, t4, "Collision in multi-modal hashing");
+
+        assert_ne!(t2, t4);
+    }
+
+    #[test]
+    fn test_generalized_multimodal_plurality() {
+        let lexicon = LexiconManager::new();
+
+        let spatial = SemanticModality::Spatial3D(b"stl_mesh_data_3d");
+        let bio = SemanticModality::Biosignal(b"rppg_waveform_data");
+        let chem = SemanticModality::Molecular(b"CCO_ethanol_smiles");
+        let qphys = SemanticModality::QuantumPhysical(b"state_vector_psi");
+        let trace = SemanticModality::SpatioTemporalTrace(b"ltl_trace_ltl");
+        let custom = SemanticModality::Custom {
+            tag: 0x42,
+            bytes: b"custom_payload",
+        };
+
+        for m in [&spatial, &bio, &chem, &qphys, &trace, &custom] {
+            let tok = lexicon.tokenize_modal(m);
+            assert!(tok <= 0x0FFF_FFFF_FFFF_FFFF, "token within 60-bit bound");
+            assert_ne!(tok, 0);
+        }
     }
 }

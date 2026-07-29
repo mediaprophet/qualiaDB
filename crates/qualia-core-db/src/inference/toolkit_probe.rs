@@ -132,7 +132,12 @@ mod tests {
         let t0 = Instant::now();
         let mut out_llm = vec![0f32; n_out];
         assert!(crate::gguf_bridge::stack_gemm_quant(
-            &raw, &info, &input, &mut out_llm, n_in, n_out
+            &raw,
+            &info,
+            &input,
+            &mut out_llm,
+            n_in,
+            n_out
         ));
         let ms_llm = t0.elapsed().as_secs_f64() * 1e3;
 
@@ -226,7 +231,7 @@ mod tests {
 
     #[test]
     fn stage6_ternary_blob_gemm_vs_dense() {
-        use crate::ternary::{quantize_ternary, ternary_blob, ternary_gemm_cpu, dequantize_blob};
+        use crate::ternary::{dequantize_blob, quantize_ternary, ternary_blob, ternary_gemm_cpu};
 
         let n_in = 48usize;
         let n_out = 16usize;
@@ -243,9 +248,7 @@ mod tests {
         let (scale, _) = quantize_ternary(&w);
         let packed = &blob[4..];
         let mut out_t = vec![0f32; n_out];
-        ternary_gemm_cpu(
-            &input, packed, scale, n_in, n_out, 1, 0, 0, &mut out_t,
-        );
+        ternary_gemm_cpu(&input, packed, scale, n_in, n_out, 1, 0, 0, &mut out_t);
         let ms_t = t0.elapsed().as_secs_f64() * 1e3;
 
         let t1 = Instant::now();
@@ -315,11 +318,9 @@ mod tests {
         assert!(crate::p64_weight::has_p64_magic(&bytes));
 
         let t_full = Instant::now();
-        let idx = crate::p64_weight::P64TensorIndex::from_p64_with_integrity(
-            &bytes,
-            IntegrityMode::Full,
-        )
-        .unwrap();
+        let idx =
+            crate::p64_weight::P64TensorIndex::from_p64_with_integrity(&bytes, IntegrityMode::Full)
+                .unwrap();
         let ms_full = t_full.elapsed().as_secs_f64() * 1e3;
 
         let t_meta = Instant::now();
@@ -344,7 +345,7 @@ mod tests {
             ))
         );
         if helper.is_none() {
-            eprintln!("[stage8] ⚑ re-convert to attach .q42.cbor-ld");
+            eprintln!("[stage8] ⚑ re-convert to attach canonical .q42 metadata");
         }
         // Metadata mode must be materially faster on multi-hundred-MB models.
         if ms_full > 500.0 {

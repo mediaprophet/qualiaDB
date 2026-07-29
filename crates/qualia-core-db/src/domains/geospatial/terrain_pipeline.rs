@@ -49,12 +49,12 @@ pub fn compile_terrain_tile(
     }
 }
 
-use crate::render::assets::Mesh;
-use crate::container_10d::mesh_section::{encode_mesh_section, encoded_len};
-use crate::container_10d::provenance_section::{ProvenanceSidecar, encode_provenance_section};
-use crate::container_10d::section::{encode_container, SectionInput, SectionType, AlignmentTier};
 use crate::container_10d::header::Container10dHeader;
 use crate::container_10d::integrity::seal_whole_file_crc32c;
+use crate::container_10d::mesh_section::{encode_mesh_section, encoded_len};
+use crate::container_10d::provenance_section::{encode_provenance_section, ProvenanceSidecar};
+use crate::container_10d::section::{encode_container, AlignmentTier, SectionInput, SectionType};
+use crate::render::assets::Mesh;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 /// Compiles a DEM heightfield into a native `.10d` QuantizedMesh tensor file,
@@ -70,7 +70,7 @@ pub fn compile_and_encode_10d_tile(
 ) -> Result<Vec<u8>, String> {
     // 1. Generate standard TerrainMesh
     let terrain = generate_terrain_mesh(heightfield, width, height, cell_size_m);
-    
+
     // 2. Convert to render::assets::Mesh
     let mut triangles = Vec::with_capacity(terrain.indices.len() / 3);
     for chunk in terrain.indices.chunks_exact(3) {
@@ -80,40 +80,54 @@ pub fn compile_and_encode_10d_tile(
     let mut max = [f32::NEG_INFINITY; 3];
     for p in &terrain.vertices {
         for i in 0..3 {
-            if p[i] < min[i] { min[i] = p[i]; }
-            if p[i] > max[i] { max[i] = p[i]; }
+            if p[i] < min[i] {
+                min[i] = p[i];
+            }
+            if p[i] > max[i] {
+                max[i] = p[i];
+            }
         }
     }
     if terrain.vertices.is_empty() {
-        min = [0.0; 3]; max = [0.0; 3];
+        min = [0.0; 3];
+        max = [0.0; 3];
     }
-    
+
     let render_mesh = Mesh {
         positions: terrain.vertices,
         triangles,
         min,
         max,
     };
-    
+
     // 3. Encode QuantizedMesh Section
     let mesh_need = encoded_len(render_mesh.positions.len(), render_mesh.triangles.len());
     let mut mesh_payload = vec![0u8; mesh_need];
-    let mesh_size = encode_mesh_section(&render_mesh, &mut mesh_payload).map_err(|e| e.to_string())?;
+    let mesh_size =
+        encode_mesh_section(&render_mesh, &mut mesh_payload).map_err(|e| e.to_string())?;
     mesh_payload.truncate(mesh_size);
-    
+
     // 4. Build Provenance Sidecar
-    let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+    let now = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_secs();
     let mut sidecar = ProvenanceSidecar::new(source_bytes, "application/octet-stream", licence);
     sidecar.semantic_metadata = cbor_ld_metadata;
     sidecar.timestamp_epoch_s = now;
     sidecar.version_hash = [0x42; 32];
-    
-    let sidecar_need = sidecar.source_bytes.len() + sidecar.source_media_type.len() 
-        + sidecar.licence.len() + sidecar.vc.len() + sidecar.semantic_metadata.len() + 1024;
+
+    let sidecar_need = sidecar.source_bytes.len()
+        + sidecar.source_media_type.len()
+        + sidecar.licence.len()
+        + sidecar.vc.len()
+        + sidecar.semantic_metadata.len()
+        + 1024;
     let mut sidecar_payload = vec![0u8; sidecar_need];
-    let sidecar_size = encode_provenance_section(&sidecar, &mut sidecar_payload).map_err(|e| e.to_string())?;
+    let sidecar_size =
+        encode_provenance_section(&sidecar, &mut sidecar_payload).map_err(|e| e.to_string())?;
     sidecar_payload.truncate(sidecar_size);
-    
+
     // 5. Encode 10D Container
     let h = Container10dHeader::proposed();
     let inputs = [
@@ -132,14 +146,14 @@ pub fn compile_and_encode_10d_tile(
             payload: &sidecar_payload,
         },
     ];
-    
+
     // Allocate 10D container size plus header padding
     let mut out = vec![0u8; mesh_size + sidecar_size + 1024];
     let n = encode_container(&h, &inputs, &mut out).map_err(|e| e.to_string())?;
     out.truncate(n);
-    
+
     seal_whole_file_crc32c(&mut out);
-    
+
     Ok(out)
 }
 
@@ -151,16 +165,7 @@ mod tests {
     fn terrain_tile_has_enu_origin() {
         let heights = vec![0.0f32; 9];
         let tile = compile_terrain_tile(
-            &heights,
-            3,
-            3,
-            10.0,
-            -33.8688,
-            151.2093,
-            0.0,
-            -33.8688,
-            151.2093,
-            0.0,
+            &heights, 3, 3, 10.0, -33.8688, 151.2093, 0.0, -33.8688, 151.2093, 0.0,
         );
         assert_eq!(tile.mesh.vertices.len(), 9);
         assert!((tile.enu_origin.0).abs() < 1.0);

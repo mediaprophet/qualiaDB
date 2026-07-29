@@ -150,7 +150,9 @@ mod tests {
     #[test]
     #[serial_test::serial(gpu)]
     fn md_gpu_matches_oracle() {
-        if !crate::wgsl_forge::test_gpu_available() { return; }
+        if !crate::wgsl_forge::test_gpu_available() {
+            return;
+        }
         let count = 200usize;
         let mut state = Vec::with_capacity(count * MD_STRIDE);
         for i in 0..count {

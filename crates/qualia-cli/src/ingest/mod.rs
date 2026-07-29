@@ -17,14 +17,13 @@ use qualia_core_db::{NQuin, QUINS_PER_BLOCK};
 use rio_api::parser::TriplesParser;
 use rio_xml::RdfXmlParser;
 
-
-pub mod detect;
-pub mod pipeline;
-pub mod mapper;
-pub mod csv_mapper;
-pub mod json_mapper;
-pub mod writer;
 pub mod agent_intent;
+pub mod csv_mapper;
+pub mod detect;
+pub mod json_mapper;
+pub mod mapper;
+pub mod pipeline;
+pub mod writer;
 
 #[derive(Debug)]
 pub enum IngestError {
@@ -33,7 +32,9 @@ pub enum IngestError {
 }
 
 impl From<std::io::Error> for IngestError {
-    fn from(err: std::io::Error) -> Self { IngestError::Io(err) }
+    fn from(err: std::io::Error) -> Self {
+        IngestError::Io(err)
+    }
 }
 
 impl std::fmt::Display for IngestError {
@@ -136,17 +137,22 @@ pub fn ingest_rdf_xml(
 
             let sh = hash_token(&s);
             let ph = hash_token(&p);
-            
+
             let mut oh = None;
 
-            if let rio_api::model::Term::Literal(rio_api::model::Literal::Typed { value, datatype }) = t.object {
+            if let rio_api::model::Term::Literal(rio_api::model::Literal::Typed {
+                value,
+                datatype,
+            }) = t.object
+            {
                 let dt = datatype.iri;
                 if dt == "http://www.w3.org/2001/XMLSchema#integer" {
                     if let Ok(num) = value.parse::<i64>() {
                         let max_val = (1i64 << 59) - 1;
                         let min_val = -(1i64 << 59);
                         if num >= min_val && num <= max_val {
-                            let unsigned = (num as u64) & qualia_core_db::resolver::INLINE_VALUE_MASK;
+                            let unsigned =
+                                (num as u64) & qualia_core_db::resolver::INLINE_VALUE_MASK;
                             oh = Some(qualia_core_db::resolver::INLINE_TAG_INTEGER | unsigned);
                         }
                     }
@@ -157,7 +163,8 @@ pub fn ingest_rdf_xml(
                         let min_val = (-(1i64 << 59)) as f64;
                         if scaled >= min_val && scaled <= max_val {
                             let num_i64 = scaled.round() as i64;
-                            let unsigned = (num_i64 as u64) & qualia_core_db::resolver::INLINE_VALUE_MASK;
+                            let unsigned =
+                                (num_i64 as u64) & qualia_core_db::resolver::INLINE_VALUE_MASK;
                             oh = Some(qualia_core_db::resolver::INLINE_TAG_DECIMAL | unsigned);
                         }
                     }
@@ -172,18 +179,23 @@ pub fn ingest_rdf_xml(
 
             let oh = oh.unwrap_or_else(|| hash_token(&o) & 0x0FFF_FFFF_FFFF_FFFF);
 
-            sorter.push(NQuin {
-                subject: sh,
-                predicate: ph,
-                object: oh,
-                context: 0,
-                metadata: 0,
-                parity: NQuin::calculate_parity(sh, ph, oh, 0, 0),
-            }).map_err(|e| {
-                let io_err = std::io::Error::new(std::io::ErrorKind::Other, e.to_string());
-                parse_err = Some(std::io::Error::new(std::io::ErrorKind::Other, e.to_string()));
-                io_err
-            })?;
+            sorter
+                .push(NQuin {
+                    subject: sh,
+                    predicate: ph,
+                    object: oh,
+                    context: 0,
+                    metadata: 0,
+                    parity: NQuin::calculate_parity(sh, ph, oh, 0, 0),
+                })
+                .map_err(|e| {
+                    let io_err = std::io::Error::new(std::io::ErrorKind::Other, e.to_string());
+                    parse_err = Some(std::io::Error::new(
+                        std::io::ErrorKind::Other,
+                        e.to_string(),
+                    ));
+                    io_err
+                })?;
             triples += 1;
             Ok(())
         },
@@ -216,7 +228,6 @@ fn parse_nt_line(line: &str) -> Option<(&str, &str, &str)> {
     Some((s, p, o))
 }
 
-
 pub fn ingest_chk(input: &Path, output: &Path) -> Result<IngestStats, Box<dyn std::error::Error>> {
     let reader = File::open(input)?;
     let temp_dir = std::env::temp_dir().join("qualia_sort_chk");
@@ -243,7 +254,8 @@ pub fn ingest_cbor(input: &Path, output: &Path) -> Result<IngestStats, Box<dyn s
         return Err(format!(
             "CBOR input is {} MB — exceeds 256 MB guard. Split into smaller files.",
             file_size / (1024 * 1024)
-        ).into());
+        )
+        .into());
     }
     // Safety: file size checked above; mmap avoids heap copy of raw bytes.
     let mmap = unsafe { memmap2::Mmap::map(&file)? };
@@ -252,7 +264,8 @@ pub fn ingest_cbor(input: &Path, output: &Path) -> Result<IngestStats, Box<dyn s
     let temp_dir = std::env::temp_dir().join("qualia_sort_cbor");
     let mut sorter = ExternalSorter::new(temp_dir);
 
-    let triples = qualia_core_db::parsers::cbor_parser::parse_cbor_ld_stream(&buffer, 0, &mut sorter)?;
+    let triples =
+        qualia_core_db::parsers::cbor_parser::parse_cbor_ld_stream(&buffer, 0, &mut sorter)?;
 
     let block_seq = sorter.merge(output)?;
 
@@ -266,7 +279,7 @@ pub fn ingest_cbor(input: &Path, output: &Path) -> Result<IngestStats, Box<dyn s
 }
 
 /// Ingest a Turtle-Star file with SPARQL-Star embedded triples.
-/// 
+///
 /// This function uses the new LexiconEntry type to support embedded triples
 /// in addition to regular string lexicon entries.
 pub fn ingest_turtle_star(
@@ -275,10 +288,12 @@ pub fn ingest_turtle_star(
 ) -> Result<IngestStats, Box<dyn std::error::Error>> {
     let parent_dir = output.parent().unwrap_or(Path::new("."));
     let ingestor = pipeline::IncrementalIngestor::new(parent_dir, 256 * 1024 * 1024);
-    
-    // We map the custom IngestError to Box<dyn std::error::Error> 
-    ingestor.execute_stream_compilation(input, output).map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
-    
+
+    // We map the custom IngestError to Box<dyn std::error::Error>
+    ingestor
+        .execute_stream_compilation(input, output)
+        .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
+
     // For now we return empty stats since we didn't track them in the pipeline struct.
     Ok(IngestStats {
         triples_ingested: 0,
@@ -300,7 +315,8 @@ pub fn ingest_kml(input: &Path, output: &Path) -> Result<IngestStats, Box<dyn st
         return Err(format!(
             "KML input is {} MB — exceeds 256 MB guard. Split into smaller files.",
             file_size / (1024 * 1024)
-        ).into());
+        )
+        .into());
     }
     // Safety: file size checked above; OS maps pages on-demand, no heap copy.
     let mmap = unsafe { memmap2::Mmap::map(&file)? };
@@ -332,7 +348,10 @@ pub fn ingest_kml(input: &Path, output: &Path) -> Result<IngestStats, Box<dyn st
     let lex_entries = lex.len() as u64;
 
     qualia_core_db::q42_volume::write_unified_volume_with_entries(
-        output, &lex, &block_ranges, &blocks,
+        output,
+        &lex,
+        &block_ranges,
+        &blocks,
     )?;
 
     Ok(IngestStats {
@@ -350,7 +369,10 @@ pub fn ingest_kml(input: &Path, output: &Path) -> Result<IngestStats, Box<dyn st
 /// (type, vertex/triangle counts, bounding box, centroid, source format) which are written to the
 /// volume — the artefact is *semantically known*, not just drawn. (Raw vertex/index buffers feed
 /// the GPU renderer separately — Phase 1.2, RENDERER_IMPLEMENTATION_PLAN.)
-pub fn ingest_asset(input: &Path, output: &Path) -> Result<IngestStats, Box<dyn std::error::Error>> {
+pub fn ingest_asset(
+    input: &Path,
+    output: &Path,
+) -> Result<IngestStats, Box<dyn std::error::Error>> {
     let file = File::open(input)?;
     let file_size = file.metadata()?.len();
     if file_size > 256 * 1024 * 1024 {
@@ -398,7 +420,10 @@ pub fn ingest_asset(input: &Path, output: &Path) -> Result<IngestStats, Box<dyn 
     let lex_entries = lex.len() as u64;
 
     qualia_core_db::q42_volume::write_unified_volume_with_entries(
-        output, &lex, &block_ranges, &blocks,
+        output,
+        &lex,
+        &block_ranges,
+        &blocks,
     )?;
 
     Ok(IngestStats {
@@ -416,7 +441,10 @@ pub fn ingest_asset(input: &Path, output: &Path) -> Result<IngestStats, Box<dyn 
 
 macro_rules! stream_ingest {
     ($name:ident, $parse_fn:path, $temp_suffix:literal) => {
-        pub fn $name(input: &Path, output: &Path) -> Result<IngestStats, Box<dyn std::error::Error>> {
+        pub fn $name(
+            input: &Path,
+            output: &Path,
+        ) -> Result<IngestStats, Box<dyn std::error::Error>> {
             let reader = File::open(input)?;
             let temp_dir = std::env::temp_dir().join($temp_suffix);
             let mut sorter = ExternalSorter::new(temp_dir);
@@ -433,44 +461,66 @@ macro_rules! stream_ingest {
     };
 }
 
-stream_ingest!(ingest_ntriples_star,
+stream_ingest!(
+    ingest_ntriples_star,
     qualia_core_db::parsers::ntriples_star::parse_ntriples_star_stream,
-    "qualia_sort_nts");
+    "qualia_sort_nts"
+);
 
-stream_ingest!(ingest_nquads,
+stream_ingest!(
+    ingest_nquads,
     qualia_core_db::parsers::nquads_star::parse_nquads_star_stream,
-    "qualia_sort_nq");
+    "qualia_sort_nq"
+);
 
-stream_ingest!(ingest_nquads_star,
+stream_ingest!(
+    ingest_nquads_star,
     qualia_core_db::parsers::nquads_star::parse_nquads_star_stream,
-    "qualia_sort_nqs");
+    "qualia_sort_nqs"
+);
 
-stream_ingest!(ingest_turtle,
+stream_ingest!(
+    ingest_turtle,
     qualia_core_db::parsers::turtle_doc::parse_turtle_doc_stream,
-    "qualia_sort_ttl");
+    "qualia_sort_ttl"
+);
 
-stream_ingest!(ingest_trig,
+stream_ingest!(
+    ingest_trig,
     qualia_core_db::parsers::trig_star::parse_trig_star_stream,
-    "qualia_sort_trig");
+    "qualia_sort_trig"
+);
 
-stream_ingest!(ingest_trig_star,
+stream_ingest!(
+    ingest_trig_star,
     qualia_core_db::parsers::trig_star::parse_trig_star_stream,
-    "qualia_sort_trigs");
+    "qualia_sort_trigs"
+);
 
-stream_ingest!(ingest_n3,
+stream_ingest!(
+    ingest_n3,
     qualia_core_db::parsers::turtle_doc::parse_turtle_doc_stream,
-    "qualia_sort_n3");
+    "qualia_sort_n3"
+);
 
-stream_ingest!(ingest_json_ld,
+stream_ingest!(
+    ingest_json_ld,
     qualia_core_db::parsers::json_ld_stream::parse_json_ld_stream,
-    "qualia_sort_jsonld");
+    "qualia_sort_jsonld"
+);
 
-pub fn ingest_json_ld_star(input: &Path, output: &Path) -> Result<IngestStats, Box<dyn std::error::Error>> {
+pub fn ingest_json_ld_star(
+    input: &Path,
+    output: &Path,
+) -> Result<IngestStats, Box<dyn std::error::Error>> {
     let reader = File::open(input)?;
     let temp_dir = std::env::temp_dir().join("qualia_sort_jsonlds");
     let mut sorter = ExternalSorter::new(temp_dir);
     let triples = qualia_core_db::parsers::json_ld_stream::parse_json_ld_star_stream(
-        reader, 0, &mut sorter, true,
+        reader,
+        0,
+        &mut sorter,
+        true,
     )?;
     let block_seq = sorter.merge(output)?;
     Ok(IngestStats {
@@ -495,26 +545,28 @@ pub fn ingest_auto(
     })?;
 
     let stats = match fmt {
-        detect::SemanticFormat::NTriples     => ingest_ntriples(input, output)?,
+        detect::SemanticFormat::NTriples => ingest_ntriples(input, output)?,
         detect::SemanticFormat::NTriplesStar => ingest_ntriples_star(input, output)?,
-        detect::SemanticFormat::NQuads       => ingest_nquads(input, output)?,
-        detect::SemanticFormat::NQuadsStar   => ingest_nquads_star(input, output)?,
-        detect::SemanticFormat::Turtle       => ingest_turtle(input, output)?,
-        detect::SemanticFormat::TurtleStar   => ingest_turtle_star(input, output)?,
-        detect::SemanticFormat::TriG         => ingest_trig(input, output)?,
-        detect::SemanticFormat::TriGStar     => ingest_trig_star(input, output)?,
-        detect::SemanticFormat::N3           => ingest_n3(input, output)?,
-        detect::SemanticFormat::RdfXml       => ingest_rdf_xml(input, output)?,
-        detect::SemanticFormat::JsonLd       => ingest_json_ld(input, output)?,
-        detect::SemanticFormat::JsonLdStar   => ingest_json_ld_star(input, output)?,
-        detect::SemanticFormat::AgentIntentJsonl => agent_intent::ingest_agent_intent(input, output)?,
-        detect::SemanticFormat::CborLd       => ingest_cbor(input, output)?,
-        detect::SemanticFormat::Kml          => ingest_kml(input, output)?,
-        detect::SemanticFormat::Mesh         => ingest_asset(input, output)?,
-        detect::SemanticFormat::Chk          => ingest_chk(input, output)?,
-        detect::SemanticFormat::Q42          => return Err(
-            "Q42 vaults are already in native format — no ingestion needed.".into()
-        ),
+        detect::SemanticFormat::NQuads => ingest_nquads(input, output)?,
+        detect::SemanticFormat::NQuadsStar => ingest_nquads_star(input, output)?,
+        detect::SemanticFormat::Turtle => ingest_turtle(input, output)?,
+        detect::SemanticFormat::TurtleStar => ingest_turtle_star(input, output)?,
+        detect::SemanticFormat::TriG => ingest_trig(input, output)?,
+        detect::SemanticFormat::TriGStar => ingest_trig_star(input, output)?,
+        detect::SemanticFormat::N3 => ingest_n3(input, output)?,
+        detect::SemanticFormat::RdfXml => ingest_rdf_xml(input, output)?,
+        detect::SemanticFormat::JsonLd => ingest_json_ld(input, output)?,
+        detect::SemanticFormat::JsonLdStar => ingest_json_ld_star(input, output)?,
+        detect::SemanticFormat::AgentIntentJsonl => {
+            agent_intent::ingest_agent_intent(input, output)?
+        }
+        detect::SemanticFormat::CborLd => ingest_cbor(input, output)?,
+        detect::SemanticFormat::Kml => ingest_kml(input, output)?,
+        detect::SemanticFormat::Mesh => ingest_asset(input, output)?,
+        detect::SemanticFormat::Chk => ingest_chk(input, output)?,
+        detect::SemanticFormat::Q42 => {
+            return Err("Q42 vaults are already in native format — no ingestion needed.".into())
+        }
     };
 
     Ok((stats, fmt))

@@ -13,12 +13,30 @@ use crate::canvas_world::{
 const SYDNEY_LAT: f64 = -33.8688;
 const SYDNEY_LON: f64 = 151.2093;
 
-/// Mid-year UTC unix anchor for calendar-year valid-time intervals.
+/// Mid-year temporal anchor for calendar-year valid-time intervals.
+///
+/// Pre-1970 dates have **negative** Unix timestamps; casting those to `u64`
+/// wraps to huge values and inverts `valid_from <= valid_until` (kent-brewery
+/// failed validation). We store post-epoch as real Unix seconds; pre-epoch as
+/// ordered synthetic stamps in `0..FIRST_UNIX_YEAR_MID` so relative order of
+/// historical years is preserved under `u64`.
 fn year_mid(y: u32) -> u64 {
-    Utc.with_ymd_and_hms(y as i32, 7, 1, 0, 0, 0)
-        .single()
-        .expect("valid calendar year")
-        .timestamp() as u64
+    const FIRST_UNIX: u64 = 0; // 1970-01-01
+                               // ~ mid 1970
+    const YEAR_1970_MID: u64 = 15_778_800;
+    match Utc.with_ymd_and_hms(y as i32, 7, 1, 0, 0, 0).single() {
+        Some(dt) => {
+            let ts = dt.timestamp();
+            if ts >= 0 {
+                ts as u64
+            } else {
+                // Map years [0, 1970) into [0, YEAR_1970_MID) linearly by year.
+                let y = y.min(1969) as u64;
+                FIRST_UNIX + (y * YEAR_1970_MID) / 1970
+            }
+        }
+        None => y as u64,
+    }
 }
 
 /// OpenHistoricalMap-style historical world: temporal scrub over Sydney built fabric.
@@ -95,7 +113,8 @@ pub fn history_world() -> CanvasWorldConfig {
         norms: vec![
             CanvasNorm {
                 rule_uri: "urn:qualia:canvas:public-commons".to_string(),
-                description: "Historical commons read; HGIS attribution required on export".to_string(),
+                description: "Historical commons read; HGIS attribution required on export"
+                    .to_string(),
             },
             CanvasNorm {
                 rule_uri: "urn:qualia:canvas:temporal-scrub".to_string(),
@@ -127,7 +146,8 @@ pub fn biosphere_world() -> CanvasWorldConfig {
         assets: vec![],
         norms: vec![CanvasNorm {
             rule_uri: "urn:qualia:canvas:world-of-god".to_string(),
-            description: "Biosphere outputs are Hypothesis under F/A — never ground truth".to_string(),
+            description: "Biosphere outputs are Hypothesis under F/A — never ground truth"
+                .to_string(),
         }],
         origin_lat: 0.0,
         origin_lon: 0.0,
@@ -154,7 +174,8 @@ pub fn council_world() -> CanvasWorldConfig {
         assets: vec![],
         norms: vec![CanvasNorm {
             rule_uri: "urn:qualia:canvas:council-commons".to_string(),
-            description: "Municipal open data; placement requires council placement right".to_string(),
+            description: "Municipal open data; placement requires council placement right"
+                .to_string(),
         }],
         origin_lat: SYDNEY_LAT,
         origin_lon: SYDNEY_LON,
@@ -189,7 +210,8 @@ pub fn sdg_world() -> CanvasWorldConfig {
         norms: vec![
             CanvasNorm {
                 rule_uri: "urn:qualia:canvas:sdg-alignment".to_string(),
-                description: "Constructed-vs-natural interaction metrics for SDG walkthrough".to_string(),
+                description: "Constructed-vs-natural interaction metrics for SDG walkthrough"
+                    .to_string(),
             },
             CanvasNorm {
                 rule_uri: "urn:qualia:canvas:public-commons".to_string(),
@@ -271,6 +293,16 @@ mod tests {
     use super::*;
     use std::collections::HashSet;
     use std::fs;
+
+    #[test]
+    fn year_mid_preserves_historical_order() {
+        let a = year_mid(1835);
+        let b = year_mid(2005);
+        assert!(a <= b, "1835 mid ({a}) must be <= 2005 mid ({b})");
+        let c = year_mid(1973);
+        let d = year_mid(2015);
+        assert!(c <= d);
+    }
 
     #[test]
     fn flagship_worlds_validate_five_distinct_ids() {

@@ -144,8 +144,9 @@ pub fn route_job(inputs: &RoutingInputs, policy: &RoutingPolicy) -> RoutingDecis
             RoutingDecision::Local
         } else {
             RoutingDecision::Blocked {
-                reason: "external providers are disabled by policy and no local engine is available"
-                    .to_string(),
+                reason:
+                    "external providers are disabled by policy and no local engine is available"
+                        .to_string(),
             }
         };
     }
@@ -182,11 +183,13 @@ pub fn route_job(inputs: &RoutingInputs, policy: &RoutingPolicy) -> RoutingDecis
             return remote_unless_over_ceiling(
                 inputs,
                 policy,
-                "no local inference engine is available; routing to an external MCP provider".to_string(),
+                "no local inference engine is available; routing to an external MCP provider"
+                    .to_string(),
             );
         }
         return RoutingDecision::NeedsConsent {
-            reason: "no local engine available — needs consent to use external provider".to_string(),
+            reason: "no local engine available — needs consent to use external provider"
+                .to_string(),
         };
     }
 
@@ -554,7 +557,10 @@ mod tests {
     #[test]
     fn default_policy_is_sensible() {
         let p = RoutingPolicy::default();
-        assert!(p.allow_external, "default policy should permit external use");
+        assert!(
+            p.allow_external,
+            "default policy should permit external use"
+        );
         assert_eq!(p.cost_ceiling_microcents, DEFAULT_COST_CEILING_MICROCENTS);
     }
 

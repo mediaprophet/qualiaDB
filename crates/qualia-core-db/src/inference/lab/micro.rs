@@ -3,7 +3,7 @@
 use std::time::Instant;
 
 use crate::ggml_quants::{
-    dequantize_row_into, q4k_block_to_soa, GGML_TYPE_Q4_K_SOA, BLOCK_Q4K_SOA_BYTES,
+    dequantize_row_into, q4k_block_to_soa, BLOCK_Q4K_SOA_BYTES, GGML_TYPE_Q4_K_SOA,
 };
 use crate::inference_kernel_parity::{max_abs_err, max_ulp_diff};
 use crate::inference_modes::{set_inference_mode, InferenceMode};

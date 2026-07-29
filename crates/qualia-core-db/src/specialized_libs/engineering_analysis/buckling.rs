@@ -1,6 +1,5 @@
 use super::*;
 
-
 /// Buckling analysis
 pub struct BucklingAnalysis {
     eigenvalue_buckling: EigenvalueBuckling,
@@ -173,4 +172,3 @@ impl NonlinearBuckling {
         }
     }
 }
-

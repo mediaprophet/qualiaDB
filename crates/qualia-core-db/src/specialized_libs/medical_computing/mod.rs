@@ -10,33 +10,33 @@
 // split into single-concern submodules. mod.rs retains the module doc and
 // re-exports the full public surface unchanged.
 
-mod types;
-mod errors;
-mod library;
+mod cheminformatics;
 mod clinical_formulas;
-mod records;
-mod privacy;
+mod compliance;
 mod diagnosis;
 mod differential;
-mod imaging;
-mod image_dsp;
 mod drug_discovery;
-mod cheminformatics;
-mod compliance;
+mod errors;
+mod image_dsp;
+mod imaging;
+mod library;
+mod privacy;
+mod records;
+mod types;
 
-pub use types::*;
-pub use errors::*;
-pub use library::*;
+pub use cheminformatics::*;
 pub use clinical_formulas::*;
-pub use records::*;
-pub use privacy::*;
+pub use compliance::*;
 pub use diagnosis::*;
 pub use differential::*;
-pub use imaging::*;
-pub use image_dsp::*;
 pub use drug_discovery::*;
-pub use cheminformatics::*;
-pub use compliance::*;
+pub use errors::*;
+pub use image_dsp::*;
+pub use imaging::*;
+pub use library::*;
+pub use privacy::*;
+pub use records::*;
+pub use types::*;
 
 #[cfg(test)]
 mod tests;

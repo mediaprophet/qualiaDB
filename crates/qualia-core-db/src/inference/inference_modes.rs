@@ -66,7 +66,7 @@ impl InferenceMode {
                 "wgpu resident decode/prefill (DX12/Vulkan/Metal); Q4_K SoA INT4 coop GEMV; INT8 KV default; no second DirectML device unless QUALIA_DIRECTML=1"
             }
             InferenceMode::CudaTc => {
-                "prefer forge CUDA WMMA dense GEMM (f16-acc f32) when m,n,k multiples of 16; portable fallback; A2000: TC helps prefill, decode is still GEMV"
+                "CUDA-capable lane: resident wgpu decode by default (coherent); Q4_K SoA device GEMV when applicable; dense densify+TC decode GEMV is opt-in QUALIA_LLM_CUDA_TC_DECODE=1 (lab — was incoherent when default-on)"
             }
             InferenceMode::QuantGraph => {
                 "INT4 (Q4_K SoA) front-end — A2000 bandwidth sweet spot — + graph/Webizen verify to recover quality; INT2 experimental with graph net"
@@ -80,14 +80,8 @@ impl InferenceMode {
 
 static MODE: AtomicU8 = AtomicU8::new(InferenceMode::Portable as u8);
 
-/// Resolve mode from `QUALIA_INFERENCE_MODE` once (or after explicit set).
-pub fn active_inference_mode() -> InferenceMode {
-    // Env can override atomic at read time so shells without restart work.
-    if let Ok(s) = std::env::var("QUALIA_INFERENCE_MODE") {
-        if let Some(m) = InferenceMode::parse(&s) {
-            return m;
-        }
-    }
+#[inline]
+fn atomic_inference_mode() -> InferenceMode {
     match MODE.load(Ordering::Relaxed) {
         1 => InferenceMode::CudaTc,
         2 => InferenceMode::QuantGraph,
@@ -96,15 +90,26 @@ pub fn active_inference_mode() -> InferenceMode {
     }
 }
 
+/// Resolve mode from `QUALIA_INFERENCE_MODE` at the cold configuration boundary.
+///
+/// A successful environment parse is published to [`MODE`]. Per-token predicates must read
+/// that atomic via [`atomic_inference_mode`] instead of allocating a fresh environment string.
+pub fn active_inference_mode() -> InferenceMode {
+    // Env can override the configured atomic when this cold-boundary API is invoked.
+    if let Ok(s) = std::env::var("QUALIA_INFERENCE_MODE") {
+        if let Some(m) = InferenceMode::parse(&s) {
+            MODE.store(m as u8, Ordering::Relaxed);
+            return m;
+        }
+    }
+    atomic_inference_mode()
+}
+
 /// Set process mode and apply associated toggles. Env still wins on next read if set.
 pub fn set_inference_mode(mode: InferenceMode) {
     MODE.store(mode as u8, Ordering::Relaxed);
     apply_mode_toggles(mode);
-    log::info!(
-        "LLM_MODE|active|{}|{}",
-        mode.as_str(),
-        mode.description()
-    );
+    log::info!("LLM_MODE|active|{}|{}", mode.as_str(), mode.description());
 }
 
 /// Apply mode-specific defaults without changing the mode atom (used at first infer).
@@ -131,18 +136,25 @@ pub fn apply_mode_toggles(mode: InferenceMode) {
                 // it beats resident. Device SDPA requires f32 KV (int8 indices differ).
                 match std::env::var("QUALIA_LLM_CUDA_DECODE").ok().as_deref() {
                     Some("1") | Some("true") => {
-                        set_resident_decode(false);
+                        // Keep resident_decode ON — the wgpu resident path handles mixed
+                        // quant types (Q4_K_M has Q8_0 V, Q6_K down) and serves as fallback
+                        // when the CUDA mega-pass can't run (requires all-Q4_K_SOA weights).
+                        // The mega-pass is only attempted when the resident path returns None.
                         // Force f32 KV so device SDPA index formula matches host layout.
-                        // Env wins over the AtomicBool in `kv_int8_enabled`.
                         crate::llm_bench::set_kv_int8(false);
                         // SAFETY: process-local lab toggle; decode-proxy is single-threaded measure.
                         std::env::set_var("QUALIA_LLM_KV_INT8", "0");
                         log::info!(
-                            "LLM_MODE|cuda|resident_decode=off|cuda_soa_layer|f32_kv|device_sdpa|lab_path_not_default"
+                            "LLM_MODE|cuda|resident_decode=on|cuda_mega_pass_fallback|f32_kv|device_sdpa|lab_path"
                         );
                     }
                     _ => {
-                        log::info!("LLM_MODE|cuda|resident_decode=on|prewarm_at_plan");
+                        // Default excellence path: resident mega-pass + wgpu GEMV.
+                        // Dense densify+TC for decode GEMV is OFF unless QUALIA_LLM_CUDA_TC_DECODE=1
+                        // (that path was measured incoherent — garbage tokens — 2026-07-24).
+                        log::info!(
+                            "LLM_MODE|cuda|resident_decode=on|dense_tc_decode=off|use_q4k_soa_device_when_present"
+                        );
                     }
                 }
             }
@@ -166,7 +178,7 @@ pub fn apply_mode_toggles(mode: InferenceMode) {
 /// True when dense forge GEMM should try tensor-core path first.
 #[inline]
 pub fn prefer_tensor_core_gemm() -> bool {
-    matches!(active_inference_mode(), InferenceMode::CudaTc)
+    matches!(atomic_inference_mode(), InferenceMode::CudaTc)
 }
 
 /// True when agent should run graph / Webizen grounding after proposals.
@@ -267,13 +279,19 @@ mod tests {
 
     #[test]
     fn parse_mode_names() {
-        assert_eq!(InferenceMode::parse("portable"), Some(InferenceMode::Portable));
+        assert_eq!(
+            InferenceMode::parse("portable"),
+            Some(InferenceMode::Portable)
+        );
         assert_eq!(InferenceMode::parse("CUDA"), Some(InferenceMode::CudaTc));
         assert_eq!(
             InferenceMode::parse("quant-graph"),
             Some(InferenceMode::QuantGraph)
         );
-        assert_eq!(InferenceMode::parse("hybrid"), Some(InferenceMode::QuantGraph));
+        assert_eq!(
+            InferenceMode::parse("hybrid"),
+            Some(InferenceMode::QuantGraph)
+        );
         assert_eq!(
             InferenceMode::parse("fast-verify"),
             Some(InferenceMode::FastVerify)
@@ -309,5 +327,28 @@ mod tests {
         assert_eq!(active_inference_mode(), InferenceMode::CudaTc);
         set_inference_mode(InferenceMode::Portable);
         assert_eq!(active_inference_mode(), InferenceMode::Portable);
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn cold_env_publish_makes_hot_cuda_guard_zero_allocation() {
+        let previous = std::env::var("QUALIA_INFERENCE_MODE").ok();
+        std::env::set_var("QUALIA_INFERENCE_MODE", "cuda");
+        set_inference_mode(InferenceMode::Portable);
+        assert_eq!(active_inference_mode(), InferenceMode::CudaTc);
+        crate::specialized_libs::computational_geometry::allocation_counter::assert_zero_alloc(
+            "atomic_cuda_mode_guard",
+            || assert!(prefer_tensor_core_gemm()),
+        );
+        match previous {
+            Some(value) => {
+                std::env::set_var("QUALIA_INFERENCE_MODE", value);
+                let _ = active_inference_mode();
+            }
+            None => {
+                std::env::remove_var("QUALIA_INFERENCE_MODE");
+                set_inference_mode(InferenceMode::Portable);
+            }
+        }
     }
 }

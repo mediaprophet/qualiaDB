@@ -34,7 +34,9 @@ pub fn WellfairSyncPanel() -> Element {
     let mut loaded = use_signal(|| false);
 
     use_effect(move || {
-        if loaded() { return; }
+        if loaded() {
+            return;
+        }
         loaded.set(true);
         reload();
     });
@@ -43,6 +45,7 @@ pub fn WellfairSyncPanel() -> Element {
         section {
             aria_label: "WellFair sync inbox",
             style: "padding:0.85rem;border:1px solid var(--qualia-border,#ddd);border-radius:10px;background:var(--qualia-surface,#fafafa);margin-bottom:0.85rem;",
+            super::shared::DomainChrome { domain: "Instruments", chip: "Sync · fail-closed quarantine", show_memory: false }
             h2 { style: "margin:0 0 0.5rem;font-size:1rem;", "Sync inbox" }
             p {
                 style: "margin:0 0 0.75rem;font-size:0.74rem;color:var(--qualia-text-muted,#666);",

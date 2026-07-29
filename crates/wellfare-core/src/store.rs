@@ -62,7 +62,12 @@ impl HealthStore {
 
     /// Load prefixes + data, then run a SPARQL ASK shape check.
     /// Returns `true` if the constraint is violated (ASK returns true = violation found).
-    pub fn check_shape(&mut self, prefixes: &str, turtle_data: &str, ask_query: &str) -> Result<bool, String> {
+    pub fn check_shape(
+        &mut self,
+        prefixes: &str,
+        turtle_data: &str,
+        ask_query: &str,
+    ) -> Result<bool, String> {
         let full_ttl = format!("{}\n{}", prefixes, turtle_data);
         self.load_turtle(&full_ttl)?;
         let result = self.query(ask_query)?;

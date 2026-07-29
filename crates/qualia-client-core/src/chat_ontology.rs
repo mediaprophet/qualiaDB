@@ -205,8 +205,9 @@ fn wordnet_lexicon() -> Option<&'static qualia_core_db::q42_lex::Q42Lexicon> {
             qualia_core_db::q42_lex::Q42Lexicon::load_for_q42(&q42)
                 .ok()
                 .or_else(|| {
-                    resolve_wordnet_lex(&q42)
-                        .and_then(|lex_path| qualia_core_db::q42_lex::Q42Lexicon::load(&lex_path).ok())
+                    resolve_wordnet_lex(&q42).and_then(|lex_path| {
+                        qualia_core_db::q42_lex::Q42Lexicon::load(&lex_path).ok()
+                    })
                 })
         })
         .as_ref()

@@ -20,7 +20,7 @@ use serde::{Deserialize, Serialize};
 #[cfg(target_arch = "wasm32")]
 use crate::specialized_libs::computational_geometry::{
     convex_hull_indices_2, delaunay_triangulation_2, nearest_site_brute_force, orientation_2,
-    voronoi_diagram_2, EdgeSlot, HalfEdge, Orientation, Point2, VoronoiEdge, VoronoiVertex,
+    voronoi_diagram_2, Orientation, Point2, VoronoiEdge, VoronoiVertex,
 };
 
 // ───────────────────────────────────────────────────────────────────────────

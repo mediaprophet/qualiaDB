@@ -139,10 +139,7 @@ pub fn log_returns_into(prices: &[f64], out: &mut [f64]) -> Result<usize, TimeSe
 /// Writes `returns.len() + 1` values: `out[0] = 1.0` (unit initial wealth) and
 /// `out[i] = out[i-1] * (1 + returns[i-1])`. Requires
 /// `out.len() >= returns.len() + 1`.
-pub fn cumulative_wealth_into(
-    returns: &[f64],
-    out: &mut [f64],
-) -> Result<usize, TimeSeriesError> {
+pub fn cumulative_wealth_into(returns: &[f64], out: &mut [f64]) -> Result<usize, TimeSeriesError> {
     if !all_finite(returns) {
         return Err(TimeSeriesError::NonFiniteInput);
     }
@@ -444,7 +441,11 @@ pub fn gbm_simulate_into(
     let drift_term = (drift - 0.5 * volatility * volatility) * dt;
     out[0] = initial_price;
     for t in 1..steps {
-        let z = if volatility > 0.0 { rng.gaussian() } else { 0.0 };
+        let z = if volatility > 0.0 {
+            rng.gaussian()
+        } else {
+            0.0
+        };
         out[t] = out[t - 1] * f64::exp(drift_term + volatility * sqrt_dt * z);
     }
     Ok(steps)
@@ -505,9 +506,7 @@ pub fn historical_var(
     scratch: &mut [f64],
 ) -> Result<f64, TimeSeriesError> {
     crate::specialized_libs::computational_economics::risk::historical_var(
-        returns,
-        confidence,
-        scratch,
+        returns, confidence, scratch,
     )
     .map_err(|e| match e {
         crate::specialized_libs::computational_economics::risk::RiskError::OutputBufferTooSmall => {
@@ -525,9 +524,7 @@ pub fn historical_cvar(
     scratch: &mut [f64],
 ) -> Result<f64, TimeSeriesError> {
     crate::specialized_libs::computational_economics::risk::historical_cvar(
-        returns,
-        confidence,
-        scratch,
+        returns, confidence, scratch,
     )
     .map_err(|e| match e {
         crate::specialized_libs::computational_economics::risk::RiskError::OutputBufferTooSmall => {
@@ -539,11 +536,7 @@ pub fn historical_cvar(
 
 /// Parametric Gaussian VaR — delegates to `risk::gaussian_var`.
 #[inline]
-pub fn parametric_var(
-    mean: f64,
-    std_dev: f64,
-    confidence: f64,
-) -> Result<f64, TimeSeriesError> {
+pub fn parametric_var(mean: f64, std_dev: f64, confidence: f64) -> Result<f64, TimeSeriesError> {
     crate::specialized_libs::computational_economics::risk::gaussian_var(mean, std_dev, confidence)
         .map_err(|_| TimeSeriesError::InvalidInput)
 }

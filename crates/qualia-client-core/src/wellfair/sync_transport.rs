@@ -53,7 +53,10 @@ impl InMemoryRelay {
 
 impl SyncTransport for InMemoryRelay {
     fn publish(&self, ops: &[SyncOperation]) -> Result<(), String> {
-        let mut store = self.inner.lock().map_err(|_| "relay lock poisoned".to_string())?;
+        let mut store = self
+            .inner
+            .lock()
+            .map_err(|_| "relay lock poisoned".to_string())?;
         for op in ops {
             if !store.iter().any(|e| e.operation_id == op.operation_id) {
                 store.push(op.clone());
@@ -63,7 +66,10 @@ impl SyncTransport for InMemoryRelay {
     }
 
     fn pull(&self, since: u64) -> Result<Vec<SyncOperation>, String> {
-        let store = self.inner.lock().map_err(|_| "relay lock poisoned".to_string())?;
+        let store = self
+            .inner
+            .lock()
+            .map_err(|_| "relay lock poisoned".to_string())?;
         let start = (since as usize).min(store.len());
         Ok(store[start..].to_vec())
     }
@@ -211,16 +217,24 @@ mod tests {
     #[test]
     fn in_memory_relay_dedups_and_pulls_from_cursor() {
         let relay = InMemoryRelay::new();
-        relay.publish(&[signed("a", "ledger_entry", "1", 1)]).unwrap();
-        relay.publish(&[signed("b", "ledger_entry", "2", 2)]).unwrap();
+        relay
+            .publish(&[signed("a", "ledger_entry", "1", 1)])
+            .unwrap();
+        relay
+            .publish(&[signed("b", "ledger_entry", "2", 2)])
+            .unwrap();
         // Re-publishing 'a' is idempotent at the relay.
-        relay.publish(&[signed("a", "ledger_entry", "1", 1)]).unwrap();
+        relay
+            .publish(&[signed("a", "ledger_entry", "1", 1)])
+            .unwrap();
         assert_eq!(relay.len(), 2);
 
         // Cursor: pull everything, then only what's new.
         assert_eq!(relay.pull(0).unwrap().len(), 2);
         assert_eq!(relay.pull(2).unwrap().len(), 0);
-        relay.publish(&[signed("c", "ledger_entry", "3", 3)]).unwrap();
+        relay
+            .publish(&[signed("c", "ledger_entry", "3", 3)])
+            .unwrap();
         let fresh = relay.pull(2).unwrap();
         assert_eq!(fresh.len(), 1);
         assert_eq!(fresh[0].operation_id, "c");
@@ -252,7 +266,10 @@ mod tests {
 
         let set_a = inbox_a.validated_operations().unwrap();
         let set_b = inbox_b.validated_operations().unwrap();
-        assert_eq!(set_a, set_b, "nodes must converge to the same validated set");
+        assert_eq!(
+            set_a, set_b,
+            "nodes must converge to the same validated set"
+        );
         assert_eq!(set_a.len(), 2);
     }
 
@@ -297,7 +314,9 @@ mod tests {
         let relay = InMemoryRelay::new();
         let dir = tempfile::tempdir().unwrap();
         let inbox = SyncInbox::open(dir.path()).unwrap();
-        relay.publish(&[signed("r1", "ledger_entry", "x", 1)]).unwrap();
+        relay
+            .publish(&[signed("r1", "ledger_entry", "x", 1)])
+            .unwrap();
 
         for _ in 0..3 {
             for op in relay.pull(0).unwrap() {
@@ -313,8 +332,11 @@ mod tests {
         // (the rejoin) and both admit everything — converging.
         let left = InMemoryRelay::new();
         let right = InMemoryRelay::new();
-        left.publish(&[signed("L", "contribution", "l", 1)]).unwrap();
-        right.publish(&[signed("R", "contribution", "r", 2)]).unwrap();
+        left.publish(&[signed("L", "contribution", "l", 1)])
+            .unwrap();
+        right
+            .publish(&[signed("R", "contribution", "r", 2)])
+            .unwrap();
 
         let dir_a = tempfile::tempdir().unwrap();
         let dir_b = tempfile::tempdir().unwrap();
@@ -328,7 +350,10 @@ mod tests {
             inbox_a.admit(op, 1).unwrap();
             inbox_b.admit(op, 1).unwrap();
         }
-        assert_eq!(inbox_a.validated_operations().unwrap(), inbox_b.validated_operations().unwrap());
+        assert_eq!(
+            inbox_a.validated_operations().unwrap(),
+            inbox_b.validated_operations().unwrap()
+        );
         assert_eq!(inbox_a.validated_operations().unwrap().len(), 2);
     }
 
@@ -354,11 +379,13 @@ mod tests {
             let _guard = rt_a.enter();
             Libp2pSyncNode::spawn(relay_a.clone())
         };
-        let a_addr = rt_a.block_on(a.listen("/ip4/127.0.0.1/tcp/0")).expect("A listen");
+        let a_addr = rt_a
+            .block_on(a.listen("/ip4/127.0.0.1/tcp/0"))
+            .expect("A listen");
 
         // The libp2p SyncTransport (the spoke) dials A.
-        let transport =
-            Libp2pSyncTransport::connect(&a.peer_id.to_string(), &a_addr.to_string()).expect("connect");
+        let transport = Libp2pSyncTransport::connect(&a.peer_id.to_string(), &a_addr.to_string())
+            .expect("connect");
 
         // Publish two real signed operations, then pull them back.
         let ops = vec![
@@ -369,7 +396,10 @@ mod tests {
         assert_eq!(relay_a.len(), 2, "A's relay holds both op frames");
 
         let pulled = transport.pull(0).expect("pull");
-        assert_eq!(pulled, ops, "operations round-trip losslessly through CBOR + libp2p");
+        assert_eq!(
+            pulled, ops,
+            "operations round-trip losslessly through CBOR + libp2p"
+        );
 
         // The pulled operations admit into a fresh fail-closed inbox as Validated.
         let dir = tempfile::tempdir().unwrap();

@@ -1,9 +1,9 @@
 {
-  "version": "0.0.24",
+  "version": "0.0.27",
   "brand": {
-    "name": "QualiaDB",
-    "tagline": "Human-Centric Semantic Engine",
-    "icon": "Q"
+    "name": "Webizen",
+    "tagline": "Life-domain habitat · QualiaDB engine",
+    "icon": "W"
   },
   "navigation": [
     {
@@ -13,10 +13,16 @@
       "group": "Core"
     },
     {
-      "label": "0.0.24 Progress",
-      "href": "progress-0.0.24.html",
+      "label": "0.0.27 Progress",
+      "href": "progress-0.0.27.html",
       "icon": "fa-heart-pulse",
       "highlight": true,
+      "group": "Core"
+    },
+    {
+      "label": "0.0.26 Archive",
+      "href": "progress-0.0.26.html",
+      "icon": "fa-clock-rotate-left",
       "group": "Core"
     },
     {
@@ -115,6 +121,13 @@
       "label": "Spatial / GeoSPARQL",
       "href": "spatial.html",
       "icon": "fa-cube",
+      "group": "Sciences"
+    },
+    {
+      "label": "Knowledge Universe",
+      "href": "universe.html",
+      "icon": "fa-globe",
+      "highlight": true,
       "group": "Sciences"
     },
     {

@@ -140,11 +140,17 @@ fn run_desktop_proxy() -> Result<(), String> {
         if req.trim().is_empty() {
             continue;
         }
-        tcp_writer.write_all(req.as_bytes()).map_err(|e| e.to_string())?;
+        tcp_writer
+            .write_all(req.as_bytes())
+            .map_err(|e| e.to_string())?;
         tcp_writer.write_all(b"\n").map_err(|e| e.to_string())?;
         tcp_writer.flush().ok();
         reply.clear();
-        if tcp_reader.read_line(&mut reply).map_err(|e| e.to_string())? == 0 {
+        if tcp_reader
+            .read_line(&mut reply)
+            .map_err(|e| e.to_string())?
+            == 0
+        {
             break;
         }
         let mut out = stdout.lock();

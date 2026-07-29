@@ -26,8 +26,8 @@ pub fn save(
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent)?;
     }
-    let text = serde_json::to_string_pretty(prefs)
-        .map_err(|e| std::io::Error::other(e.to_string()))?;
+    let text =
+        serde_json::to_string_pretty(prefs).map_err(|e| std::io::Error::other(e.to_string()))?;
     fs::write(&path, text)?;
     Ok(())
 }

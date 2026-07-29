@@ -1,6 +1,5 @@
 use super::*;
 
-
 /// Statistical zone for different data types
 #[derive(Debug, Clone)]
 pub struct StatisticalZone {
@@ -394,4 +393,3 @@ impl StatisticalDataStorage {
         self.get_dataset_data_legacy("sample")
     }
 }
-

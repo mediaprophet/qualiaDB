@@ -41,9 +41,12 @@ fn generate_subcommand_path_emits_wgsl_for_all_builtins_without_gpu() {
 #[test]
 fn validate_subcommand_path_naga_validates_generated_wgsl_without_gpu() {
     // affine-f32 is the CLI default kernel; exercise that exact default path.
-    let generated =
-        generate_builtin(BuiltinKernel::AffineF32, Schedule::default(), TargetBackend::Wgsl)
-            .expect("generate affine-f32");
+    let generated = generate_builtin(
+        BuiltinKernel::AffineF32,
+        Schedule::default(),
+        TargetBackend::Wgsl,
+    )
+    .expect("generate affine-f32");
     let report = validate_wgsl(&generated.source).expect("naga validate affine-f32");
     assert!(report.naga_validated);
     assert!(report.binding_count >= 1, "expected at least one binding");
@@ -66,6 +69,10 @@ fn generate_then_validate_pipeline_holds_for_all_builtins_without_gpu() {
             .unwrap_or_else(|e| panic!("generate {} failed: {e}", builtin.name()));
         let report = validate_wgsl(&generated.source)
             .unwrap_or_else(|e| panic!("validate {} failed: {e}", builtin.name()));
-        assert!(report.naga_validated, "{} not naga-validated", builtin.name());
+        assert!(
+            report.naga_validated,
+            "{} not naga-validated",
+            builtin.name()
+        );
     }
 }

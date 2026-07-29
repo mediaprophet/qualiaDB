@@ -376,7 +376,7 @@ fn test_obfuscation_with_specialized_libraries() -> Result<(), ExecutionError> {
     // Verify Ouroboros data preservation
     let decoded_params = polynomial_obfuscator
         .decode_from_quin(&ouroboros_quin, ObfuscationDomain::HamiltonianOperator)?;
-    let recovered_params: crate::specialized_libs::physics_simulation::ouroboros_solver::OuroborosParameters = 
+    let recovered_params: crate::specialized_libs::physics_simulation::ouroboros_solver::OuroborosParameters =
         unsafe { core::mem::transmute(decoded_params) };
 
     assert!((recovered_params.m_chi - ouroboros_params.m_chi).abs() < 1e-10);
@@ -396,7 +396,7 @@ fn test_obfuscation_with_specialized_libraries() -> Result<(), ExecutionError> {
     // Verify optimization data preservation
     let decoded_opt = polynomial_obfuscator
         .decode_from_quin(&opt_quin, ObfuscationDomain::OptimizationProblem)?;
-    let recovered_opt: crate::specialized_libs::linear_algebra::parameter_optimizer::OptimizationResults = 
+    let recovered_opt: crate::specialized_libs::linear_algebra::parameter_optimizer::OptimizationResults =
         unsafe { core::mem::transmute(decoded_opt) };
 
     assert!((recovered_opt.best_fitness - opt_results.best_fitness).abs() < 1e-10);

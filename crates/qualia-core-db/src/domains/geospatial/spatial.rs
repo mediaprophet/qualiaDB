@@ -8,12 +8,8 @@ pub struct SpatialElement {
 
 #[derive(Debug, Clone)]
 enum QuadTreeNode {
-    Leaf {
-        elements: Vec<SpatialElement>,
-    },
-    Internal {
-        children: Box<[QuadTreeNode; 4]>,
-    },
+    Leaf { elements: Vec<SpatialElement> },
+    Internal { children: Box<[QuadTreeNode; 4]> },
 }
 
 #[derive(Debug, Clone)]
@@ -28,14 +24,23 @@ impl SpatiotemporalQuadTree {
     pub fn new(bounds: (f64, f64, f64, f64)) -> Self {
         Self {
             root_bounds: bounds,
-            root: QuadTreeNode::Leaf { elements: Vec::new() },
+            root: QuadTreeNode::Leaf {
+                elements: Vec::new(),
+            },
             max_elements: 16,
             max_depth: 8,
         }
     }
 
     pub fn insert(&mut self, element: SpatialElement) {
-        Self::insert_into(&mut self.root, self.root_bounds, element, 0, self.max_elements, self.max_depth);
+        Self::insert_into(
+            &mut self.root,
+            self.root_bounds,
+            element,
+            0,
+            self.max_elements,
+            self.max_depth,
+        );
     }
 
     fn insert_into(
@@ -68,18 +73,32 @@ impl SpatiotemporalQuadTree {
                         let bottom = el_min_y <= mid_y;
                         let top = el_max_y >= mid_y;
 
-                        if left && top { top_left.push(el.clone()); }
-                        if right && top { top_right.push(el.clone()); }
-                        if left && bottom { bottom_left.push(el.clone()); }
-                        if right && bottom { bottom_right.push(el.clone()); }
+                        if left && top {
+                            top_left.push(el.clone());
+                        }
+                        if right && top {
+                            top_right.push(el.clone());
+                        }
+                        if left && bottom {
+                            bottom_left.push(el.clone());
+                        }
+                        if right && bottom {
+                            bottom_right.push(el.clone());
+                        }
                     }
 
                     *node = QuadTreeNode::Internal {
                         children: Box::new([
                             QuadTreeNode::Leaf { elements: top_left },
-                            QuadTreeNode::Leaf { elements: top_right },
-                            QuadTreeNode::Leaf { elements: bottom_left },
-                            QuadTreeNode::Leaf { elements: bottom_right },
+                            QuadTreeNode::Leaf {
+                                elements: top_right,
+                            },
+                            QuadTreeNode::Leaf {
+                                elements: bottom_left,
+                            },
+                            QuadTreeNode::Leaf {
+                                elements: bottom_right,
+                            },
                         ]),
                     };
                 }
@@ -96,16 +115,44 @@ impl SpatiotemporalQuadTree {
                 let top = el_max_y >= mid_y;
 
                 if left && top {
-                    Self::insert_into(&mut children[0], (min_x, mid_y, mid_x, max_y), element.clone(), depth + 1, max_elements, max_depth);
+                    Self::insert_into(
+                        &mut children[0],
+                        (min_x, mid_y, mid_x, max_y),
+                        element.clone(),
+                        depth + 1,
+                        max_elements,
+                        max_depth,
+                    );
                 }
                 if right && top {
-                    Self::insert_into(&mut children[1], (mid_x, mid_y, max_x, max_y), element.clone(), depth + 1, max_elements, max_depth);
+                    Self::insert_into(
+                        &mut children[1],
+                        (mid_x, mid_y, max_x, max_y),
+                        element.clone(),
+                        depth + 1,
+                        max_elements,
+                        max_depth,
+                    );
                 }
                 if left && bottom {
-                    Self::insert_into(&mut children[2], (min_x, min_y, mid_x, mid_y), element.clone(), depth + 1, max_elements, max_depth);
+                    Self::insert_into(
+                        &mut children[2],
+                        (min_x, min_y, mid_x, mid_y),
+                        element.clone(),
+                        depth + 1,
+                        max_elements,
+                        max_depth,
+                    );
                 }
                 if right && bottom {
-                    Self::insert_into(&mut children[3], (mid_x, min_y, max_x, mid_y), element.clone(), depth + 1, max_elements, max_depth);
+                    Self::insert_into(
+                        &mut children[3],
+                        (mid_x, min_y, max_x, mid_y),
+                        element.clone(),
+                        depth + 1,
+                        max_elements,
+                        max_depth,
+                    );
                 }
             }
         }
@@ -115,8 +162,15 @@ impl SpatiotemporalQuadTree {
     /// and are valid within the given temporal range [t0, t1].
     pub fn query_region(&self, x1: f64, y1: f64, x2: f64, y2: f64, t0: u64, t1: u64) -> Vec<u64> {
         let mut results = Vec::new();
-        Self::query_node(&self.root, self.root_bounds, (x1, y1, x2, y2), t0, t1, &mut results);
-        
+        Self::query_node(
+            &self.root,
+            self.root_bounds,
+            (x1, y1, x2, y2),
+            t0,
+            t1,
+            &mut results,
+        );
+
         // Remove duplicates because elements might span multiple quadrants
         results.sort_unstable();
         results.dedup();
@@ -155,10 +209,38 @@ impl SpatiotemporalQuadTree {
                 let mid_x = (bx1 + bx2) / 2.0;
                 let mid_y = (by1 + by2) / 2.0;
 
-                Self::query_node(&children[0], (bx1, mid_y, mid_x, by2), query_bounds, t0, t1, results);
-                Self::query_node(&children[1], (mid_x, mid_y, bx2, by2), query_bounds, t0, t1, results);
-                Self::query_node(&children[2], (bx1, by1, mid_x, mid_y), query_bounds, t0, t1, results);
-                Self::query_node(&children[3], (mid_x, by1, bx2, mid_y), query_bounds, t0, t1, results);
+                Self::query_node(
+                    &children[0],
+                    (bx1, mid_y, mid_x, by2),
+                    query_bounds,
+                    t0,
+                    t1,
+                    results,
+                );
+                Self::query_node(
+                    &children[1],
+                    (mid_x, mid_y, bx2, by2),
+                    query_bounds,
+                    t0,
+                    t1,
+                    results,
+                );
+                Self::query_node(
+                    &children[2],
+                    (bx1, by1, mid_x, mid_y),
+                    query_bounds,
+                    t0,
+                    t1,
+                    results,
+                );
+                Self::query_node(
+                    &children[3],
+                    (mid_x, by1, bx2, mid_y),
+                    query_bounds,
+                    t0,
+                    t1,
+                    results,
+                );
             }
         }
     }
@@ -181,14 +263,14 @@ mod tests {
     #[test]
     fn test_query_region() {
         let mut qt = SpatiotemporalQuadTree::new((-180.0, -90.0, 180.0, 90.0));
-        
+
         qt.insert(SpatialElement {
             h3_index: 101,
             bounds: (10.0, 10.0, 20.0, 20.0),
             t0: 1000,
             t1: 2000,
         });
-        
+
         qt.insert(SpatialElement {
             h3_index: 202,
             bounds: (50.0, 50.0, 60.0, 60.0),
@@ -217,12 +299,17 @@ mod tests {
         for i in 0..5 {
             qt.insert(SpatialElement {
                 h3_index: i,
-                bounds: (10.0 + (i as f64), 10.0 + (i as f64), 15.0 + (i as f64), 15.0 + (i as f64)),
+                bounds: (
+                    10.0 + (i as f64),
+                    10.0 + (i as f64),
+                    15.0 + (i as f64),
+                    15.0 + (i as f64),
+                ),
                 t0: 100,
                 t1: 200,
             });
         }
-        
+
         let res = qt.query_region(0.0, 0.0, 50.0, 50.0, 50, 250);
         assert_eq!(res.len(), 5);
     }

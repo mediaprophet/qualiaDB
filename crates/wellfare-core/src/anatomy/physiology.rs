@@ -244,7 +244,10 @@ impl StateModulator {
     /// scaled by that system's state engagement, then `net` is recomputed (`adverse − supportive`, floored
     /// at 0). Supportive load is left as entered. This models "the same external load lands harder on a
     /// system this state already engages more" without pathologising the state.
-    pub fn apply_to_burdens(&self, burdens: &[super::accumulate::SystemBurden]) -> Vec<super::accumulate::SystemBurden> {
+    pub fn apply_to_burdens(
+        &self,
+        burdens: &[super::accumulate::SystemBurden],
+    ) -> Vec<super::accumulate::SystemBurden> {
         burdens
             .iter()
             .map(|b| {
@@ -265,7 +268,11 @@ impl StateModulator {
     /// for one system — so a physiological state can be dropped onto a [`Timeline`](super::temporal::Timeline)
     /// and scale that system's adverse contributions the same way the weather does. One modulator per
     /// engaged system (the timeline layer matches a single `target_system`).
-    pub fn as_environment_modulators(&self, from_minute: i64, to_minute: i64) -> Vec<EnvironmentModulator> {
+    pub fn as_environment_modulators(
+        &self,
+        from_minute: i64,
+        to_minute: i64,
+    ) -> Vec<EnvironmentModulator> {
         self.system_scale_pct
             .iter()
             .filter(|(_, scale)| *scale != 100)
@@ -299,9 +306,12 @@ fn seed_scale_table(state: PhysiologicalState) -> &'static [(&'static str, u32)]
         }
         // Pregnancy — a whole-body reconfiguration deepening by trimester (blood volume/cardiac output,
         // renal filtration, respiratory tidal volume, endocrine, musculoskeletal load).
-        Reproductive(Pregnant(Trimester::First)) => {
-            &[("circulatory", 115), ("urinary", 115), ("endocrine", 130), ("digestive", 110)]
-        }
+        Reproductive(Pregnant(Trimester::First)) => &[
+            ("circulatory", 115),
+            ("urinary", 115),
+            ("endocrine", 130),
+            ("digestive", 110),
+        ],
         Reproductive(Pregnant(Trimester::Second)) => &[
             ("circulatory", 130),
             ("urinary", 125),
@@ -330,11 +340,16 @@ fn seed_scale_table(state: PhysiologicalState) -> &'static [(&'static str, u32)]
         // Lactation — endocrine (prolactin/oxytocin) + nutritional/skeletal (calcium) demand.
         Reproductive(Lactating) => &[("endocrine", 125), ("digestive", 115), ("skeletal", 110)],
         // Perimenopause — endocrine variability, bone, vasomotor/mood.
-        Reproductive(Perimenopause) => {
-            &[("endocrine", 135), ("nervous", 115), ("skeletal", 115), ("circulatory", 110)]
-        }
+        Reproductive(Perimenopause) => &[
+            ("endocrine", 135),
+            ("nervous", 115),
+            ("skeletal", 115),
+            ("circulatory", 110),
+        ],
         // Post-menopause — bone-density and cardiovascular-risk shifts.
-        Reproductive(PostMenopause) => &[("skeletal", 120), ("circulatory", 115), ("endocrine", 110)],
+        Reproductive(PostMenopause) => {
+            &[("skeletal", 120), ("circulatory", 115), ("endocrine", 110)]
+        }
     }
 }
 
@@ -417,7 +432,7 @@ pub fn whole_body_profile(state: PhysiologicalState) -> Vec<SystemEngagement> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::anatomy::accumulate::{accumulate, SystemBurden};
+    use crate::anatomy::accumulate::{SystemBurden, accumulate};
     use crate::anatomy::factor::{EvidenceTier, Factor, FactorKind};
 
     #[test]
@@ -425,14 +440,22 @@ mod tests {
         assert_eq!(CyclePhase::Menstrual.next(), CyclePhase::Follicular);
         assert_eq!(CyclePhase::Follicular.next(), CyclePhase::Ovulatory);
         assert_eq!(CyclePhase::Ovulatory.next(), CyclePhase::Luteal);
-        assert_eq!(CyclePhase::Luteal.next(), CyclePhase::Menstrual, "wraps to a new cycle");
+        assert_eq!(
+            CyclePhase::Luteal.next(),
+            CyclePhase::Menstrual,
+            "wraps to a new cycle"
+        );
     }
 
     #[test]
     fn trimesters_advance_then_end_at_birth_not_a_fourth_pregnancy_trimester() {
         assert_eq!(Trimester::First.next(), Some(Trimester::Second));
         assert_eq!(Trimester::Second.next(), Some(Trimester::Third));
-        assert_eq!(Trimester::Third.next(), None, "birth follows the third, not a fourth trimester of pregnancy");
+        assert_eq!(
+            Trimester::Third.next(),
+            None,
+            "birth follows the third, not a fourth trimester of pregnancy"
+        );
         assert_eq!(Trimester::Third.week_span(), (28, 40));
     }
 
@@ -441,7 +464,10 @@ mod tests {
         use ReproductiveState::*;
         // Menarche opens the cycle at menstruation.
         assert!(PreMenarche.can_transition_to(Cycling(CyclePhase::Menstrual)));
-        assert!(!PreMenarche.can_transition_to(Pregnant(Trimester::First)), "no jump straight to pregnancy");
+        assert!(
+            !PreMenarche.can_transition_to(Pregnant(Trimester::First)),
+            "no jump straight to pregnancy"
+        );
 
         // Conception is reachable from any cycle phase; the cycle also advances.
         assert!(Cycling(CyclePhase::Luteal).can_transition_to(Pregnant(Trimester::First)));
@@ -464,28 +490,47 @@ mod tests {
 
     #[test]
     fn baseline_and_pre_menarche_do_not_modulate() {
-        assert!(state_modulator(PhysiologicalState::Baseline).system_scale_pct.is_empty());
+        assert!(
+            state_modulator(PhysiologicalState::Baseline)
+                .system_scale_pct
+                .is_empty()
+        );
         assert!(whole_body_profile(PhysiologicalState::Baseline).is_empty());
         assert_eq!(
-            state_modulator(PhysiologicalState::Reproductive(ReproductiveState::PreMenarche))
-                .scale_for("circulatory"),
+            state_modulator(PhysiologicalState::Reproductive(
+                ReproductiveState::PreMenarche
+            ))
+            .scale_for("circulatory"),
             100
         );
     }
 
     #[test]
     fn pregnancy_engages_the_whole_body_and_deepens_by_trimester() {
-        let t1 = state_modulator(PhysiologicalState::Reproductive(ReproductiveState::Pregnant(Trimester::First)));
-        let t3 = state_modulator(PhysiologicalState::Reproductive(ReproductiveState::Pregnant(Trimester::Third)));
+        let t1 = state_modulator(PhysiologicalState::Reproductive(
+            ReproductiveState::Pregnant(Trimester::First),
+        ));
+        let t3 = state_modulator(PhysiologicalState::Reproductive(
+            ReproductiveState::Pregnant(Trimester::Third),
+        ));
 
         // Circulatory (blood volume / cardiac output) engagement rises across trimesters.
         assert!(t3.scale_for("circulatory") > t1.scale_for("circulatory"));
         // It is a *whole-body* reconfiguration — many systems engaged, not just "reproductive".
-        let profile = whole_body_profile(PhysiologicalState::Reproductive(ReproductiveState::Pregnant(Trimester::Third)));
-        assert!(profile.len() >= 5, "third-trimester pregnancy engages many systems: {}", profile.len());
+        let profile = whole_body_profile(PhysiologicalState::Reproductive(
+            ReproductiveState::Pregnant(Trimester::Third),
+        ));
+        assert!(
+            profile.len() >= 5,
+            "third-trimester pregnancy engages many systems: {}",
+            profile.len()
+        );
         assert!(profile.iter().all(|e| e.scale_pct > 100));
         // The third-trimester circulatory engagement is classified High.
-        let circ = profile.iter().find(|e| e.system_id == "circulatory").unwrap();
+        let circ = profile
+            .iter()
+            .find(|e| e.system_id == "circulatory")
+            .unwrap();
         assert_eq!(circ.level, EngagementLevel::High);
         assert!(!circ.plain_label.is_empty(), "accessibility label present");
     }
@@ -493,18 +538,44 @@ mod tests {
     #[test]
     fn modulator_scales_an_external_adverse_load_not_the_state_itself() {
         // A nephrotoxic medication: adverse renal (urinary) load. The state adds NO factors of its own.
-        let med = Factor::new("med:nephrotoxic", FactorKind::Medication, "a kidney-taxing medication")
-            .targeting("urinary", Effect::Adverse, EvidenceTier::ClinicalEvidence, 400);
+        let med = Factor::new(
+            "med:nephrotoxic",
+            FactorKind::Medication,
+            "a kidney-taxing medication",
+        )
+        .targeting(
+            "urinary",
+            Effect::Adverse,
+            EvidenceTier::ClinicalEvidence,
+            400,
+        );
         let burdens = accumulate(&[med]);
-        let renal_base = burdens.iter().find(|b| b.system_id == "urinary").unwrap().net_milli;
+        let renal_base = burdens
+            .iter()
+            .find(|b| b.system_id == "urinary")
+            .unwrap()
+            .net_milli;
         assert_eq!(renal_base, 400);
 
         // In the third trimester (renal filtration elevated) the SAME med is a bigger ask on the kidneys.
-        let preg = state_modulator(PhysiologicalState::Reproductive(ReproductiveState::Pregnant(Trimester::Third)));
+        let preg = state_modulator(PhysiologicalState::Reproductive(
+            ReproductiveState::Pregnant(Trimester::Third),
+        ));
         let modulated = preg.apply_to_burdens(&burdens);
-        let renal_preg = modulated.iter().find(|b| b.system_id == "urinary").unwrap().net_milli;
-        assert!(renal_preg > renal_base, "the external load lands harder: {renal_preg} > {renal_base}");
-        assert_eq!(renal_preg, 400 * 130 / 100, "scaled by the seed renal engagement (130%)");
+        let renal_preg = modulated
+            .iter()
+            .find(|b| b.system_id == "urinary")
+            .unwrap()
+            .net_milli;
+        assert!(
+            renal_preg > renal_base,
+            "the external load lands harder: {renal_preg} > {renal_base}"
+        );
+        assert_eq!(
+            renal_preg,
+            400 * 130 / 100,
+            "scaled by the seed renal engagement (130%)"
+        );
 
         // A system the state does not engage is untouched.
         let unrelated = vec![SystemBurden {
@@ -520,7 +591,9 @@ mod tests {
 
     #[test]
     fn support_is_not_scaled_and_net_floors_at_zero() {
-        let preg = state_modulator(PhysiologicalState::Reproductive(ReproductiveState::Pregnant(Trimester::Third)));
+        let preg = state_modulator(PhysiologicalState::Reproductive(
+            ReproductiveState::Pregnant(Trimester::Third),
+        ));
         let b = vec![SystemBurden {
             system_id: "urinary".into(),
             adverse_milli: 100,
@@ -532,16 +605,24 @@ mod tests {
         let out = preg.apply_to_burdens(&b);
         assert_eq!(out[0].adverse_milli, 130, "adverse scaled 100→130");
         assert_eq!(out[0].supportive_milli, 500, "support unchanged");
-        assert_eq!(out[0].net_milli, 0, "still floored at 0 (support exceeds scaled adverse)");
+        assert_eq!(
+            out[0].net_milli, 0,
+            "still floored at 0 (support exceeds scaled adverse)"
+        );
     }
 
     #[test]
     fn state_can_drive_a_timeline_via_environment_modulators() {
-        let preg = state_modulator(PhysiologicalState::Reproductive(ReproductiveState::Pregnant(Trimester::Second)));
+        let preg = state_modulator(PhysiologicalState::Reproductive(
+            ReproductiveState::Pregnant(Trimester::Second),
+        ));
         let mods = preg.as_environment_modulators(0, 40 * 7 * 24 * 60);
         // One modulator per engaged system, each targeting Adverse on that system.
         assert_eq!(mods.len(), preg.system_scale_pct.len());
-        let renal = mods.iter().find(|m| m.target_system.as_deref() == Some("urinary")).unwrap();
+        let renal = mods
+            .iter()
+            .find(|m| m.target_system.as_deref() == Some("urinary"))
+            .unwrap();
         assert_eq!(renal.target_effect, Some(Effect::Adverse));
         assert_eq!(renal.scale_pct, 125);
     }

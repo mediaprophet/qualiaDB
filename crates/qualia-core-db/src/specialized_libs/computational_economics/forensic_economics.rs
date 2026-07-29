@@ -490,8 +490,22 @@ pub fn early_intervention_counterfactual_delta(
     let mut s2 = [HealthWelfareState::Stable; MAX_TRAJECTORY_STEPS];
     let mut n2 = [NquinVector::ZERO; MAX_TRAJECTORY_STEPS];
 
-    let _ = generate_synthetic_persona_trace(seed, steps, baseline_support, shock_profile, &mut s1, &mut n1)?;
-    let _ = generate_synthetic_persona_trace(seed, steps, boosted_support, shock_profile, &mut s2, &mut n2)?;
+    let _ = generate_synthetic_persona_trace(
+        seed,
+        steps,
+        baseline_support,
+        shock_profile,
+        &mut s1,
+        &mut n1,
+    )?;
+    let _ = generate_synthetic_persona_trace(
+        seed,
+        steps,
+        boosted_support,
+        shock_profile,
+        &mut s2,
+        &mut n2,
+    )?;
 
     let l1_1 = n1[steps - 1].l1_norm();
     let l1_2 = n2[steps - 1].l1_norm();

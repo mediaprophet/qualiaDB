@@ -1,6 +1,5 @@
 use super::*;
 
-
 /// Financial operation result
 #[derive(Debug, Clone)]
 pub struct FinancialOperationResult<T> {

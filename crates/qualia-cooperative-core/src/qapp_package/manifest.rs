@@ -227,9 +227,8 @@ impl QappManifest {
         }
 
         if self.icons.is_empty() {
-            problems.push(
-                "at least one icon is required for a usable home-screen install".to_string(),
-            );
+            problems
+                .push("at least one icon is required for a usable home-screen install".to_string());
         }
 
         if problems.is_empty() {
@@ -255,7 +254,10 @@ mod tests {
         assert_eq!(m.theme_color, "#101418");
         assert_eq!(m.background_color, "#0b0d10");
         assert!(m.offline);
-        assert!(m.capabilities.is_empty(), "least privilege = empty by default");
+        assert!(
+            m.capabilities.is_empty(),
+            "least privilege = empty by default"
+        );
         assert_eq!(m.kind, QappKind::Cooperative);
     }
 
@@ -310,17 +312,20 @@ mod tests {
 
     #[test]
     fn custom_kind_serializes_to_its_string() {
-        let json = serde_json::to_string(&QappKind::Custom("coop.custom.kind".to_string())).unwrap();
+        let json =
+            serde_json::to_string(&QappKind::Custom("coop.custom.kind".to_string())).unwrap();
         assert_eq!(json, "{\"custom\":\"coop.custom.kind\"}");
         assert_eq!(QappKind::Custom("x".to_string()).as_str(), "x");
     }
 
     #[test]
     fn custom_capability_serializes_to_its_string() {
-        let json =
-            serde_json::to_string(&Capability::Custom("geolocation".to_string())).unwrap();
+        let json = serde_json::to_string(&Capability::Custom("geolocation".to_string())).unwrap();
         assert_eq!(json, "{\"custom\":\"geolocation\"}");
-        assert_eq!(Capability::Custom("geolocation".to_string()).as_str(), "geolocation");
+        assert_eq!(
+            Capability::Custom("geolocation".to_string()).as_str(),
+            "geolocation"
+        );
         // Well-known snake_case check.
         assert_eq!(
             serde_json::to_string(&Capability::ReadRecords).unwrap(),
@@ -368,7 +373,9 @@ mod tests {
             purpose: "any".to_string(),
         });
         let problems = m.validate().unwrap_err();
-        assert!(problems.iter().any(|p| p.contains("name must not be empty")));
+        assert!(problems
+            .iter()
+            .any(|p| p.contains("name must not be empty")));
     }
 
     #[test]

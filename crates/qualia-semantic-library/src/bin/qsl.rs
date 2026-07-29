@@ -11,7 +11,11 @@ use clap::{Parser, Subcommand};
 use qualia_semantic_library::container::{AssetKind, HmcContainer};
 
 #[derive(Parser)]
-#[command(name = "qsl", version, about = "Rust-native semantic library over .hmc hypermedia containers")]
+#[command(
+    name = "qsl",
+    version,
+    about = "Rust-native semantic library over .hmc hypermedia containers"
+)]
 struct Cli {
     #[command(subcommand)]
     cmd: Cmd,
@@ -94,26 +98,52 @@ fn main() -> Result<()> {
     let cli = Cli::parse();
     match cli.cmd {
         #[cfg(feature = "pdf")]
-        Cmd::Ingest { path, out, no_recursive, force } => cmd_ingest(path, out, no_recursive, force),
+        Cmd::Ingest {
+            path,
+            out,
+            no_recursive,
+            force,
+        } => cmd_ingest(path, out, no_recursive, force),
         Cmd::Info { container } => cmd_info(container),
         Cmd::Verify { container } => cmd_verify(container),
         Cmd::Library { dir, near } => cmd_library(dir, near),
-        Cmd::Reorganize { dir, out, apply, move_files } => cmd_reorganize(dir, out, apply, move_files),
+        Cmd::Reorganize {
+            dir,
+            out,
+            apply,
+            move_files,
+        } => cmd_reorganize(dir, out, apply, move_files),
         #[cfg(feature = "llm-http")]
-        Cmd::Embed { path, ollama_url, embed_model } => cmd_embed(path, ollama_url, embed_model),
+        Cmd::Embed {
+            path,
+            ollama_url,
+            embed_model,
+        } => cmd_embed(path, ollama_url, embed_model),
         #[cfg(feature = "llm-http")]
-        Cmd::Analyze { path, ollama_url, gen_model } => cmd_analyze(path, ollama_url, gen_model),
+        Cmd::Analyze {
+            path,
+            ollama_url,
+            gen_model,
+        } => cmd_analyze(path, ollama_url, gen_model),
         #[cfg(feature = "llm-http")]
-        Cmd::Search { dir, query, k, ollama_url, embed_model } => {
-            cmd_search(dir, query, k, ollama_url, embed_model)
-        }
+        Cmd::Search {
+            dir,
+            query,
+            k,
+            ollama_url,
+            embed_model,
+        } => cmd_search(dir, query, k, ollama_url, embed_model),
     }
 }
 
 #[cfg(feature = "pdf")]
 fn cmd_ingest(path: PathBuf, out: PathBuf, no_recursive: bool, force: bool) -> Result<()> {
     use qualia_semantic_library::ingest::{ingest_path, IngestOptions};
-    let opts = IngestOptions { out_dir: out, recursive: !no_recursive, skip_existing: !force };
+    let opts = IngestOptions {
+        out_dir: out,
+        recursive: !no_recursive,
+        skip_existing: !force,
+    };
     let results = ingest_path(&path, &opts)?;
     let (mut new, mut skipped) = (0, 0);
     for r in &results {
@@ -122,11 +152,19 @@ fn cmd_ingest(path: PathBuf, out: PathBuf, no_recursive: bool, force: bool) -> R
         } else {
             new += 1;
             if !r.notes.is_empty() {
-                println!("  {} — {}", &r.doc_id[..8.min(r.doc_id.len())], r.notes.join("; "));
+                println!(
+                    "  {} — {}",
+                    &r.doc_id[..8.min(r.doc_id.len())],
+                    r.notes.join("; ")
+                );
             }
         }
     }
-    println!("[ingest] {} containers ({new} new, {skipped} skipped) → {}", results.len(), opts.out_dir.display());
+    println!(
+        "[ingest] {} containers ({new} new, {skipped} skipped) → {}",
+        results.len(),
+        opts.out_dir.display()
+    );
     Ok(())
 }
 
@@ -135,17 +173,29 @@ fn cmd_info(container: PathBuf) -> Result<()> {
     let m = c.manifest();
     println!("doc_id     : {}", m.doc_id);
     println!("title      : {}", m.source.title);
-    println!("source     : {} ({}, {} bytes, {} pages)", m.source.filename, m.source.mime, m.source.size_bytes, m.source.page_count);
+    println!(
+        "source     : {} ({}, {} bytes, {} pages)",
+        m.source.filename, m.source.mime, m.source.size_bytes, m.source.page_count
+    );
     println!("created    : {}", m.created);
     println!("extractor  : {}", m.pipeline.extractor);
-    println!("embedder   : {} (dim {})", m.pipeline.embedder, m.pipeline.embed_dim);
-    println!("status     : extracted={} chunked={} embedded={} analyzed={}", m.status.extracted, m.status.chunked, m.status.embedded, m.status.analyzed);
+    println!(
+        "embedder   : {} (dim {})",
+        m.pipeline.embedder, m.pipeline.embed_dim
+    );
+    println!(
+        "status     : extracted={} chunked={} embedded={} analyzed={}",
+        m.status.extracted, m.status.chunked, m.status.embedded, m.status.analyzed
+    );
     if !m.tags.is_empty() {
         println!("tags       : {}", m.tags.join(", "));
     }
     println!("assets     :");
     for a in &m.assets {
-        println!("  {:<28} {:<10} {:>9} B  {:?}", a.path, a.mime, a.bytes, a.kind);
+        println!(
+            "  {:<28} {:<10} {:>9} B  {:?}",
+            a.path, a.mime, a.bytes, a.kind
+        );
     }
     if !m.status.notes.is_empty() {
         println!("notes      : {}", m.status.notes.join("; "));
@@ -190,7 +240,11 @@ fn cmd_library(dir: PathBuf, near: f32) -> Result<()> {
         let nd = lib.near_duplicates(near);
         println!("  near-duplicate pairs (≥{near}): {}", nd.len());
         for (a, b, s) in nd.iter().take(10) {
-            println!("    {} ~ {}  ({s:.3})", &a[..8.min(a.len())], &b[..8.min(b.len())]);
+            println!(
+                "    {} ~ {}  ({s:.3})",
+                &a[..8.min(a.len())],
+                &b[..8.min(b.len())]
+            );
         }
     } else {
         println!("  near-duplicates: (no embeddings yet — run `qsl embed`)");
@@ -200,7 +254,7 @@ fn cmd_library(dir: PathBuf, near: f32) -> Result<()> {
 
 fn cmd_reorganize(dir: PathBuf, out: PathBuf, apply: bool, move_files: bool) -> Result<()> {
     use qualia_semantic_library::library::Library;
-    use qualia_semantic_library::reorganize::{plan, apply as apply_plan, ApplyMode};
+    use qualia_semantic_library::reorganize::{apply as apply_plan, plan, ApplyMode};
     let lib = Library::scan(&dir)?;
     let p = plan(&lib, &out);
 
@@ -209,15 +263,27 @@ fn cmd_reorganize(dir: PathBuf, out: PathBuf, apply: bool, move_files: bool) -> 
     for op in &p {
         *by_cat.entry(op.category.as_str()).or_default() += 1;
     }
-    println!("[reorganize] {} containers → {} ({} categories)", p.len(), out.display(), by_cat.len());
+    println!(
+        "[reorganize] {} containers → {} ({} categories)",
+        p.len(),
+        out.display(),
+        by_cat.len()
+    );
     for (cat, n) in &by_cat {
         println!("  {cat:<16} {n}");
     }
 
     if apply {
-        let mode = if move_files { ApplyMode::Move } else { ApplyMode::Copy };
+        let mode = if move_files {
+            ApplyMode::Move
+        } else {
+            ApplyMode::Copy
+        };
         let n = apply_plan(&p, mode)?;
-        println!("  placed {n} containers ({})", if move_files { "moved" } else { "copied" });
+        println!(
+            "  placed {n} containers ({})",
+            if move_files { "moved" } else { "copied" }
+        );
     } else {
         println!("  (dry-run — pass --apply to place files)");
     }
@@ -225,7 +291,11 @@ fn cmd_reorganize(dir: PathBuf, out: PathBuf, apply: bool, move_files: bool) -> 
 }
 
 #[cfg(feature = "llm-http")]
-fn backend(url: Option<String>, embed_model: &str, gen_model: &str) -> Result<qualia_semantic_library::llm::OllamaBackend> {
+fn backend(
+    url: Option<String>,
+    embed_model: &str,
+    gen_model: &str,
+) -> Result<qualia_semantic_library::llm::OllamaBackend> {
     use qualia_semantic_library::llm::ollama::{OllamaBackend, OllamaConfig};
     let mut cfg = OllamaConfig::default();
     if let Some(u) = url {
@@ -244,8 +314,11 @@ fn each_container(path: &std::path::Path) -> Vec<PathBuf> {
     walkdir::WalkDir::new(path)
         .into_iter()
         .filter_map(|e| e.ok())
-        .filter(|e| e.file_type().is_file()
-            && e.path().extension().and_then(|x| x.to_str()) == Some(qualia_semantic_library::container::HMC_EXTENSION))
+        .filter(|e| {
+            e.file_type().is_file()
+                && e.path().extension().and_then(|x| x.to_str())
+                    == Some(qualia_semantic_library::container::HMC_EXTENSION)
+        })
         .map(|e| e.path().to_path_buf())
         .collect()
 }
@@ -257,7 +330,10 @@ fn cmd_embed(path: PathBuf, url: Option<String>, embed_model: String) -> Result<
     let mut total = 0;
     for c in each_container(&path) {
         match embed_container(&c, &be) {
-            Ok(n) => { total += n; println!("  embedded {n} chunks — {}", c.display()); }
+            Ok(n) => {
+                total += n;
+                println!("  embedded {n} chunks — {}", c.display());
+            }
             Err(e) => eprintln!("  FAILED {}: {e}", c.display()),
         }
     }
@@ -271,7 +347,11 @@ fn cmd_analyze(path: PathBuf, url: Option<String>, gen_model: String) -> Result<
     let be = backend(url, "qwen3-embedding:0.6b", &gen_model)?;
     for c in each_container(&path) {
         match analyze_container(&c, &be) {
-            Ok(tags) => println!("  {} — [{}]", c.file_name().and_then(|n| n.to_str()).unwrap_or(""), tags.join(", ")),
+            Ok(tags) => println!(
+                "  {} — [{}]",
+                c.file_name().and_then(|n| n.to_str()).unwrap_or(""),
+                tags.join(", ")
+            ),
             Err(e) => eprintln!("  FAILED {}: {e}", c.display()),
         }
     }
@@ -279,16 +359,29 @@ fn cmd_analyze(path: PathBuf, url: Option<String>, gen_model: String) -> Result<
 }
 
 #[cfg(feature = "llm-http")]
-fn cmd_search(dir: PathBuf, query: String, k: usize, url: Option<String>, embed_model: String) -> Result<()> {
+fn cmd_search(
+    dir: PathBuf,
+    query: String,
+    k: usize,
+    url: Option<String>,
+    embed_model: String,
+) -> Result<()> {
     use qualia_semantic_library::library::Library;
     use qualia_semantic_library::llm::LlmBackend;
     let be = backend(url, &embed_model, "gemma4:e4b")?;
-    let qv = be.embed(&[query.clone()])?.into_iter().next().unwrap_or_default();
+    let qv = be
+        .embed(&[query.clone()])?
+        .into_iter()
+        .next()
+        .unwrap_or_default();
     let lib = Library::scan(&dir)?;
     let hits = lib.search(&qv, k);
     println!("[search] \"{query}\" — {} hits", hits.len());
     for h in hits {
-        println!("  {:.3}  {} #{}  {}", h.score, h.title, h.chunk_idx, h.snippet);
+        println!(
+            "  {:.3}  {} #{}  {}",
+            h.score, h.title, h.chunk_idx, h.snippet
+        );
     }
     Ok(())
 }

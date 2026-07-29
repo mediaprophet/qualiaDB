@@ -188,9 +188,7 @@ pub enum Pattern {
     /// nested query (index into `SparqlQueryContext::subqueries`) whose projected
     /// solutions join with the enclosing group. Only the sub-select's SELECT
     /// variables are visible outside it.
-    SubSelect {
-        query_id: u16,
-    },
+    SubSelect { query_id: u16 },
 }
 
 /// Property path (SPARQL 1.1)
@@ -254,10 +252,7 @@ pub enum Expression {
     /// in. `negated` flips the result (NOT EXISTS). Evaluated by the executor
     /// (it needs graph access), not the pure value evaluator; it is only valid
     /// in a FILTER/HAVING boolean position.
-    Exists {
-        pattern: PatternId,
-        negated: bool,
-    },
+    Exists { pattern: PatternId, negated: bool },
 }
 
 /// Unary operators
@@ -566,7 +561,10 @@ impl<'a> TextResolver<'a> {
             seed: 0,
         }
     }
-    pub fn with_lexicon(literals: &'a LiteralTable, lexicon: &'a dyn Fn(u64) -> Option<String>) -> Self {
+    pub fn with_lexicon(
+        literals: &'a LiteralTable,
+        lexicon: &'a dyn Fn(u64) -> Option<String>,
+    ) -> Self {
         Self {
             literals,
             lexicon: Some(lexicon),
@@ -619,7 +617,10 @@ impl<'a> TextResolver<'a> {
         }
         // A known/resolvable literal with no lang tag → "".
         if self.literals.contains(hash)
-            || self.sink.map(|s| s.resolve(hash).is_some()).unwrap_or(false)
+            || self
+                .sink
+                .map(|s| s.resolve(hash).is_some())
+                .unwrap_or(false)
             || crate::resolver::classify_inline_literal(hash).is_some()
         {
             return Some(String::new());
@@ -652,7 +653,10 @@ impl<'a> TextResolver<'a> {
             return Some(lit.datatype_iri().to_string());
         }
         if self.literals.contains(hash)
-            || self.sink.map(|s| s.resolve(hash).is_some()).unwrap_or(false)
+            || self
+                .sink
+                .map(|s| s.resolve(hash).is_some())
+                .unwrap_or(false)
         {
             return Some(XSD_STRING.to_string());
         }

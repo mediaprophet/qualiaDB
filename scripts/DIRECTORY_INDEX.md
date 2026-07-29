@@ -14,6 +14,8 @@ Comprehensive index of functionality for `scripts`. This document serves as the 
 - 📁 `[cross-linux](cross-linux/DIRECTORY_INDEX.md)`
 
 ### Files & Exported Functionality
+- 📄 `auto_transcode_and_scrub.ps1`
+  - Sequential model transcoding (.safetensors, .gguf) -> .p64 & build artifact scrubbing engine
 - 📄 `build_frontend.ps1`
 - 📄 `build_master_provenance.py`
 - 📄 `build_w3c_mail_q42.sh`

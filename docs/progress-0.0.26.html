@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QualiaDB / Webizen 0.0.26 — Honest Progress</title>
+  <link rel="stylesheet" href="css/tailwind-built.css">
+  <link rel="stylesheet" href="css/site-nav.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <script src="js/menu-loader.js"></script>
+</head>
+<body class="bg-zinc-950 text-zinc-200">
+<nav class="sticky top-0 z-50 border-b border-white/10" style="background:rgba(17,23,31,0.88);backdrop-filter:blur(32px)">
+  <div class="max-w-screen-2xl mx-auto px-8">
+    <div class="flex items-center justify-between h-16">
+      <a href="index.html" class="flex items-center gap-3">
+        <div class="w-8 h-8 bg-gradient-to-br from-violet-500 to-cyan-400 rounded-xl flex items-center justify-center">
+          <span class="text-black font-bold text-xl">W</span>
+        </div>
+        <div><span class="font-semibold tracking-tight text-xl">Webizen</span><span class="text-violet-400 text-xl"> / QualiaDB</span></div>
+      </a>
+      <div id="dynamic-nav" class="relative flex items-center text-sm"></div>
+    </div>
+  </div>
+</nav>
+
+<main class="max-w-3xl mx-auto px-6 py-12">
+  <p class="text-violet-300 text-sm mb-2"><i class="fa-solid fa-shield-halved"></i> Human-rights infrastructure · local-first · branch <code>0.0.26</code></p>
+  <h1 class="text-4xl font-semibold tracking-tight mb-4">Honest progress — 0.0.26</h1>
+  <p class="text-white/70 mb-8">
+    This page is for operators and reviewers who need the truth, not a launch brochure.
+    QualiaDB is the semantic engine; <strong>Webizen</strong> is the habitat product shell.
+    Where we are not yet good enough for life-critical sole reliance, we say so.
+  </p>
+
+  <section class="mb-10 p-6 rounded-2xl border border-violet-500/30 bg-violet-500/5">
+    <h2 class="text-xl font-semibold text-violet-200 mb-2">What 0.0.26 is for</h2>
+    <p class="text-sm text-white/80 mb-3">
+      Move from “engineering dashboard” language (Talk / Keep / Reach) to <strong>life domains</strong>
+      that match how people live: <strong>Memory · Relations · Care · Practice · World · Instruments</strong>.
+      Dual computational (engine) vs presentation (render) layers; natural persons are not identity assets;
+      investigators and instruments must not dump private vault content by default.
+    </p>
+    <p class="text-xs text-white/50">Design pack (in-repo plans, not all published on Pages): mindware strategy, integrated surface map, habitat swarm, prestige surfaces.</p>
+  </section>
+
+  <section class="mb-10 p-6 rounded-2xl border border-amber-500/30 bg-amber-500/5">
+    <h2 class="text-xl font-semibold text-amber-300 mb-2">Not good enough yet (as sole system)</h2>
+    <ul class="list-disc pl-5 text-white/80 space-y-1 text-sm">
+      <li>Desktop installers / signed updater CI is still hardening — do not treat a failed Actions run as a silent success.</li>
+      <li>Local LLM decode on large models is not yet competitive with specialised CUDA stacks for latency-critical use.</li>
+      <li>Do not use free-form generation alone for high-stakes legal, medical, or safety decisions.</li>
+      <li>Native mobile apps are out of product scope; phone = installable remote controller PWA only.</li>
+      <li>GitHub Pages environment previously allowed only <code>main</code> / <code>0.0.24</code> — 0.0.26 deploys need branch policy + content refresh.</li>
+    </ul>
+  </section>
+
+  <section class="mb-10">
+    <h2 class="text-xl font-semibold mb-3">What is real in 0.0.26</h2>
+    <ul class="space-y-3 text-sm text-white/80">
+      <li>
+        <strong class="text-emerald-400">Entity-view kernel</strong> —
+        <code>entity_view/*</code> + <code>view_host</code> session: observer fail-closed, rights filter,
+        presentation levels, web locus / library project, Memory spatialize GPU path
+        (<code>view_render_memory_spatial</code>), scene pick / select by URI.
+      </li>
+      <li>
+        <strong class="text-emerald-400">Habitat shell (Webizen studio)</strong> —
+        life-domain top bar and sidebar; Lived Memory as home; Care shell with grouped areas
+        (Body · Rights · Life · Commons · Instruments); Relations hub with instrument honesty
+        (models/agents are not peer persons).
+      </li>
+      <li>
+        <strong class="text-emerald-400">Practice → Memory</strong> —
+        project create/seed can auto-Remember into the Work lane of Lived Memory
+        (soft-fail if vault locked); work board Remember handoff.
+      </li>
+      <li>
+        <strong class="text-emerald-400">Remote controller</strong> —
+        installable companion / remote-controller PWA surface for phone as controller, not a second OS dump target.
+      </li>
+      <li>
+        <strong class="text-emerald-400">Engine base (carried forward)</strong> —
+        48-byte NQuin, 42&nbsp;MB Sentinel, modalities (deontic, epistemic, LTL, ASP, …),
+        native GGUF/P64 + wgpu inference, SPARQL/N3/SHACL paths, vision/audio crates, privacy BFV/DP.
+      </li>
+    </ul>
+  </section>
+
+  <section class="mb-10">
+    <h2 class="text-xl font-semibold mb-3">Life domains (product language)</h2>
+    <div class="grid sm:grid-cols-2 gap-3 text-sm">
+      <div class="p-4 rounded-xl border border-white/10 bg-white/5"><strong class="text-violet-300">Memory</strong><p class="text-white/60 mt-1">Lived Memory — meaning shelf, spatialize, shared entity session.</p></div>
+      <div class="p-4 rounded-xl border border-white/10 bg-white/5"><strong class="text-sky-300">Relations</strong><p class="text-white/60 mt-1">People, chat, mail, reception — humans and bonds, not SaaS capture.</p></div>
+      <div class="p-4 rounded-xl border border-white/10 bg-white/5"><strong class="text-indigo-300">Care</strong><p class="text-white/60 mt-1">Health, rights, sanctuary vault, welfare under principal control.</p></div>
+      <div class="p-4 rounded-xl border border-white/10 bg-white/5"><strong class="text-emerald-300">Practice</strong><p class="text-white/60 mt-1">Projects, work board, labour artefacts → optional Memory.</p></div>
+      <div class="p-4 rounded-xl border border-white/10 bg-white/5"><strong class="text-cyan-300">World</strong><p class="text-white/60 mt-1">Browser + Chora commons; pages project into the same session.</p></div>
+      <div class="p-4 rounded-xl border border-white/10 bg-white/5"><strong class="text-slate-300">Instruments</strong><p class="text-white/60 mt-1">Vision, Listen, tools, models — Partial honesty; never social peers.</p></div>
+    </div>
+  </section>
+
+  <section class="mb-10">
+    <h2 class="text-xl font-semibold mb-3">Release &amp; CI (operator notes)</h2>
+    <ul class="list-disc pl-5 text-sm text-white/80 space-y-1">
+      <li>Release tag line: <code>v0.0.26</code> · working branch <code>0.0.26</code>.</li>
+      <li>WASM / CLI release paths rebuilt after tracking <code>qualia-audio</code> <code>models/</code> source (was gitignored).</li>
+      <li>Desktop release: wasm-bindgen CLI pin for mac studio dist; Windows NSIS + real tauri build logs.</li>
+      <li>Actions: Node&nbsp;24-native majors for checkout/cache/setup-node/artifacts.</li>
+    </ul>
+  </section>
+
+  <section class="mb-10 p-6 rounded-2xl border border-white/10 bg-white/5">
+    <h2 class="text-xl font-semibold mb-2">Prior honesty pages</h2>
+    <p class="text-sm text-white/70">
+      <a class="text-cyan-400 underline" href="progress-0.0.24.html">0.0.24 progress</a>
+      remains available for historical comparison. Prefer this 0.0.26 page for current product language.
+    </p>
+  </section>
+
+  <p class="text-xs text-white/40">Updated 2026-07-24 · QualiaDB / Webizen · principal-directed engineering record · no personal circumstances</p>
+</main>
+</body>
+</html>

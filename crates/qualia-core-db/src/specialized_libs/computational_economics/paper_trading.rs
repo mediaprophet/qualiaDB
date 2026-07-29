@@ -282,9 +282,23 @@ mod tests {
             status: 0,
         }; MAX_ORDERS];
         let mut next = 1u64;
-        let i = submit_paper_order(&mut orders, &mut next, Side::Buy, OrderType::Market, 10.0, 0.0, 0.0).unwrap();
+        let i = submit_paper_order(
+            &mut orders,
+            &mut next,
+            Side::Buy,
+            OrderType::Market,
+            10.0,
+            0.0,
+            0.0,
+        )
+        .unwrap();
         let snaps = [snap(100.0), snap(100.1)];
-        let mut fills = [Fill { order_id: 0, qty: 0.0, price: 0.0, fee: 0.0 }; MAX_ORDERS];
+        let mut fills = [Fill {
+            order_id: 0,
+            qty: 0.0,
+            price: 0.0,
+            fee: 0.0,
+        }; MAX_ORDERS];
         let n = simulate_fills_against_snapshots(&mut orders, &snaps, 0.001, &mut fills).unwrap();
         assert!(n >= 1);
         assert!(orders[i].status == 1 || orders[i].filled_qty > 0.0);
@@ -295,20 +309,63 @@ mod tests {
 
     #[test]
     fn limit_order_only_fills_when_crossed() {
-        let mut orders = [PaperOrder { id: 0, side: Side::Buy, order_type: OrderType::Limit, qty: 5.0, limit_price: 99.0, stop_price: 0.0, filled_qty: 0.0, avg_fill_price: 0.0, status: 0 }; MAX_ORDERS];
+        let mut orders = [PaperOrder {
+            id: 0,
+            side: Side::Buy,
+            order_type: OrderType::Limit,
+            qty: 5.0,
+            limit_price: 99.0,
+            stop_price: 0.0,
+            filled_qty: 0.0,
+            avg_fill_price: 0.0,
+            status: 0,
+        }; MAX_ORDERS];
         let mut next = 10u64;
-        let _ = submit_paper_order(&mut orders, &mut next, Side::Buy, OrderType::Limit, 5.0, 99.0, 0.0).unwrap();
+        let _ = submit_paper_order(
+            &mut orders,
+            &mut next,
+            Side::Buy,
+            OrderType::Limit,
+            5.0,
+            99.0,
+            0.0,
+        )
+        .unwrap();
         let snaps = [snap(101.0)]; // price too high for buy limit 99
-        let mut fills = [Fill { order_id: 0, qty: 0.0, price: 0.0, fee: 0.0 }; MAX_ORDERS];
+        let mut fills = [Fill {
+            order_id: 0,
+            qty: 0.0,
+            price: 0.0,
+            fee: 0.0,
+        }; MAX_ORDERS];
         let n = simulate_fills_against_snapshots(&mut orders, &snaps, 0.0, &mut fills).unwrap();
         assert_eq!(n, 0); // did not fill
     }
 
     #[test]
     fn cancel_works() {
-        let mut orders = [PaperOrder { id: 0, side: Side::Sell, order_type: OrderType::Market, qty: 1.0, limit_price: 0.0, stop_price: 0.0, filled_qty: 0.0, avg_fill_price: 0.0, status: 0 }; MAX_ORDERS];
+        let mut orders = [PaperOrder {
+            id: 0,
+            side: Side::Sell,
+            order_type: OrderType::Market,
+            qty: 1.0,
+            limit_price: 0.0,
+            stop_price: 0.0,
+            filled_qty: 0.0,
+            avg_fill_price: 0.0,
+            status: 0,
+        }; MAX_ORDERS];
         let mut next = 99u64;
-        let i = submit_paper_order(&mut orders, &mut next, Side::Sell, OrderType::Market, 1.0, 0.0, 0.0).unwrap();
+        let i = submit_paper_order(
+            &mut orders,
+            &mut next,
+            Side::Sell,
+            OrderType::Market,
+            1.0,
+            0.0,
+            0.0,
+        )
+        .unwrap();
         let order_id = next - 1; // id assigned inside submit before the increment
         assert!(cancel_paper_order(&mut orders, order_id));
         assert_eq!(orders[i].status, 2);
@@ -316,10 +373,33 @@ mod tests {
 
     #[test]
     fn refuses_without_market_data() {
-        let mut orders = [PaperOrder { id: 0, side: Side::Buy, order_type: OrderType::Market, qty: 1.0, limit_price: 0.0, stop_price: 0.0, filled_qty: 0.0, avg_fill_price: 0.0, status: 0 }; MAX_ORDERS];
+        let mut orders = [PaperOrder {
+            id: 0,
+            side: Side::Buy,
+            order_type: OrderType::Market,
+            qty: 1.0,
+            limit_price: 0.0,
+            stop_price: 0.0,
+            filled_qty: 0.0,
+            avg_fill_price: 0.0,
+            status: 0,
+        }; MAX_ORDERS];
         let mut next = 1;
-        let _ = submit_paper_order(&mut orders, &mut next, Side::Buy, OrderType::Market, 1.0, 0.0, 0.0);
-        let mut fills = [Fill { order_id: 0, qty: 0.0, price: 0.0, fee: 0.0 }; 4];
+        let _ = submit_paper_order(
+            &mut orders,
+            &mut next,
+            Side::Buy,
+            OrderType::Market,
+            1.0,
+            0.0,
+            0.0,
+        );
+        let mut fills = [Fill {
+            order_id: 0,
+            qty: 0.0,
+            price: 0.0,
+            fee: 0.0,
+        }; 4];
         let err = simulate_fills_against_snapshots(&mut orders, &[], 0.0, &mut fills).unwrap_err();
         assert_eq!(err, PaperTradingError::NoMarketData);
     }

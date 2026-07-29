@@ -47,8 +47,7 @@ pub fn audit_hot_path() -> HotPathAudit {
     }
     if ffn_in_resident {
         notes.push(
-            "T-A1/T-A1b: fused_ffn in resident (coop entry when QUALIA_LLM_COOP_GEMV on)"
-                .into(),
+            "T-A1/T-A1b: fused_ffn in resident (coop entry when QUALIA_LLM_COOP_GEMV on)".into(),
         );
     }
 
@@ -114,7 +113,10 @@ impl HotPathAudit {
             "  resident_weights:        {}\n",
             yn(self.resident_weights)
         ));
-        s.push_str(&format!("  coop_gemv:               {}\n", yn(self.coop_gemv)));
+        s.push_str(&format!(
+            "  coop_gemv:               {}\n",
+            yn(self.coop_gemv)
+        ));
         s.push_str(&format!(
             "  ffn_fusion flag:         {}\n",
             yn(self.ffn_fusion_flag)
@@ -123,7 +125,10 @@ impl HotPathAudit {
             "  ffn_fusion in resident:  {}  (must be yes for T-A1 done)\n",
             yn(self.ffn_fusion_in_resident_decode)
         ));
-        s.push_str(&format!("  kv_int8:                 {}\n", yn(self.kv_int8)));
+        s.push_str(&format!(
+            "  kv_int8:                 {}\n",
+            yn(self.kv_int8)
+        ));
         s.push_str(&format!(
             "  attention_preproject:    {}\n",
             yn(self.attention_preproject)
@@ -136,13 +141,22 @@ impl HotPathAudit {
             "  prefer_cuda_gemm:        {}\n",
             yn(self.prefer_cuda_gemm)
         ));
-        s.push_str(&format!("  cuda_caps:               {}\n", yn(self.cuda_caps)));
+        s.push_str(&format!(
+            "  cuda_caps:               {}\n",
+            yn(self.cuda_caps)
+        ));
         s.push_str(&format!(
             "  post_turn_verify:        {}\n",
             yn(self.post_turn_verify)
         ));
-        s.push_str(&format!("  sentinel_mid:            {}\n", yn(self.sentinel_mid)));
-        s.push_str(&format!("  quant_graph:             {}\n", yn(self.quant_graph)));
+        s.push_str(&format!(
+            "  sentinel_mid:            {}\n",
+            yn(self.sentinel_mid)
+        ));
+        s.push_str(&format!(
+            "  quant_graph:             {}\n",
+            yn(self.quant_graph)
+        ));
         s.push_str(&format!(
             "  timestamps_supported:    {}\n",
             yn(self.timestamps_supported)

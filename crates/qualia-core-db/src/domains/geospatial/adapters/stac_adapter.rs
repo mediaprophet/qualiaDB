@@ -78,7 +78,11 @@ impl StacAdapter {
                 .and_then(|p| p.get("datetime"))
                 .and_then(|v| v.as_str())
             {
-                quins.push(quin(subject, created_p, generate_60bit_token(dt.as_bytes())));
+                quins.push(quin(
+                    subject,
+                    created_p,
+                    generate_60bit_token(dt.as_bytes()),
+                ));
             }
 
             // properties.license -> dc:license
@@ -86,7 +90,11 @@ impl StacAdapter {
                 .and_then(|p| p.get("license"))
                 .and_then(|v| v.as_str())
             {
-                quins.push(quin(subject, license_p, generate_60bit_token(lic.as_bytes())));
+                quins.push(quin(
+                    subject,
+                    license_p,
+                    generate_60bit_token(lic.as_bytes()),
+                ));
             }
 
             // First asset href -> dc:source
@@ -97,7 +105,11 @@ impl StacAdapter {
                 .and_then(|asset| asset.get("href"))
                 .and_then(|v| v.as_str())
             {
-                quins.push(quin(subject, source_p, generate_60bit_token(href.as_bytes())));
+                quins.push(quin(
+                    subject,
+                    source_p,
+                    generate_60bit_token(href.as_bytes()),
+                ));
             }
 
             // bbox (>=4 numbers) -> centre lat/long as raw f64 bits.
@@ -141,7 +153,12 @@ impl DataAdapter for StacAdapter {
         let stac_bbox = format!("{},{},{},{}", bbox.0, bbox.1, bbox.2, bbox.3);
         let stac_datetime = format!("{}/{}", time_range.0, time_range.1); // Stub: properly format ISO8601 strings
 
-        let mut url = format!("{}/search?bbox={}&datetime={}", self.endpoint.trim_end_matches('/'), stac_bbox, stac_datetime);
+        let mut url = format!(
+            "{}/search?bbox={}&datetime={}",
+            self.endpoint.trim_end_matches('/'),
+            stac_bbox,
+            stac_datetime
+        );
         if let Some(c) = &self.collection {
             url.push_str(&format!("&collections={}", c));
         }
@@ -170,7 +187,11 @@ mod tests {
     #[test]
     fn test_stac_adapter_consent_denied() {
         let registry = NetworkDisclosureRegistry::new();
-        let adapter = StacAdapter::new("stac_adapter", "https://planetarycomputer.microsoft.com/api/stac/v1", Some("landsat-c2-l2"));
+        let adapter = StacAdapter::new(
+            "stac_adapter",
+            "https://planetarycomputer.microsoft.com/api/stac/v1",
+            Some("landsat-c2-l2"),
+        );
 
         let res = adapter.fetch_region((0.0, 0.0, 1.0, 1.0), (0, 0), &registry);
         assert!(res.is_err());
@@ -211,9 +232,9 @@ mod tests {
         let created_p = generate_60bit_token(b"http://purl.org/dc/terms/created");
         let created_o = generate_60bit_token(b"2023-05-01T10:00:00Z");
         assert!(
-            quins.iter().any(|q| q.subject == subject
-                && q.predicate == created_p
-                && q.object == created_o),
+            quins
+                .iter()
+                .any(|q| q.subject == subject && q.predicate == created_p && q.object == created_o),
             "expected CREATED quin not found"
         );
     }

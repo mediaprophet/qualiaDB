@@ -593,9 +593,7 @@ pub fn execute_vm_frame(
                     }
                     2 => {
                         // Simple fixed income: price a par bond using object bits as rough params
-                        use crate::specialized_libs::computational_economics::fixed_income::{
-                            coupon_bond_price,
-                        };
+                        use crate::specialized_libs::computational_economics::fixed_income::coupon_bond_price;
                         let face = 100.0;
                         let c = ((frame.object_reg >> 8) & 0xFF) as f64 * 0.001; // coupon rate rough
                         let y = 0.05;
@@ -1205,7 +1203,8 @@ pub fn execute_vm_frame(
             | SlgOpcode::NativeCtlAlwaysGlobally
             | SlgOpcode::NativeModalNecessary
             | SlgOpcode::NativeModalPossible
-            | SlgOpcode::NativeRcc8(_) | SlgOpcode::NativeRcc8Assert(_) => {
+            | SlgOpcode::NativeRcc8(_)
+            | SlgOpcode::NativeRcc8Assert(_) => {
                 let is_assert = matches!(opcode, SlgOpcode::NativeRcc8Assert(_));
                 if !execute_snapshot_logic(arena, opcode, frame) {
                     return None;
@@ -1227,10 +1226,18 @@ pub fn execute_vm_frame(
                     }
                 }
                 if matches < quorum {
-                    vm_log!("[Webizen] NativeStewardQuorum: failed. Found {}/{} stewards", matches, quorum);
+                    vm_log!(
+                        "[Webizen] NativeStewardQuorum: failed. Found {}/{} stewards",
+                        matches,
+                        quorum
+                    );
                     return None;
                 }
-                vm_log!("[Webizen] NativeStewardQuorum: passed with {}/{} stewards", matches, quorum);
+                vm_log!(
+                    "[Webizen] NativeStewardQuorum: passed with {}/{} stewards",
+                    matches,
+                    quorum
+                );
             }
             SlgOpcode::NativeRegisterRule => {
                 if !arena.activate_staged_rule(frame.object_reg) {

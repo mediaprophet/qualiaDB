@@ -37,9 +37,6 @@ pub mod ambient_orchestration;
 pub mod compute_universe;
 #[cfg(target_os = "windows")]
 pub mod directml_bridge;
-/// Stage-by-stage library probe tests for the inference optim toolkit.
-#[cfg(test)]
-pub mod toolkit_probe;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
 pub mod ggml_quants;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
@@ -64,6 +61,9 @@ pub mod tensor_roles;
 pub mod ternary;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod ternary_gpu;
+/// Stage-by-stage library probe tests for the inference optim toolkit.
+#[cfg(test)]
+pub mod toolkit_probe;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
 pub mod topk;
 // W2: exact CPU sampling chain (pure, wasm-safe — no GPU, no `rand`, no file I/O).
@@ -84,6 +84,9 @@ pub use application_profile::{
 // Inference superiority lab (plan: inference-superiority-lab-and-toolset-plan.md).
 #[cfg(not(target_arch = "wasm32"))]
 pub mod lab;
+// Prepared native inference plan/run boundary, execution receipts, and bounded run artifacts.
+#[cfg(not(target_arch = "wasm32"))]
+pub mod runtime;
 // Post-turn verify / self-heal (FastVerify path).
 pub mod post_turn_verify;
 pub use post_turn_verify::{
@@ -117,18 +120,28 @@ pub use qualia_hybrid::{
 pub mod cuda_lane;
 #[cfg(any(target_arch = "wasm32", not(feature = "cuda")))]
 pub mod cuda_lane_stub;
-#[cfg(any(target_arch = "wasm32", not(feature = "cuda")))]
-pub use cuda_lane_stub as cuda_lane;
 #[cfg(all(not(target_arch = "wasm32"), feature = "cuda"))]
 pub use cuda_lane::{
     cache_dense_weight, clear_weight_cache, dense_weight_cached, device_kv_ready,
-    ensure_device_kv_cache, q4k_device_weight_count, try_cuda_batch_gemv, try_cuda_batch_gemv_cached,
-    try_cuda_batch_gemv_cached_only, try_q4k_soa_attention_device, try_q4k_soa_ffn_block,
-    try_q4k_soa_ffn_block_residual, try_q4k_soa_fused_swiglu, try_q4k_soa_gemv, try_q4k_soa_qkv,
-    warm_cuda_context, weight_cache_len, weight_fingerprint, MAX_DENSE_ELEMS,
+    ensure_device_kv_cache, preload_resident_blob, prepare_mega_pass_kernels,
+    q4k_device_weight_count, q4k_weight_resident, q8_0_gemv_oracle_into, try_cuda_batch_gemv,
+    try_cuda_batch_gemv_cached, try_cuda_batch_gemv_cached_only, try_cuda_mega_pass,
+    try_q4k_soa_attention_device, try_q4k_soa_ffn_block, try_q4k_soa_ffn_block_residual,
+    try_q4k_soa_fused_swiglu, try_q4k_soa_gemv, try_q4k_soa_qkv, try_q8_0_cuda_gemv,
+    warm_cuda_context, weight_cache_len, weight_fingerprint, MegaPassLayerDims,
+    MegaPassLayerWeights, MegaPassPlanView, MegaPassWeightLayout, MAX_DENSE_ELEMS,
+    Q8_0_BLOCK_BYTES, Q8_0_BLOCK_ELEMS,
 };
+#[cfg(any(target_arch = "wasm32", not(feature = "cuda")))]
+pub use cuda_lane_stub as cuda_lane;
 // W6a: prompt-lookup speculative decoding proposer (pure, wasm-safe).
 pub mod prompt_lookup;
+// Metal mega-pass orchestrator (Apple Silicon). Stub on non-macOS.
+pub mod metal_lane;
+// Paged KV cache: block-paged KV storage (vLLM-style). Re-exports `runtime::kv::paged`, so it
+// carries the same native-only gate as `runtime`.
+#[cfg(not(target_arch = "wasm32"))]
+pub mod paged_kv;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod topk_gpu;
 // OMP sparse KV-cache decomposition builds on `crate::solvers` (dense linear

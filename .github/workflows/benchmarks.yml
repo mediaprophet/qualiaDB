@@ -2,7 +2,7 @@ name: Comparative Benchmarks
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "0.0.27" ]
   schedule:
     - cron: '0 3 * * 1'   # Weekly on Monday at 03:00 UTC
   workflow_dispatch:
@@ -26,7 +26,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -34,7 +34,7 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       - name: Cache Cargo dependencies
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/.cargo/bin/
@@ -78,9 +78,10 @@ jobs:
 
       # ── Comunica (SPARQL JS engine) ───────────────────────────────────────────
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
-          node-version: 22
+          node-version: 24
+          package-manager-cache: false
 
       - name: Install Comunica Node.js dependencies
         run: cd benchmarks/comunica && npm install --prefer-offline
@@ -109,7 +110,7 @@ jobs:
 
       - name: Build Qualia WASM for comparative harness
         env:
-          RUSTFLAGS: "-C target-feature=+simd128"
+          RUSTFLAGS: "-C target-feature=+simd128 -C link-arg=-zstack-size=8388608 -C link-arg=--max-memory=4294967296"
         run: |
           rustup target add wasm32-unknown-unknown
           wasm-pack build crates/qualia-core-db \
@@ -181,14 +182,14 @@ jobs:
           git push origin main
 
       - name: Upload comparative results artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: comparative-benchmark-results
           path: docs/comparative_benchmark_results.json
           retention-days: 30
 
       - name: Upload LLM benchmark results artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: llm-benchmark-results
           path: docs/llm_benchmark_results.json
@@ -200,7 +201,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -208,7 +209,7 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       - name: Cache Cargo dependencies
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/.cargo/bin/
@@ -223,9 +224,10 @@ jobs:
         run: pip install --quiet -r benchmarks/requirements.txt
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
-          node-version: 22
+          node-version: 24
+          package-manager-cache: false
 
       - name: Install Comunica and WASM-Prolog Node dependencies
         run: |
@@ -234,7 +236,7 @@ jobs:
 
       - name: Install wasm-pack and build Qualia WASM
         env:
-          RUSTFLAGS: "-C target-feature=+simd128"
+          RUSTFLAGS: "-C target-feature=+simd128 -C link-arg=-zstack-size=8388608 -C link-arg=--max-memory=4294967296"
         run: |
           cargo install wasm-pack --locked --version 0.13.1 --force
           rustup target add wasm32-unknown-unknown
@@ -280,7 +282,7 @@ jobs:
           git push origin main
 
       - name: Upload Schema.org comparative results artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: comparative-benchmark-results-schemaorg
           path: docs/comparative_benchmark_results.schemaorg-30-current-https.json

@@ -1,4 +1,4 @@
-//! Build a `.qualia` bundle from a set of intact files.
+//! Build a `.hmc` bundle from a set of intact files.
 
 use sha2::{Digest, Sha256};
 
@@ -10,7 +10,7 @@ use super::format::{
     OFF_TOTAL_LENGTH, OFF_VERSION,
 };
 
-/// Accumulates intact files and serialises them into a `.qualia` bundle.
+/// Accumulates intact files and serialises them into a `.hmc` bundle.
 ///
 /// Files are stored **verbatim** — no compression, no transformation — each
 /// page-aligned so the interior alignment (and thus zero-copy segment access)
@@ -138,7 +138,12 @@ mod tests {
         let bytes = w.build().unwrap();
         let reader = super::super::reader::BundleReader::parse(&bytes).unwrap();
         for e in reader.entries() {
-            assert_eq!(e.offset % BUNDLE_ENTRY_ALIGN as u64, 0, "entry {} unaligned", e.key);
+            assert_eq!(
+                e.offset % BUNDLE_ENTRY_ALIGN as u64,
+                0,
+                "entry {} unaligned",
+                e.key
+            );
         }
     }
 }

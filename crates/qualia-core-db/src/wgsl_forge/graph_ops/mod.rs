@@ -18,3 +18,4 @@ pub mod reduce;
 pub mod scatter;
 pub mod slice;
 pub mod stencil;
+pub mod vision;

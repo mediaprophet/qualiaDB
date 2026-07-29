@@ -146,9 +146,10 @@ pub fn caps() -> ComputeCaps {
 fn probe_caps() -> ComputeCaps {
     // Make NVRTC discoverable before the CUDA probe (CUDA 13: bin\x64).
     ensure_cuda_runtime_path();
-    // wgpu: build a throwaway context. If it constructs, the WGSL GPU path is live,
-    // and its constraints carry the coopmat/rt hardware bits.
-    let (wgpu, coopmat, rt) = match WgpuComputeContext::new(PROBE_CAPACITY_BYTES) {
+    // wgpu: try Vulkan first for coopmat (NVIDIA Vulkan exposes VK_KHR_cooperative_matrix
+    // even when DX12 doesn't expose the equivalent). Falls back to default backend if no
+    // coopmat adapter is found.
+    let (wgpu, coopmat, rt) = match WgpuComputeContext::new_for_coopmat(PROBE_CAPACITY_BYTES) {
         Ok(ctx) => (
             true,
             ctx.constraints.supports_coopmat,
@@ -441,7 +442,7 @@ fn gemm_f32_tc_coopmat_unchecked(
         ForgeError::GpuValidation("m*n overflow in gemm_f32_tc_coopmat".to_string())
     })?;
     let capacity = (element_count.saturating_mul(8)).max(4 << 20);
-    let mut ctx = WgpuComputeContext::new(capacity)?;
+    let mut ctx = WgpuComputeContext::new_for_coopmat(capacity)?;
 
     let view_a =
         ctx.allocate_and_write(bytemuck::cast_slice(a), 0, 0, BindingUsage::StorageRead)?;
@@ -634,8 +635,7 @@ static CUDA_TC_CTX: OnceLock<Mutex<Option<crate::wgsl_forge::execute::CudaComput
     OnceLock::new();
 
 #[cfg(feature = "cuda")]
-fn cuda_tc_ctx_cell(
-) -> &'static Mutex<Option<crate::wgsl_forge::execute::CudaComputeContext>> {
+fn cuda_tc_ctx_cell() -> &'static Mutex<Option<crate::wgsl_forge::execute::CudaComputeContext>> {
     CUDA_TC_CTX.get_or_init(|| Mutex::new(None))
 }
 
@@ -1517,7 +1517,9 @@ mod tests {
     #[test]
     #[serial_test::serial(gpu)]
     fn gemm_f32_gpu_matches_cpu() {
-        if !crate::wgsl_forge::test_gpu_available() { return; }
+        if !crate::wgsl_forge::test_gpu_available() {
+            return;
+        }
         let (m, k, n) = (64usize, 64, 64);
         let a = det_f32(m * k, 0x6745_4D4D_4633_3201);
         let b = det_f32(k * n, 0x6745_4D4D_4633_3202);
@@ -1534,7 +1536,9 @@ mod tests {
     #[test]
     #[serial_test::serial(gpu)]
     fn gemv_f32_gpu_matches_cpu() {
-        if !crate::wgsl_forge::test_gpu_available() { return; }
+        if !crate::wgsl_forge::test_gpu_available() {
+            return;
+        }
         let (m, n) = (256usize, 256);
         let a = det_f32(m * n, 0x6745_4D56_4633_3201);
         let x = det_f32(n, 0x6745_4D56_4633_3202);
@@ -1553,7 +1557,9 @@ mod tests {
     #[test]
     #[serial_test::serial(gpu)]
     fn fft_f32_gpu_matches_dft() {
-        if !crate::wgsl_forge::test_gpu_available() { return; }
+        if !crate::wgsl_forge::test_gpu_available() {
+            return;
+        }
         let n = 256usize;
         // 2*n interleaved (real, imag) samples, deterministic and identical for
         // both paths.
@@ -1572,7 +1578,9 @@ mod tests {
     #[test]
     #[serial_test::serial(gpu)]
     fn gemm_f64_cuda_matches_cpu() {
-        if !crate::wgsl_forge::test_cuda_available() { return; }
+        if !crate::wgsl_forge::test_cuda_available() {
+            return;
+        }
         let (m, k, n) = (64usize, 64, 64);
         let a: Vec<f64> = det_f32(m * k, 0x6745_4D4D_4636_3401)
             .into_iter()
@@ -1598,7 +1606,9 @@ mod tests {
     #[test]
     #[serial_test::serial(gpu)]
     fn gemm_tc_cuda_tiled_matches_f16_reference() {
-        if !crate::wgsl_forge::test_cuda_available() { return; }
+        if !crate::wgsl_forge::test_cuda_available() {
+            return;
+        }
         let (m, k, n) = (64usize, 64, 64);
         // Small-magnitude data so f16 rounding error stays bounded over the K=64 sum.
         let a: Vec<f32> = det_f32(m * k, 0x574D_4D41_5449_4C45)
@@ -1637,7 +1647,9 @@ mod tests {
     #[test]
     #[serial_test::serial(gpu)]
     fn df64_precision_is_probed_and_honest() {
-        if !crate::wgsl_forge::test_gpu_available() { return; }
+        if !crate::wgsl_forge::test_gpu_available() {
+            return;
+        }
         let (m, k, n) = (64usize, 64, 64);
         let a: Vec<f64> = det_f32(m * k, 0x6446_3634_4D4D_3401)
             .into_iter()
@@ -1683,7 +1695,9 @@ mod tests {
     #[test]
     #[serial_test::serial(gpu)]
     fn gemv_f64_cuda_matches_cpu() {
-        if !crate::wgsl_forge::test_cuda_available() { return; }
+        if !crate::wgsl_forge::test_cuda_available() {
+            return;
+        }
         let (m, n) = (256usize, 256);
         let a: Vec<f64> = det_f32(m * n, 0x6745_4D56_4636_3401)
             .into_iter()

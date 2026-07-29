@@ -516,4 +516,3 @@ impl CostModel {
         self.total_cost() < other.total_cost()
     }
 }
-

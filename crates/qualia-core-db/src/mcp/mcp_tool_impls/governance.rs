@@ -1,6 +1,5 @@
 use super::*;
 
-
 /// Return the canonical capability catalogue used by chat, CLI, and MCP.
 ///
 /// Internal/library-only operations remain visible with no MCP route, while

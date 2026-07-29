@@ -44,10 +44,7 @@ pub fn social_cost_of_carbon(
 /// Total pollution damage: `D = 0.5 * damage_coeff * emissions^2`.
 ///
 /// Quadratic damage function (standard in environmental economics).
-pub fn pollution_damage(
-    emissions: f64,
-    damage_coeff: f64,
-) -> Result<f64, EnvironmentalError> {
+pub fn pollution_damage(emissions: f64, damage_coeff: f64) -> Result<f64, EnvironmentalError> {
     require_finite(emissions)?;
     require_finite(damage_coeff)?;
     if emissions < 0.0 || damage_coeff < 0.0 {
@@ -57,10 +54,7 @@ pub fn pollution_damage(
 }
 
 /// Marginal damage: `MD = damage_coeff * emissions`.
-pub fn marginal_damage(
-    emissions: f64,
-    damage_coeff: f64,
-) -> Result<f64, EnvironmentalError> {
+pub fn marginal_damage(emissions: f64, damage_coeff: f64) -> Result<f64, EnvironmentalError> {
     require_finite(emissions)?;
     require_finite(damage_coeff)?;
     if emissions < 0.0 || damage_coeff < 0.0 {
@@ -114,7 +108,8 @@ pub fn abatement_net_benefit(
     if baseline_emissions < 0.0 || actual_emissions < 0.0 || actual_emissions > baseline_emissions {
         return Err(EnvironmentalError::InvalidInput);
     }
-    let avoided_damage = 0.5 * damage_coeff * (baseline_emissions.powi(2) - actual_emissions.powi(2));
+    let avoided_damage =
+        0.5 * damage_coeff * (baseline_emissions.powi(2) - actual_emissions.powi(2));
     let abatement_cost = 0.5 * abatement_coeff * (baseline_emissions - actual_emissions).powi(2);
     Ok(avoided_damage - abatement_cost)
 }

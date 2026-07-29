@@ -160,8 +160,7 @@ mod tests {
             assert!(dir.path().join(expected).exists(), "{expected} not on disk");
         }
         // The manifest is a real Web App Manifest.
-        let webmanifest =
-            std::fs::read_to_string(dir.path().join("manifest.webmanifest")).unwrap();
+        let webmanifest = std::fs::read_to_string(dir.path().join("manifest.webmanifest")).unwrap();
         assert!(webmanifest.contains("\"display\""));
         assert!(webmanifest.contains("Demo"));
     }

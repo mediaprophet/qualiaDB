@@ -1,4 +1,4 @@
-//! Read a `.qualia` bundle: verify integrity, enumerate entries, and hand back
+//! Read a `.hmc` bundle: verify integrity, enumerate entries, and hand back
 //! **zero-copy slices** of intact embedded files (and of interior segments).
 
 use crate::container_10d::crc32c::crc32c_update;
@@ -31,7 +31,7 @@ fn whole_file_crc(bytes: &[u8]) -> u32 {
     !crc
 }
 
-/// A parsed, integrity-checked view over a `.qualia` bundle's bytes. Borrows the
+/// A parsed, integrity-checked view over a `.hmc` bundle's bytes. Borrows the
 /// input; `get`/`segment` return slices into it (zero copy).
 pub struct BundleReader<'a> {
     bytes: &'a [u8],
@@ -68,14 +68,21 @@ impl<'a> BundleReader<'a> {
         let stored_crc = read_u32(bytes, OFF_CRC32C);
         let got = whole_file_crc(bytes);
         if got != stored_crc {
-            return Err(BundleError::CrcMismatch { expected: stored_crc, got });
+            return Err(BundleError::CrcMismatch {
+                expected: stored_crc,
+                got,
+            });
         }
 
         let index_offset = read_u64(bytes, OFF_INDEX_OFFSET);
         let index_length = read_u64(bytes, OFF_INDEX_LENGTH);
         let end = index_offset
             .checked_add(index_length)
-            .ok_or(BundleError::BadIndexPointer { offset: index_offset, length: index_length, total: bytes.len() })?;
+            .ok_or(BundleError::BadIndexPointer {
+                offset: index_offset,
+                length: index_length,
+                total: bytes.len(),
+            })?;
         if index_offset < BUNDLE_HEADER_SIZE as u64 || end as usize > bytes.len() {
             return Err(BundleError::BadIndexPointer {
                 offset: index_offset,
@@ -90,10 +97,14 @@ impl<'a> BundleReader<'a> {
 
         // Every entry must lie within the payload region (before the index).
         for e in &entries {
-            let e_end = e
-                .offset
-                .checked_add(e.length)
-                .ok_or_else(|| BundleError::EntryOutOfBounds { key: e.key.clone(), offset: e.offset, length: e.length })?;
+            let e_end =
+                e.offset
+                    .checked_add(e.length)
+                    .ok_or_else(|| BundleError::EntryOutOfBounds {
+                        key: e.key.clone(),
+                        offset: e.offset,
+                        length: e.length,
+                    })?;
             if e.offset < BUNDLE_HEADER_SIZE as u64 || e_end > index_offset {
                 return Err(BundleError::EntryOutOfBounds {
                     key: e.key.clone(),
@@ -103,7 +114,11 @@ impl<'a> BundleReader<'a> {
             }
         }
 
-        Ok(Self { bytes, entries, flags })
+        Ok(Self {
+            bytes,
+            entries,
+            flags,
+        })
     }
 
     /// The bundle's entries (index order).
@@ -147,15 +162,19 @@ impl<'a> BundleReader<'a> {
     /// Verify one entry's payload against its recorded SHA-256.
     pub fn verify_entry(&self, key: &str) -> bool {
         use sha2::{Digest, Sha256};
-        let Some(e) = self.entry(key) else { return false };
-        let Some(payload) = self.get(key) else { return false };
+        let Some(e) = self.entry(key) else {
+            return false;
+        };
+        let Some(payload) = self.get(key) else {
+            return false;
+        };
         let mut hasher = Sha256::new();
         hasher.update(payload);
         hasher.finalize().as_slice() == e.sha256.as_slice()
     }
 }
 
-/// Open a `.qualia` bundle from disk via `mmap` for zero-copy access (native).
+/// Open a `.hmc` bundle from disk via `mmap` for zero-copy access (native).
 ///
 /// The mapping backs the slices returned by [`BundleReader`], so an embedded
 /// file (or one of its interior segments) can be read without copying the
@@ -172,7 +191,8 @@ impl BundleMmap {
         let file = std::fs::File::open(path).map_err(|e| BundleError::Io(e.to_string()))?;
         // SAFETY: the map is read-only and lives as long as `self`; callers get
         // slices bounded by `self`.
-        let map = unsafe { memmap2::Mmap::map(&file) }.map_err(|e| BundleError::Io(e.to_string()))?;
+        let map =
+            unsafe { memmap2::Mmap::map(&file) }.map_err(|e| BundleError::Io(e.to_string()))?;
         Ok(Self { map })
     }
 
@@ -194,10 +214,20 @@ mod tests {
 
     fn sample_bundle() -> Vec<u8> {
         let mut w = BundleWriter::new();
-        w.add_file("liver.10d", "10d", (0..200u32).map(|i| i as u8).collect(), Some(vec![0xAA, 0xBB]))
-            .unwrap();
-        w.add_file("graph.q42", "q42", b"hello q42 segment world".to_vec(), None)
-            .unwrap();
+        w.add_file(
+            "liver.10d",
+            "10d",
+            (0..200u32).map(|i| i as u8).collect(),
+            Some(vec![0xAA, 0xBB]),
+        )
+        .unwrap();
+        w.add_file(
+            "graph.q42",
+            "q42",
+            b"hello q42 segment world".to_vec(),
+            None,
+        )
+        .unwrap();
         w.build().unwrap()
     }
 
@@ -211,7 +241,10 @@ mod tests {
         assert_eq!(r.get("liver.10d").unwrap(), liver.as_slice());
         assert_eq!(r.get("graph.q42").unwrap(), b"hello q42 segment world");
         assert_eq!(r.entry("liver.10d").unwrap().kind, "10d");
-        assert_eq!(r.entry("liver.10d").unwrap().meta.as_deref(), Some(&[0xAA, 0xBB][..]));
+        assert_eq!(
+            r.entry("liver.10d").unwrap().meta.as_deref(),
+            Some(&[0xAA, 0xBB][..])
+        );
         assert!(r.get("missing").is_none());
     }
 
@@ -246,10 +279,16 @@ mod tests {
 
     #[test]
     fn rejects_bad_magic_and_short_input() {
-        assert!(matches!(BundleReader::parse(&[0u8; 10]), Err(BundleError::TooShort)));
+        assert!(matches!(
+            BundleReader::parse(&[0u8; 10]),
+            Err(BundleError::TooShort)
+        ));
         let mut bytes = sample_bundle();
         bytes[0] = b'X';
-        assert!(matches!(BundleReader::parse(&bytes), Err(BundleError::BadMagic)));
+        assert!(matches!(
+            BundleReader::parse(&bytes),
+            Err(BundleError::BadMagic)
+        ));
     }
 
     #[cfg(not(target_arch = "wasm32"))]
@@ -257,7 +296,7 @@ mod tests {
     fn mmap_roundtrip() {
         let bytes = sample_bundle();
         let dir = tempfile::tempdir().unwrap();
-        let path = dir.path().join("pack.qualia");
+        let path = dir.path().join("pack.hmc");
         std::fs::write(&path, &bytes).unwrap();
         let m = BundleMmap::open(&path).unwrap();
         let r = m.reader().unwrap();

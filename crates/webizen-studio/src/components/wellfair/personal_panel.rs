@@ -1,13 +1,13 @@
 //! Personal Core — owner profile, conditions/allergies, emergency contacts, accessibility.
 
+use super::host_client::use_host_snapshot;
 use super::host_client::{
-    add_allergy, add_condition, add_disputed_diagnosis, add_emergency_contact,
-    add_housing_safety, fetch_emergency_contacts, fetch_health_records, fetch_identity,
-    save_accessibility, AddAllergyRequest, AddConditionRequest, AddDisputedDiagnosisRequest,
-    AddHousingSafetyRequest, EmergencyContactDto,
+    add_allergy, add_condition, add_disputed_diagnosis, add_emergency_contact, add_housing_safety,
+    fetch_emergency_contacts, fetch_health_records, fetch_identity, save_accessibility,
+    AddAllergyRequest, AddConditionRequest, AddDisputedDiagnosisRequest, AddHousingSafetyRequest,
+    EmergencyContactDto,
 };
 use super::host_dto::{AccessibilityPreferences, HealthRecordDto, NetworkExposure, VaultLifecycle};
-use super::host_client::use_host_snapshot;
 use dioxus::prelude::*;
 
 fn network_label(n: NetworkExposure) -> &'static str {
@@ -75,10 +75,7 @@ pub fn WellfairPersonalPanel() -> Element {
                         .filter(|r| {
                             matches!(
                                 r.kind.as_str(),
-                                "condition"
-                                    | "allergy"
-                                    | "disputed_diagnosis"
-                                    | "housing_safety"
+                                "condition" | "allergy" | "disputed_diagnosis" | "housing_safety"
                             )
                         })
                         .collect();
@@ -106,7 +103,9 @@ pub fn WellfairPersonalPanel() -> Element {
     let mut prefs_loaded = use_signal(|| false);
 
     use_effect(move || {
-        if prefs_loaded() { return; }
+        if prefs_loaded() {
+            return;
+        }
         prefs_loaded.set(true);
         let prefs = snapshot().accessibility.clone();
         state.write().prefs = prefs;
@@ -115,7 +114,9 @@ pub fn WellfairPersonalPanel() -> Element {
     let mut loaded = use_signal(|| false);
 
     use_effect(move || {
-        if loaded() { return; }
+        if loaded() {
+            return;
+        }
         loaded.set(true);
         reload_profile_records();
         reload_contacts();
@@ -142,6 +143,7 @@ pub fn WellfairPersonalPanel() -> Element {
         section {
             aria_label: "WellFair personal core",
             style: "padding:0.85rem;border:1px solid var(--qualia-border,#ddd);border-radius:10px;background:var(--qualia-surface,#fafafa);",
+            super::shared::DomainChrome { domain: "You", chip: "Profile · accessibility · not the person-as-asset", show_memory: true }
             h2 { style: "margin:0 0 0.75rem;font-size:1rem;", "Personal — profile and accessibility" }
 
             div {

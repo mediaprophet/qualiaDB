@@ -31,6 +31,9 @@ async fn invoke_json<T>(cmd: &str, args: serde_json::Value) -> Result<T, String>
 where
     T: serde::de::DeserializeOwned,
 {
+    if !crate::endpoints::is_native_host() {
+        return Err("The desktop host is unavailable in this preview.".to_string());
+    }
     let js_args = serde_wasm_bindgen::to_value(&args).map_err(|e| e.to_string())?;
     let value = tauri_invoke(cmd, js_args.into())
         .await
@@ -44,13 +47,22 @@ const BTN: &str = "background: #8b5cf6; color: white; padding: 7px 14px; border:
 const CHIP: &str = "display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 999px; background: #0f172a; color: #a5b4fc; margin: 2px 4px 2px 0; border: 1px solid #334155;";
 
 fn s(v: &serde_json::Value, key: &str) -> String {
-    v.get(key).and_then(|x| x.as_str()).unwrap_or_default().to_string()
+    v.get(key)
+        .and_then(|x| x.as_str())
+        .unwrap_or_default()
+        .to_string()
 }
 fn arr(v: &serde_json::Value, key: &str) -> Vec<serde_json::Value> {
-    v.get(key).and_then(|x| x.as_array()).cloned().unwrap_or_default()
+    v.get(key)
+        .and_then(|x| x.as_array())
+        .cloned()
+        .unwrap_or_default()
 }
 fn strs(v: &serde_json::Value, key: &str) -> Vec<String> {
-    arr(v, key).iter().filter_map(|x| x.as_str().map(|s| s.to_string())).collect()
+    arr(v, key)
+        .iter()
+        .filter_map(|x| x.as_str().map(|s| s.to_string()))
+        .collect()
 }
 
 #[component]
@@ -73,7 +85,12 @@ pub fn DirectoryPane() -> Element {
         {
             let (mut result, mut status) = (result, status);
             spawn(async move {
-                match invoke_json::<serde_json::Value>("search_directory", json!({ "query": "", "facetsJson": "" })).await {
+                match invoke_json::<serde_json::Value>(
+                    "search_directory",
+                    json!({ "query": "", "facetsJson": "" }),
+                )
+                .await
+                {
                     Ok(v) => result.set(v),
                     Err(e) => status.set(format!("Load directory failed: {e}")),
                 }

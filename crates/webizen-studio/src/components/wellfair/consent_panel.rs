@@ -15,7 +15,8 @@ pub fn WellfairConsentPanel() -> Element {
     let mut epistemic = use_signal(|| "asserted".to_string());
     let mut decision = use_signal(|| None::<PolicyDecisionDto>);
     let mut grants = use_signal(Vec::<ConsentGrantDto>::new);
-    let mut status = use_signal(|| "Evaluate a qApp access request against PolicyService.".to_string());
+    let mut status =
+        use_signal(|| "Evaluate a qApp access request against PolicyService.".to_string());
 
     let reload_grants = move || {
         spawn(async move {
@@ -37,15 +38,20 @@ pub fn WellfairConsentPanel() -> Element {
                 Ok(d) => {
                     decision.set(Some(d.clone()));
                     status.set(match &d {
-                        PolicyDecisionDto::Permit { .. } => "Permitted — no owner action required.".into(),
+                        PolicyDecisionDto::Permit { .. } => {
+                            "Permitted — no owner action required.".into()
+                        }
                         PolicyDecisionDto::Deny { reasons } => {
                             format!("Denied: {}", reasons.join("; "))
                         }
                         PolicyDecisionDto::Prompt { .. } => {
-                            "Consent required — review the draft below and grant if you approve.".into()
+                            "Consent required — review the draft below and grant if you approve."
+                                .into()
                         }
                         PolicyDecisionDto::Suspend { required_approvals } => {
-                            format!("Suspended — {required_approvals} guardian approval(s) required.")
+                            format!(
+                                "Suspended — {required_approvals} guardian approval(s) required."
+                            )
                         }
                     });
                 }
@@ -77,7 +83,9 @@ pub fn WellfairConsentPanel() -> Element {
     let mut loaded = use_signal(|| false);
 
     use_effect(move || {
-        if loaded() { return; }
+        if loaded() {
+            return;
+        }
         loaded.set(true);
         reload_grants();
         run_evaluate();
@@ -92,6 +100,7 @@ pub fn WellfairConsentPanel() -> Element {
         section {
             aria_label: "WellFair consent and selective disclosure",
             style: "padding:0.85rem;border:1px solid var(--qualia-border,#ddd);border-radius:10px;background:var(--qualia-surface,#fafafa);",
+            super::shared::DomainChrome { domain: "Care", chip: "Rights · consent · fail-closed", show_memory: true }
             div {
                 style: "display:flex;align-items:center;justify-content:space-between;margin-bottom:0.5rem;",
                 h2 { style: "margin:0;font-size:1rem;", "Consent — access profiles" }

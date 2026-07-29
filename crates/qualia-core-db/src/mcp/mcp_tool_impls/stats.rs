@@ -1,6 +1,5 @@
 use super::*;
 
-
 pub fn statistical_analysis(args: &[u8]) -> Result<String, McpSystemError> {
     use crate::specialized_libs::statistical_computing::{
         CorrelationMethod, DataType, DataValue, HypothesisType, PrivacyLevel,
@@ -326,7 +325,14 @@ pub fn statistical_analysis(args: &[u8]) -> Result<String, McpSystemError> {
             let classifier = json_bool(&v, "classifier", false);
             let seed = v.get("seed").and_then(Value::as_u64).unwrap_or(42);
             let r = lib
-                .random_forest(&dataset_id, &feature_refs, label_column, n_trees, classifier, seed)
+                .random_forest(
+                    &dataset_id,
+                    &feature_refs,
+                    label_column,
+                    n_trees,
+                    classifier,
+                    seed,
+                )
                 .map_err(|_| McpSystemError::InvalidParameters)?;
             json!({
                 "stat": "random_forest", "features": feature_columns, "target": label_column,

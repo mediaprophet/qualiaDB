@@ -1,0 +1,10 @@
+﻿{
+    "id":  "mediapipe_pose",
+    "filename":  "pose_landmarker_lite.task",
+    "licence":  "Apache-2.0",
+    "licence_tag":  "PermissiveReady",
+    "sha256":  "59929e1d1ee95287735ddd833b19cf4ac46d29bc7afddbbf6753c459690d574a",
+    "bytes":  5777746,
+    "fetched_unix":  1784321865,
+    "note":  "PermissiveReady weight; not a commercial-licence gate"
+}

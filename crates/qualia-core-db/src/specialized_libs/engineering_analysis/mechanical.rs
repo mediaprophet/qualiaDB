@@ -1,6 +1,5 @@
 use super::*;
 
-
 /// Mechanical analyzer for mechanical engineering analysis
 pub struct MechanicalAnalyzer {
     kinematics: Kinematics,
@@ -856,4 +855,3 @@ impl GeometricTolerance {
         }
     }
 }
-

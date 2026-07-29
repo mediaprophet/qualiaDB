@@ -6,7 +6,10 @@
 //! not a diagnosis or advice**; evidence provenance is disclosed. A clinician lens surfaces the same
 //! data as structural OSCE-Prac *considerations*. (The native 3D body replaces this surface in S5.)
 
-use super::host_client::{fetch_anatomy_view, get_physiological_state, reset_physiological_state, set_physiological_state, AnatomyViewReportDto};
+use super::host_client::{
+    fetch_anatomy_view, get_physiological_state, reset_physiological_state,
+    set_physiological_state, AnatomyViewReportDto,
+};
 use dioxus::prelude::*;
 
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -61,7 +64,9 @@ fn state_label(state: &serde_json::Value) -> String {
         return "Baseline (not declared)".to_string();
     }
     let repro = state.get("Reproductive");
-    let Some(repro) = repro else { return "Unknown state".to_string(); };
+    let Some(repro) = repro else {
+        return "Unknown state".to_string();
+    };
     if let Some(s) = repro.as_str() {
         return match s {
             "PreMenarche" => "Pre-menarche".to_string(),
@@ -96,18 +101,54 @@ fn state_label(state: &serde_json::Value) -> String {
 fn declarable_states() -> Vec<(String, String)> {
     vec![
         (r#""Baseline""#.to_string(), "Baseline".to_string()),
-        (r#"{"Reproductive":"PreMenarche"}"#.to_string(), "Pre-menarche".to_string()),
-        (r#"{"Reproductive":{"Cycling":"Menstrual"}}"#.to_string(), "Cycling — menstrual".to_string()),
-        (r#"{"Reproductive":{"Cycling":"Follicular"}}"#.to_string(), "Cycling — follicular".to_string()),
-        (r#"{"Reproductive":{"Cycling":"Ovulatory"}}"#.to_string(), "Cycling — ovulatory".to_string()),
-        (r#"{"Reproductive":{"Cycling":"Luteal"}}"#.to_string(), "Cycling — luteal".to_string()),
-        (r#"{"Reproductive":{"Pregnant":"First"}}"#.to_string(), "Pregnant — 1st trimester".to_string()),
-        (r#"{"Reproductive":{"Pregnant":"Second"}}"#.to_string(), "Pregnant — 2nd trimester".to_string()),
-        (r#"{"Reproductive":{"Pregnant":"Third"}}"#.to_string(), "Pregnant — 3rd trimester".to_string()),
-        (r#"{"Reproductive":"Postpartum"}"#.to_string(), "Postpartum".to_string()),
-        (r#"{"Reproductive":"Lactating"}"#.to_string(), "Lactating".to_string()),
-        (r#"{"Reproductive":"Perimenopause"}"#.to_string(), "Perimenopause".to_string()),
-        (r#"{"Reproductive":"PostMenopause"}"#.to_string(), "Post-menopause".to_string()),
+        (
+            r#"{"Reproductive":"PreMenarche"}"#.to_string(),
+            "Pre-menarche".to_string(),
+        ),
+        (
+            r#"{"Reproductive":{"Cycling":"Menstrual"}}"#.to_string(),
+            "Cycling — menstrual".to_string(),
+        ),
+        (
+            r#"{"Reproductive":{"Cycling":"Follicular"}}"#.to_string(),
+            "Cycling — follicular".to_string(),
+        ),
+        (
+            r#"{"Reproductive":{"Cycling":"Ovulatory"}}"#.to_string(),
+            "Cycling — ovulatory".to_string(),
+        ),
+        (
+            r#"{"Reproductive":{"Cycling":"Luteal"}}"#.to_string(),
+            "Cycling — luteal".to_string(),
+        ),
+        (
+            r#"{"Reproductive":{"Pregnant":"First"}}"#.to_string(),
+            "Pregnant — 1st trimester".to_string(),
+        ),
+        (
+            r#"{"Reproductive":{"Pregnant":"Second"}}"#.to_string(),
+            "Pregnant — 2nd trimester".to_string(),
+        ),
+        (
+            r#"{"Reproductive":{"Pregnant":"Third"}}"#.to_string(),
+            "Pregnant — 3rd trimester".to_string(),
+        ),
+        (
+            r#"{"Reproductive":"Postpartum"}"#.to_string(),
+            "Postpartum".to_string(),
+        ),
+        (
+            r#"{"Reproductive":"Lactating"}"#.to_string(),
+            "Lactating".to_string(),
+        ),
+        (
+            r#"{"Reproductive":"Perimenopause"}"#.to_string(),
+            "Perimenopause".to_string(),
+        ),
+        (
+            r#"{"Reproductive":"PostMenopause"}"#.to_string(),
+            "Post-menopause".to_string(),
+        ),
     ]
 }
 
@@ -129,11 +170,16 @@ fn level_word(level: &str) -> &'static str {
 
 #[component]
 pub fn WellfairAnatomyPanel() -> Element {
-    let mut ui = use_signal(|| AnatomyUi { lens: "person".to_string(), ..Default::default() });
+    let mut ui = use_signal(|| AnatomyUi {
+        lens: "person".to_string(),
+        ..Default::default()
+    });
     let mut init_done = use_signal(|| false);
 
     use_effect(move || {
-        if init_done() { return; }
+        if init_done() {
+            return;
+        }
         init_done.set(true);
         spawn(load(ui));
         spawn(load_phys_state(ui));
@@ -142,12 +188,16 @@ pub fn WellfairAnatomyPanel() -> Element {
     let state = ui();
     let is_person = state.lens != "clinician";
     let declared_state = state.phys_state.clone().flatten();
-    let state_label_str = declared_state.as_ref().map(state_label).unwrap_or_else(|| "Baseline (not declared)".to_string());
+    let state_label_str = declared_state
+        .as_ref()
+        .map(state_label)
+        .unwrap_or_else(|| "Baseline (not declared)".to_string());
 
     rsx! {
         section {
             aria_label: "Whole-person anatomy view",
             style: "padding:0.85rem;border:1px solid var(--qualia-border,#ddd);border-radius:10px;background:var(--qualia-surface,#fafafa);margin-top:0.85rem;",
+            super::shared::DomainChrome { domain: "Care", chip: "Body · anatomy overview", show_memory: true }
             h2 { style: "margin:0 0 0.35rem;font-size:1rem;", "Your body, overall" }
             p {
                 style: "margin:0 0 0.6rem;font-size:0.78rem;color:var(--qualia-text-muted,#666);",
@@ -163,9 +213,9 @@ pub fn WellfairAnatomyPanel() -> Element {
                     type: "button",
                     aria_pressed: "{is_person}",
                     style: if is_person {
-                        "padding:0.45rem 0.8rem;border:2px solid var(--qualia-accent,#2a6f97);border-radius:8px;background:#fff;cursor:pointer;font-size:0.85rem;"
+                        "padding:0.45rem 0.8rem;border:2px solid var(--qualia-accent,#2a6f97);border-radius:8px;background:var(--qualia-surface);color:var(--qualia-text);cursor:pointer;font-size:0.85rem;"
                     } else {
-                        "padding:0.45rem 0.8rem;border:1px solid var(--qualia-border,#ccc);border-radius:8px;background:#fff;cursor:pointer;font-size:0.85rem;"
+                        "padding:0.45rem 0.8rem;border:1px solid var(--qualia-border,#ccc);border-radius:8px;background:transparent;color:var(--qualia-text-muted);cursor:pointer;font-size:0.85rem;"
                     },
                     onclick: move |_| {
                         ui.write().lens = "person".to_string();
@@ -177,9 +227,9 @@ pub fn WellfairAnatomyPanel() -> Element {
                     type: "button",
                     aria_pressed: "{!is_person}",
                     style: if !is_person {
-                        "padding:0.45rem 0.8rem;border:2px solid var(--qualia-accent,#2a6f97);border-radius:8px;background:#fff;cursor:pointer;font-size:0.85rem;"
+                        "padding:0.45rem 0.8rem;border:2px solid var(--qualia-accent,#2a6f97);border-radius:8px;background:var(--qualia-surface);color:var(--qualia-text);cursor:pointer;font-size:0.85rem;"
                     } else {
-                        "padding:0.45rem 0.8rem;border:1px solid var(--qualia-border,#ccc);border-radius:8px;background:#fff;cursor:pointer;font-size:0.85rem;"
+                        "padding:0.45rem 0.8rem;border:1px solid var(--qualia-border,#ccc);border-radius:8px;background:transparent;color:var(--qualia-text-muted);cursor:pointer;font-size:0.85rem;"
                     },
                     onclick: move |_| {
                         ui.write().lens = "clinician".to_string();
@@ -193,7 +243,7 @@ pub fn WellfairAnatomyPanel() -> Element {
             div {
                 role: "group",
                 aria_label: "Physiological state",
-                style: "margin-bottom:0.7rem;padding:0.5rem 0.6rem;border:1px solid var(--qualia-border,#e2e2e2);border-radius:8px;background:#fff;",
+                style: "margin-bottom:0.7rem;padding:0.5rem 0.6rem;border:1px solid var(--qualia-border,#e2e2e2);border-radius:8px;background:var(--qualia-surface);color:var(--qualia-text);",
                 div {
                     style: "display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;",
                     span {
@@ -206,7 +256,7 @@ pub fn WellfairAnatomyPanel() -> Element {
                     }
                     button {
                         type: "button",
-                        style: "margin-left:auto;padding:0.25rem 0.5rem;border:1px solid var(--qualia-border,#ccc);border-radius:6px;background:#f6f6f6;cursor:pointer;font-size:0.75rem;",
+                        style: "margin-left:auto;padding:0.25rem 0.5rem;border:1px solid var(--qualia-border,#ccc);border-radius:6px;background:transparent;color:var(--qualia-text);cursor:pointer;font-size:0.75rem;",
                         onclick: move |_| {
                             let open = ui.read().state_picker_open;
                             ui.write().state_picker_open = !open;
@@ -225,7 +275,7 @@ pub fn WellfairAnatomyPanel() -> Element {
                             button {
                                 key: "{json}",
                                 type: "button",
-                                style: "padding:0.3rem 0.55rem;border:1px solid var(--qualia-border,#ccc);border-radius:6px;background:#fff;cursor:pointer;font-size:0.75rem;",
+                                style: "padding:0.3rem 0.55rem;border:1px solid var(--qualia-border,#ccc);border-radius:6px;background:var(--qualia-surface);color:var(--qualia-text);cursor:pointer;font-size:0.75rem;",
                                 onclick: move |_| {
                                     let json_clone = json.clone();
                                     spawn(async move {

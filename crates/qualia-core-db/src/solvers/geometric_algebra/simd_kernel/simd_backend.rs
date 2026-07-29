@@ -335,17 +335,18 @@ pub unsafe fn geometric_product_avx2(a: __m256, b: __m256) -> __m256 {
 }
 
 pub fn multivector_geometric_product(a: &[f32; 8], b: &[f32; 8]) -> [f32; 8] {
-    let kernel = GA_SIMD_KERNEL.get_or_init(GaKernel::init);
-
     #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
-    if kernel.has_avx2 {
-        unsafe {
-            let a_simd = _mm256_loadu_ps(a.as_ptr());
-            let b_simd = _mm256_loadu_ps(b.as_ptr());
-            let res_simd = geometric_product_avx2(a_simd, b_simd);
-            let mut out = [0.0; 8];
-            _mm256_storeu_ps(out.as_mut_ptr(), res_simd);
-            return out;
+    {
+        let kernel = GA_SIMD_KERNEL.get_or_init(GaKernel::init);
+        if kernel.has_avx2 {
+            unsafe {
+                let a_simd = _mm256_loadu_ps(a.as_ptr());
+                let b_simd = _mm256_loadu_ps(b.as_ptr());
+                let res_simd = geometric_product_avx2(a_simd, b_simd);
+                let mut out = [0.0; 8];
+                _mm256_storeu_ps(out.as_mut_ptr(), res_simd);
+                return out;
+            }
         }
     }
 

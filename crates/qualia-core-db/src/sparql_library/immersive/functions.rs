@@ -544,15 +544,13 @@ mod tests {
         }
         // withinDistance / volume are QISP-owned (no GeoSPARQL 2D equivalent used here).
         let wd =
-            entry_for_iri("https://webizen.org/immersive/function/0.1#withinDistance")
-                .unwrap();
+            entry_for_iri("https://webizen.org/immersive/function/0.1#withinDistance").unwrap();
         assert!(wd.defers_to.is_none());
     }
 
     #[test]
     fn admission_rejects_knn_inline_but_admits_predicates() {
-        let intersects =
-            crate::q_hash("https://webizen.org/immersive/function/0.1#intersects");
+        let intersects = crate::q_hash("https://webizen.org/immersive/function/0.1#intersects");
         assert!(
             matches!(admit_inline(intersects), Some(Ok(_))),
             "intersects is legal inline"

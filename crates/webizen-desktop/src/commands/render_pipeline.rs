@@ -6,8 +6,7 @@ use std::f64::consts::PI;
 
 use serde::Deserialize;
 use webizen_render::scene_contract::{
-    EpistemicState, RenderScene, SceneCamera, SceneEdge, SceneNode, ScenePoint,
-    Tensor10DProjection,
+    EpistemicState, RenderScene, SceneCamera, SceneEdge, SceneNode, ScenePoint, Tensor10DProjection,
 };
 use webizen_studio::render::item_color;
 use webizen_studio::render::qualia::{ItemState, SemanticScene};
@@ -50,6 +49,101 @@ fn map_epistemic(state: ItemState) -> EpistemicState {
 
 fn inferencing_from_state(state: ItemState) -> bool {
     matches!(state, ItemState::Highlighted | ItemState::Alert)
+}
+
+/// Build a volumetric [`RenderScene`] from entity-view library projection (prestige Memory morph).
+pub fn entity_view_to_render_scene(
+    nodes: &[qualia_core_db::entity_view::SceneNodeProj],
+    selected_entity_id: u64,
+) -> RenderScene {
+    let mut scene = RenderScene::new();
+    scene.set_background("#050812");
+    scene.set_camera(SceneCamera {
+        position: [0.0, 5.5, 12.5],
+        target: [0.0, 0.2, 0.0],
+        fov: 52.0,
+    });
+
+    let total = nodes.len().max(1);
+    let mut positions: Vec<(f64, f64, f64)> = Vec::with_capacity(nodes.len());
+
+    for (idx, n) in nodes.iter().enumerate() {
+        // Prefer manifold field from projection x,y,z (0..1) mapped into view volume.
+        let (x, y, z) = if n.z > 0.01 || n.x != 0.0 {
+            let mx = (n.x - 0.5) * 11.0;
+            let my = (0.5 - n.y) * 6.5 + n.z * 3.5;
+            let mz = (n.z - 0.4) * 9.0;
+            (mx, my, mz)
+        } else {
+            sphere_position(idx, total)
+        };
+        positions.push((x, y, z));
+
+        let selected = selected_entity_id != 0 && selected_entity_id == n.entity_id;
+        let radius = if selected { n.radius * 1.65 } else { n.radius };
+        let color = if selected {
+            "#fbbf24".to_string()
+        } else {
+            n.color.clone()
+        };
+
+        scene.add_node(SceneNode {
+            id: n.id.clone(),
+            position: ScenePoint {
+                x: n.x,
+                y: n.y,
+                z: n.z,
+            },
+            color,
+            radius,
+            alpha: n.alpha.clamp(0.4, 1.0),
+            is_inferencing: selected,
+            pulse_rate: if selected { 1.4 } else { 0.15 },
+            tensor: Tensor10DProjection {
+                q: if selected { 0.25 } else { 0.0 },
+                v: idx as f64,
+                w: 1.0,
+                x,
+                y,
+                z,
+                t: n.z,
+                alpha: n.alpha,
+                mu: 0.0,
+                sigma: n.radius / 12.0,
+            },
+            epistemic_state: if selected {
+                EpistemicState::Sandbox
+            } else {
+                EpistemicState::Collapsed
+            },
+            version: n.z,
+            entity_id: n.entity_id,
+            affordance_bits: n.affordance_bits,
+        });
+    }
+
+    // Typed-looking relational strands between sequential neighbors (not random neon).
+    for idx in 0..positions.len().saturating_sub(1) {
+        let a = positions[idx];
+        let b = positions[idx + 1];
+        scene.add_edge(SceneEdge {
+            from: ScenePoint {
+                x: a.0,
+                y: a.1,
+                z: a.2,
+            },
+            to: ScenePoint {
+                x: b.0,
+                y: b.1,
+                z: b.2,
+            },
+            color: "rgba(167, 139, 250, 0.28)".to_string(),
+            alpha: 0.35,
+            width: 1.4,
+        });
+    }
+
+    scene
 }
 
 /// Build a volumetric [`RenderScene`] from a QualiaDB semantic projection.
@@ -103,6 +197,8 @@ pub fn semantic_to_render_scene(semantic: &SemanticScene) -> RenderScene {
             },
             epistemic_state: map_epistemic(item.state),
             version: item.intensity,
+            entity_id: 0,
+            affordance_bits: 0,
         });
     }
 
@@ -205,6 +301,8 @@ pub fn merge_workspace_panes(scene: &mut RenderScene, panes: &[StudioPaneInput])
             } else {
                 EpistemicState::Collapsed
             },
+            entity_id: 0,
+            affordance_bits: 0,
             version: intensity,
         });
     }

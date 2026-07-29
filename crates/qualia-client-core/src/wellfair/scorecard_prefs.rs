@@ -53,16 +53,25 @@ mod tests {
 
         // The person authors their own model.
         let mut model = wellfare_core::anatomy::seed_weight_model();
-        model.system_weights.push(wellfare_core::anatomy::SystemAspectWeight {
-            system_id: "nervous".into(),
-            aspect: wellfare_core::anatomy::Aspect::Stress,
-            weight_pct: 42,
-        });
+        model
+            .system_weights
+            .push(wellfare_core::anatomy::SystemAspectWeight {
+                system_id: "nervous".into(),
+                aspect: wellfare_core::anatomy::Aspect::Stress,
+                weight_pct: 42,
+            });
         save(dir.path(), &model).unwrap();
-        assert_eq!(load(dir.path()).as_ref(), Some(&model), "the person's model is theirs, persisted");
+        assert_eq!(
+            load(dir.path()).as_ref(),
+            Some(&model),
+            "the person's model is theirs, persisted"
+        );
 
         // They can revert to the suggestion.
         clear(dir.path()).unwrap();
-        assert!(load(dir.path()).is_none(), "reset returns to the seed suggestion");
+        assert!(
+            load(dir.path()).is_none(),
+            "reset returns to the seed suggestion"
+        );
     }
 }

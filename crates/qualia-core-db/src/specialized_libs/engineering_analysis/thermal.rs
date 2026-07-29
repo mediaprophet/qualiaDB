@@ -1,6 +1,5 @@
 use super::*;
 
-
 /// Thermal analyzer for thermal engineering analysis
 pub struct ThermalAnalyzer {
     heat_transfer: HeatTransfer,
@@ -273,4 +272,3 @@ impl Transient {
         }
     }
 }
-

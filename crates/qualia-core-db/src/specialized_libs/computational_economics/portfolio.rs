@@ -9,8 +9,6 @@ pub enum PortfolioError {
     OutputBufferTooSmall,
 }
 
-
-
 fn validate_shape(
     flat_returns: &[f64],
     period_count: usize,

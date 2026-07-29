@@ -1,0 +1,10 @@
+﻿{
+    "id":  "sface",
+    "filename":  "face_recognition_sface_2021dec.onnx",
+    "licence":  "Apache-2.0",
+    "licence_tag":  "PermissiveReady",
+    "sha256":  "0ba9fbfa01b5270c96627c4ef784da859931e02f04419c829e83484087c34e79",
+    "bytes":  38696353,
+    "fetched_unix":  1784321801,
+    "note":  "PermissiveReady weight; not a commercial-licence gate"
+}

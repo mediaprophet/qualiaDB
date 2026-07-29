@@ -31,7 +31,6 @@ pub struct PerformanceInfo {
     pub parallel_efficiency: f64,
 }
 
-
 // ============================================================================
 // Genuine simulations for the declared `SimulationType` domains.
 //

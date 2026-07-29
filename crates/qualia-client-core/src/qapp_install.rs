@@ -70,9 +70,16 @@ pub enum QappInstallError {
     ManifestMissing,
     ManifestInvalid(String),
     ContentManifestInvalid(String),
-    HashMismatch { path: String, expected: String, actual: String },
+    HashMismatch {
+        path: String,
+        expected: String,
+        actual: String,
+    },
     SignatureInvalid(String),
-    AbiMismatch { found: String, supported: String },
+    AbiMismatch {
+        found: String,
+        supported: String,
+    },
     PackageRevoked(String),
     StagingFailed(String),
     RegistryCorrupt(String),
@@ -87,8 +94,15 @@ impl std::fmt::Display for QappInstallError {
             Self::ManifestMissing => write!(f, "qapp.json not found"),
             Self::ManifestInvalid(e) => write!(f, "invalid qapp.json: {e}"),
             Self::ContentManifestInvalid(e) => write!(f, "invalid package-manifest.json: {e}"),
-            Self::HashMismatch { path, expected, actual } => {
-                write!(f, "hash mismatch for {path}: expected {expected}, got {actual}")
+            Self::HashMismatch {
+                path,
+                expected,
+                actual,
+            } => {
+                write!(
+                    f,
+                    "hash mismatch for {path}: expected {expected}, got {actual}"
+                )
             }
             Self::SignatureInvalid(e) => write!(f, "signature invalid: {e}"),
             Self::AbiMismatch { found, supported } => {
@@ -159,12 +173,15 @@ pub fn load_install_registry(storage: &Path) -> Result<QappInstallRegistry, Qapp
     if !path.is_file() {
         return Ok(QappInstallRegistry::default());
     }
-    let content = fs::read_to_string(&path).map_err(|e| QappInstallError::RegistryCorrupt(e.to_string()))?;
-    serde_json::from_str(&content)
-        .map_err(|e| QappInstallError::RegistryCorrupt(e.to_string()))
+    let content =
+        fs::read_to_string(&path).map_err(|e| QappInstallError::RegistryCorrupt(e.to_string()))?;
+    serde_json::from_str(&content).map_err(|e| QappInstallError::RegistryCorrupt(e.to_string()))
 }
 
-pub fn save_install_registry(storage: &Path, registry: &QappInstallRegistry) -> Result<(), QappInstallError> {
+pub fn save_install_registry(
+    storage: &Path,
+    registry: &QappInstallRegistry,
+) -> Result<(), QappInstallError> {
     ensure_qapps_dir(storage)?;
     let path = registry_path(storage);
     let staging = path.with_extension("json.staging");
@@ -295,10 +312,12 @@ fn verify_content_manifest(
         let pk = trust_pubkey.ok_or_else(|| {
             QappInstallError::SignatureInvalid("no trust pubkey configured".into())
         })?;
-        let sig_bytes = hex::decode(sig_hex)
-            .map_err(|e| QappInstallError::SignatureInvalid(e.to_string()))?;
+        let sig_bytes =
+            hex::decode(sig_hex).map_err(|e| QappInstallError::SignatureInvalid(e.to_string()))?;
         if sig_bytes.len() != 64 {
-            return Err(QappInstallError::SignatureInvalid("expected 64-byte ed25519 signature".into()));
+            return Err(QappInstallError::SignatureInvalid(
+                "expected 64-byte ed25519 signature".into(),
+            ));
         }
         let mut sig_arr = [0u8; 64];
         sig_arr.copy_from_slice(&sig_bytes);
@@ -372,7 +391,11 @@ fn remove_dir_contents(dir: &Path) -> Result<(), QappInstallError> {
     Ok(())
 }
 
-fn archive_active_version(storage: &Path, package_id: &str, version: &str) -> Result<(), QappInstallError> {
+fn archive_active_version(
+    storage: &Path,
+    package_id: &str,
+    version: &str,
+) -> Result<(), QappInstallError> {
     let active = active_package_dir(storage, package_id);
     if !active.join(QAPP_PACKAGE_MANIFEST).is_file() {
         return Ok(());
@@ -444,7 +467,8 @@ pub fn install_package_atomic(
     ensure_qapps_dir(storage)?;
     let staging_parent = staging_root(storage);
     fs::create_dir_all(&staging_parent)?;
-    let staging_dir = staging_parent.join(format!("{package_id}-{version}-{}", uuid::Uuid::new_v4()));
+    let staging_dir =
+        staging_parent.join(format!("{package_id}-{version}-{}", uuid::Uuid::new_v4()));
     copy_dir_all(source_dir, &staging_dir)?;
 
     let dest = active_package_dir(storage, &package_id);
@@ -518,10 +542,15 @@ pub fn revoke_package(storage: &Path, package_id: &str) -> Result<(), QappInstal
 }
 
 pub fn list_registry_entries(storage: &Path) -> Result<Vec<QappRegistryEntry>, QappInstallError> {
-    Ok(load_install_registry(storage)?.packages.into_values().collect())
+    Ok(load_install_registry(storage)?
+        .packages
+        .into_values()
+        .collect())
 }
 
-pub fn reconcile_registry_with_disk(storage: &Path) -> Result<QappInstallRegistry, QappInstallError> {
+pub fn reconcile_registry_with_disk(
+    storage: &Path,
+) -> Result<QappInstallRegistry, QappInstallError> {
     ensure_qapps_dir(storage)?;
     let mut registry = load_install_registry(storage)?;
     let root = qapps_dir(storage);
@@ -609,10 +638,13 @@ mod tests {
         let source = storage.join("source");
         write_minimal_package(&source, "TestApp", "0.0.1");
 
-        let entry = install_package_atomic(&storage, &source, InstallPolicy::Development, None).unwrap();
+        let entry =
+            install_package_atomic(&storage, &source, InstallPolicy::Development, None).unwrap();
         assert_eq!(entry.package_id, "TestApp");
         assert_eq!(entry.active_version, "0.0.1");
-        assert!(active_package_dir(&storage, "TestApp").join("index.html").is_file());
+        assert!(active_package_dir(&storage, "TestApp")
+            .join("index.html")
+            .is_file());
 
         let registry = load_install_registry(&storage).unwrap();
         assert!(registry.packages.contains_key("TestApp"));
@@ -631,7 +663,8 @@ mod tests {
         install_package_atomic(&storage, &v1, InstallPolicy::Development, None).unwrap();
         install_package_atomic(&storage, &v2, InstallPolicy::Development, None).unwrap();
 
-        let html = fs::read_to_string(active_package_dir(&storage, "TestApp").join("index.html")).unwrap();
+        let html =
+            fs::read_to_string(active_package_dir(&storage, "TestApp").join("index.html")).unwrap();
         assert!(html.contains("v2"));
         let registry = load_install_registry(&storage).unwrap();
         assert_eq!(registry.packages["TestApp"].active_version, "0.0.2");
@@ -646,7 +679,8 @@ mod tests {
         write_minimal_package(&source, "TestApp", "0.0.1");
         install_package_atomic(&storage, &source, InstallPolicy::Development, None).unwrap();
         revoke_package(&storage, "TestApp").unwrap();
-        let err = install_package_atomic(&storage, &source, InstallPolicy::Development, None).unwrap_err();
+        let err = install_package_atomic(&storage, &source, InstallPolicy::Development, None)
+            .unwrap_err();
         assert!(matches!(err, QappInstallError::PackageRevoked(_)));
         let _ = fs::remove_dir_all(&storage);
     }
@@ -654,7 +688,11 @@ mod tests {
     #[test]
     fn reconcile_discovers_flat_install() {
         let storage = temp_storage();
-        write_minimal_package(&active_package_dir(&storage, "LegacyApp"), "LegacyApp", "1.0.0");
+        write_minimal_package(
+            &active_package_dir(&storage, "LegacyApp"),
+            "LegacyApp",
+            "1.0.0",
+        );
         let registry = reconcile_registry_with_disk(&storage).unwrap();
         assert!(registry.packages.contains_key("LegacyApp"));
         let _ = fs::remove_dir_all(&storage);

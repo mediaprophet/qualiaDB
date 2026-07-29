@@ -7,7 +7,10 @@ use wasm_bindgen::prelude::*;
 #[wasm_bindgen]
 extern "C" {
     #[wasm_bindgen(js_namespace = ["window", "__TAURI__", "core"], js_name = invoke, catch)]
-    async fn invoke(cmd: &str, args: wasm_bindgen::JsValue) -> Result<wasm_bindgen::JsValue, wasm_bindgen::JsValue>;
+    async fn invoke(
+        cmd: &str,
+        args: wasm_bindgen::JsValue,
+    ) -> Result<wasm_bindgen::JsValue, wasm_bindgen::JsValue>;
 }
 
 #[component]
@@ -20,7 +23,12 @@ pub fn ModelLifecycle() -> Element {
         let _ = (&mut step, &mut lifecycle_label_state);
         #[cfg(target_arch = "wasm32")]
         loop {
-            if let Ok(response) = invoke("wellfair_get_model_lifecycle_status", serde_wasm_bindgen::to_value(&()).unwrap()).await {
+            if let Ok(response) = invoke(
+                "wellfair_get_model_lifecycle_status",
+                serde_wasm_bindgen::to_value(&()).unwrap(),
+            )
+            .await
+            {
                 if let Some(state_str) = response.as_string() {
                     lifecycle_label_state.set(state_str.clone());
                     let new_step = match state_str.as_str() {
@@ -68,17 +76,17 @@ pub fn ModelLifecycle() -> Element {
 
                 div { style: "display: flex; gap: 12px;",
                     button { style: "padding: 10px 20px; background: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;", "Abort Loading" }
-                    button { 
-                        style: "padding: 10px 20px; background: #10b981; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;", 
-                        onclick: move |_| { 
+                    button {
+                        style: "padding: 10px 20px; background: #10b981; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;",
+                        onclick: move |_| {
                             #[cfg(target_arch = "wasm32")]
                             {
                                 let phase = if step() < 4 { step() + 1 } else { 0 };
                                 let args = serde_wasm_bindgen::to_value(&serde_json::json!({ "phase": phase })).unwrap();
                                 let _ = invoke("wellfair_force_model_lifecycle_phase", args);
                             }
-                        }, 
-                        "Force Next Phase" 
+                        },
+                        "Force Next Phase"
                     }
                 }
             }

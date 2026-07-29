@@ -56,39 +56,76 @@ pub struct MailVerdict {
 ///    delivered to quarantine rather than the inbox.
 /// 3. The `priority` and `notify` hints are carried through from the rules, with reasons recorded
 ///    for a non-zero priority and for quarantine.
+/// 4. Optional **semantic_route** (agreement / credential / values id, or a small DSL):
+///    - `quarantine` — force quarantine
+///    - `require_verified` — same as require_verified_sender for this evaluation
+///    - `priority:N` — override priority
+///    - anything else — recorded as audit trail (hook for rights/agreement engines)
 pub fn evaluate(rules: &crate::domains::MailRules, msg: &InboundMessage) -> MailVerdict {
     let mut reasons: Vec<String> = Vec::new();
+    let mut require_verified = rules.require_verified_sender;
+    let mut force_quarantine = rules.quarantine;
+    let mut priority = rules.priority;
+    let mut notify = rules.notify;
+
+    // (0) Semantic route DSL / agreement reference.
+    if let Some(ref route) = rules.semantic_route {
+        let r = route.trim();
+        if !r.is_empty() {
+            reasons.push(format!("semantic_route: {r}"));
+            for token in r.split(|c: char| c == ',' || c == ';' || c.is_whitespace()) {
+                let t = token.trim().to_ascii_lowercase();
+                if t.is_empty() {
+                    continue;
+                }
+                if t == "quarantine" {
+                    force_quarantine = true;
+                } else if t == "require_verified" || t == "verified_only" {
+                    require_verified = true;
+                } else if let Some(rest) = t.strip_prefix("priority:") {
+                    if let Ok(p) = rest.parse::<i8>() {
+                        priority = p;
+                    }
+                } else if t == "notify" {
+                    notify = true;
+                } else if t == "silent" {
+                    notify = false;
+                }
+                // Other tokens (agreement ids, values-credentials) stay as audit trail only.
+            }
+        }
+    }
 
     // (1) Verified-sender gate — fail closed, no delivery.
-    if rules.require_verified_sender && !msg.sender_verified {
+    if require_verified && !msg.sender_verified {
         reasons.push("rejected: unverified sender".to_string());
         return MailVerdict {
             deliver: false,
             quarantined: false,
             rejected: Some("unverified sender".to_string()),
-            priority: rules.priority,
-            notify: rules.notify,
+            priority,
+            notify,
             reasons,
         };
     }
 
     // (2) Delivered. Quarantine still delivers, but to the quarantine store.
-    let quarantined = rules.quarantine;
+    let quarantined = force_quarantine;
     if quarantined {
         reasons.push("quarantined by rule".to_string());
     }
 
     // (3) Priority / notify hints.
-    if rules.priority > 0 {
-        reasons.push(format!("priority set to {}", rules.priority));
+    if priority > 0 {
+        reasons.push(format!("priority set to {priority}"));
     }
 
     MailVerdict {
         deliver: true,
         quarantined,
         rejected: None,
-        priority: rules.priority,
-        notify: rules.notify,
+        priority,
+        notify,
         reasons,
     }
 }
@@ -158,10 +195,7 @@ mod tests {
         assert!(verdict.deliver, "quarantined mail is still delivered");
         assert!(verdict.quarantined);
         assert_eq!(verdict.rejected, None);
-        assert!(verdict
-            .reasons
-            .iter()
-            .any(|r| r == "quarantined by rule"));
+        assert!(verdict.reasons.iter().any(|r| r == "quarantined by rule"));
     }
 
     #[test]
@@ -174,7 +208,10 @@ mod tests {
         let verdict = evaluate(&rules, &msg(true));
         assert_eq!(verdict.priority, 7);
         assert!(verdict.notify);
-        assert!(verdict.reasons.iter().any(|r| r.contains("priority set to 7")));
+        assert!(verdict
+            .reasons
+            .iter()
+            .any(|r| r.contains("priority set to 7")));
     }
 
     #[test]
@@ -195,5 +232,32 @@ mod tests {
             retention_cutoff_unix(&thirty_days, received),
             Some(received + 30 * 86_400)
         );
+    }
+
+    #[test]
+    fn semantic_route_quarantine_and_priority() {
+        let rules = MailRules {
+            semantic_route: Some("quarantine priority:9 notify".into()),
+            ..Default::default()
+        };
+        let verdict = evaluate(&rules, &msg(true));
+        assert!(verdict.deliver);
+        assert!(verdict.quarantined);
+        assert_eq!(verdict.priority, 9);
+        assert!(verdict.notify);
+        assert!(verdict
+            .reasons
+            .iter()
+            .any(|r| r.starts_with("semantic_route:")));
+    }
+
+    #[test]
+    fn semantic_route_require_verified() {
+        let rules = MailRules {
+            semantic_route: Some("require_verified".into()),
+            ..Default::default()
+        };
+        let v = evaluate(&rules, &msg(false));
+        assert!(!v.deliver);
     }
 }

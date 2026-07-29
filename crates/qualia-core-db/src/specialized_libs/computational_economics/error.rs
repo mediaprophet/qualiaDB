@@ -37,10 +37,7 @@ impl EconStatus {
     /// True when the failure is a caller-side buffer/dimension problem.
     #[inline]
     pub fn is_caller_error(self) -> bool {
-        matches!(
-            self,
-            EconStatus::InvalidInput | EconStatus::BufferTooSmall
-        )
+        matches!(self, EconStatus::InvalidInput | EconStatus::BufferTooSmall)
     }
 }
 
@@ -181,7 +178,10 @@ mod tests {
     #[test]
     fn error_to_status_round_trip() {
         assert_eq!(EconError::Singular.to_status(), EconStatus::Singular);
-        assert_eq!(EconError::NonConverged.to_status(), EconStatus::MaxIterations);
+        assert_eq!(
+            EconError::NonConverged.to_status(),
+            EconStatus::MaxIterations
+        );
         let status: EconStatus = EconError::BufferTooSmall.into();
         assert_eq!(status, EconStatus::BufferTooSmall);
     }

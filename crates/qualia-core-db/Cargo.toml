@@ -1,8 +1,11 @@
 [package]
 name = "qualia-core-db"
-version = "0.0.23"
+version = "0.0.27"
 edition = "2021"
 authors = ["Timothy Charles Holborn <timothy.holborn@gmail.com>"]
+description = "QualiaDB semantic graph, inference, ontology, spatial, and browser-WASM runtime"
+repository = "https://github.com/mediaprophet/qualiaDB"
+license-file = "LICENSE"
 
 [features]
 default = ["profile_target_1024", "zk-culling", "gpu-runtime", "wgsl-forge", "privacy-he"]
@@ -21,12 +24,19 @@ cuda = ["dep:cudarc"]
 # driver's NVML at runtime — no CUDA SDK needed to build). Opt-in; the base build is unaffected and
 # `thermal_telemetry` degrades to "telemetry unavailable" when the feature is off or NVML is absent.
 nvml = ["dep:nvml-wrapper"]
+# Learned vision inference (ONNX Runtime) for the SR CNN/ESRGAN/SwinIR session adapters (D2.10-12).
+# Off by default; the adapters fail closed (WeightAbsent/FeatureDisabled) without it. Pulls the ORT
+# binaries only when explicitly enabled.
+vision-onnx = ["dep:ort"]
 dxc = []
 portal = ["wasm_simd", "gpu-runtime"]
 wasm-ontology = []
 wasm-logic = []
 wasm-scientific = ["gpu-runtime"]
 wasm-llm = ["gpu-runtime", "wasm-logic", "wasm-scientific"]
+# Optional browser GPU differential probes and legacy readback experiments.
+# Kept out of release bundles; enable explicitly while developing MC8 kernels.
+wasm-llm-diagnostics = ["wasm-llm"]
 wasm-playground = ["wasm-logic", "wasm-scientific"]
 wasm-full = ["portal", "wasm-logic", "wasm-scientific", "wasm-llm", "wasm-playground"]
 
@@ -79,6 +89,7 @@ neon_simd_unroll = []
 vm_tracing = []
 
 [dependencies]
+qualia-inference-kernel = { path = "../qualia-inference-kernel" }
 minicbor = { version = "2.2.2", features = ["std"] }
 futures-core = { version = "0.3", default-features = false }
 futures-channel = "0.3"
@@ -144,7 +155,7 @@ async-trait = "0.1.89"
 dashmap = "6.2.1"
 rand_distr = "0.6.0"
 fast_qr = { version = "0.13.1", features = ["svg"] }
-wgpu = { version = "30", features = ["webgpu"], optional = true }
+wgpu = { version = "30", features = ["webgpu", "spirv"], optional = true }
 naga = { version = "30", features = ["wgsl-in", "spv-out"], optional = true }
 raw-window-handle = { version = "0.6", optional = true }
 cudarc = { version = "0.19", optional = true, features = ["cuda-13030"] }
@@ -216,6 +227,7 @@ windows = { version = "0.62", features = [
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 libc = "0.2"
+qualia-audio = { path = "../qualia-audio" }
 keyring = "4"
 memmap2 = "0.9"
 futures-util = "0.3"
@@ -228,6 +240,13 @@ tower-http = { version = "0.7", features = ["fs", "cors", "set-header"] }
 tokio-stream = { version = "0.1.18", features = ["sync"] }
 http-body-util = "0.1.3"
 zstd = "0.13"
+# Permissive pure-Rust image codecs (D1.10): PNG (MIT/Apache) + baseline JPEG (MIT/Apache).
+png = "0.17"
+jpeg-decoder = "0.3"
+# ONNX Runtime for learned SR session adapters (feature `vision-onnx`, off by default).
+ort = { version = "2.0.0-rc.12", features = ["download-binaries"], optional = true }
+# Pure-Rust MP4 container demuxer (MIT) for D1.11 video file I/O (demux only; codec decode is separate).
+mp4 = "0.14"
 sysinfo = "0.39.3"
 # W7: NVIDIA GPU thermal/power telemetry (opt-in via the `nvml` feature). Loads the driver's NVML
 # library at runtime (dlopen) — builds without the CUDA SDK; init fails gracefully on non-NVIDIA hosts.

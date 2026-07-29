@@ -29,7 +29,12 @@ impl VolumetricRenderer {
     /// The surface is created from a raw window handle (HWND on Windows).
     /// Call `render()` to draw a frame; the swapchain present is automatic.
     #[cfg(all(not(target_arch = "wasm32"), feature = "qualia"))]
-    pub fn new_surface(hwnd: isize, width: u32, height: u32, particle_cap: usize) -> Result<Self, String> {
+    pub fn new_surface(
+        hwnd: isize,
+        width: u32,
+        height: u32,
+        particle_cap: usize,
+    ) -> Result<Self, String> {
         Ok(Self {
             inner: PortalGpu::new_surface(hwnd, width, height, particle_cap)?,
         })
@@ -50,8 +55,8 @@ impl VolumetricRenderer {
     /// Decode/allocation occurs once at this explicit asset boundary; the
     /// resulting vertex/index buffers use the normal zero-copy GPU draw path.
     pub fn upload_10d_mesh(&mut self, bytes: &[u8]) -> Result<u32, String> {
-        let mesh = qualia_core_db::container_10d::decode_mesh_section(bytes)
-            .map_err(|e| e.to_string())?;
+        let mesh =
+            qualia_core_db::container_10d::decode_mesh_section(bytes).map_err(|e| e.to_string())?;
         let mut indices = Vec::with_capacity(mesh.triangles.len() * 3);
         for triangle in &mesh.triangles {
             indices.extend_from_slice(triangle);
@@ -118,27 +123,26 @@ impl VolumetricRenderer {
         standpoint: &qualia_core_db::render::telemetry::ObserverStandpoint,
     ) -> Option<u32> {
         qualia_core_db::render::navigation::cpu_pick_node_at(
-            tensor,
-            canvas_w,
-            canvas_h,
-            pick_x,
-            pick_y,
-            yaw,
-            standpoint,
+            tensor, canvas_w, canvas_h, pick_x, pick_y, yaw, standpoint,
         )
     }
 
     /// P9.3 — Load a full `.10d` container asset (not just a mesh section).
     /// Parses the section table, extracts the QuantizedMesh, uploads it to the
     /// GPU, and returns `(vertex_count, triangle_count, provenance_mu)`.
+    ///
+    /// D3: when Tensor10DNodes are present, vertices are coloured by nearest-node
+    /// σ via `sigma_to_display_rgb` (vision recon / EMF paint fuel).
     pub fn load_10d_asset(&mut self, bytes: &[u8]) -> Result<(u32, u32, f32), String> {
         use qualia_core_db::container_10d::{
-            self, header::Container10dHeader,
+            self, header::Container10dHeader, node_section::parse_node_header,
         };
+        use qualia_core_db::render::spectral::sigma_to_display_rgb;
+        use qualia_core_db::tensor::Tensor10D;
 
         let mut bytes_mut = bytes.to_vec();
-        let header = Container10dHeader::parse(&bytes_mut)
-            .map_err(|e| format!("10d header: {e}"))?;
+        let header =
+            Container10dHeader::parse(&bytes_mut).map_err(|e| format!("10d header: {e}"))?;
         container_10d::verify_whole_file_crc32c(&mut bytes_mut)
             .map_err(|e| format!("10d CRC: {e}"))?;
         let descs = container_10d::parse_section_table(&bytes_mut, &header)
@@ -146,6 +150,7 @@ impl VolumetricRenderer {
 
         let mut mesh = None;
         let mut provenance_mu: f32 = 0.0;
+        let mut nodes: Vec<Tensor10D> = Vec::new();
 
         for desc in descs.iter() {
             let st = container_10d::SectionType::from_u8(desc.section_type)
@@ -162,8 +167,19 @@ impl VolumetricRenderer {
                     );
                 }
                 container_10d::SectionType::Tensor10DNodes => {
-                    if let Ok(t) = container_10d::read_node(payload, 0) {
+                    if let Ok((nh, _)) = parse_node_header(payload) {
+                        let count = nh.node_count as usize;
+                        for i in 0..count {
+                            if let Ok(t) = container_10d::read_node(payload, i) {
+                                if i == 0 {
+                                    provenance_mu = t.mu;
+                                }
+                                nodes.push(t);
+                            }
+                        }
+                    } else if let Ok(t) = container_10d::read_node(payload, 0) {
                         provenance_mu = t.mu;
+                        nodes.push(t);
                     }
                 }
                 _ => {}
@@ -178,7 +194,34 @@ impl VolumetricRenderer {
         for triangle in &mesh.triangles {
             indices.extend_from_slice(triangle);
         }
-        self.inner.upload_mesh(&mesh.positions, &indices);
+
+        if nodes.is_empty() {
+            self.inner.upload_mesh(&mesh.positions, &indices);
+        } else {
+            // Colour vertices by nearest node σ (spectral paint).
+            let colors: Vec<[f32; 4]> = mesh
+                .positions
+                .iter()
+                .map(|p| {
+                    let mut best = 0usize;
+                    let mut best_d = f32::INFINITY;
+                    for (i, n) in nodes.iter().enumerate() {
+                        let dx = p[0] - n.x;
+                        let dy = p[1] - n.y;
+                        let dz = p[2] - n.z;
+                        let d = dx * dx + dy * dy + dz * dz;
+                        if d < best_d {
+                            best_d = d;
+                            best = i;
+                        }
+                    }
+                    let (r, g, b) = sigma_to_display_rgb(nodes[best].sigma);
+                    [r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0, 1.0]
+                })
+                .collect();
+            self.inner
+                .upload_mesh_colored(&mesh.positions, &colors, &indices);
+        }
 
         Ok((vert_count, tri_count, provenance_mu))
     }
@@ -219,11 +262,7 @@ impl VolumetricRenderer {
     /// `[t_slice - t_window/2, t_slice + t_window/2]` time window. Returns
     /// the indices of nodes in the window, byte-identical to a linear-scan
     /// oracle.
-    pub fn temporal_scrub(
-        tensor: &[u8],
-        t_slice: f32,
-        t_window: f32,
-    ) -> Result<Vec<u32>, String> {
+    pub fn temporal_scrub(tensor: &[u8], t_slice: f32, t_window: f32) -> Result<Vec<u32>, String> {
         let count = qualia_core_db::tensor::buffer_export::tensor_node_count(tensor)
             .map_err(|e| e.to_string())?;
         let half = t_window * 0.5;
@@ -563,17 +602,35 @@ mod tests {
         write_tensor_buffer(&tensors, &mut buf).unwrap();
 
         let result = VolumetricRenderer::temporal_scrub(&buf, 5.0, 0.0).unwrap();
-        assert!(result.is_empty(), "zero-width window at t=5 should match no nodes");
+        assert!(
+            result.is_empty(),
+            "zero-width window at t=5 should match no nodes"
+        );
     }
 
     #[test]
     fn temporal_scrub_matches_linear_scan_oracle() {
-        use qualia_core_db::tensor::buffer_export::{read_tensor_at, tensor_node_count, write_tensor_buffer, TensorBufferHeader};
+        use qualia_core_db::tensor::buffer_export::{
+            read_tensor_at, tensor_node_count, write_tensor_buffer, TensorBufferHeader,
+        };
         use qualia_core_db::tensor::Tensor10D;
 
-        let tensors: Vec<Tensor10D> = (0..20).map(|i| {
-            Tensor10D::new(0.0, 0.0, 0.0, i as f32 * 0.1, 0.0, 0.0, i as f32 * 0.3, 1.0, 0.0, 0.0)
-        }).collect();
+        let tensors: Vec<Tensor10D> = (0..20)
+            .map(|i| {
+                Tensor10D::new(
+                    0.0,
+                    0.0,
+                    0.0,
+                    i as f32 * 0.1,
+                    0.0,
+                    0.0,
+                    i as f32 * 0.3,
+                    1.0,
+                    0.0,
+                    0.0,
+                )
+            })
+            .collect();
         let mut buf = vec![0u8; TensorBufferHeader::total_bytes(tensors.len())];
         write_tensor_buffer(&tensors, &mut buf).unwrap();
 
@@ -594,6 +651,9 @@ mod tests {
         }
 
         let result = VolumetricRenderer::temporal_scrub(&buf, t_slice, t_window).unwrap();
-        assert_eq!(result, oracle, "temporal_scrub must match linear-scan oracle");
+        assert_eq!(
+            result, oracle,
+            "temporal_scrub must match linear-scan oracle"
+        );
     }
 }

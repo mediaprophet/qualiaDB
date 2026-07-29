@@ -36,7 +36,8 @@ impl Ogc3dTilesAdapter {
 
         let type_p = generate_60bit_token(b"http://www.w3.org/1999/02/22-rdf-syntax-ns#type");
         let source_p = generate_60bit_token(b"http://purl.org/dc/terms/source");
-        let geomerr_p = generate_60bit_token(b"https://github.com/CesiumGS/3d-tiles#geometricError");
+        let geomerr_p =
+            generate_60bit_token(b"https://github.com/CesiumGS/3d-tiles#geometricError");
         let lat_p = generate_60bit_token(b"http://www.w3.org/2003/01/geo/wgs84_pos#lat");
         let long_p = generate_60bit_token(b"http://www.w3.org/2003/01/geo/wgs84_pos#long");
         let tile_kind = generate_60bit_token(b"https://github.com/CesiumGS/3d-tiles#Tile");
@@ -78,7 +79,11 @@ impl Ogc3dTilesAdapter {
                 let subject = generate_60bit_token(uri.as_bytes());
 
                 out.push(quin(subject, type_p, tile_kind));
-                out.push(quin(subject, source_p, generate_60bit_token(uri.as_bytes())));
+                out.push(quin(
+                    subject,
+                    source_p,
+                    generate_60bit_token(uri.as_bytes()),
+                ));
 
                 if let Some(err) = tile.get("geometricError").and_then(|g| g.as_f64()) {
                     out.push(quin(subject, geomerr_p, err.to_bits()));
@@ -179,7 +184,10 @@ mod tests {
     #[test]
     fn test_ogc_3d_tiles_consent_denied() {
         let registry = NetworkDisclosureRegistry::new();
-        let adapter = Ogc3dTilesAdapter::new("ogc_3d_tiles", "https://assets.ion.cesium.com/1/tileset.json");
+        let adapter = Ogc3dTilesAdapter::new(
+            "ogc_3d_tiles",
+            "https://assets.ion.cesium.com/1/tileset.json",
+        );
 
         let res = adapter.fetch_region((0.0, 0.0, 1.0, 1.0), (0, 0), &registry);
         assert!(res.is_err());
@@ -198,7 +206,9 @@ mod tests {
    ]}}"#;
 
         let adapter = Ogc3dTilesAdapter::new("ogc_3d_tiles", "https://example.com/tileset.json");
-        let quins = adapter.parse_features(tileset).expect("valid tileset should parse");
+        let quins = adapter
+            .parse_features(tileset)
+            .expect("valid tileset should parse");
 
         let type_p = generate_60bit_token(b"http://www.w3.org/1999/02/22-rdf-syntax-ns#type");
         let source_p = generate_60bit_token(b"http://purl.org/dc/terms/source");
@@ -210,14 +220,23 @@ mod tests {
             .filter(|q| q.predicate == type_p && q.object == tile_kind)
             .map(|q| q.subject)
             .collect();
-        assert_eq!(subjects.len(), 3, "expected 3 tile subjects (root + 2 children)");
+        assert_eq!(
+            subjects.len(),
+            3,
+            "expected 3 tile subjects (root + 2 children)"
+        );
 
         // Quin accounting:
         //   root:  type + source + geomErr + lat + long        = 5 (region)
         //   0/0:   type + source + geomErr                      = 3 (box only, no lat/long)
         //   0/1:   type + source + geomErr + lat + long         = 5 (region)
         // total = 13
-        assert_eq!(quins.len(), 13, "expected 13 quins total, got {}", quins.len());
+        assert_eq!(
+            quins.len(),
+            13,
+            "expected 13 quins total, got {}",
+            quins.len()
+        );
 
         // A known tile's SOURCE quin is present (recompute hashes here).
         let child_subject = generate_60bit_token(b"0/1.b3dm");
@@ -233,7 +252,9 @@ mod tests {
         let box_subject = generate_60bit_token(b"0/0.b3dm");
         let lat_p = generate_60bit_token(b"http://www.w3.org/2003/01/geo/wgs84_pos#lat");
         assert!(
-            !quins.iter().any(|q| q.subject == box_subject && q.predicate == lat_p),
+            !quins
+                .iter()
+                .any(|q| q.subject == box_subject && q.predicate == lat_p),
             "box-only tile must not emit a lat quin"
         );
 

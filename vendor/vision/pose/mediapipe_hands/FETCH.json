@@ -1,0 +1,10 @@
+﻿{
+    "id":  "mediapipe_hands",
+    "filename":  "hand_landmarker.task",
+    "licence":  "Apache-2.0",
+    "licence_tag":  "PermissiveReady",
+    "sha256":  "fbc2a30080c3c557093b5ddfc334698132eb341044ccee322ccf8bcf3607cde1",
+    "bytes":  7819105,
+    "fetched_unix":  1784321897,
+    "note":  "PermissiveReady weight; not a commercial-licence gate"
+}

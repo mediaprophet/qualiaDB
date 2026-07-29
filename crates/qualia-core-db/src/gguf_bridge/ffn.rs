@@ -247,11 +247,7 @@ impl QTensorEngine {
                 down_raw,
                 &mut scratch_a[..emb_dim],
             ) {
-                add_residual_inplace(
-                    &mut hidden[..emb_dim],
-                    &scratch_a[..emb_dim],
-                    emb_dim,
-                );
+                add_residual_inplace(&mut hidden[..emb_dim], &scratch_a[..emb_dim], emb_dim);
                 return true;
             }
         }
@@ -539,7 +535,9 @@ impl QTensorEngine {
         self.poll_wait();
         if let Ok(handle) = tokio::runtime::Handle::try_current() {
             if handle.block_on(rx).ok().map(|m| m.is_ok()).unwrap_or(false) {
-                let data = slice.get_mapped_range().expect("wgpu buffer map_range failed");
+                let data = slice
+                    .get_mapped_range()
+                    .expect("wgpu buffer map_range failed");
                 let floats: &[f32] = bytemuck::cast_slice(&data);
                 scratch_a[..dn_out].copy_from_slice(&floats[..dn_out]);
                 drop(data);
@@ -599,11 +597,11 @@ impl QTensorEngine {
             || dn_in != n_ffn
             || n_ffn > MAX_STACK_GEMM_DIM
             || dn_out > scratch_a.len()
+            || n_ffn > scratch_b.len()
         {
             return false;
         }
         let mut gate_buf = [0f32; MAX_STACK_GEMM_DIM];
-        let mut up_buf = [0f32; MAX_STACK_GEMM_DIM];
         if !self
             .dispatch_gemm_into_async(
                 index,
@@ -622,7 +620,7 @@ impl QTensorEngine {
                 index,
                 up_info,
                 &ffn_input[..up_in],
-                &mut up_buf[..n_ffn],
+                &mut scratch_b[..n_ffn],
                 up_in,
                 n_ffn,
             )
@@ -632,7 +630,7 @@ impl QTensorEngine {
         }
         silu_inplace(&mut gate_buf[..n_ffn], n_ffn);
         for i in 0..n_ffn {
-            gate_buf[i] *= up_buf[i];
+            gate_buf[i] *= scratch_b[i];
         }
         if !self
             .dispatch_gemm_into_async(

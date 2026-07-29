@@ -24,8 +24,8 @@ pub struct CanvasRightsModel;
 
 impl CanvasRightsModel {
     /// Validates whether a specific principal has the right to place a virtual asset
-    /// at the given `location_hash`. 
-    /// 
+    /// at the given `location_hash`.
+    ///
     /// Follows the G2 explicit-denial guard principle:
     /// No automated agent can override a human principal's explicit refusal quin.
     pub fn validate_placement(
@@ -48,7 +48,7 @@ impl CanvasRightsModel {
         // location is under private/owned governance rather than open commons.
         // Derived from the arena quins below, not a mock.
         let mut is_owned = false;
-        
+
         for quin in arena_quins {
             if quin.predicate == placement_right && quin.subject == location_hash {
                 is_owned = true;
@@ -74,7 +74,7 @@ mod tests {
         let loc = 0x111;
         let prin = 0x222;
         let asset = 0x333;
-        
+
         let mut quins = vec![];
         // Explicitly deny the principal
         quins.push(NQuin {
@@ -86,7 +86,10 @@ mod tests {
             parity: 0,
         });
 
-        assert_eq!(CanvasRightsModel::validate_placement(loc, prin, asset, &quins), false);
+        assert_eq!(
+            CanvasRightsModel::validate_placement(loc, prin, asset, &quins),
+            false
+        );
     }
 
     #[test]
@@ -94,7 +97,7 @@ mod tests {
         let loc = 0x111;
         let prin = 0x222;
         let asset = 0x333;
-        
+
         let mut quins = vec![];
         // Grant the principal
         quins.push(NQuin {
@@ -106,6 +109,9 @@ mod tests {
             parity: 0,
         });
 
-        assert_eq!(CanvasRightsModel::validate_placement(loc, prin, asset, &quins), true);
+        assert_eq!(
+            CanvasRightsModel::validate_placement(loc, prin, asset, &quins),
+            true
+        );
     }
 }

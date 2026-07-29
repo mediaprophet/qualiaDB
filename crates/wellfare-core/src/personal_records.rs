@@ -3,9 +3,7 @@
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::record::{
-    EpistemicStatus, EvidenceType, RecordEnvelope, SensitivityClass,
-};
+use crate::record::{EpistemicStatus, EvidenceType, RecordEnvelope, SensitivityClass};
 
 /// Owner disputes or has not confirmed a diagnosis attributed to them.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

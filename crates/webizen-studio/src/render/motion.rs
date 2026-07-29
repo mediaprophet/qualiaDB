@@ -82,11 +82,7 @@ pub fn prefers_reduced_motion() -> bool {
 }
 
 /// Build a timeline tick honoring sanctuary theme + OS reduced-motion.
-pub fn timeline_from_theme(
-    current_time: f64,
-    delta_t: f64,
-    theme_class: Option<&str>,
-) -> Timeline {
+pub fn timeline_from_theme(current_time: f64, delta_t: f64, theme_class: Option<&str>) -> Timeline {
     let sanctuary = theme_class
         .map(|c| c.contains("sanctuary"))
         .unwrap_or(false);

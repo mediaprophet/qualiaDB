@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use crate::record::EpistemicStatus;
 
 use super::factor::{Effect, EvidenceTier, Factor, FactorKind};
-use super::systems::{body_system, BODY_SYSTEMS};
+use super::systems::{BODY_SYSTEMS, body_system};
 use super::{push_unique, system_key};
 
 /// Aggregated load on one body system.
@@ -30,10 +30,12 @@ pub fn accumulate(factors: &[Factor]) -> Vec<SystemBurden> {
     let mut by_system: BTreeMap<&str, SystemBurden> = BTreeMap::new();
     for factor in factors {
         for t in &factor.targets {
-            let entry = by_system.entry(system_key(&t.system_id)).or_insert_with(|| SystemBurden {
-                system_id: t.system_id.clone(),
-                ..Default::default()
-            });
+            let entry = by_system
+                .entry(system_key(&t.system_id))
+                .or_insert_with(|| SystemBurden {
+                    system_id: t.system_id.clone(),
+                    ..Default::default()
+                });
             match t.effect {
                 Effect::Adverse => {
                     entry.adverse_milli = entry.adverse_milli.saturating_add(t.weight_milli);
@@ -110,8 +112,12 @@ pub fn interactions(factors: &[Factor]) -> Vec<Interaction> {
 
 fn classify_interaction(a: &Factor, ea: Effect, b: &Factor, eb: Effect) -> Option<InteractionKind> {
     let is_med = |f: &Factor| f.kind == FactorKind::Medication;
-    let is_botanical =
-        |f: &Factor| matches!(f.kind, FactorKind::Herb | FactorKind::Tea | FactorKind::Supplement);
+    let is_botanical = |f: &Factor| {
+        matches!(
+            f.kind,
+            FactorKind::Herb | FactorKind::Tea | FactorKind::Supplement
+        )
+    };
     // Herb–drug: one medication + one botanical touching the same system (either direction).
     if (is_med(a) && is_botanical(b)) || (is_botanical(a) && is_med(b)) {
         return Some(InteractionKind::HerbDrug);
@@ -180,7 +186,9 @@ fn dominant_evidence(factors: &[Factor], system_id: &str) -> EvidenceTier {
     factors
         .iter()
         .flat_map(|f| &f.targets)
-        .filter(|t| t.effect == Effect::Adverse && system_key(&t.system_id) == system_key(system_id))
+        .filter(|t| {
+            t.effect == Effect::Adverse && system_key(&t.system_id) == system_key(system_id)
+        })
         .map(|t| t.evidence)
         .max()
         .unwrap_or(EvidenceTier::CommunityAnecdotal)
@@ -199,7 +207,12 @@ mod tests {
         )
     }
     fn herb(id: &str, system: &str, effect: Effect, w: u32) -> Factor {
-        Factor::new(id, FactorKind::Herb, id).targeting(system, effect, EvidenceTier::TraditionalUse, w)
+        Factor::new(id, FactorKind::Herb, id).targeting(
+            system,
+            effect,
+            EvidenceTier::TraditionalUse,
+            w,
+        )
     }
 
     #[test]
@@ -221,10 +234,18 @@ mod tests {
         assert_eq!(dig.adverse_contributors, vec!["cond:nafld".to_string()]);
 
         // Support exceeding adverse floors net at 0 (never "better than baseline").
-        let more_support =
-            vec![med("med:x", "urinary", 100), herb("herb:y", "urinary", Effect::Supportive, 500)];
+        let more_support = vec![
+            med("med:x", "urinary", 100),
+            herb("herb:y", "urinary", Effect::Supportive, 500),
+        ];
         let b = accumulate(&more_support);
-        assert_eq!(b.iter().find(|b| b.system_id == "urinary").unwrap().net_milli, 0);
+        assert_eq!(
+            b.iter()
+                .find(|b| b.system_id == "urinary")
+                .unwrap()
+                .net_milli,
+            0
+        );
     }
 
     #[test]
@@ -240,7 +261,11 @@ mod tests {
             med("med:nephro", "urinary", 400),
         ];
         let impl2 = systemic_implications(&factors, 2);
-        assert_eq!(impl2.len(), 1, "only 'digestive' has 2 converging adverse factors");
+        assert_eq!(
+            impl2.len(),
+            1,
+            "only 'digestive' has 2 converging adverse factors"
+        );
         assert_eq!(impl2[0].system_id, "digestive");
         assert_eq!(impl2[0].converging_factors.len(), 2);
         assert_eq!(impl2[0].epistemic_status, EpistemicStatus::Hypothesis);
@@ -251,8 +276,10 @@ mod tests {
 
     #[test]
     fn herb_drug_interaction_is_detected_on_a_shared_system() {
-        let factors =
-            vec![med("med:warfarin", "circulatory", 400), herb("herb:ginkgo", "circulatory", Effect::Adverse, 300)];
+        let factors = vec![
+            med("med:warfarin", "circulatory", 400),
+            herb("herb:ginkgo", "circulatory", Effect::Adverse, 300),
+        ];
         let ix = interactions(&factors);
         assert_eq!(ix.len(), 1);
         assert_eq!(ix[0].kind, InteractionKind::HerbDrug);
@@ -272,17 +299,27 @@ mod tests {
                 100,
             ),
         ];
-        assert_eq!(interactions(&compounding)[0].kind, InteractionKind::Compounding);
+        assert_eq!(
+            interactions(&compounding)[0].kind,
+            InteractionKind::Compounding
+        );
     }
 
     #[test]
     fn community_hot_take_stays_lowest_tier_and_only_a_hypothesis() {
-        let factors = vec![Factor::new(
-            "post:reddit-123",
-            FactorKind::Herb,
-            "someone said this tea 'detoxes' the liver",
-        )
-        .targeting("digestive", Effect::Adverse, EvidenceTier::CommunityAnecdotal, 50)];
+        let factors = vec![
+            Factor::new(
+                "post:reddit-123",
+                FactorKind::Herb,
+                "someone said this tea 'detoxes' the liver",
+            )
+            .targeting(
+                "digestive",
+                Effect::Adverse,
+                EvidenceTier::CommunityAnecdotal,
+                50,
+            ),
+        ];
         let imps = systemic_implications(&factors, 1);
         assert_eq!(imps.len(), 1);
         assert_eq!(imps[0].dominant_evidence, EvidenceTier::CommunityAnecdotal);

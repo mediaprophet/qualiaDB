@@ -1,6 +1,6 @@
 [package]
 name = "webizen-desktop"
-version = "0.0.24"
+version = "0.0.28"
 edition = "2021"
 authors = ["Timothy Charles Holborn <timothy.holborn@gmail.com>"]
 
@@ -12,7 +12,7 @@ path = "src/lib.rs"
 tauri-build = { version = "2.6", features = [] }
 
 [dependencies]
-tauri = { version = "2.11", features = ["protocol-asset", "tray-icon", "image-png", "unstable"] }
+tauri = { version = "=2.11.5", features = ["protocol-asset", "tray-icon", "image-png", "unstable"] }
 tauri-plugin-updater = "2.10"
 tauri-plugin-notification = "2"
 tauri-plugin-dialog = "2"
@@ -27,6 +27,7 @@ base64 = "0.22"
 open = "5"
 qualia-core-db = { path = "../qualia-core-db" }
 qualia-client-core = { path = "../qualia-client-core" }
+qualia-vision = { path = "../qualia-vision" }
 wellfare-core = { path = "../wellfare-core" }
 qualia-cooperative-core = { path = "../qualia-cooperative-core" }
 webizen-runtime = { path = "../webizen-runtime" }
@@ -52,6 +53,8 @@ fast_qr = { version = "0.13.1", features = ["svg"] }
 raw-window-handle = "0.6"
 webrtc = "0.17.1"
 scraper = "0.27.0"
+cpal = "0.15"
+qualia-audio = { path = "../qualia-audio" }
 
 [target.'cfg(windows)'.dependencies]
 windows = { version = "0.62", features = [
@@ -60,6 +63,16 @@ windows = { version = "0.62", features = [
     "Win32_Foundation",
     "Win32_System_LibraryLoader",
 ] }
+# Same major as Tauri/wry stack — ServerCertificateErrorDetected (C1).
+webview2-com = "0.38"
+# Interface::cast must match webview2-com's windows-core (0.61), not our windows 0.62.
+windows-core-wv2 = { package = "windows-core", version = "0.61.2" }
 
 [features]
+default = []
 custom-protocol = ["tauri/custom-protocol"]
+# Experimental Servo engine path (S1/S2). Off by default.
+# Does NOT link libservo in this build — compile-time markers + docs/UI surface only.
+# Default `cargo check -p webizen-desktop` stays free of any Servo dependency.
+# See docs/plans/servo-experimental.md for the future embed plug-in contract.
+servo = []

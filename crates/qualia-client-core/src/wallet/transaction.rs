@@ -32,32 +32,32 @@ impl Transaction {
 
     pub fn serialize(&self) -> Vec<u8> {
         let mut buf = Vec::new();
-        
+
         buf.extend_from_slice(&self.version.to_le_bytes());
-        
+
         buf.extend_from_slice(&encode_varint(self.inputs.len() as u64));
         for input in &self.inputs {
             let mut txid_bytes = hex::decode(&input.prev_txid).unwrap_or_else(|_| vec![0; 32]);
             txid_bytes.reverse();
             buf.extend_from_slice(&txid_bytes);
-            
+
             buf.extend_from_slice(&input.prev_out_idx.to_le_bytes());
-            
+
             buf.extend_from_slice(&encode_varint(input.signature_script.len() as u64));
             buf.extend_from_slice(&input.signature_script);
-            
+
             buf.extend_from_slice(&input.sequence.to_le_bytes());
         }
-        
+
         buf.extend_from_slice(&encode_varint(self.outputs.len() as u64));
         for output in &self.outputs {
             buf.extend_from_slice(&output.value.to_le_bytes());
             buf.extend_from_slice(&encode_varint(output.pk_script.len() as u64));
             buf.extend_from_slice(&output.pk_script);
         }
-        
+
         buf.extend_from_slice(&self.lock_time.to_le_bytes());
-        
+
         buf
     }
 }

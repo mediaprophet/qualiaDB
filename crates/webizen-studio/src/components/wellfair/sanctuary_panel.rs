@@ -34,7 +34,12 @@ pub fn WellfairSanctuaryPanel() -> Element {
             if let Ok(list) = fetch_health_records(48).await {
                 let notes: Vec<_> = list
                     .into_iter()
-                    .filter(|r| matches!(r.kind.as_str(), "sanctuary_note" | "therapy_note" | "welfare_case"))
+                    .filter(|r| {
+                        matches!(
+                            r.kind.as_str(),
+                            "sanctuary_note" | "therapy_note" | "welfare_case"
+                        )
+                    })
                     .collect();
                 ui.write().records = notes;
             }
@@ -42,7 +47,9 @@ pub fn WellfairSanctuaryPanel() -> Element {
     };
 
     use_effect(move || {
-        if loaded() { return; }
+        if loaded() {
+            return;
+        }
         loaded.set(true);
         reload();
     });
@@ -55,6 +62,7 @@ pub fn WellfairSanctuaryPanel() -> Element {
         section {
             aria_label: "WellFair sanctuary",
             style: "padding:0.85rem;border:1px solid var(--qualia-border,#ddd);border-radius:10px;background:var(--qualia-surface,#fafafa);",
+            super::shared::DomainChrome { domain: "Care", chip: "Rights · sanctuary vault", show_memory: true }
             h2 { style: "margin:0 0 0.35rem;font-size:1rem;", "Sanctuary" }
             p {
                 style: "margin:0 0 0.75rem;font-size:0.74rem;color:var(--qualia-text-muted,#666);",
@@ -231,7 +239,9 @@ pub fn WellfairSanctuaryVaultPanel() -> Element {
     let mut vault_loaded = use_signal(|| false);
 
     use_effect(move || {
-        if vault_loaded() { return; }
+        if vault_loaded() {
+            return;
+        }
         vault_loaded.set(true);
         spawn(async move {
             if let Ok(c) = sanctuary_vault_configured().await {

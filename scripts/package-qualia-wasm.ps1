@@ -15,6 +15,13 @@ if (-not (Get-Command wasm-pack -ErrorAction SilentlyContinue)) {
     Write-Error "wasm-pack not found. Install: cargo install wasm-pack"
 }
 
+$crateManifest = Join-Path $CrateDir "Cargo.toml"
+$manifestText = Get-Content -LiteralPath $crateManifest -Raw
+if ($manifestText -notmatch '(?ms)^\[package\]\s*.*?^version\s*=\s*"([^"]+)"') {
+    throw "Could not read the qualia-core-db package version from $crateManifest"
+}
+$packageVersion = $Matches[1]
+
 Push-Location $CrateDir
 try {
     # Slim viewport+acoustic bundle: qualia-shell.js / qualia-wasm-runtime.js load this on every spatial
@@ -22,7 +29,11 @@ try {
     # SIMD kernels. The browser LLM ships in the wasm-full *playground* bundle (docs/playground) — not the
     # portal — which is where the 8 MB stack / 4 GB max-memory link-args belong.
     $env:RUSTFLAGS = "-C target-feature=+simd128"
-    wasm-pack build --target web --out-dir pkg-qualia --release -- --no-default-features --features portal
+    cmd.exe /d /s /c "wasm-pack build --target web --out-dir pkg-qualia --release -- --no-default-features --features portal 2>&1"
+    $wasmPackExitCode = $LASTEXITCODE
+    if ($wasmPackExitCode -ne 0) {
+        throw "wasm-pack portal build failed with exit code $wasmPackExitCode"
+    }
 } finally {
     Pop-Location
 }
@@ -60,17 +71,16 @@ if (Test-Path $qualiaJs) {
 }
 
 # Publish friendly package.json for GitHub Pages / Jekyll
-$ver = "0.0.18"
 @{
     name = "qualia-portal"
     type = "module"
-    version = $ver
+    version = $packageVersion
     main = "qualia.js"
     types = "qualia.d.ts"
-    files = @("qualia.js", "qualia_bg.wasm", "qualia.d.ts", "qualia_bg.wasm.d.ts")
+    files = @("qualia.js", "qualia_bg.wasm", "qualia.d.ts", "qualia_bg.wasm.d.ts", "LICENSE")
 } | ConvertTo-Json | Set-Content (Join-Path $DocsPkg "package.json") -Encoding UTF8
 
-Write-Host "Qualia WASM portal v$ver built from qualia-core-db -> $DocsPkg"
+Write-Host "Qualia WASM portal v$packageVersion built from qualia-core-db -> $DocsPkg"
 
 if ($DesktopPortalPkg -and (Test-Path $DocsPkg)) {
     New-Item -ItemType Directory -Force -Path $DesktopPortalPkg | Out-Null

@@ -14,22 +14,22 @@
 #[allow(unused_imports)]
 use super::*;
 
-mod types;
-mod manager;
-mod catalog;
-mod search;
-mod encryption_at_rest;
 mod access;
+mod catalog;
+mod encryption_at_rest;
 mod generator;
-mod rotation;
+mod manager;
 mod recovery;
+mod rotation;
+mod search;
+mod types;
 
-pub use types::*;
-pub use manager::*;
-pub use catalog::*;
-pub use search::*;
-pub use encryption_at_rest::*;
 pub use access::*;
+pub use catalog::*;
+pub use encryption_at_rest::*;
 pub use generator::*;
-pub use rotation::*;
+pub use manager::*;
 pub use recovery::*;
+pub use rotation::*;
+pub use search::*;
+pub use types::*;

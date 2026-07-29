@@ -1,12 +1,10 @@
-use qualia_core_db::render::compile_10d::compile_mesh_to_10d_with_provenance;
 use qualia_core_db::container_10d::provenance_section::ProvenanceSidecar;
 use qualia_core_db::render::assets::Mesh;
+use qualia_core_db::render::compile_10d::compile_mesh_to_10d_with_provenance;
 
 use super::layers::{
     catalog::{find_layer, LayerDefinition, LayerSource},
-    mesh_gen,
-    nasa_gibs,
-    starfield,
+    mesh_gen, nasa_gibs, starfield,
 };
 
 pub struct CompiledLayerAsset {
@@ -25,23 +23,24 @@ pub async fn download_and_compile_layer(
     layer_id: &str,
     resolution: u32,
 ) -> Result<CompiledLayerAsset, String> {
-    let layer = find_layer(layer_id)
-        .ok_or_else(|| format!("Unknown layer: {layer_id}"))?;
+    let layer = find_layer(layer_id).ok_or_else(|| format!("Unknown layer: {layer_id}"))?;
 
     match &layer.source {
-        LayerSource::NasaGibs { layer: gibs_layer, projection } => {
-            download_and_compile_earth(gibs_layer, projection, resolution, layer).await
-        }
-        LayerSource::YaleBrightStars => {
-            compile_bright_stars(layer)
-        }
-        LayerSource::HipparcosCatalog => {
-            compile_synthetic_stars(layer, resolution)
-        }
-        LayerSource::WmsImagery { layer: wms_layer, .. } if layer_id.starts_with("mars") || layer_id.starts_with("moon") => {
+        LayerSource::NasaGibs {
+            layer: gibs_layer,
+            projection,
+        } => download_and_compile_earth(gibs_layer, projection, resolution, layer).await,
+        LayerSource::YaleBrightStars => compile_bright_stars(layer),
+        LayerSource::HipparcosCatalog => compile_synthetic_stars(layer, resolution),
+        LayerSource::WmsImagery {
+            layer: wms_layer, ..
+        } if layer_id.starts_with("mars") || layer_id.starts_with("moon") => {
             compile_planetary(layer, wms_layer, resolution)
         }
-        _ => Err(format!("Layer '{}' source not yet supported for download", layer_id))
+        _ => Err(format!(
+            "Layer '{}' source not yet supported for download",
+            layer_id
+        )),
     }
 }
 
@@ -58,12 +57,17 @@ async fn download_and_compile_earth(
         height: resolution / 2,
     };
 
-    let texture = nasa_gibs::download_gibs_texture(&req).await.map_err(|e| {
-        format!("GIBS download failed (layer: {gibs_layer}): {e}. Falling back to synthetic Earth.")
-    }).or_else(|e| {
-        eprintln!("GIBS download error: {e}");
-        Err(e)
-    });
+    let texture = nasa_gibs::download_gibs_texture(&req)
+        .await
+        .map_err(|e| {
+            format!(
+                "GIBS download failed (layer: {gibs_layer}): {e}. Falling back to synthetic Earth."
+            )
+        })
+        .or_else(|e| {
+            eprintln!("GIBS download error: {e}");
+            Err(e)
+        });
 
     let texture = match texture {
         Ok(t) => Some(t),
@@ -73,28 +77,26 @@ async fn download_and_compile_earth(
     let segments = (resolution / 4).max(32).min(256);
     let rings = segments / 2;
 
-    let (positions, colors, indices) = mesh_gen::generate_sphere_mesh_colored(segments, rings, |lat, lon| {
-        if let Some(ref tex) = texture {
-            tex.sample(lat, lon)
-        } else {
-            let ocean = lat.abs() < 60.0;
-            let land = (lon.sin() * lat.cos() * 3.0).fract() > 0.3;
-            if ocean && land {
-                [0.2, 0.5, 0.2]
-            } else if ocean {
-                [0.1, 0.2, 0.5]
+    let (positions, colors, indices) =
+        mesh_gen::generate_sphere_mesh_colored(segments, rings, |lat, lon| {
+            if let Some(ref tex) = texture {
+                tex.sample(lat, lon)
             } else {
-                [0.9, 0.9, 0.95]
+                let ocean = lat.abs() < 60.0;
+                let land = (lon.sin() * lat.cos() * 3.0).fract() > 0.3;
+                if ocean && land {
+                    [0.2, 0.5, 0.2]
+                } else if ocean {
+                    [0.1, 0.2, 0.5]
+                } else {
+                    [0.9, 0.9, 0.95]
+                }
             }
-        }
-    });
+        });
 
     let mesh = Mesh {
         positions: positions.clone(),
-        triangles: indices
-            .chunks(3)
-            .map(|c| [c[0], c[1], c[2]])
-            .collect(),
+        triangles: indices.chunks(3).map(|c| [c[0], c[1], c[2]]).collect(),
         min: [-1.0, -1.0, -1.0],
         max: [1.0, 1.0, 1.0],
     };
@@ -167,7 +169,10 @@ fn compile_bright_stars(layer_def: &LayerDefinition) -> Result<CompiledLayerAsse
     })
 }
 
-fn compile_synthetic_stars(layer_def: &LayerDefinition, count: u32) -> Result<CompiledLayerAsset, String> {
+fn compile_synthetic_stars(
+    layer_def: &LayerDefinition,
+    count: u32,
+) -> Result<CompiledLayerAsset, String> {
     let radius = 200.0f64;
     let count = count.min(50_000);
     let (positions, colors) = starfield::generate_synthetic_starfield(count, radius, 42);
@@ -207,21 +212,28 @@ fn compile_synthetic_stars(layer_def: &LayerDefinition, count: u32) -> Result<Co
     })
 }
 
-fn compile_planetary(layer_def: &LayerDefinition, _wms_layer: &str, resolution: u32) -> Result<CompiledLayerAsset, String> {
+fn compile_planetary(
+    layer_def: &LayerDefinition,
+    _wms_layer: &str,
+    resolution: u32,
+) -> Result<CompiledLayerAsset, String> {
     let segments = (resolution / 4).max(32).min(128);
     let rings = segments / 2;
 
     let base_color = layer_def.preview_color;
     let body_id = layer_def.id;
 
-    let (positions, colors, indices) = mesh_gen::generate_sphere_mesh_colored(segments, rings, |lat, lon| {
-        let crater_noise = ((lat * 7.0).sin() * (lon * 5.0).cos() + (lat * 3.0).cos() * (lon * 11.0).sin()) * 0.15;
-        let r = (base_color[0] + crater_noise).clamp(0.0, 1.0);
-        let g = (base_color[1] + crater_noise * 0.8).clamp(0.0, 1.0);
-        let b = (base_color[2] + crater_noise * 0.6).clamp(0.0, 1.0);
-        let _ = body_id;
-        [r, g, b]
-    });
+    let (positions, colors, indices) =
+        mesh_gen::generate_sphere_mesh_colored(segments, rings, |lat, lon| {
+            let crater_noise = ((lat * 7.0).sin() * (lon * 5.0).cos()
+                + (lat * 3.0).cos() * (lon * 11.0).sin())
+                * 0.15;
+            let r = (base_color[0] + crater_noise).clamp(0.0, 1.0);
+            let g = (base_color[1] + crater_noise * 0.8).clamp(0.0, 1.0);
+            let b = (base_color[2] + crater_noise * 0.6).clamp(0.0, 1.0);
+            let _ = body_id;
+            [r, g, b]
+        });
 
     let mesh = Mesh {
         positions: positions.clone(),

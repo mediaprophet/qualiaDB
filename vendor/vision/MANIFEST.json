@@ -1,0 +1,125 @@
+{
+  "schema": "qualia.vendor.vision.manifest/v1",
+  "updated": "2026-07-17",
+  "root": "vendor/vision",
+  "resolution_order": [
+    "vendor/vision",
+    "bundled/models/vision",
+    "{storage}/models/vision"
+  ],
+  "assets": [
+    {
+      "id": "yunet",
+      "registry_gates": ["D2.01", "D3.01"],
+      "todo": ["TODO-MESH1", "TODO-ONNX1"],
+      "licence": "MIT",
+      "licence_tag": "PermissiveReady",
+      "format": "onnx",
+      "rel_dir": "face/yunet",
+      "filename": "face_detection_yunet_2023mar.onnx",
+      "source_urls": [
+        "https://huggingface.co/opencv/face_detection_yunet/resolve/main/face_detection_yunet_2023mar.onnx",
+        "https://github.com/opencv/opencv_zoo/raw/main/models/face_detection_yunet/face_detection_yunet_2023mar.onnx"
+      ],
+      "source_project": "opencv/opencv_zoo face_detection_yunet",
+      "notes": "Weights MIT via OpenCV Zoo. Not a commercial-licence gate."
+    },
+    {
+      "id": "sface",
+      "registry_gates": ["D3.10"],
+      "todo": ["TODO-ONNX1"],
+      "licence": "Apache-2.0",
+      "licence_tag": "PermissiveReady",
+      "format": "onnx",
+      "rel_dir": "face/sface",
+      "filename": "face_recognition_sface_2021dec.onnx",
+      "source_urls": [
+        "https://github.com/opencv/opencv_zoo/raw/main/models/face_recognition_sface/face_recognition_sface_2021dec.onnx"
+      ],
+      "source_project": "opencv/opencv_zoo face_recognition_sface",
+      "notes": "Apache-2.0 zoo weights. Sanctuary template path; not NQuin payload."
+    },
+    {
+      "id": "mediapipe_face_landmarker",
+      "registry_gates": ["D3.01", "D3.09", "D3.13", "D3.14"],
+      "todo": ["TODO-MESH1"],
+      "licence": "Apache-2.0",
+      "licence_tag": "PermissiveReady",
+      "format": "task",
+      "rel_dir": "face/mediapipe_landmarker",
+      "filename": "face_landmarker.task",
+      "source_urls": [
+        "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task"
+      ],
+      "source_project": "Google MediaPipe Face Landmarker",
+      "notes": "Apache-2.0. Prefer TFLite/ONNX export path in adapter if .task awkward; blendshapes for affect Path A."
+    },
+    {
+      "id": "yolo_nas_s",
+      "registry_gates": ["D2.01", "D2.03"],
+      "todo": ["TODO-ONNX1", "TODO-MOT"],
+      "licence": "Apache-2.0",
+      "licence_tag": "PermissiveReady",
+      "format": "onnx",
+      "rel_dir": "detect/yolo_nas",
+      "filename": "yolo_nas_s.onnx",
+      "source_urls": [],
+      "source_project": "Deci SuperGradients YOLO-NAS",
+      "notes": "Apache-2.0. Export ONNX from SuperGradients or place pre-exported file; download.ps1 skips until URL filled.",
+      "manual_place": true
+    },
+    {
+      "id": "emotions_retail_0003",
+      "registry_gates": ["D3.13"],
+      "todo": ["TODO-ONNX1"],
+      "licence": "Apache-2.0",
+      "licence_tag": "PermissiveReady",
+      "format": "onnx",
+      "rel_dir": "affect/openvino_emotions_retail",
+      "filename": "emotions-recognition-retail-0003.onnx",
+      "source_urls": [],
+      "source_project": "OpenVINO Open Model Zoo emotions-recognition-retail-0003",
+      "notes": "Optional Path B. Default Path A = MediaPipe blendshapes (no weight). Export IR→ONNX or place file.",
+      "manual_place": true,
+      "optional": true
+    },
+    {
+      "id": "mediapipe_pose",
+      "registry_gates": ["D2.06"],
+      "todo": ["TODO-POSE"],
+      "licence": "Apache-2.0",
+      "licence_tag": "PermissiveReady",
+      "format": "task",
+      "rel_dir": "pose/mediapipe_pose",
+      "filename": "pose_landmarker_lite.task",
+      "source_urls": [
+        "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task"
+      ],
+      "source_project": "Google MediaPipe Pose Landmarker",
+      "notes": "Apache-2.0. Wave W2."
+    },
+    {
+      "id": "mediapipe_hands",
+      "registry_gates": ["D2.06"],
+      "todo": ["TODO-HAND"],
+      "licence": "Apache-2.0",
+      "licence_tag": "PermissiveReady",
+      "format": "task",
+      "rel_dir": "pose/mediapipe_hands",
+      "filename": "hand_landmarker.task",
+      "source_urls": [
+        "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task"
+      ],
+      "source_project": "Google MediaPipe Hand Landmarker",
+      "notes": "Apache-2.0. Wave W2."
+    }
+  ],
+  "explicitly_not_commercial_licence_blockers": [
+    "YuNet MIT",
+    "SFace Apache-2.0",
+    "MediaPipe Apache-2.0",
+    "YOLO-NAS Apache-2.0",
+    "OMZ emotions retail Apache-2.0"
+  ],
+  "training_deferred": "Principal fine-tune/corpora later; does not block published-weight adapters."
+}

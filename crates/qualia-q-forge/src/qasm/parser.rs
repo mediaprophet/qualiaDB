@@ -15,13 +15,13 @@ impl<'a> Parser<'a> {
     pub fn parse(&mut self) -> Result<QasmProgram, &'static str> {
         let mut program = QasmProgram::new();
         self.skip_whitespace();
-        
+
         while self.pos < self.input.len() {
             let statement = self.parse_statement()?;
             program.push(statement)?;
             self.skip_whitespace();
         }
-        
+
         Ok(program)
     }
 
@@ -53,7 +53,7 @@ impl<'a> Parser<'a> {
         } else if self.starts_with_keyword("gate") {
             return self.parse_gate_decl();
         }
-        
+
         // Try parsing a gate call
         if let Some(ident) = self.parse_identifier() {
             return self.parse_gate_call(ident);
@@ -106,19 +106,19 @@ impl<'a> Parser<'a> {
     fn parse_qubit_decl(&mut self) -> Result<QasmStatement, &'static str> {
         self.pos += "qubit".len();
         self.skip_whitespace();
-        
+
         let mut size = 1;
         if self.input[self.pos..].starts_with('[') {
             self.pos += 1;
             size = self.parse_u16()?;
             self.expect_char(']')?;
         }
-        
+
         self.skip_whitespace();
         let name = self.parse_identifier().ok_or("Expected qubit name")?;
         self.skip_whitespace();
         self.expect_char(';')?;
-        
+
         Ok(QasmStatement::QubitDecl {
             name_hash: q_hash(name),
             size,
@@ -130,7 +130,7 @@ impl<'a> Parser<'a> {
         self.skip_whitespace();
         let name = self.parse_identifier().ok_or("Expected gate name")?;
         self.skip_whitespace();
-        
+
         // Skip parameters if present (e.g., gate rx(theta) q { ... })
         if self.input[self.pos..].starts_with('(') {
             self.pos += 1;
@@ -140,7 +140,7 @@ impl<'a> Parser<'a> {
             self.pos += 1; // Skip ')'
             self.skip_whitespace();
         }
-        
+
         // Skip qubit arguments
         let mut num_qubits = 0;
         while self.pos < self.input.len() && !self.input[self.pos..].starts_with('{') {
@@ -153,15 +153,15 @@ impl<'a> Parser<'a> {
                 self.skip_whitespace();
             }
         }
-        
+
         self.expect_char('{')?;
-        
+
         // Skip body for now (stub implementation)
         while self.pos < self.input.len() && !self.input[self.pos..].starts_with('}') {
             self.pos += 1;
         }
         self.expect_char('}')?;
-        
+
         Ok(QasmStatement::GateDecl {
             name_hash: q_hash(name),
             num_qubits,
@@ -170,10 +170,10 @@ impl<'a> Parser<'a> {
 
     fn parse_gate_call(&mut self, name: &'a str) -> Result<QasmStatement, &'static str> {
         self.skip_whitespace();
-        
+
         let mut params = [0.0; 4];
         let mut num_params = 0;
-        
+
         if self.input[self.pos..].starts_with('(') {
             self.pos += 1;
             self.skip_whitespace();
@@ -192,17 +192,17 @@ impl<'a> Parser<'a> {
             self.expect_char(')')?;
             self.skip_whitespace();
         }
-        
+
         let mut target_qubits = [0; 4];
         let mut num_targets = 0;
-        
+
         while self.pos < self.input.len() && !self.input[self.pos..].starts_with(';') {
             if num_targets >= 4 {
                 return Err("Too many targets");
             }
             let _qubit_name = self.parse_identifier().ok_or("Expected qubit name")?;
             self.skip_whitespace();
-            
+
             let mut index = 0;
             if self.input[self.pos..].starts_with('[') {
                 self.pos += 1;
@@ -210,10 +210,10 @@ impl<'a> Parser<'a> {
                 self.expect_char(']')?;
                 self.skip_whitespace();
             }
-            
+
             target_qubits[num_targets as usize] = index;
             num_targets += 1;
-            
+
             if self.input[self.pos..].starts_with(',') {
                 self.pos += 1;
                 self.skip_whitespace();
@@ -221,9 +221,9 @@ impl<'a> Parser<'a> {
                 break;
             }
         }
-        
+
         self.expect_char(';')?;
-        
+
         Ok(QasmStatement::GateCall {
             name_hash: q_hash(name),
             target_qubits,
@@ -261,7 +261,9 @@ impl<'a> Parser<'a> {
             }
         }
         if self.pos > start {
-            self.input[start..self.pos].parse().map_err(|_| "Invalid u16")
+            self.input[start..self.pos]
+                .parse()
+                .map_err(|_| "Invalid u16")
         } else {
             Err("Expected number")
         }
@@ -280,7 +282,9 @@ impl<'a> Parser<'a> {
         if self.pos > start {
             // NOTE: In #![no_std], f64 parsing might be tricky if we don't have alloc.
             // core::str::parse::<f64> exists and is usable.
-            self.input[start..self.pos].parse().map_err(|_| "Invalid f64")
+            self.input[start..self.pos]
+                .parse()
+                .map_err(|_| "Invalid f64")
         } else {
             Err("Expected number")
         }
@@ -312,7 +316,7 @@ mod tests {
         let mut parser = Parser::new(source);
         let program = parser.parse().unwrap();
         assert_eq!(program.statement_count, 5);
-        
+
         match program.statements[2] {
             QasmStatement::QubitDecl { size, .. } => assert_eq!(size, 2),
             _ => panic!("Expected QubitDecl"),

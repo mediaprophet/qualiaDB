@@ -16,8 +16,8 @@
 //! **permission-gated**: guardian-flagged (sensitive) entries are never auto-injected.
 
 use crate::wellfair::hypermedia_store::{HypermediaStore, LibraryEntry};
-use qualia_core_db::hypermedia::{ingest_with, Descriptors, TextProcessor};
 use qualia_core_db::hypermedia::fnv60;
+use qualia_core_db::hypermedia::{ingest_with, Descriptors, TextProcessor};
 use std::collections::HashSet;
 use std::path::Path;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -144,7 +144,11 @@ fn now_unix() -> u64 {
 /// Store a chat turn's CML context into the inforg — **only when the message carries explicit tags**
 /// (deliberate, permissive). The turn's text + its concept facets become a searchable library entry.
 /// Returns the concepts stored (empty if the message had no tags).
-pub fn ingest_turn(storage: &Path, session_id: &str, text: &str) -> Result<Vec<ContextTag>, String> {
+pub fn ingest_turn(
+    storage: &Path,
+    session_id: &str,
+    text: &str,
+) -> Result<Vec<ContextTag>, String> {
     let tags = parse_cml_tags(text);
     if tags.is_empty() {
         return Ok(Vec::new());
@@ -164,7 +168,13 @@ pub fn ingest_turn(storage: &Path, session_id: &str, text: &str) -> Result<Vec<C
 
     let digest = fnv60(text.as_bytes());
     let uri = format!("urn:qualia:chat:{session_id}:{digest:016x}");
-    let r = ingest_with(&TextProcessor::default(), &uri, "text/plain", digest, text.as_bytes());
+    let r = ingest_with(
+        &TextProcessor::default(),
+        &uri,
+        "text/plain",
+        digest,
+        text.as_bytes(),
+    );
     let subject = r.container.primary.subject();
     let mut quins = r.quins;
     let desc = Descriptors {
@@ -176,13 +186,29 @@ pub fn ingest_turn(storage: &Path, session_id: &str, text: &str) -> Result<Vec<C
     let (dq, _lex) = qualia_core_db::hypermedia::descriptors_to_nquins(subject, &desc);
     quins.extend(dq);
 
-    let entry = LibraryEntry {
+    // Enrich chat turn with the same Rust CML context graph (TEXT→CONCEPT→LOGIC).
+    let units = crate::wellfair::cml_context::units_from_headings(text);
+    let g = crate::wellfair::cml_context::build_document_context(&uri, "chat-turn", &units);
+    for t in &g.topics {
+        if !topics.iter().any(|x| x == t) {
+            topics.push(t.clone());
+        }
+    }
+    for p in &g.purposes {
+        if !purposes.iter().any(|x| x == p) {
+            purposes.push(p.clone());
+        }
+    }
+    quins.extend(g.quins);
+
+    let mut entry = LibraryEntry {
         asset_uri: uri,
         primary_subject: subject,
         media_type: "text/plain".to_string(),
         quins,
         topics,
         projects,
+        purposes: purposes.clone(),
         place: None,
         occurred_at: None,
         lat: None,
@@ -190,7 +216,22 @@ pub fn ingest_turn(storage: &Path, session_id: &str, text: &str) -> Result<Vec<C
         flags: Vec::new(),
         ingested_unix: now_unix(),
         excerpt: text.chars().take(240).collect(),
+        sensitivity: "public".into(),
+        section: "personal".into(),
+        commons_visibility: Default::default(),
+        cml_signals: g.signal_tags,
+        cml_concept_count: g.concepts.len() as u32,
+        cml_n3: if g.n3.len() > 16_000 {
+            format!("{}…", &g.n3[..16_000])
+        } else {
+            g.n3
+        },
+        cof_html: String::new(),
+        cof_segment_count: 0,
+        cof_segment_index: 0,
+        cof_profile: String::new(),
     };
+    entry.recompute_section();
     store.add(entry).map_err(|e| e.to_string())?;
     Ok(tags)
 }
@@ -279,11 +320,25 @@ mod tests {
 
     #[test]
     fn parses_multi_part_context() {
-        let tags = parse_cml_tags("note #project:tax_2026 [[capital gains]] #deductions #task:file-return");
-        assert!(tags.contains(&ContextTag { tier: ConceptTier::Project, label: "tax 2026".into() }));
-        assert!(tags.contains(&ContextTag { tier: ConceptTier::General, label: "capital gains".into() }));
-        assert!(tags.contains(&ContextTag { tier: ConceptTier::Topic, label: "deductions".into() }));
-        assert!(tags.contains(&ContextTag { tier: ConceptTier::Task, label: "file-return".into() }));
+        let tags = parse_cml_tags(
+            "note #project:tax_2026 [[capital gains]] #deductions #task:file-return",
+        );
+        assert!(tags.contains(&ContextTag {
+            tier: ConceptTier::Project,
+            label: "tax 2026".into()
+        }));
+        assert!(tags.contains(&ContextTag {
+            tier: ConceptTier::General,
+            label: "capital gains".into()
+        }));
+        assert!(tags.contains(&ContextTag {
+            tier: ConceptTier::Topic,
+            label: "deductions".into()
+        }));
+        assert!(tags.contains(&ContextTag {
+            tier: ConceptTier::Task,
+            label: "file-return".into()
+        }));
     }
 
     #[test]
@@ -313,8 +368,14 @@ mod tests {
 
     #[test]
     fn concept_is_a_context_hash() {
-        let t = ContextTag { tier: ConceptTier::Topic, label: "Capital Gains".into() };
-        assert_eq!(t.iri(), "https://ns.webcivics.net/cml/concept/topic/capital-gains");
+        let t = ContextTag {
+            tier: ConceptTier::Topic,
+            label: "Capital Gains".into(),
+        };
+        assert_eq!(
+            t.iri(),
+            "https://ns.webcivics.net/cml/concept/topic/capital-gains"
+        );
         assert_ne!(t.context_hash(), 0);
     }
 }

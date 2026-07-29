@@ -216,10 +216,13 @@ mod tests {
             },
         };
         let r = solve(&p);
-        assert!(r.final_residual < 0.02, "orbit energy drift {}", r.final_residual);
+        assert!(
+            r.final_residual < 0.02,
+            "orbit energy drift {}",
+            r.final_residual
+        );
         let pos = &r.output["positions_out"];
-        let sep =
-            (((pos[0] - pos[2]).powi(2) + (pos[1] - pos[3]).powi(2)) as f64).sqrt();
+        let sep = (((pos[0] - pos[2]).powi(2) + (pos[1] - pos[3]).powi(2)) as f64).sqrt();
         assert!(sep > 0.2 && sep < 5.0, "orbit separation ran away: {sep}");
     }
 }

@@ -453,8 +453,7 @@ mod tests {
     fn matching_pennies_mixed_nash_is_half_half() {
         let payoffs_row = [1.0, -1.0, -1.0, 1.0];
         let payoffs_col = [-1.0, 1.0, 1.0, -1.0];
-        let (p_row, p_col, exp_row, exp_col) =
-            mixed_nash_2x2(&payoffs_row, &payoffs_col).unwrap();
+        let (p_row, p_col, exp_row, exp_col) = mixed_nash_2x2(&payoffs_row, &payoffs_col).unwrap();
         assert!((p_row - 0.5).abs() < TOL);
         assert!((p_col - 0.5).abs() < TOL);
         // Expected payoff is zero for both at the mixed equilibrium.

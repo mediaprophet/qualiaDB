@@ -279,7 +279,7 @@ mod tests {
     #[test]
     fn decode_rejects_truncated() {
         assert_eq!(decode_credential(&[0u8; 10]), Err(VcError::DecodeTooShort));
-        
+
         let c = sample();
         let mut bytes = encode_credential(&c);
         bytes.truncate(bytes.len() - 10);

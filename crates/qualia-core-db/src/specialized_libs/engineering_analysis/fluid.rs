@@ -1,6 +1,5 @@
 use super::*;
 
-
 /// Fluid analyzer for fluid dynamics analysis
 pub struct FluidAnalyzer {
     computational_fluid_dynamics: ComputationalFluidDynamics,
@@ -201,7 +200,11 @@ impl FluidAnalyzer {
         let bc = cfd::CfdBc::default();
         let cfg = cfd::SolverConfig::default();
         let solution = cfd::run_cfd(model, bc, cfg, 32, 32)?;
-        Ok(cfd::cfd_to_analysis_results(&solution, model, analysis_type))
+        Ok(cfd::cfd_to_analysis_results(
+            &solution,
+            model,
+            analysis_type,
+        ))
     }
 }
 
@@ -334,4 +337,3 @@ impl ChannelGeometry {
         }
     }
 }
-

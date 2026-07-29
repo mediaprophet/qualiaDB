@@ -15,14 +15,14 @@
 // serde type; its Serialize/Deserialize trait resolution exceeds the default recursion limit.
 #![recursion_limit = "256"]
 
-pub mod taxonomy;
-pub mod authority_type;
-pub mod agency_domain;
-pub mod trigger;
-pub mod provenance;
 pub mod agency_delegation;
-pub mod work_item;
+pub mod agency_domain;
+pub mod authority_type;
+pub mod provenance;
 pub mod qapp_package;
+pub mod taxonomy;
+pub mod trigger;
+pub mod work_item;
 
 /// Re-export the shared record envelope base so cooperative consumers can depend on this
 /// crate alone. (The types physically live in `wellfare-core` today.)

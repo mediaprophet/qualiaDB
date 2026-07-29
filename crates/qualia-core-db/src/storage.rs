@@ -51,7 +51,7 @@ impl SuperBlockWriter {
         }
 
         // Real integrity checksum over the quin payload — CRC-32C, the same
-        // routine the .10d/.qualia containers use (replaces a former mock
+        // routine the .10d/.hmc containers use (replaces a former mock
         // `0xABCD`). Computed over the ledger only (not the header), so a
         // reader can recompute it over the same region. Complementary to the
         // per-quin XOR-parity ECC: this covers the whole ledger in one word.

@@ -1,6 +1,5 @@
 use super::*;
 
-
 /// Structural dynamics
 pub struct StructuralDynamics {
     modal_analysis: ModalAnalysis,
@@ -468,4 +467,3 @@ impl ResonanceDetection {
         }
     }
 }
-

@@ -78,10 +78,7 @@ impl LiveShareStore {
                 fs::create_dir_all(parent)?;
             }
             if !path.exists() {
-                OpenOptions::new()
-                    .create(true)
-                    .write(true)
-                    .open(path)?;
+                OpenOptions::new().create(true).write(true).open(path)?;
             }
         }
         Ok(Self {
@@ -90,7 +87,11 @@ impl LiveShareStore {
         })
     }
 
-    pub fn enqueue_request(&self, request: LiveSectionRequest, now_unix: u64) -> std::io::Result<LiveShareRequestRecord> {
+    pub fn enqueue_request(
+        &self,
+        request: LiveSectionRequest,
+        now_unix: u64,
+    ) -> std::io::Result<LiveShareRequestRecord> {
         let record = LiveShareRequestRecord::from_request(request, now_unix);
         let line =
             serde_json::to_string(&record).map_err(|e| std::io::Error::other(e.to_string()))?;
@@ -168,9 +169,11 @@ impl LiveShareStore {
     }
 
     pub fn save_usage_agreement(&self, agreement: &UsageAgreement) -> std::io::Result<()> {
-        let line = serde_json::to_string(agreement)
-            .map_err(|e| std::io::Error::other(e.to_string()))?;
-        let mut file = OpenOptions::new().append(true).open(&self.agreements_path)?;
+        let line =
+            serde_json::to_string(agreement).map_err(|e| std::io::Error::other(e.to_string()))?;
+        let mut file = OpenOptions::new()
+            .append(true)
+            .open(&self.agreements_path)?;
         writeln!(file, "{line}")?;
         file.sync_all()?;
         Ok(())
@@ -260,7 +263,10 @@ pub fn sanctuary_allows_classified_projection(prefs: &super::sanctuary::Sanctuar
     prefs.enabled && !prefs.locked && !prefs.decoy_session
 }
 
-pub fn live_share_request_journal_entry(record: &LiveShareRequestRecord, committed_unix: u32) -> JournalEntry {
+pub fn live_share_request_journal_entry(
+    record: &LiveShareRequestRecord,
+    committed_unix: u32,
+) -> JournalEntry {
     let sensitivity = if record.requires_owner_approval {
         "Classified"
     } else {
@@ -296,17 +302,11 @@ pub fn live_share_decision_journal_entry(
     let approved = record.approved.unwrap_or(false);
     let projection = record.projection_kinds.clone().unwrap_or_default();
     JournalEntry {
-        id: format!(
-            "urn:wellfair:live_share_decision:{}",
-            record.request.id
-        ),
+        id: format!("urn:wellfair:live_share_decision:{}", record.request.id),
         kind: "live_share_decision".into(),
         asserted_time_unix: record.decided_at_unix.unwrap_or(0) as u32,
         evidence_type: "SelfReported".into(),
-        sensitivity: if projection
-            .iter()
-            .any(|k| is_sanctuary_protected_kind(k))
-        {
+        sensitivity: if projection.iter().any(|k| is_sanctuary_protected_kind(k)) {
             "Classified".into()
         } else {
             "Restricted".into()
@@ -390,7 +390,13 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let store = LiveShareStore::open(dir.path()).unwrap();
         let first = UsageAgreement::new("phone-1", "vitals", vec!["sleep".into()], 100, 50);
-        let second = UsageAgreement::new("phone-1", "vitals v2", vec!["sleep".into(), "steps".into()], 200, 150);
+        let second = UsageAgreement::new(
+            "phone-1",
+            "vitals v2",
+            vec!["sleep".into(), "steps".into()],
+            200,
+            150,
+        );
         store.save_usage_agreement(&first).unwrap();
         store.save_usage_agreement(&second).unwrap();
         let got = store.get_usage_agreement("phone-1").unwrap().unwrap();

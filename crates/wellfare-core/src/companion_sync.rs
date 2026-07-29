@@ -21,7 +21,11 @@ pub struct CompanionHealthBundle {
 }
 
 impl CompanionHealthBundle {
-    pub fn new(device_id: impl Into<String>, captured_at_unix: u32, files: Vec<CompanionCsvFile>) -> Self {
+    pub fn new(
+        device_id: impl Into<String>,
+        captured_at_unix: u32,
+        files: Vec<CompanionCsvFile>,
+    ) -> Self {
         Self {
             schema_version: COMPANION_HEALTH_BUNDLE_SCHEMA,
             operation_id: uuid::Uuid::new_v4().to_string(),

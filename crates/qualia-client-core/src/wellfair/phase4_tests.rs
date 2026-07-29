@@ -77,7 +77,10 @@ mod tests {
     fn sanctuary_protected_kind_enqueueable_decision_must_be_explicit() {
         let dir = tempfile::tempdir().unwrap();
         let host = test_host(&dir);
-        let request = sample_request("req-phase4-3", vec!["therapy_note", "wellbeing_observation"]);
+        let request = sample_request(
+            "req-phase4-3",
+            vec!["therapy_note", "wellbeing_observation"],
+        );
         let enqueued = host.submit_live_share_request(&request).unwrap();
         assert_eq!(enqueued.kind, "live_share_request");
         assert!(enqueued
@@ -110,12 +113,8 @@ mod tests {
         host2.submit_live_share_request(&request2).unwrap();
 
         // Explicit classified projection fails closed without sanctuary unlock.
-        let blocked = host2.decide_live_share_request(
-            "req-phase4-4",
-            true,
-            &["therapy_note".into()],
-            None,
-        );
+        let blocked =
+            host2.decide_live_share_request("req-phase4-4", true, &["therapy_note".into()], None);
         assert!(blocked.is_err());
         assert!(blocked
             .unwrap_err()

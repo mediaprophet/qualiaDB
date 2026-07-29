@@ -142,7 +142,11 @@ impl AuthorityProfile {
         for (field, term, facet) in [
             ("modality", &self.modality, ids::FACET_MODALITY),
             ("trigger", &self.trigger, ids::FACET_TRIGGER),
-            ("accountability", &self.accountability, ids::FACET_ACCOUNTABILITY),
+            (
+                "accountability",
+                &self.accountability,
+                ids::FACET_ACCOUNTABILITY,
+            ),
         ] {
             if let Some(t) = term {
                 let Some(def) = tax.get(t) else {
@@ -219,7 +223,10 @@ mod tests {
         assert_eq!(tax.in_category(FACET_ACCOUNTABILITY).len(), 3);
         assert!(tax.contains(MOD_DEVELOPMENTAL));
         // parens patriae is a flagged edge case, not a facet term.
-        assert_eq!(tax.get(FLAG_PARENS_PATRIAE).unwrap().attr("edge_case"), Some("true"));
+        assert_eq!(
+            tax.get(FLAG_PARENS_PATRIAE).unwrap().attr("edge_case"),
+            Some("true")
+        );
     }
 
     #[test]

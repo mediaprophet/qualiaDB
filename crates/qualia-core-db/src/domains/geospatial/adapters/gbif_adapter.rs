@@ -37,10 +37,7 @@ impl GbifAdapter {
 
         let gbif_query = format!(
             "{}?decimalLatitude={},{}&decimalLongitude={},{}&year={},{}",
-            self.occurrence_endpoint,
-            bbox.1, bbox.3,
-            bbox.0, bbox.2,
-            time_range.0, time_range.1
+            self.occurrence_endpoint, bbox.1, bbox.3, bbox.0, bbox.2, time_range.0, time_range.1
         );
 
         Ok(AdapterHttpRequest::get(gbif_query, "GBIF"))
@@ -104,11 +101,19 @@ impl GbifAdapter {
                 quins.push(quin(subject, license, generate_60bit_token(lic.as_bytes())));
             }
             if let Some(date) = rec.get("eventDate").and_then(|v| v.as_str()) {
-                quins.push(quin(subject, created, generate_60bit_token(date.as_bytes())));
+                quins.push(quin(
+                    subject,
+                    created,
+                    generate_60bit_token(date.as_bytes()),
+                ));
             }
 
             // dc:source -> occurrence IRI (always).
-            quins.push(quin(subject, source, generate_60bit_token(occ_iri.as_bytes())));
+            quins.push(quin(
+                subject,
+                source,
+                generate_60bit_token(occ_iri.as_bytes()),
+            ));
 
             if let Some(lat) = rec.get("decimalLatitude").and_then(|v| v.as_f64()) {
                 quins.push(quin(subject, lat_p, lat.to_bits()));
@@ -195,14 +200,13 @@ mod tests {
 
         // Recompute expected hashes the same way the parser does.
         let title = generate_60bit_token(b"http://purl.org/dc/terms/title");
-        let subj1 =
-            generate_60bit_token(b"https://www.gbif.org/occurrence/123456");
+        let subj1 = generate_60bit_token(b"https://www.gbif.org/occurrence/123456");
         let title_obj1 = generate_60bit_token(b"Panthera leo");
 
         assert!(
-            quins.iter().any(|q| q.subject == subj1
-                && q.predicate == title
-                && q.object == title_obj1),
+            quins
+                .iter()
+                .any(|q| q.subject == subj1 && q.predicate == title && q.object == title_obj1),
             "expected TITLE quin for Panthera leo not found"
         );
 

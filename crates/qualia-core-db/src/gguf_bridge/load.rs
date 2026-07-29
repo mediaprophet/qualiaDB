@@ -31,6 +31,13 @@ impl QTensorEngine {
             "LLM_LOAD|ram-map|0.70|Mapped {:.2} GiB GGUF into system memory",
             bytes_to_gib(file_size as u64)
         );
+        // H2 CONSUMPTION wiring (default-OFF via QUALIA_LLM_ROUTE): compute + record + store
+        // the residency EmploymentPlan for this model, using the honest mapped weight-byte count
+        // (`file_size`) and the already-probed hardware passport. This makes the residency planner
+        // OBSERVABLE and CONSUMED without changing weight placement or the decode path.
+        // TODO(H3-exec): actually running overflow layers on the auxiliary circuit is the remaining
+        // (out-of-scope) H3 step; the recorded plan is advisory until an execution stage consults it.
+        let _ = crate::residency_planner::route_employment_from_passport(file_size as u64);
         let index = crate::gguf_sharder::GgufTensorIndex::from_gguf(&mmap);
         if index.tensor_data_start == 0
             && index.max_tensor_bytes == 0
@@ -381,6 +388,7 @@ impl QTensorEngine {
     /// so the bench can count submit→wait round-trips per token and separate synchronization stall
     /// from real kernel time. Behaviourally identical to a bare blocking poll.
     #[inline]
+    #[cfg(not(target_arch = "wasm32"))]
     pub(crate) fn poll_wait(&self) {
         let _ = self.gpu_device().poll(wgpu::PollType::wait_indefinitely());
         GPU_WAIT_COUNT.fetch_add(1, std::sync::atomic::Ordering::Relaxed);

@@ -47,7 +47,10 @@ impl DataAdapter for IvoaTapAdapter {
             ra_min, dec_max
         );
 
-        let body = format!("REQUEST=doQuery&LANG=ADQL&QUERY={}", urlencoding::encode(&adql_query));
+        let body = format!(
+            "REQUEST=doQuery&LANG=ADQL&QUERY={}",
+            urlencoding::encode(&adql_query)
+        );
 
         Ok(AdapterHttpRequest::post_form(
             self.endpoint.clone(),
@@ -73,7 +76,11 @@ mod tests {
     #[test]
     fn test_ivoa_tap_consent_denied() {
         let registry = NetworkDisclosureRegistry::new();
-        let adapter = IvoaTapAdapter::new("ivoa_tap", "https://gea.esac.esa.int/tap-server/tap/sync", "gaiadr3.gaia_source");
+        let adapter = IvoaTapAdapter::new(
+            "ivoa_tap",
+            "https://gea.esac.esa.int/tap-server/tap/sync",
+            "gaiadr3.gaia_source",
+        );
 
         let res = adapter.fetch_region((0.0, 0.0, 1.0, 1.0), (0, 0), &registry);
         assert!(res.is_err());

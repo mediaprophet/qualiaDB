@@ -4,8 +4,8 @@
 //! unconfirmed report is never presented as clinician-verified.
 
 use super::host_client::{
-    add_clinical_attachment_from_path, add_clinical_report, export_attachment, fetch_health_records,
-    pick_file_path, pick_save_path,
+    add_clinical_attachment_from_path, add_clinical_report, export_attachment,
+    fetch_health_records, pick_file_path, pick_save_path,
 };
 use super::host_dto::HealthRecordDto;
 use dioxus::prelude::*;
@@ -64,7 +64,9 @@ pub fn WellfairClinicalPanel() -> Element {
     let mut loaded = use_signal(|| false);
 
     use_effect(move || {
-        if loaded() { return; }
+        if loaded() {
+            return;
+        }
         loaded.set(true);
         reload();
     });
@@ -73,6 +75,7 @@ pub fn WellfairClinicalPanel() -> Element {
         section {
             aria_label: "WellFair clinical documents",
             style: "padding:0.85rem;border:1px solid var(--qualia-border,#ddd);border-radius:10px;background:var(--qualia-surface,#fafafa);margin-bottom:0.85rem;",
+            super::shared::DomainChrome { domain: "Care", chip: "Body · clinical · records-first", show_memory: true }
             h2 { style: "margin:0 0 0.5rem;font-size:1rem;", "Clinical documents" }
             p {
                 style: "margin:0 0 0.75rem;font-size:0.74rem;color:var(--qualia-text-muted,#666);",

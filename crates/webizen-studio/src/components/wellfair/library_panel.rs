@@ -1,29 +1,203 @@
-//! **Library** panel — the personal hypermedia asset library. Ingest a document (it's *processed* to derive
-//! topics + a searchable text representation), then find your files **by meaning** — topic, depiction, place,
-//! project, purpose — never by folder. A flagged ingest under a guardianship relation notifies the guardian.
+//! **Library** — personal hypermedia knowledge shelf.
 //!
-//! Three views over the same library of meaning:
-//! - **List** — everything / a facet search.
-//! - **Timeline** — assets with a date, in time order (a photo's EXIF capture time, or a date you attach).
-//! - **Map** — assets with coordinates, plotted (a photo's GPS, or a place you attach).
+//! Ingest notes, receipts, photos (meaning derived: topics, EXIF time/place, purpose/project you attach).
+//! Browse by **List · Timeline · Map**, free-text or facet search. Not a folder tree — a graph of meaning.
 //!
-//! Ingest derives what it can from the content (a text doc → topics; a photo → EXIF time/GPS; a WAV →
-//! duration/pitch). You can also **author facets yourself** — a date, a place, a project, a purpose — because
-//! the software provides the means; the person defines the meaning.
+//! Perception catalogue (U4-C): seed models / ontologies / computer_vision specialized-lib rows
+//! via host commands `library_seed_perception_assets` / `wellfair_seed_perception_library`.
+//!
+//! **Reads are vault-free:** list / query / stats prefer `library_*` Tauri commands (AppState
+//! storage path). Sanctuary unlock is only required for secret-shelf UX and vault-gated writes.
 
 use super::host_client::{
-    ingest_document, ingest_file_hex, list_library, search_library, search_library_time, IngestFacets,
+    export_library_graph, ingest_document, ingest_file_hex, ingest_legislation_text,
+    library_commons_share_card, library_stats, list_library_section, query_library_faceted,
+    remove_library_entry, search_library, search_library_time, seed_perception_library,
+    seed_studio_qapps, set_library_commons, view_morph, view_pick_scene, view_project_library,
+    view_render_memory_spatial, view_select, view_select_uri, view_session, view_set_observer,
+    view_set_presentation_level, IngestFacets,
 };
-use dioxus::prelude::*;
+use crate::components::honesty_chip::{HonestyChip, HonestyLevel};
 use crate::Route;
+use dioxus::prelude::*;
+
+const SECTIONS: &[(&str, &str, &str)] = &[
+    ("all", "All", "Everything you can see"),
+    ("secret", "Secret", "Sanctuary · private · classified"),
+    ("wellfair", "Wellfair", "Health & welfare"),
+    ("personal", "Personal", "Private life shelf"),
+    ("work", "Work", "Projects & labour"),
+    ("tools", "Tools", "Logs · telemetry · agent/tool output"),
+    ("software", "Software", "QApps · websites · packages"),
+    ("commons", "Commons", "Peers & permissive share"),
+];
+
+/// Purpose chip: Library filter for browser bookmarks (purpose=bookmark).
+const BOOKMARK_PURPOSE: &str = "bookmark";
+
+/// True when a library entry is a perception / model / ontology / computer_vision catalogue row.
+fn is_perception_row(r: &serde_json::Value) -> bool {
+    let uri = str_field(r, "asset_uri");
+    if uri.starts_with("model://") || uri.starts_with("ontology://") {
+        return true;
+    }
+    let media = str_field(r, "media_type");
+    if media.contains("webizen-model") || media.contains("webizen-ontology") {
+        return true;
+    }
+    let topics = arr_str(r, "topics");
+    let purposes = arr_str(r, "purposes");
+    let projects = arr_str(r, "projects");
+    let excerpt = str_field(r, "excerpt").to_ascii_lowercase();
+    let hay: String = topics
+        .iter()
+        .chain(purposes.iter())
+        .chain(projects.iter())
+        .cloned()
+        .collect::<Vec<_>>()
+        .join(" ")
+        .to_ascii_lowercase();
+    hay.contains("perception")
+        || hay.contains("computer_vision")
+        || hay.contains("vision-library")
+        || hay.contains("specialized-lib")
+        || excerpt.contains("computer_vision")
+}
+
+fn is_computer_vision_row(r: &serde_json::Value) -> bool {
+    let uri = str_field(r, "asset_uri");
+    if uri.contains("computer-vision") || uri.contains("computer_vision") {
+        return true;
+    }
+    let topics = arr_str(r, "topics");
+    let projects = arr_str(r, "projects");
+    let excerpt = str_field(r, "excerpt").to_ascii_lowercase();
+    topics.iter().any(|t| {
+        let t = t.to_ascii_lowercase();
+        t.contains("vision-library")
+            || t.contains("computer_vision")
+            || t == "vision"
+            || t.contains("specialized-lib")
+    }) || projects
+        .iter()
+        .any(|p| p.to_ascii_lowercase().contains("perception:vision"))
+        || excerpt.contains("computer_vision")
+}
+
+fn is_model_row(r: &serde_json::Value) -> bool {
+    str_field(r, "asset_uri").starts_with("model://")
+        || str_field(r, "media_type").contains("webizen-model")
+        || arr_str(r, "purposes")
+            .iter()
+            .any(|p| p.eq_ignore_ascii_case("model"))
+}
+
+fn is_ontology_row(r: &serde_json::Value) -> bool {
+    str_field(r, "asset_uri").starts_with("ontology://")
+        || str_field(r, "media_type").contains("webizen-ontology")
+        || arr_str(r, "purposes")
+            .iter()
+            .any(|p| p.eq_ignore_ascii_case("ontology"))
+}
+
+fn row_has_seed_flag(r: &serde_json::Value) -> bool {
+    r.get("flags")
+        .and_then(|x| x.as_array())
+        .map(|a| {
+            a.iter().any(|f| {
+                str_field(f, "kind").contains("seed_reference")
+                    || str_field(f, "detail")
+                        .to_ascii_lowercase()
+                        .contains("seed/reference")
+            })
+        })
+        .unwrap_or(false)
+        || arr_str(r, "topics")
+            .iter()
+            .any(|t| t.eq_ignore_ascii_case("seed-reference"))
+        || str_field(r, "excerpt")
+            .to_ascii_lowercase()
+            .contains("seed/reference")
+}
+
+/// Derive honesty levels from catalogue rows present in the library (honest Present/Partial).
+fn perception_honesty(rows: &[serde_json::Value]) -> (HonestyLevel, HonestyLevel, HonestyLevel) {
+    let models: Vec<_> = rows.iter().filter(|r| is_model_row(r)).collect();
+    let ontologies: Vec<_> = rows.iter().filter(|r| is_ontology_row(r)).collect();
+    let cv: Vec<_> = rows.iter().filter(|r| is_computer_vision_row(r)).collect();
+    let any_perception = rows.iter().any(is_perception_row);
+
+    let models_level = if models.is_empty() {
+        HonestyLevel::Unavailable
+    } else if models.iter().any(|r| row_has_seed_flag(r)) {
+        // Seed weights + user slots — not foundation models.
+        HonestyLevel::Partial
+    } else if models.iter().any(|r| is_computer_vision_row(r)) {
+        HonestyLevel::Ready
+    } else {
+        HonestyLevel::Partial
+    };
+
+    let ontologies_level = if ontologies.is_empty() {
+        HonestyLevel::Unavailable
+    } else {
+        // Catalogued file references — present as shelf rows; not full Index hydration claim.
+        HonestyLevel::Partial
+    };
+
+    let perception_level = if !any_perception && cv.is_empty() {
+        HonestyLevel::Unavailable
+    } else if !cv.is_empty() {
+        // specialized_libs::computer_vision algorithm rows are real code paths in-tree.
+        HonestyLevel::Ready
+    } else {
+        HonestyLevel::Partial
+    };
+
+    (models_level, ontologies_level, perception_level)
+}
+
+// ── styles (Talk-aligned dark product chrome) ────────────────────────────────
+
+const ROOT: &str = "display:flex;flex-direction:column;height:100%;min-height:0;background:#0b1220;color:#e5e7eb;box-sizing:border-box;font-family:inherit;";
+const HEADER: &str = "padding:1.1rem 1.35rem 0.85rem;border-bottom:1px solid #1f2937;background:linear-gradient(180deg,#111827 0%,#0b1220 100%);flex-shrink:0;";
+const STATS: &str = "display:flex;flex-wrap:wrap;gap:0.45rem;margin-top:0.75rem;";
+const STAT_CHIP: &str = "display:inline-flex;align-items:center;gap:0.35rem;padding:0.28rem 0.65rem;border-radius:999px;background:#0f172a;border:1px solid #334155;font-size:0.72rem;color:#94a3b8;";
+const STAT_NUM: &str = "color:#a78bfa;font-weight:700;font-variant-numeric:tabular-nums;";
+const BODY: &str =
+    "flex:1;min-height:0;display:grid;grid-template-columns:minmax(280px,340px) 1fr;gap:0;";
+const SIDE: &str =
+    "border-right:1px solid #1f2937;overflow-y:auto;padding:1rem;background:#0f172a;min-height:0;";
+const MAIN: &str = "overflow-y:auto;padding:1rem 1.25rem;min-height:0;";
+const CARD: &str = "background:#111827;border:1px solid #1f2937;border-radius:14px;padding:0.95rem 1.05rem;margin-bottom:0.85rem;";
+const H3: &str = "margin:0 0 0.4rem;font-size:0.82rem;font-weight:700;color:#c4b5fd;letter-spacing:0.04em;text-transform:uppercase;";
+const MUTED: &str = "margin:0 0 0.75rem;font-size:0.78rem;color:#94a3b8;line-height:1.45;";
+const INPUT: &str = "width:100%;box-sizing:border-box;padding:0.5rem 0.65rem;margin-bottom:0.45rem;background:#0b1220;color:#f3f4f6;border:1px solid #334155;border-radius:9px;font-family:inherit;font-size:0.8rem;";
+const LABEL: &str =
+    "display:block;font-size:0.68rem;color:#64748b;margin:0 0 0.2rem;font-weight:600;";
+const BTN: &str = "background:#8b5cf6;color:#fff;padding:0.5rem 0.9rem;border:none;border-radius:9px;font-weight:600;cursor:pointer;font-size:0.8rem;";
+const BTN2: &str = "background:#1e293b;color:#e2e8f0;padding:0.45rem 0.75rem;border:1px solid #334155;border-radius:9px;font-weight:600;cursor:pointer;font-size:0.75rem;";
+const TAB: &str = "padding:0.4rem 0.85rem;border-radius:9px;border:1px solid #334155;background:transparent;color:#94a3b8;font-size:0.78rem;font-weight:600;cursor:pointer;";
+const TAB_ON: &str = "padding:0.4rem 0.85rem;border-radius:9px;border:1px solid #8b5cf6;background:rgba(139,92,246,0.18);color:#e9d5ff;font-size:0.78rem;font-weight:600;cursor:pointer;";
+const TOPIC: &str = "display:inline-block;padding:0.15rem 0.5rem;margin:0.1rem 0.2rem 0.1rem 0;border-radius:999px;background:rgba(139,92,246,0.12);border:1px solid #4c1d95;color:#c4b5fd;font-size:0.68rem;cursor:pointer;";
+const ENTRY: &str = "padding:0.85rem 1rem;border-radius:12px;border:1px solid #1f2937;background:#111827;margin-bottom:0.55rem;transition:border-color 0.15s;";
+const STATUS_OK: &str = "padding:0.55rem 0.85rem;border-radius:10px;background:#052e1c;border:1px solid #10b981;color:#a7f3d0;font-size:0.78rem;margin-bottom:0.75rem;";
+const STATUS_ERR: &str = "padding:0.55rem 0.85rem;border-radius:10px;background:#3b0b0b;border:1px solid #ef4444;color:#fecaca;font-size:0.78rem;margin-bottom:0.75rem;";
 
 fn str_field(v: &serde_json::Value, key: &str) -> String {
-    v.get(key).and_then(|x| x.as_str()).unwrap_or("").to_string()
+    v.get(key)
+        .and_then(|x| x.as_str())
+        .unwrap_or("")
+        .to_string()
 }
-fn arr_join(v: &serde_json::Value, key: &str) -> String {
+fn arr_str(v: &serde_json::Value, key: &str) -> Vec<String> {
     v.get(key)
         .and_then(|x| x.as_array())
-        .map(|a| a.iter().filter_map(|x| x.as_str()).collect::<Vec<_>>().join(", "))
+        .map(|a| {
+            a.iter()
+                .filter_map(|x| x.as_str().map(|s| s.to_string()))
+                .collect()
+        })
         .unwrap_or_default()
 }
 fn i64_field(v: &serde_json::Value, key: &str) -> Option<i64> {
@@ -32,8 +206,9 @@ fn i64_field(v: &serde_json::Value, key: &str) -> Option<i64> {
 fn f64_field(v: &serde_json::Value, key: &str) -> Option<f64> {
     v.get(key).and_then(|x| x.as_f64())
 }
-
-// ── date helpers (no chrono dependency) ──────────────────────────────────────
+fn u64_field(v: &serde_json::Value, key: &str) -> u64 {
+    v.get(key).and_then(|x| x.as_u64()).unwrap_or(0)
+}
 
 fn days_from_civil(y: i64, m: i64, d: i64) -> i64 {
     let y = y - (m <= 2) as i64;
@@ -44,7 +219,6 @@ fn days_from_civil(y: i64, m: i64, d: i64) -> i64 {
     let doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;
     era * 146097 + doe - 719468
 }
-
 fn civil_from_days(z: i64) -> (i64, i64, i64) {
     let z = z + 719468;
     let era = (if z >= 0 { z } else { z - 146096 }) / 146097;
@@ -57,14 +231,12 @@ fn civil_from_days(z: i64) -> (i64, i64, i64) {
     let m = if mp < 10 { mp + 3 } else { mp - 9 };
     (y + (m <= 2) as i64, m, d)
 }
-
-/// Parse `YYYY-MM-DD` (optionally with a `HH:MM` time) to unix seconds (UTC).
 fn parse_date(s: &str) -> Option<i64> {
     let s = s.trim();
     if s.is_empty() {
         return None;
     }
-    let (date, time) = match s.split_once(&['T', ' '][..]) {
+    let (date, time) = match s.split_once(['T', ' ']) {
         Some((d, t)) => (d, Some(t)),
         None => (s, None),
     };
@@ -83,20 +255,14 @@ fn parse_date(s: &str) -> Option<i64> {
     }
     Some(days_from_civil(y, mo, d) * 86_400 + h * 3600 + mi * 60)
 }
-
-/// Format unix seconds as `YYYY-MM-DD`.
 fn fmt_date(unix: i64) -> String {
     let (y, m, d) = civil_from_days(unix.div_euclid(86_400));
     format!("{y:04}-{m:02}-{d:02}")
 }
-
-/// Parse a `lat,lon` string to a coordinate pair.
 fn parse_latlon(s: &str) -> Option<(f32, f32)> {
     let (a, b) = s.trim().split_once(',')?;
     Some((a.trim().parse().ok()?, b.trim().parse().ok()?))
 }
-
-/// Hex-encode bytes (for the binary ingest path).
 fn to_hex(bytes: &[u8]) -> String {
     let mut s = String::with_capacity(bytes.len() * 2);
     for b in bytes {
@@ -104,107 +270,446 @@ fn to_hex(bytes: &[u8]) -> String {
     }
     s
 }
+fn display_title(uri: &str) -> String {
+    let t = uri.rsplit(['/', ':']).next().unwrap_or(uri);
+    if t.is_empty() {
+        uri.to_string()
+    } else {
+        t.replace('-', " ").replace('_', " ")
+    }
+}
+fn media_icon(media: &str) -> &'static str {
+    if media.contains("qapp") || media.contains("webizen-qapp") {
+        "▦"
+    } else if media.starts_with("image/") {
+        "🖼"
+    } else if media.starts_with("audio/") {
+        "🔊"
+    } else if media.contains("html") || media.contains("website") {
+        "🌐"
+    } else {
+        "📄"
+    }
+}
+
+fn category_label(slug: &str) -> String {
+    match slug {
+        "social-sciences" => "Social Sciences".into(),
+        "humanities" => "Humanities".into(),
+        "natural-sciences" => "Natural Sciences".into(),
+        "formal-sciences" => "Formal Sciences".into(),
+        "area-studies" => "Area Studies".into(),
+        "applied-liberal-arts" => "Applied Liberal Arts".into(),
+        "emerging-interdisciplinary" => "Emerging Interdisciplinary".into(),
+        "specialized-sciences" => "Specialized Sciences".into(),
+        "pre-professional" => "Pre-Professional".into(),
+        "language-regional" => "Language & Regional".into(),
+        "arts-performance" => "Arts & Performance".into(),
+        "advanced-subdisciplines" => "Advanced Sub-disciplines".into(),
+        "niche-sciences" => "Niche Sciences".into(),
+        "philosophy-theory" => "Philosophy & Theory".into(),
+        "religious-studies" => "Religious Studies".into(),
+        "literary-media" => "Literary & Media".into(),
+        "linguistics-semiotics" => "Linguistics & Semiotics".into(),
+        "intersectional-applied" => "Intersectional & Applied".into(),
+        "historical-textual" => "Historical & Textual".into(),
+        "critical-cultural" => "Critical & Cultural".into(),
+        "interdisciplinary-stem" => "Interdisciplinary STEM".into(),
+        "design-spatial" => "Design & Spatial".into(),
+        "critical-theory" => "Critical Theory".into(),
+        other => other.replace('-', " "),
+    }
+}
 
 #[component]
 pub fn WellfairLibraryPanel() -> Element {
     let mut results = use_signal(Vec::<serde_json::Value>::new);
+    let mut stats = use_signal(|| serde_json::json!({}));
+    let mut facet_counts = use_signal(|| serde_json::json!({}));
     let mut status = use_signal(String::new);
+    let mut status_err = use_signal(|| false);
     let mut view = use_signal(|| "list".to_string());
+    let mut show_ingest = use_signal(|| true);
+    let mut q = use_signal(String::new);
+    let mut section = use_signal(|| "all".to_string());
+    let mut sort_mode = use_signal(|| "newest".to_string());
+    let mut category = use_signal(String::new);
+    let mut secret_unlocked = use_signal(|| false);
+    let mut share_card = use_signal(String::new);
 
-    let mut ing_uri = use_signal(|| "urn:doc:my-note".to_string());
+    let mut ing_uri = use_signal(|| {
+        let secs = {
+            #[cfg(target_arch = "wasm32")]
+            {
+                (js_sys::Date::now() as u64 / 1000) % 100_000
+            }
+            #[cfg(not(target_arch = "wasm32"))]
+            {
+                std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .map(|d| d.as_secs() % 100_000)
+                    .unwrap_or(0)
+            }
+        };
+        format!("urn:doc:note-{}", secs)
+    });
     let mut ing_media = use_signal(|| "text/markdown".to_string());
-    let mut ing_text = use_signal(|| "Notes: the liver is an organ; keep this receipt for the tax deduction.".to_string());
+    let mut ing_text = use_signal(String::new);
     let mut ing_binary = use_signal(|| false);
     let mut ing_guardian = use_signal(String::new);
     let mut ing_sensitivity = use_signal(|| "public".to_string());
-    // person-authored facets
     let mut ing_date = use_signal(String::new);
-    let mut ing_place = use_signal(String::new); // "lat,lon"
+    let mut ing_place = use_signal(String::new);
     let mut ing_place_label = use_signal(String::new);
     let mut ing_project = use_signal(String::new);
     let mut ing_purpose = use_signal(String::new);
+    let mut ing_section = use_signal(|| "personal".to_string());
+    let mut ing_commons = use_signal(|| "none".to_string());
+    let mut legis_text = use_signal(String::new);
+    let mut legis_id = use_signal(String::new);
+    let mut legis_title = use_signal(String::new);
 
     let mut facet = use_signal(|| "topic".to_string());
-    let mut value = use_signal(|| "biology".to_string());
+    let mut value = use_signal(String::new);
     let mut tl_from = use_signal(String::new);
     let mut tl_to = use_signal(String::new);
+    // When true, faceted query requires purpose=bookmark (browser bookmarks).
+    let mut bookmarks_only = use_signal(|| false);
+    // Perception catalogue filter (models / ontologies / computer_vision).
+    let mut perception_only = use_signal(|| false);
+    let mut perception_rows = use_signal(Vec::<serde_json::Value>::new);
+    let mut seed_busy = use_signal(|| false);
+    let mut perception_seed_status = use_signal(String::new);
+    let mut models_honesty = use_signal(|| HonestyLevel::Unavailable);
+    let mut ontologies_honesty = use_signal(|| HonestyLevel::Unavailable);
+    let mut perception_honesty_level = use_signal(|| HonestyLevel::Unavailable);
 
-    let reload = move || {
+    // Entity-view session (app-wide: observer + morph + hidden wing count)
+    let mut view_observer = use_signal(|| "principal".to_string());
+    let mut view_presentation = use_signal(|| 1u8);
+    let mut view_hidden = use_signal(|| 0u32);
+    let mut view_flat_count = use_signal(|| 0usize);
+    let mut view_scene_count = use_signal(|| 0usize);
+    let mut view_morph_mode = use_signal(|| "both".to_string());
+    let mut view_status = use_signal(String::new);
+    let mut view_entity_cards = use_signal(Vec::<serde_json::Value>::new);
+    let mut view_scene_nodes = use_signal(Vec::<serde_json::Value>::new);
+    // Shared session: attention URI drives Library↔browser highlight continuity.
+    let mut session_selected_id = use_signal(|| 0u64);
+    let mut session_attention_uri = use_signal(String::new);
+    let mut gpu_epoch = use_signal(|| 0u64);
+    let mut gpu_status = use_signal(String::new);
+
+    let pull_view_session = move || {
         spawn(async move {
-            if let Ok(serde_json::Value::Array(rows)) = list_library().await {
-                results.set(rows);
+            if let Ok(s) = view_session().await {
+                let sel = s
+                    .get("selection")
+                    .and_then(|a| a.as_array())
+                    .and_then(|a| a.first())
+                    .and_then(|v| {
+                        v.as_u64().or_else(|| {
+                            v.as_object()
+                                .and_then(|o| o.values().find_map(|x| x.as_u64()))
+                        })
+                    })
+                    .unwrap_or(0);
+                session_selected_id.set(sel);
+                match s.get("attention_url").and_then(|x| x.as_str()) {
+                    Some(u) if !u.is_empty() => session_attention_uri.set(u.to_string()),
+                    _ => {}
+                }
             }
         });
     };
-    let mut loaded = use_signal(|| false);
 
+    let mut apply_perception_from_rows = move |rows: &[serde_json::Value]| {
+        let perc: Vec<serde_json::Value> = rows
+            .iter()
+            .filter(|r| is_perception_row(r))
+            .cloned()
+            .collect();
+        let (m, o, p) = perception_honesty(&perc);
+        models_honesty.set(m);
+        ontologies_honesty.set(o);
+        perception_honesty_level.set(p);
+        perception_rows.set(perc);
+    };
+
+    let refresh_entity_view = move || {
+        let sec = section();
+        let obs = view_observer();
+        let level = view_presentation();
+        spawn(async move {
+            let sect = if sec == "all" {
+                None
+            } else {
+                Some(sec.as_str())
+            };
+            match view_project_library(sect, Some(obs.as_str()), Some(level)).await {
+                Ok(v) => {
+                    let hidden = v.get("hidden_count").and_then(|x| x.as_u64()).unwrap_or(0) as u32;
+                    let flat = v
+                        .get("flat")
+                        .and_then(|a| a.as_array())
+                        .cloned()
+                        .unwrap_or_default();
+                    let scene_n = v
+                        .get("scene_nodes")
+                        .and_then(|a| a.as_array())
+                        .map(|a| a.len())
+                        .unwrap_or(0);
+                    let flat_n = flat.len();
+                    let scenes = v
+                        .get("scene_nodes")
+                        .and_then(|a| a.as_array())
+                        .cloned()
+                        .unwrap_or_default();
+                    view_hidden.set(hidden);
+                    view_flat_count.set(flat_n);
+                    view_scene_count.set(scene_n);
+                    view_entity_cards.set(flat);
+                    view_scene_nodes.set(scenes);
+                    view_status.set(format!(
+                        "Entity view · observer={obs} · visible={flat_n} · hidden={hidden} · scene={scene_n}"
+                    ));
+                }
+                Err(e) => {
+                    view_status.set(format!("Entity view unavailable: {e}"));
+                }
+            }
+        });
+    };
+
+    let refresh_all = move || {
+        let sec = section();
+        let cat = category();
+        let sort = sort_mode();
+        let text = q();
+        let bm = bookmarks_only();
+        let perc_only = perception_only();
+        refresh_entity_view();
+        pull_view_session();
+        spawn(async move {
+            if sec == "secret" && !secret_unlocked() {
+                results.set(Vec::new());
+                perception_rows.set(Vec::new());
+                status_err.set(false);
+                if let Ok(s) = library_stats().await {
+                    stats.set(s);
+                }
+                return;
+            }
+            let mut filter = serde_json::Map::new();
+            if sec != "all" {
+                filter.insert("section".into(), serde_json::Value::String(sec.clone()));
+            }
+            if !cat.trim().is_empty() {
+                filter.insert("categories".into(), serde_json::json!([cat.trim()]));
+            }
+            if !text.trim().is_empty() {
+                filter.insert("text".into(), serde_json::Value::String(text));
+            }
+            if bm {
+                filter.insert("purposes".into(), serde_json::json!([BOOKMARK_PURPOSE]));
+            }
+            let filter = serde_json::Value::Object(filter);
+            match query_library_faceted(&filter, &sort).await {
+                Ok(v) => {
+                    let mut rows = v
+                        .get("entries")
+                        .and_then(|e| e.as_array())
+                        .cloned()
+                        .unwrap_or_default();
+                    apply_perception_from_rows(&rows);
+                    if perc_only {
+                        rows.retain(|r| is_perception_row(r));
+                    }
+                    let n = rows.len();
+                    results.set(rows);
+                    if let Some(f) = v.get("facets") {
+                        facet_counts.set(f.clone());
+                    }
+                    status_err.set(false);
+                    if perc_only {
+                        status.set(format!("{n} perception item(s) · sort {sort}."));
+                    } else {
+                        status.set(format!("{n} item(s) · sort {sort}."));
+                    }
+                }
+                Err(e) => {
+                    // Fallback to plain section list if faceted path unavailable.
+                    let want = if sec == "all" {
+                        None
+                    } else {
+                        Some(sec.as_str())
+                    };
+                    match list_library_section(want).await {
+                        Ok(serde_json::Value::Array(mut rows)) => {
+                            apply_perception_from_rows(&rows);
+                            if perc_only {
+                                rows.retain(|r| is_perception_row(r));
+                            }
+                            results.set(rows);
+                            status_err.set(false);
+                        }
+                        Ok(_) => {
+                            results.set(Vec::new());
+                            perception_rows.set(Vec::new());
+                        }
+                        Err(e2) => {
+                            status_err.set(true);
+                            status.set(format!(
+                                "Could not open library: {e} / {e2}. Reads use the storage shelf (no vault required). If this persists after rebuild, check desktop AppState storage_path."
+                            ));
+                        }
+                    }
+                }
+            }
+            if let Ok(s) = library_stats().await {
+                stats.set(s);
+            }
+        });
+    };
+
+    let mut loaded = use_signal(|| false);
     use_effect(move || {
-        if loaded() { return; }
+        if loaded() {
+            return;
+        }
         loaded.set(true);
-        reload();
+        refresh_all();
     });
 
     let do_ingest = move |_| {
-        let (uri, media, text, binary, g, sensitivity) =
-            (ing_uri(), ing_media(), ing_text(), ing_binary(), ing_guardian(), ing_sensitivity());
-        let (date, place, place_label, project, purpose) =
-            (ing_date(), ing_place(), ing_place_label(), ing_project(), ing_purpose());
+        let (uri, media, text, binary, g, sensitivity) = (
+            ing_uri(),
+            ing_media(),
+            ing_text(),
+            ing_binary(),
+            ing_guardian(),
+            ing_sensitivity(),
+        );
+        let (date, place, place_label, project, purpose, sec, commons) = (
+            ing_date(),
+            ing_place(),
+            ing_place_label(),
+            ing_project(),
+            ing_purpose(),
+            ing_section(),
+            ing_commons(),
+        );
         spawn(async move {
+            if text.trim().is_empty() {
+                status_err.set(true);
+                status.set("Add some content (or hex bytes for a photo) before ingesting.".into());
+                return;
+            }
             let guardian = if g.trim().is_empty() { None } else { Some(g) };
+            // Section secret forces classified sensitivity.
+            let sens =
+                if sec == "secret" || sensitivity == "classified" || sensitivity == "restricted" {
+                    if sensitivity == "public" {
+                        "classified".to_string()
+                    } else {
+                        sensitivity.clone()
+                    }
+                } else {
+                    sensitivity.clone()
+                };
+            let commons = if sec == "secret" || sens != "public" {
+                "none".to_string()
+            } else {
+                commons
+            };
             let res = if binary {
-                // The "text" field carries hex bytes of a photo/audio; a photo's EXIF auto-populates
-                // the timeline + map. (Native file-picker → bytes is the remaining UI affordance.)
-                let hex = if text.trim().chars().all(|c| c.is_ascii_hexdigit() || c.is_whitespace()) {
+                let hex = if text
+                    .trim()
+                    .chars()
+                    .all(|c| c.is_ascii_hexdigit() || c.is_whitespace())
+                {
                     text.split_whitespace().collect::<String>()
                 } else {
                     to_hex(text.as_bytes())
                 };
-                ingest_file_hex(&uri, &media, &hex, &uri, guardian, &sensitivity).await
+                // Binary path still uses host sensitivity string where available.
+                ingest_file_hex(&uri, &media, &hex, &uri, guardian, &sens).await
             } else {
-                let (lat, lon) = parse_latlon(&place).map(|(a, b)| (Some(a), Some(b))).unwrap_or((None, None));
+                let (lat, lon) = parse_latlon(&place)
+                    .map(|(a, b)| (Some(a), Some(b)))
+                    .unwrap_or((None, None));
                 let facets = IngestFacets {
                     occurred_at: parse_date(&date),
-                    place_label: if place_label.trim().is_empty() { None } else { Some(place_label) },
+                    place_label: if place_label.trim().is_empty() {
+                        None
+                    } else {
+                        Some(place_label)
+                    },
                     lat,
                     lon,
-                    project: if project.trim().is_empty() { None } else { Some(project) },
-                    purpose: if purpose.trim().is_empty() { None } else { Some(purpose) },
+                    project: if project.trim().is_empty() {
+                        None
+                    } else {
+                        Some(project)
+                    },
+                    purpose: if purpose.trim().is_empty() {
+                        None
+                    } else {
+                        Some(purpose)
+                    },
+                    sensitivity: Some(sens.clone()),
+                    section: Some(sec.clone()),
+                    commons_visibility: Some(commons),
                 };
-                ingest_document(&uri, &media, &text, guardian, &facets, &sensitivity).await
+                ingest_document(&uri, &media, &text, guardian, &facets, &sens).await
             };
             match res {
                 Ok(v) => {
-                    let topics = arr_join(&v, "topics");
-                    let n_flags = v.get("flags").and_then(|x| x.as_array()).map(|a| a.len()).unwrap_or(0);
-                    let n_notif = v.get("guardian_notifications").and_then(|x| x.as_array()).map(|a| a.len()).unwrap_or(0);
-                    let placed = v.get("occurred_at").and_then(|x| x.as_i64()).map(|t| format!(" · dated {}", fmt_date(t))).unwrap_or_default();
-                    let mapped = v.get("lat").and_then(|x| x.as_f64()).map(|_| " · on the map".to_string()).unwrap_or_default();
+                    let topics = arr_str(&v, "topics").join(", ");
+                    let sect = str_field(&v, "section");
+                    status_err.set(false);
                     status.set(format!(
-                        "Ingested {uri} — topics: [{topics}]{placed}{mapped}{}{}",
-                        if n_flags > 0 { format!(" · {n_flags} flag(s)") } else { String::new() },
-                        if n_notif > 0 { format!(" · notified guardian ({n_notif})") } else { String::new() },
+                        "Saved to {sect} · topics [{topics}] — findable by meaning, not by folder."
                     ));
-                    reload();
+                    ing_text.set(String::new());
+                    if !sect.is_empty() {
+                        section.set(sect);
+                    }
+                    refresh_all();
                 }
-                Err(e) => status.set(format!("Ingest failed: {e}")),
+                Err(e) => {
+                    status_err.set(true);
+                    status.set(format!("Ingest failed: {e}"));
+                }
             }
         });
     };
-    let do_search = move |_| {
+
+    let do_quick_search = move |_| {
+        // Faceted path respects section + category + sort + free text.
+        refresh_all();
+    };
+
+    let do_facet_search = move |_| {
         let (f, v) = (facet(), value());
         spawn(async move {
             match search_library(&f, &v).await {
                 Ok(serde_json::Value::Array(rows)) => {
                     let n = rows.len();
                     results.set(rows);
-                    status.set(format!("{n} result(s) for {f} = \"{v}\"."));
+                    status_err.set(false);
+                    status.set(format!("{n} · {f} = “{v}”"));
                 }
-                Ok(_) => results.set(Vec::new()),
-                Err(e) => status.set(format!("Search failed: {e}")),
+                Err(e) => {
+                    status_err.set(true);
+                    status.set(format!("Facet search failed: {e}"));
+                }
+                _ => results.set(Vec::new()),
             }
         });
     };
-    let do_timeline_search = move |_| {
+
+    let do_timeline = move |_| {
         let (from, to) = (tl_from(), tl_to());
         spawn(async move {
             let start = parse_date(&from).unwrap_or(i64::MIN / 2);
@@ -213,207 +718,1410 @@ pub fn WellfairLibraryPanel() -> Element {
                 Ok(serde_json::Value::Array(rows)) => {
                     let n = rows.len();
                     results.set(rows);
-                    view.set("timeline".to_string());
-                    status.set(format!("{n} dated asset(s) in range."));
+                    view.set("timeline".into());
+                    status_err.set(false);
+                    status.set(format!("{n} dated item(s) in range."));
                 }
-                Ok(_) => results.set(Vec::new()),
-                Err(e) => status.set(format!("Timeline search failed: {e}")),
+                Err(e) => {
+                    status_err.set(true);
+                    status.set(format!("Timeline failed: {e}"));
+                }
+                _ => results.set(Vec::new()),
             }
         });
     };
 
-    let field_style = "padding:0.3rem 0.45rem;border-radius:6px;border:1px solid var(--qualia-border,#ccc);font-size:0.78rem;background:var(--qualia-surface-2,#fff);";
-    let label_style = "display:flex;flex-direction:column;gap:0.15rem;font-size:0.72rem;color:var(--qualia-text-muted,#666);";
+    let st = stats();
+    let total = u64_field(&st, "total");
+    let with_date = u64_field(&st, "with_date");
+    let with_place = u64_field(&st, "with_place");
+    let quins = u64_field(&st, "quins");
+    let topic_map = st
+        .get("topics")
+        .and_then(|t| t.as_object())
+        .cloned()
+        .unwrap_or_default();
+    let mut topic_list: Vec<(String, u64)> = topic_map
+        .iter()
+        .filter_map(|(k, v)| v.as_u64().map(|n| (k.clone(), n)))
+        .collect();
+    topic_list.sort_by(|a, b| b.1.cmp(&a.1));
 
-    // ── the active view's result rendering ──
-    let rows: Vec<serde_json::Value> = results.read().clone();
+    let rows = results();
+    let on_select_uri = move |uri: String| {
+        session_attention_uri.set(uri.clone());
+        spawn(async move {
+            match view_select_uri(&uri).await {
+                Ok(s) => {
+                    if let Some(u) = s.get("attention_url").and_then(|x| x.as_str()) {
+                        session_attention_uri.set(u.to_string());
+                    }
+                    view_status.set(format!("Selected · shared with browser session · {uri}"));
+                }
+                Err(e) => view_status.set(format!("Select failed: {e}")),
+            }
+        });
+    };
     let body = match view().as_str() {
         "timeline" => rsx! { TimelineView { rows: rows.clone() } },
-        "map" => rsx! { MapView { rows: rows.clone() } },
-        _ => rsx! { ListView { rows: rows.clone() } },
-    };
-
-    let tab_style = |active: bool| {
-        if active {
-            "padding:0.25rem 0.7rem;border-radius:6px;border:1px solid var(--qualia-accent,#2b6);background:var(--qualia-accent,#2b6);color:#fff;font-size:0.75rem;cursor:pointer;"
-        } else {
-            "padding:0.25rem 0.7rem;border-radius:6px;border:1px solid var(--qualia-border,#ccc);background:transparent;font-size:0.75rem;cursor:pointer;"
-        }
+        "map" => rsx! {
+            MapView {
+                rows: rows.clone(),
+                selected_uri: session_attention_uri(),
+                on_select: on_select_uri,
+            }
+        },
+        _ if view_morph_mode() == "spatialize" => rsx! {
+            SpatialSceneView {
+                nodes: view_scene_nodes(),
+                titles: view_entity_cards(),
+                selected_id: session_selected_id(),
+                hidden_count: view_hidden(),
+                gpu_status: gpu_status(),
+                gpu_epoch: gpu_epoch(),
+                on_flatten: move |_| {
+                    view_morph_mode.set("flatten".into());
+                    spawn(async move {
+                        let _ = view_morph("flatten").await;
+                        view_status.set("Flatten — same selection, flat cards".into());
+                    });
+                },
+                on_gpu_frame: move |_| {
+                    gpu_status.set("Rendering entity_view → PortalGpu…".into());
+                    spawn(async move {
+                        match view_render_memory_spatial(Some(1280), Some(720)).await {
+                            Ok(v) => {
+                                let n = v.get("node_count").and_then(|x| x.as_u64()).unwrap_or(0);
+                                gpu_epoch.set(gpu_epoch() + 1);
+                                gpu_status.set(format!(
+                                    "GPU frame ready · {n} nodes · webizen://render-preview"
+                                ));
+                                view_status.set("Prestige spatial frame from engine projection".into());
+                            }
+                            Err(e) => {
+                                gpu_status.set(format!("GPU frame unavailable: {e}"));
+                            }
+                        }
+                    });
+                },
+                on_pick_norm: move |(nx, ny): (f64, f64)| {
+                    spawn(async move {
+                        match view_pick_scene(nx, ny).await {
+                            Ok(v) => {
+                                if v.get("found").and_then(|x| x.as_bool()).unwrap_or(false) {
+                                    let id = v.get("entity_id").and_then(|x| x.as_u64()).unwrap_or(0);
+                                    session_selected_id.set(id);
+                                    view_status.set(format!(
+                                        "Picked scene node · entity {id} · shared session"
+                                    ));
+                                    pull_view_session();
+                                } else {
+                                    view_status.set("No scene node near pick.".into());
+                                }
+                            }
+                            Err(e) => view_status.set(format!("Pick failed: {e}")),
+                        }
+                    });
+                },
+            }
+        },
+        _ => rsx! {
+            ListView {
+                rows: rows.clone(),
+                selected_uri: session_attention_uri(),
+                on_select: on_select_uri,
+                on_topic: move |t: String| {
+                    value.set(t.clone());
+                    facet.set("topic".into());
+                    spawn(async move {
+                        if let Ok(serde_json::Value::Array(r)) = search_library("topic", &t).await {
+                            results.set(r);
+                        }
+                    });
+                },
+                on_remove: move |uri: String| {
+                    spawn(async move {
+                        match remove_library_entry(&uri).await {
+                            Ok(_) => {
+                                status_err.set(false);
+                                status.set("Removed from library.".into());
+                                refresh_all();
+                            }
+                            Err(e) => {
+                                status_err.set(true);
+                                status.set(format!("Remove failed: {e}"));
+                            }
+                        }
+                    });
+                },
+                on_commons: move |(uri, vis): (String, String)| {
+                    spawn(async move {
+                        match set_library_commons(&uri, &vis).await {
+                            Ok(_) => {
+                                status_err.set(false);
+                                status.set(format!("Commons visibility → {vis}."));
+                                refresh_all();
+                            }
+                            Err(e) => {
+                                status_err.set(true);
+                                status.set(format!("Commons update failed: {e}"));
+                            }
+                        }
+                    });
+                },
+                on_share_card: move |uri: String| {
+                    spawn(async move {
+                        match library_commons_share_card(&uri).await {
+                            Ok(v) => {
+                                let text = serde_json::to_string_pretty(&v).unwrap_or_else(|_| v.to_string());
+                                share_card.set(text);
+                                status_err.set(false);
+                                status.set("Commons share card ready — copy from below; send via Relations → People.".into());
+                            }
+                            Err(e) => {
+                                status_err.set(true);
+                                status.set(format!("Share card failed: {e}"));
+                            }
+                        }
+                    });
+                },
+            }
+        },
     };
 
     rsx! {
-        section {
-            aria_label: "WellFair hypermedia library",
-            style: "padding:0.85rem;border:1px solid var(--qualia-border,#ddd);border-radius:10px;background:var(--qualia-surface,#fafafa);display:flex;flex-direction:column;gap:0.8rem;",
-            div {
-                style: "display:flex;align-items:center;justify-content:space-between;gap:0.5rem;flex-wrap:wrap;",
-                h2 { style: "margin:0;font-size:1rem;", "Library — find your files by meaning" }
+        div { style: "{ROOT}",
+            // ── Header ──
+            div { style: "{HEADER}",
+                div { style: "display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;flex-wrap:wrap;",
+                    div {
+                        h1 { style: "margin:0;font-size:1.35rem;font-weight:700;color:#e9d5ff;letter-spacing:-0.02em;",
+                            "Lived Memory"
+                        }
+                        p { style: "margin:0.35rem 0 0;font-size:0.82rem;color:#94a3b8;max-width:36rem;line-height:1.45;",
+                            "Your hypermedia meaning shelf — topics, places, projects, time. Entity-view morph and observer rights apply. Not a folder tree."
+                        }
+                    }
+                    div { style: "display:flex;gap:0.35rem;flex-wrap:wrap;align-items:center;",
+                        button {
+                            style: if bookmarks_only() { TAB_ON } else { TAB },
+                            title: "Filter purpose=bookmark (browser QLinks)",
+                            onclick: move |_| {
+                                bookmarks_only.set(!bookmarks_only());
+                                refresh_all();
+                            },
+                            "🔖 Bookmarks"
+                        }
+                        button {
+                            style: if perception_only() { TAB_ON } else { TAB },
+                            title: "Show models, ontologies, and computer_vision catalogue rows only",
+                            onclick: move |_| {
+                                perception_only.set(!perception_only());
+                                refresh_all();
+                            },
+                            "👁 Perception"
+                        }
+                        button {
+                            style: if view() == "list" { TAB_ON } else { TAB },
+                            onclick: move |_| view.set("list".into()),
+                            "List"
+                        }
+                        button {
+                            style: if view() == "timeline" { TAB_ON } else { TAB },
+                            onclick: move |_| view.set("timeline".into()),
+                            "Timeline"
+                        }
+                        button {
+                            style: if view() == "map" { TAB_ON } else { TAB },
+                            onclick: move |_| view.set("map".into()),
+                            "Map"
+                        }
+                        button { style: "{BTN2}", onclick: move |_| refresh_all(), "Refresh" }
+                    }
+                }
+                // Honesty: models / ontologies / perception (Present=Ready vs Partial)
                 div {
-                    style: "display:flex;gap:0.3rem;",
-                    button { style: "{tab_style(view() == \"list\")}", onclick: move |_| view.set("list".to_string()), "List" }
-                    button { style: "{tab_style(view() == \"timeline\")}", onclick: move |_| view.set("timeline".to_string()), "Timeline" }
-                    button { style: "{tab_style(view() == \"map\")}", onclick: move |_| view.set("map".to_string()), "Map" }
+                    style: "display:flex;flex-wrap:wrap;gap:0.4rem;margin-top:0.65rem;align-items:center;",
+                    span { style: "font-size:0.68rem;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;",
+                        "Catalogue"
+                    }
+                    HonestyChip {
+                        level: models_honesty(),
+                        detail: "models".to_string(),
+                    }
+                    HonestyChip {
+                        level: ontologies_honesty(),
+                        detail: "ontologies".to_string(),
+                    }
+                    HonestyChip {
+                        level: perception_honesty_level(),
+                        detail: "perception / computer_vision".to_string(),
+                    }
+                }
+                // Entity-view strip — multi-observer projection (app-wide session)
+                div {
+                    style: "margin-top:0.75rem;padding:0.65rem 0.75rem;border-radius:12px;border:1px solid #334155;background:#0f172a;",
+                    div {
+                        style: "display:flex;flex-wrap:wrap;gap:0.45rem;align-items:center;margin-bottom:0.4rem;",
+                        span {
+                            style: "font-size:0.68rem;color:#a5b4fc;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;",
+                            "Entity view"
+                        }
+                        span {
+                            style: "font-size:0.68rem;color:#64748b;",
+                            "Same session as Browser · rights-filter · morph"
+                        }
+                        HonestyChip {
+                            level: HonestyLevel::Ready,
+                            detail: "view_* ready".to_string(),
+                        }
+                    }
+                    div {
+                        style: "display:flex;flex-wrap:wrap;gap:0.4rem;align-items:center;",
+                        label {
+                            style: "font-size:0.68rem;color:#94a3b8;display:flex;align-items:center;gap:0.3rem;",
+                            "Observer"
+                            select {
+                                style: "background:#0b1220;color:#e2e8f0;border:1px solid #334155;border-radius:8px;padding:0.28rem 0.45rem;font-size:0.75rem;",
+                                value: "{view_observer}",
+                                onchange: move |ev| {
+                                    let v = ev.value();
+                                    view_observer.set(v.clone());
+                                    spawn(async move {
+                                        let _ = view_set_observer(&v).await;
+                                        // re-project after observer change
+                                    });
+                                    refresh_entity_view();
+                                },
+                                option { value: "principal", "Principal" }
+                                option { value: "peer", "Peer" }
+                                option { value: "guardian", "Guardian" }
+                                option { value: "steward", "Steward" }
+                                option { value: "public", "Public" }
+                                option { value: "instrument", "Instrument" }
+                                option { value: "auditor", "Auditor" }
+                            }
+                        }
+                        label {
+                            style: "font-size:0.68rem;color:#94a3b8;display:flex;align-items:center;gap:0.3rem;",
+                            "Morphology"
+                            select {
+                                style: "background:#0b1220;color:#e2e8f0;border:1px solid #334155;border-radius:8px;padding:0.28rem 0.45rem;font-size:0.75rem;",
+                                value: "{view_presentation}",
+                                onchange: move |ev| {
+                                    if let Ok(n) = ev.value().parse::<u8>() {
+                                        view_presentation.set(n);
+                                        spawn(async move {
+                                            let _ = view_set_presentation_level(n).await;
+                                        });
+                                        refresh_entity_view();
+                                    }
+                                },
+                                option { value: "0", "P0 Document" }
+                                option { value: "1", "P1 App habitat" }
+                                option { value: "2", "P2 Spatial desk" }
+                                option { value: "3", "P3 Stage" }
+                                option { value: "4", "P4 Embodied" }
+                                option { value: "5", "P5 Infosphere" }
+                                option { value: "6", "P6 Multi-sensory" }
+                            }
+                        }
+                        button {
+                            style: if view_morph_mode() == "flatten" { TAB_ON } else { TAB },
+                            title: "Show flat cards only from last projection",
+                            onclick: move |_| {
+                                view_morph_mode.set("flatten".into());
+                                spawn(async move {
+                                    match view_morph("flatten").await {
+                                        Ok(v) => {
+                                            let flat = v.get("flat").and_then(|a| a.as_array()).cloned().unwrap_or_default();
+                                            let hidden = v.get("hidden_count").and_then(|x| x.as_u64()).unwrap_or(0) as u32;
+                                            view_flat_count.set(flat.len());
+                                            view_entity_cards.set(flat);
+                                            view_hidden.set(hidden);
+                                            view_scene_count.set(0);
+                                            view_status.set("Morph → flatten".into());
+                                        }
+                                        Err(e) => view_status.set(format!("Morph: {e}")),
+                                    }
+                                });
+                            },
+                            "Flatten"
+                        }
+                        button {
+                            style: if view_morph_mode() == "spatialize" { TAB_ON } else { TAB },
+                            title: "Show scene nodes only from last projection (Sanctuary theme may discourage Spatialize)",
+                            onclick: move |_| {
+                                view_morph_mode.set("spatialize".into());
+                                spawn(async move {
+                                    match view_morph("spatialize").await {
+                                        Ok(v) => {
+                                            let nodes = v.get("scene_nodes").and_then(|a| a.as_array()).cloned().unwrap_or_default();
+                                            let hidden = v.get("hidden_count").and_then(|x| x.as_u64()).unwrap_or(0) as u32;
+                                            view_scene_count.set(nodes.len());
+                                            view_scene_nodes.set(nodes);
+                                            view_hidden.set(hidden);
+                                            view_status.set("Morph → spatialize · click nodes to pick · Sanctuary theme pack disables spatialize policy in Presentation Binding".into());
+                                        }
+                                        Err(e) => view_status.set(format!("Morph: {e}")),
+                                    }
+                                });
+                            },
+                            "Spatialize"
+                        }
+                        button {
+                            style: if view_morph_mode() == "both" { TAB_ON } else { TAB },
+                            onclick: move |_| {
+                                view_morph_mode.set("both".into());
+                                refresh_entity_view();
+                            },
+                            "Both"
+                        }
+                        span { style: "{STAT_CHIP}",
+                            span { style: "{STAT_NUM}", "{view_flat_count}" } " visible"
+                        }
+                        span { style: "{STAT_CHIP}",
+                            span { style: "{STAT_NUM}", "{view_hidden}" } " hidden (rights)"
+                        }
+                        span { style: "{STAT_CHIP}",
+                            span { style: "{STAT_NUM}", "{view_scene_count}" } " scene"
+                        }
+                        button {
+                            style: "{BTN2}",
+                            title: "Re-run view_project_library for current section/observer",
+                            onclick: move |_| refresh_entity_view(),
+                            "Project"
+                        }
+                    }
+                    if !view_status().is_empty() {
+                        p {
+                            style: "margin:0.4rem 0 0;font-size:0.72rem;color:#94a3b8;line-height:1.35;",
+                            "{view_status}"
+                        }
+                    }
+                    if !session_attention_uri().is_empty() {
+                        div {
+                            style: "margin-top:0.45rem;padding:0.4rem 0.55rem;border-radius:8px;border:1px solid #4c1d95;background:rgba(139,92,246,0.1);font-size:0.72rem;color:#e9d5ff;display:flex;flex-wrap:wrap;gap:0.35rem;align-items:center;",
+                            span { style: "font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:#a5b4fc;font-size:0.65rem;", "Shared selection" }
+                            span { style: "font-family:ui-monospace,monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:28rem;", "{session_attention_uri}" }
+                            span { style: "color:#94a3b8;", "· same entity as browser ◎ / web locus" }
+                            button {
+                                style: "{BTN2}",
+                                title: "Re-read view_session from host",
+                                onclick: move |_| pull_view_session(),
+                                "Sync session"
+                            }
+                        }
+                    }
+                    if !view_entity_cards().is_empty() && (view_morph_mode() == "flatten" || view_morph_mode() == "both") {
+                        div {
+                            style: "display:flex;flex-wrap:wrap;gap:0.35rem;margin-top:0.45rem;max-height:5.5rem;overflow-y:auto;",
+                            for card in view_entity_cards().into_iter().take(24) {
+                                {
+                                    let title = str_field(&card, "title");
+                                    let wing = str_field(&card, "wing");
+                                    let eid = u64_field(&card, "entity_id");
+                                    let label = if title.is_empty() {
+                                        format!("{:x}", eid)
+                                    } else {
+                                        title.chars().take(28).collect::<String>()
+                                    };
+                                    let wing_l = if wing.is_empty() { "—".into() } else { wing };
+                                    rsx! {
+                                        button {
+                                            style: "font-size:0.68rem;padding:0.25rem 0.5rem;border-radius:8px;border:1px solid #4c1d95;background:rgba(139,92,246,0.12);color:#e9d5ff;cursor:pointer;max-width:12rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;",
+                                            title: "Select entity {eid}",
+                                            onclick: move |_| {
+                                                spawn(async move {
+                                                    let _ = view_select(eid).await;
+                                                });
+                                                view_status.set(format!("Selected entity {eid}"));
+                                            },
+                                            "{label} · {wing_l}"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                div { style: "{STATS}",
+                    span { style: "{STAT_CHIP}", span { style: "{STAT_NUM}", "{total}" } " items" }
+                    span { style: "{STAT_CHIP}", span { style: "{STAT_NUM}", "{with_date}" } " dated" }
+                    span { style: "{STAT_CHIP}", span { style: "{STAT_NUM}", "{with_place}" } " on map" }
+                    span { style: "{STAT_CHIP}", span { style: "{STAT_NUM}", "{quins}" } " semantic edges" }
+                    {
+                        let pn = perception_rows().len();
+                        let cvn = perception_rows().iter().filter(|r| is_computer_vision_row(r)).count();
+                        rsx! {
+                            span { style: "{STAT_CHIP}", span { style: "{STAT_NUM}", "{pn}" } " perception" }
+                            span { style: "{STAT_CHIP}", span { style: "{STAT_NUM}", "{cvn}" } " computer_vision" }
+                        }
+                    }
                     button {
-                        style: "padding:0.25rem 0.55rem;border-radius:6px;border:1px solid var(--qualia-border,#ccc);background:transparent;font-size:0.75rem;cursor:pointer;",
-                        onclick: move |_| reload(),
-                        "Show all"
+                        style: "{BTN2} margin-left:auto;",
+                        onclick: move |_| {
+                            spawn(async move {
+                                match export_library_graph().await {
+                                    Ok(v) => {
+                                        let n = u64_field(&v, "quin_count");
+                                        status_err.set(false);
+                                        status.set(format!(
+                                            "Graph export ready · {n} NQuins (hypermedia edge mass for inject / query)."
+                                        ));
+                                    }
+                                    Err(e) => {
+                                        status_err.set(true);
+                                        status.set(format!("Export failed: {e}"));
+                                    }
+                                }
+                            });
+                        },
+                        "Export graph mass"
                     }
                 }
-            }
-            p { style: "margin:0;font-size:0.7rem;color:var(--qualia-text-muted,#777);",
-                "Ingest an asset — it's processed to derive its meaning (a doc → topics; a photo → its EXIF date + GPS; a WAV → duration + pitch). Attach a date or place yourself to put anything on the timeline or map. Not a folder of files; a graph of meaning."
-            }
-
-            // ── Operational Contexts (Quick Links) ──
-            div {
-                style: "display:flex; gap:0.5rem; flex-wrap:wrap; padding: 0.6rem 0; border-top: 1px dashed var(--qualia-border,#eee); border-bottom: 1px dashed var(--qualia-border,#eee);",
-                Link { to: Route::SanctuaryRoute {}, style: "text-decoration:none; display:flex; align-items:center; gap:0.3rem; padding:0.3rem 0.6rem; border-radius:6px; background:var(--qualia-surface-2,#fff); border:1px solid var(--qualia-border,#ddd); font-size:0.75rem; color:var(--qualia-text,#333);",
-                    sl-icon { "name": "safe" }
-                    "Secure Enclave"
-                }
-                Link { to: Route::WorkRoute {}, style: "text-decoration:none; display:flex; align-items:center; gap:0.3rem; padding:0.3rem 0.6rem; border-radius:6px; background:var(--qualia-surface-2,#fff); border:1px solid var(--qualia-border,#ddd); font-size:0.75rem; color:var(--qualia-text,#333);",
-                    sl-icon { "name": "wallet2" }
-                    "Wallet & Finance"
-                }
-                Link { to: Route::WorkRoute {}, style: "text-decoration:none; display:flex; align-items:center; gap:0.3rem; padding:0.3rem 0.6rem; border-radius:6px; background:var(--qualia-surface-2,#fff); border:1px solid var(--qualia-border,#ddd); font-size:0.75rem; color:var(--qualia-text,#333);",
-                    sl-icon { "name": "diagram-3" }
-                    "Cooperative Projects"
-                }
-                Link { to: Route::IdentityRoute {}, style: "text-decoration:none; display:flex; align-items:center; gap:0.3rem; padding:0.3rem 0.6rem; border-radius:6px; background:var(--qualia-surface-2,#fff); border:1px solid var(--qualia-border,#ddd); font-size:0.75rem; color:var(--qualia-text,#333);",
-                    sl-icon { "name": "journal-bookmark-fill" }
-                    "Social Directory"
-                }
-            }
-
-            if !status().is_empty() {
-                p { style: "margin:0;font-size:0.76rem;color:var(--qualia-accent,#2b6);", "{status()}" }
-            }
-
-            // ── Ingest ──
-            div {
-                style: "display:flex;flex-direction:column;gap:0.35rem;padding:0.5rem 0.6rem;border-radius:8px;border:1px solid var(--qualia-border,#eee);background:var(--qualia-surface-2,#fff);",
-                div { style: "font-size:0.8rem;font-weight:600;", "Ingest an asset" }
+                // Perception seed control (always available — not only Software section)
                 div {
-                    style: "display:flex;gap:0.4rem;flex-wrap:wrap;",
-                    label { style: "{label_style}flex:1;min-width:12rem;", "Asset id (uri)"
-                        input { style: "{field_style}", value: "{ing_uri}", oninput: move |e| ing_uri.set(e.value()) } }
-                    label { style: "{label_style}", "Type"
-                        select {
-                            style: "{field_style}",
-                            value: "{ing_media}",
-                            oninput: move |e| ing_media.set(e.value()),
-                            option { value: "text/markdown", "text" }
-                            option { value: "image/jpeg", "image/jpeg" }
-                            option { value: "image/png", "image/png" }
-                            option { value: "audio/wav", "audio/wav" }
+                    style: "display:flex;flex-wrap:wrap;gap:0.5rem;margin-top:0.75rem;align-items:center;",
+                    button {
+                        style: if seed_busy() {
+                            "background:#4c1d95;color:#e9d5ff;padding:0.5rem 0.9rem;border:none;border-radius:9px;font-weight:600;cursor:wait;font-size:0.8rem;opacity:0.75;"
+                        } else {
+                            BTN
+                        },
+                        disabled: seed_busy(),
+                        title: "Hosts: library_seed_perception_assets (storage) or wellfair_seed_perception_library (vault)",
+                        onclick: move |_| {
+                            if seed_busy() {
+                                return;
+                            }
+                            seed_busy.set(true);
+                            perception_seed_status.set("Seeding perception catalogue…".into());
+                            spawn(async move {
+                                match seed_perception_library().await {
+                                    Ok(v) => {
+                                        let models_a = u64_field(&v, "models_added");
+                                        let models_u = u64_field(&v, "models_updated");
+                                        let onto_a = u64_field(&v, "ontologies_added");
+                                        let onto_u = u64_field(&v, "ontologies_updated");
+                                        let note = str_field(&v, "note");
+                                        let weights = v
+                                            .get("weights_ensured")
+                                            .and_then(|w| w.as_array())
+                                            .map(|a| a.len())
+                                            .unwrap_or(0);
+                                        status_err.set(false);
+                                        let msg = format!(
+                                            "Perception seed OK · models +{models_a}/{models_u} upd · ontologies +{onto_a}/{onto_u} upd · weights {weights} · {note}"
+                                        );
+                                        status.set(msg.clone());
+                                        perception_seed_status.set(msg);
+                                        section.set("software".into());
+                                        perception_only.set(true);
+                                        seed_busy.set(false);
+                                        refresh_all();
+                                    }
+                                    Err(e) => {
+                                        status_err.set(true);
+                                        let msg = format!("Seed perception library failed: {e}");
+                                        status.set(msg.clone());
+                                        perception_seed_status.set(msg);
+                                        seed_busy.set(false);
+                                    }
+                                }
+                            });
+                        },
+                        if seed_busy() { "Seeding…" } else { "Seed perception library" }
+                    }
+                    button {
+                        style: "{BTN2}",
+                        title: "Browse Software shelf for model:// and ontology:// rows",
+                        onclick: move |_| {
+                            section.set("software".into());
+                            perception_only.set(true);
+                            refresh_all();
+                        },
+                        "Show perception rows"
+                    }
+                    if !perception_seed_status().is_empty() {
+                        span {
+                            style: "font-size:0.75rem;color:#94a3b8;max-width:36rem;line-height:1.35;",
+                            "{perception_seed_status}"
                         }
                     }
-                    label { style: "{label_style}", "Sensitivity (Sanctuary Vault)"
-                        select {
-                            style: "{field_style}",
-                            value: "{ing_sensitivity}",
-                            oninput: move |e| ing_sensitivity.set(e.value()),
-                            option { value: "public", "Public (Cleartext)" }
-                            option { value: "restricted", "Restricted (Encrypted Enclave)" }
-                            option { value: "classified", "Classified (M-of-N Guardianship)" }
+                }
+                // Section rail — purpose lanes + Secret
+                div {
+                    style: "display:flex;flex-wrap:wrap;gap:0.4rem;margin-top:0.85rem;align-items:center;",
+                    for (id, label, blurb) in SECTIONS {
+                        {
+                            let id = (*id).to_string();
+                            let label = *label;
+                            let blurb = *blurb;
+                            let on = section() == id;
+                            let count = st
+                                .get("sections")
+                                .and_then(|s| s.get(&id))
+                                .and_then(|x| x.as_u64())
+                                .unwrap_or(0);
+                            rsx! {
+                                button {
+                                    title: "{blurb}",
+                                    style: if on {
+                                        if id == "secret" {
+                                            "padding:0.4rem 0.75rem;border-radius:10px;border:1px solid #f59e0b;background:rgba(245,158,11,0.15);color:#fde68a;font-size:0.75rem;font-weight:700;cursor:pointer;"
+                                        } else {
+                                            TAB_ON
+                                        }
+                                    } else {
+                                        TAB
+                                    },
+                                    onclick: move |_| {
+                                        section.set(id.clone());
+                                        if id == "secret" && !secret_unlocked() {
+                                            results.set(Vec::new());
+                                            status_err.set(false);
+                                            status.set(
+                                                "Secret section locked — click Unlock secret shelf to view sanctuary / classified items."
+                                                    .into(),
+                                            );
+                                        } else {
+                                            refresh_all();
+                                        }
+                                    },
+                                    "{label}"
+                                    if id != "all" {
+                                        span { style: "opacity:0.75;margin-left:0.25rem;", "({count})" }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    if section() == "secret" {
+                        button {
+                            style: if secret_unlocked() {
+                                "padding:0.4rem 0.75rem;border-radius:10px;border:1px solid #10b981;background:rgba(16,185,129,0.15);color:#a7f3d0;font-size:0.75rem;font-weight:700;cursor:pointer;"
+                            } else {
+                                "padding:0.4rem 0.75rem;border-radius:10px;border:1px solid #f59e0b;background:#78350f;color:#fde68a;font-size:0.75rem;font-weight:700;cursor:pointer;"
+                            },
+                            onclick: move |_| {
+                                let next = !secret_unlocked();
+                                secret_unlocked.set(next);
+                                if next {
+                                    status.set("Secret shelf unlocked for this session.".into());
+                                    refresh_all();
+                                } else {
+                                    results.set(Vec::new());
+                                    status.set("Secret shelf locked again.".into());
+                                }
+                            },
+                            if secret_unlocked() { "Lock secret shelf" } else { "Unlock secret shelf" }
                         }
                     }
                 }
-                label { style: "{label_style}",
-                    if ing_binary() { "Bytes (hex — a photo/audio file's contents)" } else { "Text" }
-                    textarea { style: "{field_style}min-height:3rem;font-family:inherit;", value: "{ing_text}", oninput: move |e| ing_text.set(e.value()) } }
-                label { style: "display:flex;gap:0.35rem;align-items:center;font-size:0.72rem;color:var(--qualia-text-muted,#666);",
-                    input { r#type: "checkbox", checked: ing_binary(), onchange: move |e| ing_binary.set(e.checked()) }
-                    "Binary asset — the field above is hex bytes (a photo's EXIF date/GPS auto-fill the timeline & map)"
-                }
-                // person-authored facets (the "means, not definition" path)
-                div {
-                    style: "display:flex;gap:0.4rem;flex-wrap:wrap;",
-                    label { style: "{label_style}", "Date (YYYY-MM-DD) → timeline"
-                        input { style: "{field_style}", placeholder: "2025-04-01", value: "{ing_date}", oninput: move |e| ing_date.set(e.value()) } }
-                    label { style: "{label_style}", "Place (lat,lon) → map"
-                        input { style: "{field_style}", placeholder: "-33.87,151.21", value: "{ing_place}", oninput: move |e| ing_place.set(e.value()) } }
-                    label { style: "{label_style}", "Place label"
-                        input { style: "{field_style}", value: "{ing_place_label}", oninput: move |e| ing_place_label.set(e.value()) } }
-                }
-                div {
-                    style: "display:flex;gap:0.4rem;flex-wrap:wrap;",
-                    label { style: "{label_style}", "Project"
-                        input { style: "{field_style}", placeholder: "house-move-2025", value: "{ing_project}", oninput: move |e| ing_project.set(e.value()) } }
-                    label { style: "{label_style}", "Purpose"
-                        input { style: "{field_style}", placeholder: "tax-return-2025", value: "{ing_purpose}", oninput: move |e| ing_purpose.set(e.value()) } }
-                    label { style: "{label_style}flex:1;min-width:10rem;", "Guardian DID (optional — flagged ingest notifies them)"
-                        input { style: "{field_style}", value: "{ing_guardian}", oninput: move |e| ing_guardian.set(e.value()) } }
-                }
-                button {
-                    style: "align-self:flex-start;padding:0.3rem 0.7rem;border-radius:6px;border:1px solid var(--qualia-accent,#2b6);background:var(--qualia-accent,#2b6);color:#fff;font-size:0.78rem;cursor:pointer;",
-                    onclick: do_ingest,
-                    "Ingest"
-                }
-            }
-
-            // ── Search (facet + timeline range) ──
-            div {
-                style: "display:flex;gap:0.6rem;align-items:flex-end;flex-wrap:wrap;",
-                label { style: "{label_style}", "Find by"
-                    select {
-                        style: "{field_style}",
-                        value: "{facet}",
-                        oninput: move |e| facet.set(e.value()),
-                        option { value: "topic", "Topic" }
-                        option { value: "depicts", "Depicts" }
-                        option { value: "place", "Place" }
-                        option { value: "project", "Project" }
-                        option { value: "purpose", "Purpose" }
+                if section() == "commons" {
+                    p { style: "margin:0.65rem 0 0;font-size:0.75rem;color:#94a3b8;line-height:1.4;",
+                        "Commons is the permissive share surface — metadata cards for Relations peers / micro-commons. Secret and classified items never appear here. Connect people under Relations → People first."
                     }
                 }
-                label { style: "{label_style}", "Value"
-                    input { style: "{field_style}", value: "{value}", oninput: move |e| value.set(e.value()) } }
-                button {
-                    style: "padding:0.3rem 0.7rem;border-radius:6px;border:1px solid var(--qualia-border,#ccc);background:transparent;font-size:0.78rem;cursor:pointer;",
-                    onclick: do_search,
-                    "Search"
+                if section() == "tools" {
+                    p { style: "margin:0.65rem 0 0;font-size:0.75rem;color:#94a3b8;line-height:1.4;",
+                        "Tools holds logs, telemetry, agent/tool output, and technical diagnostics — the machine paper trail, separate from personal notes and secret health."
+                    }
                 }
-                span { style: "width:1px;height:1.5rem;background:var(--qualia-border,#ddd);" }
-                label { style: "{label_style}", "From"
-                    input { style: "{field_style}", placeholder: "2025-01-01", value: "{tl_from}", oninput: move |e| tl_from.set(e.value()) } }
-                label { style: "{label_style}", "To"
-                    input { style: "{field_style}", placeholder: "2025-12-31", value: "{tl_to}", oninput: move |e| tl_to.set(e.value()) } }
-                button {
-                    style: "padding:0.3rem 0.7rem;border-radius:6px;border:1px solid var(--qualia-border,#ccc);background:transparent;font-size:0.78rem;cursor:pointer;",
-                    onclick: do_timeline_search,
-                    "On timeline"
+                if section() == "work" {
+                    p { style: "margin:0.65rem 0 0;font-size:0.75rem;color:#94a3b8;line-height:1.4;",
+                        "Work holds project labour and legislation. Paste Act text (or use native PDF ingest via host) — every section is stored with full body text for faceted search."
+                    }
+                }
+                if section() == "software" {
+                    p { style: "margin:0.65rem 0 0;font-size:0.75rem;color:#94a3b8;line-height:1.4;",
+                        "Software holds QApps, websites, packages — including the early academic studio QApp inventory (catalogued & categorised; many are stubs). Use category facets and sort below. Runtime logs stay under Tools."
+                    }
+                    div { style: "display:flex;flex-wrap:wrap;gap:0.4rem;margin-top:0.55rem;align-items:center;",
+                        button {
+                            style: "{BTN}",
+                            onclick: move |_| {
+                                spawn(async move {
+                                    match seed_studio_qapps().await {
+                                        Ok(v) => {
+                                            let added = u64_field(&v, "added");
+                                            let updated = u64_field(&v, "updated");
+                                            let total_c = u64_field(&v, "total_catalog");
+                                            let cats = u64_field(&v, "categories");
+                                            status_err.set(false);
+                                            status.set(format!(
+                                                "QApps seeded into Software · catalog {total_c} · +{added} new · {updated} refreshed · {cats} categories."
+                                            ));
+                                            section.set("software".into());
+                                            refresh_all();
+                                        }
+                                        Err(e) => {
+                                            status_err.set(true);
+                                            status.set(format!("Seed QApps failed: {e}"));
+                                        }
+                                    }
+                                });
+                            },
+                            "Seed academic QApps → Software"
+                        }
+                        button {
+                            style: "{BTN2}",
+                            onclick: move |_| {
+                                category.set(String::new());
+                                sort_mode.set("category".into());
+                                refresh_all();
+                            },
+                            "Sort by category"
+                        }
+                    }
+                }
+                if section() == "secret" {
+                    p { style: "margin:0.65rem 0 0;font-size:0.75rem;color:#fde68a;line-height:1.4;",
+                        "Secret is for Wellfair-private health and other high-sensitivity material. It never exports to Commons. Unlock is session-local UI gate — Sanctuary vault still holds the enclave."
+                    }
                 }
             }
 
-            {body}
+            div { style: "{BODY}",
+                // ── Sidebar: ingest + search ──
+                div { style: "{SIDE}",
+                    // Free text search + faceted sort
+                    div { style: "{CARD}",
+                        div { style: "{H3}", "Search & sort" }
+                        p { style: "{MUTED}", "Faceted browse: free text × section × category × sort. Anything you remember — topic, discipline, QApp name." }
+                        input {
+                            style: "{INPUT}",
+                            placeholder: "Search library…",
+                            value: "{q}",
+                            oninput: move |e| q.set(e.value()),
+                        }
+                        label { style: "{LABEL}", "Sort" }
+                        select {
+                            style: "{INPUT}",
+                            value: "{sort_mode}",
+                            onchange: move |e| {
+                                sort_mode.set(e.value());
+                                refresh_all();
+                            },
+                            option { value: "newest", "Newest first" }
+                            option { value: "oldest", "Oldest first" }
+                            option { value: "title_asc", "Title A–Z" }
+                            option { value: "title_desc", "Title Z–A" }
+                            option { value: "category", "Category" }
+                            option { value: "media_type", "Media type" }
+                        }
+                        button { style: "{BTN} width:100%;", onclick: do_quick_search, "Search" }
+                        // Category facets (from faceted query counts — strong for Software/QApps)
+                        {
+                            let cat_map = facet_counts()
+                                .get("categories")
+                                .and_then(|t| t.as_object())
+                                .cloned()
+                                .unwrap_or_default();
+                            let mut cat_list: Vec<(String, u64)> = cat_map
+                                .iter()
+                                .filter_map(|(k, v)| v.as_u64().map(|n| (k.clone(), n)))
+                                .collect();
+                            cat_list.sort_by(|a, b| b.1.cmp(&a.1).then_with(|| a.0.cmp(&b.0)));
+                            rsx! {
+                                if !cat_list.is_empty() || section() == "software" {
+                                    div { style: "margin-top:0.75rem;",
+                                        div { style: "{LABEL}", "Categories" }
+                                        button {
+                                            style: if category().is_empty() {
+                                                "display:inline-block;padding:0.15rem 0.5rem;margin:0.1rem 0.2rem 0.1rem 0;border-radius:999px;background:rgba(139,92,246,0.35);border:1px solid #a78bfa;color:#f5f3ff;font-size:0.68rem;cursor:pointer;font-weight:700;"
+                                            } else {
+                                                TOPIC
+                                            },
+                                            onclick: move |_| {
+                                                category.set(String::new());
+                                                refresh_all();
+                                            },
+                                            "All categories"
+                                        }
+                                        for (c, n) in cat_list.iter() {
+                                            {
+                                                let c = c.clone();
+                                                let n = *n;
+                                                let on = category() == c;
+                                                let label = category_label(&c);
+                                                rsx! {
+                                                    button {
+                                                        style: if on {
+                                                            "display:inline-block;padding:0.15rem 0.5rem;margin:0.1rem 0.2rem 0.1rem 0;border-radius:999px;background:rgba(139,92,246,0.35);border:1px solid #a78bfa;color:#f5f3ff;font-size:0.68rem;cursor:pointer;font-weight:700;"
+                                                        } else {
+                                                            TOPIC
+                                                        },
+                                                        onclick: move |_| {
+                                                            category.set(c.clone());
+                                                            if section() != "software" && section() != "all" {
+                                                                // keep current section
+                                                            }
+                                                            refresh_all();
+                                                            status.set(format!("Category “{label}” · {n}"));
+                                                        },
+                                                        "{label} · {n}"
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        if !topic_list.is_empty() {
+                            div { style: "margin-top:0.75rem;",
+                                div { style: "{LABEL}", "Popular topics" }
+                                for (t, n) in topic_list.iter().take(12) {
+                                    {
+                                        let t = t.clone();
+                                        let n = *n;
+                                        rsx! {
+                                            button {
+                                                style: "{TOPIC}",
+                                                onclick: move |_| {
+                                                    let t = t.clone();
+                                                    value.set(t.clone());
+                                                    facet.set("topic".into());
+                                                    q.set(t.clone());
+                                                    spawn(async move {
+                                                        if let Ok(serde_json::Value::Array(r)) =
+                                                            search_library("topic", &t).await
+                                                        {
+                                                            results.set(r);
+                                                            status.set(format!("Topic “{t}”."));
+                                                        }
+                                                    });
+                                                },
+                                                "{t} · {n}"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // Native legislation ingest (structure parse — full section bodies)
+                    div { style: "{CARD}",
+                        div { style: "{H3}", "Legislation" }
+                        p { style: "{MUTED}",
+                            "Paste Act text (after the enacting formula). Native Rust: structure + CML context graph (deontic / privacy·GDPR-family / rights / temporal, all cml:Proposed) under Work. No Python."
+                        }
+                        label { style: "{LABEL}", "Register id (optional)" }
+                        input {
+                            style: "{INPUT}",
+                            placeholder: "C2004A00601",
+                            value: "{legis_id}",
+                            oninput: move |e| legis_id.set(e.value()),
+                        }
+                        label { style: "{LABEL}", "Title hint (optional)" }
+                        input {
+                            style: "{INPUT}",
+                            placeholder: "Privacy Act 1988",
+                            value: "{legis_title}",
+                            oninput: move |e| legis_title.set(e.value()),
+                        }
+                        label { style: "{LABEL}", "Instrument text" }
+                        textarea {
+                            style: "{INPUT} min-height:7rem;font-family:ui-monospace,monospace;font-size:0.72rem;",
+                            placeholder: "The Parliament of Australia enacts:\n1  Short title\nThis Act may be cited as…",
+                            value: "{legis_text}",
+                            oninput: move |e| legis_text.set(e.value()),
+                        }
+                        button {
+                            style: "{BTN} width:100%;",
+                            onclick: move |_| {
+                                let (text, id, title) = (legis_text(), legis_id(), legis_title());
+                                spawn(async move {
+                                    if text.trim().is_empty() {
+                                        status_err.set(true);
+                                        status.set("Paste legislation text first.".into());
+                                        return;
+                                    }
+                                    let reg = if id.trim().is_empty() { None } else { Some(id.as_str()) };
+                                    let th = if title.trim().is_empty() { None } else { Some(title.as_str()) };
+                                    match ingest_legislation_text(&text, reg, Some("AU"), th).await {
+                                        Ok(v) => {
+                                            let secs = u64_field(&v, "sections");
+                                            let with_t = u64_field(&v, "concepts_with_text");
+                                            let _empty = u64_field(&v, "empty_text");
+                                            let written = u64_field(&v, "library_entries_written");
+                                            let cml_c = u64_field(&v, "cml_concepts");
+                                            let cml_d = u64_field(&v, "cml_deontic_norms");
+                                            let cml_p = u64_field(&v, "cml_privacy_hits");
+                                            let cof_s = u64_field(&v, "cof_segments");
+                                            let cof_t = u64_field(&v, "cof_approx_tokens");
+                                            status_err.set(false);
+                                            status.set(format!(
+                                                "Legislation + CML + COF · {secs} sections · {with_t} text · CML {cml_c}/{cml_d} deontic/{cml_p} privacy · COF {cof_s} segs (~{cof_t} tok) · {written} rows → Work."
+                                            ));
+                                            section.set("work".into());
+                                            legis_text.set(String::new());
+                                            refresh_all();
+                                        }
+                                        Err(e) => {
+                                            status_err.set(true);
+                                            status.set(format!("Legislation ingest failed: {e}"));
+                                        }
+                                    }
+                                });
+                            },
+                            "Ingest legislation → Work"
+                        }
+                    }
+
+                    // Facet + timeline
+                    div { style: "{CARD}",
+                        div { style: "{H3}", "Facet & time" }
+                        label { style: "{LABEL}", "Facet" }
+                        select {
+                            style: "{INPUT}",
+                            value: "{facet}",
+                            onchange: move |e| facet.set(e.value()),
+                            option { value: "topic", "Topic" }
+                            option { value: "project", "Project" }
+                            option { value: "purpose", "Purpose" }
+                            option { value: "place", "Place" }
+                            option { value: "depicts", "Depicts" }
+                        }
+                        label { style: "{LABEL}", "Value" }
+                        input {
+                            style: "{INPUT}",
+                            placeholder: "biology · house-move · tax-return",
+                            value: "{value}",
+                            oninput: move |e| value.set(e.value()),
+                        }
+                        button { style: "{BTN2} width:100%;margin-bottom:0.65rem;", onclick: do_facet_search, "Run facet search" }
+                        div { style: "display:grid;grid-template-columns:1fr 1fr;gap:0.4rem;",
+                            div {
+                                label { style: "{LABEL}", "From" }
+                                input { style: "{INPUT}", placeholder: "2025-01-01", value: "{tl_from}", oninput: move |e| tl_from.set(e.value()) }
+                            }
+                            div {
+                                label { style: "{LABEL}", "To" }
+                                input { style: "{INPUT}", placeholder: "2025-12-31", value: "{tl_to}", oninput: move |e| tl_to.set(e.value()) }
+                            }
+                        }
+                        button { style: "{BTN2} width:100%;", onclick: do_timeline, "Filter timeline range" }
+                    }
+
+                    // Ingest
+                    div { style: "{CARD}",
+                        div { style: "display:flex;justify-content:space-between;align-items:center;margin-bottom:0.35rem;",
+                            div { style: "{H3} margin:0;", "Add to library" }
+                            button {
+                                style: "{BTN2}",
+                                onclick: move |_| {
+                                    let n = !show_ingest();
+                                    show_ingest.set(n);
+                                },
+                                if show_ingest() { "Hide" } else { "Show" }
+                            }
+                        }
+                        if show_ingest() {
+                            p { style: "{MUTED}",
+                                "Paste a note, receipt, or research blurb. Topics are derived automatically. Attach date/place/project when you care."
+                            }
+                            label { style: "{LABEL}", "Title id" }
+                            input {
+                                style: "{INPUT}",
+                                value: "{ing_uri}",
+                                oninput: move |e| ing_uri.set(e.value()),
+                            }
+                            label { style: "{LABEL}", "Type" }
+                            select {
+                                style: "{INPUT}",
+                                value: "{ing_media}",
+                                onchange: move |e| ing_media.set(e.value()),
+                                option { value: "text/markdown", "Text / markdown" }
+                                option { value: "image/jpeg", "Image JPEG" }
+                                option { value: "image/png", "Image PNG" }
+                                option { value: "audio/wav", "Audio WAV" }
+                            }
+                            label { style: "{LABEL}", "Section" }
+                            select {
+                                style: "{INPUT}",
+                                value: "{ing_section}",
+                                onchange: move |e| {
+                                    let v = e.value();
+                                    ing_section.set(v.clone());
+                                    if v == "secret" {
+                                        ing_sensitivity.set("classified".into());
+                                        ing_commons.set("none".into());
+                                    } else if v == "wellfair" {
+                                        // Wellfair default restricted unless user opens Secret.
+                                        if ing_sensitivity() == "public" {
+                                            ing_sensitivity.set("restricted".into());
+                                        }
+                                    } else if v == "commons" {
+                                        ing_sensitivity.set("public".into());
+                                        ing_commons.set("commons".into());
+                                    }
+                                },
+                                option { value: "personal", "Personal" }
+                                option { value: "wellfair", "Wellfair (health / care)" }
+                                option { value: "work", "Work / project" }
+                                option { value: "tools", "Tools / logs / technical" }
+                                option { value: "software", "Software (QApps / websites)" }
+                                option { value: "commons", "Commons (shareable)" }
+                                option { value: "secret", "Secret (sanctuary)" }
+                            }
+                            label { style: "{LABEL}", "Sensitivity" }
+                            select {
+                                style: "{INPUT}",
+                                value: "{ing_sensitivity}",
+                                onchange: move |e| ing_sensitivity.set(e.value()),
+                                option { value: "public", "Public" }
+                                option { value: "restricted", "Restricted (enclave)" }
+                                option { value: "classified", "Classified / sanctuary" }
+                            }
+                            label { style: "{LABEL}", "Social / commons reach" }
+                            select {
+                                style: "{INPUT}",
+                                value: "{ing_commons}",
+                                onchange: move |e| ing_commons.set(e.value()),
+                                option { value: "none", "Device only" }
+                                option { value: "peers", "Relations peers (bilateral)" }
+                                option { value: "commons", "Permissive commons" }
+                            }
+                            label { style: "{LABEL}", if ing_binary() { "Bytes (hex)" } else { "Content" } }
+                            textarea {
+                                style: "{INPUT} min-height:7rem;resize:vertical;line-height:1.4;",
+                                placeholder: "The liver is an organ… keep this receipt for the tax deduction…",
+                                value: "{ing_text}",
+                                oninput: move |e| ing_text.set(e.value()),
+                            }
+                            label { style: "display:flex;gap:0.4rem;align-items:center;font-size:0.72rem;color:#94a3b8;margin-bottom:0.5rem;",
+                                input {
+                                    r#type: "checkbox",
+                                    checked: ing_binary(),
+                                    onchange: move |e| ing_binary.set(e.checked()),
+                                }
+                                "Binary (hex) — photo EXIF fills timeline & map"
+                            }
+                            label { style: "{LABEL}", "Date → timeline" }
+                            input { style: "{INPUT}", placeholder: "YYYY-MM-DD", value: "{ing_date}", oninput: move |e| ing_date.set(e.value()) }
+                            label { style: "{LABEL}", "Place lat,lon → map" }
+                            input { style: "{INPUT}", placeholder: "-33.87,151.21", value: "{ing_place}", oninput: move |e| ing_place.set(e.value()) }
+                            label { style: "{LABEL}", "Place label" }
+                            input { style: "{INPUT}", value: "{ing_place_label}", oninput: move |e| ing_place_label.set(e.value()) }
+                            label { style: "{LABEL}", "Project" }
+                            input { style: "{INPUT}", placeholder: "house-move-2025", value: "{ing_project}", oninput: move |e| ing_project.set(e.value()) }
+                            label { style: "{LABEL}", "Purpose" }
+                            input { style: "{INPUT}", placeholder: "tax-return-2025", value: "{ing_purpose}", oninput: move |e| ing_purpose.set(e.value()) }
+                            label { style: "{LABEL}", "Guardian DID (optional)" }
+                            input { style: "{INPUT}", value: "{ing_guardian}", oninput: move |e| ing_guardian.set(e.value()) }
+                            button { style: "{BTN} width:100%;margin-top:0.35rem;", onclick: do_ingest, "Ingest into library" }
+                        }
+                    }
+
+                    div { style: "font-size:0.72rem;color:#64748b;line-height:1.4;padding:0.25rem;",
+                        Link {
+                            to: Route::SanctuaryRoute {},
+                            style: "color:#a78bfa;",
+                            "Sanctuary"
+                        }
+                        " unlocks the vault host · "
+                        Link {
+                            to: Route::TalkRoute {},
+                            style: "color:#a78bfa;",
+                            "Relations → Projects"
+                        }
+                        " for cooperative work"
+                    }
+                }
+
+                // ── Main results ──
+                div { style: "{MAIN}",
+                    if !status().is_empty() {
+                        div {
+                            style: if status_err() { STATUS_ERR } else { STATUS_OK },
+                            "{status}"
+                        }
+                    }
+                    if !share_card().is_empty() {
+                        div { style: "{CARD}",
+                            div { style: "{H3}", "Commons share card (metadata only)" }
+                            pre {
+                                style: "margin:0;white-space:pre-wrap;word-break:break-all;font-size:0.68rem;color:#a7f3d0;max-height:160px;overflow:auto;",
+                                "{share_card}"
+                            }
+                        }
+                    }
+                    if rows.is_empty() && !status_err() {
+                        if perception_only() {
+                            div {
+                                style: "padding:2.5rem 1.5rem;text-align:center;border:1px dashed #334155;border-radius:16px;background:#0f172a;",
+                                div { style: "font-size:2rem;margin-bottom:0.5rem;", "👁" }
+                                h2 { style: "margin:0 0 0.4rem;color:#e9d5ff;font-size:1.1rem;",
+                                    "No perception catalogue rows yet"
+                                }
+                                p { style: "margin:0 auto 0.85rem;max-width:28rem;color:#94a3b8;font-size:0.85rem;line-height:1.5;",
+                                    "Seed models, ontologies, and specialized_libs computer_vision rows into Library → Software. Host commands: library_seed_perception_assets (storage) or wellfair_seed_perception_library (vault)."
+                                }
+                                button {
+                                    style: "{BTN}",
+                                    disabled: seed_busy(),
+                                    onclick: move |_| {
+                                        if seed_busy() {
+                                            return;
+                                        }
+                                        seed_busy.set(true);
+                                        perception_seed_status.set("Seeding perception catalogue…".into());
+                                        spawn(async move {
+                                            match seed_perception_library().await {
+                                                Ok(v) => {
+                                                    let models_a = u64_field(&v, "models_added");
+                                                    let models_u = u64_field(&v, "models_updated");
+                                                    let onto_a = u64_field(&v, "ontologies_added");
+                                                    let onto_u = u64_field(&v, "ontologies_updated");
+                                                    let note = str_field(&v, "note");
+                                                    status_err.set(false);
+                                                    let msg = format!(
+                                                        "Perception seed OK · models +{models_a}/{models_u} upd · ontologies +{onto_a}/{onto_u} upd · {note}"
+                                                    );
+                                                    status.set(msg.clone());
+                                                    perception_seed_status.set(msg);
+                                                    section.set("software".into());
+                                                    perception_only.set(true);
+                                                    seed_busy.set(false);
+                                                    refresh_all();
+                                                }
+                                                Err(e) => {
+                                                    status_err.set(true);
+                                                    let msg = format!("Seed perception library failed: {e}");
+                                                    status.set(msg.clone());
+                                                    perception_seed_status.set(msg);
+                                                    seed_busy.set(false);
+                                                }
+                                            }
+                                        });
+                                    },
+                                    if seed_busy() { "Seeding…" } else { "Seed perception library" }
+                                }
+                            }
+                        } else {
+                            div {
+                                style: "padding:2.5rem 1.5rem;text-align:center;border:1px dashed #334155;border-radius:16px;background:#0f172a;",
+                                div { style: "font-size:2rem;margin-bottom:0.5rem;", "📚" }
+                                h2 { style: "margin:0 0 0.4rem;color:#e9d5ff;font-size:1.1rem;", "Your hypermedia shelf is empty" }
+                                p { style: "margin:0 auto 0.85rem;max-width:30rem;color:#94a3b8;font-size:0.85rem;line-height:1.5;",
+                                    "This is your personal library — notes, models, ontologies, receipts, photos — found by meaning, time, and place. Nothing is hidden behind Sanctuary for ordinary (non-secret) rows."
+                                }
+                                p { style: "margin:0 auto 1rem;max-width:30rem;color:#64748b;font-size:0.78rem;line-height:1.45;",
+                                    "Start with the perception catalogue (models + computer_vision), seed academic QApps under Software, or paste a note under Add to library."
+                                }
+                                div { style: "display:flex;flex-wrap:wrap;gap:0.5rem;justify-content:center;",
+                                    button {
+                                        style: "{BTN}",
+                                        disabled: seed_busy(),
+                                        onclick: move |_| {
+                                            if seed_busy() {
+                                                return;
+                                            }
+                                            seed_busy.set(true);
+                                            spawn(async move {
+                                                match seed_perception_library().await {
+                                                    Ok(v) => {
+                                                        let models_a = u64_field(&v, "models_added");
+                                                        let onto_a = u64_field(&v, "ontologies_added");
+                                                        status_err.set(false);
+                                                        status.set(format!(
+                                                            "Seeded perception · models +{models_a} · ontologies +{onto_a}. Showing Software → Perception."
+                                                        ));
+                                                        section.set("software".into());
+                                                        perception_only.set(true);
+                                                        seed_busy.set(false);
+                                                        refresh_all();
+                                                    }
+                                                    Err(e) => {
+                                                        status_err.set(true);
+                                                        status.set(format!("Seed failed: {e}"));
+                                                        seed_busy.set(false);
+                                                    }
+                                                }
+                                            });
+                                        },
+                                        if seed_busy() { "Seeding…" } else { "Seed perception catalogue" }
+                                    }
+                                    button {
+                                        style: "{BTN2}",
+                                        onclick: move |_| {
+                                            show_ingest.set(true);
+                                            status_err.set(false);
+                                            status.set("Expand Add to library on the left — paste a note and save.".into());
+                                        },
+                                        "Add a note"
+                                    }
+                                    button {
+                                        style: "{BTN2}",
+                                        onclick: move |_| {
+                                            section.set("software".into());
+                                            refresh_all();
+                                        },
+                                        "Open Software shelf"
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        // When perception filter is on, show a compact CV summary strip above the list.
+                        if perception_only() {
+                            {
+                                let cv_rows: Vec<_> = rows
+                                    .iter()
+                                    .filter(|r| is_computer_vision_row(r))
+                                    .cloned()
+                                    .collect();
+                                let model_n = rows.iter().filter(|r| is_model_row(r)).count();
+                                let onto_n = rows.iter().filter(|r| is_ontology_row(r)).count();
+                                rsx! {
+                                    div { style: "{CARD}",
+                                        div { style: "{H3}", "Perception catalogue" }
+                                        p { style: "{MUTED}",
+                                            "{model_n} model row(s) · {onto_n} ontology row(s) · {cv_rows.len()} computer_vision row(s). Seed weights are Partial (not foundation models); computer_vision specialized-lib rows are Present (in-tree algorithms)."
+                                        }
+                                        if cv_rows.is_empty() {
+                                            p { style: "margin:0;font-size:0.78rem;color:#fde68a;",
+                                                "No computer_vision rows in this view — run Seed perception library, then filter Perception."
+                                            }
+                                        } else {
+                                            ul { style: "margin:0;padding:0;list-style:none;",
+                                                for r in cv_rows {
+                                                    {
+                                                        let title = display_title(&str_field(&r, "asset_uri"));
+                                                        let excerpt = str_field(&r, "excerpt");
+                                                        let uri = str_field(&r, "asset_uri");
+                                                        rsx! {
+                                                            li {
+                                                                style: "padding:0.45rem 0;border-bottom:1px solid #1f2937;",
+                                                                div { style: "font-size:0.85rem;font-weight:600;color:#e9d5ff;",
+                                                                    "computer_vision · {title}"
+                                                                }
+                                                                div { style: "font-size:0.65rem;color:#64748b;font-family:ui-monospace,monospace;",
+                                                                    "{uri}"
+                                                                }
+                                                                if !excerpt.is_empty() {
+                                                                    div { style: "font-size:0.75rem;color:#94a3b8;margin-top:0.15rem;",
+                                                                        "{excerpt}"
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        {body}
+                    }
+                }
+            }
         }
     }
 }
 
-/// The plain list view (any asset).
 #[component]
-fn ListView(rows: Vec<serde_json::Value>) -> Element {
-    if rows.is_empty() {
-        return rsx! { p { style: "font-size:0.75rem;color:var(--qualia-text-muted,#888);", "Nothing yet — ingest an asset above." } };
-    }
+fn ListView(
+    rows: Vec<serde_json::Value>,
+    selected_uri: String,
+    on_select: EventHandler<String>,
+    on_topic: EventHandler<String>,
+    on_remove: EventHandler<String>,
+    on_commons: EventHandler<(String, String)>,
+    on_share_card: EventHandler<String>,
+) -> Element {
     rsx! {
-        ul {
-            style: "margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:0.4rem;",
+        div {
             for r in rows {
-                li {
-                    key: "{str_field(&r, \"asset_uri\")}",
-                    style: "padding:0.45rem 0.55rem;border-radius:6px;border:1px solid var(--qualia-border,#eee);font-size:0.74rem;display:flex;flex-direction:column;gap:0.15rem;",
-                    strong { "{str_field(&r, \"asset_uri\")}" }
-                    if !arr_join(&r, "topics").is_empty() {
-                        div { style: "font-size:0.68rem;color:var(--qualia-accent,#2b6);", "topics: {arr_join(&r, \"topics\")}" }
-                    }
-                    if let Some(t) = i64_field(&r, "occurred_at") {
-                        div { style: "font-size:0.68rem;color:var(--qualia-text-muted,#777);", "date: {fmt_date(t)}" }
-                    }
-                    div { style: "color:var(--qualia-text-muted,#777);", "{str_field(&r, \"excerpt\")}" }
-                    if r.get("flags").and_then(|x| x.as_array()).map(|a| !a.is_empty()).unwrap_or(false) {
-                        div { style: "font-size:0.68rem;color:var(--qualia-danger,#b44);", "flagged" }
+                {
+                    let uri = str_field(&r, "asset_uri");
+                    let media = str_field(&r, "media_type");
+                    let excerpt = str_field(&r, "excerpt");
+                    let topics = arr_str(&r, "topics");
+                    let projects = arr_str(&r, "projects");
+                    let purposes = arr_str(&r, "purposes");
+                    let place = str_field(&r, "place");
+                    let section = str_field(&r, "section");
+                    let sens = str_field(&r, "sensitivity");
+                    let title = display_title(&uri);
+                    let icon = media_icon(&media);
+                    let uri_rm = uri.clone();
+                    let uri_peers = uri.clone();
+                    let uri_com = uri.clone();
+                    let uri_share = uri.clone();
+                    let uri_none = uri.clone();
+                    let uri_open = uri.clone();
+                    let uri_sel = uri.clone();
+                    let is_selected = !selected_uri.is_empty() && selected_uri == uri;
+                    let is_bookmark = purposes.iter().any(|p| p.eq_ignore_ascii_case("bookmark"))
+                        || uri.starts_with("http://")
+                        || uri.starts_with("https://");
+                    let is_http = uri.starts_with("http://") || uri.starts_with("https://");
+                    let is_secret = r.get("is_secret").and_then(|x| x.as_bool()).unwrap_or(false)
+                        || section == "secret";
+                    let flagged = r
+                        .get("flags")
+                        .and_then(|x| x.as_array())
+                        .map(|a| !a.is_empty())
+                        .unwrap_or(false);
+                    let wing_label = if is_secret {
+                        "Private"
+                    } else if section == "commons" || purposes.iter().any(|p| p.contains("commons")) {
+                        "Commons"
+                    } else if purposes.iter().any(|p| p.eq_ignore_ascii_case("bookmark")) {
+                        "Offered"
+                    } else {
+                        "Private"
+                    };
+                    let wing_style = match wing_label {
+                        "Commons" => "font-size:0.62rem;padding:0.1rem 0.4rem;border-radius:999px;background:rgba(14,116,144,0.2);color:#67e8f9;border:1px solid #0e7490;font-weight:700;",
+                        "Offered" => "font-size:0.62rem;padding:0.1rem 0.4rem;border-radius:999px;background:rgba(16,185,129,0.15);color:#6ee7b7;border:1px solid #059669;font-weight:700;",
+                        _ => "font-size:0.62rem;padding:0.1rem 0.4rem;border-radius:999px;background:rgba(139,92,246,0.15);color:#e9d5ff;border:1px solid #6d28d9;font-weight:700;",
+                    };
+                    let border = if is_selected {
+                        "padding:0.85rem 1rem;border-radius:12px;border:1px solid #8b5cf6;background:rgba(139,92,246,0.12);margin-bottom:0.55rem;box-shadow:0 0 0 1px rgba(139,92,246,0.25);"
+                    } else if is_secret {
+                        "padding:0.85rem 1rem;border-radius:12px;border:1px solid #b45309;background:#1c1917;margin-bottom:0.55rem;"
+                    } else if section == "commons" {
+                        "padding:0.85rem 1rem;border-radius:12px;border:1px solid #0e7490;background:#0c1a24;margin-bottom:0.55rem;"
+                    } else {
+                        ENTRY
+                    };
+                    rsx! {
+                        article {
+                            style: "{border}",
+                            onclick: move |_| on_select.call(uri_sel.clone()),
+                            div { style: "display:flex;gap:0.75rem;align-items:flex-start;",
+                                div { style: "font-size:1.4rem;line-height:1;flex-shrink:0;", "{icon}" }
+                                div { style: "flex:1;min-width:0;",
+                                    div { style: "display:flex;justify-content:space-between;gap:0.5rem;align-items:baseline;flex-wrap:wrap;",
+                                        h3 { style: "margin:0;font-size:0.95rem;color:#f3f4f6;font-weight:650;",
+                                            "{title}"
+                                            if is_selected {
+                                                span { style: "margin-left:0.4rem;font-size:0.65rem;color:#c4b5fd;font-weight:700;", "· selected" }
+                                            }
+                                        }
+                                        div { style: "display:flex;gap:0.35rem;align-items:center;",
+                                            span { style: "{wing_style}", title: "Representation wing (entity-view)", "{wing_label}" }
+                                            if !section.is_empty() {
+                                                span {
+                                                    style: "font-size:0.65rem;padding:0.12rem 0.45rem;border-radius:999px;background:#1e293b;color:#cbd5e1;border:1px solid #334155;",
+                                                    "{section}"
+                                                }
+                                            }
+                                            if !sens.is_empty() && sens != "public" {
+                                                span {
+                                                    style: "font-size:0.65rem;padding:0.12rem 0.45rem;border-radius:999px;background:rgba(245,158,11,0.15);color:#fde68a;border:1px solid #b45309;",
+                                                    "{sens}"
+                                                }
+                                            }
+                                            if let Some(t) = i64_field(&r, "occurred_at") {
+                                                span { style: "font-size:0.7rem;color:#a78bfa;white-space:nowrap;", "{fmt_date(t)}" }
+                                            }
+                                        }
+                                    }
+                                    div { style: "font-size:0.65rem;color:#64748b;font-family:ui-monospace,monospace;margin:0.15rem 0 0.35rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;",
+                                        "{uri}"
+                                    }
+                                    if is_bookmark && is_http {
+                                        button {
+                                            r#type: "button",
+                                            style: "margin:0 0 0.45rem;padding:0.28rem 0.55rem;border-radius:8px;border:1px solid #4c1d95;background:rgba(139,92,246,0.15);color:#e9d5ff;font-size:0.72rem;font-weight:600;cursor:pointer;",
+                                            title: "Open in Webizen Browser",
+                                            onclick: move |_| {
+                                                let u = uri_open.clone();
+                                                spawn(async move {
+                                                    let _ = crate::components::qapp_engine::invoke_json(
+                                                        "browser_navigate",
+                                                        serde_json::json!({ "url": u }),
+                                                    )
+                                                    .await;
+                                                });
+                                            },
+                                            "Open in browser"
+                                        }
+                                    }
+                                    if !excerpt.is_empty() {
+                                        p { style: "margin:0 0 0.45rem;font-size:0.8rem;color:#94a3b8;line-height:1.45;",
+                                            "{excerpt}"
+                                        }
+                                    }
+                                    div {
+                                        for t in topics {
+                                            {
+                                                let t2 = t.clone();
+                                                rsx! {
+                                                    button {
+                                                        style: "{TOPIC}",
+                                                        onclick: move |_| on_topic.call(t2.clone()),
+                                                        "{t}"
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        for p in projects {
+                                            span {
+                                                style: "display:inline-block;padding:0.15rem 0.5rem;margin:0.1rem 0.2rem 0;border-radius:999px;background:rgba(16,185,129,0.12);border:1px solid #065f46;color:#6ee7b7;font-size:0.68rem;",
+                                                "📁 {p}"
+                                            }
+                                        }
+                                        for p in purposes {
+                                            span {
+                                                style: "display:inline-block;padding:0.15rem 0.5rem;margin:0.1rem 0.2rem 0;border-radius:999px;background:rgba(167,139,250,0.12);border:1px solid #5b21b6;color:#ddd6fe;font-size:0.68rem;",
+                                                "🎯 {p}"
+                                            }
+                                        }
+                                        if !place.is_empty() {
+                                            span {
+                                                style: "display:inline-block;padding:0.15rem 0.5rem;margin:0.1rem 0.2rem 0;border-radius:999px;background:rgba(56,189,248,0.1);border:1px solid #0e7490;color:#7dd3fc;font-size:0.68rem;",
+                                                "📍 {place}"
+                                            }
+                                        }
+                                        if flagged {
+                                            span {
+                                                style: "display:inline-block;padding:0.15rem 0.5rem;margin:0.1rem 0.2rem 0;border-radius:999px;background:rgba(239,68,68,0.12);border:1px solid #991b1b;color:#fca5a5;font-size:0.68rem;",
+                                                "flagged"
+                                            }
+                                        }
+                                    }
+                                    if !is_secret {
+                                        div { style: "display:flex;flex-wrap:wrap;gap:0.35rem;margin-top:0.55rem;",
+                                            button {
+                                                style: "{BTN2}",
+                                                onclick: move |_| on_commons.call((uri_peers.clone(), "peers".into())),
+                                                "Share → peers"
+                                            }
+                                            button {
+                                                style: "{BTN2}",
+                                                onclick: move |_| on_commons.call((uri_com.clone(), "commons".into())),
+                                                "Share → commons"
+                                            }
+                                            button {
+                                                style: "{BTN2}",
+                                                onclick: move |_| on_share_card.call(uri_share.clone()),
+                                                "Commons card"
+                                            }
+                                            button {
+                                                style: "{BTN2}",
+                                                onclick: move |_| on_commons.call((uri_none.clone(), "none".into())),
+                                                "Unshare"
+                                            }
+                                        }
+                                    }
+                                }
+                                button {
+                                    style: "{BTN2} flex-shrink:0;color:#fca5a5;border-color:#7f1d1d;",
+                                    onclick: move |_| on_remove.call(uri_rm.clone()),
+                                    "Remove"
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -421,7 +2129,6 @@ fn ListView(rows: Vec<serde_json::Value>) -> Element {
     }
 }
 
-/// The timeline view — dated assets in chronological order.
 #[component]
 fn TimelineView(rows: Vec<serde_json::Value>) -> Element {
     let mut dated: Vec<(i64, serde_json::Value)> = rows
@@ -430,31 +2137,42 @@ fn TimelineView(rows: Vec<serde_json::Value>) -> Element {
         .collect();
     dated.sort_by_key(|(t, _)| *t);
     if dated.is_empty() {
-        return rsx! { p { style: "font-size:0.75rem;color:var(--qualia-text-muted,#888);", "No dated assets. Attach a date when you ingest (or ingest a photo with EXIF), then they appear here in order." } };
+        return rsx! {
+            div { style: "padding:2rem;text-align:center;color:#94a3b8;font-size:0.85rem;",
+                "No dated assets yet. Add a date when ingesting, or drop in a photo with EXIF."
+            }
+        };
     }
     rsx! {
-        ol {
-            style: "margin:0;padding:0 0 0 0;list-style:none;display:flex;flex-direction:column;gap:0;border-left:2px solid var(--qualia-accent,#2b6);",
+        div { style: "border-left:2px solid #7c3aed;margin-left:0.5rem;padding-left:0;",
             for (t, r) in dated {
-                li {
+                div {
                     key: "{str_field(&r, \"asset_uri\")}",
-                    style: "position:relative;padding:0.35rem 0.6rem 0.6rem 0.9rem;",
-                    span { style: "position:absolute;left:-6px;top:0.5rem;width:9px;height:9px;border-radius:50%;background:var(--qualia-accent,#2b6);" }
-                    div { style: "font-size:0.72rem;font-weight:600;color:var(--qualia-accent,#2b6);", "{fmt_date(t)}" }
-                    div { style: "font-size:0.74rem;", "{str_field(&r, \"asset_uri\")}" }
-                    if !arr_join(&r, "topics").is_empty() {
-                        div { style: "font-size:0.66rem;color:var(--qualia-text-muted,#777);", "{arr_join(&r, \"topics\")}" }
+                    style: "position:relative;padding:0.55rem 0 1rem 1.15rem;",
+                    span {
+                        style: "position:absolute;left:-7px;top:0.7rem;width:12px;height:12px;border-radius:50%;background:#a78bfa;box-shadow:0 0 0 3px #0b1220;",
                     }
-                    div { style: "font-size:0.68rem;color:var(--qualia-text-muted,#888);", "{str_field(&r, \"excerpt\")}" }
+                    div { style: "font-size:0.72rem;font-weight:700;color:#a78bfa;margin-bottom:0.2rem;",
+                        "{fmt_date(t)}"
+                    }
+                    div { style: "font-size:0.9rem;color:#f3f4f6;font-weight:600;",
+                        "{display_title(&str_field(&r, \"asset_uri\"))}"
+                    }
+                    div { style: "font-size:0.78rem;color:#94a3b8;margin-top:0.2rem;",
+                        "{str_field(&r, \"excerpt\")}"
+                    }
                 }
             }
         }
     }
 }
 
-/// The map view — assets with coordinates on an equirectangular world plot.
 #[component]
-fn MapView(rows: Vec<serde_json::Value>) -> Element {
+fn MapView(
+    rows: Vec<serde_json::Value>,
+    selected_uri: String,
+    on_select: EventHandler<String>,
+) -> Element {
     let placed: Vec<(f64, f64, serde_json::Value)> = rows
         .into_iter()
         .filter_map(|r| match (f64_field(&r, "lat"), f64_field(&r, "lon")) {
@@ -463,43 +2181,263 @@ fn MapView(rows: Vec<serde_json::Value>) -> Element {
         })
         .collect();
     if placed.is_empty() {
-        return rsx! { p { style: "font-size:0.75rem;color:var(--qualia-text-muted,#888);", "No located assets. Attach a place (lat,lon) when you ingest (or ingest a geotagged photo), then they appear on the map." } };
+        return rsx! {
+            div { style: "padding:2rem;text-align:center;color:#94a3b8;font-size:0.85rem;",
+                "No located assets. Attach lat,lon when ingesting, or use a geotagged photo. Geo pins are real coordinates — not decorative."
+            }
+        };
     }
     rsx! {
         div {
-            style: "display:flex;flex-direction:column;gap:0.5rem;",
+            p { style: "margin:0 0 0.5rem;font-size:0.72rem;color:#94a3b8;",
+                "Geo pins from library lat/lon (equirectangular). Click a pin to select into the shared entity-view session."
+            }
             svg {
                 view_box: "0 0 360 180",
                 width: "100%",
-                style: "background:var(--qualia-surface-2,#eef3f6);border:1px solid var(--qualia-border,#cdd);border-radius:8px;max-height:360px;",
-                // graticule
+                style: "background:linear-gradient(180deg,#0f172a,#1e1b4b);border:1px solid #334155;border-radius:14px;max-height:380px;",
                 for gx in [60, 120, 180, 240, 300] {
-                    line { x1: "{gx}", y1: "0", x2: "{gx}", y2: "180", stroke: "#c3d0d6", stroke_width: "0.4" }
+                    line { x1: "{gx}", y1: "0", x2: "{gx}", y2: "180", stroke: "#334155", stroke_width: "0.5" }
                 }
                 for gy in [45, 90, 135] {
-                    line { x1: "0", y1: "{gy}", x2: "360", y2: "{gy}", stroke: "#c3d0d6", stroke_width: "0.4" }
+                    line { x1: "0", y1: "{gy}", x2: "360", y2: "{gy}", stroke: "#334155", stroke_width: "0.5" }
                 }
                 for (lat, lon, r) in placed.clone() {
-                    circle {
-                        cx: "{lon + 180.0}",
-                        cy: "{90.0 - lat}",
-                        r: "2.4",
-                        fill: "var(--qualia-accent,#2b6)",
-                        fill_opacity: "0.8",
-                        stroke: "#fff",
-                        stroke_width: "0.5",
-                        title { "{str_field(&r, \"asset_uri\")} ({lat:.3},{lon:.3})" }
+                    {
+                        let uri = str_field(&r, "asset_uri");
+                        let uri_c = uri.clone();
+                        let sel = !selected_uri.is_empty() && selected_uri == uri;
+                        let fill = if sel { "#fbbf24" } else { "#a78bfa" };
+                        let rad = if sel { "5.0" } else { "3.2" };
+                        rsx! {
+                            circle {
+                                cx: "{lon + 180.0}",
+                                cy: "{90.0 - lat}",
+                                r: "{rad}",
+                                fill: "{fill}",
+                                fill_opacity: "0.95",
+                                stroke: "#ede9fe",
+                                stroke_width: "0.6",
+                                style: "cursor:pointer;",
+                                onclick: move |_| on_select.call(uri_c.clone()),
+                                title { "{uri} ({lat:.3},{lon:.3})" }
+                            }
+                        }
                     }
                 }
             }
-            ul {
-                style: "margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:0.25rem;",
+            ul { style: "margin:0.75rem 0 0;padding:0;list-style:none;",
                 for (lat, lon, r) in placed {
-                    li {
-                        key: "{str_field(&r, \"asset_uri\")}",
-                        style: "font-size:0.72rem;display:flex;gap:0.5rem;",
-                        span { style: "color:var(--qualia-accent,#2b6);font-variant-numeric:tabular-nums;", "{lat:.3},{lon:.3}" }
-                        span { "{str_field(&r, \"asset_uri\")}" }
+                    {
+                        let uri = str_field(&r, "asset_uri");
+                        let uri_c = uri.clone();
+                        let sel = !selected_uri.is_empty() && selected_uri == uri;
+                        rsx! {
+                            li {
+                                key: "{uri}",
+                                style: if sel {
+                                    "font-size:0.78rem;display:flex;gap:0.65rem;padding:0.35rem 0;border-bottom:1px solid #4c1d95;cursor:pointer;background:rgba(139,92,246,0.1);"
+                                } else {
+                                    "font-size:0.78rem;display:flex;gap:0.65rem;padding:0.35rem 0;border-bottom:1px solid #1f2937;cursor:pointer;"
+                                },
+                                onclick: move |_| on_select.call(uri_c.clone()),
+                                span { style: "color:#7dd3fc;font-variant-numeric:tabular-nums;", "{lat:.3}, {lon:.3}" }
+                                span { style: "color:#e5e7eb;", "{display_title(&uri)}" }
+                                if sel {
+                                    span { style: "color:#c4b5fd;font-size:0.65rem;font-weight:700;", "selected" }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// Spatial morph stage: entity_view scene_nodes + optional GPU frame (PortalGpu).
+#[component]
+fn SpatialSceneView(
+    nodes: Vec<serde_json::Value>,
+    titles: Vec<serde_json::Value>,
+    selected_id: u64,
+    hidden_count: u32,
+    on_pick_norm: EventHandler<(f64, f64)>,
+    on_flatten: EventHandler<()>,
+    on_gpu_frame: EventHandler<()>,
+    gpu_status: String,
+    gpu_epoch: u64,
+) -> Element {
+    let scene: Vec<_> = nodes
+        .into_iter()
+        .filter(|n| {
+            n.get("entity_id").and_then(|x| x.as_u64()).unwrap_or(0) != 0
+                || n.get("x").and_then(|x| x.as_f64()).is_some()
+        })
+        .collect();
+    if scene.is_empty() {
+        return rsx! {
+            div {
+                style: "padding:2.5rem 1.5rem;text-align:center;border-radius:16px;border:1px solid #334155;background:radial-gradient(ellipse at 50% 30%,#1e1b4b 0%,#0b1220 70%);",
+                p { style: "margin:0 0 0.5rem;font-size:1.05rem;font-weight:700;color:#e9d5ff;",
+                    "Spatial stage awaits a projection"
+                }
+                p { style: "margin:0 auto;max-width:28rem;font-size:0.85rem;color:#94a3b8;line-height:1.5;",
+                    "Ingest or open items, set Observer, press Project — then Spatialize. Layout uses the engine golden-angle field and geo pins when place is known. Same entity ids as the flat cards."
+                }
+            }
+        };
+    }
+
+    fn title_for(titles: &[serde_json::Value], eid: u64) -> String {
+        for t in titles {
+            if t.get("entity_id").and_then(|x| x.as_u64()) == Some(eid) {
+                let title = str_field(t, "title");
+                if !title.is_empty() {
+                    return title;
+                }
+            }
+        }
+        format!("{:x}", eid)
+    }
+
+    let preview_src = format!("webizen://render-preview?t={gpu_epoch}");
+
+    rsx! {
+        div {
+            // Prestige HUD
+            div {
+                style: "display:flex;flex-wrap:wrap;gap:0.45rem;align-items:center;margin-bottom:0.65rem;",
+                span {
+                    style: "font-size:0.65rem;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#a5b4fc;",
+                    "Spatial morph"
+                }
+                span {
+                    style: "font-size:0.72rem;padding:0.2rem 0.55rem;border-radius:999px;border:1px solid #4c1d95;background:rgba(139,92,246,0.12);color:#e9d5ff;",
+                    "{scene.len()} nodes"
+                }
+                if hidden_count > 0 {
+                    span {
+                        style: "font-size:0.72rem;padding:0.2rem 0.55rem;border-radius:999px;border:1px solid #b45309;background:rgba(245,158,11,0.12);color:#fde68a;",
+                        "{hidden_count} hidden from this view"
+                    }
+                }
+                button {
+                    r#type: "button",
+                    style: "margin-left:auto;font-size:0.75rem;font-weight:700;padding:0.4rem 0.75rem;border-radius:9px;border:1px solid #334155;background:#1e293b;color:#e2e8f0;cursor:pointer;",
+                    title: "Return to flat cards — same selection",
+                    onclick: move |_| on_flatten.call(()),
+                    "Flatten"
+                }
+                button {
+                    r#type: "button",
+                    style: "font-size:0.75rem;font-weight:700;padding:0.4rem 0.75rem;border-radius:9px;border:1px solid #6d28d9;background:linear-gradient(135deg,#7c3aed,#4c1d95);color:#fff;cursor:pointer;",
+                    title: "Render entity_view projection through PortalGpu (desktop host)",
+                    onclick: move |_| on_gpu_frame.call(()),
+                    "GPU frame"
+                }
+            }
+            if !gpu_status.is_empty() {
+                p { style: "margin:0 0 0.45rem;font-size:0.72rem;color:#94a3b8;", "{gpu_status}" }
+            }
+            // Dual stage: interactive field + optional GPU plate
+            div {
+                style: "display:grid;grid-template-columns:1.15fr 0.85fr;gap:0.75rem;align-items:stretch;",
+                // Interactive field (controller surface)
+                div {
+                    style: "position:relative;width:100%;aspect-ratio:16/10;min-height:280px;background:\
+                        radial-gradient(ellipse 80% 60% at 50% 42%, rgba(76,29,149,0.45) 0%, transparent 55%),\
+                        radial-gradient(ellipse 50% 40% at 20% 80%, rgba(56,189,248,0.12) 0%, transparent 50%),\
+                        linear-gradient(165deg,#050812 0%,#0b1220 45%,#111827 100%);\
+                        border:1px solid #334155;border-radius:16px;overflow:hidden;box-shadow:inset 0 0 80px rgba(0,0,0,0.45);",
+                    // subtle horizon
+                    div {
+                        style: "position:absolute;left:8%;right:8%;bottom:18%;height:1px;background:linear-gradient(90deg,transparent,#475569,transparent);opacity:0.5;"
+                    }
+                    for n in scene.iter() {
+                        {
+                            let eid = n.get("entity_id").and_then(|x| x.as_u64()).unwrap_or(0);
+                            let x = n.get("x").and_then(|v| v.as_f64()).unwrap_or(0.5);
+                            let y = n.get("y").and_then(|v| v.as_f64()).unwrap_or(0.5);
+                            let z = n.get("z").and_then(|v| v.as_f64()).unwrap_or(0.2);
+                            let color = str_field(n, "color");
+                            let color = if color.is_empty() { "#a78bfa".into() } else { color };
+                            let left = format!("{:.2}%", x * 100.0);
+                            let top = format!("{:.2}%", y * 100.0);
+                            let scale = 0.65 + z * 0.9;
+                            let size = 10.0 + scale * 10.0;
+                            let sel = selected_id != 0 && selected_id == eid;
+                            let bg = if sel { "#fbbf24".to_string() } else { color };
+                            let glow = if sel {
+                                "0 0 28px rgba(251,191,36,0.75), 0 0 8px rgba(255,255,255,0.4)"
+                            } else {
+                                "0 0 18px rgba(167,139,250,0.45)"
+                            };
+                            let label = title_for(&titles, eid);
+                            let label_short: String = label.chars().take(22).collect();
+                            rsx! {
+                                button {
+                                    r#type: "button",
+                                    style: "position:absolute;left:{left};top:{top};transform:translate(-50%,-50%);width:{size}px;height:{size}px;border-radius:50%;border:2px solid rgba(237,233,254,0.85);background:{bg};cursor:pointer;padding:0;box-shadow:{glow};z-index:{((z*100.0) as i32)};",
+                                    title: "{label} · entity {eid}",
+                                    onclick: move |e| {
+                                        e.stop_propagation();
+                                        on_pick_norm.call((x, y));
+                                    },
+                                }
+                                if sel {
+                                    span {
+                                        style: "position:absolute;left:{left};top:calc({top} + 14px);transform:translateX(-50%);font-size:0.68rem;font-weight:700;color:#fde68a;white-space:nowrap;text-shadow:0 1px 4px #000;pointer-events:none;",
+                                        "{label_short}"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    span {
+                        style: "position:absolute;left:0.75rem;bottom:0.55rem;font-size:0.62rem;color:#64748b;letter-spacing:0.04em;text-transform:uppercase;",
+                        "Entity field · engine layout · click to select"
+                    }
+                }
+                // GPU plate
+                div {
+                    style: "position:relative;border-radius:16px;border:1px solid #334155;background:#020617;overflow:hidden;min-height:280px;display:flex;align-items:center;justify-content:center;",
+                    if gpu_epoch > 0 {
+                        img {
+                            src: "{preview_src}",
+                            style: "width:100%;height:100%;object-fit:cover;",
+                            alt: "GPU Memory spatial frame",
+                        }
+                    } else {
+                        div { style: "padding:1.25rem;text-align:center;color:#64748b;font-size:0.8rem;line-height:1.45;max-width:16rem;",
+                            "GPU plate — press GPU frame to render this projection through the shared PortalGpu path (desktop host)."
+                        }
+                    }
+                    span {
+                        style: "position:absolute;left:0.75rem;bottom:0.55rem;font-size:0.62rem;color:#64748b;letter-spacing:0.04em;text-transform:uppercase;",
+                        "PortalGpu · entity_view"
+                    }
+                }
+            }
+            ul { style: "margin:0.75rem 0 0;padding:0;list-style:none;max-height:7.5rem;overflow-y:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:0.35rem;",
+                for n in scene {
+                    {
+                        let eid = n.get("entity_id").and_then(|x| x.as_u64()).unwrap_or(0);
+                        let x = n.get("x").and_then(|v| v.as_f64()).unwrap_or(0.5);
+                        let y = n.get("y").and_then(|v| v.as_f64()).unwrap_or(0.5);
+                        let label = title_for(&titles, eid);
+                        let sel = selected_id != 0 && selected_id == eid;
+                        rsx! {
+                            li {
+                                style: if sel {
+                                    "font-size:0.72rem;padding:0.4rem 0.55rem;border-radius:10px;border:1px solid #8b5cf6;background:rgba(139,92,246,0.15);color:#e9d5ff;cursor:pointer;"
+                                } else {
+                                    "font-size:0.72rem;padding:0.4rem 0.55rem;border-radius:10px;border:1px solid #1f2937;background:#0f172a;color:#94a3b8;cursor:pointer;"
+                                },
+                                onclick: move |_| on_pick_norm.call((x, y)),
+                                "{label}"
+                            }
+                        }
                     }
                 }
             }

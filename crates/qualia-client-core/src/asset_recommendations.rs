@@ -130,7 +130,10 @@ pub fn device_profile_from_input(input: &DeviceProfileInput) -> DeviceProfile {
             ram_gb: ram,
             has_webgpu: input.has_webgpu,
             cpu_cores: input.cpu_cores.unwrap_or(4),
-            platform: input.platform.clone().unwrap_or_else(|| "browser".to_string()),
+            platform: input
+                .platform
+                .clone()
+                .unwrap_or_else(|| "browser".to_string()),
             source: "client_reported".to_string(),
         };
     }
@@ -144,23 +147,45 @@ pub fn infer_domains_from_text(text: &str) -> Vec<String> {
         (
             "product",
             &[
-                "design", "product", "assembly", "module", "part", "housing", "switch",
-                "socket", "gadget", "device",
+                "design", "product", "assembly", "module", "part", "housing", "switch", "socket",
+                "gadget", "device",
             ],
         ),
         (
             "electrical",
             &[
-                "electric", "electrician", "power", "mains", "voltage", "wiring", "powerpoint",
+                "electric",
+                "electrician",
+                "power",
+                "mains",
+                "voltage",
+                "wiring",
+                "powerpoint",
             ],
         ),
-        ("iot", &["sensor", "wifi", "smart", "mcu", "bluetooth", "home"]),
+        (
+            "iot",
+            &["sensor", "wifi", "smart", "mcu", "bluetooth", "home"],
+        ),
         (
             "health",
-            &["medical", "clinical", "anatomy", "patient", "diagnosis", "dicom"],
+            &[
+                "medical",
+                "clinical",
+                "anatomy",
+                "patient",
+                "diagnosis",
+                "dicom",
+            ],
         ),
-        ("legal", &["contract", "obligation", "rights", "policy", "consent"]),
-        ("geography", &["map", "location", "geo", "place", "building"]),
+        (
+            "legal",
+            &["contract", "obligation", "rights", "policy", "consent"],
+        ),
+        (
+            "geography",
+            &["map", "location", "geo", "place", "building"],
+        ),
         ("linguistics", &["word", "language", "lexicon", "ontology"]),
     ];
     for (domain, kws) in rules {
@@ -205,7 +230,10 @@ fn score_llm(
             }
         }
         DeviceTier::Mainstream => {
-            if rec.iter().any(|r| r == "edge" || r == "low_ram" || r == "general") {
+            if rec
+                .iter()
+                .any(|r| r == "edge" || r == "low_ram" || r == "general")
+            {
                 score += 25;
                 reasons.push("mainstream fit");
             }
@@ -239,7 +267,12 @@ fn ontology_domain_match(
     ont: &qualia_core_db::resource_catalog::OntologyResource,
     domains: &[String],
 ) -> bool {
-    if domains.contains(&"general".to_string()) && ont.tags.as_ref().is_some_and(|t| t.contains(&"core".to_string())) {
+    if domains.contains(&"general".to_string())
+        && ont
+            .tags
+            .as_ref()
+            .is_some_and(|t| t.contains(&"core".to_string()))
+    {
         return true;
     }
     if let Some(d) = &ont.domain {
@@ -267,7 +300,10 @@ fn score_ontology(
         return None;
     }
 
-    let is_core = ont.tags.as_ref().is_some_and(|t| t.contains(&"core".to_string()));
+    let is_core = ont
+        .tags
+        .as_ref()
+        .is_some_and(|t| t.contains(&"core".to_string()));
     let domain_hit = ontology_domain_match(ont, domains);
     if !is_core && !domain_hit {
         return None;
@@ -360,7 +396,9 @@ pub fn recommend_assets(
                         "ontology_id": ont.id
                     })),
                     cli_hint: format!("qualia resources import ontology {}", ont.id),
-                    native_note: "Settings portal :8080 can enqueue the same job via POST /api/jobs.".to_string(),
+                    native_note:
+                        "Settings portal :8080 can enqueue the same job via POST /api/jobs."
+                            .to_string(),
                 },
             })
         })

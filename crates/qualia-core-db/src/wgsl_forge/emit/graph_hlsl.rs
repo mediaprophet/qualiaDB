@@ -14,6 +14,11 @@ use super::GeneratedShader;
 use crate::wgsl_forge::ir::graph::{ComputeGraph, EwKind, GraphNode, Lowerer, OpNode, RedKind};
 use crate::wgsl_forge::{ForgeError, Schedule, FORGE_SCHEMA_VERSION};
 
+/// Entry point name for graph-lowered GEMV kernels.
+const GEMV_ENTRY: &str = "gemv_main";
+/// Entry point name for graph-lowered GEMM kernels.
+const GEMM_ENTRY: &str = "gemm_main";
+
 fn unary_expr_hlsl(kind: EwKind) -> Option<&'static str> {
     Some(match kind {
         EwKind::Silu => "v / (1.0f + exp(-v))",
@@ -140,10 +145,195 @@ impl Lowerer for HlslLowerer<'_> {
             .push_str(&broadcast_hlsl(node.sched.workgroup_size.max(1)));
         Ok(())
     }
+    fn gemv(&mut self, node: &GraphNode) -> Result<(), ForgeError> {
+        if let OpNode::Gemv { .. } = node.op {
+            let wg = node.sched.workgroup_size.max(1);
+            let use_wave = wg % 32 == 0 && wg >= 32;
+            if use_wave {
+                emit_gemv_wave_graph(self.source, wg, GEMV_ENTRY)?;
+            } else {
+                emit_gemv_scalar_graph(self.source, wg, GEMV_ENTRY)?;
+            }
+            Ok(())
+        } else {
+            Err(ForgeError::Emission("HlslLowerer::gemv on non-Gemv".into()))
+        }
+    }
+    fn matmul(&mut self, node: &GraphNode) -> Result<(), ForgeError> {
+        if let OpNode::MatMul { .. } = node.op {
+            emit_gemm_graph(self.source, node.sched.workgroup_size.max(1), GEMM_ENTRY)?;
+            Ok(())
+        } else {
+            Err(ForgeError::Emission(
+                "HlslLowerer::matmul on non-MatMul".into(),
+            ))
+        }
+    }
 }
 
 /// Emit a complete HLSL module for a portable compute-graph (the HLSL analogue of
 /// `emit_graph_wgsl`). Non-portable nodes lower to an explicit `Err`.
+pub fn conv2d_hlsl(wg: u32) -> String {
+    format!(
+        r#"StructuredBuffer<float> input : register(t0);
+StructuredBuffer<float> weight : register(t1);
+StructuredBuffer<float> bias : register(t2);
+RWStructuredBuffer<float> output : register(u3);
+StructuredBuffer<uint> params : register(t4);
+
+[numthreads({wg}, 1, 1)]
+void conv2d_main(uint3 gid : SV_DispatchThreadID) {{
+    uint idx = gid.x;
+    uint c_in = params[0];
+    uint c_out = params[1];
+    uint h = params[2];
+    uint w = params[3];
+    uint kh = params[4];
+    uint kw = params[5];
+    uint sh = params[6];
+    uint sw = params[7];
+    uint ph = params[8];
+    uint pw = params[9];
+    uint ho = params[10];
+    uint wo = params[11];
+    uint n_out = c_out * ho * wo;
+    if (idx >= n_out) return;
+    uint oc = idx / (ho * wo);
+    uint rem = idx % (ho * wo);
+    uint oh = rem / wo;
+    uint ow = rem % wo;
+    float acc = bias[oc];
+    for (uint ic = 0; ic < c_in; ic++) {{
+        for (uint ky = 0; ky < kh; ky++) {{
+            for (uint kx = 0; kx < kw; kx++) {{
+                uint ih_p = oh * sh + ky;
+                uint iw_p = ow * sw + kx;
+                if (ih_p < ph || iw_p < pw) continue;
+                uint ih = ih_p - ph;
+                uint iw = iw_p - pw;
+                if (ih >= h || iw >= w) continue;
+                float iv = input[ic * h * w + ih * w + iw];
+                float wv = weight[oc * (c_in * kh * kw) + ic * (kh * kw) + ky * kw + kx];
+                acc += iv * wv;
+            }}
+        }}
+    }}
+    output[idx] = acc;
+}}
+"#
+    )
+}
+
+/// Wave-cooperative GEMV for graph lowering: one wave per output row,
+/// `WaveActiveSum` reduces partial dot products across lanes.
+fn emit_gemv_wave_graph(source: &mut String, wg: u32, entry: &str) -> Result<(), ForgeError> {
+    writeln!(
+        source,
+        r#"struct GemvParams {{
+    uint m;
+    uint n;
+    uint _pad0;
+    uint _pad1;
+}};
+
+StructuredBuffer<float> a : register(t0, space0);
+StructuredBuffer<float> x : register(t1, space0);
+RWStructuredBuffer<float> y : register(u2, space0);
+ConstantBuffer<GemvParams> params : register(b3, space0);
+
+[numthreads({wg}, 1, 1)]
+void {entry}(uint3 gid : SV_DispatchThreadID) {{
+    uint wave_size = WaveGetLaneCount();
+    uint row = gid.x / wave_size;
+    if (row >= params.m) {{ return; }}
+    uint lane = WaveGetLaneIndex();
+    uint a_row = row * params.n;
+    float partial = 0.0;
+    for (uint j = lane; j < params.n; j += wave_size) {{
+        partial += a[a_row + j] * x[j];
+    }}
+    float acc = WaveActiveSum(partial);
+    if (lane == 0) {{
+        y[row] = acc;
+    }}
+}}"#,
+        wg = wg,
+        entry = entry
+    )
+    .map_err(|e| ForgeError::Emission(e.to_string()))?;
+    Ok(())
+}
+
+/// Scalar GEMV for graph lowering: one thread per output row.
+fn emit_gemv_scalar_graph(source: &mut String, wg: u32, entry: &str) -> Result<(), ForgeError> {
+    writeln!(
+        source,
+        r#"struct GemvParams {{
+    uint m;
+    uint n;
+    uint _pad0;
+    uint _pad1;
+}};
+
+StructuredBuffer<float> a : register(t0, space0);
+StructuredBuffer<float> x : register(t1, space0);
+RWStructuredBuffer<float> y : register(u2, space0);
+ConstantBuffer<GemvParams> params : register(b3, space0);
+
+[numthreads({wg}, 1, 1)]
+void {entry}(uint3 gid : SV_DispatchThreadID) {{
+    uint i = gid.x;
+    if (i >= params.m) {{ return; }}
+    float acc = 0.0;
+    uint a_row = i * params.n;
+    for (uint j = 0; j < params.n; j++) {{
+        acc += a[a_row + j] * x[j];
+    }}
+    y[i] = acc;
+}}"#,
+        wg = wg,
+        entry = entry
+    )
+    .map_err(|e| ForgeError::Emission(e.to_string()))?;
+    Ok(())
+}
+
+/// Dense GEMM for graph lowering: one thread per output element.
+fn emit_gemm_graph(source: &mut String, wg: u32, entry: &str) -> Result<(), ForgeError> {
+    writeln!(
+        source,
+        r#"struct GemmParams {{
+    uint m;
+    uint n;
+    uint k;
+    uint _pad;
+}};
+
+StructuredBuffer<float> a : register(t0, space0);
+StructuredBuffer<float> b : register(t1, space0);
+RWStructuredBuffer<float> c : register(u2, space0);
+ConstantBuffer<GemmParams> params : register(b3, space0);
+
+[numthreads({wg}, 1, 1)]
+void {entry}(uint3 gid : SV_DispatchThreadID) {{
+    uint o = gid.x;
+    if (o >= params.m * params.n) {{ return; }}
+    uint row = o / params.n;
+    uint col = o % params.n;
+    float acc = 0.0;
+    uint a_row = row * params.k;
+    for (uint kk = 0; kk < params.k; kk++) {{
+        acc += a[a_row + kk] * b[kk * params.n + col];
+    }}
+    c[o] = acc;
+}}"#,
+        wg = wg,
+        entry = entry
+    )
+    .map_err(|e| ForgeError::Emission(e.to_string()))?;
+    Ok(())
+}
+
 pub fn emit_graph_hlsl(
     graph: &ComputeGraph,
     schedule: Schedule,
@@ -187,6 +377,7 @@ mod tests {
         }
         assert!(reduce_hlsl(RedKind::Max, 64).contains("asfloat(0xff7fffff)"));
         assert!(broadcast_hlsl(64).contains("i % params[0]"));
+        assert!(conv2d_hlsl(64).contains("void conv2d_main"));
     }
 
     #[test]
@@ -197,13 +388,127 @@ mod tests {
         assert!(shader.source.contains("reduce_main") && shader.source.contains("ewise_main"));
     }
 
+    #[test]
+    fn emit_graph_hlsl_lowers_gemv_with_wave_intrinsics() {
+        use crate::wgsl_forge::ir::graph::{ComputeGraph, DType, OpNode, Shape, TensorRef};
+        let mut g = ComputeGraph::new();
+        let a = TensorRef::external(Shape::new(&[0, 0]), DType::F32);
+        let x = TensorRef::external(Shape::new(&[0]), DType::F32);
+        let out = g
+            .push(
+                OpNode::Gemv {
+                    m: 0,
+                    n: 0,
+                    tc: false,
+                },
+                &[a, x],
+                Shape::new(&[0]),
+                DType::F32,
+                Schedule {
+                    workgroup_size: 64,
+                    ..Default::default()
+                },
+            )
+            .unwrap();
+        g.mark_output(out);
+        let shader = emit_graph_hlsl(
+            &g,
+            Schedule {
+                workgroup_size: 64,
+                ..Default::default()
+            },
+        )
+        .expect("hlsl gemv");
+        assert!(
+            shader.source.contains("WaveActiveSum"),
+            "wave GEMV should use wave intrinsics"
+        );
+        assert!(shader.source.contains("WaveGetLaneCount"));
+        assert!(shader.source.contains("gemv_main"));
+    }
+
+    #[test]
+    fn emit_graph_hlsl_lowers_gemv_scalar_when_wg_not_multiple_of_32() {
+        use crate::wgsl_forge::ir::graph::{ComputeGraph, DType, OpNode, Shape, TensorRef};
+        let mut g = ComputeGraph::new();
+        let a = TensorRef::external(Shape::new(&[0, 0]), DType::F32);
+        let x = TensorRef::external(Shape::new(&[0]), DType::F32);
+        let out = g
+            .push(
+                OpNode::Gemv {
+                    m: 0,
+                    n: 0,
+                    tc: false,
+                },
+                &[a, x],
+                Shape::new(&[0]),
+                DType::F32,
+                Schedule {
+                    workgroup_size: 16,
+                    ..Default::default()
+                },
+            )
+            .unwrap();
+        g.mark_output(out);
+        let shader = emit_graph_hlsl(
+            &g,
+            Schedule {
+                workgroup_size: 16,
+                ..Default::default()
+            },
+        )
+        .expect("hlsl gemv scalar");
+        assert!(
+            !shader.source.contains("WaveActiveSum"),
+            "scalar GEMV should not use wave intrinsics"
+        );
+        assert!(shader.source.contains("gemv_main"));
+    }
+
+    #[test]
+    fn emit_graph_hlsl_lowers_matmul() {
+        use crate::wgsl_forge::ir::graph::{ComputeGraph, DType, OpNode, Shape, TensorRef};
+        let mut g = ComputeGraph::new();
+        let a = TensorRef::external(Shape::new(&[0, 0]), DType::F32);
+        let b = TensorRef::external(Shape::new(&[0, 0]), DType::F32);
+        let out = g
+            .push(
+                OpNode::MatMul {
+                    m: 0,
+                    n: 0,
+                    k: 0,
+                    tc: false,
+                    trans_b: false,
+                },
+                &[a, b],
+                Shape::new(&[0, 0]),
+                DType::F32,
+                Schedule {
+                    workgroup_size: 64,
+                    ..Default::default()
+                },
+            )
+            .unwrap();
+        g.mark_output(out);
+        let shader = emit_graph_hlsl(
+            &g,
+            Schedule {
+                workgroup_size: 64,
+                ..Default::default()
+            },
+        )
+        .expect("hlsl gemm");
+        assert!(shader.source.contains("gemm_main"));
+        assert!(shader.source.contains("params.k"));
+    }
+
     /// Real DXC toolchain validation (needs `--features dxc` + a `dxc` CLI on PATH /
-    /// `QUALIA_DXC_PATH`): every portable-kit HLSL kernel compiles to SPIR-V.
+    /// `QUALIA_DXC_CLI_PATH`): every portable-kit HLSL kernel compiles to SPIR-V.
     #[cfg(feature = "dxc")]
     #[test]
     fn hlsl_portable_kit_dxc_compiles() {
         use crate::wgsl_forge::emit::dxc::compile_hlsl_to_spirv;
-        let dxc = std::env::var("QUALIA_DXC_PATH").unwrap_or_else(|_| "dxc".to_string());
+        let dxc = std::env::var("QUALIA_DXC_CLI_PATH").unwrap_or_else(|_| "dxc".to_string());
         if std::process::Command::new(&dxc)
             .arg("--version")
             .output()

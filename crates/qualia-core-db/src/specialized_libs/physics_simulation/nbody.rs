@@ -79,10 +79,8 @@ impl PhysicsSimulationLibrary {
         let (final_state, snapshots, accepted, rejected) =
             self.integrate_ode_samples(state, total_time, num_samples, deriv)?;
         let (energy_final, angmom_final) = energy(&final_state);
-        let position_snapshots: Vec<Vec<f64>> = snapshots
-            .iter()
-            .map(|s| s[..2 * n].to_vec())
-            .collect();
+        let position_snapshots: Vec<Vec<f64>> =
+            snapshots.iter().map(|s| s[..2 * n].to_vec()).collect();
         let n_pts = snapshots.len();
         let times: Vec<f64> = (0..n_pts)
             .map(|k| total_time * k as f64 / (n_pts - 1).max(1) as f64)

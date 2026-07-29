@@ -372,25 +372,33 @@ fn backend_from_name(name: &str) -> Option<(wgpu::Backend, wgpu::Backends)> {
     }
 }
 
-fn encode_response(path: &std::path::Path, response: &DeviceBenchmarkResponse) -> Result<(), String> {
+fn encode_response(
+    path: &std::path::Path,
+    response: &DeviceBenchmarkResponse,
+) -> Result<(), String> {
     let mut payload = Vec::new();
     ciborium::into_writer(response, &mut payload).map_err(|e| format!("encode response: {e}"))?;
-    let mut file = std::fs::File::create(path).map_err(|e| format!("create {}: {e}", path.display()))?;
-    file.write_all(&(payload.len() as u64).to_le_bytes()).map_err(|e| e.to_string())?;
+    let mut file =
+        std::fs::File::create(path).map_err(|e| format!("create {}: {e}", path.display()))?;
+    file.write_all(&(payload.len() as u64).to_le_bytes())
+        .map_err(|e| e.to_string())?;
     file.write_all(&payload).map_err(|e| e.to_string())?;
     file.sync_all().map_err(|e| e.to_string())
 }
 
 fn decode_response(path: &std::path::Path) -> Result<DeviceBenchmarkResponse, String> {
-    let mut file = std::fs::File::open(path).map_err(|e| format!("open {}: {e}", path.display()))?;
+    let mut file =
+        std::fs::File::open(path).map_err(|e| format!("open {}: {e}", path.display()))?;
     let mut length = [0u8; 8];
-    file.read_exact(&mut length).map_err(|e| format!("read response length: {e}"))?;
+    file.read_exact(&mut length)
+        .map_err(|e| format!("read response length: {e}"))?;
     let length = u64::from_le_bytes(length) as usize;
     if length == 0 || length > 1024 * 1024 {
         return Err(format!("invalid worker response length {length}"));
     }
     let mut payload = vec![0u8; length];
-    file.read_exact(&mut payload).map_err(|e| format!("read response: {e}"))?;
+    file.read_exact(&mut payload)
+        .map_err(|e| format!("read response: {e}"))?;
     ciborium::from_reader(payload.as_slice()).map_err(|e| format!("decode response: {e}"))
 }
 
@@ -401,13 +409,24 @@ fn benchmark_one(request: &DeviceBenchmarkRequest) -> Result<CircuitBench, Strin
     descriptor.backends = backends;
     let instance = wgpu::Instance::new(descriptor);
     let adapters = pollster::block_on(instance.enumerate_adapters(backends));
-    let adapter = adapters.into_iter().find(|adapter| {
-        let info = adapter.get_info();
-        info.backend == expected_backend && info.vendor == request.vendor && info.device == request.device
-    }).ok_or_else(|| format!("adapter {:04x}:{:04x}/{} unavailable", request.vendor, request.device, request.backend))?;
+    let adapter = adapters
+        .into_iter()
+        .find(|adapter| {
+            let info = adapter.get_info();
+            info.backend == expected_backend
+                && info.vendor == request.vendor
+                && info.device == request.device
+        })
+        .ok_or_else(|| {
+            format!(
+                "adapter {:04x}:{:04x}/{} unavailable",
+                request.vendor, request.device, request.backend
+            )
+        })?;
     let info = adapter.get_info();
-    let (device, queue) = pollster::block_on(adapter.request_device(&wgpu::DeviceDescriptor::default()))
-        .map_err(|e| format!("request_device: {e}"))?;
+    let (device, queue) =
+        pollster::block_on(adapter.request_device(&wgpu::DeviceDescriptor::default()))
+            .map_err(|e| format!("request_device: {e}"))?;
     let ms = bench_gpu_gemv(&device, &queue, request.gemv_n);
     let upload_gbps = bench_upload_gbps(&device, &queue, 16 * 1024 * 1024);
     Ok(CircuitBench {
@@ -426,13 +445,30 @@ fn benchmark_one(request: &DeviceBenchmarkRequest) -> Result<CircuitBench, Strin
 pub fn run_worker_from_env() -> Result<(), String> {
     let request: DeviceBenchmarkRequest = DeviceBenchmarkRequest {
         backend: std::env::var("QUALIA_DEVICE_BENCHMARK_BACKEND").map_err(|_| "missing backend")?,
-        vendor: std::env::var("QUALIA_DEVICE_BENCHMARK_VENDOR").map_err(|_| "missing vendor")?.parse().map_err(|_| "invalid vendor")?,
-        device: std::env::var("QUALIA_DEVICE_BENCHMARK_DEVICE").map_err(|_| "missing device")?.parse().map_err(|_| "invalid device")?,
-        gemv_n: std::env::var("QUALIA_DEVICE_BENCHMARK_N").map_err(|_| "missing n")?.parse().map_err(|_| "invalid n")?,
+        vendor: std::env::var("QUALIA_DEVICE_BENCHMARK_VENDOR")
+            .map_err(|_| "missing vendor")?
+            .parse()
+            .map_err(|_| "invalid vendor")?,
+        device: std::env::var("QUALIA_DEVICE_BENCHMARK_DEVICE")
+            .map_err(|_| "missing device")?
+            .parse()
+            .map_err(|_| "invalid device")?,
+        gemv_n: std::env::var("QUALIA_DEVICE_BENCHMARK_N")
+            .map_err(|_| "missing n")?
+            .parse()
+            .map_err(|_| "invalid n")?,
     };
     let response = match benchmark_one(&request) {
-        Ok(bench) => DeviceBenchmarkResponse { request, bench: Some(bench), error: None },
-        Err(error) => DeviceBenchmarkResponse { request, bench: None, error: Some(error) },
+        Ok(bench) => DeviceBenchmarkResponse {
+            request,
+            bench: Some(bench),
+            error: None,
+        },
+        Err(error) => DeviceBenchmarkResponse {
+            request,
+            bench: None,
+            error: Some(error),
+        },
     };
     let output = std::env::var_os(WORKER_OUTPUT_ENV).ok_or("missing worker output path")?;
     encode_response(std::path::Path::new(&output), &response)
@@ -451,9 +487,11 @@ fn worker_executable() -> Option<std::path::PathBuf> {
     });
     if sibling.is_file() {
         Some(sibling)
-    } else if current.file_stem().and_then(|s| s.to_str()).is_some_and(|name| {
-        name == "qualia-cli" || name == "webizen-desktop"
-    }) {
+    } else if current
+        .file_stem()
+        .and_then(|s| s.to_str())
+        .is_some_and(|name| name == "qualia-cli" || name == "webizen-desktop")
+    {
         // Qualia's shipped CLI and desktop hosts expose the same private worker
         // entry before normal argument/UI initialization, so no sidecar is
         // required for those packages. Other embedders can set WORKER_ENV.
@@ -465,16 +503,25 @@ fn worker_executable() -> Option<std::path::PathBuf> {
 
 fn invoke_worker(request: &DeviceBenchmarkRequest) -> Result<CircuitBench, String> {
     let sequence = WORKER_SEQUENCE.fetch_add(1, AtomicOrdering::Relaxed);
-    let output = std::env::temp_dir().join(format!("qualia-device-bench-{}-{sequence}.cbor", std::process::id()));
+    let output = std::env::temp_dir().join(format!(
+        "qualia-device-bench-{}-{sequence}.cbor",
+        std::process::id()
+    ));
     let mut command;
     #[cfg(test)]
     {
         command = Command::new(std::env::current_exe().map_err(|e| e.to_string())?);
-        command.args(["--exact", "platform::device_benchmark::tests::device_benchmark_worker_entry", "--nocapture"]);
+        command.args([
+            "--exact",
+            "platform::device_benchmark::tests::device_benchmark_worker_entry",
+            "--nocapture",
+        ]);
     }
     #[cfg(not(test))]
     {
-        command = Command::new(worker_executable().ok_or_else(|| format!("worker not found; set {WORKER_ENV}"))?);
+        command = Command::new(
+            worker_executable().ok_or_else(|| format!("worker not found; set {WORKER_ENV}"))?,
+        );
     }
     let mut child = command
         .env("QUALIA_DEVICE_BENCHMARK_BACKEND", &request.backend)
@@ -482,10 +529,14 @@ fn invoke_worker(request: &DeviceBenchmarkRequest) -> Result<CircuitBench, Strin
         .env("QUALIA_DEVICE_BENCHMARK_DEVICE", request.device.to_string())
         .env("QUALIA_DEVICE_BENCHMARK_N", request.gemv_n.to_string())
         .env(WORKER_OUTPUT_ENV, &output)
-        .spawn().map_err(|e| format!("launch worker: {e}"))?;
+        .spawn()
+        .map_err(|e| format!("launch worker: {e}"))?;
     let deadline = Instant::now() + std::time::Duration::from_secs(120);
     let status = loop {
-        if let Some(status) = child.try_wait().map_err(|e| format!("wait for worker: {e}"))? {
+        if let Some(status) = child
+            .try_wait()
+            .map_err(|e| format!("wait for worker: {e}"))?
+        {
             break status;
         }
         if Instant::now() >= deadline {
@@ -496,17 +547,32 @@ fn invoke_worker(request: &DeviceBenchmarkRequest) -> Result<CircuitBench, Strin
         }
         std::thread::sleep(std::time::Duration::from_millis(25));
     };
-    let decoded = if status.success() { decode_response(&output) } else { Err(format!("worker exited {status}")) };
+    let decoded = if status.success() {
+        decode_response(&output)
+    } else {
+        Err(format!("worker exited {status}"))
+    };
     let _ = std::fs::remove_file(&output);
     let response = decoded?;
-    if response.request.backend != request.backend || response.request.vendor != request.vendor
-        || response.request.device != request.device || response.request.gemv_n != request.gemv_n {
+    if response.request.backend != request.backend
+        || response.request.vendor != request.vendor
+        || response.request.device != request.device
+        || response.request.gemv_n != request.gemv_n
+    {
         return Err("worker response identity mismatch".into());
     }
-    if let Some(error) = response.error { return Err(error); }
-    let bench = response.bench.ok_or("worker returned neither result nor error")?;
-    if !bench.ms_per_gemv.is_finite() || bench.ms_per_gemv <= 0.0 || !bench.gflops.is_finite()
-        || !bench.upload_gbps.is_finite() || bench.upload_gbps < 0.0 {
+    if let Some(error) = response.error {
+        return Err(error);
+    }
+    let bench = response
+        .bench
+        .ok_or("worker returned neither result nor error")?;
+    if !bench.ms_per_gemv.is_finite()
+        || bench.ms_per_gemv <= 0.0
+        || !bench.gflops.is_finite()
+        || !bench.upload_gbps.is_finite()
+        || bench.upload_gbps < 0.0
+    {
         return Err("worker returned invalid metrics".into());
     }
     Ok(bench)
@@ -551,7 +617,10 @@ pub fn benchmark_devices(n: usize) -> CapabilityMatrix {
             Ok(bench) => circuits.push(bench),
             Err(error) => log::warn!(
                 "device_benchmark|skip|{:04x}:{:04x}|{}|{}",
-                request.vendor, request.device, request.backend, error
+                request.vendor,
+                request.device,
+                request.backend,
+                error
             ),
         }
         // Guard: if a backend hangs the probe, the process may stick — operators can

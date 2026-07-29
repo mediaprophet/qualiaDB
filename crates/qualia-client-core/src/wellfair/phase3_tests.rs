@@ -32,7 +32,9 @@ mod tests {
     fn life_event_and_welfare_case_journal_kinds() {
         let dir = tempfile::tempdir().unwrap();
         let mut host = host(&dir);
-        let life = host.add_life_event(&LifeEventReport::new("Job loss")).unwrap();
+        let life = host
+            .add_life_event(&LifeEventReport::new("Job loss"))
+            .unwrap();
         assert_eq!(life.kind, "life_event");
         let case = host
             .add_welfare_case(&WelfareCaseReport::new("Rent arrears"))
@@ -62,8 +64,10 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let mut host = host(&dir);
         host.setup_sanctuary("real-pin-99", "decoy-pin-88").unwrap();
-        host.add_wellbeing_observation(&WellbeingObservation::new("low")).unwrap();
-        host.add_therapy_note(&TherapyNote::new("private session notes")).unwrap();
+        host.add_wellbeing_observation(&WellbeingObservation::new("low"))
+            .unwrap();
+        host.add_therapy_note(&TherapyNote::new("private session notes"))
+            .unwrap();
         host.lock_sanctuary().unwrap();
         let visible = host.list_health_records(32).unwrap();
         assert!(visible.iter().any(|e| e.kind == "wellbeing_observation"));

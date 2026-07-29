@@ -82,11 +82,18 @@ impl ConnectionIdentifier {
 
     /// Verify the self-certifying signature. Does **not** check expiry (see [`is_expired`](Self::is_expired)).
     pub fn verify(&self) -> Result<(), String> {
-        let pk = hex::decode(&self.identity_pubkey_hex).map_err(|e| format!("bad identity key: {e}"))?;
-        let pk: [u8; 32] = pk.as_slice().try_into().map_err(|_| "identity key must be 32 bytes".to_string())?;
+        let pk =
+            hex::decode(&self.identity_pubkey_hex).map_err(|e| format!("bad identity key: {e}"))?;
+        let pk: [u8; 32] = pk
+            .as_slice()
+            .try_into()
+            .map_err(|_| "identity key must be 32 bytes".to_string())?;
         let vk = VerifyingKey::from_bytes(&pk).map_err(|e| format!("bad identity key: {e}"))?;
         let sig = hex::decode(&self.signature_hex).map_err(|e| format!("bad signature: {e}"))?;
-        let sig: [u8; 64] = sig.as_slice().try_into().map_err(|_| "signature must be 64 bytes".to_string())?;
+        let sig: [u8; 64] = sig
+            .as_slice()
+            .try_into()
+            .map_err(|_| "signature must be 64 bytes".to_string())?;
         vk.verify(&self.signing_payload(), &Signature::from_bytes(&sig))
             .map_err(|_| "signature verification failed".to_string())
     }
@@ -136,8 +143,14 @@ mod tests {
             wireguard_pubkey_hex: "aa".repeat(32),
             overlay_addr: derive_overlay_addr(&[0xaau8; 32]),
             rendezvous: vec![
-                RendezvousHint { kind: "domain".into(), value: "alice.example".into() },
-                RendezvousHint { kind: "edge".into(), value: "https://edge.alice.example".into() },
+                RendezvousHint {
+                    kind: "domain".into(),
+                    value: "alice.example".into(),
+                },
+                RendezvousHint {
+                    kind: "edge".into(),
+                    value: "https://edge.alice.example".into(),
+                },
             ],
             relation_type: "spc:GuardianshipArrangement".into(),
             display_name: "Alice".into(),
@@ -165,7 +178,10 @@ mod tests {
         id.sign(&key);
         // Flip a signed field after signing.
         id.wireguard_pubkey_hex = "bb".repeat(32);
-        assert!(id.verify().is_err(), "tampered payload must fail verification");
+        assert!(
+            id.verify().is_err(),
+            "tampered payload must fail verification"
+        );
     }
 
     #[test]
@@ -197,7 +213,11 @@ mod tests {
         let b = derive_overlay_addr(&[1u8; 32]);
         assert_eq!(a, b, "deterministic");
         assert!(a.starts_with("fd"), "ULA fd00::/8");
-        assert_ne!(a, derive_overlay_addr(&[2u8; 32]), "different key → different address");
+        assert_ne!(
+            a,
+            derive_overlay_addr(&[2u8; 32]),
+            "different key → different address"
+        );
     }
 
     #[test]

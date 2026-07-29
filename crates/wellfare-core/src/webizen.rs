@@ -18,50 +18,67 @@ pub enum WebizenOpcode {
     MatchPredicate(u64),
     MatchObject(u64),
     EvalMetadataMask(u32),
-    BindRegister { vector_id: u8, register_index: usize },
-    MatchRegister { vector_id: u8, register_index: usize },
+    BindRegister {
+        vector_id: u8,
+        register_index: usize,
+    },
+    MatchRegister {
+        vector_id: u8,
+        register_index: usize,
+    },
     HaltIfFalse,
     /// Numeric comparison opcodes (extension for N3Logic rules)
     /// Compare the float value in register[register_index] against threshold.
-    LessThan    { register_index: usize, threshold: f64 },
-    GreaterThan { register_index: usize, threshold: f64 },
+    LessThan {
+        register_index: usize,
+        threshold: f64,
+    },
+    GreaterThan {
+        register_index: usize,
+        threshold: f64,
+    },
     /// Load a literal f64 into a float register slot (slots 8-15).
-    LoadFloat   { register_index: usize, value: f64 },
+    LoadFloat {
+        register_index: usize,
+        value: f64,
+    },
     /// Halt-and-pass if the condition is false (inverse of HaltIfFalse).
     HaltIfTrue,
 }
 
 /// Routing lane constants matching qualiaDB PermissiveRoutingLane.
-pub const LANE_PASSTHROUGH:    u8 = 0;
-pub const LANE_PERMISSIVE:     u8 = 1;
-pub const LANE_BILATERAL:      u8 = 2;
+pub const LANE_PASSTHROUGH: u8 = 0;
+pub const LANE_PERMISSIVE: u8 = 1;
+pub const LANE_BILATERAL: u8 = 2;
 pub const LANE_SPATIOTEMPORAL: u8 = 3;
 
 /// A named constraint rule: bytecode + routing lane.
 pub struct WebizenRule {
-    pub name:         &'static str,
+    pub name: &'static str,
     pub routing_lane: u8,
-    pub bytecode:     &'static [WebizenOpcode],
+    pub bytecode: &'static [WebizenOpcode],
 }
 
 /// Zero-allocation VM: 16 u64 registers (0-7) + 16 f64 float slots (8-15 via float_regs).
 pub struct WebizenVM {
-    pub registers:   [Option<u64>; 16],
-    pub float_regs:  [f64; 16],
-    bytecode_buf:    [Option<WebizenOpcode>; 64],
+    pub registers: [Option<u64>; 16],
+    pub float_regs: [f64; 16],
+    bytecode_buf: [Option<WebizenOpcode>; 64],
 }
 
 impl WebizenVM {
     pub fn new() -> Self {
         Self {
-            registers:  [None; 16],
+            registers: [None; 16],
             float_regs: [0.0; 16],
             bytecode_buf: [None; 64],
         }
     }
 
     pub fn load_bytecode(&mut self, ops: &[WebizenOpcode]) {
-        for slot in self.bytecode_buf.iter_mut() { *slot = None; }
+        for slot in self.bytecode_buf.iter_mut() {
+            *slot = None;
+        }
         for (i, &op) in ops.iter().enumerate().take(64) {
             self.bytecode_buf[i] = Some(op);
         }
@@ -73,33 +90,68 @@ impl WebizenVM {
         let mut flag = true;
         for op in self.bytecode_buf.iter().flatten().copied() {
             match op {
-                WebizenOpcode::MatchSubject(v)   => flag = s == v,
+                WebizenOpcode::MatchSubject(v) => flag = s == v,
                 WebizenOpcode::MatchPredicate(v) => flag = p == v,
-                WebizenOpcode::MatchObject(v)    => flag = o == v,
+                WebizenOpcode::MatchObject(v) => flag = o == v,
                 WebizenOpcode::EvalMetadataMask(mask) => {
                     flag = ((m & 0xFFFF) as u32 & mask) == mask;
                 }
-                WebizenOpcode::BindRegister { vector_id, register_index } => {
-                    let v = match vector_id { 0 => s, 1 => p, 2 => o, 3 => c, _ => 0 };
+                WebizenOpcode::BindRegister {
+                    vector_id,
+                    register_index,
+                } => {
+                    let v = match vector_id {
+                        0 => s,
+                        1 => p,
+                        2 => o,
+                        3 => c,
+                        _ => 0,
+                    };
                     self.registers[register_index] = Some(v);
                     flag = true;
                 }
-                WebizenOpcode::MatchRegister { vector_id, register_index } => {
-                    let v = match vector_id { 0 => s, 1 => p, 2 => o, 3 => c, _ => 0 };
+                WebizenOpcode::MatchRegister {
+                    vector_id,
+                    register_index,
+                } => {
+                    let v = match vector_id {
+                        0 => s,
+                        1 => p,
+                        2 => o,
+                        3 => c,
+                        _ => 0,
+                    };
                     flag = self.registers[register_index] == Some(v);
                 }
-                WebizenOpcode::LoadFloat { register_index, value } => {
+                WebizenOpcode::LoadFloat {
+                    register_index,
+                    value,
+                } => {
                     self.float_regs[register_index] = value;
                     flag = true;
                 }
-                WebizenOpcode::LessThan { register_index, threshold } => {
+                WebizenOpcode::LessThan {
+                    register_index,
+                    threshold,
+                } => {
                     flag = self.float_regs[register_index] < threshold;
                 }
-                WebizenOpcode::GreaterThan { register_index, threshold } => {
+                WebizenOpcode::GreaterThan {
+                    register_index,
+                    threshold,
+                } => {
                     flag = self.float_regs[register_index] > threshold;
                 }
-                WebizenOpcode::HaltIfFalse => { if !flag { return false; } }
-                WebizenOpcode::HaltIfTrue  => { if  flag { return true;  } }
+                WebizenOpcode::HaltIfFalse => {
+                    if !flag {
+                        return false;
+                    }
+                }
+                WebizenOpcode::HaltIfTrue => {
+                    if flag {
+                        return true;
+                    }
+                }
             }
         }
         flag
@@ -146,12 +198,19 @@ pub mod policy_rules {
 
 /// Evaluate a named policy constraint against a quin.
 /// Returns `(passed: bool, lane: u8)`.
-pub fn evaluate_policy_constraint(name: &str, s: u64, p: u64, o: u64, c: u64, m: u64) -> (bool, u8) {
+pub fn evaluate_policy_constraint(
+    name: &str,
+    s: u64,
+    p: u64,
+    o: u64,
+    c: u64,
+    m: u64,
+) -> (bool, u8) {
     let mut vm = WebizenVM::new();
     let (ops, lane) = match name {
         "cooperative_obligation" => (policy_rules::COOPERATIVE_OBLIGATION_GATE, LANE_PERMISSIVE),
-        "guardian_identity"      => (policy_rules::GUARDIAN_IDENTITY_GATE,      LANE_BILATERAL),
-        "commercial_block"       => (policy_rules::COMMERCIAL_BLOCK_GATE,        LANE_BILATERAL),
+        "guardian_identity" => (policy_rules::GUARDIAN_IDENTITY_GATE, LANE_BILATERAL),
+        "commercial_block" => (policy_rules::COMMERCIAL_BLOCK_GATE, LANE_BILATERAL),
         _ => return (true, LANE_PASSTHROUGH), // unknown constraint → passthrough
     };
     vm.load_bytecode(ops);
@@ -167,7 +226,10 @@ mod tests {
         let mut vm = WebizenVM::new();
         // sleepHours < 6 — should pass for 5.5h
         let ops = &[
-            WebizenOpcode::LessThan { register_index: 0, threshold: 6.0 },
+            WebizenOpcode::LessThan {
+                register_index: 0,
+                threshold: 6.0,
+            },
             WebizenOpcode::HaltIfFalse,
         ];
         assert!(vm.check_threshold(5.5, ops), "5.5h should be < 6h");

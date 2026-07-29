@@ -211,7 +211,9 @@ impl LoRAGpuApplicator {
             .map_err(|_| LoRAError::Io("GPU readback channel closed".into()))?
             .map_err(|e| LoRAError::Io(format!("map_async: {e:?}")))?;
 
-        let mapped = slice.get_mapped_range().expect("wgpu buffer map_range failed");
+        let mapped = slice
+            .get_mapped_range()
+            .expect("wgpu buffer map_range failed");
         let result: &[f32] = bytemuck::cast_slice(&mapped);
         output.copy_from_slice(result);
         Ok(())

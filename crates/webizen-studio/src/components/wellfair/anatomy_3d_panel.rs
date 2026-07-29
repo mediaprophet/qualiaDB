@@ -15,8 +15,8 @@
 use super::host_client::{
     acquire_body_assets, body_assets_status, render_body_snapshot, BodyAssetsStatus,
 };
+use crate::components::experience_mode::use_experience_mode;
 use dioxus::prelude::*;
-use dioxus::document::eval;
 
 #[derive(Clone, Debug, Default, PartialEq)]
 struct Anatomy3dUi {
@@ -94,6 +94,8 @@ async fn acquire_assets(mut ui: Signal<Anatomy3dUi>) {
 
 #[component]
 pub fn WellfairAnatomy3dPanel() -> Element {
+    let experience_mode = use_experience_mode();
+    let advanced = experience_mode().is_advanced();
     let mut ui = use_signal(|| Anatomy3dUi {
         elevation: 10.0,
         model: "male".to_string(),
@@ -115,7 +117,12 @@ pub fn WellfairAnatomy3dPanel() -> Element {
     {
         let mut was_ready = use_signal(|| false);
         use_effect(move || {
-            let ready = ui.read().cache_status.as_ref().map(|c| c.cached).unwrap_or(false)
+            let ready = ui
+                .read()
+                .cache_status
+                .as_ref()
+                .map(|c| c.cached)
+                .unwrap_or(false)
                 && crate::endpoints::is_native_host();
             if ready && !was_ready() {
                 was_ready.set(true);
@@ -134,7 +141,9 @@ pub fn WellfairAnatomy3dPanel() -> Element {
                             }})()"#
                         );
                         if let Ok(v) = js_sys::eval(&js) {
-                            if v.as_bool() == Some(true) { break; }
+                            if v.as_bool() == Some(true) {
+                                break;
+                            }
                         }
                         gloo_timers::future::TimeoutFuture::new(500).await;
                     }
@@ -170,6 +179,7 @@ pub fn WellfairAnatomy3dPanel() -> Element {
                 color: var(--qualia-text, #fff);
                 margin-top: 1rem;
                 overflow: hidden;
+                flex: 0 0 auto;
             ",
             // Subtle animated gradient background behind the glass
             div {
@@ -189,16 +199,21 @@ pub fn WellfairAnatomy3dPanel() -> Element {
                 ".anatomy-btn:hover {{ background: rgba(255, 255, 255, 0.15) !important; }}"
             }
 
+            super::shared::DomainChrome { domain: "Care", chip: "Body · 3D · local GPU", show_memory: true }
             div {
                 style: "display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.2rem;",
                 div {
-                    h2 { 
-                        style: "margin: 0 0 0.4rem; font-size: 1.4rem; font-weight: 600; letter-spacing: -0.02em; text-shadow: 0 2px 4px rgba(0,0,0,0.5);", 
-                        "Your Physical State" 
+                    h2 {
+                        style: "margin: 0 0 0.4rem; font-size: 1.4rem; font-weight: 600; letter-spacing: -0.02em; text-shadow: 0 2px 4px rgba(0,0,0,0.5);",
+                        if advanced { "3D anatomy engine" } else { "Explore the body in 3D" }
                     }
                     p {
                         style: "margin: 0; font-size: 0.85rem; color: var(--qualia-text-muted, #a0aec0); max-width: 500px; line-height: 1.5;",
-                        "A holistic structural projection. Regions pulse indicating accumulated physiological load."
+                        if advanced {
+                            "Public reference GLB meshes are compiled into bounded .10d assets and rendered locally on the GPU."
+                        } else {
+                            "Move around a reference body and explore its structures. This is an educational view, not a diagnosis."
+                        }
                     }
                 }
             }
@@ -224,45 +239,12 @@ pub fn WellfairAnatomy3dPanel() -> Element {
                         box-shadow: inset 0 2px 10px rgba(0,0,0,0.8);
                     ",
                     if real_mesh_ready {
-                        div {
-                            id: "anatomy-portal-webview",
-                            style: "position: absolute; inset: 0; width: 100%; height: 100%;",
-                            onmounted: move |_| {
-                                let url = portal_src.clone();
-                                spawn(async move {
-                                    #[cfg(target_arch = "wasm32")]
-                                    gloo_timers::future::sleep(std::time::Duration::from_millis(100)).await;
-                                    #[cfg(not(target_arch = "wasm32"))]
-                                    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
-                                    let script = format!(r#"
-                                        const container = document.getElementById('anatomy-portal-webview');
-                                        if (container && window.__TAURI__) {{
-                                            const invoke = window.__TAURI__.core.invoke;
-                                            const r = container.getBoundingClientRect();
-                                            const id = 'anatomy-portal';
-                                            
-                                            invoke('spawn_native_webview', {{
-                                                id: id, url: '{}', x: r.left, y: r.top, width: r.width, height: r.height
-                                            }}).then(() => {{
-                                                invoke('show_native_webview', {{ id }});
-                                                invoke('resize_native_webview', {{ id, x: r.left, y: r.top, width: r.width, height: r.height }});
-                                            }}).catch(console.error);
-
-                                            if (!window.anatomyWebviewObserver) {{
-                                                window.anatomyWebviewObserver = new ResizeObserver(() => {{
-                                                    const r2 = container.getBoundingClientRect();
-                                                    invoke('resize_native_webview', {{ 
-                                                        id: 'anatomy-portal', 
-                                                        x: r2.left, y: r2.top, width: r2.width, height: r2.height 
-                                                    }}).catch(console.error);
-                                                }});
-                                                window.anatomyWebviewObserver.observe(container);
-                                            }}
-                                        }}
-                                    "#, url);
-                                    let _ = eval(&script);
-                                });
-                            }
+                        iframe {
+                            id: "anatomy-portal-iframe",
+                            src: "{portal_src}",
+                            title: "Interactive native-backed 3D anatomy renderer",
+                            allow: "cross-origin-isolated; fullscreen",
+                            style: "position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: #030712;",
                         }
                     } else if has_frame {
                         img {
@@ -309,7 +291,9 @@ pub fn WellfairAnatomy3dPanel() -> Element {
                             ",
                             div {
                                 style: "display: flex; align-items: center; justify-content: space-between; gap: 1rem;",
-                                label { style: "font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; color: #a0aec0;", "Azimuth" }
+                                label { style: "font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; color: #a0aec0;",
+                                    if advanced { "Azimuth" } else { "Turn" }
+                                }
                                 span { style: "font-family: monospace; font-size: 0.8rem; color: #e2e8f0;", "{state.azimuth:.0}°" }
                             }
                             input {
@@ -320,7 +304,9 @@ pub fn WellfairAnatomy3dPanel() -> Element {
                             }
                             div {
                                 style: "display: flex; align-items: center; justify-content: space-between; gap: 1rem;",
-                                label { style: "font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; color: #a0aec0;", "Elevation" }
+                                label { style: "font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; color: #a0aec0;",
+                                    if advanced { "Elevation" } else { "Look up / down" }
+                                }
                                 span { style: "font-family: monospace; font-size: 0.8rem; color: #e2e8f0;", "{state.elevation:.0}°" }
                             }
                             input {
@@ -366,21 +352,25 @@ pub fn WellfairAnatomy3dPanel() -> Element {
                                         ui.write().cache_checked = false;
                                         spawn(refresh_cache_status(ui));
                                     },
-                                    option { value: "male", style: "background: #111;", "XY Form" }
-                                    option { value: "female", style: "background: #111;", "XX Form" }
+                                    option { value: "male", style: "background: #111;", "Male reference body" }
+                                    option { value: "female", style: "background: #111;", "Female reference body" }
                                 }
                                 if let Some(c) = cache {
                                     div {
                                         style: "font-size: 0.75rem; padding: 0.4rem 0.8rem; border-radius: 8px; background: rgba(255,255,255,0.05); color: #cbd5e1;",
                                         if c.cached {
-                                            "Loaded: {c.organ_count} organs · {c.total_ten_d_bytes / 1_000_000} MB"
+                                            if advanced {
+                                                "Loaded: {c.organ_count} .10d organs · {c.total_ten_d_bytes / 1_000_000} MB"
+                                            } else {
+                                                "Interactive body ready · {c.organ_count} structures"
+                                            }
                                         } else {
                                             "No local meshes"
                                         }
                                     }
                                 }
                             }
-                            
+
                             div {
                                 style: "display: flex; gap: 0.5rem;",
                                 button {
@@ -398,7 +388,15 @@ pub fn WellfairAnatomy3dPanel() -> Element {
                                     ",
                                     disabled: state.acquiring,
                                     onclick: move |_| { spawn(acquire_assets(ui)); },
-                                    if state.acquiring { "Acquiring..." } else if cache.map(|c| c.cached).unwrap_or(false) { "Update Meshes" } else { "Download HD Meshes" }
+                                    if state.acquiring {
+                                        if advanced { "Compiling…" } else { "Preparing…" }
+                                    } else if cache.map(|c| c.cached).unwrap_or(false) {
+                                        if advanced { "Rebuild GLB → .10d" } else { "Update body" }
+                                    } else if advanced {
+                                        "Download and compile GLB → .10d"
+                                    } else {
+                                        "Download interactive body"
+                                    }
                                 }
                                 if cache.map(|c| c.cached).unwrap_or(false) {
                                     button {
@@ -421,7 +419,7 @@ pub fn WellfairAnatomy3dPanel() -> Element {
                                                 spawn(refresh_cache_status(ui));
                                             });
                                         },
-                                        "Purge Cache"
+                                        if advanced { "Purge asset cache" } else { "Remove local body files" }
                                     }
                                 }
                             }

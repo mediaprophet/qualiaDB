@@ -99,11 +99,18 @@ mod tests {
     use super::*;
 
     fn means(id: &str, accessible: bool) -> MeansToCheck {
-        MeansToCheck { id: id.into(), description: format!("means {id}"), accessible }
+        MeansToCheck {
+            id: id.into(),
+            description: format!("means {id}"),
+            accessible,
+        }
     }
 
     fn duty(means: Vec<MeansToCheck>) -> DutyOfInquiry {
-        DutyOfInquiry { act: "record the person as unreliable / medicate".into(), expected_means: means }
+        DutyOfInquiry {
+            act: "record the person as unreliable / medicate".into(),
+            expected_means: means,
+        }
     }
 
     fn conduct(checked: &[&str], acted: bool, injury: bool) -> ConductAgainstDuty {
@@ -120,15 +127,24 @@ mod tests {
         // The person's specialist credential existed but was NOT accessible to the staff (secrecy / no route
         // to verify) — they could not reasonably have known. Not negligence.
         let d = duty(vec![means("cred:specialist", false)]);
-        assert_eq!(assess(&d, &conduct(&[], true, true)), InquiryVerdict::NoFault);
+        assert_eq!(
+            assess(&d, &conduct(&[], true, true)),
+            InquiryVerdict::NoFault
+        );
     }
 
     #[test]
     fn diligent_when_the_accessible_means_were_checked() {
-        let d = duty(vec![means("cred:specialist", true), means("record:timeline", true)]);
+        let d = duty(vec![
+            means("cred:specialist", true),
+            means("record:timeline", true),
+        ]);
         // Both accessible means checked before acting.
         assert_eq!(
-            assess(&d, &conduct(&["cred:specialist", "record:timeline"], true, false)),
+            assess(
+                &d,
+                &conduct(&["cred:specialist", "record:timeline"], true, false)
+            ),
             InquiryVerdict::Diligent
         );
     }
@@ -137,8 +153,14 @@ mod tests {
     fn negligent_when_accessible_means_unchecked_and_a_harmful_act_follows() {
         // The person offered a transparency invocation + a verifiable credential (accessible); staff did NOT
         // check, then acted in a way that caused further injury. This is the definition of negligence.
-        let d = duty(vec![means("transparency:timeline", true), means("cred:specialist", true)]);
-        assert_eq!(assess(&d, &conduct(&[], true, true)), InquiryVerdict::Negligent);
+        let d = duty(vec![
+            means("transparency:timeline", true),
+            means("cred:specialist", true),
+        ]);
+        assert_eq!(
+            assess(&d, &conduct(&[], true, true)),
+            InquiryVerdict::Negligent
+        );
         // Even checking ONE of two accessible means, if the unchecked one was material and harm followed:
         assert_eq!(
             assess(&d, &conduct(&["cred:specialist"], true, true)),
@@ -150,19 +172,28 @@ mod tests {
     fn unchecked_but_no_harm_is_a_shortfall_not_inflated_to_negligence() {
         // Accessible means unchecked, but no harmful act followed — honestly a gap, not (yet) negligence.
         let d = duty(vec![means("cred:specialist", true)]);
-        assert_eq!(assess(&d, &conduct(&[], false, false)), InquiryVerdict::UncheckedNoHarm);
+        assert_eq!(
+            assess(&d, &conduct(&[], false, false)),
+            InquiryVerdict::UncheckedNoHarm
+        );
         // Acted, but no further injury → still not negligence.
-        assert_eq!(assess(&d, &conduct(&[], true, false)), InquiryVerdict::UncheckedNoHarm);
+        assert_eq!(
+            assess(&d, &conduct(&[], true, false)),
+            InquiryVerdict::UncheckedNoHarm
+        );
     }
 
     #[test]
     fn serde_round_trips() {
         let d = duty(vec![means("m", true)]);
-        let back: DutyOfInquiry = serde_json::from_str(&serde_json::to_string(&d).unwrap()).unwrap();
+        let back: DutyOfInquiry =
+            serde_json::from_str(&serde_json::to_string(&d).unwrap()).unwrap();
         assert_eq!(d, back);
         assert_eq!(
-            serde_json::from_str::<InquiryVerdict>(&serde_json::to_string(&InquiryVerdict::Negligent).unwrap())
-                .unwrap(),
+            serde_json::from_str::<InquiryVerdict>(
+                &serde_json::to_string(&InquiryVerdict::Negligent).unwrap()
+            )
+            .unwrap(),
             InquiryVerdict::Negligent
         );
     }

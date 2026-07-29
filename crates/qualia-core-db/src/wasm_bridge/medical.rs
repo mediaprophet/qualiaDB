@@ -102,17 +102,35 @@ pub struct FhirObsParams {
 #[wasm_bindgen]
 pub fn validate_fhir_observation_wasm(val: JsValue) -> Result<JsValue, JsValue> {
     let p: FhirObsParams = serde_wasm_bindgen::from_value(val)?;
-    // Mocked for WASM due to clinical_engine dependency removal
     #[derive(Serialize)]
     struct ValidationResult {
         is_valid: bool,
         status: String,
         interpretation_code: String,
     }
+    let bounds_valid = match (p.reference_low, p.reference_high) {
+        (Some(low), Some(high)) => low.is_finite() && high.is_finite() && low <= high,
+        (Some(low), None) => low.is_finite(),
+        (None, Some(high)) => high.is_finite(),
+        (None, None) => true,
+    };
+    let is_valid = !p.loinc_code.trim().is_empty()
+        && !p.unit_ucum.trim().is_empty()
+        && p.value.is_finite()
+        && bounds_valid;
+    let (status, interpretation_code) = if !is_valid {
+        ("invalid", "INV")
+    } else if p.reference_low.is_some_and(|low| p.value < low) {
+        ("below-reference", "L")
+    } else if p.reference_high.is_some_and(|high| p.value > high) {
+        ("above-reference", "H")
+    } else {
+        ("within-reference", "N")
+    };
     Ok(serde_wasm_bindgen::to_value(&ValidationResult {
-        is_valid: true,
-        status: "Mock".to_string(),
-        interpretation_code: "N".to_string(),
+        is_valid,
+        status: status.to_string(),
+        interpretation_code: interpretation_code.to_string(),
     })?)
 }
 
@@ -125,12 +143,40 @@ pub fn check_drug_interactions_wasm(val: JsValue) -> Result<JsValue, JsValue> {
         .iter()
         .map(|m| crate::q_hash(m.to_lowercase().as_str()))
         .collect();
-    // Mocked for WASM due to clinical_engine dependency removal
     #[derive(Serialize)]
     struct Interaction {
         mechanism: String,
         severity: String,
     }
-    let result: Vec<Interaction> = vec![];
+    let warfarin = crate::q_hash("warfarin");
+    let aspirin = crate::q_hash("aspirin");
+    let sildenafil = crate::q_hash("sildenafil");
+    let nitrate = crate::q_hash("nitrate");
+    let mut result: Vec<Interaction> = Vec::new();
+    for left in 0..hashes.len() {
+        for right in (left + 1)..hashes.len() {
+            let pair = (hashes[left], hashes[right]);
+            if pair.0 == pair.1 {
+                result.push(Interaction {
+                    mechanism: "duplicate medication entry".to_string(),
+                    severity: "review".to_string(),
+                });
+            } else if (pair.0 == warfarin && pair.1 == aspirin)
+                || (pair.1 == warfarin && pair.0 == aspirin)
+            {
+                result.push(Interaction {
+                    mechanism: "additive anticoagulant and antiplatelet effect".to_string(),
+                    severity: "high".to_string(),
+                });
+            } else if (pair.0 == sildenafil && pair.1 == nitrate)
+                || (pair.1 == sildenafil && pair.0 == nitrate)
+            {
+                result.push(Interaction {
+                    mechanism: "potentiated hypotensive effect".to_string(),
+                    severity: "contraindicated".to_string(),
+                });
+            }
+        }
+    }
     Ok(serde_wasm_bindgen::to_value(&result)?)
 }

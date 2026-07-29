@@ -94,13 +94,21 @@ pub const P64_LAYER_GLOBAL: u16 = 0xFFFF;
 
 // Metadata bitfields are handled by the q42 layer, no longer embedded in weights.
 
+/// Precision view flags for multi-precision `.p64` containers.
+pub const P64_VIEW_FLAG_F32: u16 = 1 << 0;
+pub const P64_VIEW_FLAG_F16: u16 = 1 << 1;
+pub const P64_VIEW_FLAG_BF16: u16 = 1 << 2;
+pub const P64_VIEW_FLAG_Q8_0: u16 = 1 << 3;
+pub const P64_VIEW_FLAG_Q4_K: u16 = 1 << 4;
+pub const P64_VIEW_FLAG_SOA: u16 = 1 << 5;
+pub const P64_VIEW_FLAG_TERNARY_158: u16 = 1 << 6;
 
 #[repr(C, align(64))]
 #[derive(Clone, Copy, Debug)]
 pub struct P64WeightHeader {
     pub magic: [u8; 4], // b"p64\0"
     pub version: u16,   // 3
-    pub flags: u16,     // Endianness
+    pub flags: u16,     // Endianness & Feature Flags
 
     // 32-bit Relative Offsets (WASM-native)
     pub role_table_offset: u32,     // Maps tensors to semantic roles
@@ -120,17 +128,19 @@ pub struct P64WeightHeader {
 #[repr(C, align(64))]
 #[derive(Clone, Copy, Debug)]
 pub struct P64TensorEntry {
-    pub name_offset: u32,      // Relative offset to string table
-    pub role_id: u16,          // Standardized enum (e.g., P64_ROLE_FFN_UP)
-    pub dtype: u16,            // Data type (FP32, Q4_K, etc.)
-    pub manifold_idx: u32,     // Index into the 10D Manifold table (replaces flat layers)
-    pub rank: u32,             // Number of dimensions
-    pub dimensions: [u32; 4],  // Shape of the tensor
-    pub blob_offset: u32,      // Relative offset to tensor data
-    pub blob_size: u32,        // Size in bytes
-    pub source_offset: u64,    // Original offset inside the GGUF tensor-data block
-    pub source_name_hash: u64, // Original GGUF tensor-name hash
-    pub reserved: [u8; 8],     // Pad exactly to 64 bytes
+    pub name_offset: u32,          // Relative offset to string table
+    pub role_id: u16,              // Standardized enum (e.g., P64_ROLE_FFN_UP)
+    pub dtype: u16,                // Primary data type (FP32, FP16, etc.)
+    pub manifold_idx: u32,         // Index into the 10D Manifold table
+    pub rank: u32,                 // Number of dimensions
+    pub dimensions: [u32; 4],      // Shape of the tensor
+    pub blob_offset: u32,          // Relative offset to primary tensor data
+    pub blob_size: u32,            // Size in bytes of primary blob
+    pub source_offset: u64,        // Original offset inside source container
+    pub source_name_hash: u64,     // Original tensor-name hash
+    pub alt_dtype: u16,            // Secondary/quantized view dtype (e.g. Q4_K / Ternary)
+    pub precision_views_mask: u16, // Bitmask of available precision loading views
+    pub alt_blob_offset: u32,      // Relative offset to secondary quantized blob
 }
 
 #[repr(C, align(64))]

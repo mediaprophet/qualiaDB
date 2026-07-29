@@ -72,11 +72,7 @@ async fn poll_job_until_done(job_id: &str) -> Result<LocalJob, String> {
     let client = reqwest::Client::new();
     let url = crate::endpoints::job_url(job_id);
     for _ in 0..120 {
-        let res = client
-            .get(&url)
-            .send()
-            .await
-            .map_err(|e| e.to_string())?;
+        let res = client.get(&url).send().await.map_err(|e| e.to_string())?;
         if !res.status().is_success() {
             return Err(format!("job poll failed ({})", res.status()));
         }
@@ -173,21 +169,27 @@ pub fn builtin_layout_suggestions(catalog: &[CatalogOntology]) -> Vec<OntologyLa
 
     specs
         .into_iter()
-        .map(|(label, domain, description, presentation, panes, keywords)| {
-            let ontology_ids = resolve_ontology_ids(domain, keywords, catalog);
-            OntologyLayoutSuggestion {
-                label: label.to_string(),
-                domain: domain.to_string(),
-                description: description.to_string(),
-                panes,
-                presentation,
-                ontology_ids,
-            }
-        })
+        .map(
+            |(label, domain, description, presentation, panes, keywords)| {
+                let ontology_ids = resolve_ontology_ids(domain, keywords, catalog);
+                OntologyLayoutSuggestion {
+                    label: label.to_string(),
+                    domain: domain.to_string(),
+                    description: description.to_string(),
+                    panes,
+                    presentation,
+                    ontology_ids,
+                }
+            },
+        )
         .collect()
 }
 
-fn resolve_ontology_ids(domain: &str, keywords: &[&str], catalog: &[CatalogOntology]) -> Vec<String> {
+fn resolve_ontology_ids(
+    domain: &str,
+    keywords: &[&str],
+    catalog: &[CatalogOntology],
+) -> Vec<String> {
     let mut ids = Vec::new();
     for ont in catalog {
         let domain_hit = ont
@@ -195,13 +197,19 @@ fn resolve_ontology_ids(domain: &str, keywords: &[&str], catalog: &[CatalogOntol
             .as_deref()
             .map(|d| d.to_ascii_lowercase().contains(domain))
             .unwrap_or(false);
-        let tag_hit = ont.tags.as_ref().map(|tags| {
-            tags.iter().any(|t| {
-                let tl = t.to_ascii_lowercase();
-                keywords.iter().any(|k| tl.contains(k))
+        let tag_hit = ont
+            .tags
+            .as_ref()
+            .map(|tags| {
+                tags.iter().any(|t| {
+                    let tl = t.to_ascii_lowercase();
+                    keywords.iter().any(|k| tl.contains(k))
+                })
             })
-        }).unwrap_or(false);
-        let id_hit = keywords.iter().any(|k| ont.id.to_ascii_lowercase().contains(k));
+            .unwrap_or(false);
+        let id_hit = keywords
+            .iter()
+            .any(|k| ont.id.to_ascii_lowercase().contains(k));
         let name_hit = keywords
             .iter()
             .any(|k| ont.name.to_ascii_lowercase().contains(k));
@@ -262,9 +270,7 @@ async fn enqueue_ontology_import(ontology_id: &str, bundled: bool) -> Result<Str
 }
 
 #[component]
-pub fn OntologyImportWizard(
-    on_apply: EventHandler<OntologyLayoutSuggestion>,
-) -> Element {
+pub fn OntologyImportWizard(on_apply: EventHandler<OntologyLayoutSuggestion>) -> Element {
     let mut catalog = use_signal(Vec::<CatalogOntology>::new);
     let import_status = use_signal(|| String::new());
 

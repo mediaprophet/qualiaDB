@@ -5,9 +5,7 @@
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
-use crate::record::{
-    EpistemicStatus, EvidenceType, RecordEnvelope, SensitivityClass,
-};
+use crate::record::{EpistemicStatus, EvidenceType, RecordEnvelope, SensitivityClass};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -160,11 +158,7 @@ pub fn administration_envelope(
     }
 }
 
-pub fn diet_envelope(
-    entry: &DietEntry,
-    owner_did: &str,
-    author_did: &str,
-) -> EnvelopeWithSummary {
+pub fn diet_envelope(entry: &DietEntry, owner_did: &str, author_did: &str) -> EnvelopeWithSummary {
     let payload = serde_json::to_string(entry).unwrap_or_default();
     let summary = serde_json::json!({
         "description": entry.description,

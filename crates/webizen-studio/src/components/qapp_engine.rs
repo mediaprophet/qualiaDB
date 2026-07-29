@@ -33,7 +33,17 @@ mod imp {
     ) -> Result<wasm_bindgen::JsValue, wasm_bindgen::JsValue> {
         let global = js_sys::global();
         let tauri = js_sys::Reflect::get(&global, &JsValue::from_str("__TAURI__"))?;
+        if tauri.is_undefined() || tauri.is_null() {
+            return Err(JsValue::from_str(
+                "This action requires the Webizen desktop host",
+            ));
+        }
         let core = js_sys::Reflect::get(&tauri, &JsValue::from_str("core"))?;
+        if core.is_undefined() || core.is_null() {
+            return Err(JsValue::from_str(
+                "This action requires the Webizen desktop host",
+            ));
+        }
         let invoke = js_sys::Reflect::get(&core, &JsValue::from_str("invoke"))?;
         if !invoke.is_function() {
             return Err(JsValue::from_str(
@@ -64,22 +74,23 @@ mod imp {
             "enqueue_job" => ("POST", "/api/jobs".to_string()),
             "system_telemetry" => ("GET", "/api/telemetry".to_string()),
             "execute_sparql_query" => ("POST", "/api/sparql/query".to_string()),
-            _ => return Err(format!("Command '{cmd}' is not exposed via typed REST portals")),
+            _ => {
+                return Err(format!(
+                    "Command '{cmd}' is not exposed via typed REST portals"
+                ))
+            }
         };
 
         let url = format!("http://127.0.0.1:8080{endpoint}");
         let client = reqwest::Client::new();
-        
+
         let req = if method == "GET" {
             client.get(&url)
         } else {
             client.post(&url).json(&args)
         };
 
-        let resp = req
-            .send()
-            .await
-            .map_err(|e| format!("invoke {cmd}: {e}"))?;
+        let resp = req.send().await.map_err(|e| format!("invoke {cmd}: {e}"))?;
 
         if resp.status().is_success() {
             resp.json::<Value>()
@@ -113,9 +124,10 @@ pub async fn invoke_json(cmd: &str, args: serde_json::Value) -> Result<serde_jso
 
 #[cfg(target_arch = "wasm32")]
 pub async fn invoke_json(cmd: &str, args: serde_json::Value) -> Result<serde_json::Value, String> {
-    let js_args = serde_wasm_bindgen::to_value(&args)
-        .map_err(|e| format!("serialize args: {e}"))?;
-    let result = tauri_invoke(cmd, js_args).await
+    let js_args =
+        serde_wasm_bindgen::to_value(&args).map_err(|e| format!("serialize args: {e}"))?;
+    let result = tauri_invoke(cmd, js_args)
+        .await
         .map_err(|e| format!("invoke {cmd}: {:?}", e))?;
     serde_wasm_bindgen::from_value::<serde_json::Value>(result)
         .map_err(|e| format!("deserialize result: {e}"))

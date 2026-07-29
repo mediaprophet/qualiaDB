@@ -149,7 +149,8 @@ pub fn parse_facts_tsv(text: &str) -> Vec<GroundingFact> {
 
 /// Load facts from a TSV file path. Returns count added (merge by reason).
 pub fn load_facts_from_tsv(path: &std::path::Path) -> Result<usize, String> {
-    let text = std::fs::read_to_string(path).map_err(|e| format!("read {}: {e}", path.display()))?;
+    let text =
+        std::fs::read_to_string(path).map_err(|e| format!("read {}: {e}", path.display()))?;
     let facts = parse_facts_tsv(&text);
     let n = facts.len();
     for f in facts {

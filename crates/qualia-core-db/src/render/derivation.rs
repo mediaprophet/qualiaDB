@@ -1,8 +1,8 @@
 //! Decoupled Derivation Job (P2)
 //!
-//! Converts an original source asset (e.g., an OBJ or GLB file) into a `.10d` hypermedia 
+//! Converts an original source asset (e.g., an OBJ or GLB file) into a `.10d` hypermedia
 //! container carrying the provenance sidecar (the source bytes + metadata) bound within it.
-//! This fulfills the "context is the asset" mandate, ensuring native geometry and provenance 
+//! This fulfills the "context is the asset" mandate, ensuring native geometry and provenance
 //! are inseparable.
 
 use crate::container_10d::provenance_section::ProvenanceSidecar;
@@ -30,7 +30,7 @@ impl std::error::Error for DerivationError {}
 
 /// Run the decoupled derivation job on an original source asset.
 ///
-/// Takes the raw source bytes, imports them into a mesh, wraps the source bytes and 
+/// Takes the raw source bytes, imports them into a mesh, wraps the source bytes and
 /// metadata into a `ProvenanceSidecar`, and compiles it all into a sealed `.10d` container.
 pub fn run_derivation_job(
     source_bytes: &[u8],
@@ -55,27 +55,29 @@ pub fn run_derivation_job(
 mod tests {
     use super::*;
     use crate::container_10d::header::Container10dHeader;
+    use crate::container_10d::provenance_section::{
+        decode_provenance_section, validate_provenance,
+    };
     use crate::container_10d::section::{parse_section_table, SectionType};
-    use crate::container_10d::provenance_section::{decode_provenance_section, validate_provenance};
 
     const TRI_OBJ: &[u8] = b"v 0 0 0\nv 1 0 0\nv 0 1 0\nf 1 2 3\n";
 
     #[test]
     fn derivation_job_produces_valid_container() {
         let out = run_derivation_job(TRI_OBJ, Some("obj"), "text/plain", "CC0", None).unwrap();
-        
+
         let header = Container10dHeader::parse(&out).unwrap();
         let descs = parse_section_table(&out, &header).unwrap();
-        
+
         // Find provenance sidecar
         let prov = descs
             .iter()
             .find(|d| d.section_type == SectionType::ProvenanceSidecar as u8)
             .expect("provenance section generated");
-            
+
         let payload = &out[prov.byte_offset as usize..][..prov.byte_length as usize];
         let view = decode_provenance_section(payload).unwrap();
-        
+
         validate_provenance(&view).unwrap();
         assert_eq!(view.licence(), "CC0");
         assert_eq!(view.source_bytes(), TRI_OBJ);

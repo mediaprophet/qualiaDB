@@ -22,9 +22,9 @@
 mod compiler;
 mod layout;
 mod reader;
-mod transcode;
 #[cfg(test)]
 mod tests;
+mod transcode;
 // Historical tests for the pre-P64 Q42W layout are retained as migration
 // documentation only. They refer to the removed 144/80-byte API.
 #[cfg(all(test, any()))]
@@ -72,6 +72,9 @@ fn write_tensor_entry(entry: &P64TensorEntry, out: &mut [u8]) {
     out[36..40].copy_from_slice(&entry.blob_size.to_le_bytes());
     out[40..48].copy_from_slice(&entry.source_offset.to_le_bytes());
     out[48..56].copy_from_slice(&entry.source_name_hash.to_le_bytes());
+    out[56..58].copy_from_slice(&entry.alt_dtype.to_le_bytes());
+    out[58..60].copy_from_slice(&entry.precision_views_mask.to_le_bytes());
+    out[60..64].copy_from_slice(&entry.alt_blob_offset.to_le_bytes());
 }
 
 /// GGUF tensor-name suffix for a per-layer P64 role (None for global tensors, named directly).

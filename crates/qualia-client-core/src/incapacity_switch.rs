@@ -57,7 +57,11 @@ pub struct IncapacityTrigger {
 impl IncapacityTrigger {
     /// Satisfied iff (official instrument present, if required) AND ≥ `attestation_threshold` distinct
     /// *participating* parties have attested.
-    pub fn is_satisfied(&self, attesting_parties: &[String], official_instrument: Option<&str>) -> bool {
+    pub fn is_satisfied(
+        &self,
+        attesting_parties: &[String],
+        official_instrument: Option<&str>,
+    ) -> bool {
         if self.require_official_instrument && official_instrument.is_none() {
             return false;
         }
@@ -92,8 +96,15 @@ impl IncapacitySwitch {
     }
 
     /// Whether the switch can be activated now (trigger satisfied and not already active).
-    pub fn can_activate(&self, attesting_parties: &[String], official_instrument: Option<&str>) -> bool {
-        !self.advocate_active() && self.trigger.is_satisfied(attesting_parties, official_instrument)
+    pub fn can_activate(
+        &self,
+        attesting_parties: &[String],
+        official_instrument: Option<&str>,
+    ) -> bool {
+        !self.advocate_active()
+            && self
+                .trigger
+                .is_satisfied(attesting_parties, official_instrument)
     }
 
     /// Activate advocacy if the trigger is satisfied. Returns whether it activated.
@@ -160,7 +171,11 @@ mod tests {
             principal_did: "did:wf:person".into(),
             kind: IncapacityKind::InvoluntaryPsychiatric,
             trigger: IncapacityTrigger {
-                parties: vec!["did:wf:alice".into(), "did:wf:bob".into(), "did:wf:carol".into()],
+                parties: vec![
+                    "did:wf:alice".into(),
+                    "did:wf:bob".into(),
+                    "did:wf:carol".into(),
+                ],
                 attestation_threshold: 2,
                 require_official_instrument: true,
             },
@@ -187,7 +202,10 @@ mod tests {
     fn non_party_attestations_do_not_count() {
         let s = switch();
         let mixed = vec!["did:wf:stranger".to_string(), "did:wf:alice".to_string()];
-        assert!(!s.can_activate(&mixed, Some("order")), "only participating parties count toward quorum");
+        assert!(
+            !s.can_activate(&mixed, Some("order")),
+            "only participating parties count toward quorum"
+        );
     }
 
     #[test]
@@ -216,7 +234,11 @@ mod tests {
         };
         // The person can always make their OWN prior events transparent, on their terms.
         assert!(inv.advocate_may_invoke(&s));
-        assert_eq!(inv.disclosed_commitments.len(), 2, "a scoped selection they choose");
+        assert_eq!(
+            inv.disclosed_commitments.len(),
+            2,
+            "a scoped selection they choose"
+        );
     }
 
     #[test]
@@ -232,18 +254,30 @@ mod tests {
         // Not active yet → the advocate may NOT invoke on the person's behalf.
         assert!(!inv.advocate_may_invoke(&s));
         // Once a validated incapacity is active, the advocate may.
-        s.activate(&["did:wf:alice".to_string(), "did:wf:bob".to_string()], Some("order"), 1_000);
+        s.activate(
+            &["did:wf:alice".to_string(), "did:wf:bob".to_string()],
+            Some("order"),
+            1_000,
+        );
         assert!(inv.advocate_may_invoke(&s));
         // And once the person recovers, the advocate may not again.
         s.regain_capacity(2_000);
-        assert!(!inv.advocate_may_invoke(&s), "advocate acts only while the person cannot");
+        assert!(
+            !inv.advocate_may_invoke(&s),
+            "advocate acts only while the person cannot"
+        );
     }
 
     #[test]
     fn serde_round_trips() {
         let mut s = switch();
-        s.activate(&["did:wf:alice".to_string(), "did:wf:bob".to_string()], Some("order"), 1_000);
-        let back: IncapacitySwitch = serde_json::from_str(&serde_json::to_string(&s).unwrap()).unwrap();
+        s.activate(
+            &["did:wf:alice".to_string(), "did:wf:bob".to_string()],
+            Some("order"),
+            1_000,
+        );
+        let back: IncapacitySwitch =
+            serde_json::from_str(&serde_json::to_string(&s).unwrap()).unwrap();
         assert_eq!(s, back);
     }
 }

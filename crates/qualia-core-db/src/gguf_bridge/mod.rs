@@ -88,6 +88,18 @@ pub const KV_ATTENTION_MASK_WORDS: usize = crate::compute_universe::KV_ATTENTION
 
 // ElemGpuParams + ELEM_OP_* codes moved to `gpu_params` (see submodule declarations above).
 
+/// FNV-1a hash for bind group cache keys.
+#[cfg(target_arch = "wasm32")]
+#[inline]
+pub(crate) fn mc8_bg_hash(parts: &[u64]) -> u64 {
+    let mut h: u64 = 0xcbf29ce484222325;
+    for &p in parts {
+        h ^= p;
+        h = h.wrapping_mul(0x100000001b3);
+    }
+    h
+}
+
 /// MC8 Part 3s: WebGPU dynamic uniform offsets must be multiples of 256 bytes.
 #[cfg(target_arch = "wasm32")]
 pub(crate) const MC8_UNIFORM_ALIGN: usize = 256;
@@ -98,7 +110,7 @@ pub(crate) const MC8_MAX_ELEM_UNIFORM_SLOTS: usize = 8;
 #[cfg(target_arch = "wasm32")]
 pub(crate) const MC8_MAX_ATTN_UNIFORM_SLOTS: usize = 8;
 #[cfg(target_arch = "wasm32")]
-pub(crate) const MC8_MAX_ELEM_UNIFORM_LAYER_SLOTS: usize = 8;
+pub(crate) const MC8_MAX_ELEM_UNIFORM_LAYER_SLOTS: usize = MC8_MAX_ELEM_UNIFORM_SLOTS;
 /// MC8 Part 3v / Phase 5.4: layers encoded into one submit batch. Sizes the per-layer uniform
 /// buffers (slots_per_layer × this) and is the decode forward's chunk size — 64 → the whole
 /// ≤64-layer forward is a single submit. Per-chunk flush + reset handles deeper models.
@@ -256,6 +268,10 @@ impl Mc8ElemUniformArena {
         if self.slots == 0 {
             return;
         }
+        if base_slot == 0 {
+            self.upload(queue, buf);
+            return;
+        }
         let byte_off = (base_slot * MC8_UNIFORM_ALIGN) as wgpu::BufferAddress;
         queue.write_buffer(buf, byte_off, &self.bytes[..self.slots * MC8_UNIFORM_ALIGN]);
     }
@@ -282,6 +298,10 @@ impl Mc8AttnUniformArena {
 
     pub(crate) fn upload_at(&self, queue: &wgpu::Queue, buf: &wgpu::Buffer, base_slot: usize) {
         if self.slots == 0 {
+            return;
+        }
+        if base_slot == 0 {
+            self.upload(queue, buf);
             return;
         }
         let byte_off = (base_slot * MC8_UNIFORM_ALIGN) as wgpu::BufferAddress;
@@ -483,6 +503,31 @@ impl KvCacheLayout {
         })
     }
 
+    /// Derive the dense f32 device layout used by native CUDA kernels without changing the host
+    /// cache representation. Host int8/dictionary compression and the CUDA execution arena are
+    /// independent storage decisions.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub(crate) fn dense_device_layout(self) -> Option<Self> {
+        let slot_kv_elems = self.n_kv_head.checked_mul(self.head_dim)?;
+        let layer_stride = self
+            .max_context
+            .checked_mul(slot_kv_elems)?
+            .checked_mul(2)?;
+        let total_f32_elems = (self.n_layer as usize).checked_mul(layer_stride as usize)?;
+        total_f32_elems
+            .checked_mul(std::mem::size_of::<f32>())
+            .filter(|bytes| *bytes <= KV_CACHE_MAX_BYTES)?;
+        Some(Self {
+            slot_kv_elems,
+            layer_stride,
+            total_f32_elems,
+            int8: false,
+            dict_k: 0,
+            dict_n_atoms: 0,
+            ..self
+        })
+    }
+
     #[inline]
     pub fn ring_slot(&self, token_idx: u32) -> u32 {
         token_idx % self.max_context
@@ -578,6 +623,13 @@ pub(crate) use pipeline_cache::*;
 // pub(crate) so they call across modules freely; types/imports arrive via each file's `use super::*`.
 mod async_dispatch;
 mod attention;
+#[cfg(all(not(target_arch = "wasm32"), feature = "cuda"))]
+mod cuda_decode_plan;
+/// Hard cap on the KV context window a decode plan may request. Declared here rather than in the
+/// `cuda`-gated plan module because the raw-decode harness and the mega-pass guard validate
+/// against it on every target, CUDA or not.
+#[cfg(not(target_arch = "wasm32"))]
+pub(crate) const MAX_CUDA_CONTEXT_WINDOW: u32 = 4096;
 mod embedding;
 mod ffn;
 mod forward;
@@ -588,11 +640,12 @@ mod output;
 #[cfg(not(target_arch = "wasm32"))]
 mod prefill_arena;
 mod prefill_async;
+#[cfg(not(target_arch = "wasm32"))]
 mod resident_decode;
 mod verify_arena;
 
 /// MC8 pt3e: max abs error over the first `n` elements.
-#[cfg(target_arch = "wasm32")]
+#[cfg(all(target_arch = "wasm32", feature = "wasm-llm-diagnostics"))]
 fn probe_max_abs_diff(a: &[f32], b: &[f32], n: usize) -> f32 {
     let n = n.min(a.len()).min(b.len());
     let mut m = 0.0f32;
@@ -602,7 +655,7 @@ fn probe_max_abs_diff(a: &[f32], b: &[f32], n: usize) -> f32 {
     m
 }
 
-#[cfg(target_arch = "wasm32")]
+#[cfg(all(target_arch = "wasm32", feature = "wasm-llm-diagnostics"))]
 fn probe_log_diff(phase: &str, cpu: &[f32], gpu: &[f32], n: usize) {
     let n = n.min(8).min(cpu.len()).min(gpu.len());
     if n == 0 {
@@ -615,7 +668,7 @@ fn probe_log_diff(phase: &str, cpu: &[f32], gpu: &[f32], n: usize) {
     ));
 }
 
-#[cfg(target_arch = "wasm32")]
+#[cfg(all(target_arch = "wasm32", feature = "wasm-llm-diagnostics"))]
 fn probe_log_mid_diff(phase: &str, cpu: &[f32], gpu: &[f32], n: usize) {
     let n = n.min(8).min(cpu.len()).min(gpu.len());
     if n == 0 {
@@ -628,7 +681,7 @@ fn probe_log_mid_diff(phase: &str, cpu: &[f32], gpu: &[f32], n: usize) {
     ));
 }
 
-#[cfg(target_arch = "wasm32")]
+#[cfg(all(target_arch = "wasm32", feature = "wasm-llm-diagnostics"))]
 fn probe_log_ffn_diff(phase: &str, cpu: &[f32], gpu: &[f32], n: usize) {
     let n = n.min(8).min(cpu.len()).min(gpu.len());
     if n == 0 {
@@ -642,7 +695,7 @@ fn probe_log_ffn_diff(phase: &str, cpu: &[f32], gpu: &[f32], n: usize) {
 }
 
 /// MC8 pt3g: CPU SwiGLU stages from post-attn hidden @ L0.
-#[cfg(target_arch = "wasm32")]
+#[cfg(all(target_arch = "wasm32", feature = "wasm-llm-diagnostics"))]
 async fn mc8_cpu_l0_ffn_stages(
     engine: &QTensorEngine,
     index: &crate::gguf_sharder::GgufTensorIndex,
@@ -757,7 +810,7 @@ async fn mc8_cpu_l0_ffn_stages(
 }
 
 /// Read one KV head from the CPU mirror arena.
-#[cfg(target_arch = "wasm32")]
+#[cfg(all(target_arch = "wasm32", feature = "wasm-llm-diagnostics"))]
 fn read_kv_cpu_head(
     layout: &KvCacheLayout,
     kv: &[f32],
@@ -786,7 +839,7 @@ fn read_kv_cpu_head(
     true
 }
 
-#[cfg(target_arch = "wasm32")]
+#[cfg(all(target_arch = "wasm32", feature = "wasm-llm-diagnostics"))]
 fn probe_log_prefill_diff(phase: &str, cpu: &[f32], gpu: &[f32], n: usize) {
     let n = n.min(8).min(cpu.len()).min(gpu.len());
     if n == 0 {
@@ -800,7 +853,7 @@ fn probe_log_prefill_diff(phase: &str, cpu: &[f32], gpu: &[f32], n: usize) {
 }
 
 /// MC8 pt3f: CPU SDPA @ L0 → full `q_dim` Attn_Out (async KV readback).
-#[cfg(target_arch = "wasm32")]
+#[cfg(all(target_arch = "wasm32", feature = "wasm-llm-diagnostics"))]
 async fn mc8_cpu_l0_attn_out(
     engine: &QTensorEngine,
     index: &crate::gguf_sharder::GgufTensorIndex,
@@ -1028,7 +1081,8 @@ pub(crate) fn stack_gemm_quant(
     if n_in > input.len() || n_out > out.len() || n_in > MAX_STACK_GEMM_IN {
         wlog(&format!(
             "[stack_gemm] GUARD tripped n_in={n_in} n_out={n_out} input={} out={} MAX_IN={MAX_STACK_GEMM_IN}",
-            input.len(), out.len()
+            input.len(),
+            out.len()
         ));
         return false;
     }
@@ -1055,6 +1109,9 @@ pub struct QTensorEngine {
     #[cfg(target_arch = "wasm32")]
     queue: wgpu::Queue,
     pub pipeline: wgpu::ComputePipeline,
+    /// WASM multi-row Q8_0 GEMV (llama.cpp-style: 64 thr, 4 rows/WG, u32 packed reads).
+    #[cfg(target_arch = "wasm32")]
+    pub mmv_q8_0_pipeline: wgpu::ComputePipeline,
     #[cfg(not(target_arch = "wasm32"))]
     native_pipeline_cache: Option<wgpu::PipelineCache>,
     #[cfg(not(target_arch = "wasm32"))]
@@ -1083,6 +1140,7 @@ pub struct QTensorEngine {
     #[cfg(not(target_arch = "wasm32"))]
     pub(crate) coop_gemv_residual_warp_pipeline: wgpu::ComputePipeline,
     /// Legacy f32×f32 mock block for offset-0 `QTensor` fallback (no mmap).
+    #[cfg(not(target_arch = "wasm32"))]
     mock_pipeline: wgpu::ComputePipeline,
     /// GPU-side Q6_K embedding dequant + matmul (zero CPU dequant).
     pub embedding_pipeline: wgpu::ComputePipeline,
@@ -1097,6 +1155,15 @@ pub struct QTensorEngine {
     pub gguf_mmap: Option<Arc<memmap2::Mmap>>,
     #[cfg(target_arch = "wasm32")]
     pub gguf_mmap: Option<Arc<[u8]>>,
+    /// WASM: cached tokenizer extracted from gguf_mmap before dropping it.
+    #[cfg(target_arch = "wasm32")]
+    pub cached_tokenizer: Option<crate::gguf_sharder::GgufTokenizer>,
+    /// WASM: cached tensor index extracted from gguf_mmap before dropping it.
+    #[cfg(target_arch = "wasm32")]
+    pub cached_tensor_index: Option<crate::gguf_sharder::GgufTensorIndex>,
+    /// WASM: raw bytes of the token_embd tensor (for embedding lookup after dropping gguf_mmap).
+    #[cfg(target_arch = "wasm32")]
+    pub cached_token_embd: Option<Arc<[u8]>>,
     /// Resident P64 container bytes.
     #[cfg(target_arch = "wasm32")]
     pub p64_resident: Option<Arc<[u8]>>,
@@ -1133,12 +1200,17 @@ pub struct QTensorEngine {
     // A1a (STELLAR §A): persistent GPU top-k output-projection pipeline + small candidate buffers.
     // Lets the output logits stay on-GPU (top-k over them, read back only K pairs) instead of the
     // 196 KB/token full-logit readback. Created once in `ensure_gemm_buffers`.
+    #[cfg(not(target_arch = "wasm32"))]
     output_topk_pipeline: Option<wgpu::ComputePipeline>,
     #[cfg(not(target_arch = "wasm32"))]
     output_topk_bind_layout: Option<wgpu::BindGroupLayout>,
+    #[cfg(not(target_arch = "wasm32"))]
     topk_cand_val_buf: Option<wgpu::Buffer>,
+    #[cfg(not(target_arch = "wasm32"))]
     topk_cand_idx_buf: Option<wgpu::Buffer>,
+    #[cfg(not(target_arch = "wasm32"))]
     topk_cand_staging: Option<wgpu::Buffer>,
+    #[cfg(not(target_arch = "wasm32"))]
     topk_params_buf: Option<wgpu::Buffer>,
     /// MC8 FFN / attention scratch (gate, up, o_proj).
     gemm_aux_buf: Option<wgpu::Buffer>,
@@ -1262,12 +1334,21 @@ pub struct QTensorEngine {
     /// Native GPU-resident single-fence decode plan (see `resident_decode.rs`).
     #[cfg(not(target_arch = "wasm32"))]
     resident_decode: resident_decode::ResidentDecodeState,
+    /// Cold-built host descriptor for the native CUDA all-layer plan.
+    #[cfg(all(not(target_arch = "wasm32"), feature = "cuda"))]
+    cuda_decode_plan: cuda_decode_plan::CudaDecodePlanState,
     /// W3: native GPU-resident single-fence-per-chunk prefill plan (see `prefill_arena.rs`).
     #[cfg(not(target_arch = "wasm32"))]
     prefill_arena: prefill_arena::PrefillArenaState,
     /// W6a: batched speculative-verify forward plan (per-position argmax; see `verify_arena.rs`).
     #[cfg(not(target_arch = "wasm32"))]
     verify_arena: verify_arena::VerifyArenaState,
+    /// Bind group cache: eliminates per-token `create_bind_group` calls by caching
+    /// bind groups keyed on (buffer addresses, offsets, weight role, layer). Bind groups
+    /// are identical across tokens for the same layer/op since only dynamic uniform
+    /// offsets change — those are passed at `set_bind_group` time, not baked into the BG.
+    #[cfg(target_arch = "wasm32")]
+    mc8_bg_cache: std::sync::Mutex<std::collections::HashMap<u64, wgpu::BindGroup>>,
 }
 
 #[cfg(target_arch = "wasm32")]

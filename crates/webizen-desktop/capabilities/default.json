@@ -2,7 +2,7 @@
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
   "description": "Default capability for the Webizen main window: core defaults plus notification, updater, and native file dialogs (open/save).",
-  "windows": ["main"],
+  "windows": ["main", "webizen-browser", "webizen-browser-chrome", "webizen-browser-content"],
   "permissions": [
     "core:default",
     "notification:default",

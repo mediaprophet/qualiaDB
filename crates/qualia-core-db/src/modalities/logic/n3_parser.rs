@@ -25,6 +25,34 @@
 
 use std::fmt;
 
+/// Decode one UTF-8 character at byte offset `i` in `bytes`, returning
+/// `(char, byte_width)`. Falls back to the raw byte for invalid UTF-8
+/// (never panics). Used for Unicode-aware whitespace detection.
+#[inline]
+fn decode_utf8_char(bytes: &[u8], i: usize) -> (char, usize) {
+    let b = bytes[i];
+    if b < 0x80 {
+        return (b as char, 1);
+    }
+    let remaining = &bytes[i..];
+    match std::str::from_utf8(remaining) {
+        Ok(s) => {
+            let c = s.chars().next().unwrap_or(b as char);
+            (c, c.len_utf8())
+        }
+        Err(e) => {
+            let valid_len = e.valid_up_to();
+            if valid_len > 0 {
+                let s = std::str::from_utf8(&remaining[..valid_len]).unwrap();
+                let c = s.chars().next().unwrap();
+                (c, c.len_utf8())
+            } else {
+                (b as char, 1)
+            }
+        }
+    }
+}
+
 /// Max triples in a zero-allocation [`StackFormula`] (matches the compiler's
 /// `CompiledFormula` capacity).
 pub const MAX_STACK_TRIPLES: usize = 8;
@@ -154,11 +182,15 @@ fn empty_triple<'a>() -> Triple<'a> {
     }
 }
 
-/// Canonical 64-bit FNV-1a hash of a quoted-formula's text, with runs of ASCII
-/// whitespace collapsed to a single space (and leading/trailing whitespace
-/// dropped). This gives a **stable identity** for a quoted statement so that
-/// `{ :a :b :c }` and `{  :a  :b  :c  }` denote the same node — the handle other
-/// nquins use to reason about that statement (reification). Zero-allocation.
+/// Canonical 64-bit FNV-1a hash of a quoted-formula's text, with runs of
+/// Unicode whitespace collapsed to a single space (and leading/trailing
+/// whitespace dropped). This gives a **stable identity** for a quoted statement
+/// so that `{ :a :b :c }` and `{  :a  :b  :c  }` denote the same node — the
+/// handle other nquins use to reason about that statement (reification).
+/// Zero-allocation.
+///
+/// Unicode-aware: handles CJK ideographic space (U+3000), non-breaking space
+/// (U+00A0), and all other `char::is_whitespace` code points, not just ASCII.
 pub fn q_hash_formula(text: &str) -> u64 {
     const OFFSET: u64 = 0xcbf29ce484222325;
     const PRIME: u64 = 0x0000_0100_0000_01B3;
@@ -167,8 +199,8 @@ pub fn q_hash_formula(text: &str) -> u64 {
     // AND trailing whitespace are both dropped (only interior runs collapse).
     let mut pending_space = false;
     let mut started = false;
-    for &b in text.as_bytes() {
-        if b.is_ascii_whitespace() {
+    for c in text.chars() {
+        if c.is_whitespace() {
             if started {
                 pending_space = true;
             }
@@ -178,8 +210,11 @@ pub fn q_hash_formula(text: &str) -> u64 {
                 h = h.wrapping_mul(PRIME);
                 pending_space = false;
             }
-            h ^= b as u64;
-            h = h.wrapping_mul(PRIME);
+            // Hash the UTF-8 bytes of the character, not just the low byte.
+            for &b in c.encode_utf8(&mut [0u8; 4]).as_bytes() {
+                h ^= b as u64;
+                h = h.wrapping_mul(PRIME);
+            }
             started = true;
         }
     }
@@ -226,10 +261,16 @@ impl<'a> Iterator for TripleTokenizer<'a> {
         let len = self.b.len();
         // Skip whitespace and `#...\n` comments (a comment is only a comment when
         // it starts a token - a `#` inside a `<...>` URI or string literal is
-        // consumed as part of that token below).
+        // consumed as part of that token below). Unicode-aware: handles CJK
+        // ideographic space (U+3000), non-breaking space (U+00A0), etc.
         loop {
-            while self.i < len && self.b[self.i].is_ascii_whitespace() {
-                self.i += 1;
+            while self.i < len {
+                let (c, w) = decode_utf8_char(self.b, self.i);
+                if c.is_whitespace() {
+                    self.i += w;
+                } else {
+                    break;
+                }
             }
             if self.i < len && self.b[self.i] == b'#' {
                 while self.i < len && self.b[self.i] != b'\n' {
@@ -298,6 +339,13 @@ impl<'a> Iterator for TripleTokenizer<'a> {
             }
             if d.is_ascii_whitespace() || d == b';' || d == b',' || d == b'{' || d == b'"' {
                 break;
+            }
+            // Also break on Unicode whitespace (e.g. U+3000 ideographic space).
+            if (d & 0x80) != 0 {
+                let (ch, _) = decode_utf8_char(self.b, self.i);
+                if ch.is_whitespace() {
+                    break;
+                }
             }
             self.i += 1;
         }

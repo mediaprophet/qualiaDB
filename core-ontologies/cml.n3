@@ -129,6 +129,31 @@ cml:Deontic a cml:Modality .       cml:Temporal a cml:Modality .
 cml:Defeasible a cml:Modality .    cml:Argumentation a cml:Modality .
 cml:Spatial a cml:Modality .       cml:Probabilistic a cml:Modality .
 
+# The executable QualiaDB logic suite. These are routing terms, not claims that every
+# assertion requires every evaluator: cml:LogicApplication records subject-matter-selected
+# applicability and the native surface that should evaluate the proposal.
+cml:Epistemic a cml:Modality .
+cml:LTL a cml:Modality ; rdfs:comment "Linear Temporal Logic (G/F/X/U/R) over ordered Quin traces." .
+cml:Paraconsistent a cml:Modality .
+cml:AnswerSetProgramming a cml:Modality .
+cml:Dialectical a cml:Modality .
+cml:LinearLogic a cml:Modality .
+cml:DescriptionLogic a cml:Modality .
+cml:AllenInterval a cml:Modality .
+cml:Diffusion a cml:Modality .
+cml:CogAI a cml:Modality .
+cml:SHACL a cml:Modality .
+cml:N3Logic a cml:Modality .
+
+cml:LogicApplication a rdfs:Class ;
+    rdfs:comment "A bounded, proposed routing of one source-backed concept to an applicable logic evaluator. It is analysis metadata, not proof or human attestation." .
+cml:operator a rdf:Property ; rdfs:domain cml:LogicApplication ; rdfs:range xsd:string .
+cml:logicSummary a rdf:Property ; rdfs:domain cml:LogicApplication ; rdfs:range xsd:string .
+cml:premiseText a rdf:Property ; rdfs:domain cml:LogicApplication ; rdfs:range xsd:string .
+cml:conclusionText a rdf:Property ; rdfs:domain cml:LogicApplication ; rdfs:range xsd:string .
+cml:executionSurface a rdf:Property ; rdfs:domain cml:LogicApplication ; rdfs:range xsd:string ;
+    rdfs:comment "The implemented QualiaDB module/compiler selected for subsequent bounded evaluation." .
+
 cml:asserts a rdf:Property ;
     rdfs:domain cml:Concept ;
     rdfs:comment "Binds a concept to a logic assertion in one of its modality sub-graphs. ENGINE MAPPING: the asserted quins carry context = q_hash(concept IRI), so the concept's hash IS the sub-graph the Webizen VM masks on. This is how a logic library is run against a concept." .
@@ -165,3 +190,15 @@ cml:AcquiredMethodShape a sh:NodeShape ;
                   sh:message "cml:AcquiredMethod must retain file/page or media-fragment evidence." ] ;
     sh:property [ sh:path cml:surfaceRelation ; sh:minCount 1 ;
                   sh:message "cml:AcquiredMethod must state its additive relation to the current source surface." ] .
+
+cml:LogicApplicationShape a sh:NodeShape ;
+    sh:targetClass cml:LogicApplication ;
+    sh:property [ sh:path cml:modality ; sh:minCount 1 ; sh:maxCount 1 ; sh:class cml:Modality ;
+                  sh:message "A logic application must select exactly one registered CML modality." ] ;
+    sh:property [ sh:path cml:logicSummary ; sh:minCount 1 ;
+                  sh:message "A logic application must explain why the evaluator is applicable." ] ;
+    sh:property [ sh:path cml:executionSurface ; sh:minCount 1 ; sh:maxCount 1 ;
+                  sh:message "A logic application must name its implemented QualiaDB execution surface." ] ;
+    sh:property [ sh:path cml:confidence ; sh:minInclusive 0 ; sh:maxInclusive 1 ; sh:maxCount 1 ] ;
+    sh:property [ sh:path cml:curationStatus ; sh:hasValue cml:Proposed ; sh:minCount 1 ;
+                  sh:message "Automated logic routing remains cml:Proposed until authoritative review." ] .

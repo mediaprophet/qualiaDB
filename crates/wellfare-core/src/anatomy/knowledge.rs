@@ -177,8 +177,17 @@ pub struct KnowledgeSource {
 }
 
 impl KnowledgeSource {
-    pub fn new(id: impl Into<String>, title: impl Into<String>, trust_ceiling: EvidenceTier) -> Self {
-        Self { id: id.into(), title: title.into(), trust_ceiling, url: None }
+    pub fn new(
+        id: impl Into<String>,
+        title: impl Into<String>,
+        trust_ceiling: EvidenceTier,
+    ) -> Self {
+        Self {
+            id: id.into(),
+            title: title.into(),
+            trust_ceiling,
+            url: None,
+        }
     }
 }
 
@@ -241,13 +250,20 @@ impl KnowledgeBase {
         self.entries.values()
     }
 
-    pub fn by_kind<'a>(&'a self, kind: &'a FactorKind) -> impl Iterator<Item = &'a FactorKnowledge> {
+    pub fn by_kind<'a>(
+        &'a self,
+        kind: &'a FactorKind,
+    ) -> impl Iterator<Item = &'a FactorKnowledge> {
         self.entries.values().filter(move |e| &e.kind == kind)
     }
 
     /// Verify every stored entry's content hash. Returns the keys of any that fail (empty = all good).
     pub fn verify_integrity(&self) -> Vec<String> {
-        self.entries.values().filter(|e| !e.integrity_ok()).map(|e| e.key.clone()).collect()
+        self.entries
+            .values()
+            .filter(|e| !e.integrity_ok())
+            .map(|e| e.key.clone())
+            .collect()
     }
 }
 
@@ -390,13 +406,14 @@ pub fn seed_knowledge_base() -> KnowledgeBase {
 
     // Traditional-use: milk thistle (Silybum marianum) — traditionally used for liver support.
     kb.insert(
-        FactorKnowledge::new("herb:milk-thistle", FactorKind::Herb, "Milk thistle", who()).targeting(
-            "digestive",
-            Effect::Supportive,
-            EvidenceTier::TraditionalUse,
-            200,
-            Kinetics::new(30, 12 * 60),
-        ),
+        FactorKnowledge::new("herb:milk-thistle", FactorKind::Herb, "Milk thistle", who())
+            .targeting(
+                "digestive",
+                Effect::Supportive,
+                EvidenceTier::TraditionalUse,
+                200,
+                Kinetics::new(30, 12 * 60),
+            ),
     );
     // Traditional-use: chamomile tea — traditionally used to calm / aid sleep (nervous system).
     kb.insert(
@@ -411,8 +428,20 @@ pub fn seed_knowledge_base() -> KnowledgeBase {
     // Nutritional-data: beer — an alcohol-containing intake loading hepatic + renal systems.
     kb.insert(
         FactorKnowledge::new("food:beer", FactorKind::Food, "Beer (alcohol)", nutrition())
-            .targeting("digestive", Effect::Adverse, EvidenceTier::NutritionalData, 300, Kinetics::new(30, 5 * 60))
-            .targeting("urinary", Effect::Adverse, EvidenceTier::NutritionalData, 250, Kinetics::new(60, 3 * 60)),
+            .targeting(
+                "digestive",
+                Effect::Adverse,
+                EvidenceTier::NutritionalData,
+                300,
+                Kinetics::new(30, 5 * 60),
+            )
+            .targeting(
+                "urinary",
+                Effect::Adverse,
+                EvidenceTier::NutritionalData,
+                250,
+                Kinetics::new(60, 3 * 60),
+            ),
     );
     // Nutritional-data: water + electrolytes — a rehydration intervention (renal support).
     kb.insert(
@@ -422,7 +451,13 @@ pub fn seed_knowledge_base() -> KnowledgeBase {
             "Water + electrolytes",
             nutrition(),
         )
-        .targeting("urinary", Effect::Supportive, EvidenceTier::NutritionalData, 500, Kinetics::new(20, 4 * 60)),
+        .targeting(
+            "urinary",
+            Effect::Supportive,
+            EvidenceTier::NutritionalData,
+            500,
+            Kinetics::new(20, 4 * 60),
+        ),
     );
     // Community "hot take" — deliberately over-tagged as clinical to prove the cap forces it down.
     kb.insert(
@@ -447,7 +482,7 @@ pub fn seed_knowledge_base() -> KnowledgeBase {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::anatomy::{accumulate, Timeline};
+    use crate::anatomy::{Timeline, accumulate};
 
     #[test]
     fn content_hash_seals_and_detects_tampering() {
@@ -462,7 +497,13 @@ mod tests {
                 imported_at: None,
             },
         )
-        .targeting("digestive", Effect::Supportive, EvidenceTier::TraditionalUse, 100, Kinetics::CHRONIC)
+        .targeting(
+            "digestive",
+            Effect::Supportive,
+            EvidenceTier::TraditionalUse,
+            100,
+            Kinetics::CHRONIC,
+        )
         .sealed();
         assert!(e.integrity_ok());
         // Tamper with a weight after sealing → integrity fails.
@@ -475,7 +516,10 @@ mod tests {
         let kb = seed_knowledge_base();
         let hot_take = kb.get("tea:detox-claim").unwrap();
         // Authored as ClinicalEvidence but capped to the community source's ceiling.
-        assert_eq!(hot_take.targets[0].evidence, EvidenceTier::CommunityAnecdotal);
+        assert_eq!(
+            hot_take.targets[0].evidence,
+            EvidenceTier::CommunityAnecdotal
+        );
         assert!(hot_take.integrity_ok(), "hash reflects the capped tier");
         // A traditional-use source keeps its own honest tier (not subordinated, not erased).
         assert_eq!(
@@ -504,17 +548,22 @@ mod tests {
         assert_eq!(res.entries[0].key, "cond:hypertension");
         assert_eq!(res.entries[0].targets[0].system_id, "circulatory");
         assert!(res.entries[0].integrity_ok());
-        assert_eq!(res.warnings.len(), 1, "the imaginary system is reported, not silently dropped");
+        assert_eq!(
+            res.warnings.len(),
+            1,
+            "the imaginary system is reported, not silently dropped"
+        );
     }
 
     #[test]
     fn condition_mapping_to_a_registered_extension_system_is_not_dropped() {
-        use super::super::registry::{SystemDef, SystemProvenance, SystemTier};
         use super::super::model::SystemRepresentation;
+        use super::super::registry::{SystemDef, SystemProvenance, SystemTier};
         // A person's record maps a condition to a system beyond the seeded 17. With only the seed it is
         // warned + skipped; once that system is REGISTERED, the same import resolves and evaluates it —
         // the honest "supports evaluation of it all" guarantee, made real for a new system.
-        let json = r#"{ "conditions": { "Plantar Fasciitis": { "primarySystem": "Fascial System" } } }"#;
+        let json =
+            r#"{ "conditions": { "Plantar Fasciitis": { "primarySystem": "Fascial System" } } }"#;
         let prov = Provenance {
             source_id: "clinical-reference".into(),
             source_title: "condition-map".into(),
@@ -542,7 +591,11 @@ mod tests {
             provenance: SystemProvenance::User,
         });
         let extended = import_condition_map(json, prov, &reg).unwrap();
-        assert_eq!(extended.entries.len(), 1, "the registered system now resolves");
+        assert_eq!(
+            extended.entries.len(),
+            1,
+            "the registered system now resolves"
+        );
         assert!(extended.warnings.is_empty());
         assert_eq!(extended.entries[0].targets[0].system_id, "fascial");
     }
@@ -551,15 +604,32 @@ mod tests {
     fn seed_entries_instantiate_and_flow_through_the_temporal_engine() {
         let kb = seed_knowledge_base();
         // The beer template → a dosed event; still loads hepatic well after onset.
-        let beer = kb.get("food:beer").unwrap().to_event("intake:beer-1", 0, 300);
+        let beer = kb
+            .get("food:beer")
+            .unwrap()
+            .to_event("intake:beer-1", 0, 300);
         let tl = Timeline::new().with_event(beer);
-        let dig = tl.burden_at(60).into_iter().find(|b| b.system_id == "digestive").unwrap();
-        assert!(dig.net_milli > 0, "hepatic load present after the beer event");
+        let dig = tl
+            .burden_at(60)
+            .into_iter()
+            .find(|b| b.system_id == "digestive")
+            .unwrap();
+        assert!(
+            dig.net_milli > 0,
+            "hepatic load present after the beer event"
+        );
 
         // The non-temporal instantiation accumulates via slice-1 too.
-        let f = kb.get("herb:milk-thistle").unwrap().to_factor("intake:mt-1");
+        let f = kb
+            .get("herb:milk-thistle")
+            .unwrap()
+            .to_factor("intake:mt-1");
         let burdens = accumulate(&[f]);
-        assert!(burdens.iter().any(|b| b.system_id == "digestive" && b.supportive_milli > 0));
+        assert!(
+            burdens
+                .iter()
+                .any(|b| b.system_id == "digestive" && b.supportive_milli > 0)
+        );
     }
 
     #[test]

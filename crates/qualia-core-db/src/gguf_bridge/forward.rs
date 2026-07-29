@@ -160,7 +160,7 @@ impl QTensorEngine {
     }
 
     /// Phase 2B: batched prefill layer via async GPU attention (K/V GPU; Q+FFN per token).
-    #[cfg(target_arch = "wasm32")]
+    #[cfg(all(target_arch = "wasm32", feature = "wasm-llm-diagnostics"))]
     pub(crate) async fn dispatch_prefill_layer_batch_async(
         &mut self,
         index: &crate::gguf_sharder::GgufTensorIndex,
@@ -468,6 +468,234 @@ impl QTensorEngine {
         #[cfg(not(target_arch = "wasm32"))]
         crate::llm_bench::add_decode_ffn_ns(t_ffn.elapsed().as_nanos() as u64);
         ffn_ok
+    }
+
+    /// Attempt the CUDA mega-pass: all layers in one fenced CUDA stream.
+    /// Returns `Some(token_id)` on success, `None` to fall back to per-layer path.
+    #[cfg(all(not(target_arch = "wasm32"), feature = "cuda"))]
+    pub fn try_cuda_mega_pass_decode(
+        &mut self,
+        index: &crate::gguf_sharder::GgufTensorIndex,
+        hidden: &mut [f32],
+        emb_dim: usize,
+        token_idx: u32,
+    ) -> Option<u32> {
+        self.try_prepared_cuda_decode(index, hidden, emb_dim, token_idx)
+    }
+
+    /// Decode directly from a token id using the resident Q8 embedding table.
+    ///
+    /// This path avoids CPU embedding dequantization and the full hidden-state H2D upload.
+    #[cfg(all(not(target_arch = "wasm32"), feature = "cuda"))]
+    pub fn try_cuda_mega_pass_decode_token(
+        &mut self,
+        index: &crate::gguf_sharder::GgufTensorIndex,
+        token_id: u32,
+        hidden: &mut [f32],
+        emb_dim: usize,
+        token_idx: u32,
+    ) -> Option<u32> {
+        self.try_prepared_cuda_decode_token(index, token_id, hidden, emb_dim, token_idx)
+    }
+
+    /// Superseded unprepared implementation retained temporarily for line-by-line parity review
+    /// during R9.4 decomposition. It is excluded from compilation and will be removed after the
+    /// prepared-plan differential test is certified.
+    #[cfg(any())]
+    pub fn try_cuda_mega_pass_decode_unprepared_reference(
+        &self,
+        index: &crate::gguf_sharder::GgufTensorIndex,
+        hidden: &mut [f32],
+        emb_dim: usize,
+        token_idx: u32,
+    ) -> Option<u32> {
+        use super::RMS_NORM_EPS;
+        use crate::ggml_quants::{fetch_tensor_bytes, GGML_TYPE_Q4_K_SOA};
+        use crate::gguf_bridge::cpu_ops::dequant_norm_row_into;
+        use crate::inference::cuda_lane::{MegaPassLayerDims, MegaPassLayerWeights};
+
+        let h = index.hyperparams;
+        let n_layer = h.n_layer;
+        let n_embd = h.n_embd as usize;
+        let n_head = h.n_head as usize;
+        let n_kv = h.effective_n_kv_head() as usize;
+        let head_dim = h.head_dim() as usize;
+        if n_layer == 0 || n_embd == 0 || n_embd > 4096 || n_embd != emb_dim {
+            return None;
+        }
+        let layout = self.kv_layout?;
+        if layout.int8 || layout.dict_k > 0 {
+            return None;
+        }
+        let mmap = self.gguf_mmap.as_deref()?;
+        let tds = index.tensor_data_start;
+
+        // Phase 1: Collect raw weights, dims, and norm weights.
+        struct LayerRaw<'a> {
+            q_raw: &'a [u8],
+            k_raw: &'a [u8],
+            v_raw: &'a [u8],
+            o_raw: &'a [u8],
+            g_raw: &'a [u8],
+            u_raw: &'a [u8],
+            d_raw: &'a [u8],
+        }
+        let mut layer_raws: Vec<LayerRaw<'_>> = Vec::with_capacity(n_layer as usize);
+        let mut layer_dims: Vec<MegaPassLayerDims> = Vec::with_capacity(n_layer as usize);
+        let mut all_attn_norms: Vec<Vec<f32>> = Vec::with_capacity(n_layer as usize);
+        let mut all_ffn_norms: Vec<Vec<f32>> = Vec::with_capacity(n_layer as usize);
+
+        for l in 0..n_layer {
+            let t = index.get_layer_tensors(l);
+
+            let q_info = t.attn_q.as_ref()?;
+            let k_info = t.attn_k.as_ref()?;
+            let v_info = t.attn_v.as_ref()?;
+            let o_info = t.attn_output.as_ref()?;
+            let g_info = t.ffn_gate.as_ref()?;
+            let u_info = t.ffn_up.as_ref()?;
+            let d_info = t.ffn_down.as_ref()?;
+
+            if q_info.ggml_type != GGML_TYPE_Q4_K_SOA
+                || k_info.ggml_type != GGML_TYPE_Q4_K_SOA
+                || v_info.ggml_type != GGML_TYPE_Q4_K_SOA
+                || o_info.ggml_type != GGML_TYPE_Q4_K_SOA
+                || g_info.ggml_type != GGML_TYPE_Q4_K_SOA
+                || u_info.ggml_type != GGML_TYPE_Q4_K_SOA
+                || d_info.ggml_type != GGML_TYPE_Q4_K_SOA
+            {
+                log::debug!(
+                    "mega_pass_decode|skip|layer{l}|not_soa|q={} k={} v={} o={} g={} u={} d={}",
+                    q_info.ggml_type,
+                    k_info.ggml_type,
+                    v_info.ggml_type,
+                    o_info.ggml_type,
+                    g_info.ggml_type,
+                    u_info.ggml_type,
+                    d_info.ggml_type
+                );
+                return None;
+            }
+
+            let (q_in, q_out) = Self::matmul_dims(q_info);
+            let (k_in, k_out) = Self::matmul_dims(k_info);
+            let (_v_in, _v_out) = Self::matmul_dims(v_info);
+            let (o_in, o_out) = Self::matmul_dims(o_info);
+            let (g_in, g_out) = Self::matmul_dims(g_info);
+            let (u_in, u_out) = Self::matmul_dims(u_info);
+            let (d_in, d_out) = Self::matmul_dims(d_info);
+
+            let q_raw = fetch_tensor_bytes(mmap, tds, q_info).ok()?;
+            let k_raw = fetch_tensor_bytes(mmap, tds, k_info).ok()?;
+            let v_raw = fetch_tensor_bytes(mmap, tds, v_info).ok()?;
+            let o_raw = fetch_tensor_bytes(mmap, tds, o_info).ok()?;
+            let g_raw = fetch_tensor_bytes(mmap, tds, g_info).ok()?;
+            let u_raw = fetch_tensor_bytes(mmap, tds, u_info).ok()?;
+            let d_raw = fetch_tensor_bytes(mmap, tds, d_info).ok()?;
+
+            let mut attn_norm = vec![0.0f32; n_embd];
+            let mut ffn_norm = vec![0.0f32; n_embd];
+            if let Some(an_info) = t.attn_norm.as_ref() {
+                if dequant_norm_row_into(mmap, tds, an_info, &mut attn_norm) < n_embd {
+                    return None;
+                }
+            }
+            if let Some(fn_info) = t.ffn_norm.as_ref() {
+                if dequant_norm_row_into(mmap, tds, fn_info, &mut ffn_norm) < n_embd {
+                    return None;
+                }
+            }
+            all_attn_norms.push(attn_norm);
+            all_ffn_norms.push(ffn_norm);
+            layer_raws.push(LayerRaw {
+                q_raw,
+                k_raw,
+                v_raw,
+                o_raw,
+                g_raw,
+                u_raw,
+                d_raw,
+            });
+            layer_dims.push(MegaPassLayerDims {
+                q_in,
+                q_out,
+                kv_in: k_in,
+                kv_out: k_out,
+                o_in,
+                o_out,
+                gate_in: g_in,
+                gate_out: g_out,
+                up_in: u_in,
+                up_out: u_out,
+                down_in: d_in,
+                down_out: d_out,
+            });
+        }
+
+        // Phase 2: Build layer_weights with references into the now-stable norm vectors.
+        let layer_weights: Vec<MegaPassLayerWeights<'_>> = layer_raws
+            .iter()
+            .zip(all_attn_norms.iter().zip(all_ffn_norms.iter()))
+            .map(|(r, (an, fn_))| MegaPassLayerWeights {
+                attn_norm: &an[..n_embd],
+                q_raw: r.q_raw,
+                k_raw: r.k_raw,
+                v_raw: r.v_raw,
+                o_raw: r.o_raw,
+                ffn_norm: &fn_[..n_embd],
+                gate_raw: r.g_raw,
+                up_raw: r.u_raw,
+                down_raw: r.d_raw,
+            })
+            .collect();
+
+        // Output norm.
+        let mut output_norm_buf = vec![0.0f32; n_embd];
+        let output_norm: Option<&[f32]> = if let Some(on_info) = index.output_norm_info() {
+            if dequant_norm_row_into(mmap, tds, on_info, &mut output_norm_buf) >= n_embd {
+                Some(&output_norm_buf[..n_embd])
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+
+        // LM head.
+        let lm_info = index.logits_projection_info()?;
+        let (lm_in, lm_out) = Self::matmul_dims(lm_info);
+        let lm_raw = fetch_tensor_bytes(mmap, tds, lm_info).ok()?;
+        let lm_head_raw = if lm_info.ggml_type == GGML_TYPE_Q4_K_SOA {
+            Some(lm_raw)
+        } else {
+            None
+        };
+
+        let rope_base = h.effective_rope_freq_base();
+        let rope_scale = h.effective_rope_scale();
+        let rms_eps = RMS_NORM_EPS;
+
+        crate::try_cuda_mega_pass(
+            n_embd,
+            n_head,
+            n_kv,
+            head_dim,
+            n_layer,
+            token_idx,
+            layout.max_context,
+            layout.layer_stride,
+            layout.slot_kv_elems,
+            rope_base,
+            rope_scale,
+            rms_eps,
+            &mut hidden[..n_embd],
+            &layer_weights,
+            &layer_dims,
+            output_norm,
+            lm_head_raw,
+            lm_in,
+            lm_out,
+        )
     }
 
     /// Sequential layer-by-layer forward (one tensor payload in VRAM at a time).
@@ -1054,7 +1282,9 @@ impl QTensorEngine {
         };
         let batch_buf = self.gemm_input_buf.as_ref().unwrap();
         let token_buf = self.gemm_output_buf.as_ref().unwrap();
-        let norm_buf = self.norm_weight_buf.as_ref().unwrap();
+        if self.norm_weight_buf.is_none() {
+            return 0;
+        }
         self.gpu_queue()
             .write_buffer(batch_buf, 0, bytemuck::cast_slice(&hidden[..n_embd]));
         let mmap = match self.gguf_mmap.as_deref() {
@@ -1285,6 +1515,482 @@ impl QTensorEngine {
             return 0;
         }
         ran
+    }
+
+    /// Fused forward + output norm + argmax in a single encoder/submit/readback.
+    /// Eliminates 1 of 2 GPU round-trips per token vs the separate forward+argmax path.
+    #[cfg(target_arch = "wasm32")]
+    pub async fn dispatch_forward_and_argmax_fused_async(
+        &mut self,
+        index: &crate::gguf_sharder::GgufTensorIndex,
+        hidden: &mut [f32],
+        emb_dim: usize,
+        token_idx: u32,
+        max_layers: u32,
+        chunk_logits: &mut [f32],
+        max_chunks: u32,
+    ) -> Option<StreamingArgmaxResult> {
+        let n_layer = index.hyperparams.n_layer;
+        if n_layer == 0 || !self.mc8_buffers_ready() {
+            return None;
+        }
+        if self.prefill_work_buf_a.is_none() || self.prefill_work_buf_b.is_none() {
+            return None;
+        }
+        if !self.mc8_weights_resident {
+            let _ = self.mc8_upload_all_resident_weights(index);
+        }
+        let limit = if max_layers == 0 {
+            n_layer
+        } else {
+            max_layers.min(n_layer)
+        };
+        let n_embd = index.hyperparams.n_embd as usize;
+        if emb_dim < n_embd || n_embd > hidden.len() || n_embd > self.gemm_max_input_floats {
+            return None;
+        }
+        let prefill_scratch = self.prefill_scratch_buf.as_ref()?;
+        let batch_buf = self.gemm_input_buf.as_ref().unwrap();
+        let norm_buf = self.norm_weight_buf.as_ref().unwrap();
+        let mmap = self.gguf_mmap.as_deref()?;
+        let layout = self.kv_layout?;
+
+        // Upload hidden to batch_buf
+        self.gpu_queue()
+            .write_buffer(batch_buf, 0, bytemuck::cast_slice(&hidden[..n_embd]));
+
+        // === Forward pass (same as dispatch_transformer_forward_async but without flush) ===
+        let n_tokens = 1u32;
+        let mut ran = 0u32;
+        let mut layer_uniform_cursors = Mc8ChunkUniformCursors {
+            attn: 0,
+            elem: 0,
+            gemm: 0,
+        };
+        let mut enc = WasmGpuPipeline::begin(self);
+        for layer in 0..limit {
+            if layer > 0 && (layer % MC8_LAYERS_PER_ENCODER) == 0 {
+                self.mc8_flush(&mut enc);
+                layer_uniform_cursors.reset();
+            }
+            let tensors = index.get_layer_tensors(layer);
+            let k_info = match tensors.attn_k.as_ref() {
+                Some(i) => i,
+                None => break,
+            };
+            let v_info = match tensors.attn_v.as_ref() {
+                Some(i) => i,
+                None => break,
+            };
+            let k_raw =
+                match crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, k_info)
+                {
+                    Ok(s) => s,
+                    Err(_) => break,
+                };
+            let v_raw =
+                match crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, v_info)
+                {
+                    Ok(s) => s,
+                    Err(_) => break,
+                };
+            let h = index.hyperparams;
+            let n_kv = h.effective_n_kv_head();
+            let used_attn_norm = tensors.attn_norm.is_some();
+            let (uniforms, geom) = match self.mc8_stage_prefill_layer_super_arena(
+                index,
+                layer,
+                &tensors,
+                token_idx,
+                n_tokens,
+                emb_dim,
+                used_attn_norm,
+                k_info,
+                &k_raw,
+                v_info,
+                &v_raw,
+                &mut layer_uniform_cursors,
+            ) {
+                Some(v) => v,
+                None => break,
+            };
+            let attn_src = if used_attn_norm {
+                if let (Some(norm), Some(off)) =
+                    (tensors.attn_norm.as_ref(), uniforms.attn_norm_elem_off)
+                {
+                    let (norm_b, norm_b_off) = match self.mc8_norm_source(
+                        mmap,
+                        index.tensor_data_start,
+                        norm,
+                        n_embd,
+                        layer,
+                        false,
+                    ) {
+                        Some(v) => v,
+                        None => break,
+                    };
+                    self.encode_elem_offset(
+                        &mut enc,
+                        ELEM_OP_RMS_NORM,
+                        n_embd as u32,
+                        n_tokens,
+                        batch_buf,
+                        0,
+                        geom.batch_in_bytes,
+                        norm_b,
+                        norm_b_off,
+                        geom.n_embd_bytes,
+                        prefill_scratch,
+                        0,
+                        geom.batch_in_bytes,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        off,
+                    );
+                }
+                prefill_scratch
+            } else {
+                batch_buf
+            };
+            let n_kv_wg = n_tokens.saturating_mul(n_kv);
+            let kv_dim = (n_kv * h.head_dim()) as usize;
+            let kv_proj_bytes = (kv_dim * n_tokens as usize * 4) as wgpu::BufferAddress;
+            let k_proj = self.mc8_k_proj_buf.as_ref().unwrap();
+            let v_proj = self.mc8_v_proj_buf.as_ref().unwrap();
+            if !self.encode_gemm_bufs_offset(
+                &mut enc,
+                k_info,
+                k_raw,
+                n_embd,
+                kv_dim,
+                attn_src,
+                0,
+                geom.batch_in_bytes,
+                k_proj,
+                0,
+                kv_proj_bytes,
+                n_tokens,
+                n_embd as u32,
+                kv_dim as u32,
+                uniforms.off_k_gemm,
+                layer,
+                Mc8WeightRole::AttnK,
+            ) {
+                break;
+            }
+            if !self.encode_gemm_bufs_offset(
+                &mut enc,
+                v_info,
+                v_raw,
+                n_embd,
+                kv_dim,
+                attn_src,
+                0,
+                geom.batch_in_bytes,
+                v_proj,
+                0,
+                kv_proj_bytes,
+                n_tokens,
+                n_embd as u32,
+                kv_dim as u32,
+                uniforms.off_v_gemm,
+                layer,
+                Mc8WeightRole::AttnV,
+            ) {
+                break;
+            }
+            if !self.encode_attention_pass_gpu(
+                &mut enc,
+                k_proj,
+                self.gemm_output_buf.as_ref().unwrap(),
+                n_embd,
+                n_tokens,
+                token_idx,
+                &layout,
+                layer,
+                token_idx,
+                &h,
+                k_info,
+                k_raw,
+                1,
+                n_kv_wg,
+                uniforms.k_off,
+                Mc8WeightRole::AttnK,
+            ) {
+                break;
+            }
+            if !self.encode_attention_pass_gpu(
+                &mut enc,
+                v_proj,
+                self.gemm_output_buf.as_ref().unwrap(),
+                n_embd,
+                n_tokens,
+                token_idx,
+                &layout,
+                layer,
+                token_idx,
+                &h,
+                v_info,
+                v_raw,
+                2,
+                n_kv_wg,
+                uniforms.v_off,
+                Mc8WeightRole::AttnV,
+            ) {
+                break;
+            }
+            let work_a = self.prefill_work_buf_a.as_ref().unwrap();
+            let work_b = self.prefill_work_buf_b.as_ref().unwrap();
+            if !self.encode_prefill_q_ffn_tail_fused(
+                &mut enc,
+                index,
+                layer,
+                &tensors,
+                batch_buf,
+                attn_src,
+                work_a,
+                work_b,
+                n_tokens,
+                token_idx,
+                emb_dim,
+                used_attn_norm,
+                &uniforms,
+                &geom,
+            ) {
+                break;
+            }
+            ran += 1;
+        }
+        if ran == 0 {
+            self.mc8_flush(&mut enc);
+            return None;
+        }
+
+        // === Output norm on GPU ===
+        let output_norm_info = match index.output_norm_info() {
+            Some(i) => i,
+            None => {
+                // No output norm — just read hidden and fall back to CPU argmax
+                self.mc8_flush(&mut enc);
+                if !self.pipeline_read_hidden(emb_dim, hidden).await {
+                    return None;
+                }
+                return None; // caller will use separate argmax
+            }
+        };
+        // Upload output norm weights to norm_weight_buf
+        let mut norm_w = [0f32; MAX_HIDDEN_DIM];
+        if dequant_norm_row_into(mmap, index.tensor_data_start, output_norm_info, &mut norm_w)
+            < n_embd
+        {
+            self.mc8_flush(&mut enc);
+            return None;
+        }
+        self.gpu_queue()
+            .write_buffer(norm_buf, 0, bytemuck::cast_slice(&norm_w[..n_embd]));
+        // RMS norm: read from batch_buf, write to prefill_scratch
+        let n_embd_bytes = (n_embd * 4) as wgpu::BufferAddress;
+        self.encode_elem_offset(
+            &mut enc,
+            ELEM_OP_RMS_NORM,
+            n_embd as u32,
+            1,
+            batch_buf,
+            0,
+            n_embd_bytes,
+            norm_buf,
+            0,
+            n_embd_bytes,
+            prefill_scratch,
+            0,
+            n_embd_bytes,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+        );
+        // Copy normed hidden back to batch_buf for argmax GEMM input
+        enc.encoder
+            .copy_buffer_to_buffer(prefill_scratch, 0, batch_buf, 0, n_embd_bytes);
+
+        // === Batched argmax in same encoder ===
+        let resident_buf = self.mc8_logits_resident_buf.as_ref()?;
+        let row_bytes = self.mc8_logits_row_bytes as u64;
+        let output_buf = self.gemm_output_buf.as_ref().unwrap();
+        let params_buf = self.gemm_params_buf.as_ref().unwrap();
+        let staging = self.gemm_output_staging.as_ref().unwrap();
+        let logits_info = index.logits_projection_info()?;
+        let (n_in, vocab_size) = Self::matmul_dims(logits_info);
+        if n_in == 0 || vocab_size == 0 || n_in > emb_dim {
+            self.mc8_flush(&mut enc);
+            return None;
+        }
+        let full_chunks = vocab_size.div_ceil(VOCAB_CHUNK_ROWS);
+        let n_chunks = if max_chunks == 0 {
+            full_chunks
+        } else {
+            (max_chunks as usize).min(full_chunks)
+        };
+        let params = GemmGpuParams {
+            n_in: n_in as u32,
+            n_out: VOCAB_CHUNK_ROWS as u32,
+            weight_ggml_type: logits_info.ggml_type,
+            weight_row_elems: logits_info.dims[0] as u32,
+            weight_byte_len: (VOCAB_CHUNK_ROWS as u64 * row_bytes) as u32,
+            n_batch: 1,
+            in_row_stride: 0,
+            out_row_stride: 0,
+        };
+        self.gpu_queue()
+            .write_buffer(params_buf, 0, bytemuck::bytes_of(&params));
+        #[cfg(target_arch = "wasm32")]
+        let use_mmv_q8_0 =
+            logits_info.ggml_type == crate::ggml_quants::GGML_TYPE_Q8_0 && (n_in % 32 == 0);
+        #[cfg(target_arch = "wasm32")]
+        let logits_pipeline: &wgpu::ComputePipeline = if use_mmv_q8_0 {
+            &self.mmv_q8_0_pipeline
+        } else {
+            &self.pipeline
+        };
+        #[cfg(not(target_arch = "wasm32"))]
+        let logits_pipeline: &wgpu::ComputePipeline = &self.pipeline;
+        let bind_layout = logits_pipeline.get_bind_group_layout(0);
+        let staging_capacity = (staging.size() / 4) as usize;
+        for chunk_idx in 0..n_chunks {
+            let row_start = chunk_idx * VOCAB_CHUNK_ROWS;
+            let chunk_rows = VOCAB_CHUNK_ROWS.min(vocab_size - row_start);
+            let weight = wgpu::BindingResource::Buffer(wgpu::BufferBinding {
+                buffer: resident_buf,
+                offset: row_start as u64 * row_bytes,
+                size: std::num::NonZeroU64::new(chunk_rows as u64 * row_bytes),
+            });
+            let key = mc8_bg_hash(&[
+                7,
+                chunk_idx as u64,
+                row_start as u64,
+                row_bytes as u64,
+                chunk_rows as u64,
+                resident_buf as *const _ as u64,
+                batch_buf as *const _ as u64,
+                output_buf as *const _ as u64,
+            ]);
+            let bind_group = {
+                let cached = self
+                    .mc8_bg_cache
+                    .lock()
+                    .ok()
+                    .and_then(|c| c.get(&key).cloned());
+                match cached {
+                    Some(bg) => bg,
+                    None => {
+                        let bg = self
+                            .gpu_device()
+                            .create_bind_group(&wgpu::BindGroupDescriptor {
+                                label: Some("FusedArgmaxBind"),
+                                layout: &bind_layout,
+                                entries: &[
+                                    wgpu::BindGroupEntry {
+                                        binding: 0,
+                                        resource: batch_buf.as_entire_binding(),
+                                    },
+                                    wgpu::BindGroupEntry {
+                                        binding: 1,
+                                        resource: weight,
+                                    },
+                                    wgpu::BindGroupEntry {
+                                        binding: 2,
+                                        resource: Self::mc8_dynamic_uniform_binding(params_buf),
+                                    },
+                                    wgpu::BindGroupEntry {
+                                        binding: 3,
+                                        resource: output_buf.as_entire_binding(),
+                                    },
+                                ],
+                            });
+                        if let Ok(mut c) = self.mc8_bg_cache.lock() {
+                            c.insert(key, bg.clone());
+                        }
+                        bg
+                    }
+                }
+            };
+            {
+                let mut cpass = enc
+                    .encoder
+                    .begin_compute_pass(&wgpu::ComputePassDescriptor {
+                        label: None,
+                        timestamp_writes: None,
+                    });
+                cpass.set_pipeline(logits_pipeline);
+                cpass.set_bind_group(0, &bind_group, &[0]);
+                #[cfg(target_arch = "wasm32")]
+                if use_mmv_q8_0 {
+                    cpass.dispatch_workgroups((chunk_rows as u32 + 3) / 4, 1, 1);
+                } else {
+                    cpass.dispatch_workgroups((chunk_rows as u32 + 63) / 64, 1, 1);
+                }
+                #[cfg(not(target_arch = "wasm32"))]
+                cpass.dispatch_workgroups((chunk_rows as u32 + 63) / 64, 1, 1);
+            }
+            let chunk_bytes = (chunk_rows * 4) as wgpu::BufferAddress;
+            let staging_off = (chunk_idx * VOCAB_CHUNK_ROWS * 4) as wgpu::BufferAddress;
+            if staging_off + chunk_bytes <= staging.size() {
+                enc.encoder
+                    .copy_buffer_to_buffer(output_buf, 0, staging, staging_off, chunk_bytes);
+            }
+        }
+
+        // Single submit + single readback
+        self.gpu_queue().submit(Some(enc.encoder.finish()));
+
+        let total_floats = (n_chunks * VOCAB_CHUNK_ROWS).min(staging_capacity);
+        let total_bytes = (total_floats * 4) as wgpu::BufferAddress;
+        let slice = staging.slice(..total_bytes);
+        if !await_wgpu_map(slice).await {
+            let _ = staging.unmap();
+            return None;
+        }
+        let data = slice
+            .get_mapped_range()
+            .expect("wgpu buffer map_range failed");
+        let all_floats: &[f32] = bytemuck::cast_slice(&data);
+        let mut best_token_id = 0u32;
+        let mut max_logit = f32::NEG_INFINITY;
+        for chunk_idx in 0..n_chunks {
+            let row_start = chunk_idx * VOCAB_CHUNK_ROWS;
+            let chunk_rows = VOCAB_CHUNK_ROWS.min(vocab_size - row_start);
+            let chunk_data = &all_floats
+                [chunk_idx * VOCAB_CHUNK_ROWS..chunk_idx * VOCAB_CHUNK_ROWS + chunk_rows];
+            if chunk_rows > chunk_logits.len() {
+                drop(data);
+                staging.unmap();
+                return None;
+            }
+            chunk_logits[..chunk_rows].copy_from_slice(chunk_data);
+            update_streaming_argmax(
+                &chunk_logits[..chunk_rows],
+                chunk_rows,
+                chunk_idx,
+                &mut best_token_id,
+                &mut max_logit,
+            );
+        }
+        drop(data);
+        staging.unmap();
+        if max_logit == f32::NEG_INFINITY {
+            return None;
+        }
+        Some(StreamingArgmaxResult {
+            best_token_id,
+            max_logit,
+        })
     }
 
     /// Topological speculative verify — accept longest draft prefix (B3.1d).

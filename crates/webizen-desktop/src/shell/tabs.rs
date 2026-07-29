@@ -1,5 +1,5 @@
-use std::sync::Mutex;
 use std::collections::HashMap;
+use std::sync::Mutex;
 
 pub type TabId = u32;
 
@@ -114,7 +114,8 @@ impl TabManager {
 
 pub fn qapp_url(qapp_id: &str) -> String {
     match qapp_id {
-        "dashboard" => "/studio/#/".to_string(),
+        // Talk is home (empty studio hash). Legacy dashboard/home alias the same URL.
+        "talk" | "dashboard" | "home" => "/studio/#/".to_string(),
         "wellfair" => "/studio/#/wellfair".to_string(),
         "chora" => "/studio/#/chora".to_string(),
         "browser" => "/studio/#/browser".to_string(),
@@ -133,7 +134,7 @@ pub fn qapp_url(qapp_id: &str) -> String {
 
 pub fn qapp_title(qapp_id: &str) -> &'static str {
     match qapp_id {
-        "dashboard" => "Dashboard",
+        "talk" | "dashboard" | "home" => "Talk",
         "wellfair" => "WellFair",
         "chora" => "Chora",
         "browser" => "Browser",

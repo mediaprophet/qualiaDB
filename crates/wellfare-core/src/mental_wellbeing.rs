@@ -3,9 +3,7 @@
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::record::{
-    EpistemicStatus, EvidenceType, RecordEnvelope, SensitivityClass,
-};
+use crate::record::{EpistemicStatus, EvidenceType, RecordEnvelope, SensitivityClass};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct WellbeingObservation {

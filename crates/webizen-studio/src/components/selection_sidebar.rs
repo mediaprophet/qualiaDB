@@ -15,12 +15,11 @@ fn suggest_companion_panes(
     palette: &[PaneDefinition],
     on_canvas: &[PanePlacement],
 ) -> Vec<PaneDefinition> {
-    let selected = palette.iter().find(|p| p.component_id == selected_component_id);
-    let category = selected.map(|p| p.category.clone());
-    let present: HashSet<&str> = on_canvas
+    let selected = palette
         .iter()
-        .map(|p| p.component_id.as_str())
-        .collect();
+        .find(|p| p.component_id == selected_component_id);
+    let category = selected.map(|p| p.category.clone());
+    let present: HashSet<&str> = on_canvas.iter().map(|p| p.component_id.as_str()).collect();
 
     let mut scored: Vec<(i32, PaneDefinition)> = palette
         .iter()
@@ -40,7 +39,10 @@ fn suggest_companion_panes(
         })
         .collect();
 
-    scored.sort_by(|a, b| b.0.cmp(&a.0).then_with(|| a.1.display_name.cmp(&b.1.display_name)));
+    scored.sort_by(|a, b| {
+        b.0.cmp(&a.0)
+            .then_with(|| a.1.display_name.cmp(&b.1.display_name))
+    });
     scored
         .into_iter()
         .filter(|(s, _)| *s > 0)

@@ -3,8 +3,8 @@
 //! `_q42` aliases, plus the compile-time helpers (`p64_tensor_name`, f16 blob expansion).
 
 use super::*;
-use crate::gguf_sharder::{GgufTensorIndex, GgufTensorInfo};
 use crate::container_10d::crc32c::crc32c;
+use crate::gguf_sharder::{GgufTensorIndex, GgufTensorInfo};
 
 fn p64_tensor_name(role: u16, layer: u16, source_name_hash: u64) -> String {
     if layer == P64_LAYER_GLOBAL {
@@ -191,6 +191,7 @@ pub fn compile_gguf_to_p64_with_layout(
         Copy,
         F16Expand,
         Q4kSoa,
+        Q4kSoaRequant,
     }
     let mut blob_kind: Vec<BlobKind> = Vec::with_capacity(planned.len());
     let mut cursor = blob_region_offset;
@@ -214,8 +215,11 @@ pub fn compile_gguf_to_p64_with_layout(
             && info.ggml_type != crate::ggml_quants::GGML_TYPE_F32;
         let do_soa = matches!(layout, P64ConvertLayout::Q4kSoa)
             && p64_role_is_weight_matrix(*role)
-            && info.n_dims >= 2
-            && info.ggml_type == crate::ggml_quants::GGML_TYPE_Q4_K;
+            && info.n_dims >= 2;
+        // Q4_K source → direct SoA expand (lossless layout transform).
+        // Non-Q4_K source → dequant to f32 then re-quantize to Q4_K_SOA.
+        let do_soa_requant = do_soa && info.ggml_type != crate::ggml_quants::GGML_TYPE_Q4_K;
+        let do_soa = do_soa && !do_soa_requant;
         let (out_dtype, blob_size, kind) = if do_f16 {
             let n0 = info.dims[0] as usize;
             let n1 = info.dims[1] as usize;
@@ -230,20 +234,19 @@ pub fn compile_gguf_to_p64_with_layout(
                 bytes,
                 BlobKind::F16Expand,
             )
-        } else if do_soa {
+        } else if do_soa || do_soa_requant {
             let n0 = info.dims[0] as usize;
             let n1 = info.dims[1].max(1) as usize;
-            let bytes = crate::ggml_quants::ggml_row_bytes(
-                crate::ggml_quants::GGML_TYPE_Q4_K_SOA,
-                n0,
-            )
-            .and_then(|r| r.checked_mul(n1))
-            .ok_or("p64: Q4_K SoA size overflow")?;
-            (
-                crate::ggml_quants::GGML_TYPE_Q4_K_SOA as u16,
-                bytes,
-                BlobKind::Q4kSoa,
-            )
+            let bytes =
+                crate::ggml_quants::ggml_row_bytes(crate::ggml_quants::GGML_TYPE_Q4_K_SOA, n0)
+                    .and_then(|r| r.checked_mul(n1))
+                    .ok_or("p64: Q4_K SoA size overflow")?;
+            let kind = if do_soa_requant {
+                BlobKind::Q4kSoaRequant
+            } else {
+                BlobKind::Q4kSoa
+            };
+            (crate::ggml_quants::GGML_TYPE_Q4_K_SOA as u16, bytes, kind)
         } else {
             (
                 u16::try_from(info.ggml_type).map_err(|_| "p64: GGML type exceeds u16")?,
@@ -286,7 +289,9 @@ pub fn compile_gguf_to_p64_with_layout(
             blob_size: u32::try_from(blob_size).map_err(|_| "p64: tensor exceeds 4 GiB")?,
             source_offset: info.byte_offset,
             source_name_hash: *name_hash,
-            reserved: [0; 8],
+            alt_dtype: 0,
+            precision_views_mask: 0,
+            alt_blob_offset: 0,
         });
         blob_kind.push(kind);
         cursor = cursor
@@ -303,7 +308,9 @@ pub fn compile_gguf_to_p64_with_layout(
         | P64_FLAG_LAYER_PACK
         | P64_FLAG_LAYER_SCHEDULE;
     if matches!(layout, P64ConvertLayout::Q4kSoa)
-        && blob_kind.iter().any(|k| matches!(k, BlobKind::Q4kSoa))
+        && blob_kind
+            .iter()
+            .any(|k| matches!(k, BlobKind::Q4kSoa | BlobKind::Q4kSoaRequant))
     {
         flags |= P64_FLAG_Q4K_SOA;
     }
@@ -427,6 +434,35 @@ pub fn compile_gguf_to_p64_with_layout(
                     &mut output[target_start..target_end],
                 )
                 .map_err(|e| format!("p64: Q4_K SoA expand: {e:?}"))?;
+            }
+            BlobKind::Q4kSoaRequant => {
+                let info = &planned[position].3;
+                let source_blob_size = crate::ggml_quants::tensor_byte_len(info)
+                    .ok_or("p64: Q4_K SoA requant missing source size")?;
+                let source_start = tensor_data_start + entry.source_offset as usize;
+                let source_end = source_start + source_blob_size;
+                let raw = &input[source_start..source_end];
+                let n0 = info.dims[0] as usize;
+                let n1 = info.dims[1].max(1) as usize;
+                let total_elems = n0
+                    .checked_mul(n1)
+                    .ok_or("p64: Q4_K SoA requant element count overflow")?;
+                // Dequantize source → f32, then re-quantize f32 → Q4_K_SOA.
+                let mut f32_buf: Vec<f32> = vec![0.0f32; total_elems];
+                crate::ggml_quants::dequantize_row_into(
+                    raw,
+                    info.ggml_type,
+                    total_elems,
+                    &mut f32_buf,
+                )
+                .map_err(|e| format!("p64: Q4_K SoA requant dequant: {e:?}"))?;
+                crate::ggml_quants::quantize_f32_to_q4_k_soa_tensor(
+                    &f32_buf,
+                    n0,
+                    n1,
+                    &mut output[target_start..target_end],
+                )
+                .map_err(|e| format!("p64: Q4_K SoA requant: {e:?}"))?;
             }
             BlobKind::Copy => {
                 let source_start = tensor_data_start + entry.source_offset as usize;

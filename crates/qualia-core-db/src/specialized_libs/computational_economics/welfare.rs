@@ -48,7 +48,9 @@ impl WelfareError {
     pub fn is_caller_error(self) -> bool {
         matches!(
             self,
-            WelfareError::InvalidInput | WelfareError::BufferTooSmall | WelfareError::InsufficientData
+            WelfareError::InvalidInput
+                | WelfareError::BufferTooSmall
+                | WelfareError::InsufficientData
         )
     }
 }
@@ -509,10 +511,7 @@ pub fn distributional_npv(
     if n_periods > MAX_POPULATION {
         return Err(WelfareError::BufferTooSmall);
     }
-    if benefits.len() < n_periods
-        || costs.len() < n_periods
-        || weights.len() < n_periods
-    {
+    if benefits.len() < n_periods || costs.len() < n_periods || weights.len() < n_periods {
         return Err(WelfareError::InvalidInput);
     }
     if !finite(discount_rate) || discount_rate <= -1.0 {
@@ -702,7 +701,10 @@ mod tests {
 
     #[test]
     fn gini_all_zero_is_invalid() {
-        assert_eq!(gini_coefficient(&[0.0, 0.0]), Err(WelfareError::InvalidInput));
+        assert_eq!(
+            gini_coefficient(&[0.0, 0.0]),
+            Err(WelfareError::InvalidInput)
+        );
     }
 
     #[test]
@@ -907,7 +909,10 @@ mod tests {
 
     #[test]
     fn welfare_empty_is_insufficient_data() {
-        assert_eq!(utilitarian_welfare(&[]), Err(WelfareError::InsufficientData));
+        assert_eq!(
+            utilitarian_welfare(&[]),
+            Err(WelfareError::InsufficientData)
+        );
         assert_eq!(rawlsian_welfare(&[]), Err(WelfareError::InsufficientData));
         assert_eq!(nash_welfare(&[]), Err(WelfareError::InsufficientData));
     }
@@ -1025,7 +1030,11 @@ mod tests {
         let report = survival_floor_allocation_into(&needs, &floors, budget, &mut out).unwrap();
         // surplus needs: 6, 15, 24 -> total 45
         // extras: 10*6/45, 10*15/45, 10*24/45
-        let expected = [4.0 + 10.0 * 6.0 / 45.0, 5.0 + 10.0 * 15.0 / 45.0, 6.0 + 10.0 * 24.0 / 45.0];
+        let expected = [
+            4.0 + 10.0 * 6.0 / 45.0,
+            5.0 + 10.0 * 15.0 / 45.0,
+            6.0 + 10.0 * 24.0 / 45.0,
+        ];
         for i in 0..3 {
             assert!(approx(out[i], expected[i]));
         }
@@ -1106,9 +1115,6 @@ mod tests {
         let big = [1.0f64; MAX_POPULATION + 1];
         // Use a small slice that exceeds capacity.
         let slice = &big[..MAX_POPULATION + 1];
-        assert_eq!(
-            gini_coefficient(slice),
-            Err(WelfareError::BufferTooSmall)
-        );
+        assert_eq!(gini_coefficient(slice), Err(WelfareError::BufferTooSmall));
     }
 }

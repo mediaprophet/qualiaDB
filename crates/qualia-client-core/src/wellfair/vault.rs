@@ -79,7 +79,10 @@ impl VaultService {
         self.graph.list_recent(limit)
     }
 
-    pub fn graph_coverage(&self, journal_limit: usize) -> std::io::Result<Vec<super::graph_query::GraphCoverageRow>> {
+    pub fn graph_coverage(
+        &self,
+        journal_limit: usize,
+    ) -> std::io::Result<Vec<super::graph_query::GraphCoverageRow>> {
         let journal = self.journal.list_recent(journal_limit)?;
         let quin_limit = journal.len().saturating_mul(8).max(64);
         let quins = self.graph.list_recent(quin_limit)?;
@@ -106,7 +109,10 @@ impl VaultService {
         self.sync_outbox.count_queued()
     }
 
-    pub fn list_active_consents(&self, now_unix: u64) -> std::io::Result<Vec<super::consent_store::ConsentGrantRecord>> {
+    pub fn list_active_consents(
+        &self,
+        now_unix: u64,
+    ) -> std::io::Result<Vec<super::consent_store::ConsentGrantRecord>> {
         self.consents.list_active(now_unix)
     }
 
@@ -230,9 +236,7 @@ impl VaultService {
 mod tests {
     use super::*;
     use ed25519_dalek::SigningKey;
-    use wellfare_core::record::{
-        EpistemicStatus, EvidenceType, RecordEnvelope, SensitivityClass,
-    };
+    use wellfare_core::record::{EpistemicStatus, EvidenceType, RecordEnvelope, SensitivityClass};
 
     #[test]
     fn checkpoint_persists_graph_and_meta() {

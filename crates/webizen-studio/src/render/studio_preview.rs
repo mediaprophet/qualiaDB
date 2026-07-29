@@ -26,7 +26,10 @@ pub fn semantic_scene_from_panes(panes: &[PanePlacement]) -> SemanticScene {
             },
             intensity: (0.35 + (idx as f64 * 0.08)).min(1.0),
             provenance: Some(format!("pane:{idx}")),
-            reasons: vec![format!("{} @ ({:.0}, {:.0})", pane.component_id, pane.x, pane.y)],
+            reasons: vec![format!(
+                "{} @ ({:.0}, {:.0})",
+                pane.component_id, pane.x, pane.y
+            )],
         })
         .collect();
 
@@ -49,10 +52,7 @@ fn pane_layout(panes: &[PanePlacement]) -> impl Fn(&str) -> Option<(Vec3, Mesh)>
 }
 
 /// Build a scene from any [`SceneSource`] (SPARQL payload, mock, or pane grid).
-pub fn workspace_scene_from_source(
-    source: &impl SceneSource,
-    panes: &[PanePlacement],
-) -> Scene {
+pub fn workspace_scene_from_source(source: &impl SceneSource, panes: &[PanePlacement]) -> Scene {
     let sem = source.semantic_scene();
     if sem.items.is_empty() {
         return empty_workspace_fallback_scene();
@@ -211,7 +211,10 @@ impl Renderer for DrawCountRenderer {
 }
 
 /// Resolve theme binding into a motion-friendly class for spring drivers.
-pub fn motion_class_from_binding(binding: &ThemeBinding, catalog: &[crate::theme_engine::ThemeDefinition]) -> String {
+pub fn motion_class_from_binding(
+    binding: &ThemeBinding,
+    catalog: &[crate::theme_engine::ThemeDefinition],
+) -> String {
     let resolved = crate::theme_engine::resolve_theme(Some(binding), catalog);
     resolved
         .class_name

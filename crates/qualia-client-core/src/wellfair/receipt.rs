@@ -33,10 +33,7 @@ impl ReceiptLog {
             fs::create_dir_all(parent)?;
         }
         if !path.exists() {
-            OpenOptions::new()
-                .create(true)
-                .write(true)
-                .open(&path)?;
+            OpenOptions::new().create(true).write(true).open(&path)?;
         }
         Ok(Self { path })
     }
@@ -83,12 +80,16 @@ pub fn receipt_from_decision(
         DecisionResult::Permit { obligations } => ("permit".to_string(), obligations.clone()),
         DecisionResult::Deny { reasons } => ("deny".to_string(), reasons.clone()),
         DecisionResult::Prompt { .. } => ("prompt".to_string(), vec![]),
-        DecisionResult::Suspend { required_approvals } => {
-            ("suspend".to_string(), vec![format!("approvals:{required_approvals}")])
-        }
+        DecisionResult::Suspend { required_approvals } => (
+            "suspend".to_string(),
+            vec![format!("approvals:{required_approvals}")],
+        ),
     };
     ReceiptRecord {
-        id: format!("rcpt-{timestamp_unix}-{}", &record_id[record_id.len().saturating_sub(8)..]),
+        id: format!(
+            "rcpt-{timestamp_unix}-{}",
+            &record_id[record_id.len().saturating_sub(8)..]
+        ),
         timestamp_unix,
         qapp_id: qapp_id.to_string(),
         record_id: record_id.to_string(),

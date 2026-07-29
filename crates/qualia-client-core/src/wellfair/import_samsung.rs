@@ -10,9 +10,7 @@ use wellfare_core::models::{HeartRateRecord, SleepRecord, StepRecord, WeightReco
 use wellfare_core::parser::{
     parse_heart_rate_csv, parse_sleep_csv, parse_steps_csv, parse_weight_csv,
 };
-use wellfare_core::record::{
-    EpistemicStatus, EvidenceType, RecordEnvelope, SensitivityClass,
-};
+use wellfare_core::record::{EpistemicStatus, EvidenceType, RecordEnvelope, SensitivityClass};
 
 use super::api::WebizenHostApi;
 
@@ -71,7 +69,11 @@ fn envelope_from_parts(
     }
 }
 
-fn weight_envelopes(records: &[WeightRecord], owner: &str, author: &str) -> Vec<EnvelopeWithSummary> {
+fn weight_envelopes(
+    records: &[WeightRecord],
+    owner: &str,
+    author: &str,
+) -> Vec<EnvelopeWithSummary> {
     records
         .iter()
         .filter_map(|r| {
@@ -212,7 +214,11 @@ pub fn parse_csv_named_content(
         }
         SamsungCsvKind::HeartRate => {
             let records = parse_heart_rate_csv(content).map_err(|e| e.to_string())?;
-            Ok((kind, heart_rate_envelopes(&records, owner_did, author_did), 0))
+            Ok((
+                kind,
+                heart_rate_envelopes(&records, owner_did, author_did),
+                0,
+            ))
         }
         SamsungCsvKind::Steps => {
             let records = parse_steps_csv(content).map_err(|e| e.to_string())?;
@@ -228,10 +234,7 @@ fn parse_csv_file(
     author_did: &str,
 ) -> Result<(SamsungCsvKind, Vec<EnvelopeWithSummary>, u32), String> {
     let content = fs::read_to_string(path).map_err(|e| format!("read {}: {e}", path.display()))?;
-    let name = path
-        .file_name()
-        .and_then(|n| n.to_str())
-        .unwrap_or("");
+    let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
     parse_csv_named_content(name, &content, owner_did, author_did)
 }
 
@@ -327,7 +330,9 @@ pub fn import_samsung_folder(
     };
 
     if !folder.is_dir() {
-        report.errors.push(format!("Not a directory: {}", folder.display()));
+        report
+            .errors
+            .push(format!("Not a directory: {}", folder.display()));
         return report;
     }
 
@@ -400,8 +405,7 @@ mod tests {
         )
         .unwrap();
 
-        let (kind, envelopes, _) =
-            parse_csv_file(&csv, "did:wf:owner", "did:wf:owner").unwrap();
+        let (kind, envelopes, _) = parse_csv_file(&csv, "did:wf:owner", "did:wf:owner").unwrap();
         assert_eq!(kind, SamsungCsvKind::Weight);
         assert_eq!(envelopes.len(), 1);
         assert_eq!(

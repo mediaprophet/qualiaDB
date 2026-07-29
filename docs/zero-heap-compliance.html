@@ -361,7 +361,9 @@ Total: 48 bytes per Quin (exactly 6 cache lines on most CPUs)
     async function loadWasm() {
         try {
             const module = await import('./playground/qualia_core_db.js');
-            await module.default();
+            const wasmResp = await fetch('./playground/qualia_core_db_bg.wasm', { cache: 'no-store' });
+            if (!wasmResp.ok) throw new Error(`WASM fetch failed: ${wasmResp.status}`);
+            await module.default(wasmResp);
             wasm = module;
             
             // Update UI

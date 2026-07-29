@@ -332,12 +332,7 @@ mod tests {
 
     #[test]
     fn attachment_envelope_kind_and_hash() {
-        let meta = AttachmentMeta::new(
-            "path_report.pdf",
-            "application/pdf",
-            2048,
-            "deadbeef",
-        );
+        let meta = AttachmentMeta::new("path_report.pdf", "application/pdf", 2048, "deadbeef");
         let env = build_clinical_attachment_envelope(
             &meta,
             "did:wf:owner",
@@ -358,7 +353,11 @@ mod tests {
             10,
             "No acute findings.",
         );
-        for status in [ClaimStatus::Draft, ClaimStatus::Submitted, ClaimStatus::Superseded] {
+        for status in [
+            ClaimStatus::Draft,
+            ClaimStatus::Submitted,
+            ClaimStatus::Superseded,
+        ] {
             report.claim_status = status;
             let env = build_clinical_report_envelope(&report, "did:wf:o", "did:wf:o", 20, None);
             assert_eq!(
@@ -392,7 +391,10 @@ mod tests {
     #[test]
     fn draft_cannot_jump_to_clinician_confirmed_without_submission() {
         // Confirm on a Draft is a no-op — the document must be Submitted first.
-        assert_eq!(advance_claim(ClaimStatus::Draft, ClaimEvent::Confirm), ClaimStatus::Draft);
+        assert_eq!(
+            advance_claim(ClaimStatus::Draft, ClaimEvent::Confirm),
+            ClaimStatus::Draft
+        );
         // The legal path: Draft --submit--> Submitted --confirm--> ClinicianConfirmed.
         let submitted = advance_claim(ClaimStatus::Draft, ClaimEvent::Submit);
         assert_eq!(submitted, ClaimStatus::Submitted);

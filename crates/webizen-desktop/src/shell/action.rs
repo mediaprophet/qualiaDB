@@ -25,6 +25,8 @@ pub enum ShellAction {
     OpenMedReminders,
     OpenSyncInbox,
     RevokeSessions,
+    /// Open the shell command palette (Ctrl+K / Ctrl+P).
+    OpenCommandPalette,
 }
 
 impl ShellAction {
@@ -44,7 +46,8 @@ impl ShellAction {
             "open_chora" => Some(Self::Navigate("chora".to_string())),
             "open_browser" => Some(Self::Navigate("browser".to_string())),
             "open_10d" => Some(Self::Navigate("10d-browser".to_string())),
-            "open_dashboard" | "show" => Some(Self::Navigate("dashboard".to_string())),
+            // Home is Talk (human-first). Legacy open_dashboard / tray "show" land on talk.
+            "open_dashboard" | "open_talk" | "show" => Some(Self::Navigate("talk".to_string())),
             "open_qapp_studio" => Some(Self::Navigate("qapp-studio".to_string())),
             "open_qapp_manager" => Some(Self::Navigate("qapps".to_string())),
             "open_settings" | "settings" => Some(Self::Navigate("settings".to_string())),
@@ -66,7 +69,29 @@ impl ShellAction {
             "health_med_reminders" => Some(Self::OpenMedReminders),
             "sync_inbox" => Some(Self::OpenSyncInbox),
             "revoke" => Some(Self::RevokeSessions),
+            "open_command_palette" | "command_palette" => Some(Self::OpenCommandPalette),
             _ => None,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::ShellAction;
+
+    #[test]
+    fn command_palette_action_ids() {
+        assert_eq!(
+            ShellAction::from_id("open_command_palette"),
+            Some(ShellAction::OpenCommandPalette)
+        );
+        assert_eq!(
+            ShellAction::from_id("command_palette"),
+            Some(ShellAction::OpenCommandPalette)
+        );
+        assert_eq!(
+            ShellAction::from_id("open_talk"),
+            Some(ShellAction::Navigate("talk".to_string()))
+        );
     }
 }

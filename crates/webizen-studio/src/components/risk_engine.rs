@@ -38,7 +38,7 @@ pub fn RiskEngine() -> Element {
         let current_val = portfolio_value.read().clone();
         let current_vol = volatility.read().clone();
         let current_time = time_horizon.read().clone();
-        
+
         async move {
             let args = serde_json::json!({
                 "portfolio_value": current_val,

@@ -196,7 +196,10 @@ impl<'a> WktParser<'a> {
             self.pos += 1;
             Ok(())
         } else {
-            Err(format!("expected '{}' in WKT at byte {}", c as char, self.pos))
+            Err(format!(
+                "expected '{}' in WKT at byte {}",
+                c as char, self.pos
+            ))
         }
     }
 
@@ -210,7 +213,10 @@ impl<'a> WktParser<'a> {
         self.skip_dim();
         // EMPTY geometries.
         self.skip_ws();
-        if self.src[self.pos..].to_ascii_uppercase().starts_with("EMPTY") {
+        if self.src[self.pos..]
+            .to_ascii_uppercase()
+            .starts_with("EMPTY")
+        {
             self.pos += 5;
             return Ok(match kw.as_str() {
                 "POINT" => Geometry::Point(Coord::new(f64::NAN, f64::NAN)),
@@ -388,8 +394,13 @@ fn representative_point(g: &Geometry) -> Coord {
     match g {
         Geometry::Point(c) => *c,
         Geometry::LineString(cs) | Geometry::MultiPoint(cs) => centroid(cs),
-        Geometry::Polygon(rings) => rings.first().map(|r| centroid(r)).unwrap_or(Coord::new(0.0, 0.0)),
-        Geometry::MultiLineString(ls) => centroid(&ls.iter().flatten().copied().collect::<Vec<_>>()),
+        Geometry::Polygon(rings) => rings
+            .first()
+            .map(|r| centroid(r))
+            .unwrap_or(Coord::new(0.0, 0.0)),
+        Geometry::MultiLineString(ls) => {
+            centroid(&ls.iter().flatten().copied().collect::<Vec<_>>())
+        }
         Geometry::MultiPolygon(ps) => centroid(
             &ps.iter()
                 .filter_map(|p| p.first())
@@ -408,7 +419,9 @@ fn centroid(cs: &[Coord]) -> Coord {
     if cs.is_empty() {
         return Coord::new(0.0, 0.0);
     }
-    let (sx, sy) = cs.iter().fold((0.0, 0.0), |(ax, ay), c| (ax + c.x, ay + c.y));
+    let (sx, sy) = cs
+        .iter()
+        .fold((0.0, 0.0), |(ax, ay), c| (ax + c.x, ay + c.y));
     Coord::new(sx / cs.len() as f64, sy / cs.len() as f64)
 }
 
@@ -417,9 +430,9 @@ fn centroid(cs: &[Coord]) -> Coord {
 pub fn contains(a: &Geometry, b: &Geometry) -> bool {
     match a {
         Geometry::Polygon(rings) => all_points(b).iter().all(|p| point_in_polygon(*p, rings)),
-        Geometry::MultiPolygon(polys) => {
-            all_points(b).iter().all(|p| polys.iter().any(|r| point_in_polygon(*p, r)))
-        }
+        Geometry::MultiPolygon(polys) => all_points(b)
+            .iter()
+            .all(|p| polys.iter().any(|r| point_in_polygon(*p, r))),
         _ => false,
     }
 }
@@ -681,8 +694,14 @@ mod tests {
     #[test]
     fn hole_excludes_point() {
         let g = parse_wkt("POLYGON((0 0, 4 0, 4 4, 0 4, 0 0),(1 1, 3 1, 3 3, 1 3, 1 1))").unwrap();
-        assert!(!contains(&g, &Geometry::Point(Coord::new(2.0, 2.0))), "in hole");
-        assert!(contains(&g, &Geometry::Point(Coord::new(0.5, 0.5))), "outside hole");
+        assert!(
+            !contains(&g, &Geometry::Point(Coord::new(2.0, 2.0))),
+            "in hole"
+        );
+        assert!(
+            contains(&g, &Geometry::Point(Coord::new(0.5, 0.5))),
+            "outside hole"
+        );
     }
 
     #[test]

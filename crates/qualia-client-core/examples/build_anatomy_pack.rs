@@ -1,4 +1,4 @@
-//! Produce a curated `.qualia` anatomy asset pack from the live HRA endpoints.
+//! Produce a curated `.hmc` anatomy asset pack from the live HRA endpoints.
 //!
 //! Usage:
 //!   cargo run -p qualia-client-core --example build_anatomy_pack -- list [male|female|both]
@@ -7,7 +7,7 @@
 //! `list`  — discover every reference organ for the model(s) and print each
 //!           filename + normalised token (use this to curate the token set).
 //! `build` — fetch the curated organs, compile to `.10d`, and write
-//!           `<out_dir>/anatomy-<model>.qualia` (default out_dir: current dir).
+//!           `<out_dir>/anatomy-<model>.hmc` (default out_dir: current dir).
 
 use qualia_client_core::wellfair::anatomy_pack::{build_anatomy_pack, discover_model_organs};
 use qualia_core_db::bundle::BundleMmap;
@@ -31,7 +31,11 @@ fn main() {
             for model in models_arg(args.get(2)) {
                 match discover_model_organs(model) {
                     Ok(organs) => {
-                        println!("== {} : {} reference organs ==", model.as_str(), organs.len());
+                        println!(
+                            "== {} : {} reference organs ==",
+                            model.as_str(),
+                            organs.len()
+                        );
                         for o in &organs {
                             println!("  {:<40} {}", o.token, o.filename);
                         }
@@ -44,14 +48,17 @@ fn main() {
             let out_dir = args.get(3).cloned().unwrap_or_else(|| ".".to_string());
             let mut had_err = false;
             for model in models_arg(args.get(2)) {
-                let out = format!("{out_dir}/anatomy-{}.qualia", model.as_str());
+                let out = format!("{out_dir}/anatomy-{}.hmc", model.as_str());
                 match build_anatomy_pack(model, &out, None) {
                     Ok(r) => {
                         println!("== packed {} ==", r.model);
                         println!("  file        : {}", r.out_path);
                         println!("  organs      : {}", r.organs_packed);
                         println!("  .10d bytes  : {}", r.total_10d_bytes);
-                        println!("  body.q42    : {} B · {} quins (provenance + organ→system graph)", r.q42_graph_bytes, r.q42_quins);
+                        println!(
+                            "  body.q42    : {} B · {} quins (provenance + organ→system graph)",
+                            r.q42_graph_bytes, r.q42_quins
+                        );
                         println!("  q42 sidecar : {}", r.q42_sidecar_path);
                         println!("  bundle bytes: {}", r.bundle_bytes);
                         println!("  keys        : {}", r.packed_keys.join(", "));
@@ -79,7 +86,7 @@ fn main() {
             let out_dir = args.get(3).cloned().unwrap_or_else(|| ".".to_string());
             let mut had_err = false;
             for model in models_arg(args.get(2)) {
-                let path = format!("{out_dir}/anatomy-{}.qualia", model.as_str());
+                let path = format!("{out_dir}/anatomy-{}.hmc", model.as_str());
                 let m = match BundleMmap::open(&path) {
                     Ok(m) => m,
                     Err(e) => {
@@ -96,7 +103,12 @@ fn main() {
                         continue;
                     }
                 };
-                println!("== {} : {} entries, {} bytes ==", path, r.entries().len(), m.as_bytes().len());
+                println!(
+                    "== {} : {} entries, {} bytes ==",
+                    path,
+                    r.entries().len(),
+                    m.as_bytes().len()
+                );
                 for e in r.entries() {
                     let sha_ok = r.verify_entry(&e.key);
                     if !sha_ok {
@@ -107,7 +119,8 @@ fn main() {
                         let quins_licence = r.get(&e.key).and_then(|bytes| {
                             let tmp = tempfile::NamedTempFile::new().ok()?;
                             std::fs::write(tmp.path(), bytes).ok()?;
-                            let vol = qualia_core_db::q42_volume::Q42Volume::open(tmp.path()).ok()?;
+                            let vol =
+                                qualia_core_db::q42_volume::Q42Volume::open(tmp.path()).ok()?;
                             let quins = vol.read_all_quins().ok()?;
                             let lex = vol.lex_view().ok()?;
                             let lic = quins
@@ -171,7 +184,7 @@ fn main() {
             // they are local-framed and need CCF placement transforms.
             let out_dir = args.get(3).cloned().unwrap_or_else(|| ".".to_string());
             for model in models_arg(args.get(2)) {
-                let path = format!("{out_dir}/anatomy-{}.qualia", model.as_str());
+                let path = format!("{out_dir}/anatomy-{}.hmc", model.as_str());
                 let m = match BundleMmap::open(&path) {
                     Ok(m) => m,
                     Err(e) => {
@@ -220,11 +233,21 @@ fn main() {
             // Default: the gap-fill glands + sense/other organs CCF barely covers (small, tens of MB).
             let systems: Vec<String> = match args.get(3).map(String::as_str) {
                 Some("all") => Vec::new(),
-                Some(csv) => csv.split(',').map(|s| s.trim().to_string()).filter(|s| !s.is_empty()).collect(),
-                None => ["endocrine", "sensory", "urinary", "immune_lymphatic", "reproductive"]
-                    .iter()
-                    .map(|s| s.to_string())
+                Some(csv) => csv
+                    .split(',')
+                    .map(|s| s.trim().to_string())
+                    .filter(|s| !s.is_empty())
                     .collect(),
+                None => [
+                    "endocrine",
+                    "sensory",
+                    "urinary",
+                    "immune_lymphatic",
+                    "reproductive",
+                ]
+                .iter()
+                .map(|s| s.to_string())
+                .collect(),
             };
             let max_structures: usize = args.get(4).and_then(|s| s.parse().ok()).unwrap_or(0);
             let max_mb: usize = args.get(5).and_then(|s| s.parse().ok()).unwrap_or(25);
@@ -233,11 +256,15 @@ fn main() {
                 max_structures,
                 max_stl_bytes: max_mb.saturating_mul(1024 * 1024),
             };
-            let out = format!("{out_dir}/anatomy-bodyparts3d.qualia");
+            let out = format!("{out_dir}/anatomy-bodyparts3d.hmc");
             println!("BodyParts3D · {BP3D_LICENCE} · {BP3D_ATTRIBUTION}");
             println!(
                 "selection: systems={} max_structures={} max_mb={}",
-                if systems.is_empty() { "all".to_string() } else { systems.join(",") },
+                if systems.is_empty() {
+                    "all".to_string()
+                } else {
+                    systems.join(",")
+                },
                 max_structures,
                 max_mb
             );

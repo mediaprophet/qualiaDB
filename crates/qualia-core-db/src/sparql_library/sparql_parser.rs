@@ -428,7 +428,10 @@ mod tests {
     fn dotted_iris_and_literals_do_not_break_bgp() {
         let two = "SELECT ?a WHERE { ?a <https://ns.webcivics.net/values/partOf> <https://ns.webcivics.net/values/x#Instrument> . \
                    ?a <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://ns.webcivics.net/values/Undertaking> }";
-        assert!(parse_sparql(two).is_ok(), "two dotted-IRI triples must parse");
+        assert!(
+            parse_sparql(two).is_ok(),
+            "two dotted-IRI triples must parse"
+        );
 
         let lit = "SELECT ?a WHERE { ?a <https://ns.webcivics.net/values/originalText> \"Art. 3 applies.\" }";
         assert!(

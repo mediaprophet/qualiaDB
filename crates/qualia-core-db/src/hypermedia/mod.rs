@@ -645,6 +645,43 @@ impl Default for TextProcessor {
                     "finance",
                     &["invoice", "expense", "tax", "receipt", "deduction"],
                 ),
+                // Privacy / GDPR-family (aligned with wellfair::cml_context extractors).
+                kw(
+                    "privacy",
+                    &[
+                        "personal data",
+                        "data subject",
+                        "data controller",
+                        "data processor",
+                        "consent",
+                        "gdpr",
+                        "privacy",
+                        "erasure",
+                        "portability",
+                        "dpia",
+                        "breach",
+                    ],
+                ),
+                kw(
+                    "human-rights",
+                    &[
+                        "human rights",
+                        "discrimination",
+                        "freedom of expression",
+                        "due process",
+                        "fair trial",
+                    ],
+                ),
+                kw(
+                    "deontic",
+                    &[
+                        "must not",
+                        "shall not",
+                        "is required to",
+                        "obligation",
+                        "prohibition",
+                    ],
+                ),
             ],
             flag_words: Vec::new(),
         }

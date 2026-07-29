@@ -106,11 +106,10 @@ pub fn analyze_intensity_grid(
 
     // -- Histogram (delegated) ------------------------------------------------
     let mut counts = vec![0u32; bins];
-    let (hist_min, hist_max, hist_bin_width) =
-        match histogram::histogram_into(data, &mut counts) {
-            Some(r) => (r.min, r.max, r.bin_width),
-            None => (min, max, 0.0),
-        };
+    let (hist_min, hist_max, hist_bin_width) = match histogram::histogram_into(data, &mut counts) {
+        Some(r) => (r.min, r.max, r.bin_width),
+        None => (min, max, 0.0),
+    };
 
     // -- Threshold ------------------------------------------------------------
     let threshold = match threshold {
@@ -212,8 +211,7 @@ fn sobel_magnitude(data: &[f64], width: usize, height: usize) -> Vec<f64> {
     for r in 0..height as isize {
         for c in 0..width as isize {
             // Gx kernel [[-1,0,1],[-2,0,2],[-1,0,1]]
-            let gx = -at(r - 1, c - 1) + at(r - 1, c + 1) - 2.0 * at(r, c - 1)
-                + 2.0 * at(r, c + 1)
+            let gx = -at(r - 1, c - 1) + at(r - 1, c + 1) - 2.0 * at(r, c - 1) + 2.0 * at(r, c + 1)
                 - at(r + 1, c - 1)
                 + at(r + 1, c + 1);
             // Gy kernel [[-1,-2,-1],[0,0,0],[1,2,1]]
@@ -262,8 +260,7 @@ mod tests {
         let data: Vec<f64> = (0..16)
             .map(|i| if i % 4 >= 2 { 100.0 } else { 0.0 })
             .collect();
-        let r =
-            analyze_intensity_grid(&data, 4, 4, 8, SegmentationThreshold::Otsu, None).unwrap();
+        let r = analyze_intensity_grid(&data, 4, 4, 8, SegmentationThreshold::Otsu, None).unwrap();
         // Otsu split point lies below the bright level, so the 8 bright pixels segment out.
         // (For a perfectly bimodal {0,100} image the optimal split bin is the background
         // level itself, i.e. threshold == 0.0; foreground = intensity > threshold.)

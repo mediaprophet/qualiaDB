@@ -35,7 +35,11 @@ pub struct BackupReport {
     pub bytes: u64,
 }
 
-fn collect_files(base: &Path, dir: &Path, out: &mut BTreeMap<String, Vec<u8>>) -> Result<(), String> {
+fn collect_files(
+    base: &Path,
+    dir: &Path,
+    out: &mut BTreeMap<String, Vec<u8>>,
+) -> Result<(), String> {
     for entry in fs::read_dir(dir).map_err(|e| e.to_string())? {
         let entry = entry.map_err(|e| e.to_string())?;
         let path = entry.path();
@@ -110,7 +114,10 @@ fn safe_join(base: &Path, rel: &str) -> Result<PathBuf, String> {
 }
 
 /// Restore an archive into the `wellfair/` subtree under `storage_root` (creating directories).
-pub fn restore_archive(storage_root: &Path, archive: &BackupArchive) -> Result<BackupReport, String> {
+pub fn restore_archive(
+    storage_root: &Path,
+    archive: &BackupArchive,
+) -> Result<BackupReport, String> {
     let base = storage_root.join(WELLFAIR_SUBDIR);
     let mut report = BackupReport::default();
     for (rel, bytes) in &archive.files {
@@ -174,7 +181,11 @@ mod tests {
     fn backup_round_trips_the_wellfair_subtree() {
         let src = tempfile::tempdir().unwrap();
         write(src.path(), "journal.jsonl", b"{\"kind\":\"weight\"}\n");
-        write(src.path(), "sanctuary_vault.cbor", &[0xDE, 0xAD, 0xBE, 0xEF]);
+        write(
+            src.path(),
+            "sanctuary_vault.cbor",
+            &[0xDE, 0xAD, 0xBE, 0xEF],
+        );
         write(src.path(), "blobs/aa/bb.bin", b"blobbytes");
 
         let bytes = create_backup(src.path(), 1_700_000_000).unwrap();
@@ -186,9 +197,18 @@ mod tests {
 
         // Every file is byte-identical after the round trip.
         let base = dst.path().join(WELLFAIR_SUBDIR);
-        assert_eq!(fs::read(base.join("journal.jsonl")).unwrap(), b"{\"kind\":\"weight\"}\n");
-        assert_eq!(fs::read(base.join("sanctuary_vault.cbor")).unwrap(), vec![0xDE, 0xAD, 0xBE, 0xEF]);
-        assert_eq!(fs::read(base.join("blobs/aa/bb.bin")).unwrap(), b"blobbytes");
+        assert_eq!(
+            fs::read(base.join("journal.jsonl")).unwrap(),
+            b"{\"kind\":\"weight\"}\n"
+        );
+        assert_eq!(
+            fs::read(base.join("sanctuary_vault.cbor")).unwrap(),
+            vec![0xDE, 0xAD, 0xBE, 0xEF]
+        );
+        assert_eq!(
+            fs::read(base.join("blobs/aa/bb.bin")).unwrap(),
+            b"blobbytes"
+        );
     }
 
     #[test]
@@ -205,7 +225,11 @@ mod tests {
     fn restore_rejects_path_traversal_keys() {
         let mut files = BTreeMap::new();
         files.insert("../escape.txt".to_string(), b"evil".to_vec());
-        let archive = BackupArchive { version: BACKUP_VERSION, created_unix: 1, files };
+        let archive = BackupArchive {
+            version: BACKUP_VERSION,
+            created_unix: 1,
+            files,
+        };
         let dst = tempfile::tempdir().unwrap();
         assert!(restore_archive(dst.path(), &archive).is_err());
         // Nothing escaped the target directory.

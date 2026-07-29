@@ -19,6 +19,11 @@ use super::GeneratedShader;
 use crate::wgsl_forge::ir::graph::{ComputeGraph, EwKind, GraphNode, Lowerer, OpNode, RedKind};
 use crate::wgsl_forge::{ForgeError, Schedule, FORGE_SCHEMA_VERSION};
 
+/// Entry point name for graph-lowered GEMV kernels in MSL.
+const GEMV_ENTRY: &str = "gemv_main";
+/// Entry point name for graph-lowered GEMM kernels in MSL.
+const GEMM_ENTRY: &str = "gemm_main";
+
 /// MSL expression for a unary [`EwKind`] (`f(v)`), or `None` if not unary.
 fn unary_expr_msl(kind: EwKind) -> Option<&'static str> {
     Some(match kind {
@@ -141,10 +146,207 @@ impl Lowerer for MslLowerer<'_> {
         self.source.push_str(&broadcast_msl());
         Ok(())
     }
+    fn gemv(&mut self, node: &GraphNode) -> Result<(), ForgeError> {
+        if let OpNode::Gemv { .. } = node.op {
+            let wg = node.sched.workgroup_size.max(1);
+            // Apple Silicon SIMD groups are 32 threads (same as NVIDIA warps).
+            // Use simd_sum for cooperative reduction when workgroup is a multiple of 32.
+            let use_simd = wg % 32 == 0 && wg >= 32;
+            if use_simd {
+                emit_gemv_simd_graph(self.source, wg, GEMV_ENTRY)?;
+            } else {
+                emit_gemv_scalar_graph(self.source, wg, GEMV_ENTRY)?;
+            }
+            Ok(())
+        } else {
+            Err(ForgeError::Emission("MslLowerer::gemv on non-Gemv".into()))
+        }
+    }
+    fn matmul(&mut self, node: &GraphNode) -> Result<(), ForgeError> {
+        if let OpNode::MatMul { .. } = node.op {
+            emit_gemm_graph(self.source, node.sched.workgroup_size.max(1), GEMM_ENTRY)?;
+            Ok(())
+        } else {
+            Err(ForgeError::Emission(
+                "MslLowerer::matmul on non-MatMul".into(),
+            ))
+        }
+    }
 }
 
 /// Emit a complete MSL module for a portable compute-graph (the MSL analogue of
 /// `emit_graph_wgsl`). Non-portable nodes lower to an explicit `Err`.
+pub fn conv2d_msl() -> String {
+    format!(
+        r#"#include <metal_stdlib>
+using namespace metal;
+
+kernel void conv2d_main(
+    device const float* input [[buffer(0)]],
+    device const float* weight [[buffer(1)]],
+    device const float* bias [[buffer(2)]],
+    device float* output [[buffer(3)]],
+    device const uint* params [[buffer(4)]],
+    uint3 gid [[thread_position_in_grid]]
+) {{
+    uint idx = gid.x;
+    uint c_in = params[0];
+    uint c_out = params[1];
+    uint h = params[2];
+    uint w = params[3];
+    uint kh = params[4];
+    uint kw = params[5];
+    uint sh = params[6];
+    uint sw = params[7];
+    uint ph = params[8];
+    uint pw = params[9];
+    uint ho = params[10];
+    uint wo = params[11];
+    uint n_out = c_out * ho * wo;
+    if (idx >= n_out) return;
+    uint oc = idx / (ho * wo);
+    uint rem = idx % (ho * wo);
+    uint oh = rem / wo;
+    uint ow = rem % wo;
+    float acc = bias[oc];
+    for (uint ic = 0; ic < c_in; ic++) {{
+        for (uint ky = 0; ky < kh; ky++) {{
+            for (uint kx = 0; kx < kw; kx++) {{
+                uint ih_p = oh * sh + ky;
+                uint iw_p = ow * sw + kx;
+                if (ih_p < ph || iw_p < pw) continue;
+                uint ih = ih_p - ph;
+                uint iw = iw_p - pw;
+                if (ih >= h || iw >= w) continue;
+                float iv = input[ic * h * w + ih * w + iw];
+                float wv = weight[oc * (c_in * kh * kw) + ic * (kh * kw) + ky * kw + kx];
+                acc += iv * wv;
+            }}
+        }}
+    }}
+    output[idx] = acc;
+}}
+"#
+    )
+}
+
+/// SIMD-group cooperative GEMV for graph lowering: one SIMD group per output row,
+/// `simd_sum` reduces partial dot products across lanes. Apple Silicon equivalent
+/// of HLSL wave-intrinsic GEMV.
+fn emit_gemv_simd_graph(source: &mut String, _wg: u32, entry: &str) -> Result<(), ForgeError> {
+    writeln!(
+        source,
+        r#"#include <metal_stdlib>
+using namespace metal;
+
+struct GemvParams {{
+    uint m;
+    uint n;
+    uint _pad0;
+    uint _pad1;
+}};
+
+kernel void {entry}(
+    device const float* a [[buffer(0)]],
+    device const float* x [[buffer(1)]],
+    device float* y [[buffer(2)]],
+    constant GemvParams& params [[buffer(3)]],
+    uint3 gid [[thread_position_in_grid]]
+) {{
+    uint simd_size = 32;
+    uint row = gid.x / simd_size;
+    if (row >= params.m) {{ return; }}
+    uint lane = gid.x % simd_size;
+    uint a_row = row * params.n;
+    float partial = 0.0f;
+    for (uint j = lane; j < params.n; j += simd_size) {{
+        partial += a[a_row + j] * x[j];
+    }}
+    float acc = simd_sum(partial);
+    if (lane == 0) {{
+        y[row] = acc;
+    }}
+}}"#,
+        entry = entry
+    )
+    .map_err(|e| ForgeError::Emission(e.to_string()))?;
+    Ok(())
+}
+
+/// Scalar GEMV for graph lowering: one thread per output row.
+fn emit_gemv_scalar_graph(source: &mut String, _wg: u32, entry: &str) -> Result<(), ForgeError> {
+    writeln!(
+        source,
+        r#"#include <metal_stdlib>
+using namespace metal;
+
+struct GemvParams {{
+    uint m;
+    uint n;
+    uint _pad0;
+    uint _pad1;
+}};
+
+kernel void {entry}(
+    device const float* a [[buffer(0)]],
+    device const float* x [[buffer(1)]],
+    device float* y [[buffer(2)]],
+    constant GemvParams& params [[buffer(3)]],
+    uint3 gid [[thread_position_in_grid]]
+) {{
+    uint i = gid.x;
+    if (i >= params.m) {{ return; }}
+    float acc = 0.0f;
+    uint a_row = i * params.n;
+    for (uint j = 0; j < params.n; j++) {{
+        acc += a[a_row + j] * x[j];
+    }}
+    y[i] = acc;
+}}"#,
+        entry = entry
+    )
+    .map_err(|e| ForgeError::Emission(e.to_string()))?;
+    Ok(())
+}
+
+/// Dense GEMM for graph lowering: one thread per output element.
+fn emit_gemm_graph(source: &mut String, _wg: u32, entry: &str) -> Result<(), ForgeError> {
+    writeln!(
+        source,
+        r#"#include <metal_stdlib>
+using namespace metal;
+
+struct GemmParams {{
+    uint m;
+    uint n;
+    uint k;
+    uint _pad;
+}};
+
+kernel void {entry}(
+    device const float* a [[buffer(0)]],
+    device const float* b [[buffer(1)]],
+    device float* c [[buffer(2)]],
+    constant GemmParams& params [[buffer(3)]],
+    uint3 gid [[thread_position_in_grid]]
+) {{
+    uint o = gid.x;
+    if (o >= params.m * params.n) {{ return; }}
+    uint row = o / params.n;
+    uint col = o % params.n;
+    float acc = 0.0f;
+    uint a_row = row * params.k;
+    for (uint kk = 0; kk < params.k; kk++) {{
+        acc += a[a_row + kk] * b[kk * params.n + col];
+    }}
+    c[o] = acc;
+}}"#,
+        entry = entry
+    )
+    .map_err(|e| ForgeError::Emission(e.to_string()))?;
+    Ok(())
+}
+
 pub fn emit_graph_msl(
     graph: &ComputeGraph,
     schedule: Schedule,
@@ -190,6 +392,7 @@ mod tests {
         }
         assert!(reduce_msl(RedKind::Max, 64).contains("as_type<float>(0xff7fffffu)"));
         assert!(broadcast_msl().contains("i % params[0]"));
+        assert!(conv2d_msl().contains("kernel void conv2d_main"));
     }
 
     #[test]
@@ -200,5 +403,130 @@ mod tests {
         let shader = emit_graph_msl(&g, Schedule::default()).expect("msl");
         assert!(shader.source.contains("kernel void"));
         assert!(shader.source.contains("reduce_main") && shader.source.contains("ewise_main"));
+    }
+
+    #[test]
+    fn emit_graph_msl_lowers_gemv_with_simd_group() {
+        use crate::wgsl_forge::ir::graph::{ComputeGraph, DType, OpNode, Shape, TensorRef};
+        let mut g = ComputeGraph::new();
+        let a = TensorRef::external(Shape::new(&[0, 0]), DType::F32);
+        let x = TensorRef::external(Shape::new(&[0]), DType::F32);
+        let out = g
+            .push(
+                OpNode::Gemv {
+                    m: 0,
+                    n: 0,
+                    tc: false,
+                },
+                &[a, x],
+                Shape::new(&[0]),
+                DType::F32,
+                Schedule {
+                    workgroup_size: 64,
+                    ..Default::default()
+                },
+            )
+            .unwrap();
+        g.mark_output(out);
+        let shader = emit_graph_msl(
+            &g,
+            Schedule {
+                workgroup_size: 64,
+                ..Default::default()
+            },
+        )
+        .expect("msl gemv");
+        assert!(
+            shader.source.contains("simd_sum"),
+            "should use simd_sum for cooperative reduction"
+        );
+        assert!(
+            shader.source.contains("gemv_main"),
+            "should contain gemv entry point"
+        );
+    }
+
+    #[test]
+    fn emit_graph_msl_lowers_gemv_scalar_when_wg_not_multiple_of_32() {
+        use crate::wgsl_forge::ir::graph::{ComputeGraph, DType, OpNode, Shape, TensorRef};
+        let mut g = ComputeGraph::new();
+        let a = TensorRef::external(Shape::new(&[0, 0]), DType::F32);
+        let x = TensorRef::external(Shape::new(&[0]), DType::F32);
+        let out = g
+            .push(
+                OpNode::Gemv {
+                    m: 0,
+                    n: 0,
+                    tc: false,
+                },
+                &[a, x],
+                Shape::new(&[0]),
+                DType::F32,
+                Schedule {
+                    workgroup_size: 16,
+                    ..Default::default()
+                },
+            )
+            .unwrap();
+        g.mark_output(out);
+        let shader = emit_graph_msl(
+            &g,
+            Schedule {
+                workgroup_size: 16,
+                ..Default::default()
+            },
+        )
+        .expect("msl gemv scalar");
+        assert!(
+            !shader.source.contains("simd_sum"),
+            "should NOT use simd_sum for small workgroup"
+        );
+        assert!(
+            shader.source.contains("gemv_main"),
+            "should contain gemv entry point"
+        );
+    }
+
+    #[test]
+    fn emit_graph_msl_lowers_matmul() {
+        use crate::wgsl_forge::ir::graph::{ComputeGraph, DType, OpNode, Shape, TensorRef};
+        let mut g = ComputeGraph::new();
+        let a = TensorRef::external(Shape::new(&[0, 0]), DType::F32);
+        let b = TensorRef::external(Shape::new(&[0, 0]), DType::F32);
+        let out = g
+            .push(
+                OpNode::MatMul {
+                    m: 0,
+                    n: 0,
+                    k: 0,
+                    tc: false,
+                    trans_b: false,
+                },
+                &[a, b],
+                Shape::new(&[0, 0]),
+                DType::F32,
+                Schedule {
+                    workgroup_size: 64,
+                    ..Default::default()
+                },
+            )
+            .unwrap();
+        g.mark_output(out);
+        let shader = emit_graph_msl(
+            &g,
+            Schedule {
+                workgroup_size: 64,
+                ..Default::default()
+            },
+        )
+        .expect("msl gemm");
+        assert!(
+            shader.source.contains("gemm_main"),
+            "should contain gemm entry point"
+        );
+        assert!(
+            shader.source.contains("params.k"),
+            "should reference k dimension"
+        );
     }
 }

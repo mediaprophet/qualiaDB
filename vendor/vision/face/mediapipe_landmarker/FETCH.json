@@ -1,0 +1,10 @@
+﻿{
+    "id":  "mediapipe_face_landmarker",
+    "filename":  "face_landmarker.task",
+    "licence":  "Apache-2.0",
+    "licence_tag":  "PermissiveReady",
+    "sha256":  "64184e229b263107bc2b804c6625db1341ff2bb731874b0bcc2fe6544e0bc9ff",
+    "bytes":  3758596,
+    "fetched_unix":  1784321827,
+    "note":  "PermissiveReady weight; not a commercial-licence gate"
+}

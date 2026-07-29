@@ -963,4 +963,3 @@ pub struct MedicalPerformanceMetrics {
     pub compliance_score: Option<f64>,
     pub data_quality: Option<f64>,
 }
-

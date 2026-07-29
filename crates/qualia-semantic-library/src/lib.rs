@@ -37,8 +37,8 @@ pub mod ingest;
 pub mod llm;
 
 pub mod library;
-pub mod reorganize;
 pub mod ontology;
+pub mod reorganize;
 
 pub use container::{
     AssetEntry, AssetKind, HmcContainer, HmcError, HmcManifest, HmcWriter, SourceInfo,

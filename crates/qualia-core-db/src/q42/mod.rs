@@ -1,7 +1,11 @@
 //! `q42` category (reorg).
 
 pub mod design_encode;
-/// CBOR-LD model-helper sidecar (`.q42.cbor-ld`) for converted `.p64` packages.
+/// Attested run recipe for a native `.p64` package (layout + mode + measured knobs).
+pub mod execution_profile;
+/// Host GPU native capability profile (CUDA / DX12 / Vulkan / Metal tiers over WGSL floor).
+pub mod machine_gpu_profile;
+/// Canonical Q42 v3 model-metadata volume for converted `.p64` packages.
 pub mod model_helper;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
 pub mod p64_weight;

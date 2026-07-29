@@ -112,9 +112,9 @@ crates/qualia-core-db/pkg/
 # wasm-pack scratch out-dirs for the portal facade (local builds)
 crates/qualia-core-db/pkg-qualia/
 crates/qualia-core-db/target/portal-wasm/
-# Anatomy .qualia asset packs — build artifacts produced by the build_anatomy_pack
+# Anatomy .hmc asset packs — build artifacts produced by the build_anatomy_pack
 # tool (at CI/build time); never committed (tens of MB of CC-BY-4.0 HRA meshes).
-docs/playground/*.qualia
+docs/playground/*.hmc
 
 # Generated Rust API docs staged for Jekyll (CI only)
 docs/rustdoc/
@@ -140,6 +140,9 @@ keystore.bin
 # One-off migration scripts, old release binaries, debug artefacts
 scratch/
 scripts/
+!scripts/
+scripts/*
+!scripts/build_frontend.sh
 
 # Build/debug error logs (PowerShell redirection output — UTF-16, not source)
 *_errors.json
@@ -167,9 +170,12 @@ ingest_raw.wal.tmp
 yago-tests/ 
 reports/
 
-# Local test GGUF models (not deployed)
+# Local test GGUF / weight blobs (not deployed) — do NOT ignore Rust source trees.
 docs/models/
-models/
+/models/
+# Explicit allow for audio learned-head source modules (was swallowed by a blanket models/)
+!crates/qualia-audio/src/models/
+!crates/qualia-audio/src/models/**
 
 # personal info
 provenance/
@@ -186,19 +192,32 @@ provenance/
 /agent-intents/
 fix_quotes.py
 
-# Agent coordination feed is tracked at coordination/NOTICES.md (canonical tree: C:\Projects\qualia-27062026)
+# Multi-agent coordination is local to each machine — do not publish on GitHub.
+# (Full /coordination/ dir; NOTICES.md is the live feed and must never be committed.)
 /coordination/
+coordination/NOTICES.md
+**/NOTICES.md
 
 
 # Private Development Documents, not for GitHub (do not publish)
 
 # Plan Files
 /docs/plans/*
-!/docs/plans/native-computational-economics.md
-!/docs/plans/cof-html-rdfa-etl.md
-!/docs/plans/optional-ollama-harness.md
-!/docs/plans/solid-outpost-hackathon-bridge.md
-!/docs/plans/p64-decode-upgrade-plan.md
+
+# Vision vendor weights (large binaries) — manifests/README tracked; fetch via vendor/vision/download.ps1
+/vendor/vision/**/*.onnx
+/vendor/vision/**/*.tflite
+/vendor/vision/**/*.task
+/vendor/vision/**/*.bin
+/vendor/vision/**/*.pb
+/vendor/vision/**/*.pth
+/vendor/vision/**/*.pt
+/vendor/vision/**/*.safetensors
+# Allow FETCH metadata written by download.ps1
+!/vendor/vision/**/FETCH.json
+!/vendor/vision/**/README.md
+!/vendor/vision/**/.gitkeep
+
 /docs/manuals/planning/
 docs/to-do/
 

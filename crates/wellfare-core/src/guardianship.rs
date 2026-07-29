@@ -138,7 +138,10 @@ pub struct ProposalStatus {
 /// tie), so duplicated or reordered co-signatures converge to the same result. A guardian's latest
 /// vote being an objection halts the escrow (protective veto); otherwise the proposal ratifies once
 /// `approvals ≥ threshold`.
-pub fn derive_status(proposal: &GuardianshipProposal, votes: &[GuardianshipVote]) -> ProposalStatus {
+pub fn derive_status(
+    proposal: &GuardianshipProposal,
+    votes: &[GuardianshipVote],
+) -> ProposalStatus {
     // Latest vote per guardian for this proposal.
     let mut latest: Vec<&GuardianshipVote> = Vec::new();
     for v in votes.iter().filter(|v| v.proposal_id == proposal.id) {
@@ -303,7 +306,10 @@ mod tests {
         assert_eq!(p.threshold, 2);
         let env = p.escrowed_envelope().unwrap();
         assert_eq!(env.id, "urn:wellfair:condition:e1");
-        assert_eq!(p.escrowed_record_id().as_deref(), Some("urn:wellfair:condition:e1"));
+        assert_eq!(
+            p.escrowed_record_id().as_deref(),
+            Some("urn:wellfair:condition:e1")
+        );
     }
 
     #[test]
@@ -371,7 +377,13 @@ mod tests {
         let votes = vec![
             GuardianshipVote::new(&p.id, "did:wf:g1", true, None, 10),
             GuardianshipVote::new(&p.id, "did:wf:g2", true, None, 11),
-            GuardianshipVote::new(&p.id, "did:wf:g3", false, Some("not in her interest".into()), 12),
+            GuardianshipVote::new(
+                &p.id,
+                "did:wf:g3",
+                false,
+                Some("not in her interest".into()),
+                12,
+            ),
         ];
         let s = derive_status(&p, &votes);
         assert_eq!(s.state, ProposalState::Denied);
@@ -406,6 +418,9 @@ mod tests {
         let env = build_proposal_envelope(&p, "did:wf:principal", "did:wf:proxy", 1_700_000_000);
         assert!(env.id.contains(":guardianship_proposal:"));
         assert_eq!(env.sensitivity, SensitivityClass::Restricted);
-        assert!(env.proxy_did.is_none(), "governance records must not recurse into escrow");
+        assert!(
+            env.proxy_did.is_none(),
+            "governance records must not recurse into escrow"
+        );
     }
 }

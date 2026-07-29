@@ -1,9 +1,12 @@
 #[cfg(not(target_arch = "wasm32"))]
 use memmap2::MmapOptions;
+#[cfg(not(target_arch = "wasm32"))]
 use std::fs::File;
+#[cfg(not(target_arch = "wasm32"))]
 use std::io;
 #[cfg(not(target_arch = "wasm32"))]
 use std::io::{Cursor, Read};
+#[cfg(not(target_arch = "wasm32"))]
 use std::path::Path;
 
 /// Magic number for `.q42` luminary archive.

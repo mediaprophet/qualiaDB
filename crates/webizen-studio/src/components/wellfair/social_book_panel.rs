@@ -74,7 +74,9 @@ pub fn WellfairSocialBookPanel() -> Element {
     let mut loaded = use_signal(|| false);
 
     use_effect(move || {
-        if loaded() { return; }
+        if loaded() {
+            return;
+        }
         loaded.set(true);
         reload();
     });
@@ -159,10 +161,19 @@ pub fn WellfairSocialBookPanel() -> Element {
             .parse::<u64>()
             .ok()
             .map(|days| {
-                let now = std::time::SystemTime::now()
-                    .duration_since(std::time::UNIX_EPOCH)
-                    .map(|d| d.as_secs())
-                    .unwrap_or(0);
+                let now = {
+                    #[cfg(target_arch = "wasm32")]
+                    {
+                        js_sys::Date::now() as u64 / 1000
+                    }
+                    #[cfg(not(target_arch = "wasm32"))]
+                    {
+                        std::time::SystemTime::now()
+                            .duration_since(std::time::UNIX_EPOCH)
+                            .map(|d| d.as_secs())
+                            .unwrap_or(0)
+                    }
+                };
                 now + days * 86_400
             });
         let draft = ConsentGrantDraft {
@@ -223,6 +234,7 @@ pub fn WellfairSocialBookPanel() -> Element {
         section {
             aria_label: "WellFair social book",
             style: "padding:0.85rem;border:1px solid var(--qualia-border,#ddd);border-radius:10px;background:var(--qualia-surface,#fafafa);",
+            super::shared::DomainChrome { domain: "Relations", chip: "People · not identity assets", show_memory: true }
             div {
                 style: "display:flex;align-items:center;justify-content:space-between;margin-bottom:0.5rem;",
                 h2 { style: "margin:0;font-size:1rem;", "Relationships — Social Book" }

@@ -107,8 +107,7 @@ impl QTensorEngine {
         // k=1 → one cand per block; oversize for TOPK_MAX_K headroom on smaller vocabs.
         const MAX_VOCAB_RESIDENT: usize = 262_144;
         let max_blocks = (MAX_VOCAB_RESIDENT / crate::topk::TOPK_BLOCK_SIZE).max(1);
-        let cand_bytes =
-            ((max_blocks * crate::topk::TOPK_MAX_K).max(1) * 4) as wgpu::BufferAddress;
+        let cand_bytes = ((max_blocks * crate::topk::TOPK_MAX_K).max(1) * 4) as wgpu::BufferAddress;
         self.topk_cand_val_buf = Some(self.gpu_device().create_buffer(&wgpu::BufferDescriptor {
             label: Some("TopkCandVal"),
             size: cand_bytes,
@@ -165,8 +164,7 @@ impl QTensorEngine {
         let mmap = self.gguf_mmap.as_deref()?;
 
         let use_coop = crate::llm_bench::coop_gemv_enabled();
-        let use_mr = use_coop
-            && info.ggml_type == crate::ggml_quants::GGML_TYPE_Q4_K_SOA;
+        let use_mr = use_coop && info.ggml_type == crate::ggml_quants::GGML_TYPE_Q4_K_SOA;
         let gemm_pipeline: &wgpu::ComputePipeline = if use_mr {
             &self.coop_gemv_mr_pipeline
         } else if use_coop {
@@ -247,8 +245,10 @@ impl QTensorEngine {
                 };
                 let gp = bytemuck::bytes_of(&gparams);
                 let go = chunk_idx * SLOT;
-                gemm_slab[go..go + gemm_slot.min(gp.len())].copy_from_slice(&gp[..gemm_slot.min(gp.len())]);
-                let tparams = crate::topk::topk_params_bytes(chunk_rows as u32, 1, block_size as u32);
+                gemm_slab[go..go + gemm_slot.min(gp.len())]
+                    .copy_from_slice(&gp[..gemm_slot.min(gp.len())]);
+                let tparams =
+                    crate::topk::topk_params_bytes(chunk_rows as u32, 1, block_size as u32);
                 topk_slab[go..go + tparams.len()].copy_from_slice(&tparams);
                 let num_blocks = chunk_rows.div_ceil(block_size) as u32;
                 chunk_meta.push((chunk_rows as u32, weight_byte_len, num_blocks));
@@ -268,10 +268,8 @@ impl QTensorEngine {
                 usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
                 mapped_at_creation: false,
             });
-            self.gpu_queue()
-                .write_buffer(&gemm_multi, 0, &gemm_slab);
-            self.gpu_queue()
-                .write_buffer(&topk_multi, 0, &topk_slab);
+            self.gpu_queue().write_buffer(&gemm_multi, 0, &gemm_slab);
+            self.gpu_queue().write_buffer(&topk_multi, 0, &topk_slab);
 
             let mut encoder =
                 self.device()
@@ -318,37 +316,41 @@ impl QTensorEngine {
                         resource: input_buf.as_entire_binding(),
                     });
                 }
-                let gemm_bind = self.gpu_device().create_bind_group(&wgpu::BindGroupDescriptor {
-                    label: Some("Top1GemmBindFused"),
-                    layout: &gemm_layout,
-                    entries: &gemm_entries,
-                });
-                let topk_bind_c = self.gpu_device().create_bind_group(&wgpu::BindGroupDescriptor {
-                    label: Some("Top1TopkBindFused"),
-                    layout: topk_layout,
-                    entries: &[
-                        wgpu::BindGroupEntry {
-                            binding: 0,
-                            resource: output_buf.as_entire_binding(),
-                        },
-                        wgpu::BindGroupEntry {
-                            binding: 1,
-                            resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
-                                buffer: &topk_multi,
-                                offset: go,
-                                size: tsize,
-                            }),
-                        },
-                        wgpu::BindGroupEntry {
-                            binding: 2,
-                            resource: cand_val.as_entire_binding(),
-                        },
-                        wgpu::BindGroupEntry {
-                            binding: 3,
-                            resource: cand_idx.as_entire_binding(),
-                        },
-                    ],
-                });
+                let gemm_bind = self
+                    .gpu_device()
+                    .create_bind_group(&wgpu::BindGroupDescriptor {
+                        label: Some("Top1GemmBindFused"),
+                        layout: &gemm_layout,
+                        entries: &gemm_entries,
+                    });
+                let topk_bind_c = self
+                    .gpu_device()
+                    .create_bind_group(&wgpu::BindGroupDescriptor {
+                        label: Some("Top1TopkBindFused"),
+                        layout: topk_layout,
+                        entries: &[
+                            wgpu::BindGroupEntry {
+                                binding: 0,
+                                resource: output_buf.as_entire_binding(),
+                            },
+                            wgpu::BindGroupEntry {
+                                binding: 1,
+                                resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
+                                    buffer: &topk_multi,
+                                    offset: go,
+                                    size: tsize,
+                                }),
+                            },
+                            wgpu::BindGroupEntry {
+                                binding: 2,
+                                resource: cand_val.as_entire_binding(),
+                            },
+                            wgpu::BindGroupEntry {
+                                binding: 3,
+                                resource: cand_idx.as_entire_binding(),
+                            },
+                        ],
+                    });
                 {
                     let mut cpass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
                         label: Some("Top1GemmPass"),
@@ -466,11 +468,13 @@ impl QTensorEngine {
                         resource: input_buf.as_entire_binding(),
                     });
                 }
-                let gemm_bind = self.gpu_device().create_bind_group(&wgpu::BindGroupDescriptor {
-                    label: Some("Top1GemmBind"),
-                    layout: &gemm_layout,
-                    entries: &gemm_entries,
-                });
+                let gemm_bind = self
+                    .gpu_device()
+                    .create_bind_group(&wgpu::BindGroupDescriptor {
+                        label: Some("Top1GemmBind"),
+                        layout: &gemm_layout,
+                        entries: &gemm_entries,
+                    });
                 let mut encoder =
                     self.device()
                         .create_command_encoder(&wgpu::CommandEncoderDescriptor {
@@ -536,7 +540,9 @@ impl QTensorEngine {
         let mut best_token_id = 0u32;
         let mut max_logit = f32::NEG_INFINITY;
         {
-            let data = slice.get_mapped_range().expect("wgpu buffer map_range failed");
+            let data = slice
+                .get_mapped_range()
+                .expect("wgpu buffer map_range failed");
             let val_bytes = total_cands * 4;
             let vals: &[f32] = bytemuck::cast_slice(&data[..val_bytes]);
             let idxs: &[u32] = bytemuck::cast_slice(&data[val_bytes..val_bytes * 2]);
@@ -605,8 +611,7 @@ impl QTensorEngine {
         let block_size = crate::topk::TOPK_BLOCK_SIZE;
         let full_chunks = vocab_size.div_ceil(VOCAB_CHUNK_ROWS);
         let use_coop = crate::llm_bench::coop_gemv_enabled();
-        let use_mr = use_coop
-            && info.ggml_type == crate::ggml_quants::GGML_TYPE_Q4_K_SOA;
+        let use_mr = use_coop && info.ggml_type == crate::ggml_quants::GGML_TYPE_Q4_K_SOA;
         let gemm_pipeline: &wgpu::ComputePipeline = if use_mr {
             &self.coop_gemv_mr_pipeline
         } else if use_coop {
@@ -799,7 +804,9 @@ impl QTensorEngine {
                 return None;
             }
             {
-                let data = slice.get_mapped_range().expect("wgpu buffer map_range failed");
+                let data = slice
+                    .get_mapped_range()
+                    .expect("wgpu buffer map_range failed");
                 let vals: &[f32] = bytemuck::cast_slice(&data[..cand_count * 4]);
                 let idxs: &[u32] = bytemuck::cast_slice(&data[cand_count * 4..cand_count * 8]);
                 for i in 0..cand_count {

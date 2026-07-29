@@ -314,8 +314,7 @@ mod tests {
 
     #[test]
     fn government_letter_envelope_uses_attachment_as_blob() {
-        let mut letter =
-            GovernmentLetter::new("Centrelink", "Appointment notice", 1_700_002_000);
+        let mut letter = GovernmentLetter::new("Centrelink", "Appointment notice", 1_700_002_000);
         letter.attachment_blob_hash = Some("letter-pdf-hash".into());
         letter.action_required = true;
         let env = build_government_letter_envelope(&letter, OWNER, OWNER, 1_700_002_010);
@@ -334,7 +333,10 @@ mod tests {
         let s = assistance_need_summary(&need);
         assert!(s.contains("legal"));
         assert!(s.contains("Tenancy dispute advice"));
-        assert!(s.contains("critical"), "urgency must serialize snake_case: {s}");
+        assert!(
+            s.contains("critical"),
+            "urgency must serialize snake_case: {s}"
+        );
 
         let mut stream = WelfareStream::new("Rent Assistance", 1_700_000_000);
         stream.reference = Some("CRN-12345".into());
@@ -342,7 +344,10 @@ mod tests {
         let s = welfare_stream_summary(&stream);
         assert!(s.contains("Rent Assistance"));
         assert!(s.contains("CRN-12345"));
-        assert!(s.contains("active"), "status must serialize snake_case: {s}");
+        assert!(
+            s.contains("active"),
+            "status must serialize snake_case: {s}"
+        );
 
         let mut letter = GovernmentLetter::new("ATO", "Tax assessment", 1_700_000_000);
         letter.action_required = true;

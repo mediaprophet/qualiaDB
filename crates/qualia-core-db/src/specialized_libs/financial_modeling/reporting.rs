@@ -1,6 +1,5 @@
 use super::*;
 
-
 /// Reporting engine
 pub struct ReportingEngine {
     report_templates: HashMap<String, ReportTemplate>,

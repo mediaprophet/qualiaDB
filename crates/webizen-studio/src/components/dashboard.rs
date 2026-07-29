@@ -98,14 +98,31 @@ pub fn Dashboard() -> Element {
 
         main { class: "home-tab",
             div { class: "home-inner",
-                
+
                 header { class: "home-header",
-                    h1 { "Good evening, User" }
-                    p { "Your digital ecosystem is active. 10D Manifold is stable, and 3 local agents are available." }
+                    h1 { "Overview" }
+                    p { "Webizen is local-first. Start with Talk (your agent), Keep (records & body), or Reach (browser)." }
                 }
 
                 div { class: "widget-grid",
-                    
+
+                    article { class: "widget-card",
+                        div { class: "widget-header",
+                            div { class: "widget-title",
+                                sl-icon { "name": "chat-dots" }
+                                "Relations"
+                            }
+                            Link { to: Route::TalkRoute {}, sl-icon { "name": "box-arrow-up-right", style: "color: var(--qualia-text-muted); cursor: pointer;" } }
+                        }
+                        p { style: "margin:0; color: var(--qualia-text-muted); font-size: 0.9rem; line-height: 1.5;",
+                            "Private conversation with your local agent. Load a model, then chat — streaming on-device. Instruments are not peers."
+                        }
+                        div { class: "quick-actions", style: "margin-top: 0.5rem;",
+                            Link { to: Route::TalkRoute {}, class: "btn-action", sl-icon { "name": "chat-dots" } "Open Relations" }
+                            Link { to: Route::LibraryRoute {}, class: "btn-action", sl-icon { "name": "archive" } "Open Memory" }
+                        }
+                    }
+
                     // Health Vault Widget
                     article { class: "widget-card",
                         div { class: "widget-header",
@@ -179,10 +196,10 @@ pub fn Dashboard() -> Element {
                             }
                         }
                         div { class: "quick-actions",
-                            Link { to: Route::AnatomyRoute {}, class: "btn-action", sl-icon { "name": "person" } "3D Anatomy" }
-                            Link { to: Route::TenDBrowserRoute {}, class: "btn-action", sl-icon { "name": "box" } "10D Manifold" }
-                            Link { to: Route::StudioRoute {}, class: "btn-action", sl-icon { "name": "layers" } "QApp Studio" }
-                            Link { to: Route::ContextStudioRoute {}, class: "btn-action", sl-icon { "name": "diagram-3" } "Context Map" }
+                            Link { to: Route::BrowserRoute {}, class: "btn-action", sl-icon { "name": "globe2" } "Reach" }
+                            Link { to: Route::AnatomyRoute {}, class: "btn-action", sl-icon { "name": "person" } "Anatomy" }
+                            Link { to: Route::LibraryRoute {}, class: "btn-action", sl-icon { "name": "collection" } "Library" }
+                            Link { to: Route::SettingsRoute {}, class: "btn-action", sl-icon { "name": "gear" } "Settings" }
                         }
                     }
 

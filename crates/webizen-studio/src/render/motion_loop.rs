@@ -45,13 +45,16 @@ pub fn spawn_ui_motion_loop(mut on_frame: impl FnMut(f64) + 'static) {
     let last = Rc::new(RefCell::new(0.0f64));
     let interval = Interval::new(16, move || {
         let now = js_sys::Date::now();
-        let mut prev = last.borrow_mut();
-        let dt = if *prev > 0.0 {
-            ((now - *prev) / 1000.0).clamp(0.001, 0.05)
-        } else {
-            0.016
+        let dt = {
+            let mut prev = last.borrow_mut();
+            let dt = if *prev > 0.0 {
+                ((now - *prev) / 1000.0).clamp(0.001, 0.05)
+            } else {
+                0.016
+            };
+            *prev = now;
+            dt
         };
-        *prev = now;
         on_frame(dt);
     });
     interval.forget();

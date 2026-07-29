@@ -23,7 +23,7 @@ struct LogicEdge {
     from: usize,
     to: usize,
     def: Option<OntologicalDefinition>, // The predicate defining the edge
-    status: String, // "valid", "contradiction", "pending"
+    status: String,                     // "valid", "contradiction", "pending"
 }
 
 fn get_toolbox_items() -> Vec<OntologicalDefinition> {
@@ -78,27 +78,41 @@ pub fn LogicModeler() -> Element {
     let mut nodes = use_signal(|| {
         let items = get_toolbox_items();
         vec![
-            LogicNode { id: 1, x: 300.0, y: 150.0, def: items[1].clone() }, // User
-            LogicNode { id: 2, x: 700.0, y: 150.0, def: items[0].clone() }, // Entity
+            LogicNode {
+                id: 1,
+                x: 300.0,
+                y: 150.0,
+                def: items[1].clone(),
+            }, // User
+            LogicNode {
+                id: 2,
+                x: 700.0,
+                y: 150.0,
+                def: items[0].clone(),
+            }, // Entity
         ]
     });
 
     let mut edges = use_signal(|| {
         let items = get_toolbox_items();
-        vec![
-            LogicEdge { id: 101, from: 1, to: 2, def: Some(items[3].clone()), status: "valid".into() },
-        ]
+        vec![LogicEdge {
+            id: 101,
+            from: 1,
+            to: 2,
+            def: Some(items[3].clone()),
+            status: "valid".into(),
+        }]
     });
 
     let toolbox_items = use_signal(get_toolbox_items);
-    
+
     // Drag and drop state for nodes
     let mut dragging_node = use_signal(|| None::<usize>);
-    
+
     // Wiring state (drawing an edge)
     let mut drawing_edge_from = use_signal(|| None::<usize>);
     let mut cursor_pos = use_signal(|| (0.0, 0.0));
-    
+
     // Selected item for the Inspector panel
     let mut selected_node = use_signal(|| None::<usize>);
     let mut selected_edge = use_signal(|| None::<usize>);
@@ -108,7 +122,7 @@ pub fn LogicModeler() -> Element {
     let handle_mouse_move = move |evt: Event<MouseData>| {
         let coords = evt.client_coordinates();
         cursor_pos.set((coords.x, coords.y));
-        
+
         if let Some(id) = dragging_node.read().clone() {
             let mut current_nodes = nodes.read().clone();
             if let Some(node) = current_nodes.iter_mut().find(|n| n.id == id) {
@@ -119,8 +133,6 @@ pub fn LogicModeler() -> Element {
             nodes.set(current_nodes);
         }
     };
-
-
 
     let handle_mouse_up = move |_: Event<MouseData>| {
         dragging_node.set(None);
@@ -141,7 +153,7 @@ pub fn LogicModeler() -> Element {
                 let mut e = edges.read().clone();
                 let new_id = next_id.read().clone();
                 next_id.set(new_id + 1);
-                
+
                 e.push(LogicEdge {
                     id: new_id,
                     from: from_id,
@@ -154,7 +166,7 @@ pub fn LogicModeler() -> Element {
         }
         drawing_edge_from.set(None);
     };
-    
+
     let mut select_edge = move |evt: Event<MouseData>, edge_id: usize| {
         evt.stop_propagation();
         selected_edge.set(Some(edge_id));
@@ -251,7 +263,7 @@ pub fn LogicModeler() -> Element {
                         }
                     }
                 }
-                
+
                 div {
                     style: "margin-top: auto; padding-top: 20px;",
                     button {
@@ -265,11 +277,11 @@ pub fn LogicModeler() -> Element {
             // Canvas Area
             div {
                 style: "flex: 1; position: relative;",
-                
+
                 // SVG Layer for Edges
                 svg {
                     style: "position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1;",
-                    
+
                     {
                         edges.read().clone().into_iter().filter_map(|edge| {
                             if let (Some(n1), Some(n2)) = (nodes.read().iter().find(|n| n.id == edge.from).cloned(), nodes.read().iter().find(|n| n.id == edge.to).cloned()) {
@@ -325,7 +337,7 @@ pub fn LogicModeler() -> Element {
                             }
                         })
                     }
-                    
+
                     // Render drawing edge
                     {
                         let mut result = None;
@@ -336,7 +348,7 @@ pub fn LogicModeler() -> Element {
                                 // Need to offset cursor based on sidebar width roughly (280px)
                                 let end_x = cursor_pos.read().0 - 280.0;
                                 let end_y = cursor_pos.read().1;
-                                
+
                                 result = Some(rsx! {
                                     path {
                                         d: "M {start_x} {start_y} C {start_x + 80.0} {start_y}, {end_x - 80.0} {end_y}, {end_x} {end_y}",
@@ -379,13 +391,13 @@ pub fn LogicModeler() -> Element {
                                     selected_edge.set(None);
                                     dragging_node.set(Some(node.id));
                                 },
-                                
+
                                 // Incoming Port
                                 div {
                                     style: "position: absolute; left: -8px; top: 32px; width: 16px; height: 16px; background: #222; border: 2px solid {border_color}; border-radius: 50%; cursor: crosshair; z-index: 3;",
                                     onmouseup: move |e| finish_wiring(e, node.id),
                                 }
-                                
+
                                 // Outgoing Port
                                 div {
                                     style: "position: absolute; right: -8px; top: 32px; width: 16px; height: 16px; background: {border_color}; border: 2px solid #222; border-radius: 50%; cursor: crosshair; z-index: 3; box-shadow: 0 0 8px {border_color};",
@@ -408,13 +420,13 @@ pub fn LogicModeler() -> Element {
                         }
                     })
                 }
-                
+
                 // Right Inspector Panel
                 if selected_node.read().is_some() || selected_edge.read().is_some() {
                     div {
                         style: "position: absolute; right: 20px; top: 20px; width: 300px; background: rgba(15, 15, 20, 0.9); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 20px; z-index: 10; box-shadow: 0 10px 30px rgba(0,0,0,0.5);",
                         h3 { style: "margin: 0 0 16px 0; font-size: 1rem; color: #fff;", "Inspector" }
-                        
+
                         if let Some(id) = selected_node.read().clone() {
                             if let Some(node) = nodes.read().iter().find(|n| n.id == id) {
                                 div {

@@ -98,7 +98,8 @@ pub fn start_qualia_protocol() -> Result<u16, String> {
                     let mime = guess_mime(&file_path);
                     let mut response = tiny_http::Response::from_data(data).with_status_code(200);
                     response.add_header(
-                        tiny_http::Header::from_bytes(&b"Content-Type"[..], mime.as_bytes()).unwrap(),
+                        tiny_http::Header::from_bytes(&b"Content-Type"[..], mime.as_bytes())
+                            .unwrap(),
                     );
                     response.add_header(
                         tiny_http::Header::from_bytes(
@@ -107,10 +108,15 @@ pub fn start_qualia_protocol() -> Result<u16, String> {
                         ).unwrap(),
                     );
                     response.add_header(
-                        tiny_http::Header::from_bytes(&b"X-Content-Type-Options"[..], &b"nosniff"[..]).unwrap(),
+                        tiny_http::Header::from_bytes(
+                            &b"X-Content-Type-Options"[..],
+                            &b"nosniff"[..],
+                        )
+                        .unwrap(),
                     );
                     response.add_header(
-                        tiny_http::Header::from_bytes(&b"Referrer-Policy"[..], &b"no-referrer"[..]).unwrap(),
+                        tiny_http::Header::from_bytes(&b"Referrer-Policy"[..], &b"no-referrer"[..])
+                            .unwrap(),
                     );
                     let _ = request.respond(response);
                 }

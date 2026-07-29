@@ -2,6 +2,7 @@
 
 use bytemuck::{Pod, Zeroable};
 
+#[cfg(not(target_arch = "wasm32"))]
 use super::resident_substrate::{global_resident_substrate, MAX_KNN_HITS, MAX_RESIDENT_NODES};
 use super::Tensor10D;
 
@@ -215,7 +216,9 @@ impl TensorVolumeGpu {
         if rx.recv().ok().and_then(|r| r.ok()).is_none() {
             return 0;
         }
-        let count_data = count_slice.get_mapped_range().expect("wgpu buffer map_range failed");
+        let count_data = count_slice
+            .get_mapped_range()
+            .expect("wgpu buffer map_range failed");
         let total = u32::from_le_bytes(count_data[..4].try_into().unwrap_or([0; 4])) as usize;
         drop(count_data);
         self.staging_count.unmap();
@@ -229,7 +232,9 @@ impl TensorVolumeGpu {
         if rx2.recv().ok().and_then(|r| r.ok()).is_none() {
             return 0;
         }
-        let hits_data = hits_slice.get_mapped_range().expect("wgpu buffer map_range failed");
+        let hits_data = hits_slice
+            .get_mapped_range()
+            .expect("wgpu buffer map_range failed");
         let indices: &[u32] = bytemuck::cast_slice(&hits_data);
         let n = total.min(out.len()).min(indices.len());
         for i in 0..n {

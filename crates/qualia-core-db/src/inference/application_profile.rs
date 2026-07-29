@@ -94,11 +94,7 @@ pub fn active_application_profile() -> ApplicationProfile {
 pub fn set_application_profile(profile: ApplicationProfile) {
     PROFILE.store(profile as u8, Ordering::Relaxed);
     apply_application_profile(profile);
-    log::info!(
-        "APP_PROFILE|{}|{}",
-        profile.as_str(),
-        profile.description()
-    );
+    log::info!("APP_PROFILE|{}|{}", profile.as_str(), profile.description());
 }
 
 pub fn apply_application_profile(profile: ApplicationProfile) {
@@ -121,7 +117,7 @@ pub fn apply_application_profile(profile: ApplicationProfile) {
             // Long-form reasoning for differential / multi-system jobs.
             set_decode_budget_override(2048);
             set_inference_timeout_override_ms(8 * 60 * 60 * 1000); // 8 hours
-            // Always post-verify + HTML surface for email / archival.
+                                                                   // Always post-verify + HTML surface for email / archival.
             std::env::set_var("QUALIA_RETURN_VERIFY_HTML", "1");
             if std::env::var("QUALIA_INFERENCE_MODE").is_err() {
                 set_inference_mode(InferenceMode::FastVerify);

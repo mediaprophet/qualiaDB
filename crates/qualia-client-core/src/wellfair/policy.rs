@@ -5,10 +5,18 @@ use wellfare_core::record::{EpistemicStatus, SensitivityClass};
 /// The outcome of a policy decision (maps to `PolicyDecisionDto` for UI).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DecisionResult {
-    Permit { obligations: Vec<String> },
-    Deny { reasons: Vec<String> },
-    Prompt { requested_consent: ConsentGrantDraft },
-    Suspend { required_approvals: u8 },
+    Permit {
+        obligations: Vec<String>,
+    },
+    Deny {
+        reasons: Vec<String>,
+    },
+    Prompt {
+        requested_consent: ConsentGrantDraft,
+    },
+    Suspend {
+        required_approvals: u8,
+    },
 }
 
 /// The receipt bound to a policy decision for auditability.
@@ -78,9 +86,9 @@ impl PolicyDecisionService {
         scope: &str,
         now_unix: u64,
     ) -> bool {
-        grants.iter().any(|g| {
-            g.is_active(now_unix) && g.recipient == qapp_id && g.scope == scope
-        })
+        grants
+            .iter()
+            .any(|g| g.is_active(now_unix) && g.recipient == qapp_id && g.scope == scope)
     }
 
     /// Evaluates if a qApp capability is permitted to act on a record with a given sensitivity.
@@ -129,7 +137,9 @@ impl PolicyDecisionService {
             && requested_scope == "write_record"
             && sensitivity == SensitivityClass::Restricted
         {
-            return DecisionResult::Suspend { required_approvals: 2 };
+            return DecisionResult::Suspend {
+                required_approvals: 2,
+            };
         }
 
         match requested_scope {
@@ -141,7 +151,10 @@ impl PolicyDecisionService {
                 }
                 if Self::has_active_grant(active_grants, qapp_id, requested_scope, now_unix) {
                     return DecisionResult::Permit {
-                        obligations: vec!["emit_wal_receipt".into(), "honour_consent_expiry".into()],
+                        obligations: vec![
+                            "emit_wal_receipt".into(),
+                            "honour_consent_expiry".into(),
+                        ],
                     };
                 }
                 let fields = if requested_scope == "write_record" {
@@ -253,7 +266,12 @@ mod tests {
             0,
             true,
         );
-        assert!(matches!(d, DecisionResult::Suspend { required_approvals: 2 }));
+        assert!(matches!(
+            d,
+            DecisionResult::Suspend {
+                required_approvals: 2
+            }
+        ));
     }
 
     #[test]

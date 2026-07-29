@@ -11,9 +11,6 @@ use wasm_bindgen::prelude::*;
 
 // ─── Economics: Monte Carlo VaR ──────────────────────────────────────────────
 #[cfg(target_arch = "wasm32")]
-use super::*;
-
-#[cfg(target_arch = "wasm32")]
 #[derive(Deserialize)]
 pub struct JsonLdFlatTriple {
     pub s: String,

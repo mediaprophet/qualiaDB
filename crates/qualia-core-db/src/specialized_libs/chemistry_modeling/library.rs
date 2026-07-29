@@ -412,11 +412,9 @@ impl ChemistryModelingLibrary {
         molecule: &Molecule,
     ) -> Result<[f64; 3], ChemistryError> {
         let com = self.center_of_mass(molecule)?;
-        let mut tensor = crate::specialized_libs::shared::zero_heap_algebra::ZeroHeapMatrix::<
-            f64,
-            3,
-            3,
-        >::zeros();
+        let mut tensor =
+            crate::specialized_libs::shared::zero_heap_algebra::ZeroHeapMatrix::<f64, 3, 3>::zeros(
+            );
         let mut ixx = 0.0;
         let mut iyy = 0.0;
         let mut izz = 0.0;

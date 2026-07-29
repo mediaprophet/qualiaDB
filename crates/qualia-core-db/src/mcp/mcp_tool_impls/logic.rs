@@ -1,6 +1,5 @@
 use super::*;
 
-
 pub fn symbolic_logic_infer(args: &[u8]) -> Result<String, McpSystemError> {
     use crate::solvers::symbolic_logic::{
         BoundedSatSolver, Clause, DefeasibleRule, Fact, ForwardChainingDefeasible, Literal,

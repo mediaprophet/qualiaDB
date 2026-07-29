@@ -8,13 +8,11 @@ mod tests {
     use wellfare_core::companion_sync::{CompanionCsvFile, CompanionHealthBundle};
     use wellfare_core::conditions::ConditionReport;
     use wellfare_core::medication::AdministrationStatus;
-    use wellfare_core::record::{
-        EpistemicStatus, EvidenceType, RecordEnvelope, SensitivityClass,
-    };
+    use wellfare_core::record::{EpistemicStatus, EvidenceType, RecordEnvelope, SensitivityClass};
 
-    use super::super::host_state::AccessibilityPreferences;
     use super::super::api::WebizenHostApi;
     use super::super::checkpoint_store;
+    use super::super::host_state::AccessibilityPreferences;
     use super::super::host_state::ConsentGrantDraft;
     use super::super::policy::PolicyDecisionService;
     use super::super::vault::VaultService;
@@ -78,7 +76,8 @@ a1000001-0000-4000-8000-000000000001,1777632000000,1777632060000,60,72.0,18.5,32
             None,
         )
         .unwrap();
-        host.add_diet_entry("Oatmeal", "breakfast", Some(320)).unwrap();
+        host.add_diet_entry("Oatmeal", "breakfast", Some(320))
+            .unwrap();
 
         // Step 3 (personal) — self-reported condition
         host.add_condition(&ConditionReport::new("Hypertension"))
@@ -126,7 +125,9 @@ a1000001-0000-4000-8000-000000000001,1777632000000,1777632060000,60,72.0,18.5,32
         assert!(pkg.turtle_body.contains("@prefix wf:"));
         assert!(!export_receipt.export_sha256_hex.is_empty());
         let receipts = host.list_receipts(16).unwrap();
-        assert!(receipts.iter().any(|r| r.obligations.contains(&"standards_readable_export".into())));
+        assert!(receipts
+            .iter()
+            .any(|r| r.obligations.contains(&"standards_readable_export".into())));
 
         let graph_before = host.graph_quin_count();
         let journal_before = host.list_health_records(64).unwrap().len();

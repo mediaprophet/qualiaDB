@@ -34,6 +34,9 @@ async fn invoke_json<T>(cmd: &str, args: serde_json::Value) -> Result<T, String>
 where
     T: serde::de::DeserializeOwned,
 {
+    if !crate::endpoints::is_native_host() {
+        return Err("The desktop host is unavailable in this preview.".to_string());
+    }
     let js_args = serde_wasm_bindgen::to_value(&args).map_err(|e| e.to_string())?;
     let value = tauri_invoke(cmd, js_args.into())
         .await
@@ -48,10 +51,16 @@ const CHIP: &str = "display: inline-block; font-size: 11px; padding: 2px 8px; bo
 const TEXTAREA: &str = "width: 100%; box-sizing: border-box; padding: 8px 10px; background: #0f172a; color: #f3f4f6; border: 1px solid #374151; border-radius: 8px; font-family: monospace; font-size: 12px; resize: vertical;";
 
 fn s(v: &serde_json::Value, key: &str) -> String {
-    v.get(key).and_then(|x| x.as_str()).unwrap_or_default().to_string()
+    v.get(key)
+        .and_then(|x| x.as_str())
+        .unwrap_or_default()
+        .to_string()
 }
 fn arr(v: &serde_json::Value, key: &str) -> Vec<serde_json::Value> {
-    v.get(key).and_then(|x| x.as_array()).cloned().unwrap_or_default()
+    v.get(key)
+        .and_then(|x| x.as_array())
+        .cloned()
+        .unwrap_or_default()
 }
 
 #[component]
@@ -76,7 +85,16 @@ pub fn ConnectPane() -> Element {
 
     #[cfg(not(target_arch = "wasm32"))]
     {
-        let _ = (&relation, &domain, &link, &paste, &accept_status, &peers, &mesh, &status);
+        let _ = (
+            &relation,
+            &domain,
+            &link,
+            &paste,
+            &accept_status,
+            &peers,
+            &mesh,
+            &status,
+        );
     }
 
     // Load the social peers + mesh status on mount.
@@ -105,7 +123,10 @@ pub fn ConnectPane() -> Element {
     let peers_list = peers().as_array().cloned().unwrap_or_default();
 
     let mesh_v = mesh();
-    let mesh_running = mesh_v.get("running").and_then(|x| x.as_bool()).unwrap_or(false);
+    let mesh_running = mesh_v
+        .get("running")
+        .and_then(|x| x.as_bool())
+        .unwrap_or(false);
     let mesh_node_key = s(&mesh_v, "node_wg_pubkey");
     let mesh_peers = arr(&mesh_v, "peers");
 

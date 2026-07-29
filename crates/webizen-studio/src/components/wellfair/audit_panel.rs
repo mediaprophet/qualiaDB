@@ -41,7 +41,9 @@ pub fn WellfairAuditPanel() -> Element {
     let mut loaded = use_signal(|| false);
 
     use_effect(move || {
-        if loaded() { return; }
+        if loaded() {
+            return;
+        }
         loaded.set(true);
         reload();
     });
@@ -50,6 +52,7 @@ pub fn WellfairAuditPanel() -> Element {
         section {
             aria_label: "WellFair audit and graph coverage",
             style: "padding:0.85rem;border:1px solid var(--qualia-border,#ddd);border-radius:10px;background:var(--qualia-surface,#fafafa);",
+            super::shared::DomainChrome { domain: "Instruments", chip: "Audit · provenance · local", show_memory: true }
             div {
                 style: "display:flex;align-items:center;justify-content:space-between;gap:0.5rem;margin-bottom:0.5rem;",
                 h2 { style: "margin:0;font-size:1rem;", "Audit & provenance" }

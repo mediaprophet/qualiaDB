@@ -1,5 +1,6 @@
-//! `.qualia` — a **transparent container-of-files** bundle for shipping a set of
-//! sealed Qualia assets (`.10d` meshes, `.q42` graph volumes, `.p64` weights, …)
+//! `.hmc` — the **hyper-media-container**: a **transparent container-of-files**
+//! bundle for shipping a set of sealed Qualia assets (`.emf` spectral media,
+//! `.10d` meshes, `.q42` graph volumes, `.p64` weights, …)
 //! as one attestable unit (a release artefact, a downloadable pack, a signed
 //! asset set).
 //!
@@ -7,7 +8,7 @@
 //! The Qualia container family (`.10d` / `.q42` / `.p64`) are all internally
 //! navigable — you can pull a *segment* (a mesh section, a subgraph, a weight
 //! shard) without reading the whole file, ideally `mmap` zero-copy. A bundle
-//! must not destroy that. So a `.qualia` bundle only **concatenates intact files,
+//! must not destroy that. So a `.hmc` bundle only **concatenates intact files,
 //! page-aligned, with an index of absolute offsets** — it never compresses,
 //! re-chunks, or reframes an entry. Consequences:
 //!

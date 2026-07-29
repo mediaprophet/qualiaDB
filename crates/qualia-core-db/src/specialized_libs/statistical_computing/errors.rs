@@ -1,5 +1,3 @@
-
-
 // Supporting types
 
 #[derive(Debug, Clone)]

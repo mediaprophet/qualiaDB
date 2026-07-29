@@ -297,8 +297,9 @@ mod sparql_tests {
             ctx.variable_hashes
                 .iter()
                 .position(|h| *h == crate::lexicon::generate_60bit_token(name))
-                .unwrap_or_else(|| panic!("variable {} not registered", String::from_utf8_lossy(name)))
-                as u8
+                .unwrap_or_else(|| {
+                    panic!("variable {} not registered", String::from_utf8_lossy(name))
+                }) as u8
         };
         let o_var = var(b"?o");
         let copy_var = var(b"?copy");
@@ -309,16 +310,17 @@ mod sparql_tests {
             // BIND(?o AS ?copy) copies the value.
             assert_eq!(row.get(copy_var), Some(o), "?copy should equal ?o");
             // BIND(?o + ?o AS ?double) computes a real numeric value.
-            assert_eq!(row.get(double_var), Some(o + o), "?double should be ?o + ?o");
+            assert_eq!(
+                row.get(double_var),
+                Some(o + o),
+                "?double should be ?o + ?o"
+            );
         }
     }
 
     // ===== OPTIONAL / MINUS semantics end-to-end =====
 
-    fn run_query(
-        query: &str,
-        quins: &[crate::NQuin],
-    ) -> (SparqlQueryContext, Vec<BindingRow>) {
+    fn run_query(query: &str, quins: &[crate::NQuin]) -> (SparqlQueryContext, Vec<BindingRow>) {
         let (q, ctx) = parse_sparql(query).unwrap();
         let plan = QueryPlanner::plan(&q, &ctx).unwrap();
         let rows = QueryExecutor::new(quins).execute(&plan, &ctx).unwrap();
@@ -355,8 +357,7 @@ mod sparql_tests {
         let quins = vec![mk_quin(alice, knows, bob)];
 
         // Rewrite matched knows-triples into a new `friend` predicate.
-        let query =
-            "CONSTRUCT { ?s <http://ex/friend> ?o } WHERE { ?s <http://ex/knows> ?o }";
+        let query = "CONSTRUCT { ?s <http://ex/friend> ?o } WHERE { ?s <http://ex/knows> ?o }";
         let (q, ctx) = parse_sparql(query).unwrap();
         let template = match &q {
             SparqlQuery::Construct(c) => c.template_pattern,
@@ -454,7 +455,11 @@ mod sparql_tests {
         let q = "SELECT ?o WHERE { <http://ex/alice> <http://ex/knows> ?o . \
                  FILTER NOT EXISTS { ?o <http://ex/likes> ?z } }";
         let (ctx, rows) = run_query(q, &quins);
-        assert_eq!(rows.len(), 1, "only dave (likes nobody) survives NOT EXISTS");
+        assert_eq!(
+            rows.len(),
+            1,
+            "only dave (likes nobody) survives NOT EXISTS"
+        );
         assert_eq!(rows[0].get(var_of(&ctx, b"?o")), Some(dave));
     }
 
@@ -504,7 +509,11 @@ mod sparql_tests {
         assert!(!rows.is_empty(), "GRAPH ?g must match the named graph");
         let g_var = var_of(&ctx, b"?g");
         let o_var = var_of(&ctx, b"?o");
-        assert_eq!(rows[0].get(g_var), Some(g1), "?g bound to the named graph IRI");
+        assert_eq!(
+            rows[0].get(g_var),
+            Some(g1),
+            "?g bound to the named graph IRI"
+        );
         assert_eq!(rows[0].get(o_var), Some(o), "?o bound within the graph");
     }
 
@@ -537,7 +546,11 @@ mod sparql_tests {
 
         assert_eq!(rows.len(), 2, "only alice's two triples");
         for r in &rows {
-            assert_eq!(r.get(0), Some(alice), "every described triple is about alice");
+            assert_eq!(
+                r.get(0),
+                Some(alice),
+                "every described triple is about alice"
+            );
         }
     }
 
@@ -557,15 +570,24 @@ mod sparql_tests {
             &quins,
         );
         let (sv, av) = (var_of(&ctx, b"?s"), var_of(&ctx, b"?age"));
-        let mut got: Vec<(u64, Option<u64>)> =
-            rows.iter().map(|r| (r.get(sv).unwrap(), r.get(av))).collect();
+        let mut got: Vec<(u64, Option<u64>)> = rows
+            .iter()
+            .map(|r| (r.get(sv).unwrap(), r.get(av)))
+            .collect();
         got.sort();
-        assert!(got.contains(&(s1, Some(42))), "s1 should carry ?age; got {got:?}");
+        assert!(
+            got.contains(&(s1, Some(42))),
+            "s1 should carry ?age; got {got:?}"
+        );
         assert!(
             got.contains(&(s2, None)),
             "s2 must be kept with ?age unbound (OPTIONAL is a left-join); got {got:?}"
         );
-        assert_eq!(got.len(), 2, "OPTIONAL must not drop the unmatched row; got {got:?}");
+        assert_eq!(
+            got.len(),
+            2,
+            "OPTIONAL must not drop the unmatched row; got {got:?}"
+        );
     }
 
     #[test]

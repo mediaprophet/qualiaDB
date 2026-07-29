@@ -55,7 +55,7 @@ impl WmsAdapter {
             "{}?SERVICE={}&REQUEST={}&BBOX={},{},{},{}",
             self.endpoint, service, request, bbox.0, bbox.1, bbox.2, bbox.3
         );
-        
+
         if time_range.1 > 0 {
             // Stub: proper ISO8601 formatting for TIME parameter
             url.push_str(&format!("&TIME={}/{}", time_range.0, time_range.1));
@@ -83,7 +83,11 @@ mod tests {
 
     #[test]
     fn test_wms_adapter_egress() {
-        let adapter = WmsAdapter::new("wms_adapter", "https://wms.example.com/geoserver/wms", OgcServiceType::Wms);
+        let adapter = WmsAdapter::new(
+            "wms_adapter",
+            "https://wms.example.com/geoserver/wms",
+            OgcServiceType::Wms,
+        );
         let registry = NetworkDisclosureRegistry::new();
 
         let res1 = adapter.fetch_region((-1.0, 51.0, 0.0, 52.0), (0, 0), &registry);
@@ -99,7 +103,11 @@ mod tests {
 
         let res2 = adapter.fetch_region((-1.0, 51.0, 0.0, 52.0), (0, 0), &registry);
         if let Err(e) = res2 {
-            assert!(!e.contains("Consent denied"), "Failed on consent when it should have been granted: {}", e);
+            assert!(
+                !e.contains("Consent denied"),
+                "Failed on consent when it should have been granted: {}",
+                e
+            );
         }
     }
 }

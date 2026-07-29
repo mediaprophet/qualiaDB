@@ -6,12 +6,15 @@
 //! This extension uses the native Qualia LLM pipeline (wgpu + WGSL shaders) for neural network
 //! inference, ensuring zero-allocation hot paths and GPU acceleration without external ML frameworks.
 
-use crate::{Extension, ExtensionCapability, ExtensionError, ExtensionJob, ExtensionResult, ResourceRequirements, NQuin};
+use crate::{
+    Extension, ExtensionCapability, ExtensionError, ExtensionJob, ExtensionResult, NQuin,
+    ResourceRequirements,
+};
 use async_trait::async_trait;
+use base64;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::time::Instant;
-use base64;
 
 #[cfg(feature = "pinn")]
 use qualia_core_db::llm_agent::LocalLlmAgent;
@@ -231,7 +234,8 @@ impl PinnExtension {
 
         let model_manager = TernaryPinnModelManager {
             loaded_models: HashMap::new(),
-            model_cache_path: std::env::var("QUALIA_PINN_CACHE").unwrap_or_else(|_| "./ternary_pinn_models".to_string()),
+            model_cache_path: std::env::var("QUALIA_PINN_CACHE")
+                .unwrap_or_else(|_| "./ternary_pinn_models".to_string()),
             quantization_config: quantization_config.clone(),
         };
 
@@ -297,24 +301,33 @@ impl PinnExtension {
         self
     }
 
-    async fn solve_pde_ternary(&self, params: PinnJobParams) -> Result<PinnExecutionResult, ExtensionError> {
+    async fn solve_pde_ternary(
+        &self,
+        params: PinnJobParams,
+    ) -> Result<PinnExecutionResult, ExtensionError> {
         let model = {
             let model_manager = self.model_manager.read().unwrap();
             model_manager.get_model(&params.model_name).cloned()
-        }.ok_or_else(|| ExtensionError::ExtensionNotFound(format!("Model '{}' not found", params.model_name)))?;
+        }
+        .ok_or_else(|| {
+            ExtensionError::ExtensionNotFound(format!("Model '{}' not found", params.model_name))
+        })?;
 
         let start_time = Instant::now();
-        
+
         // Execute ternary PINN inference with SMX formatting
         let result = self.execute_ternary_pinn_inference(&model, &params).await?;
-        
+
         let execution_time = start_time.elapsed().as_millis() as u64;
 
         // Format output with SMX
-        let smx_output = self.smx_formatter.format_output(&result.output_points, &model.quantization_config)?;
-        
+        let smx_output = self
+            .smx_formatter
+            .format_output(&result.output_points, &model.quantization_config)?;
+
         // Calculate quantization metrics
-        let quantization_metrics = self.calculate_quantization_metrics(&result, &model.quantization_config);
+        let quantization_metrics =
+            self.calculate_quantization_metrics(&result, &model.quantization_config);
 
         Ok(PinnExecutionResult {
             output_points: result.output_points,
@@ -327,9 +340,11 @@ impl PinnExtension {
         })
     }
 
-
-
-    async fn execute_ternary_pinn_inference(&self, model: &TernaryPinnModel, params: &PinnJobParams) -> Result<PinnExecutionResult, ExtensionError> {
+    async fn execute_ternary_pinn_inference(
+        &self,
+        model: &TernaryPinnModel,
+        params: &PinnJobParams,
+    ) -> Result<PinnExecutionResult, ExtensionError> {
         // Execute inference with ternary quantized weights
         let mut output_points = Vec::new();
         let mut residuals = Vec::new();
@@ -349,7 +364,8 @@ impl PinnExtension {
             self.calculate_convergence_metrics(&residuals, params.max_iterations, params.tolerance);
 
         // Check for physics violations
-        let physics_violations = self.check_physics_violations(&output_points, &model.physics_constraints);
+        let physics_violations =
+            self.check_physics_violations(&output_points, &model.physics_constraints);
 
         Ok(PinnExecutionResult {
             output_points,
@@ -373,32 +389,42 @@ impl PinnExtension {
         })
     }
 
-    fn forward_pass_ternary(&self, model: &TernaryPinnModel, input: &[f64]) -> Result<Vec<f64>, ExtensionError> {
+    fn forward_pass_ternary(
+        &self,
+        model: &TernaryPinnModel,
+        input: &[f64],
+    ) -> Result<Vec<f64>, ExtensionError> {
         // Simulate forward pass through ternary neural network
         let mut activations = input.to_vec();
-        
+
         for (layer_idx, weight_tensor) in model.ternary_weights.iter().enumerate() {
             // Apply ternary matrix multiplication
             activations = self.ternary_matmul(&activations, weight_tensor)?;
-            
+
             // Apply activation function
             activations = self.apply_activation(&activations, layer_idx);
         }
-        
+
         Ok(activations)
     }
 
-    fn ternary_matmul(&self, input: &[f64], weights: &TernaryTensor) -> Result<Vec<f64>, ExtensionError> {
+    fn ternary_matmul(
+        &self,
+        input: &[f64],
+        weights: &TernaryTensor,
+    ) -> Result<Vec<f64>, ExtensionError> {
         // Perform matrix multiplication with ternary weights {-1, 0, 1}
         let input_size = input.len();
         let output_size = weights.shape[0];
-        
+
         if weights.shape[1] != input_size {
-            return Err(ExtensionError::ExecutionFailed("Input dimension mismatch".to_string()));
+            return Err(ExtensionError::ExecutionFailed(
+                "Input dimension mismatch".to_string(),
+            ));
         }
-        
+
         let mut output = vec![0.0; output_size];
-        
+
         for i in 0..output_size {
             for j in 0..input_size {
                 let weight_idx = i * input_size + j;
@@ -408,7 +434,7 @@ impl PinnExtension {
                 }
             }
         }
-        
+
         Ok(output)
     }
 
@@ -416,15 +442,20 @@ impl PinnExtension {
         // Apply activation function based on layer index
         match layer_idx % 3 {
             0 => input.iter().map(|x| x.max(0.0)).collect(), // ReLU
-            1 => input.iter().map(|x| x.tanh()).collect(),      // Tanh
-            _ => input.to_vec(),                               // Linear
+            1 => input.iter().map(|x| x.tanh()).collect(),   // Tanh
+            _ => input.to_vec(),                             // Linear
         }
     }
 
     // (Removed the mock `calculate_physics_residual` — it computed arbitrary algebra, not a
     // PDE residual. The live path now uses the real `pde_residual` free function.)
 
-    fn calculate_convergence_metrics(&self, residuals: &[f64], max_iterations: u32, tolerance: f64) -> ConvergenceMetrics {
+    fn calculate_convergence_metrics(
+        &self,
+        residuals: &[f64],
+        max_iterations: u32,
+        tolerance: f64,
+    ) -> ConvergenceMetrics {
         if residuals.is_empty() {
             return ConvergenceMetrics {
                 final_loss: 0.0,
@@ -443,7 +474,7 @@ impl PinnExtension {
         // Converged when the mean PDE residual is within the caller's tolerance.
         let converged = final_loss < tolerance;
         let iterations = std::cmp::min(max_iterations, residuals.len() as u32);
-        
+
         ConvergenceMetrics {
             final_loss,
             convergence_rate,
@@ -452,23 +483,33 @@ impl PinnExtension {
         }
     }
 
-    fn calculate_quantization_metrics(&self, result: &PinnExecutionResult, config: &TernaryQuantizationConfig) -> QuantizationMetrics {
+    fn calculate_quantization_metrics(
+        &self,
+        result: &PinnExecutionResult,
+        config: &TernaryQuantizationConfig,
+    ) -> QuantizationMetrics {
         let error_floor = (result.convergence_metrics.final_loss * 0.01).max(0.001);
         QuantizationMetrics {
             quantization_error: error_floor,
-            sparsity_ratio: 0.85,    // 85% of weights are zero in ternary
+            sparsity_ratio: 0.85, // 85% of weights are zero in ternary
             compression_ratio: config.compression_ratio,
-            inference_speedup: 4.0,   // 4x speedup from ternary operations
-            memory_savings: 0.75,     // 75% memory savings
+            inference_speedup: 4.0, // 4x speedup from ternary operations
+            memory_savings: 0.75,   // 75% memory savings
         }
     }
 
-    async fn execute_pinn_inference(&self, model: &TernaryPinnModel, params: &PinnJobParams) -> Result<PinnExecutionResult, ExtensionError> {
+    async fn execute_pinn_inference(
+        &self,
+        model: &TernaryPinnModel,
+        params: &PinnJobParams,
+    ) -> Result<PinnExecutionResult, ExtensionError> {
         #[cfg(feature = "pinn")]
         {
             // Use native Qualia LLM pipeline (wgpu + WGSL shaders) for neural network inference
             if let Some(backend) = &self.native_backend {
-                return self.execute_native_pinn_inference(backend, model, params).await;
+                return self
+                    .execute_native_pinn_inference(backend, model, params)
+                    .await;
             }
         }
 
@@ -493,7 +534,8 @@ impl PinnExtension {
             converged: residuals.iter().all(|&r| r < params.tolerance),
         };
 
-        let physics_violations = self.check_physics_violations(&output_points, &model.physics_constraints);
+        let physics_violations =
+            self.check_physics_violations(&output_points, &model.physics_constraints);
 
         Ok(PinnExecutionResult {
             output_points,
@@ -521,7 +563,11 @@ impl PinnExtension {
     // forward is `ternary_forward` / `pinn_forward`; the real physics-informed PDE residual
     // is `pde_residual` — all module-level functions above.)
 
-    fn check_physics_violations(&self, outputs: &[Vec<f64>], constraints: &[PhysicsConstraint]) -> Vec<PhysicsViolation> {
+    fn check_physics_violations(
+        &self,
+        outputs: &[Vec<f64>],
+        constraints: &[PhysicsConstraint],
+    ) -> Vec<PhysicsViolation> {
         let mut violations = Vec::new();
 
         for (i, output) in outputs.iter().enumerate() {
@@ -535,7 +581,7 @@ impl PinnExtension {
                         } else {
                             None
                         }
-                    },
+                    }
                     EquationType::HeatEquation => {
                         // Check energy conservation
                         let total_energy = output.iter().map(|v| v * v).sum::<f64>();
@@ -544,7 +590,7 @@ impl PinnExtension {
                         } else {
                             None
                         }
-                    },
+                    }
                     _ => None,
                 };
 
@@ -570,8 +616,12 @@ impl PinnExtension {
             predicate: crate::q_hash("q42:hasConvergence"),
             object: (result.convergence_metrics.final_loss * 1000000.0) as u64, // Fixed-point
             context: crate::q_hash("pinn:convergence"),
-            metadata: ((result.convergence_metrics.iterations as u64) << 32) | 
-                     (if result.convergence_metrics.converged { 1 } else { 0 }),
+            metadata: ((result.convergence_metrics.iterations as u64) << 32)
+                | (if result.convergence_metrics.converged {
+                    1
+                } else {
+                    0
+                }),
             parity: 0,
         };
         quins.push(convergence_quin);
@@ -619,10 +669,11 @@ impl PinnExtension {
         for input_point in &params.input_points {
             // Convert input to format expected by native pipeline
             let prompt = self.format_input_for_native_pipeline(input_point, &model.domain);
-            
+
             // Use native LLM inference for neural network forward pass
             // Note: In production, this would use a specialized PINN model loaded via GGUF
-            let output = self.native_neural_forward(&prompt, input_point, model.output_dim, &model.domain);
+            let output =
+                self.native_neural_forward(&prompt, input_point, model.output_dim, &model.domain);
             output_points.push(output);
 
             // Calculate residuals using native compute
@@ -637,7 +688,8 @@ impl PinnExtension {
             converged: residuals.iter().all(|&r| r < params.tolerance),
         };
 
-        let physics_violations = self.check_physics_violations(&output_points, &model.physics_constraints);
+        let physics_violations =
+            self.check_physics_violations(&output_points, &model.physics_constraints);
 
         Ok(PinnExecutionResult {
             output_points,
@@ -673,12 +725,26 @@ impl PinnExtension {
             PhysicsDomain::ChaosTheory => "chaos_theory",
             PhysicsDomain::StatisticalMechanics => "statistical_mechanics",
         };
-        
-        format!("PINN_INFERENCE:{}:[{}]", domain_str, input.iter().map(|x| x.to_string()).collect::<Vec<_>>().join(","))
+
+        format!(
+            "PINN_INFERENCE:{}:[{}]",
+            domain_str,
+            input
+                .iter()
+                .map(|x| x.to_string())
+                .collect::<Vec<_>>()
+                .join(",")
+        )
     }
 
     #[cfg(feature = "pinn")]
-    fn native_neural_forward(&self, _prompt: &str, input: &[f64], output_dim: usize, domain: &PhysicsDomain) -> Vec<f64> {
+    fn native_neural_forward(
+        &self,
+        _prompt: &str,
+        input: &[f64],
+        output_dim: usize,
+        domain: &PhysicsDomain,
+    ) -> Vec<f64> {
         // The native LLM/GGUF inference path is not yet wired; fall back to the real
         // analytic physics reference for the domain (an exact/standard solution, not a mock).
         physics_reference(domain, input, output_dim)
@@ -693,29 +759,35 @@ impl TernaryPinnModelManager {
     pub fn load_model(&mut self, model: TernaryPinnModel) -> Result<(), ExtensionError> {
         // Load and quantize model to 1.58-bit ternary format
         let quantized_model = self.quantize_model(model.clone())?;
-        self.loaded_models.insert(model.name.clone(), quantized_model);
+        self.loaded_models
+            .insert(model.name.clone(), quantized_model);
         Ok(())
     }
 
     fn quantize_model(&self, model: TernaryPinnModel) -> Result<TernaryPinnModel, ExtensionError> {
         // Quantize model weights to ternary format {-1, 0, 1}
         let mut quantized_weights = Vec::new();
-        
+
         for weight_tensor in &model.ternary_weights {
-            let quantized_tensor = self.quantize_tensor(weight_tensor, &self.quantization_config)?;
+            let quantized_tensor =
+                self.quantize_tensor(weight_tensor, &self.quantization_config)?;
             quantized_weights.push(quantized_tensor);
         }
-        
+
         Ok(TernaryPinnModel {
             ternary_weights: quantized_weights,
             ..model
         })
     }
 
-    fn quantize_tensor(&self, tensor: &TernaryTensor, config: &TernaryQuantizationConfig) -> Result<TernaryTensor, ExtensionError> {
+    fn quantize_tensor(
+        &self,
+        tensor: &TernaryTensor,
+        config: &TernaryQuantizationConfig,
+    ) -> Result<TernaryTensor, ExtensionError> {
         // Quantize tensor to ternary values
         let mut ternary_data = Vec::new();
-        
+
         for &value in &tensor.ternary_data {
             let quantized = if (value as f32) > config.scaling_factor {
                 1
@@ -726,16 +798,16 @@ impl TernaryPinnModelManager {
             };
             ternary_data.push(quantized);
         }
-        
+
         let compressed_size = ternary_data.len();
-        
+
         Ok(TernaryTensor {
             ternary_data,
             metadata: TensorMetadata {
                 quantization_bits: config.quantization_bits,
                 compression_method: "ternary_1.58bit".to_string(),
                 original_size: tensor.ternary_data.len() * 4, // Assume 32-bit original
-                compressed_size, // 1.58-bit compressed
+                compressed_size,                              // 1.58-bit compressed
                 ..tensor.metadata.clone()
             },
             ..tensor.clone()
@@ -802,8 +874,16 @@ fn lorenz_state_at(t: f64) -> [f64; 3] {
     let steps = (t.max(0.0) / dt) as usize;
     for _ in 0..steps {
         let k1 = f(s);
-        let k2 = f([s[0] + 0.5 * dt * k1[0], s[1] + 0.5 * dt * k1[1], s[2] + 0.5 * dt * k1[2]]);
-        let k3 = f([s[0] + 0.5 * dt * k2[0], s[1] + 0.5 * dt * k2[1], s[2] + 0.5 * dt * k2[2]]);
+        let k2 = f([
+            s[0] + 0.5 * dt * k1[0],
+            s[1] + 0.5 * dt * k1[1],
+            s[2] + 0.5 * dt * k1[2],
+        ]);
+        let k3 = f([
+            s[0] + 0.5 * dt * k2[0],
+            s[1] + 0.5 * dt * k2[1],
+            s[2] + 0.5 * dt * k2[2],
+        ]);
         let k4 = f([s[0] + dt * k3[0], s[1] + dt * k3[1], s[2] + dt * k3[2]]);
         for i in 0..3 {
             s[i] += dt / 6.0 * (k1[i] + 2.0 * k2[i] + 2.0 * k3[i] + k4[i]);
@@ -895,7 +975,11 @@ fn pde_residual(model: &TernaryPinnModel, input: &[f64], constraints: &[PhysicsC
         let r = match c.equation_type {
             EquationType::HeatEquation => {
                 // u_t − α·u_xx, with input = [x, t].
-                let alpha = c.parameters.get("thermal_diffusivity").copied().unwrap_or(1.0);
+                let alpha = c
+                    .parameters
+                    .get("thermal_diffusivity")
+                    .copied()
+                    .unwrap_or(1.0);
                 let u = eval(input)[0];
                 let u_t = (perturb(1, h)[0] - perturb(1, -h)[0]) / (2.0 * h);
                 let u_xx = (perturb(0, h)[0] - 2.0 * u + perturb(0, -h)[0]) / (h * h);
@@ -940,19 +1024,28 @@ fn pde_residual(model: &TernaryPinnModel, input: &[f64], constraints: &[PhysicsC
 }
 
 impl SmxFormatter {
-    pub fn format_output(&self, output_points: &[Vec<f64>], config: &TernaryQuantizationConfig) -> Result<SmxOutput, ExtensionError> {
+    pub fn format_output(
+        &self,
+        output_points: &[Vec<f64>],
+        config: &TernaryQuantizationConfig,
+    ) -> Result<SmxOutput, ExtensionError> {
         // Convert output points to ternary tensors for SMX format
         let mut output_tensors = Vec::new();
-        
+
         for (_i, point) in output_points.iter().enumerate() {
-            let tensor_data: Vec<i8> = point.iter()
+            let tensor_data: Vec<i8> = point
+                .iter()
                 .map(|&x| {
-                    if x > config.scaling_factor as f64 { 1 }
-                    else if x < -(config.scaling_factor as f64) { -1 }
-                    else { 0 }
+                    if x > config.scaling_factor as f64 {
+                        1
+                    } else if x < -(config.scaling_factor as f64) {
+                        -1
+                    } else {
+                        0
+                    }
                 })
                 .collect();
-            
+
             let tensor = TernaryTensor {
                 shape: vec![point.len()],
                 ternary_data: tensor_data,
@@ -965,10 +1058,10 @@ impl SmxFormatter {
                     compressed_size: point.len() / 6, // 1.58-bit compressed
                 },
             };
-            
+
             output_tensors.push(tensor);
         }
-        
+
         Ok(SmxOutput {
             version: self.version.clone(),
             output_tensors,
@@ -985,7 +1078,7 @@ impl SmxFormatter {
             weights: model.ternary_weights.clone(),
             compression_level: self.compression_level,
         };
-        
+
         serde_json::to_vec(&smx_data)
             .map_err(|e| ExtensionError::ExecutionFailed(format!("SMX export failed: {}", e)))
     }
@@ -994,7 +1087,7 @@ impl SmxFormatter {
         // Import model from SMX format
         let smx_model: SmxModelData = serde_json::from_slice(smx_data)
             .map_err(|e| ExtensionError::ExecutionFailed(format!("SMX import failed: {}", e)))?;
-        
+
         Ok(TernaryPinnModel {
             name: "imported_model".to_string(),
             domain: PhysicsDomain::FluidDynamics, // Default
@@ -1026,86 +1119,133 @@ impl Extension for PinnExtension {
 
     async fn execute(&self, job: ExtensionJob) -> Result<ExtensionResult, ExtensionError> {
         let start_time = Instant::now();
-        
+
         match job.operation.as_str() {
             "solve_pde_ternary" => {
                 let params: PinnJobParams = serde_json::from_value(
-                    job.parameters.get("pinn_params")
-                        .ok_or_else(|| ExtensionError::ExecutionFailed("Missing pinn_params".to_string()))?
-                        .clone()
-                ).map_err(|e| ExtensionError::ExecutionFailed(format!("Invalid pinn_params: {}", e)))?;
+                    job.parameters
+                        .get("pinn_params")
+                        .ok_or_else(|| {
+                            ExtensionError::ExecutionFailed("Missing pinn_params".to_string())
+                        })?
+                        .clone(),
+                )
+                .map_err(|e| {
+                    ExtensionError::ExecutionFailed(format!("Invalid pinn_params: {}", e))
+                })?;
 
                 let result = self.solve_pde_ternary(params).await?;
                 let quins = Self::result_to_quins(&result, &job.job_id);
-                
+
                 Ok(ExtensionResult {
                     job_id: job.job_id,
                     success: true,
                     result_quins: quins,
                     metadata: {
                         let mut meta = HashMap::new();
-                        meta.insert("converged".to_string(), result.convergence_metrics.converged.to_string());
-                        meta.insert("final_loss".to_string(), result.convergence_metrics.final_loss.to_string());
-                        meta.insert("iterations".to_string(), result.convergence_metrics.iterations.to_string());
-                        meta.insert("physics_violations".to_string(), result.physics_violations.len().to_string());
-                        meta.insert("compression_ratio".to_string(), result.quantization_metrics.compression_ratio.to_string());
+                        meta.insert(
+                            "converged".to_string(),
+                            result.convergence_metrics.converged.to_string(),
+                        );
+                        meta.insert(
+                            "final_loss".to_string(),
+                            result.convergence_metrics.final_loss.to_string(),
+                        );
+                        meta.insert(
+                            "iterations".to_string(),
+                            result.convergence_metrics.iterations.to_string(),
+                        );
+                        meta.insert(
+                            "physics_violations".to_string(),
+                            result.physics_violations.len().to_string(),
+                        );
+                        meta.insert(
+                            "compression_ratio".to_string(),
+                            result.quantization_metrics.compression_ratio.to_string(),
+                        );
                         meta.insert("quantization_bits".to_string(), "1.58".to_string());
-                        meta.insert("inference_speedup".to_string(), result.quantization_metrics.inference_speedup.to_string());
+                        meta.insert(
+                            "inference_speedup".to_string(),
+                            result.quantization_metrics.inference_speedup.to_string(),
+                        );
                         meta
                     },
                     execution_time_ms: start_time.elapsed().as_millis() as u64,
                 })
-            },
+            }
             "export_smx_format" => {
                 let model_name: String = serde_json::from_value(
-                    job.parameters.get("model_name")
-                        .ok_or_else(|| ExtensionError::ExecutionFailed("Missing model_name".to_string()))?
-                        .clone()
-                ).map_err(|e| ExtensionError::ExecutionFailed(format!("Invalid model_name: {}", e)))?;
+                    job.parameters
+                        .get("model_name")
+                        .ok_or_else(|| {
+                            ExtensionError::ExecutionFailed("Missing model_name".to_string())
+                        })?
+                        .clone(),
+                )
+                .map_err(|e| {
+                    ExtensionError::ExecutionFailed(format!("Invalid model_name: {}", e))
+                })?;
 
                 let model = {
                     let model_manager = self.model_manager.read().unwrap();
                     model_manager.get_model(&model_name).cloned()
-                }.ok_or_else(|| ExtensionError::ExtensionNotFound(format!("Model '{}' not found", model_name)))?;
+                }
+                .ok_or_else(|| {
+                    ExtensionError::ExtensionNotFound(format!("Model '{}' not found", model_name))
+                })?;
 
                 let smx_data = self.smx_formatter.export_model_smx(&model)?;
-                
+
                 Ok(ExtensionResult {
                     job_id: job.job_id,
                     success: true,
                     result_quins: vec![],
                     metadata: {
                         let mut meta = HashMap::new();
-                        use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64_STANDARD};
+                        use base64::{
+                            engine::general_purpose::STANDARD as BASE64_STANDARD, Engine as _,
+                        };
                         let encoded_smx = BASE64_STANDARD.encode(&smx_data);
-                        
+
                         meta.insert("model_name".to_string(), model_name);
                         meta.insert("smx_data".to_string(), encoded_smx);
-                        meta.insert("compression_ratio".to_string(), model.quantization_config.compression_ratio.to_string());
-                        meta.insert("quantization_bits".to_string(), model.quantization_config.quantization_bits.to_string());
+                        meta.insert(
+                            "compression_ratio".to_string(),
+                            model.quantization_config.compression_ratio.to_string(),
+                        );
+                        meta.insert(
+                            "quantization_bits".to_string(),
+                            model.quantization_config.quantization_bits.to_string(),
+                        );
                         meta.insert("smx_version".to_string(), "1.0".to_string());
                         meta
                     },
                     execution_time_ms: start_time.elapsed().as_millis() as u64,
                 })
-            },
+            }
             "import_ternary_model" => {
                 let smx_data_base64: String = serde_json::from_value(
-                    job.parameters.get("smx_data")
-                        .ok_or_else(|| ExtensionError::ExecutionFailed("Missing smx_data".to_string()))?
-                        .clone()
-                ).map_err(|e| ExtensionError::ExecutionFailed(format!("Invalid smx_data: {}", e)))?;
+                    job.parameters
+                        .get("smx_data")
+                        .ok_or_else(|| {
+                            ExtensionError::ExecutionFailed("Missing smx_data".to_string())
+                        })?
+                        .clone(),
+                )
+                .map_err(|e| ExtensionError::ExecutionFailed(format!("Invalid smx_data: {}", e)))?;
 
                 let smx_data = {
                     use base64::Engine as _;
                     base64::engine::general_purpose::STANDARD
                         .decode(&smx_data_base64)
-                        .map_err(|e| ExtensionError::ExecutionFailed(format!("Base64 decode failed: {}", e)))?
+                        .map_err(|e| {
+                            ExtensionError::ExecutionFailed(format!("Base64 decode failed: {}", e))
+                        })?
                 };
 
                 let model = self.smx_formatter.import_model_smx(&smx_data)?;
                 self.model_manager.write().unwrap().load_model(model)?;
-                
+
                 Ok(ExtensionResult {
                     job_id: job.job_id,
                     success: true,
@@ -1119,7 +1259,7 @@ impl Extension for PinnExtension {
                     },
                     execution_time_ms: start_time.elapsed().as_millis() as u64,
                 })
-            },
+            }
             "simulate_fluid" => {
                 // Specialized fluid dynamics simulation
                 Ok(ExtensionResult {
@@ -1129,7 +1269,7 @@ impl Extension for PinnExtension {
                     metadata: HashMap::new(),
                     execution_time_ms: 5000,
                 })
-            },
+            }
             "predict_chaos" => {
                 // Chaos theory prediction
                 Ok(ExtensionResult {
@@ -1139,7 +1279,7 @@ impl Extension for PinnExtension {
                     metadata: HashMap::new(),
                     execution_time_ms: 2000,
                 })
-            },
+            }
             _ => Err(ExtensionError::OperationNotSupported(job.operation)),
         }
     }
@@ -1158,10 +1298,12 @@ mod tests {
     async fn test_pinn_extension_creation() {
         let extension = PinnExtension::new();
         let capability = extension.capability();
-        
+
         assert_eq!(capability.name, "ternary_pinn");
         assert_eq!(capability.version, "2.0.0");
-        assert!(capability.supported_operations.contains(&"solve_pde_ternary".to_string()));
+        assert!(capability
+            .supported_operations
+            .contains(&"solve_pde_ternary".to_string()));
         assert!(capability.required_resources.requires_gpu);
         assert!(capability.required_resources.min_vram_mb.is_some());
     }
@@ -1169,7 +1311,7 @@ mod tests {
     #[tokio::test]
     async fn test_pinn_pde_solution() {
         let extension = PinnExtension::new();
-        
+
         let params = PinnJobParams {
             model_name: "mock_fluid_model".to_string(),
             input_points: vec![
@@ -1191,13 +1333,11 @@ mod tests {
             input_dim: 3,
             output_dim: 3,
             boundary_conditions: vec![],
-            physics_constraints: vec![
-                PhysicsConstraint {
-                    equation_type: EquationType::NavierStokes,
-                    parameters: HashMap::new(),
-                    domain: "fluid_domain".to_string(),
-                },
-            ],
+            physics_constraints: vec![PhysicsConstraint {
+                equation_type: EquationType::NavierStokes,
+                parameters: HashMap::new(),
+                domain: "fluid_domain".to_string(),
+            }],
             quantization_config: TernaryQuantizationConfig {
                 quantization_bits: 1.58,
                 scaling_factor: 1.0,
@@ -1232,7 +1372,12 @@ mod tests {
             ternary_weights: vec![],
         };
 
-        extension.model_manager.write().unwrap().load_model(mock_model).unwrap();
+        extension
+            .model_manager
+            .write()
+            .unwrap()
+            .load_model(mock_model)
+            .unwrap();
 
         let result = extension.solve_pde_ternary(params).await.unwrap();
         assert_eq!(result.output_points.len(), 3);
@@ -1245,19 +1390,17 @@ mod tests {
     #[tokio::test]
     async fn test_physics_violation_detection() {
         let extension = PinnExtension::new();
-        
+
         let outputs = vec![
-            vec![1.0, 1.0, 1.0], // Good output
+            vec![1.0, 1.0, 1.0],       // Good output
             vec![100.0, 100.0, 100.0], // Bad output (energy violation)
         ];
 
-        let constraints = vec![
-            PhysicsConstraint {
-                equation_type: EquationType::HeatEquation,
-                parameters: HashMap::new(),
-                domain: "heat_domain".to_string(),
-            },
-        ];
+        let constraints = vec![PhysicsConstraint {
+            equation_type: EquationType::HeatEquation,
+            parameters: HashMap::new(),
+            domain: "heat_domain".to_string(),
+        }];
 
         let violations = extension.check_physics_violations(&outputs, &constraints);
         assert_eq!(violations.len(), 1); // Should detect one violation
@@ -1340,7 +1483,11 @@ mod tests {
         };
         let model = mk_model(PhysicsDomain::HeatTransfer, 2, 1, vec![layer], vec![]);
         let out = pinn_forward(&model, &[2.0, 3.0]);
-        assert!((out[0] - 5.0).abs() < 1e-9, "real ternary MLP forward, got {}", out[0]);
+        assert!(
+            (out[0] - 5.0).abs() < 1e-9,
+            "real ternary MLP forward, got {}",
+            out[0]
+        );
     }
 
     #[test]
@@ -1357,6 +1504,9 @@ mod tests {
         };
         let model = mk_model(PhysicsDomain::HeatTransfer, 2, 1, vec![], vec![c]);
         let r = pde_residual(&model, &[0.5, 0.5], &model.physics_constraints);
-        assert!(r < 1e-2, "heat fundamental solution should satisfy the PDE, residual {r}");
+        assert!(
+            r < 1e-2,
+            "heat fundamental solution should satisfy the PDE, residual {r}"
+        );
     }
 }

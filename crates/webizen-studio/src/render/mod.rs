@@ -55,6 +55,7 @@ pub mod prelude {
 
 /// Touch the render stack so graph/mesh/qualia/scene exports stay wired (lib + bin).
 pub fn render_stack_revision() -> usize {
+    #[cfg(not(target_arch = "wasm32"))]
     let panes: &[crate::canvas_model::PanePlacement] = &[];
     let _transform = Transform::default();
     let _scene_item = SceneItem {
@@ -72,11 +73,9 @@ pub fn render_stack_revision() -> usize {
                 .with_mesh(Mesh::line(Vec3::default(), Vec3::new(0.0, 1.0, 0.0)))
                 .with_style(Style::wire("var(--qualia-text-muted)")),
         );
-        let _ = build_scene(
-            &SemanticScene::default(),
-            Camera::default(),
-            |_| None::<(Vec3, Mesh)>,
-        );
+        let _ = build_scene(&SemanticScene::default(), Camera::default(), |_| {
+            None::<(Vec3, Mesh)>
+        });
         let _ = item_color(ItemState::Active, 0.25);
         let _prelude_item = SceneItem {
             id: "prelude-item".to_string(),
@@ -85,7 +84,11 @@ pub fn render_stack_revision() -> usize {
             provenance: None,
             reasons: Vec::new(),
         };
-        let _screen = ScreenPoint { x: 0.0, y: 0.0, depth: 1.0 };
+        let _screen = ScreenPoint {
+            x: 0.0,
+            y: 0.0,
+            depth: 1.0,
+        };
         let _xf = Transform::default();
     }
     let _scene = Scene::new(Camera::default()).add(
@@ -94,11 +97,9 @@ pub fn render_stack_revision() -> usize {
             .with_style(Style::wire("var(--qualia-accent)")),
     );
     let _ = item_color(ItemState::Active, 0.5);
-    let _ = build_scene(
-        &SemanticScene::default(),
-        Camera::default(),
-        |_| None::<(Vec3, Mesh)>,
-    );
+    let _ = build_scene(&SemanticScene::default(), Camera::default(), |_| {
+        None::<(Vec3, Mesh)>
+    });
     #[cfg(not(target_arch = "wasm32"))]
     {
         let _ = workspace_scene_from_panes(panes);
@@ -111,7 +112,8 @@ pub fn render_stack_revision() -> usize {
         let mut cam = Camera::default();
         orbit_preview_camera(&mut cam, 0.1, 0.2);
         let mut spring = motion::Spring::new(0.0);
-        let theme = crate::theme_engine::resolve_theme(None, &crate::theme_engine::builtin_theme_catalog());
+        let theme =
+            crate::theme_engine::resolve_theme(None, &crate::theme_engine::builtin_theme_catalog());
         let _ = theme_motion_timeline(&theme, 0.016);
         let _ = step_native_selection_pulse(&mut spring, true, &theme);
         let binding = crate::theme_engine::ThemeBinding::default();

@@ -217,8 +217,12 @@ impl ExpressionEvaluator {
                 Self::evaluate_unary_op(*op, inner)
             }
             Expression::BinaryOp { op, left, right } => {
-                let left_val =
-                    Self::evaluate_expression(&ctx.expressions[*left as usize], ctx, row, resolver)?;
+                let left_val = Self::evaluate_expression(
+                    &ctx.expressions[*left as usize],
+                    ctx,
+                    row,
+                    resolver,
+                )?;
                 let right_val = Self::evaluate_expression(
                     &ctx.expressions[*right as usize],
                     ctx,
@@ -242,7 +246,8 @@ impl ExpressionEvaluator {
                 // mints (generate_embedded_triple_id: FNV-1a over the 24 LE bytes
                 // of [s,p,o] | TAG_EMBEDDED). A prior `s ^ p ^ o` XOR never matched
                 // a stored quoted triple (order-insensitive, no tag bit).
-                let triple_hash = crate::lexicon::generate_embedded_triple_id(*subject, *predicate, *object);
+                let triple_hash =
+                    crate::lexicon::generate_embedded_triple_id(*subject, *predicate, *object);
                 Ok(EvalResult::Numeric(triple_hash))
             }
             // EXISTS needs to run a graph pattern, which the pure value evaluator
@@ -250,8 +255,7 @@ impl ExpressionEvaluator {
             // position (see QueryExecutor::eval_filter_bool). Reaching it here
             // means it was used as a value — reject loudly rather than fake it.
             Expression::Exists { .. } => Err(
-                "EXISTS/NOT EXISTS is only valid in a FILTER/HAVING boolean position"
-                    .to_string(),
+                "EXISTS/NOT EXISTS is only valid in a FILTER/HAVING boolean position".to_string(),
             ),
         }
     }
@@ -288,7 +292,9 @@ impl ExpressionEvaluator {
                 (EvalResult::Numeric(_), EvalResult::Numeric(_)) => {
                     Ok(EvalResult::Boolean(left == right))
                 }
-                (l, r) if matches!(l, EvalResult::Float(_)) || matches!(r, EvalResult::Float(_)) => {
+                (l, r)
+                    if matches!(l, EvalResult::Float(_)) || matches!(r, EvalResult::Float(_)) =>
+                {
                     match (l.as_f64(), r.as_f64()) {
                         (Some(a), Some(b)) => Ok(EvalResult::Boolean(a == b)),
                         _ => Ok(EvalResult::Boolean(false)),
@@ -325,7 +331,9 @@ impl ExpressionEvaluator {
                 (EvalResult::Numeric(l), EvalResult::Numeric(r)) => Ok(EvalResult::Boolean(l >= r)),
                 (l, r) => match (l.as_f64(), r.as_f64()) {
                     (Some(a), Some(b)) => Ok(EvalResult::Boolean(a >= b)),
-                    _ => Err("GREATER THAN OR EQUAL operator requires numeric operands".to_string()),
+                    _ => {
+                        Err("GREATER THAN OR EQUAL operator requires numeric operands".to_string())
+                    }
                 },
             },
             BinaryOp::Add => match (left, right) {
@@ -446,7 +454,8 @@ impl ExpressionEvaluator {
             }
             Function::LangMatches => {
                 // LANGMATCHES(tag, range) per RFC 4647 basic filtering.
-                let tag = Self::arg_text(0, args_start, args_len, ctx, row, resolver, "LANGMATCHES")?;
+                let tag =
+                    Self::arg_text(0, args_start, args_len, ctx, row, resolver, "LANGMATCHES")?;
                 let range =
                     Self::arg_text(1, args_start, args_len, ctx, row, resolver, "LANGMATCHES")?;
                 Ok(EvalResult::Boolean(Self::lang_matches(&tag, &range)))
@@ -456,8 +465,14 @@ impl ExpressionEvaluator {
                 let s = Self::arg_text(0, args_start, args_len, ctx, row, resolver, "STRLANG")?;
                 let lang = Self::arg_text(1, args_start, args_len, ctx, row, resolver, "STRLANG")?;
                 match resolver.and_then(|r| r.sink) {
-                    Some(sink) => Ok(EvalResult::String(sink.intern_tagged(&s, Some(&lang), None))),
-                    None => Err("STRLANG produces a value but no string sink is available".to_string()),
+                    Some(sink) => Ok(EvalResult::String(sink.intern_tagged(
+                        &s,
+                        Some(&lang),
+                        None,
+                    ))),
+                    None => {
+                        Err("STRLANG produces a value but no string sink is available".to_string())
+                    }
                 }
             }
             Function::StrDt => {
@@ -466,7 +481,9 @@ impl ExpressionEvaluator {
                 let dt = Self::arg_text(1, args_start, args_len, ctx, row, resolver, "STRDT")?;
                 match resolver.and_then(|r| r.sink) {
                     Some(sink) => Ok(EvalResult::String(sink.intern_tagged(&s, None, Some(&dt)))),
-                    None => Err("STRDT produces a value but no string sink is available".to_string()),
+                    None => {
+                        Err("STRDT produces a value but no string sink is available".to_string())
+                    }
                 }
             }
             Function::IsIri | Function::IsUri => {
@@ -768,7 +785,9 @@ impl ExpressionEvaluator {
                     // A 2D operation GeoSPARQL owns → execute via the geo engine on WKT.
                     if let Some(geof_iri) = entry.defers_to {
                         if let Some(geo_fn) = geosparql::geo_fn_for_hash(crate::q_hash(geof_iri)) {
-                            return Self::run_geo_fn(geo_fn, args_start, args_len, ctx, row, resolver);
+                            return Self::run_geo_fn(
+                                geo_fn, args_start, args_len, ctx, row, resolver,
+                            );
                         }
                     }
                     // QISP-owned predicate. The Tensor10D predicates EXECUTE inline now,
@@ -837,7 +856,9 @@ impl ExpressionEvaluator {
                 }
 
                 // 4. Unknown to all engines.
-                Err(format!("unknown extension function (hash {iri_hash:#018x})"))
+                Err(format!(
+                    "unknown extension function (hash {iri_hash:#018x})"
+                ))
             }
             // ── String-producing builtins (QISP-R06) ────────────────────────
             // Each recovers its argument text via the resolver and interns its
@@ -847,7 +868,9 @@ impl ExpressionEvaluator {
             Function::Concat => {
                 let mut s = String::new();
                 for i in 0..args_len as usize {
-                    s.push_str(&Self::arg_text(i, args_start, args_len, ctx, row, resolver, "CONCAT")?);
+                    s.push_str(&Self::arg_text(
+                        i, args_start, args_len, ctx, row, resolver, "CONCAT",
+                    )?);
                 }
                 Self::produce_string(resolver, &s, "CONCAT")
             }
@@ -862,12 +885,14 @@ impl ExpressionEvaluator {
             Function::Substring => {
                 // SUBSTR(str, start[, length]) — SPARQL/XPath 1-based, codepoint-indexed.
                 let s = Self::arg_text(0, args_start, args_len, ctx, row, resolver, "SUBSTR")?;
-                let start = Self::arg_number(1, args_start, args_len, ctx, row, resolver, "SUBSTR")?;
+                let start =
+                    Self::arg_number(1, args_start, args_len, ctx, row, resolver, "SUBSTR")?;
                 let chars: Vec<char> = s.chars().collect();
                 let n = chars.len() as i64;
                 let from = start.max(1);
                 let end = if args_len >= 3 {
-                    let len = Self::arg_number(2, args_start, args_len, ctx, row, resolver, "SUBSTR")?;
+                    let len =
+                        Self::arg_number(2, args_start, args_len, ctx, row, resolver, "SUBSTR")?;
                     (from + len.max(0)).min(n + 1)
                 } else {
                     n + 1
@@ -875,7 +900,9 @@ impl ExpressionEvaluator {
                 let out: String = if from > n || end <= from {
                     String::new()
                 } else {
-                    chars[(from - 1) as usize..(end - 1) as usize].iter().collect()
+                    chars[(from - 1) as usize..(end - 1) as usize]
+                        .iter()
+                        .collect()
                 };
                 Self::produce_string(resolver, &out, "SUBSTR")
             }
@@ -906,7 +933,15 @@ impl ExpressionEvaluator {
                 Self::produce_string(resolver, &out, "STRAFTER")
             }
             Function::EncodeForUri => {
-                let s = Self::arg_text(0, args_start, args_len, ctx, row, resolver, "ENCODE_FOR_URI")?;
+                let s = Self::arg_text(
+                    0,
+                    args_start,
+                    args_len,
+                    ctx,
+                    row,
+                    resolver,
+                    "ENCODE_FOR_URI",
+                )?;
                 Self::produce_string(resolver, &Self::encode_for_uri(&s), "ENCODE_FOR_URI")
             }
             // ── COALESCE — first argument that is bound and evaluates cleanly ──
@@ -947,7 +982,8 @@ impl ExpressionEvaluator {
             | Function::Hours
             | Function::Minutes
             | Function::Seconds => {
-                let s = Self::arg_text(0, args_start, args_len, ctx, row, resolver, "date accessor")?;
+                let s =
+                    Self::arg_text(0, args_start, args_len, ctx, row, resolver, "date accessor")?;
                 let dt = Self::parse_datetime(&s)?;
                 use chrono::{Datelike, Timelike};
                 let v: i64 = match func {
@@ -1002,7 +1038,11 @@ impl ExpressionEvaluator {
                 }
                 let uuid = Self::deterministic_uuid(seed, args_start as u64);
                 let is_iri = matches!(func, Function::Uuid);
-                let text = if is_iri { format!("urn:uuid:{uuid}") } else { uuid };
+                let text = if is_iri {
+                    format!("urn:uuid:{uuid}")
+                } else {
+                    uuid
+                };
                 match resolver.and_then(|r| r.sink) {
                     Some(sink) => {
                         let h = sink.intern(&text);
@@ -1012,7 +1052,9 @@ impl ExpressionEvaluator {
                             EvalResult::String(h)
                         })
                     }
-                    None => Err("UUID produces a value but no string sink is available".to_string()),
+                    None => {
+                        Err("UUID produces a value but no string sink is available".to_string())
+                    }
                 }
             }
             // ── IRI / URI / BNODE construction ──
@@ -1029,7 +1071,9 @@ impl ExpressionEvaluator {
                 let text = format!("_:b{}", &label[..8.min(label.len())]);
                 match resolver.and_then(|r| r.sink) {
                     Some(sink) => Ok(EvalResult::Iri(sink.intern(&text))),
-                    None => Err("BNODE produces a term but no string sink is available".to_string()),
+                    None => {
+                        Err("BNODE produces a term but no string sink is available".to_string())
+                    }
                 }
             }
             // RAND() → a real double in [0, 1) via the EvalResult::Float channel.
@@ -1041,12 +1085,14 @@ impl ExpressionEvaluator {
                 if seed == 0 {
                     return Err("RAND requires a query-stable seed; none supplied".to_string());
                 }
-                Ok(EvalResult::Float(Self::deterministic_unit_f64(seed, args_start as u64)))
-            }
-            // NOTE: the match over `Function` is now exhaustive — every SPARQL builtin has
-            // a real implementation above (no fabricated placeholder, no residual). If a
-            // new `Function` variant is added, the compiler will flag the missing arm here
-            // rather than silently falling through to a fabricated result.
+                Ok(EvalResult::Float(Self::deterministic_unit_f64(
+                    seed,
+                    args_start as u64,
+                )))
+            } // NOTE: the match over `Function` is now exhaustive — every SPARQL builtin has
+              // a real implementation above (no fabricated placeholder, no residual). If a
+              // new `Function` variant is added, the compiler will flag the missing arm here
+              // rather than silently falling through to a fabricated result.
         }
     }
 
@@ -1065,9 +1111,11 @@ impl ExpressionEvaluator {
         // current bindings, and return EXISTS/NOT EXISTS/count. Until then we
         // fail closed rather than fabricate `true` (which would let every row
         // pass a `FILTER EXISTS { ... }`). Tracked in the QISP plan.
-        Err("SPARQL FILTER subquery (EXISTS/sub-SELECT) is not implemented; \
+        Err(
+            "SPARQL FILTER subquery (EXISTS/sub-SELECT) is not implemented; \
              refusing to fabricate a passing result"
-            .to_string())
+                .to_string(),
+        )
     }
 
     /// Recover the text behind function argument `idx` (0-based) through the
@@ -1325,8 +1373,16 @@ impl ExpressionEvaluator {
         let v = crate::sparql_library::immersive::validate_inline_tensor10d(&vals)
             .map_err(|e| e.to_string())?;
         Ok(crate::tensor::Tensor10D::new(
-            v[0] as f32, v[1] as f32, v[2] as f32, v[3] as f32, v[4] as f32, v[5] as f32,
-            v[6] as f32, v[7] as f32, v[8] as f32, v[9] as f32,
+            v[0] as f32,
+            v[1] as f32,
+            v[2] as f32,
+            v[3] as f32,
+            v[4] as f32,
+            v[5] as f32,
+            v[6] as f32,
+            v[7] as f32,
+            v[8] as f32,
+            v[9] as f32,
         ))
     }
 
@@ -1467,7 +1523,8 @@ mod tests {
         row.set(var_id, 42);
 
         let result =
-            ExpressionEvaluator::evaluate_function(Function::Bound, 0, 1, &ctx, &row, None).unwrap();
+            ExpressionEvaluator::evaluate_function(Function::Bound, 0, 1, &ctx, &row, None)
+                .unwrap();
 
         assert_eq!(result, EvalResult::Boolean(true));
     }
@@ -1492,25 +1549,45 @@ mod tests {
         let row = BindingRow::new();
 
         let contains = ExpressionEvaluator::evaluate_function(
-            Function::Contains, 0, 2, &ctx, &row, Some(resolver),
+            Function::Contains,
+            0,
+            2,
+            &ctx,
+            &row,
+            Some(resolver),
         )
         .unwrap();
         assert_eq!(contains, EvalResult::Boolean(true));
 
         let starts = ExpressionEvaluator::evaluate_function(
-            Function::VarStarts, 0, 2, &ctx, &row, Some(resolver),
+            Function::VarStarts,
+            0,
+            2,
+            &ctx,
+            &row,
+            Some(resolver),
         )
         .unwrap();
         assert_eq!(starts, EvalResult::Boolean(false)); // "hello world" !startsWith "world"
 
         let ends = ExpressionEvaluator::evaluate_function(
-            Function::VarEnds, 0, 2, &ctx, &row, Some(resolver),
+            Function::VarEnds,
+            0,
+            2,
+            &ctx,
+            &row,
+            Some(resolver),
         )
         .unwrap();
         assert_eq!(ends, EvalResult::Boolean(true)); // ends with "world"
 
         let len = ExpressionEvaluator::evaluate_function(
-            Function::Strlen, 0, 1, &ctx, &row, Some(resolver),
+            Function::Strlen,
+            0,
+            1,
+            &ctx,
+            &row,
+            Some(resolver),
         )
         .unwrap();
         assert_eq!(len, EvalResult::Numeric(11)); // "hello world"
@@ -1537,14 +1614,24 @@ mod tests {
 
         // Case-insensitive flag: ^hello matches "Hello World".
         let with_i = ExpressionEvaluator::evaluate_function(
-            Function::Regex, 0, 3, &ctx, &row, Some(resolver),
+            Function::Regex,
+            0,
+            3,
+            &ctx,
+            &row,
+            Some(resolver),
         )
         .unwrap();
         assert_eq!(with_i, EvalResult::Boolean(true));
 
         // Without the flag arg, ^hello does NOT match "Hello World".
         let no_flag = ExpressionEvaluator::evaluate_function(
-            Function::Regex, 0, 2, &ctx, &row, Some(resolver),
+            Function::Regex,
+            0,
+            2,
+            &ctx,
+            &row,
+            Some(resolver),
         )
         .unwrap();
         assert_eq!(no_flag, EvalResult::Boolean(false));
@@ -1564,7 +1651,10 @@ mod tests {
 
         for func in [Function::Contains, Function::Regex, Function::Strlen] {
             let r = ExpressionEvaluator::evaluate_function(func, 0, 2, &ctx, &row, None);
-            assert!(r.is_err(), "{func:?} must error without a resolver, not fabricate");
+            assert!(
+                r.is_err(),
+                "{func:?} must error without a resolver, not fabricate"
+            );
         }
     }
 
@@ -1580,10 +1670,9 @@ mod tests {
         ctx.function_args[0] = five_a;
         ctx.function_args[1] = five_b;
         ctx.function_arg_count = 2;
-        let same = ExpressionEvaluator::evaluate_function(
-            Function::SameTerm, 0, 2, &ctx, &row, None,
-        )
-        .unwrap();
+        let same =
+            ExpressionEvaluator::evaluate_function(Function::SameTerm, 0, 2, &ctx, &row, None)
+                .unwrap();
         assert_eq!(same, EvalResult::Boolean(true));
 
         // IF(cond=5 (truthy), then=9, else=5) => 9.
@@ -1603,7 +1692,10 @@ mod tests {
         let ctx = SparqlQueryContext::new();
         let row = BindingRow::new();
         let r = ExpressionEvaluator::evaluate_function(Function::Concat, 0, 0, &ctx, &row, None);
-        assert!(r.is_err(), "string-producing builtin must error without a sink, not fabricate");
+        assert!(
+            r.is_err(),
+            "string-producing builtin must error without a sink, not fabricate"
+        );
     }
 
     #[test]
@@ -1612,7 +1704,12 @@ mod tests {
         // errors — they must NOT silently pass.
         let ctx = SparqlQueryContext::new();
         let row = BindingRow::new();
-        for f in [Function::Rand, Function::LangMatches, Function::StrLang, Function::StrDt] {
+        for f in [
+            Function::Rand,
+            Function::LangMatches,
+            Function::StrLang,
+            Function::StrDt,
+        ] {
             let r = ExpressionEvaluator::evaluate_function(f, 0, 0, &ctx, &row, None);
             assert!(r.is_err(), "{f:?} must fail closed, not fabricate");
         }
@@ -1641,29 +1738,51 @@ mod tests {
         let row = BindingRow::new();
 
         let concat = ExpressionEvaluator::evaluate_function(
-            Function::Concat, 0, 2, &ctx, &row, Some(resolver),
+            Function::Concat,
+            0,
+            2,
+            &ctx,
+            &row,
+            Some(resolver),
         )
         .unwrap();
         match concat {
-            EvalResult::String(h) => assert_eq!(sink.resolve(h).as_deref(), Some("Hello, World/x y")),
+            EvalResult::String(h) => {
+                assert_eq!(sink.resolve(h).as_deref(), Some("Hello, World/x y"))
+            }
             _ => panic!("CONCAT must produce a string"),
         }
 
         let up = ExpressionEvaluator::evaluate_function(
-            Function::Ucase, 0, 1, &ctx, &row, Some(resolver),
+            Function::Ucase,
+            0,
+            1,
+            &ctx,
+            &row,
+            Some(resolver),
         )
         .unwrap();
         assert_eq!(up.as_string(&sink).as_deref(), Some("HELLO, "));
 
         let lo = ExpressionEvaluator::evaluate_function(
-            Function::Lcase, 0, 1, &ctx, &row, Some(resolver),
+            Function::Lcase,
+            0,
+            1,
+            &ctx,
+            &row,
+            Some(resolver),
         )
         .unwrap();
         assert_eq!(lo.as_string(&sink).as_deref(), Some("hello, "));
 
         // ENCODE_FOR_URI on arg 1 ("World/x y"): '/' and ' ' get percent-encoded.
         let enc = ExpressionEvaluator::evaluate_function(
-            Function::EncodeForUri, 1, 1, &ctx, &row, Some(resolver),
+            Function::EncodeForUri,
+            1,
+            1,
+            &ctx,
+            &row,
+            Some(resolver),
         )
         .unwrap();
         assert_eq!(enc.as_string(&sink).as_deref(), Some("World%2Fx%20y"));
@@ -1691,7 +1810,12 @@ mod tests {
         ctx.function_args[2] = e_len;
         ctx.function_arg_count = 3;
         let sub = ExpressionEvaluator::evaluate_function(
-            Function::Substring, 0, 3, &ctx, &row, Some(resolver),
+            Function::Substring,
+            0,
+            3,
+            &ctx,
+            &row,
+            Some(resolver),
         )
         .unwrap();
         assert_eq!(sub.as_string(&sink).as_deref(), Some("world"));
@@ -1701,14 +1825,24 @@ mod tests {
         ctx.function_args[1] = esep;
         ctx.function_arg_count = 2;
         let before = ExpressionEvaluator::evaluate_function(
-            Function::StrBefore, 0, 2, &ctx, &row, Some(resolver),
+            Function::StrBefore,
+            0,
+            2,
+            &ctx,
+            &row,
+            Some(resolver),
         )
         .unwrap();
         assert_eq!(before.as_string(&sink).as_deref(), Some("hello"));
 
         // STRAFTER("hello world!", " ") -> "world!"
         let after = ExpressionEvaluator::evaluate_function(
-            Function::StrAfter, 0, 2, &ctx, &row, Some(resolver),
+            Function::StrAfter,
+            0,
+            2,
+            &ctx,
+            &row,
+            Some(resolver),
         )
         .unwrap();
         assert_eq!(after.as_string(&sink).as_deref(), Some("world!"));
@@ -1721,15 +1855,19 @@ mod tests {
         let sink = StringSink::new();
         // 2021-01-01T00:00:00Z = 1609459200000 ms.
         let now_ms = 1_609_459_200_000u64;
-        let resolver = TextResolver::new(&lits).with_sink(&sink).with_env(now_ms, 12345);
+        let resolver = TextResolver::new(&lits)
+            .with_sink(&sink)
+            .with_env(now_ms, 12345);
         let row = BindingRow::new();
 
-        let now = ExpressionEvaluator::evaluate_function(
-            Function::Now, 0, 0, &ctx, &row, Some(resolver),
-        )
-        .unwrap();
+        let now =
+            ExpressionEvaluator::evaluate_function(Function::Now, 0, 0, &ctx, &row, Some(resolver))
+                .unwrap();
         let now_text = now.as_string(&sink).expect("NOW is a string");
-        assert!(now_text.starts_with("2021-01-01T00:00:00"), "got {now_text}");
+        assert!(
+            now_text.starts_with("2021-01-01T00:00:00"),
+            "got {now_text}"
+        );
 
         // YEAR(now_text) -> 2021. Feed the produced dateTime back as the arg.
         let mut ctx2 = SparqlQueryContext::new();
@@ -1741,7 +1879,12 @@ mod tests {
         ctx2.function_args[0] = earg;
         ctx2.function_arg_count = 1;
         let year = ExpressionEvaluator::evaluate_function(
-            Function::Year, 0, 1, &ctx2, &row, Some(resolver),
+            Function::Year,
+            0,
+            1,
+            &ctx2,
+            &row,
+            Some(resolver),
         )
         .unwrap();
         assert_eq!(year, EvalResult::Numeric(2021));
@@ -1754,8 +1897,12 @@ mod tests {
         // now_ms unset (0) → NOW must error, never fabricate a time.
         let resolver = TextResolver::new(&lits).with_sink(&sink);
         let row = BindingRow::new();
-        let r = ExpressionEvaluator::evaluate_function(Function::Now, 0, 0, &ctx, &row, Some(resolver));
-        assert!(r.is_err(), "NOW without a query-stable clock must fail closed");
+        let r =
+            ExpressionEvaluator::evaluate_function(Function::Now, 0, 0, &ctx, &row, Some(resolver));
+        assert!(
+            r.is_err(),
+            "NOW without a query-stable clock must fail closed"
+        );
     }
 
     #[test]
@@ -1763,19 +1910,48 @@ mod tests {
         use crate::sparql_ast::StringSink;
         let (mut ctx, lits) = r06_ctx();
         let sink = StringSink::new();
-        let resolver = TextResolver::new(&lits).with_sink(&sink).with_env(1, 0xABCDEF);
+        let resolver = TextResolver::new(&lits)
+            .with_sink(&sink)
+            .with_env(1, 0xABCDEF);
         let row = BindingRow::new();
 
         // Two calls at the SAME site (same args_start) are stable.
         ctx.function_arg_count = 0;
-        let u1 = ExpressionEvaluator::evaluate_function(Function::Uuid, 0, 0, &ctx, &row, Some(resolver)).unwrap();
-        let u2 = ExpressionEvaluator::evaluate_function(Function::Uuid, 0, 0, &ctx, &row, Some(resolver)).unwrap();
+        let u1 = ExpressionEvaluator::evaluate_function(
+            Function::Uuid,
+            0,
+            0,
+            &ctx,
+            &row,
+            Some(resolver),
+        )
+        .unwrap();
+        let u2 = ExpressionEvaluator::evaluate_function(
+            Function::Uuid,
+            0,
+            0,
+            &ctx,
+            &row,
+            Some(resolver),
+        )
+        .unwrap();
         assert_eq!(u1, u2, "same UUID site is stable within a query");
         let t1 = u1.as_string(&sink).unwrap();
-        assert!(t1.starts_with("urn:uuid:"), "UUID() yields an IRI term: {t1}");
+        assert!(
+            t1.starts_with("urn:uuid:"),
+            "UUID() yields an IRI term: {t1}"
+        );
 
         // A different call site (different args_start) yields a different UUID.
-        let u3 = ExpressionEvaluator::evaluate_function(Function::Uuid, 4, 0, &ctx, &row, Some(resolver)).unwrap();
+        let u3 = ExpressionEvaluator::evaluate_function(
+            Function::Uuid,
+            4,
+            0,
+            &ctx,
+            &row,
+            Some(resolver),
+        )
+        .unwrap();
         assert_ne!(u1, u3, "distinct UUID sites differ");
     }
 
@@ -1787,7 +1963,9 @@ mod tests {
 
         // ?unbound (var 0, unbound) then literal 42 → COALESCE returns 42.
         let vunbound = ctx.register_variable("?u").unwrap();
-        let e_var = ctx.alloc_expression(Expression::Variable(vunbound)).unwrap();
+        let e_var = ctx
+            .alloc_expression(Expression::Variable(vunbound))
+            .unwrap();
         let e_lit = ctx.alloc_expression(Expression::Literal(42)).unwrap();
         ctx.function_args[0] = e_var;
         ctx.function_args[1] = e_lit;
@@ -1795,10 +1973,19 @@ mod tests {
         let row = BindingRow::new(); // var 0 unbound
 
         let c = ExpressionEvaluator::evaluate_function(
-            Function::Coalesce, 0, 2, &ctx, &row, Some(resolver),
+            Function::Coalesce,
+            0,
+            2,
+            &ctx,
+            &row,
+            Some(resolver),
         )
         .unwrap();
-        assert_eq!(c, EvalResult::Numeric(42), "COALESCE skips the unbound variable");
+        assert_eq!(
+            c,
+            EvalResult::Numeric(42),
+            "COALESCE skips the unbound variable"
+        );
     }
 
     // ── QISP (qispf:) function dispatch: admission + geo-deference + honest gaps ──
@@ -1836,11 +2023,14 @@ mod tests {
         let intersects = Function::Custom(crate::q_hash(
             "https://webizen.org/immersive/function/0.1#intersects",
         ));
-        let got = ExpressionEvaluator::evaluate_function(
-            intersects, 0, 2, &ctx, &row, Some(resolver),
-        )
-        .unwrap();
-        assert_eq!(got, EvalResult::Boolean(true), "point (1,1) intersects the square");
+        let got =
+            ExpressionEvaluator::evaluate_function(intersects, 0, 2, &ctx, &row, Some(resolver))
+                .unwrap();
+        assert_eq!(
+            got,
+            EvalResult::Boolean(true),
+            "point (1,1) intersects the square"
+        );
 
         // qispf:volume is QISP-owned (mesh) → honest "not yet executable inline"
         // error, NOT a fabricated measurement.
@@ -1879,7 +2069,9 @@ mod tests {
         let dist_iri = Function::Custom(crate::q_hash(
             "https://webizen.org/immersive/function/0.1#tensorDistance",
         ));
-        match ExpressionEvaluator::evaluate_function(dist_iri, 0, 2, &ctx, &row, Some(resolver)).unwrap() {
+        match ExpressionEvaluator::evaluate_function(dist_iri, 0, 2, &ctx, &row, Some(resolver))
+            .unwrap()
+        {
             EvalResult::Float(d) => assert!((d - 5.0).abs() < 1e-5, "distance {d} != 5"),
             other => panic!("tensorDistance must be Float, got {other:?}"),
         }
@@ -1890,11 +2082,23 @@ mod tests {
         let within_iri = Function::Custom(crate::q_hash(
             "https://webizen.org/immersive/function/0.1#tensorWithin",
         ));
-        let w5 = ExpressionEvaluator::evaluate_function(within_iri, 0, 3, &ctx, &row, Some(resolver)).unwrap();
-        assert_eq!(w5, EvalResult::Boolean(true), "distance 5 is within radius 5");
+        let w5 =
+            ExpressionEvaluator::evaluate_function(within_iri, 0, 3, &ctx, &row, Some(resolver))
+                .unwrap();
+        assert_eq!(
+            w5,
+            EvalResult::Boolean(true),
+            "distance 5 is within radius 5"
+        );
         ctx.function_args[2] = er4;
-        let w4 = ExpressionEvaluator::evaluate_function(within_iri, 0, 3, &ctx, &row, Some(resolver)).unwrap();
-        assert_eq!(w4, EvalResult::Boolean(false), "distance 5 is NOT within radius 4");
+        let w4 =
+            ExpressionEvaluator::evaluate_function(within_iri, 0, 3, &ctx, &row, Some(resolver))
+                .unwrap();
+        assert_eq!(
+            w4,
+            EvalResult::Boolean(false),
+            "distance 5 is NOT within radius 4"
+        );
 
         // A malformed tensor literal (wrong arity) fails closed, never fabricates.
         let mut ctx2 = SparqlQueryContext::new();
@@ -1910,7 +2114,15 @@ mod tests {
         let sink2 = StringSink::new();
         let resolver2 = TextResolver::new(&lits2).with_sink(&sink2);
         assert!(
-            ExpressionEvaluator::evaluate_function(dist_iri, 0, 2, &ctx2, &BindingRow::new(), Some(resolver2)).is_err(),
+            ExpressionEvaluator::evaluate_function(
+                dist_iri,
+                0,
+                2,
+                &ctx2,
+                &BindingRow::new(),
+                Some(resolver2)
+            )
+            .is_err(),
             "a 3-value tensor literal must fail closed, not fabricate a distance"
         );
     }
@@ -1943,14 +2155,38 @@ mod tests {
         // LANG("hello"@en) = "en"; LANG("hello") = "" (correct default, not fabricated).
         ctx.function_args[0] = e_en;
         ctx.function_arg_count = 1;
-        let l1 = ExpressionEvaluator::evaluate_function(Function::Lang, 0, 1, &ctx, &row, Some(resolver)).unwrap();
+        let l1 = ExpressionEvaluator::evaluate_function(
+            Function::Lang,
+            0,
+            1,
+            &ctx,
+            &row,
+            Some(resolver),
+        )
+        .unwrap();
         assert_eq!(l1.as_string(&sink).as_deref(), Some("en"));
         ctx.function_args[0] = e_plain;
-        let l0 = ExpressionEvaluator::evaluate_function(Function::Lang, 0, 1, &ctx, &row, Some(resolver)).unwrap();
+        let l0 = ExpressionEvaluator::evaluate_function(
+            Function::Lang,
+            0,
+            1,
+            &ctx,
+            &row,
+            Some(resolver),
+        )
+        .unwrap();
         assert_eq!(l0.as_string(&sink).as_deref(), Some(""));
 
         // DATATYPE("hello") = xsd:string, returned as an IRI term comparable to the query's.
-        let dt = ExpressionEvaluator::evaluate_function(Function::Datatype, 0, 1, &ctx, &row, Some(resolver)).unwrap();
+        let dt = ExpressionEvaluator::evaluate_function(
+            Function::Datatype,
+            0,
+            1,
+            &ctx,
+            &row,
+            Some(resolver),
+        )
+        .unwrap();
         assert_eq!(
             dt,
             EvalResult::Iri(crate::lexicon::generate_60bit_token(
@@ -1962,7 +2198,15 @@ mod tests {
         ctx.function_args[0] = e_hi;
         ctx.function_args[1] = e_fr;
         ctx.function_arg_count = 2;
-        let sl = ExpressionEvaluator::evaluate_function(Function::StrLang, 0, 2, &ctx, &row, Some(resolver)).unwrap();
+        let sl = ExpressionEvaluator::evaluate_function(
+            Function::StrLang,
+            0,
+            2,
+            &ctx,
+            &row,
+            Some(resolver),
+        )
+        .unwrap();
         let sl_hash = match sl {
             EvalResult::String(h) => h,
             other => panic!("STRLANG must be a String, got {other:?}"),
@@ -1972,12 +2216,23 @@ mod tests {
         // STRDT("hi", myType) round-trips: the produced term's DATATYPE is myType.
         ctx.function_args[0] = e_hi;
         ctx.function_args[1] = e_dt;
-        let sd = ExpressionEvaluator::evaluate_function(Function::StrDt, 0, 2, &ctx, &row, Some(resolver)).unwrap();
+        let sd = ExpressionEvaluator::evaluate_function(
+            Function::StrDt,
+            0,
+            2,
+            &ctx,
+            &row,
+            Some(resolver),
+        )
+        .unwrap();
         let sd_hash = match sd {
             EvalResult::String(h) => h,
             other => panic!("STRDT must be a String, got {other:?}"),
         };
-        assert_eq!(resolver.datatype_of(sd_hash).as_deref(), Some("http://example.org/myType"));
+        assert_eq!(
+            resolver.datatype_of(sd_hash).as_deref(),
+            Some("http://example.org/myType")
+        );
 
         // LANGMATCHES per RFC 4647.
         assert!(ExpressionEvaluator::lang_matches("en-US", "en"));
@@ -2001,7 +2256,8 @@ mod tests {
 
         // did:resolve(?did) → the DID's real endpoint URL (no keys needed).
         let f = Function::Custom(crate::q_hash("did:resolve"));
-        let out = ExpressionEvaluator::evaluate_function(f, 0, 1, &ctx, &row, Some(resolver)).unwrap();
+        let out =
+            ExpressionEvaluator::evaluate_function(f, 0, 1, &ctx, &row, Some(resolver)).unwrap();
         assert_eq!(
             out.as_string(&sink).as_deref(),
             Some("https://example.org/.well-known/did.json")
@@ -2009,7 +2265,9 @@ mod tests {
 
         // did:sign → honest error (the query layer holds no keys), never fabricated.
         let s = Function::Custom(crate::q_hash("did:sign"));
-        assert!(ExpressionEvaluator::evaluate_function(s, 0, 1, &ctx, &row, Some(resolver)).is_err());
+        assert!(
+            ExpressionEvaluator::evaluate_function(s, 0, 1, &ctx, &row, Some(resolver)).is_err()
+        );
     }
 
     #[test]
@@ -2017,39 +2275,78 @@ mod tests {
         let ctx = SparqlQueryContext::new();
         let lits = LiteralTable::new();
         let sink = crate::sparql_ast::StringSink::new();
-        let resolver = TextResolver::new(&lits).with_sink(&sink).with_env(0, 0xABCDEF);
+        let resolver = TextResolver::new(&lits)
+            .with_sink(&sink)
+            .with_env(0, 0xABCDEF);
         let row = BindingRow::new();
 
         // RAND is a real double in [0,1), query-stable per site, distinct per site.
-        let r1 = ExpressionEvaluator::evaluate_function(Function::Rand, 0, 0, &ctx, &row, Some(resolver)).unwrap();
-        let r1b = ExpressionEvaluator::evaluate_function(Function::Rand, 0, 0, &ctx, &row, Some(resolver)).unwrap();
+        let r1 = ExpressionEvaluator::evaluate_function(
+            Function::Rand,
+            0,
+            0,
+            &ctx,
+            &row,
+            Some(resolver),
+        )
+        .unwrap();
+        let r1b = ExpressionEvaluator::evaluate_function(
+            Function::Rand,
+            0,
+            0,
+            &ctx,
+            &row,
+            Some(resolver),
+        )
+        .unwrap();
         assert_eq!(r1, r1b, "RAND is stable at the same site within a query");
         match r1 {
             EvalResult::Float(v) => assert!((0.0..1.0).contains(&v), "RAND {v} not in [0,1)"),
             other => panic!("RAND must be Float, got {other:?}"),
         }
-        let r2 = ExpressionEvaluator::evaluate_function(Function::Rand, 4, 0, &ctx, &row, Some(resolver)).unwrap();
+        let r2 = ExpressionEvaluator::evaluate_function(
+            Function::Rand,
+            4,
+            0,
+            &ctx,
+            &row,
+            Some(resolver),
+        )
+        .unwrap();
         assert_ne!(r1, r2, "distinct RAND sites differ");
 
         // Without a query-stable seed, RAND fails closed (never fabricates).
         let no_seed = TextResolver::new(&lits);
         assert!(
-            ExpressionEvaluator::evaluate_function(Function::Rand, 0, 0, &ctx, &row, Some(no_seed)).is_err(),
+            ExpressionEvaluator::evaluate_function(Function::Rand, 0, 0, &ctx, &row, Some(no_seed))
+                .is_err(),
             "RAND without a seed must fail closed"
         );
 
         // Float participates in comparison + arithmetic, mixing with integer terms.
         assert_eq!(
-            ExpressionEvaluator::evaluate_binary_op(BinaryOp::LessThan, EvalResult::Float(5.0), EvalResult::Numeric(6)),
+            ExpressionEvaluator::evaluate_binary_op(
+                BinaryOp::LessThan,
+                EvalResult::Float(5.0),
+                EvalResult::Numeric(6)
+            ),
             Ok(EvalResult::Boolean(true))
         );
         assert_eq!(
-            ExpressionEvaluator::evaluate_binary_op(BinaryOp::Add, EvalResult::Float(2.5), EvalResult::Numeric(1)),
+            ExpressionEvaluator::evaluate_binary_op(
+                BinaryOp::Add,
+                EvalResult::Float(2.5),
+                EvalResult::Numeric(1)
+            ),
             Ok(EvalResult::Float(3.5))
         );
         // Exact term-hash equality (Numeric/Numeric) is preserved, not routed through f64.
         assert_eq!(
-            ExpressionEvaluator::evaluate_binary_op(BinaryOp::Equal, EvalResult::Numeric(42), EvalResult::Numeric(42)),
+            ExpressionEvaluator::evaluate_binary_op(
+                BinaryOp::Equal,
+                EvalResult::Numeric(42),
+                EvalResult::Numeric(42)
+            ),
             Ok(EvalResult::Boolean(true))
         );
     }

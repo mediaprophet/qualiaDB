@@ -31,7 +31,9 @@ impl CanvasWorldStore {
 
     pub fn load_all(&self) -> std::io::Result<Vec<CanvasWorldRecord>> {
         match fs::read(&self.path) {
-            Ok(bytes) => serde_json::from_slice(&bytes).map_err(|e| std::io::Error::other(e.to_string())),
+            Ok(bytes) => {
+                serde_json::from_slice(&bytes).map_err(|e| std::io::Error::other(e.to_string()))
+            }
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(Vec::new()),
             Err(e) => Err(e),
         }
@@ -39,7 +41,8 @@ impl CanvasWorldStore {
 
     fn save_all(&self, records: &[CanvasWorldRecord]) -> std::io::Result<()> {
         let tmp = self.path.with_extension("json.tmp");
-        let json = serde_json::to_vec_pretty(records).map_err(|e| std::io::Error::other(e.to_string()))?;
+        let json =
+            serde_json::to_vec_pretty(records).map_err(|e| std::io::Error::other(e.to_string()))?;
         fs::write(&tmp, &json)?;
         fs::rename(&tmp, &self.path)?;
         Ok(())

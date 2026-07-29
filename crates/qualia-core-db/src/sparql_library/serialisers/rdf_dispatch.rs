@@ -39,9 +39,8 @@ fn serialize_plain<W: Write>(
     // yielded N-Triples text). N-Triples/N-Quads keep the zero-heap resolver
     // fast path; the grouped/structured formats use their real serializers.
     match format {
-        RdfFormat::NTriples => {
-            resolver::format_ntriples_to(quins, out).map_err(|e| RdfDispatchError::Io(e.to_string()))
-        }
+        RdfFormat::NTriples => resolver::format_ntriples_to(quins, out)
+            .map_err(|e| RdfDispatchError::Io(e.to_string())),
         RdfFormat::NQuads => {
             resolver::format_nquads_to(quins, out).map_err(|e| RdfDispatchError::Io(e.to_string()))
         }

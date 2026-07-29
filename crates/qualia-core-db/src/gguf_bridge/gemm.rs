@@ -3,6 +3,7 @@
 use super::*;
 
 /// XOR into the resident-weight key so f16-promoted FFN blobs never alias quant blobs.
+#[cfg(not(target_arch = "wasm32"))]
 const F16_PROMOTE_KEY_TAG: u64 = 0xF16E_F16E_0000_00F1;
 
 impl QTensorEngine {
@@ -60,11 +61,17 @@ impl QTensorEngine {
         if crate::dense_weight_cached(key) {
             return true;
         }
-        let Some(dense) = Self::dequant_weight_dense_f32(info, raw, n_in, n_out) else {
-            return false;
-        };
-        crate::cache_dense_weight(key, n_in, n_out, dense);
-        true
+        // Dequantize directly into the 2 MiB-aligned huge-page buffer — skips
+        // the intermediate Vec<f32> allocation + copy that cache_dense_weight
+        // would require. Rayon parallelizes over rows.
+        use crate::ggml_quants::dequant_matrix_row_into;
+        use rayon::prelude::*;
+        crate::inference::cuda_lane::cache_dense_weight_direct(key, n_in, n_out, |buf| {
+            buf.par_chunks_mut(n_in)
+                .enumerate()
+                .map(|(r, row)| dequant_matrix_row_into(raw, info, r, row).is_ok())
+                .all(|b| b)
+        })
     }
 
     /// Promote a 2-D quant weight (Q4_K / SoA / Q6_K / Q8_0) to a resident **f16** buffer
@@ -153,6 +160,7 @@ impl QTensorEngine {
     }
 
     /// Quantized GEMM from a pre-sliced weight byte range (chunk-local row indices).
+    #[cfg(not(target_arch = "wasm32"))]
     pub(crate) fn dispatch_gemm_raw_into(
         &self,
         info: &GgufTensorInfo,
@@ -171,13 +179,23 @@ impl QTensorEngine {
         {
             if crate::prefer_tensor_core_gemm() {
                 // M2b: on-device Q4_K SoA dequant-GEMV (no host densify) — preferred for .soa.p64.
+                // This path has CPU differential tests; keep it on for mode=cuda.
                 if info.ggml_type == crate::ggml_quants::GGML_TYPE_Q4_K_SOA
                     && crate::try_q4k_soa_gemv(n_in, n_out, &input[..n_in], raw, &mut out[..n_out])
                 {
                     return true;
                 }
-                // Dense densify+WMMA cache for other types / fallback.
-                if n_in >= 16
+                // Dense densify + CUDA GEMM for F16/Q8/etc. was measured **incoherent** on
+                // single-token decode (pad-to-16 + f16-WMMA reduced path → garbage tokens,
+                // 2026-07-24 SmolLM f16 package). Default OFF for decode GEMV (always batch=1
+                // here). Opt-in: QUALIA_LLM_CUDA_TC_DECODE=1 (lab only). Prefill should use
+                // multi-token dispatch or the resident mega-pass, not this broken default.
+                let densify_tc_decode = matches!(
+                    std::env::var("QUALIA_LLM_CUDA_TC_DECODE").ok().as_deref(),
+                    Some("1") | Some("true")
+                );
+                if densify_tc_decode
+                    && n_in >= 16
                     && n_out >= 16
                     && n_in.saturating_mul(n_out) <= crate::inference::cuda_lane::MAX_DENSE_ELEMS
                 {
@@ -282,7 +300,14 @@ impl QTensorEngine {
                 &self.pipeline
             };
             #[cfg(target_arch = "wasm32")]
-            let active_pipeline: &wgpu::ComputePipeline = &self.pipeline;
+            let use_mmv_q8_0 =
+                info.ggml_type == crate::ggml_quants::GGML_TYPE_Q8_0 && (n_in % 32 == 0);
+            #[cfg(target_arch = "wasm32")]
+            let active_pipeline: &wgpu::ComputePipeline = if use_mmv_q8_0 {
+                &self.mmv_q8_0_pipeline
+            } else {
+                &self.pipeline
+            };
             #[cfg(target_arch = "wasm32")]
             let use_mr = false;
 
@@ -366,6 +391,13 @@ impl QTensorEngine {
                 } else if use_coop {
                     cpass.dispatch_workgroups(n_out as u32, 1, 1);
                 } else {
+                    #[cfg(target_arch = "wasm32")]
+                    if use_mmv_q8_0 {
+                        cpass.dispatch_workgroups((n_out as u32 + 3) / 4, 1, 1);
+                    } else {
+                        cpass.dispatch_workgroups((n_out as u32 + 63) / 64, 1, 1);
+                    }
+                    #[cfg(not(target_arch = "wasm32"))]
                     cpass.dispatch_workgroups((n_out as u32 + 63) / 64, 1, 1);
                 }
             }
@@ -384,7 +416,9 @@ impl QTensorEngine {
             #[cfg(not(target_arch = "wasm32"))]
             if let Ok(handle) = tokio::runtime::Handle::try_current() {
                 if handle.block_on(rx).ok().map(|m| m.is_ok()).unwrap_or(false) {
-                    let data = slice.get_mapped_range().expect("wgpu buffer map_range failed");
+                    let data = slice
+                        .get_mapped_range()
+                        .expect("wgpu buffer map_range failed");
                     let floats: &[f32] = bytemuck::cast_slice(&data);
                     out[..n_out].copy_from_slice(&floats[..n_out]);
                     drop(data);
@@ -395,6 +429,25 @@ impl QTensorEngine {
             let _ = staging.unmap();
         }
 
+        stack_gemm_quant(raw, info, input, out, n_in, n_out)
+    }
+
+    /// Browser compatibility path for synchronous callers. WebGPU mapping must
+    /// be awaited, so the public browser inference route uses the async GEMM
+    /// dispatcher and this fallback executes the deterministic CPU kernel.
+    #[cfg(target_arch = "wasm32")]
+    pub(crate) fn dispatch_gemm_raw_into(
+        &self,
+        info: &GgufTensorInfo,
+        raw: &[u8],
+        input: &[f32],
+        out: &mut [f32],
+        n_in: usize,
+        n_out: usize,
+    ) -> bool {
+        if n_in > input.len() || n_out > out.len() {
+            return false;
+        }
         stack_gemm_quant(raw, info, input, out, n_in, n_out)
     }
 

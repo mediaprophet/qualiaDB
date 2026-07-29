@@ -128,7 +128,9 @@ pub struct Contribution {
     pub predecessor_id: Option<String>,
 }
 
-fn default_roi() -> f32 { 1.0 }
+fn default_roi() -> f32 {
+    1.0
+}
 
 impl Contribution {
     pub fn new(
@@ -206,8 +208,7 @@ pub fn merge_contributions(
     existing: &[Contribution],
     incoming: &[Contribution],
 ) -> Vec<Contribution> {
-    let mut merged: Vec<Contribution> =
-        Vec::with_capacity(existing.len() + incoming.len());
+    let mut merged: Vec<Contribution> = Vec::with_capacity(existing.len() + incoming.len());
     for entry in existing.iter().chain(incoming.iter()) {
         if !merged.iter().any(|e| e.id == entry.id) {
             merged.push(entry.clone());
@@ -436,20 +437,31 @@ mod tests {
     #[test]
     fn contribution_envelope_kind_and_chain() {
         let first = Contribution::new(
-            "proj-1", "did:wf:bob", "dig beds", 60, 0, 1.0, ContributionPrivacy::default(), 100,
+            "proj-1",
+            "did:wf:bob",
+            "dig beds",
+            60,
+            0,
+            1.0,
+            ContributionPrivacy::default(),
+            100,
         );
         let second = Contribution::new(
-            "proj-1", "did:wf:bob", "plant seeds", 30, 0, 1.0, ContributionPrivacy::default(), 200,
+            "proj-1",
+            "did:wf:bob",
+            "plant seeds",
+            30,
+            0,
+            1.0,
+            ContributionPrivacy::default(),
+            200,
         )
         .following(&first);
         let env = build_contribution_envelope(&second, "did:wf:coop", "did:wf:bob", 250, None);
         assert!(env.id.contains(":contribution:"));
         assert_eq!(env.sensitivity, SensitivityClass::Restricted);
         // The author chain is preserved as a namespaced predecessor link.
-        assert_eq!(
-            env.predecessor_id,
-            Some(contribution_record_id(&first.id))
-        );
+        assert_eq!(env.predecessor_id, Some(contribution_record_id(&first.id)));
         assert!(env.predecessor_id.unwrap().contains(":contribution:"));
     }
 
@@ -461,7 +473,11 @@ mod tests {
         ];
         let dup = vec![contribution("c1", "p1", "did:wf:a", 60, 1)]; // replayed frame
         let merged = merge_contributions(&a, &dup);
-        assert_eq!(merged.len(), 2, "duplicate id must not create a second entry");
+        assert_eq!(
+            merged.len(),
+            2,
+            "duplicate id must not create a second entry"
+        );
     }
 
     #[test]

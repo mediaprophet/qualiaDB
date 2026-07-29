@@ -255,8 +255,8 @@ async fn get_or_create_file_handle(
     dir: &FileSystemDirectoryHandle,
     name: &str,
 ) -> Result<FileSystemFileHandle, JsValue> {
-    let mut opts = FileSystemGetFileOptions::new();
-    opts.create(true);
+    let opts = FileSystemGetFileOptions::new();
+    opts.set_create(true);
     JsFuture::from(dir.get_file_handle_with_options(name, &opts))
         .await?
         .dyn_into()

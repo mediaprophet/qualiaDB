@@ -133,17 +133,20 @@ fn push_decode_stream_delta(
     let _ = tx.send(delta);
 }
 
-/// Load sibling `.q42.cbor-ld` (if present) and merge its stop-token set into `tok`.
+/// Load sibling canonical `.q42` metadata (if present) and merge its stop-token set into `tok`.
 /// Also tries preferring a sibling `.p64` path's helper when `model_path` is a GGUF
 /// that has already been converted beside it.
-pub(super) fn apply_model_helper_stops(model_path: &str, tok: &mut crate::gguf_sharder::GgufTokenizer) {
+pub(super) fn apply_model_helper_stops(
+    model_path: &str,
+    tok: &mut crate::gguf_sharder::GgufTokenizer,
+) {
     let path = std::path::Path::new(model_path);
     // Direct: path is already .p64 (or any path with a sibling helper).
     if let Ok(Some(h)) = crate::model_helper::ModelHelper::load_beside_p64(path) {
         h.apply_stops_to_tokenizer(tok);
         return;
     }
-    // Prefer converted sibling: foo.gguf → foo.p64 + foo.q42.cbor-ld
+    // Prefer converted sibling: foo.gguf → foo.p64 + foo.q42
     if path
         .extension()
         .and_then(|e| e.to_str())
@@ -280,6 +283,17 @@ pub(super) fn build_sieve(
     lex_path: Option<&str>,
 ) -> Option<crate::neuro_symbolic_sieve::NeuroSymbolicSieve> {
     let spec = spec?;
+    #[cfg(target_arch = "wasm32")]
+    {
+        if spec.subjects_len == 0 || spec.predicates_len == 0 || spec.objects_len == 0 {
+            return None;
+        }
+        if let Some(path) = lex_path {
+            crate::gguf_bridge::wlog(&format!(
+                "[sieve] browser build cannot memory-map lex sidecar {path}; using tokenizer vocabulary"
+            ));
+        }
+    }
     #[cfg(not(target_arch = "wasm32"))]
     if let Some(path) = lex_path {
         let p = std::path::Path::new(path);
@@ -313,10 +327,13 @@ pub(super) fn build_sieve(
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 static PREFIX_CACHE: std::sync::OnceLock<
     std::sync::Mutex<std::collections::HashMap<u64, Box<[f32]>>>,
 > = std::sync::OnceLock::new();
 
-pub(super) fn get_prefix_cache() -> &'static std::sync::Mutex<std::collections::HashMap<u64, Box<[f32]>>> {
+#[cfg(not(target_arch = "wasm32"))]
+pub(super) fn get_prefix_cache(
+) -> &'static std::sync::Mutex<std::collections::HashMap<u64, Box<[f32]>>> {
     PREFIX_CACHE.get_or_init(|| std::sync::Mutex::new(std::collections::HashMap::new()))
 }

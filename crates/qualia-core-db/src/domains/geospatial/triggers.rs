@@ -200,7 +200,8 @@ mod tests {
             metadata: 0,
             parity: 0,
         };
-        loc_quin.parity = loc_quin.subject ^ loc_quin.predicate ^ loc_quin.object ^ loc_quin.context;
+        loc_quin.parity =
+            loc_quin.subject ^ loc_quin.predicate ^ loc_quin.object ^ loc_quin.context;
 
         let mut arena: Vec<NQuin> = region_quins.to_vec();
         arena.push(loc_quin);

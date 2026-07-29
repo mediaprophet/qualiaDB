@@ -1,6 +1,5 @@
 use super::*;
 
-
 /// Trading engine
 pub struct TradingEngine {
     order_manager: OrderManager,

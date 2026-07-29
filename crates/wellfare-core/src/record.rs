@@ -1,4 +1,4 @@
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 /// FNV-1a hash matching the QualiaDB canonical q_hash
 pub const fn q_hash(bytes: &[u8]) -> u64 {
@@ -30,7 +30,14 @@ pub struct NQuin {
 impl NQuin {
     pub fn new(s: u64, p: u64, o: u64, c: u64, m: u64) -> Self {
         let parity = s ^ p ^ o ^ c;
-        Self { subject: s, predicate: p, object: o, context: c, metadata: m, parity }
+        Self {
+            subject: s,
+            predicate: p,
+            object: o,
+            context: c,
+            metadata: m,
+            parity,
+        }
     }
 }
 
@@ -95,27 +102,51 @@ impl RecordEnvelope {
         let meta = self.sensitivity.to_metadata_mask();
 
         if count < out.len() {
-            out[count] = NQuin::new(id_hash, q_hash_str("q42:hasAuthor"), q_hash_str(&self.author_did), ctx, meta);
+            out[count] = NQuin::new(
+                id_hash,
+                q_hash_str("q42:hasAuthor"),
+                q_hash_str(&self.author_did),
+                ctx,
+                meta,
+            );
             count += 1;
         }
 
         if let Some(ref proxy) = self.proxy_did {
             if count < out.len() {
-                out[count] = NQuin::new(id_hash, q_hash_str("q42:hasProxy"), q_hash_str(proxy), ctx, meta);
+                out[count] = NQuin::new(
+                    id_hash,
+                    q_hash_str("q42:hasProxy"),
+                    q_hash_str(proxy),
+                    ctx,
+                    meta,
+                );
                 count += 1;
             }
         }
 
         if let Some(ref pred) = self.predecessor_id {
             if count < out.len() {
-                out[count] = NQuin::new(id_hash, q_hash_str("q42:precedes"), q_hash_str(pred), ctx, meta);
+                out[count] = NQuin::new(
+                    id_hash,
+                    q_hash_str("q42:precedes"),
+                    q_hash_str(pred),
+                    ctx,
+                    meta,
+                );
                 count += 1;
             }
         }
 
         if let Some(ref blob) = self.blob_hash {
             if count < out.len() {
-                out[count] = NQuin::new(id_hash, q_hash_str("q42:hasBlob"), q_hash_str(blob), ctx, meta);
+                out[count] = NQuin::new(
+                    id_hash,
+                    q_hash_str("q42:hasBlob"),
+                    q_hash_str(blob),
+                    ctx,
+                    meta,
+                );
                 count += 1;
             }
         }
@@ -124,7 +155,7 @@ impl RecordEnvelope {
             out[count] = NQuin::new(id_hash, q_hash_str("q42:isTombstone"), 1, ctx, meta);
             count += 1;
         }
-        
+
         count
     }
 }

@@ -1,8 +1,8 @@
-//! Produce a shippable **curated `.qualia` anatomy asset pack** for a model.
+//! Produce a shippable **curated `.hmc` anatomy asset pack** for a model.
 //!
 //! The full CCF/HRA reference body is ~200–290 MB of GLB per model — too large to
 //! bundle into a release. This builds a *curated* subset (a representative set of
-//! organs across body systems, tens of MB) into a single `.qualia` bundle (see
+//! organs across body systems, tens of MB) into a single `.hmc` bundle (see
 //! [`qualia_core_db::bundle`]): each organ is a sealed `.10d` entry carrying an
 //! [`AnatomyOrganMeta`] (system + approximate position + neutral colour). The
 //! bundle is the artefact shipped in the desktop release resources and published
@@ -82,7 +82,8 @@ pub struct DiscoveredOrgan {
 /// Useful for curating [`CURATED_ORGAN_TOKENS`] against what the HRA actually
 /// serves.
 pub fn discover_model_organs(model: AnatomyModel) -> Result<Vec<DiscoveredOrgan>, String> {
-    let all = discover_ref_organs(HRA_SPARQL_ENDPOINT).map_err(|e| format!("SPARQL discovery: {e}"))?;
+    let all =
+        discover_ref_organs(HRA_SPARQL_ENDPOINT).map_err(|e| format!("SPARQL discovery: {e}"))?;
     Ok(organs_for_model(&all, model)
         .into_iter()
         .map(|o| DiscoveredOrgan {
@@ -116,7 +117,7 @@ pub struct PackReport {
     pub q42_sidecar_path: String,
 }
 
-/// Build a curated `.qualia` pack for `model` and write it to `out_path`.
+/// Build a curated `.hmc` pack for `model` and write it to `out_path`.
 ///
 /// `curated` is the set of normalised base tokens to include (defaults to
 /// [`CURATED_ORGAN_TOKENS`] when `None`). Blocking network I/O.
@@ -128,7 +129,8 @@ pub fn build_anatomy_pack(
     let out_path = out_path.as_ref();
 
     // Discover every reference organ for this model.
-    let all = discover_ref_organs(HRA_SPARQL_ENDPOINT).map_err(|e| format!("SPARQL discovery: {e}"))?;
+    let all =
+        discover_ref_organs(HRA_SPARQL_ENDPOINT).map_err(|e| format!("SPARQL discovery: {e}"))?;
     let model_organs = organs_for_model(&all, model);
 
     // `Some(list)` selects a curated subset by normalised token; `None` builds the COMPLETE body —
@@ -144,8 +146,10 @@ pub fn build_anatomy_pack(
                 })
                 .cloned()
                 .collect();
-            let found: std::collections::BTreeSet<String> =
-                sel.iter().map(|o| normalize_organ_key(&o.filename)).collect();
+            let found: std::collections::BTreeSet<String> = sel
+                .iter()
+                .map(|o| normalize_organ_key(&o.filename))
+                .collect();
             let missing: Vec<String> = list
                 .iter()
                 .filter(|t| !found.contains(**t))
@@ -157,7 +161,10 @@ pub fn build_anatomy_pack(
     };
 
     if selected.is_empty() {
-        return Err(format!("no reference organs discovered for {}", model.as_str()));
+        return Err(format!(
+            "no reference organs discovered for {}",
+            model.as_str()
+        ));
     }
 
     // Fetch each selected GLB.
@@ -208,8 +215,10 @@ pub fn build_anatomy_pack(
     // from the SAME hypermedia containers the desktop uses, so the pack's semantics are the
     // product's semantics (not a demo aside). Its source citations use the real CCF/HRA CDN
     // URLs each GLB was fetched from.
-    let source_urls: HashMap<String, String> =
-        selected.iter().map(|o| (o.filename.clone(), o.glb_url.clone())).collect();
+    let source_urls: HashMap<String, String> = selected
+        .iter()
+        .map(|o| (o.filename.clone(), o.glb_url.clone()))
+        .collect();
     let (q42_bytes, q42_quins) = build_pack_q42(model, &compiled.organs, &source_urls);
     let q42_graph_bytes = q42_bytes.len();
     // Carried INSIDE the bundle (one attestable unit alongside the `.10d` meshes).
@@ -351,7 +360,10 @@ mod tests {
         const TRI_OBJ: &[u8] = b"v 0 0 0\nv 1 0 0\nv 0 1 0\nf 1 2 3\n";
         let organs = vec![
             ("3d-vh-m-lung.obj".to_string(), TRI_OBJ.to_vec()),
-            ("3d-vh-m-blood-vasculature.obj".to_string(), TRI_OBJ.to_vec()),
+            (
+                "3d-vh-m-blood-vasculature.obj".to_string(),
+                TRI_OBJ.to_vec(),
+            ),
         ];
         let body = compile_body(AnatomyModel::Male, &organs);
         assert_eq!(body.organs.len(), 2, "both organs mapped to a system");
@@ -370,28 +382,46 @@ mod tests {
         std::fs::write(tmp.path(), &q42).unwrap();
         let vol = Q42Volume::open(tmp.path()).unwrap();
         let quins = vol.read_all_quins().unwrap();
-        assert_eq!(quins.len(), quin_count, "every fact recoverable from the .q42");
+        assert_eq!(
+            quins.len(),
+            quin_count,
+            "every fact recoverable from the .q42"
+        );
 
         // Resolve the string-valued objects through the embedded lexicon.
         let lex = vol.lex_view().unwrap();
-        let vals: Vec<String> =
-            quins.iter().filter_map(|q| lex.lookup_hash(q.object).map(str::to_string)).collect();
+        let vals: Vec<String> = quins
+            .iter()
+            .filter_map(|q| lex.lookup_hash(q.object).map(str::to_string))
+            .collect();
         // Provenance: the licence and the real CDN source URL are in the graph.
-        assert!(vals.iter().any(|v| v == "CC-BY-4.0"), "licence fact present: {vals:?}");
+        assert!(
+            vals.iter().any(|v| v == "CC-BY-4.0"),
+            "licence fact present: {vals:?}"
+        );
         assert!(
             vals.iter().any(|v| v.contains("humanatlas.io")),
             "source citation present: {vals:?}"
         );
         // Organ→system: lung→respiratory and blood-vasculature→circulatory are both bound.
-        assert!(vals.iter().any(|v| v == "respiratory"), "lung system present");
-        assert!(vals.iter().any(|v| v == "circulatory"), "vasculature system present");
+        assert!(
+            vals.iter().any(|v| v == "respiratory"),
+            "lung system present"
+        );
+        assert!(
+            vals.iter().any(|v| v == "circulatory"),
+            "vasculature system present"
+        );
     }
 
     #[test]
     fn laterality_nudges_paired_organs_apart() {
         let l = position_for("3d-vh-f-kidney-l.glb");
         let r = position_for("3d-vh-f-kidney-r.glb");
-        assert!(l[0] < r[0], "left kidney is left of right kidney: {l:?} {r:?}");
+        assert!(
+            l[0] < r[0],
+            "left kidney is left of right kidney: {l:?} {r:?}"
+        );
         // Unpaired organ is centred.
         assert_eq!(position_for("3d-vh-m-heart.glb")[0], 0.50);
     }
@@ -402,8 +432,19 @@ mod tests {
         assert_eq!(palette_for("circulatory")[0], 0.80);
         assert_eq!(palette_for("immune_lymphatic")[1], 0.82);
         // …and every organ we actually pack resolves to a non-default colour.
-        for sys in ["nervous", "circulatory", "respiratory", "digestive", "urinary", "immune_lymphatic"] {
-            assert_ne!(palette_for(sys), [0.62, 0.66, 0.72, 1.0], "{sys} should have a colour");
+        for sys in [
+            "nervous",
+            "circulatory",
+            "respiratory",
+            "digestive",
+            "urinary",
+            "immune_lymphatic",
+        ] {
+            assert_ne!(
+                palette_for(sys),
+                [0.62, 0.66, 0.72, 1.0],
+                "{sys} should have a colour"
+            );
         }
         // Unknown system falls back to neutral.
         assert_eq!(palette_for("unknown-system"), [0.62, 0.66, 0.72, 1.0]);

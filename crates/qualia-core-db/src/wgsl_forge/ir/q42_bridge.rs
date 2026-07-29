@@ -63,6 +63,9 @@ const OP_SCATTER_ACCUM: u64 = 0x19;
 const OP_NEIGHBOR: u64 = 0x1A;
 const OP_SLICE: u64 = 0x1B;
 const OP_ROPE: u64 = 0x1C;
+const OP_POOL2D: u64 = 0x1D;
+const OP_RESIZE2D: u64 = 0x1E;
+const OP_CONV2D: u64 = 0x1F;
 
 /// The op-kind opcode for an [`OpNode`] (the value stored in a `q42:opKind` quin's `object`).
 pub fn opcode_of(op: &OpNode) -> u64 {
@@ -80,6 +83,9 @@ pub fn opcode_of(op: &OpNode) -> u64 {
         OpNode::Neighbor { .. } => OP_NEIGHBOR,
         OpNode::Slice { .. } => OP_SLICE,
         OpNode::Rope { .. } => OP_ROPE,
+        OpNode::Pool2d { .. } => OP_POOL2D,
+        OpNode::Resize2d { .. } => OP_RESIZE2D,
+        OpNode::Conv2d { .. } => OP_CONV2D,
     }
 }
 
@@ -293,7 +299,7 @@ fn encode_op(op: &OpNode) -> Result<(u64, u64, u64), ForgeError> {
             (m as u64) | ((n as u64) << 32),
             (k as u64) | ((tc as u64) << 32) | ((trans_b as u64) << 33),
         ),
-        OpNode::Gemv { m, n } => (OP_GEMV, (m as u64) | ((n as u64) << 32), 0),
+        OpNode::Gemv { m, n, tc } => (OP_GEMV, (m as u64) | ((n as u64) << 32), tc as u64),
         OpNode::Fft { len, inverse } => (OP_FFT, (len as u64) | ((inverse as u64) << 32), 0),
         OpNode::Reduce { op, axis } => (OP_REDUCE, redkind_code(op) | (axis_code(axis) << 16), 0),
         OpNode::GatherDequant { scheme, block } => (
@@ -333,6 +339,58 @@ fn encode_op(op: &OpNode) -> Result<(u64, u64, u64), ForgeError> {
             (head_dim as u64) | ((pos as u64) << 32),
             (mode as u64) | ((base_bits as u64) << 32),
         ),
+        OpNode::Pool2d {
+            c,
+            h,
+            w,
+            kh,
+            kw,
+            stride_h,
+            stride_w,
+        } => (
+            OP_POOL2D,
+            (c as u64)
+                | ((h as u64) << 16)
+                | ((w as u64) << 32)
+                | ((kh as u64) << 48)
+                | ((kw as u64) << 56),
+            (stride_h as u64) | ((stride_w as u64) << 16),
+        ),
+        OpNode::Resize2d {
+            c,
+            h_in,
+            w_in,
+            h_out,
+            w_out,
+        } => (
+            OP_RESIZE2D,
+            (c as u64) | ((h_in as u64) << 16) | ((w_in as u64) << 32) | ((h_out as u64) << 48),
+            w_out as u64,
+        ),
+        OpNode::Conv2d {
+            c_in,
+            c_out,
+            h,
+            w,
+            kh,
+            kw,
+            stride_h,
+            stride_w,
+            pad_h,
+            pad_w,
+        } => (
+            OP_CONV2D,
+            (c_in as u64)
+                | ((c_out as u64) << 8)
+                | ((h as u64) << 16)
+                | ((w as u64) << 32)
+                | ((kh as u64) << 48)
+                | ((kw as u64) << 56),
+            (stride_h as u64)
+                | ((stride_w as u64) << 8)
+                | ((pad_h as u64) << 16)
+                | ((pad_w as u64) << 24),
+        ),
     })
 }
 
@@ -352,6 +410,7 @@ fn decode_op(opcode: u64, w0: u64, w1: u64) -> Result<OpNode, ForgeError> {
         OP_GEMV => OpNode::Gemv {
             m: (w0 & 0xFFFF_FFFF) as u32,
             n: (w0 >> 32) as u32,
+            tc: w1 & 1 == 1,
         },
         OP_FFT => OpNode::Fft {
             len: (w0 & 0xFFFF_FFFF) as u32,
@@ -397,6 +456,34 @@ fn decode_op(opcode: u64, w0: u64, w1: u64) -> Result<OpNode, ForgeError> {
             pos: (w0 >> 32) as u32,
             mode: (w1 & 0xFFFF_FFFF) as u32,
             base_bits: (w1 >> 32) as u32,
+        },
+        OP_POOL2D => OpNode::Pool2d {
+            c: (w0 & 0xFFFF) as u32,
+            h: ((w0 >> 16) & 0xFFFF) as u32,
+            w: ((w0 >> 32) & 0xFFFF) as u32,
+            kh: ((w0 >> 48) & 0xFF) as u32,
+            kw: ((w0 >> 56) & 0xFF) as u32,
+            stride_h: (w1 & 0xFFFF) as u32,
+            stride_w: ((w1 >> 16) & 0xFFFF) as u32,
+        },
+        OP_RESIZE2D => OpNode::Resize2d {
+            c: (w0 & 0xFFFF) as u32,
+            h_in: ((w0 >> 16) & 0xFFFF) as u32,
+            w_in: ((w0 >> 32) & 0xFFFF) as u32,
+            h_out: ((w0 >> 48) & 0xFFFF) as u32,
+            w_out: (w1 & 0xFFFF) as u32,
+        },
+        OP_CONV2D => OpNode::Conv2d {
+            c_in: (w0 & 0xFF) as u32,
+            c_out: ((w0 >> 8) & 0xFF) as u32,
+            h: ((w0 >> 16) & 0xFFFF) as u32,
+            w: ((w0 >> 32) & 0xFFFF) as u32,
+            kh: ((w0 >> 48) & 0xFF) as u32,
+            kw: ((w0 >> 56) & 0xFF) as u32,
+            stride_h: (w1 & 0xFF) as u32,
+            stride_w: ((w1 >> 8) & 0xFF) as u32,
+            pad_h: ((w1 >> 16) & 0xFF) as u32,
+            pad_w: ((w1 >> 24) & 0xFF) as u32,
         },
         other => return Err(err(format!("q42: unknown op-kind opcode {other:#x}"))),
     })
@@ -645,7 +732,11 @@ mod tests {
                 tc: true,
                 trans_b: true,
             },
-            OpNode::Gemv { m: 5, n: 6 },
+            OpNode::Gemv {
+                m: 5,
+                n: 6,
+                tc: true,
+            },
             OpNode::Fft {
                 len: 1024,
                 inverse: true,
@@ -729,10 +820,11 @@ mod tests {
             OP_STENCIL,
             OP_SCATTER_ACCUM,
             OP_NEIGHBOR,
+            // Slice/Rope/vision (0x1B–0x1F) tested via encode/decode round-trip; range still reserved modality.
         ];
         for &c in &codes {
             assert!(
-                (0x10..=0x1A).contains(&c),
+                (0x10..=0x1F).contains(&c),
                 "opcode {c:#x} out of reserved range"
             );
             assert!(c > 0x04, "collides with mini_parser 0x00-0x04");

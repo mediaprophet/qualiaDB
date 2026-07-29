@@ -18,6 +18,9 @@ The QualiaDB system actively logs conduct through the Webizen Semantic Gatekeepe
 - **DID Association**: Conduct records securely associate the behavior with the commanding natural person's Decentralized Identifier (`principal_did`).
 - **Insurance & Legal Liability**: These immutable records generate cryptographically auditable trails suitable for courts of law, establishing precise insurance liability graphs and proportionalities.
 
+### 4. Apology Is Not Remedy
+AI instruments (and human operators directing them) do **not** clear harm or cost by apologising. Required response after material failure or breach: name the harm, name the cost, reverse what is reversible, complete the authorised work, and record against interest when required. Viable project-side consequences include non-discharge of the incident, cost remaining on the audit vector, privilege reduction or ban of the instrument, permanent conduct records for liability graphs, and in-product deny/isolate gates — full rule in `CLAUDE.md` §15.7.
+
 ## Technical Contributions
 
 When submitting code:

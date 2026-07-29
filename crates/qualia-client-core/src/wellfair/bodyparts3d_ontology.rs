@@ -186,8 +186,8 @@ pub fn ontology_q42_bytes(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::super::bodyparts3d_resolver::Bp3dHierarchy;
+    use super::*;
 
     const PARTS: &str = "\"id\"\ten\n\
         FMA72954\tmuscular system\n\
@@ -219,21 +219,48 @@ mod tests {
         let quins = vol.read_all_quins().unwrap();
         assert_eq!(quins.len(), n, "every fact recoverable");
         let lex = vol.lex_view().unwrap();
-        let objs: Vec<String> =
-            quins.iter().filter_map(|q| lex.lookup_hash(q.object).map(str::to_string)).collect();
+        let objs: Vec<String> = quins
+            .iter()
+            .filter_map(|q| lex.lookup_hash(q.object).map(str::to_string))
+            .collect();
 
         // Canonical OBO IRI IDENTITY (the concept is addressable + joins to disease data).
         let iri = "http://purl.obolibrary.org/obo/FMA_13295";
-        assert_eq!(lex.lookup_hash(fnv60(iri.as_bytes())), Some(iri), "concept keyed by OBO IRI");
+        assert_eq!(
+            lex.lookup_hash(fnv60(iri.as_bytes())),
+            Some(iri),
+            "concept keyed by OBO IRI"
+        );
         // is-a parent + part-of parents as OBO IRIs (objects).
-        assert!(objs.iter().any(|v| v == "http://purl.obolibrary.org/obo/FMA_9909"), "is-a parent IRI");
-        assert!(objs.iter().any(|v| v == "http://purl.obolibrary.org/obo/FMA_72954"), "part-of muscular sys");
-        assert!(objs.iter().any(|v| v == "http://purl.obolibrary.org/obo/FMA_7158"), "part-of respiratory sys");
+        assert!(
+            objs.iter()
+                .any(|v| v == "http://purl.obolibrary.org/obo/FMA_9909"),
+            "is-a parent IRI"
+        );
+        assert!(
+            objs.iter()
+                .any(|v| v == "http://purl.obolibrary.org/obo/FMA_72954"),
+            "part-of muscular sys"
+        );
+        assert!(
+            objs.iter()
+                .any(|v| v == "http://purl.obolibrary.org/obo/FMA_7158"),
+            "part-of respiratory sys"
+        );
         // Label + BOTH system memberships + the CC-BY-SA licence (dataset node).
         assert!(objs.iter().any(|v| v == "diaphragm"), "label");
-        assert!(objs.iter().any(|v| v == "muscular") && objs.iter().any(|v| v == "respiratory"), "systems");
-        assert!(objs.iter().any(|v| v == BP3D_LICENCE), "CC-BY-SA licence on the dataset node");
+        assert!(
+            objs.iter().any(|v| v == "muscular") && objs.iter().any(|v| v == "respiratory"),
+            "systems"
+        );
+        assert!(
+            objs.iter().any(|v| v == BP3D_LICENCE),
+            "CC-BY-SA licence on the dataset node"
+        );
         // The compiled `.10d` digest is addressable as a numeric object (geo:compiledDigest).
-        assert!(quins.iter().any(|q| q.object == 0xDEAD_BEEF), "hasMesh digest present");
+        assert!(
+            quins.iter().any(|q| q.object == 0xDEAD_BEEF),
+            "hasMesh digest present"
+        );
     }
 }

@@ -2,6 +2,7 @@
 
 use super::host_client::{fetch_health_records, fetch_host_snapshot};
 use super::host_dto::HealthRecordDto;
+use super::shared::DomainChrome;
 use dioxus::prelude::*;
 
 fn format_unix(ts: u32) -> String {
@@ -55,7 +56,9 @@ pub fn WellfairHealthPanel() -> Element {
     let mut loaded = use_signal(|| false);
 
     use_effect(move || {
-        if loaded() { return; }
+        if loaded() {
+            return;
+        }
         loaded.set(true);
         reload();
     });
@@ -80,6 +83,7 @@ pub fn WellfairHealthPanel() -> Element {
         section {
             aria_label: "WellFair health observations",
             style: "padding:0.85rem;border:1px solid var(--qualia-border,#ddd);border-radius:10px;background:var(--qualia-surface,#fafafa);",
+            DomainChrome { domain: "Care", chip: "Body · local vault", show_memory: true }
             div {
                 style: "display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:0.5rem;margin-bottom:0.75rem;",
                 h2 { style: "margin:0;font-size:1rem;", "Health — observations" }

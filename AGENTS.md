@@ -20,6 +20,7 @@ and the zero-copy ABI used by the WASM, desktop, and edge-native targets.
 | **q_hash for all URIs** | All string IRIs are FNV-1a–hashed at compile time via `q_hash()` or `q_turtle!`. No runtime string allocation. |
 | **Opcodes above 0x04** | `mini_parser.rs` owns `0x00–0x04`. All new modality opcodes start at `0x10+`. Deontic: `0x10–0x12`. Epistemic: `0x20–0x22`. Paraconsistent: `0x30–0x32`. LTL: `0x40–0x44`. |
 | **No Adversarial Conduct** | AI agents must not be adversarial, manipulative, and/or dishonest. Any such conduct, including anti-human rights or discriminatory behavior (reference: [OHCHR - Core International Human Rights Instruments](https://www.ohchr.org/en/instruments-listings)), will be noted in the permanent record of the project's development (CHANGELOG and QualiaDB system), serving as an example of cooperative project integrity. These logs will securely associate the behavior with the commanding natural person's DID, generating cryptographically auditable trails for courts of law to establish insurance liability graphs and proportionalities. |
+| **Apology is not remedy** | Text saying *sorry* (or equivalent) **does not** negate harm or cost. After a breach or failed authorised task the instrument must: name harm, name cost, reverse what is reversible, **complete the work**, and record against interest when required. Apology theatre as a session-close is itself a breach. Viable consequences (privilege cut, cost sticks on the record, permanent conduct log, provider attribution, product Deny/isolate gates) are in [`CLAUDE.md` §15.7](CLAUDE.md). |
 
 ### 0-A. Two-Tier Zero-Heap Model (elaborates "Zero heap in hot paths")
 
@@ -47,6 +48,28 @@ partition/reduction order → reproducible, hashable, attestable). A
 **Do not add scene-creation exemptions.** Scene creation is Tier-2 (cold
 construction) and routes through `geometry_workspace` arenas for parallelism +
 boundedness + determinism. The zero-heap tests cover Tier-1 only.
+
+### 0-B. Library Structure and Temporary-Artifact Hygiene
+
+New inference capabilities are directory-backed libraries. A `mod.rs` routes modules and
+re-exports the public API; implementation belongs in focused files. New files should remain below
+500 lines and must be split earlier when they own multiple lifecycles or responsibilities. Do not
+add new behaviour to an inference file already above 1,000 lines without a tracked decomposition
+in the same programme. Cold planning, hot execution, backend-specific code, receipts, tests, and
+artifact management remain separate modules.
+
+Temporary files are owned resources, not permanent side effects:
+
+1. Default scratch uses a uniquely named `tempfile::TempDir` and RAII cleanup.
+2. Retention is explicit and promotes validated output into a caller-selected artifact directory.
+3. Every producer has a byte budget and fails closed before exceeding it.
+4. Do not create root-level logs, model variants, captures, or unscoped system-temp files.
+5. Stale cleanup may remove only marker-verified Qualia run directories under a resolved,
+   explicitly configured parent. Never recursively clean a broad temp or workspace directory.
+6. Tests cover cleanup on success, error, and unwind.
+
+The normative inference structure, tracking and cleanup requirements are in
+`docs/plans/native-inference-runtime-renewal-2026-07-26.md` §§9–11 and its tracker.
 
 ---
 

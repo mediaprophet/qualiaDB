@@ -13,13 +13,14 @@ fn show_main_window(app: &AppHandle) {
 
 fn qapp_route(qapp_id: &str) -> &str {
     match qapp_id {
-        "dashboard" => "/",
+        // Talk is home (studio root). Legacy "dashboard" aliases the same route.
+        "talk" | "dashboard" | "home" => "/",
         "wellfair" => "/wellfair",
         "chora" => "/chora",
         "browser" => "/browser",
         "10d-browser" => "/10d-browser",
         "settings" => "/settings",
-        "library" => "/library",
+        "library" | "memory" => "/library",
         "wallet" => "/identity",
         "qapp-studio" => "/qapp-studio",
         "qapps" => "/qapps",
@@ -224,10 +225,20 @@ pub fn build_app_menu(
     let forward = MenuItem::with_id(app, "nav_forward", "Forward", true, Some("Alt+Right"))?;
     let reload = MenuItem::with_id(app, "nav_reload", "Reload", true, Some("Ctrl+R"))?;
 
+    let command_palette = MenuItem::with_id(
+        app,
+        "open_command_palette",
+        "Command Palette…",
+        true,
+        Some("Ctrl+K"),
+    )?;
+
     let view_menu = SubmenuBuilder::new(app, "View")
         .item(&back)
         .item(&forward)
         .item(&reload)
+        .separator()
+        .item(&command_palette)
         .separator()
         .text("toggle_gpu", "Toggle GPU Surface")
         .text("toggle_ambient", "Toggle Ambient Visualizations")
@@ -241,7 +252,8 @@ pub fn build_app_menu(
     let chora = MenuItem::with_id(app, "open_chora", "Chora", true, Some("Ctrl+2"))?;
     let browser = MenuItem::with_id(app, "open_browser", "Web Browser", true, Some("Ctrl+3"))?;
     let ten_d = MenuItem::with_id(app, "open_10d", "10D Browser", true, Some("Ctrl+4"))?;
-    let dashboard = MenuItem::with_id(app, "open_dashboard", "Dashboard", true, Some("Ctrl+0"))?;
+    // Home shortcut: Talk (not a legacy "Dashboard" product surface).
+    let talk = MenuItem::with_id(app, "open_talk", "Talk", true, Some("Ctrl+0"))?;
     let qapp_studio =
         MenuItem::with_id(app, "open_qapp_studio", "QApp Studio", true, None::<&str>)?;
     let qapp_manager = MenuItem::with_id(
@@ -253,7 +265,7 @@ pub fn build_app_menu(
     )?;
 
     let qapps_menu = SubmenuBuilder::new(app, "QApps")
-        .item(&dashboard)
+        .item(&talk)
         .item(&wellfair)
         .item(&chora)
         .item(&browser)
@@ -384,9 +396,18 @@ pub fn dispatch_shell_action(app: &AppHandle, action: crate::shell::action::Shel
         ShellAction::SyncRelay => {
             let app_handle = app.clone();
             tauri::async_runtime::spawn(async move {
-                match crate::commands::wellfair_sync_with_relay(app_handle, "http://127.0.0.1:4242".to_string(), 0) {
-                    Ok(msg) => crate::desktop_log::record("info", format!("sync relay via tray: {msg}")),
-                    Err(e) => crate::desktop_log::record("error", format!("sync relay via tray failed: {e}")),
+                match crate::commands::wellfair_sync_with_relay(
+                    app_handle,
+                    "http://127.0.0.1:4242".to_string(),
+                    0,
+                ) {
+                    Ok(msg) => {
+                        crate::desktop_log::record("info", format!("sync relay via tray: {msg}"))
+                    }
+                    Err(e) => crate::desktop_log::record(
+                        "error",
+                        format!("sync relay via tray failed: {e}"),
+                    ),
                 }
             });
         }
@@ -409,15 +430,13 @@ pub fn dispatch_shell_action(app: &AppHandle, action: crate::shell::action::Shel
         }
         ShellAction::HelpPortal => open_settings_portal(""),
 
-        ShellAction::SanctuaryLock => {
-            match crate::commands::wellfair_lock_sanctuary(app.clone()) {
-                Ok(_) => {
-                    let _ = app.emit("sanctuary-locked", ());
-                    eprintln!("Sanctuary locked via tray");
-                }
-                Err(e) => eprintln!("Sanctuary lock via tray failed: {e}"),
+        ShellAction::SanctuaryLock => match crate::commands::wellfair_lock_sanctuary(app.clone()) {
+            Ok(_) => {
+                let _ = app.emit("sanctuary-locked", ());
+                eprintln!("Sanctuary locked via tray");
             }
-        }
+            Err(e) => eprintln!("Sanctuary lock via tray failed: {e}"),
+        },
         ShellAction::SanctuaryUnlock => {
             show_main_window(app);
             let _ = app.emit("open-sanctuary-unlock", ());
@@ -453,6 +472,15 @@ pub fn dispatch_shell_action(app: &AppHandle, action: crate::shell::action::Shel
             show_main_window(app);
             let _ = app.emit("open-sync-inbox", ());
         }
+        ShellAction::OpenCommandPalette => {
+            show_main_window(app);
+            // Handled by shell_html.js command palette (U6-A).
+            let _ = app.emit("shell-open-command-palette", ());
+            eval_main(
+                app,
+                "if (window.__webizenOpenCommandPalette) window.__webizenOpenCommandPalette();",
+            );
+        }
     }
 }
 
@@ -469,13 +497,16 @@ mod tests {
     #[test]
     fn every_native_destination_has_an_explicit_route() {
         let expected = [
-            ("dashboard", "/"),
+            ("talk", "/"),
+            ("dashboard", "/"), // legacy alias → same home route as Talk
+            ("home", "/"),
             ("wellfair", "/wellfair"),
             ("chora", "/chora"),
             ("browser", "/browser"),
             ("10d-browser", "/10d-browser"),
             ("settings", "/settings"),
             ("library", "/library"),
+            ("memory", "/library"),
             ("wallet", "/identity"),
             ("qapp-studio", "/qapp-studio"),
             ("qapps", "/qapps"),

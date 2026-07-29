@@ -26,17 +26,18 @@ pub mod robust;
 pub mod timeseries;
 
 pub use correlation::{correlation_p_value, kendall, pearson, rank_into, spearman};
-pub use timeseries::{autocorrelation, exponential_smoothing_into, moving_average_into};
 pub use descriptive::{
     covariance, kurtosis, max, mean, median_in_place, median_sorted, min, mode_in_place,
     quantile_in_place, quantile_sorted, skewness, std_dev, sum, variance,
 };
 pub use histogram::{histogram_into, HistRange};
+pub use timeseries::{autocorrelation, exponential_smoothing_into, moving_average_into};
 
 pub use hypothesis::{
     chi_square_gof, chi_square_independence, friedman, ks_1sample, mann_whitney_u, mcnemar,
     one_sample_t, one_way_anova, paired_t, two_sample_t, AnovaResult, ChiSquareResult,
-    FriedmanResult, KolmogorovSmirnovResult, MannWhitneyResult, NonparametricResult, TTest, TwoSampleTTest,
+    FriedmanResult, KolmogorovSmirnovResult, MannWhitneyResult, NonparametricResult, TTest,
+    TwoSampleTTest,
 };
 pub use information::{cross_entropy, entropy, kl_divergence, mutual_information_discrete};
 pub use regression::{simple_linear_regression, LinearRegression};
@@ -73,11 +74,13 @@ pub fn bootstrap_means(
 /// Ljung-Box test statistic for autocorrelation up to lag h.
 /// acf[0..h] are sample autocorrelations (from lag 1).
 pub fn ljung_box(acf: &[f64], n: usize, h: usize) -> f64 {
-    if h == 0 || acf.len() < h { return f64::NAN; }
+    if h == 0 || acf.len() < h {
+        return f64::NAN;
+    }
     let mut q = 0.0;
     for k in 1..=h {
-        if k-1 < acf.len() {
-            q += acf[k-1].powi(2) / (n - k) as f64;
+        if k - 1 < acf.len() {
+            q += acf[k - 1].powi(2) / (n - k) as f64;
         }
     }
     q * n as f64
@@ -85,15 +88,19 @@ pub fn ljung_box(acf: &[f64], n: usize, h: usize) -> f64 {
 
 /// Simple ADF-like stationarity proxy (negative means more stationary tendency).
 pub fn adf_proxy(series: &[f64]) -> f64 {
-    if series.len() < 3 { return f64::NAN; }
+    if series.len() < 3 {
+        return f64::NAN;
+    }
     let mut sum_diff = 0.0;
     let mut sum_lag = 0.0;
     for i in 1..series.len() {
-        let diff = series[i] - series[i-1];
-        sum_diff += diff * series[i-1];
-        sum_lag += series[i-1] * series[i-1];
+        let diff = series[i] - series[i - 1];
+        sum_diff += diff * series[i - 1];
+        sum_lag += series[i - 1] * series[i - 1];
     }
-    if sum_lag.abs() < 1e-12 { return 0.0; }
+    if sum_lag.abs() < 1e-12 {
+        return 0.0;
+    }
     sum_diff / sum_lag
 }
 

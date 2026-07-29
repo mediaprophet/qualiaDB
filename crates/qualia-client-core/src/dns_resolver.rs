@@ -34,9 +34,9 @@
 //! and the hyperlocal-root concept (RFC 8806) by moving truth into the local
 //! Q42 zone cache and only touching the network to bootstrap into it.
 
+use qualia_core_db::identifier::parse_did_q42;
 use reqwest::Client;
 use serde::Deserialize;
-use qualia_core_db::identifier::parse_did_q42;
 
 /// Webizen NS-encoding namespace.  Payloads encoded in NS records are served
 /// under this suffix so the daemon can identify them unambiguously.
@@ -84,8 +84,8 @@ pub async fn resolve_identity(input: &str) -> Result<ResolvedIdentity, String> {
 
     // ── Tier 0: native did:q42: — zero network ──────────────────────────────
     if input.starts_with("did:q42:") {
-        let pointer = parse_did_q42(input.as_bytes())
-            .map_err(|e| format!("Invalid did:q42 URI: {:?}", e))?;
+        let pointer =
+            parse_did_q42(input.as_bytes()).map_err(|e| format!("Invalid did:q42 URI: {:?}", e))?;
         return Ok(ResolvedIdentity {
             did: input.to_string(),
             q42_pointer: Some(pointer),
@@ -111,7 +111,8 @@ pub async fn resolve_identity(input: &str) -> Result<ResolvedIdentity, String> {
 
     // ── Tier 2: HTTP QDP discovery ───────────────────────────────────────────
     if let Ok(profile) = fetch_qdp_profile(input).await {
-        let did = profile.front_door_did
+        let did = profile
+            .front_door_did
             .or_else(|| profile.webid.clone())
             .ok_or_else(|| format!("QDP profile at {} has no DID", input))?;
 
@@ -130,7 +131,8 @@ pub async fn resolve_identity(input: &str) -> Result<ResolvedIdentity, String> {
     }
 
     // ── Tier 3: DNS TXT record ───────────────────────────────────────────────
-    let did = verify_front_door_did_via_dns(input).await
+    let did = verify_front_door_did_via_dns(input)
+        .await
         .map_err(|e| format!("All resolution tiers failed for '{}'. Last: {}", input, e))?;
 
     let q42_pointer = if did.starts_with("did:q42:") {
@@ -258,7 +260,10 @@ pub async fn fetch_qdp_profile(domain: &str) -> Result<QdpProfile, String> {
 
     let response = client
         .get(format!("https://{}/.well-known/QDP", domain))
-        .header("Accept", "application/ld+json, text/turtle;q=0.9, */*;q=0.5")
+        .header(
+            "Accept",
+            "application/ld+json, text/turtle;q=0.9, */*;q=0.5",
+        )
         .send()
         .await
         .map_err(|e| format!("QDP fetch failed for {}: {}", domain, e))?;
@@ -283,7 +288,9 @@ fn parse_qdp_body(domain: &str, body: &str) -> QdpProfile {
         let line = line.trim();
 
         if line.contains("hasWebID") || line.contains("QDP:webid") || line.contains("foaf:openid") {
-            if let Some(uri) = extract_angle_bracket_uri(line).or_else(|| extract_json_string_uri(line)) {
+            if let Some(uri) =
+                extract_angle_bracket_uri(line).or_else(|| extract_json_string_uri(line))
+            {
                 if webid.is_none() {
                     webid = Some(uri);
                 }
@@ -291,7 +298,9 @@ fn parse_qdp_body(domain: &str, body: &str) -> QdpProfile {
         }
 
         if line.contains("qdp:signer") || line.contains("QDP:frontDoorDid") {
-            if let Some(did) = extract_angle_bracket_uri(line).or_else(|| extract_did_from_text(line)) {
+            if let Some(did) =
+                extract_angle_bracket_uri(line).or_else(|| extract_did_from_text(line))
+            {
                 front_door_did = Some(did);
             }
         }
@@ -306,7 +315,12 @@ fn parse_qdp_body(domain: &str, body: &str) -> QdpProfile {
         }
     }
 
-    QdpProfile { domain: domain.to_string(), webid, front_door_did, raw: body.to_string() }
+    QdpProfile {
+        domain: domain.to_string(),
+        webid,
+        front_door_did,
+        raw: body.to_string(),
+    }
 }
 
 // ── Tier 3: DNS TXT verification ─────────────────────────────────────────────
@@ -384,7 +398,11 @@ pub fn encode_did_for_ns(did: &str) -> Option<String> {
             .take(63)
             .collect::<String>()
             .to_lowercase();
-        if safe.is_empty() { None } else { Some(safe) }
+        if safe.is_empty() {
+            None
+        } else {
+            Some(safe)
+        }
     } else {
         None
     }
@@ -434,7 +452,11 @@ fn extract_did_from_text(text: &str) -> Option<String> {
         .find(|c: char| c.is_whitespace() || c == '>' || c == '"' || c == ')')
         .unwrap_or(rest.len());
     let did = rest[..end].trim_end_matches(['.', ',', ';']).to_string();
-    if did.len() > 4 { Some(did) } else { None }
+    if did.len() > 4 {
+        Some(did)
+    } else {
+        None
+    }
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
@@ -456,7 +478,11 @@ mod tests {
         let payload = without_suffix.strip_prefix("ns1.").unwrap();
         let reconstructed = format!("did:q42:{}", payload);
         // Payloads are lowercased; original was mixed case — verify prefix at least
-        assert!(reconstructed.starts_with("did:q42:z6mk"), "got: {}", reconstructed);
+        assert!(
+            reconstructed.starts_with("did:q42:z6mk"),
+            "got: {}",
+            reconstructed
+        );
     }
 
     #[test]

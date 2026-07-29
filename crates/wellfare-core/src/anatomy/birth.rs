@@ -136,13 +136,19 @@ impl Guardianship {
 
     /// Whether any steward holds their role by official credential (vs the biological default alone).
     pub fn is_credentialed(&self) -> bool {
-        self.stewards.iter().any(|s| s.basis == StewardBasis::Credentialed) || !self.credentials.is_empty()
+        self.stewards
+            .iter()
+            .any(|s| s.basis == StewardBasis::Credentialed)
+            || !self.credentials.is_empty()
     }
 
     /// Stewards holding a particular responsibility — supports the "different roles held by different
     /// guardians" reality (e.g. who is the medical decision-maker).
     pub fn stewards_with(&self, role: &StewardRole) -> Vec<&Steward> {
-        self.stewards.iter().filter(|s| s.roles.contains(role)).collect()
+        self.stewards
+            .iter()
+            .filter(|s| s.roles.contains(role))
+            .collect()
     }
 }
 
@@ -261,8 +267,11 @@ impl DigitalBirthRecord {
             return Err(BirthRecordInvalid::NoSteward);
         }
         // The subject is distinct from every steward and every known adult in the parentage.
-        let collapses_into_steward =
-            self.guardianship.stewards.iter().any(|s| s.principal.did.trim() == subject);
+        let collapses_into_steward = self
+            .guardianship
+            .stewards
+            .iter()
+            .any(|s| s.principal.did.trim() == subject);
         let collapses_into_parent = self
             .parentage
             .known_genetic_parents()
@@ -321,7 +330,10 @@ impl MaternalFetalDyad {
             subject: PrincipalRef::new(self.child.pairwise_did.clone()),
             biometrics,
             parentage: self.child.parentage.clone(),
-            guardianship: Guardianship { stewards, credentials },
+            guardianship: Guardianship {
+                stewards,
+                credentials,
+            },
             agency_stage: AgencyStage::Neonate,
             issued_by,
             birth_date,
@@ -343,7 +355,9 @@ mod tests {
         MaternalFetalDyad {
             maternal: MaternalBody {
                 principal: PrincipalRef::new("did:wf:mother"),
-                state: PhysiologicalState::Reproductive(ReproductiveState::Pregnant(Trimester::Third)),
+                state: PhysiologicalState::Reproductive(ReproductiveState::Pregnant(
+                    Trimester::Third,
+                )),
             },
             child: EmergingChild {
                 pairwise_did: "did:wf:child-1".into(),
@@ -364,7 +378,13 @@ mod tests {
     #[test]
     fn birth_default_stewards_are_the_biological_parents_in_a_commons() {
         let rec = dyad_two_known_parents()
-            .give_birth(vec![BiometricClass::Dna, BiometricClass::BloodType], vec![], vec![], None, None)
+            .give_birth(
+                vec![BiometricClass::Dna, BiometricClass::BloodType],
+                vec![],
+                vec![],
+                None,
+                None,
+            )
             .unwrap();
         assert_eq!(rec.validate(), Ok(()));
         // The born person owns their record; starts as a neonate on the agency gradient.
@@ -375,7 +395,12 @@ mod tests {
         let guardian_dids: Vec<&str> = rec.guardians().iter().map(|g| g.did.as_str()).collect();
         assert!(guardian_dids.contains(&"did:wf:mother"));
         assert!(guardian_dids.contains(&"did:wf:father"));
-        assert!(rec.guardianship.stewards.iter().all(|s| s.basis == StewardBasis::BiologicalDefault));
+        assert!(
+            rec.guardianship
+                .stewards
+                .iter()
+                .all(|s| s.basis == StewardBasis::BiologicalDefault)
+        );
         assert!(!rec.guardianship.is_credentialed());
         assert_eq!(rec.forum_class(), ForumClass::Internum);
     }
@@ -388,7 +413,10 @@ mod tests {
         dyad.child.parentage = Parentage {
             ovum_source: Progenitor::Donor,
             sperm_source: Progenitor::Known(PrincipalRef::new("did:wf:genetic-father")),
-            intended_parents: vec![PrincipalRef::new("did:wf:parent-a"), PrincipalRef::new("did:wf:parent-b")],
+            intended_parents: vec![
+                PrincipalRef::new("did:wf:parent-a"),
+                PrincipalRef::new("did:wf:parent-b"),
+            ],
         };
         let rec = dyad
             .give_birth(
@@ -397,14 +425,22 @@ mod tests {
                     vc_id: "vc:surrogacy-order-1".into(),
                     kind: GuardianshipCredential::SurrogacyParentageOrder,
                 }],
-                vec![PrincipalRef::new("did:wf:parent-a"), PrincipalRef::new("did:wf:parent-b")],
+                vec![
+                    PrincipalRef::new("did:wf:parent-a"),
+                    PrincipalRef::new("did:wf:parent-b"),
+                ],
                 Some(PrincipalRef::new("did:wf:registry")),
                 Some("2026-07-06".into()),
             )
             .unwrap();
         assert_eq!(rec.validate(), Ok(()));
         assert!(rec.guardianship.is_credentialed());
-        assert!(rec.guardianship.stewards.iter().all(|s| s.basis == StewardBasis::Credentialed));
+        assert!(
+            rec.guardianship
+                .stewards
+                .iter()
+                .all(|s| s.basis == StewardBasis::Credentialed)
+        );
         let guardian_dids: Vec<&str> = rec.guardians().iter().map(|g| g.did.as_str()).collect();
         assert_eq!(guardian_dids, vec!["did:wf:parent-a", "did:wf:parent-b"]);
         assert!(!guardian_dids.contains(&"did:wf:surrogate"));
@@ -413,9 +449,15 @@ mod tests {
     #[test]
     fn agency_is_a_gradient_not_a_binary_and_stewardship_yields_over_development() {
         // Self-determination increases monotonically across the developmental gradient.
-        assert!(AgencyStage::Neonate.self_determination() < AgencyStage::Child.self_determination());
-        assert!(AgencyStage::Child.self_determination() < AgencyStage::Adolescent.self_determination());
-        assert!(AgencyStage::Adolescent.self_determination() < AgencyStage::Adult.self_determination());
+        assert!(
+            AgencyStage::Neonate.self_determination() < AgencyStage::Child.self_determination()
+        );
+        assert!(
+            AgencyStage::Child.self_determination() < AgencyStage::Adolescent.self_determination()
+        );
+        assert!(
+            AgencyStage::Adolescent.self_determination() < AgencyStage::Adult.self_determination()
+        );
         // A supported adult has FULL self-determination (with supports), not a reduced status.
         assert_eq!(
             AgencyStage::SupportedAdult.self_determination(),
@@ -449,7 +491,10 @@ mod tests {
         let medical = g.stewards_with(&StewardRole::Medical);
         assert_eq!(medical.len(), 1);
         assert_eq!(medical[0].principal.did, "did:wf:medical-guardian");
-        assert_eq!(g.stewards_with(&StewardRole::PrimaryCare)[0].principal.did, "did:wf:carer");
+        assert_eq!(
+            g.stewards_with(&StewardRole::PrimaryCare)[0].principal.did,
+            "did:wf:carer"
+        );
     }
 
     #[test]
@@ -465,8 +510,9 @@ mod tests {
         assert_eq!(rec.validate(), Err(BirthRecordInvalid::NoSteward));
 
         // Subject collapsed into a steward ⇒ invalid.
-        let mut rec2 =
-            dyad_two_known_parents().give_birth(vec![], vec![], vec![], None, None).unwrap();
+        let mut rec2 = dyad_two_known_parents()
+            .give_birth(vec![], vec![], vec![], None, None)
+            .unwrap();
         rec2.subject = PrincipalRef::new("did:wf:mother");
         assert_eq!(rec2.validate(), Err(BirthRecordInvalid::SubjectCollapsed));
     }
@@ -476,7 +522,8 @@ mod tests {
         let mut dyad = dyad_two_known_parents();
         dyad.maternal.state = PhysiologicalState::Baseline;
         assert_eq!(
-            dyad.give_birth(vec![], vec![], vec![], None, None).unwrap_err(),
+            dyad.give_birth(vec![], vec![], vec![], None, None)
+                .unwrap_err(),
             DyadInvalid::NotPregnant
         );
     }

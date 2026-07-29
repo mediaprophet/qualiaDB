@@ -140,7 +140,10 @@ impl PodStore {
             }
         }
         // Must stay under root
-        let canon_root = self.root.canonicalize().unwrap_or_else(|_| self.root.clone());
+        let canon_root = self
+            .root
+            .canonicalize()
+            .unwrap_or_else(|_| self.root.clone());
         if let Ok(canon) = out.canonicalize() {
             if !canon.starts_with(&canon_root) {
                 return Err(io::Error::new(
@@ -193,9 +196,7 @@ impl PodStore {
     }
 
     pub fn exists(&self, url_path: &str) -> bool {
-        self.resolve(url_path)
-            .map(|p| p.exists())
-            .unwrap_or(false)
+        self.resolve(url_path).map(|p| p.exists()).unwrap_or(false)
     }
 
     pub fn is_container(&self, url_path: &str) -> bool {
@@ -257,11 +258,13 @@ mod tests {
         let got = store.read_bytes("/public/hello.ttl").unwrap();
         assert_eq!(got, b"<a> <b> <c> .");
 
-        assert!(store.resolve("/public/../profile/card").is_err()
-            || store
-                .resolve("/public/../profile/card")
-                .map(|p| p.starts_with(&dir.join("profile")))
-                .unwrap_or(false));
+        assert!(
+            store.resolve("/public/../profile/card").is_err()
+                || store
+                    .resolve("/public/../profile/card")
+                    .map(|p| p.starts_with(&dir.join("profile")))
+                    .unwrap_or(false)
+        );
 
         // Explicit parent components rejected
         assert!(store.resolve("/../etc/passwd").is_err());

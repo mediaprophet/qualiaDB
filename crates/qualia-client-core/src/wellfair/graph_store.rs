@@ -21,10 +21,7 @@ impl GraphStore {
             fs::create_dir_all(parent)?;
         }
         if !path.exists() {
-            OpenOptions::new()
-                .create(true)
-                .write(true)
-                .open(&path)?;
+            OpenOptions::new().create(true).write(true).open(&path)?;
         }
         let quin_count = count_quins(&path)?;
         Ok(Self { path, quin_count })

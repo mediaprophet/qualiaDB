@@ -1,6 +1,5 @@
 use super::*;
 
-
 /// Dataset relationships
 #[derive(Debug, Clone)]
 pub struct Relationship {
@@ -284,4 +283,3 @@ impl SearchEngine {
         self.indexing_strategy = strategy;
     }
 }
-

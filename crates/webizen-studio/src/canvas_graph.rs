@@ -46,11 +46,7 @@ pub fn derive_graph_edges(panes: &[PanePlacement]) -> Vec<GraphEdge> {
                 if from_idx == to_idx {
                     continue;
                 }
-                let shared = other
-                    .data_bindings
-                    .iter()
-                    .filter(|b| *b == binding)
-                    .count() as u8;
+                let shared = other.data_bindings.iter().filter(|b| *b == binding).count() as u8;
                 if shared == 0 {
                     continue;
                 }
@@ -66,9 +62,10 @@ pub fn derive_graph_edges(panes: &[PanePlacement]) -> Vec<GraphEdge> {
                         label: binding.clone(),
                         strength: *strength_map.get(&key).unwrap_or(&1),
                     });
-                } else if let Some(edge) = edges.iter_mut().find(|e| {
-                    e.from_idx == a && e.to_idx == b && e.label == *binding
-                }) {
+                } else if let Some(edge) = edges
+                    .iter_mut()
+                    .find(|e| e.from_idx == a && e.to_idx == b && e.label == *binding)
+                {
                     edge.strength = edge.strength.saturating_add(shared.max(1));
                 }
             }
@@ -87,7 +84,11 @@ pub struct GraphNeighbor {
 }
 
 /// Panes linked to `selected_idx` (incoming or outgoing).
-pub fn graph_neighbors(edges: &[GraphEdge], panes: &[PanePlacement], selected_idx: usize) -> Vec<GraphNeighbor> {
+pub fn graph_neighbors(
+    edges: &[GraphEdge],
+    panes: &[PanePlacement],
+    selected_idx: usize,
+) -> Vec<GraphNeighbor> {
     let mut out = Vec::new();
     let mut seen = HashSet::new();
 
@@ -114,7 +115,11 @@ pub fn graph_neighbors(edges: &[GraphEdge], panes: &[PanePlacement], selected_id
         });
     }
 
-    out.sort_by(|a, b| b.strength.cmp(&a.strength).then_with(|| a.component_id.cmp(&b.component_id)));
+    out.sort_by(|a, b| {
+        b.strength
+            .cmp(&a.strength)
+            .then_with(|| a.component_id.cmp(&b.component_id))
+    });
     out
 }
 

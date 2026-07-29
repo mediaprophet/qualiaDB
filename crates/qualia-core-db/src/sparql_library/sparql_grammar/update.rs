@@ -244,9 +244,11 @@ fn term_hash(tok: &Token, prefixes: &HashMap<String, String>) -> Result<u64, Str
         Token::Num(text) => Ok(text
             .parse::<u64>()
             .unwrap_or_else(|_| crate::lexicon::generate_60bit_token(text.as_bytes()))),
-        Token::Bool(b) => Ok(crate::lexicon::generate_60bit_token(
-            if *b { b"true" } else { b"false" },
-        )),
+        Token::Bool(b) => Ok(crate::lexicon::generate_60bit_token(if *b {
+            b"true"
+        } else {
+            b"false"
+        })),
         Token::Word(w) if w == "a" => Ok(crate::lexicon::generate_60bit_token(
             b"http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
         )),

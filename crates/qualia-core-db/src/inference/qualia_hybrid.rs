@@ -31,6 +31,11 @@ pub const GRAPH_LOGIT_BIAS: f32 = 2.5;
 /// Prepare hybrid hints before a decode turn (safe no-ops when inactive).
 /// Call **after** any default `publish_query_tensor` so route/query are not wiped.
 /// FastVerify skips mid-decode hybrid work (post-turn verify owns quality).
+///
+/// **Do not** enable route masks under `mode=cuda` alone. That used to OR in
+/// `prefer_tensor_core_gemm()`, which published random prompt-hash KV masks and
+/// destroyed attention (measured garbage decode 2026-07-24: repeated `Ċ` tokens).
+/// Hybrid routing is for quant-graph / explicit `QUALIA_HYBRID_ROUTE=1` only.
 pub fn prepare_hybrid_decode(prompt: &str) {
     if matches!(
         crate::inference_modes::active_inference_mode(),
@@ -38,9 +43,12 @@ pub fn prepare_hybrid_decode(prompt: &str) {
     ) {
         return;
     }
-    if crate::inference_modes::quant_graph_grounding_enabled()
-        || crate::inference_modes::prefer_tensor_core_gemm()
-    {
+    let hybrid_route = crate::inference_modes::quant_graph_grounding_enabled()
+        || matches!(
+            std::env::var("QUALIA_HYBRID_ROUTE").ok().as_deref(),
+            Some("1") | Some("true")
+        );
+    if hybrid_route {
         publish_graph_route_from_prompt(prompt);
         publish_prompt_query_tensor(prompt);
     }
@@ -89,10 +97,7 @@ pub fn publish_graph_route_from_prompt(prompt: &str) {
     }
     if mask.active_bits > 0 {
         publish_attention_route_mask(mask);
-        log::debug!(
-            "qualia_hybrid|route_mask|bits={}",
-            mask.active_bits
-        );
+        log::debug!("qualia_hybrid|route_mask|bits={}", mask.active_bits);
     }
 }
 
@@ -175,10 +180,7 @@ pub fn propose_fact_draft(prompt: &str, encode: &dyn Fn(&str) -> Vec<u32>) -> Dr
     let take = ids.len().min(MAX_DRAFT);
     d.tokens[..take].copy_from_slice(&ids[..take]);
     d.len = take;
-    log::info!(
-        "qualia_hybrid|fact_draft|reason={:?}|len={take}",
-        g.reason
-    );
+    log::info!("qualia_hybrid|fact_draft|reason={:?}|len={take}", g.reason);
     d
 }
 
@@ -335,11 +337,7 @@ pub fn publish_grounding_obligation(prompt: &str) -> Option<NQuin> {
 }
 
 /// Prefer fact draft when quant-graph; else prompt-lookup n-gram draft.
-pub fn propose_best_draft(
-    prompt: &str,
-    ctx: &[u32],
-    encode: &dyn Fn(&str) -> Vec<u32>,
-) -> Draft {
+pub fn propose_best_draft(prompt: &str, ctx: &[u32], encode: &dyn Fn(&str) -> Vec<u32>) -> Draft {
     let fact = propose_fact_draft(prompt, encode);
     if fact.len > 0 {
         return fact;
@@ -369,22 +367,24 @@ mod tests {
         reset_fact_store_to_defaults();
         set_inference_mode(InferenceMode::QuantGraph);
         // Sanity: empty answer must repair when needles match.
-        let g = crate::quant_graph_grounding::ground_generation(
-            "What is the capital of France?",
-            "",
-        );
+        let g =
+            crate::quant_graph_grounding::ground_generation("What is the capital of France?", "");
         assert!(
             g.repaired,
             "expected repair on empty answer; reason={:?} text={}",
-            g.reason,
-            g.text
+            g.reason, g.text
         );
         let encode = |s: &str| {
             // Fake tokenizer: one id per byte
             s.bytes().map(|b| b as u32).collect()
         };
         let d = propose_fact_draft("What is the capital of France?", &encode);
-        assert!(d.len > 0, "draft len 0; repaired={} text={}", g.repaired, g.text);
+        assert!(
+            d.len > 0,
+            "draft len 0; repaired={} text={}",
+            g.repaired,
+            g.text
+        );
         set_inference_mode(InferenceMode::Portable);
     }
 

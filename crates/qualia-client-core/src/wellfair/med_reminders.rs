@@ -53,8 +53,8 @@ pub fn save_prefs(storage_root: impl AsRef<Path>, prefs: &MedReminderPrefs) -> s
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent)?;
     }
-    let json = serde_json::to_string_pretty(prefs)
-        .map_err(|e| std::io::Error::other(e.to_string()))?;
+    let json =
+        serde_json::to_string_pretty(prefs).map_err(|e| std::io::Error::other(e.to_string()))?;
     fs::write(&path, json)
 }
 
@@ -87,7 +87,11 @@ pub fn compute_due_reminders(
         let Ok(json) = serde_json::from_str::<serde_json::Value>(summary) else {
             continue;
         };
-        if json.get("ceased").and_then(|v| v.as_bool()).unwrap_or(false) {
+        if json
+            .get("ceased")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false)
+        {
             continue;
         }
         let name = json

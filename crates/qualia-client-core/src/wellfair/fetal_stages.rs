@@ -43,12 +43,42 @@ impl CarnegieStage {
 /// Postfertilization ages are the standard Carnegie-stage values (stage 16 ≈ 39 d is confirmed on NIH 3D).
 pub fn carnegie_series() -> Vec<CarnegieStage> {
     vec![
-        CarnegieStage { stage: 12, postfertilization_days: 26, nih3d_entry: "3DPX-016955", glb_file_id: 565713 },
-        CarnegieStage { stage: 14, postfertilization_days: 32, nih3d_entry: "3DPX-016954", glb_file_id: 502105 },
-        CarnegieStage { stage: 16, postfertilization_days: 39, nih3d_entry: "3DPX-016953", glb_file_id: 508256 },
-        CarnegieStage { stage: 18, postfertilization_days: 44, nih3d_entry: "3DPX-016952", glb_file_id: 501993 },
-        CarnegieStage { stage: 20, postfertilization_days: 49, nih3d_entry: "3DPX-016951", glb_file_id: 501897 },
-        CarnegieStage { stage: 23, postfertilization_days: 56, nih3d_entry: "3DPX-016950", glb_file_id: 502070 },
+        CarnegieStage {
+            stage: 12,
+            postfertilization_days: 26,
+            nih3d_entry: "3DPX-016955",
+            glb_file_id: 565713,
+        },
+        CarnegieStage {
+            stage: 14,
+            postfertilization_days: 32,
+            nih3d_entry: "3DPX-016954",
+            glb_file_id: 502105,
+        },
+        CarnegieStage {
+            stage: 16,
+            postfertilization_days: 39,
+            nih3d_entry: "3DPX-016953",
+            glb_file_id: 508256,
+        },
+        CarnegieStage {
+            stage: 18,
+            postfertilization_days: 44,
+            nih3d_entry: "3DPX-016952",
+            glb_file_id: 501993,
+        },
+        CarnegieStage {
+            stage: 20,
+            postfertilization_days: 49,
+            nih3d_entry: "3DPX-016951",
+            glb_file_id: 501897,
+        },
+        CarnegieStage {
+            stage: 23,
+            postfertilization_days: 56,
+            nih3d_entry: "3DPX-016950",
+            glb_file_id: 502070,
+        },
     ]
 }
 
@@ -68,7 +98,13 @@ mod tests {
                 "t-axis (gestational age) must be monotonic"
             );
         }
-        assert_eq!(s.iter().find(|x| x.stage == 16).unwrap().postfertilization_days, 39);
+        assert_eq!(
+            s.iter()
+                .find(|x| x.stage == 16)
+                .unwrap()
+                .postfertilization_days,
+            39
+        );
         assert_eq!(s[0].glb_url(), "https://3d.nih.gov/api/files/565713");
         assert_eq!(s.last().unwrap().key(), "carnegie-stage-23");
     }
@@ -118,6 +154,9 @@ mod tests {
                 Err(e) => eprintln!("CARNEGIE {} compile FAILED: {e:?}", st.stage),
             }
         }
-        assert!(compiled >= 5, "most of the Carnegie series should compile (got {compiled})");
+        assert!(
+            compiled >= 5,
+            "most of the Carnegie series should compile (got {compiled})"
+        );
     }
 }

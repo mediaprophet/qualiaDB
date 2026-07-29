@@ -399,7 +399,7 @@ impl QTensorEngine {
             Some(l) => l,
             None => return false,
         };
-        let norm_buf = self.norm_weight_buf.as_ref().unwrap();
+        debug_assert!(batch_start_token_idx < layout.max_context || layout.max_context == 0);
         let q_info = match tensors.attn_q.as_ref() {
             Some(i) => i,
             None => return false,
@@ -862,7 +862,9 @@ impl QTensorEngine {
         }
         let batch_buf = self.gemm_input_buf.as_ref().unwrap();
         let token_buf = self.gemm_output_buf.as_ref().unwrap();
-        let norm_buf = self.norm_weight_buf.as_ref().unwrap();
+        if self.norm_weight_buf.is_none() {
+            return false;
+        }
         if batch_elems > self.gemm_max_input_floats {
             return false;
         }
@@ -1296,7 +1298,9 @@ impl QTensorEngine {
 
         receiver.await.unwrap().unwrap();
 
-        let data = buffer_slice.get_mapped_range().expect("wgpu buffer map_range failed");
+        let data = buffer_slice
+            .get_mapped_range()
+            .expect("wgpu buffer map_range failed");
         let result: Vec<f32> = bytemuck::cast_slice(&data).to_vec();
         drop(data);
         staging_buf.unmap();
@@ -1315,7 +1319,23 @@ impl QTensorEngine {
         max_chunks: u32,
         sieve_mask: Option<&crate::neuro_symbolic_sieve::SieveStateMask>,
     ) -> Option<StreamingArgmaxResult> {
-        // Part 3l: per-chunk async GPU vocab GEMM + streaming CPU argmax (no WGSL argmax shader).
+        // Fast path: batched single-submit when resident logits are available
+        if self.mc8_logits_resident_buf.is_some() {
+            if let Some(result) = self
+                .dispatch_output_argmax_batched_async(
+                    index,
+                    hidden,
+                    emb_dim,
+                    chunk_logits,
+                    max_chunks,
+                    sieve_mask,
+                )
+                .await
+            {
+                return Some(result);
+            }
+        }
+        // Fallback: per-chunk submit + readback
         self.dispatch_output_argmax_chunked_async_mc8_fused(
             index,
             hidden,
@@ -1426,6 +1446,171 @@ impl QTensorEngine {
             }
             scrub_f32_volatile(&mut chunk_logits[..chunk_rows], chunk_rows);
         }
+        if max_logit == f32::NEG_INFINITY {
+            return None;
+        }
+        Some(StreamingArgmaxResult {
+            best_token_id,
+            max_logit,
+        })
+    }
+
+    /// Batched argmax: all vocab chunks in one encoder + one submit + one readback.
+    /// Eliminates 4 of 5 async map yields per token vs the per-chunk path.
+    #[cfg(target_arch = "wasm32")]
+    pub(crate) async fn dispatch_output_argmax_batched_async(
+        &self,
+        index: &crate::gguf_sharder::GgufTensorIndex,
+        hidden: &[f32],
+        emb_dim: usize,
+        chunk_logits: &mut [f32],
+        max_chunks: u32,
+        sieve_mask: Option<&crate::neuro_symbolic_sieve::SieveStateMask>,
+    ) -> Option<StreamingArgmaxResult> {
+        let info = index.logits_projection_info()?;
+        let (n_in, vocab_size) = Self::matmul_dims(info);
+        if n_in == 0 || vocab_size == 0 || n_in > emb_dim || n_in > hidden.len() {
+            return None;
+        }
+        if chunk_logits.len() < VOCAB_CHUNK_ROWS || !self.mc8_buffers_ready() {
+            return None;
+        }
+        let resident_buf = self.mc8_logits_resident_buf.as_ref()?;
+        let row_bytes = self.mc8_logits_row_bytes as u64;
+        let input_buf = self.gemm_input_buf.as_ref().unwrap();
+        let output_buf = self.gemm_output_buf.as_ref().unwrap();
+        let params_buf = self.gemm_params_buf.as_ref().unwrap();
+        let staging = self.gemm_output_staging.as_ref().unwrap();
+
+        let full_chunks = vocab_size.div_ceil(VOCAB_CHUNK_ROWS);
+        let n_chunks = if max_chunks == 0 {
+            full_chunks
+        } else {
+            (max_chunks as usize).min(full_chunks)
+        };
+
+        // Write input hidden + params once
+        let params = GemmGpuParams {
+            n_in: n_in as u32,
+            n_out: VOCAB_CHUNK_ROWS as u32,
+            weight_ggml_type: info.ggml_type,
+            weight_row_elems: info.dims[0] as u32,
+            weight_byte_len: (VOCAB_CHUNK_ROWS as u64 * row_bytes) as u32,
+            n_batch: 1,
+            in_row_stride: 0,
+            out_row_stride: 0,
+        };
+        self.gpu_queue()
+            .write_buffer(input_buf, 0, bytemuck::cast_slice(&hidden[..n_in]));
+        self.gpu_queue()
+            .write_buffer(params_buf, 0, bytemuck::bytes_of(&params));
+
+        let bind_layout = self.pipeline.get_bind_group_layout(0);
+        let mut encoder = self
+            .device()
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("BatchedArgmaxEncoder"),
+            });
+
+        // Dispatch each chunk into a different offset of the output buffer.
+        // output_buf is MAX_STACK_GEMM_OUT floats = 10240. Each chunk is VOCAB_CHUNK_ROWS=10240.
+        // So we can only fit 1 chunk at a time in output_buf. Instead, dispatch sequentially
+        // but within one encoder: chunk i writes to output_buf[0..chunk_rows], then we copy
+        // to staging at offset i*VOCAB_CHUNK_ROWS. WebGPU intra-encoder barriers handle deps.
+        let staging_capacity = (staging.size() / 4) as usize;
+        for chunk_idx in 0..n_chunks {
+            let row_start = chunk_idx * VOCAB_CHUNK_ROWS;
+            let chunk_rows = VOCAB_CHUNK_ROWS.min(vocab_size - row_start);
+            let weight = wgpu::BindingResource::Buffer(wgpu::BufferBinding {
+                buffer: resident_buf,
+                offset: row_start as u64 * row_bytes,
+                size: std::num::NonZeroU64::new(chunk_rows as u64 * row_bytes),
+            });
+            let bind_group = self
+                .gpu_device()
+                .create_bind_group(&wgpu::BindGroupDescriptor {
+                    label: Some("BatchedArgmaxBind"),
+                    layout: &bind_layout,
+                    entries: &[
+                        wgpu::BindGroupEntry {
+                            binding: 0,
+                            resource: input_buf.as_entire_binding(),
+                        },
+                        wgpu::BindGroupEntry {
+                            binding: 1,
+                            resource: weight,
+                        },
+                        wgpu::BindGroupEntry {
+                            binding: 2,
+                            resource: Self::mc8_dynamic_uniform_binding(params_buf),
+                        },
+                        wgpu::BindGroupEntry {
+                            binding: 3,
+                            resource: output_buf.as_entire_binding(),
+                        },
+                    ],
+                });
+            {
+                let mut cpass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+                    label: None,
+                    timestamp_writes: None,
+                });
+                cpass.set_pipeline(&self.pipeline);
+                cpass.set_bind_group(0, &bind_group, &[0]);
+                cpass.dispatch_workgroups((chunk_rows as u32 + 63) / 64, 1, 1);
+            }
+            // Copy this chunk's results to staging at the right offset
+            let chunk_bytes = (chunk_rows * 4) as wgpu::BufferAddress;
+            let staging_off = (chunk_idx * VOCAB_CHUNK_ROWS * 4) as wgpu::BufferAddress;
+            if staging_off + chunk_bytes <= staging.size() {
+                encoder.copy_buffer_to_buffer(output_buf, 0, staging, staging_off, chunk_bytes);
+            }
+        }
+
+        self.gpu_queue().submit(Some(encoder.finish()));
+
+        // Single readback of all chunks
+        let total_floats = (n_chunks * VOCAB_CHUNK_ROWS).min(staging_capacity);
+        let total_bytes = (total_floats * 4) as wgpu::BufferAddress;
+        let slice = staging.slice(..total_bytes);
+        if !await_wgpu_map(slice).await {
+            let _ = staging.unmap();
+            return None;
+        }
+        let data = slice
+            .get_mapped_range()
+            .expect("wgpu buffer map_range failed");
+        let all_floats: &[f32] = bytemuck::cast_slice(&data);
+
+        let mut best_token_id = 0u32;
+        let mut max_logit = f32::NEG_INFINITY;
+        for chunk_idx in 0..n_chunks {
+            let row_start = chunk_idx * VOCAB_CHUNK_ROWS;
+            let chunk_rows = VOCAB_CHUNK_ROWS.min(vocab_size - row_start);
+            let chunk_data = &all_floats
+                [chunk_idx * VOCAB_CHUNK_ROWS..chunk_idx * VOCAB_CHUNK_ROWS + chunk_rows];
+            if let Some(mask) = sieve_mask {
+                update_streaming_argmax_sieved(
+                    chunk_data,
+                    chunk_rows,
+                    chunk_idx,
+                    Some(mask),
+                    &mut best_token_id,
+                    &mut max_logit,
+                );
+            } else {
+                update_streaming_argmax(
+                    chunk_data,
+                    chunk_rows,
+                    chunk_idx,
+                    &mut best_token_id,
+                    &mut max_logit,
+                );
+            }
+        }
+        drop(data);
+        staging.unmap();
+
         if max_logit == f32::NEG_INFINITY {
             return None;
         }

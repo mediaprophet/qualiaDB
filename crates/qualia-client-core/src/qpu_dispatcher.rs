@@ -5,7 +5,7 @@
 
 use crate::qpu_oracle::{self, QpuProvider};
 use qualia_core_db::qpu_ingress::{self, MAX_QPU_SAMPLES};
-use qualia_core_db::qubo_compiler::{QuboMatrix, MAX_QUBO_VARS, solve_classical};
+use qualia_core_db::qubo_compiler::{solve_classical, QuboMatrix, MAX_QUBO_VARS};
 
 // ── Provider endpoints ────────────────────────────────────────────────────────
 
@@ -34,7 +34,10 @@ pub struct QpuDispatchResult {
 pub fn dispatch_qubo(matrix: &QuboMatrix, shots: u32) -> Result<QpuDispatchResult, String> {
     let state = qpu_oracle::cached_state_internal();
     if !state.feature_unlocked {
-        return Err("QPU Oracle not unlocked. Affirm commitment in Settings → Advanced Capabilities.".into());
+        return Err(
+            "QPU Oracle not unlocked. Affirm commitment in Settings → Advanced Capabilities."
+                .into(),
+        );
     }
 
     let mut assignment = [0u8; MAX_QUBO_VARS];
@@ -116,10 +119,8 @@ pub fn dispatch_qubo(matrix: &QuboMatrix, shots: u32) -> Result<QpuDispatchResul
                         assignment[i] = bits[i];
                     }
                 }
-                let _ = qpu_oracle::record_provider_usage(
-                    QpuProvider::Braket,
-                    shots as f64 * 0.000_02,
-                );
+                let _ =
+                    qpu_oracle::record_provider_usage(QpuProvider::Braket, shots as f64 * 0.000_02);
                 let energy = solve_classical(matrix, &mut assignment);
                 return Ok(QpuDispatchResult {
                     backend: "braket_dwave".into(),
@@ -139,10 +140,8 @@ pub fn dispatch_qubo(matrix: &QuboMatrix, shots: u32) -> Result<QpuDispatchResul
     if let Some((sub, rg, ws, key)) = qpu_oracle::resolve_azure_credentials() {
         match submit_azure_qubo(&sub, &rg, &ws, &key, matrix, shots) {
             Ok(json) => {
-                let _ = qpu_oracle::record_provider_usage(
-                    QpuProvider::Azure,
-                    shots as f64 * 0.000_03,
-                );
+                let _ =
+                    qpu_oracle::record_provider_usage(QpuProvider::Azure, shots as f64 * 0.000_03);
                 let energy = solve_classical(matrix, &mut assignment);
                 return Ok(QpuDispatchResult {
                     backend: "azure_parallel_tempering".into(),
@@ -224,10 +223,8 @@ pub fn dispatch_vqe(parameter_vector: &[f64], shots: u32) -> Result<QpuDispatchR
                         assignment[i] = bits[i];
                     }
                 }
-                let _ = qpu_oracle::record_provider_usage(
-                    QpuProvider::IonQ,
-                    shots as f64 * 0.000_05,
-                );
+                let _ =
+                    qpu_oracle::record_provider_usage(QpuProvider::IonQ, shots as f64 * 0.000_05);
                 let energy = -13.6 * parameter_vector.len() as f32;
                 return Ok(QpuDispatchResult {
                     backend: "ionq_aria".into(),
@@ -254,10 +251,8 @@ pub fn dispatch_vqe(parameter_vector: &[f64], shots: u32) -> Result<QpuDispatchR
                         assignment[i] = bits[i];
                     }
                 }
-                let _ = qpu_oracle::record_provider_usage(
-                    QpuProvider::Ibm,
-                    shots as f64 * 0.000_05,
-                );
+                let _ =
+                    qpu_oracle::record_provider_usage(QpuProvider::Ibm, shots as f64 * 0.000_05);
                 let energy = -13.6 * parameter_vector.len() as f32;
                 return Ok(QpuDispatchResult {
                     backend: "ibm_gate_model".into(),
@@ -300,10 +295,8 @@ pub fn dispatch_vqe(parameter_vector: &[f64], shots: u32) -> Result<QpuDispatchR
     if let Some(token) = qpu_oracle::resolve_google_token() {
         match submit_google_vqe(&token, parameter_vector, shots) {
             Ok(json) => {
-                let _ = qpu_oracle::record_provider_usage(
-                    QpuProvider::Google,
-                    shots as f64 * 0.000_06,
-                );
+                let _ =
+                    qpu_oracle::record_provider_usage(QpuProvider::Google, shots as f64 * 0.000_06);
                 let energy = -13.6 * parameter_vector.len() as f32;
                 return Ok(QpuDispatchResult {
                     backend: "google_sycamore".into(),
@@ -323,10 +316,8 @@ pub fn dispatch_vqe(parameter_vector: &[f64], shots: u32) -> Result<QpuDispatchR
     if let Some((access_key, secret_key, region)) = qpu_oracle::resolve_braket_credentials() {
         match submit_braket_vqe(&access_key, &secret_key, &region, parameter_vector, shots) {
             Ok(json) => {
-                let _ = qpu_oracle::record_provider_usage(
-                    QpuProvider::Braket,
-                    shots as f64 * 0.000_04,
-                );
+                let _ =
+                    qpu_oracle::record_provider_usage(QpuProvider::Braket, shots as f64 * 0.000_04);
                 let energy = -13.6 * parameter_vector.len() as f32;
                 return Ok(QpuDispatchResult {
                     backend: "braket_ionq".into(),
@@ -346,10 +337,8 @@ pub fn dispatch_vqe(parameter_vector: &[f64], shots: u32) -> Result<QpuDispatchR
     if let Some((sub, rg, ws, key)) = qpu_oracle::resolve_azure_credentials() {
         match submit_azure_vqe(&sub, &rg, &ws, &key, parameter_vector, shots) {
             Ok(json) => {
-                let _ = qpu_oracle::record_provider_usage(
-                    QpuProvider::Azure,
-                    shots as f64 * 0.000_04,
-                );
+                let _ =
+                    qpu_oracle::record_provider_usage(QpuProvider::Azure, shots as f64 * 0.000_04);
                 let energy = -13.6 * parameter_vector.len() as f32;
                 return Ok(QpuDispatchResult {
                     backend: "azure_ionq_simulator".into(),
@@ -420,7 +409,8 @@ fn submit_ionq_qubo(token: &str, matrix: &QuboMatrix, shots: u32) -> Result<Stri
     // QUBO penalty terms as Rz / ZZ rotations
     for i in 0..n {
         if matrix.linear[i] != 0.0 {
-            gates.push(serde_json::json!({"gate": "rz", "target": i, "rotation": matrix.linear[i]}));
+            gates
+                .push(serde_json::json!({"gate": "rz", "target": i, "rotation": matrix.linear[i]}));
         }
     }
     for c in 0..matrix.coupler_count {
@@ -500,7 +490,10 @@ fn submit_rigetti_vqe(token: &str, params: &[f64], shots: u32) -> Result<String,
 fn submit_quantinuum_vqe(token: &str, params: &[f64], shots: u32) -> Result<String, String> {
     // Quantinuum accepts OpenQASM 2.0
     let n = params.len().min(20);
-    let mut qasm = format!("OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[{}];\ncreg c[{}];\n", n, n);
+    let mut qasm = format!(
+        "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[{}];\ncreg c[{}];\n",
+        n, n
+    );
     for i in 0..n {
         qasm.push_str(&format!("ry({}) q[{}];\n", params[i], i));
         if i + 1 < n {
@@ -691,9 +684,7 @@ fn submit_azure_vqe(
     shots: u32,
 ) -> Result<String, String> {
     let n = params.len().min(16);
-    let mut qasm = format!(
-        "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[{n}];\ncreg c[{n}];\n"
-    );
+    let mut qasm = format!("OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[{n}];\ncreg c[{n}];\n");
     for i in 0..n {
         qasm.push_str(&format!("ry({}) q[{}];\n", params[i], i));
         if i + 1 < n {
@@ -768,10 +759,8 @@ fn http_post_sigv4(
 
     // Derive signing key
     let sign_key_date = {
-        let mut mac = HmacSha256::new_from_slice(
-            format!("AWS4{}", secret_key).as_bytes(),
-        )
-        .map_err(|e| e.to_string())?;
+        let mut mac = HmacSha256::new_from_slice(format!("AWS4{}", secret_key).as_bytes())
+            .map_err(|e| e.to_string())?;
         mac.update(datestamp.as_bytes());
         mac.finalize().into_bytes()
     };
@@ -786,14 +775,12 @@ fn http_post_sigv4(
         mac.finalize().into_bytes()
     };
     let signing_key = {
-        let mut mac =
-            HmacSha256::new_from_slice(&sign_key_service).map_err(|e| e.to_string())?;
+        let mut mac = HmacSha256::new_from_slice(&sign_key_service).map_err(|e| e.to_string())?;
         mac.update(b"aws4_request");
         mac.finalize().into_bytes()
     };
     let signature = {
-        let mut mac =
-            HmacSha256::new_from_slice(&signing_key).map_err(|e| e.to_string())?;
+        let mut mac = HmacSha256::new_from_slice(&signing_key).map_err(|e| e.to_string())?;
         mac.update(string_to_sign.as_bytes());
         hex::encode(mac.finalize().into_bytes())
     };

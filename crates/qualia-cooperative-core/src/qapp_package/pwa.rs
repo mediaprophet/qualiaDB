@@ -404,7 +404,9 @@ mod tests {
     #[test]
     fn webmanifest_has_required_keys_and_values() {
         let bundle = generate_pwa(&sample());
-        let text = bundle.text_of("manifest.webmanifest").expect("manifest present");
+        let text = bundle
+            .text_of("manifest.webmanifest")
+            .expect("manifest present");
 
         // Raw string assertions the task asks for.
         assert!(text.contains("\"display\": \"standalone\""), "text: {text}");
@@ -451,8 +453,14 @@ mod tests {
         let html = bundle.text_of("index.html").expect("index present");
         assert!(html.contains("manifest.webmanifest"), "html: {html}");
         // The loader is external now (strict CSP) — not inline.
-        assert!(html.contains("<script src=\"loader.js\" defer></script>"), "html: {html}");
-        assert!(!html.contains("(function ()"), "loader must not be inline: {html}");
+        assert!(
+            html.contains("<script src=\"loader.js\" defer></script>"),
+            "html: {html}"
+        );
+        assert!(
+            !html.contains("(function ()"),
+            "loader must not be inline: {html}"
+        );
         // iOS installability meta tags.
         assert!(html.contains("apple-mobile-web-app-capable"));
         assert!(html.contains("apple-mobile-web-app-title"));
@@ -472,9 +480,15 @@ mod tests {
         // No sync capability → default-deny, no network egress, strict own-origin scripts.
         let bundle = generate_pwa(&sample());
         let html = bundle.text_of("index.html").expect("index present");
-        assert!(html.contains("http-equiv=\"Content-Security-Policy\""), "html: {html}");
+        assert!(
+            html.contains("http-equiv=\"Content-Security-Policy\""),
+            "html: {html}"
+        );
         assert!(html.contains("default-src &#39;none&#39;"), "html: {html}");
-        assert!(html.contains("script-src &#39;self&#39; &#39;wasm-unsafe-eval&#39;"), "html: {html}");
+        assert!(
+            html.contains("script-src &#39;self&#39; &#39;wasm-unsafe-eval&#39;"),
+            "html: {html}"
+        );
         // No 'unsafe-inline' anywhere in script-src (scripts are external-only).
         let csp = super::build_csp(&sample());
         assert!(!csp.contains("script-src 'self' 'unsafe-inline'"));
@@ -483,7 +497,9 @@ mod tests {
 
         // With the Sync capability, connect-src widens to same-origin only.
         let mut synced = sample();
-        synced.capabilities.push(crate::qapp_package::manifest::Capability::Sync);
+        synced
+            .capabilities
+            .push(crate::qapp_package::manifest::Capability::Sync);
         let csp = super::build_csp(&synced);
         assert!(csp.contains("connect-src 'self'"), "csp: {csp}");
         assert!(!csp.contains("connect-src 'none'"));
@@ -499,15 +515,21 @@ mod tests {
     #[test]
     fn html_escapes_dangerous_strings() {
         // A name containing HTML/script metacharacters must be escaped in index.html.
-        let m = QappManifest::new("coop.qualia.evil", "Journal <script>alert('x')</script> & \"co\"")
-            .with_icon(IconRef {
-                src: "./i.png".to_string(),
-                sizes: "any".to_string(),
-                purpose: "any".to_string(),
-            });
+        let m = QappManifest::new(
+            "coop.qualia.evil",
+            "Journal <script>alert('x')</script> & \"co\"",
+        )
+        .with_icon(IconRef {
+            src: "./i.png".to_string(),
+            sizes: "any".to_string(),
+            purpose: "any".to_string(),
+        });
         let bundle = generate_pwa(&m);
         let html = bundle.text_of("index.html").unwrap();
-        assert!(!html.contains("<script>alert('x')</script>"), "raw script leaked: {html}");
+        assert!(
+            !html.contains("<script>alert('x')</script>"),
+            "raw script leaked: {html}"
+        );
         assert!(html.contains("&lt;script&gt;"));
         assert!(html.contains("&amp;"));
     }
@@ -529,7 +551,10 @@ mod tests {
         let bundle = generate_pwa(&m);
         // The wasm path lives in the external loader now.
         let loader = bundle.text_of("loader.js").unwrap();
-        assert!(loader.contains("./a\\'b.wasm"), "quote not escaped: {loader}");
+        assert!(
+            loader.contains("./a\\'b.wasm"),
+            "quote not escaped: {loader}"
+        );
     }
 
     #[test]

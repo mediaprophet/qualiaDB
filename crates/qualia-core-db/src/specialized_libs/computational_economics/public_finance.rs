@@ -69,7 +69,11 @@ pub fn progressive_tax_into(
     let mut total_tax = 0.0;
     for i in 0..n {
         let lower = brackets[i].threshold;
-        let upper = if i + 1 < n { brackets[i + 1].threshold } else { f64::INFINITY };
+        let upper = if i + 1 < n {
+            brackets[i + 1].threshold
+        } else {
+            f64::INFINITY
+        };
         let taxable = if income > lower {
             (income.min(upper) - lower).max(0.0)
         } else {
@@ -79,7 +83,11 @@ pub fn progressive_tax_into(
         out[i] = bracket_tax;
         total_tax += bracket_tax;
     }
-    let avg_rate = if income > 0.0 { total_tax / income } else { 0.0 };
+    let avg_rate = if income > 0.0 {
+        total_tax / income
+    } else {
+        0.0
+    };
     Ok((total_tax, avg_rate))
 }
 
@@ -203,9 +211,18 @@ mod tests {
         // Brackets: [(0, 0.1), (50000, 0.2), (100000, 0.3)]
         // Income 120000 → tax = 50000*0.1 + 50000*0.2 + 20000*0.3 = 21000
         let brackets = [
-            TaxBracket { threshold: 0.0, marginal_rate: 0.1 },
-            TaxBracket { threshold: 50000.0, marginal_rate: 0.2 },
-            TaxBracket { threshold: 100000.0, marginal_rate: 0.3 },
+            TaxBracket {
+                threshold: 0.0,
+                marginal_rate: 0.1,
+            },
+            TaxBracket {
+                threshold: 50000.0,
+                marginal_rate: 0.2,
+            },
+            TaxBracket {
+                threshold: 100000.0,
+                marginal_rate: 0.3,
+            },
         ];
         let mut per_bracket = [0.0f64; 3];
         let (total, avg) = progressive_tax_into(120000.0, &brackets, &mut per_bracket).unwrap();
@@ -218,7 +235,10 @@ mod tests {
 
     #[test]
     fn progressive_tax_below_first_threshold() {
-        let brackets = [TaxBracket { threshold: 50000.0, marginal_rate: 0.2 }];
+        let brackets = [TaxBracket {
+            threshold: 50000.0,
+            marginal_rate: 0.2,
+        }];
         let mut per = [0.0f64; 1];
         let (total, _) = progressive_tax_into(30000.0, &brackets, &mut per).unwrap();
         assert!(approx(total, 0.0, 1e-9));
@@ -227,8 +247,14 @@ mod tests {
     #[test]
     fn progressive_tax_rejects_unsorted() {
         let brackets = [
-            TaxBracket { threshold: 100000.0, marginal_rate: 0.3 },
-            TaxBracket { threshold: 50000.0, marginal_rate: 0.2 },
+            TaxBracket {
+                threshold: 100000.0,
+                marginal_rate: 0.3,
+            },
+            TaxBracket {
+                threshold: 50000.0,
+                marginal_rate: 0.2,
+            },
         ];
         let mut per = [0.0f64; 2];
         let err = progressive_tax_into(120000.0, &brackets, &mut per).unwrap_err();
@@ -267,8 +293,16 @@ mod tests {
 
     #[test]
     fn laffer_curve_zero_at_extremes() {
-        assert!(approx(laffer_curve_revenue(0.0, 1000.0, 1.0).unwrap(), 0.0, 1e-9));
-        assert!(approx(laffer_curve_revenue(1.0, 1000.0, 1.0).unwrap(), 0.0, 1e-9));
+        assert!(approx(
+            laffer_curve_revenue(0.0, 1000.0, 1.0).unwrap(),
+            0.0,
+            1e-9
+        ));
+        assert!(approx(
+            laffer_curve_revenue(1.0, 1000.0, 1.0).unwrap(),
+            0.0,
+            1e-9
+        ));
     }
 
     #[test]

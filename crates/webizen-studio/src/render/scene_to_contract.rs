@@ -126,6 +126,11 @@ fn collect_scene_elements(
                 // Animation states: derive from node label semantics
                 let (is_inferencing, pulse_rate) = extract_animation_state(&node.label);
 
+                let entity_id = if node.entity_id != 0 {
+                    node.entity_id
+                } else {
+                    parse_entity_id_from_label(&node.label)
+                };
                 render_scene.add_node(SceneNode {
                     id: node.label.clone(),
                     position: ScenePoint {
@@ -141,6 +146,8 @@ fn collect_scene_elements(
                     tensor: webizen_render::scene_contract::Tensor10DProjection::default(),
                     epistemic_state: webizen_render::scene_contract::EpistemicState::Collapsed,
                     version: 0.0,
+                    entity_id,
+                    affordance_bits: node.affordance_bits,
                 });
             }
         }
@@ -149,6 +156,32 @@ fn collect_scene_elements(
     // Recursively process children
     for child in &node.children {
         collect_scene_elements(child, &to_world, render_scene);
+    }
+}
+
+/// Parse entity id from layout ids like `016x` hex (`{:016x}` from entity_view projection).
+pub(crate) fn parse_entity_id_from_label(label: &str) -> u64 {
+    let s = label.trim();
+    if s.len() == 16 && s.chars().all(|c| c.is_ascii_hexdigit()) {
+        return u64::from_str_radix(s, 16).unwrap_or(0);
+    }
+    if let Some(hex) = s.strip_prefix("entity:") {
+        if hex.chars().all(|c| c.is_ascii_hexdigit()) {
+            return u64::from_str_radix(hex, 16).unwrap_or(0);
+        }
+    }
+    0
+}
+
+#[cfg(test)]
+mod entity_id_tests {
+    use super::parse_entity_id_from_label;
+
+    #[test]
+    fn parses_layout_hex_id() {
+        assert_eq!(parse_entity_id_from_label("00000000000000ab"), 0xab);
+        assert_eq!(parse_entity_id_from_label("entity:ff"), 0xff);
+        assert_eq!(parse_entity_id_from_label("plain-label"), 0);
     }
 }
 

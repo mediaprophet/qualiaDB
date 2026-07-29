@@ -1,4 +1,4 @@
-use crate::models::{WeightRecord, SleepRecord, HeartRateRecord, StepRecord};
+use crate::models::{HeartRateRecord, SleepRecord, StepRecord, WeightRecord};
 use serde_json::Value;
 
 pub fn generate_rdf_prefixes() -> String {
@@ -28,7 +28,7 @@ pub fn vault_meds_to_turtle(json: &str) -> Result<String, String> {
     let arr: Vec<Value> = serde_json::from_str(json).map_err(|e| e.to_string())?;
     let mut out = generate_rdf_prefixes();
     for rec in &arr {
-        let id   = rec["id"].as_str().unwrap_or("unknown");
+        let id = rec["id"].as_str().unwrap_or("unknown");
         let name = rec["name"].as_str().unwrap_or("");
         let subj = format!("<urn:wf:med:{}>", id);
         out.push_str(&format!("{} a wf:MedicationRecord ;\n", subj));
@@ -58,7 +58,7 @@ pub fn vault_diet_to_turtle(json: &str) -> Result<String, String> {
     let arr: Vec<Value> = serde_json::from_str(json).map_err(|e| e.to_string())?;
     let mut out = generate_rdf_prefixes();
     for rec in &arr {
-        let id   = rec["id"].as_str().unwrap_or("unknown");
+        let id = rec["id"].as_str().unwrap_or("unknown");
         let name = rec["name"].as_str().unwrap_or("");
         let subj = format!("<urn:wf:diet:{}>", id);
         out.push_str(&format!("{} a wf:DietEntry ;\n", subj));
@@ -70,13 +70,13 @@ pub fn vault_diet_to_turtle(json: &str) -> Result<String, String> {
             out.push_str(&format!("    wf:meal {:?} ;\n", v));
         }
         for (field, pred) in &[
-            ("kcal",       "wf:kcal"),
-            ("protein_g",  "wf:proteinG"),
-            ("carbs_g",    "wf:carbsG"),
-            ("fat_g",      "wf:fatG"),
-            ("fiber_g",    "wf:fiberG"),
-            ("sugar_g",    "wf:sugarG"),
-            ("sodium_mg",  "wf:sodiumMg"),
+            ("kcal", "wf:kcal"),
+            ("protein_g", "wf:proteinG"),
+            ("carbs_g", "wf:carbsG"),
+            ("fat_g", "wf:fatG"),
+            ("fiber_g", "wf:fiberG"),
+            ("sugar_g", "wf:sugarG"),
+            ("sodium_mg", "wf:sodiumMg"),
         ] {
             if let Some(v) = rec[*field].as_f64() {
                 out.push_str(&format!("    {} {} ;\n", pred, v));
@@ -93,13 +93,19 @@ pub fn vault_biometrics_to_turtle(json: &str) -> Result<String, String> {
     let arr: Vec<Value> = serde_json::from_str(json).map_err(|e| e.to_string())?;
     let mut out = generate_rdf_prefixes();
     for rec in &arr {
-        let id    = rec["id"].as_str().unwrap_or("unknown");
+        let id = rec["id"].as_str().unwrap_or("unknown");
         let btype = rec["type"].as_str().unwrap_or("unknown");
-        let subj  = format!("<urn:wf:biometric:{}>", id);
-        out.push_str(&format!("{} a wf:BiometricRecord , fhir:Observation ;\n", subj));
+        let subj = format!("<urn:wf:biometric:{}>", id);
+        out.push_str(&format!(
+            "{} a wf:BiometricRecord , fhir:Observation ;\n",
+            subj
+        ));
         out.push_str(&format!("    wf:biometricType {:?} ;\n", btype));
         if let Some(v) = rec["date"].as_str() {
-            out.push_str(&format!("    fhir:Observation.effectiveDateTime {:?}^^xsd:dateTime ;\n", v));
+            out.push_str(&format!(
+                "    fhir:Observation.effectiveDateTime {:?}^^xsd:dateTime ;\n",
+                v
+            ));
         }
         if let Some(v) = rec["value"].as_f64() {
             out.push_str(&format!("    fhir:Observation.valueQuantity {} ;\n", v));
@@ -124,14 +130,25 @@ pub fn weight_to_turtle(records: &[WeightRecord]) -> String {
         out.push_str("    prov:wasDerivedFrom <urn:health:source:samsung-health-export> ;\n");
         out.push_str("    prov:wasGeneratedBy <urn:wellfair:agent:health-to-solid> ;\n");
         out.push_str("    schema:description \"Samsung Health CSV export\" ;\n");
-        out.push_str(&format!("    fhir:Observation.effectiveDateTime \"{}\"^^xsd:dateTime ;\n", rec.start_datetime.to_rfc3339()));
-        out.push_str(&format!("    fhir:Observation.valueQuantity {} ;\n", rec.weight));
+        out.push_str(&format!(
+            "    fhir:Observation.effectiveDateTime \"{}\"^^xsd:dateTime ;\n",
+            rec.start_datetime.to_rfc3339()
+        ));
+        out.push_str(&format!(
+            "    fhir:Observation.valueQuantity {} ;\n",
+            rec.weight
+        ));
         out.push_str("    qudt:unit qudt-unit:Pound_Lb ;\n");
         out.push_str("    schema:unitCode \"Pound_Lb\" ;\n");
-        out.push_str("    health:semanticReference fhir:Observation.valueQuantity , snomed:27113001 .\n\n");
+        out.push_str(
+            "    health:semanticReference fhir:Observation.valueQuantity , snomed:27113001 .\n\n",
+        );
 
         if let Some(body_fat) = rec.body_fat {
-            out.push_str(&format!("{} health:bodyFatPercentage {} ;\n", subj, body_fat));
+            out.push_str(&format!(
+                "{} health:bodyFatPercentage {} ;\n",
+                subj, body_fat
+            ));
             out.push_str("    qudt:unit qudt-unit:Percent ;\n");
             out.push_str("    schema:unitCode \"Percent\" .\n\n");
         }
@@ -141,12 +158,18 @@ pub fn weight_to_turtle(records: &[WeightRecord]) -> String {
             out.push_str("    schema:unitCode \"Kilogram\" .\n\n");
         }
         if let Some(body_water) = rec.body_water {
-            out.push_str(&format!("{} health:bodyWaterPercentage {} ;\n", subj, body_water));
+            out.push_str(&format!(
+                "{} health:bodyWaterPercentage {} ;\n",
+                subj, body_water
+            ));
             out.push_str("    qudt:unit qudt-unit:Percent ;\n");
             out.push_str("    schema:unitCode \"Percent\" .\n\n");
         }
         if let Some(skeletal_muscle) = rec.skeletal_muscle {
-            out.push_str(&format!("{} health:skeletalMuscleMassKg {} ;\n", subj, skeletal_muscle));
+            out.push_str(&format!(
+                "{} health:skeletalMuscleMassKg {} ;\n",
+                subj, skeletal_muscle
+            ));
             out.push_str("    qudt:unit qudt-unit:Kilogram ;\n");
             out.push_str("    schema:unitCode \"Kilogram\" .\n\n");
         }
@@ -171,12 +194,27 @@ pub fn sleep_to_turtle(records: &[SleepRecord]) -> String {
         out.push_str("    prov:wasDerivedFrom <urn:health:source:samsung-health-export> ;\n");
         out.push_str("    prov:wasGeneratedBy <urn:wellfair:agent:health-to-solid> ;\n");
         out.push_str("    schema:description \"Samsung Health CSV export\" ;\n");
-        out.push_str(&format!("    fhir:Observation.effectivePeriod.start \"{}\"^^xsd:dateTime ;\n", rec.start_datetime.to_rfc3339()));
-        out.push_str(&format!("    fhir:Observation.effectivePeriod.end \"{}\"^^xsd:dateTime ;\n", rec.end_datetime.to_rfc3339()));
-        out.push_str(&format!("    fhir:Observation.valueQuantity \"PT{}M\"^^xsd:duration ;\n", rec.sleep_duration as u64));
+        out.push_str(&format!(
+            "    fhir:Observation.effectivePeriod.start \"{}\"^^xsd:dateTime ;\n",
+            rec.start_datetime.to_rfc3339()
+        ));
+        out.push_str(&format!(
+            "    fhir:Observation.effectivePeriod.end \"{}\"^^xsd:dateTime ;\n",
+            rec.end_datetime.to_rfc3339()
+        ));
+        out.push_str(&format!(
+            "    fhir:Observation.valueQuantity \"PT{}M\"^^xsd:duration ;\n",
+            rec.sleep_duration as u64
+        ));
         out.push_str("    qudt:unit qudt-unit:Minute ;\n");
-        out.push_str(&format!("    health:sleepHours {} ;\n", rec.sleep_duration / 60.0));
-        out.push_str(&format!("    health:sleepEfficiency {} ;\n", rec.efficiency));
+        out.push_str(&format!(
+            "    health:sleepHours {} ;\n",
+            rec.sleep_duration / 60.0
+        ));
+        out.push_str(&format!(
+            "    health:sleepEfficiency {} ;\n",
+            rec.efficiency
+        ));
         out.push_str("    health:semanticReference fhir:Observation.valueQuantity .\n\n");
 
         if let Some(deep) = rec.deep_sleep {
@@ -216,8 +254,14 @@ pub fn heart_rate_to_turtle(records: &[HeartRateRecord]) -> String {
         out.push_str("    prov:wasDerivedFrom <urn:health:source:samsung-health-export> ;\n");
         out.push_str("    prov:wasGeneratedBy <urn:wellfair:agent:health-to-solid> ;\n");
         out.push_str("    schema:description \"Samsung Health CSV export\" ;\n");
-        out.push_str(&format!("    fhir:Observation.effectiveDateTime \"{}\"^^xsd:dateTime ;\n", rec.start_datetime.to_rfc3339()));
-        out.push_str(&format!("    fhir:Observation.valueQuantity {} ;\n", rec.heart_rate));
+        out.push_str(&format!(
+            "    fhir:Observation.effectiveDateTime \"{}\"^^xsd:dateTime ;\n",
+            rec.start_datetime.to_rfc3339()
+        ));
+        out.push_str(&format!(
+            "    fhir:Observation.valueQuantity {} ;\n",
+            rec.heart_rate
+        ));
         out.push_str("    qudt:unit qudt-unit:BeatsPerMinute ;\n");
         out.push_str("    health:semanticReference fhir:Observation.valueQuantity , snomed:364075005 , loinc:8867-4 .\n\n");
 
@@ -254,13 +298,25 @@ pub fn steps_to_turtle(records: &[StepRecord]) -> String {
         out.push_str("    prov:wasDerivedFrom <urn:health:source:samsung-health-export> ;\n");
         out.push_str("    prov:wasGeneratedBy <urn:wellfair:agent:health-to-solid> ;\n");
         out.push_str("    schema:description \"Samsung Health CSV export\" ;\n");
-        out.push_str(&format!("    fhir:Observation.effectivePeriod.start \"{}\"^^xsd:dateTime ;\n", rec.start_datetime.to_rfc3339()));
-        out.push_str(&format!("    fhir:Observation.effectivePeriod.end \"{}\"^^xsd:dateTime ;\n", rec.end_datetime.to_rfc3339()));
-        out.push_str(&format!("    fhir:Observation.valueQuantity {} ;\n", rec.count));
+        out.push_str(&format!(
+            "    fhir:Observation.effectivePeriod.start \"{}\"^^xsd:dateTime ;\n",
+            rec.start_datetime.to_rfc3339()
+        ));
+        out.push_str(&format!(
+            "    fhir:Observation.effectivePeriod.end \"{}\"^^xsd:dateTime ;\n",
+            rec.end_datetime.to_rfc3339()
+        ));
+        out.push_str(&format!(
+            "    fhir:Observation.valueQuantity {} ;\n",
+            rec.count
+        ));
         out.push_str("    qudt:unit qudt-unit:Unitless ;\n");
         out.push_str("    health:semanticReference fhir:Observation.valueQuantity .\n\n");
 
-        out.push_str(&format!("{} health:caloriesBurned {} ;\n", subj, rec.calorie));
+        out.push_str(&format!(
+            "{} health:caloriesBurned {} ;\n",
+            subj, rec.calorie
+        ));
         out.push_str("    qudt:unit qudt-unit:Kilocalorie .\n\n");
 
         out.push_str(&format!("{} health:distance {} ;\n", subj, rec.distance));

@@ -16,7 +16,7 @@ fn apply_mlock(mmap: &memmap2::Mmap, mlock: bool) {
     }
 }
 
-#[cfg(not(all(unix, not(target_arch = "wasm32"))))]
+#[cfg(all(not(target_arch = "wasm32"), not(unix)))]
 fn apply_mlock<T>(_mmap: &T, _mlock: bool) {}
 
 #[cfg(not(target_arch = "wasm32"))]

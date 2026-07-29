@@ -110,7 +110,9 @@ pub async fn execute_diffusion_pass(graph: &mut [NQuin]) -> Result<(), String> {
     let _ = device.poll(wgpu::PollType::wait_indefinitely());
 
     if let Ok(Ok(())) = rx.recv() {
-        let data = buffer_slice.get_mapped_range().expect("wgpu buffer map_range failed");
+        let data = buffer_slice
+            .get_mapped_range()
+            .expect("wgpu buffer map_range failed");
         let out_quins: &[NQuin] = bytemuck::cast_slice(&data);
         graph.copy_from_slice(out_quins);
         drop(data);

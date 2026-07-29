@@ -25,80 +25,140 @@
     <link rel="stylesheet" href="css/site-nav.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
+        :root {
+            --safe-top: env(safe-area-inset-top, 0px);
+            --safe-bottom: env(safe-area-inset-bottom, 0px);
+        }
         body { font-family: 'Inter', system-ui, sans-serif; }
         .glass { background: rgba(255,255,255,0.05); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.10); }
         .glass-strong { background: rgba(255,255,255,0.07); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.13); }
-        #token-stream { white-space: pre-wrap; font-family: 'JetBrains Mono', 'Fira Code', monospace; font-size: 0.82rem; line-height: 1.6; min-height: 120px; }
-        .mode-tab { cursor: pointer; padding: 0.4rem 1rem; border-radius: 9999px; font-size: 0.8rem; transition: background 0.15s; }
+        #token-stream { white-space: pre-wrap; font-family: 'JetBrains Mono', 'Fira Code', monospace; font-size: 0.82rem; line-height: 1.6; min-height: 80px; }
+        .mode-tab { cursor: pointer; padding: 0.45rem 0.9rem; border-radius: 9999px; font-size: 0.8rem; transition: background 0.15s; touch-action: manipulation; }
         .mode-tab.active { background: rgba(99,102,241,0.25); color: #a5b4fc; }
         .mode-tab:not(.active) { color: #94a3b8; }
         .mode-tab:not(.active):hover { background: rgba(255,255,255,0.06); }
-        .progress-bar { height: 4px; background: rgba(255,255,255,0.08); border-radius: 9999px; overflow: hidden; }
+        .progress-bar { height: 6px; background: rgba(255,255,255,0.08); border-radius: 9999px; overflow: hidden; }
         .progress-fill { height: 100%; background: linear-gradient(90deg, #6366f1, #06b6d4); border-radius: 9999px; transition: width 0.3s; }
         .sparql-result { border-left: 3px solid #6366f1; background: rgba(99,102,241,0.07); }
         .wikidata-result { border-left: 3px solid #06b6d4; background: rgba(6,182,212,0.07); }
         textarea:focus { outline: none; }
         pre { overflow-x: auto; }
+        #load-btn, #send-btn, #unload-btn { min-height: 44px; touch-action: manipulation; }
+        #user-input { font-size: 16px; } /* prevent iOS zoom-on-focus */
+
+        /* Mobile: chat-first, collapsible setup, sticky composer above keyboard */
+        @media (max-width: 900px) {
+            .llm-nav-inner { padding-left: 0.75rem; padding-right: 0.75rem; }
+            .llm-page {
+                padding: 0.75rem 0.75rem calc(1rem + var(--safe-bottom)) !important;
+                gap: 0.75rem !important;
+            }
+            .llm-config.collapsed > *:not(.llm-config-toggle) { display: none !important; }
+            .llm-config-toggle {
+                display: flex !important;
+                width: 100%;
+                align-items: center;
+                justify-content: space-between;
+                gap: 0.5rem;
+                padding: 0.85rem 1rem;
+                border-radius: 1rem;
+                background: rgba(255,255,255,0.06);
+                border: 1px solid rgba(255,255,255,0.12);
+                color: #e4e4e7;
+                font-weight: 600;
+                font-size: 0.9rem;
+                touch-action: manipulation;
+            }
+            .chat-panel {
+                min-height: calc(100dvh - 10rem);
+                display: flex;
+                flex-direction: column;
+            }
+            #chat-messages {
+                flex: 1 1 auto;
+                max-height: none !important;
+                min-height: 40dvh !important;
+            }
+            .chat-composer {
+                position: sticky;
+                bottom: 0;
+                z-index: 20;
+                margin: 0 -0.25rem;
+                padding: 0.5rem 0.25rem calc(0.35rem + var(--safe-bottom));
+                background: linear-gradient(to top, rgba(9,9,11,0.98) 70%, rgba(9,9,11,0));
+            }
+            .badge-mobile-hide { display: none !important; }
+            details.llm-advanced summary { cursor: pointer; list-style: none; }
+            details.llm-advanced summary::-webkit-details-marker { display: none; }
+        }
+        @media (min-width: 901px) {
+            .llm-config-toggle { display: none !important; }
+            .llm-config.collapsed > * { display: revert !important; }
+        }
     </style>
     <script src="js/menu-loader.js"></script></head>
 <body class="bg-zinc-950 text-zinc-200 min-h-screen">
 
 <!-- Nav -->
-<nav class="sticky top-0 z-50 border-b border-white/10" style="background:rgba(17,23,31,0.88);backdrop-filter:blur(32px)">
-    <div class="max-w-screen-2xl mx-auto px-8">
-        <div class="flex items-center justify-between h-16">
-            <div class="flex items-center gap-8">
-                <a href="index.html" class="flex items-center gap-3">
+<nav class="sticky top-0 z-50 border-b border-white/10" style="background:rgba(17,23,31,0.88);backdrop-filter:blur(32px);padding-top:var(--safe-top)">
+    <div class="max-w-screen-2xl mx-auto llm-nav-inner px-4 sm:px-8">
+        <div class="flex items-center justify-between gap-2 min-h-[3.5rem] py-2">
+            <div class="flex items-center gap-3 sm:gap-8 min-w-0 flex-1">
+                <a href="index.html" class="flex items-center gap-2 sm:gap-3 shrink-0">
                     <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-cyan-400 rounded-xl flex items-center justify-center">
                         <span class="text-black font-bold text-xl">Q</span>
                     </div>
-                    <div><span class="font-semibold tracking-tight text-xl">Qualia</span><span class="text-blue-400 text-xl">DB</span></div>
+                    <div class="hidden sm:block"><span class="font-semibold tracking-tight text-xl">Qualia</span><span class="text-blue-400 text-xl">DB</span></div>
                 </a>
-                <div id="dynamic-nav" class="relative flex items-center text-sm">
+                <div id="dynamic-nav" class="relative flex items-center text-sm min-w-0">
                     <!-- Navigation loaded dynamically by menu-loader.js -->
                 </div>
             </div>
-            <div class="flex items-center gap-3 text-xs">
-                <button id="install-btn" onclick="installApp()" class="hidden px-3 py-1.5 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white border border-indigo-400/30 items-center gap-1.5 transition-colors">
-                    <i class="fas fa-mobile-screen-button"></i> Install app
+            <div class="flex items-center gap-2 text-xs shrink-0">
+                <button id="install-btn" onclick="installApp()" class="hidden px-2.5 sm:px-3 py-1.5 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white border border-indigo-400/30 items-center gap-1.5 transition-colors">
+                    <i class="fas fa-mobile-screen-button"></i><span class="hidden sm:inline"> Install</span>
                 </button>
-                <div id="model-badge" class="px-3 py-1.5 rounded-2xl bg-slate-800 text-slate-400 border border-slate-700">No model loaded</div>
-                <div id="daemon-badge" class="px-3 py-1.5 rounded-2xl bg-slate-800 text-slate-400 border border-slate-700">Daemon offline</div>
+                <div id="model-badge" class="px-2 sm:px-3 py-1.5 rounded-2xl bg-slate-800 text-slate-400 border border-slate-700 max-w-[9rem] sm:max-w-none truncate">No model</div>
+                <div id="daemon-badge" class="badge-mobile-hide px-3 py-1.5 rounded-2xl bg-slate-800 text-slate-400 border border-slate-700">Daemon offline</div>
             </div>
         </div>
     </div>
 </nav>
 
-<div class="max-w-screen-2xl mx-auto px-8 pt-10 pb-16 grid grid-cols-1 xl:grid-cols-3 gap-8">
+<div class="max-w-screen-2xl mx-auto llm-page px-4 sm:px-8 pt-6 sm:pt-10 pb-16 grid grid-cols-1 xl:grid-cols-3 gap-6 sm:gap-8">
 
-    <!-- Left: Config Panel -->
-    <div class="xl:col-span-1 flex flex-col gap-6">
+    <!-- Left: Config Panel (collapsible on mobile) -->
+    <div class="xl:col-span-1 flex flex-col gap-4 sm:gap-6 llm-config collapsed" id="llm-config">
+        <button type="button" class="llm-config-toggle" id="llm-config-toggle" aria-expanded="false" aria-controls="llm-config">
+            <span><i class="fas fa-sliders mr-2 text-indigo-400"></i>Setup · model &amp; sources</span>
+            <i class="fas fa-chevron-down text-zinc-500" id="llm-config-chevron"></i>
+        </button>
 
         <!-- Model Loader -->
-        <div class="glass-strong rounded-3xl p-6">
-            <h2 class="font-semibold text-lg mb-4 flex items-center gap-2">
+        <div class="glass-strong rounded-3xl p-4 sm:p-6">
+            <h2 class="font-semibold text-lg mb-3 sm:mb-4 flex items-center gap-2">
                 <i class="fas fa-microchip text-indigo-400"></i> Model
             </h2>
+            <div id="engine-status" class="mb-3 rounded-xl border border-zinc-700/80 bg-zinc-900/60 px-3 py-2 text-xs text-zinc-400">
+                Starting WASM engine…
+            </div>
+            <div id="mobile-model-hint" class="hidden mb-3 rounded-xl border border-cyan-500/30 bg-cyan-500/10 px-3 py-2.5 text-xs leading-relaxed text-cyan-100"></div>
             <!-- WebGPU capability notice — populated by checkWebgpuSupport() so unsupported devices
                  (esp. some Android browsers) get a clear message instead of a silent stall. -->
             <div id="webgpu-notice" class="hidden mb-4 rounded-xl border px-3 py-2.5 text-xs leading-relaxed"></div>
             <div class="space-y-3 mb-4">
-                <label class="block text-xs text-zinc-400 mb-1">Select GGUF</label>
+                <label class="block text-xs text-zinc-400 mb-1">Select release model (P64)</label>
                 <select id="model-select" class="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-sm text-zinc-200 focus:border-indigo-500 focus:outline-none">
-                    <!-- SmolLM2-360M is the verified browser model (same one the llmdemo runs). Larger
-                         models are offered but flagged experimental: 1B+ configs currently trip a prefill
-                         buffer limit in-browser, and Gemma-3 is a gated download + a non-llama arch. -->
-                    <option value="https://huggingface.co/bartowski/SmolLM2-360M-Instruct-GGUF/resolve/main/SmolLM2-360M-Instruct-Q4_K_M.gguf" data-name="SmolLM2-360M Q4_K_M (~270 MB)" data-format="chatml" selected>SmolLM2 360M Instruct Q4_K_M — recommended</option>
-                    <option value="https://huggingface.co/HuggingFaceTB/SmolLM2-1.7B-Instruct-GGUF/resolve/main/smollm2-1.7b-instruct-q4_k_m.gguf" data-name="SmolLM2-1.7B Q4_K_M (~1.2 GB)" data-format="chatml">SmolLM2 1.7B Instruct Q4_K_M — experimental</option>
-                    <option value="https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct-GGUF/resolve/main/qwen2.5-1.5b-instruct-q4_k_m.gguf" data-name="Qwen2.5-1.5B Q4_K_M (~1.1 GB)" data-format="chatml">Qwen 2.5 1.5B Instruct Q4_K_M — experimental</option>
-                    <option value="https://huggingface.co/bartowski/Llama-3.2-1B-Instruct-GGUF/resolve/main/Llama-3.2-1B-Instruct-Q4_K_M.gguf" data-name="Llama-3.2-1B Q4_K_M (~850 MB)" data-format="chatml">Llama 3.2 1B Instruct Q4_K_M — experimental</option>
-                    <option value="https://huggingface.co/bartowski/Llama-3.2-3B-Instruct-GGUF/resolve/main/Llama-3.2-3B-Instruct-Q4_K_M.gguf" data-name="Llama-3.2-3B Q4_K_M (~2.0 GB)" data-format="chatml">Llama 3.2 3B Instruct Q4_K_M — experimental</option>
-                    <option value="https://huggingface.co/google/gemma-3-1b-it-qat-q4_0-gguf/resolve/main/gemma-3-1b-it-q4_0.gguf" data-name="Gemma-3-1B Q4_0 (~570 MB)" data-format="gemma3">Gemma 3 1B Instruct Q4_0 — gated · arch unsupported</option>
+                    <option value="https://github.com/mediaprophet/qualiaDB/releases/download/v0.0.24/SmolLM2-360M-Instruct-Q4_K_M.p64" data-gguf="https://huggingface.co/bartowski/SmolLM2-360M-Instruct-GGUF/resolve/main/SmolLM2-360M-Instruct-Q4_K_M.gguf" data-q42="https://github.com/mediaprophet/qualiaDB/releases/download/v0.0.24/SmolLM2-360M-Instruct-Q4_K_M.q42" data-name="SmolLM2-360M Q4_K_M P64 (~258 MB)" data-format="chatml" selected>SmolLM2 360M Instruct Q4_K_M — recommended</option>
+                    <option value="https://github.com/mediaprophet/qualiaDB/releases/download/v0.0.24/smollm2-1.7b-instruct-q4_k_m.p64" data-gguf="https://huggingface.co/HuggingFaceTB/SmolLM2-1.7B-Instruct-GGUF/resolve/main/smollm2-1.7b-instruct-q4_k_m.gguf" data-q42="https://github.com/mediaprophet/qualiaDB/releases/download/v0.0.24/smollm2-1.7b-instruct-q4_k_m.q42" data-name="SmolLM2-1.7B Q4_K_M P64 (~1.0 GB)" data-format="chatml">SmolLM2 1.7B Instruct Q4_K_M — experimental</option>
+                    <option value="models/smollm2-360m-instruct-q8_0.gguf" data-gguf="models/smollm2-360m-instruct-q8_0.gguf" data-name="SmolLM2-360M Instruct Q8_0 (local ~386 MB)" data-format="chatml">SmolLM2 360M Instruct Q8_0 — local</option>
+                    <option value="https://github.com/mediaprophet/qualiaDB/releases/download/v0.0.24/Llama-3.2-1B-Instruct-Q4_K_M.p64" data-gguf="https://huggingface.co/bartowski/Llama-3.2-1B-Instruct-GGUF/resolve/main/Llama-3.2-1B-Instruct-Q4_K_M.gguf" data-q42="https://github.com/mediaprophet/qualiaDB/releases/download/v0.0.24/Llama-3.2-1B-Instruct-Q4_K_M.q42" data-name="Llama-3.2-1B Q4_K_M P64 (~769 MB)" data-format="llama3">Llama 3.2 1B Instruct Q4_K_M — experimental</option>
+                    <option value="https://github.com/mediaprophet/qualiaDB/releases/download/v0.0.24/llama-3.2-3b-instruct-q4_k_m.p64" data-gguf="https://huggingface.co/hugging-quants/Llama-3.2-3B-Instruct-Q4_K_M-GGUF/resolve/main/llama-3.2-3b-instruct-q4_k_m.gguf" data-q42="https://github.com/mediaprophet/qualiaDB/releases/download/v0.0.24/llama-3.2-3b-instruct-q4_k_m.q42" data-name="Llama-3.2-3B Q4_K_M P64 (~1.9 GB)" data-format="llama3">Llama 3.2 3B Instruct Q4_K_M — experimental</option>
                 </select>
-                <label class="block text-xs text-zinc-400 mt-3 mb-1">Or load a local GGUF file</label>
-                <input type="file" id="local-model-file" accept=".gguf" multiple
+                <label class="block text-xs text-zinc-400 mt-3 mb-1">Or load a local P64 / GGUF file</label>
+                <input type="file" id="local-model-file" accept=".p64,.gguf" multiple
                     class="w-full text-xs text-zinc-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-zinc-800 file:text-zinc-200 hover:file:bg-zinc-700">
-                <p class="text-xs text-zinc-500 leading-relaxed">GGUF weights only. Inference runs through Qualia's native WebGPU engine (<code class="text-zinc-400">qualia_core_db_bg.wasm</code>). LiteRT-LM / TFLite not supported.</p>
+                <p class="text-xs text-zinc-500 leading-relaxed">Release models are precompiled P64 weights paired with canonical Q42 metadata packages. Local GGUF remains supported and is compiled once on-device. Inference runs through Qualia's native WebGPU engine (<code class="text-zinc-400">qualia_core_db_bg.wasm</code>).</p>
             </div>
             <div class="progress-bar mb-2" id="dl-progress-wrap" style="display:none">
                 <div class="progress-fill" id="dl-progress" style="width:0%"></div>
@@ -113,7 +173,7 @@
         </div>
 
         <!-- Data Sources -->
-        <div class="glass-strong rounded-3xl p-6">
+        <div class="glass-strong rounded-3xl p-4 sm:p-6">
             <h2 class="font-semibold text-lg mb-4 flex items-center gap-2">
                 <i class="fas fa-database text-cyan-400"></i> Data Sources
             </h2>
@@ -145,7 +205,7 @@
         </div>
 
         <!-- Mode Selector -->
-        <div class="glass-strong rounded-3xl p-6">
+        <div class="glass-strong rounded-3xl p-4 sm:p-6">
             <h2 class="font-semibold text-lg mb-3 flex items-center gap-2">
                 <i class="fas fa-sliders text-purple-400"></i> Mode
             </h2>
@@ -160,60 +220,68 @@
             </div>
         </div>
 
-        <!-- System Prompt -->
-        <div class="glass-strong rounded-3xl p-6">
-            <div class="flex items-center justify-between mb-3">
-                <h2 class="font-semibold text-sm flex items-center gap-2"><i class="fas fa-scroll text-amber-400"></i> System Prompt</h2>
-                <button onclick="resetSystemPrompt()" class="text-xs text-zinc-500 hover:text-zinc-300">Reset</button>
-            </div>
-            <textarea id="system-prompt" rows="6"
-                class="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-xs text-zinc-300 resize-none focus:border-indigo-500"
+        <!-- System Prompt (collapsed by default on small screens via details) -->
+        <details class="glass-strong rounded-3xl p-4 sm:p-6 llm-advanced group">
+            <summary class="font-semibold text-sm flex items-center justify-between gap-2">
+                <span class="flex items-center gap-2"><i class="fas fa-scroll text-amber-400"></i> System Prompt</span>
+                <span class="flex items-center gap-2">
+                    <button type="button" onclick="event.preventDefault();resetSystemPrompt()" class="text-xs text-zinc-500 hover:text-zinc-300">Reset</button>
+                    <i class="fas fa-chevron-down text-zinc-600 group-open:rotate-180 transition-transform"></i>
+                </span>
+            </summary>
+            <textarea id="system-prompt" rows="5"
+                class="mt-3 w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-xs text-zinc-300 resize-none focus:border-indigo-500"
             ></textarea>
-        </div>
+        </details>
     </div>
 
     <!-- Right: Chat + Results -->
-    <div class="xl:col-span-2 flex flex-col gap-6">
+    <div class="xl:col-span-2 flex flex-col gap-4 sm:gap-6">
 
         <!-- Chat Window -->
-        <div class="glass-strong rounded-3xl p-6 flex flex-col gap-4">
-            <div class="flex items-center justify-between">
-                <h2 class="font-semibold text-lg flex items-center gap-2">
+        <div class="glass-strong rounded-3xl p-4 sm:p-6 flex flex-col gap-3 sm:gap-4 chat-panel">
+            <div class="flex items-center justify-between gap-2">
+                <h2 class="font-semibold text-base sm:text-lg flex items-center gap-2">
                     <i class="fas fa-comments text-indigo-400"></i> Conversation
                 </h2>
-                <button onclick="clearChat()" class="text-xs text-zinc-500 hover:text-zinc-300 flex items-center gap-1">
+                <button onclick="clearChat()" class="text-xs text-zinc-500 hover:text-zinc-300 flex items-center gap-1 px-2 py-1">
                     <i class="fas fa-trash-alt"></i> Clear
                 </button>
             </div>
 
             <!-- Messages -->
             <div id="chat-messages" class="space-y-4 min-h-[200px] max-h-[400px] overflow-y-auto pr-1">
-                <div class="text-xs text-zinc-600 text-center pt-8">Load a model and start chatting.</div>
+                <div class="text-xs text-zinc-500 text-center pt-6 px-2 leading-relaxed">
+                    1) Open <strong class="text-zinc-300">Setup</strong> (phones) · 2) Tap <strong class="text-zinc-300">Load Model</strong> · 3) Chat fully on-device via WebGPU.
+                </div>
             </div>
 
             <!-- Streaming Output (active generation) -->
             <div id="stream-wrap" class="hidden glass rounded-2xl p-4">
                 <div class="text-xs text-indigo-400 mb-2 flex items-center gap-2">
                     <span class="inline-block w-2 h-2 rounded-full bg-indigo-400 animate-pulse"></span>
-                    Generating…
+                    <span id="gen-status">Generating…</span>
                 </div>
                 <div id="token-stream" class="text-zinc-300"></div>
             </div>
 
-            <!-- Input -->
-            <div class="flex gap-3 mt-2">
-                <textarea id="user-input" rows="2" placeholder="Ask anything… or type a SPARQL query / entity lookup in the selected mode."
-                    class="flex-1 bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-3 text-sm text-zinc-200 resize-none focus:border-indigo-500 placeholder:text-zinc-600"
-                    onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMessage();}"
-                ></textarea>
-                <button id="send-btn" onclick="sendMessage()" disabled
-                    class="px-5 py-3 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed rounded-xl font-semibold text-sm transition-colors self-end flex items-center gap-2">
-                    <i class="fas fa-paper-plane"></i>
-                </button>
-            </div>
-            <div class="flex items-center gap-4 text-xs text-zinc-600">
-                <span>Shift+Enter = newline</span>
-                <span id="token-count" class="ml-auto"></span>
+            <!-- Input (sticky on mobile so keyboard doesn't bury it) -->
+            <div class="chat-composer">
+                <div class="flex gap-2 sm:gap-3">
+                    <textarea id="user-input" rows="2" placeholder="Ask anything…"
+                        enterkeyhint="send"
+                        class="flex-1 bg-zinc-900 border border-zinc-700 rounded-xl px-3 sm:px-4 py-3 text-sm text-zinc-200 resize-none focus:border-indigo-500 placeholder:text-zinc-600"
+                        onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMessage();}"
+                    ></textarea>
+                    <button id="send-btn" onclick="sendMessage()" disabled
+                        class="px-4 sm:px-5 py-3 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed rounded-xl font-semibold text-sm transition-colors self-end flex items-center gap-2">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+                <div class="flex items-center gap-4 text-xs text-zinc-600 mt-1.5 px-0.5">
+                    <span class="hidden sm:inline">Shift+Enter = newline</span>
+                    <span id="token-count" class="ml-auto"></span>
+                </div>
             </div>
         </div>
 
@@ -262,13 +330,13 @@
                 <i class="fas fa-chevron-down text-zinc-600 group-open:rotate-180 transition-transform"></i>
             </summary>
             <div class="mt-4 text-xs text-zinc-400 leading-relaxed space-y-3">
-                <p>The pipeline runs entirely client-side via Qualia's native WASM + WebGPU stack (<code class="text-emerald-300">gguf_bridge</code> → <code class="text-emerald-300">llm_agent</code> Phase 8 decode). No third-party llama.cpp bindings. GGUF only — not LiteRT-LM.</p>
+                <p>The pipeline runs entirely client-side via Qualia's native WASM + WebGPU stack (<code class="text-emerald-300">gguf_bridge</code> → <code class="text-emerald-300">llm_agent</code> Phase 8 decode). No third-party llama.cpp bindings. P64/GGUF only — not LiteRT-LM. On phones prefer SmolLM2-360M.</p>
                 <pre class="bg-black/40 rounded-xl p-4 text-emerald-300 overflow-x-auto">
 [ Human Input ]
        │
        ▼
 ┌──────────────────────┐
-│  Gemma 3 1B (WASM)   │ ◄── System prompt with QualiaDB ontologies
+│  Local P64 / WebGPU  │ ◄── System prompt with QualiaDB ontologies
 └──────────┬───────────┘
            │ Emits SPARQL query or JSON-LD
            ▼
@@ -278,9 +346,9 @@
            │ Returns semantic bindings
            ▼
 ┌──────────────────────┐
-│  Gemma 3 1B (WASM)   │ ──► Natural language answer + JSON-LD node
+│  SmolLM2 / Llama 3   │ ──► Natural language answer + JSON-LD node
 └──────────────────────┘</pre>
-                <p>If the SPARQL query fails validation, the error is fed back to the model for self-correction (up to 3 retries). Token streaming uses <code class="text-emerald-300">inferWasmStreaming</code> with inline Sentinel checks (0x99 anachronism byte).</p>
+                <p>If the SPARQL query fails validation, the error is fed back to the model for self-correction (up to 3 retries). Token streaming uses <code class="text-emerald-300">inferWasmAsync</code> (yields to the event loop each GPU map_async, so the tab stays responsive) with inline Sentinel checks (0x99 anachronism byte).</p>
                 <p><strong class="text-zinc-300">COI note:</strong> The COI service worker at the top of this page injects <code class="text-yellow-300">Cross-Origin-Opener-Policy: same-origin</code> and <code class="text-yellow-300">Cross-Origin-Embedder-Policy: require-corp</code> headers on reload, enabling SharedArrayBuffer for multi-threaded WASM inference.</p>
             </div>
         </details>
@@ -290,20 +358,31 @@
 <script type="module">
 import init, {
     initialize_webgpu_engine,
-    inferWasmStreaming,
+    inferWasmAsync,
     releaseWebgpuEngine,
     isWebgpuEngineReady,
     getEngineVersion,
     compileGgufToP64,
     p64FormatVersion,
 } from './playground/qualia_core_db.js';
+// Optional: only present after wasm rebuild that includes getResidentTokenizerVocab.
+import * as QualiaWasm from './playground/qualia_core_db.js';
 import { loadGgufCached, loadOrCompileP64 } from './js/opfs-model-cache.js';
+
+function residentTokenizerVocab() {
+    try {
+        const fn = QualiaWasm.getResidentTokenizerVocab;
+        return typeof fn === 'function' ? (fn() | 0) : 0;
+    } catch {
+        return 0;
+    }
+}
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const QUALIA_SPARQL = 'http://localhost:4242/query';
 const WIKIDATA_SPARQL = 'https://query.wikidata.org/sparql';
-const USER_AGENT = 'QualiaDB-OnlineLLMDemo/0.0.23 (https://github.com/mediaprophet/qualiaDB)';
+const USER_AGENT = 'QualiaDB-OnlineLLMDemo/0.0.27 (https://github.com/mediaprophet/qualiaDB)';
 
 const QUALIA_ONTOLOGY = `
 # QualiaDB Ontology Prefixes
@@ -343,12 +422,25 @@ Format: output one SPARQL query per entity, separated by --- markers. No other t
 // ── State ─────────────────────────────────────────────────────────────────────
 
 let wasmReady = false;
+let wasmBootError = null;
+/** @type {Promise<void>|null} */
+let wasmReadyPromise = null;
 let modelLoaded = false;
 let currentMode = 'chat';
 let messages = []; // {role, content}
 let isGenerating = false;
 let lastSparql = '';
 let lastJsonLd = '';
+let loadInFlight = false;
+
+const isMobileDevice = () =>
+    /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || '') ||
+    (navigator.maxTouchPoints > 1 && Math.min(screen.width, screen.height) < 900);
+
+const deviceMemoryGb = () => {
+    const m = navigator.deviceMemory;
+    return typeof m === 'number' && m > 0 ? m : null;
+};
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
 
@@ -366,18 +458,145 @@ window.resetSystemPrompt = () => { document.getElementById('system-prompt').valu
 document.getElementById('system-prompt').value = SYSTEM_PROMPTS.chat;
 checkWebgpuSupport();
 setupInstall();
+setupMobileConfigToggle();
+applyMobileModelPolicy();
 bootWasm();
 checkDaemon();
 
-async function bootWasm() {
-    try {
-        await init();
-        wasmReady = true;
-        const ver = getEngineVersion?.() ?? 'unknown';
-        appendSystem(`Qualia WASM engine v${ver} ready. Load a GGUF model to begin.`);
-    } catch (err) {
-        showDlStatus(`WASM init failed: ${err.message}`);
+function setEngineStatus(msg, kind) {
+    const el = document.getElementById('engine-status');
+    if (!el) return;
+    el.textContent = msg;
+    el.className = 'mb-3 rounded-xl border px-3 py-2 text-xs ' + (
+        kind === 'ok' ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-200'
+        : kind === 'error' ? 'border-rose-500/40 bg-rose-500/10 text-rose-200'
+        : kind === 'warn' ? 'border-amber-500/40 bg-amber-500/10 text-amber-100'
+        : 'border-zinc-700/80 bg-zinc-900/60 text-zinc-400'
+    );
+}
+
+function setupMobileConfigToggle() {
+    const cfg = document.getElementById('llm-config');
+    const btn = document.getElementById('llm-config-toggle');
+    const chev = document.getElementById('llm-config-chevron');
+    if (!cfg || !btn) return;
+    btn.addEventListener('click', () => {
+        // collapsed present ⇒ panel closed. Toggle the class, then recompute openness.
+        cfg.classList.toggle('collapsed');
+        const isOpen = !cfg.classList.contains('collapsed');
+        btn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+        if (chev) chev.style.transform = isOpen ? 'rotate(180deg)' : '';
+        if (isOpen) {
+            document.getElementById('load-btn')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        }
+    });
+    // Desktop: never keep collapsed
+    const mq = window.matchMedia('(min-width: 901px)');
+    const sync = () => {
+        if (mq.matches) {
+            cfg.classList.remove('collapsed');
+            btn.setAttribute('aria-expanded', 'true');
+        }
+    };
+    mq.addEventListener?.('change', sync);
+    sync();
+}
+
+/** Prefer the small model on phones / low-RAM devices; hide multi‑GB options that OOM browsers. */
+function applyMobileModelPolicy() {
+    const sel = document.getElementById('model-select');
+    const hint = document.getElementById('mobile-model-hint');
+    if (!sel) return;
+    const mem = deviceMemoryGb();
+    const mobile = isMobileDevice();
+    const lowRam = mem != null && mem <= 4;
+    if (!mobile && !lowRam) return;
+
+    // Mark heavy options; keep them but discourage (don't remove — user may still try on a flagship).
+    for (const opt of sel.options) {
+        const name = (opt.dataset.name || opt.textContent || '').toLowerCase();
+        const heavy = /1\.7b|1\.5b|3b|769 mb|1\.0 gb|1\.1 gb|1\.9 gb/i.test(name + ' ' + opt.textContent);
+        if (heavy) {
+            opt.textContent = opt.textContent.replace(/\s*—\s*.*$/, '') + ' — heavy for this device';
+            if (mem != null && mem <= 2) opt.disabled = true;
+        }
     }
+    // Force recommended 360M selected
+    const preferred = [...sel.options].find(o => /360M/i.test(o.dataset.name || o.textContent || ''));
+    if (preferred) sel.value = preferred.value;
+
+    if (hint) {
+        hint.classList.remove('hidden');
+        const memTxt = mem != null ? ` This browser reports ~${mem} GB deviceMemory.` : '';
+        hint.innerHTML =
+            `<strong>Phone / low-RAM path.</strong> Use <em>SmolLM2 360M</em> (~258 MB). ` +
+            `Larger models often kill the tab (the engine currently materialises weights in JS heap).` +
+            `${memTxt} Stay on Wi‑Fi; first load downloads once and caches in OPFS.`;
+    }
+}
+
+async function bootWasm() {
+    setEngineStatus('Starting WASM engine…', 'info');
+    const loadBtn = document.getElementById('load-btn');
+    if (loadBtn && navigator.gpu) {
+        loadBtn.disabled = true;
+        loadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Engine starting…';
+    }
+
+    // COI service worker reloads once to inject COOP/COEP. If isolation is still missing
+    // after that, multi-thread paths may be limited — surface it instead of silent hang.
+    if (typeof crossOriginIsolated !== 'undefined' && !crossOriginIsolated) {
+        console.warn('[llm-demo] page is not crossOriginIsolated — SharedArrayBuffer may be unavailable');
+        setEngineStatus('COI not active yet (service worker may reload once)…', 'warn');
+    }
+
+    wasmReadyPromise = (async () => {
+        try {
+            await init();
+            wasmReady = true;
+            wasmBootError = null;
+            const ver = getEngineVersion?.() ?? 'unknown';
+            const coi = (typeof crossOriginIsolated !== 'undefined' && crossOriginIsolated)
+                ? ' · COI on'
+                : ' · COI off';
+            setEngineStatus(`WASM engine v${ver} ready${coi}`, 'ok');
+            appendSystem(`Qualia WASM engine v${ver} ready. Load a model to begin.`);
+            if (loadBtn && navigator.gpu) {
+                loadBtn.disabled = false;
+                loadBtn.innerHTML = '<i class="fas fa-download"></i> Load Model';
+            }
+        } catch (err) {
+            wasmReady = false;
+            wasmBootError = err;
+            const msg = err?.message ?? String(err);
+            setEngineStatus(`WASM init failed: ${msg}`, 'error');
+            showDlStatus(`WASM init failed: ${msg}`);
+            if (loadBtn) {
+                loadBtn.disabled = true;
+                loadBtn.innerHTML = '<i class="fas fa-triangle-exclamation"></i> Engine failed';
+            }
+            throw err;
+        }
+    })();
+
+    try {
+        await wasmReadyPromise;
+    } catch {
+        /* surfaced above */
+    }
+}
+
+/** Wait until the engine is ready (or failed). Used so Load Model never silently no-ops. */
+async function ensureWasmReady() {
+    if (wasmReady) return true;
+    if (wasmBootError) throw wasmBootError;
+    if (wasmReadyPromise) {
+        showDlStatus('Waiting for WASM engine…');
+        setEngineStatus('Waiting for WASM engine…', 'warn');
+        await wasmReadyPromise;
+    }
+    if (!wasmReady) throw wasmBootError || new Error('WASM engine is not ready');
+    return true;
 }
 
 function setMode(mode) {
@@ -396,7 +615,16 @@ function setMode(mode) {
 function formatLoadError(err) {
     const msg = err?.message ?? String(err);
     if (/webgpu|adapter/i.test(msg)) {
-        return `${msg} — WebGPU is required for Qualia native inference. Use Chrome/Edge with GPU enabled.`;
+        return `${msg} — WebGPU is required for Qualia native inference. Use Chrome/Edge (Android) or Safari 18+ (iOS) with GPU enabled.`;
+    }
+    if (/out of memory|oom|Array buffer allocation|Invalid array length|Failed to allocate/i.test(msg)) {
+        return `${msg} — the browser ran out of memory. On phones use SmolLM2 360M only, close other tabs, and reload. Larger models need a desktop.`;
+    }
+    if (/fetch\s*0|Failed to fetch|NetworkError|CORS/i.test(msg)) {
+        return `${msg} — download blocked (network/CORS). Try again on Wi‑Fi, or load a local .p64/.gguf file from your device.`;
+    }
+    if (/SharedArrayBuffer|crossOriginIsolated|COOP|COEP/i.test(msg)) {
+        return `${msg} — cross-origin isolation failed. Hard-refresh once so the COI service worker can set isolation headers.`;
     }
     return msg;
 }
@@ -448,7 +676,16 @@ async function downloadGguf(url, label, onProgress) {
 }
 
 async function loadModel() {
-    if (modelLoaded || !wasmReady) return;
+    if (modelLoaded || loadInFlight) return;
+    if (!navigator.gpu) {
+        showDlStatus('Error: WebGPU is not available in this browser — model loading is disabled.');
+        setEngineStatus('WebGPU unavailable — cannot load models', 'error');
+        // Open setup panel so the notice is visible on phones
+        document.getElementById('llm-config')?.classList.remove('collapsed');
+        return;
+    }
+
+    loadInFlight = true;
     const sel = document.getElementById('model-select');
     const localFiles = document.getElementById('local-model-file').files;
     const url = sel.value;
@@ -458,60 +695,139 @@ async function loadModel() {
     document.getElementById('load-btn').innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading…';
     document.getElementById('dl-progress-wrap').style.display = 'block';
     document.getElementById('dl-status').classList.remove('hidden');
+    // Expand setup on mobile so progress is visible
+    document.getElementById('llm-config')?.classList.remove('collapsed');
 
     try {
+        await ensureWasmReady();
+
+        // Soft warn before multi‑GB downloads on phones
+        if (isMobileDevice() && localFiles.length === 0 && /1\.7b|1\.5b|3b/i.test(name || '')) {
+            const ok = confirm(
+                `${name} is large for a phone and often crashes the tab.\n\nContinue anyway?\n\nTip: choose SmolLM2 360M for a reliable mobile path.`,
+            );
+            if (!ok) {
+                document.getElementById('load-btn').disabled = false;
+                document.getElementById('load-btn').innerHTML = '<i class="fas fa-download"></i> Load Model';
+                document.getElementById('dl-progress-wrap').style.display = 'none';
+                showDlStatus('');
+                loadInFlight = false;
+                return;
+            }
+        }
+
         let ggufBytes;
         if (localFiles.length > 0) {
             name = localFiles.length > 1
                 ? `${localFiles[0].name} (+${localFiles.length - 1} shards)`
                 : localFiles[0].name;
             showDlStatus(`Reading local file: ${name}…`);
+            setEngineStatus(`Reading ${name}…`, 'info');
             ggufBytes = await readLocalGguf(localFiles);
             document.getElementById('dl-progress').style.width = '100%';
         } else {
-            // AOT: compile GGUF→P64 once, cache P64 in OPFS, then warm-boot it.
+            // Release P64 files load directly; legacy GGUF URLs still compile once on-device.
             showDlStatus(`Downloading ${name}…`);
-            const { bytes, source } = await loadOrCompileP64(url, url.split('/').pop(), {
+            setEngineStatus(`Downloading ${name}…`, 'info');
+            const cacheOptions = {
                 compile: compileGgufToP64,
                 formatVersion: p64FormatVersion(),
                 onProgress: (loaded, total, phase) => {
                     if (phase === 'p64-hit') {
                         document.getElementById('dl-progress').style.width = '100%';
-                        showDlStatus(`Loaded ${name} from P64 cache`);
+                        showDlStatus(`Loaded ${name} from OPFS cache`);
+                        setEngineStatus('Loaded from OPFS cache', 'ok');
                     } else if (phase === 'download') {
                         const pct = total ? Math.round(loaded / total * 100) : 0;
                         document.getElementById('dl-progress').style.width = `${pct}%`;
-                        showDlStatus(`Downloading ${name}: ${pct}% (${(loaded / 1048576).toFixed(1)} MB)`);
+                        const mb = (loaded / 1048576).toFixed(1);
+                        const tmb = total ? (total / 1048576).toFixed(0) : '?';
+                        showDlStatus(`Downloading ${name}: ${pct}% (${mb}/${tmb} MB)`);
+                        setEngineStatus(`Download ${pct}% · ${mb}/${tmb} MB`, 'info');
                     } else if (phase === 'compile') {
                         showDlStatus(`Compiling ${name} → P64…`);
+                        setEngineStatus('Compiling GGUF → P64…', 'warn');
                     }
                 },
-            });
+            };
+            let loaded;
+            try {
+                loaded = await loadOrCompileP64(url, url.split('/').pop(), cacheOptions);
+            } catch (releaseError) {
+                const fallbackUrl = sel.options[sel.selectedIndex].dataset.gguf;
+                if (!fallbackUrl) throw releaseError;
+                console.warn('[model-loader] Release P64 fetch unavailable; using GGUF fallback:', releaseError);
+                showDlStatus(`Release P64 blocked; falling back to GGUF for ${name}…`);
+                setEngineStatus('Release host blocked — GGUF fallback…', 'warn');
+                loaded = await loadOrCompileP64(fallbackUrl, url.split('/').pop(), cacheOptions);
+            }
+            const { bytes, source } = loaded;
             ggufBytes = bytes;
             showDlStatus(source === 'opfs-p64-hit'
                 ? `Loaded ${name} from P64 cache`
-                : `Compiled ${name} → P64 (cached for next time)`);
+                : source === 'downloaded-p64'
+                    ? `Downloaded precompiled ${name} (cached for next time)`
+                    : `Compiled ${name} → P64 (cached for next time)`);
         }
 
+        // Yield a frame so the UI can paint "Initialising…" before the heavy call.
         showDlStatus('Initialising Qualia WebGPU engine…');
+        setEngineStatus('Initialising WebGPU engine…', 'info');
+        await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0)));
+
         await initialize_webgpu_engine(ggufBytes);
-        if (!isWebgpuEngineReady()) throw new Error('Engine failed to initialise after GGUF load');
+        // Drop the large buffer reference ASAP so GC can reclaim before chat.
+        ggufBytes = null;
+        if (!isWebgpuEngineReady()) throw new Error('Engine failed to initialise after model load');
+
+        // Fail closed in the UI when the resident tokenizer is the 256-byte fallback.
+        // That path used to stream pure garbage while still reporting "ready".
+        // (Requires wasm rebuild that exports getResidentTokenizerVocab; otherwise skipped.)
+        const vocab = residentTokenizerVocab();
+        if (vocab > 0 && vocab < 1000) {
+            try { await releaseWebgpuEngine(); } catch {}
+            throw new Error(
+                `Tokenizer is fallback-only (vocab=${vocab}). This produces garbage text. ` +
+                `Use a release P64 with a Q42T section, or load the original GGUF so the real vocab is parsed. ` +
+                `Clear OPFS cache if an old compile was stored.`
+            );
+        }
+        if (vocab === 0) {
+            console.warn('[loadModel] tokenizer vocab diagnostic unavailable (0) — engine may be pre-diagnostic WASM or Q42T missing');
+        }
 
         modelLoaded = true;
         document.getElementById('dl-progress-wrap').style.display = 'none';
         showDlStatus('');
+        const vocabNote = vocab > 0 ? ` · vocab ${vocab.toLocaleString()}` : '';
+        setEngineStatus(`Model ready — chat below${vocabNote}`, 'ok');
         document.getElementById('model-badge').textContent = name;
-        document.getElementById('model-badge').className = 'px-3 py-1.5 rounded-2xl bg-indigo-500/15 text-indigo-300 border border-indigo-500/30 text-xs';
+        document.getElementById('model-badge').className = 'px-2 sm:px-3 py-1.5 rounded-2xl bg-indigo-500/15 text-indigo-300 border border-indigo-500/30 text-xs max-w-[9rem] sm:max-w-none truncate';
         document.getElementById('load-btn').classList.add('hidden');
         document.getElementById('unload-btn').classList.remove('hidden');
         document.getElementById('send-btn').disabled = false;
-        appendSystem(`Model loaded: ${name}. Qualia native pipeline active.`);
+        appendSystem(
+            `Model loaded: ${name}. Qualia native WebGPU pipeline active` +
+            (vocab > 0 ? ` (tokenizer vocab ${vocab.toLocaleString()})` : '') +
+            `. Prefer SmolLM2-360M on phones. If replies look like random symbols, clear site data/OPFS and reload GGUF (not a stale P64).`
+        );
+        // Collapse setup on phones so conversation owns the screen
+        if (isMobileDevice()) {
+            document.getElementById('llm-config')?.classList.add('collapsed');
+            document.getElementById('user-input')?.focus({ preventScroll: false });
+            document.getElementById('chat-messages')?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+        }
     } catch (err) {
+        console.error('[loadModel]', err);
         document.getElementById('load-btn').disabled = false;
         document.getElementById('load-btn').innerHTML = '<i class="fas fa-download"></i> Load Model';
-        showDlStatus(`Error: ${formatLoadError(err)}`);
+        const friendly = formatLoadError(err);
+        showDlStatus(`Error: ${friendly}`);
+        setEngineStatus(`Load failed: ${friendly}`, 'error');
         try { await releaseWebgpuEngine(); } catch {}
         modelLoaded = false;
+    } finally {
+        loadInFlight = false;
     }
 }
 
@@ -637,30 +953,69 @@ async function runLookupMode(userText) {
 
 function buildPrompt(system, user) {
     const fmt = document.getElementById('model-select').selectedOptions[0]?.dataset.format || 'chatml';
-    if (fmt === 'gemma3') {
-        const userBlock = system ? `${system}\n\n${user}` : user;
-        return `<start_of_turn>user\n${userBlock}<end_of_turn>\n<start_of_turn>model\n`;
+    if (fmt === 'llama3') {
+        return `<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\n${system}<|eot_id|>`
+            + `<|start_header_id|>user<|end_header_id|>\n\n${user}<|eot_id|>`
+            + '<|start_header_id|>assistant<|end_header_id|>\n\n';
     }
     return `<|im_start|>system\n${system}<|im_end|>\n<|im_start|>user\n${user}<|im_end|>\n<|im_start|>assistant\n`;
 }
 
+// Chat-template terminators. The model emits these to end its turn; they must be cut from the
+// visible answer (this is why raw output showed "Hello.<|im_end|>").
+const STOP_STRINGS = ['<|im_end|>', '<|endoftext|>', '<|eot_id|>', '<|end_of_text|>', '<|im_start|>', '<|start_header_id|>'];
+
+function cleanGenerated(text) {
+    let cut = text.length;
+    for (const s of STOP_STRINGS) {
+        const i = text.indexOf(s);
+        if (i !== -1 && i < cut) cut = i;
+    }
+    return text.slice(0, cut)
+        .replace(/<\|im_(start|end)\|>|<\|(endoftext|eot_id|end_of_text|start_header_id)\|>/g, '')
+        .trim();
+}
+
+// Force one paint so the "Generating…" state is visible before decode starts.
+const nextPaint = () => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+
 async function generate(system, user, opts = {}) {
-    document.getElementById('stream-wrap').classList.remove('hidden');
+    const streamWrap = document.getElementById('stream-wrap');
     const streamEl = document.getElementById('token-stream');
+    const statusEl = document.getElementById('gen-status');
+    streamWrap.classList.remove('hidden');
     streamEl.textContent = '';
-    let full = '';
+    statusEl.textContent = 'Generating…';
+    await nextPaint();
 
     const prompt = buildPrompt(system, user);
+    const t0 = performance.now();
+    let full = '';
+    let tokens = 0;
+    let stopped = false;
+
     const onToken = (piece) => {
+        if (stopped) return;
         full += piece;
-        streamEl.textContent = full;
+        tokens++;
+        // Stop rendering (and count) once a chat terminator appears; the engine may emit a few
+        // more tokens before it halts, but the user only ever sees the clean answer.
+        const cleaned = cleanGenerated(full);
+        if (cleaned.length < full.replace(/\s+$/,'').length && STOP_STRINGS.some(s => full.includes(s))) {
+            stopped = true;
+        }
+        streamEl.textContent = cleaned || '▍';
+        const secs = (performance.now() - t0) / 1000;
+        statusEl.textContent = `Generating… ${tokens} tokens · ${secs.toFixed(1)}s · ${(tokens / Math.max(secs, 0.001)).toFixed(1)} tok/s`;
     };
 
-    const reply = await inferWasmStreaming(prompt, onToken);
+    // inferWasmAsync yields to the event loop on every GPU map_async, so the tab stays responsive
+    // and tokens paint as they arrive (inferWasmStreaming is synchronous and freezes the page).
+    const reply = await inferWasmAsync(prompt, onToken);
     if (reply && !full) full = reply;
 
-    document.getElementById('stream-wrap').classList.add('hidden');
-    return full.trim();
+    streamWrap.classList.add('hidden');
+    return cleanGenerated(full);
 }
 
 // ── SPARQL Execution ──────────────────────────────────────────────────────────
@@ -839,7 +1194,15 @@ async function checkDaemon() {
 
 function checkWebgpuSupport() {
     const el = document.getElementById('webgpu-notice');
-    if (navigator.gpu) return; // supported — a real device is probed at model-load time
+    if (!el) return;
+    if (navigator.gpu) {
+        // Supported at API level — real adapter is probed at model-load time.
+        // Expand setup on first visit for phones so people see Load Model.
+        if (isMobileDevice()) {
+            // Leave collapsed by default (chat-first) but surface a one-line engine tip.
+        }
+        return;
+    }
     // No WebGPU at all: tell the user plainly instead of letting a later load silently stall.
     el.className = 'mb-4 rounded-xl border border-amber-500/40 bg-amber-500/10 px-3 py-2.5 text-xs leading-relaxed text-amber-200';
     const isAndroid = /Android/i.test(navigator.userAgent);
@@ -851,6 +1214,9 @@ function checkWebgpuSupport() {
     el.innerHTML = `<strong>WebGPU unavailable.</strong> ${hint} You can still install this app and browse it; model loading will be disabled until WebGPU is available.`;
     const btn = document.getElementById('load-btn');
     if (btn) { btn.disabled = true; btn.classList.add('opacity-40', 'cursor-not-allowed'); }
+    setEngineStatus('WebGPU unavailable in this browser', 'error');
+    // Open setup so the amber notice is not hidden behind the collapsed panel.
+    document.getElementById('llm-config')?.classList.remove('collapsed');
 }
 
 let deferredInstallPrompt = null;

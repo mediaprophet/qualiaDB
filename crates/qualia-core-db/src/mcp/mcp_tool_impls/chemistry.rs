@@ -1,6 +1,5 @@
 use super::*;
 
-
 pub fn chemical_analysis(args: &[u8]) -> Result<String, McpSystemError> {
     use crate::specialized_libs::chemistry_modeling::{
         Atom, ChemistryModelingLibrary, MolecularProperties, Molecule, PropertyType,
@@ -24,10 +23,18 @@ pub fn chemical_analysis(args: &[u8]) -> Result<String, McpSystemError> {
         let mut atoms = Vec::with_capacity(atoms_json.len());
         let mut coords = Vec::with_capacity(atoms_json.len());
         for (i, a) in atoms_json.iter().enumerate() {
-            let c = vec![json_f64(a, "x", 0.0), json_f64(a, "y", 0.0), json_f64(a, "z", 0.0)];
+            let c = vec![
+                json_f64(a, "x", 0.0),
+                json_f64(a, "y", 0.0),
+                json_f64(a, "z", 0.0),
+            ];
             atoms.push(Atom {
                 atom_id: format!("a{}", i),
-                element: a.get("element").and_then(Value::as_str).unwrap_or("X").to_string(),
+                element: a
+                    .get("element")
+                    .and_then(Value::as_str)
+                    .unwrap_or("X")
+                    .to_string(),
                 atomic_number: a.get("atomic_number").and_then(Value::as_u64).unwrap_or(0) as usize,
                 mass: json_f64(a, "mass", 0.0),
                 charge: 0.0,
@@ -36,7 +43,11 @@ pub fn chemical_analysis(args: &[u8]) -> Result<String, McpSystemError> {
             coords.push(c);
         }
         let mut m = Molecule::new();
-        m.molecule_id = v.get("molecule_id").and_then(Value::as_str).unwrap_or("mcp_mol").to_string();
+        m.molecule_id = v
+            .get("molecule_id")
+            .and_then(Value::as_str)
+            .unwrap_or("mcp_mol")
+            .to_string();
         m.atoms = atoms;
         m.coordinates = coords;
         let method = match json_str(&v, "method", "hartree_fock") {
@@ -75,7 +86,11 @@ pub fn chemical_analysis(args: &[u8]) -> Result<String, McpSystemError> {
                     .and_then(Value::as_str)
                     .unwrap_or("X")
                     .to_string();
-                let c = vec![json_f64(a, "x", 0.0), json_f64(a, "y", 0.0), json_f64(a, "z", 0.0)];
+                let c = vec![
+                    json_f64(a, "x", 0.0),
+                    json_f64(a, "y", 0.0),
+                    json_f64(a, "z", 0.0),
+                ];
                 atoms.push(Atom {
                     atom_id: format!("a{}", i),
                     element,

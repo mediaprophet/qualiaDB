@@ -15,17 +15,11 @@ pub struct GraphCoverageRow {
 /// Count quins whose subject field matches the FNV-1a hash of `record_id`.
 pub fn count_quins_for_record(quins: &[NQuin], record_id: &str) -> usize {
     let subject = q_hash_str(record_id);
-    quins
-        .iter()
-        .filter(|q| q.subject == subject)
-        .count()
+    quins.iter().filter(|q| q.subject == subject).count()
 }
 
 /// For each journal row, report how many materialized quins reference that record id.
-pub fn coverage_for_journal(
-    journal: &[JournalEntry],
-    quins: &[NQuin],
-) -> Vec<GraphCoverageRow> {
+pub fn coverage_for_journal(journal: &[JournalEntry], quins: &[NQuin]) -> Vec<GraphCoverageRow> {
     journal
         .iter()
         .map(|entry| GraphCoverageRow {

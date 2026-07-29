@@ -45,7 +45,8 @@ pub fn save(storage_root: impl AsRef<Path>, state: &CanvasNavigationState) -> st
         fs::create_dir_all(parent)?;
     }
     let tmp = path.with_extension("json.tmp");
-    let json = serde_json::to_vec_pretty(state).map_err(|e| std::io::Error::other(e.to_string()))?;
+    let json =
+        serde_json::to_vec_pretty(state).map_err(|e| std::io::Error::other(e.to_string()))?;
     fs::write(&tmp, &json)?;
     fs::rename(&tmp, &path)?;
     Ok(())

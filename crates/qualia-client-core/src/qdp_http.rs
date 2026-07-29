@@ -85,8 +85,7 @@ pub fn serve_blocking(record: FrontDoorRecord, bind_addr: &str) -> Result<(), St
 
         let reply = route(&record, &method, &url, &accept);
 
-        let mut resp =
-            tiny_http::Response::from_data(reply.body).with_status_code(reply.status);
+        let mut resp = tiny_http::Response::from_data(reply.body).with_status_code(reply.status);
         if let Ok(header) =
             tiny_http::Header::from_bytes(b"Content-Type", reply.content_type.as_bytes())
         {

@@ -1,17 +1,20 @@
 //! QualiaDB Extensions Daemon
-//! 
+//!
 //! Manages and executes advanced computational extensions while maintaining
 //! strict isolation from the core QualiaDB engine.
 
-use qualia_extensions::{ExtensionManager, ExtensionJob, ExtensionResult, qpu_extension::QpuExtension, pinn_extension::PinnExtension, webgpu_extension::WebGpuExtension};
+use qualia_extensions::{
+    pinn_extension::PinnExtension, qpu_extension::QpuExtension, webgpu_extension::WebGpuExtension,
+    ExtensionJob, ExtensionManager, ExtensionResult,
+};
+use serde_json;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Instant;
-use tokio::net::{TcpListener, TcpStream};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::mpsc;
-use tracing::{info, warn, error, debug};
-use serde_json;
+use tracing::{debug, error, info, warn};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -24,7 +27,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Create extension manager
     let mut manager = ExtensionManager::new();
-    
+
     // Register extensions
     manager.register_extension(Box::new(QpuExtension::new()));
     manager.register_extension(Box::new(PinnExtension::new()));
@@ -46,15 +49,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tokio::spawn(async move {
         while let Some(job) = job_rx.recv().await {
             debug!("Processing job: {}", job.job_id);
-            
+
             let start_time = Instant::now();
             let result = manager_clone.execute_job(job).await;
-            
+
             match result {
                 Ok(extension_result) => {
-                    debug!("Job completed successfully in {}ms", start_time.elapsed().as_millis());
+                    debug!(
+                        "Job completed successfully in {}ms",
+                        start_time.elapsed().as_millis()
+                    );
                     let _ = result_tx_clone.send(extension_result).await;
-                },
+                }
                 Err(e) => {
                     error!("Job failed: {:?}", e);
                     // Send error result
@@ -92,7 +98,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 debug!("New connection from: {}", addr);
                 let manager = manager.clone();
                 tokio::spawn(handle_connection(stream, manager));
-            },
+            }
             Err(e) => {
                 error!("Failed to accept connection: {:?}", e);
             }
@@ -105,7 +111,7 @@ async fn handle_connection(
     manager: Arc<ExtensionManager>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let mut buffer = vec![0u8; 4096];
-    
+
     loop {
         let n = stream.read(&mut buffer).await?;
         if n == 0 {
@@ -124,7 +130,7 @@ async fn handle_connection(
                     let response = serde_json::to_string(&extension_result)?;
                     stream.write_all(response.as_bytes()).await?;
                     stream.write_all(b"\n").await?;
-                },
+                }
                 Err(e) => {
                     let error_response = format!("{{\"error\": \"{:?}\"}}\n", e);
                     stream.write_all(error_response.as_bytes()).await?;
@@ -145,11 +151,11 @@ fn parse_job_request(message: &str) -> Result<ExtensionJob, serde_json::Error> {
 async fn send_result_to_core(result: &ExtensionResult) -> Result<(), Box<dyn std::error::Error>> {
     // Connect to core QualiaDB and send result
     let mut stream = TcpStream::connect("127.0.0.1:8081").await?;
-    
+
     let result_json = serde_json::to_string(result)?;
     stream.write_all(result_json.as_bytes()).await?;
     stream.write_all(b"\n").await?;
-    
+
     debug!("Sent result to core QualiaDB");
     Ok(())
 }
@@ -191,10 +197,10 @@ mod tests {
     async fn test_extension_manager() {
         let mut manager = ExtensionManager::new();
         manager.register_extension(Box::new(QpuExtension::new()));
-        
+
         let capabilities = manager.list_capabilities();
         assert!(!capabilities.is_empty());
-        
+
         let qpu_capability = capabilities.iter().find(|c| c.name == "qpu");
         assert!(qpu_capability.is_some());
     }

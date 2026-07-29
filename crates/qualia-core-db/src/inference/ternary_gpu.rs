@@ -197,7 +197,9 @@ fn run_gemm(
     rx.recv()
         .expect("map channel")
         .expect("map ternary staging");
-    let data = slice.get_mapped_range().expect("wgpu buffer map_range failed");
+    let data = slice
+        .get_mapped_range()
+        .expect("wgpu buffer map_range failed");
     let out: Vec<f32> = bytemuck::cast_slice(&data)[..out_elems].to_vec();
     drop(data);
     staging.unmap();
@@ -471,7 +473,9 @@ impl TernaryFfnResident {
             Ok(Ok(())) => {}
             _ => return false,
         }
-        let data = slice.get_mapped_range().expect("wgpu buffer map_range failed");
+        let data = slice
+            .get_mapped_range()
+            .expect("wgpu buffer map_range failed");
         out[..n_out].copy_from_slice(&bytemuck::cast_slice(&data)[..n_out]);
         drop(data);
         self.staging.unmap();

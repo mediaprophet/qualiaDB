@@ -18,7 +18,9 @@ impl QTensorEngine {
             let _ = staging.unmap();
             return false;
         }
-        let data = slice.get_mapped_range().expect("wgpu buffer map_range failed");
+        let data = slice
+            .get_mapped_range()
+            .expect("wgpu buffer map_range failed");
         let floats: &[f32] = bytemuck::cast_slice(&data);
         hidden[..emb_dim].copy_from_slice(&floats[..emb_dim]);
         drop(data);
@@ -26,6 +28,8 @@ impl QTensorEngine {
         true
     }
 
+    #[cfg(feature = "wasm-llm-diagnostics")]
+    #[cfg(feature = "wasm-llm-diagnostics")]
     pub(crate) async fn pipeline_read_batch(&self, batch_elems: usize, out: &mut [f32]) -> bool {
         if batch_elems > out.len() || batch_elems > self.gemm_max_input_floats {
             return false;
@@ -48,7 +52,9 @@ impl QTensorEngine {
             let _ = staging.unmap();
             return false;
         }
-        let data = slice.get_mapped_range().expect("wgpu buffer map_range failed");
+        let data = slice
+            .get_mapped_range()
+            .expect("wgpu buffer map_range failed");
         let floats: &[f32] = bytemuck::cast_slice(&data);
         out[..batch_elems].copy_from_slice(&floats[..batch_elems]);
         drop(data);
@@ -56,6 +62,8 @@ impl QTensorEngine {
         true
     }
 
+    #[cfg(feature = "wasm-llm-diagnostics")]
+    #[cfg(feature = "wasm-llm-diagnostics")]
     pub(crate) async fn pipeline_read_gpu_bytes_at(
         &self,
         src: &wgpu::Buffer,
@@ -82,13 +90,17 @@ impl QTensorEngine {
             let _ = staging.unmap();
             return false;
         }
-        let data = slice.get_mapped_range().expect("wgpu buffer map_range failed");
+        let data = slice
+            .get_mapped_range()
+            .expect("wgpu buffer map_range failed");
         out.copy_from_slice(&data);
         drop(data);
         staging.unmap();
         true
     }
 
+    #[cfg(feature = "wasm-llm-diagnostics")]
+    #[cfg(feature = "wasm-llm-diagnostics")]
     pub(crate) async fn pipeline_read_kv_head(
         &self,
         layout: &KvCacheLayout,

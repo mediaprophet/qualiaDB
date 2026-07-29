@@ -58,6 +58,7 @@ pub(crate) fn ggml_gpu_attention_shader_supported(ggml_type: u32) -> bool {
 /// is the GEMM-side analogue of the #49 attention-support fix. Verified end-to-end for Q8_0
 /// (SmolLM2-360M-q8_0); Q4_0/Q5_0 share the proven dequant but have no resident test model yet.
 #[inline]
+#[cfg(not(target_arch = "wasm32"))]
 pub(crate) fn ggml_gpu_gemm_supported(ggml_type: u32) -> bool {
     matches!(
         ggml_type,

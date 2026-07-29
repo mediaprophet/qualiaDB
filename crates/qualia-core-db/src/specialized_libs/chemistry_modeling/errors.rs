@@ -1,4 +1,3 @@
-
 /// Chemistry error types
 #[derive(Debug, Clone)]
 pub enum ChemistryError {

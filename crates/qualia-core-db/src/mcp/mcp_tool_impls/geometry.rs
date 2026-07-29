@@ -1,6 +1,5 @@
 use super::*;
 
-
 pub fn computational_geometry(args: &[u8]) -> Result<String, McpSystemError> {
     let text = core::str::from_utf8(args).map_err(|_| McpSystemError::ParseError)?;
     crate::specialized_libs::computational_geometry::execute_geometry_tool_json(text)

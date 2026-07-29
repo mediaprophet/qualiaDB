@@ -82,15 +82,14 @@ impl QTensorEngine {
             // still enabling f16/subgroup/timing acceleration where available.
             let required_features =
                 crate::gpu_context::requested_native_llm_features(adapter.features());
-            let experimental_features = if required_features
-                .contains(wgpu::Features::EXPERIMENTAL_COOPERATIVE_MATRIX)
-            {
-                // Safety: the feature is both explicitly opted into and advertised
-                // by the browser adapter before this token is enabled.
-                unsafe { wgpu::ExperimentalFeatures::enabled() }
-            } else {
-                wgpu::ExperimentalFeatures::disabled()
-            };
+            let experimental_features =
+                if required_features.contains(wgpu::Features::EXPERIMENTAL_COOPERATIVE_MATRIX) {
+                    // Safety: the feature is both explicitly opted into and advertised
+                    // by the browser adapter before this token is enabled.
+                    unsafe { wgpu::ExperimentalFeatures::enabled() }
+                } else {
+                    wgpu::ExperimentalFeatures::disabled()
+                };
             adapter
                 .request_device(&wgpu::DeviceDescriptor {
                     required_features,
@@ -102,9 +101,6 @@ impl QTensorEngine {
         };
         #[cfg(target_arch = "wasm32")]
         let device = &wasm_device;
-        #[cfg(target_arch = "wasm32")]
-        let queue = &wasm_queue;
-
         #[cfg(not(target_arch = "wasm32"))]
         let native_pipeline_cache = create_native_pipeline_cache(device);
         #[cfg(target_arch = "wasm32")]
@@ -113,6 +109,9 @@ impl QTensorEngine {
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("Fused Transformer Shader"),
             source: wgpu::ShaderSource::Wgsl(
+                #[cfg(target_arch = "wasm32")]
+                include_str!("../shaders/wasm/fused_transformer.wgsl").into(),
+                #[cfg(not(target_arch = "wasm32"))]
                 include_str!("../shaders/fused_transformer.wgsl").into(),
             ),
         });
@@ -251,10 +250,19 @@ impl QTensorEngine {
 
         #[cfg(target_arch = "wasm32")]
         let pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-            label: Some("Fused Transformer Pipeline"),
+            label: Some("Fused Transformer Pipeline (WASM)"),
             layout: Some(&mc8_gemm_pipeline_layout),
             module: &shader,
             entry_point: Some("main"),
+            compilation_options: Default::default(),
+            cache: native_pipeline_cache.as_ref(),
+        });
+        #[cfg(target_arch = "wasm32")]
+        let mmv_q8_0_pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+            label: Some("MulMatVec Q8_0 Pipeline (WASM)"),
+            layout: Some(&mc8_gemm_pipeline_layout),
+            module: &shader,
+            entry_point: Some("mul_mat_vec_q8_0"),
             compilation_options: Default::default(),
             cache: native_pipeline_cache.as_ref(),
         });
@@ -369,12 +377,14 @@ impl QTensorEngine {
                 cache: native_pipeline_cache.as_ref(),
             });
 
+        #[cfg(not(target_arch = "wasm32"))]
         let mock_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("Mock Fused Contraction Shader"),
             source: wgpu::ShaderSource::Wgsl(
                 include_str!("../shaders/fused_tensor_contraction.wgsl").into(),
             ),
         });
+        #[cfg(not(target_arch = "wasm32"))]
         let mock_pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
             label: Some("Mock Fused Contraction Pipeline"),
             layout: None,
@@ -688,12 +698,13 @@ impl QTensorEngine {
         #[cfg(target_arch = "wasm32")]
         let mc8_ffn_fused_pipeline = {
             // Modular WGSL: shared scaffold + per-role dequant instances composed at runtime.
-            let tpl = include_str!("../shaders/dequant_template.wgsl");
+            let tpl = include_str!("../shaders/wasm/dequant_template.wgsl");
             let gate_fns = tpl.replace("$W", "gate_words").replace("$S", "_gate");
             let up_fns = tpl.replace("$W", "up_words").replace("$S", "_up");
-            let base = include_str!("../shaders/fused_ffn.wgsl");
+            let base = include_str!("../shaders/wasm/fused_ffn.wgsl");
             // Inject the per-role dequant math at the marker (between shared helpers and
             // the entry point) so declarations precede their uses.
+            // WASM copy already has subgroup entry points stripped — no runtime filtering needed.
             let src = base.replace("// @@DEQUANT_FUNCTIONS@@", &format!("{gate_fns}\n{up_fns}"));
             let module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
                 label: Some("FusedFFNExpansion"),
@@ -778,7 +789,12 @@ impl QTensorEngine {
                 ],
             });
         #[cfg(not(target_arch = "wasm32"))]
-        let (ffn_fused_pipeline, ffn_fused_coop_pipeline, ffn_fused_mr_pipeline, ffn_fused_warp_pipeline) = {
+        let (
+            ffn_fused_pipeline,
+            ffn_fused_coop_pipeline,
+            ffn_fused_mr_pipeline,
+            ffn_fused_warp_pipeline,
+        ) = {
             let tpl = include_str!("../shaders/dequant_template.wgsl");
             let gate_fns = tpl.replace("$W", "gate_words").replace("$S", "_gate");
             let up_fns = tpl.replace("$W", "up_words").replace("$S", "_up");
@@ -833,7 +849,9 @@ impl QTensorEngine {
                 compilation_options: Default::default(),
                 cache: native_pipeline_cache.as_ref(),
             });
-            log::info!("LLM_LOAD|fused_ffn|coop_entry={coop_ep}|mr=coop_fused_ffn_mr|warp=coop_fused_ffn_warp");
+            log::info!(
+                "LLM_LOAD|fused_ffn|coop_entry={coop_ep}|mr=coop_fused_ffn_mr|warp=coop_fused_ffn_warp"
+            );
             (naive, coop, coop_mr, coop_warp)
         };
 
@@ -909,9 +927,7 @@ impl QTensorEngine {
         let (dual_gemv_pipeline, dual_gemv_mr_pipeline) = {
             let module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
                 label: Some("Dual GEMV Shader"),
-                source: wgpu::ShaderSource::Wgsl(
-                    include_str!("../shaders/dual_gemv.wgsl").into(),
-                ),
+                source: wgpu::ShaderSource::Wgsl(include_str!("../shaders/dual_gemv.wgsl").into()),
             });
             let layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("DualGemvPL"),
@@ -1134,6 +1150,8 @@ impl QTensorEngine {
             #[cfg(target_arch = "wasm32")]
             queue: wasm_queue,
             pipeline,
+            #[cfg(target_arch = "wasm32")]
+            mmv_q8_0_pipeline,
             #[cfg(not(target_arch = "wasm32"))]
             native_pipeline_cache,
             #[cfg(not(target_arch = "wasm32"))]
@@ -1154,6 +1172,7 @@ impl QTensorEngine {
             coop_gemv_warp_pipeline,
             #[cfg(not(target_arch = "wasm32"))]
             coop_gemv_residual_warp_pipeline,
+            #[cfg(not(target_arch = "wasm32"))]
             mock_pipeline,
             embedding_pipeline,
             #[cfg(not(target_arch = "wasm32"))]
@@ -1165,6 +1184,12 @@ impl QTensorEngine {
             #[cfg(target_os = "windows")]
             dml: dml_status,
             gguf_mmap: None,
+            #[cfg(target_arch = "wasm32")]
+            cached_tokenizer: None,
+            #[cfg(target_arch = "wasm32")]
+            cached_tensor_index: None,
+            #[cfg(target_arch = "wasm32")]
+            cached_token_embd: None,
             #[cfg(target_arch = "wasm32")]
             p64_resident: None,
             #[cfg(not(target_arch = "wasm32"))]
@@ -1187,12 +1212,17 @@ impl QTensorEngine {
             gemm_output_buf: None,
             gemm_params_buf: None,
             gemm_output_staging: None,
+            #[cfg(not(target_arch = "wasm32"))]
             output_topk_pipeline: None,
             #[cfg(not(target_arch = "wasm32"))]
             output_topk_bind_layout: None,
+            #[cfg(not(target_arch = "wasm32"))]
             topk_cand_val_buf: None,
+            #[cfg(not(target_arch = "wasm32"))]
             topk_cand_idx_buf: None,
+            #[cfg(not(target_arch = "wasm32"))]
             topk_cand_staging: None,
+            #[cfg(not(target_arch = "wasm32"))]
             topk_params_buf: None,
             gemm_aux_buf: None,
             gemm_ffn_buf: None,
@@ -1258,6 +1288,8 @@ impl QTensorEngine {
             ternary_ffn: None,
             #[cfg(not(target_arch = "wasm32"))]
             resident_decode: super::resident_decode::ResidentDecodeState::Unbuilt,
+            #[cfg(all(not(target_arch = "wasm32"), feature = "cuda"))]
+            cuda_decode_plan: super::cuda_decode_plan::CudaDecodePlanState::Unbuilt,
             #[cfg(not(target_arch = "wasm32"))]
             prefill_arena: super::prefill_arena::PrefillArenaState::Unbuilt,
             #[cfg(not(target_arch = "wasm32"))]
@@ -1274,6 +1306,8 @@ impl QTensorEngine {
             mc8_norm_resident_buf: None,
             #[cfg(target_arch = "wasm32")]
             mc8_norm_stride: 0,
+            #[cfg(target_arch = "wasm32")]
+            mc8_bg_cache: std::sync::Mutex::new(std::collections::HashMap::new()),
         };
         // Exercise the CPU elementwise oracle (ReLU) once at engine init so the fallback
         // path stays linked when GPU elem kernels are unavailable.
@@ -1514,7 +1548,9 @@ impl QTensorEngine {
         if handle.block_on(rx).ok()?.is_err() {
             return None;
         }
-        let data = slice.get_mapped_range().expect("wgpu buffer map_range failed");
+        let data = slice
+            .get_mapped_range()
+            .expect("wgpu buffer map_range failed");
         let out: Vec<f32> = bytemuck::cast_slice(&data).to_vec();
         drop(data);
         staging.unmap();
@@ -1629,22 +1665,26 @@ impl QTensorEngine {
         #[cfg(target_arch = "wasm32")]
         {
             let weight_usage = wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST;
-            let mk = |label: &str| {
+            // Initial arena buffers are placeholders — mc8_upload_all_resident_weights replaces
+            // them with properly-sized per-role buffers. Using minimal size here avoids a
+            // transient GPU memory peak of 7 × w_bytes (~336 MB for SmolLM2-360M Q8_0) that
+            // coexists with the resident buffers during the async swap, causing WebGPU OOM.
+            let arena_min = 4u64;
+            let mk_arena = |label: &str| {
                 self.gpu_device().create_buffer(&wgpu::BufferDescriptor {
                     label: Some(label),
-                    size: w_bytes,
+                    size: arena_min,
                     usage: weight_usage,
                     mapped_at_creation: false,
                 })
             };
-            let qkv_k = mk("MC8WeightAttnK");
-            let qkv_v = mk("MC8WeightAttnV");
-            let qkv_q = mk("MC8WeightAttnQ");
-            let o_proj = mk("MC8WeightOProj");
-            let gate = mk("MC8WeightGate");
-            let up = mk("MC8WeightUp");
-            let down = mk("MC8WeightDown");
-            let weight_b = mk("LayerGemmWeightB");
+            let qkv_k = mk_arena("MC8WeightAttnK");
+            let qkv_v = mk_arena("MC8WeightAttnV");
+            let qkv_q = mk_arena("MC8WeightAttnQ");
+            let o_proj = mk_arena("MC8WeightOProj");
+            let gate = mk_arena("MC8WeightGate");
+            let up = mk_arena("MC8WeightUp");
+            let down = mk_arena("MC8WeightDown");
             self.mc8_weight_arena = Some(Mc8WeightArenaBufs {
                 qkv_k,
                 qkv_v,
@@ -1654,7 +1694,15 @@ impl QTensorEngine {
                 up,
                 down,
             });
-            self.gemm_weight_buf_b = Some(weight_b);
+            // gemm_weight_buf_b is a legacy decode-path ping-pong that is never read;
+            // allocate at minimal size to avoid wasting GPU memory.
+            self.gemm_weight_buf_b =
+                Some(self.gpu_device().create_buffer(&wgpu::BufferDescriptor {
+                    label: Some("LayerGemmWeightB"),
+                    size: arena_min,
+                    usage: weight_usage,
+                    mapped_at_creation: false,
+                }));
         }
         self.gemm_output_buf = Some(self.gpu_device().create_buffer(&wgpu::BufferDescriptor {
             label: Some("LayerGemmOutput"),

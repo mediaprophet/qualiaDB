@@ -4,6 +4,7 @@
 //! inputs. Tuning is therefore allowed to change work distribution without
 //! changing the mathematical operation being certified.
 
+pub mod audio;
 pub mod backend;
 // W10: the forge's calibration/adaptation pipeline (corpus→capture→learn→certify→package). Native-
 // only (drives the real inference stack for capture + the PPL oracle). The third produce-and-certify
@@ -43,9 +44,8 @@ pub use backend::resolve_execution_backend;
 pub use cache::ManifestCache;
 pub use dispatch::{
     caps, coopmat_usable, fft_f32, gemm_cpu_f64, gemm_f32, gemm_f32_tc, gemm_f32_tc_coopmat,
-    gemm_f32_tc_reduced,
-    gemm_f64, gemm_f64_df64, gemv_cpu_f64, gemv_f32, gemv_f64, pairwise_sq_dist_cpu_f64,
-    pairwise_sq_dist_f64, ComputeCaps, GEMM_GPU_THRESHOLD,
+    gemm_f32_tc_reduced, gemm_f64, gemm_f64_df64, gemv_cpu_f64, gemv_f32, gemv_f64,
+    pairwise_sq_dist_cpu_f64, pairwise_sq_dist_f64, ComputeCaps, GEMM_GPU_THRESHOLD,
 };
 pub use emit::{decode_spirv_words, emit_shader, matmul_tc_wgsl, GeneratedShader, TargetBackend};
 pub use ir::{

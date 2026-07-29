@@ -13,6 +13,9 @@ pub const ARCH_GEMMA3: u32 = 4;
 /// Gemma 4 (E2B/E4B/…): dual head-dim SWA+global, PLE, shared KV — **not** standard Llama-shape.
 pub const ARCH_GEMMA4: u32 = 5;
 pub const ARCH_QWEN2: u32 = 6;
+pub const ARCH_GLM4: u32 = 7;
+pub const ARCH_PHI4: u32 = 8;
+pub const ARCH_DEEPSEEK_MOE: u32 = 9;
 pub const ARCH_OTHER: u32 = 255;
 
 /// Feature flags on [`GgufHyperparams::arch_flags`].
@@ -67,22 +70,20 @@ impl GgufHyperparams {
             1.0
         }
     }
-    pub fn head_dim(&self) -> u32 {
+
+    /// Nominal `head_dim` (`n_embd / n_head` if `head_dim == 0`).
+    pub fn effective_head_dim(&self) -> u32 {
         if self.head_dim > 0 {
             self.head_dim
-        } else if self.n_head == 0 {
-            0
-        } else {
+        } else if self.n_head > 0 {
             self.n_embd / self.n_head
+        } else {
+            128
         }
     }
 
-    pub fn head_dim_swa_or(&self) -> u32 {
-        if self.head_dim_swa > 0 {
-            self.head_dim_swa
-        } else {
-            self.head_dim()
-        }
+    pub fn head_dim(&self) -> u32 {
+        self.effective_head_dim()
     }
 
     pub fn effective_n_kv_head(&self) -> u32 {
@@ -102,6 +103,18 @@ impl GgufHyperparams {
         }
     }
 
+    pub fn gqa_ratio(&self) -> u32 {
+        self.q_heads_per_kv()
+    }
+
+    pub fn head_dim_swa_or(&self) -> u32 {
+        if self.head_dim_swa > 0 {
+            self.head_dim_swa
+        } else {
+            self.effective_head_dim()
+        }
+    }
+
     /// Human-readable architecture name for logs / errors.
     pub fn architecture_name(&self) -> &'static str {
         match self.architecture {
@@ -111,6 +124,9 @@ impl GgufHyperparams {
             ARCH_GEMMA3 => "gemma3",
             ARCH_GEMMA4 => "gemma4",
             ARCH_QWEN2 => "qwen2",
+            ARCH_GLM4 => "glm4",
+            ARCH_PHI4 => "phi4",
+            ARCH_DEEPSEEK_MOE => "deepseek_moe",
             ARCH_OTHER => "other",
             _ => "unknown",
         }
@@ -167,7 +183,10 @@ pub fn parse_architecture_id(name: &str) -> u32 {
         "gemma2" => ARCH_GEMMA2,
         "gemma3" => ARCH_GEMMA3,
         "gemma4" => ARCH_GEMMA4,
-        "qwen2" | "qwen2vl" | "qwen3" => ARCH_QWEN2,
+        "qwen2" | "qwen2vl" | "qwen3" | "qwen3.5" | "qwen3.6" => ARCH_QWEN2,
+        "glm" | "glm4" | "glm4.7" | "chatglm" => ARCH_GLM4,
+        "phi" | "phi3" | "phi4" => ARCH_PHI4,
+        "deepseek" | "deepseek2" | "deepseek3" | "deepseek_moe" => ARCH_DEEPSEEK_MOE,
         "" => ARCH_UNKNOWN,
         _ => ARCH_OTHER,
     }

@@ -277,7 +277,9 @@ impl WebGpuIntegrator {
         let _mapping_result = receiver.await.unwrap();
 
         // Get mapped slice
-        let result_data = buffer_slice.get_mapped_range().expect("wgpu buffer map_range failed");
+        let result_data = buffer_slice
+            .get_mapped_range()
+            .expect("wgpu buffer map_range failed");
 
         // Read workgroup results and sum using Kahan summation for precision
         let workgroup_results: &[f32] = bytemuck::cast_slice(&*result_data);
@@ -404,7 +406,9 @@ impl WebGpuIntegrator {
         self.queue.submit(None);
         let _ = rx.await.unwrap();
 
-        let mapped = slice.get_mapped_range().expect("wgpu buffer map_range failed");
+        let mapped = slice
+            .get_mapped_range()
+            .expect("wgpu buffer map_range failed");
         let partials: &[f32] = bytemuck::cast_slice(&*mapped);
 
         // Kahan summation for numerical stability

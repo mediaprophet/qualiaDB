@@ -124,8 +124,7 @@ pub fn run_chat_inference_full(
     );
 
     // Native GGUF path requires an active model; optional Ollama harness does not.
-    if !use_ollama
-        && crate::model_lifecycle::get_model_lifecycle_state() != ModelLifecycle::Active
+    if !use_ollama && crate::model_lifecycle::get_model_lifecycle_state() != ModelLifecycle::Active
     {
         return empty_result(
             started,
@@ -422,9 +421,8 @@ fn run_ollama_chat_turn(
     }
 
     let _ = persist_citations(session_id, storage, &output, retrieval);
-    let mut result = finalize_success_result(
-        output, retrieval, started, agent_cfg, false, 0, false, None,
-    );
+    let mut result =
+        finalize_success_result(output, retrieval, started, agent_cfg, false, 0, false, None);
     result.model_id = Some(gen.model);
     result.agent_backend = Some("ollama".into());
     result
@@ -563,6 +561,8 @@ fn finalize_success_result(
     wal_suspended: bool,
     suspended_agreement_id: Option<u64>,
 ) -> ChatInferenceResult {
+    let duration_ms = started.elapsed().as_millis() as u64;
+    crate::model_lifecycle::record_last_decode_tok_s(output.tokens_generated, duration_ms);
     ChatInferenceResult {
         text: output.text,
         provenance_hashes: output
@@ -573,7 +573,7 @@ fn finalize_success_result(
         citations: retrieval.citations.clone(),
         retrieval_triple_count: retrieval.triple_count,
         tokens_generated: output.tokens_generated,
-        inference_duration_ms: started.elapsed().as_millis() as u64,
+        inference_duration_ms: duration_ms,
         committed: true,
         block_reason: None,
         sub_agent_of: Some(agent_cfg.principal_did.clone()),

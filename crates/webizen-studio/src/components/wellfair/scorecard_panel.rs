@@ -9,11 +9,16 @@
 //! (forum-internum, Sanctuary-class) — a set of *Hypotheses to explore*, **not a diagnosis and not a
 //! rating**. `Resilience` reads "higher is better"; every other aspect reads "higher = more to discuss".
 
-use super::host_client::{compute_scorecard, get_weight_model, reset_weight_model, set_weight_model};
+use super::host_client::{
+    compute_scorecard, get_weight_model, reset_weight_model, set_weight_model,
+};
 use dioxus::prelude::*;
 
 fn str_field(v: &serde_json::Value, key: &str) -> String {
-    v.get(key).and_then(|x| x.as_str()).unwrap_or("").to_string()
+    v.get(key)
+        .and_then(|x| x.as_str())
+        .unwrap_or("")
+        .to_string()
 }
 fn u64_field(v: &serde_json::Value, key: &str) -> u64 {
     v.get(key).and_then(|x| x.as_u64()).unwrap_or(0)
@@ -102,7 +107,9 @@ pub fn WellfairScorecardPanel() -> Element {
     let mut loaded = use_signal(|| false);
 
     use_effect(move || {
-        if loaded() { return; }
+        if loaded() {
+            return;
+        }
         loaded.set(true);
         reload();
     });
@@ -121,7 +128,8 @@ pub fn WellfairScorecardPanel() -> Element {
                                 (
                                     str_field(w, "system_id"),
                                     str_field(w, "aspect"),
-                                    w.get("weight_pct").and_then(|x| x.as_u64()).unwrap_or(0) as u32,
+                                    w.get("weight_pct").and_then(|x| x.as_u64()).unwrap_or(0)
+                                        as u32,
                                 )
                             })
                             .collect::<Vec<_>>()
@@ -132,7 +140,9 @@ pub fn WellfairScorecardPanel() -> Element {
         });
     };
     use_effect(move || {
-        if loaded() { return; }
+        if loaded() {
+            return;
+        }
         loaded.set(true);
         load_model();
     });
@@ -146,7 +156,11 @@ pub fn WellfairScorecardPanel() -> Element {
                 .collect();
             let model_json = serde_json::json!({ "system_weights": system_weights }).to_string();
             match set_weight_model(&model_json).await {
-                Ok(()) => { status.set("Saved — the card now reads you through your own model.".into()); authored.set(true); reload(); }
+                Ok(()) => {
+                    status.set("Saved — the card now reads you through your own model.".into());
+                    authored.set(true);
+                    reload();
+                }
                 Err(e) => status.set(format!("Save failed: {e}")),
             }
         });
@@ -154,7 +168,11 @@ pub fn WellfairScorecardPanel() -> Element {
     let reset_model = move |_| {
         spawn(async move {
             match reset_weight_model().await {
-                Ok(()) => { status.set("Reset to the starting suggestion.".into()); load_model(); reload(); }
+                Ok(()) => {
+                    status.set("Reset to the starting suggestion.".into());
+                    load_model();
+                    reload();
+                }
                 Err(e) => status.set(format!("Reset failed: {e}")),
             }
         });
@@ -179,6 +197,7 @@ pub fn WellfairScorecardPanel() -> Element {
         section {
             aria_label: "WellFair well-being score-card",
             style: "padding:0.85rem;border:1px solid var(--qualia-border,#ddd);border-radius:10px;background:var(--qualia-surface,#fafafa);display:flex;flex-direction:column;gap:0.7rem;",
+            super::shared::DomainChrome { domain: "Care", chip: "Body · score-card · not diagnosis", show_memory: true }
             div {
                 style: "display:flex;align-items:center;justify-content:space-between;gap:0.5rem;",
                 h2 { style: "margin:0;font-size:1rem;", "Well-being score-card" }
@@ -216,7 +235,7 @@ pub fn WellfairScorecardPanel() -> Element {
 
             // ── The person authors their own interpretive lens ──
             div {
-                style: "padding:0.5rem 0.6rem;border-radius:8px;border:1px solid var(--qualia-border,#eee);background:var(--qualia-surface-2,#fff);",
+                style: "padding:0.5rem 0.6rem;border-radius:8px;border:1px solid var(--qualia-border,#eee);background:var(--qualia-surface);color:var(--qualia-text);",
                 div {
                     style: "display:flex;align-items:center;justify-content:space-between;gap:0.5rem;cursor:pointer;",
                     onclick: move |_| { let s = show_model(); show_model.set(!s); },

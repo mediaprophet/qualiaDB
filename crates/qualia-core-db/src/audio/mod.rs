@@ -7,6 +7,9 @@ pub mod audio_spectral_sheet;
 pub mod cqt_bake;
 pub mod dsp_kernel;
 pub mod hrtf;
+/// AU-CORE-DSP — real inverse STFT (WOLA resynthesis; reuses `qualia-audio`). Native only.
+#[cfg(not(target_arch = "wasm32"))]
+pub mod istft;
 pub mod stft;
 pub mod stft_bake;
 /// P7.5 — Time-frequency surface view over STFT/CQT rasters.

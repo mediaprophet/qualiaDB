@@ -1,6 +1,5 @@
 use super::*;
 
-
 pub fn ml_inference(args: &[u8]) -> Result<String, McpSystemError> {
     use crate::specialized_libs::machine_learning::{
         InferenceParameters, MachineLearningLibrary, Precision,
@@ -161,8 +160,19 @@ pub fn financial_model(args: &[u8]) -> Result<String, McpSystemError> {
         let steps = v.get("steps").and_then(Value::as_u64).unwrap_or(20) as usize;
         let mut states = [HealthWelfareState::Stable; 64];
         let mut nqs = [NquinVector::ZERO; 64];
-        let shocks: Vec<f64> = v.get("shocks").and_then(Value::as_array).map(|a| a.iter().filter_map(Value::as_f64).collect()).unwrap_or_else(|| vec![-0.05; steps]);
-        let _ = generate_synthetic_persona_trace(4242, steps.min(64), 0.4, &shocks, &mut states, &mut nqs);
+        let shocks: Vec<f64> = v
+            .get("shocks")
+            .and_then(Value::as_array)
+            .map(|a| a.iter().filter_map(Value::as_f64).collect())
+            .unwrap_or_else(|| vec![-0.05; steps]);
+        let _ = generate_synthetic_persona_trace(
+            4242,
+            steps.min(64),
+            0.4,
+            &shocks,
+            &mut states,
+            &mut nqs,
+        );
         let final_l1 = nqs[steps.min(64) - 1].l1_norm();
         return Ok(json!({
             "op": "forensic_demo",
@@ -175,13 +185,18 @@ pub fn financial_model(args: &[u8]) -> Result<String, McpSystemError> {
 
     if op == "welfare" {
         use crate::specialized_libs::computational_economics::welfare::gini_coefficient;
-        let inc: Vec<f64> = v.get("incomes").and_then(Value::as_array).map(|a| a.iter().filter_map(Value::as_f64).collect()).unwrap_or_default();
+        let inc: Vec<f64> = v
+            .get("incomes")
+            .and_then(Value::as_array)
+            .map(|a| a.iter().filter_map(Value::as_f64).collect())
+            .unwrap_or_default();
         let g = gini_coefficient(&inc).unwrap_or(f64::NAN);
         return Ok(json!({
             "op": "welfare",
             "gini": g,
             "assumptions": "gini from incomes list; pair with deontic review"
-        }).to_string());
+        })
+        .to_string());
     }
 
     let option_type = if json_str(&v, "option_type", "call") == "put" {

@@ -15,8 +15,12 @@ pub fn ProvenanceGraph() -> Element {
                 if let Ok(triples) = serde_json::from_value::<Vec<(String, String, String)>>(res) {
                     let mut n = Vec::new();
                     for t in triples.iter() {
-                        if !n.contains(&(t.0.clone(), "Entity".to_string())) { n.push((t.0.clone(), "Entity".to_string())); }
-                        if !n.contains(&(t.2.clone(), "Target".to_string())) { n.push((t.2.clone(), "Target".to_string())); }
+                        if !n.contains(&(t.0.clone(), "Entity".to_string())) {
+                            n.push((t.0.clone(), "Entity".to_string()));
+                        }
+                        if !n.contains(&(t.2.clone(), "Target".to_string())) {
+                            n.push((t.2.clone(), "Target".to_string()));
+                        }
                     }
                     nodes.set(n);
                     edges.set(triples);
@@ -36,7 +40,7 @@ pub fn ProvenanceGraph() -> Element {
             }
             div { style: "flex: 1; position: relative; overflow: hidden; background: radial-gradient(circle, #27272a 1px, transparent 1px); background-size: 20px 20px;",
                 for (i, (id, typ)) in nodes.read().iter().enumerate() {
-                    div { 
+                    div {
                         key: "{id}",
                         style: "position: absolute; top: {20 + i * 15}%; left: {30 + i * 15}%; background: #0284c7; padding: 10px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.5); z-index: 10;",
                         div { style: "font-size: 12px; opacity: 0.8;", "{typ}" }

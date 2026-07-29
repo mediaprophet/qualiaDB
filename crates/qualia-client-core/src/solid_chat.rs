@@ -126,7 +126,10 @@ pub fn export_parts(meta: &SessionMeta, messages: &[ChatMessage]) -> SolidChatEx
 
     // --- index.ttl (the channel) ---
     let mut index = String::new();
-    let _ = writeln!(index, "@prefix meeting: <http://www.w3.org/ns/pim/meeting#> .");
+    let _ = writeln!(
+        index,
+        "@prefix meeting: <http://www.w3.org/ns/pim/meeting#> ."
+    );
     let _ = writeln!(index, "@prefix dct: <http://purl.org/dc/terms/> .");
     let _ = writeln!(index, "@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .");
     let _ = writeln!(index, "@prefix qc: <{NS_QC}> .");
@@ -154,7 +157,11 @@ pub fn export_parts(meta: &SessionMeta, messages: &[ChatMessage]) -> SolidChatEx
         for (i, msg) in messages.iter().enumerate() {
             let uri = format!("{}/chat.ttl#{}", day_path(msg.timestamp), message_id(msg));
             let sep = if i + 1 == n { " ." } else { " ," };
-            let lead = if i == 0 { "    meeting:message " } else { "        " };
+            let lead = if i == 0 {
+                "    meeting:message "
+            } else {
+                "        "
+            };
             let _ = writeln!(index, "{lead}<{uri}>{sep}");
         }
     }
@@ -167,7 +174,10 @@ pub fn export_parts(meta: &SessionMeta, messages: &[ChatMessage]) -> SolidChatEx
         write_message(body, msg, owner);
     }
 
-    SolidChatExport { index_ttl: index, day_files }
+    SolidChatExport {
+        index_ttl: index,
+        day_files,
+    }
 }
 
 fn day_header() -> String {
@@ -184,7 +194,11 @@ fn day_header() -> String {
 fn write_message(out: &mut String, msg: &ChatMessage, owner_did: &str) {
     let id = message_id(msg);
     // Standard Solid subset (every long-chat client reads these three).
-    let _ = writeln!(out, "<#{id}> dct:created \"{}\"^^xsd:dateTime ;", iso_utc(msg.timestamp));
+    let _ = writeln!(
+        out,
+        "<#{id}> dct:created \"{}\"^^xsd:dateTime ;",
+        iso_utc(msg.timestamp)
+    );
     let _ = writeln!(out, "    sioc:content \"{}\" ;", esc(&msg.content));
     let _ = writeln!(out, "    foaf:maker <{}> ;", maker_uri(msg, owner_did));
     // Additive native fidelity (a vanilla Solid client ignores the qc: namespace).
@@ -295,7 +309,10 @@ fn parse_statement(stmt: &str) -> Option<ImportedMessage> {
         return None;
     }
     let mut m = ImportedMessage {
-        id: subject.trim_start_matches("<#").trim_end_matches('>').to_string(),
+        id: subject
+            .trim_start_matches("<#")
+            .trim_end_matches('>')
+            .to_string(),
         ..Default::default()
     };
     for clause in split_top_level_semicolons(rest) {
@@ -390,7 +407,10 @@ fn literal(obj: &str) -> String {
 }
 
 fn uri(obj: &str) -> String {
-    obj.trim().trim_start_matches('<').trim_end_matches('>').to_string()
+    obj.trim()
+        .trim_start_matches('<')
+        .trim_end_matches('>')
+        .to_string()
 }
 
 #[cfg(test)]
@@ -441,7 +461,10 @@ mod tests {
         assert!(export.index_ttl.contains("dct:author <did:wf:owner>"));
         assert!(export.index_ttl.contains("meeting:message"));
         // Day-partitioned message URI.
-        assert!(export.index_ttl.contains("2023/11/14/chat.ttl#msg-1") || export.index_ttl.contains("/chat.ttl#msg-1"));
+        assert!(
+            export.index_ttl.contains("2023/11/14/chat.ttl#msg-1")
+                || export.index_ttl.contains("/chat.ttl#msg-1")
+        );
     }
 
     #[test]
@@ -475,14 +498,20 @@ mod tests {
         let export = export_parts(&meta(), &originals);
 
         // Parse every day file back.
-        let mut parsed: Vec<ImportedMessage> =
-            export.day_files.values().flat_map(|b| parse_day_ttl(b)).collect();
+        let mut parsed: Vec<ImportedMessage> = export
+            .day_files
+            .values()
+            .flat_map(|b| parse_day_ttl(b))
+            .collect();
         parsed.sort_by_key(|m| m.lamport.unwrap_or(0));
         assert_eq!(parsed.len(), 2);
 
         for (orig, back) in originals.iter().zip(parsed.iter()) {
             let rebuilt = back.to_chat_message(0);
-            assert_eq!(rebuilt.content, orig.content, "content (incl. newlines/quotes) preserved");
+            assert_eq!(
+                rebuilt.content, orig.content,
+                "content (incl. newlines/quotes) preserved"
+            );
             assert_eq!(rebuilt.lamport, orig.lamport);
             assert_eq!(rebuilt.role, orig.role);
             assert_eq!(rebuilt.content_hash, orig.content_hash);
@@ -509,7 +538,10 @@ mod tests {
         assert_eq!(parsed.len(), 1);
         let m = parsed[0].to_chat_message(42);
         assert_eq!(m.content, "hi from solid");
-        assert_eq!(m.author_did.as_deref(), Some("https://bob.example/profile/card#me"));
+        assert_eq!(
+            m.author_did.as_deref(),
+            Some("https://bob.example/profile/card#me")
+        );
         assert_eq!(m.lamport, 42, "no qc:lamport → caller's fallback");
         assert_eq!(m.role, Role::User, "default role");
         assert_eq!(m.source.as_deref(), Some("solid"));

@@ -292,6 +292,16 @@ fn stable_mcp_tools() -> &'static [McpToolDescriptor] {
             input_schema: r#"{"type":"object","required":["op"],"properties":{"op":{"type":"string","enum":["orientation_2","convex_hull_2","triangle_topology","delaunay_2","voronoi_2","nearest_site","mesh_topology","create_box","create_sphere","create_cylinder","create_plane"]},"points":{"type":"array","items":{"type":"array","items":{"type":"number"}}},"vertex_count":{"type":"integer"},"triangles":{"type":"array","items":{"type":"array","items":{"type":"integer"}}},"width":{"type":"number"},"height":{"type":"number"},"depth":{"type":"number"},"radius":{"type":"number"},"size":{"type":"number"},"lat_segments":{"type":"integer"},"lon_segments":{"type":"integer"},"segments":{"type":"integer"},"query":{"type":"array","items":{"type":"number"}}}}"#,
         },
         McpToolDescriptor {
+            name: "computer_vision",
+            description: "Native computer_vision specialized lib (MIG-V2): list ops, rgb_to_gray, classical super_resolve (nearest/bilinear/bicubic/lanczos), mesh_quality_cleanup, class_score_to_sigma. Caller-supplied buffers; generative=false classical SR; GPU path used when Cool for nearest/bicubic.",
+            input_schema: r#"{"type":"object","required":["op"],"properties":{"op":{"type":"string","enum":["list","capability_summary","rgb_to_gray","super_resolve","mesh_quality_cleanup","class_score_to_sigma"]},"width":{"type":"integer"},"height":{"type":"integer"},"scale":{"type":"integer"},"kernel":{"type":"string","enum":["nearest","bilinear","bicubic","lanczos3"]},"rgb":{"type":"array","items":{"type":"integer"}},"class_hash":{"type":"integer"},"score":{"type":"number"},"positions":{"type":"array","items":{"type":"array","items":{"type":"number"}}},"indices":{"type":"array","items":{"type":"integer"}},"weld_epsilon":{"type":"number"}}}"#,
+        },
+        McpToolDescriptor {
+            name: "audio_features",
+            description: "Native qualia-audio features + honest capability registry: list (all capabilities with Present/Partial/Missing/NeedsWeights status), capability_summary (counts), log_mel, pitch_yin (real YIN F0+confidence), loudness_r128 (EBU R128 LUFS). Caller-supplied PCM samples; CPU; learned heads fail closed.",
+            input_schema: r#"{"type":"object","required":["op"],"properties":{"op":{"type":"string","enum":["list","capability_summary","log_mel","pitch_yin","loudness_r128"]},"samples":{"type":"array","items":{"type":"number"}},"sample_rate":{"type":"integer"},"n_mel":{"type":"integer"}}}"#,
+        },
+        McpToolDescriptor {
             name: "geometry_manifests",
             description: "List per-op capability manifests (backends, determinism class, resource limits) and run Reserve-mode budget queries for computational-geometry ops.",
             input_schema: r#"{"type":"object","properties":{"op":{"type":"string","description":"Op name for a Reserve-mode budget query (omit to list all manifests)"},"device":{"type":"object","properties":{"cpu":{"type":"boolean"},"simd":{"type":"boolean"},"wgpu":{"type":"boolean"},"cuda":{"type":"boolean"},"wasm":{"type":"boolean"},"exact":{"type":"boolean"}}}}}"#,
@@ -487,6 +497,9 @@ pub unsafe fn enforce_fiduciary_tool_dispatch(
         }
         b"computational_geometry" => mcp_tool_impls::computational_geometry(payload.arguments_raw),
         b"geometry_manifests" => mcp_tool_impls::geometry_manifests(payload.arguments_raw),
+        b"computer_vision" => mcp_tool_impls::computer_vision(payload.arguments_raw),
+        #[cfg(not(target_arch = "wasm32"))]
+        b"audio_features" => mcp_tool_impls::audio_features(payload.arguments_raw),
 
         // ── Identifiers & Wallet Tools ─────────────────────────────────────────
         b"get_wallet_status" => execute_wallet_status(payload.arguments_raw, intent_frame),
@@ -1522,6 +1535,34 @@ mod tests {
         let payload: Value = serde_json::from_str(text).expect("embedded json");
         assert_eq!(payload["vertex_count"], 4);
         assert_eq!(payload["indices"], json!([0, 1, 3, 4]));
+    }
+
+    #[test]
+    fn computer_vision_tool_list_and_sigma() {
+        let reply = handle_jsonrpc_message(
+            r#"{"jsonrpc":"2.0","id":"cv","method":"tools/call","params":{"name":"computer_vision","arguments":{"op":"list"}}}"#,
+            false,
+            false,
+        )
+        .expect("reply");
+        let json: Value = serde_json::from_str(&reply).expect("valid json");
+        let text = json["result"]["content"][0]["text"]
+            .as_str()
+            .expect("text payload");
+        let payload: Value = serde_json::from_str(text).expect("embedded json");
+        assert_eq!(payload["library"], "specialized_libs::computer_vision");
+        let reply2 = handle_jsonrpc_message(
+            r#"{"jsonrpc":"2.0","id":"cv2","method":"tools/call","params":{"name":"computer_vision","arguments":{"op":"class_score_to_sigma","class_hash":4,"score":1.0}}}"#,
+            false,
+            false,
+        )
+        .expect("reply2");
+        let json2: Value = serde_json::from_str(&reply2).expect("valid json");
+        let text2 = json2["result"]["content"][0]["text"]
+            .as_str()
+            .expect("text");
+        let payload2: Value = serde_json::from_str(text2).expect("json");
+        assert!(payload2["sigma"].as_f64().unwrap() > 0.0);
     }
 
     #[test]

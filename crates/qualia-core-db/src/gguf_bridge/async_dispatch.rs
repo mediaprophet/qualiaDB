@@ -170,7 +170,9 @@ impl QTensorEngine {
 
             let slice = staging.slice(..out_bytes);
             if await_wgpu_map(slice).await {
-                let data = slice.get_mapped_range().expect("wgpu buffer map_range failed");
+                let data = slice
+                    .get_mapped_range()
+                    .expect("wgpu buffer map_range failed");
                 let floats: &[f32] = bytemuck::cast_slice(&data);
                 out[..n_out].copy_from_slice(&floats[..n_out]);
                 drop(data);
@@ -236,7 +238,13 @@ impl QTensorEngine {
         self.gpu_queue()
             .write_buffer(params_buf, 0, bytemuck::bytes_of(&params));
 
-        let bind_layout = self.pipeline.get_bind_group_layout(0);
+        let use_mmv = weight_ggml_type == crate::ggml_quants::GGML_TYPE_Q8_0 && (n_in % 32 == 0);
+        let active_pipeline = if use_mmv {
+            &self.mmv_q8_0_pipeline
+        } else {
+            &self.pipeline
+        };
+        let bind_layout = active_pipeline.get_bind_group_layout(0);
         let bind_group = self
             .gpu_device()
             .create_bind_group(&wgpu::BindGroupDescriptor {
@@ -274,9 +282,13 @@ impl QTensorEngine {
                 label: None,
                 timestamp_writes: crate::llm_gpu_profiler::pass_writes_both(),
             });
-            cpass.set_pipeline(&self.pipeline);
+            cpass.set_pipeline(active_pipeline);
             cpass.set_bind_group(0, &bind_group, &[0]);
-            cpass.dispatch_workgroups((n_out as u32 + 63) / 64, 1, 1);
+            if use_mmv {
+                cpass.dispatch_workgroups((n_out as u32 + 3) / 4, 1, 1);
+            } else {
+                cpass.dispatch_workgroups((n_out as u32 + 63) / 64, 1, 1);
+            }
         }
         let out_bytes = (n_out * 4) as wgpu::BufferAddress;
         encoder.copy_buffer_to_buffer(output_buf, 0, staging, 0, out_bytes);
@@ -286,7 +298,9 @@ impl QTensorEngine {
 
         let slice = staging.slice(..out_bytes);
         if await_wgpu_map(slice).await {
-            let data = slice.get_mapped_range().expect("wgpu buffer map_range failed");
+            let data = slice
+                .get_mapped_range()
+                .expect("wgpu buffer map_range failed");
             let floats: &[f32] = bytemuck::cast_slice(&data);
             out[..n_out].copy_from_slice(&floats[..n_out]);
             drop(data);
@@ -636,7 +650,9 @@ impl QTensorEngine {
         let out_bytes = (readback_elems * 4) as wgpu::BufferAddress;
         let slice = staging.slice(..out_bytes);
         if await_wgpu_map(slice).await {
-            let data = slice.get_mapped_range().expect("wgpu buffer map_range failed");
+            let data = slice
+                .get_mapped_range()
+                .expect("wgpu buffer map_range failed");
             let floats: &[f32] = bytemuck::cast_slice(&data);
             if let Some(out) = readback_out {
                 out[..readback_elems].copy_from_slice(&floats[..readback_elems]);
@@ -648,7 +664,7 @@ impl QTensorEngine {
         let _ = staging.unmap();
         false
     }
-    #[cfg(target_arch = "wasm32")]
+    #[cfg(all(target_arch = "wasm32", feature = "wasm-llm-diagnostics"))]
     pub(crate) async fn dispatch_attention_q_ffn_token_async(
         &mut self,
         index: &crate::gguf_sharder::GgufTensorIndex,

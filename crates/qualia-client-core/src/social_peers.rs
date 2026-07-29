@@ -134,6 +134,21 @@ pub fn set_peer_envelope_key(did: &str, pubkey_hex: &str) -> Result<(), String> 
     save_peers(&peers)
 }
 
+/// Set (or clear) the peer's last-known transport endpoint (`host:port`), then persist.
+/// Empty `endpoint` clears it. Errors if no such peer.
+pub fn set_peer_endpoint(did: &str, endpoint: Option<&str>) -> Result<(), String> {
+    let mut peers = list_peers();
+    match peers.iter_mut().find(|p| p.did == did) {
+        Some(p) => {
+            p.endpoint = endpoint
+                .map(|e| e.trim().to_string())
+                .filter(|e| !e.is_empty());
+        }
+        None => return Err(format!("no peer with did {did}")),
+    }
+    save_peers(&peers)
+}
+
 /// Resolve `dids` to `(did, envelope_pubkey_hex)` pairs from `peers` — the parties whose envelope key is
 /// known. Parties without a published key (or not peered) are simply omitted (the caller learns which keys
 /// are still missing by comparing lengths). Pure; unit-tested.
@@ -188,10 +203,17 @@ mod tests {
         let peers = vec![alice, bob];
         let resolved = resolve_envelope_keys(
             &peers,
-            &["did:key:alice".to_string(), "did:key:bob".to_string(), "did:key:carol".to_string()],
+            &[
+                "did:key:alice".to_string(),
+                "did:key:bob".to_string(),
+                "did:key:carol".to_string(),
+            ],
         );
         // Only Alice has a key; Bob (no key) and Carol (not a peer) are omitted.
-        assert_eq!(resolved, vec![("did:key:alice".to_string(), "ab".repeat(32))]);
+        assert_eq!(
+            resolved,
+            vec![("did:key:alice".to_string(), "ab".repeat(32))]
+        );
     }
 
     #[test]

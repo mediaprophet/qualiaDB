@@ -40,10 +40,7 @@ pub struct CoinSelection {
 ///
 /// Only considers UTXOs that have no SLP/ALP token metadata (plain XEC UTXOs).
 /// Returns `Err` if insufficient funds.
-pub fn select_utxos(
-    utxos: &[ChronikUtxo],
-    target_sats: i64,
-) -> Result<CoinSelection, String> {
+pub fn select_utxos(utxos: &[ChronikUtxo], target_sats: i64) -> Result<CoinSelection, String> {
     if target_sats <= 0 {
         return Err("Target amount must be positive".into());
     }
@@ -123,8 +120,8 @@ pub fn select_token_utxos(
 
     // We also need plain XEC UTXOs to pay the transaction fee
     // Token txs need: OP_RETURN output (0 sats) + token output (546 sats) + change output + fee
-    let min_xec_needed = DUST_THRESHOLD_SATS + BASE_FEE_SATS +
-        PER_INPUT_FEE_SATS * (token_utxos.len() as i64 + 1); // +1 for XEC funding input
+    let min_xec_needed =
+        DUST_THRESHOLD_SATS + BASE_FEE_SATS + PER_INPUT_FEE_SATS * (token_utxos.len() as i64 + 1); // +1 for XEC funding input
 
     let xec_selection = select_utxos(utxos, min_xec_needed)?;
 

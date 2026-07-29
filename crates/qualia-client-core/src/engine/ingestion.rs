@@ -1,9 +1,18 @@
+use qualia_core_db::sparql_library::parsers::csv_parser::{parse_csv_to_quins, CsvMappingProfile};
+use qualia_core_db::sparql_library::parsers::json_parser::{
+    parse_json_to_quins, JsonMappingProfile,
+};
+use qualia_core_db::sparql_library::serialisers::csv_serializer::{
+    serialize_quins_to_csv, CsvSerializationProfile,
+};
+use qualia_core_db::sparql_library::serialisers::json_serializer::{
+    serialize_quins_to_json, JsonSerializationProfile,
+};
+use qualia_core_db::sparql_library::serialisers::rdf_serializers::{
+    serialize_to_jsonld, serialize_to_n3, serialize_to_nquads, serialize_to_ntriples,
+    serialize_to_trig, serialize_to_turtle,
+};
 use serde::{Deserialize, Serialize};
-use qualia_core_db::sparql_library::parsers::csv_parser::{CsvMappingProfile, parse_csv_to_quins};
-use qualia_core_db::sparql_library::parsers::json_parser::{JsonMappingProfile, parse_json_to_quins};
-use qualia_core_db::sparql_library::serialisers::csv_serializer::{CsvSerializationProfile, serialize_quins_to_csv};
-use qualia_core_db::sparql_library::serialisers::json_serializer::{JsonSerializationProfile, serialize_quins_to_json};
-use qualia_core_db::sparql_library::serialisers::rdf_serializers::{serialize_to_ntriples, serialize_to_turtle, serialize_to_nquads, serialize_to_trig, serialize_to_n3, serialize_to_jsonld};
 use std::fs::File;
 use std::io::{BufReader, BufWriter};
 
@@ -57,32 +66,42 @@ pub fn process_pdf(file_name: &str) -> Result<IngestionResult, String> {
 }
 
 /// Parse CSV file using core-db parser
-pub fn parse_csv(file_path: &str, profile: &mut CsvMappingProfile) -> Result<Vec<qualia_core_db::NQuin>, String> {
+pub fn parse_csv(
+    file_path: &str,
+    profile: &mut CsvMappingProfile,
+) -> Result<Vec<qualia_core_db::NQuin>, String> {
     let file = File::open(file_path).map_err(|e| format!("Failed to open CSV: {}", e))?;
     let mut quins = Vec::new();
-    
+
     parse_csv_to_quins(file, profile, |quin| {
         quins.push(quin);
     })?;
-    
+
     Ok(quins)
 }
 
 /// Parse JSON file using core-db parser
-pub fn parse_json(file_path: &str, profile: &JsonMappingProfile) -> Result<Vec<qualia_core_db::NQuin>, String> {
+pub fn parse_json(
+    file_path: &str,
+    profile: &JsonMappingProfile,
+) -> Result<Vec<qualia_core_db::NQuin>, String> {
     let file = File::open(file_path).map_err(|e| format!("Failed to open JSON: {}", e))?;
     let reader = BufReader::new(file);
     let mut quins = Vec::new();
-    
+
     parse_json_to_quins(reader, profile, |quin| {
         quins.push(quin);
     })?;
-    
+
     Ok(quins)
 }
 
 /// Serialize Quins to CSV file
-pub fn serialize_to_csv_file(file_path: &str, quins: &[qualia_core_db::NQuin], profile: &CsvSerializationProfile) -> Result<(), String> {
+pub fn serialize_to_csv_file(
+    file_path: &str,
+    quins: &[qualia_core_db::NQuin],
+    profile: &CsvSerializationProfile,
+) -> Result<(), String> {
     let file = File::create(file_path).map_err(|e| format!("Failed to create CSV file: {}", e))?;
     let mut writer = BufWriter::new(file);
     serialize_quins_to_csv(&mut writer, quins, profile)?;
@@ -90,7 +109,11 @@ pub fn serialize_to_csv_file(file_path: &str, quins: &[qualia_core_db::NQuin], p
 }
 
 /// Serialize Quins to JSON file
-pub fn serialize_to_json_file(file_path: &str, quins: &[qualia_core_db::NQuin], profile: &JsonSerializationProfile) -> Result<(), String> {
+pub fn serialize_to_json_file(
+    file_path: &str,
+    quins: &[qualia_core_db::NQuin],
+    profile: &JsonSerializationProfile,
+) -> Result<(), String> {
     let file = File::create(file_path).map_err(|e| format!("Failed to create JSON file: {}", e))?;
     let mut writer = BufWriter::new(file);
     serialize_quins_to_json(&mut writer, quins, profile)?;
@@ -98,10 +121,14 @@ pub fn serialize_to_json_file(file_path: &str, quins: &[qualia_core_db::NQuin], 
 }
 
 /// Serialize Quins to RDF format file
-pub fn serialize_to_rdf_file(file_path: &str, quins: &[qualia_core_db::NQuin], format: RdfFormat) -> Result<(), String> {
+pub fn serialize_to_rdf_file(
+    file_path: &str,
+    quins: &[qualia_core_db::NQuin],
+    format: RdfFormat,
+) -> Result<(), String> {
     let file = File::create(file_path).map_err(|e| format!("Failed to create RDF file: {}", e))?;
     let mut writer = BufWriter::new(file);
-    
+
     match format {
         RdfFormat::NTriples => serialize_to_ntriples(&mut writer, quins)?,
         RdfFormat::Turtle => serialize_to_turtle(&mut writer, quins)?,
@@ -110,7 +137,7 @@ pub fn serialize_to_rdf_file(file_path: &str, quins: &[qualia_core_db::NQuin], f
         RdfFormat::N3 => serialize_to_n3(&mut writer, quins)?,
         RdfFormat::JsonLd => serialize_to_jsonld(&mut writer, quins)?,
     }
-    
+
     Ok(())
 }
 

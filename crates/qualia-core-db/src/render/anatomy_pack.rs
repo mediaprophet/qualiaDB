@@ -1,7 +1,7 @@
-//! Shared metadata schema for a `.qualia` **anatomy asset pack** — the per-organ
+//! Shared metadata schema for a `.hmc` **anatomy asset pack** — the per-organ
 //! `meta` carried in each bundle entry.
 //!
-//! A packed anatomy body is a `.qualia` bundle (see [`crate::bundle`]) whose
+//! A packed anatomy body is a `.hmc` bundle (see [`crate::bundle`]) whose
 //! entries are the per-organ sealed `.10d` meshes. Each entry's opaque `meta`
 //! holds one CBOR-encoded [`AnatomyOrganMeta`]: which body **system** the organ
 //! belongs to, an **approximate** anatomical position for assembling the whole
@@ -15,7 +15,7 @@
 
 use serde::{Deserialize, Serialize};
 
-/// Per-organ render metadata carried in a `.qualia` anatomy-pack entry's `meta`.
+/// Per-organ render metadata carried in a `.hmc` anatomy-pack entry's `meta`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct AnatomyOrganMeta {
     /// The organ's **primary** body-system id (its default colour/placement),
@@ -66,7 +66,11 @@ mod tests {
         let m = AnatomyOrganMeta {
             system: "digestive".to_string(),
             label: "pancreas".to_string(),
-            systems: vec!["digestive".to_string(), "endocrine".to_string(), "exocrine".to_string()],
+            systems: vec![
+                "digestive".to_string(),
+                "endocrine".to_string(),
+                "exocrine".to_string(),
+            ],
             position: [0.5, 0.6, 0.55],
             rgba: [0.8, 0.3, 0.3, 1.0],
         };
@@ -78,7 +82,7 @@ mod tests {
     }
 
     /// A pack written before `systems` existed must still decode (the field defaults to empty), so an
-    /// older `.qualia` on disk keeps working. The consumer treats an empty `systems` as `[system]`.
+    /// older `.hmc` on disk keeps working. The consumer treats an empty `systems` as `[system]`.
     #[test]
     fn old_meta_without_systems_field_still_decodes() {
         #[derive(serde::Serialize)]
@@ -89,7 +93,11 @@ mod tests {
         }
         let mut bytes = Vec::new();
         ciborium::into_writer(
-            &OldMeta { system: "respiratory".to_string(), position: [0.4, 0.6, 0.5], rgba: [0.5, 0.7, 0.9, 1.0] },
+            &OldMeta {
+                system: "respiratory".to_string(),
+                position: [0.4, 0.6, 0.5],
+                rgba: [0.5, 0.7, 0.9, 1.0],
+            },
             &mut bytes,
         )
         .unwrap();

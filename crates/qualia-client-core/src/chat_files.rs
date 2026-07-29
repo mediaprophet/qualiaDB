@@ -1012,10 +1012,7 @@ mod tests {
         let owner_did = attached.file.author_did.clone();
         let listed = list_chat_files(&storage, &session_id, Some(&owner_did)).unwrap();
         assert_eq!(listed.len(), 1);
-        assert_eq!(
-            listed[0].sensitivity_level,
-            NQuin::SENSITIVITY_RESTRICTED
-        );
+        assert_eq!(listed[0].sensitivity_level, NQuin::SENSITIVITY_RESTRICTED);
 
         let updated = set_chat_file_sharing(
             &storage,
@@ -1033,10 +1030,7 @@ mod tests {
         )
         .expect("set sharing");
         assert_eq!(updated.sharing.visibility, FileVisibility::SpecificDids);
-        assert_eq!(
-            updated.sensitivity_level,
-            NQuin::SENSITIVITY_RESTRICTED
-        );
+        assert_eq!(updated.sensitivity_level, NQuin::SENSITIVITY_RESTRICTED);
         assert_eq!(
             updated.sharing.sensitivity_level,
             NQuin::SENSITIVITY_RESTRICTED

@@ -91,7 +91,12 @@ impl QualiaPortal {
         global_vram_ledger().mode() as u8
     }
 
-    pub fn resize(&self, canvas: HtmlCanvasElement, width: u32, height: u32) -> Result<(), JsValue> {
+    pub fn resize(
+        &self,
+        canvas: HtmlCanvasElement,
+        width: u32,
+        height: u32,
+    ) -> Result<(), JsValue> {
         canvas.set_width(width);
         canvas.set_height(height);
         self.paint_frame(&canvas)
@@ -165,7 +170,9 @@ impl QualiaPortal {
     /// Lightweight generative DOM: map parsed triples → HTML elements (B2 person-controlled loader).
     pub fn mount_qapp(&self, root_id: &str) -> Result<(), JsValue> {
         let window = web_sys::window().ok_or_else(|| JsValue::from_str("no window"))?;
-        let document = window.document().ok_or_else(|| JsValue::from_str("no document"))?;
+        let document = window
+            .document()
+            .ok_or_else(|| JsValue::from_str("no document"))?;
         let root = document
             .get_element_by_id(root_id)
             .ok_or_else(|| JsValue::from_str(&format!("element #{root_id} not found")))?;
@@ -215,7 +222,9 @@ impl QualiaPortal {
         let w = canvas.width() as f64;
         let h = canvas.height() as f64;
         let mode = global_vram_ledger().mode();
-        let particle_cap = mode.max_particles().min(if self.tier >= 1 { 12_000 } else { 400 }) as usize;
+        let particle_cap = mode
+            .max_particles()
+            .min(if self.tier >= 1 { 12_000 } else { 400 }) as usize;
 
         paint_background(&ctx, w, h, self.telemetry[6]);
         paint_ambient_field(&ctx, w, h, self.time, particle_cap, &self.telemetry);
@@ -230,9 +239,7 @@ impl QualiaPortal {
 }
 
 fn default_telemetry() -> [f32; TELEMETRY_DIM] {
-    [
-        0.05, 0.05, 0.1, 0.0, 0.0, 0.12, 0.2, 0.08, 0.25, 0.03, 0.0,
-    ]
+    [0.05, 0.05, 0.1, 0.0, 0.0, 0.12, 0.2, 0.08, 0.25, 0.03, 0.0]
 }
 
 fn detect_tier() -> u8 {
@@ -289,11 +296,15 @@ fn paint_ambient_field(
         let sigma = ((fi * 0.017 + telemetry[6] as f64) % 1.0) as f32;
         let (r, g, b) = sigma_to_rgb(sigma);
         let alpha = 0.08 + (fi * 0.001 + heat).sin().abs() * 0.35;
-        ctx.set_fill_style(&JsValue::from_str(&format!(
-            "rgba({r},{g},{b},{alpha:.2})"
-        )));
+        ctx.set_fill_style(&JsValue::from_str(&format!("rgba({r},{g},{b},{alpha:.2})")));
         ctx.begin_path();
-        let _ = ctx.arc(px, py, 0.8 + (fi % 3.0) + heat * 2.0, 0.0, std::f64::consts::TAU);
+        let _ = ctx.arc(
+            px,
+            py,
+            0.8 + (fi % 3.0) + heat * 2.0,
+            0.0,
+            std::f64::consts::TAU,
+        );
         ctx.fill();
     }
 }
@@ -378,7 +389,13 @@ fn paint_tensor_projection(
                     node.r, node.g, node.b
                 )));
                 ctx.begin_path();
-                let _ = ctx.arc(node.px, node.py, node.radius + 2.5, 0.0, std::f64::consts::TAU);
+                let _ = ctx.arc(
+                    node.px,
+                    node.py,
+                    node.radius + 2.5,
+                    0.0,
+                    std::f64::consts::TAU,
+                );
                 ctx.stroke();
             }
         }
@@ -448,7 +465,10 @@ fn paint_hud(ctx: &CanvasRenderingContext2d, portal: &QualiaPortal, mode: Operat
         OperationalMode::Reserve => "Reserve",
     };
     let _ = ctx.fill_text(
-        &format!("Qualia WASM · {tier_label} · {mode_label} · {}", portal.description),
+        &format!(
+            "Qualia WASM · {tier_label} · {mode_label} · {}",
+            portal.description
+        ),
         16.0,
         28.0,
     );
@@ -463,7 +483,11 @@ fn paint_hud(ctx: &CanvasRenderingContext2d, portal: &QualiaPortal, mode: Operat
     }
 }
 
-fn append_parsed_dom(document: &Document, panel: &Element, parsed: &JsValue) -> Result<(), JsValue> {
+fn append_parsed_dom(
+    document: &Document,
+    panel: &Element,
+    parsed: &JsValue,
+) -> Result<(), JsValue> {
     if parsed.is_array() {
         let arr: Array = parsed.clone().dyn_into()?;
         for entry in arr.iter() {
@@ -474,7 +498,11 @@ fn append_parsed_dom(document: &Document, panel: &Element, parsed: &JsValue) -> 
     append_triple_dom(document, panel, parsed)
 }
 
-fn append_triple_dom(document: &Document, panel: &Element, triple: &JsValue) -> Result<(), JsValue> {
+fn append_triple_dom(
+    document: &Document,
+    panel: &Element,
+    triple: &JsValue,
+) -> Result<(), JsValue> {
     let subject = field_as_string(triple, "subject").or_else(|| field_as_string(triple, "s"));
     let predicate = field_as_string(triple, "predicate").or_else(|| field_as_string(triple, "p"));
     let object = field_as_string(triple, "object").or_else(|| field_as_string(triple, "o"));

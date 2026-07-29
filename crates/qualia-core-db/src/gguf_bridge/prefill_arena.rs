@@ -361,13 +361,7 @@ impl QTensorEngine {
                 dispatch(&mut cpass, gemv, &lb.q_gemm, gemv_wg(q_dim_u), bu);
                 dispatch(&mut cpass, attn, &lb.q, plan.n_head.max(1), bu);
                 // O·attn + residual(hidden_a) → hidden_b
-                dispatch(
-                    &mut cpass,
-                    gemv_resid,
-                    &lb.o_resid,
-                    gemv_wg(n_embd_u),
-                    bu,
-                );
+                dispatch(&mut cpass, gemv_resid, &lb.o_resid, gemv_wg(n_embd_u), bu);
                 dispatch(&mut cpass, rms, &lb.rms_ffn, 1, bu);
                 if let Some(ref fbg) = lb.fused_ffn {
                     dispatch(&mut cpass, fused_pipe, fbg, gemv_wg(n_ffn_u), bu);
@@ -625,20 +619,19 @@ impl QTensorEngine {
         };
 
         // Prototype GEMM params (batched-tight: in/out row strides default to n_in/n_out).
-        let gemm_proto = |ggml_type: u32,
-                          n_in: usize,
-                          n_out: usize,
-                          row_elems: u32,
-                          raw_len: usize| GemmGpuParams {
-            n_in: n_in as u32,
-            n_out: n_out as u32,
-            weight_ggml_type: ggml_type,
-            weight_row_elems: row_elems,
-            weight_byte_len: raw_len as u32,
-            n_batch: 1,
-            in_row_stride: 0,
-            out_row_stride: 0,
-        };
+        let gemm_proto =
+            |ggml_type: u32, n_in: usize, n_out: usize, row_elems: u32, raw_len: usize| {
+                GemmGpuParams {
+                    n_in: n_in as u32,
+                    n_out: n_out as u32,
+                    weight_ggml_type: ggml_type,
+                    weight_row_elems: row_elems,
+                    weight_byte_len: raw_len as u32,
+                    n_batch: 1,
+                    in_row_stride: 0,
+                    out_row_stride: 0,
+                }
+            };
         let elem_proto = |n: usize, op: u32| ElemGpuParams {
             n: n as u32,
             batch: 1,
@@ -711,13 +704,14 @@ impl QTensorEngine {
             let res = |raw: &[u8]| self.resident_weight_buffer(raw.as_ptr() as u64, raw);
             let (q_w, k_w, v_w) = (res(q_raw)?, res(k_raw)?, res(v_raw)?);
             let o_w = res(o_raw)?;
-            let ffn_bind = |info: &GgufTensorInfo, raw: &[u8]| -> Option<(wgpu::Buffer, u32, u32, u32)> {
-                if let Some(p) = self.promote_matrix_to_f16_resident(info, raw) {
-                    return Some(p);
-                }
-                let b = res(raw)?;
-                Some((b, info.ggml_type, raw.len() as u32, info.dims[0] as u32))
-            };
+            let ffn_bind =
+                |info: &GgufTensorInfo, raw: &[u8]| -> Option<(wgpu::Buffer, u32, u32, u32)> {
+                    if let Some(p) = self.promote_matrix_to_f16_resident(info, raw) {
+                        return Some(p);
+                    }
+                    let b = res(raw)?;
+                    Some((b, info.ggml_type, raw.len() as u32, info.dims[0] as u32))
+                };
             let (g_w, g_ty, g_blen, g_row) = ffn_bind(&gate_info, g_raw)?;
             let (u_w, u_ty, u_blen, u_row) = ffn_bind(&up_info, u_raw)?;
             let (d_w, d_ty, d_blen, d_row) = ffn_bind(&down_info, d_raw)?;

@@ -35,6 +35,9 @@ pub fn emit_cuda_c(kernel: &KernelSpec, schedule: Schedule) -> Result<GeneratedS
             };
             crate::wgsl_forge::ir::graph::lower_graph(&graph, &mut lowerer)?;
         }
+        "ternary-gemv" => emit_ternary_gemv(&mut source)?,
+        "p64-project" => emit_p64_project(&mut source)?,
+        "fft" => emit_fft(&mut source, wg)?,
         other => {
             return Err(ForgeError::Emission(format!(
                 "CUDA-C emission not implemented for kernel {other}"
@@ -250,6 +253,280 @@ extern "C" __global__ void q4k_soa_gemv(const float *x,
     if (t < Q4K_ROWS) {
         unsigned row = row0 + t;
         if (row < n_out) y[row] = red[t * 256u];
+    }
+}
+"#;
+
+/// Entry point of [`Q4K_SOA_WMMA_GEMV_SRC`] — WMMA tensor-core Q4K SoA dequant-GEMV.
+pub const Q4K_SOA_WMMA_GEMV_ENTRY: &str = "q4k_soa_wmma_gemv";
+
+/// Number of output rows per block for the WMMA GEMV kernel.
+/// 4 warps × 16 rows/warp = 64 rows per block.
+pub const Q4K_SOA_WMMA_GEMV_ROWS: u32 = 64;
+
+/// **WMMA tensor-core Q4K SoA dequant-GEMV**.
+///
+/// Each block has 4 warps (128 threads). Each warp owns 16 consecutive output rows
+/// and uses `wmma::mma_sync` with f16 fragments for the multiply-accumulate.
+/// Q4 nibbles are dequanted to f16 in registers and loaded into WMMA fragments.
+/// The input vector is converted to f16 and zero-padded to 16×16 tiles.
+///
+/// This trades f32 precision for tensor-core throughput (f16×f16→f32 accumulate).
+/// The scalar [`Q4K_SOA_GEMV_SRC`] remains the precision-safe fallback.
+///
+/// Layout: per 256-weight superblock = 160 B: qs[128] | d_sub f16[8] | m_sub f16[8].
+/// Bindings: `x` f32[n_in], `W` uchar[n_out * row_bytes], `y` f32[n_out],
+/// `dims` uint[3] = {n_in, n_out, row_bytes}.
+///
+/// Dispatch: `grid = ceil(n_out / 64)`, `block = 128`.
+pub const Q4K_SOA_WMMA_GEMV_SRC: &str = r#"#include <mma.h>
+using namespace nvcuda;
+#define WMMA_M 16u
+#define WMMA_N 16u
+#define WMMA_K 16u
+#define WARPS_PER_BLOCK 4u
+#define ROWS_PER_BLOCK (WMMA_M * WARPS_PER_BLOCK)
+#define K_BLOCK 256u
+#define K_TILES_PER_BLOCK (K_BLOCK / WMMA_K)
+
+__device__ __forceinline__ unsigned short f32_to_f16_bits(float v) {
+    unsigned u = __float_as_int(v);
+    unsigned sign = (u >> 16) & 0x8000u;
+    int exp = (int)((u >> 23) & 0xffu) - 127 + 15;
+    unsigned mant = u & 0x7fffffu;
+    if (exp <= 0) {
+        if (exp < -10) return (unsigned short)sign;
+        mant |= 0x800000u;
+        unsigned shift = (unsigned)(14 - exp);
+        unsigned lsb = (mant >> shift) & 1u;
+        unsigned short h = (unsigned short)(sign | (mant >> (shift + 13)));
+        h += lsb;
+        return h;
+    } else if (exp >= 31) {
+        return (unsigned short)(sign | 0x7c00u);
+    }
+    unsigned lsb = (mant >> 13) & 1u;
+    unsigned short h = (unsigned short)(sign | (exp << 10) | (mant >> 13));
+    h += lsb;
+    return h;
+}
+
+extern "C" __global__ void q4k_soa_wmma_gemv(const float *x,
+                                              const unsigned char *W,
+                                              float *y,
+                                              const unsigned *dims) {
+    unsigned n_in = dims[0];
+    unsigned n_out = dims[1];
+    unsigned row_bytes = dims[2];
+    unsigned row0 = blockIdx.x * ROWS_PER_BLOCK;
+    unsigned warp_id = threadIdx.x / 32u;
+    unsigned lane = threadIdx.x % 32u;
+    unsigned warp_row0 = row0 + warp_id * WMMA_M;
+    if (row0 >= n_out) return;
+
+    // Shared memory: x tiles (f16, zero-padded to 16x16) + weight f16 tiles.
+    // x_tile: 16 K-elements × 16 cols (only col 0 used) = 256 f16 = 512 bytes per tile.
+    // 16 K-tiles per K-block → 16 × 512 = 8 KB for x tiles (shared by all warps).
+    // weight tile: 16 rows × 16 K-elements = 256 f16 = 512 bytes per warp.
+    // 4 warps × 512 = 2 KB for weight tiles.
+    // Total: ~10 KB — fits comfortably in 48 KB shared memory.
+    __shared__ __half x_tile[K_TILES_PER_BLOCK][WMMA_K * WMMA_N]; // 16×16×16 f16
+    __shared__ __half w_tile[WARPS_PER_BLOCK][WMMA_M * WMMA_K];   // 4×16×16 f16
+
+    wmma::fragment<wmma::matrix_a, WMMA_M, WMMA_N, WMMA_K, __half, wmma::row_major> a_frag;
+    wmma::fragment<wmma::matrix_b, WMMA_M, WMMA_N, WMMA_K, __half, wmma::col_major> b_frag;
+    wmma::fragment<wmma::accumulator, WMMA_M, WMMA_N, WMMA_K, float> c_frag;
+    wmma::fill_fragment(c_frag, 0.0f);
+
+    unsigned n_k_blocks = n_in / K_BLOCK;
+    for (unsigned kb = 0u; kb < n_k_blocks; kb++) {
+        // Phase 1: Load x chunk and convert to f16, zero-pad to 16×16 tiles.
+        // 128 threads load 256 elements → 2 per thread.
+        for (unsigned i = threadIdx.x; i < K_BLOCK; i += 128u) {
+            unsigned tile = i / WMMA_K;
+            unsigned elem = i % WMMA_K;
+            x_tile[tile][elem] = __float2half(x[kb * K_BLOCK + i]);
+        }
+        // Zero-pad columns 1..15 of each tile.
+        for (unsigned i = threadIdx.x; i < K_TILES_PER_BLOCK * WMMA_K * (WMMA_N - 1u); i += 128u) {
+            unsigned tile = i / (WMMA_K * (WMMA_N - 1u));
+            unsigned rest = i % (WMMA_K * (WMMA_N - 1u));
+            unsigned elem = rest / (WMMA_N - 1u);
+            unsigned col = rest % (WMMA_N - 1u) + 1u;
+            x_tile[tile][elem * WMMA_N + col] = __float2half(0.0f);
+        }
+        __syncthreads();
+
+        // Phase 2: Dequant weight rows to f16 and accumulate via WMMA.
+        // Each warp processes its 16 rows. 32 lanes dequant 16×256 = 4096 elements
+        // → 128 elements per lane. Process one 16×16 K-tile at a time.
+        for (unsigned kt = 0u; kt < K_TILES_PER_BLOCK; kt++) {
+            // Dequant 16 rows × 16 K-elements into w_tile.
+            // Q4K block layout: 128 bytes nibbles | 8×f16 d_sub | 8×f16 m_sub.
+            // Each group of 32 elements has its own d/m scale.
+            // A 16-element K-tile spans half a group.
+            unsigned k_base = kt * WMMA_K; // 0, 16, 32, ..., 240
+            unsigned group = k_base / 32u; // 0 or 1, ..., 7
+            unsigned sub_in_group = (k_base % 32u) / 16u; // 0 or 1 (first or second half of group)
+
+            for (unsigned i = lane; i < WMMA_M * WMMA_K; i += 32u) {
+                unsigned r = i / WMMA_K;
+                unsigned k = i % WMMA_K;
+                unsigned row = warp_row0 + r;
+                if (row >= n_out) {
+                    w_tile[warp_id][i] = __float2half(0.0f);
+                    continue;
+                }
+                const unsigned char *blk =
+                    W + (size_t)row * (size_t)row_bytes + (size_t)kb * 160u;
+                // d/m scales for this group.
+                unsigned d_off = 128u + group * 2u;
+                unsigned m_off = 144u + group * 2u;
+                unsigned short dh = (unsigned short)(blk[d_off] | (blk[d_off + 1u] << 8));
+                unsigned short mh = (unsigned short)(blk[m_off] | (blk[m_off + 1u] << 8));
+                float dsub = __half2float(__ushort_as_half(dh));
+                float msub = __half2float(__ushort_as_half(mh));
+                // Nibble index within the 32-element group.
+                unsigned nib_idx = sub_in_group * 16u + k;
+                unsigned byte_idx = group * 32u + nib_idx;
+                unsigned char byte_val = blk[byte_idx / 2u];
+                float nib = (nib_idx % 2u == 0u)
+                    ? (float)(byte_val & 0xFu)
+                    : (float)(byte_val >> 4);
+                float deq = dsub * nib - msub;
+                w_tile[warp_id][i] = __float2half(deq);
+            }
+            __syncwarp();
+
+            // Load WMMA fragments from shared memory.
+            wmma::load_matrix_sync(a_frag, w_tile[warp_id], WMMA_K);
+            wmma::load_matrix_sync(b_frag, x_tile[kt], WMMA_N);
+            wmma::mma_sync(c_frag, a_frag, b_frag, c_frag);
+        }
+        __syncthreads();
+    }
+
+    // Phase 3: Store results. Only column 0 of the 16×16 accumulator has meaningful values.
+    // Store the full fragment to shared memory, then extract column 0.
+    __shared__ float c_store[WARPS_PER_BLOCK][WMMA_M * WMMA_N];
+    wmma::store_matrix_sync(c_store[warp_id], c_frag, WMMA_N, wmma::mem_row_major);
+    __syncwarp();
+
+    if (lane < WMMA_M) {
+        unsigned row = warp_row0 + lane;
+        if (row < n_out) {
+            y[row] = c_store[warp_id][lane * WMMA_N]; // column 0
+        }
+    }
+}
+"#;
+
+/// Entry point of [`Q4K_SOA_WMMA_GEMV_RESID_SRC`] — WMMA tensor-core Q4K SoA GEMV + residual.
+pub const Q4K_SOA_WMMA_GEMV_RESID_ENTRY: &str = "q4k_soa_wmma_gemv_resid";
+
+/// WMMA tensor-core Q4K SoA dequant-GEMV with fused residual add:
+/// `y[i] = residual[i] + W[i]·x`. Same WMMA geometry as [`Q4K_SOA_WMMA_GEMV_SRC`]
+/// but adds residual to the output.
+///
+/// Bindings: `x` f32[n_in], `W` uchar[n_out * row_bytes], `y` f32[n_out],
+/// `dims` uint[3] = {n_in, n_out, row_bytes}, `residual` f32[n_out].
+/// Dispatch: `grid = ceil(n_out / 64)`, `block = 128`.
+pub const Q4K_SOA_WMMA_GEMV_RESID_SRC: &str = r#"#include <mma.h>
+using namespace nvcuda;
+#define WMMA_M 16u
+#define WMMA_N 16u
+#define WMMA_K 16u
+#define WARPS_PER_BLOCK 4u
+#define ROWS_PER_BLOCK (WMMA_M * WARPS_PER_BLOCK)
+#define K_BLOCK 256u
+#define K_TILES_PER_BLOCK (K_BLOCK / WMMA_K)
+
+extern "C" __global__ void q4k_soa_wmma_gemv_resid(const float *x,
+                                                    const unsigned char *W,
+                                                    float *y,
+                                                    const unsigned *dims,
+                                                    const float *residual) {
+    unsigned n_in = dims[0];
+    unsigned n_out = dims[1];
+    unsigned row_bytes = dims[2];
+    unsigned row0 = blockIdx.x * ROWS_PER_BLOCK;
+    unsigned warp_id = threadIdx.x / 32u;
+    unsigned lane = threadIdx.x % 32u;
+    unsigned warp_row0 = row0 + warp_id * WMMA_M;
+    if (row0 >= n_out) return;
+
+    __shared__ __half x_tile[K_TILES_PER_BLOCK][WMMA_K * WMMA_N];
+    __shared__ __half w_tile[WARPS_PER_BLOCK][WMMA_M * WMMA_K];
+
+    wmma::fragment<wmma::matrix_a, WMMA_M, WMMA_N, WMMA_K, __half, wmma::row_major> a_frag;
+    wmma::fragment<wmma::matrix_b, WMMA_M, WMMA_N, WMMA_K, __half, wmma::col_major> b_frag;
+    wmma::fragment<wmma::accumulator, WMMA_M, WMMA_N, WMMA_K, float> c_frag;
+    wmma::fill_fragment(c_frag, 0.0f);
+
+    unsigned n_k_blocks = n_in / K_BLOCK;
+    for (unsigned kb = 0u; kb < n_k_blocks; kb++) {
+        for (unsigned i = threadIdx.x; i < K_BLOCK; i += 128u) {
+            unsigned tile = i / WMMA_K;
+            unsigned elem = i % WMMA_K;
+            x_tile[tile][elem] = __float2half(x[kb * K_BLOCK + i]);
+        }
+        for (unsigned i = threadIdx.x; i < K_TILES_PER_BLOCK * WMMA_K * (WMMA_N - 1u); i += 128u) {
+            unsigned tile = i / (WMMA_K * (WMMA_N - 1u));
+            unsigned rest = i % (WMMA_K * (WMMA_N - 1u));
+            unsigned elem = rest / (WMMA_N - 1u);
+            unsigned col = rest % (WMMA_N - 1u) + 1u;
+            x_tile[tile][elem * WMMA_N + col] = __float2half(0.0f);
+        }
+        __syncthreads();
+
+        for (unsigned kt = 0u; kt < K_TILES_PER_BLOCK; kt++) {
+            unsigned k_base = kt * WMMA_K;
+            unsigned group = k_base / 32u;
+            unsigned sub_in_group = (k_base % 32u) / 16u;
+
+            for (unsigned i = lane; i < WMMA_M * WMMA_K; i += 32u) {
+                unsigned r = i / WMMA_K;
+                unsigned k = i % WMMA_K;
+                unsigned row = warp_row0 + r;
+                if (row >= n_out) {
+                    w_tile[warp_id][i] = __float2half(0.0f);
+                    continue;
+                }
+                const unsigned char *blk =
+                    W + (size_t)row * (size_t)row_bytes + (size_t)kb * 160u;
+                unsigned d_off = 128u + group * 2u;
+                unsigned m_off = 144u + group * 2u;
+                unsigned short dh = (unsigned short)(blk[d_off] | (blk[d_off + 1u] << 8));
+                unsigned short mh = (unsigned short)(blk[m_off] | (blk[m_off + 1u] << 8));
+                float dsub = __half2float(__ushort_as_half(dh));
+                float msub = __half2float(__ushort_as_half(mh));
+                unsigned nib_idx = sub_in_group * 16u + k;
+                unsigned byte_idx = group * 32u + nib_idx;
+                unsigned char byte_val = blk[byte_idx / 2u];
+                float nib = (nib_idx % 2u == 0u)
+                    ? (float)(byte_val & 0xFu)
+                    : (float)(byte_val >> 4);
+                float deq = dsub * nib - msub;
+                w_tile[warp_id][i] = __float2half(deq);
+            }
+            __syncwarp();
+
+            wmma::load_matrix_sync(a_frag, w_tile[warp_id], WMMA_K);
+            wmma::load_matrix_sync(b_frag, x_tile[kt], WMMA_N);
+            wmma::mma_sync(c_frag, a_frag, b_frag, c_frag);
+        }
+        __syncthreads();
+    }
+
+    __shared__ float c_store[WARPS_PER_BLOCK][WMMA_M * WMMA_N];
+    wmma::store_matrix_sync(c_store[warp_id], c_frag, WMMA_N, wmma::mem_row_major);
+    __syncwarp();
+
+    if (lane < WMMA_M) {
+        unsigned row = warp_row0 + lane;
+        if (row < n_out) {
+            y[row] = residual[row] + c_store[warp_id][lane * WMMA_N];
+        }
     }
 }
 "#;
@@ -626,17 +903,21 @@ extern "C" __global__ void sdpa_decode_gqa(
     const float *kv,
     float *out,
     const unsigned *params,
-    const unsigned *scale_bits
+    const unsigned *scale_bits,
+    const unsigned *layer_id,
+    const unsigned *step,
+    const unsigned *block_table
 ) {
     unsigned n_head = params[0];
     unsigned n_kv = params[1];
     unsigned head_dim = params[2];
-    unsigned layer = params[3];
-    unsigned pos = params[4];
-    unsigned max_context = params[5];
-    unsigned layer_stride = params[6];
-    unsigned slot_kv_elems = params[7];
-    unsigned q_per_kv = params[8];
+    unsigned max_context = params[3];
+    unsigned block_size = params[4];
+    unsigned blocks_per_layer = params[5];
+    unsigned slot_kv_elems = params[6];
+    unsigned q_per_kv = params[7];
+    unsigned layer = layer_id[0];
+    unsigned pos = step[0];
     if (q_per_kv == 0u) q_per_kv = 1u;
     float scale = __int_as_float((int)scale_bits[0]);
     unsigned q_h = blockIdx.x;
@@ -644,23 +925,33 @@ extern "C" __global__ void sdpa_decode_gqa(
     if (q_h >= n_head) return;
     unsigned kv_h = q_h / q_per_kv;
     if (kv_h >= n_kv) return;
-    if (head_dim > 256u || pos >= 1024u || max_context == 0u || max_context > 1024u) return;
+    if (head_dim > 256u || pos >= 1024u || max_context == 0u || max_context > 1024u
+        || block_size == 0u || blocks_per_layer == 0u) return;
 
     __shared__ float q_sh[256];
     __shared__ float red[256];
-    __shared__ float scores[1024];
-    __shared__ float max_sh;
-    __shared__ float sum_sh;
+    __shared__ float running_max;
+    __shared__ float running_sum;
+    __shared__ float alpha_sh;
+    __shared__ float beta_sh;
 
     if (t < head_dim) q_sh[t] = q[q_h * head_dim + t];
+    if (t == 0u) {
+        running_max = -3.402823466e+38F;
+        running_sum = 0.0f;
+    }
     __syncthreads();
 
     // Phase 1: scores[past] = (q · K[past]) * scale
+    float acc = 0.0f;
     for (unsigned past = 0u; past <= pos; past++) {
         unsigned past_slot = past % max_context;
-        unsigned k_base = layer * layer_stride
-            + past_slot * slot_kv_elems * 2u
-            + kv_h * head_dim;
+        unsigned logical_block = past_slot / block_size;
+        unsigned physical_block = block_table[layer * blocks_per_layer + logical_block];
+        if (physical_block == 0xffffffffu) return;
+        unsigned block_offset = past_slot % block_size;
+        unsigned k_base = physical_block * block_size * slot_kv_elems * 2u
+            + block_offset * slot_kv_elems * 2u + kv_h * head_dim;
         float partial = 0.0f;
         if (t < head_dim) partial = q_sh[t] * kv[k_base + t];
         red[t] = (t < head_dim) ? partial : 0.0f;
@@ -669,43 +960,113 @@ extern "C" __global__ void sdpa_decode_gqa(
             if (t < s) red[t] += red[t + s];
             __syncthreads();
         }
-        if (t == 0u) scores[past] = red[0] * scale;
+        if (t == 0u) {
+            float score = red[0] * scale;
+            float next_max = fmaxf(running_max, score);
+            float alpha = running_sum == 0.0f ? 0.0f : expf(running_max - next_max);
+            float beta = expf(score - next_max);
+            running_sum = running_sum * alpha + beta;
+            running_max = next_max;
+            alpha_sh = alpha;
+            beta_sh = beta;
+        }
         __syncthreads();
-    }
-
-    // Phase 2: max + softmax (thread 0; broadcast via shared)
-    if (t == 0u) {
-        float mx = scores[0];
-        for (unsigned past = 1u; past <= pos; past++) {
-            if (scores[past] > mx) mx = scores[past];
-        }
-        max_sh = mx;
-        float sum = 0.0f;
-        for (unsigned past = 0u; past <= pos; past++) {
-            float e = expf(scores[past] - mx);
-            scores[past] = e;
-            sum += e;
-        }
-        if (sum == 0.0f) sum = 1.0f;
-        for (unsigned past = 0u; past <= pos; past++) scores[past] /= sum;
-        sum_sh = sum;
-    }
-    __syncthreads();
-    (void)sum_sh;
-
-    // Phase 3: out = sum_p softmax[p] * V[p]
-    if (t < head_dim) {
-        float acc = 0.0f;
-        for (unsigned past = 0u; past <= pos; past++) {
-            unsigned past_slot = past % max_context;
-            unsigned v_base = layer * layer_stride
-                + past_slot * slot_kv_elems * 2u
+        if (t < head_dim) {
+            unsigned v_base = physical_block * block_size * slot_kv_elems * 2u
+                + block_offset * slot_kv_elems * 2u
                 + n_kv * head_dim
                 + kv_h * head_dim;
-            acc += kv[v_base + t] * scores[past];
+            acc = acc * alpha_sh + kv[v_base + t] * beta_sh;
         }
-        out[q_h * head_dim + t] = acc;
+        __syncthreads();
     }
+    if (t < head_dim) {
+        out[q_h * head_dim + t] = acc / fmaxf(running_sum, 1.0e-20f);
+    }
+}
+"#;
+
+/// Entry point of [`RMSNORM_F32_SRC`] — device-side RMSNorm for the mega-pass.
+pub const RMSNORM_F32_ENTRY: &str = "rmsnorm_f32";
+
+/// Device-side RMSNorm: `out[i] = x[i] * rsqrt(mean(x²) + eps) * weight[i]`.
+/// One block of 256 threads, grid-stride + tree reduction. Handles n up to ~65k.
+/// Bindings: `x` f32[n], `weight` f32[n], `out` f32[n], `params` u32[2] = {n, eps_bits}.
+/// Dispatch: `grid = 1`, `block = 256`.
+pub const RMSNORM_F32_SRC: &str = r#"
+extern "C" __global__ void rmsnorm_f32(const float *x, const float *weight, float *out, const unsigned *params) {
+    unsigned n = params[0];
+    float eps = __int_as_float((int)params[1]);
+    unsigned t = threadIdx.x;
+    __shared__ float red[256];
+    float ss = 0.0f;
+    for (unsigned i = t; i < n; i += 256u) {
+        float v = x[i];
+        ss += v * v;
+    }
+    red[t] = ss;
+    __syncthreads();
+    for (unsigned s = 128u; s > 0u; s >>= 1u) {
+        if (t < s) red[t] += red[t + s];
+        __syncthreads();
+    }
+    float rms_inv = rsqrtf(red[0] / (float)n + eps);
+    for (unsigned i = t; i < n; i += 256u) {
+        out[i] = x[i] * rms_inv * weight[i];
+    }
+}
+"#;
+
+/// Entry point of [`RESIDUAL_ADD_SRC`] — device-side residual add for the mega-pass.
+pub const RESIDUAL_ADD_ENTRY: &str = "residual_add";
+
+/// Device-side residual add: `out[i] = base[i] + delta[i]`.
+/// Grid-stride loop. Bindings: `delta` f32[n], `base` f32[n], `out` f32[n], `params` u32[1] = {n}.
+/// Dispatch: `grid = ceil(n / 256)`, `block = 256`.
+pub const RESIDUAL_ADD_SRC: &str = r#"
+extern "C" __global__ void residual_add(const float *delta, const float *base, float *out, const unsigned *params) {
+    unsigned n = params[0];
+    unsigned gid = blockIdx.x * blockDim.x + threadIdx.x;
+    if (gid < n) out[gid] = base[gid] + delta[gid];
+}
+"#;
+
+/// Entry point of [`ARGMAX_F32_SRC`] — device-side argmax for the mega-pass.
+pub const ARGMAX_F32_ENTRY: &str = "argmax_f32";
+
+/// Device-side argmax: finds the index of the maximum value in `logits[0..n]`.
+/// Single block of 256 threads with grid-stride scan + tree reduction.
+/// Handles n up to ~128k (500 elements/thread for 128k vocab).
+/// Bindings: `logits` f32[n], `out_token` u32[1], `params` u32[1] = {n}.
+/// Dispatch: `grid = 1`, `block = 256`.
+pub const ARGMAX_F32_SRC: &str = r#"
+extern "C" __global__ void argmax_f32(const float *logits, unsigned *out_token, const unsigned *params) {
+    unsigned n = params[0];
+    unsigned t = threadIdx.x;
+    __shared__ float s_val[256];
+    __shared__ unsigned s_idx[256];
+    float best_val = __int_as_float(0xff7fffff);
+    unsigned best_idx = 0u;
+    for (unsigned i = t; i < n; i += 256u) {
+        float v = logits[i];
+        if (v > best_val || (v == best_val && i < best_idx)) {
+            best_val = v;
+            best_idx = i;
+        }
+    }
+    s_val[t] = best_val;
+    s_idx[t] = best_idx;
+    __syncthreads();
+    for (unsigned s = 128u; s > 0u; s >>= 1u) {
+        if (t < s) {
+            if (s_val[t + s] > s_val[t] || (s_val[t + s] == s_val[t] && s_idx[t + s] < s_idx[t])) {
+                s_val[t] = s_val[t + s];
+                s_idx[t] = s_idx[t + s];
+            }
+        }
+        __syncthreads();
+    }
+    if (t == 0u) *out_token = s_idx[0];
 }
 "#;
 
@@ -899,3 +1260,211 @@ extern "C" __global__ void topk(const float* input, float* output, TopKParams pa
     )
     .map_err(|e| ForgeError::Emission(e.to_string()))
 }
+
+/// BitNet-style ternary GEMV in CUDA-C: one thread per output row. 2-bit codes,
+/// 16 per `unsigned` (`0->0.0, 1->+1.0, 2->-1.0, 3->0.0`), `k_words` per row.
+/// Mirrors the certified WGSL/HLSL math — same binding order, same dequant map.
+fn emit_ternary_gemv(source: &mut String) -> Result<(), ForgeError> {
+    writeln!(
+        source,
+        r#"struct TernaryGemvParams {{ unsigned m; unsigned k; unsigned k_words; unsigned _pad; }};
+extern "C" __global__ void ternary_gemv(const float* x,
+                                        const unsigned* w_packed,
+                                        const float* scale,
+                                        float* output,
+                                        TernaryGemvParams params) {{
+    unsigned o = blockIdx.x * blockDim.x + threadIdx.x;
+    if (o >= params.m) return;
+    float acc = 0.0f;
+    unsigned row_base = o * params.k_words;
+    for (unsigned word_idx = 0u; word_idx < params.k_words; word_idx++) {{
+        unsigned word = w_packed[row_base + word_idx];
+        unsigned lane_base = word_idx * 16u;
+        for (unsigned lane = 0u; lane < 16u; lane++) {{
+            unsigned i = lane_base + lane;
+            if (i >= params.k) break;
+            unsigned code = (word >> (lane * 2u)) & 3u;
+            float tern = 0.0f;
+            if (code == 1u) {{ tern = 1.0f; }} else if (code == 2u) {{ tern = -1.0f; }}
+            acc += tern * x[i];
+        }}
+    }}
+    output[o] = scale[o] * acc;
+}}"#
+    )
+    .map_err(|e| ForgeError::Emission(e.to_string()))
+}
+
+/// P64 descriptor projection in CUDA-C: one thread per record. The record count
+/// is passed as a scalar parameter (CUDA has no buffer-length query, unlike
+/// WGSL `arrayLength` / HLSL `GetDimensions`). Uses a flat `unsigned` array for
+/// the 16 packed words — same memory layout as WGSL `array<vec4<u32>, 4>`.
+fn emit_p64_project(source: &mut String) -> Result<(), ForgeError> {
+    writeln!(
+        source,
+        r#"struct P64Words64 {{ unsigned words[16]; }};
+extern "C" __global__ void p64_project(const P64Words64* input,
+                                       const float* weights,
+                                       float* output,
+                                       unsigned record_count) {{
+    unsigned r = blockIdx.x * blockDim.x + threadIdx.x;
+    if (r >= record_count) return;
+    P64Words64 rec = input[r];
+    float acc = 0.0f;
+    for (unsigned w = 0u; w < 16u; w++) {{
+        acc += weights[w] * (float)rec.words[w];
+    }}
+    output[r] = acc;
+}}"#
+    )
+    .map_err(|e| ForgeError::Emission(e.to_string()))
+}
+
+/// Forward radix-2 DIT FFT in CUDA-C over one thread block of `N = workgroup_size`
+/// threads. Interleaved complex f32, bit-reversal load into `__shared__` memory,
+/// then `log2(N)` butterfly stages with `__syncthreads()`. Same
+/// `exp(-2*pi*i*k/m)` convention as the WGSL kernel and the CPU DFT oracle.
+/// `__brev` is the CUDA intrinsic for 32-bit bit reversal (WGSL: `reverseBits`,
+/// HLSL: `reversebits`).
+fn emit_fft(source: &mut String, wg: u32) -> Result<(), ForgeError> {
+    writeln!(
+        source,
+        r#"struct FftParams {{ unsigned n; unsigned log2n; unsigned _pad0; unsigned _pad1; }};
+extern "C" __global__ void fft(const float* input,
+                               float* output,
+                               FftParams params) {{
+    __shared__ float s_re[{wg}];
+    __shared__ float s_im[{wg}];
+    unsigned t = threadIdx.x;
+    unsigned n = params.n;
+    unsigned logn = params.log2n;
+    unsigned rev = __brev(t) >> (32u - logn);
+    s_re[rev] = input[2u * t];
+    s_im[rev] = input[2u * t + 1u];
+    __syncthreads();
+    for (unsigned s = 0u; s < logn; s++) {{
+        unsigned span = 1u << s;
+        unsigned m = span << 1u;
+        if (t < (n >> 1u)) {{
+            unsigned k = t & (span - 1u);
+            unsigned j = ((t >> s) << (s + 1u)) + k;
+            unsigned jp = j + span;
+            float ang = -6.28318548f * (float)k / (float)m;
+            float wr = cosf(ang);
+            float wi = sinf(ang);
+            float ur = s_re[j];
+            float ui = s_im[j];
+            float vr = s_re[jp];
+            float vi = s_im[jp];
+            float tr = vr * wr - vi * wi;
+            float ti = vr * wi + vi * wr;
+            s_re[j] = ur + tr;
+            s_im[j] = ui + ti;
+            s_re[jp] = ur - tr;
+            s_im[jp] = ui - ti;
+        }}
+        __syncthreads();
+    }}
+    output[2u * t] = s_re[t];
+    output[2u * t + 1u] = s_im[t];
+}}"#
+    )
+    .map_err(|e| ForgeError::Emission(e.to_string()))
+}
+
+/// Entry point of [`Q6K_SOA_GEMV_SRC`] — Q6_K SoA dequant-GEMV (scalar).
+pub const Q6K_SOA_GEMV_ENTRY: &str = "q6k_soa_gemv";
+
+/// Number of output rows per block for the Q6K GEMV kernel.
+pub const Q6K_SOA_GEMV_ROWS: u32 = 16;
+
+/// **Q6_K SoA dequant-GEMV** (scalar, multi-row coop).
+///
+/// Q6_K block: 210 bytes, 256 weights. 6-bit quantization with per-block
+/// scales. Each block owns `Q6K_SOA_GEMV_ROWS` consecutive output rows.
+///
+/// Layout: ql[128] | qh[64] | scales[16] (i8) | d (f16).
+/// 6-bit value = lower 4 bits from ql, upper 2 bits from qh.
+/// deq = d * scale * (q - 32).
+///
+/// Bindings: `x` f32[n_in], `W` uchar[n_out * row_bytes], `y` f32[n_out],
+/// `dims` uint[3] = {n_in, n_out, row_bytes}.
+/// Dispatch: `grid = ceil(n_out / Q6K_SOA_GEMV_ROWS)`, `block = 256`.
+pub const Q6K_SOA_GEMV_SRC: &str = r#"
+#define Q6K_ROWS 16u
+__device__ __forceinline__ float q6k_f16_to_f32(unsigned short h) {
+    unsigned sign = (h >> 15) & 1u;
+    unsigned exp  = (h >> 10) & 0x1fu;
+    unsigned mant = h & 0x3ffu;
+    unsigned fbits;
+    if (exp == 0) {
+        if (mant == 0) fbits = sign << 31;
+        else {
+            exp = 127 - 15 + 1;
+            while ((mant & 0x400u) == 0) { mant <<= 1; exp--; }
+            mant &= 0x3ffu;
+            fbits = (sign << 31) | (exp << 23) | (mant << 13);
+        }
+    } else if (exp == 31) fbits = (sign << 31) | 0x7f800000u | (mant << 13);
+    else fbits = (sign << 31) | ((exp + (127 - 15)) << 23) | (mant << 13);
+    return __int_as_float(fbits);
+}
+
+extern "C" __global__ void q6k_soa_gemv(const float *x,
+                                        const unsigned char *W,
+                                        float *y,
+                                        const unsigned *dims) {
+    unsigned n_in = dims[0];
+    unsigned n_out = dims[1];
+    unsigned row_bytes = dims[2];
+    unsigned row0 = blockIdx.x * Q6K_ROWS;
+    unsigned t = threadIdx.x;
+    if (row0 >= n_out) return;
+
+    float acc[Q6K_ROWS];
+    #pragma unroll
+    for (unsigned r = 0u; r < Q6K_ROWS; r++) acc[r] = 0.0f;
+
+    unsigned n_blocks = n_in / 256u;
+    for (unsigned b = 0u; b < n_blocks; b++) {
+        float xv = x[b * 256u + t];
+        #pragma unroll
+        for (unsigned r = 0u; r < Q6K_ROWS; r++) {
+            unsigned row = row0 + r;
+            if (row >= n_out) continue;
+            const unsigned char *blk = W + (size_t)row * (size_t)row_bytes + (size_t)b * 210u;
+            unsigned y_in_block = t;
+            unsigned chunk = y_in_block / 128u;
+            unsigned ql_idx = y_in_block % 128u;
+            unsigned short dh = (unsigned short)(blk[208] | (blk[209] << 8));
+            float d = q6k_f16_to_f32(dh);
+            unsigned ql_byte = blk[ql_idx / 2u];
+            unsigned qh_idx = (y_in_block / 4u) & 63u;
+            unsigned qh_byte = blk[128u + qh_idx];
+            unsigned q = (ql_byte & 0xFu) | ((qh_byte >> 4u) & 0x3u) << 4u;
+            unsigned scale_idx = chunk * 8u + (ql_idx / 16u);
+            int scale = (signed char)blk[192u + scale_idx];
+            float scale_f = (float)scale;
+            float deq = d * scale_f * ((float)q - 32.0f);
+            acc[r] += deq * xv;
+        }
+    }
+
+    __shared__ float red[Q6K_ROWS * 256u];
+    #pragma unroll
+    for (unsigned r = 0u; r < Q6K_ROWS; r++) red[r * 256u + t] = acc[r];
+    __syncthreads();
+    for (unsigned s = 128u; s > 0u; s >>= 1u) {
+        if (t < s) {
+            #pragma unroll
+            for (unsigned r = 0u; r < Q6K_ROWS; r++)
+                red[r * 256u + t] += red[r * 256u + t + s];
+        }
+        __syncthreads();
+    }
+    if (t < Q6K_ROWS) {
+        unsigned row = row0 + t;
+        if (row < n_out) y[row] = red[t * 256u];
+    }
+}
+"#;

@@ -32,7 +32,10 @@ fn short(s: &str, n: usize) -> String {
 }
 
 fn str_field(v: &serde_json::Value, key: &str) -> String {
-    v.get(key).and_then(|x| x.as_str()).unwrap_or("").to_string()
+    v.get(key)
+        .and_then(|x| x.as_str())
+        .unwrap_or("")
+        .to_string()
 }
 
 #[component]
@@ -60,7 +63,9 @@ pub fn WellfairAccountabilityPanel() -> Element {
     let mut c_reason = use_signal(|| "acting under the granted consent".to_string());
 
     // Real envelope-encryption: seal a plaintext payload + open it back.
-    let mut seal_payload_text = use_signal(|| "Emergency housing placement requested; unsafe living situation.".to_string());
+    let mut seal_payload_text = use_signal(|| {
+        "Emergency housing placement requested; unsafe living situation.".to_string()
+    });
     let mut owner_pubkey = use_signal(String::new);
     let mut opened_plaintext = use_signal(String::new);
 
@@ -77,7 +82,10 @@ pub fn WellfairAccountabilityPanel() -> Element {
                     integrity.set(if ok {
                         "✓ Ledger intact — every entry chains and its signature verifies.".into()
                     } else {
-                        format!("⚠ Tamper detected: {}", v.get("tamper").cloned().unwrap_or_default())
+                        format!(
+                            "⚠ Tamper detected: {}",
+                            v.get("tamper").cloned().unwrap_or_default()
+                        )
                     });
                 }
                 Err(e) => integrity.set(format!("Verify unavailable: {e}")),
@@ -96,16 +104,25 @@ pub fn WellfairAccountabilityPanel() -> Element {
     let mut loaded = use_signal(|| false);
 
     use_effect(move || {
-        if loaded() { return; }
+        if loaded() {
+            return;
+        }
         loaded.set(true);
         reload();
     });
 
     let do_grant = move |_| {
-        let (agent, scope, purpose, commitment, wrapped) =
-            (g_agent(), g_scope(), g_purpose(), g_commitment(), g_wrapped());
+        let (agent, scope, purpose, commitment, wrapped) = (
+            g_agent(),
+            g_scope(),
+            g_purpose(),
+            g_commitment(),
+            g_wrapped(),
+        );
         spawn(async move {
-            match grant_consent_credential(&agent, &scope, &purpose, &commitment, &wrapped, None).await {
+            match grant_consent_credential(&agent, &scope, &purpose, &commitment, &wrapped, None)
+                .await
+            {
                 Ok(v) => {
                     status.set(format!("Granted credential {}", str_field(&v, "id")));
                     reload();
@@ -116,12 +133,16 @@ pub fn WellfairAccountabilityPanel() -> Element {
     };
 
     let do_seal_grant = move |_| {
-        let (agent, scope, purpose, payload) = (g_agent(), g_scope(), g_purpose(), seal_payload_text());
+        let (agent, scope, purpose, payload) =
+            (g_agent(), g_scope(), g_purpose(), seal_payload_text());
         spawn(async move {
             // Empty agent public key ⇒ sealed to the owner (self-custody), so it can be opened here.
             match seal_and_grant_credential(&agent, "", &scope, &purpose, &payload, None).await {
                 Ok(v) => {
-                    status.set(format!("Sealed + granted credential {} (payload encrypted)", str_field(&v, "id")));
+                    status.set(format!(
+                        "Sealed + granted credential {} (payload encrypted)",
+                        str_field(&v, "id")
+                    ));
                     reload();
                 }
                 Err(e) => status.set(format!("Seal + grant failed: {e}")),
@@ -151,6 +172,7 @@ pub fn WellfairAccountabilityPanel() -> Element {
         section {
             aria_label: "WellFair accountability fabric",
             style: "padding:0.85rem;border:1px solid var(--qualia-border,#ddd);border-radius:10px;background:var(--qualia-surface,#fafafa);display:flex;flex-direction:column;gap:0.85rem;",
+            super::shared::DomainChrome { domain: "Care", chip: "Rights · accountability · ledger", show_memory: true }
             div {
                 style: "display:flex;align-items:center;justify-content:space-between;gap:0.5rem;",
                 h2 { style: "margin:0;font-size:1rem;", "Accountability — consent credentials & tamper-evident ledger" }

@@ -105,7 +105,7 @@ mod tests {
             lamport: 1,
             deleted: false,
         };
-        
+
         let asset1_v2 = PlantedAsset {
             asset_id: "obj-1".into(),
             cell_id: 1234,
@@ -131,11 +131,11 @@ mod tests {
 
         let merged = merge_planted_assets(&local, &remote);
         assert_eq!(merged.len(), 2);
-        
+
         // V2 should overwrite V1 for obj-1
         assert_eq!(merged[0].asset_id, "obj-1");
         assert_eq!(merged[0].position[1], 5.0);
-        
+
         assert_eq!(merged[1].asset_id, "obj-2");
     }
 

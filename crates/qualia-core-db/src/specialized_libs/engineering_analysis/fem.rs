@@ -215,12 +215,7 @@ fn frame_stiffness(
     let ea_l = e * area / l;
     let ei = e * inertia;
     let (l2, l3) = (l * l, l * l * l);
-    let (b12, b6, b4, b2) = (
-        12.0 * ei / l3,
-        6.0 * ei / l2,
-        4.0 * ei / l,
-        2.0 * ei / l,
-    );
+    let (b12, b6, b4, b2) = (12.0 * ei / l3, 6.0 * ei / l2, 4.0 * ei / l, 2.0 * ei / l);
     // Local 6×6 (row-major), order [u1,v1,θ1,u2,v2,θ2].
     #[rustfmt::skip]
     let kl = vec![
@@ -596,9 +591,9 @@ pub fn newmark_linear(
     let m_lu = lu_decompose(n, m).map_err(|e| {
         EngineeringError::SolverError(format!("Newmark mass-matrix LU failed: {e:?}"))
     })?;
-    let mut a = m_lu.solve(&rhs0).ok_or_else(|| {
-        EngineeringError::SolverError("mass matrix is singular".to_string())
-    })?;
+    let mut a = m_lu
+        .solve(&rhs0)
+        .ok_or_else(|| EngineeringError::SolverError("mass matrix is singular".to_string()))?;
 
     let mut out = NewmarkResult {
         time: Vec::with_capacity(nsteps + 1),
@@ -805,7 +800,9 @@ pub fn newmark_nonlinear(
         let a_new: Vec<f64> = (0..n)
             .map(|i| a0 * (u_trial[i] - u_n[i]) - a2 * v_n[i] - a3 * a_n[i])
             .collect();
-        let v_new: Vec<f64> = (0..n).map(|i| v_n[i] + a6 * a_n[i] + a7 * a_new[i]).collect();
+        let v_new: Vec<f64> = (0..n)
+            .map(|i| v_n[i] + a6 * a_n[i] + a7 * a_new[i])
+            .collect();
         u = u_trial;
         v = v_new;
         a = a_new;
@@ -854,7 +851,12 @@ impl GeoNonlinearBar {
         self.ea / self.length * ((1.0 + r) * (1.0 + r) + self.strain(u))
     }
     /// Solve `f_int(u) = f_ext` for the tip displacement by Newton–Raphson.
-    pub fn solve_static(&self, f_ext: f64, tol: f64, max_iter: usize) -> Result<f64, EngineeringError> {
+    pub fn solve_static(
+        &self,
+        f_ext: f64,
+        tol: f64,
+        max_iter: usize,
+    ) -> Result<f64, EngineeringError> {
         let ea = self.ea;
         let l = self.length;
         let bar = *self;
@@ -905,7 +907,11 @@ mod tests {
         );
         // Reaction at the fixed ux DOF balances the applied load.
         let rux = res.reactions.iter().find(|(d, _)| *d == 0).unwrap().1;
-        assert!((rux + f).abs() / f < 1e-9, "reaction ux = {rux} (expected {})", -f);
+        assert!(
+            (rux + f).abs() / f < 1e-9,
+            "reaction ux = {rux} (expected {})",
+            -f
+        );
         // Element axial force equals the applied tension.
         assert!(
             (res.element_axial_force[0] - f).abs() / f < 1e-9,
@@ -931,17 +937,41 @@ mod tests {
                 FeNode { x: 2.0 * l, y: 0.0 },
             ],
             elements: vec![
-                FeElement::Truss { ni: 0, nj: 1, e: E_STEEL, area, rho: 7850.0 },
-                FeElement::Truss { ni: 1, nj: 2, e: E_STEEL, area, rho: 7850.0 },
+                FeElement::Truss {
+                    ni: 0,
+                    nj: 1,
+                    e: E_STEEL,
+                    area,
+                    rho: 7850.0,
+                },
+                FeElement::Truss {
+                    ni: 1,
+                    nj: 2,
+                    e: E_STEEL,
+                    area,
+                    rho: 7850.0,
+                },
             ],
             // Fix n0 fully; constrain transverse + rotation of n1,n2 (pure axial chain).
-            constraints: vec![(0, 0.0), (1, 0.0), (2, 0.0), (4, 0.0), (5, 0.0), (7, 0.0), (8, 0.0)],
+            constraints: vec![
+                (0, 0.0),
+                (1, 0.0),
+                (2, 0.0),
+                (4, 0.0),
+                (5, 0.0),
+                (7, 0.0),
+                (8, 0.0),
+            ],
             loads: vec![(6, f)], // ux at n2
         };
         let res = solve_static(&model).unwrap();
         let u1 = res.displacements[3];
         let u2 = res.displacements[6];
-        assert!((u1 - f / k).abs() / (f / k) < 1e-9, "u1 = {u1} (expected {})", f / k);
+        assert!(
+            (u1 - f / k).abs() / (f / k) < 1e-9,
+            "u1 = {u1} (expected {})",
+            f / k
+        );
         assert!((u2 - 2.0 * f / k).abs() / (2.0 * f / k) < 1e-9, "u2 = {u2}");
     }
 
@@ -975,7 +1005,10 @@ mod tests {
         );
         // Root vertical reaction balances the applied load.
         let ruy = res.reactions.iter().find(|(d, _)| *d == 1).unwrap().1;
-        assert!((ruy - p).abs() / p < 1e-9, "root reaction = {ruy} (expected {p})");
+        assert!(
+            (ruy - p).abs() / p < 1e-9,
+            "root reaction = {ruy} (expected {p})"
+        );
         // Root moment reaction magnitude = P·L (cantilever). Sign follows the standard
         // Euler–Bernoulli DOF convention: hand-deriving the reduced 2-DOF system gives
         // R_θ1 = −6EI/L²·v2 + 2EI/L·θ2 = +P·L for a downward tip load.
@@ -999,8 +1032,22 @@ mod tests {
                 FeNode { x: l, y: 0.0 },
             ],
             elements: vec![
-                FeElement::Frame { ni: 0, nj: 1, e: E_STEEL, area, inertia, rho: 7850.0 },
-                FeElement::Frame { ni: 1, nj: 2, e: E_STEEL, area, inertia, rho: 7850.0 },
+                FeElement::Frame {
+                    ni: 0,
+                    nj: 1,
+                    e: E_STEEL,
+                    area,
+                    inertia,
+                    rho: 7850.0,
+                },
+                FeElement::Frame {
+                    ni: 1,
+                    nj: 2,
+                    e: E_STEEL,
+                    area,
+                    inertia,
+                    rho: 7850.0,
+                },
             ],
             constraints: vec![(0, 0.0), (1, 0.0), (2, 0.0)],
             loads: vec![(7, -p)], // uy at node2 (tip)
@@ -1096,12 +1143,18 @@ mod tests {
         // Small load: 100 N ⇒ linear δ = 1e-4. Nonlinear correction is tiny.
         let small = bar.solve_static(100.0, 1e-12, 100).unwrap();
         let lin_small = 100.0 / ea;
-        assert!((small - lin_small).abs() / lin_small < 1e-3, "small u = {small}");
+        assert!(
+            (small - lin_small).abs() / lin_small < 1e-3,
+            "small u = {small}"
+        );
         // Large load: nonlinear tip disp is strictly less than the linear estimate
         // (Green strain stiffens in tension) and satisfies f_int(u) = F exactly.
         let big = bar.solve_static(3.0e5, 1e-10, 100).unwrap();
         let lin_big = 3.0e5 / ea;
-        assert!(big < lin_big, "expected stiffening: u = {big}, linear = {lin_big}");
+        assert!(
+            big < lin_big,
+            "expected stiffening: u = {big}, linear = {lin_big}"
+        );
         assert!(
             (bar.internal_force(big) - 3.0e5).abs() < 1e-3,
             "residual not satisfied: f_int = {}",

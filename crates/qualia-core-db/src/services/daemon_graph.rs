@@ -390,7 +390,9 @@ pub fn apply_sparql_update(
     use crate::sparql_library::sparql_update::UpdateExecutor;
 
     let lock = graph_lock();
-    let mut guard = lock.write().map_err(|_| "daemon graph poisoned".to_string())?;
+    let mut guard = lock
+        .write()
+        .map_err(|_| "daemon graph poisoned".to_string())?;
 
     let before: Vec<NQuin> = guard.as_slice().to_vec();
     let mut working = before.clone();
@@ -683,7 +685,12 @@ mod tests {
         reset_graph_for_test();
     }
 
-    fn parse_upd(src: &str) -> (crate::sparql_ast::SparqlQueryContext, crate::sparql_library::sparql_update::UpdateOperation) {
+    fn parse_upd(
+        src: &str,
+    ) -> (
+        crate::sparql_ast::SparqlQueryContext,
+        crate::sparql_library::sparql_update::UpdateOperation,
+    ) {
         let mut ctx = crate::sparql_ast::SparqlQueryContext::new();
         let op = crate::sparql_library::sparql_grammar::parse_update(
             src,
@@ -704,9 +711,15 @@ mod tests {
         let rev_before = graph_revision();
         let out = apply_sparql_update(&op, &ctx, None).unwrap();
         assert_eq!(out.inserted, 1);
-        assert!(!out.persisted, "no signer callback → ephemeral, not persisted");
+        assert!(
+            !out.persisted,
+            "no signer callback → ephemeral, not persisted"
+        );
         assert_eq!(graph_quin_count(), before + 1);
-        assert!(graph_revision() > rev_before, "revision bumped for subscribers");
+        assert!(
+            graph_revision() > rev_before,
+            "revision bumped for subscribers"
+        );
         reset_graph_for_test();
     }
 
@@ -734,8 +747,9 @@ mod tests {
         let _ = std::fs::remove_file(snapshot_path(&storage));
 
         // Apply an update and snapshot the full state.
-        let (ctx, op) =
-            parse_upd("INSERT DATA { <http://q.test/durable> <http://q.test/p> <http://q.test/o> }");
+        let (ctx, op) = parse_upd(
+            "INSERT DATA { <http://q.test/durable> <http://q.test/p> <http://q.test/o> }",
+        );
         apply_sparql_update(&op, &ctx, None).unwrap();
         let count = graph_quin_count();
         assert!(count > 0);

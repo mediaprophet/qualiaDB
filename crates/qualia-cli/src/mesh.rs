@@ -104,10 +104,18 @@ pub fn run(action: &MeshAction) -> Result<(), Box<dyn std::error::Error>> {
             println!("  public : {}", kp.public_hex());
             Ok(())
         }
-        MeshAction::Listen { pass, port, seconds } => run_listen(pass, *port, *seconds),
-        MeshAction::Connect { pass, peer, message, count, timeout } => {
-            run_connect(pass, peer, message, *count, *timeout)
-        }
+        MeshAction::Listen {
+            pass,
+            port,
+            seconds,
+        } => run_listen(pass, *port, *seconds),
+        MeshAction::Connect {
+            pass,
+            peer,
+            message,
+            count,
+            timeout,
+        } => run_connect(pass, peer, message, *count, *timeout),
     }
 }
 
@@ -170,7 +178,10 @@ fn run_listen(pass: &str, port: u16, seconds: u64) -> Result<(), Box<dyn std::er
                     announced_session = true;
                     println!(
                         "  ✓ handshake complete with {:?} — tunnel is up",
-                        tunnel.peer_endpoint().map(|e| e.to_string()).unwrap_or_default()
+                        tunnel
+                            .peer_endpoint()
+                            .map(|e| e.to_string())
+                            .unwrap_or_default()
                     );
                 }
             }
@@ -205,7 +216,10 @@ fn run_connect(
 
     println!("SocialWebNet probe — CONNECT (role B)");
     println!("  my WG public : {}", my_keys.public_hex());
-    println!("  peer         : {endpoint} (WG public {})", peer_keys.public_hex());
+    println!(
+        "  peer         : {endpoint} (WG public {})",
+        peer_keys.public_hex()
+    );
     println!("  initiating handshake…");
     tunnel.initiate_handshake()?;
 
@@ -242,8 +256,6 @@ fn run_connect(
             let _ = tunnel.pump()?;
         }
     }
-    println!(
-        "  done. Delivery is best-effort UDP; the listener prints each datagram it decrypts."
-    );
+    println!("  done. Delivery is best-effort UDP; the listener prints each datagram it decrypts.");
     Ok(())
 }

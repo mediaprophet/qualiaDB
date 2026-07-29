@@ -124,9 +124,10 @@ pub fn is_cached(storage_root: impl AsRef<Path>, model: AnatomyModel) -> bool {
     let Some(manifest) = load_manifest(&storage_root, model) else {
         return false;
     };
-    manifest.organs.iter().all(|o| {
-        ten_d_path(&storage_root, model, &o.organ_key).is_file()
-    })
+    manifest
+        .organs
+        .iter()
+        .all(|o| ten_d_path(&storage_root, model, &o.organ_key).is_file())
 }
 
 /// The cached organ keys for a model (empty if not cached).
@@ -189,7 +190,9 @@ pub fn acquire_body_assets(
     model: AnatomyModel,
     mut progress: impl FnMut(AcquireProgress),
 ) -> Result<AcquireReport, String> {
-    use super::ccf_resolver::{discover_ref_organs, fetch_glb, organs_for_model, HRA_SPARQL_ENDPOINT};
+    use super::ccf_resolver::{
+        discover_ref_organs, fetch_glb, organs_for_model, HRA_SPARQL_ENDPOINT,
+    };
 
     // Discover the manifest.
     progress(AcquireProgress {
@@ -198,9 +201,13 @@ pub fn acquire_body_assets(
         done: 0,
         total: 0,
         bytes: 0,
-        message: format!("Discovering {} reference organs from the HRA…", model.as_str()),
+        message: format!(
+            "Discovering {} reference organs from the HRA…",
+            model.as_str()
+        ),
     });
-    let all = discover_ref_organs(HRA_SPARQL_ENDPOINT).map_err(|e| format!("SPARQL discovery: {e}"))?;
+    let all =
+        discover_ref_organs(HRA_SPARQL_ENDPOINT).map_err(|e| format!("SPARQL discovery: {e}"))?;
     let set = organs_for_model(&all, model);
     if set.is_empty() {
         return Err(format!("no {} reference organs discovered", model.as_str()));
@@ -259,7 +266,12 @@ pub fn acquire_body_assets(
             done: i,
             total: compiled.len(),
             bytes: total_ten_d_bytes,
-            message: format!("Compiling {} ({}/{})…", organ.organ_key, i + 1, compiled.len()),
+            message: format!(
+                "Compiling {} ({}/{})…",
+                organ.organ_key,
+                i + 1,
+                compiled.len()
+            ),
         });
         let path = ten_d_path(&storage_root, model, &organ.organ_key);
         if std::fs::write(&path, &organ.asset.container_10d).is_ok() {
@@ -294,7 +306,8 @@ pub fn acquire_body_assets(
             .unwrap_or(0),
         organs: entries,
     };
-    let manifest_json = serde_json::to_vec_pretty(&manifest).map_err(|e| format!("manifest serde: {e}"))?;
+    let manifest_json =
+        serde_json::to_vec_pretty(&manifest).map_err(|e| format!("manifest serde: {e}"))?;
     std::fs::write(manifest_path(&storage_root, model), manifest_json)
         .map_err(|e| format!("manifest write: {e}"))?;
 
@@ -352,11 +365,20 @@ mod tests {
         // Platform-independent path checks (Windows uses backslashes).
         let male_str = male_glb.to_string_lossy().replace('\\', "/");
         let female_str = female_glb.to_string_lossy().replace('\\', "/");
-        assert!(male_str.contains("assets/ccf/male/glb/3d-vh-m-liver.glb"), "{male_str}");
-        assert!(female_str.contains("assets/ccf/female/glb/3d-vh-m-liver.glb"), "{female_str}");
+        assert!(
+            male_str.contains("assets/ccf/male/glb/3d-vh-m-liver.glb"),
+            "{male_str}"
+        );
+        assert!(
+            female_str.contains("assets/ccf/female/glb/3d-vh-m-liver.glb"),
+            "{female_str}"
+        );
         let ten_d = ten_d_path(root.path(), AnatomyModel::Male, "3d-vh-m-liver.glb");
         let ten_d_str = ten_d.to_string_lossy().replace('\\', "/");
-        assert!(ten_d_str.ends_with("10d/3d-vh-m-liver.glb.10d"), "{ten_d_str}");
+        assert!(
+            ten_d_str.ends_with("10d/3d-vh-m-liver.glb.10d"),
+            "{ten_d_str}"
+        );
     }
 
     #[test]
@@ -367,7 +389,11 @@ mod tests {
         // Write a manifest + a .10d file → cached.
         let dir = cache_dir(root.path(), AnatomyModel::Male).join("10d");
         std::fs::create_dir_all(&dir).unwrap();
-        std::fs::write(ten_d_path(root.path(), AnatomyModel::Male, "liver.glb"), b"fake10d").unwrap();
+        std::fs::write(
+            ten_d_path(root.path(), AnatomyModel::Male, "liver.glb"),
+            b"fake10d",
+        )
+        .unwrap();
         let manifest = CacheManifest {
             model: "male".into(),
             acquired_at_unix: 0,
@@ -386,7 +412,10 @@ mod tests {
         .unwrap();
 
         assert!(is_cached(root.path(), AnatomyModel::Male));
-        assert_eq!(cached_organ_keys(root.path(), AnatomyModel::Male), vec!["liver.glb".to_string()]);
+        assert_eq!(
+            cached_organ_keys(root.path(), AnatomyModel::Male),
+            vec!["liver.glb".to_string()]
+        );
         assert_eq!(
             load_cached_10d(root.path(), AnatomyModel::Male, "liver.glb").unwrap(),
             b"fake10d".to_vec()
@@ -414,7 +443,10 @@ mod tests {
             serde_json::to_vec_pretty(&manifest).unwrap(),
         )
         .unwrap();
-        assert!(!is_cached(root.path(), AnatomyModel::Male), "missing .10d → not cached");
+        assert!(
+            !is_cached(root.path(), AnatomyModel::Male),
+            "missing .10d → not cached"
+        );
     }
 
     #[test]
@@ -424,11 +456,7 @@ mod tests {
         clear_cache(root.path(), AnatomyModel::Male).unwrap();
         // Create a cache → clear removes it.
         std::fs::create_dir_all(cache_dir(root.path(), AnatomyModel::Male)).unwrap();
-        std::fs::write(
-            manifest_path(root.path(), AnatomyModel::Male),
-            b"{}",
-        )
-        .unwrap();
+        std::fs::write(manifest_path(root.path(), AnatomyModel::Male), b"{}").unwrap();
         assert!(manifest_path(root.path(), AnatomyModel::Male).exists());
         clear_cache(root.path(), AnatomyModel::Male).unwrap();
         assert!(!manifest_path(root.path(), AnatomyModel::Male).exists());
@@ -461,7 +489,10 @@ mod tests {
         let json = serde_json::to_string(&m).unwrap();
         let back: CacheManifest = serde_json::from_str(&json).unwrap();
         assert_eq!(back, m);
-        assert_eq!(back.organ_keys(), vec!["liver.glb".to_string(), "lung.glb".to_string()]);
+        assert_eq!(
+            back.organ_keys(),
+            vec!["liver.glb".to_string(), "lung.glb".to_string()]
+        );
         assert_eq!(back.total_ten_d_bytes(), 1_300_000);
     }
 }

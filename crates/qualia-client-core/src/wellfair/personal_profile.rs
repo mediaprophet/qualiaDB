@@ -31,10 +31,7 @@ impl EmergencyContactStore {
             fs::create_dir_all(parent)?;
         }
         if !path.exists() {
-            OpenOptions::new()
-                .create(true)
-                .write(true)
-                .open(&path)?;
+            OpenOptions::new().create(true).write(true).open(&path)?;
         }
         Ok(Self { path })
     }

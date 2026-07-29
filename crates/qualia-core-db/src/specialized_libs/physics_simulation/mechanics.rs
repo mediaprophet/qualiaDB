@@ -23,10 +23,7 @@ fn estimate_period_from_crossings(times: &[f64], values: &[f64]) -> f64 {
         }
     }
     if crossings.len() >= 2 {
-        let total: f64 = crossings
-            .windows(2)
-            .map(|w| w[1] - w[0])
-            .sum();
+        let total: f64 = crossings.windows(2).map(|w| w[1] - w[0]).sum();
         total / (crossings.len() - 1) as f64
     } else {
         0.0
@@ -126,8 +123,7 @@ impl PhysicsSimulationLibrary {
 
         let force = move |q: f64| -k_spring * q; // dp/dt
         let kinetic_velocity = move |p: f64| p / mass; // dq/dt
-        let hamiltonian =
-            move |q: f64, p: f64| 0.5 * p * p / mass + 0.5 * k_spring * q * q;
+        let hamiltonian = move |q: f64, p: f64| 0.5 * p * p / mass + 0.5 * k_spring * q * q;
 
         let mut q = x0;
         let mut p = mass * v0;
@@ -195,9 +191,8 @@ impl PhysicsSimulationLibrary {
             ));
         }
         let l = length;
-        let energy = move |theta: f64, omega: f64| {
-            0.5 * l * l * omega * omega + g * l * (1.0 - theta.cos())
-        };
+        let energy =
+            move |theta: f64, omega: f64| 0.5 * l * l * omega * omega + g * l * (1.0 - theta.cos());
         let energy_initial = energy(theta0, omega0);
         let state = vec![theta0, omega0];
         let deriv = move |_t: f64, y: &[f64], dy: &mut [f64]| -> Result<(), OdeError> {

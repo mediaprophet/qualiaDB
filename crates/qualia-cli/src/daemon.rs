@@ -150,9 +150,7 @@ pub async fn serve_foreground(opts: &DaemonOpts, wait_for_ctrl_c: bool) {
                                     version
                                 );
                                 println!("   You are currently running v{}", current_version);
-                                println!(
-                                    "   Run `cargo install qualia-cli --force` to update."
-                                );
+                                println!("   Run `cargo install qualia-cli --force` to update.");
                                 println!("========================================\n");
                             }
                         }
@@ -191,7 +189,10 @@ pub async fn serve_foreground(opts: &DaemonOpts, wait_for_ctrl_c: bool) {
             .expect("Failed to install Ctrl-C handler");
         println!("[Qualia Daemon] Shutdown signal received. Goodbye.");
     } else {
-        println!("[Qualia Daemon] Background service active on 127.0.0.1:{}.", opts.port);
+        println!(
+            "[Qualia Daemon] Background service active on 127.0.0.1:{}.",
+            opts.port
+        );
         std::future::pending::<()>().await;
     }
 }
@@ -257,7 +258,10 @@ pub fn stop_service() -> Result<(), String> {
 
     if !pid_is_running(record.pid) {
         clear_service_record()?;
-        println!("Removed stale daemon service record for pid {}.", record.pid);
+        println!(
+            "Removed stale daemon service record for pid {}.",
+            record.pid
+        );
         return Ok(());
     }
 
@@ -266,7 +270,10 @@ pub fn stop_service() -> Result<(), String> {
     let pid = Pid::from_u32(record.pid);
     let Some(process) = system.process(pid) else {
         clear_service_record()?;
-        println!("Removed stale daemon service record for pid {}.", record.pid);
+        println!(
+            "Removed stale daemon service record for pid {}.",
+            record.pid
+        );
         return Ok(());
     };
 
@@ -376,9 +383,8 @@ pub fn ping_daemon(port: u16) -> Result<serde_json::Value, String> {
     stream
         .set_read_timeout(Some(Duration::from_secs(3)))
         .map_err(|e| e.to_string())?;
-    let request = format!(
-        "GET /health HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\nConnection: close\r\n\r\n"
-    );
+    let request =
+        format!("GET /health HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\nConnection: close\r\n\r\n");
     stream
         .write_all(request.as_bytes())
         .map_err(|e| format!("write {url}: {e}"))?;
@@ -387,7 +393,9 @@ pub fn ping_daemon(port: u16) -> Result<serde_json::Value, String> {
     stream
         .read_to_string(&mut body)
         .map_err(|e| format!("read {url}: {e}"))?;
-    let json_start = body.find('{').ok_or_else(|| format!("no JSON body in {url} response"))?;
+    let json_start = body
+        .find('{')
+        .ok_or_else(|| format!("no JSON body in {url} response"))?;
     serde_json::from_str(&body[json_start..]).map_err(|e| format!("decode {url}: {e}"))
 }
 

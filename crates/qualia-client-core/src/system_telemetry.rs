@@ -85,8 +85,8 @@ fn sample_event(status: &str, activation_in_progress: bool) -> SystemTelemetryEv
     let (vram_used_mb, vram_total_mb) = probe_vram_usage_mb();
     let ram_total_mb = (sys.total_memory() / (1024 * 1024)).min(u32::MAX as u64) as u32;
     let ram_used_mb = (sys.used_memory() / (1024 * 1024)).min(u32::MAX as u64) as u32;
-    let llm_memory_mb =
-        (crate::model_lifecycle::get_llm_memory_bytes() / (1024 * 1024)).min(u32::MAX as u64) as u32;
+    let llm_memory_mb = (crate::model_lifecycle::get_llm_memory_bytes() / (1024 * 1024))
+        .min(u32::MAX as u64) as u32;
 
     SystemTelemetryEvent {
         ram_used_mb,

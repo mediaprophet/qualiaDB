@@ -232,4 +232,3 @@ impl LoadBalancer {
         self.unit_metrics.len()
     }
 }
-

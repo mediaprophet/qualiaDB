@@ -17,12 +17,17 @@ pub fn SolidLdpBrowser() -> Element {
 
             if let Ok(res) = invoke_json("validate_shacl_shape", args).await {
                 if let Ok(is_valid) = serde_json::from_value::<bool>(res) {
-                    validation_status.set(if is_valid { "Graph Valid".to_string() } else { "Invalid Shape".to_string() });
+                    validation_status.set(if is_valid {
+                        "Graph Valid".to_string()
+                    } else {
+                        "Invalid Shape".to_string()
+                    });
                 }
             } else {
                 // The backend fails closed until a shape-registry lookup exists
                 // (it will not fabricate "Graph Valid" against an empty shape).
-                validation_status.set("Validation unavailable (shape registry not implemented)".to_string());
+                validation_status
+                    .set("Validation unavailable (shape registry not implemented)".to_string());
             }
         });
     };
@@ -47,10 +52,10 @@ pub fn SolidLdpBrowser() -> Element {
                     value: "{current_path}",
                     oninput: move |e| current_path.set(e.value().clone()),
                 }
-                button { 
-                    style: "padding: 0.5rem 1rem; background: rgba(0, 200, 255, 0.2); border: 1px solid rgba(0,200,255,0.5); border-radius: 8px; color: #00C8FF; cursor: pointer;", 
+                button {
+                    style: "padding: 0.5rem 1rem; background: rgba(0, 200, 255, 0.2); border: 1px solid rgba(0,200,255,0.5); border-radius: 8px; color: #00C8FF; cursor: pointer;",
                     onclick: validate_graph,
-                    "Validate SHACL" 
+                    "Validate SHACL"
                 }
                 if !validation_status().is_empty() {
                     div { style: "display: flex; align-items: center; color: #00C8FF;", "{validation_status}" }

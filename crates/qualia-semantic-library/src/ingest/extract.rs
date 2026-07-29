@@ -31,15 +31,28 @@ pub fn extract(acq: &Acquired) -> Extracted {
         SourceKind::Html => {
             let html = String::from_utf8_lossy(&acq.bytes).to_string();
             let text = html_to_text(&html);
-            Extracted { text, html, page_count: 0, extractor: "passthrough-html".into(), notes: vec![] }
+            Extracted {
+                text,
+                html,
+                page_count: 0,
+                extractor: "passthrough-html".into(),
+                notes: vec![],
+            }
         }
         SourceKind::Text | SourceKind::Markdown | SourceKind::Unknown => {
             let text = String::from_utf8_lossy(&acq.bytes).to_string();
             let html = text_to_html(&acq.source.title, &text);
-            Extracted { text, html, page_count: 0, extractor: "passthrough-text".into(), notes: vec![] }
+            Extracted {
+                text,
+                html,
+                page_count: 0,
+                extractor: "passthrough-text".into(),
+                notes: vec![],
+            }
         }
         SourceKind::Epub => {
-            let mut notes = vec!["epub extraction not implemented in the pure-Rust baseline".into()];
+            let mut notes =
+                vec!["epub extraction not implemented in the pure-Rust baseline".into()];
             notes.push("install a structured extractor to populate derived assets".into());
             Extracted {
                 text: String::new(),
@@ -76,18 +89,28 @@ fn extract_pdf(acq: &Acquired) -> Extracted {
                 String::new()
             }
             Err(_) => {
-                notes.push("pdf-extract panicked on this document — needs an alternate extractor".into());
+                notes.push(
+                    "pdf-extract panicked on this document — needs an alternate extractor".into(),
+                );
                 String::new()
             }
         }
     };
     if text.trim().is_empty() {
-        notes.push("no extractable text (likely scanned/image PDF) — needs OCR/vision extractor".into());
+        notes.push(
+            "no extractable text (likely scanned/image PDF) — needs OCR/vision extractor".into(),
+        );
     }
     notes.push("baseline extractor: no per-page markers or MathML".into());
 
     let html = text_to_html(&acq.source.title, &text);
-    Extracted { text, html, page_count, extractor: "pdf-extract".into(), notes }
+    Extracted {
+        text,
+        html,
+        page_count,
+        extractor: "pdf-extract".into(),
+        notes,
+    }
 }
 
 #[cfg(not(feature = "pdf"))]
@@ -146,7 +169,9 @@ fn looks_like_heading(s: &str) -> bool {
     let first = s.chars().next().unwrap_or(' ');
     let numbered = first.is_ascii_digit() && s.split_whitespace().count() <= 12;
     let shouty = s.chars().filter(|c| c.is_alphabetic()).count() > 2
-        && s.chars().filter(|c| c.is_alphabetic()).all(|c| c.is_uppercase());
+        && s.chars()
+            .filter(|c| c.is_alphabetic())
+            .all(|c| c.is_uppercase());
     numbered || shouty
 }
 

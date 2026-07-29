@@ -2,20 +2,16 @@
 //!
 //! A strict, fail-closed gate that must pass before geometry is accepted for rendering.
 //! Validates the relational SHACL rules of the manifest, checks the `.10d` whole-file CRC,
-//! decodes the provenance sidecar, asserts the immutable `source_digest`, ensures the 
-//! presence of a licence (context not stripped), and optionally verifies any attached 
+//! decodes the provenance sidecar, asserts the immutable `source_digest`, ensures the
+//! presence of a licence (context not stripped), and optionally verifies any attached
 //! Verifiable Credentials against grounded issuers.
 
 use ed25519_dalek::{Signature, VerifyingKey};
 
 use crate::container_10d::header::Container10dHeader;
+use crate::container_10d::provenance_section::{decode_provenance_section, validate_provenance};
 use crate::container_10d::section::{parse_section_table, SectionType};
-use crate::container_10d::{
-    decode_mesh_section, verify_whole_file_crc32c,
-};
-use crate::container_10d::provenance_section::{
-    decode_provenance_section, validate_provenance,
-};
+use crate::container_10d::{decode_mesh_section, verify_whole_file_crc32c};
 use crate::crypto::verifiable_credential::{decode_credential, verify_grounded, VcError};
 use crate::indexing::QuinIndex;
 use crate::modalities::logic::geometry_asset_shacl::{
@@ -58,7 +54,7 @@ impl std::fmt::Display for BarrierError {
 impl std::error::Error for BarrierError {}
 
 /// The validate-before-render barrier.
-/// 
+///
 /// 1. Relational SHACL validation.
 /// 2. `.10d` whole-file CRC verification.
 /// 3. Provenance extraction and `validate_provenance` (source_digest and licence checks).
@@ -85,7 +81,7 @@ pub fn validate_before_render(
 
     let header = Container10dHeader::parse(&bytes_mut)
         .map_err(|e| BarrierError::ContainerIntegrity(e.to_string()))?;
-    
+
     let descs = parse_section_table(&bytes_mut, &header)
         .map_err(|e| BarrierError::ContainerIntegrity(format!("{e:?}")))?;
 
@@ -108,15 +104,13 @@ pub fn validate_before_render(
     }
 
     // 3. Provenance Extraction & Validation
-    let prov_payload = provenance.ok_or_else(|| {
-        BarrierError::ProvenanceFailed("No provenance sidecar found".to_string())
-    })?;
+    let prov_payload = provenance
+        .ok_or_else(|| BarrierError::ProvenanceFailed("No provenance sidecar found".to_string()))?;
 
     let view = decode_provenance_section(prov_payload)
         .map_err(|e| BarrierError::ProvenanceFailed(e.to_string()))?;
 
-    validate_provenance(&view)
-        .map_err(|e| BarrierError::ProvenanceFailed(e.to_string()))?;
+    validate_provenance(&view).map_err(|e| BarrierError::ProvenanceFailed(e.to_string()))?;
 
     // 4. VC Verification
     if let Some(vc_bytes) = view.vc() {
@@ -125,8 +119,8 @@ pub fn validate_before_render(
         }
         let (sig_bytes, cred_bytes) = vc_bytes.split_at(64);
         let signature = Signature::from_bytes(sig_bytes.try_into().unwrap());
-        let credential = decode_credential(cred_bytes)
-            .map_err(|_| BarrierError::CredentialMalformed)?;
+        let credential =
+            decode_credential(cred_bytes).map_err(|_| BarrierError::CredentialMalformed)?;
 
         let issuer_key = key_resolver(credential.issuer).ok_or_else(|| {
             BarrierError::CredentialInvalid(VcError::InvalidSignature) // Key not found

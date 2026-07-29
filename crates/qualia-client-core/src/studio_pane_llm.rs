@@ -5,11 +5,11 @@
 
 use crate::chat_inference;
 use crate::model_lifecycle;
-use qualia_core_db::orchestrator::ModelLifecycle;
 use crate::studio_pane_generator::{
     generate_panes_from_request, GeneratePaneRequest, PaneGenerationPlan, PanePlacement,
     PresentationMode,
 };
+use qualia_core_db::orchestrator::ModelLifecycle;
 
 const LAYOUT_SESSION: &str = "studio-pane-layout";
 
@@ -83,7 +83,9 @@ pub fn parse_llm_plan_json(text: &str) -> Option<PaneGenerationPlan> {
             })
             .collect(),
         presentation,
-        summary: raw.summary.unwrap_or_else(|| "LLM-generated layout".to_string()),
+        summary: raw
+            .summary
+            .unwrap_or_else(|| "LLM-generated layout".to_string()),
     })
 }
 

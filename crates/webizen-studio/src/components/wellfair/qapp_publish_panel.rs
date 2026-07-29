@@ -61,6 +61,7 @@ pub fn WellfairQappPublishPanel() -> Element {
         section {
             aria_label: "Package and publish a qapp",
             style: "padding:0.85rem;border:1px solid var(--qualia-border,#ddd);border-radius:10px;background:var(--qualia-surface,#fafafa);margin-bottom:0.85rem;",
+            super::shared::DomainChrome { domain: "Instruments", chip: "Qapps · least-privilege package", show_memory: false }
             h2 { style: "margin:0 0 0.5rem;font-size:1rem;", "Package & Publish a qapp" }
             p {
                 style: "margin:0 0 0.75rem;font-size:0.74rem;color:var(--qualia-text-muted,#666);",

@@ -180,38 +180,55 @@ pub fn fetch_unseen(
                     .map(|s| String::from_utf8_lossy(s).into_owned())
                     .unwrap_or_default();
 
-                // From — reconstruct `local@host` from the first sender address, if present.
-                let from = envelope
-                    .from
-                    .as_ref()
-                    .and_then(|addrs| addrs.first())
-                    .map(|addr| {
-                        let mailbox_part = addr
-                            .mailbox
-                            .as_ref()
+                // Reconstruct `local@host` from raw IMAP mailbox/host byte fields.
+                let parts_to_string =
+                    |mailbox_bytes: Option<&[u8]>, host_bytes: Option<&[u8]>| -> String {
+                        let mailbox_part = mailbox_bytes
                             .map(|m| String::from_utf8_lossy(m).into_owned())
                             .unwrap_or_default();
-                        let host_part = addr
-                            .host
-                            .as_ref()
+                        let host_part = host_bytes
                             .map(|h| String::from_utf8_lossy(h).into_owned())
                             .unwrap_or_default();
                         if host_part.is_empty() {
                             mailbox_part
                         } else {
-                            format!("{}@{}", mailbox_part, host_part)
+                            format!("{mailbox_part}@{host_part}")
                         }
+                    };
+
+                // From — first sender address, if present.
+                let from = envelope
+                    .from
+                    .as_ref()
+                    .and_then(|addrs| addrs.first())
+                    .map(|addr| {
+                        parts_to_string(
+                            addr.mailbox.as_ref().map(|m| m.as_ref()),
+                            addr.host.as_ref().map(|h| h.as_ref()),
+                        )
                     })
                     .unwrap_or_default();
+
+                // To — first envelope recipient when it looks like an address; else IMAP folder
+                // name (often "INBOX"). mail_fetch falls back to IMAP username for non-@ targets.
+                let to = envelope
+                    .to
+                    .as_ref()
+                    .and_then(|addrs| addrs.first())
+                    .map(|addr| {
+                        parts_to_string(
+                            addr.mailbox.as_ref().map(|m| m.as_ref()),
+                            addr.host.as_ref().map(|h| h.as_ref()),
+                        )
+                    })
+                    .filter(|s| s.contains('@'))
+                    .unwrap_or_else(|| mailbox.to_string());
 
                 // Size — `RFC822.SIZE` populates `fetch.size`; default to 0 when absent.
                 let size = fetch.size.unwrap_or(0) as usize;
 
                 out.push(build_inbound(
-                    &from,
-                    mailbox,
-                    &subject,
-                    size,
+                    &from, &to, &subject, size,
                     false, // sender_verified — IMAP does not attest identity
                     None,  // sender_did — verification is a higher-layer concern
                 ));

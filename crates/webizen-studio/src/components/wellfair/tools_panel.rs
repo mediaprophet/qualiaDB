@@ -19,10 +19,25 @@ pub fn WellfairToolsPanel() -> Element {
         section {
             aria_label: "WellFair tools",
             style: "padding:0.85rem;border:1px solid var(--qualia-border,#ddd);border-radius:10px;background:var(--qualia-surface,#fafafa);",
+            div { style: "display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap;margin-bottom:0.35rem;",
+                span {
+                    style: "font-size:0.62rem;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#94a3b8;",
+                    "Instruments"
+                }
+                span {
+                    style: "font-size:0.62rem;padding:0.1rem 0.4rem;border-radius:999px;border:1px solid #475569;background:rgba(71,85,105,0.2);color:#64748b;font-weight:700;",
+                    "Partial · not a peer"
+                }
+                Link {
+                    to: crate::Route::LibraryRoute {},
+                    style: "font-size:0.68rem;font-weight:700;color:#7c3aed;text-decoration:none;margin-left:auto;",
+                    "→ Memory"
+                }
+            }
             h2 { style: "margin:0 0 0.5rem;font-size:1rem;", "Tools — Samsung Health sync" }
             p {
                 style: "margin:0 0 0.75rem;font-size:0.78rem;color:var(--qualia-text-muted,#666);",
-                "Samsung Health data lives on your phone. Use the WellFair companion PWA to export CSVs, then paste or share the bundle JSON here. Your desktop vault is the authoritative store."
+                "Samsung Health data lives on your phone. Use the WellFair companion PWA to export CSVs, then paste or share the bundle JSON here. Your desktop vault is the authoritative store. Instrument path only — not a social peer."
             }
             label {
                 style: "display:block;font-size:0.78rem;margin-bottom:0.25rem;font-weight:600;",

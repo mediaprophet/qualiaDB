@@ -1,6 +1,5 @@
 use super::*;
 
-
 /// Risk assessor
 pub struct RiskAssessor {
     risk_models: HashMap<String, RiskModel>,

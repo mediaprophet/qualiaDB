@@ -117,19 +117,15 @@ pub fn resolve_inference_path_plan() -> InferencePathPlan {
     let (wgpu_backend, winning, decode_tok, gemv_ms) = if let Some(ref b) = env_backend {
         rationale.push(format!("wgpu backend pinned by QUALIA_WGPU_BACKEND={b}"));
         (Some(b.clone()), None, None, None)
-    } else if let Some(p) = crate::hardware_passport::read_passport(
-        &crate::hardware_passport::default_cache_path(),
-    ) {
+    } else if let Some(p) =
+        crate::hardware_passport::read_passport(&crate::hardware_passport::default_cache_path())
+    {
         let best = p.matrix.best().cloned();
-        let token = p
-            .preferred_inference_backend
-            .clone()
-            .or_else(|| {
-                best.as_ref()
-                    .and_then(|c| {
-                        crate::hardware_passport::backend_env_token(&c.backend).map(str::to_string)
-                    })
-            });
+        let token = p.preferred_inference_backend.clone().or_else(|| {
+            best.as_ref().and_then(|c| {
+                crate::hardware_passport::backend_env_token(&c.backend).map(str::to_string)
+            })
+        });
         if let Some(ref c) = best {
             rationale.push(format!(
                 "passport winner: {} [{}/{}] gemv={:.3}ms decode={:?}",
@@ -198,7 +194,10 @@ pub fn resolve_inference_path_plan() -> InferencePathPlan {
     // ── 3. Quant + quality ────────────────────────────────────────────────
     let rights = crate::inference_modes::rights_mode_enabled()
         || matches!(
-            mode_pin.as_deref().map(|s| s.to_ascii_lowercase()).as_deref(),
+            mode_pin
+                .as_deref()
+                .map(|s| s.to_ascii_lowercase())
+                .as_deref(),
             Some("quant-graph")
                 | Some("graph")
                 | Some("hybrid")
@@ -209,7 +208,10 @@ pub fn resolve_inference_path_plan() -> InferencePathPlan {
         );
     // Prefer FastVerify when operator asks for ollama-like + post heal without mid-decode tax.
     if matches!(
-        mode_pin.as_deref().map(|s| s.to_ascii_lowercase()).as_deref(),
+        mode_pin
+            .as_deref()
+            .map(|s| s.to_ascii_lowercase())
+            .as_deref(),
         Some("fast-verify") | Some("fast_verify") | Some("ollama-like") | Some("3")
     ) {
         rationale.push(
@@ -228,7 +230,8 @@ pub fn resolve_inference_path_plan() -> InferencePathPlan {
     if prefill_prefer_tc {
         rationale.push("prefill: prefer TC dense GEMM when m,n,k multiples of 16".into());
     }
-    rationale.push("decode: always GEMV (m=1) — tensor cores do not replace single-token GEMV".into());
+    rationale
+        .push("decode: always GEMV (m=1) — tensor cores do not replace single-token GEMV".into());
     rationale.push(
         "multi-weight: wgpu resident plan keeps layer weights in VRAM (Vulkan/DX12/Metal); CUDA slab is optional densify path"
             .into(),

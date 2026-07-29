@@ -68,23 +68,29 @@ pub fn ProblemsPane() -> Element {
     });
 
     let current_state = state();
-    
-    let failed_services: Vec<_> = current_state.services.iter()
+
+    let failed_services: Vec<_> = current_state
+        .services
+        .iter()
         .filter(|s| s.state == "failed" || s.state == "degraded")
         .collect();
-        
-    let failed_operations: Vec<_> = current_state.operations.iter()
+
+    let failed_operations: Vec<_> = current_state
+        .operations
+        .iter()
         .filter(|o| o.state == "failed")
         .collect();
 
-    let active_operations: Vec<_> = current_state.operations.iter()
+    let active_operations: Vec<_> = current_state
+        .operations
+        .iter()
         .filter(|o| o.state == "running" || o.state == "queued")
         .collect();
 
     rsx! {
         div {
             style: "width: 100%; height: 100%; overflow: auto; display: flex; flex-direction: column; padding: 2rem; gap: 2rem; background: var(--qualia-surface);",
-            
+
             div {
                 h1 { style: "margin: 0 0 0.5rem; font-size: 1.5rem; color: var(--qualia-text);", "System Problems & Operations" }
                 p { style: "margin: 0; color: var(--qualia-text-muted); font-size: 0.9rem;", "Monitor failed services, active tasks, and required human interventions." }
@@ -100,9 +106,9 @@ pub fn ProblemsPane() -> Element {
             if !failed_services.is_empty() {
                 div {
                     style: "display: flex; flex-direction: column; gap: 1rem;",
-                    h2 { style: "margin: 0; font-size: 1.2rem; color: #ff6b6b; display: flex; align-items: center; gap: 0.5rem;", 
+                    h2 { style: "margin: 0; font-size: 1.2rem; color: #ff6b6b; display: flex; align-items: center; gap: 0.5rem;",
                         sl-icon { name: "exclamation-triangle" }
-                        "Failed Services" 
+                        "Failed Services"
                     }
                     for s in failed_services {
                         div {
@@ -134,9 +140,9 @@ pub fn ProblemsPane() -> Element {
             if !failed_operations.is_empty() {
                 div {
                     style: "display: flex; flex-direction: column; gap: 1rem;",
-                    h2 { style: "margin: 0; font-size: 1.2rem; color: #ff9e6b; display: flex; align-items: center; gap: 0.5rem;", 
+                    h2 { style: "margin: 0; font-size: 1.2rem; color: #ff9e6b; display: flex; align-items: center; gap: 0.5rem;",
                         sl-icon { name: "exclamation-circle" }
-                        "Failed Operations" 
+                        "Failed Operations"
                     }
                     for o in failed_operations {
                         div {
@@ -169,9 +175,9 @@ pub fn ProblemsPane() -> Element {
             // Active Operations
             div {
                 style: "display: flex; flex-direction: column; gap: 1rem;",
-                h2 { style: "margin: 0; font-size: 1.2rem; color: var(--qualia-text); display: flex; align-items: center; gap: 0.5rem;", 
+                h2 { style: "margin: 0; font-size: 1.2rem; color: var(--qualia-text); display: flex; align-items: center; gap: 0.5rem;",
                     sl-icon { name: "activity" }
-                    "Active Operations" 
+                    "Active Operations"
                 }
                 if active_operations.is_empty() {
                     div {

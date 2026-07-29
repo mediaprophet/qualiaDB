@@ -2,95 +2,167 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#0a0a0f">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Qualia-DB 3D Anatomy Demo</title>
     <style>
         :root {
             --bg-dark: #0a0a0f;
-            --panel-bg: rgba(25, 25, 35, 0.7);
+            --panel-bg: rgba(18, 18, 28, 0.94);
             --accent: #00f0ff;
             --accent-dim: rgba(0, 240, 255, 0.2);
             --text-main: #e0e0e0;
             --text-dim: #888;
+            --safe-top: env(safe-area-inset-top, 0px);
+            --safe-bottom: env(safe-area-inset-bottom, 0px);
+            --safe-left: env(safe-area-inset-left, 0px);
+            --safe-right: env(safe-area-inset-right, 0px);
+            --sheet-h: min(72dvh, 560px);
+            --topbar-h: 52px;
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+        html, body {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            height: 100dvh;
+            overflow: hidden;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+            overscroll-behavior: none;
         }
 
         body {
-            margin: 0;
-            padding: 0;
-            background-color: var(--bg-dark);
-            color: var(--text-main);
-            font-family: 'Inter', -apple-system, sans-serif;
             display: flex;
-            height: 100vh;
+            flex-direction: column;
+        }
+
+        /* ── Top bar (always visible on mobile; slim on desktop) ── */
+        .topbar {
+            flex: 0 0 auto;
+            height: calc(var(--topbar-h) + var(--safe-top));
+            padding: var(--safe-top) max(12px, var(--safe-right)) 0 max(12px, var(--safe-left));
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(10, 10, 15, 0.88);
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            backdrop-filter: blur(14px);
+            z-index: 40;
+        }
+        .topbar h1 {
+            margin: 0;
+            font-size: 1rem;
+            font-weight: 600;
+            color: #fff;
+            flex: 1;
+            min-width: 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .topbar-links {
+            display: none;
+            gap: 12px;
+            font-size: 0.78rem;
+        }
+        .topbar-links a { color: var(--text-dim); text-decoration: none; }
+        .topbar-links a:hover { color: var(--accent); }
+
+        .icon-btn {
+            flex: 0 0 auto;
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            border: 1px solid rgba(255,255,255,0.12);
+            background: rgba(255,255,255,0.06);
+            color: var(--text-main);
+            font-size: 1.1rem;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            touch-action: manipulation;
+        }
+        .icon-btn:active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
+        .icon-btn.primary {
+            background: var(--accent-dim);
+            border-color: rgba(0, 240, 255, 0.45);
+            color: var(--accent);
+            width: auto;
+            padding: 0 12px;
+            gap: 6px;
+            font-size: 0.82rem;
+            font-weight: 600;
+        }
+
+        .stage {
+            flex: 1 1 auto;
+            position: relative;
+            min-height: 0;
+            display: flex;
             overflow: hidden;
         }
 
+        /* ── Sidebar / bottom sheet ── */
         .sidebar {
-            width: 300px;
+            width: 320px;
+            max-width: 100%;
             background: var(--panel-bg);
             border-right: 1px solid rgba(255,255,255,0.1);
-            backdrop-filter: blur(10px);
-            padding: 20px;
+            backdrop-filter: blur(16px);
+            padding: 16px;
             display: flex;
             flex-direction: column;
-            gap: 20px;
-            z-index: 10;
+            gap: 14px;
+            z-index: 30;
+            overflow-y: auto;
+            overscroll-behavior: contain;
+            -webkit-overflow-scrolling: touch;
         }
-
-        .header {
-            margin-bottom: 20px;
-        }
-
-        .header h1 {
-            margin: 0 0 5px 0;
-            font-size: 1.5rem;
-            color: #fff;
-        }
-
-        .header a {
-            color: var(--text-dim);
-            text-decoration: none;
-            font-size: 0.9rem;
-        }
-        
-        .header a:hover {
-            color: var(--accent);
-        }
+        .sidebar .header { display: none; }
 
         .control-group {
-            background: rgba(0,0,0,0.3);
+            background: rgba(0,0,0,0.32);
             border: 1px solid rgba(255,255,255,0.1);
-            border-radius: 8px;
-            padding: 15px;
+            border-radius: 10px;
+            padding: 12px;
+            flex-shrink: 0;
         }
-
         .control-group h3 {
-            margin: 0 0 15px 0;
-            font-size: 1rem;
+            margin: 0 0 12px 0;
+            font-size: 0.92rem;
             color: var(--accent);
         }
 
         .toggle-container {
             display: flex;
             background: rgba(0,0,0,0.5);
-            border-radius: 6px;
+            border-radius: 8px;
             overflow: hidden;
         }
-
         .toggle-btn {
             flex: 1;
-            padding: 10px;
+            padding: 11px 8px;
             border: none;
             background: transparent;
             color: var(--text-dim);
             cursor: pointer;
-            transition: all 0.2s;
+            transition: all 0.15s;
+            font-size: 0.82rem;
+            touch-action: manipulation;
+            min-height: 44px;
         }
-
         .toggle-btn.active {
             background: var(--accent-dim);
             color: var(--accent);
-            border: 1px solid var(--accent);
+            box-shadow: inset 0 0 0 1px var(--accent);
         }
 
         .checkbox-label {
@@ -100,20 +172,23 @@
             margin-bottom: 10px;
             cursor: pointer;
             color: #ccc;
+            min-height: 36px;
         }
-
         .checkbox-label input {
             cursor: pointer;
-            width: 16px;
-            height: 16px;
+            width: 18px;
+            height: 18px;
             accent-color: var(--accent);
         }
 
         #canvas-container {
             flex: 1;
             position: relative;
-            background-image: 
+            min-width: 0;
+            min-height: 0;
+            background-image:
                 radial-gradient(circle at 50% 50%, rgba(0, 240, 255, 0.05) 0%, transparent 70%);
+            touch-action: none;
         }
 
         #tooltip {
@@ -132,53 +207,121 @@
 
         #status {
             position: absolute;
-            left: 16px;
-            bottom: 14px;
-            max-width: calc(100% - 32px);
-            background: rgba(0, 0, 0, 0.72);
+            left: max(12px, var(--safe-left));
+            bottom: max(12px, var(--safe-bottom));
+            max-width: min(420px, calc(100% - 24px));
+            background: rgba(0, 0, 0, 0.78);
             border: 1px solid rgba(255, 255, 255, 0.12);
             border-left: 3px solid var(--accent);
             color: var(--text-main);
             padding: 8px 12px;
-            border-radius: 6px;
-            font-family: monospace;
-            font-size: 0.82rem;
+            border-radius: 8px;
+            font-family: ui-monospace, 'Cascadia Code', monospace;
+            font-size: 0.78rem;
             line-height: 1.4;
             z-index: 20;
+            pointer-events: none;
         }
         #status.ok { border-left-color: #38e08a; }
         #status.error { border-left-color: #ff6b6b; color: #ffd9d9; }
 
-        .mixer-systems { display: flex; flex-direction: column; gap: 7px; margin-top: 6px; }
-        .mixer-row { display: flex; align-items: center; gap: 10px; }
-        .mixer-label { flex: 0 0 118px; font-size: 0.78rem; color: #ccc; line-height: 1.2; }
-        .mixer-fader { flex: 1; accent-color: var(--accent); cursor: pointer; }
+        #progress-wrap {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: min(280px, calc(100% - 48px));
+            z-index: 21;
+            display: none;
+            pointer-events: none;
+        }
+        #progress-wrap.visible { display: block; }
+        #progress-label {
+            text-align: center;
+            font-size: 0.78rem;
+            color: #bcd;
+            margin-bottom: 8px;
+            text-shadow: 0 1px 4px #000;
+        }
+        .progress-bar {
+            height: 6px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 999px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #00f0ff, #38e08a);
+            border-radius: 999px;
+            transition: width 0.2s;
+        }
+
+        .mixer-systems { display: flex; flex-direction: column; gap: 8px; margin-top: 6px; }
+        .mixer-row { display: flex; align-items: center; gap: 10px; min-height: 36px; }
+        .mixer-label { flex: 0 0 110px; font-size: 0.76rem; color: #ccc; line-height: 1.2; }
+        .mixer-fader { flex: 1; accent-color: var(--accent); cursor: pointer; height: 28px; }
         .mixer-fader:disabled { opacity: 0.35; cursor: not-allowed; }
         .mixer-row-overlay .mixer-label { color: var(--text-dim); font-style: italic; }
-        .mixer-note { margin-top: 10px; font-size: 0.72rem; color: var(--text-dim); line-height: 1.35; }
+        .mixer-note { margin-top: 10px; font-size: 0.72rem; color: var(--text-dim); line-height: 1.4; }
         .mixer-note em { color: #bcd; font-style: italic; }
 
         #parts-count { font-weight: normal; color: var(--text-dim); font-size: 0.78rem; }
-        .parts-search { width: 100%; box-sizing: border-box; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.12); color: var(--text-main); border-radius: 6px; padding: 6px 8px; font-size: 0.82rem; }
+        .parts-search {
+            width: 100%;
+            box-sizing: border-box;
+            background: rgba(0,0,0,0.4);
+            border: 1px solid rgba(255,255,255,0.12);
+            color: var(--text-main);
+            border-radius: 8px;
+            padding: 10px 10px;
+            font-size: 0.9rem;
+        }
         .parts-buttons { display: flex; gap: 8px; margin: 8px 0; }
-        .parts-btn { flex: 1; border: 1px solid rgba(255,255,255,0.12); border-radius: 6px; padding: 5px; }
-        .parts-list { max-height: 240px; overflow-y: auto; margin-top: 2px; }
-        .parts-group > summary { cursor: pointer; font-size: 0.82rem; color: var(--accent); padding: 3px 0; list-style: revert; }
-        .part-row { display: flex; align-items: center; gap: 8px; font-size: 0.78rem; color: #ccc; padding: 2px 0 2px 12px; cursor: pointer; }
-        .part-row input { accent-color: var(--accent); cursor: pointer; }
+        .parts-btn { flex: 1; border: 1px solid rgba(255,255,255,0.12); border-radius: 8px; padding: 10px 5px; min-height: 42px; }
+        .parts-list { max-height: 220px; overflow-y: auto; margin-top: 2px; -webkit-overflow-scrolling: touch; }
+        .parts-group > summary { cursor: pointer; font-size: 0.82rem; color: var(--accent); padding: 8px 0; list-style: revert; min-height: 36px; }
+        .part-row { display: flex; align-items: center; gap: 8px; font-size: 0.78rem; color: #ccc; padding: 6px 0 6px 12px; cursor: pointer; min-height: 36px; }
+        .part-row input { accent-color: var(--accent); cursor: pointer; width: 16px; height: 16px; }
+
+        /* Floating zoom cluster (mobile + touch) */
+        .zoom-cluster {
+            position: absolute;
+            right: max(12px, var(--safe-right));
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            z-index: 22;
+        }
+        .zoom-cluster button {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.14);
+            background: rgba(0,0,0,0.62);
+            color: #fff;
+            font-size: 1.25rem;
+            font-weight: 600;
+            cursor: pointer;
+            touch-action: manipulation;
+            backdrop-filter: blur(8px);
+        }
+        .zoom-cluster button:active { border-color: var(--accent); color: var(--accent); }
 
         #attribution {
             position: absolute;
-            right: 16px;
-            bottom: 14px;
-            max-width: 470px;
-            background: rgba(0, 0, 0, 0.72);
+            right: max(12px, var(--safe-right));
+            bottom: max(12px, var(--safe-bottom));
+            max-width: min(360px, calc(100% - 24px));
+            background: rgba(0, 0, 0, 0.78);
             border: 1px solid rgba(255, 255, 255, 0.12);
             color: var(--text-dim);
             padding: 6px 11px;
-            border-radius: 6px;
-            font-family: monospace;
-            font-size: 0.72rem;
+            border-radius: 8px;
+            font-family: ui-monospace, monospace;
+            font-size: 0.7rem;
             line-height: 1.5;
             z-index: 20;
         }
@@ -188,6 +331,7 @@
             list-style: none;
             text-align: right;
             user-select: none;
+            padding: 4px 0;
         }
         #attribution > summary::-webkit-details-marker { display: none; }
         #attribution[open] > summary {
@@ -201,83 +345,204 @@
         #attribution .note { color: var(--text-dim); font-style: italic; margin-top: 3px; }
         #attribution a { color: var(--accent); text-decoration: none; }
         #attribution a:hover { text-decoration: underline; }
+
+        .sheet-scrim {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.45);
+            z-index: 45;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        .sheet-scrim.open {
+            display: block;
+            opacity: 1;
+        }
+
+        .sheet-handle {
+            display: none;
+            width: 40px;
+            height: 4px;
+            border-radius: 999px;
+            background: rgba(255,255,255,0.22);
+            margin: 0 auto 10px;
+        }
+
+        .foot-note {
+            font-size: 0.78rem;
+            color: var(--text-dim);
+            line-height: 1.4;
+        }
+
+        /* ── Mobile: bottom sheet ── */
+        @media (max-width: 860px) {
+            .topbar-links { display: none; }
+            .sidebar .header { display: block; margin-bottom: 4px; }
+            .sidebar .header h1 { display: none; }
+            .sidebar .header a {
+                color: var(--text-dim);
+                text-decoration: none;
+                font-size: 0.82rem;
+                display: inline-block;
+                margin-right: 12px;
+            }
+
+            .stage { flex-direction: column; }
+
+            .sidebar {
+                position: fixed;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                width: 100%;
+                height: var(--sheet-h);
+                max-height: var(--sheet-h);
+                border-right: none;
+                border-top: 1px solid rgba(255,255,255,0.12);
+                border-radius: 18px 18px 0 0;
+                padding: 10px 14px calc(14px + var(--safe-bottom));
+                transform: translateY(110%);
+                transition: transform 0.28s cubic-bezier(0.2, 0.9, 0.2, 1);
+                z-index: 50;
+                box-shadow: 0 -12px 40px rgba(0,0,0,0.45);
+            }
+            .sidebar.open { transform: translateY(0); }
+            .sheet-handle { display: block; }
+
+            #status {
+                bottom: max(64px, calc(12px + var(--safe-bottom)));
+                max-width: calc(100% - 88px);
+                font-size: 0.72rem;
+            }
+            #attribution {
+                bottom: max(64px, calc(12px + var(--safe-bottom)));
+                max-width: min(200px, 42vw);
+                font-size: 0.65rem;
+            }
+            .parts-list { max-height: 160px; }
+            .foot-note { display: none; }
+        }
+
+        /* Desktop: show hub links in topbar, hide mobile-only chrome */
+        @media (min-width: 861px) {
+            body { flex-direction: column; }
+            .topbar { height: 48px; padding-top: 0; }
+            .topbar-links { display: flex; }
+            .icon-btn.primary span.label { display: none; }
+            .icon-btn.primary { width: 40px; padding: 0; }
+            .stage { flex-direction: row; }
+            .sidebar {
+                position: relative;
+                transform: none !important;
+                height: auto;
+                max-height: none;
+            }
+            .sheet-scrim { display: none !important; }
+            .sheet-handle { display: none; }
+            .zoom-cluster { display: none; }
+            #status { bottom: 14px; left: 16px; }
+            #attribution { bottom: 14px; right: 16px; max-width: 470px; }
+        }
     </style>
-    <script src="../js/menu-loader.js"></script></head>
+    <script src="../js/menu-loader.js"></script>
+</head>
 <body>
-    <div class="sidebar">
-        <div class="header">
-            <h1>Qualia 3D CCF</h1>
-            <a href="../index.html" style="color:#aaa; display:block; margin-bottom:5px;">← Return to Hub</a>
-            <a href="index.html">← Back to Engine Playground</a>
+    <header class="topbar">
+        <button type="button" class="icon-btn" id="btn-back" title="Back" aria-label="Back to playground" onclick="location.href='index.html'">←</button>
+        <h1 id="title">Qualia 3D Anatomy</h1>
+        <div class="topbar-links">
+            <a href="../index.html">Hub</a>
+            <a href="index.html">Playground</a>
         </div>
+        <button type="button" class="icon-btn primary" id="btn-controls" aria-expanded="false" aria-controls="sidebar" title="Body controls">
+            ☰ <span class="label">Controls</span>
+        </button>
+    </header>
 
-        <div class="control-group">
-            <h3>Reference Body</h3>
-            <div class="toggle-container">
-                <button id="btn-male" class="toggle-btn active" onclick="setSex('male')">Male (VHM)</button>
-                <button id="btn-female" class="toggle-btn" onclick="setSex('female')">Female (VHF)</button>
+    <div class="stage">
+        <div class="sheet-scrim" id="sheet-scrim" aria-hidden="true"></div>
+
+        <aside class="sidebar" id="sidebar" role="dialog" aria-label="Anatomy controls">
+            <div class="sheet-handle" aria-hidden="true"></div>
+            <div class="header">
+                <a href="../index.html">← Hub</a>
+                <a href="index.html">← Playground</a>
             </div>
-            <button id="btn-complete" class="toggle-btn" style="margin-top:8px;width:100%;border:1px solid rgba(255,255,255,0.15);border-radius:6px;" onclick="setSex('complete')">Complete — every muscle, bone, gland &amp; nerve</button>
-            <div id="complete-loader" style="display:none;margin-top:8px;font-size:0.7rem;color:var(--text-dim);line-height:1.4;">
-                The complete BodyParts3D body (CC BY-SA) is a large pack. Browsers can't fetch GitHub-release assets cross-origin, so:
-                <div style="margin-top:6px;"><a id="complete-dl" href="#" rel="noopener" download>↓ Download anatomy-bodyparts3d.qualia</a></div>
-                <div style="margin-top:6px;">then load the file:</div>
-                <input id="complete-file" type="file" accept=".qualia" onchange="onCompleteFile(this.files[0])" style="margin-top:4px;width:100%;font-size:0.68rem;color:var(--text-dim);" />
-                <div style="margin-top:6px;">The desktop app loads it directly — no download step.</div>
+
+            <div class="control-group">
+                <h3>Reference Body</h3>
+                <div class="toggle-container">
+                    <button id="btn-male" class="toggle-btn active" type="button" onclick="setSex('male')">Male (VHM)</button>
+                    <button id="btn-female" class="toggle-btn" type="button" onclick="setSex('female')">Female (VHF)</button>
+                </div>
+                <button id="btn-complete" class="toggle-btn" type="button" style="margin-top:8px;width:100%;border:1px solid rgba(255,255,255,0.15);border-radius:8px;" onclick="setSex('complete')">Complete body</button>
+                <div id="complete-loader" style="display:none;margin-top:8px;font-size:0.72rem;color:var(--text-dim);line-height:1.45;">
+                    The complete BodyParts3D body (CC BY-SA) is a large pack. Browsers can't fetch GitHub-release assets cross-origin, so:
+                    <div style="margin-top:6px;"><a id="complete-dl" href="#" rel="noopener" download>↓ Download anatomy-bodyparts3d.hmc</a></div>
+                    <div style="margin-top:6px;">then load the file:</div>
+                    <input id="complete-file" type="file" accept=".hmc" onchange="onCompleteFile(this.files[0])" style="margin-top:4px;width:100%;font-size:0.72rem;color:var(--text-dim);" />
+                    <div style="margin-top:6px;">The desktop app loads it directly — no download step. On phones, prefer Male/Female CCF packs (same-origin).</div>
+                </div>
             </div>
-        </div>
 
-        <div class="control-group">
-            <h3>Mixer — Attention</h3>
-            <label class="checkbox-label">
-                <input type="checkbox" id="ch-ambient" onchange="onAmbient(this.checked)"> Ambient σ field
-            </label>
-            <div id="mixer-systems" class="mixer-systems"></div>
-            <div class="mixer-note">Compose which body systems you attend to — the faders are built from the systems this body actually contains. Drag a fader to 0 to mute a system. Systems marked <em>·overlay</em> (ECS / ENS / glymphatic) are distributed networks with no single organ — evaluated and painted as an overlay on their host organs, so they're listed but not shown/hidden here.</div>
-        </div>
-
-        <div class="control-group">
-            <h3>Parts <span id="parts-count"></span></h3>
-            <input id="parts-search" type="text" placeholder="Search parts…" oninput="onPartSearch(this.value)" class="parts-search" />
-            <div class="parts-buttons">
-                <button class="toggle-btn parts-btn" onclick="setAllParts(true)">Select all</button>
-                <button class="toggle-btn parts-btn" onclick="setAllParts(false)">Deselect all</button>
+            <div class="control-group">
+                <h3>Mixer — Attention</h3>
+                <label class="checkbox-label">
+                    <input type="checkbox" id="ch-ambient" onchange="onAmbient(this.checked)"> Ambient σ field
+                </label>
+                <div id="mixer-systems" class="mixer-systems"></div>
+                <div class="mixer-note">Compose which body systems you attend to. Drag a fader to 0 to mute. Systems marked <em>·overlay</em> (ECS / ENS / glymphatic) are distributed networks painted on host organs.</div>
             </div>
-            <div id="parts-list" class="parts-list"></div>
-            <div class="mixer-note">Every individual structure this body contains, grouped by system. Untick a part to hide just that structure. Search to find one (the complete body has ~900).</div>
-        </div>
 
-        <div style="flex-grow: 1;"></div>
-        <div style="font-size: 0.8rem; color: var(--text-dim); line-height: 1.4;">
-            Real HuBMAP/CCF reference-organ meshes, compiled to sealed <b>.10d</b> and shipped in one transparent <b>.qualia</b> bundle, rendered by the Qualia engine on <b>WebGPU</b> — the same renderer that runs natively on the desktop.
+            <div class="control-group">
+                <h3>Parts <span id="parts-count"></span></h3>
+                <input id="parts-search" type="search" enterkeyhint="search" placeholder="Search parts…" oninput="onPartSearch(this.value)" class="parts-search" autocomplete="off" />
+                <div class="parts-buttons">
+                    <button type="button" class="toggle-btn parts-btn" onclick="setAllParts(true)">Select all</button>
+                    <button type="button" class="toggle-btn parts-btn" onclick="setAllParts(false)">Deselect all</button>
+                </div>
+                <div id="parts-list" class="parts-list"></div>
+                <div class="mixer-note">Every structure in this body, grouped by system. Untick a part to hide it.</div>
+            </div>
+
+            <div class="foot-note">
+                Real HuBMAP/CCF reference-organ meshes, compiled to sealed <b>.10d</b> and shipped in one transparent <b>.hmc</b> bundle, rendered by the Qualia engine on <b>WebGPU</b> — the same renderer that runs natively on the desktop.
+            </div>
+        </aside>
+
+        <div id="canvas-container">
+            <div id="tooltip"></div>
+            <div id="progress-wrap" aria-live="polite">
+                <div id="progress-label">Loading body…</div>
+                <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+            </div>
+            <div class="zoom-cluster" aria-label="Zoom">
+                <button type="button" id="btn-zoom-in" title="Zoom in" aria-label="Zoom in">+</button>
+                <button type="button" id="btn-zoom-out" title="Zoom out" aria-label="Zoom out">−</button>
+                <button type="button" id="btn-zoom-reset" title="Reset view" aria-label="Reset view">↻</button>
+            </div>
+            <div id="status" class="status">Starting…</div>
+            <details id="attribution" class="attribution">
+                <summary>ⓘ Sources</summary>
+                <div id="attribution-body"></div>
+            </details>
         </div>
     </div>
 
-    <div id="canvas-container">
-        <div id="tooltip"></div>
-        <div id="status" class="status">Starting…</div>
-        <details id="attribution" class="attribution">
-            <summary>ⓘ Sources &amp; licences</summary>
-            <div id="attribution-body"></div>
-        </details>
-    </div>
-
-    <!-- Fallback diagnostic: a plain (non-module) script that always runs. If the ES module never
-         executes — e.g. the page was opened as a file:// instead of served over HTTP, or module/WASM
-         loading is blocked — the status stays "Starting…". Replace it with an actionable message. -->
+    <!-- Fallback if the ES module never runs (file:// or blocked WASM). -->
     <script>
       setTimeout(function () {
         var s = document.getElementById('status');
         if (s && s.textContent.trim().indexOf('Starting') === 0) {
           s.className = 'status error';
           s.textContent = (location.protocol === 'file:')
-            ? 'This demo must be SERVED over HTTP, not opened as a file. Start a local server in docs/ and open http://localhost:PORT/playground/anatomy.html in Chrome or Edge (WebGPU).'
-            : 'The renderer module did not load. It needs a WebGPU browser (Chrome/Edge) over HTTP. Open the console (F12) for the specific error.';
+            ? 'This demo must be SERVED over HTTP, not opened as a file. Serve docs/ and open playground/anatomy.html in a WebGPU browser (Chrome/Edge, Safari 18+).'
+            : 'The renderer module did not load. Needs a WebGPU browser over HTTPS/HTTP. Open the console for the specific error.';
         }
       }, 8000);
     </script>
 
-    <!-- Real Qualia WebGPU renderer (ES module) -->
     <script type="module" src="anatomy.js"></script>
 </body>
 </html>

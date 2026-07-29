@@ -1,0 +1,22 @@
+Copyright (c) 2026 Timothy Charles Holborn
+https://www.linkedin.com/in/ubiquitous/ | timothy.holborn@gmail.com
+
+Attribution-NonCommercial-NoDerivatives 4.0 International
+
+This licence applies to the technical work in this crate (webizen-lite-wasm) and
+to the Qualia WASM Lite package published for ontology sites such as
+ns.webcivics.net. It does not claim or re-license copyright in source
+legislation or third-party material.
+
+By exercising the Licensed Rights, You accept and agree to be bound by the
+Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International
+Public License (CC BY-NC-ND 4.0).
+
+License deed:
+https://creativecommons.org/licenses/by-nc-nd/4.0/
+
+Full legal code:
+https://creativecommons.org/licenses/by-nc-nd/4.0/legalcode
+
+This matches the technical-work scope used by the Web Civics / Webizen
+namespace project (see that repository's LICENSE and RIGHTS.md).

@@ -66,8 +66,8 @@ pub fn solve(params: &WebGpuJobParams) -> SolverReport {
                 let w = idx(wrap(i as i64 - 1, nxi), j);
                 let nn = idx(i, wrap(j as i64 + 1, nyi));
                 let s = idx(i, wrap(j as i64 - 1, nyi));
-                let lap = (u[e] + u[w] - 2.0 * u[c]) * inv_hx2
-                    + (u[nn] + u[s] - 2.0 * u[c]) * inv_hy2;
+                let lap =
+                    (u[e] + u[w] - 2.0 * u[c]) * inv_hx2 + (u[nn] + u[s] - 2.0 * u[c]) * inv_hy2;
                 next[c] = u[c] + dt * alpha * lap;
             }
         }

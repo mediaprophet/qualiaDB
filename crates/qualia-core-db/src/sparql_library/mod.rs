@@ -24,6 +24,7 @@ pub mod sparql_shacl;
 pub mod sparql_tests;
 pub mod sparql_update;
 pub mod sparql_websocket;
+pub mod vision_shacl;
 
 // Re-export parsers (explicit, not glob: `CsvDatatype` / `JsonDatatype` are *also* defined
 // independently in the serializer modules, so glob-flattening both made the bare name

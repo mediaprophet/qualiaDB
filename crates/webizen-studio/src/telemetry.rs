@@ -50,21 +50,26 @@ pub fn use_telemetry() {
 pub fn use_telemetry() {
     use_effect(move || {
         // On native, store the device ID in a local file
-        let storage_dir = std::env::var("QUALIA_DATA_DIR")
-            .unwrap_or_else(|_| {
-                dirs_next::data_dir()
-                    .map(|d| d.join("webizen").to_string_lossy().to_string())
-                    .unwrap_or_else(|| ".".to_string())
-            });
+        let storage_dir = std::env::var("QUALIA_DATA_DIR").unwrap_or_else(|_| {
+            dirs_next::data_dir()
+                .map(|d| d.join("webizen").to_string_lossy().to_string())
+                .unwrap_or_else(|| ".".to_string())
+        });
         let device_id_path = std::path::Path::new(&storage_dir).join("device_id");
 
         if !device_id_path.exists() {
             let new_id = Uuid::new_v4().to_string();
             let _ = std::fs::create_dir_all(&storage_dir);
             let _ = std::fs::write(&device_id_path, &new_id);
-            eprintln!("[telemetry] Created new device ID at {}", device_id_path.display());
+            eprintln!(
+                "[telemetry] Created new device ID at {}",
+                device_id_path.display()
+            );
         } else {
-            eprintln!("[telemetry] Device ID exists at {}", device_id_path.display());
+            eprintln!(
+                "[telemetry] Device ID exists at {}",
+                device_id_path.display()
+            );
         }
     });
 }
