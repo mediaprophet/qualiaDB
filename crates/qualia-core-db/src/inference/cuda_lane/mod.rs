@@ -43,7 +43,7 @@ pub use mega_pass::{
     MegaPassPlanView, MegaPassWeightLayout,
 };
 pub use q8::{q8_0_gemv_oracle_into, try_q8_0_cuda_gemv, Q8_0_BLOCK_BYTES, Q8_0_BLOCK_ELEMS};
-pub(crate) use tuning::cuda_q8_tuning;
+pub(crate) use tuning::cuda_q8_tuning_for_model;
 pub use weight_cache::{
     cache_dense_weight, cache_dense_weight_direct, clear_weight_cache, dense_weight_cached,
     try_cuda_batch_gemv, try_cuda_batch_gemv_cached, try_cuda_batch_gemv_cached_only,

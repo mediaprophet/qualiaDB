@@ -4,7 +4,7 @@
 use super::attention::f32_bits_u32;
 use super::device::{ensure_device, ensure_mega_pass_arena, multi_weight_device};
 use super::q8::{Q8_0_EMBEDDING_LOOKUP_ENTRY, Q8_0_EMBEDDING_LOOKUP_SRC, Q8_0_GEMV_ROWS};
-use super::tuning::cuda_q8_tuning;
+use super::tuning::cuda_q8_tuning_for_model;
 
 mod attention_stage;
 mod attention_sdpa;
@@ -107,7 +107,7 @@ pub(crate) fn try_cuda_mega_pass_with_token(
     if !crate::inference_modes::prefer_tensor_core_gemm() {
         return None;
     }
-    let tuning = cuda_q8_tuning().for_model(n_embd, n_head, n_kv, head_dim, n_layer, lm_head_out);
+    let tuning = cuda_q8_tuning_for_model(n_embd, n_head, n_kv, head_dim, n_layer, lm_head_out);
     let weight_layout = plan.weight_layout();
     let weight_type = match weight_layout {
         MegaPassWeightLayout::Q4KSoa => GGML_TYPE_Q4_K_SOA,

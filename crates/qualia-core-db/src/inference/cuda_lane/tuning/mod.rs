@@ -5,7 +5,7 @@
 
 mod q8_config;
 
-pub(crate) use q8_config::{cuda_q8_tuning, CudaQ8Tuning};
+pub(crate) use q8_config::{cuda_q8_tuning_for_model, CudaQ8Tuning};
 
 #[cfg(test)]
 mod tests;

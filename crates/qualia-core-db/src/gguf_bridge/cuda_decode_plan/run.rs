@@ -86,16 +86,15 @@ impl crate::gguf_bridge::QTensorEngine {
                 crate::inference::cuda_lane::decode_graph_h2d_bytes_per_token()?,
             readback_bytes_per_token: 4,
             graph_key: crate::inference::cuda_lane::decode_graph_key(),
-            tuning_profile: crate::inference::cuda_lane::cuda_q8_tuning()
-                .for_model(
-                    plan.n_embd,
-                    plan.n_head,
-                    plan.n_kv,
-                    plan.head_dim,
-                    plan.n_layer,
-                    plan.lm_head_out,
-                )
-                .receipt_id(),
+            tuning_profile: crate::inference::cuda_lane::cuda_q8_tuning_for_model(
+                plan.n_embd,
+                plan.n_head,
+                plan.n_kv,
+                plan.head_dim,
+                plan.n_layer,
+                plan.lm_head_out,
+            )
+            .receipt_id(),
             context_window: plan.max_context,
         })
     }
