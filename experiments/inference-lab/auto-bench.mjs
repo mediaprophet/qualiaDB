@@ -4,7 +4,8 @@
  * Launches Chrome with WebGPU enabled, loads auto-bench.html,
  * captures results, and writes them to a JSON file.
  *
- * Usage: node experiments/inference-lab/auto-bench.mjs [--out results.json]
+ * Usage: node experiments/inference-lab/auto-bench.mjs
+ *        [--url http://localhost:8000/auto-bench.html] [--out results.json]
  */
 import puppeteer from 'puppeteer';
 import { writeFileSync, readFileSync, existsSync } from 'fs';
@@ -13,10 +14,14 @@ import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, '..', '..');
-const SERVER_URL = 'http://localhost:8080/auto-bench.html';
 const HISTORY_FILE = resolve(__dirname, 'bench-history.json');
 
 const args = process.argv.slice(2);
+const urlIdx = args.indexOf('--url');
+const serverUrl =
+  (urlIdx >= 0 && args[urlIdx + 1]) ||
+  process.env.QUALIA_WASM_BENCH_URL ||
+  'http://localhost:8000/auto-bench.html';
 const outIdx = args.indexOf('--out');
 const outFile = outIdx >= 0 && args[outIdx + 1] ? args[outIdx + 1] : null;
 
@@ -85,8 +90,8 @@ async function main() {
     console.error(`[request-failed] ${req.url()} — ${req.failure()?.errorText}`);
   });
 
-  console.log(`Navigating to ${SERVER_URL}…`);
-  await page.goto(SERVER_URL, { waitUntil: 'domcontentloaded' });
+  console.log(`Navigating to ${serverUrl}…`);
+  await page.goto(serverUrl, { waitUntil: 'domcontentloaded' });
 
   console.log('Waiting for benchmark to complete (up to 5 min)…');
 

@@ -15,6 +15,7 @@ const BROWSER_MODEL_TAG: &str = "wasm-resident.gguf";
 /// Autoregressive decode budget for browser harness.
 /// 32 was too short for chat replies and made truncated junk look like "garbage".
 const WASM_DECODE_TOKEN_BUDGET: usize = 128;
+const WASM_MAX_CONFIGURED_DECODE_TOKENS: usize = 512;
 /// `0` = all transformer layers.
 const WASM_LAYER_CAP: u32 = 0;
 /// `0` = full vocabulary argmax sweep.
@@ -80,11 +81,22 @@ fn require_real_tokenizer(tok: &GgufTokenizer) -> Result<(), String> {
 }
 
 /// Phase 2B: fully async prefill + decode via `_async` dispatchers (`map_async` + `.await`).
-async fn run_inference_async(prompt: &str, on_token: Function) -> Result<String, String> {
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct WasmAsyncInferenceResult {
+    text: String,
+    generated_tokens: u32,
+}
+
+async fn run_inference_async(
+    prompt: &str,
+    on_token: Function,
+    decode_token_budget: usize,
+) -> Result<WasmAsyncInferenceResult, String> {
     let mut engine = take_engine()?;
     let prompt_owned = prompt.to_string();
 
-    let result: Result<String, String> = async {
+    let result: Result<WasmAsyncInferenceResult, String> = async {
         // Boot purely from P64 when present: synthetic tensor index +
         // tokenizer section, no GGUF parse. (gguf_mmap holds the P64 bytes; the synthetic index
         // uses tensor_data_start=0 + absolute offsets, so the rest of the path is unchanged.)
@@ -198,7 +210,7 @@ async fn run_inference_async(prompt: &str, on_token: Function) -> Result<String,
         let mut out_ids: Vec<u32> = Vec::new();
         let mut streamed_len = 0usize;
 
-        for step in 0..WASM_DECODE_TOKEN_BUDGET {
+        for step in 0..decode_token_budget {
             let cur = *ctx.last().unwrap_or(&tok.bos_token_id);
 
             let hidden_ok = tensor_idx
@@ -287,7 +299,10 @@ async fn run_inference_async(prompt: &str, on_token: Function) -> Result<String,
             let _ = step;
         }
 
-        Ok(tok.decode(&out_ids))
+        Ok(WasmAsyncInferenceResult {
+            text: tok.decode(&out_ids),
+            generated_tokens: out_ids.len() as u32,
+        })
     }
     .await;
 
@@ -383,9 +398,27 @@ pub async fn infer_wasm_streaming_with_context(
 /// Returns a JS `Promise`; use `await inferWasmAsync(...)` from module code.
 #[wasm_bindgen(js_name = inferWasmAsync)]
 pub async fn infer_wasm_async(prompt: String, on_token: Function) -> Result<String, JsValue> {
-    run_inference_async(&prompt, on_token)
+    run_inference_async(&prompt, on_token, WASM_DECODE_TOKEN_BUDGET)
         .await
+        .map(|result| result.text)
         .map_err(|e| JsValue::from_str(&e))
+}
+
+/// Async WebGPU decode with an explicit, bounded token budget and exact token count.
+///
+/// This is the benchmark-safe API: callers can compare engines at the same decode
+/// budget without estimating model tokens from whitespace.
+#[wasm_bindgen(js_name = inferWasmAsyncMeasured)]
+pub async fn infer_wasm_async_measured(
+    prompt: String,
+    max_tokens: u32,
+    on_token: Function,
+) -> Result<JsValue, JsValue> {
+    let budget = (max_tokens as usize).clamp(1, WASM_MAX_CONFIGURED_DECODE_TOKENS);
+    let result = run_inference_async(&prompt, on_token, budget)
+        .await
+        .map_err(|e| JsValue::from_str(&e))?;
+    serde_wasm_bindgen::to_value(&result).map_err(|e| JsValue::from_str(&e.to_string()))
 }
 
 /// Compile a flat GGUF byte image into a canonical P64 LLM-weight container.

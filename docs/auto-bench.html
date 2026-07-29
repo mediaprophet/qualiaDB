@@ -24,8 +24,15 @@
   }
 
   async function runQualia() {
-    const mod = await import('../playground/qualia_core_db.js');
-    await mod.default();
+    // Every benchmark must execute the just-built artifact. Browser module caches
+    // otherwise survive page reloads and can silently benchmark an older WASM.
+    const mod = await import(`../playground/qualia_core_db.js?bench=${Date.now()}`);
+    await mod.default({
+      module_or_path: new URL(
+        `../playground/qualia_core_db_bg.wasm?bench=${Date.now()}`,
+        import.meta.url,
+      ),
+    });
     mod.init_panic_hook?.();
     const cache = await import('../js/opfs-model-cache.js');
 
@@ -46,17 +53,25 @@
     let firstAt = null;
     let outputText = '';
     const start = performance.now();
-    await mod.inferWasmAsync(prompt, (piece) => {
+    const measured = await mod.inferWasmAsyncMeasured(prompt, MAX_TOKENS, (piece) => {
       if (firstAt === null) firstAt = performance.now();
       outputText += piece;
     });
     const end = performance.now();
     const approxTokens = estimateTokens(outputText);
+    const generatedTokens = measured.generatedTokens;
     const generationMs = end - start;
     const ttftMs = firstAt === null ? generationMs : firstAt - start;
+    const decodeMs = firstAt === null ? 0 : end - firstAt;
+    const decodeTokens = Math.max(0, generatedTokens - 1);
+    const endToEndTokensPerSecond =
+      generationMs > 0 ? (generatedTokens * 1000) / generationMs : 0;
+    const tokensPerSecond =
+      decodeMs > 0 ? (decodeTokens * 1000) / decodeMs : 0;
     return {
-      engine: 'qualia', loadMs, ttftMs, generationMs, outputText, approxTokens,
-      tokensPerSecond: generationMs > 0 ? (approxTokens * 1000) / generationMs : 0,
+      engine: 'qualia', loadMs, ttftMs, generationMs, decodeMs, outputText, approxTokens,
+      generatedTokens, tokenCountSource: 'engine', configuredMaxTokens: MAX_TOKENS,
+      endToEndTokensPerSecond, tokensPerSecond,
     };
   }
 
@@ -70,22 +85,35 @@
 
     let firstAt = null;
     let outputText = '';
+    let streamChunks = 0;
     const start = performance.now();
-    await wllama.createCompletion({
+    const completion = await wllama.createCompletion({
       prompt: PROMPT, max_tokens: MAX_TOKENS, temperature: 0.0,
       stream: true,
       onData: (chunk) => {
         if (firstAt === null) firstAt = performance.now();
-        outputText += chunk?.choices?.[0]?.text || '';
+        const text = chunk?.choices?.[0]?.text || '';
+        outputText += text;
+        if (text) streamChunks += 1;
       },
     });
     const end = performance.now();
     const approxTokens = estimateTokens(outputText);
+    const usageTokens = completion?.usage?.completion_tokens;
+    const generatedTokens = Number.isFinite(usageTokens) ? usageTokens : streamChunks;
+    const tokenCountSource = Number.isFinite(usageTokens) ? 'engine-usage' : 'stream-events';
     const generationMs = end - start;
     const ttftMs = firstAt === null ? generationMs : firstAt - start;
+    const decodeMs = firstAt === null ? 0 : end - firstAt;
+    const decodeTokens = Math.max(0, generatedTokens - 1);
+    const endToEndTokensPerSecond =
+      generationMs > 0 ? (generatedTokens * 1000) / generationMs : 0;
+    const tokensPerSecond =
+      decodeMs > 0 ? (decodeTokens * 1000) / decodeMs : 0;
     return {
-      engine: 'wllama', loadMs, ttftMs, generationMs, outputText, approxTokens,
-      tokensPerSecond: generationMs > 0 ? (approxTokens * 1000) / generationMs : 0,
+      engine: 'wllama', loadMs, ttftMs, generationMs, decodeMs, outputText, approxTokens,
+      generatedTokens, tokenCountSource, configuredMaxTokens: MAX_TOKENS,
+      endToEndTokensPerSecond, tokensPerSecond,
     };
   }
 
