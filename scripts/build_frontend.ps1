@@ -106,11 +106,13 @@ if (-not $wasmOptOk) {
     if (-not (Test-Path -LiteralPath $wasmOptCandidate)) {
         New-Item -ItemType Directory -Force -Path $dxToolsRoot | Out-Null
         $archTag = if ($env:PROCESSOR_ARCHITECTURE -match 'ARM64|aarch64') { 'arm64' } else { 'x86_64' }
-        $isWindows = $env:OS -eq 'Windows_NT' -or $IsWindows
-        $isMac = $IsMacOS -or ($PSVersionTable.OS -match 'Darwin')
-        if ($isWindows) {
+        # Do not assign to $isWindows / $isMacOS — those names collide with PowerShell's
+        # automatic read-only variables (case-insensitive), which aborts under $ErrorActionPreference=Stop.
+        $onWindows = ($env:OS -eq 'Windows_NT') -or ($true -eq $IsWindows)
+        $onMac = ($true -eq $IsMacOS) -or ($PSVersionTable.OS -match 'Darwin')
+        if ($onWindows) {
             $asset = "binaryen-version_$BinaryenVersion-$archTag-windows.tar.gz"
-        } elseif ($isMac) {
+        } elseif ($onMac) {
             $asset = "binaryen-version_$BinaryenVersion-$archTag-macos.tar.gz"
         } else {
             $asset = "binaryen-version_$BinaryenVersion-$archTag-linux.tar.gz"
