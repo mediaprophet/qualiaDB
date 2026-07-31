@@ -2,6 +2,7 @@ use serde::Serialize;
 use std::collections::VecDeque;
 use std::io::Write;
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{sync_channel, SyncSender, TrySendError};
 use std::sync::{Mutex, OnceLock};
 
@@ -23,6 +24,35 @@ static RECENT: OnceLock<Mutex<VecDeque<DesktopLogEntry>>> = OnceLock::new();
 static LOG_SENDER: OnceLock<SyncSender<DesktopLogEntry>> = OnceLock::new();
 static SESSION_ID: OnceLock<String> = OnceLock::new();
 static PANIC_HOOK_INSTALLED: OnceLock<()> = OnceLock::new();
+static DEBUG_ENABLED: AtomicBool = AtomicBool::new(false);
+static LOGGER_INSTALLED: OnceLock<bool> = OnceLock::new();
+
+struct DesktopFacadeLogger;
+
+static DESKTOP_FACADE_LOGGER: DesktopFacadeLogger = DesktopFacadeLogger;
+
+impl log::Log for DesktopFacadeLogger {
+    fn enabled(&self, metadata: &log::Metadata<'_>) -> bool {
+        metadata.level()
+            <= if DEBUG_ENABLED.load(Ordering::Relaxed) {
+                log::Level::Debug
+            } else {
+                log::Level::Info
+            }
+    }
+
+    fn log(&self, entry: &log::Record<'_>) {
+        if !self.enabled(entry.metadata()) {
+            return;
+        }
+        record(
+            entry.level().as_str().to_ascii_lowercase(),
+            format!("{}: {}", entry.target(), entry.args()),
+        );
+    }
+
+    fn flush(&self) {}
+}
 
 fn default_log_path() -> PathBuf {
     if let Ok(path) = std::env::var("WEBIZEN_DESKTOP_LOG") {
@@ -101,6 +131,24 @@ fn rotate_log(path: &Path) {
 
 pub fn init() -> PathBuf {
     let path = log_path();
+    let debug = std::env::var("WEBIZEN_DEBUG")
+        .map(|value| {
+            matches!(
+                value.to_ascii_lowercase().as_str(),
+                "1" | "true" | "yes" | "on"
+            )
+        })
+        .unwrap_or_else(|_| {
+            std::fs::read_to_string(debug_mode_path())
+                .map(|value| value.trim() == "true")
+                .unwrap_or(false)
+        });
+    DEBUG_ENABLED.store(debug, Ordering::Relaxed);
+    let installed =
+        *LOGGER_INSTALLED.get_or_init(|| log::set_logger(&DESKTOP_FACADE_LOGGER).is_ok());
+    if installed {
+        apply_log_level(debug);
+    }
     let _ = RECENT.get_or_init(|| Mutex::new(VecDeque::with_capacity(MAX_RECENT_LINES)));
     let _ = session_id();
     let _ = ensure_writer();
@@ -109,6 +157,47 @@ pub fn init() -> PathBuf {
         format!("Webizen desktop logging to {}", path.display()),
     );
     path
+}
+
+fn debug_mode_path() -> PathBuf {
+    log_path()
+        .parent()
+        .unwrap_or_else(|| Path::new("."))
+        .join("debug-mode")
+}
+
+fn apply_log_level(enabled: bool) {
+    log::set_max_level(if enabled {
+        log::LevelFilter::Debug
+    } else {
+        log::LevelFilter::Info
+    });
+}
+
+pub fn debug_enabled() -> bool {
+    DEBUG_ENABLED.load(Ordering::Relaxed)
+}
+
+/// Enable verbose native logging across the `log` facade. The preference persists beside the logs
+/// and takes effect immediately; no restart is required.
+pub fn set_debug_enabled(enabled: bool) -> Result<(), String> {
+    let path = debug_mode_path();
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent).map_err(|error| error.to_string())?;
+    }
+    std::fs::write(&path, if enabled { "true" } else { "false" })
+        .map_err(|error| error.to_string())?;
+    DEBUG_ENABLED.store(enabled, Ordering::Relaxed);
+    apply_log_level(enabled);
+    record(
+        "info",
+        if enabled {
+            "Debug mode enabled; verbose native events will be recorded"
+        } else {
+            "Debug mode disabled; native logging returned to information level"
+        },
+    );
+    Ok(())
 }
 
 pub fn install_panic_hook() {

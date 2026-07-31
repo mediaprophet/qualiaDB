@@ -323,6 +323,92 @@ pub fn is_webgpu_engine_ready() -> bool {
     engine_ready()
 }
 
+/// Differential WebGPU/CPU probe for the first layer's Q projection.
+///
+/// This is intentionally exposed to the browser debug surface so automated
+/// agents can distinguish model/package failures from quantized-kernel
+/// failures without asking a user to inspect opaque generated text.
+#[wasm_bindgen(js_name = verifyFirstLayerQuant)]
+pub async fn verify_first_layer_quant() -> Result<JsValue, JsValue> {
+    #[derive(serde::Serialize)]
+    #[serde(rename_all = "camelCase")]
+    struct QuantProbe {
+        role: &'static str,
+        ggml_type: u32,
+        rows_checked: usize,
+        max_abs_error: f32,
+        max_rel_error: f32,
+        passed: bool,
+    }
+
+    let engine = take_engine().map_err(|e| JsValue::from_str(&e))?;
+    let result: Result<QuantProbe, String> = async {
+        let index = if let Some(data) = engine.p64_resident.as_ref() {
+            crate::p64_weight::P64TensorIndex::from_p64(data)?.to_gguf_index()
+        } else {
+            let bytes = engine
+                .gguf_mmap
+                .as_deref()
+                .ok_or_else(|| "quant probe: no resident model".to_string())?;
+            crate::gguf_sharder::GgufTensorIndex::from_gguf(bytes)
+        };
+        let info = index
+            .get_layer_tensors(0)
+            .attn_q
+            .ok_or_else(|| "quant probe: layer 0 has no Q projection".to_string())?;
+        let (n_in, n_out) = crate::gguf_bridge::QTensorEngine::matmul_dims(&info);
+        let rows = n_out.min(8);
+        if n_in == 0 || n_in > 8192 || rows == 0 {
+            return Err("quant probe: unsupported projection dimensions".to_string());
+        }
+        let bytes = engine
+            .gguf_mmap
+            .as_deref()
+            .ok_or_else(|| "quant probe: model bytes unavailable".to_string())?;
+        let raw = crate::ggml_quants::fetch_tensor_bytes(bytes, index.tensor_data_start, &info)
+            .map_err(|e| format!("quant probe: tensor bytes unavailable: {e:?}"))?;
+        let mut input = vec![0.0f32; n_in];
+        for (i, value) in input.iter_mut().enumerate() {
+            *value = ((i as f32 * 0.017).sin() + (i as f32 * 0.013).cos()) * 0.25;
+        }
+        let mut gpu = vec![0.0f32; rows];
+        if !engine
+            .dispatch_gemm_into_async(&index, &info, &input, &mut gpu, n_in, rows)
+            .await
+        {
+            return Err("quant probe: WebGPU GEMM dispatch failed".to_string());
+        }
+        let mut row = vec![0.0f32; n_in];
+        let mut max_abs = 0.0f32;
+        let mut max_rel = 0.0f32;
+        for r in 0..rows {
+            crate::ggml_quants::dequant_matrix_row_into(raw, &info, r, &mut row)
+                .map_err(|e| format!("quant probe: CPU dequant failed: {e:?}"))?;
+            let cpu = row
+                .iter()
+                .zip(input.iter())
+                .map(|(w, x)| w * x)
+                .sum::<f32>();
+            let abs = (gpu[r] - cpu).abs();
+            let rel = abs / cpu.abs().max(1.0e-5);
+            max_abs = max_abs.max(abs);
+            max_rel = max_rel.max(rel);
+        }
+        Ok(QuantProbe {
+            role: "blk.0.attn_q.weight",
+            ggml_type: info.ggml_type,
+            rows_checked: rows,
+            max_abs_error: max_abs,
+            max_rel_error: max_rel,
+            passed: max_abs <= 0.05 || max_rel <= 0.02,
+        })
+    }
+    .await;
+    restore_engine(engine);
+    let probe = result.map_err(|e| JsValue::from_str(&e))?;
+    serde_wasm_bindgen::to_value(&probe).map_err(|e| JsValue::from_str(&e.to_string()))
+}
+
 /// Load a GGUF or P64 model into the resident browser WebGPU engine.
 #[wasm_bindgen]
 pub async fn initialize_webgpu_engine(model_data: js_sys::Uint8Array) -> Result<(), js_sys::Error> {

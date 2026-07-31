@@ -147,18 +147,15 @@
                  (esp. some Android browsers) get a clear message instead of a silent stall. -->
             <div id="webgpu-notice" class="hidden mb-4 rounded-xl border px-3 py-2.5 text-xs leading-relaxed"></div>
             <div class="space-y-3 mb-4">
-                <label class="block text-xs text-zinc-400 mb-1">Select release model (P64)</label>
+                <label class="block text-xs text-zinc-400 mb-1">Select verified browser model</label>
                 <select id="model-select" class="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-sm text-zinc-200 focus:border-indigo-500 focus:outline-none">
-                    <option value="https://github.com/mediaprophet/qualiaDB/releases/download/v0.0.24/SmolLM2-360M-Instruct-Q4_K_M.p64" data-gguf="https://huggingface.co/bartowski/SmolLM2-360M-Instruct-GGUF/resolve/main/SmolLM2-360M-Instruct-Q4_K_M.gguf" data-q42="https://github.com/mediaprophet/qualiaDB/releases/download/v0.0.24/SmolLM2-360M-Instruct-Q4_K_M.q42" data-name="SmolLM2-360M Q4_K_M P64 (~258 MB)" data-format="chatml" selected>SmolLM2 360M Instruct Q4_K_M — recommended</option>
-                    <option value="https://github.com/mediaprophet/qualiaDB/releases/download/v0.0.24/smollm2-1.7b-instruct-q4_k_m.p64" data-gguf="https://huggingface.co/HuggingFaceTB/SmolLM2-1.7B-Instruct-GGUF/resolve/main/smollm2-1.7b-instruct-q4_k_m.gguf" data-q42="https://github.com/mediaprophet/qualiaDB/releases/download/v0.0.24/smollm2-1.7b-instruct-q4_k_m.q42" data-name="SmolLM2-1.7B Q4_K_M P64 (~1.0 GB)" data-format="chatml">SmolLM2 1.7B Instruct Q4_K_M — experimental</option>
-                    <option value="models/smollm2-360m-instruct-q8_0.gguf" data-gguf="models/smollm2-360m-instruct-q8_0.gguf" data-name="SmolLM2-360M Instruct Q8_0 (local ~386 MB)" data-format="chatml">SmolLM2 360M Instruct Q8_0 — local</option>
-                    <option value="https://github.com/mediaprophet/qualiaDB/releases/download/v0.0.24/Llama-3.2-1B-Instruct-Q4_K_M.p64" data-gguf="https://huggingface.co/bartowski/Llama-3.2-1B-Instruct-GGUF/resolve/main/Llama-3.2-1B-Instruct-Q4_K_M.gguf" data-q42="https://github.com/mediaprophet/qualiaDB/releases/download/v0.0.24/Llama-3.2-1B-Instruct-Q4_K_M.q42" data-name="Llama-3.2-1B Q4_K_M P64 (~769 MB)" data-format="llama3">Llama 3.2 1B Instruct Q4_K_M — experimental</option>
-                    <option value="https://github.com/mediaprophet/qualiaDB/releases/download/v0.0.24/llama-3.2-3b-instruct-q4_k_m.p64" data-gguf="https://huggingface.co/hugging-quants/Llama-3.2-3B-Instruct-Q4_K_M-GGUF/resolve/main/llama-3.2-3b-instruct-q4_k_m.gguf" data-q42="https://github.com/mediaprophet/qualiaDB/releases/download/v0.0.24/llama-3.2-3b-instruct-q4_k_m.q42" data-name="Llama-3.2-3B Q4_K_M P64 (~1.9 GB)" data-format="llama3">Llama 3.2 3B Instruct Q4_K_M — experimental</option>
+                    <option value="https://huggingface.co/HuggingFaceTB/SmolLM2-360M-Instruct-GGUF/resolve/main/smollm2-360m-instruct-q8_0.gguf" data-gguf="https://huggingface.co/HuggingFaceTB/SmolLM2-360M-Instruct-GGUF/resolve/main/smollm2-360m-instruct-q8_0.gguf" data-name="SmolLM2-360M Instruct Q8_0 GGUF (~369 MB)" data-format="chatml" data-bytes="386404992" data-sha256="48ab3034d0dd401fbc721eb1df3217902fee7dab9078992d66431f09b7750201" selected>SmolLM2 360M Instruct Q8_0 — verified</option>
                 </select>
+                <p class="mt-2 text-[11px] leading-relaxed text-zinc-500">Q4_K_M browser presets are temporarily withheld: the current WebGPU quantized path can terminate on the first token. This Q8_0 image is the locally coherence-tested profile.</p>
                 <label class="block text-xs text-zinc-400 mt-3 mb-1">Or load a local P64 / GGUF file</label>
                 <input type="file" id="local-model-file" accept=".p64,.gguf" multiple
                     class="w-full text-xs text-zinc-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-zinc-800 file:text-zinc-200 hover:file:bg-zinc-700">
-                <p class="text-xs text-zinc-500 leading-relaxed">Release models are precompiled P64 weights paired with canonical Q42 metadata packages. Local GGUF remains supported and is compiled once on-device. Inference runs through Qualia's native WebGPU engine (<code class="text-zinc-400">qualia_core_db_bg.wasm</code>).</p>
+                <p class="text-xs text-zinc-500 leading-relaxed">The verified GGUF is compiled to canonical P64 once on-device and cached in OPFS. Local P64 / GGUF remains supported. Inference runs through Qualia's native WebGPU engine (<code class="text-zinc-400">qualia_core_db_bg.wasm</code>).</p>
             </div>
             <div class="progress-bar mb-2" id="dl-progress-wrap" style="display:none">
                 <div class="progress-fill" id="dl-progress" style="width:0%"></div>
@@ -358,15 +355,15 @@
 <script type="module">
 import init, {
     initialize_webgpu_engine,
-    inferWasmAsync,
+    inferWasmAsyncMeasured,
     releaseWebgpuEngine,
     isWebgpuEngineReady,
     getEngineVersion,
     compileGgufToP64,
     p64FormatVersion,
-} from './playground/qualia_core_db.js';
+} from './playground/qualia_core_db.js?v=0.0.28';
 // Optional: only present after wasm rebuild that includes getResidentTokenizerVocab.
-import * as QualiaWasm from './playground/qualia_core_db.js';
+import * as QualiaWasm from './playground/qualia_core_db.js?v=0.0.28';
 import { loadGgufCached, loadOrCompileP64 } from './js/opfs-model-cache.js';
 
 function residentTokenizerVocab() {
@@ -382,7 +379,7 @@ function residentTokenizerVocab() {
 
 const QUALIA_SPARQL = 'http://localhost:4242/query';
 const WIKIDATA_SPARQL = 'https://query.wikidata.org/sparql';
-const USER_AGENT = 'QualiaDB-OnlineLLMDemo/0.0.27 (https://github.com/mediaprophet/qualiaDB)';
+const USER_AGENT = 'QualiaDB-OnlineLLMDemo/0.0.28 (https://github.com/mediaprophet/qualiaDB)';
 
 const QUALIA_ONTOLOGY = `
 # QualiaDB Ontology Prefixes
@@ -529,7 +526,7 @@ function applyMobileModelPolicy() {
         hint.classList.remove('hidden');
         const memTxt = mem != null ? ` This browser reports ~${mem} GB deviceMemory.` : '';
         hint.innerHTML =
-            `<strong>Phone / low-RAM path.</strong> Use <em>SmolLM2 360M</em> (~258 MB). ` +
+            `<strong>Phone / low-RAM path.</strong> Use <em>SmolLM2 360M Q8_0</em> (~369 MB). ` +
             `Larger models often kill the tab (the engine currently materialises weights in JS heap).` +
             `${memTxt} Stay on Wi‑Fi; first load downloads once and caches in OPFS.`;
     }
@@ -552,7 +549,7 @@ async function bootWasm() {
 
     wasmReadyPromise = (async () => {
         try {
-            await init();
+            await init('./playground/qualia_core_db_bg.wasm?v=0.0.28');
             wasmReady = true;
             wasmBootError = null;
             const ver = getEngineVersion?.() ?? 'unknown';
@@ -1009,13 +1006,26 @@ async function generate(system, user, opts = {}) {
         statusEl.textContent = `Generating… ${tokens} tokens · ${secs.toFixed(1)}s · ${(tokens / Math.max(secs, 0.001)).toFixed(1)} tok/s`;
     };
 
-    // inferWasmAsync yields to the event loop on every GPU map_async, so the tab stays responsive
-    // and tokens paint as they arrive (inferWasmStreaming is synchronous and freezes the page).
-    const reply = await inferWasmAsync(prompt, onToken);
-    if (reply && !full) full = reply;
-
-    streamWrap.classList.add('hidden');
-    return cleanGenerated(full);
+    // The measured path returns an exact token count, allowing the UI to reject
+    // models that immediately emit EOS/blank text instead of silently appending
+    // an empty assistant message.
+    const maxTokens = Math.max(1, Math.min(Number(opts.max_tokens || 128), 512));
+    let result;
+    try {
+        result = await inferWasmAsyncMeasured(prompt, maxTokens, onToken);
+    } finally {
+        streamWrap.classList.add('hidden');
+    }
+    if (result?.text && !full) full = result.text;
+    const cleaned = cleanGenerated(full);
+    if (!cleaned) {
+        const generated = Number(result?.generatedTokens || tokens || 0);
+        throw new Error(
+            `The model returned no visible text (${generated} generated token${generated === 1 ? '' : 's'}). ` +
+            `This model/runtime combination failed the browser decode gate; reload the verified Q8_0 preset or choose a compatible local model.`
+        );
+    }
+    return cleaned;
 }
 
 // ── SPARQL Execution ──────────────────────────────────────────────────────────

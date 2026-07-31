@@ -792,21 +792,16 @@ pub fn ConnectChat() -> Element {
                                 onclick: move |_| {
                                     #[cfg(target_arch = "wasm32")]
                                     {
-                                        let (selected_model, models, mut active_model, mut status) = (selected_model, models, active_model, status);
+                                        let (selected_model, models, mut status) = (selected_model, models, status);
                                         spawn(async move {
                                             let mut name = selected_model();
                                             if name.is_empty() { if let Some(f) = models().first() { name = model_label(f); } }
                                             if name.is_empty() { status.set("Pick a model first.".into()); return; }
                                             status.set(format!("Activating {name}…"));
-                                            match invoke_json::<serde_json::Value>("set_active_model", json!({ "modelName": name })).await {
-                                                Ok(_) => {
-                                                    if let Ok(Some(m)) = invoke_json::<Option<String>>("get_active_model", json!({})).await {
-                                                        active_model.set(m);
-                                                    } else {
-                                                        active_model.set(name.clone());
-                                                    }
-                                                    // Success is visible in the header pill; clear status quickly.
-                                                    flash_status(status, format!("Activated {name}."), 1200);
+                                            match invoke_json::<serde_json::Value>("schedule_model_activation", json!({ "modelName": name })).await {
+                                                Ok(job) => {
+                                                    let id = job.get("id").and_then(serde_json::Value::as_str).unwrap_or("queued");
+                                                    status.set(format!("Model activation queued as {id}. Follow it in Background jobs."));
                                                 }
                                                 Err(e) => status.set(format!("Activate failed: {e}")),
                                             }

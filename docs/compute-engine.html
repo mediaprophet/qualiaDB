@@ -67,7 +67,7 @@
         <div id="cards" class="grid grid-cols-1 lg:grid-cols-2 gap-5"></div>
 
         <div class="text-center text-white/40 text-sm mt-12">
-            <p>QualiaDB v0.0.27 &bull; Computational Engine &bull; bundle <code class="text-white/50">docs/playground/qualia_core_db_bg.wasm</code> (<code class="text-white/50">--features wasm-full</code>) &bull; exports: <code class="text-white/50">crates/qualia-core-db/src/wasm_bridge/engine/</code></p>
+            <p>QualiaDB v0.0.28 &bull; Computational Engine &bull; bundle <code class="text-white/50">docs/playground/qualia_core_db_bg.wasm</code> (<code class="text-white/50">--features wasm-full</code>) &bull; exports: <code class="text-white/50">crates/qualia-core-db/src/wasm_bridge/engine/</code></p>
         </div>
     </div>
 
@@ -82,8 +82,8 @@
     {"domain":"crypto","name":"crypto_sha3_256","summary":"SHA3-256 (Keccak) digest of {text} or {hex}.","input":"{\"text\":\"hello world\"}"},
     {"domain":"crypto","name":"crypto_blake3","summary":"BLAKE3 256-bit digest of {text} or {hex}.","input":"{\"text\":\"hello world\"}"},
     {"domain":"crypto","name":"crypto_hkdf_sha256","summary":"HKDF-SHA256 key derivation (RFC 5869): derive `length` output bytes from ikm with optional salt/info.","input":"{\"ikm\":{\"text\":\"input key material\"},\"salt\":{\"hex\":\"000102030405060708090a0b0c\"},\"info\":{\"text\":\"app context\"},\"length\":32}"},
-    {"domain":"crypto","name":"crypto_aead_encrypt","summary":"AEAD encrypt (AES-256-GCM | ChaCha20-Poly1305 | XChaCha20-Poly1305). 32-byte key, 12-byte nonce (24 for xchacha), optional AAD. Output is ciphertext‖tag. ⚠ caller owns the nonce — never reuse a (key,nonce).","input":"{\"algorithm\":\"aes256gcm\",\"key\":{\"hex\":\"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f\"},\"nonce\":{\"hex\":\"0102030405060708090a0b0c\"},\"plaintext\":{\"text\":\"attack at dawn\"},\"aad\":{\"text\":\"qualiadb-0.0.27\"}}"},
-    {"domain":"crypto","name":"crypto_aead_decrypt","summary":"AEAD decrypt + verify; fails closed on a bad tag / wrong key, nonce, or aad. Returns the plaintext (utf8 + hex).","input":"{\"algorithm\":\"aes256gcm\",\"key\":{\"hex\":\"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f\"},\"nonce\":{\"hex\":\"0102030405060708090a0b0c\"},\"ciphertext\":{\"hex\":\"649e2eb48fffd0e738820726677d46090688d2b9f0f9807a2d20379cea1e\"},\"aad\":{\"text\":\"qualiadb-0.0.27\"}}"}];
+    {"domain":"crypto","name":"crypto_aead_encrypt","summary":"AEAD encrypt (AES-256-GCM | ChaCha20-Poly1305 | XChaCha20-Poly1305). 32-byte key, 12-byte nonce (24 for xchacha), optional AAD. Output is ciphertext‖tag. ⚠ caller owns the nonce — never reuse a (key,nonce).","input":"{\"algorithm\":\"aes256gcm\",\"key\":{\"hex\":\"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f\"},\"nonce\":{\"hex\":\"0102030405060708090a0b0c\"},\"plaintext\":{\"text\":\"attack at dawn\"},\"aad\":{\"text\":\"qualiadb-0.0.28\"}}"},
+    {"domain":"crypto","name":"crypto_aead_decrypt","summary":"AEAD decrypt + verify; fails closed on a bad tag / wrong key, nonce, or aad. Returns the plaintext (utf8 + hex).","input":"{\"algorithm\":\"aes256gcm\",\"key\":{\"hex\":\"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f\"},\"nonce\":{\"hex\":\"0102030405060708090a0b0c\"},\"ciphertext\":{\"hex\":\"649e2eb48fffd0e738820726677ddde2bd214284e63900b551e851711e5b\"},\"aad\":{\"text\":\"qualiadb-0.0.28\"}}"}];
 
     const DOMAIN_LABELS = {
         linalg: 'Linear Algebra', stats: 'Statistics', cas: 'Computer Algebra',

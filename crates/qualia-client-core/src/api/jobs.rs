@@ -34,6 +34,46 @@ pub fn cancel_local_job(id: String) -> Result<bool, String> {
     crate::local_job_scheduler::LocalJobScheduler::global().cancel(&id)
 }
 
+/// Re-run a finished job with the same bounded inputs.
+pub fn retry_local_job(id: String) -> Result<serde_json::Value, String> {
+    let job = crate::local_job_scheduler::LocalJobScheduler::global().retry(&id)?;
+    serde_json::to_value(job).map_err(|e| e.to_string())
+}
+
+/// Clear completed/failed/cancelled history without affecting active work.
+pub fn clear_finished_local_jobs() -> Result<usize, String> {
+    crate::local_job_scheduler::LocalJobScheduler::global().clear_finished()
+}
+
+pub fn schedule_model_download(
+    url: String,
+    filename: String,
+    model_id: String,
+) -> Result<serde_json::Value, String> {
+    let job = crate::local_job_scheduler::LocalJobScheduler::global().enqueue(
+        crate::local_job_scheduler::LocalJobKind::ModelDownload {
+            url,
+            filename,
+            model_id,
+        },
+    )?;
+    serde_json::to_value(job).map_err(|e| e.to_string())
+}
+
+pub fn schedule_model_activation(model_name: String) -> Result<serde_json::Value, String> {
+    let job = crate::local_job_scheduler::LocalJobScheduler::global()
+        .enqueue(crate::local_job_scheduler::LocalJobKind::ModelActivation { model_name })?;
+    serde_json::to_value(job).map_err(|e| e.to_string())
+}
+
+pub fn schedule_anatomy_asset_acquire(model: String) -> Result<serde_json::Value, String> {
+    // Validate before queueing so typo failures are immediate and visible at the initiating control.
+    crate::wellfair::api::parse_anatomy_model(&model)?;
+    let job = crate::local_job_scheduler::LocalJobScheduler::global()
+        .enqueue(crate::local_job_scheduler::LocalJobKind::AnatomyAssetAcquire { model })?;
+    serde_json::to_value(job).map_err(|e| e.to_string())
+}
+
 pub fn ensure_chat_session() -> Result<String, String> {
     if let Some(id) = get_last_chat_session_id() {
         let state = crate::state::APP_STATE.get().unwrap();

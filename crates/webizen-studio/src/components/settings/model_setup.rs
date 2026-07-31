@@ -146,11 +146,14 @@ pub fn ModelSetupPanel() -> Element {
                         busy.set(true);
                         status.set(format!("Starting the bounded download for {filename}…"));
                         spawn(async move {
-                            match invoke_json::<String>(
-                                "download_model",
+                            match invoke_json::<serde_json::Value>(
+                                "schedule_model_download",
                                 serde_json::json!({ "url": url, "filename": filename, "modelId": model_id }),
                             ).await {
-                                Ok(download) => status.set(format!("Download started: {download}. Progress is available in Advanced Technical settings.")),
+                                Ok(job) => {
+                                    let id = job.get("id").and_then(serde_json::Value::as_str).unwrap_or("queued");
+                                    status.set(format!("Download queued as {id}. You can keep working; progress is in Background jobs."));
+                                }
                                 Err(error) => status.set(format!("Download failed: {error}")),
                             }
                             busy.set(false);
@@ -230,11 +233,11 @@ pub fn ModelSetupPanel() -> Element {
                                 busy.set(true);
                                 status.set(format!("Activating {model}…"));
                                 spawn(async move {
-                                    match invoke_json::<()>("set_active_model", serde_json::json!({ "modelName": model.clone() })).await {
-                                        Ok(()) => {
-                                            active.set(model);
+                                    match invoke_json::<serde_json::Value>("schedule_model_activation", serde_json::json!({ "modelName": model.clone() })).await {
+                                        Ok(job) => {
                                             probe.set(None);
-                                            status.set("Model active. Run the private test before relying on it.".to_string());
+                                            let id = job.get("id").and_then(serde_json::Value::as_str).unwrap_or("queued");
+                                            status.set(format!("Activation queued as {id}. Webizen will map and validate the model in Background jobs; this screen no longer needs to stay open."));
                                         }
                                         Err(error) => status.set(format!("Activation failed: {error}")),
                                     }

@@ -12,9 +12,7 @@
 //! The orbit camera (azimuth / elevation sliders) drives both views. Everything shown is a **hypothesis
 //! to explore, not a diagnosis**; the text surface (`anatomy_panel.rs`) carries the narrative + disclosure.
 
-use super::host_client::{
-    acquire_body_assets, body_assets_status, render_body_snapshot, BodyAssetsStatus,
-};
+use super::host_client::{body_assets_status, render_body_snapshot, BodyAssetsStatus};
 use crate::components::experience_mode::use_experience_mode;
 use dioxus::prelude::*;
 
@@ -74,20 +72,23 @@ async fn refresh_cache_status(mut ui: Signal<Anatomy3dUi>) {
 async fn acquire_assets(mut ui: Signal<Anatomy3dUi>) {
     let model = ui.read().model.clone();
     ui.write().acquiring = true;
-    ui.write().acquire_message = "Starting download…".to_string();
-    match acquire_body_assets(&model).await {
-        Ok(report) => {
+    ui.write().acquire_message = "Queueing anatomy download and conversion…".to_string();
+    match crate::components::qapp_engine::invoke_json(
+        "schedule_anatomy_asset_acquire",
+        serde_json::json!({ "model": model }),
+    )
+    .await
+    {
+        Ok(job) => {
+            let id = job
+                .get("id")
+                .and_then(serde_json::Value::as_str)
+                .unwrap_or("queued");
             ui.write().acquire_message = format!(
-                "{} body cached: {} organs · {} MB · {} failed",
-                report.model,
-                report.organs_cached,
-                report.total_ten_d_bytes / 1_000_000,
-                report.organs_failed,
+                "Anatomy job {id} is queued. It will download GLBs, compile .10d assets and update this cache. You can leave this page; follow progress in Background jobs."
             );
-            // Refresh the cache status to reflect the new state.
-            spawn(refresh_cache_status(ui));
         }
-        Err(e) => ui.write().acquire_message = format!("Download failed: {e}"),
+        Err(e) => ui.write().acquire_message = format!("Couldn’t queue anatomy assets: {e}"),
     }
     ui.write().acquiring = false;
 }
@@ -109,6 +110,21 @@ pub fn WellfairAnatomy3dPanel() -> Element {
             spawn(render_frame(ui));
             spawn(refresh_cache_status(ui));
         }
+    });
+
+    // Anatomy acquisition now runs in the global job centre. Observe the cache in the background so
+    // this page switches to the real-mesh view when that job finishes, even if it was started elsewhere.
+    #[cfg(target_arch = "wasm32")]
+    use_effect(move || {
+        if !crate::endpoints::is_native_host() {
+            return;
+        }
+        spawn(async move {
+            loop {
+                gloo_timers::future::sleep(std::time::Duration::from_secs(4)).await;
+                refresh_cache_status(ui).await;
+            }
+        });
     });
 
     // When the cache becomes ready, postMessage the portal iframe to load the real body.

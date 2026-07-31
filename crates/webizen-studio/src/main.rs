@@ -196,6 +196,9 @@ pub enum Route {
     #[route("/logs")]
     LogsRoute {},
 
+    #[route("/jobs")]
+    JobsRoute {},
+
     #[route("/agent-qa")]
     AgentQaRoute {},
 
@@ -472,6 +475,7 @@ fn route_from_omnibox(query: &str) -> Route {
         "nexus" | "knowledge-nexus" => return Route::NexusRoute {},
         "qapps" | "apps" => return Route::QAppsRoute {},
         "logs" => return Route::LogsRoute {},
+        "jobs" | "tasks" | "downloads" | "queue" => return Route::JobsRoute {},
         "qa" | "debug" | "diagnostics" | "agent-qa" => return Route::AgentQaRoute {},
         "identity" => return Route::IdentityRoute {},
         "sanctuary" => return Route::SanctuaryRoute {},
@@ -754,6 +758,11 @@ fn LogsRoute() -> Element {
 }
 
 #[component]
+fn JobsRoute() -> Element {
+    rsx! { components::job_center::JobCenterPage {} }
+}
+
+#[component]
 fn AgentQaRoute() -> Element {
     rsx! { components::agent_qa_panel::AgentQaPanel {} }
 }
@@ -818,6 +827,8 @@ struct DesktopLogEntry {
 #[derive(Clone, Debug, Default, PartialEq, Deserialize)]
 struct DesktopLogsResponse {
     log_file: String,
+    #[serde(default)]
+    debug_enabled: bool,
     entries: Vec<DesktopLogEntry>,
 }
 
@@ -905,6 +916,29 @@ fn DesktopLogsPage() -> Element {
                 div {
                     style: "display: flex; align-items: center; gap: 0.5rem;",
                     span { style: "color: var(--qualia-text-muted); font-size: 0.75rem;", "{status()}" }
+                    button {
+                        onclick: move |_| {
+                            let enabled = !logs().debug_enabled;
+                            spawn(async move {
+                                match components::qapp_engine::invoke_json(
+                                    "set_desktop_debug_mode",
+                                    serde_json::json!({ "enabled": enabled }),
+                                ).await {
+                                    Ok(_) => refresh_desktop_logs(logs, status),
+                                    Err(error) => {
+                                        let mut status = status;
+                                        status.set(format!("Debug mode failed: {error}"));
+                                    }
+                                }
+                            });
+                        },
+                        style: if response.debug_enabled {
+                            "border:1px solid #38bdf8;background:rgba(56,189,248,.14);color:#bae6fd;border-radius:8px;padding:.55rem .8rem;cursor:pointer;font-weight:750;"
+                        } else {
+                            "border:1px solid var(--qualia-border);background:transparent;color:var(--qualia-text);border-radius:8px;padding:.55rem .8rem;cursor:pointer;font-weight:750;"
+                        },
+                        if response.debug_enabled { "Debug mode: on" } else { "Enable debug mode" }
+                    }
                     button {
                         onclick: move |_| refresh_desktop_logs(logs, status),
                         style: "border: 1px solid var(--qualia-border); background: var(--qualia-surface); color: var(--qualia-text); border-radius: 8px; padding: 0.55rem 0.8rem; cursor: pointer;",
@@ -1048,6 +1082,7 @@ fn AppLayout() -> Element {
                         "tools" => menu_nav.push(Route::ToolsRoute {}),
                         "sanctuary" => menu_nav.push(Route::SanctuaryRoute {}),
                         "logs" => menu_nav.push(Route::LogsRoute {}),
+                        "jobs" => menu_nav.push(Route::JobsRoute {}),
                         "gpu-viewport" => menu_nav.push(Route::GpuViewportRoute {}),
                         _ => menu_nav.push(Route::TalkRoute {}),
                     };
@@ -1387,6 +1422,7 @@ fn AppLayout() -> Element {
                 div {
                     style: "margin-left: auto; display: flex; align-items: center; gap: 0.5rem; padding-bottom: 0.55rem; flex-wrap: wrap; justify-content: flex-end;",
                     components::experience_mode::ExperienceModeSwitch {}
+                    components::job_center::JobIndicator {}
                     // Context chip: principal posture · host · instrument backend
                     div {
                         style: "display: flex; align-items: center; gap: 0.4rem; border: 1px solid var(--qualia-border); background: rgba(139,92,246,0.08); border-radius: 999px; padding: 0.3rem 0.65rem; max-width: min(420px, 48vw);",
@@ -1478,6 +1514,7 @@ fn AppLayout() -> Element {
                         }
 
                         span { class: "app-sidebar-label", "System" }
+                        Link { to: Route::JobsRoute {}, class: "nav-item", sl-icon { "name": "activity" } "Background jobs" }
                         Link { to: Route::SettingsRoute {}, class: "nav-item", sl-icon { "name": "gear" } "Settings" }
 
                         details {
@@ -1492,6 +1529,7 @@ fn AppLayout() -> Element {
                                 Link { to: Route::NexusRoute {}, class: "nav-item", "Knowledge Nexus" }
                                 Link { to: Route::QAppsRoute {}, class: "nav-item", "QApps catalog" }
                                 Link { to: Route::LogsRoute {}, class: "nav-item", "Desktop logs" }
+                                Link { to: Route::JobsRoute {}, class: "nav-item", "Job centre" }
                                 Link { to: Route::AgentQaRoute {}, class: "nav-item", "Agent QA" }
                                 Link { to: Route::SupervisorRoute {}, class: "nav-item", "Operations" }
                                 Link { to: Route::StudioRoute {}, class: "nav-item", "QApp Studio" }

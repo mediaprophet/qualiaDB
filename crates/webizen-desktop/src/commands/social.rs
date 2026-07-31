@@ -327,3 +327,32 @@ pub fn list_local_jobs() -> Result<serde_json::Value, String> {
 pub fn cancel_local_job(id: String) -> Result<bool, String> {
     api::cancel_local_job(id)
 }
+
+#[command]
+pub fn retry_local_job(id: String) -> Result<serde_json::Value, String> {
+    api::retry_local_job(id)
+}
+
+#[command]
+pub fn clear_finished_local_jobs() -> Result<usize, String> {
+    api::clear_finished_local_jobs()
+}
+
+#[command]
+pub fn schedule_model_download(
+    url: String,
+    filename: String,
+    model_id: String,
+) -> Result<serde_json::Value, String> {
+    api::schedule_model_download(url, filename, model_id)
+}
+
+#[command]
+pub fn schedule_model_activation(model_name: String) -> Result<serde_json::Value, String> {
+    api::schedule_model_activation(model_name)
+}
+
+#[command]
+pub fn schedule_anatomy_asset_acquire(model: String) -> Result<serde_json::Value, String> {
+    api::schedule_anatomy_asset_acquire(model)
+}

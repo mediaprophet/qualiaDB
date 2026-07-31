@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>QualiaDB / Webizen 0.0.27 — Honest Progress</title>
+  <title>QualiaDB / Webizen 0.0.28 — Honest Progress</title>
   <link rel="stylesheet" href="css/tailwind-built.css">
   <link rel="stylesheet" href="css/site-nav.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -25,8 +25,8 @@
 </nav>
 
 <main class="max-w-3xl mx-auto px-6 py-12">
-  <p class="text-violet-300 text-sm mb-2"><i class="fa-solid fa-shield-halved"></i> Human-rights infrastructure · local-first · branch <code>0.0.27</code></p>
-  <h1 class="text-4xl font-semibold tracking-tight mb-4">Honest progress — 0.0.27</h1>
+  <p class="text-violet-300 text-sm mb-2"><i class="fa-solid fa-shield-halved"></i> Human-rights infrastructure · local-first · branch <code>0.0.28</code></p>
+  <h1 class="text-4xl font-semibold tracking-tight mb-4">Honest progress — 0.0.28</h1>
   <p class="text-white/70 mb-8">
     This page is for operators and reviewers who need the truth, not a launch brochure.
     QualiaDB is the semantic engine; <strong>Webizen</strong> is the habitat product shell.
@@ -34,15 +34,15 @@
   </p>
 
   <section class="mb-10 p-6 rounded-2xl border border-violet-500/30 bg-violet-500/5">
-    <h2 class="text-xl font-semibold text-violet-200 mb-2">What 0.0.27 is for</h2>
+    <h2 class="text-xl font-semibold text-violet-200 mb-2">What 0.0.28 is for</h2>
     <p class="text-sm text-white/80 mb-3">
-      Stabilise the WASM feature profiles, fix the portal build, and surface the knowledge universe.
-      The WASM build is fixed and deployed (run 30224601664). This release closes the gap between
-      the <code>wasm-logic</code>, <code>wasm-scientific</code>, <code>wasm-llm</code>, and
-      <code>portal</code> feature gates so every capability profile compiles and links cleanly
-      under <code>wasm32-unknown-unknown</code>.
+      Make the desktop understandable and observable: guided setup for ordinary use, an
+      Advanced Technical mode, visible background work, exportable diagnostics, restored
+      communications, and a Hypermedia library that acts as the semantic home for documents,
+      ontologies, models, and graph-derived artefacts. The same release also aligns every
+      workspace crate and web package to <code>0.0.28</code>.
     </p>
-    <p class="text-xs text-white/50">Native shader emitters, GPU capability profiling, and workspace crate version bump round out the release.</p>
+    <p class="text-xs text-white/50">This is an integration release, not a claim that every deep engine capability is now equally discoverable.</p>
   </section>
 
   <section class="mb-10 p-6 rounded-2xl border border-amber-500/30 bg-amber-500/5">
@@ -53,12 +53,43 @@
       <li>Do not use free-form generation alone for high-stakes legal, medical, or safety decisions.</li>
       <li>Native mobile apps are out of product scope; phone = installable remote controller PWA only.</li>
       <li>GPU capability profiling is diagnostic-only; runtime feature negotiation is not yet wired into all render paths.</li>
+      <li>Mixed-quant “Q4_K_M” browser models remain gated: native decode is coherent and the browser Q5_0 GEMM oracle passes exactly, but the specialised fused Q5 FFN path is still under end-to-end certification.</li>
     </ul>
   </section>
 
   <section class="mb-10">
-    <h2 class="text-xl font-semibold mb-3">What is real in 0.0.27</h2>
+    <h2 class="text-xl font-semibold mb-3">What is real in 0.0.28</h2>
     <ul class="space-y-3 text-sm text-white/80">
+      <li>
+        <strong class="text-emerald-400">Job Centre and debug mode</strong> —
+        long-running downloads, model loads, anatomy assets, parsing, conversion, and inference
+        are represented as jobs with state, progress, cancellation, retry, and failure details.
+        Desktop logs are structured and exportable for agent-assisted diagnosis.
+      </li>
+      <li>
+        <strong class="text-emerald-400">Setup and operating modes</strong> —
+        the first-run flow captures local storage, identity, model provider, privacy, networking,
+        ontology packs, accessibility, and optional social services. General mode uses task language;
+        Advanced Technical mode exposes backends, graph details, hashes, manifests, and diagnostics.
+      </li>
+      <li>
+        <strong class="text-emerald-400">Hypermedia semantic explorer</strong> —
+        documents, ontologies, model packages, graph records, provenance, and derived artefacts
+        share a navigable library. Ingest jobs expose parse, classify, map-to-ontology, validate,
+        and graph-write stages.
+      </li>
+      <li>
+        <strong class="text-emerald-400">Communications, Chora, and anatomy</strong> —
+        chat, contacts, and social-web reception return to desktop navigation; Chora links are
+        actionable; anatomy asset acquisition is a visible background job rather than an
+        indefinitely waiting screen.
+      </li>
+      <li>
+        <strong class="text-emerald-400">Agent-callable quant diagnostics</strong> —
+        the browser harness runs a deterministic WebGPU-to-CPU projection check. The tested
+        SmolLM2 Q5_0 projection passed with <code>maxAbs=0</code> and <code>maxRel=0</code>;
+        the SOA package remains gated after failing this oracle.
+      </li>
       <li>
         <strong class="text-emerald-400">WASM feature profile fixes</strong> —
         <code>portal</code>, <code>wasm-logic</code>, <code>wasm-scientific</code>, and
@@ -82,7 +113,7 @@
       </li>
       <li>
         <strong class="text-emerald-400">Workspace crate bump</strong> —
-        all workspace crates bumped to 0.0.27; portal <code>package.json</code> version
+        all workspace crates bumped to 0.0.28; portal <code>package.json</code> version
         aligned across <code>pages.yml</code> and <code>release-wasm.yml</code>.
       </li>
       <li>
@@ -108,11 +139,12 @@
   <section class="mb-10">
     <h2 class="text-xl font-semibold mb-3">Release &amp; CI (operator notes)</h2>
     <ul class="list-disc pl-5 text-sm text-white/80 space-y-1">
-      <li>Release tag line: <code>v0.0.27</code> · working branch <code>0.0.27</code>.</li>
-      <li>WASM build fixed and deployed (Pages run 30224601664).</li>
-      <li>Portal <code>package.json</code> version aligned to 0.0.27 across <code>pages.yml</code> and <code>release-wasm.yml</code>.</li>
-      <li>P64 model release workflow branch trigger updated to <code>0.0.27</code>.</li>
+      <li>Release tag line: <code>v0.0.28</code> · working branch <code>0.0.28</code>.</li>
+      <li>Release-faithful local WASM build uses the CI 8&nbsp;MiB stack and 4&nbsp;GiB max-memory linker contract.</li>
+      <li>Portal <code>package.json</code> version aligned to 0.0.28 across <code>pages.yml</code> and <code>release-wasm.yml</code>.</li>
+      <li>P64 model release workflow branch trigger updated to <code>0.0.28</code>.</li>
       <li>Actions: Node&nbsp;24-native majors for checkout/cache/setup-node/artifacts.</li>
+      <li>Release consistency test verifies all 20 workspace crates and generated web package identifiers are <code>0.0.28</code>.</li>
     </ul>
   </section>
 
@@ -122,11 +154,11 @@
       <a class="text-cyan-400 underline" href="progress-0.0.26.html">0.0.26 progress</a>
       and
       <a class="text-cyan-400 underline" href="progress-0.0.24.html">0.0.24 progress</a>
-      remain available for historical comparison. Prefer this 0.0.27 page for current product language.
+      remain available for historical comparison. Prefer this 0.0.28 page for current product language.
     </p>
   </section>
 
-  <p class="text-xs text-white/40">Updated 2026-07-27 · QualiaDB / Webizen · principal-directed engineering record · no personal circumstances</p>
+  <p class="text-xs text-white/40">Updated 2026-07-29 · QualiaDB / Webizen · principal-directed engineering record · no personal circumstances</p>
 </main>
 </body>
 </html>

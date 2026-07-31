@@ -18,6 +18,8 @@ $sourceTreeDirty = -not [string]::IsNullOrWhiteSpace(($initialStatus -join "`n")
 
 # Keep in lockstep with crates/webizen-studio/Cargo.toml wasm-bindgen pin.
 $WasmBindgenCliVersion = if ($env:WASM_BINDGEN_CLI_VERSION) { $env:WASM_BINDGEN_CLI_VERSION } else { "0.2.125" }
+# Keep in lockstep with dioxus-cli 0.8.0-alpha.0/src/esbuild.rs.
+$EsbuildVersion = if ($env:ESBUILD_VERSION) { $env:ESBUILD_VERSION } else { "0.27.3" }
 
 Write-Host "Ensuring dioxus-cli is installed..."
 if (!(Get-Command "dx" -ErrorAction SilentlyContinue)) {
@@ -42,9 +44,10 @@ $cargoBin = if ($env:CARGO_HOME) { Join-Path $env:CARGO_HOME "bin" } else { Join
 $managedToolDirs = @()
 $dxTools = Join-Path $env:USERPROFILE ".dx\tools"
 if (Test-Path -LiteralPath $dxTools) {
-    $managedToolDirs += Get-ChildItem -LiteralPath $dxTools -Directory -Filter "esbuild-*" -ErrorAction SilentlyContinue |
-        Sort-Object Name -Descending |
-        Select-Object -First 1 -ExpandProperty FullName
+    $managedEsbuild = Join-Path $dxTools "esbuild-$EsbuildVersion"
+    if (Test-Path -LiteralPath $managedEsbuild) {
+        $managedToolDirs += $managedEsbuild
+    }
     $managedToolDirs += Get-ChildItem -LiteralPath $dxTools -Directory -Filter "binaryen-*" -ErrorAction SilentlyContinue |
         Sort-Object Name -Descending |
         Select-Object -First 1 |
@@ -53,6 +56,35 @@ if (Test-Path -LiteralPath $dxTools) {
 $toolPath = (@($cargoBin) + @($managedToolDirs) + @($env:Path)) -join ";"
 $env:Path = $toolPath
 Write-Host "Using wasm-bindgen: $((Get-Command wasm-bindgen).Source) $(wasm-bindgen --version)"
+
+# NO_DOWNLOADS prevents Dioxus from replacing the pinned wasm-bindgen CLI, but
+# it also requires esbuild to exist before dx starts. Fresh Windows runners do
+# not carry Dioxus' ~/.dx/tools cache, so provision the exact pinned binary.
+$esbuildOk = $false
+if (Get-Command "esbuild" -ErrorAction SilentlyContinue) {
+    $foundEsbuildVersion = (& esbuild --version 2>$null | Out-String).Trim()
+    $esbuildOk = $foundEsbuildVersion -eq $EsbuildVersion
+}
+if (-not $esbuildOk) {
+    $npm = Get-Command "npm.cmd" -ErrorAction SilentlyContinue
+    if (-not $npm) {
+        throw "esbuild $EsbuildVersion is required, but npm.cmd is unavailable."
+    }
+    Write-Host "Installing esbuild $EsbuildVersion (must match dioxus-cli pin)..."
+    & $npm.Source install --global "esbuild@$EsbuildVersion"
+    if ($LASTEXITCODE -ne 0) {
+        throw "Could not install esbuild $EsbuildVersion."
+    }
+}
+$resolvedEsbuild = Get-Command "esbuild" -ErrorAction SilentlyContinue
+if (-not $resolvedEsbuild) {
+    throw "esbuild $EsbuildVersion was installed but is not available on PATH."
+}
+$resolvedEsbuildVersion = (& esbuild --version 2>$null | Out-String).Trim()
+if ($resolvedEsbuildVersion -ne $EsbuildVersion) {
+    throw "esbuild version $resolvedEsbuildVersion does not match required $EsbuildVersion."
+}
+Write-Host "Using esbuild: $($resolvedEsbuild.Source) $resolvedEsbuildVersion"
 # Dioxus 0.8 otherwise ignores the verified PATH binary and attempts to
 # redownload a managed wasm-bindgen on every invocation. Agents and offline
 # builds must use the exact pinned local CLI established above.

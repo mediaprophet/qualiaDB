@@ -46,6 +46,20 @@ pub enum LocalJobKind {
     },
     WorkbenchDaemonSync,
     DaemonGraphReload,
+    /// Download a local inference model into the configured model store.
+    ModelDownload {
+        url: String,
+        filename: String,
+        model_id: String,
+    },
+    /// Validate, index, memory-map, and activate a GGUF/P64 model.
+    ModelActivation {
+        model_name: String,
+    },
+    /// Download public reference GLBs and compile them into the local anatomy `.10d` cache.
+    AnatomyAssetAcquire {
+        model: String,
+    },
     /// Run one agent turn as a background job — the native agent processes it locally, or (when the
     /// chosen agent's backend is remote-MCP) routes it out over MCP. Curated from chat by the person
     /// (or, with confirmation, by their agent). Runs off the chat thread; the reply lands in the session.
@@ -109,6 +123,7 @@ struct SchedulerInner {
     store_path: Mutex<PathBuf>,
 }
 
+#[derive(Clone)]
 pub struct LocalJobScheduler {
     inner: Arc<SchedulerInner>,
 }
@@ -205,6 +220,12 @@ impl LocalJobScheduler {
         };
         {
             let mut jobs = self.inner.jobs.lock().map_err(|e| e.to_string())?;
+            if jobs.iter().any(|existing| {
+                matches!(existing.status, JobStatus::Queued | JobStatus::Running)
+                    && existing.kind == job.kind
+            }) {
+                return Err("A matching job is already queued or running".to_string());
+            }
             if jobs.len() >= MAX_JOBS {
                 self.prune_completed(&mut jobs);
             }
@@ -252,12 +273,13 @@ impl LocalJobScheduler {
     }
 
     pub fn cancel(&self, id: &str) -> Result<bool, String> {
-        if let Some(flag) = self.inner.cancel.lock().map_err(|e| e.to_string())?.get(id) {
-            flag.store(true, Ordering::Relaxed);
-        }
         let mut jobs = self.inner.jobs.lock().map_err(|e| e.to_string())?;
         let Some(job) = jobs.iter_mut().find(|j| j.id == id) else {
             return Ok(false);
+        };
+        let download_id = match &job.kind {
+            LocalJobKind::ModelDownload { model_id, .. } => Some(model_id.clone()),
+            _ => None,
         };
         if job.status == JobStatus::Queued {
             job.status = JobStatus::Cancelled;
@@ -267,11 +289,64 @@ impl LocalJobScheduler {
             return Ok(true);
         }
         if job.status == JobStatus::Running {
+            if matches!(job.kind, LocalJobKind::ModelActivation { .. }) {
+                return Err(
+                    "Model activation cannot be interrupted safely after memory mapping starts"
+                        .to_string(),
+                );
+            }
+            if let Some(flag) = self.inner.cancel.lock().map_err(|e| e.to_string())?.get(id) {
+                flag.store(true, Ordering::Relaxed);
+            }
             job.message = "Cancel requested".to_string();
             self.persist(&jobs)?;
+            drop(jobs);
+            if let Some(download_id) = download_id {
+                let _ = crate::api::cancel_download(download_id);
+            }
             return Ok(true);
         }
         Ok(false)
+    }
+
+    /// Re-enqueue a completed, failed, or cancelled job with the same bounded inputs.
+    pub fn retry(&self, id: &str) -> Result<LocalJob, String> {
+        let kind = {
+            let jobs = self.inner.jobs.lock().map_err(|e| e.to_string())?;
+            let job = jobs
+                .iter()
+                .find(|job| job.id == id)
+                .ok_or_else(|| "job not found".to_string())?;
+            if matches!(job.status, JobStatus::Queued | JobStatus::Running) {
+                return Err("job is still active".to_string());
+            }
+            job.kind.clone()
+        };
+        self.enqueue(kind)
+    }
+
+    /// Remove finished history while preserving queued and running work.
+    pub fn clear_finished(&self) -> Result<usize, String> {
+        let mut jobs = self.inner.jobs.lock().map_err(|e| e.to_string())?;
+        let before = jobs.len();
+        let removed_ids: Vec<String> = jobs
+            .iter()
+            .filter(|job| {
+                matches!(
+                    job.status,
+                    JobStatus::Completed | JobStatus::Failed | JobStatus::Cancelled
+                )
+            })
+            .map(|job| job.id.clone())
+            .collect();
+        jobs.retain(|job| matches!(job.status, JobStatus::Queued | JobStatus::Running));
+        if let Ok(mut cancel) = self.inner.cancel.lock() {
+            for id in removed_ids {
+                cancel.remove(&id);
+            }
+        }
+        self.persist(&jobs)?;
+        Ok(before.saturating_sub(jobs.len()))
     }
 
     fn prune_completed(&self, jobs: &mut Vec<LocalJob>) {
@@ -328,6 +403,24 @@ impl LocalJobScheduler {
         self.persist(&jobs)
     }
 
+    /// Update visible progress for a running job. Progress is clamped and persisted so recovery and
+    /// agent diagnostics see the same state as the UI.
+    pub fn report_progress(
+        &self,
+        id: &str,
+        progress: f64,
+        message: impl Into<String>,
+    ) -> Result<(), String> {
+        let progress = progress.clamp(0.0, 0.99);
+        let message = message.into();
+        self.update_job(id, |job| {
+            if job.status == JobStatus::Running {
+                job.progress = progress;
+                job.message = message;
+            }
+        })
+    }
+
     fn cancel_flag(&self, id: &str) -> Option<Arc<AtomicBool>> {
         self.inner.cancel.lock().ok()?.get(id).cloned()
     }
@@ -373,7 +466,8 @@ impl LocalJobScheduler {
             crate::activity_signals::begin_ontology_job();
         }
 
-        let outcome = execute_job(&job_id, &kind, self.cancel_flag(&job_id)).await;
+        log::info!("JOB|{}|running|{:?}", job_id, kind);
+        let outcome = execute_job(self, &job_id, &kind, self.cancel_flag(&job_id)).await;
 
         if kind.is_ontology_work() {
             crate::activity_signals::end_ontology_job();
@@ -389,9 +483,15 @@ impl LocalJobScheduler {
                     job.result = Some(result);
                     job.error = None;
                 })?;
+                log::info!("JOB|{}|completed|Completed", job_id);
             }
             Err(err) => {
                 let cancelled = err == "cancelled";
+                if cancelled {
+                    log::warn!("JOB|{}|cancelled|Cancelled", job_id);
+                } else {
+                    log::error!("JOB|{}|failed|{}", job_id, err);
+                }
                 self.update_job(&job_id, |job| {
                     job.status = if cancelled {
                         JobStatus::Cancelled
@@ -429,6 +529,7 @@ fn check_cancel(flag: &Option<Arc<AtomicBool>>) -> Result<(), String> {
 }
 
 async fn execute_job(
+    scheduler: &LocalJobScheduler,
     job_id: &str,
     kind: &LocalJobKind,
     cancel: Option<Arc<AtomicBool>>,
@@ -513,6 +614,126 @@ async fn execute_job(
                 "daemon_graph": "reloaded"
             }))
         }
+        LocalJobKind::ModelDownload {
+            url,
+            filename,
+            model_id,
+        } => {
+            check_cancel(&cancel)?;
+            scheduler.report_progress(
+                job_id,
+                0.02,
+                format!("Connecting to download source for {filename}"),
+            )?;
+            let mut download = Box::pin(crate::api::download_model(
+                url.clone(),
+                filename.clone(),
+                model_id.clone(),
+            ));
+            loop {
+                tokio::select! {
+                    result = &mut download => {
+                        let path = match result {
+                            Ok(path) => path,
+                            Err(_) if cancel
+                                .as_ref()
+                                .is_some_and(|flag| flag.load(Ordering::Relaxed)) =>
+                            {
+                                return Err("cancelled".to_string());
+                            }
+                            Err(error) => return Err(error),
+                        };
+                        check_cancel(&cancel)?;
+                        return Ok(serde_json::json!({
+                            "model_id": model_id,
+                            "filename": filename,
+                            "path": path,
+                        }));
+                    }
+                    _ = tokio::time::sleep(std::time::Duration::from_millis(350)) => {
+                        if check_cancel(&cancel).is_err() {
+                            let _ = crate::api::cancel_download(model_id.clone());
+                        }
+                        if let Some(payload) = state
+                            .active_downloads
+                            .lock()
+                            .ok()
+                            .and_then(|downloads| downloads.get(model_id).cloned())
+                        {
+                            let fraction = (payload.progress / 100.0).clamp(0.02, 0.94);
+                            let size = if payload.total_bytes > 0 {
+                                format!(
+                                    "{:.1}/{:.1} MB",
+                                    payload.downloaded_bytes as f64 / 1_000_000.0,
+                                    payload.total_bytes as f64 / 1_000_000.0
+                                )
+                            } else {
+                                format!("{:.1} MB", payload.downloaded_bytes as f64 / 1_000_000.0)
+                            };
+                            scheduler.report_progress(
+                                job_id,
+                                fraction,
+                                format!("Downloading {filename} · {size} · {:.0} KB/s", payload.speed_kbps),
+                            )?;
+                        }
+                    }
+                }
+            }
+        }
+        LocalJobKind::ModelActivation { model_name } => {
+            check_cancel(&cancel)?;
+            scheduler.report_progress(
+                job_id,
+                0.08,
+                format!("Validating and indexing {model_name}"),
+            )?;
+            let selected = model_name.clone();
+            let scheduler_for_task = scheduler.clone();
+            let job_for_task = job_id.to_string();
+            let result = tokio::task::spawn_blocking(move || {
+                scheduler_for_task.report_progress(
+                    &job_for_task,
+                    0.32,
+                    "Mapping model into memory and initialising the inference backend",
+                )?;
+                crate::api::set_active_model(selected)?;
+                scheduler_for_task.report_progress(
+                    &job_for_task,
+                    0.94,
+                    "Model mapped; completing activation record",
+                )?;
+                Ok::<_, String>(())
+            })
+            .await
+            .map_err(|error| format!("model activation task failed: {error}"))?;
+            result?;
+            check_cancel(&cancel)?;
+            Ok(serde_json::json!({
+                "model": model_name,
+                "active": crate::api::get_active_model(),
+            }))
+        }
+        LocalJobKind::AnatomyAssetAcquire { model } => {
+            check_cancel(&cancel)?;
+            let parsed = crate::wellfair::api::parse_anatomy_model(model)?;
+            let scheduler_for_task = scheduler.clone();
+            let job_for_task = job_id.to_string();
+            let storage_for_task = storage_path.clone();
+            let cancel_for_task = cancel.clone();
+            let report = tokio::task::spawn_blocking(move || {
+                qualia_client_core_anatomy_acquire(
+                    &scheduler_for_task,
+                    &job_for_task,
+                    &storage_for_task,
+                    parsed,
+                    cancel_for_task,
+                )
+            })
+            .await
+            .map_err(|error| format!("anatomy acquisition task failed: {error}"))??;
+            check_cancel(&cancel)?;
+            serde_json::to_value(report).map_err(|error| error.to_string())
+        }
         LocalJobKind::AgentTurn {
             session_id,
             agent_slug,
@@ -548,6 +769,34 @@ async fn execute_job(
     }
 }
 
+fn qualia_client_core_anatomy_acquire(
+    scheduler: &LocalJobScheduler,
+    job_id: &str,
+    storage_path: &str,
+    model: wellfare_core::anatomy::AnatomyModel,
+    cancel: Option<Arc<AtomicBool>>,
+) -> Result<crate::wellfair::anatomy_assets::AcquireReport, String> {
+    crate::wellfair::anatomy_assets::acquire_body_assets_controlled(
+        storage_path,
+        model,
+        |progress| {
+            let fraction = match progress.stage.as_str() {
+                "discover" => 0.05,
+                "fetch" => 0.10 + 0.58 * (progress.done as f64 / progress.total.max(1) as f64),
+                "compile" => 0.70 + 0.25 * (progress.done as f64 / progress.total.max(1) as f64),
+                "done" => 0.98,
+                _ => 0.05,
+            };
+            let _ = scheduler.report_progress(job_id, fraction, progress.message);
+        },
+        || {
+            cancel
+                .as_ref()
+                .is_some_and(|flag| flag.load(Ordering::Relaxed))
+        },
+    )
+}
+
 fn build_import_progress(
     job_id: &str,
     state: &crate::state::AppState,
@@ -576,6 +825,27 @@ mod tests {
         assert!(matches!(
             req.kind,
             LocalJobKind::OntologyCatalogImport { .. }
+        ));
+    }
+
+    #[test]
+    fn job_kind_deserializes_model_activation() {
+        let raw = r#"{"kind":"model_activation","model_name":"C:\\Models\\local.gguf"}"#;
+        let req: EnqueueJobRequest = serde_json::from_str(raw).unwrap();
+        assert!(matches!(
+            req.kind,
+            LocalJobKind::ModelActivation { model_name }
+                if model_name.ends_with("local.gguf")
+        ));
+    }
+
+    #[test]
+    fn job_kind_deserializes_anatomy_acquisition() {
+        let raw = r#"{"kind":"anatomy_asset_acquire","model":"female"}"#;
+        let req: EnqueueJobRequest = serde_json::from_str(raw).unwrap();
+        assert!(matches!(
+            req.kind,
+            LocalJobKind::AnatomyAssetAcquire { model } if model == "female"
         ));
     }
 }

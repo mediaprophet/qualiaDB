@@ -179,8 +179,15 @@ pub fn get_desktop_status(
 pub fn get_desktop_logs() -> serde_json::Value {
     serde_json::json!({
         "log_file": crate::desktop_log::log_path().display().to_string(),
+        "debug_enabled": crate::desktop_log::debug_enabled(),
         "entries": crate::desktop_log::recent_entries(),
     })
+}
+
+#[command]
+pub fn set_desktop_debug_mode(enabled: bool) -> Result<bool, String> {
+    crate::desktop_log::set_debug_enabled(enabled)?;
+    Ok(crate::desktop_log::debug_enabled())
 }
 
 #[command]
@@ -266,6 +273,7 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         // ── Local (mod.rs) ──
         get_desktop_status,
         get_desktop_logs,
+        set_desktop_debug_mode,
         get_supervisor_state,
         report_client_error,
         list_installed_qapps,
@@ -615,6 +623,11 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         social::schedule_agent_job,
         social::list_local_jobs,
         social::cancel_local_job,
+        social::retry_local_job,
+        social::clear_finished_local_jobs,
+        social::schedule_model_download,
+        social::schedule_model_activation,
+        social::schedule_anatomy_asset_acquire,
         // ── personal_directory ──
         personal_directory::list_directory,
         personal_directory::list_directory_categories,

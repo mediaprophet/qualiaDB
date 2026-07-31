@@ -2,7 +2,7 @@ name: Comparative Benchmarks
 
 on:
   push:
-    branches: [ "main", "0.0.27" ]
+    branches: [ "main", "0.0.28" ]
   schedule:
     - cron: '0 3 * * 1'   # Weekly on Monday at 03:00 UTC
   workflow_dispatch:
@@ -234,11 +234,15 @@ jobs:
           cd benchmarks/comunica && npm install --prefer-offline
           cd ../wasm_prolog && npm install --prefer-offline
 
-      - name: Install wasm-pack and build Qualia WASM
+      # wasm-pack is a native Linux tool. Do not expose its cargo build to
+      # wasm32-only linker flags such as --max-memory.
+      - name: Install wasm-pack
+        run: cargo install wasm-pack --locked --version 0.13.1 --force
+
+      - name: Build Qualia WASM for Schema.org harness
         env:
           RUSTFLAGS: "-C target-feature=+simd128 -C link-arg=-zstack-size=8388608 -C link-arg=--max-memory=4294967296"
         run: |
-          cargo install wasm-pack --locked --version 0.13.1 --force
           rustup target add wasm32-unknown-unknown
           wasm-pack build crates/qualia-core-db \
             --target web \

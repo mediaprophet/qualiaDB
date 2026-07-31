@@ -301,13 +301,20 @@ pub async fn download_model(
         .unwrap()
         .insert(model_id.clone(), cancelled.clone());
 
-    let response = reqwest::get(&url).await.map_err(|e| {
+    let response = reqwest::get(&url)
+        .await
+        .and_then(reqwest::Response::error_for_status)
+        .map_err(|e| {
+            handles.lock().unwrap().remove(&model_id);
+            active_dl.lock().unwrap().remove(&model_id);
+            e.to_string()
+        })?;
+    let total_bytes = response.content_length().unwrap_or(0);
+    let mut dest = std::fs::File::create(&dest_path).map_err(|e| {
         handles.lock().unwrap().remove(&model_id);
         active_dl.lock().unwrap().remove(&model_id);
-        e.to_string()
+        format!("create {}: {e}", dest_path.display())
     })?;
-    let total_bytes = response.content_length().unwrap_or(0);
-    let mut dest = std::fs::File::create(&dest_path).map_err(|e| e.to_string())?;
     let mut stream = response.bytes_stream();
     let mut downloaded: u64 = 0;
     let mut last_report = std::time::Instant::now();
@@ -329,8 +336,23 @@ pub async fn download_model(
             active_dl.lock().unwrap().remove(&model_id);
             return Err("Cancelled".to_string());
         }
-        let chunk = chunk.map_err(|e| e.to_string())?;
-        dest.write_all(&chunk).map_err(|e| e.to_string())?;
+        let chunk = match chunk {
+            Ok(chunk) => chunk,
+            Err(error) => {
+                drop(dest);
+                let _ = std::fs::remove_file(&dest_path);
+                handles.lock().unwrap().remove(&model_id);
+                active_dl.lock().unwrap().remove(&model_id);
+                return Err(format!("download stream failed: {error}"));
+            }
+        };
+        if let Err(error) = dest.write_all(&chunk) {
+            drop(dest);
+            let _ = std::fs::remove_file(&dest_path);
+            handles.lock().unwrap().remove(&model_id);
+            active_dl.lock().unwrap().remove(&model_id);
+            return Err(format!("write {}: {error}", dest_path.display()));
+        }
         downloaded += chunk.len() as u64;
 
         let now = std::time::Instant::now();

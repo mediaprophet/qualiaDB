@@ -47,6 +47,7 @@ hex = "0.4.3"
 uuid = { version = "1.10", features = ["v4"] }
 urlencoding = "2.1"
 chrono = "0.4"
+log = "0.4"
 crossbeam-channel = "0.5.15"
 pollster = "1"
 fast_qr = { version = "0.13.1", features = ["svg"] }

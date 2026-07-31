@@ -1,6 +1,6 @@
 {
   "_comment": "Knowledge Universe layout for docs/universe.html. Galaxy mass ≈ on-disk pack bytes; positions are authored for legibility, not astronomy. Celestial layer uses Chora Yale bright-star sample (starfield.rs).",
-  "version": "0.0.27",
+  "version": "0.0.28",
   "title": "Qualia Knowledge Universe",
   "subtitle": "Bundled ontology packs · CODATA constants · Chora starfield",
   "galaxies": [

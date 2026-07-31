@@ -324,14 +324,11 @@
 
     document.getElementById("btn-chora").onclick = async () => {
       try {
-        // Open main shell Chora route via shell action if available.
-        await invoke("open_web_url", { url: "qualia://chora" });
-      } catch (_) {
-        try {
-          await invoke("browser_navigate", { url: "qualia://chora" });
-        } catch (e) {
-          setStatus("Open Chora tab from the shell menu (Ctrl+2). " + e, true);
-        }
+        // This is an application route, not a browser URL. Focus the main shell and route there.
+        await invoke("shell_navigate", { route: "chora" });
+        setStatus("Opened the Chora explorer in Webizen.");
+      } catch (e) {
+        setStatus("Could not open the Chora explorer: " + e, true);
       }
     };
 
