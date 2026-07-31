@@ -30,7 +30,7 @@ Comprehensive index of functionality for `docs`. This document serves as the gro
 
 ### Files & Exported Functionality
 - 📄 `FULL_WASM_COMPUTE_PROGRESS.md`
-- 📄 `HANDOVER-0.0.23-release.md`
+- 📄 `HANDOVER-0.0.28-release.md`
 - 📄 `HANDOVER-llm-on-forge.md`
 - 📄 `WGPU_UPSTREAM_TRACKING.md`
 - 📄 `_config.yml`

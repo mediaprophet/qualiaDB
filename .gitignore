@@ -143,6 +143,11 @@ scripts/
 !scripts/
 scripts/*
 !scripts/build_frontend.sh
+!scripts/build_frontend.ps1
+!scripts/fetch_anatomy_packs_release.sh
+!scripts/sync_docs_version.py
+!scripts/fetch_wordnet_release.sh
+!scripts/fetch_wordnet_release.ps1
 
 # Build/debug error logs (PowerShell redirection output — UTF-16, not source)
 *_errors.json

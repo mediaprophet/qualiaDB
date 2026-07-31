@@ -1,7 +1,7 @@
 # ADR 0008: FrameLayout ABI for the NQuin's Computational Bytes
 
 ## Status
-Accepted (2026-06-21, 0.0.19)
+Accepted (2026-06-21, 0.0.28)
 
 ## Context
 [ADR 0001](0001-the-48-byte-qualia-quin-alignment.md) fixes the `QualiaQuin`/`NQuin` at

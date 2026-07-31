@@ -221,7 +221,19 @@ export async function loadOrCompileP64(ggufUrl, baseName, { compile, formatVersi
     gguf = null;
     source = 'downloaded-p64';
   } else {
+    if (typeof compile !== 'function') {
+      throw new Error('compileGgufToP64 is required to AOT-compile GGUF on-device');
+    }
     if (onProgress) onProgress(0, 0, 'compile');
+    // Yield so the UI can paint "Compiling…" before the main-thread sync WASM
+    // compile freezes the event loop (otherwise phones look stuck after download).
+    await new Promise((r) => {
+      if (typeof requestAnimationFrame === 'function') {
+        requestAnimationFrame(() => setTimeout(r, 0));
+      } else {
+        setTimeout(r, 0);
+      }
+    });
     p64 = compile(gguf, 14); // wasm AOT compile (16 KB pages) → Uint8Array
     gguf = null; // free the GGUF cold-path buffer ASAP
     source = 'compiled';

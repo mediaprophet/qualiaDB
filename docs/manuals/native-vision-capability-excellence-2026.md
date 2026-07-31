@@ -3,7 +3,7 @@
 **Date:** 2026-07-17 (expanded: selfhood biometrics, surveillance policy, 3D manufacture, biology, full domain map)  
 **Ambition:** Best-in-class **2026** vision + biosensing + spatial manufacture + bio-imaging capabilities, **all in Rust**, inside Qualia’s integrated rights-aware environment — **excellence, not “it’ll do.”**  
 **Not:** OpenCV clone, vendor OpenCV, cloud face/emotion APIs as product default, demo-grade biosense toys.  
-**Branch:** `0.0.25` · canonical tree only  
+**Branch:** `0.0.28` · canonical tree only  
 **Status:** Ready when Timothy says **execute vision-excellence** / **execute VX0**  
 **Related:**  
 - Vision/audio: `native-visual-intelligence-and-generative-3d.md`, `qualia-vision`, `qualia-audio`  

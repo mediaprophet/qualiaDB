@@ -1,7 +1,7 @@
 # Perception & Library Progress Report
 
 **Date:** 2026-07-17  
-**Branch:** `0.0.25`  
+**Branch:** `0.0.28`  
 **Canonical tree:** `C:\Projects\qualia-27062026`  
 **Audience:** Timothy (principal) and follow-on agents  
 
@@ -175,12 +175,12 @@ Still valuable:
 
 ## 6. Commits / lineage (indicative)
 
-Recent perception line on `0.0.25` includes (among others):
+Recent perception line on `0.0.28` includes (among others):
 
 - Auditory swarms A–X, full completion waves, cont 2–4 closeout (`9019f2e8` and predecessors)  
 - This wave: `perception_catalog`, expanded bundled ontology defaults, Listen mixer UI, progress report  
 
-Use `git log --oneline 0.0.25` for exact SHAs after this report’s commit.
+Use `git log --oneline 0.0.28` for exact SHAs after this report’s commit.
 
 ---
 

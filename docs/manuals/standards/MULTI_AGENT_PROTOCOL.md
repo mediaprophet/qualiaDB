@@ -1,7 +1,7 @@
 # Human-Centric Multi-Agent Coordination Specification
 
 **Version:** 1.0.0
-**Target Environment:** QualiaDB `0.0.23` _(draft — Sentinel VM & Swarm Daemon; coordination ISA 0x70–0x72 implemented, see §5; remaining parts proposed)_
+**Target Environment:** QualiaDB `0.0.28` _(draft — Sentinel VM & Swarm Daemon; coordination ISA 0x70–0x72 implemented, see §5; remaining parts proposed)_
 
 This specification defines the strict mechanical and cryptographic boundaries for multi-agent interaction within the QualiaDB ecosystem. It solves the "Competitive Bot" / "Black-Box Agent" problem by enforcing transparent provenance, shared context ingestion, and strict token-bidding economics at the physical memory layer. 
 
@@ -84,7 +84,7 @@ Reference: `governance::coordination::compute_priority(windowed_faults, usury_ev
 > and other modality encodings. They are reallocated to the collision-free **`0x70–0x7F`** block. The
 > opcodes execute **atomically** within the Sentinel VM frame.
 >
-> **Implementation status (0.0.23).** Implemented and unit-tested in
+> **Implementation status (0.0.28).** Implemented and unit-tested in
 > `crates/qualia-core-db/src/governance/coordination.rs`:
 > (a) the *decidable core* of all three opcodes — the expiry gate, the anti-usury resource contract +
 > circuit breakers, the fidelity/efficiency arithmetic, and the Darwinian priority law above; and

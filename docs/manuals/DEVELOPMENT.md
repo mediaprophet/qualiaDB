@@ -2,7 +2,7 @@
 
 Build, test, benchmark, and contribute to QualiaDB / Webizen.
 
-_Branch: `0.0.18-dev` | Last updated: 2026-06-19_
+_Branch: `0.0.28-dev` | Last updated: 2026-06-19_
 
 ---
 
@@ -123,8 +123,8 @@ GitHub Actions (`.github/workflows/release.yml`) builds on tag push:
 - Flutter desktop bundles — `.dmg` (macOS), AppImage + `.deb` (Linux), `.exe` + `.msi` (Windows)
 
 ```bash
-git tag v0.0.18
-git push origin v0.0.18
+git tag v0.0.28
+git push origin v0.0.28
 ```
 
 ### Cross-compiling the CLI locally (Windows → Linux)
@@ -342,7 +342,7 @@ Supported input formats for `qualia ingest`:
 
 ---
 
-## Known Build Issues (v0.0.18-dev)
+## Known Build Issues (v0.0.28-dev)
 
 All crates compile cleanly except where noted:
 
@@ -368,7 +368,7 @@ These supersede the older `AI_INSTRUCTIONS.md`.
 
 ## Releases & Versioning
 
-- **Current branch:** `0.0.18-dev`
+- **Current branch:** `0.0.28-dev`
 - **Release config:** `release.toml` (cargo-release)
 - **Release notes:** [CHANGELOG.md](../../CHANGELOG.md)
 - **CI:** `.github/workflows/release.yml` — builds on tag push (Windows, macOS, Linux)
@@ -376,8 +376,8 @@ These supersede the older `AI_INSTRUCTIONS.md`.
 To cut a release:
 
 ```bash
-git tag v0.0.18
-git push origin v0.0.18
+git tag v0.0.28
+git push origin v0.0.28
 ```
 
 ADRs (Architectural Decision Records): [`docs/manuals/adr/`](adr/)

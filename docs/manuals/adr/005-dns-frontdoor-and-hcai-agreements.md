@@ -1,7 +1,7 @@
 # ADR 005: DNS Frontdoor and HCAI Agreements
 
 ## Status
-Accepted (v0.0.4)
+Accepted (v0.0.28)
 
 ## Context
 Qualia-DB is an offline-first, zero-telemetry sovereign vault. However, for a user (Principal) to establish a connection with another user or organisation, they must be globally discoverable without leaking their raw `.q42` data or exposing themselves to unauthenticated network probing.

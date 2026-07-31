@@ -1,7 +1,7 @@
 # ADR 006: Zero-Allocation Solid Bridge Isolation
 
 ## Status
-Accepted (v0.0.4)
+Accepted (v0.0.28)
 
 ## Context
 To ensure Qualia-DB can bootstrap within existing decentralized ecosystems, we required interoperability with W3C Solid apps. Solid applications expect to communicate via HTTP REST APIs and string-heavy linked data formats (JSON-LD, Turtle). 

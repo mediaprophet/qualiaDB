@@ -1,7 +1,7 @@
 # Vision Excellence — Swarm Execute Plan (asset-backed)
 
 **Date:** 2026-07-17  
-**Branch:** `0.0.25`  
+**Branch:** `0.0.28`  
 **Canonical tree only:** `C:\Projects\qualia-27062026`  
 **Assets:** `vendor/vision/` + `MANIFEST.json` + `download.ps1`  
 **Catalogue:** `vision-capability-catalogue-2026.md`  
@@ -107,7 +107,7 @@ Append CLAIM to `coordination/NOTICES.md` when spawning tracks.
 ## 4. Single-track agent prompt (copy-paste)
 
 ```text
-You are Track [S#] on Qualia vision excellence swarm (branch 0.0.25).
+You are Track [S#] on Qualia vision excellence swarm (branch 0.0.28).
 Canonical tree: C:\Projects\qualia-27062026 only. No worktrees.
 
 Read:
@@ -183,6 +183,6 @@ Never flip on “licence cleared” alone — licence was already permissive.
 - [ ] Land B1 EVM excellence  
 - [ ] Land C2–C4 adapters  
 - [ ] Progress log wave entry  
-- [ ] Push `0.0.25`  
+- [ ] Push `0.0.28`  
 
 **Execute phrase:** `execute vision swarm` / `execute S0 S1 S2`

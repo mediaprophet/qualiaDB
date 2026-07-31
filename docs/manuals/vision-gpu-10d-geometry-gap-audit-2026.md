@@ -1,7 +1,7 @@
 # Vision / CV gap audit — GPU (native + WASM), `.10d` / EMF σ, computational geometry
 
 **Date:** 2026-07-17  
-**Branch:** `0.0.25`  
+**Branch:** `0.0.28`  
 **Trigger:** Principal concern that CV excellence and SR plans under-used the existing GPU backplane, 10D container (inc. EMF/σ), and computational geometry library.  
 **Status:** Audit complete. Findings are against the tree as of this date — not a claim that gaps are fixed.
 

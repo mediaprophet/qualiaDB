@@ -3,7 +3,7 @@
 **Version:** 0.1 (draft)  
 **Date:** 2026-06-17  
 **Status:** Internal draft — not submitted externally  
-**Branch:** `0.0.23`  
+**Branch:** `0.0.28`  
 **Normative code:** `crates/qualia-core-db/src/audio/`, `sonic_token.rs`, `audio/acoustic_plane.rs`
 
 ---

@@ -3,7 +3,7 @@
 **Version:** 1.2  
 **Date:** 2026-06-21 (rev; was 1.1 2026-06-17)  
 **Status:** Draft Standard  
-**Repository:** https://github.com/mediaprophet/qualiaDB/tree/0.0.23
+**Repository:** https://github.com/mediaprophet/qualiaDB/tree/0.0.28
 
 **Changelog (1.2):** §4 made normative — the volume-search metric is selected by the
 **query's** `v` topology class, with an exact euclidean formula and a **GPU/CPU

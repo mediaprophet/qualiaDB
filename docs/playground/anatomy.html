@@ -445,6 +445,8 @@
             #attribution { bottom: 14px; right: 16px; max-width: 470px; }
         }
     </style>
+    <!-- Strip removed WebGPU limits before portal requestDevice (same hang fix as online-llm-demo). -->
+    <script src="../js/webgpu-limits-shim.js"></script>
     <script src="../js/menu-loader.js"></script>
 </head>
 <body>

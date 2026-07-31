@@ -152,7 +152,9 @@ pub fn ModelSetupPanel() -> Element {
                             ).await {
                                 Ok(job) => {
                                     let id = job.get("id").and_then(serde_json::Value::as_str).unwrap_or("queued");
-                                    status.set(format!("Download queued as {id}. You can keep working; progress is in Background jobs."));
+                                    status.set(format!(
+                                        "Download queued as {id}. When it finishes, Webizen indexes and activates the model automatically — progress is in Background jobs."
+                                    ));
                                 }
                                 Err(error) => status.set(format!("Download failed: {error}")),
                             }

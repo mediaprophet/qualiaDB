@@ -1,7 +1,7 @@
 # Agent Intent Semantic Logging Specification
 
 **Version:** 1.1.0  
-**Target Environment:** QualiaDB `0.0.23` _(draft — not a conformance claim; portions are proposed, not yet shipped)_
+**Target Environment:** QualiaDB `0.0.28` _(draft — not a conformance claim; portions are proposed, not yet shipped)_
 
 ## 1. Architectural Purpose
 To guarantee that the decisions, code edits, and interactions of multi-agent systems are transparent, auditable, and verifiable, the QualiaDB ecosystem requires all agent interaction logs to be semantically ingestible. Unstructured text files (e.g., standard JSONL) cannot be natively queried by SHACL or SPARQL. 

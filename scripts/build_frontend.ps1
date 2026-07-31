@@ -85,6 +85,94 @@ if ($resolvedEsbuildVersion -ne $EsbuildVersion) {
     throw "esbuild version $resolvedEsbuildVersion does not match required $EsbuildVersion."
 }
 Write-Host "Using esbuild: $($resolvedEsbuild.Source) $resolvedEsbuildVersion"
+
+# NO_DOWNLOADS also blocks Dioxus from fetching Binaryen. Fresh Windows runners
+# then fail at the end of `dx build` with:
+#   Failed to create wasm-opt instance / Missing wasm-opt
+# Provision wasm-opt into ~/.dx/tools (or PATH) before NO_DOWNLOADS is set.
+$BinaryenVersion = if ($env:BINARYEN_VERSION) { $env:BINARYEN_VERSION } else { "123" }
+$wasmOptOk = $false
+if (Get-Command "wasm-opt" -ErrorAction SilentlyContinue) {
+    $wasmOptOk = $true
+    Write-Host "Using wasm-opt on PATH: $((Get-Command wasm-opt).Source)"
+}
+if (-not $wasmOptOk) {
+    $dxToolsRoot = Join-Path $env:USERPROFILE ".dx\tools"
+    $binaryenHome = Join-Path $dxToolsRoot "binaryen-version_$BinaryenVersion"
+    $wasmOptCandidate = Join-Path $binaryenHome "bin\wasm-opt.exe"
+    if (-not (Test-Path -LiteralPath $wasmOptCandidate)) {
+        $wasmOptCandidate = Join-Path $binaryenHome "wasm-opt.exe"
+    }
+    if (-not (Test-Path -LiteralPath $wasmOptCandidate)) {
+        New-Item -ItemType Directory -Force -Path $dxToolsRoot | Out-Null
+        $archTag = if ($env:PROCESSOR_ARCHITECTURE -match 'ARM64|aarch64') { 'arm64' } else { 'x86_64' }
+        $isWindows = $env:OS -eq 'Windows_NT' -or $IsWindows
+        $isMac = $IsMacOS -or ($PSVersionTable.OS -match 'Darwin')
+        if ($isWindows) {
+            $asset = "binaryen-version_$BinaryenVersion-$archTag-windows.tar.gz"
+        } elseif ($isMac) {
+            $asset = "binaryen-version_$BinaryenVersion-$archTag-macos.tar.gz"
+        } else {
+            $asset = "binaryen-version_$BinaryenVersion-$archTag-linux.tar.gz"
+        }
+        $url = "https://github.com/WebAssembly/binaryen/releases/download/version_$BinaryenVersion/$asset"
+        $archive = Join-Path $dxToolsRoot $asset
+        Write-Host "Downloading Binaryen version_$BinaryenVersion ($asset) for wasm-opt..."
+        try {
+            Invoke-WebRequest -Uri $url -OutFile $archive -UseBasicParsing
+        } catch {
+            throw "Could not download Binaryen wasm-opt from $url : $($_.Exception.Message)"
+        }
+        Write-Host "Extracting Binaryen to $binaryenHome..."
+        if (Test-Path -LiteralPath $binaryenHome) {
+            Remove-Item -LiteralPath $binaryenHome -Recurse -Force
+        }
+        # tar is available on modern Windows runners and handles .tar.gz.
+        New-Item -ItemType Directory -Force -Path $binaryenHome | Out-Null
+        tar -xzf $archive -C $dxToolsRoot
+        if ($LASTEXITCODE -ne 0) {
+            throw "Failed to extract Binaryen archive $archive"
+        }
+        # Release tarballs unpack as binaryen-version_N/; normalize if nested.
+        if (-not (Test-Path -LiteralPath (Join-Path $binaryenHome "bin")) -and
+            -not (Test-Path -LiteralPath (Join-Path $binaryenHome "wasm-opt.exe"))) {
+            $unpacked = Get-ChildItem -LiteralPath $dxToolsRoot -Directory -Filter "binaryen-version_*" |
+                Sort-Object LastWriteTime -Descending |
+                Select-Object -First 1
+            if ($unpacked -and $unpacked.FullName -ne $binaryenHome) {
+                if (Test-Path -LiteralPath $binaryenHome) {
+                    Remove-Item -LiteralPath $binaryenHome -Recurse -Force
+                }
+                Move-Item -LiteralPath $unpacked.FullName -Destination $binaryenHome
+            }
+        }
+        Remove-Item -LiteralPath $archive -Force -ErrorAction SilentlyContinue
+        $wasmOptCandidate = Join-Path $binaryenHome "bin\wasm-opt.exe"
+        if (-not (Test-Path -LiteralPath $wasmOptCandidate)) {
+            $wasmOptCandidate = Join-Path $binaryenHome "bin\wasm-opt"
+        }
+        if (-not (Test-Path -LiteralPath $wasmOptCandidate)) {
+            $wasmOptCandidate = Join-Path $binaryenHome "wasm-opt.exe"
+        }
+        if (-not (Test-Path -LiteralPath $wasmOptCandidate)) {
+            $wasmOptCandidate = Join-Path $binaryenHome "wasm-opt"
+        }
+    }
+    if (Test-Path -LiteralPath $wasmOptCandidate) {
+        $binDir = Split-Path -Parent $wasmOptCandidate
+        $env:Path = "$binDir;$env:Path"
+        $managedToolDirs += $binDir
+        $toolPath = (@($cargoBin) + @($managedToolDirs) + @($env:Path)) -join ";"
+        $env:Path = $toolPath
+        $wasmOptOk = $true
+        Write-Host "Using wasm-opt: $wasmOptCandidate"
+    }
+}
+if (-not $wasmOptOk -or -not (Get-Command "wasm-opt" -ErrorAction SilentlyContinue)) {
+    throw "wasm-opt is required for dx build (Binaryen version_$BinaryenVersion). Install Binaryen or set BINARYEN_VERSION."
+}
+Write-Host "Using wasm-opt: $((Get-Command wasm-opt).Source)"
+
 # Dioxus 0.8 otherwise ignores the verified PATH binary and attempts to
 # redownload a managed wasm-bindgen on every invocation. Agents and offline
 # builds must use the exact pinned local CLI established above.

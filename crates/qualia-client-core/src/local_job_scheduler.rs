@@ -644,10 +644,37 @@ async fn execute_job(
                             Err(error) => return Err(error),
                         };
                         check_cancel(&cancel)?;
+                        // Download alone left models as raw files with no install
+                        // manifest, so activation failed with "No install manifest"
+                        // and chat stayed on "no active model". Path-based
+                        // set_active_model finalizes (manifest + index) and activates.
+                        scheduler.report_progress(
+                            job_id,
+                            0.95,
+                            format!("Download complete — indexing and activating {filename}"),
+                        )?;
+                        let path_for_activate = path.clone();
+                        let model_id_for_activate = model_id.clone();
+                        let activate_result = tokio::task::spawn_blocking(move || {
+                            crate::api::set_active_model(path_for_activate.clone()).map_err(|e| {
+                                format!(
+                                    "download ok but activate failed for {model_id_for_activate}: {e}"
+                                )
+                            })?;
+                            Ok::<_, String>(
+                                crate::api::get_active_model().unwrap_or(path_for_activate),
+                            )
+                        })
+                        .await
+                        .map_err(|e| format!("post-download activation task failed: {e}"))?;
+                        let active_path = activate_result?;
+                        check_cancel(&cancel)?;
                         return Ok(serde_json::json!({
                             "model_id": model_id,
                             "filename": filename,
                             "path": path,
+                            "active": active_path,
+                            "lifecycle": "Active",
                         }));
                     }
                     _ = tokio::time::sleep(std::time::Duration::from_millis(350)) => {

@@ -73,10 +73,33 @@ impl QTensorEngine {
         #[cfg(target_arch = "wasm32")]
         let (wasm_device, wasm_queue) = {
             let instance = wgpu::Instance::default();
-            let adapter = instance
-                .request_adapter(&wgpu::RequestAdapterOptions::default())
+            // Prefer the high-performance adapter on phones (Pixel / Android
+            // Chrome often expose a low-power fallback that stalls compute).
+            let adapter = match instance
+                .request_adapter(&wgpu::RequestAdapterOptions {
+                    power_preference: wgpu::PowerPreference::HighPerformance,
+                    ..Default::default()
+                })
                 .await
-                .map_err(|e| format!("Failed to find wgpu adapter: {e}"))?;
+            {
+                Ok(a) => a,
+                Err(high_err) => instance
+                    .request_adapter(&wgpu::RequestAdapterOptions::default())
+                    .await
+                    .map_err(|e| {
+                        format!(
+                            "Failed to find wgpu adapter (high-performance: {high_err}; default: {e})"
+                        )
+                    })?,
+            };
+            let info = adapter.get_info();
+            log::info!(
+                "LLM_LOAD|webgpu-adapter|0.20|name={} backend={:?} device={:?} vendor={:?}",
+                info.name,
+                info.backend,
+                info.device,
+                info.vendor
+            );
             // Browser WebGPU exposes a smaller feature set than native backends.
             // Intersecting with the adapter keeps device creation portable while
             // still enabling f16/subgroup/timing acceleration where available.
@@ -90,14 +113,32 @@ impl QTensorEngine {
                 } else {
                     wgpu::ExperimentalFeatures::disabled()
                 };
+            // Raise buffer caps to the adapter's advertised maximum (same pattern as
+            // native shared_gpu). Default wgpu caps are too small for real weight
+            // tensors and can make requestDevice succeed then fail at buffer create.
+            let adapter_limits = adapter.limits();
+            let required_limits = wgpu::Limits {
+                max_buffer_size: adapter_limits.max_buffer_size,
+                max_storage_buffer_binding_size: adapter_limits.max_storage_buffer_binding_size,
+                ..wgpu::Limits::default()
+            };
+
             adapter
                 .request_device(&wgpu::DeviceDescriptor {
+                    label: Some("qualia-wasm-llm"),
                     required_features,
+                    required_limits,
                     experimental_features,
                     ..Default::default()
                 })
                 .await
-                .map_err(|e| e.to_string())?
+                .map_err(|e| {
+                    format!(
+                        "WebGPU requestDevice failed on adapter '{}': {e}. \
+                         On phones use SmolLM2-360M only, close other tabs, and ensure Chrome WebGPU is enabled.",
+                        info.name
+                    )
+                })?
         };
         #[cfg(target_arch = "wasm32")]
         let device = &wasm_device;

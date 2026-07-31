@@ -623,6 +623,9 @@ function formatLoadError(err) {
     if (/SharedArrayBuffer|crossOriginIsolated|COOP|COEP/i.test(msg)) {
         return `${msg} — cross-origin isolation failed. Hard-refresh once so the COI service worker can set isolation headers.`;
     }
+    if (/timed out|requestDevice|adapter/i.test(msg)) {
+        return `${msg} — engine did not become ready after download. Prefer Chrome (not in-app browsers), reload once, and stay on SmolLM2 360M.`;
+    }
     return msg;
 }
 
@@ -742,21 +745,31 @@ async function loadModel() {
                         showDlStatus(`Downloading ${name}: ${pct}% (${mb}/${tmb} MB)`);
                         setEngineStatus(`Download ${pct}% · ${mb}/${tmb} MB`, 'info');
                     } else if (phase === 'compile') {
-                        showDlStatus(`Compiling ${name} → P64…`);
-                        setEngineStatus('Compiling GGUF → P64…', 'warn');
+                        showDlStatus(`Compiling ${name} → P64… (main thread; phone UI may pause 1–3 min — leave the tab open)`);
+                        setEngineStatus('Compiling GGUF → P64 (do not background the tab)…', 'warn');
                     }
                 },
             };
             let loaded;
+            // Prefer a prebuilt release P64 when the option provides data-p64 — avoids
+            // main-thread AOT compile after download, which is the common phone hang.
+            const releaseP64 = sel.options[sel.selectedIndex].dataset.p64;
+            const cacheKey = (releaseP64 || url).split('/').pop();
             try {
-                loaded = await loadOrCompileP64(url, url.split('/').pop(), cacheOptions);
+                if (releaseP64) {
+                    showDlStatus(`Fetching prebuilt P64 for ${name}…`);
+                    setEngineStatus('Downloading prebuilt P64…', 'info');
+                    loaded = await loadOrCompileP64(releaseP64, cacheKey, cacheOptions);
+                } else {
+                    loaded = await loadOrCompileP64(url, cacheKey, cacheOptions);
+                }
             } catch (releaseError) {
-                const fallbackUrl = sel.options[sel.selectedIndex].dataset.gguf;
-                if (!fallbackUrl) throw releaseError;
+                const fallbackUrl = sel.options[sel.selectedIndex].dataset.gguf || url;
+                if (!fallbackUrl || fallbackUrl === releaseP64) throw releaseError;
                 console.warn('[model-loader] Release P64 fetch unavailable; using GGUF fallback:', releaseError);
-                showDlStatus(`Release P64 blocked; falling back to GGUF for ${name}…`);
-                setEngineStatus('Release host blocked — GGUF fallback…', 'warn');
-                loaded = await loadOrCompileP64(fallbackUrl, url.split('/').pop(), cacheOptions);
+                showDlStatus(`Prebuilt P64 unavailable; compiling GGUF for ${name} (phone may pause here)…`);
+                setEngineStatus('GGUF fallback — compiling on-device…', 'warn');
+                loaded = await loadOrCompileP64(fallbackUrl, cacheKey, cacheOptions);
             }
             const { bytes, source } = loaded;
             ggufBytes = bytes;
@@ -767,14 +780,32 @@ async function loadModel() {
                     : `Compiled ${name} → P64 (cached for next time)`);
         }
 
-        // Yield a frame so the UI can paint "Initialising…" before the heavy call.
-        showDlStatus('Initialising Qualia WebGPU engine…');
+        // Yield so "Initialising…" paints before the heavy WebGPU path.
+        // On phones the previous hang was: download finishes → UI freezes on
+        // init with no further status (or a rejected promise that never settled).
+        showDlStatus('Initialising Qualia WebGPU engine… (may take 30–90s on phones)');
         setEngineStatus('Initialising WebGPU engine…', 'info');
         await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0)));
 
-        await initialize_webgpu_engine(ggufBytes);
-        // Drop the large buffer reference ASAP so GC can reclaim before chat.
-        ggufBytes = null;
+        const modelBytes = ggufBytes;
+        ggufBytes = null; // drop before init so peak RAM is model + engine, not 2×
+        if (typeof globalThis.gc === 'function') {
+            try { globalThis.gc(); } catch { /* optional */ }
+        }
+
+        const INIT_TIMEOUT_MS = isMobileDevice() ? 180_000 : 120_000;
+        await Promise.race([
+            initialize_webgpu_engine(modelBytes),
+            new Promise((_, reject) => {
+                setTimeout(() => {
+                    reject(new Error(
+                        `WebGPU engine init timed out after ${Math.round(INIT_TIMEOUT_MS / 1000)}s. ` +
+                        `On phones: use SmolLM2 360M only, close other tabs, hard-refresh once for COI, ` +
+                        `and confirm chrome://flags WebGPU is enabled.`,
+                    ));
+                }, INIT_TIMEOUT_MS);
+            }),
+        ]);
         if (!isWebgpuEngineReady()) throw new Error('Engine failed to initialise after model load');
 
         // Fail closed in the UI when the resident tokenizer is the 256-byte fallback.

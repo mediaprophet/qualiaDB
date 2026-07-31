@@ -6,7 +6,7 @@
 // an ambient-field channel (off by default) and a per-body-system channel row.
 // Mobile: full-viewport canvas + bottom-sheet controls, pinch zoom, orbit drag.
 
-import { loadQualiaPortal } from "../js/qualia-shell.js";
+import { ensureCanvasBackingStore, loadQualiaPortal } from "../js/qualia-shell.js";
 
 const container = document.getElementById("canvas-container");
 const statusEl = document.getElementById("status");
@@ -70,7 +70,9 @@ const BP3D_SOURCE = {
   cite: "Mitsuhashi et al., Nucleic Acids Res. 2009 (doi:10.1093/nar/gkn613) · data doi:10.18908/lsdba.nbdc00837-000",
 };
 
-const RELEASE_BASE = "https://github.com/mediaprophet/qualiaDB/releases/download/v0.0.24";
+// Keep in lockstep with crates/qualia-core-db Cargo.toml / release tag.
+const ENGINE_VERSION = "0.0.28";
+const RELEASE_BASE = `https://github.com/mediaprophet/qualiaDB/releases/download/v${ENGINE_VERSION}`;
 const isCoarsePointer = () =>
   (typeof window !== "undefined" &&
     (window.matchMedia?.("(pointer: coarse)").matches ||
@@ -79,8 +81,16 @@ const isCoarsePointer = () =>
 const isMobileUA = () =>
   /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || "");
 
+/** Same-origin first (Pages deploy), then GitHub Release as secondary. */
+function bodyUrls(key) {
+  if (key === "complete") {
+    return [`${RELEASE_BASE}/anatomy-bodyparts3d.hmc`];
+  }
+  const name = `anatomy-${key}.hmc`;
+  return [name, `${RELEASE_BASE}/${name}`];
+}
 function bodyUrl(key) {
-  return key === "complete" ? `${RELEASE_BASE}/anatomy-bodyparts3d.hmc` : `anatomy-${key}.hmc`;
+  return bodyUrls(key)[0];
 }
 function provenanceQ42Url() {
   return currentBody === "complete"
@@ -131,12 +141,42 @@ function setProgress(visible, pct, label) {
   }
 }
 
+function layoutSize() {
+  if (!container) return { w: 0, h: 0 };
+  const w = Math.round(container.clientWidth || container.getBoundingClientRect().width || 0);
+  const h = Math.round(container.clientHeight || container.getBoundingClientRect().height || 0);
+  return { w, h };
+}
+
 function onResize() {
-  if (portal && portal.resize && canvas) {
+  if (!canvas || !container) return;
+  const { w, h } = layoutSize();
+  // Skip 0×0 — common on first mobile paint before flex/dvh settles; resizing the
+  // WebGPU surface to zero blanks the body and looks like a failed render.
+  if (w < 2 || h < 2) return;
+  ensureCanvasBackingStore(canvas, w, h);
+  if (portal && portal.resize) {
     try {
-      portal.resize(canvas, container.clientWidth, container.clientHeight);
+      portal.resize(canvas, w, h);
     } catch (_) {}
   }
+}
+
+/** Wait until the stage has a real box (phones often report 0×0 on first frame). */
+async function waitForLayout(maxMs = 2500) {
+  const start = performance.now();
+  while (performance.now() - start < maxMs) {
+    const { w, h } = layoutSize();
+    if (w >= 32 && h >= 32) {
+      onResize();
+      return { w, h };
+    }
+    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+  }
+  // Last resort: force a usable backing store so WebGPU can bind.
+  if (canvas) ensureCanvasBackingStore(canvas, 360, 640);
+  onResize();
+  return layoutSize();
 }
 
 // ── Controls sheet (mobile bottom sheet / desktop always-on sidebar) ──
@@ -200,13 +240,23 @@ async function boot() {
   renderAttribution();
   setupSheet();
 
+  if (!container) {
+    setStatus("Missing #canvas-container — anatomy page markup is incomplete.", "error");
+    return;
+  }
+
   canvas = document.createElement("canvas");
-  canvas.style.cssText = "width:100%;height:100%;display:block;touch-action:none";
+  canvas.style.cssText = "width:100%;height:100%;display:block;touch-action:none;background:transparent";
   canvas.setAttribute("aria-label", "3D anatomy body");
   container.appendChild(canvas);
 
   // Mixer is useful even without WebGPU (taxonomy inspectable).
   buildMixer();
+
+  // Phones: sheet closed first so the flex stage gets the full viewport height
+  // before we measure the canvas / bind WebGPU.
+  if (isSheetMode()) setSheetOpen(false);
+  await waitForLayout();
 
   if (!navigator.gpu) {
     const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
@@ -214,7 +264,7 @@ async function boot() {
     let hint =
       "This browser has no WebGPU. The real 3D body needs a WebGPU-capable browser.";
     if (isIOS) hint += " On iPhone/iPad use Safari 18+ (iOS 18+), or enable WebGPU under Settings → Safari → Advanced → Feature Flags.";
-    else if (isAndroid) hint += " On Android use Chrome 121+ on a device with a supported GPU.";
+    else if (isAndroid) hint += " On Android use Chrome (not in-app browsers). Pixel / recent Android Chrome 121+ with WebGPU enabled.";
     else hint += " Use Chrome, Edge, or Firefox Nightly with hardware acceleration.";
     hint += " The system mixer still lists what the engine evaluates — open Controls.";
     setStatus(hint, "error");
@@ -225,6 +275,8 @@ async function boot() {
   setStatus("Loading the Qualia renderer (WASM · WebGPU)…");
   let res;
   try {
+    // Re-measure immediately before GPU init (rotation / address-bar hide changes height).
+    await waitForLayout(1200);
     res = await loadQualiaPortal(canvas);
   } catch (e) {
     setStatus("Renderer failed to load: " + e, "error");
@@ -235,6 +287,7 @@ async function boot() {
   window.__portal = portal;
   if (!portal) {
     setStatus("WebGPU portal unavailable (source: " + res.source + ").", "error");
+    if (isSheetMode()) setSheetOpen(true);
     return;
   }
   if (typeof portal.load_body_from_qualia_bundle_mixed !== "function") {
@@ -242,14 +295,39 @@ async function boot() {
     return;
   }
 
-  new ResizeObserver(onResize).observe(container);
+  new ResizeObserver(() => {
+    onResize();
+    // After a real size appears post-load, re-push the body so the mesh is not stuck at 0×0.
+    if (bodyBytes && layoutSize().w >= 32) {
+      try {
+        applyMixer();
+        applyCam();
+      } catch (_) {}
+    }
+  }).observe(container);
   window.addEventListener("resize", onResize);
+  window.addEventListener("orientationchange", () => {
+    setTimeout(async () => {
+      await waitForLayout(800);
+      if (bodyBytes) {
+        applyMixer();
+        applyCam();
+      }
+    }, 200);
+  });
   setupOrbit();
   setupZoomButtons();
   startLoop();
-  // On phones, leave the sheet closed so the body fills the screen first.
-  if (isSheetMode()) setSheetOpen(false);
+  onResize();
   await loadBody(currentBody);
+  // One more layout pass after the first body (mobile URL bar / safe-area settle).
+  setTimeout(async () => {
+    await waitForLayout(600);
+    if (bodyBytes) {
+      applyMixer();
+      applyCam();
+    }
+  }, 400);
 }
 
 function bodyLabel(key) {
@@ -355,36 +433,60 @@ async function fetchWithProgress(url, label) {
 async function loadBody(key) {
   renderAttribution();
   showCompleteLoader(key === "complete");
+  currentBody = key;
 
   if (key === "complete") {
     setProgress(false);
     setStatus(
-      "The complete body is a large pack. Browsers can't fetch GitHub-release assets cross-origin — download it below and load the file, or open it in the desktop app. On a phone, Male/Female CCF packs are the better path.",
+      "The complete body is a large pack (~700 MB). Prefer Male/Female on a phone. On desktop you can download the file below and load it, or open the desktop app.",
       "error",
     );
     if (isSheetMode()) setSheetOpen(true);
     return;
   }
 
-  // CCF male/female ship same-origin on Pages.
+  // CCF male/female: same-origin on Pages (preferred), GitHub Release fallback.
   const sizeHint = isMobileUA() || isCoarsePointer()
     ? " (~90–120 MB — stay on Wi‑Fi)"
     : "";
   setStatus(`Fetching ${bodyLabel(key)} reference body${sizeHint}…`);
-  try {
-    const bytes = await fetchWithProgress(bodyUrl(key), `Fetching ${bodyLabel(key)}`);
-    renderPackBytes(bytes);
-  } catch (e) {
-    setProgress(false);
-    if (e && e.status) {
-      setStatus(
-        `Body pack not found (HTTP ${e.status}). The .hmc packs ship as build artifacts — produce them with the build_anatomy_pack tool.`,
-        "error",
-      );
-    } else {
-      setStatus("Body pack fetch failed: " + e, "error");
+  const urls = bodyUrls(key);
+  let lastErr = null;
+  for (const url of urls) {
+    try {
+      const label =
+        url.startsWith("http")
+          ? `Release ${bodyLabel(key)}`
+          : `Fetching ${bodyLabel(key)}`;
+      const bytes = await fetchWithProgress(url, label);
+      if (!bytes || bytes.length < 1024) {
+        throw new Error("pack too small / empty");
+      }
+      await waitForLayout(800);
+      renderPackBytes(bytes);
+      onResize();
+      applyCam();
+      return;
+    } catch (e) {
+      lastErr = e;
+      console.warn("[anatomy] pack fetch failed for", url, e);
     }
   }
+  setProgress(false);
+  if (lastErr && lastErr.status) {
+    setStatus(
+      `Body pack not found (HTTP ${lastErr.status}). Pages must ship anatomy-male/female.hmc (see scripts/fetch_anatomy_packs_release.sh) or the v${ENGINE_VERSION} release assets.`,
+      "error",
+    );
+  } else {
+    setStatus(
+      "Body pack fetch failed: " +
+        (lastErr && lastErr.message ? lastErr.message : lastErr) +
+        ". On phones stay on Wi‑Fi; try Male if Female failed (or the reverse).",
+      "error",
+    );
+  }
+  if (isSheetMode()) setSheetOpen(true);
 }
 
 window.onCompleteFile = (file) => {
@@ -415,6 +517,7 @@ window.onCompleteFile = (file) => {
 
 function applyMixer() {
   if (!portal || !bodyBytes) return;
+  onResize();
   const noun = currentBody === "complete" ? "structures" : "organs";
   try {
     const r = portal.load_body_from_qualia_bundle_mixed(
@@ -426,13 +529,22 @@ function applyMixer() {
     const organs = r && r.organs_loaded != null ? r.organs_loaded : "?";
     const tris =
       r && r.total_triangles != null ? Number(r.total_triangles).toLocaleString() : "?";
+    const { w, h } = layoutSize();
+    if (w < 32 || h < 32) {
+      setStatus(
+        `${bodyLabel(currentBody)} body loaded (${organs} ${noun}) but the canvas is still 0×0 — rotate the phone or reopen Controls once so layout can settle.`,
+        "error",
+      );
+      return;
+    }
     const gesture = isCoarsePointer() ? "drag to orbit · pinch to zoom" : "drag to orbit · scroll to zoom";
     setStatus(`${bodyLabel(currentBody)} body · ${organs} ${noun} · ${tris} triangles · ${gesture}`, "ok");
+    applyCam();
   } catch (e) {
     const msg = String(e);
     if (/out of memory|oom|allocation|RangeError/i.test(msg)) {
       setStatus(
-        "Render ran out of memory. On phones, deselect Skin and heavy systems in Controls, or use a desktop browser.",
+        "Render ran out of memory. On phones keep Skin off (default), close other tabs, or use Male/Female only — not the complete pack.",
         "error",
       );
     } else {
