@@ -182,7 +182,8 @@ pub fn WellfairShell() -> Element {
 
     rsx! {
         div {
-            style: "display:flex;flex-direction:column;gap:1rem;padding:1.25rem;max-width:1100px;margin:0 auto;width:100%;box-sizing:border-box;",
+            // Scroll as a document under the app main surface (parent is overflow:hidden).
+            style: "flex:1;min-height:0;width:100%;box-sizing:border-box;display:flex;flex-direction:column;gap:1rem;padding:1.25rem 1.25rem 3rem;max-width:1100px;margin:0 auto;overflow-y:auto;overscroll-behavior:contain;",
             header {
                 style: "display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:space-between;gap:1rem;padding-bottom:0.75rem;border-bottom:1px solid var(--qualia-border,#1f2937);",
                 div {

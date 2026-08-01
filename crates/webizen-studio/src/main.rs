@@ -729,12 +729,22 @@ fn ToolsRoute() -> Element {
 
 #[component]
 fn WellfairRoute() -> Element {
-    rsx! { components::wellfair::WellfairShell {} }
+    rsx! {
+        div {
+            style: "flex:1;min-height:0;width:100%;display:flex;flex-direction:column;overflow:hidden;",
+            components::wellfair::WellfairShell {}
+        }
+    }
 }
 
 #[component]
 fn ChoraRoute() -> Element {
-    rsx! { components::wellfair::WellfairChoraPanel {} }
+    rsx! {
+        div {
+            style: "flex:1;min-height:0;width:100%;overflow-y:auto;overscroll-behavior:contain;",
+            components::wellfair::WellfairChoraPanel {}
+        }
+    }
 }
 
 #[component]
@@ -749,7 +759,12 @@ fn GpuViewportRoute() -> Element {
 
 #[component]
 fn SettingsRoute() -> Element {
-    rsx! { components::settings_page::SettingsPage {} }
+    rsx! {
+        div {
+            style: "flex:1;min-height:0;width:100%;height:100%;display:flex;flex-direction:column;overflow:hidden;",
+            components::settings_page::SettingsPage {}
+        }
+    }
 }
 
 #[component]
