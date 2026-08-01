@@ -361,9 +361,9 @@ import init, {
     getEngineVersion,
     compileGgufToP64,
     p64FormatVersion,
-} from './playground/qualia_core_db.js?v=0.0.28';
-// Optional: only present after wasm rebuild that includes getResidentTokenizerVocab.
-import * as QualiaWasm from './playground/qualia_core_db.js?v=0.0.28';
+} from './playground/qualia_core_db.js?v=0.0.28-mobile-init';
+// Optional diagnostics: getResidentTokenizerVocab / getWebgpuInitStatus after wasm rebuild.
+import * as QualiaWasm from './playground/qualia_core_db.js?v=0.0.28-mobile-init';
 import { loadGgufCached, loadOrCompileP64 } from './js/opfs-model-cache.js';
 
 function residentTokenizerVocab() {
@@ -372,6 +372,18 @@ function residentTokenizerVocab() {
         return typeof fn === 'function' ? (fn() | 0) : 0;
     } catch {
         return 0;
+    }
+}
+
+/** Stage text from WASM init (empty when idle). Requires rebuilt playground wasm. */
+function webgpuInitStatus() {
+    try {
+        const fn = QualiaWasm.getWebgpuInitStatus;
+        if (typeof fn !== 'function') return '';
+        const s = fn();
+        return s == null ? '' : String(s);
+    } catch {
+        return '';
     }
 }
 
@@ -550,7 +562,7 @@ async function bootWasm() {
 
     wasmReadyPromise = (async () => {
         try {
-            await init('./playground/qualia_core_db_bg.wasm?v=0.0.28');
+            await init('./playground/qualia_core_db_bg.wasm?v=0.0.28-mobile-init');
             wasmReady = true;
             wasmBootError = null;
             const ver = getEngineVersion?.() ?? 'unknown';
@@ -798,13 +810,22 @@ async function loadModel() {
                 `Try a phone with more free memory, or use desktop.`,
             );
         }
+        // Phones: defer the multi‑hundred‑MB GPU weight upload so init can finish.
+        // Without this, create_compute_pipeline + write_buffer monopolise the main thread
+        // and the UI freezes on "Initialising WebGPU" with no progress (timers never fire).
+        const deferWeights = isMobileDevice();
         showDlStatus(
-            isMobileDevice()
-                ? 'Initialising Qualia WebGPU engine… (30–180s on phones — keep this tab open and in the foreground)'
+            deferWeights
+                ? 'Initialising Qualia WebGPU engine… (phone path — deferred weight upload; keep tab foreground)'
                 : 'Initialising Qualia WebGPU engine…',
         );
-        setEngineStatus('Initialising WebGPU engine…', 'info');
-        // Two frames + a short delay so the status line and progress paint before the freeze.
+        setEngineStatus(
+            deferWeights
+                ? 'Initialising WebGPU (phone: skip eager weight upload)…'
+                : 'Initialising WebGPU engine…',
+            'info',
+        );
+        // Two frames + a short delay so the status line paints before heavy work.
         await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(r, 50))));
 
         const modelBytes = ggufBytes;
@@ -813,24 +834,33 @@ async function loadModel() {
             try { globalThis.gc(); } catch { /* optional */ }
         }
 
-        // Phones need a long timeout: GGUF→P64 may already be done, but weight upload to GPU is slow.
-        const INIT_TIMEOUT_MS = isMobileDevice() ? 240_000 : 120_000;
+        // With cooperative yields + deferred weights, phone init should finish in ~1–2 min
+        // (pipeline compile). Desktop may still upload weights eagerly.
+        const INIT_TIMEOUT_MS = isMobileDevice() ? 180_000 : 180_000;
         let initHeartbeat = null;
         const initStarted = Date.now();
-        if (isMobileDevice()) {
-            initHeartbeat = setInterval(() => {
-                const sec = Math.round((Date.now() - initStarted) / 1000);
-                showDlStatus(`Initialising WebGPU engine… ${sec}s (still working — do not background Chrome)`);
-            }, 4000);
-        }
+        initHeartbeat = setInterval(() => {
+            const sec = Math.round((Date.now() - initStarted) / 1000);
+            const stage = webgpuInitStatus();
+            const stageTxt = stage ? ` · ${stage}` : '';
+            showDlStatus(
+                `Initialising WebGPU… ${sec}s${stageTxt}` +
+                (isMobileDevice() ? ' — keep Chrome in the foreground' : ''),
+            );
+            if (stage) setEngineStatus(stage, 'info');
+        }, 500);
         try {
+            // Second arg: defer_weight_upload (phones). Older wasm ignores extra args safely
+            // only if the export is single-arg — our rebuild takes Option<bool>.
             await Promise.race([
-                initialize_webgpu_engine(modelBytes),
+                initialize_webgpu_engine(modelBytes, deferWeights),
                 new Promise((_, reject) => {
                     setTimeout(() => {
+                        const stage = webgpuInitStatus();
                         reject(new Error(
-                            `WebGPU engine init timed out after ${Math.round(INIT_TIMEOUT_MS / 1000)}s. ` +
-                            `On phones: use SmolLM2 360M only, close other tabs, leave Chrome foreground, ` +
+                            `WebGPU engine init timed out after ${Math.round(INIT_TIMEOUT_MS / 1000)}s` +
+                            (stage ? ` (last stage: ${stage})` : '') +
+                            `. On phones: use SmolLM2 360M only, close other tabs, leave Chrome foreground, ` +
                             `hard-refresh once for COI, and confirm WebGPU is enabled.`,
                         ));
                     }, INIT_TIMEOUT_MS);
@@ -839,9 +869,6 @@ async function loadModel() {
         } finally {
             if (initHeartbeat) clearInterval(initHeartbeat);
         }
-        // Drop the JS-side model buffer as soon as WASM owns it (engine holds Arc<[u8]>).
-        // modelBytes may still be reachable until GC; null the local and hope.
-        // (Cannot detach if wasm-bindgen still holds a view of the same buffer.)
         if (!isWebgpuEngineReady()) throw new Error('Engine failed to initialise after model load');
 
         // Fail closed in the UI when the resident tokenizer is the 256-byte fallback.
@@ -873,6 +900,9 @@ async function loadModel() {
         appendSystem(
             `Model loaded: ${name}. Qualia native WebGPU pipeline active` +
             (vocab > 0 ? ` (tokenizer vocab ${vocab.toLocaleString()})` : '') +
+            (isMobileDevice()
+                ? '. Phone path deferred GPU weight upload — the first reply may take longer while weights stream to the GPU.'
+                : '') +
             `. Prefer SmolLM2-360M on phones. If replies look like random symbols, clear site data/OPFS and reload GGUF (not a stale P64).`
         );
         // Collapse setup on phones so conversation owns the screen

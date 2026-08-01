@@ -409,12 +409,45 @@ pub async fn verify_first_layer_quant() -> Result<JsValue, JsValue> {
     serde_wasm_bindgen::to_value(&probe).map_err(|e| JsValue::from_str(&e.to_string()))
 }
 
+/// Current stage of WebGPU engine init (empty when idle/done). Poll from JS so the
+/// status line advances on phones while pipelines/weights load.
+#[wasm_bindgen(js_name = getWebgpuInitStatus)]
+pub fn get_webgpu_init_status() -> String {
+    #[cfg(target_arch = "wasm32")]
+    {
+        crate::gguf_bridge::wasm_yield::init_status()
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        String::new()
+    }
+}
+
 /// Load a GGUF or P64 model into the resident browser WebGPU engine.
+///
+/// `defer_weight_upload`: when true (recommended on phones), skip the multi‑hundred‑MB
+/// GPU weight materialisation during init so the UI leaves "Initialising WebGPU".
+/// Weights upload lazily on the first forward pass (slower first token).
 #[wasm_bindgen]
-pub async fn initialize_webgpu_engine(model_data: js_sys::Uint8Array) -> Result<(), js_sys::Error> {
+pub async fn initialize_webgpu_engine(
+    model_data: js_sys::Uint8Array,
+    defer_weight_upload: Option<bool>,
+) -> Result<(), js_sys::Error> {
+    let defer = defer_weight_upload.unwrap_or(false);
+    // Copy once into WASM memory. This can take a few seconds for ~370 MB on phones —
+    // surface it so the UI is not stuck on a generic "Initialising…" with no feedback.
+    #[cfg(target_arch = "wasm32")]
+    crate::gguf_bridge::wasm_yield::phase(&format!(
+        "Copying model into engine memory ({:.0} MB)…",
+        model_data.length() as f64 / (1024.0 * 1024.0)
+    ))
+    .await;
     let vec = model_data.to_vec();
     let arc: std::sync::Arc<[u8]> = vec.into();
-    crate::gguf_bridge::initialize_webgpu_engine(arc)
+    #[cfg(target_arch = "wasm32")]
+    crate::gguf_bridge::wasm_yield::yield_to_browser().await;
+
+    crate::gguf_bridge::initialize_webgpu_engine_with_options(arc, defer)
         .await
         .map_err(|e| js_sys::Error::new(&e))
 }

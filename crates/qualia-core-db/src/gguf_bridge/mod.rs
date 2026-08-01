@@ -636,6 +636,9 @@ mod forward;
 mod gemm;
 mod init;
 mod load;
+/// Cooperative browser yields + init-status for WASM LLM boot (phones).
+#[cfg(target_arch = "wasm32")]
+pub(crate) mod wasm_yield;
 mod output;
 #[cfg(not(target_arch = "wasm32"))]
 mod prefill_arena;
@@ -1358,19 +1361,44 @@ thread_local! {
 
 #[cfg(target_arch = "wasm32")]
 pub async fn initialize_webgpu_engine(model_data: std::sync::Arc<[u8]>) -> Result<(), String> {
+    initialize_webgpu_engine_with_options(model_data, false).await
+}
+
+/// WASM LLM boot with phone-friendly options.
+///
+/// `defer_weight_upload`: skip the multi‑hundred‑MB GPU weight materialisation at
+/// init (the usual "stuck on Initialising WebGPU" phase on phones). Weights upload
+/// lazily on the first forward pass instead — init finishes; first token is slower.
+#[cfg(target_arch = "wasm32")]
+pub async fn initialize_webgpu_engine_with_options(
+    model_data: std::sync::Arc<[u8]>,
+    defer_weight_upload: bool,
+) -> Result<(), String> {
+    use wasm_yield::{clear_init_status, phase, set_init_status};
+
     // Use `try_new()` (not `new_async()`) so a missing/incompatible WebGPU adapter
     // surfaces as a rejected promise the JS layer can display, rather than an
     // `.expect()` panic that aborts the wasm module and leaves the init promise
     // pending forever (the "stuck on Initialising…" hang).
+    phase("Requesting WebGPU adapter + device…").await;
     let mut engine = QTensorEngine::try_new().await?;
+    phase("WebGPU device ready — loading model metadata…").await;
+
     // Dual-format boot gate. P64 owns the canonical lowercase four-byte
     // `p64\0` magic.
     if crate::p64_weight::has_p64_magic(&model_data) {
-        engine.adopt_resident_p64(model_data)?;
+        engine
+            .adopt_resident_p64_async(model_data, defer_weight_upload)
+            .await?;
     } else {
-        engine.adopt_resident_mmap(model_data)?;
+        engine
+            .adopt_resident_mmap_async(model_data, defer_weight_upload)
+            .await?;
     }
+    phase("Engine resident — finishing…").await;
     WASM_ENGINE_INSTANCE.with(|g| *g.borrow_mut() = Some(engine));
+    set_init_status("ready");
+    clear_init_status();
     Ok(())
 }
 
