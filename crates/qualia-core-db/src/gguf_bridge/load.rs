@@ -414,11 +414,14 @@ impl QTensorEngine {
     }
     #[cfg(target_arch = "wasm32")]
     pub fn adopt_resident_mmap(&mut self, mmap: Arc<[u8]>) -> Result<GgufLoadReport, String> {
-        // Sync path (tests / callers that cannot await). Browser boot uses the async variant.
         let file_size = mmap.len();
         if file_size == 0 {
             return Err("Empty GGUF mmap".to_string());
         }
+        log::info!(
+            "LLM_LOAD|resident-mmap|0.68|Reusing resident GGUF mapping ({:.2} GiB)",
+            bytes_to_gib(file_size as u64)
+        );
         let index = crate::gguf_sharder::GgufTensorIndex::from_gguf(mmap.as_ref());
         if index.tensor_data_start == 0
             && index.max_tensor_bytes == 0
@@ -438,6 +441,7 @@ impl QTensorEngine {
             return Err("KV cache allocation failed (layout or CPU mirror missing)".to_string());
         }
         self.gguf_mmap = Some(mmap);
+        // Full eager upload — required for coherent decode (do not defer).
         if !self.mc8_upload_all_resident_weights(&index) {
             wlog("[MC8] eager resident weight upload skipped at init — will retry lazily");
         }
@@ -446,92 +450,6 @@ impl QTensorEngine {
         }
         if !self.mc8_upload_resident_norms(&index) {
             wlog("[MC8] resident norm weights skipped at init — per-layer upload fallback");
-        }
-        Ok(GgufLoadReport {
-            mapped_bytes: file_size as u64,
-            tensor_data_offset: self.tensor_data_offset,
-            n_layer: self.hyperparams.n_layer,
-            n_head: self.hyperparams.n_head,
-            n_kv_head: self.hyperparams.effective_n_kv_head(),
-            max_tensor_bytes: index.max_tensor_bytes,
-            kv_cache_bytes: self.kv_cache_bytes(),
-            directml_enabled: false,
-        })
-    }
-
-    /// Async GGUF boot for the browser. See [`Self::adopt_resident_p64_async`].
-    #[cfg(target_arch = "wasm32")]
-    pub async fn adopt_resident_mmap_async(
-        &mut self,
-        mmap: Arc<[u8]>,
-        defer_weight_upload: bool,
-    ) -> Result<GgufLoadReport, String> {
-        use crate::gguf_bridge::wasm_yield::{phase, yield_to_browser};
-
-        let file_size = mmap.len();
-        if file_size == 0 {
-            return Err("Empty GGUF mmap".to_string());
-        }
-        phase(&format!(
-            "Parsing GGUF metadata ({:.0} MB)…",
-            file_size as f64 / (1024.0 * 1024.0)
-        ))
-        .await;
-        log::info!(
-            "LLM_LOAD|resident-mmap|0.68|Reusing resident GGUF mapping ({:.2} GiB)",
-            bytes_to_gib(file_size as u64)
-        );
-        let index = crate::gguf_sharder::GgufTensorIndex::from_gguf(mmap.as_ref());
-        yield_to_browser().await;
-        if index.tensor_data_start == 0
-            && index.max_tensor_bytes == 0
-            && index.hyperparams.n_layer == 0
-        {
-            return Err("GGUF header parse failed or yielded no tensor metadata".to_string());
-        }
-        phase(&format!(
-            "Reserving KV / GEMM arenas ({} layers)…",
-            index.hyperparams.n_layer
-        ))
-        .await;
-        self.tensor_data_offset = index.tensor_data_start;
-        self.hyperparams = index.hyperparams;
-        let staging = index
-            .max_layer_tensor_bytes
-            .max(4096)
-            .min(MAX_WGPU_WEIGHT_STAGING);
-        self.ensure_gemm_buffers(staging, MAX_STACK_GEMM_OUT as u32);
-        self.ensure_kv_cache(&index.hyperparams);
-        if self.kv_layout.is_none() || self.kv_cache_cpu.is_none() {
-            return Err(
-                "KV cache allocation failed (device out of memory? close other tabs, use 360M only)"
-                    .to_string(),
-            );
-        }
-        self.gguf_mmap = Some(mmap);
-
-        if defer_weight_upload {
-            phase(
-                "Skipping eager GPU weight upload (phone path) — first reply will be slower…",
-            )
-            .await;
-            wlog("[MC8] defer_weight_upload=true — resident weights deferred to first forward");
-        } else {
-            phase(&format!(
-                "Uploading weights to GPU ({} layers)…",
-                index.hyperparams.n_layer
-            ))
-            .await;
-            if !self.mc8_upload_all_resident_weights_yielding(&index).await {
-                wlog("[MC8] eager resident weight upload skipped at init — will retry lazily");
-            }
-            phase("Uploading logits / norm weights…").await;
-            if !self.mc8_upload_resident_logits(&index) {
-                wlog("[MC8] resident logits projection skipped at init — per-token upload fallback");
-            }
-            if !self.mc8_upload_resident_norms(&index) {
-                wlog("[MC8] resident norm weights skipped at init — per-layer upload fallback");
-            }
         }
         let kv_cache_bytes = self.kv_cache_bytes();
         Ok(GgufLoadReport {
@@ -542,16 +460,7 @@ impl QTensorEngine {
             n_kv_head: self.hyperparams.effective_n_kv_head(),
             max_tensor_bytes: index.max_tensor_bytes,
             kv_cache_bytes,
-            directml_enabled: {
-                #[cfg(target_os = "windows")]
-                {
-                    self.dml.is_some()
-                }
-                #[cfg(not(target_os = "windows"))]
-                {
-                    false
-                }
-            },
+            directml_enabled: false,
         })
     }
 }

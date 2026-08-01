@@ -361,9 +361,9 @@ import init, {
     getEngineVersion,
     compileGgufToP64,
     p64FormatVersion,
-} from './playground/qualia_core_db.js?v=0.0.28-mobile-init';
+} from './playground/qualia_core_db.js?v=0.0.28-llm-restore';
 // Optional diagnostics: getResidentTokenizerVocab / getWebgpuInitStatus after wasm rebuild.
-import * as QualiaWasm from './playground/qualia_core_db.js?v=0.0.28-mobile-init';
+import * as QualiaWasm from './playground/qualia_core_db.js?v=0.0.28-llm-restore';
 import { loadGgufCached, loadOrCompileP64 } from './js/opfs-model-cache.js';
 
 function residentTokenizerVocab() {
@@ -538,10 +538,10 @@ function applyMobileModelPolicy() {
         hint.classList.remove('hidden');
         const memTxt = mem != null ? ` This browser reports ~${mem} GB deviceMemory.` : '';
         hint.innerHTML =
-            `<strong>Phone / low-RAM path.</strong> Use <em>SmolLM2 360M Q8_0</em> (~369 MB). ` +
-            `First load downloads, then compiles to P64 and boots WebGPU — the tab can look frozen for 1–3 minutes after 100% download; leave Chrome in the foreground. ` +
-            `If it fails after download, tap Load again (OPFS cache skips the download). ` +
-            `Larger models often kill the tab.${memTxt} Prefer Wi‑Fi; close other tabs.`;
+            `<strong>Phone / low-RAM path.</strong> Use <em>SmolLM2 360M Q8_0</em> only (~369 MB). ` +
+            `After download the engine must compile pipelines and upload full weights — the UI may pause 1–4 minutes; leave Chrome in the foreground. ` +
+            `Status advances between phases; a long pause on “uploading GPU weights” is expected. ` +
+            `If it fails, tap Load again (OPFS skips re-download). Prefer Wi‑Fi; close other tabs.${memTxt}`;
     }
 }
 
@@ -562,7 +562,7 @@ async function bootWasm() {
 
     wasmReadyPromise = (async () => {
         try {
-            await init('./playground/qualia_core_db_bg.wasm?v=0.0.28-mobile-init');
+            await init('./playground/qualia_core_db_bg.wasm?v=0.0.28-llm-restore');
             wasmReady = true;
             wasmBootError = null;
             const ver = getEngineVersion?.() ?? 'unknown';
@@ -810,33 +810,24 @@ async function loadModel() {
                 `Try a phone with more free memory, or use desktop.`,
             );
         }
-        // Phones: defer the multi‑hundred‑MB GPU weight upload so init can finish.
-        // Without this, create_compute_pipeline + write_buffer monopolise the main thread
-        // and the UI freezes on "Initialising WebGPU" with no progress (timers never fire).
-        const deferWeights = isMobileDevice();
+        // Full eager weight upload (required for coherent text). Between major phases the
+        // WASM yields so this heartbeat can advance; during pipeline/weight blocks the UI
+        // may still pause — leave the tab open. Do NOT defer weights (that produced garbage).
         showDlStatus(
-            deferWeights
-                ? 'Initialising Qualia WebGPU engine… (phone path — deferred weight upload; keep tab foreground)'
+            isMobileDevice()
+                ? 'Initialising WebGPU… (pipelines + full weight upload; keep Chrome foreground, 1–4 min)'
                 : 'Initialising Qualia WebGPU engine…',
         );
-        setEngineStatus(
-            deferWeights
-                ? 'Initialising WebGPU (phone: skip eager weight upload)…'
-                : 'Initialising WebGPU engine…',
-            'info',
-        );
-        // Two frames + a short delay so the status line paints before heavy work.
+        setEngineStatus('Initialising WebGPU engine…', 'info');
         await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(r, 50))));
 
         const modelBytes = ggufBytes;
-        ggufBytes = null; // drop before init so peak RAM is model + engine, not 2×
+        ggufBytes = null;
         if (typeof globalThis.gc === 'function') {
             try { globalThis.gc(); } catch { /* optional */ }
         }
 
-        // With cooperative yields + deferred weights, phone init should finish in ~1–2 min
-        // (pipeline compile). Desktop may still upload weights eagerly.
-        const INIT_TIMEOUT_MS = isMobileDevice() ? 180_000 : 180_000;
+        const INIT_TIMEOUT_MS = isMobileDevice() ? 300_000 : 180_000;
         let initHeartbeat = null;
         const initStarted = Date.now();
         initHeartbeat = setInterval(() => {
@@ -848,20 +839,17 @@ async function loadModel() {
                 (isMobileDevice() ? ' — keep Chrome in the foreground' : ''),
             );
             if (stage) setEngineStatus(stage, 'info');
-        }, 500);
+        }, 400);
         try {
-            // Second arg: defer_weight_upload (phones). Older wasm ignores extra args safely
-            // only if the export is single-arg — our rebuild takes Option<bool>.
             await Promise.race([
-                initialize_webgpu_engine(modelBytes, deferWeights),
+                initialize_webgpu_engine(modelBytes),
                 new Promise((_, reject) => {
                     setTimeout(() => {
                         const stage = webgpuInitStatus();
                         reject(new Error(
                             `WebGPU engine init timed out after ${Math.round(INIT_TIMEOUT_MS / 1000)}s` +
                             (stage ? ` (last stage: ${stage})` : '') +
-                            `. On phones: use SmolLM2 360M only, close other tabs, leave Chrome foreground, ` +
-                            `hard-refresh once for COI, and confirm WebGPU is enabled.`,
+                            `. On phones: use SmolLM2 360M only, close other tabs, leave Chrome foreground.`,
                         ));
                     }, INIT_TIMEOUT_MS);
                 }),
@@ -900,10 +888,7 @@ async function loadModel() {
         appendSystem(
             `Model loaded: ${name}. Qualia native WebGPU pipeline active` +
             (vocab > 0 ? ` (tokenizer vocab ${vocab.toLocaleString()})` : '') +
-            (isMobileDevice()
-                ? '. Phone path deferred GPU weight upload — the first reply may take longer while weights stream to the GPU.'
-                : '') +
-            `. Prefer SmolLM2-360M on phones. If replies look like random symbols, clear site data/OPFS and reload GGUF (not a stale P64).`
+            `. Prefer SmolLM2-360M on phones. If replies look like random symbols, clear site data/OPFS and reload the GGUF (not a stale P64 cache).`
         );
         // Collapse setup on phones so conversation owns the screen
         if (isMobileDevice()) {

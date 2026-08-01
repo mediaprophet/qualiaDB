@@ -1359,21 +1359,14 @@ thread_local! {
     pub static WASM_ENGINE_INSTANCE: std::cell::RefCell<Option<QTensorEngine>> = std::cell::RefCell::new(None);
 }
 
+/// Boot the resident WASM WebGPU engine from GGUF or P64 bytes.
+///
+/// Uses the **original sync adopt path** (full weight + logits + norm upload) so
+/// decode stays coherent. Yields only between major phases so the UI can paint
+/// status; weight upload itself is intentionally one blocking stretch with a
+/// clear status line first (phones will freeze briefly — that is correct).
 #[cfg(target_arch = "wasm32")]
 pub async fn initialize_webgpu_engine(model_data: std::sync::Arc<[u8]>) -> Result<(), String> {
-    initialize_webgpu_engine_with_options(model_data, false).await
-}
-
-/// WASM LLM boot with phone-friendly options.
-///
-/// `defer_weight_upload`: skip the multi‑hundred‑MB GPU weight materialisation at
-/// init (the usual "stuck on Initialising WebGPU" phase on phones). Weights upload
-/// lazily on the first forward pass instead — init finishes; first token is slower.
-#[cfg(target_arch = "wasm32")]
-pub async fn initialize_webgpu_engine_with_options(
-    model_data: std::sync::Arc<[u8]>,
-    defer_weight_upload: bool,
-) -> Result<(), String> {
     use wasm_yield::{clear_init_status, phase, set_init_status};
 
     // Use `try_new()` (not `new_async()`) so a missing/incompatible WebGPU adapter
@@ -1382,22 +1375,28 @@ pub async fn initialize_webgpu_engine_with_options(
     // pending forever (the "stuck on Initialising…" hang).
     phase("Requesting WebGPU adapter + device…").await;
     let mut engine = QTensorEngine::try_new().await?;
-    phase("WebGPU device ready — loading model metadata…").await;
+    phase("WebGPU device + pipelines ready — loading model (weights may take 1–3 min)…").await;
 
     // Dual-format boot gate. P64 owns the canonical lowercase four-byte
-    // `p64\0` magic.
+    // `p64\0` magic. Sync adopt is the proven coherent path (do not defer uploads).
     if crate::p64_weight::has_p64_magic(&model_data) {
-        engine
-            .adopt_resident_p64_async(model_data, defer_weight_upload)
-            .await?;
+        set_init_status(format!(
+            "Loading P64 + uploading GPU weights ({:.0} MB)…",
+            model_data.len() as f64 / (1024.0 * 1024.0)
+        ));
+        // One yield so the status line paints before the long sync upload freezes the tab.
+        wasm_yield::yield_to_browser().await;
+        engine.adopt_resident_p64(model_data)?;
     } else {
-        engine
-            .adopt_resident_mmap_async(model_data, defer_weight_upload)
-            .await?;
+        set_init_status(format!(
+            "Loading GGUF + uploading GPU weights ({:.0} MB)…",
+            model_data.len() as f64 / (1024.0 * 1024.0)
+        ));
+        wasm_yield::yield_to_browser().await;
+        engine.adopt_resident_mmap(model_data)?;
     }
-    phase("Engine resident — finishing…").await;
+    phase("Engine resident — ready").await;
     WASM_ENGINE_INSTANCE.with(|g| *g.borrow_mut() = Some(engine));
-    set_init_status("ready");
     clear_init_status();
     Ok(())
 }

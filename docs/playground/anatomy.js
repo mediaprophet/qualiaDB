@@ -50,9 +50,24 @@ const SYSTEMS = [
   ["glymphatic", "Glymphatic", true],
 ];
 // Opaque skin occludes everything — peel by default.
-// On phones also mute high-poly systems until the person opts in (peak RAM).
+// On phones keep only a lite organ set until the person opts in (peak RAM on Pixel-class devices).
 const DEFAULT_MUTED = new Set(["integumentary"]);
-const MOBILE_EXTRA_MUTED = new Set(["muscular", "integumentary"]);
+const MOBILE_EXTRA_MUTED = new Set([
+  "muscular",
+  "integumentary",
+  "digestive",
+  "immune_lymphatic",
+  "endocrine",
+  "urinary",
+  "reproductive",
+  "sensory",
+  "exocrine",
+  "vestibular",
+  "ecs",
+  "ens",
+  "glymphatic",
+]);
+// Phone lite default keeps: circulatory, respiratory, nervous, skeletal.
 
 const CCF_SOURCE = {
   what: "3D reference-organ meshes",
@@ -90,7 +105,8 @@ const deviceMemoryGb = () => {
 };
 // Pixel-class phones often report 4–8 GB; Chrome still kills tabs near ~100 MB pack × multi-copy.
 // Cap backing-store DPR so WebGPU surfaces stay within budget after mesh upload.
-const anatomyMaxDpr = () => (isPhonePath() ? 1.75 : 3);
+// Pixel DPR is often 2.6–3.5; full-res WebGPU surfaces + ~100 MB mesh = tab kill.
+const anatomyMaxDpr = () => (isPhonePath() ? 1.25 : 3);
 
 /** Same-origin only for browser fetch. GitHub Releases do not send CORS ACAO for XHR/fetch,
  *  so a release URL fallback always fails in Chrome — prefer Pages-hosted packs (CI must ship them). */

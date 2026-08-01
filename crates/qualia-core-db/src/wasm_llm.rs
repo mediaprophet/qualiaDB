@@ -425,17 +425,14 @@ pub fn get_webgpu_init_status() -> String {
 
 /// Load a GGUF or P64 model into the resident browser WebGPU engine.
 ///
-/// `defer_weight_upload`: when true (recommended on phones), skip the multi‑hundred‑MB
-/// GPU weight materialisation during init so the UI leaves "Initialising WebGPU".
-/// Weights upload lazily on the first forward pass (slower first token).
+/// Single-argument ABI (stable for demos). Progress stages are published via
+/// [`get_webgpu_init_status`] while this future runs; the implementation yields to
+/// the browser between major phases so the status line can update.
 #[wasm_bindgen]
 pub async fn initialize_webgpu_engine(
     model_data: js_sys::Uint8Array,
-    defer_weight_upload: Option<bool>,
 ) -> Result<(), js_sys::Error> {
-    let defer = defer_weight_upload.unwrap_or(false);
-    // Copy once into WASM memory. This can take a few seconds for ~370 MB on phones —
-    // surface it so the UI is not stuck on a generic "Initialising…" with no feedback.
+    // Copy once into WASM memory. Can take a few seconds for ~370 MB on phones.
     #[cfg(target_arch = "wasm32")]
     crate::gguf_bridge::wasm_yield::phase(&format!(
         "Copying model into engine memory ({:.0} MB)…",
@@ -447,7 +444,9 @@ pub async fn initialize_webgpu_engine(
     #[cfg(target_arch = "wasm32")]
     crate::gguf_bridge::wasm_yield::yield_to_browser().await;
 
-    crate::gguf_bridge::initialize_webgpu_engine_with_options(arc, defer)
+    // Always full eager weight upload — the known-good path that produces coherent text.
+    // (Deferred upload was tried for phones and produced garbage / incomplete residency.)
+    crate::gguf_bridge::initialize_webgpu_engine(arc)
         .await
         .map_err(|e| js_sys::Error::new(&e))
 }

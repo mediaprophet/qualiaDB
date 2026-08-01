@@ -147,9 +147,12 @@ impl QTensorEngine {
         };
         #[cfg(target_arch = "wasm32")]
         let device = &wasm_device;
+        // One yield after device so the UI paints before pipeline compile freezes the main thread.
         #[cfg(target_arch = "wasm32")]
-        crate::gguf_bridge::wasm_yield::phase("Compiling compute pipelines (may take 30–90s on phones)…")
-            .await;
+        crate::gguf_bridge::wasm_yield::phase(
+            "Compiling compute pipelines (UI may pause 30–90s on phones — leave tab open)…",
+        )
+        .await;
         #[cfg(not(target_arch = "wasm32"))]
         let native_pipeline_cache = create_native_pipeline_cache(device);
         #[cfg(target_arch = "wasm32")]
@@ -307,8 +310,6 @@ impl QTensorEngine {
             cache: native_pipeline_cache.as_ref(),
         });
         #[cfg(target_arch = "wasm32")]
-        crate::gguf_bridge::wasm_yield::yield_to_browser().await;
-        #[cfg(target_arch = "wasm32")]
         let mmv_q8_0_pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
             label: Some("MulMatVec Q8_0 Pipeline (WASM)"),
             layout: Some(&mc8_gemm_pipeline_layout),
@@ -317,8 +318,6 @@ impl QTensorEngine {
             compilation_options: Default::default(),
             cache: native_pipeline_cache.as_ref(),
         });
-        #[cfg(target_arch = "wasm32")]
-        crate::gguf_bridge::wasm_yield::yield_to_browser().await;
         #[cfg(not(target_arch = "wasm32"))]
         let pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
             label: Some("Fused Transformer Pipeline"),
@@ -551,9 +550,6 @@ impl QTensorEngine {
             compilation_options: Default::default(),
             cache: native_pipeline_cache.as_ref(),
         });
-        #[cfg(target_arch = "wasm32")]
-        crate::gguf_bridge::wasm_yield::phase("Pipelines: attention done — elementwise next…")
-            .await;
         #[cfg(not(target_arch = "wasm32"))]
         let attention_pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
             label: Some("Fused Attention Pipeline"),
