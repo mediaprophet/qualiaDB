@@ -131,20 +131,29 @@ async function signTensorSliceRequest({
     return bytesToHex(sig);
 }
 
-/** Set canvas backing store from layout box (CSS 100% does not set width/height attributes). */
-export function ensureCanvasBackingStore(canvas, minW = 640, minH = 360) {
+/**
+ * Set canvas backing store from layout box (CSS 100% does not set width/height attributes).
+ * @param {HTMLCanvasElement} canvas
+ * @param {number} [minW=640]
+ * @param {number} [minH=360]
+ * @param {{ maxDpr?: number }} [opts] Cap devicePixelRatio on phones to limit WebGPU VRAM
+ *   (Pixel DPR is often 2.5–3.5; full-res anatomy surfaces OOMed after pack decode).
+ */
+export function ensureCanvasBackingStore(canvas, minW = 640, minH = 360, opts = {}) {
     if (!canvas) return { w: minW, h: minH };
     const rect = canvas.getBoundingClientRect();
     const cssW = Math.max(Math.round(rect.width) || minW, 1);
     const cssH = Math.max(Math.round(rect.height) || minH, 1);
-    const dpr = typeof window !== 'undefined' ? (window.devicePixelRatio || 1) : 1;
+    const rawDpr = typeof window !== 'undefined' ? (window.devicePixelRatio || 1) : 1;
+    const maxDpr = typeof opts.maxDpr === 'number' && opts.maxDpr > 0 ? opts.maxDpr : Infinity;
+    const dpr = Math.min(rawDpr, maxDpr);
     const w = Math.round(cssW * dpr);
     const h = Math.round(cssH * dpr);
     if (canvas.width !== w || canvas.height !== h) {
         canvas.width = w;
         canvas.height = h;
     }
-    return { w, h };
+    return { w, h, dpr };
 }
 
 /** Published portal artefact names (CI copies wasm-pack output → qualia.js + qualia_bg.wasm). */

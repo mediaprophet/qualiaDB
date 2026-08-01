@@ -527,8 +527,9 @@ function applyMobileModelPolicy() {
         const memTxt = mem != null ? ` This browser reports ~${mem} GB deviceMemory.` : '';
         hint.innerHTML =
             `<strong>Phone / low-RAM path.</strong> Use <em>SmolLM2 360M Q8_0</em> (~369 MB). ` +
-            `Larger models often kill the tab (the engine currently materialises weights in JS heap).` +
-            `${memTxt} Stay on Wi‑Fi; first load downloads once and caches in OPFS.`;
+            `First load downloads, then compiles to P64 and boots WebGPU — the tab can look frozen for 1–3 minutes after 100% download; leave Chrome in the foreground. ` +
+            `If it fails after download, tap Load again (OPFS cache skips the download). ` +
+            `Larger models often kill the tab.${memTxt} Prefer Wi‑Fi; close other tabs.`;
     }
 }
 
@@ -611,11 +612,11 @@ function setMode(mode) {
 
 function formatLoadError(err) {
     const msg = err?.message ?? String(err);
-    if (/webgpu|adapter/i.test(msg)) {
-        return `${msg} — WebGPU is required for Qualia native inference. Use Chrome/Edge (Android) or Safari 18+ (iOS) with GPU enabled.`;
+    if (/webgpu|adapter/i.test(msg) && !/timed out/i.test(msg)) {
+        return `${msg} — WebGPU is required for Qualia native inference. Use Chrome/Edge (Android) or Safari 18+ (iOS) with GPU enabled. Not an in-app browser (Gmail/Instagram/etc.).`;
     }
-    if (/out of memory|oom|Array buffer allocation|Invalid array length|Failed to allocate/i.test(msg)) {
-        return `${msg} — the browser ran out of memory. On phones use SmolLM2 360M only, close other tabs, and reload. Larger models need a desktop.`;
+    if (/out of memory|oom|Array buffer allocation|Invalid array length|Failed to allocate|memory access out of bounds/i.test(msg)) {
+        return `${msg} — the browser ran out of memory after the download. Close other tabs, hard-refresh, then tap Load again (P64 may already be in OPFS so download is skipped). Stay on SmolLM2 360M.`;
     }
     if (/fetch\s*0|Failed to fetch|NetworkError|CORS/i.test(msg)) {
         return `${msg} — download blocked (network/CORS). Try again on Wi‑Fi, or load a local .p64/.gguf file from your device.`;
@@ -623,8 +624,14 @@ function formatLoadError(err) {
     if (/SharedArrayBuffer|crossOriginIsolated|COOP|COEP/i.test(msg)) {
         return `${msg} — cross-origin isolation failed. Hard-refresh once so the COI service worker can set isolation headers.`;
     }
-    if (/timed out|requestDevice|adapter/i.test(msg)) {
+    if (/timed out/i.test(msg)) {
+        return `${msg} — compile/init stalled (common when the tab is backgrounded on phones). Leave Chrome in the foreground, close other tabs, and tap Load again — OPFS usually already has the model so only init re-runs.`;
+    }
+    if (/requestDevice|adapter/i.test(msg)) {
         return `${msg} — engine did not become ready after download. Prefer Chrome (not in-app browsers), reload once, and stay on SmolLM2 360M.`;
+    }
+    if (/Tokenizer is fallback-only|vocab=/i.test(msg)) {
+        return `${msg} — clear site storage (OPFS) and reload the GGUF so a fresh P64 with a real tokenizer is compiled.`;
     }
     return msg;
 }
@@ -783,9 +790,22 @@ async function loadModel() {
         // Yield so "Initialising…" paints before the heavy WebGPU path.
         // On phones the previous hang was: download finishes → UI freezes on
         // init with no further status (or a rejected promise that never settled).
-        showDlStatus('Initialising Qualia WebGPU engine… (may take 30–90s on phones)');
+        const mem = deviceMemoryGb();
+        if (isMobileDevice() && mem != null && mem <= 2) {
+            throw new Error(
+                `This device reports only ~${mem} GB RAM (deviceMemory). ` +
+                `SmolLM2 360M Q8 needs more headroom for compile + WebGPU weight upload. ` +
+                `Try a phone with more free memory, or use desktop.`,
+            );
+        }
+        showDlStatus(
+            isMobileDevice()
+                ? 'Initialising Qualia WebGPU engine… (30–180s on phones — keep this tab open and in the foreground)'
+                : 'Initialising Qualia WebGPU engine…',
+        );
         setEngineStatus('Initialising WebGPU engine…', 'info');
-        await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0)));
+        // Two frames + a short delay so the status line and progress paint before the freeze.
+        await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(r, 50))));
 
         const modelBytes = ggufBytes;
         ggufBytes = null; // drop before init so peak RAM is model + engine, not 2×
@@ -793,19 +813,35 @@ async function loadModel() {
             try { globalThis.gc(); } catch { /* optional */ }
         }
 
-        const INIT_TIMEOUT_MS = isMobileDevice() ? 180_000 : 120_000;
-        await Promise.race([
-            initialize_webgpu_engine(modelBytes),
-            new Promise((_, reject) => {
-                setTimeout(() => {
-                    reject(new Error(
-                        `WebGPU engine init timed out after ${Math.round(INIT_TIMEOUT_MS / 1000)}s. ` +
-                        `On phones: use SmolLM2 360M only, close other tabs, hard-refresh once for COI, ` +
-                        `and confirm chrome://flags WebGPU is enabled.`,
-                    ));
-                }, INIT_TIMEOUT_MS);
-            }),
-        ]);
+        // Phones need a long timeout: GGUF→P64 may already be done, but weight upload to GPU is slow.
+        const INIT_TIMEOUT_MS = isMobileDevice() ? 240_000 : 120_000;
+        let initHeartbeat = null;
+        const initStarted = Date.now();
+        if (isMobileDevice()) {
+            initHeartbeat = setInterval(() => {
+                const sec = Math.round((Date.now() - initStarted) / 1000);
+                showDlStatus(`Initialising WebGPU engine… ${sec}s (still working — do not background Chrome)`);
+            }, 4000);
+        }
+        try {
+            await Promise.race([
+                initialize_webgpu_engine(modelBytes),
+                new Promise((_, reject) => {
+                    setTimeout(() => {
+                        reject(new Error(
+                            `WebGPU engine init timed out after ${Math.round(INIT_TIMEOUT_MS / 1000)}s. ` +
+                            `On phones: use SmolLM2 360M only, close other tabs, leave Chrome foreground, ` +
+                            `hard-refresh once for COI, and confirm WebGPU is enabled.`,
+                        ));
+                    }, INIT_TIMEOUT_MS);
+                }),
+            ]);
+        } finally {
+            if (initHeartbeat) clearInterval(initHeartbeat);
+        }
+        // Drop the JS-side model buffer as soon as WASM owns it (engine holds Arc<[u8]>).
+        // modelBytes may still be reachable until GC; null the local and hope.
+        // (Cannot detach if wasm-bindgen still holds a view of the same buffer.)
         if (!isWebgpuEngineReady()) throw new Error('Engine failed to initialise after model load');
 
         // Fail closed in the UI when the resident tokenizer is the 256-byte fallback.
@@ -850,7 +886,10 @@ async function loadModel() {
         document.getElementById('load-btn').disabled = false;
         document.getElementById('load-btn').innerHTML = '<i class="fas fa-download"></i> Load Model';
         const friendly = formatLoadError(err);
-        showDlStatus(`Error: ${friendly}`);
+        const retryHint = isMobileDevice()
+            ? ' Tip: tap Load again — if download already finished, OPFS should skip it and only re-run init.'
+            : '';
+        showDlStatus(`Error: ${friendly}${retryHint}`);
         setEngineStatus(`Load failed: ${friendly}`, 'error');
         try { await releaseWebgpuEngine(); } catch {}
         modelLoaded = false;

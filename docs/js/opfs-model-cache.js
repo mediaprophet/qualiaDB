@@ -229,14 +229,16 @@ export async function loadOrCompileP64(ggufUrl, baseName, { compile, formatVersi
     // compile freezes the event loop (otherwise phones look stuck after download).
     await new Promise((r) => {
       if (typeof requestAnimationFrame === 'function') {
-        requestAnimationFrame(() => setTimeout(r, 0));
+        requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(r, 40)));
       } else {
-        setTimeout(r, 0);
+        setTimeout(r, 40);
       }
     });
     p64 = compile(gguf, 14); // wasm AOT compile (16 KB pages) → Uint8Array
     gguf = null; // free the GGUF cold-path buffer ASAP
     source = 'compiled';
+    // Let the browser reclaim the GGUF heap before OPFS write + WebGPU init (phones).
+    await new Promise((r) => setTimeout(r, 0));
   }
   if (!isP64Header(p64, formatVersion)) {
     throw new Error('AOT compiler returned non-P64 bytes or an unexpected P64 version');

@@ -50,7 +50,9 @@ const SYSTEMS = [
   ["glymphatic", "Glymphatic", true],
 ];
 // Opaque skin occludes everything — peel by default.
+// On phones also mute high-poly systems until the person opts in (peak RAM).
 const DEFAULT_MUTED = new Set(["integumentary"]);
+const MOBILE_EXTRA_MUTED = new Set(["muscular", "integumentary"]);
 
 const CCF_SOURCE = {
   what: "3D reference-organ meshes",
@@ -80,14 +82,93 @@ const isCoarsePointer = () =>
   false;
 const isMobileUA = () =>
   /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || "");
+/** True on phones / coarse pointers — cap canvas DPR and mute heavier systems. */
+const isPhonePath = () => isMobileUA() || isCoarsePointer();
+const deviceMemoryGb = () => {
+  const m = navigator.deviceMemory;
+  return typeof m === "number" && m > 0 ? m : null;
+};
+// Pixel-class phones often report 4–8 GB; Chrome still kills tabs near ~100 MB pack × multi-copy.
+// Cap backing-store DPR so WebGPU surfaces stay within budget after mesh upload.
+const anatomyMaxDpr = () => (isPhonePath() ? 1.75 : 3);
 
-/** Same-origin first (Pages deploy), then GitHub Release as secondary. */
+/** Same-origin only for browser fetch. GitHub Releases do not send CORS ACAO for XHR/fetch,
+ *  so a release URL fallback always fails in Chrome — prefer Pages-hosted packs (CI must ship them). */
 function bodyUrls(key) {
   if (key === "complete") {
-    return [`${RELEASE_BASE}/anatomy-bodyparts3d.hmc`];
+    // Complete body is file-picker only in the browser (CORS + ~700 MB).
+    return [];
   }
   const name = `anatomy-${key}.hmc`;
-  return [name, `${RELEASE_BASE}/${name}`];
+  return [name];
+}
+
+/** OPFS cache key for a body pack (versioned so engine bumps invalidate). */
+function packCacheName(key) {
+  return `anatomy-v${ENGINE_VERSION}-${key}.hmc`;
+}
+
+async function opfsRoot() {
+  try {
+    if (!navigator?.storage?.getDirectory) return null;
+    return await navigator.storage.getDirectory();
+  } catch {
+    return null;
+  }
+}
+
+/** Read a previously cached pack from OPFS (if any). */
+async function readPackFromOpfs(key) {
+  const root = await opfsRoot();
+  if (!root) return null;
+  try {
+    const fh = await root.getFileHandle(packCacheName(key));
+    const file = await fh.getFile();
+    if (file.size < 1024) return null;
+    setProgress(true, 100, `OPFS cache · ${(file.size / 1e6).toFixed(0)} MB`);
+    return new Uint8Array(await file.arrayBuffer());
+  } catch {
+    return null;
+  }
+}
+
+/** Best-effort OPFS write after a successful network fetch. */
+async function writePackToOpfs(key, bytes) {
+  const root = await opfsRoot();
+  if (!root || !bytes || !bytes.length) return;
+  const name = packCacheName(key);
+  const part = name + ".part";
+  try {
+    const partHandle = await root.getFileHandle(part, { create: true });
+    const writable = await partHandle.createWritable();
+    const CHUNK = 8 * 1024 * 1024;
+    for (let off = 0; off < bytes.length; off += CHUNK) {
+      await writable.write(bytes.subarray(off, Math.min(off + CHUNK, bytes.length)));
+    }
+    await writable.close();
+    if (typeof partHandle.move === "function") {
+      await partHandle.move(name);
+    } else {
+      const fin = await root.getFileHandle(name, { create: true });
+      const w = await fin.createWritable();
+      for (let off = 0; off < bytes.length; off += CHUNK) {
+        await w.write(bytes.subarray(off, Math.min(off + CHUNK, bytes.length)));
+      }
+      await w.close();
+      try {
+        await root.removeEntry(part);
+      } catch {
+        /* ignore */
+      }
+    }
+  } catch (e) {
+    console.warn("[anatomy] OPFS cache write failed:", e);
+    try {
+      await root.removeEntry(part);
+    } catch {
+      /* ignore */
+    }
+  }
 }
 function bodyUrl(key) {
   return bodyUrls(key)[0];
@@ -154,7 +235,7 @@ function onResize() {
   // Skip 0×0 — common on first mobile paint before flex/dvh settles; resizing the
   // WebGPU surface to zero blanks the body and looks like a failed render.
   if (w < 2 || h < 2) return;
-  ensureCanvasBackingStore(canvas, w, h);
+  ensureCanvasBackingStore(canvas, w, h, { maxDpr: anatomyMaxDpr() });
   if (portal && portal.resize) {
     try {
       portal.resize(canvas, w, h);
@@ -174,7 +255,7 @@ async function waitForLayout(maxMs = 2500) {
     await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
   }
   // Last resort: force a usable backing store so WebGPU can bind.
-  if (canvas) ensureCanvasBackingStore(canvas, 360, 640);
+  if (canvas) ensureCanvasBackingStore(canvas, 360, 640, { maxDpr: anatomyMaxDpr() });
   onResize();
   return layoutSize();
 }
@@ -298,21 +379,16 @@ async function boot() {
   new ResizeObserver(() => {
     onResize();
     // After a real size appears post-load, re-push the body so the mesh is not stuck at 0×0.
+    // Debounced — mobile chrome (URL bar hide) must not re-decode the whole pack every frame.
     if (bodyBytes && layoutSize().w >= 32) {
-      try {
-        applyMixer();
-        applyCam();
-      } catch (_) {}
+      scheduleApplyMixer(false);
     }
   }).observe(container);
   window.addEventListener("resize", onResize);
   window.addEventListener("orientationchange", () => {
     setTimeout(async () => {
       await waitForLayout(800);
-      if (bodyBytes) {
-        applyMixer();
-        applyCam();
-      }
+      if (bodyBytes) scheduleApplyMixer(true);
     }, 200);
   });
   setupOrbit();
@@ -323,10 +399,7 @@ async function boot() {
   // One more layout pass after the first body (mobile URL bar / safe-area settle).
   setTimeout(async () => {
     await waitForLayout(600);
-    if (bodyBytes) {
-      applyMixer();
-      applyCam();
-    }
+    if (bodyBytes) scheduleApplyMixer(true);
   }, 400);
 }
 
@@ -345,9 +418,10 @@ function renderPackBytes(bytes) {
     packParts = [];
   }
   disabledParts.clear();
+  lastApplySignature = ""; // force a real decode for the new pack
   buildMixer();
   buildPartsList();
-  applyMixer();
+  scheduleApplyMixer(true);
   setProgress(false);
   // After first body on mobile, keep sheet closed so the person sees the body.
   if (isSheetMode()) setSheetOpen(false);
@@ -362,7 +436,8 @@ function showCompleteLoader(show) {
 
 async function fetchWithProgress(url, label) {
   setProgress(true, 0, label || "Downloading…");
-  const resp = await fetch(url, { cache: "no-store" });
+  // Prefer HTTP cache on revisit; first visit still streams once.
+  const resp = await fetch(url, { cache: "force-cache" });
   if (!resp.ok) {
     setProgress(false);
     throw Object.assign(new Error(`HTTP ${resp.status}`), { status: resp.status, resp });
@@ -445,44 +520,76 @@ async function loadBody(key) {
     return;
   }
 
-  // CCF male/female: same-origin on Pages (preferred), GitHub Release fallback.
-  const sizeHint = isMobileUA() || isCoarsePointer()
-    ? " (~90–120 MB — stay on Wi‑Fi)"
-    : "";
-  setStatus(`Fetching ${bodyLabel(key)} reference body${sizeHint}…`);
+  const sizeHint = isPhonePath() ? " (~90–120 MB — stay on Wi‑Fi)" : "";
+  const mem = deviceMemoryGb();
+  const memHint = mem != null && mem <= 4 ? ` · ~${mem} GB deviceMemory` : "";
+
+  // 1) OPFS hit — skip network (second visit / retry after a failed GPU upload).
+  try {
+    setStatus(`Looking for cached ${bodyLabel(key)} body…`);
+    const cached = await readPackFromOpfs(key);
+    if (cached && cached.length >= 1024) {
+      setStatus(`Building ${bodyLabel(key)} body from OPFS cache${memHint}…`);
+      setProgress(true, 100, "Building body…");
+      await waitForLayout(800);
+      // Yield so status paints before the heavy decode/GPU path freezes the main thread.
+      await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0)));
+      renderPackBytes(cached);
+      onResize();
+      applyCam();
+      return;
+    }
+  } catch (e) {
+    console.warn("[anatomy] OPFS read failed:", e);
+  }
+
+  // 2) Same-origin fetch (Pages). Do not attempt GitHub Release — no CORS for browser fetch.
+  setStatus(`Fetching ${bodyLabel(key)} reference body${sizeHint}${memHint}…`);
   const urls = bodyUrls(key);
   let lastErr = null;
   for (const url of urls) {
     try {
-      const label =
-        url.startsWith("http")
-          ? `Release ${bodyLabel(key)}`
-          : `Fetching ${bodyLabel(key)}`;
+      const label = `Fetching ${bodyLabel(key)}`;
       const bytes = await fetchWithProgress(url, label);
       if (!bytes || bytes.length < 1024) {
         throw new Error("pack too small / empty");
       }
+      // Cache before decode so a mid-render OOM still leaves a retry path without re-download.
+      void writePackToOpfs(key, bytes);
+      setStatus(`Building ${bodyLabel(key)} body (${(bytes.length / 1e6).toFixed(0)} MB pack)…`);
+      setProgress(true, 100, "Building body…");
       await waitForLayout(800);
+      await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0)));
       renderPackBytes(bytes);
       onResize();
       applyCam();
       return;
     } catch (e) {
       lastErr = e;
-      console.warn("[anatomy] pack fetch failed for", url, e);
+      console.warn("[anatomy] pack fetch/build failed for", url, e);
+      const msg = String(e && e.message ? e.message : e);
+      if (/out of memory|oom|allocation|RangeError/i.test(msg)) {
+        setProgress(false);
+        setStatus(
+          "Phone ran out of memory while building the body. Keep Skin/Muscular off (default), close other tabs, hard-refresh, then try again — the pack is cached in OPFS so it will not re-download.",
+          "error",
+        );
+        if (isSheetMode()) setSheetOpen(true);
+        return;
+      }
     }
   }
   setProgress(false);
   if (lastErr && lastErr.status) {
     setStatus(
-      `Body pack not found (HTTP ${lastErr.status}). Pages must ship anatomy-male/female.hmc (see scripts/fetch_anatomy_packs_release.sh) or the v${ENGINE_VERSION} release assets.`,
+      `Body pack not found (HTTP ${lastErr.status}). Pages must ship anatomy-male/female.hmc under playground/ (CI fetch_anatomy_packs_release.sh).`,
       "error",
     );
   } else {
     setStatus(
-      "Body pack fetch failed: " +
+      "Body pack load failed: " +
         (lastErr && lastErr.message ? lastErr.message : lastErr) +
-        ". On phones stay on Wi‑Fi; try Male if Female failed (or the reverse).",
+        ". On phones use Chrome (not an in-app browser), stay on Wi‑Fi, try Male if Female failed.",
       "error",
     );
   }
@@ -515,10 +622,48 @@ window.onCompleteFile = (file) => {
   reader.readAsArrayBuffer(file);
 };
 
+let applyMixerTimer = null;
+let lastApplySignature = "";
+let applyInFlight = false;
+
+function mixerSignature() {
+  const levels = Object.keys(systemLevels)
+    .sort()
+    .map((k) => `${k}:${systemLevels[k]}`)
+    .join(",");
+  const disabled = Array.from(disabledParts).sort().join(",");
+  const { w, h } = layoutSize();
+  // Quantise size so 1px chrome jitter does not re-decode the whole pack.
+  return `${currentBody}|${levels}|${disabled}|${Math.round(w / 8)}x${Math.round(h / 8)}`;
+}
+
+/** Debounced mixer apply — phones re-fire resize/orientation and must not re-decode 100 MB packs. */
+function scheduleApplyMixer(immediate = false) {
+  if (immediate) {
+    if (applyMixerTimer) {
+      clearTimeout(applyMixerTimer);
+      applyMixerTimer = null;
+    }
+    applyMixer();
+    return;
+  }
+  if (applyMixerTimer) clearTimeout(applyMixerTimer);
+  applyMixerTimer = setTimeout(() => {
+    applyMixerTimer = null;
+    applyMixer();
+  }, isPhonePath() ? 220 : 60);
+}
+
 function applyMixer() {
-  if (!portal || !bodyBytes) return;
+  if (!portal || !bodyBytes || applyInFlight) return;
+  const sig = mixerSignature();
+  if (sig === lastApplySignature && window.__lastRender) {
+    applyCam();
+    return;
+  }
   onResize();
   const noun = currentBody === "complete" ? "structures" : "organs";
+  applyInFlight = true;
   try {
     const r = portal.load_body_from_qualia_bundle_mixed(
       bodyBytes,
@@ -526,6 +671,7 @@ function applyMixer() {
       Array.from(disabledParts),
     );
     window.__lastRender = r;
+    lastApplySignature = sig;
     const organs = r && r.organs_loaded != null ? r.organs_loaded : "?";
     const tris =
       r && r.total_triangles != null ? Number(r.total_triangles).toLocaleString() : "?";
@@ -539,17 +685,20 @@ function applyMixer() {
     }
     const gesture = isCoarsePointer() ? "drag to orbit · pinch to zoom" : "drag to orbit · scroll to zoom";
     setStatus(`${bodyLabel(currentBody)} body · ${organs} ${noun} · ${tris} triangles · ${gesture}`, "ok");
+    setProgress(false);
     applyCam();
   } catch (e) {
     const msg = String(e);
     if (/out of memory|oom|allocation|RangeError/i.test(msg)) {
       setStatus(
-        "Render ran out of memory. On phones keep Skin off (default), close other tabs, or use Male/Female only — not the complete pack.",
+        "Render ran out of memory. On phones keep Skin/Muscular off (default), close other tabs, or reload — pack stays in OPFS.",
         "error",
       );
     } else {
       setStatus("Render error: " + e, "error");
     }
+  } finally {
+    applyInFlight = false;
   }
 }
 
@@ -568,11 +717,14 @@ function buildMixer() {
   host.innerHTML = "";
   const present = systemsInPack();
   const havePack = packParts.length > 0;
+  const muteSet = isPhonePath()
+    ? new Set([...DEFAULT_MUTED, ...MOBILE_EXTRA_MUTED])
+    : DEFAULT_MUTED;
   const overlayTip =
     "A distributed network with no standalone organ mesh — evaluated and painted as an overlay on its host organs.";
   for (const [id, label, overlay] of SYSTEMS) {
     if (havePack && !overlay && !present.has(id)) continue;
-    const muted = DEFAULT_MUTED.has(id);
+    const muted = muteSet.has(id);
     systemLevels[id] = muted ? 0 : 1.0;
     const row = document.createElement("div");
     row.className = "mixer-row" + (overlay ? " mixer-row-overlay" : "");
@@ -596,7 +748,7 @@ function buildMixer() {
       });
       fader.addEventListener("change", () => {
         systemLevels[id] = fader.value / 100;
-        applyMixer();
+        scheduleApplyMixer(true);
       });
     }
     row.appendChild(name);
@@ -646,7 +798,7 @@ function buildPartsList() {
       cb.addEventListener("change", () => {
         if (cb.checked) disabledParts.delete(p.key);
         else disabledParts.add(p.key);
-        applyMixer();
+        scheduleApplyMixer(true);
       });
       const span = document.createElement("span");
       span.textContent = label;
@@ -688,7 +840,7 @@ window.setAllParts = (on) => {
     if (on) disabledParts.delete(p.key);
     else disabledParts.add(p.key);
   });
-  applyMixer();
+  scheduleApplyMixer(true);
 };
 
 window.onAmbient = (checked) => {

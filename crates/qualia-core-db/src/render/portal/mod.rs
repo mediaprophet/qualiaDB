@@ -82,6 +82,142 @@ struct ProjectedNode {
     epistemic_ring: bool,
 }
 
+/// Accumulates decoded organ meshes for the whole-body anatomy path.
+/// Keeps decoding entirely in Rust so phone browsers never hold N organ copies in JS.
+struct BodyMeshAccum {
+    positions: Vec<[f32; 3]>,
+    colors: Vec<[f32; 4]>,
+    indices: Vec<u32>,
+    gmin: [f32; 3],
+    gmax: [f32; 3],
+    organs_loaded: u32,
+    organs_refused: u32,
+    total_triangles: u32,
+}
+
+impl BodyMeshAccum {
+    fn new() -> Self {
+        Self {
+            positions: Vec::new(),
+            colors: Vec::new(),
+            indices: Vec::new(),
+            gmin: [f32::INFINITY; 3],
+            gmax: [f32::NEG_INFINITY; 3],
+            organs_loaded: 0,
+            organs_refused: 0,
+            total_triangles: 0,
+        }
+    }
+
+    /// Decode one sealed `.10d` organ. One owned buffer for CRC verify only —
+    /// no JS heap intermediate, no second clone after `to_vec`.
+    fn append_organ_10d(&mut self, organ_bytes: &[u8], rgba: [f32; 4]) {
+        use crate::container_10d::{
+            self,
+            header::{Container10dHeader, FLAG_DEFAULT_DISPOSITION_REFUSE},
+        };
+
+        let mut bytes = organ_bytes.to_vec();
+        let header = match Container10dHeader::parse(&bytes) {
+            Ok(h) => h,
+            Err(_) => return,
+        };
+        if container_10d::verify_whole_file_crc32c(&mut bytes).is_err() {
+            return;
+        }
+        let descs = match container_10d::parse_section_table(&bytes, &header) {
+            Ok(d) => d,
+            Err(_) => return,
+        };
+
+        let mut mesh = None;
+        let mut has_attestation = false;
+        for desc in descs.iter() {
+            let st = match container_10d::SectionType::from_u8(desc.section_type) {
+                Some(st) => st,
+                None => continue,
+            };
+            let off = desc.byte_offset as usize;
+            let len = desc.byte_length as usize;
+            if off.saturating_add(len) > bytes.len() {
+                continue;
+            }
+            let payload = &bytes[off..off + len];
+            match st {
+                container_10d::SectionType::QuantizedMesh => {
+                    if let Ok(m) = container_10d::decode_mesh_section(payload) {
+                        mesh = Some(m);
+                    }
+                }
+                container_10d::SectionType::ProvenanceSidecar => {
+                    if let Ok(view) =
+                        container_10d::provenance_section::decode_provenance_section(payload)
+                    {
+                        if container_10d::provenance_section::validate_provenance(&view).is_ok() {
+                            has_attestation = true;
+                        }
+                    }
+                }
+                _ => {}
+            }
+        }
+
+        let Some(mesh) = mesh else {
+            return;
+        };
+        let governance_refused =
+            (header.flags & FLAG_DEFAULT_DISPOSITION_REFUSE) != 0 && !has_attestation;
+        if governance_refused {
+            self.organs_refused += 1;
+            return;
+        }
+
+        for k in 0..3 {
+            if mesh.min[k] < self.gmin[k] {
+                self.gmin[k] = mesh.min[k];
+            }
+            if mesh.max[k] > self.gmax[k] {
+                self.gmax[k] = mesh.max[k];
+            }
+        }
+        let base = self.positions.len() as u32;
+        let [r, g, b, a] = rgba;
+        for p in mesh.positions.iter() {
+            self.positions.push([p[0], p[1], p[2]]);
+            self.colors.push([r, g, b, a]);
+        }
+        for t in mesh.triangles.iter() {
+            self.indices.push(base + t[0]);
+            self.indices.push(base + t[1]);
+            self.indices.push(base + t[2]);
+        }
+        self.total_triangles += mesh.triangles.len() as u32;
+        self.organs_loaded += 1;
+    }
+
+    /// One global centre + scale so the body fits ~1.7 of the orbit frame.
+    fn normalise_to_orbit_frame(&mut self) {
+        if self.organs_loaded == 0 {
+            return;
+        }
+        let gc = [
+            (self.gmin[0] + self.gmax[0]) * 0.5,
+            (self.gmin[1] + self.gmax[1]) * 0.5,
+            (self.gmin[2] + self.gmax[2]) * 0.5,
+        ];
+        let gspan = (self.gmax[0] - self.gmin[0])
+            .max(self.gmax[1] - self.gmin[1])
+            .max(self.gmax[2] - self.gmin[2])
+            .max(1e-6);
+        let s = 1.7 / gspan;
+        for p in self.positions.iter_mut() {
+            p[0] = (p[0] - gc[0]) * s;
+            p[1] = (p[1] - gc[1]) * s;
+            p[2] = (p[2] - gc[2]) * s;
+        }
+    }
+}
+
 /// Portal tier: 0 = CPU canvas2d fallback, 1 = tensor projection, 2 = WebGPU ambient.
 #[wasm_bindgen]
 pub struct QualiaPortal {
@@ -865,27 +1001,16 @@ impl QualiaPortal {
     /// `organs` is a JS `Array` of objects: `{ bytes: Uint8Array, r: f32, g: f32, b: f32, a: f32 }`
     /// (per-organ colour). Any `x/y/z` fields are ignored — the mesh already carries its position.
     /// Returns `{ organs_loaded, organs_refused, total_triangles }`.
+    ///
+    /// Prefer [`Self::load_body_from_qualia_bundle_mixed`] for packs — that path never materialises a
+    /// per-organ JS `Uint8Array` copy (critical on phones).
     pub fn load_body_organs_colored(&mut self, organs: &Array) -> Result<JsValue, JsValue> {
-        use crate::container_10d::{
-            self,
-            header::{Container10dHeader, FLAG_DEFAULT_DISPOSITION_REFUSE},
-        };
-
-        let mut all_positions: Vec<[f32; 3]> = Vec::new();
-        let mut all_colors: Vec<[f32; 4]> = Vec::new();
-        let mut all_indices: Vec<u32> = Vec::new();
-        let mut organs_loaded = 0u32;
-        let mut organs_refused = 0u32;
-        let mut total_triangles = 0u32;
-        // Whole-body bounds accumulated across all organs (they share one coordinate space), so a single
-        // global centre + scale can be applied after decoding.
-        let mut gmin = [f32::INFINITY; 3];
-        let mut gmax = [f32::NEG_INFINITY; 3];
-
+        let mut accum = BodyMeshAccum::new();
         for i in 0..organs.length() {
             let organ = organs.get(i);
             let bytes_val = Reflect::get(&organ, &JsValue::from_str("bytes"))
                 .map_err(|_| JsValue::from_str("organ.bytes missing"))?;
+            // One JS→Rust copy only (no secondary clone for CRC).
             let bytes: Vec<u8> = js_sys::Uint8Array::new(&bytes_val).to_vec();
             let r = Reflect::get(&organ, &JsValue::from_str("r"))
                 .ok()
@@ -903,128 +1028,9 @@ impl QualiaPortal {
                 .ok()
                 .and_then(|v| v.as_f64())
                 .unwrap_or(1.0) as f32;
-
-            let mut bytes_mut = bytes.clone();
-            let header = match Container10dHeader::parse(&bytes_mut) {
-                Ok(h) => h,
-                Err(_) => continue, // skip undecodable organs
-            };
-            if container_10d::verify_whole_file_crc32c(&mut bytes_mut).is_err() {
-                continue;
-            }
-            let descs = match container_10d::parse_section_table(&bytes_mut, &header) {
-                Ok(d) => d,
-                Err(_) => continue,
-            };
-
-            let mut mesh = None;
-            let mut has_attestation = false;
-            for desc in descs.iter() {
-                let st = match container_10d::SectionType::from_u8(desc.section_type) {
-                    Some(st) => st,
-                    None => continue,
-                };
-                let off = desc.byte_offset as usize;
-                let len = desc.byte_length as usize;
-                let payload = &bytes_mut[off..off + len];
-                match st {
-                    container_10d::SectionType::QuantizedMesh => {
-                        if let Ok(m) = container_10d::decode_mesh_section(payload) {
-                            mesh = Some(m);
-                        }
-                    }
-                    container_10d::SectionType::ProvenanceSidecar => {
-                        if let Ok(view) =
-                            container_10d::provenance_section::decode_provenance_section(payload)
-                        {
-                            if container_10d::provenance_section::validate_provenance(&view).is_ok()
-                            {
-                                has_attestation = true;
-                            }
-                        }
-                    }
-                    _ => {}
-                }
-            }
-
-            let Some(mesh) = mesh else { continue };
-            let governance_refused =
-                (header.flags & FLAG_DEFAULT_DISPOSITION_REFUSE) != 0 && !has_attestation;
-            if governance_refused {
-                organs_refused += 1;
-                continue;
-            }
-
-            // Keep the organ's TRUE coordinates; grow the whole-body bounds. Placement happens once,
-            // globally, after every organ is decoded.
-            for k in 0..3 {
-                if mesh.min[k] < gmin[k] {
-                    gmin[k] = mesh.min[k];
-                }
-                if mesh.max[k] > gmax[k] {
-                    gmax[k] = mesh.max[k];
-                }
-            }
-            let base = all_positions.len() as u32;
-            for p in mesh.positions.iter() {
-                all_positions.push([p[0], p[1], p[2]]);
-                all_colors.push([r, g, b, a]);
-            }
-            for t in mesh.triangles.iter() {
-                all_indices.push(base + t[0]);
-                all_indices.push(base + t[1]);
-                all_indices.push(base + t[2]);
-            }
-            total_triangles += mesh.triangles.len() as u32;
-            organs_loaded += 1;
+            accum.append_organ_10d(&bytes, [r, g, b, a]);
         }
-
-        // One global centre + scale — preserves true anatomical positions and relative organ sizes, and
-        // fits whatever subset is present (skin on or off) to ~1.7 of the orbit frame.
-        if organs_loaded > 0 {
-            let gc = [
-                (gmin[0] + gmax[0]) * 0.5,
-                (gmin[1] + gmax[1]) * 0.5,
-                (gmin[2] + gmax[2]) * 0.5,
-            ];
-            let gspan = (gmax[0] - gmin[0])
-                .max(gmax[1] - gmin[1])
-                .max(gmax[2] - gmin[2])
-                .max(1e-6);
-            let s = 1.7 / gspan;
-            for p in all_positions.iter_mut() {
-                p[0] = (p[0] - gc[0]) * s;
-                p[1] = (p[1] - gc[1]) * s;
-                p[2] = (p[2] - gc[2]) * s;
-            }
-        }
-
-        if let Some(ref mut gpu) = self.gpu {
-            gpu.upload_mesh_colored(&all_positions, &all_colors, &all_indices);
-            self.tier = 2;
-        }
-
-        self.description = format!(
-            "{organs_loaded} organs · {total_triangles} triangles · {organs_refused} refused · coloured · T2"
-        );
-
-        let result = js_sys::Object::new();
-        Reflect::set(
-            &result,
-            &JsValue::from_str("organs_loaded"),
-            &JsValue::from_f64(organs_loaded as f64),
-        )?;
-        Reflect::set(
-            &result,
-            &JsValue::from_str("organs_refused"),
-            &JsValue::from_f64(organs_refused as f64),
-        )?;
-        Reflect::set(
-            &result,
-            &JsValue::from_str("total_triangles"),
-            &JsValue::from_f64(total_triangles as f64),
-        )?;
-        Ok(result.into())
+        self.finish_body_mesh_upload(accum)
     }
 
     /// S5.8 (web) — load the whole body directly from a `.hmc` **anatomy pack**
@@ -1096,6 +1102,9 @@ impl QualiaPortal {
     /// (The mesh pipeline is currently opaque, so a nonzero level acts as show; smooth opacity lands
     /// when the mesh pipeline gains alpha blending — mixer plan P2.) An absent/empty map shows every
     /// system at full — so `load_body_from_qualia_bundle` is exactly this with no mixer applied.
+    ///
+    /// Decodes organs **in Rust** from the pack buffer — no per-organ JS `Uint8Array` materialisation.
+    /// That cut peak heap by ~1–2× pack size and is the phone-safe path.
     pub fn load_body_from_qualia_bundle_mixed(
         &mut self,
         bytes: &[u8],
@@ -1114,67 +1123,66 @@ impl QualiaPortal {
         let reader = BundleReader::parse(bytes)
             .map_err(|e| JsValue::from_str(&format!("qualia bundle: {e}")))?;
 
-        let organs = js_sys::Array::new();
+        let mut accum = BodyMeshAccum::new();
         for entry in reader.entries() {
             if entry.kind != "10d" {
                 continue;
             }
             if disabled.contains(&entry.key) {
-                continue; // this specific part deselected in the parts list
+                continue;
             }
             let Some(meta) = entry.meta.as_deref().and_then(AnatomyOrganMeta::from_cbor) else {
                 continue;
             };
             let level = levels.get(&meta.system).copied().unwrap_or(1.0);
             if level <= 0.0 {
-                continue; // system muted by the mixer
+                continue;
             }
             let Some(organ_bytes) = reader.get(&entry.key) else {
                 continue;
             };
-            let u8 = js_sys::Uint8Array::new_with_length(organ_bytes.len() as u32);
-            u8.copy_from(organ_bytes);
-            let obj = js_sys::Object::new();
-            Reflect::set(&obj, &JsValue::from_str("bytes"), &u8)?;
-            Reflect::set(
-                &obj,
-                &JsValue::from_str("r"),
-                &JsValue::from_f64(meta.rgba[0] as f64),
-            )?;
-            Reflect::set(
-                &obj,
-                &JsValue::from_str("g"),
-                &JsValue::from_f64(meta.rgba[1] as f64),
-            )?;
-            Reflect::set(
-                &obj,
-                &JsValue::from_str("b"),
-                &JsValue::from_f64(meta.rgba[2] as f64),
-            )?;
-            Reflect::set(
-                &obj,
-                &JsValue::from_str("a"),
-                &JsValue::from_f64((meta.rgba[3] * level) as f64),
-            )?;
-            Reflect::set(
-                &obj,
-                &JsValue::from_str("x"),
-                &JsValue::from_f64(meta.position[0] as f64),
-            )?;
-            Reflect::set(
-                &obj,
-                &JsValue::from_str("y"),
-                &JsValue::from_f64(meta.position[1] as f64),
-            )?;
-            Reflect::set(
-                &obj,
-                &JsValue::from_str("z"),
-                &JsValue::from_f64(meta.position[2] as f64),
-            )?;
-            organs.push(&obj);
+            // Single Rust-side copy for CRC verify (mutates header CRC field in-place).
+            // Never crosses the JS heap — critical on Android Chrome (~100 MB packs).
+            accum.append_organ_10d(
+                organ_bytes,
+                [
+                    meta.rgba[0],
+                    meta.rgba[1],
+                    meta.rgba[2],
+                    meta.rgba[3] * level,
+                ],
+            );
         }
+        self.finish_body_mesh_upload(accum)
+    }
 
-        self.load_body_organs_colored(&organs)
+    fn finish_body_mesh_upload(&mut self, mut accum: BodyMeshAccum) -> Result<JsValue, JsValue> {
+        accum.normalise_to_orbit_frame();
+        if let Some(ref mut gpu) = self.gpu {
+            gpu.upload_mesh_colored(&accum.positions, &accum.colors, &accum.indices);
+            self.tier = 2;
+        }
+        self.description = format!(
+            "{} organs · {} triangles · {} refused · coloured · T2",
+            accum.organs_loaded, accum.total_triangles, accum.organs_refused
+        );
+        let result = js_sys::Object::new();
+        Reflect::set(
+            &result,
+            &JsValue::from_str("organs_loaded"),
+            &JsValue::from_f64(accum.organs_loaded as f64),
+        )?;
+        Reflect::set(
+            &result,
+            &JsValue::from_str("organs_refused"),
+            &JsValue::from_f64(accum.organs_refused as f64),
+        )?;
+        Reflect::set(
+            &result,
+            &JsValue::from_str("total_triangles"),
+            &JsValue::from_f64(accum.total_triangles as f64),
+        )?;
+        Ok(result.into())
     }
 
     /// Phase 2 — drive the loaded mesh artefact with a kinematic joint (visible physics). `kind` is
