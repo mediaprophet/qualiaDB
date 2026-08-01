@@ -565,7 +565,12 @@ pub fn OnboardingGate() -> Element {
         };
     }
     if complete() {
-        return rsx! { Router::<crate::Route> {} };
+        // Fill the themed shell so nested 100% / flex layouts get a real height budget.
+        return rsx! {
+            div { style: "flex:1;min-height:0;width:100%;height:100%;display:flex;flex-direction:column;",
+                Router::<crate::Route> {}
+            }
+        };
     }
 
     let index = step().min(STEPS.len() - 1);
@@ -606,8 +611,8 @@ pub fn OnboardingGate() -> Element {
     };
 
     rsx! {
-        div { style: "width:100%;height:100%;display:grid;grid-template-columns:245px minmax(0,1fr);background:radial-gradient(circle at 72% 10%,rgba(56,189,248,.09),transparent 32%),#07101f;color:#e5edf8;overflow:hidden;",
-            aside { style: "border-right:1px solid #243044;background:#0a1424;padding:24px 16px;overflow-y:auto;",
+        div { style: "width:100%;height:100%;min-height:0;display:grid;grid-template-columns:245px minmax(0,1fr);grid-template-rows:minmax(0,1fr);background:radial-gradient(circle at 72% 10%,rgba(56,189,248,.09),transparent 32%),#07101f;color:#e5edf8;overflow:hidden;",
+            aside { style: "min-height:0;border-right:1px solid #243044;background:#0a1424;padding:24px 16px;overflow-y:auto;overscroll-behavior:contain;",
                 div { style: "padding:0 8px 18px;",
                     div { style: "font-size:.66rem;text-transform:uppercase;letter-spacing:.1em;color:#7dd3fc;font-weight:850;", "Your Webizen" }
                     h1 { style: "margin:6px 0 4px;font-size:1.18rem;", "Local foundations" }
@@ -637,8 +642,8 @@ pub fn OnboardingGate() -> Element {
                     "Setup continues in Relations and Settings whenever you are ready. Nothing here is a permanent claim about you."
                 }
             }
-            main { style: "overflow-y:auto;padding:clamp(24px,5vw,60px);",
-                div { style: "max-width:880px;margin:0 auto;",
+            main { style: "min-width:0;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:clamp(24px,5vw,60px) clamp(24px,5vw,60px) 4rem;",
+                div { style: "max-width:880px;margin:0 auto;padding-bottom:2rem;",
                     header { style: "display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:18px;",
                         div {
                             div { style: "font-size:.66rem;color:#7dd3fc;text-transform:uppercase;letter-spacing:.1em;font-weight:850;", "{step_label}" }

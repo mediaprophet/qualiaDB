@@ -187,7 +187,7 @@ pub fn IdentityPlanePanel() -> Element {
                     }
                     button {
                         r#type: "button",
-                        style: "{PRIMARY_BUTTON} margin-top:12px;",
+                        style: format!("{PRIMARY_BUTTON} margin-top:12px;"),
                         disabled: busy(),
                         onclick: move |_| {
                             let url = control_url();
@@ -219,17 +219,30 @@ pub fn IdentityPlanePanel() -> Element {
                             for d in p.devices {
                                 div { style: "padding:12px;border:1px solid var(--qualia-border);border-radius:11px;",
                                     div { style: "display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;",
-                                        strong { style: "font-size:.78rem;", if d.label.is_empty() { "Apparatus" } else { "{d.label}" } }
+                                        strong { style: "font-size:.78rem;",
+                                            if d.label.is_empty() {
+                                                "Apparatus"
+                                            } else {
+                                                "{d.label}"
+                                            }
+                                        }
                                         span { style: "font-size:.64rem;font-weight:800;text-transform:uppercase;",
                                             if d.is_local { "Local" } else { "Peer" }
                                         }
                                     }
                                     div { style: "margin-top:6px;font-family:ui-monospace,monospace;font-size:.66rem;overflow-wrap:anywhere;", "{d.device_id}" }
                                     if !d.control_base_url.is_empty() {
-                                        div { style: "margin-top:4px;font-size:.7rem;color:var(--qualia-text-muted);", "URL: {d.control_base_url}" }
+                                        div { style: "margin-top:4px;font-size:.7rem;color:var(--qualia-text-muted);",
+                                            "URL: "
+                                            "{d.control_base_url}"
+                                        }
                                     }
                                     if !d.hostname.is_empty() {
-                                        div { style: "margin-top:2px;font-size:.7rem;color:var(--qualia-text-muted);", "Host: {d.hostname} (informational only)" }
+                                        div { style: "margin-top:2px;font-size:.7rem;color:var(--qualia-text-muted);",
+                                            "Host: "
+                                            "{d.hostname}"
+                                            " (informational only)"
+                                        }
                                     }
                                 }
                             }
@@ -244,7 +257,10 @@ pub fn IdentityPlanePanel() -> Element {
                                 busy.set(true);
                                 spawn(async move {
                                     match invoke_json::<usize>("retry_remote_job_outbox", serde_json::json!({})).await {
-                                        Ok(n) => status.set(format!("Retried remote outbox; delivered {n}.")),
+                                        Ok(n) => status.set(format!(
+                                            "Retried remote outbox; delivered {}.",
+                                            n
+                                        )),
                                         Err(e) => error.set(e),
                                     }
                                     busy.set(false);
@@ -266,13 +282,13 @@ pub fn IdentityPlanePanel() -> Element {
                 textarea {
                     value: "{import_json}",
                     rows: "6",
-                    placeholder: "{ \"format\": \"qualia.person.transfer.v1\", ... }",
-                    style: "{FIELD} min-height:120px;font-family:ui-monospace,monospace;font-size:.68rem;",
+                    placeholder: "Paste person transfer bundle JSON (format qualia.person.transfer.v1)",
+                    style: format!("{FIELD} min-height:120px;font-family:ui-monospace,monospace;font-size:.68rem;"),
                     oninput: move |e| import_json.set(e.value()),
                 }
                 button {
                     r#type: "button",
-                    style: "{PRIMARY_BUTTON} margin-top:10px;",
+                    style: format!("{PRIMARY_BUTTON} margin-top:10px;"),
                     disabled: busy() || import_json().trim().is_empty(),
                     onclick: move |_| {
                         let raw = import_json();
@@ -280,10 +296,13 @@ pub fn IdentityPlanePanel() -> Element {
                         spawn(async move {
                             match serde_json::from_str::<serde_json::Value>(&raw) {
                                 Ok(bundle) => {
+                                    let payload = serde_json::json!({ "bundle": bundle });
                                     match invoke_json::<IdentityPlaneView>(
                                         "import_person_transfer_bundle",
-                                        serde_json::json!({ "bundle": bundle }),
-                                    ).await {
+                                        payload,
+                                    )
+                                    .await
+                                    {
                                         Ok(v) => {
                                             plane.set(Some(v));
                                             status.set("Person principal imported; local apparatus re-bound.".into());
@@ -291,7 +310,7 @@ pub fn IdentityPlanePanel() -> Element {
                                         Err(e) => error.set(e),
                                     }
                                 }
-                                Err(e) => error.set(format!("Invalid JSON: {e}")),
+                                Err(e) => error.set(format!("Invalid JSON: {}", e)),
                             }
                             busy.set(false);
                         });
@@ -305,18 +324,18 @@ pub fn IdentityPlanePanel() -> Element {
                 p { style: "margin:0 0 10px;font-size:.72rem;color:var(--qualia-text-muted);line-height:1.5;",
                     "Paste a device record JSON from the peer's "
                     code { "get_identity_plane" }
-                    " local device (or full devices[] entry), including control_base_url."
+                    " local device (or full devices entry), including control_base_url."
                 }
                 textarea {
                     value: "{peer_json}",
                     rows: "5",
-                    placeholder: "{ \"device_id\": \"did:q42:device:…\", \"control_base_url\": \"http://…\", … }",
-                    style: "{FIELD} min-height:100px;font-family:ui-monospace,monospace;font-size:.68rem;",
+                    placeholder: "Peer device JSON: device_id, person_id, control_base_url",
+                    style: format!("{FIELD} min-height:100px;font-family:ui-monospace,monospace;font-size:.68rem;"),
                     oninput: move |e| peer_json.set(e.value()),
                 }
                 button {
                     r#type: "button",
-                    style: "{PRIMARY_BUTTON} margin-top:10px;",
+                    style: format!("{PRIMARY_BUTTON} margin-top:10px;"),
                     disabled: busy() || peer_json().trim().is_empty(),
                     onclick: move |_| {
                         let raw = peer_json();
@@ -324,10 +343,13 @@ pub fn IdentityPlanePanel() -> Element {
                         spawn(async move {
                             match serde_json::from_str::<serde_json::Value>(&raw) {
                                 Ok(device) => {
+                                    let payload = serde_json::json!({ "device": device });
                                     match invoke_json::<IdentityPlaneView>(
                                         "register_remote_apparatus_device",
-                                        serde_json::json!({ "device": device }),
-                                    ).await {
+                                        payload,
+                                    )
+                                    .await
+                                    {
                                         Ok(v) => {
                                             plane.set(Some(v));
                                             status.set("Peer apparatus registered.".into());
@@ -335,7 +357,7 @@ pub fn IdentityPlanePanel() -> Element {
                                         Err(e) => error.set(e),
                                     }
                                 }
-                                Err(e) => error.set(format!("Invalid JSON: {e}")),
+                                Err(e) => error.set(format!("Invalid JSON: {}", e)),
                             }
                             busy.set(false);
                         });

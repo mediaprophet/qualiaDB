@@ -66,8 +66,8 @@ pub fn SettingsShell() -> Element {
         .collect();
 
     rsx! {
-        div { style: "width:100%;height:100%;display:grid;grid-template-columns:250px minmax(0,1fr);background:var(--qualia-bg);color:var(--qualia-text);overflow:hidden;",
-            aside { style: "border-right:1px solid var(--qualia-border);background:color-mix(in srgb,var(--qualia-surface) 94%,var(--qualia-bg));padding:18px 12px;overflow-y:auto;",
+        div { style: "width:100%;height:100%;min-height:0;display:grid;grid-template-columns:250px minmax(0,1fr);grid-template-rows:minmax(0,1fr);background:var(--qualia-bg);color:var(--qualia-text);overflow:hidden;",
+            aside { style: "min-height:0;border-right:1px solid var(--qualia-border);background:color-mix(in srgb,var(--qualia-surface) 94%,var(--qualia-bg));padding:18px 12px;overflow-y:auto;overscroll-behavior:contain;",
                 div { style: "padding:0 8px 15px;",
                     div { style: "font-size:.64rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--qualia-accent);", "Your Webizen" }
                     h1 { style: "font-size:1.12rem;margin:5px 0 4px;", "Settings" }
@@ -95,8 +95,8 @@ pub fn SettingsShell() -> Element {
                     ExperienceModeSwitch {}
                 }
             }
-            main { style: "min-width:0;overflow-y:auto;padding:clamp(20px,3vw,38px);",
-                div { style: "max-width:1100px;margin:0 auto;",
+            main { style: "min-width:0;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:clamp(20px,3vw,38px) clamp(20px,3vw,38px) 4rem;",
+                div { style: "max-width:1100px;margin:0 auto;padding-bottom:2rem;",
                     header { style: "display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:22px;flex-wrap:wrap;",
                         div {
                             div { style: "font-size:.65rem;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--qualia-accent);",

@@ -340,7 +340,7 @@ fn DomainRouteHeader(domain: &'static str, title: &'static str, blurb: &'static 
 fn KeepHub() -> Element {
     rsx! {
         div {
-            style: "flex:1; overflow-y:auto; padding:2rem; max-width:720px; margin:0 auto; color:var(--qualia-text);",
+            style: "flex:1; min-height:0; overflow-y:auto; padding:2rem 2rem 3rem; max-width:720px; margin:0 auto; color:var(--qualia-text); box-sizing:border-box; width:100%;",
             div { style: "display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap;margin-bottom:0.35rem;",
                 span {
                     style: "font-size:0.62rem;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#94a3b8;",
@@ -570,10 +570,10 @@ fn LibraryRoute() -> Element {
     let mode = components::experience_mode::use_experience_mode();
     rsx! {
         div {
-            style: "flex: 1; display: flex; flex-direction: column; overflow: hidden;",
+            style: "flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden;",
             if mode().is_advanced() {
                 div {
-                    style: "height:100%;padding:1rem;box-sizing:border-box;",
+                    style: "flex:1;min-height:0;overflow-y:auto;padding:1rem;box-sizing:border-box;",
                     components::wellfair::library_panel::WellfairLibraryPanel {}
                 }
             } else {
@@ -606,7 +606,7 @@ fn ListenRoute() -> Element {
 fn CommunicationsRoute() -> Element {
     rsx! {
         div {
-            style: "flex: 1; display: flex; flex-direction: column; overflow: hidden; padding: 2rem;",
+            style: "flex: 1; min-height: 0; display: flex; flex-direction: column; overflow-y: auto; padding: 2rem 2rem 3rem;",
             components::wellfair::WellfairCommunicationsPanel {}
         }
     }
@@ -616,7 +616,7 @@ fn CommunicationsRoute() -> Element {
 fn HealthRoute() -> Element {
     rsx! {
         div {
-            style: "flex: 1; display: flex; flex-direction: column; overflow: auto; padding: 2rem; gap: 2rem;",
+            style: "flex: 1; min-height: 0; display: flex; flex-direction: column; overflow-y: auto; padding: 2rem 2rem 3rem; gap: 2rem;",
             DomainRouteHeader {
                 domain: "Care",
                 title: "Health vault",
@@ -634,7 +634,7 @@ fn HealthRoute() -> Element {
 fn AnatomyRoute() -> Element {
     rsx! {
         div {
-            style: "flex: 1; display: flex; flex-direction: column; overflow: auto; padding: 2rem; gap: 2rem;",
+            style: "flex: 1; min-height: 0; display: flex; flex-direction: column; overflow-y: auto; padding: 2rem 2rem 3rem; gap: 2rem;",
             components::wellfair::WellfairScorecardPanel {}
             components::wellfair::WellfairAnatomy3dPanel {}
             components::wellfair::WellfairComorbidityPanel {}
@@ -647,7 +647,7 @@ fn AnatomyRoute() -> Element {
 fn ClinicalRoute() -> Element {
     rsx! {
         div {
-            style: "flex: 1; display: flex; flex-direction: column; overflow: auto; padding: 2rem; gap: 2rem;",
+            style: "flex: 1; min-height: 0; display: flex; flex-direction: column; overflow-y: auto; padding: 2rem 2rem 3rem; gap: 2rem;",
             components::wellfair::WellfairClinicalPanel {}
             components::wellfair::WellfairLifePanel {}
             components::wellfair::WellfairWelfarePanel {}
@@ -659,7 +659,7 @@ fn ClinicalRoute() -> Element {
 fn IdentityRoute() -> Element {
     rsx! {
         div {
-            style: "flex: 1; display: flex; flex-direction: column; overflow: auto; padding: 2rem; gap: 2rem;",
+            style: "flex: 1; min-height: 0; display: flex; flex-direction: column; overflow-y: auto; padding: 2rem 2rem 3rem; gap: 2rem;",
             components::wellfair::WellfairPersonalPanel {}
             components::wellfair::WellfairSocialBookPanel {}
             components::wellfair::WellfairConsentPanel {}
@@ -671,7 +671,7 @@ fn IdentityRoute() -> Element {
 fn AgencyRoute() -> Element {
     rsx! {
         div {
-            style: "flex: 1; display: flex; flex-direction: column; overflow: auto; padding: 2rem; gap: 2rem;",
+            style: "flex: 1; min-height: 0; display: flex; flex-direction: column; overflow-y: auto; padding: 2rem 2rem 3rem; gap: 2rem;",
             components::wellfair::WellfairGuardianshipPanel {}
             components::wellfair::WellfairAgencyPanel {}
             components::wellfair::WellfairAccountabilityPanel {}
@@ -684,7 +684,7 @@ fn AgencyRoute() -> Element {
 fn SanctuaryRoute() -> Element {
     rsx! {
         div {
-            style: "flex: 1; display: flex; flex-direction: column; overflow: auto; padding: 2rem; gap: 2rem;",
+            style: "flex: 1; min-height: 0; display: flex; flex-direction: column; overflow-y: auto; padding: 2rem 2rem 3rem; gap: 2rem;",
             components::wellfair::WellfairSanctuaryPanel {}
             components::wellfair::WellfairSanctuaryVaultPanel {}
         }
@@ -695,7 +695,7 @@ fn SanctuaryRoute() -> Element {
 fn WorkRoute() -> Element {
     rsx! {
         div {
-            style: "flex: 1; display: flex; flex-direction: column; overflow: auto; padding: 2rem; gap: 2rem;",
+            style: "flex: 1; min-height: 0; display: flex; flex-direction: column; overflow-y: auto; padding: 2rem 2rem 3rem; gap: 2rem;",
             DomainRouteHeader {
                 domain: "Practice",
                 title: "Work & labour",
@@ -713,7 +713,7 @@ fn WorkRoute() -> Element {
 fn ToolsRoute() -> Element {
     rsx! {
         div {
-            style: "flex: 1; display: flex; flex-direction: column; overflow: auto; padding: 2rem; gap: 2rem;",
+            style: "flex: 1; min-height: 0; display: flex; flex-direction: column; overflow-y: auto; padding: 2rem 2rem 3rem; gap: 2rem;",
             DomainRouteHeader {
                 domain: "Instruments",
                 title: "Tools & sync",
@@ -1337,7 +1337,9 @@ fn AppLayout() -> Element {
 
     rsx! {
         div {
-            style: "display: flex; flex-direction: column; height: 100vh; width: 100%; overflow: hidden; background: transparent;",
+            // min-height:0 on flex children is required so nested pages can scroll
+            // instead of clipping unreachable overflow under overflow:hidden ancestors.
+            style: "display: flex; flex-direction: column; height: 100%; max-height: 100vh; width: 100%; overflow: hidden; background: transparent; min-height: 0;",
 
             // U6-A command palette (Ctrl+K / Ctrl+P) — always mounted under layout.
             components::command_palette::CommandPalette {}
@@ -1476,7 +1478,7 @@ fn AppLayout() -> Element {
 
             // ── Sidebar: life domains first; engineering under Advanced ─────
             div {
-                style: "flex: 1; overflow: hidden; display: flex; position: relative;",
+                style: "flex: 1; min-height: 0; overflow: hidden; display: flex; position: relative;",
                 aside {
                     class: "app-sidebar",
                     nav {
@@ -1542,7 +1544,12 @@ fn AppLayout() -> Element {
                     }
                 }
                 main {
-                    style: "min-width: 0; flex: 1; overflow: hidden; display: flex; position: relative;",
+                    // Default scroll surface for all routes. Nested panes that need
+                    // their own split (chat, browser) still set overflow:hidden +
+                    // min-height:0 on their root; without this, long Settings /
+                    // onboarding / domain pages clip below the fold with no way to scroll.
+                    class: "app-main-scroll",
+                    style: "min-width: 0; min-height: 0; flex: 1; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; display: flex; flex-direction: column; position: relative;",
                     components::wellfair::HostSnapshotProvider {
                         Outlet::<Route> {}
                     }
@@ -1695,7 +1702,9 @@ fn App() -> Element {
                 width: 220px;
                 min-width: 220px;
                 height: 100%;
+                min-height: 0;
                 overflow: hidden;
+                flex-shrink: 0;
                 border-right: 1px solid var(--qualia-border);
                 background:
                     radial-gradient(circle at 15% 10%, color-mix(in srgb, var(--qualia-accent) 7%, transparent), transparent 34%),
@@ -1704,12 +1713,33 @@ fn App() -> Element {
             }}
             .app-sidebar-nav {{
                 height: 100%;
+                min-height: 0;
                 overflow-y: auto;
                 overscroll-behavior: contain;
                 scrollbar-gutter: stable;
                 scrollbar-width: thin;
                 scrollbar-color: color-mix(in srgb, var(--qualia-text-muted) 45%, transparent) transparent;
                 padding: 12px 10px 42px;
+            }}
+            .app-main-scroll {{
+                /* Shared scroll surface for route content (settings, domain pages, long forms). */
+                scrollbar-gutter: stable;
+                scrollbar-width: thin;
+                scrollbar-color: color-mix(in srgb, var(--qualia-text-muted) 48%, transparent) transparent;
+            }}
+            .app-main-scroll::-webkit-scrollbar {{ width: 10px; }}
+            .app-main-scroll::-webkit-scrollbar-track {{ background: transparent; }}
+            .app-main-scroll::-webkit-scrollbar-thumb {{
+                background: color-mix(in srgb, var(--qualia-text-muted) 48%, transparent);
+                border-radius: 999px;
+                border: 2px solid transparent;
+                background-clip: padding-box;
+            }}
+            /* Full-bleed panes that manage their own internal scroll must fill the main surface. */
+            .app-main-scroll > * {{
+                flex: 1 1 auto;
+                min-height: 0;
+                min-width: 0;
             }}
             .app-sidebar-nav::-webkit-scrollbar {{ width: 8px; }}
             .app-sidebar-nav::-webkit-scrollbar-track {{ background: transparent; }}
@@ -1815,7 +1845,7 @@ fn App() -> Element {
             class: "webizen-studio-shell {shell_class}",
             "data-theme-scope": "app",
             "data-theme": "{data_theme}",
-            style: "--qualia-bg: {bg}; --qualia-surface: {surface}; --qualia-border: {border}; --qualia-text: {text}; --qualia-text-muted: {text_muted}; --qualia-accent: {accent}; --qualia-accent-glow: {accent_glow}; width: 100vw; height: 100vh; background: {bg_gradient}; color: var(--qualia-text); font-family: 'Inter', sans-serif; transition: background 0.5s ease, color 0.4s ease; overflow: hidden;",
+            style: "--qualia-bg: {bg}; --qualia-surface: {surface}; --qualia-border: {border}; --qualia-text: {text}; --qualia-text-muted: {text_muted}; --qualia-accent: {accent}; --qualia-accent-glow: {accent_glow}; width: 100vw; height: 100vh; max-height: 100vh; background: {bg_gradient}; color: var(--qualia-text); font-family: 'Inter', sans-serif; transition: background 0.5s ease, color 0.4s ease; overflow: hidden; display: flex; flex-direction: column; min-height: 0;",
             components::onboarding::OnboardingGate {}
         }
     }
