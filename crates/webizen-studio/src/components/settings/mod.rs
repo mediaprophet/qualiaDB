@@ -2,6 +2,7 @@
 
 pub mod health;
 pub mod host;
+pub mod identity_plane;
 pub mod model_setup;
 pub mod types;
 
@@ -10,6 +11,7 @@ use crate::Route;
 use dioxus::prelude::*;
 use health::SetupHealthPanel;
 use host::invoke_json;
+use identity_plane::IdentityPlanePanel;
 use model_setup::ModelSetupPanel;
 use types::{AgentQaSnapshot, SettingsSection, ALL_SECTIONS};
 
@@ -127,7 +129,18 @@ pub fn SettingsShell() -> Element {
                             }
                         },
                         SettingsSection::Appearance => rsx! { AppearanceAccess {} },
-                        SettingsSection::Device => rsx! { crate::components::hardware_configurator::HardwareConfigurator {} },
+                        SettingsSection::Device => rsx! {
+                            div { style: "display:grid;gap:18px;",
+                                IdentityPlanePanel {}
+                                div { style: "{PANEL}",
+                                    h2 { style: "margin:0 0 8px;font-size:1rem;", "Hardware probe (optional)" }
+                                    p { style: "margin:0 0 12px;color:var(--qualia-text-muted);font-size:.74rem;line-height:1.5;",
+                                        "Technical capability charts are separate from person/apparatus identity."
+                                    }
+                                    crate::components::hardware_configurator::HardwareConfigurator {}
+                                }
+                            }
+                        },
                         SettingsSection::Backup => rsx! { crate::components::wellfair::WellfairSyncBackupPanel {} },
                         SettingsSection::Services => rsx! { ServicesUpdates { snapshot: snapshot() } },
                         SettingsSection::Technical => rsx! { crate::components::settings_technical::TechnicalSettingsPage {} },

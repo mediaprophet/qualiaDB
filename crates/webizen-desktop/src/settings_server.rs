@@ -367,6 +367,10 @@ async fn run_settings_server(state: SettingsServerState, port: u16) -> Result<()
         )
         .route("/api/jobs/{id}", get(get_job_handler))
         .route("/api/jobs/{id}/cancel", post(cancel_job_handler))
+        // Multi-apparatus fleet: accept signed jobs + publish identity for peers
+        .route("/api/fleet/jobs", post(fleet_accept_job_handler))
+        .route("/api/fleet/identity", get(fleet_identity_handler))
+        .route("/api/fleet/outbox/retry", post(fleet_retry_outbox_handler))
         .route("/api/telemetry", get(system_telemetry_handler))
         .route("/api/sparql/endpoints", get(sparql_endpoints_handler))
         .route("/api/sparql/query", post(sparql_query_handler))
@@ -384,10 +388,13 @@ async fn run_settings_server(state: SettingsServerState, port: u16) -> Result<()
         .layer(control_plane_cors(port))
         .with_state(state);
 
-    let addr = SocketAddr::from(([127, 0, 0, 1], port));
+    // Bind all interfaces so a second machine on the LAN can deliver fleet jobs
+    // to `/api/fleet/jobs` when control_base_url uses a non-loopback address.
+    // Loopback clients continue to work via 127.0.0.1:{port}.
+    let addr = SocketAddr::from(([0, 0, 0, 0], port));
     let listener = tokio::net::TcpListener::bind(addr)
         .await
-        .map_err(|e| format!("bind 127.0.0.1:{port}: {e}"))?;
+        .map_err(|e| format!("bind 0.0.0.0:{port}: {e}"))?;
     if let Some(supervisor) = APP_HANDLE
         .get()
         .and_then(|app| app.try_state::<crate::supervisor::DesktopSupervisor>())
@@ -907,6 +914,31 @@ async fn cancel_job_handler(Path(id): Path<String>) -> Result<StatusCode, (Statu
             StatusCode::NOT_FOUND,
             "job not found or not cancellable".to_string(),
         )),
+        Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, e)),
+    }
+}
+
+async fn fleet_accept_job_handler(
+    Json(envelope): Json<qualia_client_core::identity_plane::FleetJobEnvelope>,
+) -> Result<(StatusCode, Json<LocalJob>), (StatusCode, String)> {
+    match qualia_client_core::identity_plane::accept_fleet_job_envelope(envelope) {
+        Ok(job) => Ok((StatusCode::ACCEPTED, Json(job))),
+        Err(e) => Err((StatusCode::BAD_REQUEST, e)),
+    }
+}
+
+async fn fleet_identity_handler() -> Result<
+    Json<qualia_client_core::identity_plane::IdentityPlaneSnapshot>,
+    (StatusCode, String),
+> {
+    qualia_client_core::identity_plane::get_identity_plane()
+        .map(Json)
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e))
+}
+
+async fn fleet_retry_outbox_handler() -> Result<Json<serde_json::Value>, (StatusCode, String)> {
+    match qualia_client_core::identity_plane::fleet_jobs::retry_remote_outbox() {
+        Ok(n) => Ok(Json(serde_json::json!({ "delivered": n }))),
         Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, e)),
     }
 }

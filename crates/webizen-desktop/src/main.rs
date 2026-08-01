@@ -13,7 +13,7 @@ use webizen_desktop::{
     desktop_log, mcp_server,
     med_reminder_notifier::{self, MedReminderNotifierState},
     native_surface::NativeSurfaceState,
-    runtime::{spawn_runtime, RuntimeHandle},
+    runtime::RuntimeHandle,
     settings_server,
     supervisor::DesktopSupervisor,
     telemetry_bridge, telemetry_hooks,
@@ -379,29 +379,29 @@ fn main() {
                 })
                 .build(app)?;
 
-            let runtime_init_handle = handle.clone();
-            let runtime_init_state = app_state.clone();
-            let runtime_supervisor = desktop_supervisor.clone();
-            runtime_supervisor.service_starting("runtime", "initialising WGPU runtime");
-            tauri::async_runtime::spawn_blocking(move || {
-                desktop_log::record("info", "starting Webizen WGPU runtime in background");
-                match spawn_runtime(runtime_init_handle.clone(), runtime_init_state) {
-                    Ok(runtime_handle) => {
-                        runtime_init_handle.manage(runtime_handle);
-                        runtime_supervisor.service_ready("runtime", "WGPU runtime ready");
-                        let _ = runtime_init_handle.emit("webizen-runtime-ready", ());
-                        desktop_log::record("info", "Webizen WGPU runtime ready");
-                    }
-                    Err(err) => {
-                        runtime_supervisor.service_failed("runtime", err.clone());
-                        let _ = runtime_init_handle.emit("webizen-runtime-failed", err.clone());
-                        desktop_log::record(
-                            "error",
-                            format!("Webizen WGPU runtime failed to start: {err}"),
-                        );
-                    }
-                }
-            });
+            // Optional ambient/diffusion GPU runtime. On incomplete first-run setup we
+            // defer it so a bad GPU driver cannot kill the setup window (Intel UHD Vulkan
+            // ICD access-violation was taking down the process mid-onboarding). After setup
+            // completes, `finish_setup` starts it. Operators can force early start with
+            // WEBIZEN_FORCE_RUNTIME=1.
+            let force_runtime = std::env::var("WEBIZEN_FORCE_RUNTIME")
+                .map(|v| matches!(v.to_ascii_lowercase().as_str(), "1" | "true" | "yes" | "on"))
+                .unwrap_or(false);
+            let setup_completed = qualia_client_core::api::get_setup_state()
+                .map(|s| s.completed)
+                .unwrap_or(false);
+            if setup_completed || force_runtime {
+                webizen_desktop::runtime::ensure_runtime_started(handle, app_state.clone());
+            } else {
+                desktop_supervisor.service_starting(
+                    "runtime",
+                    "deferred until first-run setup completes",
+                );
+                desktop_log::record(
+                    "info",
+                    "deferring Webizen WGPU runtime until first-run setup completes",
+                );
+            }
 
             if let Err(e) = qualia_client_core::api::start_qualia_protocol() {
                 eprintln!("Qapp loopback asset server failed to start: {e}");

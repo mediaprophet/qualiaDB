@@ -74,6 +74,19 @@ pub fn schedule_anatomy_asset_acquire(model: String) -> Result<serde_json::Value
     serde_json::to_value(job).map_err(|e| e.to_string())
 }
 
+/// Enqueue a job for a specific apparatus (`did:q42:device:…`). Empty target → this install.
+/// Remote devices fail closed until multi-device dispatch is live.
+pub fn schedule_job_on_device(
+    kind_json: String,
+    target_device_id: Option<String>,
+) -> Result<serde_json::Value, String> {
+    let kind: crate::local_job_scheduler::LocalJobKind =
+        serde_json::from_str(&kind_json).map_err(|e| format!("invalid job kind: {e}"))?;
+    let job = crate::local_job_scheduler::LocalJobScheduler::global()
+        .enqueue_for_device(kind, target_device_id)?;
+    serde_json::to_value(job).map_err(|e| e.to_string())
+}
+
 pub fn ensure_chat_session() -> Result<String, String> {
     if let Some(id) = get_last_chat_session_id() {
         let state = crate::state::APP_STATE.get().unwrap();

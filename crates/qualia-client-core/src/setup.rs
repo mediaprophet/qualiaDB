@@ -10,19 +10,58 @@ use std::path::{Path, PathBuf};
 
 use crate::state::{app_meta_dir, config_file_path};
 
-pub const SETUP_STATE_VERSION: u32 = 3;
-pub const REQUIRED_SETUP_STEPS: [&str; 10] = [
+pub const SETUP_STATE_VERSION: u32 = 5;
+
+/// First-run gate: local foundations that do **not** require peers, domains, or live mesh.
+///
+/// Relational and network configuration is progressive — see [`PROGRESSIVE_SETUP_PATHS`].
+pub const REQUIRED_SETUP_STEPS: [&str; 8] = [
     "welcome",
     "storage",
     "control",
     "device",
     "inference",
-    "relations",
-    "reachability",
+    "relations", // how you want to be known (local profile only)
     "care",
-    "assurance",
     "ready",
 ];
+
+/// Paths that become meaningful after the apparatus is running and people can connect.
+/// These never block the first-run gate; they surface in Setup Health / Relations over time.
+pub const PROGRESSIVE_SETUP_PATHS: [&str; 6] = [
+    "reachability",      // private / mesh / public posture
+    "assurance",         // backup destination + verified restore
+    "people_connections", // invites, contacts, groups
+    "domains_mail",      // front door, DNS, purpose mailboxes
+    "care_records",      // provenance-backed health material
+    "peer_agreements",   // multi-party norms once peers exist
+];
+
+/// Social and tenure context for the machine Webizen is being installed on.
+///
+/// This is not hardware telemetry. It answers: whose machine, only machine or not,
+/// one person or several, and (if several) what kind of shared setting. All fields
+/// are optional plain tokens; empty means “prefer not to say / not set yet”.
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
+pub struct DeviceContext {
+    /// e.g. `owned_by_me` | `employer` | `school` | `organisation` | `shared_household`
+    /// | `borrowed_or_public` | `prefer_not_say` | `other`
+    #[serde(default)]
+    pub ownership: String,
+    /// `only_machine` | `one_of_several` | `prefer_not_say`
+    #[serde(default)]
+    pub machine_fleet: String,
+    /// `just_me` | `more_than_one` | `prefer_not_say`
+    #[serde(default)]
+    pub user_scope: String,
+    /// When `user_scope` is multi-person: `family` | `household` | `work` | `school`
+    /// | `organisation` | `public_shared` | `mixed` | `other` | `prefer_not_say`
+    #[serde(default)]
+    pub shared_setting: String,
+    /// Free-text clarification the person chooses to add (optional).
+    #[serde(default)]
+    pub notes: String,
+}
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
 pub struct SetupProfile {
@@ -42,6 +81,9 @@ pub struct SetupProfile {
     pub care_priorities: Vec<String>,
     #[serde(default)]
     pub qapp_goals: Vec<String>,
+    /// Situation of this machine (ownership, sole vs fleet, single vs multi-user).
+    #[serde(default)]
+    pub device_context: DeviceContext,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -80,6 +122,8 @@ pub fn update_setup_profile(profile: SetupProfile) -> Result<SetupState, String>
     let mut state = get_setup_state()?;
     state.profile = profile;
     save_setup_state_to(&setup_state_path(), &state)?;
+    // Keep apparatus device_context in the fleet identity plane (person ≠ machine).
+    let _ = crate::identity_plane::sync_local_device_context(&state.profile.device_context);
     Ok(state)
 }
 
@@ -93,18 +137,23 @@ pub fn get_setup_state() -> Result<SetupState, String> {
 
 pub fn complete_setup_step(step: String) -> Result<SetupState, String> {
     let step = step.trim();
-    if !REQUIRED_SETUP_STEPS.contains(&step) {
+    let is_required = REQUIRED_SETUP_STEPS.contains(&step);
+    let is_progressive = PROGRESSIVE_SETUP_PATHS.contains(&step);
+    if !is_required && !is_progressive {
         return Err(format!("Unknown setup step: {step}"));
     }
 
     let mut state = get_setup_state()?;
-    if state.completed {
+    // Progressive paths may be recorded after first-run is already complete.
+    if state.completed && is_required {
         return Ok(state);
     }
     if !state.completed_steps.iter().any(|done| done == step) {
         state.completed_steps.push(step.to_string());
     }
-    state.current_step = next_incomplete_step(&state).unwrap_or("ready").to_string();
+    if !state.completed {
+        state.current_step = next_incomplete_step(&state).unwrap_or("ready").to_string();
+    }
     save_setup_state_to(&setup_state_path(), &state)?;
     Ok(state)
 }
@@ -131,6 +180,9 @@ pub fn finish_setup() -> Result<SetupState, String> {
     state.completed = true;
     state.current_step = "complete".to_string();
     save_setup_state_to(&setup_state_path(), &state)?;
+    // Mint / refresh person + local apparatus under the fleet plane so multi-device
+    // job targeting has a real local device_id (not OS account, not “the person”).
+    crate::identity_plane::ensure_local_apparatus(Some(state.profile.device_context.clone()))?;
     Ok(state)
 }
 
@@ -220,11 +272,45 @@ mod tests {
     }
 
     #[test]
+    fn first_run_gate_does_not_require_relational_paths() {
+        assert!(!REQUIRED_SETUP_STEPS.contains(&"reachability"));
+        assert!(!REQUIRED_SETUP_STEPS.contains(&"assurance"));
+        assert!(PROGRESSIVE_SETUP_PATHS.contains(&"reachability"));
+        assert!(PROGRESSIVE_SETUP_PATHS.contains(&"people_connections"));
+        assert_eq!(REQUIRED_SETUP_STEPS.len(), 8);
+    }
+
+    #[test]
     fn older_setup_state_gets_an_empty_profile() {
         let state: SetupState = serde_json::from_str(
             r#"{"version":2,"completed":false,"current_step":"care","completed_steps":[]}"#,
         )
         .unwrap();
         assert_eq!(state.profile, SetupProfile::default());
+        assert_eq!(state.profile.device_context, DeviceContext::default());
+    }
+
+    #[test]
+    fn device_context_deserializes_on_v5_profile() {
+        let state: SetupState = serde_json::from_str(
+            r#"{
+                "version":5,
+                "completed":false,
+                "current_step":"device",
+                "completed_steps":[],
+                "profile":{
+                    "device_context":{
+                        "ownership":"owned_by_me",
+                        "machine_fleet":"one_of_several",
+                        "user_scope":"more_than_one",
+                        "shared_setting":"family",
+                        "notes":""
+                    }
+                }
+            }"#,
+        )
+        .unwrap();
+        assert_eq!(state.profile.device_context.ownership, "owned_by_me");
+        assert_eq!(state.profile.device_context.shared_setting, "family");
     }
 }

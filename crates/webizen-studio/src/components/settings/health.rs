@@ -36,7 +36,7 @@ pub fn SetupHealthPanel(
             "Data home",
             true,
             snapshot.config.storage_path.clone(),
-            "Data",
+            "Local foundation",
         ),
         (
             "Local model",
@@ -45,18 +45,34 @@ pub fn SetupHealthPanel(
                 .active_model
                 .clone()
                 .unwrap_or_else(|| "Choose and test a model".to_string()),
-            "Models",
+            "Local foundation",
         ),
         (
             "First-run foundations",
             setup_complete,
             if setup_complete {
-                "Reviewed"
+                "Local foundations reviewed"
             } else {
-                "Incomplete"
+                "Incomplete — finish local foundations"
             }
             .to_string(),
-            "Setup",
+            "Local foundation",
+        ),
+        (
+            "Person / apparatus IDs",
+            setup_complete,
+            if setup_complete {
+                "Person principal ≠ this machine; multi-device fleet ready".to_string()
+            } else {
+                "Minted on open / finish setup".to_string()
+            },
+            "Local foundation",
+        ),
+        (
+            "People & reachability",
+            false,
+            "Progressive · set up in Relations when peers connect".to_string(),
+            "Progressive",
         ),
         (
             "Mail reception",
@@ -64,16 +80,16 @@ pub fn SetupHealthPanel(
             if mail_running {
                 "Receiver running"
             } else {
-                "Optional · not running"
+                "Progressive · optional · not required to start"
             }
             .to_string(),
-            "Relations",
+            "Progressive",
         ),
         (
             "Local services",
             !snapshot.daemon_status.is_empty(),
             snapshot.daemon_status.clone(),
-            "Services",
+            "Local foundation",
         ),
     ];
 
@@ -83,7 +99,7 @@ pub fn SetupHealthPanel(
                 div {
                     h2 { style: "margin:0;font-size:1.3rem;", "Your Webizen" }
                     p { style: "margin:.35rem 0 0;color:var(--qualia-text-muted);font-size:.8rem;line-height:1.5;",
-                        "A living view of what is ready, optional or needs attention."
+                        "Living health: local foundations first, then progressive relational and network paths when they make sense."
                     }
                 }
                 button { style: "{super::SECONDARY_BUTTON}", onclick: move |_| on_refresh.call(()), "Refresh health" }
@@ -93,7 +109,9 @@ pub fn SetupHealthPanel(
                     div { style: if ready { super::SUCCESS_CARD } else { super::WARNING_CARD },
                         div { style: "display:flex;align-items:center;justify-content:space-between;gap:8px;",
                             strong { "{title}" }
-                            span { style: "font-size:.64rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;", if ready { "Ready" } else { "Review" } }
+                            span { style: "font-size:.64rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;",
+                                if ready { "Ready" } else if domain == "Progressive" { "Later" } else { "Review" }
+                            }
                         }
                         div { style: "margin-top:7px;font-size:.72rem;line-height:1.45;overflow-wrap:anywhere;", "{detail}" }
                         div { style: "margin-top:9px;font-size:.62rem;opacity:.72;", "{domain}" }
@@ -103,6 +121,14 @@ pub fn SetupHealthPanel(
             div { style: "display:grid;grid-template-columns:minmax(0,1.3fr) minmax(260px,.7fr);gap:14px;",
                 div { style: "{super::PANEL}",
                     h3 { style: "margin:0 0 12px;font-size:.9rem;", "Needs your attention" }
+                    if !setup_complete {
+                        div { style: "{super::ACTION_ROW}",
+                            div {
+                                strong { "Finish local foundations" }
+                                p { style: "margin:4px 0 0;color:var(--qualia-text-muted);font-size:.7rem;", "Data home, device, a local instrument and how you want to be known. Relational setup waits until after open." }
+                            }
+                        }
+                    }
                     if !model_ready {
                         div { style: "{super::ACTION_ROW}",
                             div {
@@ -114,13 +140,13 @@ pub fn SetupHealthPanel(
                     if !mail_running {
                         div { style: "{super::ACTION_ROW}",
                             div {
-                                strong { "Public mail reception is off" }
-                                p { style: "margin:4px 0 0;color:var(--qualia-text-muted);font-size:.7rem;", "This is optional. Local and peer conversations remain available." }
+                                strong { "Mail and public reachability are progressive" }
+                                p { style: "margin:4px 0 0;color:var(--qualia-text-muted);font-size:.7rem;", "Not required to start. Configure in Relations when you have a domain or peers." }
                             }
                         }
                     }
-                    if model_ready && mail_running {
-                        div { style: "{super::EMPTY_CARD}", "No immediate setup repairs detected." }
+                    if setup_complete && model_ready {
+                        div { style: "{super::EMPTY_CARD}", "Local foundations look fine. Extend people, reachability and backups when you need them." }
                     }
                 }
                 div { style: "{super::PANEL}",

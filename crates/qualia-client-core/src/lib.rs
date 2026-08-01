@@ -46,6 +46,7 @@ pub mod guardianship;
 pub mod handshake;
 pub mod incapacity_switch;
 pub mod inference_backend;
+pub mod identity_plane;
 pub mod job_router;
 pub mod local_job_scheduler;
 pub mod magic_link;

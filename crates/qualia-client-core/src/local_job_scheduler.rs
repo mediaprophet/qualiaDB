@@ -98,6 +98,15 @@ pub struct LocalJob {
     pub result: Option<serde_json::Value>,
     #[serde(default)]
     pub error: Option<String>,
+    /// Apparatus that should run the work (`did:q42:device:…`). Empty/None → this install.
+    #[serde(default)]
+    pub target_device_id: Option<String>,
+    /// Apparatus that enqueued the work (local device when known).
+    #[serde(default)]
+    pub originating_device_id: Option<String>,
+    /// Person principal who owns the work (not the OS account).
+    #[serde(default)]
+    pub person_id: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -206,6 +215,83 @@ impl LocalJobScheduler {
     }
 
     pub fn enqueue(&self, kind: LocalJobKind) -> Result<LocalJob, String> {
+        self.enqueue_for_device(kind, None)
+    }
+
+    /// Patch provenance fields on an existing job (e.g. after fleet accept).
+    pub fn update_job_meta(&self, updated: &LocalJob) -> Result<(), String> {
+        let mut jobs = self.inner.jobs.lock().map_err(|e| e.to_string())?;
+        if let Some(slot) = jobs.iter_mut().find(|j| j.id == updated.id) {
+            slot.originating_device_id = updated.originating_device_id.clone();
+            slot.person_id = updated.person_id.clone();
+            slot.message = updated.message.clone();
+            slot.target_device_id = updated.target_device_id.clone();
+            self.persist(&jobs)?;
+        }
+        Ok(())
+    }
+
+    /// Enqueue work for a specific apparatus. `None` / local device_id runs here.
+    /// Remote registered devices are delivered via the fleet job path (HTTP + outbox).
+    pub fn enqueue_for_device(
+        &self,
+        kind: LocalJobKind,
+        target_device_id: Option<String>,
+    ) -> Result<LocalJob, String> {
+        let plane = crate::identity_plane::ensure_local_apparatus(None).ok();
+        let local_id = plane.as_ref().map(|p| p.local_device_id.clone());
+        let person_id = plane.as_ref().map(|p| p.person.person_id.clone());
+        let placement = crate::identity_plane::resolve_job_placement(target_device_id.as_deref())?;
+        match &placement {
+            crate::identity_plane::JobPlacement::Local { .. } => {}
+            crate::identity_plane::JobPlacement::RemoteRegistered { device_id, .. } => {
+                let entry = crate::identity_plane::deliver_or_queue_remote_job(
+                    kind.clone(),
+                    device_id,
+                )?;
+                // Represent remote work as a completed/queued audit job on the origin.
+                let job = LocalJob {
+                    id: entry.id.clone(),
+                    kind,
+                    status: if entry.delivered {
+                        JobStatus::Completed
+                    } else {
+                        JobStatus::Queued
+                    },
+                    created_at: entry.created_at_unix,
+                    started_at: Some(entry.last_attempt_unix),
+                    finished_at: if entry.delivered {
+                        Some(entry.last_attempt_unix)
+                    } else {
+                        None
+                    },
+                    progress: if entry.delivered { 1.0 } else { 0.0 },
+                    message: if entry.delivered {
+                        format!("Delivered to remote apparatus {device_id}")
+                    } else {
+                        format!(
+                            "Queued for remote delivery to {device_id}: {}",
+                            entry.last_error.clone().unwrap_or_default()
+                        )
+                    },
+                    result: serde_json::to_value(&entry).ok(),
+                    error: entry.last_error.clone(),
+                    target_device_id: Some(device_id.clone()),
+                    originating_device_id: local_id,
+                    person_id,
+                };
+                let mut jobs = self.inner.jobs.lock().map_err(|e| e.to_string())?;
+                jobs.push(job.clone());
+                self.persist(&jobs)?;
+                return Ok(job);
+            }
+            crate::identity_plane::JobPlacement::Unknown { device_id } => {
+                return Err(format!(
+                    "Unknown target device_id {device_id}. Register it in the device fleet or leave target empty for this install."
+                ));
+            }
+        }
+
         let job = LocalJob {
             id: Uuid::new_v4().to_string(),
             kind,
@@ -217,6 +303,9 @@ impl LocalJobScheduler {
             message: "Queued".to_string(),
             result: None,
             error: None,
+            target_device_id: local_id.clone(),
+            originating_device_id: local_id,
+            person_id,
         };
         {
             let mut jobs = self.inner.jobs.lock().map_err(|e| e.to_string())?;

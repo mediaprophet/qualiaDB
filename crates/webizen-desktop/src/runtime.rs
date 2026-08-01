@@ -184,6 +184,46 @@ impl RuntimeHandle {
     }
 }
 
+/// Start the optional WGPU diffusion runtime if it is not already running.
+///
+/// Safe to call from setup completion and from cold start after setup. Failures
+/// are logged and reported via supervisor/events; they must not abort the UI.
+pub fn ensure_runtime_started(app_handle: &AppHandle, app_state: Arc<AppState>) {
+    if app_handle.try_state::<RuntimeHandle>().is_some() {
+        return;
+    }
+    let runtime_init_handle = app_handle.clone();
+    let supervisor = app_handle.try_state::<crate::supervisor::DesktopSupervisor>();
+    if let Some(s) = supervisor.as_ref() {
+        s.service_starting("runtime", "initialising WGPU runtime");
+    }
+    tauri::async_runtime::spawn_blocking(move || {
+        crate::desktop_log::record("info", "starting Webizen WGPU runtime in background");
+        match spawn_runtime(runtime_init_handle.clone(), app_state) {
+            Ok(runtime_handle) => {
+                runtime_init_handle.manage(runtime_handle);
+                if let Some(s) = runtime_init_handle.try_state::<crate::supervisor::DesktopSupervisor>()
+                {
+                    s.service_ready("runtime", "WGPU runtime ready");
+                }
+                let _ = runtime_init_handle.emit("webizen-runtime-ready", ());
+                crate::desktop_log::record("info", "Webizen WGPU runtime ready");
+            }
+            Err(err) => {
+                if let Some(s) = runtime_init_handle.try_state::<crate::supervisor::DesktopSupervisor>()
+                {
+                    s.service_failed("runtime", err.clone());
+                }
+                let _ = runtime_init_handle.emit("webizen-runtime-failed", err.clone());
+                crate::desktop_log::record(
+                    "error",
+                    format!("Webizen WGPU runtime failed to start: {err}"),
+                );
+            }
+        }
+    });
+}
+
 pub fn spawn_runtime(
     app_handle: AppHandle,
     app_state: Arc<AppState>,
