@@ -616,6 +616,9 @@ mod cpu_ops;
 pub(crate) use cpu_ops::*;
 #[cfg(not(target_arch = "wasm32"))]
 mod pipeline_cache;
+/// Prepared CPU execution floor for browser WASM. This backend owns no wgpu
+/// objects and remains available when the browser exposes no WebGPU adapter.
+pub mod wasm_cpu;
 #[cfg(not(target_arch = "wasm32"))]
 pub(crate) use pipeline_cache::*;
 
@@ -636,9 +639,6 @@ mod forward;
 mod gemm;
 mod init;
 mod load;
-/// Cooperative browser yields + init-status for WASM LLM boot (phones).
-#[cfg(target_arch = "wasm32")]
-pub(crate) mod wasm_yield;
 mod output;
 #[cfg(not(target_arch = "wasm32"))]
 mod prefill_arena;
@@ -646,6 +646,9 @@ mod prefill_async;
 #[cfg(not(target_arch = "wasm32"))]
 mod resident_decode;
 mod verify_arena;
+/// Cooperative browser yields + init-status for WASM LLM boot (phones).
+#[cfg(target_arch = "wasm32")]
+pub(crate) mod wasm_yield;
 
 /// MC8 pt3e: max abs error over the first `n` elements.
 #[cfg(all(target_arch = "wasm32", feature = "wasm-llm-diagnostics"))]

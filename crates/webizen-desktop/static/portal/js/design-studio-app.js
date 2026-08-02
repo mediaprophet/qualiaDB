@@ -29,8 +29,147 @@ let qualiaPortal = null;
 let wasm = null;
 let wasmSource = "none";
 let portalReady = false;
+/** Queued Care→iframe anatomy loads that arrived before the portal finished boot. */
+let pendingAnatomyLoad = null;
+let anatomyLoadInFlight = false;
 
 const $ = (id) => document.getElementById(id);
+
+/**
+ * Desktop Care posts `{ type: 'anatomy-load-body', model: 'male'|'female' }` into this
+ * design-studio iframe once the body-asset cache is ready. Fetch per-organ `.10d` via
+ * the host protocol and upload through QualiaPortal (same path as playground packs).
+ */
+async function loadAnatomyBodyFromHost(model) {
+  const m = (model || "male").toLowerCase() === "female" ? "female" : "male";
+  if (!portalReady || !qualiaPortal) {
+    pendingAnatomyLoad = m;
+    debugLog("anatomy-load queued (portal not ready)", { model: m });
+    return;
+  }
+  if (anatomyLoadInFlight) {
+    pendingAnatomyLoad = m;
+    return;
+  }
+  anatomyLoadInFlight = true;
+  pendingAnatomyLoad = null;
+  try {
+    const canvas = $("design-canvas");
+    const wrap = $("design-canvas-wrap");
+    if (canvas && wrap) {
+      const w = Math.max(wrap.clientWidth || 0, canvas.clientWidth || 0, 320);
+      const h = Math.max(wrap.clientHeight || 0, canvas.clientHeight || 0, 240);
+      ensureCanvasBackingStore(canvas, w, h);
+      qualiaPortal.resize?.(canvas, w, h);
+    }
+
+    if ($("encode-status")) {
+      $("encode-status").textContent = `Loading anatomy body (${m}) from host cache…`;
+    }
+
+    const bodyRes = await fetch(
+      `webizen://localhost/anatomy/body.json?model=${encodeURIComponent(m)}`,
+    );
+    if (!bodyRes.ok) {
+      throw new Error(`body.json HTTP ${bodyRes.status} — acquire body assets in Care first`);
+    }
+    const body = await bodyRes.json();
+    const painted = Array.isArray(body.percepts) ? body.percepts : [];
+    if (!painted.length) {
+      throw new Error("body.json has no organ percepts");
+    }
+
+    const organs = [];
+    let failed = 0;
+    for (const entry of painted) {
+      const key = entry.organ_key;
+      if (!key) continue;
+      const tenRes = await fetch(
+        `webizen://localhost/anatomy/10d/${encodeURIComponent(m)}/${encodeURIComponent(key)}`,
+      );
+      if (!tenRes.ok) {
+        failed += 1;
+        continue;
+      }
+      const bytes = new Uint8Array(await tenRes.arrayBuffer());
+      if (!bytes.byteLength) {
+        failed += 1;
+        continue;
+      }
+      const rgba = entry.percept?.rgba || entry.rgba || [0.55, 0.62, 0.78, 1];
+      organs.push({
+        bytes,
+        r: Number(rgba[0] ?? 0.55),
+        g: Number(rgba[1] ?? 0.62),
+        b: Number(rgba[2] ?? 0.78),
+        a: Number(rgba[3] ?? 1),
+      });
+    }
+
+    if (!organs.length) {
+      throw new Error(
+        `no .10d organs loaded (percepts=${painted.length}, failed=${failed})`,
+      );
+    }
+
+    if (typeof qualiaPortal.load_body_organs_colored !== "function") {
+      throw new Error(
+        "portal missing load_body_organs_colored — rebuild docs/pkg/qualia (package-qualia-wasm.ps1)",
+      );
+    }
+
+    // wasm-bindgen expects a real JS Array of objects, not a plain array of records only.
+    const organArr = organs;
+    const summary = qualiaPortal.load_body_organs_colored(organArr);
+    const loaded =
+      summary && typeof summary === "object"
+        ? summary.organs_loaded ?? organs.length
+        : organs.length;
+    const triangles =
+      summary && typeof summary === "object" ? summary.total_triangles ?? "—" : "—";
+    const refused =
+      summary && typeof summary === "object" ? summary.organs_refused ?? 0 : 0;
+
+    debugLog("anatomy body loaded", { model: m, loaded, triangles, refused, failed });
+    if ($("encode-status")) {
+      $("encode-status").textContent =
+        `Anatomy ${m}: ${loaded} organs · ${triangles} tris` +
+        (refused ? ` · ${refused} refused` : "") +
+        (failed ? ` · ${failed} missing` : "");
+    }
+    if ($("canvas-hud")) {
+      $("canvas-hud").innerHTML = [
+        `<strong>Care · ${m} reference body</strong>`,
+        `${loaded} organs · ${triangles} triangles`,
+        "Qualia Portal · host-cached .10d",
+      ].join("<br>");
+    }
+    qualiaPortal.set_telemetry?.(
+      telemetryToFloats({ baking_crystallization: 0.4, epistemic_density: 0.55 }),
+    );
+  } catch (e) {
+    debugError("anatomy-load-body failed", e);
+    if ($("encode-status")) {
+      $("encode-status").textContent = `Anatomy load failed: ${e?.message || e}`;
+    }
+  } finally {
+    anatomyLoadInFlight = false;
+    if (pendingAnatomyLoad) {
+      const next = pendingAnatomyLoad;
+      pendingAnatomyLoad = null;
+      void loadAnatomyBodyFromHost(next);
+    }
+  }
+}
+
+function installAnatomyLoadListener() {
+  window.addEventListener("message", (ev) => {
+    const data = ev?.data;
+    if (!data || typeof data !== "object") return;
+    if (data.type !== "anatomy-load-body") return;
+    void loadAnatomyBodyFromHost(data.model || "male");
+  });
+}
 
 function telemetryToFloats(partial) {
   const base = defaultTelemetry();
@@ -477,6 +616,8 @@ function renderJobs() {
 
 async function boot() {
   debugLog("boot start");
+  // Listen before portal boot so early postMessages from Care are queued.
+  installAnatomyLoadListener();
   showLoading(true);
   try {
     // QualiaPortal needs a laid-out canvas (WebGPU surface); hidden main-content is 0×0.
@@ -494,6 +635,9 @@ async function boot() {
     await initQualiaPortalLayer();
     showLoading(false);
     debugLog("boot complete");
+    if (pendingAnatomyLoad) {
+      void loadAnatomyBodyFromHost(pendingAnatomyLoad);
+    }
   } catch (e) {
     debugError("boot failed", e);
     showError(e.message);

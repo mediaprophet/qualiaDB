@@ -1947,6 +1947,10 @@ impl QTensorEngine {
             }
         }
 
+        // REVIEW(wasm-mobile-2026-08-02 F5): this is one submit/fence, but it
+        // still reads the complete vocabulary back for CPU argmax (196,608 bytes
+        // for vocab 49,152). Replace with a separately validated browser GPU
+        // top-1 reduction that returns only token id + score.
         // Single submit + single readback
         self.gpu_queue().submit(Some(enc.encoder.finish()));
 

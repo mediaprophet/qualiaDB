@@ -355,6 +355,9 @@ async function boot() {
   if (isSheetMode()) setSheetOpen(false);
   await waitForLayout();
 
+  // REVIEW(wasm-mobile-2026-08-02 F1/F2): API presence is not adapter capability.
+  // Chrome may expose navigator.gpu while blocklisting every adapter. Consume the
+  // proposed shared capability receipt before selecting the Anatomy renderer.
   if (!navigator.gpu) {
     const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
     const isAndroid = /Android/i.test(navigator.userAgent);
@@ -869,7 +872,10 @@ function startLoop() {
     lastT = t;
     try {
       portal.tick(canvas, dt);
-    } catch (_) {}
+    } catch (_) {
+      // REVIEW(wasm-mobile-2026-08-02 F9): report bounded device-loss/render
+      // diagnostics here; swallowing this made the mobile blank-body failure opaque.
+    }
     requestAnimationFrame(frame);
   };
   requestAnimationFrame(frame);

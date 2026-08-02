@@ -363,6 +363,9 @@ export class QualiaPortal {
      * (The mesh pipeline is currently opaque, so a nonzero level acts as show; smooth opacity lands
      * when the mesh pipeline gains alpha blending — mixer plan P2.) An absent/empty map shows every
      * system at full — so `load_body_from_qualia_bundle` is exactly this with no mixer applied.
+     *
+     * Decodes organs **in Rust** from the pack buffer — no per-organ JS `Uint8Array` materialisation.
+     * That cut peak heap by ~1–2× pack size and is the phone-safe path.
      * @param {Uint8Array} bytes
      * @param {any} system_levels
      * @param {any} disabled_parts
@@ -391,6 +394,9 @@ export class QualiaPortal {
      * `organs` is a JS `Array` of objects: `{ bytes: Uint8Array, r: f32, g: f32, b: f32, a: f32 }`
      * (per-organ colour). Any `x/y/z` fields are ignored — the mesh already carries its position.
      * Returns `{ organs_loaded, organs_refused, total_triangles }`.
+     *
+     * Prefer [`Self::load_body_from_qualia_bundle_mixed`] for packs — that path never materialises a
+     * per-organ JS `Uint8Array` copy (critical on phones).
      * @param {Array<any>} organs
      * @returns {any}
      */

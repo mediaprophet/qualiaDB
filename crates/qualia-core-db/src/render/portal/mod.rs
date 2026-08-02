@@ -1158,6 +1158,10 @@ impl QualiaPortal {
 
     fn finish_body_mesh_upload(&mut self, mut accum: BodyMeshAccum) -> Result<JsValue, JsValue> {
         accum.normalise_to_orbit_frame();
+        // REVIEW(wasm-mobile-2026-08-02 F2): when `gpu` is None this currently
+        // drops the decoded body and still returns a success summary. A repair
+        // must render through a real fallback or return an explicit unsupported
+        // result; it must not claim that an invisible body loaded successfully.
         if let Some(ref mut gpu) = self.gpu {
             gpu.upload_mesh_colored(&accum.positions, &accum.colors, &accum.indices);
             self.tier = 2;

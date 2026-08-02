@@ -48,6 +48,7 @@ during the audit.
 | R8 Serving scheduler | Not started | Continuous batching after latency efficiency | Matched-concurrency vLLM comparison |
 | R9 Build/decomposition | Implementing | Cohesive subdirectory libraries and lean builds | File-size/module checks and feature profiles |
 | R10 Temp/disk hygiene | Verifying | Bounded RAII scratch and explicit artifact promotion | Cleanup tests and receipt counters |
+| R11 Browser/WASM restoration | Implementing | Restore Qualia's accelerated browser path without replacing or demoting native inference | Physical-phone adapter, residency, parity and exact-token receipts |
 
 ## Detailed ledger
 
@@ -145,10 +146,32 @@ during the audit.
 | R10.6 | Certified | Cleanup counters in execution receipts | Serialized in retained manifests; unknown counters distinguished by coverage mask |
 | R10.7 | Implementing | Migrate lab/compiler temporary producers | Removed legacy root `cargo-check-workspace-{before,after}.log`; remaining producers still require migration |
 
+### R11 — Browser/WASM restoration
+
+This package is additive to the accepted native runtime. It must not replace, gate, or silently
+demote the certified CUDA profile. wllama remains a lab comparator only and is not a Qualia
+runtime dependency. Browser execution remains Qualia's Rust/WASM engine plus backend-specific
+Qualia kernels.
+
+| ID | Status | Deliverable | Evidence required |
+|---|---|---|---|
+| R11.1 | Verifying | Source/shipping-artifact synchronization | Browser reports the expected engine version and artifact SHA after every WASM source change |
+| R11.2 | Verifying | Resident WebGPU load contract | All layer weights, LM head and norms upload once; any lazy/non-resident fallback fails visibly |
+| R11.3 | Implementing | Android adapter negotiation | Compatibility/Core/low-power/software probes are ordered and logged; physical Pixel receipt names the successful adapter path |
+| R11.4 | Not started | Directory-backed `runtime/backend/wasm/` boundary | Routing-only `mod.rs`; adapter, prepared plan, execution and receipt concerns remain below 500 lines each |
+| R11.5 | Verifying | Qualia-owned CPU-WASM contingency | Qualia kernels execute a real full-transformer token without WebGPU; browser routing is wired, while WASM token parity and threaded performance receipts remain open. LLM weights, KV cache and inference scratch are explicitly outside the 42 MiB semantic/SLG Sentinel arena. |
+| R11.6 | Investigating | Browser TTFT/decode recovery | Exact-token five-run median/p95, resident/fence/upload counters and comparison to the last matching harness |
+| R11.7 | Verifying | Native non-regression gate | Accepted A2000 CUDA source/profile remains independently selectable and its exact-output/profile tests pass |
+| R11.8 | Verifying | LAN physical-phone telemetry | Secure/COI environment, adapter, init stages, TTFT, completion, bounded memory/error events retained under marker-owned lab directory |
+
 ## Evidence log
 
 | Date | IDs | Evidence | Result |
 |---|---|---|---|
+| 2026-08-02 | R11.2, R11.6 | Local browser, SmolLM2-360M Q8_0 P64 | Coherent `Paris`; 318.8 MB/32 layer weights, 47.8 MB LM head and 64 norm slots resident once; TTFT remains slow and performance is not certified |
+| 2026-08-02 | R11.3, R11.8 | Pixel LAN session `secure-phone-20260802-123000` | HTTPS secure context and COI pass; Chrome 150 exposes `navigator.gpu` but returns no adapter before model code |
+| 2026-08-02 | R11.3 | `webgpu-adapter-order.test.mjs` | Android compatibility-first negotiation and desktop requested-then-default ordering pass |
+| 2026-08-02 | R11.5 | `wasm_cpu_backend` real SmolLM2-360M Q8_0 test | Qualia-owned CPU transformer token completes without a GPU at a 1,024-token context; measured mutable LLM working set is 80.2 MiB, confirming inference is not constrained by the 42 MiB semantic Sentinel |
 | 2026-07-26 | R0.1, R1.2, R1.3, R2.1 | llama.cpp/vLLM/Qualia audit; live A2000 decode | Qualia 54.90 tok/s; 355 dispatches/token; priority corrected |
 | 2026-07-26 | R0.4 | Decode-proxy execution-path counters | Implemented, broader receipt schema still incomplete |
 | 2026-07-26 | R9.1, R10.1 | Programme policy added | Implementation gates established |
