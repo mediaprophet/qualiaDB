@@ -7,6 +7,8 @@
 //! the browser facade (`portal`, `portal_wasm`) remains gated to wasm + `portal`.
 
 pub mod acoustic;
+/// Browser Anatomy render backends. Shared pack metadata remains in `anatomy_pack`.
+pub mod anatomy;
 /// Shared metadata schema for a `.hmc` anatomy asset pack (per-organ system /
 /// position / neutral colour). Platform-agnostic (native + WASM consumers).
 pub mod anatomy_pack;

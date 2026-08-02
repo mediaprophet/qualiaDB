@@ -169,12 +169,76 @@ Acceptance: desktop decode back to **wllama-competitive class** (principal’s ~
 
 ---
 
+## Repair machine (`C:\Projects\qualia-27062026`, 2026-08-02) — measured
+
+| Item | Status |
+|------|--------|
+| Branch | `0.0.29-dev` (local tracking `origin/0.0.29-dev`) |
+| GPU | NVIDIA RTX A2000 12GB + Intel HD 530 |
+| Models | **`C:\Projects\qualia-27062026\models\`** (gitignored). Junction: `docs/models` → `../models` so demos’ `/models/` and `../models/` paths resolve. |
+| Disk | Removed regenerable `target/` (~42 GB); free space restored before wasm-pack |
+| Playground WASM | Rebuilt + copied to `docs/playground/` + `docs/llmdemo/` (`portal,wasm-llm,wasm-logic,wasm-scientific,wasm-playground`) |
+| Portal WASM | `scripts/package-qualia-wasm.ps1` → `docs/pkg/qualia` + desktop `static/portal/pkg/qualia` |
+| Anatomy iframe | Wired `anatomy-load-body` in `docs/js/design-studio-app.js` (synced to desktop static) |
+| Cache-bust | `?v=0.0.29-llm-restore` on `online-llm-demo.html` / `wasm-llm-test.html` |
+
+### WASM LLM measurements (SmolLM2-360M Q8_0, Chrome WebGPU, A2000)
+
+| Harness | Result | Notes |
+|---------|--------|-------|
+| Pre-repair (reported) | **~0.46–0.54 tok/s** | Non-resident / stale artifact floor |
+| `agent-tools/llmdemo-test.mjs` after rebuild | **4.6 tok/s** (128 tok, TTFT 1.60s) | Console: engine resident; coherent “Paris” output |
+| `wasm-llm-test.html` after rebuild | init **3607 ms**; MC8 logs **resident weights 318.8 MB / 32 layers** | Short run 7 tok includes heavy TTFT → headline ~1.3 tok/s not comparable to 128-tok decode |
+
+**Residency is back** (`[MC8] resident weights uploaded once` + no eager-upload-skip). Throughput is **~10× above the 0.46 floor** and in CHANGELOG Phase-5 class (~5.9 on another GPU), **not** the principal’s remembered ~26 tok/s competitive desktop class. Remaining gap vs ~26 is **not** “stale wasm still shipping deferred residency”; investigate decode path / adapter / multi-submit / comparison baseline separately. Do not reintroduce deferred weight residency.
+
+### Still open
+
+1. Close remaining gap toward ~20–26 tok/s class if that prior measure was the same WASM path (label GPU + harness in every row).
+2. Live dogfood: Care anatomy PNG + iframe after acquire; playground `anatomy.html` with packs.
+3. Mobile blank re-test after portal rebuild (phone lite mute must not fire on real desktop).
+
+---
+
 ## Branch intent
 
 `0.0.29-dev` carries:
 
 1. Full `0.0.28` tip (including failed mobile series + source restore).  
 2. This handoff document.  
-3. No false claim that tok/s is already fixed — **fix lands on the machine with models + WebGPU desktop + wasm-pack**.
+3. Repair-machine rebuild + residency restore + anatomy postMessage wiring (2026-08-02).
 
-When fixed: rebuild WASM artifacts, re-run benches, append measured numbers here, then promote.
+Promote only after anatomy dogfood + any further tok/s work the principal prioritises.
+
+---
+
+## Follow-up audit and mobile LAN harness (2026-08-02)
+
+The historical inference-lab peak was **21.84 displayed tok/s** for Qualia and **27.67** for
+wllama, but that harness counted approximate whitespace pieces while Qualia internally decoded a
+fixed 128 model tokens. It is a useful historical target, not an exact-token comparison.
+
+Fresh exact-token tests on the repair machine (SmolLM2-360M Q8_0, 64 generated model tokens):
+
+| Browser run | Qualia steady decode | wllama steady decode | Qualia/wllama |
+|---|---:|---:|---:|
+| Chrome before safe decode repair | 4.89 tok/s | 9.31 tok/s | 0.52 |
+| Independent browser after repeated GPU stress | 3.71 tok/s | 9.36 tok/s | 0.40 |
+
+The later run followed multiple invalid experimental GPU-reduction submissions and should be
+treated as a stressed-process floor, not a clean A/B attribution. Q8 remained coherent (Paris and
+the 64-token zero-copy answer). Both local Q4 artifacts remain semantically invalid; the demo keeps
+Q4 withheld. The engine now treats literal `<|endoftext|>` as a stop token, containing Q4 failure at
+zero visible tokens instead of rendering 128 control markers.
+
+The rejected experiment established a concrete boundary: inserting the existing native top-K
+reduction into the browser's fused encoder invalidated/corrupted the WebGPU command stream. The
+unsafe code was removed before the accepted rebuild. The retained repair is caller-buffered
+incremental token-piece decoding plus the stop-token correction.
+
+Physical-phone validation is now supported by `tools/mobile_wasm_lab.py` and
+`docs/js/mobile-wasm-lab.js`. The HTTPS LAN session records environment, adapter limits, WASM boot,
+model init, TTFT, completion, visibility, bounded text preview, memory when exposed, and errors to
+`.qualia/mobile-wasm-lab/<session>/events.jsonl`. See
+`docs/development/mobile-wasm-lab.md`. Actual mobile WebGPU memory behavior is not claimed until a
+trusted-HTTPS physical-phone run is captured.

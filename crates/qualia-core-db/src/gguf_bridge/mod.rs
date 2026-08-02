@@ -616,6 +616,9 @@ mod cpu_ops;
 pub(crate) use cpu_ops::*;
 #[cfg(not(target_arch = "wasm32"))]
 mod pipeline_cache;
+/// Prepared CPU execution floor for browser WASM. This backend owns no wgpu
+/// objects and remains available when the browser exposes no WebGPU adapter.
+pub mod wasm_cpu;
 #[cfg(not(target_arch = "wasm32"))]
 pub(crate) use pipeline_cache::*;
 
@@ -623,6 +626,8 @@ pub(crate) use pipeline_cache::*;
 // pub(crate) so they call across modules freely; types/imports arrive via each file's `use super::*`.
 mod async_dispatch;
 mod attention;
+#[cfg(target_arch = "wasm32")]
+mod browser;
 #[cfg(all(not(target_arch = "wasm32"), feature = "cuda"))]
 mod cuda_decode_plan;
 /// Hard cap on the KV context window a decode plan may request. Declared here rather than in the
@@ -636,9 +641,6 @@ mod forward;
 mod gemm;
 mod init;
 mod load;
-/// Cooperative browser yields + init-status for WASM LLM boot (phones).
-#[cfg(target_arch = "wasm32")]
-pub(crate) mod wasm_yield;
 mod output;
 #[cfg(not(target_arch = "wasm32"))]
 mod prefill_arena;
@@ -646,6 +648,9 @@ mod prefill_async;
 #[cfg(not(target_arch = "wasm32"))]
 mod resident_decode;
 mod verify_arena;
+/// Cooperative browser yields + init-status for WASM LLM boot (phones).
+#[cfg(target_arch = "wasm32")]
+pub(crate) mod wasm_yield;
 
 /// MC8 pt3e: max abs error over the first `n` elements.
 #[cfg(all(target_arch = "wasm32", feature = "wasm-llm-diagnostics"))]
@@ -1089,6 +1094,10 @@ pub(crate) fn stack_gemm_quant(
         ));
         return false;
     }
+    #[cfg(target_arch = "wasm32")]
+    if info.ggml_type == crate::ggml_quants::GGML_TYPE_Q8_0 {
+        return wasm_cpu::q8_0_gemv_into(raw, input, out, n_in, n_out);
+    }
     let mut row = [0f32; MAX_STACK_GEMM_IN];
     for i in 0..n_out {
         if crate::ggml_quants::dequant_matrix_row_into(raw, info, i, &mut row[..n_in]).unwrap_or(0)
@@ -1203,17 +1212,11 @@ pub struct QTensorEngine {
     // A1a (STELLAR §A): persistent GPU top-k output-projection pipeline + small candidate buffers.
     // Lets the output logits stay on-GPU (top-k over them, read back only K pairs) instead of the
     // 196 KB/token full-logit readback. Created once in `ensure_gemm_buffers`.
-    #[cfg(not(target_arch = "wasm32"))]
     output_topk_pipeline: Option<wgpu::ComputePipeline>,
-    #[cfg(not(target_arch = "wasm32"))]
     output_topk_bind_layout: Option<wgpu::BindGroupLayout>,
-    #[cfg(not(target_arch = "wasm32"))]
     topk_cand_val_buf: Option<wgpu::Buffer>,
-    #[cfg(not(target_arch = "wasm32"))]
     topk_cand_idx_buf: Option<wgpu::Buffer>,
-    #[cfg(not(target_arch = "wasm32"))]
     topk_cand_staging: Option<wgpu::Buffer>,
-    #[cfg(not(target_arch = "wasm32"))]
     topk_params_buf: Option<wgpu::Buffer>,
     /// MC8 FFN / attention scratch (gate, up, o_proj).
     gemm_aux_buf: Option<wgpu::Buffer>,

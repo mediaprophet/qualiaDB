@@ -68,7 +68,7 @@ import init, {
   initialize_webgpu_engine, inferWasmAsync, inferWasmStreaming, isWebgpuEngineReady,
   releaseWebgpuEngine, getEngineVersion, init_panic_hook, compileGgufToP64, p64FormatVersion,
   verifyFirstLayerQuant,
-} from './playground/qualia_core_db.js?v=0.0.28-q4fix3';
+} from './playground/qualia_core_db.js?v=0.0.29-safe-decode1';
 import { loadGgufCached, loadOrCompileP64, clearAllOpfsModels } from './js/opfs-model-cache.js';
 
 const USE_ASYNC_GPU = new URLSearchParams(location.search).get('async') !== '0';
@@ -95,7 +95,7 @@ window.__qualiaVerifyFirstLayerQuant = verifyFirstLayerQuant;
     $('gpu').textContent = 'WebGPU: ' + (a ? 'adapter ok' : 'NONE');
   } catch (e) { $('gpu').textContent = 'WebGPU: err ' + e; }
   try {
-    await init(new URL('./playground/qualia_core_db_bg.wasm?v=0.0.28-q4fix3', location.href));
+    await init(new URL('./playground/qualia_core_db_bg.wasm?v=0.0.29-safe-decode1', location.href));
     try { init_panic_hook(); log('panic hook installed', 'dim'); } catch {}
     $('engine-ver').textContent = 'engine: v' + (getEngineVersion?.() ?? '?');
     log('WASM module initialised', 'ok');

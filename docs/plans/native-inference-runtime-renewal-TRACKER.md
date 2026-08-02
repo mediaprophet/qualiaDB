@@ -48,6 +48,7 @@ during the audit.
 | R8 Serving scheduler | Not started | Continuous batching after latency efficiency | Matched-concurrency vLLM comparison |
 | R9 Build/decomposition | Implementing | Cohesive subdirectory libraries and lean builds | File-size/module checks and feature profiles |
 | R10 Temp/disk hygiene | Verifying | Bounded RAII scratch and explicit artifact promotion | Cleanup tests and receipt counters |
+| R11 Browser/WASM restoration | Implementing | Restore Qualia's accelerated browser path without replacing or demoting native inference | Physical-phone adapter, residency, parity and exact-token receipts |
 
 ## Detailed ledger
 
@@ -145,10 +146,45 @@ during the audit.
 | R10.6 | Certified | Cleanup counters in execution receipts | Serialized in retained manifests; unknown counters distinguished by coverage mask |
 | R10.7 | Implementing | Migrate lab/compiler temporary producers | Removed legacy root `cargo-check-workspace-{before,after}.log`; remaining producers still require migration |
 
+### R11 — Browser/WASM restoration
+
+This package is additive to the accepted native runtime. It must not replace, gate, or silently
+demote the certified CUDA profile. wllama remains a lab comparator only and is not a Qualia
+runtime dependency. Browser execution remains Qualia's Rust/WASM engine plus backend-specific
+Qualia kernels.
+
+Normative recovery review and implementation sequence:
+[`wasm-wgpu-mobile-anatomy-review-2026-08-02.md`](../reports/wasm-wgpu-mobile-anatomy-review-2026-08-02.md),
+tracked as R11 below.
+
+| ID | Status | Deliverable | Evidence required |
+|---|---|---|---|
+| R11.1 | Verifying | Source/shipping-artifact synchronization | Browser reports the expected engine version and artifact SHA after every WASM source change |
+| R11.2 | Verifying | Resident WebGPU load contract | All layer weights, LM head and norms upload once; any lazy/non-resident fallback fails visibly |
+| R11.3 | Verifying | Structured browser capability negotiation | WebGPU, WebGL2, SIMD, worker and shared-memory capabilities are independent receipt fields; compatibility/core adapter attempts and independent LLM/Anatomy selections are covered by the browser contract tests; physical Pixel rerun remains open |
+| R11.4 | Implementing | Directory-backed `gguf_bridge/browser/{webgpu,cpu}` boundary | Browser WebGPU top-1 and CPU-WASM packed-kernel concerns are now focused modules; remaining lifecycle/receipt extraction must keep routing-only `mod.rs` files and sub-500-line ownership |
+| R11.5 | Verifying | Qualia-owned CPU-WASM contingency | Qualia kernels execute a real full-transformer token without WebGPU; browser model/init/decode now runs in a dedicated module worker with a zero-copy JS transfer and direct packed SIMD128 Q8_0 GEMV. Physical WASM token parity and multi-worker performance receipts remain open. LLM weights, KV cache and inference scratch are explicitly outside the 42 MiB semantic/SLG Sentinel arena. |
+| R11.6 | Implementing | Browser TTFT/decode recovery | Compact GPU top-1 and packed CPU Q8_0 SIMD are implemented; exact-token five-run median/p95, stage timings and physical-Pixel promotion gates remain open |
+| R11.7 | Verifying | Native non-regression gate | Accepted A2000 CUDA source/profile remains independently selectable and its exact-output/profile tests pass |
+| R11.8 | Verifying | LAN physical-phone telemetry | Secure/COI environment, adapter, init stages, TTFT, completion, bounded memory/error events retained under marker-owned lab directory |
+| R11.9 | Verifying | Honest Anatomy WebGPU/WebGL2 lifecycle | Rust/WASM WebGPU and WebGL2 paths now require non-zero uploaded geometry and a presented frame before success; both rendered the real XY body locally, including a 412x915 WebGL2 pass; physical Pixel verification remains open |
+| R11.10 | Verifying | Versioned browser capability and execution receipts | Stable capability/Anatomy receipts plus `qualia.browser-execution.v1` now declare backend, vocab, compact/full readback bytes, independent LLM memory, Sentinel exclusion and CPU worker/SIMD/Q8 details; exact-token performance fields remain open |
+| R11.11 | Verifying | Canonical `.hmc` LAN staging | The LAN server validates QBDL magic, size and SHA-256, stages missing `.hmc` names atomically from retained `.qualia` sources, and refuses startup/QR on failure; local hard-link staging tests pass |
+
 ## Evidence log
 
 | Date | IDs | Evidence | Result |
 |---|---|---|---|
+| 2026-08-02 | R11.6 | Local wllama 3.5.1 source inspection | Confirms llama.cpp/server-context reuse, worker execution, conditional pthread pool, WASM SIMD, GPU-layer offload and versioned GLUE messaging; retained as an external comparator only, not a Qualia dependency |
+| 2026-08-02 | R11.2, R11.6 | Local browser, SmolLM2-360M Q8_0 P64 | Coherent `Paris`; 318.8 MB/32 layer weights, 47.8 MB LM head and 64 norm slots resident once; TTFT remains slow and performance is not certified |
+| 2026-08-02 | R11.3, R11.8 | Pixel LAN session `secure-phone-20260802-123000` | HTTPS secure context and COI pass; Chrome 150 exposes `navigator.gpu` but returns no adapter before model code |
+| 2026-08-02 | R11.3 | `webgpu-adapter-order.test.mjs` | Android compatibility-first negotiation and desktop requested-then-default ordering pass |
+| 2026-08-02 | R11.3, R11.10 | `browser-capability.test.mjs`, `online-llm-cpu-fallback.test.mjs` | Stable capability schema, independent WebGPU/WebGL2/CPU-WASM selection, adapter-attempt receipts and honest LLM fallback wiring pass |
+| 2026-08-02 | R11.9 | Local browser, real XY Anatomy `.hmc` | WebGPU presents 25 organs / 5,222,191 triangles; forced WebGL2 presents the same body, and the 412x915 phone profile presents 9 organs / 1,615,213 triangles with an acknowledged frame |
+| 2026-08-02 | R11.11 | `mobile-wasm-lab-assets.test.py`, session `local-browser-20260802` | Male/female QBDL packs validated and canonical `.hmc` hard links staged with SHA-256 receipts before LAN server startup |
+| 2026-08-02 | R11.5 | `wasm_cpu_backend` real SmolLM2-360M Q8_0 test | Qualia-owned CPU transformer token completes without a GPU at a 1,024-token context; measured mutable LLM working set is 80.2 MiB, confirming inference is not constrained by the 42 MiB semantic Sentinel |
+| 2026-08-02 | R11.4, R11.6 | `browser-webgpu-top1.test.mjs`; native vocab-scale top-k GPU differential | Browser output projection reduces 49,152 logits on-device and reads 48 `{score, token}` pairs (384 bytes/token) instead of 196,608 bytes; deterministic token parity passes for k=1/32/64 |
+| 2026-08-02 | R11.4-R11.6, R11.10 | `qualia-cpu-worker.test.mjs`; `packed_q8_matches_dequantized_rows`; full `wasm-full` release build | CPU model ownership and decode moved off the UI thread; model bytes transfer into the worker; packed Q8_0 GEMV matches the dequantized oracle and compiles with explicit SIMD128; execution receipt declares one dedicated worker and the independent LLM memory domain |
 | 2026-07-26 | R0.1, R1.2, R1.3, R2.1 | llama.cpp/vLLM/Qualia audit; live A2000 decode | Qualia 54.90 tok/s; 355 dispatches/token; priority corrected |
 | 2026-07-26 | R0.4 | Decode-proxy execution-path counters | Implemented, broader receipt schema still incomplete |
 | 2026-07-26 | R9.1, R10.1 | Programme policy added | Implementation gates established |

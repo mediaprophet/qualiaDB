@@ -442,6 +442,9 @@ impl QTensorEngine {
         }
         self.gguf_mmap = Some(mmap);
         // Full eager upload — required for coherent decode (do not defer).
+        // REVIEW(wasm-mobile-2026-08-02 F6): accelerated/benchmark mode needs a
+        // fail-closed residency contract and receipt. Continuing here can silently
+        // demote the engine into the historical per-forward upload performance floor.
         if !self.mc8_upload_all_resident_weights(&index) {
             wlog("[MC8] eager resident weight upload skipped at init — will retry lazily");
         }

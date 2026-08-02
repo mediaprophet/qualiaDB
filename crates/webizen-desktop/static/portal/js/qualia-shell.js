@@ -131,32 +131,41 @@ async function signTensorSliceRequest({
     return bytesToHex(sig);
 }
 
-/** Set canvas backing store from layout box (CSS 100% does not set width/height attributes). */
-export function ensureCanvasBackingStore(canvas, minW = 640, minH = 360) {
+/**
+ * Set canvas backing store from layout box (CSS 100% does not set width/height attributes).
+ * @param {HTMLCanvasElement} canvas
+ * @param {number} [minW=640]
+ * @param {number} [minH=360]
+ * @param {{ maxDpr?: number }} [opts] Cap devicePixelRatio on phones to limit WebGPU VRAM
+ *   (Pixel DPR is often 2.5–3.5; full-res anatomy surfaces OOMed after pack decode).
+ */
+export function ensureCanvasBackingStore(canvas, minW = 640, minH = 360, opts = {}) {
     if (!canvas) return { w: minW, h: minH };
     const rect = canvas.getBoundingClientRect();
     const cssW = Math.max(Math.round(rect.width) || minW, 1);
     const cssH = Math.max(Math.round(rect.height) || minH, 1);
-    const dpr = typeof window !== 'undefined' ? (window.devicePixelRatio || 1) : 1;
+    const rawDpr = typeof window !== 'undefined' ? (window.devicePixelRatio || 1) : 1;
+    const maxDpr = typeof opts.maxDpr === 'number' && opts.maxDpr > 0 ? opts.maxDpr : Infinity;
+    const dpr = Math.min(rawDpr, maxDpr);
     const w = Math.round(cssW * dpr);
     const h = Math.round(cssH * dpr);
     if (canvas.width !== w || canvas.height !== h) {
         canvas.width = w;
         canvas.height = h;
     }
-    return { w, h };
+    return { w, h, dpr };
 }
 
 /** Published portal artefact names (CI copies wasm-pack output → qualia.js + qualia_bg.wasm). */
 function portalPkgUrls() {
     const base = new URL('../pkg/qualia/', import.meta.url);
     return {
-        js: new URL('qualia.js', base).href,
+        js: new URL('qualia.js?v=0.0.29-mobile-recovery4', base).href,
         wasm: new URL('qualia_bg.wasm', base).href,
     };
 }
 
-export async function loadQualiaPortal(canvas) {
+export async function loadQualiaPortal(canvas, options = {}) {
     const { js, wasm } = portalPkgUrls();
     debugEnv({ portalJs: js, portalWasm: wasm, canvas: canvas?.id ?? null });
     const t = debugTime('loadQualiaPortal');
@@ -182,30 +191,57 @@ export async function loadQualiaPortal(canvas) {
         // paint adopts the stashed GPU instead. (The limits-shim strips the removed
         // maxInterStageShaderComponents limit so requestDevice succeeds on current Chrome.) Retry a
         // few frames since the freshly-shown canvas may not be paint-ready immediately.
-        if (typeof mod.portal_init_webgpu === 'function' && navigator.gpu) {
+        const preferredRenderer = options.anatomyBackend || (navigator.gpu ? 'webgpu' : 'none');
+        const allowWebGl2 = options.allowWebGl2 === true;
+        let armedRenderer = null;
+        let rendererError = null;
+        if (preferredRenderer === 'webgpu' && typeof mod.portal_init_webgpu === 'function' && navigator.gpu) {
             const raf2 = () => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
             for (let attempt = 0; attempt < 10; attempt++) {
                 let ok = false, err = null;
                 try { ok = await mod.portal_init_webgpu(canvas); }
                 catch (e) { err = String((e && e.message) || e).slice(0, 400); }
                 window.__qualiaGpuInit = { ok, err, attempt, w: canvas.width, h: canvas.height };
-                if (ok) { debugLog('portal_init_webgpu ok', { attempt }); break; }
+                if (ok) {
+                    armedRenderer = 'webgpu';
+                    debugLog('portal_init_webgpu ok', { attempt });
+                    break;
+                }
+                rendererError = err;
                 await raf2();
             }
         } else {
             window.__qualiaGpuInit = { skipped: true, hasFn: typeof mod.portal_init_webgpu, hasGpu: !!navigator.gpu };
         }
+        if (!armedRenderer && allowWebGl2 && typeof mod.portal_init_webgl2 === 'function') {
+            try {
+                if (mod.portal_init_webgl2(canvas)) {
+                    armedRenderer = 'webgl2';
+                    debugLog('portal_init_webgl2 ok');
+                }
+            } catch (e) {
+                rendererError = String((e && e.message) || e).slice(0, 400);
+            }
+        }
+        window.__qualiaAnatomyInit = {
+            preferredRenderer,
+            renderer: armedRenderer,
+            error: rendererError,
+        };
+        if (options.requireBodyRenderer === true && !armedRenderer) {
+            throw new Error(rendererError || 'No WebGPU or WebGL2 Anatomy renderer is available');
+        }
         portal = new mod.QualiaPortal(canvas);
         const tier = portal.tier?.() ?? -1;
-        debugLog('QualiaPortal ready', { source: 'qualia-portal', tier });
-        t.end({ source: 'qualia-portal', tier });
-        return { portal, mod, source: 'qualia-portal', portalError: null };
+        debugLog('QualiaPortal ready', { source: 'qualia-portal', tier, renderer: armedRenderer });
+        t.end({ source: 'qualia-portal', tier, renderer: armedRenderer });
+        return { portal, mod, source: 'qualia-portal', renderer: armedRenderer, portalError: null };
     } catch (e) {
         portalError = e;
         debugWarn('portal pkg failed, falling back to playground wasm-full', e);
         console.warn('Qualia portal pkg not found, falling back to qualia_core_db.wasm', e);
         try {
-            const fallback = new URL('../playground/qualia_core_db.js', import.meta.url).href;
+            const fallback = new URL('../playground/qualia_core_db.js?v=0.0.29-mobile-recovery4', import.meta.url).href;
             debugLog('import fallback', fallback);
             const mod = await import(fallback);
             const fallbackWasm = new URL('../playground/qualia_core_db_bg.wasm', import.meta.url).href;
