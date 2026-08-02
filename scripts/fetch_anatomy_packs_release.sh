@@ -17,7 +17,7 @@ if [[ -f "$CARGO_TOML" ]]; then
     PREFERRED_TAG="v${VER}"
   fi
 fi
-PREFERRED_TAG="${ANATOMY_RELEASE_TAG:-${PREFERRED_TAG:-v0.0.28}}"
+PREFERRED_TAG="${ANATOMY_RELEASE_TAG:-${PREFERRED_TAG:-v0.0.29}}"
 
 REPO="${QUALIA_GITHUB_REPO:-mediaprophet/qualiaDB}"
 OUT_DIR="$REPO_ROOT/docs/playground"

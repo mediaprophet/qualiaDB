@@ -1,7 +1,7 @@
 # QISP (Immersive SPARQL Profile) — implementation progress log
 
 Honest engineering record for `docs/plans/immersive-sparql-hypermedia-profile.md`.
-Per CLAUDE.md §9. Branch `0.0.28`.
+Per CLAUDE.md §9. Branch `0.0.29`.
 
 ---
 

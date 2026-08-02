@@ -1,6 +1,6 @@
 # Getting Started with QualiaDB
 
-**Version:** 0.0.28  
+**Version:** 0.0.29
 **Last Updated:** 2026-06-18
 
 This guide will help you get up and running with QualiaDB, the human-centric semantic engine designed for personal devices and edge computing.

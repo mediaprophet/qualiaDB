@@ -95,7 +95,7 @@ const BP3D_SOURCE = {
 };
 
 // Keep in lockstep with crates/qualia-core-db Cargo.toml / release tag.
-const ENGINE_VERSION = "0.0.28";
+const ENGINE_VERSION = "0.0.29";
 const RELEASE_BASE = `https://github.com/mediaprophet/qualiaDB/releases/download/v${ENGINE_VERSION}`;
 const isCoarsePointer = () =>
   (typeof window !== "undefined" &&

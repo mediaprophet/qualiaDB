@@ -374,7 +374,7 @@ import {
 } from './js/browser-capability.js?v=0.0.29-mobile-recovery4';
 
 const browserCapabilityReceiptPromise = getBrowserCapabilityReceipt({
-    engineVersion: '0.0.29-moredev',
+    engineVersion: '0.0.29',
     sessionId: new URLSearchParams(location.search).get('lab') || '',
 });
 const cpuWorker = new QualiaCpuWorkerClient();
@@ -405,7 +405,7 @@ function webgpuInitStatus() {
 
 const QUALIA_SPARQL = 'http://localhost:4242/query';
 const WIKIDATA_SPARQL = 'https://query.wikidata.org/sparql';
-const USER_AGENT = 'QualiaDB-OnlineLLMDemo/0.0.28 (https://github.com/mediaprophet/qualiaDB)';
+const USER_AGENT = 'QualiaDB-OnlineLLMDemo/0.0.29 (https://github.com/mediaprophet/qualiaDB)';
 const BACKEND_OVERRIDE = new URLSearchParams(location.search).get('backend');
 
 const QUALIA_ONTOLOGY = `

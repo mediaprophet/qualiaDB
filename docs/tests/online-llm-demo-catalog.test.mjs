@@ -22,6 +22,6 @@ assert.match(html, /inferWasmAsyncMeasured/);
 assert.match(html, /returned no visible text/);
 assert.match(html, /qualia_core_db\.js\?v=0\.0\.29-mobile-performance1/);
 assert.match(html, /qualia_core_db_bg\.wasm\?v=0\.0\.29-mobile-performance1/);
-assert.equal(wasmPackage.version, '0.0.28');
+assert.equal(wasmPackage.version, '0.0.29');
 
 console.log('Online LLM demo catalogue tests passed.');

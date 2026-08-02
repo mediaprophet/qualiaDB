@@ -45,7 +45,7 @@ function memorySnapshot() {
 
 async function captureEnvironment() {
     const capabilityReceipt = await getBrowserCapabilityReceipt({
-        engineVersion: '0.0.29-moredev',
+        engineVersion: '0.0.29',
         sessionId: session,
     });
     const detail = {

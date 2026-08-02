@@ -6,6 +6,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [0.0.29] — 2026-08-02
+
+### Changed
+
+- Restored honest mobile capability selection and real WebGL2 Anatomy rendering when WebGPU is unavailable.
+- Restored browser LLM performance with compact WebGPU top-1 readback, a dedicated CPU-WASM worker, and packed SIMD128 Q8_0 GEMV.
+- Aligned workspace crates, release workflows, portal and desktop metadata, live documentation, and checked-in WASM bundles to `0.0.29`.
+
 ## [unreleased] — branch `feature/p64-manifold-wal-eigensolver` — 2026-06-29
 
 Forge **LLM-on-forge** (kernel generation + certification for the decode path) and an

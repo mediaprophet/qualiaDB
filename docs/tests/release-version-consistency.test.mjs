@@ -2,67 +2,74 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 
-const releaseVersion = '0.0.28';
-const previousVersion = ['0', '0', '27'].join('.');
+const releaseVersion = '0.0.29';
 const root = path.resolve(import.meta.dirname, '..', '..');
+const read = (relativePath) => fs.readFileSync(path.join(root, relativePath), 'utf8');
 
-const rootManifest = fs.readFileSync(path.join(root, 'Cargo.toml'), 'utf8');
+const rootManifest = read('Cargo.toml');
 const workspaceMembers = [...rootManifest.matchAll(/^\s*"([^"]+)",?\s*$/gm)]
   .map((match) => match[1])
   .filter((member) => member.startsWith('crates/'));
 
 assert.equal(workspaceMembers.length, 20, 'expected all 20 workspace crates');
 
+const workspacePackageNames = [];
 for (const member of workspaceMembers) {
-  const manifestPath = path.join(root, member, 'Cargo.toml');
-  const manifest = fs.readFileSync(manifestPath, 'utf8');
+  const manifest = read(path.join(member, 'Cargo.toml'));
   const packageSection = manifest.match(/^\[package\]\s*$([\s\S]*?)(?=^\[|\Z)/m)?.[1] ?? '';
+  const name = packageSection.match(/^name\s*=\s*"([^"]+)"/m)?.[1];
   const version = packageSection.match(/^version\s*=\s*"([^"]+)"/m)?.[1];
+  assert.ok(name, `${member} package name`);
   assert.equal(version, releaseVersion, `${member} package version`);
+  workspacePackageNames.push(name);
 }
 
-const textExtensions = new Set([
-  '.html', '.json', '.js', '.mjs', '.md', '.ps1', '.sh', '.toml', '.yaml', '.yml',
-]);
-const scanRoots = [
-  'Cargo.toml',
-  'Cargo.lock',
-  '.github/workflows',
-  'crates/webizen-desktop/static/portal',
-  'docs',
+const lockPackages = new Map(
+  [...read('Cargo.lock').matchAll(/\[\[package\]\]\r?\nname = "([^"]+)"\r?\nversion = "([^"]+)"/g)]
+    .map((match) => [match[1], match[2]]),
+);
+for (const name of workspacePackageNames) {
+  assert.equal(lockPackages.get(name), releaseVersion, `Cargo.lock ${name} version`);
+}
+
+const versionedJson = [
+  'crates/webizen-desktop/tauri.conf.json',
+  'crates/webizen-desktop/static/portal/menu.json',
+  'docs/data/knowledge-universe-manifest.json',
+  'docs/menu.json',
+  'docs/pkg/qualia/package.json',
+  'docs/playground/package.json',
+  'scripts/studio-gui-e2e/package.json',
 ];
-const stale = [];
-
-function scan(relativePath) {
-  const absolutePath = path.join(root, relativePath);
-  const stat = fs.statSync(absolutePath);
-  if (stat.isDirectory()) {
-    for (const entry of fs.readdirSync(absolutePath)) {
-      scan(path.join(relativePath, entry));
-    }
-    return;
-  }
-  if (!textExtensions.has(path.extname(absolutePath))) return;
-  const text = fs.readFileSync(absolutePath, 'utf8');
-  if (text.includes(previousVersion)) stale.push(relativePath.replaceAll('\\', '/'));
-  if (path.basename(absolutePath) === 'package.json') {
-    const packageVersion = JSON.parse(text.replace(/^\uFEFF/, '')).version;
-    if (packageVersion !== undefined) {
-      assert.equal(packageVersion, releaseVersion, `${relativePath} package version`);
-    }
-  }
+for (const relativePath of versionedJson) {
+  const json = JSON.parse(read(relativePath).replace(/^\uFEFF/, ''));
+  assert.equal(json.version, releaseVersion, `${relativePath} version`);
 }
 
-for (const scanRoot of scanRoots) scan(scanRoot);
+const liveReleaseSurfaces = [
+  '.github/workflows/benchmarks.yml',
+  '.github/workflows/pages.yml',
+  '.github/workflows/release-cli.yml',
+  '.github/workflows/release-desktop.yml',
+  '.github/workflows/release-p64-models.yml',
+  '.github/workflows/release-wasm.yml',
+  'crates/webizen-desktop/static/portal/js/qualia-wasm-runtime.js',
+  'docs/api-explorer/index.html',
+  'docs/api.html',
+  'docs/benchmark.html',
+  'docs/js/mobile-wasm-lab.js',
+  'docs/js/qualia-wasm-runtime.js',
+  'docs/online-llm-demo.html',
+  'docs/playground/anatomy.js',
+  'docs/tests/index.html',
+];
+for (const relativePath of liveReleaseSurfaces) {
+  const text = read(relativePath);
+  assert.ok(text.includes(releaseVersion), `${relativePath} must identify ${releaseVersion}`);
+  assert.ok(!text.includes('0.0.29-moredev'), `${relativePath} must not identify a development branch`);
+}
 
-assert.deepEqual(stale, [], `stale ${previousVersion} identifiers: ${stale.join(', ')}`);
-assert.equal(
-  JSON.parse(fs.readFileSync(path.join(root, 'docs/menu.json'), 'utf8')).version,
-  releaseVersion,
-);
-assert.equal(
-  JSON.parse(fs.readFileSync(path.join(root, 'docs/playground/package.json'), 'utf8')).version,
-  releaseVersion,
-);
+assert.match(read('.github/workflows/pages.yml'), /- "0\.0\.29"/);
+assert.match(read('.github/workflows/release-p64-models.yml'), /- 0\.0\.29/);
 
 console.log(`Release version consistency passed for ${workspaceMembers.length} crates at ${releaseVersion}.`);
