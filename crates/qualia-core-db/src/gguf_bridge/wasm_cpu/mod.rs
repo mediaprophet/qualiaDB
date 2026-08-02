@@ -5,8 +5,12 @@
 //! mathematics while keeping WebGPU an optional accelerator.
 
 mod forward;
+#[cfg(any(test, target_arch = "wasm32"))]
+mod kernels;
 mod model;
 
+#[cfg(target_arch = "wasm32")]
+pub(crate) use kernels::q8_0_gemv_into;
 pub use model::{CpuWasmEngine, CpuWasmError, CpuWasmStep};
 
 /// Mobile-first default for the independent LLM working set. This is not part

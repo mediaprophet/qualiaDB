@@ -626,6 +626,8 @@ pub(crate) use pipeline_cache::*;
 // pub(crate) so they call across modules freely; types/imports arrive via each file's `use super::*`.
 mod async_dispatch;
 mod attention;
+#[cfg(target_arch = "wasm32")]
+mod browser;
 #[cfg(all(not(target_arch = "wasm32"), feature = "cuda"))]
 mod cuda_decode_plan;
 /// Hard cap on the KV context window a decode plan may request. Declared here rather than in the
@@ -1092,6 +1094,10 @@ pub(crate) fn stack_gemm_quant(
         ));
         return false;
     }
+    #[cfg(target_arch = "wasm32")]
+    if info.ggml_type == crate::ggml_quants::GGML_TYPE_Q8_0 {
+        return wasm_cpu::q8_0_gemv_into(raw, input, out, n_in, n_out);
+    }
     let mut row = [0f32; MAX_STACK_GEMM_IN];
     for i in 0..n_out {
         if crate::ggml_quants::dequant_matrix_row_into(raw, info, i, &mut row[..n_in]).unwrap_or(0)
@@ -1206,17 +1212,11 @@ pub struct QTensorEngine {
     // A1a (STELLAR §A): persistent GPU top-k output-projection pipeline + small candidate buffers.
     // Lets the output logits stay on-GPU (top-k over them, read back only K pairs) instead of the
     // 196 KB/token full-logit readback. Created once in `ensure_gemm_buffers`.
-    #[cfg(not(target_arch = "wasm32"))]
     output_topk_pipeline: Option<wgpu::ComputePipeline>,
-    #[cfg(not(target_arch = "wasm32"))]
     output_topk_bind_layout: Option<wgpu::BindGroupLayout>,
-    #[cfg(not(target_arch = "wasm32"))]
     topk_cand_val_buf: Option<wgpu::Buffer>,
-    #[cfg(not(target_arch = "wasm32"))]
     topk_cand_idx_buf: Option<wgpu::Buffer>,
-    #[cfg(not(target_arch = "wasm32"))]
     topk_cand_staging: Option<wgpu::Buffer>,
-    #[cfg(not(target_arch = "wasm32"))]
     topk_params_buf: Option<wgpu::Buffer>,
     /// MC8 FFN / attention scratch (gate, up, o_proj).
     gemm_aux_buf: Option<wgpu::Buffer>,

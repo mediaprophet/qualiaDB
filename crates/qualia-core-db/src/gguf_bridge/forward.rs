@@ -1527,7 +1527,7 @@ impl QTensorEngine {
         emb_dim: usize,
         token_idx: u32,
         max_layers: u32,
-        chunk_logits: &mut [f32],
+        _chunk_logits: &mut [f32],
         max_chunks: u32,
     ) -> Option<StreamingArgmaxResult> {
         let n_layer = index.hyperparams.n_layer;
@@ -1838,6 +1838,12 @@ impl QTensorEngine {
         } else {
             (max_chunks as usize).min(full_chunks)
         };
+        let top1_plan =
+            crate::gguf_bridge::browser::webgpu::BrowserTop1Plan::new(vocab_size, n_chunks as u32)?;
+        if !self.prepare_browser_top1(top1_plan) {
+            self.mc8_flush(&mut enc);
+            return None;
+        }
         let params = GemmGpuParams {
             n_in: n_in as u32,
             n_out: VOCAB_CHUNK_ROWS as u32,
@@ -1862,7 +1868,6 @@ impl QTensorEngine {
         #[cfg(not(target_arch = "wasm32"))]
         let logits_pipeline: &wgpu::ComputePipeline = &self.pipeline;
         let bind_layout = logits_pipeline.get_bind_group_layout(0);
-        let staging_capacity = (staging.size() / 4) as usize;
         for chunk_idx in 0..n_chunks {
             let row_start = chunk_idx * VOCAB_CHUNK_ROWS;
             let chunk_rows = VOCAB_CHUNK_ROWS.min(vocab_size - row_start);
@@ -1939,62 +1944,22 @@ impl QTensorEngine {
                 #[cfg(not(target_arch = "wasm32"))]
                 cpass.dispatch_workgroups((chunk_rows as u32 + 63) / 64, 1, 1);
             }
-            let chunk_bytes = (chunk_rows * 4) as wgpu::BufferAddress;
-            let staging_off = (chunk_idx * VOCAB_CHUNK_ROWS * 4) as wgpu::BufferAddress;
-            if staging_off + chunk_bytes <= staging.size() {
-                enc.encoder
-                    .copy_buffer_to_buffer(output_buf, 0, staging, staging_off, chunk_bytes);
-            }
-        }
-
-        // REVIEW(wasm-mobile-2026-08-02 F5): this is one submit/fence, but it
-        // still reads the complete vocabulary back for CPU argmax (196,608 bytes
-        // for vocab 49,152). Replace with a separately validated browser GPU
-        // top-1 reduction that returns only token id + score.
-        // Single submit + single readback
-        self.gpu_queue().submit(Some(enc.encoder.finish()));
-
-        let total_floats = (n_chunks * VOCAB_CHUNK_ROWS).min(staging_capacity);
-        let total_bytes = (total_floats * 4) as wgpu::BufferAddress;
-        let slice = staging.slice(..total_bytes);
-        if !await_wgpu_map(slice).await {
-            let _ = staging.unmap();
-            return None;
-        }
-        let data = slice
-            .get_mapped_range()
-            .expect("wgpu buffer map_range failed");
-        let all_floats: &[f32] = bytemuck::cast_slice(&data);
-        let mut best_token_id = 0u32;
-        let mut max_logit = f32::NEG_INFINITY;
-        for chunk_idx in 0..n_chunks {
-            let row_start = chunk_idx * VOCAB_CHUNK_ROWS;
-            let chunk_rows = VOCAB_CHUNK_ROWS.min(vocab_size - row_start);
-            let chunk_data = &all_floats
-                [chunk_idx * VOCAB_CHUNK_ROWS..chunk_idx * VOCAB_CHUNK_ROWS + chunk_rows];
-            if chunk_rows > chunk_logits.len() {
-                drop(data);
-                staging.unmap();
+            if !self.encode_browser_top1_chunk(
+                &mut enc.encoder,
+                output_buf,
+                staging,
+                top1_plan,
+                chunk_idx,
+            ) {
+                self.mc8_flush(&mut enc);
                 return None;
             }
-            chunk_logits[..chunk_rows].copy_from_slice(chunk_data);
-            update_streaming_argmax(
-                &chunk_logits[..chunk_rows],
-                chunk_rows,
-                chunk_idx,
-                &mut best_token_id,
-                &mut max_logit,
-            );
         }
-        drop(data);
-        staging.unmap();
-        if max_logit == f32::NEG_INFINITY {
-            return None;
-        }
-        Some(StreamingArgmaxResult {
-            best_token_id,
-            max_logit,
-        })
+
+        // One submit/fence. Logits remain on-device; only bounded block
+        // candidates are mapped for the deterministic global merge.
+        self.gpu_queue().submit(Some(enc.encoder.finish()));
+        self.read_browser_top1(staging, top1_plan).await
     }
 
     /// Topological speculative verify — accept longest draft prefix (B3.1d).

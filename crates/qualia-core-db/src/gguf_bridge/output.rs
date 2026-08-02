@@ -84,7 +84,6 @@ impl QTensorEngine {
     }
 
     /// A1a: create the persistent GPU top-k pipeline + small candidate/staging buffers (once).
-    #[cfg(not(target_arch = "wasm32"))]
     pub(crate) fn init_output_topk(&mut self) {
         let shader = self
             .gpu_device()
@@ -100,7 +99,16 @@ impl QTensorEngine {
                     module: &shader,
                     entry_point: Some("topk_block"),
                     compilation_options: Default::default(),
-                    cache: self.native_pipeline_cache_ref(),
+                    cache: {
+                        #[cfg(not(target_arch = "wasm32"))]
+                        {
+                            self.native_pipeline_cache_ref()
+                        }
+                        #[cfg(target_arch = "wasm32")]
+                        {
+                            None
+                        }
+                    },
                 });
         let pipeline_layout = pipeline.get_bind_group_layout(0);
         // Multi-chunk mega-pass: hold candidates for a full large-vocab sweep (≤256k ids),
@@ -128,7 +136,9 @@ impl QTensorEngine {
         }));
         self.topk_params_buf = Some(self.gpu_device().create_buffer(&wgpu::BufferDescriptor {
             label: Some("TopkParams"),
-            size: 16,
+            // Browser top-1 uses one 256-byte-aligned slot per vocabulary
+            // chunk; native paths continue to bind the first 16 bytes.
+            size: 32 * 256,
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         }));

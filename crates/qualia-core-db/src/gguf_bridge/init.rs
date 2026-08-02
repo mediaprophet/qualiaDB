@@ -1264,17 +1264,11 @@ impl QTensorEngine {
             gemm_output_buf: None,
             gemm_params_buf: None,
             gemm_output_staging: None,
-            #[cfg(not(target_arch = "wasm32"))]
             output_topk_pipeline: None,
-            #[cfg(not(target_arch = "wasm32"))]
             output_topk_bind_layout: None,
-            #[cfg(not(target_arch = "wasm32"))]
             topk_cand_val_buf: None,
-            #[cfg(not(target_arch = "wasm32"))]
             topk_cand_idx_buf: None,
-            #[cfg(not(target_arch = "wasm32"))]
             topk_cand_staging: None,
-            #[cfg(not(target_arch = "wasm32"))]
             topk_params_buf: None,
             gemm_aux_buf: None,
             gemm_ffn_buf: None,
@@ -1668,7 +1662,6 @@ impl QTensorEngine {
     pub(crate) fn ensure_gemm_buffers(&mut self, max_weight_bytes: usize, max_out_dim: u32) {
         // A1a: build the persistent GPU top-k pipeline + candidate buffers once (additive; the
         // existing argmax path is unaffected whether or not this succeeds).
-        #[cfg(not(target_arch = "wasm32"))]
         if self.output_topk_pipeline.is_none() {
             self.init_output_topk();
         }

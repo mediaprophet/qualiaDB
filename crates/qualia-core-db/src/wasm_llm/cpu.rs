@@ -25,6 +25,16 @@ pub(super) fn vocab_len() -> u32 {
     })
 }
 
+pub(super) fn working_set_bytes() -> u64 {
+    CPU_ENGINE.with(|engine| {
+        engine
+            .borrow()
+            .as_ref()
+            .map(|engine| engine.working_set_bytes() as u64)
+            .unwrap_or(0)
+    })
+}
+
 pub(super) fn release() {
     CPU_ENGINE.with(|engine| *engine.borrow_mut() = None);
 }

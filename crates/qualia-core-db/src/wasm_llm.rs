@@ -360,6 +360,48 @@ pub fn get_wasm_backend() -> String {
     }
 }
 
+/// Stable cold-path receipt for the resident browser execution plan.
+#[wasm_bindgen(js_name = getBrowserExecutionReceipt)]
+pub fn get_browser_execution_receipt() -> Result<JsValue, JsValue> {
+    #[derive(serde::Serialize)]
+    #[serde(rename_all = "camelCase")]
+    struct Receipt {
+        schema: &'static str,
+        backend: String,
+        vocab_size: u32,
+        gpu_top1: bool,
+        device_to_host_bytes_per_token: u32,
+        full_logits_bytes_per_token: u32,
+        cpu_working_set_bytes: u64,
+        inference_memory_domain: &'static str,
+        sentinel_arena_bound: bool,
+    }
+
+    let backend = get_wasm_backend();
+    let vocab_size = get_resident_tokenizer_vocab();
+    let compact_bytes = if backend == "webgpu" {
+        crate::gguf_bridge::WASM_ENGINE_INSTANCE.with(|slot| {
+            slot.borrow()
+                .as_ref()
+                .and_then(|engine| engine.browser_top1_readback_bytes(vocab_size as usize))
+        })
+    } else {
+        None
+    };
+    let receipt = Receipt {
+        schema: "qualia.browser-execution.v1",
+        backend,
+        vocab_size,
+        gpu_top1: compact_bytes.is_some(),
+        device_to_host_bytes_per_token: compact_bytes.unwrap_or(0),
+        full_logits_bytes_per_token: vocab_size.saturating_mul(4),
+        cpu_working_set_bytes: cpu::working_set_bytes(),
+        inference_memory_domain: "llm-independent",
+        sentinel_arena_bound: false,
+    };
+    serde_wasm_bindgen::to_value(&receipt).map_err(|error| JsValue::from_str(&error.to_string()))
+}
+
 /// Differential WebGPU/CPU probe for the first layer's Q projection.
 ///
 /// This is intentionally exposed to the browser debug surface so automated

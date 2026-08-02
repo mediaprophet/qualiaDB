@@ -345,7 +345,7 @@
 ┌──────────────────────┐
 │  SmolLM2 / Llama 3   │ ──► Natural language answer + JSON-LD node
 └──────────────────────┘</pre>
-                <p>If the SPARQL query fails validation, the error is fed back to the model for self-correction (up to 3 retries). Token streaming uses <code class="text-emerald-300">inferWasmAsyncMeasured</code>; CPU-WASM yields between tokens and WebGPU yields around asynchronous device work.</p>
+                <p>If the SPARQL query fails validation, the error is fed back to the model for self-correction (up to 3 retries). Token streaming uses <code class="text-emerald-300">inferWasmAsyncMeasured</code>; CPU-WASM runs in a dedicated worker with packed SIMD128 Q8 kernels, while WebGPU yields around asynchronous device work.</p>
                 <p><strong class="text-zinc-300">COI note:</strong> The COI service worker at the top of this page injects <code class="text-yellow-300">Cross-Origin-Opener-Policy: same-origin</code> and <code class="text-yellow-300">Cross-Origin-Embedder-Policy: require-corp</code> headers on reload, enabling SharedArrayBuffer for multi-threaded WASM inference.</p>
             </div>
         </details>
@@ -355,7 +355,6 @@
 <script type="module">
 import init, {
     initialize_webgpu_engine,
-    initializeCpuWasmEngine,
     inferWasmAsyncMeasured,
     releaseWebgpuEngine,
     isWasmEngineReady,
@@ -363,10 +362,11 @@ import init, {
     getEngineVersion,
     compileGgufToP64,
     p64FormatVersion,
-} from './playground/qualia_core_db.js?v=0.0.29-cpu-wasm1';
+} from './playground/qualia_core_db.js?v=0.0.29-mobile-performance1';
 // Optional diagnostics: getResidentTokenizerVocab / getWebgpuInitStatus after wasm rebuild.
-import * as QualiaWasm from './playground/qualia_core_db.js?v=0.0.29-cpu-wasm1';
+import * as QualiaWasm from './playground/qualia_core_db.js?v=0.0.29-mobile-performance1';
 import { loadGgufCached, loadOrCompileP64 } from './js/opfs-model-cache.js';
+import { QualiaCpuWorkerClient } from './js/qualia-cpu-worker-client.js?v=0.0.29-mobile-performance1';
 import { mobileLab } from './js/mobile-wasm-lab.js?v=0.0.29-mobile-recovery4';
 import {
     getBrowserCapabilityReceipt,
@@ -377,8 +377,10 @@ const browserCapabilityReceiptPromise = getBrowserCapabilityReceipt({
     engineVersion: '0.0.29-moredev',
     sessionId: new URLSearchParams(location.search).get('lab') || '',
 });
+const cpuWorker = new QualiaCpuWorkerClient();
 
 function residentTokenizerVocab() {
+    if (selectedInferenceBackend === 'cpu-wasm') return Number(cpuWorker.details?.vocab || 0);
     try {
         const fn = QualiaWasm.getResidentTokenizerVocab;
         return typeof fn === 'function' ? (fn() | 0) : 0;
@@ -577,7 +579,7 @@ async function bootWasm() {
 
     wasmReadyPromise = (async () => {
         try {
-            await init('./playground/qualia_core_db_bg.wasm?v=0.0.29-cpu-wasm1');
+            await init('./playground/qualia_core_db_bg.wasm?v=0.0.29-mobile-performance1');
             wasmReady = true;
             wasmBootError = null;
             const ver = getEngineVersion?.() ?? 'unknown';
@@ -910,7 +912,7 @@ async function loadModel() {
             await Promise.race([
                 selectedInferenceBackend === 'webgpu'
                     ? initialize_webgpu_engine(modelBytes)
-                    : initializeCpuWasmEngine(modelBytes),
+                    : cpuWorker.initialize(modelBytes),
                 new Promise((_, reject) => {
                     setTimeout(() => {
                         const stage = webgpuInitStatus();
@@ -925,18 +927,28 @@ async function loadModel() {
         } finally {
             if (initHeartbeat) clearInterval(initHeartbeat);
         }
-        if (!isWasmEngineReady()) throw new Error(`${backendLabel} engine failed to initialise after model load`);
-        selectedInferenceBackend = getWasmBackend();
+        const engineReady = selectedInferenceBackend === 'webgpu'
+            ? isWasmEngineReady()
+            : cpuWorker.ready;
+        if (!engineReady) throw new Error(`${backendLabel} engine failed to initialise after model load`);
+        selectedInferenceBackend = selectedInferenceBackend === 'webgpu'
+            ? getWasmBackend()
+            : cpuWorker.details.backend;
         recordBackendDeviceOutcome(capabilities, 'llm', {
             backend: selectedInferenceBackend,
             state: 'available',
         });
+        const executionReceipt = selectedInferenceBackend === 'cpu-wasm'
+            ? cpuWorker.details?.executionReceipt || null
+            : QualiaWasm.getBrowserExecutionReceipt?.() || null;
+        window.__qualiaExecutionReceipt = executionReceipt;
         void mobileLab.emit('wasm_inference_init_ready', {
             backend: selectedInferenceBackend,
             elapsedMs: Math.round(performance.now() - initStartedAt),
             totalLoadMs: Math.round(performance.now() - loadStarted),
             initStatus: webgpuInitStatus(),
             memory: mobileLab.memorySnapshot(),
+            executionReceipt,
         });
 
         // Fail closed in the UI when the resident tokenizer is the 256-byte fallback.
@@ -944,7 +956,7 @@ async function loadModel() {
         // (Requires wasm rebuild that exports getResidentTokenizerVocab; otherwise skipped.)
         const vocab = residentTokenizerVocab();
         if (vocab > 0 && vocab < 1000) {
-            try { await releaseWebgpuEngine(); } catch {}
+            await releaseInferenceEngine();
             throw new Error(
                 `Tokenizer is fallback-only (vocab=${vocab}). This produces garbage text. ` +
                 `Use a release P64 with a Q42T section, or load the original GGUF so the real vocab is parsed. ` +
@@ -1004,7 +1016,7 @@ async function loadModel() {
             : '';
         showDlStatus(`Error: ${friendly}${retryHint}`);
         setEngineStatus(`Load failed: ${friendly}`, 'error');
-        try { await releaseWebgpuEngine(); } catch {}
+        await releaseInferenceEngine();
         modelLoaded = false;
         selectedInferenceBackend = 'none';
     } finally {
@@ -1014,7 +1026,7 @@ async function loadModel() {
 
 async function unloadModel() {
     if (!modelLoaded) return;
-    await releaseWebgpuEngine();
+    await releaseInferenceEngine();
     modelLoaded = false;
     selectedInferenceBackend = 'none';
     document.getElementById('local-model-file').value = '';
@@ -1203,7 +1215,9 @@ async function generate(system, user, opts = {}) {
     const maxTokens = Math.max(1, Math.min(Number(opts.max_tokens || 128), 512));
     let result;
     try {
-        result = await inferWasmAsyncMeasured(prompt, maxTokens, onToken);
+        result = selectedInferenceBackend === 'cpu-wasm'
+            ? await cpuWorker.infer(prompt, maxTokens, onToken)
+            : await inferWasmAsyncMeasured(prompt, maxTokens, onToken);
     } catch (error) {
         void mobileLab.emit('generation_failed', {
             elapsedMs: Math.round(performance.now() - t0),
@@ -1234,6 +1248,10 @@ async function generate(system, user, opts = {}) {
         memory: mobileLab.memorySnapshot(),
     });
     return cleaned;
+}
+
+async function releaseInferenceEngine() {
+    await Promise.allSettled([releaseWebgpuEngine(), cpuWorker.release()]);
 }
 
 // ── SPARQL Execution ──────────────────────────────────────────────────────────
