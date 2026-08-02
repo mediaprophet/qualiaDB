@@ -6,7 +6,11 @@
 // an ambient-field channel (off by default) and a per-body-system channel row.
 // Mobile: full-viewport canvas + bottom-sheet controls, pinch zoom, orbit drag.
 
-import { ensureCanvasBackingStore, loadQualiaPortal } from "../js/qualia-shell.js";
+import { ensureCanvasBackingStore, loadQualiaPortal } from "../js/qualia-shell.js?v=0.0.29-mobile-recovery4";
+import {
+  getBrowserCapabilityReceipt,
+  recordBackendDeviceOutcome,
+} from "../js/browser-capability.js?v=0.0.29-mobile-recovery4";
 
 const container = document.getElementById("canvas-container");
 const statusEl = document.getElementById("status");
@@ -22,6 +26,9 @@ let canvas = null;
 let currentBody = "male";
 let lastT = 0;
 let bodyBytes = null;
+let capabilityReceipt = null;
+let anatomyRenderer = "unsupported";
+let renderGeneration = 0;
 // Pack manifest — [{ key, label, system, systems }] per part — built from the pack itself.
 let packParts = [];
 const disabledParts = new Set();
@@ -355,38 +362,63 @@ async function boot() {
   if (isSheetMode()) setSheetOpen(false);
   await waitForLayout();
 
-  // REVIEW(wasm-mobile-2026-08-02 F1/F2): API presence is not adapter capability.
+  capabilityReceipt = await getBrowserCapabilityReceipt({
+    engineVersion: ENGINE_VERSION,
+    sessionId: new URL(location.href).searchParams.get("lab") || "",
+  });
+  window.__qualiaCapabilityReceipt = capabilityReceipt;
+  const rendererOverride = new URL(location.href).searchParams.get("renderer");
+  const selectedRenderer = rendererOverride === "webgl2" && capabilityReceipt.webgl2.available
+    ? "webgl2"
+    : capabilityReceipt.selection.anatomy;
+
+  // API presence is not adapter capability. WebGL2 remains independently
+  // usable on phones where Chrome suppresses every WebGPU adapter.
   // Chrome may expose navigator.gpu while blocklisting every adapter. Consume the
   // proposed shared capability receipt before selecting the Anatomy renderer.
-  if (!navigator.gpu) {
+  if (selectedRenderer === "unsupported") {
     const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
     const isAndroid = /Android/i.test(navigator.userAgent);
     let hint =
-      "This browser has no WebGPU. The real 3D body needs a WebGPU-capable browser.";
-    if (isIOS) hint += " On iPhone/iPad use Safari 18+ (iOS 18+), or enable WebGPU under Settings → Safari → Advanced → Feature Flags.";
-    else if (isAndroid) hint += " On Android use Chrome (not in-app browsers). Pixel / recent Android Chrome 121+ with WebGPU enabled.";
-    else hint += " Use Chrome, Edge, or Firefox Nightly with hardware acceleration.";
+      "This browser exposes neither WebGPU nor WebGL2, so the real 3D body cannot be rendered.";
+    if (isIOS) hint += " On iPhone/iPad use a current Safari release with hardware acceleration enabled.";
+    else if (isAndroid) hint += " On Android use current Chrome rather than an embedded in-app browser.";
+    else hint += " Use a current hardware-accelerated browser.";
     hint += " The system mixer still lists what the engine evaluates — open Controls.";
     setStatus(hint, "error");
     if (isSheetMode()) setSheetOpen(true);
     return;
   }
 
-  setStatus("Loading the Qualia renderer (WASM · WebGPU)…");
+  setStatus(`Loading the Qualia renderer (WASM · ${selectedRenderer})…`);
   let res;
   try {
     // Re-measure immediately before GPU init (rotation / address-bar hide changes height).
     await waitForLayout(1200);
-    res = await loadQualiaPortal(canvas);
+    res = await loadQualiaPortal(canvas, {
+      anatomyBackend: selectedRenderer,
+      allowWebGl2: capabilityReceipt.webgl2.available,
+      requireBodyRenderer: true,
+    });
   } catch (e) {
+    recordBackendDeviceOutcome(capabilityReceipt, "anatomy", {
+      backend: selectedRenderer,
+      state: "device_request_failed",
+      error: e,
+    });
     setStatus("Renderer failed to load: " + e, "error");
     if (isSheetMode()) setSheetOpen(true);
     return;
   }
   portal = res.portal;
+  anatomyRenderer = res.renderer || "unsupported";
+  recordBackendDeviceOutcome(capabilityReceipt, "anatomy", {
+    backend: anatomyRenderer,
+    state: portal ? "available" : "unsupported",
+  });
   window.__portal = portal;
   if (!portal) {
-    setStatus("WebGPU portal unavailable (source: " + res.source + ").", "error");
+    setStatus("Anatomy renderer unavailable (source: " + res.source + ").", "error");
     if (isSheetMode()) setSheetOpen(true);
     return;
   }
@@ -705,6 +737,10 @@ function applyMixer() {
     const gesture = isCoarsePointer() ? "drag to orbit · pinch to zoom" : "drag to orbit · scroll to zoom";
     setStatus(`${bodyLabel(currentBody)} body · ${organs} ${noun} · ${tris} triangles · ${gesture}`, "ok");
     setProgress(false);
+    setStatus(`${bodyLabel(currentBody)} body uploaded · waiting for ${anatomyRenderer} presentation…`);
+    setProgress(true, 100, "Presenting body…");
+    const generation = ++renderGeneration;
+    void confirmBodyPresented(generation, { organs, noun, tris, gesture, upload: r });
     applyCam();
   } catch (e) {
     const msg = String(e);
@@ -719,6 +755,38 @@ function applyMixer() {
   } finally {
     applyInFlight = false;
   }
+}
+
+async function confirmBodyPresented(generation, summary) {
+  if (typeof portal?.body_render_receipt !== "function") {
+    setStatus("The loaded renderer is stale: Anatomy lifecycle receipts are unavailable.", "error");
+    return;
+  }
+  for (let frame = 0; frame < 20; frame++) {
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    if (generation !== renderGeneration) return;
+    const receipt = portal.body_render_receipt();
+    window.__anatomyRenderReceipt = {
+      schema: "qualia.anatomy-render.v1",
+      capability: capabilityReceipt,
+      asset: `anatomy-${currentBody}.hmc`,
+      upload: summary.upload,
+      presentation: receipt,
+    };
+    if (receipt?.success) {
+      setStatus(
+        `${bodyLabel(currentBody)} body · ${summary.organs} ${summary.noun} · ${summary.tris} triangles · ${receipt.renderer} · ${summary.gesture}`,
+        "ok",
+      );
+      setProgress(false);
+      return;
+    }
+  }
+  setProgress(false);
+  setStatus(
+    `Anatomy upload completed but ${anatomyRenderer} did not present a body frame.`,
+    "error",
+  );
 }
 
 function systemsInPack() {
@@ -867,14 +935,24 @@ window.onAmbient = (checked) => {
 };
 
 function startLoop() {
+  let stopped = false;
   const frame = (t) => {
+    if (stopped) return;
     const dt = lastT ? t - lastT : 16;
     lastT = t;
     try {
       portal.tick(canvas, dt);
-    } catch (_) {
-      // REVIEW(wasm-mobile-2026-08-02 F9): report bounded device-loss/render
-      // diagnostics here; swallowing this made the mobile blank-body failure opaque.
+    } catch (error) {
+      stopped = true;
+      const message = String(error?.message || error).slice(0, 400);
+      window.__anatomyRenderError = {
+        schema: "qualia.anatomy-render-error.v1",
+        renderer: anatomyRenderer,
+        message,
+        observedAt: new Date().toISOString(),
+      };
+      setStatus(`Anatomy ${anatomyRenderer} render stopped: ${message}`, "error");
+      return;
     }
     requestAnimationFrame(frame);
   };

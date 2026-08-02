@@ -47,6 +47,8 @@ use crate::{
 };
 
 #[cfg(target_arch = "wasm32")]
+use crate::render::anatomy::webgl2::AnatomyWebGl2;
+#[cfg(target_arch = "wasm32")]
 use crate::render::gpu::{particle_cap_for_mode, PortalGpu};
 
 /// Viewport display mode (geometry projection style).
@@ -218,6 +220,23 @@ impl BodyMeshAccum {
     }
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum BodyRendererBackend {
+    None,
+    WebGpu,
+    WebGl2,
+}
+
+impl BodyRendererBackend {
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::None => "none",
+            Self::WebGpu => "webgpu",
+            Self::WebGl2 => "webgl2",
+        }
+    }
+}
+
 /// Portal tier: 0 = CPU canvas2d fallback, 1 = tensor projection, 2 = WebGPU ambient.
 #[wasm_bindgen]
 pub struct QualiaPortal {
@@ -238,7 +257,13 @@ pub struct QualiaPortal {
     #[cfg(target_arch = "wasm32")]
     gpu: Option<PortalGpu>,
     #[cfg(target_arch = "wasm32")]
+    anatomy_webgl2: Option<AnatomyWebGl2>,
+    #[cfg(target_arch = "wasm32")]
     gpu_init_failed: bool,
+    body_renderer: BodyRendererBackend,
+    body_vertex_count: u32,
+    body_index_count: u32,
+    body_frames_presented: u32,
     acoustic_enabled: bool,
     acoustic_pulse_accum: f32,
     /// Pinned mmap-ready STFT/CQT sidecar for selected node (cold bake → hot frame read).
@@ -273,7 +298,13 @@ impl QualiaPortal {
             #[cfg(target_arch = "wasm32")]
             gpu: None,
             #[cfg(target_arch = "wasm32")]
+            anatomy_webgl2: None,
+            #[cfg(target_arch = "wasm32")]
             gpu_init_failed: false,
+            body_renderer: BodyRendererBackend::None,
+            body_vertex_count: 0,
+            body_index_count: 0,
+            body_frames_presented: 0,
             acoustic_enabled: true,
             acoustic_pulse_accum: 0.0,
             acoustic_sidecar: None,
@@ -1158,17 +1189,34 @@ impl QualiaPortal {
 
     fn finish_body_mesh_upload(&mut self, mut accum: BodyMeshAccum) -> Result<JsValue, JsValue> {
         accum.normalise_to_orbit_frame();
-        // REVIEW(wasm-mobile-2026-08-02 F2): when `gpu` is None this currently
-        // drops the decoded body and still returns a success summary. A repair
-        // must render through a real fallback or return an explicit unsupported
-        // result; it must not claim that an invisible body loaded successfully.
+        if accum.positions.is_empty() || accum.indices.is_empty() {
+            return Err(JsValue::from_str("anatomy_body_mesh_empty"));
+        }
+
+        let mut renderer = BodyRendererBackend::None;
         if let Some(ref mut gpu) = self.gpu {
             gpu.upload_mesh_colored(&accum.positions, &accum.colors, &accum.indices);
             self.tier = 2;
+            renderer = BodyRendererBackend::WebGpu;
+        } else if let Some(ref mut webgl2) = self.anatomy_webgl2 {
+            webgl2.upload_mesh(&accum.positions, &accum.colors, &accum.indices)?;
+            self.tier = 1;
+            renderer = BodyRendererBackend::WebGl2;
         }
+        if renderer == BodyRendererBackend::None {
+            return Err(JsValue::from_str("anatomy_renderer_unsupported"));
+        }
+
+        self.body_renderer = renderer;
+        self.body_vertex_count = accum.positions.len().min(u32::MAX as usize) as u32;
+        self.body_index_count = accum.indices.len().min(u32::MAX as usize) as u32;
+        self.body_frames_presented = 0;
         self.description = format!(
-            "{} organs · {} triangles · {} refused · coloured · T2",
-            accum.organs_loaded, accum.total_triangles, accum.organs_refused
+            "{} organs · {} triangles · {} refused · coloured · {}",
+            accum.organs_loaded,
+            accum.total_triangles,
+            accum.organs_refused,
+            renderer.as_str()
         );
         let result = js_sys::Object::new();
         Reflect::set(
@@ -1185,6 +1233,54 @@ impl QualiaPortal {
             &result,
             &JsValue::from_str("total_triangles"),
             &JsValue::from_f64(accum.total_triangles as f64),
+        )?;
+        Reflect::set(
+            &result,
+            &JsValue::from_str("vertex_count"),
+            &JsValue::from_f64(self.body_vertex_count as f64),
+        )?;
+        Reflect::set(
+            &result,
+            &JsValue::from_str("renderer"),
+            &JsValue::from_str(renderer.as_str()),
+        )?;
+        Reflect::set(&result, &JsValue::from_str("uploaded"), &JsValue::TRUE)?;
+        Ok(result.into())
+    }
+
+    /// Cold-path Anatomy lifecycle receipt. Success requires a retained upload
+    /// and at least one presented renderer frame.
+    pub fn body_render_receipt(&self) -> Result<JsValue, JsValue> {
+        let result = js_sys::Object::new();
+        Reflect::set(
+            &result,
+            &JsValue::from_str("renderer"),
+            &JsValue::from_str(self.body_renderer.as_str()),
+        )?;
+        Reflect::set(
+            &result,
+            &JsValue::from_str("vertex_count"),
+            &JsValue::from_f64(self.body_vertex_count as f64),
+        )?;
+        Reflect::set(
+            &result,
+            &JsValue::from_str("index_count"),
+            &JsValue::from_f64(self.body_index_count as f64),
+        )?;
+        Reflect::set(
+            &result,
+            &JsValue::from_str("frames_presented"),
+            &JsValue::from_f64(self.body_frames_presented as f64),
+        )?;
+        Reflect::set(
+            &result,
+            &JsValue::from_str("success"),
+            &JsValue::from_bool(
+                self.body_renderer != BodyRendererBackend::None
+                    && self.body_vertex_count > 0
+                    && self.body_index_count > 0
+                    && self.body_frames_presented > 0,
+            ),
         )?;
         Ok(result.into())
     }
@@ -1559,15 +1655,49 @@ impl QualiaPortal {
                     gpu.resize(cw, ch);
                 }
                 gpu.sync_bloom_targets();
-                if gpu.render(self.time as f32, &self.telemetry).is_ok() {
-                    if self.pending_gpu_pick {
-                        if let Some(idx) = gpu.poll_pick_readback() {
-                            self.selected_node = Some(idx);
-                            self.pending_gpu_pick = false;
+                match gpu.render(self.time as f32, &self.telemetry) {
+                    Ok(()) => {
+                        if self.body_renderer == BodyRendererBackend::WebGpu
+                            && self.body_index_count > 0
+                        {
+                            self.body_frames_presented =
+                                self.body_frames_presented.saturating_add(1);
                         }
+                        if self.pending_gpu_pick {
+                            if let Some(idx) = gpu.poll_pick_readback() {
+                                self.selected_node = Some(idx);
+                                self.pending_gpu_pick = false;
+                            }
+                        }
+                        return Ok(());
                     }
-                    return Ok(());
+                    Err(error) if self.body_renderer == BodyRendererBackend::WebGpu => {
+                        return Err(JsValue::from_str(&format!(
+                            "anatomy_webgpu_render_failed: {error}"
+                        )));
+                    }
+                    Err(_) => {}
                 }
+            }
+
+            if self.anatomy_webgl2.is_none() {
+                if let Some(webgl2) = PENDING_WEBGL2.with(|p| p.borrow_mut().take()) {
+                    self.tier = 1;
+                    self.anatomy_webgl2 = Some(webgl2);
+                }
+            }
+            if let Some(ref mut webgl2) = self.anatomy_webgl2 {
+                webgl2.render(
+                    self.camera.yaw,
+                    self.camera.pitch,
+                    self.camera.zoom,
+                    canvas.width(),
+                    canvas.height(),
+                )?;
+                if self.body_renderer == BodyRendererBackend::WebGl2 && self.body_index_count > 0 {
+                    self.body_frames_presented = webgl2.frame_count();
+                }
+                return Ok(());
             }
         }
 
@@ -1612,6 +1742,7 @@ impl QualiaPortal {
 #[cfg(target_arch = "wasm32")]
 thread_local! {
     static PENDING_GPU: std::cell::RefCell<Option<PortalGpu>> = std::cell::RefCell::new(None);
+    static PENDING_WEBGL2: std::cell::RefCell<Option<AnatomyWebGl2>> = std::cell::RefCell::new(None);
 }
 
 /// Create the WebGPU device + surface asynchronously and stash it for the render loop to adopt.
@@ -1633,6 +1764,17 @@ pub async fn portal_init_webgpu(canvas: HtmlCanvasElement) -> Result<bool, JsVal
         }
         Err(e) => Err(JsValue::from_str(&format!("portal_init_webgpu: {e}"))),
     }
+}
+
+/// Bind a hardware WebGL2 Anatomy renderer before `QualiaPortal` construction.
+/// This is selected only after capability probing proves that WebGPU has no
+/// usable adapter and WebGL2 context creation succeeds.
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen]
+pub fn portal_init_webgl2(canvas: HtmlCanvasElement) -> Result<bool, JsValue> {
+    let renderer = AnatomyWebGl2::try_new(&canvas)?;
+    PENDING_WEBGL2.with(|p| *p.borrow_mut() = Some(renderer));
+    Ok(true)
 }
 
 fn detect_tier() -> u8 {

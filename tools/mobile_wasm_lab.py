@@ -10,12 +10,14 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import hashlib
 import html
 import http.server
 import json
 import os
 from pathlib import Path
 import secrets
+import shutil
 import socket
 import ssl
 import sys
@@ -25,6 +27,71 @@ import urllib.parse
 
 MAX_EVENT_BYTES = 64 * 1024
 MAX_EVENTS = 20_000
+MAX_ANATOMY_ASSET_BYTES = 800 * 1024 * 1024
+ANATOMY_ASSETS = ("anatomy-male", "anatomy-female")
+QBDL_MAGIC = b"QBDL"
+
+
+def validate_qbdl_asset(path: Path) -> dict[str, object]:
+    """Validate and identify one bounded Anatomy bundle."""
+    resolved = path.resolve()
+    if not resolved.is_file():
+        raise ValueError(f"Anatomy asset missing: {resolved}")
+    size = resolved.stat().st_size
+    if size < 1024 or size > MAX_ANATOMY_ASSET_BYTES:
+        raise ValueError(f"Anatomy asset size outside budget: {resolved} ({size} bytes)")
+    digest = hashlib.sha256()
+    with resolved.open("rb") as stream:
+        if stream.read(4) != QBDL_MAGIC:
+            raise ValueError(f"Anatomy asset has invalid QBDL magic: {resolved}")
+        stream.seek(0)
+        while chunk := stream.read(8 * 1024 * 1024):
+            digest.update(chunk)
+    return {
+        "path": str(resolved),
+        "bytes": size,
+        "sha256": digest.hexdigest(),
+        "magic": QBDL_MAGIC.decode("ascii"),
+    }
+
+
+def stage_anatomy_assets(docs: Path) -> list[dict[str, object]]:
+    """Ensure canonical `.hmc` assets exist without deleting source bundles."""
+    playground = docs.resolve() / "playground"
+    if not playground.is_dir():
+        raise ValueError(f"Anatomy playground directory missing: {playground}")
+    receipts: list[dict[str, object]] = []
+    for stem in ANATOMY_ASSETS:
+        target = playground / f"{stem}.hmc"
+        staged_from: Path | None = None
+        method = "existing"
+        if not target.exists():
+            source = playground / f"{stem}.qualia"
+            validate_qbdl_asset(source)
+            temporary = playground / f".{stem}.hmc.stage-{os.getpid()}-{secrets.token_hex(4)}"
+            try:
+                try:
+                    os.link(source, temporary)
+                    method = "hardlink"
+                except OSError:
+                    shutil.copyfile(source, temporary)
+                    method = "copy"
+                os.replace(temporary, target)
+            finally:
+                if temporary.exists():
+                    temporary.unlink()
+            staged_from = source.resolve()
+        receipt = validate_qbdl_asset(target)
+        receipt.update(
+            {
+                "name": target.name,
+                "publicPath": f"/playground/{target.name}",
+                "stagedFrom": str(staged_from) if staged_from else None,
+                "stageMethod": method,
+            }
+        )
+        receipts.append(receipt)
+    return receipts
 
 
 def lan_ipv4() -> str:
@@ -57,12 +124,14 @@ class LabState:
         phone_url: str,
         ca_cert: Path | None,
         ca_url: str | None,
+        anatomy_assets: list[dict[str, object]],
     ) -> None:
         self.docs = docs
         self.session = session
         self.phone_url = phone_url
         self.ca_cert = ca_cert
         self.ca_url = ca_url
+        self.anatomy_assets = anatomy_assets
         self.session_dir = artifact_root / session
         self.session_dir.mkdir(parents=True, exist_ok=False)
         self.events_path = self.session_dir / "events.jsonl"
@@ -77,6 +146,7 @@ class LabState:
                     "createdUtc": dt.datetime.now(dt.timezone.utc).isoformat(),
                     "phoneUrl": phone_url,
                     "events": str(self.events_path.resolve()),
+                    "anatomyAssets": anatomy_assets,
                 },
                 indent=2,
             ),
@@ -145,6 +215,7 @@ class LabHandler(http.server.SimpleHTTPRequestHandler):
                     "ok": True,
                     "session": self.server.state.session,
                     "events": self.server.state.event_count,
+                    "anatomyAssets": self.server.state.anatomy_assets,
                 },
             )
             return
@@ -200,6 +271,7 @@ Only the public certificate is downloadable; the private key remains on this com
 <p>Scan this on the phone, or copy the URL. The QR image is rendered by api.qrserver.com; the URL below remains usable if it is blocked.</p>
 <p><img src="{html.escape(qr_url)}" width="280" height="280" alt="QR code for phone lab URL"></p>
 <p><a href="{html.escape(state.phone_url)}"><code>{html.escape(state.phone_url)}</code></a></p>
+<p>Canonical Anatomy assets: {", ".join(html.escape(str(asset["name"])) for asset in state.anatomy_assets)} (QBDL validated before this QR was displayed).</p>
 <p>Session <code>{html.escape(state.session)}</code>. Events are stored locally and capped at {MAX_EVENTS:,} records / {MAX_EVENT_BYTES // 1024} KiB each.</p>"""
         encoded_body = body.encode("utf-8")
         self.send_response(200)
@@ -274,7 +346,20 @@ def main() -> int:
     phone_url = args.phone_url or f"{scheme}://{args.lan_ip}:{args.port}/online-llm-demo.html?lab={session}&labText=1"
     ca_cert = args.ca_cert.resolve() if args.ca_cert is not None else None
     ca_url = f"{scheme}://{args.lan_ip}:{args.port}/__qualia/root-ca.crt" if ca_cert is not None else None
-    state = LabState(args.docs.resolve(), args.artifacts.resolve(), session, phone_url, ca_cert, ca_url)
+    try:
+        anatomy_assets = stage_anatomy_assets(args.docs)
+    except (OSError, ValueError) as error:
+        print(f"Refusing to display QR: {error}", file=sys.stderr)
+        return 2
+    state = LabState(
+        args.docs.resolve(),
+        args.artifacts.resolve(),
+        session,
+        phone_url,
+        ca_cert,
+        ca_url,
+        anatomy_assets,
+    )
     server = LabServer((args.host, args.port), state)
     if use_tls:
         context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)

@@ -43,6 +43,12 @@ The terminal prints:
 - the exact HTTPS phone URL;
 - the local JSONL telemetry path.
 
+Before displaying the QR page, the server validates the male and female QBDL pack magic, byte
+budget, and SHA-256 identity under their canonical `.hmc` URLs. If only the legacy `.qualia`
+filenames exist, it stages `.hmc` hardlinks (or bounded copies when hardlinks are unavailable)
+without deleting the source bundles. Invalid or missing assets stop startup before a phone can be
+sent to a broken Anatomy URL.
+
 Allow the Python process through Windows Firewall for private networks if prompted. Both devices
 must be on the same LAN. Keep the phone browser in the foreground during model initialization.
 

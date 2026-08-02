@@ -367,7 +367,16 @@ import init, {
 // Optional diagnostics: getResidentTokenizerVocab / getWebgpuInitStatus after wasm rebuild.
 import * as QualiaWasm from './playground/qualia_core_db.js?v=0.0.29-cpu-wasm1';
 import { loadGgufCached, loadOrCompileP64 } from './js/opfs-model-cache.js';
-import { mobileLab } from './js/mobile-wasm-lab.js';
+import { mobileLab } from './js/mobile-wasm-lab.js?v=0.0.29-mobile-recovery4';
+import {
+    getBrowserCapabilityReceipt,
+    recordBackendDeviceOutcome,
+} from './js/browser-capability.js?v=0.0.29-mobile-recovery4';
+
+const browserCapabilityReceiptPromise = getBrowserCapabilityReceipt({
+    engineVersion: '0.0.29-moredev',
+    sessionId: new URLSearchParams(location.search).get('lab') || '',
+});
 
 function residentTokenizerVocab() {
     try {
@@ -470,7 +479,7 @@ window.copyJsonLd = () => navigator.clipboard.writeText(lastJsonLd);
 window.resetSystemPrompt = () => { document.getElementById('system-prompt').value = SYSTEM_PROMPTS[currentMode]; };
 
 document.getElementById('system-prompt').value = SYSTEM_PROMPTS.chat;
-checkWebgpuSupport();
+void checkWebgpuSupport();
 setupInstall();
 setupMobileConfigToggle();
 applyMobileModelPolicy();
@@ -706,18 +715,25 @@ async function loadModel() {
     if (modelLoaded || loadInFlight) return;
     // WebGPU is an accelerator, not an admission gate. The independent Qualia
     // CPU-WASM backend remains available when Chrome returns no adapter.
-    let adapterProbe = null;
-    if (BACKEND_OVERRIDE !== 'cpu' && BACKEND_OVERRIDE !== 'cpu-wasm' && navigator.gpu) {
-        try {
-            adapterProbe = await navigator.gpu.requestAdapter({ powerPreference: 'high-performance' });
-        } catch (error) {
-            void mobileLab.emit('webgpu_adapter_failed', { error: mobileLab.errorText(error) });
-        }
+    const capabilities = await browserCapabilityReceiptPromise;
+    window.__qualiaCapabilityReceipt = capabilities;
+    selectedInferenceBackend = BACKEND_OVERRIDE === 'cpu' || BACKEND_OVERRIDE === 'cpu-wasm'
+        ? 'cpu-wasm'
+        : capabilities.selection.llm;
+    if (selectedInferenceBackend === 'unsupported') {
+        recordBackendDeviceOutcome(capabilities, 'llm', {
+            backend: 'unsupported',
+            state: 'unsupported',
+            error: 'wasm_unavailable',
+        });
+        showDlStatus('This browser exposes neither WebGPU nor a usable WebAssembly runtime.', true);
+        setEngineStatus('No supported local inference backend', 'err');
+        return;
     }
-    if (!adapterProbe) {
-        selectedInferenceBackend = 'cpu-wasm';
+    if (selectedInferenceBackend !== 'webgpu') {
         void mobileLab.emit('webgpu_adapter_unavailable', {
-            compatibilityCoreLowPowerAndSoftwareAdaptersTried: true,
+            state: capabilities.webgpu.state,
+            attempts: capabilities.webgpu.attempts,
             fallbackBackend: selectedInferenceBackend,
         });
         showDlStatus(
@@ -727,13 +743,12 @@ async function loadModel() {
         );
         setEngineStatus('CPU-WASM fallback selected', 'warn');
     } else {
-        selectedInferenceBackend = 'webgpu';
         void mobileLab.emit('webgpu_adapter_ready', {
-            maxBufferSize: Number(adapterProbe.limits?.maxBufferSize || 0),
-            maxStorageBufferBindingSize: Number(adapterProbe.limits?.maxStorageBufferBindingSize || 0),
+            attempt: capabilities.webgpu.adapterAttempt,
+            info: capabilities.webgpu.info,
+            limits: capabilities.webgpu.limits,
         });
     }
-    adapterProbe = null;
 
     loadInFlight = true;
     const sel = document.getElementById('model-select');
@@ -912,6 +927,10 @@ async function loadModel() {
         }
         if (!isWasmEngineReady()) throw new Error(`${backendLabel} engine failed to initialise after model load`);
         selectedInferenceBackend = getWasmBackend();
+        recordBackendDeviceOutcome(capabilities, 'llm', {
+            backend: selectedInferenceBackend,
+            state: 'available',
+        });
         void mobileLab.emit('wasm_inference_init_ready', {
             backend: selectedInferenceBackend,
             elapsedMs: Math.round(performance.now() - initStartedAt),
@@ -964,6 +983,11 @@ async function loadModel() {
             document.getElementById('chat-messages')?.scrollIntoView({ block: 'start', behavior: 'smooth' });
         }
     } catch (err) {
+        recordBackendDeviceOutcome(capabilities, 'llm', {
+            backend: selectedInferenceBackend,
+            state: 'device_request_failed',
+            error: err,
+        });
         void mobileLab.emit('model_load_failed', {
             name,
             elapsedMs: Math.round(performance.now() - loadStarted),
@@ -1386,20 +1410,28 @@ async function checkDaemon() {
 
 // ── WebGPU capability + PWA install ─────────────────────────────────────────────
 
-function checkWebgpuSupport() {
+async function checkWebgpuSupport() {
     const el = document.getElementById('webgpu-notice');
     if (!el) return;
-    if (navigator.gpu) {
-        // Supported at API level — real adapter is probed at model-load time.
+    const capabilities = await browserCapabilityReceiptPromise;
+    window.__qualiaCapabilityReceipt = capabilities;
+    if (capabilities.selection.llm === 'webgpu') {
+        // A real adapter was acquired by the shared capability probe.
         // Expand setup on first visit for phones so people see Load Model.
         if (isMobileDevice()) {
             // Leave collapsed by default (chat-first) but surface a one-line engine tip.
         }
         return;
     }
-    // No WebGPU API: CPU-WASM is the guaranteed execution floor.
+    if (capabilities.selection.llm === 'unsupported') {
+        el.className = 'mb-4 rounded-xl border border-red-500/40 bg-red-500/10 px-3 py-2.5 text-xs leading-relaxed text-red-200';
+        el.innerHTML = '<strong>Unsupported browser.</strong> Neither a WebGPU adapter nor a usable WebAssembly runtime is available.';
+        setEngineStatus('No supported local inference backend', 'err');
+        return;
+    }
+    // No WebGPU adapter: CPU-WASM is the execution floor.
     el.className = 'mb-4 rounded-xl border border-amber-500/40 bg-amber-500/10 px-3 py-2.5 text-xs leading-relaxed text-amber-200';
-    el.innerHTML = '<strong>CPU-WASM mode.</strong> This browser does not expose WebGPU, so Qualia will run inference on the CPU. No browser settings are required.';
+    el.innerHTML = `<strong>CPU-WASM mode.</strong> WebGPU state: ${escHtml(capabilities.webgpu.state)}. Qualia will run inference on the CPU; no browser settings are required.`;
     setEngineStatus('CPU-WASM available · WebGPU acceleration unavailable', 'warn');
 }
 

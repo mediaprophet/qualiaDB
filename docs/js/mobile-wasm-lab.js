@@ -1,3 +1,5 @@
+import { getBrowserCapabilityReceipt } from './browser-capability.js?v=0.0.29-mobile-recovery4';
+
 const params = new URLSearchParams(location.search);
 const session = params.get('lab') || '';
 const includeText = params.get('labText') === '1';
@@ -42,6 +44,10 @@ function memorySnapshot() {
 }
 
 async function captureEnvironment() {
+    const capabilityReceipt = await getBrowserCapabilityReceipt({
+        engineVersion: '0.0.29-moredev',
+        sessionId: session,
+    });
     const detail = {
         href: location.href.replace(/([?&]lab=)[^&]+/, '$1…'),
         userAgent: navigator.userAgent,
@@ -51,31 +57,14 @@ async function captureEnvironment() {
         maxTouchPoints: navigator.maxTouchPoints ?? null,
         secureContext: window.isSecureContext,
         crossOriginIsolated: window.crossOriginIsolated,
-        webgpu: Boolean(navigator.gpu),
+        webgpu: capabilityReceipt.webgpu.apiPresent,
+        capabilityReceipt,
         viewport: { width: innerWidth, height: innerHeight, dpr: devicePixelRatio },
         screen: { width: screen.width, height: screen.height, colorDepth: screen.colorDepth },
         memory: memorySnapshot(),
     };
-    if (navigator.gpu) {
-        try {
-            const adapter = await navigator.gpu.requestAdapter({ powerPreference: 'high-performance' });
-            const info = adapter?.info || await adapter?.requestAdapterInfo?.();
-            detail.adapter = info ? {
-                vendor: info.vendor || '',
-                architecture: info.architecture || '',
-                device: info.device || '',
-                description: info.description || '',
-            } : null;
-            detail.limits = adapter ? {
-                maxBufferSize: Number(adapter.limits.maxBufferSize),
-                maxStorageBufferBindingSize: Number(adapter.limits.maxStorageBufferBindingSize),
-                maxComputeWorkgroupStorageSize: Number(adapter.limits.maxComputeWorkgroupStorageSize),
-                maxComputeInvocationsPerWorkgroup: Number(adapter.limits.maxComputeInvocationsPerWorkgroup),
-            } : null;
-        } catch (error) {
-            detail.adapterError = errorText(error);
-        }
-    }
+    detail.adapter = capabilityReceipt.webgpu.info;
+    detail.limits = capabilityReceipt.webgpu.limits;
     await emit('environment', detail);
 }
 
@@ -104,5 +93,5 @@ export const mobileLab = {
 };
 
 if (enabled) {
-    void captureEnvironment();
+    void captureEnvironment().catch((error) => emit('environment_error', { message: errorText(error) }));
 }

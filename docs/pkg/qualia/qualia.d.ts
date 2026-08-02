@@ -64,6 +64,11 @@ export class QualiaPortal {
      */
     bake_stft_sidecar_demo(frames: number): Uint8Array;
     /**
+     * Cold-path Anatomy lifecycle receipt. Success requires a retained upload
+     * and at least one presented renderer frame.
+     */
+    body_render_receipt(): any;
+    /**
      * Phase 5 (affordability rail) — whether a device tier (`0`=Full, `1`=Eco, `2`=Reserve)
      * collapses a qapp's 3D scene to its 2D pane under the budget rule. Pure (no state change);
      * the qapp planner (`render::authoring`) uses the same `OperationalMode::supports_3d` source.
@@ -346,6 +351,13 @@ export function parse_cbor_ld_wasm(payload: Uint8Array): any;
 export function parse_json_wasm(payload: string): any;
 
 /**
+ * Bind a hardware WebGL2 Anatomy renderer before `QualiaPortal` construction.
+ * This is selected only after capability probing proves that WebGPU has no
+ * usable adapter and WebGL2 context creation succeeds.
+ */
+export function portal_init_webgl2(canvas: HTMLCanvasElement): boolean;
+
+/**
  * Create the WebGPU device + surface asynchronously and stash it for the render loop to adopt.
  * JS calls this **once, awaited**, right after constructing the portal and **before** the render
  * loop starts — the canvas must still be context-free (no 2d context yet) so the WebGPU surface
@@ -420,9 +432,16 @@ export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembl
 
 export interface InitOutput {
     readonly memory: WebAssembly.Memory;
-    readonly parse_cbor_ld_wasm: (a: number, b: number) => any;
-    readonly parse_json_wasm: (a: number, b: number) => any;
+    readonly estimate_browser_storage: () => any;
+    readonly is_opfs_block_cached: (a: number) => any;
+    readonly pack_quins_into_superblock: (a: bigint, b: bigint, c: number, d: number) => [number, number, number];
+    readonly read_opfs_block: (a: number) => any;
+    readonly verify_superblock_ecc: (a: number, b: number) => [number, number];
+    readonly write_opfs_block: (a: number, b: number, c: number) => any;
     readonly __wbg_qualiaportal_free: (a: number, b: number) => void;
+    readonly __wbg_webengine_free: (a: number, b: number) => void;
+    readonly create_canvas: (a: number, b: number) => [number, number, number];
+    readonly portal_init_webgl2: (a: any) => [number, number, number];
     readonly portal_init_webgpu: (a: any) => any;
     readonly qualiaportal_acoustic_enabled: (a: number) => number;
     readonly qualiaportal_acoustic_sab_byte_length: (a: number) => number;
@@ -434,6 +453,7 @@ export interface InitOutput {
     readonly qualiaportal_artefact_refused: (a: number) => number;
     readonly qualiaportal_bake_cqt_sidecar_demo: (a: number, b: number) => [number, number, number];
     readonly qualiaportal_bake_stft_sidecar_demo: (a: number, b: number) => [number, number, number];
+    readonly qualiaportal_body_render_receipt: (a: number) => [number, number, number];
     readonly qualiaportal_budget_collapses_3d: (a: number, b: number) => number;
     readonly qualiaportal_camera_pitch: (a: number) => number;
     readonly qualiaportal_camera_yaw: (a: number) => number;
@@ -485,15 +505,13 @@ export interface InitOutput {
     readonly qualiaportal_tier: (a: number) => number;
     readonly qualiaportal_upload_mesh_asset: (a: number, b: number, c: number, d: number, e: number) => [number, number, number];
     readonly qualiaportal_upload_tensor_buffer: (a: number, b: number, c: number) => [number, number];
-    readonly qualiaportal_selected_node_index: (a: number) => number;
-    readonly __wbg_webengine_free: (a: number, b: number) => void;
-    readonly create_canvas: (a: number, b: number) => [number, number, number];
     readonly webengine_last_parsed: (a: number) => any;
     readonly webengine_load_json_scene: (a: number, b: number, c: number) => [number, number, number];
     readonly webengine_load_q42: (a: number, b: number, c: number) => [number, number, number];
     readonly webengine_mount_qapp: (a: number, b: number, c: number) => [number, number];
     readonly webengine_new: () => [number, number, number];
     readonly webengine_render_to_canvas: (a: number) => [number, number];
+    readonly qualiaportal_selected_node_index: (a: number) => number;
     readonly init_panic_hook: () => void;
     readonly design_encode_wasm: (a: number, b: number) => [number, number, number];
     readonly export_tensor_buffer_wasm: (a: number, b: number) => [number, number, number];
@@ -501,12 +519,8 @@ export interface InitOutput {
     readonly geosparql_operation_wasm: (a: number, b: number) => [number, number, number];
     readonly sample_browser_telemetry_wasm: () => [number, number, number];
     readonly spatial_encode_wasm: (a: number, b: number) => [number, number, number];
-    readonly estimate_browser_storage: () => any;
-    readonly is_opfs_block_cached: (a: number) => any;
-    readonly pack_quins_into_superblock: (a: bigint, b: bigint, c: number, d: number) => [number, number, number];
-    readonly read_opfs_block: (a: number) => any;
-    readonly verify_superblock_ecc: (a: number, b: number) => [number, number];
-    readonly write_opfs_block: (a: number, b: number, c: number) => any;
+    readonly parse_cbor_ld_wasm: (a: number, b: number) => any;
+    readonly parse_json_wasm: (a: number, b: number) => any;
     readonly __wbg_federatednodemanager_free: (a: number, b: number) => void;
     readonly __wbg_get_wasmoffloadintent_opcode: (a: number) => number;
     readonly __wbg_get_wasmoffloadintent_payload_size: (a: number) => number;
@@ -530,9 +544,9 @@ export interface InitOutput {
     readonly webizen_sign_agreement: (a: bigint, b: number, c: number) => void;
     readonly prune_and_validate_mesh: (a: bigint) => number;
     readonly wasm_bindgen__convert__closures_____invoke__h8803f8c799f93ab4: (a: number, b: number, c: any) => [number, number];
-    readonly wasm_bindgen__convert__closures_____invoke__h15d54f7d5fe0b283: (a: number, b: number, c: any) => [number, number];
-    readonly wasm_bindgen__convert__closures_____invoke__h15d54f7d5fe0b283_2: (a: number, b: number, c: any) => [number, number];
-    readonly wasm_bindgen__convert__closures_____invoke__h15d54f7d5fe0b283_3: (a: number, b: number, c: any) => [number, number];
+    readonly wasm_bindgen__convert__closures_____invoke__h0f3e9914b348256f: (a: number, b: number, c: any) => [number, number];
+    readonly wasm_bindgen__convert__closures_____invoke__h0f3e9914b348256f_2: (a: number, b: number, c: any) => [number, number];
+    readonly wasm_bindgen__convert__closures_____invoke__h0f3e9914b348256f_3: (a: number, b: number, c: any) => [number, number];
     readonly wasm_bindgen__convert__closures_____invoke__h243b5e59773a58aa: (a: number, b: number, c: any, d: any) => void;
     readonly __wbindgen_malloc: (a: number, b: number) => number;
     readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
