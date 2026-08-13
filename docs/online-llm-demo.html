@@ -149,7 +149,7 @@
             <div class="space-y-3 mb-4">
                 <label class="block text-xs text-zinc-400 mb-1">Select verified browser model</label>
                 <select id="model-select" class="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-sm text-zinc-200 focus:border-indigo-500 focus:outline-none">
-                    <option value="https://huggingface.co/HuggingFaceTB/SmolLM2-360M-Instruct-GGUF/resolve/main/smollm2-360m-instruct-q8_0.gguf" data-gguf="https://huggingface.co/HuggingFaceTB/SmolLM2-360M-Instruct-GGUF/resolve/main/smollm2-360m-instruct-q8_0.gguf" data-name="SmolLM2-360M Instruct Q8_0 GGUF (~369 MB)" data-format="chatml" data-bytes="386404992" data-sha256="48ab3034d0dd401fbc721eb1df3217902fee7dab9078992d66431f09b7750201" selected>SmolLM2 360M Instruct Q8_0 — verified</option>
+                    <option value="https://huggingface.co/HuggingFaceTB/SmolLM2-360M-Instruct-GGUF/resolve/main/smollm2-360m-instruct-q8_0.gguf" data-gguf="https://huggingface.co/HuggingFaceTB/SmolLM2-360M-Instruct-GGUF/resolve/main/smollm2-360m-instruct-q8_0.gguf" data-name="SmolLM2-360M Instruct Q8_0 GGUF (~369 MB)" data-format="chatml" data-bytes="386404992" data-sha256="48ab3034d0dd401fbc721eb1df3217902fee7dab9078992d66431f09b7750201" data-cache-key="smollm2-360m-instruct-q8_0.browser-decode-r2.p64" data-legacy-cache-key="smollm2-360m-instruct-q8_0.gguf" data-verified="true" selected>SmolLM2 360M Instruct Q8_0 — verified</option>
                 </select>
                 <p class="mt-2 text-[11px] leading-relaxed text-zinc-500">Q4_K_M browser presets are temporarily withheld: the current WebGPU quantized path can terminate on the first token. This Q8_0 image is the locally coherence-tested profile.</p>
                 <label class="block text-xs text-zinc-400 mt-3 mb-1">Or load a local P64 / GGUF file</label>
@@ -166,6 +166,9 @@
             </button>
             <button id="unload-btn" onclick="unloadModel()" class="w-full py-2 rounded-xl border border-zinc-700 hover:bg-zinc-800 text-xs text-zinc-400 mt-2 hidden transition-colors">
                 Unload
+            </button>
+            <button id="reload-verified-btn" onclick="recoverVerifiedModel()" class="w-full py-2 rounded-xl border border-amber-500/50 bg-amber-500/10 hover:bg-amber-500/20 text-xs text-amber-200 mt-2 hidden transition-colors">
+                Clear cached Q8 model &amp; reload
             </button>
         </div>
 
@@ -365,7 +368,7 @@ import init, {
 } from './playground/qualia_core_db.js?v=0.0.29-mobile-performance1';
 // Optional diagnostics: getResidentTokenizerVocab / getWebgpuInitStatus after wasm rebuild.
 import * as QualiaWasm from './playground/qualia_core_db.js?v=0.0.29-mobile-performance1';
-import { loadGgufCached, loadOrCompileP64 } from './js/opfs-model-cache.js';
+import { clearOpfsModel, loadGgufCached, loadOrCompileP64 } from './js/opfs-model-cache.js';
 import { QualiaCpuWorkerClient } from './js/qualia-cpu-worker-client.js?v=0.0.29-mobile-performance1';
 import { mobileLab } from './js/mobile-wasm-lab.js?v=0.0.29-mobile-recovery4';
 import {
@@ -472,6 +475,7 @@ const deviceMemoryGb = () => {
 window.setMode = setMode;
 window.loadModel = loadModel;
 window.unloadModel = unloadModel;
+window.recoverVerifiedModel = recoverVerifiedModel;
 window.sendMessage = sendMessage;
 window.clearChat = clearChat;
 window.runSparqlManual = runSparqlManual;
@@ -829,8 +833,12 @@ async function loadModel() {
             let loaded;
             // Prefer a prebuilt release P64 when the option provides data-p64 — avoids
             // main-thread AOT compile after download, which is the common phone hang.
-            const releaseP64 = sel.options[sel.selectedIndex].dataset.p64;
-            const cacheKey = (releaseP64 || url).split('/').pop();
+            const selectedOption = sel.options[sel.selectedIndex];
+            const releaseP64 = selectedOption.dataset.p64;
+            // A P64 format version alone does not capture decoder semantics. Keep the
+            // verified browser preset on a revisioned key so an older, header-valid
+            // on-device compile cannot survive a browser decode gate change.
+            const cacheKey = selectedOption.dataset.cacheKey || (releaseP64 || url).split('/').pop();
             try {
                 if (releaseP64) {
                     showDlStatus(`Fetching prebuilt P64 for ${name}…`);
@@ -1036,7 +1044,42 @@ async function unloadModel() {
     document.getElementById('load-btn').disabled = false;
     document.getElementById('load-btn').innerHTML = '<i class="fas fa-download"></i> Load Model';
     document.getElementById('unload-btn').classList.add('hidden');
+    document.getElementById('reload-verified-btn').classList.add('hidden');
     document.getElementById('send-btn').disabled = true;
+}
+
+async function recoverVerifiedModel() {
+    if (loadInFlight || isGenerating) return;
+    const option = document.getElementById('model-select').selectedOptions[0];
+    if (!option || option.dataset.verified !== 'true') return;
+
+    const currentKey = option.dataset.cacheKey;
+    const legacyKey = option.dataset.legacyCacheKey;
+    if (!currentKey) return;
+
+    const button = document.getElementById('reload-verified-btn');
+    button.disabled = true;
+    button.textContent = 'Clearing cached model…';
+    setEngineStatus('Removing cached Q8 model before a clean reload…', 'warn');
+    try {
+        await releaseInferenceEngine();
+        modelLoaded = false;
+        selectedInferenceBackend = 'none';
+        document.getElementById('unload-btn').classList.add('hidden');
+        document.getElementById('send-btn').disabled = true;
+
+        const removed = await Promise.all([
+            clearOpfsModel(currentKey),
+            legacyKey ? clearOpfsModel(legacyKey) : Promise.resolve(0),
+        ]);
+        const removedCount = removed[0] + removed[1];
+        showDlStatus(`Removed ${removedCount} cached model file${removedCount === 1 ? '' : 's'}; fetching the verified Q8_0 source again…`);
+        button.classList.add('hidden');
+        await loadModel();
+    } finally {
+        button.disabled = false;
+        button.textContent = 'Clear cached Q8 model & reload';
+    }
 }
 
 // ── Message Handling ──────────────────────────────────────────────────────────
@@ -1233,9 +1276,18 @@ async function generate(system, user, opts = {}) {
     const cleaned = cleanGenerated(full);
     if (!cleaned) {
         const generated = Number(result?.generatedTokens || tokens || 0);
+        const selected = document.getElementById('model-select').selectedOptions[0];
+        const canRecoverVerifiedPreset = selected?.dataset.verified === 'true'
+            && Boolean(selected.dataset.cacheKey);
+        if (canRecoverVerifiedPreset) {
+            document.getElementById('reload-verified-btn').classList.remove('hidden');
+            setEngineStatus('Decode gate rejected the loaded model; a clean Q8 reload is available.', 'error');
+        }
         throw new Error(
             `The model returned no visible text (${generated} generated token${generated === 1 ? '' : 's'}). ` +
-            `This model/runtime combination failed the browser decode gate; reload the verified Q8_0 preset or choose a compatible local model.`
+            (canRecoverVerifiedPreset
+                ? 'Use “Clear cached Q8 model & reload” to rebuild the verified preset, or choose a compatible local model.'
+                : 'This model/runtime combination failed the browser decode gate; choose a compatible local model.')
         );
     }
     void mobileLab.emit('generation_complete', {

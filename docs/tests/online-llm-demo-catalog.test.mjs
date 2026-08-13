@@ -16,6 +16,11 @@ assert.equal(
 assert.match(options[0][2], /SmolLM2-360M.*Q8_0/);
 assert.match(html, /data-bytes="386404992"/);
 assert.match(html, /data-sha256="48ab3034d0dd401fbc721eb1df3217902fee7dab9078992d66431f09b7750201"/);
+assert.match(html, /data-cache-key="smollm2-360m-instruct-q8_0\.browser-decode-r2\.p64"/);
+assert.match(html, /data-legacy-cache-key="smollm2-360m-instruct-q8_0\.gguf"/);
+assert.match(html, /clearOpfsModel/);
+assert.match(html, /recoverVerifiedModel/);
+assert.match(html, /Clear cached Q8 model &amp; reload/);
 assert.doesNotMatch(html, /releases\/download\/v0\.0\.24\/.*\.(p64|gguf)/);
 assert.doesNotMatch(html, /value="models\/.*\.gguf"/);
 assert.match(html, /inferWasmAsyncMeasured/);
