@@ -1,0 +1,114 @@
+// Stable component boundary for the Wellfare data surface.
+//
+// This contract is intentionally separate from the current wasm-bindgen module.
+// It becomes a runtime export only when a component-model adapter and conformance
+// tests are added. In particular, semantic identifiers stay u64 end-to-end and
+// stores are explicitly bounded by their caller.
+package qualia:wellfare@0.1.0;
+
+interface types {
+    enum sensitivity {
+        public,
+        restricted,
+        classified,
+    }
+
+    record access-context {
+        principal: u64,
+        contract: u64,
+        sensitivity: sensitivity,
+        authorization: list<u8>,
+    }
+
+    record quin {
+        subject: u64,
+        predicate: u64,
+        object: u64,
+        context: u64,
+        metadata: u64,
+    }
+
+    record bounded-query {
+        value: u64,
+        max-results: u32,
+    }
+
+    record document {
+        media-type: string,
+        bytes: list<u8>,
+    }
+
+    variant error {
+        invalid-input(string),
+        unauthorized,
+        sensitivity-mismatch,
+        capacity-exceeded,
+        result-limit-exceeded,
+        malformed-cbor,
+        internal(string),
+    }
+}
+
+interface parsers {
+    use types.{document, error};
+
+    parse-weight-csv-json: func(content: string) -> result<document, error>;
+    parse-sleep-csv-json: func(content: string) -> result<document, error>;
+    parse-heart-rate-csv-json: func(content: string) -> result<document, error>;
+    parse-steps-csv-json: func(content: string) -> result<document, error>;
+
+    weight-turtle-from-csv: func(content: string) -> result<string, error>;
+    sleep-turtle-from-csv: func(content: string) -> result<string, error>;
+    heart-rate-turtle-from-csv: func(content: string) -> result<string, error>;
+    steps-turtle-from-csv: func(content: string) -> result<string, error>;
+}
+
+interface store {
+    use types.{access-context, bounded-query, document, error, quin};
+
+    resource health-store {
+        constructor(capacity-bytes: u32);
+        load-turtle: func(access: access-context, turtle: string) -> result<_, error>;
+        query: func(access: access-context, sparql: string, max-result-bytes: u32) -> result<document, error>;
+    }
+
+    resource qualia-store {
+        constructor(capacity-quins: u32);
+        insert-quin: func(access: access-context, value: quin) -> result<_, error>;
+        query-subject: func(access: access-context, query: bounded-query) -> result<list<quin>, error>;
+        query-predicate: func(access: access-context, query: bounded-query) -> result<list<quin>, error>;
+        query-context: func(access: access-context, query: bounded-query) -> result<list<quin>, error>;
+        len: func() -> u32;
+        clear: func(access: access-context) -> result<_, error>;
+        insert-from-cbor-ld: func(access: access-context, data: list<u8>) -> result<_, error>;
+    }
+}
+
+interface validation {
+    use types.{access-context, error};
+
+    validate-health-turtle: func(access: access-context, turtle: string) -> result<string, error>;
+}
+
+interface vault {
+    use types.{access-context, error};
+
+    vault-meds-to-turtle: func(access: access-context, json: string) -> result<string, error>;
+    vault-diet-to-turtle: func(access: access-context, json: string) -> result<string, error>;
+    vault-biometrics-to-turtle: func(access: access-context, json: string) -> result<string, error>;
+}
+
+interface rules {
+    use types.{access-context, error, quin};
+
+    evaluate-n3-rules: func(access: access-context, turtle: string) -> result<string, error>;
+    validate-health-quin: func(access: access-context, constraint: string, value: quin) -> result<string, error>;
+}
+
+world wellfare-core {
+    export parsers;
+    export store;
+    export validation;
+    export vault;
+    export rules;
+}
