@@ -3,6 +3,19 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script>
+    // The lab needs the same cross-origin isolation as the public demo so
+    // WebAssembly SIMD and SharedArrayBuffer-dependent paths are comparable.
+    if ('serviceWorker' in navigator && !window.crossOriginIsolated) {
+      navigator.serviceWorker.register('./coi-serviceworker.js').then(() => {
+        const key = 'qualia-lab-coi-reloaded';
+        if (!navigator.serviceWorker.controller && !sessionStorage.getItem(key)) {
+          sessionStorage.setItem(key, '1');
+          window.location.reload();
+        }
+      }).catch((error) => console.warn('Inference lab COI setup failed:', error));
+    }
+  </script>
   <title>Qualia WASM vs wllama — Inference Lab Benchmark</title>
   <style>
     :root {
@@ -199,6 +212,13 @@
       </select>
     </div>
     <div>
+      <label for="qualia-backend">Qualia Backend</label>
+      <select id="qualia-backend">
+        <option value="webgpu">WebGPU</option>
+        <option value="cpu-wasm">CPU-WASM</option>
+      </select>
+    </div>
+    <div>
       <label for="wllama-gpu-layers">wllama n_gpu_layers</label>
       <input type="number" id="wllama-gpu-layers" value="99" min="0" max="999">
     </div>
@@ -252,6 +272,7 @@
   const STORAGE_KEY = 'qualia_wasm_bench_history';
   const WLLAMA_ESM = 'https://cdn.jsdelivr.net/npm/@wllama/wllama@2.4.1/+esm';
   const WLLAMA_WASM = 'https://cdn.jsdelivr.net/npm/@wllama/wllama@2.4.1/esm/wasm/wllama.wasm';
+  const QUALIA_DECODE_TIMEOUT_MS = 120000;
 
   const $ = (id) => document.getElementById(id);
   const logLines = [];
@@ -370,6 +391,7 @@
       maxTokens: parseInt($('max-tokens').value) || 64,
       temperature: parseFloat($('temperature').value) || 0.0,
       qualiaFormat: $('qualia-format').value,
+      qualiaBackend: $('qualia-backend').value,
       wllamaGpuLayers: parseInt($('wllama-gpu-layers').value) || 99,
     };
   }
@@ -378,11 +400,11 @@
   async function loadQualiaModules() {
     if (!qualiaState.mod) {
       log('Loading Qualia WASM module…');
-      const mod = await import('../playground/qualia_core_db.js');
+      const mod = await import('../../docs/playground/qualia_core_db.js');
       await mod.default();
       mod.init_panic_hook?.();
       qualiaState.mod = mod;
-      qualiaState.cache = await import('../js/opfs-model-cache.js');
+      qualiaState.cache = await import('../../docs/js/opfs-model-cache.js');
       log('Qualia WASM module loaded', 'ok');
     }
     return qualiaState.mod;
@@ -394,11 +416,12 @@
     const mod = await loadQualiaModules();
     const url = cfg.modelUrl;
     const format = cfg.qualiaFormat;
-    const key = `${url}|${format}`;
+    const backend = cfg.qualiaBackend;
+    const key = `${url}|${format}|${backend}`;
     let loadMs = 0;
     let source = 'resident';
-    if (qualiaState.loadedKey !== key || !mod.isWebgpuEngineReady()) {
-      if (mod.isWebgpuEngineReady()) await mod.releaseWebgpuEngine();
+    if (qualiaState.loadedKey !== key || !mod.isWasmEngineReady()) {
+      if (mod.isWasmEngineReady()) await mod.releaseWebgpuEngine();
       const name = url.split('/').pop();
       const t0 = performance.now();
       let bytes;
@@ -415,9 +438,13 @@
           setStatus('qualia-status', phase === 'download' && total ? `download ${Math.round(100 * loaded / total)}%` : phase));
         bytes = r.bytes; source = r.source;
       }
-      setStatus('qualia-status', 'initializing WebGPU engine…');
-      await mod.initialize_webgpu_engine(bytes);
-      if (!mod.isWebgpuEngineReady()) throw new Error('Qualia engine failed to initialise');
+      setStatus('qualia-status', `initializing ${backend === 'cpu-wasm' ? 'CPU-WASM' : 'WebGPU'} engine…`);
+      if (backend === 'cpu-wasm') {
+        await mod.initializeCpuWasmEngine(bytes);
+      } else {
+        await mod.initialize_webgpu_engine(bytes);
+      }
+      if (!mod.isWasmEngineReady()) throw new Error(`Qualia ${backend} engine failed to initialise`);
       loadMs = performance.now() - t0;
       qualiaState.loadedKey = key;
     }
@@ -428,17 +455,40 @@
     let firstAt = null;
     let outputText = '';
     const start = performance.now();
-    await mod.inferWasmAsync(prompt, (piece) => {
-      if (firstAt === null) firstAt = performance.now();
-      outputText += piece;
+    const maxTokens = Math.max(1, Math.min(cfg.maxTokens, 512));
+    let timeoutId = null;
+    let measured;
+    try {
+      measured = await Promise.race([
+        mod.inferWasmAsyncMeasured(prompt, maxTokens, (piece) => {
+          if (firstAt === null) firstAt = performance.now();
+          outputText += piece;
+          setOutput('qualia-output', outputText);
+        }),
+        new Promise((_, reject) => {
+          timeoutId = setTimeout(
+            () => reject(new Error(`Qualia ${backend} decode timed out after ${QUALIA_DECODE_TIMEOUT_MS / 1000}s`)),
+            QUALIA_DECODE_TIMEOUT_MS,
+          );
+        }),
+      ]);
+    } finally {
+      if (timeoutId !== null) clearTimeout(timeoutId);
+    }
+    if (measured?.text && !outputText) {
+      outputText = measured.text;
       setOutput('qualia-output', outputText);
-    });
+    }
+    const generatedTokens = Number(measured?.generatedTokens || 0);
+    if (!outputText.trim()) {
+      throw new Error(`Qualia ${backend} decode gate returned no visible text (${generatedTokens} generated tokens)`);
+    }
     const end = performance.now();
-    const approxTokens = estimateTokens(outputText);
+    const approxTokens = generatedTokens || estimateTokens(outputText);
     const generationMs = end - start;
     const ttftMs = firstAt === null ? generationMs : firstAt - start;
     const result = {
-      engine: 'qualia', loadMs, ttftMs, generationMs, outputText, approxTokens,
+      engine: 'qualia', loadMs, ttftMs, generationMs, outputText, approxTokens, backend,
       tokensPerSecond: generationMs > 0 ? (approxTokens * 1000) / generationMs : 0,
       source, format,
     };
