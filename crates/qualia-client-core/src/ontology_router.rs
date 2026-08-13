@@ -22,14 +22,54 @@ pub struct OntologyRoutingDecision {
 }
 
 pub fn route_prompt_to_ontologies(env: &ChatEnvironment, prompt: &str) -> OntologyRoutingDecision {
-    if env.ontology_summaries.is_empty() {
+    route_prompt_with_focus(env, prompt, &[])
+}
+
+/// Route a prompt with bounded, agent-declared semantic focus terms.  These
+/// terms are only relevance hints: dataset access, tool permission, and remote
+/// disclosure remain governed elsewhere.
+pub fn route_prompt_with_focus(
+    env: &ChatEnvironment,
+    prompt: &str,
+    focus_terms: &[String],
+) -> OntologyRoutingDecision {
+    route_prompt_with_focus_and_allowlist(env, prompt, focus_terms, &[])
+}
+
+/// Route within the intersection of the session environment and a named
+/// agent's explicit data-source allowlist.  The allowlist can only narrow a
+/// session; an empty list preserves the session's existing boundary.
+pub fn route_prompt_with_focus_and_allowlist(
+    env: &ChatEnvironment,
+    prompt: &str,
+    focus_terms: &[String],
+    allowed_ontology_ids: &[String],
+) -> OntologyRoutingDecision {
+    let allowed = |id: &str| {
+        allowed_ontology_ids.is_empty()
+            || allowed_ontology_ids.iter().any(|configured| configured == id)
+    };
+    let in_scope: Vec<&OntologyScopeSummary> = env
+        .ontology_summaries
+        .iter()
+        .filter(|summary| allowed(&summary.id))
+        .collect();
+    if in_scope.is_empty() {
         return OntologyRoutingDecision::default();
     }
 
-    let keywords = extract_keywords(prompt);
-    let mut scored: Vec<(i32, &OntologyScopeSummary)> = env
-        .ontology_summaries
+    let mut keywords = extract_keywords(prompt);
+    for term in focus_terms {
+        for keyword in extract_keywords(term) {
+            if !keywords.iter().any(|known| known == &keyword) {
+                keywords.push(keyword);
+            }
+        }
+    }
+    keywords.truncate(32);
+    let mut scored: Vec<(i32, &OntologyScopeSummary)> = in_scope
         .iter()
+        .copied()
         .map(|summary| (score_summary(summary, &keywords), summary))
         .collect();
 
@@ -60,16 +100,16 @@ pub fn route_prompt_to_ontologies(env: &ChatEnvironment, prompt: &str) -> Ontolo
     }
 
     if ontology_ids.is_empty() {
-        for summary in env.ontology_summaries.iter().take(MAX_ROUTED_ONTOLOGIES) {
+        for summary in in_scope.iter().take(MAX_ROUTED_ONTOLOGIES) {
             ontology_ids.push(summary.id.clone());
             extend_namespaces(&mut context_namespaces, summary);
         }
     }
 
     if ontology_ids.iter().all(|id| !id.contains("wordnet")) {
-        if let Some(wordnet) = env
-            .ontology_summaries
+        if let Some(wordnet) = in_scope
             .iter()
+            .copied()
             .find(|o| o.id.contains("wordnet"))
             .filter(|_| ontology_ids.len() < MAX_ROUTED_ONTOLOGIES)
         {
@@ -283,5 +323,28 @@ mod tests {
             route_prompt_to_ontologies(&env(), "Draft a guardianship consent agreement.");
         assert!(decision.ontology_ids.iter().any(|id| id == "legal-commons"));
         assert!(decision.context_namespaces.contains(&q_hash("legal")));
+    }
+
+    #[test]
+    fn semantic_focus_can_narrow_routing_without_prompt_keywords() {
+        let decision = route_prompt_with_focus(
+            &env(),
+            "Please prepare a concise source note.",
+            &["clinical evidence".to_string(), "health".to_string()],
+        );
+        assert!(decision.ontology_ids.iter().any(|id| id == "snomed"));
+        assert!(decision.matched_terms.iter().any(|term| term == "clinical"));
+    }
+
+    #[test]
+    fn agent_allowlist_intersects_the_session_scope() {
+        let decision = route_prompt_with_focus_and_allowlist(
+            &env(),
+            "What does this patient fever indicate?",
+            &[],
+            &["legal-commons".to_string()],
+        );
+        assert_eq!(decision.ontology_ids, vec!["legal-commons".to_string()]);
+        assert!(!decision.context_namespaces.contains(&q_hash("health")));
     }
 }

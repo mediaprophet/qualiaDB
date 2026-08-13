@@ -105,6 +105,15 @@ pub struct ParticipantAgentConfig {
     pub principal_did: String,
     /// Derived sub-agent DID — not an independent chat actor.
     pub sub_agent_did: String,
+    /// Stable roster binding for the agent that most recently answered in this
+    /// session.  Older session files omit it and retain the default local
+    /// assistant behaviour.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub roster_agent_slug: Option<String>,
+    /// User-defined roster name captured with the turn so chat attribution
+    /// does not fall back to the principal's generic Webizen-agent label.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub roster_agent_display_name: Option<String>,
     pub model_id: Option<String>,
     pub backend: AgentBackendKind,
     pub outcome_sharing: OutcomeSharingPolicy,
@@ -202,11 +211,37 @@ pub fn fresh_local_agent_config(
     ParticipantAgentConfig {
         principal_did: principal_did.to_string(),
         sub_agent_did: compile_sub_agent_did(principal_did, session_id),
+        roster_agent_slug: None,
+        roster_agent_display_name: None,
         model_id: model_id.map(|s| s.to_string()),
         backend: crate::inference_backend::load_inference_backend_settings().backend,
         outcome_sharing: default_outcome_sharing_for_profile(kind, profile),
         updated_at: unix_now(),
     }
+}
+
+/// Bind the local session projection to a named roster agent immediately
+/// before its turn.  The roster remains the source of truth; this small
+/// session record is used solely to attribute the persisted chat message.
+pub fn bind_local_roster_agent(
+    storage_root: &Path,
+    session_id: &str,
+    agent: &crate::agent_registry::AgentDefinition,
+) -> Result<(), String> {
+    let model_id = match &agent.backend {
+        crate::agent_registry::AgentBackendSpec::LocalEngine { model_id } => model_id.clone(),
+        crate::agent_registry::AgentBackendSpec::RemoteMcp { .. } => {
+            return Err("remote roster agents are not local session bindings".to_string());
+        }
+    };
+    let mut config = load_local_agent_config(storage_root, session_id)?;
+    config.roster_agent_slug = Some(agent.slug.clone());
+    config.roster_agent_display_name = Some(agent.display_name.clone());
+    // A blank roster model explicitly means "use the active local default";
+    // clear any earlier agent's pin rather than carrying it into attribution.
+    config.model_id = model_id;
+    config.backend = AgentBackendKind::Local;
+    save_local_agent_config(storage_root, session_id, &config)
 }
 
 pub fn ensure_local_agent_config(storage_root: &Path, session_id: &str) -> Result<(), String> {
@@ -269,6 +304,12 @@ pub fn decorate_local_agent_message(
 }
 
 pub fn local_agent_display_name(cfg: &ParticipantAgentConfig) -> String {
+    if let Some(name) = cfg.roster_agent_display_name.as_deref() {
+        if let Some(model) = cfg.model_id.as_deref() {
+            return format!("{name} ({model})");
+        }
+        return name.to_string();
+    }
     let profile = crate::user_profile::load_profile();
     let base = if profile.public_did == cfg.principal_did {
         profile.display_name.clone()

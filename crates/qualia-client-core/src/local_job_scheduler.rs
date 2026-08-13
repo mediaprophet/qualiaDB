@@ -67,6 +67,11 @@ pub enum LocalJobKind {
         session_id: String,
         #[serde(default)]
         agent_slug: Option<String>,
+        /// Roster revision captured when the job was curated.  Execution
+        /// refuses a changed/missing definition instead of silently adopting
+        /// new model, sharing, or remote-placement policy.
+        #[serde(default)]
+        agent_updated_at_unix: Option<u64>,
         prompt: String,
     },
 }
@@ -245,10 +250,8 @@ impl LocalJobScheduler {
         match &placement {
             crate::identity_plane::JobPlacement::Local { .. } => {}
             crate::identity_plane::JobPlacement::RemoteRegistered { device_id, .. } => {
-                let entry = crate::identity_plane::deliver_or_queue_remote_job(
-                    kind.clone(),
-                    device_id,
-                )?;
+                let entry =
+                    crate::identity_plane::deliver_or_queue_remote_job(kind.clone(), device_id)?;
                 // Represent remote work as a completed/queued audit job on the origin.
                 let job = LocalJob {
                     id: entry.id.clone(),
@@ -853,9 +856,30 @@ async fn execute_job(
         LocalJobKind::AgentTurn {
             session_id,
             agent_slug,
+            agent_updated_at_unix,
             prompt,
         } => {
             check_cancel(&cancel)?;
+            if let (Some(slug), Some(expected_revision)) =
+                (agent_slug.as_deref(), agent_updated_at_unix)
+            {
+                let storage = crate::state::APP_STATE
+                    .get()
+                    .ok_or("Application not initialized")?
+                    .config
+                    .lock()
+                    .map_err(|error| error.to_string())?
+                    .storage_path
+                    .clone();
+                let current =
+                    crate::agent_registry::get_agent(std::path::Path::new(&storage), slug)
+                        .ok_or_else(|| format!("scheduled agent @{slug} no longer exists"))?;
+                if current.updated_at_unix != *expected_revision {
+                    return Err(format!(
+                        "scheduled agent @{slug} changed after this job was queued; review and schedule it again"
+                    ));
+                }
+            }
             // Route by the chosen agent's backend (local-first). A remote-MCP agent runs its turn out
             // over MCP (native only); otherwise the native engine runs it and appends the reply.
             #[cfg(not(target_arch = "wasm32"))]
@@ -868,11 +892,16 @@ async fn execute_job(
                         session_id.clone(),
                         slug,
                         prompt.clone(),
+                        false,
                     );
                 }
             }
-            let result =
-                crate::chat_inference::run_chat_inference_with_options(session_id, prompt, None);
+            let result = crate::chat_inference::run_chat_inference_for_agent(
+                session_id,
+                prompt,
+                agent_slug.as_deref(),
+                None,
+            );
             if result.committed && !result.text.trim().is_empty() {
                 let _ = crate::api::append_chat_message(
                     session_id.clone(),
@@ -962,6 +991,20 @@ mod tests {
         assert!(matches!(
             req.kind,
             LocalJobKind::AnatomyAssetAcquire { model } if model == "female"
+        ));
+    }
+
+    #[test]
+    fn agent_turn_snapshot_is_backward_compatible() {
+        let raw = r#"{"kind":"agent_turn","session_id":"chat-1","agent_slug":"researcher","prompt":"summarise"}"#;
+        let req: EnqueueJobRequest = serde_json::from_str(raw).unwrap();
+        assert!(matches!(
+            req.kind,
+            LocalJobKind::AgentTurn {
+                agent_slug: Some(ref slug),
+                agent_updated_at_unix: None,
+                ..
+            } if slug == "researcher"
         ));
     }
 }

@@ -45,6 +45,43 @@ pub fn agent_roster_remove(slug: String) -> Result<(), String> {
     crate::agent_registry::remove_agent(Path::new(&storage), &slug)
 }
 
+/// Truthful runtime projection for one roster agent.  Definitions are durable;
+/// this response describes only the currently effective local-model residency
+/// and recent decode measurement, so callers do not mistake "configured" for
+/// "loaded on GPU".
+pub fn agent_runtime_status(slug: String) -> Result<serde_json::Value, String> {
+    let storage = agent_roster_storage()?;
+    let agent = crate::agent_registry::get_agent(Path::new(&storage), &slug)
+        .ok_or_else(|| format!("unknown agent @{slug}"))?;
+    let active = crate::api::load_active_model_record_from_disk();
+    let (backend, configured_model, resident) = match &agent.backend {
+        crate::agent_registry::AgentBackendSpec::LocalEngine { model_id } => {
+            let resident = active.as_ref().is_some_and(|active| {
+                model_id
+                    .as_deref()
+                    .map_or(true, |configured| configured == active.model_id)
+            });
+            ("local", model_id.clone(), resident)
+        }
+        crate::agent_registry::AgentBackendSpec::RemoteMcp { model, .. } => {
+            ("remote_mcp", model.clone(), false)
+        }
+    };
+    Ok(serde_json::json!({
+        "slug": agent.slug,
+        "enabled": agent.enabled,
+        "backend": backend,
+        "configured_model_id": configured_model,
+        "resident": resident,
+        "active_model_id": active.as_ref().map(|record| record.model_id.clone()),
+        "lifecycle_state": crate::model_lifecycle::lifecycle_label(
+            crate::model_lifecycle::get_model_lifecycle_state()
+        ),
+        "last_decode_tokens_per_sec": crate::model_lifecycle::get_last_decode_tok_s(),
+        "last_decode_at_unix": crate::model_lifecycle::get_last_decode_tok_s_at_unix(),
+    }))
+}
+
 // ── Principal-gated MCP tool loop (U3-A / U3-B) ────────────────────────────────
 // Propose → Permit/Deny → execute. Deny never dispatches. Allowlist from roster.
 
@@ -118,6 +155,7 @@ pub fn agent_roster_add_remote(
         }
         "http" => McpTransport::Http {
             url: endpoint.trim().to_string(),
+            credential_id: None,
         },
         "stdio" => {
             let mut parts = endpoint.split_whitespace().map(|s| s.to_string());
@@ -149,6 +187,40 @@ pub fn agent_roster_add_remote(
     crate::agent_registry::upsert_agent(Path::new(&storage), agent)
 }
 
+/// Store a bearer credential for a user-owned connection in the operating
+/// system keychain. The secret is intentionally write-only at this API boundary.
+#[cfg(not(target_arch = "wasm32"))]
+pub fn provider_credential_store(connection_id: String, bearer: String) -> Result<(), String> {
+    crate::provider_credentials::store_bearer_credential(&connection_id, &bearer)
+}
+
+/// Remove a user-owned connection credential from the operating-system keychain.
+#[cfg(not(target_arch = "wasm32"))]
+pub fn provider_credential_remove(connection_id: String) -> Result<(), String> {
+    crate::provider_credentials::remove_bearer_credential(&connection_id)
+}
+
+/// Verify that a configured remote-MCP agent can answer the non-generative
+/// `tools/list` handshake.  This never sends a chat prompt.
+#[cfg(not(target_arch = "wasm32"))]
+pub fn agent_remote_connection_test(slug: String) -> Result<serde_json::Value, String> {
+    let storage = agent_roster_storage()?;
+    let agent = crate::agent_registry::get_agent(Path::new(&storage), &slug)
+        .ok_or_else(|| format!("no agent '{slug}' in roster"))?;
+    let transport = match &agent.backend {
+        crate::agent_registry::AgentBackendSpec::RemoteMcp { transport, .. } => transport,
+        crate::agent_registry::AgentBackendSpec::LocalEngine { .. } => {
+            return Err("only remote MCP agents have a connection to test".into());
+        }
+    };
+    let tool_count = crate::remote_mcp::remote_mcp_probe(transport)?;
+    Ok(serde_json::json!({
+        "ok": true,
+        "agent_slug": agent.slug,
+        "tool_count": tool_count,
+    }))
+}
+
 /// Backend kind of a roster agent: `"local"` | `"remote"` (unknown/empty slug → `"local"`).
 pub fn agent_backend_kind(slug: Option<String>) -> Result<String, String> {
     let slug = match slug {
@@ -173,6 +245,7 @@ pub fn run_remote_agent_turn(
     session_id: String,
     slug: String,
     prompt: String,
+    per_turn_consent: bool,
 ) -> Result<serde_json::Value, String> {
     use crate::agent_registry::AgentBackendSpec;
     let storage = agent_roster_storage()?;
@@ -184,6 +257,16 @@ pub fn run_remote_agent_turn(
             agent.display_name
         )));
     }
+    match agent.execution_policy.remote_consent {
+        crate::agent_registry::RemoteConsentPolicy::Never => {
+            return Ok(remote_turn_blocked("this agent's remote connection is disabled by its policy"));
+        }
+        crate::agent_registry::RemoteConsentPolicy::PerTurn if !per_turn_consent => {
+            return Ok(remote_turn_blocked("remote dispatch requires this turn's explicit confirmation"));
+        }
+        crate::agent_registry::RemoteConsentPolicy::PerTurn
+        | crate::agent_registry::RemoteConsentPolicy::Preapproved => {}
+    }
     let (transport, infer_tool, model) = match &agent.backend {
         AgentBackendSpec::RemoteMcp {
             transport,
@@ -192,7 +275,7 @@ pub fn run_remote_agent_turn(
             ..
         } => (transport.clone(), infer_tool.clone(), model.clone()),
         AgentBackendSpec::LocalEngine { .. } => {
-            return Err("agent is local — use the local inference path".to_string())
+            return Err("agent is local — use the local inference path".to_string());
         }
     };
 
@@ -204,7 +287,10 @@ pub fn run_remote_agent_turn(
     let inputs = crate::job_router::RoutingInputs {
         sensitivity: wellfare_core::record::SensitivityClass::Restricted,
         local_available: local_active,
-        external_consented: true,
+        external_consented: per_turn_consent || matches!(
+            agent.execution_policy.remote_consent,
+            crate::agent_registry::RemoteConsentPolicy::Preapproved
+        ),
         requires_capability: None,
         local_has_capability: false,
         estimated_cost_microcents: 0,

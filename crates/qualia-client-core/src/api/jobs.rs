@@ -13,10 +13,29 @@ pub fn schedule_agent_job(
     agent_slug: Option<String>,
     prompt: String,
 ) -> Result<serde_json::Value, String> {
+    let agent_updated_at_unix = if let Some(slug) = agent_slug.as_deref() {
+        let state = crate::state::APP_STATE
+            .get()
+            .ok_or("Application not initialized")?;
+        let storage = state
+            .config
+            .lock()
+            .map_err(|error| error.to_string())?
+            .storage_path
+            .clone();
+        Some(
+            crate::agent_registry::get_agent(Path::new(&storage), slug)
+                .ok_or_else(|| format!("unknown agent @{slug}"))?
+                .updated_at_unix,
+        )
+    } else {
+        None
+    };
     let job = crate::local_job_scheduler::LocalJobScheduler::global().enqueue(
         crate::local_job_scheduler::LocalJobKind::AgentTurn {
             session_id,
             agent_slug,
+            agent_updated_at_unix,
             prompt,
         },
     )?;

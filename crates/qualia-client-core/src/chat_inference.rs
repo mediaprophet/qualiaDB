@@ -2,9 +2,10 @@
 
 use std::path::Path;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex, OnceLock};
 
 use qualia_core_db::{
+    NQuin,
     llm_agent::{
         AgentError, AgentIntent, AgentOutput, AgentRuntime, LocalLlmAgent, WebizenVerdict,
     },
@@ -12,7 +13,6 @@ use qualia_core_db::{
     orchestrator::{ModelLifecycle, OrchestrationResult},
     q_hash,
     wal::WriteAheadLog,
-    NQuin,
 };
 use serde::{Deserialize, Serialize};
 
@@ -24,6 +24,11 @@ use crate::ontology_router::OntologyRoutingDecision;
 const OBJECT_HASH_MASK: u64 = 0x0FFF_FFFF_FFFF_FFFF;
 
 static INFERENCE_CANCEL: AtomicBool = AtomicBool::new(false);
+
+/// One consumer GPU normally has one practical full-model decode lane. Named
+/// local-agent turns acquire this cold-path lease before switching/using the
+/// resident model, preventing competing loads and VRAM overcommit.
+static LOCAL_AGENT_DECODE_LANE: OnceLock<Mutex<()>> = OnceLock::new();
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ChatInferenceResult {
@@ -78,6 +83,12 @@ pub struct ChatInferenceOptions {
     pub reply_to_fragment_id: Option<String>,
     /// Override session environment: route through sieve + orchestrator WAL path.
     pub graph_mutation: bool,
+    /// Pointed ontology profile of the named agent serving this turn.  The
+    /// profile narrows relevance routing; it does not grant access itself.
+    pub semantic_profile: Option<crate::agent_registry::AgentSemanticProfile>,
+    /// Optional per-agent ontology/data-source boundary. An empty list keeps
+    /// the session's existing scope; a populated list can only narrow it.
+    pub allowed_ontology_ids: Vec<String>,
 }
 
 pub fn run_chat_inference_with_options(
@@ -90,6 +101,86 @@ pub fn run_chat_inference_with_options(
         prompt,
         on_token,
         ChatInferenceOptions::default(),
+    )
+}
+
+/// Run a local turn using a named roster agent.  A pinned model is activated on
+/// demand before inference; the lifecycle implementation owns any resident
+/// mapping replacement.  This is a cold control-path operation and never runs
+/// inside the decode/evaluator hot path.
+pub fn run_chat_inference_for_agent(
+    session_id: &str,
+    prompt: &str,
+    agent_slug: Option<&str>,
+    on_token: Option<Arc<dyn Fn(String) + Send + Sync>>,
+) -> ChatInferenceResult {
+    let Some(slug) = agent_slug.filter(|slug| !slug.trim().is_empty()) else {
+        return run_chat_inference_with_options(session_id, prompt, on_token);
+    };
+    let started = std::time::Instant::now();
+    let lane = LOCAL_AGENT_DECODE_LANE.get_or_init(|| Mutex::new(()));
+    let _lease = lane.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+    let Some(state) = crate::state::APP_STATE.get() else {
+        return empty_result(started, "Application not initialized", None);
+    };
+    let storage = match state.config.lock() {
+        Ok(config) => config.storage_path.clone(),
+        Err(error) => return empty_result(started, &error.to_string(), None),
+    };
+    let Some(agent) = crate::agent_registry::get_agent(Path::new(&storage), slug) else {
+        return empty_result(started, &format!("Unknown agent @{slug}"), None);
+    };
+    if !agent.enabled {
+        return empty_result(started, &format!("Agent @{} is disabled", agent.slug), None);
+    }
+    let model_id = match &agent.backend {
+        crate::agent_registry::AgentBackendSpec::LocalEngine { model_id } => model_id.clone(),
+        crate::agent_registry::AgentBackendSpec::RemoteMcp { .. } => {
+            return empty_result(
+                started,
+                "Remote agent must be dispatched through its MCP provider",
+                None,
+            );
+        }
+    };
+    if let Err(error) =
+        crate::chat_agents::bind_local_roster_agent(Path::new(&storage), session_id, &agent)
+    {
+        return empty_result(started, &format!("Could not bind agent: {error}"), None);
+    }
+    if let Some(model_id) = model_id {
+        let active_record = crate::api::load_active_model_record_from_disk();
+        let already_active = active_record
+            .as_ref()
+            .is_some_and(|active| active.model_id == model_id);
+        if !already_active {
+            // Local agents share a consumer device's bounded decode lane.  A
+            // model switch is explicit: scrub the old resident mapping before
+            // asking the lifecycle to map and activate the selected agent's
+            // model.  Agent definitions and queued-job records remain intact.
+            if let Some(active) = active_record {
+                crate::model_lifecycle::unload_active_model(Some(active.profile_id));
+            }
+            if let Err(error) =
+                crate::model_lifecycle::activate_model_for_id(&model_id, Path::new(&storage))
+            {
+                return empty_result(
+                    started,
+                    &format!("Could not load @{slug}'s model `{model_id}`: {error}"),
+                    None,
+                );
+            }
+        }
+    }
+    run_chat_inference_full(
+        session_id,
+        prompt,
+        on_token,
+        ChatInferenceOptions {
+            semantic_profile: Some(agent.semantic_profile),
+            allowed_ontology_ids: agent.data_policy.allowed_ontology_ids,
+            ..ChatInferenceOptions::default()
+        },
     )
 }
 
@@ -161,7 +252,17 @@ pub fn run_chat_inference_full(
         agent_cfg.model_id = Some(ib_settings.ollama_model.clone());
     }
 
-    let routing = crate::ontology_router::route_prompt_to_ontologies(&env, prompt);
+    let focus_terms = options
+        .semantic_profile
+        .as_ref()
+        .map(crate::agent_registry::AgentSemanticProfile::focus_terms)
+        .unwrap_or_default();
+    let routing = crate::ontology_router::route_prompt_with_focus_and_allowlist(
+        &env,
+        prompt,
+        &focus_terms,
+        &options.allowed_ontology_ids,
+    );
     let retrieval = crate::chat_retrieval::retrieve_graph_context(
         Path::new(&storage),
         &env,
@@ -177,6 +278,7 @@ pub fn run_chat_inference_full(
         &retrieval,
         &catalog,
         &routing,
+        options.semantic_profile.as_ref(),
         options.reply_to_fragment_id.as_deref(),
     ) {
         Ok(p) => p,
@@ -376,7 +478,7 @@ fn run_ollama_chat_turn(
     let system = "You are a Webizen/Qualia assistant. Ground answers in the provided graph context when present. Prefer precise, citation-aware replies. Do not invent legal or medical facts.";
     let user = packet.augmented_prompt.as_str();
 
-    let gen = match harness.generate(system, user) {
+    let generation = match harness.generate(system, user) {
         Ok(g) => g,
         Err(e) => {
             return empty(&format!(
@@ -392,8 +494,8 @@ fn run_ollama_chat_turn(
 
     // Surface full completion once (streaming wire-up for Ollama is a follow-up).
     if let Some(cb) = on_token.as_ref() {
-        if !gen.text.is_empty() {
-            cb(gen.text.clone());
+        if !generation.text.is_empty() {
+            cb(generation.text.clone());
         }
     }
 
@@ -401,9 +503,9 @@ fn run_ollama_chat_turn(
     provenance.sort_unstable();
     provenance.dedup();
 
-    let tokens = gen.eval_count.unwrap_or(0);
+    let tokens = generation.eval_count.unwrap_or(0);
     let output = AgentOutput {
-        text: gen.text,
+        text: generation.text,
         semantic_quin: None,
         provenance_quins: provenance,
         tokens_generated: tokens,
@@ -423,7 +525,7 @@ fn run_ollama_chat_turn(
     let _ = persist_citations(session_id, storage, &output, retrieval);
     let mut result =
         finalize_success_result(output, retrieval, started, agent_cfg, false, 0, false, None);
-    result.model_id = Some(gen.model);
+    result.model_id = Some(generation.model);
     result.agent_backend = Some("ollama".into());
     result
 }
@@ -820,6 +922,7 @@ fn build_augmented_packet(
     retrieval: &RetrievalBundle,
     catalog: &qualia_core_db::resource_catalog::ResourceCatalog,
     routing: &OntologyRoutingDecision,
+    semantic_profile: Option<&crate::agent_registry::AgentSemanticProfile>,
     reply_to_fragment_id: Option<&str>,
 ) -> Result<InferenceContextPacket, String> {
     let mut packet = context_binding::build_inference_packet(env, user_prompt, catalog)
@@ -853,6 +956,9 @@ fn build_augmented_packet(
             )
         })
         .unwrap_or_default();
+    let semantic_block = semantic_profile
+        .map(crate::agent_registry::AgentSemanticProfile::briefing)
+        .unwrap_or_default();
 
     let enriched_context = serde_json::json!({
         "environment": serde_json::from_str::<serde_json::Value>(&packet.graph_context_json).unwrap_or_default(),
@@ -875,6 +981,7 @@ fn build_augmented_packet(
             "context_namespaces": routing.context_namespaces.iter().map(|h| format!("0x{h:016x}")).collect::<Vec<_>>(),
             "brief": routing.routing_brief.clone(),
         },
+        "agent_semantic_profile": semantic_profile,
         "chat_graph_thread": thread_block,
         "chat_files": files_block,
         "cooperative_agents": cooperative_block,
@@ -885,8 +992,9 @@ fn build_augmented_packet(
 
     if thread_block.is_empty() {
         packet.augmented_prompt = format!(
-            "{}\n\n{}\n\n{}\n\n{}\n\n{}\n\n{}\n\n---\nUser: {}\n---",
+            "{}\n\n{}\n\n{}\n\n{}\n\n{}\n\n{}\n\n{}\n\n---\nUser: {}\n---",
             env.capability_briefing,
+            semantic_block,
             routing.routing_brief,
             cooperative_block,
             files_block,
@@ -896,8 +1004,9 @@ fn build_augmented_packet(
         );
     } else {
         packet.augmented_prompt = format!(
-            "{}\n\n{}\n\n{}\n\n{}\n\n{}\n\n{}\n\n{}\n\n---\nUser (replying to graph fragment): {}\n---",
+            "{}\n\n{}\n\n{}\n\n{}\n\n{}\n\n{}\n\n{}\n\n{}\n\n---\nUser (replying to graph fragment): {}\n---",
             env.capability_briefing,
+            semantic_block,
             routing.routing_brief,
             cooperative_block,
             thread_block,
