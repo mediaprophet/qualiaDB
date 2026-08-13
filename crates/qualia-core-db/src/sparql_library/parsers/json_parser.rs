@@ -42,12 +42,7 @@ pub fn parse_json_to_quins<R: Read>(
 ) -> Result<(), String> {
     let stream = Deserializer::from_reader(reader).into_iter::<Value>();
 
-    for value in stream {
-        let obj = match value {
-            Ok(Value::Object(map)) => map,
-            _ => continue,
-        };
-
+    let mut emit_object = |obj: &serde_json::Map<String, Value>| {
         let subject_hash: u64 = rand::random(); // Ephemeral Subject ID for this entity
 
         for field in &profile.fields {
@@ -138,6 +133,20 @@ pub fn parse_json_to_quins<R: Read>(
                 }
             }
         }
+    };
+
+    for value in stream {
+        match value {
+            Ok(Value::Object(obj)) => emit_object(&obj),
+            Ok(Value::Array(entries)) => {
+                for entry in entries {
+                    if let Value::Object(obj) = entry {
+                        emit_object(&obj);
+                    }
+                }
+            }
+            _ => {}
+        }
     }
 
     Ok(())
@@ -162,4 +171,32 @@ fn parse_datetime_millis(s: &str) -> Option<u64> {
         return Some(Utc.from_utc_datetime(&nd).timestamp_millis() as u64);
     }
     None
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{parse_json_to_quins, JsonDatatype, JsonFieldMapping, JsonMappingProfile};
+
+    #[test]
+    fn parses_each_object_in_a_top_level_array() {
+        let profile = JsonMappingProfile {
+            base_class_hash: 0,
+            fields: vec![JsonFieldMapping {
+                source_key: "name".to_owned(),
+                predicate_hash: 42,
+                datatype: JsonDatatype::StringRef,
+            }],
+        };
+        let mut quins = Vec::new();
+
+        parse_json_to_quins(
+            br#"[{"name":"Alice"},{"name":"Bob"}]"#.as_slice(),
+            &profile,
+            |quin| quins.push(quin),
+        )
+        .expect("top-level arrays containing objects are valid JSON mappings");
+
+        assert_eq!(quins.len(), 2);
+        assert!(quins.iter().all(|quin| quin.predicate == 42));
+    }
 }

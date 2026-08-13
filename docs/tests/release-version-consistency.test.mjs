@@ -69,6 +69,14 @@ for (const relativePath of liveReleaseSurfaces) {
   assert.ok(!text.includes('0.0.29-moredev'), `${relativePath} must not identify a development branch`);
 }
 
+const apiExplorer = read('docs/api-explorer/index.html');
+assert.match(apiExplorer, /href="\.\.\/css\/tailwind-built\.css"/,
+  'API Explorer must load the utility styles used by the shared navigation');
+assert.match(apiExplorer, /href="\.\.\/css\/site-nav\.css"/,
+  'API Explorer must load shared navigation styles');
+assert.match(apiExplorer, /menu-loader\.js/,
+  'API Explorer must load the shared navigation renderer');
+
 assert.match(read('.github/workflows/pages.yml'), /- "0\.0\.29"/);
 assert.match(read('.github/workflows/release-p64-models.yml'), /- 0\.0\.29/);
 

@@ -32,6 +32,8 @@ export function register(runner) {
             });
             runner.expect(result).toBeDefined();
             runner.expect(result.quin_count).toBeGreaterThan(0);
+            runner.expect(result.quins.length).toBe(result.quin_count);
+            runner.expect(typeof result.quins[0][0]).toBe('string');
         });
 
         runner.it('parse_csv_wasm: handles empty CSV', () => {
@@ -60,6 +62,8 @@ export function register(runner) {
             });
             runner.expect(result).toBeDefined();
             runner.expect(result.quin_count).toBeGreaterThan(0);
+            runner.expect(result.quins.length).toBe(result.quin_count);
+            runner.expect(typeof result.quins[0][0]).toBe('string');
         });
 
         runner.it('parse_json_wasm: handles JSON array', () => {
@@ -72,7 +76,7 @@ export function register(runner) {
                 ],
             });
             runner.expect(result).toBeDefined();
-            runner.expect(result.quin_count).toBeGreaterThan(0);
+            runner.expect(result.quin_count).toBe(2);
         });
 
         // ── CSV Serializer ─────────────────────────────────────────────────

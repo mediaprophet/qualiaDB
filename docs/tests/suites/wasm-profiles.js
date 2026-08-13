@@ -223,7 +223,7 @@ export function register(runner) {
         runner.it('validate_shacl_constraint_wasm is callable if present', () => {
             if (!mod?.validate_shacl_constraint_wasm) return;
             runner.expect(() => mod.validate_shacl_constraint_wasm({
-                constraint_type: 'sh:minInclusive',
+                constraint_type: 'minInclusive',
                 value: 1.0,
                 target_value: 1.0,
             })).not.toThrow();
