@@ -53,18 +53,14 @@ pub fn run_sparql_query(vault: &std::path::Path, query_str: &str) {
         }
     };
 
-    let volume = match qualia_core_db::q42_volume::Q42Volume::open(vault) {
-        Ok(v) => Some(v),
+    let quins = match qualia_core_db::q42_reader::read_q42_quins(vault) {
+        Ok(quins) => quins,
         Err(e) => {
             eprintln!("Warning: could not open vault '{}': {e}", vault.display());
-            None
+            Vec::new()
         }
     };
-    let quins: Vec<qualia_core_db::NQuin> = volume
-        .as_ref()
-        .map(|v| v.read_all_quins().unwrap_or_default())
-        .unwrap_or_default();
-    let lex = volume.as_ref().and_then(|v| v.lex_view().ok());
+    let lex = qualia_core_db::q42_lex::Q42Lexicon::load_for_q42(vault).ok();
 
     if quins.is_empty() {
         eprintln!(
@@ -82,7 +78,7 @@ pub fn run_sparql_query(vault: &std::path::Path, query_str: &str) {
                 print!("[{i:>4}]");
                 for (slot_idx, slot) in row.slots.iter().enumerate() {
                     if let Some(v) = slot {
-                        match lex.as_ref().and_then(|l| l.lookup_hash(*v)) {
+                        match lex.as_ref().and_then(|l| l.lookup(*v)) {
                             Some(s) => print!("  ?v{slot_idx}={s}"),
                             None => print!("  ?v{slot_idx}=0x{v:016x}"),
                         }

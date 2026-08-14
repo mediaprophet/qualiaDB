@@ -344,6 +344,21 @@ fn stream_q42_records(
     budget: &mut TempBudget,
 ) -> io::Result<()> {
     let volume = Q42Volume::open(q42_path)?;
+    if volume.volume_manifest()?.is_some() {
+        let set = crate::q42_volume::Q42VolumeSet::open_root(q42_path)?;
+        for segment in set.segments() {
+            stream_q42_volume_records(segment, spool, budget)?;
+        }
+        return Ok(());
+    }
+    stream_q42_volume_records(&volume, spool, budget)
+}
+
+fn stream_q42_volume_records(
+    volume: &Q42Volume,
+    spool: &mut DiskSpool,
+    budget: &mut TempBudget,
+) -> io::Result<()> {
     let mut buffer = [0u8; SUPERBLOCK_SIZE];
     for block_index in 0..volume.block_count() as usize {
         volume.read_superblock_into(block_index, &mut buffer)?;

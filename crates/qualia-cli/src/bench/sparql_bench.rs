@@ -1,4 +1,3 @@
-use qualia_core_db::q42_volume::{Q42Volume, QUIN_SIZE, SUPERBLOCK_HEADER, SUPERBLOCK_SIZE};
 use qualia_core_db::sparql_library::sparql_executor::QueryExecutor;
 use qualia_core_db::sparql_library::sparql_parser::parse_sparql;
 use qualia_core_db::sparql_library::sparql_planner::QueryPlanner;
@@ -27,37 +26,10 @@ pub fn run_sparql_suite(database_volume_path: &Path) -> Result<(), BenchError> {
     );
     let start_init = Instant::now();
 
-    // Core engine executes entirely out-of-core via pointers
-    // We decompress into RAM for the executor which currently relies on &[NQuin].
-    let volume = Q42Volume::open(database_volume_path)
-        .map_err(|e| BenchError::Format(format!("Failed to open Q42 volume: {}", e)))?;
-
-    let mut all_quins = Vec::new();
-    let mut sb_buf = vec![0u8; SUPERBLOCK_SIZE];
-    for i in 0..volume.block_count() as usize {
-        let _ = volume
-            .read_superblock_into(i, &mut sb_buf)
-            .map_err(|e| BenchError::Format(format!("Failed to read superblock {}: {}", i, e)))?;
-        let quin_count = u64::from_le_bytes(sb_buf[16..24].try_into().unwrap()) as usize;
-        let mut off = SUPERBLOCK_HEADER;
-        for _ in 0..quin_count {
-            let subject = u64::from_le_bytes(sb_buf[off..off + 8].try_into().unwrap());
-            let predicate = u64::from_le_bytes(sb_buf[off + 8..off + 16].try_into().unwrap());
-            let object = u64::from_le_bytes(sb_buf[off + 16..off + 24].try_into().unwrap());
-            let context = u64::from_le_bytes(sb_buf[off + 24..off + 32].try_into().unwrap());
-            let metadata = u64::from_le_bytes(sb_buf[off + 32..off + 40].try_into().unwrap());
-            let parity = u64::from_le_bytes(sb_buf[off + 40..off + 48].try_into().unwrap());
-            all_quins.push(NQuin {
-                subject,
-                predicate,
-                object,
-                context,
-                metadata,
-                parity,
-            });
-            off += QUIN_SIZE;
-        }
-    }
+    // The resident executor remains a benchmark compatibility path, but it
+    // opens a front-manifested logical root as one graph.
+    let all_quins: Vec<NQuin> = qualia_core_db::q42_reader::read_q42_quins(database_volume_path)
+        .map_err(|e| BenchError::Format(format!("Failed to open Q42 volume: {e}")))?;
 
     println!(
         "Volume loaded into memory: {} quins in {} μs",

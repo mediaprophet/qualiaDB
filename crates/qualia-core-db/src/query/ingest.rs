@@ -398,29 +398,37 @@ fn streaming_import_rdf_with_mode_inner(
 
     // Lexicon byte size actually written — read back cheaply from the finished header (mmap, no
     // re-serialize) so the report reflects what is really on disk.
-    let lex_length: u64 = crate::q42_volume::Q42Volume::open(std::path::Path::new(out_path))
-        .map(|v| v.header().lex_length)
-        .unwrap_or(0);
+    let (lex_length, out_bytes) =
+        crate::q42_volume::Q42Volume::open(std::path::Path::new(out_path))
+            .ok()
+            .map(|root| {
+                let mut lex_bytes = root.header().lex_length;
+                let mut logical_bytes = std::fs::metadata(out_path).map(|m| m.len()).unwrap_or(0);
+                if let Ok(Some(manifest)) = root.volume_manifest() {
+                    let parent = std::path::Path::new(out_path)
+                        .parent()
+                        .unwrap_or_else(|| std::path::Path::new("."));
+                    for segment in manifest.segments {
+                        logical_bytes = logical_bytes.saturating_add(segment.byte_length);
+                    }
+                    for segment in manifest.lexicon_segments {
+                        logical_bytes = logical_bytes.saturating_add(segment.byte_length);
+                    if let Ok(shard) =
+                        crate::q42_volume::Q42Volume::open(&parent.join(&segment.locator))
+                        {
+                            lex_bytes = lex_bytes.saturating_add(shard.header().lex_length);
+                        }
+                    }
+                }
+                (lex_bytes, logical_bytes)
+            })
+            .unwrap_or((0, std::fs::metadata(out_path).map(|m| m.len()).unwrap_or(0)));
 
     let duration = start_time.elapsed();
 
     // 8. Honest reporting — state the mode and, for the lossy mode, that the size reduction is data
     // loss, NOT compression (CLAUDE.md §15: no claim-vs-reality gap).
     let src_bytes = std::fs::metadata(in_path).map(|m| m.len()).unwrap_or(0);
-    let out_bytes = crate::q42_volume::Q42Volume::open(std::path::Path::new(out_path))
-        .ok()
-        .and_then(|root| {
-            root.volume_manifest().ok().flatten().map(|manifest| {
-                std::fs::metadata(out_path).map(|m| m.len()).unwrap_or(0)
-                    + manifest
-                        .segments
-                        .into_iter()
-                        .map(|segment| segment.byte_length)
-                        .sum::<u64>()
-            })
-        })
-        .unwrap_or_else(|| std::fs::metadata(out_path).map(|m| m.len()).unwrap_or(0));
-
     println!("✅ Import Complete!");
     println!("Parsed {} triples.", triples_read);
     log::info!("Ontology Ingest: parsed {} triples", triples_read);

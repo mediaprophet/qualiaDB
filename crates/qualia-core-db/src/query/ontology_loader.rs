@@ -190,34 +190,13 @@ pub fn parse_ttl_to_quins(path: &std::path::Path, graph_context: u64) -> Vec<NQu
 
 /// Load a unified `.q42` volume ontology file.
 pub fn load_q42_file(path: &std::path::Path) -> Vec<NQuin> {
-    use crate::q42_volume::{Q42Volume, SUPERBLOCK_HEADER, SUPERBLOCK_SIZE};
-    let vol = match Q42Volume::open(path) {
-        Ok(v) => v,
+    let all_quins = match crate::q42_reader::read_q42_quins(path) {
+        Ok(quins) => quins,
         Err(e) => {
             log::warn!("[ontology_loader] cannot open q42 volume {:?}: {e}", path);
             return Vec::new();
         }
     };
-    let mut all_quins = Vec::new();
-    let mut buf = vec![0u8; SUPERBLOCK_SIZE];
-    for i in 0..vol.block_count() as usize {
-        if let Ok(n) = vol.read_superblock_into(i, &mut buf) {
-            if n <= SUPERBLOCK_HEADER {
-                continue;
-            }
-            let quin_size = std::mem::size_of::<NQuin>();
-            let data_len = n - SUPERBLOCK_HEADER;
-            let quin_count = data_len / quin_size;
-
-            let chunk = &buf[SUPERBLOCK_HEADER..SUPERBLOCK_HEADER + quin_count * quin_size];
-            let quins: &[NQuin] = bytemuck::cast_slice(chunk);
-            for q in quins {
-                if q.subject != 0 || q.predicate != 0 || q.object != 0 {
-                    all_quins.push(*q);
-                }
-            }
-        }
-    }
     log::info!(
         "[ontology_loader] loaded {} quins from unified volume {:?}",
         all_quins.len(),
