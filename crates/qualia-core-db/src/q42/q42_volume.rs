@@ -460,6 +460,20 @@ pub fn write_volume_root(path: &Path, manifest: &Q42VolumeManifest) -> io::Resul
         .finish(path)
 }
 
+/// Publish a logical-volume root with a lossless shared Q42LEX in its front
+/// matter. Child data segments may keep empty local lexicons because all term
+/// resolution for the snapshot is recoverable from this immutable root.
+pub fn write_volume_root_with_lex(
+    path: &Path,
+    lex: &HashMap<u64, String>,
+    manifest: &Q42VolumeManifest,
+) -> io::Result<()> {
+    UnifiedVolumeBuilder::with_lex_map(lex)
+        .map_err(lex_error_to_io)?
+        .with_volume_manifest(manifest)?
+        .finish(path)
+}
+
 fn lex_error_to_io(error: LexError) -> io::Error {
     io::Error::new(
         io::ErrorKind::InvalidInput,

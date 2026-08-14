@@ -19,6 +19,11 @@ const CHUNK_SIZE_LIMIT: usize = 1_000_000;
 /// Bound simultaneously open sorted runs and their reader buffers.
 const MAX_MERGE_FAN_IN: usize = 32;
 
+#[cfg(not(target_arch = "wasm32"))]
+mod volume_publisher;
+#[cfg(not(target_arch = "wasm32"))]
+pub use volume_publisher::{Q42VolumePublishStats, DEFAULT_Q42_SEGMENT_MAX_BYTES};
+
 pub struct ExternalSorter {
     buffer: Vec<NQuin>,
     chunk_files: Vec<PathBuf>,

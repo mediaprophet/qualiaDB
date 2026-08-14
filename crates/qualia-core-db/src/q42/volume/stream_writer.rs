@@ -98,6 +98,44 @@ impl StreamingQ42VolumeWriter {
         Ok(())
     }
 
+    pub fn block_count(&self) -> u64 {
+        self.block_count
+    }
+
+    /// The exact final length if the writer were finished now. It includes the
+    /// front matter and fixed BIDX/directory records, not just compressed data.
+    pub fn estimated_final_length(&self) -> io::Result<u64> {
+        let bidx_length = 16u64
+            .checked_add(
+                self.block_count
+                    .checked_mul(16)
+                    .ok_or_else(|| invalid("Q42 BIDX length overflow"))?,
+            )
+            .ok_or_else(|| invalid("Q42 BIDX length overflow"))?;
+        let directory_length = self
+            .block_count
+            .checked_mul(BlockDirectoryEntry::SIZE as u64)
+            .ok_or_else(|| invalid("Q42 directory length overflow"))?;
+        (HEADER_SIZE as u64)
+            .checked_add(self.lex_bytes.len() as u64)
+            .and_then(|value| value.checked_add(bidx_length))
+            .and_then(|value| value.checked_add(directory_length))
+            .and_then(|value| value.checked_add(self.data_length))
+            .ok_or_else(|| invalid("Q42 final length overflow"))
+    }
+
+    /// A safe upper bound for the final length after one additional block.
+    /// It lets volume publishers split before a block crosses their byte cap
+    /// without retaining compressed payloads.
+    pub fn maximum_final_length_after_next_block(&self) -> io::Result<u64> {
+        self.estimated_final_length()?
+            .checked_add(32) // one BIDX interval plus one directory entry
+            .and_then(|value| {
+                value.checked_add(crate::q42_volume::MAX_COMPRESSED_SUPERBLOCK_SIZE as u64)
+            })
+            .ok_or_else(|| invalid("Q42 final length overflow"))
+    }
+
     pub fn finish(mut self, path: &Path) -> io::Result<()> {
         self.bidx.flush()?;
         self.directory.flush()?;
