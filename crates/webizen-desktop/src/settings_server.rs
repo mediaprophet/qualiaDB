@@ -409,6 +409,11 @@ async fn run_settings_server(state: SettingsServerState, port: u16) -> Result<()
         .route("/api/sparql/endpoints", get(sparql_endpoints_handler))
         .route("/api/sparql/query", post(sparql_query_handler))
         .route("/api/graph/verify", post(graph_verify_handler))
+        .route("/api/q42/volumes", get(q42_volumes_handler))
+        .route("/api/q42/inspect", post(q42_inspect_handler))
+        .route("/api/q42/verify", post(q42_verify_handler))
+        .route("/api/q42/magnet", post(q42_magnet_handler))
+        .route("/api/q42/compact", post(q42_compact_handler))
         .route("/api/assets/catalog", get(assets_catalog_handler))
         .route("/api/assets/recommend", post(assets_recommend_handler))
         .route("/api/assets/enqueue", post(assets_enqueue_handler))
@@ -1229,6 +1234,94 @@ async fn graph_verify_handler(
     })?
     .map_err(|error| (StatusCode::BAD_REQUEST, error.to_string()))?;
     Ok(Json(report))
+}
+
+#[derive(Debug, Deserialize)]
+struct Q42PathRequest {
+    path: String,
+    level: Option<String>,
+}
+
+async fn q42_volumes_handler(
+) -> Result<Json<qualia_client_core::api::Q42VolumeWorkspace>, (StatusCode, String)> {
+    tokio::task::spawn_blocking(qualia_client_core::api::list_q42_volumes)
+        .await
+        .map_err(|error| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("q42 list task: {error}"),
+            )
+        })?
+        .map(Json)
+        .map_err(|error| (StatusCode::BAD_REQUEST, error))
+}
+
+async fn q42_inspect_handler(
+    Json(request): Json<Q42PathRequest>,
+) -> Result<Json<qualia_core_db::q42_volume::Q42InspectReport>, (StatusCode, String)> {
+    tokio::task::spawn_blocking(move || {
+        qualia_client_core::api::inspect_q42_volume(request.path)
+    })
+    .await
+    .map_err(|error| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("q42 inspect task: {error}"),
+        )
+    })?
+    .map(Json)
+    .map_err(|error| (StatusCode::BAD_REQUEST, error))
+}
+
+async fn q42_verify_handler(
+    Json(request): Json<Q42PathRequest>,
+) -> Result<Json<qualia_core_db::q42_volume::Q42VerifySetReport>, (StatusCode, String)> {
+    tokio::task::spawn_blocking(move || {
+        qualia_client_core::api::verify_q42_volume(request.path, request.level)
+    })
+    .await
+    .map_err(|error| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("q42 verify task: {error}"),
+        )
+    })?
+    .map(Json)
+    .map_err(|error| (StatusCode::BAD_REQUEST, error))
+}
+
+async fn q42_magnet_handler(
+    Json(request): Json<Q42PathRequest>,
+) -> Result<Json<qualia_client_core::api::Q42MagnetResult>, (StatusCode, String)> {
+    tokio::task::spawn_blocking(move || {
+        qualia_client_core::api::magnet_q42_volume(request.path)
+    })
+    .await
+    .map_err(|error| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("q42 magnet task: {error}"),
+        )
+    })?
+    .map(Json)
+    .map_err(|error| (StatusCode::BAD_REQUEST, error))
+}
+
+async fn q42_compact_handler(
+    Json(request): Json<Q42PathRequest>,
+) -> Result<Json<qualia_client_core::api::Q42CompactResult>, (StatusCode, String)> {
+    tokio::task::spawn_blocking(move || {
+        qualia_client_core::api::compact_q42_volume(request.path)
+    })
+    .await
+    .map_err(|error| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("q42 compact task: {error}"),
+        )
+    })?
+    .map(Json)
+    .map_err(|error| (StatusCode::BAD_REQUEST, error))
 }
 
 #[derive(Serialize)]

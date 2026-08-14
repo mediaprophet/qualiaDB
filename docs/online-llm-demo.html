@@ -20,7 +20,7 @@
          hangs on "Initialising…". Root placement gives scope "/", covering this page. (The cdnjs
          copy previously referenced here 404s.) -->
     <script src="coi-serviceworker.js"></script>
-    <script src="js/webgpu-limits-shim.js?v=0.0.29-android-compat-first1"></script>
+    <script src="js/webgpu-limits-shim.js?v=0.0.30-android-compat-first1"></script>
     <link rel="stylesheet" href="css/tailwind-built.css">
     <link rel="stylesheet" href="css/site-nav.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -365,19 +365,19 @@ import init, {
     getEngineVersion,
     compileGgufToP64,
     p64FormatVersion,
-} from './playground/qualia_core_db.js?v=0.0.29-mobile-performance1';
+} from './playground/qualia_core_db.js?v=0.0.30-mobile-performance1';
 // Optional diagnostics: getResidentTokenizerVocab / getWebgpuInitStatus after wasm rebuild.
-import * as QualiaWasm from './playground/qualia_core_db.js?v=0.0.29-mobile-performance1';
+import * as QualiaWasm from './playground/qualia_core_db.js?v=0.0.30-mobile-performance1';
 import { clearOpfsModel, loadGgufCached, loadOrCompileP64 } from './js/opfs-model-cache.js';
-import { QualiaCpuWorkerClient } from './js/qualia-cpu-worker-client.js?v=0.0.29-mobile-performance1';
-import { mobileLab } from './js/mobile-wasm-lab.js?v=0.0.29-mobile-recovery4';
+import { QualiaCpuWorkerClient } from './js/qualia-cpu-worker-client.js?v=0.0.30-mobile-performance1';
+import { mobileLab } from './js/mobile-wasm-lab.js?v=0.0.30-mobile-recovery4';
 import {
     getBrowserCapabilityReceipt,
     recordBackendDeviceOutcome,
-} from './js/browser-capability.js?v=0.0.29-mobile-recovery4';
+} from './js/browser-capability.js?v=0.0.30-mobile-recovery4';
 
 const browserCapabilityReceiptPromise = getBrowserCapabilityReceipt({
-    engineVersion: '0.0.29',
+    engineVersion: '0.0.30',
     sessionId: new URLSearchParams(location.search).get('lab') || '',
 });
 const cpuWorker = new QualiaCpuWorkerClient();
@@ -408,7 +408,7 @@ function webgpuInitStatus() {
 
 const QUALIA_SPARQL = 'http://localhost:4242/query';
 const WIKIDATA_SPARQL = 'https://query.wikidata.org/sparql';
-const USER_AGENT = 'QualiaDB-OnlineLLMDemo/0.0.29 (https://github.com/mediaprophet/qualiaDB)';
+const USER_AGENT = 'QualiaDB-OnlineLLMDemo/0.0.30 (https://github.com/mediaprophet/qualiaDB)';
 const BACKEND_OVERRIDE = new URLSearchParams(location.search).get('backend');
 
 const QUALIA_ONTOLOGY = `
@@ -583,7 +583,7 @@ async function bootWasm() {
 
     wasmReadyPromise = (async () => {
         try {
-            await init('./playground/qualia_core_db_bg.wasm?v=0.0.29-mobile-performance1');
+            await init('./playground/qualia_core_db_bg.wasm?v=0.0.30-mobile-performance1');
             wasmReady = true;
             wasmBootError = null;
             const ver = getEngineVersion?.() ?? 'unknown';

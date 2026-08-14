@@ -345,7 +345,7 @@ async function clearDatasetCache() {
     setLoading(true, 'Clearing browser cache…');
     try {
         await engine.vfs.clearOpfsCache();
-        const stats = await engine.mountDataset(engine.activeDataset?.id ?? 'wordnet');
+        const stats = await engine.mountDataset(engine.activeDataset?.id ?? 'schemaorg-30');
         updateStats(stats);
         updateDatasetInfo(stats);
         setStatus('Cache cleared · dataset remounted');
@@ -370,6 +370,7 @@ function renderDatasetPicker() {
         const active = d.id === engine.activeDataset?.id;
         const profile = d.profile ?? 'wordnet';
         const icon = d.icon ?? (profile === 'schemaorg' ? '🌐' : profile === 'w3c' ? '📘' : '📚');
+        const hosted = d.hosted !== false;
         return `
             <button type="button"
                 class="dataset-btn flex-1 min-w-[140px] px-4 py-3 rounded-2xl text-left transition-all ${active
@@ -379,6 +380,7 @@ function renderDatasetPicker() {
                 <div class="text-lg mb-1">${icon}</div>
                 <div class="text-sm font-semibold">${esc(d.label ?? d.id)}</div>
                 <div class="text-xs text-white/50 mt-0.5">${esc(d.description?.slice(0, 72) ?? profile)}</div>
+                ${hosted ? '' : '<div class="text-[10px] uppercase tracking-wide text-amber-400 mt-1">Not on Pages · ~127 MB</div>'}
             </button>`;
     };
 
@@ -733,6 +735,11 @@ async function boot() {
         updateDatasetInfo(stats);
         setStatus(`${stats.label} · ${stats.blocks.toLocaleString()} blocks · WASM ready${formatOpfsCacheLabel(engine.vfs?.opfsCache)}`);
         watchOpfsCache(engine.vfs);
+        if (engine.bootFallbackFrom) {
+            setStatus(
+                `${engine.bootFallbackFrom} is not published on this site (~127 MB). Showing ${stats.label} instead.`,
+            );
+        }
         const hints = datasetUiHints();
         showSparqlExample(hints.sparqlExamples[0]?.id ?? 'wildcard');
         $('entity-search').value = hints.defaultSearch;

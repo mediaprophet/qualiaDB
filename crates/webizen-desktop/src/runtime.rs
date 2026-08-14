@@ -202,7 +202,8 @@ pub fn ensure_runtime_started(app_handle: &AppHandle, app_state: Arc<AppState>) 
         match spawn_runtime(runtime_init_handle.clone(), app_state) {
             Ok(runtime_handle) => {
                 runtime_init_handle.manage(runtime_handle);
-                if let Some(s) = runtime_init_handle.try_state::<crate::supervisor::DesktopSupervisor>()
+                if let Some(s) =
+                    runtime_init_handle.try_state::<crate::supervisor::DesktopSupervisor>()
                 {
                     s.service_ready("runtime", "WGPU runtime ready");
                 }
@@ -210,7 +211,8 @@ pub fn ensure_runtime_started(app_handle: &AppHandle, app_state: Arc<AppState>) 
                 crate::desktop_log::record("info", "Webizen WGPU runtime ready");
             }
             Err(err) => {
-                if let Some(s) = runtime_init_handle.try_state::<crate::supervisor::DesktopSupervisor>()
+                if let Some(s) =
+                    runtime_init_handle.try_state::<crate::supervisor::DesktopSupervisor>()
                 {
                     s.service_failed("runtime", err.clone());
                 }

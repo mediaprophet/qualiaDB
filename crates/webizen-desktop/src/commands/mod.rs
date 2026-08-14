@@ -27,6 +27,7 @@ pub use wellfair::{
 };
 pub mod directory;
 pub mod ingest;
+pub mod q42;
 pub mod mail;
 pub mod personal_directory;
 pub mod qapp_host;
@@ -428,6 +429,9 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         wellfair::anatomy::wellfair_get_physiological_state,
         wellfair::anatomy::wellfair_set_physiological_state,
         wellfair::anatomy::wellfair_reset_physiological_state,
+        wellfair::anatomy::wellfair_get_body_constitution,
+        wellfair::anatomy::wellfair_set_body_constitution,
+        wellfair::anatomy::wellfair_reset_body_constitution,
         wellfair::anatomy::wellfair_render_body_snapshot,
         wellfair::anatomy::wellfair_body_assets_status,
         wellfair::anatomy::wellfair_acquire_body_assets,
@@ -579,6 +583,11 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         ingest::ingest_image,
         ingest::ingest_image_async,
         ingest::verify_graph_equivalence,
+        q42::list_q42_volumes,
+        q42::inspect_q42_volume,
+        q42::verify_q42_volume,
+        q42::magnet_q42_volume,
+        q42::compact_q42_volume,
         // ── inference (in ingest.rs) ──
         ingest::discover_models,
         ingest::download_and_vectorize,

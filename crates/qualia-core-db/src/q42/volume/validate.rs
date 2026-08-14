@@ -3,10 +3,12 @@
 use std::io;
 
 use super::super::{
-    BlockDirectoryEntry, Q42VolumeHeader, FLAG_BLOCKS_LZ4, FLAG_FIELD_RANGES, FLAG_OBJECT_SORTED,
+    BlockDirectoryEntry, Q42VolumeHeader, FLAG_BLOCKS_LZ4, FLAG_FIELD_POSTINGS, FLAG_FIELD_RANGES,
+    FLAG_OBJECT_SORTED,
     HEADER_SIZE, QUINS_PER_BLOCK, SUPERBLOCK_SIZE,
 };
 use super::index::{validate_bidx, validate_field_range_index};
+use super::postings::validate_postings_section;
 
 #[derive(Clone, Copy)]
 struct Section {
@@ -84,6 +86,7 @@ pub(crate) fn validate_volume_structure(header: &Q42VolumeHeader, bytes: &[u8]) 
     let software_agent_offset = header.software_agent_did_offset;
     let manifest_range = header.volume_manifest_range();
     let field_range_index = header.field_range_index_range();
+    let field_postings = header.field_postings_range();
 
     if flags & FLAG_BLOCKS_LZ4 == 0 {
         return Err(invalid("Q42 v3 volume does not declare block-local LZ4"));
@@ -144,6 +147,13 @@ pub(crate) fn validate_volume_structure(header: &Q42VolumeHeader, bytes: &[u8]) 
             ),
             None => None,
         },
+        match field_postings {
+            Some((offset, length)) => Some(
+                section("field postings", offset, length, bytes.len())?
+                    .ok_or_else(|| invalid("Q42 has an empty field-postings section"))?,
+            ),
+            None => None,
+        },
         section("block directory", dir_offset, dir_length, bytes.len())?,
         section("block data", data_offset, data_length, bytes.len())?,
         section(
@@ -188,6 +198,13 @@ pub(crate) fn validate_volume_structure(header: &Q42VolumeHeader, bytes: &[u8]) 
         let start = checked_usize(offset, "field-range index offset")?;
         let end = start + checked_usize(length, "field-range index length")?;
         validate_field_range_index(&bytes[start..end], block_count)?;
+    }
+    if flags & FLAG_FIELD_POSTINGS != 0 {
+        let (offset, length) = field_postings
+            .ok_or_else(|| invalid("Q42 field-postings flag has no section location"))?;
+        let start = checked_usize(offset, "field postings offset")?;
+        let end = start + checked_usize(length, "field postings length")?;
+        validate_postings_section(&bytes[start..end], block_count)?;
     }
 
     let dir_start = checked_usize(dir_offset, "block directory offset")?;

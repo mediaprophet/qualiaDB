@@ -33,18 +33,11 @@ pub struct IdentityPlaneSnapshot {
 #[serde(rename_all = "snake_case", tag = "placement")]
 pub enum JobPlacement {
     /// Run on this process / local job queue.
-    Local {
-        device_id: String,
-    },
+    Local { device_id: String },
     /// Target is a registered peer device — dispatch not yet live (fail-closed).
-    RemoteRegistered {
-        device_id: String,
-        label: String,
-    },
+    RemoteRegistered { device_id: String, label: String },
     /// Unknown device id.
-    Unknown {
-        device_id: String,
-    },
+    Unknown { device_id: String },
 }
 
 fn fleet_path() -> PathBuf {
@@ -58,8 +51,8 @@ fn load_fleet() -> Result<Option<DeviceFleetFile>, String> {
     }
     let bytes =
         std::fs::read(&path).map_err(|e| format!("failed to read {}: {e}", path.display()))?;
-    let fleet: DeviceFleetFile = serde_json::from_slice(&bytes)
-        .map_err(|e| format!("failed to parse device fleet: {e}"))?;
+    let fleet: DeviceFleetFile =
+        serde_json::from_slice(&bytes).map_err(|e| format!("failed to parse device fleet: {e}"))?;
     Ok(Some(fleet))
 }
 
@@ -78,11 +71,12 @@ fn save_fleet(fleet: &DeviceFleetFile) -> Result<(), String> {
 /// Ensure person + local apparatus + fleet entry exist.
 ///
 /// Safe to call at startup and after setup. Does not use OS username as identity.
-pub fn ensure_local_apparatus(device_context: Option<DeviceContext>) -> Result<IdentityPlaneSnapshot, String> {
+pub fn ensure_local_apparatus(
+    device_context: Option<DeviceContext>,
+) -> Result<IdentityPlaneSnapshot, String> {
     let mut person = PersonPrincipal::load_or_create(None)?;
     if let Ok(setup) = crate::setup::get_setup_state() {
-        if !setup.profile.preferred_name.trim().is_empty()
-            && person.display_hint.trim().is_empty()
+        if !setup.profile.preferred_name.trim().is_empty() && person.display_hint.trim().is_empty()
         {
             person.display_hint = setup.profile.preferred_name.clone();
             person.persist()?;
@@ -126,7 +120,11 @@ pub fn ensure_local_apparatus(device_context: Option<DeviceContext>) -> Result<I
             f.person_id = person.person_id.clone();
             f.local_device_id = local.device_id.clone();
             // Upsert local record
-            if let Some(slot) = f.devices.iter_mut().find(|d| d.device_id == local.device_id) {
+            if let Some(slot) = f
+                .devices
+                .iter_mut()
+                .find(|d| d.device_id == local.device_id)
+            {
                 slot.device_context = local.device_context.clone();
                 slot.label = local.label.clone();
                 slot.hostname = local.hostname.clone();
@@ -196,7 +194,9 @@ pub fn list_devices() -> Result<Vec<DeviceRecordPublic>, String> {
     Ok(get_identity_plane()?.devices)
 }
 
-pub fn sync_local_device_context(device_context: &DeviceContext) -> Result<IdentityPlaneSnapshot, String> {
+pub fn sync_local_device_context(
+    device_context: &DeviceContext,
+) -> Result<IdentityPlaneSnapshot, String> {
     ensure_local_apparatus(Some(device_context.clone()))
 }
 
@@ -210,14 +210,18 @@ pub fn export_person_transfer_bundle() -> Result<PersonTransferBundle, String> {
 }
 
 /// Import person principal onto this machine, then re-bind local apparatus under them.
-pub fn import_person_transfer_bundle(bundle: PersonTransferBundle) -> Result<IdentityPlaneSnapshot, String> {
+pub fn import_person_transfer_bundle(
+    bundle: PersonTransferBundle,
+) -> Result<IdentityPlaneSnapshot, String> {
     PersonPrincipal::from_transfer_bundle(bundle)?;
     // Rebuild fleet local entry under the imported person.
     ensure_local_apparatus(None)
 }
 
 /// Register another apparatus (peer / second PC) for fleet awareness and job targeting.
-pub fn register_remote_device(mut device: DeviceRecordPublic) -> Result<IdentityPlaneSnapshot, String> {
+pub fn register_remote_device(
+    mut device: DeviceRecordPublic,
+) -> Result<IdentityPlaneSnapshot, String> {
     if !device.device_id.starts_with("did:q42:device:") {
         return Err("device_id must be did:q42:device:…".into());
     }
@@ -338,10 +342,7 @@ mod tests {
         }
         assert_eq!(plane.devices.len(), 1);
         assert!(plane.devices[0].is_local);
-        assert_eq!(
-            plane.devices[0].device_context.ownership,
-            "owned_by_me"
-        );
+        assert_eq!(plane.devices[0].device_context.ownership, "owned_by_me");
 
         // Second ensure is stable.
         let again = ensure_local_apparatus(None).unwrap();
@@ -350,7 +351,9 @@ mod tests {
 
         // Remote peer under same person.
         let mut peer = plane.devices[0].clone();
-        peer.device_id = "did:q42:device:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff".into();
+        peer.device_id =
+            "did:q42:device:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+                .into();
         peer.identity_pubkey_hex =
             "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff".into();
         peer.is_local = false;

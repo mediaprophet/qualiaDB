@@ -74,6 +74,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Commands::Inspect { file_path } => {
             handlers::misc::handle_inspect(file_path)?;
         }
+        Commands::Q42 { action } => {
+            handlers::misc::handle_q42(action)?;
+        }
         Commands::Dump { out_path } => {
             handlers::misc::handle_dump(out_path)?;
         }

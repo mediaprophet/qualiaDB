@@ -1,9 +1,7 @@
-//! Read legacy framed LZ4 transport artifacts produced by
-//! `ingest::streaming_import_rdf`.
+//! Read `.q42` graphs for cold-path callers (chat retrieval, daemon vault load).
 //!
-//! This module does **not** read canonical raw `.q42` SuperBlock containers.
-//! It reads the older 16-byte-header + LZ4-payload framing that should now be
-//! treated as a `.c.q42`-style transport artifact during the migration window.
+//! Canonical files are unified v3 volumes. Legacy 16-byte framed LZ4
+//! (`.c.q42` transport) remains a fallback only.
 
 use std::fs::File;
 use std::io::Read;

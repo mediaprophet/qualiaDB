@@ -4,7 +4,7 @@
 
 use super::mesh;
 use qualia_client_core::api;
-use tauri::{AppHandle, Emitter, State, command};
+use tauri::{command, AppHandle, Emitter, State};
 
 // ── Social connect + group chat (P0: expose the connect → group → talk loop) ────
 //
@@ -148,15 +148,16 @@ pub async fn stream_chat_inference(
         let slug = agent_slug.unwrap_or_default();
         let sid = session_id.clone();
         let prompt_r = prompt.clone();
-        let detail =
-            tokio::task::spawn_blocking(move || api::run_remote_agent_turn(
+        let detail = tokio::task::spawn_blocking(move || {
+            api::run_remote_agent_turn(
                 sid,
                 slug,
                 prompt_r,
                 remote_consent_approved.unwrap_or(false),
-            ))
-                .await
-                .map_err(|e| format!("remote turn join failed: {e}"))??;
+            )
+        })
+        .await
+        .map_err(|e| format!("remote turn join failed: {e}"))??;
         let _ = app.emit(
             "chat-done",
             serde_json::json!({

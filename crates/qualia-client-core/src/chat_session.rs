@@ -395,34 +395,8 @@ fn build_message_quin(session_id: &str, role: Role, lamport: u64, content_hash: 
 }
 
 fn write_quins_to_q42(quins: &[NQuin], out_path: &Path) -> Result<u64, ChatError> {
-    let mut out_file = File::create(out_path)?;
-    let mut written_count = 0u64;
-    let mut block_id: u64 = 0;
-    let mut buffer = Vec::with_capacity(393_216);
-
-    for quin in quins {
-        buffer.extend_from_slice(bytemuck::bytes_of(quin));
-        written_count += 1;
-        if buffer.len() >= 393_216 {
-            let compressed = lz4_flex::compress_prepend_size(&buffer);
-            out_file.write_all(&block_id.to_le_bytes())?;
-            out_file.write_all(&(compressed.len() as u32).to_le_bytes())?;
-            out_file.write_all(&(buffer.len() as u32).to_le_bytes())?;
-            out_file.write_all(&compressed)?;
-            buffer.clear();
-            block_id += 1;
-        }
-    }
-
-    if !buffer.is_empty() {
-        let compressed = lz4_flex::compress_prepend_size(&buffer);
-        out_file.write_all(&block_id.to_le_bytes())?;
-        out_file.write_all(&(compressed.len() as u32).to_le_bytes())?;
-        out_file.write_all(&(buffer.len() as u32).to_le_bytes())?;
-        out_file.write_all(&compressed)?;
-    }
-
-    Ok(written_count)
+    let count = qualia_core_db::q42_volume::write_sorted_quins_volume(out_path, quins)?;
+    Ok(count as u64)
 }
 
 pub fn get_last_session_id() -> Option<String> {
@@ -1087,6 +1061,14 @@ mod tests {
 
         let q42 = compact_session_to_q42(&storage, &id).unwrap();
         assert!(q42.is_file());
+        let bytes = fs::read(&q42).unwrap();
+        assert!(
+            bytes.starts_with(&qualia_core_db::q42_volume::Q42_MAGIC),
+            "chat.q42 must be a unified v3 volume"
+        );
+        let volume = qualia_core_db::q42_volume::Q42Volume::open(&q42).unwrap();
+        volume.verify_all_blocks().expect("chat.q42 ECC");
+        assert_eq!(volume.read_all_quins().unwrap().len(), 2);
 
         delete_session(&storage, &id).unwrap();
         assert!(load_session(&storage, &id).is_err());

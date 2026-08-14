@@ -49,7 +49,40 @@ impl WebizenHostApi {
         }
         let report = self.compute_anatomy_view("person", 2)?;
         let key_refs: Vec<&str> = organ_keys.iter().map(|s| s.as_str()).collect();
-        Ok(report.paint_organs(&key_refs))
+        let (painted, unmapped) = report.paint_organs(&key_refs);
+        let fit = self.body_fit();
+        let painted = painted
+            .into_iter()
+            .filter(|p| !fit.hides(&p.organ_key))
+            .collect();
+        Ok((painted, unmapped))
+    }
+
+    /// The person's declared constitution, or an empty one if they have not authored it.
+    pub fn get_body_constitution(&self) -> wellfare_core::anatomy::BodyConstitution {
+        super::super::body_constitution::load(&self.storage_root).unwrap_or_default()
+    }
+
+    pub fn body_constitution_is_declared(&self) -> bool {
+        super::super::body_constitution::load(&self.storage_root).is_some()
+    }
+
+    pub fn set_body_constitution(
+        &self,
+        body: &wellfare_core::anatomy::BodyConstitution,
+    ) -> Result<(), String> {
+        super::super::body_constitution::save(&self.storage_root, body)
+    }
+
+    pub fn reset_body_constitution(&self) -> Result<(), String> {
+        super::super::body_constitution::clear(&self.storage_root)
+    }
+
+    /// View transform for the current constitution + physiological state.
+    pub fn body_fit(&self) -> wellfare_core::anatomy::BodyFit {
+        let constitution = self.get_body_constitution();
+        let phys = self.get_physiological_state();
+        super::super::body_constitution::fit_for(&constitution, &phys)
     }
 
     /// Clear the cache for a model (idempotent). The person can re-acquire later.

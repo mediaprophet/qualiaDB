@@ -125,6 +125,9 @@ impl ExternalSorter {
         }
 
         let mut writer = StreamingQ42VolumeWriter::new(&self.lex)?;
+        // Catalog ontologies (Pages ingest), not personal records.
+        // Sanctuary bits on a Quin still win inside the writer.
+        writer.declare_permissive_commons();
 
         if self.chunk_files.is_empty() {
             writer.finish(final_q42)?;
@@ -374,5 +377,39 @@ mod tests {
                 .object;
         }
         assert_eq!(objects, [1, 2, 3, 7, 8, 9]);
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    #[test]
+    fn merge_declares_permissive_commons_for_catalog_ingest() {
+        use crate::q42_volume::{Q42Volume, FLAG_PERMISSIVE_COMMONS, FLAG_SANCTUARY};
+
+        let dir = TempDir::new().unwrap();
+        let mut sorter = ExternalSorter::new(dir.path().join("sort"));
+        sorter
+            .push(NQuin {
+                subject: 1,
+                predicate: 2,
+                object: 3,
+                context: 0,
+                metadata: 0,
+                parity: 0,
+            })
+            .unwrap();
+        sorter.push_lex(1, "urn:q42:catalog-subject");
+        let out = dir.path().join("catalog.q42");
+        sorter.merge(&out).unwrap();
+        let volume = Q42Volume::open(&out).unwrap();
+        let flags = volume.header().flags;
+        assert_ne!(
+            flags & FLAG_PERMISSIVE_COMMONS,
+            0,
+            "Pages catalog merge must set FLAG_PERMISSIVE_COMMONS"
+        );
+        assert_eq!(
+            flags & FLAG_SANCTUARY,
+            0,
+            "unmarked catalog Quins must not flip Sanctuary"
+        );
     }
 }

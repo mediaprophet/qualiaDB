@@ -1,6 +1,6 @@
 [package]
 name = "qualia-cli"
-version = "0.0.29"
+version = "0.0.30"
 edition = "2021"
 build = "build.rs"
 authors = ["Timothy Charles Holborn <timothy.holborn@gmail.com>"]

@@ -133,12 +133,14 @@ fn anatomy_body_json_response(app: &tauri::AppHandle, model: Option<String>) -> 
             Ok(p) => p,
             Err(_) => return Ok::<_, String>(protocol_response(500, None, Vec::new())),
         };
+        let fit = host.body_fit();
         let body = serde_json::json!({
             "model": status.model,
             "cached": status.cached,
             "organ_count": status.organ_count,
             "percepts": painted,
             "unmapped": unmapped,
+            "fit": fit,
         });
         match serde_json::to_vec(&body) {
             Ok(bytes) => Ok::<_, String>(protocol_response(200, Some("application/json"), bytes)),

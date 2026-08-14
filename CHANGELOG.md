@@ -6,6 +6,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [0.0.30] — 2026-08-15
+
+### Changed
+
+- Workspace crates, Tauri, portal/package metadata, Pages menus, and release workflows now identify `0.0.30`.
+- Unified Q42 v3 volumes (embedded lexicon/indexes, LZ4 SuperBlocks inside the file; no `.c.q42` twin).
+- GitHub Pages demos boot Schema.org 30.0; compare and zero-heap run without a missing WordNet file or missing WASM exports.
+
 ## [0.0.29] — 2026-08-02
 
 ### Changed

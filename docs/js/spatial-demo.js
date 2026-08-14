@@ -703,7 +703,11 @@ export async function bootSpatialPage() {
         // on a canvas that isn't in the rendered tree, so the WebGPU surface must bind while the
         // viewer tab is laid out (it's otherwise activated later, after init → canvas2d fallback).
         switchTab('viewer', null, { silent: true });
-        await initQualiaLayer();
+        try {
+            await initQualiaLayer();
+        } catch (portalErr) {
+            debugWarn('initQualiaLayer failed; continuing with playground WASM', portalErr);
+        }
         if (!wasm) {
             const module = await import('../playground/qualia_core_db.js');
             const wasmUrl = new URL('../playground/qualia_core_db_bg.wasm', import.meta.url);

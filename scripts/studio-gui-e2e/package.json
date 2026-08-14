@@ -1,7 +1,7 @@
 {
   "name": "qualia-studio-gui-e2e",
   "private": true,
-  "version": "0.0.29",
+  "version": "0.0.30",
   "description": "Playwright GUI contracts for the Webizen portal and naturalised desktop shell",
   "scripts": {
     "test": "playwright test",

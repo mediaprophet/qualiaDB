@@ -2,7 +2,7 @@ import { hashToken, parseBigDecimal, toHex16, hasMsb } from './hash.js';
 import { VFSProvider, QUIN_SIZE, formatOpfsCacheLabel } from './vfs.js';
 import wasmInit, { execute_ntriples_query } from './qualia_core_db.js';
 
-const DEFAULT_DATASET_ID = 'wordnet';
+const DEFAULT_DATASET_ID = 'schemaorg-30';
 
 // ---------------------------------------------------------------------------
 // Cost widget state
@@ -111,7 +111,9 @@ async function loadManifest() {
     return;
   }
 
-  const preferred = provider.available.find(d => d.id === DEFAULT_DATASET_ID) ?? provider.available[0];
+  const preferred = provider.available.find(d => d.id === DEFAULT_DATASET_ID && d.hosted !== false)
+    ?? provider.available.find(d => d.hosted !== false)
+    ?? provider.available[0];
   sel.value = preferred.id;
   updateDatasetDescription();
   document.getElementById('mount-btn').disabled = false;

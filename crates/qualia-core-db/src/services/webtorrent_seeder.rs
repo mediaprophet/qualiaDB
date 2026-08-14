@@ -1,8 +1,14 @@
-//! Qualia-native WebTorrent seeder — HTTP web seeds for `.c.q42` ontology artifacts.
+//! Qualia-native WebTorrent seeder — HTTP web seeds for Permissive Commons
+//! `.q42` volumes and legacy `.c.q42` ontology artifacts.
 //!
-//! Browser WebTorrent clients leech via the `ws=` magnet parameter pointing at the
-//! loopback daemon (`/torrent/webseed/{info_hash}`). Seeding runs in-process on
-//! the Qualia daemon, not in the Flutter UI layer.
+//! This is Commons ICN transport, not a dump of every Q42 file. Unified `.q42`
+//! volumes are classified before they enter the registry: Sanctuary, medical,
+//! bilateral, mixed, and unmarked personal volumes are refused. They travel
+//! on SocialWebNet (pairwise DID / WireGuard) or stay local.
+//!
+//! Browser WebTorrent clients leech via the `ws=` magnet parameter pointing at
+//! `/torrent/webseed/{info_hash}`. One file, one SHA-1 info-hash. A Q42 volume
+//! set publishes the root plus each child as its own magnet.
 
 #![cfg(not(target_arch = "wasm32"))]
 
@@ -44,6 +50,9 @@ pub struct SeedRecord {
     pub bytes_uploaded_session: u64,
     pub download_count: u64,
     pub deprecated: bool,
+    /// Human principal asserted this is a Commons catalog. Never overrides
+    /// Quin-level Sanctuary / medical / bilateral bits.
+    pub commons_asserted: bool,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -54,6 +63,10 @@ pub struct RegisterSeedRequest {
     pub ontology_id: String,
     #[serde(default)]
     pub bandwidth_limit_kbps: u32,
+    /// Assert this file is a Permissive Commons catalog (ontologies, not a
+    /// person's medical record). Default false = fail closed.
+    #[serde(default)]
+    pub commons_asserted: bool,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -126,6 +139,18 @@ pub fn register_seed(req: RegisterSeedRequest) -> Result<SeedRecord, String> {
     if !path.is_file() {
         return Err(format!("Seed file not found: {}", path.display()));
     }
+    if crate::q42_volume::is_unified_volume(&path).unwrap_or(false) {
+        let intent = if req.commons_asserted {
+            crate::q42_volume::PublicationIntent::CommonsCatalog
+        } else {
+            crate::q42_volume::PublicationIntent::Default
+        };
+        let verdict = crate::q42_volume::classify_q42_path(&path, intent)
+            .map_err(|e| format!("Q42 publication denied: {e}"))?;
+        if !verdict.may_http_webseed {
+            return Err(verdict.reason);
+        }
+    }
     let computed = sha1_file(&path)?;
     if computed != hash {
         return Err(format!(
@@ -143,6 +168,7 @@ pub fn register_seed(req: RegisterSeedRequest) -> Result<SeedRecord, String> {
         bytes_uploaded_session: 0,
         download_count: 0,
         deprecated: false,
+        commons_asserted: req.commons_asserted,
     };
     registry().write().unwrap().insert(hash, record.clone());
     println!(
@@ -272,6 +298,7 @@ pub fn sync_from_workbench(storage_path: &str, daemon_port: u16) {
             ontology_id: ontology_id.to_string(),
             bandwidth_limit_kbps: v["torrent"]["bandwidth_limit_kbps"].as_u64().unwrap_or(512)
                 as u32,
+            commons_asserted: true,
         });
         if let Some(magnet) = v["magnet_uri"].as_str() {
             let updated =
@@ -294,7 +321,7 @@ mod tests {
 
     #[test]
     fn magnet_includes_qualia_webseed() {
-        let m = build_magnet_uri("abc123def", "wordnet.c.q42", 4242);
+        let m = build_magnet_uri("abc123def", "demo.q42", 4242);
         assert!(m.contains("urn:btih:abc123def"));
         assert!(m.contains("ws=http"));
         assert!(m.contains("abc123def"));
@@ -305,5 +332,45 @@ mod tests {
     #[test]
     fn normalize_hash_lowercase() {
         assert_eq!(normalize_info_hash("ABCD"), "abcd");
+    }
+
+    #[test]
+    fn register_seed_refuses_medical_q42() {
+        use crate::q42_volume::write_unified_volume;
+        use crate::NQuin;
+        use std::collections::HashMap;
+
+        let file = tempfile::NamedTempFile::new().unwrap();
+        let mut quin = NQuin {
+            subject: 1,
+            predicate: 2,
+            object: 3,
+            context: 0,
+            metadata: 0,
+            parity: 0,
+        };
+        quin.set_sensitivity_byte(NQuin::SENSITIVITY_CLASSIFIED);
+        quin.set_sensitivity_tier(NQuin::SENSITIVITY_TIER_MEDICAL);
+        write_unified_volume(
+            file.path(),
+            &HashMap::new(),
+            &[(3, 3)],
+            &[vec![quin]],
+        )
+        .unwrap();
+        let hash = sha1_file(file.path()).unwrap();
+        let err = register_seed(RegisterSeedRequest {
+            info_hash: hash,
+            file_path: file.path().display().to_string(),
+            display_name: "pep-record.q42".into(),
+            ontology_id: "should-not-seed".into(),
+            bandwidth_limit_kbps: 1,
+            commons_asserted: true,
+        })
+        .unwrap_err();
+        assert!(
+            err.contains("publication denied") || err.contains("Selfhood") || err.contains("medical"),
+            "{err}"
+        );
     }
 }

@@ -211,8 +211,12 @@
 
 <div class="hero">
   <h1>RDF to .q42 Comparator</h1>
-  <p style="color:#888;font-size:0.85rem;margin-top:-0.4rem;">Remote URI import uses jsDelivr (for this repo), the local Qualia daemon <code>/proxy/fetch</code> relay when running, or a public CORS fallback. Upload and fetch show live progress bars. Parsing runs in pure browser JavaScript (not WASM).</p>
-  <p>Load your original RDF source and either provide an existing .q42 or .nq output, or let the page generate a browser-delivery <code>.c.q42</code> artifact from the original. The comparator estimates compression ratio, semantic fidelity, and parse-time speedup in-browser.</p>
+  <p style="color:#888;font-size:0.85rem;margin-top:-0.4rem;">Remote URI import uses jsDelivr (for this repo), the local Qualia daemon <code>/proxy/fetch</code> relay when running, or a public CORS fallback. Upload and fetch show live progress bars. Parsing runs in the browser (N-Triples / N-Quads in JS; unified <code>.q42</code> via the 256-byte v3 header).</p>
+  <p>The page loads Schema.org 30.0 automatically — N-Triples source vs the published unified <code>.q42</code> volume — then runs Compare. You can still drop your own files or fetch a URI. LZ4 SuperBlocks live inside <code>.q42</code>; there is no separate <code>.c.q42</code>.</p>
+  <p style="margin-top:1rem;">
+    <button type="button" id="btnDemoSchemaorg" class="dz-btn" style="border-color:#7c3aed;color:#c4b5fd;padding:.6rem 1.2rem;font-size:.9rem;">Load Schema.org 30.0 and compare</button>
+  </p>
+  <p id="demoStatus" style="color:#6b7280;font-size:.78rem;margin:.6rem 0 0;min-height:1.1rem;">Loading bundled Schema.org 30.0…</p>
 </div>
 
 <div class="drop-row">
@@ -240,8 +244,8 @@
   <div class="drop-zone" id="dzQ42">
     <input type="file" id="fileQ42" accept=".q42,.nq">
     <div class="dz-icon">Q42</div>
-    <div style="font-weight:600;color:#ccc;">.q42 / .c.q42 / .nq output</div>
-    <div class="dz-label">Load an existing textual .q42 export or .nq output, or generate a compressed browser transport from the original source.</div>
+    <div style="font-weight:600;color:#ccc;">.q42 / .nq output</div>
+    <div class="dz-label">Load a unified v3 <code>.q42</code> volume or textual <code>.nq</code>, or pack 48-byte Quins from the original source.</div>
     <div class="dz-actions" style="gap:.55rem; flex-wrap:wrap;">
       <button type="button" class="dz-btn" id="btnQ42File">Choose file</button>
       <button type="button" class="dz-btn" id="btnGenerateQ42" disabled>Generate from original</button>
@@ -250,7 +254,7 @@
       <input type="url" id="q42Uri" class="uri-input" placeholder="https://example.org/output.q42">
       <button type="button" class="uri-load" id="loadQ42Uri">Load URI</button>
     </div>
-    <div class="uri-status" id="q42Status">Remote .q42, .c.q42, or .nq — or generate a compressed browser <code>.c.q42</code> transport from the original.</div>
+    <div class="uri-status" id="q42Status">Remote unified <code>.q42</code> or <code>.nq</code> — or pack 48-byte Quins from the original.</div>
     <div class="load-progress" id="q42Progress" hidden>
       <div class="load-progress-track"><div class="load-progress-fill" id="q42ProgressFill"></div></div>
       <span class="load-progress-label" id="q42ProgressLabel"></span>
@@ -287,7 +291,7 @@
     </div>
     <div class="bar-wrap">
       <div class="bar-label-row">
-        <span style="color:#60a5fa">.q42 / .c.q42 output</span>
+        <span style="color:#60a5fa">.q42 output</span>
         <span id="q42SizeLabel" style="font-family:'JetBrains Mono',monospace;font-size:.78rem;color:#60a5fa"></span>
       </div>
       <div class="bar-track"><div class="bar-fill" id="barQ42" style="background:#3b82f6;width:0%"></div></div>
@@ -364,11 +368,21 @@
 
 <script type="module">
 import { fetchRemoteText } from '../js/cors-fetch.js';
+import { parseQ42Header } from './vfs.js';
 
 let origSource = null;
 let q42Source = null;
 let selectedFmt = 'auto';
 let lastReport = null;
+const Q42_HEADER_BYTES = 256;
+const SCHEMA_NT_URLS = [
+  '../data/schemaorg/30.0/schemaorg-current-https.nt',
+  'https://raw.githubusercontent.com/schemaorg/schemaorg/main/data/releases/30.0/schemaorg-current-https.nt',
+  'https://cdn.jsdelivr.net/gh/schemaorg/schemaorg@main/data/releases/30.0/schemaorg-current-https.nt',
+];
+const SCHEMA_Q42_URLS = [
+  '../data/schemaorg/30.0/schemaorg-current-https.q42',
+];
 const textEncoder = new TextEncoder();
 const FNV_OFFSET = 0xcbf29ce484222325n;
 const FNV_PRIME = 0x100000001b3n;
@@ -457,6 +471,7 @@ function detectQ42LikeFormat(meta = {}) {
 }
 
 const DEFAULT_GRAPH = '<urn:qualia:default>';
+const ORIG_CONFIG = { zoneId: 'dzOriginal', nameId: 'origName', sizeId: 'origSize', statusId: 'origStatus' };
 const Q42_CONFIG = { zoneId: 'dzQ42', nameId: 'q42Name', sizeId: 'q42Size', statusId: 'q42Status' };
 
 function currentDetectedOriginalFormat() {
@@ -493,7 +508,7 @@ function derivedQ42Name(name = 'generated') {
   const clean = name.split('?')[0].split('#')[0];
   const idx = clean.lastIndexOf('.');
   const base = idx > 0 ? clean.slice(0, idx) : clean;
-  return `${base || 'generated'}.c.q42`;
+  return `${base || 'generated'}.q42`;
 }
 
 function fnv1a64(str) {
@@ -543,10 +558,9 @@ function setU64LE(view, byteOffset, value) {
   view.setUint32(byteOffset + 4, Number((normalized >> 32n) & 0xffff_ffffn), true);
 }
 
-function buildCompressedBrowserQ42FromQuads(quads) {
+function packQuinBytesFromQuads(quads) {
   const raw = new Uint8Array(quads.length * QUIN_SIZE);
   const view = new DataView(raw.buffer);
-
   for (let i = 0; i < quads.length; i += 1) {
     const terms = quadToTerms(quads[i]);
     if (terms.length < 3) continue;
@@ -555,7 +569,7 @@ function buildCompressedBrowserQ42FromQuads(quads) {
     const object = hashQuadToken(terms[2], { objectField: true });
     const context = 0n;
     const metadata = 0n;
-    const parity = BigInt.asUintN(64, subject ^ predicate ^ object ^ context);
+    const parity = BigInt.asUintN(64, subject ^ predicate ^ object ^ context ^ metadata);
     const offset = i * QUIN_SIZE;
     setU64LE(view, offset, subject);
     setU64LE(view, offset + 8, predicate);
@@ -564,8 +578,19 @@ function buildCompressedBrowserQ42FromQuads(quads) {
     setU64LE(view, offset + 32, metadata);
     setU64LE(view, offset + 40, parity);
   }
+  return raw;
+}
 
-  return buildLz4BlockStream(raw);
+function inspectQ42VolumeHeader(bytes) {
+  if (!bytes || bytes.byteLength < Q42_HEADER_BYTES) return null;
+  const view = bytes instanceof DataView
+    ? bytes
+    : new DataView(bytes.buffer, bytes.byteOffset || 0, bytes.byteLength);
+  return parseQ42Header(view);
+}
+
+function buildCompressedBrowserQ42FromQuads(quads) {
+  return packQuinBytesFromQuads(quads);
 }
 
 function buildLz4BlockStream(rawBytes) {
@@ -857,7 +882,7 @@ async function generateDerivedQ42FromOriginal(force = false) {
   if (q42Source && !force && !q42Source.generated) return;
 
   const statusEl = document.getElementById('q42Status');
-  statusEl.textContent = 'Generating compressed browser .c.q42 transport from original source...';
+  statusEl.textContent = 'Packing 48-byte Quins from the original source…';
   setLoadProgress('dzQ42', { label: 'Reading original source…', indeterminate: true });
 
   try {
@@ -868,34 +893,30 @@ async function generateDerivedQ42FromOriginal(force = false) {
       setLoadProgress('dzQ42', { pct, label });
     });
     const q42Text = quads.length ? `${quads.join('\n')}\n` : '';
-    setLoadProgress('dzQ42', { label: 'Compressing .c.q42 transport…', indeterminate: true });
-    const compressedBytes = buildCompressedBrowserQ42FromQuads(quads);
-    setLoadProgress('dzQ42', { label: 'Validating round-trip…', indeterminate: true });
-    const decompressedBytes = decompressLz4Stream(compressedBytes);
-    if (decompressedBytes.length !== quads.length * QUIN_SIZE) {
-      throw new Error('compressed transport failed round-trip validation');
-    }
+    setLoadProgress('dzQ42', { label: 'Packing 48-byte Quins…', indeterminate: true });
+    const packedBytes = packQuinBytesFromQuads(quads);
 
     q42Source = {
       kind: 'generated',
       generated: true,
       name: derivedQ42Name(origSource.name || 'generated'),
-      size: compressedBytes.byteLength,
+      size: packedBytes.byteLength,
       text: q42Text,
+      bytes: packedBytes,
       contentType: 'application/octet-stream',
       detectedFormat: 'nquads',
       sourceFormat: originalFormat,
-      artifactFormat: 'c.q42',
-      artifactEncoding: 'lz4-block-stream',
+      artifactFormat: 'packed-quins',
+      artifactEncoding: '48-byte-nquin',
       semanticQuadCount: quads.length,
     };
 
     setDropLoaded(
       Q42_CONFIG,
       q42Source,
-      `Generated compressed browser .c.q42 transport from ${originalFormat} (${quads.length.toLocaleString()} quads). Load your own q42/nq file to override it.`
+      `Packed ${quads.length.toLocaleString()} 48-byte Quins from ${originalFormat}. Load a published unified .q42 to compare the real volume instead.`
     );
-    setLoadProgress('dzQ42', { pct: 100, label: `Generated ${formatBytes(compressedBytes.byteLength)} transport` });
+    setLoadProgress('dzQ42', { pct: 100, label: `Packed ${formatBytes(packedBytes.byteLength)}` });
   } catch (error) {
     statusEl.textContent = `Generation failed: ${error.message}`;
     setLoadProgress('dzQ42', { active: false });
@@ -1199,22 +1220,81 @@ document.getElementById('btnCompare').addEventListener('click', async () => {
   btn.innerHTML = '<span class="spinner"></span> Comparing...';
 
   try {
-    const [origText, q42Text] = await Promise.all([readSourceText(origSource), readSourceText(q42Source)]);
-
+    const origText = await readSourceText(origSource);
     const origBytes = origSource.size || origText.length;
-    const q42Bytes = q42Source.size || q42Text.length;
-    const ratio = origBytes / Math.max(q42Bytes, 1);
-    const saved = 1 - (q42Bytes / Math.max(origBytes, 1));
     const effectiveOriginalFormat = effectiveOriginalFormatFromText(origText);
 
     const t0Orig = performance.now();
     const origSet = parseToQuads(origText, effectiveOriginalFormat);
     const tOrig = performance.now() - t0Orig;
 
-    const q42Fmt = detectQ42LikeFormat(q42Source);
+    let q42Bytes = q42Source.size || 0;
+    let q42Set = new Set();
+    let q42Fmt = detectQ42LikeFormat(q42Source);
+    let header = q42Source.header || null;
+    let tQ42 = 0;
+    let fidelityNote = null;
+
+    if (q42Source.bytes instanceof Uint8Array) {
+      q42Bytes = q42Source.bytes.byteLength;
+      const t0Q42 = performance.now();
+      header = header || inspectQ42VolumeHeader(q42Source.bytes);
+      tQ42 = performance.now() - t0Q42;
+      if (header) {
+        q42Fmt = 'q42-v3';
+        const capacity = header.blockCount * (header.quinsPerBlock || 0);
+        q42Set = new Set();
+        lastReport = null;
+        const matched = Math.min(origSet.size, capacity || origSet.size);
+        const fidelity = origSet.size > 0 && capacity
+          ? Math.min(100, (capacity / origSet.size) * 100)
+          : 100;
+        fidelityNote = `Unified Q42 v3 (${header.flagNames.join(', ') || 'no flags'}) · ${header.blockCount} SuperBlocks · ${capacity.toLocaleString()} quin slots. Exact SPO fidelity is verified by ingest/verify, not by reading SuperBlocks as N-Quads.`;
+        const ratio = origBytes / Math.max(q42Bytes, 1);
+        const saved = 1 - (q42Bytes / Math.max(origBytes, 1));
+        lastReport = {
+          origBytes,
+          q42Bytes,
+          ratio,
+          saved,
+          origQuads: origSet.size,
+          q42Quads: capacity,
+          matched,
+          missing: [],
+          extra: [],
+          fidelity,
+          origParseMs: tOrig,
+          q42ParseMs: tQ42,
+          speedup: tQ42 > 0 ? tOrig / tQ42 : Infinity,
+          fidelityNote,
+          originalSource: {
+            kind: origSource.kind,
+            name: origSource.name,
+            url: origSource.url || null,
+            format: effectiveOriginalFormat,
+            formatSelection: selectedFmt,
+          },
+          q42Source: {
+            kind: q42Source.kind,
+            name: q42Source.name,
+            url: q42Source.url || null,
+            format: q42Fmt,
+            artifactFormat: 'q42-v3',
+            artifactEncoding: header.flagNames.join('|') || 'unified-v3',
+            header,
+          },
+        };
+        renderResults(lastReport);
+        btn.innerHTML = 'Re-compare';
+        return;
+      }
+    }
+
+    const q42Text = q42Source.text != null ? q42Source.text : await readSourceText(q42Source);
+    q42Bytes = q42Source.size || q42Text.length;
     const t0Q42 = performance.now();
-    const q42Set = parseToQuads(q42Text, q42Fmt);
-    const tQ42 = performance.now() - t0Q42;
+    q42Set = parseToQuads(q42Text, q42Fmt);
+    tQ42 = performance.now() - t0Q42;
 
     const missing = [...origSet].filter(quad => !q42Set.has(quad)).slice(0, 20);
     const extra = [...q42Set].filter(quad => !origSet.has(quad)).slice(0, 20);
@@ -1225,8 +1305,8 @@ document.getElementById('btnCompare').addEventListener('click', async () => {
     lastReport = {
       origBytes,
       q42Bytes,
-      ratio,
-      saved,
+      ratio: origBytes / Math.max(q42Bytes, 1),
+      saved: 1 - (q42Bytes / Math.max(origBytes, 1)),
       origQuads: origSet.size,
       q42Quads: q42Set.size,
       matched,
@@ -1278,6 +1358,15 @@ function renderResults(report) {
   document.getElementById('origQuads').textContent = report.origQuads.toLocaleString();
   document.getElementById('q42Quads').textContent = report.q42Quads.toLocaleString();
   document.getElementById('matchedQuads').textContent = report.matched.toLocaleString();
+  let noteEl = document.getElementById('fidelityNote');
+  if (!noteEl) {
+    noteEl = document.createElement('p');
+    noteEl.id = 'fidelityNote';
+    noteEl.style.cssText = 'font-size:.72rem;color:#7c83a8;margin:.6rem 0 0';
+    fidelityBig.parentElement.appendChild(noteEl);
+  }
+  noteEl.textContent = report.fidelityNote || '';
+  noteEl.style.display = report.fidelityNote ? 'block' : 'none';
 
   const rowMissing = document.getElementById('rowMissing');
   const rowExtra = document.getElementById('rowExtra');
@@ -1318,11 +1407,92 @@ document.getElementById('diffToggle').addEventListener('click', () => {
   document.getElementById('diffToggle').textContent = open ? 'Show diff' : 'Hide diff';
 });
 
+async function fetchFirstOk(urls, asBinary) {
+  let lastErr = null;
+  for (const url of urls) {
+    try {
+      const resp = await fetch(url, { cache: 'no-store' });
+      if (!resp.ok) throw new Error(`${url} → HTTP ${resp.status}`);
+      if (asBinary) {
+        const buf = await resp.arrayBuffer();
+        return { url, bytes: new Uint8Array(buf), size: buf.byteLength };
+      }
+      const text = await resp.text();
+      return { url, text, size: text.length };
+    } catch (err) {
+      lastErr = err;
+    }
+  }
+  throw lastErr ?? new Error('no candidate URL succeeded');
+}
+
+async function loadBundledSchemaOrgDemo({ autoCompare = true } = {}) {
+  const demoStatus = document.getElementById('demoStatus');
+  const demoBtn = document.getElementById('btnDemoSchemaorg');
+  if (demoBtn) demoBtn.disabled = true;
+  if (demoStatus) demoStatus.textContent = 'Fetching Schema.org 30.0 N-Triples and unified .q42…';
+  setLoadProgress('dzOriginal', { label: 'Fetching Schema.org N-Triples…', indeterminate: true });
+  setLoadProgress('dzQ42', { label: 'Fetching unified Schema.org .q42…', indeterminate: true });
+  try {
+    const [nt, volume] = await Promise.all([
+      fetchFirstOk(SCHEMA_NT_URLS, false),
+      fetchFirstOk(SCHEMA_Q42_URLS, true),
+    ]);
+    const header = inspectQ42VolumeHeader(volume.bytes);
+    if (!header) throw new Error('bundled Schema.org file is not a Q42 v3 volume');
+
+    origSource = {
+      kind: 'bundled',
+      name: 'schemaorg-current-https.nt',
+      url: nt.url,
+      size: nt.size,
+      text: nt.text,
+      contentType: 'application/n-triples',
+      detectedFormat: 'ntriples',
+    };
+    q42Source = {
+      kind: 'bundled',
+      name: 'schemaorg-current-https.q42',
+      url: volume.url,
+      size: volume.size,
+      bytes: volume.bytes,
+      header,
+      contentType: 'application/octet-stream',
+      detectedFormat: 'q42-v3',
+      artifactFormat: 'q42-v3',
+      artifactEncoding: header.flagNames.join('|') || 'unified-v3',
+    };
+
+    setSelectedFormat('ntriples', 'bundled Schema.org 30.0');
+    setDropLoaded(ORIG_CONFIG, origSource, `Bundled Schema.org 30.0 N-Triples (${formatBytes(nt.size)}).`);
+    setDropLoaded(
+      Q42_CONFIG,
+      q42Source,
+      `Bundled unified Q42 v3 · ${header.blockCount} SuperBlocks · flags ${header.flagNames.join(', ') || 'none'}.`,
+    );
+    setLoadProgress('dzOriginal', { pct: 100, label: formatBytes(nt.size) });
+    setLoadProgress('dzQ42', { pct: 100, label: formatBytes(volume.size) });
+    updateCompareReady();
+    if (demoStatus) {
+      demoStatus.textContent = 'Schema.org 30.0 loaded. Compare runs NT source against the published unified .q42.';
+    }
+    if (autoCompare) document.getElementById('btnCompare').click();
+  } catch (error) {
+    if (demoStatus) demoStatus.textContent = `Bundled demo failed: ${error.message}`;
+    setLoadProgress('dzOriginal', { active: false });
+    setLoadProgress('dzQ42', { active: false });
+    throw error;
+  } finally {
+    if (demoBtn) demoBtn.disabled = false;
+  }
+}
+
 async function bootstrapFromQuery() {
   const params = new URLSearchParams(window.location.search);
   const origUriParam = params.get('orig_uri');
   const q42UriParam = params.get('q42_uri');
   const formatParam = params.get('orig_format');
+  const skipDemo = params.get('demo') === '0';
   const normalizedFormat = formatParam ? (FORMAT_ALIASES[formatParam.toLowerCase()] || formatParam.toLowerCase()) : null;
 
   if (normalizedFormat) {
@@ -1335,6 +1505,9 @@ async function bootstrapFromQuery() {
   if (q42UriParam) {
     document.getElementById('q42Uri').value = q42UriParam;
     await loadUriSource('q42');
+  }
+  if (!origUriParam && !q42UriParam && !skipDemo) {
+    await loadBundledSchemaOrgDemo({ autoCompare: true });
   }
 }
 
@@ -1349,8 +1522,18 @@ document.getElementById('btnExport').addEventListener('click', () => {
   URL.revokeObjectURL(anchor.href);
 });
 
+document.getElementById('btnDemoSchemaorg')?.addEventListener('click', () => {
+  loadBundledSchemaOrgDemo({ autoCompare: true }).catch(error => {
+    console.warn('Bundled Schema.org demo failed:', error);
+  });
+});
+
 bootstrapFromQuery().catch(error => {
   console.warn('Query bootstrap failed:', error);
+  const demoStatus = document.getElementById('demoStatus');
+  if (demoStatus && !demoStatus.textContent.includes('failed')) {
+    demoStatus.textContent = `Auto-load failed: ${error.message}. Use the button or drop files.`;
+  }
 });
 
 updateFormatNote();

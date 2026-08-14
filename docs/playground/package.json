@@ -5,7 +5,7 @@
     "Timothy Charles Holborn <timothy.holborn@gmail.com>"
   ],
   "description": "QualiaDB semantic graph, inference, ontology, spatial, and browser-WASM runtime",
-  "version": "0.0.29",
+  "version": "0.0.30",
   "license": "SEE LICENSE IN LICENSE",
   "repository": {
     "type": "git",

@@ -38,8 +38,22 @@ pub use volume::{
     Q42RangeQueryStrategy, Q42RangeSource, Q42RangeVolume, Q42RangeVolumeSet, Q42SegmentMatchPage,
     Q42SegmentMatchRange, Q42SegmentRangeFactory, Q42VolumeManifest, Q42VolumeSegment,
     Q42VolumeSet, Q42VolumeSetQueryCursor, Q42VolumeSetQueryPage, StreamingQ42VolumeWriter,
-    MAX_VOLUME_MANIFEST_BYTES,
+    VerifiedCarBlock, CidSha256, BlockFieldPostings, Q42InspectReport, Q42SectionReport,
+    Q42Magnet, Q42VolumeSetMagnets, Q42RolloverPublisher, Q42QueryMode, Q42VerifyReceipt,
+    Q42VerifySetReport,
+    VerifyLevel, CheckStatus, VerifyCheck, compose_magnet, sha1_hex_file,
+    classify_q42_path, classify_q42_volume, classify_q42_volume_set, deny_public_publication,
+    quin_requires_sanctuary, ClassificationCounts, PublicationIntent, Q42PublicationClass,
+    Q42PublicationVerdict, Q42Transport,
+    append_segment_to_root, verify_volume_set_from_root, DEFAULT_SEGMENT_MAX_BYTES,
+    RESIDENT_QUERY_MAX_BYTES, decode_and_verify_car, encode_raw_car,
+    extract_entity_bytes, inclusive_entity_bytes, encode_block_postings, encode_postings_section,
+    measure_bloom_false_positives, FIELD_POSTINGS_MAGIC, MAX_VOLUME_MANIFEST_BYTES,
+    compact_volume_set, verify_car_bytes_as_q42_source, verify_local_car_as_q42_source,
+    OpfsCallbackRangeSource, OpfsSliceRangeSource, VerifiedCarRangeSource,
 };
+#[cfg(not(target_arch = "wasm32"))]
+pub use volume::{write_sorted_quins_volume, write_sorted_quins_volume_with_author};
 
 pub const Q42_MAGIC: [u8; 4] = [0x51, 0x34, 0x32, 0x00]; // "Q42\0"
 pub const Q42_VERSION_V3: u16 = 3;
@@ -57,6 +71,15 @@ pub const FLAG_VOLUME_ROOT: u16 = 0x0004;
 /// A per-SuperBlock subject/predicate/context range index is present in front
 /// matter.  It supplements (but does not replace) the object-sorted BIDX.
 pub const FLAG_FIELD_RANGES: u16 = 0x0008;
+/// Compact per-block S/P/C postings (or measured Bloom) are present.
+pub const FLAG_FIELD_POSTINGS: u16 = 0x0010;
+/// Affirmative Permissive Commons catalog. Required (with a clean Quin scan)
+/// before a public magnet / HTTP web-seed / IPFS pin is emitted.
+pub const FLAG_PERMISSIVE_COMMONS: u16 = 0x0020;
+/// Affirmative Sanctuary / Selfhood volume. Public hash addressing is denied.
+/// Writers also set this when any Quin is restricted, classified, medical,
+/// legal, fiduciary, or bilateral.
+pub const FLAG_SANCTUARY: u16 = 0x0040;
 pub const FIELD_RANGE_INDEX_MAGIC: [u8; 4] = *b"FIDX";
 pub const FIELD_RANGE_INDEX_HEADER_BYTES: usize = 16;
 pub const FIELD_RANGE_INDEX_ENTRY_BYTES: usize = 48;
@@ -68,7 +91,7 @@ pub struct Q42VerificationReceipt {
     pub quins_verified: u64,
 }
 
-/// Q42 volume header — 280 bytes, `repr(C, packed)`.
+/// Q42 volume header — 256 bytes, `repr(C, packed)`.
 /// v3 builds hard-reject files with `version < 3` — run `q42 migrate meta` first.
 #[repr(C, packed)]
 #[derive(Clone, Copy, Debug)]
@@ -141,6 +164,17 @@ impl Q42VolumeHeader {
         Some((
             u64::from_le_bytes(reserved[16..24].try_into().unwrap()),
             u64::from_le_bytes(reserved[24..32].try_into().unwrap()),
+        ))
+    }
+
+    fn field_postings_range(&self) -> Option<(u64, u64)> {
+        if self.flags & FLAG_FIELD_POSTINGS == 0 {
+            return None;
+        }
+        let reserved = self._reserved;
+        Some((
+            u64::from_le_bytes(reserved[32..40].try_into().unwrap()),
+            u64::from_le_bytes(reserved[40..48].try_into().unwrap()),
         ))
     }
 
@@ -236,6 +270,10 @@ pub fn migrate_v2_to_v3(path: &Path) -> io::Result<()> {
     }
     // Bump version to 3.
     header[4..6].copy_from_slice(&(Q42_VERSION_V3 as u16).to_le_bytes());
+    // v2 only knew LZ4 + object-sorted. Later flags (root, FIDX, PIDX) must not
+    // survive a header bump with their reserved offsets zeroed.
+    let flags = u16::from_le_bytes([header[6], header[7]]) & (FLAG_BLOCKS_LZ4 | FLAG_OBJECT_SORTED);
+    header[6..8].copy_from_slice(&flags.to_le_bytes());
     // Zero out the v3 extension fields (bytes 88..256 within the header).
     header[88..256].fill(0);
     f.seek(SeekFrom::Start(0))?;
@@ -364,6 +402,36 @@ pub fn encode_superblock(seq_id: u64, quins: &[NQuin]) -> [u8; SUPERBLOCK_SIZE] 
     block
 }
 
+/// Live Quins in a decompressed SuperBlock (160-byte header + 48-byte slots).
+pub fn decode_superblock_quins(block: &[u8]) -> io::Result<Vec<NQuin>> {
+    if block.len() < SUPERBLOCK_HEADER {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            "SuperBlock shorter than its 160-byte header",
+        ));
+    }
+    let live = u64::from_le_bytes(block[16..24].try_into().unwrap()) as usize;
+    if live > QUINS_PER_BLOCK {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            "SuperBlock live Quin count exceeds capacity",
+        ));
+    }
+    let mut out = Vec::with_capacity(live);
+    for index in 0..live {
+        let offset = SUPERBLOCK_HEADER + index * QUIN_SIZE;
+        let end = offset + QUIN_SIZE;
+        if end > block.len() {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "SuperBlock truncated inside a Quin slot",
+            ));
+        }
+        out.push(bytemuck::pod_read_unaligned(&block[offset..end]));
+    }
+    Ok(out)
+}
+
 pub fn header_to_bytes(h: &Q42VolumeHeader) -> [u8; HEADER_SIZE] {
     let mut buf = [0u8; HEADER_SIZE];
     // Core fields (0..88)
@@ -448,7 +516,7 @@ pub fn write_unified_volume(
             "block count mismatch",
         ));
     }
-    let mut builder = UnifiedVolumeBuilder::with_lex_map(lex).map_err(lex_error_to_io)?;
+    let mut writer = StreamingQ42VolumeWriter::new(lex)?;
     for ((seq, quins), declared_range) in blocks.iter().enumerate().zip(block_ranges) {
         let actual_range = object_range(quins)?;
         if actual_range != *declared_range {
@@ -460,9 +528,9 @@ pub fn write_unified_volume(
                 ),
             ));
         }
-        builder.push_block(seq as u64, quins)?;
+        writer.push_block(seq as u64, quins)?;
     }
-    builder.finish(path)
+    writer.finish(path)
 }
 
 /// Write a unified v3 .q42 volume with embedded triple support.
@@ -502,6 +570,15 @@ pub fn write_unified_volume_with_entries(
 /// catalog snapshot through [`Q42VolumeSet`].
 pub fn write_volume_root(path: &Path, manifest: &Q42VolumeManifest) -> io::Result<()> {
     UnifiedVolumeBuilder::with_empty_lex()
+        .with_volume_manifest(manifest)?
+        .finish(path)
+}
+
+/// Same as [`write_volume_root`], but marks the catalog as Permissive Commons.
+/// Use for public ontologies / knowledge graphs, never for personal volumes.
+pub fn write_volume_root_for_commons(path: &Path, manifest: &Q42VolumeManifest) -> io::Result<()> {
+    UnifiedVolumeBuilder::with_empty_lex()
+        .with_permissive_commons()
         .with_volume_manifest(manifest)?
         .finish(path)
 }
@@ -569,6 +646,7 @@ pub struct UnifiedVolumeBuilder {
     block_ranges: Vec<(u64, u64)>,
     field_ranges: Vec<(u64, u64, u64, u64, u64, u64)>,
     dir_entries: Vec<BlockDirectoryEntry>,
+    field_postings: Vec<BlockFieldPostings>,
     data_blob: Vec<u8>,
     /// Merkle-DAG commit history — populated as each SuperBlock is pushed.
     dag_store: crate::git_bridge::DagStore,
@@ -578,6 +656,9 @@ pub struct UnifiedVolumeBuilder {
     last_dag_hash: [u8; 32],
     /// Last object hash admitted to the object-sorted stream.
     last_object_hash: Option<u64>,
+    publication_commons: bool,
+    publication_sanctuary: bool,
+    sanctuary_quin_count: u64,
 }
 
 impl UnifiedVolumeBuilder {
@@ -588,11 +669,15 @@ impl UnifiedVolumeBuilder {
             block_ranges: Vec::new(),
             field_ranges: Vec::new(),
             dir_entries: Vec::new(),
+            field_postings: Vec::new(),
             data_blob: Vec::new(),
             dag_store: crate::git_bridge::DagStore::new(),
             author_did: 0,
             last_dag_hash: [0u8; 32],
             last_object_hash: None,
+            publication_commons: false,
+            publication_sanctuary: false,
+            sanctuary_quin_count: 0,
         })
     }
 
@@ -604,11 +689,15 @@ impl UnifiedVolumeBuilder {
             block_ranges: Vec::new(),
             field_ranges: Vec::new(),
             dir_entries: Vec::new(),
+            field_postings: Vec::new(),
             data_blob: Vec::new(),
             dag_store: crate::git_bridge::DagStore::new(),
             author_did: 0,
             last_dag_hash: [0u8; 32],
             last_object_hash: None,
+            publication_commons: false,
+            publication_sanctuary: false,
+            sanctuary_quin_count: 0,
         })
     }
 
@@ -626,6 +715,18 @@ impl UnifiedVolumeBuilder {
     /// Set the author DID for DAG commit nodes (optional; defaults to 0 = system).
     pub fn with_author_did(mut self, did: u64) -> Self {
         self.author_did = did;
+        self
+    }
+
+    /// Affirm this tiny embedded volume is a Permissive Commons catalog.
+    pub fn with_permissive_commons(mut self) -> Self {
+        self.publication_commons = true;
+        self
+    }
+
+    /// Affirm this volume is Sanctuary / Selfhood.
+    pub fn with_sanctuary(mut self) -> Self {
+        self.publication_sanctuary = true;
         self
     }
 
@@ -656,6 +757,10 @@ impl UnifiedVolumeBuilder {
             context_min = context_min.min(quin.context);
             context_max = context_max.max(quin.context);
         }
+        self.sanctuary_quin_count += quins
+            .iter()
+            .filter(|quin| volume::quin_requires_sanctuary(quin))
+            .count() as u64;
         self.field_ranges.push((
             subject_min,
             subject_max,
@@ -664,6 +769,8 @@ impl UnifiedVolumeBuilder {
             context_min,
             context_max,
         ));
+        self.field_postings
+            .push(BlockFieldPostings::from_quins(quins));
         let raw = encode_superblock(seq_id, quins);
         let compressed = lz4_flex::compress_prepend_size(&raw);
         self.dir_entries.push(BlockDirectoryEntry {
@@ -716,6 +823,7 @@ impl UnifiedVolumeBuilder {
     pub fn finish_to_bytes(self) -> Vec<u8> {
         let bidx_bytes = encode_bidx(&self.block_ranges);
         let field_range_bytes = encode_field_range_index(&self.field_ranges);
+        let postings_bytes = encode_postings_section(&self.field_postings);
         let block_count = self.block_ranges.len() as u64;
         let manifest_bytes = self.volume_manifest.as_deref().unwrap_or(&[]);
 
@@ -723,7 +831,8 @@ impl UnifiedVolumeBuilder {
         let manifest_offset = lex_offset + self.lex_bytes.len() as u64;
         let bidx_offset = manifest_offset + manifest_bytes.len() as u64;
         let field_range_offset = bidx_offset + bidx_bytes.len() as u64;
-        let block_dir_offset = field_range_offset + field_range_bytes.len() as u64;
+        let postings_offset = field_range_offset + field_range_bytes.len() as u64;
+        let block_dir_offset = postings_offset + postings_bytes.len() as u64;
         let block_dir_length = block_count * BlockDirectoryEntry::SIZE as u64;
         let data_offset = block_dir_offset + block_dir_length;
 
@@ -754,10 +863,20 @@ impl UnifiedVolumeBuilder {
 
         let mut reserved = [0u8; 80];
         let mut flags = FLAG_BLOCKS_LZ4 | FLAG_OBJECT_SORTED;
+        if self.publication_sanctuary || self.sanctuary_quin_count > 0 {
+            flags |= FLAG_SANCTUARY;
+        } else if self.publication_commons {
+            flags |= FLAG_PERMISSIVE_COMMONS;
+        }
         if !self.field_ranges.is_empty() {
             flags |= FLAG_FIELD_RANGES;
             reserved[16..24].copy_from_slice(&field_range_offset.to_le_bytes());
             reserved[24..32].copy_from_slice(&(field_range_bytes.len() as u64).to_le_bytes());
+        }
+        if !self.field_postings.is_empty() {
+            flags |= FLAG_FIELD_POSTINGS;
+            reserved[32..40].copy_from_slice(&postings_offset.to_le_bytes());
+            reserved[40..48].copy_from_slice(&(postings_bytes.len() as u64).to_le_bytes());
         }
         if !manifest_bytes.is_empty() {
             flags |= FLAG_VOLUME_ROOT;
@@ -796,6 +915,7 @@ impl UnifiedVolumeBuilder {
                 + manifest_bytes.len()
                 + bidx_bytes.len()
                 + field_range_bytes.len()
+                + postings_bytes.len()
                 + block_dir_length as usize
                 + self.data_blob.len()
                 + dag_bytes.len(),
@@ -805,6 +925,7 @@ impl UnifiedVolumeBuilder {
         out.extend_from_slice(manifest_bytes);
         out.extend_from_slice(&bidx_bytes);
         out.extend_from_slice(&field_range_bytes);
+        out.extend_from_slice(&postings_bytes);
         for entry in &self.dir_entries {
             // Writing to a `Vec<u8>` is infallible.
             entry.write_to(&mut out).expect("Vec<u8> write cannot fail");
@@ -842,6 +963,10 @@ impl Q42Volume {
 
     pub fn header(&self) -> &Q42VolumeHeader {
         &self.header
+    }
+
+    pub fn as_bytes(&self) -> &[u8] {
+        &self.mmap
     }
 
     pub fn lex_bytes(&self) -> &[u8] {

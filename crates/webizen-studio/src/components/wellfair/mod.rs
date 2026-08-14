@@ -1,6 +1,8 @@
 pub mod accountability_panel;
 pub mod agency_panel;
 pub mod anatomy_3d_panel;
+pub mod anatomy_constitution_form;
+pub mod anatomy_measurement_fields;
 pub mod anatomy_panel;
 pub mod assessment_panel;
 pub mod audit_panel;

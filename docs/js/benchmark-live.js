@@ -1767,3 +1767,59 @@ export async function runSparqlLive({
         graphModel,
     };
 }
+
+/** Real WASM scientific kernels — no simulated ops/s. */
+export async function runSciLive({ wasm, domain, iterations }) {
+    if (!wasm) throw new Error('WASM engine is not loaded');
+    const n = Math.max(1, Math.min(iterations || 1, 200));
+    const t0 = performance.now();
+    let sample = null;
+    let fn = null;
+    switch (domain) {
+        case 'clinical':
+            fn = wasm.clinical_risk || wasm.compute_framingham_risk_wasm;
+            sample = fn
+                ? fn(JSON.stringify({ age: 65, systolic_bp: 140, smoker: true, sex: 'M' }))
+                : null;
+            break;
+        case 'chem':
+            fn = wasm.compute_molecular_descriptors_wasm || wasm.evaluate_lipinski_wasm;
+            sample = fn ? fn(JSON.stringify({ smiles: 'CCO' })) : null;
+            break;
+        case 'bio':
+            fn = wasm.align_sequences_wasm;
+            sample = fn
+                ? fn(JSON.stringify({ query: 'ATCGATCGTTAG', target: 'ATCGATCGAAAG' }))
+                : null;
+            break;
+        case 'thermo':
+            fn = wasm.compute_thermochemistry_wasm;
+            sample = fn ? fn(JSON.stringify({ smiles: 'O' })) : null;
+            break;
+        case 'ode':
+            fn = wasm.cas_evaluate_wasm;
+            sample = fn ? fn(JSON.stringify({ expr: 'x^2', x: 2 })) : null;
+            break;
+        case 'dft':
+            fn = wasm.compute_thermochemistry_wasm;
+            sample = fn ? fn(JSON.stringify({ smiles: 'O', mode: 'dft' })) : null;
+            break;
+        default:
+            throw new Error(`Unknown science domain: ${domain}`);
+    }
+    if (!fn) {
+        throw new Error(`No WASM export for domain "${domain}" in this build`);
+    }
+    const payload = JSON.stringify({ age: 65, systolic_bp: 140, smoker: true, smiles: 'CCO', query: 'ATCG', target: 'ATCG' });
+    for (let i = 1; i < n; i++) {
+        fn(payload);
+    }
+    const elapsed = performance.now() - t0;
+    return {
+        domain,
+        iterations: n,
+        elapsedMs: elapsed,
+        opsPerSec: elapsed > 0 ? (n * 1000) / elapsed : 0,
+        sample,
+    };
+}

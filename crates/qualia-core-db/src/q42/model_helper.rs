@@ -354,7 +354,8 @@ fn make_quin(
         object,
         context,
         metadata,
-        parity: subject ^ predicate ^ object ^ context,
+        // Five-field ECC: same fold as NQuin::calculate_parity (metadata included).
+        parity: crate::NQuin::calculate_parity(subject, predicate, object, context, metadata),
     }
 }
 
@@ -433,6 +434,11 @@ mod tests {
         assert!(std::fs::read(&path).unwrap().starts_with(&Q42_MAGIC));
         let volume = Q42Volume::open(&path).unwrap();
         assert_eq!({ volume.header().version }, Q42_VERSION_V3);
+        volume
+            .verify_all_blocks()
+            .expect("canonical helper must pass five-field ECC + BIDX");
+        assert!(volume.header().flags & crate::q42_volume::FLAG_FIELD_POSTINGS != 0);
+        assert!(volume.header().flags & crate::q42_volume::FLAG_FIELD_RANGES != 0);
         assert_eq!(ModelHelper::load_beside_p64(&p64).unwrap(), Some(h));
     }
 

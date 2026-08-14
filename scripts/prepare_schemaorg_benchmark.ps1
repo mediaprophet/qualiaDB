@@ -13,8 +13,6 @@ $docsReleaseDir = Join-Path $repoRoot (Join-Path "docs/data/schemaorg" $Release)
 $baseName = "schemaorg-$Variant"
 $ntPath = Join-Path $releaseDir "$baseName.nt"
 $q42Path = Join-Path $releaseDir "$baseName.q42"
-$q42LexPath = Join-Path $releaseDir "$baseName.q42.lex"
-$q42BidxPath = Join-Path $releaseDir "$baseName.q42.bidx"
 $rawUrl = "https://raw.githubusercontent.com/schemaorg/schemaorg/main/data/releases/$Release/$baseName.nt"
 
 New-Item -ItemType Directory -Force -Path $releaseDir | Out-Null
@@ -32,9 +30,9 @@ if (-not (Test-Path $ntPath)) {
     Write-Host "NT source already present, reusing local file." -ForegroundColor DarkGray
 }
 
-Write-Host "Ingesting N-Triples into unified v3 .q42..." -ForegroundColor Yellow
+Write-Host "Ingesting N-Triples into unified v3 .q42 (embedded lexicon, no sidecars)..." -ForegroundColor Yellow
 Push-Location $repoRoot
-cargo run --release -p qualia-cli -- ingest semantic $ntPath
+cargo run --release -p qualia-cli -- import $ntPath $q42Path
 Pop-Location
 
 if (Test-Path $ntPath) {
@@ -49,12 +47,10 @@ if (Test-Path $q42Path) {
 Write-Host "Syncing benchmark artifacts into docs/data for GitHub Pages and local site testing..." -ForegroundColor Yellow
 Copy-Item -Force $ntPath $docsReleaseDir
 Copy-Item -Force $q42Path $docsReleaseDir
-if (Test-Path $q42LexPath) {
-    Copy-Item -Force $q42LexPath $docsReleaseDir
-}
-if (Test-Path $q42BidxPath) {
-    Copy-Item -Force $q42BidxPath $docsReleaseDir
-}
+Remove-Item -Force (Join-Path $releaseDir "$baseName.q42.lex") -ErrorAction SilentlyContinue
+Remove-Item -Force (Join-Path $releaseDir "$baseName.q42.bidx") -ErrorAction SilentlyContinue
+Remove-Item -Force (Join-Path $docsReleaseDir "$baseName.q42.lex") -ErrorAction SilentlyContinue
+Remove-Item -Force (Join-Path $docsReleaseDir "$baseName.q42.bidx") -ErrorAction SilentlyContinue
 
 Write-Host ""
 Write-Host "Next steps:" -ForegroundColor Green

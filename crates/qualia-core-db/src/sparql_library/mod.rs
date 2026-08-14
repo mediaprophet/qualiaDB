@@ -1,3 +1,30 @@
+pub mod range_bind;
+pub mod range_hash_join;
+pub mod range_join_select;
+pub mod range_optional;
+pub mod range_select_apply;
+pub mod range_union;
+pub use range_bind::{
+    apply_bind, execute_range_bind_page_into, execute_range_volume_set_bind_page_into,
+    Q42RangeBindPlan, Q42RangeBindState, Q42RangeVolumeSetBindState,
+};
+pub use range_hash_join::{
+    execute_range_hash_join_page_into, execute_range_volume_set_hash_join_page_into,
+    Q42RangeHashJoinPlan, Q42RangeHashJoinSlot, Q42RangeHashJoinState,
+    Q42RangeVolumeSetHashJoinState,
+};
+pub use range_join_select::{
+    execute_range_join_select_page_into, execute_range_volume_set_join_select_page_into,
+    Q42RangeJoinSelectPlan, Q42RangeJoinSelectState, Q42RangeVolumeSetJoinSelectState,
+};
+pub use range_optional::{
+    execute_range_optional_page_into, execute_range_volume_set_optional_page_into,
+    Q42RangeOptionalPlan, Q42RangeOptionalState, Q42RangeVolumeSetOptionalState,
+};
+pub use range_union::{
+    execute_range_union_page_into, execute_range_volume_set_union_page_into, Q42RangeUnionPlan,
+    Q42RangeUnionState, Q42RangeVolumeSetUnionState,
+};
 pub mod external_sort;
 pub mod geosparql;
 /// Immersive SPARQL (QISP) profile — Phase 2 typed values, dense-asset registry,

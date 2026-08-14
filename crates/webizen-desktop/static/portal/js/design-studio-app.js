@@ -118,6 +118,10 @@ async function loadAnatomyBodyFromHost(model) {
       );
     }
 
+    if (body.fit && typeof qualiaPortal.set_body_fit_json === "function") {
+      qualiaPortal.set_body_fit_json(JSON.stringify(body.fit));
+    }
+
     // wasm-bindgen expects a real JS Array of objects, not a plain array of records only.
     const organArr = organs;
     const summary = qualiaPortal.load_body_organs_colored(organArr);

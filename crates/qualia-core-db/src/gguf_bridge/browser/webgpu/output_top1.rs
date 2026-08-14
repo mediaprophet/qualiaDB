@@ -3,7 +3,7 @@
 //! Logits stay on-device. Each vocabulary chunk is reduced to one candidate
 //! per 1024-logit block and only the bounded candidate pairs are mapped.
 
-use crate::gguf_bridge::{QTensorEngine, StreamingArgmaxResult, VOCAB_CHUNK_ROWS, await_wgpu_map};
+use crate::gguf_bridge::{await_wgpu_map, QTensorEngine, StreamingArgmaxResult, VOCAB_CHUNK_ROWS};
 
 const PARAM_STRIDE: usize = 256;
 const MAX_CHUNKS: usize = 32;

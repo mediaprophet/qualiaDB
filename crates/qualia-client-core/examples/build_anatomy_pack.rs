@@ -3,6 +3,8 @@
 //! Usage:
 //!   cargo run -p qualia-client-core --example build_anatomy_pack -- list [male|female|both]
 //!   cargo run -p qualia-client-core --example build_anatomy_pack -- build [male|female|both] [out_dir]
+//!   cargo run -p qualia-client-core --example build_anatomy_pack -- workshop [male|female] <export_dir> [out_path]
+//!   cargo run -p qualia-client-core --example build_anatomy_pack -- systems
 //!
 //! `list`  — discover every reference organ for the model(s) and print each
 //!           filename + normalised token (use this to curate the token set).
@@ -41,6 +43,45 @@ fn main() {
                         }
                     }
                     Err(e) => eprintln!("discover {} failed: {e}", model.as_str()),
+                }
+            }
+        }
+        "systems" => {
+            print!("{}", wellfare_core::anatomy::seed_system_coverage_markdown());
+            println!(
+                "\nAuthority is Qualia (`wellfare_core::anatomy::seed_system_coverage`), not the workshop Python CLI."
+            );
+        }
+        "workshop" => {
+            let model = match args.get(2).map(|s| s.as_str()) {
+                Some("female") => AnatomyModel::Female,
+                _ => AnatomyModel::Male,
+            };
+            let dir = args
+                .get(3)
+                .cloned()
+                .unwrap_or_else(|| r"C:\Projects\anatomy\export".to_string());
+            let out = args.get(4).cloned().unwrap_or_else(|| {
+                format!("target/anatomy-pack/workshop-{}.hmc", model.as_str())
+            });
+            match qualia_client_core::wellfair::workshop_ingest::build_workshop_pack(
+                &dir, model, &out,
+            ) {
+                Ok(r) => {
+                    println!("== workshop packed {} ==", r.model);
+                    println!("  file        : {}", r.out_path);
+                    println!("  organs      : {}", r.organs_packed);
+                    println!("  .10d bytes  : {}", r.total_10d_bytes);
+                    println!("  keys        : {}", r.packed_keys.join(", "));
+                    if !r.failed.is_empty() {
+                        for (k, e) in &r.failed {
+                            eprintln!("  FAILED {k}: {e}");
+                        }
+                    }
+                }
+                Err(e) => {
+                    eprintln!("workshop ingest failed: {e}");
+                    std::process::exit(1);
                 }
             }
         }

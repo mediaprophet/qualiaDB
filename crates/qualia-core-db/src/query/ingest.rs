@@ -21,11 +21,205 @@ use rio_turtle::{NTriplesParser, TurtleParser};
 use rio_xml::RdfXmlParser;
 use std::collections::HashMap;
 use std::fs::File;
-use std::io::BufReader;
+use std::io::{self, BufReader, Cursor};
+use std::path::Path;
 use std::thread;
 use std::time::Instant;
 use sysinfo::System;
 use tempfile::TempDir;
+
+/// Base IRI for relative terms / empty `xml:base` in catalog RDF.
+pub fn catalog_base_iri(path: &Path) -> Option<oxiri::Iri<String>> {
+    let stem = path.file_stem()?.to_str()?.to_ascii_lowercase();
+    let iri = match stem.as_str() {
+        "earl" => "http://www.w3.org/ns/earl#".to_string(),
+        "music" => "http://purl.org/ontology/mo/".to_string(),
+        other => format!("https://www.w3.org/ns/{other}#"),
+    };
+    oxiri::Iri::parse(iri).ok()
+}
+
+/// Expand Turtle `prefix:` empty local names (`dc:`, `foaf:`, `ns1:`) to IRIs.
+///
+/// Rio rejects those tokens even though Turtle 1.1 allows them. Catalog
+/// ontologies (Music Ontology in particular) use them as namespace objects.
+pub fn expand_empty_turtle_prefixed_names(src: &str) -> String {
+    let mut prefixes: Vec<(String, String)> = Vec::new();
+    for line in src.lines() {
+        let trimmed = line.trim();
+        let rest = trimmed
+            .strip_prefix("@prefix ")
+            .or_else(|| trimmed.strip_prefix("PREFIX "));
+        let Some(rest) = rest else {
+            continue;
+        };
+        let rest = rest.trim();
+        let Some(colon) = rest.find(':') else {
+            continue;
+        };
+        let name = rest[..colon].trim();
+        let Some(start) = rest[colon + 1..].find('<') else {
+            continue;
+        };
+        let after = &rest[colon + 1 + start + 1..];
+        let Some(end) = after.find('>') else {
+            continue;
+        };
+        prefixes.push((name.to_string(), after[..end].to_string()));
+    }
+    prefixes.sort_by(|a, b| b.0.len().cmp(&a.0.len()));
+    if prefixes.is_empty() {
+        return src.to_string();
+    }
+
+    let bytes = src.as_bytes();
+    let mut out = String::with_capacity(src.len() + 256);
+    let mut i = 0;
+    let mut in_iri = false;
+    let mut in_string = false;
+    let mut long_string = false;
+    let mut in_prefix_decl = false;
+    while i < bytes.len() {
+        let c = bytes[i] as char;
+        if !in_iri && !in_string && starts_with_keyword(bytes, i, b"@prefix") {
+            in_prefix_decl = true;
+        } else if !in_iri && !in_string && starts_with_keyword(bytes, i, b"PREFIX") {
+            in_prefix_decl = true;
+        }
+        if in_prefix_decl {
+            out.push(c);
+            if c == '>' {
+                in_prefix_decl = false;
+            }
+            i += 1;
+            continue;
+        }
+        if in_iri {
+            out.push(c);
+            if c == '>' {
+                in_iri = false;
+            }
+            i += 1;
+            continue;
+        }
+        if in_string {
+            out.push(c);
+            if c == '\\' && i + 1 < bytes.len() {
+                out.push(bytes[i + 1] as char);
+                i += 2;
+                continue;
+            }
+            if long_string
+                && c == '"'
+                && i + 2 < bytes.len()
+                && bytes[i + 1] == b'"'
+                && bytes[i + 2] == b'"'
+            {
+                out.push('"');
+                out.push('"');
+                i += 3;
+                in_string = false;
+                long_string = false;
+                continue;
+            }
+            if !long_string && c == '"' {
+                in_string = false;
+            }
+            i += 1;
+            continue;
+        }
+        if c == '<' {
+            in_iri = true;
+            out.push(c);
+            i += 1;
+            continue;
+        }
+        if c == '"' {
+            in_string = true;
+            long_string = i + 2 < bytes.len() && bytes[i + 1] == b'"' && bytes[i + 2] == b'"';
+            out.push(c);
+            i += 1;
+            continue;
+        }
+        if let Some((name, iri)) = prefixes.iter().find(|(name, _)| {
+            let start = i;
+            let end = start + name.len();
+            bytes.get(end) == Some(&b':')
+                && bytes.get(start..end) == Some(name.as_bytes())
+                && (start == 0 || !is_prefix_name_char(bytes[start - 1]))
+        }) {
+            let local_start = i + name.len() + 1;
+            if empty_local_name_follows(bytes, local_start) {
+                out.push('<');
+                out.push_str(iri);
+                out.push('>');
+                i = local_start;
+                continue;
+            }
+            if let Some(hash_at) = hash_terminated_local_name(bytes, local_start) {
+                out.push('<');
+                out.push_str(iri);
+                out.push_str(&src[local_start..=hash_at]);
+                out.push('>');
+                i = hash_at + 1;
+                continue;
+            }
+        }
+        out.push(c);
+        i += 1;
+    }
+    out
+}
+
+fn starts_with_keyword(bytes: &[u8], i: usize, keyword: &[u8]) -> bool {
+    bytes.get(i..i + keyword.len()) == Some(keyword)
+        && (i == 0 || !is_prefix_name_char(bytes[i - 1]))
+        && match bytes.get(i + keyword.len()) {
+            Some(b) if is_prefix_name_char(*b) => false,
+            _ => true,
+        }
+}
+
+fn is_prefix_name_char(b: u8) -> bool {
+    b.is_ascii_alphanumeric() || b == b'_' || b == b'-'
+}
+
+fn repair_rdfxml_empty_base(src: &str, base: &str) -> String {
+    src.replace("xml:base=\"\"", &format!("xml:base=\"{base}\""))
+        .replace("xml:base=''", &format!("xml:base='{base}'"))
+}
+
+fn empty_local_name_follows(bytes: &[u8], i: usize) -> bool {
+    match bytes.get(i) {
+        None => true,
+        Some(b) => matches!(*b, b' ' | b'\t' | b'\r' | b'\n' | b',' | b';' | b'.' | b')' | b']'),
+    }
+}
+
+fn hash_terminated_local_name(bytes: &[u8], start: usize) -> Option<usize> {
+    let mut i = start;
+    if i >= bytes.len() || !is_prefix_name_char(bytes[i]) {
+        return None;
+    }
+    i += 1;
+    while i < bytes.len() && is_prefix_name_char(bytes[i]) {
+        i += 1;
+    }
+    if bytes.get(i) == Some(&b'#') {
+        Some(i)
+    } else {
+        None
+    }
+}
+
+fn ingest_scratch_dir() -> io::Result<TempDir> {
+    if let Some(parent) = std::env::var_os("QUALIA_INGEST_SCRATCH") {
+        std::fs::create_dir_all(&parent)?;
+        TempDir::new_in(parent)
+    } else {
+        TempDir::new()
+    }
+}
 
 /// How much of the source graph the `.q42` retains.
 ///
@@ -193,7 +387,7 @@ fn streaming_import_rdf_with_mode_inner(
     // 4. Drain hashed Quins into bounded external-sort runs instead of one
     // whole-graph Vec. The TempDir owns every run and cleans it on success,
     // error, or unwind.
-    let sorter_temp = TempDir::new()?;
+    let sorter_temp = ingest_scratch_dir()?;
     let sorter_path = sorter_temp.path().to_owned();
     let collector_handle = thread::spawn(
         move || -> std::io::Result<crate::external_sort::ExternalSorter> {
@@ -266,26 +460,36 @@ fn streaming_import_rdf_with_mode_inner(
     };
 
     let path_lower = in_path.to_lowercase();
+    let base_iri = catalog_base_iri(Path::new(in_path));
+    let mut parse_error: Option<String> = None;
     if path_lower.ends_with(".rdf") || path_lower.ends_with(".xml") || path_lower.ends_with(".owl")
     {
         log::info!("Ontology Ingest: parsing RDF/XML source {}", in_path);
-        let mut parser = RdfXmlParser::new(buf_reader, None);
+        let raw = std::fs::read_to_string(in_path)?;
+        let repaired = if let Some(base) = base_iri.as_ref() {
+            repair_rdfxml_empty_base(&raw, base.as_str())
+        } else {
+            raw
+        };
+        let mut parser = RdfXmlParser::new(Cursor::new(repaired), base_iri.clone());
         if let Err(e) = parser.parse_all(&mut on_triple) {
-            eprintln!("RDF/XML Parsing Error: {}", e);
+            parse_error = Some(format!("RDF/XML: {e}"));
         }
         log::info!("Ontology Ingest: completed RDF/XML parse for {}", in_path);
     } else if path_lower.ends_with(".ttl") {
         log::info!("Ontology Ingest: parsing Turtle source {}", in_path);
-        let mut parser = TurtleParser::new(buf_reader, None);
+        let raw = std::fs::read_to_string(in_path)?;
+        let expanded = expand_empty_turtle_prefixed_names(&raw);
+        let mut parser = TurtleParser::new(Cursor::new(expanded), base_iri.clone());
         if let Err(e) = parser.parse_all(&mut on_triple) {
-            eprintln!("Turtle Parsing Error: {}", e);
+            parse_error = Some(format!("Turtle: {e}"));
         }
         log::info!("Ontology Ingest: completed Turtle parse for {}", in_path);
     } else if path_lower.ends_with(".nt") {
         log::info!("Ontology Ingest: parsing N-Triples source {}", in_path);
         let mut parser = NTriplesParser::new(buf_reader);
         if let Err(e) = parser.parse_all(&mut on_triple) {
-            eprintln!("N-Triples Parsing Error: {}", e);
+            parse_error = Some(format!("N-Triples: {e}"));
         }
         log::info!("Ontology Ingest: completed N-Triples parse for {}", in_path);
     } else if path_lower.ends_with(".n3") {
@@ -339,7 +543,7 @@ fn streaming_import_rdf_with_mode_inner(
         };
 
         if let Err(e) = parser.parse_all(on_n3_event) {
-            eprintln!("N3 Logic Parsing Error: {}", e);
+            parse_error = Some(format!("N3: {e}"));
         }
         let fired = webizen.fire_registered_rules(crate::q_hash("q42:ingestSession"));
         println!(
@@ -353,11 +557,21 @@ fn streaming_import_rdf_with_mode_inner(
             fired
         );
     } else {
-        eprintln!("Unsupported file extension. Expected .rdf, .xml, .ttl, .nt, or .n3");
-        log::warn!(
-            "Ontology Ingest: unsupported file extension for {}",
-            in_path
-        );
+        drop(tx_raw);
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            format!("unsupported RDF extension for {in_path}; expected .rdf, .xml, .owl, .ttl, .nt, or .n3"),
+        ));
+    }
+
+    if let Some(error) = parse_error {
+        drop(tx_raw);
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            format!(
+                "RDF parse failed after {triples_read} triples in {in_path}: {error}"
+            ),
+        ));
     }
 
     // Drop the main sender so workers know to terminate
@@ -585,5 +799,75 @@ mod tests {
         let volume = crate::q42_volume::Q42Volume::open(&output).unwrap();
         assert_eq!(volume.block_count(), 1);
         assert!(volume.lex_view().unwrap().entry_count() >= 3);
+    }
+
+    #[test]
+    fn empty_turtle_prefixed_names_expand_to_iris() {
+        let src = "@prefix dc: <http://purl.org/dc/terms/> .\n@prefix ns1: <http://purl.org/ontology/mo/> .\n<http://ex/s> rdfs:seeAlso dc: ;\n  rdfs:isDefinedBy ns1: .\n";
+        let expanded = expand_empty_turtle_prefixed_names(src);
+        assert!(expanded.contains("<http://purl.org/dc/terms/>"));
+        assert!(expanded.contains("<http://purl.org/ontology/mo/>"));
+        assert!(!expanded.contains(" dc: ;"));
+        assert!(!expanded.contains(" ns1: ."));
+    }
+
+    #[test]
+    fn turtle_with_empty_prefix_names_ingests() {
+        let dir = TempDir::new().unwrap();
+        let input = dir.path().join("music-mini.ttl");
+        let output = dir.path().join("music-mini.q42");
+        std::fs::write(
+            &input,
+            "@prefix dc: <http://purl.org/dc/terms/> .\n\
+             @prefix ns1: <http://purl.org/ontology/mo/> .\n\
+             @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .\n\
+             <http://purl.org/ontology/mo/Track> rdfs:isDefinedBy ns1: .\n\
+             <http://purl.org/ontology/mo/> dc:title \"The Music Ontology\" .\n",
+        )
+        .unwrap();
+        let written =
+            streaming_import_rdf(input.to_str().unwrap(), output.to_str().unwrap()).unwrap();
+        assert!(written >= 1, "expected at least one SuperBlock, got {written}");
+        let report = crate::q42_volume::Q42InspectReport::from_path(&output).unwrap();
+        assert!(!report.lexicon_has_no_terms);
+        assert!(report.flags & crate::q42_volume::FLAG_PERMISSIVE_COMMONS != 0);
+    }
+
+    #[test]
+    fn rdfxml_empty_xml_base_ingests_with_catalog_base() {
+        let dir = TempDir::new().unwrap();
+        let input = dir.path().join("earl.rdf");
+        let output = dir.path().join("earl.q42");
+        std::fs::write(
+            &input,
+            concat!(
+                "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n",
+                "<rdf:RDF xml:base=\"\"\n",
+                "         xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\"\n",
+                "         xmlns:rdfs=\"http://www.w3.org/2000/01/rdf-schema#\">\n",
+                "  <rdf:Description rdf:about=\"#Assertion\">\n",
+                "    <rdfs:label xml:lang=\"en\">Assertion</rdfs:label>\n",
+                "  </rdf:Description>\n",
+                "</rdf:RDF>\n",
+            ),
+        )
+        .unwrap();
+        let written = streaming_import_rdf(input.to_str().unwrap(), output.to_str().unwrap())
+            .expect("empty xml:base must not fail closed after catalog base is applied");
+        assert!(written >= 1);
+        let report = crate::q42_volume::Q42InspectReport::from_path(&output).unwrap();
+        assert!(!report.lexicon_has_no_terms);
+    }
+
+    #[test]
+    fn broken_turtle_fails_closed() {
+        let dir = TempDir::new().unwrap();
+        let input = dir.path().join("bad.ttl");
+        let output = dir.path().join("bad.q42");
+        std::fs::write(&input, "@prefix broken\n").unwrap();
+        let err = streaming_import_rdf(input.to_str().unwrap(), output.to_str().unwrap())
+            .unwrap_err();
+        assert_eq!(err.kind(), io::ErrorKind::InvalidData);
+        assert!(err.to_string().contains("parse failed"));
     }
 }

@@ -96,11 +96,7 @@ fn write_empty_coff_object(override_dir: &Path, empty_o: &Path) -> Result<(), St
 
 fn find_host_gcc() -> String {
     // Prefer the exact triple rustc uses on this host, then plain `gcc`.
-    const CANDIDATES: &[&str] = &[
-        "x86_64-w64-mingw32-gcc",
-        "gcc",
-        "cc",
-    ];
+    const CANDIDATES: &[&str] = &["x86_64-w64-mingw32-gcc", "gcc", "cc"];
     for name in CANDIDATES {
         if Command::new(name)
             .arg("-dumpversion")

@@ -80,8 +80,7 @@ pub fn finish_setup(app: tauri::AppHandle) -> Result<SetupState, String> {
     let state = api::finish_setup()?;
     // First-run defers the optional WGPU diffusion runtime so a driver fault cannot
     // kill the setup window. Start it now that foundations are saved.
-    if let Some(app_state) =
-        app.try_state::<std::sync::Arc<qualia_client_core::state::AppState>>()
+    if let Some(app_state) = app.try_state::<std::sync::Arc<qualia_client_core::state::AppState>>()
     {
         crate::runtime::ensure_runtime_started(&app, app_state.inner().clone());
     }
@@ -91,8 +90,8 @@ pub fn finish_setup(app: tauri::AppHandle) -> Result<SetupState, String> {
 // ── Person / apparatus identity (person ≠ machine ≠ OS account) ───────────────
 
 #[command]
-pub fn get_identity_plane() -> Result<qualia_client_core::identity_plane::IdentityPlaneSnapshot, String>
-{
+pub fn get_identity_plane(
+) -> Result<qualia_client_core::identity_plane::IdentityPlaneSnapshot, String> {
     api::get_identity_plane()
 }
 

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding='UTF-8'?>
-<rdf:RDF xml:base=""
+<rdf:RDF xml:base="http://www.w3.org/ns/earl#"
          xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
          xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
          xmlns:owl="http://www.w3.org/2002/07/owl"
@@ -7,7 +7,7 @@
 
 <!--// ### ontology header ### //-->
 
-<owl:Ontology rdf:about="">
+<owl:Ontology rdf:about="http://www.w3.org/ns/earl#">
   <rdfs:label xml:lang="en">Evaluation and Report Language (EARL) 1.0 Schema</rdfs:label>
   <rdfs:comment xml:lang="en">Formal schema of the Evaluation and Report Language (EARL) 1.0</rdfs:comment>
   <owl:versionInfo xml:lang="en">Editor's Working Draft 10 June 2009</owl:versionInfo>

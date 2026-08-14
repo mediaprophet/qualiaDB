@@ -122,13 +122,17 @@ pub struct Q42RangeVolumeSetNestedLoopJoinState {
 
 impl Q42RangeNestedLoopJoinPlan {
     pub fn from_execution_plan(plan: &ExecutionPlan) -> Result<Self, String> {
-        if plan.operator_count == 0 || plan.root_operator as usize >= plan.operator_count as usize {
+        Self::from_join_root(plan, plan.root_operator)
+    }
+
+    pub fn from_join_root(plan: &ExecutionPlan, root: OperatorId) -> Result<Self, String> {
+        if plan.operator_count == 0 || root as usize >= plan.operator_count as usize {
             return Err("range join requires a non-empty execution plan".to_string());
         }
         let PhysicalOperatorType::NestedLoopJoin { left, right, .. } =
-            plan.operators[plan.root_operator as usize].operator_type
+            plan.operators[root as usize].operator_type
         else {
-            return Err("range join currently requires a root NestedLoopJoin".to_string());
+            return Err("range join currently requires a NestedLoopJoin".to_string());
         };
         let triple = |operator: OperatorId| -> Result<Q42RangeTriplePattern, String> {
             let Some(entry) = plan.operators.get(operator as usize) else {

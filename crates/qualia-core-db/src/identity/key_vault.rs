@@ -217,8 +217,7 @@ pub fn generate_webid_tls_cert_for_seed(
     did_uri: &str,
 ) -> Result<(String, String), String> {
     use rcgen::{
-        CertificateParams, DnType, ExtendedKeyUsagePurpose, IsCa, KeyPair, KeyUsagePurpose,
-        SanType,
+        CertificateParams, DnType, ExtendedKeyUsagePurpose, IsCa, KeyPair, KeyUsagePurpose, SanType,
     };
 
     if did_uri.trim().is_empty() {
@@ -233,9 +232,7 @@ pub fn generate_webid_tls_cert_for_seed(
         CertificateParams::new(Vec::<String>::new()).map_err(|e| format!("cert params: {e}"))?;
     params.distinguished_name.push(DnType::CommonName, did_uri);
     params.subject_alt_names = vec![SanType::URI(
-        did_uri
-            .try_into()
-            .map_err(|e| format!("SAN URI: {e}"))?,
+        did_uri.try_into().map_err(|e| format!("SAN URI: {e}"))?,
     )];
     params.is_ca = IsCa::NoCa;
     params.key_usages = vec![
@@ -284,9 +281,7 @@ fn format_ed25519_pkcs8_pem(seed: &[u8; 32]) -> String {
     // version INTEGER 0
     body.extend_from_slice(&[0x02, 0x01, 0x00]);
     // AlgorithmIdentifier SEQUENCE { OID 1.3.101.112 }
-    body.extend_from_slice(&[
-        0x30, 0x05, 0x06, 0x03, 0x2b, 0x65, 0x70,
-    ]);
+    body.extend_from_slice(&[0x30, 0x05, 0x06, 0x03, 0x2b, 0x65, 0x70]);
     // privateKey OCTET STRING wrapping inner OCTET STRING
     body.push(0x04);
     body.push(inner_octet.len() as u8);
@@ -309,7 +304,6 @@ fn format_ed25519_pkcs8_pem(seed: &[u8; 32]) -> String {
 }
 
 impl KeyVault {
-
     /// Issues a cryptographically signed Semantic Token for an installed qapp.
     /// The token enforces gatekeeper boundary policies (which shapes the qapp can access).
     pub fn issue_qapp_token(

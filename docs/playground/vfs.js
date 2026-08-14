@@ -9,7 +9,8 @@
  * Q42 v3 unified volume (preferred):
  *   [0..256)       Q42VolumeHeader (magic "Q42\\0", version 3)
  *   [lex_offset]   Q42LEX blob (structural vocabulary)
- *   [bidx_offset]  BIDX blob (10D block routing index)
+ *   [bidx_offset]  BIDX blob (object-range index)
+ *   [reserved FIDX/PIDX]  optional field-range and postings (flags 0x0008 / 0x0010)
  *   [block_dir]    BlockDirectoryEntry × block_count (16 bytes each)
  *   [data_offset]  LZ4-compressed SuperBlock payloads
  *
@@ -190,6 +191,13 @@ const Q42_MAGIC4      = 0x00;
 const Q42_VERSION_V3  = 3;
 const HEADER_SIZE     = 256;
 const DIR_ENTRY_SIZE  = 16;
+const FLAG_BLOCKS_LZ4 = 0x0001;
+const FLAG_OBJECT_SORTED = 0x0002;
+const FLAG_VOLUME_ROOT = 0x0004;
+const FLAG_FIELD_RANGES = 0x0008;
+const FLAG_FIELD_POSTINGS = 0x0010;
+const FLAG_PERMISSIVE_COMMONS = 0x0020;
+const FLAG_SANCTUARY = 0x0040;
 /** Initial Range fetch — covers lex+bidx+block_dir for typical ontology volumes. */
 const PREAMBLE_PROBE  = 8191;
 
@@ -208,7 +216,7 @@ function hasQ42V3Magic(bytes) {
     return parseQ42Header(dv) !== null;
 }
 
-function parseQ42Header(dv) {
+export function parseQ42Header(dv) {
     if (dv.byteLength < HEADER_SIZE) return null;
     if (dv.getUint8(0) !== Q42_MAGIC || dv.getUint8(1) !== Q42_MAGIC2 ||
         dv.getUint8(2) !== Q42_MAGIC3 || dv.getUint8(3) !== Q42_MAGIC4) {
@@ -217,9 +225,13 @@ function parseQ42Header(dv) {
     const version = dv.getUint16(4, true);
     if (version !== Q42_VERSION_V3) return null;
 
+    const flags = dv.getUint16(6, true);
+    // Named v3 fields occupy 0..176; FIDX/PIDX live in _reserved[16..48] (file 192..224).
+    const reserved = 176;
     return {
         version,
-        flags:            dv.getUint16(6, true),
+        flags,
+        flagNames: decodeFlagNames(flags),
         lexOffset:        Number(dv.getBigUint64(8,  true)),
         lexLength:        Number(dv.getBigUint64(16, true)),
         bidxOffset:       Number(dv.getBigUint64(24, true)),
@@ -231,7 +243,29 @@ function parseQ42Header(dv) {
         blockCount:       Number(dv.getBigUint64(72, true)),
         blockSize:        dv.getUint32(80, true),
         quinsPerBlock:    dv.getUint32(84, true),
+        merkleRoot:       Array.from(new Uint8Array(dv.buffer, dv.byteOffset + 104, 32)),
+        fidxOffset:       flags & FLAG_FIELD_RANGES ? Number(dv.getBigUint64(reserved + 16, true)) : 0,
+        fidxLength:       flags & FLAG_FIELD_RANGES ? Number(dv.getBigUint64(reserved + 24, true)) : 0,
+        pidxOffset:       flags & FLAG_FIELD_POSTINGS ? Number(dv.getBigUint64(reserved + 32, true)) : 0,
+        pidxLength:       flags & FLAG_FIELD_POSTINGS ? Number(dv.getBigUint64(reserved + 40, true)) : 0,
+        hasFieldRanges:   (flags & FLAG_FIELD_RANGES) !== 0,
+        hasFieldPostings: (flags & FLAG_FIELD_POSTINGS) !== 0,
+        isVolumeRoot:     (flags & FLAG_VOLUME_ROOT) !== 0,
+        isCommons:        (flags & FLAG_PERMISSIVE_COMMONS) !== 0,
+        isSanctuary:      (flags & FLAG_SANCTUARY) !== 0,
     };
+}
+
+function decodeFlagNames(flags) {
+    const names = [];
+    if (flags & FLAG_BLOCKS_LZ4) names.push('lz4');
+    if (flags & FLAG_OBJECT_SORTED) names.push('object-sorted');
+    if (flags & FLAG_VOLUME_ROOT) names.push('volume-root');
+    if (flags & FLAG_FIELD_RANGES) names.push('field-ranges');
+    if (flags & FLAG_FIELD_POSTINGS) names.push('field-postings');
+    if (flags & FLAG_PERMISSIVE_COMMONS) names.push('permissive-commons');
+    if (flags & FLAG_SANCTUARY) names.push('sanctuary');
+    return names;
 }
 
 /**
@@ -440,7 +474,7 @@ export function decompressLz4Stream(raw) {
 
 export class VFS {
     /**
-     * @param {string}       remoteUrl    — URL of the hosted .q42 (or .c.q42) file
+     * @param {string}       remoteUrl    — URL of the hosted unified v3 .q42
      * @param {string}       [lexUrl]     — URL of the .q42-lex side-car
      * @param {boolean}      [compressed] — true when remoteUrl is an LZ4 block stream
      * @param {string|null}  [bidxUrl]    — URL of the .q42.bidx block-index side-car
@@ -478,6 +512,7 @@ export class VFS {
         /** True when lex+bidx were parsed from the embedded v3 preamble. */
         this._embeddedPreamble = false;
         this._volumeV3       = false;
+        this._volumeHeader   = null;
         this._telemetry      = { netRequests: 0, opfsHits: 0, lastFaultMs: 0, totalFaultMs: 0 };
     }
 
@@ -540,6 +575,7 @@ export class VFS {
     /** True when this volume uses the v3 unified format (embedded lex/bidx). */
     get embeddedPreamble() { return this._embeddedPreamble; }
     get volumeV3() { return this._volumeV3; }
+    get volumeHeader() { return this._volumeHeader; }
 
     /** True once the BIDX has been loaded and `lookupBlocks()` is operative. */
     get bidxLoaded() { return this._bidxLoaded; }
@@ -656,9 +692,12 @@ export class VFS {
 
         onProgress?.('Dataset header ready', 62);
         this._opfsCacheStatus.totalBytes = this._totalBytes;
+        this._volumeHeader = header;
         console.log(
             `[VFS] v3 preamble: lex=${header.lexLength} B, bidx=${header.bidxLength} B,` +
-            ` ${header.blockCount} blocks, data@${header.dataOffset}` +
+            ` fidx=${header.fidxLength} B, pidx=${header.pidxLength} B,` +
+            ` ${header.blockCount} blocks, flags=${header.flagNames.join('|') || 'none'},` +
+            ` data@${header.dataOffset}` +
             ` (${(this._totalBytes / 1024).toFixed(1)} KB total)` +
             (this._opfsCacheStatus.complete ? ' · OPFS cache hit' : '')
         );

@@ -651,10 +651,12 @@ impl WebizenHostApi {
         elevation_deg: f64,
     ) -> Result<webizen_render::scene_contract::RenderScene, String> {
         let report = self.compute_anatomy_view("person", 2)?;
-        Ok(super::super::anatomy_render::body_scene(
+        let fit = self.body_fit();
+        Ok(super::super::anatomy_render::body_scene_with_fit(
             &report,
             azimuth_deg,
             elevation_deg,
+            &fit,
         ))
     }
 }

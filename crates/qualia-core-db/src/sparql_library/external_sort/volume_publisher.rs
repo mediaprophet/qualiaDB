@@ -7,8 +7,8 @@ use std::io::{self, BufReader};
 use std::path::{Path, PathBuf};
 
 use crate::q42_volume::{
-    root_relative_path, write_unified_volume, write_volume_root, Q42LexiconSegment,
-    Q42VolumeManifest, Q42VolumeSegment, StreamingQ42VolumeWriter,
+    root_relative_path, Q42LexiconSegment, Q42VolumeManifest, Q42VolumeSegment,
+    StreamingQ42VolumeWriter,
 };
 use crate::{NQuin, QUINS_PER_BLOCK};
 
@@ -27,6 +27,14 @@ pub struct Q42VolumePublishStats {
 
 fn invalid(message: impl Into<String>) -> io::Error {
     io::Error::new(io::ErrorKind::InvalidInput, message.into())
+}
+
+/// Catalog ontologies (Pages / Commons ingest). Sanctuary bits on a Quin
+/// still win inside the writer.
+fn new_catalog_writer(lex: &HashMap<u64, String>) -> io::Result<StreamingQ42VolumeWriter> {
+    let mut writer = StreamingQ42VolumeWriter::new(lex)?;
+    writer.declare_permissive_commons();
+    Ok(writer)
 }
 
 impl ExternalSorter {
@@ -97,7 +105,7 @@ impl ExternalSorter {
         }
 
         let empty_lex = HashMap::new();
-        let mut writer = Some(StreamingQ42VolumeWriter::new(&empty_lex)?);
+        let mut writer = Some(new_catalog_writer(&empty_lex)?);
         let mut block_buffer = Vec::with_capacity(QUINS_PER_BLOCK);
         let mut segments = Vec::new();
         let mut segment_index = 0usize;
@@ -150,7 +158,7 @@ impl ExternalSorter {
             segments,
             lexicon_segments,
         };
-        write_volume_root(root, &manifest)?;
+        crate::q42_volume::write_volume_root_for_commons(root, &manifest)?;
         let root_bytes = std::fs::metadata(root)?.len();
         if root_bytes > max_segment_bytes {
             return Err(invalid(
@@ -219,7 +227,9 @@ fn finish_lexicon_segment(
     max_segment_bytes: u64,
 ) -> io::Result<Q42LexiconSegment> {
     let path = lexicon_segment_path(root, index)?;
-    write_unified_volume(&path, lexicon, &[], &[])?;
+    let mut writer = StreamingQ42VolumeWriter::new(lexicon)?;
+    writer.declare_permissive_commons();
+    writer.finish(&path)?;
     if std::fs::metadata(&path)?.len() > max_segment_bytes {
         return Err(invalid(
             "a single Q42 lexicon shard exceeds the physical segment cap",
@@ -247,7 +257,7 @@ fn publish_block(
         let complete = writer.take().expect("segment writer must be present");
         segments.push(finish_segment(complete, root, *segment_index)?);
         *segment_index += 1;
-        *writer = Some(StreamingQ42VolumeWriter::new(empty_lex)?);
+        *writer = Some(new_catalog_writer(empty_lex)?);
     }
     let current = writer.as_mut().expect("segment writer must be present");
     current.push_block(current.block_count(), block)
@@ -322,6 +332,10 @@ mod tests {
         assert_eq!(root_volume.lex_view().unwrap().entry_count(), 0);
         assert_eq!(manifest.lexicon_segments.len(), 1);
         let set = Q42VolumeSet::open_root(&root).unwrap();
+        assert_ne!(
+            root_volume.header().flags & crate::q42_volume::FLAG_PERMISSIVE_COMMONS,
+            0
+        );
         assert_eq!(set.lookup_hash(7), Some("urn:q42:shared-term"));
         assert_eq!(
             crate::q42_lex::Q42Lexicon::load_for_q42(&root)
@@ -330,6 +344,34 @@ mod tests {
             Some("urn:q42:shared-term")
         );
         set.verify_segment_hashes(&root).unwrap();
+    }
+
+    #[test]
+    #[ignore = "opens the local 8+ GiB Monarch volume set when present"]
+    fn monarch_volume_set_resolves_a_lexicon_term() {
+        let root = std::path::Path::new(r"C:\Projects\monarch-kg\monarch-kg-root.q42");
+        if !root.is_file() {
+            return;
+        }
+        let set = Q42VolumeSet::open_root(root).expect("open monarch volume set");
+        assert!(
+            !set.lexicon_segments().is_empty(),
+            "monarch root must name lexicon shards"
+        );
+        assert!(
+            !set.segments().is_empty(),
+            "monarch root must name data segments"
+        );
+        let view = set.lexicon_segments()[0]
+            .lex_view()
+            .expect("open first lexicon shard");
+        let hash = view.hash_at(0).expect("first lexicon entry");
+        let term = set
+            .lookup_hash(hash)
+            .expect("volume-set lookup through shard");
+        assert!(!term.is_empty(), "resolved monarch term must be non-empty");
+        println!("monarch lookup ok: {term}");
+        set.verify_segment_hashes(root).expect("segment sha256");
     }
 
     #[test]

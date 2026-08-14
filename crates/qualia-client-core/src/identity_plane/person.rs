@@ -169,8 +169,8 @@ impl PersonPrincipal {
             }
         }
         // Legacy cleartext
-        let person: PersonPrincipal = serde_json::from_slice(bytes)
-            .map_err(|e| format!("person identity parse: {e}"))?;
+        let person: PersonPrincipal =
+            serde_json::from_slice(bytes).map_err(|e| format!("person identity parse: {e}"))?;
         if person.person_id.starts_with("did:q42:person:") && person.ed25519_secret != [0u8; 32] {
             return Ok(person);
         }

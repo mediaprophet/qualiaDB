@@ -6,7 +6,7 @@ use qualia_core_db::NQuin;
 
 use crate::cli::{
     CompileAction, ExtensionAction, GovernanceAction, IngestFormat, MigrateAction, ProfileAction,
-    QueryDialect, ShaclAction,
+    Q42Action, QueryDialect, ShaclAction,
 };
 use crate::sparql::run_sparql_query;
 
@@ -111,7 +111,131 @@ pub fn handle_mem(inspect: bool) {
     }
 }
 
+pub fn handle_q42(action: &Q42Action) -> Result<(), Box<dyn std::error::Error>> {
+    match action {
+        Q42Action::Inspect { path } => {
+            let report = qualia_core_db::q42_volume::Q42InspectReport::from_path(path)?;
+            print!("{}", report.to_text());
+        }
+        Q42Action::Verify { path, level } => {
+            let level = qualia_core_db::q42_volume::VerifyLevel::parse(level)?;
+            let report =
+                qualia_core_db::q42_volume::verify_volume_set_from_root(path, level)?;
+            print!("{}", report.to_text());
+            match report.overall {
+                qualia_core_db::q42_volume::CheckStatus::Fail => {
+                    return Err("Q42 verify failed".into());
+                }
+                qualia_core_db::q42_volume::CheckStatus::Incomplete => {
+                    return Err("Q42 verify incomplete".into());
+                }
+                _ => {}
+            }
+        }
+        Q42Action::Magnet {
+            path,
+            name,
+            port,
+            webseed,
+            set,
+            commons,
+        } => {
+            let intent = if *commons {
+                qualia_core_db::q42_volume::PublicationIntent::CommonsCatalog
+            } else {
+                qualia_core_db::q42_volume::PublicationIntent::Default
+            };
+            if *set {
+                let base = webseed
+                    .clone()
+                    .unwrap_or_else(|| format!("http://127.0.0.1:{port}/torrent/webseed/{{hash}}"));
+                let set = qualia_core_db::q42_volume::Q42VolumeSetMagnets::for_root_with_intent(
+                    path,
+                    Some(&base),
+                    intent,
+                )?;
+                println!("{}", set.root.magnet_uri);
+                for child in set.children {
+                    println!("{}", child.magnet_uri);
+                }
+            } else {
+                let display = name
+                    .clone()
+                    .unwrap_or_else(|| {
+                        path.file_name()
+                            .and_then(|n| n.to_str())
+                            .unwrap_or("volume.q42")
+                            .to_string()
+                    });
+                let magnet = if let Some(ws) = webseed {
+                    qualia_core_db::q42_volume::Q42Magnet::for_path_named_with_intent(
+                        path,
+                        &display,
+                        Some(ws),
+                        intent,
+                    )?
+                } else {
+                    qualia_core_db::q42_volume::Q42Magnet::for_daemon_seed_with_intent(
+                        path, &display, *port, intent,
+                    )?
+                };
+                println!("{}", magnet.magnet_uri);
+            }
+        }
+        Q42Action::Compact { root, out } => {
+            let out_dir = out.clone().unwrap_or_else(|| {
+                root.parent()
+                    .unwrap_or_else(|| std::path::Path::new("."))
+                    .join("compacted")
+            });
+            let produced = qualia_core_db::q42_volume::compact_volume_set(root, &out_dir)?;
+            println!("{}", produced.display());
+        }
+        Q42Action::Seed {
+            path,
+            name,
+            id,
+            commons,
+        } => {
+            let intent = if *commons {
+                qualia_core_db::q42_volume::PublicationIntent::CommonsCatalog
+            } else {
+                qualia_core_db::q42_volume::PublicationIntent::Default
+            };
+            let display = name.clone().unwrap_or_else(|| {
+                path.file_name()
+                    .and_then(|n| n.to_str())
+                    .unwrap_or("volume.q42")
+                    .to_string()
+            });
+            let ontology_id = id.clone().unwrap_or_else(|| display.clone());
+            let magnet = qualia_core_db::q42_volume::Q42Magnet::for_daemon_seed_with_intent(
+                path, &display, 4242, intent,
+            )?;
+            let record = qualia_core_db::webtorrent_seeder::register_seed(
+                qualia_core_db::webtorrent_seeder::RegisterSeedRequest {
+                    info_hash: magnet.info_hash_sha1.clone(),
+                    file_path: path.display().to_string(),
+                    display_name: display,
+                    ontology_id,
+                    bandwidth_limit_kbps: 512,
+                    commons_asserted: *commons,
+                },
+            )
+            .map_err(|e| e.to_string())?;
+            println!("{}", magnet.magnet_uri);
+            println!("seeded {} bytes as {}", record.file_size, record.info_hash);
+        }
+    }
+    Ok(())
+}
+
 pub fn handle_inspect(file_path: &PathBuf) -> Result<(), Box<dyn std::error::Error>> {
+    if qualia_core_db::q42_volume::is_unified_volume(file_path)? {
+        let report = qualia_core_db::q42_volume::Q42InspectReport::from_path(file_path)?;
+        print!("{}", report.to_text());
+        return Ok(());
+    }
     println!("Initializing Block Inspector for: {:?}", file_path);
 
     let mut file = std::fs::File::open(file_path)?;

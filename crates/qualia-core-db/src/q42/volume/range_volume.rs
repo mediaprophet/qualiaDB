@@ -20,6 +20,22 @@ fn invalid(message: impl Into<String>) -> io::Error {
     io::Error::new(io::ErrorKind::InvalidData, message.into())
 }
 
+/// Fail closed on a decoded SuperBlock before any Quin is copied out.
+fn verify_decoded_superblock(decoded: &[u8]) -> io::Result<()> {
+    if decoded.len() != SUPERBLOCK_SIZE {
+        return Err(invalid("decoded Q42 SuperBlock has the wrong length"));
+    }
+    let count = u64::from_le_bytes(decoded[16..24].try_into().unwrap()) as usize;
+    if count > QUINS_PER_BLOCK {
+        return Err(invalid("decoded Q42 SuperBlock Quin count exceeds capacity"));
+    }
+    let occupied = SUPERBLOCK_HEADER + count * QUIN_SIZE;
+    if occupied > SUPERBLOCK_SIZE {
+        return Err(invalid("decoded Q42 SuperBlock Quin payload overruns the block"));
+    }
+    Ok(())
+}
+
 /// A Q42 reader that fetches exactly the bytes needed from a random-access
 /// source. All variable-size buffers remain caller-owned.
 pub struct Q42RangeVolume<S: Q42RangeSource> {
@@ -166,6 +182,7 @@ impl<S: Q42RangeSource> Q42RangeVolume<S> {
         };
         volume.bidx_block_count()?;
         volume.validate_field_range_index()?;
+        volume.validate_field_postings()?;
         Ok(volume)
     }
 
@@ -224,7 +241,7 @@ impl<S: Q42RangeSource> Q42RangeVolume<S> {
         let mut returned = 0usize;
         while block_index < end {
             if plan.strategy == Q42RangeQueryStrategy::FieldRanges
-                && !self.field_range_may_match(block_index, plan.pattern)?
+                && !self.field_membership_may_match(block_index, plan.pattern)?
             {
                 block_index += 1;
                 quin_offset = 0;
@@ -760,6 +777,7 @@ impl<S: Q42RangeSource> Q42RangeVolume<S> {
         if decoded != declared {
             return Err(invalid("Q42 range block decoded to an unexpected length"));
         }
+        verify_decoded_superblock(&out[..decoded])?;
         Ok(decoded)
     }
 
@@ -858,6 +876,85 @@ impl<S: Q42RangeSource> Q42RangeVolume<S> {
             return Err(invalid("Q42 field-range index header is invalid"));
         }
         Ok(())
+    }
+
+    fn validate_field_postings(&self) -> io::Result<()> {
+        let Some((offset, length)) = self.header.field_postings_range() else {
+            return Ok(());
+        };
+        if length < super::postings::FIELD_POSTINGS_HEADER_BYTES as u64 {
+            return Err(invalid("Q42 field postings shorter than header"));
+        }
+        let mut header = [0u8; super::postings::FIELD_POSTINGS_HEADER_BYTES];
+        self.read_section(
+            offset,
+            super::postings::FIELD_POSTINGS_HEADER_BYTES as u64,
+            &mut header,
+        )?;
+        if header[0..4] != super::postings::FIELD_POSTINGS_MAGIC
+            || u32::from_le_bytes(header[4..8].try_into().unwrap()) != 1
+            || u32::from_le_bytes(header[8..12].try_into().unwrap()) as u64
+                != self.header.block_count
+        {
+            return Err(invalid("Q42 field postings header is invalid"));
+        }
+        Ok(())
+    }
+
+    fn field_membership_may_match(
+        &self,
+        block_index: usize,
+        pattern: Q42RangeQueryPattern,
+    ) -> io::Result<bool> {
+        if let Some(matches) = self.field_postings_may_match(block_index, pattern)? {
+            return Ok(matches);
+        }
+        self.field_range_may_match(block_index, pattern)
+    }
+
+    fn field_postings_may_match(
+        &self,
+        block_index: usize,
+        pattern: Q42RangeQueryPattern,
+    ) -> io::Result<Option<bool>> {
+        let Some((offset, length)) = self.header.field_postings_range() else {
+            return Ok(None);
+        };
+        if block_index >= self.header.block_count as usize {
+            return Err(invalid("Q42 field postings block index is out of bounds"));
+        }
+        let table = offset
+            + super::postings::FIELD_POSTINGS_HEADER_BYTES as u64
+            + (block_index as u64) * 4;
+        let mut ends = [0u8; 8];
+        self.read_section(table, 8, &mut ends)?;
+        let start = u32::from_le_bytes(ends[0..4].try_into().unwrap()) as u64;
+        let end = u32::from_le_bytes(ends[4..8].try_into().unwrap()) as u64;
+        if end < start {
+            return Err(invalid("Q42 field postings interval inverted"));
+        }
+        let payload_base = offset
+            + super::postings::FIELD_POSTINGS_HEADER_BYTES as u64
+            + (self.header.block_count + 1) * 4;
+        let payload_offset = payload_base + start;
+        let payload_len = usize::try_from(end - start)
+            .map_err(|_| invalid("Q42 field postings payload exceeds platform"))?;
+        if payload_offset + payload_len as u64 > offset + length {
+            return Err(invalid("Q42 field postings payload leaves its section"));
+        }
+        let mut payload = vec![0u8; payload_len];
+        self.read_section(payload_offset, payload_len as u64, &mut payload)?;
+        let check = |field: usize, value: Option<u64>| -> io::Result<bool> {
+            match value {
+                None => Ok(true),
+                Some(hash) => super::postings::field_may_contain(&payload, field, hash),
+            }
+        };
+        Ok(Some(
+            check(0, pattern.subject)?
+                && check(1, pattern.predicate)?
+                && check(2, pattern.context)?,
+        ))
     }
 
     fn field_range_may_match(

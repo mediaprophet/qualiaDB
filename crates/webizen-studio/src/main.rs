@@ -1361,7 +1361,8 @@ fn AppLayout() -> Element {
 
             // ── Top bar: brand + life-domain nav + context chip ─────────────
             div {
-                style: "display: flex; align-items: flex-end; padding: 0.55rem 1rem 0; background: rgba(10, 15, 30, 0.55); border-bottom: 1px solid var(--qualia-border); backdrop-filter: blur(24px); gap: 1rem; flex-shrink: 0;",
+                // Keep popups from the top bar above the omnibox and route content below.
+                style: "position: relative; z-index: 100; overflow: visible; display: flex; align-items: flex-end; padding: 0.55rem 1rem 0; background: rgba(10, 15, 30, 0.55); border-bottom: 1px solid var(--qualia-border); backdrop-filter: blur(24px); gap: 1rem; flex-shrink: 0;",
 
                 Link {
                     to: Route::LibraryRoute {},

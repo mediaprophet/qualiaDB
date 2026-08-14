@@ -96,6 +96,10 @@ pub enum Commands {
     Inspect {
         file_path: PathBuf,
     },
+    Q42 {
+        #[command(subcommand)]
+        action: Q42Action,
+    },
     Dump {
         out_path: PathBuf,
     },

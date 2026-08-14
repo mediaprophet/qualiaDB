@@ -84,6 +84,21 @@ fn rgba_to_css(rgba: [f32; 4]) -> String {
 /// viewed from `(azimuth, elevation)` in degrees. `azimuth` 0..360 rotates around the body; `elevation`
 /// -90..90 looks up→down. The camera orbits at a fixed radius around the body centre.
 pub fn body_scene(report: &AnatomyViewReport, azimuth_deg: f64, elevation_deg: f64) -> RenderScene {
+    body_scene_with_fit(
+        report,
+        azimuth_deg,
+        elevation_deg,
+        &wellfare_core::anatomy::BodyFit::identity(),
+    )
+}
+
+/// Like [`body_scene`], but stretches the silhouette by the person's declared stature / torso / legs.
+pub fn body_scene_with_fit(
+    report: &AnatomyViewReport,
+    azimuth_deg: f64,
+    elevation_deg: f64,
+    fit: &wellfare_core::anatomy::BodyFit,
+) -> RenderScene {
     let percepts = report.system_percepts();
     let mut scene = RenderScene {
         background: "#0a0f14".to_string(),
@@ -126,7 +141,7 @@ pub fn body_scene(report: &AnatomyViewReport, azimuth_deg: f64, elevation_deg: f
                 rgba: [0.29, 0.62, 0.36, 1.0], // settled green
                 frequency_hz: 0.0,
             });
-        let pos = system_position(sys);
+        let pos = fit_silhouette_point(system_position(sys), fit);
         let overlay = is_overlay(sys);
         // Radius grows with burden: settled = base, under_strain = base × 2.2.
         let burden_scale = match percept.level {
@@ -157,6 +172,26 @@ pub fn body_scene(report: &AnatomyViewReport, azimuth_deg: f64, elevation_deg: f
     }
 
     scene
+}
+
+fn fit_silhouette_point(
+    p: ScenePoint,
+    fit: &wellfare_core::anatomy::BodyFit,
+) -> ScenePoint {
+    // Silhouette y is top→bottom (0 head, 1 feet) — invert for the CCF-style fit bands.
+    let y_up = 1.0 - p.y as f32;
+    let y_seg = if y_up < fit.pelvis_y_norm {
+        fit.leg_scale_y
+    } else {
+        fit.torso_scale_y
+    };
+    let y_from_feet = (1.0 - p.y) * (y_seg as f64) * (fit.stature_scale as f64);
+    let cx = 0.50;
+    ScenePoint {
+        x: cx + (p.x - cx) * (fit.arm_span_scale_x as f64) * (fit.shoulder_scale_x as f64),
+        y: (1.0 - y_from_feet).clamp(0.02, 0.98),
+        z: p.z,
+    }
 }
 
 /// The orbit camera for `(azimuth, elevation)` in degrees, looking at the body centre `[0.5, 0.5, 0]`

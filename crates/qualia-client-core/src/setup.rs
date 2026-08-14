@@ -29,12 +29,12 @@ pub const REQUIRED_SETUP_STEPS: [&str; 8] = [
 /// Paths that become meaningful after the apparatus is running and people can connect.
 /// These never block the first-run gate; they surface in Setup Health / Relations over time.
 pub const PROGRESSIVE_SETUP_PATHS: [&str; 6] = [
-    "reachability",      // private / mesh / public posture
-    "assurance",         // backup destination + verified restore
+    "reachability",       // private / mesh / public posture
+    "assurance",          // backup destination + verified restore
     "people_connections", // invites, contacts, groups
-    "domains_mail",      // front door, DNS, purpose mailboxes
-    "care_records",      // provenance-backed health material
-    "peer_agreements",   // multi-party norms once peers exist
+    "domains_mail",       // front door, DNS, purpose mailboxes
+    "care_records",       // provenance-backed health material
+    "peer_agreements",    // multi-party norms once peers exist
 ];
 
 /// Social and tenure context for the machine Webizen is being installed on.

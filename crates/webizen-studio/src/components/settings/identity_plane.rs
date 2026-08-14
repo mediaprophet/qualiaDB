@@ -2,7 +2,7 @@
 
 #![allow(non_snake_case)]
 
-use super::{PRIMARY_BUTTON, SECONDARY_BUTTON, PANEL, WARNING_CARD, SUCCESS_CARD, FIELD};
+use super::{FIELD, PANEL, PRIMARY_BUTTON, SECONDARY_BUTTON, SUCCESS_CARD, WARNING_CARD};
 use crate::components::settings::host::invoke_json;
 use dioxus::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -62,7 +62,8 @@ pub fn IdentityPlanePanel() -> Element {
         busy.set(true);
         error.set(String::new());
         spawn(async move {
-            match invoke_json::<IdentityPlaneView>("get_identity_plane", serde_json::json!({})).await
+            match invoke_json::<IdentityPlaneView>("get_identity_plane", serde_json::json!({}))
+                .await
             {
                 Ok(value) => {
                     if let Some(local) = value.devices.iter().find(|d| d.is_local) {

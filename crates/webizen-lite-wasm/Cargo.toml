@@ -1,6 +1,6 @@
 [package]
 name = "webizen-lite-wasm"
-version = "0.0.29"
+version = "0.0.30"
 edition = "2021"
 description = "Ontology-site MCP JSON-RPC endpoint backed by Qualia's WASM-safe reasoning kernel."
 license-file = "LICENSE"

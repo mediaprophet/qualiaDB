@@ -10,11 +10,11 @@
 use dioxus::html::input_data::keyboard_types::{Key, Modifiers};
 use dioxus::prelude::*;
 
-use crate::components::conduct_banner::{ConductBanner, ConductNotice};
 #[cfg(target_arch = "wasm32")]
 use crate::components::conduct_banner::{
     notice_from_chat_done, notice_from_chat_result, notice_from_conduct_violation,
 };
+use crate::components::conduct_banner::{ConductBanner, ConductNotice};
 use crate::components::honesty_chip::{HonestyChip, HonestyLevel};
 use crate::components::tool_use_card::ToolUseCard;
 
@@ -317,18 +317,26 @@ async fn send_chat_turn(
             .iter()
             .flatten()
             .filter_map(|slug| roster.iter().find(|agent| s(agent, "slug") == *slug))
-            .filter(|agent| agent.get("backend").and_then(|backend| backend.get("remote_mcp")).is_some())
+            .filter(|agent| {
+                agent
+                    .get("backend")
+                    .and_then(|backend| backend.get("remote_mcp"))
+                    .is_some()
+            })
             .collect();
         if remote_agents.iter().any(|agent| {
-            agent.get("execution_policy")
+            agent
+                .get("execution_policy")
                 .and_then(|policy| policy.get("remote_consent"))
-                .and_then(|value| value.as_str()) == Some("never")
+                .and_then(|value| value.as_str())
+                == Some("never")
         }) {
             status.set("A selected agent has remote use disabled by its policy.".into());
             return;
         }
         let needs_remote_confirmation = remote_agents.iter().any(|agent| {
-            agent.get("execution_policy")
+            agent
+                .get("execution_policy")
                 .and_then(|policy| policy.get("remote_consent"))
                 .and_then(|value| value.as_str())
                 .map_or(true, |policy| policy == "per_turn")

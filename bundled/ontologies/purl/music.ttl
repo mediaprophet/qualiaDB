@@ -30,7 +30,7 @@
   dc11:title "The Music Ontology" ;
   ns0:preferredNamespacePrefix "mo" ;
   ns0:preferredNamespaceUri "http://purl.org/ontology/mo/" ;
-  owl:imports <http://purl.org/NET/c4dm/event.owl>, <http://purl.org/NET/c4dm/keys.owl>, dc:, <http://purl.org/ontology/ao/core>, <http://purl.org/vocab/bio/0.1/>, <http://purl.org/vocab/frbr/core>, <http://www.w3.org/2006/time>, foaf: ;
+  owl:imports <http://purl.org/NET/c4dm/event.owl>, <http://purl.org/NET/c4dm/keys.owl>, <http://purl.org/dc/terms/>, <http://purl.org/ontology/ao/core>, <http://purl.org/vocab/bio/0.1/>, <http://purl.org/vocab/frbr/core>, <http://www.w3.org/2006/time>, <http://xmlns.com/foaf/0.1/> ;
   owl:versionInfo "Revision: 2.1.5" ;
   foaf:maker <http://foaf.me/zazi#me>, <http://kurtisrandom.com/foaf.rdf#kurtjx>, <http://raimond.me.uk/foaf.rdf#moustaki>, <http://www.talkdigger.com/foaf/fgiasson>, [ foaf:name "George Fazekas" ], [
     foaf:homepage <http://simon-reinhardt.de/> ;
@@ -241,7 +241,7 @@ ns1:Instrument
     """ ;
   rdfs:isDefinedBy ns1: ;
   rdfs:label "Instrument" ;
-  rdfs:seeAlso ns1:mit# ;
+  rdfs:seeAlso <http://purl.org/ontology/mo/mit#> ;
   ns2:term_status "stable" .
 
 ns1:Instrumentation

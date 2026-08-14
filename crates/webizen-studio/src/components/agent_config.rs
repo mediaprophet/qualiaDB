@@ -57,7 +57,13 @@ fn comma_list(value: &serde_json::Value, key: &str) -> String {
     value
         .get(key)
         .and_then(|entries| entries.as_array())
-        .map(|entries| entries.iter().filter_map(|entry| entry.as_str()).collect::<Vec<_>>().join(", "))
+        .map(|entries| {
+            entries
+                .iter()
+                .filter_map(|entry| entry.as_str())
+                .collect::<Vec<_>>()
+                .join(", ")
+        })
         .unwrap_or_default()
 }
 

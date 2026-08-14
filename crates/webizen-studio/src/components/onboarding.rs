@@ -93,7 +93,11 @@ const LOCALE_CHOICES: &[(&str, &str)] = &[
 /// Current place for clocks and local defaults — not a permanent “home”.
 /// People move; this is always revisable in Settings.
 const TIMEZONE_CHOICES: &[(&str, &str, &str)] = &[
-    ("", "Prefer not to say", "No place assumed; times stay device-local."),
+    (
+        "",
+        "Prefer not to say",
+        "No place assumed; times stay device-local.",
+    ),
     (
         "Australia/Sydney",
         "Australia — Sydney, Canberra, Melbourne",
@@ -119,46 +123,14 @@ const TIMEZONE_CHOICES: &[(&str, &str, &str)] = &[
         "Australia — Perth",
         "Western Australia (AWST).",
     ),
-    (
-        "Pacific/Auckland",
-        "New Zealand — Auckland",
-        "NZST/NZDT.",
-    ),
-    (
-        "Pacific/Fiji",
-        "Fiji — Suva",
-        "Pacific islands (FJT).",
-    ),
-    (
-        "Asia/Singapore",
-        "Singapore",
-        "SGT.",
-    ),
-    (
-        "Asia/Tokyo",
-        "Japan — Tokyo",
-        "JST.",
-    ),
-    (
-        "Asia/Hong_Kong",
-        "Hong Kong",
-        "HKT.",
-    ),
-    (
-        "Asia/Kolkata",
-        "India — Kolkata / Delhi region",
-        "IST.",
-    ),
-    (
-        "Europe/London",
-        "United Kingdom — London",
-        "GMT/BST.",
-    ),
-    (
-        "Europe/Dublin",
-        "Ireland — Dublin",
-        "IST/GMT.",
-    ),
+    ("Pacific/Auckland", "New Zealand — Auckland", "NZST/NZDT."),
+    ("Pacific/Fiji", "Fiji — Suva", "Pacific islands (FJT)."),
+    ("Asia/Singapore", "Singapore", "SGT."),
+    ("Asia/Tokyo", "Japan — Tokyo", "JST."),
+    ("Asia/Hong_Kong", "Hong Kong", "HKT."),
+    ("Asia/Kolkata", "India — Kolkata / Delhi region", "IST."),
+    ("Europe/London", "United Kingdom — London", "GMT/BST."),
+    ("Europe/Dublin", "Ireland — Dublin", "IST/GMT."),
     (
         "Europe/Paris",
         "Central Europe — Paris, Berlin, Rome…",
@@ -189,21 +161,9 @@ const TIMEZONE_CHOICES: &[(&str, &str, &str)] = &[
         "North America — Pacific (Los Angeles)",
         "PST/PDT.",
     ),
-    (
-        "America/Toronto",
-        "Canada — Toronto",
-        "Eastern Canada.",
-    ),
-    (
-        "America/Vancouver",
-        "Canada — Vancouver",
-        "Pacific Canada.",
-    ),
-    (
-        "America/Sao_Paulo",
-        "Brazil — São Paulo",
-        "BRT.",
-    ),
+    ("America/Toronto", "Canada — Toronto", "Eastern Canada."),
+    ("America/Vancouver", "Canada — Vancouver", "Pacific Canada."),
+    ("America/Sao_Paulo", "Brazil — São Paulo", "BRT."),
     (
         "Africa/Johannesburg",
         "South Africa — Johannesburg",
@@ -371,11 +331,7 @@ const FLEET_CHOICES: &[(&str, &str, &str)] = &[
         "I use more than one machine",
         "Laptop, desktop, phone, another PC — this is one of them.",
     ),
-    (
-        "prefer_not_say",
-        "Prefer not to say",
-        "Skip for now.",
-    ),
+    ("prefer_not_say", "Prefer not to say", "Skip for now."),
 ];
 
 const USER_SCOPE_CHOICES: &[(&str, &str, &str)] = &[
@@ -389,11 +345,7 @@ const USER_SCOPE_CHOICES: &[(&str, &str, &str)] = &[
         "More than one person uses this machine",
         "Family, colleagues, classmates, public counter, etc.",
     ),
-    (
-        "prefer_not_say",
-        "Prefer not to say",
-        "Skip for now.",
-    ),
+    ("prefer_not_say", "Prefer not to say", "Skip for now."),
 ];
 
 const SHARED_SETTING_CHOICES: &[(&str, &str, &str)] = &[
@@ -432,16 +384,8 @@ const SHARED_SETTING_CHOICES: &[(&str, &str, &str)] = &[
         "Mixed — more than one of these",
         "e.g. work laptop that also comes home.",
     ),
-    (
-        "prefer_not_say",
-        "Prefer not to say",
-        "Skip for now.",
-    ),
-    (
-        "other",
-        "Something else",
-        "Add a short note if useful.",
-    ),
+    ("prefer_not_say", "Prefer not to say", "Skip for now."),
+    ("other", "Something else", "Add a short note if useful."),
 ];
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -523,8 +467,8 @@ pub fn OnboardingGate() -> Element {
                         complete.set(setup.completed);
                         // Resume at the first incomplete *foundation* step. Older state may still
                         // name progressive-only steps (reachability/assurance); those never block.
-                        let resume = first_incomplete_foundation(&setup.completed_steps)
-                            .unwrap_or("ready");
+                        let resume =
+                            first_incomplete_foundation(&setup.completed_steps).unwrap_or("ready");
                         step.set(step_index(resume));
                         display_name.set(setup.profile.preferred_name.clone());
                         profile.set(setup.profile);
@@ -1290,7 +1234,9 @@ mod tests {
         assert_eq!(step_index("relations"), 5);
         assert_eq!(step_index("care"), 6);
         assert_eq!(step_index("ready"), 7);
-        assert!(STEPS.iter().all(|(id, _)| *id != "reachability" && *id != "assurance"));
+        assert!(STEPS
+            .iter()
+            .all(|(id, _)| *id != "reachability" && *id != "assurance"));
         assert_eq!(STEPS[5].1, "How you're known");
         assert_eq!(step_title(5), "How you want to be known");
         assert_eq!(step_title(7), "Foundations ready — the rest is progressive");
@@ -1320,9 +1266,14 @@ mod tests {
     #[test]
     fn location_choices_are_present_and_blank_is_first() {
         assert_eq!(TIMEZONE_CHOICES[0].0, "");
-        assert!(TIMEZONE_CHOICES.iter().any(|(id, _, _)| *id == "Australia/Sydney"));
+        assert!(TIMEZONE_CHOICES
+            .iter()
+            .any(|(id, _, _)| *id == "Australia/Sydney"));
         assert!(LOCALE_CHOICES.iter().any(|(id, _)| *id == "en-AU"));
-        assert_eq!(timezone_hint("Australia/Sydney"), "Eastern Australia (AEST/AEDT).");
+        assert_eq!(
+            timezone_hint("Australia/Sydney"),
+            "Eastern Australia (AEST/AEDT)."
+        );
     }
 
     #[test]
@@ -1342,16 +1293,28 @@ mod tests {
 
     #[test]
     fn device_context_choices_cover_ownership_fleet_and_shared_settings() {
-        assert!(OWNERSHIP_CHOICES.iter().any(|(id, _, _)| *id == "owned_by_me"));
+        assert!(OWNERSHIP_CHOICES
+            .iter()
+            .any(|(id, _, _)| *id == "owned_by_me"));
         assert!(OWNERSHIP_CHOICES.iter().any(|(id, _, _)| *id == "employer"));
         assert!(OWNERSHIP_CHOICES.iter().any(|(id, _, _)| *id == "school"));
         assert!(FLEET_CHOICES.iter().any(|(id, _, _)| *id == "only_machine"));
-        assert!(FLEET_CHOICES.iter().any(|(id, _, _)| *id == "one_of_several"));
+        assert!(FLEET_CHOICES
+            .iter()
+            .any(|(id, _, _)| *id == "one_of_several"));
         assert!(USER_SCOPE_CHOICES.iter().any(|(id, _, _)| *id == "just_me"));
-        assert!(USER_SCOPE_CHOICES.iter().any(|(id, _, _)| *id == "more_than_one"));
-        assert!(SHARED_SETTING_CHOICES.iter().any(|(id, _, _)| *id == "family"));
-        assert!(SHARED_SETTING_CHOICES.iter().any(|(id, _, _)| *id == "work"));
-        assert!(SHARED_SETTING_CHOICES.iter().any(|(id, _, _)| *id == "organisation"));
+        assert!(USER_SCOPE_CHOICES
+            .iter()
+            .any(|(id, _, _)| *id == "more_than_one"));
+        assert!(SHARED_SETTING_CHOICES
+            .iter()
+            .any(|(id, _, _)| *id == "family"));
+        assert!(SHARED_SETTING_CHOICES
+            .iter()
+            .any(|(id, _, _)| *id == "work"));
+        assert!(SHARED_SETTING_CHOICES
+            .iter()
+            .any(|(id, _, _)| *id == "organisation"));
         assert_eq!(step_title(3), "What kind of machine is this?");
         assert_eq!(STEPS[3].1, "This machine");
     }

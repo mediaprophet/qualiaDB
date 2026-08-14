@@ -1,7 +1,7 @@
 {
   "format": "qualia.p64.release-manifest.v1",
-  "release": "v0.0.29",
-  "release_base_url": "https://github.com/mediaprophet/qualiaDB/releases/download/v0.0.29/",
+  "release": "v0.0.30",
+  "release_base_url": "https://github.com/mediaprophet/qualiaDB/releases/download/v0.0.30/",
   "p64_version": 4,
   "q42_version": 3,
   "layout": "Verbatim",

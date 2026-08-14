@@ -175,7 +175,8 @@ pub fn JobIndicator() -> Element {
 
     rsx! {
         div {
-            style: "position:relative;",
+            // Keep the trigger and popup above sibling controls in the top bar.
+            style: "position:relative;z-index:101;",
             button {
                 r#type: "button",
                 title: "Background work and failure events",
@@ -199,7 +200,7 @@ pub fn JobIndicator() -> Element {
                 div {
                     role: "dialog",
                     aria_label: "Background jobs",
-                    style: "position:absolute;right:0;top:calc(100% + 10px);z-index:1000;width:min(420px,86vw);max-height:560px;overflow:auto;padding:12px;border:1px solid var(--qualia-border);border-radius:14px;background:color-mix(in srgb,var(--qualia-surface) 96%,#020617);box-shadow:0 22px 60px rgba(0,0,0,.46);",
+                    style: "position:absolute;right:0;top:calc(100% + 10px);z-index:102;width:min(420px,86vw);max-height:560px;overflow:auto;padding:12px;border:1px solid var(--qualia-border);border-radius:14px;background:color-mix(in srgb,var(--qualia-surface) 96%,#020617);box-shadow:0 22px 60px rgba(0,0,0,.46);",
                     div {
                         style: "display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:10px;",
                         div {

@@ -240,47 +240,37 @@ export function register(runner) {
         // ── WordNet integration (MANUAL — requires dataset build) ─────────────
         // Activate: ?manual=1 in URL or window.MANUAL_TESTS = true before Run.
 
-        runner.it('wordnet.q42 reachable at /playground/wordnet.q42 (manual)', async () => {
+        runner.it('wordnet.q42 reachable (manual) — unified v3, not wordnet.c.q42', async () => {
             if (!manualWordNetEnabled()) return;
-            const r = await fetch('/playground/wordnet.q42', { method: 'HEAD' });
+            const r = await fetch('../data/wordnet/princeton.q42', { method: 'HEAD' });
             runner.expect(r.ok).toBeTruthy();
         });
 
-        runner.it('wordnet.q42.lex sidecar reachable (manual)', async () => {
+        runner.it('schema.org unified v3 Q42 has Q42\\0 magic (no sidecar required)', async () => {
+            const r = await fetch('../data/schemaorg/30.0/schemaorg-current-https.q42', { method: 'GET' });
+            if (!r.ok) return;
+            const buf = new Uint8Array(await r.arrayBuffer());
+            runner.expect(buf[0]).toBe(0x51);
+            runner.expect(buf[1]).toBe(0x34);
+            runner.expect(buf[2]).toBe(0x32);
+            runner.expect(buf[3]).toBe(0x00);
+            runner.expect(buf[4]).toBe(3);
+            const flags = buf[6] | (buf[7] << 8);
+            runner.expect((flags & 0x0001) !== 0).toBeTruthy();
+        });
+
+        runner.it('wordnet.q42 is a unified v3 volume (LZ4 SuperBlocks inside, no .c.q42 twin) (manual)', async () => {
             if (!manualWordNetEnabled()) return;
-            const r = await fetch('/playground/wordnet.q42.lex', { method: 'HEAD' });
+            const r = await fetch('../data/wordnet/princeton.q42');
             runner.expect(r.ok).toBeTruthy();
-        });
-
-        runner.it('wordnet.q42.bidx block-range index reachable (manual)', async () => {
-            if (!manualWordNetEnabled()) return;
-            const r = await fetch('/playground/wordnet.q42.bidx', { method: 'HEAD' });
-            runner.expect(r.ok).toBeTruthy();
-        });
-
-        runner.it('wordnet.c.q42 compressed variant reachable (manual)', async () => {
-            if (!manualWordNetEnabled()) return;
-            const r = await fetch('/playground/wordnet.c.q42', { method: 'HEAD' });
-            runner.expect(r.ok).toBeTruthy();
-        });
-
-        runner.it('wordnet.q42 is > 50 MB and < 200 MB — confirms Princeton full ingest (manual)', async () => {
-            if (!manualWordNetEnabled()) return;
-            const r = await fetch('/playground/wordnet.q42', { method: 'HEAD' });
-            const size = parseInt(r.headers.get('content-length') || '0');
-            runner.expect(size).toBeGreaterThan(50 * 1024 * 1024);
-            runner.expect(size).toBeLessThan(200 * 1024 * 1024);
-        });
-
-        runner.it('wordnet.c.q42 is smaller than wordnet.q42 (LZ4 compression active) (manual)', async () => {
-            if (!manualWordNetEnabled()) return;
-            const [r1, r2] = await Promise.all([
-                fetch('/playground/wordnet.q42',   { method: 'HEAD' }),
-                fetch('/playground/wordnet.c.q42', { method: 'HEAD' }),
-            ]);
-            const q42Size  = parseInt(r1.headers.get('content-length') || '0');
-            const cq42Size = parseInt(r2.headers.get('content-length') || '0');
-            runner.expect(cq42Size).toBeLessThan(q42Size);
+            const buf = new Uint8Array(await r.arrayBuffer());
+            runner.expect(buf[0]).toBe(0x51);
+            runner.expect(buf[1]).toBe(0x34);
+            runner.expect(buf[2]).toBe(0x32);
+            runner.expect(buf[3]).toBe(0x00);
+            const flags = buf[6] | (buf[7] << 8);
+            runner.expect((flags & 0x0001) !== 0).toBeTruthy();
+            runner.expect(buf.length).toBeGreaterThan(50 * 1024 * 1024);
         });
     });
 }

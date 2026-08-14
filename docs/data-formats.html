@@ -53,6 +53,7 @@
                 CSV Parsing
             </h2>
             
+            <p class="text-white/70 mb-6">Ingest writes a <strong>unified Q42 v3</strong> volume (<code>Q42\0</code> header, embedded Q42LEX / BIDX / FIDX / PIDX, LZ4 SuperBlocks). There is no sibling <code>.c.q42</code> or <code>.q42.lex</code> — compression and lexicon live inside the single <code>.q42</code>.</p>
             <p class="text-white/70 mb-6">QualiaDB can ingest CSV files and convert them to semantic triples. Here's how to parse a CSV with person data:</p>
             
             <h3 class="text-lg font-medium mb-3">Input CSV (people.csv)</h3>
@@ -275,7 +276,7 @@ qualia ingest data.nq data.q42</code></pre>
         <div class="max-w-screen-2xl mx-auto px-8">
             <div class="flex items-center justify-between">
                 <div class="text-white/50 text-sm">
-                    QualiaDB v0.0.29 • Human-Centric Semantic Engine
+                    QualiaDB v0.0.30 • Human-Centric Semantic Engine
                 </div>
                 <div class="flex items-center gap-6 text-sm">
                     <a href="manuals/" class="hover:text-white transition-colors">Manuals</a>

@@ -280,9 +280,13 @@ impl TaskOrchestrator {
         drop(state);
         *self.current_model_id.lock().unwrap() = Some(model_id);
 
-        // Wire lex sidecar: prefer schema.org bundle, else model-adjacent `.q42.lex`.
+        // Prefer the unified schema.org volume (embedded Q42LEX). Legacy
+        // `.q42.lex` sidecar remains a fallback until sidecars are gone.
+        let schema_q42 = "data/schemaorg/30.0/schemaorg-current-https.q42";
         let schema_lex = "data/schemaorg/30.0/schemaorg-current-https.q42.lex";
-        if std::path::Path::new(schema_lex).exists() {
+        if std::path::Path::new(schema_q42).exists() {
+            agent.configure_sieve_lex(schema_q42);
+        } else if std::path::Path::new(schema_lex).exists() {
             agent.configure_sieve_lex(schema_lex);
         } else if let crate::llm_agent::AgentBackend::Local { model_path, .. } = &agent.backend {
             let mut p = std::path::PathBuf::from(model_path);

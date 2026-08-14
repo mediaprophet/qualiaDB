@@ -769,6 +769,10 @@ fn resolve_sieve_lex_path(
             return Some(lex.to_string_lossy().into_owned());
         }
     }
+    let schema_q42 = "data/schemaorg/30.0/schemaorg-current-https.q42";
+    if Path::new(schema_q42).is_file() {
+        return Some(schema_q42.to_string());
+    }
     let schema_lex = "data/schemaorg/30.0/schemaorg-current-https.q42.lex";
     if Path::new(schema_lex).is_file() {
         return Some(schema_lex.to_string());

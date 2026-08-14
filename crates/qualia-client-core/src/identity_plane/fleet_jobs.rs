@@ -173,12 +173,7 @@ pub fn deliver_or_queue_remote_job(
         ));
     }
     let person = PersonPrincipal::load_or_create(None)?;
-    let envelope = FleetJobEnvelope::build(
-        &person,
-        &plane.local_device_id,
-        &device_id,
-        kind,
-    )?;
+    let envelope = FleetJobEnvelope::build(&person, &plane.local_device_id, &device_id, kind)?;
     let url = format!(
         "{}/api/fleet/jobs",
         peer.control_base_url.trim_end_matches('/')
@@ -264,16 +259,11 @@ pub fn accept_fleet_job_envelope(envelope: FleetJobEnvelope) -> Result<LocalJob,
         );
     }
     // Enqueue as local work; placement already verified as this apparatus.
-    let mut job = LocalJobScheduler::global().enqueue_for_device(
-        envelope.kind,
-        Some(plane.local_device_id.clone()),
-    )?;
+    let mut job = LocalJobScheduler::global()
+        .enqueue_for_device(envelope.kind, Some(plane.local_device_id.clone()))?;
     job.originating_device_id = Some(envelope.source_device_id.clone());
     job.person_id = Some(envelope.person_id.clone());
-    job.message = format!(
-        "Accepted from fleet peer {}",
-        envelope.source_device_id
-    );
+    job.message = format!("Accepted from fleet peer {}", envelope.source_device_id);
     LocalJobScheduler::global().update_job_meta(&job)?;
     Ok(job)
 }
@@ -313,13 +303,8 @@ mod tests {
     fn envelope_round_trip_verifies() {
         let person = PersonPrincipal::generate("t").unwrap();
         let kind = LocalJobKind::DaemonGraphReload;
-        let env = FleetJobEnvelope::build(
-            &person,
-            "did:q42:device:aa",
-            "did:q42:device:bb",
-            kind,
-        )
-        .unwrap();
+        let env = FleetJobEnvelope::build(&person, "did:q42:device:aa", "did:q42:device:bb", kind)
+            .unwrap();
         env.verify().unwrap();
         let mut bad = env.clone();
         bad.signature_hex = "00".repeat(64);

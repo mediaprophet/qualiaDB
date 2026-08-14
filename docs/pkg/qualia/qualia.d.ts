@@ -231,6 +231,11 @@ export class QualiaPortal {
      */
     set_ambient_enabled(on: boolean): void;
     /**
+     * Replace the person-authored body fit. Pass JSON matching wellfare `BodyFit`.
+     * Applied on the next `load_body_*` upload. Empty / invalid JSON resets to identity.
+     */
+    set_body_fit_json(json: string): void;
+    /**
      * Orbit camera IPC from the UI shell (yaw/pitch in radians, zoom = eye distance).
      */
     set_camera(yaw: number, pitch: number, zoom: number): void;
@@ -432,12 +437,20 @@ export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembl
 
 export interface InitOutput {
     readonly memory: WebAssembly.Memory;
+    readonly parse_cbor_ld_wasm: (a: number, b: number) => any;
+    readonly parse_json_wasm: (a: number, b: number) => any;
     readonly estimate_browser_storage: () => any;
     readonly is_opfs_block_cached: (a: number) => any;
     readonly pack_quins_into_superblock: (a: bigint, b: bigint, c: number, d: number) => [number, number, number];
     readonly read_opfs_block: (a: number) => any;
     readonly verify_superblock_ecc: (a: number, b: number) => [number, number];
     readonly write_opfs_block: (a: number, b: number, c: number) => any;
+    readonly design_encode_wasm: (a: number, b: number) => [number, number, number];
+    readonly export_tensor_buffer_wasm: (a: number, b: number) => [number, number, number];
+    readonly export_tensor_slice_wasm: (a: number) => [number, number, number];
+    readonly geosparql_operation_wasm: (a: number, b: number) => [number, number, number];
+    readonly sample_browser_telemetry_wasm: () => [number, number, number];
+    readonly spatial_encode_wasm: (a: number, b: number) => [number, number, number];
     readonly __wbg_qualiaportal_free: (a: number, b: number) => void;
     readonly __wbg_webengine_free: (a: number, b: number) => void;
     readonly create_canvas: (a: number, b: number) => [number, number, number];
@@ -490,6 +503,7 @@ export interface InitOutput {
     readonly qualiaportal_select_node_at: (a: number, b: number, c: number, d: number, e: number) => [number, number];
     readonly qualiaportal_set_acoustic_enabled: (a: number, b: number) => void;
     readonly qualiaportal_set_ambient_enabled: (a: number, b: number) => void;
+    readonly qualiaportal_set_body_fit_json: (a: number, b: number, c: number) => void;
     readonly qualiaportal_set_camera: (a: number, b: number, c: number, d: number) => [number, number];
     readonly qualiaportal_set_display_mode: (a: number, b: number, c: number) => [number, number];
     readonly qualiaportal_set_standpoint: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => [number, number];
@@ -513,14 +527,6 @@ export interface InitOutput {
     readonly webengine_render_to_canvas: (a: number) => [number, number];
     readonly qualiaportal_selected_node_index: (a: number) => number;
     readonly init_panic_hook: () => void;
-    readonly design_encode_wasm: (a: number, b: number) => [number, number, number];
-    readonly export_tensor_buffer_wasm: (a: number, b: number) => [number, number, number];
-    readonly export_tensor_slice_wasm: (a: number) => [number, number, number];
-    readonly geosparql_operation_wasm: (a: number, b: number) => [number, number, number];
-    readonly sample_browser_telemetry_wasm: () => [number, number, number];
-    readonly spatial_encode_wasm: (a: number, b: number) => [number, number, number];
-    readonly parse_cbor_ld_wasm: (a: number, b: number) => any;
-    readonly parse_json_wasm: (a: number, b: number) => any;
     readonly __wbg_federatednodemanager_free: (a: number, b: number) => void;
     readonly __wbg_get_wasmoffloadintent_opcode: (a: number) => number;
     readonly __wbg_get_wasmoffloadintent_payload_size: (a: number) => number;

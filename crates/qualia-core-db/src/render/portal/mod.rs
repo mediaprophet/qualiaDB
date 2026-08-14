@@ -197,6 +197,28 @@ impl BodyMeshAccum {
         self.organs_loaded += 1;
     }
 
+    /// Apply a person-authored fit, then recompute bounds so orbit framing stays honest.
+    fn apply_body_fit(&mut self, fit: &crate::render::body_fit::AnatomyBodyFit) {
+        if fit.identity || self.positions.is_empty() {
+            return;
+        }
+        fit.apply_in_place(&mut self.positions, self.gmin, self.gmax);
+        let mut gmin = [f32::INFINITY; 3];
+        let mut gmax = [f32::NEG_INFINITY; 3];
+        for p in &self.positions {
+            for k in 0..3 {
+                if p[k] < gmin[k] {
+                    gmin[k] = p[k];
+                }
+                if p[k] > gmax[k] {
+                    gmax[k] = p[k];
+                }
+            }
+        }
+        self.gmin = gmin;
+        self.gmax = gmax;
+    }
+
     /// One global centre + scale so the body fits ~1.7 of the orbit frame.
     fn normalise_to_orbit_frame(&mut self) {
         if self.organs_loaded == 0 {
@@ -269,6 +291,8 @@ pub struct QualiaPortal {
     /// Pinned mmap-ready STFT/CQT sidecar for selected node (cold bake → hot frame read).
     acoustic_sidecar: Option<Vec<u8>>,
     acoustic_sidecar_frame: u32,
+    /// Person-authored body fit (JSON-compatible with wellfare `BodyFit`).
+    body_fit: crate::render::body_fit::AnatomyBodyFit,
 }
 
 #[wasm_bindgen]
@@ -309,6 +333,7 @@ impl QualiaPortal {
             acoustic_pulse_accum: 0.0,
             acoustic_sidecar: None,
             acoustic_sidecar_frame: 0,
+            body_fit: crate::render::body_fit::AnatomyBodyFit::default(),
         };
         portal.paint_frame(&canvas)?;
         Ok(portal)
@@ -1187,7 +1212,21 @@ impl QualiaPortal {
         self.finish_body_mesh_upload(accum)
     }
 
+    /// Replace the person-authored body fit. Pass JSON matching wellfare `BodyFit`.
+    /// Applied on the next `load_body_*` upload. Empty / invalid JSON resets to identity.
+    pub fn set_body_fit_json(&mut self, json: &str) {
+        if json.trim().is_empty() {
+            self.body_fit = crate::render::body_fit::AnatomyBodyFit::default();
+            return;
+        }
+        match serde_json::from_str::<crate::render::body_fit::AnatomyBodyFit>(json) {
+            Ok(fit) => self.body_fit = fit,
+            Err(_) => self.body_fit = crate::render::body_fit::AnatomyBodyFit::default(),
+        }
+    }
+
     fn finish_body_mesh_upload(&mut self, mut accum: BodyMeshAccum) -> Result<JsValue, JsValue> {
+        accum.apply_body_fit(&self.body_fit);
         accum.normalise_to_orbit_frame();
         if accum.positions.is_empty() || accum.indices.is_empty() {
             return Err(JsValue::from_str("anatomy_body_mesh_empty"));

@@ -29,7 +29,16 @@ Secure, peer-to-peer networking is established via **SocialWebNet**, a dynamic t
 
 ### 1.2 WebTorrent & Information Centric Networking (ICN)
 Artifacts are distributed via an in-process HTTP WebTorrent seeder (`webtorrent_seeder.rs`), providing an **Information Centric Networking (ICN)** approach where assets are addressed by cryptographic hash rather than domain name.
-* **Deterministic Addressing:** Every artifact is hashed (SHA-1) to create a deterministic magnet link.
+
+**Publication is fail-closed.** A public magnet / HTTP web-seed / IPFS pin is Permissive Commons *transport*, not a default for every `.q42`. Unified volumes are classified before a hash is emitted (`q42/volume/publication.rs`):
+
+* **Selfhood / Sanctuary** — restricted, classified, medical, legal, fiduciary, or `EnforceBilateralMicroCommons` Quins. No public magnet. Transport is **SocialWebNet** (pairwise DID / WireGuard) or local only. This includes medical records of a natural person, including a politically exposed person.
+* **Unmarked** — no restricted Quins and no Commons declaration. Stays local until a human marks the file as a catalog (`FLAG_PERMISSIVE_COMMONS` or `q42 magnet --commons`).
+* **Permissive Commons** — affirmative catalog / ontology / ruleset. Magnet and web-seed are allowed as ICN addressing. This is still not "open data": consume-side TrustGroup and billing gates remain.
+
+A `--commons` flag cannot override Quin-level Selfhood bits. Mixed files (Commons + Selfhood in one volume) are denied until split.
+
+* **Deterministic Addressing:** Every *Commons* artifact is hashed (SHA-1) to create a deterministic magnet link.
 * **Solid/RWW Backward Compatibility:** The distribution of containers over the WebTorrent DHT retains backward compatibility with "socially aware cloud storage" frameworks, such as the Linked Data Platform (LDP), Solid, and Read Write Web (RWW).
 * **Native Integration:** Browser WebTorrent clients leech via the `ws=` magnet parameter pointing directly at the local Qualia daemon's loopback (`/torrent/webseed/{info_hash}`).
 * **Deduplication:** The Distributed Hash Table (DHT)1.  **Quantum Processing Unit (QPU) Snapshots:** `.q42` DAG ledgers representing discrete, frozen states of semantic logic execution.

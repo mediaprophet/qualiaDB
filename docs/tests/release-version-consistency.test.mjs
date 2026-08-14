@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 
-const releaseVersion = '0.0.29';
+const releaseVersion = '0.0.30';
 const root = path.resolve(import.meta.dirname, '..', '..');
 const read = (relativePath) => fs.readFileSync(path.join(root, relativePath), 'utf8');
 
@@ -77,7 +77,7 @@ assert.match(apiExplorer, /href="\.\.\/css\/site-nav\.css"/,
 assert.match(apiExplorer, /menu-loader\.js/,
   'API Explorer must load the shared navigation renderer');
 
-assert.match(read('.github/workflows/pages.yml'), /- "0\.0\.29"/);
-assert.match(read('.github/workflows/release-p64-models.yml'), /- 0\.0\.29/);
+assert.match(read('.github/workflows/pages.yml'), /- "0\.0\.30"/);
+assert.match(read('.github/workflows/release-p64-models.yml'), /- 0\.0\.30/);
 
 console.log(`Release version consistency passed for ${workspaceMembers.length} crates at ${releaseVersion}.`);

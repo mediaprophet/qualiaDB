@@ -446,6 +446,7 @@ pub fn WellfairAnatomy3dPanel() -> Element {
                     }
                 }
             }
+            super::anatomy_constitution_form::AnatomyConstitutionForm { model: state.model.clone() }
         }
     }
 }

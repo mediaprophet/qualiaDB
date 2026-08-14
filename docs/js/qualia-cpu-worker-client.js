@@ -1,4 +1,4 @@
-const WORKER_URL = new URL('./qualia-cpu-worker.js?v=0.0.29-mobile-performance1', import.meta.url);
+const WORKER_URL = new URL('./qualia-cpu-worker.js?v=0.0.30-mobile-performance1', import.meta.url);
 
 function transferableModelBuffer(modelBytes) {
     if (modelBytes instanceof ArrayBuffer) return modelBytes;
