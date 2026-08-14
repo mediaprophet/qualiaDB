@@ -35,6 +35,136 @@ pub struct Q42RangeVolumeSetSparqlPage {
     pub next_cursor: Option<Q42RangeVolumeSetSparqlCursor>,
 }
 
+/// A range-executable subset of a physical plan: one triple pattern with
+/// optional projection and LIMIT/OFFSET. Unsupported trees are rejected so a
+/// caller can deliberately choose the resident compatibility executor instead
+/// of receiving a partial SPARQL result.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct Q42RangeTripleSelectPlan {
+    pub subject: u64,
+    pub predicate: u64,
+    pub object: u64,
+    pub projection: [VariableId; MAX_VARIABLES],
+    pub projection_count: u8,
+    pub limit: u64,
+    pub offset: u64,
+}
+
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub struct Q42RangeTripleSelectCursor {
+    pub scan: Q42RangeSparqlCursor,
+    pub skipped: u64,
+    pub emitted: u64,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct Q42RangeTripleSelectPage {
+    pub returned: usize,
+    pub next_cursor: Option<Q42RangeTripleSelectCursor>,
+}
+
+impl Q42RangeTripleSelectPlan {
+    pub fn from_execution_plan(plan: &ExecutionPlan) -> Result<Self, String> {
+        if plan.operator_count == 0 || plan.root_operator as usize >= plan.operator_count as usize {
+            return Err("range SPARQL requires a non-empty execution plan".to_string());
+        }
+        let mut operator = plan.root_operator;
+        let mut projection = [0; MAX_VARIABLES];
+        let mut projection_count = 0;
+        let mut limit = u64::MAX;
+        let mut offset = 0;
+        loop {
+            match plan.operators[operator as usize].operator_type {
+                PhysicalOperatorType::Project { input, vars, var_count } => {
+                    if projection_count != 0 { return Err("range SPARQL does not support nested projections".to_string()); }
+                    projection = vars;
+                    projection_count = var_count;
+                    operator = input;
+                }
+                PhysicalOperatorType::Limit { input, limit: configured, offset: configured_offset } => {
+                    if limit != u64::MAX || offset != 0 { return Err("range SPARQL does not support nested limits".to_string()); }
+                    limit = configured;
+                    offset = configured_offset;
+                    operator = input;
+                }
+                PhysicalOperatorType::TripleScan { subject, predicate, object } => {
+                    return Ok(Self { subject, predicate, object, projection, projection_count, limit, offset });
+                }
+                _ => return Err("range SPARQL currently supports one TripleScan with optional PROJECT and LIMIT/OFFSET".to_string()),
+            }
+        }
+    }
+}
+
+/// Execute one bounded page of a simple SELECT/ASK physical plan.
+pub fn execute_range_triple_select_page_into<S: crate::q42_volume::Q42RangeSource>(
+    volume: &crate::q42_volume::Q42RangeVolume<S>,
+    plan: Q42RangeTripleSelectPlan,
+    ctx: &SparqlQueryContext,
+    cursor: Q42RangeTripleSelectCursor,
+    compressed: &mut [u8],
+    decoded: &mut [u8],
+    quin_scratch: &mut [NQuin],
+    out: &mut [BindingRow],
+) -> Result<Q42RangeTripleSelectPage, String> {
+    let source_page = execute_range_triple_page_into(
+        volume,
+        plan.subject,
+        plan.predicate,
+        plan.object,
+        None,
+        ctx,
+        &BindingRow::default(),
+        cursor.scan,
+        compressed,
+        decoded,
+        quin_scratch,
+        out,
+    )?;
+    let mut returned = 0usize;
+    let mut skipped = cursor.skipped;
+    let mut emitted = cursor.emitted;
+    for index in 0..source_page.returned {
+        if skipped < plan.offset {
+            skipped += 1;
+            continue;
+        }
+        if emitted >= plan.limit {
+            return Ok(Q42RangeTripleSelectPage {
+                returned,
+                next_cursor: None,
+            });
+        }
+        let mut row = out[index];
+        if plan.projection_count != 0 {
+            let mut projected = BindingRow::default();
+            for variable in plan.projection.iter().take(plan.projection_count as usize) {
+                if let Some(value) = row.get(*variable) {
+                    projected.set(*variable, value);
+                }
+            }
+            row = projected;
+        }
+        out[returned] = row;
+        returned += 1;
+        emitted += 1;
+    }
+    Ok(Q42RangeTripleSelectPage {
+        returned,
+        next_cursor: if emitted >= plan.limit {
+            None
+        } else {
+            source_page
+                .next_cursor
+                .map(|scan| Q42RangeTripleSelectCursor {
+                    scan,
+                    skipped,
+                    emitted,
+                })
+        },
+    })
+}
+
 /// Execute one physical page of a SPARQL triple pattern against a Q42 range
 /// source.  Constants and already-bound variables become on-disk filters; a
 /// bound object selects BIDX pruning automatically. `quin_scratch` and `out`
