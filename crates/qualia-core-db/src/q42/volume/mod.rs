@@ -7,6 +7,7 @@
 mod cursor;
 mod index;
 mod manifest;
+mod range;
 mod validate;
 
 pub use cursor::{Q42BlockCursor, Q42BlockMeta};
@@ -14,6 +15,9 @@ pub use index::{BidxBlockRange, BidxMatchPage};
 pub use manifest::{
     root_relative_path, Q42VolumeManifest, Q42VolumeSegment, Q42VolumeSet,
     MAX_VOLUME_MANIFEST_BYTES,
+};
+pub use range::{
+    validate_exact_range_response, LocalFileRangeSource, Q42ByteRange, Q42RangeSource,
 };
 
 pub(crate) use index::{bidx_block_range_for_hash, bidx_blocks_for_hash_into};

@@ -26,7 +26,8 @@ use crate::{NQuin, QUINS_PER_BLOCK};
 mod volume;
 
 pub use volume::{
-    root_relative_path, BidxBlockRange, BidxMatchPage, Q42BlockCursor, Q42BlockMeta,
+    root_relative_path, validate_exact_range_response, BidxBlockRange, BidxMatchPage,
+    LocalFileRangeSource, Q42BlockCursor, Q42BlockMeta, Q42ByteRange, Q42RangeSource,
     Q42VolumeManifest, Q42VolumeSegment, Q42VolumeSet, MAX_VOLUME_MANIFEST_BYTES,
 };
 
