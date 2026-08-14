@@ -25,8 +25,9 @@ assert.doesNotMatch(html, /releases\/download\/v0\.0\.24\/.*\.(p64|gguf)/);
 assert.doesNotMatch(html, /value="models\/.*\.gguf"/);
 assert.match(html, /inferWasmAsyncMeasured/);
 assert.match(html, /returned no visible text/);
-assert.match(html, /qualia_core_db\.js\?v=0\.0\.29-mobile-performance1/);
-assert.match(html, /qualia_core_db_bg\.wasm\?v=0\.0\.29-mobile-performance1/);
-assert.equal(wasmPackage.version, '0.0.29');
+const wasmVersion = wasmPackage.version.replaceAll('.', '\\.');
+assert.match(html, new RegExp(`qualia_core_db\\.js\\?v=${wasmVersion}-`));
+assert.match(html, new RegExp(`qualia_core_db_bg\\.wasm\\?v=${wasmVersion}-`));
+assert.equal(wasmPackage.version, '0.0.30');
 
 console.log('Online LLM demo catalogue tests passed.');
