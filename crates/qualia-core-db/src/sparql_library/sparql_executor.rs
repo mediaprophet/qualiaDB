@@ -10,6 +10,10 @@ use crate::sparql_filter::{EvalResult, ExpressionEvaluator};
 use crate::sparql_planner::*;
 use crate::NQuin;
 
+#[cfg(not(target_arch = "wasm32"))]
+mod range_q42_exec {
+    use super::*;
+
 /// Resume state for a caller-buffered triple-pattern page over a range-backed
 /// Q42 segment.  It is deliberately separate from the resident executor: no
 /// graph-sized `Vec<NQuin>` is constructed on this path.
@@ -711,6 +715,11 @@ pub fn execute_range_volume_set_triple_page_into<S: crate::q42_volume::Q42RangeS
             .map(|scan| Q42RangeVolumeSetSparqlCursor { scan }),
     })
 }
+
+} // range_q42_exec — native mmap/HTTP range SPARQL; not on wasm32.
+
+#[cfg(not(target_arch = "wasm32"))]
+pub use range_q42_exec::*;
 
 #[inline]
 fn term_is_var(term: u64, ctx: &SparqlQueryContext) -> Option<VariableId> {
@@ -2216,6 +2225,7 @@ mod tests {
         assert!(result.is_err());
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     #[test]
     fn range_triple_page_uses_q42_bidx_without_resident_graph() {
         let dir = tempfile::TempDir::new().unwrap();
@@ -2261,6 +2271,7 @@ mod tests {
         assert_eq!(rows[0].slots[0], None);
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     #[test]
     fn range_nested_loop_join_resumes_without_a_resident_graph() {
         let dir = tempfile::TempDir::new().unwrap();
@@ -2346,6 +2357,7 @@ mod tests {
         assert!(final_page.done);
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     #[test]
     fn range_volume_set_nested_loop_join_scans_manifest_children() {
         let dir = tempfile::TempDir::new().unwrap();

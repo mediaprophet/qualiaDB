@@ -1,26 +1,36 @@
-pub mod range_bind;
-pub mod range_hash_join;
-pub mod range_join_select;
-pub mod range_optional;
 pub mod range_select_apply;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod range_bind;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod range_hash_join;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod range_join_select;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod range_optional;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod range_union;
+#[cfg(not(target_arch = "wasm32"))]
 pub use range_bind::{
     apply_bind, execute_range_bind_page_into, execute_range_volume_set_bind_page_into,
     Q42RangeBindPlan, Q42RangeBindState, Q42RangeVolumeSetBindState,
 };
+#[cfg(not(target_arch = "wasm32"))]
 pub use range_hash_join::{
     execute_range_hash_join_page_into, execute_range_volume_set_hash_join_page_into,
     Q42RangeHashJoinPlan, Q42RangeHashJoinSlot, Q42RangeHashJoinState,
     Q42RangeVolumeSetHashJoinState,
 };
+#[cfg(not(target_arch = "wasm32"))]
 pub use range_join_select::{
     execute_range_join_select_page_into, execute_range_volume_set_join_select_page_into,
     Q42RangeJoinSelectPlan, Q42RangeJoinSelectState, Q42RangeVolumeSetJoinSelectState,
 };
+#[cfg(not(target_arch = "wasm32"))]
 pub use range_optional::{
     execute_range_optional_page_into, execute_range_volume_set_optional_page_into,
     Q42RangeOptionalPlan, Q42RangeOptionalState, Q42RangeVolumeSetOptionalState,
 };
+#[cfg(not(target_arch = "wasm32"))]
 pub use range_union::{
     execute_range_union_page_into, execute_range_volume_set_union_page_into, Q42RangeUnionPlan,
     Q42RangeUnionState, Q42RangeVolumeSetUnionState,
