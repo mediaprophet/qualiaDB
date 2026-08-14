@@ -43,7 +43,7 @@ jobs:
             local url="$1"
             local source_name="$2"
             local asset_name="$3"
-            local expected_sha256="$4"
+            local source_sha256="$4"
             local source="$RUNNER_TEMP/p64-source/$source_name"
             local output_dir="$RUNNER_TEMP/p64-output/${asset_name%.p64}"
             local output="$output_dir/$asset_name"
@@ -51,34 +51,42 @@ jobs:
 
             curl --fail --location --retry 8 --retry-all-errors \
               --output "$source" "$url"
+            printf '%s  %s\n' "$source_sha256" "$source" | sha256sum --check --strict
             target/release/examples/build_p64_release "$source" "$output_dir"
-            printf '%s  %s\n' "$expected_sha256" "$output" | sha256sum --check --strict
-            gh release upload "$RELEASE_TAG" "$output" \
+            test -f "$output"
+            test -f "$helper"
+            echo "P64 $(sha256sum "$output")"
+            echo "Q42 $(sha256sum "$helper")"
+            gh release upload "$RELEASE_TAG" "$output" "$helper" \
               --repo "$GITHUB_REPOSITORY" --clobber
             rm -f "$source" "$output" "$helper"
             rmdir "$output_dir"
           }
 
+          # Pin the HuggingFace GGUF (LFS SHA-256). The converter already
+          # re-opens the P64 and round-trips the companion Q42 v3 helper.
+          # Do not pin output P64 bytes: helper/ECC layout is allowed to change.
+
           convert_upload \
             "https://huggingface.co/HuggingFaceTB/SmolLM2-1.7B-Instruct-GGUF/resolve/main/smollm2-1.7b-instruct-q4_k_m.gguf" \
             "smollm2-1.7b-instruct-q4_k_m.gguf" \
             "smollm2-1.7b-instruct-q4_k_m.p64" \
-            "1bb20a2c71613b53994ccab30882c0c90f14a2f39af657dd4a266fc65f86d9de"
+            "decd2598bc2c8ed08c19adc3c8fdd461ee19ed5708679d1c54ef54a5a30d4f33"
 
           convert_upload \
             "https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct-GGUF/resolve/main/qwen2.5-1.5b-instruct-q4_k_m.gguf" \
             "qwen2.5-1.5b-instruct-q4_k_m.gguf" \
             "qwen2.5-1.5b-instruct-q4_k_m.p64" \
-            "7e79a949ec7368e0a8fb6c9a87f74696890d558369ed819e8a8082fe6668e8be"
+            "6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e"
 
           convert_upload \
             "https://huggingface.co/bartowski/Llama-3.2-1B-Instruct-GGUF/resolve/main/Llama-3.2-1B-Instruct-Q4_K_M.gguf" \
             "Llama-3.2-1B-Instruct-Q4_K_M.gguf" \
             "Llama-3.2-1B-Instruct-Q4_K_M.p64" \
-            "606f2b42b113f2fc6b415fce151598a2186c7e2f8a2f2bcd6e36502e00c13fad"
+            "6f85a640a97cf2bf5b8e764087b1e83da0fdb51d7c9fab7d0fece9385611df83"
 
           convert_upload \
             "https://huggingface.co/hugging-quants/Llama-3.2-3B-Instruct-Q4_K_M-GGUF/resolve/main/llama-3.2-3b-instruct-q4_k_m.gguf" \
             "llama-3.2-3b-instruct-q4_k_m.gguf" \
             "llama-3.2-3b-instruct-q4_k_m.p64" \
-            "17e006669c226dd0d5ee84a86797729d8a0ff93bfa2a70e5b3a7fcf628b4ce54"
+            "c55a83bfb6396799337853ca69918a0b9bbb2917621078c34570bc17d20fd7a1"
