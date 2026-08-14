@@ -4,10 +4,12 @@ use std::io;
 
 use super::super::{
     header_from_bytes, BlockDirectoryEntry, Q42VolumeHeader, BIDX_MAGIC, FLAG_BLOCKS_LZ4,
-    HEADER_SIZE, MAX_COMPRESSED_SUPERBLOCK_SIZE, Q42_VERSION_V3, QUINS_PER_BLOCK, SUPERBLOCK_SIZE,
+    HEADER_SIZE, MAX_COMPRESSED_SUPERBLOCK_SIZE, Q42_VERSION_V3, QUINS_PER_BLOCK, QUIN_SIZE,
+    SUPERBLOCK_HEADER, SUPERBLOCK_SIZE,
 };
 use super::index::{BidxBlockRange, BidxMatchPage};
 use super::range::{Q42ByteRange, Q42RangeSource};
+use crate::NQuin;
 
 const BIDX_HEADER_BYTES: usize = 16;
 const BIDX_ENTRY_BYTES: usize = 16;
@@ -22,6 +24,24 @@ pub struct Q42RangeVolume<S: Q42RangeSource> {
     source: S,
     header: Q42VolumeHeader,
     source_length: u64,
+}
+
+/// Resume state for a caller-buffered object search. It is tied to the object
+/// hash passed to [`Q42RangeVolume::find_object_into`].
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub struct Q42ObjectSearchCursor {
+    /// Offset into the matching BIDX block interval.
+    pub block_offset: usize,
+    /// Quin offset in the current decoded block.
+    pub quin_offset: usize,
+}
+
+/// One page of exact object matches written by [`Q42RangeVolume::find_object_into`].
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct Q42ObjectMatchPage {
+    pub block_range: BidxBlockRange,
+    pub returned: usize,
+    pub next_cursor: Option<Q42ObjectSearchCursor>,
 }
 
 impl<S: Q42RangeSource> Q42RangeVolume<S> {
@@ -267,6 +287,76 @@ impl<S: Q42RangeSource> Q42RangeVolume<S> {
         }))
     }
 
+    /// Find Quins whose object equals `object_hash`, using the BIDX to fetch
+    /// only candidate SuperBlocks. `compressed`, `decoded`, and `out` are all
+    /// caller-owned. Reuse `cursor` from the returned page until it is `None`.
+    pub fn find_object_into(
+        &self,
+        object_hash: u64,
+        cursor: Q42ObjectSearchCursor,
+        compressed: &mut [u8],
+        decoded: &mut [u8],
+        out: &mut [NQuin],
+    ) -> io::Result<Option<Q42ObjectMatchPage>> {
+        let Some(block_range) = self.bidx_block_range_for_hash(object_hash)? else {
+            return Ok(None);
+        };
+        if cursor.block_offset > block_range.len() {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "Q42 object search cursor is beyond the matching block interval",
+            ));
+        }
+        if out.is_empty() && cursor.block_offset < block_range.len() {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "Q42 object search output buffer must contain at least one Quin",
+            ));
+        }
+
+        let mut written = 0usize;
+        let mut block_offset = cursor.block_offset;
+        let mut quin_offset = cursor.quin_offset;
+        while block_offset < block_range.len() && written < out.len() {
+            self.read_superblock_into(block_range.start + block_offset, compressed, decoded)?;
+            let live = u64::from_le_bytes(decoded[16..24].try_into().unwrap()) as usize;
+            if live > QUINS_PER_BLOCK || quin_offset > live {
+                return Err(invalid(
+                    "Q42 object search encountered an invalid SuperBlock",
+                ));
+            }
+            while quin_offset < live && written < out.len() {
+                let offset = SUPERBLOCK_HEADER + quin_offset * QUIN_SIZE;
+                let quin =
+                    bytemuck::pod_read_unaligned::<NQuin>(&decoded[offset..offset + QUIN_SIZE]);
+                if quin.object < object_hash {
+                    quin_offset += 1;
+                    continue;
+                }
+                if quin.object > object_hash {
+                    quin_offset = live;
+                    break;
+                }
+                out[written] = quin;
+                written += 1;
+                quin_offset += 1;
+            }
+            if quin_offset == live {
+                block_offset += 1;
+                quin_offset = 0;
+            }
+        }
+        let next_cursor = (block_offset < block_range.len()).then_some(Q42ObjectSearchCursor {
+            block_offset,
+            quin_offset,
+        });
+        Ok(Some(Q42ObjectMatchPage {
+            block_range,
+            returned: written,
+            next_cursor,
+        }))
+    }
+
     /// Fetch and decode one block. `compressed` must fit the directory entry;
     /// `out` must be at least one full decoded SuperBlock.
     pub fn read_superblock_into(
@@ -485,6 +575,64 @@ mod tests {
             .unwrap();
         assert_eq!(&page, &[2, 3]);
         assert_eq!(last.next_cursor, Some(4));
+    }
+
+    #[test]
+    fn range_volume_object_search_is_paged_and_zero_heap() {
+        let (file, quin) = sample_volume();
+        let mut lex = HashMap::new();
+        lex.insert(quin.subject, "urn:q42:range-subject".to_string());
+        lex.insert(quin.predicate, "urn:q42:range-predicate".to_string());
+        lex.insert(quin.object, "urn:q42:range-object".to_string());
+        write_unified_volume(
+            file.path(),
+            &lex,
+            &[(quin.object, quin.object); 3],
+            &[vec![quin], vec![quin], vec![quin]],
+        )
+        .unwrap();
+        let source = super::super::range::LocalFileRangeSource::open(file.path()).unwrap();
+        let volume = Q42RangeVolume::open(source).unwrap();
+        let mut compressed = [0u8; MAX_COMPRESSED_SUPERBLOCK_SIZE];
+        let mut decoded = [0u8; SUPERBLOCK_SIZE];
+        let mut out = [NQuin::default(); 2];
+        let first = volume
+            .find_object_into(
+                quin.object,
+                Q42ObjectSearchCursor::default(),
+                &mut compressed,
+                &mut decoded,
+                &mut out,
+            )
+            .unwrap()
+            .unwrap();
+        assert_eq!(first.returned, 2);
+        assert_eq!(out, [quin, quin]);
+        let second = volume
+            .find_object_into(
+                quin.object,
+                first.next_cursor.unwrap(),
+                &mut compressed,
+                &mut decoded,
+                &mut out,
+            )
+            .unwrap()
+            .unwrap();
+        assert_eq!(second.returned, 1);
+        assert_eq!(out[0], quin);
+        assert_eq!(second.next_cursor, None);
+
+        assert_zero_alloc("q42_range_volume_object_search", || {
+            volume
+                .find_object_into(
+                    quin.object,
+                    Q42ObjectSearchCursor::default(),
+                    &mut compressed,
+                    &mut decoded,
+                    &mut out,
+                )
+                .unwrap();
+        });
     }
 
     #[test]

@@ -33,7 +33,8 @@ pub use volume::{
 pub use volume::{
     root_relative_path, validate_exact_range_response, verify_source_sha256, BidxBlockRange,
     BidxMatchPage, LocalFileRangeSource, Q42BlockCursor, Q42BlockMeta, Q42ByteRange,
-    Q42RangeSource, Q42RangeVolume, Q42RangeVolumeSet, Q42SegmentRangeFactory, Q42VolumeManifest,
+    Q42ObjectMatchPage, Q42ObjectSearchCursor, Q42RangeSource, Q42RangeVolume, Q42RangeVolumeSet,
+    Q42SegmentMatchPage, Q42SegmentMatchRange, Q42SegmentRangeFactory, Q42VolumeManifest,
     Q42VolumeSegment, Q42VolumeSet, StreamingQ42VolumeWriter, MAX_VOLUME_MANIFEST_BYTES,
 };
 

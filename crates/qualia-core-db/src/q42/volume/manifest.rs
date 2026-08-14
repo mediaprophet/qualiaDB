@@ -41,6 +41,31 @@ pub struct Q42VolumeManifest {
     pub segments: Vec<Q42VolumeSegment>,
 }
 
+/// A contiguous interval of volume segments that can contain one object hash.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct Q42SegmentMatchRange {
+    pub start: usize,
+    pub end: usize,
+}
+
+impl Q42SegmentMatchRange {
+    pub fn len(self) -> usize {
+        self.end - self.start
+    }
+
+    pub fn is_empty(self) -> bool {
+        self.start == self.end
+    }
+}
+
+/// One caller-buffered page from a manifest object-hash segment match.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct Q42SegmentMatchPage {
+    pub range: Q42SegmentMatchRange,
+    pub returned: usize,
+    pub next_cursor: Option<usize>,
+}
+
 impl Q42VolumeManifest {
     pub fn encode(&self) -> io::Result<Vec<u8>> {
         self.validate()?;
@@ -171,6 +196,71 @@ impl Q42VolumeManifest {
         Ok(())
     }
 
+    /// Return every segment whose committed object interval can contain the
+    /// given value. Equal boundaries remain complete across adjacent volumes.
+    pub fn segment_range_for_object(&self, object_hash: u64) -> Option<Q42SegmentMatchRange> {
+        let mut lo = 0usize;
+        let mut hi = self.segments.len();
+        while lo < hi {
+            let mid = lo + (hi - lo) / 2;
+            if self.segments[mid].last_object_hash < object_hash {
+                lo = mid + 1;
+            } else {
+                hi = mid;
+            }
+        }
+        let start = lo;
+        if start == self.segments.len() || self.segments[start].first_object_hash > object_hash {
+            return None;
+        }
+        lo = start;
+        hi = self.segments.len();
+        while lo < hi {
+            let mid = lo + (hi - lo) / 2;
+            if self.segments[mid].first_object_hash <= object_hash {
+                lo = mid + 1;
+            } else {
+                hi = mid;
+            }
+        }
+        Some(Q42SegmentMatchRange { start, end: lo })
+    }
+
+    /// Fill a bounded page of matching segment indices. This caps caller work
+    /// even when a high-frequency object falls on many volume boundaries.
+    pub fn segment_indices_for_object_into(
+        &self,
+        object_hash: u64,
+        cursor: usize,
+        out: &mut [usize],
+    ) -> io::Result<Option<Q42SegmentMatchPage>> {
+        let Some(range) = self.segment_range_for_object(object_hash) else {
+            return Ok(None);
+        };
+        if cursor > range.len() {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "Q42 manifest segment cursor is beyond the matching interval",
+            ));
+        }
+        if out.is_empty() && cursor < range.len() {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "Q42 manifest segment page requires at least one output slot",
+            ));
+        }
+        let returned = (range.len() - cursor).min(out.len());
+        for (offset, slot) in out.iter_mut().take(returned).enumerate() {
+            *slot = range.start + cursor + offset;
+        }
+        let next = cursor + returned;
+        Ok(Some(Q42SegmentMatchPage {
+            range,
+            returned,
+            next_cursor: (next < range.len()).then_some(next),
+        }))
+    }
+
     pub fn segment_from_file(path: &Path, locator: String) -> io::Result<Q42VolumeSegment> {
         let volume = Q42Volume::open(path)?;
         let mut first = None;
@@ -281,21 +371,19 @@ impl<S: Q42RangeSource> Q42RangeVolumeSet<S> {
     /// Segment boundary overlap is legal for high-frequency values, so callers
     /// must advance through adjoining intervals when a value spans segments.
     pub fn segment_index_for_object(&self, object_hash: u64) -> Option<usize> {
-        let mut lo = 0usize;
-        let mut hi = self.manifest.segments.len();
-        while lo < hi {
-            let mid = lo + (hi - lo) / 2;
-            if self.manifest.segments[mid].last_object_hash < object_hash {
-                lo = mid + 1;
-            } else {
-                hi = mid;
-            }
-        }
         self.manifest
-            .segments
-            .get(lo)
-            .filter(|segment| segment.first_object_hash <= object_hash)
-            .map(|_| lo)
+            .segment_range_for_object(object_hash)
+            .map(|range| range.start)
+    }
+
+    pub fn segment_indices_for_object_into(
+        &self,
+        object_hash: u64,
+        cursor: usize,
+        out: &mut [usize],
+    ) -> io::Result<Option<Q42SegmentMatchPage>> {
+        self.manifest
+            .segment_indices_for_object_into(object_hash, cursor, out)
     }
 
     /// Verify every immutable child digest using a caller-owned scratch buffer.
@@ -513,5 +601,38 @@ mod tests {
                 "locator {locator:?} must be rejected"
             );
         }
+    }
+
+    #[test]
+    fn manifest_pages_all_boundary_spanning_segments_without_allocation() {
+        let mut first = segment("one.q42");
+        let mut second = segment("two.q42");
+        let mut third = segment("three.q42");
+        first.first_object_hash = 41;
+        first.last_object_hash = 42;
+        second.first_object_hash = 42;
+        second.last_object_hash = 42;
+        third.first_object_hash = 42;
+        third.last_object_hash = 43;
+        let manifest = Q42VolumeManifest {
+            generation: 1,
+            segments: vec![first, second, third],
+        };
+        manifest.validate().unwrap();
+        let mut page = [usize::MAX; 2];
+        let first_page = manifest
+            .segment_indices_for_object_into(42, 0, &mut page)
+            .unwrap()
+            .unwrap();
+        assert_eq!(first_page.range, Q42SegmentMatchRange { start: 0, end: 3 });
+        assert_eq!(&page, &[0, 1]);
+        assert_eq!(first_page.next_cursor, Some(2));
+        let second_page = manifest
+            .segment_indices_for_object_into(42, 2, &mut page)
+            .unwrap()
+            .unwrap();
+        assert_eq!(second_page.returned, 1);
+        assert_eq!(page[0], 2);
+        assert_eq!(second_page.next_cursor, None);
     }
 }
