@@ -9,8 +9,8 @@ use tempfile::TempDir;
 
 use super::super::{
     encode_lex, encode_superblock, header_to_bytes, BlockDirectoryEntry, Q42VolumeHeader,
-    FLAG_BLOCKS_LZ4, FLAG_OBJECT_SORTED, HEADER_SIZE, Q42_VERSION_V3, QUINS_PER_BLOCK,
-    SUPERBLOCK_SIZE,
+    FLAG_BLOCKS_LZ4, FLAG_FIELD_RANGES, FLAG_OBJECT_SORTED, HEADER_SIZE, Q42_VERSION_V3,
+    QUINS_PER_BLOCK, SUPERBLOCK_SIZE,
 };
 use crate::NQuin;
 
@@ -23,9 +23,11 @@ fn invalid(message: impl Into<String>) -> io::Error {
 pub struct StreamingQ42VolumeWriter {
     _temp: TempDir,
     bidx_path: PathBuf,
+    field_ranges_path: PathBuf,
     directory_path: PathBuf,
     data_path: PathBuf,
     bidx: BufWriter<File>,
+    field_ranges: BufWriter<File>,
     directory: BufWriter<File>,
     data: BufWriter<File>,
     lex_bytes: Vec<u8>,
@@ -38,15 +40,18 @@ impl StreamingQ42VolumeWriter {
     pub fn new(lexicon: &HashMap<u64, String>) -> io::Result<Self> {
         let temp = TempDir::new()?;
         let bidx_path = temp.path().join("bidx.entries");
+        let field_ranges_path = temp.path().join("field-ranges.entries");
         let directory_path = temp.path().join("block.directory");
         let data_path = temp.path().join("blocks.lz4");
         let open = |path: &Path| OpenOptions::new().create_new(true).write(true).open(path);
         Ok(Self {
             bidx: BufWriter::new(open(&bidx_path)?),
+            field_ranges: BufWriter::new(open(&field_ranges_path)?),
             directory: BufWriter::new(open(&directory_path)?),
             data: BufWriter::new(open(&data_path)?),
             _temp: temp,
             bidx_path,
+            field_ranges_path,
             directory_path,
             data_path,
             lex_bytes: encode_lex(lexicon)
@@ -82,6 +87,30 @@ impl StreamingQ42VolumeWriter {
             .map_err(|_| invalid("compressed Q42 block exceeds u32"))?;
         self.bidx.write_all(&first.object.to_le_bytes())?;
         self.bidx.write_all(&previous.to_le_bytes())?;
+        let mut subject_min = first.subject;
+        let mut subject_max = first.subject;
+        let mut predicate_min = first.predicate;
+        let mut predicate_max = first.predicate;
+        let mut context_min = first.context;
+        let mut context_max = first.context;
+        for quin in &quins[1..] {
+            subject_min = subject_min.min(quin.subject);
+            subject_max = subject_max.max(quin.subject);
+            predicate_min = predicate_min.min(quin.predicate);
+            predicate_max = predicate_max.max(quin.predicate);
+            context_min = context_min.min(quin.context);
+            context_max = context_max.max(quin.context);
+        }
+        for value in [
+            subject_min,
+            subject_max,
+            predicate_min,
+            predicate_max,
+            context_min,
+            context_max,
+        ] {
+            self.field_ranges.write_all(&value.to_le_bytes())?;
+        }
         BlockDirectoryEntry {
             rel_offset: self.data_length,
             comp_len: compressed_len,
@@ -112,6 +141,13 @@ impl StreamingQ42VolumeWriter {
                     .ok_or_else(|| invalid("Q42 BIDX length overflow"))?,
             )
             .ok_or_else(|| invalid("Q42 BIDX length overflow"))?;
+        let field_ranges_length = 16u64
+            .checked_add(
+                self.block_count
+                    .checked_mul(48)
+                    .ok_or_else(|| invalid("Q42 field-range index length overflow"))?,
+            )
+            .ok_or_else(|| invalid("Q42 field-range index length overflow"))?;
         let directory_length = self
             .block_count
             .checked_mul(BlockDirectoryEntry::SIZE as u64)
@@ -119,6 +155,7 @@ impl StreamingQ42VolumeWriter {
         (HEADER_SIZE as u64)
             .checked_add(self.lex_bytes.len() as u64)
             .and_then(|value| value.checked_add(bidx_length))
+            .and_then(|value| value.checked_add(field_ranges_length))
             .and_then(|value| value.checked_add(directory_length))
             .and_then(|value| value.checked_add(self.data_length))
             .ok_or_else(|| invalid("Q42 final length overflow"))
@@ -138,6 +175,7 @@ impl StreamingQ42VolumeWriter {
 
     pub fn finish(mut self, path: &Path) -> io::Result<()> {
         self.bidx.flush()?;
+        self.field_ranges.flush()?;
         self.directory.flush()?;
         self.data.flush()?;
         let bidx_length = 16
@@ -149,14 +187,20 @@ impl StreamingQ42VolumeWriter {
             .block_count
             .checked_mul(BlockDirectoryEntry::SIZE as u64)
             .ok_or_else(|| invalid("Q42 directory length overflow"))?;
+        let field_ranges_length = 16
+            + self
+                .block_count
+                .checked_mul(48)
+                .ok_or_else(|| invalid("Q42 field-range index length overflow"))?;
         let lex_offset = HEADER_SIZE as u64;
         let bidx_offset = lex_offset + self.lex_bytes.len() as u64;
-        let directory_offset = bidx_offset + bidx_length;
+        let field_ranges_offset = bidx_offset + bidx_length;
+        let directory_offset = field_ranges_offset + field_ranges_length;
         let data_offset = directory_offset + directory_length;
         let header = Q42VolumeHeader {
             magic: super::super::Q42_MAGIC,
             version: Q42_VERSION_V3,
-            flags: FLAG_BLOCKS_LZ4 | FLAG_OBJECT_SORTED,
+            flags: FLAG_BLOCKS_LZ4 | FLAG_OBJECT_SORTED | FLAG_FIELD_RANGES,
             lex_offset,
             lex_length: self.lex_bytes.len() as u64,
             bidx_offset,
@@ -176,7 +220,12 @@ impl StreamingQ42VolumeWriter {
             dag_root_length: 0,
             natural_person_did_offset: 0,
             software_agent_did_offset: 0,
-            _reserved: [0; 80],
+            _reserved: {
+                let mut reserved = [0; 80];
+                reserved[16..24].copy_from_slice(&field_ranges_offset.to_le_bytes());
+                reserved[24..32].copy_from_slice(&(field_ranges_length as u64).to_le_bytes());
+                reserved
+            },
         };
         let mut output = BufWriter::new(
             OpenOptions::new()
@@ -192,6 +241,11 @@ impl StreamingQ42VolumeWriter {
         output.write_all(&(self.block_count as u32).to_le_bytes())?;
         output.write_all(&0u32.to_le_bytes())?;
         copy_file(&self.bidx_path, &mut output)?;
+        output.write_all(&super::super::FIELD_RANGE_INDEX_MAGIC)?;
+        output.write_all(&1u32.to_le_bytes())?;
+        output.write_all(&(self.block_count as u32).to_le_bytes())?;
+        output.write_all(&0u32.to_le_bytes())?;
+        copy_file(&self.field_ranges_path, &mut output)?;
         copy_file(&self.directory_path, &mut output)?;
         copy_file(&self.data_path, &mut output)?;
         output.flush()

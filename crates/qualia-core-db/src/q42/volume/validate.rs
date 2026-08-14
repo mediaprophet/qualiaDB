@@ -3,10 +3,10 @@
 use std::io;
 
 use super::super::{
-    BlockDirectoryEntry, Q42VolumeHeader, FLAG_BLOCKS_LZ4, FLAG_OBJECT_SORTED, HEADER_SIZE,
-    QUINS_PER_BLOCK, SUPERBLOCK_SIZE,
+    BlockDirectoryEntry, Q42VolumeHeader, FLAG_BLOCKS_LZ4, FLAG_FIELD_RANGES, FLAG_OBJECT_SORTED,
+    HEADER_SIZE, QUINS_PER_BLOCK, SUPERBLOCK_SIZE,
 };
-use super::index::validate_bidx;
+use super::index::{validate_bidx, validate_field_range_index};
 
 #[derive(Clone, Copy)]
 struct Section {
@@ -83,6 +83,7 @@ pub(crate) fn validate_volume_structure(header: &Q42VolumeHeader, bytes: &[u8]) 
     let natural_person_offset = header.natural_person_did_offset;
     let software_agent_offset = header.software_agent_did_offset;
     let manifest_range = header.volume_manifest_range();
+    let field_range_index = header.field_range_index_range();
 
     if flags & FLAG_BLOCKS_LZ4 == 0 {
         return Err(invalid("Q42 v3 volume does not declare block-local LZ4"));
@@ -136,6 +137,13 @@ pub(crate) fn validate_volume_structure(header: &Q42VolumeHeader, bytes: &[u8]) 
         section("lexicon", lex_offset, lex_length, bytes.len())?,
         manifest_section,
         section("BIDX", bidx_offset, bidx_length, bytes.len())?,
+        match field_range_index {
+            Some((offset, length)) => Some(
+                section("field-range index", offset, length, bytes.len())?
+                    .ok_or_else(|| invalid("Q42 has an empty field-range index"))?,
+            ),
+            None => None,
+        },
         section("block directory", dir_offset, dir_length, bytes.len())?,
         section("block data", data_offset, data_length, bytes.len())?,
         section(
@@ -173,6 +181,13 @@ pub(crate) fn validate_volume_structure(header: &Q42VolumeHeader, bytes: &[u8]) 
         let bidx_start = checked_usize(bidx_offset, "BIDX offset")?;
         let bidx_end = bidx_start + checked_usize(bidx_length, "BIDX length")?;
         validate_bidx(&bytes[bidx_start..bidx_end], block_count)?;
+    }
+    if flags & FLAG_FIELD_RANGES != 0 {
+        let (offset, length) = field_range_index
+            .ok_or_else(|| invalid("Q42 field-range flag has no index location"))?;
+        let start = checked_usize(offset, "field-range index offset")?;
+        let end = start + checked_usize(length, "field-range index length")?;
+        validate_field_range_index(&bytes[start..end], block_count)?;
     }
 
     let dir_start = checked_usize(dir_offset, "block directory offset")?;

@@ -3,9 +3,9 @@
 use std::io;
 
 use super::super::{
-    header_from_bytes, BlockDirectoryEntry, Q42VolumeHeader, BIDX_MAGIC, FLAG_BLOCKS_LZ4,
-    HEADER_SIZE, MAX_COMPRESSED_SUPERBLOCK_SIZE, Q42_VERSION_V3, QUINS_PER_BLOCK, QUIN_SIZE,
-    SUPERBLOCK_HEADER, SUPERBLOCK_SIZE,
+    header_from_bytes, BlockDirectoryEntry, Q42VolumeHeader, BIDX_MAGIC, FIELD_RANGE_INDEX_MAGIC,
+    FLAG_BLOCKS_LZ4, HEADER_SIZE, MAX_COMPRESSED_SUPERBLOCK_SIZE, Q42_VERSION_V3, QUINS_PER_BLOCK,
+    QUIN_SIZE, SUPERBLOCK_HEADER, SUPERBLOCK_SIZE,
 };
 use super::index::{BidxBlockRange, BidxMatchPage};
 use super::range::{Q42ByteRange, Q42RangeSource};
@@ -13,6 +13,8 @@ use crate::NQuin;
 
 const BIDX_HEADER_BYTES: usize = 16;
 const BIDX_ENTRY_BYTES: usize = 16;
+const FIELD_RANGE_INDEX_HEADER_BYTES: usize = 16;
+const FIELD_RANGE_INDEX_ENTRY_BYTES: usize = 48;
 
 fn invalid(message: impl Into<String>) -> io::Error {
     io::Error::new(io::ErrorKind::InvalidData, message.into())
@@ -58,6 +60,7 @@ pub struct Q42RangeQueryPattern {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Q42RangeQueryStrategy {
     ObjectBidx,
+    FieldRanges,
     Sequential,
 }
 
@@ -72,6 +75,11 @@ impl Q42RangeQueryPlan {
         Self {
             strategy: if pattern.object.is_some() {
                 Q42RangeQueryStrategy::ObjectBidx
+            } else if pattern.subject.is_some()
+                || pattern.predicate.is_some()
+                || pattern.context.is_some()
+            {
+                Q42RangeQueryStrategy::FieldRanges
             } else {
                 Q42RangeQueryStrategy::Sequential
             },
@@ -122,6 +130,10 @@ impl<S: Q42RangeSource> Q42RangeVolume<S> {
         for (name, offset, length) in [
             ("lexicon", header.lex_offset, header.lex_length),
             ("BIDX", header.bidx_offset, header.bidx_length),
+            match header.field_range_index_range() {
+                Some((offset, length)) => ("field-range index", offset, length),
+                None => ("field-range index", 0, 0),
+            },
             (
                 "block directory",
                 header.block_dir_offset,
@@ -153,6 +165,7 @@ impl<S: Q42RangeSource> Q42RangeVolume<S> {
             source_length,
         };
         volume.bidx_block_count()?;
+        volume.validate_field_range_index()?;
         Ok(volume)
     }
 
@@ -198,7 +211,9 @@ impl<S: Q42RangeSource> Q42RangeVolume<S> {
                     })
                 }
             },
-            Q42RangeQueryStrategy::Sequential => (0, self.header.block_count as usize),
+            Q42RangeQueryStrategy::FieldRanges | Q42RangeQueryStrategy::Sequential => {
+                (0, self.header.block_count as usize)
+            }
         };
         let mut block_index = cursor.block_index.max(start);
         let mut quin_offset = if block_index == cursor.block_index {
@@ -208,6 +223,13 @@ impl<S: Q42RangeSource> Q42RangeVolume<S> {
         };
         let mut returned = 0usize;
         while block_index < end {
+            if plan.strategy == Q42RangeQueryStrategy::FieldRanges
+                && !self.field_range_may_match(block_index, plan.pattern)?
+            {
+                block_index += 1;
+                quin_offset = 0;
+                continue;
+            }
             self.read_superblock_into(block_index, compressed, decoded)?;
             let count = u64::from_le_bytes(decoded[16..24].try_into().unwrap()) as usize;
             if count > QUINS_PER_BLOCK {
@@ -809,6 +831,68 @@ impl<S: Q42RangeSource> Q42RangeVolume<S> {
         }
         Ok((min, max))
     }
+
+    fn validate_field_range_index(&self) -> io::Result<()> {
+        let Some((offset, length)) = self.header.field_range_index_range() else {
+            return Ok(());
+        };
+        let expected = FIELD_RANGE_INDEX_HEADER_BYTES
+            .checked_add(
+                (self.header.block_count as usize)
+                    .checked_mul(FIELD_RANGE_INDEX_ENTRY_BYTES)
+                    .ok_or_else(|| invalid("Q42 field-range index length overflows"))?,
+            )
+            .ok_or_else(|| invalid("Q42 field-range index length overflows"))?;
+        if length != expected as u64 {
+            return Err(invalid(
+                "Q42 field-range index length does not match block count",
+            ));
+        }
+        let mut header = [0u8; FIELD_RANGE_INDEX_HEADER_BYTES];
+        self.read_section(offset, FIELD_RANGE_INDEX_HEADER_BYTES as u64, &mut header)?;
+        if header[0..4] != FIELD_RANGE_INDEX_MAGIC
+            || u32::from_le_bytes(header[4..8].try_into().unwrap()) != 1
+            || u32::from_le_bytes(header[8..12].try_into().unwrap()) as u64
+                != self.header.block_count
+        {
+            return Err(invalid("Q42 field-range index header is invalid"));
+        }
+        Ok(())
+    }
+
+    fn field_range_may_match(
+        &self,
+        block_index: usize,
+        pattern: Q42RangeQueryPattern,
+    ) -> io::Result<bool> {
+        let Some((offset, _)) = self.header.field_range_index_range() else {
+            return Ok(true);
+        };
+        if block_index >= self.header.block_count as usize {
+            return Err(invalid("Q42 field-range block index is out of bounds"));
+        }
+        let entry_offset = offset
+            .checked_add(FIELD_RANGE_INDEX_HEADER_BYTES as u64)
+            .and_then(|value| {
+                value.checked_add((block_index * FIELD_RANGE_INDEX_ENTRY_BYTES) as u64)
+            })
+            .ok_or_else(|| invalid("Q42 field-range entry offset overflows"))?;
+        let mut entry = [0u8; FIELD_RANGE_INDEX_ENTRY_BYTES];
+        self.read_section(
+            entry_offset,
+            FIELD_RANGE_INDEX_ENTRY_BYTES as u64,
+            &mut entry,
+        )?;
+        let includes = |field: usize, value: Option<u64>| {
+            let start = field * 16;
+            let min = u64::from_le_bytes(entry[start..start + 8].try_into().unwrap());
+            let max = u64::from_le_bytes(entry[start + 8..start + 16].try_into().unwrap());
+            min <= max && value.is_none_or(|value| min <= value && value <= max)
+        };
+        Ok(includes(0, pattern.subject)
+            && includes(1, pattern.predicate)
+            && includes(2, pattern.context))
+    }
 }
 
 #[cfg(test)]
@@ -1162,4 +1246,56 @@ mod tests {
         lex.insert(object, object_text.to_string());
         (quin, lex)
     }
+}
+#[test]
+fn field_ranges_prune_non_object_constant_scans() {
+    let file = tempfile::NamedTempFile::new().unwrap();
+    let first = NQuin {
+        subject: 10,
+        predicate: 20,
+        object: 1,
+        context: 30,
+        metadata: 0,
+        parity: 0,
+    };
+    let second = NQuin {
+        subject: 40,
+        predicate: 50,
+        object: 2,
+        context: 60,
+        metadata: 0,
+        parity: 0,
+    };
+    crate::q42_volume::write_unified_volume(
+        file.path(),
+        &std::collections::HashMap::new(),
+        &[(1, 1), (2, 2)],
+        &[vec![first], vec![second]],
+    )
+    .unwrap();
+    let source = crate::q42_volume::LocalFileRangeSource::open(file.path()).unwrap();
+    let volume = Q42RangeVolume::open(source).unwrap();
+    let pattern = Q42RangeQueryPattern {
+        predicate: Some(second.predicate),
+        ..Q42RangeQueryPattern::default()
+    };
+    assert_eq!(
+        Q42RangeQueryPlan::for_pattern(pattern).strategy,
+        Q42RangeQueryStrategy::FieldRanges
+    );
+    let mut compressed = [0u8; MAX_COMPRESSED_SUPERBLOCK_SIZE];
+    let mut decoded = [0u8; SUPERBLOCK_SIZE];
+    let mut out = [NQuin::default(); 1];
+    let page = volume
+        .execute_query_page_into(
+            Q42RangeQueryPlan::for_pattern(pattern),
+            Q42RangeQueryCursor::default(),
+            &mut compressed,
+            &mut decoded,
+            &mut out,
+        )
+        .unwrap();
+    assert_eq!(page.returned, 1);
+    assert_eq!(out[0], second);
+    assert!(page.next_cursor.is_none());
 }

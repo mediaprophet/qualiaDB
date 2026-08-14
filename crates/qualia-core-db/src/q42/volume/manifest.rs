@@ -6,7 +6,9 @@ use std::path::{Component, Path, PathBuf};
 
 use sha2::{Digest, Sha256};
 
-use super::super::{Q42Volume, MAX_COMPRESSED_SUPERBLOCK_SIZE, SUPERBLOCK_SIZE};
+use super::super::{
+    Q42VerificationReceipt, Q42Volume, MAX_COMPRESSED_SUPERBLOCK_SIZE, SUPERBLOCK_SIZE,
+};
 use super::range::{verify_source_sha256, Q42RangeSource};
 use super::range_volume::{
     Q42RangeQueryCursor, Q42RangeQueryPage, Q42RangeQueryPlan, Q42RangeVolume,
@@ -923,6 +925,35 @@ impl Q42VolumeSet {
             }
         }
         Ok(())
+    }
+
+    /// Exhaustively verify a local logical snapshot: manifest-attested child
+    /// digests plus every decoded data Quin.  This remains a cold operation;
+    /// each physical verifier uses a single fixed SuperBlock scratch buffer.
+    pub fn verify_all(&self, root_path: &Path) -> io::Result<Q42VerificationReceipt> {
+        self.verify_segment_hashes(root_path)?;
+        let mut receipt = Q42VerificationReceipt {
+            blocks_verified: 0,
+            quins_verified: 0,
+        };
+        for (entry, segment) in self.manifest.segments.iter().zip(&self.segments) {
+            let segment_receipt = segment.verify_all_blocks()?;
+            if segment_receipt.quins_verified != entry.quin_count {
+                return Err(invalid(format!(
+                    "Q42 verified Quin count differs from root manifest: {}",
+                    entry.locator
+                )));
+            }
+            receipt.blocks_verified = receipt
+                .blocks_verified
+                .checked_add(segment_receipt.blocks_verified)
+                .ok_or_else(|| invalid("Q42 verified block count overflows"))?;
+            receipt.quins_verified = receipt
+                .quins_verified
+                .checked_add(segment_receipt.quins_verified)
+                .ok_or_else(|| invalid("Q42 verified Quin count overflows"))?;
+        }
+        Ok(receipt)
     }
 }
 

@@ -2,7 +2,10 @@
 
 use std::io;
 
-use super::super::BIDX_MAGIC;
+use super::super::{
+    BIDX_MAGIC, FIELD_RANGE_INDEX_ENTRY_BYTES, FIELD_RANGE_INDEX_HEADER_BYTES,
+    FIELD_RANGE_INDEX_MAGIC,
+};
 
 const BIDX_HEADER_BYTES: usize = 16;
 const BIDX_ENTRY_BYTES: usize = 16;
@@ -105,6 +108,44 @@ pub(crate) fn validate_bidx(bidx: &[u8], expected_blocks: usize) -> io::Result<(
         }
         previous_min = min;
         previous_max = max;
+    }
+    Ok(())
+}
+
+pub(crate) fn validate_field_range_index(bytes: &[u8], expected_blocks: usize) -> io::Result<()> {
+    let expected = FIELD_RANGE_INDEX_HEADER_BYTES
+        .checked_add(
+            expected_blocks
+                .checked_mul(FIELD_RANGE_INDEX_ENTRY_BYTES)
+                .ok_or_else(|| invalid("field-range index length overflows"))?,
+        )
+        .ok_or_else(|| invalid("field-range index length overflows"))?;
+    if bytes.len() != expected {
+        return Err(invalid(format!(
+            "field-range index is {} bytes, expected {expected}",
+            bytes.len()
+        )));
+    }
+    if bytes[0..4] != FIELD_RANGE_INDEX_MAGIC {
+        return Err(invalid("field-range index has bad magic"));
+    }
+    if u32::from_le_bytes(bytes[4..8].try_into().unwrap()) != 1 {
+        return Err(invalid("unsupported field-range index version"));
+    }
+    if u32::from_le_bytes(bytes[8..12].try_into().unwrap()) as usize != expected_blocks {
+        return Err(invalid("field-range index block count mismatch"));
+    }
+    for index in 0..expected_blocks {
+        let offset = FIELD_RANGE_INDEX_HEADER_BYTES + index * FIELD_RANGE_INDEX_ENTRY_BYTES;
+        for field in 0..3 {
+            let min_offset = offset + field * 16;
+            let min = u64::from_le_bytes(bytes[min_offset..min_offset + 8].try_into().unwrap());
+            let max =
+                u64::from_le_bytes(bytes[min_offset + 8..min_offset + 16].try_into().unwrap());
+            if min > max {
+                return Err(invalid("field-range index has an inverted range"));
+            }
+        }
     }
     Ok(())
 }
