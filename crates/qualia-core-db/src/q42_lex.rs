@@ -665,6 +665,15 @@ impl Q42Lexicon {
     pub fn load_for_q42(q42_path: &Path) -> std::io::Result<Self> {
         if crate::q42_volume::is_unified_volume(q42_path)? {
             let vol = crate::q42_volume::Q42Volume::open(q42_path)?;
+            if vol.volume_manifest()?.is_some() {
+                let set = crate::q42_volume::Q42VolumeSet::open_root(q42_path)?;
+                let mut lexicon = Self::load_from_lex_bytes(set.root().lex_bytes())?;
+                for shard in set.lexicon_segments() {
+                    let entries = Self::load_from_lex_bytes(shard.lex_bytes())?;
+                    lexicon.entries.extend(entries.entries);
+                }
+                return Ok(lexicon);
+            }
             return Self::load_from_lex_bytes(vol.lex_bytes());
         }
         let sidecar = q42_path.with_extension("q42.lex");

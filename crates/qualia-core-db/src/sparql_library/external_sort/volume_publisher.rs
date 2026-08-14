@@ -323,6 +323,12 @@ mod tests {
         assert_eq!(manifest.lexicon_segments.len(), 1);
         let set = Q42VolumeSet::open_root(&root).unwrap();
         assert_eq!(set.lookup_hash(7), Some("urn:q42:shared-term"));
+        assert_eq!(
+            crate::q42_lex::Q42Lexicon::load_for_q42(&root)
+                .unwrap()
+                .lookup(7),
+            Some("urn:q42:shared-term")
+        );
         set.verify_segment_hashes(&root).unwrap();
     }
 
