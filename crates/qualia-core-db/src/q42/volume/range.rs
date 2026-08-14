@@ -100,6 +100,152 @@ pub fn validate_exact_range_response(
     Ok(())
 }
 
+/// Native HTTP byte-range source for trusted gateways. It never accepts a
+/// `200 OK` full-body fallback: large Q42 access must stay range-bounded.
+#[cfg(not(target_arch = "wasm32"))]
+pub struct HttpRangeSource {
+    client: reqwest::blocking::Client,
+    url: reqwest::Url,
+    length: u64,
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+impl HttpRangeSource {
+    pub fn new(url: &str, length: u64) -> io::Result<Self> {
+        if length == 0 {
+            return Err(invalid("Q42 HTTP source length must be non-zero"));
+        }
+        let url = reqwest::Url::parse(url)
+            .map_err(|error| invalid(format!("invalid Q42 HTTP URL: {error}")))?;
+        if url.scheme() != "https" && url.scheme() != "http" {
+            return Err(invalid("Q42 HTTP source must use http or https"));
+        }
+        let client = reqwest::blocking::Client::builder()
+            .connect_timeout(std::time::Duration::from_secs(10))
+            .timeout(std::time::Duration::from_secs(30))
+            .build()
+            .map_err(|error| io::Error::other(format!("build Q42 HTTP client: {error}")))?;
+        Ok(Self {
+            client,
+            url,
+            length,
+        })
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+impl Q42RangeSource for HttpRangeSource {
+    fn length(&self) -> io::Result<u64> {
+        Ok(self.length)
+    }
+
+    fn read_range_into(&self, range: Q42ByteRange, out: &mut [u8]) -> io::Result<()> {
+        if out.len() != range.length {
+            return Err(invalid(
+                "Q42 range output buffer length does not match request",
+            ));
+        }
+        range.validate_for(self.length)?;
+        let end = range
+            .end()?
+            .checked_sub(1)
+            .ok_or_else(|| invalid("Q42 HTTP range may not be empty"))?;
+        let response = self
+            .client
+            .get(self.url.clone())
+            .header(
+                reqwest::header::RANGE,
+                format!("bytes={}-{}", range.offset, end),
+            )
+            .send()
+            .map_err(|error| io::Error::other(format!("fetch Q42 range: {error}")))?;
+        if response.status() != reqwest::StatusCode::PARTIAL_CONTENT {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "Q42 gateway did not return HTTP 206 Partial Content",
+            ));
+        }
+        let header = response
+            .headers()
+            .get(reqwest::header::CONTENT_RANGE)
+            .and_then(|value| value.to_str().ok())
+            .ok_or_else(|| {
+                io::Error::new(
+                    io::ErrorKind::InvalidData,
+                    "Q42 range response has no valid Content-Range",
+                )
+            })?;
+        let (start, returned_end, total) = parse_content_range(header)?;
+        if total != self.length
+            || returned_end
+                .checked_add(1)
+                .and_then(|value| value.checked_sub(start))
+                .and_then(|value| usize::try_from(value).ok())
+                != Some(range.length)
+        {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "Q42 Content-Range does not match catalog length",
+            ));
+        }
+        let mut response = response;
+        response
+            .read_exact(out)
+            .map_err(|error| io::Error::other(format!("read Q42 range body: {error}")))?;
+        let mut extra = [0u8; 1];
+        if response
+            .read(&mut extra)
+            .map_err(|error| io::Error::other(format!("read Q42 range tail: {error}")))?
+            != 0
+        {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "Q42 range response contains extra bytes",
+            ));
+        }
+        validate_exact_range_response(range, self.length, start, out.len())
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub fn ipfs_gateway_range_source(
+    gateway: &str,
+    cid: &str,
+    length: u64,
+) -> io::Result<HttpRangeSource> {
+    if cid.is_empty() || !cid.bytes().all(|byte| byte.is_ascii_alphanumeric()) {
+        return Err(invalid("IPFS CID must be a non-empty base32/base58 token"));
+    }
+    let gateway = gateway.trim_end_matches('/');
+    HttpRangeSource::new(&format!("{gateway}/ipfs/{cid}"), length)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn parse_content_range(value: &str) -> io::Result<(u64, u64, u64)> {
+    let body = value
+        .strip_prefix("bytes ")
+        .ok_or_else(|| invalid("unsupported Content-Range unit"))?;
+    let (range, total) = body
+        .split_once('/')
+        .ok_or_else(|| invalid("malformed Content-Range"))?;
+    let (start, end) = range
+        .split_once('-')
+        .ok_or_else(|| invalid("malformed Content-Range interval"))?;
+    let start = start
+        .parse()
+        .map_err(|_| invalid("invalid Content-Range start"))?;
+    let end = end
+        .parse()
+        .map_err(|_| invalid("invalid Content-Range end"))?;
+    let total = total
+        .parse()
+        .map_err(|_| invalid("invalid Content-Range total"))?;
+    if start > end || end >= total {
+        return Err(invalid("Content-Range lies outside source"));
+    }
+    Ok((start, end, total))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -141,5 +287,14 @@ mod tests {
             4
         )
         .is_err());
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    #[test]
+    fn content_range_parser_rejects_mismatched_or_invalid_bounds() {
+        assert_eq!(parse_content_range("bytes 5-8/10").unwrap(), (5, 8, 10));
+        assert!(parse_content_range("bytes 8-5/10").is_err());
+        assert!(parse_content_range("bytes 5-10/10").is_err());
+        assert!(parse_content_range("items 5-8/10").is_err());
     }
 }

@@ -25,6 +25,8 @@ use crate::{NQuin, QUINS_PER_BLOCK};
 #[path = "volume/mod.rs"]
 mod volume;
 
+#[cfg(not(target_arch = "wasm32"))]
+pub use volume::{ipfs_gateway_range_source, HttpRangeSource};
 pub use volume::{
     root_relative_path, validate_exact_range_response, BidxBlockRange, BidxMatchPage,
     LocalFileRangeSource, Q42BlockCursor, Q42BlockMeta, Q42ByteRange, Q42RangeSource,
