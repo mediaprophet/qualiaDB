@@ -282,6 +282,24 @@ impl<S: Q42RangeSource> Q42RangeVolume<S> {
         self.read_section(self.header.lex_offset, self.header.lex_length, out)
     }
 
+    /// Read the fixed Q42LEX header only.  This is used to validate a routed
+    /// lexicon shard without transferring its dictionary pages.
+    pub fn read_lexicon_prefix_into(
+        &self,
+        out: &mut [u8; crate::q42_lex::LEX_HEADER_SIZE],
+    ) -> io::Result<()> {
+        if self.header.lex_length < crate::q42_lex::LEX_HEADER_SIZE as u64 {
+            return Err(invalid("Q42 lexicon is shorter than its fixed header"));
+        }
+        self.source.read_range_into(
+            Q42ByteRange {
+                offset: self.header.lex_offset,
+                length: crate::q42_lex::LEX_HEADER_SIZE,
+            },
+            out,
+        )
+    }
+
     /// Resolve a string from a paged Q42LEX dictionary using exact range reads.
     /// `page_scratch` and `out` are caller-owned; neither a full lexicon nor a
     /// decoded page is retained by the reader.  Returns the UTF-8 byte length
@@ -1044,6 +1062,7 @@ mod tests {
         let root_path = dir.path().join("root.q42");
         let first_path = dir.path().join("segment-000.q42");
         let second_path = dir.path().join("segment-001.q42");
+        let lex_path = dir.path().join("lex-000.q42");
         let (first_quin, first_lex) = sample_quin("urn:q42:one");
         let (second_quin, second_lex) = sample_quin("urn:q42:two");
         let mut entries = [(first_quin, first_lex), (second_quin, second_lex)];
@@ -1062,6 +1081,7 @@ mod tests {
             &[vec![entries[1].0]],
         )
         .unwrap();
+        write_unified_volume(&lex_path, &entries[0].1, &[], &[]).unwrap();
         let manifest = Q42VolumeManifest {
             generation: 1,
             segments: vec![
@@ -1070,6 +1090,11 @@ mod tests {
                 Q42VolumeManifest::segment_from_file(&second_path, "segment-001.q42".into())
                     .unwrap(),
             ],
+            lexicon_segments: vec![Q42VolumeManifest::lexicon_segment_from_file(
+                &lex_path,
+                "lex-000.q42".into(),
+            )
+            .unwrap()],
         };
         write_volume_root(&root_path, &manifest).unwrap();
 
@@ -1078,7 +1103,21 @@ mod tests {
         let factory = |entry: &super::super::manifest::Q42VolumeSegment| {
             super::super::range::LocalFileRangeSource::open(&dir.path().join(&entry.locator))
         };
-        let set = Q42RangeVolumeSet::open_root(&root, &factory).unwrap();
+        let mut set = Q42RangeVolumeSet::open_root(&root, &factory).unwrap();
+        set.attach_lexicon_segments(&|entry: &super::super::manifest::Q42LexiconSegment| {
+            super::super::range::LocalFileRangeSource::open(&dir.path().join(&entry.locator))
+        })
+        .unwrap();
+        let mut lex_page = [0u8; 4096];
+        let mut lex_text = [0u8; 128];
+        let lex_len = set
+            .lookup_lexicon_hash_into(entries[0].0.object, &mut lex_page, &mut lex_text)
+            .unwrap()
+            .unwrap();
+        assert_eq!(
+            &lex_text[..lex_len],
+            entries[0].1[&entries[0].0.object].as_bytes()
+        );
         assert_eq!(set.segment_index_for_object(entries[0].0.object), Some(0));
         assert_eq!(set.segment_index_for_object(entries[1].0.object), Some(1));
         let mut digest_scratch = [0u8; 1024];

@@ -7,8 +7,8 @@ use std::io::{self, BufReader};
 use std::path::{Path, PathBuf};
 
 use crate::q42_volume::{
-    root_relative_path, write_volume_root_with_lex, Q42VolumeManifest, Q42VolumeSegment,
-    StreamingQ42VolumeWriter,
+    root_relative_path, write_unified_volume, write_volume_root, Q42LexiconSegment,
+    Q42VolumeManifest, Q42VolumeSegment, StreamingQ42VolumeWriter,
 };
 use crate::{NQuin, QUINS_PER_BLOCK};
 
@@ -31,11 +31,12 @@ fn invalid(message: impl Into<String>) -> io::Error {
 
 impl ExternalSorter {
     /// Merge sorted runs into immutable, SuperBlock-aligned child segments and
-    /// publish their descriptor plus the lossless shared lexicon in `root`.
+    /// publish their descriptor plus front-manifested, size-capped lossless
+    /// Q42LEX shards.  No standalone sidecar format is introduced.
     ///
     /// The cap applies to every child segment's whole physical file, including
     /// header, index, directory, and compressed data. The root is checked
-    /// separately because an unpaged shared lexicon can itself exceed the cap.
+    /// separately because the dictionary is physically sharded as well.
     pub fn merge_volume_set(
         mut self,
         root: &Path,
@@ -143,15 +144,17 @@ impl ExternalSorter {
             let _ = std::fs::remove_file(chunk_path);
         }
 
+        let lexicon_segments = publish_lexicon_segments(root, &self.lex, max_segment_bytes)?;
         let manifest = Q42VolumeManifest {
             generation: 1,
             segments,
+            lexicon_segments,
         };
-        write_volume_root_with_lex(root, &self.lex, &manifest)?;
+        write_volume_root(root, &manifest)?;
         let root_bytes = std::fs::metadata(root)?.len();
         if root_bytes > max_segment_bytes {
             return Err(invalid(
-                "Q42 root lexicon exceeds the physical segment cap; use paged Q42LEX before publishing this dataset",
+                "Q42 root manifest exceeds the physical segment cap; reduce the segment count or use hierarchical manifests",
             ));
         }
         Ok(Q42VolumePublishStats {
@@ -160,6 +163,69 @@ impl ExternalSorter {
             root_bytes,
         })
     }
+}
+
+fn publish_lexicon_segments(
+    root: &Path,
+    lexicon: &HashMap<u64, String>,
+    max_segment_bytes: u64,
+) -> io::Result<Vec<Q42LexiconSegment>> {
+    if lexicon.is_empty() {
+        return Ok(Vec::new());
+    }
+    if max_segment_bytes <= 1024 {
+        return Err(invalid("Q42 segment cap is too small for a lexicon shard"));
+    }
+    let mut entries: Vec<(&u64, &String)> = lexicon.iter().collect();
+    entries.sort_unstable_by_key(|(hash, _)| **hash);
+    let payload_budget = usize::try_from(max_segment_bytes - 1024)
+        .map_err(|_| invalid("Q42 segment cap exceeds platform"))?;
+    let mut shards = Vec::new();
+    let mut pending = HashMap::new();
+    let mut pending_bytes = 0usize;
+    for (hash, term) in entries {
+        let cost = term
+            .len()
+            .checked_add(40)
+            .ok_or_else(|| invalid("Q42 lexicon term length overflow"))?;
+        if !pending.is_empty() && pending_bytes.saturating_add(cost) > payload_budget {
+            shards.push(finish_lexicon_segment(
+                root,
+                shards.len(),
+                &pending,
+                max_segment_bytes,
+            )?);
+            pending.clear();
+            pending_bytes = 0;
+        }
+        pending.insert(*hash, term.clone());
+        pending_bytes = pending_bytes.saturating_add(cost);
+    }
+    if !pending.is_empty() {
+        shards.push(finish_lexicon_segment(
+            root,
+            shards.len(),
+            &pending,
+            max_segment_bytes,
+        )?);
+    }
+    Ok(shards)
+}
+
+fn finish_lexicon_segment(
+    root: &Path,
+    index: usize,
+    lexicon: &HashMap<u64, String>,
+    max_segment_bytes: u64,
+) -> io::Result<Q42LexiconSegment> {
+    let path = lexicon_segment_path(root, index)?;
+    write_unified_volume(&path, lexicon, &[], &[])?;
+    if std::fs::metadata(&path)?.len() > max_segment_bytes {
+        return Err(invalid(
+            "a single Q42 lexicon shard exceeds the physical segment cap",
+        ));
+    }
+    Q42VolumeManifest::lexicon_segment_from_file(&path, root_relative_path(root, &path)?)
 }
 
 fn publish_block(
@@ -208,6 +274,16 @@ fn child_segment_path(root: &Path, segment_index: usize) -> io::Result<PathBuf> 
     Ok(parent.join(format!("{stem}.segment-{segment_index:05}.q42")))
 }
 
+fn lexicon_segment_path(root: &Path, index: usize) -> io::Result<PathBuf> {
+    let parent = root.parent().unwrap_or_else(|| Path::new("."));
+    let stem = root
+        .file_stem()
+        .and_then(|stem| stem.to_str())
+        .filter(|stem| !stem.is_empty())
+        .ok_or_else(|| invalid("Q42 root output path has no UTF-8 file stem"))?;
+    Ok(parent.join(format!("{stem}.lex-{index:05}.q42")))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -243,9 +319,10 @@ mod tests {
         let root_volume = Q42Volume::open(&root).unwrap();
         let manifest = root_volume.volume_manifest().unwrap().unwrap();
         assert_eq!(manifest.segments.len(), 2);
-        assert!(root_volume.lex_view().unwrap().lookup_hash(7).is_some());
+        assert_eq!(root_volume.lex_view().unwrap().entry_count(), 0);
+        assert_eq!(manifest.lexicon_segments.len(), 1);
         let set = Q42VolumeSet::open_root(&root).unwrap();
-        assert!(set.root().lex_view().unwrap().lookup_hash(7).is_some());
+        assert_eq!(set.lookup_hash(7), Some("urn:q42:shared-term"));
         set.verify_segment_hashes(&root).unwrap();
     }
 

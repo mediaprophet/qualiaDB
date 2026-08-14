@@ -33,11 +33,12 @@ pub use volume::{
 pub use volume::{
     root_relative_path, validate_exact_range_response, verify_source_sha256, BidxBlockRange,
     BidxMatchPage, LocalFileRangeSource, Q42BlockCursor, Q42BlockMeta, Q42ByteRange,
-    Q42ObjectMatchPage, Q42ObjectSearchCursor, Q42RangeQueryCursor, Q42RangeQueryPage,
-    Q42RangeQueryPattern, Q42RangeQueryPlan, Q42RangeQueryStrategy, Q42RangeSource, Q42RangeVolume,
-    Q42RangeVolumeSet, Q42SegmentMatchPage, Q42SegmentMatchRange, Q42SegmentRangeFactory,
-    Q42VolumeManifest, Q42VolumeSegment, Q42VolumeSet, Q42VolumeSetQueryCursor,
-    Q42VolumeSetQueryPage, StreamingQ42VolumeWriter, MAX_VOLUME_MANIFEST_BYTES,
+    Q42LexiconSegment, Q42ObjectMatchPage, Q42ObjectSearchCursor, Q42RangeQueryCursor,
+    Q42RangeQueryPage, Q42RangeQueryPattern, Q42RangeQueryPlan, Q42RangeQueryStrategy,
+    Q42RangeSource, Q42RangeVolume, Q42RangeVolumeSet, Q42SegmentMatchPage, Q42SegmentMatchRange,
+    Q42SegmentRangeFactory, Q42VolumeManifest, Q42VolumeSegment, Q42VolumeSet,
+    Q42VolumeSetQueryCursor, Q42VolumeSetQueryPage, StreamingQ42VolumeWriter,
+    MAX_VOLUME_MANIFEST_BYTES,
 };
 
 pub const Q42_MAGIC: [u8; 4] = [0x51, 0x34, 0x32, 0x00]; // "Q42\0"
@@ -1118,6 +1119,7 @@ mod tests {
                 Q42VolumeManifest::segment_from_file(&second_path, "segment-001.q42".into())
                     .unwrap(),
             ],
+            lexicon_segments: vec![],
         };
         write_volume_root(&root, &manifest).unwrap();
 

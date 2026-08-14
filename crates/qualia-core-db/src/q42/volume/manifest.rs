@@ -13,11 +13,12 @@ use super::range_volume::{
 };
 
 pub const VOLUME_MANIFEST_MAGIC: [u8; 8] = *b"Q42VOL\0\0";
-pub const VOLUME_MANIFEST_VERSION: u16 = 1;
+pub const VOLUME_MANIFEST_VERSION: u16 = 2;
 pub const MAX_VOLUME_MANIFEST_BYTES: usize = 4 * 1024 * 1024;
 pub const MAX_VOLUME_SEGMENTS: usize = 65_536;
 const HEADER_BYTES: usize = 32;
 const ENTRY_FIXED_BYTES: usize = 66;
+const LEX_ENTRY_FIXED_BYTES: usize = 58;
 
 fn invalid(message: impl Into<String>) -> io::Error {
     io::Error::new(io::ErrorKind::InvalidData, message.into())
@@ -36,11 +37,25 @@ pub struct Q42VolumeSegment {
     pub sha256: [u8; 32],
 }
 
+/// Immutable physical Q42 file holding a contiguous hash range of the shared
+/// Q42LEX dictionary.  It has no graph blocks: terms remain front-embedded in
+/// a Q42 container and can be retrieved by exact ranges independently of data
+/// segment size.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct Q42LexiconSegment {
+    pub locator: String,
+    pub byte_length: u64,
+    pub first_hash: u64,
+    pub last_hash: u64,
+    pub sha256: [u8; 32],
+}
+
 /// Front-embedded catalog which makes immutable Q42 segments one snapshot.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Q42VolumeManifest {
     pub generation: u64,
     pub segments: Vec<Q42VolumeSegment>,
+    pub lexicon_segments: Vec<Q42LexiconSegment>,
 }
 
 /// A contiguous interval of volume segments that can contain one object hash.
@@ -71,13 +86,17 @@ pub struct Q42SegmentMatchPage {
 impl Q42VolumeManifest {
     pub fn encode(&self) -> io::Result<Vec<u8>> {
         self.validate()?;
-        let mut bytes = Vec::with_capacity(HEADER_BYTES + self.segments.len() * ENTRY_FIXED_BYTES);
+        let mut bytes = Vec::with_capacity(
+            HEADER_BYTES
+                + self.segments.len() * ENTRY_FIXED_BYTES
+                + self.lexicon_segments.len() * LEX_ENTRY_FIXED_BYTES,
+        );
         bytes.extend_from_slice(&VOLUME_MANIFEST_MAGIC);
         bytes.extend_from_slice(&VOLUME_MANIFEST_VERSION.to_le_bytes());
         bytes.extend_from_slice(&0u16.to_le_bytes());
         bytes.extend_from_slice(&(self.segments.len() as u32).to_le_bytes());
         bytes.extend_from_slice(&self.generation.to_le_bytes());
-        bytes.extend_from_slice(&0u64.to_le_bytes());
+        bytes.extend_from_slice(&(self.lexicon_segments.len() as u64).to_le_bytes());
         for segment in &self.segments {
             let locator = segment.locator.as_bytes();
             let locator_len = u16::try_from(locator.len()).map_err(|_| {
@@ -90,6 +109,21 @@ impl Q42VolumeManifest {
             bytes.extend_from_slice(&segment.first_object_hash.to_le_bytes());
             bytes.extend_from_slice(&segment.last_object_hash.to_le_bytes());
             bytes.extend_from_slice(&segment.quin_count.to_le_bytes());
+            bytes.extend_from_slice(&segment.sha256);
+            bytes.extend_from_slice(&locator_len.to_le_bytes());
+            bytes.extend_from_slice(locator);
+        }
+        for segment in &self.lexicon_segments {
+            let locator = segment.locator.as_bytes();
+            let locator_len = u16::try_from(locator.len()).map_err(|_| {
+                io::Error::new(
+                    io::ErrorKind::InvalidInput,
+                    "Q42 lexicon segment locator exceeds u16 length",
+                )
+            })?;
+            bytes.extend_from_slice(&segment.byte_length.to_le_bytes());
+            bytes.extend_from_slice(&segment.first_hash.to_le_bytes());
+            bytes.extend_from_slice(&segment.last_hash.to_le_bytes());
             bytes.extend_from_slice(&segment.sha256);
             bytes.extend_from_slice(&locator_len.to_le_bytes());
             bytes.extend_from_slice(locator);
@@ -110,7 +144,8 @@ impl Q42VolumeManifest {
         if bytes[0..8] != VOLUME_MANIFEST_MAGIC {
             return Err(invalid("invalid Q42 volume manifest magic"));
         }
-        if u16::from_le_bytes(bytes[8..10].try_into().unwrap()) != VOLUME_MANIFEST_VERSION {
+        let version = u16::from_le_bytes(bytes[8..10].try_into().unwrap());
+        if version != 1 && version != VOLUME_MANIFEST_VERSION {
             return Err(invalid("unsupported Q42 volume manifest version"));
         }
         let count = u32::from_le_bytes(bytes[12..16].try_into().unwrap()) as usize;
@@ -118,6 +153,12 @@ impl Q42VolumeManifest {
             return Err(invalid("invalid Q42 volume manifest segment count"));
         }
         let generation = u64::from_le_bytes(bytes[16..24].try_into().unwrap());
+        let lexicon_count = if version == 1 {
+            0
+        } else {
+            usize::try_from(u64::from_le_bytes(bytes[24..32].try_into().unwrap()))
+                .map_err(|_| invalid("Q42 lexicon segment count exceeds platform"))?
+        };
         let mut offset = HEADER_BYTES;
         let mut segments = Vec::with_capacity(count);
         for _ in 0..count {
@@ -157,12 +198,46 @@ impl Q42VolumeManifest {
             });
             offset = locator_end;
         }
+        let mut lexicon_segments = Vec::with_capacity(lexicon_count);
+        for _ in 0..lexicon_count {
+            let fixed_end = offset
+                .checked_add(LEX_ENTRY_FIXED_BYTES)
+                .ok_or_else(|| invalid("lexicon manifest entry overflow"))?;
+            if fixed_end > bytes.len() {
+                return Err(invalid("truncated Q42 lexicon manifest entry"));
+            }
+            let byte_length = u64::from_le_bytes(bytes[offset..offset + 8].try_into().unwrap());
+            let first_hash = u64::from_le_bytes(bytes[offset + 8..offset + 16].try_into().unwrap());
+            let last_hash = u64::from_le_bytes(bytes[offset + 16..offset + 24].try_into().unwrap());
+            let sha256 = bytes[offset + 24..offset + 56].try_into().unwrap();
+            let locator_len =
+                u16::from_le_bytes(bytes[offset + 56..fixed_end].try_into().unwrap()) as usize;
+            offset = fixed_end;
+            let locator_end = offset
+                .checked_add(locator_len)
+                .ok_or_else(|| invalid("Q42 lexicon locator overflow"))?;
+            if locator_end > bytes.len() {
+                return Err(invalid("truncated Q42 lexicon segment locator"));
+            }
+            let locator = std::str::from_utf8(&bytes[offset..locator_end])
+                .map_err(|_| invalid("Q42 lexicon locator is not UTF-8"))?
+                .to_owned();
+            lexicon_segments.push(Q42LexiconSegment {
+                locator,
+                byte_length,
+                first_hash,
+                last_hash,
+                sha256,
+            });
+            offset = locator_end;
+        }
         if offset != bytes.len() {
             return Err(invalid("Q42 volume manifest has trailing bytes"));
         }
         let manifest = Self {
             generation,
             segments,
+            lexicon_segments,
         };
         manifest.validate()?;
         Ok(manifest)
@@ -194,6 +269,20 @@ impl Q42VolumeManifest {
                 ));
             }
             previous_last = Some(segment.last_object_hash);
+        }
+        let mut previous_last = None;
+        for segment in &self.lexicon_segments {
+            validate_segment_locator(&segment.locator)?;
+            if segment.byte_length == 0
+                || segment.first_hash > segment.last_hash
+                || previous_last.is_some_and(|last| segment.first_hash <= last)
+            {
+                return Err(io::Error::new(
+                    io::ErrorKind::InvalidInput,
+                    "Q42 lexicon segments are invalid or overlap",
+                ));
+            }
+            previous_last = Some(segment.last_hash);
         }
         Ok(())
     }
@@ -297,6 +386,29 @@ impl Q42VolumeManifest {
             sha256: sha256_file(path)?,
         })
     }
+
+    pub fn lexicon_segment_from_file(
+        path: &Path,
+        locator: String,
+    ) -> io::Result<Q42LexiconSegment> {
+        let volume = Q42Volume::open(path)?;
+        let view = volume
+            .lex_view()
+            .map_err(|error| invalid(format!("invalid Q42LEX shard: {error:?}")))?;
+        let Some(first_hash) = view.hash_at(0) else {
+            return Err(invalid("Q42 lexicon shard is empty"));
+        };
+        let last_hash = view
+            .hash_at(view.entry_count() - 1)
+            .ok_or_else(|| invalid("Q42 lexicon shard has no last hash"))?;
+        Ok(Q42LexiconSegment {
+            locator,
+            byte_length: std::fs::metadata(path)?.len(),
+            first_hash,
+            last_hash,
+            sha256: sha256_file(path)?,
+        })
+    }
 }
 
 /// Opens an immutable child source identified by the front-embedded manifest.
@@ -324,6 +436,7 @@ where
 pub struct Q42RangeVolumeSet<S: Q42RangeSource> {
     manifest: Q42VolumeManifest,
     segments: Vec<Q42RangeVolume<S>>,
+    lexicon_segments: Vec<Q42RangeVolume<S>>,
 }
 
 /// Resume state for a range-backed scan across a logical Q42 volume set.
@@ -371,7 +484,11 @@ impl<S: Q42RangeSource> Q42RangeVolumeSet<S> {
             }
             segments.push(volume);
         }
-        Ok(Self { manifest, segments })
+        Ok(Self {
+            manifest,
+            segments,
+            lexicon_segments: Vec::new(),
+        })
     }
 
     pub fn manifest(&self) -> &Q42VolumeManifest {
@@ -380,6 +497,77 @@ impl<S: Q42RangeSource> Q42RangeVolumeSet<S> {
 
     pub fn segments(&self) -> &[Q42RangeVolume<S>] {
         &self.segments
+    }
+
+    pub fn lexicon_segments(&self) -> &[Q42RangeVolume<S>] {
+        &self.lexicon_segments
+    }
+
+    /// Attach the root-manifested Q42LEX shards through the same exact-range
+    /// transport used for graph segments.  The separate closure keeps legacy
+    /// data-only factories source-compatible while allowing IPFS locators for
+    /// lexicon shards.
+    pub fn attach_lexicon_segments<F>(&mut self, factory: &F) -> io::Result<()>
+    where
+        F: Fn(&Q42LexiconSegment) -> io::Result<S>,
+    {
+        if !self.lexicon_segments.is_empty() {
+            return Err(invalid("Q42 lexicon shards are already attached"));
+        }
+        let mut opened = Vec::with_capacity(self.manifest.lexicon_segments.len());
+        for entry in &self.manifest.lexicon_segments {
+            let source = factory(entry)?;
+            if source.length()? != entry.byte_length {
+                return Err(invalid(format!(
+                    "Q42 lexicon segment length differs from root manifest: {}",
+                    entry.locator
+                )));
+            }
+            let volume = Q42RangeVolume::open(source)?;
+            let mut header = [0u8; crate::q42_lex::LEX_HEADER_SIZE];
+            volume.read_lexicon_prefix_into(&mut header)?;
+            let entries = usize::try_from(u64::from_le_bytes(header[8..16].try_into().unwrap()))
+                .map_err(|_| invalid("Q42 lexicon entry count exceeds platform"))?;
+            if entries == 0 {
+                return Err(invalid("Q42 lexicon shard is empty"));
+            }
+            opened.push(volume);
+        }
+        self.lexicon_segments = opened;
+        Ok(())
+    }
+
+    /// Resolve a term through the hash-routed lexicon shard.  Callers supply
+    /// page and text buffers, preserving the zero-heap range contract.
+    pub fn lookup_lexicon_hash_into(
+        &self,
+        hash: u64,
+        page: &mut [u8],
+        out: &mut [u8],
+    ) -> io::Result<Option<usize>> {
+        if self.manifest.lexicon_segments.is_empty() {
+            return Ok(None);
+        }
+        if self.lexicon_segments.len() != self.manifest.lexicon_segments.len() {
+            return Err(invalid("Q42 lexicon shards have not been attached"));
+        }
+        let mut lo = 0usize;
+        let mut hi = self.manifest.lexicon_segments.len();
+        while lo < hi {
+            let mid = lo + (hi - lo) / 2;
+            if self.manifest.lexicon_segments[mid].first_hash <= hash {
+                lo = mid + 1;
+            } else {
+                hi = mid;
+            }
+        }
+        let Some(index) = lo.checked_sub(1) else {
+            return Ok(None);
+        };
+        if hash > self.manifest.lexicon_segments[index].last_hash {
+            return Ok(None);
+        }
+        self.lexicon_segments[index].lookup_lexicon_hash_into(hash, page, out)
     }
 
     /// Scan one bounded result page across child segments.  Bound-object
@@ -573,6 +761,7 @@ pub struct Q42VolumeSet {
     root: Q42Volume,
     manifest: Q42VolumeManifest,
     segments: Vec<Q42Volume>,
+    lexicon_segments: Vec<Q42Volume>,
 }
 
 impl Q42VolumeSet {
@@ -602,10 +791,34 @@ impl Q42VolumeSet {
             }
             segments.push(segment);
         }
+        let mut lexicon_segments = Vec::with_capacity(manifest.lexicon_segments.len());
+        for entry in &manifest.lexicon_segments {
+            let segment_path = parent.join(&entry.locator);
+            if std::fs::metadata(&segment_path)?.len() != entry.byte_length {
+                return Err(invalid(format!(
+                    "Q42 lexicon segment length differs from root manifest: {}",
+                    entry.locator
+                )));
+            }
+            let segment = Q42Volume::open(&segment_path)?;
+            let view = segment
+                .lex_view()
+                .map_err(|error| invalid(format!("invalid Q42 lexicon segment: {error:?}")))?;
+            if view.hash_at(0) != Some(entry.first_hash)
+                || view.hash_at(view.entry_count().saturating_sub(1)) != Some(entry.last_hash)
+            {
+                return Err(invalid(format!(
+                    "Q42 lexicon segment hash bounds differ from root manifest: {}",
+                    entry.locator
+                )));
+            }
+            lexicon_segments.push(segment);
+        }
         Ok(Self {
             root,
             manifest,
             segments,
+            lexicon_segments,
         })
     }
 
@@ -621,12 +834,55 @@ impl Q42VolumeSet {
         &self.segments
     }
 
+    pub fn lexicon_segments(&self) -> &[Q42Volume] {
+        &self.lexicon_segments
+    }
+
+    /// Resolve a term through the root dictionary or its front-manifested
+    /// physical lexicon shards.  Construction owns the maps/mappings; lookup
+    /// borrows directly from the selected Q42LEX page.
+    pub fn lookup_hash(&self, hash: u64) -> Option<&str> {
+        if let Ok(root) = self.root.lex_view() {
+            if let Some(value) = root.lookup_hash(hash) {
+                return Some(value);
+            }
+        }
+        let mut lo = 0usize;
+        let mut hi = self.manifest.lexicon_segments.len();
+        while lo < hi {
+            let mid = lo + (hi - lo) / 2;
+            if self.manifest.lexicon_segments[mid].first_hash <= hash {
+                lo = mid + 1;
+            } else {
+                hi = mid;
+            }
+        }
+        let index = lo.checked_sub(1)?;
+        let descriptor = self.manifest.lexicon_segments.get(index)?;
+        if hash > descriptor.last_hash {
+            return None;
+        }
+        self.lexicon_segments
+            .get(index)?
+            .lex_view()
+            .ok()?
+            .lookup_hash(hash)
+    }
+
     pub fn verify_segment_hashes(&self, root_path: &Path) -> io::Result<()> {
         let parent = root_path.parent().unwrap_or_else(|| Path::new("."));
         for entry in &self.manifest.segments {
             if sha256_file(&parent.join(&entry.locator))? != entry.sha256 {
                 return Err(invalid(format!(
                     "Q42 segment digest differs from root manifest: {}",
+                    entry.locator
+                )));
+            }
+        }
+        for entry in &self.manifest.lexicon_segments {
+            if sha256_file(&parent.join(&entry.locator))? != entry.sha256 {
+                return Err(invalid(format!(
+                    "Q42 lexicon segment digest differs from root manifest: {}",
                     entry.locator
                 )));
             }
@@ -688,6 +944,7 @@ mod tests {
         let manifest = Q42VolumeManifest {
             generation: 1,
             segments: vec![segment("ipfs://bafybeigdyrzt5v5cbe")],
+            lexicon_segments: vec![],
         };
         let bytes = manifest.encode().unwrap();
         assert_eq!(Q42VolumeManifest::decode(&bytes).unwrap(), manifest);
@@ -702,6 +959,7 @@ mod tests {
             let invalid = Q42VolumeManifest {
                 generation: 1,
                 segments: vec![segment(locator)],
+                lexicon_segments: vec![],
             };
             assert!(
                 invalid.validate().is_err(),
@@ -724,6 +982,7 @@ mod tests {
         let manifest = Q42VolumeManifest {
             generation: 1,
             segments: vec![first, second, third],
+            lexicon_segments: vec![],
         };
         manifest.validate().unwrap();
         let mut page = [usize::MAX; 2];

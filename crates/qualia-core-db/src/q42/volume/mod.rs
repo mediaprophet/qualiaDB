@@ -15,9 +15,9 @@ mod validate;
 pub use cursor::{Q42BlockCursor, Q42BlockMeta};
 pub use index::{BidxBlockRange, BidxMatchPage};
 pub use manifest::{
-    root_relative_path, Q42RangeVolumeSet, Q42SegmentMatchPage, Q42SegmentMatchRange,
-    Q42SegmentRangeFactory, Q42VolumeManifest, Q42VolumeSegment, Q42VolumeSet,
-    Q42VolumeSetQueryCursor, Q42VolumeSetQueryPage, MAX_VOLUME_MANIFEST_BYTES,
+    root_relative_path, Q42LexiconSegment, Q42RangeVolumeSet, Q42SegmentMatchPage,
+    Q42SegmentMatchRange, Q42SegmentRangeFactory, Q42VolumeManifest, Q42VolumeSegment,
+    Q42VolumeSet, Q42VolumeSetQueryCursor, Q42VolumeSetQueryPage, MAX_VOLUME_MANIFEST_BYTES,
 };
 #[cfg(not(target_arch = "wasm32"))]
 pub use range::{
