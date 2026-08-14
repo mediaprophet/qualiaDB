@@ -15,11 +15,14 @@ mod validate;
 pub use cursor::{Q42BlockCursor, Q42BlockMeta};
 pub use index::{BidxBlockRange, BidxMatchPage};
 pub use manifest::{
-    root_relative_path, Q42VolumeManifest, Q42VolumeSegment, Q42VolumeSet,
-    MAX_VOLUME_MANIFEST_BYTES,
+    root_relative_path, Q42RangeVolumeSet, Q42SegmentRangeFactory, Q42VolumeManifest,
+    Q42VolumeSegment, Q42VolumeSet, MAX_VOLUME_MANIFEST_BYTES,
 };
 #[cfg(not(target_arch = "wasm32"))]
-pub use range::{ipfs_gateway_range_source, HttpRangeSource};
+pub use range::{
+    ipfs_gateway_range_source, ipns_gateway_range_source, HttpRangeSource,
+    IpfsGatewaySegmentFactory,
+};
 pub use range::{
     validate_exact_range_response, verify_source_sha256, LocalFileRangeSource, Q42ByteRange,
     Q42RangeSource,

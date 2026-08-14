@@ -2,11 +2,15 @@
 
 use std::io;
 
-use super::range::{Q42ByteRange, Q42RangeSource};
 use super::super::{
-    header_from_bytes, BlockDirectoryEntry, Q42VolumeHeader, FLAG_BLOCKS_LZ4, HEADER_SIZE,
-    MAX_COMPRESSED_SUPERBLOCK_SIZE, QUINS_PER_BLOCK, Q42_VERSION_V3, SUPERBLOCK_SIZE,
+    header_from_bytes, BlockDirectoryEntry, Q42VolumeHeader, BIDX_MAGIC, FLAG_BLOCKS_LZ4,
+    HEADER_SIZE, MAX_COMPRESSED_SUPERBLOCK_SIZE, Q42_VERSION_V3, QUINS_PER_BLOCK, SUPERBLOCK_SIZE,
 };
+use super::index::{BidxBlockRange, BidxMatchPage};
+use super::range::{Q42ByteRange, Q42RangeSource};
+
+const BIDX_HEADER_BYTES: usize = 16;
+const BIDX_ENTRY_BYTES: usize = 16;
 
 fn invalid(message: impl Into<String>) -> io::Error {
     io::Error::new(io::ErrorKind::InvalidData, message.into())
@@ -27,35 +31,74 @@ impl<S: Q42RangeSource> Q42RangeVolume<S> {
             return Err(invalid("Q42 range source is shorter than its header"));
         }
         let mut bytes = [0u8; HEADER_SIZE];
-        source.read_range_into(Q42ByteRange { offset: 0, length: HEADER_SIZE }, &mut bytes)?;
+        source.read_range_into(
+            Q42ByteRange {
+                offset: 0,
+                length: HEADER_SIZE,
+            },
+            &mut bytes,
+        )?;
         let header = header_from_bytes(&bytes)?;
         let version = header.version;
         let flags = header.flags;
         let block_size = header.block_size;
         let quins_per_block = header.quins_per_block;
-        if version != Q42_VERSION_V3 || flags & FLAG_BLOCKS_LZ4 == 0 || block_size != SUPERBLOCK_SIZE as u32 || quins_per_block != QUINS_PER_BLOCK as u32 {
+        if version != Q42_VERSION_V3
+            || flags & FLAG_BLOCKS_LZ4 == 0
+            || block_size != SUPERBLOCK_SIZE as u32
+            || quins_per_block != QUINS_PER_BLOCK as u32
+        {
             return Err(invalid("unsupported Q42 range-volume header"));
         }
         for (name, offset, length) in [
             ("lexicon", header.lex_offset, header.lex_length),
             ("BIDX", header.bidx_offset, header.bidx_length),
-            ("block directory", header.block_dir_offset, header.block_dir_length),
+            (
+                "block directory",
+                header.block_dir_offset,
+                header.block_dir_length,
+            ),
             ("block data", header.data_offset, header.data_length),
         ] {
-            if length != 0 && (offset < HEADER_SIZE as u64 || offset.checked_add(length).is_none_or(|end| end > source_length)) {
-                return Err(invalid(format!("Q42 {name} section lies outside the range source")));
+            if length != 0
+                && (offset < HEADER_SIZE as u64
+                    || offset
+                        .checked_add(length)
+                        .is_none_or(|end| end > source_length))
+            {
+                return Err(invalid(format!(
+                    "Q42 {name} section lies outside the range source"
+                )));
             }
         }
-        let expected_directory = header.block_count.checked_mul(BlockDirectoryEntry::SIZE as u64).ok_or_else(|| invalid("Q42 directory length overflow"))?;
+        let expected_directory = header
+            .block_count
+            .checked_mul(BlockDirectoryEntry::SIZE as u64)
+            .ok_or_else(|| invalid("Q42 directory length overflow"))?;
         if header.block_dir_length != expected_directory {
             return Err(invalid("Q42 directory does not match its block count"));
         }
-        Ok(Self { source, header, source_length })
+        let volume = Self {
+            source,
+            header,
+            source_length,
+        };
+        volume.bidx_block_count()?;
+        Ok(volume)
     }
 
-    pub fn header(&self) -> &Q42VolumeHeader { &self.header }
-    pub fn source_length(&self) -> u64 { self.source_length }
-    pub fn block_count(&self) -> u64 { self.header.block_count }
+    pub fn header(&self) -> &Q42VolumeHeader {
+        &self.header
+    }
+    pub fn source_length(&self) -> u64 {
+        self.source_length
+    }
+    pub fn block_count(&self) -> u64 {
+        self.header.block_count
+    }
+    pub fn source(&self) -> &S {
+        &self.source
+    }
 
     pub fn read_lexicon_into(&self, out: &mut [u8]) -> io::Result<()> {
         self.read_section(self.header.lex_offset, self.header.lex_length, out)
@@ -63,24 +106,181 @@ impl<S: Q42RangeSource> Q42RangeVolume<S> {
     pub fn read_bidx_into(&self, out: &mut [u8]) -> io::Result<()> {
         self.read_section(self.header.bidx_offset, self.header.bidx_length, out)
     }
+
+    /// Return the size of the front-embedded logical-volume manifest, if this
+    /// segment is a root. The caller can use [`Self::read_volume_manifest_into`]
+    /// to retrieve exactly those bytes.
+    pub fn volume_manifest_length(&self) -> io::Result<Option<usize>> {
+        let Some((offset, length)) = self.header.volume_manifest_range() else {
+            return Ok(None);
+        };
+        let length =
+            usize::try_from(length).map_err(|_| invalid("Q42 manifest exceeds platform"))?;
+        if length == 0 || length > super::manifest::MAX_VOLUME_MANIFEST_BYTES {
+            return Err(invalid(
+                "Q42 root has an invalid embedded volume manifest length",
+            ));
+        }
+        Q42ByteRange { offset, length }.validate_for(self.source_length)?;
+        Ok(Some(length))
+    }
+
+    pub fn read_volume_manifest_into(&self, out: &mut [u8]) -> io::Result<bool> {
+        let Some(length) = self.volume_manifest_length()? else {
+            return Ok(false);
+        };
+        if out.len() != length {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "Q42 manifest output buffer has wrong length",
+            ));
+        }
+        let (offset, _) = self
+            .header
+            .volume_manifest_range()
+            .expect("manifest length was present");
+        self.source
+            .read_range_into(Q42ByteRange { offset, length }, out)?;
+        Ok(true)
+    }
     fn read_section(&self, offset: u64, length: u64, out: &mut [u8]) -> io::Result<()> {
-        let length = usize::try_from(length).map_err(|_| invalid("Q42 section exceeds platform"))?;
-        if out.len() != length { return Err(io::Error::new(io::ErrorKind::InvalidInput, "Q42 section output buffer has wrong length")); }
-        self.source.read_range_into(Q42ByteRange { offset, length }, out)
+        let length =
+            usize::try_from(length).map_err(|_| invalid("Q42 section exceeds platform"))?;
+        if out.len() != length {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "Q42 section output buffer has wrong length",
+            ));
+        }
+        self.source
+            .read_range_into(Q42ByteRange { offset, length }, out)
     }
 
     pub fn block_directory_entry(&self, index: usize) -> io::Result<BlockDirectoryEntry> {
-        if index >= self.header.block_count as usize { return Err(io::Error::new(io::ErrorKind::InvalidInput, "Q42 block index out of range")); }
-        let offset = self.header.block_dir_offset.checked_add((index * BlockDirectoryEntry::SIZE) as u64).ok_or_else(|| invalid("Q42 directory offset overflow"))?;
+        if index >= self.header.block_count as usize {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "Q42 block index out of range",
+            ));
+        }
+        let offset = self
+            .header
+            .block_dir_offset
+            .checked_add((index * BlockDirectoryEntry::SIZE) as u64)
+            .ok_or_else(|| invalid("Q42 directory offset overflow"))?;
         let mut bytes = [0u8; BlockDirectoryEntry::SIZE];
-        self.source.read_range_into(Q42ByteRange { offset, length: BlockDirectoryEntry::SIZE }, &mut bytes)?;
+        self.source.read_range_into(
+            Q42ByteRange {
+                offset,
+                length: BlockDirectoryEntry::SIZE,
+            },
+            &mut bytes,
+        )?;
         Ok(BlockDirectoryEntry::from_bytes(&bytes))
+    }
+
+    /// Object-hash bounds read from the first and last BIDX entry. This avoids
+    /// materialising the index merely to validate a manifest segment.
+    pub fn object_hash_bounds(&self) -> io::Result<Option<(u64, u64)>> {
+        let count = self.bidx_block_count()?;
+        if count == 0 {
+            return Ok(None);
+        }
+        let first = self.bidx_entry(0)?;
+        let last = self.bidx_entry(count - 1)?;
+        if first.0 > first.1 || last.0 > last.1 || first.0 > last.1 {
+            return Err(invalid("Q42 BIDX object bounds are invalid"));
+        }
+        Ok(Some((first.0, last.1)))
+    }
+
+    /// Return the complete BIDX interval which can contain an object hash.
+    /// Each comparison fetches one fixed 16-byte BIDX entry; there is no index
+    /// allocation or whole-index transfer.
+    pub fn bidx_block_range_for_hash(
+        &self,
+        object_hash: u64,
+    ) -> io::Result<Option<BidxBlockRange>> {
+        let block_count = self.bidx_block_count()?;
+        if block_count == 0 {
+            return Ok(None);
+        }
+        let mut lo = 0usize;
+        let mut hi = block_count;
+        while lo < hi {
+            let mid = lo + (hi - lo) / 2;
+            if self.bidx_entry(mid)?.1 < object_hash {
+                lo = mid + 1;
+            } else {
+                hi = mid;
+            }
+        }
+        let start = lo;
+        if start == block_count || self.bidx_entry(start)?.0 > object_hash {
+            return Ok(None);
+        }
+        lo = start;
+        hi = block_count;
+        while lo < hi {
+            let mid = lo + (hi - lo) / 2;
+            if self.bidx_entry(mid)?.0 <= object_hash {
+                lo = mid + 1;
+            } else {
+                hi = mid;
+            }
+        }
+        Ok(Some(BidxBlockRange { start, end: lo }))
+    }
+
+    /// Fill one bounded page of BIDX block indices. This retains complete
+    /// heavy-hitter semantics while forcing callers to provide the cap.
+    pub fn bidx_blocks_for_hash_into(
+        &self,
+        object_hash: u64,
+        cursor: usize,
+        out: &mut [usize],
+    ) -> io::Result<Option<BidxMatchPage>> {
+        let Some(range) = self.bidx_block_range_for_hash(object_hash)? else {
+            return Ok(None);
+        };
+        if cursor > range.len() {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "Q42 BIDX cursor is beyond the matching interval",
+            ));
+        }
+        if out.is_empty() && cursor < range.len() {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "Q42 BIDX page buffer must contain at least one block index",
+            ));
+        }
+        let returned = (range.len() - cursor).min(out.len());
+        for (offset, slot) in out.iter_mut().take(returned).enumerate() {
+            *slot = range.start + cursor + offset;
+        }
+        let next = cursor + returned;
+        Ok(Some(BidxMatchPage {
+            range,
+            returned,
+            next_cursor: (next < range.len()).then_some(next),
+        }))
     }
 
     /// Fetch and decode one block. `compressed` must fit the directory entry;
     /// `out` must be at least one full decoded SuperBlock.
-    pub fn read_superblock_into(&self, index: usize, compressed: &mut [u8], out: &mut [u8]) -> io::Result<usize> {
-        if out.len() < SUPERBLOCK_SIZE { return Err(io::Error::new(io::ErrorKind::InvalidInput, "Q42 decoded output buffer is too small")); }
+    pub fn read_superblock_into(
+        &self,
+        index: usize,
+        compressed: &mut [u8],
+        out: &mut [u8],
+    ) -> io::Result<usize> {
+        if out.len() < SUPERBLOCK_SIZE {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "Q42 decoded output buffer is too small",
+            ));
+        }
         let entry = self.block_directory_entry(index)?;
         let compressed_len = entry.comp_len as usize;
         if compressed_len < 4
@@ -90,22 +290,107 @@ impl<S: Q42RangeSource> Q42RangeVolume<S> {
         {
             return Err(invalid("invalid Q42 compressed block directory entry"));
         }
-        let offset = self.header.data_offset.checked_add(entry.rel_offset).ok_or_else(|| invalid("Q42 compressed block offset overflow"))?;
-        self.source.read_range_into(Q42ByteRange { offset, length: compressed_len }, &mut compressed[..compressed_len])?;
+        let offset = self
+            .header
+            .data_offset
+            .checked_add(entry.rel_offset)
+            .ok_or_else(|| invalid("Q42 compressed block offset overflow"))?;
+        self.source.read_range_into(
+            Q42ByteRange {
+                offset,
+                length: compressed_len,
+            },
+            &mut compressed[..compressed_len],
+        )?;
         let declared = u32::from_le_bytes(compressed[0..4].try_into().unwrap()) as usize;
-        if declared != SUPERBLOCK_SIZE { return Err(invalid("Q42 LZ4 prefix does not declare one SuperBlock")); }
-        let decoded = lz4_flex::decompress_into(&compressed[4..compressed_len], &mut out[..declared]).map_err(|error| invalid(format!("decode Q42 range block: {error}")))?;
-        if decoded != declared { return Err(invalid("Q42 range block decoded to an unexpected length")); }
+        if declared != SUPERBLOCK_SIZE {
+            return Err(invalid("Q42 LZ4 prefix does not declare one SuperBlock"));
+        }
+        let decoded =
+            lz4_flex::decompress_into(&compressed[4..compressed_len], &mut out[..declared])
+                .map_err(|error| invalid(format!("decode Q42 range block: {error}")))?;
+        if decoded != declared {
+            return Err(invalid("Q42 range block decoded to an unexpected length"));
+        }
         Ok(decoded)
     }
 
-    pub fn into_source(self) -> S { self.source }
+    pub fn into_source(self) -> S {
+        self.source
+    }
+
+    fn bidx_block_count(&self) -> io::Result<usize> {
+        let bidx_length = self.header.bidx_length;
+        if bidx_length < BIDX_HEADER_BYTES as u64 {
+            return Err(invalid("Q42 BIDX is shorter than its header"));
+        }
+        let mut bytes = [0u8; BIDX_HEADER_BYTES];
+        let offset = self.header.bidx_offset;
+        self.source.read_range_into(
+            Q42ByteRange {
+                offset,
+                length: BIDX_HEADER_BYTES,
+            },
+            &mut bytes,
+        )?;
+        if bytes[0..4] != BIDX_MAGIC || u32::from_le_bytes(bytes[4..8].try_into().unwrap()) != 1 {
+            return Err(invalid("unsupported Q42 BIDX header"));
+        }
+        let count = u32::from_le_bytes(bytes[8..12].try_into().unwrap()) as usize;
+        if count != self.header.block_count as usize {
+            return Err(invalid("Q42 BIDX count does not match the block directory"));
+        }
+        let expected = BIDX_HEADER_BYTES
+            .checked_add(
+                count
+                    .checked_mul(BIDX_ENTRY_BYTES)
+                    .ok_or_else(|| invalid("Q42 BIDX entry count overflow"))?,
+            )
+            .ok_or_else(|| invalid("Q42 BIDX length overflow"))?;
+        if bidx_length != expected as u64 {
+            return Err(invalid("Q42 BIDX length does not match its entry count"));
+        }
+        Ok(count)
+    }
+
+    fn bidx_entry(&self, index: usize) -> io::Result<(u64, u64)> {
+        let block_count = usize::try_from(self.header.block_count)
+            .map_err(|_| invalid("Q42 block count exceeds platform"))?;
+        if index >= block_count {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "Q42 BIDX entry index out of range",
+            ));
+        }
+        let offset = self
+            .header
+            .bidx_offset
+            .checked_add(BIDX_HEADER_BYTES as u64)
+            .and_then(|value| value.checked_add((index * BIDX_ENTRY_BYTES) as u64))
+            .ok_or_else(|| invalid("Q42 BIDX entry offset overflow"))?;
+        let mut bytes = [0u8; BIDX_ENTRY_BYTES];
+        self.source.read_range_into(
+            Q42ByteRange {
+                offset,
+                length: BIDX_ENTRY_BYTES,
+            },
+            &mut bytes,
+        )?;
+        let min = u64::from_le_bytes(bytes[0..8].try_into().unwrap());
+        let max = u64::from_le_bytes(bytes[8..16].try_into().unwrap());
+        if min > max {
+            return Err(invalid("Q42 BIDX entry has min > max"));
+        }
+        Ok((min, max))
+    }
 }
 
 #[cfg(test)]
 mod tests {
+    use super::super::super::{
+        write_unified_volume, write_volume_root, Q42RangeVolumeSet, Q42VolumeManifest,
+    };
     use super::*;
-    use super::super::super::write_unified_volume;
     use crate::mini_parser::hash_token;
     use crate::specialized_libs::computational_geometry::allocation_counter::assert_zero_alloc;
     use crate::NQuin;
@@ -116,7 +401,14 @@ mod tests {
         let subject = hash_token("urn:q42:range-subject");
         let predicate = hash_token("urn:q42:range-predicate");
         let object = hash_token("urn:q42:range-object");
-        let quin = NQuin { subject, predicate, object, context: 0, metadata: 0, parity: 0 };
+        let quin = NQuin {
+            subject,
+            predicate,
+            object,
+            context: 0,
+            metadata: 0,
+            parity: 0,
+        };
         let mut lex = HashMap::new();
         lex.insert(subject, "urn:q42:range-subject".to_string());
         lex.insert(predicate, "urn:q42:range-predicate".to_string());
@@ -137,9 +429,17 @@ mod tests {
 
         let mut compressed = [0u8; MAX_COMPRESSED_SUPERBLOCK_SIZE];
         let mut decoded = [0u8; SUPERBLOCK_SIZE];
-        assert_eq!(volume.read_superblock_into(0, &mut compressed, &mut decoded).unwrap(), SUPERBLOCK_SIZE);
+        assert_eq!(
+            volume
+                .read_superblock_into(0, &mut compressed, &mut decoded)
+                .unwrap(),
+            SUPERBLOCK_SIZE
+        );
         assert_eq!(u64::from_le_bytes(decoded[16..24].try_into().unwrap()), 1);
-        assert_eq!(u64::from_le_bytes(decoded[160..168].try_into().unwrap()), quin.subject);
+        assert_eq!(
+            u64::from_le_bytes(decoded[160..168].try_into().unwrap()),
+            quin.subject
+        );
     }
 
     #[test]
@@ -150,7 +450,110 @@ mod tests {
         let mut compressed = [0u8; MAX_COMPRESSED_SUPERBLOCK_SIZE];
         let mut decoded = [0u8; SUPERBLOCK_SIZE];
         assert_zero_alloc("q42_range_volume_block_read", || {
-            volume.read_superblock_into(0, &mut compressed, &mut decoded).unwrap();
+            volume
+                .read_superblock_into(0, &mut compressed, &mut decoded)
+                .unwrap();
         });
+    }
+
+    #[test]
+    fn range_volume_bidx_pages_complete_heavy_hitters() {
+        let (file, quin) = sample_volume();
+        let mut lex = HashMap::new();
+        lex.insert(quin.subject, "urn:q42:range-subject".to_string());
+        lex.insert(quin.predicate, "urn:q42:range-predicate".to_string());
+        lex.insert(quin.object, "urn:q42:range-object".to_string());
+        write_unified_volume(
+            file.path(),
+            &lex,
+            &[(quin.object, quin.object); 5],
+            &[vec![quin], vec![quin], vec![quin], vec![quin], vec![quin]],
+        )
+        .unwrap();
+        let source = super::super::range::LocalFileRangeSource::open(file.path()).unwrap();
+        let volume = Q42RangeVolume::open(source).unwrap();
+        let mut page = [usize::MAX; 2];
+        let first = volume
+            .bidx_blocks_for_hash_into(quin.object, 0, &mut page)
+            .unwrap()
+            .unwrap();
+        assert_eq!(first.range, BidxBlockRange { start: 0, end: 5 });
+        assert_eq!(&page, &[0, 1]);
+        let last = volume
+            .bidx_blocks_for_hash_into(quin.object, first.next_cursor.unwrap(), &mut page)
+            .unwrap()
+            .unwrap();
+        assert_eq!(&page, &[2, 3]);
+        assert_eq!(last.next_cursor, Some(4));
+    }
+
+    #[test]
+    fn range_volume_set_opens_front_embedded_root_and_verifies_segments() {
+        let dir = tempfile::TempDir::new().unwrap();
+        let root_path = dir.path().join("root.q42");
+        let first_path = dir.path().join("segment-000.q42");
+        let second_path = dir.path().join("segment-001.q42");
+        let (first_quin, first_lex) = sample_quin("urn:q42:one");
+        let (second_quin, second_lex) = sample_quin("urn:q42:two");
+        let mut entries = [(first_quin, first_lex), (second_quin, second_lex)];
+        entries.sort_unstable_by_key(|(quin, _)| quin.object);
+        write_unified_volume(
+            &first_path,
+            &entries[0].1,
+            &[(entries[0].0.object, entries[0].0.object)],
+            &[vec![entries[0].0]],
+        )
+        .unwrap();
+        write_unified_volume(
+            &second_path,
+            &entries[1].1,
+            &[(entries[1].0.object, entries[1].0.object)],
+            &[vec![entries[1].0]],
+        )
+        .unwrap();
+        let manifest = Q42VolumeManifest {
+            generation: 1,
+            segments: vec![
+                Q42VolumeManifest::segment_from_file(&first_path, "segment-000.q42".into())
+                    .unwrap(),
+                Q42VolumeManifest::segment_from_file(&second_path, "segment-001.q42".into())
+                    .unwrap(),
+            ],
+        };
+        write_volume_root(&root_path, &manifest).unwrap();
+
+        let root_source = super::super::range::LocalFileRangeSource::open(&root_path).unwrap();
+        let root = Q42RangeVolume::open(root_source).unwrap();
+        let factory = |entry: &super::super::manifest::Q42VolumeSegment| {
+            super::super::range::LocalFileRangeSource::open(&dir.path().join(&entry.locator))
+        };
+        let set = Q42RangeVolumeSet::open_root(&root, &factory).unwrap();
+        assert_eq!(set.segment_index_for_object(entries[0].0.object), Some(0));
+        assert_eq!(set.segment_index_for_object(entries[1].0.object), Some(1));
+        let mut digest_scratch = [0u8; 1024];
+        set.verify_segment_hashes(&mut digest_scratch).unwrap();
+        let mut compressed = [0u8; MAX_COMPRESSED_SUPERBLOCK_SIZE];
+        let mut decoded = [0u8; SUPERBLOCK_SIZE];
+        set.verify_segment_quin_counts(&mut compressed, &mut decoded)
+            .unwrap();
+    }
+
+    fn sample_quin(object_text: &str) -> (NQuin, HashMap<u64, String>) {
+        let subject = hash_token("urn:q42:range-subject");
+        let predicate = hash_token("urn:q42:range-predicate");
+        let object = hash_token(object_text);
+        let quin = NQuin {
+            subject,
+            predicate,
+            object,
+            context: 0,
+            metadata: 0,
+            parity: 0,
+        };
+        let mut lex = HashMap::new();
+        lex.insert(subject, "urn:q42:range-subject".to_string());
+        lex.insert(predicate, "urn:q42:range-predicate".to_string());
+        lex.insert(object, object_text.to_string());
+        (quin, lex)
     }
 }

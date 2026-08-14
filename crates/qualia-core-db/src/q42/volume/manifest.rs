@@ -2,11 +2,13 @@
 
 use std::fs::File;
 use std::io::{self, Read};
-use std::path::{Path, PathBuf};
+use std::path::{Component, Path, PathBuf};
 
 use sha2::{Digest, Sha256};
 
-use super::super::Q42Volume;
+use super::super::{Q42Volume, MAX_COMPRESSED_SUPERBLOCK_SIZE, SUPERBLOCK_SIZE};
+use super::range::{verify_source_sha256, Q42RangeSource};
+use super::range_volume::Q42RangeVolume;
 
 pub const VOLUME_MANIFEST_MAGIC: [u8; 8] = *b"Q42VOL\0\0";
 pub const VOLUME_MANIFEST_VERSION: u16 = 1;
@@ -148,12 +150,7 @@ impl Q42VolumeManifest {
         }
         let mut previous_last = None;
         for segment in &self.segments {
-            if segment.locator.is_empty() || Path::new(&segment.locator).is_absolute() {
-                return Err(io::Error::new(
-                    io::ErrorKind::InvalidInput,
-                    "Q42 segment locator must be a non-empty relative path",
-                ));
-            }
+            validate_segment_locator(&segment.locator)?;
             if segment.byte_length == 0
                 || segment.quin_count == 0
                 || segment.first_object_hash > segment.last_object_hash
@@ -208,6 +205,181 @@ impl Q42VolumeManifest {
             sha256: sha256_file(path)?,
         })
     }
+}
+
+/// Opens an immutable child source identified by the front-embedded manifest.
+/// Construction may allocate; all subsequent block reads remain caller-buffered.
+pub trait Q42SegmentRangeFactory {
+    type Source: Q42RangeSource;
+
+    fn open_segment(&self, segment: &Q42VolumeSegment) -> io::Result<Self::Source>;
+}
+
+impl<F, S> Q42SegmentRangeFactory for F
+where
+    F: Fn(&Q42VolumeSegment) -> io::Result<S>,
+    S: Q42RangeSource,
+{
+    type Source = S;
+
+    fn open_segment(&self, segment: &Q42VolumeSegment) -> io::Result<Self::Source> {
+        self(segment)
+    }
+}
+
+/// Transport-neutral logical Q42 snapshot. Root and child volumes can be
+/// opened from HTTP/IPFS range sources just as from a local file.
+pub struct Q42RangeVolumeSet<S: Q42RangeSource> {
+    manifest: Q42VolumeManifest,
+    segments: Vec<Q42RangeVolume<S>>,
+}
+
+impl<S: Q42RangeSource> Q42RangeVolumeSet<S> {
+    pub fn open_root<R, F>(root: &Q42RangeVolume<R>, factory: &F) -> io::Result<Self>
+    where
+        R: Q42RangeSource,
+        F: Q42SegmentRangeFactory<Source = S>,
+    {
+        let manifest_length = root
+            .volume_manifest_length()?
+            .ok_or_else(|| invalid("Q42 root has no embedded volume manifest"))?;
+        let mut bytes = vec![0u8; manifest_length];
+        root.read_volume_manifest_into(&mut bytes)?;
+        let manifest = Q42VolumeManifest::decode(&bytes)?;
+        let mut segments = Vec::with_capacity(manifest.segments.len());
+        for entry in &manifest.segments {
+            let source = factory.open_segment(entry)?;
+            if source.length()? != entry.byte_length {
+                return Err(invalid(format!(
+                    "Q42 segment length differs from root manifest: {}",
+                    entry.locator
+                )));
+            }
+            let volume = Q42RangeVolume::open(source)?;
+            if volume.object_hash_bounds()?
+                != Some((entry.first_object_hash, entry.last_object_hash))
+            {
+                return Err(invalid(format!(
+                    "Q42 segment object bounds differ from root manifest: {}",
+                    entry.locator
+                )));
+            }
+            segments.push(volume);
+        }
+        Ok(Self { manifest, segments })
+    }
+
+    pub fn manifest(&self) -> &Q42VolumeManifest {
+        &self.manifest
+    }
+
+    pub fn segments(&self) -> &[Q42RangeVolume<S>] {
+        &self.segments
+    }
+
+    /// Find the first segment whose object interval can contain `object_hash`.
+    /// Segment boundary overlap is legal for high-frequency values, so callers
+    /// must advance through adjoining intervals when a value spans segments.
+    pub fn segment_index_for_object(&self, object_hash: u64) -> Option<usize> {
+        let mut lo = 0usize;
+        let mut hi = self.manifest.segments.len();
+        while lo < hi {
+            let mid = lo + (hi - lo) / 2;
+            if self.manifest.segments[mid].last_object_hash < object_hash {
+                lo = mid + 1;
+            } else {
+                hi = mid;
+            }
+        }
+        self.manifest
+            .segments
+            .get(lo)
+            .filter(|segment| segment.first_object_hash <= object_hash)
+            .map(|_| lo)
+    }
+
+    /// Verify every immutable child digest using a caller-owned scratch buffer.
+    pub fn verify_segment_hashes(&self, scratch: &mut [u8]) -> io::Result<()> {
+        for (entry, segment) in self.manifest.segments.iter().zip(&self.segments) {
+            verify_source_sha256(segment.source(), &entry.sha256, scratch)?;
+        }
+        Ok(())
+    }
+
+    /// Verify the committed Quin count in every segment. The supplied buffers
+    /// are reused for every block and cap the verifier's memory use.
+    pub fn verify_segment_quin_counts(
+        &self,
+        compressed: &mut [u8],
+        decoded: &mut [u8],
+    ) -> io::Result<()> {
+        if compressed.len() < MAX_COMPRESSED_SUPERBLOCK_SIZE || decoded.len() < SUPERBLOCK_SIZE {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "Q42 segment verifier buffers are too small",
+            ));
+        }
+        for (entry, segment) in self.manifest.segments.iter().zip(&self.segments) {
+            let mut actual = 0u64;
+            for index in 0..segment.block_count() as usize {
+                segment.read_superblock_into(index, compressed, decoded)?;
+                let live = u64::from_le_bytes(decoded[16..24].try_into().unwrap());
+                if live > crate::QUINS_PER_BLOCK as u64 {
+                    return Err(invalid("Q42 SuperBlock exceeds its Quin capacity"));
+                }
+                actual = actual
+                    .checked_add(live)
+                    .ok_or_else(|| invalid("Q42 segment Quin count overflow"))?;
+            }
+            if actual != entry.quin_count {
+                return Err(invalid(format!(
+                    "Q42 segment Quin count differs from root manifest: {}",
+                    entry.locator
+                )));
+            }
+        }
+        Ok(())
+    }
+}
+
+impl Q42VolumeSegment {
+    /// Return the immutable CID for an `ipfs://CID` locator.
+    pub fn ipfs_cid(&self) -> Option<&str> {
+        self.locator.strip_prefix("ipfs://")
+    }
+}
+
+fn validate_segment_locator(locator: &str) -> io::Result<()> {
+    if locator.is_empty() {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "Q42 segment locator is empty",
+        ));
+    }
+    if let Some(cid) = locator.strip_prefix("ipfs://") {
+        if cid.is_empty() || !cid.bytes().all(|byte| byte.is_ascii_alphanumeric()) {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "Q42 IPFS locator has an invalid CID",
+            ));
+        }
+        return Ok(());
+    }
+    let path = Path::new(locator);
+    if path.is_absolute()
+        || path.components().any(|component| {
+            matches!(
+                component,
+                Component::ParentDir | Component::RootDir | Component::Prefix(_)
+            )
+        })
+    {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "Q42 segment locator must be a relative path or ipfs://CID",
+        ));
+    }
+    Ok(())
 }
 
 /// Locally backed multi-segment query snapshot. It deliberately has no remote
@@ -299,4 +471,47 @@ pub fn root_relative_path(root: &Path, segment: &Path) -> io::Result<String> {
             "segment path is not valid UTF-8",
         )
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn segment(locator: &str) -> Q42VolumeSegment {
+        Q42VolumeSegment {
+            locator: locator.to_owned(),
+            byte_length: 1,
+            first_object_hash: 1,
+            last_object_hash: 1,
+            quin_count: 1,
+            sha256: [7; 32],
+        }
+    }
+
+    #[test]
+    fn manifest_accepts_immutable_ipfs_cids_and_rejects_escaping_paths() {
+        let manifest = Q42VolumeManifest {
+            generation: 1,
+            segments: vec![segment("ipfs://bafybeigdyrzt5v5cbe")],
+        };
+        let bytes = manifest.encode().unwrap();
+        assert_eq!(Q42VolumeManifest::decode(&bytes).unwrap(), manifest);
+        assert_eq!(manifest.segments[0].ipfs_cid(), Some("bafybeigdyrzt5v5cbe"));
+
+        for locator in [
+            "../segment.q42",
+            "C:\\segment.q42",
+            "/segment.q42",
+            "ipfs://bad/path",
+        ] {
+            let invalid = Q42VolumeManifest {
+                generation: 1,
+                segments: vec![segment(locator)],
+            };
+            assert!(
+                invalid.validate().is_err(),
+                "locator {locator:?} must be rejected"
+            );
+        }
+    }
 }

@@ -11,6 +11,9 @@ use std::sync::Mutex;
 
 use sha2::{Digest, Sha256};
 
+#[cfg(not(target_arch = "wasm32"))]
+use super::manifest::{Q42SegmentRangeFactory, Q42VolumeSegment};
+
 fn invalid(message: impl Into<String>) -> io::Error {
     io::Error::new(io::ErrorKind::InvalidInput, message.into())
 }
@@ -173,6 +176,62 @@ impl HttpRangeSource {
             length,
         })
     }
+
+    /// Discover an immutable source length without downloading its body. This
+    /// is a cold construction operation used for a root URL (including IPNS).
+    /// Gateways that omit `Content-Length` on HEAD must still prove a one-byte
+    /// `206` range response before they are accepted.
+    pub fn discover(url: &str) -> io::Result<Self> {
+        let url = reqwest::Url::parse(url)
+            .map_err(|error| invalid(format!("invalid Q42 HTTP URL: {error}")))?;
+        if url.scheme() != "https" && url.scheme() != "http" {
+            return Err(invalid("Q42 HTTP source must use http or https"));
+        }
+        let client = reqwest::blocking::Client::builder()
+            .connect_timeout(std::time::Duration::from_secs(10))
+            .timeout(std::time::Duration::from_secs(30))
+            .build()
+            .map_err(|error| io::Error::other(format!("build Q42 HTTP client: {error}")))?;
+        if let Ok(response) = client.head(url.clone()).send() {
+            if response.status().is_success() {
+                if let Some(length) = response.content_length().filter(|length| *length != 0) {
+                    return Ok(Self {
+                        client,
+                        url,
+                        length,
+                    });
+                }
+            }
+        }
+        let mut response = client
+            .get(url.clone())
+            .header(reqwest::header::RANGE, "bytes=0-0")
+            .send()
+            .map_err(|error| io::Error::other(format!("discover Q42 range length: {error}")))?;
+        if response.status() != reqwest::StatusCode::PARTIAL_CONTENT {
+            return Err(invalid("Q42 gateway cannot prove byte-range source length"));
+        }
+        let header = response
+            .headers()
+            .get(reqwest::header::CONTENT_RANGE)
+            .and_then(|value| value.to_str().ok())
+            .ok_or_else(|| invalid("Q42 discovery response has no valid Content-Range"))?;
+        let (start, end, length) = parse_content_range(header)?;
+        if start != 0 || end != 0 {
+            return Err(invalid("Q42 discovery range was not exactly bytes 0-0"));
+        }
+        let mut first = [0u8; 1];
+        response.read_exact(&mut first)?;
+        let mut extra = [0u8; 1];
+        if response.read(&mut extra)? != 0 {
+            return Err(invalid("Q42 discovery response contains extra bytes"));
+        }
+        Ok(Self {
+            client,
+            url,
+            length,
+        })
+    }
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -260,6 +319,57 @@ pub fn ipfs_gateway_range_source(
     }
     let gateway = gateway.trim_end_matches('/');
     HttpRangeSource::new(&format!("{gateway}/ipfs/{cid}"), length)
+}
+
+/// Construct a range source for an IPNS-published root. Resolution is bounded
+/// by the HTTP adapter's 10-second connect and 30-second request timeouts;
+/// after the root manifest is read, child segments must use immutable CIDs.
+#[cfg(not(target_arch = "wasm32"))]
+pub fn ipns_gateway_range_source(gateway: &str, name: &str) -> io::Result<HttpRangeSource> {
+    if name.is_empty()
+        || !name
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'.' | b'-' | b'_'))
+    {
+        return Err(invalid("IPNS name must be an ASCII name without a path"));
+    }
+    let gateway = gateway.trim_end_matches('/');
+    HttpRangeSource::discover(&format!("{gateway}/ipns/{name}"))
+}
+
+/// Opens manifest `ipfs://CID` child locators through one configured gateway.
+/// The CID and byte length remain manifest-committed; the gateway is merely a
+/// transport route and cannot substitute a different-length object.
+#[cfg(not(target_arch = "wasm32"))]
+pub struct IpfsGatewaySegmentFactory {
+    gateway: String,
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+impl IpfsGatewaySegmentFactory {
+    pub fn new(gateway: &str) -> io::Result<Self> {
+        let gateway = gateway.trim_end_matches('/');
+        let url = reqwest::Url::parse(gateway)
+            .map_err(|error| invalid(format!("invalid IPFS gateway URL: {error}")))?;
+        if url.scheme() != "https" && url.scheme() != "http" {
+            return Err(invalid("IPFS gateway must use http or https"));
+        }
+        Ok(Self {
+            gateway: gateway.to_owned(),
+        })
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+impl Q42SegmentRangeFactory for IpfsGatewaySegmentFactory {
+    type Source = HttpRangeSource;
+
+    fn open_segment(&self, segment: &Q42VolumeSegment) -> io::Result<Self::Source> {
+        let cid = segment
+            .ipfs_cid()
+            .ok_or_else(|| invalid("IPFS gateway factory requires an ipfs://CID locator"))?;
+        ipfs_gateway_range_source(&self.gateway, cid, segment.byte_length)
+    }
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -374,5 +484,21 @@ mod tests {
         assert!(parse_content_range("bytes 8-5/10").is_err());
         assert!(parse_content_range("bytes 5-10/10").is_err());
         assert!(parse_content_range("items 5-8/10").is_err());
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    #[test]
+    fn ipfs_factory_requires_cid_locators_without_contacting_the_gateway() {
+        let factory = IpfsGatewaySegmentFactory::new("https://gateway.example").unwrap();
+        let local = Q42VolumeSegment {
+            locator: "segment.q42".into(),
+            byte_length: 1,
+            first_object_hash: 1,
+            last_object_hash: 1,
+            quin_count: 1,
+            sha256: [0; 32],
+        };
+        assert!(factory.open_segment(&local).is_err());
+        assert!(ipns_gateway_range_source("https://gateway.example", "bad/name").is_err());
     }
 }

@@ -26,12 +26,15 @@ use crate::{NQuin, QUINS_PER_BLOCK};
 mod volume;
 
 #[cfg(not(target_arch = "wasm32"))]
-pub use volume::{ipfs_gateway_range_source, HttpRangeSource};
+pub use volume::{
+    ipfs_gateway_range_source, ipns_gateway_range_source, HttpRangeSource,
+    IpfsGatewaySegmentFactory,
+};
 pub use volume::{
     root_relative_path, validate_exact_range_response, verify_source_sha256, BidxBlockRange,
     BidxMatchPage, LocalFileRangeSource, Q42BlockCursor, Q42BlockMeta, Q42ByteRange,
-    Q42RangeSource, Q42RangeVolume, Q42VolumeManifest, Q42VolumeSegment, Q42VolumeSet, StreamingQ42VolumeWriter,
-    MAX_VOLUME_MANIFEST_BYTES,
+    Q42RangeSource, Q42RangeVolume, Q42RangeVolumeSet, Q42SegmentRangeFactory, Q42VolumeManifest,
+    Q42VolumeSegment, Q42VolumeSet, StreamingQ42VolumeWriter, MAX_VOLUME_MANIFEST_BYTES,
 };
 
 pub const Q42_MAGIC: [u8; 4] = [0x51, 0x34, 0x32, 0x00]; // "Q42\0"
