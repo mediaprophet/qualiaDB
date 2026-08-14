@@ -200,6 +200,8 @@ const FLAG_PERMISSIVE_COMMONS = 0x0020;
 const FLAG_SANCTUARY = 0x0040;
 /** Initial Range fetch — covers lex+bidx+block_dir for typical ontology volumes. */
 const PREAMBLE_PROBE  = 8191;
+/** Ontology volumes this size or smaller are fetched once (no HTTP Range). */
+const SMALL_VOLUME_MAX = 8 * 1024 * 1024;
 
 // ---------------------------------------------------------------------------
 // Q42 v3 volume header + block directory (embedded lex/bidx preamble)
@@ -503,6 +505,8 @@ export class VFS {
             source: 'none',
         };
         this._totalBytes     = 0;
+        /** @type {Uint8Array|null} entire volume when it fits in SMALL_VOLUME_MAX */
+        this._fullVolume     = null;
         /** @type {BlockOffsetMap|V3BlockOffsetMap|null} */
         this._blockOffsetMap = null;
         /** @type {BigUint64Array|null}  — interleaved [min0,max0, min1,max1, …] */
@@ -607,6 +611,13 @@ export class VFS {
             try {
                 const fh = await this._opfsVault.getFileHandle(OPFS_VOLUME_FILE);
                 this._totalBytes = (await fh.getFile()).size;
+                if (this._totalBytes && this._totalBytes <= SMALL_VOLUME_MAX) {
+                    const all = await this._readOpfsVolumeRange(0, this._totalBytes);
+                    if (all?.length === this._totalBytes && hasQ42V3Magic(all)) {
+                        this._fullVolume = all;
+                        preamble = all;
+                    }
+                }
             } catch (_) { /* size unknown until header parse */ }
         }
 
@@ -622,12 +633,11 @@ export class VFS {
             }
         }
 
-        if (!this._totalBytes) {
-            try {
-                const head = await fetch(this._remoteUrl, { method: 'HEAD', cache: 'no-store' });
-                const cl = head.headers.get('Content-Length');
-                if (cl) this._totalBytes = parseInt(cl, 10);
-            } catch (_) { /* fully offline */ }
+        await this._probeRemoteSize();
+        if (!this._fullVolume && this._totalBytes && this._totalBytes <= SMALL_VOLUME_MAX) {
+            onProgress?.('Downloading dataset…', 30);
+            const all = await this._loadFullVolume();
+            if (all?.length >= HEADER_SIZE) preamble = all;
         }
 
         if (!preamble || preamble.length < HEADER_SIZE) {
@@ -978,7 +988,31 @@ export class VFS {
     // Private helpers — HTTP
     // -------------------------------------------------------------------------
 
+    async _probeRemoteSize() {
+        if (this._totalBytes) return this._totalBytes;
+        try {
+            const head = await fetch(this._remoteUrl, { method: 'HEAD', cache: 'no-store' });
+            const cl = head.headers.get('Content-Length');
+            if (cl) this._totalBytes = parseInt(cl, 10);
+        } catch (_) { /* offline or HEAD blocked */ }
+        return this._totalBytes;
+    }
+
+    async _loadFullVolume() {
+        if (this._fullVolume) return this._fullVolume;
+        const resp = await fetch(this._remoteUrl, { cache: 'no-store' });
+        if (!resp.ok) return null;
+        const raw = new Uint8Array(await resp.arrayBuffer());
+        if (!raw.length) return null;
+        this._fullVolume = raw;
+        this._totalBytes = raw.length;
+        return raw;
+    }
+
     async _fetchRangeBlock(offset, size) {
+        if (this._fullVolume && this._fullVolume.length >= offset + size) {
+            return this._fullVolume.subarray(offset, offset + size);
+        }
         const cached = await this._readOpfsVolumeRange(offset, size);
         if (cached?.length === size) {
             this._telemetry.opfsHits++;
@@ -988,7 +1022,10 @@ export class VFS {
         const t0 = performance.now();
         const raw = await this._fetchVolumeBytes(offset, size);
         if (!raw || raw.length < size) {
-            throw new Error(`VFS byte fetch failed at offset ${offset} (${this._remoteUrl})`);
+            throw new Error(
+                `VFS byte fetch failed at offset ${offset} need ${size} B ` +
+                `(have ${raw?.length ?? 0}, file ${this._totalBytes || '?'}) (${this._remoteUrl})`
+            );
         }
         const ms = performance.now() - t0;
         this._telemetry.netRequests++;
@@ -1006,6 +1043,15 @@ export class VFS {
      */
     async _fetchVolumeBytes(offset, length) {
         if (!length) return null;
+        if (this._fullVolume && this._fullVolume.length >= offset + length) {
+            return this._fullVolume.subarray(offset, offset + length);
+        }
+        if (!this._fullVolume && this._totalBytes && this._totalBytes <= SMALL_VOLUME_MAX) {
+            const all = await this._loadFullVolume();
+            if (all && all.length >= offset + length) {
+                return all.subarray(offset, offset + length);
+            }
+        }
         const hi = offset + length - 1;
         try {
             const resp = await fetch(this._remoteUrl, {
@@ -1015,23 +1061,30 @@ export class VFS {
             if (resp.ok || resp.status === 206) {
                 this._totalBytes = this._parseContentLength(resp) || this._totalBytes;
                 const raw = new Uint8Array(await resp.arrayBuffer());
-                if (raw.length >= length) {
-                    if (raw.length >= offset + length) {
-                        return raw.subarray(offset, offset + length);
+                if (raw.length >= offset + length) {
+                    if (!this._fullVolume && raw.length === this._totalBytes) {
+                        this._fullVolume = raw;
                     }
+                    return raw.subarray(offset, offset + length);
+                }
+                if (raw.length >= length) {
                     if (!this._rangeWarned) {
                         this._rangeWarned = true;
                         console.warn(
-                            '[VFS] Server returned HTTP 200 for a Range request — slicing client-side.'
+                            '[VFS] Server returned a Range-sized body without Content-Range — slicing from 0.'
                         );
                     }
                     return raw.subarray(0, length);
                 }
             }
         } catch (e) {
-            console.warn('[VFS] Range fetch failed, trying stream read:', e.message);
+            console.warn('[VFS] Range fetch failed, trying full GET:', e.message);
         }
 
+        const all = await this._loadFullVolume();
+        if (all && all.length >= offset + length) {
+            return all.subarray(offset, offset + length);
+        }
         return this._fetchVolumeBytesStream(offset, length);
     }
 

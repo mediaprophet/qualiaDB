@@ -4,7 +4,7 @@
  * execute_ntriples_query (WASM). No mock result rows.
  */
 
-import { VFSProvider, QUIN_SIZE } from '../playground/vfs.js';
+import { VFSProvider, QUIN_SIZE } from '../playground/vfs.js?v=0.0.30-vfs-fullget1';
 
 const SUPERBLOCK_HEADER = 160;
 const DEFAULT_DATASET = 'schemaorg-30';

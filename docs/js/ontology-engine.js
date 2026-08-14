@@ -3,7 +3,7 @@
  */
 
 import { parseBigDecimal, hashToken, toHex16, hasMsb } from '../playground/hash.js';
-import { VFS, QUIN_SIZE } from '../playground/vfs.js';
+import { VFS, QUIN_SIZE } from '../playground/vfs.js?v=0.0.30-vfs-fullget1';
 
 const DOCS_ROOT = new URL('../', import.meta.url);
 const PLAYGROUND = new URL('../playground/', import.meta.url);
