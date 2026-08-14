@@ -55,6 +55,13 @@ pub const FLAG_BLOCKS_LZ4: u16 = 0x0001;
 pub const FLAG_OBJECT_SORTED: u16 = 0x0002;
 pub const FLAG_VOLUME_ROOT: u16 = 0x0004;
 
+/// Exhaustive cold-path verification receipt for one physical Q42 segment.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct Q42VerificationReceipt {
+    pub blocks_verified: u64,
+    pub quins_verified: u64,
+}
+
 /// Q42 volume header — 280 bytes, `repr(C, packed)`.
 /// v3 builds hard-reject files with `version < 3` — run `q42 migrate meta` first.
 #[repr(C, packed)]
@@ -829,6 +836,53 @@ impl Q42Volume {
         self.header.block_count
     }
 
+    /// Decode and verify every block without materialising the graph.  This
+    /// checks SuperBlock counts, parity, per-block/global object ordering, and
+    /// the BIDX range advertised for each block. Logical roots have no local
+    /// records and must be verified through their manifest children.
+    pub fn verify_all_blocks(&self) -> io::Result<Q42VerificationReceipt> {
+        if self.volume_manifest()?.is_some() {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "verify a Q42 logical root through its manifest child segments",
+            ));
+        }
+        let mut decoded = [0u8; SUPERBLOCK_SIZE];
+        let mut quins_verified = 0u64;
+        let mut previous_object = None;
+        for block_index in 0..self.block_count() as usize {
+            self.read_superblock_into(block_index, &mut decoded)?;
+            let live = u64::from_le_bytes(decoded[16..24].try_into().unwrap()) as usize;
+            if live == 0 || live > QUINS_PER_BLOCK {
+                return Err(io::Error::new(io::ErrorKind::InvalidData, "Q42 SuperBlock has invalid live Quin count"));
+            }
+            let bidx_offset = 16 + block_index * 16;
+            let bidx = self.bidx_bytes();
+            let advertised_min = u64::from_le_bytes(bidx[bidx_offset..bidx_offset + 8].try_into().unwrap());
+            let advertised_max = u64::from_le_bytes(bidx[bidx_offset + 8..bidx_offset + 16].try_into().unwrap());
+            let mut first = None;
+            let mut last = 0u64;
+            for quin_index in 0..live {
+                let offset = SUPERBLOCK_HEADER + quin_index * QUIN_SIZE;
+                let quin: crate::NQuin = bytemuck::pod_read_unaligned(&decoded[offset..offset + QUIN_SIZE]);
+                if !quin.verify_ecc_parity() {
+                    return Err(io::Error::new(io::ErrorKind::InvalidData, format!("Q42 parity mismatch in block {block_index}, Quin {quin_index}")));
+                }
+                if previous_object.is_some_and(|previous| quin.object < previous) {
+                    return Err(io::Error::new(io::ErrorKind::InvalidData, format!("Q42 object order regresses in block {block_index}")));
+                }
+                first.get_or_insert(quin.object);
+                last = quin.object;
+                previous_object = Some(quin.object);
+                quins_verified += 1;
+            }
+            if first != Some(advertised_min) || last != advertised_max {
+                return Err(io::Error::new(io::ErrorKind::InvalidData, format!("Q42 BIDX range disagrees with decoded block {block_index}")));
+            }
+        }
+        Ok(Q42VerificationReceipt { blocks_verified: self.block_count(), quins_verified })
+    }
+
     /// Binary-search BIDX for `object_hash`; returns block indices that may contain it.
     ///
     /// This allocating compatibility helper now returns the complete matching
@@ -1053,6 +1107,41 @@ mod tests {
         vol.read_superblock_into(hits[0], &mut block).unwrap();
         let active = u64::from_le_bytes(block[16..24].try_into().unwrap());
         assert_eq!(active, 1);
+    }
+
+    #[test]
+    fn exhaustive_verifier_checks_decoded_quins_against_bidx() {
+        let tmp = NamedTempFile::new().unwrap();
+        let mut quin = NQuin {
+            subject: 11,
+            predicate: 22,
+            object: 33,
+            context: 44,
+            metadata: 55,
+            parity: 0,
+        };
+        quin.parity = NQuin::calculate_parity(
+            quin.subject,
+            quin.predicate,
+            quin.object,
+            quin.context,
+            quin.metadata,
+        );
+        write_unified_volume(
+            tmp.path(),
+            &HashMap::new(),
+            &[(quin.object, quin.object)],
+            &[vec![quin]],
+        )
+        .unwrap();
+        let volume = Q42Volume::open(tmp.path()).unwrap();
+        assert_eq!(
+            volume.verify_all_blocks().unwrap(),
+            Q42VerificationReceipt {
+                blocks_verified: 1,
+                quins_verified: 1,
+            }
+        );
     }
 
     #[test]
