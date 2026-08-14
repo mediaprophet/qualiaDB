@@ -373,6 +373,21 @@ impl Q42SegmentRangeFactory for IpfsGatewaySegmentFactory {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+impl super::manifest::Q42LexiconRangeFactory for IpfsGatewaySegmentFactory {
+    type Source = HttpRangeSource;
+
+    fn open_lexicon_segment(
+        &self,
+        segment: &super::manifest::Q42LexiconSegment,
+    ) -> io::Result<Self::Source> {
+        let cid = segment.locator.strip_prefix("ipfs://").ok_or_else(|| {
+            invalid("IPFS gateway factory requires an ipfs://CID lexicon locator")
+        })?;
+        ipfs_gateway_range_source(&self.gateway, cid, segment.byte_length)
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
 fn parse_content_range(value: &str) -> io::Result<(u64, u64, u64)> {
     let body = value
         .strip_prefix("bytes ")

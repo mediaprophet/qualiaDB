@@ -63,6 +63,19 @@ pub struct Q42RangeTripleSelectPage {
     pub next_cursor: Option<Q42RangeTripleSelectCursor>,
 }
 
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub struct Q42RangeVolumeSetTripleSelectCursor {
+    pub scan: Q42RangeVolumeSetSparqlCursor,
+    pub skipped: u64,
+    pub emitted: u64,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct Q42RangeVolumeSetTripleSelectPage {
+    pub returned: usize,
+    pub next_cursor: Option<Q42RangeVolumeSetTripleSelectCursor>,
+}
+
 impl Q42RangeTripleSelectPlan {
     pub fn from_execution_plan(plan: &ExecutionPlan) -> Result<Self, String> {
         if plan.operator_count == 0 || plan.root_operator as usize >= plan.operator_count as usize {
@@ -157,6 +170,76 @@ pub fn execute_range_triple_select_page_into<S: crate::q42_volume::Q42RangeSourc
             source_page
                 .next_cursor
                 .map(|scan| Q42RangeTripleSelectCursor {
+                    scan,
+                    skipped,
+                    emitted,
+                })
+        },
+    })
+}
+
+/// Execute one bounded page of the same simple SELECT/ASK plan across a
+/// front-manifested logical Q42 root.
+pub fn execute_range_volume_set_triple_select_page_into<S: crate::q42_volume::Q42RangeSource>(
+    volumes: &crate::q42_volume::Q42RangeVolumeSet<S>,
+    plan: Q42RangeTripleSelectPlan,
+    ctx: &SparqlQueryContext,
+    cursor: Q42RangeVolumeSetTripleSelectCursor,
+    compressed: &mut [u8],
+    decoded: &mut [u8],
+    quin_scratch: &mut [NQuin],
+    out: &mut [BindingRow],
+) -> Result<Q42RangeVolumeSetTripleSelectPage, String> {
+    let source_page = execute_range_volume_set_triple_page_into(
+        volumes,
+        plan.subject,
+        plan.predicate,
+        plan.object,
+        None,
+        ctx,
+        &BindingRow::default(),
+        cursor.scan,
+        compressed,
+        decoded,
+        quin_scratch,
+        out,
+    )?;
+    let mut returned = 0usize;
+    let mut skipped = cursor.skipped;
+    let mut emitted = cursor.emitted;
+    for index in 0..source_page.returned {
+        if skipped < plan.offset {
+            skipped += 1;
+            continue;
+        }
+        if emitted >= plan.limit {
+            return Ok(Q42RangeVolumeSetTripleSelectPage {
+                returned,
+                next_cursor: None,
+            });
+        }
+        let mut row = out[index];
+        if plan.projection_count != 0 {
+            let mut projected = BindingRow::default();
+            for variable in plan.projection.iter().take(plan.projection_count as usize) {
+                if let Some(value) = row.get(*variable) {
+                    projected.set(*variable, value);
+                }
+            }
+            row = projected;
+        }
+        out[returned] = row;
+        returned += 1;
+        emitted += 1;
+    }
+    Ok(Q42RangeVolumeSetTripleSelectPage {
+        returned,
+        next_cursor: if emitted >= plan.limit {
+            None
+        } else {
+            source_page
+                .next_cursor
+                .map(|scan| Q42RangeVolumeSetTripleSelectCursor {
                     scan,
                     skipped,
                     emitted,

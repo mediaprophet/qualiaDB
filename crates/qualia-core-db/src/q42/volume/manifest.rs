@@ -419,6 +419,25 @@ pub trait Q42SegmentRangeFactory {
     fn open_segment(&self, segment: &Q42VolumeSegment) -> io::Result<Self::Source>;
 }
 
+/// Opens a manifest-attested Q42LEX shard through a range transport.
+pub trait Q42LexiconRangeFactory {
+    type Source: Q42RangeSource;
+
+    fn open_lexicon_segment(&self, segment: &Q42LexiconSegment) -> io::Result<Self::Source>;
+}
+
+impl<F, S> Q42LexiconRangeFactory for F
+where
+    F: Fn(&Q42LexiconSegment) -> io::Result<S>,
+    S: Q42RangeSource,
+{
+    type Source = S;
+
+    fn open_lexicon_segment(&self, segment: &Q42LexiconSegment) -> io::Result<Self::Source> {
+        self(segment)
+    }
+}
+
 impl<F, S> Q42SegmentRangeFactory for F
 where
     F: Fn(&Q42VolumeSegment) -> io::Result<S>,
@@ -453,6 +472,22 @@ pub struct Q42VolumeSetQueryPage {
 }
 
 impl<S: Q42RangeSource> Q42RangeVolumeSet<S> {
+    /// Open a root's graph and lexicon shards as one transport-neutral range
+    /// snapshot. This is the service-facing constructor for HTTP/IPFS callers.
+    pub fn open_root_with_lexicon_factory<R, DF, LF>(
+        root: &Q42RangeVolume<R>,
+        data_factory: &DF,
+        lexicon_factory: &LF,
+    ) -> io::Result<Self>
+    where
+        R: Q42RangeSource,
+        DF: Q42SegmentRangeFactory<Source = S>,
+        LF: Q42LexiconRangeFactory<Source = S>,
+    {
+        let mut set = Self::open_root(root, data_factory)?;
+        set.attach_lexicon_segments(&|segment| lexicon_factory.open_lexicon_segment(segment))?;
+        Ok(set)
+    }
     pub fn open_root<R, F>(root: &Q42RangeVolume<R>, factory: &F) -> io::Result<Self>
     where
         R: Q42RangeSource,

@@ -53,6 +53,17 @@ pub fn run_sparql_query(vault: &std::path::Path, query_str: &str) {
         }
     };
 
+    if let Ok(range_plan) =
+        qualia_core_db::sparql_executor::Q42RangeTripleSelectPlan::from_execution_plan(&plan)
+    {
+        match run_range_triple_query(vault, range_plan, &ctx) {
+            Ok(()) => return,
+            Err(error) => eprintln!(
+                "Range SPARQL unavailable; using resident compatibility executor: {error}"
+            ),
+        }
+    }
+
     let quins = match qualia_core_db::q42_reader::read_q42_quins(vault) {
         Ok(quins) => quins,
         Err(e) => {
@@ -87,5 +98,105 @@ pub fn run_sparql_query(vault: &std::path::Path, query_str: &str) {
                 println!();
             }
         }
+    }
+}
+
+fn run_range_triple_query(
+    vault: &std::path::Path,
+    plan: qualia_core_db::sparql_executor::Q42RangeTripleSelectPlan,
+    ctx: &qualia_core_db::sparql_ast::SparqlQueryContext,
+) -> Result<(), String> {
+    use qualia_core_db::q42_volume::{
+        LocalFileRangeSource, Q42RangeVolume, Q42RangeVolumeSet, Q42VolumeSegment,
+    };
+    use qualia_core_db::sparql_ast::BindingRow;
+    use qualia_core_db::sparql_executor::{
+        execute_range_triple_select_page_into, execute_range_volume_set_triple_select_page_into,
+        Q42RangeTripleSelectCursor, Q42RangeVolumeSetTripleSelectCursor,
+    };
+
+    const PAGE_ROWS: usize = 128;
+    let source = LocalFileRangeSource::open(vault).map_err(|error| error.to_string())?;
+    let root = Q42RangeVolume::open(source).map_err(|error| error.to_string())?;
+    let lexicon = qualia_core_db::q42_lex::Q42Lexicon::load_for_q42(vault).ok();
+    let mut compressed = [0u8; qualia_core_db::q42_volume::MAX_COMPRESSED_SUPERBLOCK_SIZE];
+    let mut decoded = [0u8; qualia_core_db::q42_volume::SUPERBLOCK_SIZE];
+    let mut quins = [qualia_core_db::NQuin::default(); PAGE_ROWS];
+    let mut rows = [BindingRow::default(); PAGE_ROWS];
+    let mut total = 0usize;
+
+    if root
+        .volume_manifest_length()
+        .map_err(|error| error.to_string())?
+        .is_some()
+    {
+        let parent = vault.parent().unwrap_or_else(|| std::path::Path::new("."));
+        let factory =
+            |entry: &Q42VolumeSegment| LocalFileRangeSource::open(&parent.join(&entry.locator));
+        let mut set =
+            Q42RangeVolumeSet::open_root(&root, &factory).map_err(|error| error.to_string())?;
+        set.attach_lexicon_segments(&|entry| {
+            LocalFileRangeSource::open(&parent.join(&entry.locator))
+        })
+        .map_err(|error| error.to_string())?;
+        let mut cursor = Q42RangeVolumeSetTripleSelectCursor::default();
+        loop {
+            let page = execute_range_volume_set_triple_select_page_into(
+                &set,
+                plan,
+                ctx,
+                cursor,
+                &mut compressed,
+                &mut decoded,
+                &mut quins,
+                &mut rows,
+            )?;
+            print_range_rows(&rows[..page.returned], lexicon.as_ref());
+            total += page.returned;
+            let Some(next) = page.next_cursor else {
+                break;
+            };
+            cursor = next;
+        }
+    } else {
+        let mut cursor = Q42RangeTripleSelectCursor::default();
+        loop {
+            let page = execute_range_triple_select_page_into(
+                &root,
+                plan,
+                ctx,
+                cursor,
+                &mut compressed,
+                &mut decoded,
+                &mut quins,
+                &mut rows,
+            )?;
+            print_range_rows(&rows[..page.returned], lexicon.as_ref());
+            total += page.returned;
+            let Some(next) = page.next_cursor else {
+                break;
+            };
+            cursor = next;
+        }
+    }
+    println!("{total} result(s) from {} (range-backed)", vault.display());
+    Ok(())
+}
+
+fn print_range_rows(
+    rows: &[qualia_core_db::sparql_ast::BindingRow],
+    lexicon: Option<&qualia_core_db::q42_lex::Q42Lexicon>,
+) {
+    for row in rows {
+        print!("[range]");
+        for (slot, value) in row.slots.iter().enumerate() {
+            if let Some(value) = value {
+                match lexicon.and_then(|lexicon| lexicon.lookup(*value)) {
+                    Some(text) => print!("  ?v{slot}={text}"),
+                    None => print!("  ?v{slot}=0x{value:016x}"),
+                }
+            }
+        }
+        println!();
     }
 }
