@@ -30,7 +30,8 @@ pub use volume::{ipfs_gateway_range_source, HttpRangeSource};
 pub use volume::{
     root_relative_path, validate_exact_range_response, verify_source_sha256, BidxBlockRange,
     BidxMatchPage, LocalFileRangeSource, Q42BlockCursor, Q42BlockMeta, Q42ByteRange,
-    Q42RangeSource, Q42VolumeManifest, Q42VolumeSegment, Q42VolumeSet, MAX_VOLUME_MANIFEST_BYTES,
+    Q42RangeSource, Q42VolumeManifest, Q42VolumeSegment, Q42VolumeSet, StreamingQ42VolumeWriter,
+    MAX_VOLUME_MANIFEST_BYTES,
 };
 
 pub const Q42_MAGIC: [u8; 4] = [0x51, 0x34, 0x32, 0x00]; // "Q42\0"

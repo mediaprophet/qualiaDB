@@ -1,5 +1,5 @@
 #[cfg(not(target_arch = "wasm32"))]
-use crate::q42_volume::UnifiedVolumeBuilder;
+use crate::q42_volume::StreamingQ42VolumeWriter;
 use crate::NQuin;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::QUINS_PER_BLOCK;
@@ -117,15 +117,10 @@ impl ExternalSorter {
             );
         }
 
-        let mut builder = UnifiedVolumeBuilder::with_lex_map(&self.lex).map_err(|e| {
-            std::io::Error::new(
-                std::io::ErrorKind::InvalidInput,
-                format!("invalid Q42LEX: {e:?}"),
-            )
-        })?;
+        let mut writer = StreamingQ42VolumeWriter::new(&self.lex)?;
 
         if self.chunk_files.is_empty() {
-            builder.finish(final_q42)?;
+            writer.finish(final_q42)?;
             return Ok(0);
         }
 
@@ -188,7 +183,7 @@ impl ExternalSorter {
             }
 
             if block_buffer.len() == QUINS_PER_BLOCK {
-                builder.push_block(block_seq, &block_buffer)?;
+                writer.push_block(block_seq, &block_buffer)?;
                 block_buffer.clear();
                 block_seq += 1;
             }
@@ -196,11 +191,11 @@ impl ExternalSorter {
 
         // Flush remaining in block buffer
         if !block_buffer.is_empty() {
-            builder.push_block(block_seq, &block_buffer)?;
+            writer.push_block(block_seq, &block_buffer)?;
             block_seq += 1;
         }
 
-        builder.finish(final_q42)?;
+        writer.finish(final_q42)?;
 
         // Cleanup temp files
         for chunk_path in &self.chunk_files {
