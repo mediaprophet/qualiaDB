@@ -8,6 +8,7 @@ mod cursor;
 mod index;
 mod manifest;
 mod range;
+mod range_volume;
 mod stream_writer;
 mod validate;
 
@@ -23,6 +24,7 @@ pub use range::{
     validate_exact_range_response, verify_source_sha256, LocalFileRangeSource, Q42ByteRange,
     Q42RangeSource,
 };
+pub use range_volume::Q42RangeVolume;
 pub use stream_writer::StreamingQ42VolumeWriter;
 
 pub(crate) use index::{bidx_block_range_for_hash, bidx_blocks_for_hash_into};

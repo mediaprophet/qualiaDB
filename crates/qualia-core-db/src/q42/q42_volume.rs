@@ -30,7 +30,7 @@ pub use volume::{ipfs_gateway_range_source, HttpRangeSource};
 pub use volume::{
     root_relative_path, validate_exact_range_response, verify_source_sha256, BidxBlockRange,
     BidxMatchPage, LocalFileRangeSource, Q42BlockCursor, Q42BlockMeta, Q42ByteRange,
-    Q42RangeSource, Q42VolumeManifest, Q42VolumeSegment, Q42VolumeSet, StreamingQ42VolumeWriter,
+    Q42RangeSource, Q42RangeVolume, Q42VolumeManifest, Q42VolumeSegment, Q42VolumeSet, StreamingQ42VolumeWriter,
     MAX_VOLUME_MANIFEST_BYTES,
 };
 
@@ -38,6 +38,9 @@ pub const Q42_MAGIC: [u8; 4] = [0x51, 0x34, 0x32, 0x00]; // "Q42\0"
 pub const Q42_VERSION_V3: u16 = 3;
 pub const HEADER_SIZE: usize = 256;
 pub const SUPERBLOCK_SIZE: usize = 40_960;
+/// Conservative caller-buffer bound for an LZ4 `prepend_size` encoding of one
+/// Q42 SuperBlock.  The bound includes its four-byte decoded-size prefix.
+pub const MAX_COMPRESSED_SUPERBLOCK_SIZE: usize = SUPERBLOCK_SIZE + (SUPERBLOCK_SIZE / 255) + 36;
 pub const SUPERBLOCK_HEADER: usize = 160;
 pub const QUIN_SIZE: usize = 48;
 pub const BIDX_MAGIC: [u8; 4] = *b"BIDX";
