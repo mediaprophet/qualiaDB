@@ -7,6 +7,40 @@ use qualia_client_core::engine::{ingestion, llm_offload};
 use qualia_client_core::state::ProgressPayload;
 use tauri::command;
 
+/// Run the bounded external-sort graph proof without blocking the desktop UI.
+/// The core verifier owns and removes its temporary workspace on completion.
+#[command]
+pub async fn verify_graph_equivalence(
+    source_path: String,
+    q42_path: String,
+    memory_mib: Option<u64>,
+    temp_gib: Option<u64>,
+) -> Result<qualia_core_db::graph_proof::GraphProofReport, String> {
+    let memory_mib = memory_mib.unwrap_or(32);
+    let temp_gib = temp_gib.unwrap_or(32);
+    let memory_limit_bytes = memory_mib
+        .checked_mul(1024 * 1024)
+        .and_then(|value| usize::try_from(value).ok())
+        .ok_or_else(|| "memory_mib is too large for this platform".to_string())?;
+    let temporary_byte_budget = temp_gib
+        .checked_mul(1024 * 1024 * 1024)
+        .ok_or_else(|| "temp_gib is too large".to_string())?;
+
+    tokio::task::spawn_blocking(move || {
+        qualia_core_db::graph_proof::prove_cli_ntriples_q42_equivalence(
+            std::path::Path::new(&source_path),
+            std::path::Path::new(&q42_path),
+            qualia_core_db::graph_proof::GraphProofOptions {
+                memory_limit_bytes,
+                temporary_byte_budget,
+            },
+        )
+        .map_err(|error| error.to_string())
+    })
+    .await
+    .map_err(|error| format!("graph proof task failed: {error}"))?
+}
+
 // ── Ingest ────────────────────────────────────────────────────────────────────
 
 #[command]

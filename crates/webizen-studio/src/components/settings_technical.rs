@@ -822,13 +822,12 @@ pub fn TechnicalSettingsPage() -> Element {
                                                     #[cfg(target_arch = "wasm32")]
                                                     {
                                                         let name = model.name.clone();
-                                                        let mut active_model = _active_model;
                                                         let mut model_status = model_status;
                                                         spawn(async move {
-                                                            match invoke_tauri_json::<()>("set_active_model", json!({ "modelName": name })).await {
-                                                                Ok(_) => {
-                                                                    active_model.set(name.clone());
-                                                                    model_status.set(format!("Activated: {name}"));
+                                                            match invoke_tauri_json::<serde_json::Value>("schedule_model_activation", json!({ "modelName": name })).await {
+                                                                Ok(job) => {
+                                                                    let id = job.get("id").and_then(serde_json::Value::as_str).unwrap_or("queued");
+                                                                    model_status.set(format!("Activation queued as {id}. See Background jobs."));
                                                                 }
                                                                 Err(e) => model_status.set(format!("Activate failed: {e}")),
                                                             }
@@ -895,12 +894,15 @@ pub fn TechnicalSettingsPage() -> Element {
                                             };
                                             let mut model_status = model_status;
                                             spawn(async move {
-                                                match invoke_tauri_json::<String>("download_model", json!({
+                                                match invoke_tauri_json::<serde_json::Value>("schedule_model_download", json!({
                                                     "url": url,
                                                     "filename": filename,
                                                     "modelId": model_id
                                                 })).await {
-                                                    Ok(msg) => model_status.set(msg),
+                                                    Ok(job) => {
+                                                        let id = job.get("id").and_then(serde_json::Value::as_str).unwrap_or("queued");
+                                                        model_status.set(format!("Download queued as {id}. See Background jobs."));
+                                                    }
                                                     Err(e) => model_status.set(format!("Download failed: {e}")),
                                                 }
                                             });

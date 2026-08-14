@@ -1,10 +1,14 @@
 # Q42 AcousticPlane — Internal Draft Standard
 
-**Version:** 0.1 (draft)  
-**Date:** 2026-06-17  
+**Version:** 0.1.1 (draft)  
+**Date:** 2026-08-15  
 **Status:** Internal draft — not submitted externally  
-**Branch:** `0.0.23`  
-**Normative code:** `crates/qualia-core-db/src/audio/`, `sonic_token.rs`, `audio/acoustic_plane.rs`
+**Branch:** `0.0.30`  
+**Normative code:** `crates/qualia-core-db/src/audio/` (`acoustic_plane.rs`, `acoustic_sab.rs`, `audio_spectral_sheet.rs`), `crates/qualia-core-db/src/net/sonic_token.rs`, `crates/qualia-core-db/src/render/acoustic.rs`
+
+This is a **U3 binary contract**, not a Q42 volume layout. It does not encode NQuins
+and is not affected by five-field SuperBlock ECC. Sizes below (8-byte token, 328-byte
+uniform, 1024-byte SAB, 20-byte Q4AU header) are unchanged.
 
 ---
 
@@ -21,13 +25,13 @@ This draft defines the **U3 AcousticPlane** binary contracts for Qualia WASM: 64
 - Hot-path symbolic events (Sonic Tokens)
 - Parametric synthesis driven by `Tensor10D` SOA
 - Binaural staging from tensor position + camera yaw
-- Cold STFT sidecar header (`Q4AU`)
+- Cold STFT sidecar header (`Q4AU` v1) and additive v2 planes (mel + MFCC)
+- CQT mmap kind (`SIDECAR_KIND_CQT` in header `_pad`)
 - Browser transport (SAB + float mirror)
 
 ### Out of scope (v0.1)
 
 - KEMAR HRTF table assets (analytic head model only)
-- Full CQT mmap ingest path
 - MP3/AAC as storage truth
 - Neural audio from U0
 
@@ -86,8 +90,12 @@ raw = delta_time
 
 ### 3.4 Transport
 
-- **Ring:** SPSC `rtrb`, capacity 128 (`SONIC_RING_CAP`)
-- **Drain:** `drain_sonic_tokens(max)` → JS array of `u64`
+- **Ring:** process-local SPSC (`SonicTokenRing` in `acoustic_plane.rs`):
+  `UnsafeCell<[u64; 128]>` + `AtomicU32` write/read sequences. Capacity
+  `SONIC_RING_CAP = 128`. This is **not** the `rtrb` logit/control rings used
+  by Phase 8 inference.
+- **Drain:** `drain_sonic_tokens(&mut [u64])` → count written; WASM
+  `drain_sonic_tokens(max)` → JS array of `u64`
 - **SAB slots:** 16 × 8 B at offset 384 (see §5)
 
 ---
@@ -141,7 +149,7 @@ Populated by `apply_binaural_to_uniform(uniform, listener_yaw)`:
 
 | Region | Offset | Size | Content |
 |--------|--------|------|---------|
-| Header | 0 | 32 | `AcousticSabHeader` (28 B pod + 4 B pad) |
+| Header | 0 | 32 | Slot is 32 B; `AcousticSabHeader` pod is 28 B (includes `_pad: u32`) |
 | Uniform | 32 | 352 | `AcousticUniform` pod (328 B used) |
 | Tokens | 384 | 128 | 16 × 8 B Sonic Token ring |
 | Float mirror | 512 | 328 | `f32[82]` for worklet `Float32Array` view |
@@ -181,23 +189,33 @@ f_hz     = clamp(1760 × (1 - t) + 110 × t, 55, 8000)
 
 ---
 
-## 7. STFT sidecar header (`Q4AU`, 20 bytes)
+## 7. Spectral sidecar header (`Q4AU`, 20 bytes)
 
 ```rust
 #[repr(C)]
 pub struct AudioSpectralSidecarHeader {
     pub magic: u32,       // 0x5134_4155 "Q4AU"
-    pub version: u16,     // 1
-    pub _pad: u16,
+    pub version: u16,     // 1 = plane-0 only; 2 = plane-0 + appended v2 planes
+    pub _pad: u16,        // SIDECAR_KIND_STFT = 0, SIDECAR_KIND_CQT = 1
     pub bin_count: u32,   // typically 64
     pub frame_count: u32,
     pub sample_rate: u32, // typically 48000
 }
-// Payload: frame_count × bin_count × f32 LE
+// v1 payload: frame_count × bin_count × f32 LE  (plane-0)
 ```
 
-Cold bake: `bake_stft_sidecar_demo(frames)` in portal WASM.  
-Future: mmap under `{storage}/spectral/audio/{hash}.bin` at ingest (P-A4 remainder).
+`version == 1` remains valid. `version == 2` does **not** change the 20-byte header
+or plane-0 layout. After plane-0, v2 appends:
+
+```
+SpectralV2SubHeader (12 B): magic 0x324D_3451 "Q4M2", n_mel u32, n_mfcc u32
+mel plane:  frame_count × n_mel  × f32 LE
+MFCC plane: frame_count × n_mfcc × f32 LE
+```
+
+Cold bake: `bake_stft_sidecar_demo(frames)` / `bake_cqt_sidecar_demo(frames)` in
+portal WASM; native `bake_spectral_v2_from_samples`. mmap path:
+`{storage}/spectral/audio/{hash}.bin`.
 
 ---
 
@@ -225,6 +243,7 @@ node docs/tests/phenomenal-verify.mjs
 | Version | Date | Change |
 |---------|------|--------|
 | 0.1 | 2026-06-17 | Initial draft — shipped U3 on Pages |
+| 0.1.1 | 2026-08-15 | Paths + SPSC ring match crate; Q4AU-v2 + CQT kind recorded without changing v1 sizes |
 
 ---
 

@@ -45,6 +45,10 @@ const GGML_TYPE_Q8_0: u32 = 8u;
 const GGML_TYPE_Q4_K: u32 = 12u;
 const GGML_TYPE_Q6_K: u32 = 14u;
 const GGML_TYPE_Q4_K_SOA: u32 = 112u;
+// Q5_0's block-amortized specialization remains behind a Forge/runtime
+// differential gate. The generic fused branch uses the same Q5 decoder that
+// passes `verifyFirstLayerQuant` exactly on browser WebGPU.
+const ENABLE_Q5_BLOCK_FAST_PATH: bool = false;
 
 @group(0) @binding(0) var<storage, read> ffn_input: array<f32>;
 @group(0) @binding(1) var<storage, read> gate_words: array<u32>;
@@ -132,7 +136,7 @@ fn fused_ffn_expansion(@builtin(global_invocation_id) global_id: vec3<u32>) {
     var gate_sum = 0.0;
     var up_sum = 0.0;
 
-    if params.weight_ggml_type == GGML_TYPE_Q5_0 {
+    if ENABLE_Q5_BLOCK_FAST_PATH && params.weight_ggml_type == GGML_TYPE_Q5_0 {
         // Phase 5.2 â€” block-amortized Q5_0. The per-element path re-decodes each 32-elem
         // block's `d` (f16) and 32-bit `qh` for EVERY element (32Ã— redundant ALU â€” the true
         // anchor on decode tok/s). Here we decode `d`+`qh` for gate AND up ONCE per block,

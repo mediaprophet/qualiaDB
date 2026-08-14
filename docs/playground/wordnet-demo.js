@@ -1,8 +1,9 @@
 import { hashToken, parseBigDecimal, toHex16, hasMsb } from './hash.js';
 import { VFSProvider, QUIN_SIZE, formatOpfsCacheLabel } from './vfs.js';
 import wasmInit, { execute_ntriples_query } from './qualia_core_db.js';
+import { fetchWasmBinary } from '../js/wasm-fetch.js';
 
-const DEFAULT_DATASET_ID = 'wordnet';
+const DEFAULT_DATASET_ID = 'schemaorg-30';
 
 // ---------------------------------------------------------------------------
 // Cost widget state
@@ -47,8 +48,7 @@ let execQuery  = null;
 async function loadWasm() {
   try {
     const wasmUrl = new URL('qualia_core_db_bg.wasm', import.meta.url);
-    const resp = await fetch(wasmUrl, { cache: 'no-store' });
-    if (!resp.ok) throw new Error(`WASM fetch HTTP ${resp.status}`);
+    const resp = await fetchWasmBinary(wasmUrl);
     await wasmInit({ module_or_path: resp });
     if (typeof execute_ntriples_query === 'function') {
       execQuery = execute_ntriples_query;
@@ -111,7 +111,9 @@ async function loadManifest() {
     return;
   }
 
-  const preferred = provider.available.find(d => d.id === DEFAULT_DATASET_ID) ?? provider.available[0];
+  const preferred = provider.available.find(d => d.id === DEFAULT_DATASET_ID && d.hosted !== false)
+    ?? provider.available.find(d => d.hosted !== false)
+    ?? provider.available[0];
   sel.value = preferred.id;
   updateDatasetDescription();
   document.getElementById('mount-btn').disabled = false;

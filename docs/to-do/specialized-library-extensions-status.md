@@ -1,7 +1,7 @@
 # Specialized Library Extensions — Implementation Status
 
 **Date:** 2026-06-11  
-**Branch:** `0.0.12-dev`  
+**Branch:** `0.0.28-dev`  
 **Reference plans:** `local/specialized-libraries/`
 
 ---

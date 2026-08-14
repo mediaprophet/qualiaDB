@@ -16,6 +16,7 @@ function Copy-Tree($src, $dst) {
 }
 
 $jsFiles = @(
+    "browser-capability.js",
     "design-studio-app.js",
     "asset-recommendations.js",
     "qualia-shell.js",

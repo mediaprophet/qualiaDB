@@ -6,6 +6,7 @@ use super::gguf_skip_value;
 use std::collections::HashMap;
 use std::sync::OnceLock;
 
+mod decode;
 mod pretokenizer;
 pub use pretokenizer::{PretokenError, PretokenSpan};
 
@@ -405,6 +406,7 @@ impl GgufTokenizer {
         // Chat / instruct end-of-turn tokens. Missing from vocab → no-op.
         // Without these, Llama-3 keeps past <|eot_id|> into pretraining-style continuation.
         const CHAT_ENDS: &[&str] = &[
+            "<|endoftext|>",
             "<|eot_id|>",
             "<|im_end|>",
             "<end_of_turn>",
@@ -424,6 +426,7 @@ impl GgufTokenizer {
             let l = n.to_ascii_lowercase();
             l == "<|im_end|>"
                 || l == "<|eot_id|>"
+                || l == "<|endoftext|>"
                 || l == "<end_of_turn>"
                 || l == "</s>"
                 || l.ends_with("im_end|>")

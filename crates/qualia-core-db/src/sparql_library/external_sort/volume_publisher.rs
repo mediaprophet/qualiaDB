@@ -1,0 +1,395 @@
+//! Immutable, size-capped logical Q42 volume publication from external runs.
+
+use std::cmp::Ordering;
+use std::collections::{BinaryHeap, HashMap};
+use std::fs::File;
+use std::io::{self, BufReader};
+use std::path::{Path, PathBuf};
+
+use crate::q42_volume::{
+    root_relative_path, Q42LexiconSegment, Q42VolumeManifest, Q42VolumeSegment,
+    StreamingQ42VolumeWriter,
+};
+use crate::{NQuin, QUINS_PER_BLOCK};
+
+use super::ExternalSorter;
+
+/// Default physical child cap for online-safe Q42 distribution.
+pub const DEFAULT_Q42_SEGMENT_MAX_BYTES: u64 = 512 * 1024 * 1024;
+
+/// Outcome of publishing one logical root and its immutable child segments.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct Q42VolumePublishStats {
+    pub blocks_written: u64,
+    pub segments_written: u64,
+    pub root_bytes: u64,
+}
+
+fn invalid(message: impl Into<String>) -> io::Error {
+    io::Error::new(io::ErrorKind::InvalidInput, message.into())
+}
+
+/// Catalog ontologies (Pages / Commons ingest). Sanctuary bits on a Quin
+/// still win inside the writer.
+fn new_catalog_writer(lex: &HashMap<u64, String>) -> io::Result<StreamingQ42VolumeWriter> {
+    let mut writer = StreamingQ42VolumeWriter::new(lex)?;
+    writer.declare_permissive_commons();
+    Ok(writer)
+}
+
+impl ExternalSorter {
+    /// Merge sorted runs into immutable, SuperBlock-aligned child segments and
+    /// publish their descriptor plus front-manifested, size-capped lossless
+    /// Q42LEX shards.  No standalone sidecar format is introduced.
+    ///
+    /// The cap applies to every child segment's whole physical file, including
+    /// header, index, directory, and compressed data. The root is checked
+    /// separately because the dictionary is physically sharded as well.
+    pub fn merge_volume_set(
+        mut self,
+        root: &Path,
+        max_segment_bytes: u64,
+    ) -> io::Result<Q42VolumePublishStats> {
+        if max_segment_bytes == 0 {
+            return Err(invalid("Q42 volume segment cap must be non-zero"));
+        }
+        self.flush_chunk()?;
+        if self.lex_collisions > 0 {
+            return Err(invalid(format!(
+                "cannot publish lossless Q42 volume: {} lexical token collision(s)",
+                self.lex_collisions
+            )));
+        }
+        if self.chunk_files.is_empty() {
+            return Err(invalid("cannot publish a logical Q42 volume with no Quins"));
+        }
+
+        let chunk_files = self.compact_runs()?;
+        let mut readers = Vec::with_capacity(chunk_files.len());
+        for chunk_path in &chunk_files {
+            readers.push(BufReader::with_capacity(
+                1024 * 1024,
+                File::open(chunk_path)?,
+            ));
+        }
+
+        #[derive(Eq)]
+        struct HeapItem {
+            quin: NQuin,
+            reader_idx: usize,
+        }
+        impl Ord for HeapItem {
+            fn cmp(&self, other: &Self) -> Ordering {
+                other.quin.object.cmp(&self.quin.object)
+            }
+        }
+        impl PartialOrd for HeapItem {
+            fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+                Some(self.cmp(other))
+            }
+        }
+        impl PartialEq for HeapItem {
+            fn eq(&self, other: &Self) -> bool {
+                self.quin.object == other.quin.object
+            }
+        }
+
+        let mut heap = BinaryHeap::new();
+        for (idx, reader) in readers.iter_mut().enumerate() {
+            if let Some(quin) = Self::read_quin(reader)? {
+                heap.push(HeapItem {
+                    quin,
+                    reader_idx: idx,
+                });
+            }
+        }
+
+        let empty_lex = HashMap::new();
+        let mut writer = Some(new_catalog_writer(&empty_lex)?);
+        let mut block_buffer = Vec::with_capacity(QUINS_PER_BLOCK);
+        let mut segments = Vec::new();
+        let mut segment_index = 0usize;
+        let mut blocks_written = 0u64;
+
+        while let Some(item) = heap.pop() {
+            block_buffer.push(item.quin);
+            if let Some(next) = Self::read_quin(&mut readers[item.reader_idx])? {
+                heap.push(HeapItem {
+                    quin: next,
+                    reader_idx: item.reader_idx,
+                });
+            }
+            if block_buffer.len() == QUINS_PER_BLOCK {
+                publish_block(
+                    &mut writer,
+                    &empty_lex,
+                    root,
+                    max_segment_bytes,
+                    &mut segments,
+                    &mut segment_index,
+                    &block_buffer,
+                )?;
+                blocks_written += 1;
+                block_buffer.clear();
+            }
+        }
+        if !block_buffer.is_empty() {
+            publish_block(
+                &mut writer,
+                &empty_lex,
+                root,
+                max_segment_bytes,
+                &mut segments,
+                &mut segment_index,
+                &block_buffer,
+            )?;
+            blocks_written += 1;
+        }
+
+        let final_writer = writer.take().expect("segment writer must remain present");
+        segments.push(finish_segment(final_writer, root, segment_index)?);
+        for chunk_path in &chunk_files {
+            let _ = std::fs::remove_file(chunk_path);
+        }
+
+        let lexicon_segments = publish_lexicon_segments(root, &self.lex, max_segment_bytes)?;
+        let manifest = Q42VolumeManifest {
+            generation: 1,
+            segments,
+            lexicon_segments,
+        };
+        crate::q42_volume::write_volume_root_for_commons(root, &manifest)?;
+        let root_bytes = std::fs::metadata(root)?.len();
+        if root_bytes > max_segment_bytes {
+            return Err(invalid(
+                "Q42 root manifest exceeds the physical segment cap; reduce the segment count or use hierarchical manifests",
+            ));
+        }
+        Ok(Q42VolumePublishStats {
+            blocks_written,
+            segments_written: manifest.segments.len() as u64,
+            root_bytes,
+        })
+    }
+}
+
+fn publish_lexicon_segments(
+    root: &Path,
+    lexicon: &HashMap<u64, String>,
+    max_segment_bytes: u64,
+) -> io::Result<Vec<Q42LexiconSegment>> {
+    if lexicon.is_empty() {
+        return Ok(Vec::new());
+    }
+    if max_segment_bytes <= 1024 {
+        return Err(invalid("Q42 segment cap is too small for a lexicon shard"));
+    }
+    let mut entries: Vec<(&u64, &String)> = lexicon.iter().collect();
+    entries.sort_unstable_by_key(|(hash, _)| **hash);
+    let payload_budget = usize::try_from(max_segment_bytes - 1024)
+        .map_err(|_| invalid("Q42 segment cap exceeds platform"))?;
+    let mut shards = Vec::new();
+    let mut pending = HashMap::new();
+    let mut pending_bytes = 0usize;
+    for (hash, term) in entries {
+        let cost = term
+            .len()
+            .checked_add(40)
+            .ok_or_else(|| invalid("Q42 lexicon term length overflow"))?;
+        if !pending.is_empty() && pending_bytes.saturating_add(cost) > payload_budget {
+            shards.push(finish_lexicon_segment(
+                root,
+                shards.len(),
+                &pending,
+                max_segment_bytes,
+            )?);
+            pending.clear();
+            pending_bytes = 0;
+        }
+        pending.insert(*hash, term.clone());
+        pending_bytes = pending_bytes.saturating_add(cost);
+    }
+    if !pending.is_empty() {
+        shards.push(finish_lexicon_segment(
+            root,
+            shards.len(),
+            &pending,
+            max_segment_bytes,
+        )?);
+    }
+    Ok(shards)
+}
+
+fn finish_lexicon_segment(
+    root: &Path,
+    index: usize,
+    lexicon: &HashMap<u64, String>,
+    max_segment_bytes: u64,
+) -> io::Result<Q42LexiconSegment> {
+    let path = lexicon_segment_path(root, index)?;
+    let mut writer = StreamingQ42VolumeWriter::new(lexicon)?;
+    writer.declare_permissive_commons();
+    writer.finish(&path)?;
+    if std::fs::metadata(&path)?.len() > max_segment_bytes {
+        return Err(invalid(
+            "a single Q42 lexicon shard exceeds the physical segment cap",
+        ));
+    }
+    Q42VolumeManifest::lexicon_segment_from_file(&path, root_relative_path(root, &path)?)
+}
+
+fn publish_block(
+    writer: &mut Option<StreamingQ42VolumeWriter>,
+    empty_lex: &HashMap<u64, String>,
+    root: &Path,
+    max_segment_bytes: u64,
+    segments: &mut Vec<Q42VolumeSegment>,
+    segment_index: &mut usize,
+    block: &[NQuin],
+) -> io::Result<()> {
+    let current = writer.as_ref().expect("segment writer must be present");
+    if current.maximum_final_length_after_next_block()? > max_segment_bytes {
+        if current.block_count() == 0 {
+            return Err(invalid(
+                "Q42 segment cap is smaller than one encoded SuperBlock",
+            ));
+        }
+        let complete = writer.take().expect("segment writer must be present");
+        segments.push(finish_segment(complete, root, *segment_index)?);
+        *segment_index += 1;
+        *writer = Some(new_catalog_writer(empty_lex)?);
+    }
+    let current = writer.as_mut().expect("segment writer must be present");
+    current.push_block(current.block_count(), block)
+}
+
+fn finish_segment(
+    writer: StreamingQ42VolumeWriter,
+    root: &Path,
+    segment_index: usize,
+) -> io::Result<Q42VolumeSegment> {
+    let path = child_segment_path(root, segment_index)?;
+    writer.finish(&path)?;
+    let locator = root_relative_path(root, &path)?;
+    Q42VolumeManifest::segment_from_file(&path, locator)
+}
+
+fn child_segment_path(root: &Path, segment_index: usize) -> io::Result<PathBuf> {
+    let parent = root.parent().unwrap_or_else(|| Path::new("."));
+    let stem = root
+        .file_stem()
+        .and_then(|stem| stem.to_str())
+        .filter(|stem| !stem.is_empty())
+        .ok_or_else(|| invalid("Q42 root output path has no UTF-8 file stem"))?;
+    Ok(parent.join(format!("{stem}.segment-{segment_index:05}.q42")))
+}
+
+fn lexicon_segment_path(root: &Path, index: usize) -> io::Result<PathBuf> {
+    let parent = root.parent().unwrap_or_else(|| Path::new("."));
+    let stem = root
+        .file_stem()
+        .and_then(|stem| stem.to_str())
+        .filter(|stem| !stem.is_empty())
+        .ok_or_else(|| invalid("Q42 root output path has no UTF-8 file stem"))?;
+    Ok(parent.join(format!("{stem}.lex-{index:05}.q42")))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::q42_volume::{Q42Volume, Q42VolumeSet};
+    use tempfile::TempDir;
+
+    #[test]
+    fn publisher_splits_only_at_superblocks_and_publishes_a_lossless_root() {
+        let dir = TempDir::new().unwrap();
+        let mut sorter = ExternalSorter::new(dir.path().join("sort"));
+        for block in 0..2u64 {
+            for index in 0..QUINS_PER_BLOCK as u64 {
+                let seed = block * QUINS_PER_BLOCK as u64 + index;
+                sorter
+                    .push(NQuin {
+                        subject: seed.wrapping_mul(0x9E37_79B9_7F4A_7C15),
+                        predicate: seed.wrapping_mul(0xD6E8_FEB8_6659_FD93),
+                        object: seed,
+                        context: seed.wrapping_mul(0xA076_1D64_78BD_642F),
+                        metadata: seed.wrapping_mul(0xE703_7ED1_A0B4_28DB),
+                        parity: seed.wrapping_mul(0x8EBC_6AF0_9C88_C6E3),
+                    })
+                    .unwrap();
+            }
+        }
+        sorter.push_lex(7, "urn:q42:shared-term");
+        let root = dir.path().join("dataset.q42");
+        let stats = sorter.merge_volume_set(&root, 42 * 1024).unwrap();
+        assert_eq!(stats.blocks_written, 2);
+        assert_eq!(stats.segments_written, 2);
+        assert!(stats.root_bytes <= 42 * 1024);
+
+        let root_volume = Q42Volume::open(&root).unwrap();
+        let manifest = root_volume.volume_manifest().unwrap().unwrap();
+        assert_eq!(manifest.segments.len(), 2);
+        assert_eq!(root_volume.lex_view().unwrap().entry_count(), 0);
+        assert_eq!(manifest.lexicon_segments.len(), 1);
+        let set = Q42VolumeSet::open_root(&root).unwrap();
+        assert_ne!(
+            root_volume.header().flags & crate::q42_volume::FLAG_PERMISSIVE_COMMONS,
+            0
+        );
+        assert_eq!(set.lookup_hash(7), Some("urn:q42:shared-term"));
+        assert_eq!(
+            crate::q42_lex::Q42Lexicon::load_for_q42(&root)
+                .unwrap()
+                .lookup(7),
+            Some("urn:q42:shared-term")
+        );
+        set.verify_segment_hashes(&root).unwrap();
+    }
+
+    #[test]
+    #[ignore = "opens the local 8+ GiB Monarch volume set when present"]
+    fn monarch_volume_set_resolves_a_lexicon_term() {
+        let root = std::path::Path::new(r"C:\Projects\monarch-kg\monarch-kg-root.q42");
+        if !root.is_file() {
+            return;
+        }
+        let set = Q42VolumeSet::open_root(root).expect("open monarch volume set");
+        assert!(
+            !set.lexicon_segments().is_empty(),
+            "monarch root must name lexicon shards"
+        );
+        assert!(
+            !set.segments().is_empty(),
+            "monarch root must name data segments"
+        );
+        let view = set.lexicon_segments()[0]
+            .lex_view()
+            .expect("open first lexicon shard");
+        let hash = view.hash_at(0).expect("first lexicon entry");
+        let term = set
+            .lookup_hash(hash)
+            .expect("volume-set lookup through shard");
+        assert!(!term.is_empty(), "resolved monarch term must be non-empty");
+        println!("monarch lookup ok: {term}");
+        set.verify_segment_hashes(root).expect("segment sha256");
+    }
+
+    #[test]
+    fn publisher_rejects_a_cap_that_cannot_hold_one_superblock() {
+        let dir = TempDir::new().unwrap();
+        let mut sorter = ExternalSorter::new(dir.path().join("sort"));
+        sorter
+            .push(NQuin {
+                subject: 1,
+                predicate: 2,
+                object: 3,
+                context: 0,
+                metadata: 0,
+                parity: 0,
+            })
+            .unwrap();
+        assert!(sorter
+            .merge_volume_set(&dir.path().join("dataset.q42"), 1)
+            .is_err());
+    }
+}

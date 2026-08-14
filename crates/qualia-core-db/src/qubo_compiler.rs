@@ -168,6 +168,7 @@ pub fn publish_to_commons(
         display_name: "quantum_cache.q42".to_string(),
         ontology_id: "quantum_commons".to_string(),
         bandwidth_limit_kbps: 1024,
+        commons_asserted: true,
     };
 
     // Check if there is an existing seed and deprecate it

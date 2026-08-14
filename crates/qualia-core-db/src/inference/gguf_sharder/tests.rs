@@ -215,6 +215,29 @@ fn decode_recovers_exact_gpt2_utf8_bytes() {
     assert_eq!(tok.decode(&[0, 1]), "café ok");
     assert_eq!(tok.decode_token_bytes_cold(0), b"caf\xc3\xa9");
     assert_eq!(tok.decode_token_bytes_cold(1), b" ok");
+
+    let mut piece = [0u8; 16];
+    let first = tok.decode_token_bytes_into(0, &mut piece).unwrap();
+    assert_eq!(&piece[..first], b"caf\xc3\xa9");
+    let second = tok.decode_token_bytes_into(1, &mut piece).unwrap();
+    assert_eq!(&piece[..second], b" ok");
+}
+
+#[test]
+fn endoftext_literal_is_always_a_stop_token() {
+    let mut tok = GgufTokenizer::default();
+    tok.eos_token_id = 2;
+    tok.vocab = vec!["<|endoftext|>".into(), "ordinary".into(), "</s>".into()];
+    tok.token_to_id_map = tok
+        .vocab
+        .iter()
+        .enumerate()
+        .map(|(id, token)| (token.clone(), id as u32))
+        .collect();
+    tok.rebuild_stop_token_ids();
+    assert!(tok.is_stop_token(0));
+    assert!(tok.is_stop_token(2));
+    assert!(!tok.is_stop_token(1));
 }
 
 #[test]

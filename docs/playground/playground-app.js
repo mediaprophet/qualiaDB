@@ -7,6 +7,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import wasmInit, * as WasmExports from './qualia_core_db.js';
+import { fetchWasmBinary } from '../js/wasm-fetch.js';
 import {
     N3_PRESETS, N3_RULE_ARROWS, SHACL_QUALIA_EXTENSIONS,
     detectN3Rules, parseN3Triples, validateShaclConstraint, runForwardChain,
@@ -18,10 +19,7 @@ let MOD = null;
 /** Load WASM from this directory (playground/), not via cross-folder dynamic import. */
 async function loadPlaygroundEngine() {
     const wasmUrl = new URL('qualia_core_db_bg.wasm', import.meta.url);
-    const resp = await fetch(wasmUrl, { cache: 'no-store' });
-    if (!resp.ok) {
-        throw new Error(`WASM fetch failed: ${resp.status} ${wasmUrl.href}`);
-    }
+    const resp = await fetchWasmBinary(wasmUrl);
     await wasmInit({ module_or_path: resp });
     return WasmExports;
 }

@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QualiaDB / Webizen 0.0.30 — Honest Progress</title>
+  <link rel="stylesheet" href="css/tailwind-built.css">
+  <link rel="stylesheet" href="css/site-nav.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <script src="js/menu-loader.js"></script>
+</head>
+<body class="bg-zinc-950 text-zinc-200">
+<nav class="sticky top-0 z-50 border-b border-white/10" style="background:rgba(17,23,31,0.88);backdrop-filter:blur(32px)">
+  <div class="max-w-screen-2xl mx-auto px-8">
+    <div class="flex items-center justify-between h-16">
+      <a href="index.html" class="flex items-center gap-3">
+        <div class="w-8 h-8 bg-gradient-to-br from-violet-500 to-cyan-400 rounded-xl flex items-center justify-center">
+          <span class="text-black font-bold text-xl">W</span>
+        </div>
+        <div><span class="font-semibold tracking-tight text-xl">Webizen</span><span class="text-violet-400 text-xl"> / QualiaDB</span></div>
+      </a>
+      <div id="dynamic-nav" class="relative flex items-center text-sm"></div>
+    </div>
+  </div>
+</nav>
+
+<main class="max-w-3xl mx-auto px-6 py-12">
+  <p class="text-violet-300 text-sm mb-2"><i class="fa-solid fa-shield-halved"></i> Human-rights infrastructure · local-first · branch <code>0.0.30</code></p>
+  <h1 class="text-4xl font-semibold tracking-tight mb-4">Honest progress — 0.0.30</h1>
+  <p class="text-white/70 mb-8">
+    This page is the current operator record. QualiaDB is the engine; Webizen is the habitat.
+    0.0.30 is the <strong>unified Q42 volume</strong> release: one <code>.q42</code> file, no sidecar twins,
+    no separate <code>.c.q42</code> compress-and-ship artefact.
+  </p>
+
+  <section class="mb-10 p-6 rounded-2xl border border-violet-500/30 bg-violet-500/5">
+    <h2 class="text-xl font-semibold text-violet-200 mb-2">What 0.0.30 is for</h2>
+    <p class="text-sm text-white/80 mb-3">
+      Make the on-disk graph file honest and complete: 256-byte <code>Q42\0</code> header, embedded
+      Q42LEX, BIDX, FIDX, PIDX, LZ4 SuperBlocks, merkle chain, and fail-closed publication.
+      Desktop chat, anatomy, checkpoints, and the Studio volume console all write and read that
+      same format. GGUF convert writes a sibling P64 plus a helper Q42 that <code>q42 verify</code> accepts.
+    </p>
+    <p class="text-xs text-white/50">Unreleased until 0.1.x. Reprocess of existing volumes is allowed and expected.</p>
+  </section>
+
+  <section class="mb-10 p-6 rounded-2xl border border-amber-500/30 bg-amber-500/5">
+    <h2 class="text-xl font-semibold text-amber-300 mb-2">Not good enough yet</h2>
+    <ul class="list-disc pl-5 text-white/80 space-y-1 text-sm">
+      <li>Hashed-only session volumes (no lexicon terms) verify as <code>Incomplete</code> on Full — that is correct, not a silent Pass.</li>
+      <li>Local LLM tok/s on consumer GPUs is still below specialised CUDA stacks.</li>
+      <li>Do not use free-form generation alone for high-stakes legal or medical decisions.</li>
+      <li>Workspace crate <code>Cargo.toml</code> versions are <code>0.0.30</code>.</li>
+      <li>WordNet must be ingested as <code>princeton.q42</code> / <code>wordnet.q42</code>. A twin <code>wordnet.c.q42</code> is not part of this release.</li>
+    </ul>
+  </section>
+
+  <section class="mb-10">
+    <h2 class="text-xl font-semibold mb-3">What is real in 0.0.30</h2>
+    <ul class="space-y-3 text-sm text-white/80">
+      <li>
+        <strong class="text-emerald-400">Unified Q42 v3</strong> —
+        one file: header, lexicon, object BIDX, field ranges, postings, LZ4 SuperBlocks, merkle DAG.
+        Sidecar <code>.q42.lex</code> / <code>.q42.bidx</code> and framed <code>.c.q42</code> are fallback-only.
+      </li>
+      <li>
+        <strong class="text-emerald-400">Volume-set verify</strong> —
+        <code>q42 inspect</code> / <code>q42 verify</code> walk root + data children + lexicon shards and SHA-256.
+        Five-field ECC (includes metadata). July-15 model helpers were rewritten to Pass.
+      </li>
+      <li>
+        <strong class="text-emerald-400">Publication fail-closed</strong> —
+        public magnets / web-seed / IPFS only when <code>FLAG_PERMISSIVE_COMMONS</code> is set and the Quin scan is clean.
+        Unmarked, Sanctuary, medical, bilateral stay local or SocialWebNet.
+      </li>
+      <li>
+        <strong class="text-emerald-400">P64 + helper Q42</strong> —
+        <code>qualia-cli llm convert</code> writes <code>.p64</code> weights and a canonical helper <code>.q42</code>.
+        SmolLM2-360M Q4_K_M decode-proxy: <code>The capital of France is Paris.&lt;|im_end|&gt;</code> at 49.4 tok/s on an RTX A2000.
+      </li>
+      <li>
+        <strong class="text-emerald-400">Desktop / Studio</strong> —
+        chat compact, environment, WellFair checkpoint write unified v3.
+        SuperBlock inspector and render mmap read v3 first.
+        Studio <strong>Q42 volumes</strong> lists the vault, inspects, verifies, mints fail-closed magnets, and compacts.
+      </li>
+      <li>
+        <strong class="text-emerald-400">Range SPARQL</strong> —
+        Q42QueryMode 4&nbsp;MiB forbids resident <code>read_all_quins</code> on large vaults; Optional / Union / Bind / HashJoin stay on the range path.
+      </li>
+      <li>
+        <strong class="text-emerald-400">Pages / WASM readers</strong> —
+        <code>playground/vfs.js</code> boots the 256-byte header and embedded lex/BIDX/FIDX/PIDX.
+        SPARQL showcase runs <code>execute_ntriples_query</code> on Schema.org’s unified <code>.q42</code>, not mock rows.
+        Ontology search uses the SuperBlock live-Quin count.
+      </li>
+      <li>
+        <strong class="text-emerald-400">Catalogues</strong> —
+        schema.org, EARL, Music, Dublin Core and sibling Pages <code>docs/data/**/*.q42</code> reprocessed as lossless unified volumes.
+      </li>
+    </ul>
+  </section>
+
+  <section class="mb-10">
+    <h2 class="text-xl font-semibold mb-3">Try it on this site</h2>
+    <ul class="list-disc pl-5 text-sm text-white/80 space-y-1">
+      <li><a class="text-cyan-400 underline" href="ontology.html">Ontology demo</a> — boots Schema.org 30.0 (WordNet is ~127 MB and not hosted on Pages)</li>
+      <li><a class="text-cyan-400 underline" href="sparql-showcase.html">SPARQL showcase</a> — live WASM over Schema.org Q42</li>
+      <li><a class="text-cyan-400 underline" href="zero-heap-compliance.html">Zero-heap</a> — real <code>execute_ntriples_query</code> + FNV Quin inspect</li>
+      <li><a class="text-cyan-400 underline" href="data-formats.html">Data formats</a> — ingest → one <code>.q42</code></li>
+      <li><a class="text-cyan-400 underline" href="playground/compare.html">RDF compare</a> — one-click Schema.org NT vs unified .q42</li>
+    </ul>
+  </section>
+
+  <section class="mb-10 p-6 rounded-2xl border border-white/10 bg-white/5">
+    <h2 class="text-xl font-semibold mb-2">Prior honesty pages</h2>
+    <p class="text-sm text-white/70">
+      <a class="text-cyan-400 underline" href="progress-0.0.28.html">0.0.28</a>,
+      <a class="text-cyan-400 underline" href="progress-0.0.26.html">0.0.26</a>,
+      and
+      <a class="text-cyan-400 underline" href="progress-0.0.24.html">0.0.24</a>
+      remain as archives. Prefer this 0.0.30 page for the current graph file.
+    </p>
+  </section>
+
+  <p class="text-xs text-white/40">Updated 2026-08-15 · QualiaDB / Webizen · principal-directed engineering record · no personal circumstances</p>
+</main>
+</body>
+</html>

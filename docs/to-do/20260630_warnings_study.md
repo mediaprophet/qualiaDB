@@ -1,6 +1,6 @@
 # `cargo check --workspace` Warnings Study — 2026-06-30
 
-**Branch:** `0.0.23` | **Command:** `cargo check --workspace` | **Result:** ✅ compiles, 0 errors, 762 warnings
+**Branch:** `0.0.28` | **Command:** `cargo check --workspace` | **Result:** ✅ compiles, 0 errors, 762 warnings
 
 ---
 

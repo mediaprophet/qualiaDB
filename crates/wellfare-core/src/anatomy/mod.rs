@@ -21,11 +21,16 @@
 mod accumulate;
 mod birth;
 mod bridge;
+mod constitution;
+mod coverage;
 mod dyad;
 mod factor;
 mod knowledge;
+mod knowledge_context;
 mod lens;
+mod measurements;
 mod model;
+mod observations;
 mod pathway;
 mod physiology;
 mod registry;
@@ -54,7 +59,25 @@ pub use knowledge::{
     FactorKnowledge, ImportResult, KnowledgeBase, KnowledgeSource, KnowledgeTarget, Provenance,
     import_condition_map, import_entries, seed_knowledge_base,
 };
+pub use knowledge_context::{
+    AncestryInvalid, AncestryRecord, ContextEdgeKind, EthnicityAffiliation,
+    KnowledgeConsideration, KnowledgeContextEdge, SubjectKnowledgeContext,
+    affiliations_from_observations, considerations_for_context, illustrative_context_pack,
+};
 pub use lens::{AnatomyView, Lens, SystemView, WellbeingLevel, build_view, burden_to_sigma};
+pub use coverage::{seed_system_coverage, seed_system_coverage_markdown, SystemCoverage};
+pub use constitution::{
+    AbsenceReason, AbsentPart, BodyAttributes, BodyCharacteristics, BodyConstitution, BodyFit,
+    BodyMeasurements, DominantSide, ReferenceGirths, VH_FEMALE_STATURE_MM, VH_MALE_STATURE_MM,
+};
+pub use measurements::{
+    measurement_catalog_json, MeasurementGroup, MeasurementInputUnit, MeasurementSpec,
+    MeasurementUse, MEASUREMENT_CATALOG, CIRC_MM_RANGE, STATURE_MM_RANGE, WEIGHT_G_RANGE,
+};
+pub use observations::{
+    bind_for_code, is_known_code, BodyObservation, InstrumentKind, KnownObservationCode,
+    RepresentationBind, KNOWN_OBSERVATION_CODES,
+};
 pub use model::{
     AnatomyModel, Karyotype, SystemRepresentation, body_system_for_organ, normalize_organ_key,
     overlay_host_systems, system_memberships_for_organ, system_representation,
@@ -95,8 +118,8 @@ pub(crate) fn push_unique(v: &mut Vec<String>, id: &str) {
 }
 
 /// Lower-kebab a human label for use in a knowledge key (`"Type 2 Diabetes"` → `"type-2-diabetes"`).
-/// Shared by the knowledge importer and the record→factor bridge so keys line up.
-pub(crate) fn slugify(s: &str) -> String {
+/// Shared by the knowledge importer, ethnicity tokens, and the record→factor bridge so keys line up.
+pub fn slugify(s: &str) -> String {
     let mut out = String::with_capacity(s.len());
     let mut prev_dash = false;
     for c in s.chars() {

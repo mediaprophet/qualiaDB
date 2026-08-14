@@ -36,6 +36,9 @@ pub fn init_app_state() -> Arc<AppState> {
         download_events: tokio::sync::broadcast::channel(100).0,
     });
     APP_STATE.set(state.clone()).ok();
+    // Person ≠ machine: ensure person principal + local apparatus exist early.
+    // Failures are non-fatal at boot (e.g. read-only meta dir); setup/finish retries.
+    let _ = crate::identity_plane::ensure_local_apparatus(None);
     state
 }
 
@@ -107,6 +110,13 @@ pub fn dirs_default_path() -> String {
 }
 
 pub fn app_meta_dir() -> PathBuf {
+    // Tests and multi-profile installs may override the meta root without changing code.
+    if let Ok(p) = std::env::var("QUALIA_APP_META_DIR") {
+        let trimmed = p.trim();
+        if !trimmed.is_empty() {
+            return PathBuf::from(trimmed);
+        }
+    }
     #[cfg(target_os = "windows")]
     {
         PathBuf::from(

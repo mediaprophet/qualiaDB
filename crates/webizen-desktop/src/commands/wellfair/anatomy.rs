@@ -165,6 +165,62 @@ pub fn wellfair_reset_physiological_state(app: AppHandle) -> Result<String, Stri
     })?
 }
 
+/// The person's declared body constitution + computed fit. `{ constitution, declared, fit }`.
+#[command]
+pub fn wellfair_get_body_constitution(app: AppHandle) -> Result<String, String> {
+    let state = app.state::<HostApiState>();
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        serde_json::to_string(&serde_json::json!({
+            "constitution": host.get_body_constitution(),
+            "declared": host.body_constitution_is_declared(),
+            "fit": host.body_fit(),
+            "catalog": wellfare_core::anatomy::measurement_catalog_json(),
+        }))
+        .map_err(|e| e.to_string())
+    })?
+}
+
+/// Save the person's constitution (JSON = `BodyConstitution`). Validates ranges.
+#[command]
+pub fn wellfair_set_body_constitution(
+    app: AppHandle,
+    constitution_json: String,
+) -> Result<String, String> {
+    let body: wellfare_core::anatomy::BodyConstitution = serde_json::from_str(&constitution_json)
+        .map_err(|e| format!("invalid body constitution JSON: {e}"))?;
+    let app_state = app.state::<HostApiState>();
+    app_state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        host.set_body_constitution(&body)?;
+        serde_json::to_string(&serde_json::json!({
+            "set": true,
+            "constitution": host.get_body_constitution(),
+            "declared": true,
+            "fit": host.body_fit(),
+            "catalog": wellfare_core::anatomy::measurement_catalog_json(),
+        }))
+        .map_err(|e| e.to_string())
+    })?
+}
+
+/// Clear the constitution — identity fit (reference body as published).
+#[command]
+pub fn wellfair_reset_body_constitution(app: AppHandle) -> Result<String, String> {
+    let state = app.state::<HostApiState>();
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        host.reset_body_constitution()?;
+        Ok("{\"reset\":true}".into())
+    })?
+}
+
 // ── 3D Anatomy render surface (S5.7 — whole-body percept snapshot) ────────────────────────────
 
 /// Render the whole-body 3D Anatomy snapshot to a PNG (headless GPU via `webizen_render`), coloured by

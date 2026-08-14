@@ -999,7 +999,7 @@ GET http://127.0.0.1:4242/health
             js(`
 const r    = await fetch('http://127.0.0.1:4242/health');
 const body = await r.json();
-// { status: "active", engine: "qualia-core-db", version: "0.0.18", webtorrent: { … } }
+// { status: "active", engine: "qualia-core-db", version: "0.0.30", webtorrent: { … } }
 `),
             cli(`
 # Start the daemon (dev mode — no token required)
@@ -1111,7 +1111,7 @@ ws.onmessage = (e) => {
             cli(`
 # WebSocket test with websocat (install: cargo install websocat)
 websocat ws://127.0.0.1:4242/qualia-bridge
-# Immediately receives: {"type":"HANDSHAKE_SUCCESS","payload":{"mode":"NATIVE","version":"0.0.18"}}
+# Immediately receives: {"type":"HANDSHAKE_SUCCESS","payload":{"mode":"NATIVE","version":"0.0.30"}}
 `),
         ],
         live: async (_wasm, native) => {
@@ -1219,10 +1219,10 @@ curl "http://127.0.0.1:4242/chat/pull?session_id=grp-abc123&since_lamport=10"
         id: 'daemon.torrent_seed',
         category: 'Native Daemon',
         name: 'POST /torrent/seed',
-        summary: 'Register a .c.q42 ontology artifact for HTTP web-seeding on the Qualia daemon. Seeding runs in-process (seeder: qualia-daemon), not in the Flutter UI. Magnets include a ws= parameter pointing at /torrent/webseed/{hash}.',
+        summary: 'Register a unified v3 .q42 ontology for HTTP web-seeding on the Qualia daemon. Seeding runs in-process (seeder: qualia-daemon). Magnets include a ws= parameter pointing at /torrent/webseed/{hash}. Separate .c.q42 transport files are obsolete — LZ4 SuperBlocks live inside the .q42.',
         params: [
             { name: 'info_hash', type: 'string', desc: 'SHA-1 info hash (40 hex chars)' },
-            { name: 'file_path', type: 'string', desc: 'Absolute path to the .c.q42 file' },
+            { name: 'file_path', type: 'string', desc: 'Absolute path to the unified .q42 volume' },
             { name: 'display_name', type: 'string', desc: 'Human-readable torrent name' },
             { name: 'ontology_id', type: 'string', desc: 'Workbench ontology identifier' },
         ],
@@ -1234,7 +1234,7 @@ Content-Type: application/json
 
 {
   "info_hash": "a1b2c3d4e5f6789012345678abcdef0123456789",
-  "file_path": "C:/Users/me/.qualia/Index/ontologies/prov-o.c.q42",
+  "file_path": "C:/Users/me/.qualia/Index/prov-o.q42",
   "display_name": "W3C PROV-O (compressed)",
   "ontology_id": "prov-o"
 }
@@ -1274,7 +1274,7 @@ const stats = await r.json();
         id: 'daemon.torrent_webseed',
         category: 'Native Daemon',
         name: 'GET /torrent/webseed/{info_hash}',
-        summary: 'Serve a registered .c.q42 file as an HTTP web seed (BEP-19). Supports Range requests for partial fetches. Referenced by magnet URIs via the ws= parameter.',
+        summary: 'Serve a registered unified .q42 as an HTTP web seed (BEP-19). Supports Range requests for LZ4 SuperBlocks. Referenced by magnet URIs via the ws= parameter.',
         params: [
             { name: 'info_hash', type: 'string', desc: 'SHA-1 info hash (path segment)' },
             { name: 'Range', type: 'header', desc: 'Optional bytes=start-end for partial content' },
@@ -1402,7 +1402,7 @@ const id = await createGroupChatSession(
         id: 'workbench.import_uri',
         category: 'Ontology Workbench',
         name: 'workbenchImportOntologyUri()',
-        summary: 'Import an ontology from a remote URI, compress to .c.q42, compute SHA-1 info hash, and build a magnet URI with ws= web-seed parameter for Permissive Commons sharing.',
+        summary: 'Import an ontology from a remote URI into a unified v3 .q42, compute SHA-1 info hash, and build a magnet URI with ws= for Permissive Commons sharing.',
         params: [
             { name: 'uri', type: 'string', desc: 'Source ontology URL (Turtle, N-Triples, etc.)' },
             { name: 'ontologyId', type: 'string?', desc: 'Stable ID (auto-derived if omitted)' },
@@ -1425,7 +1425,7 @@ const result = await workbenchImportOntologyUri(
             cli(`
 # After import, enable seeding via the Ontology Hub UI or:
 curl -X POST http://127.0.0.1:4242/torrent/seed -H "Content-Type: application/json" \\
-  -d '{"info_hash":"…","file_path":"…/prov-o.c.q42","display_name":"PROV-O","ontology_id":"prov-o"}'
+  -d '{"info_hash":"…","file_path":"…/prov-o.q42","display_name":"PROV-O","ontology_id":"prov-o"}'
 `),
         ],
     },
@@ -1434,7 +1434,7 @@ curl -X POST http://127.0.0.1:4242/torrent/seed -H "Content-Type: application/js
         id: 'workbench.set_seed',
         category: 'Ontology Workbench',
         name: 'setWorkbenchSeed()',
-        summary: 'Toggle active seeding for a workbench ontology. Registers the .c.q42 with the Qualia daemon seeder and updates workbench.jsonl index.',
+        summary: 'Toggle active seeding for a workbench ontology. Registers the unified v3 .q42 with the Qualia daemon seeder and updates workbench.jsonl index.',
         params: [
             { name: 'ontologyId', type: 'string', desc: 'Workbench ontology ID' },
             { name: 'active', type: 'bool', desc: 'true to seed, false to unseed' },
@@ -1502,21 +1502,22 @@ qualia-cli daemon --dev --net-mode metered --energy-mode strict
         id: 'cli.ingest',
         category: 'CLI',
         name: 'qualia-cli ingest',
-        summary: 'Ingest an N-Triples file into a .q42 SuperBlock binary + .q42.lex reverse-lexicon + .q42.bidx block-range index. The output is suitable for browser OPFS caching and the GH Pages WASM demo.',
+        summary: 'Ingest RDF into a unified Q42 v3 volume (Q42\\0 header, embedded Q42LEX, BIDX, FIDX, PIDX, LZ4 SuperBlocks). Sidecar .q42.lex / .q42.bidx files are not written.',
         params: [
-            { name: '--input',  type: 'path', desc: 'Path to .nt (N-Triples) input file' },
-            { name: '--output', type: 'path', desc: 'Path for the output .q42 file (.lex and .bidx are auto-created alongside)' },
+            { name: '--input',  type: 'path', desc: 'Path to .nt / .ttl / .rdf input' },
+            { name: '--output', type: 'path', desc: 'Path for the unified .q42 volume' },
         ],
-        returns: '.q42 (40960-byte SuperBlocks) + .q42.lex (lexicon) + .q42.bidx (block index)',
+        returns: 'one .q42 file (256-byte v3 header + embedded lexicon/indexes + LZ4 SuperBlocks)',
         snippets: [
             cli(`
-# Ingest an N-Triples file
+# Ingest N-Triples into a unified v3 volume
 qualia-cli ingest --input data.nt --output data.q42
+qualia-cli q42 inspect data.q42
+qualia-cli q42 verify data.q42
 
-# Output:
-#   data.q42       — SuperBlock binary (N × 40960 bytes)
-#   data.q42.lex   — Reverse lexicon (hash → IRI string)
-#   data.q42.bidx  — Block-range index for demand-paged HTTP Range requests
+# Output is a single file:
+#   data.q42  — Q42\\0 v3 · Q42LEX + BIDX + FIDX + PIDX + LZ4 SuperBlocks
+# Sidecar .q42.lex / .q42.bidx are obsolete.
 `),
             js(`
 // Upload an ingested .q42 shard to the daemon cache
@@ -1533,15 +1534,16 @@ await fetch('http://127.0.0.1:4242/cache?filename=data.q42', {
         id: 'cli.dump',
         category: 'CLI',
         name: 'qualia-cli dump',
-        summary: 'Generate a mocked .q42 binary file with 3 sample Quins for testing. Produces exactly 144 bytes (3 × 48-byte Quins).',
+        summary: 'Write a tiny unified v3 .q42 for tests. Not a flat 144-byte Quin dump — inspect/verify expect Q42\\0.',
         params: [
-            { name: 'out_path', type: 'path', desc: 'Output path for the .q42 test file' },
+            { name: 'out_path', type: 'path', desc: 'Output path for the .q42 test volume' },
         ],
-        returns: '144-byte .q42 file with 3 mocked Quins',
+        returns: 'unified v3 .q42 (header + lexicon + one SuperBlock)',
         snippets: [
             cli(`
 qualia-cli dump test_block.q42
-# → Dumped 3 mocked Quins (144 bytes) to .q42 successfully.
+qualia-cli q42 inspect test_block.q42
+# → unified v3 volume; use q42 verify, not a 144-byte size check.
 `),
         ],
     },
@@ -3133,12 +3135,12 @@ console.log('Winner object:', winner.object); // 20n — remote wins (higher clo
         name: 'get_engine_version()',
         summary: 'Returns the qualia-core-db crate version baked in at compile time. Identical to the version field returned by the native daemon\'s GET /health endpoint.',
         params: [],
-        returns: 'string — semver string e.g. "0.0.18"',
+        returns: 'string — semver string e.g. "0.0.30"',
         snippets: [
             js(`
 import init, { get_engine_version } from './qualia_core_db.js';
 await init();
-console.log(get_engine_version()); // "0.0.18"
+console.log(get_engine_version()); // "0.0.30"
 `),
         ],
         live: async (wasm) => {

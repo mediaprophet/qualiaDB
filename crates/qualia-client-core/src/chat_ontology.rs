@@ -163,11 +163,12 @@ pub fn resolve_wordnet_q42(storage: &Path) -> Option<PathBuf> {
     let local = local_wordnet_dir();
     let candidates = [
         index.join("wordnet.q42"),
+        index.join("princeton.q42"),
         index.join("wordnet-rdf.q42"),
         index.join("english-wordnet.q42"),
         local.join("wordnet.q42"),
-        local.join("wordnet.c.q42"),
-        local.join("wordnet_compressed.q42"),
+        local.join("princeton.q42"),
+        PathBuf::from("docs/data/wordnet/princeton.q42"),
         PathBuf::from("docs/playground/wordnet.q42"),
         PathBuf::from("wordnet.q42"),
     ];

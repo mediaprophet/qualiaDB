@@ -1,6 +1,6 @@
 [package]
 name = "qualia-client-core"
-version = "0.0.27"
+version = "0.0.30"
 edition = "2021"
 
 [dependencies]
@@ -58,6 +58,11 @@ rustls = { version = "0.23", default-features = false, features = ["ring", "std"
 
 [target.'cfg(windows)'.dependencies]
 winreg = "0.56"
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+# Provider bearer credentials are held by the operating-system keychain, never
+# serialized into the agent roster or inference settings files.
+keyring = "4"
 
 [dev-dependencies]
 dhat = "0.3.3"

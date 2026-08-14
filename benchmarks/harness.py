@@ -31,6 +31,7 @@ from environment import (
     collect_harness_environment,
     fetch_daemon_execution_environment,
     merge_execution_environment,
+    read_workspace_engine_version,
 )
 
 BASE_ENGINES = ["oxigraph", "surrealdb", "comunica", "wasm_prolog", "qualia_wasm"]
@@ -142,6 +143,15 @@ def normalize_result(engine: str, raw: dict, dataset_profile: dict) -> dict:
     for key in ("point", "twohop", "filter"):
         if key not in result:
             result[key] = None
+    if (
+        engine.startswith("qualia")
+        and not result.get("engine_version")
+        and not result.get("daemon_version")
+        and result.get("qualia_daemon_available") is not False
+    ):
+        workspace_ver = read_workspace_engine_version()
+        if workspace_ver:
+            result["engine_version"] = workspace_ver
     return record_dataset_file_metrics(result, dataset_profile)
 
 

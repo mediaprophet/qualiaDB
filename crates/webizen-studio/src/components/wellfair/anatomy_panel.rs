@@ -415,6 +415,7 @@ pub fn WellfairAnatomyPanel() -> Element {
                     "{report.mapped_count} of {report.total_records} items mapped. {report.disclosure}"
                 }
             }
+            super::anatomy_constitution_form::AnatomyConstitutionForm { model: "male".to_string() }
         }
     }
 }

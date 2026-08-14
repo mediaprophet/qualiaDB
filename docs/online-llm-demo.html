@@ -20,7 +20,7 @@
          hangs on "Initialising…". Root placement gives scope "/", covering this page. (The cdnjs
          copy previously referenced here 404s.) -->
     <script src="coi-serviceworker.js"></script>
-    <script src="js/webgpu-limits-shim.js"></script>
+    <script src="js/webgpu-limits-shim.js?v=0.0.30-android-compat-first1"></script>
     <link rel="stylesheet" href="css/tailwind-built.css">
     <link rel="stylesheet" href="css/site-nav.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -147,18 +147,15 @@
                  (esp. some Android browsers) get a clear message instead of a silent stall. -->
             <div id="webgpu-notice" class="hidden mb-4 rounded-xl border px-3 py-2.5 text-xs leading-relaxed"></div>
             <div class="space-y-3 mb-4">
-                <label class="block text-xs text-zinc-400 mb-1">Select release model (P64)</label>
+                <label class="block text-xs text-zinc-400 mb-1">Select verified browser model</label>
                 <select id="model-select" class="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-sm text-zinc-200 focus:border-indigo-500 focus:outline-none">
-                    <option value="https://github.com/mediaprophet/qualiaDB/releases/download/v0.0.24/SmolLM2-360M-Instruct-Q4_K_M.p64" data-gguf="https://huggingface.co/bartowski/SmolLM2-360M-Instruct-GGUF/resolve/main/SmolLM2-360M-Instruct-Q4_K_M.gguf" data-q42="https://github.com/mediaprophet/qualiaDB/releases/download/v0.0.24/SmolLM2-360M-Instruct-Q4_K_M.q42" data-name="SmolLM2-360M Q4_K_M P64 (~258 MB)" data-format="chatml" selected>SmolLM2 360M Instruct Q4_K_M — recommended</option>
-                    <option value="https://github.com/mediaprophet/qualiaDB/releases/download/v0.0.24/smollm2-1.7b-instruct-q4_k_m.p64" data-gguf="https://huggingface.co/HuggingFaceTB/SmolLM2-1.7B-Instruct-GGUF/resolve/main/smollm2-1.7b-instruct-q4_k_m.gguf" data-q42="https://github.com/mediaprophet/qualiaDB/releases/download/v0.0.24/smollm2-1.7b-instruct-q4_k_m.q42" data-name="SmolLM2-1.7B Q4_K_M P64 (~1.0 GB)" data-format="chatml">SmolLM2 1.7B Instruct Q4_K_M — experimental</option>
-                    <option value="models/smollm2-360m-instruct-q8_0.gguf" data-gguf="models/smollm2-360m-instruct-q8_0.gguf" data-name="SmolLM2-360M Instruct Q8_0 (local ~386 MB)" data-format="chatml">SmolLM2 360M Instruct Q8_0 — local</option>
-                    <option value="https://github.com/mediaprophet/qualiaDB/releases/download/v0.0.24/Llama-3.2-1B-Instruct-Q4_K_M.p64" data-gguf="https://huggingface.co/bartowski/Llama-3.2-1B-Instruct-GGUF/resolve/main/Llama-3.2-1B-Instruct-Q4_K_M.gguf" data-q42="https://github.com/mediaprophet/qualiaDB/releases/download/v0.0.24/Llama-3.2-1B-Instruct-Q4_K_M.q42" data-name="Llama-3.2-1B Q4_K_M P64 (~769 MB)" data-format="llama3">Llama 3.2 1B Instruct Q4_K_M — experimental</option>
-                    <option value="https://github.com/mediaprophet/qualiaDB/releases/download/v0.0.24/llama-3.2-3b-instruct-q4_k_m.p64" data-gguf="https://huggingface.co/hugging-quants/Llama-3.2-3B-Instruct-Q4_K_M-GGUF/resolve/main/llama-3.2-3b-instruct-q4_k_m.gguf" data-q42="https://github.com/mediaprophet/qualiaDB/releases/download/v0.0.24/llama-3.2-3b-instruct-q4_k_m.q42" data-name="Llama-3.2-3B Q4_K_M P64 (~1.9 GB)" data-format="llama3">Llama 3.2 3B Instruct Q4_K_M — experimental</option>
+                    <option value="https://huggingface.co/HuggingFaceTB/SmolLM2-360M-Instruct-GGUF/resolve/main/smollm2-360m-instruct-q8_0.gguf" data-gguf="https://huggingface.co/HuggingFaceTB/SmolLM2-360M-Instruct-GGUF/resolve/main/smollm2-360m-instruct-q8_0.gguf" data-name="SmolLM2-360M Instruct Q8_0 GGUF (~369 MB)" data-format="chatml" data-bytes="386404992" data-sha256="48ab3034d0dd401fbc721eb1df3217902fee7dab9078992d66431f09b7750201" data-cache-key="smollm2-360m-instruct-q8_0.browser-decode-r3.p64" data-legacy-cache-key="smollm2-360m-instruct-q8_0.browser-decode-r2.p64,smollm2-360m-instruct-q8_0.gguf" data-verified="true" selected>SmolLM2 360M Instruct Q8_0 — verified</option>
                 </select>
+                <p class="mt-2 text-[11px] leading-relaxed text-zinc-500">Q4_K_M browser presets are temporarily withheld: the current WebGPU quantized path can terminate on the first token. This Q8_0 image is the locally coherence-tested profile.</p>
                 <label class="block text-xs text-zinc-400 mt-3 mb-1">Or load a local P64 / GGUF file</label>
                 <input type="file" id="local-model-file" accept=".p64,.gguf" multiple
                     class="w-full text-xs text-zinc-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-zinc-800 file:text-zinc-200 hover:file:bg-zinc-700">
-                <p class="text-xs text-zinc-500 leading-relaxed">Release models are precompiled P64 weights paired with canonical Q42 metadata packages. Local GGUF remains supported and is compiled once on-device. Inference runs through Qualia's native WebGPU engine (<code class="text-zinc-400">qualia_core_db_bg.wasm</code>).</p>
+                <p class="text-xs text-zinc-500 leading-relaxed">The verified GGUF is compiled to canonical P64 once on-device and cached in OPFS. Local P64 / GGUF remains supported. Inference runs through Qualia's native CPU-WASM backend, with WebGPU used as an optional accelerator (<code class="text-zinc-400">qualia_core_db_bg.wasm</code>).</p>
             </div>
             <div class="progress-bar mb-2" id="dl-progress-wrap" style="display:none">
                 <div class="progress-fill" id="dl-progress" style="width:0%"></div>
@@ -169,6 +166,9 @@
             </button>
             <button id="unload-btn" onclick="unloadModel()" class="w-full py-2 rounded-xl border border-zinc-700 hover:bg-zinc-800 text-xs text-zinc-400 mt-2 hidden transition-colors">
                 Unload
+            </button>
+            <button id="reload-verified-btn" onclick="recoverVerifiedModel()" class="w-full py-2 rounded-xl border border-amber-500/50 bg-amber-500/10 hover:bg-amber-500/20 text-xs text-amber-200 mt-2 hidden transition-colors">
+                Clear cached Q8 model &amp; reload
             </button>
         </div>
 
@@ -252,7 +252,7 @@
             <!-- Messages -->
             <div id="chat-messages" class="space-y-4 min-h-[200px] max-h-[400px] overflow-y-auto pr-1">
                 <div class="text-xs text-zinc-500 text-center pt-6 px-2 leading-relaxed">
-                    1) Open <strong class="text-zinc-300">Setup</strong> (phones) · 2) Tap <strong class="text-zinc-300">Load Model</strong> · 3) Chat fully on-device via WebGPU.
+                    1) Open <strong class="text-zinc-300">Setup</strong> (phones) · 2) Tap <strong class="text-zinc-300">Load Model</strong> · 3) Chat fully on-device via CPU-WASM or WebGPU.
                 </div>
             </div>
 
@@ -330,13 +330,13 @@
                 <i class="fas fa-chevron-down text-zinc-600 group-open:rotate-180 transition-transform"></i>
             </summary>
             <div class="mt-4 text-xs text-zinc-400 leading-relaxed space-y-3">
-                <p>The pipeline runs entirely client-side via Qualia's native WASM + WebGPU stack (<code class="text-emerald-300">gguf_bridge</code> → <code class="text-emerald-300">llm_agent</code> Phase 8 decode). No third-party llama.cpp bindings. P64/GGUF only — not LiteRT-LM. On phones prefer SmolLM2-360M.</p>
+                <p>The pipeline runs entirely client-side via Qualia's native inference stack (<code class="text-emerald-300">gguf_bridge</code> → CPU-WASM or WebGPU decode). No third-party llama.cpp bindings. P64/GGUF only — not LiteRT-LM. On phones prefer SmolLM2-360M.</p>
                 <pre class="bg-black/40 rounded-xl p-4 text-emerald-300 overflow-x-auto">
 [ Human Input ]
        │
        ▼
 ┌──────────────────────┐
-│  Local P64 / WebGPU  │ ◄── System prompt with QualiaDB ontologies
+│ Local P64 / WASM LLM │ ◄── System prompt with QualiaDB ontologies
 └──────────┬───────────┘
            │ Emits SPARQL query or JSON-LD
            ▼
@@ -348,7 +348,7 @@
 ┌──────────────────────┐
 │  SmolLM2 / Llama 3   │ ──► Natural language answer + JSON-LD node
 └──────────────────────┘</pre>
-                <p>If the SPARQL query fails validation, the error is fed back to the model for self-correction (up to 3 retries). Token streaming uses <code class="text-emerald-300">inferWasmAsync</code> (yields to the event loop each GPU map_async, so the tab stays responsive) with inline Sentinel checks (0x99 anachronism byte).</p>
+                <p>If the SPARQL query fails validation, the error is fed back to the model for self-correction (up to 3 retries). Token streaming uses <code class="text-emerald-300">inferWasmAsyncMeasured</code>; CPU-WASM runs in a dedicated worker with packed SIMD128 Q8 kernels, while WebGPU yields around asynchronous device work.</p>
                 <p><strong class="text-zinc-300">COI note:</strong> The COI service worker at the top of this page injects <code class="text-yellow-300">Cross-Origin-Opener-Policy: same-origin</code> and <code class="text-yellow-300">Cross-Origin-Embedder-Policy: require-corp</code> headers on reload, enabling SharedArrayBuffer for multi-threaded WASM inference.</p>
             </div>
         </details>
@@ -358,18 +358,32 @@
 <script type="module">
 import init, {
     initialize_webgpu_engine,
-    inferWasmAsync,
+    inferWasmAsyncMeasured,
     releaseWebgpuEngine,
-    isWebgpuEngineReady,
+    isWasmEngineReady,
+    getWasmBackend,
     getEngineVersion,
     compileGgufToP64,
     p64FormatVersion,
-} from './playground/qualia_core_db.js';
-// Optional: only present after wasm rebuild that includes getResidentTokenizerVocab.
-import * as QualiaWasm from './playground/qualia_core_db.js';
-import { loadGgufCached, loadOrCompileP64 } from './js/opfs-model-cache.js';
+} from './playground/qualia_core_db.js?v=0.0.30-mobile-performance1';
+// Optional diagnostics: getResidentTokenizerVocab / getWebgpuInitStatus after wasm rebuild.
+import * as QualiaWasm from './playground/qualia_core_db.js?v=0.0.30-mobile-performance1';
+import { clearOpfsModel, loadGgufCached, loadOrCompileP64 } from './js/opfs-model-cache.js';
+import { QualiaCpuWorkerClient } from './js/qualia-cpu-worker-client.js?v=0.0.30-mobile-performance1';
+import { mobileLab } from './js/mobile-wasm-lab.js?v=0.0.30-mobile-recovery4';
+import {
+    getBrowserCapabilityReceipt,
+    recordBackendDeviceOutcome,
+} from './js/browser-capability.js?v=0.0.30-mobile-recovery4';
+
+const browserCapabilityReceiptPromise = getBrowserCapabilityReceipt({
+    engineVersion: '0.0.30',
+    sessionId: new URLSearchParams(location.search).get('lab') || '',
+});
+const cpuWorker = new QualiaCpuWorkerClient();
 
 function residentTokenizerVocab() {
+    if (selectedInferenceBackend === 'cpu-wasm') return Number(cpuWorker.details?.vocab || 0);
     try {
         const fn = QualiaWasm.getResidentTokenizerVocab;
         return typeof fn === 'function' ? (fn() | 0) : 0;
@@ -378,11 +392,24 @@ function residentTokenizerVocab() {
     }
 }
 
+/** Stage text from WASM init (empty when idle). Requires rebuilt playground wasm. */
+function webgpuInitStatus() {
+    try {
+        const fn = QualiaWasm.getWebgpuInitStatus;
+        if (typeof fn !== 'function') return '';
+        const s = fn();
+        return s == null ? '' : String(s);
+    } catch {
+        return '';
+    }
+}
+
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const QUALIA_SPARQL = 'http://localhost:4242/query';
 const WIKIDATA_SPARQL = 'https://query.wikidata.org/sparql';
-const USER_AGENT = 'QualiaDB-OnlineLLMDemo/0.0.27 (https://github.com/mediaprophet/qualiaDB)';
+const USER_AGENT = 'QualiaDB-OnlineLLMDemo/0.0.30 (https://github.com/mediaprophet/qualiaDB)';
+const BACKEND_OVERRIDE = new URLSearchParams(location.search).get('backend');
 
 const QUALIA_ONTOLOGY = `
 # QualiaDB Ontology Prefixes
@@ -432,6 +459,9 @@ let isGenerating = false;
 let lastSparql = '';
 let lastJsonLd = '';
 let loadInFlight = false;
+let selectedInferenceBackend = 'none';
+/** Last successful OPFS/model source so a WebGPU 0-token decode can retry on CPU-WASM. */
+let lastLoadedModel = null;
 
 const isMobileDevice = () =>
     /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || '') ||
@@ -447,6 +477,7 @@ const deviceMemoryGb = () => {
 window.setMode = setMode;
 window.loadModel = loadModel;
 window.unloadModel = unloadModel;
+window.recoverVerifiedModel = recoverVerifiedModel;
 window.sendMessage = sendMessage;
 window.clearChat = clearChat;
 window.runSparqlManual = runSparqlManual;
@@ -456,7 +487,7 @@ window.copyJsonLd = () => navigator.clipboard.writeText(lastJsonLd);
 window.resetSystemPrompt = () => { document.getElementById('system-prompt').value = SYSTEM_PROMPTS[currentMode]; };
 
 document.getElementById('system-prompt').value = SYSTEM_PROMPTS.chat;
-checkWebgpuSupport();
+void checkWebgpuSupport();
 setupInstall();
 setupMobileConfigToggle();
 applyMobileModelPolicy();
@@ -529,16 +560,18 @@ function applyMobileModelPolicy() {
         hint.classList.remove('hidden');
         const memTxt = mem != null ? ` This browser reports ~${mem} GB deviceMemory.` : '';
         hint.innerHTML =
-            `<strong>Phone / low-RAM path.</strong> Use <em>SmolLM2 360M</em> (~258 MB). ` +
-            `Larger models often kill the tab (the engine currently materialises weights in JS heap).` +
-            `${memTxt} Stay on Wi‑Fi; first load downloads once and caches in OPFS.`;
+            `<strong>Phone / low-RAM path.</strong> Use <em>SmolLM2 360M Q8_0</em> only (~369 MB). ` +
+            `Qualia uses WebGPU when available and otherwise runs its own CPU-WASM backend. ` +
+            `After download, initialisation may pause briefly; leave the browser in the foreground. ` +
+            `If it fails, tap Load again (OPFS skips re-download). Prefer Wi‑Fi; close other tabs.${memTxt}`;
     }
 }
 
 async function bootWasm() {
+    void mobileLab.emit('wasm_boot_start');
     setEngineStatus('Starting WASM engine…', 'info');
     const loadBtn = document.getElementById('load-btn');
-    if (loadBtn && navigator.gpu) {
+    if (loadBtn) {
         loadBtn.disabled = true;
         loadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Engine starting…';
     }
@@ -552,20 +585,22 @@ async function bootWasm() {
 
     wasmReadyPromise = (async () => {
         try {
-            await init();
+            await init('./playground/qualia_core_db_bg.wasm?v=0.0.30-mobile-performance1');
             wasmReady = true;
             wasmBootError = null;
             const ver = getEngineVersion?.() ?? 'unknown';
+            void mobileLab.emit('wasm_boot_ready', { version: ver, crossOriginIsolated });
             const coi = (typeof crossOriginIsolated !== 'undefined' && crossOriginIsolated)
                 ? ' · COI on'
                 : ' · COI off';
             setEngineStatus(`WASM engine v${ver} ready${coi}`, 'ok');
             appendSystem(`Qualia WASM engine v${ver} ready. Load a model to begin.`);
-            if (loadBtn && navigator.gpu) {
+            if (loadBtn) {
                 loadBtn.disabled = false;
                 loadBtn.innerHTML = '<i class="fas fa-download"></i> Load Model';
             }
         } catch (err) {
+            void mobileLab.emit('wasm_boot_failed', { error: mobileLab.errorText(err) });
             wasmReady = false;
             wasmBootError = err;
             const msg = err?.message ?? String(err);
@@ -614,17 +649,26 @@ function setMode(mode) {
 
 function formatLoadError(err) {
     const msg = err?.message ?? String(err);
-    if (/webgpu|adapter/i.test(msg)) {
-        return `${msg} — WebGPU is required for Qualia native inference. Use Chrome/Edge (Android) or Safari 18+ (iOS) with GPU enabled.`;
+    if (/webgpu|adapter/i.test(msg) && !/timed out/i.test(msg)) {
+        return `${msg} — WebGPU acceleration failed. Reload and Qualia will use its native CPU-WASM backend; no browser GPU setting is required.`;
     }
-    if (/out of memory|oom|Array buffer allocation|Invalid array length|Failed to allocate/i.test(msg)) {
-        return `${msg} — the browser ran out of memory. On phones use SmolLM2 360M only, close other tabs, and reload. Larger models need a desktop.`;
+    if (/out of memory|oom|Array buffer allocation|Invalid array length|Failed to allocate|memory access out of bounds/i.test(msg)) {
+        return `${msg} — the browser ran out of memory after the download. Close other tabs, hard-refresh, then tap Load again (P64 may already be in OPFS so download is skipped). Stay on SmolLM2 360M.`;
     }
     if (/fetch\s*0|Failed to fetch|NetworkError|CORS/i.test(msg)) {
         return `${msg} — download blocked (network/CORS). Try again on Wi‑Fi, or load a local .p64/.gguf file from your device.`;
     }
     if (/SharedArrayBuffer|crossOriginIsolated|COOP|COEP/i.test(msg)) {
         return `${msg} — cross-origin isolation failed. Hard-refresh once so the COI service worker can set isolation headers.`;
+    }
+    if (/timed out/i.test(msg)) {
+        return `${msg} — compile/init stalled (common when the tab is backgrounded on phones). Leave Chrome in the foreground, close other tabs, and tap Load again — OPFS usually already has the model so only init re-runs.`;
+    }
+    if (/requestDevice|adapter/i.test(msg)) {
+        return `${msg} — engine did not become ready after download. Prefer Chrome (not in-app browsers), reload once, and stay on SmolLM2 360M.`;
+    }
+    if (/Tokenizer is fallback-only|vocab=/i.test(msg)) {
+        return `${msg} — clear site storage (OPFS) and reload the GGUF so a fresh P64 with a real tokenizer is compiled.`;
     }
     return msg;
 }
@@ -677,12 +721,41 @@ async function downloadGguf(url, label, onProgress) {
 
 async function loadModel() {
     if (modelLoaded || loadInFlight) return;
-    if (!navigator.gpu) {
-        showDlStatus('Error: WebGPU is not available in this browser — model loading is disabled.');
-        setEngineStatus('WebGPU unavailable — cannot load models', 'error');
-        // Open setup panel so the notice is visible on phones
-        document.getElementById('llm-config')?.classList.remove('collapsed');
+    // WebGPU is an accelerator, not an admission gate. The independent Qualia
+    // CPU-WASM backend remains available when Chrome returns no adapter.
+    const capabilities = await browserCapabilityReceiptPromise;
+    window.__qualiaCapabilityReceipt = capabilities;
+    selectedInferenceBackend = BACKEND_OVERRIDE === 'cpu' || BACKEND_OVERRIDE === 'cpu-wasm'
+        ? 'cpu-wasm'
+        : capabilities.selection.llm;
+    if (selectedInferenceBackend === 'unsupported') {
+        recordBackendDeviceOutcome(capabilities, 'llm', {
+            backend: 'unsupported',
+            state: 'unsupported',
+            error: 'wasm_unavailable',
+        });
+        showDlStatus('This browser exposes neither WebGPU nor a usable WebAssembly runtime.', true);
+        setEngineStatus('No supported local inference backend', 'err');
         return;
+    }
+    if (selectedInferenceBackend !== 'webgpu') {
+        void mobileLab.emit('webgpu_adapter_unavailable', {
+            state: capabilities.webgpu.state,
+            attempts: capabilities.webgpu.attempts,
+            fallbackBackend: selectedInferenceBackend,
+        });
+        showDlStatus(
+            BACKEND_OVERRIDE === 'cpu' || BACKEND_OVERRIDE === 'cpu-wasm'
+                ? 'CPU-WASM was selected by the diagnostic URL override.'
+                : 'Chrome is not exposing WebGPU; Qualia will use CPU-WASM.',
+        );
+        setEngineStatus('CPU-WASM fallback selected', 'warn');
+    } else {
+        void mobileLab.emit('webgpu_adapter_ready', {
+            attempt: capabilities.webgpu.adapterAttempt,
+            info: capabilities.webgpu.info,
+            limits: capabilities.webgpu.limits,
+        });
     }
 
     loadInFlight = true;
@@ -690,6 +763,15 @@ async function loadModel() {
     const localFiles = document.getElementById('local-model-file').files;
     const url = sel.value;
     let name = sel.options[sel.selectedIndex].dataset.name;
+    const loadStarted = performance.now();
+    void mobileLab.emit('model_load_start', {
+        name,
+        declaredBytes: Number(sel.options[sel.selectedIndex].dataset.bytes || 0),
+        localFiles: localFiles.length,
+        mobile: isMobileDevice(),
+        deviceMemoryGb: deviceMemoryGb(),
+        backend: selectedInferenceBackend,
+    });
 
     document.getElementById('load-btn').disabled = true;
     document.getElementById('load-btn').innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading…';
@@ -745,21 +827,40 @@ async function loadModel() {
                         showDlStatus(`Downloading ${name}: ${pct}% (${mb}/${tmb} MB)`);
                         setEngineStatus(`Download ${pct}% · ${mb}/${tmb} MB`, 'info');
                     } else if (phase === 'compile') {
-                        showDlStatus(`Compiling ${name} → P64…`);
-                        setEngineStatus('Compiling GGUF → P64…', 'warn');
+                        showDlStatus(`Compiling ${name} → P64… (main thread; phone UI may pause 1–3 min — leave the tab open)`);
+                        setEngineStatus('Compiling GGUF → P64 (do not background the tab)…', 'warn');
                     }
                 },
             };
             let loaded;
+            // Prefer a prebuilt release P64 when the option provides data-p64 — avoids
+            // main-thread AOT compile after download, which is the common phone hang.
+            const selectedOption = sel.options[sel.selectedIndex];
+            const releaseP64 = selectedOption.dataset.p64;
+            // A P64 format version alone does not capture decoder semantics. Keep the
+            // verified browser preset on a revisioned key so an older, header-valid
+            // on-device compile cannot survive a browser decode gate change.
+            const cacheKey = selectedOption.dataset.cacheKey || (releaseP64 || url).split('/').pop();
+            lastLoadedModel = {
+                cacheKey,
+                sourceUrl: releaseP64 || sel.options[sel.selectedIndex].dataset.gguf || url,
+                name,
+            };
             try {
-                loaded = await loadOrCompileP64(url, url.split('/').pop(), cacheOptions);
+                if (releaseP64) {
+                    showDlStatus(`Fetching prebuilt P64 for ${name}…`);
+                    setEngineStatus('Downloading prebuilt P64…', 'info');
+                    loaded = await loadOrCompileP64(releaseP64, cacheKey, cacheOptions);
+                } else {
+                    loaded = await loadOrCompileP64(url, cacheKey, cacheOptions);
+                }
             } catch (releaseError) {
-                const fallbackUrl = sel.options[sel.selectedIndex].dataset.gguf;
-                if (!fallbackUrl) throw releaseError;
+                const fallbackUrl = sel.options[sel.selectedIndex].dataset.gguf || url;
+                if (!fallbackUrl || fallbackUrl === releaseP64) throw releaseError;
                 console.warn('[model-loader] Release P64 fetch unavailable; using GGUF fallback:', releaseError);
-                showDlStatus(`Release P64 blocked; falling back to GGUF for ${name}…`);
-                setEngineStatus('Release host blocked — GGUF fallback…', 'warn');
-                loaded = await loadOrCompileP64(fallbackUrl, url.split('/').pop(), cacheOptions);
+                showDlStatus(`Prebuilt P64 unavailable; compiling GGUF for ${name} (phone may pause here)…`);
+                setEngineStatus('GGUF fallback — compiling on-device…', 'warn');
+                loaded = await loadOrCompileP64(fallbackUrl, cacheKey, cacheOptions);
             }
             const { bytes, source } = loaded;
             ggufBytes = bytes;
@@ -770,22 +871,107 @@ async function loadModel() {
                     : `Compiled ${name} → P64 (cached for next time)`);
         }
 
-        // Yield a frame so the UI can paint "Initialising…" before the heavy call.
-        showDlStatus('Initialising Qualia WebGPU engine…');
-        setEngineStatus('Initialising WebGPU engine…', 'info');
-        await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0)));
+        // Yield so "Initialising…" paints before the selected backend starts.
+        // On phones the previous hang was: download finishes → UI freezes on
+        // init with no further status (or a rejected promise that never settled).
+        const mem = deviceMemoryGb();
+        if (isMobileDevice() && mem != null && mem <= 2) {
+            throw new Error(
+                `This device reports only ~${mem} GB RAM (deviceMemory). ` +
+                `SmolLM2 360M Q8 needs more headroom for model compilation and inference working memory. ` +
+                `Try a phone with more free memory, or use desktop.`,
+            );
+        }
+        // Full eager weight upload (required for coherent text). Between major phases the
+        // WASM yields so this heartbeat can advance; during pipeline/weight blocks the UI
+        // may still pause — leave the tab open. Do NOT defer weights (that produced garbage).
+        const backendLabel = selectedInferenceBackend === 'webgpu' ? 'WebGPU' : 'CPU-WASM';
+        showDlStatus(
+            selectedInferenceBackend === 'webgpu' && isMobileDevice()
+                ? 'Initialising WebGPU… (pipelines + full weight upload; keep Chrome foreground, 1–4 min)'
+                : `Initialising Qualia ${backendLabel} engine…`,
+        );
+        setEngineStatus(`Initialising ${backendLabel} engine…`, 'info');
+        await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(r, 50))));
 
-        await initialize_webgpu_engine(ggufBytes);
-        // Drop the large buffer reference ASAP so GC can reclaim before chat.
+        const modelBytes = ggufBytes;
+        void mobileLab.emit('model_bytes_ready', {
+            bytes: modelBytes?.byteLength || modelBytes?.length || 0,
+            elapsedMs: Math.round(performance.now() - loadStarted),
+            memory: mobileLab.memorySnapshot(),
+        });
         ggufBytes = null;
-        if (!isWebgpuEngineReady()) throw new Error('Engine failed to initialise after model load');
+        if (typeof globalThis.gc === 'function') {
+            try { globalThis.gc(); } catch { /* optional */ }
+        }
+
+        const INIT_TIMEOUT_MS = isMobileDevice() ? 300_000 : 180_000;
+        const initStartedAt = performance.now();
+        void mobileLab.emit('wasm_inference_init_start', {
+            timeoutMs: INIT_TIMEOUT_MS,
+            backend: selectedInferenceBackend,
+        });
+        let initHeartbeat = null;
+        const initStarted = Date.now();
+        initHeartbeat = setInterval(() => {
+            const sec = Math.round((Date.now() - initStarted) / 1000);
+            const stage = webgpuInitStatus();
+            const stageTxt = stage ? ` · ${stage}` : '';
+            showDlStatus(
+                `Initialising ${backendLabel}… ${sec}s${stageTxt}` +
+                (isMobileDevice() ? ' — keep Chrome in the foreground' : ''),
+            );
+            if (stage) setEngineStatus(stage, 'info');
+        }, 400);
+        try {
+            await Promise.race([
+                selectedInferenceBackend === 'webgpu'
+                    ? initialize_webgpu_engine(modelBytes)
+                    : cpuWorker.initialize(modelBytes),
+                new Promise((_, reject) => {
+                    setTimeout(() => {
+                        const stage = webgpuInitStatus();
+                        reject(new Error(
+                            `${backendLabel} engine init timed out after ${Math.round(INIT_TIMEOUT_MS / 1000)}s` +
+                            (stage ? ` (last stage: ${stage})` : '') +
+                            `. On phones: use SmolLM2 360M only, close other tabs, leave Chrome foreground.`,
+                        ));
+                    }, INIT_TIMEOUT_MS);
+                }),
+            ]);
+        } finally {
+            if (initHeartbeat) clearInterval(initHeartbeat);
+        }
+        const engineReady = selectedInferenceBackend === 'webgpu'
+            ? isWasmEngineReady()
+            : cpuWorker.ready;
+        if (!engineReady) throw new Error(`${backendLabel} engine failed to initialise after model load`);
+        selectedInferenceBackend = selectedInferenceBackend === 'webgpu'
+            ? getWasmBackend()
+            : cpuWorker.details.backend;
+        recordBackendDeviceOutcome(capabilities, 'llm', {
+            backend: selectedInferenceBackend,
+            state: 'available',
+        });
+        const executionReceipt = selectedInferenceBackend === 'cpu-wasm'
+            ? cpuWorker.details?.executionReceipt || null
+            : QualiaWasm.getBrowserExecutionReceipt?.() || null;
+        window.__qualiaExecutionReceipt = executionReceipt;
+        void mobileLab.emit('wasm_inference_init_ready', {
+            backend: selectedInferenceBackend,
+            elapsedMs: Math.round(performance.now() - initStartedAt),
+            totalLoadMs: Math.round(performance.now() - loadStarted),
+            initStatus: webgpuInitStatus(),
+            memory: mobileLab.memorySnapshot(),
+            executionReceipt,
+        });
 
         // Fail closed in the UI when the resident tokenizer is the 256-byte fallback.
         // That path used to stream pure garbage while still reporting "ready".
         // (Requires wasm rebuild that exports getResidentTokenizerVocab; otherwise skipped.)
         const vocab = residentTokenizerVocab();
         if (vocab > 0 && vocab < 1000) {
-            try { await releaseWebgpuEngine(); } catch {}
+            await releaseInferenceEngine();
             throw new Error(
                 `Tokenizer is fallback-only (vocab=${vocab}). This produces garbage text. ` +
                 `Use a release P64 with a Q42T section, or load the original GGUF so the real vocab is parsed. ` +
@@ -797,19 +983,25 @@ async function loadModel() {
         }
 
         modelLoaded = true;
+        void mobileLab.emit('model_ready', {
+            name,
+            vocab,
+            totalLoadMs: Math.round(performance.now() - loadStarted),
+            backend: selectedInferenceBackend,
+        });
         document.getElementById('dl-progress-wrap').style.display = 'none';
         showDlStatus('');
         const vocabNote = vocab > 0 ? ` · vocab ${vocab.toLocaleString()}` : '';
-        setEngineStatus(`Model ready — chat below${vocabNote}`, 'ok');
+        setEngineStatus(`Model ready on ${selectedInferenceBackend} — chat below${vocabNote}`, 'ok');
         document.getElementById('model-badge').textContent = name;
         document.getElementById('model-badge').className = 'px-2 sm:px-3 py-1.5 rounded-2xl bg-indigo-500/15 text-indigo-300 border border-indigo-500/30 text-xs max-w-[9rem] sm:max-w-none truncate';
         document.getElementById('load-btn').classList.add('hidden');
         document.getElementById('unload-btn').classList.remove('hidden');
         document.getElementById('send-btn').disabled = false;
         appendSystem(
-            `Model loaded: ${name}. Qualia native WebGPU pipeline active` +
+            `Model loaded: ${name}. Qualia ${selectedInferenceBackend} pipeline active` +
             (vocab > 0 ? ` (tokenizer vocab ${vocab.toLocaleString()})` : '') +
-            `. Prefer SmolLM2-360M on phones. If replies look like random symbols, clear site data/OPFS and reload GGUF (not a stale P64).`
+            `. Prefer SmolLM2-360M on phones. If replies look like random symbols, clear site data/OPFS and reload the GGUF (not a stale P64 cache).`
         );
         // Collapse setup on phones so conversation owns the screen
         if (isMobileDevice()) {
@@ -818,14 +1010,30 @@ async function loadModel() {
             document.getElementById('chat-messages')?.scrollIntoView({ block: 'start', behavior: 'smooth' });
         }
     } catch (err) {
+        recordBackendDeviceOutcome(capabilities, 'llm', {
+            backend: selectedInferenceBackend,
+            state: 'device_request_failed',
+            error: err,
+        });
+        void mobileLab.emit('model_load_failed', {
+            name,
+            elapsedMs: Math.round(performance.now() - loadStarted),
+            error: mobileLab.errorText(err),
+            initStatus: webgpuInitStatus(),
+            memory: mobileLab.memorySnapshot(),
+        });
         console.error('[loadModel]', err);
         document.getElementById('load-btn').disabled = false;
         document.getElementById('load-btn').innerHTML = '<i class="fas fa-download"></i> Load Model';
         const friendly = formatLoadError(err);
-        showDlStatus(`Error: ${friendly}`);
+        const retryHint = isMobileDevice()
+            ? ' Tip: tap Load again — if download already finished, OPFS should skip it and only re-run init.'
+            : '';
+        showDlStatus(`Error: ${friendly}${retryHint}`);
         setEngineStatus(`Load failed: ${friendly}`, 'error');
-        try { await releaseWebgpuEngine(); } catch {}
+        await releaseInferenceEngine();
         modelLoaded = false;
+        selectedInferenceBackend = 'none';
     } finally {
         loadInFlight = false;
     }
@@ -833,8 +1041,9 @@ async function loadModel() {
 
 async function unloadModel() {
     if (!modelLoaded) return;
-    await releaseWebgpuEngine();
+    await releaseInferenceEngine();
     modelLoaded = false;
+    selectedInferenceBackend = 'none';
     document.getElementById('local-model-file').value = '';
     document.getElementById('model-badge').textContent = 'No model loaded';
     document.getElementById('model-badge').className = 'px-3 py-1.5 rounded-2xl bg-slate-800 text-slate-400 border border-slate-700 text-xs';
@@ -842,7 +1051,45 @@ async function unloadModel() {
     document.getElementById('load-btn').disabled = false;
     document.getElementById('load-btn').innerHTML = '<i class="fas fa-download"></i> Load Model';
     document.getElementById('unload-btn').classList.add('hidden');
+    document.getElementById('reload-verified-btn').classList.add('hidden');
     document.getElementById('send-btn').disabled = true;
+}
+
+async function recoverVerifiedModel() {
+    if (loadInFlight || isGenerating) return;
+    const option = document.getElementById('model-select').selectedOptions[0];
+    if (!option || option.dataset.verified !== 'true') return;
+
+    const currentKey = option.dataset.cacheKey;
+    const legacyKeys = String(option.dataset.legacyCacheKey || '')
+        .split(',')
+        .map((key) => key.trim())
+        .filter(Boolean);
+    if (!currentKey) return;
+
+    const button = document.getElementById('reload-verified-btn');
+    button.disabled = true;
+    button.textContent = 'Clearing cached model…';
+    setEngineStatus('Removing cached Q8 model before a clean reload…', 'warn');
+    try {
+        await releaseInferenceEngine();
+        modelLoaded = false;
+        selectedInferenceBackend = 'none';
+        document.getElementById('unload-btn').classList.add('hidden');
+        document.getElementById('send-btn').disabled = true;
+
+        const removed = await Promise.all([
+            clearOpfsModel(currentKey),
+            ...legacyKeys.map((key) => clearOpfsModel(key)),
+        ]);
+        const removedCount = removed.reduce((sum, n) => sum + Number(n || 0), 0);
+        showDlStatus(`Removed ${removedCount} cached model file${removedCount === 1 ? '' : 's'}; fetching the verified Q8_0 source again…`);
+        button.classList.add('hidden');
+        await loadModel();
+    } finally {
+        button.disabled = false;
+        button.textContent = 'Clear cached Q8 model & reload';
+    }
 }
 
 // ── Message Handling ──────────────────────────────────────────────────────────
@@ -976,6 +1223,35 @@ function cleanGenerated(text) {
         .trim();
 }
 
+async function retryDecodeOnCpuWasm(prompt, maxTokens, onToken) {
+    if (!lastLoadedModel?.cacheKey) return null;
+    const selected = document.getElementById('model-select').selectedOptions[0];
+    const sourceUrl = lastLoadedModel.sourceUrl
+        || selected?.dataset.p64
+        || selected?.dataset.gguf
+        || selected?.value;
+    if (!sourceUrl) return null;
+    try {
+        await releaseWebgpuEngine();
+        const loaded = await loadOrCompileP64(sourceUrl, lastLoadedModel.cacheKey, {
+            compile: compileGgufToP64,
+            formatVersion: p64FormatVersion(),
+        });
+        await cpuWorker.initialize(loaded.bytes);
+        if (!cpuWorker.ready) return null;
+        const retryFull = { text: '' };
+        const wrapped = (piece) => {
+            retryFull.text += piece;
+            onToken(piece);
+        };
+        const result = await cpuWorker.infer(prompt, maxTokens, wrapped);
+        return { result, full: retryFull.text || result?.text || '' };
+    } catch (error) {
+        console.warn('[llm-demo] CPU-WASM decode retry failed:', error);
+        return null;
+    }
+}
+
 // Force one paint so the "Generating…" state is visible before decode starts.
 const nextPaint = () => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
 
@@ -990,14 +1266,20 @@ async function generate(system, user, opts = {}) {
 
     const prompt = buildPrompt(system, user);
     const t0 = performance.now();
+    void mobileLab.emit('generation_start', { maxTokens: Math.max(1, Math.min(Number(opts.max_tokens || 128), 512)) });
     let full = '';
     let tokens = 0;
     let stopped = false;
+    let firstTokenMs = null;
 
     const onToken = (piece) => {
         if (stopped) return;
         full += piece;
         tokens++;
+        if (firstTokenMs == null) {
+            firstTokenMs = performance.now() - t0;
+            void mobileLab.emit('generation_first_token', { ttftMs: Math.round(firstTokenMs) });
+        }
         // Stop rendering (and count) once a chat terminator appears; the engine may emit a few
         // more tokens before it halts, but the user only ever sees the clean answer.
         const cleaned = cleanGenerated(full);
@@ -1009,13 +1291,71 @@ async function generate(system, user, opts = {}) {
         statusEl.textContent = `Generating… ${tokens} tokens · ${secs.toFixed(1)}s · ${(tokens / Math.max(secs, 0.001)).toFixed(1)} tok/s`;
     };
 
-    // inferWasmAsync yields to the event loop on every GPU map_async, so the tab stays responsive
-    // and tokens paint as they arrive (inferWasmStreaming is synchronous and freezes the page).
-    const reply = await inferWasmAsync(prompt, onToken);
-    if (reply && !full) full = reply;
+    // The measured path returns an exact token count, allowing the UI to reject
+    // models that immediately emit EOS/blank text instead of silently appending
+    // an empty assistant message.
+    const maxTokens = Math.max(1, Math.min(Number(opts.max_tokens || 128), 512));
+    let result;
+    try {
+        result = selectedInferenceBackend === 'cpu-wasm'
+            ? await cpuWorker.infer(prompt, maxTokens, onToken)
+            : await inferWasmAsyncMeasured(prompt, maxTokens, onToken);
+        if (result?.text && !full) full = result.text;
+        let cleanedProbe = cleanGenerated(full);
+        if (!cleanedProbe && selectedInferenceBackend === 'webgpu' && lastLoadedModel?.cacheKey) {
+            setEngineStatus('WebGPU returned no text (first token was a stop/EOS). Retrying on CPU-WASM…', 'warn');
+            showDlStatus('WebGPU decode produced 0 visible tokens — retrying on CPU-WASM…');
+            statusEl.textContent = 'Retrying on CPU-WASM…';
+            const retry = await retryDecodeOnCpuWasm(prompt, maxTokens, onToken);
+            if (retry?.result) {
+                result = retry.result;
+                full = retry.full || result.text || '';
+                selectedInferenceBackend = 'cpu-wasm';
+            }
+        }
+    } catch (error) {
+        void mobileLab.emit('generation_failed', {
+            elapsedMs: Math.round(performance.now() - t0),
+            streamedTokens: tokens,
+            error: mobileLab.errorText(error),
+            memory: mobileLab.memorySnapshot(),
+        });
+        throw error;
+    } finally {
+        streamWrap.classList.add('hidden');
+    }
+    if (result?.text && !full) full = result.text;
+    const cleaned = cleanGenerated(full);
+    const generated = Number(result?.generatedTokens || tokens || 0);
+    if (!cleaned) {
+        const selected = document.getElementById('model-select').selectedOptions[0];
+        const canRecoverVerifiedPreset = selected?.dataset.verified === 'true'
+            && Boolean(selected.dataset.cacheKey);
+        if (canRecoverVerifiedPreset) {
+            document.getElementById('reload-verified-btn').classList.remove('hidden');
+            setEngineStatus('Decode gate rejected the loaded model; a clean Q8 reload is available.', 'error');
+        }
+        throw new Error(
+            `The model returned no visible text (${generated} generated token${generated === 1 ? '' : 's'}). ` +
+            (canRecoverVerifiedPreset
+                ? 'Use “Clear cached Q8 model & reload” to rebuild the verified preset, or choose a compatible local model.'
+                : 'This model/runtime combination failed the browser decode gate; choose a compatible local model.')
+        );
+    }
+    void mobileLab.emit('generation_complete', {
+        elapsedMs: Math.round(performance.now() - t0),
+        ttftMs: firstTokenMs == null ? null : Math.round(firstTokenMs),
+        generatedTokens: Number(result?.generatedTokens || tokens || 0),
+        streamedTokens: tokens,
+        chars: cleaned.length,
+        preview: mobileLab.textPreview(cleaned),
+        memory: mobileLab.memorySnapshot(),
+    });
+    return cleaned;
+}
 
-    streamWrap.classList.add('hidden');
-    return cleanGenerated(full);
+async function releaseInferenceEngine() {
+    await Promise.allSettled([releaseWebgpuEngine(), cpuWorker.release()]);
 }
 
 // ── SPARQL Execution ──────────────────────────────────────────────────────────
@@ -1192,31 +1532,29 @@ async function checkDaemon() {
 
 // ── WebGPU capability + PWA install ─────────────────────────────────────────────
 
-function checkWebgpuSupport() {
+async function checkWebgpuSupport() {
     const el = document.getElementById('webgpu-notice');
     if (!el) return;
-    if (navigator.gpu) {
-        // Supported at API level — real adapter is probed at model-load time.
+    const capabilities = await browserCapabilityReceiptPromise;
+    window.__qualiaCapabilityReceipt = capabilities;
+    if (capabilities.selection.llm === 'webgpu') {
+        // A real adapter was acquired by the shared capability probe.
         // Expand setup on first visit for phones so people see Load Model.
         if (isMobileDevice()) {
             // Leave collapsed by default (chat-first) but surface a one-line engine tip.
         }
         return;
     }
-    // No WebGPU at all: tell the user plainly instead of letting a later load silently stall.
+    if (capabilities.selection.llm === 'unsupported') {
+        el.className = 'mb-4 rounded-xl border border-red-500/40 bg-red-500/10 px-3 py-2.5 text-xs leading-relaxed text-red-200';
+        el.innerHTML = '<strong>Unsupported browser.</strong> Neither a WebGPU adapter nor a usable WebAssembly runtime is available.';
+        setEngineStatus('No supported local inference backend', 'err');
+        return;
+    }
+    // No WebGPU adapter: CPU-WASM is the execution floor.
     el.className = 'mb-4 rounded-xl border border-amber-500/40 bg-amber-500/10 px-3 py-2.5 text-xs leading-relaxed text-amber-200';
-    const isAndroid = /Android/i.test(navigator.userAgent);
-    const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
-    let hint = 'Local inference needs WebGPU, which this browser does not expose.';
-    if (isAndroid) hint += ' On Android use Chrome 121+ on a device with a supported GPU (some phones do not have it).';
-    else if (isIOS) hint += ' On iOS use Safari 18+ / iOS 18+, or enable WebGPU in Settings → Safari → Advanced → Feature Flags.';
-    else hint += ' Use Chrome or Edge with hardware acceleration enabled.';
-    el.innerHTML = `<strong>WebGPU unavailable.</strong> ${hint} You can still install this app and browse it; model loading will be disabled until WebGPU is available.`;
-    const btn = document.getElementById('load-btn');
-    if (btn) { btn.disabled = true; btn.classList.add('opacity-40', 'cursor-not-allowed'); }
-    setEngineStatus('WebGPU unavailable in this browser', 'error');
-    // Open setup so the amber notice is not hidden behind the collapsed panel.
-    document.getElementById('llm-config')?.classList.remove('collapsed');
+    el.innerHTML = `<strong>CPU-WASM mode.</strong> WebGPU state: ${escHtml(capabilities.webgpu.state)}. Qualia will run inference on the CPU; no browser settings are required.`;
+    setEngineStatus('CPU-WASM available · WebGPU acceleration unavailable', 'warn');
 }
 
 let deferredInstallPrompt = null;

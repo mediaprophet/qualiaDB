@@ -135,9 +135,56 @@ pub struct WgpuDiffusionBackend<'a> {
     depth_texture_view: Option<wgpu::TextureView>,
 }
 
+/// Build a wgpu instance with the same Windows-safe backend policy as
+/// `qualia_core_db::gpu_context`: **DX12 by default on Windows**.
+///
+/// `Instance::default()` enables Vulkan + DX12. On many Intel UHD systems the
+/// Vulkan ICD (`igvk64.dll`) access-violates during `request_device`, which
+/// kills the whole desktop process mid first-run setup. Prefer DX12 unless the
+/// operator pins `QUALIA_WGPU_BACKEND` / `WGPU_BACKEND`.
+fn create_instance() -> wgpu::Instance {
+    let mut desc = wgpu::InstanceDescriptor::new_without_display_handle();
+
+    if let Some(backends) = backend_override_from_env() {
+        log::info!("webizen-runtime|backend_override|{backends:?}");
+        desc.backends = backends;
+    } else if cfg!(target_os = "windows") {
+        desc.backends = wgpu::Backends::DX12;
+        log::info!(
+            "webizen-runtime|backend_default|windows->dx12 (override with QUALIA_WGPU_BACKEND=vulkan)"
+        );
+    }
+
+    wgpu::Instance::new(desc)
+}
+
+fn backend_override_from_env() -> Option<wgpu::Backends> {
+    for key in ["QUALIA_WGPU_BACKEND", "WGPU_BACKEND"] {
+        if let Ok(raw) = std::env::var(key) {
+            let v = raw.trim().to_ascii_lowercase();
+            if v.is_empty() {
+                continue;
+            }
+            return Some(match v.as_str() {
+                "vulkan" | "vk" => wgpu::Backends::VULKAN,
+                "dx12" | "d3d12" | "directx12" | "dx" => wgpu::Backends::DX12,
+                "metal" | "mtl" => wgpu::Backends::METAL,
+                "gl" | "opengl" | "gles" => wgpu::Backends::GL,
+                "primary" => wgpu::Backends::PRIMARY,
+                "all" => wgpu::Backends::all(),
+                other => {
+                    log::warn!("{key}='{other}' unrecognized — using platform default");
+                    return None;
+                }
+            });
+        }
+    }
+    None
+}
+
 impl<'a> WgpuDiffusionBackend<'a> {
     pub async fn new(config: DiffusionConfig) -> Result<Self, RuntimeError> {
-        let instance = wgpu::Instance::default();
+        let instance = create_instance();
 
         // CRITICAL FIX: Use HighPerformance on native desktop to capture NVIDIA GPU
         // LowPower bypasses discrete NVIDIA GPU on Windows
@@ -164,6 +211,11 @@ impl<'a> WgpuDiffusionBackend<'a> {
             adapter_info.backend
         );
 
+        log::info!(
+            "webizen-runtime|request_device|adapter={} backend={:?}",
+            adapter_info.name,
+            adapter_info.backend
+        );
         let (device, queue) = adapter
             .request_device(&wgpu::DeviceDescriptor {
                 label: Some("webizen-runtime-device"),
@@ -173,6 +225,7 @@ impl<'a> WgpuDiffusionBackend<'a> {
             })
             .await
             .map_err(|err| RuntimeError::DeviceRequestFailed(err.to_string()))?;
+        log::info!("webizen-runtime|request_device|ok");
 
         let device = Arc::new(device);
         let queue = Arc::new(queue);

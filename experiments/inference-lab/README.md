@@ -4,6 +4,14 @@
 
 Native-only instruments. Optional Ollama is a **yardstick** (A-gap), never a product dependency.
 
+## Browser and GGUF diagnostics
+
+Use the supported tools in [`tools/diagnostics`](../../tools/diagnostics/README.md)
+for bounded GGUF header/tensor inspection and browser/WebGPU smoke receipts.
+They are the supported replacement for one-off root-level scripts and require
+an explicit evidence output directory; do not retain `node_modules`, console
+dumps, or browser profiles in this lab.
+
 ## Commands
 
 ```powershell

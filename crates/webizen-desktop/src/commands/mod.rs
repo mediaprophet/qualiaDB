@@ -27,6 +27,7 @@ pub use wellfair::{
 };
 pub mod directory;
 pub mod ingest;
+pub mod q42;
 pub mod mail;
 pub mod personal_directory;
 pub mod qapp_host;
@@ -179,8 +180,15 @@ pub fn get_desktop_status(
 pub fn get_desktop_logs() -> serde_json::Value {
     serde_json::json!({
         "log_file": crate::desktop_log::log_path().display().to_string(),
+        "debug_enabled": crate::desktop_log::debug_enabled(),
         "entries": crate::desktop_log::recent_entries(),
     })
+}
+
+#[command]
+pub fn set_desktop_debug_mode(enabled: bool) -> Result<bool, String> {
+    crate::desktop_log::set_debug_enabled(enabled)?;
+    Ok(crate::desktop_log::debug_enabled())
 }
 
 #[command]
@@ -266,6 +274,7 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         // ── Local (mod.rs) ──
         get_desktop_status,
         get_desktop_logs,
+        set_desktop_debug_mode,
         get_supervisor_state,
         report_client_error,
         list_installed_qapps,
@@ -341,6 +350,19 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         system::complete_setup_step,
         system::update_setup_profile,
         system::finish_setup,
+        system::get_identity_plane,
+        system::list_apparatus_devices,
+        system::export_person_public,
+        system::export_person_transfer_bundle,
+        system::import_person_transfer_bundle,
+        system::register_remote_apparatus_device,
+        system::resolve_job_device_placement,
+        system::schedule_job_on_device,
+        system::set_local_control_base_url,
+        system::list_remote_job_outbox,
+        system::retry_remote_job_outbox,
+        system::mint_person_webid_tls_cert,
+        system::accept_fleet_job_envelope,
         // ── agent QA / structured diagnostics ──
         agent_qa::agent_qa_snapshot,
         agent_qa::agent_qa_test_active_model,
@@ -407,6 +429,9 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         wellfair::anatomy::wellfair_get_physiological_state,
         wellfair::anatomy::wellfair_set_physiological_state,
         wellfair::anatomy::wellfair_reset_physiological_state,
+        wellfair::anatomy::wellfair_get_body_constitution,
+        wellfair::anatomy::wellfair_set_body_constitution,
+        wellfair::anatomy::wellfair_reset_body_constitution,
         wellfair::anatomy::wellfair_render_body_snapshot,
         wellfair::anatomy::wellfair_body_assets_status,
         wellfair::anatomy::wellfair_acquire_body_assets,
@@ -557,6 +582,12 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         ingest::export_to_solid,
         ingest::ingest_image,
         ingest::ingest_image_async,
+        ingest::verify_graph_equivalence,
+        q42::list_q42_volumes,
+        q42::inspect_q42_volume,
+        q42::verify_q42_volume,
+        q42::magnet_q42_volume,
+        q42::compact_q42_volume,
         // ── inference (in ingest.rs) ──
         ingest::discover_models,
         ingest::download_and_vectorize,
@@ -606,7 +637,11 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         social::agent_roster_get,
         social::agent_roster_upsert,
         social::agent_roster_remove,
+        social::agent_runtime_status,
         social::agent_roster_add_remote,
+        social::provider_credential_store,
+        social::provider_credential_remove,
+        social::agent_remote_connection_test,
         social::mcp_list_local_tools,
         social::mcp_call_tool_gated,
         social::agent_set_allowed_mcp_tools,
@@ -615,6 +650,11 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         social::schedule_agent_job,
         social::list_local_jobs,
         social::cancel_local_job,
+        social::retry_local_job,
+        social::clear_finished_local_jobs,
+        social::schedule_model_download,
+        social::schedule_model_activation,
+        social::schedule_anatomy_asset_acquire,
         // ── personal_directory ──
         personal_directory::list_directory,
         personal_directory::list_directory_categories,

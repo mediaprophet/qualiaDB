@@ -96,6 +96,10 @@ pub enum Commands {
     Inspect {
         file_path: PathBuf,
     },
+    Q42 {
+        #[command(subcommand)]
+        action: Q42Action,
+    },
     Dump {
         out_path: PathBuf,
     },
@@ -143,11 +147,27 @@ pub enum Commands {
         #[arg(long)]
         dataset: PathBuf,
     },
+    /// Prove exact encoded N-Triples/Q42 set equivalence using bounded external sorting.
+    VerifyGraph {
+        #[arg(long)]
+        input: PathBuf,
+        #[arg(long)]
+        dataset: PathBuf,
+        /// Maximum RAM for each fixed-width sort buffer.
+        #[arg(long, default_value_t = 32)]
+        memory_mib: u64,
+        /// Maximum live temporary-run space. The check fails closed at this limit.
+        #[arg(long, default_value_t = 24)]
+        temp_gib: u64,
+    },
     Import {
         input: PathBuf,
         output: PathBuf,
         #[arg(long)]
         strip_literals: bool,
+        /// Publish an embedded-manifest root plus child Q42 segments capped at this size.
+        #[arg(long)]
+        segment_mib: Option<u64>,
     },
     Ingest {
         #[command(subcommand)]

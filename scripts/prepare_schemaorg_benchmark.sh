@@ -29,13 +29,14 @@ else
   echo "NT source already present, reusing local file."
 fi
 
-echo "Ingesting N-Triples into native .q42..."
-# `ingest semantic <file>` writes <file>.with_extension("q42") == $Q42_PATH
-(cd "$REPO_ROOT" && cargo run --release -p qualia-cli -- ingest semantic "$NT_PATH")
+echo "Ingesting N-Triples into unified v3 .q42 (embedded lexicon, no sidecars)..."
+(cd "$REPO_ROOT" && cargo run --release -p qualia-cli -- import "$NT_PATH" "$Q42_PATH")
 
 echo "Syncing benchmark artifacts into docs/data for GitHub Pages and local site testing..."
 cp "$NT_PATH" "$DOCS_RELEASE_DIR/"
 cp "$Q42_PATH" "$DOCS_RELEASE_DIR/"
+rm -f "$RELEASE_DIR/$BASE_NAME.q42.lex" "$RELEASE_DIR/$BASE_NAME.q42.bidx"
+rm -f "$DOCS_RELEASE_DIR/$BASE_NAME.q42.lex" "$DOCS_RELEASE_DIR/$BASE_NAME.q42.bidx"
 
 echo "Done. Run:"
 echo "  python benchmarks/harness.py --all --dataset-profile schemaorg-30-current-https --output docs/comparative_benchmark_results.schemaorg-30-current-https.json"

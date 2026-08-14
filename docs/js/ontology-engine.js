@@ -3,7 +3,8 @@
  */
 
 import { parseBigDecimal, hashToken, toHex16, hasMsb } from '../playground/hash.js';
-import { VFS, QUIN_SIZE } from '../playground/vfs.js';
+import { VFS, QUIN_SIZE } from '../playground/vfs.js?v=0.0.30-vfs-fullget1';
+import { fetchWasmBinary } from './wasm-fetch.js';
 
 const DOCS_ROOT = new URL('../', import.meta.url);
 const PLAYGROUND = new URL('../playground/', import.meta.url);
@@ -107,6 +108,8 @@ export class OntologyEngine {
         this.activeDataset = null;
         this.datasetLabel = 'Ontology';
         this._dbBytes = null;
+        this.bootRequestedId = null;
+        this.bootFallbackFrom = null;
     }
 
     playgroundUrl(path) {
@@ -128,8 +131,7 @@ export class OntologyEngine {
         onProgress?.('Loading WASM module…', 5);
         const mod = await import(this.playgroundUrl('qualia_core_db.js'));
         onProgress?.('Fetching WASM binary…', 12);
-        const wasmResp = await fetch(this.playgroundUrl('qualia_core_db_bg.wasm'));
-        if (!wasmResp.ok) throw new Error(`WASM fetch failed: ${wasmResp.status}`);
+        const wasmResp = await fetchWasmBinary(this.playgroundUrl('qualia_core_db_bg.wasm'));
         onProgress?.('Initialising WASM runtime…', 18);
         await mod.default(wasmResp);
         if (typeof mod.execute_ntriples_query !== 'function') {
@@ -151,13 +153,48 @@ export class OntologyEngine {
         return params.get('dataset') || null;
     }
 
+    /**
+     * Pages-hosted volumes we can boot without a 100+ MB download.
+     * WordNet is listed in the manifest but is not published on GitHub Pages.
+     */
+    pickBootDataset(datasets, requested) {
+        const list = Array.isArray(datasets) ? datasets : [];
+        if (requested) {
+            const hit = list.find(d => d.id === requested);
+            if (hit) return hit.id;
+        }
+        const preferred = ['schemaorg-30', 'w3c-skos', 'w3c-rdfs', 'w3c-owl'];
+        for (const id of preferred) {
+            if (list.some(d => d.id === id && d.hosted !== false)) return id;
+        }
+        const hosted = list.find(d => d.hosted !== false && d.id !== 'wordnet');
+        return hosted?.id ?? list.find(d => d.hosted !== false)?.id ?? list[0]?.id ?? null;
+    }
+
     async init(datasetId = null, { onProgress } = {}) {
         await this.initWasm(onProgress);
         onProgress?.('Loading dataset manifest…', 22);
         await this.loadManifest();
-        const id = datasetId ?? this.datasetFromUrl() ?? this.datasets[0]?.id;
+        const requested = datasetId ?? this.datasetFromUrl();
+        const id = this.pickBootDataset(this.datasets, requested);
         if (!id) throw new Error('No datasets in vfs-manifest.json');
-        return this.mountDataset(id, { onProgress });
+        this.bootRequestedId = requested;
+        this.bootFallbackFrom = null;
+        try {
+            return await this.mountDataset(id, { onProgress });
+        } catch (err) {
+            const fallback = this.pickBootDataset(
+                this.datasets.filter(d => d.id !== id),
+                null,
+            );
+            if (!fallback) throw err;
+            this.bootFallbackFrom = id;
+            onProgress?.(
+                `${id} is not available here — mounting ${fallback} instead…`,
+                26,
+            );
+            return this.mountDataset(fallback, { onProgress });
+        }
     }
 
     _datasetVolumeUrls(entry) {
@@ -171,8 +208,8 @@ export class OntologyEngine {
         await this.initWasm(onProgress);
         if (!this.datasets.length) await this.loadManifest();
 
-        const entry = this.datasets.find(d => d.id === datasetId) ?? this.datasets[0];
-        if (!entry) throw new Error('No datasets in vfs-manifest.json');
+        const entry = this.datasets.find(d => d.id === datasetId);
+        if (!entry) throw new Error(`Unknown dataset ${datasetId}`);
 
         this.activeDataset = entry;
         this.datasetLabel = entry.label ?? datasetId;
@@ -394,8 +431,11 @@ export class OntologyEngine {
         if (!this.vfs) {
             return { terms: 0, entities: 0, relations: 0, depth: 0, triples: 0, blocks: 0 };
         }
-        const blocks = this.vfs.blockCount ?? 0;
-        const triples = blocks * 850;
+        const header = this.vfs.volumeHeader;
+        const blocks = header?.blockCount ?? this.vfs.blockCount ?? 0;
+        const triples = header
+            ? header.blockCount * (header.quinsPerBlock || 850)
+            : blocks * 850;
         const terms = this.vfs._lexMap?.size ?? 0;
         const relCount = (REL_PROFILES[this.profile] ?? REL_PROFILES.wordnet).length;
         const entities = Math.max(1, Math.round(triples / (this.profile === 'schemaorg' ? 3 : 6)));
@@ -469,7 +509,11 @@ export class OntologyEngine {
             for (const blockBytes of blocks) {
                 if (!blockBytes || matches.length >= maxResults) break;
                 const view = new DataView(blockBytes.buffer, blockBytes.byteOffset);
-                const quinSlots = Math.floor((blockBytes.length - HEADER_BYTES) / QUIN_SIZE);
+                const live = Number(getU64(view, 16));
+                const quinSlots = Math.min(
+                    live > 0 ? live : Math.floor((blockBytes.length - HEADER_BYTES) / QUIN_SIZE),
+                    Math.floor((blockBytes.length - HEADER_BYTES) / QUIN_SIZE),
+                );
 
                 for (let qi = 0; qi < quinSlots && matches.length < maxResults; qi++) {
                     const b = HEADER_BYTES + qi * QUIN_SIZE;

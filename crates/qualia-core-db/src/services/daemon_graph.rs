@@ -6,7 +6,7 @@
 //! by `/query` no longer relies on `Vec` or `HashSet`.
 
 use crate::{q_hash, NQuin};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::ops::Index;
 use std::path::Path;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -277,19 +277,35 @@ fn try_load_index_dir(store: &mut DaemonGraphStore, storage_path: &str) {
     let Ok(entries) = std::fs::read_dir(&index) else {
         return;
     };
-    for entry in entries.filter_map(Result::ok) {
-        let path = entry.path();
-        if path.extension().and_then(|e| e.to_str()) != Some("q42") {
+    let paths: Vec<_> = entries
+        .filter_map(Result::ok)
+        .map(|entry| entry.path())
+        .filter(|path| {
+            path.extension().and_then(|e| e.to_str()) == Some("q42")
+                && !path
+                    .file_name()
+                    .map(|n| n.to_string_lossy().contains(".meta."))
+                    .unwrap_or(false)
+        })
+        .collect();
+    let mut child_paths = HashSet::new();
+    for path in &paths {
+        let Ok(root) = crate::q42_volume::Q42Volume::open(path) else {
+            continue;
+        };
+        let Ok(Some(manifest)) = root.volume_manifest() else {
+            continue;
+        };
+        let parent = path.parent().unwrap_or_else(|| Path::new("."));
+        for segment in manifest.segments {
+            child_paths.insert(parent.join(segment.locator));
+        }
+    }
+    for path in paths {
+        if child_paths.contains(&path) {
             continue;
         }
-        if path
-            .file_name()
-            .map(|n| n.to_string_lossy().contains(".meta."))
-            .unwrap_or(false)
-        {
-            continue;
-        }
-        if let Ok(quins) = crate::q42_reader::read_c_q42_quins(&path) {
+        if let Ok(quins) = crate::q42_reader::read_q42_quins(&path) {
             store.extend_from_slice(&quins);
         }
     }

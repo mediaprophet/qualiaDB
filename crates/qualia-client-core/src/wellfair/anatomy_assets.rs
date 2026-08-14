@@ -188,11 +188,27 @@ pub struct AcquireReport {
 pub fn acquire_body_assets(
     storage_root: impl AsRef<Path>,
     model: AnatomyModel,
+    progress: impl FnMut(AcquireProgress),
+) -> Result<AcquireReport, String> {
+    acquire_body_assets_controlled(storage_root, model, progress, || false)
+}
+
+/// Cancellable form used by the desktop job centre. Cancellation is checked between remote fetches
+/// and before/after the bounded compile phase, so a request never leaves a half-written manifest.
+#[cfg(not(target_arch = "wasm32"))]
+pub fn acquire_body_assets_controlled(
+    storage_root: impl AsRef<Path>,
+    model: AnatomyModel,
     mut progress: impl FnMut(AcquireProgress),
+    mut is_cancelled: impl FnMut() -> bool,
 ) -> Result<AcquireReport, String> {
     use super::ccf_resolver::{
         discover_ref_organs, fetch_glb, organs_for_model, HRA_SPARQL_ENDPOINT,
     };
+
+    if is_cancelled() {
+        return Err("cancelled".to_string());
+    }
 
     // Discover the manifest.
     progress(AcquireProgress {
@@ -208,6 +224,9 @@ pub fn acquire_body_assets(
     });
     let all =
         discover_ref_organs(HRA_SPARQL_ENDPOINT).map_err(|e| format!("SPARQL discovery: {e}"))?;
+    if is_cancelled() {
+        return Err("cancelled".to_string());
+    }
     let set = organs_for_model(&all, model);
     if set.is_empty() {
         return Err(format!("no {} reference organs discovered", model.as_str()));
@@ -225,6 +244,9 @@ pub fn acquire_body_assets(
     let mut failed: Vec<(String, String)> = Vec::new();
     let mut total_glb_bytes = 0usize;
     for (i, organ) in set.iter().enumerate() {
+        if is_cancelled() {
+            return Err("cancelled".to_string());
+        }
         progress(AcquireProgress {
             stage: "fetch".into(),
             organ_key: organ.filename.clone(),
@@ -245,12 +267,18 @@ pub fn acquire_body_assets(
     }
 
     // Compile the fetched GLBs to .10d.
+    if is_cancelled() {
+        return Err("cancelled".to_string());
+    }
     let BodyCompileResult {
         model: _,
         organs: compiled,
         unmapped,
         failed: compile_failed,
     } = compile_body(model, &fetched);
+    if is_cancelled() {
+        return Err("cancelled".to_string());
+    }
     // Merge compile failures into the failed list.
     for (k, e) in compile_failed {
         failed.push((k, format!("compile: {e}")));
@@ -260,6 +288,9 @@ pub fn acquire_body_assets(
     let mut entries: Vec<CachedOrganEntry> = Vec::new();
     let mut total_ten_d_bytes = 0usize;
     for (i, organ) in compiled.iter().enumerate() {
+        if is_cancelled() {
+            return Err("cancelled".to_string());
+        }
         progress(AcquireProgress {
             stage: "compile".into(),
             organ_key: organ.organ_key.clone(),

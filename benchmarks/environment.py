@@ -9,9 +9,11 @@ from __future__ import annotations
 import json
 import os
 import platform
+import re
 import sys
 import urllib.request
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any, Optional
 
 SCHEMA_VERSION = 2
@@ -95,13 +97,28 @@ def _harness_runner_label() -> str:
     return "python-comparative-harness"
 
 
+def read_workspace_engine_version() -> Optional[str]:
+    """Crate version from the tree that produced the harness run."""
+    root = Path(__file__).resolve().parents[1]
+    for rel in ("crates/qualia-cli/Cargo.toml", "crates/qualia-core-db/Cargo.toml"):
+        path = root / rel
+        try:
+            text = path.read_text(encoding="utf-8")
+        except OSError:
+            continue
+        match = re.search(r'(?m)^version\s*=\s*"([^"]+)"', text)
+        if match:
+            return match.group(1)
+    return None
+
+
 def collect_harness_environment(
     runner: Optional[str] = None,
     measurement_path: str = "harness_isolated_subprocess",
 ) -> dict[str, Any]:
     env: dict[str, Any] = {
         "runner": runner or _harness_runner_label(),
-        "engine_version": None,
+        "engine_version": read_workspace_engine_version(),
         "memory_ceiling_mb": MEMORY_CEILING_MB,
         "measurement_path": measurement_path,
         "topology": {
@@ -159,6 +176,11 @@ def merge_execution_environment(
     else:
         out.pop("ci_environment", None)
     out["collected_at"] = _utc_now()
+    # Always refresh from this tree. Merging into a prior JSON used to keep a
+    # stale engine_version (synthetic-10k stayed at 0.0.18 after 0.0.30 runs).
+    workspace_ver = read_workspace_engine_version()
+    if workspace_ver:
+        out["engine_version"] = workspace_ver
     if daemon_env:
         topo = daemon_env.get("topology") or {}
         out["qualia_daemon_topology"] = topo

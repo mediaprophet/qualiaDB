@@ -1,6 +1,6 @@
 [package]
 name = "qualia-core-db"
-version = "0.0.27"
+version = "0.0.30"
 edition = "2021"
 authors = ["Timothy Charles Holborn <timothy.holborn@gmail.com>"]
 description = "QualiaDB semantic graph, inference, ontology, spatial, and browser-WASM runtime"
@@ -137,6 +137,7 @@ rio_xml = "0.8"
 
 rio_turtle = "0.8"
 rio_api = "0.8"
+oxiri = "0.2"
 lz4_flex = "0.13"
 rtrb = "0.3.4"
 rand = "0.10.1"
@@ -194,6 +195,12 @@ web-sys = { version = "0.3", features = [
     "HtmlCanvasElement",
     "CanvasRenderingContext2d",
     "CanvasGradient",
+    "WebGl2RenderingContext",
+    "WebGlBuffer",
+    "WebGlProgram",
+    "WebGlShader",
+    "WebGlUniformLocation",
+    "WebGlVertexArrayObject",
     "console",
 ] }
 # Feature-unification shim for stable fips20x/x25519 dependencies that still
@@ -266,6 +273,10 @@ serde-wasm-bindgen = "0.6.5"
 io-uring = "0.7.12"
 
 [dev-dependencies]
+oxiri = "0.2"
+rio_api = "0.8"
+rio_turtle = "0.8"
+rio_xml = "0.8"
 naga = { version = "30", features = ["wgsl-in", "spv-out"] }
 ciborium = "0.2.2"
 criterion = "0.8.2"

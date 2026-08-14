@@ -465,79 +465,58 @@ WHERE {
             document.getElementById('sparql-query').value = presets[preset] || '';
         }
 
-        // Mock query execution (in real version, this would call WASM)
-        function runQuery() {
+        function showQueryError(el, err) {
+            if (el) el.textContent = String(err);
+        }
+
+        async function runLive(query, resultEl, extras = {}) {
+            const { ensureSparqlLive } = await import('./js/sparql-live.js?v=0.0.30-vfs-fullget2');
+            const session = await ensureSparqlLive('schemaorg-30');
+            const out = session.run(query, extras.maxResults || 64);
+            const matches = out.result?.matches || out.result?.bindings || out.result;
+            if (resultEl) resultEl.textContent = JSON.stringify(out.result, null, 2);
+            if (extras.countEl) extras.countEl.textContent = Array.isArray(matches) ? matches.length : (out.quinCount || 0);
+            if (extras.timeEl) extras.timeEl.textContent = out.elapsedMs.toFixed(2) + 'ms';
+            if (extras.opsEl) extras.opsEl.textContent = out.quinCount.toLocaleString() + ' quins';
+            return out;
+        }
+
+        async function runQuery() {
             const query = document.getElementById('sparql-query').value;
-            const iterations = parseInt(document.getElementById('query-iterations').value);
-            const startTime = performance.now();
-            
-            // Simulate query execution
-            setTimeout(() => {
-                const endTime = performance.now();
-                const latency = (endTime - startTime).toFixed(2);
-                const ops = iterations * 100;
-                
-                // Generate mock results
-                const results = [];
-                for (let i = 0; i < Math.min(iterations, 50); i++) {
-                    results.push({
-                        s: `http://example.org/entity${i}`,
-                        p: 'http://example.org/predicate',
-                        o: `http://example.org/value${i}`
-                    });
-                }
-                
-                document.getElementById('query-results').textContent = JSON.stringify(results, null, 2);
-                document.getElementById('result-count').textContent = results.length;
-                document.getElementById('result-time').textContent = latency + 'ms';
-                document.getElementById('result-ops').textContent = ops.toLocaleString();
-            }, 100);
+            const box = document.getElementById('query-results');
+            box.textContent = 'Loading Schema.org Q42 + WASM…';
+            try {
+                await runLive(query, box, {
+                    maxResults: Math.min(64, parseInt(document.getElementById('query-iterations')?.value || '32', 10) || 32),
+                    countEl: document.getElementById('result-count'),
+                    timeEl: document.getElementById('result-time'),
+                    opsEl: document.getElementById('result-ops'),
+                });
+            } catch (err) {
+                showQueryError(box, err);
+            }
         }
 
-        function runStarQuery() {
+        async function runStarQuery() {
             const query = document.getElementById('star-query').value;
-            const startTime = performance.now();
-            
-            setTimeout(() => {
-                const endTime = performance.now();
-                const latency = (endTime - startTime).toFixed(2);
-                
-                const results = [
-                    {
-                        triple: '<<:Alice foaf:knows :Bob>>',
-                        doc: 'http://example.org/Document1'
-                    },
-                    {
-                        triple: '<<:Alice foaf:knows :Charlie>>',
-                        doc: 'http://example.org/Document2'
-                    }
-                ];
-                
-                document.getElementById('star-results').textContent = JSON.stringify(results, null, 2);
-            }, 100);
+            const box = document.getElementById('star-results');
+            box.textContent = 'Running on Schema.org Q42 (WASM)…';
+            try {
+                await runLive(query, box);
+            } catch (err) {
+                showQueryError(box, err);
+            }
         }
 
-        function runTemporalQuery() {
+        async function runTemporalQuery() {
             const query = document.getElementById('temporal-query').value;
-            const startTime = performance.now();
-            
-            setTimeout(() => {
-                const endTime = performance.now();
-                const latency = (endTime - startTime).toFixed(2);
-                
-                const results = [
-                    {
-                        agent: 'http://example.org/Alice',
-                        activity: 'http://example.org/Activity1'
-                    },
-                    {
-                        agent: 'http://example.org/Bob',
-                        activity: 'http://example.org/Activity2'
-                    }
-                ];
-                
-                document.getElementById('temporal-results').textContent = JSON.stringify(results, null, 2);
-            }, 100);
+            const box = document.getElementById('temporal-results');
+            box.textContent = 'Running on Schema.org Q42 (WASM)…';
+            try {
+                await runLive(query, box);
+            } catch (err) {
+                showQueryError(box, err);
+            }
         }
 
         // Initialize charts when the telemetry tab is first opened (avoids zero-width canvas in hidden tabs)

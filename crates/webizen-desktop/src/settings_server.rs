@@ -4,7 +4,7 @@
 //! `webizen-studio` expects (`/manifest`, `/telemetry`).
 
 use axum::{
-    extract::{Path, Query, State},
+    extract::{OriginalUri, Path, Query, State},
     http::{header, HeaderMap, HeaderValue, Method, StatusCode},
     response::{
         sse::{Event, KeepAlive, Sse},
@@ -28,7 +28,7 @@ use std::time::Duration;
 use tauri::Manager;
 use tower_http::{
     cors::{AllowOrigin, CorsLayer},
-    services::ServeDir,
+    services::{ServeDir, ServeFile},
 };
 use webizen_render::scene_contract::SystemTelemetry;
 
@@ -176,6 +176,37 @@ fn studio_dist_dir() -> PathBuf {
         .unwrap_or_else(|| PathBuf::from("../webizen-studio/dist"))
 }
 
+/// Documentation assets shared by the desktop Design Studio and GitHub Pages.
+///
+/// Release bundles place this tree at `portal-support`; development builds
+/// read the checked-in `docs/` tree directly. This keeps the desktop page from
+/// silently losing a newly imported module or WASM package.
+fn portal_support_dir() -> PathBuf {
+    let mut candidates = Vec::new();
+    if let Some(resource_dir) = APP_HANDLE
+        .get()
+        .and_then(|app| app.path().resource_dir().ok())
+    {
+        candidates.push(resource_dir.join("portal-support"));
+    }
+    if let Ok(exe) = std::env::current_exe() {
+        if let Some(dir) = exe.parent() {
+            candidates.push(dir.join("portal-support"));
+        }
+    }
+    let docs_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .and_then(|crates| crates.parent())
+        .map(|root| root.join("docs"))
+        .unwrap_or_else(|| PathBuf::from("../../docs"));
+    candidates.push(docs_dir.clone());
+
+    candidates
+        .into_iter()
+        .find(|path| path.is_dir())
+        .unwrap_or(docs_dir)
+}
+
 /// Directory where the Studio WASM build is served from.
 /// The `dx build --release` command outputs to `target/dx/webizen-studio/release/web/public/`.
 /// A build script or manual copy step places the assets in `static/studio-wasm/`.
@@ -281,6 +312,7 @@ pub fn spawn_settings_server(
 async fn run_settings_server(state: SettingsServerState, port: u16) -> Result<(), String> {
     let static_root = state.static_root.clone();
     let studio_root = studio_wasm_dir();
+    let portal_support_root = portal_support_dir();
     if !static_root.is_dir() {
         crate::desktop_log::record(
             "error",
@@ -331,9 +363,11 @@ async fn run_settings_server(state: SettingsServerState, port: u16) -> Result<()
         .route("/settings", get(studio_index_handler))
         .route("/design-studio", get(design_studio_handler))
         .route("/design-studio.html", get(design_studio_handler))
-        .route("/health", get(health_handler))
+        .route("/health", get(health_or_studio_handler))
+        .route("/api/health", get(health_handler))
         .route("/shell", get(shell_handler))
-        .route("/logs", get(logs_page_handler))
+        .route("/logs", get(studio_index_handler))
+        .route("/desktop-logs", get(logs_page_handler))
         .route("/api/logs", get(logs_json_handler))
         .route("/api/logs/text", get(logs_text_handler))
         .route("/api/status", get(status_handler))
@@ -367,27 +401,69 @@ async fn run_settings_server(state: SettingsServerState, port: u16) -> Result<()
         )
         .route("/api/jobs/{id}", get(get_job_handler))
         .route("/api/jobs/{id}/cancel", post(cancel_job_handler))
+        // Multi-apparatus fleet: accept signed jobs + publish identity for peers
+        .route("/api/fleet/jobs", post(fleet_accept_job_handler))
+        .route("/api/fleet/identity", get(fleet_identity_handler))
+        .route("/api/fleet/outbox/retry", post(fleet_retry_outbox_handler))
         .route("/api/telemetry", get(system_telemetry_handler))
         .route("/api/sparql/endpoints", get(sparql_endpoints_handler))
         .route("/api/sparql/query", post(sparql_query_handler))
+        .route("/api/graph/verify", post(graph_verify_handler))
+        .route("/api/q42/volumes", get(q42_volumes_handler))
+        .route("/api/q42/inspect", post(q42_inspect_handler))
+        .route("/api/q42/verify", post(q42_verify_handler))
+        .route("/api/q42/magnet", post(q42_magnet_handler))
+        .route("/api/q42/compact", post(q42_compact_handler))
         .route("/api/assets/catalog", get(assets_catalog_handler))
         .route("/api/assets/recommend", post(assets_recommend_handler))
         .route("/api/assets/enqueue", post(assets_enqueue_handler))
         .route("/generate_pane", post(generate_pane_handler))
+        .route_service(
+            "/portal.css",
+            ServeFile::new(static_root.join("portal.css")),
+        )
+        .route_service("/portal.js", ServeFile::new(static_root.join("portal.js")))
+        .route_service(
+            "/settings.html",
+            ServeFile::new(static_root.join("settings.html")),
+        )
+        .route_service("/menu.json", ServeFile::new(static_root.join("menu.json")))
+        .route_service(
+            "/coi-serviceworker.js",
+            ServeFile::new(portal_support_root.join("coi-serviceworker.js")),
+        )
+        .nest_service("/resources", ServeDir::new(static_root.join("resources")))
+        .nest_service(
+            "/js",
+            ServeDir::new(static_root.join("js"))
+                .fallback(ServeDir::new(portal_support_root.join("js"))),
+        )
+        .nest_service(
+            "/css",
+            ServeDir::new(static_root.join("css"))
+                .fallback(ServeDir::new(portal_support_root.join("css"))),
+        )
+        .nest_service(
+            "/pkg/qualia",
+            ServeDir::new(portal_support_root.join("pkg").join("qualia")),
+        )
         // Studio WASM build — browser-accessible Studio UI at /studio/
         .nest_service("/assets", ServeDir::new(studio_root.join("assets")))
         .nest_service(
             "/studio",
             ServeDir::new(studio_root).append_index_html_on_directories(true),
         )
-        .fallback_service(ServeDir::new(static_root).append_index_html_on_directories(true))
+        .fallback(get(studio_spa_fallback))
         .layer(control_plane_cors(port))
         .with_state(state);
 
-    let addr = SocketAddr::from(([127, 0, 0, 1], port));
+    // Bind all interfaces so a second machine on the LAN can deliver fleet jobs
+    // to `/api/fleet/jobs` when control_base_url uses a non-loopback address.
+    // Loopback clients continue to work via 127.0.0.1:{port}.
+    let addr = SocketAddr::from(([0, 0, 0, 0], port));
     let listener = tokio::net::TcpListener::bind(addr)
         .await
-        .map_err(|e| format!("bind 127.0.0.1:{port}: {e}"))?;
+        .map_err(|e| format!("bind 0.0.0.0:{port}: {e}"))?;
     if let Some(supervisor) = APP_HANDLE
         .get()
         .and_then(|app| app.try_state::<crate::supervisor::DesktopSupervisor>())
@@ -612,6 +688,41 @@ async fn design_studio_handler(State(state): State<SettingsServerState>) -> Resp
 
 async fn studio_index_handler() -> Response {
     portal_file_response(&studio_wasm_dir(), "index.html", "text/html; charset=utf-8").await
+}
+
+fn accepts_html(headers: &HeaderMap) -> bool {
+    headers
+        .get(header::ACCEPT)
+        .and_then(|value| value.to_str().ok())
+        .is_some_and(|value| {
+            value
+                .split(',')
+                .any(|part| part.trim().starts_with("text/html"))
+        })
+}
+
+async fn health_or_studio_handler(
+    State(state): State<SettingsServerState>,
+    headers: HeaderMap,
+) -> Response {
+    if accepts_html(&headers) {
+        studio_index_handler().await
+    } else {
+        health_handler(State(state)).await.into_response()
+    }
+}
+
+async fn studio_spa_fallback(OriginalUri(uri): OriginalUri) -> Response {
+    let last_segment = uri.path().rsplit('/').next().unwrap_or_default();
+    if last_segment.contains('.') {
+        return (
+            StatusCode::NOT_FOUND,
+            [(header::CONTENT_TYPE, "text/plain; charset=utf-8")],
+            format!("Webizen asset not found: {}", uri.path()),
+        )
+            .into_response();
+    }
+    studio_index_handler().await
 }
 
 async fn portal_file_response(
@@ -911,6 +1022,29 @@ async fn cancel_job_handler(Path(id): Path<String>) -> Result<StatusCode, (Statu
     }
 }
 
+async fn fleet_accept_job_handler(
+    Json(envelope): Json<qualia_client_core::identity_plane::FleetJobEnvelope>,
+) -> Result<(StatusCode, Json<LocalJob>), (StatusCode, String)> {
+    match qualia_client_core::identity_plane::accept_fleet_job_envelope(envelope) {
+        Ok(job) => Ok((StatusCode::ACCEPTED, Json(job))),
+        Err(e) => Err((StatusCode::BAD_REQUEST, e)),
+    }
+}
+
+async fn fleet_identity_handler(
+) -> Result<Json<qualia_client_core::identity_plane::IdentityPlaneSnapshot>, (StatusCode, String)> {
+    qualia_client_core::identity_plane::get_identity_plane()
+        .map(Json)
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e))
+}
+
+async fn fleet_retry_outbox_handler() -> Result<Json<serde_json::Value>, (StatusCode, String)> {
+    match qualia_client_core::identity_plane::fleet_jobs::retry_remote_outbox() {
+        Ok(n) => Ok(Json(serde_json::json!({ "delivered": n }))),
+        Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, e)),
+    }
+}
+
 async fn telemetry_handler() -> Sse<impl Stream<Item = Result<Event, Infallible>>> {
     let stream = stream::unfold(0u64, |tick| async move {
         tokio::time::sleep(Duration::from_secs(2)).await;
@@ -1056,6 +1190,138 @@ async fn sparql_query_handler(
         return Err((StatusCode::BAD_GATEWAY, text));
     }
     Ok((headers, text))
+}
+
+#[derive(Debug, Deserialize)]
+struct GraphProofRequest {
+    source_path: String,
+    q42_path: String,
+    memory_mib: Option<u64>,
+    temp_gib: Option<u64>,
+}
+
+async fn graph_verify_handler(
+    Json(request): Json<GraphProofRequest>,
+) -> Result<Json<qualia_core_db::graph_proof::GraphProofReport>, (StatusCode, String)> {
+    let memory_mib = request.memory_mib.unwrap_or(32);
+    let temp_gib = request.temp_gib.unwrap_or(32);
+    let memory_limit_bytes = memory_mib
+        .checked_mul(1024 * 1024)
+        .and_then(|value| usize::try_from(value).ok())
+        .ok_or((
+            StatusCode::BAD_REQUEST,
+            "memory_mib is too large".to_string(),
+        ))?;
+    let temporary_byte_budget = temp_gib
+        .checked_mul(1024 * 1024 * 1024)
+        .ok_or((StatusCode::BAD_REQUEST, "temp_gib is too large".to_string()))?;
+    let report = tokio::task::spawn_blocking(move || {
+        qualia_core_db::graph_proof::prove_cli_ntriples_q42_equivalence(
+            std::path::Path::new(&request.source_path),
+            std::path::Path::new(&request.q42_path),
+            qualia_core_db::graph_proof::GraphProofOptions {
+                memory_limit_bytes,
+                temporary_byte_budget,
+            },
+        )
+    })
+    .await
+    .map_err(|error| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("graph proof task: {error}"),
+        )
+    })?
+    .map_err(|error| (StatusCode::BAD_REQUEST, error.to_string()))?;
+    Ok(Json(report))
+}
+
+#[derive(Debug, Deserialize)]
+struct Q42PathRequest {
+    path: String,
+    level: Option<String>,
+}
+
+async fn q42_volumes_handler(
+) -> Result<Json<qualia_client_core::api::Q42VolumeWorkspace>, (StatusCode, String)> {
+    tokio::task::spawn_blocking(qualia_client_core::api::list_q42_volumes)
+        .await
+        .map_err(|error| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("q42 list task: {error}"),
+            )
+        })?
+        .map(Json)
+        .map_err(|error| (StatusCode::BAD_REQUEST, error))
+}
+
+async fn q42_inspect_handler(
+    Json(request): Json<Q42PathRequest>,
+) -> Result<Json<qualia_core_db::q42_volume::Q42InspectReport>, (StatusCode, String)> {
+    tokio::task::spawn_blocking(move || {
+        qualia_client_core::api::inspect_q42_volume(request.path)
+    })
+    .await
+    .map_err(|error| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("q42 inspect task: {error}"),
+        )
+    })?
+    .map(Json)
+    .map_err(|error| (StatusCode::BAD_REQUEST, error))
+}
+
+async fn q42_verify_handler(
+    Json(request): Json<Q42PathRequest>,
+) -> Result<Json<qualia_core_db::q42_volume::Q42VerifySetReport>, (StatusCode, String)> {
+    tokio::task::spawn_blocking(move || {
+        qualia_client_core::api::verify_q42_volume(request.path, request.level)
+    })
+    .await
+    .map_err(|error| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("q42 verify task: {error}"),
+        )
+    })?
+    .map(Json)
+    .map_err(|error| (StatusCode::BAD_REQUEST, error))
+}
+
+async fn q42_magnet_handler(
+    Json(request): Json<Q42PathRequest>,
+) -> Result<Json<qualia_client_core::api::Q42MagnetResult>, (StatusCode, String)> {
+    tokio::task::spawn_blocking(move || {
+        qualia_client_core::api::magnet_q42_volume(request.path)
+    })
+    .await
+    .map_err(|error| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("q42 magnet task: {error}"),
+        )
+    })?
+    .map(Json)
+    .map_err(|error| (StatusCode::BAD_REQUEST, error))
+}
+
+async fn q42_compact_handler(
+    Json(request): Json<Q42PathRequest>,
+) -> Result<Json<qualia_client_core::api::Q42CompactResult>, (StatusCode, String)> {
+    tokio::task::spawn_blocking(move || {
+        qualia_client_core::api::compact_q42_volume(request.path)
+    })
+    .await
+    .map_err(|error| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("q42 compact task: {error}"),
+        )
+    })?
+    .map(Json)
+    .map_err(|error| (StatusCode::BAD_REQUEST, error))
 }
 
 #[derive(Serialize)]
@@ -1258,4 +1524,66 @@ async fn companion_ws_route(
     ws: axum::extract::ws::WebSocketUpgrade,
 ) -> impl IntoResponse {
     crate::companion_gateway::companion_ws_upgrade(State(host_api), ws).await
+}
+
+#[cfg(test)]
+mod ui_route_tests {
+    use super::*;
+
+    #[test]
+    fn browser_navigation_accepts_html_but_api_probes_do_not() {
+        let mut browser_headers = HeaderMap::new();
+        browser_headers.insert(
+            header::ACCEPT,
+            HeaderValue::from_static("text/html,application/xhtml+xml"),
+        );
+        assert!(accepts_html(&browser_headers));
+
+        let mut api_headers = HeaderMap::new();
+        api_headers.insert(header::ACCEPT, HeaderValue::from_static("application/json"));
+        assert!(!accepts_html(&api_headers));
+    }
+
+    #[test]
+    fn design_studio_support_tree_contains_boot_assets() {
+        let root = portal_support_dir();
+        for relative in [
+            "css/tailwind-built.css",
+            "css/site-nav.css",
+            "js/qualia-debug.js",
+            "pkg/qualia/qualia.js",
+            "pkg/qualia/qualia_bg.wasm",
+            "coi-serviceworker.js",
+        ] {
+            assert!(
+                root.join(relative).is_file(),
+                "missing Design Studio support asset: {relative}"
+            );
+        }
+    }
+
+    #[test]
+    fn design_studio_portal_contains_its_local_entry_assets() {
+        let root = static_portal_dir();
+        for relative in [
+            "design-studio.html",
+            "css/design-studio.css",
+            "js/design-studio-app.js",
+            "js/asset-recommendations.js",
+        ] {
+            assert!(
+                root.join(relative).is_file(),
+                "missing Design Studio portal asset: {relative}"
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn spa_fallback_serves_pages_but_not_missing_assets() {
+        let page = studio_spa_fallback(OriginalUri("/talk".parse().unwrap())).await;
+        assert_eq!(page.status(), StatusCode::OK);
+
+        let asset = studio_spa_fallback(OriginalUri("/missing.js".parse().unwrap())).await;
+        assert_eq!(asset.status(), StatusCode::NOT_FOUND);
+    }
 }

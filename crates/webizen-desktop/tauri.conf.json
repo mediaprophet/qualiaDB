@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Webizen",
-  "version": "0.0.28",
+  "version": "0.0.30",
   "identifier": "org.webizen.browser",
   "build": {
     "frontendDist": "../webizen-studio/dist"
@@ -48,7 +48,11 @@
     ],
     "resources": {
       "../webizen-studio/dist": "studio-dist",
-      "static/portal": "portal"
+      "static/portal": "portal",
+      "../../docs/css": "portal-support/css",
+      "../../docs/js": "portal-support/js",
+      "../../docs/pkg/qualia": "portal-support/pkg/qualia",
+      "../../docs/coi-serviceworker.js": "portal-support/coi-serviceworker.js"
     },
     "windows": {
       "allowDowngrades": true,

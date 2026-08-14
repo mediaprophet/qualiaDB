@@ -286,13 +286,12 @@ fn dequant_q4_k_soa_weight(row: u32, col: u32) -> f32 {
     let sub = elem / 32u;
     let group = elem / 64u;
     let local = elem % 64u;
-    // d_sub[8] f16 packed as 4 u32 words at +128; m_sub at +144.
-    let d_word = weight_words[(block_base + 128u + (sub & ~1u) * 2u) >> 2u];
-    let m_word = weight_words[(block_base + 144u + (sub & ~1u) * 2u) >> 2u];
-    let d_bits = select(d_word & 0xFFFFu, d_word >> 16u, (sub & 1u) == 1u);
-    let m_bits = select(m_word & 0xFFFFu, m_word >> 16u, (sub & 1u) == 1u);
-    let dsub = f16_to_f32(d_bits);
-    let msub = f16_to_f32(m_bits);
+    // Byte-addressed reads mirror the CPU oracle and fused-attention decoder.
+    // This avoids backend-dependent packed-word behavior for the high half.
+    let d_off = block_base + 128u + sub * 2u;
+    let m_off = block_base + 144u + sub * 2u;
+    let dsub = f16_to_f32(read_u8_weight(d_off) | (read_u8_weight(d_off + 1u) << 8u));
+    let msub = f16_to_f32(read_u8_weight(m_off) | (read_u8_weight(m_off + 1u) << 8u));
     let qs_base = block_base;
     let q_off = group * 32u;
     var nib: u32;

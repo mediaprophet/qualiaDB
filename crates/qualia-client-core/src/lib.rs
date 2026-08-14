@@ -44,6 +44,7 @@ pub mod front_door;
 pub mod github;
 pub mod guardianship;
 pub mod handshake;
+pub mod identity_plane;
 pub mod incapacity_switch;
 pub mod inference_backend;
 pub mod job_router;
@@ -63,6 +64,8 @@ pub mod ontology_router;
 pub mod ontology_workbench;
 pub mod prerequisites;
 pub mod project_collab;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod provider_credentials;
 pub mod q42_compress;
 pub mod qapp_api;
 pub mod qapp_install;

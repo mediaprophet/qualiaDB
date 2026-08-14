@@ -18,8 +18,8 @@ pub fn RelationsShell() -> Element {
     let mut section = use_signal(|| initial_section(mode().is_advanced()));
 
     rsx! {
-        div { style: "width:100%;height:100%;display:grid;grid-template-columns:205px minmax(0,1fr);background:#08101d;color:#e5edf8;overflow:hidden;",
-            aside { style: "border-right:1px solid #243044;background:#0b1424;padding:16px 10px;display:flex;flex-direction:column;min-height:0;",
+        div { style: "width:100%;height:100%;min-height:0;display:grid;grid-template-columns:205px minmax(0,1fr);grid-template-rows:minmax(0,1fr);background:#08101d;color:#e5edf8;overflow:hidden;",
+            aside { style: "min-height:0;overflow-y:auto;overscroll-behavior:contain;border-right:1px solid #243044;background:#0b1424;padding:16px 10px;display:flex;flex-direction:column;",
                 div { style: "padding:0 9px 14px;",
                     div { style: "font-size:.62rem;color:#a78bfa;font-weight:850;letter-spacing:.09em;text-transform:uppercase;", "Life domain" }
                     h1 { style: "margin:5px 0 4px;font-size:1.18rem;", "Relations" }
@@ -44,13 +44,21 @@ pub fn RelationsShell() -> Element {
                     }
                 }
             }
-            main { style: "min-width:0;min-height:0;overflow:hidden;",
+            main { style: "min-width:0;min-height:0;overflow:hidden;display:flex;flex-direction:column;",
                 match section() {
                     RelationsSection::Inbox => rsx! { crate::components::connect_chat::ConnectChat {} },
-                    RelationsSection::People => rsx! { PeopleOverview {} },
-                    RelationsSection::Groups => rsx! { GroupsOverview {} },
+                    RelationsSection::People => rsx! {
+                        div { style: "flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;",
+                            PeopleOverview {}
+                        }
+                    },
+                    RelationsSection::Groups => rsx! {
+                        div { style: "flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;",
+                            GroupsOverview {}
+                        }
+                    },
                     RelationsSection::Requests => rsx! {
-                        div { style: "height:100%;overflow-y:auto;padding:22px;display:grid;gap:16px;",
+                        div { style: "flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:22px 22px 3rem;display:grid;gap:16px;",
                             div {
                                 h2 { style: "margin:0;font-size:1.15rem;", "Requests" }
                                 p { style: "margin:5px 0 0;color:var(--qualia-text-muted);font-size:.76rem;", "Invitations, live-share consent and proposed changes that need a decision." }
@@ -62,14 +70,26 @@ pub fn RelationsShell() -> Element {
                             }
                         }
                     },
-                    RelationsSection::Reception => rsx! { crate::components::domains_pane::DomainsPane {} },
+                    RelationsSection::Reception => rsx! {
+                        div { style: "flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;",
+                            crate::components::domains_pane::DomainsPane {}
+                        }
+                    },
                     RelationsSection::Agreements => rsx! {
-                        div { style: "height:100%;overflow-y:auto;padding:22px;",
+                        div { style: "flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:22px 22px 3rem;",
                             crate::components::agreements_rights::AgreementsRights {}
                         }
                     },
-                    RelationsSection::Topology => rsx! { RelationshipTechnicalInspector {} },
-                    RelationsSection::ExistingTools => rsx! { crate::components::social_hub::SocialHub {} },
+                    RelationsSection::Topology => rsx! {
+                        div { style: "flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;",
+                            RelationshipTechnicalInspector {}
+                        }
+                    },
+                    RelationsSection::ExistingTools => rsx! {
+                        div { style: "flex:1;min-height:0;overflow:hidden;",
+                            crate::components::social_hub::SocialHub {}
+                        }
+                    },
                 }
             }
         }

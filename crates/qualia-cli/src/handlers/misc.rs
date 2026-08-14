@@ -6,7 +6,7 @@ use qualia_core_db::NQuin;
 
 use crate::cli::{
     CompileAction, ExtensionAction, GovernanceAction, IngestFormat, MigrateAction, ProfileAction,
-    QueryDialect, ShaclAction,
+    Q42Action, QueryDialect, ShaclAction,
 };
 use crate::sparql::run_sparql_query;
 
@@ -111,7 +111,131 @@ pub fn handle_mem(inspect: bool) {
     }
 }
 
+pub fn handle_q42(action: &Q42Action) -> Result<(), Box<dyn std::error::Error>> {
+    match action {
+        Q42Action::Inspect { path } => {
+            let report = qualia_core_db::q42_volume::Q42InspectReport::from_path(path)?;
+            print!("{}", report.to_text());
+        }
+        Q42Action::Verify { path, level } => {
+            let level = qualia_core_db::q42_volume::VerifyLevel::parse(level)?;
+            let report =
+                qualia_core_db::q42_volume::verify_volume_set_from_root(path, level)?;
+            print!("{}", report.to_text());
+            match report.overall {
+                qualia_core_db::q42_volume::CheckStatus::Fail => {
+                    return Err("Q42 verify failed".into());
+                }
+                qualia_core_db::q42_volume::CheckStatus::Incomplete => {
+                    return Err("Q42 verify incomplete".into());
+                }
+                _ => {}
+            }
+        }
+        Q42Action::Magnet {
+            path,
+            name,
+            port,
+            webseed,
+            set,
+            commons,
+        } => {
+            let intent = if *commons {
+                qualia_core_db::q42_volume::PublicationIntent::CommonsCatalog
+            } else {
+                qualia_core_db::q42_volume::PublicationIntent::Default
+            };
+            if *set {
+                let base = webseed
+                    .clone()
+                    .unwrap_or_else(|| format!("http://127.0.0.1:{port}/torrent/webseed/{{hash}}"));
+                let set = qualia_core_db::q42_volume::Q42VolumeSetMagnets::for_root_with_intent(
+                    path,
+                    Some(&base),
+                    intent,
+                )?;
+                println!("{}", set.root.magnet_uri);
+                for child in set.children {
+                    println!("{}", child.magnet_uri);
+                }
+            } else {
+                let display = name
+                    .clone()
+                    .unwrap_or_else(|| {
+                        path.file_name()
+                            .and_then(|n| n.to_str())
+                            .unwrap_or("volume.q42")
+                            .to_string()
+                    });
+                let magnet = if let Some(ws) = webseed {
+                    qualia_core_db::q42_volume::Q42Magnet::for_path_named_with_intent(
+                        path,
+                        &display,
+                        Some(ws),
+                        intent,
+                    )?
+                } else {
+                    qualia_core_db::q42_volume::Q42Magnet::for_daemon_seed_with_intent(
+                        path, &display, *port, intent,
+                    )?
+                };
+                println!("{}", magnet.magnet_uri);
+            }
+        }
+        Q42Action::Compact { root, out } => {
+            let out_dir = out.clone().unwrap_or_else(|| {
+                root.parent()
+                    .unwrap_or_else(|| std::path::Path::new("."))
+                    .join("compacted")
+            });
+            let produced = qualia_core_db::q42_volume::compact_volume_set(root, &out_dir)?;
+            println!("{}", produced.display());
+        }
+        Q42Action::Seed {
+            path,
+            name,
+            id,
+            commons,
+        } => {
+            let intent = if *commons {
+                qualia_core_db::q42_volume::PublicationIntent::CommonsCatalog
+            } else {
+                qualia_core_db::q42_volume::PublicationIntent::Default
+            };
+            let display = name.clone().unwrap_or_else(|| {
+                path.file_name()
+                    .and_then(|n| n.to_str())
+                    .unwrap_or("volume.q42")
+                    .to_string()
+            });
+            let ontology_id = id.clone().unwrap_or_else(|| display.clone());
+            let magnet = qualia_core_db::q42_volume::Q42Magnet::for_daemon_seed_with_intent(
+                path, &display, 4242, intent,
+            )?;
+            let record = qualia_core_db::webtorrent_seeder::register_seed(
+                qualia_core_db::webtorrent_seeder::RegisterSeedRequest {
+                    info_hash: magnet.info_hash_sha1.clone(),
+                    file_path: path.display().to_string(),
+                    display_name: display,
+                    ontology_id,
+                    bandwidth_limit_kbps: 512,
+                    commons_asserted: *commons,
+                },
+            )
+            .map_err(|e| e.to_string())?;
+            println!("{}", magnet.magnet_uri);
+            println!("seeded {} bytes as {}", record.file_size, record.info_hash);
+        }
+    }
+    Ok(())
+}
+
 pub fn handle_inspect(file_path: &PathBuf) -> Result<(), Box<dyn std::error::Error>> {
+    if qualia_core_db::q42_volume::is_unified_volume(file_path)? {
+        let report = qualia_core_db::q42_volume::Q42InspectReport::from_path(file_path)?;
+        print!("{}", report.to_text());
+        return Ok(());
+    }
     println!("Initializing Block Inspector for: {:?}", file_path);
 
     let mut file = std::fs::File::open(file_path)?;
@@ -229,8 +353,9 @@ pub fn handle_verify_integrity(input: &PathBuf, dataset: &PathBuf) {
 
     match qualia_core_db::ingest::verify_integrity(input.clone(), dataset.clone()) {
         Ok(true) => {
+            println!("Warning: this legacy XOR result is diagnostic only, not a proof of exact graph equality.");
             println!("\n✅ Integrity Check Passed: 100% Exact Match!");
-            println!("The XOR Fold Checksums are perfectly identical.");
+            println!("XOR folds and record counts match; this is not a losslessness or graph-equality proof. Use `verify-graph` for the bounded encoded-set proof.");
         }
         Ok(false) => {
             eprintln!("\n❌ Integrity Check Failed: Checksums mismatch!");
@@ -243,7 +368,79 @@ pub fn handle_verify_integrity(input: &PathBuf, dataset: &PathBuf) {
     }
 }
 
-pub fn handle_import(input: &PathBuf, output: &PathBuf, strip_literals: bool) {
+/// Run the exact, bounded-memory encoded graph proof.
+pub fn handle_verify_graph(
+    input: &PathBuf,
+    dataset: &PathBuf,
+    memory_mib: u64,
+    temp_gib: u64,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let memory_limit_bytes = memory_mib
+        .checked_mul(1024 * 1024)
+        .and_then(|bytes| usize::try_from(bytes).ok())
+        .ok_or_else(|| std::io::Error::other("--memory-mib is too large for this platform"))?;
+    let temporary_byte_budget = temp_gib
+        .checked_mul(1024 * 1024 * 1024)
+        .ok_or_else(|| std::io::Error::other("--temp-gib is too large"))?;
+
+    println!("============================================================");
+    println!("QualiaDB bounded encoded-graph proof");
+    println!("  Input       : {}", input.display());
+    println!("  Q42         : {}", dataset.display());
+    println!("  RAM budget  : {memory_mib} MiB");
+    println!("  Temp budget : {temp_gib} GiB");
+    println!("============================================================");
+
+    let report = qualia_core_db::graph_proof::prove_cli_ntriples_q42_equivalence(
+        input,
+        dataset,
+        qualia_core_db::graph_proof::GraphProofOptions {
+            memory_limit_bytes,
+            temporary_byte_budget,
+        },
+    )?;
+
+    println!("Source records      : {}", report.source_records);
+    println!("Q42 records         : {}", report.q42_records);
+    println!("Unique source quads : {}", report.source_unique_records);
+    println!("Unique Q42 quads    : {}", report.q42_unique_records);
+    println!("Missing from Q42    : {}", report.missing_from_q42);
+    println!("Unexpected in Q42   : {}", report.unexpected_in_q42);
+    println!("Skipped source lines : {}", report.source_skipped_lines);
+
+    if !report.encoded_sets_match() {
+        if let Some(record) = report.first_missing {
+            println!("First missing encoded quad    : {record:016X?}");
+        }
+        if let Some(record) = report.first_unexpected {
+            println!("First unexpected encoded quad : {record:016X?}");
+        }
+        return Err(std::io::Error::other("encoded graph sets differ").into());
+    }
+
+    match report.rdf_isomorphism {
+        qualia_core_db::graph_proof::RdfIsomorphismStatus::GroundGraphProven => {
+            println!("PASS: exact ground-graph equivalence is proven in the Q42 encoding.");
+            Ok(())
+        }
+        qualia_core_db::graph_proof::RdfIsomorphismStatus::BlankNodeCanonicalizationRequired => {
+            Err(std::io::Error::other(
+                "encoded sets match only under blank-node label identity; RDF isomorphism requires canonical lexical blank-node support",
+            )
+            .into())
+        }
+        qualia_core_db::graph_proof::RdfIsomorphismStatus::Different => {
+            Err(std::io::Error::other("encoded graph sets differ").into())
+        }
+    }
+}
+
+pub fn handle_import(
+    input: &PathBuf,
+    output: &PathBuf,
+    strip_literals: bool,
+    segment_mib: Option<u64>,
+) {
     println!("============================================================");
     println!("📥 QualiaDB Native RDF/XML Ingestion Pipeline");
     println!("============================================================");
@@ -256,7 +453,22 @@ pub fn handle_import(input: &PathBuf, output: &PathBuf, strip_literals: bool) {
         qualia_core_db::ingest::IngestMode::Complete
     };
 
-    match qualia_core_db::ingest::streaming_import_rdf_with_mode(&in_path, &out_path, mode) {
+    let result = match segment_mib {
+        Some(mib) => match mib.checked_mul(1024 * 1024) {
+            Some(bytes) if bytes != 0 => {
+                println!("Publishing a Q42 logical volume with {mib} MiB child cap.");
+                qualia_core_db::ingest::streaming_import_rdf_volume_set_with_mode(
+                    &in_path, &out_path, mode, bytes,
+                )
+            }
+            _ => Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                "--segment-mib must be greater than zero",
+            )),
+        },
+        None => qualia_core_db::ingest::streaming_import_rdf_with_mode(&in_path, &out_path, mode),
+    };
+    match result {
         Ok(quin_count) => {
             println!("✨ Done! Wrote {quin_count} Super-Quins.");
         }

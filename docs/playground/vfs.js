@@ -9,7 +9,8 @@
  * Q42 v3 unified volume (preferred):
  *   [0..256)       Q42VolumeHeader (magic "Q42\\0", version 3)
  *   [lex_offset]   Q42LEX blob (structural vocabulary)
- *   [bidx_offset]  BIDX blob (10D block routing index)
+ *   [bidx_offset]  BIDX blob (object-range index)
+ *   [reserved FIDX/PIDX]  optional field-range and postings (flags 0x0008 / 0x0010)
  *   [block_dir]    BlockDirectoryEntry × block_count (16 bytes each)
  *   [data_offset]  LZ4-compressed SuperBlock payloads
  *
@@ -190,8 +191,17 @@ const Q42_MAGIC4      = 0x00;
 const Q42_VERSION_V3  = 3;
 const HEADER_SIZE     = 256;
 const DIR_ENTRY_SIZE  = 16;
+const FLAG_BLOCKS_LZ4 = 0x0001;
+const FLAG_OBJECT_SORTED = 0x0002;
+const FLAG_VOLUME_ROOT = 0x0004;
+const FLAG_FIELD_RANGES = 0x0008;
+const FLAG_FIELD_POSTINGS = 0x0010;
+const FLAG_PERMISSIVE_COMMONS = 0x0020;
+const FLAG_SANCTUARY = 0x0040;
 /** Initial Range fetch — covers lex+bidx+block_dir for typical ontology volumes. */
 const PREAMBLE_PROBE  = 8191;
+/** Ontology volumes this size or smaller are fetched once (no HTTP Range). */
+const SMALL_VOLUME_MAX = 8 * 1024 * 1024;
 
 // ---------------------------------------------------------------------------
 // Q42 v3 volume header + block directory (embedded lex/bidx preamble)
@@ -208,7 +218,7 @@ function hasQ42V3Magic(bytes) {
     return parseQ42Header(dv) !== null;
 }
 
-function parseQ42Header(dv) {
+export function parseQ42Header(dv) {
     if (dv.byteLength < HEADER_SIZE) return null;
     if (dv.getUint8(0) !== Q42_MAGIC || dv.getUint8(1) !== Q42_MAGIC2 ||
         dv.getUint8(2) !== Q42_MAGIC3 || dv.getUint8(3) !== Q42_MAGIC4) {
@@ -217,9 +227,13 @@ function parseQ42Header(dv) {
     const version = dv.getUint16(4, true);
     if (version !== Q42_VERSION_V3) return null;
 
+    const flags = dv.getUint16(6, true);
+    // Named v3 fields occupy 0..176; FIDX/PIDX live in _reserved[16..48] (file 192..224).
+    const reserved = 176;
     return {
         version,
-        flags:            dv.getUint16(6, true),
+        flags,
+        flagNames: decodeFlagNames(flags),
         lexOffset:        Number(dv.getBigUint64(8,  true)),
         lexLength:        Number(dv.getBigUint64(16, true)),
         bidxOffset:       Number(dv.getBigUint64(24, true)),
@@ -231,7 +245,29 @@ function parseQ42Header(dv) {
         blockCount:       Number(dv.getBigUint64(72, true)),
         blockSize:        dv.getUint32(80, true),
         quinsPerBlock:    dv.getUint32(84, true),
+        merkleRoot:       Array.from(new Uint8Array(dv.buffer, dv.byteOffset + 104, 32)),
+        fidxOffset:       flags & FLAG_FIELD_RANGES ? Number(dv.getBigUint64(reserved + 16, true)) : 0,
+        fidxLength:       flags & FLAG_FIELD_RANGES ? Number(dv.getBigUint64(reserved + 24, true)) : 0,
+        pidxOffset:       flags & FLAG_FIELD_POSTINGS ? Number(dv.getBigUint64(reserved + 32, true)) : 0,
+        pidxLength:       flags & FLAG_FIELD_POSTINGS ? Number(dv.getBigUint64(reserved + 40, true)) : 0,
+        hasFieldRanges:   (flags & FLAG_FIELD_RANGES) !== 0,
+        hasFieldPostings: (flags & FLAG_FIELD_POSTINGS) !== 0,
+        isVolumeRoot:     (flags & FLAG_VOLUME_ROOT) !== 0,
+        isCommons:        (flags & FLAG_PERMISSIVE_COMMONS) !== 0,
+        isSanctuary:      (flags & FLAG_SANCTUARY) !== 0,
     };
+}
+
+function decodeFlagNames(flags) {
+    const names = [];
+    if (flags & FLAG_BLOCKS_LZ4) names.push('lz4');
+    if (flags & FLAG_OBJECT_SORTED) names.push('object-sorted');
+    if (flags & FLAG_VOLUME_ROOT) names.push('volume-root');
+    if (flags & FLAG_FIELD_RANGES) names.push('field-ranges');
+    if (flags & FLAG_FIELD_POSTINGS) names.push('field-postings');
+    if (flags & FLAG_PERMISSIVE_COMMONS) names.push('permissive-commons');
+    if (flags & FLAG_SANCTUARY) names.push('sanctuary');
+    return names;
 }
 
 /**
@@ -240,6 +276,52 @@ function parseQ42Header(dv) {
  * @param {object} header
  * @returns {Array<{relOffset:number, compLen:number, uncompLen:number}>}
  */
+/**
+ * Flatten a unified v3 volume already in memory into concatenated live Quin bytes.
+ * Used by SPARQL/Pages loaders so a 1 MB ontology never depends on HTTP Range.
+ */
+export function flattenUnifiedVolumeQuins(bytes) {
+    if (!bytes || bytes.length < HEADER_SIZE) {
+        throw new Error('Q42 volume is shorter than the 256-byte header');
+    }
+    const header = parseQ42Header(new DataView(bytes.buffer, bytes.byteOffset, HEADER_SIZE));
+    if (!header) throw new Error('not a Q42 v3 unified volume');
+    const dir = parseBlockDirectory(bytes, header);
+    const chunks = [];
+    let total = 0;
+    for (let i = 0; i < dir.length; i++) {
+        const e = dir[i];
+        const start = header.dataOffset + e.relOffset;
+        const end = start + e.compLen;
+        if (end > bytes.length) {
+            throw new Error(`Q42 block ${i} ends at ${end}, file is ${bytes.length}`);
+        }
+        const compressed = bytes.subarray(start, end);
+        const decoded = _decompressLz4PrependSize(compressed, e.uncompLen);
+        const live = extractSuperblockQuins(decoded);
+        if (live.length) {
+            chunks.push(live);
+            total += live.length;
+        }
+    }
+    const out = new Uint8Array(total);
+    let offset = 0;
+    for (const chunk of chunks) {
+        out.set(chunk, offset);
+        offset += chunk.length;
+    }
+    return out;
+}
+
+function extractSuperblockQuins(blockBytes) {
+    if (!blockBytes || blockBytes.length < 160 + QUIN_SIZE) return new Uint8Array(0);
+    const view = new DataView(blockBytes.buffer, blockBytes.byteOffset);
+    const live = Number(view.getBigUint64(16, true));
+    const cap = Math.floor((blockBytes.length - 160) / QUIN_SIZE);
+    const count = Math.max(0, Math.min(live > 0 ? live : cap, cap));
+    return blockBytes.subarray(160, 160 + count * QUIN_SIZE);
+}
+
 function parseBlockDirectory(buf, header) {
     const entries = [];
     const base = header.blockDirOffset;
@@ -440,7 +522,7 @@ export function decompressLz4Stream(raw) {
 
 export class VFS {
     /**
-     * @param {string}       remoteUrl    — URL of the hosted .q42 (or .c.q42) file
+     * @param {string}       remoteUrl    — URL of the hosted unified v3 .q42
      * @param {string}       [lexUrl]     — URL of the .q42-lex side-car
      * @param {boolean}      [compressed] — true when remoteUrl is an LZ4 block stream
      * @param {string|null}  [bidxUrl]    — URL of the .q42.bidx block-index side-car
@@ -469,6 +551,8 @@ export class VFS {
             source: 'none',
         };
         this._totalBytes     = 0;
+        /** @type {Uint8Array|null} entire volume when it fits in SMALL_VOLUME_MAX */
+        this._fullVolume     = null;
         /** @type {BlockOffsetMap|V3BlockOffsetMap|null} */
         this._blockOffsetMap = null;
         /** @type {BigUint64Array|null}  — interleaved [min0,max0, min1,max1, …] */
@@ -478,6 +562,7 @@ export class VFS {
         /** True when lex+bidx were parsed from the embedded v3 preamble. */
         this._embeddedPreamble = false;
         this._volumeV3       = false;
+        this._volumeHeader   = null;
         this._telemetry      = { netRequests: 0, opfsHits: 0, lastFaultMs: 0, totalFaultMs: 0 };
     }
 
@@ -540,6 +625,7 @@ export class VFS {
     /** True when this volume uses the v3 unified format (embedded lex/bidx). */
     get embeddedPreamble() { return this._embeddedPreamble; }
     get volumeV3() { return this._volumeV3; }
+    get volumeHeader() { return this._volumeHeader; }
 
     /** True once the BIDX has been loaded and `lookupBlocks()` is operative. */
     get bidxLoaded() { return this._bidxLoaded; }
@@ -571,6 +657,13 @@ export class VFS {
             try {
                 const fh = await this._opfsVault.getFileHandle(OPFS_VOLUME_FILE);
                 this._totalBytes = (await fh.getFile()).size;
+                if (this._totalBytes && this._totalBytes <= SMALL_VOLUME_MAX) {
+                    const all = await this._readOpfsVolumeRange(0, this._totalBytes);
+                    if (all?.length === this._totalBytes && hasQ42V3Magic(all)) {
+                        this._fullVolume = all;
+                        preamble = all;
+                    }
+                }
             } catch (_) { /* size unknown until header parse */ }
         }
 
@@ -586,12 +679,11 @@ export class VFS {
             }
         }
 
-        if (!this._totalBytes) {
-            try {
-                const head = await fetch(this._remoteUrl, { method: 'HEAD', cache: 'no-store' });
-                const cl = head.headers.get('Content-Length');
-                if (cl) this._totalBytes = parseInt(cl, 10);
-            } catch (_) { /* fully offline */ }
+        await this._probeRemoteSize();
+        if (!this._fullVolume && this._totalBytes && this._totalBytes <= SMALL_VOLUME_MAX) {
+            onProgress?.('Downloading dataset…', 30);
+            const all = await this._loadFullVolume();
+            if (all?.length >= HEADER_SIZE) preamble = all;
         }
 
         if (!preamble || preamble.length < HEADER_SIZE) {
@@ -656,9 +748,12 @@ export class VFS {
 
         onProgress?.('Dataset header ready', 62);
         this._opfsCacheStatus.totalBytes = this._totalBytes;
+        this._volumeHeader = header;
         console.log(
             `[VFS] v3 preamble: lex=${header.lexLength} B, bidx=${header.bidxLength} B,` +
-            ` ${header.blockCount} blocks, data@${header.dataOffset}` +
+            ` fidx=${header.fidxLength} B, pidx=${header.pidxLength} B,` +
+            ` ${header.blockCount} blocks, flags=${header.flagNames.join('|') || 'none'},` +
+            ` data@${header.dataOffset}` +
             ` (${(this._totalBytes / 1024).toFixed(1)} KB total)` +
             (this._opfsCacheStatus.complete ? ' · OPFS cache hit' : '')
         );
@@ -939,7 +1034,31 @@ export class VFS {
     // Private helpers — HTTP
     // -------------------------------------------------------------------------
 
+    async _probeRemoteSize() {
+        if (this._totalBytes) return this._totalBytes;
+        try {
+            const head = await fetch(this._remoteUrl, { method: 'HEAD', cache: 'no-store' });
+            const cl = head.headers.get('Content-Length');
+            if (cl) this._totalBytes = parseInt(cl, 10);
+        } catch (_) { /* offline or HEAD blocked */ }
+        return this._totalBytes;
+    }
+
+    async _loadFullVolume() {
+        if (this._fullVolume) return this._fullVolume;
+        const resp = await fetch(this._remoteUrl, { cache: 'no-store' });
+        if (!resp.ok) return null;
+        const raw = new Uint8Array(await resp.arrayBuffer());
+        if (!raw.length) return null;
+        this._fullVolume = raw;
+        this._totalBytes = raw.length;
+        return raw;
+    }
+
     async _fetchRangeBlock(offset, size) {
+        if (this._fullVolume && this._fullVolume.length >= offset + size) {
+            return this._fullVolume.subarray(offset, offset + size);
+        }
         const cached = await this._readOpfsVolumeRange(offset, size);
         if (cached?.length === size) {
             this._telemetry.opfsHits++;
@@ -949,7 +1068,10 @@ export class VFS {
         const t0 = performance.now();
         const raw = await this._fetchVolumeBytes(offset, size);
         if (!raw || raw.length < size) {
-            throw new Error(`VFS byte fetch failed at offset ${offset} (${this._remoteUrl})`);
+            throw new Error(
+                `VFS byte fetch failed at offset ${offset} need ${size} B ` +
+                `(have ${raw?.length ?? 0}, file ${this._totalBytes || '?'}) (${this._remoteUrl})`
+            );
         }
         const ms = performance.now() - t0;
         this._telemetry.netRequests++;
@@ -967,6 +1089,15 @@ export class VFS {
      */
     async _fetchVolumeBytes(offset, length) {
         if (!length) return null;
+        if (this._fullVolume && this._fullVolume.length >= offset + length) {
+            return this._fullVolume.subarray(offset, offset + length);
+        }
+        if (!this._fullVolume && this._totalBytes && this._totalBytes <= SMALL_VOLUME_MAX) {
+            const all = await this._loadFullVolume();
+            if (all && all.length >= offset + length) {
+                return all.subarray(offset, offset + length);
+            }
+        }
         const hi = offset + length - 1;
         try {
             const resp = await fetch(this._remoteUrl, {
@@ -976,23 +1107,30 @@ export class VFS {
             if (resp.ok || resp.status === 206) {
                 this._totalBytes = this._parseContentLength(resp) || this._totalBytes;
                 const raw = new Uint8Array(await resp.arrayBuffer());
-                if (raw.length >= length) {
-                    if (raw.length >= offset + length) {
-                        return raw.subarray(offset, offset + length);
+                if (raw.length >= offset + length) {
+                    if (!this._fullVolume && raw.length === this._totalBytes) {
+                        this._fullVolume = raw;
                     }
+                    return raw.subarray(offset, offset + length);
+                }
+                if (raw.length >= length) {
                     if (!this._rangeWarned) {
                         this._rangeWarned = true;
                         console.warn(
-                            '[VFS] Server returned HTTP 200 for a Range request — slicing client-side.'
+                            '[VFS] Server returned a Range-sized body without Content-Range — slicing from 0.'
                         );
                     }
                     return raw.subarray(0, length);
                 }
             }
         } catch (e) {
-            console.warn('[VFS] Range fetch failed, trying stream read:', e.message);
+            console.warn('[VFS] Range fetch failed, trying full GET:', e.message);
         }
 
+        const all = await this._loadFullVolume();
+        if (all && all.length >= offset + length) {
+            return all.subarray(offset, offset + length);
+        }
         return this._fetchVolumeBytesStream(offset, length);
     }
 

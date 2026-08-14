@@ -13,10 +13,29 @@ pub fn schedule_agent_job(
     agent_slug: Option<String>,
     prompt: String,
 ) -> Result<serde_json::Value, String> {
+    let agent_updated_at_unix = if let Some(slug) = agent_slug.as_deref() {
+        let state = crate::state::APP_STATE
+            .get()
+            .ok_or("Application not initialized")?;
+        let storage = state
+            .config
+            .lock()
+            .map_err(|error| error.to_string())?
+            .storage_path
+            .clone();
+        Some(
+            crate::agent_registry::get_agent(Path::new(&storage), slug)
+                .ok_or_else(|| format!("unknown agent @{slug}"))?
+                .updated_at_unix,
+        )
+    } else {
+        None
+    };
     let job = crate::local_job_scheduler::LocalJobScheduler::global().enqueue(
         crate::local_job_scheduler::LocalJobKind::AgentTurn {
             session_id,
             agent_slug,
+            agent_updated_at_unix,
             prompt,
         },
     )?;
@@ -32,6 +51,59 @@ pub fn list_local_jobs() -> Result<serde_json::Value, String> {
 /// Cancel a job by id (queued → cancelled; running → cooperative cancel).
 pub fn cancel_local_job(id: String) -> Result<bool, String> {
     crate::local_job_scheduler::LocalJobScheduler::global().cancel(&id)
+}
+
+/// Re-run a finished job with the same bounded inputs.
+pub fn retry_local_job(id: String) -> Result<serde_json::Value, String> {
+    let job = crate::local_job_scheduler::LocalJobScheduler::global().retry(&id)?;
+    serde_json::to_value(job).map_err(|e| e.to_string())
+}
+
+/// Clear completed/failed/cancelled history without affecting active work.
+pub fn clear_finished_local_jobs() -> Result<usize, String> {
+    crate::local_job_scheduler::LocalJobScheduler::global().clear_finished()
+}
+
+pub fn schedule_model_download(
+    url: String,
+    filename: String,
+    model_id: String,
+) -> Result<serde_json::Value, String> {
+    let job = crate::local_job_scheduler::LocalJobScheduler::global().enqueue(
+        crate::local_job_scheduler::LocalJobKind::ModelDownload {
+            url,
+            filename,
+            model_id,
+        },
+    )?;
+    serde_json::to_value(job).map_err(|e| e.to_string())
+}
+
+pub fn schedule_model_activation(model_name: String) -> Result<serde_json::Value, String> {
+    let job = crate::local_job_scheduler::LocalJobScheduler::global()
+        .enqueue(crate::local_job_scheduler::LocalJobKind::ModelActivation { model_name })?;
+    serde_json::to_value(job).map_err(|e| e.to_string())
+}
+
+pub fn schedule_anatomy_asset_acquire(model: String) -> Result<serde_json::Value, String> {
+    // Validate before queueing so typo failures are immediate and visible at the initiating control.
+    crate::wellfair::api::parse_anatomy_model(&model)?;
+    let job = crate::local_job_scheduler::LocalJobScheduler::global()
+        .enqueue(crate::local_job_scheduler::LocalJobKind::AnatomyAssetAcquire { model })?;
+    serde_json::to_value(job).map_err(|e| e.to_string())
+}
+
+/// Enqueue a job for a specific apparatus (`did:q42:device:…`). Empty target → this install.
+/// Remote devices fail closed until multi-device dispatch is live.
+pub fn schedule_job_on_device(
+    kind_json: String,
+    target_device_id: Option<String>,
+) -> Result<serde_json::Value, String> {
+    let kind: crate::local_job_scheduler::LocalJobKind =
+        serde_json::from_str(&kind_json).map_err(|e| format!("invalid job kind: {e}"))?;
+    let job = crate::local_job_scheduler::LocalJobScheduler::global()
+        .enqueue_for_device(kind, target_device_id)?;
+    serde_json::to_value(job).map_err(|e| e.to_string())
 }
 
 pub fn ensure_chat_session() -> Result<String, String> {

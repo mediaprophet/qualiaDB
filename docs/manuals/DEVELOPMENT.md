@@ -2,7 +2,7 @@
 
 Build, test, benchmark, and contribute to QualiaDB / Webizen.
 
-_Branch: `0.0.18-dev` | Last updated: 2026-06-19_
+_Branch: `0.0.30` | Last updated: 2026-08-15_
 
 ---
 
@@ -123,8 +123,8 @@ GitHub Actions (`.github/workflows/release.yml`) builds on tag push:
 - Flutter desktop bundles — `.dmg` (macOS), AppImage + `.deb` (Linux), `.exe` + `.msi` (Windows)
 
 ```bash
-git tag v0.0.18
-git push origin v0.0.18
+git tag v0.0.29
+git push origin v0.0.29
 ```
 
 ### Cross-compiling the CLI locally (Windows → Linux)
@@ -151,10 +151,13 @@ cd scripts/cross-linux
 qualia ingest data.ttl output.q42
 qualia ingest --profile health.qchk data.ttl output.q42   # profile-bound
 
-# ── Inspection & export ────────────────────────────────────────────────
-qualia inspect output.q42                 # decode and display Quin fields
-qualia dump output.q42                    # stream-dump raw Quins
-qualia compress output.q42 output.c.q42  # LZ4 SuperBlock compress
+# ── Inspection & volume ops (unified v3) ───────────────────────────────
+qualia q42 inspect output.q42            # header, flags, lex, FIDX/PIDX
+qualia q42 verify output.q42             # SuperBlock walk + five-field ECC
+qualia q42 magnet output.q42             # fail-closed public magnet
+qualia q42 compact output.q42            # rewrite to current v3
+qualia inspect output.q42                # decode and display Quin fields
+qualia dump output.q42                   # stream-dump raw Quins
 qualia export-solid output.q42 ./solid-pod/   # W3C Solid LDP export
 
 # ── Querying ───────────────────────────────────────────────────────────
@@ -257,7 +260,7 @@ qualia query ./data/dbpedia.q42
 
 ```bash
 bash scripts/fetch_wordnet.sh --subset 100000
-# Outputs: docs/playground/wordnet.q42 + .lex + .bidx + .c.q42 + .lex.lz4
+# Outputs: one unified v3 wordnet.q42 (lex + bidx + LZ4 SuperBlocks inside)
 ```
 
 Rebuild the WASM module after updating the dataset:
@@ -342,7 +345,7 @@ Supported input formats for `qualia ingest`:
 
 ---
 
-## Known Build Issues (v0.0.18-dev)
+## Known Build Issues (v0.0.29)
 
 All crates compile cleanly except where noted:
 
@@ -368,7 +371,7 @@ These supersede the older `AI_INSTRUCTIONS.md`.
 
 ## Releases & Versioning
 
-- **Current branch:** `0.0.18-dev`
+- **Current branch:** `0.0.29`
 - **Release config:** `release.toml` (cargo-release)
 - **Release notes:** [CHANGELOG.md](../../CHANGELOG.md)
 - **CI:** `.github/workflows/release.yml` — builds on tag push (Windows, macOS, Linux)
@@ -376,8 +379,8 @@ These supersede the older `AI_INSTRUCTIONS.md`.
 To cut a release:
 
 ```bash
-git tag v0.0.18
-git push origin v0.0.18
+git tag v0.0.29
+git push origin v0.0.29
 ```
 
 ADRs (Architectural Decision Records): [`docs/manuals/adr/`](adr/)

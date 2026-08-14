@@ -1,5 +1,5 @@
 #[cfg(not(target_arch = "wasm32"))]
-use crate::q42_volume::UnifiedVolumeBuilder;
+use crate::q42_volume::StreamingQ42VolumeWriter;
 use crate::NQuin;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::QUINS_PER_BLOCK;
@@ -16,6 +16,13 @@ use std::path::{Path, PathBuf};
 
 // 50MB buffer limit: ~1 million Quins (48 bytes each -> 48MB)
 const CHUNK_SIZE_LIMIT: usize = 1_000_000;
+/// Bound simultaneously open sorted runs and their reader buffers.
+const MAX_MERGE_FAN_IN: usize = 32;
+
+#[cfg(not(target_arch = "wasm32"))]
+mod volume_publisher;
+#[cfg(not(target_arch = "wasm32"))]
+pub use volume_publisher::{Q42VolumePublishStats, DEFAULT_Q42_SEGMENT_MAX_BYTES};
 
 pub struct ExternalSorter {
     buffer: Vec<NQuin>,
@@ -117,16 +124,23 @@ impl ExternalSorter {
             );
         }
 
-        let mut builder = UnifiedVolumeBuilder::with_lex_map(&self.lex);
+        let mut writer = StreamingQ42VolumeWriter::new(&self.lex)?;
+        // Catalog ontologies (Pages ingest), not personal records.
+        // Sanctuary bits on a Quin still win inside the writer.
+        writer.declare_permissive_commons();
 
         if self.chunk_files.is_empty() {
-            builder.finish(final_q42)?;
+            writer.finish(final_q42)?;
             return Ok(0);
         }
 
-        // Open all chunk files
+        // Compact raw sorted runs hierarchically before the final Q42 merge.
+        // This keeps file descriptors and buffered reader memory bounded.
+        let chunk_files = self.compact_runs()?;
+
+        // Open the bounded final run set.
         let mut readers: Vec<BufReader<File>> = Vec::new();
-        for chunk_path in &self.chunk_files {
+        for chunk_path in &chunk_files {
             let f = File::open(chunk_path)?;
             readers.push(BufReader::with_capacity(1024 * 1024, f)); // 1MB buffer per file
         }
@@ -183,7 +197,7 @@ impl ExternalSorter {
             }
 
             if block_buffer.len() == QUINS_PER_BLOCK {
-                builder.push_block(block_seq, &block_buffer);
+                writer.push_block(block_seq, &block_buffer)?;
                 block_buffer.clear();
                 block_seq += 1;
             }
@@ -191,14 +205,14 @@ impl ExternalSorter {
 
         // Flush remaining in block buffer
         if !block_buffer.is_empty() {
-            builder.push_block(block_seq, &block_buffer);
+            writer.push_block(block_seq, &block_buffer)?;
             block_seq += 1;
         }
 
-        builder.finish(final_q42)?;
+        writer.finish(final_q42)?;
 
         // Cleanup temp files
-        for chunk_path in &self.chunk_files {
+        for chunk_path in &chunk_files {
             let _ = std::fs::remove_file(chunk_path);
         }
 
@@ -223,11 +237,90 @@ impl ExternalSorter {
             Err(e) => Err(e),
         }
     }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    fn compact_runs(&self) -> std::io::Result<Vec<PathBuf>> {
+        let mut runs = self.chunk_files.clone();
+        let mut pass = 0usize;
+        while runs.len() > MAX_MERGE_FAN_IN {
+            let mut next =
+                Vec::with_capacity((runs.len() + MAX_MERGE_FAN_IN - 1) / MAX_MERGE_FAN_IN);
+            for (group, inputs) in runs.chunks(MAX_MERGE_FAN_IN).enumerate() {
+                let output = self.temp_dir.join(format!("merge_{pass}_{group}.tmp"));
+                Self::merge_raw_runs(inputs, &output)?;
+                next.push(output);
+            }
+            for input in runs {
+                let _ = std::fs::remove_file(input);
+            }
+            runs = next;
+            pass += 1;
+        }
+        Ok(runs)
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    fn merge_raw_runs(inputs: &[PathBuf], output: &Path) -> std::io::Result<()> {
+        if inputs.is_empty() || inputs.len() > MAX_MERGE_FAN_IN {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                "invalid sorted-run merge group",
+            ));
+        }
+        #[derive(Eq)]
+        struct Item {
+            quin: NQuin,
+            reader: usize,
+        }
+        impl Ord for Item {
+            fn cmp(&self, other: &Self) -> Ordering {
+                other.quin.object.cmp(&self.quin.object)
+            }
+        }
+        impl PartialOrd for Item {
+            fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+                Some(self.cmp(other))
+            }
+        }
+        impl PartialEq for Item {
+            fn eq(&self, other: &Self) -> bool {
+                self.quin.object == other.quin.object
+            }
+        }
+        let mut readers = Vec::with_capacity(inputs.len());
+        for input in inputs {
+            readers.push(BufReader::with_capacity(64 * 1024, File::open(input)?));
+        }
+        let mut heap = BinaryHeap::new();
+        for (reader, input) in readers.iter_mut().enumerate() {
+            if let Some(quin) = Self::read_quin(input)? {
+                heap.push(Item { quin, reader });
+            }
+        }
+        let mut writer = std::io::BufWriter::new(
+            std::fs::OpenOptions::new()
+                .create_new(true)
+                .write(true)
+                .open(output)?,
+        );
+        while let Some(item) = heap.pop() {
+            writer.write_all(bytemuck::bytes_of(&item.quin))?;
+            if let Some(quin) = Self::read_quin(&mut readers[item.reader])? {
+                heap.push(Item {
+                    quin,
+                    reader: item.reader,
+                });
+            }
+        }
+        writer.flush()
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[cfg(not(target_arch = "wasm32"))]
+    use tempfile::TempDir;
 
     #[test]
     fn push_lex_detects_handle_collisions_without_silent_assumption() {
@@ -249,5 +342,74 @@ mod tests {
         );
         s.push_lex(0x0FED_CBA9_8765_4321, "gamma"); // different token -> no collision
         assert_eq!(s.lex_collision_count(), 1);
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    #[test]
+    fn bounded_raw_run_merge_preserves_global_object_order() {
+        let dir = TempDir::new().unwrap();
+        let mut inputs = Vec::new();
+        for (index, object) in [[1u64, 7], [2, 8], [3, 9]].iter().enumerate() {
+            let path = dir.path().join(format!("input-{index}.tmp"));
+            let mut file = std::io::BufWriter::new(File::create(&path).unwrap());
+            for object in object {
+                let quin = NQuin {
+                    subject: 0,
+                    predicate: 0,
+                    object: *object,
+                    context: 0,
+                    metadata: 0,
+                    parity: 0,
+                };
+                file.write_all(bytemuck::bytes_of(&quin)).unwrap();
+            }
+            file.flush().unwrap();
+            inputs.push(path);
+        }
+        let output = dir.path().join("output.tmp");
+        ExternalSorter::merge_raw_runs(&inputs, &output).unwrap();
+        let mut reader = BufReader::new(File::open(output).unwrap());
+        let mut objects = [0u64; 6];
+        for object in &mut objects {
+            *object = ExternalSorter::read_quin(&mut reader)
+                .unwrap()
+                .unwrap()
+                .object;
+        }
+        assert_eq!(objects, [1, 2, 3, 7, 8, 9]);
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    #[test]
+    fn merge_declares_permissive_commons_for_catalog_ingest() {
+        use crate::q42_volume::{Q42Volume, FLAG_PERMISSIVE_COMMONS, FLAG_SANCTUARY};
+
+        let dir = TempDir::new().unwrap();
+        let mut sorter = ExternalSorter::new(dir.path().join("sort"));
+        sorter
+            .push(NQuin {
+                subject: 1,
+                predicate: 2,
+                object: 3,
+                context: 0,
+                metadata: 0,
+                parity: 0,
+            })
+            .unwrap();
+        sorter.push_lex(1, "urn:q42:catalog-subject");
+        let out = dir.path().join("catalog.q42");
+        sorter.merge(&out).unwrap();
+        let volume = Q42Volume::open(&out).unwrap();
+        let flags = volume.header().flags;
+        assert_ne!(
+            flags & FLAG_PERMISSIVE_COMMONS,
+            0,
+            "Pages catalog merge must set FLAG_PERMISSIVE_COMMONS"
+        );
+        assert_eq!(
+            flags & FLAG_SANCTUARY,
+            0,
+            "unmarked catalog Quins must not flip Sanctuary"
+        );
     }
 }

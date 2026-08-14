@@ -138,6 +138,7 @@ pub async fn stream_chat_inference(
     session_id: String,
     prompt: String,
     agent_slug: Option<String>,
+    remote_consent_approved: Option<bool>,
 ) -> Result<serde_json::Value, String> {
     // Diverse agents under the principal: route by the chosen agent's backend (local-first). A remote
     // (MCP) agent runs its turn off-thread and returns a ChatInferenceResult-shaped result; the local
@@ -147,10 +148,16 @@ pub async fn stream_chat_inference(
         let slug = agent_slug.unwrap_or_default();
         let sid = session_id.clone();
         let prompt_r = prompt.clone();
-        let detail =
-            tokio::task::spawn_blocking(move || api::run_remote_agent_turn(sid, slug, prompt_r))
-                .await
-                .map_err(|e| format!("remote turn join failed: {e}"))??;
+        let detail = tokio::task::spawn_blocking(move || {
+            api::run_remote_agent_turn(
+                sid,
+                slug,
+                prompt_r,
+                remote_consent_approved.unwrap_or(false),
+            )
+        })
+        .await
+        .map_err(|e| format!("remote turn join failed: {e}"))??;
         let _ = app.emit(
             "chat-done",
             serde_json::json!({
@@ -173,9 +180,10 @@ pub async fn stream_chat_inference(
                     serde_json::json!({ "session_id": sid_evt, "delta": delta }),
                 );
             });
-        qualia_client_core::chat_inference::run_chat_inference_with_options(
+        qualia_client_core::chat_inference::run_chat_inference_for_agent(
             &sid_infer,
             &prompt,
+            agent_slug.as_deref(),
             Some(cb),
         )
     })
@@ -245,6 +253,12 @@ pub fn agent_roster_remove(slug: String) -> Result<(), String> {
     api::agent_roster_remove(slug)
 }
 
+/// Current runtime/residency projection for a named roster agent.
+#[command]
+pub fn agent_runtime_status(slug: String) -> Result<serde_json::Value, String> {
+    api::agent_runtime_status(slug)
+}
+
 /// Add/update a remote-MCP agent from primitives (transport_kind ∈ tcp|http|stdio).
 #[command]
 pub fn agent_roster_add_remote(
@@ -265,6 +279,27 @@ pub fn agent_roster_add_remote(
         model,
         system_prompt,
     )
+}
+
+/// Save a user-supplied remote-provider credential in the OS keychain. The
+/// command is write-only: no caller can list or retrieve its value.
+#[command]
+pub fn provider_credential_store(connection_id: String, bearer: String) -> Result<(), String> {
+    api::provider_credential_store(connection_id, bearer)
+}
+
+/// Remove a remote-provider credential from the OS keychain.
+#[command]
+pub fn provider_credential_remove(connection_id: String) -> Result<(), String> {
+    api::provider_credential_remove(connection_id)
+}
+
+/// Send a non-generative MCP `tools/list` request for a configured remote agent.
+#[command]
+pub async fn agent_remote_connection_test(slug: String) -> Result<serde_json::Value, String> {
+    tokio::task::spawn_blocking(move || api::agent_remote_connection_test(slug))
+        .await
+        .map_err(|error| format!("connection test join failed: {error}"))?
 }
 
 // ── Principal-gated MCP tool loop (U3-A / U3-B) ─────────────────────────────────
@@ -326,4 +361,33 @@ pub fn list_local_jobs() -> Result<serde_json::Value, String> {
 #[command]
 pub fn cancel_local_job(id: String) -> Result<bool, String> {
     api::cancel_local_job(id)
+}
+
+#[command]
+pub fn retry_local_job(id: String) -> Result<serde_json::Value, String> {
+    api::retry_local_job(id)
+}
+
+#[command]
+pub fn clear_finished_local_jobs() -> Result<usize, String> {
+    api::clear_finished_local_jobs()
+}
+
+#[command]
+pub fn schedule_model_download(
+    url: String,
+    filename: String,
+    model_id: String,
+) -> Result<serde_json::Value, String> {
+    api::schedule_model_download(url, filename, model_id)
+}
+
+#[command]
+pub fn schedule_model_activation(model_name: String) -> Result<serde_json::Value, String> {
+    api::schedule_model_activation(model_name)
+}
+
+#[command]
+pub fn schedule_anatomy_asset_acquire(model: String) -> Result<serde_json::Value, String> {
+    api::schedule_anatomy_asset_acquire(model)
 }

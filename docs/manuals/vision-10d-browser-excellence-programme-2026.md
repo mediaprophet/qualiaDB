@@ -1,6 +1,6 @@
 # Vision → GPU → 10D Browser Excellence Programme (2026)
 
-**Branch:** `0.0.25`  
+**Branch:** `0.0.28`  
 **Canonical tree:** `C:\Projects\qualia-27062026` only  
 **Status:** Ready to execute with multi-agent swarms  
 **Purpose:** Close the loop from **pixels / biosense / SR** through **domains · modalities · solvers · computational geometry · shared GPU** into **`.10d` tooling** that powers **portal / 10D browser capabilities** (native desktop first, WASM portal second).
@@ -245,7 +245,7 @@ fetch sealed `.10d` bytes (no full CV) → WebGPU paint with σ — proves **bro
 ## 8. Track agent prompt template
 
 ```text
-You are Track [ID] on Vision-10D Browser Excellence Programme (branch 0.0.25).
+You are Track [ID] on Vision-10D Browser Excellence Programme (branch 0.0.28).
 Canonical: C:\Projects\qualia-27062026 only. No worktrees.
 
 Read first:
@@ -298,7 +298,7 @@ Done: acceptance tests + progress-log line + RELEASE/PROGRESS notice.
 - [ ] Spawn Sprint 1 tracks with exclusive paths  
 - [ ] After each sprint: `cargo test -p qualia-vision --lib` (+ client/desktop as touched)  
 - [ ] Progress log entry  
-- [ ] Push `0.0.25`  
+- [ ] Push `0.0.28`  
 
 **Execute phrase:** `execute vision-10d programme` or `execute sprint 1` (A1 B0 C1 E1).
 

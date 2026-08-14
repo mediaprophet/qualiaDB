@@ -248,6 +248,17 @@ static ORGAN_SECONDARY_SYSTEMS: &[(&str, &str)] = &[
 /// additional memberships. Empty if the organ is unmapped. This is what makes an organ a shared building
 /// block rather than a leaf of one system: a caller can colour by the primary (default) **or** blend across
 /// all memberships, and a person's condition on any member system lights the organ.
+/// Seeded primary organ → system pairs (cold authoring / coverage). Overlay systems
+/// do not appear as primaries.
+pub fn primary_organ_system_pairs() -> &'static [(&'static str, &'static str)] {
+    ORGAN_SYSTEMS
+}
+
+/// Seeded extra memberships (an organ participates in more than its primary system).
+pub fn secondary_organ_system_pairs() -> &'static [(&'static str, &'static str)] {
+    ORGAN_SECONDARY_SYSTEMS
+}
+
 pub fn system_memberships_for_organ(organ: &str) -> Vec<(&'static str, bool)> {
     let key = normalize_organ_key(organ);
     let mut out: Vec<(&'static str, bool)> = Vec::new();

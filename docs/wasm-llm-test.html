@@ -37,8 +37,9 @@
 
 <div class="row">
   <select id="model">
-    <option value="models/SmolLM2-360M-Instruct-Q4_K_M.gguf" data-tmpl="chatml" selected>SmolLM2-360M Q4_K_M (chatml)</option>
-    <option value="models/smollm2-360m-instruct-q8_0.gguf" data-tmpl="chatml">SmolLM2-360M Q8_0 (chatml)</option>
+    <option value="models/SmolLM2-360M-Instruct-Q4_K_M.soa.p64" data-tmpl="chatml">SmolLM2-360M Q4_K_SOA P64 (experimental)</option>
+    <option value="models/SmolLM2-360M-Instruct-Q4_K_M.gguf" data-tmpl="chatml">SmolLM2-360M Q4_K_M GGUF source</option>
+    <option value="models/smollm2-360m-instruct-q8_0.gguf" data-tmpl="chatml" selected>SmolLM2-360M Q8_0 (verified)</option>
     <option value="models/gemma-3-1b-it-q4_0.gguf" data-tmpl="gemma3">Gemma-3-1B Q4_0 (gemma3)</option>
   </select>
   <label><input type="checkbox" id="cache" checked> Cache in browser</label>
@@ -53,6 +54,7 @@
 </div>
 <div class="row">
   <button id="run" disabled>Run inference</button>
+  <button id="probe" disabled>Verify quant kernel</button>
   <button id="release" disabled>Release engine</button>
   <span class="stat" id="genstat"></span>
 </div>
@@ -65,7 +67,8 @@
 import init, {
   initialize_webgpu_engine, inferWasmAsync, inferWasmStreaming, isWebgpuEngineReady,
   releaseWebgpuEngine, getEngineVersion, init_panic_hook, compileGgufToP64, p64FormatVersion,
-} from './playground/qualia_core_db.js';
+  verifyFirstLayerQuant,
+} from './playground/qualia_core_db.js?v=0.0.30-safe-decode1';
 import { loadGgufCached, loadOrCompileP64, clearAllOpfsModels } from './js/opfs-model-cache.js';
 
 const USE_ASYNC_GPU = new URLSearchParams(location.search).get('async') !== '0';
@@ -78,6 +81,9 @@ const logEl = $('log');
 function log(msg, cls='') { const t = new Date().toISOString().slice(11,23); logEl.innerHTML += `<span class="${cls}">[${t}] ${msg}</span>\n`; logEl.scrollTop = logEl.scrollHeight; }
 
 let loaded = false;
+// Agent/debug hook: deterministic GPU↔CPU differential probe. Kept off the
+// ordinary UI, but callable from browser automation and DevTools.
+window.__qualiaVerifyFirstLayerQuant = verifyFirstLayerQuant;
 
 (async function boot() {
   // capture wasm panics / traps into the log
@@ -89,7 +95,7 @@ let loaded = false;
     $('gpu').textContent = 'WebGPU: ' + (a ? 'adapter ok' : 'NONE');
   } catch (e) { $('gpu').textContent = 'WebGPU: err ' + e; }
   try {
-    await init();
+    await init(new URL('./playground/qualia_core_db_bg.wasm?v=0.0.30-safe-decode1', location.href));
     try { init_panic_hook(); log('panic hook installed', 'dim'); } catch {}
     $('engine-ver').textContent = 'engine: v' + (getEngineVersion?.() ?? '?');
     log('WASM module initialised', 'ok');
@@ -161,6 +167,7 @@ $('load').onclick = async () => {
     log(`engine ready=${ready} (init ${Math.round(performance.now()-t0)} ms)`, ready ? 'ok' : 'err');
     loaded = ready;
     $('run').disabled = !ready;
+    $('probe').disabled = !ready;
     $('release').disabled = !ready;
     $('loadstat').textContent = ready ? 'loaded ✓' : 'init failed';
   } catch (e) {
@@ -193,6 +200,19 @@ $('release').onclick = async () => {
   }
 };
 
+$('probe').onclick = async () => {
+  $('probe').disabled = true;
+  try {
+    const result = await verifyFirstLayerQuant();
+    log(`QUANT PROBE ${result.passed ? 'PASS' : 'FAIL'}: ${result.role} type=${result.ggmlType} rows=${result.rowsChecked} maxAbs=${result.maxAbsError} maxRel=${result.maxRelError}`,
+      result.passed ? 'ok' : 'err');
+  } catch (e) {
+    log('QUANT PROBE ERROR: ' + (e?.message ?? e), 'err');
+  } finally {
+    $('probe').disabled = !isWebgpuEngineReady();
+  }
+};
+
 function buildPrompt(tmpl, user) {
   if (tmpl === 'gemma3') return `<start_of_turn>user\n${user}<end_of_turn>\n<start_of_turn>model\n`;
   return `<|im_start|>user\n${user}<|im_end|>\n<|im_start|>assistant\n`;
@@ -219,7 +239,7 @@ $('run').onclick = async () => {
     if (!$('out').textContent && full) $('out').textContent = full;
     log(`DONE: ${n} tokens in ${ms} ms (${(n/(ms/1000)).toFixed(1)} tok/s)`, 'ok');
   } catch (e) {
-    log('INFER ERROR: ' + (e?.message ?? e), 'err');
+    log('INFER ERROR: ' + (e?.stack ?? e?.message ?? e), 'err');
     $('out').className = 'err';
   } finally { $('run').disabled = false; }
 };

@@ -91,11 +91,9 @@ pub fn write_q42_checkpoint(
     if quins.is_empty() {
         return Ok(());
     }
-    use qualia_core_db::q42::q42_volume::UnifiedVolumeBuilder;
-    let mut builder = UnifiedVolumeBuilder::with_empty_lex().with_author_did(author_did);
-    builder.push_block(0, quins);
     let path = storage_root.join(Q42_FILE);
-    builder.finish(&path)
+    qualia_core_db::q42_volume::write_sorted_quins_volume_with_author(&path, quins, author_did)?;
+    Ok(())
 }
 
 #[cfg(target_arch = "wasm32")]

@@ -1,4 +1,4 @@
-# Warnings Audit — qualia-core-db 0.0.23
+# Warnings Audit — qualia-core-db 0.0.28
 
 _Generated 2026-07-01. 360 unique warning lines from `cargo build -p qualia-core-db --lib`._
 

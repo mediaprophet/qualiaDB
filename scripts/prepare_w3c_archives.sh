@@ -45,7 +45,7 @@ while IFS= read -r file; do
     cp "$artifact" "$OUT_DIR/$base.q42"
   fi
   count=$((count + 1))
-done < <(python3 -c "import json,sys; sys.stdout.write('\n'.join(e['file'] for e in json.load(open(sys.argv[1])).get('ontologies',[])))" "$CATALOG")
+done < <(python3 -c "import json,sys; sys.stdout.write('\n'.join(e['file'] for e in json.load(open(sys.argv[1], encoding='utf-8-sig')).get('ontologies',[])))" "$CATALOG")
 
 python3 "$REPO_ROOT/scripts/merge_ontology_manifest.py" w3c-archives
 echo "Sync complete — $count W3C archive ontologies under $OUT_DIR/"

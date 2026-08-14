@@ -135,6 +135,78 @@ fn auto_select_model_label(list: &[serde_json::Value], current: &str) -> Option<
     list.first().map(model_label)
 }
 
+/// Return explicit `@slug` targets in first-mention order.  Handles are kept
+/// as stable slugs; display-name matching belongs in the picker/autocomplete,
+/// never in dispatch where an ambiguous name could invoke the wrong agent.
+#[cfg(target_arch = "wasm32")]
+fn mentioned_agent_slugs(body: &str, roster: &[serde_json::Value]) -> Result<Vec<String>, String> {
+    let mut requested = Vec::new();
+    for token in body.split_whitespace() {
+        let Some(rest) = token.strip_prefix('@') else {
+            continue;
+        };
+        let slug = rest
+            .trim_matches(|c: char| !c.is_ascii_lowercase() && !c.is_ascii_digit() && c != '-')
+            .to_string();
+        if slug.is_empty() {
+            continue;
+        }
+        if !roster.iter().any(|agent| s(agent, "slug") == slug) {
+            return Err(format!("No agent is registered as @{slug}."));
+        }
+        if !requested.iter().any(|known| known == &slug) {
+            requested.push(slug);
+        }
+    }
+    if requested.len() > 4 {
+        return Err("A message may invoke at most four agents.".to_string());
+    }
+    Ok(requested)
+}
+
+/// Build the bounded answer-summary context that a recipient is explicitly
+/// permitted to receive from already-completed agents in this mention group.
+/// Both sides must grant it: the source names the recipient and the recipient
+/// names the source. Raw user prompts, transcript, attachments and graph
+/// records are never copied here.
+#[cfg(target_arch = "wasm32")]
+fn permitted_agent_summaries(
+    roster: &[serde_json::Value],
+    recipient: &str,
+    completed: &[(String, String)],
+) -> String {
+    let Some(recipient_agent) = roster.iter().find(|agent| s(agent, "slug") == recipient) else {
+        return String::new();
+    };
+    let accepts = recipient_agent
+        .get("context_policy")
+        .and_then(|policy| policy.get("allowed_source_agents"))
+        .and_then(|values| values.as_array());
+    let mut output = String::new();
+    for (source, text) in completed {
+        let receives_source = accepts.is_some_and(|values| {
+            values
+                .iter()
+                .any(|value| value.as_str() == Some(source.as_str()))
+        });
+        let source_permits = roster
+            .iter()
+            .find(|agent| s(agent, "slug") == *source)
+            .and_then(|agent| agent.get("context_policy"))
+            .and_then(|policy| policy.get("allowed_recipient_agents"))
+            .and_then(|values| values.as_array())
+            .is_some_and(|values| values.iter().any(|value| value.as_str() == Some(recipient)));
+        if receives_source && source_permits {
+            let bounded: String = text.chars().take(4_096).collect();
+            output.push_str("\n\n[Permitted answer summary from @");
+            output.push_str(source);
+            output.push_str("]\n");
+            output.push_str(&bounded);
+        }
+    }
+    output
+}
+
 /// Pin the thread to the latest content. Prefer scrolling the overflow container
 /// (`#chat-thread`); also scroll the end sentinel so layout after stream/paint sticks.
 #[cfg(target_arch = "wasm32")]
@@ -191,6 +263,100 @@ async fn send_chat_turn(
     if body.trim().is_empty() {
         return;
     }
+    // Resolve explicit mentions before persisting the user message.  An unknown
+    // `@handle` must not become a misleading, unfulfilled chat request.
+    let mentioned =
+        match invoke_json::<Vec<serde_json::Value>>("agent_roster_list", json!({})).await {
+            Ok(roster) => match mentioned_agent_slugs(&body, &roster) {
+                Ok(slugs) => slugs,
+                Err(reason) => {
+                    status.set(reason.clone());
+                    conduct.set(Some(ConductNotice::inference_block(reason)));
+                    return;
+                }
+            },
+            Err(e) => {
+                status.set(format!("Could not resolve agents: {e}"));
+                return;
+            }
+        };
+    let target_agents: Vec<Option<String>> = if mentioned.is_empty() {
+        vec![(!active_agent().is_empty()).then(|| active_agent())]
+    } else {
+        mentioned.into_iter().map(Some).collect()
+    };
+    // A roster agent may require explicit review of each context manifest.
+    // This first slice has only the addressed message/retrieval context, so the
+    // confirmation names that exact boundary rather than implying transcript
+    // sharing.  More detailed manifest review is added with multi-job groups.
+    let mut remote_consent_approved = false;
+    if let Ok(roster) = invoke_json::<Vec<serde_json::Value>>("agent_roster_list", json!({})).await
+    {
+        let needs_confirmation = target_agents.iter().flatten().any(|slug| {
+            roster.iter().any(|agent| {
+                s(agent, "slug") == *slug
+                    && agent
+                        .get("context_policy")
+                        .and_then(|policy| policy.get("require_turn_confirmation"))
+                        .and_then(|flag| flag.as_bool())
+                        .unwrap_or(false)
+            })
+        });
+        if needs_confirmation {
+            let approved = web_sys::window()
+                .and_then(|window| window.confirm_with_message(
+                    "Send this message to the selected agent? Only the addressed message and permitted retrieval context will be included.",
+                ).ok())
+                .unwrap_or(false);
+            if !approved {
+                status.set("Agent context dispatch cancelled.".into());
+                return;
+            }
+        }
+        let remote_agents: Vec<&serde_json::Value> = target_agents
+            .iter()
+            .flatten()
+            .filter_map(|slug| roster.iter().find(|agent| s(agent, "slug") == *slug))
+            .filter(|agent| {
+                agent
+                    .get("backend")
+                    .and_then(|backend| backend.get("remote_mcp"))
+                    .is_some()
+            })
+            .collect();
+        if remote_agents.iter().any(|agent| {
+            agent
+                .get("execution_policy")
+                .and_then(|policy| policy.get("remote_consent"))
+                .and_then(|value| value.as_str())
+                == Some("never")
+        }) {
+            status.set("A selected agent has remote use disabled by its policy.".into());
+            return;
+        }
+        let needs_remote_confirmation = remote_agents.iter().any(|agent| {
+            agent
+                .get("execution_policy")
+                .and_then(|policy| policy.get("remote_consent"))
+                .and_then(|value| value.as_str())
+                .map_or(true, |policy| policy == "per_turn")
+        });
+        if needs_remote_confirmation {
+            let approved = web_sys::window()
+                .and_then(|window| window.confirm_with_message(
+                    "This turn will send the addressed message and permitted retrieval context to the selected external MCP provider. Continue?",
+                ).ok())
+                .unwrap_or(false);
+            if !approved {
+                status.set("Remote agent dispatch cancelled.".into());
+                return;
+            }
+            remote_consent_approved = true;
+        }
+    }
+    let roster_for_sharing = invoke_json::<Vec<serde_json::Value>>("agent_roster_list", json!({}))
+        .await
+        .unwrap_or_default();
     let mut sid = active_session();
     if sid.is_empty() {
         match invoke_json::<String>(
@@ -241,14 +407,17 @@ async fn send_chat_turn(
                 messages.set(msgs);
             }
             status.set("Your agent is thinking…".into());
-            let agent_arg = if active_agent().is_empty() {
-                serde_json::Value::Null
-            } else {
-                json!(active_agent())
-            };
+            // Mentions resolve to stable roster slugs.  Turns are run in a
+            // bounded sequence on the current local decode lane, so consumer
+            // GPUs never receive competing full-model generations.
+            let target = target_agents.first().cloned().flatten();
+            let agent_arg = target
+                .as_ref()
+                .map_or(serde_json::Value::Null, |slug| json!(slug));
+            let mut completed_summaries: Vec<(String, String)> = Vec::new();
             match invoke_json::<serde_json::Value>(
                 "stream_chat_inference",
-                json!({ "sessionId": sid, "prompt": body, "agentSlug": agent_arg }),
+                json!({ "sessionId": sid, "prompt": body, "agentSlug": agent_arg, "remoteConsentApproved": remote_consent_approved }),
             )
             .await
             {
@@ -257,6 +426,16 @@ async fn send_chat_turn(
                         .get("committed")
                         .and_then(|v| v.as_bool())
                         .unwrap_or(false);
+                    if committed {
+                        if let (Some(source), Some(text)) = (
+                            target.as_deref(),
+                            result.get("text").and_then(|value| value.as_str()),
+                        ) {
+                            if !text.trim().is_empty() {
+                                completed_summaries.push((source.to_string(), text.to_string()));
+                            }
+                        }
+                    }
                     // Conduct / shield / block_reason → dedicated banner (U1-B).
                     // Also keep a short status line so non-banner chrome still shows failure.
                     if let Some(notice) = notice_from_chat_result(&result) {
@@ -302,6 +481,64 @@ async fn send_chat_turn(
                     status.set(msg.clone());
                     conduct.set(Some(ConductNotice::inference_block(msg)));
                 }
+            }
+            for (index, extra) in target_agents.iter().enumerate().skip(1) {
+                let Some(extra_slug) = extra.as_deref() else {
+                    continue;
+                };
+                status.set(format!(
+                    "Agent {}/{} (@{}) is thinkingâ€¦",
+                    index + 1,
+                    target_agents.len(),
+                    extra_slug
+                ));
+                let shared = permitted_agent_summaries(
+                    &roster_for_sharing,
+                    extra_slug,
+                    &completed_summaries,
+                );
+                let prompt_for_agent = format!("{body}{shared}");
+                match invoke_json::<serde_json::Value>(
+                    "stream_chat_inference",
+                    json!({ "sessionId": sid.clone(), "prompt": prompt_for_agent, "agentSlug": extra_slug, "remoteConsentApproved": remote_consent_approved }),
+                )
+                .await
+                {
+                    Ok(result) => {
+                        if let Some(text) = result.get("text").and_then(|value| value.as_str()) {
+                            if !text.trim().is_empty() {
+                                completed_summaries.push((extra_slug.to_string(), text.to_string()));
+                            }
+                        }
+                        if let Some(notice) = notice_from_chat_result(&result) {
+                            status.set(format!("No reply: {}", notice.reason));
+                            conduct.set(Some(notice));
+                        }
+                    }
+                    Err(e) => {
+                        let msg = format!("Inference failed: {e}");
+                        status.set(msg.clone());
+                        conduct.set(Some(ConductNotice::inference_block(msg)));
+                    }
+                }
+            }
+            if target_agents.len() > 1 {
+                streaming.set(String::new());
+                if let Ok(full) = invoke_json::<serde_json::Value>(
+                    "load_chat_session",
+                    json!({ "id": sid.clone() }),
+                )
+                .await
+                {
+                    let msgs = full
+                        .get("messages")
+                        .and_then(|m| m.as_array())
+                        .cloned()
+                        .unwrap_or_default();
+                    messages.set(msgs);
+                }
+                status.set(String::new());
+                scroll_chat_to_bottom();
             }
         }
         Err(e) => {
@@ -665,6 +902,30 @@ pub fn ConnectChat() -> Element {
             t
         }
     };
+    // A local preview of the context boundary for explicit @mentions.  This
+    // is descriptive only; the same rules are re-checked at dispatch time.
+    let context_manifest: Vec<(String, String)> = draft()
+        .split_whitespace()
+        .filter_map(|token| token.strip_prefix('@'))
+        .map(|raw| raw.trim_matches(|c: char| !c.is_ascii_lowercase() && !c.is_ascii_digit() && c != '-'))
+        .filter_map(|slug| agents().iter().find(|agent| s(agent, "slug") == slug).map(|agent| (slug.to_string(), agent.clone())))
+        .fold(Vec::new(), |mut entries, (slug, agent)| {
+            if entries.iter().any(|(known, _)| known == &slug) || entries.len() >= 4 { return entries; }
+            let policy = agent.get("context_policy");
+            let retrieval = policy.and_then(|value| value.get("retrieval")).and_then(|value| value.as_str()).unwrap_or("permitted_scopes");
+            let attachments = policy.and_then(|value| value.get("attachments")).and_then(|value| value.as_str()).unwrap_or("permitted_attachments");
+            let remote = agent.get("backend").and_then(|backend| backend.get("remote_mcp")).is_some();
+            let consent = agent.get("execution_policy").and_then(|value| value.get("remote_consent")).and_then(|value| value.as_str()).unwrap_or("per_turn");
+            let sources = policy.and_then(|value| value.get("allowed_source_agents")).and_then(|value| value.as_array()).map(|values| values.iter().filter_map(|value| value.as_str()).collect::<Vec<_>>().join(", ")).unwrap_or_default();
+            let boundary = format!(
+                "Receives: addressed message; retrieval: {retrieval}; attachments: {attachments}. Other agent summaries: {}. {}{}",
+                if sources.is_empty() { "none" } else { &sources },
+                if remote { "External MCP provider; " } else { "Local runtime; " },
+                if remote { format!("remote consent: {consent}.") } else { "nothing leaves this device.".to_string() },
+            );
+            entries.push((slug, boundary));
+            entries
+        });
 
     // Keep the thread pinned to the latest token / message.
     // Immediate scroll + paint-deferred passes so layout height is settled
@@ -792,21 +1053,16 @@ pub fn ConnectChat() -> Element {
                                 onclick: move |_| {
                                     #[cfg(target_arch = "wasm32")]
                                     {
-                                        let (selected_model, models, mut active_model, mut status) = (selected_model, models, active_model, status);
+                                        let (selected_model, models, mut status) = (selected_model, models, status);
                                         spawn(async move {
                                             let mut name = selected_model();
                                             if name.is_empty() { if let Some(f) = models().first() { name = model_label(f); } }
                                             if name.is_empty() { status.set("Pick a model first.".into()); return; }
                                             status.set(format!("Activating {name}…"));
-                                            match invoke_json::<serde_json::Value>("set_active_model", json!({ "modelName": name })).await {
-                                                Ok(_) => {
-                                                    if let Ok(Some(m)) = invoke_json::<Option<String>>("get_active_model", json!({})).await {
-                                                        active_model.set(m);
-                                                    } else {
-                                                        active_model.set(name.clone());
-                                                    }
-                                                    // Success is visible in the header pill; clear status quickly.
-                                                    flash_status(status, format!("Activated {name}."), 1200);
+                                            match invoke_json::<serde_json::Value>("schedule_model_activation", json!({ "modelName": name })).await {
+                                                Ok(job) => {
+                                                    let id = job.get("id").and_then(serde_json::Value::as_str).unwrap_or("queued");
+                                                    status.set(format!("Model activation queued as {id}. Follow it in Background jobs."));
                                                 }
                                                 Err(e) => status.set(format!("Activate failed: {e}")),
                                             }
@@ -835,7 +1091,14 @@ pub fn ConnectChat() -> Element {
                         }
                         for a in agents() {
                             div { style: "display:flex; justify-content:space-between; align-items:center; padding:6px 8px; background:#0b1220; border-radius:6px; margin-bottom:4px;",
-                                span { style: "color:#f3f4f6; font-size:12px; font-weight:600;", "{s(&a, \"display_name\")}" }
+                                div {
+                                    span { style: "color:#f3f4f6; font-size:12px; font-weight:600;", "{s(&a, \"display_name\")}" }
+                                    div { style: "display:flex;gap:4px;flex-wrap:wrap;margin-top:3px;",
+                                        for tag in a.get("semantic_profile").and_then(|profile| profile.get("tags")).and_then(|tags| tags.as_array()).into_iter().flatten().take(5) {
+                                            span { style: "font-size:9px;padding:2px 5px;border-radius:999px;background:#202a44;color:#c4b5fd;", "{s(tag, \"label\")}" }
+                                        }
+                                    }
+                                }
                                 span { style: "font-size:10px; color:#94a3b8;",
                                     if a.get("backend").and_then(|b| b.get("RemoteMcp")).is_some() { "remote · MCP" } else { "local" }
                                 }
@@ -1122,6 +1385,42 @@ pub fn ConnectChat() -> Element {
                             }
                         }
                         div { id: "chat-thread-end", style: "height:1px; flex-shrink:0;" }
+                    }
+                    if !agents().is_empty() {
+                        div { style: "display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:6px 16px;border-top:1px solid #162033;background:#0d1628;",
+                            span { style: "font-size:11px;color:#94a3b8;", "Mention:" }
+                            for agent in agents() {
+                                {
+                                    let slug = s(&agent, "slug");
+                                    let label = s(&agent, "display_name");
+                                    let insert_slug = slug.clone();
+                                    rsx! {
+                                        button {
+                                            style: "padding:3px 7px;border:1px solid #334155;border-radius:999px;background:#172033;color:#ddd6fe;font-size:11px;cursor:pointer;",
+                                            title: "Invoke {label} (@{slug})",
+                                            onclick: move |_| {
+                                                let mut draft = draft;
+                                                let current = draft();
+                                                let mention = format!("@{insert_slug} ");
+                                                if !current.split_whitespace().any(|token| token == format!("@{insert_slug}")) {
+                                                    draft.set(format!("{mention}{current}"));
+                                                }
+                                            },
+                                            "@{slug}"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    if !context_manifest.is_empty() {
+                        div { style: "margin:0 16px 8px;padding:9px 11px;border:1px solid #36506f;border-radius:8px;background:#0c1728;color:#cbd5e1;font-size:11px;line-height:1.45;",
+                            div { style: "font-weight:700;color:#93c5fd;margin-bottom:4px;", "Context manifest — review before sending" }
+                            for (slug, boundary) in context_manifest.iter() {
+                                div { style: "margin-top:3px;", strong { "@{slug}: " } "{boundary}" }
+                            }
+                            div { style: "margin-top:5px;color:#94a3b8;", "Raw transcript, files, and graph records are not shared between agents unless an explicit policy permits them." }
+                        }
                     }
                     div { style: "{COMPOSER}",
                         textarea {

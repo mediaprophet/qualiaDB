@@ -139,7 +139,7 @@ impl QTensorEngine {
                         },
                         wgpu::BindGroupEntry {
                             binding: 2,
-                            resource: params_buf.as_entire_binding(),
+                            resource: Self::mc8_dynamic_uniform_binding(params_buf),
                         },
                         wgpu::BindGroupEntry {
                             binding: 3,
@@ -159,7 +159,7 @@ impl QTensorEngine {
                     timestamp_writes: crate::llm_gpu_profiler::pass_writes_both(),
                 });
                 cpass.set_pipeline(&self.pipeline);
-                cpass.set_bind_group(0, &bind_group, &[]);
+                cpass.set_bind_group(0, &bind_group, &[0]);
                 cpass.dispatch_workgroups((n_out as u32 + 63) / 64, 1, 1);
             }
             let out_bytes = (n_out * 4) as wgpu::BufferAddress;

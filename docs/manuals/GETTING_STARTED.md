@@ -1,7 +1,7 @@
 # Getting Started with QualiaDB
 
-**Version:** 0.0.18  
-**Last Updated:** 2026-06-18
+**Version:** 0.0.30
+**Last Updated:** 2026-08-15
 
 This guide will help you get up and running with QualiaDB, the human-centric semantic engine designed for personal devices and edge computing.
 
@@ -76,7 +76,17 @@ ex:bob a ex:Person ;
 qualia ingest people.ttl people.q42
 ```
 
-This converts the RDF data into QualiaDB's native `.q42` binary format.
+This converts the RDF data into a **unified Q42 v3** volume (magic `Q42\0`):
+lexicon, BIDX, and LZ4 SuperBlocks are embedded. No `.q42.lex` / `.c.q42` sibling
+is written.
+
+```bash
+qualia q42 inspect people.q42
+qualia q42 verify people.q42
+```
+
+`inspect` reports header state (version, flags, block count, lexicon terms).
+`verify` walks every SuperBlock and five-field ECC (`subject ^ predicate ^ object ^ context ^ metadata`).
 
 ### 3. Query the Data
 

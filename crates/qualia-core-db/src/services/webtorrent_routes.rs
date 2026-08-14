@@ -52,10 +52,17 @@ async fn register_handler(Json(req): Json<RegisterSeedRequest>) -> impl IntoResp
                 "seeder": "qualia-daemon",
             })),
         ),
-        Err(e) => (
-            StatusCode::BAD_REQUEST,
-            Json(json!({ "status": "error", "message": e })),
-        ),
+        Err(e) => {
+            let denied = e.contains("publication denied") || e.contains("Sanctuary");
+            (
+                if denied {
+                    StatusCode::FORBIDDEN
+                } else {
+                    StatusCode::BAD_REQUEST
+                },
+                Json(json!({ "status": "error", "message": e })),
+            )
+        }
     }
 }
 
@@ -115,6 +122,37 @@ async fn webseed_handler(
     };
 
     let path = Path::new(&seed.file_path);
+    if crate::q42_volume::is_unified_volume(path).unwrap_or(false) {
+        let intent = if seed.commons_asserted {
+            crate::q42_volume::PublicationIntent::CommonsCatalog
+        } else {
+            crate::q42_volume::PublicationIntent::Default
+        };
+        match crate::q42_volume::classify_q42_path(path, intent) {
+            Ok(verdict) if verdict.may_http_webseed => {}
+            Ok(verdict) => {
+                let _ = webtorrent_seeder::unregister_seed(&info_hash);
+                return (
+                    StatusCode::FORBIDDEN,
+                    Json(json!({
+                        "error": "publication denied",
+                        "message": verdict.reason,
+                    })),
+                )
+                    .into_response();
+            }
+            Err(e) => {
+                return (
+                    StatusCode::FORBIDDEN,
+                    Json(json!({
+                        "error": "publication denied",
+                        "message": e.to_string(),
+                    })),
+                )
+                    .into_response();
+            }
+        }
+    }
     let Ok(data) = std::fs::read(path) else {
         return (
             StatusCode::INTERNAL_SERVER_ERROR,

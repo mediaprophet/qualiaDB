@@ -309,7 +309,7 @@ fn seed_color_rgba(id: &str) -> [f32; 4] {
 /// The hierarchy tier of a seeded system: the classic 11 are canonical majors; sensory / vestibular /
 /// ENS / glymphatic are sub-branches of the nervous system; ECS + exocrine are body-wide cross-cutting
 /// networks.
-fn seed_tier(id: &str) -> SystemTier {
+pub(crate) fn seed_tier(id: &str) -> SystemTier {
     match id {
         "sensory" | "vestibular" | "ens" | "glymphatic" => SystemTier::SubSystem,
         "ecs" | "exocrine" => SystemTier::CrossCutting,

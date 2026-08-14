@@ -35,6 +35,86 @@ pub fn finish_setup() -> Result<SetupState, String> {
     crate::setup::finish_setup()
 }
 
+// ── Person / apparatus identity plane (person ≠ machine ≠ OS account) ─────────
+
+pub fn get_identity_plane() -> Result<crate::identity_plane::IdentityPlaneSnapshot, String> {
+    crate::identity_plane::get_identity_plane()
+}
+
+pub fn list_apparatus_devices() -> Result<Vec<crate::identity_plane::DeviceRecordPublic>, String> {
+    crate::identity_plane::list_devices()
+}
+
+pub fn export_person_public() -> Result<crate::identity_plane::PersonPublic, String> {
+    crate::identity_plane::export_person_public()
+}
+
+/// Recovery-grade bundle to install the same person principal on another machine.
+pub fn export_person_transfer_bundle() -> Result<crate::identity_plane::PersonTransferBundle, String>
+{
+    crate::identity_plane::export_person_transfer_bundle()
+}
+
+pub fn import_person_transfer_bundle(
+    bundle: crate::identity_plane::PersonTransferBundle,
+) -> Result<crate::identity_plane::IdentityPlaneSnapshot, String> {
+    crate::identity_plane::import_person_transfer_bundle(bundle)
+}
+
+pub fn register_remote_apparatus_device(
+    device: crate::identity_plane::DeviceRecordPublic,
+) -> Result<crate::identity_plane::IdentityPlaneSnapshot, String> {
+    crate::identity_plane::register_remote_device(device)
+}
+
+pub fn resolve_job_device_placement(
+    target_device_id: Option<String>,
+) -> Result<crate::identity_plane::JobPlacement, String> {
+    crate::identity_plane::resolve_job_placement(target_device_id.as_deref())
+}
+
+pub fn set_local_control_base_url(
+    url: String,
+) -> Result<crate::identity_plane::IdentityPlaneSnapshot, String> {
+    crate::identity_plane::set_local_control_base_url(url)
+}
+
+pub fn list_remote_job_outbox() -> Result<Vec<crate::identity_plane::RemoteOutboxEntry>, String> {
+    crate::identity_plane::list_remote_outbox()
+}
+
+pub fn retry_remote_job_outbox() -> Result<usize, String> {
+    crate::identity_plane::fleet_jobs::retry_remote_outbox()
+}
+
+/// Mint a real WebID-TLS self-signed cert bound to the local person DID (SAN URI).
+pub fn mint_person_webid_tls_cert() -> Result<serde_json::Value, String> {
+    let person = crate::identity_plane::PersonPrincipal::load_or_create(None)?;
+    let (cert_pem, key_pem) = qualia_core_db::key_vault::generate_webid_tls_cert_for_seed(
+        &person.ed25519_secret,
+        &person.person_id,
+    )?;
+    // Persist under app meta for operators (key material is person-secret grade).
+    let dir = crate::state::app_meta_dir().join("certs");
+    std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+    std::fs::write(dir.join("person-webid.crt.pem"), &cert_pem).map_err(|e| e.to_string())?;
+    std::fs::write(dir.join("person-webid.key.pem"), &key_pem).map_err(|e| e.to_string())?;
+    Ok(serde_json::json!({
+        "person_id": person.person_id,
+        "cert_pem": cert_pem,
+        "key_pem_path": dir.join("person-webid.key.pem").display().to_string(),
+        "cert_path": dir.join("person-webid.crt.pem").display().to_string(),
+        "note": "Self-signed WebID-TLS style cert; DID is in SAN URI. Treat key as recovery material."
+    }))
+}
+
+pub fn accept_fleet_job_envelope(
+    envelope: crate::identity_plane::FleetJobEnvelope,
+) -> Result<serde_json::Value, String> {
+    let job = crate::identity_plane::accept_fleet_job_envelope(envelope)?;
+    serde_json::to_value(job).map_err(|e| e.to_string())
+}
+
 pub use crate::qpu_oracle::{QpuChatCommandResult, QpuOracleSettings, QpuOracleSettingsInput};
 
 pub fn get_qpu_settings() -> QpuOracleSettings {
@@ -301,13 +381,20 @@ pub async fn download_model(
         .unwrap()
         .insert(model_id.clone(), cancelled.clone());
 
-    let response = reqwest::get(&url).await.map_err(|e| {
+    let response = reqwest::get(&url)
+        .await
+        .and_then(reqwest::Response::error_for_status)
+        .map_err(|e| {
+            handles.lock().unwrap().remove(&model_id);
+            active_dl.lock().unwrap().remove(&model_id);
+            e.to_string()
+        })?;
+    let total_bytes = response.content_length().unwrap_or(0);
+    let mut dest = std::fs::File::create(&dest_path).map_err(|e| {
         handles.lock().unwrap().remove(&model_id);
         active_dl.lock().unwrap().remove(&model_id);
-        e.to_string()
+        format!("create {}: {e}", dest_path.display())
     })?;
-    let total_bytes = response.content_length().unwrap_or(0);
-    let mut dest = std::fs::File::create(&dest_path).map_err(|e| e.to_string())?;
     let mut stream = response.bytes_stream();
     let mut downloaded: u64 = 0;
     let mut last_report = std::time::Instant::now();
@@ -329,8 +416,23 @@ pub async fn download_model(
             active_dl.lock().unwrap().remove(&model_id);
             return Err("Cancelled".to_string());
         }
-        let chunk = chunk.map_err(|e| e.to_string())?;
-        dest.write_all(&chunk).map_err(|e| e.to_string())?;
+        let chunk = match chunk {
+            Ok(chunk) => chunk,
+            Err(error) => {
+                drop(dest);
+                let _ = std::fs::remove_file(&dest_path);
+                handles.lock().unwrap().remove(&model_id);
+                active_dl.lock().unwrap().remove(&model_id);
+                return Err(format!("download stream failed: {error}"));
+            }
+        };
+        if let Err(error) = dest.write_all(&chunk) {
+            drop(dest);
+            let _ = std::fs::remove_file(&dest_path);
+            handles.lock().unwrap().remove(&model_id);
+            active_dl.lock().unwrap().remove(&model_id);
+            return Err(format!("write {}: {error}", dest_path.display()));
+        }
         downloaded += chunk.len() as u64;
 
         let now = std::time::Instant::now();

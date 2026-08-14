@@ -74,6 +74,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Commands::Inspect { file_path } => {
             handlers::misc::handle_inspect(file_path)?;
         }
+        Commands::Q42 { action } => {
+            handlers::misc::handle_q42(action)?;
+        }
         Commands::Dump { out_path } => {
             handlers::misc::handle_dump(out_path)?;
         }
@@ -101,12 +104,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Commands::VerifyIntegrity { input, dataset } => {
             handlers::misc::handle_verify_integrity(input, dataset);
         }
+        Commands::VerifyGraph {
+            input,
+            dataset,
+            memory_mib,
+            temp_gib,
+        } => {
+            handlers::misc::handle_verify_graph(input, dataset, *memory_mib, *temp_gib)?;
+        }
         Commands::Import {
             input,
             output,
             strip_literals,
+            segment_mib,
         } => {
-            handlers::misc::handle_import(input, output, *strip_literals);
+            handlers::misc::handle_import(input, output, *strip_literals, *segment_mib);
         }
         Commands::Query { dialect } => {
             handlers::misc::handle_query(dialect);

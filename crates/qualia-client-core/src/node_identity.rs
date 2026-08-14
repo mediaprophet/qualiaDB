@@ -66,7 +66,9 @@ impl NodeIdentity {
     /// it is returned as-is. Otherwise a new identity is generated from the OS
     /// CSPRNG, written to that path (creating the parent directory as needed) as
     /// pretty-printed JSON, and returned. All errors are mapped to `String`.
-    #[cfg(not(target_arch = "wasm32"))]
+    ///
+    /// Available on all targets: mesh WG helpers remain native-only, but the
+    /// Ed25519 apparatus identity is needed for multi-device person/fleet wiring.
     pub fn load_or_create() -> Result<NodeIdentity, String> {
         let path = crate::state::app_meta_dir().join("node_identity.json");
 

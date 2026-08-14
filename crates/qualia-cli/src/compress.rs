@@ -41,13 +41,17 @@ pub fn compress_q42(
     output: &Path,
 ) -> Result<CompressStats, Box<dyn std::error::Error>> {
     if qualia_core_db::q42_volume::is_unified_volume(input)? {
+        let volume = qualia_core_db::q42_volume::Q42Volume::open(input)?;
+        if volume.volume_manifest()?.is_some() {
+            return Err("cannot copy a logical Q42 root as one file: publish/copy its manifest-attested child and lexicon segments together".into());
+        }
         fs::copy(input, output)?;
         let input_bytes = fs::metadata(input)?.len();
         let output_bytes = fs::metadata(output)?.len();
         return Ok(CompressStats {
             input_bytes,
             output_bytes,
-            blocks: qualia_core_db::q42_volume::Q42Volume::open(input)?.block_count(),
+            blocks: volume.block_count(),
             ratio: 1.0,
         });
     }

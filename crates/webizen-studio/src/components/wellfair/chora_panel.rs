@@ -101,7 +101,8 @@ pub fn WellfairChoraPanel() -> Element {
                 font-family: 'Inter', -apple-system, sans-serif;
                 box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3), inset 0 1px 1px rgba(255, 255, 255, 0.1);
                 position: relative;
-                overflow: hidden;
+                overflow: visible;
+                margin: 1rem;
             ",
 
             // Background cosmic/grid styling

@@ -3,7 +3,7 @@
 //! Produces a capability briefing the LLM receives via `graph_context` and prompt prefix.
 
 use std::collections::HashMap;
-use std::fs::{self, File};
+use std::fs;
 use std::path::Path;
 
 use serde::{Deserialize, Serialize};
@@ -488,36 +488,7 @@ fn write_environment_manifest_q42(
 }
 
 fn write_quins_to_q42(quins: &[NQuin], out_path: &Path) -> Result<(), BindError> {
-    let mut out_file = File::create(out_path)?;
-    let mut block_id: u64 = 0;
-    let mut buffer = Vec::with_capacity(393_216);
-
-    for quin in quins {
-        buffer.extend_from_slice(bytemuck::bytes_of(quin));
-        if buffer.len() >= 393_216 {
-            flush_q42_block(&mut out_file, &mut buffer, &mut block_id)?;
-        }
-    }
-
-    if !buffer.is_empty() {
-        flush_q42_block(&mut out_file, &mut buffer, &mut block_id)?;
-    }
-    Ok(())
-}
-
-fn flush_q42_block(
-    out_file: &mut File,
-    buffer: &mut Vec<u8>,
-    block_id: &mut u64,
-) -> Result<(), BindError> {
-    use std::io::Write;
-    let compressed = lz4_flex::compress_prepend_size(buffer);
-    out_file.write_all(&block_id.to_le_bytes())?;
-    out_file.write_all(&(compressed.len() as u32).to_le_bytes())?;
-    out_file.write_all(&(buffer.len() as u32).to_le_bytes())?;
-    out_file.write_all(&compressed)?;
-    buffer.clear();
-    *block_id += 1;
+    qualia_core_db::q42_volume::write_sorted_quins_volume(out_path, quins)?;
     Ok(())
 }
 

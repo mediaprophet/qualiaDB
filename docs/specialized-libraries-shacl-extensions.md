@@ -19,9 +19,9 @@ This document describes the comprehensive SHACL (Shapes Constraint Language) ext
 - `MatrixConfiguration` - Matrix storage and computation validation
 - `MatrixOperation` - Matrix operation parameter validation (ops now incl. determinant / eigen / svd)
 - `EigenDecomposition` - Eigenvalue decomposition validation
-- `PolynomialSolveConfiguration` - Polynomial root-finding (degree ≤ 256; quadratic_closed_form / durand_kerner / companion) *(added 0.0.19)*
-- `SvdConfiguration` - Singular value decomposition parameters *(added 0.0.19)*
-- `DeterminantConfiguration` - Determinant computation (lu / cofactor) *(added 0.0.19)*
+- `PolynomialSolveConfiguration` - Polynomial root-finding (degree ≤ 256; quadratic_closed_form / durand_kerner / companion) *(added 0.0.28)*
+- `SvdConfiguration` - Singular value decomposition parameters *(added 0.0.28)*
+- `DeterminantConfiguration` - Determinant computation (lu / cofactor) *(added 0.0.28)*
 
 **Key Validations:**
 - Matrix size limits (1 to 1,000,000)
@@ -29,7 +29,7 @@ This document describes the comprehensive SHACL (Shapes Constraint Language) ext
 - Numerical stability (condition number limits)
 - Precision mode enforcement (f32, f64, f128)
 
-### 1b. Symbolic Algebra (CAS) Library *(added 0.0.19)*
+### 1b. Symbolic Algebra (CAS) Library *(added 0.0.28)*
 **Purpose:** Computer-algebra system — symbolic expressions, differentiation, simplification,
 factoring, and equation solving. Distinct from `solvers/symbolic_logic` (SAT / defeasible logic).
 

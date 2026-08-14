@@ -74,6 +74,12 @@ mod imp {
             "enqueue_job" => ("POST", "/api/jobs".to_string()),
             "system_telemetry" => ("GET", "/api/telemetry".to_string()),
             "execute_sparql_query" => ("POST", "/api/sparql/query".to_string()),
+            "verify_graph_equivalence" => ("POST", "/api/graph/verify".to_string()),
+            "list_q42_volumes" => ("GET", "/api/q42/volumes".to_string()),
+            "inspect_q42_volume" => ("POST", "/api/q42/inspect".to_string()),
+            "verify_q42_volume" => ("POST", "/api/q42/verify".to_string()),
+            "magnet_q42_volume" => ("POST", "/api/q42/magnet".to_string()),
+            "compact_q42_volume" => ("POST", "/api/q42/compact".to_string()),
             _ => {
                 return Err(format!(
                     "Command '{cmd}' is not exposed via typed REST portals"

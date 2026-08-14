@@ -16,18 +16,23 @@ The repo previously exhibited multiple incompatible `.q42` interpretations. As o
 
 - single `.q42` file with magic `Q42\0`, version 3
 - embedded Q42LEX + BIDX + block-local LZ4 SuperBlocks
+- FIDX (`0x0008`) and PIDX (`0x0010`) optional; Commons (`0x0020`) /
+  Sanctuary (`0x0040`) publication flags
+- five-field ECC (`s^p^o^c^metadata`); verify Fail on four-field leftovers
+- public magnets fail closed unless Commons is set and Sanctuary is clear
 - v3 header adds: `temporal_index_offset/length`, `merkle_root [u8;32]`,
-  `assertion_timestamp`, `dag_root_offset/length` (carved from `_reserved`)
+  `assertion_timestamp`, `dag_root_offset/length`, DID offsets, reserved
+  FIDX/PIDX pointers
 - v2 files are **hard-rejected** — `verify_version()` requires version == 3;
-  `migrate_v2_to_v3()` performs a one-pass in-place upgrade
+  `migrate_v2_to_v3()` / `qualia q42 compact` upgrade
 - `qualia-cli ingest` and external sort write v3 only
-- legacy v1 sidecars and framed transport remain **read** paths only
+- leftover v1 sidecars and framed `.c.q42` remain **read** paths only
 
 Remaining before external standardization:
 
-- migrate WASM playground VFS to v3 (or document build-time translation)
 - freeze media-type names and publish test vectors
-- complete `.c.q42` deprecation in all distribution docs
+- [x] WASM playground VFS reads v3 (`docs/playground/vfs.js`)
+- [x] distribution docs drop `.c.q42` as a required twin (2026-08-15)
 
 Historical evidence (pre-v2):
 
@@ -85,7 +90,7 @@ Each of those should become its own draft with its own conformance language.
 
 ## 1. q42 container and sidecars
 
-- Scope: unified v2 `.q42`, legacy sidecars, deprecated `.c.q42`, block layout,
+- Scope: unified v3 `.q42`, leftover sidecars, obsolete `.c.q42`, block layout,
   byte order, compression profile, HTTP delivery expectations.
 - Why it is non-standard: custom binary container with embedded index sections
   and browser / daemon transport conventions.
@@ -446,5 +451,5 @@ v2 note:
 Still open:
 
 - WASM playground VFS still legacy (or document the build-time translation)
-- `.c.q42` deprecated but retained as a copy alias
+- `.c.q42` obsolete; new writes MUST NOT emit it
 - propose content-type names + publish worked v3 test vectors (Priority-1 item 1 exit criteria)

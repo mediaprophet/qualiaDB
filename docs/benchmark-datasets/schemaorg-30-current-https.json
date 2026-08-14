@@ -12,8 +12,7 @@
   },
   "paths": {
     "nt": "../data/schemaorg/30.0/schemaorg-current-https.nt",
-    "q42": "../data/schemaorg/30.0/schemaorg-current-https.q42",
-    "cq42": "../data/schemaorg/30.0/schemaorg-current-https.c.q42"
+    "q42": "../data/schemaorg/30.0/schemaorg-current-https.q42"
   },
   "dataset_info": {
     "label": "Schema.org 30.0 current HTTPS",
@@ -24,10 +23,10 @@
     "source_path": "C:\\Projects\\qualiaDB\\data\\schemaorg\\30.0\\schemaorg-current-https.nt",
     "native_format": "q42",
     "native_q42_base_path": "C:\\Projects\\qualiaDB\\data\\schemaorg\\30.0\\schemaorg-current-https",
-    "native_q42_path": "C:\\Projects\\qualiaDB\\data\\schemaorg\\30.0\\schemaorg-current-https.q42",
+    "native_q42_path": "../data/schemaorg/30.0/schemaorg-current-https.q42",
     "native_q42_available": true,
-    "compressed_q42_path": "C:\\Projects\\qualiaDB\\data\\schemaorg\\30.0\\schemaorg-current-https.c.q42",
-    "compressed_q42_available": true,
+    "compressed_q42_path": null,
+    "compressed_q42_available": false,
     "n_triples": 17949,
     "missing_source": false,
     "source_file_mb": 2.263,

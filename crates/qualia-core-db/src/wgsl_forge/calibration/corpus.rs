@@ -82,21 +82,16 @@ fn assemble_q42_lexicon(
     volume: &std::path::Path,
     min_len: usize,
 ) -> Result<Vec<String>, CalibrationError> {
-    use crate::q42_volume::Q42Volume;
-    let vol = Q42Volume::open(volume)
-        .map_err(|e| CalibrationError::CaptureFailed(format!("open q42 {volume:?}: {e}")))?;
-    let lex = vol
-        .lex_view()
-        .map_err(|e| CalibrationError::CaptureFailed(format!("q42 lexicon: {e:?}")))?;
+    let lex = crate::q42_lex::Q42Lexicon::load_for_q42(volume).map_err(|e| {
+        CalibrationError::CaptureFailed(format!("open q42 lexicon {volume:?}: {e}"))
+    })?;
     let min_len = min_len.max(1);
     let mut docs = Vec::new();
     let mut seen = std::collections::HashSet::new();
-    for i in 0..lex.entry_count() {
-        if let Some(s) = lex.string_at(i) {
-            let t = s.trim();
-            if t.len() >= min_len && t.contains(' ') && seen.insert(t.to_string()) {
-                docs.push(t.to_string());
-            }
+    for s in lex.entries.values() {
+        let t = s.trim();
+        if t.len() >= min_len && t.contains(' ') && seen.insert(t.to_string()) {
+            docs.push(t.to_string());
         }
     }
     Ok(docs)
@@ -110,15 +105,10 @@ fn assemble_q42_field(
     volume: &std::path::Path,
     predicate: &str,
 ) -> Result<Vec<String>, CalibrationError> {
-    use crate::q42_volume::Q42Volume;
-    let vol = Q42Volume::open(volume)
-        .map_err(|e| CalibrationError::CaptureFailed(format!("open q42 {volume:?}: {e}")))?;
-    let quins = vol
-        .read_all_quins()
+    let quins = crate::q42_reader::read_q42_quins(volume)
         .map_err(|e| CalibrationError::CaptureFailed(format!("read q42 quins: {e}")))?;
-    let lex = vol
-        .lex_view()
-        .map_err(|e| CalibrationError::CaptureFailed(format!("q42 lexicon: {e:?}")))?;
+    let lex = crate::q42_lex::Q42Lexicon::load_for_q42(volume)
+        .map_err(|e| CalibrationError::CaptureFailed(format!("q42 lexicon: {e}")))?;
     let pred_hash = crate::q_hash(predicate);
 
     let mut docs: Vec<String> = Vec::new();
@@ -127,7 +117,7 @@ fn assemble_q42_field(
         if q.predicate != pred_hash {
             continue;
         }
-        if let Some(s) = lex.lookup_hash(q.object) {
+        if let Some(s) = lex.lookup(q.object) {
             let t = s.trim();
             if !t.is_empty() && seen.insert(q.object) {
                 docs.push(t.to_string());

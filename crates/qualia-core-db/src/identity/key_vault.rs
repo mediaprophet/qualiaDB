@@ -196,31 +196,114 @@ impl KeyVault {
             .map_err(|_| "Invalid signature".to_string())
     }
 
-    /// Generates a WebID-TLS / mTLS compatible X.509 Certificate.
-    /// The agent's DID is embedded into the Subject Alternative Name (SAN) URI extension.
-    /// This binds the IPv6 networking TLS layer directly to the Qualia Identity layer.
+    /// Generates a WebID-TLS / mTLS compatible self-signed X.509 certificate.
+    ///
+    /// The DID URI is placed in the Subject Alternative Name URI extension so
+    /// transport identity can be bound to the Qualia principal. Uses real `rcgen`
+    /// PEM output (not a mock). Private key material is the provided Ed25519 seed
+    /// encoded as PKCS#8 PEM.
     pub fn generate_webid_tls_cert(
         &self,
         key: &SigningKey,
         did_uri: &str,
     ) -> Result<(String, String), String> {
-        // Since rcgen v0.14 API is volatile, we output the standard PEM headers for WebID-TLS.
-        // In a full production build, we would use the X.509 ASN.1 DER encoder to inject the
-        // SubjectAlternativeName (SAN) extension with the specific did_uri.
-        let pub_hex = hex::encode(VerifyingKey::from(key).as_bytes());
+        generate_webid_tls_cert_for_seed(&key.to_bytes(), did_uri)
+    }
+}
 
-        let cert_pem = format!(
-            "-----BEGIN CERTIFICATE-----\nMIIMOCKCERTIFICATESAN={}\n-----END CERTIFICATE-----\n",
-            did_uri
-        );
-        let key_pem = format!(
-            "-----BEGIN PRIVATE KEY-----\nMIIMOCKPRIVATEKEY={}\n-----END PRIVATE KEY-----\n",
-            pub_hex
-        );
+/// PKCS#8 PEM + self-signed cert for an Ed25519 seed and DID SAN URI.
+pub fn generate_webid_tls_cert_for_seed(
+    seed: &[u8; 32],
+    did_uri: &str,
+) -> Result<(String, String), String> {
+    use rcgen::{
+        CertificateParams, DnType, ExtendedKeyUsagePurpose, IsCa, KeyPair, KeyUsagePurpose, SanType,
+    };
 
-        Ok((cert_pem, key_pem))
+    if did_uri.trim().is_empty() {
+        return Err("did_uri must not be empty".into());
     }
 
+    let key_pem = format_ed25519_pkcs8_pem(seed);
+    let key_pair =
+        KeyPair::from_pem(&key_pem).map_err(|e| format!("rcgen KeyPair::from_pem: {e}"))?;
+
+    let mut params =
+        CertificateParams::new(Vec::<String>::new()).map_err(|e| format!("cert params: {e}"))?;
+    params.distinguished_name.push(DnType::CommonName, did_uri);
+    params.subject_alt_names = vec![SanType::URI(
+        did_uri.try_into().map_err(|e| format!("SAN URI: {e}"))?,
+    )];
+    params.is_ca = IsCa::NoCa;
+    params.key_usages = vec![
+        KeyUsagePurpose::DigitalSignature,
+        KeyUsagePurpose::KeyEncipherment,
+    ];
+    params.extended_key_usages = vec![
+        ExtendedKeyUsagePurpose::ClientAuth,
+        ExtendedKeyUsagePurpose::ServerAuth,
+    ];
+
+    let cert = params
+        .self_signed(&key_pair)
+        .map_err(|e| format!("self_signed: {e}"))?;
+    Ok((cert.pem(), key_pair.serialize_pem()))
+}
+
+#[cfg(test)]
+mod webid_tls_tests {
+    use super::*;
+
+    #[test]
+    fn webid_tls_cert_is_real_pem_with_did_san() {
+        let seed = [9u8; 32];
+        let did = "did:q42:person:aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899";
+        let (cert, key) = generate_webid_tls_cert_for_seed(&seed, did).expect("cert");
+        assert!(cert.contains("BEGIN CERTIFICATE"));
+        assert!(key.contains("BEGIN PRIVATE KEY") || key.contains("BEGIN"));
+        assert!(!cert.contains("MIIMOCK"));
+    }
+}
+
+/// RFC 8410 PKCS#8 for an Ed25519 private key seed (32 bytes).
+fn format_ed25519_pkcs8_pem(seed: &[u8; 32]) -> String {
+    // PrivateKeyInfo ::= SEQUENCE {
+    //   version                   Version, -- 0
+    //   privateKeyAlgorithm       AlgorithmIdentifier, -- id-Ed25519
+    //   privateKey                OCTET STRING, -- OCTET STRING of 32-byte seed
+    // }
+    let mut inner_octet = Vec::with_capacity(2 + 32);
+    inner_octet.push(0x04); // OCTET STRING
+    inner_octet.push(32);
+    inner_octet.extend_from_slice(seed);
+
+    let mut body = Vec::new();
+    // version INTEGER 0
+    body.extend_from_slice(&[0x02, 0x01, 0x00]);
+    // AlgorithmIdentifier SEQUENCE { OID 1.3.101.112 }
+    body.extend_from_slice(&[0x30, 0x05, 0x06, 0x03, 0x2b, 0x65, 0x70]);
+    // privateKey OCTET STRING wrapping inner OCTET STRING
+    body.push(0x04);
+    body.push(inner_octet.len() as u8);
+    body.extend_from_slice(&inner_octet);
+
+    let mut der = Vec::new();
+    der.push(0x30);
+    der.push(body.len() as u8);
+    der.extend_from_slice(&body);
+
+    use base64::Engine as _;
+    let b64 = base64::engine::general_purpose::STANDARD.encode(&der);
+    let mut pem = String::from("-----BEGIN PRIVATE KEY-----\n");
+    for chunk in b64.as_bytes().chunks(64) {
+        pem.push_str(std::str::from_utf8(chunk).unwrap_or(""));
+        pem.push('\n');
+    }
+    pem.push_str("-----END PRIVATE KEY-----\n");
+    pem
+}
+
+impl KeyVault {
     /// Issues a cryptographically signed Semantic Token for an installed qapp.
     /// The token enforces gatekeeper boundary policies (which shapes the qapp can access).
     pub fn issue_qapp_token(

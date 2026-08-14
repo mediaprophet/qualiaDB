@@ -73,10 +73,33 @@ impl QTensorEngine {
         #[cfg(target_arch = "wasm32")]
         let (wasm_device, wasm_queue) = {
             let instance = wgpu::Instance::default();
-            let adapter = instance
-                .request_adapter(&wgpu::RequestAdapterOptions::default())
+            // Prefer the high-performance adapter on phones (Pixel / Android
+            // Chrome often expose a low-power fallback that stalls compute).
+            let adapter = match instance
+                .request_adapter(&wgpu::RequestAdapterOptions {
+                    power_preference: wgpu::PowerPreference::HighPerformance,
+                    ..Default::default()
+                })
                 .await
-                .map_err(|e| format!("Failed to find wgpu adapter: {e}"))?;
+            {
+                Ok(a) => a,
+                Err(high_err) => instance
+                    .request_adapter(&wgpu::RequestAdapterOptions::default())
+                    .await
+                    .map_err(|e| {
+                        format!(
+                            "Failed to find wgpu adapter (high-performance: {high_err}; default: {e})"
+                        )
+                    })?,
+            };
+            let info = adapter.get_info();
+            log::info!(
+                "LLM_LOAD|webgpu-adapter|0.20|name={} backend={:?} device={:?} vendor={:?}",
+                info.name,
+                info.backend,
+                info.device,
+                info.vendor
+            );
             // Browser WebGPU exposes a smaller feature set than native backends.
             // Intersecting with the adapter keeps device creation portable while
             // still enabling f16/subgroup/timing acceleration where available.
@@ -90,17 +113,46 @@ impl QTensorEngine {
                 } else {
                     wgpu::ExperimentalFeatures::disabled()
                 };
+            // Raise buffer caps to the adapter's advertised maximum (same pattern as
+            // native shared_gpu). Default wgpu caps are too small for real weight
+            // tensors and can make requestDevice succeed then fail at buffer create.
+            let adapter_limits = adapter.limits();
+            let required_limits = wgpu::Limits {
+                max_buffer_size: adapter_limits.max_buffer_size,
+                max_storage_buffer_binding_size: adapter_limits.max_storage_buffer_binding_size,
+                ..wgpu::Limits::default()
+            };
+
+            crate::gguf_bridge::wasm_yield::phase(&format!(
+                "Adapter '{}' — creating WebGPU device…",
+                info.name
+            ))
+            .await;
             adapter
                 .request_device(&wgpu::DeviceDescriptor {
+                    label: Some("qualia-wasm-llm"),
                     required_features,
+                    required_limits,
                     experimental_features,
                     ..Default::default()
                 })
                 .await
-                .map_err(|e| e.to_string())?
+                .map_err(|e| {
+                    format!(
+                        "WebGPU requestDevice failed on adapter '{}': {e}. \
+                         On phones use SmolLM2-360M only, close other tabs, and ensure Chrome WebGPU is enabled.",
+                        info.name
+                    )
+                })?
         };
         #[cfg(target_arch = "wasm32")]
         let device = &wasm_device;
+        // One yield after device so the UI paints before pipeline compile freezes the main thread.
+        #[cfg(target_arch = "wasm32")]
+        crate::gguf_bridge::wasm_yield::phase(
+            "Compiling compute pipelines (UI may pause 30–90s on phones — leave tab open)…",
+        )
+        .await;
         #[cfg(not(target_arch = "wasm32"))]
         let native_pipeline_cache = create_native_pipeline_cache(device);
         #[cfg(target_arch = "wasm32")]
@@ -1212,17 +1264,11 @@ impl QTensorEngine {
             gemm_output_buf: None,
             gemm_params_buf: None,
             gemm_output_staging: None,
-            #[cfg(not(target_arch = "wasm32"))]
             output_topk_pipeline: None,
-            #[cfg(not(target_arch = "wasm32"))]
             output_topk_bind_layout: None,
-            #[cfg(not(target_arch = "wasm32"))]
             topk_cand_val_buf: None,
-            #[cfg(not(target_arch = "wasm32"))]
             topk_cand_idx_buf: None,
-            #[cfg(not(target_arch = "wasm32"))]
             topk_cand_staging: None,
-            #[cfg(not(target_arch = "wasm32"))]
             topk_params_buf: None,
             gemm_aux_buf: None,
             gemm_ffn_buf: None,
@@ -1616,7 +1662,6 @@ impl QTensorEngine {
     pub(crate) fn ensure_gemm_buffers(&mut self, max_weight_bytes: usize, max_out_dim: u32) {
         // A1a: build the persistent GPU top-k pipeline + candidate buffers once (additive; the
         // existing argmax path is unaffected whether or not this succeeds).
-        #[cfg(not(target_arch = "wasm32"))]
         if self.output_topk_pipeline.is_none() {
             self.init_output_topk();
         }

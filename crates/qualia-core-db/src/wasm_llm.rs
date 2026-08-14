@@ -1,5 +1,7 @@
 //! Browser-native LLM exports — Qualia GGUF + WebGPU path (not third-party llama.cpp bindings).
 
+mod cpu;
+
 use js_sys::Function;
 use wasm_bindgen::prelude::*;
 
@@ -25,7 +27,7 @@ pub fn get_engine_version() -> String {
     crate::ENGINE_VERSION.to_string()
 }
 
-fn engine_ready() -> bool {
+fn webgpu_engine_ready() -> bool {
     crate::gguf_bridge::WASM_ENGINE_INSTANCE.with(|g| g.borrow().is_some())
 }
 
@@ -53,9 +55,9 @@ fn require_real_tokenizer(tok: &GgufTokenizer) -> Result<(), String> {
 /// Phase 2B: fully async prefill + decode via `_async` dispatchers (`map_async` + `.await`).
 #[derive(serde::Serialize)]
 #[serde(rename_all = "camelCase")]
-struct WasmAsyncInferenceResult {
-    text: String,
-    generated_tokens: u32,
+pub(super) struct WasmAsyncInferenceResult {
+    pub(super) text: String,
+    pub(super) generated_tokens: u32,
 }
 
 async fn run_inference_async(
@@ -64,6 +66,9 @@ async fn run_inference_async(
     on_token: Option<Function>,
     decode_token_budget: usize,
 ) -> Result<WasmAsyncInferenceResult, String> {
+    if cpu::ready() {
+        return cpu::infer(prompt, graph_context, on_token, decode_token_budget).await;
+    }
     let mut engine = take_engine()?;
     let prompt_owned = prompt.to_string();
     if !graph_context.is_empty() {
@@ -184,8 +189,10 @@ async fn run_inference_async(
             }
         }
 
-        let mut out_ids: Vec<u32> = Vec::new();
-        let mut streamed_len = 0usize;
+        let mut out_ids: Vec<u32> = Vec::with_capacity(decode_token_budget);
+        let mut decoded_bytes: Vec<u8> = Vec::with_capacity(decode_token_budget * 8);
+        let mut streamed_bytes = 0usize;
+        let mut token_piece = [0u8; 1024];
 
         for step in 0..decode_token_budget {
             let cur = *ctx.last().unwrap_or(&tok.bos_token_id);
@@ -267,10 +274,19 @@ async fn run_inference_async(
             out_ids.push(next);
             ctx.push(next);
 
-            let full = tok.decode(&out_ids);
-            if full.len() > streamed_len {
-                let delta = full[streamed_len..].to_string();
-                streamed_len = full.len();
+            let piece_len = tok
+                .decode_token_bytes_into(next, &mut token_piece)
+                .ok_or_else(|| format!("token {next} exceeds the 1024-byte decode-piece limit"))?;
+            decoded_bytes.extend_from_slice(&token_piece[..piece_len]);
+            let pending = &decoded_bytes[streamed_bytes..];
+            let valid_len = match std::str::from_utf8(pending) {
+                Ok(_) => pending.len(),
+                Err(error) => error.valid_up_to(),
+            };
+            if valid_len > 0 {
+                let delta = std::str::from_utf8(&pending[..valid_len])
+                    .expect("validated UTF-8 prefix");
+                streamed_bytes += valid_len;
                 if let Some(callback) = on_token.as_ref() {
                     let _ = callback.call1(&JsValue::UNDEFINED, &JsValue::from_str(&delta));
                 }
@@ -279,7 +295,7 @@ async fn run_inference_async(
         }
 
         Ok(WasmAsyncInferenceResult {
-            text: tok.decode(&out_ids),
+            text: String::from_utf8_lossy(&decoded_bytes).into_owned(),
             generated_tokens: out_ids.len() as u32,
         })
     }
@@ -293,7 +309,10 @@ async fn run_inference_async(
 /// Used by the online demo to show "garbage risk" before generate.
 #[wasm_bindgen(js_name = getResidentTokenizerVocab)]
 pub fn get_resident_tokenizer_vocab() -> u32 {
-    if !engine_ready() {
+    if cpu::ready() {
+        return cpu::vocab_len();
+    }
+    if !webgpu_engine_ready() {
         return 0;
     }
     // Peek without taking the engine.
@@ -320,17 +339,224 @@ pub fn get_resident_tokenizer_vocab() -> u32 {
 /// Returns true when a GGUF or P64 model has been loaded via `initialize_webgpu_engine`.
 #[wasm_bindgen(js_name = isWebgpuEngineReady)]
 pub fn is_webgpu_engine_ready() -> bool {
-    engine_ready()
+    webgpu_engine_ready()
+}
+
+/// True when either first-party Qualia browser backend has a resident model.
+#[wasm_bindgen(js_name = isWasmEngineReady)]
+pub fn is_wasm_engine_ready() -> bool {
+    cpu::ready() || webgpu_engine_ready()
+}
+
+/// Name of the selected resident browser backend.
+#[wasm_bindgen(js_name = getWasmBackend)]
+pub fn get_wasm_backend() -> String {
+    if cpu::ready() {
+        "cpu-wasm".into()
+    } else if webgpu_engine_ready() {
+        "webgpu".into()
+    } else {
+        "none".into()
+    }
+}
+
+/// Stable cold-path receipt for the resident browser execution plan.
+#[wasm_bindgen(js_name = getBrowserExecutionReceipt)]
+pub fn get_browser_execution_receipt() -> Result<JsValue, JsValue> {
+    #[derive(serde::Serialize)]
+    #[serde(rename_all = "camelCase")]
+    struct Receipt {
+        schema: &'static str,
+        backend: String,
+        vocab_size: u32,
+        gpu_top1: bool,
+        device_to_host_bytes_per_token: u32,
+        full_logits_bytes_per_token: u32,
+        cpu_working_set_bytes: u64,
+        inference_memory_domain: &'static str,
+        sentinel_arena_bound: bool,
+    }
+
+    let backend = get_wasm_backend();
+    let vocab_size = get_resident_tokenizer_vocab();
+    let compact_bytes = if backend == "webgpu" {
+        crate::gguf_bridge::WASM_ENGINE_INSTANCE.with(|slot| {
+            slot.borrow()
+                .as_ref()
+                .and_then(|engine| engine.browser_top1_readback_bytes(vocab_size as usize))
+        })
+    } else {
+        None
+    };
+    let receipt = Receipt {
+        schema: "qualia.browser-execution.v1",
+        backend,
+        vocab_size,
+        gpu_top1: compact_bytes.is_some(),
+        device_to_host_bytes_per_token: compact_bytes.unwrap_or(0),
+        full_logits_bytes_per_token: vocab_size.saturating_mul(4),
+        cpu_working_set_bytes: cpu::working_set_bytes(),
+        inference_memory_domain: "llm-independent",
+        sentinel_arena_bound: false,
+    };
+    serde_wasm_bindgen::to_value(&receipt).map_err(|error| JsValue::from_str(&error.to_string()))
+}
+
+/// Differential WebGPU/CPU probe for the first layer's Q projection.
+///
+/// This is intentionally exposed to the browser debug surface so automated
+/// agents can distinguish model/package failures from quantized-kernel
+/// failures without asking a user to inspect opaque generated text.
+#[wasm_bindgen(js_name = verifyFirstLayerQuant)]
+pub async fn verify_first_layer_quant() -> Result<JsValue, JsValue> {
+    #[derive(serde::Serialize)]
+    #[serde(rename_all = "camelCase")]
+    struct QuantProbe {
+        role: &'static str,
+        ggml_type: u32,
+        rows_checked: usize,
+        max_abs_error: f32,
+        max_rel_error: f32,
+        passed: bool,
+    }
+
+    let engine = take_engine().map_err(|e| JsValue::from_str(&e))?;
+    let result: Result<QuantProbe, String> = async {
+        let index = if let Some(data) = engine.p64_resident.as_ref() {
+            crate::p64_weight::P64TensorIndex::from_p64(data)?.to_gguf_index()
+        } else {
+            let bytes = engine
+                .gguf_mmap
+                .as_deref()
+                .ok_or_else(|| "quant probe: no resident model".to_string())?;
+            crate::gguf_sharder::GgufTensorIndex::from_gguf(bytes)
+        };
+        let info = index
+            .get_layer_tensors(0)
+            .attn_q
+            .ok_or_else(|| "quant probe: layer 0 has no Q projection".to_string())?;
+        let (n_in, n_out) = crate::gguf_bridge::QTensorEngine::matmul_dims(&info);
+        let rows = n_out.min(8);
+        if n_in == 0 || n_in > 8192 || rows == 0 {
+            return Err("quant probe: unsupported projection dimensions".to_string());
+        }
+        let bytes = engine
+            .gguf_mmap
+            .as_deref()
+            .ok_or_else(|| "quant probe: model bytes unavailable".to_string())?;
+        let raw = crate::ggml_quants::fetch_tensor_bytes(bytes, index.tensor_data_start, &info)
+            .map_err(|e| format!("quant probe: tensor bytes unavailable: {e:?}"))?;
+        let mut input = vec![0.0f32; n_in];
+        for (i, value) in input.iter_mut().enumerate() {
+            *value = ((i as f32 * 0.017).sin() + (i as f32 * 0.013).cos()) * 0.25;
+        }
+        let mut gpu = vec![0.0f32; rows];
+        if !engine
+            .dispatch_gemm_into_async(&index, &info, &input, &mut gpu, n_in, rows)
+            .await
+        {
+            return Err("quant probe: WebGPU GEMM dispatch failed".to_string());
+        }
+        let mut row = vec![0.0f32; n_in];
+        let mut max_abs = 0.0f32;
+        let mut max_rel = 0.0f32;
+        for r in 0..rows {
+            crate::ggml_quants::dequant_matrix_row_into(raw, &info, r, &mut row)
+                .map_err(|e| format!("quant probe: CPU dequant failed: {e:?}"))?;
+            let cpu = row
+                .iter()
+                .zip(input.iter())
+                .map(|(w, x)| w * x)
+                .sum::<f32>();
+            let abs = (gpu[r] - cpu).abs();
+            let rel = abs / cpu.abs().max(1.0e-5);
+            max_abs = max_abs.max(abs);
+            max_rel = max_rel.max(rel);
+        }
+        Ok(QuantProbe {
+            role: "blk.0.attn_q.weight",
+            ggml_type: info.ggml_type,
+            rows_checked: rows,
+            max_abs_error: max_abs,
+            max_rel_error: max_rel,
+            passed: max_abs <= 0.05 || max_rel <= 0.02,
+        })
+    }
+    .await;
+    restore_engine(engine);
+    let probe = result.map_err(|e| JsValue::from_str(&e))?;
+    serde_wasm_bindgen::to_value(&probe).map_err(|e| JsValue::from_str(&e.to_string()))
+}
+
+/// Current stage of WebGPU engine init (empty when idle/done). Poll from JS so the
+/// status line advances on phones while pipelines/weights load.
+#[wasm_bindgen(js_name = getWebgpuInitStatus)]
+pub fn get_webgpu_init_status() -> String {
+    #[cfg(target_arch = "wasm32")]
+    {
+        crate::gguf_bridge::wasm_yield::init_status()
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        String::new()
+    }
 }
 
 /// Load a GGUF or P64 model into the resident browser WebGPU engine.
+///
+/// Single-argument ABI (stable for demos). Progress stages are published via
+/// [`get_webgpu_init_status`] while this future runs; the implementation yields to
+/// the browser between major phases so the status line can update.
 #[wasm_bindgen]
 pub async fn initialize_webgpu_engine(model_data: js_sys::Uint8Array) -> Result<(), js_sys::Error> {
+    // Copy once into WASM memory. Can take a few seconds for ~370 MB on phones.
+    #[cfg(target_arch = "wasm32")]
+    crate::gguf_bridge::wasm_yield::phase(&format!(
+        "Copying model into engine memory ({:.0} MB)…",
+        model_data.length() as f64 / (1024.0 * 1024.0)
+    ))
+    .await;
     let vec = model_data.to_vec();
     let arc: std::sync::Arc<[u8]> = vec.into();
+    #[cfg(target_arch = "wasm32")]
+    crate::gguf_bridge::wasm_yield::yield_to_browser().await;
+
+    // Always full eager weight upload — the known-good path that produces coherent text.
+    // (Deferred upload was tried for phones and produced garbage / incomplete residency.)
     crate::gguf_bridge::initialize_webgpu_engine(arc)
         .await
         .map_err(|e| js_sys::Error::new(&e))
+}
+
+/// Prepare Qualia's independent CPU-WASM engine without creating a GPU adapter,
+/// device, pipeline, or buffer. WebGPU remains an optional faster backend.
+#[wasm_bindgen(js_name = initializeCpuWasmEngine)]
+pub async fn initialize_cpu_wasm_engine(
+    model_data: js_sys::Uint8Array,
+) -> Result<(), js_sys::Error> {
+    crate::gguf_bridge::wasm_yield::phase(&format!(
+        "Copying model into CPU-WASM memory ({:.0} MB)…",
+        model_data.length() as f64 / (1024.0 * 1024.0)
+    ))
+    .await;
+    let model: std::sync::Arc<[u8]> = model_data.to_vec().into();
+    crate::gguf_bridge::wasm_yield::yield_to_browser().await;
+    cpu::initialize(model)
+        .await
+        .map_err(|error| js_sys::Error::new(&error))
+}
+
+/// Prepare CPU-WASM with an explicit LLM context allocation. This memory domain
+/// is independent from the 42 MiB semantic/SLG Sentinel arena.
+#[wasm_bindgen(js_name = initializeCpuWasmEngineWithContext)]
+pub async fn initialize_cpu_wasm_engine_with_context(
+    model_data: js_sys::Uint8Array,
+    max_context: u32,
+) -> Result<(), js_sys::Error> {
+    let model: std::sync::Arc<[u8]> = model_data.to_vec().into();
+    cpu::initialize_with_context(model, max_context as usize)
+        .await
+        .map_err(|error| js_sys::Error::new(&error))
 }
 
 /// Release resident model weights and tear down the WebGPU engine instance.
@@ -339,6 +565,7 @@ pub async fn release_webgpu_engine() -> Result<(), JsValue> {
     crate::gguf_bridge::WASM_ENGINE_INSTANCE.with(|g| {
         *g.borrow_mut() = None;
     });
+    cpu::release();
     Ok(())
 }
 

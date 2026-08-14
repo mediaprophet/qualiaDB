@@ -114,19 +114,21 @@ pub fn parse_csv_wasm(val: JsValue) -> Result<JsValue, JsValue> {
     #[derive(Serialize)]
     struct ParseResult {
         quin_count: usize,
-        quins: Vec<[u64; 6]>, // Serialize NQuin as array of 6 u64
+        // JavaScript Numbers cannot faithfully represent every u64. Emit decimal
+        // strings so callers retain the exact Quin payloads across the WASM ABI.
+        quins: Vec<[String; 6]>,
     }
 
-    let quin_arrays: Vec<[u64; 6]> = quins
+    let quin_arrays: Vec<[String; 6]> = quins
         .iter()
         .map(|q| {
             [
-                q.subject,
-                q.predicate,
-                q.object,
-                q.context,
-                q.metadata,
-                q.parity,
+                q.subject.to_string(),
+                q.predicate.to_string(),
+                q.object.to_string(),
+                q.context.to_string(),
+                q.metadata.to_string(),
+                q.parity.to_string(),
             ]
         })
         .collect();
@@ -195,19 +197,19 @@ pub fn parse_json_mapping_wasm(val: JsValue) -> Result<JsValue, JsValue> {
     #[derive(Serialize)]
     struct ParseResult {
         quin_count: usize,
-        quins: Vec<[u64; 6]>,
+        quins: Vec<[String; 6]>,
     }
 
-    let quin_arrays: Vec<[u64; 6]> = quins
+    let quin_arrays: Vec<[String; 6]> = quins
         .iter()
         .map(|q| {
             [
-                q.subject,
-                q.predicate,
-                q.object,
-                q.context,
-                q.metadata,
-                q.parity,
+                q.subject.to_string(),
+                q.predicate.to_string(),
+                q.object.to_string(),
+                q.context.to_string(),
+                q.metadata.to_string(),
+                q.parity.to_string(),
             ]
         })
         .collect();

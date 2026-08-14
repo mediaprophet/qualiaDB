@@ -103,8 +103,11 @@ impl ModelHelper {
         let (lex, mut quins) = self.to_q42_graph();
         // Unified-volume BIDX ranges and FLAG_OBJECT_SORTED require object order.
         quins.sort_unstable_by_key(|q| q.object);
-        let mut builder = UnifiedVolumeBuilder::with_lex_map(&lex);
-        builder.push_block(0, &quins);
+        let mut builder = UnifiedVolumeBuilder::with_lex_map(&lex)
+            .map_err(|e| format!("build Q42LEX for helper: {e:?}"))?;
+        builder
+            .push_block(0, &quins)
+            .map_err(|e| format!("build canonical Q42 helper: {e}"))?;
         builder
             .finish(&helper_path)
             .map_err(|e| format!("write {}: {e}", helper_path.display()))?;
@@ -351,7 +354,8 @@ fn make_quin(
         object,
         context,
         metadata,
-        parity: subject ^ predicate ^ object ^ context,
+        // Five-field ECC: same fold as NQuin::calculate_parity (metadata included).
+        parity: crate::NQuin::calculate_parity(subject, predicate, object, context, metadata),
     }
 }
 
@@ -430,6 +434,11 @@ mod tests {
         assert!(std::fs::read(&path).unwrap().starts_with(&Q42_MAGIC));
         let volume = Q42Volume::open(&path).unwrap();
         assert_eq!({ volume.header().version }, Q42_VERSION_V3);
+        volume
+            .verify_all_blocks()
+            .expect("canonical helper must pass five-field ECC + BIDX");
+        assert!(volume.header().flags & crate::q42_volume::FLAG_FIELD_POSTINGS != 0);
+        assert!(volume.header().flags & crate::q42_volume::FLAG_FIELD_RANGES != 0);
         assert_eq!(ModelHelper::load_beside_p64(&p64).unwrap(), Some(h));
     }
 

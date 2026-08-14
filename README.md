@@ -25,8 +25,12 @@ human-controlled applications.
 
 ### Semantic graph and query engine
 
-- Compact 48-byte `NQuin` records and memory-mapped `.q42` ledgers provide deterministic,
-  bounded graph storage without requiring a cloud database.
+- Compact 48-byte `NQuin` records and memory-mapped **unified Q42 v3** volumes
+  (`Q42\0`, 256-byte header) provide deterministic, bounded graph storage. Lexicon,
+  object-range BIDX, optional field-range/postings indexes, and LZ4 SuperBlocks live
+  **inside** the single `.q42` file. There is no sibling `.c.q42` or `.q42.lex` on new
+  writes. Public magnets fail closed unless the volume is affirmatively Permissive
+  Commons; Sanctuary / personal / medical volumes cannot mint a public hash address.
 - The live SPARQL engine supports SELECT, ASK, CONSTRUCT, DESCRIBE, named graphs,
   SPARQL-Star, OPTIONAL, UNION, MINUS, BIND, aggregates, sorting, full transitive property
   paths, governed UPDATE, and local or explicitly requested HTTP federation.
@@ -122,7 +126,8 @@ Full build instructions, CLI reference, and benchmark guide: [docs/manuals/DEVEL
 
 ## Current status
 
-**0.0.25 (active branch)** — active development, pre-release.
+**0.0.30 (active branch)** — active development, pre-release. Unified Q42 v3 is the
+only new-write graph container.
 
 Recent verification of the implemented surfaces includes:
 
@@ -154,7 +159,8 @@ capabilities, and remaining pre-v0.1 work, see the
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Full technical architecture — Quin bit layout, all modalities, inference stack, every module |
 | [docs/manuals/qualia_db_functionality_manual.md](docs/manuals/qualia_db_functionality_manual.md) | Per-crate functionality manual — what each part of the workspace actually does today |
 | [docs/manuals/DEVELOPMENT.md](docs/manuals/DEVELOPMENT.md) | Build, test, benchmark, CLI reference, cross-compilation |
-| [docs/release-targets.md](docs/release-targets.md) | Feature status across all five release targets (Browser, Mobile PWA, CLI, Desktop, Mobile Native) |
+| [docs/progress-0.0.30.html](docs/progress-0.0.30.html) | 0.0.30 progress — Q42 v3 volumes, Pages, desktop |
+| [docs/manuals/standards/q42-format-internal-draft.md](docs/manuals/standards/q42-format-internal-draft.md) | Canonical Q42 v3 physical layout (48-byte NQuin, 40,960-byte SuperBlock, 256-byte header) |
 | [docs/manuals/qapps_specification.md](docs/manuals/qapps_specification.md) | QApp manifest spec — build apps for the Webizen platform |
 | [CHANGELOG.md](CHANGELOG.md) | Release history |
 | [AGENTS.md](AGENTS.md) / [CLAUDE.md](CLAUDE.md) | AI agent orientation for contributors |

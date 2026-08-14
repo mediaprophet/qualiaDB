@@ -106,7 +106,7 @@ pub fn remote_mcp_infer(
     let resp = match transport {
         McpTransport::Tcp { host, port } => call_tcp(host, *port, &req)?,
         McpTransport::Stdio { command, args } => call_stdio(command, args, &req)?,
-        McpTransport::Http { url } => call_http(url, &req)?,
+        McpTransport::Http { url, credential_id } => call_http(url, credential_id.as_deref(), &req)?,
     };
     parse_infer_response(&resp)
 }
@@ -198,17 +198,27 @@ fn call_stdio(
     found.ok_or_else(|| "no JSON-RPC response from stdio MCP server".to_string())
 }
 
-fn call_http(url: &str, req: &serde_json::Value) -> Result<serde_json::Value, String> {
+fn call_http(
+    url: &str,
+    credential_id: Option<&str>,
+    req: &serde_json::Value,
+) -> Result<serde_json::Value, String> {
     let client = reqwest::blocking::Client::builder()
         .timeout(Duration::from_secs(180))
         .build()
         .map_err(|e| e.to_string())?;
-    let resp = client
+    let mut request = client
         .post(url)
         .header("content-type", "application/json")
         .header("accept", "application/json")
-        .json(req)
-        .send()
+        .json(req);
+    if let Some(connection) = credential_id.filter(|value| !value.trim().is_empty()) {
+        // The credential exists only in the platform keychain and is read at
+        // dispatch time after the caller has obtained consent.
+        let secret = crate::provider_credentials::bearer_credential(connection)?;
+        request = request.bearer_auth(secret);
+    }
+    let resp = request.send()
         .map_err(|e| format!("http post: {e}"))?;
     let status = resp.status();
     let text = resp.text().map_err(|e| e.to_string())?;
@@ -217,6 +227,29 @@ fn call_http(url: &str, req: &serde_json::Value) -> Result<serde_json::Value, St
         return Err(format!("remote MCP HTTP {status}: {snippet}"));
     }
     serde_json::from_str(&text).map_err(|e| format!("parse http json: {e}"))
+}
+
+/// Test an MCP endpoint without asking it to generate text.  It sends the
+/// standard `tools/list` request and only reports that a response was received.
+pub fn remote_mcp_probe(transport: &McpTransport) -> Result<usize, String> {
+    let req = serde_json::json!({
+        "jsonrpc": "2.0", "id": 1, "method": "tools/list", "params": {}
+    });
+    let response = match transport {
+        McpTransport::Tcp { host, port } => call_tcp(host, *port, &req)?,
+        McpTransport::Stdio { command, args } => call_stdio(command, args, &req)?,
+        McpTransport::Http { url, credential_id } => call_http(url, credential_id.as_deref(), &req)?,
+    };
+    if let Some(error) = response.get("error") {
+        let message = error.get("message").and_then(|value| value.as_str()).unwrap_or("MCP error");
+        return Err(format!("MCP tools/list failed: {message}"));
+    }
+    let tools = response
+        .get("result")
+        .and_then(|result| result.get("tools"))
+        .and_then(|tools| tools.as_array())
+        .ok_or_else(|| "MCP tools/list response had no tools array".to_string())?;
+    Ok(tools.len())
 }
 
 #[cfg(test)]

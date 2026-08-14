@@ -143,6 +143,11 @@ scripts/
 !scripts/
 scripts/*
 !scripts/build_frontend.sh
+!scripts/build_frontend.ps1
+!scripts/fetch_anatomy_packs_release.sh
+!scripts/sync_docs_version.py
+!scripts/fetch_wordnet_release.sh
+!scripts/fetch_wordnet_release.ps1
 
 # Build/debug error logs (PowerShell redirection output — UTF-16, not source)
 *_errors.json
@@ -236,3 +241,16 @@ assets/ccf/
 # untracked here; the ACTIVE signing key lives only in GitHub Actions secrets.
 *.key
 tauri_updater.key.pub
+
+# Local browser/WebGPU diagnostics. Supported source lives in tools/diagnostics;
+# these are machine-specific installs, logs, and generated evidence only.
+/node_modules/
+/build-logs/
+/debug.log
+/single-test-result.json
+/test-output.txt
+/test-wasm-results.json
+/templog-codex.md
+/experiments/inference-lab/auto-bench-browser.log
+/experiments/inference-lab/artifacts/debug-*/
+/experiments/inference-lab/artifacts/raw-*/

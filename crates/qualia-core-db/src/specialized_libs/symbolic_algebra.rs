@@ -444,13 +444,14 @@ fn push_node(
     metadata: u64,
 ) -> usize {
     let idx = out.len();
+    let subject = idx as u64;
     out.push(NQuin {
-        subject: idx as u64,
+        subject,
         predicate,
         object,
         context,
         metadata,
-        parity: 0,
+        parity: NQuin::calculate_parity(subject, predicate, object, context, metadata),
     });
     idx
 }
@@ -905,6 +906,10 @@ mod tests {
         let e = parse("x^2 + 3*x + 2").unwrap();
         let quins = to_quins(&e);
         assert!(!quins.is_empty());
+        assert!(
+            quins.iter().all(|q| q.verify_ecc_parity()),
+            "CAS Quins must carry five-field ECC so a v3 volume verify can accept them"
+        );
         let back = from_quins(&quins).unwrap();
         assert_eq!(e, back);
 

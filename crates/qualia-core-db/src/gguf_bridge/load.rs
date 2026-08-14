@@ -441,17 +441,16 @@ impl QTensorEngine {
             return Err("KV cache allocation failed (layout or CPU mirror missing)".to_string());
         }
         self.gguf_mmap = Some(mmap);
-        // Part 3y: stage all layer weights to the GPU now (init time, before the TTFT clock),
-        // so the 219 MB upload is not charged to the first token's latency.
+        // Full eager upload — required for coherent decode (do not defer).
+        // REVIEW(wasm-mobile-2026-08-02 F6): accelerated/benchmark mode needs a
+        // fail-closed residency contract and receipt. Continuing here can silently
+        // demote the engine into the historical per-forward upload performance floor.
         if !self.mc8_upload_all_resident_weights(&index) {
             wlog("[MC8] eager resident weight upload skipped at init — will retry lazily");
         }
-        // Phase 5.3: also make the output/logits projection resident (eliminates the ~50 MB
-        // per-token re-upload in the decode argmax).
         if !self.mc8_upload_resident_logits(&index) {
             wlog("[MC8] resident logits projection skipped at init — per-token upload fallback");
         }
-        // Phase 5.4: norm weights resident (removes the per-layer norm write_buffer race).
         if !self.mc8_upload_resident_norms(&index) {
             wlog("[MC8] resident norm weights skipped at init — per-layer upload fallback");
         }
@@ -464,16 +463,7 @@ impl QTensorEngine {
             n_kv_head: self.hyperparams.effective_n_kv_head(),
             max_tensor_bytes: index.max_tensor_bytes,
             kv_cache_bytes,
-            directml_enabled: {
-                #[cfg(target_os = "windows")]
-                {
-                    self.dml.is_some()
-                }
-                #[cfg(not(target_os = "windows"))]
-                {
-                    false
-                }
-            },
+            directml_enabled: false,
         })
     }
 }

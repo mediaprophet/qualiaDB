@@ -68,7 +68,13 @@ pub enum McpTransport {
     /// A raw TCP endpoint (`host:port`).
     Tcp { host: String, port: u16 },
     /// A streamable-HTTP MCP endpoint.
-    Http { url: String },
+    Http {
+        url: String,
+        /// Optional OS-keychain connection ID. The bearer token itself is
+        /// never represented in the roster.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        credential_id: Option<String>,
+    },
     /// A locally-launched MCP server spoken to over stdio.
     Stdio { command: String, args: Vec<String> },
 }
@@ -99,6 +105,247 @@ pub enum AgentBackendSpec {
     },
 }
 
+/// The role played by a semantic tag in an agent's pointed study graph.
+/// Tags are declarative grounding hints and never confer data/tool authority.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum AgentSemanticFacet {
+    Classification,
+    Specialisation,
+    Geography,
+    Language,
+    Method,
+    Dataset,
+    Tool,
+    Constraint,
+}
+
+/// An ontology-addressable point in the agent's declared study graph.
+/// `broader_iri` links a specialization to its selected parent, giving a
+/// bounded path such as Researcher → History → Australian History.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct AgentSemanticTag {
+    pub iri: String,
+    pub label: String,
+    pub facet: AgentSemanticFacet,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub broader_iri: Option<String>,
+}
+
+/// Ontology-linked profile used to narrow routing and disclose an agent's
+/// declared scope.  The profile may recommend tools/datasets but permissions
+/// and tool allowlists remain separately authoritative.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub struct AgentSemanticProfile {
+    #[serde(default)]
+    pub tags: Vec<AgentSemanticTag>,
+}
+
+impl AgentSemanticProfile {
+    /// Short human/model-readable focus terms used by ontology routing.  This
+    /// is bounded and cold-path only; it never loads or exports a dataset.
+    pub fn focus_terms(&self) -> Vec<String> {
+        self.tags
+            .iter()
+            .map(|tag| tag.label.trim().to_ascii_lowercase())
+            .filter(|label| !label.is_empty())
+            .take(32)
+            .collect()
+    }
+
+    pub fn briefing(&self) -> String {
+        if self.tags.is_empty() {
+            return String::new();
+        }
+        let mut lines = Vec::new();
+        lines.push("[Agent semantic study profile — use as a bounded routing focus; it does not grant permissions]".to_string());
+        for tag in self.tags.iter().take(32) {
+            let facet = match tag.facet {
+                AgentSemanticFacet::Classification => "classification",
+                AgentSemanticFacet::Specialisation => "specialisation",
+                AgentSemanticFacet::Geography => "geography",
+                AgentSemanticFacet::Language => "language",
+                AgentSemanticFacet::Method => "method",
+                AgentSemanticFacet::Dataset => "dataset",
+                AgentSemanticFacet::Tool => "tool capability",
+                AgentSemanticFacet::Constraint => "constraint",
+            };
+            lines.push(format!("- {facet}: {} ({})", tag.label, tag.iri));
+        }
+        lines.join("\n")
+    }
+}
+
+/// Conversation material an agent is permitted to receive for a turn.
+///
+/// This is deliberately narrower than the session itself.  Selecting an agent
+/// in a conversation never grants it the entire transcript by implication.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum ConversationAccess {
+    None,
+    #[default]
+    AddressedMessage,
+    SessionSummary,
+    PermittedHistory,
+}
+
+/// Whether graph/retrieval results may be included in an agent context manifest.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum RetrievalAccess {
+    None,
+    #[default]
+    PermittedScopes,
+}
+
+/// Whether files selected in the conversation may enter an agent context manifest.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum AttachmentAccess {
+    None,
+    MetadataOnly,
+    #[default]
+    PermittedAttachments,
+}
+
+/// Default visibility of an agent's completed answer.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum ContextVisibility {
+    #[default]
+    OwnerOnly,
+    NamedAgents,
+    SessionParticipants,
+}
+
+/// Directional context contract for a named agent.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct AgentContextPolicy {
+    #[serde(default)]
+    pub conversation: ConversationAccess,
+    #[serde(default)]
+    pub retrieval: RetrievalAccess,
+    #[serde(default)]
+    pub attachments: AttachmentAccess,
+    /// Stable roster slugs whose *completed summaries* may be supplied to this agent.
+    /// Empty means no other agent output is included.
+    #[serde(default)]
+    pub allowed_source_agents: Vec<String>,
+    #[serde(default)]
+    pub default_visibility: ContextVisibility,
+    /// Stable roster slugs permitted to receive this agent's output as context.
+    #[serde(default)]
+    pub allowed_recipient_agents: Vec<String>,
+    #[serde(default)]
+    pub may_share_raw_prompt: bool,
+    #[serde(default)]
+    pub may_share_attachments: bool,
+    #[serde(default)]
+    pub may_share_graph_records: bool,
+    #[serde(default = "default_share_provenance")]
+    pub may_share_provenance: bool,
+    /// Require a person to review a turn-specific context manifest before dispatch.
+    #[serde(default)]
+    pub require_turn_confirmation: bool,
+}
+
+const fn default_share_provenance() -> bool {
+    true
+}
+
+impl Default for AgentContextPolicy {
+    fn default() -> Self {
+        Self {
+            conversation: ConversationAccess::AddressedMessage,
+            retrieval: RetrievalAccess::PermittedScopes,
+            attachments: AttachmentAccess::PermittedAttachments,
+            allowed_source_agents: Vec::new(),
+            default_visibility: ContextVisibility::OwnerOnly,
+            allowed_recipient_agents: Vec::new(),
+            may_share_raw_prompt: false,
+            may_share_attachments: false,
+            may_share_graph_records: false,
+            may_share_provenance: true,
+            require_turn_confirmation: false,
+        }
+    }
+}
+
+/// Per-agent data boundary.  An empty allowlist means the agent may use only
+/// the ontology scopes already admitted to its chat session; a non-empty list
+/// further intersects that session scope.  It never widens access.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub struct AgentDataPolicy {
+    /// Installed ontology/data-source IDs this agent may retrieve from.
+    /// Stable IDs are used rather than labels so a rename cannot widen access.
+    #[serde(default)]
+    pub allowed_ontology_ids: Vec<String>,
+}
+
+/// Residency preference for a local model selected by an agent.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum ModelResidencyPreference {
+    #[default]
+    OnDemand,
+    KeepWarm,
+    Pinned,
+}
+
+/// Scheduler priority for work requested through an agent.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum AgentJobPriority {
+    #[default]
+    Interactive,
+    Normal,
+    Background,
+}
+
+/// Consent required before an agent may use its configured remote backend.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum RemoteConsentPolicy {
+    Never,
+    #[default]
+    PerTurn,
+    Preapproved,
+}
+
+/// Per-agent scheduler and placement policy.  It describes a preference, not a
+/// reservation: the runtime may decline a pinned/keep-warm request when the
+/// caller's device budget cannot safely admit it.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct AgentExecutionPolicy {
+    #[serde(default)]
+    pub residency: ModelResidencyPreference,
+    #[serde(default)]
+    pub priority: AgentJobPriority,
+    #[serde(default = "default_max_parallel_turns")]
+    pub max_parallel_turns: u8,
+    #[serde(default)]
+    pub remote_consent: RemoteConsentPolicy,
+    #[serde(default)]
+    pub allow_scheduled_runs: bool,
+}
+
+const fn default_max_parallel_turns() -> u8 {
+    1
+}
+
+impl Default for AgentExecutionPolicy {
+    fn default() -> Self {
+        Self {
+            residency: ModelResidencyPreference::OnDemand,
+            priority: AgentJobPriority::Interactive,
+            max_parallel_turns: 1,
+            remote_consent: RemoteConsentPolicy::PerTurn,
+            allow_scheduled_runs: false,
+        }
+    }
+}
+
 /// A single agent in a principal's roster.
 ///
 /// Keyed by [`slug`](AgentDefinition::slug), a stable identifier that survives
@@ -127,6 +374,25 @@ pub struct AgentDefinition {
     /// How this agent's processed outcomes may be shared with peers.
     #[serde(default)]
     pub outcome_sharing: OutcomeSharing,
+    /// Pointed ontology-linked study graph: classification, specialization,
+    /// geographic/language scope, methods, datasets, tools and constraints.
+    #[serde(default)]
+    pub semantic_profile: AgentSemanticProfile,
+    /// Fine-grained, directional context contract.  Missing in pre-existing
+    /// roster files means the safe default above, preserving compatibility.
+    #[serde(default)]
+    pub context_policy: AgentContextPolicy,
+    /// Narrower per-agent data-source boundary, intersected with session
+    /// permissions at inference time.
+    #[serde(default)]
+    pub data_policy: AgentDataPolicy,
+    /// Model residency and remote-consent preferences, interpreted by the job
+    /// scheduler rather than by the inference hot path.
+    #[serde(default)]
+    pub execution_policy: AgentExecutionPolicy,
+    /// Persisted schema marker for future non-breaking roster migrations.
+    #[serde(default)]
+    pub roster_version: u16,
     /// Whether the agent is currently available for invocation.
     pub enabled: bool,
     /// Unix seconds at which this agent was first created.
@@ -158,6 +424,11 @@ impl AgentDefinition {
             allowed_mcp_tools: Vec::new(),
             max_sensitivity: SENSITIVITY_PUBLIC,
             outcome_sharing: OutcomeSharing::default(),
+            semantic_profile: AgentSemanticProfile::default(),
+            context_policy: AgentContextPolicy::default(),
+            data_policy: AgentDataPolicy::default(),
+            execution_policy: AgentExecutionPolicy::default(),
+            roster_version: 1,
             enabled: true,
             created_at_unix: now,
             updated_at_unix: now,
@@ -204,6 +475,11 @@ pub fn default_local_agent() -> AgentDefinition {
         allowed_mcp_tools: Vec::new(),
         max_sensitivity: SENSITIVITY_LOCAL_DEFAULT,
         outcome_sharing: OutcomeSharing::default(),
+        semantic_profile: AgentSemanticProfile::default(),
+        context_policy: AgentContextPolicy::default(),
+        data_policy: AgentDataPolicy::default(),
+        execution_policy: AgentExecutionPolicy::default(),
+        roster_version: 1,
         enabled: true,
         created_at_unix: now,
         updated_at_unix: now,
@@ -290,6 +566,7 @@ pub fn upsert_agent_at(
     mut agent: AgentDefinition,
     now_unix: u64,
 ) -> Result<(), String> {
+    validate_agent(&agent)?;
     agent.updated_at_unix = now_unix;
     let mut roster = load_roster(storage_root);
     if let Some(slot) = roster.iter_mut().find(|a| a.slug == agent.slug) {
@@ -300,6 +577,75 @@ pub fn upsert_agent_at(
         roster.push(agent);
     }
     save_roster(storage_root, &roster)
+}
+
+/// Validate values that cross the roster/UI boundary.  This is intentionally
+/// a cold-path check: it protects stable mention keys and prevents a malformed
+/// execution preference from becoming a scheduler ambiguity.
+pub fn validate_agent(agent: &AgentDefinition) -> Result<(), String> {
+    let slug = agent.slug.trim();
+    if slug.is_empty() || slug.len() > 64 {
+        return Err("agent slug must contain 1-64 characters".to_string());
+    }
+    if !slug
+        .bytes()
+        .all(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit() || byte == b'-')
+    {
+        return Err(
+            "agent slug may contain only lowercase letters, digits, and hyphens".to_string(),
+        );
+    }
+    if agent.display_name.trim().is_empty() || agent.display_name.chars().count() > 96 {
+        return Err("agent name must contain 1-96 characters".to_string());
+    }
+    if agent.system_prompt.len() > 32 * 1024 {
+        return Err("agent instructions exceed the 32 KiB limit".to_string());
+    }
+    if agent.execution_policy.max_parallel_turns == 0
+        || agent.execution_policy.max_parallel_turns > 4
+    {
+        return Err("agent max_parallel_turns must be between 1 and 4".to_string());
+    }
+    if agent.semantic_profile.tags.len() > 32 {
+        return Err("agent semantic profile supports at most 32 tags".to_string());
+    }
+    for tag in &agent.semantic_profile.tags {
+        if tag.iri.trim().is_empty() || tag.iri.len() > 256 {
+            return Err(
+                "each agent semantic tag needs an IRI of at most 256 characters".to_string(),
+            );
+        }
+        if tag.label.trim().is_empty() || tag.label.chars().count() > 96 {
+            return Err("each agent semantic tag needs a label of 1-96 characters".to_string());
+        }
+        if tag
+            .broader_iri
+            .as_deref()
+            .is_some_and(|iri| iri.trim().is_empty() || iri.len() > 256)
+        {
+            return Err("agent semantic tag broader IRI is invalid".to_string());
+        }
+    }
+    if agent.data_policy.allowed_ontology_ids.len() > 32 {
+        return Err("agent data policy supports at most 32 ontology IDs".to_string());
+    }
+    if agent.data_policy.allowed_ontology_ids.iter().any(|id| {
+        id.trim().is_empty() || id.len() > 160 || id.contains(['/', '\\', '\0'])
+    }) {
+        return Err("agent data policy has an invalid ontology ID".to_string());
+    }
+    match &agent.backend {
+        AgentBackendSpec::LocalEngine { model_id } => {
+            if model_id.as_deref().is_some_and(|id| id.trim().is_empty()) {
+                return Err("local agent model_id must not be blank".to_string());
+            }
+        }
+        AgentBackendSpec::RemoteMcp { endpoint, .. } if endpoint.trim().is_empty() => {
+            return Err("remote agent endpoint is required".to_string());
+        }
+        AgentBackendSpec::RemoteMcp { .. } => {}
+    }
+    Ok(())
 }
 
 /// Remove the agent with the given `slug` from the stored roster, then persist.
@@ -344,6 +690,11 @@ mod tests {
             allowed_mcp_tools: vec!["search".to_string()],
             max_sensitivity: SENSITIVITY_PUBLIC,
             outcome_sharing: OutcomeSharing::default(),
+            semantic_profile: AgentSemanticProfile::default(),
+            context_policy: AgentContextPolicy::default(),
+            data_policy: AgentDataPolicy::default(),
+            execution_policy: AgentExecutionPolicy::default(),
+            roster_version: 1,
             enabled: true,
             created_at_unix: 100,
             updated_at_unix: 100,
@@ -376,6 +727,7 @@ mod tests {
                 endpoint: "e".to_string(),
                 transport: McpTransport::Http {
                     url: "https://x/mcp".to_string(),
+                    credential_id: None,
                 },
                 infer_tool: None,
                 model: None,
@@ -386,7 +738,65 @@ mod tests {
         assert!(a.allowed_mcp_tools.is_empty());
         assert_eq!(a.max_sensitivity, SENSITIVITY_PUBLIC);
         assert_eq!(a.outcome_sharing, OutcomeSharing::default());
+        assert_eq!(a.context_policy, AgentContextPolicy::default());
+        assert_eq!(a.execution_policy, AgentExecutionPolicy::default());
+        assert!(a.semantic_profile.tags.is_empty());
         assert_eq!(a.created_at_unix, a.updated_at_unix);
+    }
+
+    #[test]
+    fn legacy_roster_without_new_policies_loads_safe_defaults() {
+        let dir = tempdir().unwrap();
+        save_blob(
+            dir.path(),
+            r#"[{"slug":"legacy","display_name":"Legacy","description":"x","backend":{"local_engine":{"model_id":null}},"system_prompt":"","allowed_mcp_tools":[],"max_sensitivity":0,"outcome_sharing":{"visibility":"owner_only","share_provenance":true,"share_model_attribution":false,"allow_peer_llm_context":false,"allowed_dids":[]},"enabled":true,"created_at_unix":1,"updated_at_unix":1}]"#,
+        );
+        let legacy = get_agent(dir.path(), "legacy").unwrap();
+        assert_eq!(legacy.context_policy, AgentContextPolicy::default());
+        assert_eq!(legacy.execution_policy, AgentExecutionPolicy::default());
+        assert_eq!(legacy.roster_version, 0);
+    }
+
+    #[test]
+    fn rejects_invalid_stable_slug_and_parallelism() {
+        let dir = tempdir().unwrap();
+        let mut a = default_local_agent();
+        a.slug = "Not stable".to_string();
+        assert!(upsert_agent(dir.path(), a).is_err());
+
+        let mut a = default_local_agent();
+        a.execution_policy.max_parallel_turns = 5;
+        assert!(upsert_agent(dir.path(), a).is_err());
+    }
+
+    #[test]
+    fn semantic_profile_is_bounded_and_produces_routing_focus() {
+        let mut agent = default_local_agent();
+        agent.semantic_profile.tags = vec![
+            AgentSemanticTag {
+                iri: "q42:Researcher".to_string(),
+                label: "Researcher".to_string(),
+                facet: AgentSemanticFacet::Classification,
+                broader_iri: None,
+            },
+            AgentSemanticTag {
+                iri: "q42:AustralianHistory".to_string(),
+                label: "Australian History".to_string(),
+                facet: AgentSemanticFacet::Specialisation,
+                broader_iri: Some("q42:History".to_string()),
+            },
+        ];
+        assert_eq!(
+            agent.semantic_profile.focus_terms(),
+            vec!["researcher", "australian history"]
+        );
+        assert!(
+            agent
+                .semantic_profile
+                .briefing()
+                .contains("Australian History")
+        );
+        validate_agent(&agent).unwrap();
     }
 
     #[test]
@@ -448,6 +858,7 @@ mod tests {
                 "http-agent",
                 McpTransport::Http {
                     url: "https://x/mcp".to_string(),
+                    credential_id: None,
                 },
             ),
             remote(
@@ -472,6 +883,7 @@ mod tests {
             "worker",
             McpTransport::Http {
                 url: "u".to_string(),
+                credential_id: None,
             },
         );
         a.created_at_unix = 100;
@@ -490,6 +902,7 @@ mod tests {
             "worker",
             McpTransport::Http {
                 url: "u2".to_string(),
+                credential_id: None,
             },
         );
         edited.display_name = "renamed".to_string();
@@ -517,6 +930,7 @@ mod tests {
                 "gone",
                 McpTransport::Http {
                     url: "u".to_string(),
+                    credential_id: None,
                 },
             ),
             1,

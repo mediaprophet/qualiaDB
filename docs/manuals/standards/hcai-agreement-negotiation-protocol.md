@@ -565,7 +565,7 @@ Node protects itself; HCAI-ANP is only how a Node lets an agent in.
 
 1. Should `requiredProof` permit suites beyond `Ed25519Signature2020` (e.g. a
    post-quantum suite) in v1, given `QUANTUM_RESEARCH_SPEC.md`? *(Update: as of
-   `qualia-core-db` 0.0.17 a real post-quantum signature primitive — ML-DSA-65
+   `qualia-core-db` 0.0.28 a real post-quantum signature primitive — ML-DSA-65
    (FIPS-204, via the `fips204` crate in `fiduciary_crypto.rs`) — is implemented and
    available. This question is therefore no longer blocked on the primitive existing;
    the remaining work is defining a VC proof suite that binds it and a multi-Quin

@@ -9,8 +9,10 @@
  *     from './js/qualia-wasm-runtime.js';
  *
  *   const mod = await initQualiaWasm();
- *   console.log(getEngineVersion(mod)); // "0.0.18"
+ *   console.log(getEngineVersion(mod)); // "0.0.30"
  */
+
+import { fetchWasmBinary } from './wasm-fetch.js';
 
 let _mod = null;
 let _initPromise = null;
@@ -46,10 +48,7 @@ export async function initQualiaWasm(opts = {}) {
         const paths = resolvePaths(opts);
         const tryInit = async (jsUrl, wasmUrl) => {
             const module = await import(jsUrl);
-            const response = await fetch(wasmUrl);
-            if (!response.ok) {
-                throw new Error(`WASM fetch failed: ${response.status} ${wasmUrl}`);
-            }
+            const response = await fetchWasmBinary(wasmUrl);
             await module.default({ module_or_path: response });
             return module;
         };

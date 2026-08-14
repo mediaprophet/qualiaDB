@@ -616,6 +616,9 @@ mod cpu_ops;
 pub(crate) use cpu_ops::*;
 #[cfg(not(target_arch = "wasm32"))]
 mod pipeline_cache;
+/// Prepared CPU execution floor for browser WASM. This backend owns no wgpu
+/// objects and remains available when the browser exposes no WebGPU adapter.
+pub mod wasm_cpu;
 #[cfg(not(target_arch = "wasm32"))]
 pub(crate) use pipeline_cache::*;
 
@@ -623,6 +626,8 @@ pub(crate) use pipeline_cache::*;
 // pub(crate) so they call across modules freely; types/imports arrive via each file's `use super::*`.
 mod async_dispatch;
 mod attention;
+#[cfg(target_arch = "wasm32")]
+mod browser;
 #[cfg(all(not(target_arch = "wasm32"), feature = "cuda"))]
 mod cuda_decode_plan;
 /// Hard cap on the KV context window a decode plan may request. Declared here rather than in the
@@ -643,6 +648,9 @@ mod prefill_async;
 #[cfg(not(target_arch = "wasm32"))]
 mod resident_decode;
 mod verify_arena;
+/// Cooperative browser yields + init-status for WASM LLM boot (phones).
+#[cfg(target_arch = "wasm32")]
+pub(crate) mod wasm_yield;
 
 /// MC8 pt3e: max abs error over the first `n` elements.
 #[cfg(all(target_arch = "wasm32", feature = "wasm-llm-diagnostics"))]
@@ -1086,6 +1094,10 @@ pub(crate) fn stack_gemm_quant(
         ));
         return false;
     }
+    #[cfg(target_arch = "wasm32")]
+    if info.ggml_type == crate::ggml_quants::GGML_TYPE_Q8_0 {
+        return wasm_cpu::q8_0_gemv_into(raw, input, out, n_in, n_out);
+    }
     let mut row = [0f32; MAX_STACK_GEMM_IN];
     for i in 0..n_out {
         if crate::ggml_quants::dequant_matrix_row_into(raw, info, i, &mut row[..n_in]).unwrap_or(0)
@@ -1200,17 +1212,11 @@ pub struct QTensorEngine {
     // A1a (STELLAR §A): persistent GPU top-k output-projection pipeline + small candidate buffers.
     // Lets the output logits stay on-GPU (top-k over them, read back only K pairs) instead of the
     // 196 KB/token full-logit readback. Created once in `ensure_gemm_buffers`.
-    #[cfg(not(target_arch = "wasm32"))]
     output_topk_pipeline: Option<wgpu::ComputePipeline>,
-    #[cfg(not(target_arch = "wasm32"))]
     output_topk_bind_layout: Option<wgpu::BindGroupLayout>,
-    #[cfg(not(target_arch = "wasm32"))]
     topk_cand_val_buf: Option<wgpu::Buffer>,
-    #[cfg(not(target_arch = "wasm32"))]
     topk_cand_idx_buf: Option<wgpu::Buffer>,
-    #[cfg(not(target_arch = "wasm32"))]
     topk_cand_staging: Option<wgpu::Buffer>,
-    #[cfg(not(target_arch = "wasm32"))]
     topk_params_buf: Option<wgpu::Buffer>,
     /// MC8 FFN / attention scratch (gate, up, o_proj).
     gemm_aux_buf: Option<wgpu::Buffer>,
@@ -1356,21 +1362,45 @@ thread_local! {
     pub static WASM_ENGINE_INSTANCE: std::cell::RefCell<Option<QTensorEngine>> = std::cell::RefCell::new(None);
 }
 
+/// Boot the resident WASM WebGPU engine from GGUF or P64 bytes.
+///
+/// Uses the **original sync adopt path** (full weight + logits + norm upload) so
+/// decode stays coherent. Yields only between major phases so the UI can paint
+/// status; weight upload itself is intentionally one blocking stretch with a
+/// clear status line first (phones will freeze briefly — that is correct).
 #[cfg(target_arch = "wasm32")]
 pub async fn initialize_webgpu_engine(model_data: std::sync::Arc<[u8]>) -> Result<(), String> {
+    use wasm_yield::{clear_init_status, phase, set_init_status};
+
     // Use `try_new()` (not `new_async()`) so a missing/incompatible WebGPU adapter
     // surfaces as a rejected promise the JS layer can display, rather than an
     // `.expect()` panic that aborts the wasm module and leaves the init promise
     // pending forever (the "stuck on Initialising…" hang).
+    phase("Requesting WebGPU adapter + device…").await;
     let mut engine = QTensorEngine::try_new().await?;
+    phase("WebGPU device + pipelines ready — loading model (weights may take 1–3 min)…").await;
+
     // Dual-format boot gate. P64 owns the canonical lowercase four-byte
-    // `p64\0` magic.
+    // `p64\0` magic. Sync adopt is the proven coherent path (do not defer uploads).
     if crate::p64_weight::has_p64_magic(&model_data) {
+        set_init_status(format!(
+            "Loading P64 + uploading GPU weights ({:.0} MB)…",
+            model_data.len() as f64 / (1024.0 * 1024.0)
+        ));
+        // One yield so the status line paints before the long sync upload freezes the tab.
+        wasm_yield::yield_to_browser().await;
         engine.adopt_resident_p64(model_data)?;
     } else {
+        set_init_status(format!(
+            "Loading GGUF + uploading GPU weights ({:.0} MB)…",
+            model_data.len() as f64 / (1024.0 * 1024.0)
+        ));
+        wasm_yield::yield_to_browser().await;
         engine.adopt_resident_mmap(model_data)?;
     }
+    phase("Engine resident — ready").await;
     WASM_ENGINE_INSTANCE.with(|g| *g.borrow_mut() = Some(engine));
+    clear_init_status();
     Ok(())
 }
 
