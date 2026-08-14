@@ -1,8 +1,0 @@
-Q4_K SoA GEMV microbench
-  shape:     256 x 32
-  cpu_ms:    0.0155  (1.06 GFLOP/s)
-  cuda_ms:   1.9621
-  cuda_ok:   true
-  max_abs:   0.000000e0
-  max_ulp:   0
-  cuda differential max_abs=0.000000e0 max_ulp=0 weights=1

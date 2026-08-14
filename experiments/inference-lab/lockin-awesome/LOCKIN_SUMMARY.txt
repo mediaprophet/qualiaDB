@@ -1,7 +1,0 @@
-LOCK-IN SUMMARY (awesome 2026-07-10)
-  smol fast-verify: ~63 tok/s   ? default interactive
-  smol portable:    ~27 tok/s
-  3B cuda:          ~7 tok/s    ? best 3B SoA (use QUALIA_INFERENCE_MODE=cuda)
-  3B portable:      ~1.6 tok/s  (short-run was EOS-biased; fixed-token now)
-  Ollama 3B:        ~72 tok/s   (still ~10× — next: residual-on-CUDA + stronger Q4)
-  Apply: . .\experiments\inference-lab\lockin-awesome\apply-best.ps1
