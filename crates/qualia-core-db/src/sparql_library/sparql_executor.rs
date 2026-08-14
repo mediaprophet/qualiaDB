@@ -78,6 +78,180 @@ pub struct Q42RangeVolumeSetTripleSelectPage {
     pub next_cursor: Option<Q42RangeVolumeSetTripleSelectCursor>,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct Q42RangeTriplePattern {
+    pub subject: u64,
+    pub predicate: u64,
+    pub object: u64,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct Q42RangeNestedLoopJoinPlan {
+    pub left: Q42RangeTriplePattern,
+    pub right: Q42RangeTriplePattern,
+}
+
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub struct Q42RangeNestedLoopJoinState {
+    pub left_scan: Q42RangeSparqlCursor,
+    pub right_scan: Q42RangeSparqlCursor,
+    pub left_count: usize,
+    pub left_index: usize,
+    pub left_exhausted: bool,
+    pub right_active: bool,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct Q42RangeNestedLoopJoinPage {
+    pub returned: usize,
+    pub done: bool,
+}
+
+impl Q42RangeNestedLoopJoinPlan {
+    pub fn from_execution_plan(plan: &ExecutionPlan) -> Result<Self, String> {
+        if plan.operator_count == 0 || plan.root_operator as usize >= plan.operator_count as usize {
+            return Err("range join requires a non-empty execution plan".to_string());
+        }
+        let PhysicalOperatorType::NestedLoopJoin { left, right, .. } =
+            plan.operators[plan.root_operator as usize].operator_type
+        else {
+            return Err("range join currently requires a root NestedLoopJoin".to_string());
+        };
+        let triple = |operator: OperatorId| -> Result<Q42RangeTriplePattern, String> {
+            let Some(entry) = plan.operators.get(operator as usize) else {
+                return Err("range join input operator is out of bounds".to_string());
+            };
+            match entry.operator_type {
+                PhysicalOperatorType::TripleScan {
+                    subject,
+                    predicate,
+                    object,
+                } => Ok(Q42RangeTriplePattern {
+                    subject,
+                    predicate,
+                    object,
+                }),
+                _ => Err("range join currently requires TripleScan inputs".to_string()),
+            }
+        };
+        Ok(Self {
+            left: triple(left)?,
+            right: triple(right)?,
+        })
+    }
+}
+
+/// Execute a bounded page of a two-pattern nested-loop join. `left_rows` and
+/// `right_rows` remain owned by the caller across invocations; the state holds
+/// only fixed-size cursors and counts. The output buffer must be at least as
+/// large as the Quin scratch buffer so no right-page result is dropped.
+pub fn execute_range_nested_loop_join_page_into<S: crate::q42_volume::Q42RangeSource>(
+    volume: &crate::q42_volume::Q42RangeVolume<S>,
+    plan: Q42RangeNestedLoopJoinPlan,
+    ctx: &SparqlQueryContext,
+    state: &mut Q42RangeNestedLoopJoinState,
+    compressed: &mut [u8],
+    decoded: &mut [u8],
+    quin_scratch: &mut [NQuin],
+    left_rows: &mut [BindingRow],
+    right_rows: &mut [BindingRow],
+    out: &mut [BindingRow],
+) -> Result<Q42RangeNestedLoopJoinPage, String> {
+    if quin_scratch.is_empty()
+        || left_rows.len() < quin_scratch.len()
+        || right_rows.len() < quin_scratch.len()
+        || out.len() < quin_scratch.len()
+    {
+        return Err(
+            "range nested-loop join requires row buffers at least as large as Quin scratch"
+                .to_string(),
+        );
+    }
+    let mut returned = 0usize;
+    loop {
+        if returned + quin_scratch.len() > out.len() {
+            return Ok(Q42RangeNestedLoopJoinPage {
+                returned,
+                done: false,
+            });
+        }
+        if state.left_index >= state.left_count {
+            if state.left_exhausted {
+                return Ok(Q42RangeNestedLoopJoinPage {
+                    returned,
+                    done: true,
+                });
+            }
+            let page = execute_range_triple_page_into(
+                volume,
+                plan.left.subject,
+                plan.left.predicate,
+                plan.left.object,
+                None,
+                ctx,
+                &BindingRow::default(),
+                state.left_scan,
+                compressed,
+                decoded,
+                quin_scratch,
+                left_rows,
+            )?;
+            state.left_count = page.returned;
+            state.left_index = 0;
+            state.left_scan = page.next_cursor.unwrap_or_default();
+            state.left_exhausted = page.next_cursor.is_none();
+            state.right_active = false;
+            if state.left_count == 0 {
+                if state.left_exhausted {
+                    return Ok(Q42RangeNestedLoopJoinPage {
+                        returned,
+                        done: true,
+                    });
+                }
+                continue;
+            }
+        }
+        let input = left_rows[state.left_index];
+        let page = execute_range_triple_page_into(
+            volume,
+            plan.right.subject,
+            plan.right.predicate,
+            plan.right.object,
+            None,
+            ctx,
+            &input,
+            if state.right_active {
+                state.right_scan
+            } else {
+                Q42RangeSparqlCursor::default()
+            },
+            compressed,
+            decoded,
+            quin_scratch,
+            right_rows,
+        )?;
+        out[returned..returned + page.returned].copy_from_slice(&right_rows[..page.returned]);
+        returned += page.returned;
+        match page.next_cursor {
+            Some(next) => {
+                state.right_scan = next;
+                state.right_active = true;
+            }
+            None => {
+                state.left_index += 1;
+                state.right_scan = Q42RangeSparqlCursor::default();
+                state.right_active = false;
+            }
+        }
+        if returned + quin_scratch.len() > out.len() {
+            return Ok(Q42RangeNestedLoopJoinPage {
+                returned,
+                done: false,
+            });
+        }
+    }
+}
+
 impl Q42RangeTripleSelectPlan {
     pub fn from_execution_plan(plan: &ExecutionPlan) -> Result<Self, String> {
         if plan.operator_count == 0 || plan.root_operator as usize >= plan.operator_count as usize {
@@ -1957,5 +2131,90 @@ mod tests {
         .unwrap();
         assert_eq!(page.returned, 1);
         assert_eq!(rows[0].slots[0], None);
+    }
+
+    #[test]
+    fn range_nested_loop_join_resumes_without_a_resident_graph() {
+        let dir = tempfile::TempDir::new().unwrap();
+        let path = dir.path().join("range-join.q42");
+        let left = NQuin {
+            subject: 10,
+            predicate: 20,
+            object: 30,
+            context: 0,
+            metadata: 0,
+            parity: 0,
+        };
+        let right = NQuin {
+            subject: 30,
+            predicate: 40,
+            object: 50,
+            context: 0,
+            metadata: 0,
+            parity: 0,
+        };
+        crate::q42_volume::write_unified_volume(
+            &path,
+            &std::collections::HashMap::new(),
+            &[(left.object, right.object)],
+            &[vec![left, right]],
+        )
+        .unwrap();
+        let source = crate::q42_volume::LocalFileRangeSource::open(&path).unwrap();
+        let volume = crate::q42_volume::Q42RangeVolume::open(source).unwrap();
+        let mut context = SparqlQueryContext::new();
+        context.variable_count = 1;
+        let plan = Q42RangeNestedLoopJoinPlan {
+            left: Q42RangeTriplePattern {
+                subject: left.subject,
+                predicate: left.predicate,
+                object: 0,
+            },
+            right: Q42RangeTriplePattern {
+                subject: 0,
+                predicate: right.predicate,
+                object: right.object,
+            },
+        };
+        let mut compressed = [0u8; crate::q42_volume::MAX_COMPRESSED_SUPERBLOCK_SIZE];
+        let mut decoded = [0u8; crate::q42_volume::SUPERBLOCK_SIZE];
+        let mut quins = [NQuin::default(); 1];
+        let mut left_rows = [BindingRow::default(); 1];
+        let mut right_rows = [BindingRow::default(); 1];
+        let mut out = [BindingRow::default(); 1];
+        let mut state = Q42RangeNestedLoopJoinState::default();
+
+        let first = execute_range_nested_loop_join_page_into(
+            &volume,
+            plan,
+            &context,
+            &mut state,
+            &mut compressed,
+            &mut decoded,
+            &mut quins,
+            &mut left_rows,
+            &mut right_rows,
+            &mut out,
+        )
+        .unwrap();
+        assert_eq!(first.returned, 1);
+        assert_eq!(out[0].slots[0], Some(right.subject));
+        assert!(!first.done);
+
+        let final_page = execute_range_nested_loop_join_page_into(
+            &volume,
+            plan,
+            &context,
+            &mut state,
+            &mut compressed,
+            &mut decoded,
+            &mut quins,
+            &mut left_rows,
+            &mut right_rows,
+            &mut out,
+        )
+        .unwrap();
+        assert_eq!(final_page.returned, 0);
+        assert!(final_page.done);
     }
 }
