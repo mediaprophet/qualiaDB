@@ -180,28 +180,33 @@ jobs:
           bash scripts/prepare_schemaorg_benchmark.sh 30.0 current-https
 
       - name: Fetch Princeton WordNet from GitHub Release
+        # Optional: ~127 MB Release asset. Ontology Demo boots Schema.org 30.0
+        # from the committed docs/data/schemaorg volume. Do not fail the Pages
+        # deploy when WordNet is not published on the current tag.
+        continue-on-error: true
         run: |
-          bash scripts/fetch_wordnet_release.sh
-          test -f docs/data/wordnet/princeton.q42
-          test -f docs/playground/wordnet.q42
-          ls -lh docs/data/wordnet/princeton.q42 docs/playground/wordnet.q42
-          # Verify Q42 v3 magic so Pages never ships a stale HTML/404 body
-          python3 - <<'PY'
+          if bash scripts/fetch_wordnet_release.sh \
+            && test -f docs/data/wordnet/princeton.q42 \
+            && test -f docs/playground/wordnet.q42; then
+            ls -lh docs/data/wordnet/princeton.q42 docs/playground/wordnet.q42
+            python3 - <<'PY'
           import pathlib, sys
           p = pathlib.Path("docs/data/wordnet/princeton.q42")
           magic = p.read_bytes()[:4]
           if magic != b"Q42\x00":
               sys.exit(f"invalid Q42 magic in {p}: {magic!r}")
-          print(f"OK: {p.name} magic Q42\\\\0, size {p.stat().st_size:,} B")
+          print(f"OK: {p.name} magic Q42\\0, size {p.stat().st_size:,} B")
           PY
+          else
+            echo "::warning title=WordNet volume missing::princeton.q42 is not on this Release; Ontology Demo boots Schema.org 30.0"
+          fi
 
       # Ontology volume builds are intentionally SOFT (continue-on-error): each
       # runs `cargo run --release -p qualia-cli ingest`, a heavy compile that
-      # must never block a docs deploy, and the Ontology Demo degrades gracefully
-      # to its hard-gated Princeton WordNet dataset when a volume is absent. The
-      # "Verify ontology volumes" step below surfaces any missing group as a
-      # ::warning:: so soft failures are visible rather than silent. (Decision:
-      # WASM_PAGES_AUDIT §4.3.)
+      # must never block a docs deploy. The Ontology Demo boots Schema.org 30.0
+      # from the committed docs/data/schemaorg volume. The "Verify ontology
+      # volumes" step below surfaces any missing group as a ::warning:: so soft
+      # failures are visible rather than silent.
       - name: Build W3C ontology volumes for Ontology Demo
         continue-on-error: true
         run: |
@@ -250,7 +255,7 @@ jobs:
             if [ "$n" -gt 0 ]; then
               echo "ontology volumes: $grp = $n .q42 file(s)"
             else
-              echo "::warning title=Ontology volume missing::no .q42 volumes built for '$grp'; Ontology Demo falls back to WordNet"
+              echo "::warning title=Ontology volume missing::no .q42 volumes built for '$grp'; Ontology Demo still boots Schema.org 30.0"
               missing=$((missing + 1))
             fi
           done

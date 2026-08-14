@@ -260,7 +260,7 @@ jobs:
       - name: Build Qualia CLI and q42_comparative_bench
         run: cargo build --release -p qualia-cli
 
-      - name: Prepare Schema.org NT + q42 + c.q42 artifacts
+      - name: Prepare Schema.org NT + unified v3 .q42 artifacts
         run: bash scripts/prepare_schemaorg_benchmark.sh 30.0 current-https
 
       - name: Run Schema.org comparative harness (all engines)

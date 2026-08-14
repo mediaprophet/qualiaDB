@@ -17,7 +17,7 @@ if [[ -f "$CARGO_TOML" ]]; then
     PREFERRED_TAG="v${VER}"
   fi
 fi
-PREFERRED_TAG="${ANATOMY_RELEASE_TAG:-${PREFERRED_TAG:-v0.0.29}}"
+PREFERRED_TAG="${ANATOMY_RELEASE_TAG:-${PREFERRED_TAG:-v0.0.30}}"
 
 REPO="${QUALIA_GITHUB_REPO:-mediaprophet/qualiaDB}"
 OUT_DIR="$REPO_ROOT/docs/playground"
@@ -38,7 +38,7 @@ OPTIONAL=(
 )
 
 # Prefer current tag, then recent known anatomy-bearing releases.
-FALLBACK_TAGS=("$PREFERRED_TAG" "v0.0.28" "v0.0.27" "v0.0.26" "v0.0.24")
+FALLBACK_TAGS=("$PREFERRED_TAG" "v0.0.29" "v0.0.28" "v0.0.27" "v0.0.26" "v0.0.24")
 
 echo "=== Fetch anatomy packs from GitHub Release ==="
 echo "  Repo : $REPO"
