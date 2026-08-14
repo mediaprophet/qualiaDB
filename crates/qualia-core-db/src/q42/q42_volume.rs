@@ -959,6 +959,12 @@ impl Q42Volume {
     /// `bytemuck::cast_slice` the raw file will panic (`OutputSliceWouldHaveSlop`)
     /// because the file length is not a multiple of `QUIN_SIZE`. Use this instead.
     pub fn read_all_quins(&self) -> io::Result<Vec<crate::NQuin>> {
+        if self.volume_manifest()?.is_some() {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "Q42 logical root has no local graph blocks; open Q42VolumeSet or use read_q42_quins",
+            ));
+        }
         let rd = |b: &[u8], o: usize| u64::from_le_bytes(b[o..o + 8].try_into().unwrap());
         let mut out = Vec::new();
         let mut sb = vec![0u8; SUPERBLOCK_SIZE];
