@@ -67,7 +67,7 @@ GROUP_CONFIG = {
 
 def build_entries(group: str) -> list:
     cfg = GROUP_CONFIG[group]
-    catalog = json.loads((cfg["src"] / "catalog.json").read_text(encoding="utf-8"))
+    catalog = json.loads((cfg["src"] / "catalog.json").read_text(encoding="utf-8-sig"))
     built = []
     for entry in catalog.get("ontologies", []):
         if entry.get("domain"):
