@@ -165,11 +165,10 @@ jobs:
 
       # ── Persist results to the repo (so Pages picks them up) ──────────────────
       - name: Commit benchmark results
-        # Only persist results back to main. On any other ref (e.g. a
-        # workflow_dispatch against a feature branch) the benchmarks still run
-        # and upload artifacts, but MUST NOT push — pushing from a diverged
-        # branch would rebase that branch's commits onto main.
-        if: github.ref == 'refs/heads/main'
+        # Persist onto the branch that ran. Pages and the release line live on
+        # 0.0.30; main still gets weekly/scheduled numbers. Do not push from
+        # tags or arbitrary feature branches — that used to rebase them onto main.
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/0.0.30'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -178,8 +177,8 @@ jobs:
             || git commit -m "chore: update benchmark results [skip ci]"
           # During rebase our just-generated results are the replayed ("theirs")
           # side; prefer them on any conflict so the latest numbers win.
-          git pull --rebase --autostash -X theirs origin main
-          git push origin main
+          git pull --rebase --autostash -X theirs origin "${{ github.ref_name }}"
+          git push origin "HEAD:${{ github.ref_name }}"
 
       - name: Upload comparative results artifact
         uses: actions/upload-artifact@v6
@@ -272,18 +271,15 @@ jobs:
             --output docs/comparative_benchmark_results.schemaorg-30-current-https.json
 
       - name: Commit Schema.org benchmark results
-        # See the note above: only push results on main; never from a diverged
-        # dispatched branch.
-        if: github.ref == 'refs/heads/main'
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/0.0.30'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add docs/comparative_benchmark_results.schemaorg-30-current-https.json
           git diff --cached --quiet \
             || git commit -m "chore: update Schema.org comparative benchmark results [skip ci]"
-          # Prefer our just-generated results on conflict (see note above).
-          git pull --rebase --autostash -X theirs origin main
-          git push origin main
+          git pull --rebase --autostash -X theirs origin "${{ github.ref_name }}"
+          git push origin "HEAD:${{ github.ref_name }}"
 
       - name: Upload Schema.org comparative results artifact
         uses: actions/upload-artifact@v6

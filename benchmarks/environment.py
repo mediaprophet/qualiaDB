@@ -176,6 +176,11 @@ def merge_execution_environment(
     else:
         out.pop("ci_environment", None)
     out["collected_at"] = _utc_now()
+    # Always refresh from this tree. Merging into a prior JSON used to keep a
+    # stale engine_version (synthetic-10k stayed at 0.0.18 after 0.0.30 runs).
+    workspace_ver = read_workspace_engine_version()
+    if workspace_ver:
+        out["engine_version"] = workspace_ver
     if daemon_env:
         topo = daemon_env.get("topology") or {}
         out["qualia_daemon_topology"] = topo

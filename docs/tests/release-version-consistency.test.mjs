@@ -80,4 +80,24 @@ assert.match(apiExplorer, /menu-loader\.js/,
 assert.match(read('.github/workflows/pages.yml'), /- "0\.0\.30"/);
 assert.match(read('.github/workflows/release-p64-models.yml'), /- 0\.0\.30/);
 
+const comparative = JSON.parse(read('docs/comparative_benchmark_results.json'));
+assert.equal(
+  comparative.execution_environment?.engine_version,
+  releaseVersion,
+  'synthetic-10k comparative JSON must stamp the current engine',
+);
+assert.equal(
+  comparative.engines?.qualia_wasm?.engine_version,
+  releaseVersion,
+  'synthetic-10k Qualia WASM row must stamp the current engine',
+);
+const schemaorgComparative = JSON.parse(
+  read('docs/comparative_benchmark_results.schemaorg-30-current-https.json'),
+);
+assert.equal(
+  schemaorgComparative.execution_environment?.engine_version,
+  releaseVersion,
+  'Schema.org comparative JSON must stamp the current engine',
+);
+
 console.log(`Release version consistency passed for ${workspaceMembers.length} crates at ${releaseVersion}.`);
