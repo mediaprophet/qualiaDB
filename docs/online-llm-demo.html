@@ -149,7 +149,7 @@
             <div class="space-y-3 mb-4">
                 <label class="block text-xs text-zinc-400 mb-1">Select verified browser model</label>
                 <select id="model-select" class="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-sm text-zinc-200 focus:border-indigo-500 focus:outline-none">
-                    <option value="https://huggingface.co/HuggingFaceTB/SmolLM2-360M-Instruct-GGUF/resolve/main/smollm2-360m-instruct-q8_0.gguf" data-gguf="https://huggingface.co/HuggingFaceTB/SmolLM2-360M-Instruct-GGUF/resolve/main/smollm2-360m-instruct-q8_0.gguf" data-name="SmolLM2-360M Instruct Q8_0 GGUF (~369 MB)" data-format="chatml" data-bytes="386404992" data-sha256="48ab3034d0dd401fbc721eb1df3217902fee7dab9078992d66431f09b7750201" data-cache-key="smollm2-360m-instruct-q8_0.browser-decode-r2.p64" data-legacy-cache-key="smollm2-360m-instruct-q8_0.gguf" data-verified="true" selected>SmolLM2 360M Instruct Q8_0 — verified</option>
+                    <option value="https://huggingface.co/HuggingFaceTB/SmolLM2-360M-Instruct-GGUF/resolve/main/smollm2-360m-instruct-q8_0.gguf" data-gguf="https://huggingface.co/HuggingFaceTB/SmolLM2-360M-Instruct-GGUF/resolve/main/smollm2-360m-instruct-q8_0.gguf" data-name="SmolLM2-360M Instruct Q8_0 GGUF (~369 MB)" data-format="chatml" data-bytes="386404992" data-sha256="48ab3034d0dd401fbc721eb1df3217902fee7dab9078992d66431f09b7750201" data-cache-key="smollm2-360m-instruct-q8_0.browser-decode-r3.p64" data-legacy-cache-key="smollm2-360m-instruct-q8_0.browser-decode-r2.p64,smollm2-360m-instruct-q8_0.gguf" data-verified="true" selected>SmolLM2 360M Instruct Q8_0 — verified</option>
                 </select>
                 <p class="mt-2 text-[11px] leading-relaxed text-zinc-500">Q4_K_M browser presets are temporarily withheld: the current WebGPU quantized path can terminate on the first token. This Q8_0 image is the locally coherence-tested profile.</p>
                 <label class="block text-xs text-zinc-400 mt-3 mb-1">Or load a local P64 / GGUF file</label>
@@ -460,6 +460,8 @@ let lastSparql = '';
 let lastJsonLd = '';
 let loadInFlight = false;
 let selectedInferenceBackend = 'none';
+/** Last successful OPFS/model source so a WebGPU 0-token decode can retry on CPU-WASM. */
+let lastLoadedModel = null;
 
 const isMobileDevice = () =>
     /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || '') ||
@@ -839,6 +841,11 @@ async function loadModel() {
             // verified browser preset on a revisioned key so an older, header-valid
             // on-device compile cannot survive a browser decode gate change.
             const cacheKey = selectedOption.dataset.cacheKey || (releaseP64 || url).split('/').pop();
+            lastLoadedModel = {
+                cacheKey,
+                sourceUrl: releaseP64 || sel.options[sel.selectedIndex].dataset.gguf || url,
+                name,
+            };
             try {
                 if (releaseP64) {
                     showDlStatus(`Fetching prebuilt P64 for ${name}…`);
@@ -1054,7 +1061,10 @@ async function recoverVerifiedModel() {
     if (!option || option.dataset.verified !== 'true') return;
 
     const currentKey = option.dataset.cacheKey;
-    const legacyKey = option.dataset.legacyCacheKey;
+    const legacyKeys = String(option.dataset.legacyCacheKey || '')
+        .split(',')
+        .map((key) => key.trim())
+        .filter(Boolean);
     if (!currentKey) return;
 
     const button = document.getElementById('reload-verified-btn');
@@ -1070,9 +1080,9 @@ async function recoverVerifiedModel() {
 
         const removed = await Promise.all([
             clearOpfsModel(currentKey),
-            legacyKey ? clearOpfsModel(legacyKey) : Promise.resolve(0),
+            ...legacyKeys.map((key) => clearOpfsModel(key)),
         ]);
-        const removedCount = removed[0] + removed[1];
+        const removedCount = removed.reduce((sum, n) => sum + Number(n || 0), 0);
         showDlStatus(`Removed ${removedCount} cached model file${removedCount === 1 ? '' : 's'}; fetching the verified Q8_0 source again…`);
         button.classList.add('hidden');
         await loadModel();
@@ -1213,6 +1223,35 @@ function cleanGenerated(text) {
         .trim();
 }
 
+async function retryDecodeOnCpuWasm(prompt, maxTokens, onToken) {
+    if (!lastLoadedModel?.cacheKey) return null;
+    const selected = document.getElementById('model-select').selectedOptions[0];
+    const sourceUrl = lastLoadedModel.sourceUrl
+        || selected?.dataset.p64
+        || selected?.dataset.gguf
+        || selected?.value;
+    if (!sourceUrl) return null;
+    try {
+        await releaseWebgpuEngine();
+        const loaded = await loadOrCompileP64(sourceUrl, lastLoadedModel.cacheKey, {
+            compile: compileGgufToP64,
+            formatVersion: p64FormatVersion(),
+        });
+        await cpuWorker.initialize(loaded.bytes);
+        if (!cpuWorker.ready) return null;
+        const retryFull = { text: '' };
+        const wrapped = (piece) => {
+            retryFull.text += piece;
+            onToken(piece);
+        };
+        const result = await cpuWorker.infer(prompt, maxTokens, wrapped);
+        return { result, full: retryFull.text || result?.text || '' };
+    } catch (error) {
+        console.warn('[llm-demo] CPU-WASM decode retry failed:', error);
+        return null;
+    }
+}
+
 // Force one paint so the "Generating…" state is visible before decode starts.
 const nextPaint = () => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
 
@@ -1261,6 +1300,19 @@ async function generate(system, user, opts = {}) {
         result = selectedInferenceBackend === 'cpu-wasm'
             ? await cpuWorker.infer(prompt, maxTokens, onToken)
             : await inferWasmAsyncMeasured(prompt, maxTokens, onToken);
+        if (result?.text && !full) full = result.text;
+        let cleanedProbe = cleanGenerated(full);
+        if (!cleanedProbe && selectedInferenceBackend === 'webgpu' && lastLoadedModel?.cacheKey) {
+            setEngineStatus('WebGPU returned no text (first token was a stop/EOS). Retrying on CPU-WASM…', 'warn');
+            showDlStatus('WebGPU decode produced 0 visible tokens — retrying on CPU-WASM…');
+            statusEl.textContent = 'Retrying on CPU-WASM…';
+            const retry = await retryDecodeOnCpuWasm(prompt, maxTokens, onToken);
+            if (retry?.result) {
+                result = retry.result;
+                full = retry.full || result.text || '';
+                selectedInferenceBackend = 'cpu-wasm';
+            }
+        }
     } catch (error) {
         void mobileLab.emit('generation_failed', {
             elapsedMs: Math.round(performance.now() - t0),
@@ -1274,8 +1326,8 @@ async function generate(system, user, opts = {}) {
     }
     if (result?.text && !full) full = result.text;
     const cleaned = cleanGenerated(full);
+    const generated = Number(result?.generatedTokens || tokens || 0);
     if (!cleaned) {
-        const generated = Number(result?.generatedTokens || tokens || 0);
         const selected = document.getElementById('model-select').selectedOptions[0];
         const canRecoverVerifiedPreset = selected?.dataset.verified === 'true'
             && Boolean(selected.dataset.cacheKey);
