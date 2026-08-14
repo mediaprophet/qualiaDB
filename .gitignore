@@ -141,6 +141,7 @@ keystore.bin
 /grok-chat/
 /mcps/
 /tests/
+/experiments/inference-lab/
 
 # One-off migration scripts, old release binaries, debug artefacts
 scratch/

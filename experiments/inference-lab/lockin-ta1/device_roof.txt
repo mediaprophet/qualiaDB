@@ -1,8 +1,0 @@
-Device roof calibration
-  gemv_n:        512
-  best:          CPU native (rayon, 8 cores) [native]
-  gemv_ms:       0.0887
-  gemv_gflops:   5.91
-  upload_gbps:   -1.00
-  balance FLOP/B:20.00
-  from benchmark_devices(512); use balance_flop_per_byte for schedule classification

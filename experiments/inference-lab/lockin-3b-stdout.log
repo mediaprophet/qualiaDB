@@ -1,8 +1,0 @@
-lab auto — recursive measure → search → lock-in
-  model:      C:\LLM_Models\P64\llama-3.2-3b-instruct-q4_k_m.soa.p64
-  tokens:     8
-  hours:      2
-  gens:       4
-  out:        experiments/inference-lab/lockin-3b
-  ollama:     (skipped)
-  (wall clock budget; plateau or gens may finish earlier)
