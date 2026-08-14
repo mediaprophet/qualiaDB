@@ -207,24 +207,60 @@ pub fn validate_postings_section(bytes: &[u8], expected_blocks: usize) -> io::Re
     if bytes.len() != header_end + last {
         return Err(invalid("field postings payload length mismatch"));
     }
+    for block_index in 0..block_count {
+        let _ = block_payload(bytes, block_index)?;
+    }
     Ok(())
 }
 
-pub fn block_payload<'a>(bytes: &'a [u8], block_index: usize) -> io::Result<&'a [u8]> {
-    let block_count = u32::from_le_bytes(bytes[8..12].try_into().unwrap()) as usize;
+/// Absolute byte interval of one SuperBlock's encoded PIDX payload, relative to
+/// the start of a complete PIDX section (header + offset table + payloads).
+pub(crate) fn block_payload_interval(
+    block_count: usize,
+    block_index: usize,
+    table_start: u32,
+    table_end: u32,
+) -> io::Result<(usize, usize)> {
     if block_index >= block_count {
         return Err(invalid("field postings block index out of range"));
     }
-    let table = FIELD_POSTINGS_HEADER_BYTES + block_index * 4;
-    let start = u32::from_le_bytes(bytes[table..table + 4].try_into().unwrap()) as usize;
-    let end = u32::from_le_bytes(bytes[table + 4..table + 8].try_into().unwrap()) as usize;
-    let payload_base = FIELD_POSTINGS_HEADER_BYTES + (block_count + 1) * 4;
+    if table_end < table_start {
+        return Err(invalid("field postings interval inverted"));
+    }
+    let table_bytes = (block_count + 1)
+        .checked_mul(4)
+        .ok_or_else(|| invalid("field postings table overflow"))?;
+    let payload_base = FIELD_POSTINGS_HEADER_BYTES
+        .checked_add(table_bytes)
+        .ok_or_else(|| invalid("field postings payload base overflow"))?;
     let from = payload_base
-        .checked_add(start)
+        .checked_add(table_start as usize)
         .ok_or_else(|| invalid("posting payload start overflow"))?;
     let to = payload_base
-        .checked_add(end)
+        .checked_add(table_end as usize)
         .ok_or_else(|| invalid("posting payload end overflow"))?;
+    Ok((from, to))
+}
+
+/// Slice one SuperBlock's encoded S/P/C membership out of an in-memory PIDX section.
+pub fn block_payload<'a>(bytes: &'a [u8], block_index: usize) -> io::Result<&'a [u8]> {
+    if bytes.len() < FIELD_POSTINGS_HEADER_BYTES {
+        return Err(invalid("field postings shorter than header"));
+    }
+    let block_count = u32::from_le_bytes(bytes[8..12].try_into().unwrap()) as usize;
+    let table = FIELD_POSTINGS_HEADER_BYTES
+        .checked_add(
+            block_index
+                .checked_mul(4)
+                .ok_or_else(|| invalid("field postings table overflow"))?,
+        )
+        .ok_or_else(|| invalid("field postings table overflow"))?;
+    if bytes.len() < table + 8 {
+        return Err(invalid("field postings offset table truncated"));
+    }
+    let start = u32::from_le_bytes(bytes[table..table + 4].try_into().unwrap());
+    let end = u32::from_le_bytes(bytes[table + 4..table + 8].try_into().unwrap());
+    let (from, to) = block_payload_interval(block_count, block_index, start, end)?;
     bytes
         .get(from..to)
         .ok_or_else(|| invalid("field postings payload slice out of range"))
@@ -387,6 +423,20 @@ mod tests {
         let payload = block_payload(&section, 1).unwrap();
         assert!(field_may_contain(payload, 0, 7).unwrap());
         assert!(!field_may_contain(payload, 0, 1).unwrap());
+        assert!(block_payload(&section, 2).is_err());
+    }
+
+    #[test]
+    fn inverted_table_interval_is_rejected() {
+        let mut section = encode_postings_section(&[
+            BlockFieldPostings::from_quins(&[quin(1, 2, 3)]),
+            BlockFieldPostings::from_quins(&[quin(4, 5, 6)]),
+        ]);
+        let table = FIELD_POSTINGS_HEADER_BYTES;
+        section[table..table + 4].copy_from_slice(&8u32.to_le_bytes());
+        section[table + 4..table + 8].copy_from_slice(&0u32.to_le_bytes());
+        assert!(validate_postings_section(&section, 2).is_err());
+        assert!(block_payload(&section, 0).is_err());
     }
 
     fn quin(subject: u64, predicate: u64, context: u64) -> NQuin {

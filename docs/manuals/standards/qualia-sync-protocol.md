@@ -247,8 +247,8 @@ collapsed into this protocol draft.
 They are related, but distinct:
 
 - daemon chat relay over loopback HTTP
-- WebTorrent unified v2 `.q42` web-seeding (legacy `.c.q42` alias still
-  supported in older seeds)
+- WebTorrent unified v3 `.q42` web-seeding (fail-closed unless
+  `FLAG_PERMISSIVE_COMMONS`; leftover `.c.q42` seeds are not minted)
 - qapp loopback serving
 - future WebRTC or GUN-oriented coordination language elsewhere in the repo
 
@@ -345,7 +345,7 @@ The previous contradictions have been resolved through the implementation of CBO
 4. **✅ Stable Block Transfer**: Defined in unified v3 `.q42` format
    - Block transfer grammar tied to v3 volume specification
    - CBOR-LD payloads reference v3 volume structures
-   - Legacy compatibility maintained for `.c.q42` transport
+   - Leftover `.c.q42` may still decode; new seeds are unified v3 `.q42` only
 
 5. **✅ Trust Logic Enhancement**: Semantic validation with Q42 lexicon
    - Trust conditions now use semantic term resolution

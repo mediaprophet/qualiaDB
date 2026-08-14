@@ -1,9 +1,9 @@
 # Q42 Symbolic Algebra Encoding & Numeric Algebra Surface
 
-**Version:** 0.1
-**Date:** 2026-06-21
+**Version:** 0.1.1
+**Date:** 2026-08-15
 **Status:** Draft Standard
-**Repository:** https://github.com/mediaprophet/qualiaDB/tree/0.0.28
+**Repository:** https://github.com/mediaprophet/qualiaDB/tree/0.0.30
 
 ## Abstract
 
@@ -46,14 +46,15 @@ expr   = term (('+' | '-') term)*
 term   = factor (('*' | '/') factor)*
 factor = unary ('^' ['-'] integer)?       // exponent is an integer literal
 unary  = '-' unary | base
-base   = number | ident | 'sqrt' '(' expr ')' | '(' expr ')'
+base   = number | ident | unop '(' expr ')' | '(' expr ')'
+unop   = 'sqrt' | 'exp' | 'ln' | 'sin' | 'cos' | 'tan'
 number = digits ['.' digits]
 ident  = (alpha | '_') (alphanumeric | '_')*
 ```
 
 `*` binds tighter than `+`/`-`; `^` binds tighter than unary minus on the base. `sqrt` is
-the only reserved identifier. Examples: `x^3 - 2*x^2 + 5`, `sqrt(b^2 - 4*a*c)`,
-`(price - 4) / 2`.
+reserved identifiers. Examples: `x^3 - 2*x^2 + 5`, `sqrt(b^2 - 4*a*c)`,
+`sin(x) + exp(2*x)`, `(price - 4) / 2`.
 
 Malformed input MUST be rejected with an error (never a panic).
 
@@ -77,10 +78,16 @@ not load-bearing for decode):
 | Pow | `cas:pow` | base child index | 0 | exponent (`i32` as `u64`) |
 | Neg | `cas:neg` | child index | 0 | 0 |
 | Sqrt | `cas:sqrt` | child index | 0 | 0 |
+| Exp | `cas:exp` | child index | 0 | 0 |
+| Ln | `cas:ln` | child index | 0 | 0 |
+| Sin | `cas:sin` | child index | 0 | 0 |
+| Cos | `cas:cos` | child index | 0 | 0 |
+| Tan | `cas:tan` | child index | 0 | 0 |
 
-Node-kind tags are FNV-1a `q_hash` of the strings in the table. `parity` MAY be 0 in this
-in-memory form; when a sequence is persisted into a `.q42` volume the standard NQuin
-parity (`subject ^ predicate ^ object ^ context`) applies.
+Node-kind tags are FNV-1a `q_hash` of the strings in the table. `parity` MUST be the
+five-field fold `subject ^ predicate ^ object ^ context ^ metadata`
+(`NQuin::calculate_parity`). Decode MAY ignore `parity`; a unified v3 volume verify
+MUST NOT. A four-field fold (metadata omitted) is a verify Fail.
 
 ### 3.1 Variable-name packing
 
@@ -92,8 +99,9 @@ common short-name case; a future revision MAY add an overflow form for long name
 ### 3.2 Round-trip guarantee
 
 For any expression whose variable names are ≤ 8 bytes, `from_quins(to_quins(e)) == e`.
-Decoding starts at the last element and recurses through child indices. An out-of-range
-child index or an unknown predicate tag MUST be a decode error.
+Every Quin produced by `to_quins` MUST satisfy `verify_ecc_parity()`. Decoding starts
+at the last element and recurses through child indices. An out-of-range child index or
+an unknown predicate tag MUST be a decode error.
 
 ## 4. Operations surface (NORMATIVE interface names)
 

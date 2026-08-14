@@ -58,7 +58,7 @@ _Examples: `social-cooperative.html`, `yaml-ld-q42` manifests._
 Stateless, declarative user interface shells that bind to the sovereign `qualia-db` engine. QApps represent collaborative spaces (Kanban boards, Analytics, Budgets, DocuQuin pipelines) and are fetched and hydrated from the WebTorrent DHT instantly, allowing applications to exist independently of app stores.
 
 ### 2.2 Semantic Ontologies and Logic Rules
-_Examples: `.c.q42` bundles, `cooperative-projects.ttl`, `cooperative-evaluation.n3`._
+_Examples: unified v3 `.q42` volumes (Commons-flagged), `cooperative-projects.ttl`, `cooperative-evaluation.n3`._
 Machine-readable definitions of domain knowledge. When a cooperative defines a new ontology or set of defeasible logic rules, these are published as deterministic magnet links, ensuring all participating nodes share the exact same structural understanding without runtime string allocations.
 
 ### 2.3 LLM Packages, Compute Weights & Language Sovereignty

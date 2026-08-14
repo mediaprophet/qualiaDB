@@ -24,9 +24,9 @@ It is not:
 
 Those roles remain with other artifacts:
 
-- `.q42` for graph/data substrate (prefer unified v3 volumes with embedded
-  lexicon and block index)
-- legacy `.q42.lex` and `.q42.bidx` sidecars when opening pre-v2 datasets only
+- `.q42` for graph/data substrate (unified v3 volumes with embedded
+  lexicon, BIDX, and optional FIDX/PIDX)
+- leftover `.q42.lex` and `.q42.bidx` sidecars only when opening pre-v3 datasets
 - `.qchk` for capability envelopes
 - `qapp.json` for qapp-local launch metadata
 

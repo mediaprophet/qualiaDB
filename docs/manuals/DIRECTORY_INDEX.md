@@ -42,6 +42,7 @@ Comprehensive index of functionality for `manuals`. This document serves as the 
 - 📄 `wgsl-forge.md`
 
 ## Changelog
+- **2026-08-15**: Q42 manuals/glossary/GETTING_STARTED aligned to unified v3 (no `.c.q42` twin; five-field ECC; fail-closed magnets). Spec sizes unchanged.
 - **2026-07-03**: Added the computational 3D asset and digital-twin capability manual.
 - **2026-07-02**: Added the end-to-end Q42/P64 inference pipeline manual.
 - **2026-06-30**: Automated full index generation, extracting code definitions.

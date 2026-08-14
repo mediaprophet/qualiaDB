@@ -1,6 +1,6 @@
 # Qualia-DB Glossary
 
-_Branch: `0.0.28` | Last updated: 2026-06-21_
+_Branch: `0.0.30` | Last updated: 2026-08-15_
 
 ---
 
@@ -9,10 +9,15 @@ _Branch: `0.0.28` | Last updated: 2026-06-21_
 - **Super-Quin (NQuin)**: 48-byte struct — six `u64` fields: subject, predicate, object, context, metadata, parity. Replaces RDF triples. All semantic meaning is bit-packed; no pointers, no heap references.
 - **FrameLayout ABI** (`frame_layout.rs`): the single canonical registry for the NQuin's ~6 "computational" bytes — predicate opcode/path/defeater, object inline datatype tags, the role-keyed `metadata` overlay, and parity. Modalities read/write those bits only through it; no-collision invariants are test-enforced. See [ADR 0008](adr/0008-frame-layout-abi-and-inline-tags.md).
 - **Inline datatype tags** (`resolver.rs`, object field, MSB clear): `0b001` xsd:integer, `0b010` xsd:decimal, `0b011` xsd:boolean, **`0b101` xsd:float** (allocated 0.0.28 — formerly clashed with integer), `0b1000` Webizen WebID. Bits `[60..62]` select; `[0..59]` carry the value.
-- **SuperBlock**: 40,960-byte (10 sectors) LZ4-compressed block holding ~850 Quins plus a 160-byte header. Supports lazy header scanning.
-- **`.q42`**: Native binary format. A file is a sequence of SuperBlocks preceded by a header.
-- **`.q42.bidx`**: Block-range index sidecar. Maps subject-hash ranges to SuperBlock byte offsets for O(1) block skip.
-- **`.q42.lex`**: Reverse-lexicon sidecar. Maps hashed tokens back to human-readable strings (for browser demos).
+- **SuperBlock**: 40,960-byte (10 sectors) physical I/O unit. 160-byte header + 850 × 48-byte Quins. New writes store each SuperBlock LZ4-compressed inside a unified v3 volume.
+- **`.q42`**: Native graph volume. **New writes are unified Q42 v3**: 256-byte `Q42\0` header, embedded Q42LEX + object-range BIDX, optional FIDX (S/P/C ranges) and PIDX (postings), block directory, LZ4 SuperBlock payloads. One file. See [q42-format-internal-draft.md](standards/q42-format-internal-draft.md).
+- **BIDX**: Embedded object-hash min/max per SuperBlock. Binary search decides which blocks to decompress. Not a sidecar on v3 writes.
+- **Q42LEX**: Embedded reverse hash→string dictionary. Same layout as the obsolete `.q42.lex` sidecar; now lives inside the volume.
+- **FIDX / PIDX**: Optional field-range and postings indexes (flags `0x0008` / `0x0010`). Supplement BIDX; they do not replace it.
+- **Five-field ECC**: `parity = subject ^ predicate ^ object ^ context ^ metadata`. Verify walks reject a Quin that fails this fold.
+- **`.q42.bidx` / `.q42.lex`**: Legacy v1 sidecars. Read-only fallbacks when opening pre-v3 trees. New ingest MUST NOT emit them.
+- **FLAG_PERMISSIVE_COMMONS (`0x0020`)**: Affirmative catalog flag required (with a clean Quin scan) before a public magnet / HTTP web-seed / IPFS pin is minted.
+- **FLAG_SANCTUARY (`0x0040`)**: Affirmative Sanctuary / Selfhood volume. Public hash addressing is denied.
 - **Epoch (QuinEpoch)**: Inline timestamp type, nanoseconds since 2026-01-01.
 
 ---
@@ -92,7 +97,7 @@ All are zero-allocation Rust engines wired from `webizen.rs::execute_vm_frame`. 
 ## Query & Performance
 
 - **Lazy SuperBlock Query**: O(1) header scan + selective LZ4 decompress + WebRTC P2P for remote blocks. Enables massive datasets under the 512 MB floor.
-- **BIDX Demand-Paging**: Binary-search over `.q42.bidx` to identify which SuperBlocks could contain a target subject. `BlockOffsetMap` (`indexing.rs`) holds the in-memory index.
+- **BIDX Demand-Paging**: Binary-search over the embedded object-range BIDX (or a legacy `.q42.bidx` sidecar) to identify which SuperBlocks could contain a target object hash. `V3BlockOffsetMap` / `Q42Volume` hold the in-memory index.
 - **mmap_query_subject**: Fast point lookup via OS memory mapping.
 - **Allocation Firewall**: Zero-allocation boundary (e.g. `ldp_translator.rs`) that intercepts heavy text protocols (HTTP/JSON-LD) and hashes strings into 64-bit Quins before they hit the core memory space.
 - **OPFS auto-cache** (WASM target): Blocks fetched from the native daemon are cached in the Origin Private File System for subsequent local queries.
@@ -134,7 +139,7 @@ All are zero-allocation Rust engines wired from `webizen.rs::execute_vm_frame`. 
 - **QCHK (`.qchk` binary)**: QualiaDB Capability Profile binary format. Identified by magic bytes `0x51 0x43 0x48 0x4B` ("QCHK") at offset 0. This is a *constraint binding* for agent sessions, not an ingest data source. Legacy `.chk` QCHK files remain readable during migration.
 - **Capability envelope migration**: CogAI Chunks keep the `.chk` extension. QCHK profiles move to `.qchk`. Always check the magic bytes at offset 0 when handling older profile files.
 - **CBOR-LD**: Compact binary Linked Data. Primary runtime format for protocol exchanges, mobile storage, and verifiable claims.
-- **`.q42`**: Native graph binary. Sequence of LZ4-compressed SuperBlocks.
+- **`.q42`**: Native graph binary. Unified v3 volume (header + lex + BIDX + LZ4 SuperBlocks). Not a raw SuperBlock stream and not a whole-file LZ4 archive.
 - **q_hash()**: FNV-1a hash at compile time for all IRIs. Replaces runtime string allocation in the engine core.
 
 ---
@@ -148,14 +153,14 @@ All are zero-allocation Rust engines wired from `webizen.rs::execute_vm_frame`. 
 
 ## Ontology Workbench & Permissive Commons
 
-- **`.c.q42`**: Compressed ontology artifact produced by the workbench import pipeline (LZ4 SuperBlocks). Distinct from raw `.q42` graph binaries.
-- **Workbench**: Ontology Hub pipeline — URI import, compression, SHA-1 info hash, magnet URI generation, and audience-scoped sharing policy.
-- **HTTP Web Seed**: BEP-19 style serving of `.c.q42` files via `GET /torrent/webseed/{info_hash}` on the Qualia daemon. Magnet URIs include `ws=` pointing at this endpoint.
+- **`.c.q42`**: Obsolete framed-LZ4 transport / copy alias. New ingest writes unified `.q42` only. Readers may still open a leftover file; nothing new MUST emit this extension.
+- **Workbench**: Ontology Hub pipeline — URI import into a unified v3 `.q42`, SHA-1 info hash, magnet URI generation (fail-closed for Sanctuary / unmarked personal volumes), and audience-scoped sharing policy.
+- **HTTP Web Seed**: BEP-19 style serving of unified `.q42` files via `GET /torrent/webseed/{info_hash}` on the Qualia daemon. Magnet URIs include `ws=` pointing at this endpoint. Unmarked or Sanctuary volumes MUST NOT receive a public magnet.
 - **Share Card**: Filtered ontology metadata (title, magnet, quin count) visible to a contact or session DID per torrent policy.
 
 ## Tooling & Harness
 
-- **qualia-cli**: Main binary. Key subcommands: `bench` / `benchmark`, `ingest`, `import`, `compress`, `query`, `inspect`, `daemon`, `profile`, `resources`, `webizen`, `export-solid`, `shacl`, `benchmark-action`.
+- **qualia-cli**: Main binary. Key subcommands: `bench` / `benchmark`, `ingest`, `import`, `q42 inspect|verify|magnet|compact`, `query`, `inspect`, `daemon`, `profile`, `resources`, `webizen`, `export-solid`, `shacl`.
 - **Dual-Mode Benchmark Harness**: Native (real engine + telemetry) vs browser/JS fallback. Produces `llm_benchmark_results.json`. Includes WordNet entries from actual import.
 - **Fractal Sharding**: Multiple isolated 512 MB cells on big hardware for swarm compute. `qualia-cli daemon --workers N --compute-swarm`.
 

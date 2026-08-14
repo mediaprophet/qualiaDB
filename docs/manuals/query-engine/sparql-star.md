@@ -157,12 +157,14 @@ Embedded triples do not need a new file format.
 
 The assertions about the triple (e.g., <<s p o>> :certainty 0.9) are stored as standard 48-byte NQuins inside your existing .q42 superblocks.
 
-The reverse lookup mapping (Virtual ID -> [s, p, o]) is appended directly into your existing .q42.lex file, exactly like a string literal.
+The reverse lookup mapping (Virtual ID -> [s, p, o]) is appended into the
+**embedded Q42LEX** of the unified v3 `.q42` volume (same layout as the obsolete
+`.q42.lex` sidecar), exactly like a string literal.
 
 8. Performance Constraints
 To adhere to the 42MB SlgArena and zero-allocation mandate:
 
-Virtual ID mapping: Do not use std::collections::HashMap. Resolve mappings purely by doing binary searches or direct offset reads over the mmap backing the .lex file.
+Virtual ID mapping: Do not use std::collections::HashMap. Resolve mappings purely by doing binary searches or direct offset reads over the mmap backing the embedded Q42LEX (or a leftover `.q42.lex` sidecar).
 
 Nested triple resolution: When unpacking <<s p o>>, read the 24 bytes from the mmap directly onto the stack as [u64; 3]. There is zero heap allocation required.
 

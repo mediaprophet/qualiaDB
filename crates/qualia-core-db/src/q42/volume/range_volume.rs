@@ -928,17 +928,16 @@ impl<S: Q42RangeSource> Q42RangeVolume<S> {
             + (block_index as u64) * 4;
         let mut ends = [0u8; 8];
         self.read_section(table, 8, &mut ends)?;
-        let start = u32::from_le_bytes(ends[0..4].try_into().unwrap()) as u64;
-        let end = u32::from_le_bytes(ends[4..8].try_into().unwrap()) as u64;
-        if end < start {
-            return Err(invalid("Q42 field postings interval inverted"));
-        }
-        let payload_base = offset
-            + super::postings::FIELD_POSTINGS_HEADER_BYTES as u64
-            + (self.header.block_count + 1) * 4;
-        let payload_offset = payload_base + start;
-        let payload_len = usize::try_from(end - start)
-            .map_err(|_| invalid("Q42 field postings payload exceeds platform"))?;
+        let start = u32::from_le_bytes(ends[0..4].try_into().unwrap());
+        let end = u32::from_le_bytes(ends[4..8].try_into().unwrap());
+        let (rel_from, rel_to) = super::postings::block_payload_interval(
+            self.header.block_count as usize,
+            block_index,
+            start,
+            end,
+        )?;
+        let payload_offset = offset + rel_from as u64;
+        let payload_len = rel_to - rel_from;
         if payload_offset + payload_len as u64 > offset + length {
             return Err(invalid("Q42 field postings payload leaves its section"));
         }
