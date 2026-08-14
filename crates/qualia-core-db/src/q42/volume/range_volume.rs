@@ -44,6 +44,55 @@ pub struct Q42ObjectMatchPage {
     pub next_cursor: Option<Q42ObjectSearchCursor>,
 }
 
+/// A simple physical pattern for range-backed Q42 scans. `None` is an
+/// unbound SPARQL position.  The planner selects the BIDX object index when
+/// `object` is bound and otherwise performs a bounded sequential block scan.
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub struct Q42RangeQueryPattern {
+    pub subject: Option<u64>,
+    pub predicate: Option<u64>,
+    pub object: Option<u64>,
+    pub context: Option<u64>,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum Q42RangeQueryStrategy {
+    ObjectBidx,
+    Sequential,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct Q42RangeQueryPlan {
+    pub pattern: Q42RangeQueryPattern,
+    pub strategy: Q42RangeQueryStrategy,
+}
+
+impl Q42RangeQueryPlan {
+    pub fn for_pattern(pattern: Q42RangeQueryPattern) -> Self {
+        Self {
+            strategy: if pattern.object.is_some() {
+                Q42RangeQueryStrategy::ObjectBidx
+            } else {
+                Q42RangeQueryStrategy::Sequential
+            },
+            pattern,
+        }
+    }
+}
+
+/// Resume state for a bounded range-query page.
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub struct Q42RangeQueryCursor {
+    pub block_index: usize,
+    pub quin_offset: usize,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct Q42RangeQueryPage {
+    pub returned: usize,
+    pub next_cursor: Option<Q42RangeQueryCursor>,
+}
+
 impl<S: Q42RangeSource> Q42RangeVolume<S> {
     pub fn open(source: S) -> io::Result<Self> {
         let source_length = source.length()?;
@@ -116,12 +165,281 @@ impl<S: Q42RangeSource> Q42RangeVolume<S> {
     pub fn block_count(&self) -> u64 {
         self.header.block_count
     }
+
+    /// Execute one caller-buffered page of a physical Q42 scan.  A bound
+    /// object uses BIDX to avoid unrelated SuperBlocks; all other patterns
+    /// stream one block at a time.  This is the reusable low-level path that
+    /// a SPARQL planner can drive without materialising a graph snapshot.
+    pub fn execute_query_page_into(
+        &self,
+        plan: Q42RangeQueryPlan,
+        cursor: Q42RangeQueryCursor,
+        compressed: &mut [u8],
+        decoded: &mut [u8],
+        out: &mut [NQuin],
+    ) -> io::Result<Q42RangeQueryPage> {
+        if out.is_empty() {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "Q42 query output buffer is empty",
+            ));
+        }
+        let (start, end) = match plan.strategy {
+            Q42RangeQueryStrategy::ObjectBidx => match self.bidx_block_range_for_hash(
+                plan.pattern
+                    .object
+                    .expect("object strategy requires object"),
+            )? {
+                Some(range) => (range.start, range.end),
+                None => {
+                    return Ok(Q42RangeQueryPage {
+                        returned: 0,
+                        next_cursor: None,
+                    })
+                }
+            },
+            Q42RangeQueryStrategy::Sequential => (0, self.header.block_count as usize),
+        };
+        let mut block_index = cursor.block_index.max(start);
+        let mut quin_offset = if block_index == cursor.block_index {
+            cursor.quin_offset
+        } else {
+            0
+        };
+        let mut returned = 0usize;
+        while block_index < end {
+            self.read_superblock_into(block_index, compressed, decoded)?;
+            let count = u64::from_le_bytes(decoded[16..24].try_into().unwrap()) as usize;
+            if count > QUINS_PER_BLOCK {
+                return Err(invalid("Q42 decoded SuperBlock has invalid Quin count"));
+            }
+            while quin_offset < count {
+                let offset = SUPERBLOCK_HEADER + quin_offset * QUIN_SIZE;
+                let quin = NQuin {
+                    subject: u64::from_le_bytes(decoded[offset..offset + 8].try_into().unwrap()),
+                    predicate: u64::from_le_bytes(
+                        decoded[offset + 8..offset + 16].try_into().unwrap(),
+                    ),
+                    object: u64::from_le_bytes(
+                        decoded[offset + 16..offset + 24].try_into().unwrap(),
+                    ),
+                    context: u64::from_le_bytes(
+                        decoded[offset + 24..offset + 32].try_into().unwrap(),
+                    ),
+                    metadata: u64::from_le_bytes(
+                        decoded[offset + 32..offset + 40].try_into().unwrap(),
+                    ),
+                    parity: u64::from_le_bytes(
+                        decoded[offset + 40..offset + 48].try_into().unwrap(),
+                    ),
+                };
+                quin_offset += 1;
+                let pattern = plan.pattern;
+                if pattern.subject.is_some_and(|value| value != quin.subject)
+                    || pattern
+                        .predicate
+                        .is_some_and(|value| value != quin.predicate)
+                    || pattern.object.is_some_and(|value| value != quin.object)
+                    || pattern.context.is_some_and(|value| value != quin.context)
+                {
+                    continue;
+                }
+                out[returned] = quin;
+                returned += 1;
+                if returned == out.len() {
+                    let next = if quin_offset < count {
+                        Some(Q42RangeQueryCursor {
+                            block_index,
+                            quin_offset,
+                        })
+                    } else if block_index + 1 < end {
+                        Some(Q42RangeQueryCursor {
+                            block_index: block_index + 1,
+                            quin_offset: 0,
+                        })
+                    } else {
+                        None
+                    };
+                    return Ok(Q42RangeQueryPage {
+                        returned,
+                        next_cursor: next,
+                    });
+                }
+            }
+            block_index += 1;
+            quin_offset = 0;
+        }
+        Ok(Q42RangeQueryPage {
+            returned,
+            next_cursor: None,
+        })
+    }
     pub fn source(&self) -> &S {
         &self.source
     }
 
     pub fn read_lexicon_into(&self, out: &mut [u8]) -> io::Result<()> {
         self.read_section(self.header.lex_offset, self.header.lex_length, out)
+    }
+
+    /// Resolve a string from a paged Q42LEX dictionary using exact range reads.
+    /// `page_scratch` and `out` are caller-owned; neither a full lexicon nor a
+    /// decoded page is retained by the reader.  Returns the UTF-8 byte length
+    /// written into `out`, or `None` when the hash is absent.
+    pub fn lookup_lexicon_hash_into(
+        &self,
+        hash: u64,
+        page_scratch: &mut [u8],
+        out: &mut [u8],
+    ) -> io::Result<Option<usize>> {
+        use crate::q42_lex::{
+            LEX_HEADER_SIZE, LEX_MAGIC, LEX_VERSION_PAGED, PAGED_DIRECTORY_ENTRY_SIZE,
+            PAGED_DIRECTORY_HEADER_SIZE, PAGED_PAGE_HEADER_SIZE,
+        };
+        if self.header.lex_length < (LEX_HEADER_SIZE + PAGED_DIRECTORY_HEADER_SIZE) as u64 {
+            return Err(invalid("Q42 lexicon is too short for paged lookup"));
+        }
+        let mut header = [0u8; LEX_HEADER_SIZE];
+        self.source.read_range_into(
+            Q42ByteRange {
+                offset: self.header.lex_offset,
+                length: LEX_HEADER_SIZE,
+            },
+            &mut header,
+        )?;
+        if header[0..8] != LEX_MAGIC
+            || u64::from_le_bytes(header[24..32].try_into().unwrap()) != LEX_VERSION_PAGED
+        {
+            return Err(io::Error::new(
+                io::ErrorKind::Unsupported,
+                "Q42 range lexicon is not paged Q42LEX v2",
+            ));
+        }
+        let directory_offset = u64::from_le_bytes(header[16..24].try_into().unwrap());
+        if directory_offset != LEX_HEADER_SIZE as u64 {
+            return Err(invalid("Q42 paged lexicon has an invalid directory offset"));
+        }
+        let mut page_count_bytes = [0u8; PAGED_DIRECTORY_HEADER_SIZE];
+        self.source.read_range_into(
+            Q42ByteRange {
+                offset: self.header.lex_offset + directory_offset,
+                length: PAGED_DIRECTORY_HEADER_SIZE,
+            },
+            &mut page_count_bytes,
+        )?;
+        let page_count = usize::try_from(u64::from_le_bytes(page_count_bytes))
+            .map_err(|_| invalid("Q42 paged lexicon page count exceeds platform"))?;
+        let mut lo = 0usize;
+        let mut hi = page_count;
+        let mut entry = [0u8; PAGED_DIRECTORY_ENTRY_SIZE];
+        while lo < hi {
+            let mid = lo + (hi - lo) / 2;
+            let offset = self.header.lex_offset
+                + directory_offset
+                + PAGED_DIRECTORY_HEADER_SIZE as u64
+                + (mid * PAGED_DIRECTORY_ENTRY_SIZE) as u64;
+            self.source.read_range_into(
+                Q42ByteRange {
+                    offset,
+                    length: PAGED_DIRECTORY_ENTRY_SIZE,
+                },
+                &mut entry,
+            )?;
+            if u64::from_le_bytes(entry[0..8].try_into().unwrap()) <= hash {
+                lo = mid + 1;
+            } else {
+                hi = mid;
+            }
+        }
+        let Some(page_index) = lo.checked_sub(1) else {
+            return Ok(None);
+        };
+        let offset = self.header.lex_offset
+            + directory_offset
+            + PAGED_DIRECTORY_HEADER_SIZE as u64
+            + (page_index * PAGED_DIRECTORY_ENTRY_SIZE) as u64;
+        self.source.read_range_into(
+            Q42ByteRange {
+                offset,
+                length: PAGED_DIRECTORY_ENTRY_SIZE,
+            },
+            &mut entry,
+        )?;
+        let page_offset = u64::from_le_bytes(entry[8..16].try_into().unwrap());
+        let page_length = usize::try_from(u64::from_le_bytes(entry[16..24].try_into().unwrap()))
+            .map_err(|_| invalid("Q42 lexicon page exceeds platform"))?;
+        let count = u32::from_le_bytes(entry[24..28].try_into().unwrap()) as usize;
+        if page_length > page_scratch.len()
+            || page_length < PAGED_PAGE_HEADER_SIZE
+            || page_offset
+                .checked_add(page_length as u64)
+                .is_none_or(|end| end > self.header.lex_length)
+        {
+            return Err(invalid(
+                "Q42 lexicon page is out of bounds or exceeds scratch",
+            ));
+        }
+        let page = &mut page_scratch[..page_length];
+        self.source.read_range_into(
+            Q42ByteRange {
+                offset: self.header.lex_offset + page_offset,
+                length: page_length,
+            },
+            page,
+        )?;
+        let declared_count = u32::from_le_bytes(page[0..4].try_into().unwrap()) as usize;
+        let blob_offset = usize::try_from(u64::from_le_bytes(page[8..16].try_into().unwrap()))
+            .map_err(|_| invalid("Q42 lexicon blob offset exceeds platform"))?;
+        if declared_count != count
+            || blob_offset != PAGED_PAGE_HEADER_SIZE + count * 16
+            || blob_offset > page.len()
+        {
+            return Err(invalid("Q42 lexicon page is malformed"));
+        }
+        let mut left = 0usize;
+        let mut right = count;
+        while left < right {
+            let mid = left + (right - left) / 2;
+            let index = PAGED_PAGE_HEADER_SIZE + mid * 16;
+            let entry_hash = u64::from_le_bytes(page[index..index + 8].try_into().unwrap());
+            if entry_hash < hash {
+                left = mid + 1;
+                continue;
+            }
+            if entry_hash > hash {
+                right = mid;
+                continue;
+            }
+            let relative = usize::try_from(u64::from_le_bytes(
+                page[index + 8..index + 16].try_into().unwrap(),
+            ))
+            .map_err(|_| invalid("Q42 lexicon string offset exceeds platform"))?;
+            let start = blob_offset
+                .checked_add(relative)
+                .ok_or_else(|| invalid("Q42 lexicon string offset overflow"))?;
+            if start + 3 > page.len() || page[start] != 1 {
+                return Err(invalid("Q42 lexicon string entry is malformed"));
+            }
+            let length =
+                u16::from_le_bytes(page[start + 1..start + 3].try_into().unwrap()) as usize;
+            let end = start
+                .checked_add(3 + length)
+                .ok_or_else(|| invalid("Q42 lexicon string length overflow"))?;
+            if end > page.len() {
+                return Err(invalid("Q42 lexicon string extends beyond page"));
+            }
+            if length > out.len() {
+                return Err(io::Error::new(
+                    io::ErrorKind::WriteZero,
+                    "Q42 lexicon output buffer is too small",
+                ));
+            }
+            std::str::from_utf8(&page[start + 3..end])
+                .map_err(|_| invalid("Q42 lexicon string is not UTF-8"))?;
+            out[..length].copy_from_slice(&page[start + 3..end]);
+            return Ok(Some(length));
+        }
+        Ok(None)
     }
     pub fn read_bidx_into(&self, out: &mut [u8]) -> io::Result<()> {
         self.read_section(self.header.bidx_offset, self.header.bidx_length, out)
@@ -547,6 +865,31 @@ mod tests {
     }
 
     #[test]
+    fn range_volume_resolves_one_paged_lexicon_page_without_heap() {
+        let (file, quin) = sample_volume();
+        let source = super::super::range::LocalFileRangeSource::open(file.path()).unwrap();
+        let volume = Q42RangeVolume::open(source).unwrap();
+        let mut page = [0u8; 4_096];
+        let mut text = [0u8; 128];
+        let length = volume
+            .lookup_lexicon_hash_into(quin.object, &mut page, &mut text)
+            .unwrap()
+            .unwrap();
+        assert_eq!(&text[..length], b"urn:q42:range-object");
+        assert_eq!(
+            volume
+                .lookup_lexicon_hash_into(7, &mut page, &mut text)
+                .unwrap(),
+            None
+        );
+        assert_zero_alloc("q42_range_volume_paged_lex_lookup", || {
+            volume
+                .lookup_lexicon_hash_into(quin.object, &mut page, &mut text)
+                .unwrap();
+        });
+    }
+
+    #[test]
     fn range_volume_bidx_pages_complete_heavy_hitters() {
         let (file, quin) = sample_volume();
         let mut lex = HashMap::new();
@@ -636,6 +979,66 @@ mod tests {
     }
 
     #[test]
+    fn range_query_planner_uses_bidx_and_pages_matching_quins() {
+        let (file, quin) = sample_volume();
+        let mut lex = HashMap::new();
+        lex.insert(quin.subject, "urn:q42:range-subject".to_string());
+        lex.insert(quin.predicate, "urn:q42:range-predicate".to_string());
+        lex.insert(quin.object, "urn:q42:range-object".to_string());
+        write_unified_volume(
+            file.path(),
+            &lex,
+            &[(quin.object, quin.object); 3],
+            &[vec![quin], vec![quin], vec![quin]],
+        )
+        .unwrap();
+        let source = super::super::range::LocalFileRangeSource::open(file.path()).unwrap();
+        let volume = Q42RangeVolume::open(source).unwrap();
+        let plan = Q42RangeQueryPlan::for_pattern(Q42RangeQueryPattern {
+            object: Some(quin.object),
+            predicate: Some(quin.predicate),
+            ..Default::default()
+        });
+        assert_eq!(plan.strategy, Q42RangeQueryStrategy::ObjectBidx);
+        let mut compressed = [0u8; MAX_COMPRESSED_SUPERBLOCK_SIZE];
+        let mut decoded = [0u8; SUPERBLOCK_SIZE];
+        let mut out = [NQuin::default(); 2];
+        let first = volume
+            .execute_query_page_into(
+                plan,
+                Q42RangeQueryCursor::default(),
+                &mut compressed,
+                &mut decoded,
+                &mut out,
+            )
+            .unwrap();
+        assert_eq!(first.returned, 2);
+        assert_eq!(out, [quin, quin]);
+        let second = volume
+            .execute_query_page_into(
+                plan,
+                first.next_cursor.unwrap(),
+                &mut compressed,
+                &mut decoded,
+                &mut out,
+            )
+            .unwrap();
+        assert_eq!(second.returned, 1);
+        assert_eq!(second.next_cursor, None);
+        assert_zero_alloc("q42_range_query_bidx_page", || {
+            volume
+                .execute_query_page_into(
+                    plan,
+                    Q42RangeQueryCursor::default(),
+                    &mut compressed,
+                    &mut decoded,
+                    &mut out,
+                )
+                .unwrap();
+        });
+    }
+
+    #[test]
     fn range_volume_set_opens_front_embedded_root_and_verifies_segments() {
         let dir = tempfile::TempDir::new().unwrap();
         let root_path = dir.path().join("root.q42");
@@ -684,6 +1087,22 @@ mod tests {
         let mut decoded = [0u8; SUPERBLOCK_SIZE];
         set.verify_segment_quin_counts(&mut compressed, &mut decoded)
             .unwrap();
+        let plan = Q42RangeQueryPlan::for_pattern(Q42RangeQueryPattern {
+            predicate: Some(entries[0].0.predicate),
+            ..Default::default()
+        });
+        let mut out = [NQuin::default(); 2];
+        let page = set
+            .execute_query_page_into(
+                plan,
+                super::super::manifest::Q42VolumeSetQueryCursor::default(),
+                &mut compressed,
+                &mut decoded,
+                &mut out,
+            )
+            .unwrap();
+        assert_eq!(page.returned, 2);
+        assert_eq!(page.next_cursor, None);
     }
 
     fn sample_quin(object_text: &str) -> (NQuin, HashMap<u64, String>) {

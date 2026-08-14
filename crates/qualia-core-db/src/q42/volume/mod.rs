@@ -17,7 +17,7 @@ pub use index::{BidxBlockRange, BidxMatchPage};
 pub use manifest::{
     root_relative_path, Q42RangeVolumeSet, Q42SegmentMatchPage, Q42SegmentMatchRange,
     Q42SegmentRangeFactory, Q42VolumeManifest, Q42VolumeSegment, Q42VolumeSet,
-    MAX_VOLUME_MANIFEST_BYTES,
+    Q42VolumeSetQueryCursor, Q42VolumeSetQueryPage, MAX_VOLUME_MANIFEST_BYTES,
 };
 #[cfg(not(target_arch = "wasm32"))]
 pub use range::{
@@ -28,7 +28,10 @@ pub use range::{
     validate_exact_range_response, verify_source_sha256, LocalFileRangeSource, Q42ByteRange,
     Q42RangeSource,
 };
-pub use range_volume::{Q42ObjectMatchPage, Q42ObjectSearchCursor, Q42RangeVolume};
+pub use range_volume::{
+    Q42ObjectMatchPage, Q42ObjectSearchCursor, Q42RangeQueryCursor, Q42RangeQueryPage,
+    Q42RangeQueryPattern, Q42RangeQueryPlan, Q42RangeQueryStrategy, Q42RangeVolume,
+};
 pub use stream_writer::StreamingQ42VolumeWriter;
 
 pub(crate) use index::{bidx_block_range_for_hash, bidx_blocks_for_hash_into};

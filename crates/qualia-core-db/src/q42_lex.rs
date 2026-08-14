@@ -10,8 +10,17 @@ use memmap2::Mmap;
 
 pub const LEX_MAGIC: [u8; 8] = *b"Q42LEX\0\0";
 const MAGIC: &[u8; 8] = &LEX_MAGIC;
-const HEADER_SIZE: usize = 32;
+pub const LEX_HEADER_SIZE: usize = 32;
+const HEADER_SIZE: usize = LEX_HEADER_SIZE;
 const INDEX_ENTRY_SIZE: usize = 16;
+pub const LEX_VERSION_PAGED: u64 = 2;
+pub const PAGED_DIRECTORY_HEADER_SIZE: usize = 8;
+pub const PAGED_DIRECTORY_ENTRY_SIZE: usize = 32;
+pub const PAGED_PAGE_HEADER_SIZE: usize = 16;
+/// Fixed upper bound used by the canonical writer.  Pages are independently
+/// addressable, so an HTTP/IPFS reader only needs this many dictionary records
+/// (plus their strings) for one hash lookup.
+pub const DEFAULT_LEX_PAGE_ENTRIES: usize = 4_096;
 
 /// Type tags for lexicon entries (1-byte prefix in payload)
 const LEX_TAG_STRING: u8 = 0x01; // UTF-8 string
@@ -63,6 +72,78 @@ pub fn serialize_string_lexicon(entries: &HashMap<u64, String>) -> Result<Vec<u8
     Ok(out)
 }
 
+/// Serialize the v2 paged Q42LEX representation.
+///
+/// Unlike the original monolithic index, this stores a small page directory at
+/// the front followed by independently valid pages.  Pages deliberately stay
+/// uncompressed in v2: they can be returned as borrowed `&str` values by the
+/// existing zero-allocation resolver.  Compression is a transport concern for
+/// a whole Q42 range response; keeping page contents directly addressable is
+/// what preserves the ABI and HTTP-range streamability today.
+pub fn serialize_paged_string_lexicon(
+    entries: &HashMap<u64, String>,
+    page_entries: usize,
+) -> Result<Vec<u8>, LexError> {
+    if page_entries == 0 {
+        return Err(LexError::BadIndex);
+    }
+    let mut sorted: Vec<(&u64, &String)> = entries.iter().collect();
+    sorted.sort_unstable_by_key(|(hash, _)| **hash);
+    let page_count = (sorted.len() + page_entries - 1) / page_entries;
+    let directory_len = PAGED_DIRECTORY_HEADER_SIZE
+        .checked_add(
+            page_count
+                .checked_mul(PAGED_DIRECTORY_ENTRY_SIZE)
+                .ok_or(LexError::Truncated)?,
+        )
+        .ok_or(LexError::Truncated)?;
+    let mut out = Vec::with_capacity(HEADER_SIZE + directory_len + entries.len() * 24);
+    out.extend_from_slice(MAGIC);
+    out.extend_from_slice(&(sorted.len() as u64).to_le_bytes());
+    out.extend_from_slice(&(HEADER_SIZE as u64).to_le_bytes());
+    out.extend_from_slice(&LEX_VERSION_PAGED.to_le_bytes());
+    out.extend_from_slice(&(page_count as u64).to_le_bytes());
+    out.resize(HEADER_SIZE + directory_len, 0);
+
+    for (page_index, chunk) in sorted.chunks(page_entries).enumerate() {
+        let page_offset = out.len() as u64;
+        let page_start = out.len();
+        out.extend_from_slice(&(chunk.len() as u32).to_le_bytes());
+        out.extend_from_slice(&0u32.to_le_bytes());
+        let blob_offset = PAGED_PAGE_HEADER_SIZE
+            .checked_add(
+                chunk
+                    .len()
+                    .checked_mul(INDEX_ENTRY_SIZE)
+                    .ok_or(LexError::Truncated)?,
+            )
+            .ok_or(LexError::Truncated)?;
+        out.extend_from_slice(&(blob_offset as u64).to_le_bytes());
+        let index_start = out.len();
+        out.resize(index_start + chunk.len() * INDEX_ENTRY_SIZE, 0);
+        for (entry_index, (hash, text)) in chunk.iter().enumerate() {
+            if text.len() > u16::MAX as usize {
+                return Err(LexError::TermTooLong);
+            }
+            let relative = (out.len() - page_start - blob_offset) as u64;
+            out.push(LEX_TAG_STRING);
+            out.extend_from_slice(&(text.len() as u16).to_le_bytes());
+            out.extend_from_slice(text.as_bytes());
+            let index_offset = index_start + entry_index * INDEX_ENTRY_SIZE;
+            out[index_offset..index_offset + 8].copy_from_slice(&hash.to_le_bytes());
+            out[index_offset + 8..index_offset + 16].copy_from_slice(&relative.to_le_bytes());
+        }
+        let page_length = (out.len() - page_start) as u64;
+        let directory =
+            HEADER_SIZE + PAGED_DIRECTORY_HEADER_SIZE + page_index * PAGED_DIRECTORY_ENTRY_SIZE;
+        out[directory..directory + 8].copy_from_slice(&chunk[0].0.to_le_bytes());
+        out[directory + 8..directory + 16].copy_from_slice(&page_offset.to_le_bytes());
+        out[directory + 16..directory + 24].copy_from_slice(&page_length.to_le_bytes());
+        out[directory + 24..directory + 28].copy_from_slice(&(chunk.len() as u32).to_le_bytes());
+    }
+    Ok(out)
+}
+
 /// Largest UTF-8 prefix of `s` that fits in `max_bytes`, never splitting a codepoint.
 /// Zero-allocation lexicon key for in-memory lookups
 pub enum LexiconKey<'a> {
@@ -106,6 +187,8 @@ pub struct Q42LexMmap<'a> {
     data: &'a [u8],
     entry_count: usize,
     strings_offset: usize,
+    format_version: u64,
+    page_count: usize,
 }
 
 impl<'a> Q42LexMmap<'a> {
@@ -117,9 +200,7 @@ impl<'a> Q42LexMmap<'a> {
         if data[0..8] != *MAGIC {
             return Err(LexError::InvalidMagic);
         }
-        if u64::from_le_bytes(data[24..32].try_into().unwrap()) != 1 {
-            return Err(LexError::BadIndex);
-        }
+        let format_version = u64::from_le_bytes(data[24..32].try_into().unwrap());
         let entry_count = usize::try_from(u64::from_le_bytes(data[8..16].try_into().unwrap()))
             .map_err(|_| LexError::Truncated)?;
         let strings_offset = usize::try_from(u64::from_le_bytes(data[16..24].try_into().unwrap()))
@@ -131,13 +212,42 @@ impl<'a> Q42LexMmap<'a> {
                     .ok_or(LexError::Truncated)?,
             )
             .ok_or(LexError::Truncated)?;
-        if index_end > data.len() || strings_offset != index_end {
+        let (page_count, flat) = match format_version {
+            1 => (0, true),
+            LEX_VERSION_PAGED => {
+                let page_count_end = strings_offset
+                    .checked_add(PAGED_DIRECTORY_HEADER_SIZE)
+                    .ok_or(LexError::Truncated)?;
+                if page_count_end > data.len() {
+                    return Err(LexError::Truncated);
+                }
+                let page_count = usize::try_from(u64::from_le_bytes(
+                    data[strings_offset..page_count_end].try_into().unwrap(),
+                ))
+                .map_err(|_| LexError::Truncated)?;
+                let directory_end = page_count_end
+                    .checked_add(
+                        page_count
+                            .checked_mul(PAGED_DIRECTORY_ENTRY_SIZE)
+                            .ok_or(LexError::Truncated)?,
+                    )
+                    .ok_or(LexError::Truncated)?;
+                if strings_offset != HEADER_SIZE || directory_end > data.len() {
+                    return Err(LexError::Truncated);
+                }
+                (page_count, false)
+            }
+            _ => return Err(LexError::BadIndex),
+        };
+        if flat && (index_end > data.len() || strings_offset != index_end) {
             return Err(LexError::Truncated);
         }
         let view = Self {
             data,
             entry_count,
             strings_offset,
+            format_version,
+            page_count,
         };
         view.validate_entries()?;
         Ok(view)
@@ -148,8 +258,38 @@ impl<'a> Q42LexMmap<'a> {
         self.entry_count
     }
 
+    /// Hash at sorted ordinal `i`, independent of whether the lexicon is the
+    /// legacy flat layout or the paged v2 layout. Cold loaders use this rather
+    /// than reaching into an on-disk index with v1 assumptions.
+    pub fn hash_at(&self, i: usize) -> Option<u64> {
+        if i >= self.entry_count {
+            return None;
+        }
+        if self.format_version == LEX_VERSION_PAGED {
+            let mut base = 0usize;
+            for page in 0..self.page_count {
+                let (_, offset, _, count) = self.page_directory_entry(page)?;
+                if i < base + count {
+                    let entry = offset + PAGED_PAGE_HEADER_SIZE + (i - base) * INDEX_ENTRY_SIZE;
+                    return Some(u64::from_le_bytes(
+                        self.data.get(entry..entry + 8)?.try_into().ok()?,
+                    ));
+                }
+                base += count;
+            }
+            return None;
+        }
+        let off = HEADER_SIZE + i * INDEX_ENTRY_SIZE;
+        Some(u64::from_le_bytes(
+            self.data.get(off..off + 8)?.try_into().ok()?,
+        ))
+    }
+
     /// Binary search for `hash` in the sorted index; returns the UTF-8 lexeme slice.
     pub fn lookup_hash(&self, hash: u64) -> Option<&'a str> {
+        if self.format_version == LEX_VERSION_PAGED {
+            return self.lookup_hash_paged(hash);
+        }
         let mut lo = 0usize;
         let mut hi = self.entry_count;
         while lo < hi {
@@ -176,6 +316,17 @@ impl<'a> Q42LexMmap<'a> {
         if i >= self.entry_count {
             return None;
         }
+        if self.format_version == LEX_VERSION_PAGED {
+            let mut base = 0usize;
+            for page in 0..self.page_count {
+                let (_, offset, length, count) = self.page_directory_entry(page)?;
+                if i < base + count {
+                    return self.page_string_at(offset, length, i - base);
+                }
+                base += count;
+            }
+            return None;
+        }
         let off = HEADER_SIZE + i * INDEX_ENTRY_SIZE;
         let str_off = u64::from_le_bytes(self.data[off + 8..off + 16].try_into().ok()?) as usize;
         Self::read_string_at(self.data, self.strings_offset, str_off)
@@ -185,6 +336,9 @@ impl<'a> Q42LexMmap<'a> {
     /// slice is available. This keeps corrupt lexicon sections from becoming
     /// deferred `None` values during query execution.
     fn validate_entries(&self) -> Result<(), LexError> {
+        if self.format_version == LEX_VERSION_PAGED {
+            return self.validate_paged_entries();
+        }
         let mut previous_hash = None;
         for i in 0..self.entry_count {
             let off = HEADER_SIZE + i * INDEX_ENTRY_SIZE;
@@ -238,6 +392,147 @@ impl<'a> Q42LexMmap<'a> {
         Ok(())
     }
 
+    fn page_directory_entry(&self, index: usize) -> Option<(u64, usize, usize, usize)> {
+        if index >= self.page_count {
+            return None;
+        }
+        let offset =
+            self.strings_offset + PAGED_DIRECTORY_HEADER_SIZE + index * PAGED_DIRECTORY_ENTRY_SIZE;
+        let first_hash = u64::from_le_bytes(self.data.get(offset..offset + 8)?.try_into().ok()?);
+        let page_offset = usize::try_from(u64::from_le_bytes(
+            self.data.get(offset + 8..offset + 16)?.try_into().ok()?,
+        ))
+        .ok()?;
+        let page_length = usize::try_from(u64::from_le_bytes(
+            self.data.get(offset + 16..offset + 24)?.try_into().ok()?,
+        ))
+        .ok()?;
+        let count =
+            u32::from_le_bytes(self.data.get(offset + 24..offset + 28)?.try_into().ok()?) as usize;
+        Some((first_hash, page_offset, page_length, count))
+    }
+
+    fn lookup_hash_paged(&self, hash: u64) -> Option<&'a str> {
+        let mut lo = 0usize;
+        let mut hi = self.page_count;
+        while lo < hi {
+            let mid = lo + (hi - lo) / 2;
+            if self.page_directory_entry(mid)?.0 <= hash {
+                lo = mid + 1;
+            } else {
+                hi = mid;
+            }
+        }
+        let page = lo.checked_sub(1)?;
+        let (_, offset, length, count) = self.page_directory_entry(page)?;
+        let mut left = 0usize;
+        let mut right = count;
+        while left < right {
+            let mid = left + (right - left) / 2;
+            let entry = offset + PAGED_PAGE_HEADER_SIZE + mid * INDEX_ENTRY_SIZE;
+            let entry_hash = u64::from_le_bytes(self.data.get(entry..entry + 8)?.try_into().ok()?);
+            match entry_hash.cmp(&hash) {
+                std::cmp::Ordering::Less => left = mid + 1,
+                std::cmp::Ordering::Greater => right = mid,
+                std::cmp::Ordering::Equal => return self.page_string_at(offset, length, mid),
+            }
+        }
+        None
+    }
+
+    fn page_string_at(
+        &self,
+        page_offset: usize,
+        page_length: usize,
+        index: usize,
+    ) -> Option<&'a str> {
+        let page_end = page_offset.checked_add(page_length)?;
+        let count = u32::from_le_bytes(
+            self.data
+                .get(page_offset..page_offset + 4)?
+                .try_into()
+                .ok()?,
+        ) as usize;
+        let blob_offset = usize::try_from(u64::from_le_bytes(
+            self.data
+                .get(page_offset + 8..page_offset + 16)?
+                .try_into()
+                .ok()?,
+        ))
+        .ok()?;
+        if index >= count {
+            return None;
+        }
+        let entry = page_offset + PAGED_PAGE_HEADER_SIZE + index * INDEX_ENTRY_SIZE;
+        let relative = usize::try_from(u64::from_le_bytes(
+            self.data.get(entry + 8..entry + 16)?.try_into().ok()?,
+        ))
+        .ok()?;
+        let start = page_offset
+            .checked_add(blob_offset)?
+            .checked_add(relative)?;
+        if start + 3 > page_end || self.data[start] != LEX_TAG_STRING {
+            return None;
+        }
+        let length = u16::from_le_bytes(self.data[start + 1..start + 3].try_into().ok()?) as usize;
+        let end = start.checked_add(3)?.checked_add(length)?;
+        if end > page_end {
+            return None;
+        }
+        std::str::from_utf8(&self.data[start + 3..end]).ok()
+    }
+
+    fn validate_paged_entries(&self) -> Result<(), LexError> {
+        let mut total = 0usize;
+        let mut previous = None;
+        for page in 0..self.page_count {
+            let (first, offset, length, count) =
+                self.page_directory_entry(page).ok_or(LexError::BadIndex)?;
+            if count == 0
+                || offset < HEADER_SIZE
+                || offset
+                    .checked_add(length)
+                    .is_none_or(|end| end > self.data.len())
+            {
+                return Err(LexError::BadIndex);
+            }
+            if previous.is_some_and(|value| first <= value) {
+                return Err(LexError::BadIndex);
+            }
+            let actual_count =
+                u32::from_le_bytes(self.data[offset..offset + 4].try_into().unwrap()) as usize;
+            let blob = usize::try_from(u64::from_le_bytes(
+                self.data[offset + 8..offset + 16].try_into().unwrap(),
+            ))
+            .map_err(|_| LexError::BadIndex)?;
+            if actual_count != count
+                || blob != PAGED_PAGE_HEADER_SIZE + count * INDEX_ENTRY_SIZE
+                || blob > length
+            {
+                return Err(LexError::BadIndex);
+            }
+            for item in 0..count {
+                let entry = offset + PAGED_PAGE_HEADER_SIZE + item * INDEX_ENTRY_SIZE;
+                let hash = u64::from_le_bytes(self.data[entry..entry + 8].try_into().unwrap());
+                if item == 0 && hash != first {
+                    return Err(LexError::BadIndex);
+                }
+                if previous.is_some_and(|value| hash <= value) {
+                    return Err(LexError::BadIndex);
+                }
+                previous = Some(hash);
+                if self.page_string_at(offset, length, item).is_none() {
+                    return Err(LexError::BadEntry);
+                }
+            }
+            total = total.checked_add(count).ok_or(LexError::BadIndex)?;
+        }
+        if total != self.entry_count {
+            return Err(LexError::BadIndex);
+        }
+        Ok(())
+    }
+
     fn read_string_at(data: &[u8], blob_base: usize, rel_off: usize) -> Option<&str> {
         let start = blob_base.checked_add(rel_off)?;
         if start.checked_add(3)? > data.len() {
@@ -261,6 +556,9 @@ impl<'a> Q42LexMmap<'a> {
     /// Used by SPARQL-Star Virtual ID resolution: a Virtual ID is the FNV-1a hash of an embedded
     /// triple, stored in the lexicon with tag `LEX_TAG_EMBEDDED` instead of `LEX_TAG_STRING`.
     pub fn lookup_embedded_triple(&self, hash: u64) -> Option<[u64; 3]> {
+        if self.format_version == LEX_VERSION_PAGED {
+            return None;
+        }
         let mut lo = 0usize;
         let mut hi = self.entry_count;
         while lo < hi {
@@ -283,6 +581,9 @@ impl<'a> Q42LexMmap<'a> {
 
     /// Binary search for `hash`; returns the authoritative Webizen identity string.
     pub fn lookup_webizen_identity(&self, hash: u64) -> Option<&'a str> {
+        if self.format_version == LEX_VERSION_PAGED {
+            return None;
+        }
         let mut lo = 0usize;
         let mut hi = self.entry_count;
         while lo < hi {
@@ -386,11 +687,9 @@ impl Q42Lexicon {
             .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, format!("{e:?}")))?;
         let mut entries = HashMap::with_capacity(view.entry_count());
         for i in 0..view.entry_count() {
-            let off = HEADER_SIZE + i * INDEX_ENTRY_SIZE;
-            if off + INDEX_ENTRY_SIZE > data.len() {
+            let Some(hash) = view.hash_at(i) else {
                 break;
-            }
-            let hash = u64::from_le_bytes(data[off..off + 8].try_into().unwrap());
+            };
             if let Some(text) = view.lookup_hash(hash) {
                 entries.insert(hash, text.to_string());
             }
@@ -556,6 +855,27 @@ mod tests {
         let mut map = HashMap::new();
         map.insert(h, long);
         assert_eq!(serialize_string_lexicon(&map), Err(LexError::TermTooLong));
+    }
+
+    #[test]
+    fn paged_lexicon_binary_search_crosses_page_boundaries() {
+        let mut map = HashMap::new();
+        for value in 0u64..9 {
+            map.insert(value * 10 + 3, format!("urn:q42:paged:{value}"));
+        }
+        let bytes = serialize_paged_string_lexicon(&map, 2).unwrap();
+        assert_eq!(
+            u64::from_le_bytes(bytes[24..32].try_into().unwrap()),
+            LEX_VERSION_PAGED
+        );
+        let view = Q42LexMmap::from_bytes(&bytes).unwrap();
+        assert_eq!(view.entry_count(), 9);
+        assert_eq!(view.lookup_hash(3), Some("urn:q42:paged:0"));
+        assert_eq!(view.lookup_hash(83), Some("urn:q42:paged:8"));
+        assert_eq!(view.string_at(4), Some("urn:q42:paged:4"));
+        assert_eq!(view.lookup_hash(4), None);
+        let cold = Q42Lexicon::load_from_lex_bytes(&bytes).unwrap();
+        assert_eq!(cold.lookup(43), Some("urn:q42:paged:4"));
     }
 
     #[test]

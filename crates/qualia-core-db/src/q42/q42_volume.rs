@@ -33,9 +33,11 @@ pub use volume::{
 pub use volume::{
     root_relative_path, validate_exact_range_response, verify_source_sha256, BidxBlockRange,
     BidxMatchPage, LocalFileRangeSource, Q42BlockCursor, Q42BlockMeta, Q42ByteRange,
-    Q42ObjectMatchPage, Q42ObjectSearchCursor, Q42RangeSource, Q42RangeVolume, Q42RangeVolumeSet,
-    Q42SegmentMatchPage, Q42SegmentMatchRange, Q42SegmentRangeFactory, Q42VolumeManifest,
-    Q42VolumeSegment, Q42VolumeSet, StreamingQ42VolumeWriter, MAX_VOLUME_MANIFEST_BYTES,
+    Q42ObjectMatchPage, Q42ObjectSearchCursor, Q42RangeQueryCursor, Q42RangeQueryPage,
+    Q42RangeQueryPattern, Q42RangeQueryPlan, Q42RangeQueryStrategy, Q42RangeSource, Q42RangeVolume,
+    Q42RangeVolumeSet, Q42SegmentMatchPage, Q42SegmentMatchRange, Q42SegmentRangeFactory,
+    Q42VolumeManifest, Q42VolumeSegment, Q42VolumeSet, Q42VolumeSetQueryCursor,
+    Q42VolumeSetQueryPage, StreamingQ42VolumeWriter, MAX_VOLUME_MANIFEST_BYTES,
 };
 
 pub const Q42_MAGIC: [u8; 4] = [0x51, 0x34, 0x32, 0x00]; // "Q42\0"
@@ -230,7 +232,7 @@ pub fn encode_lex(lex: &HashMap<u64, String>) -> Result<Vec<u8>, LexError> {
     // truncates over-long literals at a CHARACTER boundary (never mid-codepoint), so multilingual
     // literals round-trip byte-intact — a plain `b.len().min(65535)` byte cut could split a codepoint
     // and produce invalid UTF-8 that the reader then drops.
-    crate::q42_lex::serialize_string_lexicon(lex)
+    crate::q42_lex::serialize_paged_string_lexicon(lex, crate::q42_lex::DEFAULT_LEX_PAGE_ENTRIES)
 }
 
 /// Encode Q42LEX bytes from a hash → LexiconEntry map (supports embedded triples).

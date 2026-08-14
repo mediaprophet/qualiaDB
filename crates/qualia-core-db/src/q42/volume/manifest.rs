@@ -8,7 +8,9 @@ use sha2::{Digest, Sha256};
 
 use super::super::{Q42Volume, MAX_COMPRESSED_SUPERBLOCK_SIZE, SUPERBLOCK_SIZE};
 use super::range::{verify_source_sha256, Q42RangeSource};
-use super::range_volume::Q42RangeVolume;
+use super::range_volume::{
+    Q42RangeQueryCursor, Q42RangeQueryPage, Q42RangeQueryPlan, Q42RangeVolume,
+};
 
 pub const VOLUME_MANIFEST_MAGIC: [u8; 8] = *b"Q42VOL\0\0";
 pub const VOLUME_MANIFEST_VERSION: u16 = 1;
@@ -324,6 +326,19 @@ pub struct Q42RangeVolumeSet<S: Q42RangeSource> {
     segments: Vec<Q42RangeVolume<S>>,
 }
 
+/// Resume state for a range-backed scan across a logical Q42 volume set.
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub struct Q42VolumeSetQueryCursor {
+    pub segment_index: usize,
+    pub segment_cursor: Q42RangeQueryCursor,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct Q42VolumeSetQueryPage {
+    pub returned: usize,
+    pub next_cursor: Option<Q42VolumeSetQueryCursor>,
+}
+
 impl<S: Q42RangeSource> Q42RangeVolumeSet<S> {
     pub fn open_root<R, F>(root: &Q42RangeVolume<R>, factory: &F) -> io::Result<Self>
     where
@@ -365,6 +380,88 @@ impl<S: Q42RangeSource> Q42RangeVolumeSet<S> {
 
     pub fn segments(&self) -> &[Q42RangeVolume<S>] {
         &self.segments
+    }
+
+    /// Scan one bounded result page across child segments.  Bound-object
+    /// patterns prune the segment list through the root manifest before the
+    /// per-segment BIDX reader runs; other patterns stream segments in their
+    /// stable manifest order.
+    pub fn execute_query_page_into(
+        &self,
+        plan: Q42RangeQueryPlan,
+        cursor: Q42VolumeSetQueryCursor,
+        compressed: &mut [u8],
+        decoded: &mut [u8],
+        out: &mut [crate::NQuin],
+    ) -> io::Result<Q42VolumeSetQueryPage> {
+        if out.is_empty() {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "Q42 volume-set query output buffer is empty",
+            ));
+        }
+        let (start, end) = if let Some(object) = plan.pattern.object {
+            match self.manifest.segment_range_for_object(object) {
+                Some(range) => (range.start, range.end),
+                None => {
+                    return Ok(Q42VolumeSetQueryPage {
+                        returned: 0,
+                        next_cursor: None,
+                    })
+                }
+            }
+        } else {
+            (0, self.segments.len())
+        };
+        let mut segment_index = cursor.segment_index.max(start);
+        let mut segment_cursor = if segment_index == cursor.segment_index {
+            cursor.segment_cursor
+        } else {
+            Q42RangeQueryCursor::default()
+        };
+        let mut returned = 0usize;
+        while segment_index < end {
+            let page: Q42RangeQueryPage = self.segments[segment_index].execute_query_page_into(
+                plan,
+                segment_cursor,
+                compressed,
+                decoded,
+                &mut out[returned..],
+            )?;
+            returned += page.returned;
+            if returned == out.len() {
+                let next_cursor = match page.next_cursor {
+                    Some(next) => Some(Q42VolumeSetQueryCursor {
+                        segment_index,
+                        segment_cursor: next,
+                    }),
+                    None if segment_index + 1 < end => Some(Q42VolumeSetQueryCursor {
+                        segment_index: segment_index + 1,
+                        segment_cursor: Q42RangeQueryCursor::default(),
+                    }),
+                    None => None,
+                };
+                return Ok(Q42VolumeSetQueryPage {
+                    returned,
+                    next_cursor,
+                });
+            }
+            if let Some(next) = page.next_cursor {
+                return Ok(Q42VolumeSetQueryPage {
+                    returned,
+                    next_cursor: Some(Q42VolumeSetQueryCursor {
+                        segment_index,
+                        segment_cursor: next,
+                    }),
+                });
+            }
+            segment_index += 1;
+            segment_cursor = Q42RangeQueryCursor::default();
+        }
+        Ok(Q42VolumeSetQueryPage {
+            returned,
+            next_cursor: None,
+        })
     }
 
     /// Find the first segment whose object interval can contain `object_hash`.

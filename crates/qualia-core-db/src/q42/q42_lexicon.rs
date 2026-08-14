@@ -240,15 +240,12 @@ impl Q42Lexicon {
         let mut terms = HashMap::new();
         let mut reverse = HashMap::new();
 
-        // Iterate all string entries from the lexicon using the sorted index
-        const HEADER_SIZE: usize = 32;
-        const INDEX_ENTRY_SIZE: usize = 16;
+        // Iterate through the layout-neutral Q42LEX view.  v2 lexicons have
+        // a page directory rather than one flat index.
         for i in 0..lex_view.entry_count() {
-            let off = HEADER_SIZE + i * INDEX_ENTRY_SIZE;
-            if off + INDEX_ENTRY_SIZE > lex_data.len() {
+            let Some(hash) = lex_view.hash_at(i) else {
                 break;
-            }
-            let hash = u64::from_le_bytes(lex_data[off..off + 8].try_into().unwrap_or([0u8; 8]));
+            };
             if let Some(text) = lex_view
                 .lookup_webizen_identity(hash)
                 .or_else(|| lex_view.lookup_hash(hash))
