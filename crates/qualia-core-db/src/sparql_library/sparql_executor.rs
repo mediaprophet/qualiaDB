@@ -10,6 +10,155 @@ use crate::sparql_filter::{EvalResult, ExpressionEvaluator};
 use crate::sparql_planner::*;
 use crate::NQuin;
 
+/// Resume state for a caller-buffered triple-pattern page over a range-backed
+/// Q42 segment.  It is deliberately separate from the resident executor: no
+/// graph-sized `Vec<NQuin>` is constructed on this path.
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub struct Q42RangeSparqlCursor {
+    pub scan: crate::q42_volume::Q42RangeQueryCursor,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct Q42RangeSparqlPage {
+    pub returned: usize,
+    pub next_cursor: Option<Q42RangeSparqlCursor>,
+}
+
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub struct Q42RangeVolumeSetSparqlCursor {
+    pub scan: crate::q42_volume::Q42VolumeSetQueryCursor,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct Q42RangeVolumeSetSparqlPage {
+    pub returned: usize,
+    pub next_cursor: Option<Q42RangeVolumeSetSparqlCursor>,
+}
+
+/// Execute one physical page of a SPARQL triple pattern against a Q42 range
+/// source.  Constants and already-bound variables become on-disk filters; a
+/// bound object selects BIDX pruning automatically. `quin_scratch` and `out`
+/// are caller-owned, maintaining the zero-heap query kernel contract.
+pub fn execute_range_triple_page_into<S: crate::q42_volume::Q42RangeSource>(
+    volume: &crate::q42_volume::Q42RangeVolume<S>,
+    subject: u64,
+    predicate: u64,
+    object: u64,
+    context: Option<u64>,
+    ctx: &SparqlQueryContext,
+    input: &BindingRow,
+    cursor: Q42RangeSparqlCursor,
+    compressed: &mut [u8],
+    decoded: &mut [u8],
+    quin_scratch: &mut [NQuin],
+    out: &mut [BindingRow],
+) -> Result<Q42RangeSparqlPage, String> {
+    if quin_scratch.is_empty() || out.is_empty() {
+        return Err("range SPARQL page requires non-empty Quin and row buffers".to_string());
+    }
+    let bound = |term: u64| match term_is_var(term, ctx) {
+        Some(variable) => input.get(variable),
+        None => Some(term),
+    };
+    let pattern = crate::q42_volume::Q42RangeQueryPattern {
+        subject: bound(subject),
+        predicate: bound(predicate),
+        object: bound(object),
+        context,
+    };
+    let page = volume
+        .execute_query_page_into(
+            crate::q42_volume::Q42RangeQueryPlan::for_pattern(pattern),
+            cursor.scan,
+            compressed,
+            decoded,
+            quin_scratch,
+        )
+        .map_err(|error| format!("range Q42 triple scan: {error}"))?;
+    let mut returned = 0usize;
+    for quin in &quin_scratch[..page.returned] {
+        let mut row = *input;
+        if !bind_var(&mut row, subject, quin.subject, ctx)
+            || !bind_var(&mut row, predicate, quin.predicate, ctx)
+            || !bind_var(&mut row, object, quin.object, ctx)
+        {
+            continue;
+        }
+        if returned == out.len() {
+            return Err("range SPARQL row buffer is smaller than Quin scratch buffer".to_string());
+        }
+        out[returned] = row;
+        returned += 1;
+    }
+    Ok(Q42RangeSparqlPage {
+        returned,
+        next_cursor: page.next_cursor.map(|scan| Q42RangeSparqlCursor { scan }),
+    })
+}
+
+/// The logical-volume counterpart of [`execute_range_triple_page_into`]. It
+/// preserves exactly the same SPARQL binding semantics while the root manifest
+/// prunes child segments before each range-backed SuperBlock scan.
+pub fn execute_range_volume_set_triple_page_into<S: crate::q42_volume::Q42RangeSource>(
+    volumes: &crate::q42_volume::Q42RangeVolumeSet<S>,
+    subject: u64,
+    predicate: u64,
+    object: u64,
+    context: Option<u64>,
+    ctx: &SparqlQueryContext,
+    input: &BindingRow,
+    cursor: Q42RangeVolumeSetSparqlCursor,
+    compressed: &mut [u8],
+    decoded: &mut [u8],
+    quin_scratch: &mut [NQuin],
+    out: &mut [BindingRow],
+) -> Result<Q42RangeVolumeSetSparqlPage, String> {
+    if quin_scratch.is_empty() || out.is_empty() {
+        return Err("range SPARQL page requires non-empty Quin and row buffers".to_string());
+    }
+    let bound = |term: u64| match term_is_var(term, ctx) {
+        Some(variable) => input.get(variable),
+        None => Some(term),
+    };
+    let page = volumes
+        .execute_query_page_into(
+            crate::q42_volume::Q42RangeQueryPlan::for_pattern(
+                crate::q42_volume::Q42RangeQueryPattern {
+                    subject: bound(subject),
+                    predicate: bound(predicate),
+                    object: bound(object),
+                    context,
+                },
+            ),
+            cursor.scan,
+            compressed,
+            decoded,
+            quin_scratch,
+        )
+        .map_err(|error| format!("range Q42 volume-set triple scan: {error}"))?;
+    let mut returned = 0usize;
+    for quin in &quin_scratch[..page.returned] {
+        let mut row = *input;
+        if !bind_var(&mut row, subject, quin.subject, ctx)
+            || !bind_var(&mut row, predicate, quin.predicate, ctx)
+            || !bind_var(&mut row, object, quin.object, ctx)
+        {
+            continue;
+        }
+        if returned == out.len() {
+            return Err("range SPARQL row buffer is smaller than Quin scratch buffer".to_string());
+        }
+        out[returned] = row;
+        returned += 1;
+    }
+    Ok(Q42RangeVolumeSetSparqlPage {
+        returned,
+        next_cursor: page
+            .next_cursor
+            .map(|scan| Q42RangeVolumeSetSparqlCursor { scan }),
+    })
+}
+
 #[inline]
 fn term_is_var(term: u64, ctx: &SparqlQueryContext) -> Option<VariableId> {
     let id = term as usize;
@@ -1512,5 +1661,50 @@ mod tests {
         let result = executor.execute(&plan, &ctx);
         // Should fail because root operator is invalid
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn range_triple_page_uses_q42_bidx_without_resident_graph() {
+        let dir = tempfile::TempDir::new().unwrap();
+        let path = dir.path().join("range.q42");
+        let quin = NQuin {
+            subject: 101,
+            predicate: 202,
+            object: 303,
+            context: 0,
+            metadata: 0,
+            parity: 0,
+        };
+        crate::q42_volume::write_unified_volume(
+            &path,
+            &std::collections::HashMap::new(),
+            &[(quin.object, quin.object)],
+            &[vec![quin]],
+        )
+        .unwrap();
+        let source = crate::q42_volume::LocalFileRangeSource::open(&path).unwrap();
+        let volume = crate::q42_volume::Q42RangeVolume::open(source).unwrap();
+        let context = SparqlQueryContext::new();
+        let mut compressed = [0u8; crate::q42_volume::MAX_COMPRESSED_SUPERBLOCK_SIZE];
+        let mut decoded = [0u8; crate::q42_volume::SUPERBLOCK_SIZE];
+        let mut quins = [NQuin::default(); 1];
+        let mut rows = [BindingRow::default(); 1];
+        let page = execute_range_triple_page_into(
+            &volume,
+            quin.subject,
+            quin.predicate,
+            quin.object,
+            None,
+            &context,
+            &BindingRow::default(),
+            Q42RangeSparqlCursor::default(),
+            &mut compressed,
+            &mut decoded,
+            &mut quins,
+            &mut rows,
+        )
+        .unwrap();
+        assert_eq!(page.returned, 1);
+        assert_eq!(rows[0].slots[0], None);
     }
 }
