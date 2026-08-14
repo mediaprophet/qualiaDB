@@ -82,6 +82,7 @@ pub(crate) fn validate_volume_structure(header: &Q42VolumeHeader, bytes: &[u8]) 
     let dag_length = header.dag_root_length;
     let natural_person_offset = header.natural_person_did_offset;
     let software_agent_offset = header.software_agent_did_offset;
+    let manifest_range = header.volume_manifest_range();
 
     if flags & FLAG_BLOCKS_LZ4 == 0 {
         return Err(invalid("Q42 v3 volume does not declare block-local LZ4"));
@@ -119,8 +120,21 @@ pub(crate) fn validate_volume_structure(header: &Q42VolumeHeader, bytes: &[u8]) 
         ));
     }
 
+    let manifest_section = match manifest_range {
+        Some((offset, length)) => {
+            if length == 0 || length > super::manifest::MAX_VOLUME_MANIFEST_BYTES as u64 {
+                return Err(invalid("Q42 root has an invalid volume manifest length"));
+            }
+            Some(
+                section("volume manifest", offset, length, bytes.len())?
+                    .ok_or_else(|| invalid("Q42 root has an empty volume manifest"))?,
+            )
+        }
+        None => None,
+    };
     let sections = [
         section("lexicon", lex_offset, lex_length, bytes.len())?,
+        manifest_section,
         section("BIDX", bidx_offset, bidx_length, bytes.len())?,
         section("block directory", dir_offset, dir_length, bytes.len())?,
         section("block data", data_offset, data_length, bytes.len())?,
@@ -133,6 +147,11 @@ pub(crate) fn validate_volume_structure(header: &Q42VolumeHeader, bytes: &[u8]) 
         section("Merkle DAG", dag_offset, dag_length, bytes.len())?,
     ];
     validate_non_overlapping(&sections)?;
+
+    if let Some(manifest) = manifest_section {
+        super::manifest::Q42VolumeManifest::decode(&bytes[manifest.start..manifest.end])
+            .map_err(|error| invalid(format!("embedded volume manifest is invalid: {error}")))?;
+    }
 
     for (name, offset) in [
         ("natural-person DID offset", natural_person_offset),

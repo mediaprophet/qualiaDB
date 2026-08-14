@@ -25,7 +25,10 @@ use crate::{NQuin, QUINS_PER_BLOCK};
 #[path = "volume/mod.rs"]
 mod volume;
 
-pub use volume::{BidxBlockRange, BidxMatchPage, Q42BlockCursor, Q42BlockMeta};
+pub use volume::{
+    root_relative_path, BidxBlockRange, BidxMatchPage, Q42BlockCursor, Q42BlockMeta,
+    Q42VolumeManifest, Q42VolumeSegment, Q42VolumeSet, MAX_VOLUME_MANIFEST_BYTES,
+};
 
 pub const Q42_MAGIC: [u8; 4] = [0x51, 0x34, 0x32, 0x00]; // "Q42\0"
 pub const Q42_VERSION_V3: u16 = 3;
@@ -36,6 +39,7 @@ pub const QUIN_SIZE: usize = 48;
 pub const BIDX_MAGIC: [u8; 4] = *b"BIDX";
 pub const FLAG_BLOCKS_LZ4: u16 = 0x0001;
 pub const FLAG_OBJECT_SORTED: u16 = 0x0002;
+pub const FLAG_VOLUME_ROOT: u16 = 0x0004;
 
 /// Q42 volume header — 280 bytes, `repr(C, packed)`.
 /// v3 builds hard-reject files with `version < 3` — run `q42 migrate meta` first.
@@ -89,6 +93,17 @@ impl Q42VolumeHeader {
             return Err(format!("Q42 file is version {version}; strict v3 required"));
         }
         Ok(())
+    }
+
+    fn volume_manifest_range(&self) -> Option<(u64, u64)> {
+        if self.flags & FLAG_VOLUME_ROOT == 0 {
+            return None;
+        }
+        let reserved = self._reserved;
+        Some((
+            u64::from_le_bytes(reserved[0..8].try_into().unwrap()),
+            u64::from_le_bytes(reserved[8..16].try_into().unwrap()),
+        ))
     }
 
     /// Build a minimal valid v3 header with all extension fields zeroed.
@@ -316,6 +331,9 @@ pub fn header_to_bytes(h: &Q42VolumeHeader) -> [u8; HEADER_SIZE] {
     buf[136..144].copy_from_slice(&h.assertion_timestamp.to_le_bytes());
     buf[144..152].copy_from_slice(&h.dag_root_offset.to_le_bytes());
     buf[152..160].copy_from_slice(&h.dag_root_length.to_le_bytes());
+    buf[160..168].copy_from_slice(&h.natural_person_did_offset.to_le_bytes());
+    buf[168..176].copy_from_slice(&h.software_agent_did_offset.to_le_bytes());
+    buf[176..256].copy_from_slice(&h._reserved);
     buf
 }
 
@@ -422,6 +440,15 @@ pub fn write_unified_volume_with_entries(
     builder.finish(path)
 }
 
+/// Publish a root Q42 segment whose front matter catalogs immutable child
+/// segments. The root is intentionally data-empty; query code opens the
+/// catalog snapshot through [`Q42VolumeSet`].
+pub fn write_volume_root(path: &Path, manifest: &Q42VolumeManifest) -> io::Result<()> {
+    UnifiedVolumeBuilder::with_empty_lex()
+        .with_volume_manifest(manifest)?
+        .finish(path)
+}
+
 fn lex_error_to_io(error: LexError) -> io::Error {
     io::Error::new(
         io::ErrorKind::InvalidInput,
@@ -467,6 +494,7 @@ fn object_range(quins: &[NQuin]) -> io::Result<(u64, u64)> {
 /// Incremental builder for large external-sort merges (one SuperBlock at a time).
 pub struct UnifiedVolumeBuilder {
     lex_bytes: Vec<u8>,
+    volume_manifest: Option<Vec<u8>>,
     block_ranges: Vec<(u64, u64)>,
     dir_entries: Vec<BlockDirectoryEntry>,
     data_blob: Vec<u8>,
@@ -484,6 +512,7 @@ impl UnifiedVolumeBuilder {
     pub fn with_lex_map(lex: &HashMap<u64, String>) -> Result<Self, LexError> {
         Ok(Self {
             lex_bytes: encode_lex(lex)?,
+            volume_manifest: None,
             block_ranges: Vec::new(),
             dir_entries: Vec::new(),
             data_blob: Vec::new(),
@@ -498,6 +527,7 @@ impl UnifiedVolumeBuilder {
     pub fn with_lex_entries(lex: &HashMap<u64, LexiconEntry>) -> Result<Self, LexError> {
         Ok(Self {
             lex_bytes: encode_lex_with_entries(lex)?,
+            volume_manifest: None,
             block_ranges: Vec::new(),
             dir_entries: Vec::new(),
             data_blob: Vec::new(),
@@ -510,6 +540,13 @@ impl UnifiedVolumeBuilder {
 
     pub fn with_empty_lex() -> Self {
         Self::with_lex_map(&HashMap::new()).expect("an empty Q42LEX is valid")
+    }
+
+    /// Embed an immutable logical-volume descriptor in this root Q42 file's
+    /// front matter. Child segments remain ordinary self-contained Q42 files.
+    pub fn with_volume_manifest(mut self, manifest: &Q42VolumeManifest) -> io::Result<Self> {
+        self.volume_manifest = Some(manifest.encode()?);
+        Ok(self)
     }
 
     /// Set the author DID for DAG commit nodes (optional; defaults to 0 = system).
@@ -583,9 +620,11 @@ impl UnifiedVolumeBuilder {
     pub fn finish_to_bytes(self) -> Vec<u8> {
         let bidx_bytes = encode_bidx(&self.block_ranges);
         let block_count = self.block_ranges.len() as u64;
+        let manifest_bytes = self.volume_manifest.as_deref().unwrap_or(&[]);
 
         let lex_offset = HEADER_SIZE as u64;
-        let bidx_offset = lex_offset + self.lex_bytes.len() as u64;
+        let manifest_offset = lex_offset + self.lex_bytes.len() as u64;
+        let bidx_offset = manifest_offset + manifest_bytes.len() as u64;
         let block_dir_offset = bidx_offset + bidx_bytes.len() as u64;
         let block_dir_length = block_count * BlockDirectoryEntry::SIZE as u64;
         let data_offset = block_dir_offset + block_dir_length;
@@ -615,10 +654,17 @@ impl UnifiedVolumeBuilder {
             h.finalize().into()
         };
 
+        let mut reserved = [0u8; 80];
+        let mut flags = FLAG_BLOCKS_LZ4 | FLAG_OBJECT_SORTED;
+        if !manifest_bytes.is_empty() {
+            flags |= FLAG_VOLUME_ROOT;
+            reserved[0..8].copy_from_slice(&manifest_offset.to_le_bytes());
+            reserved[8..16].copy_from_slice(&(manifest_bytes.len() as u64).to_le_bytes());
+        }
         let header = Q42VolumeHeader {
             magic: Q42_MAGIC,
             version: Q42_VERSION_V3,
-            flags: FLAG_BLOCKS_LZ4 | FLAG_OBJECT_SORTED,
+            flags,
             lex_offset,
             lex_length: self.lex_bytes.len() as u64,
             bidx_offset,
@@ -638,12 +684,13 @@ impl UnifiedVolumeBuilder {
             dag_root_length,
             natural_person_did_offset: 0,
             software_agent_did_offset: 0,
-            _reserved: [0; 80],
+            _reserved: reserved,
         };
 
         let mut out = Vec::with_capacity(
             HEADER_SIZE
                 + self.lex_bytes.len()
+                + manifest_bytes.len()
                 + bidx_bytes.len()
                 + block_dir_length as usize
                 + self.data_blob.len()
@@ -651,6 +698,7 @@ impl UnifiedVolumeBuilder {
         );
         out.extend_from_slice(&header_to_bytes(&header));
         out.extend_from_slice(&self.lex_bytes);
+        out.extend_from_slice(manifest_bytes);
         out.extend_from_slice(&bidx_bytes);
         for entry in &self.dir_entries {
             // Writing to a `Vec<u8>` is infallible.
@@ -707,6 +755,48 @@ impl Q42Volume {
         &self.mmap[start..end]
     }
 
+    /// Return the root descriptor bytes embedded between the lexicon and BIDX.
+    pub fn volume_manifest_bytes(&self) -> io::Result<Option<&[u8]>> {
+        let Some((offset, length)) = self.header.volume_manifest_range() else {
+            return Ok(None);
+        };
+        let length = usize::try_from(length).map_err(|_| {
+            io::Error::new(
+                io::ErrorKind::InvalidData,
+                "Q42 manifest length exceeds platform",
+            )
+        })?;
+        if length == 0 || length > MAX_VOLUME_MANIFEST_BYTES {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "Q42 root has an invalid embedded volume manifest length",
+            ));
+        }
+        let start = usize::try_from(offset).map_err(|_| {
+            io::Error::new(
+                io::ErrorKind::InvalidData,
+                "Q42 manifest offset exceeds platform",
+            )
+        })?;
+        let end = start.checked_add(length).ok_or_else(|| {
+            io::Error::new(io::ErrorKind::InvalidData, "Q42 manifest range overflows")
+        })?;
+        self.mmap.get(start..end).map(Some).ok_or_else(|| {
+            io::Error::new(
+                io::ErrorKind::InvalidData,
+                "Q42 manifest lies outside the file",
+            )
+        })
+    }
+
+    /// Decode the front-embedded descriptor for a logical multi-segment Q42
+    /// snapshot. A regular v3 Q42 returns `Ok(None)`.
+    pub fn volume_manifest(&self) -> io::Result<Option<Q42VolumeManifest>> {
+        self.volume_manifest_bytes()?
+            .map(Q42VolumeManifest::decode)
+            .transpose()
+    }
+
     pub fn block_count(&self) -> u64 {
         self.header.block_count
     }
@@ -740,6 +830,20 @@ impl Q42Volume {
         out: &mut [usize],
     ) -> io::Result<Option<BidxMatchPage>> {
         volume::bidx_blocks_for_hash_into(self.bidx_bytes(), object_hash, cursor, out)
+    }
+
+    /// Minimum and maximum object hash advertised by this segment's validated
+    /// BIDX. Empty root/catalog segments return `None`.
+    pub fn object_hash_bounds(&self) -> Option<(u64, u64)> {
+        let count = self.block_count() as usize;
+        if count == 0 {
+            return None;
+        }
+        let bidx = self.bidx_bytes();
+        let first = u64::from_le_bytes(bidx[16..24].try_into().ok()?);
+        let last_offset = 16 + (count - 1) * 16;
+        let last = u64::from_le_bytes(bidx[last_offset + 8..last_offset + 16].try_into().ok()?);
+        Some((first, last))
     }
 
     pub fn block_directory_entry(&self, index: usize) -> io::Result<BlockDirectoryEntry> {
@@ -864,7 +968,7 @@ pub fn bidx_blocks_for_hash(bidx: &[u8], object_hash: u64) -> Vec<usize> {
 mod tests {
     use super::*;
     use crate::mini_parser::hash_token;
-    use tempfile::NamedTempFile;
+    use tempfile::{NamedTempFile, TempDir};
 
     fn sample_quin(subj: &str, pred: &str, obj: &str) -> (NQuin, HashMap<u64, String>) {
         let mut lex = HashMap::new();
@@ -953,6 +1057,53 @@ mod tests {
         assert_eq!(page[0], 4);
         assert_eq!(third.next_cursor, None);
         assert!(vol.bidx_blocks_for_hash_into(q.object, 0, &mut []).is_err());
+    }
+
+    #[test]
+    fn embedded_root_manifest_opens_immutable_child_segments() {
+        let dir = TempDir::new().unwrap();
+        let root = dir.path().join("root.q42");
+        let first_path = dir.path().join("segment-000.q42");
+        let second_path = dir.path().join("segment-001.q42");
+        let (first_q, first_lex) = sample_quin("s-1", "p", "o-1");
+        let (second_q, second_lex) = sample_quin("s-2", "p", "o-2");
+        let mut inputs = vec![(first_q, first_lex), (second_q, second_lex)];
+        inputs.sort_unstable_by_key(|(quin, _)| quin.object);
+        write_unified_volume(
+            &first_path,
+            &inputs[0].1,
+            &[(inputs[0].0.object, inputs[0].0.object)],
+            &[vec![inputs[0].0]],
+        )
+        .unwrap();
+        write_unified_volume(
+            &second_path,
+            &inputs[1].1,
+            &[(inputs[1].0.object, inputs[1].0.object)],
+            &[vec![inputs[1].0]],
+        )
+        .unwrap();
+        let manifest = Q42VolumeManifest {
+            generation: 7,
+            segments: vec![
+                Q42VolumeManifest::segment_from_file(&first_path, "segment-000.q42".into())
+                    .unwrap(),
+                Q42VolumeManifest::segment_from_file(&second_path, "segment-001.q42".into())
+                    .unwrap(),
+            ],
+        };
+        write_volume_root(&root, &manifest).unwrap();
+
+        let root_volume = Q42Volume::open(&root).unwrap();
+        assert_eq!(root_volume.block_count(), 0);
+        assert_eq!(
+            root_volume.volume_manifest().unwrap(),
+            Some(manifest.clone())
+        );
+        let set = Q42VolumeSet::open_root(&root).unwrap();
+        assert_eq!(set.manifest().generation, 7);
+        assert_eq!(set.segments().len(), 2);
+        set.verify_segment_hashes(&root).unwrap();
     }
 
     #[test]
