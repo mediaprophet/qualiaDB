@@ -137,8 +137,16 @@ app-development/
 # Signing keystore — never commit private keys
 keystore.bin
 
+# Local agent / Imagine / MCP scratch — not part of the product release
+/grok-chat/
+/mcps/
+/tests/
+
 # One-off migration scripts, old release binaries, debug artefacts
 scratch/
+# scripts/ is the release/CI toolchain (Pages, ontology prep, WASM pack,
+# WordNet/anatomy). Ignore one-off local scripts; keep the allow-listed
+# release helpers tracked. Do not delete this directory from git.
 scripts/
 !scripts/
 scripts/*
