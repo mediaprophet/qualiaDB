@@ -161,6 +161,9 @@ pub enum Commands {
         output: PathBuf,
         #[arg(long)]
         strip_literals: bool,
+        /// Publish an embedded-manifest root plus child Q42 segments capped at this size.
+        #[arg(long)]
+        segment_mib: Option<u64>,
     },
     Ingest {
         #[command(subcommand)]

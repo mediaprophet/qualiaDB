@@ -113,8 +113,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             input,
             output,
             strip_literals,
+            segment_mib,
         } => {
-            handlers::misc::handle_import(input, output, *strip_literals);
+            handlers::misc::handle_import(input, output, *strip_literals, *segment_mib);
         }
         Commands::Query { dialect } => {
             handlers::misc::handle_query(dialect);

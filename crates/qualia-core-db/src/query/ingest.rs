@@ -81,6 +81,26 @@ pub fn streaming_import_rdf_with_mode(
     out_path: &str,
     mode: IngestMode,
 ) -> std::io::Result<u64> {
+    streaming_import_rdf_with_mode_inner(in_path, out_path, mode, None)
+}
+
+/// Stream-ingest RDF into a front-embedded logical volume root and immutable,
+/// size-capped child Q42 segments.
+pub fn streaming_import_rdf_volume_set_with_mode(
+    in_path: &str,
+    root_path: &str,
+    mode: IngestMode,
+    max_segment_bytes: u64,
+) -> std::io::Result<u64> {
+    streaming_import_rdf_with_mode_inner(in_path, root_path, mode, Some(max_segment_bytes))
+}
+
+fn streaming_import_rdf_with_mode_inner(
+    in_path: &str,
+    out_path: &str,
+    mode: IngestMode,
+    max_segment_bytes: Option<u64>,
+) -> std::io::Result<u64> {
     let start_time = Instant::now();
     println!("Initializing Native Ingestion Pipeline...");
 
@@ -367,7 +387,14 @@ pub fn streaming_import_rdf_with_mode(
             sorter.push_lex(*hash, term);
         }
     }
-    let total_written = sorter.merge(std::path::Path::new(out_path))?;
+    let total_written = match max_segment_bytes {
+        Some(cap) => {
+            sorter
+                .merge_volume_set(std::path::Path::new(out_path), cap)?
+                .blocks_written
+        }
+        None => sorter.merge(std::path::Path::new(out_path))?,
+    };
 
     // Lexicon byte size actually written — read back cheaply from the finished header (mmap, no
     // re-serialize) so the report reflects what is really on disk.
@@ -380,7 +407,19 @@ pub fn streaming_import_rdf_with_mode(
     // 8. Honest reporting — state the mode and, for the lossy mode, that the size reduction is data
     // loss, NOT compression (CLAUDE.md §15: no claim-vs-reality gap).
     let src_bytes = std::fs::metadata(in_path).map(|m| m.len()).unwrap_or(0);
-    let out_bytes = std::fs::metadata(out_path).map(|m| m.len()).unwrap_or(0);
+    let out_bytes = crate::q42_volume::Q42Volume::open(std::path::Path::new(out_path))
+        .ok()
+        .and_then(|root| {
+            root.volume_manifest().ok().flatten().map(|manifest| {
+                std::fs::metadata(out_path).map(|m| m.len()).unwrap_or(0)
+                    + manifest
+                        .segments
+                        .into_iter()
+                        .map(|segment| segment.byte_length)
+                        .sum::<u64>()
+            })
+        })
+        .unwrap_or_else(|| std::fs::metadata(out_path).map(|m| m.len()).unwrap_or(0));
 
     println!("✅ Import Complete!");
     println!("Parsed {} triples.", triples_read);

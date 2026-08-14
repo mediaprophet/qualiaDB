@@ -311,7 +311,12 @@ pub fn handle_verify_graph(
     }
 }
 
-pub fn handle_import(input: &PathBuf, output: &PathBuf, strip_literals: bool) {
+pub fn handle_import(
+    input: &PathBuf,
+    output: &PathBuf,
+    strip_literals: bool,
+    segment_mib: Option<u64>,
+) {
     println!("============================================================");
     println!("📥 QualiaDB Native RDF/XML Ingestion Pipeline");
     println!("============================================================");
@@ -324,7 +329,22 @@ pub fn handle_import(input: &PathBuf, output: &PathBuf, strip_literals: bool) {
         qualia_core_db::ingest::IngestMode::Complete
     };
 
-    match qualia_core_db::ingest::streaming_import_rdf_with_mode(&in_path, &out_path, mode) {
+    let result = match segment_mib {
+        Some(mib) => match mib.checked_mul(1024 * 1024) {
+            Some(bytes) if bytes != 0 => {
+                println!("Publishing a Q42 logical volume with {mib} MiB child cap.");
+                qualia_core_db::ingest::streaming_import_rdf_volume_set_with_mode(
+                    &in_path, &out_path, mode, bytes,
+                )
+            }
+            _ => Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                "--segment-mib must be greater than zero",
+            )),
+        },
+        None => qualia_core_db::ingest::streaming_import_rdf_with_mode(&in_path, &out_path, mode),
+    };
+    match result {
         Ok(quin_count) => {
             println!("✨ Done! Wrote {quin_count} Super-Quins.");
         }
