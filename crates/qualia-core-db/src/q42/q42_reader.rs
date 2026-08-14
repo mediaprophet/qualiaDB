@@ -49,9 +49,22 @@ pub fn read_c_q42_quins(path: &Path) -> std::io::Result<Vec<NQuin>> {
 
 /// Legacy compatibility wrapper.
 ///
-/// This name predates the raw `.q42` versus transport `.c.q42` split and is
-/// retained only to avoid breaking older call sites all at once.
+/// Prefer canonical v3 Q42 containers (including front-embedded logical
+/// volume roots), then fall back to the explicitly legacy framed transport.
+/// This keeps existing daemon/SPARQL cold-load callers working while they
+/// migrate to block-oriented query sources.
 pub fn read_q42_quins(path: &Path) -> std::io::Result<Vec<NQuin>> {
+    if let Ok(volume) = crate::q42_volume::Q42Volume::open(path) {
+        if volume.volume_manifest()?.is_some() {
+            let set = crate::q42_volume::Q42VolumeSet::open_root(path)?;
+            let mut quins = Vec::new();
+            for segment in set.segments() {
+                quins.extend(segment.read_all_quins()?);
+            }
+            return Ok(quins);
+        }
+        return volume.read_all_quins();
+    }
     read_c_q42_quins(path)
 }
 
@@ -96,5 +109,27 @@ mod tests {
         assert_eq!(loaded.len(), 1);
         assert_eq!(loaded[0].subject, s);
         let _ = std::fs::remove_dir_all(dir);
+    }
+
+    #[test]
+    fn canonical_volume_reader_dispatches_to_unified_v3() {
+        let dir = tempfile::TempDir::new().unwrap();
+        let path = dir.path().join("canonical.q42");
+        let quin = NQuin {
+            subject: 1,
+            predicate: 2,
+            object: 3,
+            context: 0,
+            metadata: 0,
+            parity: 0,
+        };
+        crate::q42_volume::write_unified_volume(
+            &path,
+            &std::collections::HashMap::new(),
+            &[(3, 3)],
+            &[vec![quin]],
+        )
+        .unwrap();
+        assert_eq!(read_q42_quins(&path).unwrap(), vec![quin]);
     }
 }
