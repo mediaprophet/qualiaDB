@@ -1,4 +1,5 @@
 import wasmInit, * as WasmExports from '../playground/qualia_core_db.js';
+import { fetchWasmBinary } from './wasm-fetch.js';
 import {
     N3_PRESETS, N3_RULE_ARROWS, SHACL_WASM_CONSTRAINTS, SHACL_QUALIA_EXTENSIONS,
     detectN3Rules, parseN3Triples, validateShaclConstraint, runForwardChain,
@@ -9,8 +10,7 @@ let MOD = null;
 
 async function loadEngine() {
     const wasmUrl = new URL('../playground/qualia_core_db_bg.wasm', import.meta.url);
-    const resp = await fetch(wasmUrl, { cache: 'no-store' });
-    if (!resp.ok) throw new Error(`WASM fetch failed: ${resp.status}`);
+    const resp = await fetchWasmBinary(wasmUrl);
     await wasmInit({ module_or_path: resp });
     return WasmExports;
 }

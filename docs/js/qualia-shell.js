@@ -4,6 +4,7 @@
 
 import { defaultTelemetry } from './ambient-viz.js';
 import { debugEnv, debugLog, debugTime, debugWarn } from './qualia-debug.js';
+import { fetchWasmBinary } from './wasm-fetch.js';
 
 let portal = null;
 let portalModule = null;
@@ -174,10 +175,7 @@ export async function loadQualiaPortal(canvas, options = {}) {
         debugLog('import portal module', js);
         const mod = await import(js);
         debugLog('init portal wasm', wasm);
-        const wasmResp = await fetch(wasm, { cache: 'no-store' });
-        if (!wasmResp.ok) {
-            throw new Error(`portal WASM fetch HTTP ${wasmResp.status} ${wasm}`);
-        }
+        const wasmResp = await fetchWasmBinary(wasm);
         await mod.default({ module_or_path: wasmResp });
         if (typeof mod.init_panic_hook === 'function') {
             mod.init_panic_hook();
@@ -245,10 +243,7 @@ export async function loadQualiaPortal(canvas, options = {}) {
             debugLog('import fallback', fallback);
             const mod = await import(fallback);
             const fallbackWasm = new URL('../playground/qualia_core_db_bg.wasm', import.meta.url).href;
-            const fbResp = await fetch(fallbackWasm, { cache: 'no-store' });
-            if (!fbResp.ok) {
-                throw new Error(`fallback WASM fetch HTTP ${fbResp.status}`);
-            }
+            const fbResp = await fetchWasmBinary(fallbackWasm);
             await mod.default({ module_or_path: fbResp });
             portalModule = mod;
             t.end({ source: 'qualia-core-db', portal: false });

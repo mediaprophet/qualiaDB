@@ -15,6 +15,7 @@ import { ensureCrossOriginIsolation, isCrossOriginIsolated } from './qualia-coi.
 import { debugEnv, debugError, debugLog, debugTime, debugWarn } from './qualia-debug.js';
 import { mountLocalIcp } from './qualia-icp-local.js';
 import { mountIcpHost, ensureLinkPhoneUi } from './qualia-icp-host.js';
+import { fetchWasmBinary } from './wasm-fetch.js';
 
 const TENSOR_HEADER_BYTES = 32;
 const TENSOR_STRIDE = 40;
@@ -711,8 +712,7 @@ export async function bootSpatialPage() {
         if (!wasm) {
             const module = await import('../playground/qualia_core_db.js');
             const wasmUrl = new URL('../playground/qualia_core_db_bg.wasm', import.meta.url);
-            const wasmResp = await fetch(wasmUrl, { cache: 'no-store' });
-            if (!wasmResp.ok) throw new Error(`playground WASM HTTP ${wasmResp.status}`);
+            const wasmResp = await fetchWasmBinary(wasmUrl);
             await module.default({ module_or_path: wasmResp });
             wasm = module;
             wasmSource = 'qualia-core-db';

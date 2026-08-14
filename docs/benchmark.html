@@ -56,7 +56,7 @@
     <div class="text-center">
         <div class="loading-spinner mx-auto mb-4"></div>
         <div class="text-emerald-400 font-semibold">Loading QualiaDB WASM Engine...</div>
-        <div class="text-white/50 text-sm mt-2">Initializing benchmark suite v0.0.30</div>
+        <div class="text-white/50 text-sm mt-2" id="loading-status">Initializing benchmark suite v0.0.30</div>
     </div>
 </div>
 
@@ -64,10 +64,13 @@
 <div id="error-overlay" class="error-overlay hidden">
     <div class="glass-strong rounded-3xl p-8 max-w-lg text-center">
         <div class="text-red-400 text-5xl mb-4"><i class="fas fa-exclamation-triangle"></i></div>
-        <h2 class="text-2xl font-semibold text-white mb-2">WASM Engine Required</h2>
-        <p class="text-white/60 mb-6">This benchmark suite requires the QualiaDB WASM engine to run. Please ensure you have network access to load the WASM module.</p>
+        <h2 class="text-2xl font-semibold text-white mb-2">WASM Engine Unavailable</h2>
+        <p class="text-white/60 mb-6">Interactive probes need the QualiaDB WASM engine. GitHub Pages sometimes returns 503 on the 4&nbsp;MiB binary during deploy. CI platform results still load.</p>
         <div class="code-block text-left text-sm text-red-300 mb-4" id="error-message"></div>
-        <button onclick="location.reload()" class="spinbtn"><i class="fas fa-redo mr-2"></i>Retry</button>
+        <div class="flex flex-wrap gap-3 justify-center">
+            <button type="button" id="btn-retry-wasm" class="spinbtn"><i class="fas fa-redo mr-2"></i>Retry WASM</button>
+            <button type="button" id="btn-dismiss-wasm-error" class="spinbtn" style="background:rgba(255,255,255,0.08);border-color:rgba(255,255,255,0.15);color:#e2e8f0">Show CI suite anyway</button>
+        </div>
     </div>
 </div>
 
@@ -609,11 +612,11 @@ LIMIT 100</textarea>
         </div>
     </div>
 
-    <!-- --- TAB 7 — BROWSER LLM (integrated from benchmarks.html) --- -->
+    <!-- --- TAB 7 ï¿½ BROWSER LLM (integrated from benchmarks.html) --- -->
     <div id="tab-llm" class="tab-pane">
         <div class="card rounded-2xl p-6">
             <h2 class="text-xl font-bold mb-1">Browser LLM Benchmarks</h2>
-            <p class="text-white/60 text-sm mb-4">QualiaDB's native WASM + WebGPU LLM (<code class="text-cyan-400">.q42</code> AOT, ~5.9 tok/s on SmolLM2-360M) vs WebLLM / Transformers.js. Loaded on demand — the LLM engine and comparison adapters initialise only when you open this tab.</p>
+            <p class="text-white/60 text-sm mb-4">QualiaDB's native WASM + WebGPU LLM (<code class="text-cyan-400">.q42</code> AOT, ~5.9 tok/s on SmolLM2-360M) vs WebLLM / Transformers.js. Loaded on demand ï¿½ the LLM engine and comparison adapters initialise only when you open this tab.</p>
             <iframe id="llm-bench-frame" title="Browser LLM Benchmarks"
                     style="width:100%; height:1500px; border:0; border-radius:12px; background:transparent;"
                     allow="cross-origin-isolated"></iframe>
@@ -629,6 +632,7 @@ LIMIT 100</textarea>
 <script type="module">
     import { fetchJson, renderPlatformSuite } from './js/benchmark-shared.js';
     import { Object3DViewer, GraphViewer, runSpatialLive, runGraphLive, runSparqlLive, runSciLive, initializeGraphBenchmarkUi } from './js/benchmark-live.js';
+    import { fetchWasmBinary } from './js/wasm-fetch.js?v=0.0.30-wasm-retry1';
 
     // â”€â”€ Live (real-WASM) Spatial & Graph tabs + interactive viewers â”€â”€
     let obj3d = null, graphViz = null, sparqlGraphViz = null;
@@ -703,14 +707,14 @@ LIMIT 100</textarea>
         const btn = document.getElementById('btn-sci-run');
         const output = document.getElementById('sci-output');
         if (btn) btn.disabled = true;
-        output.textContent = 'Running WASM scientific kernel…';
+        output.textContent = 'Running WASM scientific kernelï¿½';
         try {
             const domain = document.getElementById('sci-domain').value;
             const iterations = parseInt(document.getElementById('sci-iterations').value, 10) || 32;
             const r = await runSciLive({ wasm: window.qualiaWasm, domain, iterations });
             output.textContent =
-                `WASM ${domain} × ${r.iterations} (real kernel, not a simulated ops table)\n` +
-                `elapsed ${r.elapsedMs.toFixed(2)} ms · ${Math.round(r.opsPerSec).toLocaleString()} calls/s\n` +
+                `WASM ${domain} ï¿½ ${r.iterations} (real kernel, not a simulated ops table)\n` +
+                `elapsed ${r.elapsedMs.toFixed(2)} ms ï¿½ ${Math.round(r.opsPerSec).toLocaleString()} calls/s\n` +
                 `sample: ${typeof r.sample === 'string' ? r.sample.slice(0, 400) : JSON.stringify(r.sample)}`;
             window.updateMetrics?.(Math.round(r.opsPerSec), r.elapsedMs.toFixed(2), 0, 0);
         } catch (e) {
@@ -855,46 +859,100 @@ LIMIT 100</textarea>
         }
     }
 
-    // Load from document-relative playground/ (not js/playground/) â€” matches scientific-computing.html
-    async function loadWasmEngine() {
-        const dot = document.getElementById('wasm-dot');
-        const badge = document.getElementById('wasm-badge');
+    // Load from document-relative playground/ (not js/playground/) â€” matches scientific-computing.html.
+    // GitHub Pages 503s the 4 MiB wasm when fetched with cache:no-store; retry a versioned URL.
+    let wasmLoadPromise = null;
+    let chartsReady = false;
+
+    function revealMain() {
         const loadingOverlay = document.getElementById('loading-overlay');
         const mainContent = document.getElementById('main-content');
-        const errorOverlay = document.getElementById('error-overlay');
-        const errorMessage = document.getElementById('error-message');
-
-        try {
-            const module = await import('./playground/qualia_core_db.js');
-            const wasmResp = await fetch('./playground/qualia_core_db_bg.wasm', { cache: 'no-store' });
-            if (!wasmResp.ok) throw new Error(`WASM fetch failed: ${wasmResp.status}`);
-            await module.default(wasmResp);
-            const ver = typeof module.get_engine_version === 'function'
-                ? module.get_engine_version()
-                : null;
-
-            dot.className = 'w-2 h-2 rounded-full bg-cyan-400';
-            document.getElementById('wasm-text').textContent = ver ? `WASM v${ver}` : 'WASM Ready';
-            badge.className = 'flex items-center gap-2 text-xs px-3 py-1.5 rounded-2xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20';
-            loadingOverlay.style.display = 'none';
-            mainContent.style.display = 'block';
-            window.qualiaWasm = module;
-            initializeCharts();
-            initializeGraphBenchmarkUi().catch(console.warn);
-            loadCiSuite();
-        } catch (err) {
-            console.error('WASM initialization error:', err);
-            dot.className = 'w-2 h-2 rounded-full bg-slate-500';
-            document.getElementById('wasm-text').textContent = 'WASM offline';
-            loadingOverlay.style.display = 'none';
-            errorOverlay.classList.remove('hidden');
-            errorMessage.textContent = err?.message || String(err);
-            initializeGraphBenchmarkUi().catch(console.warn);
-            loadCiSuite();
-        }
+        if (loadingOverlay) loadingOverlay.style.display = 'none';
+        if (mainContent) mainContent.style.display = 'block';
     }
 
-    loadWasmEngine();
+    function hideWasmError() {
+        document.getElementById('error-overlay')?.classList.add('hidden');
+    }
+
+    function showWasmError(err) {
+        const errorOverlay = document.getElementById('error-overlay');
+        const errorMessage = document.getElementById('error-message');
+        if (errorMessage) errorMessage.textContent = err?.message || String(err);
+        errorOverlay?.classList.remove('hidden');
+    }
+
+    async function loadWasmEngine() {
+        if (window.qualiaWasm) return window.qualiaWasm;
+        if (wasmLoadPromise) return wasmLoadPromise;
+
+        const dot = document.getElementById('wasm-dot');
+        const badge = document.getElementById('wasm-badge');
+        const loadingStatus = document.getElementById('loading-status');
+
+        wasmLoadPromise = (async () => {
+            try {
+                const module = await import('./playground/qualia_core_db.js');
+                const wasmResp = await fetchWasmBinary('./playground/qualia_core_db_bg.wasm', {
+                    onAttempt(attempt, attempts, lastError) {
+                        if (!loadingStatus) return;
+                        loadingStatus.textContent = attempt === 1
+                            ? 'Fetching 4 MiB WASM engineâ€¦'
+                            : `GitHub Pages ${lastError?.status || 'error'} â€” retry ${attempt}/${attempts}`;
+                    },
+                });
+                await module.default(wasmResp);
+                const ver = typeof module.get_engine_version === 'function'
+                    ? module.get_engine_version()
+                    : null;
+
+                if (dot) dot.className = 'w-2 h-2 rounded-full bg-cyan-400';
+                const wasmText = document.getElementById('wasm-text');
+                if (wasmText) wasmText.textContent = ver ? `WASM v${ver}` : 'WASM Ready';
+                if (badge) {
+                    badge.className = 'flex items-center gap-2 text-xs px-3 py-1.5 rounded-2xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20';
+                }
+                window.qualiaWasm = module;
+                hideWasmError();
+                revealMain();
+                if (!chartsReady) {
+                    chartsReady = true;
+                    initializeCharts();
+                }
+                initializeGraphBenchmarkUi().catch(console.warn);
+                return module;
+            } catch (err) {
+                wasmLoadPromise = null;
+                console.error('WASM initialization error:', err);
+                if (dot) dot.className = 'w-2 h-2 rounded-full bg-slate-500';
+                const wasmText = document.getElementById('wasm-text');
+                if (wasmText) wasmText.textContent = 'WASM offline';
+                revealMain();
+                showWasmError(err);
+                initializeGraphBenchmarkUi().catch(console.warn);
+                throw err;
+            }
+        })();
+        return wasmLoadPromise;
+    }
+
+    window.retryWasmEngine = function retryWasmEngine() {
+        hideWasmError();
+        const loadingOverlay = document.getElementById('loading-overlay');
+        if (loadingOverlay) loadingOverlay.style.display = 'flex';
+        const loadingStatus = document.getElementById('loading-status');
+        if (loadingStatus) loadingStatus.textContent = 'Retrying WASM fetchâ€¦';
+        loadWasmEngine().catch(() => {});
+    };
+    window.dismissWasmError = function dismissWasmError() {
+        hideWasmError();
+        revealMain();
+    };
+    document.getElementById('btn-retry-wasm')?.addEventListener('click', () => window.retryWasmEngine());
+    document.getElementById('btn-dismiss-wasm-error')?.addEventListener('click', () => window.dismissWasmError());
+
+    loadCiSuite();
+    loadWasmEngine().catch(() => {});
 </script>
 
 <script>

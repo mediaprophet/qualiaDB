@@ -509,6 +509,7 @@ SELECT ?molecule ?energy ?homo ?lumo WHERE {
 </div>
 
 <script type="module">
+    import { fetchWasmBinary } from './js/wasm-fetch.js?v=0.0.30-wasm-retry1';
     let wasm = null;
     let charts = {};
 
@@ -516,8 +517,7 @@ SELECT ?molecule ?energy ?homo ?lumo WHERE {
     async function loadWasm() {
         try {
             const module = await import('./playground/qualia_core_db.js');
-            const wasmResp = await fetch('./playground/qualia_core_db_bg.wasm', { cache: 'no-store' });
-            if (!wasmResp.ok) throw new Error(`WASM fetch failed: ${wasmResp.status}`);
+            const wasmResp = await fetchWasmBinary('./playground/qualia_core_db_bg.wasm');
             await module.default(wasmResp);
             wasm = module;
             

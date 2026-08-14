@@ -4,6 +4,7 @@
 
 import { parseBigDecimal, hashToken, toHex16, hasMsb } from '../playground/hash.js';
 import { VFS, QUIN_SIZE } from '../playground/vfs.js?v=0.0.30-vfs-fullget1';
+import { fetchWasmBinary } from './wasm-fetch.js';
 
 const DOCS_ROOT = new URL('../', import.meta.url);
 const PLAYGROUND = new URL('../playground/', import.meta.url);
@@ -130,8 +131,7 @@ export class OntologyEngine {
         onProgress?.('Loading WASM module…', 5);
         const mod = await import(this.playgroundUrl('qualia_core_db.js'));
         onProgress?.('Fetching WASM binary…', 12);
-        const wasmResp = await fetch(this.playgroundUrl('qualia_core_db_bg.wasm'));
-        if (!wasmResp.ok) throw new Error(`WASM fetch failed: ${wasmResp.status}`);
+        const wasmResp = await fetchWasmBinary(this.playgroundUrl('qualia_core_db_bg.wasm'));
         onProgress?.('Initialising WASM runtime…', 18);
         await mod.default(wasmResp);
         if (typeof mod.execute_ntriples_query !== 'function') {

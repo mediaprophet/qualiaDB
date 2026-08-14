@@ -67,6 +67,7 @@ jobs:
         run: |
           node docs/tests/release-version-consistency.test.mjs
           node docs/tests/online-llm-demo-catalog.test.mjs
+          node docs/tests/wasm-fetch.test.mjs
 
       - name: Install wasm-pack
         run: |
