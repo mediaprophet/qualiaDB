@@ -19,7 +19,8 @@ pub use manifest::{
 #[cfg(not(target_arch = "wasm32"))]
 pub use range::{ipfs_gateway_range_source, HttpRangeSource};
 pub use range::{
-    validate_exact_range_response, LocalFileRangeSource, Q42ByteRange, Q42RangeSource,
+    validate_exact_range_response, verify_source_sha256, LocalFileRangeSource, Q42ByteRange,
+    Q42RangeSource,
 };
 
 pub(crate) use index::{bidx_block_range_for_hash, bidx_blocks_for_hash_into};

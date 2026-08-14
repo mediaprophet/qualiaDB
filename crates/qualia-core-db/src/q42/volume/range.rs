@@ -9,6 +9,8 @@ use std::io::{self, Read, Seek, SeekFrom};
 use std::path::Path;
 use std::sync::Mutex;
 
+use sha2::{Digest, Sha256};
+
 fn invalid(message: impl Into<String>) -> io::Error {
     io::Error::new(io::ErrorKind::InvalidInput, message.into())
 }
@@ -95,6 +97,46 @@ pub fn validate_exact_range_response(
         return Err(io::Error::new(
             io::ErrorKind::InvalidData,
             "range response does not exactly match the requested Q42 bytes",
+        ));
+    }
+    Ok(())
+}
+
+/// Stream the complete immutable source through a caller-provided scratch
+/// buffer and compare it to the SHA-256 committed by the root descriptor.
+/// This is the bounded verification path for a trusted HTTP/IPFS gateway;
+/// partial-CAR block proofs can later authenticate individual ranges sooner.
+pub fn verify_source_sha256<S: Q42RangeSource>(
+    source: &S,
+    expected: &[u8; 32],
+    scratch: &mut [u8],
+) -> io::Result<()> {
+    if scratch.is_empty() {
+        return Err(invalid(
+            "Q42 verification requires a non-empty scratch buffer",
+        ));
+    }
+    let length = source.length()?;
+    let mut hasher = Sha256::new();
+    let mut offset = 0u64;
+    while offset < length {
+        let count = usize::try_from((length - offset).min(scratch.len() as u64))
+            .map_err(|_| invalid("Q42 verification chunk does not fit platform"))?;
+        source.read_range_into(
+            Q42ByteRange {
+                offset,
+                length: count,
+            },
+            &mut scratch[..count],
+        )?;
+        hasher.update(&scratch[..count]);
+        offset += count as u64;
+    }
+    let actual: [u8; 32] = hasher.finalize().into();
+    if &actual != expected {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            "Q42 source SHA-256 differs from root manifest",
         ));
     }
     Ok(())
@@ -287,6 +329,17 @@ mod tests {
             4
         )
         .is_err());
+    }
+
+    #[test]
+    fn source_hash_verification_is_bounded_and_fail_closed() {
+        let mut file = NamedTempFile::new().unwrap();
+        file.write_all(b"0123456789").unwrap();
+        let source = LocalFileRangeSource::open(file.path()).unwrap();
+        let expected: [u8; 32] = Sha256::digest(b"0123456789").into();
+        let mut scratch = [0u8; 3];
+        verify_source_sha256(&source, &expected, &mut scratch).unwrap();
+        assert!(verify_source_sha256(&source, &[0; 32], &mut scratch).is_err());
     }
 
     #[cfg(not(target_arch = "wasm32"))]
