@@ -107,6 +107,19 @@ pub struct Q42RangeNestedLoopJoinPage {
     pub done: bool,
 }
 
+/// Resumable state for the logical-volume equivalent of
+/// [`Q42RangeNestedLoopJoinState`].  The cursors include manifest child
+/// positions, so a join never has to re-open or materialise a volume set.
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub struct Q42RangeVolumeSetNestedLoopJoinState {
+    pub left_scan: Q42RangeVolumeSetSparqlCursor,
+    pub right_scan: Q42RangeVolumeSetSparqlCursor,
+    pub left_count: usize,
+    pub left_index: usize,
+    pub left_exhausted: bool,
+    pub right_active: bool,
+}
+
 impl Q42RangeNestedLoopJoinPlan {
     pub fn from_execution_plan(plan: &ExecutionPlan) -> Result<Self, String> {
         if plan.operator_count == 0 || plan.root_operator as usize >= plan.operator_count as usize {
@@ -240,6 +253,117 @@ pub fn execute_range_nested_loop_join_page_into<S: crate::q42_volume::Q42RangeSo
             None => {
                 state.left_index += 1;
                 state.right_scan = Q42RangeSparqlCursor::default();
+                state.right_active = false;
+            }
+        }
+        if returned + quin_scratch.len() > out.len() {
+            return Ok(Q42RangeNestedLoopJoinPage {
+                returned,
+                done: false,
+            });
+        }
+    }
+}
+
+/// Execute one bounded page of a two-pattern nested-loop join across a
+/// manifest-backed Q42 snapshot.  It has the same binding and output contract
+/// as [`execute_range_nested_loop_join_page_into`], while the child selection
+/// remains inside [`Q42RangeVolumeSet`].
+pub fn execute_range_volume_set_nested_loop_join_page_into<S: crate::q42_volume::Q42RangeSource>(
+    volumes: &crate::q42_volume::Q42RangeVolumeSet<S>,
+    plan: Q42RangeNestedLoopJoinPlan,
+    ctx: &SparqlQueryContext,
+    state: &mut Q42RangeVolumeSetNestedLoopJoinState,
+    compressed: &mut [u8],
+    decoded: &mut [u8],
+    quin_scratch: &mut [NQuin],
+    left_rows: &mut [BindingRow],
+    right_rows: &mut [BindingRow],
+    out: &mut [BindingRow],
+) -> Result<Q42RangeNestedLoopJoinPage, String> {
+    if quin_scratch.is_empty()
+        || left_rows.len() < quin_scratch.len()
+        || right_rows.len() < quin_scratch.len()
+        || out.len() < quin_scratch.len()
+    {
+        return Err(
+            "range nested-loop join requires row buffers at least as large as Quin scratch"
+                .to_string(),
+        );
+    }
+    let mut returned = 0usize;
+    loop {
+        if returned + quin_scratch.len() > out.len() {
+            return Ok(Q42RangeNestedLoopJoinPage {
+                returned,
+                done: false,
+            });
+        }
+        if state.left_index >= state.left_count {
+            if state.left_exhausted {
+                return Ok(Q42RangeNestedLoopJoinPage {
+                    returned,
+                    done: true,
+                });
+            }
+            let page = execute_range_volume_set_triple_page_into(
+                volumes,
+                plan.left.subject,
+                plan.left.predicate,
+                plan.left.object,
+                None,
+                ctx,
+                &BindingRow::default(),
+                state.left_scan,
+                compressed,
+                decoded,
+                quin_scratch,
+                left_rows,
+            )?;
+            state.left_count = page.returned;
+            state.left_index = 0;
+            state.left_scan = page.next_cursor.unwrap_or_default();
+            state.left_exhausted = page.next_cursor.is_none();
+            state.right_active = false;
+            if state.left_count == 0 {
+                if state.left_exhausted {
+                    return Ok(Q42RangeNestedLoopJoinPage {
+                        returned,
+                        done: true,
+                    });
+                }
+                continue;
+            }
+        }
+        let input = left_rows[state.left_index];
+        let page = execute_range_volume_set_triple_page_into(
+            volumes,
+            plan.right.subject,
+            plan.right.predicate,
+            plan.right.object,
+            None,
+            ctx,
+            &input,
+            if state.right_active {
+                state.right_scan
+            } else {
+                Q42RangeVolumeSetSparqlCursor::default()
+            },
+            compressed,
+            decoded,
+            quin_scratch,
+            right_rows,
+        )?;
+        out[returned..returned + page.returned].copy_from_slice(&right_rows[..page.returned]);
+        returned += page.returned;
+        match page.next_cursor {
+            Some(next) => {
+                state.right_scan = next;
+                state.right_active = true;
+            }
+            None => {
+                state.left_index += 1;
+                state.right_scan = Q42RangeVolumeSetSparqlCursor::default();
                 state.right_active = false;
             }
         }
@@ -2216,5 +2340,87 @@ mod tests {
         .unwrap();
         assert_eq!(final_page.returned, 0);
         assert!(final_page.done);
+    }
+
+    #[test]
+    fn range_volume_set_nested_loop_join_scans_manifest_children() {
+        let dir = tempfile::TempDir::new().unwrap();
+        let child_path = dir.path().join("child.q42");
+        let root_path = dir.path().join("root.q42");
+        let left = NQuin {
+            subject: 10,
+            predicate: 20,
+            object: 30,
+            context: 0,
+            metadata: 0,
+            parity: 0,
+        };
+        let right = NQuin {
+            subject: 30,
+            predicate: 40,
+            object: 50,
+            context: 0,
+            metadata: 0,
+            parity: 0,
+        };
+        crate::q42_volume::write_unified_volume(
+            &child_path,
+            &std::collections::HashMap::new(),
+            &[(left.object, right.object)],
+            &[vec![left, right]],
+        )
+        .unwrap();
+        let manifest = crate::q42_volume::Q42VolumeManifest {
+            generation: 1,
+            segments: vec![crate::q42_volume::Q42VolumeManifest::segment_from_file(
+                &child_path,
+                "child.q42".to_string(),
+            )
+            .unwrap()],
+            lexicon_segments: Vec::new(),
+        };
+        crate::q42_volume::write_volume_root(&root_path, &manifest).unwrap();
+        let root_source = crate::q42_volume::LocalFileRangeSource::open(&root_path).unwrap();
+        let root = crate::q42_volume::Q42RangeVolume::open(root_source).unwrap();
+        let factory = |entry: &crate::q42_volume::Q42VolumeSegment| {
+            crate::q42_volume::LocalFileRangeSource::open(&dir.path().join(&entry.locator))
+        };
+        let volumes = crate::q42_volume::Q42RangeVolumeSet::open_root(&root, &factory).unwrap();
+        let mut context = SparqlQueryContext::new();
+        context.variable_count = 1;
+        let plan = Q42RangeNestedLoopJoinPlan {
+            left: Q42RangeTriplePattern {
+                subject: left.subject,
+                predicate: left.predicate,
+                object: 0,
+            },
+            right: Q42RangeTriplePattern {
+                subject: 0,
+                predicate: right.predicate,
+                object: right.object,
+            },
+        };
+        let mut compressed = [0u8; crate::q42_volume::MAX_COMPRESSED_SUPERBLOCK_SIZE];
+        let mut decoded = [0u8; crate::q42_volume::SUPERBLOCK_SIZE];
+        let mut quins = [NQuin::default(); 1];
+        let mut left_rows = [BindingRow::default(); 1];
+        let mut right_rows = [BindingRow::default(); 1];
+        let mut out = [BindingRow::default(); 1];
+        let mut state = Q42RangeVolumeSetNestedLoopJoinState::default();
+        let page = execute_range_volume_set_nested_loop_join_page_into(
+            &volumes,
+            plan,
+            &context,
+            &mut state,
+            &mut compressed,
+            &mut decoded,
+            &mut quins,
+            &mut left_rows,
+            &mut right_rows,
+            &mut out,
+        )
+        .unwrap();
+        assert_eq!(page.returned, 1);
+        assert_eq!(out[0].slots[0], Some(right.subject));
     }
 }
