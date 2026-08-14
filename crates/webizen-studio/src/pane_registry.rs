@@ -420,6 +420,16 @@ pub fn builtin_pane_definitions() -> Vec<PaneDefinition> {
             rdf_type_hash: None,
         },
         PaneDefinition {
+            component_id: "graph-proof".into(),
+            display_name: "Graph Proof".into(),
+            element_tag: "graph-proof".into(),
+            icon: "shield-check".into(),
+            category: PaneCategory::DataDisplay,
+            default_w: 8,
+            default_h: 6,
+            rdf_type_hash: q42("q42:GraphProof"),
+        },
+        PaneDefinition {
             component_id: "hardware-configurator".into(),
             display_name: "Hardware Configurator".into(),
             element_tag: "hardware-configurator".into(),

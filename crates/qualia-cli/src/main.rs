@@ -101,6 +101,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Commands::VerifyIntegrity { input, dataset } => {
             handlers::misc::handle_verify_integrity(input, dataset);
         }
+        Commands::VerifyGraph {
+            input,
+            dataset,
+            memory_mib,
+            temp_gib,
+        } => {
+            handlers::misc::handle_verify_graph(input, dataset, *memory_mib, *temp_gib)?;
+        }
         Commands::Import {
             input,
             output,

@@ -29,6 +29,7 @@ pub fn QAppDispatcher(element_tag: String) -> Element {
             rsx! { crate::components::gbm_simulator::GbmSimulator {} }
         }
         "sparql-explorer" => rsx! { crate::components::sparql_explorer::SparqlExplorer {} },
+        "graph-proof" => rsx! { crate::components::graph_proof::GraphProof {} },
         "n3-logic-studio" => rsx! { crate::components::n3_logic_studio::N3LogicStudio {} },
         "rdf-star-editor" => rsx! { crate::components::rdf_star_editor::RdfStarEditor {} },
         "solid-browser" | "solid-ldp-browser" => {

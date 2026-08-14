@@ -374,6 +374,7 @@ async fn run_settings_server(state: SettingsServerState, port: u16) -> Result<()
         .route("/api/telemetry", get(system_telemetry_handler))
         .route("/api/sparql/endpoints", get(sparql_endpoints_handler))
         .route("/api/sparql/query", post(sparql_query_handler))
+        .route("/api/graph/verify", post(graph_verify_handler))
         .route("/api/assets/catalog", get(assets_catalog_handler))
         .route("/api/assets/recommend", post(assets_recommend_handler))
         .route("/api/assets/enqueue", post(assets_enqueue_handler))
@@ -1088,6 +1089,50 @@ async fn sparql_query_handler(
         return Err((StatusCode::BAD_GATEWAY, text));
     }
     Ok((headers, text))
+}
+
+#[derive(Debug, Deserialize)]
+struct GraphProofRequest {
+    source_path: String,
+    q42_path: String,
+    memory_mib: Option<u64>,
+    temp_gib: Option<u64>,
+}
+
+async fn graph_verify_handler(
+    Json(request): Json<GraphProofRequest>,
+) -> Result<Json<qualia_core_db::graph_proof::GraphProofReport>, (StatusCode, String)> {
+    let memory_mib = request.memory_mib.unwrap_or(32);
+    let temp_gib = request.temp_gib.unwrap_or(32);
+    let memory_limit_bytes = memory_mib
+        .checked_mul(1024 * 1024)
+        .and_then(|value| usize::try_from(value).ok())
+        .ok_or((
+            StatusCode::BAD_REQUEST,
+            "memory_mib is too large".to_string(),
+        ))?;
+    let temporary_byte_budget = temp_gib
+        .checked_mul(1024 * 1024 * 1024)
+        .ok_or((StatusCode::BAD_REQUEST, "temp_gib is too large".to_string()))?;
+    let report = tokio::task::spawn_blocking(move || {
+        qualia_core_db::graph_proof::prove_cli_ntriples_q42_equivalence(
+            std::path::Path::new(&request.source_path),
+            std::path::Path::new(&request.q42_path),
+            qualia_core_db::graph_proof::GraphProofOptions {
+                memory_limit_bytes,
+                temporary_byte_budget,
+            },
+        )
+    })
+    .await
+    .map_err(|error| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("graph proof task: {error}"),
+        )
+    })?
+    .map_err(|error| (StatusCode::BAD_REQUEST, error.to_string()))?;
+    Ok(Json(report))
 }
 
 #[derive(Serialize)]

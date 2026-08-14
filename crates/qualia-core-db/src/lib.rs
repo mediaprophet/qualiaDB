@@ -57,6 +57,8 @@ pub use medical::dicom_ingest;
 pub mod query;
 pub use query::cbor_compiler;
 pub use query::graph_index;
+#[cfg(not(target_arch = "wasm32"))]
+pub use query::graph_proof;
 pub use query::indexing;
 #[cfg(not(target_arch = "wasm32"))]
 pub use query::ingest;

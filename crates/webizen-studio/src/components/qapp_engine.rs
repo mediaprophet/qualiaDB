@@ -74,6 +74,7 @@ mod imp {
             "enqueue_job" => ("POST", "/api/jobs".to_string()),
             "system_telemetry" => ("GET", "/api/telemetry".to_string()),
             "execute_sparql_query" => ("POST", "/api/sparql/query".to_string()),
+            "verify_graph_equivalence" => ("POST", "/api/graph/verify".to_string()),
             _ => {
                 return Err(format!(
                     "Command '{cmd}' is not exposed via typed REST portals"

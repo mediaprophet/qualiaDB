@@ -243,6 +243,73 @@ pub fn handle_verify_integrity(input: &PathBuf, dataset: &PathBuf) {
     }
 }
 
+/// Run the exact, bounded-memory encoded graph proof.
+pub fn handle_verify_graph(
+    input: &PathBuf,
+    dataset: &PathBuf,
+    memory_mib: u64,
+    temp_gib: u64,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let memory_limit_bytes = memory_mib
+        .checked_mul(1024 * 1024)
+        .and_then(|bytes| usize::try_from(bytes).ok())
+        .ok_or_else(|| std::io::Error::other("--memory-mib is too large for this platform"))?;
+    let temporary_byte_budget = temp_gib
+        .checked_mul(1024 * 1024 * 1024)
+        .ok_or_else(|| std::io::Error::other("--temp-gib is too large"))?;
+
+    println!("============================================================");
+    println!("QualiaDB bounded encoded-graph proof");
+    println!("  Input       : {}", input.display());
+    println!("  Q42         : {}", dataset.display());
+    println!("  RAM budget  : {memory_mib} MiB");
+    println!("  Temp budget : {temp_gib} GiB");
+    println!("============================================================");
+
+    let report = qualia_core_db::graph_proof::prove_cli_ntriples_q42_equivalence(
+        input,
+        dataset,
+        qualia_core_db::graph_proof::GraphProofOptions {
+            memory_limit_bytes,
+            temporary_byte_budget,
+        },
+    )?;
+
+    println!("Source records      : {}", report.source_records);
+    println!("Q42 records         : {}", report.q42_records);
+    println!("Unique source quads : {}", report.source_unique_records);
+    println!("Unique Q42 quads    : {}", report.q42_unique_records);
+    println!("Missing from Q42    : {}", report.missing_from_q42);
+    println!("Unexpected in Q42   : {}", report.unexpected_in_q42);
+    println!("Skipped source lines : {}", report.source_skipped_lines);
+
+    if !report.encoded_sets_match() {
+        if let Some(record) = report.first_missing {
+            println!("First missing encoded quad    : {record:016X?}");
+        }
+        if let Some(record) = report.first_unexpected {
+            println!("First unexpected encoded quad : {record:016X?}");
+        }
+        return Err(std::io::Error::other("encoded graph sets differ").into());
+    }
+
+    match report.rdf_isomorphism {
+        qualia_core_db::graph_proof::RdfIsomorphismStatus::GroundGraphProven => {
+            println!("PASS: exact ground-graph equivalence is proven in the Q42 encoding.");
+            Ok(())
+        }
+        qualia_core_db::graph_proof::RdfIsomorphismStatus::BlankNodeCanonicalizationRequired => {
+            Err(std::io::Error::other(
+                "encoded sets match only under blank-node label identity; RDF isomorphism requires canonical lexical blank-node support",
+            )
+            .into())
+        }
+        qualia_core_db::graph_proof::RdfIsomorphismStatus::Different => {
+            Err(std::io::Error::other("encoded graph sets differ").into())
+        }
+    }
+}
+
 pub fn handle_import(input: &PathBuf, output: &PathBuf, strip_literals: bool) {
     println!("============================================================");
     println!("📥 QualiaDB Native RDF/XML Ingestion Pipeline");

@@ -578,6 +578,7 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         ingest::export_to_solid,
         ingest::ingest_image,
         ingest::ingest_image_async,
+        ingest::verify_graph_equivalence,
         // ── inference (in ingest.rs) ──
         ingest::discover_models,
         ingest::download_and_vectorize,

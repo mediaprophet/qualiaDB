@@ -197,6 +197,11 @@ fn default_panes_for_app(app_id: &str) -> Vec<PanePlacement> {
             p("n3-logic-studio", 58, 0, 36, 30),
             p("sparql-explorer", 58, 32, 36, 30),
         ],
+        "graph-proof" => vec![
+            p("graph-proof", 0, 0, 62, 62),
+            p("sparql-explorer", 64, 0, 30, 30),
+            p("q42-volume-manager", 64, 32, 30, 30),
+        ],
         "sparql-explorer" => vec![
             p("sparql-explorer", 0, 0, 62, 62),
             p("provenance-graph", 64, 0, 30, 30),
@@ -1251,7 +1256,7 @@ pub fn DynamicPage(path: Vec<String>, #[props(default)] app_id: Option<String>) 
             let templates: &[&'static str] = &[
                 "context-studio", "chat", "llm-harness", "lora-manager",
                 "agent-config", "inference-monitor", "model-lifecycle",
-                "ontology-builder", "sparql-explorer", "n3-logic-studio",
+                "ontology-builder", "sparql-explorer", "n3-logic-studio", "graph-proof",
                 "rdf-star-editor", "solid-browser", "physics-sim",
                 "chemistry-modeler", "ode-lab", "matrix-lab", "stats-lab",
                 "bioinformatics-lab", "qpu-optimizer", "quantum-dft",

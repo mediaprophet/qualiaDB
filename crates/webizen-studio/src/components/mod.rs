@@ -55,6 +55,7 @@ pub mod ebpf_filter_manager;
 pub mod experience_mode;
 pub mod extension_bus;
 pub mod gbm_simulator;
+pub mod graph_proof;
 pub mod health_vital_monitor;
 pub mod inference_monitor;
 pub mod job_center;
