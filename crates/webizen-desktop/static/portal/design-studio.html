@@ -23,7 +23,6 @@
         window.__QUALIA_DEBUG__ = true;
     })();
     </script>
-    <script src="js/menu-loader.js"></script>
     <script>
     (function () {
         if (window.crossOriginIsolated || !('serviceWorker' in navigator)) return;
@@ -51,7 +50,10 @@
         <h2 class="text-2xl font-semibold text-white mb-2">Qualia Portal required</h2>
         <p class="text-white/60 mb-4">Build <code>docs/pkg/qualia/</code> via CI or <code>scripts/package-qualia-wasm.ps1</code>.</p>
         <pre class="text-left text-xs text-red-300 mb-4 p-3 rounded-lg bg-black/40" id="error-message"></pre>
-        <button type="button" class="ds-btn" onclick="location.reload()">Retry</button>
+        <div class="flex flex-wrap justify-center gap-2">
+            <button type="button" class="ds-btn" onclick="location.reload()">Retry</button>
+            <a href="/dashboard" class="ds-btn secondary">Open Studio</a>
+        </div>
     </div>
 </div>
 
@@ -64,7 +66,23 @@
                 </div>
                 <div class="hidden sm:block"><span class="font-semibold tracking-tight text-xl">Qualia</span><span class="text-blue-400 text-xl">DB</span></div>
             </a>
-            <div id="dynamic-nav" class="relative flex items-center text-sm min-w-0 flex-1 justify-center lg:justify-start px-2"></div>
+            <details class="relative shrink-0 lg:hidden">
+                <summary class="list-none rounded-lg border border-white/10 p-2 text-slate-300 hover:text-white" aria-label="Workspace navigation">
+                    <i class="fa-solid fa-bars text-lg" aria-hidden="true"></i>
+                </summary>
+                <div class="absolute right-0 top-full z-[60] mt-2 w-52 rounded-xl border border-slate-700 bg-slate-950/95 p-2 shadow-2xl text-sm" aria-label="Workspace">
+                    <a href="/dashboard" class="block rounded-lg px-3 py-2 hover:bg-white/5 hover:text-amber-400">Studio</a>
+                    <a href="/qapps" class="block rounded-lg px-3 py-2 hover:bg-white/5 hover:text-amber-400">QApps</a>
+                    <a href="/library" class="block rounded-lg px-3 py-2 hover:bg-white/5 hover:text-amber-400">Library</a>
+                    <a href="/settings" class="block rounded-lg px-3 py-2 hover:bg-white/5 hover:text-amber-400">Settings</a>
+                </div>
+            </details>
+            <div class="hidden lg:flex lg:items-center lg:gap-4 text-sm min-w-0 flex-1 lg:justify-start px-2" aria-label="Workspace">
+                <a href="/dashboard" class="hover:text-amber-400">Studio</a>
+                <a href="/qapps" class="hover:text-amber-400">QApps</a>
+                <a href="/library" class="hover:text-amber-400">Library</a>
+                <a href="/settings" class="hover:text-amber-400">Settings</a>
+            </div>
             <div class="flex items-center gap-2 shrink-0">
                 <span id="portal-badge" class="badge-off">Checking…</span>
                 <div id="wasm-badge" class="hidden sm:flex items-center gap-2 text-xs px-3 py-1.5 rounded-2xl bg-slate-800 text-slate-400 border border-slate-700">
@@ -87,14 +105,14 @@
         <p class="text-white/60 max-w-2xl mx-auto text-sm sm:text-base">
             Tech demo for natural-language product design. Parts and relations bake into the
             <strong class="text-emerald-400">same 10D phenomenal portal</strong> as
-            <a href="spatial.html" class="text-cyan-400 hover:underline">spatial.html</a>.
+            <a href="/gpu-viewport" class="text-cyan-400 hover:underline">GPU viewport</a>.
             Asset recommendations score GGUF + ontologies for your device; native installs use the
             <code class="text-cyan-400">:8080</code> settings portal (system tray), not Flutter.
         </p>
         <p class="mt-2 text-xs text-white/40" id="encode-status">Generate a design to bake tensors.</p>
         <p class="mt-1 text-xs text-white/40">
-            <a href="design-studio-wiring.md" class="hover:text-amber-400 underline">Wiring doc</a>
-            · <a href="plans/sprint-inference-handover-native-viewport.md" class="hover:text-amber-400 underline">Next sprint: inference handover</a>
+            <a href="/dashboard" class="hover:text-amber-400 underline">Studio workspace</a>
+            · <a href="/qapps" class="hover:text-amber-400 underline">Browse QApps</a>
         </p>
     </div>
 
