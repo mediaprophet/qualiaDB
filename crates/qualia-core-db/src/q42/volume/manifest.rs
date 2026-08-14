@@ -473,6 +473,7 @@ fn validate_segment_locator(locator: &str) -> io::Result<()> {
 /// Locally backed multi-segment query snapshot. It deliberately has no remote
 /// transport yet: IPFS/HTTP range sources will implement the same contract.
 pub struct Q42VolumeSet {
+    root: Q42Volume,
     manifest: Q42VolumeManifest,
     segments: Vec<Q42Volume>,
 }
@@ -504,7 +505,16 @@ impl Q42VolumeSet {
             }
             segments.push(segment);
         }
-        Ok(Self { manifest, segments })
+        Ok(Self {
+            root,
+            manifest,
+            segments,
+        })
+    }
+
+    /// The front-matter root that owns the snapshot-wide lexicon and manifest.
+    pub fn root(&self) -> &Q42Volume {
+        &self.root
     }
 
     pub fn manifest(&self) -> &Q42VolumeManifest {

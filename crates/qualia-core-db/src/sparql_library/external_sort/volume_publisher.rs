@@ -245,6 +245,7 @@ mod tests {
         assert_eq!(manifest.segments.len(), 2);
         assert!(root_volume.lex_view().unwrap().lookup_hash(7).is_some());
         let set = Q42VolumeSet::open_root(&root).unwrap();
+        assert!(set.root().lex_view().unwrap().lookup_hash(7).is_some());
         set.verify_segment_hashes(&root).unwrap();
     }
 
