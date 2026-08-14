@@ -25,6 +25,7 @@ use std::io::BufReader;
 use std::thread;
 use std::time::Instant;
 use sysinfo::System;
+use tempfile::TempDir;
 
 /// How much of the source graph the `.q42` retains.
 ///
@@ -169,19 +170,20 @@ pub fn streaming_import_rdf_with_mode(
     // Drop the extra transmitters so channels close correctly
     drop(tx_bin);
 
-    // 4. Spawn a collector thread that drains the hashed quins concurrently with parsing (the bounded
-    // channel would otherwise backpressure the parser to a halt). It just gathers them; the canonical
-    // volume is written on the main thread once the full set is known, via `UnifiedVolumeBuilder` —
-    // which produces the GOVERNING `.q42` layout (160-byte SuperBlock headers, block directory, BIDX
-    // object index, Merkle-DAG, real lexicon offsets). The previous hand-rolled writer emitted
-    // headerless blocks that `Q42Volume::read_all_quins` could not parse — the graph was unreadable.
-    let collector_handle = thread::spawn(move || -> Vec<NQuin> {
-        let mut quins: Vec<NQuin> = Vec::new();
-        for quin in rx_bin {
-            quins.push(quin);
-        }
-        quins
-    });
+    // 4. Drain hashed Quins into bounded external-sort runs instead of one
+    // whole-graph Vec. The TempDir owns every run and cleans it on success,
+    // error, or unwind.
+    let sorter_temp = TempDir::new()?;
+    let sorter_path = sorter_temp.path().to_owned();
+    let collector_handle = thread::spawn(
+        move || -> std::io::Result<crate::external_sort::ExternalSorter> {
+            let mut sorter = crate::external_sort::ExternalSorter::new(sorter_path);
+            for quin in rx_bin {
+                sorter.push(quin)?;
+            }
+            Ok(sorter)
+        },
+    );
 
     // 5. The Streaming Sieve (Main Thread)
     // Uses Rio to read the file sequentially without loading the whole graph into RAM.
@@ -357,33 +359,15 @@ pub fn streaming_import_rdf_with_mode(
         }
     }
 
-    let mut quins = collector_handle.join().unwrap();
-    let total_written = quins.len() as u64;
-
-    // 7. Write the canonical volume via `UnifiedVolumeBuilder`. Sort by object hash first so the
-    // `FLAG_OBJECT_SORTED` flag and the BIDX object index (both set by the builder) are truthful, not
-    // decorative — the old path set the sorted flag without sorting. A quin set is unordered, so this
-    // reordering changes nothing semantically.
-    quins.sort_unstable_by_key(|q| q.object);
-
-    let mut builder = match mode {
-        IngestMode::Complete => crate::q42_volume::UnifiedVolumeBuilder::with_lex_map(&lexicon)
-            .map_err(|e| {
-                std::io::Error::new(
-                    std::io::ErrorKind::InvalidInput,
-                    format!("invalid lossless Q42LEX: {e:?}"),
-                )
-            })?,
-        IngestMode::StripLiterals => crate::q42_volume::UnifiedVolumeBuilder::with_empty_lex(),
-    };
-    let mut seq_id: u64 = 0;
-    for chunk in quins.chunks(crate::QUINS_PER_BLOCK) {
-        builder.push_block(seq_id, chunk)?;
-        seq_id += 1;
+    let mut sorter = collector_handle
+        .join()
+        .map_err(|_| std::io::Error::other("Q42 external-sort collector thread panicked"))??;
+    if mode == IngestMode::Complete {
+        for (hash, term) in &lexicon {
+            sorter.push_lex(*hash, term);
+        }
     }
-    builder
-        .finish(std::path::Path::new(out_path))
-        .map_err(|e| std::io::Error::new(e.kind(), format!("write canonical .q42 volume: {e}")))?;
+    let total_written = sorter.merge(std::path::Path::new(out_path))?;
 
     // Lexicon byte size actually written — read back cheaply from the finished header (mmap, no
     // re-serialize) so the report reflects what is really on disk.
@@ -525,4 +509,34 @@ pub fn verify_integrity(
     Ok(source_checksum == dataset_checksum
         && source_records == dataset_records
         && source_records != 0)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::TempDir;
+
+    #[test]
+    fn rdf_ingest_uses_external_runs_and_embeds_lossless_lexicon() {
+        let dir = TempDir::new().unwrap();
+        let input = dir.path().join("input.nt");
+        let output = dir.path().join("output.q42");
+        std::fs::write(
+            &input,
+            "<https://example.test/s> <https://example.test/p> \"value\" .\n",
+        )
+        .unwrap();
+        assert_eq!(
+            streaming_import_rdf_with_mode(
+                input.to_str().unwrap(),
+                output.to_str().unwrap(),
+                IngestMode::Complete,
+            )
+            .unwrap(),
+            1
+        );
+        let volume = crate::q42_volume::Q42Volume::open(&output).unwrap();
+        assert_eq!(volume.block_count(), 1);
+        assert!(volume.lex_view().unwrap().entry_count() >= 3);
+    }
 }
