@@ -318,8 +318,10 @@ fn stream_source_records(
         let (Some(subject), Some(predicate), Some(object)) =
             (tokens.next(), tokens.next(), tokens.next())
         else {
-            skipped += 1;
-            continue;
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "source contains a non-comment line without an RDF triple",
+            ));
         };
         has_blank_nodes |=
             subject.starts_with("_:") || predicate.starts_with("_:") || object.starts_with("_:");
@@ -356,6 +358,12 @@ fn stream_q42_records(
         for _ in 0..quin_count {
             let quin: crate::NQuin =
                 bytemuck::pod_read_unaligned(&buffer[offset..offset + QUIN_SIZE]);
+            if !quin.verify_ecc_parity() {
+                return Err(io::Error::new(
+                    io::ErrorKind::InvalidData,
+                    format!("Q42 parity mismatch in block {block_index}"),
+                ));
+            }
             spool.push(
                 QuadRecord {
                     subject: quin.subject,

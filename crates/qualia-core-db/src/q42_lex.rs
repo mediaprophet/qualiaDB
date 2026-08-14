@@ -32,7 +32,8 @@ const LEX_TAG_WEBIZEN: u8 = 0x03; // Authoritative Webizen identity
 /// The map is keyed by the same value stored in the quin field (for objects that is the
 /// `OBJECT_HASH_MASK`-masked hash), so `lookup_hash(quin.object)` resolves directly. Entries are sorted
 /// by hash for the reader's binary search; the caller's map has already de-duplicated by hash.
-pub fn serialize_string_lexicon(entries: &HashMap<u64, String>) -> Vec<u8> {
+/// Returns [`LexError::TermTooLong`] rather than silently truncating a term.
+pub fn serialize_string_lexicon(entries: &HashMap<u64, String>) -> Result<Vec<u8>, LexError> {
     let mut sorted: Vec<(&u64, &String)> = entries.iter().collect();
     sorted.sort_unstable_by_key(|(h, _)| **h);
     let entry_count = sorted.len() as u64;
@@ -42,10 +43,12 @@ pub fn serialize_string_lexicon(entries: &HashMap<u64, String>) -> Vec<u8> {
     let mut blob: Vec<u8> = Vec::new();
     for (hash, text) in &sorted {
         let str_off = blob.len() as u64;
-        let s = utf8_prefix(text, u16::MAX as usize);
+        if text.len() > u16::MAX as usize {
+            return Err(LexError::TermTooLong);
+        }
         blob.push(LEX_TAG_STRING);
-        blob.extend_from_slice(&(s.len() as u16).to_le_bytes());
-        blob.extend_from_slice(s.as_bytes());
+        blob.extend_from_slice(&(text.len() as u16).to_le_bytes());
+        blob.extend_from_slice(text.as_bytes());
         index.extend_from_slice(&hash.to_le_bytes());
         index.extend_from_slice(&str_off.to_le_bytes());
     }
@@ -57,21 +60,10 @@ pub fn serialize_string_lexicon(entries: &HashMap<u64, String>) -> Vec<u8> {
     out.extend_from_slice(&1u64.to_le_bytes()); // format version
     out.extend_from_slice(&index);
     out.extend_from_slice(&blob);
-    out
+    Ok(out)
 }
 
 /// Largest UTF-8 prefix of `s` that fits in `max_bytes`, never splitting a codepoint.
-fn utf8_prefix(s: &str, max_bytes: usize) -> &str {
-    if s.len() <= max_bytes {
-        return s;
-    }
-    let mut end = max_bytes;
-    while end > 0 && !s.is_char_boundary(end) {
-        end -= 1;
-    }
-    &s[..end]
-}
-
 /// Zero-allocation lexicon key for in-memory lookups
 pub enum LexiconKey<'a> {
     /// UTF-8 string reference
@@ -102,6 +94,10 @@ pub enum LexError {
     InvalidMagic,
     Truncated,
     BadStringOffset,
+    BadIndex,
+    BadEntry,
+    InvalidUtf8,
+    TermTooLong,
 }
 
 /// Zero-allocation view over a memory-mapped `.q42.lex` slice (sorted hash index).
@@ -121,17 +117,30 @@ impl<'a> Q42LexMmap<'a> {
         if data[0..8] != *MAGIC {
             return Err(LexError::InvalidMagic);
         }
-        let entry_count = u64::from_le_bytes(data[8..16].try_into().unwrap()) as usize;
-        let strings_offset = u64::from_le_bytes(data[16..24].try_into().unwrap()) as usize;
-        let index_end = HEADER_SIZE.saturating_add(entry_count.saturating_mul(INDEX_ENTRY_SIZE));
-        if index_end > data.len() || strings_offset > data.len() {
+        if u64::from_le_bytes(data[24..32].try_into().unwrap()) != 1 {
+            return Err(LexError::BadIndex);
+        }
+        let entry_count = usize::try_from(u64::from_le_bytes(data[8..16].try_into().unwrap()))
+            .map_err(|_| LexError::Truncated)?;
+        let strings_offset = usize::try_from(u64::from_le_bytes(data[16..24].try_into().unwrap()))
+            .map_err(|_| LexError::Truncated)?;
+        let index_end = HEADER_SIZE
+            .checked_add(
+                entry_count
+                    .checked_mul(INDEX_ENTRY_SIZE)
+                    .ok_or(LexError::Truncated)?,
+            )
+            .ok_or(LexError::Truncated)?;
+        if index_end > data.len() || strings_offset != index_end {
             return Err(LexError::Truncated);
         }
-        Ok(Self {
+        let view = Self {
             data,
             entry_count,
             strings_offset,
-        })
+        };
+        view.validate_entries()?;
+        Ok(view)
     }
 
     #[inline]
@@ -172,9 +181,66 @@ impl<'a> Q42LexMmap<'a> {
         Self::read_string_at(self.data, self.strings_offset, str_off)
     }
 
+    /// Validate every index entry and its tagged payload while the full byte
+    /// slice is available. This keeps corrupt lexicon sections from becoming
+    /// deferred `None` values during query execution.
+    fn validate_entries(&self) -> Result<(), LexError> {
+        let mut previous_hash = None;
+        for i in 0..self.entry_count {
+            let off = HEADER_SIZE + i * INDEX_ENTRY_SIZE;
+            let hash = u64::from_le_bytes(
+                self.data[off..off + 8]
+                    .try_into()
+                    .map_err(|_| LexError::BadIndex)?,
+            );
+            if let Some(previous) = previous_hash {
+                if hash <= previous {
+                    return Err(LexError::BadIndex);
+                }
+            }
+            previous_hash = Some(hash);
+            let rel_off = usize::try_from(u64::from_le_bytes(
+                self.data[off + 8..off + 16]
+                    .try_into()
+                    .map_err(|_| LexError::BadIndex)?,
+            ))
+            .map_err(|_| LexError::BadStringOffset)?;
+            let start = self
+                .strings_offset
+                .checked_add(rel_off)
+                .ok_or(LexError::BadStringOffset)?;
+            let tag = *self.data.get(start).ok_or(LexError::BadStringOffset)?;
+            match tag {
+                LEX_TAG_STRING | LEX_TAG_WEBIZEN => {
+                    let length_end = start.checked_add(3).ok_or(LexError::BadEntry)?;
+                    let length_bytes = self
+                        .data
+                        .get(start + 1..length_end)
+                        .ok_or(LexError::BadEntry)?;
+                    let length = u16::from_le_bytes(
+                        length_bytes.try_into().map_err(|_| LexError::BadEntry)?,
+                    ) as usize;
+                    let text_start = length_end;
+                    let text_end = text_start.checked_add(length).ok_or(LexError::BadEntry)?;
+                    let text = self
+                        .data
+                        .get(text_start..text_end)
+                        .ok_or(LexError::BadEntry)?;
+                    std::str::from_utf8(text).map_err(|_| LexError::InvalidUtf8)?;
+                }
+                LEX_TAG_EMBEDDED => {
+                    let end = start.checked_add(25).ok_or(LexError::BadEntry)?;
+                    self.data.get(start..end).ok_or(LexError::BadEntry)?;
+                }
+                _ => return Err(LexError::BadEntry),
+            }
+        }
+        Ok(())
+    }
+
     fn read_string_at(data: &[u8], blob_base: usize, rel_off: usize) -> Option<&str> {
-        let start = blob_base.saturating_add(rel_off);
-        if start + 3 > data.len() {
+        let start = blob_base.checked_add(rel_off)?;
+        if start.checked_add(3)? > data.len() {
             return None;
         }
         // Check type tag
@@ -183,7 +249,10 @@ impl<'a> Q42LexMmap<'a> {
         }
         let len = u16::from_le_bytes(data[start + 1..start + 3].try_into().ok()?) as usize;
         let text_start = start + 3;
-        let text_end = text_start.saturating_add(len).min(data.len());
+        let text_end = text_start.checked_add(len)?;
+        if text_end > data.len() {
+            return None;
+        }
         std::str::from_utf8(&data[text_start..text_end]).ok()
     }
 
@@ -234,13 +303,16 @@ impl<'a> Q42LexMmap<'a> {
     }
 
     fn read_webizen_at(data: &[u8], blob_base: usize, rel_off: usize) -> Option<&str> {
-        let start = blob_base.saturating_add(rel_off);
-        if start + 3 > data.len() || data[start] != LEX_TAG_WEBIZEN {
+        let start = blob_base.checked_add(rel_off)?;
+        if start.checked_add(3)? > data.len() || data[start] != LEX_TAG_WEBIZEN {
             return None;
         }
         let len = u16::from_le_bytes(data[start + 1..start + 3].try_into().ok()?) as usize;
         let text_start = start + 3;
-        let text_end = text_start.saturating_add(len).min(data.len());
+        let text_end = text_start.checked_add(len)?;
+        if text_end > data.len() {
+            return None;
+        }
         std::str::from_utf8(&data[text_start..text_end]).ok()
     }
 
@@ -461,7 +533,7 @@ mod tests {
         for s in samples {
             map.insert(crate::q_hash(s), s.to_string());
         }
-        let bytes = serialize_string_lexicon(&map);
+        let bytes = serialize_string_lexicon(&map).unwrap();
         let lex = Q42LexMmap::from_bytes(&bytes).unwrap();
         assert_eq!(lex.entry_count(), samples.len());
         for s in samples {
@@ -476,20 +548,14 @@ mod tests {
     /// A literal longer than the 16-bit length field is truncated at a char boundary, never
     /// mid-codepoint — so the stored bytes are always valid UTF-8 and the reader returns `Some`.
     #[test]
-    fn serialize_lexicon_truncates_on_char_boundary() {
+    fn serialize_lexicon_rejects_overlong_term() {
         // 22-000 three-byte codepoints ≈ 66 000 bytes > u16::MAX (65 535); the cut lands between
         // codepoints, so from_utf8 on read still succeeds.
         let long: String = "あ".repeat(22_000);
         let h = crate::q_hash(&long);
         let mut map = HashMap::new();
         map.insert(h, long);
-        let bytes = serialize_string_lexicon(&map);
-        let lex = Q42LexMmap::from_bytes(&bytes).unwrap();
-        let got = lex
-            .lookup_hash(h)
-            .expect("truncated string still valid UTF-8");
-        assert!(got.len() <= u16::MAX as usize);
-        assert!(got.chars().all(|c| c == 'あ'));
+        assert_eq!(serialize_string_lexicon(&map), Err(LexError::TermTooLong));
     }
 
     #[test]

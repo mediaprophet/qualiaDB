@@ -229,8 +229,9 @@ pub fn handle_verify_integrity(input: &PathBuf, dataset: &PathBuf) {
 
     match qualia_core_db::ingest::verify_integrity(input.clone(), dataset.clone()) {
         Ok(true) => {
+            println!("Warning: this legacy XOR result is diagnostic only, not a proof of exact graph equality.");
             println!("\n✅ Integrity Check Passed: 100% Exact Match!");
-            println!("The XOR Fold Checksums are perfectly identical.");
+            println!("XOR folds and record counts match; this is not a losslessness or graph-equality proof. Use `verify-graph` for the bounded encoded-set proof.");
         }
         Ok(false) => {
             eprintln!("\n❌ Integrity Check Failed: Checksums mismatch!");

@@ -280,9 +280,12 @@ fn build_pack_q42(
 fn q42_bytes_from_graph(quins: &[NQuin], lexicon: &HashMap<u64, String>) -> Vec<u8> {
     let mut sorted = quins.to_vec();
     sorted.sort_by_key(|q| q.object);
-    let mut builder = UnifiedVolumeBuilder::with_lex_map(lexicon);
+    let mut builder = UnifiedVolumeBuilder::with_lex_map(lexicon)
+        .expect("body Q42 lexicon entries fit the current Q42LEX format");
     for (seq, chunk) in sorted.chunks(QUINS_PER_BLOCK).enumerate() {
-        builder.push_block(seq as u64, chunk);
+        builder
+            .push_block(seq as u64, chunk)
+            .expect("body Q42 graph is object-sorted");
     }
     builder.finish_to_bytes()
 }

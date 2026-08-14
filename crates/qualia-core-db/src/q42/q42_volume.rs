@@ -22,6 +22,11 @@ use memmap2::{Mmap, MmapOptions};
 use crate::q42_lex::{LexError, LexiconEntry, Q42LexMmap, LEX_MAGIC};
 use crate::{NQuin, QUINS_PER_BLOCK};
 
+#[path = "volume/mod.rs"]
+mod volume;
+
+pub use volume::{BidxBlockRange, BidxMatchPage, Q42BlockCursor, Q42BlockMeta};
+
 pub const Q42_MAGIC: [u8; 4] = [0x51, 0x34, 0x32, 0x00]; // "Q42\0"
 pub const Q42_VERSION_V3: u16 = 3;
 pub const HEADER_SIZE: usize = 256;
@@ -194,7 +199,7 @@ pub fn is_unified_volume(path: &Path) -> io::Result<bool> {
 }
 
 /// Encode Q42LEX bytes from a hash → string map.
-pub fn encode_lex(lex: &HashMap<u64, String>) -> Vec<u8> {
+pub fn encode_lex(lex: &HashMap<u64, String>) -> Result<Vec<u8>, LexError> {
     // Single source of truth for the Q42LEX write format. `serialize_string_lexicon` is UTF-8 and
     // truncates over-long literals at a CHARACTER boundary (never mid-codepoint), so multilingual
     // literals round-trip byte-intact — a plain `b.len().min(65535)` byte cut could split a codepoint
@@ -203,7 +208,7 @@ pub fn encode_lex(lex: &HashMap<u64, String>) -> Vec<u8> {
 }
 
 /// Encode Q42LEX bytes from a hash → LexiconEntry map (supports embedded triples).
-pub fn encode_lex_with_entries(lex: &HashMap<u64, LexiconEntry>) -> Vec<u8> {
+pub fn encode_lex_with_entries(lex: &HashMap<u64, LexiconEntry>) -> Result<Vec<u8>, LexError> {
     let mut entries: Vec<(u64, &LexiconEntry)> = lex.iter().map(|(&h, e)| (h, e)).collect();
     entries.sort_unstable_by_key(|&(h, _)| h);
 
@@ -219,7 +224,7 @@ pub fn encode_lex_with_entries(lex: &HashMap<u64, LexiconEntry>) -> Vec<u8> {
                 // Write type tag
                 string_blob.push(0x01);
                 let b = text.as_bytes();
-                let len = b.len().min(65535) as u16;
+                let len = u16::try_from(b.len()).map_err(|_| LexError::TermTooLong)?;
                 string_blob.extend_from_slice(&len.to_le_bytes());
                 string_blob.extend_from_slice(&b[..len as usize]);
             }
@@ -234,7 +239,7 @@ pub fn encode_lex_with_entries(lex: &HashMap<u64, LexiconEntry>) -> Vec<u8> {
                 // Write type tag
                 string_blob.push(0x03);
                 let b = webid.as_bytes();
-                let len = b.len().min(65535) as u16;
+                let len = u16::try_from(b.len()).map_err(|_| LexError::TermTooLong)?;
                 string_blob.extend_from_slice(&len.to_le_bytes());
                 string_blob.extend_from_slice(&b[..len as usize]);
             }
@@ -250,7 +255,7 @@ pub fn encode_lex_with_entries(lex: &HashMap<u64, LexiconEntry>) -> Vec<u8> {
     out.extend_from_slice(&1u64.to_le_bytes());
     out.extend_from_slice(&index);
     out.extend_from_slice(&string_blob);
-    out
+    Ok(out)
 }
 
 /// Encode BIDX bytes from per-block min/max object hashes.
@@ -368,9 +373,19 @@ pub fn write_unified_volume(
             "block count mismatch",
         ));
     }
-    let mut builder = UnifiedVolumeBuilder::with_lex_map(lex);
-    for (seq, quins) in blocks.iter().enumerate() {
-        builder.push_block(seq as u64, quins);
+    let mut builder = UnifiedVolumeBuilder::with_lex_map(lex).map_err(lex_error_to_io)?;
+    for ((seq, quins), declared_range) in blocks.iter().enumerate().zip(block_ranges) {
+        let actual_range = object_range(quins)?;
+        if actual_range != *declared_range {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                format!(
+                    "declared BIDX range {:?} does not match block {seq} object range {:?}",
+                    declared_range, actual_range
+                ),
+            ));
+        }
+        builder.push_block(seq as u64, quins)?;
     }
     builder.finish(path)
 }
@@ -390,11 +405,63 @@ pub fn write_unified_volume_with_entries(
             "block count mismatch",
         ));
     }
-    let mut builder = UnifiedVolumeBuilder::with_lex_entries(lex);
-    for (seq, quins) in blocks.iter().enumerate() {
-        builder.push_block(seq as u64, quins);
+    let mut builder = UnifiedVolumeBuilder::with_lex_entries(lex).map_err(lex_error_to_io)?;
+    for ((seq, quins), declared_range) in blocks.iter().enumerate().zip(block_ranges) {
+        let actual_range = object_range(quins)?;
+        if actual_range != *declared_range {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                format!(
+                    "declared BIDX range {:?} does not match block {seq} object range {:?}",
+                    declared_range, actual_range
+                ),
+            ));
+        }
+        builder.push_block(seq as u64, quins)?;
     }
     builder.finish(path)
+}
+
+fn lex_error_to_io(error: LexError) -> io::Error {
+    io::Error::new(
+        io::ErrorKind::InvalidInput,
+        format!("invalid Q42LEX: {error:?}"),
+    )
+}
+
+/// Return the object-hash interval for one canonical SuperBlock.
+///
+/// The v3 BIDX is only sound when every block is internally object-sorted and
+/// the blocks themselves form one non-decreasing stream. Rejecting malformed
+/// input here prevents a writer from advertising an index it cannot honour.
+fn object_range(quins: &[NQuin]) -> io::Result<(u64, u64)> {
+    let Some(first) = quins.first() else {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "a Q42 SuperBlock must contain at least one Quin",
+        ));
+    };
+    if quins.len() > QUINS_PER_BLOCK {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            format!(
+                "Q42 SuperBlock contains {} Quins, exceeding capacity {QUINS_PER_BLOCK}",
+                quins.len()
+            ),
+        ));
+    }
+
+    let mut previous = first.object;
+    for quin in &quins[1..] {
+        if quin.object < previous {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "Q42 SuperBlock Quins must be sorted by object hash",
+            ));
+        }
+        previous = quin.object;
+    }
+    Ok((first.object, previous))
 }
 
 /// Incremental builder for large external-sort merges (one SuperBlock at a time).
@@ -409,36 +476,40 @@ pub struct UnifiedVolumeBuilder {
     author_did: u64,
     /// Hash of the last committed DagNode; all-zero until first push.
     last_dag_hash: [u8; 32],
+    /// Last object hash admitted to the object-sorted stream.
+    last_object_hash: Option<u64>,
 }
 
 impl UnifiedVolumeBuilder {
-    pub fn with_lex_map(lex: &HashMap<u64, String>) -> Self {
-        Self {
-            lex_bytes: encode_lex(lex),
+    pub fn with_lex_map(lex: &HashMap<u64, String>) -> Result<Self, LexError> {
+        Ok(Self {
+            lex_bytes: encode_lex(lex)?,
             block_ranges: Vec::new(),
             dir_entries: Vec::new(),
             data_blob: Vec::new(),
             dag_store: crate::git_bridge::DagStore::new(),
             author_did: 0,
             last_dag_hash: [0u8; 32],
-        }
+            last_object_hash: None,
+        })
     }
 
     /// Create a builder with a lexicon that supports embedded triples (LexiconEntry).
-    pub fn with_lex_entries(lex: &HashMap<u64, LexiconEntry>) -> Self {
-        Self {
-            lex_bytes: encode_lex_with_entries(lex),
+    pub fn with_lex_entries(lex: &HashMap<u64, LexiconEntry>) -> Result<Self, LexError> {
+        Ok(Self {
+            lex_bytes: encode_lex_with_entries(lex)?,
             block_ranges: Vec::new(),
             dir_entries: Vec::new(),
             data_blob: Vec::new(),
             dag_store: crate::git_bridge::DagStore::new(),
             author_did: 0,
             last_dag_hash: [0u8; 32],
-        }
+            last_object_hash: None,
+        })
     }
 
     pub fn with_empty_lex() -> Self {
-        Self::with_lex_map(&HashMap::new())
+        Self::with_lex_map(&HashMap::new()).expect("an empty Q42LEX is valid")
     }
 
     /// Set the author DID for DAG commit nodes (optional; defaults to 0 = system).
@@ -447,9 +518,18 @@ impl UnifiedVolumeBuilder {
         self
     }
 
-    pub fn push_block(&mut self, seq_id: u64, quins: &[NQuin]) {
-        let min_hash = quins.first().map(|q| q.object).unwrap_or(0);
-        let max_hash = quins.last().map(|q| q.object).unwrap_or(0);
+    pub fn push_block(&mut self, seq_id: u64, quins: &[NQuin]) -> io::Result<()> {
+        let (min_hash, max_hash) = object_range(quins)?;
+        if let Some(previous) = self.last_object_hash {
+            if min_hash < previous {
+                return Err(io::Error::new(
+                    io::ErrorKind::InvalidInput,
+                    format!(
+                        "block {seq_id} starts at object hash {min_hash:#018X}, before prior block maximum {previous:#018X}"
+                    ),
+                ));
+            }
+        }
         self.block_ranges.push((min_hash, max_hash));
         let raw = encode_superblock(seq_id, quins);
         let compressed = lz4_flex::compress_prepend_size(&raw);
@@ -473,6 +553,8 @@ impl UnifiedVolumeBuilder {
             self.dag_store
                 .commit_node(self.last_dag_hash, quins, self.author_did, ts, &msg)
         };
+        self.last_object_hash = Some(max_hash);
+        Ok(())
     }
 
     pub fn block_count(&self) -> u64 {
@@ -601,13 +683,7 @@ impl Q42Volume {
         let mut hdr_buf = [0u8; HEADER_SIZE];
         hdr_buf.copy_from_slice(&mmap[0..HEADER_SIZE]);
         let header = header_from_bytes(&hdr_buf)?;
-        let end = header.data_offset.saturating_add(header.data_length);
-        if end as usize > mmap.len() {
-            return Err(io::Error::new(
-                io::ErrorKind::InvalidData,
-                "Q42 volume truncated",
-            ));
-        }
+        volume::validate_volume_structure(&header, &mmap)?;
         Ok(Self { mmap, header })
     }
 
@@ -636,8 +712,34 @@ impl Q42Volume {
     }
 
     /// Binary-search BIDX for `object_hash`; returns block indices that may contain it.
+    ///
+    /// This allocating compatibility helper now returns the complete matching
+    /// interval. New query paths should use [`Self::bidx_blocks_for_hash_into`]
+    /// to enumerate a high-frequency object through a caller buffer.
     pub fn bidx_blocks_for_hash(&self, object_hash: u64) -> Vec<usize> {
         bidx_blocks_for_hash(self.bidx_bytes(), object_hash)
+    }
+
+    /// Return the full contiguous BIDX interval that may contain `object_hash`.
+    pub fn bidx_block_range_for_hash(
+        &self,
+        object_hash: u64,
+    ) -> io::Result<Option<BidxBlockRange>> {
+        volume::bidx_block_range_for_hash(self.bidx_bytes(), object_hash)
+    }
+
+    /// Fill `out` with one page of matching BIDX block indices.
+    ///
+    /// `cursor` is an offset relative to the returned interval's start. Resume
+    /// with `next_cursor` until it is `None`; an empty output buffer never
+    /// causes a silent partial success.
+    pub fn bidx_blocks_for_hash_into(
+        &self,
+        object_hash: u64,
+        cursor: usize,
+        out: &mut [usize],
+    ) -> io::Result<Option<BidxMatchPage>> {
+        volume::bidx_blocks_for_hash_into(self.bidx_bytes(), object_hash, cursor, out)
     }
 
     pub fn block_directory_entry(&self, index: usize) -> io::Result<BlockDirectoryEntry> {
@@ -663,18 +765,58 @@ impl Q42Volume {
             ));
         }
         let entry = self.block_directory_entry(index)?;
-        let start = self.header.data_offset as usize + entry.rel_offset as usize;
-        let end = start + entry.comp_len as usize;
-        let compressed = &self.mmap[start..end];
-        let decoded = lz4_flex::decompress_size_prepended(compressed).map_err(|e| {
+        let data_offset = usize::try_from(self.header.data_offset).map_err(|_| {
             io::Error::new(
                 io::ErrorKind::InvalidData,
-                format!("LZ4 decompress block {index}: {e}"),
+                "Q42 data offset does not fit this platform",
             )
         })?;
-        let n = decoded.len().min(SUPERBLOCK_SIZE);
-        out[..n].copy_from_slice(&decoded[..n]);
-        Ok(n)
+        let rel_offset = usize::try_from(entry.rel_offset).map_err(|_| {
+            io::Error::new(
+                io::ErrorKind::InvalidData,
+                "Q42 block offset does not fit this platform",
+            )
+        })?;
+        let start = data_offset.checked_add(rel_offset).ok_or_else(|| {
+            io::Error::new(
+                io::ErrorKind::InvalidData,
+                "Q42 block offset overflows usize",
+            )
+        })?;
+        let end = start.checked_add(entry.comp_len as usize).ok_or_else(|| {
+            io::Error::new(
+                io::ErrorKind::InvalidData,
+                "Q42 block length overflows usize",
+            )
+        })?;
+        let compressed = &self.mmap[start..end];
+        if compressed.len() < 4 {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "Q42 LZ4 block is shorter than its size prefix",
+            ));
+        }
+        let declared = u32::from_le_bytes(compressed[0..4].try_into().unwrap()) as usize;
+        if declared != entry.uncomp_len as usize || declared != SUPERBLOCK_SIZE {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "Q42 LZ4 size prefix disagrees with the block directory",
+            ));
+        }
+        let decoded =
+            lz4_flex::decompress_into(&compressed[4..], &mut out[..declared]).map_err(|e| {
+                io::Error::new(
+                    io::ErrorKind::InvalidData,
+                    format!("LZ4 decompress block {index}: {e}"),
+                )
+            })?;
+        if decoded != declared {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "Q42 LZ4 block decoded to an unexpected length",
+            ));
+        }
+        Ok(decoded)
     }
 
     /// Read every live Quin from this volume's SuperBlocks into a heap `Vec`.
@@ -712,31 +854,10 @@ impl Q42Volume {
 
 /// BIDX binary search (shared with sidecar format).
 pub fn bidx_blocks_for_hash(bidx: &[u8], object_hash: u64) -> Vec<usize> {
-    if bidx.len() < 16 || bidx[0..4] != BIDX_MAGIC {
-        return Vec::new();
+    match volume::bidx_block_range_for_hash(bidx, object_hash) {
+        Ok(Some(range)) => (range.start..range.end).collect(),
+        Ok(None) | Err(_) => Vec::new(),
     }
-    let block_count = u32::from_le_bytes(bidx[8..12].try_into().unwrap()) as usize;
-    let mut hits = Vec::new();
-    let mut lo = 0usize;
-    let mut hi = block_count;
-    while lo < hi {
-        let mid = lo + (hi - lo) / 2;
-        let off = 16 + mid * 16;
-        if off + 16 > bidx.len() {
-            break;
-        }
-        let min_h = u64::from_le_bytes(bidx[off..off + 8].try_into().unwrap());
-        let max_h = u64::from_le_bytes(bidx[off + 8..off + 16].try_into().unwrap());
-        if object_hash < min_h {
-            hi = mid;
-        } else if object_hash > max_h {
-            lo = mid + 1;
-        } else {
-            hits.push(mid);
-            break;
-        }
-    }
-    hits
 }
 
 #[cfg(test)]
@@ -794,6 +915,69 @@ mod tests {
         vol.read_superblock_into(hits[0], &mut block).unwrap();
         let active = u64::from_le_bytes(block[16..24].try_into().unwrap());
         assert_eq!(active, 1);
+    }
+
+    #[test]
+    fn bidx_heavy_hitter_is_complete_and_caller_buffered() {
+        let (q, lex) = sample_quin("shared", "has", "high-frequency-object");
+        let blocks = vec![vec![q]; 5];
+        let ranges = vec![(q.object, q.object); 5];
+        let tmp = NamedTempFile::new().unwrap();
+        write_unified_volume(tmp.path(), &lex, &ranges, &blocks).unwrap();
+
+        let vol = Q42Volume::open(tmp.path()).unwrap();
+        assert_eq!(vol.bidx_blocks_for_hash(q.object), vec![0, 1, 2, 3, 4]);
+
+        let mut page = [usize::MAX; 2];
+        let first = vol
+            .bidx_blocks_for_hash_into(q.object, 0, &mut page)
+            .unwrap()
+            .unwrap();
+        assert_eq!(first.range, BidxBlockRange { start: 0, end: 5 });
+        assert_eq!(first.returned, 2);
+        assert_eq!(&page, &[0, 1]);
+        assert_eq!(first.next_cursor, Some(2));
+
+        let second = vol
+            .bidx_blocks_for_hash_into(q.object, first.next_cursor.unwrap(), &mut page)
+            .unwrap()
+            .unwrap();
+        assert_eq!(&page, &[2, 3]);
+        assert_eq!(second.next_cursor, Some(4));
+
+        let third = vol
+            .bidx_blocks_for_hash_into(q.object, second.next_cursor.unwrap(), &mut page)
+            .unwrap()
+            .unwrap();
+        assert_eq!(third.returned, 1);
+        assert_eq!(page[0], 4);
+        assert_eq!(third.next_cursor, None);
+        assert!(vol.bidx_blocks_for_hash_into(q.object, 0, &mut []).is_err());
+    }
+
+    #[test]
+    fn open_rejects_mismatched_directory_length() {
+        let (q, lex) = sample_quin("s", "p", "o");
+        let tmp = NamedTempFile::new().unwrap();
+        write_unified_volume(tmp.path(), &lex, &[(q.object, q.object)], &[vec![q]]).unwrap();
+        let mut bytes = std::fs::read(tmp.path()).unwrap();
+        bytes[48..56].copy_from_slice(&0u64.to_le_bytes());
+        std::fs::write(tmp.path(), bytes).unwrap();
+        assert!(Q42Volume::open(tmp.path()).is_err());
+    }
+
+    #[test]
+    fn decompression_rejects_directory_size_disagreement() {
+        let (q, lex) = sample_quin("s", "p", "o");
+        let tmp = NamedTempFile::new().unwrap();
+        write_unified_volume(tmp.path(), &lex, &[(q.object, q.object)], &[vec![q]]).unwrap();
+        let mut bytes = std::fs::read(tmp.path()).unwrap();
+        let data_offset = u64::from_le_bytes(bytes[56..64].try_into().unwrap()) as usize;
+        bytes[data_offset..data_offset + 4].copy_from_slice(&1u32.to_le_bytes());
+        std::fs::write(tmp.path(), bytes).unwrap();
+        let vol = Q42Volume::open(tmp.path()).unwrap();
+        let mut out = [0u8; SUPERBLOCK_SIZE];
+        assert!(vol.read_superblock_into(0, &mut out).is_err());
     }
 
     /// Regression: `read_all_quins` must reconstruct every stored Quin across
@@ -884,9 +1068,9 @@ doc:article-1 a values:Undertaking ;
         let mut blocks = vec![vec![q1], vec![q2]];
         blocks.sort_by_key(|c| c[0].object);
 
-        let mut builder = UnifiedVolumeBuilder::with_lex_map(&lex);
+        let mut builder = UnifiedVolumeBuilder::with_lex_map(&lex).unwrap();
         for (seq, chunk) in blocks.iter().enumerate() {
-            builder.push_block(seq as u64, chunk);
+            builder.push_block(seq as u64, chunk).unwrap();
         }
         let bytes = builder.finish_to_bytes();
 
@@ -925,6 +1109,7 @@ pub struct StreamingVolumeAppender {
     dag_store: crate::git_bridge::DagStore,
     author_did: u64,
     last_dag_hash: [u8; 32],
+    last_object_hash: Option<u64>,
 }
 
 impl StreamingVolumeAppender {
@@ -935,10 +1120,10 @@ impl StreamingVolumeAppender {
             .write(true)
             .open(path)?;
 
-        let mut header = Q42VolumeHeader {
+        let header = Q42VolumeHeader {
             magic: Q42_MAGIC,
             version: Q42_VERSION_V3,
-            flags: FLAG_BLOCKS_LZ4,
+            flags: FLAG_BLOCKS_LZ4 | FLAG_OBJECT_SORTED,
             lex_offset: HEADER_SIZE as u64,
             lex_length: 0,
             bidx_offset: HEADER_SIZE as u64,
@@ -961,15 +1146,13 @@ impl StreamingVolumeAppender {
             _reserved: [0; 80],
         };
 
-        if file.metadata()?.len() >= HEADER_SIZE as u64 {
-            let mut hdr_buf = [0u8; HEADER_SIZE];
-            use std::io::{Read, Seek, SeekFrom};
-            file.seek(SeekFrom::Start(0))?;
-            file.read_exact(&mut hdr_buf)?;
-            if let Ok(h) = header_from_bytes(&hdr_buf) {
-                header = h;
-            }
-        } else {
+        if file.metadata()?.len() != 0 {
+            return Err(io::Error::new(
+                io::ErrorKind::Unsupported,
+                "StreamingVolumeAppender cannot reopen a Q42 volume; publish a new immutable segment",
+            ));
+        }
+        {
             use std::io::{Seek, SeekFrom, Write};
             file.seek(SeekFrom::Start(0))?;
             file.write_all(&header_to_bytes(&header))?;
@@ -983,6 +1166,7 @@ impl StreamingVolumeAppender {
             dag_store: crate::git_bridge::DagStore::new(),
             author_did: 0,
             last_dag_hash: [0u8; 32],
+            last_object_hash: None,
         })
     }
 
@@ -992,8 +1176,15 @@ impl StreamingVolumeAppender {
     }
 
     pub fn append_block(&mut self, seq_id: u64, quins: &[NQuin]) -> std::io::Result<()> {
-        let min_hash = quins.first().map(|q| q.object).unwrap_or(0);
-        let max_hash = quins.last().map(|q| q.object).unwrap_or(0);
+        let (min_hash, max_hash) = object_range(quins)?;
+        if let Some(previous) = self.last_object_hash {
+            if min_hash < previous {
+                return Err(io::Error::new(
+                    io::ErrorKind::InvalidInput,
+                    "Q42 streaming blocks must be globally sorted by object hash",
+                ));
+            }
+        }
         self.block_ranges.push((min_hash, max_hash));
 
         let raw = encode_superblock(seq_id, quins);
@@ -1026,6 +1217,7 @@ impl StreamingVolumeAppender {
             self.dag_store
                 .commit_node(self.last_dag_hash, quins, self.author_did, ts, &msg)
         };
+        self.last_object_hash = Some(max_hash);
 
         // Write BIDX and Directory at the end
         let bidx_bytes = encode_bidx(&self.block_ranges);

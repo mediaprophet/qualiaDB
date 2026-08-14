@@ -367,12 +367,18 @@ pub fn streaming_import_rdf_with_mode(
     quins.sort_unstable_by_key(|q| q.object);
 
     let mut builder = match mode {
-        IngestMode::Complete => crate::q42_volume::UnifiedVolumeBuilder::with_lex_map(&lexicon),
+        IngestMode::Complete => crate::q42_volume::UnifiedVolumeBuilder::with_lex_map(&lexicon)
+            .map_err(|e| {
+                std::io::Error::new(
+                    std::io::ErrorKind::InvalidInput,
+                    format!("invalid lossless Q42LEX: {e:?}"),
+                )
+            })?,
         IngestMode::StripLiterals => crate::q42_volume::UnifiedVolumeBuilder::with_empty_lex(),
     };
     let mut seq_id: u64 = 0;
     for chunk in quins.chunks(crate::QUINS_PER_BLOCK) {
-        builder.push_block(seq_id, chunk);
+        builder.push_block(seq_id, chunk)?;
         seq_id += 1;
     }
     builder
@@ -442,8 +448,10 @@ pub fn verify_integrity(
     use std::fs::File;
     use std::io::BufReader;
 
-    // Calculate source checksum
+    // Retained only as a fast legacy diagnostic. XOR has compensating-error
+    // collisions; `verify-graph` performs the bounded encoded-set proof.
     let mut source_checksum: u64 = 0;
+    let mut source_records: u64 = 0;
     let file = File::open(&input_path)?;
     let mut reader = BufReader::new(file);
     let mut parser = TurtleStarParser::new(0);
@@ -464,16 +472,21 @@ pub fn verify_integrity(
             continue;
         }
 
-        if let Ok((s, p, o)) = parser.parse_triple(slice) {
-            let parity = s ^ p ^ o ^ 0;
-            source_checksum ^= parity;
-        }
+        let (s, p, o) = parser.parse_triple(slice).map_err(|e| {
+            std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                format!("source contains an unparseable RDF triple: {e}"),
+            )
+        })?;
+        source_checksum ^= s ^ p ^ o;
+        source_records += 1;
     }
 
     println!("Source Checksum: 0x{:016X}", source_checksum);
 
     // Dataset calculation
     let mut dataset_checksum: u64 = 0;
+    let mut dataset_records: u64 = 0;
 
     let volume = match crate::q42_volume::Q42Volume::open(&dataset_path) {
         Ok(v) => v,
@@ -491,15 +504,25 @@ pub fn verify_integrity(
         let quin_count = u64::from_le_bytes(sb_buf[16..24].try_into().unwrap()) as usize;
         let mut off = crate::q42_volume::SUPERBLOCK_HEADER;
         for _ in 0..quin_count {
-            let parity = u64::from_le_bytes(sb_buf[off + 40..off + 48].try_into().unwrap());
-            if parity != 0 {
-                dataset_checksum ^= parity;
+            let quin: crate::NQuin =
+                bytemuck::pod_read_unaligned(&sb_buf[off..off + crate::q42_volume::QUIN_SIZE]);
+            if !quin.verify_ecc_parity() {
+                return Err(std::io::Error::new(
+                    std::io::ErrorKind::InvalidData,
+                    format!("Q42 parity mismatch in block {i}"),
+                ));
             }
+            dataset_checksum ^= quin.parity;
+            dataset_records += 1;
             off += crate::q42_volume::QUIN_SIZE;
         }
     }
 
     println!("Dataset Checksum: 0x{:016X}", dataset_checksum);
 
-    Ok(source_checksum == dataset_checksum && source_checksum != 0)
+    println!("Source records: {source_records}");
+    println!("Dataset records: {dataset_records}");
+    Ok(source_checksum == dataset_checksum
+        && source_records == dataset_records
+        && source_records != 0)
 }

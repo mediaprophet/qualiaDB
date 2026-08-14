@@ -37,13 +37,12 @@ fn graph_proof_proves_equal_ground_graph_with_forced_disk_runs() {
     )
     .unwrap();
     let mut builder = UnifiedVolumeBuilder::with_empty_lex();
-    builder.push_block(
-        0,
-        &[
-            quin("<urn:s1>", "<urn:p>", "<urn:o1>"),
-            quin("<urn:s2>", "<urn:p>", "<urn:o2>"),
-        ],
-    );
+    let mut q42_quins = vec![
+        quin("<urn:s1>", "<urn:p>", "<urn:o1>"),
+        quin("<urn:s2>", "<urn:p>", "<urn:o2>"),
+    ];
+    q42_quins.sort_unstable_by_key(|quin| quin.object);
+    builder.push_block(0, &q42_quins).unwrap();
     builder.finish(&q42).unwrap();
 
     let report = prove_cli_ntriples_q42_equivalence(&source, &q42, options()).unwrap();
@@ -64,7 +63,9 @@ fn graph_proof_reports_exact_set_difference() {
     let q42 = dir.path().join("source.q42");
     std::fs::write(&source, "<urn:s> <urn:p> <urn:expected> .\n").unwrap();
     let mut builder = UnifiedVolumeBuilder::with_empty_lex();
-    builder.push_block(0, &[quin("<urn:s>", "<urn:p>", "<urn:actual>")]);
+    builder
+        .push_block(0, &[quin("<urn:s>", "<urn:p>", "<urn:actual>")])
+        .unwrap();
     builder.finish(&q42).unwrap();
 
     let report = prove_cli_ntriples_q42_equivalence(&source, &q42, options()).unwrap();
@@ -83,7 +84,9 @@ fn graph_proof_flags_blank_nodes_as_requiring_canonicalization() {
     let q42 = dir.path().join("source.q42");
     std::fs::write(&source, "_:local <urn:p> <urn:o> .\n").unwrap();
     let mut builder = UnifiedVolumeBuilder::with_empty_lex();
-    builder.push_block(0, &[quin("_:local", "<urn:p>", "<urn:o>")]);
+    builder
+        .push_block(0, &[quin("_:local", "<urn:p>", "<urn:o>")])
+        .unwrap();
     builder.finish(&q42).unwrap();
 
     let report = prove_cli_ntriples_q42_equivalence(&source, &q42, options()).unwrap();

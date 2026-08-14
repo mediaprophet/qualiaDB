@@ -93,7 +93,7 @@ pub fn write_q42_checkpoint(
     }
     use qualia_core_db::q42::q42_volume::UnifiedVolumeBuilder;
     let mut builder = UnifiedVolumeBuilder::with_empty_lex().with_author_did(author_did);
-    builder.push_block(0, quins);
+    builder.push_block(0, quins)?;
     let path = storage_root.join(Q42_FILE);
     builder.finish(&path)
 }

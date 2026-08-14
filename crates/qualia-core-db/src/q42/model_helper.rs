@@ -103,8 +103,11 @@ impl ModelHelper {
         let (lex, mut quins) = self.to_q42_graph();
         // Unified-volume BIDX ranges and FLAG_OBJECT_SORTED require object order.
         quins.sort_unstable_by_key(|q| q.object);
-        let mut builder = UnifiedVolumeBuilder::with_lex_map(&lex);
-        builder.push_block(0, &quins);
+        let mut builder = UnifiedVolumeBuilder::with_lex_map(&lex)
+            .map_err(|e| format!("build Q42LEX for helper: {e:?}"))?;
+        builder
+            .push_block(0, &quins)
+            .map_err(|e| format!("build canonical Q42 helper: {e}"))?;
         builder
             .finish(&helper_path)
             .map_err(|e| format!("write {}: {e}", helper_path.display()))?;

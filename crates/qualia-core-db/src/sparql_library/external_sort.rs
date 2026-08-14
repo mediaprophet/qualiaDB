@@ -117,7 +117,12 @@ impl ExternalSorter {
             );
         }
 
-        let mut builder = UnifiedVolumeBuilder::with_lex_map(&self.lex);
+        let mut builder = UnifiedVolumeBuilder::with_lex_map(&self.lex).map_err(|e| {
+            std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                format!("invalid Q42LEX: {e:?}"),
+            )
+        })?;
 
         if self.chunk_files.is_empty() {
             builder.finish(final_q42)?;
@@ -183,7 +188,7 @@ impl ExternalSorter {
             }
 
             if block_buffer.len() == QUINS_PER_BLOCK {
-                builder.push_block(block_seq, &block_buffer);
+                builder.push_block(block_seq, &block_buffer)?;
                 block_buffer.clear();
                 block_seq += 1;
             }
@@ -191,7 +196,7 @@ impl ExternalSorter {
 
         // Flush remaining in block buffer
         if !block_buffer.is_empty() {
-            builder.push_block(block_seq, &block_buffer);
+            builder.push_block(block_seq, &block_buffer)?;
             block_seq += 1;
         }
 
