@@ -1,30 +1,16 @@
 /**
  * Live SPARQL / triple-pattern runner for GH Pages.
- * Mounts a unified v3 .q42 via VFS, flattens live Quins, and calls
- * execute_ntriples_query (WASM). No mock result rows.
+ * GETs the Schema.org v3 .q42 in one shot, flattens live Quins, and calls
+ * execute_ntriples_query (WASM). No mock rows and no HTTP Range paging.
  */
 
-import { VFSProvider, QUIN_SIZE } from '../playground/vfs.js?v=0.0.30-vfs-fullget1';
+import { flattenUnifiedVolumeQuins, QUIN_SIZE } from '../playground/vfs.js?v=0.0.30-vfs-fullget2';
 
-const SUPERBLOCK_HEADER = 160;
 const DEFAULT_DATASET = 'schemaorg-30';
-
-function getU64(view, off) {
-    return BigInt(view.getUint32(off, true)) | (BigInt(view.getUint32(off + 4, true)) << 32n);
-}
-
-function extractLiveQuins(blockBytes) {
-    if (!blockBytes || blockBytes.length < SUPERBLOCK_HEADER + QUIN_SIZE) {
-        return new Uint8Array(0);
-    }
-    const view = new DataView(blockBytes.buffer, blockBytes.byteOffset);
-    const live = Number(getU64(view, 16));
-    const cap = Math.floor((blockBytes.length - SUPERBLOCK_HEADER) / QUIN_SIZE);
-    const count = Math.max(0, Math.min(live > 0 ? live : cap, cap));
-    const out = new Uint8Array(count * QUIN_SIZE);
-    out.set(blockBytes.subarray(SUPERBLOCK_HEADER, SUPERBLOCK_HEADER + count * QUIN_SIZE));
-    return out;
-}
+const SCHEMAORG_Q42 = new URL(
+    '../data/schemaorg/30.0/schemaorg-current-https.q42',
+    import.meta.url,
+).href;
 
 export class SparqlLiveSession {
     constructor() {
@@ -45,27 +31,19 @@ export class SparqlLiveSession {
         if (typeof wasmMod.execute_ntriples_query !== 'function') {
             throw new Error('WASM execute_ntriples_query is not in this build');
         }
-        const provider = await VFSProvider.fromManifest(
-            new URL('../playground/vfs-manifest.json', import.meta.url).href,
-        );
-        this.vfs = await provider.mount(datasetId, { loadLex: true, prefetchToOpfs: false });
-        const chunks = [];
-        let total = 0;
-        for (let i = 0; i < this.vfs.blockCount; i++) {
-            const block = await this.vfs.readBlock(i);
-            const live = extractLiveQuins(block);
-            if (live.length) {
-                chunks.push(live);
-                total += live.length;
-            }
+        const volumeUrl = datasetId === DEFAULT_DATASET
+            ? SCHEMAORG_Q42
+            : new URL('../data/schemaorg/30.0/schemaorg-current-https.q42', import.meta.url).href;
+        const resp = await fetch(volumeUrl, { cache: 'no-store' });
+        if (!resp.ok) {
+            throw new Error(`Schema.org Q42 HTTP ${resp.status} (${volumeUrl})`);
         }
-        this.dbBytes = new Uint8Array(total);
-        let offset = 0;
-        for (const chunk of chunks) {
-            this.dbBytes.set(chunk, offset);
-            offset += chunk.length;
+        const bytes = new Uint8Array(await resp.arrayBuffer());
+        this.dbBytes = flattenUnifiedVolumeQuins(bytes);
+        this.quinCount = this.dbBytes.length / QUIN_SIZE;
+        if (!this.quinCount) {
+            throw new Error('Schema.org Q42 decoded to zero Quins');
         }
-        this.quinCount = total / QUIN_SIZE;
         this.ready = true;
         return this;
     }

@@ -276,6 +276,52 @@ function decodeFlagNames(flags) {
  * @param {object} header
  * @returns {Array<{relOffset:number, compLen:number, uncompLen:number}>}
  */
+/**
+ * Flatten a unified v3 volume already in memory into concatenated live Quin bytes.
+ * Used by SPARQL/Pages loaders so a 1 MB ontology never depends on HTTP Range.
+ */
+export function flattenUnifiedVolumeQuins(bytes) {
+    if (!bytes || bytes.length < HEADER_SIZE) {
+        throw new Error('Q42 volume is shorter than the 256-byte header');
+    }
+    const header = parseQ42Header(new DataView(bytes.buffer, bytes.byteOffset, HEADER_SIZE));
+    if (!header) throw new Error('not a Q42 v3 unified volume');
+    const dir = parseBlockDirectory(bytes, header);
+    const chunks = [];
+    let total = 0;
+    for (let i = 0; i < dir.length; i++) {
+        const e = dir[i];
+        const start = header.dataOffset + e.relOffset;
+        const end = start + e.compLen;
+        if (end > bytes.length) {
+            throw new Error(`Q42 block ${i} ends at ${end}, file is ${bytes.length}`);
+        }
+        const compressed = bytes.subarray(start, end);
+        const decoded = _decompressLz4PrependSize(compressed, e.uncompLen);
+        const live = extractSuperblockQuins(decoded);
+        if (live.length) {
+            chunks.push(live);
+            total += live.length;
+        }
+    }
+    const out = new Uint8Array(total);
+    let offset = 0;
+    for (const chunk of chunks) {
+        out.set(chunk, offset);
+        offset += chunk.length;
+    }
+    return out;
+}
+
+function extractSuperblockQuins(blockBytes) {
+    if (!blockBytes || blockBytes.length < 160 + QUIN_SIZE) return new Uint8Array(0);
+    const view = new DataView(blockBytes.buffer, blockBytes.byteOffset);
+    const live = Number(view.getBigUint64(16, true));
+    const cap = Math.floor((blockBytes.length - 160) / QUIN_SIZE);
+    const count = Math.max(0, Math.min(live > 0 ? live : cap, cap));
+    return blockBytes.subarray(160, 160 + count * QUIN_SIZE);
+}
+
 function parseBlockDirectory(buf, header) {
     const entries = [];
     const base = header.blockDirOffset;

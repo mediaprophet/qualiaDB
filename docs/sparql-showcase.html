@@ -470,7 +470,7 @@ WHERE {
         }
 
         async function runLive(query, resultEl, extras = {}) {
-            const { ensureSparqlLive } = await import('./js/sparql-live.js');
+            const { ensureSparqlLive } = await import('./js/sparql-live.js?v=0.0.30-vfs-fullget2');
             const session = await ensureSparqlLive('schemaorg-30');
             const out = session.run(query, extras.maxResults || 64);
             const matches = out.result?.matches || out.result?.bindings || out.result;
