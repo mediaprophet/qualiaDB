@@ -46,6 +46,8 @@ pub struct Q42RangeTripleSelectPlan {
     pub object: u64,
     pub projection: [VariableId; MAX_VARIABLES],
     pub projection_count: u8,
+    pub filters: [ExpressionId; 8],
+    pub filter_count: u8,
     pub limit: u64,
     pub offset: u64,
 }
@@ -84,6 +86,8 @@ impl Q42RangeTripleSelectPlan {
         let mut operator = plan.root_operator;
         let mut projection = [0; MAX_VARIABLES];
         let mut projection_count = 0;
+        let mut filters = [0; 8];
+        let mut filter_count = 0usize;
         let mut limit = u64::MAX;
         let mut offset = 0;
         loop {
@@ -100,8 +104,16 @@ impl Q42RangeTripleSelectPlan {
                     offset = configured_offset;
                     operator = input;
                 }
+                PhysicalOperatorType::Filter { input, expression } => {
+                    if filter_count == filters.len() {
+                        return Err("range SPARQL supports at most eight stacked FILTER operators".to_string());
+                    }
+                    filters[filter_count] = expression;
+                    filter_count += 1;
+                    operator = input;
+                }
                 PhysicalOperatorType::TripleScan { subject, predicate, object } => {
-                    return Ok(Self { subject, predicate, object, projection, projection_count, limit, offset });
+                    return Ok(Self { subject, predicate, object, projection, projection_count, filters, filter_count: filter_count as u8, limit, offset });
                 }
                 _ => return Err("range SPARQL currently supports one TripleScan with optional PROJECT and LIMIT/OFFSET".to_string()),
             }
@@ -138,6 +150,19 @@ pub fn execute_range_triple_select_page_into<S: crate::q42_volume::Q42RangeSourc
     let mut skipped = cursor.skipped;
     let mut emitted = cursor.emitted;
     for index in 0..source_page.returned {
+        let mut accepted = true;
+        for filter in plan.filters.iter().take(plan.filter_count as usize) {
+            if !matches!(
+                ExpressionEvaluator::evaluate(*filter, ctx, &out[index]),
+                Ok(EvalResult::Boolean(true))
+            ) {
+                accepted = false;
+                break;
+            }
+        }
+        if !accepted {
+            continue;
+        }
         if skipped < plan.offset {
             skipped += 1;
             continue;
@@ -208,6 +233,19 @@ pub fn execute_range_volume_set_triple_select_page_into<S: crate::q42_volume::Q4
     let mut skipped = cursor.skipped;
     let mut emitted = cursor.emitted;
     for index in 0..source_page.returned {
+        let mut accepted = true;
+        for filter in plan.filters.iter().take(plan.filter_count as usize) {
+            if !matches!(
+                ExpressionEvaluator::evaluate(*filter, ctx, &out[index]),
+                Ok(EvalResult::Boolean(true))
+            ) {
+                accepted = false;
+                break;
+            }
+        }
+        if !accepted {
+            continue;
+        }
         if skipped < plan.offset {
             skipped += 1;
             continue;
