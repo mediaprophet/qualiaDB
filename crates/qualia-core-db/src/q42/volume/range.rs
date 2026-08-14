@@ -291,6 +291,7 @@ fn parse_content_range(value: &str) -> io::Result<(u64, u64, u64)> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::specialized_libs::computational_geometry::allocation_counter::assert_zero_alloc;
     use std::io::Write;
     use tempfile::NamedTempFile;
 
@@ -340,6 +341,30 @@ mod tests {
         let mut scratch = [0u8; 3];
         verify_source_sha256(&source, &expected, &mut scratch).unwrap();
         assert!(verify_source_sha256(&source, &[0; 32], &mut scratch).is_err());
+    }
+
+    #[test]
+    fn local_range_and_digest_hot_loops_are_zero_heap() {
+        let mut file = NamedTempFile::new().unwrap();
+        file.write_all(b"0123456789").unwrap();
+        let source = LocalFileRangeSource::open(file.path()).unwrap();
+        let expected: [u8; 32] = Sha256::digest(b"0123456789").into();
+        let mut read_buffer = [0u8; 4];
+        let mut digest_buffer = [0u8; 3];
+        assert_zero_alloc("q42_local_range_read", || {
+            source
+                .read_range_into(
+                    Q42ByteRange {
+                        offset: 3,
+                        length: 4,
+                    },
+                    &mut read_buffer,
+                )
+                .unwrap();
+        });
+        assert_zero_alloc("q42_source_sha256", || {
+            verify_source_sha256(&source, &expected, &mut digest_buffer).unwrap();
+        });
     }
 
     #[cfg(not(target_arch = "wasm32"))]
