@@ -103,10 +103,12 @@ export function renderPlatformSuite(target, data) {
         </div>`;
 
     if (env) {
+        const when = data.last_updated || data.timestamp || env.collected_at;
         html += `
-        <div class="glass-strong rounded-3xl border border-slate-700 p-6 mb-8 grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+        <div class="glass-strong rounded-3xl border border-slate-700 p-6 mb-8 grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
             <div><div class="text-xs text-slate-500 uppercase mb-1">Runner</div><div class="font-mono">${env.runner || '—'}</div></div>
-            <div><div class="text-xs text-slate-500 uppercase mb-1">Engine</div><div class="font-mono text-amber-300">${env.engine_version ? `v${env.engine_version}` : '—'}</div></div>
+            <div><div class="text-xs text-slate-500 uppercase mb-1">Qualia engine</div><div class="font-mono text-amber-300">${env.engine_version ? `v${env.engine_version}` : 'not recorded'}</div><div class="text-[10px] text-slate-500 mt-1">Version that produced these numbers</div></div>
+            <div><div class="text-xs text-slate-500 uppercase mb-1">Recorded</div><div class="font-mono">${when ? String(when).slice(0, 19).replace('T', ' ') : '—'}</div></div>
             <div><div class="text-xs text-slate-500 uppercase mb-1">Memory ceiling</div><div class="font-mono">${data.memory_limit_enforced || (env?.memory_ceiling_mb ? `${env.memory_ceiling_mb} MB` : '—')}</div></div>
         </div>`;
     }

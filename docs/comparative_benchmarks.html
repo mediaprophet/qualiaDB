@@ -198,6 +198,10 @@
                     <div class="rounded-2xl border border-slate-700 bg-[#111f31] px-5 py-2 text-sm">
                         <span class="font-mono text-blue-300" id="dataset-label">synthetic-10k</span>
                     </div>
+                    <div class="rounded-2xl border border-amber-700/50 bg-amber-950/40 px-5 py-2 text-sm">
+                        <span class="text-slate-400">Engine</span>
+                        <span class="ml-2 font-mono text-amber-300" id="engine-version-chip">—</span>
+                    </div>
                 </div>
                 <div class="flex items-center gap-3 px-1">
                     <label for="dataset-profile-select" class="text-[11px] uppercase tracking-[1.5px] text-slate-500">Dataset profile</label>
@@ -242,7 +246,12 @@
         <!-- Run environment (schema v2) -->
         <div id="execution-environment-panel" class="mb-8 hidden">
             <div class="section-label mb-3 px-1 tracking-[1px]">RUN ENVIRONMENT</div>
-            <div class="glass-strong rounded-3xl border border-slate-700 p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 text-sm">
+            <div class="glass-strong rounded-3xl border border-slate-700 p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 text-sm">
+                <div>
+                    <div class="text-xs text-slate-500 uppercase tracking-wider mb-1">Qualia engine</div>
+                    <div id="env-engine-version" class="font-mono text-amber-300">—</div>
+                    <div class="text-[10px] text-slate-500 mt-1">Version that produced these numbers</div>
+                </div>
                 <div>
                     <div class="text-xs text-slate-500 uppercase tracking-wider mb-1">Harness host</div>
                     <div id="env-device" class="font-mono text-slate-200">—</div>
@@ -535,17 +544,40 @@
             return null;
         }
 
+        function recordedEngineVersion(data) {
+            const fromEnv = data?.execution_environment?.engine_version;
+            if (fromEnv) return String(fromEnv);
+            const engines = data?.engines || {};
+            for (const key of ['qualia', 'qualia_wasm', 'qualia_q42', 'qualia_nt']) {
+                const row = engines[key];
+                const ver = row?.engine_version || row?.daemon_version;
+                if (ver) return String(ver);
+            }
+            return null;
+        }
+
+        function engineRowVersion(engine) {
+            return engine?.engine_version || engine?.daemon_version || null;
+        }
+
         function renderExecutionEnvironment(data) {
             const panel = document.getElementById('execution-environment-panel');
             const env = data?.execution_environment;
-            if (!env) {
+            const recorded = recordedEngineVersion(data);
+            const chip = document.getElementById('engine-version-chip');
+            if (chip) chip.textContent = recorded ? `v${recorded}` : 'not recorded';
+            if (!env && !recorded) {
                 panel.classList.add('hidden');
                 return;
             }
             panel.classList.remove('hidden');
+            const envVersion = document.getElementById('env-engine-version');
+            if (envVersion) {
+                envVersion.textContent = recorded ? `v${recorded}` : 'not recorded';
+            }
             document.getElementById('env-device').textContent =
                 formatDeviceSummary(env) || 'Not recorded';
-            const topo = env.qualia_daemon_topology || env.topology;
+            const topo = env?.qualia_daemon_topology || env?.topology;
             document.getElementById('env-topology').textContent =
                 formatTopologySummary({ topology: topo }) || 'single cell (default)';
 
@@ -553,15 +585,17 @@
             const pathLines = Object.entries(engines).map(([key, e]) => {
                 const path = e.measurement_path || 'unknown';
                 const label = e.meta?.label || key;
-                return `${label}: ${path}`;
+                const ver = engineRowVersion(e);
+                return `${label}${ver ? ` v${ver}` : ''}: ${path}`;
             });
             document.getElementById('env-paths').innerHTML = pathLines.length
                 ? pathLines.join('<br>')
                 : '—';
 
             const schema = data.schema_version ?? 1;
+            const when = env?.collected_at || data.last_updated || data.timestamp;
             document.getElementById('env-schema').textContent =
-                `v${schema} · ${env.runner || 'harness'} · ${env.collected_at?.slice(0, 10) || '—'}`;
+                `v${schema} · ${env?.runner || 'harness'} · ${when ? String(when).slice(0, 10) : '—'}`;
         }
 
         function renderDataWarnings(engines) {
@@ -701,6 +735,7 @@
                         <div class="flex items-center gap-x-3">
                             <div class="h-2.5 w-2.5 rounded-full flex-shrink-0 ${getEngineColor(engine.engine)}"></div>
                             <span class="${isQualia ? 'text-amber-300 font-medium' : ''}">${label}</span>
+                            ${engineRowVersion(engine) ? `<span class="ml-2 text-[10px] px-2 py-px rounded bg-slate-800 text-slate-300 font-mono tracking-wider">v${engineRowVersion(engine)}</span>` : ''}
                             ${engine.engine === 'qualia' ? '<span class="ml-2 text-[10px] px-2 py-px rounded bg-amber-950 text-amber-400 font-mono tracking-wider">DAEMON</span>' : ''}
                             ${engine.engine === 'qualia_wasm' ? '<span class="ml-2 text-[10px] px-2 py-px rounded bg-cyan-950 text-cyan-300 font-mono tracking-wider">WASM</span>' : ''}
                             ${engine.engine === 'qualia_q42' ? '<span class="ml-2 text-[10px] px-2 py-px rounded bg-amber-950 text-yellow-300 font-mono tracking-wider">.Q42</span>' : ''}
@@ -840,6 +875,7 @@
                                 ${key === 'qualia' ? '<div class="text-xs text-amber-400 mt-0.5">Native daemon • port 4242</div>' : ''}
                                 ${key === 'qualia_wasm' ? '<div class="text-xs text-cyan-300/80 mt-0.5">Node WASM • execute_ntriples_query on flat quins</div>' : ''}
                                 ${key === 'qualia_q42' ? '<div class="text-xs text-yellow-300/80 mt-0.5">In-process .q42 SuperBlock load</div>' : ''}
+                                ${engineRowVersion(d) ? `<div class="text-xs font-mono text-amber-200/90 mt-1">Recorded engine v${engineRowVersion(d)}</div>` : ''}
 
                                 ${key === 'qualia_nt' ? '<div class="text-xs text-amber-200/80 mt-0.5">In-process N-Triples parse (same RDF as Oxigraph)</div>' : ''}
                             </div>
@@ -911,8 +947,15 @@
                 }
                 if (!loaded) throw new Error();
                 currentData = loaded;
-                const date = new Date(currentData.last_updated);
-                statusEl.innerHTML = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' • ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                const when = currentData.last_updated || currentData.timestamp || currentData.execution_environment?.collected_at;
+                const date = when ? new Date(when) : null;
+                const recorded = recordedEngineVersion(currentData);
+                const dateLabel = date && !Number.isNaN(date.getTime())
+                    ? date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' • ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                    : 'date not recorded';
+                statusEl.innerHTML = recorded
+                    ? `${dateLabel} · Qualia engine <span class="text-amber-300">v${recorded}</span>`
+                    : `${dateLabel} · Qualia engine <span class="text-rose-300">version not recorded</span>`;
             } catch {
                 currentData = profileId === 'synthetic-10k'
                     ? demoData

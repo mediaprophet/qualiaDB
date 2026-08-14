@@ -487,6 +487,7 @@ pub async fn handle_bench(suite: &str) -> Result<(), Box<dyn std::error::Error>>
         "environment": "Native Rust CLI (qualia-cli bench)",
         "memory_limit_enforced": "512MB (Qualia Floor)",
         "timestamp": timestamp,
+        "last_updated": timestamp,
         "methodology": {
             "dataset": "Synthetic deterministic 10k subject graph unless wordnet.q42 or wordnet_compressed.q42 exists for lazy streaming metrics.",
             "qualia_measurement": "Qualia metrics are measured live in this process using Instant timers, std::hint::black_box barriers, and deterministic FNV-indexed synthetic data.",
