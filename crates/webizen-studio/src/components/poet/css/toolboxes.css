@@ -1,0 +1,287 @@
+/* ==========================================================================
+   HyperCanvas: "Toolbox of Toolboxes" & Modular Action Palettes
+   With 4-Way Docking (Left, Top, Right, Bottom) & Contextual RDF Grounding
+   ========================================================================== */
+
+/* Main Floating Toolbox Shelf */
+.toolbox-dock {
+  position: absolute;
+  background: var(--surface-glass-heavy);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  padding: 6px;
+  gap: 6px;
+  z-index: 300;
+  transition: all var(--trans-smooth);
+}
+
+/* 4-Way Docking Positions */
+.toolbox-dock.dock-left {
+  top: 60px;
+  left: 20px;
+  flex-direction: column;
+}
+
+.toolbox-dock.dock-right {
+  top: 60px;
+  right: 20px;
+  flex-direction: column;
+}
+
+.toolbox-dock.dock-top {
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  flex-direction: row;
+  align-items: center;
+}
+
+.toolbox-dock.dock-bottom {
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  flex-direction: row;
+  align-items: center;
+}
+
+.dock-header-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--border-subtle);
+  margin-bottom: 4px;
+}
+.toolbox-dock.dock-top .dock-header-controls,
+.toolbox-dock.dock-bottom .dock-header-controls {
+  border-bottom: none;
+  border-right: 1px solid var(--border-subtle);
+  padding-bottom: 0;
+  padding-right: 6px;
+  margin-bottom: 0;
+  margin-right: 4px;
+}
+
+.dock-pos-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 10px;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: var(--radius-xs);
+}
+.dock-pos-btn:hover, .dock-pos-btn.active {
+  background: var(--surface-panel-elevated);
+  color: var(--accent-cyan);
+}
+
+.toolbox-dock-btn {
+  width: 40px;
+  height: 40px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: var(--trans-fast);
+  position: relative;
+}
+.toolbox-dock-btn:hover {
+  background: var(--surface-panel-elevated);
+  color: var(--text-primary);
+  border-color: var(--border-subtle);
+}
+.toolbox-dock-btn.active {
+  background: var(--surface-panel-elevated);
+  color: var(--accent-cyan);
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 12px var(--accent-cyan-glow);
+}
+
+.dock-divider {
+  background: var(--border-subtle);
+}
+.toolbox-dock.dock-left .dock-divider,
+.toolbox-dock.dock-right .dock-divider {
+  height: 1px;
+  width: 100%;
+  margin: 2px 0;
+}
+.toolbox-dock.dock-top .dock-divider,
+.toolbox-dock.dock-bottom .dock-divider {
+  width: 1px;
+  height: 100%;
+  margin: 0 4px;
+}
+
+/* Floating Active Toolbox Palette Window */
+.floating-toolbox-palette {
+  position: absolute;
+  width: 300px;
+  background: var(--surface-glass-heavy);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--border-bright);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  display: none;
+  flex-direction: column;
+  z-index: 350;
+  animation: slidePalette 0.15s cubic-bezier(0.1, 0.9, 0.2, 1);
+}
+.floating-toolbox-palette.open {
+  display: flex;
+}
+
+/* Palette Positioning relative to Dock */
+.floating-toolbox-palette.dock-left { top: 60px; left: 80px; }
+.floating-toolbox-palette.dock-right { top: 60px; right: 80px; }
+.floating-toolbox-palette.dock-top { top: 68px; left: 50%; transform: translateX(-50%); }
+.floating-toolbox-palette.dock-bottom { bottom: 78px; left: 50%; transform: translateX(-50%); }
+
+@keyframes slidePalette {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.palette-header {
+  height: 38px;
+  padding: 0 12px;
+  background: var(--surface-panel);
+  border-bottom: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.palette-body {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 420px;
+  overflow-y: auto;
+}
+
+.tool-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.tool-section-title {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  letter-spacing: 0.5px;
+}
+
+.tool-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.tool-btn {
+  background: var(--surface-panel);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xs);
+  color: var(--text-primary);
+  font-size: 11px;
+  padding: 6px 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: var(--trans-fast);
+  text-align: left;
+}
+.tool-btn:hover {
+  background: var(--surface-panel-elevated);
+  border-color: var(--border-medium);
+  color: var(--accent-cyan);
+}
+
+.tool-btn.highlight-ai {
+  border-color: rgba(6, 182, 212, 0.4);
+  background: rgba(6, 182, 212, 0.1);
+  color: var(--accent-cyan);
+}
+.tool-btn.highlight-ai:hover {
+  background: rgba(6, 182, 212, 0.2);
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 10px var(--accent-cyan-glow);
+}
+
+/* ==========================================================================
+   Contextual RDF & Semantic Selection Popover
+   ========================================================================== */
+.contextual-rdf-popover {
+  position: absolute;
+  background: var(--surface-glass-heavy);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--accent-cyan);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg), 0 0 15px var(--accent-cyan-glow);
+  padding: 10px 14px;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 280px;
+  animation: fadeInPop 0.12s ease-out;
+}
+
+@keyframes fadeInPop {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.popover-sel-text {
+  font-size: 11px;
+  font-style: italic;
+  color: #fff;
+  background: var(--canvas-bg);
+  padding: 4px 8px;
+  border-radius: var(--radius-xs);
+  border-left: 3px solid var(--accent-cyan);
+  max-height: 50px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.popover-actions-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.popover-action-btn {
+  background: var(--surface-panel);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xs);
+  color: var(--text-primary);
+  font-size: 10px;
+  padding: 3px 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.popover-action-btn:hover {
+  background: var(--surface-panel-elevated);
+  border-color: var(--accent-cyan);
+  color: var(--accent-cyan);
+}

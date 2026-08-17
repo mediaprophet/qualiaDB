@@ -1,0 +1,631 @@
+/* ==========================================================================
+   HyperCanvas: 2D/3D/4D Canvas Plane & Container Styles
+   With 3D CAD Trackball Gizmo, Strata, GIS Map, Social Chat Graph, WebRTC & Health
+   ========================================================================== */
+
+.canvas-stage {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 10000px;
+  height: 10000px;
+  transform-origin: 0 0;
+  will-change: transform;
+  transition: transform 180ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* 3D Perspective Plane */
+.canvas-viewport-container.mode-3d,
+.canvas-viewport-container.mode-4d {
+  perspective: 1200px;
+}
+.canvas-viewport-container.mode-3d .canvas-stage,
+.canvas-viewport-container.mode-4d .canvas-stage {
+  transform-style: preserve-3d;
+  transition: transform 0.2s cubic-bezier(0.1, 0.9, 0.2, 1);
+}
+
+/* Infinite Spatial Grid Background */
+.canvas-grid-svg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+/* SVG Connecting Wires Layer */
+.wires-svg-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 10000px;
+  height: 10000px;
+  pointer-events: stroke;
+  z-index: 10;
+}
+
+.connection-wire {
+  fill: none;
+  stroke: var(--border-bright);
+  stroke-width: 3px;
+  stroke-dasharray: 6 3;
+  animation: flow-dash 30s linear infinite;
+  transition: stroke 0.2s, stroke-width 0.2s, filter 0.2s;
+  pointer-events: stroke;
+  cursor: pointer;
+}
+.connection-wire:hover {
+  stroke: var(--accent-violet) !important;
+  stroke-width: 5px !important;
+  filter: drop-shadow(0 0 8px var(--accent-violet-glow)) !important;
+}
+.connection-wire.selected-wire {
+  stroke: var(--accent-violet) !important;
+  stroke-width: 5.5px !important;
+  stroke-dasharray: none !important;
+  filter: drop-shadow(0 0 12px var(--accent-violet-glow)) !important;
+}
+.connection-wire.wire-active {
+  stroke: var(--accent-cyan);
+  filter: drop-shadow(0 0 6px var(--accent-cyan-glow));
+}
+.connection-wire.wire-event {
+  stroke: var(--accent-rose);
+  filter: drop-shadow(0 0 6px var(--accent-rose-glow));
+}
+.connection-wire.wire-tensor {
+  stroke: var(--accent-amber);
+  filter: drop-shadow(0 0 6px var(--accent-amber-glow));
+}
+.connection-wire.wire-ontology {
+  stroke: var(--color-ontology);
+  filter: drop-shadow(0 0 8px var(--accent-violet-glow));
+}
+.connection-wire.wire-subjective {
+  stroke: var(--modality-subjective);
+  stroke-dasharray: 4 4;
+  filter: drop-shadow(0 0 8px var(--accent-rose-glow));
+}
+.connection-wire.wire-objective {
+  stroke: var(--modality-objective);
+  stroke-dasharray: none;
+  filter: drop-shadow(0 0 6px var(--accent-cyan-glow));
+}
+
+@keyframes flow-dash {
+  to { stroke-dashoffset: -1000; }
+}
+
+/* Wire Label Text / Badge */
+.wire-label-text {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  fill: var(--accent-cyan);
+  text-anchor: middle;
+  pointer-events: all;
+  cursor: pointer;
+  background: var(--surface-base);
+}
+
+/* ==========================================================================
+   Canvas Containers (Draggable / Resizable Nodes)
+   ========================================================================== */
+.canvas-container-node {
+  position: absolute;
+  background: var(--surface-glass);
+  backdrop-filter: blur(18px);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-container);
+  display: flex;
+  flex-direction: column;
+  min-width: 320px;
+  min-height: 220px;
+  z-index: 20;
+  transition: box-shadow var(--trans-fast), border-color var(--trans-fast), opacity var(--trans-fast), transform var(--trans-smooth);
+  user-select: none;
+  animation: node-arrive 280ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.canvas-container-node.selected {
+  border-color: var(--accent-cyan);
+  box-shadow: var(--shadow-container-active);
+  z-index: 30;
+  animation: node-arrive 280ms cubic-bezier(0.16, 1, 0.3, 1), node-pulse 2.4s ease-in-out infinite;
+}
+.canvas-container-node.dragging {
+  animation: none;
+  transition: none;
+  cursor: grabbing;
+  z-index: 40;
+}
+@keyframes node-arrive {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes node-pulse {
+  0%, 100% { box-shadow: var(--shadow-container-active); }
+  50% { box-shadow: 0 12px 35px rgba(0, 0, 0, 0.8), 0 0 0 1.5px var(--accent-cyan), 0 0 28px var(--accent-cyan-glow); }
+}
+.canvas-stage.live {
+  transition: none;
+}
+.canvas-container-node.temporally-inactive {
+  opacity: 0.35;
+  filter: grayscale(0.6);
+}
+.canvas-container-node.strata-dimmed,
+.canvas-container-node.modality-dimmed {
+  opacity: 0.2;
+  filter: grayscale(0.8);
+  pointer-events: none;
+}
+
+/* Strata Badges on Container Header */
+.strata-badge {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: var(--radius-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+.strata-env { background: rgba(16, 185, 129, 0.18); color: var(--strata-env); border: 1px solid var(--strata-env); }
+.strata-social { background: rgba(56, 189, 248, 0.18); color: var(--strata-social); border: 1px solid var(--strata-social); }
+.strata-legal { background: rgba(236, 72, 153, 0.18); color: var(--strata-legal); border: 1px solid var(--strata-legal); }
+.strata-fin { background: rgba(245, 158, 11, 0.18); color: var(--strata-fin); border: 1px solid var(--strata-fin); }
+.strata-tech { background: rgba(139, 92, 246, 0.18); color: var(--strata-tech); border: 1px solid var(--strata-tech); }
+
+/* Epistemic Modality Badges */
+.modality-badge {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: var(--radius-xs);
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+.modality-objective { background: rgba(0, 210, 255, 0.15); color: var(--modality-objective); border: 1px solid var(--modality-objective); }
+.modality-subjective { background: rgba(236, 72, 153, 0.18); color: var(--modality-subjective); border: 1px solid var(--modality-subjective); }
+.modality-intersubjective { background: rgba(168, 85, 247, 0.18); color: var(--modality-intersubjective); border: 1px solid var(--modality-intersubjective); }
+.modality-normative { background: rgba(255, 184, 52, 0.18); color: var(--modality-normative); border: 1px solid var(--modality-normative); }
+
+/* Container Header */
+.container-header {
+  height: 38px;
+  background: var(--surface-panel);
+  border-bottom: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 12px;
+  cursor: grab;
+}
+.container-header:active {
+  cursor: grabbing;
+}
+
+.container-title-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.container-type-tag {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: var(--radius-xs);
+}
+.tag-subcanvas { background: rgba(0, 210, 255, 0.2); color: var(--accent-cyan); border: 1px solid var(--accent-cyan); }
+.tag-doc { background: rgba(56, 189, 248, 0.15); color: var(--color-doc); border: 1px solid var(--color-doc); }
+.tag-code { background: rgba(0, 242, 169, 0.15); color: var(--color-code); border: 1px solid var(--color-code); }
+.tag-3d { background: rgba(168, 85, 247, 0.15); color: var(--color-3d); border: 1px solid var(--color-3d); }
+.tag-sheet { background: rgba(255, 184, 52, 0.15); color: var(--color-sheet); border: 1px solid var(--color-sheet); }
+.tag-portal { background: rgba(236, 72, 153, 0.15); color: var(--color-portal); border: 1px solid var(--color-portal); }
+.tag-media { background: rgba(249, 115, 22, 0.15); color: var(--color-media); border: 1px solid var(--color-media); }
+.tag-ai { background: rgba(6, 182, 212, 0.15); color: var(--color-ai); border: 1px solid var(--color-ai); }
+.tag-ontology { background: rgba(139, 92, 246, 0.18); color: var(--color-ontology); border: 1px solid var(--color-ontology); }
+.tag-map { background: rgba(16, 185, 129, 0.18); color: var(--color-map); border: 1px solid var(--color-map); }
+.tag-social { background: rgba(99, 102, 241, 0.18); color: var(--color-social); border: 1px solid var(--color-social); }
+.tag-webrtc { background: rgba(239, 68, 68, 0.18); color: var(--color-webrtc); border: 1px solid var(--color-webrtc); }
+.tag-health { background: rgba(20, 184, 166, 0.18); color: var(--color-health); border: 1px solid var(--color-health); }
+.tag-webview { background: rgba(14, 165, 233, 0.18); color: var(--color-webview); border: 1px solid var(--color-webview); }
+
+.container-xyzd-badge {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--text-muted);
+  background: var(--surface-base);
+  padding: 1px 5px;
+  border-radius: var(--radius-xs);
+}
+
+.container-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.container-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.container-action-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 2px;
+  border-radius: var(--radius-xs);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.container-action-btn:hover {
+  color: var(--text-primary);
+  background: var(--surface-glass-light);
+}
+
+/* Container Body */
+.container-body {
+  flex: 1;
+  padding: 12px;
+  overflow: auto;
+  position: relative;
+  user-select: text;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Connection Ports (Pins on Left & Right) */
+.container-port {
+  position: absolute;
+  top: 50%;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--surface-panel-elevated);
+  border: 2px solid var(--accent-cyan);
+  transform: translateY(-50%);
+  cursor: crosshair;
+  z-index: 50;
+  transition: transform var(--trans-fast), background var(--trans-fast);
+}
+.container-port:hover {
+  transform: translateY(-50%) scale(1.4);
+  background: var(--accent-cyan);
+  box-shadow: 0 0 10px var(--accent-cyan-glow);
+}
+.port-in { left: -6px; }
+.port-out { right: -6px; }
+
+/* Container Resize Handle */
+.container-resizer {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 14px;
+  height: 14px;
+  cursor: se-resize;
+  border-bottom-right-radius: var(--radius-md);
+  background: linear-gradient(135deg, transparent 50%, var(--border-bright) 50%);
+}
+
+/* ==========================================================================
+   3D CAD Trackball & XYZD Spatial Manifold Gizmo Widget
+   ========================================================================== */
+.xyzd-controller-hud {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  background: var(--surface-glass-heavy);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  flex-direction: column;
+  z-index: 100;
+  width: 200px;
+}
+
+.gizmo-card {
+  display: flex;
+  flex-direction: column;
+  padding: 10px;
+  gap: 6px;
+}
+
+.gizmo-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border-subtle);
+  padding-bottom: 4px;
+}
+.gizmo-title {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.gizmo-quick-views {
+  display: flex;
+  gap: 2px;
+}
+.gizmo-view-btn {
+  background: var(--surface-panel);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  font-size: 9px;
+  font-weight: 600;
+  padding: 1px 4px;
+  border-radius: 2px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.gizmo-view-btn:hover {
+  color: #fff;
+  border-color: var(--accent-cyan);
+  background: rgba(6, 182, 212, 0.15);
+}
+
+/* SVG Trackball Viewport */
+.gizmo-viewport {
+  width: 100%;
+  aspect-ratio: 1 / 0.85;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: grab;
+  position: relative;
+  background: radial-gradient(circle at 40% 35%, rgba(19, 28, 44, 0.95) 0%, rgba(6, 8, 14, 0.98) 100%);
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--border-subtle);
+  user-select: none;
+  overflow: hidden;
+}
+.gizmo-viewport.dragging {
+  cursor: grabbing;
+}
+.gizmo-viewport:hover {
+  border-color: rgba(6, 182, 212, 0.3);
+}
+
+.gizmo-svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* Axis tip hover effect */
+.gizmo-axis-tip:hover,
+.gizmo-axis-label:hover + .gizmo-axis-tip {
+  r: 9;
+  stroke-width: 1.2;
+}
+
+.gizmo-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  border-top: 1px solid var(--border-subtle);
+  padding-top: 6px;
+}
+.gizmo-axis-telemetry {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
+.gizmo-d-control {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.gizmo-d-slider {
+  flex: 1;
+  height: 4px;
+  accent-color: var(--accent-violet);
+  cursor: pointer;
+}
+.gizmo-d-value {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-secondary);
+  min-width: 30px;
+  text-align: right;
+}
+
+/* Gizmo Mode Toggle */
+.gizmo-mode-toggle {
+  display: flex;
+  gap: 2px;
+  width: 100%;
+}
+.gizmo-mode-btn {
+  flex: 1;
+  background: var(--surface-panel);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  font-size: 10px;
+  font-weight: 600;
+  padding: 3px 6px;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.18s;
+}
+.gizmo-mode-btn:hover {
+  border-color: var(--accent-cyan);
+  color: var(--text-primary);
+}
+.gizmo-mode-btn.active {
+  background: rgba(6, 182, 212, 0.18);
+  border-color: var(--accent-cyan);
+  color: #fff;
+  box-shadow: 0 0 6px rgba(6, 182, 212, 0.2);
+}
+
+/* Quick Views Bar */
+.gizmo-quick-views-bar {
+  display: flex;
+  gap: 2px;
+  padding: 0 10px;
+}
+
+/* Mode Indicator Overlay */
+.gizmo-mode-indicator {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  font-size: 8px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  color: rgba(6, 182, 212, 0.45);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  pointer-events: none;
+}
+.gizmo-mode-indicator.mode-position {
+  color: rgba(239, 68, 68, 0.55);
+}
+
+/* Position mode cursor */
+.gizmo-viewport.position-mode {
+  cursor: move;
+}
+.gizmo-viewport.position-mode.dragging {
+  cursor: grabbing;
+}
+
+/* Position Mode Footer */
+.gizmo-position-footer {
+  gap: 6px !important;
+}
+
+.gizmo-pos-target {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 6px;
+  background: var(--surface-panel);
+  border: 1px solid var(--border-subtle);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.gizmo-pos-target-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.gizmo-pos-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3px;
+}
+.gizmo-pos-row {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+.gizmo-pos-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 800;
+  min-width: 12px;
+  text-align: center;
+}
+.gizmo-pos-input {
+  width: 100%;
+  flex: 1;
+  background: var(--surface-panel);
+  border: 1px solid var(--border-subtle);
+  border-radius: 2px;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  padding: 2px 4px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.gizmo-pos-input:focus {
+  border-color: var(--accent-cyan);
+}
+.gizmo-pos-input::-webkit-inner-spin-button {
+  opacity: 0.4;
+}
+.gizmo-pos-unit {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--text-muted);
+  min-width: 14px;
+}
+
+.gizmo-pos-apply-btn {
+  background: var(--surface-panel);
+  border: 1px solid var(--border-subtle);
+  border-radius: 3px;
+  color: var(--text-secondary);
+  font-size: 10px;
+  font-weight: 600;
+  padding: 4px 8px;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-align: center;
+}
+.gizmo-pos-apply-btn:hover {
+  background: rgba(6, 182, 212, 0.12);
+  border-color: var(--accent-cyan);
+  color: #fff;
+}
+
+/* ==========================================================================
+   Navigation HUD & Canvas Minimap
+   ========================================================================== */
+.canvas-hud {
+  position: absolute;
+  bottom: 20px;
+  left: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--surface-glass-heavy);
+  backdrop-filter: blur(14px);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 6px 12px;
+  z-index: 100;
+}
+
+.hud-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 14px;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: var(--radius-xs);
+}
+.hud-btn:hover {
+  background: var(--surface-panel-elevated);
+  color: var(--text-primary);
+}
+
+.zoom-level-text {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--accent-cyan);
+  min-width: 44px;
+  text-align: center;
+}

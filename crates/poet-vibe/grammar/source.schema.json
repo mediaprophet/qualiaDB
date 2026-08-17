@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "vibe-0.1-source",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["language", "kind", "source"],
+  "properties": {
+    "language": { "const": "vibe-0.1" },
+    "kind": { "enum": ["cell", "module"] },
+    "source": { "type": "string", "minLength": 1 }
+  }
+}

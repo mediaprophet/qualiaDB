@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vibe / Poet — QualiaDB</title>
+    <link rel="stylesheet" href="../css/tailwind-built.css">
+    <link rel="stylesheet" href="../css/site-nav.css">
+    <script src="../js/menu-loader.js"></script>
+</head>
+<body class="bg-zinc-950 text-zinc-200 min-h-screen">
+    <nav class="sticky top-0 z-50 border-b border-white/10" style="background:rgba(17,23,31,0.88);backdrop-filter:blur(32px)">
+        <div class="max-w-screen-2xl mx-auto px-4 sm:px-8">
+            <div class="flex items-center justify-between gap-3 min-h-[4rem] py-2">
+                <a href="../index.html" class="flex items-center gap-3 shrink-0">
+                    <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-cyan-400 rounded-xl flex items-center justify-center">
+                        <span class="text-black font-bold text-xl">Q</span>
+                    </div>
+                    <div class="hidden sm:block"><span class="font-semibold text-xl">Qualia</span><span class="text-blue-400 text-xl">DB</span></div>
+                </a>
+                <div id="dynamic-nav" class="relative flex items-center text-sm min-w-0 flex-1 justify-center lg:justify-start px-2"></div>
+            </div>
+        </div>
+    </nav>
+    <main class="max-w-3xl mx-auto px-6 py-12">
+        <p class="text-xs uppercase tracking-widest text-slate-500 mb-3">Language · Engine · Agent overlay</p>
+        <h1 class="text-3xl font-semibold mb-3">Vibe / VibeScript</h1>
+        <p class="text-slate-400 mb-8">
+            Poet is the engine. Vibe is the language. This hub is what should be published for humans and agents.
+            Language version <span class="font-mono text-slate-300">vibe-0.1</span>.
+            Not v1.0 until core §15 holds.
+        </p>
+
+        <h2 class="text-lg font-medium text-cyan-300 mb-2">Read in this order</h2>
+        <ol class="list-decimal list-inside space-y-2 text-slate-300 mb-10">
+            <li>
+                <a class="text-cyan-400 hover:underline font-medium" href="../manuals/standards/vibescript-core.md">vibescript-core.md</a>
+                <span class="text-slate-500 text-sm"> — normative 0.1 grammar, types, effects, bindings</span>
+            </li>
+            <li>
+                <a class="text-cyan-400 hover:underline" href="../manuals/standards/vibescript-specification.md">vibescript-specification.md</a>
+                <span class="text-slate-500 text-sm"> — architectural essay; not the parser contract</span>
+            </li>
+            <li>
+                <a class="text-cyan-400 hover:underline" href="../manuals/ai-agent-vibescript-readiness.md">AI agent readiness</a>
+                <span class="text-slate-500 text-sm"> — ontology / GBNF / corpus / diagnostics overlay</span>
+            </li>
+            <li>
+                <a class="text-cyan-400 hover:underline" href="../rustdoc/poet_vibe/index.html">poet-vibe rustdoc</a>
+                <span class="text-slate-500 text-sm"> — after workspace rustdoc is on Pages</span>
+            </li>
+        </ol>
+
+        <h2 class="text-lg font-medium text-cyan-300 mb-2">Agent artifacts</h2>
+        <ul class="space-y-2 text-slate-300 mb-10">
+            <li><a class="text-cyan-400 hover:underline" href="SKILL.md">SKILL.md</a> — what coding agents should load</li>
+            <li><span class="font-mono text-slate-400">poet_vibe::diagnose(src)</span> — JSON diagnostics + safe <span class="font-mono">suggested_fix</span></li>
+            <li><span class="font-mono text-slate-400">CapabilityDiscovery.catalog</span> — Turtle of live bindings and invoke ids</li>
+            <li><a class="text-cyan-400 hover:underline" href="https://github.com/mediaprophet/qualiaDB/tree/0.0.31-dev/crates/poet-vibe/grammar">poet-vibe/grammar/</a> — EBNF, GBNF, JSON Schema</li>
+        </ul>
+
+        <h2 class="text-lg font-medium text-cyan-300 mb-2">Workbench vocabulary</h2>
+        <p class="text-slate-400 mb-3">
+            <a class="text-cyan-400 hover:underline" href="../manuals/poet-ui-concepts.md">poet-ui-concepts.md</a>
+            — manifolds (surfaces), tool chest (holds toolboxes of tools), containers (occupants).
+            HTML/GPU <span class="font-mono">canvas</span> stays a drawing surface.
+        </p>
+
+        <h2 class="text-lg font-medium text-cyan-300 mb-2">Runtime</h2>
+        <ul class="space-y-2 text-slate-300 mb-10">
+            <li><span class="font-mono text-slate-400">capability.invoke</span> — engine families; <span class="font-mono">CapabilityDiscovery.coverage</span> lists bound vs unbound</li>
+            <li><span class="font-mono text-slate-400">GraphDatabase.sparql</span> / <span class="font-mono">SHACL.validate</span> — graph + SPARQL-star + extension catalog</li>
+            <li>Desktop Poet harness: View → Shell: Poet → <span class="font-mono">/poet</span> (Classic stays default)</li>
+        </ul>
+
+        <h2 class="text-lg font-medium text-cyan-300 mb-2">How this gets published</h2>
+        <p class="text-slate-400 mb-3">
+            These files live under <span class="font-mono">docs/</span>. GitHub Pages (Jekyll) deploys that tree from
+            <span class="font-mono">main</span> / <span class="font-mono">0.0.30</span> via
+            <span class="font-mono">.github/workflows/pages.yml</span>.
+        </p>
+        <ul class="list-disc list-inside space-y-2 text-slate-400 mb-8">
+            <li>Do <strong class="text-slate-300">not</strong> point Pages at <span class="font-mono">0.0.31-dev</span> wholesale — that would replace the production playground.</li>
+            <li>To ship this hub: merge (or cherry-pick) <span class="font-mono">docs/vibe/</span> + the manuals above onto the Pages branch.</li>
+            <li>NLP TechDesign stays the authoring copy; product tree is what Pages serves.</li>
+        </ul>
+
+        <p class="text-xs text-slate-600">Copyright © 2026 Timothy Charles Holborn.</p>
+    </main>
+</body>
+</html>

@@ -202,6 +202,9 @@ pub enum Route {
     #[route("/agent-qa")]
     AgentQaRoute {},
 
+    #[route("/poet")]
+    PoetRoute {},
+
     #[route("/about")]
     AboutRoute {},
 
@@ -372,7 +375,7 @@ fn KeepHub() -> Element {
                 KeepLink { to: Route::IdentityRoute {}, title: "You — Identity", blurb: "Personal profile, social book, consent. Identifiers ≠ the natural person." }
                 KeepLink { to: Route::SanctuaryRoute {}, title: "Care — Sanctuary", blurb: "Vault lock and protected spaces." }
                 KeepLink { to: Route::AgencyRoute {}, title: "Care — Agency", blurb: "Guardianship, accountability, safeguards." }
-                KeepLink { to: Route::ChoraRoute {}, title: "World — Chora commons", blurb: "Spatio-temporal commons canvas — attributed public layers." }
+                KeepLink { to: Route::ChoraRoute {}, title: "World — Chora commons", blurb: "Spatio-temporal commons manifold — attributed public layers." }
                 KeepLink { to: Route::BrowserRoute {}, title: "World — Browser", blurb: "Web pages project into the same entity session as Memory." }
             }
         }
@@ -477,6 +480,7 @@ fn route_from_omnibox(query: &str) -> Route {
         "logs" => return Route::LogsRoute {},
         "jobs" | "tasks" | "downloads" | "queue" => return Route::JobsRoute {},
         "qa" | "debug" | "diagnostics" | "agent-qa" => return Route::AgentQaRoute {},
+        "poet" | "vibe" | "vibescript" => return Route::PoetRoute {},
         "identity" => return Route::IdentityRoute {},
         "sanctuary" => return Route::SanctuaryRoute {},
         _ => {}
@@ -783,6 +787,11 @@ fn AgentQaRoute() -> Element {
 }
 
 #[component]
+fn PoetRoute() -> Element {
+    rsx! { components::poet_harness::PoetHarness {} }
+}
+
+#[component]
 fn SupervisorRoute() -> Element {
     rsx! { components::problems_pane::ProblemsPane {} }
 }
@@ -992,6 +1001,10 @@ fn DesktopLogsPage() -> Element {
 
 #[component]
 fn AppLayout() -> Element {
+    let route = use_route::<Route>();
+    if matches!(route, Route::PoetRoute {}) {
+        return rsx! { Outlet::<Route> {} };
+    }
     let theme_state = consume_context::<Signal<ResolvedTheme>>();
     let navigator = use_navigator();
     let native_menu_listener_started = use_signal(|| false);
@@ -1000,12 +1013,17 @@ fn AppLayout() -> Element {
     let _ = navigator;
     #[cfg(not(target_arch = "wasm32"))]
     let _ = native_menu_listener_started;
+    let shell_kind = components::shell_kind::use_shell_kind();
+    let poet_chrome = shell_kind().is_poet();
     let t = theme_state();
-    let accent = t
-        .tokens
-        .get("accent")
-        .cloned()
-        .unwrap_or("#e07a5f".to_string());
+    let accent = if poet_chrome {
+        "#00d2ff".to_string()
+    } else {
+        t.tokens
+            .get("accent")
+            .cloned()
+            .unwrap_or("#e07a5f".to_string())
+    };
     let accent_glow = t
         .tokens
         .get("accent-glow")
@@ -1099,9 +1117,31 @@ fn AppLayout() -> Element {
                         "logs" => menu_nav.push(Route::LogsRoute {}),
                         "jobs" => menu_nav.push(Route::JobsRoute {}),
                         "gpu-viewport" => menu_nav.push(Route::GpuViewportRoute {}),
+                        "poet" | "vibe" => menu_nav.push(Route::PoetRoute {}),
                         _ => menu_nav.push(Route::TalkRoute {}),
                     };
                 }));
+
+                let mut kind_signal = shell_kind;
+                let kind_callback = Closure::<dyn FnMut(JsValue)>::wrap(Box::new(move |event| {
+                    let Some(target) = event_payload_string(&event) else {
+                        return;
+                    };
+                    if let Some(kind) = components::shell_kind::ShellKind::from_storage(&target) {
+                        kind_signal.set(kind);
+                        components::shell_kind::persist_shell_kind(kind);
+                    }
+                }));
+                match tauri_listen("shell-kind-set", kind_callback.as_ref().unchecked_ref()).await {
+                    Ok(_unlisten) => {
+                        kind_callback.forget();
+                    }
+                    Err(err) => {
+                        web_sys::console::error_1(
+                            &format!("shell-kind listener failed: {err:?}").into(),
+                        );
+                    }
+                }
 
                 match tauri_listen("shell-navigate", menu_callback.as_ref().unchecked_ref()).await {
                     Ok(_unlisten) => {
@@ -1364,15 +1404,28 @@ fn AppLayout() -> Element {
                 // Keep popups from the top bar above the omnibox and route content below.
                 style: "position: relative; z-index: 100; overflow: visible; display: flex; align-items: flex-end; padding: 0.55rem 1rem 0; background: rgba(10, 15, 30, 0.55); border-bottom: 1px solid var(--qualia-border); backdrop-filter: blur(24px); gap: 1rem; flex-shrink: 0;",
 
-                Link {
-                    to: Route::LibraryRoute {},
-                    style: "display: flex; align-items: center; gap: 0.5rem; text-decoration: none; padding-bottom: 0.55rem; cursor: pointer;",
-                    title: "Lived Memory — meaning shelf (flagship habitat surface)",
-                    div {
-                        style: "width: 28px; height: 28px; border-radius: 8px; background: {accent}; display: flex; align-items: center; justify-content: center; font-size: 1rem; color: white; flex-shrink: 0; box-shadow: 0 0 12px {accent_glow};",
-                        "⬡"
+                if poet_chrome {
+                    Link {
+                        to: Route::PoetRoute {},
+                        style: "display: flex; align-items: center; gap: 0.5rem; text-decoration: none; padding-bottom: 0.55rem; cursor: pointer;",
+                        title: "Poet — write Vibe, run Qualia. Classic routes remain.",
+                        div {
+                            style: "width: 28px; height: 28px; border-radius: 8px; background: {accent}; display: flex; align-items: center; justify-content: center; font-size: 1rem; color: white; flex-shrink: 0; box-shadow: 0 0 12px {accent_glow};",
+                            "⬡"
+                        }
+                        span { style: "font-weight: 800; font-size: 1rem; color: {text}; letter-spacing: 0.5px;", "Poet" }
                     }
-                    span { style: "font-weight: 800; font-size: 1rem; color: {text}; letter-spacing: 0.5px;", "Webizen" }
+                } else {
+                    Link {
+                        to: Route::LibraryRoute {},
+                        style: "display: flex; align-items: center; gap: 0.5rem; text-decoration: none; padding-bottom: 0.55rem; cursor: pointer;",
+                        title: "Lived Memory — meaning shelf (flagship habitat surface)",
+                        div {
+                            style: "width: 28px; height: 28px; border-radius: 8px; background: {accent}; display: flex; align-items: center; justify-content: center; font-size: 1rem; color: white; flex-shrink: 0; box-shadow: 0 0 12px {accent_glow};",
+                            "⬡"
+                        }
+                        span { style: "font-weight: 800; font-size: 1rem; color: {text}; letter-spacing: 0.5px;", "Webizen" }
+                    }
                 }
 
                 div {
@@ -1429,6 +1482,15 @@ fn AppLayout() -> Element {
                         sl-icon { "name": "tools", style: "font-size: 0.9rem;" }
                         "Instruments"
                     }
+                    if poet_chrome {
+                        Link {
+                            to: Route::PoetRoute {},
+                            class: "qtab",
+                            title: "Poet harness — Vibe 0.1 interpreter (Classic routes remain)",
+                            sl-icon { "name": "lightning", style: "font-size: 0.9rem;" }
+                            "Poet"
+                        }
+                    }
                     Link {
                         to: Route::SettingsRoute {},
                         class: "qtab",
@@ -1440,6 +1502,7 @@ fn AppLayout() -> Element {
                 div {
                     style: "margin-left: auto; display: flex; align-items: center; gap: 0.5rem; padding-bottom: 0.55rem; flex-wrap: wrap; justify-content: flex-end;",
                     components::experience_mode::ExperienceModeSwitch {}
+                    components::shell_kind::ShellKindSwitch {}
                     components::job_center::JobIndicator {}
                     // Context chip: principal posture · host · instrument backend
                     div {
@@ -1509,6 +1572,10 @@ fn AppLayout() -> Element {
                         }
                         Link { to: Route::WorkRoute {}, class: "nav-item", title: "Practice", sl-icon { "name": "kanban" } "Practice" }
                         Link { to: Route::ToolsRoute {}, class: "nav-item", title: "Instruments", sl-icon { "name": "tools" } "Instruments" }
+                        if poet_chrome {
+                            span { class: "app-sidebar-label", "Mindware" }
+                            Link { to: Route::PoetRoute {}, class: "nav-item", title: "Poet / Vibe harness", sl-icon { "name": "lightning" } "Poet / Vibe" }
+                        }
                         Link {
                             to: Route::SettingsRoute {},
                             class: "nav-item",
@@ -1549,6 +1616,7 @@ fn AppLayout() -> Element {
                                 Link { to: Route::LogsRoute {}, class: "nav-item", "Desktop logs" }
                                 Link { to: Route::JobsRoute {}, class: "nav-item", "Job centre" }
                                 Link { to: Route::AgentQaRoute {}, class: "nav-item", "Agent QA" }
+                                Link { to: Route::PoetRoute {}, class: "nav-item", "Poet / Vibe" }
                                 Link { to: Route::SupervisorRoute {}, class: "nav-item", "Operations" }
                                 Link { to: Route::StudioRoute {}, class: "nav-item", "QApp Studio" }
                                 Link { to: Route::ContextStudioRoute {}, class: "nav-item", "Context Studio" }
@@ -1581,6 +1649,8 @@ fn App() -> Element {
 
     let experience_mode = use_signal(components::experience_mode::initial_experience_mode);
     use_context_provider(|| experience_mode);
+    let shell_kind = use_signal(components::shell_kind::initial_shell_kind);
+    use_context_provider(|| shell_kind);
 
     let theme_state = use_signal(|| {
         let catalog = theme_engine::builtin_theme_catalog();

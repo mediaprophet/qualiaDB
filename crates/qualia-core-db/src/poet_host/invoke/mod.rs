@@ -1,0 +1,100 @@
+//! capability.invoke.
+//!
+//! Folders are **future crate seams** (D16). Do not extract workspace crates yet.
+//! Add a family by adding a file in the matching seam folder and one match arm.
+
+pub mod ids;
+mod args;
+mod clinical;
+pub mod coverage;
+mod crypto;
+mod docs;
+mod econ;
+mod engineering;
+mod geometry;
+mod governance;
+mod graph;
+mod logic;
+mod manifold;
+mod math;
+mod ml;
+mod net;
+mod nlp;
+mod render;
+mod runtime;
+mod science;
+mod sheet;
+mod social;
+mod stats;
+mod vision;
+
+use super::PoetSnapshot;
+use poet_vibe::{DiagCode, Diagnostic, Span, Value};
+
+pub fn dispatch(
+    snap: &mut PoetSnapshot,
+    id: &str,
+    args: &Value,
+    span: Span,
+) -> Result<Value, Diagnostic> {
+    match id {
+        ids::DISCOVERY_LIST | "CapabilityDiscovery" | "list_capabilities" => Ok(runtime::list()),
+        ids::HASH_IRI => runtime::iri(args, span),
+        ids::SHACL_VALIDATE => graph::shacl_validate(snap, args, span),
+        ids::SHACL_EXTENSIONS => graph::shacl_extensions(args, span),
+        ids::GRAPH_STATS | "get_graph_stats" => Ok(graph::stats(snap)),
+        ids::GRAPH_SPARQL => graph::sparql(snap, args, span),
+        ids::DEONTIC_EVAL => logic::deontic_evaluate(snap, span),
+        ids::EPISTEMIC_EVAL => logic::epistemic_evaluate(snap, span),
+        ids::PARACONSISTENT_ROUTE => logic::paraconsistent_route(snap, span),
+        ids::LTL_GLOBALLY => logic::ltl_globally(snap, args, span),
+        ids::LTL_FINALLY => logic::ltl_finally(snap, args, span),
+        ids::DL_SUBSUMES => logic::subsumption_check(snap, args, span),
+        ids::ASP_ENUMERATE => logic::asp_enumerate(snap, span),
+        ids::CAUSAL_CAUSED => logic::caused(snap, args, span),
+        ids::FUZZY_TNORM => logic::t_norm(args, span),
+        ids::NLP_ANALYZE => nlp::analyze(args, span),
+        ids::NT_GCD => math::gcd(args, span),
+        ids::NT_LCM => math::lcm(args, span),
+        ids::NT_PRIME => math::is_prime(args, span),
+        ids::LINALG_MATMUL => math::matmul(args, span),
+        ids::SYMBOLIC_EVAL => math::eval_poly(args, span),
+        ids::CALC_SIMPSON => math::simpson(args, span),
+        ids::OPT_HILL => math::hill_climb(args, span),
+        ids::GA_DOT => math::ga_dot(args, span),
+        ids::SPEC_BESSEL => math::bessel_jn(args, span),
+        ids::STAT_MEAN => stats::arithmetic_mean(args, span),
+        ids::STAT_PEARSON => stats::pearson_r(args, span),
+        ids::GEOM_HULL2 => geometry::hull2(args, span),
+        ids::VISION_AHASH => vision::ahash(args, span),
+        ids::ML_OLS => ml::fit_ols(args, span),
+        ids::PHYS_PROJECTILE => science::projectile(args, span),
+        ids::BIO_ALIGN => science::align(args, span),
+        ids::CHEM_SMILES => science::smiles(args, span),
+        ids::CLIN_FRAMINGHAM => clinical::framingham(args, span),
+        ids::FIN_BS => econ::black_scholes(args, span),
+        ids::ENG_KIN => engineering::kinematics(args, span),
+        ids::ID_DID_Q42 => governance::parse_did_q42(args, span),
+        ids::CRYPTO_SHA256 => crypto::sha256(args, span),
+        ids::MANIFOLD_DISTANCE => manifold::distance(args, span),
+        ids::MANIFOLD_AXES => manifold::axes(args, span),
+        ids::MANIFOLD_PROJECT => manifold::project(args, span),
+        ids::DOC_INGEST => docs::ingest(args, span),
+        ids::SHEET_STATS => sheet::stats(args, span),
+        ids::SHEET_SUM => sheet::sum_range(args, span),
+        ids::SOCIAL_LWW => social::lww_merge(args, span),
+        ids::NET_PEER => net::peer_hash(args, span),
+        ids::NET_SONIC => net::sonic_pack(args, span),
+        ids::FIN_PORTFOLIO => econ::portfolio_risk(args, span),
+        ids::COVERAGE_MATRIX => Ok(coverage::as_value()),
+        ids::CATALOG_TTL => Ok(Value::String(crate::poet_host::catalog_ttl::vibe_catalog_ttl())),
+        ids::RENDER_SCENE => render::scene(snap, args, span),
+        other => Err(Diagnostic::new(
+            DiagCode::E300,
+            span,
+            format!(
+                "capability.invoke({other}): unbound; add poet_host/invoke/<seam>/<family>.rs"
+            ),
+        )),
+    }
+}

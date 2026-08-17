@@ -600,13 +600,27 @@ pub async fn ingest_ontology(file_name: String) -> Result<serde_json::Value, Str
         .unwrap_or(&file_name)
         .to_string();
 
-    let quin_count = crate::resource_import::ingest_local_rdf(
+    let cancelled = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+    state
+        .download_handles
+        .lock()
+        .unwrap()
+        .insert(ontology_id.clone(), cancelled);
+    let progress = crate::resource_import::ImportProgressCtx {
+        id: ontology_id.clone(),
+        handles: state.download_handles.clone(),
+        active_downloads: state.active_downloads.clone(),
+        download_events: state.download_events.clone(),
+    };
+    let quin_count = crate::resource_import::ingest_local_rdf_with_progress(
         &source_path,
         &ontology_id,
         Path::new(&storage_path),
         None,
+        Some(&progress),
     )
     .map_err(|e| e.to_string())?;
+    progress.clear();
 
     let q42_path = index_dir.join(format!("{ontology_id}.q42"));
 

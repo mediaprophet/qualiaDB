@@ -1,0 +1,521 @@
+/* ==========================================================================
+   HyperCanvas: Layout, Menus, Ribbons, Virtual Desktop Pager & Exposé Grid
+   With 4D DateTime Span, Strata Multi-Deck, Epistemic Modalities & Multi-Canvases
+   ========================================================================== */
+
+#app-root {
+  display: flex;
+  flex-direction: column;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background: var(--canvas-bg);
+  position: relative;
+}
+
+/* ==========================================================================
+   1. Top Desktop Menu Bar (File, Edit, View, Insert, Strata, Epistemic, Help)
+   ========================================================================== */
+.top-menubar {
+  height: 32px;
+  background: var(--surface-base);
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 10px;
+  font-size: 12px;
+  z-index: 500;
+}
+
+.menu-items-group {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.brand-icon {
+  font-size: 14px;
+  margin-right: 6px;
+  display: flex;
+  align-items: center;
+}
+
+.menu-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  padding: 4px 8px;
+  border-radius: var(--radius-xs);
+  cursor: pointer;
+  font-size: 12px;
+  transition: var(--trans-fast);
+  position: relative;
+}
+.menu-btn:hover, .menu-btn.active {
+  background: var(--surface-panel-elevated);
+  color: var(--text-primary);
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  background: var(--surface-panel-elevated);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-lg);
+  min-width: 230px;
+  padding: 4px 0;
+  display: none;
+  flex-direction: column;
+  z-index: 1000;
+}
+.dropdown-menu.show {
+  display: flex;
+}
+.dropdown-item {
+  padding: 6px 14px;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  font-size: 12px;
+}
+.dropdown-item:hover {
+  background: var(--surface-glass-light);
+  color: var(--accent-cyan);
+}
+.dropdown-divider {
+  height: 1px;
+  background: var(--border-subtle);
+  margin: 4px 0;
+}
+.shortcut-hint {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+/* ==========================================================================
+   2. Canvas Control & Virtual Desktops Pager Bar
+   ========================================================================== */
+.canvas-control-bar {
+  height: 52px;
+  background: var(--surface-glass-heavy);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 14px;
+  gap: 8px;
+  z-index: 400;
+}
+
+.canvas-title-box {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.canvas-title-input {
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-xs);
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 700;
+  padding: 3px 6px;
+  outline: none;
+  transition: var(--trans-fast);
+}
+.canvas-title-input:hover, .canvas-title-input:focus {
+  border-color: var(--border-medium);
+  background: var(--surface-panel);
+}
+
+.graph-address-badge {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  background: var(--surface-panel-elevated);
+  border: 1px solid var(--border-subtle);
+  color: var(--accent-cyan);
+}
+
+/* Virtual Desktops / Multi-Canvas Pager */
+.virtual-desktop-pager {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--surface-base);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-sm);
+  padding: 2px 4px;
+}
+
+.pager-expose-btn {
+  background: var(--surface-panel);
+  border: 1px solid var(--border-subtle);
+  color: var(--accent-cyan);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: var(--radius-xs);
+  cursor: pointer;
+  transition: var(--trans-fast);
+}
+.pager-expose-btn:hover {
+  background: var(--accent-cyan);
+  color: #000;
+}
+
+.pager-desktops-list {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.desktop-tab-btn {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 600;
+  padding: 3px 6px;
+  border-radius: var(--radius-xs);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: var(--trans-fast);
+}
+.desktop-tab-btn:hover {
+  color: var(--text-primary);
+  background: var(--surface-panel);
+}
+.desktop-tab-btn.active {
+  background: var(--surface-panel-elevated);
+  border-color: var(--accent-cyan);
+  color: #fff;
+  box-shadow: 0 0 8px var(--accent-cyan-glow);
+}
+
+.desktop-num {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  background: var(--canvas-bg);
+  padding: 1px 4px;
+  border-radius: 2px;
+  color: var(--accent-cyan);
+}
+
+.pager-add-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: bold;
+  cursor: pointer;
+  padding: 0 4px;
+}
+.pager-add-btn:hover { color: var(--accent-cyan); }
+
+/* Strata / Social Dimensions Selector Ribbon */
+.strata-deck-selector {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  background: var(--surface-panel);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 2px 4px;
+}
+
+.strata-deck-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: var(--radius-xs);
+  cursor: pointer;
+  transition: var(--trans-fast);
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+.strata-deck-btn:hover {
+  color: var(--text-primary);
+}
+.strata-deck-btn.active {
+  background: var(--surface-panel-elevated);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+}
+.strata-deck-btn.active[data-strata="all"] { color: #fff; }
+.strata-deck-btn.active[data-strata="environmental"] { color: var(--strata-env); border: 1px solid var(--strata-env); }
+.strata-deck-btn.active[data-strata="social"] { color: var(--strata-social); border: 1px solid var(--strata-social); }
+.strata-deck-btn.active[data-strata="legal"] { color: var(--strata-legal); border: 1px solid var(--strata-legal); }
+.strata-deck-btn.active[data-strata="financial"] { color: var(--strata-fin); border: 1px solid var(--strata-fin); }
+.strata-deck-btn.active[data-strata="technical"] { color: var(--strata-tech); border: 1px solid var(--strata-tech); }
+
+/* Epistemic Modality Lens Selector (Objective vs Subjective) */
+.epistemic-lens-selector {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  background: var(--surface-panel);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 2px 4px;
+}
+.epistemic-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: var(--radius-xs);
+  cursor: pointer;
+  transition: var(--trans-fast);
+}
+.epistemic-btn:hover { color: #fff; }
+.epistemic-btn.active {
+  background: var(--surface-panel-elevated);
+}
+.epistemic-btn.active[data-epistemic="all"] { color: #fff; }
+.epistemic-btn.active[data-epistemic="objective"] { color: var(--modality-objective); border: 1px solid var(--modality-objective); }
+.epistemic-btn.active[data-epistemic="subjective"] { color: var(--modality-subjective); border: 1px solid var(--modality-subjective); }
+.epistemic-btn.active[data-epistemic="intersubjective"] { color: var(--modality-intersubjective); border: 1px solid var(--modality-intersubjective); }
+
+/* Dimension Mode Selector (2D / 3D / 4D) */
+.dimension-switch {
+  display: flex;
+  background: var(--surface-panel);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 2px;
+  gap: 2px;
+}
+
+.dim-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 6px;
+  border-radius: var(--radius-xs);
+  cursor: pointer;
+  transition: var(--trans-fast);
+}
+.dim-btn:hover {
+  color: var(--text-primary);
+}
+.dim-btn.active {
+  background: var(--surface-panel-elevated);
+  color: var(--accent-cyan);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+}
+
+/* 4D Spatiotemporal DateTime & DateTime Span Ribbon */
+.datetime-span-ribbon {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--surface-panel);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 3px 6px;
+}
+
+.datetime-badge {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  padding: 2px 4px;
+  border-radius: var(--radius-xs);
+  background: var(--canvas-bg);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-subtle);
+}
+.datetime-badge.active-time {
+  color: var(--accent-amber);
+  border-color: var(--accent-amber);
+  font-weight: 700;
+}
+
+.span-presets-group {
+  display: flex;
+  gap: 2px;
+}
+.span-preset-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 9px;
+  font-weight: 600;
+  padding: 2px 4px;
+  border-radius: var(--radius-xs);
+  cursor: pointer;
+}
+.span-preset-btn:hover { color: var(--text-primary); }
+.span-preset-btn.active {
+  background: var(--surface-panel-elevated);
+  color: var(--accent-cyan);
+}
+
+.time-slider-container {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.time-slider {
+  width: 90px;
+  accent-color: var(--accent-amber);
+  cursor: pointer;
+}
+
+.play-pause-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  font-size: 11px;
+  cursor: pointer;
+}
+
+/* ==========================================================================
+   3. Main Workspace Area & Slide-Out Sidebar
+   ========================================================================== */
+.main-workspace {
+  flex: 1;
+  display: flex;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Canvas Viewport */
+.canvas-viewport-container {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  background: var(--canvas-bg);
+}
+
+/* Slide-out Technical Info Sidebar */
+.tech-sidebar {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 380px;
+  background: var(--surface-glass-heavy);
+  backdrop-filter: blur(20px);
+  border-left: 1px solid var(--border-subtle);
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  flex-direction: column;
+  transform: translateX(100%);
+  transition: transform var(--trans-smooth);
+  z-index: 600;
+}
+.tech-sidebar.open {
+  transform: translateX(0);
+}
+
+/* ==========================================================================
+   4. Exposé / Mission Control Multi-Canvas Overview Grid Overlay
+   ========================================================================== */
+.expose-overview-grid {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(7, 9, 14, 0.92);
+  backdrop-filter: blur(24px);
+  z-index: 2000;
+  display: none;
+  flex-direction: column;
+  padding: 30px 40px;
+  gap: 20px;
+}
+
+.expose-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border-medium);
+  padding-bottom: 12px;
+}
+
+.expose-grid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  grid-template-rows: repeat(2, 1fr);
+  gap: 20px;
+  overflow-y: auto;
+}
+
+.expose-card {
+  background: var(--surface-panel);
+  border: 2px solid var(--border-medium);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  cursor: pointer;
+  transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+}
+.expose-card:hover {
+  transform: scale(1.02);
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 20px var(--accent-cyan-glow);
+}
+.expose-card.active {
+  border-color: var(--accent-cyan);
+  background: var(--surface-panel-elevated);
+  box-shadow: 0 0 24px var(--accent-cyan-glow);
+}
+
+.expose-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 14px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.expose-card-preview {
+  flex: 1;
+  background: var(--canvas-bg);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xs);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+/* Bottom Status Bar */
+.bottom-statusbar {
+  height: 26px;
+  background: var(--surface-base);
+  border-top: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 14px;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+  z-index: 500;
+}

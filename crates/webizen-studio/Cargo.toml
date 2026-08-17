@@ -15,7 +15,7 @@ reqwest = { version = "0.13.4", default-features = false, features = ["json"] }
 # These give the native build access to the render pipeline types.
 # dioxus is included with "router" only (not "desktop") to avoid wry conflicts.
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-dioxus = { version = "=0.8.0-alpha.0", features = ["router"] }
+dioxus = { version = "=0.8.0-alpha.1", features = ["router"] }
 qualia-core-db = { version = "0.0.30", path = "../qualia-core-db" }
 webizen-render = { version = "0.0.30", path = "../webizen-render" }
 qualia-client-core = { version = "0.0.30", path = "../qualia-client-core" }
@@ -24,7 +24,7 @@ dirs-next = "2.0.0"
 
 # ── WASM-only dependencies ────────────────────────────────────────────────────
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-dioxus = { version = "=0.8.0-alpha.0", features = ["router", "web"] }
+dioxus = { version = "=0.8.0-alpha.1", features = ["router", "web"] }
 uuid = { version = "1.10", features = ["v4", "js"] }
 # Exact pin: must match installed wasm-bindgen-cli (see scripts/build_frontend.*).
 # Mismatch surfaces as: failed to find `__wbindgen_externref_table_dealloc` (mac CI).

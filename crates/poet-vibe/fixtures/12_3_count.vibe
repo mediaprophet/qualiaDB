@@ -1,0 +1,12 @@
+requires [
+    capability("graph.read")
+];
+
+pure fn count_conditions(kind: Iri) -> Result<i64, string> {
+    let rows = graph.query(?s, clinic:hasCondition, kind, take: 64)?;
+    let mut n: i64 = 0;
+    for row in rows {
+        n = n + 1;
+    }
+    return Ok(n);
+}

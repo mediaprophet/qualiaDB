@@ -267,6 +267,18 @@ pub fn ingest_local_rdf(
     storage_root: &Path,
     ont: Option<&OntologyResource>,
 ) -> Result<u64, ImportError> {
+    ingest_local_rdf_with_progress(source_path, ontology_id, storage_root, ont, None)
+}
+
+/// Same as [`ingest_local_rdf`], emitting phase / RSS / rate snapshots onto the
+/// existing download-progress bus so desktop UIs can show ingest work.
+pub fn ingest_local_rdf_with_progress(
+    source_path: &Path,
+    ontology_id: &str,
+    storage_root: &Path,
+    ont: Option<&OntologyResource>,
+    progress: Option<&ImportProgressCtx>,
+) -> Result<u64, ImportError> {
     let index = index_dir(storage_root);
     std::fs::create_dir_all(&index)?;
 
@@ -274,8 +286,37 @@ pub fn ingest_local_rdf(
     let in_str = source_path.to_string_lossy().into_owned();
     let out_str = q42_path.to_string_lossy().into_owned();
 
-    let quin_count = ingest::streaming_import_rdf(&in_str, &out_str)
-        .map_err(|e| ImportError::Ingest(e.to_string()))?;
+    let report = match progress {
+        Some(ctx) => {
+            let id = ctx.id.clone();
+            let events = ctx.download_events.clone();
+            let active = ctx.active_downloads.clone();
+            ingest::IngestReport::new(1, move |snap| {
+                let payload = ProgressPayload {
+                    id: id.clone(),
+                    progress: snap.pct,
+                    downloaded_bytes: snap.bytes_read,
+                    total_bytes: snap.source_bytes,
+                    speed_kbps: snap.mb_per_sec * 1024.0,
+                    status: format!("ingest:{}", snap.format_text(1)),
+                };
+                let _ = events.send(payload.clone());
+                if let Ok(mut map) = active.lock() {
+                    map.insert(id.clone(), payload);
+                }
+            })
+        }
+        None => ingest::IngestReport::silent(),
+    };
+
+    let quin_count = ingest::streaming_import_rdf_with_report(
+        &in_str,
+        &out_str,
+        ingest::IngestMode::Complete,
+        None,
+        report,
+    )
+    .map_err(|e| ImportError::Ingest(e.to_string()))?;
 
     let imported_at = unix_now();
     let sha256 = sha256_file(&q42_path)?;
@@ -354,7 +395,13 @@ pub async fn import_catalog_ontology_with_options(
 
         let index = index_dir(storage_root);
         std::fs::create_dir_all(&index)?;
-        let quin_count = ingest_local_rdf(&source_path, id, storage_root, Some(ont))?;
+        let quin_count = ingest_local_rdf_with_progress(
+            &source_path,
+            id,
+            storage_root,
+            Some(ont),
+            progress,
+        )?;
         let q42_path = index.join(format!("{id}.q42"));
         let wal_path = index.join("ontologies.wal");
         let catalog_quins = ont.to_quins().len();
@@ -414,7 +461,8 @@ pub async fn import_catalog_ontology_with_options(
         });
     }
 
-    let quin_count = ingest_local_rdf(&source_path, id, storage_root, Some(ont))?;
+    let quin_count =
+        ingest_local_rdf_with_progress(&source_path, id, storage_root, Some(ont), progress)?;
     let q42_path = index.join(format!("{id}.q42"));
     let wal_path = index.join("ontologies.wal");
     let catalog_quins = ont.to_quins().len();

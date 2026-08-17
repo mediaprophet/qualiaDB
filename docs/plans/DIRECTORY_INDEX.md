@@ -1,6 +1,6 @@
 ---
 created: 2026-06-30
-updated: 2026-07-29
+updated: 2026-08-16
 update_scope: Minor
 ---
 
@@ -29,6 +29,7 @@ Webizen, inference, rendering, desktop/QApps, and supporting compute infrastruct
 - `native-auditory-language-and-music-intelligence.md`: Capability-aware plan for acoustic
   understanding, community-governed language resources, speech, music analysis/production,
   generative audio, and cross-modal perception.
+- `native-presentation-and-vibe-beyond-webview-2026-08-16.md`: Destination pair **JSON→CBOR-LD** and **JS→Vibe** (§0.1); HID not confined to HTML/CSS (§0.2); **WASM family as the bridge** (§0.3); §1.3 quick wins; incremental WebView *and* wire exit. Discussion paper for socialisation.
 - `native-computational-economics.md`: Native Rust computational-economics library plan spanning
   stochastic processes, time series, dynamic programming, heterogeneous agents, input-output/network
   economics, market design, game theory, econometrics, welfare/public finance, ontology bridges, and
@@ -38,6 +39,8 @@ Webizen, inference, rendering, desktop/QApps, and supporting compute infrastruct
   image-to-3D, canonical GLB-to-Q42 asset compilation, and tiered engineering/biological
   digital twins.
 - `phone-console.md`: Mobile/phone console, linking, storage, and interaction plan.
+- `poet-vibe-nlp-desktop-TRACKER-2026-08-15.md`: Swarm-ready implementation tracker for Vibe 0.1, Poet backend, desktop harness, and document NLP (0.0.31-dev).
+- `poet-webizen-desktop-implementation-plan-2026-08-15.md`: Research note that the tracker supersedes for execution.
 - `sprint-inference-handover-native-viewport.md`: Inference and native viewport sprint handover.
 - `wasm-viewport-migration-plan.md`: Detailed migration plan for the WASM/native 10D viewport.
 - `webizen-0.0.28-naturalised-desktop-implementation.md`: Implemented natural/technical
@@ -46,6 +49,7 @@ Webizen, inference, rendering, desktop/QApps, and supporting compute infrastruct
 
 ## Changelog
 
+- **2026-08-16**: Presentation plan: destination pair is CBOR-LD wire + Vibe language (not JSON/JS host).
 - **2026-07-29**: Added the 0.0.28 naturalised desktop implementation and verification handoff.
 - **2026-07-03**: Expanded the visual/3D plan after a repository capability audit with the
   existing GLB-to-Q42 path, compiled geometry and analysis sidecars, fidelity/assurance tiers,

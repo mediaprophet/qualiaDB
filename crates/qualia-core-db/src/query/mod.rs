@@ -1,6 +1,7 @@
 //! `query` category (reorg).
 
 pub mod cbor_compiler;
+pub mod graph_accel;
 pub mod graph_index;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod graph_proof;
@@ -9,6 +10,14 @@ mod graph_proof_tests;
 pub mod indexing;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod ingest;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod ingest_formats;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod ingest_resume;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod ingest_job;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod ingest_report;
 #[cfg(any(
     not(target_arch = "wasm32"),
     feature = "wasm-logic",

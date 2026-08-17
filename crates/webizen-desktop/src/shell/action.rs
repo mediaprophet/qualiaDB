@@ -27,6 +27,8 @@ pub enum ShellAction {
     RevokeSessions,
     /// Open the shell command palette (Ctrl+K / Ctrl+P).
     OpenCommandPalette,
+    /// Presentation chrome only. Classic remains default.
+    SetShellKind(&'static str),
 }
 
 impl ShellAction {
@@ -70,6 +72,9 @@ impl ShellAction {
             "sync_inbox" => Some(Self::OpenSyncInbox),
             "revoke" => Some(Self::RevokeSessions),
             "open_command_palette" | "command_palette" => Some(Self::OpenCommandPalette),
+            "open_poet" => Some(Self::Navigate("poet".to_string())),
+            "shell_classic" => Some(Self::SetShellKind("classic")),
+            "shell_poet" => Some(Self::SetShellKind("poet")),
             _ => None,
         }
     }
@@ -92,6 +97,14 @@ mod tests {
         assert_eq!(
             ShellAction::from_id("open_talk"),
             Some(ShellAction::Navigate("talk".to_string()))
+        );
+        assert_eq!(
+            ShellAction::from_id("open_poet"),
+            Some(ShellAction::Navigate("poet".to_string()))
+        );
+        assert_eq!(
+            ShellAction::from_id("shell_classic"),
+            Some(ShellAction::SetShellKind("classic"))
         );
     }
 }

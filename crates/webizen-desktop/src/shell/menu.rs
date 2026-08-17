@@ -30,6 +30,7 @@ fn qapp_route(qapp_id: &str) -> &str {
         "tools" => "/tools",
         "sanctuary" => "/sanctuary",
         "logs" => "/logs",
+        "poet" | "vibe" => "/poet",
         "gpu-viewport" => "/gpu-viewport",
         _ => "/",
     }
@@ -246,6 +247,9 @@ pub fn build_app_menu(
         .text("zoom_in", "Zoom In")
         .text("zoom_out", "Zoom Out")
         .text("reset_zoom", "Actual Size")
+        .separator()
+        .text("shell_classic", "Shell: Classic")
+        .text("shell_poet", "Shell: Poet")
         .build()?;
 
     let wellfair = MenuItem::with_id(app, "open_wellfair", "WellFair", true, Some("Ctrl+1"))?;
@@ -286,6 +290,7 @@ pub fn build_app_menu(
         None::<&str>,
     )?;
     let wallet = MenuItem::with_id(app, "open_wallet", "Wallet", true, None::<&str>)?;
+    let poet = MenuItem::with_id(app, "open_poet", "Poet Harness", true, None::<&str>)?;
 
     let tools_menu = SubmenuBuilder::new(app, "Tools")
         .item(&settings)
@@ -293,6 +298,7 @@ pub fn build_app_menu(
         .separator()
         .item(&library)
         .item(&wallet)
+        .item(&poet)
         .separator()
         .text("import_samsung", "Import Samsung Health...")
         .text("sync_relay", "Sync with Relay")
@@ -480,6 +486,13 @@ pub fn dispatch_shell_action(app: &AppHandle, action: crate::shell::action::Shel
                 app,
                 "if (window.__webizenOpenCommandPalette) window.__webizenOpenCommandPalette();",
             );
+        }
+        ShellAction::SetShellKind(kind) => {
+            let _ = app.emit("shell-kind-set", kind);
+            crate::desktop_log::record("info", format!("shell kind -> {kind}"));
+            if kind == "poet" {
+                navigate_main_to(app, "poet");
+            }
         }
     }
 }

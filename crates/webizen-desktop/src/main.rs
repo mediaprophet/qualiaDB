@@ -280,6 +280,7 @@ fn main() {
         .manage(telemetry_bridge::TelemetryBridge::new())
         .manage(commands::HostApiState(host_api_state.clone()))
         .manage(commands::MeshState::default())
+        .manage(commands::poet::PoetHarnessState::default())
         .manage(MedReminderNotifierState::default())
         .manage(std::sync::Arc::new(NativeSurfaceState::default()))
         .manage(desktop_supervisor.clone())

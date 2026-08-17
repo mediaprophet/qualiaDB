@@ -1,4 +1,4 @@
-# Standards Backlog
+﻿# Standards Backlog
 
 This backlog is intentionally strict. It is better to ship one precise,
 credible draft than to spray half-stable ideas across multiple standards
@@ -8,7 +8,7 @@ bodies.
 
 These items should be resolved before any serious external submission work.
 
-### 1. Unify `.q42` semantics — **substantially resolved (2026-06-11)**
+### 1. Unify `.q42` semantics â€” **substantially resolved (2026-06-11)**
 
 The repo previously exhibited multiple incompatible `.q42` interpretations. As of
 2026-06-11, **new ingest converges on unified v3 volumes**
@@ -23,7 +23,7 @@ The repo previously exhibited multiple incompatible `.q42` interpretations. As o
 - v3 header adds: `temporal_index_offset/length`, `merkle_root [u8;32]`,
   `assertion_timestamp`, `dag_root_offset/length`, DID offsets, reserved
   FIDX/PIDX pointers
-- v2 files are **hard-rejected** — `verify_version()` requires version == 3;
+- v2 files are **hard-rejected** â€” `verify_version()` requires version == 3;
   `migrate_v2_to_v3()` / `qualia q42 compact` upgrade
 - `qualia-cli ingest` and external sort write v3 only
 - leftover v1 sidecars and framed `.c.q42` remain **read** paths only
@@ -58,17 +58,17 @@ Required before standardization:
 
 ## Priority 1: standards candidates
 
-### 0. Q42 phenomenal multi-modal σ (visual + acoustic) — **internal draft shipped 2026-06-17**
+### 0. Q42 phenomenal multi-modal Ïƒ (visual + acoustic) â€” **internal draft shipped 2026-06-17**
 
-- Scope: shared `Tensor10D.σ` projection to CIE (U2) and Hz (U3); Sonic Token 64-bit layout; `AcousticUniform` 328 B; `Q3AS` SAB 1024 B; `Q4AU` STFT sidecar header.
+- Scope: shared `Tensor10D.Ïƒ` projection to CIE (U2) and Hz (U3); Sonic Token 64-bit layout; `AcousticUniform` 328 B; `Q3AS` SAB 1024 B; `Q4AU` STFT sidecar header.
 - First doc: [`q42-acoustic-plane-draft.md`](q42-acoustic-plane-draft.md) (v0.1 internal)
-- Extension: [`q42-10d-tensor-standard.md`](q42-10d-tensor-standard.md) §1.3 phenomenal σ
+- Extension: [`q42-10d-tensor-standard.md`](q42-10d-tensor-standard.md) Â§1.3 phenomenal Ïƒ
 - ADR: [`../adr/0007-u3-acoustic-plane-symbolic-audio.md`](../adr/0007-u3-acoustic-plane-symbolic-audio.md)
 - Exit criteria before external submission:
-  - [x] σ parity oracle in CI (`phenomenal_sigma_visual_audio_parity`)
+  - [x] Ïƒ parity oracle in CI (`phenomenal_sigma_visual_audio_parity`)
   - [x] binary layout tests (`audio::`, `phenomenal_hrtf`)
   - [x] CQT mmap ingest + filename convention frozen (`cqt_bake.rs`, `audio_sidecar_link.rs`, `spectral/audio/{hash:016x}.bin`)
-  - [x] KEMAR HRTF asset format — KemarLite embedded 8-azimuth profile (v0.1 default; full measured bundle optional)
+  - [x] KEMAR HRTF asset format â€” KemarLite embedded 8-azimuth profile (v0.1 default; full measured bundle optional)
   - [x] test vectors file (`vectors/acoustic-plane-v0.1.json`)
   - [ ] full measured KEMAR asset bundle (KemarLite embedded profile shipped as v0.1 default)
 
@@ -129,10 +129,10 @@ Each of those should become its own draft with its own conformance language.
 - Scope: human-facing manifest that describes a vault or collection, points at
   associated `.q42` data artifacts, and declares the preferred entry qapp or
   UI launch surface.
-- **Status**: ✅ **IMPLEMENTATION COMPLETE** (Updated 2026-06-10)
+- **Status**: âœ… **IMPLEMENTATION COMPLETE** (Updated 2026-06-10)
 - Why it is non-standard: it sits above raw data layout and below human-facing
   shell behavior, and the schema is not yet standardized.
-- First doc to write here: `qualia-vault-manifest.md` ✅ **COMPLETE**
+- First doc to write here: `qualia-vault-manifest.md` âœ… **COMPLETE**
 - Primary SDO: W3C (for Turtle/N3), IETF (for CBOR-LD)
 - **Implemented Format**: Turtle manifest spec with N3 profile support and CBOR-LD projection
 - **CBOR-LD Features**: 
@@ -144,12 +144,12 @@ Each of those should become its own draft with its own conformance language.
   current shipped desktop shell is Flutter-first, so the schema should be
   stabilized before any externalization.
 - **Exit Criteria ACHIEVED**:
-  - ✅ manifest schema frozen with CBOR-LD projection
-  - ✅ relation to v2 `.q42` (embedded lex/BIDX) and legacy sidecars made explicit
-  - ✅ host-launch behavior separated from data semantics
-  - ✅ Flutter-first file association strategy documented
-  - ✅ CBOR-LD projection implemented with Q42 lexicon
-  - ✅ Semantic validation and zero-allocation parsing
+  - âœ… manifest schema frozen with CBOR-LD projection
+  - âœ… relation to v2 `.q42` (embedded lex/BIDX) and legacy sidecars made explicit
+  - âœ… host-launch behavior separated from data semantics
+  - âœ… Flutter-first file association strategy documented
+  - âœ… CBOR-LD projection implemented with Q42 lexicon
+  - âœ… Semantic validation and zero-allocation parsing
 - **Standardization Readiness**: Ready for W3C (Turtle/N3) and IETF (CBOR-LD) submission
 
 ## 4. Qualia sync protocol
@@ -157,10 +157,10 @@ Each of those should become its own draft with its own conformance language.
 - Scope: peer handshake, sync request / response messages, CRDT exchange
   expectations, target-shape scoping, and transport framing for the current
   Qualia P2P path.
-- **Status**: ✅ **IMPLEMENTATION COMPLETE** (Updated 2026-06-10)
+- **Status**: âœ… **IMPLEMENTATION COMPLETE** (Updated 2026-06-10)
 - Why it is non-standard: custom message types and custom graph-sync behavior
   over a Qualia-specific transport contract.
-- First doc to write here: `qualia-sync-protocol.md` ✅ **COMPLETE**
+- First doc to write here: `qualia-sync-protocol.md` âœ… **COMPLETE**
 - Primary SDO: IETF (for wire format), W3C (for CBOR-LD semantic model)
 - **Implemented Format**: CBOR-LD with Q42 lexicon throughout protocol stack
 - **CBOR-LD Features**:
@@ -171,13 +171,13 @@ Each of those should become its own draft with its own conformance language.
 - Why this fit: this is transport and interoperability behavior, not RDF
   vocabulary design.
 - **Exit Criteria ACHIEVED**:
-  - ✅ message grammar frozen with CBOR-LD semantic structure
-  - ✅ error handling and version negotiation implemented
-  - ✅ transport assumptions separated from payload semantics
-  - ✅ interop path exists with Q42 lexicon integration
-  - ✅ CBOR-LD profile boundary clearly defined
-  - ✅ Zero-allocation parsing implemented
-  - ✅ Semantic validation with Q42 lexicon
+  - âœ… message grammar frozen with CBOR-LD semantic structure
+  - âœ… error handling and version negotiation implemented
+  - âœ… transport assumptions separated from payload semantics
+  - âœ… interop path exists with Q42 lexicon integration
+  - âœ… CBOR-LD profile boundary clearly defined
+  - âœ… Zero-allocation parsing implemented
+  - âœ… Semantic validation with Q42 lexicon
 - **Standardization Readiness**: Ready for IETF (wire format) and W3C (CBOR-LD) submission
 
 ## 5. Qualia SHACL extension vocabulary
@@ -186,7 +186,7 @@ Each of those should become its own draft with its own conformance language.
   paraconsistent, and scientific constraints.
 - Why it is non-standard: extension vocabulary and execution semantics sit
   outside baseline SHACL.
-- First doc to write here: `qualia-shacl-extensions.html` ✅ **COMPLETE** (2026-06-10)
+- First doc to write here: `qualia-shacl-extensions.html` âœ… **COMPLETE** (2026-06-10)
 - Primary SDO: W3C
 - Recommended format: Community Group Report or Group Note-style HTML draft
   with vocabulary tables, conformance classes, and examples.
@@ -201,12 +201,12 @@ Each of those should become its own draft with its own conformance language.
 
 - Scope: two new SPARQL modifiers that wrap a WHERE clause with a historical
   snapshot constraint. `AS OF <timestamp>` selects quins whose
-  `prov:generatedAtTime ≤ t` (assertion-time snapshot). `AT TIME <timestamp>`
-  selects quins whose `startedAtTime ≤ t ≤ endedAtTime` (valid-time point).
-- **Status:** ✅ **IMPLEMENTED** (2026-06-11)
+  `prov:generatedAtTime â‰¤ t` (assertion-time snapshot). `AT TIME <timestamp>`
+  selects quins whose `startedAtTime â‰¤ t â‰¤ endedAtTime` (valid-time point).
+- **Status:** âœ… **IMPLEMENTED** (2026-06-11)
 - Why it is non-standard: extends SPARQL 1.1/1.2 syntax outside the current
   W3C working draft; depends on PROV-O T_CONTEXT overlay quins.
-- First doc to write here: `sparql-temporal-extension.md` ✅ **COMPLETE**
+- First doc to write here: `sparql-temporal-extension.md` âœ… **COMPLETE**
 - Primary SDO: W3C SPARQL WG or Community Group Note
 - Recommended format: extension note aligned with SPARQL 1.2 WD style
 - Why this fit: builds on PROV-O (W3C Rec.), GeoSPARQL temporal patterns, and
@@ -221,13 +221,13 @@ Each of those should become its own draft with its own conformance language.
   - [ ] PROV-O dependency on T_CONTEXT clearly scoped
   - [ ] relationship to SPARQL-MM temporal windows documented
 
-## 7. Qualia qapp loopback protocol (was §6)
+## 7. Qualia qapp loopback protocol (was Â§6)
 
 - Scope: localhost / loopback asset serving and host-embedded qapp access
   boundary, including URL model, lifecycle, and trust assumptions.
 - Why it is non-standard: it is currently a product-specific app hosting
   boundary rather than a general web standard.
-- First doc to write here: `qualia-qapp-loopback-protocol.md` ✅ **COMPLETE**
+- First doc to write here: `qualia-qapp-loopback-protocol.md` âœ… **COMPLETE**
 - Primary SDO: internal first
 - Recommended format: internal explainer or ADR first
 - Why this fit: the design is still tightly coupled to current desktop /
@@ -312,7 +312,7 @@ Each of those should become its own draft with its own conformance language.
 
 ## 12. HCAI Agreement Negotiation Protocol (HCAI-ANP)
 
-- Scope: the inbound-agent ingress contract — `did:web` / NS-encoded Frontdoor
+- Scope: the inbound-agent ingress contract â€” `did:web` / NS-encoded Frontdoor
   discovery, the HCAI Agreement vocabulary and Duty-of-Care terms, the
   sign-and-verify negotiation handshake, and the WebRTC session binding. The one
   genuine multi-party interoperability surface carved out of the WebAI
@@ -324,7 +324,7 @@ Each of those should become its own draft with its own conformance language.
   **exist** (`webizen-browser` repo for the desktop surface). What remains is the signed
   agreement-negotiation **handshake** + WebRTC session binding (the `hcai_agreement` layer), and no
   non-QualiaDB party has completed a conformant negotiation yet.
-- First doc to write here: `hcai-agreement-negotiation-protocol.md` ✅ **DRAFTED (2026-06-13)**
+- First doc to write here: `hcai-agreement-negotiation-protocol.md` âœ… **DRAFTED (2026-06-13)**
 - Primary SDO: W3C (agreement vocabulary + `did:web` Frontdoor); secondary IETF /
   DNS-AID (service-type registration)
 - Recommended format: Community Group Report for the vocabulary; short companion
@@ -347,22 +347,22 @@ Each of those should become its own draft with its own conformance language.
 
 ## 13. Webizen N-Dimensional Renderer SDK
 
-- Scope: the renderer's SDK surface — the manifold→projection→view model
+- Scope: the renderer's SDK surface â€” the manifoldâ†’projectionâ†’view model
   (`qualia_core_db::render::projection`), the PGA semantic-motor oracle (`render::pga`), the
   zero-heap GPU ABI (Motor 64 B / RenderQuin 64 B / Tensor10D 40 B / uniforms), the neutral
   serde **scene contract** (`webizen_render::scene_contract`), the device renderer
-  (`WgpuRenderer` — offscreen → PNG/data-URI, scene draw, picking, orbit camera), and the
-  semantic/epistemic layer (standpoint gating, σ vision+audio parity, deontic culling, VRAM
+  (`WgpuRenderer` â€” offscreen â†’ PNG/data-URI, scene draw, picking, orbit camera), and the
+  semantic/epistemic layer (standpoint gating, Ïƒ vision+audio parity, deontic culling, VRAM
   ledger). Two deployment profiles: **WASM** (`QualiaPortal` portal facade) and **native /
   webizen-browser** (`webizen-render` + the engine).
 - Why it is a candidate: the projection model, ABI, scene contract, offscreen render, and
   semantic layer are implemented + tested; it is intended to be **employable as an SDK** in WASM
   or the webizen-browser, so the contract is specified independently of backend completeness.
-- First doc to write here: `webizen-renderer-sdk-spec.md` ✅ **DRAFTED (2026-06-30, v0.2)**
+- First doc to write here: `webizen-renderer-sdk-spec.md` âœ… **DRAFTED (2026-06-30, v0.2)**
 - Primary SDO: internal first (the projection/ABI/scene contract); a future render-interop note
   is possible once the volumetric path and packaging settle.
 - Recommended format: internal SDK specification with a conformance section (parity oracle,
-  binding coverage, ABI sizes, σ determinism, offscreen image contract).
+  binding coverage, ABI sizes, Ïƒ determinism, offscreen image contract).
 - Exit criteria before external submission / "fully implemented":
   - [x] **Cross-platform volumetric 3D draw** wired into `webizen-render` (depth buffer +
         `Tensor10D` SOA upload + `projector.wgsl` + bloom), with native caller-buffered RGBA8
@@ -376,13 +376,13 @@ Each of those should become its own draft with its own conformance language.
   - [ ] Phase 0.2b: lift `qualia_core_db::render` to a standalone `qualia-render` crate (resolves the
         dangling `RENDERER_IMPLEMENTATION_PLAN.md` reference)
   - [ ] SDK packaging: published `webizen-render` crate + a wasm bundle entry with an embedding example
-  - [~] ⚑ **Out-of-band (Timothy):** decommission / clearly mark the legacy `C:\Projects\webizen-browser`
+  - [~] âš‘ **Out-of-band (Timothy):** decommission / clearly mark the legacy `C:\Projects\webizen-browser`
         copies so the renderer has one source of truth (it was pulled into qualiaDB to unify the engine;
         the external checkout still holds parallel copies building against an older qualiaDB checkout)
 
 ## Suggested file backlog for this folder
 
-> **Reconciliation (2026-06-30)** — statuses verified against on-disk reality + current code.
+> **Reconciliation (2026-06-30)** â€” statuses verified against on-disk reality + current code.
 > Two specs previously marked done actually live under `docs/manuals/query-engine/`, not this
 > folder (now cross-linked from `standards/index.html`); several real specs were untracked and
 > are added; `webizen-protocol-split.md` was the planned name for what shipped as
@@ -393,33 +393,33 @@ Done (in `standards/`):
 - [x] `p64-weight-container-standard.md` - byte-accurate P64 v3 weight-container standard
   (header, tensor manifest, 10D manifold table, tokenizer, CRC-32C, producer profiles,
   and fail-closed reader validation; 2026-07-02)
-- [x] `q42-format-internal-draft.md` — v3 volume + separate `.p64` weight container (refreshed 2026-06-30)
+- [x] `q42-format-internal-draft.md` â€” v3 volume + separate `.p64` weight container (refreshed 2026-06-30)
 - [x] `did-q42-method-draft.md`
 - [x] `qualia-vault-manifest.md`
-- [x] `qualia-sync-protocol.md` — CBOR-LD §13 now implemented in `p2p::protocol::qcborld`
+- [x] `qualia-sync-protocol.md` â€” CBOR-LD Â§13 now implemented in `p2p::protocol::qcborld`
   (lossless, lexicon-compacted, round-trip tested). **Follow-up:** the codec uses a transient
   per-frame `ciborium::Value`; a hand-rolled streaming zero-allocation CBOR-LD encoder/decoder is
-  still to write (§13 claim 3 is honestly marked partial until then).
+  still to write (Â§13 claim 3 is honestly marked partial until then).
 - [x] `qualia-qapp-loopback-protocol.md`
-- [x] `hcai-agreement-negotiation-protocol.md` — draft (negotiation layer not yet implemented)
+- [x] `hcai-agreement-negotiation-protocol.md` â€” draft (negotiation layer not yet implemented)
 - [x] `yaml-ld-q42-specification.md`
-- [x] `CBOR_LD_SDO_Update_Summary.md` — notes / changelog
-- [x] `AGENT_INTENT_LOGGING_SPEC.md`, `SEMANTIC_HEADER_SCHEMA.md`, `MULTI_AGENT_PROTOCOL.md` —
-  multi-agent transparency family; coordination opcodes `0x70–0x72` + the operand-stack VM +
+- [x] `CBOR_LD_SDO_Update_Summary.md` â€” notes / changelog
+- [x] `AGENT_INTENT_LOGGING_SPEC.md`, `SEMANTIC_HEADER_SCHEMA.md`, `MULTI_AGENT_PROTOCOL.md` â€”
+  multi-agent transparency family; coordination opcodes `0x70â€“0x72` + the operand-stack VM +
   Darwinian law implemented 2026-06-30 (`governance::coordination`)
-- [x] `webizen-protocol-rfc.md` — the broad protocol RFC (the file the backlog earlier planned
+- [x] `webizen-protocol-rfc.md` â€” the broad protocol RFC (the file the backlog earlier planned
   as `webizen-protocol-split.md`)
-- [x] `webizen-renderer-sdk-spec.md` — N-Dimensional Renderer SDK draft (v0.2, 2026-06-30);
-  projection model + ABI + scene contract + native/WASM volumetric render + semantic layer ✅
+- [x] `webizen-renderer-sdk-spec.md` â€” N-Dimensional Renderer SDK draft (v0.2, 2026-06-30);
+  projection model + ABI + scene contract + native/WASM volumetric render + semantic layer âœ…
 
 Done, but living under `docs/manuals/query-engine/` (cross-linked from `standards/index.html`):
 
-- [x] `query-engine/qualia-shacl-extensions.html` — + Computational Mathematics Constraints (2026-06-30)
+- [x] `query-engine/qualia-shacl-extensions.html` â€” + Computational Mathematics Constraints (2026-06-30)
 - [x] `query-engine/sparql-temporal-extension.md`
 
-Genuinely outstanding (file absent on disk — accurate):
+Genuinely outstanding (file absent on disk â€” accurate):
 
-- [ ] `solid-webizen-bridge-profile.md` — a Solid-bridge ADR exists at `../adr/006-zero-allocation-solid-bridge.md`
+- [ ] `solid-webizen-bridge-profile.md` â€” a Solid-bridge ADR exists at `../adr/006-zero-allocation-solid-bridge.md`
 - [ ] `qchk-capability-profile.md`
 - [ ] `mcp-fiduciary-mediation-explainer.md`
 - [ ] `webizen-execution-model.md`
@@ -444,7 +444,7 @@ The `q42-format-internal-draft.md` was refreshed 2026-06-30 to reflect implement
 unified volumes and the separate **`.p64`** LLM-weight container. Resolved since the earlier
 v2 note:
 
-- object-hash BIDX is normative — the doc honors it (no subject-hash contradiction remains)
+- object-hash BIDX is normative â€” the doc honors it (no subject-hash contradiction remains)
 - the stale `Q42W` weight-container section was rewritten to `.p64` (`Q42W` is superseded;
   retained only as migration fixtures)
 
@@ -453,3 +453,4 @@ Still open:
 - WASM playground VFS still legacy (or document the build-time translation)
 - `.c.q42` obsolete; new writes MUST NOT emit it
 - propose content-type names + publish worked v3 test vectors (Priority-1 item 1 exit criteria)
+

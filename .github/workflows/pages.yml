@@ -275,7 +275,9 @@ jobs:
           test -f css/tailwind-built.css
 
       - name: Build Rust documentation
-        run: cargo doc --no-deps -p qualia-core-db -p qualia-cli -p qualia-client-core
+        # All workspace library crates except Tauri desktop + one-shot harvester.
+        # Script is the single source of truth (also used locally).
+        run: bash scripts/rustdoc-workspace.sh
 
       - name: Stage Rust docs into Jekyll source
         run: cp -r target/doc docs/rustdoc

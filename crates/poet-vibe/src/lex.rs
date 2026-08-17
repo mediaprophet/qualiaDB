@@ -1,0 +1,520 @@
+//! vibe-0.1 lexer. IRI vs relational `<` follows vibescript-core.md §2.
+
+use crate::error::{DiagCode, Diagnostic};
+use crate::span::Span;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TokenKind {
+    Eof,
+    Ident,
+    Keyword,
+    String,
+    Int,
+    Float,
+    Iri,
+    QueryVar,
+    TripleStart,
+    TripleEnd,
+    ReifyStart,
+    ReifyEnd,
+    ForbiddenQuin,
+    LParen,
+    RParen,
+    LBracket,
+    RBracket,
+    LBrace,
+    RBrace,
+    Comma,
+    Semicolon,
+    Colon,
+    Dot,
+    Question,
+    Eq,
+    EqEq,
+    Ne,
+    Lt,
+    Le,
+    Gt,
+    Ge,
+    Plus,
+    Minus,
+    Star,
+    Slash,
+    Percent,
+    AmpAmp,
+    PipePipe,
+    Bang,
+    FatArrow,
+    ThinArrow,
+    Tilde,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Token {
+    pub kind: TokenKind,
+    pub span: Span,
+}
+
+pub struct Lexer<'a> {
+    src: &'a str,
+    bytes: &'a [u8],
+    pos: usize,
+    /// True when the last skipped region included whitespace (not comments only).
+    last_gap_ws: bool,
+}
+
+impl<'a> Lexer<'a> {
+    pub fn new(src: &'a str) -> Self {
+        let src = strip_bom(src);
+        Self {
+            src,
+            bytes: src.as_bytes(),
+            pos: 0,
+            last_gap_ws: true,
+        }
+    }
+
+    pub fn source(&self) -> &'a str {
+        self.src
+    }
+
+    pub fn next_token(&mut self) -> Result<Token, Diagnostic> {
+        self.skip_ws_and_comments()?;
+        let start = self.pos;
+        if self.pos >= self.bytes.len() {
+            return Ok(Token {
+                kind: TokenKind::Eof,
+                span: Span::point(start as u32),
+            });
+        }
+        let b = self.bytes[self.pos];
+        match b {
+            b'"' => self.lex_string(start),
+            b'0'..=b'9' => self.lex_number(start),
+            b'?' => self.lex_question(start),
+            b'<' => self.lex_lt(start),
+            b'>' => self.lex_gt(start),
+            b'(' => self.bump_simple(TokenKind::LParen, start),
+            b')' => self.lex_rparen(start),
+            b'[' => self.bump_simple(TokenKind::LBracket, start),
+            b']' => self.bump_simple(TokenKind::RBracket, start),
+            b'{' => self.bump_simple(TokenKind::LBrace, start),
+            b'}' => self.bump_simple(TokenKind::RBrace, start),
+            b',' => self.bump_simple(TokenKind::Comma, start),
+            b';' => self.bump_simple(TokenKind::Semicolon, start),
+            b':' => self.bump_simple(TokenKind::Colon, start),
+            b'.' => self.bump_simple(TokenKind::Dot, start),
+            b'~' => self.bump_simple(TokenKind::Tilde, start),
+            b'+' => self.bump_simple(TokenKind::Plus, start),
+            b'-' => self.lex_minus(start),
+            b'*' => self.bump_simple(TokenKind::Star, start),
+            b'/' => self.bump_simple(TokenKind::Slash, start),
+            b'%' => self.bump_simple(TokenKind::Percent, start),
+            b'=' => self.lex_eq(start),
+            b'!' => self.lex_bang(start),
+            b'&' => self.lex_amp(start),
+            b'|' => self.lex_pipe(start),
+            b'_' if self.peek_at(1) == Some(b':') => self.lex_blank(start),
+            b'A'..=b'Z' | b'a'..=b'z' | b'_' => Ok(self.lex_ident_or_kw(start)),
+            _ => Err(Diagnostic::new(
+                DiagCode::E001,
+                Span::new(start as u32, (start + 1) as u32),
+                format!("unexpected character {:?}", b as char),
+            )),
+        }
+    }
+
+    fn skip_ws_and_comments(&mut self) -> Result<(), Diagnostic> {
+        self.last_gap_ws = false;
+        loop {
+            let before = self.pos;
+            while self.pos < self.bytes.len() && self.bytes[self.pos].is_ascii_whitespace() {
+                self.pos += 1;
+            }
+            if self.pos > before {
+                self.last_gap_ws = true;
+            }
+            if self.pos + 1 < self.bytes.len()
+                && self.bytes[self.pos] == b'/'
+                && self.bytes[self.pos + 1] == b'/'
+            {
+                self.pos += 2;
+                while self.pos < self.bytes.len()
+                    && self.bytes[self.pos] != b'\n'
+                    && self.bytes[self.pos] != b'\r'
+                {
+                    self.pos += 1;
+                }
+                continue;
+            }
+            if self.pos + 1 < self.bytes.len()
+                && self.bytes[self.pos] == b'/'
+                && self.bytes[self.pos + 1] == b'*'
+            {
+                let start = self.pos;
+                self.pos += 2;
+                let mut closed = false;
+                while self.pos + 1 < self.bytes.len() {
+                    if self.bytes[self.pos] == b'*' && self.bytes[self.pos + 1] == b'/' {
+                        self.pos += 2;
+                        closed = true;
+                        break;
+                    }
+                    self.pos += 1;
+                }
+                if !closed {
+                    return Err(Diagnostic::new(
+                        DiagCode::E001,
+                        Span::new(start as u32, self.pos as u32),
+                        "unclosed block comment",
+                    ));
+                }
+                continue;
+            }
+            break;
+        }
+        Ok(())
+    }
+
+    fn lex_string(&mut self, start: usize) -> Result<Token, Diagnostic> {
+        self.pos += 1;
+        while self.pos < self.bytes.len() {
+            let c = self.bytes[self.pos];
+            if c == b'"' {
+                self.pos += 1;
+                return Ok(self.tok(TokenKind::String, start));
+            }
+            if c == b'\\' {
+                self.pos += 1;
+                if self.pos >= self.bytes.len() {
+                    break;
+                }
+                self.pos += 1;
+                continue;
+            }
+            if c == b'\n' {
+                return Err(Diagnostic::new(
+                    DiagCode::E001,
+                    Span::new(start as u32, self.pos as u32),
+                    "unterminated string",
+                ));
+            }
+            self.pos += 1;
+        }
+        Err(Diagnostic::new(
+            DiagCode::E001,
+            Span::new(start as u32, self.pos as u32),
+            "unterminated string",
+        ))
+    }
+
+    fn lex_number(&mut self, start: usize) -> Result<Token, Diagnostic> {
+        if self.bytes[self.pos] == b'0' && self.peek_at(1) == Some(b'x') {
+            self.pos += 2;
+            while matches!(self.peek(), Some(b'0'..=b'9' | b'a'..=b'f' | b'A'..=b'F' | b'_')) {
+                self.pos += 1;
+            }
+            self.skip_int_suffix();
+            return Ok(self.tok(TokenKind::Int, start));
+        }
+        while matches!(self.peek(), Some(b'0'..=b'9' | b'_')) {
+            self.pos += 1;
+        }
+        let mut is_float = false;
+        if self.peek() == Some(b'.') && matches!(self.peek_at(1), Some(b'0'..=b'9')) {
+            is_float = true;
+            self.pos += 1;
+            while matches!(self.peek(), Some(b'0'..=b'9' | b'_')) {
+                self.pos += 1;
+            }
+        }
+        if matches!(self.peek(), Some(b'e' | b'E')) {
+            is_float = true;
+            self.pos += 1;
+            if matches!(self.peek(), Some(b'+' | b'-')) {
+                self.pos += 1;
+            }
+            while matches!(self.peek(), Some(b'0'..=b'9' | b'_')) {
+                self.pos += 1;
+            }
+        }
+        if is_float {
+            if self.rest_starts_with(b"f32") || self.rest_starts_with(b"f64") {
+                self.pos += 3;
+            }
+            Ok(self.tok(TokenKind::Float, start))
+        } else {
+            self.skip_int_suffix();
+            Ok(self.tok(TokenKind::Int, start))
+        }
+    }
+
+    fn skip_int_suffix(&mut self) {
+        for suf in [b"i32".as_slice(), b"u32", b"i64", b"u64"] {
+            if self.rest_starts_with(suf) {
+                self.pos += suf.len();
+                return;
+            }
+        }
+    }
+
+    fn lex_question(&mut self, start: usize) -> Result<Token, Diagnostic> {
+        if matches!(
+            self.peek_at(1),
+            Some(b'A'..=b'Z' | b'a'..=b'z' | b'_')
+        ) {
+            self.pos += 1;
+            while matches!(
+                self.peek(),
+                Some(b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'_')
+            ) {
+                self.pos += 1;
+            }
+            return Ok(self.tok(TokenKind::QueryVar, start));
+        }
+        self.pos += 1;
+        Ok(self.tok(TokenKind::Question, start))
+    }
+
+    fn lex_lt(&mut self, start: usize) -> Result<Token, Diagnostic> {
+        // <<[  forbidden Quin literal
+        if self.peek_at(1) == Some(b'<') && self.peek_at(2) == Some(b'[') {
+            self.pos += 3;
+            return Ok(self.tok(TokenKind::ForbiddenQuin, start));
+        }
+        // <<(
+        if self.peek_at(1) == Some(b'<') && self.peek_at(2) == Some(b'(') {
+            self.pos += 3;
+            return Ok(self.tok(TokenKind::TripleStart, start));
+        }
+        // <<
+        if self.peek_at(1) == Some(b'<') {
+            self.pos += 2;
+            return Ok(self.tok(TokenKind::ReifyStart, start));
+        }
+        // <=
+        if self.peek_at(1) == Some(b'=') {
+            self.pos += 2;
+            return Ok(self.tok(TokenKind::Le, start));
+        }
+        // `<` + non-ws is an IRI only if the interior looks like an IRI
+        // (`:` `/` `#`). Otherwise it is a type-argument `<` (`Result<T, E>`).
+        if let Some(n) = self.peek_at(1) {
+            if !n.is_ascii_whitespace() {
+                if let Some(gt) = self.bytes[self.pos + 1..]
+                    .iter()
+                    .position(|&c| c == b'>')
+                {
+                    let inner = &self.bytes[self.pos + 1..self.pos + 1 + gt];
+                    let looks_iri = inner.contains(&b':')
+                        || inner.contains(&b'/')
+                        || inner.contains(&b'#');
+                    if looks_iri {
+                        self.pos += 2 + gt;
+                        return Ok(self.tok(TokenKind::Iri, start));
+                    }
+                    // Type argument: Result<T, E>
+                } else if !self.last_gap_ws {
+                    return Err(Diagnostic::new(
+                        DiagCode::E001,
+                        Span::new(start as u32, (start + 1) as u32),
+                        "relational < requires whitespace on both sides (a<b is illegal)",
+                    ));
+                }
+            }
+        }
+        self.pos += 1;
+        Ok(self.tok(TokenKind::Lt, start))
+    }
+
+    fn lex_gt(&mut self, start: usize) -> Result<Token, Diagnostic> {
+        if self.peek_at(1) == Some(b'>') {
+            self.pos += 2;
+            return Ok(self.tok(TokenKind::ReifyEnd, start));
+        }
+        if self.peek_at(1) == Some(b'=') {
+            self.pos += 2;
+            return Ok(self.tok(TokenKind::Ge, start));
+        }
+        self.pos += 1;
+        Ok(self.tok(TokenKind::Gt, start))
+    }
+
+    fn lex_rparen(&mut self, start: usize) -> Result<Token, Diagnostic> {
+        if self.peek_at(1) == Some(b'>') && self.peek_at(2) == Some(b'>') {
+            self.pos += 3;
+            return Ok(self.tok(TokenKind::TripleEnd, start));
+        }
+        self.pos += 1;
+        Ok(self.tok(TokenKind::RParen, start))
+    }
+
+    fn lex_minus(&mut self, start: usize) -> Result<Token, Diagnostic> {
+        if self.peek_at(1) == Some(b'>') {
+            self.pos += 2;
+            return Ok(self.tok(TokenKind::ThinArrow, start));
+        }
+        self.pos += 1;
+        Ok(self.tok(TokenKind::Minus, start))
+    }
+
+    fn lex_eq(&mut self, start: usize) -> Result<Token, Diagnostic> {
+        if self.peek_at(1) == Some(b'>') {
+            self.pos += 2;
+            return Ok(self.tok(TokenKind::FatArrow, start));
+        }
+        if self.peek_at(1) == Some(b'=') {
+            self.pos += 2;
+            return Ok(self.tok(TokenKind::EqEq, start));
+        }
+        self.pos += 1;
+        Ok(self.tok(TokenKind::Eq, start))
+    }
+
+    fn lex_bang(&mut self, start: usize) -> Result<Token, Diagnostic> {
+        if self.peek_at(1) == Some(b'=') {
+            self.pos += 2;
+            return Ok(self.tok(TokenKind::Ne, start));
+        }
+        self.pos += 1;
+        Ok(self.tok(TokenKind::Bang, start))
+    }
+
+    fn lex_amp(&mut self, start: usize) -> Result<Token, Diagnostic> {
+        if self.peek_at(1) == Some(b'&') {
+            self.pos += 2;
+            return Ok(self.tok(TokenKind::AmpAmp, start));
+        }
+        Err(Diagnostic::new(
+            DiagCode::E001,
+            Span::new(start as u32, (start + 1) as u32),
+            "expected &&",
+        ))
+    }
+
+    fn lex_pipe(&mut self, start: usize) -> Result<Token, Diagnostic> {
+        if self.peek_at(1) == Some(b'|') {
+            self.pos += 2;
+            return Ok(self.tok(TokenKind::PipePipe, start));
+        }
+        // `|` alone is the illegal RDF reifier spelling leftover
+        Err(Diagnostic::new(
+            DiagCode::E001,
+            Span::new(start as u32, (start + 1) as u32),
+            "bare '|' is not RDF 1.2; use << s p o ~ reifier >>",
+        ))
+    }
+
+    fn lex_blank(&mut self, start: usize) -> Result<Token, Diagnostic> {
+        self.pos += 2;
+        if !matches!(self.peek(), Some(b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'_')) {
+            return Err(Diagnostic::new(
+                DiagCode::E001,
+                Span::new(start as u32, self.pos as u32),
+                "blank node needs a label",
+            ));
+        }
+        while matches!(
+            self.peek(),
+            Some(b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'_' | b'-')
+        ) {
+            self.pos += 1;
+        }
+        Ok(self.tok(TokenKind::Ident, start))
+    }
+
+    fn lex_ident_or_kw(&mut self, start: usize) -> Token {
+        self.pos += 1;
+        while matches!(
+            self.peek(),
+            Some(b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'_')
+        ) {
+            self.pos += 1;
+        }
+        let text = &self.src[start..self.pos];
+        let kind = if is_keyword(text) {
+            TokenKind::Keyword
+        } else {
+            TokenKind::Ident
+        };
+        self.tok(kind, start)
+    }
+
+    fn bump_simple(&mut self, kind: TokenKind, start: usize) -> Result<Token, Diagnostic> {
+        self.pos += 1;
+        Ok(self.tok(kind, start))
+    }
+
+    fn tok(&self, kind: TokenKind, start: usize) -> Token {
+        Token {
+            kind,
+            span: Span::new(start as u32, self.pos as u32),
+        }
+    }
+
+    fn peek(&self) -> Option<u8> {
+        self.bytes.get(self.pos).copied()
+    }
+
+    fn peek_at(&self, off: usize) -> Option<u8> {
+        self.bytes.get(self.pos + off).copied()
+    }
+
+    fn rest_starts_with(&self, s: &[u8]) -> bool {
+        self.bytes.get(self.pos..).is_some_and(|r| r.starts_with(s))
+    }
+}
+
+fn strip_bom(src: &str) -> &str {
+    src.strip_prefix('\u{feff}').unwrap_or(src)
+}
+
+pub fn is_keyword(text: &str) -> bool {
+    matches!(
+        text,
+        "module"
+            | "import"
+            | "as"
+            | "prefix"
+            | "requires"
+            | "capability"
+            | "fn"
+            | "async"
+            | "on"
+            | "let"
+            | "mut"
+            | "const"
+            | "if"
+            | "else"
+            | "for"
+            | "in"
+            | "while"
+            | "match"
+            | "return"
+            | "yield"
+            | "transaction"
+            | "await"
+            | "true"
+            | "false"
+            | "null"
+            | "effect"
+            | "pure"
+            | "hot"
+            | "cold"
+    )
+}
+
+#[allow(dead_code)]
+pub fn tokenize(src: &str) -> Result<Vec<Token>, Diagnostic> {
+    let mut lex = Lexer::new(src);
+    let mut out = Vec::new();
+    loop {
+        let t = lex.next_token()?;
+        let eof = t.kind == TokenKind::Eof;
+        out.push(t);
+        if eof {
+            break;
+        }
+    }
+    Ok(out)
+}

@@ -47,6 +47,8 @@ pub mod semantic_logic;
 pub mod telemetry;
 pub mod updater;
 pub mod vision_audio;
+pub mod poet;
+pub mod poet_render;
 
 // ── Shared types & helpers ────────────────────────────────────────────────────
 
@@ -273,6 +275,11 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
     tauri::generate_handler![
         // ── Local (mod.rs) ──
         get_desktop_status,
+        poet::poet_eval,
+        poet::poet_reset,
+        poet::poet_gazetteer,
+        poet::poet_capabilities,
+        poet_render::poet_render_preview,
         get_desktop_logs,
         set_desktop_debug_mode,
         get_supervisor_state,

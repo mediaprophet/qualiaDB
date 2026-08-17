@@ -3,7 +3,7 @@
 use std::cmp::Ordering;
 use std::collections::{BinaryHeap, HashMap};
 use std::fs::File;
-use std::io::{self, BufReader};
+use std::io::{self, BufReader, Read, Seek, SeekFrom, Write};
 use std::path::{Path, PathBuf};
 
 use crate::q42_volume::{
@@ -64,95 +64,41 @@ impl ExternalSorter {
             return Err(invalid("cannot publish a logical Q42 volume with no Quins"));
         }
 
-        let chunk_files = self.compact_runs()?;
-        let mut readers = Vec::with_capacity(chunk_files.len());
-        for chunk_path in &chunk_files {
-            readers.push(BufReader::with_capacity(
-                1024 * 1024,
-                File::open(chunk_path)?,
-            ));
-        }
-
-        #[derive(Eq)]
-        struct HeapItem {
-            quin: NQuin,
-            reader_idx: usize,
-        }
-        impl Ord for HeapItem {
-            fn cmp(&self, other: &Self) -> Ordering {
-                other.quin.object.cmp(&self.quin.object)
-            }
-        }
-        impl PartialOrd for HeapItem {
-            fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-                Some(self.cmp(other))
-            }
-        }
-        impl PartialEq for HeapItem {
-            fn eq(&self, other: &Self) -> bool {
-                self.quin.object == other.quin.object
-            }
-        }
-
-        let mut heap = BinaryHeap::new();
-        for (idx, reader) in readers.iter_mut().enumerate() {
-            if let Some(quin) = Self::read_quin(reader)? {
-                heap.push(HeapItem {
-                    quin,
-                    reader_idx: idx,
-                });
-            }
-        }
-
         let empty_lex = HashMap::new();
         let mut writer = Some(new_catalog_writer(&empty_lex)?);
-        let mut block_buffer = Vec::with_capacity(QUINS_PER_BLOCK);
         let mut segments = Vec::new();
         let mut segment_index = 0usize;
-        let mut blocks_written = 0u64;
-
-        while let Some(item) = heap.pop() {
-            block_buffer.push(item.quin);
-            if let Some(next) = Self::read_quin(&mut readers[item.reader_idx])? {
-                heap.push(HeapItem {
-                    quin: next,
-                    reader_idx: item.reader_idx,
-                });
-            }
-            if block_buffer.len() == QUINS_PER_BLOCK {
-                publish_block(
-                    &mut writer,
-                    &empty_lex,
-                    root,
-                    max_segment_bytes,
-                    &mut segments,
-                    &mut segment_index,
-                    &block_buffer,
-                )?;
-                blocks_written += 1;
-                block_buffer.clear();
-            }
-        }
-        if !block_buffer.is_empty() {
-            publish_block(
-                &mut writer,
-                &empty_lex,
+        let blocks_written = if self.chunk_files.len() > super::MAX_MERGE_FAN_IN {
+            self.note(format!(
+                "space-safe range merge of {} runs (no second full copy)",
+                self.chunk_files.len()
+            ));
+            self.merge_by_object_range(
                 root,
                 max_segment_bytes,
+                &empty_lex,
+                &mut writer,
                 &mut segments,
                 &mut segment_index,
-                &block_buffer,
-            )?;
-            blocks_written += 1;
+            )?
+        } else {
+            self.merge_compacted_runs(
+                root,
+                max_segment_bytes,
+                &empty_lex,
+                &mut writer,
+                &mut segments,
+                &mut segment_index,
+            )?
+        };
+
+        if let Some(final_writer) = writer.take() {
+            if final_writer.block_count() > 0 || segments.is_empty() {
+                segments.push(finish_segment(final_writer, root, segment_index)?);
+            }
         }
 
-        let final_writer = writer.take().expect("segment writer must remain present");
-        segments.push(finish_segment(final_writer, root, segment_index)?);
-        for chunk_path in &chunk_files {
-            let _ = std::fs::remove_file(chunk_path);
-        }
-
-        let lexicon_segments = publish_lexicon_segments(root, &self.lex, max_segment_bytes)?;
+        let lexicon_segments = publish_lexicon_segments(root, &mut self.lex, max_segment_bytes)?;
         let manifest = Q42VolumeManifest {
             generation: 1,
             segments,
@@ -171,27 +117,332 @@ impl ExternalSorter {
             root_bytes,
         })
     }
+
+    fn merge_compacted_runs(
+        &mut self,
+        root: &Path,
+        max_segment_bytes: u64,
+        empty_lex: &HashMap<u64, String>,
+        writer: &mut Option<StreamingQ42VolumeWriter>,
+        segments: &mut Vec<Q42VolumeSegment>,
+        segment_index: &mut usize,
+    ) -> io::Result<u64> {
+        let chunk_files = self.compact_runs()?;
+        let blocks = kway_merge_files(
+            &chunk_files,
+            root,
+            max_segment_bytes,
+            empty_lex,
+            writer,
+            segments,
+            segment_index,
+            self.quin_total(),
+            &self.note,
+        )?;
+        for chunk_path in &chunk_files {
+            let _ = std::fs::remove_file(chunk_path);
+        }
+        Ok(blocks)
+    }
+
+    /// Split each sorted chunk into 16 object-prefix ranges, delete the chunk,
+    /// then k-way merge one range at a time into the volume. Peak extra space
+    /// is one chunk (~48 MiB), not a second copy of the whole graph.
+    fn merge_by_object_range(
+        &mut self,
+        root: &Path,
+        max_segment_bytes: u64,
+        empty_lex: &HashMap<u64, String>,
+        writer: &mut Option<StreamingQ42VolumeWriter>,
+        segments: &mut Vec<Q42VolumeSegment>,
+        segment_index: &mut usize,
+    ) -> io::Result<u64> {
+        const BUCKETS: usize = 16;
+        let paths: Vec<PathBuf> = (0..BUCKETS)
+            .map(|i| self.temp_dir.join(format!("range_{i:02}.tmp")))
+            .collect();
+        let mut files: Vec<std::io::BufWriter<File>> = Vec::with_capacity(BUCKETS);
+        for path in &paths {
+            files.push(std::io::BufWriter::new(File::create(path)?));
+        }
+        let mut lens = [0u64; BUCKETS];
+        let mut runs: Vec<Vec<(u64, u64)>> = vec![Vec::new(); BUCKETS];
+        let chunks = std::mem::take(&mut self.chunk_files);
+        let n_chunks = chunks.len();
+        for (i, chunk) in chunks.iter().enumerate() {
+            let starts = lens;
+            let mut src = File::open(chunk)?;
+            let mut buf = [0u8; 48];
+            loop {
+                match src.read_exact(&mut buf) {
+                    Ok(()) => {
+                        let quin: NQuin = bytemuck::pod_read_unaligned(&buf);
+                        let bucket = range_bucket(quin.object, BUCKETS);
+                        files[bucket].write_all(&buf)?;
+                        lens[bucket] += 48;
+                    }
+                    Err(e) if e.kind() == io::ErrorKind::UnexpectedEof => break,
+                    Err(e) => return Err(e),
+                }
+            }
+            drop(src);
+            for b in 0..BUCKETS {
+                if lens[b] > starts[b] {
+                    runs[b].push((starts[b], lens[b]));
+                }
+            }
+            let _ = std::fs::remove_file(chunk);
+            if i == 0 || (i + 1) % 64 == 0 || i + 1 == n_chunks {
+                self.note(format!(
+                    "range-split {}/{} chunks (reclaimed each source run)",
+                    i + 1,
+                    n_chunks
+                ));
+            }
+        }
+        for mut f in files {
+            f.flush()?;
+        }
+
+        let mut blocks_written = 0u64;
+        let total_quins = self.quin_total();
+        for b in 0..BUCKETS {
+            if runs[b].is_empty() {
+                let _ = std::fs::remove_file(&paths[b]);
+                continue;
+            }
+            self.note(format!(
+                "range {b}/{BUCKETS}  {} run(s)  {} bytes",
+                runs[b].len(),
+                lens[b]
+            ));
+            blocks_written += kway_merge_slices(
+                &paths[b],
+                &runs[b],
+                root,
+                max_segment_bytes,
+                empty_lex,
+                writer,
+                segments,
+                segment_index,
+                total_quins,
+                blocks_written,
+                &self.note,
+            )?;
+            let _ = std::fs::remove_file(&paths[b]);
+        }
+        Ok(blocks_written)
+    }
+}
+
+const fn range_bucket(object: u64, buckets: usize) -> usize {
+    let payload = object & 0x0FFF_FFFF_FFFF_FFFF;
+    ((payload >> 56) as usize) % buckets
+}
+
+#[allow(clippy::too_many_arguments)]
+fn kway_merge_files(
+    files: &[PathBuf],
+    root: &Path,
+    max_segment_bytes: u64,
+    empty_lex: &HashMap<u64, String>,
+    writer: &mut Option<StreamingQ42VolumeWriter>,
+    segments: &mut Vec<Q42VolumeSegment>,
+    segment_index: &mut usize,
+    total_quins: u64,
+    note: &Option<std::sync::Arc<dyn Fn(&str) + Send + Sync>>,
+) -> io::Result<u64> {
+    let mut readers = Vec::with_capacity(files.len());
+    for path in files {
+        readers.push(BufReader::with_capacity(64 * 1024, File::open(path)?));
+    }
+    kway_merge_readers(
+        &mut readers,
+        root,
+        max_segment_bytes,
+        empty_lex,
+        writer,
+        segments,
+        segment_index,
+        total_quins,
+        0,
+        note,
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+fn kway_merge_slices(
+    path: &Path,
+    spans: &[(u64, u64)],
+    root: &Path,
+    max_segment_bytes: u64,
+    empty_lex: &HashMap<u64, String>,
+    writer: &mut Option<StreamingQ42VolumeWriter>,
+    segments: &mut Vec<Q42VolumeSegment>,
+    segment_index: &mut usize,
+    total_quins: u64,
+    blocks_already: u64,
+    note: &Option<std::sync::Arc<dyn Fn(&str) + Send + Sync>>,
+) -> io::Result<u64> {
+    let mut readers = Vec::with_capacity(spans.len());
+    for &(start, end) in spans {
+        let mut file = File::open(path)?;
+        file.seek(SeekFrom::Start(start))?;
+        readers.push(LimitedQuinReader {
+            inner: BufReader::with_capacity(64 * 1024, file),
+            remaining: end.saturating_sub(start),
+        });
+    }
+    kway_merge_readers(
+        &mut readers,
+        root,
+        max_segment_bytes,
+        empty_lex,
+        writer,
+        segments,
+        segment_index,
+        total_quins,
+        blocks_already,
+        note,
+    )
+}
+
+struct LimitedQuinReader {
+    inner: BufReader<File>,
+    remaining: u64,
+}
+
+impl QuinSource for LimitedQuinReader {
+    fn next_quin(&mut self) -> io::Result<Option<NQuin>> {
+        if self.remaining < 48 {
+            return Ok(None);
+        }
+        let mut bytes = [0u8; 48];
+        self.inner.read_exact(&mut bytes)?;
+        self.remaining -= 48;
+        Ok(Some(bytemuck::pod_read_unaligned(&bytes)))
+    }
+}
+
+impl QuinSource for BufReader<File> {
+    fn next_quin(&mut self) -> io::Result<Option<NQuin>> {
+        ExternalSorter::read_quin(self)
+    }
+}
+
+trait QuinSource {
+    fn next_quin(&mut self) -> io::Result<Option<NQuin>>;
+}
+
+#[allow(clippy::too_many_arguments)]
+fn kway_merge_readers<R: QuinSource>(
+    readers: &mut [R],
+    root: &Path,
+    max_segment_bytes: u64,
+    empty_lex: &HashMap<u64, String>,
+    writer: &mut Option<StreamingQ42VolumeWriter>,
+    segments: &mut Vec<Q42VolumeSegment>,
+    segment_index: &mut usize,
+    total_quins: u64,
+    mut blocks_written: u64,
+    note: &Option<std::sync::Arc<dyn Fn(&str) + Send + Sync>>,
+) -> io::Result<u64> {
+    #[derive(Eq)]
+    struct HeapItem {
+        quin: NQuin,
+        reader_idx: usize,
+    }
+    impl Ord for HeapItem {
+        fn cmp(&self, other: &Self) -> Ordering {
+            other.quin.object.cmp(&self.quin.object)
+        }
+    }
+    impl PartialOrd for HeapItem {
+        fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+            Some(self.cmp(other))
+        }
+    }
+    impl PartialEq for HeapItem {
+        fn eq(&self, other: &Self) -> bool {
+            self.quin.object == other.quin.object
+        }
+    }
+
+    let mut heap = BinaryHeap::new();
+    for (idx, reader) in readers.iter_mut().enumerate() {
+        if let Some(quin) = reader.next_quin()? {
+            heap.push(HeapItem {
+                quin,
+                reader_idx: idx,
+            });
+        }
+    }
+    let mut block_buffer = Vec::with_capacity(QUINS_PER_BLOCK);
+    let mut merged = 0u64;
+    while let Some(item) = heap.pop() {
+        block_buffer.push(item.quin);
+        merged += 1;
+        if let Some(next) = readers[item.reader_idx].next_quin()? {
+            heap.push(HeapItem {
+                quin: next,
+                reader_idx: item.reader_idx,
+            });
+        }
+        if block_buffer.len() == QUINS_PER_BLOCK {
+            publish_block(
+                writer,
+                empty_lex,
+                root,
+                max_segment_bytes,
+                segments,
+                segment_index,
+                &block_buffer,
+            )?;
+            blocks_written += 1;
+            if blocks_written == 1 || blocks_written % 64 == 0 {
+                let pct = if total_quins > 0 {
+                    (merged as f64 / total_quins as f64) * 100.0
+                } else {
+                    0.0
+                };
+                if let Some(note) = note {
+                    note(&format!(
+                        "merge {pct:.1}%  SuperBlocks {blocks_written}"
+                    ));
+                }
+            }
+            block_buffer.clear();
+        }
+    }
+    if !block_buffer.is_empty() {
+        publish_block(
+            writer,
+            empty_lex,
+            root,
+            max_segment_bytes,
+            segments,
+            segment_index,
+            &block_buffer,
+        )?;
+        blocks_written += 1;
+    }
+    Ok(blocks_written)
 }
 
 fn publish_lexicon_segments(
     root: &Path,
-    lexicon: &HashMap<u64, String>,
+    lexicon: &mut super::LexiconSpill,
     max_segment_bytes: u64,
 ) -> io::Result<Vec<Q42LexiconSegment>> {
-    if lexicon.is_empty() {
-        return Ok(Vec::new());
-    }
     if max_segment_bytes <= 1024 {
         return Err(invalid("Q42 segment cap is too small for a lexicon shard"));
     }
-    let mut entries: Vec<(&u64, &String)> = lexicon.iter().collect();
-    entries.sort_unstable_by_key(|(hash, _)| **hash);
     let payload_budget = usize::try_from(max_segment_bytes - 1024)
         .map_err(|_| invalid("Q42 segment cap exceeds platform"))?;
     let mut shards = Vec::new();
     let mut pending = HashMap::new();
     let mut pending_bytes = 0usize;
-    for (hash, term) in entries {
+    let unique = lexicon.for_each_sorted(|hash, term| {
         let cost = term
             .len()
             .checked_add(40)
@@ -206,9 +457,10 @@ fn publish_lexicon_segments(
             pending.clear();
             pending_bytes = 0;
         }
-        pending.insert(*hash, term.clone());
+        pending.insert(hash, term);
         pending_bytes = pending_bytes.saturating_add(cost);
-    }
+        Ok(())
+    })?;
     if !pending.is_empty() {
         shards.push(finish_lexicon_segment(
             root,
@@ -217,6 +469,10 @@ fn publish_lexicon_segments(
             max_segment_bytes,
         )?);
     }
+    log::info!(
+        "Lexicon publish: {unique} unique terms in {} shard(s).",
+        shards.len()
+    );
     Ok(shards)
 }
 
@@ -299,6 +555,34 @@ mod tests {
     use super::*;
     use crate::q42_volume::{Q42Volume, Q42VolumeSet};
     use tempfile::TempDir;
+
+    #[test]
+    fn range_merge_reclaims_many_small_runs() {
+        let dir = TempDir::new().unwrap();
+        let sort_dir = dir.path().join("sort");
+        std::fs::create_dir_all(&sort_dir).unwrap();
+        let mut files = Vec::new();
+        for i in 0..40u64 {
+            let path = sort_dir.join(format!("chunk_{i}.tmp"));
+            let quin = NQuin {
+                subject: i + 1,
+                predicate: 2,
+                object: (i.wrapping_mul(0x9E37_79B9_7F4A_7C15)) & 0x0FFF_FFFF_FFFF_FFFF,
+                context: 0,
+                metadata: 0,
+                parity: 0,
+            };
+            std::fs::write(&path, bytemuck::bytes_of(&quin)).unwrap();
+            files.push(path);
+        }
+        let mut sorter = ExternalSorter::new(sort_dir);
+        sorter.replace_chunks(files, 40);
+        sorter.push_lex(1, "urn:q42:range-merge");
+        let root = dir.path().join("range.q42");
+        let stats = sorter.merge_volume_set(&root, 8 * 1024 * 1024).unwrap();
+        assert!(stats.blocks_written >= 1);
+        assert!(Q42Volume::open(&root).is_ok());
+    }
 
     #[test]
     fn publisher_splits_only_at_superblocks_and_publishes_a_lossless_root() {

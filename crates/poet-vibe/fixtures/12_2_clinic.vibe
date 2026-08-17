@@ -1,0 +1,32 @@
+module <https://qualiadb.org/modules/clinic_alerts>;
+prefix clinic: <https://qualiadb.org/clinic/>;
+prefix snomed: <http://snomed.info/id/>;
+
+requires [
+    capability("graph.read", context: clinic:telemetry),
+    capability("graph.write", context: clinic:alerts),
+    capability("aura.validate"),
+    capability("pulse.publish", topic: "clinic/alerts")
+];
+
+effect fn raise_alert(sensor: Iri, value: f64) budget(steps: 20000) -> Result<Receipt, string> {
+    if value <= 85.0 {
+        return Ok(receipt_empty());
+    }
+
+    let proposition = <<( sensor clinic:emitsAlert clinic:Overheat )>>;
+    let stated = << sensor clinic:emitsAlert clinic:Overheat ~ clinic:claim_1 >>;
+
+    transaction {
+        graph.stage(stated);
+        aura.validate(clinic:claim_1, clinic:EmergencyAlertShape)?;
+        graph.commit()?;
+    };
+
+    effect pulse.publish("clinic/alerts", { sensor: sensor, value: value })?;
+    return Ok(receipt_empty());
+}
+
+on pulse:message(topic: string, value: f64) budget(steps: 20000) -> Result<Receipt, string> {
+    return raise_alert(clinic:sensor_1, value);
+}

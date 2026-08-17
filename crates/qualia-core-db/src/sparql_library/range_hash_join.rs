@@ -357,6 +357,39 @@ fn emit_matches(
     returned
 }
 
+fn emit_matches_accel(
+    table: &[Q42RangeHashJoinSlot],
+    probes: &[BindingRow],
+    key_vars: &[VariableId],
+    out: &mut [BindingRow],
+) -> usize {
+    let mut build_keys = Vec::new();
+    let mut build_rows = Vec::new();
+    for slot in table {
+        if slot.occupied {
+            build_keys.push(slot.key);
+            build_rows.push(slot.row);
+        }
+    }
+    let probe_keys: Vec<u64> = probes.iter().map(|r| join_key(r, key_vars)).collect();
+    let mut pairs = vec![(0u32, 0u32); out.len()];
+    let joined = crate::query::graph_accel::hash_join_u64(&build_keys, &probe_keys, &mut pairs);
+    let mut n = 0usize;
+    for &(pi, bi) in &pairs[..joined.written] {
+        if n >= out.len() {
+            break;
+        }
+        let probe = &probes[pi as usize];
+        let built = &build_rows[bi as usize];
+        if !rows_compatible(probe, built) {
+            continue;
+        }
+        out[n] = merge_rows(probe, built);
+        n += 1;
+    }
+    n
+}
+
 pub fn execute_range_hash_join_page_into<S: crate::q42_volume::Q42RangeSource>(
     volume: &crate::q42_volume::Q42RangeVolume<S>,
     plan: Q42RangeHashJoinPlan,
@@ -454,8 +487,41 @@ pub fn execute_range_hash_join_page_into<S: crate::q42_volume::Q42RangeSource>(
                 continue;
             }
         }
-        let probe = probe_rows[state.probe_index];
         let (key_vars, key_n) = shared_join_vars(plan.left, plan.right, ctx, plan.join_var);
+        if state.probe_index == 0
+            && state.match_offset == 0
+            && state.probe_count >= 32
+            && table.iter().filter(|s| s.occupied).count() >= 32
+        {
+            let produced = emit_matches_accel(
+                table,
+                &probe_rows[..state.probe_count],
+                &key_vars[..key_n as usize],
+                join_out,
+            );
+            state.probe_index = state.probe_count;
+            let applied = apply_select_wrappers(
+                ctx,
+                &plan.filters,
+                plan.filter_count,
+                plan.projection,
+                plan.projection_count,
+                plan.limit,
+                plan.offset,
+                &mut state.wrappers,
+                &join_out[..produced],
+                &mut out[returned..],
+            )?;
+            returned += applied.returned;
+            if applied.limit_reached || returned == out.len() {
+                return Ok(Q42RangeNestedLoopJoinPage {
+                    returned,
+                    done: applied.limit_reached,
+                });
+            }
+            continue;
+        }
+        let probe = probe_rows[state.probe_index];
         let produced = emit_matches(
             table,
             &probe,
@@ -593,8 +659,41 @@ pub fn execute_range_volume_set_hash_join_page_into<S: crate::q42_volume::Q42Ran
                 continue;
             }
         }
-        let probe = probe_rows[state.probe_index];
         let (key_vars, key_n) = shared_join_vars(plan.left, plan.right, ctx, plan.join_var);
+        if state.probe_index == 0
+            && state.match_offset == 0
+            && state.probe_count >= 32
+            && table.iter().filter(|s| s.occupied).count() >= 32
+        {
+            let produced = emit_matches_accel(
+                table,
+                &probe_rows[..state.probe_count],
+                &key_vars[..key_n as usize],
+                join_out,
+            );
+            state.probe_index = state.probe_count;
+            let applied = apply_select_wrappers(
+                ctx,
+                &plan.filters,
+                plan.filter_count,
+                plan.projection,
+                plan.projection_count,
+                plan.limit,
+                plan.offset,
+                &mut state.wrappers,
+                &join_out[..produced],
+                &mut out[returned..],
+            )?;
+            returned += applied.returned;
+            if applied.limit_reached || returned == out.len() {
+                return Ok(Q42RangeNestedLoopJoinPage {
+                    returned,
+                    done: applied.limit_reached,
+                });
+            }
+            continue;
+        }
+        let probe = probe_rows[state.probe_index];
         let produced = emit_matches(
             table,
             &probe,

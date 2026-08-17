@@ -1,0 +1,137 @@
+//! Stable diagnostic codes (vibescript-core.md §9).
+
+use crate::span::Span;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DiagCode {
+    /// Parse / lex
+    E001,
+    /// Type
+    E100,
+    /// Effect
+    E200,
+    /// Capability
+    E300,
+    /// Budget / unbounded loop
+    E400,
+    /// Policy
+    E500,
+    /// Evaluation
+    E600,
+}
+
+impl DiagCode {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            DiagCode::E001 => "E001",
+            DiagCode::E100 => "E100",
+            DiagCode::E200 => "E200",
+            DiagCode::E300 => "E300",
+            DiagCode::E400 => "E400",
+            DiagCode::E500 => "E500",
+            DiagCode::E600 => "E600",
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Diagnostic {
+    pub code: DiagCode,
+    pub span: Span,
+    pub message: String,
+    /// Safe rewrite hint. MUST NOT grant new authority (core §9).
+    pub suggested_fix: Option<String>,
+}
+
+impl Diagnostic {
+    pub fn new(code: DiagCode, span: Span, message: impl Into<String>) -> Self {
+        let message = message.into();
+        let suggested_fix = infer_fix(code, &message);
+        Self {
+            code,
+            span,
+            message,
+            suggested_fix,
+        }
+    }
+
+    pub fn with_fix(mut self, fix: impl Into<String>) -> Self {
+        self.suggested_fix = Some(fix.into());
+        self
+    }
+
+    /// Agent-facing JSON (no serde). Always includes `valid: false`.
+    pub fn to_json(&self) -> String {
+        let mut s = String::from("{\"valid\":false,");
+        push_kv(&mut s, "error_code", self.code.as_str());
+        s.push_str(&format!("\"span\":[{},{}],", self.span.start, self.span.end));
+        push_kv(&mut s, "message", &self.message);
+        match &self.suggested_fix {
+            Some(fix) => push_kv(&mut s, "suggested_fix", fix),
+            None => s.push_str("\"suggested_fix\":null,"),
+        }
+        s.push_str("\"shacl_violations\":[]}");
+        s
+    }
+}
+
+fn infer_fix(code: DiagCode, message: &str) -> Option<String> {
+    let m = message.to_ascii_lowercase();
+    if m.contains("<<[") || m.contains("raw quin") {
+        return Some("use quin.statement(subject, predicate, object, context) — <<[ overlay is illegal".into());
+    }
+    if m.contains("without space") || (m.contains("relational") && m.contains('<')) {
+        return Some("put spaces around < > <= >=".into());
+    }
+    if m.contains("unclosed") && m.contains("triple") {
+        return Some("close the term with )>> or >>".into());
+    }
+    if m.contains("unclosed block comment") {
+        return Some("close the comment with */".into());
+    }
+    if code == DiagCode::E200 && m.contains("pure cell") {
+        return Some("move the External call into an effect fn; cells stay Pure".into());
+    }
+    if code == DiagCode::E300 && m.contains("graph.write") {
+        return Some("add requires [ capability(\"graph.write\") ];".into());
+    }
+    if m.contains("take") && (m.contains("query") || m.contains("unbounded")) {
+        return Some("add take: N to graph.query".into());
+    }
+    if code == DiagCode::E400 {
+        return Some("add budget(steps: N) or a loop bound".into());
+    }
+    None
+}
+
+fn push_kv(out: &mut String, key: &str, value: &str) {
+    out.push('"');
+    out.push_str(key);
+    out.push_str("\":\"");
+    for c in value.chars() {
+        match c {
+            '"' => out.push_str("\\\""),
+            '\\' => out.push_str("\\\\"),
+            '\n' => out.push_str("\\n"),
+            '\r' => out.push_str("\\r"),
+            '\t' => out.push_str("\\t"),
+            c => out.push(c),
+        }
+    }
+    out.push_str("\",");
+}
+
+impl std::fmt::Display for Diagnostic {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}@{}..{}: {}",
+            self.code.as_str(),
+            self.span.start,
+            self.span.end,
+            self.message
+        )
+    }
+}
+
+impl std::error::Error for Diagnostic {}

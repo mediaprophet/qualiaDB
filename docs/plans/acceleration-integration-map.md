@@ -213,6 +213,7 @@ honestly, not faked.
 | `specialized_libs/statistical_computing.rs` | batched covariance/regression | 🧩 covariance = forge GEMM |
 | `specialized_libs/engineering_analysis/thermal_conduction.rs` | tridiagonal Thomas / Fourier-law | 🔨 sparse/tridiagonal solve (lower priority) |
 | `modalities/manifold.rs` | 10D manifold + `FixedLanczosEigensolver` | 🧩/🔨 **the manifold-WAL eigensolver on this branch** — unify with §3.2 |
+| `query/graph_accel/` | ingest chunk sort + equality sieve + u64 sort-merge join | ✅ **WIRED 2026-08-16** — GPU LSD radix / field sieve on `shared_gpu`, CPU radix floor, refuse-bad-permutation. NPU slot reserved (not faked). |
 | `tensor/resident_substrate.rs` + `tensor/volume_gpu.rs` | graph-tensor SOA + `tensor_volume.wgsl` (already GPU) | ♻️/🧩 distance filter + graph traversal (sieve + prefix-sum) |
 | `inference/residency_planner.rs` | VRAM eviction ranking | 🔨 GPU prefix-sum/top-k for eviction (reuse `TopK`) |
 | `inference/sparse_cache.rs` | sparse-attention mask / KV ring | 🧩 sparse gather/scatter (pairs with fused-attention) |

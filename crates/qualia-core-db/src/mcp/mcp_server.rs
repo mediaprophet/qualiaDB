@@ -882,7 +882,7 @@ unsafe fn execute_describe_qapp_surface_schema(
   "layout_strategies": ["PointGrid", "CssGrid", "FlexBox", "Masonry"],
   "presentation_modes": ["GridBound", "NodeRelational", "Spatial"],
   "coordinate_spaces": ["GlobalCartesian", "RelativeAnchored"],
-  "layer_behaviors": ["Docked", "FloatingOverlay", "ModalOverlay", "FullCanvas"],
+  "layer_behaviors": ["Docked", "FloatingOverlay", "ModalOverlay", "FullManifold"],
   "theme_scopes": ["environment", "app", "page", "module"],
   "manifest_surfaces": ["static-web", "wasm-local", "online-daemon-aware", "native-dioxus-pane"],
   "mcp_tools": ["list_qapps", "get_qapp_manifest", "inspect_qapp_readiness", "list_qapp_updates", "describe_qapp_surface_schema"]

@@ -3,6 +3,11 @@
 The WASM builds are deliberately separate products. A profile must not expose a
 library merely because the native engine has it.
 
+This family is the **interop bridge**: a foreign host or agent loads a
+**proportionate** package plus CBOR-LD / Q42 data. It is not a reason to emit
+HTML+RDFa as the application surface. Role in the HID/wire story:
+[`native-presentation-and-vibe-beyond-webview-2026-08-16.md`](../plans/native-presentation-and-vibe-beyond-webview-2026-08-16.md) §0.3.
+
 The compile-time source of truth is
 `crates/qualia-core-db/src/wasm_capabilities.rs`.
 

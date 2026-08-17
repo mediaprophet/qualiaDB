@@ -1,27 +1,29 @@
 //! Streaming import path for RDF text sources → canonical `.q42` volume.
 //!
 //! Pipeline: a Rio parser on the main thread streams triples into a bounded channel; a pool of worker
-//! shards hashes each triple into an `NQuin` and (in [`IngestMode::Complete`]) interns every
-//! subject/predicate/object string into a per-shard lexicon; a collector gathers the quins; the main
-//! thread merges the lexicon, sorts the quins by object hash, and writes the volume via
-//! [`crate::q42_volume::UnifiedVolumeBuilder`] — the GOVERNING `.q42` layout (160-byte SuperBlock
-//! headers, block directory, BIDX object index, Merkle-DAG, and a real lexicon section).
+//! shards hashes each triple into an `NQuin` and (in [`IngestMode::Complete`]) forwards first-seen
+//! terms; a collector interns those terms into a capped spilling lexicon and writes quin runs; merge
+//! publishes a volume set via [`crate::q42_volume::UnifiedVolumeBuilder`] — the GOVERNING `.q42`
+//! layout (160-byte SuperBlock headers, block directory, BIDX, Merkle-DAG, and Q42LEX shards).
 //!
 //! History: this path previously wrote headerless LZ4 blocks and an empty lexicon, so
 //! `Q42Volume::read_all_quins` could not read the graph back and all literal text was discarded while
 //! the shrunk file was reported as "compression". Both defects are fixed — see [`IngestMode`].
 
+use crate::query::ingest_report::CountingReader;
 use crate::{q_hash, NQuin};
+
+pub use crate::query::ingest_report::{
+    format_bytes, format_count, IngestPhase, IngestReport, IngestSnapshot,
+};
+pub use crate::query::ingest_job;
 use log;
 
-const OBJECT_HASH_MASK: u64 = 0x0FFF_FFFF_FFFF_FFFF;
+use crate::query::ingest_formats::OBJECT_IRI_MASK as OBJECT_HASH_MASK;
 use crossbeam_channel::{bounded, Receiver, Sender};
-use rio_api::parser::TriplesParser;
-use rio_turtle::{NTriplesParser, TurtleParser};
-use rio_xml::RdfXmlParser;
-use std::collections::HashMap;
+use std::collections::HashSet;
 use std::fs::File;
-use std::io::{self, BufReader, Cursor};
+use std::io::{self, BufReader, Cursor, Read};
 use std::path::Path;
 use std::thread;
 use std::time::Instant;
@@ -185,8 +187,7 @@ fn is_prefix_name_char(b: u8) -> bool {
 }
 
 fn repair_rdfxml_empty_base(src: &str, base: &str) -> String {
-    src.replace("xml:base=\"\"", &format!("xml:base=\"{base}\""))
-        .replace("xml:base=''", &format!("xml:base='{base}'"))
+    crate::query::ingest_formats::repair_rdfxml_empty_base(src, base)
 }
 
 fn empty_local_name_follows(bytes: &[u8], i: usize) -> bool {
@@ -245,7 +246,7 @@ pub enum IngestMode {
 }
 
 impl IngestMode {
-    fn label(self) -> &'static str {
+    pub fn label(self) -> &'static str {
         match self {
             IngestMode::Complete => "COMPLETE (lossless — all URIs & literals retained)",
             IngestMode::StripLiterals => {
@@ -255,13 +256,12 @@ impl IngestMode {
     }
 }
 
-/// Represents a raw string-based Triple extracted from RDF/XML
-#[derive(Debug)]
-pub struct RawTriple {
-    pub subject: String,
-    pub predicate: String,
-    pub object: String,
-    pub packed_object: Option<u64>,
+pub use crate::query::ingest_formats::RawTriple;
+
+/// Hashed quin plus first-seen lexical terms from one worker (Complete mode).
+struct HashedAtom {
+    quin: NQuin,
+    terms: Vec<(u64, String)>,
 }
 
 /// Back-compat entry point: ingests losslessly ([`IngestMode::Complete`]) — the honest default.
@@ -275,7 +275,7 @@ pub fn streaming_import_rdf_with_mode(
     out_path: &str,
     mode: IngestMode,
 ) -> std::io::Result<u64> {
-    streaming_import_rdf_with_mode_inner(in_path, out_path, mode, None)
+    streaming_import_rdf_with_report(in_path, out_path, mode, None, IngestReport::silent())
 }
 
 /// Stream-ingest RDF into a front-embedded logical volume root and immutable,
@@ -286,7 +286,48 @@ pub fn streaming_import_rdf_volume_set_with_mode(
     mode: IngestMode,
     max_segment_bytes: u64,
 ) -> std::io::Result<u64> {
-    streaming_import_rdf_with_mode_inner(in_path, root_path, mode, Some(max_segment_bytes))
+    streaming_import_rdf_with_report(
+        in_path,
+        root_path,
+        mode,
+        Some(max_segment_bytes),
+        IngestReport::silent(),
+    )
+}
+
+/// Same as the volume-set / single-file import, with a progress sink for CLI / UI.
+pub fn streaming_import_rdf_with_report(
+    in_path: &str,
+    out_path: &str,
+    mode: IngestMode,
+    max_segment_bytes: Option<u64>,
+    report: IngestReport,
+) -> std::io::Result<u64> {
+    streaming_import_rdf_with_mode_inner(
+        in_path,
+        out_path,
+        mode,
+        max_segment_bytes,
+        report,
+        None,
+    )
+}
+
+/// Resume or run a durable job directory (`job.json` + `runs/`).
+pub fn streaming_import_rdf_with_job(
+    job_dir: &Path,
+    report: IngestReport,
+) -> std::io::Result<u64> {
+    let job = crate::query::ingest_job::IngestJob::open(job_dir.to_path_buf())?;
+    let out = job.spec.output.clone();
+    let mode = if job.spec.mode == "strip_literals" {
+        IngestMode::StripLiterals
+    } else {
+        IngestMode::Complete
+    };
+    let segment = job.spec.segment_mib.map(|m| m.saturating_mul(1024 * 1024));
+    let locator = job.spec.source.locator().to_string();
+    streaming_import_rdf_with_mode_inner(&locator, &out, mode, segment, report, Some(job.dir.clone()))
 }
 
 fn streaming_import_rdf_with_mode_inner(
@@ -294,9 +335,16 @@ fn streaming_import_rdf_with_mode_inner(
     out_path: &str,
     mode: IngestMode,
     max_segment_bytes: Option<u64>,
+    mut report: IngestReport,
+    job_dir: Option<std::path::PathBuf>,
 ) -> std::io::Result<u64> {
     let start_time = Instant::now();
-    println!("Initializing Native Ingestion Pipeline...");
+    let parse_started = Instant::now();
+    report.emit(
+        IngestPhase::Starting,
+        "initializing ingest pipeline",
+        None,
+    );
 
     // 1. Hardware Detection & Scaling
     let mut sys = System::new_all();
@@ -305,27 +353,32 @@ fn streaming_import_rdf_with_mode_inner(
 
     // Constraint: Use no more than 80% of available CPU resources
     let target_workers = std::cmp::max(1, (logical_cores as f32 * 0.8).floor() as usize);
-    println!("Hardware Sieve: Detected {} logical cores. Spinning up {} parallel hasher shards (capped at 80%).", logical_cores, target_workers);
+    report.set_workers(target_workers as u32);
+    report.emit(
+        IngestPhase::Starting,
+        format!("{logical_cores} logical cores, {target_workers} hasher shards (80% cap)"),
+        Some(format!("mode={}", mode.label())),
+    );
 
     // 2. Channel Setup
     // Use bounded channels to strictly enforce the 512MB RAM floor (backpressure)
     let (tx_raw, rx_raw): (Sender<RawTriple>, Receiver<RawTriple>) = bounded(10_000);
-    let (tx_bin, rx_bin): (Sender<NQuin>, Receiver<NQuin>) = bounded(10_000);
+    let (tx_bin, rx_bin): (Sender<HashedAtom>, Receiver<HashedAtom>) = bounded(10_000);
 
     // 3. Spawn Parallel Hasher Shards (Workers)
-    // Each worker returns its local hash→string lexicon shard (empty in StripLiterals mode); the main
-    // thread merges the shards into one lexicon and writes it into the volume so the terms are
-    // recoverable. This is the fix for the historical data loss: previously the strings were hashed and
-    // thrown away here, and no lexicon was ever written.
+    // Workers keep only a hash set of first-seen tokens (8 bytes each). Strings ride
+    // with the quin to the collector, which interns into a capped spilling lexicon.
+    // Holding every WKT literal in per-shard HashMaps is what wedged the AU OSM ingest
+    // at ~80 GiB commit.
     let collect_lexicon = mode == IngestMode::Complete;
-    let mut worker_handles: Vec<thread::JoinHandle<HashMap<u64, String>>> = vec![];
+    let mut worker_handles: Vec<thread::JoinHandle<u64>> = vec![];
     for _worker_id in 0..target_workers {
         let rx = rx_raw.clone();
         let tx = tx_bin.clone();
 
         let handle = thread::spawn(move || {
-            let mut _local_count = 0u64;
-            let mut lex: HashMap<u64, String> = HashMap::new();
+            let mut local_count = 0u64;
+            let mut seen: HashSet<u64> = HashSet::new();
             for triple in rx {
                 let s_hash = q_hash(&triple.subject);
                 let p_hash = q_hash(&triple.predicate);
@@ -336,7 +389,7 @@ fn streaming_import_rdf_with_mode_inner(
                 let o_hash = triple
                     .packed_object
                     .unwrap_or_else(|| q_hash(&triple.object) & OBJECT_HASH_MASK);
-                let context = 0u64;
+                let context = triple.context;
                 let metadata = 0u64;
                 let parity = s_hash ^ p_hash ^ o_hash ^ context ^ metadata;
 
@@ -349,34 +402,31 @@ fn streaming_import_rdf_with_mode_inner(
                     parity,
                 };
 
+                let mut terms = Vec::new();
                 if collect_lexicon {
-                    // `or_insert_with(|| moved)` still moves the string even when the entry is
-                    // occupied, so branch explicitly to avoid needless clones/moves on hot hits.
-                    if !lex.contains_key(&s_hash) {
-                        lex.insert(s_hash, triple.subject);
+                    if seen.insert(s_hash) {
+                        terms.push((s_hash, triple.subject));
                     }
-                    if !lex.contains_key(&p_hash) {
-                        lex.insert(p_hash, triple.predicate);
+                    if seen.insert(p_hash) {
+                        terms.push((p_hash, triple.predicate));
                     }
-                    if !is_inline && !lex.contains_key(&o_hash) {
-                        lex.insert(o_hash, triple.object);
+                    if !is_inline && seen.insert(o_hash) {
+                        terms.push((o_hash, triple.object));
                     }
                 }
 
-                // Send back to the writer thread
-                if tx.send(quin).is_err() {
+                if tx.send(HashedAtom { quin, terms }).is_err() {
                     break;
                 }
-                _local_count += 1;
+                local_count += 1;
             }
-            if _local_count > 0 {
+            if local_count > 0 {
                 log::debug!(
-                    "Ontology Ingest: worker shard finished {} triples ({} lexemes)",
-                    _local_count,
-                    lex.len()
+                    "Ontology Ingest: worker shard finished {local_count} triples ({} first-seen hashes)",
+                    seen.len()
                 );
             }
-            lex
+            local_count
         });
         worker_handles.push(handle);
     }
@@ -385,15 +435,76 @@ fn streaming_import_rdf_with_mode_inner(
     drop(tx_bin);
 
     // 4. Drain hashed Quins into bounded external-sort runs instead of one
-    // whole-graph Vec. The TempDir owns every run and cleans it on success,
-    // error, or unwind.
-    let sorter_temp = ingest_scratch_dir()?;
-    let sorter_path = sorter_temp.path().to_owned();
+    // whole-graph Vec. A durable job directory keeps runs across crashes;
+    // otherwise TempDir owns every run and cleans it on success, error, or unwind.
+    let mut job = match job_dir.as_ref() {
+        Some(dir) => Some(crate::query::ingest_job::IngestJob::open(dir.clone())?),
+        None => None,
+    };
+    let skip_triples = job.as_ref().map(|j| j.checkpoint.triples).unwrap_or(0);
+    if let Some(j) = job.as_ref() {
+        report.set_quin_chunks(j.checkpoint.quin_chunks);
+        report.set_lex_runs(j.checkpoint.lex_runs);
+        report.set_skip_target(skip_triples);
+        report.attach_progress_file(j.dir.join(crate::query::ingest_job::JOB_PROGRESS));
+        if let crate::query::ingest_job::IngestSourceKind::File { path } = &j.spec.source {
+            if let Ok(meta) = std::fs::metadata(path) {
+                report.set_source_bytes(meta.len());
+            }
+        }
+        if skip_triples > 0 {
+            report.emit(
+                IngestPhase::Skipping,
+                format!(
+                    "replaying first {} accepted triples (no new hash)",
+                    crate::query::ingest_report::format_count(skip_triples)
+                ),
+                None,
+            );
+        }
+    }
+    let _sorter_temp;
+    let sorter_path = if let Some(j) = job.as_ref() {
+        let p = j.runs_dir();
+        std::fs::create_dir_all(&p)?;
+        p
+    } else {
+        _sorter_temp = Some(ingest_scratch_dir()?);
+        _sorter_temp.as_ref().unwrap().path().to_owned()
+    };
+    let adopt = job.is_some() && skip_triples > 0;
+    let collector_report = report.clone();
+    let collector_job_dir = job.as_ref().map(|j| j.dir.clone());
     let collector_handle = thread::spawn(
         move || -> std::io::Result<crate::external_sort::ExternalSorter> {
-            let mut sorter = crate::external_sort::ExternalSorter::new(sorter_path);
-            for quin in rx_bin {
-                sorter.push(quin)?;
+            let mut sorter = if adopt {
+                crate::external_sort::ExternalSorter::adopt_existing(sorter_path)?
+            } else {
+                crate::external_sort::ExternalSorter::new(sorter_path)
+            };
+            sorter.set_note_sink(collector_report.note_sink());
+            let report = collector_report;
+            for atom in rx_bin {
+                for (hash, term) in atom.terms {
+                    sorter.intern_term(hash, &term)?;
+                }
+                let chunks_before = sorter.quin_run_count();
+                sorter.push(atom.quin)?;
+                if sorter.quin_run_count() > chunks_before {
+                    report.add_quin_chunk();
+                    if let Some(dir) = collector_job_dir.as_ref() {
+                        if let Ok(mut live) = crate::query::ingest_job::IngestJob::open(dir.clone())
+                        {
+                            let _ = live.record_progress(
+                                sorter.quin_total(),
+                                0,
+                                sorter.quin_run_count() as u64,
+                                sorter.lex_run_count() as u64,
+                            );
+                        }
+                    }
+                }
+                report.set_interned(sorter.lex_interned_count());
             }
             Ok(sorter)
         },
@@ -401,169 +512,252 @@ fn streaming_import_rdf_with_mode_inner(
 
     // 5. The Streaming Sieve (Main Thread)
     // Uses Rio to read the file sequentially without loading the whole graph into RAM.
-    let in_file = File::open(&in_path)?;
-    let buf_reader = BufReader::new(in_file);
+    // A job URL/gzip source is opened as a stream (no second copy of the ontology).
+    let digest_outcome = std::sync::Arc::new(crate::query::ingest_job::DigestOutcome::default());
+    let (source_reader, path_lower): (Box<dyn std::io::Read + Send>, String) =
+        if let Some(j) = job.as_ref() {
+            let opened = crate::query::ingest_job::open_ingest_source(
+                &j.spec.source,
+                Some(j.spec.encoding),
+                j.spec.format,
+            )?;
+            if let Some(len) = opened.content_length {
+                report.set_source_bytes(len);
+            }
+            let digesting = crate::query::ingest_job::DigestingReader::with_outcome(
+                opened.reader,
+                Some(j.windows_path()),
+                Some(digest_outcome.clone()),
+            );
+            let fake_name = format!("stream.{}", opened.format.file_extension());
+            (Box::new(digesting), fake_name.to_string())
+        } else {
+            let in_file = File::open(&in_path)?;
+            let src_len = in_file.metadata().map(|m| m.len()).unwrap_or(0);
+            report.set_source_bytes(src_len);
+            (Box::new(in_file), in_path.to_lowercase())
+        };
+    let fmt = job
+        .as_ref()
+        .map(|j| j.spec.format)
+        .filter(|f| *f != crate::query::ingest_job::IngestRdfFormat::Auto)
+        .unwrap_or_else(|| crate::query::ingest_formats::format_from_path(&path_lower));
 
-    let mut triples_read = 0;
-
-    // Setup a callback that parses Rio triples and sends them to the worker queue
-    log::info!("Ontology Ingest: streaming triples from {}", in_path);
-    let mut on_triple = |t: rio_api::model::Triple| -> Result<(), std::io::Error> {
-        let subject = t.subject.to_string();
-        let predicate = t.predicate.to_string();
-        let object = t.object.to_string();
-        let mut packed_object = None;
-
-        if let rio_api::model::Term::Literal(rio_api::model::Literal::Typed { value, datatype }) =
-            t.object
+    let resume_cursor = job
+        .as_ref()
+        .and_then(|j| crate::query::ingest_resume::ResumeCursor::load(&j.dir).ok().flatten());
+    let mut skip_triples = skip_triples;
+    let mut source_reader = source_reader;
+    if let (Some(j), Some(cur)) = (job.as_ref(), resume_cursor.as_ref()) {
+        if cur.seekable
+            && crate::query::ingest_resume::format_can_seek(fmt)
+            && matches!(j.spec.source, crate::query::ingest_job::IngestSourceKind::File { .. })
         {
-            let dt = datatype.iri;
-            if dt == "http://www.w3.org/2001/XMLSchema#integer" {
-                if let Ok(num) = value.parse::<i64>() {
-                    let max_val = (1i64 << 59) - 1;
-                    let min_val = -(1i64 << 59);
-                    if num >= min_val && num <= max_val {
-                        let unsigned = (num as u64) & crate::resolver::INLINE_VALUE_MASK;
-                        packed_object = Some(crate::resolver::INLINE_TAG_INTEGER | unsigned);
-                    }
-                }
-            } else if dt == "http://www.w3.org/2001/XMLSchema#decimal" {
-                if let Ok(num) = value.parse::<f64>() {
-                    let scaled = num * 1_000_000.0;
-                    let max_val = ((1i64 << 59) - 1) as f64;
-                    let min_val = (-(1i64 << 59)) as f64;
-                    if scaled >= min_val && scaled <= max_val {
-                        let num_i64 = scaled.round() as i64;
-                        let unsigned = (num_i64 as u64) & crate::resolver::INLINE_VALUE_MASK;
-                        packed_object = Some(crate::resolver::INLINE_TAG_DECIMAL | unsigned);
-                    }
-                }
-            } else if dt == "http://www.w3.org/2001/XMLSchema#boolean" {
-                if value == "true" || value == "1" {
-                    packed_object = Some(crate::resolver::INLINE_TAG_BOOLEAN | 1);
-                } else if value == "false" || value == "0" {
-                    packed_object = Some(crate::resolver::INLINE_TAG_BOOLEAN | 0);
+            if let crate::query::ingest_job::IngestSourceKind::File { path } = &j.spec.source {
+                if let Ok((r, _off, _)) =
+                    crate::query::ingest_resume::open_resumed_file(Path::new(path), Some(cur))
+                {
+                    source_reader = r;
+                    skip_triples = 0;
+                    report.emit(
+                        IngestPhase::Parsing,
+                        format!(
+                            "resumed at byte {} after {} triples",
+                            cur.byte_offset, cur.triples
+                        ),
+                        None,
+                    );
                 }
             }
         }
+    }
 
-        let raw = RawTriple {
-            subject,
-            predicate,
-            object,
-            packed_object,
-        };
-        if tx_raw.send(raw).is_ok() {
-            triples_read += 1;
+    let triples_read = std::sync::atomic::AtomicU64::new(0);
+    let skip_left = std::sync::atomic::AtomicU64::new(skip_triples);
+    let mut accept_raw = |raw: RawTriple| {
+        use std::sync::atomic::Ordering::Relaxed;
+        let skip = skip_left.load(Relaxed);
+        let seen = triples_read.load(Relaxed);
+        if seen < skip {
+            let n = triples_read.fetch_add(1, Relaxed) + 1;
+            report.maybe_tick_skip(n, skip);
+            return;
         }
-        Ok(())
+        if seen == skip && skip > 0 {
+            report.emit(
+                IngestPhase::Parsing,
+                format!(
+                    "skip complete ({} triples); hashing new statements",
+                    crate::query::ingest_report::format_count(skip)
+                ),
+                None,
+            );
+        }
+        if tx_raw.send(raw).is_ok() {
+            let n = triples_read.fetch_add(1, Relaxed) + 1;
+            report.maybe_tick(IngestPhase::Parsing, n);
+        }
     };
 
-    let path_lower = in_path.to_lowercase();
+    // Line-oriented skip: do not Rio-parse 1.8B N-Triples/N-Quads just to drop them.
+    if skip_triples > 0 && crate::query::ingest_resume::format_is_line_oriented(fmt) {
+        let tick = |n, _b| report.maybe_tick_skip(n, skip_triples);
+        match crate::query::ingest_resume::skip_newlines(&mut source_reader, skip_triples, tick) {
+            Ok((bytes, tail)) => {
+                triples_read.store(skip_triples, std::sync::atomic::Ordering::Relaxed);
+                skip_left.store(0, std::sync::atomic::Ordering::Relaxed);
+                report.add_bytes_read(bytes);
+                source_reader = Box::new(std::io::Cursor::new(tail).chain(source_reader));
+                report.emit(
+                    IngestPhase::Parsing,
+                    format!(
+                        "line-skip {} triples ({} bytes); hashing new statements",
+                        crate::query::ingest_report::format_count(skip_triples),
+                        crate::query::ingest_report::format_bytes(bytes)
+                    ),
+                    None,
+                );
+                if let Some(j) = job.as_ref() {
+                    let _ = crate::query::ingest_resume::ResumeCursor {
+                        schema: 1,
+                        format: fmt,
+                        byte_offset: bytes,
+                        triples: triples_read.load(std::sync::atomic::Ordering::Relaxed),
+                        prolog: String::new(),
+                        seekable: true,
+                    }
+                    .store(&j.dir);
+                }
+            }
+            Err(e) => {
+                return Err(e);
+            }
+        }
+    }
+
+    log::info!("Ontology Ingest: streaming triples from {} ({fmt:?})", in_path);
+    let stream_ttl = job.is_some();
     let base_iri = catalog_base_iri(Path::new(in_path));
     let mut parse_error: Option<String> = None;
-    if path_lower.ends_with(".rdf") || path_lower.ends_with(".xml") || path_lower.ends_with(".owl")
-    {
-        log::info!("Ontology Ingest: parsing RDF/XML source {}", in_path);
-        let raw = std::fs::read_to_string(in_path)?;
-        let repaired = if let Some(base) = base_iri.as_ref() {
-            repair_rdfxml_empty_base(&raw, base.as_str())
-        } else {
-            raw
-        };
-        let mut parser = RdfXmlParser::new(Cursor::new(repaired), base_iri.clone());
-        if let Err(e) = parser.parse_all(&mut on_triple) {
-            parse_error = Some(format!("RDF/XML: {e}"));
-        }
-        log::info!("Ontology Ingest: completed RDF/XML parse for {}", in_path);
-    } else if path_lower.ends_with(".ttl") {
-        log::info!("Ontology Ingest: parsing Turtle source {}", in_path);
-        let raw = std::fs::read_to_string(in_path)?;
-        let expanded = expand_empty_turtle_prefixed_names(&raw);
-        let mut parser = TurtleParser::new(Cursor::new(expanded), base_iri.clone());
-        if let Err(e) = parser.parse_all(&mut on_triple) {
-            parse_error = Some(format!("Turtle: {e}"));
-        }
-        log::info!("Ontology Ingest: completed Turtle parse for {}", in_path);
-    } else if path_lower.ends_with(".nt") {
-        log::info!("Ontology Ingest: parsing N-Triples source {}", in_path);
-        let mut parser = NTriplesParser::new(buf_reader);
-        if let Err(e) = parser.parse_all(&mut on_triple) {
-            parse_error = Some(format!("N-Triples: {e}"));
-        }
-        log::info!("Ontology Ingest: completed N-Triples parse for {}", in_path);
-    } else if path_lower.ends_with(".n3") {
+    let mut captured_prolog = String::new();
+
+    if fmt == crate::query::ingest_job::IngestRdfFormat::N3 || path_lower.ends_with(".n3") {
         log::info!("Ontology Ingest: parsing N3 source {}", in_path);
         let text = std::fs::read_to_string(in_path).unwrap_or_default();
         let mut parser = crate::modalities::logic::n3_parser::N3Parser::new(&text);
         let mut webizen = crate::webizen::SlgArena::new();
         let mut rules_parsed = 0;
-
         let on_n3_event = |event: crate::modalities::logic::n3_parser::N3Event| -> Result<(), crate::modalities::logic::n3_parser::N3ParserError> {
             match event {
                 crate::modalities::logic::n3_parser::N3Event::StaticTriple(triple) => {
-                    let subject = match triple.subject {
+                    let term = |t: crate::modalities::logic::n3_parser::Term| match t {
                         crate::modalities::logic::n3_parser::Term::Uri(s)
                         | crate::modalities::logic::n3_parser::Term::Variable(s)
                         | crate::modalities::logic::n3_parser::Term::Literal(s)
                         | crate::modalities::logic::n3_parser::Term::Formula(s) => s.to_string(),
                     };
-                    let predicate = match triple.predicate {
-                        crate::modalities::logic::n3_parser::Term::Uri(s)
-                        | crate::modalities::logic::n3_parser::Term::Variable(s)
-                        | crate::modalities::logic::n3_parser::Term::Literal(s)
-                        | crate::modalities::logic::n3_parser::Term::Formula(s) => s.to_string(),
-                    };
-                    let object = match triple.object {
-                        crate::modalities::logic::n3_parser::Term::Uri(s)
-                        | crate::modalities::logic::n3_parser::Term::Variable(s)
-                        | crate::modalities::logic::n3_parser::Term::Literal(s)
-                        | crate::modalities::logic::n3_parser::Term::Formula(s) => s.to_string(),
-                    };
-                    let raw = RawTriple {
-                        subject,
-                        predicate,
-                        object,
+                    accept_raw(RawTriple {
+                        subject: term(triple.subject),
+                        predicate: term(triple.predicate),
+                        object: term(triple.object),
                         packed_object: None,
-                    };
-                    if tx_raw.send(raw).is_ok() {
-                        triples_read += 1;
-                    }
+                        context: 0,
+                    });
                 }
                 crate::modalities::logic::n3_parser::N3Event::LogicRule(rule) => {
                     webizen.register_rule(&rule);
                     rules_parsed += 1;
                 }
                 crate::modalities::logic::n3_parser::N3Event::AspBlock(_)
-                | crate::modalities::logic::n3_parser::N3Event::DiffuseBlock(_) => {
-                    // Pass these modalities to the Webizen
-                }
+                | crate::modalities::logic::n3_parser::N3Event::DiffuseBlock(_) => {}
             }
             Ok(())
         };
-
         if let Err(e) = parser.parse_all(on_n3_event) {
             parse_error = Some(format!("N3: {e}"));
         }
         let fired = webizen.fire_registered_rules(crate::q_hash("q42:ingestSession"));
-        println!(
-            "Registered {} N3 Logic Rules; fired {} through Core-1 Sentinel VM.",
-            rules_parsed, fired
-        );
-        log::info!(
-            "Ontology Ingest: completed N3 parse for {} (rules parsed: {}, fired: {})",
-            in_path,
-            rules_parsed,
-            fired
+        report.emit(
+            IngestPhase::Parsing,
+            format!("N3: {rules_parsed} rules registered, {fired} fired"),
+            None,
         );
     } else {
-        drop(tx_raw);
-        return Err(io::Error::new(
-            io::ErrorKind::InvalidInput,
-            format!("unsupported RDF extension for {in_path}; expected .rdf, .xml, .owl, .ttl, .nt, or .n3"),
-        ));
+        const STREAM_AFTER: u64 = 32 * 1024 * 1024;
+        let src_len = std::fs::metadata(in_path).map(|m| m.len()).unwrap_or(u64::MAX);
+        if matches!(fmt, crate::query::ingest_job::IngestRdfFormat::Turtle)
+            && src_len <= STREAM_AFTER
+            && !stream_ttl
+        {
+            let raw = std::fs::read_to_string(in_path)?;
+            let expanded = expand_empty_turtle_prefixed_names(&raw);
+            if let Err(e) = crate::query::ingest_formats::parse_triples_format(
+                fmt,
+                Cursor::new(expanded),
+                base_iri.clone(),
+                &mut accept_raw,
+            ) {
+                parse_error = Some(e);
+            }
+        } else if matches!(fmt, crate::query::ingest_job::IngestRdfFormat::RdfXml)
+            && src_len <= STREAM_AFTER
+            && !stream_ttl
+        {
+            let raw = std::fs::read_to_string(in_path)?;
+            let repaired = match base_iri.as_ref() {
+                Some(base) => repair_rdfxml_empty_base(&raw, base.as_str()),
+                None => raw,
+            };
+            if let Err(e) = crate::query::ingest_formats::parse_triples_format(
+                fmt,
+                Cursor::new(repaired),
+                base_iri.clone(),
+                &mut accept_raw,
+            ) {
+                parse_error = Some(e);
+            }
+        } else if crate::query::ingest_resume::format_uses_prolog(fmt) {
+            let mut cap = crate::query::ingest_resume::PrefixCapture::new(source_reader);
+            {
+                let buf_reader = BufReader::new(CountingReader::new(&mut cap, report.clone()));
+                if let Err(e) = crate::query::ingest_formats::parse_triples_format(
+                    fmt,
+                    buf_reader,
+                    base_iri.clone(),
+                    &mut accept_raw,
+                ) {
+                    parse_error = Some(e);
+                }
+            }
+            captured_prolog = cap.prolog;
+        } else {
+            let buf_reader = BufReader::new(CountingReader::new(source_reader, report.clone()));
+            if let Err(e) = crate::query::ingest_formats::parse_triples_format(
+                fmt,
+                buf_reader,
+                base_iri.clone(),
+                &mut accept_raw,
+            ) {
+                parse_error = Some(e);
+            }
+        }
     }
 
+    if let Some(j) = job.as_ref() {
+        if !captured_prolog.is_empty() {
+            let _ = crate::query::ingest_resume::ResumeCursor {
+                schema: 1,
+                format: fmt,
+                byte_offset: 0,
+                triples: triples_read.load(std::sync::atomic::Ordering::Relaxed),
+                prolog: captured_prolog,
+                seekable: false,
+            }
+            .store(&j.dir);
+        }
+    }
+
+    let triples_read = triples_read.load(std::sync::atomic::Ordering::Relaxed);
     if let Some(error) = parse_error {
         drop(tx_raw);
         return Err(io::Error::new(
@@ -577,30 +771,43 @@ fn streaming_import_rdf_with_mode_inner(
     // Drop the main sender so workers know to terminate
     drop(tx_raw);
 
-    // 6. Join the workers first (this closes the collector's channel), merging each shard's lexicon
-    // into one hash→string map. First-writer-wins on hash collisions across shards — deterministic
-    // given the same input regardless of shard scheduling, since a given term always hashes to the same
-    // key.
-    let mut lexicon: HashMap<u64, String> = HashMap::new();
+    // 6. Join the workers first (this closes the collector's channel). Lexicon
+    // strings are already interned on the collector via spilling runs.
     for handle in worker_handles {
-        let shard = handle.join().unwrap();
-        if lexicon.is_empty() {
-            lexicon = shard;
-        } else {
-            for (k, v) in shard {
-                lexicon.entry(k).or_insert(v);
-            }
-        }
+        let _ = handle.join().map_err(|_| {
+            std::io::Error::other("Q42 ingest hasher shard panicked")
+        })?;
     }
 
-    let mut sorter = collector_handle
+    let sorter = collector_handle
         .join()
         .map_err(|_| std::io::Error::other("Q42 external-sort collector thread panicked"))??;
-    if mode == IngestMode::Complete {
-        for (hash, term) in &lexicon {
-            sorter.push_lex(*hash, term);
-        }
+    report.set_parse_ms(parse_started.elapsed().as_millis() as u64);
+    let interned_terms = sorter.lex_interned_count();
+    let lex_runs = sorter.lex_run_count();
+    if let Some(j) = job.as_mut() {
+        let _ = j.record_progress(
+            triples_read,
+            0,
+            sorter.quin_run_count() as u64,
+            lex_runs as u64,
+        );
     }
+    report.set_triples(triples_read);
+    report.set_interned(interned_terms);
+    report.emit(
+        IngestPhase::Sorting,
+        format!(
+            "parse finished: {triples_read} triples, {interned_terms} first-seen terms, {lex_runs} lexicon run(s)"
+        ),
+        None,
+    );
+    report.emit(
+        IngestPhase::Publishing,
+        "merging runs into Q42 volume",
+        None,
+    );
+    let publish_started = Instant::now();
     let total_written = match max_segment_bytes {
         Some(cap) => {
             sorter
@@ -609,6 +816,7 @@ fn streaming_import_rdf_with_mode_inner(
         }
         None => sorter.merge(std::path::Path::new(out_path))?,
     };
+    report.set_publish_ms(publish_started.elapsed().as_millis() as u64);
 
     // Lexicon byte size actually written — read back cheaply from the finished header (mmap, no
     // re-serialize) so the report reflects what is really on disk.
@@ -643,34 +851,52 @@ fn streaming_import_rdf_with_mode_inner(
     // 8. Honest reporting — state the mode and, for the lossy mode, that the size reduction is data
     // loss, NOT compression (CLAUDE.md §15: no claim-vs-reality gap).
     let src_bytes = std::fs::metadata(in_path).map(|m| m.len()).unwrap_or(0);
-    println!("✅ Import Complete!");
-    println!("Parsed {} triples.", triples_read);
     log::info!("Ontology Ingest: parsed {} triples", triples_read);
-    println!("Wrote {} Super-Quins to {}.", total_written, out_path);
-    println!("Ingest mode: {}", mode.label());
-    match mode {
-        IngestMode::Complete => {
-            println!(
-                "Lexicon: {} unique terms retained ({} bytes) — every URI and literal recoverable (full Unicode).",
-                lexicon.len(),
-                lex_length
-            );
-            println!(
-                "Source {} B → .q42 {} B (lossless: 48-byte structure + complete lexicon; reversible to the source terms).",
-                src_bytes, out_bytes
-            );
-        }
-        IngestMode::StripLiterals => {
-            println!(
-                "⚠  STRIP-LITERALS mode: human-readable text (URIs and literals) was DISCARDED and is NOT recoverable."
-            );
-            println!(
-                "Source {} B → .q42 {} B. This size reduction is DATA LOSS (structure-only), not compression.",
-                src_bytes, out_bytes
-            );
-        }
+    let summary = match mode {
+        IngestMode::Complete => format!(
+            "complete: {triples_read} triples, {total_written} Super-Quins, {interned_terms} first-seen terms, lexicon {lex_length} B, source {src_bytes} B → {out_bytes} B (lossless) in {duration:?}"
+        ),
+        IngestMode::StripLiterals => format!(
+            "complete STRIP-LITERALS (data loss, not compression): {triples_read} triples, {total_written} Super-Quins, source {src_bytes} B → {out_bytes} B in {duration:?}"
+        ),
+    };
+    report.emit(IngestPhase::Complete, summary, Some(out_path.to_string()));
+    if let Some(j) = job.as_mut() {
+        let full = digest_outcome
+            .full
+            .lock()
+            .ok()
+            .and_then(|g| *g);
+        let windows = crate::query::ingest_job::read_window_hashes(&j.windows_path())
+            .unwrap_or_default();
+        let commit = crate::query::ingest_job::window_commitment(&windows);
+        let att = crate::query::ingest_job::SourceAttestation {
+            locator: j.spec.source.locator().to_string(),
+            encoding: j.spec.encoding,
+            format: j.spec.format,
+            uncompressed_bytes: digest_outcome
+                .bytes
+                .load(std::sync::atomic::Ordering::Relaxed),
+            wire_bytes: None,
+            triples: triples_read,
+            uncompressed_sha256_hex: full.map(|d| crate::query::ingest_job::hex_encode(&d)),
+            wire_sha256_hex: None,
+            window_commitment_hex: if windows.is_empty() {
+                None
+            } else {
+                Some(crate::query::ingest_job::hex_encode(&commit))
+            },
+            window_bytes: crate::query::ingest_job::WINDOW_BYTES as u64,
+            window_count: windows.len() as u64,
+            etag: None,
+            content_length: None,
+            retrieved_unix: crate::query::ingest_job::unix_now(),
+        };
+        let _ = j.write_attestation(&att);
+        let sidecar = std::path::Path::new(out_path).with_extension("q42.source.json");
+        let _ = crate::query::ingest_job::write_json_atomic(&sidecar, &att);
+        let _ = j.set_phase(crate::query::ingest_job::IngestJobPhase::Complete);
     }
-    println!("Total Time: {:?}", duration);
     let total_superblocks =
         (total_written + (crate::QUINS_PER_BLOCK as u64) - 1) / crate::QUINS_PER_BLOCK as u64;
     log::info!(
@@ -799,6 +1025,105 @@ mod tests {
         let volume = crate::q42_volume::Q42Volume::open(&output).unwrap();
         assert_eq!(volume.block_count(), 1);
         assert!(volume.lex_view().unwrap().entry_count() >= 3);
+    }
+
+    #[test]
+    fn skip_n_replays_without_rehashing_and_ticks_skip_phase() {
+        let dir = TempDir::new().unwrap();
+        let input = dir.path().join("in.nt");
+        let output = dir.path().join("out.q42");
+        std::fs::write(
+            &input,
+            "<http://ex/s1> <http://ex/p> <http://ex/o1> .\n\
+             <http://ex/s2> <http://ex/p> <http://ex/o2> .\n",
+        )
+        .unwrap();
+        let job_dir = dir.path().join("job");
+        let mut job = ingest_job::IngestJob::create(
+            job_dir.clone(),
+            ingest_job::IngestSourceKind::File {
+                path: input.to_string_lossy().into_owned(),
+            },
+            ingest_job::IngestEncoding::Identity,
+            ingest_job::IngestRdfFormat::NTriples,
+            IngestMode::Complete,
+            None,
+            &output,
+        )
+        .unwrap();
+        job.record_progress(1, 0, 0, 0).unwrap();
+        let phases = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
+        let slot = phases.clone();
+        let report = IngestReport::new(1, move |s| slot.lock().unwrap().push(s.phase));
+        let written = streaming_import_rdf_with_job(&job_dir, report).unwrap();
+        assert_eq!(written, 1, "only the unskipped triple is hashed");
+        let seen = phases.lock().unwrap().clone();
+        assert!(
+            seen.contains(&IngestPhase::Skipping),
+            "skip must be visible in progress: {seen:?}"
+        );
+        assert!(job_dir.join("progress.json").is_file());
+    }
+
+    #[test]
+    fn multi_format_ingest_hashes_the_same_iri() {
+        let dir = TempDir::new().unwrap();
+        let samples: &[(&str, &str)] = &[
+            (
+                "in.nt",
+                "<http://ex/s> <http://ex/p> <http://ex/keep> .\n",
+            ),
+            (
+                "in.ttl",
+                "@prefix ex: <http://ex/> .\nex:s ex:p ex:keep .\n",
+            ),
+            (
+                "in.jsonld",
+                r#"{"@id":"http://ex/s","http://ex/p":{"@id":"http://ex/keep"}}"#,
+            ),
+            (
+                "in.yamlld",
+                "\"@id\": http://ex/s\n\"http://ex/p\":\n  \"@id\": http://ex/keep\n",
+            ),
+            (
+                "in.rj",
+                r#"{"http://ex/s":{"http://ex/p":[{"type":"uri","value":"http://ex/keep"}]}}"#,
+            ),
+            (
+                "in.rdf",
+                r#"<?xml version="1.0"?>
+<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+         xmlns:ex="http://ex/">
+  <rdf:Description rdf:about="http://ex/s">
+    <ex:p rdf:resource="http://ex/keep"/>
+  </rdf:Description>
+</rdf:RDF>"#,
+            ),
+        ];
+        let needle = crate::query::ingest_formats::object_iri_hash("http://ex/keep");
+        for (name, body) in samples {
+            let input = dir.path().join(name);
+            let output = dir.path().join(format!("{name}.q42"));
+            std::fs::write(&input, body).unwrap();
+            streaming_import_rdf_with_mode(
+                input.to_str().unwrap(),
+                output.to_str().unwrap(),
+                IngestMode::Complete,
+            )
+            .unwrap();
+            let mut scratch = vec![NQuin::default(); 8];
+            let mut out = vec![NQuin::default(); 8];
+            let (hit, scanned) = crate::query::graph_accel::sieve_volume_file(
+                &output,
+                crate::query::graph_accel::QuinField::Object,
+                needle,
+                &mut scratch,
+                &mut out,
+            )
+            .unwrap();
+            assert_eq!(scanned, 1, "{name} scanned");
+            assert_eq!(hit.written, 1, "{name} missed object hash {needle:#x}");
+        }
     }
 
     #[test]

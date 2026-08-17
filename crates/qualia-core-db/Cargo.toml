@@ -89,6 +89,7 @@ neon_simd_unroll = []
 vm_tracing = []
 
 [dependencies]
+poet-vibe = { path = "../poet-vibe" }
 qualia-inference-kernel = { path = "../qualia-inference-kernel" }
 minicbor = { version = "2.2.2", features = ["std"] }
 futures-core = { version = "0.3", default-features = false }
@@ -247,6 +248,7 @@ tower-http = { version = "0.7", features = ["fs", "cors", "set-header"] }
 tokio-stream = { version = "0.1.18", features = ["sync"] }
 http-body-util = "0.1.3"
 zstd = "0.13"
+flate2 = "1"
 # Permissive pure-Rust image codecs (D1.10): PNG (MIT/Apache) + baseline JPEG (MIT/Apache).
 png = "0.17"
 jpeg-decoder = "0.3"

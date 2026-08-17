@@ -5,8 +5,8 @@ use std::path::PathBuf;
 use qualia_core_db::NQuin;
 
 use crate::cli::{
-    CompileAction, ExtensionAction, GovernanceAction, IngestFormat, MigrateAction, ProfileAction,
-    Q42Action, QueryDialect, ShaclAction,
+    CompileAction, ExtensionAction, GovernanceAction, IngestFormat, IngestJobAction, MigrateAction,
+    ProfileAction, Q42Action, QueryDialect, ShaclAction,
 };
 use crate::sparql::run_sparql_query;
 
@@ -436,46 +436,251 @@ pub fn handle_verify_graph(
 }
 
 pub fn handle_import(
-    input: &PathBuf,
+    input: Option<&PathBuf>,
     output: &PathBuf,
     strip_literals: bool,
     segment_mib: Option<u64>,
+    progress: crate::cli::ImportProgressFormat,
+    verbose: u8,
+    url: Option<&str>,
+    job_dir: Option<&PathBuf>,
+    resume: bool,
 ) {
-    println!("============================================================");
-    println!("📥 QualiaDB Native RDF/XML Ingestion Pipeline");
-    println!("============================================================");
-
-    let in_path = input.to_string_lossy().to_string();
-    let out_path = output.to_string_lossy().to_string();
-    let mode = if strip_literals {
-        qualia_core_db::ingest::IngestMode::StripLiterals
-    } else {
-        qualia_core_db::ingest::IngestMode::Complete
+    use crate::cli::ImportProgressFormat;
+    use qualia_core_db::ingest::{
+        streaming_import_rdf_with_job, streaming_import_rdf_with_report, IngestMode, IngestReport,
+    };
+    use qualia_core_db::ingest_job::{
+        infer_rdf_format, IngestJob, IngestSourceKind,
     };
 
-    let result = match segment_mib {
-        Some(mib) => match mib.checked_mul(1024 * 1024) {
-            Some(bytes) if bytes != 0 => {
-                println!("Publishing a Q42 logical volume with {mib} MiB child cap.");
-                qualia_core_db::ingest::streaming_import_rdf_volume_set_with_mode(
-                    &in_path, &out_path, mode, bytes,
-                )
-            }
-            _ => Err(std::io::Error::new(
-                std::io::ErrorKind::InvalidInput,
-                "--segment-mib must be greater than zero",
-            )),
-        },
-        None => qualia_core_db::ingest::streaming_import_rdf_with_mode(&in_path, &out_path, mode),
+    if progress != ImportProgressFormat::Json {
+        eprintln!("============================================================");
+        eprintln!("QualiaDB RDF → Q42 ingest");
+        eprintln!("============================================================");
+        eprintln!("Use -v / -vv for process stats. --progress json emits NDJSON for UIs.");
+        eprintln!("Stream URL with --url (gzip/zstd in-flight). Durable jobs: --job-dir.");
+    }
+
+    let report = match progress {
+        ImportProgressFormat::Text => IngestReport::text_stderr(verbose),
+        ImportProgressFormat::Json => IngestReport::json_stdout(verbose),
+        ImportProgressFormat::None => IngestReport::silent(),
     };
-    match result {
-        Ok(quin_count) => {
-            println!("✨ Done! Wrote {quin_count} Super-Quins.");
+
+    if resume {
+        let Some(dir) = job_dir else {
+            eprintln!("--resume requires --job-dir");
+            return;
+        };
+        match streaming_import_rdf_with_job(dir, report) {
+            Ok(n) => eprintln!("Continue finished. Super-Quins written: {n}"),
+            Err(e) => eprintln!("Continue failed: {e}"),
         }
-        Err(e) => {
-            eprintln!("❌ Import Failed: {}", e);
+        return;
+    }
+
+    let source = if let Some(url) = url {
+        IngestSourceKind::Url {
+            url: url.to_string(),
+        }
+    } else if let Some(path) = input {
+        IngestSourceKind::File {
+            path: path.to_string_lossy().into_owned(),
+        }
+    } else {
+        eprintln!("import needs an input path or --url");
+        return;
+    };
+
+    let mode = if strip_literals {
+        IngestMode::StripLiterals
+    } else {
+        IngestMode::Complete
+    };
+
+    if let Some(dir) = job_dir {
+        let locator = source.locator().to_string();
+        let encoding = qualia_core_db::ingest_job::detect_encoding(&locator, None, &[]);
+        let format = infer_rdf_format(&locator);
+        if let Err(e) = IngestJob::create(
+            dir.clone(),
+            source,
+            encoding,
+            format,
+            mode,
+            segment_mib,
+            output,
+        ) {
+            eprintln!("Could not create job dir: {e}");
+            return;
+        }
+        match streaming_import_rdf_with_job(dir, report) {
+            Ok(n) => eprintln!("Done. Super-Quins written: {n}"),
+            Err(e) => eprintln!("Import failed: {e}"),
+        }
+        return;
+    }
+
+    let IngestSourceKind::File { path } = source else {
+        eprintln!("--url requires --job-dir so the stream can be attested and resumed policy is explicit");
+        return;
+    };
+
+    let segment_bytes = match segment_mib {
+        Some(mib) => match mib.checked_mul(1024 * 1024) {
+            Some(bytes) if bytes != 0 => Some(bytes),
+            _ => {
+                eprintln!("--segment-mib must be greater than zero");
+                return;
+            }
+        },
+        None => None,
+    };
+
+    match streaming_import_rdf_with_report(&path, &output.to_string_lossy(), mode, segment_bytes, report)
+    {
+        Ok(quin_count) => {
+            if progress != ImportProgressFormat::Json {
+                eprintln!("Done. Wrote {quin_count} Super-Quins to {}.", output.display());
+            }
+        }
+        Err(e) => eprintln!("Import failed: {e}"),
+    }
+}
+
+pub fn handle_ingest_job(
+    action: &IngestJobAction,
+) -> Result<(), Box<dyn std::error::Error>> {
+    use qualia_core_db::ingest_job::{
+        adopt_legacy_scratch, append_rdf_to_root, compare_attestation_file_to_path, inspect_job,
+        inspect_legacy_scratch, inspect_volume_root, job_status, publish_job, IngestJob,
+        IngestSourceKind,
+    };
+    use qualia_core_db::ingest::{streaming_import_rdf_with_job, IngestMode, IngestReport};
+
+    match action {
+        IngestJobAction::Status { dir, watch } => loop {
+            let st = job_status(dir)?;
+            println!("{}", st.summary);
+            if !*watch {
+                println!("dir: {}", st.dir);
+                println!("checkpoint: {:?} accepted {}", st.phase, st.accepted_triples);
+                println!(
+                    "chunks: {}  lex: {}  runs: {}",
+                    st.quin_chunks, st.lex_runs, st.run_bytes
+                );
+                println!("source: {}", st.source);
+                println!(
+                    "output: {} ({})",
+                    st.output,
+                    if st.output_exists { "present" } else { "none" }
+                );
+                println!("resumable: {}  complete: {}", st.resumable, st.complete);
+                if let Some(live) = &st.live {
+                    println!("live: {}", live.format_text(1));
+                } else {
+                    println!("live: no progress.json (this continue predates skip ticks)");
+                }
+                if let Some(att) = IngestJob::open(dir.clone())?.load_attestation()? {
+                    println!("attestation: {}", att.verify_story());
+                }
+                break;
+            }
+            if st.complete {
+                println!("complete");
+                break;
+            }
+            std::thread::sleep(std::time::Duration::from_secs(2));
+        },
+        IngestJobAction::Inspect { path } => {
+            let report = if path.join("job.json").is_file() {
+                inspect_job(path)?
+            } else if path.extension().and_then(|e| e.to_str()) == Some("q42") {
+                inspect_volume_root(path)?
+            } else {
+                inspect_legacy_scratch(path)?
+            };
+            println!("{}", serde_json::to_string_pretty(&report)?);
+        }
+        IngestJobAction::Compare {
+            attestation,
+            against,
+        } => {
+            let kind = if against.contains("://") {
+                IngestSourceKind::Url {
+                    url: against.clone(),
+                }
+            } else {
+                IngestSourceKind::File {
+                    path: against.clone(),
+                }
+            };
+            let report = compare_attestation_file_to_path(attestation, &kind)?;
+            println!("{}", serde_json::to_string_pretty(&report)?);
+        }
+        IngestJobAction::Continue { dir, detach } => {
+            if *detach {
+                let pid = spawn_detached_continue(dir)?;
+                println!(
+                    "detached continue pid {pid}; log {}",
+                    dir.join("continue.log").display()
+                );
+                return Ok(());
+            }
+            let n = streaming_import_rdf_with_job(dir, IngestReport::text_stderr(1))?;
+            println!("continue wrote {n} Super-Quins");
+        }
+        IngestJobAction::Publish { dir, detach } => {
+            if *detach {
+                let pid = spawn_detached_publish(dir)?;
+                println!(
+                    "detached publish pid {pid}; log {}",
+                    dir.join("publish.log").display()
+                );
+                return Ok(());
+            }
+            let n = publish_job(dir, IngestReport::text_stderr(1))?;
+            println!("publish wrote {n} Super-Quins");
+        }
+        IngestJobAction::AdoptScratch {
+            scratch,
+            out_job,
+            source,
+            output,
+            segment_mib,
+        } => {
+            let job = adopt_legacy_scratch(
+                scratch,
+                out_job.clone(),
+                source,
+                output,
+                IngestMode::Complete,
+                *segment_mib,
+            )?;
+            println!(
+                "adopted into {} ({} triples, {} chunks). Then: qualia-cli ingest-job continue {}",
+                job.dir.display(),
+                job.checkpoint.triples,
+                job.checkpoint.quin_chunks,
+                job.dir.display()
+            );
+        }
+        IngestJobAction::Append { root, extra, url } => {
+            let kind = if let Some(u) = url {
+                IngestSourceKind::Url { url: u.clone() }
+            } else if let Some(p) = extra {
+                IngestSourceKind::File {
+                    path: p.to_string_lossy().into_owned(),
+                }
+            } else {
+                return Err("append needs extra path or --url".into());
+            };
+            let n = append_rdf_to_root(root, &kind, IngestReport::text_stderr(1))?;
+            println!("appended {n} Super-Quins onto {}", root.display());
         }
     }
+    Ok(())
 }
 
 pub fn handle_ingest(format: &IngestFormat) {
@@ -525,6 +730,58 @@ pub fn handle_ingest(format: &IngestFormat) {
             }
         }
     }
+}
+
+fn spawn_detached_continue(dir: &std::path::Path) -> Result<u32, Box<dyn std::error::Error>> {
+    let exe = std::env::current_exe()?;
+    let log_path = dir.join("continue.log");
+    let log = std::fs::File::create(&log_path)?;
+    let err = log.try_clone()?;
+    let mut cmd = std::process::Command::new(exe);
+    cmd.arg("ingest-job")
+        .arg("continue")
+        .arg(dir)
+        .stdin(std::process::Stdio::null())
+        .stdout(std::process::Stdio::from(log))
+        .stderr(std::process::Stdio::from(err));
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        const CREATE_BREAKAWAY_FROM_JOB: u32 = 0x0100_0000;
+        const DETACHED_PROCESS: u32 = 0x0000_0008;
+        const CREATE_NEW_PROCESS_GROUP: u32 = 0x0000_0200;
+        cmd.creation_flags(
+            CREATE_BREAKAWAY_FROM_JOB | DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP,
+        );
+    }
+    let child = cmd.spawn()?;
+    Ok(child.id())
+}
+
+fn spawn_detached_publish(dir: &std::path::Path) -> Result<u32, Box<dyn std::error::Error>> {
+    let exe = std::env::current_exe()?;
+    let log_path = dir.join("publish.log");
+    let log = std::fs::File::create(&log_path)?;
+    let err = log.try_clone()?;
+    let mut cmd = std::process::Command::new(exe);
+    cmd.arg("ingest-job")
+        .arg("publish")
+        .arg(dir)
+        .stdin(std::process::Stdio::null())
+        .stdout(std::process::Stdio::from(log))
+        .stderr(std::process::Stdio::from(err));
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        const CREATE_BREAKAWAY_FROM_JOB: u32 = 0x0100_0000;
+        const DETACHED_PROCESS: u32 = 0x0000_0008;
+        const CREATE_NEW_PROCESS_GROUP: u32 = 0x0000_0200;
+        cmd.creation_flags(
+            CREATE_BREAKAWAY_FROM_JOB | DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP,
+        );
+    }
+    let child = cmd.spawn()?;
+    Ok(child.id())
 }
 
 pub fn handle_query(dialect: &QueryDialect) {

@@ -26,6 +26,7 @@ tower-http = { version = "0.7", features = ["cors", "fs", "set-header"] }
 base64 = "0.22"
 open = "5"
 qualia-core-db = { path = "../qualia-core-db" }
+poet-vibe = { path = "../poet-vibe" }
 qualia-client-core = { path = "../qualia-client-core" }
 qualia-vision = { path = "../qualia-vision" }
 wellfare-core = { path = "../wellfare-core" }

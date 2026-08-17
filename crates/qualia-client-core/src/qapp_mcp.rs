@@ -111,7 +111,7 @@ pub fn describe_qapp_surface_schema_json() -> Result<String, String> {
         layout_strategies: vec!["PointGrid", "CssGrid", "FlexBox", "Masonry"],
         presentation_modes: vec!["GridBound", "NodeRelational", "Spatial"],
         coordinate_spaces: vec!["GlobalCartesian", "RelativeAnchored"],
-        layer_behaviors: vec!["Docked", "FloatingOverlay", "ModalOverlay", "FullCanvas"],
+        layer_behaviors: vec!["Docked", "FloatingOverlay", "ModalOverlay", "FullManifold"],
         theme_scopes: vec!["environment", "app", "page", "module"],
         manifest_surfaces: vec![
             "static-web",

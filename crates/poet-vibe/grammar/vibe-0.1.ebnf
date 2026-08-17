@@ -1,0 +1,12 @@
+(* vibe-0.1 — copy of vibescript-core.md §3. Normative source is that document. *)
+Program        ::= ModuleDecl? ImportDecl* PrefixDecl* RequiresDecl? Item* ;
+ModuleDecl     ::= 'module' (IRI | Identifier) ';' ;
+ImportDecl     ::= 'import' StringLiteral ('as' Identifier)? ';' ;
+PrefixDecl     ::= 'prefix' Identifier ':' IRI ';' ;
+RequiresDecl   ::= 'requires' '[' CapList? ']' ';' ;
+CapList        ::= CapSpec (',' CapSpec)* ;
+CapSpec        ::= 'capability' '(' StringLiteral (',' NamedArg)* ')' ;
+Item           ::= FunctionDecl | HookDecl | ConstDecl | Statement ;
+FunctionDecl   ::= EffectClass? 'async'? 'fn' Identifier '(' Params? ')' BudgetClause? ('->' Type)? Block ;
+HookDecl       ::= 'on' EventPath '(' Params? ')' BudgetClause? ('->' Type)? Block ;
+CellBody       ::= '=' Expression ;

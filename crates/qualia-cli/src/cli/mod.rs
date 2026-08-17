@@ -21,7 +21,7 @@ pub use solve::{
 };
 pub use webizen::WebizenAction;
 
-use clap::{Parser, Subcommand};
+use clap::{Parser, Subcommand, ValueEnum};
 use std::path::PathBuf;
 
 use crate::{daemon, mcp, mesh, service, shader};
@@ -41,6 +41,15 @@ pub struct Cli {
 
     #[command(subcommand)]
     pub command: Commands,
+}
+
+/// How `import` reports work-in-progress (CLI humans vs UI parsers).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, ValueEnum)]
+pub enum ImportProgressFormat {
+    #[default]
+    Text,
+    Json,
+    None,
 }
 
 #[derive(Subcommand, Debug)]
@@ -161,13 +170,30 @@ pub enum Commands {
         temp_gib: u64,
     },
     Import {
-        input: PathBuf,
+        input: Option<PathBuf>,
         output: PathBuf,
         #[arg(long)]
         strip_literals: bool,
         /// Publish an embedded-manifest root plus child Q42 segments capped at this size.
         #[arg(long)]
         segment_mib: Option<u64>,
+        /// Progress stream: human text (default), JSON lines for UIs, or silent.
+        #[arg(long, value_enum, default_value_t = ImportProgressFormat::Text)]
+        progress: ImportProgressFormat,
+        /// Stream RDF from this URL (gzip/zstd decoded in-flight). No second copy of the source.
+        #[arg(long)]
+        url: Option<String>,
+        /// Durable job directory (checkpoint + runs). Survives a crash; use `ingest-job continue`.
+        #[arg(long)]
+        job_dir: Option<PathBuf>,
+        /// Resume `--job-dir` instead of starting over.
+        #[arg(long)]
+        resume: bool,
+    },
+    /// Review, compare, continue, or append ingest jobs (including incomplete ones).
+    IngestJob {
+        #[command(subcommand)]
+        action: IngestJobAction,
     },
     Ingest {
         #[command(subcommand)]

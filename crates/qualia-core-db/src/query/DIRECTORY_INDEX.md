@@ -19,6 +19,7 @@ Comprehensive index of functionality for `query`. This document serves as the gr
   - `fn test_gatekeeper_rejects_turtle`
   - `fn test_parse_cbor_ld_dictionary`
   - `fn test_parse_cbor_buffer_overflow`
+- 📁 `graph_accel/` — GPU-first NQuin/u64 radix sort, field sieve, sort-merge join; CPU floor always.
 - 📄 `graph_index.rs`
   - `struct RevisionCache`
   - `fn with`
@@ -45,7 +46,21 @@ Comprehensive index of functionality for `query`. This document serves as the gr
 - 📄 `ingest.rs`
   - `struct RawTriple`
   - `fn streaming_import_rdf`
+  - `fn streaming_import_rdf_with_report`
   - `fn verify_integrity`
+- 📄 `ingest_formats.rs`
+  - multi-format RDF dispatch: Turtle, N-Triples, N-Quads, TriG, RDF/XML, N3, JSON-LD, YAML-LD, RDF/JSON, CBOR-LD
+  - `fn pack_rio_triple` stores bare IRIs (not Rio Display `<>`)
+  - `fn object_iri_hash` 60-bit object-field hash
+- 📄 `ingest_resume.rs`
+  - line-skip NT/NQ; PrefixCapture for Turtle/TriG; `resume.json`
+- 📄 `ingest_report.rs`
+  - `enum IngestPhase`
+  - `struct IngestSnapshot`
+  - `struct IngestReport`
+  - `struct CountingReader`
+- 📁 `ingest_job/`
+  - durable jobs: inspect, compare, continue, adopt-scratch, append, stream+attest
 - 📄 `ingestion.rs`
   - `trait ZeroCopyStream`
   - `fn stream_parse`

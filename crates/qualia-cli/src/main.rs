@@ -117,8 +117,25 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             output,
             strip_literals,
             segment_mib,
+            progress,
+            url,
+            job_dir,
+            resume,
         } => {
-            handlers::misc::handle_import(input, output, *strip_literals, *segment_mib);
+            handlers::misc::handle_import(
+                input.as_ref(),
+                output,
+                *strip_literals,
+                *segment_mib,
+                *progress,
+                cli.verbose,
+                url.as_deref(),
+                job_dir.as_ref(),
+                *resume,
+            );
+        }
+        Commands::IngestJob { action } => {
+            handlers::misc::handle_ingest_job(action)?;
         }
         Commands::Query { dialect } => {
             handlers::misc::handle_query(dialect);
