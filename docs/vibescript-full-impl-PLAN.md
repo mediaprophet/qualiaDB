@@ -1,0 +1,310 @@
+# VibeScript Full Implementation Plan
+
+**Created:** 2026-08-18
+**Author:** Devin (commissioned work, assigned to Timothy Charles Holborn)
+**Status:** Draft — awaiting Timothy's review before execution
+
+---
+
+## 0. Goal
+
+Fully implement VibeScript so that:
+1. Every `capability.invoke` ID listed in the engine's WASM export surface is wrapped and tested.
+2. The 0.1 binding profile is truthfully "live" (not "partial") wherever the daemon graph supports it.
+3. Domain coverage is complete: physics (EMF, wave, interference, Doppler, attenuation), spectral/color, geometry/SVG, CSS animation output, and all existing specialized libs.
+4. Reactive cells can drive visual output — a cell computes field values from graph-stated parameters, and the output generates CSS/SVG animation properties that truthfully reflect the underlying physics.
+5. The golden corpus covers all domain verticals with parseable, evaluable examples.
+
+---
+
+## 1. Current state (as of 2026-08-18)
+
+### Implemented and tested
+
+| Area | Status | Tests |
+|---|---|---|
+| Language core (lexer, parser, checker, AST interpreter) | Complete | 25 poet-vibe tests |
+| 0.1 binding profile (math, rdf, quin, graph, aura, pulse, capability, time) | Complete | All §12/§13 fixtures pass |
+| Hook dispatch (`on pulse:message`, `on tick`) | Complete | 4 hook dispatch tests |
+| User-defined function resolution | Complete | §12.2 CLINIC module works end-to-end |
+| Pulse transport (broadcast channel + SSE `/pulse/events`) | Complete | 5 pulse tests |
+| 27 `capability.invoke` wrappers (math, crypto, stats, graph, geometry, etc.) | Complete | 89 poet_host tests |
+| WASM compilation (`wasm32-unknown-unknown`) | Clean | `cargo check` passes |
+| Desktop harness (eval, recompute, cells, gazetteer, capabilities, dispatch_hook) | Complete | `cargo check` passes |
+
+### Existing engine infrastructure (not yet wrapped as `capability.invoke`)
+
+| Area | Engine code | What it does |
+|---|---|---|
+| EMF → spectral → color | `render/spectral_kernel.rs` | `emf_to_spd(alpha, mu, sigma)` → `spd_to_xyz` → `emf_to_linear_rgb` |
+| Spectral oracle + golden vectors | `render/spectral_oracle.rs` | EMF input → expected XYZ outputs, determinism harness |
+| Spectral blend/operator | `render/spectral_blend.rs`, `render/spectral_operator.rs` | Spectral mixing, metamerism, colour pipeline operations |
+| GPU colour kernel | `render/gpu_colour_kernel.rs` | CPU/GPU differential for EMF → display gamut mapping |
+| Wave equation | `specialized_libs/physics_simulation/fields.rs` | `run_wave_equation_1d(u0, v0, c, dx, dt, steps)` — real wave PDE solver |
+| Heat diffusion | `specialized_libs/physics_simulation/fields.rs` | `run_heat_diffusion_1d(u0, alpha, dx, dt, steps)` — real diffusion PDE |
+| Advection-diffusion | `specialized_libs/physics_simulation/fields.rs` | `run_advection_diffusion_1d(u0, v, c, dx, dt, steps)` |
+| Harmonic oscillator | `specialized_libs/physics_simulation/mechanics.rs` | `run_harmonic_oscillator(k, m, x0, v0, dt, steps)` — symplectic integrator |
+| Pendulum | `specialized_libs/physics_simulation/mechanics.rs` | `run_pendulum(L, g, theta0, dt, steps)` |
+| N-body gravitation | `specialized_libs/physics_simulation/nbody.rs` | `run_nbody_gravitation(bodies, dt, steps)` |
+| Molecular dynamics | `specialized_libs/physics_simulation/molecular_dynamics.rs` | `run_molecular_dynamics(...)` — Lennard-Jones, velocity-Verlet |
+| CFD | `specialized_libs/physics_simulation/cfd.rs`, `solvers.rs` | `run_cfd_simulation(...)`, `solve_cfd_step(...)` |
+| Quantum stationary states | `specialized_libs/physics_simulation/quantum.rs` | `run_quantum_stationary_states_1d(potential, ...)` |
+| Population dynamics | `specialized_libs/physics_simulation/population.rs` | `run_logistic_growth(n0, r, k, dt, steps)` |
+| Boundary conditions | `specialized_libs/physics_simulation/...` | Dirichlet, Neumann, periodic, time-dependent |
+| CFL/time-step control | `specialized_libs/physics_simulation/time_integration.rs` | `compute_cfl_dt`, `compute_diffusion_dt`, adaptive stepping |
+| Render scene | `poet_host/invoke/render/scene.rs` | `Render.scene` — builds node/edge/face records |
+| Render infrastructure | `render/` (40+ files) | LOD chains, camera, projection, gamut, metamer, PGA, bloom, particles, WebGL2, assets, authoring, control, navigation, telemetry, time_scrub |
+
+### Not yet implemented
+
+| Area | What's needed |
+|---|---|
+| Physics `capability.invoke` wrappers | Wave, heat, advection, oscillator, pendulum, N-body, MD, CFD, quantum, population — none are wrapped as Vibe invoke IDs |
+| EMF/spectral `capability.invoke` wrappers | `emf_to_spd`, `spd_to_xyz`, `emf_to_linear_rgb`, spectral blend/operator — not wrapped |
+| CSS/SVG output | No binding generates CSS animation properties or SVG elements from computed values |
+| Interference/Doppler/attenuation | Not in the physics lib — needs new functions for EMF wave superposition, Doppler shift, inverse-square attenuation |
+| Reactive animation loop | `on tick()` hook exists but no desktop harness loop drives it on a timer |
+| Golden corpus domain coverage | Only clinic/catchment examples; no physics, spectral, geometry, or animation examples |
+| Graph honesty labels | `graph.read`/`graph.write` still labeled "partial" in catalog despite daemon wiring being live |
+
+---
+
+## 2. Implementation phases
+
+### Phase A: Physics capability.invoke wrappers (medium)
+
+Wrap the existing physics simulation library functions as `capability.invoke` IDs so Vibe scripts can call them.
+
+**New invoke IDs:**
+- `Physics.wave_1d` — wave equation solver
+- `Physics.heat_diffusion_1d` — heat diffusion solver
+- `Physics.advection_diffusion_1d` — advection-diffusion solver
+- `Physics.harmonic_oscillator` — symplectic harmonic oscillator
+- `Physics.pendulum` — pendulum solver
+- `Physics.n_body` — N-body gravitation
+- `Physics.molecular_dynamics` — MD with Lennard-Jones
+- `Physics.cfd_step` — single CFD step
+- `Physics.quantum_states_1d` — quantum stationary states
+- `Physics.logistic_growth` — population dynamics
+- `Physics.projectile` — already wrapped (`PhysicsAndODE.projectile`)
+
+**Files to touch:**
+- `crates/qualia-core-db/src/poet_host/invoke/ids.rs` — new ID constants
+- `crates/qualia-core-db/src/poet_host/invoke/science/physics.rs` — expand from 1 function to 10
+- `crates/qualia-core-db/src/poet_host/invoke/mod.rs` — wire dispatch arms
+- `crates/qualia-core-db/src/poet_host/invoke/coverage.rs` — update WASM suggested invoke
+
+**Tests:** One per invoke ID, verifying real solver output (not stubs).
+
+**Estimated effort:** ~10 new functions, each wrapping an existing solver. Medium — the solvers exist, the work is argument marshalling and result shaping.
+
+---
+
+### Phase B: EMF + spectral capability.invoke wrappers (medium)
+
+Wrap the EMF → spectral → color pipeline so Vibe scripts can compute color from field parameters.
+
+**New invoke IDs:**
+- `Spectral.emf_to_spd` — EMF parameters → spectral power distribution
+- `Spectral.spd_to_xyz` — SPD → CIE XYZ
+- `Spectral.emf_to_rgb` — EMF parameters → linear sRGB
+- `Spectral.blend` — spectral blending (metamerism-aware)
+- `Spectral.gamut_map` — gamut mapping for display
+
+**Files to touch:**
+- `crates/qualia-core-db/src/poet_host/invoke/render/` — new `spectral.rs` submodule
+- `crates/qualia-core-db/src/poet_host/invoke/ids.rs` — new ID constants
+- `crates/qualia-core-db/src/poet_host/invoke/mod.rs` — wire dispatch arms
+- `crates/qualia-core-db/src/poet_host/invoke/coverage.rs` — update WASM suggested invoke
+
+**Tests:** One per invoke ID, verifying real spectral output against golden vectors.
+
+**Estimated effort:** Medium — the spectral kernel exists and is tested; the work is wrapping it in the invoke dispatch pattern.
+
+---
+
+### Phase C: EMF interference, Doppler, attenuation (new physics)
+
+These are the functions Timothy specifically asked about — EMF frequency shifts due to interference, distance, and relative motion.
+
+**New functions to implement:**
+- `Physics.emf_interference` — superposition of N EMF sources at a point: given source positions, frequencies, amplitudes, and phases, compute the resultant field amplitude and observed frequency at an observation point.
+- `Physics.emf_attenuation` — inverse-square law + atmospheric absorption: given source power, frequency, distance, and medium properties, compute received signal strength.
+- `Physics.doppler_shift` — relativistic Doppler: given source frequency, relative velocity, and geometry, compute observed frequency.
+- `Physics.emf_field_grid` — compute EMF field values over a 2D grid from N sources, for visualization. Returns a grid of (amplitude, phase, frequency) tuples.
+
+**Files to touch:**
+- `crates/qualia-core-db/src/specialized_libs/physics_simulation/` — new `emf.rs` submodule
+- `crates/qualia-core-db/src/poet_host/invoke/science/physics.rs` — wrap the new functions
+- `crates/qualia-core-db/src/poet_host/invoke/ids.rs` — new IDs
+
+**Tests:** Analytical verification — two-source interference pattern, known Doppler ratios, inverse-square at known distances.
+
+**Estimated effort:** Medium-high — these are new implementations, not wrappers. The math is well-defined (wave superposition, Doppler formula, inverse-square), but the grid computation and argument marshalling need care.
+
+---
+
+### Phase D: CSS/SVG output bindings (new)
+
+Enable Vibe scripts to generate CSS animation properties and SVG elements from computed values.
+
+**New invoke IDs:**
+- `Render.css_animation` — given a value curve (list of (time, value) pairs) and a CSS property name, generate `@keyframes` CSS text.
+- `Render.svg_path` — given a list of (x, y) points, generate SVG path data (`d="M x y L x y ..."`).
+- `Render.svg_circle` / `Render.svg_rect` / `Render.svg_line` — generate individual SVG elements from parameters.
+- `Render.svg_field` — given a 2D field grid (from `Physics.emf_field_grid`), generate SVG elements representing the field (circles sized by amplitude, colored by phase/frequency).
+- `Render.css_color` — given EMF parameters, compute the CSS color string (via the spectral pipeline).
+
+**Design decision needed from Timothy:**
+- Should CSS/SVG output be a `capability.invoke` (returns a string value) or a new first-class namespace (`render.css`, `render.svg`)?
+- The 0.1 spec says "Logic, geometry, inference, vision, audio, and extension codecs are out of 0.1 except as later `capability.invoke` IDs" — so `capability.invoke` is the spec-compliant path.
+- But if these are going to be heavily used for animation scripting, a `render.*` namespace might be more ergonomic. This would be a post-0.1 grammar extension.
+
+**Files to touch:**
+- `crates/qualia-core-db/src/poet_host/invoke/render/` — new `css.rs`, `svg.rs` submodules
+- `crates/qualia-core-db/src/poet_host/invoke/ids.rs` — new IDs
+- `crates/qualia-core-db/src/poet_host/invoke/mod.rs` — wire dispatch arms
+
+**Tests:** Verify generated CSS/SVG is well-formed and reflects input values.
+
+**Estimated effort:** Medium — string generation from structured values, plus integration with the spectral pipeline for color.
+
+---
+
+### Phase E: Reactive animation loop (medium)
+
+Wire the desktop harness to drive `on tick()` hooks on a timer, so reactive cells and hooks can produce animated output.
+
+**What's needed:**
+- Desktop `poet_tick` Tauri command — calls `dispatch_hook_src` with `["tick"]` path on all loaded programs, on a configurable interval.
+- Desktop `poet_pulse_event` Tauri command — injects a `pulse:message` event into the harness, dispatching `on pulse:message` hooks.
+- Integration with the pulse transport subscriber — when a pulse event arrives via the broadcast channel, automatically dispatch `on pulse:message` hooks.
+- Cell dependency tracking — when a tick fires, recompute cells whose inputs changed (not just graph-dependent cells, but also time-dependent cells).
+
+**Files to touch:**
+- `crates/webizen-desktop/src/commands/poet.rs` — new `poet_tick`, `poet_pulse_event` commands
+- `crates/webizen-desktop/src/commands/mod.rs` — register new commands
+- `crates/qualia-core-db/src/poet_host/mod.rs` — possibly add time-dependency tracking
+
+**Tests:** Desktop integration test — load a program with `on tick()`, call `poet_tick`, verify the hook fires and cells update.
+
+**Estimated effort:** Medium — the hook dispatch infrastructure exists; the work is the timer loop and event injection.
+
+---
+
+### Phase F: Graph honesty lift (low effort)
+
+Lift `graph.read`/`graph.write` catalog honesty from "partial" to "live" when attached to the daemon graph.
+
+**What's needed:**
+- The `PoetSnapshot::honesty()` method already returns "live" when attached.
+- The catalog `VIBE_0_1` table labels `graph.read`/`graph.write` as "partial" — this is honest for the detached/WASM case but misleading for the attached native case.
+- Option 1: Make the catalog honesty dynamic (query the snapshot state). This requires changing `VIBE_0_1` from `const` to a function.
+- Option 2: Keep the catalog static but document that "partial" means "partial on WASM/detached, live on native/attached".
+- Option 3: Add a `honesty_attached` field to `VibeBinding` that shows the attached honesty.
+
+**Design decision needed from Timothy:** Which option?
+
+**Files to touch:**
+- `crates/qualia-core-db/src/poet_host/catalog.rs`
+- `docs/manuals/ai-agent-vibescript-readiness.md`
+
+**Estimated effort:** Low — a label change, not new functionality.
+
+---
+
+### Phase G: Golden corpus expansion (needs Timothy's curation)
+
+Grow the fixture corpus from 22 tests to comprehensive domain coverage.
+
+**New fixture categories:**
+1. **Physics** — wave propagation, harmonic oscillator, projectile, N-body
+2. **EMF/spectral** — EMF → color, interference pattern, Doppler shift, attenuation
+3. **Geometry/SVG** — convex hull, SVG path generation, field visualization
+4. **CSS animation** — keyframe generation from value curves, reactive color
+5. **Reactive cells** — graph-dependent recomputation, time-dependent cells
+6. **Hook dispatch** — tick-driven animation, pulse-driven alerts
+7. **Legal/governance** — deontic norms, contract validation (existing clinic examples extended)
+8. **Scientific** — chemistry (SMILES validation), bioinformatics (alignment)
+9. **Financial** — Black-Scholes, portfolio optimization
+
+**What I need from Timothy:**
+- Domain priority ordering — which verticals first?
+- Any specific canonical examples he wants preserved
+- Acceptable-quality threshold for corpus inclusion
+- Whether the corpus should include negative fixtures (must-reject) for each domain
+
+**Estimated effort:** Low per fixture, but high in aggregate. Each fixture is a `.vibe` file + a conformance test.
+
+---
+
+### Phase H: vibe-bc-0.1 bytecode (v1.0 destination, post-0.1)
+
+The 0.1 spec explicitly lists bytecode as "out of 0.1". This is the natural v1.0 workstream but is not needed for 0.1 conformance.
+
+**Not started. Awaiting 0.1 completion + Timothy's go-ahead.**
+
+---
+
+## 3. Dependency graph
+
+```
+Phase A (physics wrappers) ──┐
+                              ├──► Phase C (EMF interference/Doppler/attenuation) ──► Phase D (CSS/SVG output)
+Phase B (spectral wrappers) ─┘                                                        │
+                                                                                      ▼
+Phase E (reactive animation loop) ◄───────────────────────────────────────────────────┘
+                                                                                      │
+Phase F (graph honesty) ─────────────────────────────────────────────────────────────►│
+                                                                                      ▼
+Phase G (golden corpus) ◄─────────────────────────────────────────────────────────────┘
+                                                                                      │
+                                                                                      ▼
+Phase H (bytecode) — post-0.1
+```
+
+Phases A and B can run in parallel. Phase C depends on A. Phase D depends on B and C. Phase E depends on D. Phase F is independent. Phase G depends on all others being done.
+
+---
+
+## 4. Open questions for Timothy
+
+1. **CSS/SVG output namespace:** Should CSS/SVG generation be `capability.invoke("Render.css_animation", …)` (spec-compliant 0.1) or a new `render.*` first-class namespace (post-0.1 grammar extension)? The 0.1 spec says non-core capabilities go through `capability.invoke`.
+
+2. **Graph honesty labels:** Should the catalog show dynamic honesty (changes based on attached/detached state), or keep static labels with documentation?
+
+3. **Golden corpus priorities:** Which domain verticals should be prioritized for corpus expansion? The current demo is clinic/catchment — do you want physics/EMF first, or legal/governance, or something else?
+
+4. **EMF interference scope:** For the EMF field grid visualization — should it be 2D only (for CSS/SVG output), or also 3D (for the existing render scene infrastructure)?
+
+5. **Animation loop timing:** Should the `on tick()` loop be driven by `requestAnimationFrame` (60fps), `setInterval` (configurable), or both? Should it be pausable?
+
+6. **Phase ordering:** Do you agree with the A→B→C→D→E→F→G ordering, or do you want to prioritize differently?
+
+---
+
+## 5. Verification plan
+
+After each phase:
+- `cargo test -p poet-vibe` — language tests
+- `cargo test -p qualia-core-db --lib poet_host` — host tests
+- `cargo check -p webizen-desktop` — desktop build
+- `cargo check -p poet-vibe --target wasm32-unknown-unknown` — WASM build
+- New tests for each new invoke ID
+- Update `ai-agent-vibescript-readiness.md` with new test counts and capabilities
+- Update this plan file with phase status
+
+---
+
+## 6. Phase status tracker
+
+| Phase | Status | Started | Completed | Tests added |
+|---|---|---|---|---|
+| A: Physics wrappers | Not started | — | — | — |
+| B: Spectral wrappers | Not started | — | — | — |
+| C: EMF interference/Doppler/attenuation | Not started | — | — | — |
+| D: CSS/SVG output | Not started | — | — | — |
+| E: Reactive animation loop | Not started | — | — | — |
+| F: Graph honesty lift | Not started | — | — | — |
+| G: Golden corpus expansion | Not started | — | — | — |
+| H: vibe-bc-0.1 bytecode | Not started (post-0.1) | — | — | — |
