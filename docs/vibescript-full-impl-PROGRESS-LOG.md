@@ -80,6 +80,26 @@ New test breakdown: 10 physics + 5 spectral + 3 catalog (dynamic honesty) = 18.
 
 None this step. Phase C (3D/4D EMF + 10D manifold) and Phase D (`vibeAnimation` grammar extension) are next — both are well-defined engineering tasks that don't require out-of-band decisions.
 
+### Architecture constraint (Timothy, 2026-08-18)
+
+**Physics functions must work without QPU access.** Only a few expressly-declared exceptions may require QPU access, and QPU access is expected to be extremely specialised and extremely limited in the vast majority of circumstances.
+
+The existing codebase already follows this pattern:
+- `qpu_bridge` / `qpu_oracle` — remote quantum hardware, fail-closed, opt-in, requires Human Rights commitment
+- MCP `qpu_optimize` / `qpu_dft` / `qpu_status` — gated by `qpu_enabled` flag, fail-closed when not enabled
+- `fallback_to_classical: true` by default in the QPU Oracle
+
+All VibeScript physics wrappers are **classical simulations** — they run on CPU/GPU, no QPU required:
+- `Physics.quantum_states_1d` — solves the Schrödinger equation via finite differences + classical Jacobi eigensolver. This is classical simulation of quantum mechanics, NOT quantum hardware.
+- All Phase A wrappers (wave, heat, oscillator, pendulum, N-body, MD, CFD, logistic) — classical ODE/PDE solvers.
+- All Phase B wrappers (EMF → spectral → color) — classical spectral projection.
+- All Phase C wrappers (EMF interference, Doppler, attenuation) — classical EM superposition.
+
+If a future function genuinely requires QPU access (e.g., quantum annealing for NP-hard optimization, real quantum DFT), it must:
+1. Be expressly declared as QPU-required in its doc comment
+2. Fail-closed when no QPU is available (return a diagnostic, not a panic)
+3. Follow the existing `qpu_enabled` gating pattern
+
 ### Next step
 
 **Phase C — EMF interference, Doppler shift, attenuation (3D/4D + 10D manifold):**

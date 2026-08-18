@@ -276,6 +276,11 @@ pub fn cfd_step(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
 }
 
 /// `Physics.quantum_states_1d` — time-independent Schrödinger eigenproblem.
+///
+/// **Classical simulation** — no QPU required. The TISE is discretised by
+/// finite differences and the Hamiltonian is diagonalised by the classical
+/// `symmetric_eigen` (Jacobi) eigensolver on CPU. This simulates quantum
+/// mechanics; it does not use quantum hardware.
 pub fn quantum_states_1d(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let potential = args::rec_f64_list(args_v, "potential").ok_or_else(|| {
         args::bad(span, "quantum_states_1d needs { potential: [f64], dx, mass, hbar, levels }")
