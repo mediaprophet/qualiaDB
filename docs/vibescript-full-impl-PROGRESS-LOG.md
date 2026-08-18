@@ -102,13 +102,29 @@ If a future function genuinely requires QPU access (e.g., quantum annealing for 
 
 ### Next step
 
-**Phase C — EMF interference, Doppler shift, attenuation (3D/4D + 10D manifold):**
+**Phase C — EMF interference, Doppler shift, attenuation (5D: XYZ + depth + time):**
+
+**Design decisions settled with Timothy (2026-08-18, before OOM):**
+- The field grid is **5D sampled**: X, Y, Z (position), Depth (distance from camera/observer — independent sampling parameter, drives perspective scaling, LOD, display attenuation), Time (as a time-frame with start/end, not just a single instant — needed for Phase E animation).
+- **Two-layer separation:**
+  - **Physics layer** (`Physics.emf_field_grid_3d`): 4D grid (x×y×z×t) of EMF values (amplitude, phase, frequency). Pure physics — interference superposition, inverse-square attenuation from sources, Doppler shift. No rendering concerns.
+  - **Render-depth layer** (`Physics.emf_sample_at_depth` or similar): samples the 4D physics field at specified depths from camera/observer, applying perspective scaling, display attenuation, LOD selection. Bridges physics to `vibeAnimation` output (Phase D).
+- **10D manifold integration:** Each field sample is tagged with a `ManifoldCoordinate10D` derived from the physics (amplitude→scale, frequency→recurrence_frequency, phase→spatial_phase, depth→attention_depth, time→temporal_decay, etc.). The manifold captures the *semantic* state of the field at that point.
+- **All classical — no QPU required.** EM superposition, inverse-square, Doppler are all classical physics.
+
+**Functions to implement:**
 - `Physics.emf_interference` — superposition of N EMF sources at a 3D observation point
 - `Physics.emf_attenuation` — inverse-square law + atmospheric absorption
 - `Physics.doppler_shift` — relativistic Doppler
-- `Physics.emf_field_grid_3d` — 3D field grid over time (4D), with `ManifoldCoordinate10D` integration
-- New `specialized_libs/physics_simulation/emf.rs` submodule
+- `Physics.emf_field_grid_3d` — 4D physics grid (x×y×z×t) with `ManifoldCoordinate10D` tags
+- `Physics.emf_sample_at_depth` — depth-aware sampling for render integration
+- New `specialized_libs/physics_simulation/emf.rs` submodule (the actual physics)
+- New `poet_host/invoke/science/emf.rs` (the invoke wrappers)
 
 Then **Phase D — `vibeAnimation` namespace** (grammar extension with all three surface forms: hierarchical sub-forms, single dispatch, and `capability.invoke` for the long tail; SVG wired through computational geometry libs).
 
 Then **Phase E — reactive animation loop** (comprehensive timing: rAF + setInterval + pausable + configurable).
+
+### OOM note (2026-08-18)
+
+Phase C was claimed in NOTICES but the session OOM'd before any code was written. No files were touched. Claim released. Handover written to `docs/vibescript-full-impl-HANDOVER-2026-08-18-session2.md`.
