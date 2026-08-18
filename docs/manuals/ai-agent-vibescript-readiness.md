@@ -59,7 +59,7 @@ Engine reach beyond 0.1 bindings is **`capability.invoke`**, listed at runtime b
 |---|---|---|---|
 | 1 | Language knowledge graph | `crates/qualia-core-db/src/poet_host/catalog_ttl.rs` → `capability.invoke("CapabilityDiscovery.catalog", null)` emits Turtle from `VIBE_0_1` + `ids::ALL_BOUND` | **built** |
 | 2 | Constrained decoding | `crates/poet-vibe/grammar/vibe-0.1.ebnf`, `vibe-0.1.gbnf`, `source.schema.json` (for Qualia's in-process model, not Ollama) | **built** |
-| 3 | Golden corpus | `crates/poet-vibe/fixtures/` + `tests/conformance.rs` (16 tests: §12 examples, §13 negatives, `time.unix`, `quin.statement`, `capability.resolve`) | **partial** (fixtures pass; not yet a large curated corpus) |
+| 3 | Golden corpus | `crates/poet-vibe/fixtures/` + `tests/conformance.rs` (22 tests: §12 examples, §13 negatives, `time.unix`, `quin.statement`, `capability.resolve`, hook dispatch) | **partial** (fixtures pass; not yet a large curated corpus) |
 | 4 | Diagnostic loop | `poet_vibe::diagnose(src)` → JSON with `error_code`, `span`, `message`, `suggested_fix` (safe rewrites that never grant authority) | **built** |
 
 Skill file: `skills/vibescript/SKILL.md` → `docs/vibe/SKILL.md` (points at core §3–§13 and the invoke table).
@@ -98,5 +98,5 @@ See the TechDesign source for the aligned examples. In short:
 |---|---|
 | Complete **language** spec? | **No** — that is `vibescript-core.md`, and 0.1 is the closed core, not the destination. |
 | Complete **agent-readiness** stack? | **Yes for M2–M5**: diagnostics, GBNF/JSON-Schema, Turtle catalog, and skill are all built and consistent with 0.1. Corpus depth (pillar 3) is the remaining open-ended grow item. |
-| Is 0.1 language blocked on readiness work? | **No.** Interpreter + binding profile + invoke table are implemented and tested (`poet-vibe` 19 tests, `poet_host` 54 tests). |
+| Is 0.1 language blocked on readiness work? | **No.** Interpreter + binding profile + invoke table are implemented and tested (`poet-vibe` 25 tests, `poet_host` 89 tests). Hook dispatch (`on pulse:message`, `on tick`) and user-defined function resolution are wired. Pulse transport emits through a process-wide broadcast channel when attached, with SSE endpoint `/pulse/events`. |
 | Does this overlay contradict 0.1? | **No** — core §11 bindings (incl. `time.unix`, now wired) are the only names taught; `<<[…]|>>` overlays, `pulse.broadcast`, `aura.apply_schema`, `<< id \| … >>` are all listed as "do not teach." |
