@@ -267,19 +267,23 @@ Phases A and B can run in parallel. Phase C depends on A. Phase D depends on B a
 
 ---
 
-## 4. Open questions for Timothy
+## 4. Open questions for Timothy — ANSWERED 2026-08-18
 
-1. **CSS/SVG output namespace:** Should CSS/SVG generation be `capability.invoke("Render.css_animation", …)` (spec-compliant 0.1) or a new `render.*` first-class namespace (post-0.1 grammar extension)? The 0.1 spec says non-core capabilities go through `capability.invoke`.
+1. **CSS/SVG output namespace:** → **`vibeAnimation`** — new first-class namespace (post-0.1 grammar extension). Timothy wants all three surface forms supported: hierarchical sub-forms (`vibeAnimation.css/svg/field/curve`), single dispatch (`vibeAnimation(kind, args)`), AND `capability.invoke` for the long tail. Different modalities get the surface that suits them.
 
-2. **Graph honesty labels:** Should the catalog show dynamic honesty (changes based on attached/detached state), or keep static labels with documentation?
+2. **Graph honesty labels:** → **Dynamic** — `catalog::resolve_id_with(id, attached)` flips `graph.read`, `graph.write`, `aura.validate`, `pulse.publish` to "live" when attached to the daemon graph. Implemented in Phase F.
 
-3. **Golden corpus priorities:** Which domain verticals should be prioritized for corpus expansion? The current demo is clinic/catchment — do you want physics/EMF first, or legal/governance, or something else?
+3. **Golden corpus priorities:** → **Dependency-driven, incremental** — sequence by dependency graph, not by preference.
 
-4. **EMF interference scope:** For the EMF field grid visualization — should it be 2D only (for CSS/SVG output), or also 3D (for the existing render scene infrastructure)?
+4. **EMF interference scope:** → **3D/4D (incl. time)**, supporting the 10D manifold structure (`ManifoldCoordinate10D`). Phase C expands significantly beyond 2D.
 
-5. **Animation loop timing:** Should the `on tick()` loop be driven by `requestAnimationFrame` (60fps), `setInterval` (configurable), or both? Should it be pausable?
+5. **Animation loop timing:** → **Comprehensive, best-in-class** — rAF + setInterval + pausable + configurable rate. Phase E delivers all.
 
-6. **Phase ordering:** Do you agree with the A→B→C→D→E→F→G ordering, or do you want to prioritize differently?
+6. **Phase ordering:** → **A+B → F → C → D → E → G → H** (recommended by Devin, approved by Timothy). A+B are pure wrappers (low-risk). F is quick (label lift). C does 3D/4D EMF physics + manifold. D is the `vibeAnimation` grammar extension. E animates. G curates corpus.
+
+**Additional notes from Timothy:**
+- SVG animation should hook into the computational geometry libraries (bezier, bspline, nurbs, offset_polyline, tube_along_polyline, etc.)
+- Progress file must be maintained for resumability by different sessions
 
 ---
 
@@ -300,11 +304,11 @@ After each phase:
 
 | Phase | Status | Started | Completed | Tests added |
 |---|---|---|---|---|
-| A: Physics wrappers | Not started | — | — | — |
-| B: Spectral wrappers | Not started | — | — | — |
+| A: Physics wrappers | **Done** | 2026-08-18 | 2026-08-18 | +10 (wave, heat, advection, oscillator, pendulum, n-body, MD, CFD, quantum, logistic) |
+| B: Spectral wrappers | **Done** | 2026-08-18 | 2026-08-18 | +5 (emf_to_spd, spd_to_xyz, emf_to_rgb, blend, gamut_map) |
 | C: EMF interference/Doppler/attenuation | Not started | — | — | — |
-| D: CSS/SVG output | Not started | — | — | — |
+| D: vibeAnimation namespace + CSS/SVG | Not started | — | — | — |
 | E: Reactive animation loop | Not started | — | — | — |
-| F: Graph honesty lift | Not started | — | — | — |
+| F: Graph honesty lift | **Done** | 2026-08-18 | 2026-08-18 | +3 (dynamic honesty: graph.read live when attached, pulse.publish live when attached, capability.invoke stays partial) |
 | G: Golden corpus expansion | Not started | — | — | — |
 | H: vibe-bc-0.1 bytecode | Not started (post-0.1) | — | — | — |

@@ -98,16 +98,48 @@ pub const VIBE_0_1: &[VibeBinding] = &[
     },
 ];
 
+/// Bindings whose honesty flips to "live" when the host snapshot is attached
+/// to the live daemon graph. On WASM / detached, they stay "partial".
+const DYNAMIC_LIVE_WHEN_ATTACHED: &[&str] = &[
+    "graph.read",
+    "graph.write",
+    "aura.validate",
+    "pulse.publish",
+];
+
+/// Return the effective honesty label for a binding, given attachment state.
+///
+/// `graph.read`, `graph.write`, `aura.validate`, and `pulse.publish` are
+/// "partial" on detached/WASM hosts but "live" when attached to the daemon
+/// graph (queries refresh from the live graph, commits extend it, SHACL
+/// validates against it, and pulse publishes through the transport channel).
+/// All other bindings keep their static label.
+pub fn dynamic_honesty(id: &str, attached: bool) -> &'static str {
+    if attached && DYNAMIC_LIVE_WHEN_ATTACHED.contains(&id) {
+        return "live";
+    }
+    VIBE_0_1
+        .iter()
+        .find(|b| b.id == id)
+        .map(|b| b.honesty)
+        .unwrap_or("unbound")
+}
+
 pub fn resolve_id(id: &str) -> Value {
+    resolve_id_with(id, false)
+}
+
+pub fn resolve_id_with(id: &str, attached: bool) -> Value {
     let binding = VIBE_0_1.iter().find(|b| b.id == id);
     let family = binding.map(|b| b.family);
     let desc = family.and_then(|name| CAPABILITY_DESCRIPTORS.iter().find(|d| d.name == name));
+    let honesty = dynamic_honesty(id, attached);
     let mut rec = BTreeMap::new();
     rec.insert("id".into(), Value::String(id.into()));
     rec.insert("vibe_bound".into(), Value::Bool(binding.is_some()));
     rec.insert(
         "honesty".into(),
-        Value::String(binding.map(|b| b.honesty.to_string()).unwrap_or_else(|| "unbound".into())),
+        Value::String(honesty.to_string()),
     );
     rec.insert(
         "human_surface".into(),
@@ -146,7 +178,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn graph_read_resolves_as_partial_vibe() {
+    fn graph_read_resolves_as_partial_vibe_when_detached() {
         match resolve_id("graph.read") {
             Value::Record(r) => {
                 assert_eq!(r.get("vibe_bound"), Some(&Value::Bool(true)));
@@ -154,6 +186,39 @@ mod tests {
                     r.get("honesty"),
                     Some(&Value::String("partial".into()))
                 );
+            }
+            other => panic!("{other:?}"),
+        }
+    }
+
+    #[test]
+    fn graph_read_is_live_when_attached() {
+        match resolve_id_with("graph.read", true) {
+            Value::Record(r) => {
+                assert_eq!(
+                    r.get("honesty"),
+                    Some(&Value::String("live".into()))
+                );
+            }
+            other => panic!("{other:?}"),
+        }
+    }
+
+    #[test]
+    fn pulse_publish_is_live_when_attached() {
+        match resolve_id_with("pulse.publish", true) {
+            Value::Record(r) => {
+                assert_eq!(r.get("honesty"), Some(&Value::String("live".into())));
+            }
+            other => panic!("{other:?}"),
+        }
+    }
+
+    #[test]
+    fn capability_invoke_stays_partial_even_when_attached() {
+        match resolve_id_with("capability.invoke", true) {
+            Value::Record(r) => {
+                assert_eq!(r.get("honesty"), Some(&Value::String("partial".into())));
             }
             other => panic!("{other:?}"),
         }

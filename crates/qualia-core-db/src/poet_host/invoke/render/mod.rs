@@ -5,5 +5,6 @@
 //! canvas (D13).
 
 mod scene;
+pub mod spectral;
 
 pub use scene::scene;

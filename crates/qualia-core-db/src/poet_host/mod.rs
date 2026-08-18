@@ -391,7 +391,7 @@ impl Host for PoetSnapshot {
         id: &str,
         _span: poet_vibe::Span,
     ) -> Result<Value, Diagnostic> {
-        Ok(catalog::resolve_id(id))
+        Ok(catalog::resolve_id_with(id, self.attached))
     }
 
     fn capability_invoke(

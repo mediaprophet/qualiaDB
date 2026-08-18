@@ -80,6 +80,11 @@ pub fn rec_str<'a>(v: &'a Value, key: &str) -> Option<&'a str> {
     rec(v, key).and_then(as_str)
 }
 
+/// Extract a record field as `Vec<f64>` (field must be a `List` of numbers).
+pub fn rec_f64_list(v: &Value, key: &str) -> Option<Vec<f64>> {
+    rec(v, key).and_then(f64s)
+}
+
 pub fn list(v: &Value) -> Option<&[Value]> {
     match v {
         Value::List(xs) => Some(xs.as_slice()),

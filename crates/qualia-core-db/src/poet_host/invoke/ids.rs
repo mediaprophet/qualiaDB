@@ -58,6 +58,25 @@ pub const COVERAGE_MATRIX: &str = "CapabilityDiscovery.coverage";
 pub const CATALOG_TTL: &str = "CapabilityDiscovery.catalog";
 pub const RENDER_SCENE: &str = "Render.scene";
 
+// ── Physics wrappers (wrap specialized_libs::physics_simulation) ───────────
+pub const PHYS_WAVE_1D: &str = "Physics.wave_1d";
+pub const PHYS_HEAT_DIFFUSION_1D: &str = "Physics.heat_diffusion_1d";
+pub const PHYS_ADVECTION_DIFFUSION_1D: &str = "Physics.advection_diffusion_1d";
+pub const PHYS_HARMONIC_OSCILLATOR: &str = "Physics.harmonic_oscillator";
+pub const PHYS_PENDULUM: &str = "Physics.pendulum";
+pub const PHYS_N_BODY: &str = "Physics.n_body";
+pub const PHYS_MOLECULAR_DYNAMICS: &str = "Physics.molecular_dynamics";
+pub const PHYS_CFD_STEP: &str = "Physics.cfd_step";
+pub const PHYS_QUANTUM_STATES_1D: &str = "Physics.quantum_states_1d";
+pub const PHYS_LOGISTIC_GROWTH: &str = "Physics.logistic_growth";
+
+// ── Spectral/EMF wrappers (wrap render::spectral_kernel + spectral_blend) ──
+pub const SPECTRAL_EMF_TO_SPD: &str = "Spectral.emf_to_spd";
+pub const SPECTRAL_SPD_TO_XYZ: &str = "Spectral.spd_to_xyz";
+pub const SPECTRAL_EMF_TO_RGB: &str = "Spectral.emf_to_rgb";
+pub const SPECTRAL_BLEND: &str = "Spectral.blend";
+pub const SPECTRAL_GAMUT_MAP: &str = "Spectral.gamut_map";
+
 // ── Linear algebra extensions (wrap solvers::linear_algebra) ──────────────
 pub const LA_TRANSPOSE: &str = "LinearAlgebra.transpose";
 pub const LA_DET: &str = "LinearAlgebra.determinant";
@@ -162,6 +181,21 @@ pub const ALL_BOUND: &[&str] = &[
     UNITS_CONVERT,
     GRAPH_SHORTEST_PATH,
     GRAPH_SPREADING_ACTIVATION,
+    PHYS_WAVE_1D,
+    PHYS_HEAT_DIFFUSION_1D,
+    PHYS_ADVECTION_DIFFUSION_1D,
+    PHYS_HARMONIC_OSCILLATOR,
+    PHYS_PENDULUM,
+    PHYS_N_BODY,
+    PHYS_MOLECULAR_DYNAMICS,
+    PHYS_CFD_STEP,
+    PHYS_QUANTUM_STATES_1D,
+    PHYS_LOGISTIC_GROWTH,
+    SPECTRAL_EMF_TO_SPD,
+    SPECTRAL_SPD_TO_XYZ,
+    SPECTRAL_EMF_TO_RGB,
+    SPECTRAL_BLEND,
+    SPECTRAL_GAMUT_MAP,
 ];
 
 /// Future extract target for an invoke id. Not a crate today.
@@ -182,6 +216,11 @@ pub fn seam_for(id: &str) -> &'static str {
         VISION_AHASH => "vision",
         ML_OLS => "ml",
         PHYS_PROJECTILE | BIO_ALIGN | CHEM_SMILES => "science",
+        PHYS_WAVE_1D | PHYS_HEAT_DIFFUSION_1D | PHYS_ADVECTION_DIFFUSION_1D
+        | PHYS_HARMONIC_OSCILLATOR | PHYS_PENDULUM | PHYS_N_BODY | PHYS_MOLECULAR_DYNAMICS
+        | PHYS_CFD_STEP | PHYS_QUANTUM_STATES_1D | PHYS_LOGISTIC_GROWTH => "physics",
+        SPECTRAL_EMF_TO_SPD | SPECTRAL_SPD_TO_XYZ | SPECTRAL_EMF_TO_RGB | SPECTRAL_BLEND
+        | SPECTRAL_GAMUT_MAP => "spectral",
         CLIN_FRAMINGHAM => "clinical",
         FIN_BS => "econ",
         ENG_KIN => "engineering",
