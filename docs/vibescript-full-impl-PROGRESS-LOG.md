@@ -128,3 +128,34 @@ Then **Phase E — reactive animation loop** (comprehensive timing: rAF + setInt
 ### OOM note (2026-08-18)
 
 Phase C was claimed in NOTICES but the session OOM'd before any code was written. No files were touched. Claim released. Handover written to `docs/vibescript-full-impl-HANDOVER-2026-08-18-session2.md`.
+
+### Phase C — EMF physics (done, 2026-08-18 session 3)
+
+**Implemented:** 5 new `capability.invoke` functions, all classical (no QPU):
+
+- `Physics.emf_interference` — superposition of N EMF sources at a 3D point. Same-frequency → standing interference (analytical phase combination); different frequencies → beat frequency detection.
+- `Physics.emf_attenuation` — inverse-square law + atmospheric absorption. P_rx = P_src / (4π·r²) · exp(−α·r). Returns received power, FSPL, absorption loss, total attenuation in dB.
+- `Physics.doppler_shift` — relativistic Doppler. f_obs = f_src · √((1+β)/(1−β)). Approaching (v>0) increases frequency, receding (v<0) decreases.
+- `Physics.emf_field_grid_3d` — 4D physics grid (x×y×z×t) with `ManifoldCoordinate10D` tags per cell. Maps amplitude→scale, frequency→recurrence_frequency, phase→spatial_phase, distance→attention_depth, time→temporal_decay.
+- `Physics.emf_sample_at_depth` — depth-aware sampling along a camera ray. Applies perspective scaling (1/depth), display attenuation (exp(−0.1·depth)), LOD selection (4 levels). Bridges physics to `vibeAnimation` (Phase D).
+
+**Files created:**
+- `crates/qualia-core-db/src/specialized_libs/physics_simulation/emf.rs` — EMF physics (EmfSource struct, 5 methods on PhysicsSimulationLibrary, 10 unit tests)
+- `crates/qualia-core-db/src/poet_host/invoke/science/emf.rs` — invoke wrappers (5 functions, 5 invoke-level tests)
+
+**Files modified:**
+- `results.rs` — 6 new result structs (EmfInterferenceResult, EmfAttenuationResult, DopplerShiftResult, EmfFieldGrid3DResult, DepthSample, EmfSampleAtDepthResult)
+- `physics_simulation/mod.rs` — `mod emf;` + `pub use emf::EmfSource;`
+- `science/mod.rs` — `mod emf;` + re-exports
+- `stubs.rs` — 5 EMF stubs for wasm-ontology fallback
+- `ids.rs` — 5 new ID constants + ALL_BOUND + seam_for
+- `invoke/mod.rs` — 5 dispatch arms
+
+**Verification:**
+- poet_host: 112 passed (was 107, +5 new)
+- EMF physics tests: 23 passed (10 unit + 5 invoke + 8 existing matched)
+- poet-vibe lib: 3 passed, conformance: 22 passed
+- webizen-desktop: clean
+- wasm32: clean
+
+**Next:** Phase D — `vibeAnimation` namespace (grammar extension + CSS/SVG + computational geometry integration).

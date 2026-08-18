@@ -5,12 +5,18 @@ mod bio;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 mod chem;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+mod emf;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 mod physics;
 
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 pub use bio::align;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 pub use chem::smiles;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+pub use emf::{
+    doppler_shift, emf_attenuation, emf_field_grid_3d, emf_interference, emf_sample_at_depth,
+};
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 pub use physics::{
     advection_diffusion_1d, cfd_step, harmonic_oscillator, heat_diffusion_1d, logistic_growth,

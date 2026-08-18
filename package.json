@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "playwright": "^1.62.0",
+    "puppeteer": "^25.4.0"
+  }
+}

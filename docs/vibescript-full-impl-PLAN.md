@@ -123,24 +123,24 @@ Wrap the EMF → spectral → color pipeline so Vibe scripts can compute color f
 
 ---
 
-### Phase C: EMF interference, Doppler, attenuation (new physics)
+### Phase C: EMF interference, Doppler, attenuation (new physics) — ✅ DONE
 
 These are the functions Timothy specifically asked about — EMF frequency shifts due to interference, distance, and relative motion.
 
-**New functions to implement:**
-- `Physics.emf_interference` — superposition of N EMF sources at a point: given source positions, frequencies, amplitudes, and phases, compute the resultant field amplitude and observed frequency at an observation point.
-- `Physics.emf_attenuation` — inverse-square law + atmospheric absorption: given source power, frequency, distance, and medium properties, compute received signal strength.
-- `Physics.doppler_shift` — relativistic Doppler: given source frequency, relative velocity, and geometry, compute observed frequency.
-- `Physics.emf_field_grid` — compute EMF field values over a 2D grid from N sources, for visualization. Returns a grid of (amplitude, phase, frequency) tuples.
+**Implemented functions:**
+- `Physics.emf_interference` — superposition of N EMF sources at a 3D point. Same-frequency → analytical phase combination; different frequencies → beat frequency.
+- `Physics.emf_attenuation` — inverse-square law + atmospheric absorption. Returns received power, FSPL, absorption loss, total attenuation in dB.
+- `Physics.doppler_shift` — relativistic Doppler. f_obs = f_src · √((1+β)/(1−β)).
+- `Physics.emf_field_grid_3d` — 4D physics grid (x×y×z×t) with `ManifoldCoordinate10D` tags per cell.
+- `Physics.emf_sample_at_depth` — depth-aware sampling along a camera ray with perspective scaling, display attenuation, LOD selection.
 
-**Files to touch:**
-- `crates/qualia-core-db/src/specialized_libs/physics_simulation/` — new `emf.rs` submodule
-- `crates/qualia-core-db/src/poet_host/invoke/science/physics.rs` — wrap the new functions
-- `crates/qualia-core-db/src/poet_host/invoke/ids.rs` — new IDs
+**Files created:**
+- `crates/qualia-core-db/src/specialized_libs/physics_simulation/emf.rs` — EMF physics + 10 unit tests
+- `crates/qualia-core-db/src/poet_host/invoke/science/emf.rs` — invoke wrappers + 5 tests
 
-**Tests:** Analytical verification — two-source interference pattern, known Doppler ratios, inverse-square at known distances.
+**Files modified:** results.rs, physics_simulation/mod.rs, science/mod.rs, stubs.rs, ids.rs, invoke/mod.rs
 
-**Estimated effort:** Medium-high — these are new implementations, not wrappers. The math is well-defined (wave superposition, Doppler formula, inverse-square), but the grid computation and argument marshalling need care.
+**Verification:** poet_host 112 tests, EMF 23 tests, poet-vibe 22+3, desktop+wasm clean.
 
 ---
 

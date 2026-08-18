@@ -24,6 +24,7 @@ mod data_storage;
 mod discretization;
 mod distributed;
 mod domain_model;
+mod emf;
 mod engine;
 mod errors;
 mod fields;
@@ -58,6 +59,7 @@ pub use types::*;
 // The kernel submodules (library_core/cfd/ode/mechanics/nbody/fields/
 // molecular_dynamics/quantum/population) contribute `impl PhysicsSimulationLibrary`
 // blocks and tree-internal helpers only — no free items to re-export.
+pub use emf::EmfSource;
 
 #[cfg(test)]
 mod tests;

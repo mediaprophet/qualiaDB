@@ -69,6 +69,11 @@ pub const PHYS_MOLECULAR_DYNAMICS: &str = "Physics.molecular_dynamics";
 pub const PHYS_CFD_STEP: &str = "Physics.cfd_step";
 pub const PHYS_QUANTUM_STATES_1D: &str = "Physics.quantum_states_1d";
 pub const PHYS_LOGISTIC_GROWTH: &str = "Physics.logistic_growth";
+pub const PHYS_EMF_INTERFERENCE: &str = "Physics.emf_interference";
+pub const PHYS_EMF_ATTENUATION: &str = "Physics.emf_attenuation";
+pub const PHYS_DOPPLER_SHIFT: &str = "Physics.doppler_shift";
+pub const PHYS_EMF_FIELD_GRID_3D: &str = "Physics.emf_field_grid_3d";
+pub const PHYS_EMF_SAMPLE_AT_DEPTH: &str = "Physics.emf_sample_at_depth";
 
 // ── Spectral/EMF wrappers (wrap render::spectral_kernel + spectral_blend) ──
 pub const SPECTRAL_EMF_TO_SPD: &str = "Spectral.emf_to_spd";
@@ -191,6 +196,11 @@ pub const ALL_BOUND: &[&str] = &[
     PHYS_CFD_STEP,
     PHYS_QUANTUM_STATES_1D,
     PHYS_LOGISTIC_GROWTH,
+    PHYS_EMF_INTERFERENCE,
+    PHYS_EMF_ATTENUATION,
+    PHYS_DOPPLER_SHIFT,
+    PHYS_EMF_FIELD_GRID_3D,
+    PHYS_EMF_SAMPLE_AT_DEPTH,
     SPECTRAL_EMF_TO_SPD,
     SPECTRAL_SPD_TO_XYZ,
     SPECTRAL_EMF_TO_RGB,
@@ -218,7 +228,9 @@ pub fn seam_for(id: &str) -> &'static str {
         PHYS_PROJECTILE | BIO_ALIGN | CHEM_SMILES => "science",
         PHYS_WAVE_1D | PHYS_HEAT_DIFFUSION_1D | PHYS_ADVECTION_DIFFUSION_1D
         | PHYS_HARMONIC_OSCILLATOR | PHYS_PENDULUM | PHYS_N_BODY | PHYS_MOLECULAR_DYNAMICS
-        | PHYS_CFD_STEP | PHYS_QUANTUM_STATES_1D | PHYS_LOGISTIC_GROWTH => "physics",
+        | PHYS_CFD_STEP | PHYS_QUANTUM_STATES_1D | PHYS_LOGISTIC_GROWTH
+        | PHYS_EMF_INTERFERENCE | PHYS_EMF_ATTENUATION | PHYS_DOPPLER_SHIFT
+        | PHYS_EMF_FIELD_GRID_3D | PHYS_EMF_SAMPLE_AT_DEPTH => "physics",
         SPECTRAL_EMF_TO_SPD | SPECTRAL_SPD_TO_XYZ | SPECTRAL_EMF_TO_RGB | SPECTRAL_BLEND
         | SPECTRAL_GAMUT_MAP => "spectral",
         CLIN_FRAMINGHAM => "clinical",

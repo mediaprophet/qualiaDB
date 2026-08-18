@@ -188,6 +188,108 @@ pub struct AdvectionDiffusionResult {
     pub steps_rejected: u32,
 }
 
+/// Result of `run_emf_interference` — superposition of N EMF sources at a point.
+#[derive(Debug, Clone)]
+pub struct EmfInterferenceResult {
+    /// Instantaneous field value E(t) at the observation point.
+    pub instantaneous_value: f64,
+    /// Peak amplitude of the resultant over one cycle of the lowest frequency.
+    pub amplitude: f64,
+    /// Effective phase of the resultant (radians). For single-frequency sources
+    /// this is the exact combined phase; for multi-frequency it is the phase of
+    /// the dominant component.
+    pub phase: f64,
+    /// Dominant or beat frequency of the resultant (Hz).
+    pub frequency_effective: f64,
+    /// Number of sources contributing.
+    pub num_sources: usize,
+}
+
+/// Result of `run_emf_attenuation` — inverse-square + atmospheric absorption.
+#[derive(Debug, Clone)]
+pub struct EmfAttenuationResult {
+    /// Received power after inverse-square and absorption (W).
+    pub received_power: f64,
+    /// Total attenuation in dB.
+    pub attenuation_db: f64,
+    /// Free-space path loss in dB (inverse-square only).
+    pub free_space_loss_db: f64,
+    /// Atmospheric absorption loss in dB.
+    pub absorption_loss_db: f64,
+    /// Distance from source (m).
+    pub distance: f64,
+    /// Frequency (Hz).
+    pub frequency: f64,
+}
+
+/// Result of `run_doppler_shift` — relativistic Doppler effect.
+#[derive(Debug, Clone)]
+pub struct DopplerShiftResult {
+    /// Observed frequency (Hz).
+    pub observed_frequency: f64,
+    /// Ratio f_observed / f_source.
+    pub shift_ratio: f64,
+    /// Relative velocity (m/s, positive = approaching).
+    pub relative_velocity: f64,
+    /// Beta = v / c.
+    pub beta: f64,
+}
+
+/// Result of `run_emf_field_grid_3d` — 4D physics grid (x×y×z×t).
+#[derive(Debug, Clone)]
+pub struct EmfFieldGrid3DResult {
+    pub nx: usize,
+    pub ny: usize,
+    pub nz: usize,
+    pub nt: usize,
+    /// Grid extents: [x_min, x_max, y_min, y_max, z_min, z_max].
+    pub bounds: [f64; 6],
+    /// Time values for each time slice.
+    pub times: Vec<f64>,
+    /// Flat amplitude array, indexed as [t][z][y][x], length nx*ny*nz*nt.
+    pub amplitudes: Vec<f64>,
+    /// Flat phase array, indexed as [t][z][y][x], length nx*ny*nz*nt.
+    pub phases: Vec<f64>,
+    /// Flat frequency array, indexed as [t][z][y][x], length nx*ny*nz*nt.
+    pub frequencies: Vec<f64>,
+    /// Flat manifold coordinates, indexed as [t][z][y][x], length nx*ny*nz*nt.
+    pub manifold_coords: Vec<crate::modalities::manifold::ManifoldCoordinate10D>,
+    /// Number of sources.
+    pub num_sources: usize,
+}
+
+/// A single depth sample from `run_emf_sample_at_depth`.
+#[derive(Debug, Clone)]
+pub struct DepthSample {
+    /// Distance from camera/observer (m).
+    pub depth: f64,
+    /// Field amplitude at this depth.
+    pub amplitude: f64,
+    /// Field phase at this depth (radians).
+    pub phase: f64,
+    /// Field frequency at this depth (Hz).
+    pub frequency: f64,
+    /// Perspective scaling factor (1 / depth, clamped).
+    pub perspective_scale: f64,
+    /// Display attenuation factor (0..1, decreases with depth).
+    pub display_attenuation: f64,
+    /// Level-of-detail level (0 = highest detail, increases with depth).
+    pub lod_level: u32,
+    /// 10D manifold coordinate at this sample.
+    pub manifold_coord: crate::modalities::manifold::ManifoldCoordinate10D,
+}
+
+/// Result of `run_emf_sample_at_depth` — depth-aware sampling for render integration.
+#[derive(Debug, Clone)]
+pub struct EmfSampleAtDepthResult {
+    /// One sample per requested depth.
+    pub samples: Vec<DepthSample>,
+    /// Number of depths sampled.
+    pub num_depths: usize,
+    /// Time of the sample.
+    pub time: f64,
+}
+
 /// Simulation result
 #[derive(Debug, Clone)]
 pub struct SimulationResult {
