@@ -317,6 +317,10 @@ pub fn spawn_loopback_server(
                         get(tensor_events_handler).options(preflight_handler),
                     )
                     .route(
+                        "/pulse/events",
+                        get(pulse_events_handler).options(preflight_handler),
+                    )
+                    .route(
                         "/tensor/dev-signing-key",
                         get(tensor_dev_signing_key_handler).options(preflight_handler),
                     )
@@ -606,6 +610,70 @@ async fn tensor_events_handler() -> Response {
                                 last = current;
                                 let _ = tx.send(format!("data: {{\"revision\":{current}}}\n\n"));
                             }
+                        }
+                        Err(broadcast::error::RecvError::Closed) => break,
+                    }
+                }
+                _ = keepalive.tick() => {
+                    let _ = tx.send(": keepalive\n\n".to_string());
+                }
+            }
+        }
+    });
+
+    let body_stream =
+        UnboundedReceiverStream::new(rx).map(|chunk| Ok::<Bytes, Infallible>(Bytes::from(chunk)));
+
+    Response::builder()
+        .status(StatusCode::OK)
+        .header(header::CONTENT_TYPE, "text/event-stream")
+        .header(header::CACHE_CONTROL, "no-cache")
+        .header(header::CONNECTION, "keep-alive")
+        .body(Body::from_stream(body_stream))
+        .unwrap()
+}
+
+/// SSE stream of `pulse.publish` events for live collaborative sync.
+///
+/// Each event is a JSON object with `seq`, `topic`, `payload_summary`, and
+/// `timestamp` fields. Subscribers connect via `GET /pulse/events` and receive
+/// a keepalive comment every 15 seconds.
+async fn pulse_events_handler() -> Response {
+    use std::convert::Infallible;
+    use std::time::Duration;
+
+    let (tx, rx) = tokio::sync::mpsc::unbounded_channel::<String>();
+    let initial_seq = crate::pulse_transport::pulse_seq();
+
+    tokio::spawn(async move {
+        let _ = tx.send(format!(
+            "data: {{\"seq\":{initial_seq},\"topic\":\"\",\"payload_summary\":\"\",\"timestamp\":0}}\n\n"
+        ));
+        let mut sub = crate::pulse_transport::subscribe();
+        let mut keepalive = tokio::time::interval(Duration::from_secs(15));
+        keepalive.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
+
+        loop {
+            if tx.is_closed() {
+                break;
+            }
+            tokio::select! {
+                result = sub.recv() => {
+                    match result {
+                        Ok(event) => {
+                            let _ = tx.send(format!(
+                                "data: {{\"seq\":{},\"topic\":\"{}\",\"payload_summary\":\"{}\",\"timestamp\":{}}}\n\n",
+                                event.seq,
+                                event.topic.replace('"', "\\\""),
+                                event.payload_summary.replace('"', "\\\""),
+                                event.timestamp
+                            ));
+                        }
+                        Err(broadcast::error::RecvError::Lagged(_)) => {
+                            let current = crate::pulse_transport::pulse_seq();
+                            let _ = tx.send(format!(
+                                "data: {{\"seq\":{current},\"topic\":\"\",\"payload_summary\":\"lagged\",\"timestamp\":0}}\n\n"
+                            ));
                         }
                         Err(broadcast::error::RecvError::Closed) => break,
                     }

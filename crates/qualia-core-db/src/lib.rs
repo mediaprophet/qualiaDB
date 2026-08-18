@@ -37,6 +37,8 @@ pub use services::daemon_tensor;
 #[cfg(not(target_arch = "wasm32"))]
 pub use services::ilp_dispatcher;
 #[cfg(not(target_arch = "wasm32"))]
+pub use services::pulse_transport;
+#[cfg(not(target_arch = "wasm32"))]
 pub use services::rpc;
 pub use services::solid_ldp;
 #[cfg(not(target_arch = "wasm32"))]

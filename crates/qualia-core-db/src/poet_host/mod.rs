@@ -22,6 +22,21 @@ use poet_vibe::{eval_cell, eval_function, load_program, Diagnostic, Env, Host, V
 /// Topics `pulse.publish` may use in 0.1. Anything else is E500.
 pub const PULSE_ALLOW_PREFIXES: &[&str] = &["clinic/", "poet/", "pulse/"];
 
+/// A recorded `pulse.publish` call — the 0.1 receipt for UI / audit display.
+///
+/// When the snapshot is `attached` to the live daemon graph, each publish also
+/// emits a [`crate::pulse_transport::PulseEvent`] to the process-wide broadcast
+/// channel so SSE / WebSocket subscribers receive it in real time.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PulseRecord {
+    /// The topic string (validated against [`PULSE_ALLOW_PREFIXES`]).
+    pub topic: String,
+    /// Compact textual summary of the payload value.
+    pub payload_summary: String,
+    /// Monotonic sequence number from the pulse transport (0 when detached).
+    pub seq: u64,
+}
+
 /// RDF 1.2 reifier predicate used by staged `<< s p o ~ r >>` quins.
 const RDF_REIFIES: &[u8] = b"http://www.w3.org/1999/02/22-rdf-syntax-ns#reifies";
 
@@ -34,7 +49,7 @@ pub struct PoetSnapshot {
     pub committed: Vec<NQuin>,
     staged: Vec<NQuin>,
     pub revision: u64,
-    pub published: Vec<String>,
+    pub published: Vec<PulseRecord>,
     pub attached: bool,
     /// Set to `true` when `graph_query` is called during an evaluation.
     /// The desktop harness resets this before each `eval_cell_src` and reads
@@ -293,7 +308,7 @@ impl Host for PoetSnapshot {
     fn pulse_publish(
         &mut self,
         topic: &str,
-        _payload: &Value,
+        payload: &Value,
         span: poet_vibe::Span,
     ) -> Result<Value, Diagnostic> {
         if !PULSE_ALLOW_PREFIXES
@@ -306,7 +321,22 @@ impl Host for PoetSnapshot {
                 format!("pulse topic `{topic}` is not on the 0.1 allowlist"),
             ));
         }
-        self.published.push(topic.to_string());
+        let payload_summary = format_value(payload);
+        // When attached to the live daemon, emit through the process-wide
+        // pulse transport so SSE / WebSocket subscribers receive the event.
+        #[cfg(not(target_arch = "wasm32"))]
+        let seq = if self.attached {
+            crate::pulse_transport::publish(topic, &payload_summary)
+        } else {
+            0
+        };
+        #[cfg(target_arch = "wasm32")]
+        let seq = 0u64;
+        self.published.push(PulseRecord {
+            topic: topic.to_string(),
+            payload_summary,
+            seq,
+        });
         Ok(Value::Null)
     }
 
@@ -535,6 +565,49 @@ effect fn go() {
 "#;
         let err = snap.eval_fn(src, "go", vec![]).unwrap_err();
         assert_eq!(err.code, poet_vibe::DiagCode::E500);
+    }
+
+    #[test]
+    fn pulse_records_payload_summary() {
+        let mut snap = PoetSnapshot::default();
+        let src = r#"
+requires [ capability("pulse.publish") ];
+effect fn go() {
+    effect pulse.publish("pulse/test-payload", "hello world");
+    return null;
+}
+"#;
+        snap.eval_fn(src, "go", vec![]).unwrap();
+        assert_eq!(snap.published.len(), 1);
+        assert_eq!(snap.published[0].topic, "pulse/test-payload");
+        assert!(
+            snap.published[0].payload_summary.contains("hello world"),
+            "payload summary should contain the payload text, got: {}",
+            snap.published[0].payload_summary
+        );
+        // Detached snapshot → seq is 0 (no transport emission).
+        assert_eq!(snap.published[0].seq, 0);
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    #[test]
+    fn pulse_attached_emits_to_transport() {
+        use crate::pulse_transport;
+        let mut snap = PoetSnapshot::from_daemon();
+        let mut rx = pulse_transport::subscribe();
+        let src = r#"
+requires [ capability("pulse.publish") ];
+effect fn go() {
+    effect pulse.publish("pulse/transport-test", 42);
+    return null;
+}
+"#;
+        snap.eval_fn(src, "go", vec![]).unwrap();
+        assert_eq!(snap.published.len(), 1);
+        assert!(snap.published[0].seq > 0, "attached pulse should get a seq");
+        let event = rx.try_recv().expect("transport subscriber should receive event");
+        assert_eq!(event.topic, "pulse/transport-test");
+        assert_eq!(event.seq, snap.published[0].seq);
     }
 
     #[cfg(not(target_arch = "wasm32"))]

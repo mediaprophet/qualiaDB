@@ -5,7 +5,7 @@
 //! Honesty: graph is an in-process snapshot until daemon wiring (Partial).
 
 use qualia_core_db::poet_host::catalog::{engine_families_mcp_only, VIBE_0_1};
-use qualia_core_db::poet_host::{format_value, PoetSnapshot};
+use qualia_core_db::poet_host::{format_value, PoetSnapshot, PulseRecord};
 use qualia_core_db::text_span::{annotation_quin, TextSpan};
 use qualia_core_db::nlp::analyze_document;
 use serde::Serialize;
@@ -41,13 +41,30 @@ impl Default for PoetHarnessState {
 }
 
 #[derive(Serialize)]
+pub struct PulseRecordDto {
+    pub topic: String,
+    pub payload_summary: String,
+    pub seq: u64,
+}
+
+impl From<&PulseRecord> for PulseRecordDto {
+    fn from(r: &PulseRecord) -> Self {
+        Self {
+            topic: r.topic.clone(),
+            payload_summary: r.payload_summary.clone(),
+            seq: r.seq,
+        }
+    }
+}
+
+#[derive(Serialize)]
 pub struct PoetEvalResult {
     pub ok: bool,
     pub value: String,
     pub diagnostic: Option<String>,
     pub revision: u64,
     pub committed: usize,
-    pub published: Vec<String>,
+    pub published: Vec<PulseRecordDto>,
     pub honesty: &'static str,
     pub language: &'static str,
     pub value_cbor_hex: String,
@@ -82,7 +99,7 @@ fn snapshot_result(snap: &PoetSnapshot, ok: bool, value: String, diagnostic: Opt
         diagnostic,
         revision: snap.revision,
         committed: snap.visible_count(),
-        published: snap.published.clone(),
+        published: snap.published.iter().map(PulseRecordDto::from).collect(),
         honesty: snap.honesty(),
         language: poet_vibe::LANGUAGE_VERSION,
         value_cbor_hex: encode_cbor_text(&value),

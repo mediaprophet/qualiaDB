@@ -15,6 +15,8 @@ pub mod daemon_tensor;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod ilp_dispatcher;
 #[cfg(not(target_arch = "wasm32"))]
+pub mod pulse_transport;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod rpc;
 pub mod solid_ldp;
 #[cfg(not(target_arch = "wasm32"))]
