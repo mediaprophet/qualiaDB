@@ -57,6 +57,15 @@ pub const FIN_PORTFOLIO: &str = "FinancialModeling.portfolio_risk";
 pub const COVERAGE_MATRIX: &str = "CapabilityDiscovery.coverage";
 pub const CATALOG_TTL: &str = "CapabilityDiscovery.catalog";
 pub const RENDER_SCENE: &str = "Render.scene";
+pub const RENDER_CSS_ANIMATION: &str = "Render.css_animation";
+pub const RENDER_CSS_COLOR: &str = "Render.css_color";
+pub const RENDER_CSS_TRANSFORM: &str = "Render.css_transform";
+pub const RENDER_SVG_PATH: &str = "Render.svg_path";
+pub const RENDER_SVG_CIRCLE: &str = "Render.svg_circle";
+pub const RENDER_SVG_RECT: &str = "Render.svg_rect";
+pub const RENDER_SVG_LINE: &str = "Render.svg_line";
+pub const RENDER_SVG_BEZIER: &str = "Render.svg_bezier";
+pub const RENDER_SVG_FIELD: &str = "Render.svg_field";
 
 // ── Physics wrappers (wrap specialized_libs::physics_simulation) ───────────
 pub const PHYS_WAVE_1D: &str = "Physics.wave_1d";
@@ -167,6 +176,15 @@ pub const ALL_BOUND: &[&str] = &[
     COVERAGE_MATRIX,
     CATALOG_TTL,
     RENDER_SCENE,
+    RENDER_CSS_ANIMATION,
+    RENDER_CSS_COLOR,
+    RENDER_CSS_TRANSFORM,
+    RENDER_SVG_PATH,
+    RENDER_SVG_CIRCLE,
+    RENDER_SVG_RECT,
+    RENDER_SVG_LINE,
+    RENDER_SVG_BEZIER,
+    RENDER_SVG_FIELD,
     LA_TRANSPOSE,
     LA_DET,
     LA_SOLVE,
@@ -244,7 +262,9 @@ pub fn seam_for(id: &str) -> &'static str {
         SOCIAL_LWW => "social",
         NET_PEER | NET_SONIC => "net",
         FIN_PORTFOLIO => "econ",
-        RENDER_SCENE => "render",
+        RENDER_SCENE | RENDER_CSS_ANIMATION | RENDER_CSS_COLOR | RENDER_CSS_TRANSFORM
+        | RENDER_SVG_PATH | RENDER_SVG_CIRCLE | RENDER_SVG_RECT | RENDER_SVG_LINE
+        | RENDER_SVG_BEZIER | RENDER_SVG_FIELD => "render",
         _ => "unbound",
     }
 }

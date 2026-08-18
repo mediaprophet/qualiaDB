@@ -159,3 +159,34 @@ Phase C was claimed in NOTICES but the session OOM'd before any code was written
 - wasm32: clean
 
 **Next:** Phase D — `vibeAnimation` namespace (grammar extension + CSS/SVG + computational geometry integration).
+
+### Phase D — CSS/SVG output bindings (done, 2026-08-18 session 3)
+
+**Implemented:** 9 new `capability.invoke` functions for CSS/SVG generation:
+
+- `Render.css_animation` — `@keyframes` CSS from a value curve (list of {time, value} records). Supports property name, CSS unit suffix, auto-normalized percentage offsets.
+- `Render.css_color` — EMF `[α, μ, σ]` → spectral pipeline → `rgb(r,g,b)` CSS string. Wraps `emf_to_linear_rgb` + `linear_rgb_to_display`.
+- `Render.css_transform` — CSS `transform` string from translate/rotate/scale/skew components.
+- `Render.svg_path` — SVG `<path>` element from a flat list of [x, y] points. Supports stroke, fill, closed path.
+- `Render.svg_circle` — SVG `<circle>` element.
+- `Render.svg_rect` — SVG `<rect>` element with optional rounded corners.
+- `Render.svg_line` — SVG `<line>` element.
+- `Render.svg_bezier` — Bezier curve evaluation via computational geometry `bezier_eval` (de Casteljau) → SVG path. Bridges to `parametric_cad.rs`.
+- `Render.svg_field` — 2D field grid visualization: circles sized by amplitude, colored by phase (HSL hue mapping). Consumes output from `Physics.emf_field_grid_3d`.
+
+**Files created:**
+- `crates/qualia-core-db/src/poet_host/invoke/render/css.rs` — CSS wrappers (3 functions, 6 tests)
+- `crates/qualia-core-db/src/poet_host/invoke/render/svg.rs` — SVG wrappers (6 functions, 9 tests)
+
+**Files modified:**
+- `render/mod.rs` — `mod css;` + `mod svg;` + re-exports
+- `ids.rs` — 9 new ID constants + ALL_BOUND + seam_for
+- `invoke/mod.rs` — 9 dispatch arms
+
+**Verification:**
+- poet_host: 127 passed (was 112, +15 new)
+- poet-vibe lib: 3 passed, conformance: 22 passed
+- webizen-desktop: clean
+- wasm32: clean
+
+**Next:** Phase E — reactive animation loop (rAF + setInterval + pausable + configurable).

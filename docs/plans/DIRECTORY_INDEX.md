@@ -42,6 +42,7 @@ Webizen, inference, rendering, desktop/QApps, and supporting compute infrastruct
 - `poet-vibe-nlp-desktop-TRACKER-2026-08-15.md`: Swarm-ready implementation tracker for Vibe 0.1, Poet backend, desktop harness, and document NLP (0.0.31-dev).
 - `poet-webizen-desktop-implementation-plan-2026-08-15.md`: Research note that the tracker supersedes for execution.
 - `sprint-inference-handover-native-viewport.md`: Inference and native viewport sprint handover.
+- `vibescript-webgl-and-advanced-llm-agent-interface-plan-2026-08-18.md`: Architecture and implementation plan expanding VibeScript to support hardware-accelerated WebGL/WebGL2 rendering (zero-copy WASM buffer streaming, Naga WGSL-to-GLSL transpilation) and an advanced scripting interface for in-process LLM agents (homoiconic CBOR-LD ASTs, 3-stage reflection self-repair loops, structural AST queries, Q42 Semantic Blackboard shared context, multi-agent DAGs, and dynamic capability leasing).
 - `wasm-viewport-migration-plan.md`: Detailed migration plan for the WASM/native 10D viewport.
 - `webizen-0.0.28-naturalised-desktop-implementation.md`: Implemented natural/technical
   desktop UX, setup, relations, spatial interfaces, and agent-QA verification contract.
@@ -49,6 +50,7 @@ Webizen, inference, rendering, desktop/QApps, and supporting compute infrastruct
 
 ## Changelog
 
+- **2026-08-18**: Added VibeScript WebGL rendering and advanced LLM agent scripting interface plan.
 - **2026-08-16**: Presentation plan: destination pair is CBOR-LD wire + Vibe language (not JSON/JS host).
 - **2026-07-29**: Added the 0.0.28 naturalised desktop implementation and verification handoff.
 - **2026-07-03**: Expanded the visual/3D plan after a repository capability audit with the

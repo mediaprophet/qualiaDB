@@ -144,30 +144,23 @@ These are the functions Timothy specifically asked about — EMF frequency shift
 
 ---
 
-### Phase D: CSS/SVG output bindings (new)
+### Phase D: CSS/SVG output bindings (new) — ✅ DONE
 
 Enable Vibe scripts to generate CSS animation properties and SVG elements from computed values.
 
-**New invoke IDs:**
-- `Render.css_animation` — given a value curve (list of (time, value) pairs) and a CSS property name, generate `@keyframes` CSS text.
-- `Render.svg_path` — given a list of (x, y) points, generate SVG path data (`d="M x y L x y ..."`).
-- `Render.svg_circle` / `Render.svg_rect` / `Render.svg_line` — generate individual SVG elements from parameters.
-- `Render.svg_field` — given a 2D field grid (from `Physics.emf_field_grid`), generate SVG elements representing the field (circles sized by amplitude, colored by phase/frequency).
-- `Render.css_color` — given EMF parameters, compute the CSS color string (via the spectral pipeline).
+**Implemented via `capability.invoke` (spec-compliant path, no grammar change needed):**
+- `Render.css_animation` — `@keyframes` CSS from value curves.
+- `Render.css_color` — EMF → spectral pipeline → `rgb(r,g,b)`.
+- `Render.css_transform` — CSS transform from translate/rotate/scale/skew.
+- `Render.svg_path` — SVG `<path>` from [x,y] points.
+- `Render.svg_circle` / `Render.svg_rect` / `Render.svg_line` — SVG shapes.
+- `Render.svg_bezier` — Bezier curve via computational geometry `bezier_eval` → SVG path.
+- `Render.svg_field` — 2D field grid → SVG circles (amplitude→radius, phase→hue).
 
-**Design decision needed from Timothy:**
-- Should CSS/SVG output be a `capability.invoke` (returns a string value) or a new first-class namespace (`render.css`, `render.svg`)?
-- The 0.1 spec says "Logic, geometry, inference, vision, audio, and extension codecs are out of 0.1 except as later `capability.invoke` IDs" — so `capability.invoke` is the spec-compliant path.
-- But if these are going to be heavily used for animation scripting, a `render.*` namespace might be more ergonomic. This would be a post-0.1 grammar extension.
+**Files created:** `render/css.rs` (3 fn, 6 tests), `render/svg.rs` (6 fn, 9 tests)
+**Files modified:** `render/mod.rs`, `ids.rs`, `invoke/mod.rs`
 
-**Files to touch:**
-- `crates/qualia-core-db/src/poet_host/invoke/render/` — new `css.rs`, `svg.rs` submodules
-- `crates/qualia-core-db/src/poet_host/invoke/ids.rs` — new IDs
-- `crates/qualia-core-db/src/poet_host/invoke/mod.rs` — wire dispatch arms
-
-**Tests:** Verify generated CSS/SVG is well-formed and reflects input values.
-
-**Estimated effort:** Medium — string generation from structured values, plus integration with the spectral pipeline for color.
+**Verification:** poet_host 127 tests, poet-vibe 22+3, desktop+wasm clean.
 
 ---
 
