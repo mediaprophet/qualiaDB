@@ -251,3 +251,49 @@ fn fixtures_on_disk_match_section_12_and_13() {
         DiagCode::E001
     );
 }
+
+#[test]
+fn import_alias_resolves_namespace() {
+    let src = r#"
+import "vibe:0.1/math" as m;
+fn add() { return m.abs(-5); }
+"#;
+    let program = load_program(src).unwrap();
+    let mut host = MockHost::default();
+    let mut env = Env::default();
+    let v = eval_function(&program, "add", vec![], &mut host, &mut env).unwrap();
+    assert_eq!(v.as_i64(), Some(5));
+}
+
+#[test]
+fn import_without_alias_uses_namespace_name() {
+    let src = r#"
+import "vibe:0.1/math";
+fn add() { return math.abs(-3); }
+"#;
+    let program = load_program(src).unwrap();
+    let mut host = MockHost::default();
+    let mut env = Env::default();
+    let v = eval_function(&program, "add", vec![], &mut host, &mut env).unwrap();
+    assert_eq!(v.as_i64(), Some(3));
+}
+
+#[test]
+fn import_invalid_path_rejected() {
+    let src = r#"
+import "vibe:0.1/bogus";
+fn x() { return 0; }
+"#;
+    let err = load_program(src).unwrap_err();
+    assert_eq!(err.code, DiagCode::E100);
+}
+
+#[test]
+fn import_non_vibe_path_rejected() {
+    let src = r#"
+import "https://evil.example/mod";
+fn x() { return 0; }
+"#;
+    let err = load_program(src).unwrap_err();
+    assert_eq!(err.code, DiagCode::E100);
+}

@@ -12,6 +12,31 @@ pub struct CheckResult {
 }
 
 pub fn check_program(program: &Program) -> Result<CheckResult, Diagnostic> {
+    // Validate import paths before checking items.
+    for imp in &program.imports {
+        let path = imp.path.as_str();
+        if !path.starts_with("vibe:0.1/") {
+            return Err(Diagnostic::new(
+                DiagCode::E100,
+                imp.span,
+                format!("import path must be vibe:0.1/<ns>; got '{path}'"),
+            ));
+        }
+        let ns = &path["vibe:0.1/".len()..];
+        const VALID: &[&str] = &[
+            "math", "rdf", "quin", "graph", "aura", "pulse", "capability", "time",
+        ];
+        if !VALID.contains(&ns) {
+            return Err(Diagnostic::new(
+                DiagCode::E100,
+                imp.span,
+                format!(
+                    "unknown namespace '{ns}'; valid: {}",
+                    VALID.join(", ")
+                ),
+            ));
+        }
+    }
     let granted: Vec<&str> = program.requires.iter().map(|c| c.id.as_str()).collect();
     let mut max_effect = Effect::Pure;
     let mut env = HashMap::new();

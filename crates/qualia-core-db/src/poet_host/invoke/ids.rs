@@ -58,6 +58,39 @@ pub const COVERAGE_MATRIX: &str = "CapabilityDiscovery.coverage";
 pub const CATALOG_TTL: &str = "CapabilityDiscovery.catalog";
 pub const RENDER_SCENE: &str = "Render.scene";
 
+// ── Linear algebra extensions (wrap solvers::linear_algebra) ──────────────
+pub const LA_TRANSPOSE: &str = "LinearAlgebra.transpose";
+pub const LA_DET: &str = "LinearAlgebra.determinant";
+pub const LA_SOLVE: &str = "LinearAlgebra.solve";
+pub const LA_EIGEN_SYM: &str = "LinearAlgebra.eigen_symmetric";
+pub const LA_EIGENVALUES: &str = "LinearAlgebra.eigenvalues";
+pub const LA_SVD: &str = "LinearAlgebra.svd";
+pub const LA_POLY_ROOTS: &str = "LinearAlgebra.polynomial_roots";
+
+// ── CAS extensions (wrap specialized_libs::symbolic_algebra) ──────────────
+pub const CAS_DIFFERENTIATE: &str = "SymbolicAlgebra.differentiate";
+pub const CAS_SIMPLIFY: &str = "SymbolicAlgebra.simplify";
+pub const CAS_EXPAND: &str = "SymbolicAlgebra.expand";
+pub const CAS_FACTOR: &str = "SymbolicAlgebra.factor";
+pub const CAS_SOLVE_QUADRATIC: &str = "SymbolicAlgebra.solve_quadratic";
+
+// ── Crypto extensions (wrap sha2 / blake3) ────────────────────────────────
+pub const CRYPTO_SHA512: &str = "QuantumAndCryptographic.sha512";
+pub const CRYPTO_BLAKE3: &str = "QuantumAndCryptographic.blake3";
+
+// ── Stats extension (wrap solvers::statistics::regression) ────────────────
+pub const STAT_LINEAR_REGRESSION: &str = "Statistics.linear_regression";
+
+// ── Integral transforms (wrap solvers::transforms::fourier) ───────────────
+pub const XFORM_DFT: &str = "IntegralTransforms.dft";
+
+// ── Physical units (wrap solvers::units::conversion) ──────────────────────
+pub const UNITS_CONVERT: &str = "PhysicalUnits.convert";
+
+// ── Graph reasoning (wrap solvers::graph_opt) ─────────────────────────────
+pub const GRAPH_SHORTEST_PATH: &str = "GraphReasoning.shortest_path";
+pub const GRAPH_SPREADING_ACTIVATION: &str = "GraphReasoning.spreading_activation";
+
 pub const ALL_BOUND: &[&str] = &[
     DISCOVERY_LIST,
     SHACL_VALIDATE,
@@ -110,19 +143,41 @@ pub const ALL_BOUND: &[&str] = &[
     COVERAGE_MATRIX,
     CATALOG_TTL,
     RENDER_SCENE,
+    LA_TRANSPOSE,
+    LA_DET,
+    LA_SOLVE,
+    LA_EIGEN_SYM,
+    LA_EIGENVALUES,
+    LA_SVD,
+    LA_POLY_ROOTS,
+    CAS_DIFFERENTIATE,
+    CAS_SIMPLIFY,
+    CAS_EXPAND,
+    CAS_FACTOR,
+    CAS_SOLVE_QUADRATIC,
+    CRYPTO_SHA512,
+    CRYPTO_BLAKE3,
+    STAT_LINEAR_REGRESSION,
+    XFORM_DFT,
+    UNITS_CONVERT,
+    GRAPH_SHORTEST_PATH,
+    GRAPH_SPREADING_ACTIVATION,
 ];
 
 /// Future extract target for an invoke id. Not a crate today.
 pub fn seam_for(id: &str) -> &'static str {
     match id {
         DISCOVERY_LIST | HASH_IRI | COVERAGE_MATRIX | CATALOG_TTL => "runtime",
-        SHACL_VALIDATE | SHACL_EXTENSIONS | GRAPH_STATS | GRAPH_SPARQL => "graph",
+        SHACL_VALIDATE | SHACL_EXTENSIONS | GRAPH_STATS | GRAPH_SPARQL
+        | GRAPH_SHORTEST_PATH | GRAPH_SPREADING_ACTIVATION => "graph",
         DEONTIC_EVAL | EPISTEMIC_EVAL | PARACONSISTENT_ROUTE | LTL_GLOBALLY | LTL_FINALLY
         | DL_SUBSUMES | ASP_ENUMERATE | CAUSAL_CAUSED | FUZZY_TNORM => "logic",
         NLP_ANALYZE => "nlp",
         NT_GCD | NT_LCM | NT_PRIME | LINALG_MATMUL | SYMBOLIC_EVAL | CALC_SIMPSON | OPT_HILL
-        | GA_DOT | SPEC_BESSEL => "math",
-        STAT_MEAN | STAT_PEARSON => "stats",
+        | GA_DOT | SPEC_BESSEL | LA_TRANSPOSE | LA_DET | LA_SOLVE | LA_EIGEN_SYM
+        | LA_EIGENVALUES | LA_SVD | LA_POLY_ROOTS | CAS_DIFFERENTIATE | CAS_SIMPLIFY
+        | CAS_EXPAND | CAS_FACTOR | CAS_SOLVE_QUADRATIC | XFORM_DFT | UNITS_CONVERT => "math",
+        STAT_MEAN | STAT_PEARSON | STAT_LINEAR_REGRESSION => "stats",
         GEOM_HULL2 => "geometry",
         VISION_AHASH => "vision",
         ML_OLS => "ml",
@@ -131,7 +186,7 @@ pub fn seam_for(id: &str) -> &'static str {
         FIN_BS => "econ",
         ENG_KIN => "engineering",
         ID_DID_Q42 => "governance",
-        CRYPTO_SHA256 => "crypto",
+        CRYPTO_SHA256 | CRYPTO_SHA512 | CRYPTO_BLAKE3 => "crypto",
         MANIFOLD_DISTANCE | MANIFOLD_AXES | MANIFOLD_PROJECT => "manifold",
         DOC_INGEST => "docs",
         SHEET_STATS | SHEET_SUM => "sheet",

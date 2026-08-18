@@ -10,14 +10,62 @@ use std::collections::HashMap;
 
 pub struct Env {
     pub vars: HashMap<String, Value>,
+    /// Import alias → namespace name (e.g. `g` → `graph`).
+    /// Populated from `import "vibe:0.1/graph" as g;` declarations.
+    pub aliases: HashMap<String, String>,
 }
 
 impl Default for Env {
     fn default() -> Self {
         Self {
             vars: HashMap::new(),
+            aliases: HashMap::new(),
         }
     }
+}
+
+/// The valid 0.1 namespace import paths. `vibe:0.1/{ns}`.
+pub const VIBE_0_1_NAMESPACES: &[&str] = &[
+    "math", "rdf", "quin", "graph", "aura", "pulse", "capability", "time",
+];
+
+/// Populate `env.aliases` from a program's import declarations.
+/// Each `import "vibe:0.1/graph" as g;` maps `g` → `graph`.
+/// If no alias is given, the namespace basename is used (e.g. `graph`).
+/// Returns an error if the import path is not a valid 0.1 namespace.
+pub fn populate_import_aliases(
+    env: &mut Env,
+    imports: &[ImportDecl],
+) -> Result<(), Diagnostic> {
+    for imp in imports {
+        let ns = imp
+            .path
+            .strip_prefix("vibe:0.1/")
+            .ok_or_else(|| {
+                Diagnostic::new(
+                    DiagCode::E100,
+                    imp.span,
+                    format!(
+                        "import path must be vibe:0.1/<ns>; got '{}'",
+                        imp.path
+                    ),
+                )
+            })?;
+        if !VIBE_0_1_NAMESPACES.contains(&ns) {
+            return Err(Diagnostic::new(
+                DiagCode::E100,
+                imp.span,
+                format!(
+                    "unknown namespace '{}'; valid: {}",
+                    ns,
+                    VIBE_0_1_NAMESPACES.join(", ")
+                ),
+            ));
+        }
+        let alias = imp.alias.as_deref().unwrap_or(ns);
+        env.aliases.insert(alias.to_string(), ns.to_string());
+    }
+    Ok(())
 }
 
 pub struct Engine<'a, H: Host> {
@@ -154,7 +202,9 @@ impl<'a, H: Host> Engine<'a, H> {
         let path = match &callee.kind {
             ExprKind::Member { recv, name } => {
                 if let ExprKind::Ident(ns) = &recv.kind {
-                    format!("{ns}.{name}")
+                    // Resolve import aliases: `g.query` → `graph.query`
+                    let resolved_ns = env.aliases.get(ns).map(|s| s.as_str()).unwrap_or(ns);
+                    format!("{resolved_ns}.{name}")
                 } else {
                     name.clone()
                 }
@@ -358,6 +408,8 @@ impl<'a, H: Host> Engine<'a, H> {
             self.budget.steps_left = self.budget.steps_left.min(steps);
         }
         let mut local = Env::default();
+        // Inherit import aliases from the calling environment.
+        local.aliases = env.aliases.clone();
         for (p, a) in f.params.iter().zip(args.into_iter()) {
             local.vars.insert(p.name.clone(), a);
         }

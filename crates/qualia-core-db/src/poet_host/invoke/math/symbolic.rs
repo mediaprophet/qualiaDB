@@ -1,6 +1,7 @@
 //! Polynomial eval through the CAS `Expr` tree.
 
 use super::super::args;
+use crate::specialized_libs::symbolic_algebra as sa;
 use crate::specialized_libs::symbolic_algebra::{add, c, mul, pow, var, Expr};
 use poet_vibe::{Diagnostic, Span, Value};
 use std::collections::HashMap;
@@ -27,6 +28,79 @@ pub fn eval_poly(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     Ok(Value::F64(y))
 }
 
+/// Symbolic derivative of a parsed expression with respect to a variable, simplified.
+pub fn differentiate(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
+    let expr = args::rec_str(args_v, "expr")
+        .ok_or_else(|| args::bad(span, "SymbolicAlgebra.differentiate needs expr: string"))?;
+    let var = args::rec_str(args_v, "var")
+        .ok_or_else(|| args::bad(span, "SymbolicAlgebra.differentiate needs var: string"))?;
+    let e = sa::parse(expr).map_err(|e| args::bad(span, format!("parse error: {e}")))?;
+    let d = sa::simplify(&sa::differentiate(&e, var));
+    Ok(args::record([("derivative", Value::String(d.to_string()))]))
+}
+
+/// Simplify a parsed expression (constant folding + identity elimination).
+pub fn simplify(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
+    let expr = args::rec_str(args_v, "expr")
+        .ok_or_else(|| args::bad(span, "SymbolicAlgebra.simplify needs expr: string"))?;
+    let e = sa::parse(expr).map_err(|e| args::bad(span, format!("parse error: {e}")))?;
+    let s = sa::simplify(&e);
+    Ok(args::record([("simplified", Value::String(s.to_string()))]))
+}
+
+/// Expand a parsed expression (distribute products over sums, expand small powers).
+pub fn expand(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
+    let expr = args::rec_str(args_v, "expr")
+        .ok_or_else(|| args::bad(span, "SymbolicAlgebra.expand needs expr: string"))?;
+    let e = sa::parse(expr).map_err(|e| args::bad(span, format!("parse error: {e}")))?;
+    let x = sa::expand(&e);
+    Ok(args::record([("expanded", Value::String(x.to_string()))]))
+}
+
+/// Factor a real quadratic `a·x² + b·x + c` into `a·(x − r₁)·(x − r₂)` when it has
+/// real roots. Errors when `a == 0` (not quadratic) or the discriminant is negative.
+pub fn factor(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
+    let a = args::rec_f64(args_v, "a").ok_or_else(|| args::bad(span, "factor needs a: number"))?;
+    let b = args::rec_f64(args_v, "b").ok_or_else(|| args::bad(span, "factor needs b: number"))?;
+    let c = args::rec_f64(args_v, "c").ok_or_else(|| args::bad(span, "factor needs c: number"))?;
+    let var = args::rec_str(args_v, "var").unwrap_or("x");
+    if a == 0.0 {
+        return Err(args::bad(span, "factor: a must not be 0 (not a quadratic)"));
+    }
+    let disc = b * b - 4.0 * a * c;
+    if disc < 0.0 {
+        return Err(args::bad(span, "factor: discriminant is negative (no real roots)"));
+    }
+    let factored = sa::factor_quadratic(a, b, c, var)
+        .ok_or_else(|| args::bad(span, "factor: no real factorisation"))?;
+    Ok(args::record([("factored", Value::String(factored.to_string()))]))
+}
+
+/// Symbolic roots of `a·x² + b·x + c = 0`. Each root is returned as a record with the
+/// symbolic expression string and its numeric value (or `null` when non-finite, e.g.
+/// a negative discriminant producing an imaginary root).
+pub fn solve_quadratic(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
+    let a = args::rec_f64(args_v, "a")
+        .ok_or_else(|| args::bad(span, "solve_quadratic needs a: number"))?;
+    let b = args::rec_f64(args_v, "b")
+        .ok_or_else(|| args::bad(span, "solve_quadratic needs b: number"))?;
+    let c = args::rec_f64(args_v, "c")
+        .ok_or_else(|| args::bad(span, "solve_quadratic needs c: number"))?;
+    let roots = sa::solve_quadratic_symbolic(a, b, c);
+    let env: HashMap<String, f64> = HashMap::new();
+    let list: Vec<Value> = roots
+        .iter()
+        .map(|r| {
+            let value = match Expr::eval(r, &env) {
+                Some(v) if v.is_finite() => Value::F64(v),
+                _ => Value::Null,
+            };
+            args::record([("expr", Value::String(r.to_string())), ("value", value)])
+        })
+        .collect();
+    Ok(Value::List(list))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -41,5 +115,17 @@ mod tests {
             eval_poly(&Value::Record(m), Span { start: 0, end: 0 }).unwrap(),
             Value::F64(10.0)
         );
+    }
+
+    #[test]
+    fn simplify_x_plus_zero_is_x() {
+        let mut m = BTreeMap::new();
+        m.insert("expr".into(), Value::String("x + 0".into()));
+        let v = simplify(&Value::Record(m), Span { start: 0, end: 0 }).unwrap();
+        let rec = match v {
+            Value::Record(r) => r,
+            _ => panic!("expected record"),
+        };
+        assert_eq!(rec.get("simplified"), Some(&Value::String("x".into())));
     }
 }

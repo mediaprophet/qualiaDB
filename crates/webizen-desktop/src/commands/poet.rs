@@ -14,12 +14,28 @@ use tauri::State;
 
 pub struct PoetHarnessState {
     pub(crate) snap: Mutex<PoetSnapshot>,
+    pub(crate) cells: Mutex<Vec<CellEntry>>,
+}
+
+/// A registered reactive cell. The harness re-evaluates cells whose
+/// `graph_revision_at_eval` is older than the current snapshot revision
+/// when `poet_recompute` is called. Only cells that called `graph.query`
+/// during evaluation are considered graph-dependent.
+#[derive(Clone, serde::Serialize)]
+pub struct CellEntry {
+    pub source: String,
+    pub value: String,
+    pub ok: bool,
+    pub graph_dependent: bool,
+    pub graph_revision_at_eval: u64,
+    pub diagnostic: Option<String>,
 }
 
 impl Default for PoetHarnessState {
     fn default() -> Self {
         Self {
             snap: Mutex::new(PoetSnapshot::live()),
+            cells: Mutex::new(Vec::new()),
         }
     }
 }
@@ -105,17 +121,81 @@ pub fn poet_eval(
     } else {
         snap.eval_cell_src(&source)
     };
-    match run {
+    let result = match run {
         Ok(v) => snapshot_result(&snap, true, format_value(&v), None),
         Err(e) => snapshot_result(&snap, false, String::new(), Some(e.to_json())),
+    };
+    // Register reactive cells for later recomputation.
+    if as_cell {
+        let graph_dep = snap.graph_read_during_eval;
+        let entry = CellEntry {
+            source: source.clone(),
+            value: result.value.clone(),
+            ok: result.ok,
+            graph_dependent: graph_dep,
+            graph_revision_at_eval: snap.revision,
+            diagnostic: result.diagnostic.clone(),
+        };
+        let mut cells = state.cells.lock().expect("poet cells");
+        // Replace existing cell with same source, or add new.
+        if let Some(existing) = cells.iter_mut().find(|c| c.source == source) {
+            *existing = entry;
+        } else {
+            cells.push(entry);
+        }
     }
+    result
 }
 
 #[tauri::command]
 pub fn poet_reset(state: State<PoetHarnessState>) -> PoetEvalResult {
     let mut snap = state.snap.lock().expect("poet snapshot");
     *snap = PoetSnapshot::live();
+    let mut cells = state.cells.lock().expect("poet cells");
+    cells.clear();
     snapshot_result(&snap, true, "reset".into(), None)
+}
+
+/// Re-evaluate all registered reactive cells whose graph dependency is stale
+/// (i.e. `graph_revision_at_eval` < current snapshot revision). Cells that
+/// didn't query the graph are not recomputed. Returns the updated cell list.
+#[tauri::command]
+pub fn poet_recompute(state: State<PoetHarnessState>) -> Vec<CellEntry> {
+    let mut snap = state.snap.lock().expect("poet snapshot");
+    let current_revision = snap.revision;
+    let mut cells = state.cells.lock().expect("poet cells");
+
+    for cell in cells.iter_mut() {
+        // Only re-evaluate graph-dependent cells whose revision is stale.
+        if !cell.graph_dependent || cell.graph_revision_at_eval >= current_revision {
+            continue;
+        }
+        let run = snap.eval_cell_src(&cell.source);
+        match run {
+            Ok(v) => {
+                cell.value = format_value(&v);
+                cell.ok = true;
+                cell.diagnostic = None;
+                cell.graph_revision_at_eval = snap.revision;
+                // Re-check graph dependency after recomputation.
+                cell.graph_dependent = snap.graph_read_during_eval;
+            }
+            Err(e) => {
+                cell.ok = false;
+                cell.value = String::new();
+                cell.diagnostic = Some(e.to_json());
+                cell.graph_revision_at_eval = snap.revision;
+            }
+        }
+    }
+    cells.clone()
+}
+
+/// List all registered reactive cells with their current state.
+#[tauri::command]
+pub fn poet_cells(state: State<PoetHarnessState>) -> Vec<CellEntry> {
+    let cells = state.cells.lock().expect("poet cells");
+    cells.clone()
 }
 
 #[tauri::command]

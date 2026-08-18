@@ -26,7 +26,7 @@ pub use budget::Budget;
 pub use check::{check_cell, check_program, CheckResult};
 pub use diagnose::{diagnose, DiagnoseReport};
 pub use error::{DiagCode, Diagnostic};
-pub use eval::{Engine, Env};
+pub use eval::{populate_import_aliases, Engine, Env};
 pub use grammar::{DIAGNOSTIC_SCHEMA_JSON, EBNF, GBNF, SOURCE_SCHEMA_JSON};
 pub use parse::{parse_cell, parse_program};
 pub use span::Span;
@@ -52,6 +52,7 @@ pub fn load_program(src: &str) -> Result<Program, Diagnostic> {
 }
 
 /// Evaluate a named function from a checked program.
+/// Import aliases from the program are populated into `env` before evaluation.
 pub fn eval_function<H: Host>(
     program: &Program,
     name: &str,
@@ -59,6 +60,7 @@ pub fn eval_function<H: Host>(
     host: &mut H,
     env: &mut Env,
 ) -> Result<Value, Diagnostic> {
+    populate_import_aliases(env, &program.imports)?;
     let mut engine = Engine::new(host, Budget::default());
     engine.call_function(program, name, args, env)
 }

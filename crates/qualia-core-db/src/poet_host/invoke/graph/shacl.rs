@@ -12,6 +12,8 @@ const RDF_REIFIES: &[u8] = b"http://www.w3.org/1999/02/22-rdf-syntax-ns#reifies"
 pub const EXTENSION_KINDS: &[&str] = &[
     "minCount",
     "maxCount",
+    "minLength",
+    "maxLength",
     "datatype",
     "in",
     "deonticObligate",
@@ -117,7 +119,30 @@ fn named(kind: &str, item: &Value, span: Span) -> Result<ShaclConstraint, Diagno
     Ok(match kind {
         "minCount" => ShaclConstraint::MinCount(args::rec_u64(item, "value").unwrap_or(1) as u32),
         "maxCount" => ShaclConstraint::MaxCount(args::rec_u64(item, "value").unwrap_or(1) as u32),
+        "minLength" => ShaclConstraint::MinLength(args::rec_u64(item, "value").unwrap_or(0) as u32),
+        "maxLength" => ShaclConstraint::MaxLength(args::rec_u64(item, "value").unwrap_or(u32::MAX as u64) as u32),
         "reifier" => ShaclConstraint::MinCount(1),
+        "in" => {
+            let values_list = args::rec(item, "values")
+                .and_then(args::list)
+                .ok_or_else(|| args::bad(span, "in constraint needs values list"))?;
+            let mut hashes = [0u64; 8];
+            let mut count = 0u8;
+            for v in values_list {
+                if count >= 8 {
+                    return Err(args::bad(span, "in constraint supports at most 8 values"));
+                }
+                let h = hash_val(v)
+                    .or_else(|| args::as_str(v).map(|s| crate::q_hash(s)))
+                    .ok_or_else(|| args::bad(span, "in values must be strings or IRIs"))?;
+                hashes[count as usize] = h;
+                count += 1;
+            }
+            if count == 0 {
+                return Err(args::bad(span, "in constraint needs at least one value"));
+            }
+            ShaclConstraint::In { count, values: hashes }
+        }
         "datatype" => {
             let dt = args::rec_str(item, "value").unwrap_or("xsd:integer");
             let tag = match dt {
@@ -163,5 +188,52 @@ mod tests {
             }
             other => panic!("{other:?}"),
         }
+    }
+
+    #[test]
+    fn extensions_list_includes_in_and_length() {
+        match extensions(&Value::Null, Span { start: 0, end: 0 }).unwrap() {
+            Value::List(xs) => {
+                assert!(xs.iter().any(|v| matches!(v, Value::String(s) if s == "in")));
+                assert!(xs.iter().any(|v| matches!(v, Value::String(s) if s == "minLength")));
+                assert!(xs.iter().any(|v| matches!(v, Value::String(s) if s == "maxLength")));
+            }
+            other => panic!("{other:?}"),
+        }
+    }
+
+    #[test]
+    fn parse_in_constraint() {
+        let mut m = std::collections::BTreeMap::new();
+        m.insert("kind".into(), Value::String("in".into()));
+        m.insert(
+            "values".into(),
+            Value::List(vec![
+                Value::String("apple".into()),
+                Value::String("banana".into()),
+            ]),
+        );
+        let mut buf = [ShaclConstraint::MinCount(1); 8];
+        let n = parse_constraints(&Value::Record(m), &mut buf, Span { start: 0, end: 0 }).unwrap();
+        assert_eq!(n, 1);
+        match &buf[0] {
+            ShaclConstraint::In { count, values } => {
+                assert_eq!(*count, 2);
+                assert_eq!(values[0], crate::q_hash("apple"));
+                assert_eq!(values[1], crate::q_hash("banana"));
+            }
+            other => panic!("expected In, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn parse_minlength_constraint() {
+        let mut m = std::collections::BTreeMap::new();
+        m.insert("kind".into(), Value::String("minLength".into()));
+        m.insert("value".into(), Value::U64(3));
+        let mut buf = [ShaclConstraint::MinCount(1); 8];
+        let n = parse_constraints(&Value::Record(m), &mut buf, Span { start: 0, end: 0 }).unwrap();
+        assert_eq!(n, 1);
+        assert_eq!(buf[0], ShaclConstraint::MinLength(3));
     }
 }

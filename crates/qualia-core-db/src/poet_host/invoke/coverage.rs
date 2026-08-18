@@ -108,13 +108,32 @@ fn bind_name(b: Bind) -> &'static str {
 fn wasm_suggested_invoke(export: &str) -> Option<&'static str> {
     match export {
         "la_matmul_wasm" => Some(ids::LINALG_MATMUL),
+        "la_transpose_wasm" => Some(ids::LA_TRANSPOSE),
+        "la_determinant_wasm" => Some(ids::LA_DET),
+        "la_solve_wasm" => Some(ids::LA_SOLVE),
+        "la_eigen_symmetric_wasm" => Some(ids::LA_EIGEN_SYM),
+        "la_eigenvalues_wasm" => Some(ids::LA_EIGENVALUES),
+        "la_svd_wasm" => Some(ids::LA_SVD),
+        "la_polynomial_roots_wasm" => Some(ids::LA_POLY_ROOTS),
+        "cas_differentiate_wasm" => Some(ids::CAS_DIFFERENTIATE),
+        "cas_simplify_wasm" => Some(ids::CAS_SIMPLIFY),
+        "cas_expand_wasm" => Some(ids::CAS_EXPAND),
         "cas_evaluate_wasm" => Some(ids::SYMBOLIC_EVAL),
+        "cas_factor_wasm" => Some(ids::CAS_FACTOR),
+        "cas_solve_quadratic_wasm" => Some(ids::CAS_SOLVE_QUADRATIC),
         "num_gcd_lcm_wasm" => Some(ids::NT_GCD),
         "num_is_prime_wasm" => Some(ids::NT_PRIME),
         "num_bessel_j_wasm" => Some(ids::SPEC_BESSEL),
         "stats_describe_wasm" => Some(ids::STAT_MEAN),
         "stats_correlation_wasm" => Some(ids::STAT_PEARSON),
+        "stats_linear_regression_wasm" => Some(ids::STAT_LINEAR_REGRESSION),
         "crypto_sha256" => Some(ids::CRYPTO_SHA256),
+        "crypto_sha512" => Some(ids::CRYPTO_SHA512),
+        "crypto_blake3" => Some(ids::CRYPTO_BLAKE3),
+        "units_convert" => Some(ids::UNITS_CONVERT),
+        "xform_dft" => Some(ids::XFORM_DFT),
+        "graph_shortest_path" => Some(ids::GRAPH_SHORTEST_PATH),
+        "graph_spreading_activation" => Some(ids::GRAPH_SPREADING_ACTIVATION),
         _ => None,
     }
 }
@@ -223,12 +242,14 @@ mod tests {
     }
 
     #[test]
-    fn wasm_engine_has_unbound_work() {
+    fn wasm_engine_fully_bound() {
+        // Every wasm_bridge/engine export now has a capability.invoke wrapper.
+        // If you add a new export to WASM_ENGINE, also add it to wasm_suggested_invoke.
         let unbound = rows()
             .into_iter()
             .filter(|r| r.source == Source::WasmEngine && r.bind == Bind::Unbound)
             .count();
-        assert!(unbound > 0, "update WASM_ENGINE if every export is wrapped");
+        assert_eq!(unbound, 0, "every WASM_ENGINE export must have a capability.invoke id — add it to wasm_suggested_invoke");
     }
 
     #[test]

@@ -36,6 +36,10 @@ pub struct PoetSnapshot {
     pub revision: u64,
     pub published: Vec<String>,
     pub attached: bool,
+    /// Set to `true` when `graph_query` is called during an evaluation.
+    /// The desktop harness resets this before each `eval_cell_src` and reads
+    /// it after to determine whether the cell is graph-dependent (reactive).
+    pub graph_read_during_eval: bool,
 }
 
 impl PoetSnapshot {
@@ -46,6 +50,7 @@ impl PoetSnapshot {
             revision: 1,
             published: Vec::new(),
             attached: false,
+            graph_read_during_eval: false,
         }
     }
 
@@ -68,6 +73,7 @@ impl PoetSnapshot {
             revision: crate::daemon_graph::graph_revision().max(1),
             published: Vec::new(),
             attached: true,
+            graph_read_during_eval: false,
         }
     }
 
@@ -127,8 +133,11 @@ impl PoetSnapshot {
     }
 
     pub fn eval_cell_src(&mut self, src: &str) -> Result<Value, Diagnostic> {
+        self.graph_read_during_eval = false;
         let mut env = Env::default();
-        eval_cell(src, self, &mut env)
+        let result = eval_cell(src, self, &mut env);
+        // If evaluation failed, leave the flag as-is (the cell didn't complete).
+        result
     }
 
     pub fn eval_fn(&mut self, src: &str, name: &str, args: Vec<Value>) -> Result<Value, Diagnostic> {
@@ -150,6 +159,7 @@ impl Host for PoetSnapshot {
         take: u64,
         _span: poet_vibe::Span,
     ) -> Result<Value, Diagnostic> {
+        self.graph_read_during_eval = true;
         let s = args.first();
         let p = args.get(1);
         let o = args.get(2);
