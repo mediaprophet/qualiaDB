@@ -215,6 +215,56 @@ pub fn poet_cells(state: State<PoetHarnessState>) -> Vec<CellEntry> {
     cells.clone()
 }
 
+/// Dispatch a hook event on a loaded program.
+///
+/// `path` is the event path segments (e.g. `["pulse", "message"]` for
+/// `on pulse:message(…)`, `["tick"]` for `on tick(…)`). `args_json` is a
+/// JSON array of argument values, parsed into Vibe `Value`s.
+#[tauri::command]
+pub fn poet_dispatch_hook(
+    state: State<PoetHarnessState>,
+    source: String,
+    path: Vec<String>,
+    args_json: String,
+) -> PoetEvalResult {
+    let mut snap = state.snap.lock().expect("poet snapshot");
+    let args = parse_hook_args(&args_json);
+    let run = snap.dispatch_hook_src(&source, &path, args);
+    match run {
+        Ok(v) => snapshot_result(&snap, true, format_value(&v), None),
+        Err(e) => snapshot_result(&snap, false, String::new(), Some(e.to_json())),
+    }
+}
+
+/// Parse a JSON array of hook arguments into Vibe `Value`s.
+/// Supports numbers, strings, booleans, and null. Unknown JSON types
+/// fall back to `Value::Null`.
+fn parse_hook_args(json: &str) -> Vec<poet_vibe::Value> {
+    if json.trim().is_empty() || json.trim() == "[]" {
+        return Vec::new();
+    }
+    let parsed: Vec<serde_json::Value> = serde_json::from_str(json).unwrap_or_default();
+    parsed.into_iter().map(json_to_vibe).collect()
+}
+
+fn json_to_vibe(v: serde_json::Value) -> poet_vibe::Value {
+    match v {
+        serde_json::Value::Null => poet_vibe::Value::Null,
+        serde_json::Value::Bool(b) => poet_vibe::Value::Bool(b),
+        serde_json::Value::Number(n) => {
+            if let Some(i) = n.as_i64() {
+                poet_vibe::Value::I64(i)
+            } else if let Some(u) = n.as_u64() {
+                poet_vibe::Value::U64(u)
+            } else {
+                poet_vibe::Value::F64(n.as_f64().unwrap_or(0.0))
+            }
+        }
+        serde_json::Value::String(s) => poet_vibe::Value::String(s),
+        _ => poet_vibe::Value::Null,
+    }
+}
+
 #[tauri::command]
 pub fn poet_gazetteer(state: State<PoetHarnessState>, source: String) -> PoetGazetteerResult {
     let mut snap = state.snap.lock().expect("poet snapshot");

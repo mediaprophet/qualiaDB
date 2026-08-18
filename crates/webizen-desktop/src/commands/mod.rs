@@ -281,6 +281,7 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         poet::poet_capabilities,
         poet::poet_recompute,
         poet::poet_cells,
+        poet::poet_dispatch_hook,
         poet_render::poet_render_preview,
         get_desktop_logs,
         set_desktop_debug_mode,

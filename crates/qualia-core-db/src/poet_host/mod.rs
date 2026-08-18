@@ -161,6 +161,23 @@ impl PoetSnapshot {
         eval_function(&program, name, args, self, &mut env)
     }
 
+    /// Dispatch a hook event (`on <path>(…)`) on a checked program.
+    ///
+    /// `path` is the event path segments (e.g. `["pulse", "message"]` for
+    /// `on pulse:message(…)`, or `["tick"]` for `on tick(…)`). `args` are
+    /// bound to the hook's parameters in declaration order. Returns
+    /// `Ok(Value::Null)` if no matching hook exists in the program.
+    pub fn dispatch_hook_src(
+        &mut self,
+        src: &str,
+        path: &[String],
+        args: Vec<Value>,
+    ) -> Result<Value, Diagnostic> {
+        let program = load_program(src)?;
+        let mut env = Env::default();
+        poet_vibe::dispatch_hook(&program, path, args, self, &mut env)
+    }
+
     /// Direct capability.invoke from a host (desktop renderer, tests).
     pub fn invoke_id(&mut self, id: &str, args: Value) -> Result<Value, Diagnostic> {
         invoke::dispatch(self, id, &args, poet_vibe::Span { start: 0, end: 0 })
@@ -608,6 +625,46 @@ effect fn go() {
         let event = rx.try_recv().expect("transport subscriber should receive event");
         assert_eq!(event.topic, "pulse/transport-test");
         assert_eq!(event.seq, snap.published[0].seq);
+    }
+
+    #[test]
+    fn dispatch_hook_routes_pulse_message_to_function() {
+        let mut snap = PoetSnapshot::with_demo_seed();
+        let src = r#"
+requires [
+    capability("graph.write"),
+    capability("pulse.publish", topic: "clinic/alerts")
+];
+effect fn raise_alert(value: f64) {
+    if value > 85.0 {
+        effect pulse.publish("clinic/alerts", value);
+    }
+    return null;
+}
+on pulse:message(topic: string, value: f64) {
+    return raise_alert(value);
+}
+"#;
+        let path = vec!["pulse".to_string(), "message".to_string()];
+        let v = snap
+            .dispatch_hook_src(src, &path, vec![Value::String("clinic/alerts".into()), Value::F64(90.0)])
+            .unwrap();
+        assert_eq!(v, Value::Null);
+        assert_eq!(snap.published.len(), 1, "hook should have triggered a publish");
+        assert_eq!(snap.published[0].topic, "clinic/alerts");
+    }
+
+    #[test]
+    fn dispatch_hook_unknown_path_returns_null() {
+        let mut snap = PoetSnapshot::default();
+        let src = r#"
+on tick() {
+    return null;
+}
+"#;
+        let path = vec!["unknown".to_string()];
+        let v = snap.dispatch_hook_src(src, &path, vec![]).unwrap();
+        assert_eq!(v, Value::Null);
     }
 
     #[cfg(not(target_arch = "wasm32"))]

@@ -72,6 +72,16 @@ pub struct Engine<'a, H: Host> {
     host: &'a mut H,
     budget: Budget,
     depth: u32,
+    /// The program being evaluated, if any. When set, `eval_call` resolves
+    /// user-defined function names (e.g. `raise_alert(…)`) against the
+    /// program's `Item::Function` items before falling through to host
+    /// dispatch. This is what lets `on pulse:message(…) { return
+    /// raise_alert(…) }` work — the hook body calls a sibling function.
+    ///
+    /// Stored as a raw pointer because the program's lifetime is not tied to
+    /// `'a` — it is passed by reference to `call_function` / `call_hook` and
+    /// must outlive the engine evaluation (the caller guarantees this).
+    program: Option<*const Program>,
 }
 
 enum Flow {
@@ -85,6 +95,17 @@ impl<'a, H: Host> Engine<'a, H> {
             host,
             budget,
             depth: 0,
+            program: None,
+        }
+    }
+
+    /// Attach a program so `eval_call` can resolve user-defined functions.
+    pub fn with_program(host: &'a mut H, budget: Budget, program: &Program) -> Self {
+        Self {
+            host,
+            budget,
+            depth: 0,
+            program: Some(program as *const Program),
         }
     }
 
@@ -235,6 +256,26 @@ impl<'a, H: Host> Engine<'a, H> {
             return Ok(Value::Err(Box::new(
                 pos.into_iter().next().unwrap_or(Value::Null),
             )));
+        }
+        // Try resolving as a user-defined function in the attached program.
+        if let Some(program_ptr) = self.program {
+            let program = unsafe { &*program_ptr };
+            if let Some(Item::Function(f)) = program.items.iter().find(|i| {
+                matches!(i, Item::Function(f) if f.name == path)
+            }) {
+                if let Some(steps) = budget_steps(&f.budget, env, self) {
+                    self.budget.steps_left = self.budget.steps_left.min(steps);
+                }
+                let mut local = Env::default();
+                local.aliases = env.aliases.clone();
+                for (p, a) in f.params.iter().zip(pos.into_iter()) {
+                    local.vars.insert(p.name.clone(), a);
+                }
+                self.depth += 1;
+                let r = self.finish_block(&f.body, &mut local);
+                self.depth -= 1;
+                return r;
+            }
         }
         self.depth += 1;
         let r = dispatch(self.host, &path, &pos, &named, span);
@@ -413,7 +454,49 @@ impl<'a, H: Host> Engine<'a, H> {
         for (p, a) in f.params.iter().zip(args.into_iter()) {
             local.vars.insert(p.name.clone(), a);
         }
-        self.finish_block(&f.body, &mut local)
+        // Attach the program so nested calls can resolve sibling functions.
+        let prev = self.program;
+        self.program = Some(program as *const Program);
+        let r = self.finish_block(&f.body, &mut local);
+        self.program = prev;
+        r
+    }
+
+    /// Dispatch a hook by event path (e.g. `["pulse", "message"]` or `["tick"]`).
+    ///
+    /// Finds the first `on <path>(…)` hook in the program whose path matches,
+    /// binds the supplied argument values to its parameters, and evaluates its
+    /// body. Returns `Ok(Value::Null)` if no matching hook exists (the host
+    /// may choose to ignore unhandled events silently).
+    pub fn call_hook(
+        &mut self,
+        program: &Program,
+        path: &[String],
+        args: Vec<Value>,
+        env: &mut Env,
+    ) -> Result<Value, Diagnostic> {
+        let h = program.items.iter().find_map(|i| match i {
+            Item::Hook(h) if h.path == path => Some(h),
+            _ => None,
+        });
+        let h = match h {
+            Some(h) => h,
+            None => return Ok(Value::Null),
+        };
+        if let Some(steps) = budget_steps(&h.budget, env, self) {
+            self.budget.steps_left = self.budget.steps_left.min(steps);
+        }
+        let mut local = Env::default();
+        local.aliases = env.aliases.clone();
+        for (p, a) in h.params.iter().zip(args.into_iter()) {
+            local.vars.insert(p.name.clone(), a);
+        }
+        // Attach the program so the hook body can call sibling functions.
+        let prev = self.program;
+        self.program = Some(program as *const Program);
+        let r = self.finish_block(&h.body, &mut local);
+        self.program = prev;
+        r
     }
 }
 

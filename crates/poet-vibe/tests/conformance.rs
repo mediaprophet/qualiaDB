@@ -1,8 +1,8 @@
 //! vibe-0.1 §12 / §13 fixtures.
 
 use poet_vibe::{
-    check_cell, check_program, eval_cell, eval_function, load_program, parse_cell, parse_program,
-    DiagCode, Env, MockHost, Value,
+    check_cell, check_program, dispatch_hook, eval_cell, eval_function, load_program, parse_cell,
+    parse_program, DiagCode, Env, MockHost, Value,
 };
 
 const CELL: &str = r#"= math.max(0, math.min(100, score))"#;
@@ -130,6 +130,42 @@ fn section_12_3_bounded_query() {
         Value::Ok(inner) => assert_eq!(inner.as_i64(), Some(3)),
         other => panic!("{other:?}"),
     }
+}
+
+#[test]
+fn hook_dispatch_pulse_message_routes_to_function() {
+    // The CLINIC module has `on pulse:message(topic, value) { return raise_alert(...) }`.
+    // Dispatching a pulse:message hook with value > 85 should commit + publish,
+    // exactly like calling raise_alert directly.
+    let program = load_program(CLINIC).unwrap();
+    let mut host = MockHost::default();
+    let mut env = Env::default();
+    let path = vec!["pulse".to_string(), "message".to_string()];
+    let v = dispatch_hook(
+        &program,
+        &path,
+        vec![Value::String("clinic/alerts".into()), Value::F64(90.0)],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
+    assert!(matches!(v, Value::Ok(_)), "hook should return Ok: {v:?}");
+    assert_eq!(host.committed, 1, "hook dispatch should commit the alert");
+    assert_eq!(
+        host.published, vec!["clinic/alerts".to_string()],
+        "hook dispatch should publish the pulse"
+    );
+}
+
+#[test]
+fn hook_dispatch_unknown_path_returns_null() {
+    // No matching hook → Ok(Null), not an error.
+    let program = load_program(CLINIC).unwrap();
+    let mut host = MockHost::default();
+    let mut env = Env::default();
+    let path = vec!["unknown".to_string(), "event".to_string()];
+    let v = dispatch_hook(&program, &path, vec![], &mut host, &mut env).unwrap();
+    assert_eq!(v, Value::Null);
 }
 
 #[test]

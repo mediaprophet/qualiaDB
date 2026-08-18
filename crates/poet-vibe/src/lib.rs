@@ -61,6 +61,23 @@ pub fn eval_function<H: Host>(
     env: &mut Env,
 ) -> Result<Value, Diagnostic> {
     populate_import_aliases(env, &program.imports)?;
-    let mut engine = Engine::new(host, Budget::default());
+    let mut engine = Engine::with_program(host, Budget::default(), program);
     engine.call_function(program, name, args, env)
+}
+
+/// Dispatch a hook event on a checked program.
+///
+/// `path` is the event path (e.g. `["pulse", "message"]` for `on pulse:message(…)`
+/// or `["tick"]` for `on tick(…)`). `args` are bound to the hook's parameters
+/// in declaration order. Returns `Ok(Value::Null)` if no matching hook exists.
+pub fn dispatch_hook<H: Host>(
+    program: &Program,
+    path: &[String],
+    args: Vec<Value>,
+    host: &mut H,
+    env: &mut Env,
+) -> Result<Value, Diagnostic> {
+    populate_import_aliases(env, &program.imports)?;
+    let mut engine = Engine::with_program(host, Budget::default(), program);
+    engine.call_hook(program, path, args, env)
 }
