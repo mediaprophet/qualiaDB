@@ -15,6 +15,9 @@ use tauri::State;
 pub struct PoetHarnessState {
     pub(crate) snap: Mutex<PoetSnapshot>,
     pub(crate) cells: Mutex<Vec<CellEntry>>,
+    /// Stored program sources for hook dispatch (tick, pulse).
+    /// Keyed by a caller-provided name.
+    pub(crate) programs: Mutex<Vec<StoredProgram>>,
 }
 
 /// A registered reactive cell. The harness re-evaluates cells whose
@@ -29,6 +32,16 @@ pub struct CellEntry {
     pub graph_dependent: bool,
     pub graph_revision_at_eval: u64,
     pub diagnostic: Option<String>,
+    /// True if the cell called `time.unix` during evaluation.
+    /// Time-dependent cells are recomputed on `poet_tick`.
+    pub time_dependent: bool,
+}
+
+/// A stored Vibe program for reactive hook dispatch.
+#[derive(Clone, serde::Serialize)]
+pub struct StoredProgram {
+    pub name: String,
+    pub source: String,
 }
 
 impl Default for PoetHarnessState {
@@ -36,6 +49,7 @@ impl Default for PoetHarnessState {
         Self {
             snap: Mutex::new(PoetSnapshot::live()),
             cells: Mutex::new(Vec::new()),
+            programs: Mutex::new(Vec::new()),
         }
     }
 }
@@ -145,6 +159,7 @@ pub fn poet_eval(
     // Register reactive cells for later recomputation.
     if as_cell {
         let graph_dep = snap.graph_read_during_eval;
+        let time_dep = snap.time_read_during_eval;
         let entry = CellEntry {
             source: source.clone(),
             value: result.value.clone(),
@@ -152,6 +167,7 @@ pub fn poet_eval(
             graph_dependent: graph_dep,
             graph_revision_at_eval: snap.revision,
             diagnostic: result.diagnostic.clone(),
+            time_dependent: time_dep,
         };
         let mut cells = state.cells.lock().expect("poet cells");
         // Replace existing cell with same source, or add new.
@@ -196,6 +212,7 @@ pub fn poet_recompute(state: State<PoetHarnessState>) -> Vec<CellEntry> {
                 cell.graph_revision_at_eval = snap.revision;
                 // Re-check graph dependency after recomputation.
                 cell.graph_dependent = snap.graph_read_during_eval;
+                cell.time_dependent = snap.time_read_during_eval;
             }
             Err(e) => {
                 cell.ok = false;
@@ -262,6 +279,177 @@ fn json_to_vibe(v: serde_json::Value) -> poet_vibe::Value {
         }
         serde_json::Value::String(s) => poet_vibe::Value::String(s),
         _ => poet_vibe::Value::Null,
+    }
+}
+
+/// Store a Vibe program source for reactive hook dispatch (tick, pulse).
+/// Returns the stored program list.
+#[tauri::command]
+pub fn poet_store_program(
+    state: State<PoetHarnessState>,
+    name: String,
+    source: String,
+) -> Vec<StoredProgram> {
+    let mut programs = state.programs.lock().expect("poet programs");
+    if let Some(existing) = programs.iter_mut().find(|p| p.name == name) {
+        existing.source = source;
+    } else {
+        programs.push(StoredProgram { name, source });
+    }
+    programs.clone()
+}
+
+/// List stored programs.
+#[tauri::command]
+pub fn poet_programs(state: State<PoetHarnessState>) -> Vec<StoredProgram> {
+    state.programs.lock().expect("poet programs").clone()
+}
+
+/// Dispatch `on tick()` hooks on all stored programs, then recompute
+/// time-dependent cells. Returns the tick result and updated cell list.
+#[derive(Serialize)]
+pub struct TickResult {
+    pub hooks_dispatched: u64,
+    pub hook_results: Vec<TickHookResult>,
+    pub cells: Vec<CellEntry>,
+    pub published: Vec<PulseRecordDto>,
+    pub revision: u64,
+}
+
+#[derive(Serialize)]
+pub struct TickHookResult {
+    pub program: String,
+    pub ok: bool,
+    pub value: String,
+    pub diagnostic: Option<String>,
+}
+
+#[tauri::command]
+pub fn poet_tick(state: State<PoetHarnessState>) -> TickResult {
+    let mut snap = state.snap.lock().expect("poet snapshot");
+    let programs = state.programs.lock().expect("poet programs").clone();
+    let mut hook_results = Vec::new();
+    let mut hooks_dispatched = 0u64;
+    let tick_path = vec!["tick".to_string()];
+
+    for prog in &programs {
+        let run = snap.dispatch_hook_src(&prog.source, &tick_path, vec![]);
+        hooks_dispatched += 1;
+        match run {
+            Ok(v) => hook_results.push(TickHookResult {
+                program: prog.name.clone(),
+                ok: true,
+                value: format_value(&v),
+                diagnostic: None,
+            }),
+            Err(e) => hook_results.push(TickHookResult {
+                program: prog.name.clone(),
+                ok: false,
+                value: String::new(),
+                diagnostic: Some(e.to_json()),
+            }),
+        }
+    }
+
+    // Recompute time-dependent cells.
+    let mut cells = state.cells.lock().expect("poet cells");
+    for cell in cells.iter_mut() {
+        if !cell.time_dependent {
+            continue;
+        }
+        let run = snap.eval_cell_src(&cell.source);
+        match run {
+            Ok(v) => {
+                cell.value = format_value(&v);
+                cell.ok = true;
+                cell.diagnostic = None;
+                cell.graph_revision_at_eval = snap.revision;
+                cell.graph_dependent = snap.graph_read_during_eval;
+                cell.time_dependent = snap.time_read_during_eval;
+            }
+            Err(e) => {
+                cell.ok = false;
+                cell.value = String::new();
+                cell.diagnostic = Some(e.to_json());
+                cell.graph_revision_at_eval = snap.revision;
+            }
+        }
+    }
+
+    let published = snap.published.iter().map(PulseRecordDto::from).collect();
+    let revision = snap.revision;
+    drop(snap);
+    let cells_clone = cells.clone();
+    drop(cells);
+
+    TickResult {
+        hooks_dispatched,
+        hook_results,
+        cells: cells_clone,
+        published,
+        revision,
+    }
+}
+
+/// Inject a pulse:message event into the harness, dispatching `on pulse:message`
+/// hooks on all stored programs. Returns the dispatch results and any pulse
+/// records produced.
+#[derive(Serialize)]
+pub struct PulseEventResult {
+    pub hooks_dispatched: u64,
+    pub hook_results: Vec<TickHookResult>,
+    pub published: Vec<PulseRecordDto>,
+    pub revision: u64,
+}
+
+#[tauri::command]
+pub fn poet_pulse_event(
+    state: State<PoetHarnessState>,
+    topic: String,
+    payload_json: String,
+) -> PulseEventResult {
+    let mut snap = state.snap.lock().expect("poet snapshot");
+    let programs = state.programs.lock().expect("poet programs").clone();
+    let mut hook_results = Vec::new();
+    let mut hooks_dispatched = 0u64;
+    let pulse_path = vec!["pulse".to_string(), "message".to_string()];
+
+    // Parse payload from JSON.
+    let payload = if payload_json.trim().is_empty() {
+        poet_vibe::Value::Null
+    } else {
+        json_to_vibe(serde_json::from_str(&payload_json).unwrap_or(serde_json::Value::Null))
+    };
+
+    let args = vec![poet_vibe::Value::String(topic.clone()), payload];
+
+    for prog in &programs {
+        let run = snap.dispatch_hook_src(&prog.source, &pulse_path, args.clone());
+        hooks_dispatched += 1;
+        match run {
+            Ok(v) => hook_results.push(TickHookResult {
+                program: prog.name.clone(),
+                ok: true,
+                value: format_value(&v),
+                diagnostic: None,
+            }),
+            Err(e) => hook_results.push(TickHookResult {
+                program: prog.name.clone(),
+                ok: false,
+                value: String::new(),
+                diagnostic: Some(e.to_json()),
+            }),
+        }
+    }
+
+    let published = snap.published.iter().map(PulseRecordDto::from).collect();
+    let revision = snap.revision;
+
+    PulseEventResult {
+        hooks_dispatched,
+        hook_results,
+        published,
+        revision,
     }
 }
 

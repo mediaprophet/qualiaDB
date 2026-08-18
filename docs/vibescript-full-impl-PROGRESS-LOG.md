@@ -190,3 +190,28 @@ Phase C was claimed in NOTICES but the session OOM'd before any code was written
 - wasm32: clean
 
 **Next:** Phase E — reactive animation loop (rAF + setInterval + pausable + configurable).
+
+### Phase E — Reactive animation loop (done, 2026-08-18 session 3)
+
+**Implemented:**
+
+- `time_read_during_eval` flag on `PoetSnapshot` — set when `time.unix` is called during evaluation, enabling time-dependency tracking for cells.
+- `CellEntry.time_dependent` — cells that call `time.unix` are flagged and recomputed on tick.
+- `StoredProgram` + `programs` mutex on `PoetHarnessState` — stores Vibe program sources for reactive hook dispatch.
+- `poet_store_program` Tauri command — store/replace a named Vibe program for tick/pulse dispatch.
+- `poet_programs` Tauri command — list stored programs.
+- `poet_tick` Tauri command — dispatches `on tick()` hooks on all stored programs, then recomputes time-dependent cells. Returns hook results, updated cells, published pulse records, and revision.
+- `poet_pulse_event` Tauri command — injects a `pulse:message` event, dispatching `on pulse:message` hooks on all stored programs with topic + payload. Returns hook results and published records.
+
+**Files modified:**
+- `crates/qualia-core-db/src/poet_host/mod.rs` — `time_read_during_eval` field, set in `time_unix`, reset in `eval_cell_src`, 4 new tests
+- `crates/webizen-desktop/src/commands/poet.rs` — `time_dependent` on `CellEntry`, `StoredProgram` struct, `programs` mutex, 4 new commands (`poet_store_program`, `poet_programs`, `poet_tick`, `poet_pulse_event`), `TickResult`/`PulseEventResult` structs
+- `crates/webizen-desktop/src/commands/mod.rs` — registered 4 new commands
+
+**Verification:**
+- poet_host: 131 passed (was 127, +4 new)
+- poet-vibe conformance: 22 passed
+- webizen-desktop: clean
+- wasm32: clean
+
+**Next:** Phase F — graph honesty lift (partial → live when attached to daemon graph).

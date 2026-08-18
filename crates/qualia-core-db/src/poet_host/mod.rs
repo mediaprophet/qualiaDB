@@ -55,6 +55,10 @@ pub struct PoetSnapshot {
     /// The desktop harness resets this before each `eval_cell_src` and reads
     /// it after to determine whether the cell is graph-dependent (reactive).
     pub graph_read_during_eval: bool,
+    /// Set to `true` when `time_unix` is called during an evaluation.
+    /// The desktop harness resets this before each `eval_cell_src` and reads
+    /// it after to determine whether the cell is time-dependent (reactive on tick).
+    pub time_read_during_eval: bool,
 }
 
 impl PoetSnapshot {
@@ -66,6 +70,7 @@ impl PoetSnapshot {
             published: Vec::new(),
             attached: false,
             graph_read_during_eval: false,
+            time_read_during_eval: false,
         }
     }
 
@@ -89,6 +94,7 @@ impl PoetSnapshot {
             published: Vec::new(),
             attached: true,
             graph_read_during_eval: false,
+            time_read_during_eval: false,
         }
     }
 
@@ -149,6 +155,7 @@ impl PoetSnapshot {
 
     pub fn eval_cell_src(&mut self, src: &str) -> Result<Value, Diagnostic> {
         self.graph_read_during_eval = false;
+        self.time_read_during_eval = false;
         let mut env = Env::default();
         let result = eval_cell(src, self, &mut env);
         // If evaluation failed, leave the flag as-is (the cell didn't complete).
@@ -358,6 +365,7 @@ impl Host for PoetSnapshot {
     }
 
     fn time_unix(&mut self, span: poet_vibe::Span) -> Result<Value, Diagnostic> {
+        self.time_read_during_eval = true;
         // WASM has no wall clock; the host injects replay clocks via receipts.
         #[cfg(target_arch = "wasm32")]
         {
@@ -759,6 +767,58 @@ effect fn boom() {
             )
             .unwrap_err();
         assert_eq!(err.code, poet_vibe::DiagCode::E300);
+    }
+
+    #[test]
+    fn time_unix_sets_time_read_during_eval() {
+        let mut snap = PoetSnapshot::default();
+        let src = "effect fn now() { return time.unix(); }";
+        snap.eval_fn(src, "now", vec![]).unwrap();
+        assert!(snap.time_read_during_eval, "time.unix should set time_read_during_eval");
+    }
+
+    #[test]
+    fn eval_cell_resets_time_read_during_eval() {
+        let mut snap = PoetSnapshot::default();
+        // First, trigger time_unix via a function call.
+        snap.eval_fn("effect fn now() { return time.unix(); }", "now", vec![]).unwrap();
+        assert!(snap.time_read_during_eval);
+        // Now eval a cell that doesn't use time — flag should reset to false.
+        snap.eval_cell_src("= 1 + 2").unwrap();
+        assert!(!snap.time_read_during_eval, "eval_cell_src should reset time_read_during_eval");
+    }
+
+    #[test]
+    fn dispatch_tick_hook_fires() {
+        let mut snap = PoetSnapshot::with_demo_seed();
+        let src = r#"
+requires [ capability("pulse.publish") ];
+effect fn emit() {
+    effect pulse.publish("poet/tick", 1);
+    return null;
+}
+on tick() {
+    return emit();
+}
+"#;
+        let path = vec!["tick".to_string()];
+        let v = snap.dispatch_hook_src(src, &path, vec![]).unwrap();
+        assert_eq!(v, Value::Null);
+        assert_eq!(snap.published.len(), 1, "tick hook should have triggered a publish");
+        assert_eq!(snap.published[0].topic, "poet/tick");
+    }
+
+    #[test]
+    fn dispatch_tick_no_hook_returns_null() {
+        let mut snap = PoetSnapshot::default();
+        let src = r#"
+on pulse:message(topic: string) {
+    return null;
+}
+"#;
+        let path = vec!["tick".to_string()];
+        let v = snap.dispatch_hook_src(src, &path, vec![]).unwrap();
+        assert_eq!(v, Value::Null, "no matching tick hook should return null");
     }
 }
 

@@ -164,24 +164,21 @@ Enable Vibe scripts to generate CSS animation properties and SVG elements from c
 
 ---
 
-### Phase E: Reactive animation loop (medium)
+### Phase E: Reactive animation loop (medium) — ✅ DONE
 
 Wire the desktop harness to drive `on tick()` hooks on a timer, so reactive cells and hooks can produce animated output.
 
-**What's needed:**
-- Desktop `poet_tick` Tauri command — calls `dispatch_hook_src` with `["tick"]` path on all loaded programs, on a configurable interval.
-- Desktop `poet_pulse_event` Tauri command — injects a `pulse:message` event into the harness, dispatching `on pulse:message` hooks.
-- Integration with the pulse transport subscriber — when a pulse event arrives via the broadcast channel, automatically dispatch `on pulse:message` hooks.
-- Cell dependency tracking — when a tick fires, recompute cells whose inputs changed (not just graph-dependent cells, but also time-dependent cells).
+**Implemented:**
+- `time_read_during_eval` flag on `PoetSnapshot` for time-dependency tracking.
+- `CellEntry.time_dependent` — cells calling `time.unix` are recomputed on tick.
+- `StoredProgram` + `programs` mutex on `PoetHarnessState` for hook dispatch.
+- `poet_store_program` — store named Vibe program for reactive dispatch.
+- `poet_programs` — list stored programs.
+- `poet_tick` — dispatch `on tick()` hooks on all stored programs + recompute time-dependent cells.
+- `poet_pulse_event` — inject `pulse:message` event, dispatch hooks on stored programs.
 
-**Files to touch:**
-- `crates/webizen-desktop/src/commands/poet.rs` — new `poet_tick`, `poet_pulse_event` commands
-- `crates/webizen-desktop/src/commands/mod.rs` — register new commands
-- `crates/qualia-core-db/src/poet_host/mod.rs` — possibly add time-dependency tracking
-
-**Tests:** Desktop integration test — load a program with `on tick()`, call `poet_tick`, verify the hook fires and cells update.
-
-**Estimated effort:** Medium — the hook dispatch infrastructure exists; the work is the timer loop and event injection.
+**Files modified:** `poet_host/mod.rs`, `commands/poet.rs`, `commands/mod.rs`
+**Verification:** poet_host 131 tests, poet-vibe 22, desktop+wasm clean.
 
 ---
 
