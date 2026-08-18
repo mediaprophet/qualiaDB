@@ -289,9 +289,96 @@ After each phase:
 |---|---|---|---|---|
 | A: Physics wrappers | **Done** | 2026-08-18 | 2026-08-18 | +10 (wave, heat, advection, oscillator, pendulum, n-body, MD, CFD, quantum, logistic) |
 | B: Spectral wrappers | **Done** | 2026-08-18 | 2026-08-18 | +5 (emf_to_spd, spd_to_xyz, emf_to_rgb, blend, gamut_map) |
-| C: EMF interference/Doppler/attenuation | Not started | — | — | — |
-| D: vibeAnimation namespace + CSS/SVG | Not started | — | — | — |
-| E: Reactive animation loop | Not started | — | — | — |
+| C: EMF interference/Doppler/attenuation | **Done** | 2026-08-18 | 2026-08-18 | +23 (10 unit + 5 invoke + 8 existing) |
+| D: CSS/SVG output bindings | **Done** | 2026-08-18 | 2026-08-18 | +15 (6 CSS + 9 SVG) |
+| E: Reactive animation loop | **Done** | 2026-08-18 | 2026-08-18 | +4 (time_read_during_eval, tick hook, no-hook, reset) |
 | F: Graph honesty lift | **Done** | 2026-08-18 | 2026-08-18 | +3 (dynamic honesty: graph.read live when attached, pulse.publish live when attached, capability.invoke stays partial) |
-| G: Golden corpus expansion | Not started | — | — | — |
+| G: Golden corpus expansion | Not started (needs Timothy's curation) | — | — | — |
 | H: vibe-bc-0.1 bytecode | Not started (post-0.1) | — | — | — |
+
+---
+
+## 7. WebGL Rendering & Advanced LLM Agent Interface (post-0.1)
+
+**Source plan:** `docs/plans/vibescript-webgl-and-advanced-llm-agent-interface-plan-2026-08-18.md`
+
+This section incorporates the WebGL/WebGL2 rendering pipeline and advanced LLM agent scripting interface into the implementation roadmap. These are **post-0.1** workstreams — they extend beyond the closed 0.1 grammar via `capability.invoke` and new grammar extensions.
+
+### 7.1 Review notes (technical corrections to the source plan)
+
+The source plan is architecturally sound. The following corrections should be applied during implementation:
+
+1. **Metadata bitfield conflict (Eτ evidential packing):** The plan proposes packing μ (f32) into metadata[32..63] and λ (f32) into metadata[0..31], consuming the entire 64-bit metadata field. This conflicts with AGENTS.md §1 which reserves metadata[61..62] for PermissiveRoutingLane, [32..60] for the Lamport clock (29 bits), and [0..31] for modality payload. **Resolution:** Evidential Quins should use a dedicated opcode (0x30–0x32 already allocated for paraconsistent in `paraconsistent.rs`) and pack (μ, λ) as two f16 values into the modality payload area [0..31] (16 bits each = 32 bits), preserving the Lamport clock and routing lane. This sacrifices some precision (f16 vs f32) but maintains the 48-byte NQuin contract. Alternatively, use a separate `ManifoldCoordinate10D` field for evidential data.
+
+2. **Import namespace validity:** The example Vibe code uses `import "vibe:0.1/render"`, `import "vibe:0.1/physics"`, `import "vibe:0.1/dag"`, `import "vibe:0.1/agent"`, `import "vibe:0.1/vector"`. The 0.1 checker (`check.rs`) only allows: `math`, `rdf`, `quin`, `graph`, `aura`, `pulse`, `capability`, `time`. These new namespaces require grammar extensions (post-0.1) or should use `capability.invoke` for 0.1 compliance. The plan's `vibeAnimation.webgl.*` calls should be `capability.invoke("Render.webgl_*", ...)` until the `vibeAnimation` namespace is formally added to the grammar.
+
+3. **Naga GLSL output feature:** The project's `Cargo.toml` has `naga = { version = "30", features = ["wgsl-in", "spv-out"] }`. The WebGL2 plan requires GLSL ES 300 output, which needs the `glsl-out` feature. This must be added: `naga = { version = "30", features = ["wgsl-in", "spv-out", "glsl-out"] }` (or as a separate feature gate for WebGL2 builds to avoid bloating non-WebGL targets).
+
+4. **Existing paraconsistent module:** `crates/qualia-core-db/src/modalities/paraconsistent.rs` already implements opcodes 0x30–0x32 (isolate, contradiction_score, paraconsistent_merge) with routing logic. The Eτ evidential logic should extend this module rather than creating a new `evidential_etau.rs` — or the new module should import and build on the existing contradiction routing.
+
+5. **Existing render infrastructure:** `crates/qualia-core-db/src/render/` already has `gpu/`, `anatomy/`, `spectral_kernel.rs`, `gamut.rs`, `compile_10d.rs`, `contract.rs`, etc. The WebGL2 modules (`naga_sanitize.rs`, `naga_bridge.rs`, `webgl_pipeline.rs`) should be added under `render/` alongside the existing wgpu/WebGPU code, not in a separate location.
+
+6. **`vibe-0.2` grammar extension:** The plan references `vibe-agent-0.2.ebnf` — this should be `vibe-0.2` (the next minor version), not a separate agent-specific grammar. The agent extensions (DAGs, blackboard, skills) should be part of the unified 0.2 grammar.
+
+### 7.2 Phase 1: Minimal End-to-End Core Baseline
+
+Sequenced after Phase G completion. These are the priority deliverables for the WebGL + agent substrate.
+
+| Phase | Description | Deliverables | Target Files | Dependencies |
+|---|---|---|---|---|
+| **W1** | Naga IR-Level WebGL2 Sanitizer | In-memory Naga Module IR transform: `Linear` → `Perspective` + GLSL ES 300 compilation. Add `glsl-out` feature to naga dep. | `render/naga_sanitize.rs`, `render/naga_bridge.rs` | naga `glsl-out` feature |
+| **W2** | Zero-Copy WASM Buffer Views & std140 Structs | `Float32Array::view` streaming with `#[repr(C, align(16))]` compile-time verified layouts. | `webizen-render/src/zero_copy_views.rs`, `render/anatomy/webgl2.rs` | W1 |
+| **W3** | WebGL2 Capability Invoke Table | `Render.webgl_init`, `Render.webgl_draw`, `Render.webgl_bind_ubo` invoke handlers. | `poet_host/invoke/render/webgl.rs`, `ids.rs`, `invoke/mod.rs` | W1, W2 |
+| **A1** | Homoiconic CBOR-LD AST Codec (Tag 4200) | Zero-copy bidirectional serialization between `poet_vibe::ast` and CBOR-LD 1.0 binary trees. | `poet-vibe/src/cbor_ast.rs`, `lib.rs` | None (independent) |
+| **A2** | Speculative Constrained Decoding (DOMINO) | Subword-aligned prefix-trie token masking integrated into in-process `QTensorEngine`. | `inference/speculative_decode.rs`, `poet-vibe/src/grammar/` | A1 (AST representation) |
+| **A3** | Dynamic Reflection & Self-Healing Loop | 3-stage reflection: Stage 1 search match, Stage 2 semantic shape linting, Stage 3 dry-run state injection. Configurable retry budget. | `poet-vibe/src/reflection.rs`, `diagnose.rs` | A1, A2 |
+
+### 7.3 Phase 2: Advanced Orchestration & Normative Swarm Substrate
+
+Sequenced after Phase 1 completion.
+
+| Phase | Description | Deliverables | Target Files | Dependencies |
+|---|---|---|---|---|
+| **W4** | 5D EMF & 10D Manifold Visualizer | Volumetric raymarching and slice rendering in WebGL2 driven by `Physics.emf_field_grid_3d` and `ManifoldCoordinate10D`. | `shaders/emf_volumetric.wgsl`, `render/webgl_pipeline.rs` | W3, Phase C (EMF) |
+| **W5** | Declarative `<q-viewport>` Integration | WebGL2 canvas mounting, resizing, event binding, and reactive frame loops in Studio & HyperCanvas. | `webizen-studio/src/render/`, `webizen-render/` | W4 |
+| **A4** | Structural AST Query Engine | S-expression query engine enforcing static architectural policies (mandatory `take:` limits, forbidden API calls). | `poet-vibe/src/ast_query.rs` | A1 |
+| **A5** | Q42 Semantic Blackboard & Constraint Context | Observable state channels on Q42 CRDT graphs with pinned hard/soft constraint propagation. | `poet_host/blackboard.rs` | None |
+| **A6** | Multi-Agent DAGs & Autonomous Control Units | Native DAG pipeline definitions, LLM-driven Control Units / Autonomous Routers, isolated `SlgArena` Judge verification frames. | `poet-vibe/src/dag.rs`, `agent_sandbox.rs` | A4, A5 |
+| **A7** | Paraconsistent Eτ Evidential Logic & W3C VCs | Evidential (μ, λ) packing into `NQuin` metadata (see review note 1 for bitfield layout) + W3C Verifiable Credential artifact outputs. Extends existing `paraconsistent.rs`. | `modalities/evidential_etau.rs` (or extend `paraconsistent.rs`), `crdt.rs` | None |
+| **A8** | Hardware Deontic F(φ) Interrupts & Phase Leasing | Immediate seL4-style capability revocation upon prohibition breach + phase-based capability allow-listing. | `poet-vibe/src/check.rs`, `agent_sandbox.rs` | A6 |
+| **A9** | Semantic Skills: Vectors, Embeddings & Scratchpads | First-class vector cosine distance, in-process text embedding, semantic search, ephemeral scratchpad memory. | `poet_host/invoke/agent/`, `vector.rs` | A5 |
+
+### 7.4 Updated dependency graph
+
+```
+Phase A (physics) ──┐
+                     ├──► Phase C (EMF) ──► Phase D (CSS/SVG) ──► Phase E (reactive loop)
+Phase B (spectral) ─┘                                                    │
+                                                                         ▼
+Phase F (graph honesty) ────────────────────────────────────────────────►│
+                                                                         ▼
+Phase G (golden corpus) ◄────────────────────────────────────────────────┘
+                                                                         │
+                                                                         ▼
+─── post-0.1 ────────────────────────────────────────────────────────────│
+                                                                         │
+  W1 (Naga sanitize) ──► W2 (zero-copy buffers) ──► W3 (WebGL2 invoke) ──► W4 (EMF visualizer) ──► W5 (q-viewport)
+                                                                         │
+  A1 (CBOR-LD AST) ──► A2 (DOMINO decode) ──► A3 (reflection loop)        │
+                          │                                               │
+  A4 (AST query) ◄────────┘                                               │
+  A5 (blackboard) ──► A6 (DAGs) ──► A8 (deontic interrupts)              │
+                          │                                               │
+  A7 (Eτ evidential)      A9 (semantic skills) ◄─────────────────────────┘
+```
+
+### 7.5 Verification criteria (from source plan)
+
+1. **Visual oracle:** WebGL2 output matches wgpu reference within CIEDE2000 ΔE < 2.0 and SSIM > 0.98.
+2. **GLSL ES 300 invariant:** No generated shader contains `noperspective`; all UBO data matches std140 16-byte alignment.
+3. **Zero hot-path allocation:** `assert_zero_alloc` in render frame loops and `on tick` hooks = 0 heap allocations.
+4. **Deontic hard-stop:** F(φ) breach revokes write leases, reverts staged deltas, aborts in < 1µs.
+5. **Paraconsistent precision:** Contradictory claims (G ≥ 0.5) route to quarantine sub-contexts without logical explosion.
+6. **Agent self-repair convergence:** > 95% single-step self-repair using `suggested_fix` + GBNF decoding.
+7. **Blackboard constraint preservation:** Downstream DAG nodes inherit and enforce pinned root constraints.
+8. **Sentinel compliance:** Any script/sandbox/render task exceeding 42MB arena fails-closed with E400.
