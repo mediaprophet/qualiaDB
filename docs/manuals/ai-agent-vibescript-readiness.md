@@ -53,16 +53,16 @@ Engine reach beyond 0.1 bindings is **`capability.invoke`**, listed at runtime b
 
 ---
 
-## 2. Pillars (still wanted — after alignment)
+## 2. Pillars (status as of 2026-08-18)
 
 | # | Pillar | Artifact now | Status |
 |---|---|---|---|
-| 1 | Language knowledge graph | Derive TTL from `vibescript-core` + `ids::ALL_BOUND` | **not built** |
-| 2 | Constrained decoding | EBNF is in core §3; GBNF/JSON-Schema export from that EBNF | **not built** |
-| 3 | Golden corpus | `crates/poet-vibe/fixtures/` + `tests/conformance.rs` | **partial** |
-| 4 | Diagnostic loop | `poet-vibe` `Diagnostic { code, span, message }` | **partial** (no `suggested_fix` yet) |
+| 1 | Language knowledge graph | `crates/qualia-core-db/src/poet_host/catalog_ttl.rs` → `capability.invoke("CapabilityDiscovery.catalog", null)` emits Turtle from `VIBE_0_1` + `ids::ALL_BOUND` | **built** |
+| 2 | Constrained decoding | `crates/poet-vibe/grammar/vibe-0.1.ebnf`, `vibe-0.1.gbnf`, `source.schema.json` (for Qualia's in-process model, not Ollama) | **built** |
+| 3 | Golden corpus | `crates/poet-vibe/fixtures/` + `tests/conformance.rs` (16 tests: §12 examples, §13 negatives, `time.unix`, `quin.statement`, `capability.resolve`) | **partial** (fixtures pass; not yet a large curated corpus) |
+| 4 | Diagnostic loop | `poet_vibe::diagnose(src)` → JSON with `error_code`, `span`, `message`, `suggested_fix` (safe rewrites that never grant authority) | **built** |
 
-Skill file (later): `skills/vibescript/SKILL.md` pointing at core §3–§13 and the invoke table.
+Skill file: `skills/vibescript/SKILL.md` → `docs/vibe/SKILL.md` (points at core §3–§13 and the invoke table).
 
 ---
 
@@ -80,15 +80,15 @@ See the TechDesign source for the aligned examples. In short:
 
 ## 8. Implementation order
 
-| Order | Work | Depends on |
+| Order | Work | Status |
 |---|---|---|
-| 0 | This alignment | core spec + D1–D18 |
-| 1 | Publish hub `docs/vibe/` on Pages | manuals already in `docs/` |
-| 2 | JSON diagnostic export + optional `suggested_fix` | existing `Diagnostic` |
-| 3 | GBNF/JSON-Schema generated from §3 EBNF | 2 |
-| 4 | Turtle catalog of 0.1 bindings + `ALL_BOUND` | live ids |
-| 5 | Skill + more fixture/NL pairs | 1 + 4 |
-| later | Grapheme / 3D IK / GeoSPARQL as invoke ids | those kernels |
+| 0 | This alignment (core spec + D1–D18) | done |
+| 1 | Publish hub `docs/vibe/` on Pages | manuals + `index.html` exist; Pages merge is a publishing step, not a build step |
+| 2 | JSON diagnostic export + `suggested_fix` | **done** — `poet_vibe::diagnose` |
+| 3 | GBNF/JSON-Schema from §3 EBNF | **done** — `crates/poet-vibe/grammar/` |
+| 4 | Turtle catalog of 0.1 bindings + `ALL_BOUND` | **done** — `catalog_ttl.rs` / `CapabilityDiscovery.catalog` |
+| 5 | Skill + more fixture/NL pairs | skill done; corpus growth is ongoing |
+| later | Grapheme / 3D IK / GeoSPARQL as invoke ids | reachable now via `capability.invoke` (e.g. `Geometry.Hull2`); first-class grammar is post-0.1 |
 
 ---
 
@@ -96,7 +96,7 @@ See the TechDesign source for the aligned examples. In short:
 
 | Question | Answer |
 |---|---|
-| Complete **language** spec? | **No.** That is `vibescript-core.md`. |
-| Complete **agent-readiness** spec? | After this revision: complete enough to schedule M2–M5 without contradicting 0.1. |
-| Update before implementing the readiness stack? | **Yes.** The first draft would have taught illegal syntax and the wrong inference stack. |
-| Is 0.1 language blocked on M1–M5? | **No.** Interpreter + invoke table already exist. |
+| Complete **language** spec? | **No** — that is `vibescript-core.md`, and 0.1 is the closed core, not the destination. |
+| Complete **agent-readiness** stack? | **Yes for M2–M5**: diagnostics, GBNF/JSON-Schema, Turtle catalog, and skill are all built and consistent with 0.1. Corpus depth (pillar 3) is the remaining open-ended grow item. |
+| Is 0.1 language blocked on readiness work? | **No.** Interpreter + binding profile + invoke table are implemented and tested (`poet-vibe` 19 tests, `poet_host` 54 tests). |
+| Does this overlay contradict 0.1? | **No** — core §11 bindings (incl. `time.unix`, now wired) are the only names taught; `<<[…]|>>` overlays, `pulse.broadcast`, `aura.apply_schema`, `<< id \| … >>` are all listed as "do not teach." |

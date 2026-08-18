@@ -41,6 +41,14 @@ pub trait Host {
     fn pulse_publish(&mut self, topic: &str, payload: &Value, span: Span)
         -> Result<Value, Diagnostic>;
 
+    /// Wall clock as seconds since Unix epoch. External (core §11): forbidden
+    /// in Pure cells. Default returns 0 (WASM / hosts without a clock); native
+    /// hosts override with `SystemTime::now`. Replay uses the receipt clock,
+    /// not this binding.
+    fn time_unix(&mut self, _span: Span) -> Result<Value, Diagnostic> {
+        Ok(Value::I64(0))
+    }
+
     fn quin_seal(
         &mut self,
         subject: u64,
@@ -142,6 +150,11 @@ impl Host for MockHost {
         self.published.push(topic.to_string());
         Ok(Value::Null)
     }
+
+    /// Deterministic epoch for unit tests so assertions don't depend on wall time.
+    fn time_unix(&mut self, _span: Span) -> Result<Value, Diagnostic> {
+        Ok(Value::I64(0))
+    }
 }
 
 pub fn dispatch<H: Host>(
@@ -197,6 +210,7 @@ pub fn dispatch<H: Host>(
             host.pulse_publish(&topic, &payload, span)
         }
         "graph.snapshot" => host.graph_snapshot(span),
+        "time.unix" => host.time_unix(span),
         "capability.resolve" => {
             let id = match args.first() {
                 Some(Value::String(s)) => s.clone(),

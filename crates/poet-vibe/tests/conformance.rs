@@ -215,6 +215,24 @@ fn peek() {
 }
 
 #[test]
+fn time_unix_is_external_and_forbidden_in_pure_cell() {
+    // Pure cell must not reach the clock (core §11 / §5).
+    let expr = parse_cell("= time.unix()").unwrap();
+    let err = check_cell(&expr).unwrap_err();
+    assert_eq!(err.code, DiagCode::E200);
+}
+
+#[test]
+fn time_unix_runs_in_effect_fn() {
+    let src = "effect fn now() { return time.unix(); }";
+    let program = load_program(src).unwrap();
+    let mut host = MockHost::default();
+    let mut env = Env::default();
+    let v = eval_function(&program, "now", vec![], &mut host, &mut env).unwrap();
+    assert_eq!(v.as_i64(), Some(0));
+}
+
+#[test]
 fn fixtures_on_disk_match_section_12_and_13() {
     let cell = include_str!("../fixtures/12_1_cell.vibe");
     parse_cell(cell).expect("12.1 fixture");

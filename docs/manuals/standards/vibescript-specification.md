@@ -4,7 +4,32 @@
 **Copyright © 2026 Timothy Charles Holborn.** All rights reserved.  
 **Principal / inventor:** Timothy Charles Holborn &lt;timothy.holborn@gmail.com&gt;
 
-**Normative 0.1 language:** [`vibescript-core.md`](vibescript-core.md). This file is an architectural essay, not the parser contract.
+> ## ⚑ STALE / ASPIRATIONAL — read `vibescript-core.md` instead
+>
+> **This document is an architectural essay, not the parser contract.** It predates
+> the implemented `vibe-0.1` language and describes a v1.0 destination. Several
+> constructs below are **rejected by the real parser** (`poet-vibe`) and **must not
+> be taught to agents or used in examples**:
+>
+> | In this essay | Status in `vibe-0.1` | Use instead |
+> |---|---|---|
+> | `<<[ s p o g prov ]>>` NquinTerm literal | **Illegal** (E001) | `quin.statement(subject:, predicate:, object:, context:)` |
+> | `<< id \| s p o >>` pipe reifier | **Illegal** (E001) | RDF 1.2 `<< s p o ~ reifier >>` |
+> | `pulse.broadcast` / `pulse.emit` / `pulse.subscribe` | Not in 0.1 | `pulse.publish(topic, payload)` |
+> | `aura.apply_schema` / `aura.infer` / `aura.resolve_context` | Not in 0.1 | `aura.validate(node, shape)` |
+> | `graph.assert` / `graph.retract` / `graph.commit_delta` / `graph.sparql` / `graph.get_node` | Not 0.1 bindings | `graph.stage` / `graph.commit` / `graph.query`; SPARQL via `capability.invoke("GraphDatabase.sparql", …)` |
+> | `space.*` / `geom.*` as first-class grammar | Not in 0.1 grammar | `capability.invoke("Geometry.Hull2", …)` |
+> | `on_hover` / `on_click` / `on_change` / `on_pulse` / `on_aura` hooks | Not in 0.1 | `on pulse:message(…)`, `on tick(…)`, etc. (core §3 `EventPath`) |
+> | Backtick string literals | Not in 0.1 | `"…"` only |
+> | Micro-Poet `<2MB` / `no_std` edge | Not claimed for 0.1 (core §10) | `native-desktop` + `wasm32` only |
+> | `.d10` as canonical 10D extension | Non-normative alias | `.10d` (core §10) |
+>
+> **Normative 0.1 language:** [`vibescript-core.md`](vibescript-core.md). The live
+> parser is `crates/poet-vibe/`; the live host is
+> `crates/qualia-core-db/src/poet_host/`. Where this essay and the core spec
+> disagree, **the core spec wins**. The essay is retained as the architectural
+> rationale for the v1.0 destination (CBOR-LD AST, SHACL-AF, N3Logic interop,
+> multi-platform matrix) that 0.1 is the closed core of — not a denial of.
 
 ## 1. Vision & Execution Philosophy
 **VibeScript** (or **Vibe**, `.vibe`) is an embedded, interpreted domain-specific language (DSL) evaluated by the **Poet Engine** in Rust/WASM. It is designed for **dynamic hypermedia documents, reactive semantic mindware, spatiotemporal reasoning, and decentralized graph automation** within the QualiaDB / Webizen ecosystem.
@@ -51,6 +76,12 @@
 
 ## 3. Formal EBNF Grammar Specification (v1.0)
 
+> **⚠ Not the implemented grammar.** This is the v1.0 essay grammar. The
+> implemented `vibe-0.1` grammar is in
+> [`vibescript-core.md` §3](vibescript-core.md) and
+> `crates/poet-vibe/grammar/vibe-0.1.ebnf`. Lines below marked `✗ REJECTED`
+> produce `E001` in the real parser and must not be taught:
+
 ```ebnf
 (* ===========================================================================
    VibeScript Formal Grammar (Poet Engine / W3C RDF 1.2 / Pulse / Aura)
@@ -77,12 +108,12 @@ TypeAnnotation    ::= 'Iri' | 'TripleTerm' | 'Nquin' | 'ReifiedTriple' | 'Aura' 
 
 (* --- Reactive Document & Cell Formulas --- *)
 ReactiveFormula   ::= '=' Expression ;
-HookDecl          ::= ('on_hover' | 'on_click' | 'on_change' | 'on_pulse' | 'on_aura') '(' ParameterList? ')' Block ;
+HookDecl          ::= ('on_hover' | 'on_click' | 'on_change' | 'on_pulse' | 'on_aura') '(' ParameterList? ')' Block ;   (* ✗ REJECTED in 0.1 — use on <EventPath>(…) e.g. on pulse:message(…), on tick(…) *)
 
 (* --- RDF 1.2 Triple Terms, Nquins & Reification --- *)
-TripleTerm        ::= '<<(' Subject Predicate Object ')>>' ;
-NquinTerm         ::= '<<[' Subject Predicate Object GraphContext ProvenanceTag? ']>>' ;
-ReifiedTriple     ::= '<<' (ReificationId '|')? Subject Predicate Object '>>' AnnotationBlock? ;
+TripleTerm        ::= '<<(' Subject Predicate Object ')>>' ;   (* OK in 0.1 *)
+NquinTerm         ::= '<<[' Subject Predicate Object GraphContext ProvenanceTag? ']>>' ;   (* ✗ REJECTED in 0.1 — use quin.statement() *)
+ReifiedTriple     ::= '<<' (ReificationId '|')? Subject Predicate Object '>>' AnnotationBlock? ;   (* ✗ REJECTED in 0.1 — use << s p o ~ reifier >> *)
 ReificationId     ::= IRI | BlankNode | Identifier ;
 AnnotationBlock   ::= '[' PropertyValuePair (',' PropertyValuePair)* ']' ;
 PropertyValuePair ::= (IRI | Identifier) ':' Expression ;
@@ -94,15 +125,15 @@ GraphContext      ::= IRI | BlankNode | Identifier ;
 ProvenanceTag     ::= StringLiteral | Identifier ;
 
 (* --- First-Class Namespaces: Graph, Pulse, Aura & Spatial --- *)
-GraphMutation     ::= 'graph' '.' ('assert' | 'retract' | 'commit_delta') '(' (ReifiedTriple | Expression) ')' ';' ;
-GraphQuery        ::= 'graph' '.' ('query' | 'sparql') '(' (PatternMatch | StringLiteral) ')' ;
+GraphMutation     ::= 'graph' '.' ('assert' | 'retract' | 'commit_delta') '(' (ReifiedTriple | Expression) ')' ';' ;   (* ✗ REJECTED in 0.1 — use graph.stage / graph.commit *)
+GraphQuery        ::= 'graph' '.' ('query' | 'sparql') '(' (PatternMatch | StringLiteral) ')' ;   (* ✗ 'sparql' not a 0.1 binding — use capability.invoke("GraphDatabase.sparql", …); 0.1 query is graph.query(s,p,o, take: N) *)
 PatternMatch      ::= 'match' '(' PatternElement (',' PatternElement)* ')' ;
 PatternElement    ::= '?' Identifier | IRI | Literal | '_' ;
 
-PulseDecl         ::= 'pulse' '.' ('broadcast' | 'emit' | 'subscribe') '(' ArgumentList? ')' ;
-AuraDecl          ::= 'aura' '.' ('apply_schema' | 'validate' | 'resolve_context' | 'infer') '(' ArgumentList? ')' ;
+PulseDecl         ::= 'pulse' '.' ('broadcast' | 'emit' | 'subscribe') '(' ArgumentList? ')' ;   (* ✗ REJECTED in 0.1 — use pulse.publish(topic, payload) *)
+AuraDecl          ::= 'aura' '.' ('apply_schema' | 'validate' | 'resolve_context' | 'infer') '(' ArgumentList? ')' ;   (* ✗ only aura.validate is in 0.1 *)
 
-SpatialExpr       ::= 'space' '.' Identifier '(' ArgumentList? ')'
+SpatialExpr       ::= 'space' '.' Identifier '(' ArgumentList? ')'   (* ✗ Not in 0.1 grammar — use capability.invoke("Geometry.*", …) *)
                     | 'geom' '.' Identifier '(' ArgumentList? ')' ;
 
 (* --- Control Flow & Cooperative Multitasking --- *)
@@ -148,7 +179,7 @@ LocalName         ::= [a-zA-Z_][a-zA-Z0-9_.-]* ;
 BlankNode         ::= '_:' [a-zA-Z0-9_-]+ ;
 
 Literal           ::= StringLiteral | NumericLiteral | BooleanLiteral ;
-StringLiteral     ::= '"' [^"]* '"' | '`' [^`]* '`' ;
+StringLiteral     ::= '"' [^"]* '"' | '`' [^`]* '`' ;   (* ✗ backtick strings not in 0.1 — use "…" only *)
 NumericLiteral    ::= [0-9]+ ('.' [0-9]+)? ;
 BooleanLiteral    ::= 'true' | 'false' ;
 Identifier        ::= [a-zA-Z_][a-zA-Z0-9_]* ;
@@ -158,7 +189,15 @@ Identifier        ::= [a-zA-Z_][a-zA-Z0-9_]* ;
 
 ## 4. Idiomatic VibeScript Examples
 
+> **⚠ These examples use v1.0 essay syntax that the `vibe-0.1` parser rejects.**
+> They are retained as architectural illustration only. For examples that
+> actually parse and evaluate today, see
+> [`vibescript-core.md` §12](vibescript-core.md) and
+> `crates/poet-vibe/fixtures/`. Each block below is marked with what 0.1 rejects.
+
 ### A. Reacting to a Network "Pulse" to Update an "Aura"
+> ✗ `on_pulse`, `pulse.broadcast`, `aura.apply_schema`, `graph.get_node` are not 0.1.
+> 0.1 form: `on pulse:message(…)`, `pulse.publish(topic, payload)`, `aura.validate(node, shape)`.
 ```vibe
 // When the document receives an IoT or remote collaborator Pulse:
 on_pulse(stream) {
@@ -175,6 +214,8 @@ on_pulse(stream) {
 ```
 
 ### B. W3C RDF 1.2 Claims & Reification
+> ✗ `<< :claim_42 | … >>` pipe reifier and `<<[…]|>>`-style provenance are illegal in 0.1.
+> 0.1 form: `<<( s p o )>>` and `<< s p o ~ reifier >>`; provenance is a graph/receipt, not a literal.
 ```vibe
 // 1. Abstract proposition term (unasserted claim)
 let candidate_claim = <<( :TreatmentX :cures :DiseaseY )>>;
@@ -190,12 +231,16 @@ await graph.commit_delta(asserted_fact);
 ```
 
 ### C. Reactive Mindware Cell Formula
+> ✗ `COUNT(…)` and `&&` between a query and `aura.validate` are not 0.1 cell syntax;
+> cells are Pure (`= expr`) and `aura.validate` is fine but `COUNT` is not a 0.1 binding.
 ```vibe
 // Evaluated within a <q-cell> in Poet
 =COUNT(graph.query(?s, :hasCondition, :Diabetes) && aura.validate(?s, "schema:ActivePatient"))
 ```
 
 ### D. Generative Articulatory Speech Synthesis (Cross-Modal Pulse)
+> ✗ `on_event`, `graph.resolve_phonology`, `hmc.get_mesh`, `pulse.speak` are not 0.1.
+> These are post-0.1 `capability.invoke` families, not first-class grammar.
 ```vibe
 // Project a multilingual phoneme sequence through a .d10 vocal tract profile
 on_event(user_query) {
@@ -254,6 +299,10 @@ VibeScript hooks compile directly to W3C N3Logic implication rules:
 ---
 
 ## 7. Multi-Platform Deployment Matrix
+
+> **⚠ v1.0 destination matrix.** `vibe-0.1` (core §10) claims only
+> `native-desktop` and `wasm32`. The `no_std` / Micro-Poet `<2MB` edge row is
+> **not** claimed for 0.1 and must not be advertised until measured.
 
 | Platform Target | Host Runtime | Poet Engine Mode | UI Rendering Pipeline | Wire Format & Sync |
 | :--- | :--- | :--- | :--- | :--- |

@@ -90,6 +90,12 @@ pub const VIBE_0_1: &[VibeBinding] = &[
         required: false,
         honesty: "partial",
     },
+    VibeBinding {
+        id: "time.unix",
+        family: "CapabilityDiscovery",
+        required: false,
+        honesty: "partial",
+    },
 ];
 
 pub fn resolve_id(id: &str) -> Value {

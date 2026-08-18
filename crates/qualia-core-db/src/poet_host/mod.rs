@@ -300,6 +300,27 @@ impl Host for PoetSnapshot {
         Ok(Value::Null)
     }
 
+    fn time_unix(&mut self, span: poet_vibe::Span) -> Result<Value, Diagnostic> {
+        // WASM has no wall clock; the host injects replay clocks via receipts.
+        #[cfg(target_arch = "wasm32")]
+        {
+            let _ = span;
+            Ok(Value::I64(0))
+        }
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            use std::time::{SystemTime, UNIX_EPOCH};
+            match SystemTime::now().duration_since(UNIX_EPOCH) {
+                Ok(d) => Ok(Value::I64(d.as_secs() as i64)),
+                Err(_) => Err(Diagnostic::new(
+                    poet_vibe::DiagCode::E600,
+                    span,
+                    "system clock is before Unix epoch",
+                )),
+            }
+        }
+    }
+
     fn graph_snapshot(&mut self, _span: poet_vibe::Span) -> Result<Value, Diagnostic> {
         #[cfg(not(target_arch = "wasm32"))]
         if self.attached {
@@ -541,6 +562,28 @@ fn find() {
                     row,
                     Value::Quin { subject, .. } if *subject == seed.subject
                 )));
+            }
+            other => panic!("{other:?}"),
+        }
+    }
+
+    #[test]
+    fn time_unix_returns_wall_clock_on_native() {
+        let mut snap = PoetSnapshot::default();
+        let src = "effect fn now() { return time.unix(); }";
+        let v = snap.eval_fn(src, "now", vec![]).unwrap();
+        // Native: real wall clock is positive. WASM: 0 (default). Both are I64.
+        #[cfg(not(target_arch = "wasm32"))]
+        assert!(v.as_i64().unwrap_or(0) > 0, "wall clock should be positive");
+        #[cfg(target_arch = "wasm32")]
+        assert_eq!(v.as_i64(), Some(0));
+    }
+
+    #[test]
+    fn time_unix_resolves_as_partial_vibe_binding() {
+        match crate::poet_host::catalog::resolve_id("time.unix") {
+            Value::Record(r) => {
+                assert_eq!(r.get("vibe_bound"), Some(&Value::Bool(true)));
             }
             other => panic!("{other:?}"),
         }
