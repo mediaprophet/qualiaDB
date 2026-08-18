@@ -215,3 +215,22 @@ Phase C was claimed in NOTICES but the session OOM'd before any code was written
 - wasm32: clean
 
 **Next:** Phase F — graph honesty lift (partial → live when attached to daemon graph).
+
+### Phase F — Graph honesty lift (done, 2026-08-18 session 3)
+
+**Issue:** `poet_capabilities()` used static `b.honesty` labels and hardcoded `"partial"` for the overall catalog honesty, ignoring whether the snapshot was attached to the daemon graph. The engine already had `dynamic_honesty()` and `resolve_id_with()` but the desktop command wasn't using them.
+
+**Fix:** Updated `poet_capabilities` to:
+- Accept `State<PoetHarnessState>` and read `snap.attached`
+- Use `dynamic_honesty(b.id, attached)` for each binding row
+- Use `snap.honesty()` for the overall catalog honesty label
+
+**Files modified:**
+- `crates/webizen-desktop/src/commands/poet.rs` — `poet_capabilities` now uses dynamic honesty
+- `docs/manuals/ai-agent-vibescript-readiness.md` — updated pillar 5 (added EMF + Render wrappers), updated test counts (131), added reactive loop mention
+
+**Verification:**
+- poet_host: 131 passed
+- webizen-desktop: clean
+
+**Next:** Phase G — golden corpus expansion (needs Timothy's curation for domain priority).

@@ -182,24 +182,17 @@ Wire the desktop harness to drive `on tick()` hooks on a timer, so reactive cell
 
 ---
 
-### Phase F: Graph honesty lift (low effort)
+### Phase F: Graph honesty lift (low effort) — ✅ DONE
 
 Lift `graph.read`/`graph.write` catalog honesty from "partial" to "live" when attached to the daemon graph.
 
-**What's needed:**
-- The `PoetSnapshot::honesty()` method already returns "live" when attached.
-- The catalog `VIBE_0_1` table labels `graph.read`/`graph.write` as "partial" — this is honest for the detached/WASM case but misleading for the attached native case.
-- Option 1: Make the catalog honesty dynamic (query the snapshot state). This requires changing `VIBE_0_1` from `const` to a function.
-- Option 2: Keep the catalog static but document that "partial" means "partial on WASM/detached, live on native/attached".
-- Option 3: Add a `honesty_attached` field to `VibeBinding` that shows the attached honesty.
+**Implemented (Option 1 — dynamic honesty):**
+- The engine already had `dynamic_honesty()` and `resolve_id_with()` in `catalog.rs`.
+- Fixed `poet_capabilities` Tauri command to use `dynamic_honesty(b.id, attached)` instead of static `b.honesty`, and `snap.honesty()` for the overall catalog label.
+- Updated readiness doc with current test counts and Phase C–E wrappers.
 
-**Design decision needed from Timothy:** Which option?
-
-**Files to touch:**
-- `crates/qualia-core-db/src/poet_host/catalog.rs`
-- `docs/manuals/ai-agent-vibescript-readiness.md`
-
-**Estimated effort:** Low — a label change, not new functionality.
+**Files modified:** `commands/poet.rs`, `ai-agent-vibescript-readiness.md`
+**Verification:** poet_host 131 tests, desktop clean.
 
 ---
 

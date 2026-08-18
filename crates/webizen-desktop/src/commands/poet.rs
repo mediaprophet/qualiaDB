@@ -521,7 +521,10 @@ pub struct PoetCatalog {
 }
 
 #[tauri::command]
-pub fn poet_capabilities() -> PoetCatalog {
+pub fn poet_capabilities(state: State<PoetHarnessState>) -> PoetCatalog {
+    let snap = state.snap.lock().expect("poet snapshot");
+    let attached = snap.attached;
+    let overall_honesty = snap.honesty();
     let vibe = VIBE_0_1
         .iter()
         .map(|b| {
@@ -531,7 +534,7 @@ pub fn poet_capabilities() -> PoetCatalog {
             CapabilityRow {
                 id: b.id.into(),
                 family: b.family.into(),
-                honesty: b.honesty.into(),
+                honesty: qualia_core_db::poet_host::catalog::dynamic_honesty(b.id, attached).into(),
                 required: b.required,
                 vibe_bound: true,
                 mcp_tools: desc
@@ -555,7 +558,7 @@ pub fn poet_capabilities() -> PoetCatalog {
         .collect();
     PoetCatalog {
         language: poet_vibe::LANGUAGE_VERSION,
-        honesty: "partial",
+        honesty: overall_honesty,
         vibe,
         engine_not_yet_on_vibe,
     }
