@@ -107,6 +107,12 @@ pub mod lod_chain;
 /// WebGPU renderer (`PortalGpu`) — depth, bloom, tensor-node projection, mesh surfaces.
 #[cfg(feature = "gpu-runtime")]
 pub mod gpu;
+/// Naga IR sanitizer for WebGL2 (GLSL ES 300) compatibility.
+#[cfg(any(feature = "webgl2", feature = "wgsl-forge"))]
+pub mod naga_sanitize;
+/// Naga bridge: WGSL → naga IR → GLSL ES 300 compilation.
+#[cfg(any(feature = "webgl2", feature = "wgsl-forge"))]
+pub mod naga_bridge;
 /// The `#[wasm_bindgen]` portal facade (`QualiaPortal`) driving the browser viewport.
 #[cfg(all(target_arch = "wasm32", feature = "portal"))]
 pub mod portal;

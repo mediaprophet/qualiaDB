@@ -1,0 +1,5 @@
+module <https://qualiadb.org/modules/import_math>;
+import "vibe:0.1/math" as m;
+fn clamp(lo: i64, hi: i64, x: i64) -> i64 {
+    return m.max(lo, m.min(hi, x));
+}

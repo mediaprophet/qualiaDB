@@ -67,6 +67,29 @@ pub const RENDER_SVG_LINE: &str = "Render.svg_line";
 pub const RENDER_SVG_BEZIER: &str = "Render.svg_bezier";
 pub const RENDER_SVG_FIELD: &str = "Render.svg_field";
 
+// ── WebGPU invoke surface (wraps render::gpu::PortalGpu) ──────────────────
+pub const GPU_ADAPTER_INFO: &str = "Render.gpu_adapter_info";
+pub const GPU_INIT: &str = "Render.gpu_init";
+pub const GPU_RENDER_FRAME: &str = "Render.gpu_render_frame";
+pub const GPU_READ_PIXELS: &str = "Render.gpu_read_pixels";
+pub const GPU_UPLOAD_MESH: &str = "Render.gpu_upload_mesh";
+pub const GPU_UPLOAD_TENSOR: &str = "Render.gpu_upload_tensor";
+pub const GPU_SET_CAMERA: &str = "Render.gpu_set_camera";
+pub const GPU_PICK: &str = "Render.gpu_pick";
+pub const GPU_POLL_PICK: &str = "Render.gpu_poll_pick";
+pub const GPU_RESIZE: &str = "Render.gpu_resize";
+pub const GPU_SET_AMBIENT: &str = "Render.gpu_set_ambient";
+pub const GPU_DESTROY: &str = "Render.gpu_destroy";
+pub const GPU_COMPUTE_DISPATCH: &str = "Render.gpu_compute_dispatch";
+pub const GPU_COMPUTE_READBACK: &str = "Render.gpu_compute_readback";
+pub const GPU_VALIDATE_SHADER: &str = "Render.gpu_validate_shader";
+pub const GPU_COMPILE_SHADER: &str = "Render.gpu_compile_shader";
+pub const GPU_COMPILE_TO_GLSL: &str = "Render.gpu_compile_to_glsl";
+pub const GPU_BACKEND_INFO: &str = "Render.gpu_backend_info";
+pub const EMF_UPLOAD_FIELD: &str = "Render.emf_upload_field";
+pub const EMF_RENDER_SLICE: &str = "Render.emf_render_slice";
+pub const EMF_FIELD_INFO: &str = "Render.emf_field_info";
+
 // ── Physics wrappers (wrap specialized_libs::physics_simulation) ───────────
 pub const PHYS_WAVE_1D: &str = "Physics.wave_1d";
 pub const PHYS_HEAT_DIFFUSION_1D: &str = "Physics.heat_diffusion_1d";
@@ -224,6 +247,27 @@ pub const ALL_BOUND: &[&str] = &[
     SPECTRAL_EMF_TO_RGB,
     SPECTRAL_BLEND,
     SPECTRAL_GAMUT_MAP,
+    GPU_ADAPTER_INFO,
+    GPU_INIT,
+    GPU_RENDER_FRAME,
+    GPU_READ_PIXELS,
+    GPU_UPLOAD_MESH,
+    GPU_UPLOAD_TENSOR,
+    GPU_SET_CAMERA,
+    GPU_PICK,
+    GPU_POLL_PICK,
+    GPU_RESIZE,
+    GPU_SET_AMBIENT,
+    GPU_DESTROY,
+    GPU_COMPUTE_DISPATCH,
+    GPU_COMPUTE_READBACK,
+    GPU_VALIDATE_SHADER,
+    GPU_COMPILE_SHADER,
+    GPU_COMPILE_TO_GLSL,
+    GPU_BACKEND_INFO,
+    EMF_UPLOAD_FIELD,
+    EMF_RENDER_SLICE,
+    EMF_FIELD_INFO,
 ];
 
 /// Future extract target for an invoke id. Not a crate today.
@@ -264,7 +308,13 @@ pub fn seam_for(id: &str) -> &'static str {
         FIN_PORTFOLIO => "econ",
         RENDER_SCENE | RENDER_CSS_ANIMATION | RENDER_CSS_COLOR | RENDER_CSS_TRANSFORM
         | RENDER_SVG_PATH | RENDER_SVG_CIRCLE | RENDER_SVG_RECT | RENDER_SVG_LINE
-        | RENDER_SVG_BEZIER | RENDER_SVG_FIELD => "render",
+        | RENDER_SVG_BEZIER | RENDER_SVG_FIELD
+        | GPU_ADAPTER_INFO | GPU_INIT | GPU_RENDER_FRAME | GPU_READ_PIXELS
+        | GPU_UPLOAD_MESH | GPU_UPLOAD_TENSOR | GPU_SET_CAMERA | GPU_PICK
+        | GPU_POLL_PICK | GPU_RESIZE | GPU_SET_AMBIENT | GPU_DESTROY
+        | GPU_COMPUTE_DISPATCH | GPU_COMPUTE_READBACK
+        | GPU_VALIDATE_SHADER | GPU_COMPILE_SHADER | GPU_COMPILE_TO_GLSL
+        | GPU_BACKEND_INFO | EMF_UPLOAD_FIELD | EMF_RENDER_SLICE | EMF_FIELD_INFO => "render",
         _ => "unbound",
     }
 }

@@ -11,6 +11,7 @@ pub mod honesty_chip;
 pub mod llm_harness;
 pub mod native_gpu_viewport;
 pub mod nexus;
+pub mod q_viewport;
 pub mod onboarding;
 pub mod ontology_import_wizard;
 pub mod personal_ontology;

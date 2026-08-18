@@ -19,6 +19,7 @@ default = ["profile_target_1024", "zk-culling", "gpu-runtime", "wgsl-forge", "pr
 # Full API explorer / playground:   --features wasm-full
 gpu-runtime = ["dep:wgpu", "dep:raw-window-handle"]
 wgsl-forge = ["dep:naga", "dxc", "cuda"]
+webgl2 = ["dep:naga"]
 cuda = ["dep:cudarc"]
 # W7 (ADR-pending): real NVIDIA GPU thermal/power telemetry via NVML (nvml-wrapper dlopens the
 # driver's NVML at runtime — no CUDA SDK needed to build). Opt-in; the base build is unaffected and
@@ -158,7 +159,7 @@ dashmap = "6.2.1"
 rand_distr = "0.6.0"
 fast_qr = { version = "0.13.1", features = ["svg"] }
 wgpu = { version = "30", features = ["webgpu", "spirv"], optional = true }
-naga = { version = "30", features = ["wgsl-in", "spv-out"], optional = true }
+naga = { version = "30", features = ["wgsl-in", "spv-out", "glsl-out"], optional = true }
 raw-window-handle = { version = "0.6", optional = true }
 cudarc = { version = "0.19", optional = true, features = ["cuda-13030"] }
 

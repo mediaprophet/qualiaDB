@@ -18,6 +18,7 @@ pub mod qualia;
 pub mod scene;
 
 pub mod node_graph;
+pub mod q_viewport;
 pub mod spatial_bridge;
 pub mod tensor_buffer;
 

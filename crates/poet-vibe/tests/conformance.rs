@@ -333,3 +333,130 @@ fn x() { return 0; }
     let err = load_program(src).unwrap_err();
     assert_eq!(err.code, DiagCode::E100);
 }
+
+// ── Phase G: Golden corpus expansion ─────────────────────────────────────
+
+#[test]
+fn g1_tick_hook_loads_and_dispatches() {
+    let src = include_str!("../fixtures/g1_tick_hook.vibe");
+    let program = load_program(src).expect("g1 fixture");
+    let mut host = MockHost::default();
+    let mut env = Env::default();
+    let path = vec!["tick".to_string()];
+    let v = dispatch_hook(&program, &path, vec![], &mut host, &mut env).unwrap();
+    assert_eq!(v, Value::Null, "tick hook should return null: {v:?}");
+    assert_eq!(host.published, vec!["poet/tick".to_string()]);
+}
+
+#[test]
+fn g2_tick_time_effect_fn() {
+    let src = include_str!("../fixtures/g2_tick_time.vibe");
+    let program = load_program(src).expect("g2 fixture");
+    let mut host = MockHost::default();
+    let mut env = Env::default();
+    let v = eval_function(&program, "now", vec![], &mut host, &mut env).unwrap();
+    assert_eq!(v.as_i64(), Some(0), "MockHost returns deterministic 0");
+}
+
+#[test]
+fn g3_multi_hook_tick_and_pulse() {
+    let src = include_str!("../fixtures/g3_multi_hook.vibe");
+    let program = load_program(src).expect("g3 fixture");
+    let mut host = MockHost::default();
+    let mut env = Env::default();
+
+    // Tick hook should fire without error.
+    let tick_path = vec!["tick".to_string()];
+    let v = dispatch_hook(&program, &tick_path, vec![], &mut host, &mut env).unwrap();
+    assert_eq!(v, Value::Null);
+    assert_eq!(host.published.len(), 0, "tick should not publish");
+
+    // Pulse hook with value > 50 should publish.
+    let pulse_path = vec!["pulse".to_string(), "message".to_string()];
+    let v = dispatch_hook(
+        &program,
+        &pulse_path,
+        vec![Value::String("poet/events".into()), Value::F64(75.0)],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
+    assert_eq!(v, Value::Null);
+    assert_eq!(host.published, vec!["poet/events".to_string()]);
+
+    // Pulse hook with value <= 50 should NOT publish.
+    let v = dispatch_hook(
+        &program,
+        &pulse_path,
+        vec![Value::String("poet/events".into()), Value::F64(30.0)],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
+    assert_eq!(v, Value::Null);
+    assert_eq!(host.published.len(), 1, "low value should not publish");
+}
+
+#[test]
+fn g4_reactive_cell_bounded_query() {
+    let src = include_str!("../fixtures/g4_reactive_cell.vibe");
+    let program = load_program(src).expect("g4 fixture");
+    let mut host = MockHost {
+        query_rows: 5,
+        ..MockHost::default()
+    };
+    let mut env = Env::default();
+    let v = eval_function(&program, "count", vec![], &mut host, &mut env).unwrap();
+    match v {
+        Value::Ok(inner) => assert_eq!(inner.as_i64(), Some(5)),
+        other => panic!("{other:?}"),
+    }
+}
+
+#[test]
+fn g5_import_math_clamp() {
+    let src = include_str!("../fixtures/g5_import_math.vibe");
+    let program = load_program(src).expect("g5 fixture");
+    let mut host = MockHost::default();
+    let mut env = Env::default();
+    let v = eval_function(&program, "clamp", vec![Value::I64(0), Value::I64(100), Value::I64(42)], &mut host, &mut env).unwrap();
+    assert_eq!(v.as_i64(), Some(42));
+    let v = eval_function(&program, "clamp", vec![Value::I64(0), Value::I64(100), Value::I64(150)], &mut host, &mut env).unwrap();
+    assert_eq!(v.as_i64(), Some(100));
+    let v = eval_function(&program, "clamp", vec![Value::I64(0), Value::I64(100), Value::I64(-5)], &mut host, &mut env).unwrap();
+    assert_eq!(v.as_i64(), Some(0));
+}
+
+#[test]
+fn g6_clinic_deontic_threshold() {
+    let src = include_str!("../fixtures/g6_clinic_deontic.vibe");
+    let program = load_program(src).expect("g6 fixture");
+    let mut host = MockHost::default();
+    let mut env = Env::default();
+
+    // Below threshold — no commit, no publish.
+    let v = eval_function(
+        &program,
+        "enforce_threshold",
+        vec![Value::Iri("clinic:sensor_1".into()), Value::F64(70.0)],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
+    assert_eq!(v, Value::Null);
+    assert_eq!(host.committed, 0);
+    assert_eq!(host.published.len(), 0);
+
+    // Above threshold — commit + publish.
+    let v = eval_function(
+        &program,
+        "enforce_threshold",
+        vec![Value::Iri("clinic:sensor_1".into()), Value::F64(90.0)],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
+    assert_eq!(v, Value::Null);
+    assert_eq!(host.committed, 1);
+    assert_eq!(host.published, vec!["clinic/alerts".to_string()]);
+}

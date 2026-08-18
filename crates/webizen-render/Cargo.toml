@@ -23,6 +23,10 @@ image = { version = "0.25", default-features = false, features = ["png"] }
 base64 = "0.22"
 pollster = "1"
 
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+js-sys = "0.3"
+wasm-bindgen = "0.2"
+
 [features]
 default = ["qualia"]
 qualia = ["qualia-core-db"]

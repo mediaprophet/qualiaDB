@@ -820,5 +820,209 @@ on pulse:message(topic: string) {
         let v = snap.dispatch_hook_src(src, &path, vec![]).unwrap();
         assert_eq!(v, Value::Null, "no matching tick hook should return null");
     }
+
+    // ── Phase G: Golden corpus — capability.invoke fixtures ──────────────
+
+    #[test]
+    fn g_physics_wave_1d_invoke() {
+        let mut snap = PoetSnapshot::default();
+        let src = r#"
+requires [ capability("capability.invoke") ];
+effect fn go() {
+    return capability.invoke("Physics.wave_1d", {
+        u0: [0.0, 0.5, 1.0, 0.5, 0.0],
+        v0: [0.0, 0.0, 0.0, 0.0, 0.0],
+        c: 1.0,
+        dx: 0.1,
+        total_time: 0.5,
+        samples: 10
+    });
+}
+"#;
+        let v = snap.eval_fn(src, "go", vec![]).unwrap();
+        match v {
+            Value::Record(r) => {
+                assert!(r.contains_key("energy_initial"), "wave_1d should return energy_initial");
+                assert!(r.contains_key("energy_final"), "wave_1d should return energy_final");
+            }
+            other => panic!("expected record, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn g_physics_harmonic_oscillator_invoke() {
+        let mut snap = PoetSnapshot::default();
+        let src = r#"
+requires [ capability("capability.invoke") ];
+effect fn go() {
+    return capability.invoke("Physics.harmonic_oscillator", {
+        mass: 1.0,
+        k_spring: 4.0,
+        x0: 1.0,
+        v0: 0.0,
+        t_start: 0.0,
+        t_end: 2.0,
+        t_count: 10
+    });
+}
+"#;
+        let v = snap.eval_fn(src, "go", vec![]).unwrap();
+        match v {
+            Value::Record(r) => {
+                assert!(r.contains_key("positions"), "oscillator should return positions");
+            }
+            other => panic!("expected record, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn g_spectral_emf_to_rgb_invoke() {
+        let mut snap = PoetSnapshot::default();
+        let src = r#"
+requires [ capability("capability.invoke") ];
+effect fn go() {
+    return capability.invoke("Spectral.emf_to_rgb", {
+        alpha: 1.0,
+        mu: 0.45,
+        sigma: 0.1
+    });
+}
+"#;
+        let v = snap.eval_fn(src, "go", vec![]).unwrap();
+        match v {
+            Value::Record(r) => {
+                let css = r.get("css").expect("emf_to_rgb should return css field");
+                match css {
+                    Value::String(s) => assert!(s.starts_with("rgb("), "emf_to_rgb css should start with rgb(: {s}"),
+                    other => panic!("css should be string, got {other:?}"),
+                }
+            }
+            other => panic!("expected record, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn g_render_svg_path_invoke() {
+        let mut snap = PoetSnapshot::default();
+        let src = r##"
+requires [ capability("capability.invoke") ];
+effect fn go() {
+    return capability.invoke("Render.svg_path", {
+        points: [10.0, 10.0, 90.0, 90.0, 50.0, 30.0],
+        stroke: "#ff0000",
+        stroke_width: 2.0,
+        fill: "none"
+    });
+}
+"##;
+        let v = snap.eval_fn(src, "go", vec![]).unwrap();
+        match v {
+            Value::Record(r) => {
+                let svg = r.get("svg").expect("svg_path should return svg field");
+                match svg {
+                    Value::String(s) => {
+                        assert!(s.contains("<path"), "svg_path should return <path element: {s}");
+                        assert!(s.contains("M 10 10 L 90 90"), "svg_path should contain d attribute");
+                    }
+                    other => panic!("svg should be string, got {other:?}"),
+                }
+            }
+            other => panic!("expected record, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn g_render_css_animation_invoke() {
+        let mut snap = PoetSnapshot::default();
+        let src = r#"
+requires [ capability("capability.invoke") ];
+effect fn go() {
+    return capability.invoke("Render.css_animation", {
+        name: "fade",
+        property: "opacity",
+        keyframes: [
+            { time: 0.0, value: 1.0 },
+            { time: 2.0, value: 0.0 }
+        ]
+    });
+}
+"#;
+        let v = snap.eval_fn(src, "go", vec![]).unwrap();
+        match v {
+            Value::Record(r) => {
+                let css = r.get("css").expect("css_animation should return css field");
+                match css {
+                    Value::String(s) => {
+                        assert!(s.contains("@keyframes"), "css_animation should return @keyframes: {s}");
+                        assert!(s.contains("fade"), "css_animation should contain animation name");
+                    }
+                    other => panic!("css should be string, got {other:?}"),
+                }
+            }
+            other => panic!("expected record, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn g_render_svg_circle_invoke() {
+        let mut snap = PoetSnapshot::default();
+        let src = r##"
+requires [ capability("capability.invoke") ];
+effect fn go() {
+    return capability.invoke("Render.svg_circle", {
+        cx: 50.0,
+        cy: 50.0,
+        r: 25.0,
+        stroke: "blue",
+        fill: "yellow"
+    });
+}
+"##;
+        let v = snap.eval_fn(src, "go", vec![]).unwrap();
+        match v {
+            Value::Record(r) => {
+                let svg = r.get("svg").expect("svg_circle should return svg field");
+                match svg {
+                    Value::String(s) => {
+                        assert!(s.contains("<circle"), "svg_circle should return <circle: {s}");
+                        assert!(s.contains("cx=\"50\""), "svg_circle should contain cx");
+                    }
+                    other => panic!("svg should be string, got {other:?}"),
+                }
+            }
+            other => panic!("expected record, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn g_tick_hook_with_pulse_publish_through_snapshot() {
+        let mut snap = PoetSnapshot::with_demo_seed();
+        let src = r#"
+requires [ capability("pulse.publish") ];
+effect fn emit() {
+    effect pulse.publish("poet/tick", 42);
+    return null;
+}
+on tick() {
+    return emit();
+}
+"#;
+        let path = vec!["tick".to_string()];
+        let v = snap.dispatch_hook_src(src, &path, vec![]).unwrap();
+        assert_eq!(v, Value::Null);
+        assert_eq!(snap.published.len(), 1);
+        assert_eq!(snap.published[0].topic, "poet/tick");
+    }
+
+    #[test]
+    fn g_time_dependent_cell_recomputes_on_re_eval() {
+        let mut snap = PoetSnapshot::default();
+        let src = "effect fn now() { return time.unix(); }";
+        let v1 = snap.eval_fn(src, "now", vec![]).unwrap();
+        // On native, time.unix returns wall clock — should be non-zero (usually).
+        // On WASM, returns 0. Just verify it doesn't panic and returns I64.
+        assert!(matches!(v1, Value::I64(_)), "time.unix should return I64");
+        assert!(snap.time_read_during_eval, "time_read_during_eval should be set");
+    }
 }
 

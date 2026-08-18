@@ -1,0 +1,7 @@
+module <https://qualiadb.org/modules/tick_time>;
+effect fn now() {
+    return time.unix();
+}
+on tick() {
+    return null;
+}

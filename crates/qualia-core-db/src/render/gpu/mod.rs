@@ -161,6 +161,11 @@ pub struct PortalGpu {
     /// which sets this true because the particles then ARE the epistemic nodes. The mixer's "ambient"
     /// channel toggles it explicitly.
     ambient_enabled: bool,
+    /// WebGPU compute dispatch state: pipeline cache + pending readback slot
+    /// (plan §7.3 W6 — `Render.gpu_compute_dispatch` / `Render.gpu_compute_readback`).
+    compute: compute::ComputeState,
+    /// EMF 5D volumetric visualizer state (plan §7.3 W4).
+    emf: emf_pipeline::EmfState,
     width: u32,
     height: u32,
 }
@@ -692,9 +697,10 @@ impl PortalGpu {
             cache: None,
         });
 
+        let pick_staging_size = padded_bytes_per_row(1) as u64;
         let pick_staging_buf = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("portal-pick-staging"),
-            size: 4,
+            size: pick_staging_size,
             usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
@@ -819,6 +825,8 @@ impl PortalGpu {
         #[cfg(target_arch = "wasm32")]
         drop(error_scope);
 
+        let emf_state = emf_pipeline::EmfState::new(&device, format);
+
         Ok(Self {
             device,
             queue,
@@ -870,6 +878,8 @@ impl PortalGpu {
             tensor_node_count: 0,
             particle_count: particle_count as u32,
             ambient_enabled: false,
+            compute: compute::ComputeState::new(),
+            emf: emf_state,
             width,
             height,
         })
@@ -1292,7 +1302,7 @@ impl PortalGpu {
                 buffer: &self.pick_staging_buf,
                 layout: wgpu::TexelCopyBufferLayout {
                     offset: 0,
-                    bytes_per_row: Some(4),
+                    bytes_per_row: Some(padded_bytes_per_row(1)),
                     rows_per_image: Some(1),
                 },
             },
@@ -1599,8 +1609,13 @@ impl PortalGpu {
 
 // Phase 0.2a: render/gpu submodules (bloom post-pass, resource builders, particle field).
 mod bloom;
+mod compute;
+mod emf_pipeline;
 mod particles;
 mod resources;
+
+pub use compute::{ComputeBinding, ComputeBufferKind};
+pub use emf_pipeline::{EmfFieldCell, EmfSliceUniform};
 use bloom::*;
 pub use particles::particle_cap_for_mode;
 use particles::*;

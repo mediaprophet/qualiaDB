@@ -1,0 +1,18 @@
+module <https://qualiadb.org/modules/clinic_deontic>;
+prefix clinic: <https://qualiadb.org/clinic/>;
+
+requires [
+    capability("graph.read"),
+    capability("graph.write"),
+    capability("pulse.publish", topic: "clinic/alerts")
+];
+
+effect fn enforce_threshold(sensor: Iri, value: f64) {
+    if value > 85.0 {
+        let stated = <<( sensor clinic:emitsAlert clinic:Overheat )>>;
+        graph.stage(stated);
+        graph.commit()?;
+        effect pulse.publish("clinic/alerts", { sensor: sensor, value: value })?;
+    }
+    return null;
+}

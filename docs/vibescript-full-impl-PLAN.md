@@ -298,11 +298,40 @@ After each phase:
 
 ---
 
-## 7. WebGL Rendering & Advanced LLM Agent Interface (post-0.1)
+## 7. WebGPU + WebGL2 Rendering & Advanced LLM Agent Interface (post-0.1)
 
 **Source plan:** `docs/plans/vibescript-webgl-and-advanced-llm-agent-interface-plan-2026-08-18.md`
 
-This section incorporates the WebGL/WebGL2 rendering pipeline and advanced LLM agent scripting interface into the implementation roadmap. These are **post-0.1** workstreams — they extend beyond the closed 0.1 grammar via `capability.invoke` and new grammar extensions.
+This section incorporates the WebGPU-native and WebGL2-fallback rendering pipeline and advanced LLM agent scripting interface into the implementation roadmap. These are **post-0.1** workstreams — they extend beyond the closed 0.1 grammar via `capability.invoke` and new grammar extensions.
+
+### 7.0 Architecture: Dual-Track GPU Strategy
+
+The engine already has a mature WebGPU implementation (`render/gpu/mod.rs` — `PortalGpu`) using wgpu 30, supporting:
+- Native offscreen rendering (Rgba8Unorm readback)
+- Native surface rendering (HWND swapchain, direct present)
+- Browser WebGPU (`BROWSER_WEBGPU` backend, async `try_new_async`)
+- HDR bloom chain, depth/picking, tensor-node projection, mesh pipelines
+
+A basic WebGL2 fallback exists in `render/anatomy/webgl2.rs` with hardcoded GLSL ES 300 shaders.
+
+The VibeScript integration must expose **both** tracks to scripts:
+
+```
+VibeScript `capability.invoke("Render.gpu_*", ...)`
+         │
+    ┌────┴────┐
+    ▼         ▼
+ WebGPU     WebGL2
+ (wgpu)     (naga→GLSL ES 300)
+    │         │
+    ▼         ▼
+ PortalGpu  AnatomyWebGl2
+ (native    (browser
+  + browser  fallback)
+  WebGPU)
+```
+
+**Key principle:** VibeScript scripts should be GPU-backend-agnostic. The engine detects the best available backend (WebGPU → WebGL2) and scripts call unified `Render.gpu_*` invoke IDs. The engine handles dispatch to the appropriate backend.
 
 ### 7.1 Review notes (technical corrections to the source plan)
 
@@ -310,37 +339,45 @@ The source plan is architecturally sound. The following corrections should be ap
 
 1. **Metadata bitfield conflict (Eτ evidential packing):** The plan proposes packing μ (f32) into metadata[32..63] and λ (f32) into metadata[0..31], consuming the entire 64-bit metadata field. This conflicts with AGENTS.md §1 which reserves metadata[61..62] for PermissiveRoutingLane, [32..60] for the Lamport clock (29 bits), and [0..31] for modality payload. **Resolution:** Evidential Quins should use a dedicated opcode (0x30–0x32 already allocated for paraconsistent in `paraconsistent.rs`) and pack (μ, λ) as two f16 values into the modality payload area [0..31] (16 bits each = 32 bits), preserving the Lamport clock and routing lane. This sacrifices some precision (f16 vs f32) but maintains the 48-byte NQuin contract. Alternatively, use a separate `ManifoldCoordinate10D` field for evidential data.
 
-2. **Import namespace validity:** The example Vibe code uses `import "vibe:0.1/render"`, `import "vibe:0.1/physics"`, `import "vibe:0.1/dag"`, `import "vibe:0.1/agent"`, `import "vibe:0.1/vector"`. The 0.1 checker (`check.rs`) only allows: `math`, `rdf`, `quin`, `graph`, `aura`, `pulse`, `capability`, `time`. These new namespaces require grammar extensions (post-0.1) or should use `capability.invoke` for 0.1 compliance. The plan's `vibeAnimation.webgl.*` calls should be `capability.invoke("Render.webgl_*", ...)` until the `vibeAnimation` namespace is formally added to the grammar.
+2. **Import namespace validity:** The example Vibe code uses `import "vibe:0.1/render"`, `import "vibe:0.1/physics"`, `import "vibe:0.1/dag"`, `import "vibe:0.1/agent"`, `import "vibe:0.1/vector"`. The 0.1 checker (`check.rs`) only allows: `math`, `rdf`, `quin`, `graph`, `aura`, `pulse`, `capability`, `time`. These new namespaces require grammar extensions (post-0.1) or should use `capability.invoke` for 0.1 compliance. The plan's `vibeAnimation.webgl.*` calls should be `capability.invoke("Render.gpu_*", ...)` until the `vibeAnimation` namespace is formally added to the grammar.
 
-3. **Naga GLSL output feature:** The project's `Cargo.toml` has `naga = { version = "30", features = ["wgsl-in", "spv-out"] }`. The WebGL2 plan requires GLSL ES 300 output, which needs the `glsl-out` feature. This must be added: `naga = { version = "30", features = ["wgsl-in", "spv-out", "glsl-out"] }` (or as a separate feature gate for WebGL2 builds to avoid bloating non-WebGL targets).
+3. **Naga GLSL output feature — ✅ DONE:** The `Cargo.toml` now has `naga = { version = "30", features = ["wgsl-in", "spv-out", "glsl-out"], optional = true }` under a `webgl2` feature gate.
 
 4. **Existing paraconsistent module:** `crates/qualia-core-db/src/modalities/paraconsistent.rs` already implements opcodes 0x30–0x32 (isolate, contradiction_score, paraconsistent_merge) with routing logic. The Eτ evidential logic should extend this module rather than creating a new `evidential_etau.rs` — or the new module should import and build on the existing contradiction routing.
 
-5. **Existing render infrastructure:** `crates/qualia-core-db/src/render/` already has `gpu/`, `anatomy/`, `spectral_kernel.rs`, `gamut.rs`, `compile_10d.rs`, `contract.rs`, etc. The WebGL2 modules (`naga_sanitize.rs`, `naga_bridge.rs`, `webgl_pipeline.rs`) should be added under `render/` alongside the existing wgpu/WebGPU code, not in a separate location.
+5. **Existing render infrastructure:** `crates/qualia-core-db/src/render/` already has `gpu/` (PortalGpu), `anatomy/webgl2.rs`, `spectral_kernel.rs`, `gamut.rs`, `compile_10d.rs`, `contract.rs`, etc. The WebGL2 modules (`naga_sanitize.rs`, `naga_bridge.rs`) have been added under `render/` alongside the existing wgpu/WebGPU code.
 
 6. **`vibe-0.2` grammar extension:** The plan references `vibe-agent-0.2.ebnf` — this should be `vibe-0.2` (the next minor version), not a separate agent-specific grammar. The agent extensions (DAGs, blackboard, skills) should be part of the unified 0.2 grammar.
 
-### 7.2 Phase 1: Minimal End-to-End Core Baseline
+7. **WebGPU is not WebGL2:** The source plan conflates WebGPU and WebGL2. They are distinct APIs with different capability profiles. WebGPU (wgpu) is the primary backend — it runs natively (Vulkan/Metal/D3D12) and in browsers with WebGPU support. WebGL2 (GLSL ES 300 via naga) is the fallback for browsers without WebGPU. The invoke surface must cover both, with automatic backend selection.
 
-Sequenced after Phase G completion. These are the priority deliverables for the WebGL + agent substrate.
+8. **Existing PortalGpu must be exposed:** The `render/gpu/mod.rs` `PortalGpu` struct already has `new_offscreen`, `new_surface`, `try_new_async`, `render`, `read_rgba8_into`, `set_artefact_joint`, `upload_mesh`, `upload_tensor_nodes`, camera control, and picking. This is a complete WebGPU renderer — it just needs `capability.invoke` wrappers to be callable from VibeScript.
+
+9. **Zero-heap constraint (AGENTS.md §0):** The render frame loop is a hot path. GPU invoke handlers that marshal arguments are cold (Tier 2), but the render dispatch itself must not allocate. Buffer views and uniform uploads must use caller-supplied `&mut [u8]` slices, not `Vec`.
+
+10. **Shader source management:** The engine already has WGSL shaders in `crates/qualia-core-db/src/shaders/` (viewport, fused_ffn, etc.). The naga bridge can compile these to GLSL ES 300 at build time or runtime. VibeScript should be able to request shader compilation and receive diagnostic feedback.
+
+### 7.2 Phase 1: WebGPU Invoke Surface + WebGL2 Sanitizer
+
+| Phase | Description | Deliverables | Target Files | Dependencies | Status |
+|---|---|---|---|---|---|
+| **W0** | WebGPU Capability Invoke Surface | `Render.gpu_adapter_info`, `Render.gpu_init`, `Render.gpu_render_frame`, `Render.gpu_upload_mesh`, `Render.gpu_upload_tensor`, `Render.gpu_set_camera`, `Render.gpu_read_pixels`, `Render.gpu_pick` invoke handlers wrapping existing `PortalGpu`. | `poet_host/invoke/render/gpu.rs`, `ids.rs`, `invoke/mod.rs`, `invoke/render/mod.rs` | PortalGpu (exists) | **✅ Done** |
+| **W1** | Naga IR-Level WebGL2 Sanitizer | In-memory Naga Module IR transform: validate WGSL for WebGL2 compatibility, compile to GLSL ES 300. Add `glsl-out` feature to naga dep. | `render/naga_sanitize.rs`, `render/naga_bridge.rs` | naga `glsl-out` feature | **✅ Done** |
+| **W2** | Zero-Copy WASM Buffer Views & std140 Structs | `Float32Array::view` streaming with `#[repr(C, align(16))]` compile-time verified layouts. std140 layout calculator integrated. | `webizen-render/src/zero_copy_views.rs`, `render/anatomy/webgl2.rs` | W1 | **✅ Done** |
+| **W3** | Unified GPU Capability Invoke (WebGL2 fallback) | `Render.gpu_init` detects WebGPU availability; falls back to WebGL2 via naga-compiled GLSL ES 300. Same invoke IDs, transparent backend selection. | `poet_host/invoke/render/gpu.rs` (extend), `render/naga_bridge.rs` (runtime compile) | W0, W1, W2 | **✅ Done** |
+| **A1** | Homoiconic CBOR-LD AST Codec (Tag 4200) | Zero-copy bidirectional serialization between `poet_vibe::ast` and CBOR-LD 1.0 binary trees. | `poet-vibe/src/cbor_ast.rs`, `lib.rs` | None (independent) | Pending |
+| **A2** | Speculative Constrained Decoding (DOMINO) | Subword-aligned prefix-trie token masking integrated into in-process `QTensorEngine`. | `inference/speculative_decode.rs`, `poet-vibe/src/grammar/` | A1 (AST representation) | Pending |
+| **A3** | Dynamic Reflection & Self-Healing Loop | 3-stage reflection: Stage 1 search match, Stage 2 semantic shape linting, Stage 3 dry-run state injection. Configurable retry budget. | `poet-vibe/src/reflection.rs`, `diagnose.rs` | A1, A2 | Pending |
+
+### 7.3 Phase 2: Advanced Rendering & Orchestration
 
 | Phase | Description | Deliverables | Target Files | Dependencies |
 |---|---|---|---|---|
-| **W1** | Naga IR-Level WebGL2 Sanitizer | In-memory Naga Module IR transform: `Linear` → `Perspective` + GLSL ES 300 compilation. Add `glsl-out` feature to naga dep. | `render/naga_sanitize.rs`, `render/naga_bridge.rs` | naga `glsl-out` feature |
-| **W2** | Zero-Copy WASM Buffer Views & std140 Structs | `Float32Array::view` streaming with `#[repr(C, align(16))]` compile-time verified layouts. | `webizen-render/src/zero_copy_views.rs`, `render/anatomy/webgl2.rs` | W1 |
-| **W3** | WebGL2 Capability Invoke Table | `Render.webgl_init`, `Render.webgl_draw`, `Render.webgl_bind_ubo` invoke handlers. | `poet_host/invoke/render/webgl.rs`, `ids.rs`, `invoke/mod.rs` | W1, W2 |
-| **A1** | Homoiconic CBOR-LD AST Codec (Tag 4200) | Zero-copy bidirectional serialization between `poet_vibe::ast` and CBOR-LD 1.0 binary trees. | `poet-vibe/src/cbor_ast.rs`, `lib.rs` | None (independent) |
-| **A2** | Speculative Constrained Decoding (DOMINO) | Subword-aligned prefix-trie token masking integrated into in-process `QTensorEngine`. | `inference/speculative_decode.rs`, `poet-vibe/src/grammar/` | A1 (AST representation) |
-| **A3** | Dynamic Reflection & Self-Healing Loop | 3-stage reflection: Stage 1 search match, Stage 2 semantic shape linting, Stage 3 dry-run state injection. Configurable retry budget. | `poet-vibe/src/reflection.rs`, `diagnose.rs` | A1, A2 |
-
-### 7.3 Phase 2: Advanced Orchestration & Normative Swarm Substrate
-
-Sequenced after Phase 1 completion.
-
-| Phase | Description | Deliverables | Target Files | Dependencies |
-|---|---|---|---|---|
-| **W4** | 5D EMF & 10D Manifold Visualizer | Volumetric raymarching and slice rendering in WebGL2 driven by `Physics.emf_field_grid_3d` and `ManifoldCoordinate10D`. | `shaders/emf_volumetric.wgsl`, `render/webgl_pipeline.rs` | W3, Phase C (EMF) |
-| **W5** | Declarative `<q-viewport>` Integration | WebGL2 canvas mounting, resizing, event binding, and reactive frame loops in Studio & HyperCanvas. | `webizen-studio/src/render/`, `webizen-render/` | W4 |
+| **W4** | 5D EMF & 10D Manifold Visualizer | Volumetric raymarching and slice rendering via WebGPU compute + fragment shaders driven by `Physics.emf_field_grid_3d` and `ManifoldCoordinate10D`. WebGL2 fallback uses naga-translated GLSL. | `shaders/emf_volumetric.wgsl`, `render/gpu/emf_pipeline.rs` | W0, W3, Phase C (EMF) | **✅ Done** |
+| **W5** | Declarative `<q-viewport>` Integration | WebGPU canvas mounting, resizing, event binding, and reactive frame loops in Studio & HyperCanvas. Drives `on tick()` hooks into `Render.gpu_render_frame`. | `webizen-studio/src/render/`, `webizen-render/` | W4 | **✅ Done** |
+| **W6** | WebGPU Compute Pipeline Invoke | `Render.gpu_compute_dispatch` — exposes WebGPU compute shaders to VibeScript for GPU-accelerated physics (wave equation, N-body, CFD on GPU). Compute shader source from WGSL, validated by naga. | `poet_host/invoke/render/gpu_compute.rs`, `shaders/compute/*.wgsl` | W0 | **✅ Done** |
+| **W7** | Runtime Shader Compilation & Hot-Reload | `Render.gpu_compile_shader` — VibeScript can submit WGSL source at runtime, validated by naga sanitizer, compiled to backend-specific shader (wgpu SPIR-V or GLSL ES 300). Enables live shader editing in Studio. | `poet_host/invoke/render/shader_compile.rs`, `render/naga_bridge.rs` (extend) | W0, W1 | **✅ Done** |
+| **W8** | Automatic Backend Detection & Fallback | `Render.gpu_backend_info` — probes WebGPU adapter availability; if absent, falls back to WebGL2. Returns backend type, capabilities, limits, texture format support. VibeScript scripts can query capabilities and adapt. | `poet_host/invoke/render/backend.rs` | W0, W3 | **✅ Done** |
 | **A4** | Structural AST Query Engine | S-expression query engine enforcing static architectural policies (mandatory `take:` limits, forbidden API calls). | `poet-vibe/src/ast_query.rs` | A1 |
 | **A5** | Q42 Semantic Blackboard & Constraint Context | Observable state channels on Q42 CRDT graphs with pinned hard/soft constraint propagation. | `poet_host/blackboard.rs` | None |
 | **A6** | Multi-Agent DAGs & Autonomous Control Units | Native DAG pipeline definitions, LLM-driven Control Units / Autonomous Routers, isolated `SlgArena` Judge verification frames. | `poet-vibe/src/dag.rs`, `agent_sandbox.rs` | A4, A5 |
@@ -348,7 +385,29 @@ Sequenced after Phase 1 completion.
 | **A8** | Hardware Deontic F(φ) Interrupts & Phase Leasing | Immediate seL4-style capability revocation upon prohibition breach + phase-based capability allow-listing. | `poet-vibe/src/check.rs`, `agent_sandbox.rs` | A6 |
 | **A9** | Semantic Skills: Vectors, Embeddings & Scratchpads | First-class vector cosine distance, in-process text embedding, semantic search, ephemeral scratchpad memory. | `poet_host/invoke/agent/`, `vector.rs` | A5 |
 
-### 7.4 Updated dependency graph
+### 7.4 WebGPU Invoke Surface Detail (W0)
+
+The following `capability.invoke` IDs expose the existing `PortalGpu` to VibeScript:
+
+| Invoke ID | Arguments | Returns | Wraps |
+|---|---|---|---|
+| `Render.gpu_adapter_info` | `{}` | `{ backend, device_name, driver, features[], limits }` | `gpu_context::shared_gpu()` adapter info |
+| `Render.gpu_init` | `{ width, height, particle_cap?, mode? }` | `{ handle, width, height, format }` | `PortalGpu::new_offscreen` |
+| `Render.gpu_render_frame` | `{ handle, time? }` | `{ frame_count }` | `PortalGpu::render` |
+| `Render.gpu_read_pixels` | `{ handle, width, height }` | `{ rgba8: [u8], width, height }` | `PortalGpu::read_rgba8_into` |
+| `Render.gpu_upload_mesh` | `{ handle, positions: [f32], colors: [f32], indices: [u32] }` | `{ index_count }` | `PortalGpu::upload_mesh` |
+| `Render.gpu_upload_tensor` | `{ handle, nodes: [f32], count }` | `{ node_count }` | `PortalGpu::upload_tensor_nodes` |
+| `Render.gpu_set_camera` | `{ handle, yaw, pitch, zoom }` | `{}` | `PortalGpu::set_camera_orbit` |
+| `Render.gpu_pick` | `{ handle, x, y }` | `{ node_id }` | `PortalGpu::pick` |
+
+**Design notes:**
+- `handle` is a u64 opaque ID mapping to a `PortalGpu` instance in a slot map (allows multiple viewports).
+- All GPU invoke handlers are Tier-2 (cold construction) — they marshal Vibe values to GPU types.
+- The render frame loop itself (`gpu_render_frame`) must be zero-heap (Tier 1) — no allocation in the hot path.
+- On WASM, `gpu_init` uses `try_new_async` (browser WebGPU); on native, uses `new_offscreen` or `new_surface`.
+- The `mode` argument selects: `"offscreen"` (default), `"surface"` (native HWND), `"browser"` (canvas).
+
+### 7.5 Updated dependency graph
 
 ```
 Phase A (physics) ──┐
@@ -362,7 +421,11 @@ Phase G (golden corpus) ◄─────────────────�
                                                                          ▼
 ─── post-0.1 ────────────────────────────────────────────────────────────│
                                                                          │
-  W1 (Naga sanitize) ──► W2 (zero-copy buffers) ──► W3 (WebGL2 invoke) ──► W4 (EMF visualizer) ──► W5 (q-viewport)
+  W0 (WebGPU invoke) ──┬──► W3 (unified GPU invoke + WebGL2 fallback) ──► W4 (EMF visualizer) ──► W5 (q-viewport)
+                        │                    │                             │
+  W1 (Naga sanitize) ✅ ┘                    │                             W6 (compute dispatch)
+                        │                    │                             W7 (shader hot-reload)
+  W2 (zero-copy buffers) ────────────────────┘                             W8 (backend detection)
                                                                          │
   A1 (CBOR-LD AST) ──► A2 (DOMINO decode) ──► A3 (reflection loop)        │
                           │                                               │
@@ -372,13 +435,15 @@ Phase G (golden corpus) ◄─────────────────�
   A7 (Eτ evidential)      A9 (semantic skills) ◄─────────────────────────┘
 ```
 
-### 7.5 Verification criteria (from source plan)
+### 7.6 Verification criteria
 
-1. **Visual oracle:** WebGL2 output matches wgpu reference within CIEDE2000 ΔE < 2.0 and SSIM > 0.98.
+1. **Visual oracle:** WebGPU and WebGL2 output matches wgpu reference within CIEDE2000 ΔE < 2.0 and SSIM > 0.98.
 2. **GLSL ES 300 invariant:** No generated shader contains `noperspective`; all UBO data matches std140 16-byte alignment.
 3. **Zero hot-path allocation:** `assert_zero_alloc` in render frame loops and `on tick` hooks = 0 heap allocations.
-4. **Deontic hard-stop:** F(φ) breach revokes write leases, reverts staged deltas, aborts in < 1µs.
-5. **Paraconsistent precision:** Contradictory claims (G ≥ 0.5) route to quarantine sub-contexts without logical explosion.
-6. **Agent self-repair convergence:** > 95% single-step self-repair using `suggested_fix` + GBNF decoding.
-7. **Blackboard constraint preservation:** Downstream DAG nodes inherit and enforce pinned root constraints.
-8. **Sentinel compliance:** Any script/sandbox/render task exceeding 42MB arena fails-closed with E400.
+4. **Backend transparency:** Same VibeScript code runs on WebGPU (native + browser) and WebGL2 (fallback) without modification.
+5. **Deontic hard-stop:** F(φ) breach revokes write leases, reverts staged deltas, aborts in < 1µs.
+6. **Paraconsistent precision:** Contradictory claims (G ≥ 0.5) route to quarantine sub-contexts without logical explosion.
+7. **Agent self-repair convergence:** > 95% single-step self-repair using `suggested_fix` + GBNF decoding.
+8. **Blackboard constraint preservation:** Downstream DAG nodes inherit and enforce pinned root constraints.
+9. **Sentinel compliance:** Any script/sandbox/render task exceeding 42MB arena fails-closed with E400.
+10. **GPU compute correctness:** WebGPU compute results match CPU oracle within fp32 epsilon for physics simulations.

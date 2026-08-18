@@ -1,0 +1,10 @@
+module <https://qualiadb.org/modules/reactive_cell>;
+requires [ capability("graph.read") ];
+pure fn count() -> Result<i64, string> {
+    let rows = graph.query(?s, ?p, ?o, take: 32)?;
+    let mut n: i64 = 0;
+    for row in rows {
+        n = n + 1;
+    }
+    return Ok(n);
+}

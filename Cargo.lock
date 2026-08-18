@@ -14389,11 +14389,13 @@ dependencies = [
  "bytemuck",
  "cfg_aliases",
  "image",
+ "js-sys",
  "log",
  "pollster",
  "qualia-core-db",
  "serde",
  "serde_json",
+ "wasm-bindgen",
  "wgpu",
 ]
 
