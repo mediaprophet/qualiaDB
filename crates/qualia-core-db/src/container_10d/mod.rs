@@ -44,6 +44,7 @@
 pub mod axis_role;
 pub mod conformance;
 pub mod crc32c;
+pub mod field_section;
 pub mod header;
 pub mod integrity;
 pub mod mesh_section;
