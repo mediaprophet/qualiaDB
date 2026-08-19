@@ -57,6 +57,20 @@ wired together. Drafted a comprehensive orchestration strategy with:
 
 ---
 
+## Step 3: Round 3 Implementation (DONE — commits c87a117c..c4cf0f39)
+
+**What was done:**
+- **Task G16 (T27):** Honesty-labeled `Manifold.project` as stub (`crates/qualia-core-db/src/poet_host/invoke/manifold/project.rs`). Added `"honesty": "stub"` output record. 53 manifold tests pass.
+- **Task G17 (T51):** Created machine schemas (`MachineSchema`) for all 8 `ALL_BOUND` capability IDs in `crates/qualia-core-db/src/poet_host/invoke/coverage.rs`. Added `schema_for(id)` and `all_schemas()`. 10 coverage tests pass.
+- **Task G18 (T58):** Implemented mechanical no-bylines enforcement `check_no_bylines(text: &str)` in `crates/qualia-core-db/src/governance/instrument_trace.rs` per CLAUDE.md §16. 12 instrument_trace tests pass.
+- **Task G21 (T68):** Implemented `TickPolicy` (`ProcessAll`, `Coalesce` default, `Drop`) and `TickController` under load in `crates/qualia-core-db/src/poet_host/mod.rs`. 178 poet_host tests pass.
+- **Task G22 (T73):** Implemented quantity dimension algebra (SI base dimensions, Mul/Div exponent algebra) and unit conversions (including affine Celsius/Kelvin offsets) in `crates/poet-vibe/src/quantity.rs`.
+- **Task G23 (T62):** Created `crates/poet-cli` toolchain supporting interactive REPL, source formatting, and static linting (`poet repl`, `poet format`, `poet lint`). 7 poet-cli tests pass.
+- **Task G20 (T18):** Implemented fail-closed `Host::time_unix` returning `E702: no clock available` on unclocked hosts. Added `DiagCode::E702` to `crates/poet-vibe/src/error.rs`.
+- **Task G19 (T19, T20):** Added structured `time.unix_nanos` (`{ secs: I64, nanos: U64 }`) and `time.monotonic_nanos` to `Host` ABI and VibeScript runtime dispatch.
+
+---
+
 ## Current Status: Refactors Matrix (R1–R12)
 
 | Refactor | Workstream | Description | Status | Verification |
@@ -72,13 +86,38 @@ wired together. Drafted a comprehensive orchestration strategy with:
 | **R9** | Quality | DOMINO logit mask in sampler | ✅ Done | Sampler tests pass |
 | **R10** | Governance | `DisclosureDenied` diagnostic (E800) credentialed refusal | ✅ Done | DiagCode E800 tests pass |
 | **R11** | Governance | Darwinian compute priority in daemon swarm routing | ✅ Done | Daemon swarm priority tests pass |
-| **R12** | Governance | Customer-readable instrument trace ledger | ✅ Done | 7 instrument_trace tests pass |
+| **R12** | Governance | Customer-readable instrument trace ledger | ✅ Done | 12 instrument_trace tests pass |
 
 ---
 
-## Next Steps for Round 3
+## Round 3 Tasks Completed Summary (G12–G25)
 
-1. Complete end-to-end integration test of governed multi-agent DAG pipeline driven by VibeScript `capability.invoke("agent.dag.execute", ...)`.
-2. Connect `CoordHostSeams` with secure enclave key vault and SuspendedTransactionQueue.
-3. Wire live chat inference model dispatch into `LocalJobKind::AgentTurn` worker loop.
-4. Prepare multi-agent orchestration demonstration and documentation for review.
+| Task | Target Tracker | Description | Status | Commit |
+|---|---|---|---|---|
+| **G16** | T27 | Honesty-label `Manifold.project` as stub | ✅ Done | `c87a117c` |
+| **G17** | T51 | Machine schemas for `ALL_BOUND` capability IDs | ✅ Done | `c0270d8b` |
+| **G18** | T58 | Mechanical no-bylines enforcement `check_no_bylines` | ✅ Done | `db415931` |
+| **G21** | T68 | Tick policy under load (coalesce/drop/processall) | ✅ Done | `390bb638` |
+| **G22** | T73 | Quantity dimension algebra — SI base dimensions and conversions | ✅ Done | `96d762fb` |
+| **G23** | T62 | CLI toolchain (`crates/poet-cli`) — REPL, formatter, linter | ✅ Done | `3519bb3f` |
+| **G20** | T18 | Fail-closed `Host` time — no clock returns `E702` | ✅ Done | `c4cf0f39` |
+| **G19** | T19, T20 | Add `time.unix_nanos` and `time.monotonic_nanos` to Host ABI | ✅ Done | `c4cf0f39` |
+| **G12** | T8 | Delete `Value::Identish` (Devin active lane `value.rs`/`eval.rs`) | ⏳ Queued R4 | Pending lane release |
+| **G13** | T10 | Enforce `mut` in check and eval (Devin active lane) | ⏳ Queued R4 | Pending lane release |
+| **G14** | T11 | Integer ops `checked_*` → `E600` (Devin active lane) | ⏳ Queued R4 | Pending lane release |
+| **G15** | T12 | `math.*` preserves integer domain (Devin active lane) | ⏳ Queued R4 | Pending lane release |
+| **G24** | T63 | Module system — `import <iri> as name` (Devin active lane) | ⏳ Queued R4 | Pending lane release |
+| **G25** | Docs | Update progress log and NOTICES for round 3 | ✅ Done | This commit |
+
+---
+
+## Next Steps for Round 4
+
+1. Coordinate with Devin on lane release for `crates/poet-vibe/src/eval.rs`, `ast.rs`, `check.rs`, `value.rs`.
+2. Execute remaining Round 4 tasks:
+   - **G12 (T8):** Delete `Value::Identish` and replace with typed postfix handling.
+   - **G13 (T10):** Enforce `mut` in `check.rs` and `eval.rs`.
+   - **G14 (T11):** Checked integer arithmetic with `E600` overflow diagnostics.
+   - **G15 (T12):** Preserve integer domain in `math.*` operations.
+   - **G24 (T63):** Dynamic module import `import <iri> as name`.
+3. Complete end-to-end integration test of governed multi-agent DAG pipeline driven by VibeScript `capability.invoke("agent.dag.execute", ...)`.
