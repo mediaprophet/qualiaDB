@@ -4,6 +4,8 @@ use super::super::args;
 use crate::entity_view::projection::PresentationLevel;
 use poet_vibe::{Diagnostic, Span, Value};
 
+// STUB (T27): real presentation morphism not yet implemented.
+// Currently echoes x,y,z,t. See docs/vibescript-full-impl-PLAN.md §8.4 T27.
 pub fn project(args_v: &Value, _span: Span) -> Result<Value, Diagnostic> {
     let x = args::rec_f64(args_v, "x").unwrap_or(0.0);
     let y = args::rec_f64(args_v, "y").unwrap_or(0.0);
@@ -23,6 +25,7 @@ pub fn project(args_v: &Value, _span: Span) -> Result<Value, Diagnostic> {
             "spatial",
             Value::Bool(level.as_u8() >= PresentationLevel::SpatialDesk.as_u8()),
         ),
+        ("honesty", Value::String("stub".into())),
     ]))
 }
 
@@ -37,6 +40,15 @@ mod tests {
         m.insert("level".into(), Value::U64(2));
         match project(&Value::Record(m), Span { start: 0, end: 0 }).unwrap() {
             Value::Record(r) => assert_eq!(r.get("spatial"), Some(&Value::Bool(true))),
+            other => panic!("{other:?}"),
+        }
+    }
+
+    #[test]
+    fn manifold_project_honesty_is_stub() {
+        let m = BTreeMap::new();
+        match project(&Value::Record(m), Span { start: 0, end: 0 }).unwrap() {
+            Value::Record(r) => assert_eq!(r.get("honesty"), Some(&Value::String("stub".into()))),
             other => panic!("{other:?}"),
         }
     }
