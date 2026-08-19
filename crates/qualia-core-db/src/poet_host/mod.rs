@@ -153,6 +153,46 @@ impl PoetSnapshot {
         self.revision = self.revision.wrapping_add(1);
     }
 
+    /// Fork this snapshot into a detached, isolated copy for dry-run
+    /// evaluation (reflection Stage 3, JudgeFrame verification, etc.).
+    ///
+    /// The fork inherits the current committed quins (a snapshot of the
+    /// live graph at this revision) but is **never attached** — commits
+    /// to the fork stay in the fork and cannot reach the daemon graph.
+    /// The staged deltas are cleared (a dry-run starts from the committed
+    /// baseline, not from in-flight staged changes).
+    ///
+    /// This is the R4 isolation boundary: reflection stage 3 and judge
+    /// frames evaluate against the fork, not the live host.
+    pub fn fork(&self) -> Self {
+        Self {
+            committed: self.committed.clone(),
+            staged: Vec::new(),
+            revision: self.revision,
+            published: Vec::new(),
+            attached: false,
+            graph_read_during_eval: false,
+            time_read_during_eval: false,
+        }
+    }
+
+    /// Commit staged deltas into the committed set (used by dry-run forks
+    /// to simulate a commit without touching the live graph).
+    pub fn commit_staged(&mut self) {
+        self.committed.append(&mut self.staged);
+        self.bump_revision();
+    }
+
+    /// Discard all staged deltas without committing (rollback).
+    pub fn rollback_staged(&mut self) {
+        self.staged.clear();
+    }
+
+    /// Number of staged (uncommitted) quins.
+    pub fn staged_count(&self) -> usize {
+        self.staged.len()
+    }
+
     pub fn eval_cell_src(&mut self, src: &str) -> Result<Value, Diagnostic> {
         self.graph_read_during_eval = false;
         self.time_read_during_eval = false;

@@ -82,6 +82,14 @@ pub struct Engine<'a, H: Host> {
     /// `'a` — it is passed by reference to `call_function` / `call_hook` and
     /// must outlive the engine evaluation (the caller guarantees this).
     program: Option<*const Program>,
+    /// Optional deontic phase leaser (R2). When set, every host dispatch
+    /// (`ns.fn`) is checked against the active phase's capability allow-list.
+    /// If the capability is forbidden or not allowed in the current phase,
+    /// evaluation aborts with a deontic violation diagnostic.
+    ///
+    /// This is `Option` so the engine remains backward-compatible: existing
+    /// callers that don't set a phase leaser behave exactly as before.
+    phase_leaser: Option<&'a mut crate::deontic_interrupt::PhaseLeaser>,
 }
 
 enum Flow {
@@ -96,6 +104,7 @@ impl<'a, H: Host> Engine<'a, H> {
             budget,
             depth: 0,
             program: None,
+            phase_leaser: None,
         }
     }
 
@@ -106,7 +115,57 @@ impl<'a, H: Host> Engine<'a, H> {
             budget,
             depth: 0,
             program: Some(program as *const Program),
+            phase_leaser: None,
         }
+    }
+
+    /// Attach a deontic phase leaser (R2). When set, every host dispatch
+    /// is checked against the active phase's capability allow-list.
+    pub fn with_phase_leaser(
+        host: &'a mut H,
+        budget: Budget,
+        leaser: &'a mut crate::deontic_interrupt::PhaseLeaser,
+    ) -> Self {
+        Self {
+            host,
+            budget,
+            depth: 0,
+            program: None,
+            phase_leaser: Some(leaser),
+        }
+    }
+
+    /// Check whether a capability path is allowed by the active phase lease.
+    /// Returns `Ok(())` if allowed (or if no phase leaser is attached),
+    /// `Err(diagnostic)` if the capability is forbidden or not allowed.
+    fn check_phase_capability(&self, path: &str, span: Span) -> Result<(), Diagnostic> {
+        let Some(leaser) = &self.phase_leaser else {
+            return Ok(());
+        };
+        // The capability path is `ns.fn` (e.g., `graph.query`).
+        // The phase lease checks the namespace (e.g., `graph`).
+        let cap = path.split('.').next().unwrap_or(path);
+        if leaser.is_interrupted() {
+            return Err(Diagnostic::new(
+                DiagCode::E700,
+                span,
+                format!(
+                    "deontic interrupt: agent is halted, capability '{}' denied",
+                    cap
+                ),
+            ));
+        }
+        if !leaser.is_leased(cap) {
+            return Err(Diagnostic::new(
+                DiagCode::E700,
+                span,
+                format!(
+                    "deontic phase violation: capability '{}' is not leased in the current phase",
+                    cap
+                ),
+            ));
+        }
+        Ok(())
     }
 
     pub fn eval_expr(&mut self, expr: &Expr, env: &mut Env) -> Result<Value, Diagnostic> {
@@ -278,6 +337,14 @@ impl<'a, H: Host> Engine<'a, H> {
             }
         }
         self.depth += 1;
+        // R2: Deontic phase lease check. If a phase leaser is attached,
+        // verify the capability namespace is allowed in the current phase
+        // before dispatching to the host. This is the gate that prevents
+        // an agent from calling `graph.write` during a read-only phase.
+        if let Err(diag) = self.check_phase_capability(&path, span) {
+            self.depth -= 1;
+            return Err(diag);
+        }
         let r = dispatch(self.host, &path, &pos, &named, span);
         self.depth -= 1;
         r
@@ -572,4 +639,86 @@ fn budget_steps<H: Host>(args: &[NamedArg], env: &mut Env, eng: &mut Engine<H>) 
         }
     }
     None
+}
+
+// ── Tests ──────────────────────────────────────────────────────────────────
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::bind::MockHost;
+    use crate::deontic_interrupt::{Phase, PhaseLeaser};
+
+    #[test]
+    fn r2_no_phase_leaser_backward_compatible() {
+        // Without a phase leaser, the engine behaves exactly as before.
+        let mut host = MockHost::default();
+        let mut env = Env::default();
+        let mut engine = Engine::new(&mut host, Budget::default());
+        let expr = crate::parse::parse_cell("= math.max(1, 2)").unwrap();
+        let result = engine.eval_expr(&expr, &mut env);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn r2_phase_leaser_allows_leased_capability() {
+        let mut host = MockHost::default();
+        let mut leaser = PhaseLeaser::new();
+        leaser
+            .register_phase(Phase::new("execute").allow("math"))
+            .unwrap();
+        leaser.enter_phase("execute").unwrap();
+
+        let mut env = Env::default();
+        let mut engine = Engine::with_phase_leaser(&mut host, Budget::default(), &mut leaser);
+        let expr = crate::parse::parse_cell("= math.max(1, 2)").unwrap();
+        let result = engine.eval_expr(&expr, &mut env);
+        assert!(result.is_ok(), "math should be allowed: {:?}", result);
+    }
+
+    #[test]
+    fn r2_phase_leaser_blocks_unleased_capability() {
+        let mut host = MockHost::default();
+        let mut leaser = PhaseLeaser::new();
+        // Only allow "math" in this phase — "graph" is not leased.
+        leaser
+            .register_phase(Phase::new("execute").allow("math"))
+            .unwrap();
+        leaser.enter_phase("execute").unwrap();
+
+        let mut env = Env::default();
+        let mut engine = Engine::with_phase_leaser(&mut host, Budget::default(), &mut leaser);
+        // graph.query is not allowed in this phase.
+        let expr = crate::parse::parse_cell("= graph.query(?s, ?p, ?o, take: 10)").unwrap();
+        let result = engine.eval_expr(&expr, &mut env);
+        assert!(result.is_err(), "graph should be blocked");
+        let err = result.unwrap_err();
+        assert_eq!(err.code, DiagCode::E700);
+        assert!(err.message.contains("graph"));
+    }
+
+    #[test]
+    fn r2_phase_leaser_blocks_after_interrupt() {
+        let mut host = MockHost::default();
+        let mut leaser = PhaseLeaser::new();
+        leaser
+            .register_phase(Phase::new("execute").allow("math"))
+            .unwrap();
+        leaser.enter_phase("execute").unwrap();
+
+        // Trigger an interrupt — all capabilities should be revoked.
+        let interrupt = crate::deontic_interrupt::DeonticInterrupt::prohibition_breach(
+            "graph", "execute", None,
+        );
+        leaser.trigger_interrupt(interrupt);
+
+        let mut env = Env::default();
+        let mut engine = Engine::with_phase_leaser(&mut host, Budget::default(), &mut leaser);
+        let expr = crate::parse::parse_cell("= math.max(1, 2)").unwrap();
+        let result = engine.eval_expr(&expr, &mut env);
+        assert!(result.is_err(), "math should be blocked after interrupt");
+        let err = result.unwrap_err();
+        assert_eq!(err.code, DiagCode::E700);
+        assert!(err.message.contains("halted"));
+    }
 }

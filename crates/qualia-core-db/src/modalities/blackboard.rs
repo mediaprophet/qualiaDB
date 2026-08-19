@@ -362,9 +362,145 @@ impl SemanticBlackboard {
     pub fn channel_hashes(&self) -> Vec<u64> {
         self.channels.keys().cloned().collect()
     }
+
+    /// Read all state from a named channel as a Vec (for DAG node input).
+    /// Returns an empty Vec if the channel does not exist.
+    pub fn read_channel_vec(&self, channel: &str) -> Vec<NQuin> {
+        self.get_channel(channel).map(|c| c.state.clone()).unwrap_or_default()
+    }
+
+    /// Check whether a named channel exists and has any state.
+    pub fn channel_has_data(&self, channel: &str) -> bool {
+        self.get_channel(channel).map(|c| !c.state.is_empty()).unwrap_or(false)
+    }
 }
 
 impl Default for SemanticBlackboard {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+// ── BlackboardBus (R5) ─────────────────────────────────────────────────────
+//
+// Connects DAG node I/O declarations to SemanticBlackboard channels.
+// Each DAG node declares `inputs` and `outputs` as channel name strings
+// (see `poet_vibe::dag::DagNode`). The bus reads from input channels and
+// writes to output channels, propagating pinned constraints from upstream
+// to downstream nodes.
+
+/// A bus connecting DAG nodes to a SemanticBlackboard.
+///
+/// This is the R5 wiring: DAG nodes declare inputs/outputs as channel names,
+//  and the bus reads/writes those channels on the blackboard. Pinned
+//  constraints are propagated from upstream to downstream automatically.
+#[derive(Debug)]
+pub struct BlackboardBus {
+    /// The underlying blackboard.
+    pub board: SemanticBlackboard,
+}
+
+impl BlackboardBus {
+    pub fn new() -> Self {
+        Self {
+            board: SemanticBlackboard::new(),
+        }
+    }
+
+    pub fn from_board(board: SemanticBlackboard) -> Self {
+        Self { board }
+    }
+
+    /// Read all inputs for a DAG node from the blackboard.
+    ///
+    /// Returns a map of channel_name → Vec<NQuin> for each input channel.
+    /// Channels that don't exist or have no data are included as empty Vecs.
+    pub fn read_inputs(&self, inputs: &[String]) -> Vec<(String, Vec<NQuin>)> {
+        inputs
+            .iter()
+            .map(|name| (name.clone(), self.board.read_channel_vec(name)))
+            .collect()
+    }
+
+    /// Write outputs from a DAG node to the blackboard.
+    ///
+    /// `outputs` is a list of (channel_name, quins) pairs. Each quin is
+    /// written to the named channel.
+    pub fn write_outputs(&mut self, outputs: &[(String, Vec<NQuin>)]) -> Result<(), String> {
+        for (channel, quins) in outputs {
+            for quin in quins {
+                self.board.write(channel, *quin)?;
+            }
+        }
+        Ok(())
+    }
+
+    /// Write a single quin to a named output channel.
+    pub fn write_output(&mut self, channel: &str, quin: NQuin) -> Result<(), String> {
+        self.board.write(channel, quin)
+    }
+
+    /// Propagate pinned constraints from upstream channels to downstream
+    /// channels. This ensures that hard constraints (e.g., a budget pinned
+    /// by the principal) are inherited by downstream DAG nodes.
+    ///
+    /// `upstream_channels` are the output channels of the upstream node.
+    /// `downstream_channels` are the input channels of the downstream node.
+    /// Pinned constraints from the upstream channels are propagated to the
+    /// downstream channels.
+    pub fn propagate_constraints(
+        &mut self,
+        upstream_channels: &[String],
+        downstream_channels: &[String],
+    ) -> Result<(), String> {
+        let mut pinned: Vec<Constraint> = Vec::new();
+        for name in upstream_channels {
+            if let Some(ch) = self.board.get_channel(name) {
+                pinned.extend(ch.pinned_constraints());
+            }
+        }
+        for name in downstream_channels {
+            for c in &pinned {
+                self.board.add_constraint(name, *c)?;
+            }
+        }
+        Ok(())
+    }
+
+    /// Check all constraints on all channels. Returns violations.
+    pub fn check_constraints(&self) -> Vec<ConstraintViolation> {
+        self.board.check_all()
+    }
+
+    /// Check if all input channels for a DAG node have data ready.
+    /// Returns the names of channels that are empty/missing.
+    pub fn missing_inputs(&self, inputs: &[String]) -> Vec<String> {
+        inputs
+            .iter()
+            .filter(|name| !self.board.channel_has_data(name))
+            .cloned()
+            .collect()
+    }
+
+    /// Freeze a channel (make read-only) after a node has written its
+    /// final output. This prevents downstream nodes from overwriting
+    /// upstream results.
+    pub fn freeze_output(&mut self, channel: &str) -> Result<(), String> {
+        self.board.freeze_channel(channel)
+    }
+
+    /// Get the underlying blackboard (immutable).
+    pub fn board(&self) -> &SemanticBlackboard {
+        &self.board
+    }
+
+    /// Get the underlying blackboard (mutable).
+    pub fn board_mut(&mut self) -> &mut SemanticBlackboard {
+        &mut self.board
+    }
+}
+
+impl Default for BlackboardBus {
     fn default() -> Self {
         Self::new()
     }
@@ -375,6 +511,95 @@ impl Default for SemanticBlackboard {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // ── R5: BlackboardBus tests ──────────────────────────────────────────
+
+    #[test]
+    fn r5_bus_write_and_read_output() {
+        let mut bus = BlackboardBus::new();
+        let quin = make_quin(1, 2, 3, 42);
+        bus.write_output("draft", quin).unwrap();
+
+        let inputs = bus.read_inputs(&["draft".into()]);
+        assert_eq!(inputs.len(), 1);
+        assert_eq!(inputs[0].0, "draft");
+        assert_eq!(inputs[0].1.len(), 1);
+        assert_eq!(inputs[0].1[0].subject, 1);
+    }
+
+    #[test]
+    fn r5_bus_missing_inputs() {
+        let bus = BlackboardBus::new();
+        let missing = bus.missing_inputs(&["draft".into(), "review".into()]);
+        assert_eq!(missing.len(), 2);
+        assert!(missing.contains(&"draft".to_string()));
+        assert!(missing.contains(&"review".to_string()));
+    }
+
+    #[test]
+    fn r5_bus_missing_inputs_after_write() {
+        let mut bus = BlackboardBus::new();
+        let quin = make_quin(1, 2, 3, 42);
+        bus.write_output("draft", quin).unwrap();
+
+        let missing = bus.missing_inputs(&["draft".into(), "review".into()]);
+        assert_eq!(missing.len(), 1);
+        assert_eq!(missing[0], "review");
+    }
+
+    #[test]
+    fn r5_bus_write_outputs_multi_channel() {
+        let mut bus = BlackboardBus::new();
+        let q1 = make_quin(1, 2, 3, 42);
+        let q2 = make_quin(4, 5, 6, 42);
+        bus.write_outputs(&[
+            ("draft".into(), vec![q1]),
+            ("review".into(), vec![q2]),
+        ])
+        .unwrap();
+
+        let inputs = bus.read_inputs(&["draft".into(), "review".into()]);
+        assert_eq!(inputs[0].1.len(), 1);
+        assert_eq!(inputs[1].1.len(), 1);
+    }
+
+    #[test]
+    fn r5_bus_propagate_constraints() {
+        let mut bus = BlackboardBus::new();
+        // Add a pinned constraint to the "draft" channel.
+        let pinned = Constraint::pinned(1, 2, 3, 42);
+        bus.board.add_constraint("draft", pinned).unwrap();
+
+        // Propagate from "draft" (upstream output) to "review" (downstream input).
+        bus.propagate_constraints(&["draft".into()], &["review".into()])
+            .unwrap();
+
+        // The "review" channel should now have the pinned constraint.
+        let review = bus.board.get_channel("review").unwrap();
+        assert_eq!(review.constraints.len(), 1);
+        assert!(review.constraints[0].is_pinned());
+    }
+
+    #[test]
+    fn r5_bus_freeze_output() {
+        let mut bus = BlackboardBus::new();
+        let quin = make_quin(1, 2, 3, 42);
+        bus.write_output("draft", quin).unwrap();
+        bus.freeze_output("draft").unwrap();
+
+        // Writing to a frozen channel should fail.
+        let result = bus.write_output("draft", make_quin(7, 8, 9, 42));
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn r5_bus_check_constraints_clean() {
+        let mut bus = BlackboardBus::new();
+        let quin = make_quin(1, 2, 3, 42);
+        bus.write_output("draft", quin).unwrap();
+        let violations = bus.check_constraints();
+        assert!(violations.is_empty(), "no constraints → no violations");
+    }
 
     fn make_quin(subject: u64, predicate: u64, object: u64, context: u64) -> NQuin {
         let q = NQuin {

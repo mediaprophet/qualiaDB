@@ -776,4 +776,38 @@ fn make() {
             rate * 100.0, resolved, total
         );
     }
+
+    // ── R4: Isolated dry-run host ────────────────────────────────────────
+
+    #[test]
+    fn r4_dry_run_with_mock_host_valid() {
+        let config = ReflectionConfig::default();
+        let rloop = ReflectionLoop::new(config);
+        let mut host = MockHost::default();
+        let result = rloop.run_with_dry_run_host("= 42", &mut host);
+        assert!(result.success, "stages: {:?}", result.stages);
+        let s3 = result.stages.iter().find(|s| s.stage == 3).unwrap();
+        assert!(s3.passed, "stage 3 should pass with a valid host");
+    }
+
+    #[test]
+    fn r4_dry_run_with_mock_host_math() {
+        let config = ReflectionConfig::default();
+        let rloop = ReflectionLoop::new(config);
+        let mut host = MockHost::default();
+        let result = rloop.run_with_dry_run_host("= math.max(0, 1)", &mut host);
+        assert!(result.success, "stages: {:?}", result.stages);
+    }
+
+    #[test]
+    fn r4_dry_run_does_not_mutate_host_committed() {
+        // The dry-run should not leave any side effects on the host.
+        let config = ReflectionConfig::default();
+        let rloop = ReflectionLoop::new(config);
+        let mut host = MockHost::default();
+        let _ = rloop.run_with_dry_run_host("= 42", &mut host);
+        // MockHost committed counter should stay at 0 — dry-run doesn't commit.
+        assert_eq!(host.committed, 0, "dry-run should not commit anything");
+        assert_eq!(host.staged, 0, "dry-run should not stage anything");
+    }
 }
