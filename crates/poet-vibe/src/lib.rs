@@ -27,6 +27,7 @@ pub mod dag;
 pub mod deontic_interrupt;
 pub mod hid;
 pub mod locale;
+pub mod observer;
 pub mod physics;
 pub mod presentation;
 pub mod pretty;
