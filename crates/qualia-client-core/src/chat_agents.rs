@@ -323,6 +323,164 @@ pub fn local_agent_display_name(cfg: &ParticipantAgentConfig) -> String {
     }
 }
 
+// ---------------------------------------------------------------------------
+// R7 — @mention roster resolution
+// ---------------------------------------------------------------------------
+
+/// A parsed `@mention` extracted from a chat prompt.
+///
+/// `@slug` at the start of (or anywhere in) a user message directs the turn
+/// at a named roster agent. The mention is stripped from the prompt before
+/// inference so the agent receives a clean user turn.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Mention {
+    /// The roster slug, without the leading `@`.
+    pub slug: String,
+    /// Byte offset in the original prompt where the `@slug` token began.
+    pub start: usize,
+    /// Byte offset one past the end of the `@slug` token.
+    pub end: usize,
+}
+
+impl Mention {
+    /// The raw `@slug` text, including the leading `@`.
+    pub fn raw(&self) -> String {
+        format!("@{}", self.slug)
+    }
+}
+
+/// Parse the first `@mention` from a prompt.
+///
+/// A mention is `@` followed by one or more slug characters (`[a-z0-9_-]`,
+/// starting with a letter). The mention may appear anywhere in the message
+/// but is typically at the start (e.g. `@researcher summarize the thread`).
+///
+/// Returns `None` if no valid mention is found. A `@` not followed by a
+/// valid slug character is treated as literal text (not a mention).
+pub fn parse_mention(prompt: &str) -> Option<Mention> {
+    let bytes = prompt.as_bytes();
+    let mut i = 0;
+    while i < bytes.len() {
+        if bytes[i] != b'@' {
+            i += 1;
+            continue;
+        }
+        // A mention must be at the start of the string or preceded by a
+        // word boundary (whitespace). This rejects `@@foo` and `x@foo`.
+        let at_word_boundary = i == 0
+            || bytes[i - 1].is_ascii_whitespace();
+        if !at_word_boundary {
+            i += 1;
+            continue;
+        }
+        // Must be followed by a letter (slug starts with a letter).
+        let slug_start = i + 1;
+        if slug_start >= bytes.len() || !bytes[slug_start].is_ascii_alphabetic() {
+            i += 1;
+            continue;
+        }
+        // Scan the slug body: [a-z0-9_-]
+        let mut j = slug_start;
+        while j < bytes.len()
+            && (bytes[j].is_ascii_alphanumeric()
+                || bytes[j] == b'_'
+                || bytes[j] == b'-')
+        {
+            j += 1;
+        }
+        let slug = &prompt[slug_start..j];
+        return Some(Mention {
+            slug: slug.to_string(),
+            start: i,
+            end: j,
+        });
+    }
+    None
+}
+
+/// Strip the first `@mention` from a prompt, returning the cleaned text.
+///
+/// If the mention is at the start of the prompt, leading whitespace after it
+/// is also trimmed. If the mention is mid-prompt, only the `@slug` token is
+/// removed and surrounding whitespace is collapsed.
+pub fn strip_mention(prompt: &str) -> String {
+    match parse_mention(prompt) {
+        None => prompt.to_string(),
+        Some(m) => {
+            let before = &prompt[..m.start];
+            let after = &prompt[m.end..];
+            // If the mention is at the start, trim leading whitespace after it.
+            if before.trim().is_empty() {
+                after.trim_start().to_string()
+            } else {
+                // Mid-prompt: remove the token, collapse whitespace.
+                format!("{}{}", before.trim_end(), after)
+                    .trim()
+                    .to_string()
+            }
+        }
+    }
+}
+
+/// Resolve a parsed mention against the roster.
+///
+/// Returns the matching [`AgentDefinition`] if the slug exists and is
+/// enabled, or `None` if the slug is not in the roster or the agent is
+/// disabled.
+pub fn resolve_mention(
+    storage_root: &Path,
+    mention: &Mention,
+) -> Option<crate::agent_registry::AgentDefinition> {
+    let agent = crate::agent_registry::get_agent(storage_root, &mention.slug)?;
+    if agent.enabled {
+        Some(agent)
+    } else {
+        None
+    }
+}
+
+/// The outcome of parsing a prompt for agent dispatch.
+#[derive(Debug, Clone)]
+pub enum PromptDispatch {
+    /// No mention found — use the default inference path.
+    Default,
+    /// A mention was found and resolved to a roster agent.
+    Agent {
+        agent: crate::agent_registry::AgentDefinition,
+        /// The prompt with the mention stripped.
+        clean_prompt: String,
+    },
+    /// A mention was found but the slug is unknown or disabled.
+    UnknownAgent {
+        slug: String,
+        /// The original prompt (unmodified).
+        prompt: String,
+    },
+}
+
+/// Parse a prompt and resolve any `@mention` against the roster.
+///
+/// This is the single entry point for the chat layer: call this with the
+/// raw user prompt, then dispatch based on the result.
+pub fn resolve_prompt_dispatch(
+    storage_root: &Path,
+    prompt: &str,
+) -> PromptDispatch {
+    match parse_mention(prompt) {
+        None => PromptDispatch::Default,
+        Some(m) => match resolve_mention(storage_root, &m) {
+            Some(agent) => PromptDispatch::Agent {
+                agent,
+                clean_prompt: strip_mention(prompt),
+            },
+            None => PromptDispatch::UnknownAgent {
+                slug: m.slug,
+                prompt: prompt.to_string(),
+            },
+        },
+    }
+}
+
 pub fn participant_dids(participants: &[chat_session::ChatParticipant]) -> Vec<String> {
     participants.iter().map(|p| p.did.clone()).collect()
 }
@@ -647,5 +805,146 @@ mod tests {
         save_local_agent_config(&storage, &session_id, &cfg).unwrap();
         let again = load_local_agent_config(&storage, &session_id).unwrap();
         assert_eq!(again.sub_agent_did, cfg.sub_agent_did);
+    }
+
+    // ── R7: @mention parsing ────────────────────────────────────────────
+
+    #[test]
+    fn parse_mention_at_start() {
+        let m = parse_mention("@researcher summarize the thread").unwrap();
+        assert_eq!(m.slug, "researcher");
+        assert_eq!(m.start, 0);
+        assert_eq!(m.end, 11);
+    }
+
+    #[test]
+    fn parse_mention_mid_prompt() {
+        let m = parse_mention("hey @researcher can you help?").unwrap();
+        assert_eq!(m.slug, "researcher");
+        assert_eq!(m.start, 4);
+        assert_eq!(m.end, 15);
+    }
+
+    #[test]
+    fn parse_mention_with_hyphen_and_underscore() {
+        let m = parse_mention("@data-miner_2 run the query").unwrap();
+        assert_eq!(m.slug, "data-miner_2");
+    }
+
+    #[test]
+    fn parse_mention_none_for_plain_text() {
+        assert!(parse_mention("just a regular message").is_none());
+    }
+
+    #[test]
+    fn parse_mention_none_for_at_without_slug() {
+        assert!(parse_mention("see you @ 5pm").is_none());
+    }
+
+    #[test]
+    fn parse_mention_none_for_double_at() {
+        assert!(parse_mention("@@researcher").is_none());
+    }
+
+    #[test]
+    fn parse_mention_none_for_slug_starting_with_digit() {
+        assert!(parse_mention("@2fast look at this").is_none());
+    }
+
+    #[test]
+    fn parse_mention_at_end_of_string() {
+        let m = parse_mention("summarize @researcher").unwrap();
+        assert_eq!(m.slug, "researcher");
+        assert_eq!(m.start, 10);
+        assert_eq!(m.end, 21);
+    }
+
+    #[test]
+    fn strip_mention_at_start_trims_whitespace() {
+        let clean = strip_mention("@researcher summarize the thread");
+        assert_eq!(clean, "summarize the thread");
+    }
+
+    #[test]
+    fn strip_mention_mid_prompt() {
+        let clean = strip_mention("hey @researcher can you help?");
+        assert_eq!(clean, "hey can you help?");
+    }
+
+    #[test]
+    fn strip_mention_no_mention_returns_original() {
+        let clean = strip_mention("just a regular message");
+        assert_eq!(clean, "just a regular message");
+    }
+
+    #[test]
+    fn resolve_prompt_dispatch_default() {
+        let storage = tmp_storage();
+        match resolve_prompt_dispatch(&storage, "no mention here") {
+            PromptDispatch::Default => {}
+            other => panic!("expected Default, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn resolve_prompt_dispatch_unknown_agent() {
+        let storage = tmp_storage();
+        match resolve_prompt_dispatch(&storage, "@nonexistent do something") {
+            PromptDispatch::UnknownAgent { slug, .. } => {
+                assert_eq!(slug, "nonexistent");
+            }
+            other => panic!("expected UnknownAgent, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn resolve_prompt_dispatch_known_agent() {
+        use crate::agent_registry::{
+            AgentDefinition, AgentBackendSpec, upsert_agent,
+        };
+        let storage = tmp_storage();
+        let agent = AgentDefinition::new(
+            "researcher",
+            "Researcher",
+            "research assistant",
+            AgentBackendSpec::LocalEngine { model_id: None },
+            "you are a research assistant",
+        );
+        upsert_agent(&storage, agent).unwrap();
+
+        match resolve_prompt_dispatch(&storage, "@researcher summarize the thread") {
+            PromptDispatch::Agent {
+                agent,
+                clean_prompt,
+            } => {
+                assert_eq!(agent.slug, "researcher");
+                assert_eq!(clean_prompt, "summarize the thread");
+            }
+            other => panic!("expected Agent, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn resolve_prompt_dispatch_disabled_agent() {
+        use crate::agent_registry::{
+            AgentDefinition, AgentBackendSpec, upsert_agent,
+        };
+        let storage = tmp_storage();
+        let mut agent = AgentDefinition::new(
+            "disabled-one",
+            "Disabled",
+            "test",
+            AgentBackendSpec::LocalEngine { model_id: None },
+            "test",
+        );
+        agent.enabled = false;
+        upsert_agent(&storage, agent).unwrap();
+
+        match resolve_prompt_dispatch(&storage, "@disabled-one hello") {
+            PromptDispatch::UnknownAgent { slug, .. } => {
+                assert_eq!(slug, "disabled-one");
+            }
+            other => panic!("expected UnknownAgent for disabled agent, got {:?}", other),
+        }
     }
 }

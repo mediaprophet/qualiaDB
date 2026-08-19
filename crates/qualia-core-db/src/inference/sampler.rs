@@ -268,6 +268,35 @@ impl SamplerState {
         }
         order[keep - 1]
     }
+
+    /// Sample with a DOMINO constrained-decoding mask applied first.
+    ///
+    /// This is the R9 integration point: the decode loop calls this instead
+    /// of [`sample`](Self::sample) when a [`DominoMasker`] is active. The
+    /// masker sets disallowed token logits to `-inf` before the sampling
+    /// chain runs, so the sampler can only select grammar-valid tokens.
+    ///
+    /// When the masker is inactive (`!is_active()`), this is equivalent to
+    /// calling `sample` directly — the mask is a no-op.
+    ///
+    /// After sampling, the chosen token's bytes should be fed back into the
+    /// masker via [`DominoMasker::feed_token`] so the grammar state advances.
+    pub fn sample_constrained(
+        &mut self,
+        logits: &mut [f32],
+        ctx: &[u32],
+        masker: &mut crate::inference::speculative_decode::DominoMasker,
+    ) -> u32 {
+        masker.apply_mask_preserving(logits);
+        let token = self.sample(logits, ctx);
+        // Feed the token bytes back into the grammar state. The caller is
+        // responsible for looking up the token bytes in the vocabulary and
+        // calling `feed_token` if they want the grammar to advance. We do
+        // NOT do that here because we don't have the vocabulary mapping.
+        // The caller should call `masker.feed_token_id(token, &vocab)`
+        // after this returns.
+        token
+    }
 }
 
 #[cfg(test)]
@@ -463,6 +492,168 @@ mod tests {
             run(),
             run(),
             "chat default must be reproducible for a fixed seed"
+        );
+    }
+
+    // ── R9: DOMINO sampler integration ──────────────────────────────────
+
+    fn domino_vocab() -> Vec<(u32, String)> {
+        vec![
+            (0, "=".to_string()),
+            (1, " ".to_string()),
+            (2, "\n".to_string()),
+            (3, "module".to_string()),
+            (4, "import".to_string()),
+            (5, "fn".to_string()),
+            (6, "let".to_string()),
+            (7, "return".to_string()),
+            (8, "x".to_string()),
+            (9, "42".to_string()),
+            (10, ";".to_string()),
+            (11, "{".to_string()),
+            (12, "}".to_string()),
+            (13, "(".to_string()),
+            (14, ")".to_string()),
+            (15, "1".to_string()),
+            (16, "2".to_string()),
+            (17, "test".to_string()),
+            (18, "abc".to_string()),
+        ]
+    }
+
+    #[test]
+    fn r9_constrained_sample_inactive_equals_plain() {
+        // When the masker is inactive, sample_constrained == sample.
+        // Use two separate sampler states with the same seed so the PRNG
+        // streams are identical.
+        let cfg = SamplerConfig {
+            temperature: 1.0,
+            seed: 7,
+            ..Default::default()
+        };
+        let vocab = domino_vocab();
+        let mut masker = crate::inference::speculative_decode::DominoMasker::new(&vocab);
+        // Masker is inactive by default.
+        assert!(!masker.is_active());
+
+        let mut s1 = SamplerState::new(cfg);
+        let mut s2 = SamplerState::new(cfg);
+        let base: Vec<f32> = (0..vocab.len() as i32).map(|i| i as f32 * 0.1).collect();
+
+        let mut l1 = base.clone();
+        let mut l2 = base.clone();
+        let t1 = s1.sample(&mut l1, &[]);
+        let t2 = s2.sample_constrained(&mut l2, &[], &mut masker);
+        assert_eq!(t1, t2, "inactive masker must not change sampling");
+    }
+
+    #[test]
+    fn r9_constrained_sample_only_returns_valid_tokens() {
+        // When the masker is active, the sampled token must be in the
+        // grammar-valid set. At Start state, only tokens starting with
+        // '=', whitespace, or alpha are valid — digits and braces are not.
+        let cfg = SamplerConfig {
+            temperature: 1.0,
+            top_k: 0, // no truncation — let the mask do the work
+            top_p: 1.0,
+            seed: 99,
+            ..Default::default()
+        };
+        let vocab = domino_vocab();
+        let mut masker = crate::inference::speculative_decode::DominoMasker::new(&vocab);
+        masker.enable();
+        assert!(masker.is_active());
+
+        let mut s = SamplerState::new(cfg);
+
+        // Give digit tokens (15="1", 16="2", 9="42") very high logits.
+        // If the mask works, they should be masked to -inf and never sampled.
+        let mut logits = vec![0.1f32; vocab.len()];
+        logits[15] = 100.0; // "1" — invalid at Start
+        logits[16] = 99.0; // "2" — invalid at Start
+        logits[9] = 98.0; // "42" — invalid at Start
+        logits[8] = 1.0; // "x" — valid at Start
+
+        // Sample many times — should never return a digit token.
+        for _ in 0..100 {
+            let mut l = logits.clone();
+            let token = s.sample_constrained(&mut l, &[], &mut masker);
+            // Token 9 ("42"), 15 ("1"), 16 ("2") should never be sampled.
+            assert_ne!(token, 9, "digit token '42' should be masked");
+            assert_ne!(token, 15, "digit token '1' should be masked");
+            assert_ne!(token, 16, "digit token '2' should be masked");
+            // Reset grammar state for the next iteration (we're not feeding
+            // tokens here, just testing the mask at Start state).
+            masker.reset();
+        }
+    }
+
+    #[test]
+    fn r9_constrained_sample_greedy_with_mask() {
+        // Greedy + mask: the argmax should be the highest-logit VALID token,
+        // not the highest-logit token overall.
+        let cfg = SamplerConfig::default(); // greedy (temperature 0)
+        let vocab = domino_vocab();
+        let mut masker = crate::inference::speculative_decode::DominoMasker::new(&vocab);
+        masker.enable();
+
+        let mut s = SamplerState::new(cfg);
+
+        // Token 15 ("1") has the highest logit but is invalid at Start.
+        // Token 8 ("x") has a lower logit but is valid.
+        let mut logits = vec![0.1f32; vocab.len()];
+        logits[15] = 100.0; // "1" — invalid
+        logits[8] = 50.0; // "x" — valid
+
+        let token = s.sample_constrained(&mut logits, &[], &mut masker);
+        // Greedy should pick the highest VALID token, not the highest overall.
+        // "1" is masked to -inf, so "x" (id 8) should win.
+        // But we need to check: are there other valid tokens with higher logits?
+        // At Start, valid tokens are: 0 ("="), 1 (" "), 2 ("\n"), 3 ("module"),
+        // 4 ("import"), 5 ("fn"), 6 ("let"), 7 ("return"), 8 ("x"), 17 ("test"),
+        // 18 ("abc"). Token 8 has logit 50.0, all others have 0.1. So 8 wins.
+        assert_eq!(token, 8, "greedy + mask should pick highest valid token");
+    }
+
+    #[test]
+    fn r9_constrained_sample_preserves_logit_values() {
+        // The apply_mask_preserving method should keep original logit values
+        // for valid tokens, not zero them out.
+        let cfg = SamplerConfig {
+            temperature: 1.0,
+            seed: 3,
+            ..Default::default()
+        };
+        let vocab = domino_vocab();
+        let mut masker = crate::inference::speculative_decode::DominoMasker::new(&vocab);
+        masker.enable();
+
+        let mut s = SamplerState::new(cfg);
+        let mut logits = vec![0.0f32; vocab.len()];
+        logits[8] = 5.0; // "x" — valid at Start
+        logits[3] = 3.0; // "module" — valid at Start
+        logits[15] = 10.0; // "1" — invalid at Start
+
+        // The sampler should be able to distinguish between valid tokens
+        // based on their original logit values (not just pick any valid one).
+        // With temperature 1.0 and seed 3, token 8 (logit 5.0) should be
+        // sampled more often than token 3 (logit 3.0).
+        let mut count_8 = 0;
+        let mut count_3 = 0;
+        for _ in 0..1000 {
+            let mut l = logits.clone();
+            let token = s.sample_constrained(&mut l, &[], &mut masker);
+            if token == 8 {
+                count_8 += 1;
+            } else if token == 3 {
+                count_3 += 1;
+            }
+            masker.reset();
+        }
+        // Token 8 has higher logit → should be sampled more often.
+        assert!(
+            count_8 > count_3,
+            "higher-logit valid token should be sampled more often (8: {count_8}, 3: {count_3})"
         );
     }
 }

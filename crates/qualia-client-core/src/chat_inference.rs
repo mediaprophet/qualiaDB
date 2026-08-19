@@ -66,6 +66,32 @@ pub struct ChatInferenceResult {
     pub suspended_agreement_id: Option<u64>,
 }
 
+impl Default for ChatInferenceResult {
+    fn default() -> Self {
+        Self {
+            text: String::new(),
+            provenance_hashes: Vec::new(),
+            citations: Vec::new(),
+            retrieval_triple_count: 0,
+            tokens_generated: 0,
+            inference_duration_ms: 0,
+            committed: false,
+            block_reason: None,
+            sub_agent_of: None,
+            agent_did: None,
+            model_id: None,
+            agent_backend: None,
+            semantic_quin: None,
+            wal_committed: false,
+            sieve_token_count: 0,
+            shield_alert: false,
+            axiom_bounds_label: None,
+            wal_suspended: false,
+            suspended_agreement_id: None,
+        }
+    }
+}
+
 pub fn request_cancel_inference() {
     INFERENCE_CANCEL.store(true, Ordering::SeqCst);
 }
