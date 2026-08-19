@@ -4,11 +4,8 @@ use crate::ast::TypeExpr;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Type {
-    I32,
-    U32,
     I64,
     U64,
-    F32,
     F64,
     Bool,
     String,
@@ -52,10 +49,10 @@ pub enum Type {
 impl Type {
     pub fn from_ast(t: &TypeExpr) -> Type {
         match t.name.as_str() {
-            "i32" => Type::I32,
-            "u32" => Type::U32,
+            "i32" => Type::I64,
+            "u32" => Type::U64,
             "i64" => Type::I64,
-            "f32" => Type::F32,
+            "f32" => Type::F64,
             "f64" => Type::F64,
             "u64" => Type::U64,
             "bool" => Type::Bool,
@@ -108,7 +105,35 @@ impl Type {
     pub fn is_numeric(&self) -> bool {
         matches!(
             self,
-            Type::I32 | Type::U32 | Type::I64 | Type::U64 | Type::F32 | Type::F64
+            Type::I64 | Type::U64 | Type::F64
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn tx(name: &str) -> TypeExpr {
+        TypeExpr {
+            span: crate::span::Span::point(0),
+            name: name.to_string(),
+            args: vec![],
+        }
+    }
+
+    #[test]
+    fn from_ast_i32_maps_to_i64() {
+        assert_eq!(Type::from_ast(&tx("i32")), Type::I64);
+    }
+
+    #[test]
+    fn from_ast_u32_maps_to_u64() {
+        assert_eq!(Type::from_ast(&tx("u32")), Type::U64);
+    }
+
+    #[test]
+    fn from_ast_f32_maps_to_f64() {
+        assert_eq!(Type::from_ast(&tx("f32")), Type::F64);
     }
 }

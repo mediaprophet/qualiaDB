@@ -265,7 +265,7 @@ fn time_unix_runs_in_effect_fn() {
     let mut host = MockHost::default();
     let mut env = Env::default();
     let v = eval_function(&program, "now", vec![], &mut host, &mut env).unwrap();
-    assert_eq!(v.as_i64(), Some(0));
+    assert_eq!(v.as_i64(), Some(1_000_000_000));
 }
 
 #[test]
@@ -355,7 +355,7 @@ fn g2_tick_time_effect_fn() {
     let mut host = MockHost::default();
     let mut env = Env::default();
     let v = eval_function(&program, "now", vec![], &mut host, &mut env).unwrap();
-    assert_eq!(v.as_i64(), Some(0), "MockHost returns deterministic 0");
+    assert_eq!(v.as_i64(), Some(1_000_000_000), "MockHost returns deterministic epoch");
 }
 
 #[test]
