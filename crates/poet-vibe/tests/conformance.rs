@@ -960,6 +960,10 @@ fn all_phase_g_fixtures_on_disk_are_valid() {
     let _ = include_str!("../fixtures/ad2_enum_payload.vibe");
     let _ = include_str!("../fixtures/ad3_enum_match.vibe");
     let _ = include_str!("../fixtures/ad4_enum_nested.vibe");
+    let _ = include_str!("../fixtures/qd1_field_with_unit.vibe");
+    let _ = include_str!("../fixtures/qd2_multiple_fields.vibe");
+    let _ = include_str!("../fixtures/qd3_material_with_props.vibe");
+    let _ = include_str!("../fixtures/qd4_field_material_law.vibe");
 }
 
 // ── H7: Enum/ADT golden corpus (T9 coverage) ──────────────────────────────────
@@ -992,4 +996,30 @@ fn ad3_enum_match_evaluates() {
 fn ad4_enum_nested_parses() {
     let src = include_str!("../fixtures/ad4_enum_nested.vibe");
     load_program(src).expect("ad4 fixture should parse");
+}
+
+// ── H8: Quantity/dimension golden corpus (T73 coverage) ───────────────────────
+
+#[test]
+fn qd1_field_with_unit_parses() {
+    let src = include_str!("../fixtures/qd1_field_with_unit.vibe");
+    load_program(src).expect("qd1 fixture should parse");
+}
+
+#[test]
+fn qd2_multiple_fields_parses() {
+    let src = include_str!("../fixtures/qd2_multiple_fields.vibe");
+    load_program(src).expect("qd2 fixture should parse");
+}
+
+#[test]
+fn qd3_material_with_props_parses() {
+    let src = include_str!("../fixtures/qd3_material_with_props.vibe");
+    load_program(src).expect("qd3 fixture should parse");
+}
+
+#[test]
+fn qd4_field_material_law_parses() {
+    let src = include_str!("../fixtures/qd4_field_material_law.vibe");
+    load_program(src).expect("qd4 fixture should parse");
 }

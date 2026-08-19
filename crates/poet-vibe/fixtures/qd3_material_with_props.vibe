@@ -1,0 +1,6 @@
+material steel: Material
+  yield: 250.0,
+  density: 7850.0;
+fn main() {
+  return 0;
+}
