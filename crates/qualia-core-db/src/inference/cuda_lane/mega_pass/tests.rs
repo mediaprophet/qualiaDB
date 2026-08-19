@@ -4,7 +4,7 @@ use super::super::weight_cache::{try_cuda_batch_gemv, weight_fingerprint};
 use crate::ggml_quants::{
     dequantize_row_into, q4k_block_to_soa, BLOCK_Q4K_SOA_BYTES, GGML_TYPE_Q4_K, GGML_TYPE_Q4_K_SOA,
 };
-use crate::inference_modes::{set_inference_mode, InferenceMode};
+use crate::inference_modes::{active_inference_mode, set_inference_mode, InferenceMode};
 
 #[test]
 fn fingerprint_stable() {
@@ -16,12 +16,15 @@ fn fingerprint_stable() {
 
 #[test]
 fn batch_gemv_cpu_shape_pad() {
-    // Without cuda mode this returns false quickly.
-    if std::env::var("QUALIA_INFERENCE_MODE").ok().as_deref() != Some("cuda") {
-        let mut out = [0.0f32; 4];
-        let ok = try_cuda_batch_gemv(&[1.0, 0.0], 1, 2, 2, &[1.0, 0.0, 0.0, 1.0], &mut out);
-        assert!(!ok);
-    }
+    // Force Portable mode so try_cuda_batch_gemv returns false regardless of
+    // what other tests do to the global inference mode. Save and restore to
+    // avoid polluting parallel tests.
+    let prev = active_inference_mode();
+    set_inference_mode(InferenceMode::Portable);
+    let mut out = [0.0f32; 4];
+    let ok = try_cuda_batch_gemv(&[1.0, 0.0], 1, 2, 2, &[1.0, 0.0, 0.0, 1.0], &mut out);
+    assert!(!ok, "try_cuda_batch_gemv should return false in Portable mode");
+    set_inference_mode(prev);
 }
 
 /// Build one synthetic Q4_K row (256 weights) → SoA, compare CUDA GEMV vs CPU dequant·dot.

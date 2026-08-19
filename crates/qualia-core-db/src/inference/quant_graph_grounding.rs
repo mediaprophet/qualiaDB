@@ -361,6 +361,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::serial]
     fn maybe_ground_respects_mode() {
         if std::env::var("QUALIA_INFERENCE_MODE").is_ok() {
             return;

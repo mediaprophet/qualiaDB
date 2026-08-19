@@ -350,6 +350,7 @@ mod tests {
     use crate::quant_graph_grounding::reset_fact_store_to_defaults;
 
     #[test]
+    #[serial_test::serial]
     fn heals_wrong_capital() {
         if std::env::var("QUALIA_INFERENCE_MODE").is_ok() {
             return;

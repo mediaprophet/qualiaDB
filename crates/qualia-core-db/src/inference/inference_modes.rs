@@ -304,6 +304,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::serial]
     fn fast_verify_disables_mid_sentinel() {
         if std::env::var("QUALIA_INFERENCE_MODE").is_ok()
             || std::env::var("QUALIA_SENTINEL_MID").is_ok()
@@ -318,6 +319,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::serial]
     fn set_and_read_without_env() {
         // Do not assert env-free if the machine has QUALIA_INFERENCE_MODE set.
         if std::env::var("QUALIA_INFERENCE_MODE").is_ok() {

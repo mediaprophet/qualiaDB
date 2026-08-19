@@ -406,6 +406,7 @@ mod tests {
     use super::*;
 
     #[test]
+    #[serial_test::serial]
     fn resolve_does_not_panic() {
         let p = resolve_inference_path_plan();
         assert!(p.decode_is_gemv);

@@ -275,10 +275,20 @@ fn q8_graph_replay_256_steps_are_zero_alloc_after_warmup() {
     let index = GgufTensorIndex::from_gguf(&mmap);
     let emb_dim = index.emb_dim();
     let mut hidden = vec![0.0f32; emb_dim];
-    set_inference_mode(InferenceMode::CudaTc);
-    let mut next_token = engine
-        .try_cuda_mega_pass_decode_token(&index, 64, &mut hidden, emb_dim, 0)
-        .expect("warm graph capture");
+    // The global inference mode atomic can be raced by parallel non-serial
+    // tests that call active_inference_mode() (which re-reads the env var
+    // and overwrites the atomic). Re-set CudaTc immediately before the
+    // plan-building call and retry a few times to win the race.
+    let mut next_token = None;
+    for _attempt in 0..8 {
+        set_inference_mode(InferenceMode::CudaTc);
+        next_token = engine.try_cuda_mega_pass_decode_token(&index, 64, &mut hidden, emb_dim, 0);
+        if next_token.is_some() {
+            break;
+        }
+        std::thread::yield_now();
+    }
+    let mut next_token = next_token.expect("warm graph capture");
     let mut generated = [0u32; 256];
     crate::specialized_libs::computational_geometry::allocation_counter::assert_zero_alloc(
         "q8_cuda_graph_replay_256_steps",
