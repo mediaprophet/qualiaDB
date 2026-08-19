@@ -178,6 +178,13 @@ pub trait Host {
             "law_apply not available on this host",
         ))
     }
+
+    /// Whether this host supports isolation snapshots for dry-run
+    /// evaluation. Default: false. Hosts that can create an isolated
+    /// snapshot (e.g. PoetSnapshot::fork) override this to return true.
+    fn supports_isolation(&self) -> bool {
+        false
+    }
 }
 
 /// In-memory host for unit tests.

@@ -360,6 +360,16 @@ impl ReflectionLoop {
             // evaluation against the isolated host.
             if let Some(s3) = stages.iter_mut().find(|s| s.stage == 3) {
                 if s3.passed {
+                    // Check if the host supports isolation. If not, add
+                    // a warning diagnostic (T26).
+                    if !dry_run_host.supports_isolation() {
+                        s3.diagnostics.push(Diagnostic::new(
+                            DiagCode::E500,
+                            Span::point(0),
+                            "dry-run host does not support isolation — \
+                             evaluation may mutate live state",
+                        ));
+                    }
                     if let Some(eval_diag) = self.dry_run_eval(source, dry_run_host) {
                         s3.passed = false;
                         s3.diagnostics.push(eval_diag);
@@ -530,6 +540,7 @@ impl ReflectionLoop {
 mod tests {
     use super::*;
     use crate::bind::MockHost;
+    use crate::value::Value;
 
     #[test]
     fn reflection_valid_cell() {
@@ -809,5 +820,64 @@ fn make() {
         // MockHost committed counter should stay at 0 — dry-run doesn't commit.
         assert_eq!(host.committed, 0, "dry-run should not commit anything");
         assert_eq!(host.staged, 0, "dry-run should not stage anything");
+    }
+
+    // ── T26: Reflection stage 3 isolation ────────────────────────────────
+
+    struct IsolationHost;
+    impl crate::bind::Host for IsolationHost {
+        fn graph_query(&mut self, _args: &[Value], _take: u64, _span: Span) -> Result<Value, Diagnostic> {
+            Ok(Value::Null)
+        }
+        fn graph_stage(&mut self, _term: &Value, _span: Span) -> Result<Value, Diagnostic> {
+            Ok(Value::Null)
+        }
+        fn graph_commit(&mut self, _span: Span) -> Result<Value, Diagnostic> {
+            Ok(Value::Null)
+        }
+        fn aura_validate(&mut self, _node: &Value, _shape: &Value, _span: Span) -> Result<Value, Diagnostic> {
+            Ok(Value::Bool(true))
+        }
+        fn pulse_publish(&mut self, _topic: &str, _payload: &Value, _span: Span) -> Result<Value, Diagnostic> {
+            Ok(Value::Null)
+        }
+        fn supports_isolation(&self) -> bool {
+            true
+        }
+    }
+
+    #[test]
+    fn reflection_stage3_with_isolation() {
+        let config = ReflectionConfig::default();
+        let rloop = ReflectionLoop::new(config);
+        let mut host = IsolationHost;
+        let result = rloop.run_with_dry_run_host("= 42", &mut host);
+        assert!(result.success, "stages: {:?}", result.stages);
+        let s3 = result.stages.iter().find(|s| s.stage == 3).unwrap();
+        assert!(s3.passed, "stage 3 should pass with isolation host");
+        // No warning diagnostic when isolation is supported.
+        assert!(
+            !s3.diagnostics.iter().any(|d| d.message.contains("isolation")),
+            "should not have isolation warning: {:?}",
+            s3.diagnostics
+        );
+    }
+
+    #[test]
+    fn reflection_stage3_without_isolation_falls_back() {
+        let config = ReflectionConfig::default();
+        let rloop = ReflectionLoop::new(config);
+        let mut host = MockHost::default();
+        let result = rloop.run_with_dry_run_host("= 42", &mut host);
+        // Should still succeed — fallback works.
+        assert!(result.success, "stages: {:?}", result.stages);
+        let s3 = result.stages.iter().find(|s| s.stage == 3).unwrap();
+        assert!(s3.passed, "stage 3 should still pass without isolation");
+        // Should have a warning diagnostic about missing isolation.
+        assert!(
+            s3.diagnostics.iter().any(|d| d.message.contains("isolation")),
+            "should have isolation warning: {:?}",
+            s3.diagnostics
+        );
     }
 }
