@@ -73,6 +73,9 @@ pub enum LocalJobKind {
         #[serde(default)]
         agent_updated_at_unix: Option<u64>,
         prompt: String,
+        /// Opaque serialized context (the agent's blackboard view + semantic skills context).
+        #[serde(default)]
+        context_snapshot: Vec<u8>,
     },
 }
 
@@ -858,11 +861,10 @@ async fn execute_job(
             agent_slug,
             agent_updated_at_unix,
             prompt,
+            context_snapshot: _,
         } => {
             check_cancel(&cancel)?;
-            if let (Some(slug), Some(expected_revision)) =
-                (agent_slug.as_deref(), agent_updated_at_unix)
-            {
+            if let Some(slug) = agent_slug.as_deref() {
                 let storage = crate::state::APP_STATE
                     .get()
                     .ok_or("Application not initialized")?
@@ -874,10 +876,15 @@ async fn execute_job(
                 let current =
                     crate::agent_registry::get_agent(std::path::Path::new(&storage), slug)
                         .ok_or_else(|| format!("scheduled agent @{slug} no longer exists"))?;
-                if current.updated_at_unix != *expected_revision {
-                    return Err(format!(
-                        "scheduled agent @{slug} changed after this job was queued; review and schedule it again"
-                    ));
+                if !current.enabled {
+                    return Err(format!("scheduled agent @{slug} is disabled"));
+                }
+                if let Some(expected_revision) = agent_updated_at_unix {
+                    if current.updated_at_unix != *expected_revision {
+                        return Err(format!(
+                            "scheduled agent @{slug} changed after this job was queued; review and schedule it again"
+                        ));
+                    }
                 }
             }
             // Route by the chosen agent's backend (local-first). A remote-MCP agent runs its turn out
@@ -1003,8 +1010,36 @@ mod tests {
             LocalJobKind::AgentTurn {
                 agent_slug: Some(ref slug),
                 agent_updated_at_unix: None,
+                ref context_snapshot,
                 ..
-            } if slug == "researcher"
+            } if slug == "researcher" && context_snapshot.is_empty()
+        ));
+    }
+
+    #[test]
+    fn agent_turn_with_context_snapshot_roundtrips() {
+        let snapshot_data = vec![0xDE, 0xAD, 0xBE, 0xEF, 0x01, 0x02];
+        let kind = LocalJobKind::AgentTurn {
+            session_id: "session-42".to_string(),
+            agent_slug: Some("researcher".to_string()),
+            agent_updated_at_unix: Some(1724000000),
+            prompt: "Synthesize the report".to_string(),
+            context_snapshot: snapshot_data.clone(),
+        };
+        let req = EnqueueJobRequest { kind: kind.clone() };
+        let json = serde_json::to_string(&req).unwrap();
+        let parsed: EnqueueJobRequest = serde_json::from_str(&json).unwrap();
+        assert_eq!(parsed.kind, kind);
+
+        let scheduler = LocalJobScheduler::new();
+        let job = scheduler.enqueue(kind).unwrap();
+        assert_eq!(job.status, JobStatus::Queued);
+        assert!(matches!(
+            job.kind,
+            LocalJobKind::AgentTurn {
+                ref context_snapshot,
+                ..
+            } if context_snapshot == &snapshot_data
         ));
     }
 }

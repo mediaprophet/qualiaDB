@@ -37,6 +37,7 @@ pub fn schedule_agent_job(
             agent_slug,
             agent_updated_at_unix,
             prompt,
+            context_snapshot: Vec::new(),
         },
     )?;
     serde_json::to_value(job).map_err(|e| e.to_string())
