@@ -39,6 +39,9 @@ pub fn dispatch(
     span: Span,
 ) -> Result<Value, Diagnostic> {
     match id {
+        ids::DAG_EXECUTE => agent::dag_execute(args, span),
+        ids::DAG_VALIDATE => agent::dag_validate(args, span),
+        ids::DAG_STATUS => agent::dag_status(args, span),
         ids::DISCOVERY_LIST | "CapabilityDiscovery" | "list_capabilities" => Ok(runtime::list()),
         ids::HASH_IRI => runtime::iri(args, span),
         ids::SHACL_VALIDATE => graph::shacl_validate(snap, args, span),

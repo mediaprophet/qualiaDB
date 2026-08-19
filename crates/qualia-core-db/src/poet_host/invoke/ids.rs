@@ -147,7 +147,15 @@ pub const UNITS_CONVERT: &str = "PhysicalUnits.convert";
 pub const GRAPH_SHORTEST_PATH: &str = "GraphReasoning.shortest_path";
 pub const GRAPH_SPREADING_ACTIVATION: &str = "GraphReasoning.spreading_activation";
 
+// ── Agent DAG orchestration (R3) ──────────────────────────────────────────
+pub const DAG_EXECUTE: &str = "agent.dag.execute";
+pub const DAG_VALIDATE: &str = "agent.dag.validate";
+pub const DAG_STATUS: &str = "agent.dag.status";
+
 pub const ALL_BOUND: &[&str] = &[
+    DAG_EXECUTE,
+    DAG_VALIDATE,
+    DAG_STATUS,
     DISCOVERY_LIST,
     SHACL_VALIDATE,
     SHACL_EXTENSIONS,
@@ -273,6 +281,7 @@ pub const ALL_BOUND: &[&str] = &[
 /// Future extract target for an invoke id. Not a crate today.
 pub fn seam_for(id: &str) -> &'static str {
     match id {
+        DAG_EXECUTE | DAG_VALIDATE | DAG_STATUS => "agent",
         DISCOVERY_LIST | HASH_IRI | COVERAGE_MATRIX | CATALOG_TTL => "runtime",
         SHACL_VALIDATE | SHACL_EXTENSIONS | GRAPH_STATS | GRAPH_SPARQL
         | GRAPH_SHORTEST_PATH | GRAPH_SPREADING_ACTIVATION => "graph",
