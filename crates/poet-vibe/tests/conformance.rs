@@ -970,9 +970,16 @@ fn all_phase_g_fixtures_on_disk_are_valid() {
     let _ = include_str!("../fixtures/m1_mut_reassign.vibe");
     let _ = include_str!("../fixtures/m2_immutable_reject.vibe");
     let _ = include_str!("../fixtures/m3_mut_in_block.vibe");
+    let _ = include_str!("../fixtures/crypto1_hash_sign.vibe");
 }
 
 // ── H7: Enum/ADT golden corpus (T9 coverage) ──────────────────────────────────
+
+#[test]
+fn crypto1_hash_sign_parses() {
+    let src = include_str!("../fixtures/crypto1_hash_sign.vibe");
+    load_program(src).expect("crypto1 fixture should parse");
+}
 
 #[test]
 fn ad1_enum_unit_parses() {

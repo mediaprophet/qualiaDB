@@ -22,6 +22,7 @@ mod span;
 mod types;
 mod value;
 
+pub mod crypto;
 pub mod dag;
 pub mod deontic_interrupt;
 pub mod hid;

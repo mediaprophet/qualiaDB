@@ -318,6 +318,124 @@ pub trait Host {
             "cue.post not available on this host",
         ))
     }
+
+    // ── Crypto operations (T-crypto) ────────────────────────────────
+
+    /// Compute a cryptographic hash (T-crypto). The algorithm is one of
+    /// "SHA-256", "SHA-512", "BLAKE3". The data is a String (UTF-8) or
+    /// hex-encoded String. Returns a Record `{ algorithm, hex, bytes }`.
+    /// Default: E702 (no crypto provider on this host).
+    fn crypto_hash(
+        &mut self,
+        _algorithm: &str,
+        _data: &str,
+        span: Span,
+    ) -> Result<Value, Diagnostic> {
+        Err(Diagnostic::new(
+            DiagCode::E702,
+            span,
+            "crypto.hash not available on this host",
+        ))
+    }
+
+    /// Derive a key using HKDF-SHA256 (T-crypto). Returns the derived
+    /// key as a hex-encoded String. Default: E702.
+    fn crypto_hkdf(
+        &mut self,
+        _ikm: &str,
+        _info: &str,
+        _length: u64,
+        span: Span,
+    ) -> Result<Value, Diagnostic> {
+        Err(Diagnostic::new(
+            DiagCode::E702,
+            span,
+            "crypto.hkdf not available on this host",
+        ))
+    }
+
+    /// AEAD encrypt (T-crypto). Returns a Record
+    /// `{ algorithm, ciphertext_hex, tag_hex, nonce_hex }`.
+    /// Default: E702.
+    fn crypto_aead_encrypt(
+        &mut self,
+        _algorithm: &str,
+        _key_hex: &str,
+        _nonce_hex: &str,
+        _plaintext: &str,
+        _aad: &str,
+        span: Span,
+    ) -> Result<Value, Diagnostic> {
+        Err(Diagnostic::new(
+            DiagCode::E702,
+            span,
+            "crypto.aead_encrypt not available on this host",
+        ))
+    }
+
+    /// AEAD decrypt (T-crypto). Returns the plaintext as a String, or
+    /// an error if decryption fails. Default: E702.
+    fn crypto_aead_decrypt(
+        &mut self,
+        _algorithm: &str,
+        _key_hex: &str,
+        _nonce_hex: &str,
+        _ciphertext_hex: &str,
+        _tag_hex: &str,
+        _aad: &str,
+        span: Span,
+    ) -> Result<Value, Diagnostic> {
+        Err(Diagnostic::new(
+            DiagCode::E702,
+            span,
+            "crypto.aead_decrypt not available on this host",
+        ))
+    }
+
+    /// Sign data with a key (T-crypto). The key_id identifies the key
+    /// in the host's key vault. Returns a Record
+    /// `{ key_id, signature_hex, algorithm }`. Default: E702.
+    fn crypto_sign(
+        &mut self,
+        _key_id: &str,
+        _data: &str,
+        span: Span,
+    ) -> Result<Value, Diagnostic> {
+        Err(Diagnostic::new(
+            DiagCode::E702,
+            span,
+            "crypto.sign not available on this host",
+        ))
+    }
+
+    /// Verify a signature (T-crypto). Returns Bool. Default: E702.
+    fn crypto_verify(
+        &mut self,
+        _key_id: &str,
+        _data: &str,
+        _signature_hex: &str,
+        span: Span,
+    ) -> Result<Value, Diagnostic> {
+        Err(Diagnostic::new(
+            DiagCode::E702,
+            span,
+            "crypto.verify not available on this host",
+        ))
+    }
+
+    /// Generate a new key (T-crypto). The algorithm is one of "Ed25519",
+    /// "ML-DSA-65". Returns the key_id String. Default: E702.
+    fn crypto_generate_key(
+        &mut self,
+        _algorithm: &str,
+        span: Span,
+    ) -> Result<Value, Diagnostic> {
+        Err(Diagnostic::new(
+            DiagCode::E702,
+            span,
+            "crypto.generate_key not available on this host",
+        ))
+    }
 }
 
 /// In-memory host for unit tests.
@@ -619,6 +737,63 @@ pub fn dispatch<H: Host>(
             };
             let payload = args.get(1).unwrap_or(&Value::Null);
             host.cue_post(cue_id, payload, span)
+        }
+        // ── Crypto operations (T-crypto) ─────────────────────────────
+        "crypto.sha256" => {
+            let data = crate::crypto::extract_string_arg(args, 0, "sha256", span)?;
+            host.crypto_hash("SHA-256", &data, span)
+        }
+        "crypto.sha512" => {
+            let data = crate::crypto::extract_string_arg(args, 0, "sha512", span)?;
+            host.crypto_hash("SHA-512", &data, span)
+        }
+        "crypto.blake3" => {
+            let data = crate::crypto::extract_string_arg(args, 0, "blake3", span)?;
+            host.crypto_hash("BLAKE3", &data, span)
+        }
+        "crypto.hkdf_sha256" => {
+            let ikm = crate::crypto::extract_string_arg(args, 0, "hkdf_sha256", span)?;
+            let info = crate::crypto::extract_string_arg(args, 1, "hkdf_sha256", span)?;
+            let length = crate::crypto::extract_u64_arg(args, 2, "hkdf_sha256", span)?;
+            host.crypto_hkdf(&ikm, &info, length, span)
+        }
+        "crypto.aead_encrypt" => {
+            let algorithm = crate::crypto::extract_string_arg(args, 0, "aead_encrypt", span)?;
+            let key_hex = crate::crypto::extract_string_arg(args, 1, "aead_encrypt", span)?;
+            let nonce_hex = crate::crypto::extract_string_arg(args, 2, "aead_encrypt", span)?;
+            let plaintext = crate::crypto::extract_string_arg(args, 3, "aead_encrypt", span)?;
+            let aad = args.get(4).and_then(|v| match v {
+                Value::String(s) => Some(s.as_str()),
+                _ => None,
+            }).unwrap_or("");
+            host.crypto_aead_encrypt(&algorithm, &key_hex, &nonce_hex, &plaintext, aad, span)
+        }
+        "crypto.aead_decrypt" => {
+            let algorithm = crate::crypto::extract_string_arg(args, 0, "aead_decrypt", span)?;
+            let key_hex = crate::crypto::extract_string_arg(args, 1, "aead_decrypt", span)?;
+            let nonce_hex = crate::crypto::extract_string_arg(args, 2, "aead_decrypt", span)?;
+            let ciphertext_hex = crate::crypto::extract_string_arg(args, 3, "aead_decrypt", span)?;
+            let tag_hex = crate::crypto::extract_string_arg(args, 4, "aead_decrypt", span)?;
+            let aad = args.get(5).and_then(|v| match v {
+                Value::String(s) => Some(s.as_str()),
+                _ => None,
+            }).unwrap_or("");
+            host.crypto_aead_decrypt(&algorithm, &key_hex, &nonce_hex, &ciphertext_hex, &tag_hex, aad, span)
+        }
+        "crypto.sign" => {
+            let key_id = crate::crypto::extract_string_arg(args, 0, "sign", span)?;
+            let data = crate::crypto::extract_string_arg(args, 1, "sign", span)?;
+            host.crypto_sign(&key_id, &data, span)
+        }
+        "crypto.verify" => {
+            let key_id = crate::crypto::extract_string_arg(args, 0, "verify", span)?;
+            let data = crate::crypto::extract_string_arg(args, 1, "verify", span)?;
+            let signature_hex = crate::crypto::extract_string_arg(args, 2, "verify", span)?;
+            host.crypto_verify(&key_id, &data, &signature_hex, span)
+        }
+        "crypto.generate_key" => {
+            let algorithm = crate::crypto::extract_string_arg(args, 0, "generate_key", span)?;
+            host.crypto_generate_key(&algorithm, span)
         }
         _ => Err(Diagnostic::new(
             DiagCode::E100,

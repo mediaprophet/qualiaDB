@@ -42,7 +42,7 @@ impl Default for Env {
 /// The valid 0.1 namespace import paths. `vibe:0.1/{ns}`.
 pub const VIBE_0_1_NAMESPACES: &[&str] = &[
     "math", "rdf", "quin", "graph", "aura", "pulse", "capability", "time",
-    "conservation", "causal", "dag", "deontic", "hid", "cue",
+    "conservation", "causal", "dag", "deontic", "hid", "cue", "crypto",
 ];
 
 /// Populate `env.aliases` from a program's import declarations.
@@ -1821,6 +1821,151 @@ mod tests {
             import "cue" as cue;
             fn main() {
                 return cue.post(42, {});
+            }
+        "#;
+        let result = eval_program_src(src);
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err().code, DiagCode::E100);
+    }
+
+    // ── T-crypto: Crypto dispatch ─────────────────────────────────────
+
+    #[test]
+    fn crypto_sha256_dispatches_to_host() {
+        let src = r#"
+            import "crypto" as crypto;
+            fn main() {
+                return crypto.sha256("hello");
+            }
+        "#;
+        let result = eval_program_src(src);
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err().code, DiagCode::E702);
+    }
+
+    #[test]
+    fn crypto_sha512_dispatches_to_host() {
+        let src = r#"
+            import "crypto" as crypto;
+            fn main() {
+                return crypto.sha512("hello");
+            }
+        "#;
+        let result = eval_program_src(src);
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err().code, DiagCode::E702);
+    }
+
+    #[test]
+    fn crypto_blake3_dispatches_to_host() {
+        let src = r#"
+            import "crypto" as crypto;
+            fn main() {
+                return crypto.blake3("hello");
+            }
+        "#;
+        let result = eval_program_src(src);
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err().code, DiagCode::E702);
+    }
+
+    #[test]
+    fn crypto_hkdf_dispatches_to_host() {
+        let src = r#"
+            import "crypto" as crypto;
+            fn main() {
+                return crypto.hkdf_sha256("ikm", "info", 32);
+            }
+        "#;
+        let result = eval_program_src(src);
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err().code, DiagCode::E702);
+    }
+
+    #[test]
+    fn crypto_aead_encrypt_dispatches_to_host() {
+        let src = r#"
+            import "crypto" as crypto;
+            fn main() {
+                return crypto.aead_encrypt("AES-256-GCM", "key", "nonce", "plaintext", "aad");
+            }
+        "#;
+        let result = eval_program_src(src);
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err().code, DiagCode::E702);
+    }
+
+    #[test]
+    fn crypto_aead_decrypt_dispatches_to_host() {
+        let src = r#"
+            import "crypto" as crypto;
+            fn main() {
+                return crypto.aead_decrypt("AES-256-GCM", "key", "nonce", "ct", "tag", "aad");
+            }
+        "#;
+        let result = eval_program_src(src);
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err().code, DiagCode::E702);
+    }
+
+    #[test]
+    fn crypto_sign_dispatches_to_host() {
+        let src = r#"
+            import "crypto" as crypto;
+            fn main() {
+                return crypto.sign("key:ed25519:0", "data");
+            }
+        "#;
+        let result = eval_program_src(src);
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err().code, DiagCode::E702);
+    }
+
+    #[test]
+    fn crypto_verify_dispatches_to_host() {
+        let src = r#"
+            import "crypto" as crypto;
+            fn main() {
+                return crypto.verify("key:ed25519:0", "data", "sig");
+            }
+        "#;
+        let result = eval_program_src(src);
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err().code, DiagCode::E702);
+    }
+
+    #[test]
+    fn crypto_generate_key_dispatches_to_host() {
+        let src = r#"
+            import "crypto" as crypto;
+            fn main() {
+                return crypto.generate_key("Ed25519");
+            }
+        "#;
+        let result = eval_program_src(src);
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err().code, DiagCode::E702);
+    }
+
+    #[test]
+    fn crypto_sha256_needs_string_arg() {
+        let src = r#"
+            import "crypto" as crypto;
+            fn main() {
+                return crypto.sha256(42);
+            }
+        "#;
+        let result = eval_program_src(src);
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err().code, DiagCode::E100);
+    }
+
+    #[test]
+    fn crypto_sign_needs_string_args() {
+        let src = r#"
+            import "crypto" as crypto;
+            fn main() {
+                return crypto.sign(42, "data");
             }
         "#;
         let result = eval_program_src(src);
