@@ -179,3 +179,63 @@ None — all H1-H20 were completed. H20 is this progress log entry.
 - The `vibe:0.1/` prefix is now optional in import paths (T64), but existing tests using the prefix still pass (backward compatible).
 - The t vs μ disagreement in Tensor10D comments is resolved (T67): t = coordinate time, μ = provenance carrier.
 
+---
+
+## Round 4 Batch 2 — Plan Task Sweep (2026-08-19)
+
+After completing H1-H20, swept the remaining T-tasks from the full implementation plan.
+
+### Already implemented (verified, tests pass)
+
+| Task | Description | Test count |
+|------|-------------|------------|
+| T19 | time.unix_nanos() Host ABI — { secs: i64, nanos: u32 } | existing |
+| T20 | time.monotonic_nanos() Host ABI — u64 | existing |
+| T31 | Tag 4200 CBOR encoding for FieldDecl/MaterialDecl/LawDecl | +3 round-trip tests |
+| T57 | Instrument trace ledger (Kind B) — customer-readable | 12 existing |
+
+### Newly implemented this batch
+
+| Task | Commit | Description |
+|------|--------|-------------|
+| T24 | `518a338c` | Wire dag.rs into Host ABI — dag.execute, dag.validate dispatch |
+| T25 | `518a338c` | Wire deontic_interrupt.rs into Host ABI — deontic.check dispatch |
+| T14 | `06f41d52` | Name the two tens — Tensor10D (pose/query) vs Epistemic10D (attention) |
+| T16 | `06f41d52` | Document morphism — host-internal projection, Vibe never sees Epistemic10D |
+| T32 | `ba64621c` | .10d Field section encoder — ontology table, v0 no sample bytes |
+| T47 | `cd57d743` | Stalk — isolated agent context (snapshot + lease + topic prefix) |
+| T48 | `cd57d743` | SheafCondition — Pure predicate at commit, failure is diagnostic |
+| T49 | `cd57d743` | Simplex — jointly-required cells, missing member rejects load/commit |
+| T50 | `cd57d743` | TopologicalTear — diagnostic + evidential (μ, λ) on sealed receipt |
+| T52 | `5e32f3e7` | TensorRef, GeometryRef, AssetRef — heavy returns as opaque handles |
+
+### Test counts after batch 2
+
+- **poet-vibe lib:** 264 passed (was 243 after H1-H20)
+- **poet-vibe conformance:** 78 passed (unchanged)
+- **qualia-core-db field_section:** 11 passed (new)
+- **qualia-core-db law_packages:** 7 passed (from H19)
+- **qualia-core-db instrument_trace:** 12 passed (existing, verified)
+- **qualia-core-db axis_role:** +2 T67 tests
+- **qualia-core-db manifold:** +3 T14/T16 tests
+
+### Remaining plan tasks
+
+Tasks not yet addressed (deferred or require Timothy's decision):
+- T4-T6: Frame/Pose/Transform types — partially done (Value variants exist)
+- T7: QuinRef — already implemented
+- T8: Delete Value::Identish — breaking change, needs Timothy's approval
+- T12: math.* preserves integer domain — needs audit
+- T36-T40: Multi-lingual (CST, keyword locales, poet translate, Unicode identifiers)
+- T41-T46: HID/sensors/interactivity — large vertical, needs dedicated effort
+- T51: Machine schemas for ALL_BOUND — already implemented by earlier agent
+- T53-T54: GBNF into in-process sampling loop — needs inference integration
+- T58: No bylines enforced mechanically — already implemented
+- T61: WASM playground — ecosystem task
+- T65: Interactive onboarding — ecosystem task
+- T66: Update spec to intended lattice — already implemented by earlier agent
+- T68: Tick policy under load — already implemented by earlier agent
+- T69: Presentation morphism as sheaf — needs rendering integration
+- T73: Quantity dimension algebra — already implemented by earlier agent
+- W1-W18: Wish list items — deferred to future passes
+
