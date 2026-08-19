@@ -295,6 +295,7 @@ After each phase:
 | F: Graph honesty lift | **Done** | 2026-08-18 | 2026-08-18 | +3 (dynamic honesty: graph.read live when attached, pulse.publish live when attached, capability.invoke stays partial) |
 | G: Golden corpus expansion | **Done** | 2026-08-19 | 2026-08-19 | +33 fixtures (4 physics, 4 EMF, 3 geometry, 3 CSS, 3 reactive, 3 hooks, 3 legal, 3 scientific, 3 financial, 6 negative) + parser fix for binary expressions in call args |
 | H: vibe-bc-0.1 bytecode | Not started (post-0.1) | — | — | — |
+| VC3: Zero-alloc uniform belt + compute pool | **Done** | 2026-08-19 | 2026-08-19 | +3 (uniform belt, render frame, compute dispatch — diagnostic, documenting wgpu internals) |
 
 ---
 
@@ -490,3 +491,215 @@ clean interface that could be reimplemented with a custom backend.
 acceptable for desktop and browser targets. This becomes important only
 for edge/embedded targets with strict memory constraints or for
 sub-microsecond frame budgets.
+
+---
+
+## 8. Vibe-Design To-Do List (post-0.1, excellence-first)
+
+**Source:** `docs/plans/vibe-design/` (13 design documents, 2026-08-19)
+
+The vibe-design folder defines the path from the closed `vibe-0.1` core to
+the full geometric, multi-lingual, sensor-aware, rights-respecting vision.
+The product is **unreleased** — compatibility lowering is no longer a design
+veto, only an optional implementation order. See
+[`20260819_excellence-first.md`](plans/vibe-design/20260819_excellence-first.md)
+for the immovable-vs-breakable list and the full reasoning.
+
+The to-do items below are ordered by the excellence-first delivery posture
+(§6 of that document): type lattice first, then 10D reconciliation, then
+Host breaking change, then wire-or-delete shadow runtime, then Field/Material/Law
+AST nodes, then Species/Mixture, then CST, then HID, then pretty syntax last.
+
+### 8.1 Type Lattice & Value Honesty (excellence-first §2.2, §2.5, §2.6)
+
+| # | Task | Status | Source |
+|---|------|--------|--------|
+| T1 | **Add `Instant` type** — scale (unix/tai/gps/monotonic/proper) + `{secs, nanos}` + optional frame + optional seal. Replaces `time.unix() -> i64` as the primitive. | Not started | excellence-first §2.2, recommendations §4.1, grok §6 |
+| T2 | **Add `Duration` type** — exact secs+nanos; no float subtraction. | Not started | excellence-first §2.2 |
+| T3 | **Add `Quantity` type** — `f64` or rational plus required unit IRI. Mixing `kPa` and `Pa` without conversion is `E100`. Dimensionless is explicit. | Not started | excellence-first §2.3 |
+| T4 | **Add `Frame` / `Pose` / `Transform` types** — origin + basis; local by default. Morphism, not naked mat4. | Not started | excellence-first §2.2, recommendations §4.8 |
+| T5 | **Add `FieldRef` / `MaterialRef` types** — handles to sampled fields and signed signatures; never the grid. | Not started | excellence-first §2.2, fields-materials §0 |
+| T6 | **Add `WorldLine` type** — continuant through Instant × Pose. Kills UUID-as-identity. | Not started | excellence-first §2.2, W2 |
+| T7 | **Add `QuinRef` type** — opaque 48-byte handle; scripts do not see raw metadata/parity. Replace `Value::Quin { s,p,o,c }`. | Not started | excellence-first §2.5 |
+| T8 | **Delete `Value::Identish`** — parser-shaped hole in the type lattice. | Not started | excellence-first §2.5 |
+| T9 | **User `enum` / `match` as real ADTs** — not only `Ok`/`Err`/`Some`/`None` patterns. | Not started | excellence-first §2.6, recommendations §2 |
+| T10 | **Enforce `mut` in check and eval** — currently lexed but not enforced. | Not started | recommendations §2 |
+| T11 | **Integer ops are `checked_*` → `E600`** — currently specified but not implemented. | Not started | recommendations §2 |
+| T12 | **`math.*` preserves integer domain** when all inputs are integers; no secret `F64`. | Not started | recommendations §2 |
+| T13 | **`i32`/`f32` either exist in `Value` or leave the spec.** | Not started | excellence-first §2.6 |
+
+### 8.2 Two 10Ds Reconciliation (excellence-first §2.1)
+
+| # | Task | Status | Source |
+|---|------|--------|--------|
+| T14 | **Name the two tens** — `Tensor10D` (pose/query lanes) vs `Attention10D` / `Epistemic10D` (epistemic/attention geometry). Stop calling both "the 10D manifold." | Not started | excellence-first §2.1, fields-materials §1 |
+| T15 | **Resolve `t` vs `μ` provenance conflict** — `t` = coordinate time axis; `μ` = provenance weight/carrier; Instant claims live as graph/receipt, not as f32. Fix `tensor/mod.rs` comment vs `axis_role.rs`. | Not started | excellence-first §2.1, X3 |
+| T16 | **Document the morphism** between `Tensor10D` and `ManifoldCoordinate10D` (or rule that Vibe never sees the latter). | Not started | excellence-first §3.1 |
+
+### 8.3 Host ABI Redesign (excellence-first §2.8, recommendations §4.2)
+
+| # | Task | Status | Source |
+|---|------|--------|--------|
+| T17 | **Version the `Host` trait** — additive default methods only; no required new methods without a `vibe-host-0.2` marker. | Not started | recommendations §4.2 |
+| T18 | **Fail-closed `Instant.now`** — default implementations must fail closed, not return `0`. WASM `0` is a lie. | Not started | excellence-first §2.8, grok §6 |
+| T19 | **Add `time.unix_nanos()` → `{ secs: i64, nanos: u32 }`** — structured, not raw `i128`. | Not started | recommendations §4.1, grok §6 |
+| T20 | **Add `time.monotonic_nanos()` → `u64`** — jitter-free, non-decreasing; for frame timing, physics dt, agent budgets. | Not started | recommendations §4.1 |
+| T21 | **Add `time.proper_time(worldline_id)` → `f64`** — local proper time from 10D manifold metric. Behind a capability. | Not started | grok §6, recommendations §4.1 |
+| T22 | **Add `receipt_clock()` → `Option<Instant>`** — deterministic replay path for WASM. | Not started | recommendations §4.1, W12 |
+| T23 | **Add `field_sample(field, pose)` → `Quantity`** and `law_apply(law, args)` → `Receipt` to Host. | Not started | excellence-first §2.8 |
+
+### 8.4 Wire or Delete Shadow Runtime (excellence-first §2.9, recommendations §4.6)
+
+| # | Task | Status | Source |
+|---|------|--------|--------|
+| T24 | **Wire `dag.rs` into `eval` / `capability_invoke`** — or rename `proto_dag` and strip "A8 hardware interrupt" claim. | Not started | excellence-first §2.9, recommendations §4.6 |
+| T25 | **Wire `deontic_interrupt.rs` into `capability_invoke`** — a prohibition must be a sealed receipt, not an internal module. | Not started | excellence-first §2.9 |
+| T26 | **Wire `reflection.rs` to run on isolated `PoetSnapshot`** — must not write the live graph. | Not started | recommendations §4.3 |
+| T27 | **Fix `Manifold.project`** — currently echoes x,y,z,t and stamps a presentation level. Either implement a real presentation morphism or honesty-label it `"stub"`. | Not started | excellence-first §2.9 |
+
+### 8.5 Field, Material, Law as Language (excellence-first §2.4, fields-materials)
+
+| # | Task | Status | Source |
+|---|------|--------|--------|
+| T28 | **Add `FieldDecl` AST node** — `field pressure_ambient: Pressure unit: <qudt:KiloPascal> support: region representation: grid;` | Not started | excellence-first §2.4, fields-materials §0 |
+| T29 | **Add `MaterialDecl` AST node** — `material sucrose_cube: Material yield: 50.0 <qudt:KiloPascal> ...` | Not started | excellence-first §2.4 |
+| T30 | **Add `LawDecl` AST node** — `law crush when sample(pressure_ambient, pose(self)) > self.material.yield => transform.yield(self);` | Not started | excellence-first §2.4 |
+| T31 | **Tag 4200 CBOR-LD encoding for FieldDecl/MaterialDecl/LawDecl** — no second object model. | Not started | excellence-first §2.4 |
+| T32 | **`.10d` Field section encoder** — ontology reserved, no bytes yet. Without it, "fields live on the manifold" is a graph convention. | Not started | excellence-first §3.12, fields-materials §0 |
+
+### 8.6 Species, Mixture, Phase (excellence-first §3.2)
+
+| # | Task | Status | Source |
+|---|------|--------|--------|
+| T33 | **Add `SpeciesRef` + `Mixture` field types** — mole fraction, partition, miscibility. Solubility-as-boolean cannot express oil/water. | Not started | excellence-first §3.2, W4 |
+
+### 8.7 Conservation & Causal Hooks (excellence-first §3.3, §3.5)
+
+| # | Task | Status | Source |
+|---|------|--------|--------|
+| T34 | **Conservation hooks on glue** — energy, mass, charge, information as conserved quantities the glue can refuse to violate. | Not started | excellence-first §3.3, W3 |
+| T35 | **Causal / light-cone relation on events** — who could have known. Pulse order is not causality. | Not started | excellence-first §3.5, W6 |
+
+### 8.8 Multi-Lingual (recommendations §4.4, multi-lingual doc)
+
+| # | Task | Status | Source |
+|---|------|--------|--------|
+| T36 | **CST + trivia** — comments, spans, exact token text on top of today's AST. Tag 4200 must carry trivia or a side table. Without this, `poet translate` destroys commentary. | Not started | recommendations §4.4 |
+| T37 | **Keyword locale tables** — `if` ↔ `如果` ↔ `إذا`. Ship `en` plus one second locale as proof of pipeline. | Not started | recommendations §4.4, multi-lingual doc, W18 |
+| T38 | **`poet translate` CLI** — bidirectional translation via canonical AST. | Not started | multi-lingual doc |
+| T39 | **Tier-2 identifiers via Aura `rdfs:label`** — multi-lingual labels that preserve meaning. | Not started | recommendations §4.4 |
+| T40 | **Unicode identifiers** — requires UAX #9 BiDi isolation, NFC, homoglyph policy. **Do not ship without BiDi policy.** | Not started (gated) | recommendations §4.4, excellence-first §2.10, X7 |
+
+### 8.9 HID / Sensors / Interactivity (recommendations §4.5, hid-sensors doc)
+
+| # | Task | Status | Source |
+|---|------|--------|--------|
+| T41 | **Define inbound event record ABI** — `timestamp_ns: u64` + packed payload + `AssetRef` for fat buffers. Depth maps, EEG raw, hand skeletons must never become `List<f64>`. | Not started | recommendations §4.5 |
+| T42 | **Ship desktop HID loop first** — `hid:pointer:*`, `hid:keyboard:*`, `hid:touch:*`. The hook grammar (`on hid:...`) already parses; nothing dispatches yet. | Not started | recommendations §4.5 |
+| T43 | **Assistive I/O in first HID family** — sip-and-puff, switch, Braille chord, screen-reader announce, focus cursor. Not after EMG. | Not started | recommendations §4.5, W8 |
+| T44 | **Biosignals are capability-leased and DP-filtered** — default deny. `Sensor.Biosignal.stream_raw_eeg` stays behind a medical-grade lease. | Not started | recommendations §4.5 |
+| T45 | **Outbound cues as invoke IDs** — `Haptic.*`, `Audio.Spatial.*`, `Visual.Retinal.*`, `Accessibility.*`. Same honesty rules. | Not started | recommendations §4.5 |
+| T46 | **Ring buffers + 4096-sample quotas in `poet_host` / `SlgArena`** — not in `poet-vibe`. Host constant, not language constant. | Not started | recommendations §4.5 |
+
+### 8.10 Geometry, Sheaves, Stalks (recommendations §4.6, grok §1)
+
+| # | Task | Status | Source |
+|---|------|--------|--------|
+| T47 | **Stalk as isolated `PoetSnapshot` + capability lease + pulse topic prefix** — agent context is a pointer, not a copied transcript. | Not started | recommendations §4.6, grok §2 |
+| T48 | **Glue / sheaf condition as Pure predicate at commit of staged deltas** — failure is a diagnostic, not an exception unwind. | Not started | recommendations §4.6 |
+| T49 | **Simplex as named record of jointly-required cells/graph shapes** — missing member ⇒ load or commit reject. | Not started | recommendations §4.6 |
+| T50 | **Topological tear as `Diagnostic` + evidential (μ, λ) on sealed receipt** — quarantine context is a host routing decision. | Not started | recommendations §4.6 |
+
+### 8.11 MCP Replacement / Agent-Native (recommendations §4.3, grok §2)
+
+| # | Task | Status | Source |
+|---|------|--------|--------|
+| T51 | **Every `ALL_BOUND` id exports a machine schema** — not English prose. Arguments, effect class, honesty, GBNF fragment from the same table as the catalog. | Not started | recommendations §4.3 |
+| T52 | **Heavy returns are `QuinRef` / `did:q42:…` / `TensorRef` / `GeometryRef`** — never a 10k-line payload. | Not started | recommendations §4.3 |
+| T53 | **Wire GBNF into in-process sampling loop** — projectional mutations can wait; logit mask is the actual MCP replacement. | Not started | recommendations §4.3, W11, excellence-first §3.13 |
+| T54 | **Reflection stage 3 on isolated `PoetSnapshot`** — must not write the live graph. | Not started | recommendations §4.3 (overlaps T26) |
+
+### 8.12 Disclosure Boundary & Instrument Traces (disclosure-boundary, bylines docs)
+
+| # | Task | Status | Source |
+|---|------|--------|--------|
+| T55 | **`DisclosureDenied` as a first-class value** — credentialed refusal the principal can show to an auditor; instrument degrades without seeing the payload. | Not started | disclosure-boundary §0 |
+| T56 | **Four-boundary separation** — publication / replication / agency / exfiltration are four bits, not one. `.gitignore` is publication only. | Not started | disclosure-boundary §0 |
+| T57 | **Instrument trace ledger (Kind B)** — production notes the *customer* can read: which instrument instance, which act, which Instant, which lease, what cost. Vendor-only copy is not this. | Not started | bylines §0, AGENT_INTENT_LOGGING_SPEC |
+| T58 | **No bylines (Kind A) enforced mechanically** — §16 rule already in CLAUDE.md; needs tooling to prevent injection. | Rule added | bylines §0, CLAUDE.md §16 |
+| T59 | **Agent characteristics KB** — log characteristics of agents (including AI agents) from behaviour. Local inference first, then packs for jurisdictions. | Not started | rights-not-sovereignty §1 |
+
+### 8.13 Ecosystem & Standalone Packaging (ecosystem doc, recommendations §1)
+
+| # | Task | Status | Source |
+|---|------|--------|--------|
+| T60 | **LSP server** — `tower-lsp` based; autocomplete, go-to-definition, find-references, real-time diagnostics. | Not started | ecosystem §3.1, topics-yet-considered §1 |
+| T61 | **WASM playground** — Monaco editor + live output; zero-install. | Not started | ecosystem §3.2, topics-yet-considered §2 |
+| T62 | **CLI toolchain** — REPL, formatter, linter/static analyzer. | Not started | ecosystem §3.3, topics-yet-considered §3 |
+| T63 | **Module system / package manager** — `import <iri> as name`; catalog is the module graph. No npm. No `vibe.toml` dependency solver in 0.x. | Not started | excellence-first §2.7, ecosystem §3.4 |
+| T64 | **One import / capability story** — kill `vibe:0.1/` prefix as sacred string; language version lives on module header / AST tag. | Not started | excellence-first §2.7 |
+| T65 | **Interactive onboarding / "Tour of..."** — walk new users through paradigms. | Not started | ecosystem §3.5, topics-yet-considered §5 |
+
+### 8.14 Core Spec Hygiene (excellence-first §2.10, §2.11, recommendations §2)
+
+| # | Task | Status | Source |
+|---|------|--------|--------|
+| T66 | **Update spec to intended lattice** — not to whatever the interpreter happened to do last week. `time.now()` vs `time.unix` discrepancy. | Not started | excellence-first §2.11 |
+| T67 | **Reconcile `Tensor10D` field comments and `axis_role.rs`** — they disagree about `t` and `μ`. One document. | Not started | excellence-first §2.11 (overlaps T15) |
+| T68 | **Tick policy under load** — drop / coalesce / tear. Unspecified, so animation and sensor fusion will lie. | Not started | excellence-first §3.9 |
+| T69 | **Presentation morphism as sheaf** — visual / haptic / auditory / Braille. Not `Render.css_*` plus hope. | Not started | excellence-first §3.10 |
+| T70 | **Identifier vs continuant in type system** — `Did` vs something that is allowed to mean a person. Prose-only is how UUID-identity comes back. | Not started | excellence-first §3.11, recommendations §4.7 |
+| T71 | **One clock story in Wellfair / pulse / poet** — `asserted_time_unix: u32` in wellfare-core is another coarse Unix. Replace together, or Vibe Instant won't compose. | Not started | excellence-first §3.14 |
+| T72 | **Law packages as signed content** — who authored the dissolve rate; under what licence; whether it is physical or fictional. Provenance must travel. | Not started | excellence-first §3.8, W10 |
+| T73 | **Quantity dimension algebra** — Pa = N/m². Conversions are not a host lookup table of strings. | Not started | excellence-first §3.7 |
+
+### 8.15 Wish List (excellence-first §4, ordered by product-defining power)
+
+| # | Wish | Status | Source |
+|---|------|--------|--------|
+| W1 | Projectional authoring — edit Instant / Field / Law as structure; text is a view | Not started | excellence-first §4 |
+| W2 | WorldLine as the continuant's time-like self | Not started (tracked as T6) | excellence-first §4 |
+| W3 | Conservation hooks on glue | Not started (tracked as T34) | excellence-first §4 |
+| W4 | Mixture / phase diagrams as data | Not started (tracked as T33) | excellence-first §4 |
+| W5 | Frame morphisms (Galilean → Lorentz later) | Not started | excellence-first §4 |
+| W6 | Causal cone on pulse / graph | Not started (tracked as T35) | excellence-first §4 |
+| W7 | Measurement context / observer stalk | Not started | excellence-first §4 |
+| W8 | Assistive I/O in the first HID vertical | Not started (tracked as T43) | excellence-first §4 |
+| W9 | Oral / heraldic lexicon modalities as identifier views | Not started | excellence-first §4 |
+| W10 | Law store = signed packages | Not started (tracked as T72) | excellence-first §4 |
+| W11 | GBNF on the in-process sampler | Not started (tracked as T53) | excellence-first §4 |
+| W12 | Deterministic replay Instant as the only wasm clock | Not started (tracked as T22) | excellence-first §4 |
+| W13 | Custom GPU backend when wgpu internals dominate allocs | Not started (tracked as §F1) | excellence-first §4 |
+| W14 | Multi-scale / filtered sheaves (LOD as physics) | Not started | excellence-first §4 |
+| W15 | Civic time + authority to assert it | Not started | excellence-first §4 |
+| W16 | Pretty material/field syntax that is 100% CST sugar | Not started (gated on T28–T31) | excellence-first §4 |
+| W17 | Delete Identish, four-field Quin, time.unix-as-primary in one breaking pass | Not started (tracked as T8, T7, T18) | excellence-first §4 |
+| W18 | Keyword locale views with English or another locale as first pretty dialect | Not started (tracked as T37) | excellence-first §4 |
+
+### 8.16 Decisions Needing Timothy (excellence-first §7)
+
+| # | Decision | Excellence default |
+|---|----------|-------------------|
+| X1 | Confirm immovable list (§1) vs breakable surface | As written |
+| X2 | Official name for `ManifoldCoordinate10D` in Vibe | `Attention10D` (or your term) — **not** "manifold" |
+| X3 | `t` vs `μ` as provenance | `t` = time axis; `μ` = carrier; Instant on receipts |
+| X4 | Grow grammar for `field` / `material` / `law` now? | **Yes**, as AST nodes + Tag 4200, not `nquin` |
+| X5 | `Quantity` mandatory in 0.2-that-replaces-0.1? | **Yes** |
+| X6 | Kill `time.unix` as primitive? | **Yes** — keep a projection helper |
+| X7 | Unicode identifiers this pass? | **No** unless BiDi/homoglyph is in the same pass |
+| X8 | First wish-list slice after the lattice | W2 WorldLine + W4 Mixture + W12 replay Instant |
+
+### 8.17 What NOT to do (excellence-first §5, recommendations §1)
+
+- An 11th–Nth manifold axis for the next physical idea.
+- HoTT / latent-graph rewrite before Field+Instant exist.
+- A sibling `vibe-script` working tree or a licence fiction (all dev stays in `qualia-27062026`).
+- Ollama / external model server.
+- Ambient `nquin` literals.
+- ECS as a second runtime beside the graph.
+- "JavaScript interop Value" that is only `F64`.
+- Shipping Unicode identifiers without BiDi policy.
+- Binding 120 HID ids before Instant, Field, and a switch/announce path.
+- A second syntax surface that agents use while humans use another.
+- Treating the geometric model as pure research — force every new geometric primitive to lower.
+- Letting the 42 MB sentinel or zero-heap rules become soft.
