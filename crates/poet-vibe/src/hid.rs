@@ -296,6 +296,175 @@ impl InboundEvent {
             EventPayload::fat_buffer(iri, hash),
         )
     }
+
+    // ── T43: Assistive I/O constructors ──────────────────────────────
+
+    /// Create a sip-and-puff event (assistive input).
+    /// `strength` is 0.0–1.0 (no puff → hard puff).
+    /// `duration_ms` is the duration of the sip/puff in milliseconds.
+    pub fn sip_and_puff(timestamp_ns: u64, source_id: &str, strength: f64, duration_ms: u64) -> Self {
+        Self::new(
+            timestamp_ns,
+            source_id,
+            EventKind::Assistive,
+            EventPayload::inline_pairs(&[
+                ("device", Value::String("sip_puff".into())),
+                ("strength", Value::F64(strength.clamp(0.0, 1.0))),
+                ("duration_ms", Value::U64(duration_ms)),
+            ]),
+        )
+    }
+
+    /// Create a switch event (assistive input — single switch, binary).
+    pub fn switch_event(timestamp_ns: u64, source_id: &str, switch_id: i64, pressed: bool) -> Self {
+        Self::new(
+            timestamp_ns,
+            source_id,
+            EventKind::Assistive,
+            EventPayload::inline_pairs(&[
+                ("device", Value::String("switch".into())),
+                ("switch_id", Value::I64(switch_id)),
+                ("state", Value::String(if pressed { "down" } else { "up" }.into())),
+            ]),
+        )
+    }
+
+    /// Create a Braille chord event (assistive input).
+    /// `dots` is a bitmask of the 8 Braille dots (bits 0–7).
+    pub fn braille_chord(timestamp_ns: u64, source_id: &str, dots: u8) -> Self {
+        Self::new(
+            timestamp_ns,
+            source_id,
+            EventKind::Assistive,
+            EventPayload::inline_pairs(&[
+                ("device", Value::String("braille".into())),
+                ("dots", Value::I64(dots as i64)),
+            ]),
+        )
+    }
+
+    /// Create an eye-gaze event (assistive input — eye tracking).
+    pub fn eye_gaze(timestamp_ns: u64, source_id: &str, x: f64, y: f64, fixation_ms: u64) -> Self {
+        Self::new(
+            timestamp_ns,
+            source_id,
+            EventKind::Assistive,
+            EventPayload::inline_pairs(&[
+                ("device", Value::String("eye_gaze".into())),
+                ("x", Value::F64(x)),
+                ("y", Value::F64(y)),
+                ("fixation_ms", Value::U64(fixation_ms)),
+            ]),
+        )
+    }
+}
+
+/// Outbound cue kinds for assistive output (T43/T45).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CueKind {
+    /// Haptic feedback (vibration, force feedback).
+    Haptic,
+    /// Audio cue (tone, earcon, speech).
+    Audio,
+    /// Visual cue (flash, border highlight).
+    Visual,
+    /// Accessibility cue (screen reader announcement, Braille output).
+    Accessibility,
+}
+
+impl CueKind {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::Haptic => "Haptic",
+            Self::Audio => "Audio",
+            Self::Visual => "Visual",
+            Self::Accessibility => "Accessibility",
+        }
+    }
+
+    pub fn from_str(s: &str) -> Option<Self> {
+        match s {
+            "Haptic" => Some(Self::Haptic),
+            "Audio" => Some(Self::Audio),
+            "Visual" => Some(Self::Visual),
+            "Accessibility" => Some(Self::Accessibility),
+            _ => None,
+        }
+    }
+}
+
+/// An outbound cue — haptic, audio, visual, or accessibility output.
+#[derive(Debug, Clone)]
+pub struct OutboundCue {
+    /// The cue kind.
+    pub kind: CueKind,
+    /// The cue name (e.g. "Haptic.buzz", "Audio.earcon.success",
+    /// "Accessibility.announce", "Visual.flash").
+    pub name: String,
+    /// The cue payload (inline parameters).
+    pub payload: BTreeMap<String, Value>,
+}
+
+impl OutboundCue {
+    /// Create a haptic buzz cue.
+    pub fn haptic_buzz(duration_ms: u64, strength: f64) -> Self {
+        let mut payload = BTreeMap::new();
+        payload.insert("duration_ms".into(), Value::U64(duration_ms));
+        payload.insert("strength".into(), Value::F64(strength.clamp(0.0, 1.0)));
+        Self {
+            kind: CueKind::Haptic,
+            name: "Haptic.buzz".into(),
+            payload,
+        }
+    }
+
+    /// Create an audio earcon cue.
+    pub fn audio_earcon(earcon_id: &str) -> Self {
+        let mut payload = BTreeMap::new();
+        payload.insert("earcon_id".into(), Value::String(earcon_id.into()));
+        Self {
+            kind: CueKind::Audio,
+            name: "Audio.earcon".into(),
+            payload,
+        }
+    }
+
+    /// Create a screen reader announcement cue.
+    pub fn accessibility_announce(message: &str) -> Self {
+        let mut payload = BTreeMap::new();
+        payload.insert("message".into(), Value::String(message.into()));
+        Self {
+            kind: CueKind::Accessibility,
+            name: "Accessibility.announce".into(),
+            payload,
+        }
+    }
+
+    /// Create a visual flash cue.
+    pub fn visual_flash(color: &str, duration_ms: u64) -> Self {
+        let mut payload = BTreeMap::new();
+        payload.insert("color".into(), Value::String(color.into()));
+        payload.insert("duration_ms".into(), Value::U64(duration_ms));
+        Self {
+            kind: CueKind::Visual,
+            name: "Visual.flash".into(),
+            payload,
+        }
+    }
+
+    /// Convert to a VibeScript cue.post argument value.
+    pub fn to_value(&self) -> Value {
+        let mut rec = BTreeMap::new();
+        rec.insert("kind".into(), Value::String(self.kind.as_str().into()));
+        rec.insert("name".into(), Value::String(self.name.clone()));
+        rec.insert("payload".into(), Value::Record(self.payload.clone()));
+        Value::Record(rec)
+    }
+
+    /// Get the cue ID string for cue.post (e.g. "Haptic.buzz").
+    pub fn cue_id(&self) -> &str {
+        &self.name
+    }
 }
 
 #[cfg(test)]
@@ -489,6 +658,146 @@ mod tests {
         assert!(p.is_inline());
         if let EventPayload::Inline(m) = p {
             assert_eq!(m.len(), 3);
+        }
+    }
+
+    // ── T43: Assistive I/O tests ─────────────────────────────────────
+
+    #[test]
+    fn t43_sip_and_puff_event() {
+        let e = InboundEvent::sip_and_puff(1000, "sip_puff:0", 0.7, 200);
+        assert_eq!(e.kind, EventKind::Assistive);
+        assert!(e.payload.is_inline());
+        if let EventPayload::Inline(m) = &e.payload {
+            assert_eq!(match m.get("device").unwrap() {
+                Value::String(s) => s.as_str(),
+                _ => panic!("expected String"),
+            }, "sip_puff");
+            assert_eq!(match m.get("strength").unwrap() {
+                Value::F64(f) => *f,
+                _ => panic!("expected F64"),
+            }, 0.7);
+        }
+    }
+
+    #[test]
+    fn t43_sip_and_puff_clamps_strength() {
+        let e = InboundEvent::sip_and_puff(1000, "sip_puff:0", 1.5, 100);
+        if let EventPayload::Inline(m) = &e.payload {
+            assert_eq!(match m.get("strength").unwrap() {
+                Value::F64(f) => *f,
+                _ => panic!("expected F64"),
+            }, 1.0); // clamped
+        }
+    }
+
+    #[test]
+    fn t43_switch_event() {
+        let e = InboundEvent::switch_event(2000, "switch:0", 1, true);
+        assert_eq!(e.kind, EventKind::Assistive);
+        if let EventPayload::Inline(m) = &e.payload {
+            assert_eq!(match m.get("switch_id").unwrap() {
+                Value::I64(n) => *n,
+                _ => panic!("expected I64"),
+            }, 1);
+            assert_eq!(match m.get("state").unwrap() {
+                Value::String(s) => s.as_str(),
+                _ => panic!("expected String"),
+            }, "down");
+        }
+    }
+
+    #[test]
+    fn t43_braille_chord_event() {
+        let e = InboundEvent::braille_chord(3000, "braille:0", 0b00010111);
+        assert_eq!(e.kind, EventKind::Assistive);
+        if let EventPayload::Inline(m) = &e.payload {
+            assert_eq!(match m.get("dots").unwrap() {
+                Value::I64(n) => *n,
+                _ => panic!("expected I64"),
+            }, 0b00010111);
+        }
+    }
+
+    #[test]
+    fn t43_eye_gaze_event() {
+        let e = InboundEvent::eye_gaze(4000, "eye:0", 150.0, 200.0, 500);
+        assert_eq!(e.kind, EventKind::Assistive);
+        if let EventPayload::Inline(m) = &e.payload {
+            assert_eq!(match m.get("device").unwrap() {
+                Value::String(s) => s.as_str(),
+                _ => panic!("expected String"),
+            }, "eye_gaze");
+            assert_eq!(match m.get("fixation_ms").unwrap() {
+                Value::U64(n) => *n,
+                _ => panic!("expected U64"),
+            }, 500);
+        }
+    }
+
+    #[test]
+    fn t43_cue_kind_round_trip() {
+        for kind in [CueKind::Haptic, CueKind::Audio, CueKind::Visual, CueKind::Accessibility] {
+            let s = kind.as_str();
+            assert_eq!(CueKind::from_str(s), Some(kind));
+        }
+    }
+
+    #[test]
+    fn t43_haptic_buzz_cue() {
+        let cue = OutboundCue::haptic_buzz(100, 0.5);
+        assert_eq!(cue.kind, CueKind::Haptic);
+        assert_eq!(cue.cue_id(), "Haptic.buzz");
+        assert_eq!(cue.payload.len(), 2);
+    }
+
+    #[test]
+    fn t43_audio_earcon_cue() {
+        let cue = OutboundCue::audio_earcon("success");
+        assert_eq!(cue.kind, CueKind::Audio);
+        assert_eq!(cue.cue_id(), "Audio.earcon");
+    }
+
+    #[test]
+    fn t43_accessibility_announce_cue() {
+        let cue = OutboundCue::accessibility_announce("Form submitted");
+        assert_eq!(cue.kind, CueKind::Accessibility);
+        assert_eq!(cue.cue_id(), "Accessibility.announce");
+        if let Value::String(s) = cue.payload.get("message").unwrap() {
+            assert_eq!(s, "Form submitted");
+        }
+    }
+
+    #[test]
+    fn t43_visual_flash_cue() {
+        let cue = OutboundCue::visual_flash("red", 200);
+        assert_eq!(cue.kind, CueKind::Visual);
+        assert_eq!(cue.cue_id(), "Visual.flash");
+    }
+
+    #[test]
+    fn t43_cue_to_value() {
+        let cue = OutboundCue::haptic_buzz(100, 0.5);
+        let v = cue.to_value();
+        let rec = match &v {
+            Value::Record(r) => r,
+            _ => panic!("expected Record"),
+        };
+        assert_eq!(match rec.get("kind").unwrap() {
+            Value::String(s) => s.as_str(),
+            _ => panic!("expected String"),
+        }, "Haptic");
+        assert_eq!(match rec.get("name").unwrap() {
+            Value::String(s) => s.as_str(),
+            _ => panic!("expected String"),
+        }, "Haptic.buzz");
+    }
+
+    #[test]
+    fn t43_haptic_buzz_clamps_strength() {
+        let cue = OutboundCue::haptic_buzz(100, 2.0);
+        if let Value::F64(f) = cue.payload.get("strength").unwrap() {
+            assert_eq!(*f, 1.0); // clamped
         }
     }
 }
