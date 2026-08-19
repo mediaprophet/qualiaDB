@@ -1307,9 +1307,9 @@ impl<'a> Parser<'a> {
             return Ok(Literal::String(s));
         }
         if self.cur.kind == TokenKind::Int {
-            let n = parse_int(self.text())?;
+            let lit = parse_int(self.text())?;
             self.bump()?;
-            return Ok(Literal::Int(n));
+            return Ok(lit);
         }
         if self.cur.kind == TokenKind::Float {
             let bits = parse_float_bits(self.text())?;
@@ -1497,20 +1497,36 @@ fn unquote(s: &str) -> Result<String, Diagnostic> {
     Ok(out)
 }
 
-fn parse_int(s: &str) -> Result<i64, Diagnostic> {
+fn parse_int(s: &str) -> Result<Literal, Diagnostic> {
     let raw = s
         .trim_end_matches("i32")
         .trim_end_matches("u32")
         .trim_end_matches("i64")
         .trim_end_matches("u64")
         .replace('_', "");
+    let is_unsigned = s.ends_with("u64") || s.ends_with("u32");
     if let Some(hex) = raw.strip_prefix("0x").or_else(|| raw.strip_prefix("0X")) {
-        i64::from_str_radix(hex, 16)
-            .or_else(|_| u64::from_str_radix(hex, 16).map(|u| u as i64))
-            .map_err(|_| Diagnostic::new(DiagCode::E001, Span::point(0), "bad hex integer"))
-    } else {
-        raw.parse::<i64>()
+        if is_unsigned {
+            u64::from_str_radix(hex, 16)
+                .map(Literal::UInt)
+                .map_err(|_| Diagnostic::new(DiagCode::E001, Span::point(0), "bad hex integer"))
+        } else if let Ok(i) = i64::from_str_radix(hex, 16) {
+            Ok(Literal::Int(i))
+        } else if let Ok(u) = u64::from_str_radix(hex, 16) {
+            Ok(Literal::UInt(u))
+        } else {
+            Err(Diagnostic::new(DiagCode::E001, Span::point(0), "bad hex integer"))
+        }
+    } else if is_unsigned {
+        raw.parse::<u64>()
+            .map(Literal::UInt)
             .map_err(|_| Diagnostic::new(DiagCode::E001, Span::point(0), "bad integer"))
+    } else if let Ok(i) = raw.parse::<i64>() {
+        Ok(Literal::Int(i))
+    } else if let Ok(u) = raw.parse::<u64>() {
+        Ok(Literal::UInt(u))
+    } else {
+        Err(Diagnostic::new(DiagCode::E001, Span::point(0), "bad integer"))
     }
 }
 

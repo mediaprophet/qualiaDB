@@ -194,10 +194,28 @@ impl<'a, H: Host> Engine<'a, H> {
                 let v = self.eval_expr(expr, env)?;
                 match op {
                     UnOp::Not => Ok(Value::Bool(!v.is_truthy())),
-                    UnOp::Neg => v
-                        .as_f64()
-                        .map(|n| Value::F64(-n))
-                        .ok_or_else(|| Diagnostic::new(DiagCode::E600, expr.span, "negation")),
+                    UnOp::Neg => match v {
+                        Value::I64(n) => n
+                            .checked_neg()
+                            .map(Value::I64)
+                            .ok_or_else(|| Diagnostic::new(DiagCode::E600, expr.span, "integer overflow")),
+                        Value::U64(n) => {
+                            if n == 0 {
+                                Ok(Value::U64(0))
+                            } else {
+                                Err(Diagnostic::new(DiagCode::E600, expr.span, "integer underflow"))
+                            }
+                        }
+                        Value::F64(n) => Ok(Value::F64(-n)),
+                        Value::Quantity(q) => Ok(Value::Quantity(crate::value::Quantity {
+                            value: -q.value,
+                            unit: q.unit,
+                        })),
+                        _ => v
+                            .as_f64()
+                            .map(|n| Value::F64(-n))
+                            .ok_or_else(|| Diagnostic::new(DiagCode::E600, expr.span, "negation")),
+                    },
                     UnOp::Plus => Ok(v),
                 }
             }
@@ -647,6 +665,190 @@ fn binop(op: BinOp, l: &Value, r: &Value, span: Span) -> Result<Value, Diagnosti
         let eq = l == r;
         return Ok(Value::Bool(if op == BinOp::Eq { eq } else { !eq }));
     }
+
+    if let (Value::I64(a), Value::I64(b)) = (l, r) {
+        return match op {
+            BinOp::Add => a
+                .checked_add(*b)
+                .map(Value::I64)
+                .ok_or_else(|| Diagnostic::new(DiagCode::E600, span, "integer overflow on addition")),
+            BinOp::Sub => a
+                .checked_sub(*b)
+                .map(Value::I64)
+                .ok_or_else(|| Diagnostic::new(DiagCode::E600, span, "integer overflow on subtraction")),
+            BinOp::Mul => a
+                .checked_mul(*b)
+                .map(Value::I64)
+                .ok_or_else(|| Diagnostic::new(DiagCode::E600, span, "integer overflow on multiplication")),
+            BinOp::Div => {
+                if *b == 0 {
+                    Err(Diagnostic::new(DiagCode::E600, span, "division by zero"))
+                } else {
+                    a.checked_div(*b)
+                        .map(Value::I64)
+                        .ok_or_else(|| Diagnostic::new(DiagCode::E600, span, "integer overflow on division"))
+                }
+            }
+            BinOp::Rem => {
+                if *b == 0 {
+                    Err(Diagnostic::new(DiagCode::E600, span, "division by zero"))
+                } else {
+                    a.checked_rem(*b)
+                        .map(Value::I64)
+                        .ok_or_else(|| Diagnostic::new(DiagCode::E600, span, "integer overflow on remainder"))
+                }
+            }
+            BinOp::Lt => Ok(Value::Bool(a < b)),
+            BinOp::Le => Ok(Value::Bool(a <= b)),
+            BinOp::Gt => Ok(Value::Bool(a > b)),
+            BinOp::Ge => Ok(Value::Bool(a >= b)),
+            _ => Ok(Value::I64(*a)),
+        };
+    }
+
+    if let (Value::U64(a), Value::U64(b)) = (l, r) {
+        return match op {
+            BinOp::Add => a
+                .checked_add(*b)
+                .map(Value::U64)
+                .ok_or_else(|| Diagnostic::new(DiagCode::E600, span, "integer overflow on addition")),
+            BinOp::Sub => a
+                .checked_sub(*b)
+                .map(Value::U64)
+                .ok_or_else(|| Diagnostic::new(DiagCode::E600, span, "integer overflow on subtraction")),
+            BinOp::Mul => a
+                .checked_mul(*b)
+                .map(Value::U64)
+                .ok_or_else(|| Diagnostic::new(DiagCode::E600, span, "integer overflow on multiplication")),
+            BinOp::Div => {
+                if *b == 0 {
+                    Err(Diagnostic::new(DiagCode::E600, span, "division by zero"))
+                } else {
+                    a.checked_div(*b)
+                        .map(Value::U64)
+                        .ok_or_else(|| Diagnostic::new(DiagCode::E600, span, "integer overflow on division"))
+                }
+            }
+            BinOp::Rem => {
+                if *b == 0 {
+                    Err(Diagnostic::new(DiagCode::E600, span, "division by zero"))
+                } else {
+                    a.checked_rem(*b)
+                        .map(Value::U64)
+                        .ok_or_else(|| Diagnostic::new(DiagCode::E600, span, "integer overflow on remainder"))
+                }
+            }
+            BinOp::Lt => Ok(Value::Bool(a < b)),
+            BinOp::Le => Ok(Value::Bool(a <= b)),
+            BinOp::Gt => Ok(Value::Bool(a > b)),
+            BinOp::Ge => Ok(Value::Bool(a >= b)),
+            _ => Ok(Value::U64(*a)),
+        };
+    }
+
+    if let (Value::U64(a), Value::I64(b)) = (l, r) {
+        if *b >= 0 {
+            let b_u64 = *b as u64;
+            return match op {
+                BinOp::Add => a
+                    .checked_add(b_u64)
+                    .map(Value::U64)
+                    .ok_or_else(|| Diagnostic::new(DiagCode::E600, span, "integer overflow on addition")),
+                BinOp::Sub => a
+                    .checked_sub(b_u64)
+                    .map(Value::U64)
+                    .ok_or_else(|| Diagnostic::new(DiagCode::E600, span, "integer overflow on subtraction")),
+                BinOp::Mul => a
+                    .checked_mul(b_u64)
+                    .map(Value::U64)
+                    .ok_or_else(|| Diagnostic::new(DiagCode::E600, span, "integer overflow on multiplication")),
+                BinOp::Div => {
+                    if b_u64 == 0 {
+                        Err(Diagnostic::new(DiagCode::E600, span, "division by zero"))
+                    } else {
+                        a.checked_div(b_u64)
+                            .map(Value::U64)
+                            .ok_or_else(|| Diagnostic::new(DiagCode::E600, span, "integer overflow on division"))
+                    }
+                }
+                BinOp::Rem => {
+                    if b_u64 == 0 {
+                        Err(Diagnostic::new(DiagCode::E600, span, "division by zero"))
+                    } else {
+                        a.checked_rem(b_u64)
+                            .map(Value::U64)
+                            .ok_or_else(|| Diagnostic::new(DiagCode::E600, span, "integer overflow on remainder"))
+                    }
+                }
+                BinOp::Lt => Ok(Value::Bool(*a < b_u64)),
+                BinOp::Le => Ok(Value::Bool(*a <= b_u64)),
+                BinOp::Gt => Ok(Value::Bool(*a > b_u64)),
+                BinOp::Ge => Ok(Value::Bool(*a >= b_u64)),
+                _ => Ok(Value::U64(*a)),
+            };
+        } else {
+            let neg_b = (-*b) as u64;
+            return match op {
+                BinOp::Add => a
+                    .checked_sub(neg_b)
+                    .map(Value::U64)
+                    .ok_or_else(|| Diagnostic::new(DiagCode::E600, span, "integer underflow on addition")),
+                BinOp::Sub => a
+                    .checked_add(neg_b)
+                    .map(Value::U64)
+                    .ok_or_else(|| Diagnostic::new(DiagCode::E600, span, "integer overflow on subtraction")),
+                _ => Err(Diagnostic::new(DiagCode::E600, span, "unsupported op on unsigned and negative integer")),
+            };
+        }
+    }
+
+    if let (Value::I64(a), Value::U64(b)) = (l, r) {
+        if *a >= 0 {
+            let a_u64 = *a as u64;
+            return match op {
+                BinOp::Add => a_u64
+                    .checked_add(*b)
+                    .map(Value::U64)
+                    .ok_or_else(|| Diagnostic::new(DiagCode::E600, span, "integer overflow on addition")),
+                BinOp::Sub => a_u64
+                    .checked_sub(*b)
+                    .map(Value::U64)
+                    .ok_or_else(|| Diagnostic::new(DiagCode::E600, span, "integer overflow on subtraction")),
+                BinOp::Mul => a_u64
+                    .checked_mul(*b)
+                    .map(Value::U64)
+                    .ok_or_else(|| Diagnostic::new(DiagCode::E600, span, "integer overflow on multiplication")),
+                BinOp::Div => {
+                    if *b == 0 {
+                        Err(Diagnostic::new(DiagCode::E600, span, "division by zero"))
+                    } else {
+                        a_u64
+                            .checked_div(*b)
+                            .map(Value::U64)
+                            .ok_or_else(|| Diagnostic::new(DiagCode::E600, span, "integer overflow on division"))
+                    }
+                }
+                BinOp::Rem => {
+                    if *b == 0 {
+                        Err(Diagnostic::new(DiagCode::E600, span, "division by zero"))
+                    } else {
+                        a_u64
+                            .checked_rem(*b)
+                            .map(Value::U64)
+                            .ok_or_else(|| Diagnostic::new(DiagCode::E600, span, "integer overflow on remainder"))
+                    }
+                }
+                BinOp::Lt => Ok(Value::Bool(a_u64 < *b)),
+                BinOp::Le => Ok(Value::Bool(a_u64 <= *b)),
+                BinOp::Gt => Ok(Value::Bool(a_u64 > *b)),
+                BinOp::Ge => Ok(Value::Bool(a_u64 >= *b)),
+                _ => Ok(Value::U64(a_u64)),
+            };
+        } else {
+            return Err(Diagnostic::new(DiagCode::E600, span, "unsupported op on negative integer and unsigned"));
+        }
+    }
+
     let a = l.as_f64().ok_or_else(|| {
         Diagnostic::new(DiagCode::E600, span, "numeric operator on non-number")
     })?;
@@ -668,11 +870,7 @@ fn binop(op: BinOp, l: &Value, r: &Value, span: Span) -> Result<Value, Diagnosti
         BinOp::Ge => return Ok(Value::Bool(a >= b)),
         _ => a,
     };
-    if matches!(l, Value::I64(_)) && matches!(r, Value::I64(_)) && n.fract() == 0.0 {
-        Ok(Value::I64(n as i64))
-    } else {
-        Ok(Value::F64(n))
-    }
+    Ok(Value::F64(n))
 }
 
 fn match_pat(p: &Pattern, v: &Value, env: &mut Env) -> bool {
@@ -994,5 +1192,77 @@ mod tests {
         "#;
         let err = eval_program_src(src).unwrap_err();
         assert_eq!(err.code, DiagCode::E701);
+    }
+
+    #[test]
+    fn i64_add_overflow() {
+        let src = r#"
+            fn main() {
+                let x = 9223372036854775807 + 1;
+                return x;
+            }
+        "#;
+        let err = eval_program_src(src).unwrap_err();
+        assert_eq!(err.code, DiagCode::E600);
+    }
+
+    #[test]
+    fn i64_sub_overflow() {
+        let src = r#"
+            fn main() {
+                let x = -9223372036854775808 - 1;
+                return x;
+            }
+        "#;
+        let err = eval_program_src(src).unwrap_err();
+        assert_eq!(err.code, DiagCode::E600);
+    }
+
+    #[test]
+    fn i64_mul_overflow() {
+        let src = r#"
+            fn main() {
+                let x = 9223372036854775807 * 2;
+                return x;
+            }
+        "#;
+        let err = eval_program_src(src).unwrap_err();
+        assert_eq!(err.code, DiagCode::E600);
+    }
+
+    #[test]
+    fn u64_add_overflow() {
+        let src = r#"
+            fn main() {
+                let x = 18446744073709551615 + 1;
+                return x;
+            }
+        "#;
+        let err = eval_program_src(src).unwrap_err();
+        assert_eq!(err.code, DiagCode::E600);
+    }
+
+    #[test]
+    fn i64_normal_add_still_works() {
+        let src = r#"
+            fn main() {
+                let x = 1 + 2;
+                return x;
+            }
+        "#;
+        let result = eval_program_src(src).unwrap();
+        assert_eq!(result, Value::I64(3));
+    }
+
+    #[test]
+    fn f64_overflow_not_checked() {
+        let src = r#"
+            fn main() {
+                let x = 1e308 * 1e308;
+                return x;
+            }
+        "#;
+        let result = eval_program_src(src).unwrap();
+        assert_eq!(result, Value::F64(f64::INFINITY));
     }
 }
