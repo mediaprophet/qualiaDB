@@ -176,8 +176,8 @@ impl<'a, H: Host> Engine<'a, H> {
         match &expr.kind {
             ExprKind::Literal(l) => Ok(lit(l)),
             ExprKind::Ident(n) => {
-                if n == "Ok" || n == "Err" || n == "Some" || n == "None" {
-                    return Ok(Value::Identish(n.clone()));
+                if n == "None" {
+                    return Ok(Value::Null);
                 }
                 env.vars.get(n).cloned().ok_or_else(|| {
                     Diagnostic::new(DiagCode::E600, expr.span, format!("undefined {n}"))
@@ -220,9 +220,15 @@ impl<'a, H: Host> Engine<'a, H> {
                         }
                     }
                 }
-                let _ = self.eval_expr(recv, env)?;
-                // namespace keep: math.max is Call of Member, eval'd in Call
-                Ok(Value::Identish(name.clone()))
+                let val = self.eval_expr(recv, env)?;
+                match val {
+                    Value::Record(m) => Ok(m.get(name).cloned().unwrap_or(Value::Null)),
+                    other => Err(Diagnostic::new(
+                        DiagCode::E600,
+                        expr.span,
+                        format!("cannot access member `{name}` on {other:?}"),
+                    )),
+                }
             }
             ExprKind::Call { callee, args } => self.eval_call(callee, args, expr.span, env),
             ExprKind::Try(inner) => match self.eval_expr(inner, env)? {

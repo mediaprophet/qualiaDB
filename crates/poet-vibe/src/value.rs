@@ -250,8 +250,6 @@ pub enum Value {
     QuinRef(QuinRef),
     /// A user-defined enum value (T9).
     Enum(EnumValue),
-    /// Temporary namespace/ctor name during postfix eval.
-    Identish(String),
 }
 
 impl Value {
