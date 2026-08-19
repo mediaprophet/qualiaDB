@@ -50,22 +50,28 @@ pub struct Tensor10D {
     /// Semantic Topology Z coordinate
     pub z: f32,
 
-    /// Temporal State / Provenance Ledger
+    /// Coordinate Time — the 4th dimension of spacetime (T67 reconciled).
     ///
-    /// NOTE: Disagrees with `container_10d/axis_role.rs` which defines `mu` as the
-    /// in-band provenance carrier (`CoordinateCarrier`). See Decision X3 in
-    /// `docs/plans/vibe-design/20260819_decisions-register.md` (pending Timothy's decision).
+    /// `t` is a **Coordinate** axis: it participates in distance queries
+    /// alongside `x`, `y`, `z`, `α`, `σ`. It is NOT the provenance
+    /// carrier. The earlier "Provenance Ledger" label was incorrect and
+    /// has been reconciled with `container_10d/axis_role.rs` (T67).
+    ///
+    /// Cross-reference: T14 (name the two tens) and T15 (resolve t vs μ).
     pub t: f32,
 
     /// Spectral Amplitude / Dynamic Range / Confidence Weight
     pub alpha: f32,
 
-    /// Spectral Modulation / Phase / Metadata Carrier
+    /// Provenance Weight / Carrier — epistemic metadata lane (T67 reconciled).
     ///
-    /// NOTE: In `container_10d/axis_role.rs`, `mu` is defined as `CoordinateCarrier`
-    /// (dual: measured coordinate and in-band provenance), whereas the comment on `t`
-    /// above describes `t` as the Provenance Ledger. See Decision X3 in
-    /// `docs/plans/vibe-design/20260819_decisions-register.md` (pending Timothy's decision).
+    /// `μ` is the **CoordinateCarrier**: a dual-role axis that is both a
+    /// measured coordinate AND the in-band provenance carrier. This is
+    /// distinct from `t` (coordinate time). The provenance/consent lane
+    /// is `μ`, not `t`. See `container_10d/axis_role.rs` for the
+    /// normative axis-role taxonomy.
+    ///
+    /// Cross-reference: T14 (name the two tens) and T15 (resolve t vs μ).
     pub mu: f32,
 
     /// Spectral Signature / Logical Class Index

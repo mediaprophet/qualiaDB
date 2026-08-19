@@ -15,11 +15,28 @@
 //! accepts any non-`Undefined` assignment today; a future task can tighten it
 //! to reject deviations from the frozen table once blessed.
 //!
-//! **Provenance Axis Disagreement (Decision X3 pending):**
-//! `axis_role.rs` defines `mu` as `CoordinateCarrier` (dual: measured coordinate
-//! and in-band provenance) while `crates/qualia-core-db/src/tensor/mod.rs`
-//! field comments describe `t` as the "Provenance Ledger". See Decision X3 in
-//! `docs/plans/vibe-design/20260819_decisions-register.md` (pending Timothy's decision).
+//! **t vs μ Reconciliation (T67, resolved 2026-08-19):**
+//!
+//! The earlier disagreement between this file and
+//! `crates/qualia-core-db/src/tensor/mod.rs` has been reconciled:
+//!
+//! - **`t`** = **Coordinate Time** — the 4th dimension of spacetime. It is
+//!   a `Coordinate` axis that participates in distance queries alongside
+//!   `x`, `y`, `z`, `α`, `σ`. It is NOT the provenance carrier. The
+//!   earlier "Provenance Ledger" label on `t` in `tensor/mod.rs` was
+//!   incorrect and has been corrected.
+//!
+//! - **`μ`** = **Provenance Weight / Carrier** — epistemic metadata lane.
+//!   It is the `CoordinateCarrier`: a dual-role axis that is both a
+//!   measured coordinate AND the in-band provenance carrier. This is
+//!   distinct from `t` (coordinate time). The provenance/consent lane
+//!   is `μ`, not `t`.
+//!
+//! - These are different concepts that happen to both be associated with
+//!   the 10th lane position. The 10D tensor has lanes for pose/query;
+//!   the 10D epistemic manifold has lanes for attention/epistemic geometry.
+//!
+//! Cross-reference: T14 (name the two tens) and T15 (resolve t vs μ).
 //!
 //! Reference: `docs/plans/native-computational-geometry.md` §4.1, and the
 //! execution plan's ⚑ "Axis-role taxonomy sign-off" curation datum.
@@ -171,5 +188,29 @@ mod tests {
             COORDINATE_AXES.contains(&MU_AXIS),
             "mu is a coordinate under Option A"
         );
+    }
+
+    #[test]
+    fn t67_reconciled_comment_present() {
+        // T67: verify the reconciled comment block is present in this file.
+        let source = include_str!("axis_role.rs");
+        assert!(source.contains("t vs μ Reconciliation"), "missing reconciliation header");
+        assert!(source.contains("Coordinate Time"), "missing t = Coordinate Time");
+        assert!(source.contains("Provenance Weight / Carrier"), "missing μ = provenance carrier");
+        assert!(source.contains("T67"), "missing T67 cross-reference");
+    }
+
+    #[test]
+    fn t67_tensor10d_comments_reconciled() {
+        // T67: verify the Tensor10D field comments in tensor/mod.rs are reconciled.
+        let source = include_str!("../tensor/mod.rs");
+        assert!(source.contains("Coordinate Time"), "tensor/mod.rs t field not reconciled");
+        assert!(source.contains("Provenance Weight / Carrier"), "tensor/mod.rs mu field not reconciled");
+        assert!(source.contains("T67"), "tensor/mod.rs missing T67 cross-reference");
+        // The t field should be labeled "Coordinate Time" in its doc comment.
+        let t_idx = source.find("pub t: f32").unwrap();
+        let before_t = &source[..t_idx];
+        assert!(before_t.contains("Coordinate Time"),
+            "tensor/mod.rs t field doc should say 'Coordinate Time'");
     }
 }
