@@ -8,6 +8,7 @@
 ))]
 pub mod coordination;
 pub mod illocution;
+pub mod instrument_trace;
 pub mod modal_kind;
 pub mod provenance;
 #[cfg(not(target_arch = "wasm32"))]
