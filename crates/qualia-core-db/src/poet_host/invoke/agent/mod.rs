@@ -47,7 +47,7 @@ pub fn parse_dag_node(val: &Value, span: Span) -> Result<(DagNode, Vec<u32>), Di
             let effect = map
                 .get("effect")
                 .and_then(|v| match v {
-                    Value::String(s) | Value::Identish(s) => Some(parse_node_effect(s)),
+                    Value::String(s) => Some(parse_node_effect(s)),
                     _ => None,
                 })
                 .unwrap_or(NodeEffect::Cold);

@@ -393,6 +393,12 @@ pub struct AgentDefinition {
     /// Persisted schema marker for future non-breaking roster migrations.
     #[serde(default)]
     pub roster_version: u16,
+    /// Optional DAG pipeline definition (JSON) for multi-step agent turns.
+    /// When present, the agent-turn handler executes the pipeline instead
+    /// of a single inference turn. The JSON format matches `DagPipeline`'s
+    /// CBOR serialization. Empty string = no pipeline (single-turn).
+    #[serde(default)]
+    pub dag_pipeline_json: String,
     /// Whether the agent is currently available for invocation.
     pub enabled: bool,
     /// Unix seconds at which this agent was first created.
@@ -429,6 +435,7 @@ impl AgentDefinition {
             data_policy: AgentDataPolicy::default(),
             execution_policy: AgentExecutionPolicy::default(),
             roster_version: 1,
+            dag_pipeline_json: String::new(),
             enabled: true,
             created_at_unix: now,
             updated_at_unix: now,
@@ -480,6 +487,7 @@ pub fn default_local_agent() -> AgentDefinition {
         data_policy: AgentDataPolicy::default(),
         execution_policy: AgentExecutionPolicy::default(),
         roster_version: 1,
+        dag_pipeline_json: String::new(),
         enabled: true,
         created_at_unix: now,
         updated_at_unix: now,
@@ -695,6 +703,7 @@ mod tests {
             data_policy: AgentDataPolicy::default(),
             execution_policy: AgentExecutionPolicy::default(),
             roster_version: 1,
+            dag_pipeline_json: String::new(),
             enabled: true,
             created_at_unix: 100,
             updated_at_unix: 100,

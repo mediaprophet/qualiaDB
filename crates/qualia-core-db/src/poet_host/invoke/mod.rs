@@ -4,7 +4,7 @@
 //! Add a family by adding a file in the matching seam folder and one match arm.
 
 pub mod ids;
-mod agent;
+pub mod agent;
 mod args;
 mod clinical;
 pub mod coverage;

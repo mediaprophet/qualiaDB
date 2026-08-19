@@ -9814,6 +9814,7 @@ dependencies = [
  "lz4_flex",
  "native-tls",
  "pdf-extract",
+ "poet-vibe",
  "qualia-audio",
  "qualia-cooperative-core",
  "qualia-core-db",
