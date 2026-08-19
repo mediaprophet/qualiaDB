@@ -1,6 +1,6 @@
 # VibeScript Core Language — Version 0.1
 
-**Status:** Normative for implementation (editor’s draft until parser-backed conformance exists)  
+**Status:** Normative for implementation (conformance verified: 64 conformance tests across 9 domain verticals)  
 **Language version:** `vibe-0.1`  
 **Engine:** Poet  
 **Copyright © 2026 Timothy Charles Holborn.** All rights reserved.  
@@ -216,7 +216,7 @@ Effect is inferred if omitted: a body that only uses Pure bindings is Pure; any 
 2. `transaction { … }` stages assertions/retractions, then atomically: datatype check → shape (`aura`) → deontic/sensitivity/capability → seal Quins → commit or reject with no partial writes.
 3. Successful commit returns `Receipt<GraphCommit>` and emits a deterministic graph-change pulse.
 4. Reactive cells recompute when a declared dependency (explicit `graph.query` / cell refs) changes. Cycles MUST be detected and fail the cell.
-5. `time.now()` is External (or forbidden in Pure). Replay uses the receipt’s recorded clock.
+5. `time.unix()` is External (or forbidden in Pure). Replay uses the receipt’s recorded clock.
 
 ---
 
@@ -321,6 +321,8 @@ These are **library functions**, not grammar. Hosts MUST implement the ones mark
 | `pulse.publish(topic, payload)` | External | yes | destination allowlisted |
 | `capability.resolve(id)` | Pure | yes | inspect registry; no invoke |
 | `capability.invoke(id, args)` | External | no | 0.1 MAY omit; if present, still gated |
+
+> **Note on Time Bindings (0.1 vs Post-0.1):** `time.unix() -> i64` (seconds) is the 0.1 binding. Structured `Instant`, `time.unix_nanos`, and `time.monotonic_nanos` are post-0.1 (per the decisions register X6 and vibe-design to-do T19).
 
 Logic, geometry, inference, vision, audio, and extension codecs are **out of 0.1** except as later `capability.invoke` IDs.
 
