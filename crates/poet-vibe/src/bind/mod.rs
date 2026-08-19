@@ -121,6 +121,13 @@ pub trait Host {
             format!("capability.invoke not bound on this host: {id}"),
         ))
     }
+
+    /// Host ABI version. Returns "vibe-host-0.1" for the current
+    /// trait surface. Hosts that add methods beyond 0.1 should
+    /// return "vibe-host-0.2" or higher.
+    fn host_version(&self) -> &str {
+        "vibe-host-0.1"
+    }
 }
 
 /// In-memory host for unit tests.
@@ -275,6 +282,7 @@ pub fn dispatch<H: Host>(
         "time.unix" => host.time_unix(span),
         "time.unix_nanos" => host.time_unix_nanos(span),
         "time.monotonic_nanos" => host.time_monotonic_nanos(span),
+        "host.version" => Ok(Value::String(host.host_version().into())),
         "capability.resolve" => {
             let id = match args.first() {
                 Some(Value::String(s)) => s.clone(),
@@ -392,5 +400,46 @@ mod tests {
             host.time_monotonic_nanos(Span::point(0)).unwrap(),
             Value::U64(42_000_000)
         );
+    }
+
+    #[test]
+    fn default_host_version_is_0_1() {
+        let host = MockHost::default();
+        assert_eq!(host.host_version(), "vibe-host-0.1");
+    }
+
+    #[test]
+    fn host_version_dispatch() {
+        let mut host = MockHost::default();
+        let v = dispatch(&mut host, "host.version", &[], &[], Span::point(0)).unwrap();
+        assert_eq!(v, Value::String("vibe-host-0.1".into()));
+    }
+
+    struct CustomVersionHost;
+    impl Host for CustomVersionHost {
+        fn graph_query(&mut self, _args: &[Value], _take: u64, _span: Span) -> Result<Value, Diagnostic> {
+            Ok(Value::Null)
+        }
+        fn graph_stage(&mut self, _term: &Value, _span: Span) -> Result<Value, Diagnostic> {
+            Ok(Value::Null)
+        }
+        fn graph_commit(&mut self, _span: Span) -> Result<Value, Diagnostic> {
+            Ok(Value::Null)
+        }
+        fn aura_validate(&mut self, _node: &Value, _shape: &Value, _span: Span) -> Result<Value, Diagnostic> {
+            Ok(Value::Bool(true))
+        }
+        fn pulse_publish(&mut self, _topic: &str, _payload: &Value, _span: Span) -> Result<Value, Diagnostic> {
+            Ok(Value::Null)
+        }
+        fn host_version(&self) -> &str {
+            "vibe-host-0.2"
+        }
+    }
+
+    #[test]
+    fn custom_host_version() {
+        let host = CustomVersionHost;
+        assert_eq!(host.host_version(), "vibe-host-0.2");
     }
 }
