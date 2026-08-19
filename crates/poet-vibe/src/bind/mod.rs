@@ -150,6 +150,34 @@ pub trait Host {
             "no receipt clock configured on this host",
         ))
     }
+
+    /// Sample a field at a pose. Returns a Quantity. Default: E702.
+    fn field_sample(
+        &mut self,
+        _field_ref: u64,
+        _pose: &Value,
+        span: Span,
+    ) -> Result<Value, Diagnostic> {
+        Err(Diagnostic::new(
+            DiagCode::E702,
+            span,
+            "field_sample not available on this host",
+        ))
+    }
+
+    /// Apply a law to arguments. Returns a Receipt. Default: E702.
+    fn law_apply(
+        &mut self,
+        _law_ref: u64,
+        _args: &[Value],
+        span: Span,
+    ) -> Result<Value, Diagnostic> {
+        Err(Diagnostic::new(
+            DiagCode::E702,
+            span,
+            "law_apply not available on this host",
+        ))
+    }
 }
 
 /// In-memory host for unit tests.
@@ -312,6 +340,23 @@ pub fn dispatch<H: Host>(
             host.time_proper_time(worldline_id, span)
         }
         "receipt.clock" => host.receipt_clock(span),
+        "field.sample" => {
+            let field_ref = args.first()
+                .and_then(|v| v.as_i64())
+                .unwrap_or(0) as u64;
+            let pose = args.get(1).unwrap_or(&Value::Null);
+            host.field_sample(field_ref, pose, span)
+        }
+        "law.apply" => {
+            let law_ref = args.first()
+                .and_then(|v| v.as_i64())
+                .unwrap_or(0) as u64;
+            let law_args: &[Value] = match args.get(1) {
+                Some(Value::List(xs)) => xs.as_slice(),
+                _ => &[],
+            };
+            host.law_apply(law_ref, law_args, span)
+        }
         "capability.resolve" => {
             let id = match args.first() {
                 Some(Value::String(s)) => s.clone(),
@@ -573,6 +618,69 @@ mod tests {
                 assert_eq!(r.get("secs"), Some(&Value::I64(1_000_000_000)));
                 assert_eq!(r.get("nanos"), Some(&Value::U64(42_000)));
             }
+            other => panic!("expected record, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn field_sample_default_e702() {
+        let mut host = MockHost::default();
+        let res = host.field_sample(1, &Value::Null, Span::point(0));
+        assert!(res.is_err());
+        assert_eq!(res.unwrap_err().code, DiagCode::E702);
+    }
+
+    #[test]
+    fn law_apply_default_e702() {
+        let mut host = MockHost::default();
+        let res = host.law_apply(1, &[], Span::point(0));
+        assert!(res.is_err());
+        assert_eq!(res.unwrap_err().code, DiagCode::E702);
+    }
+
+    struct FieldLawHost;
+    impl Host for FieldLawHost {
+        fn graph_query(&mut self, _args: &[Value], _take: u64, _span: Span) -> Result<Value, Diagnostic> {
+            Ok(Value::Null)
+        }
+        fn graph_stage(&mut self, _term: &Value, _span: Span) -> Result<Value, Diagnostic> {
+            Ok(Value::Null)
+        }
+        fn graph_commit(&mut self, _span: Span) -> Result<Value, Diagnostic> {
+            Ok(Value::Null)
+        }
+        fn aura_validate(&mut self, _node: &Value, _shape: &Value, _span: Span) -> Result<Value, Diagnostic> {
+            Ok(Value::Bool(true))
+        }
+        fn pulse_publish(&mut self, _topic: &str, _payload: &Value, _span: Span) -> Result<Value, Diagnostic> {
+            Ok(Value::Null)
+        }
+        fn field_sample(&mut self, field_ref: u64, _pose: &Value, _span: Span) -> Result<Value, Diagnostic> {
+            Ok(Value::Quantity(crate::value::Quantity::new(field_ref as f64, "qudt:Meter")))
+        }
+        fn law_apply(&mut self, law_ref: u64, _args: &[Value], _span: Span) -> Result<Value, Diagnostic> {
+            let mut rec = std::collections::BTreeMap::new();
+            rec.insert("law_id".into(), Value::U64(law_ref));
+            Ok(Value::Record(rec))
+        }
+    }
+
+    #[test]
+    fn field_sample_custom() {
+        let mut host = FieldLawHost;
+        let res = host.field_sample(42, &Value::Null, Span::point(0)).unwrap();
+        match res {
+            Value::Quantity(q) => assert_eq!(q.value, 42.0),
+            other => panic!("expected quantity, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn law_apply_custom() {
+        let mut host = FieldLawHost;
+        let res = host.law_apply(7, &[], Span::point(0)).unwrap();
+        match res {
+            Value::Record(r) => assert_eq!(r.get("law_id"), Some(&Value::U64(7))),
             other => panic!("expected record, got {other:?}"),
         }
     }
