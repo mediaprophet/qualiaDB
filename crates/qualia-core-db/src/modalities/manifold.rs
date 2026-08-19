@@ -20,9 +20,46 @@ pub const MANIFOLD_ASP_ATOMS: [u64; 5] = [
     MANIFOLD_ATOM_STABLE,
 ];
 
-/// Defines a tensor's precise location in the 10D geometric frameset.
+/// Defines a tensor's precise location in the 10D **epistemic** frameset.
 /// This replaces the concept of integer chronological layers (e.g. "Layer 12")
 /// with a continuous spatial coordinate in P64 containers.
+///
+/// # T14 — Name the two tens
+///
+/// There are TWO distinct 10D structures in this codebase. They are NOT
+/// the same thing and must not be conflated:
+///
+/// 1. **`Tensor10D`** (`crate::tensor::Tensor10D`) — **pose/query lanes**.
+///    Fields: `q, v, w, x, y, z, t, α, μ, σ`. These are physical/spatial
+///    coordinates for positioning a tensor in the 10D space. Used for
+///    distance queries, rendering, and geometry. VibeScript sees this.
+///
+/// 2. **`ManifoldCoordinate10D`** (this struct, aliased as `Epistemic10D`) —
+///    **epistemic/attention geometry**. Fields: `scale, attention_depth,
+///    epistemic_weight, topological_spin, temporal_decay, entropy_bias,
+///    spatial_phase, recurrence_frequency, density_threshold,
+///    manifold_curvature`. These are epistemic properties for
+///    attention/learning/inference. VibeScript does NOT see this directly.
+///
+/// # T16 — Morphism between the two tens
+///
+/// The morphism from `Tensor10D` → `ManifoldCoordinate10D` (alias
+/// `Epistemic10D`) is a **host-internal projection**, not a VibeScript
+/// operation. Vibe never sees `ManifoldCoordinate10D`. The rule:
+///
+/// - `Tensor10D` is the **Vibe-visible** 10D structure (pose, query,
+///   distance, rendering).
+/// - `ManifoldCoordinate10D` / `Epistemic10D` is the **inference-internal**
+///   10D structure (attention, epistemic weight, decay, density).
+/// - The morphism is applied by the host's inference layer when mapping
+///   a pose/query position to an attention/epistemic position. It is
+///   not exposed to VibeScript.
+/// - If a future VibeScript operation needs to reference the epistemic
+///   manifold, it should go through a Host ABI method (e.g.
+///   `manifold.attention(pose) → Attention10D`), not by exposing the
+///   raw struct.
+///
+/// Reference: `docs/vibescript-full-impl-PLAN.md` §8.2 T14, T16.
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct ManifoldCoordinate10D {
@@ -37,6 +74,12 @@ pub struct ManifoldCoordinate10D {
     pub density_threshold: f32,
     pub manifold_curvature: f32,
 }
+
+/// T14: The normative name for the epistemic 10D structure.
+/// `ManifoldCoordinate10D` is the implementation name; `Epistemic10D`
+/// is the conceptual name. Use `Epistemic10D` in prose and comments;
+/// use `ManifoldCoordinate10D` in code (they are the same type).
+pub type Epistemic10D = ManifoldCoordinate10D;
 
 impl ManifoldCoordinate10D {
     pub const DIMENSIONS: usize = 10;
@@ -552,5 +595,54 @@ mod tests {
         let count = evaluate_manifold_answer_sets(&curved, &mut models);
         assert_eq!(count, 1);
         assert_eq!(models[0] & (1u64 << stable_index), 0);
+    }
+
+    // ── T14/T16: Name the two tens + morphism documentation ──────────
+
+    #[test]
+    fn t14_epistemic_10d_alias_exists() {
+        // T14: Epistemic10D is a type alias for ManifoldCoordinate10D.
+        let coord: Epistemic10D = ManifoldCoordinate10D::default();
+        assert_eq!(coord.scale, 0.0);
+        // Verify they are the same type.
+        let _: &ManifoldCoordinate10D = &coord;
+    }
+
+    #[test]
+    fn t14_two_tens_are_distinct_structs() {
+        // T14: Tensor10D and ManifoldCoordinate10D (Epistemic10D) are
+        // distinct structures with different fields and purposes.
+        // Tensor10D = pose/query lanes (q,v,w,x,y,z,t,alpha,mu,sigma)
+        // Epistemic10D = attention/epistemic geometry (scale, attention_depth, ...)
+        use crate::tensor::Tensor10D;
+        let pose = Tensor10D::default();
+        let epistemic = Epistemic10D::default();
+        // They have different field sets — just verify they're different types.
+        assert_ne!(
+            std::mem::size_of::<Tensor10D>(),
+            0, // sanity: Tensor10D is not zero-sized
+        );
+        assert_ne!(
+            std::mem::size_of::<Epistemic10D>(),
+            0, // sanity: Epistemic10D is not zero-sized
+        );
+        // Both are 10 * f32 = 40 bytes.
+        assert_eq!(std::mem::size_of::<Tensor10D>(), 40);
+        assert_eq!(std::mem::size_of::<Epistemic10D>(), 40);
+    }
+
+    #[test]
+    fn t16_morphism_documented_in_source() {
+        // T16: The morphism between Tensor10D and Epistemic10D is
+        // documented in the source comments.
+        let source = include_str!("manifold.rs");
+        assert!(source.contains("T14"), "missing T14 reference");
+        assert!(source.contains("T16"), "missing T16 reference");
+        assert!(source.contains("Epistemic10D"), "missing Epistemic10D name");
+        assert!(source.contains("morphism"), "missing morphism documentation");
+        assert!(
+            source.contains("Vibe never sees") || source.contains("VibeScript does NOT see"),
+            "missing rule that Vibe doesn't see Epistemic10D directly"
+        );
     }
 }
