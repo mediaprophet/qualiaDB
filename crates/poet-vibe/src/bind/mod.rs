@@ -139,6 +139,17 @@ pub trait Host {
             "proper_time not available on this host",
         ))
     }
+
+    /// Deterministic replay clock for WASM. Returns None when no
+    /// replay clock is configured. When Some, the returned
+    /// { secs, nanos } is used instead of wall-clock time.
+    fn receipt_clock(&mut self, span: Span) -> Result<Value, Diagnostic> {
+        Err(Diagnostic::new(
+            DiagCode::E702,
+            span,
+            "no receipt clock configured on this host",
+        ))
+    }
 }
 
 /// In-memory host for unit tests.
@@ -300,6 +311,7 @@ pub fn dispatch<H: Host>(
                 .unwrap_or(0) as u64;
             host.time_proper_time(worldline_id, span)
         }
+        "receipt.clock" => host.receipt_clock(span),
         "capability.resolve" => {
             let id = match args.first() {
                 Some(Value::String(s)) => s.clone(),
@@ -509,5 +521,59 @@ mod tests {
         let mut host = ProperTimeHost;
         let res = host.time_proper_time(100, Span::point(0)).unwrap();
         assert_eq!(res, Value::F64(0.1));
+    }
+
+    #[test]
+    fn receipt_clock_default_e702() {
+        let mut host = MockHost::default();
+        let res = host.receipt_clock(Span::point(0));
+        assert!(res.is_err());
+        assert_eq!(res.unwrap_err().code, DiagCode::E702);
+    }
+
+    #[test]
+    fn receipt_clock_dispatch_default_e702() {
+        let mut host = MockHost::default();
+        let res = dispatch(&mut host, "receipt.clock", &[], &[], Span::point(0));
+        assert!(res.is_err());
+        assert_eq!(res.unwrap_err().code, DiagCode::E702);
+    }
+
+    struct ReceiptClockHost;
+    impl Host for ReceiptClockHost {
+        fn graph_query(&mut self, _args: &[Value], _take: u64, _span: Span) -> Result<Value, Diagnostic> {
+            Ok(Value::Null)
+        }
+        fn graph_stage(&mut self, _term: &Value, _span: Span) -> Result<Value, Diagnostic> {
+            Ok(Value::Null)
+        }
+        fn graph_commit(&mut self, _span: Span) -> Result<Value, Diagnostic> {
+            Ok(Value::Null)
+        }
+        fn aura_validate(&mut self, _node: &Value, _shape: &Value, _span: Span) -> Result<Value, Diagnostic> {
+            Ok(Value::Bool(true))
+        }
+        fn pulse_publish(&mut self, _topic: &str, _payload: &Value, _span: Span) -> Result<Value, Diagnostic> {
+            Ok(Value::Null)
+        }
+        fn receipt_clock(&mut self, _span: Span) -> Result<Value, Diagnostic> {
+            let mut rec = std::collections::BTreeMap::new();
+            rec.insert("secs".into(), Value::I64(1_000_000_000));
+            rec.insert("nanos".into(), Value::U64(42_000));
+            Ok(Value::Record(rec))
+        }
+    }
+
+    #[test]
+    fn receipt_clock_custom() {
+        let mut host = ReceiptClockHost;
+        let val = host.receipt_clock(Span::point(0)).unwrap();
+        match val {
+            Value::Record(r) => {
+                assert_eq!(r.get("secs"), Some(&Value::I64(1_000_000_000)));
+                assert_eq!(r.get("nanos"), Some(&Value::U64(42_000)));
+            }
+            other => panic!("expected record, got {other:?}"),
+        }
     }
 }
