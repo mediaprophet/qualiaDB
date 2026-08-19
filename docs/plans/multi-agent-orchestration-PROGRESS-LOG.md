@@ -123,3 +123,59 @@ wired together. Drafted a comprehensive orchestration strategy with:
 2. Wire real presentation morphism for `Manifold.project` (T27 follow-up).
 3. Connect remaining LLM inference decode streams into the unified DAG scheduler pipeline.
 
+---
+
+## Round 4 Summary (2026-08-19)
+
+**Test counts before:** poet-vibe 174 lib + 64 conformance, qualia-client-core agent_turn 8/8.
+
+### Completed by Round4-Cascade (parallel agent, commits already in tree)
+
+| Task | T-item | Commit | Description |
+|------|--------|--------|-------------|
+| H1 | T13 | `6395addf` | Remove I32/U32/F32 from Type — runtime only supports 64-bit |
+| H2 | T17 | `19161436` | Version the Host trait — host.version() returns vibe-host-0.1 |
+| H3 | T21 | `8b65fd06` | time.proper_time Host ABI — default E702 |
+| H4 | T22 | `02313740` | receipt.clock Host ABI — deterministic replay path |
+| H5 | T23 | `b5d75179` | field.sample and law.apply Host ABI — default E702 |
+| H6 | T26 | `377d53ca` | Reflection stage 3 isolation — Host::supports_isolation |
+| H7 | T9 | `78a7c8c7` | Golden corpus — enum/ADT fixtures (ad1-ad4) |
+
+### Completed by Devin (this session, after Round4-Cascade work)
+
+| Task | T-item | Commit | Description |
+|------|--------|--------|-------------|
+| T28-T30 | — | `9eafe119` | FieldDecl/MaterialDecl/LawDecl AST nodes + parser + eval + CBOR |
+| T33 | — | `96261bc2` | SpeciesRef + Mixture value types |
+| T34-T35 | — | `7f8045ff` | Conservation hooks + causal/light-cone relations |
+| H8 | T28-T30 | `ed32e67c` | Golden corpus — field/material/law fixtures (qd1-qd4) |
+| H9-H10 | T11, T10 | `7edcaa6e` | Golden corpus — checked-integer + mut enforcement fixtures |
+| H11-H12 | T55, T56 | `29d71dad` | DisclosureDenied + DisclosureBoundary first-class values |
+| H13 | T59 | `3c2cfe9e` | Agent characteristics KB scaffold |
+| H14 | T60 | `4f09dfc8` | poet-lsp server scaffold — diagnostics + document sync |
+| H15 | T64 | `c405af73` | Kill vibe:0.1/ as sacred string — prefix optional |
+| H16 | T67 | `5df4329e` | Reconcile Tensor10D comments and axis_role.rs — t vs μ |
+| H17 | T70 | `f2592c8c` | Continuant type — distinct from Did |
+| H18 | T71 | `ac892242` | AssertedTime type alias — bridge to Instant migration |
+| H19 | T72 | `527f5e11` | Law packages as signed content — provenance scaffold |
+
+### Test counts after
+
+- **poet-vibe lib:** 236 passed (up from 174)
+- **poet-vibe conformance:** 78 passed (up from 64; +6 checked-integer/mut + +4 field/material/law + +4 enum/ADT)
+- **poet-lsp:** 7 passed (new crate)
+- **qualia-client-core agent_characteristics:** 8 passed (new module)
+- **qualia-core-db law_packages:** 7 passed (new module)
+- **wellfare-core:** 221 passed (+1 AssertedTime test)
+
+### Skipped tasks
+
+None — all H1-H20 were completed. H20 is this progress log entry.
+
+### Issues discovered
+
+- The other agent's uncommitted H8 fixtures (qd1-qd4) and conformance changes were found in the working tree and committed on their behalf.
+- The user reverted the T34-T35 `Conservation` and `Causal` Type variants from types.rs (those are runtime value types, not statically typed — the revert is correct).
+- The `vibe:0.1/` prefix is now optional in import paths (T64), but existing tests using the prefix still pass (backward compatible).
+- The t vs μ disagreement in Tensor10D comments is resolved (T67): t = coordinate time, μ = provenance carrier.
+
