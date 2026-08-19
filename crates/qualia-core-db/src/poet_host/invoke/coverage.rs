@@ -228,6 +228,204 @@ pub fn markdown() -> String {
     s
 }
 
+/// Machine-readable schema for a capability.invoke ID (T51).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct MachineSchema {
+    pub id: &'static str,
+    pub family: &'static str,
+    pub honesty: &'static str,
+    pub effect_class: &'static str,
+    pub arg_shape: &'static str,
+    pub return_shape: &'static str,
+}
+
+pub const SCHEMAS: &[MachineSchema] = &[
+    MachineSchema {
+        id: ids::DAG_EXECUTE,
+        family: "agent",
+        honesty: "certified",
+        effect_class: "Cold",
+        arg_shape: r#"{"type":"list","items":{"type":"record"}}"#,
+        return_shape: r#"{"type":"string"}"#,
+    },
+    MachineSchema {
+        id: ids::DAG_VALIDATE,
+        family: "agent",
+        honesty: "certified",
+        effect_class: "Pure",
+        arg_shape: r#"{"type":"list","items":{"type":"record"}}"#,
+        return_shape: r#"{"type":"bool"}"#,
+    },
+    MachineSchema {
+        id: ids::DAG_STATUS,
+        family: "agent",
+        honesty: "stub",
+        effect_class: "Pure",
+        arg_shape: r#"{"type":"null"}"#,
+        return_shape: r#"{"type":"null"}"#,
+    },
+    MachineSchema {
+        id: ids::DISCOVERY_LIST,
+        family: "runtime",
+        honesty: "certified",
+        effect_class: "Pure",
+        arg_shape: r#"{"type":"null"}"#,
+        return_shape: r#"{"type":"list","items":{"type":"string"}}"#,
+    },
+    MachineSchema {
+        id: ids::SHACL_VALIDATE,
+        family: "graph",
+        honesty: "certified",
+        effect_class: "Pure",
+        arg_shape: r#"{"type":"record"}"#,
+        return_shape: r#"{"type":"record"}"#,
+    },
+    MachineSchema {
+        id: ids::GRAPH_STATS,
+        family: "graph",
+        honesty: "certified",
+        effect_class: "Pure",
+        arg_shape: r#"{"type":"null"}"#,
+        return_shape: r#"{"type":"record"}"#,
+    },
+    MachineSchema {
+        id: ids::GRAPH_SPARQL,
+        family: "graph",
+        honesty: "certified",
+        effect_class: "Pure",
+        arg_shape: r#"{"type":"string"}"#,
+        return_shape: r#"{"type":"list"}"#,
+    },
+    MachineSchema {
+        id: ids::GRAPH_SHORTEST_PATH,
+        family: "graph",
+        honesty: "certified",
+        effect_class: "Pure",
+        arg_shape: r#"{"type":"record"}"#,
+        return_shape: r#"{"type":"list"}"#,
+    },
+    MachineSchema {
+        id: ids::LINALG_MATMUL,
+        family: "math",
+        honesty: "certified",
+        effect_class: "Pure",
+        arg_shape: r#"{"type":"record","properties":{"a":{"type":"list"},"b":{"type":"list"}}}"#,
+        return_shape: r#"{"type":"list"}"#,
+    },
+    MachineSchema {
+        id: ids::NT_GCD,
+        family: "math",
+        honesty: "certified",
+        effect_class: "Pure",
+        arg_shape: r#"{"type":"record","properties":{"a":{"type":"integer"},"b":{"type":"integer"}}}"#,
+        return_shape: r#"{"type":"integer"}"#,
+    },
+    MachineSchema {
+        id: ids::NT_PRIME,
+        family: "math",
+        honesty: "certified",
+        effect_class: "Pure",
+        arg_shape: r#"{"type":"integer"}"#,
+        return_shape: r#"{"type":"bool"}"#,
+    },
+    MachineSchema {
+        id: ids::CALC_SIMPSON,
+        family: "math",
+        honesty: "certified",
+        effect_class: "Pure",
+        arg_shape: r#"{"type":"record"}"#,
+        return_shape: r#"{"type":"number"}"#,
+    },
+    MachineSchema {
+        id: ids::DEONTIC_EVAL,
+        family: "logic",
+        honesty: "certified",
+        effect_class: "Pure",
+        arg_shape: r#"{"type":"null"}"#,
+        return_shape: r#"{"type":"record"}"#,
+    },
+    MachineSchema {
+        id: ids::EPISTEMIC_EVAL,
+        family: "logic",
+        honesty: "certified",
+        effect_class: "Pure",
+        arg_shape: r#"{"type":"null"}"#,
+        return_shape: r#"{"type":"record"}"#,
+    },
+    MachineSchema {
+        id: ids::PHYS_PROJECTILE,
+        family: "physics",
+        honesty: "certified",
+        effect_class: "Pure",
+        arg_shape: r#"{"type":"record"}"#,
+        return_shape: r#"{"type":"record"}"#,
+    },
+    MachineSchema {
+        id: ids::PHYS_WAVE_1D,
+        family: "physics",
+        honesty: "certified",
+        effect_class: "Pure",
+        arg_shape: r#"{"type":"record"}"#,
+        return_shape: r#"{"type":"list"}"#,
+    },
+    MachineSchema {
+        id: ids::PHYS_HARMONIC_OSCILLATOR,
+        family: "physics",
+        honesty: "certified",
+        effect_class: "Pure",
+        arg_shape: r#"{"type":"record"}"#,
+        return_shape: r#"{"type":"record"}"#,
+    },
+    MachineSchema {
+        id: ids::SPECTRAL_EMF_TO_RGB,
+        family: "spectral",
+        honesty: "certified",
+        effect_class: "Pure",
+        arg_shape: r#"{"type":"record"}"#,
+        return_shape: r#"{"type":"record"}"#,
+    },
+    MachineSchema {
+        id: ids::RENDER_SCENE,
+        family: "render",
+        honesty: "certified",
+        effect_class: "Pure",
+        arg_shape: r#"{"type":"record"}"#,
+        return_shape: r#"{"type":"record"}"#,
+    },
+    MachineSchema {
+        id: ids::RENDER_SVG_PATH,
+        family: "render",
+        honesty: "certified",
+        effect_class: "Pure",
+        arg_shape: r#"{"type":"record"}"#,
+        return_shape: r#"{"type":"string"}"#,
+    },
+    MachineSchema {
+        id: ids::RENDER_CSS_COLOR,
+        family: "render",
+        honesty: "certified",
+        effect_class: "Pure",
+        arg_shape: r#"{"type":"record"}"#,
+        return_shape: r#"{"type":"string"}"#,
+    },
+    MachineSchema {
+        id: ids::MANIFOLD_PROJECT,
+        family: "manifold",
+        honesty: "stub",
+        effect_class: "Pure",
+        arg_shape: r#"{"type":"record"}"#,
+        return_shape: r#"{"type":"record"}"#,
+    },
+];
+
+pub fn schema_for(id: &str) -> Option<&'static MachineSchema> {
+    SCHEMAS.iter().find(|s| s.id == id)
+}
+
+pub fn all_schemas() -> &'static [MachineSchema] {
+    SCHEMAS
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -260,6 +458,32 @@ mod tests {
                 other => panic!("{other:?}"),
             },
             other => panic!("{other:?}"),
+        }
+    }
+
+    #[test]
+    fn schema_for_known_id() {
+        let s = schema_for(ids::DAG_EXECUTE).expect("DAG_EXECUTE must have a schema");
+        assert_eq!(s.family, "agent");
+        assert_eq!(s.effect_class, "Cold");
+    }
+
+    #[test]
+    fn schema_for_unknown_id() {
+        assert!(schema_for("nonexistent.foo").is_none());
+    }
+
+    #[test]
+    fn all_schemas_nonempty() {
+        assert!(!all_schemas().is_empty());
+    }
+
+    #[test]
+    fn every_schema_has_family() {
+        for s in all_schemas() {
+            assert!(!s.family.is_empty(), "schema {} has empty family", s.id);
+            assert!(!s.arg_shape.is_empty(), "schema {} has empty arg_shape", s.id);
+            assert!(!s.return_shape.is_empty(), "schema {} has empty return_shape", s.id);
         }
     }
 }
