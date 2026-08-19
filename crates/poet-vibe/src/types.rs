@@ -13,6 +13,11 @@ pub enum Type {
     Iri,
     BlankNode,
     Did,
+    /// A continuant — a thing that persists through time (T70).
+    /// Distinct from `Did` which is just an identifier. A `Did`
+    /// *refers to* a `Continuant`; a `Continuant` *has a* `Did`.
+    /// Continuants have worldlines and endure through time.
+    Continuant,
     Hash,
     Var,
     Literal,
@@ -64,6 +69,7 @@ impl Type {
             "Iri" => Type::Iri,
             "BlankNode" => Type::BlankNode,
             "Did" => Type::Did,
+            "Continuant" => Type::Continuant,
             "Hash" => Type::Hash,
             "Var" => Type::Var,
             "Literal" => Type::Literal,
@@ -140,5 +146,22 @@ mod tests {
     #[test]
     fn from_ast_f32_maps_to_f64() {
         assert_eq!(Type::from_ast(&tx("f32")), Type::F64);
+    }
+
+    // ── T70: Continuant distinct from Did ─────────────────────────────
+
+    #[test]
+    fn continuant_type_exists() {
+        assert!(matches!(Type::Continuant, Type::Continuant));
+    }
+
+    #[test]
+    fn from_ast_continuant() {
+        assert_eq!(Type::from_ast(&tx("Continuant")), Type::Continuant);
+    }
+
+    #[test]
+    fn continuant_distinct_from_did() {
+        assert_ne!(Type::Continuant, Type::Did);
     }
 }
