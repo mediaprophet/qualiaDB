@@ -703,3 +703,81 @@ AST nodes, then Species/Mixture, then CST, then HID, then pretty syntax last.
 - A second syntax surface that agents use while humans use another.
 - Treating the geometric model as pure research — force every new geometric primitive to lower.
 - Letting the 42 MB sentinel or zero-heap rules become soft.
+
+---
+
+## 9. Multi-Agent Orchestration Strategy (2026-08-19)
+
+**Source:** `docs/plans/multi-agent-orchestration-strategy-2026-08-19.md`
+
+The VibeScript agent primitives (A1–A9), the engine coordination ISA
+(`governance/coordination.rs`), and the desktop agent roster
+(`qualia-client-core/agent_registry.rs`) are each implemented and tested in
+isolation. The orchestration strategy defines how to wire them together into
+a unified multi-agent execution substrate.
+
+### 9.1 The 14 gaps (G1–G14)
+
+| Gap | What's not wired |
+|-----|------------------|
+| G1 | DAG → eval (A6 `dag.rs` not on `lib.rs` public surface) |
+| G2 | Deontic → capability_invoke (A8 prohibitions don't gate eval) |
+| G3 | Reflection → isolated PoetSnapshot (A3 stage 3 may write live graph) |
+| G4 | Blackboard → DAG node I/O (A5 channels declared but not read/written) |
+| G5 | Coord ISA → host seams (verify_root_delegation, SuspendedTransactionQueue, VC minting) |
+| G6 | Agent roster → chat dispatch (@mention doesn't resolve to roster agent) |
+| G7 | Agent roster → DAG pipeline (no path from @mention to DAG node binding) |
+| G8 | Job scheduler → agent turns (no `LocalJobKind::AgentTurn`) |
+| G9 | Eτ evidential → diagnostic loop (diagnostics don't carry (μ, λ)) |
+| G10 | Semantic skills → agent context (A9 not injected into context windows) |
+| G11 | DOMINO → in-process sampler (GBNF artifacts exist; inference doesn't consume) |
+| G12 | Performance VCs → reputation routing (compute_priority not called) |
+| G13 | Instrument traces (Kind B) not shipped |
+| G14 | DisclosureDenied not a first-class value |
+
+### 9.2 The 12 refactors (R1–R12)
+
+| # | Refactor | Priority | Risk | Depends on |
+|---|----------|----------|------|------------|
+| R1 | `pub use dag, deontic_interrupt, reflection` from `lib.rs` | P0 | Low | — |
+| R2 | Wire `PhaseLeaser` into `eval.rs` capability dispatch | P1 | Medium | R1 |
+| R3 | Wire `DagPipeline` execution into `poet_host` | P2 | Medium | R1, R5 |
+| R4 | Isolate `reflection::Stage3` on `PoetSnapshot` fork | P0 | Low | — |
+| R5 | Connect blackboard channels to DAG node I/O | P0 | Low | R1 |
+| R6 | Add `LocalJobKind::AgentTurn` to job scheduler | P2 | Low | — |
+| R7 | Resolve @mentions to roster agents | P2 | Medium | — |
+| R8 | Wire `governance/coordination.rs` host seams | P1 | Medium | — |
+| R9 | Wire DOMINO logit mask into `QTensorEngine` | P3 | High | — |
+| R10 | Add `DisclosureDenied` value type | P3 | Low | — |
+| R11 | Wire `compute_priority` into `daemon_swarm.rs` | P1 | Low | — |
+| R12 | Instrument trace ledger (Kind B) | P4 | Low | — |
+
+### 9.3 Priority tiers
+
+| Tier | Items | Can start? |
+|------|-------|------------|
+| P0: Foundation | R1, R4, R5 | ✅ Immediately |
+| P1: Governance | R2, R8, R11 | After P0 |
+| P2: Agent dispatch | R6, R7, R3 | After P1 |
+| P3: Inference quality | R9, R10 | After P2 |
+| P4: Audit | R12, G9 | After P2 |
+
+### 9.4 Critical path
+
+```
+R1 → R5 → R3 → R6 → R7 → agent_turn_handler
+R2 ──────────────────────────┘
+```
+
+Six steps to "Timothy can @mention two agents and they run as a governed DAG
+pipeline with blackboard-mediated state sharing."
+
+### 9.5 Decisions needing Timothy (D1–D6)
+
+See strategy document §6. Defaults provided for speed.
+
+### 9.6 Tracking
+
+- Strategy: `docs/plans/multi-agent-orchestration-strategy-2026-08-19.md`
+- Progress: `docs/plans/multi-agent-orchestration-PROGRESS-LOG.md`
+- Coordination: `coordination/NOTICES.md` (CLAIM/PROGRESS/RELEASE)
