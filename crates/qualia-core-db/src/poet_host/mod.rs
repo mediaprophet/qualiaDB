@@ -1,4 +1,4 @@
-﻿//! Live Poet host over a caller-owned Quin snapshot (P5).
+//! Live Poet host over a caller-owned Quin snapshot (P5).
 //!
 //! Scripts never write `parity`. The host seals via `NQuin::calculate_parity`.
 //! Vibe is the human/app path into existing Qualia capabilities. Document NLP
@@ -22,6 +22,94 @@ use poet_vibe::{eval_cell, eval_function, load_program, Diagnostic, Env, Host, V
 /// Topics `pulse.publish` may use in 0.1. Anything else is E500.
 pub const PULSE_ALLOW_PREFIXES: &[&str] = &["clinic/", "poet/", "pulse/"];
 
+/// Admission and coalescing policy for ticks under load (T68).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TickPolicy {
+    /// Process every tick, even if behind (may cause lag).
+    ProcessAll,
+    /// Coalesce: if a tick is in progress, drop intermediate ticks
+    /// and process only the latest. Default.
+    Coalesce,
+    /// Drop ticks while processing (may lose events).
+    Drop,
+}
+
+impl Default for TickPolicy {
+    fn default() -> Self {
+        Self::Coalesce
+    }
+}
+
+/// State machine managing tick admission under load (T68).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TickController {
+    pub policy: TickPolicy,
+    pub in_flight: bool,
+    pub pending_ticks: usize,
+    pub total_processed: u64,
+    pub total_coalesced: u64,
+    pub total_dropped: u64,
+}
+
+impl Default for TickController {
+    fn default() -> Self {
+        Self::new(TickPolicy::Coalesce)
+    }
+}
+
+impl TickController {
+    pub fn new(policy: TickPolicy) -> Self {
+        Self {
+            policy,
+            in_flight: false,
+            pending_ticks: 0,
+            total_processed: 0,
+            total_coalesced: 0,
+            total_dropped: 0,
+        }
+    }
+
+    /// Request a new tick. Returns `true` if the tick should immediately be executed.
+    pub fn request_tick(&mut self) -> bool {
+        if !self.in_flight {
+            self.in_flight = true;
+            self.total_processed += 1;
+            return true;
+        }
+
+        match self.policy {
+            TickPolicy::ProcessAll => {
+                self.pending_ticks += 1;
+                false
+            }
+            TickPolicy::Coalesce => {
+                if self.pending_ticks > 0 {
+                    self.total_coalesced += 1;
+                }
+                self.pending_ticks = 1;
+                false
+            }
+            TickPolicy::Drop => {
+                self.total_dropped += 1;
+                false
+            }
+        }
+    }
+
+    /// Finish current tick processing. Returns `true` if a coalesced or queued tick should now execute.
+    pub fn finish_tick(&mut self) -> bool {
+        if self.pending_ticks > 0 {
+            self.pending_ticks -= 1;
+            self.total_processed += 1;
+            self.in_flight = true;
+            true
+        } else {
+            self.in_flight = false;
+            false
+        }
+    }
+}
+
 /// A recorded `pulse.publish` call — the 0.1 receipt for UI / audit display.
 ///
 /// When the snapshot is `attached` to the live daemon graph, each publish also
@@ -43,7 +131,7 @@ const RDF_REIFIES: &[u8] = b"http://www.w3.org/1999/02/22-rdf-syntax-ns#reifies"
 /// In-memory graph revision used as the 0.1 live host.
 ///
 /// When `attached`, queries refresh from the native daemon graph and commits
-/// extend it. WASM has no daemon_graph â€” attach is always false there.
+/// extend it. WASM has no daemon_graph — attach is always false there.
 #[derive(Debug, Clone, Default)]
 pub struct PoetSnapshot {
     pub committed: Vec<NQuin>,
@@ -59,6 +147,8 @@ pub struct PoetSnapshot {
     /// The desktop harness resets this before each `eval_cell_src` and reads
     /// it after to determine whether the cell is time-dependent (reactive on tick).
     pub time_read_during_eval: bool,
+    /// Controller managing tick admission and coalescing under load (T68).
+    pub tick_controller: TickController,
 }
 
 impl PoetSnapshot {
@@ -71,6 +161,7 @@ impl PoetSnapshot {
             attached: false,
             graph_read_during_eval: false,
             time_read_during_eval: false,
+            tick_controller: TickController::default(),
         }
     }
 
@@ -95,6 +186,7 @@ impl PoetSnapshot {
             attached: true,
             graph_read_during_eval: false,
             time_read_during_eval: false,
+            tick_controller: TickController::default(),
         }
     }
 
@@ -173,6 +265,7 @@ impl PoetSnapshot {
             attached: false,
             graph_read_during_eval: false,
             time_read_during_eval: false,
+            tick_controller: self.tick_controller.clone(),
         }
     }
 
@@ -1063,6 +1156,54 @@ on tick() {
         // On WASM, returns 0. Just verify it doesn't panic and returns I64.
         assert!(matches!(v1, Value::I64(_)), "time.unix should return I64");
         assert!(snap.time_read_during_eval, "time_read_during_eval should be set");
+    }
+
+    #[test]
+    fn tick_process_all() {
+        let mut ctrl = TickController::new(TickPolicy::ProcessAll);
+        assert!(ctrl.request_tick()); // tick 1 in flight
+        assert!(!ctrl.request_tick()); // tick 2 queued
+        assert!(!ctrl.request_tick()); // tick 3 queued
+        assert_eq!(ctrl.pending_ticks, 2);
+
+        assert!(ctrl.finish_tick()); // finishes tick 1, starts tick 2
+        assert_eq!(ctrl.pending_ticks, 1);
+        assert!(ctrl.finish_tick()); // finishes tick 2, starts tick 3
+        assert_eq!(ctrl.pending_ticks, 0);
+        assert!(!ctrl.finish_tick()); // finishes tick 3, idle
+        assert!(!ctrl.in_flight);
+        assert_eq!(ctrl.total_processed, 3);
+    }
+
+    #[test]
+    fn tick_coalesce() {
+        let mut ctrl = TickController::new(TickPolicy::Coalesce);
+        assert!(ctrl.request_tick()); // tick 1 in flight
+        assert!(!ctrl.request_tick()); // tick 2 pending (coalesced)
+        assert!(!ctrl.request_tick()); // tick 3 collapses into pending
+        assert!(!ctrl.request_tick()); // tick 4 collapses into pending
+        assert_eq!(ctrl.pending_ticks, 1);
+        assert_eq!(ctrl.total_coalesced, 2);
+
+        assert!(ctrl.finish_tick()); // finishes tick 1, executes single coalesced tick
+        assert_eq!(ctrl.pending_ticks, 0);
+        assert!(!ctrl.finish_tick()); // finishes coalesced tick, idle
+        assert!(!ctrl.in_flight);
+        assert_eq!(ctrl.total_processed, 2);
+    }
+
+    #[test]
+    fn tick_drop() {
+        let mut ctrl = TickController::new(TickPolicy::Drop);
+        assert!(ctrl.request_tick()); // tick 1 in flight
+        assert!(!ctrl.request_tick()); // tick 2 dropped
+        assert!(!ctrl.request_tick()); // tick 3 dropped
+        assert_eq!(ctrl.pending_ticks, 0);
+        assert_eq!(ctrl.total_dropped, 2);
+
+        assert!(!ctrl.finish_tick()); // finishes tick 1, idle (nothing pending)
+        assert!(!ctrl.in_flight);
+        assert_eq!(ctrl.total_processed, 1);
     }
 }
 
