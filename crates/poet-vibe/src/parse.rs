@@ -17,6 +17,7 @@ impl<'a> Parser<'a> {
         Ok(Self { lex, cur })
     }
 
+    #[allow(dead_code)]
     pub fn source(&self) -> &'a str {
         self.lex.source()
     }
@@ -422,6 +423,11 @@ impl<'a> Parser<'a> {
                 span: Span::new(start, end),
                 expr,
             });
+        }
+        if self.cur.kind == TokenKind::LBrace {
+            let b = self.parse_block()?;
+            self.eat_optional_semi()?;
+            return Ok(Stmt::Block(b));
         }
         let expr = self.parse_expr()?;
         if self.cur.kind == TokenKind::Eq {

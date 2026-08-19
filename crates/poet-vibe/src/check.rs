@@ -4,7 +4,7 @@ use crate::ast::*;
 use crate::effects::{binding_effect, capability_for, Effect};
 use crate::error::{DiagCode, Diagnostic};
 use crate::types::Type;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 #[derive(Debug)]
 pub struct CheckResult {
@@ -40,6 +40,7 @@ pub fn check_program(program: &Program) -> Result<CheckResult, Diagnostic> {
     let granted: Vec<&str> = program.requires.iter().map(|c| c.id.as_str()).collect();
     let mut max_effect = Effect::Pure;
     let mut env = HashMap::new();
+    let mut mutables = HashSet::new();
     for item in &program.items {
         match item {
             Item::Function(f) => {
@@ -54,7 +55,7 @@ pub fn check_program(program: &Program) -> Result<CheckResult, Diagnostic> {
                 walk_expr(&c.value, &mut env, &granted, Effect::Pure, false, false)?;
             }
             Item::Statement(s) => {
-                walk_stmt(s, &mut env, &granted, Effect::External, false, false)?;
+                walk_stmt(s, &mut env, &mut mutables, &granted, Effect::External, false, false)?;
             }
             Item::Enum(_) => {
                 // Enum declarations are pure type declarations — no effect.
@@ -83,11 +84,12 @@ fn check_function(
 ) -> Result<Effect, Diagnostic> {
     let declared = f.effect.map(Effect::from_class).unwrap_or(Effect::Pure);
     let mut env = HashMap::new();
+    let mut mutables = HashSet::new();
     for p in &f.params {
         env.insert(p.name.clone(), Type::from_ast(&p.ty));
     }
     let has_budget = !f.budget.is_empty();
-    let body = walk_block(&f.body, &mut env, granted, declared, false, has_budget)?;
+    let body = walk_block(&f.body, &mut env, &mut mutables, granted, declared, false, has_budget)?;
     if body > declared && f.effect.is_some() {
         return Err(Diagnostic::new(
             DiagCode::E200,
@@ -105,24 +107,28 @@ fn check_hook(h: &HookDecl, granted: &[&str]) -> Result<Effect, Diagnostic> {
         // N7: on tick must not query the graph
     }
     let mut env = HashMap::new();
+    let mut mutables = HashSet::new();
     for p in &h.params {
         env.insert(p.name.clone(), Type::from_ast(&p.ty));
     }
     let has_budget = !h.budget.is_empty();
-    walk_block(&h.body, &mut env, granted, declared, is_tick, has_budget)
+    walk_block(&h.body, &mut env, &mut mutables, granted, declared, is_tick, has_budget)
 }
 
 fn walk_block(
     block: &Block,
     env: &mut HashMap<String, Type>,
+    mutables: &mut HashSet<String>,
     granted: &[&str],
     ambient: Effect,
     tick: bool,
     budgeted: bool,
 ) -> Result<Effect, Diagnostic> {
+    let mut scoped_env = env.clone();
+    let mut scoped_mutables = mutables.clone();
     let mut e = Effect::Pure;
     for s in &block.stmts {
-        e = e.join(walk_stmt(s, env, granted, ambient, tick, budgeted)?);
+        e = e.join(walk_stmt(s, &mut scoped_env, &mut scoped_mutables, granted, ambient, tick, budgeted)?);
     }
     Ok(e)
 }
@@ -130,25 +136,40 @@ fn walk_block(
 fn walk_stmt(
     stmt: &Stmt,
     env: &mut HashMap<String, Type>,
+    mutables: &mut HashSet<String>,
     granted: &[&str],
     ambient: Effect,
     tick: bool,
     budgeted: bool,
 ) -> Result<Effect, Diagnostic> {
     match stmt {
-        Stmt::Let { name, value, ty, .. } => {
+        Stmt::Let { mutable, name, value, ty, .. } => {
             let t = if value.as_ref().is_some_and(|v| expr_is_bounded_source(v, env)) {
                 Type::List(Box::new(Type::Unknown))
             } else {
                 ty.as_ref().map(Type::from_ast).unwrap_or(Type::Unknown)
             };
             env.insert(name.clone(), t);
+            if *mutable {
+                mutables.insert(name.clone());
+            } else {
+                mutables.remove(name);
+            }
             if let Some(v) = value {
                 return walk_expr(v, env, granted, ambient, tick, budgeted);
             }
             Ok(Effect::Pure)
         }
-        Stmt::Assign { target, value, .. } => {
+        Stmt::Assign { target, value, span } => {
+            if let Some(n) = target.ident_name() {
+                if !mutables.contains(n) {
+                    return Err(Diagnostic::new(
+                        DiagCode::E701,
+                        *span,
+                        format!("cannot assign to immutable binding `{n}` (declare with `let mut`)"),
+                    ));
+                }
+            }
             let a = walk_expr(target, env, granted, ambient, tick, budgeted)?;
             let b = walk_expr(value, env, granted, ambient, tick, budgeted)?;
             Ok(a.join(b))
@@ -160,9 +181,9 @@ fn walk_stmt(
             ..
         } => {
             let mut e = walk_expr(cond, env, granted, ambient, tick, budgeted)?;
-            e = e.join(walk_block(then_block, env, granted, ambient, tick, budgeted)?);
+            e = e.join(walk_block(then_block, env, mutables, granted, ambient, tick, budgeted)?);
             if let Some(els) = else_block {
-                e = e.join(walk_stmt(els, env, granted, ambient, tick, budgeted)?);
+                e = e.join(walk_stmt(els, env, mutables, granted, ambient, tick, budgeted)?);
             }
             Ok(e)
         }
@@ -176,7 +197,7 @@ fn walk_stmt(
                 ));
             }
             env.insert(name.clone(), Type::Unknown);
-            Ok(e.join(walk_block(body, env, granted, ambient, tick, budgeted)?))
+            Ok(e.join(walk_block(body, env, mutables, granted, ambient, tick, budgeted)?))
         }
         Stmt::While { cond, body, span, .. } => {
             if is_literal_true(cond) && !budgeted {
@@ -194,14 +215,14 @@ fn walk_stmt(
                 ));
             }
             let e = walk_expr(cond, env, granted, ambient, tick, budgeted)?;
-            Ok(e.join(walk_block(body, env, granted, ambient, tick, budgeted)?))
+            Ok(e.join(walk_block(body, env, mutables, granted, ambient, tick, budgeted)?))
         }
         Stmt::Match { scrutinee, arms, .. } => {
             let mut e = walk_expr(scrutinee, env, granted, ambient, tick, budgeted)?;
             for arm in arms {
                 match &arm.body {
                     ArmBody::Block(b) => {
-                        e = e.join(walk_block(b, env, granted, ambient, tick, budgeted)?);
+                        e = e.join(walk_block(b, env, mutables, granted, ambient, tick, budgeted)?);
                     }
                     ArmBody::Expr(x) => {
                         e = e.join(walk_expr(x, env, granted, ambient, tick, budgeted)?);
@@ -218,7 +239,7 @@ fn walk_stmt(
             }
         }
         Stmt::Transaction { body, .. } => {
-            let e = walk_block(body, env, granted, ambient, tick, budgeted)?;
+            let e = walk_block(body, env, mutables, granted, ambient, tick, budgeted)?;
             Ok(e.join(Effect::External))
         }
         Stmt::Effect { expr, span, .. } => {
@@ -232,7 +253,7 @@ fn walk_stmt(
             Ok(walk_expr(expr, env, granted, ambient, tick, budgeted)?.join(Effect::External))
         }
         Stmt::Expr { expr, .. } => walk_expr(expr, env, granted, ambient, tick, budgeted),
-        Stmt::Block(b) => walk_block(b, env, granted, ambient, tick, budgeted),
+        Stmt::Block(b) => walk_block(b, env, mutables, granted, ambient, tick, budgeted),
     }
 }
 

@@ -6,10 +6,12 @@ use crate::budget::Budget;
 use crate::error::{DiagCode, Diagnostic};
 use crate::span::Span;
 use crate::value::{EnumValue, Value};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 pub struct Env {
     pub vars: HashMap<String, Value>,
+    /// Set of variable names that were declared with `mut` (T10).
+    pub mutables: HashSet<String>,
     /// Import alias → namespace name (e.g. `g` → `graph`).
     /// Populated from `import "vibe:0.1/graph" as g;` declarations.
     pub aliases: HashMap<String, String>,
@@ -21,6 +23,7 @@ impl Default for Env {
     fn default() -> Self {
         Self {
             vars: HashMap::new(),
+            mutables: HashSet::new(),
             aliases: HashMap::new(),
             enums: HashMap::new(),
         }
@@ -405,18 +408,39 @@ impl<'a, H: Host> Engine<'a, H> {
     fn eval_stmt(&mut self, stmt: &Stmt, env: &mut Env) -> Result<Flow, Diagnostic> {
         self.budget.tick(stmt.span())?;
         match stmt {
-            Stmt::Let { name, value, .. } => {
+            Stmt::Let {
+                name,
+                value,
+                mutable,
+                ..
+            } => {
                 let v = if let Some(e) = value {
                     self.eval_expr(e, env)?
                 } else {
                     Value::Null
                 };
                 env.vars.insert(name.clone(), v);
+                if *mutable {
+                    env.mutables.insert(name.clone());
+                } else {
+                    env.mutables.remove(name);
+                }
                 Ok(Flow::Next(Value::Null))
             }
-            Stmt::Assign { target, value, .. } => {
+            Stmt::Assign {
+                target,
+                value,
+                span,
+            } => {
                 let v = self.eval_expr(value, env)?;
                 if let Some(n) = target.ident_name() {
+                    if !env.mutables.contains(n) {
+                        return Err(Diagnostic::new(
+                            DiagCode::E701,
+                            *span,
+                            format!("cannot assign to immutable binding `{n}` (declare with `let mut`)"),
+                        ));
+                    }
                     env.vars.insert(n.to_string(), v.clone());
                 }
                 Ok(Flow::Next(v))
@@ -928,5 +952,47 @@ mod tests {
         "#;
         let result = eval_program_src(src).unwrap();
         assert_eq!(result, Value::I64(1));
+    }
+
+    #[test]
+    fn mut_let_allows_reassignment() {
+        let src = r#"
+            fn main() {
+                let mut x = 1;
+                x = 2;
+                return x;
+            }
+        "#;
+        let result = eval_program_src(src).unwrap();
+        assert_eq!(result, Value::I64(2));
+    }
+
+    #[test]
+    fn let_rejects_reassignment() {
+        let src = r#"
+            fn main() {
+                let x = 1;
+                x = 2;
+                return x;
+            }
+        "#;
+        let err = eval_program_src(src).unwrap_err();
+        assert_eq!(err.code, DiagCode::E701);
+    }
+
+    #[test]
+    fn mut_check_catches_reassignment_in_block() {
+        let src = r#"
+            fn main() {
+                let mut x = 1;
+                {
+                    let y = 10;
+                    y = 20;
+                }
+                return x;
+            }
+        "#;
+        let err = eval_program_src(src).unwrap_err();
+        assert_eq!(err.code, DiagCode::E701);
     }
 }
