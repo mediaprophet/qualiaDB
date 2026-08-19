@@ -239,3 +239,48 @@ Tasks not yet addressed (deferred or require Timothy's decision):
 - T73: Quantity dimension algebra — already implemented by earlier agent
 - W1-W18: Wish list items — deferred to future passes
 
+---
+
+## Round 4 Batch 3 — Multi-lingual, HID, Physics, Presentation (2026-08-19)
+
+Swept the remaining T-tasks and wish-list items that could be implemented
+without external dependencies or breaking changes.
+
+### Newly implemented this batch
+
+| Task | Commit | Description |
+|------|--------|-------------|
+| T36 | `20c5349f` | CST trivia — Trivia, TriviaSink, CstNode, extract_comments() |
+| T37 | `4524c231` | Keyword locale tables — en (canonical) + zh (proof of pipeline) |
+| T41 | `7e8022d1` | Inbound event record ABI — InboundEvent, EventKind, EventPayload |
+| T42 | `dfff68ed` | HID dispatch — hid.poll, hid.wait Host ABI methods |
+| T45 | `dfff68ed` | Outbound cues — cue.post Host ABI method |
+| T43 | `279c92c8` | Assistive I/O — sip-puff, switch, Braille, eye-gaze, OutboundCue |
+| T69 | `01af9ccc` | Presentation morphism as sheaf — visual/haptic/auditory/Braille |
+| W2 | `50809884` | WorldLine trajectory — waypoints, interpolation, span |
+| W5 | `50809884` | Frame morphisms — Galilean + Lorentz with gamma, inverse, round-trip |
+| W16 | `94d48b58` | Pretty printer — field/material/law canonical formatting |
+
+### Already implemented (verified)
+
+| Task | Description | Test count |
+|------|-------------|------------|
+| T53 | GBNF into in-process sampling loop (DOMINO) | 15 existing |
+
+### Test counts after batch 3
+
+- **poet-vibe lib:** 381 passed (was 264 after batch 2)
+- **qualia-core-db speculative_decode:** 15 passed (existing, verified)
+- New modules: trivia.rs, locale.rs, hid.rs, presentation.rs, physics.rs, pretty.rs
+
+### Remaining tasks
+
+Tasks not yet addressed (deferred or require external dependencies):
+- T38-T40: poet translate, keyword labels, Unicode BiDi/homoglyph policy
+- T44: DP-filter biosignals — needs differential privacy library
+- T46: Ring buffers for HID — needs platform integration
+- T54: In-process sampler wired to actual model — needs GGUF model file
+- T61: WASM playground — ecosystem task
+- T65: Interactive onboarding — ecosystem task
+- W1, W3-W4, W6-W15, W17-W18: Wish list items — deferred to future passes
+
