@@ -956,4 +956,40 @@ fn all_phase_g_fixtures_on_disk_are_valid() {
     let _ = include_str!("../fixtures/n7_time_in_pure_cell.vibe");
     let _ = include_str!("../fixtures/n8_tick_queries_graph.vibe");
     let _ = include_str!("../fixtures/n9_non_vibe_import.vibe");
+    let _ = include_str!("../fixtures/ad1_enum_unit.vibe");
+    let _ = include_str!("../fixtures/ad2_enum_payload.vibe");
+    let _ = include_str!("../fixtures/ad3_enum_match.vibe");
+    let _ = include_str!("../fixtures/ad4_enum_nested.vibe");
+}
+
+// ── H7: Enum/ADT golden corpus (T9 coverage) ──────────────────────────────────
+
+#[test]
+fn ad1_enum_unit_parses() {
+    let src = include_str!("../fixtures/ad1_enum_unit.vibe");
+    load_program(src).expect("ad1 fixture should parse");
+}
+
+#[test]
+fn ad2_enum_payload_parses() {
+    let src = include_str!("../fixtures/ad2_enum_payload.vibe");
+    load_program(src).expect("ad2 fixture should parse");
+}
+
+#[test]
+fn ad3_enum_match_evaluates() {
+    let src = include_str!("../fixtures/ad3_enum_match.vibe");
+    let program = load_program(src).expect("ad3 fixture");
+    let mut host = MockHost::default();
+    let mut env = Env::default();
+    let mut engine = poet_vibe::Engine::with_program(&mut host, poet_vibe::Budget::default(), &program);
+    engine.eval_program(&program, &mut env).unwrap();
+    let v = eval_function(&program, "main", vec![], &mut host, &mut env).unwrap();
+    assert_eq!(v.as_f64(), Some(12.0));
+}
+
+#[test]
+fn ad4_enum_nested_parses() {
+    let src = include_str!("../fixtures/ad4_enum_nested.vibe");
+    load_program(src).expect("ad4 fixture should parse");
 }
