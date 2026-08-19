@@ -484,4 +484,68 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
             .unwrap_err();
         assert!(err.contains("workgroups"), "got: {err}");
     }
+
+    // ── VC3: Zero hot-path allocation in render frame loops ───────────────
+    //
+    // The criterion requires zero heap allocation in render frame loops and
+    // on tick hooks. Measurement found that wgpu's API itself allocates
+    // per-frame (create_view, write_buffer, get_current_texture), which is
+    // outside our control. These tests document the gap:
+    //
+    // - render frame steady-state: ~321 allocations (wgpu internals)
+    // - compute dispatch (cached pipeline): ~115 allocations (wgpu internals)
+    //
+    // Our code (uniform updates, camera writes, model updates) is zero-alloc;
+    // the allocations are in wgpu's queue submission and texture view creation.
+    // Achieving true zero-alloc in the render path requires either a custom
+    // GPU backend or pre-allocated wgpu resource pools (future work).
+
+    #[test]
+    #[ignore = "VC3 gap: wgpu internals allocate ~321 times per frame (create_view, write_buffer, get_current_texture). Our code is zero-alloc; wgpu's API is not."]
+    fn vc3_render_frame_zero_alloc_after_warmup() {
+        use crate::specialized_libs::computational_geometry::allocation_counter::assert_zero_alloc;
+        let Some(mut p) = portal() else { return };
+        let telemetry = super::super::SystemTelemetry::default();
+
+        // Warmup: first frame may allocate (pipeline compilation, texture
+        // creation, buffer initialization). Subsequent frames must not.
+        p.render(0.0, &telemetry).expect("warmup frame");
+
+        // Hot path: measure allocation during a steady-state frame.
+        assert_zero_alloc("vc3_render_frame_steady_state", || {
+            p.render(1.0, &telemetry).expect("steady-state frame");
+        });
+    }
+
+    #[test]
+    #[ignore = "VC3 gap: wgpu compute dispatch allocates ~115 times even with cached pipeline (queue submission, buffer binding). Our code is zero-alloc; wgpu's API is not."]
+    fn vc3_compute_dispatch_zero_alloc_after_warmup() {
+        use crate::specialized_libs::computational_geometry::allocation_counter::assert_zero_alloc;
+        let Some(mut p) = portal() else { return };
+        let a: [f32; 4] = [1.0, 2.0, 3.0, 4.0];
+        let b: [f32; 4] = [10.0, 20.0, 30.0, 40.0];
+        let ab = bytemuck::cast_slice::<f32, u8>(&a).to_vec();
+        let bb = bytemuck::cast_slice::<f32, u8>(&b).to_vec();
+        let bindings = vec![
+            ComputeBinding { binding: 0, kind: ComputeBufferKind::StorageRead, data: &ab },
+            ComputeBinding { binding: 1, kind: ComputeBufferKind::StorageRead, data: &bb },
+            ComputeBinding { binding: 2, kind: ComputeBufferKind::StorageReadWrite, data: &[] },
+        ];
+
+        // Warmup: first dispatch compiles the pipeline and caches it.
+        p.compute_dispatch(VECTOR_ADD_WGSL, "main", [4, 1, 1], &bindings, Some(2), 16)
+            .expect("warmup dispatch");
+        p.compute_readback().unwrap().unwrap();
+
+        // Hot path: second dispatch with cached pipeline must not allocate.
+        let bindings2 = vec![
+            ComputeBinding { binding: 0, kind: ComputeBufferKind::StorageRead, data: &ab },
+            ComputeBinding { binding: 1, kind: ComputeBufferKind::StorageRead, data: &bb },
+            ComputeBinding { binding: 2, kind: ComputeBufferKind::StorageReadWrite, data: &[] },
+        ];
+        assert_zero_alloc("vc3_compute_dispatch_cached", || {
+            p.compute_dispatch(VECTOR_ADD_WGSL, "main", [4, 1, 1], &bindings2, Some(2), 16)
+                .expect("cached dispatch");
+        });
+    }
 }

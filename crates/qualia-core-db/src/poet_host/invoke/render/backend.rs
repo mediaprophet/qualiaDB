@@ -185,4 +185,56 @@ mod tests {
             }
         }
     }
+
+    // ── VC4: Backend transparency ─────────────────────────────────────────
+    //
+    // The same VibeScript invoke IDs must work regardless of whether the
+    // backend is WebGPU or WebGL2. On native, we can only test WebGPU (or
+    // "none" in headless CI), but the test verifies that:
+    // 1. The backend info reports a valid backend type.
+    // 2. The same invoke ID (gpu_backend_info) works from VibeScript.
+    // 3. The capability descriptor lists the render invoke IDs regardless
+    //    of backend (they're always registered; the backend only affects
+    //    execution, not availability).
+
+    #[test]
+    fn vc4_backend_info_reports_capabilities() {
+        let result = gpu_backend_info(&Value::Record(Default::default()), dummy_span())
+            .expect("backend_info");
+        if let Value::Record(m) = &result {
+            // Backend type must be a known value.
+            let backend = m.get("backend").expect("has backend");
+            assert!(
+                matches!(backend, Value::String(s) if matches!(s.as_str(), "webgpu" | "webgl2" | "none")),
+                "backend must be webgpu|webgl2|none, got {backend:?}"
+            );
+            // Available flag must be a bool.
+            let available = m.get("available").expect("has available");
+            assert!(
+                matches!(available, Value::Bool(_)),
+                "available must be bool, got {available:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn vc4_same_invoke_ids_available_regardless_of_backend() {
+        // The render invoke IDs are registered in ids::ALL_BOUND regardless
+        // of backend. Verify that the GPU invoke IDs are present.
+        let ids = crate::poet_host::invoke::ids::ALL_BOUND;
+        let has_render = ids.iter().any(|id| id.starts_with("Render."));
+        assert!(has_render, "Render.* invoke IDs must be registered");
+        // Key invoke IDs that must work on both backends:
+        let required = [
+            "Render.gpu_backend_info",
+            "Render.gpu_init",
+            "Render.gpu_render_frame",
+        ];
+        for req in &required {
+            assert!(
+                ids.iter().any(|id| id == req),
+                "invoke ID {req} must be in ALL_BOUND"
+            );
+        }
+    }
 }

@@ -427,4 +427,80 @@ struct Data {
         assert_eq!(members[1].name, "b");
         assert_eq!(members[1].offset, 12, "f32 after vec3 should be at offset 12");
     }
+
+    // ── VC2: GLSL ES 300 invariant verification ───────────────────────────
+
+    #[test]
+    fn vc2_no_noperspective_in_generated_glsl() {
+        // GLSL ES 300 does not support `noperspective` interpolation.
+        // naga's glsl-out should never emit it. Verify by compiling a
+        // vertex shader with varying outputs and checking the GLSL source.
+        let wgsl = r#"
+struct VsOut {
+    @builtin(position) pos: vec4<f32>,
+    @location(0) uv: vec2<f32>,
+    @location(1) color: vec3<f32>,
+};
+
+@vertex
+fn vs_main(@location(0) in_pos: vec2<f32>,
+           @location(1) in_uv: vec2<f32>,
+           @location(2) in_color: vec3<f32>) -> VsOut {
+    var out: VsOut;
+    out.pos = vec4<f32>(in_pos, 0.0, 1.0);
+    out.uv = in_uv;
+    out.color = in_color;
+    return out;
+}
+"#;
+        let result = compile_wgsl_to_glsl_es300(wgsl, "vs_main", ShaderStage::Vertex);
+        assert!(result.is_ok(), "vertex shader should compile: {:?}", result);
+        let glsl = result.unwrap();
+        assert!(
+            !glsl.source.contains("noperspective"),
+            "GLSL ES 300 must not contain 'noperspective': {}",
+            glsl.source
+        );
+    }
+
+    #[test]
+    fn vc2_all_ubos_match_std140_alignment() {
+        // Verify that a struct with mixed types produces correct std140 offsets.
+        let wgsl = r#"
+struct Uniforms {
+    mvp: mat4x4<f32>,
+    offset: vec3<f32>,
+    scale: f32,
+    flags: u32,
+    padding: vec2<f32>,
+};
+"#;
+        let layout = std140_layout(wgsl);
+        assert!(layout.is_ok(), "std140 layout should succeed: {:?}", layout);
+        let members = layout.unwrap();
+
+        // mat4x4: offset 0, size 64, align 16
+        assert_eq!(members[0].name, "mvp");
+        assert_eq!(members[0].offset, 0);
+        assert_eq!(members[0].align, 16);
+
+        // vec3: offset 64, size 12, align 16
+        assert_eq!(members[1].name, "offset");
+        assert_eq!(members[1].offset, 64);
+        assert_eq!(members[1].align, 16);
+
+        // f32: offset 76 (within vec3's 16-byte slot), size 4, align 4
+        assert_eq!(members[2].name, "scale");
+        assert_eq!(members[2].offset, 76);
+
+        // u32: next 16-byte boundary = 80, size 4, align 4
+        assert_eq!(members[3].name, "flags");
+        assert_eq!(members[3].offset, 80);
+        assert_eq!(members[3].align, 4);
+
+        // vec2: offset 88, size 8, align 8
+        assert_eq!(members[4].name, "padding");
+        assert_eq!(members[4].offset, 88);
+        assert_eq!(members[4].align, 8);
+    }
 }
