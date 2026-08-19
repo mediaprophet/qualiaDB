@@ -6,9 +6,13 @@
 pub const LANGUAGE_VERSION: &str = "vibe-0.1";
 
 mod ast;
+mod ast_query;
 mod bind;
 mod budget;
+mod cbor_ast;
 mod check;
+mod dag;
+mod deontic_interrupt;
 mod diagnose;
 mod effects;
 mod error;
@@ -16,13 +20,19 @@ mod eval;
 mod grammar;
 mod lex;
 mod parse;
+mod reflection;
 mod span;
 mod types;
 mod value;
 
 pub use ast::{Expr, Program};
+pub use ast_query::{
+    builtin_policies, check_custom_policies, check_policies, function_has_budget,
+    hook_has_budget, parse_query, run_policies, Policy, PolicyViolation, QueryPattern,
+};
 pub use bind::{Host, MockHost};
 pub use budget::Budget;
+pub use cbor_ast::{decode, encode, DecodeError, TAG_VIBE_AST};
 pub use check::{check_cell, check_program, CheckResult};
 pub use diagnose::{diagnose, DiagnoseReport};
 pub use error::{DiagCode, Diagnostic};

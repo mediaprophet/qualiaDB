@@ -136,6 +136,19 @@ pub use cuda_lane::{
 pub use cuda_lane_stub as cuda_lane;
 // W6a: prompt-lookup speculative decoding proposer (pure, wasm-safe).
 pub mod prompt_lookup;
+// A2: DOMINO speculative constrained decoding (prefix-trie token masking).
+pub mod speculative_decode;
+pub use speculative_decode::{
+    DominoMasker, GrammarState, GrammarStateMachine, TokenTrie,
+    MAX_TRIE_DEPTH,
+};
+// A9: Semantic Skills — vectors, embeddings, scratchpads.
+pub mod semantic_skills;
+pub use semantic_skills::{
+    Scratchpad, ScratchpadEntry, ScratchpadError, SearchResult, StoredVector,
+    TextEmbedder, Vector, VectorStore,
+    EMBED_DIM, MAX_VECTORS, MAX_SCRATCHPAD_ENTRIES, DEFAULT_SCRATCHPAD_TTL,
+};
 // Metal mega-pass orchestrator (Apple Silicon). Stub on non-macOS.
 pub mod metal_lane;
 // Paged KV cache: block-paged KV storage (vLLM-style). Re-exports `runtime::kv::paged`, so it
