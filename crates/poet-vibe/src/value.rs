@@ -102,6 +102,65 @@ pub struct MaterialRef {
     pub hash: u64,
 }
 
+/// An opaque handle to a chemical species (T33).
+///
+/// A species is a distinct chemical entity (e.g. H₂O, NaCl, sucrose).
+/// The handle carries an IRI and a content hash for provenance. Scripts
+/// do not see the full species definition — they reference it by handle
+/// and the host resolves it via `field.sample()` or `law.apply()`.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct SpeciesRef {
+    /// The species' IRI identifier (e.g. `qudt:CHEBI_17716` for sucrose).
+    pub iri: String,
+    /// A content hash of the species definition (for provenance).
+    pub hash: u64,
+}
+
+/// A mixture of chemical species with composition data (T33).
+///
+/// Solubility-as-boolean cannot express oil/water. A mixture carries mole
+/// fractions (or mass fractions) for each species, plus phase information
+/// and miscibility data.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Mixture {
+    /// The mixture's IRI identifier (optional — anonymous mixtures are
+    /// allowed).
+    pub iri: Option<String>,
+    /// Components: species handle + mole fraction (0.0–1.0).
+    /// Mole fractions should sum to 1.0 for a closed mixture, but this
+    /// is not enforced at construction — the host's `law.apply()` can
+    /// check conservation.
+    pub components: Vec<(SpeciesRef, f64)>,
+    /// The phase of this mixture: solid, liquid, gas, plasma, or
+    /// supercritical.
+    pub phase: MixturePhase,
+    /// Miscibility with other mixtures. `Miscible` means fully mixable,
+    /// `Immiscible` means forms separate layers, `Partial` means limited
+    /// solubility.
+    pub miscibility: Miscibility,
+}
+
+/// Phase of a mixture (T33).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum MixturePhase {
+    Solid,
+    Liquid,
+    Gas,
+    Plasma,
+    Supercritical,
+}
+
+/// Miscibility between mixtures (T33).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum Miscibility {
+    /// Fully mixable in all proportions.
+    Miscible,
+    /// Forms separate layers (e.g. oil and water).
+    Immiscible,
+    /// Limited solubility — dissolves up to a saturation point.
+    Partial,
+}
+
 /// A worldline: a continuant through Instant × Pose (T6).
 ///
 /// Kills UUID-as-identity. A worldline is the identity of a thing that
@@ -250,6 +309,10 @@ pub enum Value {
     QuinRef(QuinRef),
     /// A user-defined enum value (T9).
     Enum(EnumValue),
+    /// A chemical species reference (T33).
+    SpeciesRef(SpeciesRef),
+    /// A mixture of chemical species with composition data (T33).
+    Mixture(Mixture),
 }
 
 impl Value {
@@ -365,6 +428,22 @@ impl Value {
     pub fn as_enum(&self) -> Option<&EnumValue> {
         match self {
             Value::Enum(e) => Some(e),
+            _ => None,
+        }
+    }
+
+    /// Extract a SpeciesRef if this value is one (T33).
+    pub fn as_species_ref(&self) -> Option<&SpeciesRef> {
+        match self {
+            Value::SpeciesRef(s) => Some(s),
+            _ => None,
+        }
+    }
+
+    /// Extract a Mixture if this value is one (T33).
+    pub fn as_mixture(&self) -> Option<&Mixture> {
+        match self {
+            Value::Mixture(m) => Some(m),
             _ => None,
         }
     }
@@ -637,5 +716,152 @@ mod tests {
         let v2 = v1.clone();
         // QuinRef is Copy — both should be equal.
         assert_eq!(v1, v2);
+    }
+
+    // ── T33: SpeciesRef + Mixture tests ───────────────────────────────
+
+    #[test]
+    fn value_species_ref_extract() {
+        let s = SpeciesRef {
+            iri: "qudt:CHEBI_17716".to_string(),
+            hash: 0xCAFE_BABE,
+        };
+        let v = Value::SpeciesRef(s);
+        let sr = v.as_species_ref().unwrap();
+        assert_eq!(sr.iri, "qudt:CHEBI_17716");
+        assert_eq!(sr.hash, 0xCAFE_BABE);
+    }
+
+    #[test]
+    fn value_species_ref_equality() {
+        let s1 = SpeciesRef {
+            iri: "qudt:CHEBI_15377".to_string(), // water
+            hash: 1,
+        };
+        let s2 = SpeciesRef {
+            iri: "qudt:CHEBI_15377".to_string(),
+            hash: 1,
+        };
+        let s3 = SpeciesRef {
+            iri: "qudt:CHEBI_17716".to_string(), // sucrose
+            hash: 2,
+        };
+        assert_eq!(s1, s2);
+        assert_ne!(s1, s3);
+    }
+
+    #[test]
+    fn value_mixture_extract() {
+        let water = SpeciesRef {
+            iri: "qudt:CHEBI_15377".to_string(),
+            hash: 1,
+        };
+        let ethanol = SpeciesRef {
+            iri: "qudt:CHEBI_16236".to_string(),
+            hash: 2,
+        };
+        let m = Mixture {
+            iri: Some("mixture:water_ethanol".to_string()),
+            components: vec![(water, 0.7), (ethanol, 0.3)],
+            phase: MixturePhase::Liquid,
+            miscibility: Miscibility::Miscible,
+        };
+        let v = Value::Mixture(m);
+        let mx = v.as_mixture().unwrap();
+        assert_eq!(mx.components.len(), 2);
+        assert_eq!(mx.phase, MixturePhase::Liquid);
+        assert_eq!(mx.miscibility, Miscibility::Miscible);
+        assert_eq!(mx.components[0].1, 0.7);
+        assert_eq!(mx.components[1].1, 0.3);
+    }
+
+    #[test]
+    fn value_mixture_oil_water_immiscible() {
+        let oil = SpeciesRef {
+            iri: "qudt:CHEBI_15889".to_string(),
+            hash: 1,
+        };
+        let water = SpeciesRef {
+            iri: "qudt:CHEBI_15377".to_string(),
+            hash: 2,
+        };
+        let m = Mixture {
+            iri: None,
+            components: vec![(oil, 0.5), (water, 0.5)],
+            phase: MixturePhase::Liquid,
+            miscibility: Miscibility::Immiscible,
+        };
+        let v = Value::Mixture(m);
+        let mx = v.as_mixture().unwrap();
+        assert_eq!(mx.miscibility, Miscibility::Immiscible);
+        assert!(mx.iri.is_none());
+    }
+
+    #[test]
+    fn value_mixture_partial_miscibility() {
+        let salt = SpeciesRef {
+            iri: "qudt:CHEBI_36757".to_string(),
+            hash: 1,
+        };
+        let water = SpeciesRef {
+            iri: "qudt:CHEBI_15377".to_string(),
+            hash: 2,
+        };
+        let m = Mixture {
+            iri: None,
+            components: vec![(salt, 0.1), (water, 0.9)],
+            phase: MixturePhase::Liquid,
+            miscibility: Miscibility::Partial,
+        };
+        assert_eq!(m.miscibility, Miscibility::Partial);
+    }
+
+    #[test]
+    fn value_mixture_phase_variants() {
+        let s = SpeciesRef {
+            iri: "qudt:CHEBI_15377".to_string(),
+            hash: 1,
+        };
+        let solid = Mixture {
+            iri: None, components: vec![(s.clone(), 1.0)],
+            phase: MixturePhase::Solid, miscibility: Miscibility::Miscible,
+        };
+        let gas = Mixture {
+            iri: None, components: vec![(s.clone(), 1.0)],
+            phase: MixturePhase::Gas, miscibility: Miscibility::Miscible,
+        };
+        let plasma = Mixture {
+            iri: None, components: vec![(s.clone(), 1.0)],
+            phase: MixturePhase::Plasma, miscibility: Miscibility::Miscible,
+        };
+        let supercritical = Mixture {
+            iri: None, components: vec![(s, 1.0)],
+            phase: MixturePhase::Supercritical, miscibility: Miscibility::Miscible,
+        };
+        assert_ne!(solid.phase, gas.phase);
+        assert_ne!(gas.phase, plasma.phase);
+        assert_ne!(plasma.phase, supercritical.phase);
+    }
+
+    #[test]
+    fn value_species_ref_not_mixture() {
+        let s = SpeciesRef {
+            iri: "qudt:CHEBI_15377".to_string(),
+            hash: 1,
+        };
+        let v = Value::SpeciesRef(s);
+        assert!(v.as_mixture().is_none());
+    }
+
+    #[test]
+    fn value_mixture_not_species_ref() {
+        let m = Mixture {
+            iri: None,
+            components: vec![],
+            phase: MixturePhase::Liquid,
+            miscibility: Miscibility::Miscible,
+        };
+        let v = Value::Mixture(m);
+        assert!(v.as_species_ref().is_none());
     }
 }

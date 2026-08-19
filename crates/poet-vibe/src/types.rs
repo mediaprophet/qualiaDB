@@ -35,6 +35,9 @@ pub enum Type {
     WorldLine,
     // ── T9: User-defined enum type ─────────────────────────────────────
     Enum(String),
+    // ── T33: Species and Mixture types ─────────────────────────────────
+    SpeciesRef,
+    Mixture,
     Option(Box<Type>),
     Result(Box<Type>, Box<Type>),
     List(Box<Type>),
@@ -80,6 +83,8 @@ impl Type {
             "FieldRef" => Type::FieldRef,
             "MaterialRef" => Type::MaterialRef,
             "WorldLine" => Type::WorldLine,
+            "SpeciesRef" => Type::SpeciesRef,
+            "Mixture" => Type::Mixture,
             "Record" => Type::Record,
             "Receipt" => Type::Receipt,
             "Option" => Type::Option(Box::new(
