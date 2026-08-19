@@ -15,6 +15,12 @@
 //! accepts any non-`Undefined` assignment today; a future task can tighten it
 //! to reject deviations from the frozen table once blessed.
 //!
+//! **Provenance Axis Disagreement (Decision X3 pending):**
+//! `axis_role.rs` defines `mu` as `CoordinateCarrier` (dual: measured coordinate
+//! and in-band provenance) while `crates/qualia-core-db/src/tensor/mod.rs`
+//! field comments describe `t` as the "Provenance Ledger". See Decision X3 in
+//! `docs/plans/vibe-design/20260819_decisions-register.md` (pending Timothy's decision).
+//!
 //! Reference: `docs/plans/native-computational-geometry.md` §4.1, and the
 //! execution plan's ⚑ "Axis-role taxonomy sign-off" curation datum.
 

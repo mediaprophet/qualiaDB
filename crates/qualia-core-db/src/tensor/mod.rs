@@ -51,12 +51,21 @@ pub struct Tensor10D {
     pub z: f32,
 
     /// Temporal State / Provenance Ledger
+    ///
+    /// NOTE: Disagrees with `container_10d/axis_role.rs` which defines `mu` as the
+    /// in-band provenance carrier (`CoordinateCarrier`). See Decision X3 in
+    /// `docs/plans/vibe-design/20260819_decisions-register.md` (pending Timothy's decision).
     pub t: f32,
 
     /// Spectral Amplitude / Dynamic Range / Confidence Weight
     pub alpha: f32,
 
     /// Spectral Modulation / Phase / Metadata Carrier
+    ///
+    /// NOTE: In `container_10d/axis_role.rs`, `mu` is defined as `CoordinateCarrier`
+    /// (dual: measured coordinate and in-band provenance), whereas the comment on `t`
+    /// above describes `t` as the Provenance Ledger. See Decision X3 in
+    /// `docs/plans/vibe-design/20260819_decisions-register.md` (pending Timothy's decision).
     pub mu: f32,
 
     /// Spectral Signature / Logical Class Index
