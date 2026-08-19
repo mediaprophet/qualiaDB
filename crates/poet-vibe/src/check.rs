@@ -13,6 +13,7 @@ pub struct CheckResult {
 
 pub fn check_program(program: &Program) -> Result<CheckResult, Diagnostic> {
     // Validate import paths before checking items.
+    let mut seen_aliases = HashSet::new();
     for imp in &program.imports {
         let path = imp.path.as_str();
         if !path.starts_with("vibe:0.1/") {
@@ -34,6 +35,14 @@ pub fn check_program(program: &Program) -> Result<CheckResult, Diagnostic> {
                     "unknown namespace '{ns}'; valid: {}",
                     VALID.join(", ")
                 ),
+            ));
+        }
+        let alias = imp.alias.as_deref().unwrap_or(ns);
+        if !seen_aliases.insert(alias) {
+            return Err(Diagnostic::new(
+                DiagCode::E100,
+                imp.span,
+                format!("duplicate import alias '{alias}'"),
             ));
         }
     }

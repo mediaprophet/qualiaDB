@@ -43,6 +43,7 @@ pub fn populate_import_aliases(
     env: &mut Env,
     imports: &[ImportDecl],
 ) -> Result<(), Diagnostic> {
+    let mut seen = HashSet::new();
     for imp in imports {
         let ns = imp
             .path
@@ -69,6 +70,13 @@ pub fn populate_import_aliases(
             ));
         }
         let alias = imp.alias.as_deref().unwrap_or(ns);
+        if !seen.insert(alias) {
+            return Err(Diagnostic::new(
+                DiagCode::E100,
+                imp.span,
+                format!("duplicate import alias '{alias}'"),
+            ));
+        }
         env.aliases.insert(alias.to_string(), ns.to_string());
     }
     Ok(())
@@ -1336,5 +1344,42 @@ mod tests {
         "#;
         let result = eval_program_src(src).unwrap();
         assert_eq!(result, Value::F64(3.0));
+    }
+
+    #[test]
+    fn import_resolves_alias() {
+        let src = r#"
+            import <vibe:0.1/math> as math;
+            fn main() {
+                return math.sin(0.0);
+            }
+        "#;
+        let result = eval_program_src(src).unwrap();
+        assert_eq!(result, Value::F64(0.0));
+    }
+
+    #[test]
+    fn import_unknown_iri_fails() {
+        let src = r#"
+            import <vibe:0.1/nonexistent> as foo;
+            fn main() {
+                return 1;
+            }
+        "#;
+        let err = eval_program_src(src).unwrap_err();
+        assert_eq!(err.code, DiagCode::E100);
+    }
+
+    #[test]
+    fn import_dupe_alias_fails() {
+        let src = r#"
+            import <vibe:0.1/math> as m;
+            import <vibe:0.1/time> as m;
+            fn main() {
+                return 1;
+            }
+        "#;
+        let err = eval_program_src(src).unwrap_err();
+        assert_eq!(err.code, DiagCode::E100);
     }
 }

@@ -89,7 +89,15 @@ impl<'a> Parser<'a> {
     fn parse_import(&mut self) -> Result<ImportDecl, Diagnostic> {
         let start = self.cur.span.start;
         self.bump()?;
-        let path = self.expect_string()?;
+        let path = if self.cur.kind == TokenKind::Iri {
+            let s = self.text().to_string();
+            self.bump()?;
+            strip_iri(&s)
+        } else if self.cur.kind == TokenKind::String {
+            self.expect_string()?
+        } else {
+            return Err(self.err("expected IRI or string path after import"));
+        };
         let alias = if self.kw("as") {
             self.bump()?;
             Some(self.expect_ident()?)
