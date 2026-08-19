@@ -42,7 +42,7 @@ impl Default for Env {
 /// The valid 0.1 namespace import paths. `vibe:0.1/{ns}`.
 pub const VIBE_0_1_NAMESPACES: &[&str] = &[
     "math", "rdf", "quin", "graph", "aura", "pulse", "capability", "time",
-    "conservation", "causal",
+    "conservation", "causal", "dag", "deontic",
 ];
 
 /// Populate `env.aliases` from a program's import declarations.
@@ -1714,5 +1714,61 @@ mod tests {
         "#;
         let result = eval_program_src(src).unwrap();
         assert_eq!(result, Value::I64(3));
+    }
+
+    // ── T24: DAG execution dispatch ───────────────────────────────────
+
+    #[test]
+    fn t24_dag_execute_dispatches_to_host() {
+        let src = r#"
+            import "dag" as dag;
+            fn main() {
+                return dag.execute({});
+            }
+        "#;
+        let result = eval_program_src(src);
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err().code, DiagCode::E702);
+    }
+
+    #[test]
+    fn t24_dag_validate_dispatches_to_host() {
+        let src = r#"
+            import "dag" as dag;
+            fn main() {
+                return dag.validate({});
+            }
+        "#;
+        let result = eval_program_src(src);
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err().code, DiagCode::E702);
+    }
+
+    // ── T25: Deontic check dispatch ───────────────────────────────────
+
+    #[test]
+    fn t25_deontic_check_dispatches_to_host() {
+        let src = r#"
+            import "deontic" as deontic;
+            fn main() {
+                return deontic.check("graph.query", "execute");
+            }
+        "#;
+        let result = eval_program_src(src);
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err().code, DiagCode::E702);
+    }
+
+    #[test]
+    fn t25_deontic_check_needs_capability_string() {
+        let src = r#"
+            import "deontic" as deontic;
+            fn main() {
+                return deontic.check(42, "execute");
+            }
+        "#;
+        let result = eval_program_src(src);
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err().code, DiagCode::E100);
     }
 }

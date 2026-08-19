@@ -225,6 +225,56 @@ pub trait Host {
             "causal_relation not available on this host",
         ))
     }
+
+    /// Execute a DAG pipeline (T24). The pipeline definition is passed
+    /// as a Record value (from JSON or VibeScript construction). The
+    /// host executes the DAG nodes in topological order, invoking
+    /// capabilities for each node. Default: E702 (no DAG executor
+    /// available on this host).
+    fn dag_execute(
+        &mut self,
+        _pipeline: &Value,
+        _blackboard: &Value,
+        span: Span,
+    ) -> Result<Value, Diagnostic> {
+        Err(Diagnostic::new(
+            DiagCode::E702,
+            span,
+            "dag.execute not available on this host",
+        ))
+    }
+
+    /// Validate a DAG pipeline definition (T24). Returns Ok(Null) if
+    /// valid, Err with diagnostic if invalid (cycle, missing budget,
+    /// missing capability). Default: E702.
+    fn dag_validate(
+        &mut self,
+        _pipeline: &Value,
+        span: Span,
+    ) -> Result<Value, Diagnostic> {
+        Err(Diagnostic::new(
+            DiagCode::E702,
+            span,
+            "dag.validate not available on this host",
+        ))
+    }
+
+    /// Check a deontic prohibition (T25). Given a capability ID and
+    /// the current phase, verify that the capability is allowed. If
+    /// forbidden, returns a sealed DeonticInterrupt receipt. Default:
+    /// E702 (no deontic checker available).
+    fn deontic_check(
+        &mut self,
+        _capability: &str,
+        _phase: &str,
+        span: Span,
+    ) -> Result<Value, Diagnostic> {
+        Err(Diagnostic::new(
+            DiagCode::E702,
+            span,
+            "deontic.check not available on this host",
+        ))
+    }
 }
 
 /// In-memory host for unit tests.
@@ -471,6 +521,38 @@ pub fn dispatch<H: Host>(
             let event_a = args.first().unwrap_or(&Value::Null);
             let event_b = args.get(1).unwrap_or(&Value::Null);
             host.causal_relation(event_a, event_b, span)
+        }
+        "dag.execute" => {
+            let pipeline = args.first().unwrap_or(&Value::Null);
+            let blackboard = args.get(1).unwrap_or(&Value::Null);
+            host.dag_execute(pipeline, blackboard, span)
+        }
+        "dag.validate" => {
+            let pipeline = args.first().unwrap_or(&Value::Null);
+            host.dag_validate(pipeline, span)
+        }
+        "deontic.check" => {
+            let capability = match args.first() {
+                Some(Value::String(s)) => s.as_str(),
+                _ => {
+                    return Err(Diagnostic::new(
+                        DiagCode::E100,
+                        span,
+                        "deontic.check needs a capability string",
+                    ))
+                }
+            };
+            let phase = match args.get(1) {
+                Some(Value::String(s)) => s.as_str(),
+                _ => {
+                    return Err(Diagnostic::new(
+                        DiagCode::E100,
+                        span,
+                        "deontic.check needs a phase string",
+                    ))
+                }
+            };
+            host.deontic_check(capability, phase, span)
         }
         _ => Err(Diagnostic::new(
             DiagCode::E100,
