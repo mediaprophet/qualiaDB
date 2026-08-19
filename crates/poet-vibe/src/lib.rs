@@ -11,8 +11,6 @@ mod bind;
 mod budget;
 mod cbor_ast;
 mod check;
-mod dag;
-mod deontic_interrupt;
 mod diagnose;
 mod effects;
 mod error;
@@ -20,10 +18,13 @@ mod eval;
 mod grammar;
 mod lex;
 mod parse;
-mod reflection;
 mod span;
 mod types;
 mod value;
+
+pub mod dag;
+pub mod deontic_interrupt;
+pub mod reflection;
 
 pub use ast::{Expr, Program};
 pub use ast_query::{
@@ -34,11 +35,23 @@ pub use bind::{Host, MockHost};
 pub use budget::Budget;
 pub use cbor_ast::{decode, encode, DecodeError, TAG_VIBE_AST};
 pub use check::{check_cell, check_program, CheckResult};
+pub use dag::{
+    ControlUnit, DagEdge, DagError, DagNode, DagPipeline, ExecutionState, JudgeClaim,
+    JudgeFrame, NodeEffect, NodeStatus, RouterStrategy,
+    MAX_DAG_EDGES, MAX_DAG_NODES, MAX_JUDGE_CLAIMS, MAX_NODE_IO,
+};
+pub use deontic_interrupt::{
+    AgentSandbox, DeonticInterrupt, InterruptType, LeaseError, Phase, PhaseLeaser,
+    MAX_CAPS_PER_PHASE, MAX_PHASES, MAX_SANDBOX_AGENTS,
+};
 pub use diagnose::{diagnose, DiagnoseReport};
 pub use error::{DiagCode, Diagnostic};
 pub use eval::{populate_import_aliases, Engine, Env};
 pub use grammar::{DIAGNOSTIC_SCHEMA_JSON, EBNF, GBNF, SOURCE_SCHEMA_JSON};
 pub use parse::{parse_cell, parse_program};
+pub use reflection::{
+    ReflectionConfig, ReflectionEngine, ReflectionLoop, ReflectionResult, StageResult,
+};
 pub use span::Span;
 pub use value::Value;
 

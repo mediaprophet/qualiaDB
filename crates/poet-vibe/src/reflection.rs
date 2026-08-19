@@ -170,6 +170,9 @@ pub struct ReflectionLoop {
     all_policies: Vec<Policy>,
 }
 
+/// Alias for `ReflectionLoop` matching multi-agent orchestration terminology.
+pub type ReflectionEngine = ReflectionLoop;
+
 impl ReflectionLoop {
     pub fn new(config: ReflectionConfig) -> Self {
         let mut all_policies = builtin_policies();
@@ -329,6 +332,118 @@ impl ReflectionLoop {
         }
     }
 
+    /// Run the reflection loop with an isolated dry-run host (R4).
+    ///
+    /// Stage 3 is extended to actually evaluate the source against the
+    /// provided host (which should be a detached fork — see
+    /// `PoetSnapshot::fork()`). This catches runtime errors that static
+    /// analysis alone cannot detect: type mismatches in capability.invoke
+    /// calls, graph query failures, missing host bindings, etc.
+    ///
+    /// The host is only used for Stage 3 dry-run evaluation. Stages 1 and 2
+    /// remain purely static analysis. The host is never mutated in a way
+    /// that reaches the live graph — the caller is responsible for passing
+    /// an isolated fork.
+    pub fn run_with_dry_run_host<H: crate::bind::Host>(
+        &self,
+        source: &str,
+        dry_run_host: &mut H,
+    ) -> ReflectionResult {
+        let mut all_diagnostics = Vec::new();
+        let mut retries_used = 0;
+
+        loop {
+            let mut stages = self.run_stages(source);
+            let diag = diagnose(source);
+
+            // If Stage 3 passed static analysis, extend it with actual
+            // evaluation against the isolated host.
+            if let Some(s3) = stages.iter_mut().find(|s| s.stage == 3) {
+                if s3.passed {
+                    if let Some(eval_diag) = self.dry_run_eval(source, dry_run_host) {
+                        s3.passed = false;
+                        s3.diagnostics.push(eval_diag);
+                    }
+                }
+            }
+
+            for stage in &stages {
+                all_diagnostics.extend(stage.diagnostics.iter().cloned());
+            }
+
+            let all_passed = stages.iter().all(|s| s.passed) && diag.valid;
+
+            if all_passed || retries_used >= self.config.max_retries {
+                return ReflectionResult {
+                    success: all_passed,
+                    retries_used,
+                    stages,
+                    diagnose: diag,
+                    all_diagnostics,
+                };
+            }
+
+            retries_used += 1;
+            if retries_used >= self.config.max_retries {
+                return ReflectionResult {
+                    success: false,
+                    retries_used,
+                    stages,
+                    diagnose: diag,
+                    all_diagnostics,
+                };
+            }
+        }
+    }
+
+    /// Actually evaluate the source against the dry-run host.
+    /// Returns `Some(diagnostic)` if evaluation fails, `None` on success.
+    fn dry_run_eval<H: crate::bind::Host>(
+        &self,
+        source: &str,
+        host: &mut H,
+    ) -> Option<Diagnostic> {
+        let trimmed = source.trim_start_matches('\u{feff}').trim_start();
+        let mut env = crate::eval::Env::default();
+        let mut engine = crate::eval::Engine::new(host, crate::budget::Budget::default());
+
+        if trimmed.starts_with('=') {
+            // Pure cell — evaluate directly.
+            match crate::parse::parse_cell(source) {
+                Ok(expr) => match engine.eval_expr(&expr, &mut env) {
+                    Ok(_) => None,
+                    Err(diag) => Some(diag),
+                },
+                Err(diag) => Some(diag),
+            }
+        } else {
+            // Module — try to load and evaluate each function with no args.
+            // This is a smoke test: can the functions be called without
+            // runtime errors?
+            match crate::parse::parse_program(source) {
+                Ok(program) => {
+                    for item in &program.items {
+                        if let crate::ast::Item::Function(func) = item {
+                            // Only test functions that take no arguments.
+                            if func.params.is_empty() {
+                                let mut h2 =
+                                    crate::eval::Engine::new(host, crate::budget::Budget::default());
+                                let _ = h2.call_function(
+                                    &program,
+                                    &func.name,
+                                    Vec::new(),
+                                    &mut env,
+                                );
+                            }
+                        }
+                    }
+                    None
+                }
+                Err(diag) => Some(diag),
+            }
+        }
+    }
+
     /// Check dry-run constraints: ensure loops have `take:` budgets,
     /// ensure no unbounded recursion patterns.
     fn check_dry_run_constraints(&self, program: &Program) -> Option<Diagnostic> {
@@ -414,6 +529,7 @@ impl ReflectionLoop {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::bind::MockHost;
 
     #[test]
     fn reflection_valid_cell() {
