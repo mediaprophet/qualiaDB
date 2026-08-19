@@ -111,6 +111,29 @@ impl InstrumentTraceLedger {
     }
 }
 
+/// Check that a text or commit message does not contain forbidden provider bylines (T58).
+/// Enforces CLAUDE.md §16 mechanically.
+pub fn check_no_bylines(text: &str) -> Result<(), String> {
+    for (line_num, line) in text.lines().enumerate() {
+        let trimmed = line.trim();
+        let lower = trimmed.to_ascii_lowercase();
+
+        if lower.starts_with("generated with")
+            || lower.starts_with("🤖 generated with")
+            || trimmed.starts_with("🤖 Generated with")
+            || lower.starts_with("co-authored-by:")
+            || lower.contains("co-authored-by:")
+        {
+            return Err(format!(
+                "forbidden provider byline on line {}: '{}' (violates CLAUDE.md §16)",
+                line_num + 1,
+                trimmed
+            ));
+        }
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -227,5 +250,35 @@ mod tests {
         ledger.clear();
         assert_eq!(ledger.entries().len(), 0);
         assert_eq!(ledger.total_cost(), 0);
+    }
+
+    #[test]
+    fn clean_text_passes() {
+        let msg = "feat(poet-host): add new invoke function\n\nImplements feature X and tests.";
+        assert!(check_no_bylines(msg).is_ok());
+    }
+
+    #[test]
+    fn generated_with_fails() {
+        let msg = "feat: update parser\n\nGenerated with Devin";
+        assert!(check_no_bylines(msg).is_err());
+    }
+
+    #[test]
+    fn co_authored_by_fails() {
+        let msg = "feat: add capability\n\nCo-Authored-By: Devin <devin@cognition.ai>";
+        assert!(check_no_bylines(msg).is_err());
+    }
+
+    #[test]
+    fn bot_attribution_fails() {
+        let msg = "fix: bug\n\nCo-Authored-By: devin-ai-integration[bot] <12345+bot@users.noreply.github.com>";
+        assert!(check_no_bylines(msg).is_err());
+    }
+
+    #[test]
+    fn emoji_generated_fails() {
+        let msg = "chore: cleanup\n\n🤖 Generated with Claude Code";
+        assert!(check_no_bylines(msg).is_err());
     }
 }
