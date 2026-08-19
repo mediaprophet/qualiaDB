@@ -1,6 +1,7 @@
 pub mod accountability_ledger;
 pub mod accountability_store;
 pub mod activity_signals;
+pub mod agent_characteristics;
 pub mod agent_registry;
 pub mod agent_turn_handler;
 pub mod agreements;
