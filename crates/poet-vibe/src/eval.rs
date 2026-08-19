@@ -55,19 +55,10 @@ pub fn populate_import_aliases(
 ) -> Result<(), Diagnostic> {
     let mut seen = HashSet::new();
     for imp in imports {
-        let ns = imp
-            .path
-            .strip_prefix("vibe:0.1/")
-            .ok_or_else(|| {
-                Diagnostic::new(
-                    DiagCode::E100,
-                    imp.span,
-                    format!(
-                        "import path must be vibe:0.1/<ns>; got '{}'",
-                        imp.path
-                    ),
-                )
-            })?;
+        // The vibe:0.1/ prefix is optional (T64). Both
+        // `import "vibe:0.1/math" as math;` and `import "math" as math;`
+        // are valid. The version is inferred from the program's AST tag.
+        let ns = imp.path.strip_prefix("vibe:0.1/").unwrap_or(&imp.path);
         if !VIBE_0_1_NAMESPACES.contains(&ns) {
             return Err(Diagnostic::new(
                 DiagCode::E100,
@@ -1672,5 +1663,56 @@ mod tests {
         let result = eval_program_src(src);
         assert!(result.is_err());
         assert_eq!(result.unwrap_err().code, DiagCode::E100);
+    }
+
+    // ── T64: Optional vibe:0.1/ prefix ────────────────────────────────
+
+    #[test]
+    fn t64_import_without_prefix_works() {
+        let src = r#"
+            import "math" as math;
+            fn main() {
+                return math.abs(-5);
+            }
+        "#;
+        let result = eval_program_src(src).unwrap();
+        assert_eq!(result, Value::I64(5));
+    }
+
+    #[test]
+    fn t64_import_with_prefix_still_works() {
+        let src = r#"
+            import "vibe:0.1/math" as math;
+            fn main() {
+                return math.abs(-5);
+            }
+        "#;
+        let result = eval_program_src(src).unwrap();
+        assert_eq!(result, Value::I64(5));
+    }
+
+    #[test]
+    fn t64_import_unknown_namespace_fails() {
+        let src = r#"
+            import "nonexistent" as foo;
+            fn main() {
+                return 0;
+            }
+        "#;
+        let result = eval_program_src(src);
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err().code, DiagCode::E100);
+    }
+
+    #[test]
+    fn t64_import_without_prefix_no_alias() {
+        let src = r#"
+            import "math";
+            fn main() {
+                return math.abs(-3);
+            }
+        "#;
+        let result = eval_program_src(src).unwrap();
+        assert_eq!(result, Value::I64(3));
     }
 }

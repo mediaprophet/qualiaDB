@@ -16,14 +16,13 @@ pub fn check_program(program: &Program) -> Result<CheckResult, Diagnostic> {
     let mut seen_aliases = HashSet::new();
     for imp in &program.imports {
         let path = imp.path.as_str();
-        if !path.starts_with("vibe:0.1/") {
-            return Err(Diagnostic::new(
-                DiagCode::E100,
-                imp.span,
-                format!("import path must be vibe:0.1/<ns>; got '{path}'"),
-            ));
-        }
-        let ns = &path["vibe:0.1/".len()..];
+        // The vibe:0.1/ prefix is optional (T64). The version lives on
+        // the AST tag, not in a sacred string prefix. Both
+        // `import "vibe:0.1/math" as math;` and `import "math" as math;`
+        // are valid.
+        let ns = path
+            .strip_prefix("vibe:0.1/")
+            .unwrap_or(path);
         const VALID: &[&str] = &[
             "math", "rdf", "quin", "graph", "aura", "pulse", "capability", "time",
             "conservation", "causal",
