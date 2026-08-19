@@ -20,6 +20,8 @@ pub enum DiagCode {
     E600,
     /// Deontic phase violation (R2)
     E700,
+    /// Clock unavailable on this host (T18)
+    E702,
     /// Disclosure denied — a credentialed refusal (R10).
     /// The agent/host refused to disclose content because the requester
     /// lacks the required capability, consent, or authority. This is not
@@ -39,6 +41,7 @@ impl DiagCode {
             DiagCode::E500 => "E500",
             DiagCode::E600 => "E600",
             DiagCode::E700 => "E700",
+            DiagCode::E702 => "E702",
             DiagCode::E800 => "E800",
         }
     }

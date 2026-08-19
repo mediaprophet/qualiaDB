@@ -42,11 +42,32 @@ pub trait Host {
         -> Result<Value, Diagnostic>;
 
     /// Wall clock as seconds since Unix epoch. External (core §11): forbidden
-    /// in Pure cells. Default returns 0 (WASM / hosts without a clock); native
-    /// hosts override with `SystemTime::now`. Replay uses the receipt clock,
+    /// in Pure cells. Default fails closed with E702 (WASM / hosts without a clock);
+    /// native hosts override with `SystemTime::now`. Replay uses the receipt clock,
     /// not this binding.
-    fn time_unix(&mut self, _span: Span) -> Result<Value, Diagnostic> {
-        Ok(Value::I64(0))
+    fn time_unix(&mut self, span: Span) -> Result<Value, Diagnostic> {
+        Err(Diagnostic::new(
+            DiagCode::E702,
+            span,
+            "no clock available on this host",
+        ))
+    }
+
+    /// Structured Unix time: `{ secs: I64, nanos: U64 }` (T19).
+    /// Default calls `time_unix` and wraps it into a Record.
+    fn time_unix_nanos(&mut self, span: Span) -> Result<Value, Diagnostic> {
+        let secs_val = self.time_unix(span)?;
+        let secs = secs_val.as_i64().unwrap_or(0);
+        let mut rec = std::collections::BTreeMap::new();
+        rec.insert("secs".into(), Value::I64(secs));
+        rec.insert("nanos".into(), Value::U64(0));
+        Ok(Value::Record(rec))
+    }
+
+    /// Monotonic nanos for frame timing and physics dt (T20).
+    /// Default returns 0 (WASM has no monotonic clock until W12 replay Instant).
+    fn time_monotonic_nanos(&mut self, _span: Span) -> Result<Value, Diagnostic> {
+        Ok(Value::U64(0))
     }
 
     fn quin_seal(
@@ -103,12 +124,26 @@ pub trait Host {
 }
 
 /// In-memory host for unit tests.
-#[derive(Default)]
 pub struct MockHost {
     pub staged: usize,
     pub committed: usize,
     pub published: Vec<String>,
     pub query_rows: usize,
+    pub clock_time: Option<i64>,
+    pub monotonic_time: u64,
+}
+
+impl Default for MockHost {
+    fn default() -> Self {
+        Self {
+            staged: 0,
+            committed: 0,
+            published: Vec::new(),
+            query_rows: 0,
+            clock_time: Some(1_000_000_000),
+            monotonic_time: 0,
+        }
+    }
 }
 
 impl Host for MockHost {
@@ -151,9 +186,36 @@ impl Host for MockHost {
         Ok(Value::Null)
     }
 
-    /// Deterministic epoch for unit tests so assertions don't depend on wall time.
-    fn time_unix(&mut self, _span: Span) -> Result<Value, Diagnostic> {
-        Ok(Value::I64(0))
+    /// Deterministic epoch for unit tests.
+    fn time_unix(&mut self, span: Span) -> Result<Value, Diagnostic> {
+        match self.clock_time {
+            Some(t) => Ok(Value::I64(t)),
+            None => Err(Diagnostic::new(
+                DiagCode::E702,
+                span,
+                "no clock available on this mock host",
+            )),
+        }
+    }
+
+    fn time_unix_nanos(&mut self, span: Span) -> Result<Value, Diagnostic> {
+        match self.clock_time {
+            Some(t) => {
+                let mut rec = std::collections::BTreeMap::new();
+                rec.insert("secs".into(), Value::I64(t));
+                rec.insert("nanos".into(), Value::U64(500_000));
+                Ok(Value::Record(rec))
+            }
+            None => Err(Diagnostic::new(
+                DiagCode::E702,
+                span,
+                "no clock available on this mock host",
+            )),
+        }
+    }
+
+    fn time_monotonic_nanos(&mut self, _span: Span) -> Result<Value, Diagnostic> {
+        Ok(Value::U64(self.monotonic_time))
     }
 }
 
@@ -211,6 +273,8 @@ pub fn dispatch<H: Host>(
         }
         "graph.snapshot" => host.graph_snapshot(span),
         "time.unix" => host.time_unix(span),
+        "time.unix_nanos" => host.time_unix_nanos(span),
+        "time.monotonic_nanos" => host.time_monotonic_nanos(span),
         "capability.resolve" => {
             let id = match args.first() {
                 Some(Value::String(s)) => s.clone(),
@@ -244,5 +308,89 @@ pub fn dispatch<H: Host>(
             span,
             format!("unknown binding {path}"),
         )),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    struct NoClockHost;
+
+    impl Host for NoClockHost {
+        fn graph_query(
+            &mut self,
+            _args: &[Value],
+            _take: u64,
+            _span: Span,
+        ) -> Result<Value, Diagnostic> {
+            Ok(Value::Null)
+        }
+        fn graph_stage(&mut self, _term: &Value, _span: Span) -> Result<Value, Diagnostic> {
+            Ok(Value::Null)
+        }
+        fn graph_commit(&mut self, _span: Span) -> Result<Value, Diagnostic> {
+            Ok(Value::Null)
+        }
+        fn aura_validate(&mut self, _node: &Value, _shape: &Value, _span: Span) -> Result<Value, Diagnostic> {
+            Ok(Value::Bool(true))
+        }
+        fn pulse_publish(&mut self, _topic: &str, _payload: &Value, _span: Span) -> Result<Value, Diagnostic> {
+            Ok(Value::Null)
+        }
+    }
+
+    #[test]
+    fn mock_host_time_returns_some() {
+        let mut host = MockHost::default();
+        let res = host.time_unix(Span::point(0));
+        assert_eq!(res.unwrap(), Value::I64(1_000_000_000));
+    }
+
+    #[test]
+    fn no_clock_host_time_returns_diagnostic() {
+        let mut host = NoClockHost;
+        let res = host.time_unix(Span::point(0));
+        assert!(res.is_err());
+        assert_eq!(res.unwrap_err().code, DiagCode::E702);
+    }
+
+    #[test]
+    fn time_unix_nanos_none_when_no_clock() {
+        let mut host = NoClockHost;
+        let res = host.time_unix_nanos(Span::point(0));
+        assert!(res.is_err());
+        assert_eq!(res.unwrap_err().code, DiagCode::E702);
+    }
+
+    #[test]
+    fn time_unix_nanos_returns_structured() {
+        let mut host = MockHost::default();
+        let val = host.time_unix_nanos(Span::point(0)).unwrap();
+        match val {
+            Value::Record(r) => {
+                assert_eq!(r.get("secs"), Some(&Value::I64(1_000_000_000)));
+                assert_eq!(r.get("nanos"), Some(&Value::U64(500_000)));
+            }
+            other => panic!("expected record, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn time_monotonic_nanos_default_zero() {
+        let mut host = MockHost::default();
+        assert_eq!(host.time_monotonic_nanos(Span::point(0)).unwrap(), Value::U64(0));
+    }
+
+    #[test]
+    fn time_monotonic_nanos_custom() {
+        let mut host = MockHost {
+            monotonic_time: 42_000_000,
+            ..Default::default()
+        };
+        assert_eq!(
+            host.time_monotonic_nanos(Span::point(0)).unwrap(),
+            Value::U64(42_000_000)
+        );
     }
 }
