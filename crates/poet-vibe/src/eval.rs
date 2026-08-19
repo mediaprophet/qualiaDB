@@ -1265,4 +1265,76 @@ mod tests {
         let result = eval_program_src(src).unwrap();
         assert_eq!(result, Value::F64(f64::INFINITY));
     }
+
+    #[test]
+    fn math_abs_i64_returns_i64() {
+        let src = r#"
+            import "vibe:0.1/math" as math;
+            fn main() {
+                return math.abs(-5);
+            }
+        "#;
+        let result = eval_program_src(src).unwrap();
+        assert_eq!(result, Value::I64(5));
+    }
+
+    #[test]
+    fn math_abs_f64_returns_f64() {
+        let src = r#"
+            import "vibe:0.1/math" as math;
+            fn main() {
+                return math.abs(-5.0);
+            }
+        "#;
+        let result = eval_program_src(src).unwrap();
+        assert_eq!(result, Value::F64(5.0));
+    }
+
+    #[test]
+    fn math_min_i64_returns_i64() {
+        let src = r#"
+            import "vibe:0.1/math" as math;
+            fn main() {
+                return math.min(3, 7);
+            }
+        "#;
+        let result = eval_program_src(src).unwrap();
+        assert_eq!(result, Value::I64(3));
+    }
+
+    #[test]
+    fn math_max_i64_returns_i64() {
+        let src = r#"
+            import "vibe:0.1/math" as math;
+            fn main() {
+                return math.max(3, 7);
+            }
+        "#;
+        let result = eval_program_src(src).unwrap();
+        assert_eq!(result, Value::I64(7));
+    }
+
+    #[test]
+    fn math_floor_i64_returns_i64() {
+        let src = r#"
+            import "vibe:0.1/math" as math;
+            fn main() {
+                return math.floor(5);
+            }
+        "#;
+        let result = eval_program_src(src).unwrap();
+        assert_eq!(result, Value::I64(5));
+    }
+
+    #[test]
+    fn math_sqrt_always_f64() {
+        let src = r#"
+            import "vibe:0.1/math" as math;
+            fn main() {
+                return math.sqrt(9);
+            }
+        "#;
+        let result = eval_program_src(src).unwrap();
+        assert_eq!(result, Value::F64(3.0));
+    }
 }
