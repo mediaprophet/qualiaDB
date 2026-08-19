@@ -28,6 +28,7 @@ pub mod hid;
 pub mod locale;
 pub mod physics;
 pub mod presentation;
+pub mod pretty;
 pub mod sheaf;
 pub mod trivia;
 pub mod quantity;
