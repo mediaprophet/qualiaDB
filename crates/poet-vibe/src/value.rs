@@ -102,6 +102,37 @@ pub struct MaterialRef {
     pub hash: u64,
 }
 
+/// An opaque handle to a 10D tensor on the host (T52).
+/// Scripts never see the raw tensor data — they see this handle
+/// and can pass it to host capabilities that accept TensorRef.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct TensorRef {
+    /// A host-side handle ID (opaque to VibeScript).
+    pub handle: u64,
+    /// A content hash of the tensor data (for provenance).
+    pub hash: u64,
+}
+
+/// An opaque handle to a geometry asset on the host (T52).
+/// Scripts never see the raw geometry — they see this handle.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct GeometryRef {
+    /// A host-side handle ID (opaque to VibeScript).
+    pub handle: u64,
+    /// A content hash of the geometry data (for provenance).
+    pub hash: u64,
+}
+
+/// An opaque handle to a digital asset on the host (T52).
+/// Scripts never see the raw asset bytes — they see this handle.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct AssetRef {
+    /// The asset's IRI identifier.
+    pub iri: String,
+    /// A content hash of the asset content.
+    pub hash: u64,
+}
+
 /// An opaque handle to a chemical species (T33).
 ///
 /// A species is a distinct chemical entity (e.g. H₂O, NaCl, sucrose).
@@ -425,6 +456,12 @@ pub enum Value {
     FieldRef(FieldRef),
     /// An opaque handle to a material signature (T5).
     MaterialRef(MaterialRef),
+    /// An opaque handle to a 10D tensor on the host (T52).
+    TensorRef(TensorRef),
+    /// An opaque handle to a geometry asset on the host (T52).
+    GeometryRef(GeometryRef),
+    /// An opaque handle to a digital asset on the host (T52).
+    AssetRef(AssetRef),
     /// A worldline: continuant through Instant × Pose (T6).
     WorldLine(WorldLine),
     /// An opaque 48-byte handle to a Super-Quin (T7). Scripts do not see
@@ -544,6 +581,30 @@ impl Value {
     pub fn as_material_ref(&self) -> Option<&MaterialRef> {
         match self {
             Value::MaterialRef(m) => Some(m),
+            _ => None,
+        }
+    }
+
+    /// Extract a TensorRef if this value is one (T52).
+    pub fn as_tensor_ref(&self) -> Option<&TensorRef> {
+        match self {
+            Value::TensorRef(t) => Some(t),
+            _ => None,
+        }
+    }
+
+    /// Extract a GeometryRef if this value is one (T52).
+    pub fn as_geometry_ref(&self) -> Option<&GeometryRef> {
+        match self {
+            Value::GeometryRef(g) => Some(g),
+            _ => None,
+        }
+    }
+
+    /// Extract an AssetRef if this value is one (T52).
+    pub fn as_asset_ref(&self) -> Option<&AssetRef> {
+        match self {
+            Value::AssetRef(a) => Some(a),
             _ => None,
         }
     }
@@ -818,6 +879,52 @@ mod tests {
         let v = Value::MaterialRef(m);
         let mr = v.as_material_ref().unwrap();
         assert_eq!(mr.iri, "material:sucrose");
+    }
+
+    // ── T52: Heavy returns as opaque handles ──────────────────────────
+
+    #[test]
+    fn t52_tensor_ref_construction_and_extract() {
+        let t = TensorRef { handle: 42, hash: 0xABCD };
+        let v = Value::TensorRef(t);
+        let tr = v.as_tensor_ref().unwrap();
+        assert_eq!(tr.handle, 42);
+        assert_eq!(tr.hash, 0xABCD);
+    }
+
+    #[test]
+    fn t52_geometry_ref_construction_and_extract() {
+        let g = GeometryRef { handle: 7, hash: 0x1234 };
+        let v = Value::GeometryRef(g);
+        let gr = v.as_geometry_ref().unwrap();
+        assert_eq!(gr.handle, 7);
+        assert_eq!(gr.hash, 0x1234);
+    }
+
+    #[test]
+    fn t52_asset_ref_construction_and_extract() {
+        let a = AssetRef { iri: "asset:model.glb".to_string(), hash: 0xBEEF };
+        let v = Value::AssetRef(a);
+        let ar = v.as_asset_ref().unwrap();
+        assert_eq!(ar.iri, "asset:model.glb");
+        assert_eq!(ar.hash, 0xBEEF);
+    }
+
+    #[test]
+    fn t52_extract_returns_none_on_wrong_type() {
+        let v = Value::I64(42);
+        assert!(v.as_tensor_ref().is_none());
+        assert!(v.as_geometry_ref().is_none());
+        assert!(v.as_asset_ref().is_none());
+    }
+
+    #[test]
+    fn t52_tensor_ref_equality() {
+        let t1 = TensorRef { handle: 1, hash: 100 };
+        let t2 = TensorRef { handle: 1, hash: 100 };
+        let t3 = TensorRef { handle: 2, hash: 100 };
+        assert_eq!(t1, t2);
+        assert_ne!(t1, t3);
     }
 
     #[test]
