@@ -241,6 +241,42 @@ pub struct CoordContext<V: Fn(u64, u64) -> bool> {
     pub verify_root_delegation: V,
 }
 
+/// Host-side seams bundled for the coordination ISA (R8).
+pub struct CoordHostSeams {
+    /// Verify root delegation signature (0x70).
+    /// Returns true if agent_did_hash is validly delegated by human_root_did_hash.
+    pub verify_root_delegation: Box<dyn Fn(u64, u64) -> bool + Send + Sync>,
+    /// Yield to SuspendedTransactionQueue (0x71).
+    /// Called when InsufficientGlobalResources is raised.
+    pub yield_to_suspended_queue: Box<dyn Fn(u64, u64) + Send + Sync>,
+    /// Mint a performance VC to the graph (0x72).
+    /// Returns the nquin_hash of the minted VC.
+    pub mint_performance_vc: Box<dyn Fn(u64, u64, u64, bool) -> u64 + Send + Sync>,
+}
+
+/// Conservative fail-closed default host seams (R8).
+pub fn default_seams() -> CoordHostSeams {
+    CoordHostSeams {
+        verify_root_delegation: Box::new(|_agent, _root| false),
+        yield_to_suspended_queue: Box::new(|_task, _limit| ()),
+        mint_performance_vc: Box::new(|_agent, _declared, _actual, _validation| 0),
+    }
+}
+
+impl Default for CoordHostSeams {
+    fn default() -> Self {
+        default_seams()
+    }
+}
+
+/// Execution context for coordination programs backed by full host seams (R8).
+pub struct CoordSeamContext<'a> {
+    pub current_epoch: u64,
+    pub global_token_limit: u64,
+    pub is_sentinel_daemon: bool,
+    pub seams: &'a CoordHostSeams,
+}
+
 /// What a coordination program produced (besides the operand stack).
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct CoordOutcome {
@@ -353,6 +389,102 @@ pub fn execute_coordination<V: Fn(u64, u64) -> bool>(
                     return Err(CoordVmError::StackOverflow);
                 }
                 stack[sp] = perf_vc_hash(&rec);
+                sp += 1;
+                outcome.performance = Some(rec);
+                ip += 1;
+            }
+            _ => return Err(CoordVmError::InvalidProgram),
+        }
+    }
+
+    outcome.stack_top = (sp > 0).then(|| stack[sp - 1]);
+    Ok(outcome)
+}
+
+/// Execute a coordination-ISA program against full host seams (R8).
+pub fn execute_coordination_with_seams(
+    program: &[u8],
+    ctx: &CoordSeamContext,
+) -> Result<CoordOutcome, CoordVmError> {
+    let mut stack = [0u64; COORD_STACK_DEPTH];
+    let mut sp = 0usize;
+    let mut ip = 0usize;
+    let mut outcome = CoordOutcome::default();
+
+    while ip < program.len() {
+        match program[ip] {
+            OP_PUSH_U64 => {
+                if ip + 9 > program.len() {
+                    return Err(CoordVmError::InvalidProgram);
+                }
+                if sp >= COORD_STACK_DEPTH {
+                    return Err(CoordVmError::StackOverflow);
+                }
+                let bytes: [u8; 8] = program[ip + 1..ip + 9]
+                    .try_into()
+                    .map_err(|_| CoordVmError::InvalidProgram)?;
+                stack[sp] = u64::from_le_bytes(bytes);
+                sp += 1;
+                ip += 9;
+            }
+            OP_AUTHORIZATION_GRANT => {
+                if sp < 3 {
+                    return Err(CoordVmError::StackUnderflow);
+                }
+                let timestamp = stack[sp - 1];
+                let root = stack[sp - 2];
+                let agent = stack[sp - 3];
+                sp -= 3;
+                let granted = eval_authorization_grant(
+                    agent,
+                    root,
+                    timestamp,
+                    ctx.current_epoch,
+                    |a, r| (ctx.seams.verify_root_delegation)(a, r),
+                )
+                .map_err(CoordVmError::Fault)?;
+                stack[sp] = u64::from(granted);
+                sp += 1;
+                outcome.granted = Some(granted);
+                ip += 1;
+            }
+            OP_RESOURCE_DECLARATION => {
+                if sp < 3 {
+                    return Err(CoordVmError::StackUnderflow);
+                }
+                let max_cycles = stack[sp - 1];
+                let ceiling = stack[sp - 2];
+                let task = stack[sp - 3];
+                sp -= 3;
+                match eval_resource_declaration(task, ceiling, max_cycles, ctx.global_token_limit) {
+                    Ok(contract) => {
+                        outcome.contract = Some(contract);
+                    }
+                    Err(fault @ CoordFault::InsufficientGlobalResources { declared, global_limit }) => {
+                        (ctx.seams.yield_to_suspended_queue)(declared, global_limit);
+                        return Err(CoordVmError::Fault(fault));
+                    }
+                    Err(fault) => return Err(CoordVmError::Fault(fault)),
+                }
+                ip += 1;
+            }
+            OP_PERFORMANCE_RATING => {
+                require_privileged(ctx.is_sentinel_daemon).map_err(CoordVmError::Fault)?;
+                if sp < 4 {
+                    return Err(CoordVmError::StackUnderflow);
+                }
+                let validation = stack[sp - 1] != 0;
+                let actual = stack[sp - 2];
+                let declared = stack[sp - 3];
+                let agent = stack[sp - 4];
+                sp -= 4;
+                let rec = eval_performance_rating(agent, declared, actual, validation);
+                let vc_hash = (ctx.seams.mint_performance_vc)(agent, declared, actual, validation);
+                let hash = if vc_hash != 0 { vc_hash } else { perf_vc_hash(&rec) };
+                if sp >= COORD_STACK_DEPTH {
+                    return Err(CoordVmError::StackOverflow);
+                }
+                stack[sp] = hash;
                 sp += 1;
                 outcome.performance = Some(rec);
                 ip += 1;
@@ -588,5 +720,112 @@ mod tests {
             execute_coordination(&[OP_PUSH_U64, 1, 2, 3], &ctx),
             Err(CoordVmError::InvalidProgram)
         );
+    }
+
+    #[test]
+    fn default_seams_fail_closed() {
+        let seams = default_seams();
+        // verify_root_delegation is fail-closed by default
+        assert!(!(seams.verify_root_delegation)(0x1234, 0x5678));
+        // mint_performance_vc is 0 by default (unwired)
+        assert_eq!((seams.mint_performance_vc)(0x1, 1000, 800, true), 0);
+    }
+
+    #[test]
+    fn execute_coordination_grant_with_seams() {
+        let mut seams = default_seams();
+        seams.verify_root_delegation = Box::new(|agent, root| agent == 0xA && root == 0xB);
+
+        let ctx = CoordSeamContext {
+            current_epoch: 10,
+            global_token_limit: 5000,
+            is_sentinel_daemon: true,
+            seams: &seams,
+        };
+
+        let mut prog = Vec::new();
+        push(&mut prog, 0xA);
+        push(&mut prog, 0xB);
+        push(&mut prog, 100);
+        prog.push(OP_AUTHORIZATION_GRANT);
+
+        let outcome = execute_coordination_with_seams(&prog, &ctx).unwrap();
+        assert_eq!(outcome.granted, Some(true));
+        assert_eq!(outcome.stack_top, Some(1));
+    }
+
+    #[test]
+    fn execute_coordination_resource_declaration() {
+        use std::sync::atomic::{AtomicU64, Ordering};
+        use std::sync::Arc;
+        let yielded = Arc::new(AtomicU64::new(0));
+        let yielded_clone = yielded.clone();
+
+        let mut seams = default_seams();
+        seams.yield_to_suspended_queue = Box::new(move |declared, _| {
+            yielded_clone.store(declared, Ordering::SeqCst);
+        });
+
+        let ctx = CoordSeamContext {
+            current_epoch: 0,
+            global_token_limit: 2000,
+            is_sentinel_daemon: true,
+            seams: &seams,
+        };
+
+        // Within limits -> success
+        let mut prog_ok = Vec::new();
+        push(&mut prog_ok, 42);
+        push(&mut prog_ok, 1000);
+        push(&mut prog_ok, 20);
+        prog_ok.push(OP_RESOURCE_DECLARATION);
+
+        let out = execute_coordination_with_seams(&prog_ok, &ctx).unwrap();
+        assert_eq!(out.contract.unwrap().token_ceiling, 1000);
+
+        // Exceeds limit -> yields to suspended queue and returns fault
+        let mut prog_err = Vec::new();
+        push(&mut prog_err, 42);
+        push(&mut prog_err, 3000);
+        push(&mut prog_err, 20);
+        prog_err.push(OP_RESOURCE_DECLARATION);
+
+        let err = execute_coordination_with_seams(&prog_err, &ctx);
+        assert!(matches!(
+            err,
+            Err(CoordVmError::Fault(CoordFault::InsufficientGlobalResources { .. }))
+        ));
+        assert_eq!(yielded.load(Ordering::SeqCst), 3000);
+    }
+
+    #[test]
+    fn execute_coordination_performance_rating() {
+        let mut seams = default_seams();
+        seams.mint_performance_vc = Box::new(|agent, declared, actual, valid| {
+            if valid && declared >= actual {
+                agent ^ 0xFEED_FACE
+            } else {
+                0
+            }
+        });
+
+        let ctx = CoordSeamContext {
+            current_epoch: 0,
+            global_token_limit: 5000,
+            is_sentinel_daemon: true,
+            seams: &seams,
+        };
+
+        let mut prog = Vec::new();
+        push(&mut prog, 0x1234);
+        push(&mut prog, 1000);
+        push(&mut prog, 500);
+        push(&mut prog, 1);
+        prog.push(OP_PERFORMANCE_RATING);
+
+        let out = execute_coordination_with_seams(&prog, &ctx).unwrap();
+        let rec = out.performance.unwrap();
+        assert_eq!(rec.fidelity, 1);
+        assert_eq!(out.stack_top, Some(0x1234 ^ 0xFEED_FACE));
     }
 }
