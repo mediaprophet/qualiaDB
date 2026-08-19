@@ -4,6 +4,7 @@
 
 #[cfg(not(target_arch = "wasm32"))]
 pub mod swarm {
+    use crate::governance::coordination::compute_priority;
     use crate::identifier::parse_did_q42;
     #[cfg(not(target_arch = "wasm32"))]
     use crate::q42_lexicon::{CborLdError, Q42CborLdParser, Q42Context};
@@ -19,6 +20,30 @@ pub mod swarm {
     use std::sync::{Arc, Mutex};
     use std::thread;
     use std::time::{SystemTime, UNIX_EPOCH};
+
+    /// Agent candidate evaluated during daemon swarm compute routing.
+    #[derive(Debug, Clone, PartialEq, Eq)]
+    pub struct AgentComputeCandidate {
+        pub agent_did_hash: u64,
+        pub windowed_faults: u32,
+        pub usury_event: bool,
+    }
+
+    impl AgentComputeCandidate {
+        pub const fn new(agent_did_hash: u64, windowed_faults: u32, usury_event: bool) -> Self {
+            Self {
+                agent_did_hash,
+                windowed_faults,
+                usury_event,
+            }
+        }
+
+        /// Dynamic Darwinian compute priority from recent faults and usury status.
+        #[inline]
+        pub fn priority(&self) -> u64 {
+            compute_priority(self.windowed_faults, self.usury_event)
+        }
+    }
 
     /// Ring buffer capacity for SPSC lock-free communication between Isolates
     const SPSC_BUFFER_CAPACITY: usize = 1024;
@@ -583,6 +608,16 @@ pub mod swarm {
         /// Get the semantic context for a peer, if known.
         pub fn get_semantic_context(&self, peer_id: &str) -> Option<u64> {
             self.semantic_contexts.get(peer_id).copied()
+        }
+
+        /// Compute dynamic priority for an agent given recent fault count and usury status.
+        pub fn compute_agent_priority(&self, windowed_faults: u32, usury_event: bool) -> u64 {
+            compute_priority(windowed_faults, usury_event)
+        }
+
+        /// Route compute task among agent candidates according to Darwinian governance priorities.
+        pub fn route_agent_task(&self, candidates: &[AgentComputeCandidate]) -> Option<u64> {
+            DaemonOrchestrator::route_agent_task(candidates)
         }
 
         /// Legacy CBOR-LD parsing method (fallback)
@@ -1343,6 +1378,28 @@ pub mod swarm {
 
             Ok(peer_id)
         }
+
+        /// Compute dynamic priority for an agent given recent fault count and usury status.
+        pub fn compute_agent_priority(&self, windowed_faults: u32, usury_event: bool) -> u64 {
+            compute_priority(windowed_faults, usury_event)
+        }
+
+        /// Sort agent candidates by compute priority in descending order (highest priority first).
+        /// Quarantined agents (priority 0) are ordered to the end.
+        pub fn rank_agent_candidates(candidates: &mut [AgentComputeCandidate]) {
+            candidates.sort_by(|a, b| b.priority().cmp(&a.priority()));
+        }
+
+        /// Route compute task to the candidate with highest non-zero priority.
+        /// Returns `Some(agent_did_hash)` of the chosen agent, or `None` if all are quarantined (priority 0).
+        pub fn route_agent_task(candidates: &[AgentComputeCandidate]) -> Option<u64> {
+            candidates
+                .iter()
+                .map(|c| (c.agent_did_hash, c.priority()))
+                .filter(|&(_, p)| p > 0)
+                .max_by_key(|&(_, p)| p)
+                .map(|(did, _)| did)
+        }
     }
 
     #[cfg(test)]
@@ -1496,6 +1553,50 @@ pub mod swarm {
             } else {
                 panic!("expected IPv4 from domain_to_ip");
             }
+        }
+
+        #[test]
+        fn agent_compute_priority_governance_routing() {
+            let orchestrator = DaemonOrchestrator::new();
+
+            // Clean agent (0 faults, no usury)
+            let clean_agent = AgentComputeCandidate::new(0x1001, 0, false);
+            assert_eq!(clean_agent.priority(), crate::governance::coordination::PRIORITY_BASE);
+            assert_eq!(
+                orchestrator.compute_agent_priority(0, false),
+                crate::governance::coordination::PRIORITY_BASE
+            );
+
+            // Agent with faults
+            let faulted_agent = AgentComputeCandidate::new(0x1002, 1, false);
+            assert_eq!(faulted_agent.priority(), 5000);
+
+            // Agent with usury event (hard quarantine -> 0)
+            let usury_agent = AgentComputeCandidate::new(0x1003, 0, true);
+            assert_eq!(usury_agent.priority(), 0);
+            assert_eq!(orchestrator.compute_agent_priority(0, true), 0);
+
+            // Candidate ranking
+            let mut candidates = vec![
+                faulted_agent.clone(),
+                usury_agent.clone(),
+                clean_agent.clone(),
+            ];
+            DaemonOrchestrator::rank_agent_candidates(&mut candidates);
+            assert_eq!(candidates[0].agent_did_hash, 0x1001); // clean agent first
+            assert_eq!(candidates[1].agent_did_hash, 0x1002); // faulted agent second
+            assert_eq!(candidates[2].agent_did_hash, 0x1003); // quarantined agent last
+
+            // Routing dispatch chooses clean agent
+            let chosen = DaemonOrchestrator::route_agent_task(&candidates);
+            assert_eq!(chosen, Some(0x1001));
+
+            // If only usury agents exist, route returns None (quarantine)
+            let all_usury = vec![
+                AgentComputeCandidate::new(0x2001, 0, true),
+                AgentComputeCandidate::new(0x2002, 2, true),
+            ];
+            assert_eq!(DaemonOrchestrator::route_agent_task(&all_usury), None);
         }
     }
 }
