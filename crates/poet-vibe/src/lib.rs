@@ -24,6 +24,7 @@ mod value;
 
 pub mod dag;
 pub mod deontic_interrupt;
+pub mod quantity;
 pub mod reflection;
 
 pub use ast::{Expr, Program};
@@ -54,8 +55,8 @@ pub use reflection::{
 };
 pub use span::Span;
 pub use value::{
-    Duration, FieldRef, Frame, Instant, MaterialRef, Pose, Quantity, TimeScale, Transform,
-    Value, WorldLine,
+    Duration, FieldRef, Frame, Instant, MaterialRef, Pose, Quantity, QuinRef, TimeScale,
+    Transform, Value, WorldLine,
 };
 
 /// Parse, check, and evaluate a Pure cell (`= expr`).
