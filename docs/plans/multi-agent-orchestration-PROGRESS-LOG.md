@@ -329,3 +329,48 @@ those operations.
   - Real AES-256-GCM encrypt/decrypt round-trip
   - Signing fail-closed verification
 
+---
+
+## Round 4 Batch 5 — ZK proofs / zk-SNARKs (2026-08-19)
+
+Exposed qualia-core-db's real ZK proof system (Groth16 over BLS12-381,
+arkworks 0.6) to VibeScript via the `zk` namespace.
+
+### Newly implemented
+
+| Commit | Description |
+|--------|-------------|
+| `af53026e` | poet-vibe zk namespace + qualia-core-db Host impl — real Groth16 |
+
+### ZK operations exposed
+
+| Operation | VibeScript | Host implementation |
+|-----------|------------|---------------------|
+| Threshold prove | `zk.prove_threshold(value, threshold)` | Real Groth16 (zk_predicates) |
+| Threshold verify | `zk.verify_threshold(proof, vk, threshold)` | Real Groth16 (zk_predicates) |
+| Range prove | `zk.prove_range(value, lo, hi)` | Real Groth16 (zk_predicates) |
+| Range verify | `zk.verify_range(proof, vk, lo, hi)` | Real Groth16 (zk_predicates) |
+| Matmul prove | `zk.prove_matmul(m, k, n, a, b)` | Real Groth16 (zk_proofs) |
+| List circuits | `zk.list_circuits()` | Real (zk_proofs) |
+
+### Soundness properties
+
+- **False statements are unprovable.** `prove_threshold(15, 18)` returns
+  an error — there is no satisfying witness for `15 >= 18`.
+- **Proofs are bound to public inputs.** A proof made for `threshold=18`
+  does not verify against `threshold=21`.
+- **Range proofs compose two threshold checks.** `prove_range(100, 18, 65)`
+  fails because `100 > 65`.
+
+### Test counts after batch 5
+
+- **poet-vibe lib:** 413 passed (was 402)
+- **poet-vibe conformance:** 80 passed (was 79)
+- **qualia-core-db poet_host ZK:** 6 passed (new)
+  - Threshold prove + verify (21 >= 18 → true)
+  - Wrong threshold fails (verify against 21 → false)
+  - False statement unprovable (15 >= 18 → error)
+  - Range prove + verify (25 in [18,65] → true)
+  - Range outside bounds unprovable (100 in [18,65] → error)
+  - Matmul prove (2x2, verifies [19,22,43,50])
+
