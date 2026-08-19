@@ -228,6 +228,62 @@ impl CausalRelation {
     }
 }
 
+/// Four-bit disclosure boundary (T56). Each bit is independent.
+///
+/// `.gitignore` is publication only. This struct tracks all four
+/// dimensions of disclosure control:
+/// - **Publication**: visible in public outputs (reports, UI).
+/// - **Replication**: may be copied to other nodes/stores.
+/// - **Agency**: may be acted upon by agents (inference, hooks).
+/// - **Exfiltration**: may leave the principal's trust boundary.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct DisclosureBoundary {
+    /// Publication: visible in public outputs (reports, UI).
+    pub publication: bool,
+    /// Replication: may be copied to other nodes/stores.
+    pub replication: bool,
+    /// Agency: may be acted upon by agents (inference, hooks).
+    pub agency: bool,
+    /// Exfiltration: may leave the principal's trust boundary.
+    pub exfiltration: bool,
+}
+
+impl DisclosureBoundary {
+    /// All four bits false — no disclosure allowed.
+    pub fn none() -> Self {
+        Self::default()
+    }
+
+    /// Only publication is true — visible but not replicable,
+    /// actionable, or exfiltrable.
+    pub fn public_only() -> Self {
+        Self {
+            publication: true,
+            ..Self::default()
+        }
+    }
+
+    /// All four bits true — full disclosure.
+    pub fn full() -> Self {
+        Self {
+            publication: true,
+            replication: true,
+            agency: true,
+            exfiltration: true,
+        }
+    }
+
+    /// Returns the four bits as `[publication, replication, agency, exfiltration]`.
+    pub fn as_bits(&self) -> [bool; 4] {
+        [
+            self.publication,
+            self.replication,
+            self.agency,
+            self.exfiltration,
+        ]
+    }
+}
+
 /// A worldline: a continuant through Instant × Pose (T6).
 ///
 /// Kills UUID-as-identity. A worldline is the identity of a thing that
@@ -384,6 +440,17 @@ pub enum Value {
     Conservation(ConservationResult),
     /// A causal relation between two events (T35).
     Causal(CausalRelation),
+    /// A credentialed disclosure refusal (T55). The agent/host refused
+    /// to disclose content because the requester lacks the required
+    /// capability, consent, or authority. This is a first-class rights
+    /// enforcement value, not a "file not found" error.
+    DisclosureDenied {
+        capability: String,
+        reason: String,
+    },
+    /// Four-bit disclosure boundary (T56). Each bit is independent:
+    /// publication, replication, agency, exfiltration.
+    DisclosureBoundary(DisclosureBoundary),
 }
 
 impl Value {
@@ -392,6 +459,8 @@ impl Value {
             Value::Bool(b) => *b,
             Value::Null => false,
             Value::I64(0) | Value::U64(0) => false,
+            // A disclosure denial is falsy — the disclosure did not happen.
+            Value::DisclosureDenied { .. } => false,
             _ => true,
         }
     }
@@ -531,6 +600,25 @@ impl Value {
     pub fn as_causal(&self) -> Option<CausalRelation> {
         match self {
             Value::Causal(c) => Some(*c),
+            _ => None,
+        }
+    }
+
+    /// Extract a DisclosureDenied if this value is one (T55).
+    /// Returns (capability, reason).
+    pub fn as_disclosure_denied(&self) -> Option<(&str, &str)> {
+        match self {
+            Value::DisclosureDenied { capability, reason } => {
+                Some((capability.as_str(), reason.as_str()))
+            }
+            _ => None,
+        }
+    }
+
+    /// Extract a DisclosureBoundary if this value is one (T56).
+    pub fn as_disclosure_boundary(&self) -> Option<&DisclosureBoundary> {
+        match self {
+            Value::DisclosureBoundary(b) => Some(b),
             _ => None,
         }
     }
@@ -1048,5 +1136,122 @@ mod tests {
     fn value_causal_not_conservation() {
         let v = Value::Causal(CausalRelation::Timelike);
         assert!(v.as_conservation().is_none());
+    }
+
+    // ── T55: DisclosureDenied tests ───────────────────────────────────
+
+    #[test]
+    fn value_disclosure_denied_construction() {
+        let v = Value::DisclosureDenied {
+            capability: "graph.query".to_string(),
+            reason: "requester lacks consent".to_string(),
+        };
+        let (cap, reason) = v.as_disclosure_denied().unwrap();
+        assert_eq!(cap, "graph.query");
+        assert_eq!(reason, "requester lacks consent");
+    }
+
+    #[test]
+    fn value_disclosure_denied_is_falsy() {
+        let v = Value::DisclosureDenied {
+            capability: "graph.query".to_string(),
+            reason: "denied".to_string(),
+        };
+        assert!(!v.is_truthy());
+    }
+
+    #[test]
+    fn value_disclosure_denied_not_numeric() {
+        let v = Value::DisclosureDenied {
+            capability: "x".to_string(),
+            reason: "y".to_string(),
+        };
+        assert!(v.as_f64().is_none());
+        assert!(v.as_i64().is_none());
+    }
+
+    #[test]
+    fn value_disclosure_denied_not_other_type() {
+        let v = Value::DisclosureDenied {
+            capability: "x".to_string(),
+            reason: "y".to_string(),
+        };
+        assert!(v.as_causal().is_none());
+        assert!(v.as_conservation().is_none());
+        assert!(v.as_mixture().is_none());
+    }
+
+    // ── T56: DisclosureBoundary tests ─────────────────────────────────
+
+    #[test]
+    fn value_disclosure_boundary_default_is_none() {
+        let b = DisclosureBoundary::default();
+        assert_eq!(b.as_bits(), [false, false, false, false]);
+    }
+
+    #[test]
+    fn value_disclosure_boundary_none() {
+        let b = DisclosureBoundary::none();
+        assert!(!b.publication);
+        assert!(!b.replication);
+        assert!(!b.agency);
+        assert!(!b.exfiltration);
+    }
+
+    #[test]
+    fn value_disclosure_boundary_public_only() {
+        let b = DisclosureBoundary::public_only();
+        assert!(b.publication);
+        assert!(!b.replication);
+        assert!(!b.agency);
+        assert!(!b.exfiltration);
+    }
+
+    #[test]
+    fn value_disclosure_boundary_full() {
+        let b = DisclosureBoundary::full();
+        assert!(b.publication);
+        assert!(b.replication);
+        assert!(b.agency);
+        assert!(b.exfiltration);
+    }
+
+    #[test]
+    fn value_disclosure_boundary_as_bits() {
+        let b = DisclosureBoundary {
+            publication: true,
+            replication: false,
+            agency: true,
+            exfiltration: false,
+        };
+        assert_eq!(b.as_bits(), [true, false, true, false]);
+    }
+
+    #[test]
+    fn value_disclosure_boundary_extract() {
+        let b = DisclosureBoundary::public_only();
+        let v = Value::DisclosureBoundary(b);
+        let extracted = v.as_disclosure_boundary().unwrap();
+        assert!(extracted.publication);
+        assert!(!extracted.replication);
+    }
+
+    #[test]
+    fn value_disclosure_boundary_equality() {
+        let a = DisclosureBoundary {
+            publication: true,
+            replication: false,
+            agency: true,
+            exfiltration: false,
+        };
+        let b = DisclosureBoundary {
+            publication: true,
+            replication: false,
+            agency: true,
+            exfiltration: false,
+        };
+        let c = DisclosureBoundary::full();
+        assert_eq!(a, b);
+        assert_ne!(a, c);
     }
 }

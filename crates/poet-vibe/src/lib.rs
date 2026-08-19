@@ -55,9 +55,9 @@ pub use reflection::{
 };
 pub use span::Span;
 pub use value::{
-    CausalRelation, ConservationQuantity, ConservationResult, Duration, EnumValue, FieldRef,
-    Frame, Instant, MaterialRef, Mixture, MixturePhase, Miscibility, Pose, Quantity, QuinRef,
-    SpeciesRef, TimeScale, Transform, Value, WorldLine,
+    CausalRelation, ConservationQuantity, ConservationResult, DisclosureBoundary, Duration,
+    EnumValue, FieldRef, Frame, Instant, MaterialRef, Mixture, MixturePhase, Miscibility, Pose,
+    Quantity, QuinRef, SpeciesRef, TimeScale, Transform, Value, WorldLine,
 };
 
 /// Parse, check, and evaluate a Pure cell (`= expr`).
