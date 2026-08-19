@@ -25,7 +25,7 @@ pub fn check_program(program: &Program) -> Result<CheckResult, Diagnostic> {
             .unwrap_or(path);
         const VALID: &[&str] = &[
             "math", "rdf", "quin", "graph", "aura", "pulse", "capability", "time",
-            "conservation", "causal", "dag", "deontic", "hid", "cue", "crypto",
+            "conservation", "causal", "dag", "deontic", "hid", "cue", "crypto", "zk",
         ];
         if !VALID.contains(&ns) {
             return Err(Diagnostic::new(

@@ -436,6 +436,106 @@ pub trait Host {
             "crypto.generate_key not available on this host",
         ))
     }
+
+    // ── ZK proof operations (zk-SNARKs) ─────────────────────────────
+
+    /// Prove, in zero knowledge, that a private `value` satisfies
+    /// `value >= threshold`. Returns a Record
+    /// `{ proof_hex, vk_hex, proof_id, circuit_id }`.
+    /// Default: E702 (no ZK proof system on this host).
+    fn zk_prove_threshold(
+        &mut self,
+        _value: u64,
+        _threshold: u64,
+        span: Span,
+    ) -> Result<Value, Diagnostic> {
+        Err(Diagnostic::new(
+            DiagCode::E702,
+            span,
+            "zk.prove_threshold not available on this host",
+        ))
+    }
+
+    /// Verify a ZK threshold proof against a public `threshold`.
+    /// Returns Bool. Default: E702.
+    fn zk_verify_threshold(
+        &mut self,
+        _proof_hex: &str,
+        _vk_hex: &str,
+        _threshold: u64,
+        span: Span,
+    ) -> Result<Value, Diagnostic> {
+        Err(Diagnostic::new(
+            DiagCode::E702,
+            span,
+            "zk.verify_threshold not available on this host",
+        ))
+    }
+
+    /// Prove, in zero knowledge, that a private `value` satisfies
+    /// `lo <= value <= hi`. Returns a Record
+    /// `{ proof_hex, vk_hex, proof_id, circuit_id }`.
+    /// Default: E702.
+    fn zk_prove_range(
+        &mut self,
+        _value: u64,
+        _lo: u64,
+        _hi: u64,
+        span: Span,
+    ) -> Result<Value, Diagnostic> {
+        Err(Diagnostic::new(
+            DiagCode::E702,
+            span,
+            "zk.prove_range not available on this host",
+        ))
+    }
+
+    /// Verify a ZK range proof against public bounds `lo` and `hi`.
+    /// Returns Bool. Default: E702.
+    fn zk_verify_range(
+        &mut self,
+        _proof_hex: &str,
+        _vk_hex: &str,
+        _lo: u64,
+        _hi: u64,
+        span: Span,
+    ) -> Result<Value, Diagnostic> {
+        Err(Diagnostic::new(
+            DiagCode::E702,
+            span,
+            "zk.verify_range not available on this host",
+        ))
+    }
+
+    /// Prove a matrix multiplication: given public A, B, and claimed
+    /// C = A·B, prove the multiplication is correct without revealing
+    /// the witness. Returns a Record `{ valid, result }`.
+    /// Default: E702.
+    fn zk_prove_matmul(
+        &mut self,
+        _m: u64,
+        _k: u64,
+        _n: u64,
+        _a: &[i128],
+        _b: &[i128],
+        span: Span,
+    ) -> Result<Value, Diagnostic> {
+        Err(Diagnostic::new(
+            DiagCode::E702,
+            span,
+            "zk.prove_matmul not available on this host",
+        ))
+    }
+
+    /// List all registered ZK circuits. Returns a List of circuit IDs.
+    /// Default: E702.
+    fn zk_list_circuits(&mut self, span: Span) -> Result<Value, Diagnostic> {
+        Err(Diagnostic::new(
+            DiagCode::E702,
+            span,
+            "zk.list_circuits not available on this host",
+        ))
+    }
 }
 
 /// In-memory host for unit tests.
@@ -794,6 +894,63 @@ pub fn dispatch<H: Host>(
         "crypto.generate_key" => {
             let algorithm = crate::crypto::extract_string_arg(args, 0, "generate_key", span)?;
             host.crypto_generate_key(&algorithm, span)
+        }
+        // ── ZK proof operations (zk-SNARKs) ───────────────────────────
+        "zk.prove_threshold" => {
+            let value = crate::crypto::extract_u64_arg(args, 0, "prove_threshold", span)?;
+            let threshold = crate::crypto::extract_u64_arg(args, 1, "prove_threshold", span)?;
+            host.zk_prove_threshold(value, threshold, span)
+        }
+        "zk.verify_threshold" => {
+            let proof_hex = crate::crypto::extract_string_arg(args, 0, "verify_threshold", span)?;
+            let vk_hex = crate::crypto::extract_string_arg(args, 1, "verify_threshold", span)?;
+            let threshold = crate::crypto::extract_u64_arg(args, 2, "verify_threshold", span)?;
+            host.zk_verify_threshold(&proof_hex, &vk_hex, threshold, span)
+        }
+        "zk.prove_range" => {
+            let value = crate::crypto::extract_u64_arg(args, 0, "prove_range", span)?;
+            let lo = crate::crypto::extract_u64_arg(args, 1, "prove_range", span)?;
+            let hi = crate::crypto::extract_u64_arg(args, 2, "prove_range", span)?;
+            host.zk_prove_range(value, lo, hi, span)
+        }
+        "zk.verify_range" => {
+            let proof_hex = crate::crypto::extract_string_arg(args, 0, "verify_range", span)?;
+            let vk_hex = crate::crypto::extract_string_arg(args, 1, "verify_range", span)?;
+            let lo = crate::crypto::extract_u64_arg(args, 2, "verify_range", span)?;
+            let hi = crate::crypto::extract_u64_arg(args, 3, "verify_range", span)?;
+            host.zk_verify_range(&proof_hex, &vk_hex, lo, hi, span)
+        }
+        "zk.prove_matmul" => {
+            let m = crate::crypto::extract_u64_arg(args, 0, "prove_matmul", span)? as usize;
+            let k = crate::crypto::extract_u64_arg(args, 1, "prove_matmul", span)? as usize;
+            let n = crate::crypto::extract_u64_arg(args, 2, "prove_matmul", span)? as usize;
+            // args[3] = a (List<I64>), args[4] = b (List<I64>)
+            let a: Vec<i128> = match args.get(3) {
+                Some(Value::List(xs)) => xs.iter().filter_map(|v| match v {
+                    Value::I64(n) => Some(*n as i128),
+                    Value::U64(n) => Some(*n as i128),
+                    _ => None,
+                }).collect(),
+                _ => return Err(Diagnostic::new(
+                    DiagCode::E100, span,
+                    "zk.prove_matmul: expected a List at position 3",
+                )),
+            };
+            let b: Vec<i128> = match args.get(4) {
+                Some(Value::List(xs)) => xs.iter().filter_map(|v| match v {
+                    Value::I64(n) => Some(*n as i128),
+                    Value::U64(n) => Some(*n as i128),
+                    _ => None,
+                }).collect(),
+                _ => return Err(Diagnostic::new(
+                    DiagCode::E100, span,
+                    "zk.prove_matmul: expected a List at position 4",
+                )),
+            };
+            host.zk_prove_matmul(m as u64, k as u64, n as u64, &a, &b, span)
+        }
+        "zk.list_circuits" => {
+            host.zk_list_circuits(span)
         }
         _ => Err(Diagnostic::new(
             DiagCode::E100,

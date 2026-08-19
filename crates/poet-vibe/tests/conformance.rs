@@ -971,6 +971,7 @@ fn all_phase_g_fixtures_on_disk_are_valid() {
     let _ = include_str!("../fixtures/m2_immutable_reject.vibe");
     let _ = include_str!("../fixtures/m3_mut_in_block.vibe");
     let _ = include_str!("../fixtures/crypto1_hash_sign.vibe");
+    let _ = include_str!("../fixtures/zk1_threshold_range.vibe");
 }
 
 // ── H7: Enum/ADT golden corpus (T9 coverage) ──────────────────────────────────
@@ -979,6 +980,12 @@ fn all_phase_g_fixtures_on_disk_are_valid() {
 fn crypto1_hash_sign_parses() {
     let src = include_str!("../fixtures/crypto1_hash_sign.vibe");
     load_program(src).expect("crypto1 fixture should parse");
+}
+
+#[test]
+fn zk1_threshold_range_parses() {
+    let src = include_str!("../fixtures/zk1_threshold_range.vibe");
+    load_program(src).expect("zk1 fixture should parse");
 }
 
 #[test]

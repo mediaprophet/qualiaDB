@@ -1,0 +1,36 @@
+module <https://qualiadb.org/modules/zk_demo>;
+import "zk" as zk;
+
+// Prove age >= 18 without revealing the actual age
+fn prove_age_threshold(age: U64, threshold: U64) -> Record {
+  return zk.prove_threshold(age, threshold);
+}
+
+// Verify an age threshold proof
+fn verify_age_threshold(proof_hex: String, vk_hex: String, threshold: U64) -> Bool {
+  return zk.verify_threshold(proof_hex, vk_hex, threshold);
+}
+
+// Prove a value is within a range [lo, hi] without revealing it
+fn prove_value_in_range(value: U64, lo: U64, hi: U64) -> Record {
+  return zk.prove_range(value, lo, hi);
+}
+
+// Verify a range proof
+fn verify_value_in_range(proof_hex: String, vk_hex: String, lo: U64, hi: U64) -> Bool {
+  return zk.verify_range(proof_hex, vk_hex, lo, hi);
+}
+
+// Prove a matrix multiplication is correct
+fn prove_matmul(m: U64, k: U64, n: U64, a: List<I64>, b: List<I64>) -> Record {
+  return zk.prove_matmul(m, k, n, a, b);
+}
+
+// List all registered ZK circuits
+fn list_circuits() -> List<String> {
+  return zk.list_circuits();
+}
+
+fn main() {
+  return 0;
+}

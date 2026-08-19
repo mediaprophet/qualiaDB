@@ -42,7 +42,7 @@ impl Default for Env {
 /// The valid 0.1 namespace import paths. `vibe:0.1/{ns}`.
 pub const VIBE_0_1_NAMESPACES: &[&str] = &[
     "math", "rdf", "quin", "graph", "aura", "pulse", "capability", "time",
-    "conservation", "causal", "dag", "deontic", "hid", "cue", "crypto",
+    "conservation", "causal", "dag", "deontic", "hid", "cue", "crypto", "zk",
 ];
 
 /// Populate `env.aliases` from a program's import declarations.
@@ -1966,6 +1966,99 @@ mod tests {
             import "crypto" as crypto;
             fn main() {
                 return crypto.sign(42, "data");
+            }
+        "#;
+        let result = eval_program_src(src);
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err().code, DiagCode::E100);
+    }
+
+    // ── ZK proof dispatch ─────────────────────────────────────────────
+
+    #[test]
+    fn zk_prove_threshold_dispatches_to_host() {
+        let src = r#"
+            import "zk" as zk;
+            fn main() {
+                return zk.prove_threshold(21, 18);
+            }
+        "#;
+        let result = eval_program_src(src);
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err().code, DiagCode::E702);
+    }
+
+    #[test]
+    fn zk_verify_threshold_dispatches_to_host() {
+        let src = r#"
+            import "zk" as zk;
+            fn main() {
+                return zk.verify_threshold("proof", "vk", 18);
+            }
+        "#;
+        let result = eval_program_src(src);
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err().code, DiagCode::E702);
+    }
+
+    #[test]
+    fn zk_prove_range_dispatches_to_host() {
+        let src = r#"
+            import "zk" as zk;
+            fn main() {
+                return zk.prove_range(25, 18, 65);
+            }
+        "#;
+        let result = eval_program_src(src);
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err().code, DiagCode::E702);
+    }
+
+    #[test]
+    fn zk_verify_range_dispatches_to_host() {
+        let src = r#"
+            import "zk" as zk;
+            fn main() {
+                return zk.verify_range("proof", "vk", 18, 65);
+            }
+        "#;
+        let result = eval_program_src(src);
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err().code, DiagCode::E702);
+    }
+
+    #[test]
+    fn zk_prove_matmul_dispatches_to_host() {
+        let src = r#"
+            import "zk" as zk;
+            fn main() {
+                return zk.prove_matmul(2, 2, 2, [1, 2, 3, 4], [5, 6, 7, 8]);
+            }
+        "#;
+        let result = eval_program_src(src);
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err().code, DiagCode::E702);
+    }
+
+    #[test]
+    fn zk_list_circuits_dispatches_to_host() {
+        let src = r#"
+            import "zk" as zk;
+            fn main() {
+                return zk.list_circuits();
+            }
+        "#;
+        let result = eval_program_src(src);
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err().code, DiagCode::E702);
+    }
+
+    #[test]
+    fn zk_prove_threshold_needs_u64_args() {
+        let src = r#"
+            import "zk" as zk;
+            fn main() {
+                return zk.prove_threshold("not a number", 18);
             }
         "#;
         let result = eval_program_src(src);

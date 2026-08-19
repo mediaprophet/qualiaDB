@@ -849,6 +849,186 @@ impl Host for PoetSnapshot {
             "crypto.generate_key: key vault not wired into poet host (use the identity layer directly)",
         ))
     }
+
+    // ── ZK proof operations — delegate to crypto::zk_predicates / zk_proofs ─
+
+    fn zk_prove_threshold(
+        &mut self,
+        value: u64,
+        threshold: u64,
+        span: poet_vibe::Span,
+    ) -> Result<Value, Diagnostic> {
+        #[cfg(feature = "zk-culling")]
+        {
+            use crate::crypto::zk_predicates;
+            let proof = zk_predicates::prove_threshold(value, threshold)
+                .map_err(|e| Diagnostic::new(
+                    poet_vibe::DiagCode::E100, span,
+                    format!("zk.prove_threshold: {e}"),
+                ))?;
+            let proof_hex = poet_vibe::crypto::to_hex(&proof.proof);
+            let vk_hex = poet_vibe::crypto::to_hex(&proof.vk);
+            Ok(poet_vibe::crypto::zk_proof_value(
+                &proof_hex, &vk_hex,
+                &format!("zk_threshold_{}_{}", value, threshold),
+                "threshold",
+            ))
+        }
+        #[cfg(not(feature = "zk-culling"))]
+        {
+            let _ = (value, threshold);
+            Err(Diagnostic::new(
+                poet_vibe::DiagCode::E702, span,
+                "zk.prove_threshold: zk-culling feature not enabled",
+            ))
+        }
+    }
+
+    fn zk_verify_threshold(
+        &mut self,
+        proof_hex: &str,
+        vk_hex: &str,
+        threshold: u64,
+        span: poet_vibe::Span,
+    ) -> Result<Value, Diagnostic> {
+        #[cfg(feature = "zk-culling")]
+        {
+            use crate::crypto::zk_predicates::{PredicateProof, verify_threshold};
+            let proof_bytes = poet_vibe::crypto::from_hex(proof_hex)
+                .ok_or_else(|| Diagnostic::new(
+                    poet_vibe::DiagCode::E100, span, "zk.verify_threshold: invalid proof hex",
+                ))?;
+            let vk_bytes = poet_vibe::crypto::from_hex(vk_hex)
+                .ok_or_else(|| Diagnostic::new(
+                    poet_vibe::DiagCode::E100, span, "zk.verify_threshold: invalid vk hex",
+                ))?;
+            let proof = PredicateProof { proof: proof_bytes, vk: vk_bytes };
+            let valid = verify_threshold(&proof, threshold);
+            Ok(Value::Bool(valid))
+        }
+        #[cfg(not(feature = "zk-culling"))]
+        {
+            let _ = (proof_hex, vk_hex, threshold);
+            Err(Diagnostic::new(
+                poet_vibe::DiagCode::E702, span,
+                "zk.verify_threshold: zk-culling feature not enabled",
+            ))
+        }
+    }
+
+    fn zk_prove_range(
+        &mut self,
+        value: u64,
+        lo: u64,
+        hi: u64,
+        span: poet_vibe::Span,
+    ) -> Result<Value, Diagnostic> {
+        #[cfg(feature = "zk-culling")]
+        {
+            use crate::crypto::zk_predicates;
+            let proof = zk_predicates::prove_range(value, lo, hi)
+                .map_err(|e| Diagnostic::new(
+                    poet_vibe::DiagCode::E100, span,
+                    format!("zk.prove_range: {e}"),
+                ))?;
+            let proof_hex = poet_vibe::crypto::to_hex(&proof.proof);
+            let vk_hex = poet_vibe::crypto::to_hex(&proof.vk);
+            Ok(poet_vibe::crypto::zk_proof_value(
+                &proof_hex, &vk_hex,
+                &format!("zk_range_{}_{}_{}", value, lo, hi),
+                "range",
+            ))
+        }
+        #[cfg(not(feature = "zk-culling"))]
+        {
+            let _ = (value, lo, hi);
+            Err(Diagnostic::new(
+                poet_vibe::DiagCode::E702, span,
+                "zk.prove_range: zk-culling feature not enabled",
+            ))
+        }
+    }
+
+    fn zk_verify_range(
+        &mut self,
+        proof_hex: &str,
+        vk_hex: &str,
+        lo: u64,
+        hi: u64,
+        span: poet_vibe::Span,
+    ) -> Result<Value, Diagnostic> {
+        #[cfg(feature = "zk-culling")]
+        {
+            use crate::crypto::zk_predicates::{PredicateProof, verify_range};
+            let proof_bytes = poet_vibe::crypto::from_hex(proof_hex)
+                .ok_or_else(|| Diagnostic::new(
+                    poet_vibe::DiagCode::E100, span, "zk.verify_range: invalid proof hex",
+                ))?;
+            let vk_bytes = poet_vibe::crypto::from_hex(vk_hex)
+                .ok_or_else(|| Diagnostic::new(
+                    poet_vibe::DiagCode::E100, span, "zk.verify_range: invalid vk hex",
+                ))?;
+            let proof = PredicateProof { proof: proof_bytes, vk: vk_bytes };
+            let valid = verify_range(&proof, lo, hi);
+            Ok(Value::Bool(valid))
+        }
+        #[cfg(not(feature = "zk-culling"))]
+        {
+            let _ = (proof_hex, vk_hex, lo, hi);
+            Err(Diagnostic::new(
+                poet_vibe::DiagCode::E702, span,
+                "zk.verify_range: zk-culling feature not enabled",
+            ))
+        }
+    }
+
+    fn zk_prove_matmul(
+        &mut self,
+        m: u64,
+        k: u64,
+        n: u64,
+        a: &[i128],
+        b: &[i128],
+        span: poet_vibe::Span,
+    ) -> Result<Value, Diagnostic> {
+        #[cfg(feature = "zk-culling")]
+        {
+            use crate::crypto::zk_proofs::ZkProofSystem;
+            let mut zk = ZkProofSystem::new();
+            let (valid, result) = zk.prove_matrix_multiply(m as usize, k as usize, n as usize, a, b)
+                .map_err(|e| Diagnostic::new(
+                    poet_vibe::DiagCode::E100, span,
+                    format!("zk.prove_matmul: {e}"),
+                ))?;
+            Ok(poet_vibe::crypto::zk_matmul_result_value(valid, &result))
+        }
+        #[cfg(not(feature = "zk-culling"))]
+        {
+            let _ = (m, k, n, a, b);
+            Err(Diagnostic::new(
+                poet_vibe::DiagCode::E702, span,
+                "zk.prove_matmul: zk-culling feature not enabled",
+            ))
+        }
+    }
+
+    fn zk_list_circuits(&mut self, span: poet_vibe::Span) -> Result<Value, Diagnostic> {
+        #[cfg(feature = "zk-culling")]
+        {
+            use crate::crypto::zk_proofs::ZkProofSystem;
+            let zk = ZkProofSystem::new();
+            let circuits: Vec<Value> = zk.list_circuits().into_iter().map(Value::String).collect();
+            Ok(Value::List(circuits))
+        }
+        #[cfg(not(feature = "zk-culling"))]
+        {
+            let _ = span;
+            Err(Diagnostic::new(
+                poet_vibe::DiagCode::E702, span,
+                "zk.list_circuits: zk-culling feature not enabled",
+            ))
+        }
+    }
 }
 
 #[cfg(test)]
@@ -979,6 +1159,184 @@ mod tests {
         "#;
         let result = snap.eval_fn(src, "sign_it", vec![]);
         assert!(result.is_err());
+    }
+
+    // ── ZK proof tests (real Groth16 over BLS12-381) ───────────────────
+
+    #[test]
+    fn zk_threshold_prove_and_verify_through_vibe() {
+        let mut snap = PoetSnapshot::default();
+        let src = r#"
+            import "zk" as zk;
+            fn prove_age() {
+                return zk.prove_threshold(21, 18);
+            }
+        "#;
+        let proof_val = snap.eval_fn(src, "prove_age", vec![]).unwrap();
+        let rec = match &proof_val {
+            Value::Record(r) => r,
+            _ => panic!("expected Record"),
+        };
+        let proof_hex = match rec.get("proof_hex") {
+            Some(Value::String(s)) => s.clone(),
+            _ => panic!("expected proof_hex"),
+        };
+        let vk_hex = match rec.get("vk_hex") {
+            Some(Value::String(s)) => s.clone(),
+            _ => panic!("expected vk_hex"),
+        };
+
+        // Verify the proof against the correct threshold (18).
+        let verify_src = format!(r#"
+            import "zk" as zk;
+            fn verify_age(proof_hex: String, vk_hex: String) {{
+                return zk.verify_threshold(proof_hex, vk_hex, 18);
+            }}
+        "#);
+        let result = snap.eval_fn(&verify_src, "verify_age", vec![
+            Value::String(proof_hex),
+            Value::String(vk_hex),
+        ]).unwrap();
+        assert!(match result { Value::Bool(b) => b, _ => false });
+    }
+
+    #[test]
+    fn zk_threshold_wrong_threshold_fails() {
+        let mut snap = PoetSnapshot::default();
+        // Prove value=21 >= threshold=18
+        let prove_src = r#"
+            import "zk" as zk;
+            fn prove() {
+                return zk.prove_threshold(21, 18);
+            }
+        "#;
+        let proof_val = snap.eval_fn(prove_src, "prove", vec![]).unwrap();
+        let rec = match &proof_val {
+            Value::Record(r) => r,
+            _ => panic!("expected Record"),
+        };
+        let proof_hex = match rec.get("proof_hex") {
+            Some(Value::String(s)) => s.clone(),
+            _ => panic!("expected proof_hex"),
+        };
+        let vk_hex = match rec.get("vk_hex") {
+            Some(Value::String(s)) => s.clone(),
+            _ => panic!("expected vk_hex"),
+        };
+
+        // Verify against the WRONG threshold (21) — should fail.
+        // A proof made for threshold=18 does not verify against threshold=21.
+        let verify_src = format!(r#"
+            import "zk" as zk;
+            fn verify(proof_hex: String, vk_hex: String) {{
+                return zk.verify_threshold(proof_hex, vk_hex, 21);
+            }}
+        "#);
+        let result = snap.eval_fn(&verify_src, "verify", vec![
+            Value::String(proof_hex),
+            Value::String(vk_hex),
+        ]).unwrap();
+        assert!(match result { Value::Bool(b) => !b, _ => false });
+    }
+
+    #[test]
+    fn zk_threshold_false_statement_unprovable() {
+        let mut snap = PoetSnapshot::default();
+        // Try to prove value=15 >= threshold=18 — should fail (unprovable).
+        let src = r#"
+            import "zk" as zk;
+            fn prove_false() {
+                return zk.prove_threshold(15, 18);
+            }
+        "#;
+        let result = snap.eval_fn(src, "prove_false", vec![]);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn zk_range_prove_and_verify_through_vibe() {
+        let mut snap = PoetSnapshot::default();
+        // Prove 25 is in [18, 65]
+        let prove_src = r#"
+            import "zk" as zk;
+            fn prove() {
+                return zk.prove_range(25, 18, 65);
+            }
+        "#;
+        let proof_val = snap.eval_fn(prove_src, "prove", vec![]).unwrap();
+        let rec = match &proof_val {
+            Value::Record(r) => r,
+            _ => panic!("expected Record"),
+        };
+        let proof_hex = match rec.get("proof_hex") {
+            Some(Value::String(s)) => s.clone(),
+            _ => panic!("expected proof_hex"),
+        };
+        let vk_hex = match rec.get("vk_hex") {
+            Some(Value::String(s)) => s.clone(),
+            _ => panic!("expected vk_hex"),
+        };
+
+        // Verify against the correct bounds.
+        let verify_src = format!(r#"
+            import "zk" as zk;
+            fn verify(proof_hex: String, vk_hex: String) {{
+                return zk.verify_range(proof_hex, vk_hex, 18, 65);
+            }}
+        "#);
+        let result = snap.eval_fn(&verify_src, "verify", vec![
+            Value::String(proof_hex),
+            Value::String(vk_hex),
+        ]).unwrap();
+        assert!(match result { Value::Bool(b) => b, _ => false });
+    }
+
+    #[test]
+    fn zk_range_outside_bounds_unprovable() {
+        let mut snap = PoetSnapshot::default();
+        // Try to prove 100 is in [18, 65] — should fail.
+        let src = r#"
+            import "zk" as zk;
+            fn prove_false() {
+                return zk.prove_range(100, 18, 65);
+            }
+        "#;
+        let result = snap.eval_fn(src, "prove_false", vec![]);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn zk_matmul_prove_through_vibe() {
+        let mut snap = PoetSnapshot::default();
+        // 2x2 matrix multiply: A = [[1,2],[3,4]], B = [[5,6],[7,8]]
+        // C = [[19,22],[43,50]]
+        let src = r#"
+            import "zk" as zk;
+            fn prove() {
+                return zk.prove_matmul(2, 2, 2, [1, 2, 3, 4], [5, 6, 7, 8]);
+            }
+        "#;
+        let result = snap.eval_fn(src, "prove", vec![]).unwrap();
+        let rec = match &result {
+            Value::Record(r) => r,
+            _ => panic!("expected Record"),
+        };
+        // The proof should be valid.
+        assert_eq!(match rec.get("valid").unwrap() {
+            Value::Bool(b) => *b,
+            _ => panic!("expected Bool"),
+        }, true);
+        // The result should be [19, 22, 43, 50].
+        match rec.get("result").unwrap() {
+            Value::List(xs) => {
+                assert_eq!(xs.len(), 4);
+                assert_eq!(match &xs[0] { Value::I64(n) => *n, _ => panic!("expected I64") }, 19);
+                assert_eq!(match &xs[1] { Value::I64(n) => *n, _ => panic!("expected I64") }, 22);
+                assert_eq!(match &xs[2] { Value::I64(n) => *n, _ => panic!("expected I64") }, 43);
+                assert_eq!(match &xs[3] { Value::I64(n) => *n, _ => panic!("expected I64") }, 50);
+            }
+            _ => panic!("expected List"),
+        }
     }
 
     #[test]
@@ -1609,4 +1967,5 @@ on tick() {
         assert_eq!(ctrl.total_processed, 1);
     }
 }
+
 

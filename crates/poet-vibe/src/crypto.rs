@@ -164,6 +164,52 @@ pub const SIGNING_ALGORITHMS: &[&str] = &[
     "ML-DSA-65",
 ];
 
+// ── ZK proofs (zk-SNARKs) ─────────────────────────────────────────────────────
+
+/// The list of ZK namespace capability IDs.
+pub const ZK_CAPABILITIES: &[&str] = &[
+    "zk.prove_threshold",
+    "zk.verify_threshold",
+    "zk.prove_range",
+    "zk.verify_range",
+    "zk.prove_matmul",
+    "zk.verify_matmul",
+    "zk.list_circuits",
+];
+
+/// Build a ZK proof Record value.
+/// `{ proof_hex: String, vk_hex: String, proof_id: String, circuit_id: String }`
+pub fn zk_proof_value(proof_hex: &str, vk_hex: &str, proof_id: &str, circuit_id: &str) -> Value {
+    let mut rec = BTreeMap::new();
+    rec.insert("proof_hex".into(), Value::String(proof_hex.into()));
+    rec.insert("vk_hex".into(), Value::String(vk_hex.into()));
+    rec.insert("proof_id".into(), Value::String(proof_id.into()));
+    rec.insert("circuit_id".into(), Value::String(circuit_id.into()));
+    Value::Record(rec)
+}
+
+/// Build a ZK verification result Record value.
+/// `{ valid: Bool, proof_id: String, verification_time_ms: U64 }`
+pub fn zk_verification_value(valid: bool, proof_id: &str, verification_time_ms: u64) -> Value {
+    let mut rec = BTreeMap::new();
+    rec.insert("valid".into(), Value::Bool(valid));
+    rec.insert("proof_id".into(), Value::String(proof_id.into()));
+    rec.insert("verification_time_ms".into(), Value::U64(verification_time_ms));
+    Value::Record(rec)
+}
+
+/// Build a ZK matmul proof Record value.
+/// `{ valid: Bool, result: List<I64> }`
+pub fn zk_matmul_result_value(valid: bool, result: &[i128]) -> Value {
+    let mut rec = BTreeMap::new();
+    rec.insert("valid".into(), Value::Bool(valid));
+    rec.insert(
+        "result".into(),
+        Value::List(result.iter().map(|v| Value::I64(*v as i64)).collect()),
+    );
+    Value::Record(rec)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -264,5 +310,67 @@ mod tests {
     fn signing_algorithms_listed() {
         assert!(SIGNING_ALGORITHMS.contains(&"Ed25519"));
         assert!(SIGNING_ALGORITHMS.contains(&"ML-DSA-65"));
+    }
+
+    // ── ZK proof value builder tests ─────────────────────────────────
+
+    #[test]
+    fn zk_capabilities_listed() {
+        assert!(ZK_CAPABILITIES.contains(&"zk.prove_threshold"));
+        assert!(ZK_CAPABILITIES.contains(&"zk.verify_threshold"));
+        assert!(ZK_CAPABILITIES.contains(&"zk.prove_range"));
+        assert!(ZK_CAPABILITIES.contains(&"zk.verify_range"));
+        assert!(ZK_CAPABILITIES.contains(&"zk.prove_matmul"));
+        assert!(ZK_CAPABILITIES.contains(&"zk.verify_matmul"));
+    }
+
+    #[test]
+    fn zk_proof_value_structure() {
+        let v = zk_proof_value("deadbeef", "vk123", "proof_1", "circuit_42");
+        let rec = match &v {
+            Value::Record(r) => r,
+            _ => panic!("expected Record"),
+        };
+        assert_eq!(rec.len(), 4);
+        assert!(rec.contains_key("proof_hex"));
+        assert!(rec.contains_key("vk_hex"));
+        assert!(rec.contains_key("proof_id"));
+        assert!(rec.contains_key("circuit_id"));
+    }
+
+    #[test]
+    fn zk_verification_value_structure() {
+        let v = zk_verification_value(true, "proof_1", 42);
+        let rec = match &v {
+            Value::Record(r) => r,
+            _ => panic!("expected Record"),
+        };
+        assert_eq!(rec.len(), 3);
+        assert_eq!(match rec.get("valid").unwrap() {
+            Value::Bool(b) => *b,
+            _ => panic!("expected Bool"),
+        }, true);
+        assert_eq!(match rec.get("verification_time_ms").unwrap() {
+            Value::U64(n) => *n,
+            _ => panic!("expected U64"),
+        }, 42);
+    }
+
+    #[test]
+    fn zk_matmul_result_value_structure() {
+        let v = zk_matmul_result_value(true, &[1, 2, 3]);
+        let rec = match &v {
+            Value::Record(r) => r,
+            _ => panic!("expected Record"),
+        };
+        assert_eq!(rec.len(), 2);
+        assert_eq!(match rec.get("valid").unwrap() {
+            Value::Bool(b) => *b,
+            _ => panic!("expected Bool"),
+        }, true);
+        match rec.get("result").unwrap() {
+            Value::List(xs) => assert_eq!(xs.len(), 3),
+            _ => panic!("expected List"),
+        }
     }
 }
