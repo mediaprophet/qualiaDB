@@ -24,6 +24,7 @@ mod value;
 
 pub mod dag;
 pub mod deontic_interrupt;
+pub mod sheaf;
 pub mod quantity;
 pub mod reflection;
 
