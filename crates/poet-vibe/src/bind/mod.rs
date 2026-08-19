@@ -275,6 +275,49 @@ pub trait Host {
             "deontic.check not available on this host",
         ))
     }
+
+    /// Poll for the next inbound HID event (T42). Returns the next
+    /// event from the host's HID loop, or Null if no event is
+    /// available (non-blocking). Default: E702 (no HID loop on this
+    /// host).
+    fn hid_poll(&mut self, span: Span) -> Result<Value, Diagnostic> {
+        Err(Diagnostic::new(
+            DiagCode::E702,
+            span,
+            "hid.poll not available on this host",
+        ))
+    }
+
+    /// Wait for the next inbound HID event with a timeout (T42).
+    /// Returns the next event, or Null if the timeout expired.
+    /// Default: E702.
+    fn hid_wait(
+        &mut self,
+        _timeout_ns: u64,
+        span: Span,
+    ) -> Result<Value, Diagnostic> {
+        Err(Diagnostic::new(
+            DiagCode::E702,
+            span,
+            "hid.wait not available on this host",
+        ))
+    }
+
+    /// Post an outbound cue (T45) — haptic, audio, visual, or
+    /// accessibility. The cue ID identifies the output channel and
+    /// the payload carries the cue data. Default: E702.
+    fn cue_post(
+        &mut self,
+        _cue_id: &str,
+        _payload: &Value,
+        span: Span,
+    ) -> Result<Value, Diagnostic> {
+        Err(Diagnostic::new(
+            DiagCode::E702,
+            span,
+            "cue.post not available on this host",
+        ))
+    }
 }
 
 /// In-memory host for unit tests.
@@ -553,6 +596,29 @@ pub fn dispatch<H: Host>(
                 }
             };
             host.deontic_check(capability, phase, span)
+        }
+        "hid.poll" => host.hid_poll(span),
+        "hid.wait" => {
+            let timeout_ns = match args.first() {
+                Some(Value::U64(n)) => *n,
+                Some(Value::I64(n)) => (*n).max(0) as u64,
+                _ => 0,
+            };
+            host.hid_wait(timeout_ns, span)
+        }
+        "cue.post" => {
+            let cue_id = match args.first() {
+                Some(Value::String(s)) | Some(Value::Iri(s)) => s.as_str(),
+                _ => {
+                    return Err(Diagnostic::new(
+                        DiagCode::E100,
+                        span,
+                        "cue.post needs a cue id string",
+                    ))
+                }
+            };
+            let payload = args.get(1).unwrap_or(&Value::Null);
+            host.cue_post(cue_id, payload, span)
         }
         _ => Err(Diagnostic::new(
             DiagCode::E100,

@@ -42,7 +42,7 @@ impl Default for Env {
 /// The valid 0.1 namespace import paths. `vibe:0.1/{ns}`.
 pub const VIBE_0_1_NAMESPACES: &[&str] = &[
     "math", "rdf", "quin", "graph", "aura", "pulse", "capability", "time",
-    "conservation", "causal", "dag", "deontic",
+    "conservation", "causal", "dag", "deontic", "hid", "cue",
 ];
 
 /// Populate `env.aliases` from a program's import declarations.
@@ -1765,6 +1765,62 @@ mod tests {
             import "deontic" as deontic;
             fn main() {
                 return deontic.check(42, "execute");
+            }
+        "#;
+        let result = eval_program_src(src);
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err().code, DiagCode::E100);
+    }
+
+    // ── T42: HID dispatch ─────────────────────────────────────────────
+
+    #[test]
+    fn t42_hid_poll_dispatches_to_host() {
+        let src = r#"
+            import "hid" as hid;
+            fn main() {
+                return hid.poll();
+            }
+        "#;
+        let result = eval_program_src(src);
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err().code, DiagCode::E702);
+    }
+
+    #[test]
+    fn t42_hid_wait_dispatches_to_host() {
+        let src = r#"
+            import "hid" as hid;
+            fn main() {
+                return hid.wait(1000000);
+            }
+        "#;
+        let result = eval_program_src(src);
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err().code, DiagCode::E702);
+    }
+
+    // ── T45: Outbound cues ────────────────────────────────────────────
+
+    #[test]
+    fn t45_cue_post_dispatches_to_host() {
+        let src = r#"
+            import "cue" as cue;
+            fn main() {
+                return cue.post("Haptic.buzz", {});
+            }
+        "#;
+        let result = eval_program_src(src);
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err().code, DiagCode::E702);
+    }
+
+    #[test]
+    fn t45_cue_post_needs_string_id() {
+        let src = r#"
+            import "cue" as cue;
+            fn main() {
+                return cue.post(42, {});
             }
         "#;
         let result = eval_program_src(src);
