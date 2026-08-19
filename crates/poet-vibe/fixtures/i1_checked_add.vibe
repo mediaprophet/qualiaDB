@@ -1,0 +1,5 @@
+fn main() {
+  let a = 42;
+  let b = 58;
+  return a + b;
+}

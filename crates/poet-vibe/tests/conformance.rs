@@ -964,6 +964,12 @@ fn all_phase_g_fixtures_on_disk_are_valid() {
     let _ = include_str!("../fixtures/qd2_multiple_fields.vibe");
     let _ = include_str!("../fixtures/qd3_material_with_props.vibe");
     let _ = include_str!("../fixtures/qd4_field_material_law.vibe");
+    let _ = include_str!("../fixtures/i1_checked_add.vibe");
+    let _ = include_str!("../fixtures/i2_checked_overflow.vibe");
+    let _ = include_str!("../fixtures/i3_mixed_int_float.vibe");
+    let _ = include_str!("../fixtures/m1_mut_reassign.vibe");
+    let _ = include_str!("../fixtures/m2_immutable_reject.vibe");
+    let _ = include_str!("../fixtures/m3_mut_in_block.vibe");
 }
 
 // ── H7: Enum/ADT golden corpus (T9 coverage) ──────────────────────────────────
@@ -1022,4 +1028,68 @@ fn qd3_material_with_props_parses() {
 fn qd4_field_material_law_parses() {
     let src = include_str!("../fixtures/qd4_field_material_law.vibe");
     load_program(src).expect("qd4 fixture should parse");
+}
+
+// ── H9: Checked-integer golden corpus (T11 coverage) ──────────────────────────
+
+#[test]
+fn i1_checked_add_evaluates() {
+    let src = include_str!("../fixtures/i1_checked_add.vibe");
+    let program = load_program(src).expect("i1 fixture");
+    let mut host = MockHost::default();
+    let mut env = Env::default();
+    let v = eval_function(&program, "main", vec![], &mut host, &mut env).unwrap();
+    assert_eq!(v.as_i64(), Some(100));
+}
+
+#[test]
+fn i2_checked_overflow_produces_e600() {
+    let src = include_str!("../fixtures/i2_checked_overflow.vibe");
+    let program = load_program(src).expect("i2 fixture");
+    let mut host = MockHost::default();
+    let mut env = Env::default();
+    let result = eval_function(&program, "main", vec![], &mut host, &mut env);
+    assert!(result.is_err());
+    assert_eq!(result.unwrap_err().code, DiagCode::E600);
+}
+
+#[test]
+fn i3_mixed_int_float_evaluates() {
+    let src = include_str!("../fixtures/i3_mixed_int_float.vibe");
+    let program = load_program(src).expect("i3 fixture");
+    let mut host = MockHost::default();
+    let mut env = Env::default();
+    let v = eval_function(&program, "main", vec![], &mut host, &mut env).unwrap();
+    assert_eq!(v.as_f64(), Some(3.14));
+}
+
+// ── H10: Mut enforcement golden corpus (T10 coverage) ─────────────────────────
+
+#[test]
+fn m1_mut_reassign_succeeds() {
+    let src = include_str!("../fixtures/m1_mut_reassign.vibe");
+    let program = load_program(src).expect("m1 fixture");
+    let mut host = MockHost::default();
+    let mut env = Env::default();
+    let v = eval_function(&program, "main", vec![], &mut host, &mut env).unwrap();
+    assert_eq!(v.as_i64(), Some(2));
+}
+
+#[test]
+fn m2_immutable_reject_produces_e701() {
+    let src = include_str!("../fixtures/m2_immutable_reject.vibe");
+    // load_program calls check_program, which catches E701 at check time.
+    let result = load_program(src);
+    assert!(result.is_err());
+    assert_eq!(result.unwrap_err().code, DiagCode::E701);
+}
+
+#[test]
+fn m3_mut_in_block_succeeds() {
+    let src = include_str!("../fixtures/m3_mut_in_block.vibe");
+    let program = load_program(src).expect("m3 fixture");
+    let mut host = MockHost::default();
+    let mut env = Env::default();
+    let v = eval_function(&program, "main", vec![], &mut host, &mut env).unwrap();
+    assert_eq!(v.as_i64(), Some(30));
 }
