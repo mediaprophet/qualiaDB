@@ -441,7 +441,7 @@ Phase G (golden corpus) ◄─────────────────�
 |---|-----------|--------|-------|
 | 1 | **Visual oracle:** CIEDE2000 ΔE < 2.0 and SSIM > 0.98 | **Verified** | `spectral_kernel::tests::vc1_*` (8 tests: CIEDE2000 self/similar/different/sweep, SSIM identical/noisy/different, EMF pipeline determinism) |
 | 2 | **GLSL ES 300 invariant:** No `noperspective`; std140 alignment | **Verified** | `naga_bridge::tests::vc2_*` (2 tests: noperspective rejection, mixed-type std140 offsets) |
-| 3 | **Zero hot-path allocation:** render frame loops + tick hooks | **Gap documented** | `gpu::compute::tests::vc3_*` (2 tests, `#[ignore]`): wgpu internals allocate ~321/frame (create_view, write_buffer, get_current_texture). Our code is zero-alloc; wgpu's API is not. Achieving true zero-alloc requires a custom GPU backend or pre-allocated wgpu resource pools. |
+| 3 | **Zero hot-path allocation:** render frame loops + tick hooks | **Partially verified** | `gpu::compute::tests::vc3_render_frame_zero_alloc_after_warmup` + `vc3_compute_dispatch_pooled_after_warmup` + `uniform_belt::tests::uniform_belt_zero_alloc_after_warmup` (3 tests, all passing): Our code is zero-alloc via `UniformBelt` (pre-allocated mapped buffer ring) + compute resource pool (cached binding buffers + bind groups + staging). Remaining allocations are wgpu API internals: ~22/frame baseline (encoder+submit+poll), ~13 per map_async re-map cycle, ~278 render pass recording (begin_render_pass, set_pipeline, draw). These can only be eliminated with a custom GPU backend (direct Vulkan/Metal/DX12) — logged as future task §F1. |
 | 4 | **Backend transparency:** Same code on WebGPU and WebGL2 | **Verified** | `backend::tests::vc4_*` (2 tests: backend info reports capabilities, same invoke IDs available regardless of backend) |
 | 5 | **Deontic hard-stop:** F(φ) breach revokes + aborts < 1µs | **Verified** | `deontic_interrupt::tests::vc5_*` (2 tests: trigger_interrupt < 1µs, global_halt < 100µs for 64 agents) |
 | 6 | **Paraconsistent precision:** Contradictory claims quarantine | **Verified** | `paraconsistent::tests` + `evidential_etau::tests` (16 tests: Belnap tables, routing, quarantine, contradiction, saturation) |
@@ -449,3 +449,44 @@ Phase G (golden corpus) ◄─────────────────�
 | 8 | **Blackboard constraint preservation:** DAG inherits pinned constraints | **Verified** | `blackboard::tests` + `dag::tests` (29 tests: pinned constraints, propagation, DAG validation, judge frames) |
 | 9 | **Sentinel compliance:** 42MB arena fails-closed E400 | **Verified** | `webizen::tests::vc9_*` (4 tests: arena size exactly 42MB, never exceeds, write wraps at MAX_SLOTS, E400 distinct from other codes) |
 | 10 | **GPU compute correctness:** fp32 epsilon vs CPU oracle | **Verified** | `gpu_colour_kernel::tests` (9 tests: CPU/GPU differential, ±2 LSB tolerance, determinism, kernel specification) |
+
+---
+
+## Future Tasks
+
+### F1. Custom GPU Backend (zero-allocation command recording)
+
+**Status:** Not started. Logged as future work.
+
+**Problem:** The wgpu high-level API allocates internally during command recording
+and submission. Even with pre-allocated resource pools (`UniformBelt`, compute
+buffer/bind-group pool), the following wgpu operations allocate on every frame:
+
+- `device.create_command_encoder()` — ~22 allocs (encoder + submit + poll baseline)
+- `map_async` + `poll` — ~13 allocs per re-map cycle (callback dispatch, internal state)
+- `begin_render_pass` / `set_pipeline` / `set_bind_group` / `draw` — ~278 allocs per frame
+  (render pass descriptor processing, command buffer recording internals)
+- `begin_compute_pass` / `dispatch_workgroups` — ~66 allocs per dispatch
+
+These allocations are inside wgpu's Rust code and cannot be eliminated without
+replacing wgpu with a custom GPU backend that talks directly to Vulkan, Metal,
+or DX12. A custom backend would pre-allocate command pools, descriptor sets,
+and staging buffers at initialization time, recording commands into
+pre-allocated memory with zero heap growth in the steady state.
+
+**Blast radius:** Large. A custom backend would replace the entire wgpu
+abstraction layer, requiring platform-specific implementations for Vulkan
+(Linux/desktop), Metal (macOS/iOS), DX12 (Windows), and WebGL2 (browser).
+This is a substantial architectural effort — multiple thousands of lines of
+unsafe platform-specific code, plus a WebGPU polyfill for browser targets.
+
+**Current mitigation:** The `UniformBelt` and compute resource pool eliminate
+all allocations from QualiaDB's own code. The remaining allocations are
+entirely within wgpu's internal API. The architecture is ready for a backend
+swap — the `PortalGpu` abstraction isolates wgpu-specific code behind a
+clean interface that could be reimplemented with a custom backend.
+
+**Priority:** Low for 0.1. The current allocation count (~313/frame) is
+acceptable for desktop and browser targets. This becomes important only
+for edge/embedded targets with strict memory constraints or for
+sub-microsecond frame budgets.
