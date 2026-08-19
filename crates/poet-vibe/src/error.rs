@@ -20,6 +20,12 @@ pub enum DiagCode {
     E600,
     /// Deontic phase violation (R2)
     E700,
+    /// Disclosure denied — a credentialed refusal (R10).
+    /// The agent/host refused to disclose content because the requester
+    /// lacks the required capability, consent, or authority. This is not
+    /// a "file not found" error — it is a first-class rights enforcement
+    /// value.
+    E800,
 }
 
 impl DiagCode {
@@ -33,6 +39,7 @@ impl DiagCode {
             DiagCode::E500 => "E500",
             DiagCode::E600 => "E600",
             DiagCode::E700 => "E700",
+            DiagCode::E800 => "E800",
         }
     }
 }
@@ -64,6 +71,22 @@ impl Diagnostic {
     pub fn with_fix(mut self, fix: impl Into<String>) -> Self {
         self.suggested_fix = Some(fix.into());
         self
+    }
+
+    /// Create a disclosure-denied diagnostic (R10).
+    pub fn disclosure_denied(
+        span: Span,
+        capability: &str,
+        reason: &str,
+    ) -> Self {
+        Diagnostic::new(
+            DiagCode::E800,
+            span,
+            format!(
+                "disclosure denied: capability '{}' — {}",
+                capability, reason
+            ),
+        )
     }
 
     /// Set the evidential (μ, λ) annotation: degrees of positive belief and refutation.
@@ -117,6 +140,9 @@ fn infer_fix(code: DiagCode, message: &str) -> Option<String> {
     if code == DiagCode::E400 {
         return Some("add budget(steps: N) or a loop bound".into());
     }
+    if code == DiagCode::E800 {
+        return Some("request the required capability or consent from the principal".into());
+    }
     None
 }
 
@@ -151,3 +177,36 @@ impl std::fmt::Display for Diagnostic {
 }
 
 impl std::error::Error for Diagnostic {}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn disclosure_denied_creates_e800() {
+        let diag = Diagnostic::disclosure_denied(
+            Span::point(12),
+            "graph.read.classified",
+            "principal consent token missing",
+        );
+        assert_eq!(diag.code, DiagCode::E800);
+        assert_eq!(diag.code.as_str(), "E800");
+        assert!(diag.message.contains("graph.read.classified"));
+        assert!(diag.message.contains("principal consent token missing"));
+    }
+
+    #[test]
+    fn disclosure_denied_has_suggested_fix() {
+        let diag = Diagnostic::disclosure_denied(
+            Span::point(0),
+            "sensor.biometric",
+            "unauthorized requester",
+        );
+        assert!(diag.suggested_fix.is_some());
+        assert!(diag
+            .suggested_fix
+            .as_deref()
+            .unwrap()
+            .contains("request the required capability or consent"));
+    }
+}
