@@ -339,6 +339,18 @@ fn query_item(item: &Item, pattern: &QueryPattern, results: &mut Vec<PolicyViola
         Item::Enum(_) => {
             // Enum declarations don't contain queryable expressions.
         }
+        Item::Field(_) => {
+            // Field declarations don't contain queryable expressions.
+        }
+        Item::Material(m) => {
+            for prop in &m.properties {
+                query_expr(&prop.value, pattern, results);
+            }
+        }
+        Item::Law(l) => {
+            query_expr(&l.condition, pattern, results);
+            query_expr(&l.consequence, pattern, results);
+        }
     }
 }
 

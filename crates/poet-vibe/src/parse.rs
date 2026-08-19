@@ -183,6 +183,15 @@ impl<'a> Parser<'a> {
         if self.kw("enum") {
             return Ok(Item::Enum(self.parse_enum()?));
         }
+        if self.kw("field") {
+            return Ok(Item::Field(self.parse_field()?));
+        }
+        if self.kw("material") {
+            return Ok(Item::Material(self.parse_material()?));
+        }
+        if self.kw("law") {
+            return Ok(Item::Law(self.parse_law()?));
+        }
         Ok(Item::Statement(self.parse_stmt()?))
     }
 
@@ -339,6 +348,145 @@ impl<'a> Parser<'a> {
             span: Span::new(start, end),
             name,
             variants,
+        })
+    }
+
+    /// Parse a field declaration (T28).
+    ///
+    /// ```vibe
+    /// field pressure_ambient: Pressure
+    ///   unit: <qudt:KiloPascal>
+    ///   support: region
+    ///   representation: grid;
+    /// ```
+    fn parse_field(&mut self) -> Result<FieldDecl, Diagnostic> {
+        let start = self.cur.span.start;
+        self.bump()?; // 'field'
+        let name = self.expect_ident()?;
+        self.expect(TokenKind::Colon, "expected ':' after field name")?;
+        let ty = self.parse_type()?;
+        let mut unit = None;
+        let mut support = FieldSupport::Region;
+        let mut representation = FieldRepresentation::Grid;
+        // Parse optional named properties until ';'
+        loop {
+            if self.cur.kind == TokenKind::Semicolon {
+                self.bump()?;
+                break;
+            }
+            let key = self.expect_ident()?;
+            self.expect(TokenKind::Colon, "expected ':' after field property name")?;
+            match key.as_str() {
+                "unit" => {
+                    // unit: <iri> or unit: "string"
+                    if self.cur.kind == TokenKind::Iri {
+                        let s = self.text().to_string();
+                        self.bump()?;
+                        unit = Some(strip_iri(&s));
+                    } else if self.cur.kind == TokenKind::String {
+                        unit = Some(self.expect_string()?);
+                    } else {
+                        // Could be a prefixed name like qudt:KiloPascal
+                        let s = self.expect_ident()?;
+                        unit = Some(s);
+                    }
+                }
+                "support" => {
+                    let s = self.expect_ident()?;
+                    support = match s.as_str() {
+                        "region" => FieldSupport::Region,
+                        "point" => FieldSupport::Point,
+                        "continuant" => FieldSupport::Continuant,
+                        "stream" => FieldSupport::Stream,
+                        _ => return Err(self.err(&format!("unknown field support '{s}'"))),
+                    };
+                }
+                "representation" => {
+                    let s = self.expect_ident()?;
+                    representation = match s.as_str() {
+                        "grid" => FieldRepresentation::Grid,
+                        "mesh" => FieldRepresentation::Mesh,
+                        "particles" => FieldRepresentation::Particles,
+                        "analytic" => FieldRepresentation::Analytic,
+                        "sampled" => FieldRepresentation::Sampled,
+                        _ => return Err(self.err(&format!("unknown field representation '{s}'"))),
+                    };
+                }
+                _ => {
+                    // Skip unknown property — consume one token value
+                    self.bump()?;
+                }
+            }
+        }
+        Ok(FieldDecl {
+            span: Span::new(start, self.cur.span.start),
+            name,
+            ty,
+            unit,
+            support,
+            representation,
+        })
+    }
+
+    /// Parse a material declaration (T29).
+    ///
+    /// ```vibe
+    /// material sucrose_cube: Material
+    ///   yield: 50.0 <qudt:KiloPascal>
+    ///   density: 1580.0;
+    /// ```
+    fn parse_material(&mut self) -> Result<MaterialDecl, Diagnostic> {
+        let start = self.cur.span.start;
+        self.bump()?; // 'material'
+        let name = self.expect_ident()?;
+        self.expect(TokenKind::Colon, "expected ':' after material name")?;
+        // The type name (e.g. "Material") — we consume it but don't store it
+        // since all materials are Material type for now.
+        let _ty_name = self.expect_ident()?;
+        // Parse properties as named args until ';'
+        let mut properties = Vec::new();
+        while self.cur.kind != TokenKind::Semicolon {
+            let prop = self.parse_named_arg()?;
+            properties.push(prop);
+            if self.cur.kind == TokenKind::Comma {
+                self.bump()?;
+                continue;
+            }
+            break;
+        }
+        self.expect(TokenKind::Semicolon, "expected ';' after material declaration")?;
+        Ok(MaterialDecl {
+            span: Span::new(start, self.cur.span.start),
+            name,
+            properties,
+        })
+    }
+
+    /// Parse a law declaration (T30).
+    ///
+    /// ```vibe
+    /// law crush
+    ///   when sample(pressure_ambient, pose(self)) > self.material.yield
+    ///   => transform.yield(self);
+    /// ```
+    fn parse_law(&mut self) -> Result<LawDecl, Diagnostic> {
+        let start = self.cur.span.start;
+        self.bump()?; // 'law'
+        let name = self.expect_ident()?;
+        if !self.kw("when") {
+            return Err(self.err("expected 'when' after law name"));
+        }
+        self.bump()?; // 'when'
+        // Parse the condition expression up to '=>'
+        let condition = self.parse_expr()?;
+        self.expect(TokenKind::FatArrow, "expected '=>' after law condition")?;
+        let consequence = self.parse_expr()?;
+        self.eat_optional_semi()?;
+        Ok(LawDecl {
+            span: Span::new(start, self.cur.span.start),
+            name,
+            condition,
+            consequence,
         })
     }
 
@@ -916,7 +1064,17 @@ impl<'a> Parser<'a> {
             match self.cur.kind {
                 TokenKind::Dot => {
                     self.bump()?;
-                    let name = self.expect_ident()?;
+                    // Allow keywords as member names (e.g. `material.yield`
+                    // where `yield` is a keyword).
+                    let name = if self.cur.kind == TokenKind::Ident
+                        || self.cur.kind == TokenKind::Keyword
+                    {
+                        let n = self.text().to_string();
+                        self.bump()?;
+                        n
+                    } else {
+                        return Err(self.err("expected identifier after '.'"));
+                    };
                     let end = self.prev_end(expr.span.end);
                     expr = Expr {
                         span: Span::new(expr.span.start, end),
@@ -1241,7 +1399,15 @@ impl<'a> Parser<'a> {
 
     fn parse_named_arg(&mut self) -> Result<NamedArg, Diagnostic> {
         let start = self.cur.span.start;
-        let name = self.expect_ident()?;
+        // Allow keywords as named arg names (e.g. `yield: 50.0` in material
+        // declarations — `yield` is a keyword but also a valid property name).
+        let name = if self.cur.kind == TokenKind::Ident || self.cur.kind == TokenKind::Keyword {
+            let n = self.text().to_string();
+            self.bump()?;
+            n
+        } else {
+            return Err(self.err("expected identifier in named argument"));
+        };
         self.expect(TokenKind::Colon, "expected ':' in named argument")?;
         let value = self.parse_expr()?;
         Ok(NamedArg {
@@ -1437,6 +1603,9 @@ fn item_span(item: &Item) -> Span {
         Item::Hook(h) => h.span,
         Item::Const(c) => c.span,
         Item::Enum(e) => e.span,
+        Item::Field(f) => f.span,
+        Item::Material(m) => m.span,
+        Item::Law(l) => l.span,
         Item::Statement(s) => s.span(),
     }
 }

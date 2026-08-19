@@ -69,6 +69,20 @@ pub fn check_program(program: &Program) -> Result<CheckResult, Diagnostic> {
             Item::Enum(_) => {
                 // Enum declarations are pure type declarations — no effect.
             }
+            Item::Field(_) => {
+                // Field declarations are pure type declarations — no effect.
+            }
+            Item::Material(_) => {
+                // Material declarations are pure data declarations — no effect.
+            }
+            Item::Law(l) => {
+                // Law declarations have a condition and consequence.
+                // The condition is a Pure predicate; the consequence is an
+                // External effect (it transforms state).
+                walk_expr(&l.condition, &mut env, &granted, Effect::Pure, false, false)?;
+                walk_expr(&l.consequence, &mut env, &granted, Effect::External, false, false)?;
+                max_effect = max_effect.join(Effect::External);
+            }
         }
     }
     Ok(CheckResult { effect: max_effect })

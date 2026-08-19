@@ -45,6 +45,9 @@ pub enum Item {
     Hook(HookDecl),
     Const(ConstDecl),
     Enum(EnumDecl),
+    Field(FieldDecl),
+    Material(MaterialDecl),
+    Law(LawDecl),
     Statement(Stmt),
 }
 
@@ -102,6 +105,105 @@ pub struct EnumVariant {
     pub name: String,
     /// Payload types (empty = unit variant like `Point`).
     pub payload: Vec<TypeExpr>,
+}
+
+/// A field declaration (T28).
+///
+/// ```vibe
+/// field pressure_ambient: Pressure
+///   unit: <qudt:KiloPascal>
+///   support: region
+///   representation: grid;
+/// ```
+#[derive(Debug, Clone, PartialEq)]
+pub struct FieldDecl {
+    pub span: Span,
+    pub name: String,
+    pub ty: TypeExpr,
+    /// Unit IRI (e.g. `qudt:KiloPascal`). Optional — dimensionless fields
+    /// have no unit.
+    pub unit: Option<String>,
+    /// Support: how the field is distributed in space.
+    /// `region` (grid), `point` (sampled), `continuant` (attached to an
+    /// enduring thing), `stream` (time-series).
+    pub support: FieldSupport,
+    /// Representation: how the field is stored/computed.
+    /// `grid`, `mesh`, `particles`, `analytic`, `sampled`.
+    pub representation: FieldRepresentation,
+}
+
+/// Field support describes spatial distribution (T28).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FieldSupport {
+    /// Field lives on a region (grid of cells).
+    Region,
+    /// Field is sampled at discrete points.
+    Point,
+    /// Field is attached to a continuant (enduring thing).
+    Continuant,
+    /// Field is a time-series stream.
+    Stream,
+}
+
+impl Default for FieldSupport {
+    fn default() -> Self {
+        FieldSupport::Region
+    }
+}
+
+/// Field representation describes storage/computation (T28).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FieldRepresentation {
+    /// Regular grid of cells.
+    Grid,
+    /// Unstructured mesh.
+    Mesh,
+    /// Particle-based (Lagrangian).
+    Particles,
+    /// Analytic (closed-form expression).
+    Analytic,
+    /// Sampled (lookup table / measured data).
+    Sampled,
+}
+
+impl Default for FieldRepresentation {
+    fn default() -> Self {
+        FieldRepresentation::Grid
+    }
+}
+
+/// A material declaration (T29).
+///
+/// ```vibe
+/// material sucrose_cube: Material
+///   yield: 50.0 <qudt:KiloPascal>
+///   density: 1580.0 <qudt:KiloGramPerCubicMetre>;
+/// ```
+#[derive(Debug, Clone, PartialEq)]
+pub struct MaterialDecl {
+    pub span: Span,
+    pub name: String,
+    /// Material properties as named arguments. Each property has a value
+    /// and an optional unit IRI (encoded in the NamedArg's value as a
+    /// Record or Quantity).
+    pub properties: Vec<NamedArg>,
+}
+
+/// A law declaration (T30).
+///
+/// ```vibe
+/// law crush
+///   when sample(pressure_ambient, pose(self)) > self.material.yield
+///   => transform.yield(self);
+/// ```
+#[derive(Debug, Clone, PartialEq)]
+pub struct LawDecl {
+    pub span: Span,
+    pub name: String,
+    /// The condition expression (after `when`).
+    pub condition: Expr,
+    /// The consequence expression (after `=>`).
+    pub consequence: Expr,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

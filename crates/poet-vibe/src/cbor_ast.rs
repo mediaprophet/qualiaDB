@@ -185,6 +185,42 @@ fn encode_item(enc: &mut CborEncoder, item: &Item) {
                 }
             }
         }
+        Item::Field(f) => {
+            enc.map(6);
+            enc.str("type"); enc.str("Field");
+            enc.str("name"); enc.str(&f.name);
+            enc.str("ty"); encode_type_expr(enc, &f.ty);
+            enc.str("unit"); match &f.unit {
+                Some(u) => enc.str(u),
+                None => enc.null(),
+            };
+            enc.str("support"); enc.str(match f.support {
+                FieldSupport::Region => "region",
+                FieldSupport::Point => "point",
+                FieldSupport::Continuant => "continuant",
+                FieldSupport::Stream => "stream",
+            });
+            enc.str("representation"); enc.str(match f.representation {
+                FieldRepresentation::Grid => "grid",
+                FieldRepresentation::Mesh => "mesh",
+                FieldRepresentation::Particles => "particles",
+                FieldRepresentation::Analytic => "analytic",
+                FieldRepresentation::Sampled => "sampled",
+            });
+        }
+        Item::Material(m) => {
+            enc.map(3);
+            enc.str("type"); enc.str("Material");
+            enc.str("name"); enc.str(&m.name);
+            enc.str("properties"); encode_named_args(enc, &m.properties);
+        }
+        Item::Law(l) => {
+            enc.map(4);
+            enc.str("type"); enc.str("Law");
+            enc.str("name"); enc.str(&l.name);
+            enc.str("condition"); encode_expr(enc, &l.condition);
+            enc.str("consequence"); encode_expr(enc, &l.consequence);
+        }
     }
 }
 
@@ -793,6 +829,83 @@ fn decode_item(dec: &mut CborDecoder) -> Result<Item, DecodeError> {
                 variants,
             }))
         }
+        "Field" => {
+            let mut name = String::new();
+            let mut ty = TypeExpr { span: Span::new(0, 0), name: String::new(), args: Vec::new() };
+            let mut unit = None;
+            let mut support = FieldSupport::Region;
+            let mut representation = FieldRepresentation::Grid;
+            for (k, v) in fields {
+                match (k.as_str(), v) {
+                    ("name", ItemField::Str(s)) => name = s,
+                    ("ty", ItemField::TypeExpr(t)) => ty = t,
+                    ("unit", ItemField::Str(s)) => unit = Some(s),
+                    ("support", ItemField::Str(s)) => {
+                        support = match s.as_str() {
+                            "region" => FieldSupport::Region,
+                            "point" => FieldSupport::Point,
+                            "continuant" => FieldSupport::Continuant,
+                            "stream" => FieldSupport::Stream,
+                            _ => FieldSupport::Region,
+                        };
+                    }
+                    ("representation", ItemField::Str(s)) => {
+                        representation = match s.as_str() {
+                            "grid" => FieldRepresentation::Grid,
+                            "mesh" => FieldRepresentation::Mesh,
+                            "particles" => FieldRepresentation::Particles,
+                            "analytic" => FieldRepresentation::Analytic,
+                            "sampled" => FieldRepresentation::Sampled,
+                            _ => FieldRepresentation::Grid,
+                        };
+                    }
+                    _ => {}
+                }
+            }
+            Ok(Item::Field(FieldDecl {
+                span: Span::new(0, 0),
+                name,
+                ty,
+                unit,
+                support,
+                representation,
+            }))
+        }
+        "Material" => {
+            let mut name = String::new();
+            let mut properties = Vec::new();
+            for (k, v) in fields {
+                match (k.as_str(), v) {
+                    ("name", ItemField::Str(s)) => name = s,
+                    ("properties", ItemField::NamedArgs(na)) => properties = na,
+                    _ => {}
+                }
+            }
+            Ok(Item::Material(MaterialDecl {
+                span: Span::new(0, 0),
+                name,
+                properties,
+            }))
+        }
+        "Law" => {
+            let mut name = String::new();
+            let mut condition = Expr { span: Span::new(0, 0), kind: ExprKind::Literal(Literal::Null) };
+            let mut consequence = Expr { span: Span::new(0, 0), kind: ExprKind::Literal(Literal::Null) };
+            for (k, v) in fields {
+                match (k.as_str(), v) {
+                    ("name", ItemField::Str(s)) => name = s,
+                    ("condition", ItemField::Expr(e)) => condition = e,
+                    ("consequence", ItemField::Expr(e)) => consequence = e,
+                    _ => {}
+                }
+            }
+            Ok(Item::Law(LawDecl {
+                span: Span::new(0, 0),
+                name,
+                condition,
+                consequence,
+            }))
+        }
         _ => Err(DecodeError::UnexpectedType("Item")),
     }
 }
@@ -810,6 +923,7 @@ enum ItemField {
     Span(Span),
     Stmt(Stmt),
     VariantList(Vec<EnumVariant>),
+    TypeExpr(TypeExpr),
 }
 
 fn decode_item_field(key: &str, dec: &mut CborDecoder) -> Result<ItemField, DecodeError> {
@@ -831,9 +945,10 @@ fn decode_item_field(key: &str, dec: &mut CborDecoder) -> Result<ItemField, Deco
                 Ok(ItemField::Effect(Some(e)))
             }
         }
-        "value" | "expr" => Ok(ItemField::Expr(decode_expr(dec)?)),
+        "value" | "expr" | "condition" | "consequence" => Ok(ItemField::Expr(decode_expr(dec)?)),
         "body" | "then" | "block" => Ok(ItemField::Block(decode_block(dec)?)),
         "params" => Ok(ItemField::Params(decode_params(dec)?)),
+        "properties" => Ok(ItemField::NamedArgs(decode_named_args(dec)?)),
         "budget" | "args" => {
             // "args" in Item context could be NamedArgs or Args — for Function/Hook
             // budget it's NamedArgs. For Call args it's Args. But we're in decode_item_field,
@@ -875,6 +990,12 @@ fn decode_item_field(key: &str, dec: &mut CborDecoder) -> Result<ItemField, Deco
             }
             Ok(ItemField::VariantList(vs))
         }
+        "ty" => Ok(ItemField::TypeExpr(decode_type_expr(dec)?)),
+        "unit" => {
+            if dec.is_null()? { dec.skip()?; Ok(ItemField::Str(String::new())) }
+            else { Ok(ItemField::Str(dec.str()?)) }
+        }
+        "support" | "representation" => Ok(ItemField::Str(dec.str()?)),
         _ => { dec.skip()?; Ok(ItemField::Str(String::new())) }
     }
 }

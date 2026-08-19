@@ -17,6 +17,12 @@ pub struct Env {
     pub aliases: HashMap<String, String>,
     /// User-defined enum declarations (T9). Maps enum name → declaration.
     pub enums: HashMap<String, EnumDecl>,
+    /// Field declarations (T28). Maps field name → record Value.
+    pub fields: HashMap<String, Value>,
+    /// Material declarations (T29). Maps material name → record Value.
+    pub materials: HashMap<String, Value>,
+    /// Law declarations (T30). Maps law name → record Value.
+    pub laws: HashMap<String, Value>,
 }
 
 impl Default for Env {
@@ -26,6 +32,9 @@ impl Default for Env {
             mutables: HashSet::new(),
             aliases: HashMap::new(),
             enums: HashMap::new(),
+            fields: HashMap::new(),
+            materials: HashMap::new(),
+            laws: HashMap::new(),
         }
     }
 }
@@ -190,9 +199,24 @@ impl<'a, H: Host> Engine<'a, H> {
                 if n == "None" {
                     return Ok(Value::Null);
                 }
-                env.vars.get(n).cloned().ok_or_else(|| {
-                    Diagnostic::new(DiagCode::E600, expr.span, format!("undefined {n}"))
-                })
+                // Check vars, then fields, then materials, then laws.
+                if let Some(v) = env.vars.get(n) {
+                    return Ok(v.clone());
+                }
+                if let Some(v) = env.fields.get(n) {
+                    return Ok(v.clone());
+                }
+                if let Some(v) = env.materials.get(n) {
+                    return Ok(v.clone());
+                }
+                if let Some(v) = env.laws.get(n) {
+                    return Ok(v.clone());
+                }
+                Err(Diagnostic::new(
+                    DiagCode::E600,
+                    expr.span,
+                    format!("undefined {n}"),
+                ))
             }
             ExprKind::QueryVar(n) => Ok(Value::Var(n.clone())),
             ExprKind::Iri(s) => Ok(Value::Iri(s.clone())),
@@ -581,6 +605,39 @@ impl<'a, H: Host> Engine<'a, H> {
                 Item::Enum(e) => {
                     env.enums.insert(e.name.clone(), e.clone());
                 }
+                Item::Field(f) => {
+                    let mut rec = std::collections::BTreeMap::new();
+                    rec.insert("name".to_string(), Value::String(f.name.clone()));
+                    rec.insert("ty".to_string(), Value::String(f.ty.name.clone()));
+                    if let Some(u) = &f.unit {
+                        rec.insert("unit".to_string(), Value::String(u.clone()));
+                    }
+                    rec.insert(
+                        "support".to_string(),
+                        Value::String(format!("{:?}", f.support).to_lowercase()),
+                    );
+                    rec.insert(
+                        "representation".to_string(),
+                        Value::String(format!("{:?}", f.representation).to_lowercase()),
+                    );
+                    env.fields.insert(f.name.clone(), Value::Record(rec));
+                }
+                Item::Material(m) => {
+                    let mut rec = std::collections::BTreeMap::new();
+                    rec.insert("name".to_string(), Value::String(m.name.clone()));
+                    for prop in &m.properties {
+                        let v = self.eval_expr(&prop.value, env)?;
+                        rec.insert(prop.name.clone(), v);
+                    }
+                    env.materials.insert(m.name.clone(), Value::Record(rec));
+                }
+                Item::Law(l) => {
+                    let mut rec = std::collections::BTreeMap::new();
+                    rec.insert("name".to_string(), Value::String(l.name.clone()));
+                    rec.insert("has_condition".to_string(), Value::Bool(true));
+                    rec.insert("has_consequence".to_string(), Value::Bool(true));
+                    env.laws.insert(l.name.clone(), Value::Record(rec));
+                }
             }
         }
         Ok(last)
@@ -604,9 +661,13 @@ impl<'a, H: Host> Engine<'a, H> {
             self.budget.steps_left = self.budget.steps_left.min(steps);
         }
         let mut local = Env::default();
-        // Inherit import aliases and enum declarations from the calling env.
+        // Inherit import aliases, enum declarations, and field/material/law
+        // declarations from the calling env.
         local.aliases = env.aliases.clone();
         local.enums = env.enums.clone();
+        local.fields = env.fields.clone();
+        local.materials = env.materials.clone();
+        local.laws = env.laws.clone();
         for (p, a) in f.params.iter().zip(args.into_iter()) {
             local.vars.insert(p.name.clone(), a);
         }
@@ -1381,5 +1442,176 @@ mod tests {
         "#;
         let err = eval_program_src(src).unwrap_err();
         assert_eq!(err.code, DiagCode::E100);
+    }
+
+    // ── T28: FieldDecl tests ──────────────────────────────────────────
+
+    #[test]
+    fn t28_field_decl_parses_and_evaluates() {
+        let src = r#"
+            field pressure_ambient: Pressure
+                unit: "qudt:KiloPascal"
+                support: region
+                representation: grid;
+            fn main() {
+                return pressure_ambient;
+            }
+        "#;
+        let result = eval_program_src(src).unwrap();
+        match result {
+            Value::Record(r) => {
+                assert_eq!(r.get("name"), Some(&Value::String("pressure_ambient".into())));
+                assert_eq!(r.get("ty"), Some(&Value::String("Pressure".into())));
+                assert_eq!(r.get("unit"), Some(&Value::String("qudt:KiloPascal".into())));
+                assert_eq!(r.get("support"), Some(&Value::String("region".into())));
+                assert_eq!(r.get("representation"), Some(&Value::String("grid".into())));
+            }
+            other => panic!("expected record, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn t28_field_decl_without_unit() {
+        let src = r#"
+            field temperature: Temperature
+                support: point
+                representation: sampled;
+            fn main() {
+                return temperature;
+            }
+        "#;
+        let result = eval_program_src(src).unwrap();
+        match result {
+            Value::Record(r) => {
+                assert_eq!(r.get("name"), Some(&Value::String("temperature".into())));
+                assert!(r.get("unit").is_none());
+                assert_eq!(r.get("support"), Some(&Value::String("point".into())));
+                assert_eq!(r.get("representation"), Some(&Value::String("sampled".into())));
+            }
+            other => panic!("expected record, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn t28_field_decl_defaults() {
+        let src = r#"
+            field velocity: Velocity;
+            fn main() {
+                return velocity;
+            }
+        "#;
+        let result = eval_program_src(src).unwrap();
+        match result {
+            Value::Record(r) => {
+                assert_eq!(r.get("support"), Some(&Value::String("region".into())));
+                assert_eq!(r.get("representation"), Some(&Value::String("grid".into())));
+            }
+            other => panic!("expected record, got {other:?}"),
+        }
+    }
+
+    // ── T29: MaterialDecl tests ───────────────────────────────────────
+
+    #[test]
+    fn t29_material_decl_parses_and_evaluates() {
+        let src = r#"
+            material sucrose_cube: Material
+                yield: 50.0,
+                density: 1580.0;
+            fn main() {
+                return sucrose_cube;
+            }
+        "#;
+        let result = eval_program_src(src).unwrap();
+        match result {
+            Value::Record(r) => {
+                assert_eq!(r.get("name"), Some(&Value::String("sucrose_cube".into())));
+                assert_eq!(r.get("yield"), Some(&Value::F64(50.0)));
+                assert_eq!(r.get("density"), Some(&Value::F64(1580.0)));
+            }
+            other => panic!("expected record, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn t29_material_decl_no_properties() {
+        let src = r#"
+            material empty_mat: Material;
+            fn main() {
+                return empty_mat;
+            }
+        "#;
+        let result = eval_program_src(src).unwrap();
+        match result {
+            Value::Record(r) => {
+                assert_eq!(r.get("name"), Some(&Value::String("empty_mat".into())));
+            }
+            other => panic!("expected record, got {other:?}"),
+        }
+    }
+
+    // ── T30: LawDecl tests ────────────────────────────────────────────
+
+    #[test]
+    fn t30_law_decl_parses_and_evaluates() {
+        let src = r#"
+            field pressure_ambient: Pressure
+                support: region
+                representation: grid;
+            material sucrose_cube: Material
+                yield: 50.0;
+            law crush
+                when pressure_ambient > sucrose_cube.yield
+                => sucrose_cube;
+            fn main() {
+                return crush;
+            }
+        "#;
+        let result = eval_program_src(src).unwrap();
+        match result {
+            Value::Record(r) => {
+                assert_eq!(r.get("name"), Some(&Value::String("crush".into())));
+                assert_eq!(r.get("has_condition"), Some(&Value::Bool(true)));
+                assert_eq!(r.get("has_consequence"), Some(&Value::Bool(true)));
+            }
+            other => panic!("expected record, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn t30_law_decl_check_passes() {
+        // Law with a condition and consequence should pass the checker.
+        let src = r#"
+            law simple_law
+                when 1 > 0
+                => 42;
+        "#;
+        let program = crate::parse::parse_program(src).unwrap();
+        let result = crate::check::check_program(&program);
+        assert!(result.is_ok(), "checker should accept law: {:?}", result);
+    }
+
+    #[test]
+    fn t28_t29_t30_all_three_together() {
+        let src = r#"
+            field pressure_ambient: Pressure
+                unit: "qudt:KiloPascal"
+                support: region
+                representation: grid;
+            material sucrose_cube: Material
+                yield: 50.0,
+                density: 1580.0;
+            law crush
+                when 1 > 0
+                => 42;
+            fn main() {
+                let p = pressure_ambient;
+                let m = sucrose_cube;
+                let l = crush;
+                return 0;
+            }
+        "#;
+        let result = eval_program_src(src).unwrap();
+        assert_eq!(result, Value::I64(0));
     }
 }
