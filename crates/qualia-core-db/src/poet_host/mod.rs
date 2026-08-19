@@ -565,6 +565,290 @@ impl Host for PoetSnapshot {
     fn hash_iri(&self, iri: &str) -> u64 {
         generate_60bit_token(iri.as_bytes())
     }
+
+    // ── Crypto operations — delegate to cryptographic_library ───────
+
+    fn crypto_hash(
+        &mut self,
+        algorithm: &str,
+        data: &str,
+        span: poet_vibe::Span,
+    ) -> Result<Value, Diagnostic> {
+        let bytes = data.as_bytes();
+        let (hash_hex, hash_bytes_len) = match algorithm {
+            "SHA-256" => {
+                use sha2::{Digest, Sha256};
+                let mut hasher = Sha256::new();
+                hasher.update(bytes);
+                let digest = hasher.finalize();
+                (poet_vibe::crypto::to_hex(&digest), digest.len())
+            }
+            "SHA-512" => {
+                use sha2::{Digest, Sha512};
+                let mut hasher = Sha512::new();
+                hasher.update(bytes);
+                let digest = hasher.finalize();
+                (poet_vibe::crypto::to_hex(&digest), digest.len())
+            }
+            "BLAKE3" => {
+                let digest = blake3::hash(bytes);
+                let bytes_arr = digest.as_bytes();
+                (poet_vibe::crypto::to_hex(bytes_arr), bytes_arr.len())
+            }
+            _ => {
+                return Err(Diagnostic::new(
+                    poet_vibe::DiagCode::E100,
+                    span,
+                    format!("crypto.hash: unsupported algorithm {algorithm}"),
+                ));
+            }
+        };
+        Ok(poet_vibe::crypto::hash_result_value(algorithm, &hash_hex, hash_bytes_len))
+    }
+
+    fn crypto_hkdf(
+        &mut self,
+        ikm: &str,
+        info: &str,
+        length: u64,
+        span: poet_vibe::Span,
+    ) -> Result<Value, Diagnostic> {
+        use hkdf::Hkdf;
+        use sha2::Sha256;
+        let ikm_bytes = ikm.as_bytes();
+        let info_bytes = info.as_bytes();
+        let hk = Hkdf::<Sha256>::new(None, ikm_bytes);
+        let mut okm = vec![0u8; length as usize];
+        hk.expand(info_bytes, &mut okm)
+            .map_err(|e| Diagnostic::new(
+                poet_vibe::DiagCode::E100,
+                span,
+                format!("crypto.hkdf: expansion failed: {e}"),
+            ))?;
+        Ok(Value::String(poet_vibe::crypto::to_hex(&okm)))
+    }
+
+    fn crypto_aead_encrypt(
+        &mut self,
+        algorithm: &str,
+        key_hex: &str,
+        nonce_hex: &str,
+        plaintext: &str,
+        aad: &str,
+        span: poet_vibe::Span,
+    ) -> Result<Value, Diagnostic> {
+        let key = poet_vibe::crypto::from_hex(key_hex)
+            .ok_or_else(|| Diagnostic::new(
+                poet_vibe::DiagCode::E100, span,
+                "crypto.aead_encrypt: invalid key hex",
+            ))?;
+        let nonce = poet_vibe::crypto::from_hex(nonce_hex)
+            .ok_or_else(|| Diagnostic::new(
+                poet_vibe::DiagCode::E100, span,
+                "crypto.aead_encrypt: invalid nonce hex",
+            ))?;
+
+        let aad_bytes = aad.as_bytes();
+        let pt_bytes = plaintext.as_bytes();
+
+        let (ciphertext, tag): (Vec<u8>, Vec<u8>) = match algorithm {
+            "AES-256-GCM" => {
+                use aes_gcm::{Aes256Gcm, KeyInit, Nonce};
+                use aes_gcm::aead::Aead;
+                let key_arr: &[u8; 32] = key.as_slice().try_into().map_err(|_| {
+                    Diagnostic::new(poet_vibe::DiagCode::E100, span, "AES-256-GCM key must be 32 bytes")
+                })?;
+                let cipher = Aes256Gcm::new(key_arr.into());
+                let nonce_arr = Nonce::from_slice(&nonce);
+                let payload = aes_gcm::aead::Payload { msg: pt_bytes, aad: aad_bytes };
+                let ct = cipher.encrypt(nonce_arr, payload)
+                    .map_err(|e| Diagnostic::new(
+                        poet_vibe::DiagCode::E100, span, format!("AES-256-GCM encrypt failed: {e}"),
+                    ))?;
+                // AES-GCM appends the 16-byte tag to the ciphertext.
+                let tag = ct[ct.len().saturating_sub(16)..].to_vec();
+                let ct = ct[..ct.len().saturating_sub(16)].to_vec();
+                (ct, tag)
+            }
+            "ChaCha20-Poly1305" => {
+                use chacha20poly1305::{ChaCha20Poly1305, KeyInit, Nonce};
+                use chacha20poly1305::aead::Aead;
+                let key_arr: &[u8; 32] = key.as_slice().try_into().map_err(|_| {
+                    Diagnostic::new(poet_vibe::DiagCode::E100, span, "ChaCha20 key must be 32 bytes")
+                })?;
+                let cipher = ChaCha20Poly1305::new(key_arr.into());
+                let nonce_arr = Nonce::from_slice(&nonce);
+                let payload = chacha20poly1305::aead::Payload { msg: pt_bytes, aad: aad_bytes };
+                let ct = cipher.encrypt(nonce_arr, payload)
+                    .map_err(|e| Diagnostic::new(
+                        poet_vibe::DiagCode::E100, span, format!("ChaCha20 encrypt failed: {e}"),
+                    ))?;
+                let tag = ct[ct.len().saturating_sub(16)..].to_vec();
+                let ct = ct[..ct.len().saturating_sub(16)].to_vec();
+                (ct, tag)
+            }
+            "XChaCha20-Poly1305" => {
+                use chacha20poly1305::{XChaCha20Poly1305, KeyInit, XNonce};
+                use chacha20poly1305::aead::Aead;
+                let key_arr: &[u8; 32] = key.as_slice().try_into().map_err(|_| {
+                    Diagnostic::new(poet_vibe::DiagCode::E100, span, "XChaCha20 key must be 32 bytes")
+                })?;
+                let cipher = XChaCha20Poly1305::new(key_arr.into());
+                let nonce_arr = XNonce::from_slice(&nonce);
+                let payload = chacha20poly1305::aead::Payload { msg: pt_bytes, aad: aad_bytes };
+                let ct = cipher.encrypt(nonce_arr, payload)
+                    .map_err(|e| Diagnostic::new(
+                        poet_vibe::DiagCode::E100, span, format!("XChaCha20 encrypt failed: {e}"),
+                    ))?;
+                let tag = ct[ct.len().saturating_sub(16)..].to_vec();
+                let ct = ct[..ct.len().saturating_sub(16)].to_vec();
+                (ct, tag)
+            }
+            _ => {
+                return Err(Diagnostic::new(
+                    poet_vibe::DiagCode::E100, span,
+                    format!("crypto.aead_encrypt: unsupported algorithm {algorithm}"),
+                ));
+            }
+        };
+
+        Ok(poet_vibe::crypto::encrypted_data_value(
+            algorithm,
+            &poet_vibe::crypto::to_hex(&ciphertext),
+            &poet_vibe::crypto::to_hex(&tag),
+            &poet_vibe::crypto::to_hex(&nonce),
+        ))
+    }
+
+    fn crypto_aead_decrypt(
+        &mut self,
+        algorithm: &str,
+        key_hex: &str,
+        nonce_hex: &str,
+        ciphertext_hex: &str,
+        tag_hex: &str,
+        aad: &str,
+        span: poet_vibe::Span,
+    ) -> Result<Value, Diagnostic> {
+        let key = poet_vibe::crypto::from_hex(key_hex)
+            .ok_or_else(|| Diagnostic::new(
+                poet_vibe::DiagCode::E100, span, "crypto.aead_decrypt: invalid key hex",
+            ))?;
+        let nonce = poet_vibe::crypto::from_hex(nonce_hex)
+            .ok_or_else(|| Diagnostic::new(
+                poet_vibe::DiagCode::E100, span, "crypto.aead_decrypt: invalid nonce hex",
+            ))?;
+        let ciphertext = poet_vibe::crypto::from_hex(ciphertext_hex)
+            .ok_or_else(|| Diagnostic::new(
+                poet_vibe::DiagCode::E100, span, "crypto.aead_decrypt: invalid ciphertext hex",
+            ))?;
+        let tag = poet_vibe::crypto::from_hex(tag_hex)
+            .ok_or_else(|| Diagnostic::new(
+                poet_vibe::DiagCode::E100, span, "crypto.aead_decrypt: invalid tag hex",
+            ))?;
+
+        let aad_bytes = aad.as_bytes();
+        // Combine ciphertext + tag (AEAD libraries expect them concatenated).
+        let mut ct_tag = ciphertext.clone();
+        ct_tag.extend_from_slice(&tag);
+
+        let plaintext = match algorithm {
+            "AES-256-GCM" => {
+                use aes_gcm::{Aes256Gcm, KeyInit, Nonce};
+                use aes_gcm::aead::Aead;
+                let key_arr: &[u8; 32] = key.as_slice().try_into().map_err(|_| {
+                    Diagnostic::new(poet_vibe::DiagCode::E100, span, "AES-256-GCM key must be 32 bytes")
+                })?;
+                let cipher = Aes256Gcm::new(key_arr.into());
+                let nonce_arr = Nonce::from_slice(&nonce);
+                let payload = aes_gcm::aead::Payload { msg: &ct_tag, aad: aad_bytes };
+                cipher.decrypt(nonce_arr, payload)
+                    .map_err(|e| Diagnostic::new(
+                        poet_vibe::DiagCode::E100, span, format!("AES-256-GCM decrypt failed: {e}"),
+                    ))?
+            }
+            "ChaCha20-Poly1305" => {
+                use chacha20poly1305::{ChaCha20Poly1305, KeyInit, Nonce};
+                use chacha20poly1305::aead::Aead;
+                let key_arr: &[u8; 32] = key.as_slice().try_into().map_err(|_| {
+                    Diagnostic::new(poet_vibe::DiagCode::E100, span, "ChaCha20 key must be 32 bytes")
+                })?;
+                let cipher = ChaCha20Poly1305::new(key_arr.into());
+                let nonce_arr = Nonce::from_slice(&nonce);
+                let payload = chacha20poly1305::aead::Payload { msg: &ct_tag, aad: aad_bytes };
+                cipher.decrypt(nonce_arr, payload)
+                    .map_err(|e| Diagnostic::new(
+                        poet_vibe::DiagCode::E100, span, format!("ChaCha20 decrypt failed: {e}"),
+                    ))?
+            }
+            "XChaCha20-Poly1305" => {
+                use chacha20poly1305::{XChaCha20Poly1305, KeyInit, XNonce};
+                use chacha20poly1305::aead::Aead;
+                let key_arr: &[u8; 32] = key.as_slice().try_into().map_err(|_| {
+                    Diagnostic::new(poet_vibe::DiagCode::E100, span, "XChaCha20 key must be 32 bytes")
+                })?;
+                let cipher = XChaCha20Poly1305::new(key_arr.into());
+                let nonce_arr = XNonce::from_slice(&nonce);
+                let payload = chacha20poly1305::aead::Payload { msg: &ct_tag, aad: aad_bytes };
+                cipher.decrypt(nonce_arr, payload)
+                    .map_err(|e| Diagnostic::new(
+                        poet_vibe::DiagCode::E100, span, format!("XChaCha20 decrypt failed: {e}"),
+                    ))?
+            }
+            _ => {
+                return Err(Diagnostic::new(
+                    poet_vibe::DiagCode::E100, span,
+                    format!("crypto.aead_decrypt: unsupported algorithm {algorithm}"),
+                ));
+            }
+        };
+
+        Ok(Value::String(String::from_utf8_lossy(&plaintext).into_owned()))
+    }
+
+    fn crypto_sign(
+        &mut self,
+        _key_id: &str,
+        _data: &str,
+        span: poet_vibe::Span,
+    ) -> Result<Value, Diagnostic> {
+        // Signing requires access to the key vault, which is not
+        // available in the snapshot. This is a fail-closed stub that
+        // signals the key vault is not wired into the poet host yet.
+        Err(Diagnostic::new(
+            poet_vibe::DiagCode::E702,
+            span,
+            "crypto.sign: key vault not wired into poet host (use the identity layer directly)",
+        ))
+    }
+
+    fn crypto_verify(
+        &mut self,
+        _key_id: &str,
+        _data: &str,
+        _signature_hex: &str,
+        span: poet_vibe::Span,
+    ) -> Result<Value, Diagnostic> {
+        // Verification requires access to the key vault.
+        Err(Diagnostic::new(
+            poet_vibe::DiagCode::E702,
+            span,
+            "crypto.verify: key vault not wired into poet host (use the identity layer directly)",
+        ))
+    }
+
+    fn crypto_generate_key(
+        &mut self,
+        _algorithm: &str,
+        span: poet_vibe::Span,
+    ) -> Result<Value, Diagnostic> {
+        // Key generation requires access to the key vault.
+        Err(Diagnostic::new(
+            poet_vibe::DiagCode::E702,
+            span,
+            "crypto.generate_key: key vault not wired into poet host (use the identity layer directly)",
+        ))
+    }
 }
 
 #[cfg(test)]
@@ -576,6 +860,125 @@ mod tests {
         let mut snap = PoetSnapshot::default();
         let v = snap.eval_cell_src("= math.max(1, math.min(9, 4))").unwrap();
         assert_eq!(v.as_f64(), Some(4.0));
+    }
+
+    #[test]
+    fn crypto_sha256_through_vibe() {
+        let mut snap = PoetSnapshot::default();
+        let src = r#"
+            import "crypto" as crypto;
+            fn hash_it() {
+                return crypto.sha256("hello");
+            }
+        "#;
+        let v = snap.eval_fn(src, "hash_it", vec![]).unwrap();
+        let rec = match v {
+            Value::Record(r) => r,
+            _ => panic!("expected Record"),
+        };
+        let hex = match rec.get("hex") {
+            Some(Value::String(s)) => s.clone(),
+            _ => panic!("expected hex String"),
+        };
+        // SHA-256("hello") = 2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824
+        assert_eq!(hex, "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824");
+    }
+
+    #[test]
+    fn crypto_blake3_through_vibe() {
+        let mut snap = PoetSnapshot::default();
+        let src = r#"
+            import "crypto" as crypto;
+            fn hash_it() {
+                return crypto.blake3("hello");
+            }
+        "#;
+        let v = snap.eval_fn(src, "hash_it", vec![]).unwrap();
+        let rec = match v {
+            Value::Record(r) => r,
+            _ => panic!("expected Record"),
+        };
+        let algorithm = match rec.get("algorithm") {
+            Some(Value::String(s)) => s.clone(),
+            _ => panic!("expected algorithm String"),
+        };
+        assert_eq!(algorithm, "BLAKE3");
+        // BLAKE3 hash is 32 bytes
+        let bytes = match rec.get("bytes") {
+            Some(Value::U64(n)) => *n,
+            _ => panic!("expected bytes U64"),
+        };
+        assert_eq!(bytes, 32);
+    }
+
+    #[test]
+    fn crypto_hkdf_through_vibe() {
+        let mut snap = PoetSnapshot::default();
+        let src = r#"
+            import "crypto" as crypto;
+            fn derive() {
+                return crypto.hkdf_sha256("input key material", "info", 32);
+            }
+        "#;
+        let v = snap.eval_fn(src, "derive", vec![]).unwrap();
+        match v {
+            Value::String(hex) => {
+                // 32 bytes = 64 hex chars
+                assert_eq!(hex.len(), 64);
+            }
+            _ => panic!("expected String"),
+        }
+    }
+
+    #[test]
+    fn crypto_aead_round_trip_through_vibe() {
+        let mut snap = PoetSnapshot::default();
+        // Use a 32-byte key (64 hex chars) and 12-byte nonce (24 hex chars)
+        let key_hex = "0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20";
+        let nonce_hex = "0102030405060708090a0b0c";
+        let src = format!(r#"
+            import "crypto" as crypto;
+            fn encrypt_it() {{
+                return crypto.aead_encrypt("AES-256-GCM", "{}", "{}", "secret message", "aad");
+            }}
+            fn decrypt_it(ct_hex: String, tag_hex: String) {{
+                return crypto.aead_decrypt("AES-256-GCM", "{}", "{}", ct_hex, tag_hex, "aad");
+            }}
+        "#, key_hex, nonce_hex, key_hex, nonce_hex);
+        let enc = snap.eval_fn(&src, "encrypt_it", vec![]).unwrap();
+        let enc_rec = match &enc {
+            Value::Record(r) => r,
+            _ => panic!("expected Record"),
+        };
+        let ct_hex = match enc_rec.get("ciphertext_hex") {
+            Some(Value::String(s)) => s.clone(),
+            _ => panic!("expected ciphertext_hex"),
+        };
+        let tag_hex = match enc_rec.get("tag_hex") {
+            Some(Value::String(s)) => s.clone(),
+            _ => panic!("expected tag_hex"),
+        };
+        let dec = snap.eval_fn(&src, "decrypt_it", vec![
+            Value::String(ct_hex),
+            Value::String(tag_hex),
+        ]).unwrap();
+        match dec {
+            Value::String(s) => assert_eq!(s, "secret message"),
+            _ => panic!("expected String"),
+        }
+    }
+
+    #[test]
+    fn crypto_sign_fail_closed() {
+        let mut snap = PoetSnapshot::default();
+        let src = r#"
+            import "crypto" as crypto;
+            fn sign_it() {
+                return crypto.sign("key:ed25519:0", "data");
+            }
+        "#;
+        let result = snap.eval_fn(src, "sign_it", vec![]);
+        assert!(result.is_err());
     }
 
     #[test]
