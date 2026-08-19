@@ -9346,6 +9346,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "poet-cli"
+version = "0.0.32"
+dependencies = [
+ "poet-vibe",
+]
+
+[[package]]
 name = "poet-vibe"
 version = "0.0.31"
 
