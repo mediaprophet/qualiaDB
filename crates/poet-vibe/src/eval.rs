@@ -5,7 +5,7 @@ use crate::bind::{dispatch, Host};
 use crate::budget::Budget;
 use crate::error::{DiagCode, Diagnostic};
 use crate::span::Span;
-use crate::value::Value;
+use crate::value::{EnumValue, Value};
 use std::collections::HashMap;
 
 pub struct Env {
@@ -13,6 +13,8 @@ pub struct Env {
     /// Import alias → namespace name (e.g. `g` → `graph`).
     /// Populated from `import "vibe:0.1/graph" as g;` declarations.
     pub aliases: HashMap<String, String>,
+    /// User-defined enum declarations (T9). Maps enum name → declaration.
+    pub enums: HashMap<String, EnumDecl>,
 }
 
 impl Default for Env {
@@ -20,6 +22,7 @@ impl Default for Env {
         Self {
             vars: HashMap::new(),
             aliases: HashMap::new(),
+            enums: HashMap::new(),
         }
     }
 }
@@ -207,6 +210,16 @@ impl<'a, H: Host> Engine<'a, H> {
                 binop(*op, &l, &r, expr.span)
             }
             ExprKind::Member { recv, name } => {
+                // T9: Check if this is a unit variant of a user-defined enum
+                // BEFORE evaluating the receiver (which would fail as undefined
+                // ident). `EnumName.Variant` (no call) → unit enum value.
+                if let ExprKind::Ident(enum_name) = &recv.kind {
+                    if let Some(enum_decl) = env.enums.get(enum_name) {
+                        if enum_decl.variants.iter().any(|v| v.name == *name && v.payload.is_empty()) {
+                            return Ok(Value::Enum(EnumValue::unit(enum_name, name)));
+                        }
+                    }
+                }
                 let _ = self.eval_expr(recv, env)?;
                 // namespace keep: math.max is Call of Member, eval'd in Call
                 Ok(Value::Identish(name.clone()))
@@ -316,6 +329,21 @@ impl<'a, H: Host> Engine<'a, H> {
                 pos.into_iter().next().unwrap_or(Value::Null),
             )));
         }
+        // T9: User-defined enum variant construction.
+        // `EnumName.Variant(args)` → `Value::Enum(EnumValue { ... })`
+        if let Some(dot_pos) = path.find('.') {
+            let enum_name = &path[..dot_pos];
+            let variant_name = &path[dot_pos + 1..];
+            if let Some(enum_decl) = env.enums.get(enum_name) {
+                if enum_decl.variants.iter().any(|v| v.name == variant_name) {
+                    return Ok(Value::Enum(EnumValue::with_payload(
+                        enum_name,
+                        variant_name,
+                        pos,
+                    )));
+                }
+            }
+        }
         // Try resolving as a user-defined function in the attached program.
         if let Some(program_ptr) = self.program {
             let program = unsafe { &*program_ptr };
@@ -327,6 +355,7 @@ impl<'a, H: Host> Engine<'a, H> {
                 }
                 let mut local = Env::default();
                 local.aliases = env.aliases.clone();
+                local.enums = env.enums.clone();
                 for (p, a) in f.params.iter().zip(pos.into_iter()) {
                     local.vars.insert(p.name.clone(), a);
                 }
@@ -493,6 +522,9 @@ impl<'a, H: Host> Engine<'a, H> {
                     Flow::Next(v) => last = v,
                 },
                 Item::Function(_) | Item::Hook(_) => {}
+                Item::Enum(e) => {
+                    env.enums.insert(e.name.clone(), e.clone());
+                }
             }
         }
         Ok(last)
@@ -516,8 +548,9 @@ impl<'a, H: Host> Engine<'a, H> {
             self.budget.steps_left = self.budget.steps_left.min(steps);
         }
         let mut local = Env::default();
-        // Inherit import aliases from the calling environment.
+        // Inherit import aliases and enum declarations from the calling env.
         local.aliases = env.aliases.clone();
+        local.enums = env.enums.clone();
         for (p, a) in f.params.iter().zip(args.into_iter()) {
             local.vars.insert(p.name.clone(), a);
         }
@@ -555,6 +588,7 @@ impl<'a, H: Host> Engine<'a, H> {
         }
         let mut local = Env::default();
         local.aliases = env.aliases.clone();
+        local.enums = env.enums.clone();
         for (p, a) in h.params.iter().zip(args.into_iter()) {
             local.vars.insert(p.name.clone(), a);
         }
@@ -629,6 +663,25 @@ fn match_pat(p: &Pattern, v: &Value, env: &mut Env) -> bool {
             _ => false,
         },
         Pattern::Some(inner) => match_pat(inner, v, env),
+        // T9: User-defined enum variant pattern.
+        Pattern::Variant {
+            enum_name,
+            variant_name,
+            args,
+        } => match v {
+            Value::Enum(e) if e.enum_name == *enum_name && e.variant_name == *variant_name => {
+                if args.is_empty() {
+                    e.payload.is_empty()
+                } else if args.len() == e.payload.len() {
+                    args.iter()
+                        .zip(e.payload.iter())
+                        .all(|(pat, val)| match_pat(pat, val, env))
+                } else {
+                    false
+                }
+            }
+            _ => false,
+        },
     }
 }
 
@@ -720,5 +773,154 @@ mod tests {
         let err = result.unwrap_err();
         assert_eq!(err.code, DiagCode::E700);
         assert!(err.message.contains("halted"));
+    }
+
+    // ── T9: User-defined enum / match ADT tests ───────────────────────────
+
+    fn eval_program_src(src: &str) -> Result<Value, Diagnostic> {
+        let program = crate::parse::parse_program(src)?;
+        crate::check::check_program(&program)?;
+        let mut host = MockHost::default();
+        let mut env = Env::default();
+        // Register enums and consts first.
+        let mut engine = Engine::with_program(&mut host, Budget::default(), &program);
+        engine.eval_program(&program, &mut env)?;
+        // Then call main().
+        crate::eval_function(&program, "main", Vec::new(), &mut host, &mut env)
+    }
+
+    #[test]
+    fn t9_enum_unit_variant_construction() {
+        let src = r#"
+            enum Shape {
+                Point,
+                Circle(f64),
+            }
+            fn main() {
+                return Shape.Point;
+            }
+        "#;
+        let result = eval_program_src(src).unwrap();
+        let e = result.as_enum().unwrap();
+        assert_eq!(e.enum_name, "Shape");
+        assert_eq!(e.variant_name, "Point");
+        assert!(e.payload.is_empty());
+    }
+
+    #[test]
+    fn t9_enum_payload_variant_construction() {
+        let src = r#"
+            enum Shape {
+                Point,
+                Circle(f64),
+            }
+            fn main() {
+                return Shape.Circle(3.14);
+            }
+        "#;
+        let result = eval_program_src(src).unwrap();
+        let e = result.as_enum().unwrap();
+        assert_eq!(e.enum_name, "Shape");
+        assert_eq!(e.variant_name, "Circle");
+        assert_eq!(e.payload.len(), 1);
+        assert_eq!(e.payload[0], Value::F64(3.14));
+    }
+
+    #[test]
+    fn t9_enum_match_unit_variant() {
+        let src = r#"
+            enum Shape {
+                Point,
+                Circle(f64),
+            }
+            fn main() {
+                let s = Shape.Point;
+                match s {
+                    Shape.Point => 0,
+                    Shape.Circle(r) => 1,
+                }
+            }
+        "#;
+        let result = eval_program_src(src).unwrap();
+        assert_eq!(result, Value::I64(0));
+    }
+
+    #[test]
+    fn t9_enum_match_payload_variant_binds_inner() {
+        let src = r#"
+            enum Shape {
+                Point,
+                Circle(f64),
+            }
+            fn main() {
+                let s = Shape.Circle(5.0);
+                match s {
+                    Shape.Point => 0,
+                    Shape.Circle(r) => r,
+                }
+            }
+        "#;
+        let result = eval_program_src(src).unwrap();
+        assert_eq!(result, Value::F64(5.0));
+    }
+
+    #[test]
+    fn t9_enum_match_multi_payload_variant() {
+        let src = r#"
+            enum Shape {
+                Point,
+                Circle(f64),
+                Rect(f64, f64),
+            }
+            fn main() {
+                let s = Shape.Rect(3.0, 4.0);
+                match s {
+                    Shape.Point => 0,
+                    Shape.Circle(r) => r,
+                    Shape.Rect(w, h) => w * h,
+                }
+            }
+        "#;
+        let result = eval_program_src(src).unwrap();
+        assert_eq!(result, Value::F64(12.0));
+    }
+
+    #[test]
+    fn t9_enum_match_wildcard_fallback() {
+        let src = r#"
+            enum Color {
+                Red,
+                Green,
+                Blue,
+            }
+            fn main() {
+                let c = Color.Green;
+                match c {
+                    Color.Red => 0xFF0000,
+                    _ => 0x00FF00,
+                }
+            }
+        "#;
+        let result = eval_program_src(src).unwrap();
+        assert_eq!(result, Value::I64(0x00FF00));
+    }
+
+    #[test]
+    fn t9_enum_match_wrong_variant_does_not_match() {
+        let src = r#"
+            enum Shape {
+                Point,
+                Circle(f64),
+            }
+            fn main() {
+                let s = Shape.Circle(1.0);
+                match s {
+                    Shape.Point => 0,
+                    Shape.Circle(r) => 1,
+                }
+            }
+        "#;
+        let result = eval_program_src(src).unwrap();
+        assert_eq!(result, Value::I64(1));
     }
 }

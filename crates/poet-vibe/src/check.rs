@@ -56,6 +56,9 @@ pub fn check_program(program: &Program) -> Result<CheckResult, Diagnostic> {
             Item::Statement(s) => {
                 walk_stmt(s, &mut env, &granted, Effect::External, false, false)?;
             }
+            Item::Enum(_) => {
+                // Enum declarations are pure type declarations — no effect.
+            }
         }
     }
     Ok(CheckResult { effect: max_effect })

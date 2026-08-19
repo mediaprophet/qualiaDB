@@ -484,6 +484,7 @@ pub fn is_keyword(text: &str) -> bool {
             | "let"
             | "mut"
             | "const"
+            | "enum"
             | "if"
             | "else"
             | "for"

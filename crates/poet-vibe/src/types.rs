@@ -36,6 +36,8 @@ pub enum Type {
     FieldRef,
     MaterialRef,
     WorldLine,
+    // ── T9: User-defined enum type ─────────────────────────────────────
+    Enum(String),
     Option(Box<Type>),
     Result(Box<Type>, Box<Type>),
     List(Box<Type>),

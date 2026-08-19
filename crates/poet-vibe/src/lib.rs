@@ -55,8 +55,8 @@ pub use reflection::{
 };
 pub use span::Span;
 pub use value::{
-    Duration, FieldRef, Frame, Instant, MaterialRef, Pose, Quantity, QuinRef, TimeScale,
-    Transform, Value, WorldLine,
+    Duration, EnumValue, FieldRef, Frame, Instant, MaterialRef, Pose, Quantity, QuinRef,
+    TimeScale, Transform, Value, WorldLine,
 };
 
 /// Parse, check, and evaluate a Pure cell (`= expr`).

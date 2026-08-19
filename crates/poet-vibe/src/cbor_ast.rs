@@ -167,6 +167,24 @@ fn encode_item(enc: &mut CborEncoder, item: &Item) {
             enc.str("type"); enc.str("Statement");
             enc.str("stmt"); encode_stmt(enc, s);
         }
+        Item::Enum(e) => {
+            enc.map(3);
+            enc.str("type"); enc.str("Enum");
+            enc.str("name"); enc.str(&e.name);
+            enc.str("variants"); {
+                enc.array(e.variants.len() as u64);
+                for v in &e.variants {
+                    enc.map(2);
+                    enc.str("name"); enc.str(&v.name);
+                    enc.str("payload"); {
+                        enc.array(v.payload.len() as u64);
+                        for t in &v.payload {
+                            encode_type_expr(enc, t);
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -338,6 +356,18 @@ fn encode_pattern(enc: &mut CborEncoder, p: &Pattern) {
         Pattern::Err(p) => { enc.map(2); enc.str("type"); enc.str("Err"); enc.str("inner"); encode_pattern(enc, p); }
         Pattern::Some(p) => { enc.map(2); enc.str("type"); enc.str("Some"); enc.str("inner"); encode_pattern(enc, p); }
         Pattern::None => { enc.map(1); enc.str("type"); enc.str("None"); }
+        Pattern::Variant { enum_name, variant_name, args } => {
+            enc.map(4);
+            enc.str("type"); enc.str("Variant");
+            enc.str("enum"); enc.str(enum_name);
+            enc.str("variant"); enc.str(variant_name);
+            enc.str("args"); {
+                enc.array(args.len() as u64);
+                for a in args {
+                    encode_pattern(enc, a);
+                }
+            }
+        }
     }
 }
 
@@ -747,6 +777,22 @@ fn decode_item(dec: &mut CborDecoder) -> Result<Item, DecodeError> {
             }
             Err(DecodeError::MissingField("stmt"))
         }
+        "Enum" => {
+            let mut name = String::new();
+            let mut variants = Vec::new();
+            for (k, v) in fields {
+                match (k.as_str(), v) {
+                    ("name", ItemField::Str(s)) => name = s,
+                    ("variants", ItemField::VariantList(v)) => variants = v,
+                    _ => {}
+                }
+            }
+            Ok(Item::Enum(EnumDecl {
+                span: Span::new(0, 0),
+                name,
+                variants,
+            }))
+        }
         _ => Err(DecodeError::UnexpectedType("Item")),
     }
 }
@@ -763,6 +809,7 @@ enum ItemField {
     Effect(Option<EffectClass>),
     Span(Span),
     Stmt(Stmt),
+    VariantList(Vec<EnumVariant>),
 }
 
 fn decode_item_field(key: &str, dec: &mut CborDecoder) -> Result<ItemField, DecodeError> {
@@ -801,6 +848,33 @@ fn decode_item_field(key: &str, dec: &mut CborDecoder) -> Result<ItemField, Deco
         }
         "span" => Ok(ItemField::Span(decode_span(dec)?)),
         "stmt" => Ok(ItemField::Stmt(decode_stmt(dec)?)),
+        "variants" => {
+            let n = dec.array()?;
+            let mut vs = Vec::new();
+            for _ in 0..n {
+                let m = dec.map()?;
+                let mut vname = String::new();
+                let mut payload = Vec::new();
+                for _ in 0..m {
+                    match dec.str()?.as_str() {
+                        "name" => vname = dec.str()?,
+                        "payload" => {
+                            let pn = dec.array()?;
+                            for _ in 0..pn {
+                                payload.push(decode_type_expr(dec)?);
+                            }
+                        }
+                        _ => dec.skip()?,
+                    }
+                }
+                vs.push(EnumVariant {
+                    span: Span::new(0, 0),
+                    name: vname,
+                    payload,
+                });
+            }
+            Ok(ItemField::VariantList(vs))
+        }
         _ => { dec.skip()?; Ok(ItemField::Str(String::new())) }
     }
 }
@@ -1543,6 +1617,25 @@ fn decode_pattern(dec: &mut CborDecoder) -> Result<Pattern, DecodeError> {
         "Ok" => Pattern::Ok(Box::new(decode_pattern(dec)?)),
         "Err" => Pattern::Err(Box::new(decode_pattern(dec)?)),
         "Some" => Pattern::Some(Box::new(decode_pattern(dec)?)),
+        "Variant" => {
+            let mut enum_name = String::new();
+            let mut variant_name = String::new();
+            let mut args = Vec::new();
+            for _ in 1..map_len {
+                match dec.str()?.as_str() {
+                    "enum" => enum_name = dec.str()?,
+                    "variant" => variant_name = dec.str()?,
+                    "args" => {
+                        let n = dec.array()?;
+                        for _ in 0..n {
+                            args.push(decode_pattern(dec)?);
+                        }
+                    }
+                    _ => dec.skip()?,
+                }
+            }
+            return Ok(Pattern::Variant { enum_name, variant_name, args });
+        }
         _ => return Err(DecodeError::UnexpectedType("Pattern")),
     };
     for _ in 1..map_len { dec.skip()?; }

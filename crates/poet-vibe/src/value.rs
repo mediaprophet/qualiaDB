@@ -116,6 +116,86 @@ pub struct WorldLine {
     pub created_at: i64,
 }
 
+/// A user-defined enum value (T9). Carries the enum name, variant name,
+/// and optional payload values. Unit variants have an empty payload.
+#[derive(Debug, Clone, PartialEq)]
+pub struct EnumValue {
+    pub enum_name: String,
+    pub variant_name: String,
+    pub payload: Vec<Value>,
+}
+
+impl EnumValue {
+    pub fn unit(enum_name: &str, variant_name: &str) -> Self {
+        Self {
+            enum_name: enum_name.to_string(),
+            variant_name: variant_name.to_string(),
+            payload: Vec::new(),
+        }
+    }
+
+    pub fn with_payload(enum_name: &str, variant_name: &str, payload: Vec<Value>) -> Self {
+        Self {
+            enum_name: enum_name.to_string(),
+            variant_name: variant_name.to_string(),
+            payload,
+        }
+    }
+}
+
+/// An opaque 48-byte handle to a Super-Quin / NQuin (T7).
+///
+/// Scripts do not see the raw `subject`/`predicate`/`object`/`context`/
+/// `metadata`/`parity` fields. The handle is a content-addressed reference
+/// that the host resolves. This replaces `Value::Quin { s, p, o, c }` as
+/// the preferred representation — `Quin` remains for backward compatibility
+/// but new code should use `QuinRef`.
+///
+/// The 6 × `u64` fields are the full NQuin payload (subject, predicate,
+/// object, context, metadata, parity) but they are opaque to scripts —
+/// the `as_quin_ref()` accessor returns the handle, not the fields.
+/// Host code can access the raw fields via `raw_fields()`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct QuinRef {
+    /// Opaque payload — 6 × u64 = 48 bytes. Scripts must not access this
+    /// directly. The host resolves the handle to graph data.
+    payload: [u64; 6],
+}
+
+impl QuinRef {
+    /// Create a QuinRef from raw NQuin fields (host-side only).
+    pub fn from_raw(subject: u64, predicate: u64, object: u64, context: u64, metadata: u64, parity: u64) -> Self {
+        Self {
+            payload: [subject, predicate, object, context, metadata, parity],
+        }
+    }
+
+    /// Create a QuinRef from a `Value::Quin` (which has 4 fields; metadata
+    /// and parity are computed).
+    pub fn from_quin(subject: u64, predicate: u64, object: u64, context: u64) -> Self {
+        let metadata = 0u64;
+        let parity = subject ^ predicate ^ object ^ context ^ metadata;
+        Self::from_raw(subject, predicate, object, context, metadata, parity)
+    }
+
+    /// Access the raw 6 × u64 payload (host-side only). Scripts never
+    /// see this — it's for the host to resolve the handle to graph data.
+    pub fn raw_fields(&self) -> [u64; 6] {
+        self.payload
+    }
+
+    /// The content hash of this QuinRef — used for deduplication and
+    /// provenance tracking. Position-dependent (FNV-1a style).
+    pub fn content_hash(&self) -> u64 {
+        let mut h = 0xcbf29ce484222325u64;
+        for &v in &self.payload {
+            h ^= v;
+            h = h.wrapping_mul(0x100000001b3);
+        }
+        h
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum Value {
     Null,
@@ -165,6 +245,11 @@ pub enum Value {
     MaterialRef(MaterialRef),
     /// A worldline: continuant through Instant × Pose (T6).
     WorldLine(WorldLine),
+    /// An opaque 48-byte handle to a Super-Quin (T7). Scripts do not see
+    /// the raw s/p/o/c/metadata/parity fields.
+    QuinRef(QuinRef),
+    /// A user-defined enum value (T9).
+    Enum(EnumValue),
     /// Temporary namespace/ctor name during postfix eval.
     Identish(String),
 }
@@ -266,6 +351,22 @@ impl Value {
     pub fn as_worldline(&self) -> Option<&WorldLine> {
         match self {
             Value::WorldLine(w) => Some(w),
+            _ => None,
+        }
+    }
+
+    /// Extract a QuinRef if this value is one (T7).
+    pub fn as_quin_ref(&self) -> Option<&QuinRef> {
+        match self {
+            Value::QuinRef(q) => Some(q),
+            _ => None,
+        }
+    }
+
+    /// Extract an EnumValue if this value is one (T9).
+    pub fn as_enum(&self) -> Option<&EnumValue> {
+        match self {
+            Value::Enum(e) => Some(e),
             _ => None,
         }
     }
@@ -485,5 +586,58 @@ mod tests {
         let v = Value::Quantity(Quantity::new(0.0, "qudt:Meter"));
         // Zero quantity — is_truthy returns true for non-I64/U64/Null/Bool(false).
         assert!(v.is_truthy());
+    }
+
+    // ── T7: QuinRef ──────────────────────────────────────────────────────
+
+    #[test]
+    fn quin_ref_from_raw() {
+        let q = QuinRef::from_raw(1, 2, 3, 4, 5, 6);
+        let fields = q.raw_fields();
+        assert_eq!(fields, [1, 2, 3, 4, 5, 6]);
+    }
+
+    #[test]
+    fn quin_ref_from_quin_computes_parity() {
+        let q = QuinRef::from_quin(10, 20, 30, 40);
+        let fields = q.raw_fields();
+        // metadata = 0, parity = 10 ^ 20 ^ 30 ^ 40 ^ 0 = 10 ^ 20 ^ 30 ^ 40
+        assert_eq!(fields[0], 10);
+        assert_eq!(fields[1], 20);
+        assert_eq!(fields[2], 30);
+        assert_eq!(fields[3], 40);
+        assert_eq!(fields[4], 0); // metadata
+        assert_eq!(fields[5], 10 ^ 20 ^ 30 ^ 40); // parity
+    }
+
+    #[test]
+    fn quin_ref_content_hash_deterministic() {
+        let q1 = QuinRef::from_raw(1, 2, 3, 4, 5, 6);
+        let q2 = QuinRef::from_raw(1, 2, 3, 4, 5, 6);
+        assert_eq!(q1.content_hash(), q2.content_hash());
+    }
+
+    #[test]
+    fn quin_ref_different_payloads_different_hash() {
+        let q1 = QuinRef::from_raw(1, 2, 3, 4, 5, 6);
+        let q2 = QuinRef::from_raw(6, 5, 4, 3, 2, 1);
+        assert_ne!(q1.content_hash(), q2.content_hash());
+    }
+
+    #[test]
+    fn value_quin_ref_extract() {
+        let q = QuinRef::from_raw(100, 200, 300, 400, 0, 0);
+        let v = Value::QuinRef(q);
+        let extracted = v.as_quin_ref().unwrap();
+        assert_eq!(extracted.raw_fields(), [100, 200, 300, 400, 0, 0]);
+    }
+
+    #[test]
+    fn value_quin_ref_is_copy() {
+        let q = QuinRef::from_raw(1, 2, 3, 4, 5, 6);
+        let v1 = Value::QuinRef(q);
+        let v2 = v1.clone();
+        // QuinRef is Copy — both should be equal.
+        assert_eq!(v1, v2);
     }
 }

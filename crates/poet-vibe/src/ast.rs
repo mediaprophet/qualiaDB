@@ -44,6 +44,7 @@ pub enum Item {
     Function(FunctionDecl),
     Hook(HookDecl),
     Const(ConstDecl),
+    Enum(EnumDecl),
     Statement(Stmt),
 }
 
@@ -75,6 +76,32 @@ pub struct ConstDecl {
     pub name: String,
     pub ty: Option<TypeExpr>,
     pub value: Expr,
+}
+
+/// A user-defined enum declaration (T9).
+///
+/// ```vibe
+/// enum Shape {
+///   Circle(f64),
+///   Square(f64),
+///   Rect(f64, f64),
+///   Point,
+/// }
+/// ```
+#[derive(Debug, Clone, PartialEq)]
+pub struct EnumDecl {
+    pub span: Span,
+    pub name: String,
+    pub variants: Vec<EnumVariant>,
+}
+
+/// A variant of a user-defined enum (T9).
+#[derive(Debug, Clone, PartialEq)]
+pub struct EnumVariant {
+    pub span: Span,
+    pub name: String,
+    /// Payload types (empty = unit variant like `Point`).
+    pub payload: Vec<TypeExpr>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -188,6 +215,14 @@ pub enum Pattern {
     Err(Box<Pattern>),
     Some(Box<Pattern>),
     None,
+    /// A user-defined enum variant pattern (T9).
+    /// `enum_name.variant_name` with optional inner patterns.
+    /// Unit variants have empty `args`.
+    Variant {
+        enum_name: String,
+        variant_name: String,
+        args: Vec<Pattern>,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq)]

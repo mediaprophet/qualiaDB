@@ -336,6 +336,9 @@ fn query_item(item: &Item, pattern: &QueryPattern, results: &mut Vec<PolicyViola
         Item::Statement(s) => {
             query_stmt(s, pattern, results);
         }
+        Item::Enum(_) => {
+            // Enum declarations don't contain queryable expressions.
+        }
     }
 }
 

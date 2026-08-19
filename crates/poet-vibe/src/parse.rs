@@ -171,6 +171,9 @@ impl<'a> Parser<'a> {
         if self.kw("const") {
             return Ok(Item::Const(self.parse_const()?));
         }
+        if self.kw("enum") {
+            return Ok(Item::Enum(self.parse_enum()?));
+        }
         Ok(Item::Statement(self.parse_stmt()?))
     }
 
@@ -276,6 +279,57 @@ impl<'a> Parser<'a> {
             name,
             ty,
             value,
+        })
+    }
+
+    /// Parse a user-defined enum declaration (T9).
+    ///
+    /// ```vibe
+    /// enum Shape {
+    ///   Circle(f64),
+    ///   Square(f64),
+    ///   Rect(f64, f64),
+    ///   Point,
+    /// }
+    /// ```
+    fn parse_enum(&mut self) -> Result<EnumDecl, Diagnostic> {
+        let start = self.cur.span.start;
+        self.bump()?; // 'enum'
+        let name = self.expect_ident()?;
+        self.expect(TokenKind::LBrace, "expected '{' after enum name")?;
+        let mut variants = Vec::new();
+        while self.cur.kind != TokenKind::RBrace {
+            let vstart = self.cur.span.start;
+            let vname = self.expect_ident()?;
+            let mut payload = Vec::new();
+            if self.cur.kind == TokenKind::LParen {
+                self.bump()?;
+                loop {
+                    payload.push(self.parse_type()?);
+                    if self.cur.kind == TokenKind::Comma {
+                        self.bump()?;
+                        continue;
+                    }
+                    break;
+                }
+                self.expect(TokenKind::RParen, "expected ')' after variant payload types")?;
+            }
+            variants.push(EnumVariant {
+                span: Span::new(vstart, self.cur.span.start),
+                name: vname,
+                payload,
+            });
+            if self.cur.kind == TokenKind::Comma {
+                self.bump()?;
+                continue;
+            }
+            break;
+        }
+        let end = self.expect(TokenKind::RBrace, "expected '}' after enum variants")?.end;
+        Ok(EnumDecl {
+            span: Span::new(start, end),
+            name,
+            variants,
         })
     }
 
@@ -548,6 +602,41 @@ impl<'a> Parser<'a> {
             if let Ok(lit) = self.take_literal() {
                 return Ok(Pattern::Literal(lit));
             }
+        }
+        // T9: User-defined enum variant pattern: `EnumName.Variant(args)`
+        // or `EnumName.Variant` (unit variant).
+        if self.cur.kind == TokenKind::Ident {
+            let name = self.text().to_string();
+            // Peek ahead: is there a `.` after this ident?
+            let rest = &self.lex.source()[self.cur.span.end as usize..];
+            let trimmed = rest.trim_start();
+            if trimmed.starts_with('.') {
+                self.bump()?; // enum name
+                self.expect(TokenKind::Dot, "expected '.'")?;
+                let variant_name = self.expect_ident()?;
+                let mut args = Vec::new();
+                if self.cur.kind == TokenKind::LParen {
+                    self.bump()?;
+                    if self.cur.kind != TokenKind::RParen {
+                        loop {
+                            args.push(self.parse_pattern()?);
+                            if self.cur.kind == TokenKind::Comma {
+                                self.bump()?;
+                                continue;
+                            }
+                            break;
+                        }
+                    }
+                    self.expect(TokenKind::RParen, "expected ')' after variant pattern args")?;
+                }
+                return Ok(Pattern::Variant {
+                    enum_name: name,
+                    variant_name,
+                    args,
+                });
+            }
+            // Fall through to ident pattern.
+            let _ = name; // suppress unused
         }
         let name = self.expect_ident()?;
         Ok(Pattern::Ident(name))
@@ -1333,6 +1422,7 @@ fn item_span(item: &Item) -> Span {
         Item::Function(f) => f.span,
         Item::Hook(h) => h.span,
         Item::Const(c) => c.span,
+        Item::Enum(e) => e.span,
         Item::Statement(s) => s.span(),
     }
 }
