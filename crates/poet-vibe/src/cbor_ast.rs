@@ -2063,4 +2063,60 @@ effect fn go() {
         // After tag, should be a map (major 5)
         assert!((bytes[3] >> 5) == 5);
     }
+
+    // ── T31: Tag 4200 CBOR round-trip for FieldDecl/MaterialDecl/LawDecl ──
+
+    #[test]
+    fn t31_round_trip_field_decl() {
+        use crate::parse::parse_program;
+        let src = r#"module test;
+field pressure_ambient: Pressure unit: <qudt:KiloPascal> support: region representation: grid;
+"#;
+        let prog = parse_program(src).unwrap();
+        let bytes = encode(&prog);
+        assert!(!bytes.is_empty());
+        // Verify tag 4200 is present.
+        assert_eq!(bytes[0], (6 << 5) | 25);
+        let decoded = decode(&bytes).unwrap();
+        assert_eq!(decoded.items.len(), prog.items.len());
+        // Verify the Field item survived round-trip.
+        assert!(matches!(decoded.items.first(), Some(Item::Field(_))));
+        if let Some(Item::Field(f)) = decoded.items.first() {
+            assert_eq!(f.name, "pressure_ambient");
+        }
+    }
+
+    #[test]
+    fn t31_round_trip_material_decl() {
+        use crate::parse::parse_program;
+        let src = r#"module test;
+material sucrose_cube: Material yield: 50.0;
+"#;
+        let prog = parse_program(src).unwrap();
+        let bytes = encode(&prog);
+        assert!(!bytes.is_empty());
+        let decoded = decode(&bytes).unwrap();
+        assert_eq!(decoded.items.len(), prog.items.len());
+        assert!(matches!(decoded.items.first(), Some(Item::Material(_))));
+        if let Some(Item::Material(m)) = decoded.items.first() {
+            assert_eq!(m.name, "sucrose_cube");
+        }
+    }
+
+    #[test]
+    fn t31_round_trip_law_decl() {
+        use crate::parse::parse_program;
+        let src = r#"module test;
+law crush when true => 1;
+"#;
+        let prog = parse_program(src).unwrap();
+        let bytes = encode(&prog);
+        assert!(!bytes.is_empty());
+        let decoded = decode(&bytes).unwrap();
+        assert_eq!(decoded.items.len(), prog.items.len());
+        assert!(matches!(decoded.items.first(), Some(Item::Law(_))));
+        if let Some(Item::Law(l)) = decoded.items.first() {
+            assert_eq!(l.name, "crush");
+        }
+    }
 }
