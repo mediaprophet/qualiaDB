@@ -284,3 +284,48 @@ Tasks not yet addressed (deferred or require external dependencies):
 - T65: Interactive onboarding — ecosystem task
 - W1, W3-W4, W6-W15, W17-W18: Wish list items — deferred to future passes
 
+---
+
+## Round 4 Batch 4 — Cryptography namespace (2026-08-19)
+
+Exposed qualia-core-db's cryptographic_library to VibeScript.
+
+### Newly implemented
+
+| Commit | Description |
+|--------|-------------|
+| `d996c151` | poet-vibe crypto module — namespace, Value types, Host ABI, dispatch |
+| `dca88837` | qualia-core-db Host impl — real SHA-256/512, BLAKE3, HKDF, AES-256-GCM, ChaCha20-Poly1305, XChaCha20-Poly1305 |
+
+### Crypto operations exposed
+
+| Operation | VibeScript | Host implementation |
+|-----------|------------|---------------------|
+| SHA-256 | `crypto.sha256(data)` | Real (sha2 crate) |
+| SHA-512 | `crypto.sha512(data)` | Real (sha2 crate) |
+| BLAKE3 | `crypto.blake3(data)` | Real (blake3 crate) |
+| HKDF-SHA256 | `crypto.hkdf_sha256(ikm, info, len)` | Real (hkdf crate) |
+| AES-256-GCM encrypt | `crypto.aead_encrypt(...)` | Real (aes-gcm crate) |
+| AES-256-GCM decrypt | `crypto.aead_decrypt(...)` | Real (aes-gcm crate) |
+| ChaCha20-Poly1305 | `crypto.aead_encrypt(...)` | Real (chacha20poly1305 crate) |
+| XChaCha20-Poly1305 | `crypto.aead_encrypt(...)` | Real (chacha20poly1305 crate) |
+| Ed25519 sign | `crypto.sign(key_id, data)` | Fail-closed (key vault not wired) |
+| ML-DSA-65 sign | `crypto.sign(key_id, data)` | Fail-closed (key vault not wired) |
+| Verify | `crypto.verify(key_id, data, sig)` | Fail-closed (key vault not wired) |
+| Key generation | `crypto.generate_key(algorithm)` | Fail-closed (key vault not wired) |
+
+Signing/verification/generation fail closed because the key vault is
+not wired into the poet host — use the identity layer directly for
+those operations.
+
+### Test counts after batch 4
+
+- **poet-vibe lib:** 402 passed (was 381)
+- **poet-vibe conformance:** 79 passed (was 78)
+- **qualia-core-db poet_host crypto:** 5 passed (new)
+  - Real SHA-256 hash verification (known hash match)
+  - Real BLAKE3 digest size verification
+  - Real HKDF key derivation (32-byte output)
+  - Real AES-256-GCM encrypt/decrypt round-trip
+  - Signing fail-closed verification
+
