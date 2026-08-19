@@ -42,6 +42,7 @@ impl Default for Env {
 /// The valid 0.1 namespace import paths. `vibe:0.1/{ns}`.
 pub const VIBE_0_1_NAMESPACES: &[&str] = &[
     "math", "rdf", "quin", "graph", "aura", "pulse", "capability", "time",
+    "conservation", "causal",
 ];
 
 /// Populate `env.aliases` from a program's import declarations.
@@ -1613,5 +1614,63 @@ mod tests {
         "#;
         let result = eval_program_src(src).unwrap();
         assert_eq!(result, Value::I64(0));
+    }
+
+    // ── T34-T35: Conservation + causal dispatch tests ─────────────────
+
+    #[test]
+    fn t34_conservation_check_dispatches_to_host() {
+        // MockHost doesn't override conservation_check, so it returns E702.
+        let src = r#"
+            import "vibe:0.1/conservation" as conservation;
+            fn main() {
+                return conservation.check("mass", 100.0, 100.0);
+            }
+        "#;
+        let result = eval_program_src(src);
+        assert!(result.is_err(), "expected error, got {:?}", result.ok());
+        let err = result.unwrap_err();
+        assert_eq!(err.code, DiagCode::E702, "got message: {}", err.message);
+    }
+
+    #[test]
+    fn t35_causal_relation_dispatches_to_host() {
+        // MockHost doesn't override causal_relation, so it returns E702.
+        let src = r#"
+            import "vibe:0.1/causal" as causal;
+            fn main() {
+                return causal.relation(0, 1);
+            }
+        "#;
+        let result = eval_program_src(src);
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert_eq!(err.code, DiagCode::E702);
+    }
+
+    #[test]
+    fn t34_conservation_check_with_tolerance() {
+        let src = r#"
+            import "vibe:0.1/conservation" as conservation;
+            fn main() {
+                return conservation.check("energy", 500.0, 499.5, tolerance: 0.001);
+            }
+        "#;
+        let result = eval_program_src(src);
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err().code, DiagCode::E702);
+    }
+
+    #[test]
+    fn t34_conservation_check_unknown_quantity() {
+        let src = r#"
+            import "vibe:0.1/conservation" as conservation;
+            fn main() {
+                return conservation.check("unknown_quantity", 1.0, 1.0);
+            }
+        "#;
+        let result = eval_program_src(src);
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err().code, DiagCode::E100);
     }
 }

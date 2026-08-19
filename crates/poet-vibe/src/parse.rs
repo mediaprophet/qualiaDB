@@ -1575,6 +1575,7 @@ fn is_named_arg_key(s: &str) -> bool {
             | "steps"
             | "workspace"
             | "output"
+            | "tolerance"
     )
 }
 

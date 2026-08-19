@@ -185,6 +185,46 @@ pub trait Host {
     fn supports_isolation(&self) -> bool {
         false
     }
+
+    /// Check whether a transformation preserves a conserved quantity (T34).
+    ///
+    /// Given the before and after states (as Mixtures or Records with
+    /// mass/energy/charge fields), verify that the specified conserved
+    /// quantity is preserved within tolerance. Default: E702 (no
+    /// conservation checker available).
+    fn conservation_check(
+        &mut self,
+        _quantity: &crate::value::ConservationQuantity,
+        _before: &Value,
+        _after: &Value,
+        _tolerance: f64,
+        span: Span,
+    ) -> Result<Value, Diagnostic> {
+        Err(Diagnostic::new(
+            DiagCode::E702,
+            span,
+            "conservation_check not available on this host",
+        ))
+    }
+
+    /// Determine the causal relation between two events (T35).
+    ///
+    /// Given two events (each an Instant + Pose, or a Record with `time`
+    /// and `position` fields), determine whether they are timelike,
+    /// lightlike, or spacelike separated. Default: E702 (no spacetime
+    /// metric available).
+    fn causal_relation(
+        &mut self,
+        _event_a: &Value,
+        _event_b: &Value,
+        span: Span,
+    ) -> Result<Value, Diagnostic> {
+        Err(Diagnostic::new(
+            DiagCode::E702,
+            span,
+            "causal_relation not available on this host",
+        ))
+    }
 }
 
 /// In-memory host for unit tests.
@@ -391,6 +431,46 @@ pub fn dispatch<H: Host>(
             };
             let payload = args.get(1).cloned().unwrap_or(Value::Null);
             host.capability_invoke(&id, &payload, span)
+        }
+        "conservation.check" => {
+            use crate::value::ConservationQuantity;
+            let quantity = match args.first() {
+                Some(Value::String(s)) => match s.as_str() {
+                    "mass" => ConservationQuantity::Mass,
+                    "mole" => ConservationQuantity::Mole,
+                    "energy" => ConservationQuantity::Energy,
+                    "charge" => ConservationQuantity::Charge,
+                    "momentum" => ConservationQuantity::Momentum,
+                    "angular_momentum" => ConservationQuantity::AngularMomentum,
+                    _ => {
+                        return Err(Diagnostic::new(
+                            DiagCode::E100,
+                            span,
+                            format!("unknown conserved quantity '{s}'"),
+                        ))
+                    }
+                },
+                _ => {
+                    return Err(Diagnostic::new(
+                        DiagCode::E100,
+                        span,
+                        "conservation.check needs a quantity name string",
+                    ))
+                }
+            };
+            let before = args.get(1).unwrap_or(&Value::Null);
+            let after = args.get(2).unwrap_or(&Value::Null);
+            let tolerance = named
+                .iter()
+                .find(|(k, _)| k == "tolerance")
+                .and_then(|(_, v)| v.as_f64())
+                .unwrap_or(1e-9);
+            host.conservation_check(&quantity, before, after, tolerance, span)
+        }
+        "causal.relation" => {
+            let event_a = args.first().unwrap_or(&Value::Null);
+            let event_b = args.get(1).unwrap_or(&Value::Null);
+            host.causal_relation(event_a, event_b, span)
         }
         _ => Err(Diagnostic::new(
             DiagCode::E100,

@@ -161,6 +161,73 @@ pub enum Miscibility {
     Partial,
 }
 
+/// A conservation law check result (T34).
+///
+/// When a law transforms a mixture (or any state with conserved quantities),
+/// the host's `conservation_check` method returns this value to indicate
+/// whether the transformation preserves the conserved quantity.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ConservationResult {
+    /// The conserved quantity being checked: "mass", "mole", "energy",
+    /// "charge", "momentum", or "angular_momentum".
+    pub quantity: ConservationQuantity,
+    /// The value before the transformation.
+    pub before: f64,
+    /// The value after the transformation.
+    pub after: f64,
+    /// Whether the quantity is conserved (within tolerance).
+    pub conserved: bool,
+    /// The tolerance used for the check (absolute).
+    pub tolerance: f64,
+}
+
+/// The conserved quantity being checked (T34).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum ConservationQuantity {
+    /// Mass (kg).
+    Mass,
+    /// Moles (mol).
+    Mole,
+    /// Energy (J).
+    Energy,
+    /// Electric charge (C).
+    Charge,
+    /// Linear momentum (kg·m/s).
+    Momentum,
+    /// Angular momentum (kg·m²/s).
+    AngularMomentum,
+}
+
+/// A causal relation between two events in spacetime (T35).
+///
+/// Given two events (Instant + Pose), their separation determines whether
+/// one can causally influence the other. The light cone divides spacetime
+/// into:
+/// - **Timelike**: inside the cone — subluminal signal can connect them
+/// - **Lightlike (null)**: on the cone — only light can connect them
+/// - **Spacelike**: outside the cone — no causal connection possible
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum CausalRelation {
+    /// Inside the light cone — a subluminal signal can connect the events.
+    Timelike,
+    /// On the light cone — only a light signal can connect the events.
+    Lightlike,
+    /// Outside the light cone — no causal connection is possible.
+    Spacelike,
+}
+
+impl CausalRelation {
+    /// Returns true if the earlier event can causally influence the later.
+    pub fn allows_causation(self) -> bool {
+        matches!(self, CausalRelation::Timelike | CausalRelation::Lightlike)
+    }
+
+    /// Returns true if the events are causally disconnected.
+    pub fn is_causally_disconnected(self) -> bool {
+        matches!(self, CausalRelation::Spacelike)
+    }
+}
+
 /// A worldline: a continuant through Instant × Pose (T6).
 ///
 /// Kills UUID-as-identity. A worldline is the identity of a thing that
@@ -313,6 +380,10 @@ pub enum Value {
     SpeciesRef(SpeciesRef),
     /// A mixture of chemical species with composition data (T33).
     Mixture(Mixture),
+    /// A conservation law check result (T34).
+    Conservation(ConservationResult),
+    /// A causal relation between two events (T35).
+    Causal(CausalRelation),
 }
 
 impl Value {
@@ -444,6 +515,22 @@ impl Value {
     pub fn as_mixture(&self) -> Option<&Mixture> {
         match self {
             Value::Mixture(m) => Some(m),
+            _ => None,
+        }
+    }
+
+    /// Extract a ConservationResult if this value is one (T34).
+    pub fn as_conservation(&self) -> Option<&ConservationResult> {
+        match self {
+            Value::Conservation(c) => Some(c),
+            _ => None,
+        }
+    }
+
+    /// Extract a CausalRelation if this value is one (T35).
+    pub fn as_causal(&self) -> Option<CausalRelation> {
+        match self {
+            Value::Causal(c) => Some(*c),
             _ => None,
         }
     }
@@ -863,5 +950,103 @@ mod tests {
         };
         let v = Value::Mixture(m);
         assert!(v.as_species_ref().is_none());
+    }
+
+    // ── T34: Conservation tests ───────────────────────────────────────
+
+    #[test]
+    fn value_conservation_result_mass_conserved() {
+        let r = ConservationResult {
+            quantity: ConservationQuantity::Mass,
+            before: 100.0,
+            after: 100.0,
+            conserved: true,
+            tolerance: 1e-9,
+        };
+        let v = Value::Conservation(r);
+        let c = v.as_conservation().unwrap();
+        assert_eq!(c.quantity, ConservationQuantity::Mass);
+        assert!(c.conserved);
+        assert!((c.before - c.after).abs() < c.tolerance);
+    }
+
+    #[test]
+    fn value_conservation_result_energy_violated() {
+        let r = ConservationResult {
+            quantity: ConservationQuantity::Energy,
+            before: 500.0,
+            after: 499.5,
+            conserved: false,
+            tolerance: 1e-9,
+        };
+        let v = Value::Conservation(r);
+        let c = v.as_conservation().unwrap();
+        assert!(!c.conserved);
+        assert!((c.before - c.after).abs() > c.tolerance);
+    }
+
+    #[test]
+    fn value_conservation_quantity_variants() {
+        assert_ne!(ConservationQuantity::Mass, ConservationQuantity::Mole);
+        assert_ne!(ConservationQuantity::Mole, ConservationQuantity::Energy);
+        assert_ne!(ConservationQuantity::Energy, ConservationQuantity::Charge);
+        assert_ne!(ConservationQuantity::Charge, ConservationQuantity::Momentum);
+        assert_ne!(
+            ConservationQuantity::Momentum,
+            ConservationQuantity::AngularMomentum
+        );
+    }
+
+    // ── T35: Causal relation tests ────────────────────────────────────
+
+    #[test]
+    fn value_causal_timelike_allows_causation() {
+        let v = Value::Causal(CausalRelation::Timelike);
+        let r = v.as_causal().unwrap();
+        assert!(r.allows_causation());
+        assert!(!r.is_causally_disconnected());
+    }
+
+    #[test]
+    fn value_causal_lightlike_allows_causation() {
+        let v = Value::Causal(CausalRelation::Lightlike);
+        let r = v.as_causal().unwrap();
+        assert!(r.allows_causation());
+        assert!(!r.is_causally_disconnected());
+    }
+
+    #[test]
+    fn value_causal_spacelike_disconnected() {
+        let v = Value::Causal(CausalRelation::Spacelike);
+        let r = v.as_causal().unwrap();
+        assert!(!r.allows_causation());
+        assert!(r.is_causally_disconnected());
+    }
+
+    #[test]
+    fn value_causal_relation_equality() {
+        assert_eq!(CausalRelation::Timelike, CausalRelation::Timelike);
+        assert_ne!(CausalRelation::Timelike, CausalRelation::Lightlike);
+        assert_ne!(CausalRelation::Lightlike, CausalRelation::Spacelike);
+        assert_ne!(CausalRelation::Timelike, CausalRelation::Spacelike);
+    }
+
+    #[test]
+    fn value_conservation_not_causal() {
+        let r = ConservationResult {
+            quantity: ConservationQuantity::Mass,
+            before: 1.0,
+            after: 1.0,
+            conserved: true,
+            tolerance: 1e-9,
+        };
+        let v = Value::Conservation(r);
+        assert!(v.as_causal().is_none());
+    }
+
+    #[test]
+    fn value_causal_not_conservation() {
+        let v = Value::Causal(CausalRelation::Timelike);
+        assert!(v.as_conservation().is_none());
     }
 }

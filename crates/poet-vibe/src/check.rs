@@ -26,6 +26,7 @@ pub fn check_program(program: &Program) -> Result<CheckResult, Diagnostic> {
         let ns = &path["vibe:0.1/".len()..];
         const VALID: &[&str] = &[
             "math", "rdf", "quin", "graph", "aura", "pulse", "capability", "time",
+            "conservation", "causal",
         ];
         if !VALID.contains(&ns) {
             return Err(Diagnostic::new(
