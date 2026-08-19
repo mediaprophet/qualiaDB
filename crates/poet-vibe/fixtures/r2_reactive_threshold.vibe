@@ -1,0 +1,12 @@
+module <https://qualiadb.org/modules/reactive_threshold>;
+requires [ capability("graph.read") ];
+pure fn above_threshold(limit: i64) -> Result<i64, string> {
+    let rows = graph.query(?s, ?p, ?o, take: 32)?;
+    let mut n: i64 = 0;
+    for row in rows {
+        if n < limit {
+            n = n + 1;
+        }
+    }
+    return Ok(n);
+}

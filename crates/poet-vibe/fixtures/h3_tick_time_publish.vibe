@@ -1,0 +1,10 @@
+module <https://qualiadb.org/modules/tick_time_publish>;
+requires [ capability("pulse.publish", topic: "time/tick") ];
+effect fn publish_time() {
+    let t = time.unix();
+    effect pulse.publish("time/tick", t);
+    return null;
+}
+on tick() {
+    return publish_time();
+}

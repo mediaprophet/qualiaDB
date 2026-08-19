@@ -636,6 +636,73 @@ impl<'a> Parser<'a> {
         Ok(left)
     }
 
+    /// Continue parsing binary operators from the mul level upward, given an
+    /// already-parsed left operand (e.g. an identifier with postfix operators).
+    /// This lets `parse_args` handle expressions like `v2 / g` as call arguments
+    /// where the leading identifier was already consumed for named-arg detection.
+    fn continue_binary(&mut self, mut left: Expr) -> Result<Expr, Diagnostic> {
+        // mul level
+        loop {
+            let op = match self.cur.kind {
+                TokenKind::Star => BinOp::Mul,
+                TokenKind::Slash => BinOp::Div,
+                TokenKind::Percent => BinOp::Rem,
+                _ => break,
+            };
+            self.bump()?;
+            let right = self.parse_unary()?;
+            left = bin(left, op, right);
+        }
+        // add level
+        loop {
+            let op = match self.cur.kind {
+                TokenKind::Plus => BinOp::Add,
+                TokenKind::Minus => BinOp::Sub,
+                _ => break,
+            };
+            self.bump()?;
+            let right = self.parse_mul()?;
+            left = bin(left, op, right);
+        }
+        // rel level
+        loop {
+            let op = match self.cur.kind {
+                TokenKind::Lt => BinOp::Lt,
+                TokenKind::Le => BinOp::Le,
+                TokenKind::Gt => BinOp::Gt,
+                TokenKind::Ge => BinOp::Ge,
+                _ => break,
+            };
+            self.bump()?;
+            let right = self.parse_add()?;
+            left = bin(left, op, right);
+        }
+        // eq level
+        loop {
+            let op = match self.cur.kind {
+                TokenKind::EqEq => BinOp::Eq,
+                TokenKind::Ne => BinOp::Ne,
+                _ => break,
+            };
+            self.bump()?;
+            let right = self.parse_rel()?;
+            left = bin(left, op, right);
+        }
+        // and level
+        while self.cur.kind == TokenKind::AmpAmp {
+            self.bump()?;
+            let right = self.parse_eq()?;
+            left = bin(left, BinOp::And, right);
+        }
+        // or level
+        while self.cur.kind == TokenKind::PipePipe {
+            self.bump()?;
+            let right = self.parse_and()?;
+            left = bin(left, BinOp::Or, right);
+        }
+        Ok(left)
+    }
+
     fn parse_and(&mut self) -> Result<Expr, Diagnostic> {
         let mut left = self.parse_eq()?;
         while self.cur.kind == TokenKind::AmpAmp {
@@ -827,6 +894,7 @@ impl<'a> Parser<'a> {
                         kind: ExprKind::Ident(name),
                     };
                     expr = self.continue_postfix(expr)?;
+                    expr = self.continue_binary(expr)?;
                     args.push(Arg::Pos(expr));
                 }
             } else {

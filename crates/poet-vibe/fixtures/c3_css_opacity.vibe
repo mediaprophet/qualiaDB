@@ -1,0 +1,6 @@
+module <https://qualiadb.org/modules/css_opacity>;
+import "vibe:0.1/math" as m;
+pure fn fade_opacity(visible: f64, total: f64) -> f64 {
+    let t = m.max(0.001, total);
+    return m.clamp(visible / t, 0.0, 1.0);
+}

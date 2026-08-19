@@ -293,7 +293,7 @@ After each phase:
 | D: CSS/SVG output bindings | **Done** | 2026-08-18 | 2026-08-18 | +15 (6 CSS + 9 SVG) |
 | E: Reactive animation loop | **Done** | 2026-08-18 | 2026-08-18 | +4 (time_read_during_eval, tick hook, no-hook, reset) |
 | F: Graph honesty lift | **Done** | 2026-08-18 | 2026-08-18 | +3 (dynamic honesty: graph.read live when attached, pulse.publish live when attached, capability.invoke stays partial) |
-| G: Golden corpus expansion | Not started (needs Timothy's curation) | — | — | — |
+| G: Golden corpus expansion | **Done** | 2026-08-19 | 2026-08-19 | +33 fixtures (4 physics, 4 EMF, 3 geometry, 3 CSS, 3 reactive, 3 hooks, 3 legal, 3 scientific, 3 financial, 6 negative) + parser fix for binary expressions in call args |
 | H: vibe-bc-0.1 bytecode | Not started (post-0.1) | — | — | — |
 
 ---
@@ -365,25 +365,25 @@ The source plan is architecturally sound. The following corrections should be ap
 | **W1** | Naga IR-Level WebGL2 Sanitizer | In-memory Naga Module IR transform: validate WGSL for WebGL2 compatibility, compile to GLSL ES 300. Add `glsl-out` feature to naga dep. | `render/naga_sanitize.rs`, `render/naga_bridge.rs` | naga `glsl-out` feature | **✅ Done** |
 | **W2** | Zero-Copy WASM Buffer Views & std140 Structs | `Float32Array::view` streaming with `#[repr(C, align(16))]` compile-time verified layouts. std140 layout calculator integrated. | `webizen-render/src/zero_copy_views.rs`, `render/anatomy/webgl2.rs` | W1 | **✅ Done** |
 | **W3** | Unified GPU Capability Invoke (WebGL2 fallback) | `Render.gpu_init` detects WebGPU availability; falls back to WebGL2 via naga-compiled GLSL ES 300. Same invoke IDs, transparent backend selection. | `poet_host/invoke/render/gpu.rs` (extend), `render/naga_bridge.rs` (runtime compile) | W0, W1, W2 | **✅ Done** |
-| **A1** | Homoiconic CBOR-LD AST Codec (Tag 4200) | Zero-copy bidirectional serialization between `poet_vibe::ast` and CBOR-LD 1.0 binary trees. | `poet-vibe/src/cbor_ast.rs`, `lib.rs` | None (independent) | Pending |
-| **A2** | Speculative Constrained Decoding (DOMINO) | Subword-aligned prefix-trie token masking integrated into in-process `QTensorEngine`. | `inference/speculative_decode.rs`, `poet-vibe/src/grammar/` | A1 (AST representation) | Pending |
-| **A3** | Dynamic Reflection & Self-Healing Loop | 3-stage reflection: Stage 1 search match, Stage 2 semantic shape linting, Stage 3 dry-run state injection. Configurable retry budget. | `poet-vibe/src/reflection.rs`, `diagnose.rs` | A1, A2 | Pending |
+| **A1** | Homoiconic CBOR-LD AST Codec (Tag 4200) | Zero-copy bidirectional serialization between `poet_vibe::ast` and CBOR-LD 1.0 binary trees. | `poet-vibe/src/cbor_ast.rs`, `lib.rs` | None (independent) | **✅ Done** |
+| **A2** | Speculative Constrained Decoding (DOMINO) | Subword-aligned prefix-trie token masking integrated into in-process `QTensorEngine`. | `inference/speculative_decode.rs`, `poet-vibe/src/grammar/` | A1 (AST representation) | **✅ Done** |
+| **A3** | Dynamic Reflection & Self-Healing Loop | 3-stage reflection: Stage 1 search match, Stage 2 semantic shape linting, Stage 3 dry-run state injection. Configurable retry budget. | `poet-vibe/src/reflection.rs`, `diagnose.rs` | A1, A2 | **✅ Done** |
 
 ### 7.3 Phase 2: Advanced Rendering & Orchestration
 
-| Phase | Description | Deliverables | Target Files | Dependencies |
-|---|---|---|---|---|
+| Phase | Description | Deliverables | Target Files | Dependencies | Status |
+|---|---|---|---|---|---|
 | **W4** | 5D EMF & 10D Manifold Visualizer | Volumetric raymarching and slice rendering via WebGPU compute + fragment shaders driven by `Physics.emf_field_grid_3d` and `ManifoldCoordinate10D`. WebGL2 fallback uses naga-translated GLSL. | `shaders/emf_volumetric.wgsl`, `render/gpu/emf_pipeline.rs` | W0, W3, Phase C (EMF) | **✅ Done** |
 | **W5** | Declarative `<q-viewport>` Integration | WebGPU canvas mounting, resizing, event binding, and reactive frame loops in Studio & HyperCanvas. Drives `on tick()` hooks into `Render.gpu_render_frame`. | `webizen-studio/src/render/`, `webizen-render/` | W4 | **✅ Done** |
 | **W6** | WebGPU Compute Pipeline Invoke | `Render.gpu_compute_dispatch` — exposes WebGPU compute shaders to VibeScript for GPU-accelerated physics (wave equation, N-body, CFD on GPU). Compute shader source from WGSL, validated by naga. | `poet_host/invoke/render/gpu_compute.rs`, `shaders/compute/*.wgsl` | W0 | **✅ Done** |
 | **W7** | Runtime Shader Compilation & Hot-Reload | `Render.gpu_compile_shader` — VibeScript can submit WGSL source at runtime, validated by naga sanitizer, compiled to backend-specific shader (wgpu SPIR-V or GLSL ES 300). Enables live shader editing in Studio. | `poet_host/invoke/render/shader_compile.rs`, `render/naga_bridge.rs` (extend) | W0, W1 | **✅ Done** |
 | **W8** | Automatic Backend Detection & Fallback | `Render.gpu_backend_info` — probes WebGPU adapter availability; if absent, falls back to WebGL2. Returns backend type, capabilities, limits, texture format support. VibeScript scripts can query capabilities and adapt. | `poet_host/invoke/render/backend.rs` | W0, W3 | **✅ Done** |
-| **A4** | Structural AST Query Engine | S-expression query engine enforcing static architectural policies (mandatory `take:` limits, forbidden API calls). | `poet-vibe/src/ast_query.rs` | A1 |
-| **A5** | Q42 Semantic Blackboard & Constraint Context | Observable state channels on Q42 CRDT graphs with pinned hard/soft constraint propagation. | `poet_host/blackboard.rs` | None |
-| **A6** | Multi-Agent DAGs & Autonomous Control Units | Native DAG pipeline definitions, LLM-driven Control Units / Autonomous Routers, isolated `SlgArena` Judge verification frames. | `poet-vibe/src/dag.rs`, `agent_sandbox.rs` | A4, A5 |
-| **A7** | Paraconsistent Eτ Evidential Logic & W3C VCs | Evidential (μ, λ) packing into `NQuin` metadata (see review note 1 for bitfield layout) + W3C Verifiable Credential artifact outputs. Extends existing `paraconsistent.rs`. | `modalities/evidential_etau.rs` (or extend `paraconsistent.rs`), `crdt.rs` | None |
-| **A8** | Hardware Deontic F(φ) Interrupts & Phase Leasing | Immediate seL4-style capability revocation upon prohibition breach + phase-based capability allow-listing. | `poet-vibe/src/check.rs`, `agent_sandbox.rs` | A6 |
-| **A9** | Semantic Skills: Vectors, Embeddings & Scratchpads | First-class vector cosine distance, in-process text embedding, semantic search, ephemeral scratchpad memory. | `poet_host/invoke/agent/`, `vector.rs` | A5 |
+| **A4** | Structural AST Query Engine | S-expression query engine enforcing static architectural policies (mandatory `take:` limits, forbidden API calls). | `poet-vibe/src/ast_query.rs` | A1 | **✅ Done** |
+| **A5** | Q42 Semantic Blackboard & Constraint Context | Observable state channels on Q42 CRDT graphs with pinned hard/soft constraint propagation. | `modalities/blackboard.rs` | None | **✅ Done** |
+| **A6** | Multi-Agent DAGs & Autonomous Control Units | Native DAG pipeline definitions, LLM-driven Control Units / Autonomous Routers, isolated `SlgArena` Judge verification frames. | `poet-vibe/src/dag.rs`, `deontic_interrupt.rs` | A4, A5 | **✅ Done** |
+| **A7** | Paraconsistent Eτ Evidential Logic & W3C VCs | Evidential (μ, λ) packing into `NQuin` metadata (see review note 1 for bitfield layout) + W3C Verifiable Credential artifact outputs. Extends existing `paraconsistent.rs`. | `modalities/evidential_etau.rs` | None | **✅ Done** |
+| **A8** | Hardware Deontic F(φ) Interrupts & Phase Leasing | Immediate seL4-style capability revocation upon prohibition breach + phase-based capability allow-listing. | `poet-vibe/src/deontic_interrupt.rs` | A6 | **✅ Done** |
+| **A9** | Semantic Skills: Vectors, Embeddings & Scratchpads | First-class vector cosine distance, in-process text embedding, semantic search, ephemeral scratchpad memory. | `inference/semantic_skills.rs` | A5 | **✅ Done** |
 
 ### 7.4 WebGPU Invoke Surface Detail (W0)
 

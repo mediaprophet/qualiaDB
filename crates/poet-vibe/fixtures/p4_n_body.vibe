@@ -1,0 +1,5 @@
+module <https://qualiadb.org/modules/n_body>;
+import "vibe:0.1/math" as m;
+pure fn bounded_force(f: f64, max_force: f64) -> f64 {
+    return m.clamp(f, -max_force, max_force);
+}

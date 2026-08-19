@@ -124,6 +124,7 @@ impl DagEdge {
 
 /// Errors that can occur during DAG construction or execution.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[allow(dead_code)]
 pub enum DagError {
     /// Node ID exceeds MAX_DAG_NODES.
     NodeIdOverflow,

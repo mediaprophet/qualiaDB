@@ -1,0 +1,5 @@
+module <https://qualiadb.org/modules/black_scholes>;
+import "vibe:0.1/math" as m;
+pure fn intrinsic_value(spot: f64, strike: f64) -> f64 {
+    return m.max(0.0, spot - strike);
+}

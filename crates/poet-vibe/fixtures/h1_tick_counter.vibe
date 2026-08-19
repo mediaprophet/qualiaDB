@@ -1,0 +1,9 @@
+module <https://qualiadb.org/modules/tick_counter>;
+requires [ capability("pulse.publish", topic: "tick/count") ];
+effect fn emit_count(n: f64) {
+    effect pulse.publish("tick/count", n);
+    return null;
+}
+on tick() {
+    return emit_count(1.0);
+}

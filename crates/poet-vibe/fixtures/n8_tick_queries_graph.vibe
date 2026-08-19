@@ -1,0 +1,1 @@
+on tick() { graph.query(?s, ?p, ?o, take: 1); }

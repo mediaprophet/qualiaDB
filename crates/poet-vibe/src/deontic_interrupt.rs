@@ -143,6 +143,7 @@ impl DeonticInterrupt {
 
 /// Errors from the phase leaser.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[allow(dead_code)]
 pub enum LeaseError {
     /// Unknown phase.
     UnknownPhase,

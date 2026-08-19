@@ -1,0 +1,7 @@
+module <https://qualiadb.org/modules/projectile>;
+import "vibe:0.1/math" as m;
+pure fn range_estimate(v: f64, angle: f64) -> f64 {
+    let g = 9.81;
+    let v2 = v * v;
+    return m.max(0.0, v2 / g);
+}

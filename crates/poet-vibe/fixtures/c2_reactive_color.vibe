@@ -1,0 +1,5 @@
+module <https://qualiadb.org/modules/reactive_color>;
+import "vibe:0.1/math" as m;
+pure fn temperature_to_hue(temp: f64) -> f64 {
+    return m.clamp(temp, 0.0, 360.0);
+}

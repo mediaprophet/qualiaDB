@@ -1,0 +1,14 @@
+module <https://qualiadb.org/modules/contract_validate>;
+prefix contract: <https://qualiadb.org/contract/>;
+requires [
+    capability("graph.read"),
+    capability("graph.write"),
+    capability("aura.validate")
+];
+effect fn validate_contract(party: Iri, contract_id: Iri) {
+    let obligation = <<( party contract:obligated contract_id )>>;
+    graph.stage(obligation);
+    aura.validate(party, contract:ObligationShape)?;
+    graph.commit()?;
+    return null;
+}

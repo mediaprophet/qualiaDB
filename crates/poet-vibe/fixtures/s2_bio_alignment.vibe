@@ -1,0 +1,6 @@
+module <https://qualiadb.org/modules/bio_alignment>;
+import "vibe:0.1/math" as m;
+pure fn alignment_score(matches: f64, mismatches: f64) -> f64 {
+    let score = matches * 2.0 - mismatches * 1.0;
+    return m.max(0.0, score);
+}

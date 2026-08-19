@@ -1,0 +1,6 @@
+module <https://qualiadb.org/modules/var_calc>;
+import "vibe:0.1/math" as m;
+pure fn value_at_risk(portfolio_value: f64, confidence: f64) -> f64 {
+    let c = m.clamp(confidence, 0.0, 1.0);
+    return m.max(0.0, portfolio_value * (1.0 - c));
+}
