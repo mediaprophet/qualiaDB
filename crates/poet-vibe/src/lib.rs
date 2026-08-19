@@ -53,7 +53,10 @@ pub use reflection::{
     ReflectionConfig, ReflectionEngine, ReflectionLoop, ReflectionResult, StageResult,
 };
 pub use span::Span;
-pub use value::Value;
+pub use value::{
+    Duration, FieldRef, Frame, Instant, MaterialRef, Pose, Quantity, TimeScale, Transform,
+    Value, WorldLine,
+};
 
 /// Parse, check, and evaluate a Pure cell (`= expr`).
 pub fn eval_cell<H: Host>(

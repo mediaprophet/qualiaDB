@@ -786,7 +786,18 @@ impl LocalLlmAgent {
                                                 ids.first().copied()
                                             },
                                         );
-                                        let tid = s.sample(&mut sampler_logits[..vocab], &ctx);
+                                        // R9: DOMINO constrained decoding — if a masker is
+                                        // installed and active, apply the grammar constraint
+                                        // mask before sampling. Falls back to plain sample
+                                        // when no masker is active (backward compatible).
+                                        let tid = match crate::llm_bench::domino_sample(
+                                            s,
+                                            &mut sampler_logits[..vocab],
+                                            &ctx,
+                                        ) {
+                                            Some(constrained_tid) => constrained_tid,
+                                            None => s.sample(&mut sampler_logits[..vocab], &ctx),
+                                        };
                                         Some((tid as usize, sampler_logits[tid as usize]))
                                     } else {
                                         None
