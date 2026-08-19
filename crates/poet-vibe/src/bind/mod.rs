@@ -128,6 +128,17 @@ pub trait Host {
     fn host_version(&self) -> &str {
         "vibe-host-0.1"
     }
+
+    /// Proper time along a worldline, in seconds. Default: not available
+    /// (E702). Hosts with a manifold metric implementation override this.
+    fn time_proper_time(&mut self, _worldline_id: u64, span: Span)
+        -> Result<Value, Diagnostic> {
+        Err(Diagnostic::new(
+            DiagCode::E702,
+            span,
+            "proper_time not available on this host",
+        ))
+    }
 }
 
 /// In-memory host for unit tests.
@@ -283,6 +294,12 @@ pub fn dispatch<H: Host>(
         "time.unix_nanos" => host.time_unix_nanos(span),
         "time.monotonic_nanos" => host.time_monotonic_nanos(span),
         "host.version" => Ok(Value::String(host.host_version().into())),
+        "time.proper_time" => {
+            let worldline_id = args.first()
+                .and_then(|v| v.as_i64())
+                .unwrap_or(0) as u64;
+            host.time_proper_time(worldline_id, span)
+        }
         "capability.resolve" => {
             let id = match args.first() {
                 Some(Value::String(s)) => s.clone(),
@@ -441,5 +458,56 @@ mod tests {
     fn custom_host_version() {
         let host = CustomVersionHost;
         assert_eq!(host.host_version(), "vibe-host-0.2");
+    }
+
+    #[test]
+    fn proper_time_default_e702() {
+        let mut host = MockHost::default();
+        let res = host.time_proper_time(42, Span::point(0));
+        assert!(res.is_err());
+        assert_eq!(res.unwrap_err().code, DiagCode::E702);
+    }
+
+    #[test]
+    fn proper_time_dispatch_default_e702() {
+        let mut host = MockHost::default();
+        let res = dispatch(
+            &mut host,
+            "time.proper_time",
+            &[Value::U64(42)],
+            &[],
+            Span::point(0),
+        );
+        assert!(res.is_err());
+        assert_eq!(res.unwrap_err().code, DiagCode::E702);
+    }
+
+    struct ProperTimeHost;
+    impl Host for ProperTimeHost {
+        fn graph_query(&mut self, _args: &[Value], _take: u64, _span: Span) -> Result<Value, Diagnostic> {
+            Ok(Value::Null)
+        }
+        fn graph_stage(&mut self, _term: &Value, _span: Span) -> Result<Value, Diagnostic> {
+            Ok(Value::Null)
+        }
+        fn graph_commit(&mut self, _span: Span) -> Result<Value, Diagnostic> {
+            Ok(Value::Null)
+        }
+        fn aura_validate(&mut self, _node: &Value, _shape: &Value, _span: Span) -> Result<Value, Diagnostic> {
+            Ok(Value::Bool(true))
+        }
+        fn pulse_publish(&mut self, _topic: &str, _payload: &Value, _span: Span) -> Result<Value, Diagnostic> {
+            Ok(Value::Null)
+        }
+        fn time_proper_time(&mut self, worldline_id: u64, _span: Span) -> Result<Value, Diagnostic> {
+            Ok(Value::F64(worldline_id as f64 * 0.001))
+        }
+    }
+
+    #[test]
+    fn proper_time_custom_value() {
+        let mut host = ProperTimeHost;
+        let res = host.time_proper_time(100, Span::point(0)).unwrap();
+        assert_eq!(res, Value::F64(0.1));
     }
 }
