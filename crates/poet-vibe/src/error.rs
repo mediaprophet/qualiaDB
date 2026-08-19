@@ -18,6 +18,8 @@ pub enum DiagCode {
     E500,
     /// Evaluation
     E600,
+    /// Deontic phase violation (R2)
+    E700,
 }
 
 impl DiagCode {
@@ -30,17 +32,20 @@ impl DiagCode {
             DiagCode::E400 => "E400",
             DiagCode::E500 => "E500",
             DiagCode::E600 => "E600",
+            DiagCode::E700 => "E700",
         }
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Diagnostic {
     pub code: DiagCode,
     pub span: Span,
     pub message: String,
     /// Safe rewrite hint. MUST NOT grant new authority (core §9).
     pub suggested_fix: Option<String>,
+    /// Evidential (μ, λ) annotation: degrees of positive belief and refutation (G9).
+    pub evidential: Option<(f32, f32)>,
 }
 
 impl Diagnostic {
@@ -52,11 +57,18 @@ impl Diagnostic {
             span,
             message,
             suggested_fix,
+            evidential: None,
         }
     }
 
     pub fn with_fix(mut self, fix: impl Into<String>) -> Self {
         self.suggested_fix = Some(fix.into());
+        self
+    }
+
+    /// Set the evidential (μ, λ) annotation: degrees of positive belief and refutation.
+    pub fn with_evidential(mut self, mu: f32, lambda: f32) -> Self {
+        self.evidential = Some((mu, lambda));
         self
     }
 
@@ -69,6 +81,10 @@ impl Diagnostic {
         match &self.suggested_fix {
             Some(fix) => push_kv(&mut s, "suggested_fix", fix),
             None => s.push_str("\"suggested_fix\":null,"),
+        }
+        match self.evidential {
+            Some((mu, lambda)) => s.push_str(&format!("\"evidential\":[{},{}],", mu, lambda)),
+            None => s.push_str("\"evidential\":null,"),
         }
         s.push_str("\"shacl_violations\":[]}");
         s
