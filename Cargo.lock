@@ -9353,6 +9353,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "poet-lsp"
+version = "0.0.32"
+dependencies = [
+ "poet-vibe",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "poet-vibe"
 version = "0.0.31"
 

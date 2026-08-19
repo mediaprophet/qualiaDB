@@ -22,6 +22,7 @@ members = [
     "crates/qualia-vision",
     "crates/qualia-audio",
     "crates/poet-cli",
+    "crates/poet-lsp",
 ]
 resolver = "2"
 
