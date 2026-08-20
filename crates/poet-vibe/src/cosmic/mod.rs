@@ -34,4 +34,6 @@ pub mod stardate;
 pub mod theory;
 pub mod transforms;
 pub mod usri;
+#[cfg(test)]
+pub mod verification;
 pub mod warp;
