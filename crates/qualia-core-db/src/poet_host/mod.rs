@@ -1242,6 +1242,112 @@ impl Host for PoetSnapshot {
             ))
         }
     }
+
+    /// Poll for the next HID event from the ring buffer (T42).
+    /// Non-blocking: returns Null if no event is available.
+    fn hid_poll(&mut self, span: poet_vibe::Span) -> Result<Value, Diagnostic> {
+        match self.hid_events.dequeue() {
+            None => Ok(Value::Null),
+            Some(slot) => Ok(hid_slot_to_value(&slot)),
+        }
+    }
+
+    /// Wait for the next HID event with a timeout (T42).
+    /// Currently non-blocking (polls once). A blocking implementation
+    /// would require platform-specific async infrastructure.
+    fn hid_wait(&mut self, _timeout_ns: u64, _span: poet_vibe::Span) -> Result<Value, Diagnostic> {
+        match self.hid_events.dequeue() {
+            None => Ok(Value::Null),
+            Some(slot) => Ok(hid_slot_to_value(&slot)),
+        }
+    }
+}
+
+/// Convert a HidEventSlot to a VibeScript Value record (T42).
+fn hid_slot_to_value(slot: &HidEventSlot) -> Value {
+    let mut rec = std::collections::BTreeMap::new();
+    rec.insert("timestamp_ns".into(), Value::U64(slot.timestamp_ns));
+    rec.insert("source_hash".into(), Value::U64(slot.source_hash));
+    rec.insert("event_kind".into(), Value::U64(slot.event_kind as u64));
+    rec.insert("x".into(), Value::F64(slot.x as f64));
+    rec.insert("y".into(), Value::F64(slot.y as f64));
+    rec.insert("z".into(), Value::F64(slot.z as f64));
+    if slot.capability_lease != 0 {
+        rec.insert("capability_lease".into(), Value::U64(slot.capability_lease));
+    }
+    Value::Record(rec)
+}
+
+/// Convert an InboundEvent to a compact HidEventSlot for the ring buffer (T42).
+/// The source_id is hashed to fit in u64. The event kind is stored as u8.
+impl PoetSnapshot {
+    /// Enqueue an InboundEvent into the HID ring buffer (T42).
+    /// Returns Err if the buffer is full (fail-closed).
+    pub fn enqueue_hid_event(
+        &mut self,
+        event: &poet_vibe::hid::InboundEvent,
+    ) -> Result<(), &'static str> {
+        let source_hash = crate::lexicon::generate_60bit_token(event.source_id.as_bytes());
+        let event_kind = match event.kind {
+            poet_vibe::hid::EventKind::Pointer => 0,
+            poet_vibe::hid::EventKind::Keyboard => 1,
+            poet_vibe::hid::EventKind::Touch => 2,
+            poet_vibe::hid::EventKind::Biosignal => 3,
+            poet_vibe::hid::EventKind::Depth => 4,
+            poet_vibe::hid::EventKind::Skeleton => 5,
+            poet_vibe::hid::EventKind::Imu => 6,
+            poet_vibe::hid::EventKind::Audio => 7,
+            poet_vibe::hid::EventKind::Sensor => 8,
+            poet_vibe::hid::EventKind::Assistive => 9,
+        };
+        // Extract x/y/z from inline payload if available
+        let (x, y, z) = match &event.payload {
+            poet_vibe::hid::EventPayload::Inline(m) => {
+                let x = match m.get("x") {
+                    Some(Value::F64(v)) => *v as f32,
+                    Some(Value::I64(v)) => *v as f32,
+                    _ => 0.0,
+                };
+                let y = match m.get("y") {
+                    Some(Value::F64(v)) => *v as f32,
+                    Some(Value::I64(v)) => *v as f32,
+                    _ => 0.0,
+                };
+                let z = match m.get("z") {
+                    Some(Value::F64(v)) => *v as f32,
+                    Some(Value::I64(v)) => *v as f32,
+                    _ => 0.0,
+                };
+                (x, y, z)
+            }
+            _ => (0.0, 0.0, 0.0),
+        };
+        let slot = HidEventSlot {
+            timestamp_ns: event.timestamp_ns,
+            source_hash,
+            event_kind,
+            x,
+            y,
+            z,
+            capability_lease: event.capability_lease.unwrap_or(0),
+        };
+        self.hid_events.enqueue(slot)
+    }
+
+    /// Drain all HID events from the ring buffer (T42).
+    /// Returns a Vec of event Values in FIFO order.
+    pub fn drain_hid_events(&mut self) -> Vec<Value> {
+        let mut events = Vec::new();
+        while let Some(slot) = self.hid_events.dequeue() {
+            events.push(hid_slot_to_value(&slot));
+        }
+        events
+    }
+
+    /// Number of HID events currently buffered (T42).
+    pub fn hid_event_count(&self) -> usize {
+        self.hid_events.count()
+    }
 }
 
 #[cfg(test)]
@@ -1253,6 +1359,111 @@ mod tests {
         let mut snap = PoetSnapshot::default();
         let v = snap.eval_cell_src("= math.max(1, math.min(9, 4))").unwrap();
         assert_eq!(v.as_f64(), Some(4.0));
+    }
+
+    #[test]
+    fn t42_enqueue_and_poll_hid_event() {
+        let mut snap = PoetSnapshot::default();
+        let event = poet_vibe::hid::InboundEvent::pointer_move(1000, "mouse:0", 10.5, 20.5);
+        assert!(snap.enqueue_hid_event(&event).is_ok());
+        assert_eq!(snap.hid_event_count(), 1);
+
+        // Poll via Host trait
+        let v = snap.hid_poll(poet_vibe::Span::point(0)).unwrap();
+        match v {
+            Value::Record(r) => {
+                assert_eq!(r.get("timestamp_ns"), Some(&Value::U64(1000)));
+                assert_eq!(r.get("event_kind"), Some(&Value::U64(0))); // Pointer
+                                                                       // x and y should be extracted from inline payload
+                if let Some(Value::F64(x)) = r.get("x") {
+                    assert!((x - 10.5).abs() < 0.01);
+                } else {
+                    panic!("expected x coordinate");
+                }
+            }
+            other => panic!("expected record, got {other:?}"),
+        }
+        assert_eq!(snap.hid_event_count(), 0);
+    }
+
+    #[test]
+    fn t42_hid_poll_empty_returns_null() {
+        let mut snap = PoetSnapshot::default();
+        let v = snap.hid_poll(poet_vibe::Span::point(0)).unwrap();
+        assert_eq!(v, Value::Null);
+    }
+
+    #[test]
+    fn t42_enqueue_keyboard_event() {
+        let mut snap = PoetSnapshot::default();
+        let event = poet_vibe::hid::InboundEvent::keyboard(2000, "keyboard:0", 65, true);
+        assert!(snap.enqueue_hid_event(&event).is_ok());
+
+        let v = snap.hid_poll(poet_vibe::Span::point(0)).unwrap();
+        match v {
+            Value::Record(r) => {
+                assert_eq!(r.get("event_kind"), Some(&Value::U64(1))); // Keyboard
+            }
+            other => panic!("expected record, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn t42_drain_hid_events() {
+        let mut snap = PoetSnapshot::default();
+        for i in 0..5 {
+            let event = poet_vibe::hid::InboundEvent::pointer_move(i * 1000, "mouse:0", 0.0, 0.0);
+            snap.enqueue_hid_event(&event).unwrap();
+        }
+        assert_eq!(snap.hid_event_count(), 5);
+        let drained = snap.drain_hid_events();
+        assert_eq!(drained.len(), 5);
+        assert_eq!(snap.hid_event_count(), 0);
+    }
+
+    #[test]
+    fn t42_hid_wait_returns_event() {
+        let mut snap = PoetSnapshot::default();
+        let event = poet_vibe::hid::InboundEvent::pointer_move(5000, "mouse:0", 1.0, 2.0);
+        snap.enqueue_hid_event(&event).unwrap();
+
+        let v = snap.hid_wait(1_000_000, poet_vibe::Span::point(0)).unwrap();
+        match v {
+            Value::Record(r) => {
+                assert_eq!(r.get("timestamp_ns"), Some(&Value::U64(5000)));
+            }
+            other => panic!("expected record, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn t42_hid_wait_empty_returns_null() {
+        let mut snap = PoetSnapshot::default();
+        let v = snap.hid_wait(0, poet_vibe::Span::point(0)).unwrap();
+        assert_eq!(v, Value::Null);
+    }
+
+    #[test]
+    fn t42_hid_vibescript_poll() {
+        let mut snap = PoetSnapshot::default();
+        let event = poet_vibe::hid::InboundEvent::pointer_move(100, "mouse:0", 5.0, 10.0);
+        snap.enqueue_hid_event(&event).unwrap();
+
+        // Test via VibeScript
+        let v = snap.eval_cell_src("= hid.poll()").unwrap();
+        match v {
+            Value::Record(r) => {
+                assert_eq!(r.get("timestamp_ns"), Some(&Value::U64(100)));
+            }
+            other => panic!("expected record, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn t42_hid_vibescript_poll_empty() {
+        let mut snap = PoetSnapshot::default();
+        let v = snap.eval_cell_src("= hid.poll()").unwrap();
+        assert_eq!(v, Value::Null);
     }
 
     #[test]
