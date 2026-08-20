@@ -994,6 +994,48 @@ fn ad1_enum_unit_parses() {
     load_program(src).expect("ad1 fixture should parse");
 }
 
+// ── X6: time.now → Instant (primary time primitive) ──────────────────────────
+
+#[test]
+fn x6_time_now_parses() {
+    let src = include_str!("../fixtures/x6_time_now.vibe");
+    load_program(src).expect("x6 fixture should parse");
+}
+
+#[test]
+fn x6_time_now_evaluates() {
+    let src = include_str!("../fixtures/x6_time_now.vibe");
+    let program = load_program(src).expect("x6 fixture should load");
+    let mut host = poet_vibe::MockHost::default();
+    let mut env = poet_vibe::Env::default();
+    let result = poet_vibe::eval_function(&program, "main", vec![], &mut host, &mut env)
+        .expect("x6 fixture should evaluate");
+    // MockHost returns Instant with secs=1_000_000_000, projected to i64.
+    assert_eq!(result, poet_vibe::Value::I64(1_000_000_000));
+}
+
+// ── X5: Quantity mandatory for physical fields ───────────────────────────────
+
+#[test]
+fn x5_field_missing_unit_rejected() {
+    let src = include_str!("../fixtures/x5_field_missing_unit.vibe");
+    let err = load_program(src).unwrap_err();
+    assert_eq!(err.code, DiagCode::E100);
+    assert!(err.message.contains("unit"));
+}
+
+#[test]
+fn x5_field_with_unit_accepted() {
+    let src = include_str!("../fixtures/x5_field_with_unit.vibe");
+    load_program(src).expect("field with unit should be accepted");
+}
+
+#[test]
+fn x5_nonphysical_field_without_unit_accepted() {
+    let src = include_str!("../fixtures/x5_nonphysical_field.vibe");
+    load_program(src).expect("non-physical field without unit should be accepted");
+}
+
 #[test]
 fn ad2_enum_payload_parses() {
     let src = include_str!("../fixtures/ad2_enum_payload.vibe");

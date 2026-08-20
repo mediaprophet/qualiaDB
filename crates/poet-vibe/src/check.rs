@@ -69,11 +69,41 @@ pub fn check_program(program: &Program) -> Result<CheckResult, Diagnostic> {
             Item::Enum(_) => {
                 // Enum declarations are pure type declarations — no effect.
             }
-            Item::Field(_) => {
+            Item::Field(f) => {
                 // Field declarations are pure type declarations — no effect.
+                // X5: Physical fields (F64, Quantity, I64, U64) must have a
+                // unit IRI. Non-physical fields (Bool, String, Iri, etc.)
+                // don't need one.
+                let ty = crate::types::Type::from_ast(&f.ty);
+                let is_physical = matches!(
+                    ty,
+                    crate::types::Type::F64
+                        | crate::types::Type::Quantity
+                        | crate::types::Type::I64
+                        | crate::types::Type::U64
+                );
+                if is_physical && f.unit.is_none() {
+                    return Err(Diagnostic::new(
+                        DiagCode::E100,
+                        f.span,
+                        format!(
+                            "field '{}' has physical type '{}' but no unit IRI — \
+                             physical fields require an explicit unit (X5). \
+                             Use `qudt:DimensionlessUnit` for dimensionless quantities.",
+                            f.name, f.ty.name
+                        ),
+                    ));
+                }
             }
-            Item::Material(_) => {
+            Item::Material(m) => {
                 // Material declarations are pure data declarations — no effect.
+                // X5: Material properties with numeric values should have
+                // units. Full enforcement requires grammar changes to
+                // require unit annotations on NamedArg values — the current
+                // AST doesn't carry unit info on NamedArg directly.
+                // TODO: enforce units on material properties when the
+                // grammar supports unit annotations on NamedArg values.
+                let _ = m;
             }
             Item::Law(l) => {
                 // Law declarations have a condition and consequence.

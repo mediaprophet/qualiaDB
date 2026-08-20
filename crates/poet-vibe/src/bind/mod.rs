@@ -10,7 +10,7 @@ pub use rdf::call_rdf;
 
 use crate::error::{DiagCode, Diagnostic};
 use crate::span::Span;
-use crate::value::Value;
+use crate::value::{Instant, Value};
 
 /// Host supplied by Qualia / tests.
 pub trait Host {
@@ -45,7 +45,23 @@ pub trait Host {
     /// in Pure cells. Default fails closed with E702 (WASM / hosts without a clock);
     /// native hosts override with `SystemTime::now`. Replay uses the receipt clock,
     /// not this binding.
+    ///
+    /// **DEPRECATED (X6, 2026-08-20):** Use `time_now` instead. Integer seconds
+    /// cannot support sub-frame animation, physics dt, or deterministic WASM
+    /// replay. Kept as a projection helper for display/logging only.
     fn time_unix(&mut self, span: Span) -> Result<Value, Diagnostic> {
+        Err(Diagnostic::new(
+            DiagCode::E702,
+            span,
+            "no clock available on this host",
+        ))
+    }
+
+    /// The primary time primitive (X6): returns `Value::Instant` with
+    /// nanosecond resolution, explicit `TimeScale`, and optional seal.
+    /// Default fails closed with E702. Native hosts override with
+    /// `SystemTime::now` → `Instant::unix(secs, nanos)`.
+    fn time_now(&mut self, span: Span) -> Result<Value, Diagnostic> {
         Err(Diagnostic::new(
             DiagCode::E702,
             span,
@@ -613,6 +629,18 @@ impl Host for MockHost {
         }
     }
 
+    /// Returns an `Instant` from the mock clock (X6).
+    fn time_now(&mut self, span: Span) -> Result<Value, Diagnostic> {
+        match self.clock_time {
+            Some(secs) => Ok(Value::Instant(Instant::unix(secs, 500_000_000))),
+            None => Err(Diagnostic::new(
+                DiagCode::E702,
+                span,
+                "no clock available on this mock host",
+            )),
+        }
+    }
+
     fn time_unix_nanos(&mut self, span: Span) -> Result<Value, Diagnostic> {
         match self.clock_time {
             Some(t) => {
@@ -690,6 +718,29 @@ pub fn dispatch<H: Host>(
         "time.unix" => host.time_unix(span),
         "time.unix_nanos" => host.time_unix_nanos(span),
         "time.monotonic_nanos" => host.time_monotonic_nanos(span),
+        "time.now" => host.time_now(span),
+        "instant.to_unix_secs" => {
+            let inst = match args.first() {
+                Some(Value::Instant(i)) => i.clone(),
+                _ => return Err(Diagnostic::new(
+                    DiagCode::E100,
+                    span,
+                    "instant.to_unix_secs needs an Instant argument",
+                )),
+            };
+            Ok(Value::I64(inst.secs))
+        }
+        "instant.to_unix_nanos" => {
+            let inst = match args.first() {
+                Some(Value::Instant(i)) => i.clone(),
+                _ => return Err(Diagnostic::new(
+                    DiagCode::E100,
+                    span,
+                    "instant.to_unix_nanos needs an Instant argument",
+                )),
+            };
+            Ok(Value::U64((inst.secs as u64) * 1_000_000_000 + inst.nanos as u64))
+        }
         "host.version" => Ok(Value::String(host.host_version().into())),
         "time.proper_time" => {
             let worldline_id = args.first()
@@ -1047,6 +1098,81 @@ mod tests {
     fn default_host_version_is_0_1() {
         let host = MockHost::default();
         assert_eq!(host.host_version(), "vibe-host-0.1");
+    }
+
+    // ── X6: time.now → Instant tests ───────────────────────────────────
+
+    #[test]
+    fn time_now_returns_instant() {
+        let mut host = MockHost::default();
+        let res = host.time_now(Span::point(0)).unwrap();
+        match res {
+            Value::Instant(i) => {
+                assert_eq!(i.scale, crate::value::TimeScale::Unix);
+                assert_eq!(i.secs, 1_000_000_000);
+                assert_eq!(i.nanos, 500_000_000);
+            }
+            other => panic!("expected Instant, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn time_now_no_clock_fails_closed() {
+        let mut host = NoClockHost;
+        let res = host.time_now(Span::point(0));
+        assert!(res.is_err());
+        assert_eq!(res.unwrap_err().code, DiagCode::E702);
+    }
+
+    #[test]
+    fn time_now_dispatches_via_dispatch_table() {
+        let mut host = MockHost::default();
+        let res = dispatch(&mut host, "time.now", &[], &[], Span::point(0)).unwrap();
+        match res {
+            Value::Instant(i) => assert_eq!(i.secs, 1_000_000_000),
+            other => panic!("expected Instant, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn instant_to_unix_secs_dispatches() {
+        let mut host = MockHost::default();
+        let inst = Value::Instant(Instant::unix(1234567890, 42));
+        let res = dispatch(
+            &mut host,
+            "instant.to_unix_secs",
+            &[inst],
+            &[],
+            Span::point(0),
+        ).unwrap();
+        assert_eq!(res, Value::I64(1234567890));
+    }
+
+    #[test]
+    fn instant_to_unix_secs_rejects_non_instant() {
+        let mut host = MockHost::default();
+        let res = dispatch(
+            &mut host,
+            "instant.to_unix_secs",
+            &[Value::I64(42)],
+            &[],
+            Span::point(0),
+        );
+        assert!(res.is_err());
+    }
+
+    #[test]
+    fn instant_to_unix_nanos_dispatches() {
+        let mut host = MockHost::default();
+        let inst = Value::Instant(Instant::unix(1, 500_000_000));
+        let res = dispatch(
+            &mut host,
+            "instant.to_unix_nanos",
+            &[inst],
+            &[],
+            Span::point(0),
+        ).unwrap();
+        assert_eq!(res, Value::U64(1_500_000_000));
     }
 
     #[test]
