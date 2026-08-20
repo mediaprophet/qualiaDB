@@ -374,3 +374,113 @@ arkworks 0.6) to VibeScript via the `zk` namespace.
   - Range outside bounds unprovable (100 in [18,65] → error)
   - Matmul prove (2x2, verifies [19,22,43,50])
 
+---
+
+## Round 4 Batch 6 — Observer, heraldic lexicon, multi-scale sheaves, civic time, agent KB (2026-08-20)
+
+Implemented five wish-list conceptual modules in a new `observer.rs`.
+
+### Newly implemented
+
+| Commit | Description |
+|--------|-------------|
+| `85925fbf` | poet-vibe observer.rs — W7, W9, W14, W15, T59 |
+
+### Modules
+
+| Task | Module | Description |
+|------|--------|-------------|
+| W7 | `MeasurementContext` | Observer's stalk — who observed, what instrument, when, frame, uncertainty, stalk_id. Round-trips through Value::Record. |
+| W9 | `IdentifierView` + `IdentifierModality` | Oral/heraldic/tactile/visual views of the same identity. An IRI can have multiple modality-specific presentations. |
+| W14 | `MultiScaleSheaf` + `LevelOfDetail` | Sheaves filtered at a physical scale (continuum → subatomic). LOD is physics, not rendering. Ordered scale hierarchy. |
+| W15 | `CivicInstant` | Time asserted by a civic authority (NIST, GPS, metrology institute). Carries authority IRI so provenance is explicit. Optional uncertainty. |
+| T59 | `AgentCharacteristicsKb` | Knowledge base of agent characteristics logged from behaviour (not declared). Supports log, for_agent, latest, mean. |
+
+### Test counts after batch 6
+
+- **poet-vibe lib:** 438 passed (was 413)
+- 25 new tests in observer.rs
+
+---
+
+## Round 4 Batch 7 — Bidirectional translation + tier-2 identifiers (2026-08-20)
+
+Implemented T38 (poet translate) and T39 (tier-2 identifiers) in a new `translate.rs`.
+
+### Newly implemented
+
+| Commit | Description |
+|--------|-------------|
+| `ce6eae56` | poet-vibe translate.rs — T38, T39 |
+
+### Modules
+
+| Task | Module | Description |
+|------|--------|-------------|
+| T38 | `KeywordTranslator` | Bidirectional keyword translation via locale registry. Translates canonical English keywords to target locale (fn → 函数). Preserves strings and comments. |
+| T39 | `Tier2Registry` + `Tier2Label` | Multi-lingual rdfs:label metadata for IRIs. An IRI can have labels in multiple locales. Labels are metadata, not separate identifiers. |
+
+### Test counts after batch 7
+
+- **poet-vibe lib:** 452 passed (was 438)
+- 14 new tests in translate.rs
+
+---
+
+## Round 4 Batch 8 — CLI toolchain (2026-08-20)
+
+Implemented T62 (poet CLI) as a zero-dependency binary in `crates/poet-vibe/src/bin/poet.rs`.
+
+### Newly implemented
+
+| Commit | Description |
+|--------|-------------|
+| `99f0ae5d` | poet CLI — check, fmt, eval, translate, repl |
+
+### Subcommands
+
+| Command | Description |
+|---------|-------------|
+| `poet check <file>` | Parse + type-check, print diagnostics with byte-offset positioning |
+| `poet fmt <file>` | Parse-verify + re-emit (pretty printer for declarations) |
+| `poet eval <file> [fn] [args]` | Parse + check + evaluate, print result value |
+| `poet translate <file> <locale>` | Translate keywords to en or zh |
+| `poet repl` | Interactive read-eval-print loop for cell expressions |
+
+### Verified
+
+- `poet check` on i1_checked_add.vibe → ok (1 item)
+- `poet eval` on i1_checked_add.vibe main → 100
+- `poet translate` on i1_checked_add.vibe zh → fn→函数, let→让, return→返回
+- `poet fmt` on i1_checked_add.vibe → identity re-emit
+
+---
+
+## Round 4 Batch 9 — Audit: previously implemented tasks verified (2026-08-20)
+
+Audited the remaining plan items against the repository. The following
+tasks were already implemented in prior batches but had stale "Not
+started" or "pending" status in the plan:
+
+| Task | Status | Location |
+|------|--------|----------|
+| T33/W4 | Already implemented | `value.rs` — SpeciesRef, Mixture, MixturePhase, Miscibility |
+| T34/W3 | Already implemented | `value.rs` — ConservationResult, ConservationQuantity; `bind/mod.rs` — conservation_check Host ABI |
+| T35/W6 | Already implemented | `value.rs` — CausalRelation (Timelike/Lightlike/Spacelike); `bind/mod.rs` — causal_relation Host ABI |
+| T55 | Already implemented | `value.rs` — Value::DisclosureDenied |
+| T56 | Already implemented | `value.rs` — DisclosureBoundary (publication/replication/agency/exfiltration) |
+| T64 | Already implemented | `check.rs` — vibe:0.1/ prefix optional, stripped before namespace validation |
+
+### Remaining deferred tasks
+
+These tasks remain blocked by external dependencies or platform integration:
+
+| Task | Blocker |
+|------|---------|
+| T40 | Unicode BiDi/NFC/homoglyph security policy not yet defined |
+| T44 | Needs differential privacy library + medical-grade lease semantics |
+| T46 | Needs platform HID integration + host ring buffers |
+| T54 | Needs actual GGUF model file / in-process decode path |
+| T61 | WASM playground — ecosystem/packaging task |
+| T65 | Interactive onboarding — ecosystem/packaging task |
+
