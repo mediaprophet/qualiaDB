@@ -5,6 +5,7 @@
 
 pub mod agent;
 mod args;
+mod asset_bind;
 mod biosignal;
 mod clinical;
 pub mod coverage;
@@ -173,6 +174,13 @@ pub fn dispatch(
         ids::SAMPLER_CONSTRAIN_DISABLE => sampler_bind::constrain_disable(args, span),
         ids::SAMPLER_CONSTRAIN_RESET => sampler_bind::constrain_reset(args, span),
         ids::SAMPLER_SAMPLE => sampler_bind::sample(args, span),
+        ids::ASSET_CREATE => asset_bind::create(args, span),
+        ids::ASSET_ADD_TEMPORAL => asset_bind::add_temporal(args, span),
+        ids::ASSET_ADD_TOPIC => asset_bind::add_topic(args, span),
+        ids::ASSET_SET_SPATIAL => asset_bind::set_spatial(args, span),
+        ids::ASSET_COMPILE => asset_bind::compile(args, span),
+        ids::ASSET_TEMPORAL_SPAN => asset_bind::temporal_span(args, span),
+        ids::ASSET_QUERY_ASPECTS => asset_bind::query_aspects(args, span),
         other => Err(Diagnostic::new(
             DiagCode::E300,
             span,

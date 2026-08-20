@@ -99,6 +99,15 @@ pub const SAMPLER_CONSTRAIN_DISABLE: &str = "sampler.constrain_disable";
 pub const SAMPLER_CONSTRAIN_RESET: &str = "sampler.constrain_reset";
 pub const SAMPLER_SAMPLE: &str = "sampler.sample";
 
+// ── Asset aspect sub-graphs (spatial assets with temporal assertions) ─────
+pub const ASSET_CREATE: &str = "Asset.create";
+pub const ASSET_ADD_TEMPORAL: &str = "Asset.add_temporal";
+pub const ASSET_ADD_TOPIC: &str = "Asset.add_topic";
+pub const ASSET_SET_SPATIAL: &str = "Asset.set_spatial";
+pub const ASSET_COMPILE: &str = "Asset.compile";
+pub const ASSET_TEMPORAL_SPAN: &str = "Asset.temporal_span";
+pub const ASSET_QUERY_ASPECTS: &str = "Asset.query_aspects";
+
 // ── Physics wrappers (wrap specialized_libs::physics_simulation) ───────────
 pub const PHYS_WAVE_1D: &str = "Physics.wave_1d";
 pub const PHYS_HEAT_DIFFUSION_1D: &str = "Physics.heat_diffusion_1d";
@@ -290,6 +299,13 @@ pub const ALL_BOUND: &[&str] = &[
     SAMPLER_CONSTRAIN_DISABLE,
     SAMPLER_CONSTRAIN_RESET,
     SAMPLER_SAMPLE,
+    ASSET_CREATE,
+    ASSET_ADD_TEMPORAL,
+    ASSET_ADD_TOPIC,
+    ASSET_SET_SPATIAL,
+    ASSET_COMPILE,
+    ASSET_TEMPORAL_SPAN,
+    ASSET_QUERY_ASPECTS,
 ];
 
 /// Future extract target for an invoke id. Not a crate today.
@@ -356,6 +372,8 @@ pub fn seam_for(id: &str) -> &'static str {
         | SAMPLER_CONSTRAIN_DISABLE
         | SAMPLER_CONSTRAIN_RESET
         | SAMPLER_SAMPLE => "sampler",
+        ASSET_CREATE | ASSET_ADD_TEMPORAL | ASSET_ADD_TOPIC | ASSET_SET_SPATIAL | ASSET_COMPILE
+        | ASSET_TEMPORAL_SPAN | ASSET_QUERY_ASPECTS => "asset",
         _ => "unbound",
     }
 }
