@@ -1108,6 +1108,175 @@ pub fn dispatch<H: Host>(
             };
             Ok(Value::F64(profile.surface_gravity()))
         }
+        "cosmic.body.profile" => {
+            let name = match args.first() {
+                Some(Value::String(s)) | Some(Value::Iri(s)) => s.as_str(),
+                _ => {
+                    return Err(Diagnostic::new(
+                        DiagCode::E100,
+                        span,
+                        "cosmic.body.profile needs a body name",
+                    ))
+                }
+            };
+            match crate::cosmic::celestial::body_profile_by_name(name) {
+                Some(p) => Ok(p.to_value()),
+                None => Err(Diagnostic::new(
+                    DiagCode::E100,
+                    span,
+                    format!("unknown body: {name}"),
+                )),
+            }
+        }
+        "cosmic.flrw.metric" => {
+            // Returns the flat present-epoch FLRW metric
+            let m = crate::cosmic::flrw::FlrwMetric::flat_present_epoch();
+            Ok(m.to_value())
+        }
+        "cosmic.flrw.redshift" => {
+            // redshift(a_emit) → z
+            let a = crate::crypto::extract_f64_arg(args, 0, "flrw.redshift", span)?;
+            let m = crate::cosmic::flrw::FlrwMetric::flat_present_epoch();
+            Ok(Value::F64(m.redshift(a)))
+        }
+        "cosmic.flrw.hubble_velocity" => {
+            let d = crate::crypto::extract_f64_arg(args, 0, "flrw.hubble_velocity", span)?;
+            let m = crate::cosmic::flrw::FlrwMetric::flat_present_epoch();
+            Ok(Value::F64(m.hubble_velocity(d)))
+        }
+        "cosmic.flrw.redshift_to_distance" => {
+            let z = crate::crypto::extract_f64_arg(args, 0, "flrw.redshift_to_distance", span)?;
+            let m = crate::cosmic::flrw::FlrwMetric::flat_present_epoch();
+            Ok(Value::F64(m.redshift_to_distance(z)))
+        }
+        "cosmic.atmosphere.profile" => {
+            let name = match args.first() {
+                Some(Value::String(s)) | Some(Value::Iri(s)) => s.as_str(),
+                _ => {
+                    return Err(Diagnostic::new(
+                        DiagCode::E100,
+                        span,
+                        "cosmic.atmosphere.profile needs a body name",
+                    ))
+                }
+            };
+            let atm = match name {
+                "earth" => crate::cosmic::atmosphere::AtmosphericProfile::earth(),
+                "mars" => crate::cosmic::atmosphere::AtmosphericProfile::mars(),
+                "venus" => crate::cosmic::atmosphere::AtmosphericProfile::venus(),
+                _ => {
+                    return Err(Diagnostic::new(
+                        DiagCode::E100,
+                        span,
+                        format!("unknown atmosphere body: {name}"),
+                    ))
+                }
+            };
+            Ok(atm.to_value())
+        }
+        "cosmic.atmosphere.pressure" => {
+            let name = match args.first() {
+                Some(Value::String(s)) | Some(Value::Iri(s)) => s.as_str(),
+                _ => {
+                    return Err(Diagnostic::new(
+                        DiagCode::E100,
+                        span,
+                        "cosmic.atmosphere.pressure needs a body name",
+                    ))
+                }
+            };
+            let alt = crate::crypto::extract_f64_arg(args, 1, "atmosphere.pressure", span)?;
+            let atm = match name {
+                "earth" => crate::cosmic::atmosphere::AtmosphericProfile::earth(),
+                "mars" => crate::cosmic::atmosphere::AtmosphericProfile::mars(),
+                "venus" => crate::cosmic::atmosphere::AtmosphericProfile::venus(),
+                _ => {
+                    return Err(Diagnostic::new(
+                        DiagCode::E100,
+                        span,
+                        format!("unknown atmosphere body: {name}"),
+                    ))
+                }
+            };
+            Ok(Value::F64(atm.pressure_at_altitude(alt)))
+        }
+        "cosmic.magnetosphere.profile" => {
+            let name = match args.first() {
+                Some(Value::String(s)) | Some(Value::Iri(s)) => s.as_str(),
+                _ => {
+                    return Err(Diagnostic::new(
+                        DiagCode::E100,
+                        span,
+                        "cosmic.magnetosphere.profile needs a body name",
+                    ))
+                }
+            };
+            let mag = match name {
+                "earth" => crate::cosmic::atmosphere::MagnetosphereProfile::earth(),
+                "jupiter" => crate::cosmic::atmosphere::MagnetosphereProfile::jupiter(),
+                "mars" => crate::cosmic::atmosphere::MagnetosphereProfile::mars(),
+                _ => {
+                    return Err(Diagnostic::new(
+                        DiagCode::E100,
+                        span,
+                        format!("unknown magnetosphere body: {name}"),
+                    ))
+                }
+            };
+            Ok(mag.to_value())
+        }
+        "cosmic.microverse.particle" => {
+            let name = match args.first() {
+                Some(Value::String(s)) | Some(Value::Iri(s)) => s.as_str(),
+                _ => {
+                    return Err(Diagnostic::new(
+                        DiagCode::E100,
+                        span,
+                        "cosmic.microverse.particle needs a particle name",
+                    ))
+                }
+            };
+            let p = match name {
+                "electron" => crate::cosmic::microverse::ParticleProfile::electron(),
+                "proton" => crate::cosmic::microverse::ParticleProfile::proton(),
+                "neutron" => crate::cosmic::microverse::ParticleProfile::neutron(),
+                "photon" => crate::cosmic::microverse::ParticleProfile::photon(),
+                "up-quark" => crate::cosmic::microverse::ParticleProfile::up_quark(),
+                "higgs" => crate::cosmic::microverse::ParticleProfile::higgs_boson(),
+                _ => {
+                    return Err(Diagnostic::new(
+                        DiagCode::E100,
+                        span,
+                        format!("unknown particle: {name}"),
+                    ))
+                }
+            };
+            Ok(p.to_value())
+        }
+        "cosmic.microverse.scale" => {
+            // scale(from_level, to_level, length) → transformed length
+            let from = crate::crypto::extract_f64_arg(args, 0, "microverse.scale", span)?;
+            let to = crate::crypto::extract_f64_arg(args, 1, "microverse.scale", span)?;
+            let len = crate::crypto::extract_f64_arg(args, 2, "microverse.scale", span)?;
+            let from_level = crate::cosmic::cb_usri::HierarchyLevel::from_u8(from as u8)
+                .ok_or_else(|| {
+                    Diagnostic::new(
+                        DiagCode::E100,
+                        span,
+                        format!("invalid hierarchy level: {from}"),
+                    )
+                })?;
+            let to_level =
+                crate::cosmic::cb_usri::HierarchyLevel::from_u8(to as u8).ok_or_else(|| {
+                    Diagnostic::new(
+                        DiagCode::E100,
+                        span,
+                        format!("invalid hierarchy level: {to}"),
+                    )
+                })?;
+            let lens = crate::cosmic::microverse::ScalingLens::between(from_level, to_level);
+            Ok(Value::F64(lens.transform_length(len)))
+        }
         _ => Err(Diagnostic::new(
             DiagCode::E100,
             span,
@@ -1719,5 +1888,200 @@ mod tests {
             Span::point(0),
         );
         assert!(res.is_err());
+    }
+
+    #[test]
+    fn cosmic_body_profile_jupiter() {
+        let mut host = MockHost::default();
+        let res = dispatch(
+            &mut host,
+            "cosmic.body.profile",
+            &[Value::String("jupiter".into())],
+            &[],
+            Span::point(0),
+        );
+        assert!(res.is_ok());
+        match res.unwrap() {
+            Value::Record(r) => {
+                assert_eq!(r.get("name"), Some(&Value::String("Jupiter".into())));
+            }
+            other => panic!("expected record, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn cosmic_body_profile_sun() {
+        let mut host = MockHost::default();
+        let res = dispatch(
+            &mut host,
+            "cosmic.body.profile",
+            &[Value::String("sun".into())],
+            &[],
+            Span::point(0),
+        );
+        assert!(res.is_ok());
+        match res.unwrap() {
+            Value::Record(r) => {
+                assert_eq!(r.get("name"), Some(&Value::String("Sun".into())));
+            }
+            other => panic!("expected record, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn cosmic_body_profile_unknown() {
+        let mut host = MockHost::default();
+        let res = dispatch(
+            &mut host,
+            "cosmic.body.profile",
+            &[Value::String("wormhole".into())],
+            &[],
+            Span::point(0),
+        );
+        assert!(res.is_err());
+    }
+
+    #[test]
+    fn cosmic_flrw_metric() {
+        let mut host = MockHost::default();
+        let res = dispatch(&mut host, "cosmic.flrw.metric", &[], &[], Span::point(0));
+        assert!(res.is_ok());
+        match res.unwrap() {
+            Value::Record(r) => {
+                assert!(r.contains_key("scale_factor"));
+                assert!(r.contains_key("hubble_param_km_s_mpc"));
+            }
+            other => panic!("expected record, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn cosmic_flrw_redshift() {
+        let mut host = MockHost::default();
+        // a_emit = 0.5 → z = 1.0
+        let res = dispatch(
+            &mut host,
+            "cosmic.flrw.redshift",
+            &[Value::F64(0.5)],
+            &[],
+            Span::point(0),
+        );
+        assert!(res.is_ok());
+        match res.unwrap() {
+            Value::F64(z) => assert!((z - 1.0).abs() < 1e-10),
+            other => panic!("expected f64, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn cosmic_flrw_hubble_velocity() {
+        let mut host = MockHost::default();
+        // 1 Mpc → ~67 km/s
+        let res = dispatch(
+            &mut host,
+            "cosmic.flrw.hubble_velocity",
+            &[Value::F64(3.085677581e22)],
+            &[],
+            Span::point(0),
+        );
+        assert!(res.is_ok());
+        match res.unwrap() {
+            Value::F64(v) => assert!((v / 1000.0 - 67.4).abs() < 1.0),
+            other => panic!("expected f64, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn cosmic_atmosphere_profile_earth() {
+        let mut host = MockHost::default();
+        let res = dispatch(
+            &mut host,
+            "cosmic.atmosphere.profile",
+            &[Value::String("earth".into())],
+            &[],
+            Span::point(0),
+        );
+        assert!(res.is_ok());
+        match res.unwrap() {
+            Value::Record(r) => {
+                assert_eq!(r.get("body_name"), Some(&Value::String("Earth".into())));
+            }
+            other => panic!("expected record, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn cosmic_atmosphere_pressure() {
+        let mut host = MockHost::default();
+        // Earth at sea level → 101325 Pa
+        let res = dispatch(
+            &mut host,
+            "cosmic.atmosphere.pressure",
+            &[Value::String("earth".into()), Value::F64(0.0)],
+            &[],
+            Span::point(0),
+        );
+        assert!(res.is_ok());
+        match res.unwrap() {
+            Value::F64(p) => assert!((p - 101_325.0).abs() < 1.0),
+            other => panic!("expected f64, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn cosmic_magnetosphere_profile_earth() {
+        let mut host = MockHost::default();
+        let res = dispatch(
+            &mut host,
+            "cosmic.magnetosphere.profile",
+            &[Value::String("earth".into())],
+            &[],
+            Span::point(0),
+        );
+        assert!(res.is_ok());
+        match res.unwrap() {
+            Value::Record(r) => {
+                assert!(r.contains_key("surface_field_t"));
+            }
+            other => panic!("expected record, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn cosmic_microverse_particle_electron() {
+        let mut host = MockHost::default();
+        let res = dispatch(
+            &mut host,
+            "cosmic.microverse.particle",
+            &[Value::String("electron".into())],
+            &[],
+            Span::point(0),
+        );
+        assert!(res.is_ok());
+        match res.unwrap() {
+            Value::Record(r) => {
+                assert_eq!(r.get("name"), Some(&Value::String("Electron".into())));
+            }
+            other => panic!("expected record, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn cosmic_microverse_scale() {
+        let mut host = MockHost::default();
+        // L5 (1km) → L2 (Bohr radius): transform 1.0 km
+        // L5 = 5, L2 = 2
+        let res = dispatch(
+            &mut host,
+            "cosmic.microverse.scale",
+            &[Value::F64(5.0), Value::F64(2.0), Value::F64(1.0)],
+            &[],
+            Span::point(0),
+        );
+        assert!(res.is_ok());
+        match res.unwrap() {
+            Value::F64(v) => assert!(v > 0.0 && v.is_finite()),
+            other => panic!("expected f64, got {other:?}"),
+        }
     }
 }
