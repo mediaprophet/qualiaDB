@@ -351,13 +351,7 @@ mod tests {
         };
         quin.set_sensitivity_byte(NQuin::SENSITIVITY_CLASSIFIED);
         quin.set_sensitivity_tier(NQuin::SENSITIVITY_TIER_MEDICAL);
-        write_unified_volume(
-            file.path(),
-            &HashMap::new(),
-            &[(3, 3)],
-            &[vec![quin]],
-        )
-        .unwrap();
+        write_unified_volume(file.path(), &HashMap::new(), &[(3, 3)], &[vec![quin]]).unwrap();
         let hash = sha1_file(file.path()).unwrap();
         let err = register_seed(RegisterSeedRequest {
             info_hash: hash,
@@ -369,7 +363,9 @@ mod tests {
         })
         .unwrap_err();
         assert!(
-            err.contains("publication denied") || err.contains("Selfhood") || err.contains("medical"),
+            err.contains("publication denied")
+                || err.contains("Selfhood")
+                || err.contains("medical"),
             "{err}"
         );
     }

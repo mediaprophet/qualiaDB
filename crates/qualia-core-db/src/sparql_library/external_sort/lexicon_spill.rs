@@ -214,9 +214,7 @@ impl LexiconSpill {
             while pieces.len() > MERGE_FAN_IN {
                 let mut next = Vec::new();
                 for (group, inputs) in pieces.chunks(MERGE_FAN_IN).enumerate() {
-                    let output = self
-                        .temp_dir
-                        .join(format!("lexbuckmerge_{b}_{group}.tmp"));
+                    let output = self.temp_dir.join(format!("lexbuckmerge_{b}_{group}.tmp"));
                     write_merged_runs(inputs, &output, &mut self.collisions)?;
                     next.push(output);
                     for old in inputs {
@@ -382,13 +380,12 @@ where
 }
 
 fn write_merged_runs(inputs: &[PathBuf], output: &Path, collisions: &mut u64) -> io::Result<()> {
-    let mut out = BufWriter::new(
-        File::options()
-            .create_new(true)
-            .write(true)
-            .open(output)?,
-    );
-    merge_runs(inputs, &mut |hash, term| write_record(&mut out, hash, term.as_bytes()), collisions)?;
+    let mut out = BufWriter::new(File::options().create_new(true).write(true).open(output)?);
+    merge_runs(
+        inputs,
+        &mut |hash, term| write_record(&mut out, hash, term.as_bytes()),
+        collisions,
+    )?;
     out.flush()
 }
 
@@ -428,11 +425,7 @@ mod tests {
         assert_eq!(n, 3);
         assert_eq!(
             got,
-            vec![
-                (10, "aaa".into()),
-                (20, "bbb".into()),
-                (30, "ccc".into())
-            ]
+            vec![(10, "aaa".into()), (20, "bbb".into()), (30, "ccc".into())]
         );
     }
 }

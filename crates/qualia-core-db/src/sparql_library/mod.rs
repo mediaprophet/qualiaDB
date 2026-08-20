@@ -1,4 +1,3 @@
-pub mod range_select_apply;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod range_bind;
 #[cfg(not(target_arch = "wasm32"))]
@@ -7,6 +6,7 @@ pub mod range_hash_join;
 pub mod range_join_select;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod range_optional;
+pub mod range_select_apply;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod range_union;
 #[cfg(not(target_arch = "wasm32"))]

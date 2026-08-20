@@ -83,7 +83,14 @@ impl TokenTrie {
         out: &mut [u32],
     ) -> usize {
         let mut count = 0;
-        self.walk(&self.root, byte_allowed, &mut [0u8; MAX_TRIE_DEPTH], 0, out, &mut count);
+        self.walk(
+            &self.root,
+            byte_allowed,
+            &mut [0u8; MAX_TRIE_DEPTH],
+            0,
+            out,
+            &mut count,
+        );
         count
     }
 
@@ -323,9 +330,7 @@ impl GrammarStateMachine {
                     Unconstrained
                 }
             }
-            Triple | Reified => {
-                self.transition_generic(c)
-            }
+            Triple | Reified => self.transition_generic(c),
             List => {
                 if c == ']' {
                     self.stack.pop();
@@ -479,9 +484,7 @@ impl GrammarStateMachine {
                 }
                 self.byte_allowed_parent(b)
             }
-            Start => {
-                c.is_whitespace() || c == '=' || c.is_alphabetic() || c == '_'
-            }
+            Start => c.is_whitespace() || c == '=' || c.is_alphabetic() || c == '_',
             CellExpr => {
                 c.is_whitespace()
                     || c.is_ascii_digit()
@@ -495,21 +498,33 @@ impl GrammarStateMachine {
                     || c == '?'
             }
             Ident => {
-                c.is_alphanumeric() || c == '_' || c == '.' || c == '-' || c == ':'
+                c.is_alphanumeric()
+                    || c == '_'
+                    || c == '.'
+                    || c == '-'
+                    || c == ':'
                     || c.is_whitespace()
-                    || c == '{' || c == '(' || c == ';'
+                    || c == '{'
+                    || c == '('
+                    || c == ';'
             }
             Number => c.is_ascii_digit() || c == '.' || c.is_whitespace() || c == ';',
             String => true, // Any byte can appear inside a string (escape sequences).
             Iri => b != b'>' && !c.is_whitespace() || b == b'>',
-            Block => {
-                c.is_whitespace() || c == '}' || c.is_alphabetic() || c == '_'
-            }
+            Block => c.is_whitespace() || c == '}' || c.is_alphabetic() || c == '_',
             List | Paren | Triple | Reified => {
-                c.is_whitespace() || c.is_ascii_digit() || c == '-'
-                    || c == '"' || c == '<' || c == '[' || c == '('
-                    || c == ']' || c == ')'
-                    || c.is_alphabetic() || c == '_' || c == '?'
+                c.is_whitespace()
+                    || c.is_ascii_digit()
+                    || c == '-'
+                    || c == '"'
+                    || c == '<'
+                    || c == '['
+                    || c == '('
+                    || c == ']'
+                    || c == ')'
+                    || c.is_alphabetic()
+                    || c == '_'
+                    || c == '?'
             }
             KeywordOrIdent => {
                 c.is_whitespace() || c.is_alphabetic() || c == '_' || c == '}' || c == '{'
@@ -522,23 +537,32 @@ impl GrammarStateMachine {
         use GrammarState::*;
         let c = b as char;
         match self.whitespace_parent {
-            Start | KeywordOrIdent => {
-                c == '=' || c == '{' || c.is_alphabetic() || c == '_'
-            }
+            Start | KeywordOrIdent => c == '=' || c == '{' || c.is_alphabetic() || c == '_',
             CellExpr => {
-                c.is_ascii_digit() || c == '-' || c == '"' || c == '<'
-                    || c == '[' || c == '(' || c.is_alphabetic() || c == '_' || c == '?'
+                c.is_ascii_digit()
+                    || c == '-'
+                    || c == '"'
+                    || c == '<'
+                    || c == '['
+                    || c == '('
+                    || c.is_alphabetic()
+                    || c == '_'
+                    || c == '?'
             }
-            Block => {
-                c == '}' || c.is_alphabetic() || c == '_'
-            }
-            Ident => {
-                c == '(' || c == '{' || c == ';' || c.is_alphabetic() || c == '_'
-            }
+            Block => c == '}' || c.is_alphabetic() || c == '_',
+            Ident => c == '(' || c == '{' || c == ';' || c.is_alphabetic() || c == '_',
             _ => {
-                c.is_ascii_digit() || c == '-' || c == '"' || c == '<'
-                    || c == '[' || c == '(' || c == ']' || c == ')'
-                    || c.is_alphabetic() || c == '_' || c == '?'
+                c.is_ascii_digit()
+                    || c == '-'
+                    || c == '"'
+                    || c == '<'
+                    || c == '['
+                    || c == '('
+                    || c == ']'
+                    || c == ')'
+                    || c.is_alphabetic()
+                    || c == '_'
+                    || c == '?'
             }
         }
     }

@@ -15,11 +15,21 @@ pub fn list() -> Value {
             rec.insert("maturity".into(), Value::String(d.maturity.into()));
             rec.insert(
                 "mcp_tools".into(),
-                Value::List(d.mcp_tools.iter().map(|t| Value::String((*t).into())).collect()),
+                Value::List(
+                    d.mcp_tools
+                        .iter()
+                        .map(|t| Value::String((*t).into()))
+                        .collect(),
+                ),
             );
             rec.insert(
                 "surfaces".into(),
-                Value::List(d.surfaces.iter().map(|t| Value::String((*t).into())).collect()),
+                Value::List(
+                    d.surfaces
+                        .iter()
+                        .map(|t| Value::String((*t).into()))
+                        .collect(),
+                ),
             );
             Value::Record(rec)
         })

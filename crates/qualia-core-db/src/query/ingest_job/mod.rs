@@ -35,9 +35,9 @@ pub use job::{
 #[cfg(not(target_arch = "wasm32"))]
 pub use resume::{adopt_legacy_scratch, continue_job, publish_job, resume_is_supported};
 #[cfg(not(target_arch = "wasm32"))]
-pub use status::{job_status, read_progress_json, IngestJobStatus};
-#[cfg(not(target_arch = "wasm32"))]
 pub use source::{
     detect_encoding, infer_rdf_format, open_ingest_source, DigestOutcome, DigestingReader,
     IngestEncoding, IngestRdfFormat, IngestSourceKind, OpenedSource, WINDOW_BYTES,
 };
+#[cfg(not(target_arch = "wasm32"))]
+pub use status::{job_status, read_progress_json, IngestJobStatus};

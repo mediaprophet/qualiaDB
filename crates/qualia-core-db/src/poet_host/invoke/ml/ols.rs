@@ -30,10 +30,7 @@ pub fn fit_ols(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     Ok(args::record([
         ("n", Value::U64(model.n as u64)),
         ("r_squared", Value::F64(model.r_squared)),
-        (
-            "coefficients",
-            args::f64_list_value(model.coefficients),
-        ),
+        ("coefficients", args::f64_list_value(model.coefficients)),
     ]))
 }
 

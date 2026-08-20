@@ -21,7 +21,7 @@ fn run(snap: &PoetSnapshot, args: &Value, span: Span, globally: bool) -> Result<
     } else {
         LtlFormula::Finally(pred)
     };
-    Ok(Value::Bool(
-        snap.with_live_quins(|quins| evaluate_ltl_trace(quins, &formula)),
-    ))
+    Ok(Value::Bool(snap.with_live_quins(|quins| {
+        evaluate_ltl_trace(quins, &formula)
+    })))
 }

@@ -63,9 +63,12 @@ pub fn emf_upload_field(args: &Value, span: Span) -> Result<Value, Diagnostic> {
         let ny = args::rec_u64(args, "ny").unwrap_or(0) as u32;
         let nz = args::rec_u64(args, "nz").unwrap_or(0) as u32;
         let nt = args::rec_u64(args, "nt").unwrap_or(0) as u32;
-        let cells_list = args::rec(args, "cells").and_then(args::list)
+        let cells_list = args::rec(args, "cells")
+            .and_then(args::list)
             .ok_or_else(|| args::bad(span, "emf_upload_field needs { cells: [...] }"))?;
-        let bounds = args::rec(args, "bounds").and_then(args::list).unwrap_or_default();
+        let bounds = args::rec(args, "bounds")
+            .and_then(args::list)
+            .unwrap_or_default();
         let bounds_arr: [f32; 6] = if bounds.len() >= 6 {
             [
                 bounds[0].as_f64().unwrap_or(-1.0) as f32,
@@ -98,7 +101,10 @@ pub fn emf_upload_field(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     #[cfg(target_arch = "wasm32")]
     {
         let _ = (args, span);
-        Err(args::bad(span, "emf_upload_field requires native build with gpu-runtime"))
+        Err(args::bad(
+            span,
+            "emf_upload_field requires native build with gpu-runtime",
+        ))
     }
 }
 
@@ -117,7 +123,9 @@ pub fn emf_render_slice(args: &Value, span: Span) -> Result<Value, Diagnostic> {
         let amplitude_scale = args::rec_f64(args, "amplitude_scale").unwrap_or(1.0) as f32;
         let phase_offset = args::rec_f64(args, "phase_offset").unwrap_or(0.0) as f32;
         let manifold_gain = args::rec_f64(args, "manifold_gain").unwrap_or(1.0) as f32;
-        let bounds = args::rec(args, "bounds").and_then(args::list).unwrap_or_default();
+        let bounds = args::rec(args, "bounds")
+            .and_then(args::list)
+            .unwrap_or_default();
         let bounds_arr: [f32; 6] = if bounds.len() >= 6 {
             [
                 bounds[0].as_f64().unwrap_or(-1.0) as f32,
@@ -134,8 +142,12 @@ pub fn emf_render_slice(args: &Value, span: Span) -> Result<Value, Diagnostic> {
         let (w, h, pixels) = super::gpu::slot_with(handle, |portal| {
             // Update slice params.
             portal.emf_update_slice_params(
-                slice_z, slice_t, bounds_arr,
-                amplitude_scale, phase_offset, manifold_gain,
+                slice_z,
+                slice_t,
+                bounds_arr,
+                amplitude_scale,
+                phase_offset,
+                manifold_gain,
             );
             // Render + readback in one call.
             portal.emf_render_slice_to_rgba8()
@@ -144,10 +156,7 @@ pub fn emf_render_slice(args: &Value, span: Span) -> Result<Value, Diagnostic> {
         .map_err(|e| args::bad(span, format!("emf_render_slice: {e}")))?;
 
         // Return the pixel data as a u64 byte list.
-        let pixel_values: Vec<Value> = pixels
-            .iter()
-            .map(|&b| Value::U64(b as u64))
-            .collect();
+        let pixel_values: Vec<Value> = pixels.iter().map(|&b| Value::U64(b as u64)).collect();
         Ok(args::record([
             ("rendered", Value::Bool(true)),
             ("width", Value::U64(w as u64)),
@@ -158,7 +167,10 @@ pub fn emf_render_slice(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     #[cfg(target_arch = "wasm32")]
     {
         let _ = (args, span);
-        Err(args::bad(span, "emf_render_slice requires native build with gpu-runtime"))
+        Err(args::bad(
+            span,
+            "emf_render_slice requires native build with gpu-runtime",
+        ))
     }
 }
 
@@ -176,7 +188,10 @@ pub fn emf_field_info(args: &Value, span: Span) -> Result<Value, Diagnostic> {
                 ("ny", Value::U64(ny as u64)),
                 ("nz", Value::U64(nz as u64)),
                 ("nt", Value::U64(nt as u64)),
-                ("cell_count", Value::U64((nx as u64) * (ny as u64) * (nz as u64) * (nt as u64))),
+                (
+                    "cell_count",
+                    Value::U64((nx as u64) * (ny as u64) * (nz as u64) * (nt as u64)),
+                ),
             ])
         })
         .ok_or_else(|| args::bad(span, "emf_field_info: invalid handle"))
@@ -184,14 +199,17 @@ pub fn emf_field_info(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     #[cfg(target_arch = "wasm32")]
     {
         let _ = (args, span);
-        Err(args::bad(span, "emf_field_info requires native build with gpu-runtime"))
+        Err(args::bad(
+            span,
+            "emf_field_info requires native build with gpu-runtime",
+        ))
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use super::super::{gpu_destroy, gpu_init};
     use super::*;
-    use super::super::{gpu_init, gpu_destroy};
 
     fn snap() -> crate::poet_host::PoetSnapshot {
         crate::poet_host::PoetSnapshot::default()
@@ -279,15 +297,27 @@ mod tests {
             ("ny", Value::U64(2)),
             ("nz", Value::U64(1)),
             ("nt", Value::U64(1)),
-            ("bounds", Value::List(vec![
-                Value::F64(-1.0), Value::F64(1.0),
-                Value::F64(-1.0), Value::F64(1.0),
-                Value::F64(-1.0), Value::F64(1.0),
-            ])),
+            (
+                "bounds",
+                Value::List(vec![
+                    Value::F64(-1.0),
+                    Value::F64(1.0),
+                    Value::F64(-1.0),
+                    Value::F64(1.0),
+                    Value::F64(-1.0),
+                    Value::F64(1.0),
+                ]),
+            ),
         ]);
         let upload_result = emf_upload_field(&upload_args, dummy_span()).expect("upload");
-        assert_eq!(args::rec(&upload_result, "uploaded"), Some(&Value::Bool(true)));
-        assert_eq!(args::rec(&upload_result, "cell_count"), Some(&Value::U64(4)));
+        assert_eq!(
+            args::rec(&upload_result, "uploaded"),
+            Some(&Value::Bool(true))
+        );
+        assert_eq!(
+            args::rec(&upload_result, "cell_count"),
+            Some(&Value::U64(4))
+        );
 
         // Render slice.
         let render_args = args::record([
@@ -297,15 +327,27 @@ mod tests {
             ("amplitude_scale", Value::F64(2.0)),
         ]);
         let render_result = emf_render_slice(&render_args, dummy_span()).expect("render");
-        assert_eq!(args::rec(&render_result, "rendered"), Some(&Value::Bool(true)));
+        assert_eq!(
+            args::rec(&render_result, "rendered"),
+            Some(&Value::Bool(true))
+        );
         let Value::List(pixels) = args::rec(&render_result, "pixels").unwrap() else {
             panic!("no pixels list")
         };
-        assert_eq!(pixels.len(), 16 * 16 * 4, "should have 16×16×4 RGBA8 pixels");
+        assert_eq!(
+            pixels.len(),
+            16 * 16 * 4,
+            "should have 16×16×4 RGBA8 pixels"
+        );
         // At least some non-black pixels.
-        let non_black = pixels.chunks(4).filter(|px| {
-            matches!(px[0], Value::U64(r) if r > 0) || matches!(px[1], Value::U64(g) if g > 0) || matches!(px[2], Value::U64(b) if b > 0)
-        }).count();
+        let non_black = pixels
+            .chunks(4)
+            .filter(|px| {
+                matches!(px[0], Value::U64(r) if r > 0)
+                    || matches!(px[1], Value::U64(g) if g > 0)
+                    || matches!(px[2], Value::U64(b) if b > 0)
+            })
+            .count();
         assert!(non_black > 0, "EMF slice should produce non-black pixels");
 
         // Cleanup.
@@ -328,7 +370,10 @@ mod tests {
         "#;
         let mut snap = snap();
         let result = snap.eval_fn(src, "go", vec![]);
-        assert!(result.is_err(), "expected error for invalid handle, got {result:?}");
+        assert!(
+            result.is_err(),
+            "expected error for invalid handle, got {result:?}"
+        );
         let err = result.unwrap_err();
         assert!(err.message.contains("invalid handle"), "got: {err:?}");
     }

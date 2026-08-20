@@ -78,10 +78,15 @@ pub fn inspect_legacy_scratch(dir: &Path) -> io::Result<IngestInspectReport> {
     let mut notes = vec![
         "legacy scratch (no job.json) — this is what the pre-job OSM ingest writes".into(),
         "cannot resume this layout as a job until `ingest-job adopt-scratch` copies it".into(),
-        format!("quin estimate ≈ {} (1M quins per full 45.8 MiB chunk)", runs.triples_estimate),
+        format!(
+            "quin estimate ≈ {} (1M quins per full 45.8 MiB chunk)",
+            runs.triples_estimate
+        ),
     ];
     if runs.partial_tail {
-        notes.push("last chunk is not a multiple of 48 bytes — treat as torn; do not adopt it".into());
+        notes.push(
+            "last chunk is not a multiple of 48 bytes — treat as torn; do not adopt it".into(),
+        );
     }
     Ok(IngestInspectReport {
         kind: "legacy_scratch".into(),
@@ -175,7 +180,11 @@ fn summarize_runs(dir: &Path) -> io::Result<RunSummary> {
     for ent in fs::read_dir(dir)? {
         let ent = ent?;
         let path = ent.path();
-        let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("").to_string();
+        let name = path
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or("")
+            .to_string();
         let meta = ent.metadata()?;
         let len = meta.len();
         bytes += len;
@@ -239,11 +248,7 @@ fn count_chunks(dir: &Path) -> u64 {
     fs::read_dir(dir)
         .map(|rd| {
             rd.flatten()
-                .filter(|e| {
-                    e.file_name()
-                        .to_string_lossy()
-                        .starts_with("chunk_")
-                })
+                .filter(|e| e.file_name().to_string_lossy().starts_with("chunk_"))
                 .count() as u64
         })
         .unwrap_or(0)

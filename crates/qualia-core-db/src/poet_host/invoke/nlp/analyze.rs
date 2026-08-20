@@ -16,12 +16,19 @@ pub fn analyze(args: &Value, span: Span) -> Result<Value, Diagnostic> {
         }
     };
     if text.len() > 256 * 1024 {
-        return Err(Diagnostic::new(DiagCode::E400, span, "nlp.analyze exceeds 256 KiB"));
+        return Err(Diagnostic::new(
+            DiagCode::E400,
+            span,
+            "nlp.analyze exceeds 256 KiB",
+        ));
     }
     let analysis = analyze_document(text);
     let mut rec = BTreeMap::new();
     rec.insert("tokens".into(), Value::U64(analysis.token_count as u64));
-    rec.insert("sentences".into(), Value::U64(analysis.sentence_count as u64));
+    rec.insert(
+        "sentences".into(),
+        Value::U64(analysis.sentence_count as u64),
+    );
     rec.insert("plans".into(), Value::U64(analysis.plans.len() as u64));
     rec.insert(
         "source_hash".into(),

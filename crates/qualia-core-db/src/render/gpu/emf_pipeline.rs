@@ -88,9 +88,7 @@ impl EmfState {
     pub(crate) fn new(device: &wgpu::Device, color_format: wgpu::TextureFormat) -> Self {
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("emf-volumetric-shader"),
-            source: wgpu::ShaderSource::Wgsl(
-                crate::shaders::viewport::EMF_VOLUMETRIC_WGSL.into(),
-            ),
+            source: wgpu::ShaderSource::Wgsl(crate::shaders::viewport::EMF_VOLUMETRIC_WGSL.into()),
         });
 
         let param_buf = device.create_buffer(&wgpu::BufferDescriptor {
@@ -109,7 +107,9 @@ impl EmfState {
                 ty: wgpu::BindingType::Buffer {
                     ty: wgpu::BufferBindingType::Uniform,
                     has_dynamic_offset: false,
-                    min_binding_size: std::num::NonZero::new(std::mem::size_of::<EmfSliceUniform>() as u64),
+                    min_binding_size: std::num::NonZero::new(
+                        std::mem::size_of::<EmfSliceUniform>() as u64,
+                    ),
                 },
                 count: None,
             }],
@@ -123,7 +123,9 @@ impl EmfState {
                 ty: wgpu::BindingType::Buffer {
                     ty: wgpu::BufferBindingType::Storage { read_only: true },
                     has_dynamic_offset: false,
-                    min_binding_size: std::num::NonZero::new(std::mem::size_of::<EmfFieldCell>() as u64),
+                    min_binding_size: std::num::NonZero::new(
+                        std::mem::size_of::<EmfFieldCell>() as u64
+                    ),
                 },
                 count: None,
             }],
@@ -222,11 +224,13 @@ impl super::PortalGpu {
             ));
         }
 
-        let field_buf = self.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("emf-field-storage"),
-            contents: bytemuck::cast_slice(cells),
-            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
-        });
+        let field_buf = self
+            .device
+            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("emf-field-storage"),
+                contents: bytemuck::cast_slice(cells),
+                usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+            });
 
         self.emf.field_buf = Some(field_buf);
         self.emf.cell_count = cells.len() as u32;
@@ -240,14 +244,15 @@ impl super::PortalGpu {
 
         // Rebuild the field bind group (group 1) with the new field buffer.
         let field_buf = self.emf.field_buf.as_ref().unwrap();
-        self.emf.field_bind_group = Some(self.device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("emf-field-bind"),
-            layout: &self.emf.pipeline.get_bind_group_layout(1),
-            entries: &[wgpu::BindGroupEntry {
-                binding: 0,
-                resource: field_buf.as_entire_binding(),
-            }],
-        }));
+        self.emf.field_bind_group =
+            Some(self.device.create_bind_group(&wgpu::BindGroupDescriptor {
+                label: Some("emf-field-bind"),
+                layout: &self.emf.pipeline.get_bind_group_layout(1),
+                entries: &[wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: field_buf.as_entire_binding(),
+                }],
+            }));
 
         Ok(())
     }
@@ -280,7 +285,8 @@ impl super::PortalGpu {
             manifold_gain,
             _pad: 0.0,
         };
-        self.queue.write_buffer(&self.emf.param_buf, 0, bytemuck::bytes_of(&params));
+        self.queue
+            .write_buffer(&self.emf.param_buf, 0, bytemuck::bytes_of(&params));
     }
 
     /// Render the current EMF slice to the portal's color target.
@@ -316,9 +322,11 @@ impl super::PortalGpu {
         if !self.emf.has_field() {
             return Err("no EMF field uploaded".into());
         }
-        let mut encoder = self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-            label: Some("emf-slice-encoder"),
-        });
+        let mut encoder = self
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("emf-slice-encoder"),
+            });
         {
             let view = self
                 .offscreen_texture
@@ -347,15 +355,16 @@ impl super::PortalGpu {
 
         let (w, h) = self.surface_size();
         let mut pixels = vec![0u8; (w * h * 4) as usize];
-        self.read_rgba8_into(&mut pixels).map_err(|e| e.to_string())?;
+        self.read_rgba8_into(&mut pixels)
+            .map_err(|e| e.to_string())?;
         Ok((w, h, pixels))
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::super::PortalGpu;
+    use super::*;
 
     #[test]
     fn emf_field_cell_size() {
@@ -415,7 +424,10 @@ mod tests {
         let (w, h, pixels) = portal.emf_render_slice_to_rgba8().expect("render+readback");
         assert_eq!(w, 32);
         assert_eq!(h, 32);
-        let non_black = pixels.chunks(4).filter(|px| px[0] > 0 || px[1] > 0 || px[2] > 0).count();
+        let non_black = pixels
+            .chunks(4)
+            .filter(|px| px[0] > 0 || px[1] > 0 || px[2] > 0)
+            .count();
         assert!(
             non_black > 0,
             "EMF slice should produce non-black pixels, got {non_black}"

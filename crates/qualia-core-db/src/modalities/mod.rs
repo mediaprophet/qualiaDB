@@ -88,17 +88,16 @@ pub use paraconsistent::{
 };
 pub mod blackboard;
 pub use blackboard::{
-    Constraint, ConstraintViolation, SemanticBlackboard, Channel,
-    OP_CONSTRAINT_HARD, OP_CONSTRAINT_PIN, OP_CONSTRAINT_SOFT,
-    MAX_CHANNELS, MAX_CONSTRAINTS_PER_CHANNEL, MAX_SUBSCRIBERS_PER_CHANNEL,
+    Channel, Constraint, ConstraintViolation, SemanticBlackboard, MAX_CHANNELS,
+    MAX_CONSTRAINTS_PER_CHANNEL, MAX_SUBSCRIBERS_PER_CHANNEL, OP_CONSTRAINT_HARD,
+    OP_CONSTRAINT_PIN, OP_CONSTRAINT_SOFT,
 };
 pub mod evidential_etau;
 pub use evidential_etau::{
-    EvidentialClaim, EvidentialError, EvidentialPair, EvidentialRoute,
-    OP_EVIDENTIAL_PACK, OP_EVIDENTIAL_SCORE, OP_EVIDENTIAL_VC,
-    evidential_saturation, evidential_score, extract_evidential,
-    f16_to_f32, f32_to_f16, is_evidentially_saturated,
-    pack_evidential, route_evidential, route_evidential_batch,
+    evidential_saturation, evidential_score, extract_evidential, f16_to_f32, f32_to_f16,
+    is_evidentially_saturated, pack_evidential, route_evidential, route_evidential_batch,
+    EvidentialClaim, EvidentialError, EvidentialPair, EvidentialRoute, OP_EVIDENTIAL_PACK,
+    OP_EVIDENTIAL_SCORE, OP_EVIDENTIAL_VC,
 };
 pub mod probabilistic;
 pub use probabilistic::{evaluate_threshold, BayesianNetwork, BayesianNode, MAX_BAYESIAN_NODES};

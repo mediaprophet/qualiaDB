@@ -40,11 +40,9 @@ pub fn emit_from_normalized(source: &str, norms: &[Normalized]) -> Vec<Annotatio
         .iter()
         .filter_map(|n| {
             let (span, iri, kind) = match n {
-                Normalized::DateIso { span, .. } => (
-                    *span,
-                    "https://qualiadb.org/datatype/isoDate",
-                    "date",
-                ),
+                Normalized::DateIso { span, .. } => {
+                    (*span, "https://qualiadb.org/datatype/isoDate", "date")
+                }
                 Normalized::Number { span, unit, .. } => (
                     *span,
                     if unit.is_some() {
@@ -87,7 +85,9 @@ mod tests {
         let mut plans = emit_from_hits(src, &hits);
         plans.extend(emit_from_normalized(src, &normalize_dates_and_numbers(src)));
         assert!(plans.iter().any(|p| p.term_iri.ends_with("NorthSpring")));
-        assert!(plans.iter().any(|p| p.term_iri.contains("timothy_charles_holborn")));
+        assert!(plans
+            .iter()
+            .any(|p| p.term_iri.contains("timothy_charles_holborn")));
         assert!(plans.iter().any(|p| p.kind == "date"));
         assert!(plans.iter().any(|p| p.kind == "number"));
     }

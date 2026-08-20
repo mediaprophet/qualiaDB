@@ -44,12 +44,24 @@ pub fn gpu_backend_info(_args: &Value, _span: Span) -> Result<Value, Diagnostic>
             ("webgl2_fallback", Value::Bool(false)),
             ("device_name", Value::String(caps.name.clone())),
             ("backend_label", Value::String(caps.backend_label().into())),
-            ("device_type", Value::String(caps.device_type_label().into())),
+            (
+                "device_type",
+                Value::String(caps.device_type_label().into()),
+            ),
             ("shader_f16", Value::Bool(caps.features.shader_f16)),
             ("subgroup", Value::Bool(caps.features.subgroup)),
-            ("cooperative_matrix", Value::Bool(caps.features.cooperative_matrix)),
-            ("max_compute_workgroup_size_x", Value::U64(caps.limits.max_compute_workgroup_size_x as u64)),
-            ("max_storage_buffer_binding_size", Value::U64(caps.limits.max_storage_buffer_binding_size)),
+            (
+                "cooperative_matrix",
+                Value::Bool(caps.features.cooperative_matrix),
+            ),
+            (
+                "max_compute_workgroup_size_x",
+                Value::U64(caps.limits.max_compute_workgroup_size_x as u64),
+            ),
+            (
+                "max_storage_buffer_binding_size",
+                Value::U64(caps.limits.max_storage_buffer_binding_size),
+            ),
         ]))
     }
     #[cfg(target_arch = "wasm32")]
@@ -75,14 +87,24 @@ pub fn gpu_backend_info(_args: &Value, _span: Span) -> Result<Value, Diagnostic>
         };
         Ok(args::record([
             ("backend", Value::String(backend.into())),
-            ("available", Value::Bool(webgpu_available || webgl2_available)),
+            (
+                "available",
+                Value::Bool(webgpu_available || webgl2_available),
+            ),
             ("webgl2_fallback", Value::Bool(webgl2_available)),
-            ("device_name", Value::String(
-                if webgpu_available { "WebGPU (browser)" }
-                else if webgl2_available { "WebGL2 (browser fallback)" }
-                else { "no GPU adapter" }
-                .into(),
-            )),
+            (
+                "device_name",
+                Value::String(
+                    if webgpu_available {
+                        "WebGPU (browser)"
+                    } else if webgl2_available {
+                        "WebGL2 (browser fallback)"
+                    } else {
+                        "no GPU adapter"
+                    }
+                    .into(),
+                ),
+            ),
         ]))
     }
 }
@@ -171,7 +193,10 @@ mod tests {
         }
         "#;
         let result = eval(src);
-        assert!(matches!(result, Value::Record(_)), "expected record, got {result:?}");
+        assert!(
+            matches!(result, Value::Record(_)),
+            "expected record, got {result:?}"
+        );
         if let Value::Record(m) = &result {
             let backend = m.get("backend").expect("has backend");
             match backend {

@@ -48,7 +48,9 @@ pub fn as_bool(v: &Value) -> Option<bool> {
 pub fn as_str(v: &Value) -> Option<&str> {
     match v {
         Value::String(s) | Value::Iri(s) => Some(s.as_str()),
-        Value::Prefixed(p, l) => Some(l.as_str()).filter(|_| p.is_empty()).or(Some(l.as_str())),
+        Value::Prefixed(p, l) => Some(l.as_str())
+            .filter(|_| p.is_empty())
+            .or(Some(l.as_str())),
         _ => None,
     }
 }
@@ -93,10 +95,7 @@ pub fn list(v: &Value) -> Option<&[Value]> {
 }
 
 pub fn f64s(v: &Value) -> Option<Vec<f64>> {
-    list(v)?
-        .iter()
-        .map(as_f64)
-        .collect()
+    list(v)?.iter().map(as_f64).collect()
 }
 
 pub fn u8s(v: &Value) -> Option<Vec<u8>> {
@@ -108,15 +107,27 @@ pub fn u8s(v: &Value) -> Option<Vec<u8>> {
 
 pub fn pair_f64(args: &Value, span: Span, what: &str) -> Result<(f64, f64), Diagnostic> {
     let xs = list(args).ok_or_else(|| bad(span, format!("{what} needs [a, b]")))?;
-    let a = xs.first().and_then(as_f64).ok_or_else(|| bad(span, format!("{what} needs two numbers")))?;
-    let b = xs.get(1).and_then(as_f64).ok_or_else(|| bad(span, format!("{what} needs two numbers")))?;
+    let a = xs
+        .first()
+        .and_then(as_f64)
+        .ok_or_else(|| bad(span, format!("{what} needs two numbers")))?;
+    let b = xs
+        .get(1)
+        .and_then(as_f64)
+        .ok_or_else(|| bad(span, format!("{what} needs two numbers")))?;
     Ok((a, b))
 }
 
 pub fn pair_u64(args: &Value, span: Span, what: &str) -> Result<(u64, u64), Diagnostic> {
     let xs = list(args).ok_or_else(|| bad(span, format!("{what} needs [a, b]")))?;
-    let a = xs.first().and_then(as_u64).ok_or_else(|| bad(span, format!("{what} needs two integers")))?;
-    let b = xs.get(1).and_then(as_u64).ok_or_else(|| bad(span, format!("{what} needs two integers")))?;
+    let a = xs
+        .first()
+        .and_then(as_u64)
+        .ok_or_else(|| bad(span, format!("{what} needs two integers")))?;
+    let b = xs
+        .get(1)
+        .and_then(as_u64)
+        .ok_or_else(|| bad(span, format!("{what} needs two integers")))?;
     Ok((a, b))
 }
 

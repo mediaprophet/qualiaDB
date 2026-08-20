@@ -194,9 +194,18 @@ mod tests {
     fn t67_reconciled_comment_present() {
         // T67: verify the reconciled comment block is present in this file.
         let source = include_str!("axis_role.rs");
-        assert!(source.contains("t vs μ Reconciliation"), "missing reconciliation header");
-        assert!(source.contains("Coordinate Time"), "missing t = Coordinate Time");
-        assert!(source.contains("Provenance Weight / Carrier"), "missing μ = provenance carrier");
+        assert!(
+            source.contains("t vs μ Reconciliation"),
+            "missing reconciliation header"
+        );
+        assert!(
+            source.contains("Coordinate Time"),
+            "missing t = Coordinate Time"
+        );
+        assert!(
+            source.contains("Provenance Weight / Carrier"),
+            "missing μ = provenance carrier"
+        );
         assert!(source.contains("T67"), "missing T67 cross-reference");
     }
 
@@ -204,13 +213,24 @@ mod tests {
     fn t67_tensor10d_comments_reconciled() {
         // T67: verify the Tensor10D field comments in tensor/mod.rs are reconciled.
         let source = include_str!("../tensor/mod.rs");
-        assert!(source.contains("Coordinate Time"), "tensor/mod.rs t field not reconciled");
-        assert!(source.contains("Provenance Weight / Carrier"), "tensor/mod.rs mu field not reconciled");
-        assert!(source.contains("T67"), "tensor/mod.rs missing T67 cross-reference");
+        assert!(
+            source.contains("Coordinate Time"),
+            "tensor/mod.rs t field not reconciled"
+        );
+        assert!(
+            source.contains("Provenance Weight / Carrier"),
+            "tensor/mod.rs mu field not reconciled"
+        );
+        assert!(
+            source.contains("T67"),
+            "tensor/mod.rs missing T67 cross-reference"
+        );
         // The t field should be labeled "Coordinate Time" in its doc comment.
         let t_idx = source.find("pub t: f32").unwrap();
         let before_t = &source[..t_idx];
-        assert!(before_t.contains("Coordinate Time"),
-            "tensor/mod.rs t field doc should say 'Coordinate Time'");
+        assert!(
+            before_t.contains("Coordinate Time"),
+            "tensor/mod.rs t field doc should say 'Coordinate Time'"
+        );
     }
 }

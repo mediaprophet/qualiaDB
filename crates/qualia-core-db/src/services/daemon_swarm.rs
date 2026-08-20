@@ -1561,7 +1561,10 @@ pub mod swarm {
 
             // Clean agent (0 faults, no usury)
             let clean_agent = AgentComputeCandidate::new(0x1001, 0, false);
-            assert_eq!(clean_agent.priority(), crate::governance::coordination::PRIORITY_BASE);
+            assert_eq!(
+                clean_agent.priority(),
+                crate::governance::coordination::PRIORITY_BASE
+            );
             assert_eq!(
                 orchestrator.compute_agent_priority(0, false),
                 crate::governance::coordination::PRIORITY_BASE

@@ -14,7 +14,8 @@ pub fn price(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let r = black_scholes_price_and_greeks(
         kind,
         args::rec_f64(args_v, "spot").ok_or_else(|| args::bad(span, "black_scholes needs spot"))?,
-        args::rec_f64(args_v, "strike").ok_or_else(|| args::bad(span, "black_scholes needs strike"))?,
+        args::rec_f64(args_v, "strike")
+            .ok_or_else(|| args::bad(span, "black_scholes needs strike"))?,
         args::rec_f64(args_v, "rate").unwrap_or(0.0),
         args::rec_f64(args_v, "dividend").unwrap_or(0.0),
         args::rec_f64(args_v, "vol").ok_or_else(|| args::bad(span, "black_scholes needs vol"))?,

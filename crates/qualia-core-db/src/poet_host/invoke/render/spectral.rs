@@ -14,22 +14,18 @@ use poet_vibe::{Diagnostic, Span, Value};
 
 /// `Spectral.emf_to_spd` — EMF `[α, μ, σ]` → 41-sample SPD (380–780 nm).
 pub fn emf_to_spd_fn(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
-    let alpha = args::rec_f64(args_v, "alpha").ok_or_else(|| {
-        args::bad(span, "emf_to_spd needs { alpha: f64, mu: f64, sigma: f64 }")
-    })?;
+    let alpha = args::rec_f64(args_v, "alpha")
+        .ok_or_else(|| args::bad(span, "emf_to_spd needs { alpha: f64, mu: f64, sigma: f64 }"))?;
     let mu = args::rec_f64(args_v, "mu").unwrap_or(0.0);
     let sigma = args::rec_f64(args_v, "sigma").unwrap_or(0.5);
     let spd = emf_to_spd(alpha as f32, mu as f32, sigma as f32);
-    Ok(args::f64_list_value(
-        spd.samples.iter().map(|&s| s as f64),
-    ))
+    Ok(args::f64_list_value(spd.samples.iter().map(|&s| s as f64)))
 }
 
 /// `Spectral.spd_to_xyz` — 41-sample SPD → CIE XYZ tristimulus.
 pub fn spd_to_xyz_fn(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
-    let samples = args::rec_f64_list(args_v, "spd").ok_or_else(|| {
-        args::bad(span, "spd_to_xyz needs { spd: [f64; 41] }")
-    })?;
+    let samples = args::rec_f64_list(args_v, "spd")
+        .ok_or_else(|| args::bad(span, "spd_to_xyz needs { spd: [f64; 41] }"))?;
     if samples.len() < SPD_SAMPLES {
         return Err(args::bad(
             span,
@@ -50,9 +46,8 @@ pub fn spd_to_xyz_fn(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
 
 /// `Spectral.emf_to_rgb` — EMF `[α, μ, σ]` → linear sRGB + 8-bit display sRGB.
 pub fn emf_to_rgb_fn(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
-    let alpha = args::rec_f64(args_v, "alpha").ok_or_else(|| {
-        args::bad(span, "emf_to_rgb needs { alpha: f64, mu: f64, sigma: f64 }")
-    })?;
+    let alpha = args::rec_f64(args_v, "alpha")
+        .ok_or_else(|| args::bad(span, "emf_to_rgb needs { alpha: f64, mu: f64, sigma: f64 }"))?;
     let mu = args::rec_f64(args_v, "mu").unwrap_or(0.0);
     let sigma = args::rec_f64(args_v, "sigma").unwrap_or(0.5);
     let lin = emf_to_linear_rgb(alpha as f32, mu as f32, sigma as f32);
@@ -71,7 +66,10 @@ pub fn emf_to_rgb_fn(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
 /// `Spectral.blend` — spectral-space blend of two EMF payloads → XYZ.
 pub fn blend_fn(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let alpha_a = args::rec_f64(args_v, "alpha_a").ok_or_else(|| {
-        args::bad(span, "blend needs { alpha_a, mu_a, sigma_a, alpha_b, mu_b, sigma_b, t }")
+        args::bad(
+            span,
+            "blend needs { alpha_a, mu_a, sigma_a, alpha_b, mu_b, sigma_b, t }",
+        )
     })?;
     let mu_a = args::rec_f64(args_v, "mu_a").unwrap_or(0.0);
     let sigma_a = args::rec_f64(args_v, "sigma_a").unwrap_or(0.2);
@@ -80,8 +78,12 @@ pub fn blend_fn(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let sigma_b = args::rec_f64(args_v, "sigma_b").unwrap_or(0.8);
     let t = args::rec_f64(args_v, "t").unwrap_or(0.5);
     let xyz = spectral_blend_emf(
-        alpha_a as f32, mu_a as f32, sigma_a as f32,
-        alpha_b as f32, mu_b as f32, sigma_b as f32,
+        alpha_a as f32,
+        mu_a as f32,
+        sigma_a as f32,
+        alpha_b as f32,
+        mu_b as f32,
+        sigma_b as f32,
         t as f32,
     );
     Ok(args::record([
@@ -93,9 +95,8 @@ pub fn blend_fn(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
 
 /// `Spectral.gamut_map` — map an XYZ colour into the sRGB display gamut.
 pub fn gamut_map_fn(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
-    let x = args::rec_f64(args_v, "x").ok_or_else(|| {
-        args::bad(span, "gamut_map needs { x: f64, y: f64, z: f64 }")
-    })?;
+    let x = args::rec_f64(args_v, "x")
+        .ok_or_else(|| args::bad(span, "gamut_map needs { x: f64, y: f64, z: f64 }"))?;
     let y = args::rec_f64(args_v, "y").unwrap_or(1.0);
     let z = args::rec_f64(args_v, "z").unwrap_or(1.0);
     let mapped = gamut_map_clamp(&crate::render::spectral_kernel::Xyz::new(
@@ -148,7 +149,10 @@ mod tests {
             Value::Record(m) => {
                 let g = m.get("display_g").and_then(args::as_u64).unwrap();
                 let r_ch = m.get("display_r").and_then(args::as_u64).unwrap();
-                assert!(g >= r_ch, "green should dominate at sigma=0.5: r={r_ch} g={g}");
+                assert!(
+                    g >= r_ch,
+                    "green should dominate at sigma=0.5: r={r_ch} g={g}"
+                );
                 let css = m.get("css");
                 assert!(css.is_some(), "should return css string");
             }
@@ -160,8 +164,12 @@ mod tests {
     fn blend_endpoints_match_inputs() {
         // At t=0, blend should equal first EMF's XYZ.
         let args = rec(&[
-            ("alpha_a", Value::F64(1.0)), ("mu_a", Value::F64(0.0)), ("sigma_a", Value::F64(0.2)),
-            ("alpha_b", Value::F64(1.0)), ("mu_b", Value::F64(0.0)), ("sigma_b", Value::F64(0.8)),
+            ("alpha_a", Value::F64(1.0)),
+            ("mu_a", Value::F64(0.0)),
+            ("sigma_a", Value::F64(0.2)),
+            ("alpha_b", Value::F64(1.0)),
+            ("mu_b", Value::F64(0.0)),
+            ("sigma_b", Value::F64(0.8)),
             ("t", Value::F64(0.0)),
         ]);
         let r = blend_fn(&args, poet_vibe::Span::new(0, 0)).unwrap();
@@ -198,7 +206,10 @@ mod tests {
         let r = spd_to_xyz_fn(&xyz_args, poet_vibe::Span::new(0, 0)).unwrap();
         if let Value::Record(m) = r {
             let y = m.get("y").and_then(args::as_f64).unwrap();
-            assert!(y.is_finite() && y >= 0.0, "Y should be finite and non-negative: y={y}");
+            assert!(
+                y.is_finite() && y >= 0.0,
+                "Y should be finite and non-negative: y={y}"
+            );
         }
     }
 }

@@ -1,7 +1,9 @@
 //! Model-free text ingest — `hypermedia::TextProcessor`. Word-processor start.
 
 use super::super::args;
-use crate::hypermedia::{content_digest, AssetRef, AssetRole, HypermediaContainer, Processor, TextProcessor};
+use crate::hypermedia::{
+    content_digest, AssetRef, AssetRole, HypermediaContainer, Processor, TextProcessor,
+};
 use poet_vibe::{Diagnostic, Span, Value};
 
 pub fn ingest(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
@@ -42,7 +44,9 @@ mod tests {
         {
             Value::Record(r) => match r.get("topics") {
                 Some(Value::List(ts)) => {
-                    assert!(ts.iter().any(|t| matches!(t, Value::String(s) if s == "finance")))
+                    assert!(ts
+                        .iter()
+                        .any(|t| matches!(t, Value::String(s) if s == "finance")))
                 }
                 other => panic!("{other:?}"),
             },

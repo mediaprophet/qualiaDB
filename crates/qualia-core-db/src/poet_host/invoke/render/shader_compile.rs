@@ -88,8 +88,10 @@ pub fn gpu_validate_shader(args: &Value, span: Span) -> Result<Value, Diagnostic
             .collect();
 
         // Run naga validation.
-        let mut validator =
-            naga::valid::Validator::new(naga::valid::ValidationFlags::all(), naga::valid::Capabilities::all());
+        let mut validator = naga::valid::Validator::new(
+            naga::valid::ValidationFlags::all(),
+            naga::valid::Capabilities::all(),
+        );
         let mut errors: Vec<String> = Vec::new();
         if let Err(e) = validator.validate(&module) {
             errors.push(format!("naga validation: {e}"));
@@ -177,22 +179,20 @@ pub fn gpu_compile_shader(args: &Value, span: Span) -> Result<Value, Diagnostic>
         let entry = args::rec_str(args, "entry").unwrap_or("main").to_string();
 
         // Validate first (catch errors before GPU shader creation).
-        let module = naga::front::wgsl::parse_str(wgsl).map_err(|e| {
-            args::bad(span, format!("gpu_compile_shader: WGSL parse error: {e}"))
-        })?;
+        let module = naga::front::wgsl::parse_str(wgsl)
+            .map_err(|e| args::bad(span, format!("gpu_compile_shader: WGSL parse error: {e}")))?;
         let mut validator = naga::valid::Validator::new(
             naga::valid::ValidationFlags::all(),
             naga::valid::Capabilities::all(),
         );
-        validator.validate(&module).map_err(|e| {
-            args::bad(span, format!("gpu_compile_shader: naga validation: {e}"))
-        })?;
+        validator
+            .validate(&module)
+            .map_err(|e| args::bad(span, format!("gpu_compile_shader: naga validation: {e}")))?;
 
-        let shader_id = super::gpu::slot_with(handle, |portal| {
-            portal.compile_shader_module(wgsl, &entry)
-        })
-        .ok_or_else(|| args::bad(span, "gpu_compile_shader: invalid handle"))?
-        .map_err(|e| args::bad(span, format!("gpu_compile_shader: {e}")))?;
+        let shader_id =
+            super::gpu::slot_with(handle, |portal| portal.compile_shader_module(wgsl, &entry))
+                .ok_or_else(|| args::bad(span, "gpu_compile_shader: invalid handle"))?
+                .map_err(|e| args::bad(span, format!("gpu_compile_shader: {e}")))?;
 
         Ok(args::record([
             ("compiled", Value::Bool(true)),
@@ -305,9 +305,16 @@ fn vs_main(@location(0) pos: vec2<f32>) -> @builtin(position) vec4<f32> {
         }
         "#;
         let result = eval(src);
-        assert!(matches!(result, Value::Record(_)), "expected record, got {result:?}");
+        assert!(
+            matches!(result, Value::Record(_)),
+            "expected record, got {result:?}"
+        );
         if let Value::Record(m) = &result {
-            assert_eq!(m.get("valid"), Some(&Value::Bool(true)), "shader should be valid");
+            assert_eq!(
+                m.get("valid"),
+                Some(&Value::Bool(true)),
+                "shader should be valid"
+            );
         }
     }
 }

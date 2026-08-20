@@ -30,7 +30,11 @@ pub fn normalize_dates_and_numbers(source: &str) -> Vec<Normalized> {
             out.push(norm);
             continue;
         }
-        i += source[i..].chars().next().map(|c| c.len_utf8()).unwrap_or(1);
+        i += source[i..]
+            .chars()
+            .next()
+            .map(|c| c.len_utf8())
+            .unwrap_or(1);
     }
     out
 }

@@ -137,14 +137,8 @@ pub fn resolve_id_with(id: &str, attached: bool) -> Value {
     let mut rec = BTreeMap::new();
     rec.insert("id".into(), Value::String(id.into()));
     rec.insert("vibe_bound".into(), Value::Bool(binding.is_some()));
-    rec.insert(
-        "honesty".into(),
-        Value::String(honesty.to_string()),
-    );
-    rec.insert(
-        "human_surface".into(),
-        Value::String("poet".into()),
-    );
+    rec.insert("honesty".into(), Value::String(honesty.to_string()));
+    rec.insert("human_surface".into(), Value::String("poet".into()));
     if let Some(b) = binding {
         rec.insert("required".into(), Value::Bool(b.required));
         rec.insert("family".into(), Value::String(b.family.into()));
@@ -167,9 +161,7 @@ pub fn resolve_id_with(id: &str, attached: bool) -> Value {
 pub fn engine_families_mcp_only() -> Vec<&'static CapabilityDescriptor> {
     CAPABILITY_DESCRIPTORS
         .iter()
-        .filter(|d| {
-            !VIBE_0_1.iter().any(|b| b.family == d.name) && !d.mcp_tools.is_empty()
-        })
+        .filter(|d| !VIBE_0_1.iter().any(|b| b.family == d.name) && !d.mcp_tools.is_empty())
         .collect()
 }
 
@@ -182,10 +174,7 @@ mod tests {
         match resolve_id("graph.read") {
             Value::Record(r) => {
                 assert_eq!(r.get("vibe_bound"), Some(&Value::Bool(true)));
-                assert_eq!(
-                    r.get("honesty"),
-                    Some(&Value::String("partial".into()))
-                );
+                assert_eq!(r.get("honesty"), Some(&Value::String("partial".into())));
             }
             other => panic!("{other:?}"),
         }
@@ -195,10 +184,7 @@ mod tests {
     fn graph_read_is_live_when_attached() {
         match resolve_id_with("graph.read", true) {
             Value::Record(r) => {
-                assert_eq!(
-                    r.get("honesty"),
-                    Some(&Value::String("live".into()))
-                );
+                assert_eq!(r.get("honesty"), Some(&Value::String("live".into())));
             }
             other => panic!("{other:?}"),
         }

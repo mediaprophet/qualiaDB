@@ -8,9 +8,9 @@ use rio_api::parser::{QuadsParser, TriplesParser};
 use rio_turtle::{NQuadsParser, NTriplesParser, TriGParser, TurtleParser};
 use rio_xml::RdfXmlParser;
 
+use crate::q_hash;
 use crate::query::cbor_compiler::parse_cbor_ld_to_quin;
 use crate::query::ingest_job::IngestRdfFormat;
-use crate::q_hash;
 
 /// Object-field hashes keep bits 60–63 free for resolver type tags.
 pub const OBJECT_IRI_MASK: u64 = 0x0FFF_FFFF_FFFF_FFFF;
@@ -199,7 +199,9 @@ where
         .read_to_end(&mut bytes)
         .map_err(|e| format!("YAML-LD read: {e}"))?;
     if bytes.len() > 32 * 1024 * 1024 {
-        return Err("YAML-LD ingest is limited to 32 MiB (use Turtle/N-Triples/N-Quads for dumps)".into());
+        return Err(
+            "YAML-LD ingest is limited to 32 MiB (use Turtle/N-Triples/N-Quads for dumps)".into(),
+        );
     }
     let v: serde_json::Value =
         serde_yaml::from_slice(&bytes).map_err(|e| format!("YAML-LD: {e}"))?;
@@ -424,7 +426,10 @@ where
                 // length is not returned by the quin parser, so we require a
                 // concatenated stream of standalone quin arrays decoded via
                 // a 1-byte scan for the next array header.
-                if let Some(pos) = rest.iter().skip(1).position(|&b| (0x80..=0x97).contains(&b) || b == 0x9f)
+                if let Some(pos) = rest
+                    .iter()
+                    .skip(1)
+                    .position(|&b| (0x80..=0x97).contains(&b) || b == 0x9f)
                 {
                     rest = &rest[pos + 1..];
                 } else {
@@ -438,10 +443,7 @@ where
 }
 
 /// Helper for tests / small in-memory sources.
-pub fn parse_bytes_to_raw(
-    format: IngestRdfFormat,
-    bytes: &[u8],
-) -> Result<Vec<RawTriple>, String> {
+pub fn parse_bytes_to_raw(format: IngestRdfFormat, bytes: &[u8]) -> Result<Vec<RawTriple>, String> {
     let mut out = Vec::new();
     parse_triples_format(format, Cursor::new(bytes), None, &mut |t| {
         out.push(t);
@@ -533,6 +535,9 @@ mod tests {
         .unwrap();
         assert_eq!(nt[0].subject, ttl[0].subject);
         assert_eq!(nt[0].object, ttl[0].object);
-        assert_eq!(object_iri_hash(&nt[0].object), object_iri_hash("http://ex/o"));
+        assert_eq!(
+            object_iri_hash(&nt[0].object),
+            object_iri_hash("http://ex/o")
+        );
     }
 }

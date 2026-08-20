@@ -69,11 +69,17 @@ pub fn factor(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     }
     let disc = b * b - 4.0 * a * c;
     if disc < 0.0 {
-        return Err(args::bad(span, "factor: discriminant is negative (no real roots)"));
+        return Err(args::bad(
+            span,
+            "factor: discriminant is negative (no real roots)",
+        ));
     }
     let factored = sa::factor_quadratic(a, b, c, var)
         .ok_or_else(|| args::bad(span, "factor: no real factorisation"))?;
-    Ok(args::record([("factored", Value::String(factored.to_string()))]))
+    Ok(args::record([(
+        "factored",
+        Value::String(factored.to_string()),
+    )]))
 }
 
 /// Symbolic roots of `a·x² + b·x + c = 0`. Each root is returned as a record with the

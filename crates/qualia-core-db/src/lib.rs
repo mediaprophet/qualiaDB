@@ -427,14 +427,14 @@ pub mod entity_view;
 /// Hypermedia semantic library — asset ⊕ analytics ⊕ related-assets bound as a semantic graph (not a
 /// directory). See `docs/plans/hypermedia-semantic-library.md`.
 pub mod hypermedia;
-pub mod poet_host;
-pub mod text_span;
 /// Document NLP (tokenize, gazetteer, span plans). Engine capability, not Vibe.
 pub mod nlp;
+pub mod poet_host;
 pub mod qubo_compiler;
 pub mod render;
 #[cfg(all(target_arch = "wasm32", feature = "portal"))]
 pub mod spatial_wasm;
+pub mod text_span;
 #[cfg(all(
     target_arch = "wasm32",
     any(

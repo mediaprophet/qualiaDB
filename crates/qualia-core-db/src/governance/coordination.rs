@@ -435,14 +435,11 @@ pub fn execute_coordination_with_seams(
                 let root = stack[sp - 2];
                 let agent = stack[sp - 3];
                 sp -= 3;
-                let granted = eval_authorization_grant(
-                    agent,
-                    root,
-                    timestamp,
-                    ctx.current_epoch,
-                    |a, r| (ctx.seams.verify_root_delegation)(a, r),
-                )
-                .map_err(CoordVmError::Fault)?;
+                let granted =
+                    eval_authorization_grant(agent, root, timestamp, ctx.current_epoch, |a, r| {
+                        (ctx.seams.verify_root_delegation)(a, r)
+                    })
+                    .map_err(CoordVmError::Fault)?;
                 stack[sp] = u64::from(granted);
                 sp += 1;
                 outcome.granted = Some(granted);
@@ -460,7 +457,12 @@ pub fn execute_coordination_with_seams(
                     Ok(contract) => {
                         outcome.contract = Some(contract);
                     }
-                    Err(fault @ CoordFault::InsufficientGlobalResources { declared, global_limit }) => {
+                    Err(
+                        fault @ CoordFault::InsufficientGlobalResources {
+                            declared,
+                            global_limit,
+                        },
+                    ) => {
                         (ctx.seams.yield_to_suspended_queue)(declared, global_limit);
                         return Err(CoordVmError::Fault(fault));
                     }
@@ -480,7 +482,11 @@ pub fn execute_coordination_with_seams(
                 sp -= 4;
                 let rec = eval_performance_rating(agent, declared, actual, validation);
                 let vc_hash = (ctx.seams.mint_performance_vc)(agent, declared, actual, validation);
-                let hash = if vc_hash != 0 { vc_hash } else { perf_vc_hash(&rec) };
+                let hash = if vc_hash != 0 {
+                    vc_hash
+                } else {
+                    perf_vc_hash(&rec)
+                };
                 if sp >= COORD_STACK_DEPTH {
                     return Err(CoordVmError::StackOverflow);
                 }
@@ -793,7 +799,9 @@ mod tests {
         let err = execute_coordination_with_seams(&prog_err, &ctx);
         assert!(matches!(
             err,
-            Err(CoordVmError::Fault(CoordFault::InsufficientGlobalResources { .. }))
+            Err(CoordVmError::Fault(
+                CoordFault::InsufficientGlobalResources { .. }
+            ))
         ));
         assert_eq!(yielded.load(Ordering::SeqCst), 3000);
     }

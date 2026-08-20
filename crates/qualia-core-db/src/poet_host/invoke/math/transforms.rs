@@ -61,10 +61,13 @@ mod tests {
                     Some(Value::List(xs)) => xs,
                     other => panic!("magnitude: {other:?}"),
                 };
-                assert_eq!(match r.get("n") {
-                    Some(Value::U64(n)) => *n,
-                    other => panic!("n: {other:?}"),
-                }, 4);
+                assert_eq!(
+                    match r.get("n") {
+                        Some(Value::U64(n)) => *n,
+                        other => panic!("n: {other:?}"),
+                    },
+                    4
+                );
                 assert!(match &re[0] {
                     Value::F64(x) => (x - 4.0).abs() < 1e-9,
                     _ => false,

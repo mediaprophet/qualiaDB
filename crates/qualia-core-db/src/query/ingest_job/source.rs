@@ -123,7 +123,9 @@ impl<R: Read> DigestingReader<R> {
 
     pub fn finish(mut self) -> io::Result<([u8; 32], u64, u64, Option<[u8; 32]>)> {
         self.flush_tail()?;
-        let full: [u8; 32] = std::mem::replace(&mut self.hasher, Sha256::new()).finalize().into();
+        let full: [u8; 32] = std::mem::replace(&mut self.hasher, Sha256::new())
+            .finalize()
+            .into();
         self.publish_outcome(full);
         self.finalized = true;
         Ok((full, self.uncompressed_bytes, self.window_count, None))
@@ -132,8 +134,10 @@ impl<R: Read> DigestingReader<R> {
     fn publish_outcome(&self, full: [u8; 32]) {
         if let Some(out) = &self.outcome {
             *out.full.lock().unwrap_or_else(|e| e.into_inner()) = Some(full);
-            out.bytes
-                .store(self.uncompressed_bytes, std::sync::atomic::Ordering::Relaxed);
+            out.bytes.store(
+                self.uncompressed_bytes,
+                std::sync::atomic::Ordering::Relaxed,
+            );
             out.windows
                 .store(self.window_count, std::sync::atomic::Ordering::Relaxed);
         }
@@ -216,7 +220,11 @@ pub fn detect_encoding(name: &str, content_encoding: Option<&str>, magic: &[u8])
     if magic.len() >= 2 && magic[0] == 0x1f && magic[1] == 0x8b {
         return IngestEncoding::Gzip;
     }
-    if magic.len() >= 4 && magic[0] == 0x28 && magic[1] == 0xb5 && magic[2] == 0x2f && magic[3] == 0xfd
+    if magic.len() >= 4
+        && magic[0] == 0x28
+        && magic[1] == 0xb5
+        && magic[2] == 0x2f
+        && magic[3] == 0xfd
     {
         return IngestEncoding::Zstd;
     }
@@ -325,7 +333,12 @@ fn open_url(
         .user_agent(concat!("qualiaDB-ingest/", env!("CARGO_PKG_VERSION")))
         .build()
         .map_err(io_other)?;
-    let resp = client.get(url).send().map_err(io_other)?.error_for_status().map_err(io_other)?;
+    let resp = client
+        .get(url)
+        .send()
+        .map_err(io_other)?
+        .error_for_status()
+        .map_err(io_other)?;
     let etag = resp
         .headers()
         .get(reqwest::header::ETAG)
@@ -337,7 +350,8 @@ fn open_url(
         .and_then(|v| v.to_str().ok())
         .map(str::to_string);
     let content_length = resp.content_length();
-    let encoding = encoding_hint.unwrap_or_else(|| detect_encoding(url, content_encoding.as_deref(), &[]));
+    let encoding =
+        encoding_hint.unwrap_or_else(|| detect_encoding(url, content_encoding.as_deref(), &[]));
     if url.to_ascii_lowercase().ends_with(".bz2") {
         return Err(io::Error::new(
             io::ErrorKind::InvalidInput,
@@ -362,7 +376,10 @@ fn open_url(
     })
 }
 
-fn wrap_decoder(inner: Box<dyn Read + Send>, encoding: IngestEncoding) -> io::Result<Box<dyn Read + Send>> {
+fn wrap_decoder(
+    inner: Box<dyn Read + Send>,
+    encoding: IngestEncoding,
+) -> io::Result<Box<dyn Read + Send>> {
     match encoding {
         IngestEncoding::Identity => Ok(inner),
         IngestEncoding::Gzip => Ok(Box::new(flate2::read::GzDecoder::new(inner))),
@@ -396,7 +413,10 @@ mod tests {
             detect_encoding("dump.ttl.gz", None, &[]),
             IngestEncoding::Gzip
         );
-        assert_eq!(infer_rdf_format("https://ex.test/a.nt.gz"), IngestRdfFormat::NTriples);
+        assert_eq!(
+            infer_rdf_format("https://ex.test/a.nt.gz"),
+            IngestRdfFormat::NTriples
+        );
         assert_eq!(infer_rdf_format("graph.ttl"), IngestRdfFormat::Turtle);
         assert_eq!(infer_rdf_format("doc.jsonld"), IngestRdfFormat::JsonLd);
         assert_eq!(infer_rdf_format("doc.yamlld"), IngestRdfFormat::YamlLd);

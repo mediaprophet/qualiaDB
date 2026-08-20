@@ -19,11 +19,13 @@ use poet_vibe::{Diagnostic, Span, Value};
 ///
 /// Returns: `{ svg: string, d: string, point_count: u64 }`
 pub fn svg_path(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
-    let points_flat = args::rec_f64_list(args_v, "points").ok_or_else(|| {
-        args::bad(span, "svg_path needs { points: [[x, y], ...] }")
-    })?;
+    let points_flat = args::rec_f64_list(args_v, "points")
+        .ok_or_else(|| args::bad(span, "svg_path needs { points: [[x, y], ...] }"))?;
     if points_flat.len() < 4 || points_flat.len() % 2 != 0 {
-        return Err(args::bad(span, "points must be a flat list of x,y pairs (≥ 2 points)"));
+        return Err(args::bad(
+            span,
+            "points must be a flat list of x,y pairs (≥ 2 points)",
+        ));
     }
     let stroke = args::rec_str(args_v, "stroke").unwrap_or("black");
     let stroke_width = args::rec_f64(args_v, "stroke_width").unwrap_or(1.0);
@@ -33,15 +35,18 @@ pub fn svg_path(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let n = points_flat.len() / 2;
     let mut d = format!("M {} {}", fmt_num(points_flat[0]), fmt_num(points_flat[1]));
     for i in 1..n {
-        d.push_str(&format!(" L {} {}", fmt_num(points_flat[i * 2]), fmt_num(points_flat[i * 2 + 1])));
+        d.push_str(&format!(
+            " L {} {}",
+            fmt_num(points_flat[i * 2]),
+            fmt_num(points_flat[i * 2 + 1])
+        ));
     }
     if closed {
         d.push_str(" Z");
     }
 
-    let svg = format!(
-        r#"<path d="{d}" stroke="{stroke}" stroke-width="{stroke_width}" fill="{fill}"/>"#
-    );
+    let svg =
+        format!(r#"<path d="{d}" stroke="{stroke}" stroke-width="{stroke_width}" fill="{fill}"/>"#);
 
     Ok(args::record([
         ("svg", Value::String(svg)),
@@ -54,7 +59,8 @@ pub fn svg_path(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
 ///
 /// Args: `cx`, `cy`, `r`, `stroke`, `stroke_width`, `fill`
 pub fn svg_circle(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
-    let cx = args::rec_f64(args_v, "cx").ok_or_else(|| args::bad(span, "svg_circle needs { cx, cy, r }"))?;
+    let cx = args::rec_f64(args_v, "cx")
+        .ok_or_else(|| args::bad(span, "svg_circle needs { cx, cy, r }"))?;
     let cy = args::rec_f64(args_v, "cy").unwrap_or(0.0);
     let r = args::rec_f64(args_v, "r").unwrap_or(1.0);
     let stroke = args::rec_str(args_v, "stroke").unwrap_or("black");
@@ -62,7 +68,9 @@ pub fn svg_circle(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let fill = args::rec_str(args_v, "fill").unwrap_or("none");
     let svg = format!(
         r#"<circle cx="{}" cy="{}" r="{}" stroke="{stroke}" stroke-width="{stroke_width}" fill="{fill}"/>"#,
-        fmt_num(cx), fmt_num(cy), fmt_num(r)
+        fmt_num(cx),
+        fmt_num(cy),
+        fmt_num(r)
     );
     Ok(args::record([("svg", Value::String(svg))]))
 }
@@ -71,7 +79,8 @@ pub fn svg_circle(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
 ///
 /// Args: `x`, `y`, `width`, `height`, `rx`, `stroke`, `stroke_width`, `fill`
 pub fn svg_rect(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
-    let x = args::rec_f64(args_v, "x").ok_or_else(|| args::bad(span, "svg_rect needs { x, y, width, height }"))?;
+    let x = args::rec_f64(args_v, "x")
+        .ok_or_else(|| args::bad(span, "svg_rect needs { x, y, width, height }"))?;
     let y = args::rec_f64(args_v, "y").unwrap_or(0.0);
     let width = args::rec_f64(args_v, "width").unwrap_or(1.0);
     let height = args::rec_f64(args_v, "height").unwrap_or(1.0);
@@ -79,10 +88,15 @@ pub fn svg_rect(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let stroke = args::rec_str(args_v, "stroke").unwrap_or("black");
     let stroke_width = args::rec_f64(args_v, "stroke_width").unwrap_or(1.0);
     let fill = args::rec_str(args_v, "fill").unwrap_or("none");
-    let rx_attr = rx.map(|v| format!(r#" rx="{}""#, fmt_num(v))).unwrap_or_default();
+    let rx_attr = rx
+        .map(|v| format!(r#" rx="{}""#, fmt_num(v)))
+        .unwrap_or_default();
     let svg = format!(
         r#"<rect x="{}" y="{}" width="{}" height="{}"{rx_attr} stroke="{stroke}" stroke-width="{stroke_width}" fill="{fill}"/>"#,
-        fmt_num(x), fmt_num(y), fmt_num(width), fmt_num(height)
+        fmt_num(x),
+        fmt_num(y),
+        fmt_num(width),
+        fmt_num(height)
     );
     Ok(args::record([("svg", Value::String(svg))]))
 }
@@ -91,7 +105,8 @@ pub fn svg_rect(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
 ///
 /// Args: `x1`, `y1`, `x2`, `y2`, `stroke`, `stroke_width`
 pub fn svg_line(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
-    let x1 = args::rec_f64(args_v, "x1").ok_or_else(|| args::bad(span, "svg_line needs { x1, y1, x2, y2 }"))?;
+    let x1 = args::rec_f64(args_v, "x1")
+        .ok_or_else(|| args::bad(span, "svg_line needs { x1, y1, x2, y2 }"))?;
     let y1 = args::rec_f64(args_v, "y1").unwrap_or(0.0);
     let x2 = args::rec_f64(args_v, "x2").unwrap_or(0.0);
     let y2 = args::rec_f64(args_v, "y2").unwrap_or(0.0);
@@ -99,7 +114,10 @@ pub fn svg_line(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let stroke_width = args::rec_f64(args_v, "stroke_width").unwrap_or(1.0);
     let svg = format!(
         r#"<line x1="{}" y1="{}" x2="{}" y2="{}" stroke="{stroke}" stroke-width="{stroke_width}"/>"#,
-        fmt_num(x1), fmt_num(y1), fmt_num(x2), fmt_num(y2)
+        fmt_num(x1),
+        fmt_num(y1),
+        fmt_num(x2),
+        fmt_num(y2)
     );
     Ok(args::record([("svg", Value::String(svg))]))
 }
@@ -116,11 +134,13 @@ pub fn svg_line(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
 ///
 /// Returns: `{ svg: string, d: string, segments: u64 }`
 pub fn svg_bezier(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
-    let cp_flat = args::rec_f64_list(args_v, "control_points").ok_or_else(|| {
-        args::bad(span, "svg_bezier needs { control_points: [x,y,z, ...] }")
-    })?;
+    let cp_flat = args::rec_f64_list(args_v, "control_points")
+        .ok_or_else(|| args::bad(span, "svg_bezier needs { control_points: [x,y,z, ...] }"))?;
     if cp_flat.len() < 6 || cp_flat.len() % 3 != 0 {
-        return Err(args::bad(span, "control_points must be a flat list of x,y,z triples (≥ 2 points)"));
+        return Err(args::bad(
+            span,
+            "control_points must be a flat list of x,y,z triples (≥ 2 points)",
+        ));
     }
     let segments = args::rec_u64(args_v, "segments").unwrap_or(32) as usize;
     let stroke = args::rec_str(args_v, "stroke").unwrap_or("black");
@@ -135,7 +155,8 @@ pub fn svg_bezier(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let mut d = String::with_capacity(segments * 16);
     for i in 0..=segments {
         let t = i as f64 / segments as f64;
-        let pt = bezier_eval(&control, t).map_err(|e| args::bad(span, format!("bezier_eval: {e:?}")))?;
+        let pt =
+            bezier_eval(&control, t).map_err(|e| args::bad(span, format!("bezier_eval: {e:?}")))?;
         if i == 0 {
             d.push_str(&format!("M {} {}", fmt_num(pt.x), fmt_num(pt.y)));
         } else {
@@ -143,9 +164,8 @@ pub fn svg_bezier(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
         }
     }
 
-    let svg = format!(
-        r#"<path d="{d}" stroke="{stroke}" stroke-width="{stroke_width}" fill="{fill}"/>"#
-    );
+    let svg =
+        format!(r#"<path d="{d}" stroke="{stroke}" stroke-width="{stroke_width}" fill="{fill}"/>"#);
 
     Ok(args::record([
         ("svg", Value::String(svg)),
@@ -168,7 +188,10 @@ pub fn svg_bezier(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
 /// Returns: `{ svg: string, element_count: u64 }`
 pub fn svg_field(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let amplitudes = args::rec_f64_list(args_v, "amplitudes").ok_or_else(|| {
-        args::bad(span, "svg_field needs { amplitudes: [f64], nx: u64, ny: u64 }")
+        args::bad(
+            span,
+            "svg_field needs { amplitudes: [f64], nx: u64, ny: u64 }",
+        )
     })?;
     let nx = args::rec_u64(args_v, "nx").unwrap_or(1) as usize;
     let ny = args::rec_u64(args_v, "ny").unwrap_or(1) as usize;
@@ -176,9 +199,14 @@ pub fn svg_field(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
         return Err(args::bad(span, "nx and ny must be non-zero"));
     }
     if amplitudes.len() < nx * ny {
-        return Err(args::bad(span, format!(
-            "amplitudes length {} < nx*ny = {}", amplitudes.len(), nx * ny
-        )));
+        return Err(args::bad(
+            span,
+            format!(
+                "amplitudes length {} < nx*ny = {}",
+                amplitudes.len(),
+                nx * ny
+            ),
+        ));
     }
     let cell_size = args::rec_f64(args_v, "cell_size").unwrap_or(20.0);
     let max_radius = args::rec_f64(args_v, "max_radius").unwrap_or(cell_size / 2.0);
@@ -207,7 +235,10 @@ pub fn svg_field(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
 
             svg.push_str(&format!(
                 r#"<circle cx="{}" cy="{}" r="{}" fill="{}" stroke="none"/>"#,
-                fmt_num(cx), fmt_num(cy), fmt_num(r), color
+                fmt_num(cx),
+                fmt_num(cy),
+                fmt_num(r),
+                color
             ));
             count += 1;
         }
@@ -333,7 +364,10 @@ mod tests {
     fn svg_bezier_quadratic() {
         // 3 control points → quadratic bezier
         let args = rec(&[
-            ("control_points", f64_list(&[0.0, 0.0, 0.0, 50.0, 100.0, 0.0, 100.0, 100.0, 0.0])),
+            (
+                "control_points",
+                f64_list(&[0.0, 0.0, 0.0, 50.0, 100.0, 0.0, 100.0, 100.0, 0.0]),
+            ),
             ("segments", Value::U64(16)),
         ]);
         let r = svg_bezier(&args, poet_vibe::Span::new(0, 0)).unwrap();
@@ -368,17 +402,13 @@ mod tests {
 
     #[test]
     fn svg_path_too_few_points_errors() {
-        let args = rec(&[
-            ("points", f64_list(&[0.0, 0.0])),
-        ]);
+        let args = rec(&[("points", f64_list(&[0.0, 0.0]))]);
         assert!(svg_path(&args, poet_vibe::Span::new(0, 0)).is_err());
     }
 
     #[test]
     fn svg_bezier_too_few_controls_errors() {
-        let args = rec(&[
-            ("control_points", f64_list(&[0.0, 0.0, 0.0])),
-        ]);
+        let args = rec(&[("control_points", f64_list(&[0.0, 0.0, 0.0]))]);
         assert!(svg_bezier(&args, poet_vibe::Span::new(0, 0)).is_err());
     }
 }

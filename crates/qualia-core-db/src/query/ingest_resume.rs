@@ -28,15 +28,17 @@ impl ResumeCursor {
         if !path.is_file() {
             return Ok(None);
         }
-        Ok(Some(serde_json::from_slice(&std::fs::read(path)?)
-            .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?))
+        Ok(Some(
+            serde_json::from_slice(&std::fs::read(path)?)
+                .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?,
+        ))
     }
 
     pub fn store(&self, dir: &Path) -> io::Result<()> {
         let path = dir.join(RESUME_FILE);
         let tmp = path.with_extension("json.tmp");
-        let body = serde_json::to_vec(self)
-            .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
+        let body =
+            serde_json::to_vec(self).map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
         std::fs::write(&tmp, body)?;
         std::fs::rename(tmp, path)
     }

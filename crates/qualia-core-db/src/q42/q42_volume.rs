@@ -25,32 +25,31 @@ use crate::{NQuin, QUINS_PER_BLOCK};
 #[path = "volume/mod.rs"]
 mod volume;
 
+pub use volume::{
+    append_segment_to_root, classify_q42_path, classify_q42_volume, classify_q42_volume_set,
+    compact_volume_set, compose_magnet, decode_and_verify_car, deny_public_publication,
+    encode_block_postings, encode_postings_section, encode_raw_car, extract_entity_bytes,
+    inclusive_entity_bytes, measure_bloom_false_positives, quin_requires_sanctuary,
+    root_relative_path, sha1_hex_file, validate_exact_range_response,
+    verify_car_bytes_as_q42_source, verify_local_car_as_q42_source, verify_source_sha256,
+    verify_volume_set_from_root, BidxBlockRange, BidxMatchPage, BlockFieldPostings, CheckStatus,
+    CidSha256, ClassificationCounts, LocalFileRangeSource, OpfsCallbackRangeSource,
+    OpfsSliceRangeSource, PublicationIntent, Q42BlockCursor, Q42BlockMeta, Q42ByteRange,
+    Q42InspectReport, Q42LexiconRangeFactory, Q42LexiconSegment, Q42Magnet, Q42ObjectMatchPage,
+    Q42ObjectSearchCursor, Q42PublicationClass, Q42PublicationVerdict, Q42QueryMode,
+    Q42RangeQueryCursor, Q42RangeQueryPage, Q42RangeQueryPattern, Q42RangeQueryPlan,
+    Q42RangeQueryStrategy, Q42RangeSource, Q42RangeVolume, Q42RangeVolumeSet, Q42RolloverPublisher,
+    Q42SectionReport, Q42SegmentMatchPage, Q42SegmentMatchRange, Q42SegmentRangeFactory,
+    Q42Transport, Q42VerifyReceipt, Q42VerifySetReport, Q42VolumeManifest, Q42VolumeSegment,
+    Q42VolumeSet, Q42VolumeSetMagnets, Q42VolumeSetQueryCursor, Q42VolumeSetQueryPage,
+    StreamingQ42VolumeWriter, VerifiedCarBlock, VerifiedCarRangeSource, VerifyCheck, VerifyLevel,
+    DEFAULT_SEGMENT_MAX_BYTES, FIELD_POSTINGS_MAGIC, MAX_VOLUME_MANIFEST_BYTES,
+    RESIDENT_QUERY_MAX_BYTES,
+};
 #[cfg(not(target_arch = "wasm32"))]
 pub use volume::{
     ipfs_gateway_range_source, ipns_gateway_range_source, HttpRangeSource,
     IpfsGatewaySegmentFactory,
-};
-pub use volume::{
-    root_relative_path, validate_exact_range_response, verify_source_sha256, BidxBlockRange,
-    BidxMatchPage, LocalFileRangeSource, Q42BlockCursor, Q42BlockMeta, Q42ByteRange,
-    Q42LexiconRangeFactory, Q42LexiconSegment, Q42ObjectMatchPage, Q42ObjectSearchCursor,
-    Q42RangeQueryCursor, Q42RangeQueryPage, Q42RangeQueryPattern, Q42RangeQueryPlan,
-    Q42RangeQueryStrategy, Q42RangeSource, Q42RangeVolume, Q42RangeVolumeSet, Q42SegmentMatchPage,
-    Q42SegmentMatchRange, Q42SegmentRangeFactory, Q42VolumeManifest, Q42VolumeSegment,
-    Q42VolumeSet, Q42VolumeSetQueryCursor, Q42VolumeSetQueryPage, StreamingQ42VolumeWriter,
-    VerifiedCarBlock, CidSha256, BlockFieldPostings, Q42InspectReport, Q42SectionReport,
-    Q42Magnet, Q42VolumeSetMagnets, Q42RolloverPublisher, Q42QueryMode, Q42VerifyReceipt,
-    Q42VerifySetReport,
-    VerifyLevel, CheckStatus, VerifyCheck, compose_magnet, sha1_hex_file,
-    classify_q42_path, classify_q42_volume, classify_q42_volume_set, deny_public_publication,
-    quin_requires_sanctuary, ClassificationCounts, PublicationIntent, Q42PublicationClass,
-    Q42PublicationVerdict, Q42Transport,
-    append_segment_to_root, verify_volume_set_from_root, DEFAULT_SEGMENT_MAX_BYTES,
-    RESIDENT_QUERY_MAX_BYTES, decode_and_verify_car, encode_raw_car,
-    extract_entity_bytes, inclusive_entity_bytes, encode_block_postings, encode_postings_section,
-    measure_bloom_false_positives, FIELD_POSTINGS_MAGIC, MAX_VOLUME_MANIFEST_BYTES,
-    compact_volume_set, verify_car_bytes_as_q42_source, verify_local_car_as_q42_source,
-    OpfsCallbackRangeSource, OpfsSliceRangeSource, VerifiedCarRangeSource,
 };
 #[cfg(not(target_arch = "wasm32"))]
 pub use volume::{write_sorted_quins_volume, write_sorted_quins_volume_with_author};

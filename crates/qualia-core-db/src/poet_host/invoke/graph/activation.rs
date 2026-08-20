@@ -14,17 +14,17 @@ use poet_vibe::{Diagnostic, Span, Value};
 /// validated `(n_from_edges, Edge[])` pair. Validates that indices are
 /// non-negative integers and weights are finite and non-negative. Replicates
 /// the edge half of `wasm_bridge/engine/graph.rs::build_adjacency`.
-fn parse_edges(
-    edges_raw: &[Value],
-    span: Span,
-) -> Result<(usize, Vec<Edge>), Diagnostic> {
+fn parse_edges(edges_raw: &[Value], span: Span) -> Result<(usize, Vec<Edge>), Diagnostic> {
     let mut max_idx = 0usize;
     let mut out: Vec<Edge> = Vec::with_capacity(edges_raw.len());
     for e in edges_raw {
         let triple = args::list(e)
             .ok_or_else(|| args::bad(span, "each edge must be [u, v, w] (three numbers)"))?;
         if triple.len() != 3 {
-            return Err(args::bad(span, "each edge must be [u, v, w] (three numbers)"));
+            return Err(args::bad(
+                span,
+                "each edge must be [u, v, w] (three numbers)",
+            ));
         }
         let u = args::as_f64(&triple[0])
             .ok_or_else(|| args::bad(span, "edge source u must be a number"))?;
@@ -33,10 +33,16 @@ fn parse_edges(
         let w = args::as_f64(&triple[2])
             .ok_or_else(|| args::bad(span, "edge weight w must be a number"))?;
         if !u.is_finite() || u < 0.0 || u.fract() != 0.0 {
-            return Err(args::bad(span, "edge source u must be a non-negative integer"));
+            return Err(args::bad(
+                span,
+                "edge source u must be a non-negative integer",
+            ));
         }
         if !v.is_finite() || v < 0.0 || v.fract() != 0.0 {
-            return Err(args::bad(span, "edge target v must be a non-negative integer"));
+            return Err(args::bad(
+                span,
+                "edge target v must be a non-negative integer",
+            ));
         }
         if !w.is_finite() || w < 0.0 {
             return Err(args::bad(
@@ -58,20 +64,17 @@ fn parse_edges(
 /// seeds)`. Node indices must be non-negative integers; activations finite.
 /// Replicates the seed half of `wasm_bridge/engine/graph.rs::
 /// graph_spreading_activation`.
-fn parse_seeds(
-    seeds_raw: &[Value],
-    span: Span,
-) -> Result<(usize, Vec<(usize, f64)>), Diagnostic> {
+fn parse_seeds(seeds_raw: &[Value], span: Span) -> Result<(usize, Vec<(usize, f64)>), Diagnostic> {
     let mut max_seed = 0usize;
     let mut out: Vec<(usize, f64)> = Vec::with_capacity(seeds_raw.len());
     for s in seeds_raw {
-        let pair = args::list(s)
-            .ok_or_else(|| args::bad(span, "each seed must be [node, activation]"))?;
+        let pair =
+            args::list(s).ok_or_else(|| args::bad(span, "each seed must be [node, activation]"))?;
         if pair.len() != 2 {
             return Err(args::bad(span, "each seed must be [node, activation]"));
         }
-        let node = args::as_f64(&pair[0])
-            .ok_or_else(|| args::bad(span, "seed node must be a number"))?;
+        let node =
+            args::as_f64(&pair[0]).ok_or_else(|| args::bad(span, "seed node must be a number"))?;
         let act = args::as_f64(&pair[1])
             .ok_or_else(|| args::bad(span, "seed activation must be a number"))?;
         if !node.is_finite() || node < 0.0 || node.fract() != 0.0 {
@@ -97,10 +100,20 @@ fn parse_seeds(
 pub fn spreading_activation(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let edges_raw = args::rec(args_v, "edges")
         .and_then(args::list)
-        .ok_or_else(|| args::bad(span, "spreading_activation needs edges: a list of [u, v, w]"))?;
+        .ok_or_else(|| {
+            args::bad(
+                span,
+                "spreading_activation needs edges: a list of [u, v, w]",
+            )
+        })?;
     let seeds_raw = args::rec(args_v, "seeds")
         .and_then(args::list)
-        .ok_or_else(|| args::bad(span, "spreading_activation needs seeds: a list of [node, activation]"))?;
+        .ok_or_else(|| {
+            args::bad(
+                span,
+                "spreading_activation needs seeds: a list of [node, activation]",
+            )
+        })?;
     let decay = args::rec_f64(args_v, "decay")
         .ok_or_else(|| args::bad(span, "spreading_activation needs decay: a number"))?;
     let threshold = args::rec_f64(args_v, "threshold").unwrap_or(1e-9);
@@ -126,11 +139,7 @@ pub fn spreading_activation(args_v: &Value, span: Span) -> Result<Value, Diagnos
     }
 
     let activation = sa_solver(n, &edge_list, &seeds, decay, threshold, max_hops);
-    let k = if top_k_val == 0 {
-        n
-    } else {
-        top_k_val.min(n)
-    };
+    let k = if top_k_val == 0 { n } else { top_k_val.min(n) };
     let ranking = top_k(&activation, k);
 
     Ok(args::record([
@@ -168,7 +177,11 @@ mod tests {
         // 0 -> 1 -> 2 -> 3, all weight 1. Seed node 0.
         let v = spreading_activation(
             &case(
-                vec![edge(0.0, 1.0, 1.0), edge(1.0, 2.0, 1.0), edge(2.0, 3.0, 1.0)],
+                vec![
+                    edge(0.0, 1.0, 1.0),
+                    edge(1.0, 2.0, 1.0),
+                    edge(2.0, 3.0, 1.0),
+                ],
                 vec![seed(0.0, 1.0)],
                 0.5,
             ),

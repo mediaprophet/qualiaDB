@@ -132,11 +132,9 @@ fn media_scene(span: Span) -> Result<Value, Diagnostic> {
         ));
         if i > 0 {
             if let Value::Record(prev) = &nodes[i - 1] {
-                if let (Some(ax), Some(ay), Some(az)) = (
-                    rec_num(prev, "x"),
-                    rec_num(prev, "y"),
-                    rec_num(prev, "z"),
-                ) {
+                if let (Some(ax), Some(ay), Some(az)) =
+                    (rec_num(prev, "x"), rec_num(prev, "y"), rec_num(prev, "z"))
+                {
                     edges.push(edge(ax, ay, az, nx, ny, nz, "#0891b2", 1.6));
                 }
             }
@@ -294,7 +292,15 @@ fn ring_scene(kind: &'static str, color: &str, n: usize, radius: f64) -> Value {
         let (bx, by, _) = xyz_tuple(&nodes[0]);
         edges.push(edge(ax, ay, 0.0, bx, by, 0.0, color, 1.0));
     }
-    pack(kind, "#07090e", nodes, edges, Vec::new(), [0.0, 0.0, 2.5], "live")
+    pack(
+        kind,
+        "#07090e",
+        nodes,
+        edges,
+        Vec::new(),
+        [0.0, 0.0, 2.5],
+        "live",
+    )
 }
 
 fn catchment_points() -> Vec<(f64, f64, f64)> {

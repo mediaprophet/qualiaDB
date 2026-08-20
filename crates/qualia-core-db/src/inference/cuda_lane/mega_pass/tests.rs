@@ -23,7 +23,10 @@ fn batch_gemv_cpu_shape_pad() {
     set_inference_mode(InferenceMode::Portable);
     let mut out = [0.0f32; 4];
     let ok = try_cuda_batch_gemv(&[1.0, 0.0], 1, 2, 2, &[1.0, 0.0, 0.0, 1.0], &mut out);
-    assert!(!ok, "try_cuda_batch_gemv should return false in Portable mode");
+    assert!(
+        !ok,
+        "try_cuda_batch_gemv should return false in Portable mode"
+    );
     set_inference_mode(prev);
 }
 

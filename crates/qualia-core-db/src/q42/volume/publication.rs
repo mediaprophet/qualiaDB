@@ -104,7 +104,9 @@ impl Q42Transport {
             Self::SocialWebNetBilateral => {
                 "SocialWebNet (pairwise DID / WireGuard). No public magnet."
             }
-            Self::LocalSanctuaryOnly => "local Sanctuary only. No public magnet, web-seed, or IPFS.",
+            Self::LocalSanctuaryOnly => {
+                "local Sanctuary only. No public magnet, web-seed, or IPFS."
+            }
         }
     }
 }
@@ -140,7 +142,10 @@ pub fn classify_q42_volume(volume: &Q42Volume, intent: PublicationIntent) -> Q42
     if volume.block_count() > 0 {
         let mut decoded = [0u8; SUPERBLOCK_SIZE];
         for block_index in 0..volume.block_count() as usize {
-            if volume.read_superblock_into(block_index, &mut decoded).is_err() {
+            if volume
+                .read_superblock_into(block_index, &mut decoded)
+                .is_err()
+            {
                 counts.decode_failures += 1;
                 continue;
             }
@@ -231,12 +236,10 @@ fn decide(
     intent: PublicationIntent,
     counts: ClassificationCounts,
 ) -> Q42PublicationVerdict {
-    let sanctuary_bits = header_sanctuary
-        || sanctuary_quin_count(&counts) > 0
-        || counts.decode_failures > 0;
-    let commons_bits = header_commons
-        || intent == PublicationIntent::CommonsCatalog
-        || counts.commons_lane > 0;
+    let sanctuary_bits =
+        header_sanctuary || sanctuary_quin_count(&counts) > 0 || counts.decode_failures > 0;
+    let commons_bits =
+        header_commons || intent == PublicationIntent::CommonsCatalog || counts.commons_lane > 0;
 
     let (class, reason) = if sanctuary_bits && commons_bits {
         (
@@ -267,7 +270,8 @@ fn decide(
         } else {
             (
                 Q42PublicationClass::PermissiveCommons,
-                "Permissive Commons catalog. Magnet and web-seed are allowed as ICN transport.".into(),
+                "Permissive Commons catalog. Magnet and web-seed are allowed as ICN transport."
+                    .into(),
             )
         }
     } else if counts.commons_lane > 0 {
@@ -349,13 +353,7 @@ mod tests {
     fn write_blocks(path: &Path, quins: &[NQuin]) {
         let first = quins[0].object;
         let last = quins[quins.len() - 1].object;
-        write_unified_volume(
-            path,
-            &HashMap::new(),
-            &[(first, last)],
-            &[quins.to_vec()],
-        )
-        .unwrap();
+        write_unified_volume(path, &HashMap::new(), &[(first, last)], &[quins.to_vec()]).unwrap();
     }
 
     #[test]

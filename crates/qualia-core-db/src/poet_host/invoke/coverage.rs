@@ -482,8 +482,16 @@ mod tests {
     fn every_schema_has_family() {
         for s in all_schemas() {
             assert!(!s.family.is_empty(), "schema {} has empty family", s.id);
-            assert!(!s.arg_shape.is_empty(), "schema {} has empty arg_shape", s.id);
-            assert!(!s.return_shape.is_empty(), "schema {} has empty return_shape", s.id);
+            assert!(
+                !s.arg_shape.is_empty(),
+                "schema {} has empty arg_shape",
+                s.id
+            );
+            assert!(
+                !s.return_shape.is_empty(),
+                "schema {} has empty return_shape",
+                s.id
+            );
         }
     }
 }

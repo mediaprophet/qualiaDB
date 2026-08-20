@@ -5,11 +5,13 @@
 
 use super::range_join_select::Q42RangeJoinSelectPlan;
 use super::range_select_apply::{apply_select_wrappers, SelectWrapperState};
-use super::sparql_ast::{BindingRow, ExpressionId, SparqlQueryContext, VariableId, MAX_BINDINGS, MAX_VARIABLES};
+use super::sparql_ast::{
+    BindingRow, ExpressionId, SparqlQueryContext, VariableId, MAX_BINDINGS, MAX_VARIABLES,
+};
 use super::sparql_executor::{
-    execute_range_triple_page_into, execute_range_volume_set_triple_page_into, Q42RangeNestedLoopJoinPage,
-    Q42RangeNestedLoopJoinPlan, Q42RangeSparqlCursor, Q42RangeTriplePattern,
-    Q42RangeVolumeSetSparqlCursor,
+    execute_range_triple_page_into, execute_range_volume_set_triple_page_into,
+    Q42RangeNestedLoopJoinPage, Q42RangeNestedLoopJoinPlan, Q42RangeSparqlCursor,
+    Q42RangeTriplePattern, Q42RangeVolumeSetSparqlCursor,
 };
 use super::sparql_planner::{ExecutionPlan, PhysicalOperatorType};
 use crate::NQuin;
@@ -99,7 +101,9 @@ impl Q42RangeHashJoinPlan {
                 }
                 PhysicalOperatorType::Filter { input, expression } => {
                     if filter_count == filters.len() {
-                        return Err("range HashJoin supports at most eight stacked FILTER operators".into());
+                        return Err(
+                            "range HashJoin supports at most eight stacked FILTER operators".into(),
+                        );
                     }
                     filters[filter_count] = expression;
                     filter_count += 1;
@@ -261,7 +265,11 @@ fn merge_rows(left: &BindingRow, right: &BindingRow) -> BindingRow {
     joined
 }
 
-fn insert_slot(table: &mut [Q42RangeHashJoinSlot], key: u64, row: BindingRow) -> Result<(), String> {
+fn insert_slot(
+    table: &mut [Q42RangeHashJoinSlot],
+    key: u64,
+    row: BindingRow,
+) -> Result<(), String> {
     if table.is_empty() {
         return Err(cap_error(1, 0));
     }
@@ -403,23 +411,24 @@ pub fn execute_range_hash_join_page_into<S: crate::q42_volume::Q42RangeSource>(
     join_out: &mut [BindingRow],
     out: &mut [BindingRow],
 ) -> Result<Q42RangeNestedLoopJoinPage, String> {
-    let mut page_fn = |pattern: Q42RangeTriplePattern, cursor: Q42RangeSparqlCursor, rows: &mut [BindingRow]| {
-        execute_range_triple_page_into(
-            volume,
-            pattern.subject,
-            pattern.predicate,
-            pattern.object,
-            None,
-            ctx,
-            &BindingRow::default(),
-            cursor,
-            compressed,
-            decoded,
-            quin_scratch,
-            rows,
-        )
-        .map(|page| (page.returned, page.next_cursor))
-    };
+    let mut page_fn =
+        |pattern: Q42RangeTriplePattern, cursor: Q42RangeSparqlCursor, rows: &mut [BindingRow]| {
+            execute_range_triple_page_into(
+                volume,
+                pattern.subject,
+                pattern.predicate,
+                pattern.object,
+                None,
+                ctx,
+                &BindingRow::default(),
+                cursor,
+                compressed,
+                decoded,
+                quin_scratch,
+                rows,
+            )
+            .map(|page| (page.returned, page.next_cursor))
+        };
     if !state.built {
         let left_n = count_side(&mut page_fn, plan.left, probe_rows)?;
         let right_n = count_side(&mut page_fn, plan.right, probe_rows)?;
@@ -428,7 +437,11 @@ pub fn execute_range_hash_join_page_into<S: crate::q42_volume::Q42RangeSource>(
         if build_n > table.len() {
             return Err(cap_error(build_n, table.len()));
         }
-        let build_pattern = if build_is_right { plan.right } else { plan.left };
+        let build_pattern = if build_is_right {
+            plan.right
+        } else {
+            plan.left
+        };
         let (key_vars, key_n) = shared_join_vars(plan.left, plan.right, ctx, plan.join_var);
         build_side(
             &mut page_fn,
@@ -574,24 +587,25 @@ pub fn execute_range_volume_set_hash_join_page_into<S: crate::q42_volume::Q42Ran
     join_out: &mut [BindingRow],
     out: &mut [BindingRow],
 ) -> Result<Q42RangeNestedLoopJoinPage, String> {
-    let mut page_fn =
-        |pattern: Q42RangeTriplePattern, cursor: Q42RangeVolumeSetSparqlCursor, rows: &mut [BindingRow]| {
-            execute_range_volume_set_triple_page_into(
-                volumes,
-                pattern.subject,
-                pattern.predicate,
-                pattern.object,
-                None,
-                ctx,
-                &BindingRow::default(),
-                cursor,
-                compressed,
-                decoded,
-                quin_scratch,
-                rows,
-            )
-            .map(|page| (page.returned, page.next_cursor))
-        };
+    let mut page_fn = |pattern: Q42RangeTriplePattern,
+                       cursor: Q42RangeVolumeSetSparqlCursor,
+                       rows: &mut [BindingRow]| {
+        execute_range_volume_set_triple_page_into(
+            volumes,
+            pattern.subject,
+            pattern.predicate,
+            pattern.object,
+            None,
+            ctx,
+            &BindingRow::default(),
+            cursor,
+            compressed,
+            decoded,
+            quin_scratch,
+            rows,
+        )
+        .map(|page| (page.returned, page.next_cursor))
+    };
     if !state.built {
         let left_n = count_side(&mut page_fn, plan.left, probe_rows)?;
         let right_n = count_side(&mut page_fn, plan.right, probe_rows)?;
@@ -600,7 +614,11 @@ pub fn execute_range_volume_set_hash_join_page_into<S: crate::q42_volume::Q42Ran
         if build_n > table.len() {
             return Err(cap_error(build_n, table.len()));
         }
-        let build_pattern = if build_is_right { plan.right } else { plan.left };
+        let build_pattern = if build_is_right {
+            plan.right
+        } else {
+            plan.left
+        };
         let (key_vars, key_n) = shared_join_vars(plan.left, plan.right, ctx, plan.join_var);
         build_side(
             &mut page_fn,

@@ -26,10 +26,8 @@ fn pair_seq(args_v: &Value, span: Span) -> Result<(String, String), Diagnostic> 
             .ok_or_else(|| args::bad(span, "align needs [query, target]"))?;
         return Ok((q.to_string(), t.to_string()));
     }
-    let q = args::rec_str(args_v, "query")
-        .ok_or_else(|| args::bad(span, "align needs query"))?;
-    let t = args::rec_str(args_v, "target")
-        .ok_or_else(|| args::bad(span, "align needs target"))?;
+    let q = args::rec_str(args_v, "query").ok_or_else(|| args::bad(span, "align needs query"))?;
+    let t = args::rec_str(args_v, "target").ok_or_else(|| args::bad(span, "align needs target"))?;
     Ok((q.to_string(), t.to_string()))
 }
 

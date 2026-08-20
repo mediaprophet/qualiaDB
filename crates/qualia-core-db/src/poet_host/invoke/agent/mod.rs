@@ -147,9 +147,9 @@ pub fn build_pipeline_from_value(args: &Value, span: Span) -> Result<DagPipeline
             channel_producers.insert(out.clone(), id);
         }
         all_deps.push((id, node.inputs.clone(), deps));
-        pipeline.add_node(node).map_err(|e| {
-            Diagnostic::new(DiagCode::E100, span, format!("DAG node error: {e:?}"))
-        })?;
+        pipeline
+            .add_node(node)
+            .map_err(|e| Diagnostic::new(DiagCode::E100, span, format!("DAG node error: {e:?}")))?;
     }
 
     if let Some(edges) = edge_values {
@@ -204,17 +204,18 @@ pub fn dag_execute(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let pipeline = build_pipeline_from_value(args, span)?;
     let mut bus = BlackboardBus::new();
     let mut executor = NoopNodeExecutor;
-    let result = execute_pipeline(&pipeline, &mut bus, None, &mut executor)
-        .map_err(|e| Diagnostic::new(DiagCode::E600, span, format!("DAG execution error: {e:?}")))?;
+    let result = execute_pipeline(&pipeline, &mut bus, None, &mut executor).map_err(|e| {
+        Diagnostic::new(DiagCode::E600, span, format!("DAG execution error: {e:?}"))
+    })?;
     Ok(Value::String(result.summary()))
 }
 
 /// Validate a DAG pipeline via capability.invoke (R3).
 pub fn dag_validate(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let pipeline = build_pipeline_from_value(args, span)?;
-    pipeline
-        .validate(&[])
-        .map_err(|e| Diagnostic::new(DiagCode::E100, span, format!("DAG validation error: {e:?}")))?;
+    pipeline.validate(&[]).map_err(|e| {
+        Diagnostic::new(DiagCode::E100, span, format!("DAG validation error: {e:?}"))
+    })?;
     Ok(Value::Bool(true))
 }
 
@@ -276,7 +277,9 @@ mod tests {
         let err = dag_validate(&args, Span::point(0));
         assert!(err.is_err());
         let diag = err.unwrap_err();
-        assert!(diag.message.contains("CycleDetected") || diag.message.contains("DAG validation error"));
+        assert!(
+            diag.message.contains("CycleDetected") || diag.message.contains("DAG validation error")
+        );
     }
 
     #[test]

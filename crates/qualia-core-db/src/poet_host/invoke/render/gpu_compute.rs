@@ -66,8 +66,9 @@ pub fn gpu_compute_dispatch(args: &Value, span: Span) -> Result<Value, Diagnosti
         let mut owned: Vec<Vec<u8>> = Vec::with_capacity(list.len());
         let mut metas: Vec<(u32, ComputeBufferKind)> = Vec::with_capacity(list.len());
         for (i, entry_v) in list.iter().enumerate() {
-            let binding = args::rec_u64(entry_v, "binding")
-                .ok_or_else(|| args::bad(span, format!("bindings[{i}] needs {{ binding: u64 }}")))?;
+            let binding = args::rec_u64(entry_v, "binding").ok_or_else(|| {
+                args::bad(span, format!("bindings[{i}] needs {{ binding: u64 }}"))
+            })?;
             let kind_str = args::rec_str(entry_v, "kind").unwrap_or("storage");
             let kind =
                 parse_kind(kind_str).map_err(|e| args::bad(span, format!("bindings[{i}]: {e}")))?;
@@ -233,21 +234,20 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
         let d = gpu_compute_dispatch(&dispatch_args, span).expect("dispatch");
         assert_eq!(args::rec(&d, "dispatched"), Some(&Value::Bool(true)));
 
-        let rb = gpu_compute_readback(
-            &args::record([("handle", Value::U64(*h))]),
-            span,
-        )
-        .expect("readback");
+        let rb = gpu_compute_readback(&args::record([("handle", Value::U64(*h))]), span)
+            .expect("readback");
         assert_eq!(args::rec(&rb, "ready"), Some(&Value::Bool(true)));
         let Value::List(out) = args::rec(&rb, "output").unwrap() else {
             panic!("no output")
         };
         let bytes: Vec<u8> = out
             .iter()
-            .map(|v| if let Value::U64(n) = v {
-                *n as u8
-            } else {
-                panic!("non-u8 output")
+            .map(|v| {
+                if let Value::U64(n) = v {
+                    *n as u8
+                } else {
+                    panic!("non-u8 output")
+                }
             })
             .collect();
         let floats: Vec<f32> = bytemuck::cast_slice::<u8, f32>(&bytes).to_vec();
@@ -272,11 +272,8 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
             panic!("no handle")
         };
 
-        let rb = gpu_compute_readback(
-            &args::record([("handle", Value::U64(*h))]),
-            span,
-        )
-        .expect("readback call");
+        let rb = gpu_compute_readback(&args::record([("handle", Value::U64(*h))]), span)
+            .expect("readback call");
         // No pending dispatch → ready: false.
         assert_eq!(args::rec(&rb, "ready"), Some(&Value::Bool(false)));
 
@@ -308,7 +305,10 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
         // Invalid handle → E100 diagnostic (the dispatch arm ran and reached
         // the slot lookup, which failed). This proves the VibeScript → invoke
         // → handler wiring is live.
-        assert!(result.is_err(), "expected error for invalid handle, got {result:?}");
+        assert!(
+            result.is_err(),
+            "expected error for invalid handle, got {result:?}"
+        );
         let err = result.unwrap_err();
         assert!(err.message.contains("invalid handle"), "got: {err:?}");
     }

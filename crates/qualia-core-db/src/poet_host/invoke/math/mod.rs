@@ -42,9 +42,8 @@ pub use polynomial::roots as polynomial_roots;
 pub use special::bessel_jn;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 pub use symbolic::{
-    differentiate as cas_differentiate, eval_poly, expand as cas_expand,
-    factor as cas_factor, simplify as cas_simplify,
-    solve_quadratic as cas_solve_quadratic,
+    differentiate as cas_differentiate, eval_poly, expand as cas_expand, factor as cas_factor,
+    simplify as cas_simplify, solve_quadratic as cas_solve_quadratic,
 };
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 pub use transforms::dft;
@@ -52,10 +51,7 @@ pub use transforms::dft;
 pub use units::convert_unit;
 
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
-fn missing(
-    span: poet_vibe::Span,
-    family: &str,
-) -> Result<poet_vibe::Value, poet_vibe::Diagnostic> {
+fn missing(span: poet_vibe::Span, family: &str) -> Result<poet_vibe::Value, poet_vibe::Diagnostic> {
     Err(super::args::need_scientific(span, family))
 }
 

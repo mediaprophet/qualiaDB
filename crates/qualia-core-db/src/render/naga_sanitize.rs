@@ -154,10 +154,7 @@ fn check_uniform_block_size(
     let ty = &module.types[var.ty];
     let size = compute_type_size(&ty.inner, module);
     if size > MAX_UNIFORM_BLOCK_SIZE {
-        let binding = var
-            .binding
-            .map(|b| b.binding)
-            .unwrap_or(0);
+        let binding = var.binding.map(|b| b.binding).unwrap_or(0);
         return Err(SanitizeError::UniformBlockTooLarge {
             binding,
             size_bytes: size,
@@ -234,7 +231,11 @@ fn vs_main(@location(0) pos: vec2<f32>) -> @builtin(position) vec4<f32> {
 "#;
         let module = parse_wgsl(src);
         let result = sanitize(&module, "vs_main", ShaderStage::Vertex);
-        assert!(result.is_ok(), "simple vertex shader should pass: {:?}", result);
+        assert!(
+            result.is_ok(),
+            "simple vertex shader should pass: {:?}",
+            result
+        );
     }
 
     #[test]
@@ -266,7 +267,11 @@ fn vs_main(@location(0) pos: vec3<f32>) -> @builtin(position) vec4<f32> {
 "#;
         let module = parse_wgsl(src);
         let result = sanitize(&module, "vs_main", ShaderStage::Vertex);
-        assert!(result.is_ok(), "two mat4s (128 bytes) should pass: {:?}", result);
+        assert!(
+            result.is_ok(),
+            "two mat4s (128 bytes) should pass: {:?}",
+            result
+        );
     }
 
     #[test]

@@ -9,9 +9,8 @@ const MAX_VERDICTS: usize = 32;
 pub fn evaluate(snap: &PoetSnapshot, span: Span) -> Result<Value, Diagnostic> {
     snap.with_live_quins(|quins| {
         let mut out = [DeonticVerdict::default(); MAX_VERDICTS];
-        let n = evaluate_deontic_contract(quins, 0, &mut out).map_err(|_| {
-            Diagnostic::new(DiagCode::E400, span, "deontic output buffer full")
-        })?;
+        let n = evaluate_deontic_contract(quins, 0, &mut out)
+            .map_err(|_| Diagnostic::new(DiagCode::E400, span, "deontic output buffer full"))?;
         let rows: Vec<Value> = out[..n]
             .iter()
             .map(|v| Value::String(format!("opcode={:#04x} status={:?}", v.opcode, v.status)))

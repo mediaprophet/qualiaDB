@@ -13,18 +13,17 @@ pub fn roots(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let coeffs = args::rec(args_v, "coeffs")
         .and_then(args::f64s)
         .ok_or_else(|| args::bad(span, "polynomial_roots needs coeffs"))?;
-    let result = polynomial_roots(&coeffs)
-        .map_err(|_| args::bad(span, "polynomial_roots: degenerate or non-finite coefficients"))?;
+    let result = polynomial_roots(&coeffs).map_err(|_| {
+        args::bad(
+            span,
+            "polynomial_roots: degenerate or non-finite coefficients",
+        )
+    })?;
     let degree = coeffs.len().saturating_sub(1);
     let roots_list = Value::List(
         result
             .iter()
-            .map(|c| {
-                args::record([
-                    ("re", Value::F64(c.re)),
-                    ("im", Value::F64(c.im)),
-                ])
-            })
+            .map(|c| args::record([("re", Value::F64(c.re)), ("im", Value::F64(c.im))]))
             .collect(),
     );
     Ok(args::record([

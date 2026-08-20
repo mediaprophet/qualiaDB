@@ -48,7 +48,10 @@ fn extract_bytes(args_v: &Value, span: Span, what: &str) -> Result<Vec<u8>, Diag
     if let Some(hex) = args::rec_str(args_v, "hex") {
         return hex_decode(hex).ok_or_else(|| args::bad(span, format!("{what} needs valid hex")));
     }
-    Err(args::bad(span, format!("{what} needs a record with `text` or `hex`")))
+    Err(args::bad(
+        span,
+        format!("{what} needs a record with `text` or `hex`"),
+    ))
 }
 
 fn hex_lower(bytes: &[u8]) -> String {
@@ -190,6 +193,8 @@ mod tests {
         };
         // BLAKE3("") — 32 bytes → 64 hex chars, all lowercase hex.
         assert_eq!(hex.len(), 64);
-        assert!(hex.chars().all(|c| c.is_ascii_hexdigit() && !c.is_ascii_uppercase()));
+        assert!(hex
+            .chars()
+            .all(|c| c.is_ascii_hexdigit() && !c.is_ascii_uppercase()));
     }
 }

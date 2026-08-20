@@ -129,11 +129,7 @@ impl QuinField {
 /// Equal keys emit the cartesian product, fail-closed when `out` fills
 /// (returns the count written; caller sees truncation if count == out.len()
 /// and more matches exist — use a larger buffer).
-pub fn sort_merge_join_u64(
-    build: &[u64],
-    probe: &[u64],
-    out: &mut [(u32, u32)],
-) -> usize {
+pub fn sort_merge_join_u64(build: &[u64], probe: &[u64], out: &mut [(u32, u32)]) -> usize {
     if build.is_empty() || probe.is_empty() || out.is_empty() {
         return 0;
     }

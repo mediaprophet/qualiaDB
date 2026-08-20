@@ -179,9 +179,7 @@ fn bom_stripped_copy(src: &Path, dest: &Path) -> io::Result<()> {
 
 fn already_reprocessed(dest: &Path) -> bool {
     Q42InspectReport::from_path(dest)
-        .map(|report| {
-            !report.lexicon_has_no_terms && report.flags & FLAG_PERMISSIVE_COMMONS != 0
-        })
+        .map(|report| !report.lexicon_has_no_terms && report.flags & FLAG_PERMISSIVE_COMMONS != 0)
         .unwrap_or(false)
 }
 
@@ -199,23 +197,20 @@ fn replace_dest(tmp: &Path, dest: &Path) -> io::Result<()> {
 
 fn import_path(src: &Path, dest: &Path) -> io::Result<u64> {
     let dir = tempfile::TempDir::new()?;
-    let ext = src
-        .extension()
-        .and_then(|e| e.to_str())
-        .unwrap_or("ttl");
+    let ext = src.extension().and_then(|e| e.to_str()).unwrap_or("ttl");
     let named = dir.path().join(format!(
         "{}.{}",
         src.file_stem().and_then(|s| s.to_str()).unwrap_or("src"),
         ext
     ));
     bom_stripped_copy(src, &named)?;
-    let named_s = named.to_str().ok_or_else(|| {
-        io::Error::new(io::ErrorKind::InvalidInput, "non-UTF8 temp path")
-    })?;
+    let named_s = named
+        .to_str()
+        .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidInput, "non-UTF8 temp path"))?;
     let tmp_q42 = dir.path().join("out.q42");
-    let tmp_s = tmp_q42.to_str().ok_or_else(|| {
-        io::Error::new(io::ErrorKind::InvalidInput, "non-UTF8 tmp q42")
-    })?;
+    let tmp_s = tmp_q42
+        .to_str()
+        .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidInput, "non-UTF8 tmp q42"))?;
     let first = streaming_import_rdf(named_s, tmp_s)?;
     if first > 0 || already_reprocessed(&tmp_q42) {
         replace_dest(&tmp_q42, dest)?;
@@ -229,13 +224,13 @@ fn import_path(src: &Path, dest: &Path) -> io::Result<u64> {
         replace_dest(&tmp_q42, dest)?;
         return Ok(first);
     }
-    let nt_s = nt.to_str().ok_or_else(|| {
-        io::Error::new(io::ErrorKind::InvalidInput, "non-UTF8 nt path")
-    })?;
+    let nt_s = nt
+        .to_str()
+        .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidInput, "non-UTF8 nt path"))?;
     let second = dir.path().join("out2.q42");
-    let second_s = second.to_str().ok_or_else(|| {
-        io::Error::new(io::ErrorKind::InvalidInput, "non-UTF8 tmp2 q42")
-    })?;
+    let second_s = second
+        .to_str()
+        .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidInput, "non-UTF8 tmp2 q42"))?;
     let written = streaming_import_rdf(nt_s, second_s)?;
     replace_dest(&second, dest)?;
     Ok(written)
@@ -256,10 +251,17 @@ fn reprocess_pages_catalogs() {
     if schema_src.is_file() {
         let primary = &schema_dests[0];
         if already_reprocessed(primary) {
-            println!("skip {} (lexicon + commons already present)", primary.display());
+            println!(
+                "skip {} (lexicon + commons already present)",
+                primary.display()
+            );
             rewritten += 1;
         } else {
-            println!("reprocess {} <- {}", primary.display(), schema_src.display());
+            println!(
+                "reprocess {} <- {}",
+                primary.display(),
+                schema_src.display()
+            );
             match import_path(&schema_src, primary) {
                 Ok(blocks) => {
                     println!("  ok {blocks} SuperBlocks");
@@ -283,7 +285,10 @@ fn reprocess_pages_catalogs() {
 
     for (src, dest) in one_to_one_pairs(&root) {
         if already_reprocessed(&dest) {
-            println!("skip {} (lexicon + commons already present)", dest.display());
+            println!(
+                "skip {} (lexicon + commons already present)",
+                dest.display()
+            );
             rewritten += 1;
             continue;
         }
@@ -307,7 +312,10 @@ fn reprocess_pages_catalogs() {
         }
         let nt = scratch.path().join(format!("{domain}.nt"));
         if already_reprocessed(&dest) {
-            println!("skip {} (lexicon + commons already present)", dest.display());
+            println!(
+                "skip {} (lexicon + commons already present)",
+                dest.display()
+            );
             rewritten += 1;
             continue;
         }

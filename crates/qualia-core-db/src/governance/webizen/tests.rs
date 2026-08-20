@@ -1289,7 +1289,11 @@ fn vc9_arena_size_is_exactly_42mb() {
     // The sentinel requires that the SLG arena is exactly 42MB.
     // 42 * 1024 * 1024 = 44,040,192 bytes.
     // MAX_SLOTS = SLG_ARENA_SIZE / QUIN_SIZE = 44,040,192 / 48 = 917,504.
-    assert_eq!(SLG_ARENA_SIZE, 42 * 1024 * 1024, "arena must be exactly 42MB");
+    assert_eq!(
+        SLG_ARENA_SIZE,
+        42 * 1024 * 1024,
+        "arena must be exactly 42MB"
+    );
     assert_eq!(QUIN_SIZE, 48, "each Quin must be 48 bytes");
     assert_eq!(MAX_SLOTS, 917_504, "MAX_SLOTS must be 42MB / 48B");
 }
@@ -1357,8 +1361,24 @@ fn vc9_e400_is_the_sentinel_error_code() {
     // codes, ensuring the sentinel's fail-closed behaviour is wired.
     use poet_vibe::DiagCode;
     // E400 must exist and be distinct from E001/E100/E200/E300.
-    assert_ne!(DiagCode::E400, DiagCode::E001, "E400 must be distinct from E001");
-    assert_ne!(DiagCode::E400, DiagCode::E100, "E400 must be distinct from E100");
-    assert_ne!(DiagCode::E400, DiagCode::E200, "E400 must be distinct from E200");
-    assert_ne!(DiagCode::E400, DiagCode::E300, "E400 must be distinct from E300");
+    assert_ne!(
+        DiagCode::E400,
+        DiagCode::E001,
+        "E400 must be distinct from E001"
+    );
+    assert_ne!(
+        DiagCode::E400,
+        DiagCode::E100,
+        "E400 must be distinct from E100"
+    );
+    assert_ne!(
+        DiagCode::E400,
+        DiagCode::E200,
+        "E400 must be distinct from E200"
+    );
+    assert_ne!(
+        DiagCode::E400,
+        DiagCode::E300,
+        "E400 must be distinct from E300"
+    );
 }

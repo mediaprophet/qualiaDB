@@ -10,9 +10,9 @@ pub mod invoke;
 mod scan;
 mod values;
 
+use scan::{collect_matches, subject_present};
 pub use values::format_value;
 pub(crate) use values::hash_val;
-use scan::{collect_matches, subject_present};
 use values::{reifier_quin, shape_local_name, value_to_quin};
 
 use crate::lexicon::generate_60bit_token;
@@ -149,6 +149,96 @@ pub struct PoetSnapshot {
     pub time_read_during_eval: bool,
     /// Controller managing tick admission and coalescing under load (T68).
     pub tick_controller: TickController,
+    /// HID event ring buffer (T46). 4096-sample quota — host constant,
+    /// not a language constant. Fail-closed when full.
+    pub hid_events: HidEventBuffer,
+}
+
+/// Maximum number of HID events buffered in the host (T46).
+/// 4096 samples = ~4 seconds at 1000 Hz, enough for one frame batch.
+pub const HID_SAMPLE_QUOTA: usize = 4096;
+
+/// A fixed-capacity ring buffer for HID events (T46).
+///
+/// Uses a Vec internally but enforces the 4096-sample quota.
+/// When full, new events are rejected (fail-closed).
+#[derive(Debug, Clone)]
+pub struct HidEventBuffer {
+    events: Vec<HidEventSlot>,
+    head: usize,
+    count: usize,
+}
+
+/// A compact HID event slot for the ring buffer (T46).
+/// Stores the essential fields without String allocation.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct HidEventSlot {
+    pub timestamp_ns: u64,
+    pub source_hash: u64,
+    pub event_kind: u8,
+    pub x: f32,
+    pub y: f32,
+    pub z: f32,
+    pub capability_lease: u64, // 0 = none
+}
+
+impl HidEventBuffer {
+    pub fn new() -> Self {
+        Self {
+            events: vec![HidEventSlot::default(); HID_SAMPLE_QUOTA],
+            head: 0,
+            count: 0,
+        }
+    }
+
+    /// Enqueue a HID event. Returns Err if the quota is full (T46).
+    pub fn enqueue(&mut self, event: HidEventSlot) -> Result<(), &'static str> {
+        if self.count >= HID_SAMPLE_QUOTA {
+            return Err("HID event buffer full (4096-sample quota exceeded)");
+        }
+        let tail = (self.head + self.count) % HID_SAMPLE_QUOTA;
+        self.events[tail] = event;
+        self.count += 1;
+        Ok(())
+    }
+
+    /// Dequeue the oldest HID event.
+    pub fn dequeue(&mut self) -> Option<HidEventSlot> {
+        if self.count == 0 {
+            return None;
+        }
+        let event = self.events[self.head];
+        self.head = (self.head + 1) % HID_SAMPLE_QUOTA;
+        self.count -= 1;
+        Some(event)
+    }
+
+    /// Current number of buffered events.
+    pub fn count(&self) -> usize {
+        self.count
+    }
+
+    /// Whether the buffer is full.
+    pub fn is_full(&self) -> bool {
+        self.count >= HID_SAMPLE_QUOTA
+    }
+
+    /// Whether the buffer is empty.
+    pub fn is_empty(&self) -> bool {
+        self.count == 0
+    }
+
+    /// Clear all events.
+    pub fn clear(&mut self) {
+        self.head = 0;
+        self.count = 0;
+    }
+}
+
+impl Default for HidEventBuffer {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl PoetSnapshot {
@@ -162,6 +252,7 @@ impl PoetSnapshot {
             graph_read_during_eval: false,
             time_read_during_eval: false,
             tick_controller: TickController::default(),
+            hid_events: HidEventBuffer::new(),
         }
     }
 
@@ -187,6 +278,7 @@ impl PoetSnapshot {
             graph_read_during_eval: false,
             time_read_during_eval: false,
             tick_controller: TickController::default(),
+            hid_events: HidEventBuffer::new(),
         }
     }
 
@@ -266,6 +358,7 @@ impl PoetSnapshot {
             graph_read_during_eval: false,
             time_read_during_eval: false,
             tick_controller: self.tick_controller.clone(),
+            hid_events: self.hid_events.clone(),
         }
     }
 
@@ -295,7 +388,12 @@ impl PoetSnapshot {
         result
     }
 
-    pub fn eval_fn(&mut self, src: &str, name: &str, args: Vec<Value>) -> Result<Value, Diagnostic> {
+    pub fn eval_fn(
+        &mut self,
+        src: &str,
+        name: &str,
+        args: Vec<Value>,
+    ) -> Result<Value, Diagnostic> {
         let program = load_program(src)?;
         let mut env = Env::default();
         eval_function(&program, name, args, self, &mut env)
@@ -347,11 +445,7 @@ impl Host for PoetSnapshot {
         Ok(Value::List(out))
     }
 
-    fn graph_stage(
-        &mut self,
-        term: &Value,
-        span: poet_vibe::Span,
-    ) -> Result<Value, Diagnostic> {
+    fn graph_stage(&mut self, term: &Value, span: poet_vibe::Span) -> Result<Value, Diagnostic> {
         let mut pushed = 0usize;
         if let Some(q) = value_to_quin(term, 0) {
             self.staged.push(q);
@@ -603,7 +697,11 @@ impl Host for PoetSnapshot {
                 ));
             }
         };
-        Ok(poet_vibe::crypto::hash_result_value(algorithm, &hash_hex, hash_bytes_len))
+        Ok(poet_vibe::crypto::hash_result_value(
+            algorithm,
+            &hash_hex,
+            hash_bytes_len,
+        ))
     }
 
     fn crypto_hkdf(
@@ -619,12 +717,13 @@ impl Host for PoetSnapshot {
         let info_bytes = info.as_bytes();
         let hk = Hkdf::<Sha256>::new(None, ikm_bytes);
         let mut okm = vec![0u8; length as usize];
-        hk.expand(info_bytes, &mut okm)
-            .map_err(|e| Diagnostic::new(
+        hk.expand(info_bytes, &mut okm).map_err(|e| {
+            Diagnostic::new(
                 poet_vibe::DiagCode::E100,
                 span,
                 format!("crypto.hkdf: expansion failed: {e}"),
-            ))?;
+            )
+        })?;
         Ok(Value::String(poet_vibe::crypto::to_hex(&okm)))
     }
 
@@ -637,76 +736,111 @@ impl Host for PoetSnapshot {
         aad: &str,
         span: poet_vibe::Span,
     ) -> Result<Value, Diagnostic> {
-        let key = poet_vibe::crypto::from_hex(key_hex)
-            .ok_or_else(|| Diagnostic::new(
-                poet_vibe::DiagCode::E100, span,
+        let key = poet_vibe::crypto::from_hex(key_hex).ok_or_else(|| {
+            Diagnostic::new(
+                poet_vibe::DiagCode::E100,
+                span,
                 "crypto.aead_encrypt: invalid key hex",
-            ))?;
-        let nonce = poet_vibe::crypto::from_hex(nonce_hex)
-            .ok_or_else(|| Diagnostic::new(
-                poet_vibe::DiagCode::E100, span,
+            )
+        })?;
+        let nonce = poet_vibe::crypto::from_hex(nonce_hex).ok_or_else(|| {
+            Diagnostic::new(
+                poet_vibe::DiagCode::E100,
+                span,
                 "crypto.aead_encrypt: invalid nonce hex",
-            ))?;
+            )
+        })?;
 
         let aad_bytes = aad.as_bytes();
         let pt_bytes = plaintext.as_bytes();
 
         let (ciphertext, tag): (Vec<u8>, Vec<u8>) = match algorithm {
             "AES-256-GCM" => {
-                use aes_gcm::{Aes256Gcm, KeyInit, Nonce};
                 use aes_gcm::aead::Aead;
+                use aes_gcm::{Aes256Gcm, KeyInit, Nonce};
                 let key_arr: &[u8; 32] = key.as_slice().try_into().map_err(|_| {
-                    Diagnostic::new(poet_vibe::DiagCode::E100, span, "AES-256-GCM key must be 32 bytes")
+                    Diagnostic::new(
+                        poet_vibe::DiagCode::E100,
+                        span,
+                        "AES-256-GCM key must be 32 bytes",
+                    )
                 })?;
                 let cipher = Aes256Gcm::new(key_arr.into());
                 let nonce_arr = Nonce::from_slice(&nonce);
-                let payload = aes_gcm::aead::Payload { msg: pt_bytes, aad: aad_bytes };
-                let ct = cipher.encrypt(nonce_arr, payload)
-                    .map_err(|e| Diagnostic::new(
-                        poet_vibe::DiagCode::E100, span, format!("AES-256-GCM encrypt failed: {e}"),
-                    ))?;
+                let payload = aes_gcm::aead::Payload {
+                    msg: pt_bytes,
+                    aad: aad_bytes,
+                };
+                let ct = cipher.encrypt(nonce_arr, payload).map_err(|e| {
+                    Diagnostic::new(
+                        poet_vibe::DiagCode::E100,
+                        span,
+                        format!("AES-256-GCM encrypt failed: {e}"),
+                    )
+                })?;
                 // AES-GCM appends the 16-byte tag to the ciphertext.
                 let tag = ct[ct.len().saturating_sub(16)..].to_vec();
                 let ct = ct[..ct.len().saturating_sub(16)].to_vec();
                 (ct, tag)
             }
             "ChaCha20-Poly1305" => {
-                use chacha20poly1305::{ChaCha20Poly1305, KeyInit, Nonce};
                 use chacha20poly1305::aead::Aead;
+                use chacha20poly1305::{ChaCha20Poly1305, KeyInit, Nonce};
                 let key_arr: &[u8; 32] = key.as_slice().try_into().map_err(|_| {
-                    Diagnostic::new(poet_vibe::DiagCode::E100, span, "ChaCha20 key must be 32 bytes")
+                    Diagnostic::new(
+                        poet_vibe::DiagCode::E100,
+                        span,
+                        "ChaCha20 key must be 32 bytes",
+                    )
                 })?;
                 let cipher = ChaCha20Poly1305::new(key_arr.into());
                 let nonce_arr = Nonce::from_slice(&nonce);
-                let payload = chacha20poly1305::aead::Payload { msg: pt_bytes, aad: aad_bytes };
-                let ct = cipher.encrypt(nonce_arr, payload)
-                    .map_err(|e| Diagnostic::new(
-                        poet_vibe::DiagCode::E100, span, format!("ChaCha20 encrypt failed: {e}"),
-                    ))?;
+                let payload = chacha20poly1305::aead::Payload {
+                    msg: pt_bytes,
+                    aad: aad_bytes,
+                };
+                let ct = cipher.encrypt(nonce_arr, payload).map_err(|e| {
+                    Diagnostic::new(
+                        poet_vibe::DiagCode::E100,
+                        span,
+                        format!("ChaCha20 encrypt failed: {e}"),
+                    )
+                })?;
                 let tag = ct[ct.len().saturating_sub(16)..].to_vec();
                 let ct = ct[..ct.len().saturating_sub(16)].to_vec();
                 (ct, tag)
             }
             "XChaCha20-Poly1305" => {
-                use chacha20poly1305::{XChaCha20Poly1305, KeyInit, XNonce};
                 use chacha20poly1305::aead::Aead;
+                use chacha20poly1305::{KeyInit, XChaCha20Poly1305, XNonce};
                 let key_arr: &[u8; 32] = key.as_slice().try_into().map_err(|_| {
-                    Diagnostic::new(poet_vibe::DiagCode::E100, span, "XChaCha20 key must be 32 bytes")
+                    Diagnostic::new(
+                        poet_vibe::DiagCode::E100,
+                        span,
+                        "XChaCha20 key must be 32 bytes",
+                    )
                 })?;
                 let cipher = XChaCha20Poly1305::new(key_arr.into());
                 let nonce_arr = XNonce::from_slice(&nonce);
-                let payload = chacha20poly1305::aead::Payload { msg: pt_bytes, aad: aad_bytes };
-                let ct = cipher.encrypt(nonce_arr, payload)
-                    .map_err(|e| Diagnostic::new(
-                        poet_vibe::DiagCode::E100, span, format!("XChaCha20 encrypt failed: {e}"),
-                    ))?;
+                let payload = chacha20poly1305::aead::Payload {
+                    msg: pt_bytes,
+                    aad: aad_bytes,
+                };
+                let ct = cipher.encrypt(nonce_arr, payload).map_err(|e| {
+                    Diagnostic::new(
+                        poet_vibe::DiagCode::E100,
+                        span,
+                        format!("XChaCha20 encrypt failed: {e}"),
+                    )
+                })?;
                 let tag = ct[ct.len().saturating_sub(16)..].to_vec();
                 let ct = ct[..ct.len().saturating_sub(16)].to_vec();
                 (ct, tag)
             }
             _ => {
                 return Err(Diagnostic::new(
-                    poet_vibe::DiagCode::E100, span,
+                    poet_vibe::DiagCode::E100,
+                    span,
                     format!("crypto.aead_encrypt: unsupported algorithm {algorithm}"),
                 ));
             }
@@ -730,22 +864,34 @@ impl Host for PoetSnapshot {
         aad: &str,
         span: poet_vibe::Span,
     ) -> Result<Value, Diagnostic> {
-        let key = poet_vibe::crypto::from_hex(key_hex)
-            .ok_or_else(|| Diagnostic::new(
-                poet_vibe::DiagCode::E100, span, "crypto.aead_decrypt: invalid key hex",
-            ))?;
-        let nonce = poet_vibe::crypto::from_hex(nonce_hex)
-            .ok_or_else(|| Diagnostic::new(
-                poet_vibe::DiagCode::E100, span, "crypto.aead_decrypt: invalid nonce hex",
-            ))?;
-        let ciphertext = poet_vibe::crypto::from_hex(ciphertext_hex)
-            .ok_or_else(|| Diagnostic::new(
-                poet_vibe::DiagCode::E100, span, "crypto.aead_decrypt: invalid ciphertext hex",
-            ))?;
-        let tag = poet_vibe::crypto::from_hex(tag_hex)
-            .ok_or_else(|| Diagnostic::new(
-                poet_vibe::DiagCode::E100, span, "crypto.aead_decrypt: invalid tag hex",
-            ))?;
+        let key = poet_vibe::crypto::from_hex(key_hex).ok_or_else(|| {
+            Diagnostic::new(
+                poet_vibe::DiagCode::E100,
+                span,
+                "crypto.aead_decrypt: invalid key hex",
+            )
+        })?;
+        let nonce = poet_vibe::crypto::from_hex(nonce_hex).ok_or_else(|| {
+            Diagnostic::new(
+                poet_vibe::DiagCode::E100,
+                span,
+                "crypto.aead_decrypt: invalid nonce hex",
+            )
+        })?;
+        let ciphertext = poet_vibe::crypto::from_hex(ciphertext_hex).ok_or_else(|| {
+            Diagnostic::new(
+                poet_vibe::DiagCode::E100,
+                span,
+                "crypto.aead_decrypt: invalid ciphertext hex",
+            )
+        })?;
+        let tag = poet_vibe::crypto::from_hex(tag_hex).ok_or_else(|| {
+            Diagnostic::new(
+                poet_vibe::DiagCode::E100,
+                span,
+                "crypto.aead_decrypt: invalid tag hex",
+            )
+        })?;
 
         let aad_bytes = aad.as_bytes();
         // Combine ciphertext + tag (AEAD libraries expect them concatenated).
@@ -754,56 +900,89 @@ impl Host for PoetSnapshot {
 
         let plaintext = match algorithm {
             "AES-256-GCM" => {
-                use aes_gcm::{Aes256Gcm, KeyInit, Nonce};
                 use aes_gcm::aead::Aead;
+                use aes_gcm::{Aes256Gcm, KeyInit, Nonce};
                 let key_arr: &[u8; 32] = key.as_slice().try_into().map_err(|_| {
-                    Diagnostic::new(poet_vibe::DiagCode::E100, span, "AES-256-GCM key must be 32 bytes")
+                    Diagnostic::new(
+                        poet_vibe::DiagCode::E100,
+                        span,
+                        "AES-256-GCM key must be 32 bytes",
+                    )
                 })?;
                 let cipher = Aes256Gcm::new(key_arr.into());
                 let nonce_arr = Nonce::from_slice(&nonce);
-                let payload = aes_gcm::aead::Payload { msg: &ct_tag, aad: aad_bytes };
-                cipher.decrypt(nonce_arr, payload)
-                    .map_err(|e| Diagnostic::new(
-                        poet_vibe::DiagCode::E100, span, format!("AES-256-GCM decrypt failed: {e}"),
-                    ))?
+                let payload = aes_gcm::aead::Payload {
+                    msg: &ct_tag,
+                    aad: aad_bytes,
+                };
+                cipher.decrypt(nonce_arr, payload).map_err(|e| {
+                    Diagnostic::new(
+                        poet_vibe::DiagCode::E100,
+                        span,
+                        format!("AES-256-GCM decrypt failed: {e}"),
+                    )
+                })?
             }
             "ChaCha20-Poly1305" => {
-                use chacha20poly1305::{ChaCha20Poly1305, KeyInit, Nonce};
                 use chacha20poly1305::aead::Aead;
+                use chacha20poly1305::{ChaCha20Poly1305, KeyInit, Nonce};
                 let key_arr: &[u8; 32] = key.as_slice().try_into().map_err(|_| {
-                    Diagnostic::new(poet_vibe::DiagCode::E100, span, "ChaCha20 key must be 32 bytes")
+                    Diagnostic::new(
+                        poet_vibe::DiagCode::E100,
+                        span,
+                        "ChaCha20 key must be 32 bytes",
+                    )
                 })?;
                 let cipher = ChaCha20Poly1305::new(key_arr.into());
                 let nonce_arr = Nonce::from_slice(&nonce);
-                let payload = chacha20poly1305::aead::Payload { msg: &ct_tag, aad: aad_bytes };
-                cipher.decrypt(nonce_arr, payload)
-                    .map_err(|e| Diagnostic::new(
-                        poet_vibe::DiagCode::E100, span, format!("ChaCha20 decrypt failed: {e}"),
-                    ))?
+                let payload = chacha20poly1305::aead::Payload {
+                    msg: &ct_tag,
+                    aad: aad_bytes,
+                };
+                cipher.decrypt(nonce_arr, payload).map_err(|e| {
+                    Diagnostic::new(
+                        poet_vibe::DiagCode::E100,
+                        span,
+                        format!("ChaCha20 decrypt failed: {e}"),
+                    )
+                })?
             }
             "XChaCha20-Poly1305" => {
-                use chacha20poly1305::{XChaCha20Poly1305, KeyInit, XNonce};
                 use chacha20poly1305::aead::Aead;
+                use chacha20poly1305::{KeyInit, XChaCha20Poly1305, XNonce};
                 let key_arr: &[u8; 32] = key.as_slice().try_into().map_err(|_| {
-                    Diagnostic::new(poet_vibe::DiagCode::E100, span, "XChaCha20 key must be 32 bytes")
+                    Diagnostic::new(
+                        poet_vibe::DiagCode::E100,
+                        span,
+                        "XChaCha20 key must be 32 bytes",
+                    )
                 })?;
                 let cipher = XChaCha20Poly1305::new(key_arr.into());
                 let nonce_arr = XNonce::from_slice(&nonce);
-                let payload = chacha20poly1305::aead::Payload { msg: &ct_tag, aad: aad_bytes };
-                cipher.decrypt(nonce_arr, payload)
-                    .map_err(|e| Diagnostic::new(
-                        poet_vibe::DiagCode::E100, span, format!("XChaCha20 decrypt failed: {e}"),
-                    ))?
+                let payload = chacha20poly1305::aead::Payload {
+                    msg: &ct_tag,
+                    aad: aad_bytes,
+                };
+                cipher.decrypt(nonce_arr, payload).map_err(|e| {
+                    Diagnostic::new(
+                        poet_vibe::DiagCode::E100,
+                        span,
+                        format!("XChaCha20 decrypt failed: {e}"),
+                    )
+                })?
             }
             _ => {
                 return Err(Diagnostic::new(
-                    poet_vibe::DiagCode::E100, span,
+                    poet_vibe::DiagCode::E100,
+                    span,
                     format!("crypto.aead_decrypt: unsupported algorithm {algorithm}"),
                 ));
             }
         };
 
-        Ok(Value::String(String::from_utf8_lossy(&plaintext).into_owned()))
+        Ok(Value::String(
+            String::from_utf8_lossy(&plaintext).into_owned(),
+        ))
     }
 
     fn crypto_sign(
@@ -861,15 +1040,18 @@ impl Host for PoetSnapshot {
         #[cfg(feature = "zk-culling")]
         {
             use crate::crypto::zk_predicates;
-            let proof = zk_predicates::prove_threshold(value, threshold)
-                .map_err(|e| Diagnostic::new(
-                    poet_vibe::DiagCode::E100, span,
+            let proof = zk_predicates::prove_threshold(value, threshold).map_err(|e| {
+                Diagnostic::new(
+                    poet_vibe::DiagCode::E100,
+                    span,
                     format!("zk.prove_threshold: {e}"),
-                ))?;
+                )
+            })?;
             let proof_hex = poet_vibe::crypto::to_hex(&proof.proof);
             let vk_hex = poet_vibe::crypto::to_hex(&proof.vk);
             Ok(poet_vibe::crypto::zk_proof_value(
-                &proof_hex, &vk_hex,
+                &proof_hex,
+                &vk_hex,
                 &format!("zk_threshold_{}_{}", value, threshold),
                 "threshold",
             ))
@@ -878,7 +1060,8 @@ impl Host for PoetSnapshot {
         {
             let _ = (value, threshold);
             Err(Diagnostic::new(
-                poet_vibe::DiagCode::E702, span,
+                poet_vibe::DiagCode::E702,
+                span,
                 "zk.prove_threshold: zk-culling feature not enabled",
             ))
         }
@@ -893,16 +1076,25 @@ impl Host for PoetSnapshot {
     ) -> Result<Value, Diagnostic> {
         #[cfg(feature = "zk-culling")]
         {
-            use crate::crypto::zk_predicates::{PredicateProof, verify_threshold};
-            let proof_bytes = poet_vibe::crypto::from_hex(proof_hex)
-                .ok_or_else(|| Diagnostic::new(
-                    poet_vibe::DiagCode::E100, span, "zk.verify_threshold: invalid proof hex",
-                ))?;
-            let vk_bytes = poet_vibe::crypto::from_hex(vk_hex)
-                .ok_or_else(|| Diagnostic::new(
-                    poet_vibe::DiagCode::E100, span, "zk.verify_threshold: invalid vk hex",
-                ))?;
-            let proof = PredicateProof { proof: proof_bytes, vk: vk_bytes };
+            use crate::crypto::zk_predicates::{verify_threshold, PredicateProof};
+            let proof_bytes = poet_vibe::crypto::from_hex(proof_hex).ok_or_else(|| {
+                Diagnostic::new(
+                    poet_vibe::DiagCode::E100,
+                    span,
+                    "zk.verify_threshold: invalid proof hex",
+                )
+            })?;
+            let vk_bytes = poet_vibe::crypto::from_hex(vk_hex).ok_or_else(|| {
+                Diagnostic::new(
+                    poet_vibe::DiagCode::E100,
+                    span,
+                    "zk.verify_threshold: invalid vk hex",
+                )
+            })?;
+            let proof = PredicateProof {
+                proof: proof_bytes,
+                vk: vk_bytes,
+            };
             let valid = verify_threshold(&proof, threshold);
             Ok(Value::Bool(valid))
         }
@@ -910,7 +1102,8 @@ impl Host for PoetSnapshot {
         {
             let _ = (proof_hex, vk_hex, threshold);
             Err(Diagnostic::new(
-                poet_vibe::DiagCode::E702, span,
+                poet_vibe::DiagCode::E702,
+                span,
                 "zk.verify_threshold: zk-culling feature not enabled",
             ))
         }
@@ -926,15 +1119,18 @@ impl Host for PoetSnapshot {
         #[cfg(feature = "zk-culling")]
         {
             use crate::crypto::zk_predicates;
-            let proof = zk_predicates::prove_range(value, lo, hi)
-                .map_err(|e| Diagnostic::new(
-                    poet_vibe::DiagCode::E100, span,
+            let proof = zk_predicates::prove_range(value, lo, hi).map_err(|e| {
+                Diagnostic::new(
+                    poet_vibe::DiagCode::E100,
+                    span,
                     format!("zk.prove_range: {e}"),
-                ))?;
+                )
+            })?;
             let proof_hex = poet_vibe::crypto::to_hex(&proof.proof);
             let vk_hex = poet_vibe::crypto::to_hex(&proof.vk);
             Ok(poet_vibe::crypto::zk_proof_value(
-                &proof_hex, &vk_hex,
+                &proof_hex,
+                &vk_hex,
                 &format!("zk_range_{}_{}_{}", value, lo, hi),
                 "range",
             ))
@@ -943,7 +1139,8 @@ impl Host for PoetSnapshot {
         {
             let _ = (value, lo, hi);
             Err(Diagnostic::new(
-                poet_vibe::DiagCode::E702, span,
+                poet_vibe::DiagCode::E702,
+                span,
                 "zk.prove_range: zk-culling feature not enabled",
             ))
         }
@@ -959,16 +1156,25 @@ impl Host for PoetSnapshot {
     ) -> Result<Value, Diagnostic> {
         #[cfg(feature = "zk-culling")]
         {
-            use crate::crypto::zk_predicates::{PredicateProof, verify_range};
-            let proof_bytes = poet_vibe::crypto::from_hex(proof_hex)
-                .ok_or_else(|| Diagnostic::new(
-                    poet_vibe::DiagCode::E100, span, "zk.verify_range: invalid proof hex",
-                ))?;
-            let vk_bytes = poet_vibe::crypto::from_hex(vk_hex)
-                .ok_or_else(|| Diagnostic::new(
-                    poet_vibe::DiagCode::E100, span, "zk.verify_range: invalid vk hex",
-                ))?;
-            let proof = PredicateProof { proof: proof_bytes, vk: vk_bytes };
+            use crate::crypto::zk_predicates::{verify_range, PredicateProof};
+            let proof_bytes = poet_vibe::crypto::from_hex(proof_hex).ok_or_else(|| {
+                Diagnostic::new(
+                    poet_vibe::DiagCode::E100,
+                    span,
+                    "zk.verify_range: invalid proof hex",
+                )
+            })?;
+            let vk_bytes = poet_vibe::crypto::from_hex(vk_hex).ok_or_else(|| {
+                Diagnostic::new(
+                    poet_vibe::DiagCode::E100,
+                    span,
+                    "zk.verify_range: invalid vk hex",
+                )
+            })?;
+            let proof = PredicateProof {
+                proof: proof_bytes,
+                vk: vk_bytes,
+            };
             let valid = verify_range(&proof, lo, hi);
             Ok(Value::Bool(valid))
         }
@@ -976,7 +1182,8 @@ impl Host for PoetSnapshot {
         {
             let _ = (proof_hex, vk_hex, lo, hi);
             Err(Diagnostic::new(
-                poet_vibe::DiagCode::E702, span,
+                poet_vibe::DiagCode::E702,
+                span,
                 "zk.verify_range: zk-culling feature not enabled",
             ))
         }
@@ -995,18 +1202,23 @@ impl Host for PoetSnapshot {
         {
             use crate::crypto::zk_proofs::ZkProofSystem;
             let mut zk = ZkProofSystem::new();
-            let (valid, result) = zk.prove_matrix_multiply(m as usize, k as usize, n as usize, a, b)
-                .map_err(|e| Diagnostic::new(
-                    poet_vibe::DiagCode::E100, span,
-                    format!("zk.prove_matmul: {e}"),
-                ))?;
+            let (valid, result) = zk
+                .prove_matrix_multiply(m as usize, k as usize, n as usize, a, b)
+                .map_err(|e| {
+                    Diagnostic::new(
+                        poet_vibe::DiagCode::E100,
+                        span,
+                        format!("zk.prove_matmul: {e}"),
+                    )
+                })?;
             Ok(poet_vibe::crypto::zk_matmul_result_value(valid, &result))
         }
         #[cfg(not(feature = "zk-culling"))]
         {
             let _ = (m, k, n, a, b);
             Err(Diagnostic::new(
-                poet_vibe::DiagCode::E702, span,
+                poet_vibe::DiagCode::E702,
+                span,
                 "zk.prove_matmul: zk-culling feature not enabled",
             ))
         }
@@ -1024,7 +1236,8 @@ impl Host for PoetSnapshot {
         {
             let _ = span;
             Err(Diagnostic::new(
-                poet_vibe::DiagCode::E702, span,
+                poet_vibe::DiagCode::E702,
+                span,
                 "zk.list_circuits: zk-culling feature not enabled",
             ))
         }
@@ -1040,6 +1253,84 @@ mod tests {
         let mut snap = PoetSnapshot::default();
         let v = snap.eval_cell_src("= math.max(1, math.min(9, 4))").unwrap();
         assert_eq!(v.as_f64(), Some(4.0));
+    }
+
+    #[test]
+    fn t46_hid_buffer_enqueue_dequeue() {
+        let mut buf = HidEventBuffer::new();
+        assert!(buf.is_empty());
+        let event = HidEventSlot {
+            timestamp_ns: 1000,
+            source_hash: 0xABC,
+            event_kind: 1,
+            x: 10.0,
+            y: 20.0,
+            z: 0.0,
+            capability_lease: 0,
+        };
+        assert!(buf.enqueue(event).is_ok());
+        assert_eq!(buf.count(), 1);
+        let dequeued = buf.dequeue().unwrap();
+        assert_eq!(dequeued.timestamp_ns, 1000);
+        assert!(buf.is_empty());
+    }
+
+    #[test]
+    fn t46_hid_buffer_quota_enforced() {
+        let mut buf = HidEventBuffer::new();
+        // Fill to quota
+        for i in 0..HID_SAMPLE_QUOTA {
+            let event = HidEventSlot {
+                timestamp_ns: i as u64,
+                source_hash: 0,
+                event_kind: 0,
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+                capability_lease: 0,
+            };
+            assert!(buf.enqueue(event).is_ok(), "enqueue {} should succeed", i);
+        }
+        assert!(buf.is_full());
+        // Next enqueue should fail (fail-closed)
+        let overflow = HidEventSlot::default();
+        assert!(buf.enqueue(overflow).is_err(), "should reject when full");
+    }
+
+    #[test]
+    fn t46_hid_buffer_fifo_order() {
+        let mut buf = HidEventBuffer::new();
+        for i in 0..10 {
+            buf.enqueue(HidEventSlot {
+                timestamp_ns: i,
+                ..Default::default()
+            })
+            .unwrap();
+        }
+        for i in 0..10 {
+            let event = buf.dequeue().unwrap();
+            assert_eq!(event.timestamp_ns, i, "FIFO order violated at {}", i);
+        }
+    }
+
+    #[test]
+    fn t46_hid_buffer_clear() {
+        let mut buf = HidEventBuffer::new();
+        buf.enqueue(HidEventSlot::default()).unwrap();
+        assert!(!buf.is_empty());
+        buf.clear();
+        assert!(buf.is_empty());
+    }
+
+    #[test]
+    fn t46_hid_quota_is_4096() {
+        assert_eq!(HID_SAMPLE_QUOTA, 4096);
+    }
+
+    #[test]
+    fn t46_snapshot_has_hid_buffer() {
+        let snap = PoetSnapshot::with_seed(Vec::new());
+        assert!(snap.hid_events.is_empty());
     }
 
     #[test]
@@ -1061,7 +1352,10 @@ mod tests {
             _ => panic!("expected hex String"),
         };
         // SHA-256("hello") = 2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824
-        assert_eq!(hex, "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824");
+        assert_eq!(
+            hex,
+            "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"
+        );
     }
 
     #[test]
@@ -1116,7 +1410,8 @@ mod tests {
         // Use a 32-byte key (64 hex chars) and 12-byte nonce (24 hex chars)
         let key_hex = "0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20";
         let nonce_hex = "0102030405060708090a0b0c";
-        let src = format!(r#"
+        let src = format!(
+            r#"
             import "crypto" as crypto;
             fn encrypt_it() {{
                 return crypto.aead_encrypt("AES-256-GCM", "{}", "{}", "secret message", "aad");
@@ -1124,7 +1419,9 @@ mod tests {
             fn decrypt_it(ct_hex: String, tag_hex: String) {{
                 return crypto.aead_decrypt("AES-256-GCM", "{}", "{}", ct_hex, tag_hex, "aad");
             }}
-        "#, key_hex, nonce_hex, key_hex, nonce_hex);
+        "#,
+            key_hex, nonce_hex, key_hex, nonce_hex
+        );
         let enc = snap.eval_fn(&src, "encrypt_it", vec![]).unwrap();
         let enc_rec = match &enc {
             Value::Record(r) => r,
@@ -1138,10 +1435,13 @@ mod tests {
             Some(Value::String(s)) => s.clone(),
             _ => panic!("expected tag_hex"),
         };
-        let dec = snap.eval_fn(&src, "decrypt_it", vec![
-            Value::String(ct_hex),
-            Value::String(tag_hex),
-        ]).unwrap();
+        let dec = snap
+            .eval_fn(
+                &src,
+                "decrypt_it",
+                vec![Value::String(ct_hex), Value::String(tag_hex)],
+            )
+            .unwrap();
         match dec {
             Value::String(s) => assert_eq!(s, "secret message"),
             _ => panic!("expected String"),
@@ -1187,17 +1487,25 @@ mod tests {
         };
 
         // Verify the proof against the correct threshold (18).
-        let verify_src = format!(r#"
+        let verify_src = format!(
+            r#"
             import "zk" as zk;
             fn verify_age(proof_hex: String, vk_hex: String) {{
                 return zk.verify_threshold(proof_hex, vk_hex, 18);
             }}
-        "#);
-        let result = snap.eval_fn(&verify_src, "verify_age", vec![
-            Value::String(proof_hex),
-            Value::String(vk_hex),
-        ]).unwrap();
-        assert!(match result { Value::Bool(b) => b, _ => false });
+        "#
+        );
+        let result = snap
+            .eval_fn(
+                &verify_src,
+                "verify_age",
+                vec![Value::String(proof_hex), Value::String(vk_hex)],
+            )
+            .unwrap();
+        assert!(match result {
+            Value::Bool(b) => b,
+            _ => false,
+        });
     }
 
     #[test]
@@ -1226,17 +1534,25 @@ mod tests {
 
         // Verify against the WRONG threshold (21) — should fail.
         // A proof made for threshold=18 does not verify against threshold=21.
-        let verify_src = format!(r#"
+        let verify_src = format!(
+            r#"
             import "zk" as zk;
             fn verify(proof_hex: String, vk_hex: String) {{
                 return zk.verify_threshold(proof_hex, vk_hex, 21);
             }}
-        "#);
-        let result = snap.eval_fn(&verify_src, "verify", vec![
-            Value::String(proof_hex),
-            Value::String(vk_hex),
-        ]).unwrap();
-        assert!(match result { Value::Bool(b) => !b, _ => false });
+        "#
+        );
+        let result = snap
+            .eval_fn(
+                &verify_src,
+                "verify",
+                vec![Value::String(proof_hex), Value::String(vk_hex)],
+            )
+            .unwrap();
+        assert!(match result {
+            Value::Bool(b) => !b,
+            _ => false,
+        });
     }
 
     #[test]
@@ -1278,17 +1594,25 @@ mod tests {
         };
 
         // Verify against the correct bounds.
-        let verify_src = format!(r#"
+        let verify_src = format!(
+            r#"
             import "zk" as zk;
             fn verify(proof_hex: String, vk_hex: String) {{
                 return zk.verify_range(proof_hex, vk_hex, 18, 65);
             }}
-        "#);
-        let result = snap.eval_fn(&verify_src, "verify", vec![
-            Value::String(proof_hex),
-            Value::String(vk_hex),
-        ]).unwrap();
-        assert!(match result { Value::Bool(b) => b, _ => false });
+        "#
+        );
+        let result = snap
+            .eval_fn(
+                &verify_src,
+                "verify",
+                vec![Value::String(proof_hex), Value::String(vk_hex)],
+            )
+            .unwrap();
+        assert!(match result {
+            Value::Bool(b) => b,
+            _ => false,
+        });
     }
 
     #[test]
@@ -1322,18 +1646,45 @@ mod tests {
             _ => panic!("expected Record"),
         };
         // The proof should be valid.
-        assert_eq!(match rec.get("valid").unwrap() {
-            Value::Bool(b) => *b,
-            _ => panic!("expected Bool"),
-        }, true);
+        assert_eq!(
+            match rec.get("valid").unwrap() {
+                Value::Bool(b) => *b,
+                _ => panic!("expected Bool"),
+            },
+            true
+        );
         // The result should be [19, 22, 43, 50].
         match rec.get("result").unwrap() {
             Value::List(xs) => {
                 assert_eq!(xs.len(), 4);
-                assert_eq!(match &xs[0] { Value::I64(n) => *n, _ => panic!("expected I64") }, 19);
-                assert_eq!(match &xs[1] { Value::I64(n) => *n, _ => panic!("expected I64") }, 22);
-                assert_eq!(match &xs[2] { Value::I64(n) => *n, _ => panic!("expected I64") }, 43);
-                assert_eq!(match &xs[3] { Value::I64(n) => *n, _ => panic!("expected I64") }, 50);
+                assert_eq!(
+                    match &xs[0] {
+                        Value::I64(n) => *n,
+                        _ => panic!("expected I64"),
+                    },
+                    19
+                );
+                assert_eq!(
+                    match &xs[1] {
+                        Value::I64(n) => *n,
+                        _ => panic!("expected I64"),
+                    },
+                    22
+                );
+                assert_eq!(
+                    match &xs[2] {
+                        Value::I64(n) => *n,
+                        _ => panic!("expected I64"),
+                    },
+                    43
+                );
+                assert_eq!(
+                    match &xs[3] {
+                        Value::I64(n) => *n,
+                        _ => panic!("expected I64"),
+                    },
+                    50
+                );
             }
             _ => panic!("expected List"),
         }
@@ -1524,7 +1875,9 @@ effect fn go() {
         snap.eval_fn(src, "go", vec![]).unwrap();
         assert_eq!(snap.published.len(), 1);
         assert!(snap.published[0].seq > 0, "attached pulse should get a seq");
-        let event = rx.try_recv().expect("transport subscriber should receive event");
+        let event = rx
+            .try_recv()
+            .expect("transport subscriber should receive event");
         assert_eq!(event.topic, "pulse/transport-test");
         assert_eq!(event.seq, snap.published[0].seq);
     }
@@ -1549,10 +1902,18 @@ on pulse:message(topic: string, value: f64) {
 "#;
         let path = vec!["pulse".to_string(), "message".to_string()];
         let v = snap
-            .dispatch_hook_src(src, &path, vec![Value::String("clinic/alerts".into()), Value::F64(90.0)])
+            .dispatch_hook_src(
+                src,
+                &path,
+                vec![Value::String("clinic/alerts".into()), Value::F64(90.0)],
+            )
             .unwrap();
         assert_eq!(v, Value::Null);
-        assert_eq!(snap.published.len(), 1, "hook should have triggered a publish");
+        assert_eq!(
+            snap.published.len(),
+            1,
+            "hook should have triggered a publish"
+        );
         assert_eq!(snap.published[0].topic, "clinic/alerts");
     }
 
@@ -1668,18 +2029,25 @@ effect fn boom() {
         let mut snap = PoetSnapshot::default();
         let src = "effect fn now() { return time.unix(); }";
         snap.eval_fn(src, "now", vec![]).unwrap();
-        assert!(snap.time_read_during_eval, "time.unix should set time_read_during_eval");
+        assert!(
+            snap.time_read_during_eval,
+            "time.unix should set time_read_during_eval"
+        );
     }
 
     #[test]
     fn eval_cell_resets_time_read_during_eval() {
         let mut snap = PoetSnapshot::default();
         // First, trigger time_unix via a function call.
-        snap.eval_fn("effect fn now() { return time.unix(); }", "now", vec![]).unwrap();
+        snap.eval_fn("effect fn now() { return time.unix(); }", "now", vec![])
+            .unwrap();
         assert!(snap.time_read_during_eval);
         // Now eval a cell that doesn't use time — flag should reset to false.
         snap.eval_cell_src("= 1 + 2").unwrap();
-        assert!(!snap.time_read_during_eval, "eval_cell_src should reset time_read_during_eval");
+        assert!(
+            !snap.time_read_during_eval,
+            "eval_cell_src should reset time_read_during_eval"
+        );
     }
 
     #[test]
@@ -1698,7 +2066,11 @@ on tick() {
         let path = vec!["tick".to_string()];
         let v = snap.dispatch_hook_src(src, &path, vec![]).unwrap();
         assert_eq!(v, Value::Null);
-        assert_eq!(snap.published.len(), 1, "tick hook should have triggered a publish");
+        assert_eq!(
+            snap.published.len(),
+            1,
+            "tick hook should have triggered a publish"
+        );
         assert_eq!(snap.published[0].topic, "poet/tick");
     }
 
@@ -1736,8 +2108,14 @@ effect fn go() {
         let v = snap.eval_fn(src, "go", vec![]).unwrap();
         match v {
             Value::Record(r) => {
-                assert!(r.contains_key("energy_initial"), "wave_1d should return energy_initial");
-                assert!(r.contains_key("energy_final"), "wave_1d should return energy_final");
+                assert!(
+                    r.contains_key("energy_initial"),
+                    "wave_1d should return energy_initial"
+                );
+                assert!(
+                    r.contains_key("energy_final"),
+                    "wave_1d should return energy_final"
+                );
             }
             other => panic!("expected record, got {other:?}"),
         }
@@ -1763,7 +2141,10 @@ effect fn go() {
         let v = snap.eval_fn(src, "go", vec![]).unwrap();
         match v {
             Value::Record(r) => {
-                assert!(r.contains_key("positions"), "oscillator should return positions");
+                assert!(
+                    r.contains_key("positions"),
+                    "oscillator should return positions"
+                );
             }
             other => panic!("expected record, got {other:?}"),
         }
@@ -1787,7 +2168,10 @@ effect fn go() {
             Value::Record(r) => {
                 let css = r.get("css").expect("emf_to_rgb should return css field");
                 match css {
-                    Value::String(s) => assert!(s.starts_with("rgb("), "emf_to_rgb css should start with rgb(: {s}"),
+                    Value::String(s) => assert!(
+                        s.starts_with("rgb("),
+                        "emf_to_rgb css should start with rgb(: {s}"
+                    ),
                     other => panic!("css should be string, got {other:?}"),
                 }
             }
@@ -1815,8 +2199,14 @@ effect fn go() {
                 let svg = r.get("svg").expect("svg_path should return svg field");
                 match svg {
                     Value::String(s) => {
-                        assert!(s.contains("<path"), "svg_path should return <path element: {s}");
-                        assert!(s.contains("M 10 10 L 90 90"), "svg_path should contain d attribute");
+                        assert!(
+                            s.contains("<path"),
+                            "svg_path should return <path element: {s}"
+                        );
+                        assert!(
+                            s.contains("M 10 10 L 90 90"),
+                            "svg_path should contain d attribute"
+                        );
                     }
                     other => panic!("svg should be string, got {other:?}"),
                 }
@@ -1847,8 +2237,14 @@ effect fn go() {
                 let css = r.get("css").expect("css_animation should return css field");
                 match css {
                     Value::String(s) => {
-                        assert!(s.contains("@keyframes"), "css_animation should return @keyframes: {s}");
-                        assert!(s.contains("fade"), "css_animation should contain animation name");
+                        assert!(
+                            s.contains("@keyframes"),
+                            "css_animation should return @keyframes: {s}"
+                        );
+                        assert!(
+                            s.contains("fade"),
+                            "css_animation should contain animation name"
+                        );
                     }
                     other => panic!("css should be string, got {other:?}"),
                 }
@@ -1878,7 +2274,10 @@ effect fn go() {
                 let svg = r.get("svg").expect("svg_circle should return svg field");
                 match svg {
                     Value::String(s) => {
-                        assert!(s.contains("<circle"), "svg_circle should return <circle: {s}");
+                        assert!(
+                            s.contains("<circle"),
+                            "svg_circle should return <circle: {s}"
+                        );
                         assert!(s.contains("cx=\"50\""), "svg_circle should contain cx");
                     }
                     other => panic!("svg should be string, got {other:?}"),
@@ -1916,7 +2315,10 @@ on tick() {
         // On native, time.unix returns wall clock — should be non-zero (usually).
         // On WASM, returns 0. Just verify it doesn't panic and returns I64.
         assert!(matches!(v1, Value::I64(_)), "time.unix should return I64");
-        assert!(snap.time_read_during_eval, "time_read_during_eval should be set");
+        assert!(
+            snap.time_read_during_eval,
+            "time_read_during_eval should be set"
+        );
     }
 
     #[test]
@@ -1967,5 +2369,3 @@ on tick() {
         assert_eq!(ctrl.total_processed, 1);
     }
 }
-
-

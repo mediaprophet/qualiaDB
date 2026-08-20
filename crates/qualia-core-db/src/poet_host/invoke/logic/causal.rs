@@ -1,7 +1,7 @@
 //! Causal reachability and Gödel t-norm. Full modalities only (not wasm-ontology lite).
 
-use crate::poet_host::{hash_val, PoetSnapshot};
 use super::super::args;
+use crate::poet_host::{hash_val, PoetSnapshot};
 use poet_vibe::{Diagnostic, Span, Value};
 
 #[cfg(any(
@@ -12,9 +12,9 @@ use poet_vibe::{Diagnostic, Span, Value};
 ))]
 pub fn caused(snap: &PoetSnapshot, args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     use crate::modalities::causal::caused as caused_of;
-    let effect = rec_hash(args_v, "effect").or_else(|| hash_val(args_v)).ok_or_else(|| {
-        args::bad(span, "CausalFuzzyAndControl.caused needs effect")
-    })?;
+    let effect = rec_hash(args_v, "effect")
+        .or_else(|| hash_val(args_v))
+        .ok_or_else(|| args::bad(span, "CausalFuzzyAndControl.caused needs effect"))?;
     let mut roots = [0u64; 32];
     let mut n = 0usize;
     if let Some(xs) = args::rec(args_v, "roots").and_then(args::list) {

@@ -351,11 +351,19 @@ pub fn ciede2000(xyz1: &Xyz, xyz2: &Xyz) -> f32 {
 
     let h1p = {
         let h = b1.atan2(a1p);
-        if h < 0.0 { h + 2.0 * std::f32::consts::PI } else { h }
+        if h < 0.0 {
+            h + 2.0 * std::f32::consts::PI
+        } else {
+            h
+        }
     };
     let h2p = {
         let h = b2.atan2(a2p);
-        if h < 0.0 { h + 2.0 * std::f32::consts::PI } else { h }
+        if h < 0.0 {
+            h + 2.0 * std::f32::consts::PI
+        } else {
+            h
+        }
     };
 
     let d_l = l2 - l1;
@@ -391,8 +399,7 @@ pub fn ciede2000(xyz1: &Xyz, xyz2: &Xyz) -> f32 {
         }
     };
 
-    let t = 1.0
-        - 0.17 * (h_barp - 30.0 * std::f32::consts::PI / 180.0).cos()
+    let t = 1.0 - 0.17 * (h_barp - 30.0 * std::f32::consts::PI / 180.0).cos()
         + 0.24 * (2.0 * h_barp).cos()
         + 0.32 * (3.0 * h_barp + 6.0 * std::f32::consts::PI / 180.0).cos()
         - 0.20 * (4.0 * h_barp - 63.0 * std::f32::consts::PI / 180.0).cos();
@@ -435,8 +442,12 @@ pub fn ssim_rgba8(img1: &[u8], img2: &[u8], width: usize, height: usize) -> f32 
     let mut y1 = vec![0f32; n];
     let mut y2 = vec![0f32; n];
     for i in 0..n {
-        y1[i] = 0.2126 * img1[i * 4] as f32 + 0.7152 * img1[i * 4 + 1] as f32 + 0.0722 * img1[i * 4 + 2] as f32;
-        y2[i] = 0.2126 * img2[i * 4] as f32 + 0.7152 * img2[i * 4 + 1] as f32 + 0.0722 * img2[i * 4 + 2] as f32;
+        y1[i] = 0.2126 * img1[i * 4] as f32
+            + 0.7152 * img1[i * 4 + 1] as f32
+            + 0.0722 * img1[i * 4 + 2] as f32;
+        y2[i] = 0.2126 * img2[i * 4] as f32
+            + 0.7152 * img2[i * 4 + 1] as f32
+            + 0.0722 * img2[i * 4 + 2] as f32;
     }
 
     // SSIM constants (stabilization for small denominators).
@@ -781,7 +792,10 @@ mod tests {
         let xyz1 = spd_to_xyz(&emf_to_spd(1.0, 0.0, 0.1)); // narrow blue
         let xyz2 = spd_to_xyz(&emf_to_spd(1.0, 0.0, 0.9)); // broad red
         let de = ciede2000(&xyz1, &xyz2);
-        assert!(de > 5.0, "very different colors should have ΔE > 5.0, got {de}");
+        assert!(
+            de > 5.0,
+            "very different colors should have ΔE > 5.0, got {de}"
+        );
     }
 
     #[test]
@@ -803,7 +817,10 @@ mod tests {
         let h = 8;
         let img: Vec<u8> = (0..w * h * 4).map(|i| (i % 256) as u8).collect();
         let s = ssim_rgba8(&img, &img, w, h);
-        assert!((s - 1.0).abs() < 1e-4, "SSIM of identical images should be 1.0, got {s}");
+        assert!(
+            (s - 1.0).abs() < 1e-4,
+            "SSIM of identical images should be 1.0, got {s}"
+        );
     }
 
     #[test]
@@ -817,7 +834,10 @@ mod tests {
             img2[i * 4] = img2[i * 4].wrapping_add(1);
         }
         let s = ssim_rgba8(&img1, &img2, w, h);
-        assert!(s > 0.98, "SSIM of near-identical images should be > 0.98, got {s}");
+        assert!(
+            s > 0.98,
+            "SSIM of near-identical images should be > 0.98, got {s}"
+        );
     }
 
     #[test]

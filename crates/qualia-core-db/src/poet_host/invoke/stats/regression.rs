@@ -17,10 +17,17 @@ pub fn linear_regression(args_v: &Value, span: Span) -> Result<Value, Diagnostic
         .and_then(args::f64s)
         .ok_or_else(|| args::bad(span, "linear_regression needs y"))?;
     if x.len() != y.len() {
-        return Err(args::bad(span, "linear_regression: x and y length mismatch"));
+        return Err(args::bad(
+            span,
+            "linear_regression: x and y length mismatch",
+        ));
     }
-    let fit = simple_linear_regression(&x, &y)
-        .ok_or_else(|| args::bad(span, "linear_regression: degenerate input (n < 3 or zero variance)"))?;
+    let fit = simple_linear_regression(&x, &y).ok_or_else(|| {
+        args::bad(
+            span,
+            "linear_regression: degenerate input (n < 3 or zero variance)",
+        )
+    })?;
     Ok(args::record([
         ("slope", Value::F64(fit.slope)),
         ("intercept", Value::F64(fit.intercept)),
@@ -39,8 +46,14 @@ mod tests {
     fn exact_line_recovered() {
         // y = 3 + 2x exactly.
         let mut m = BTreeMap::new();
-        m.insert("x".into(), args::f64_list_value(vec![0.0, 1.0, 2.0, 3.0, 4.0]));
-        m.insert("y".into(), args::f64_list_value(vec![3.0, 5.0, 7.0, 9.0, 11.0]));
+        m.insert(
+            "x".into(),
+            args::f64_list_value(vec![0.0, 1.0, 2.0, 3.0, 4.0]),
+        );
+        m.insert(
+            "y".into(),
+            args::f64_list_value(vec![3.0, 5.0, 7.0, 9.0, 11.0]),
+        );
         let v = linear_regression(&Value::Record(m), Span { start: 0, end: 0 }).unwrap();
         let rec = match v {
             Value::Record(r) => r,

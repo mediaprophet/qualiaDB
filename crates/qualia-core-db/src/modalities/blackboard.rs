@@ -65,17 +65,38 @@ pub struct Constraint {
 impl Constraint {
     /// Create a hard constraint.
     pub fn hard(subject: u64, predicate: u64, object: u64, context: u64) -> Self {
-        Self { opcode: OP_CONSTRAINT_HARD, subject, predicate, object, context, pinned: false }
+        Self {
+            opcode: OP_CONSTRAINT_HARD,
+            subject,
+            predicate,
+            object,
+            context,
+            pinned: false,
+        }
     }
 
     /// Create a soft constraint.
     pub fn soft(subject: u64, predicate: u64, object: u64, context: u64) -> Self {
-        Self { opcode: OP_CONSTRAINT_SOFT, subject, predicate, object, context, pinned: false }
+        Self {
+            opcode: OP_CONSTRAINT_SOFT,
+            subject,
+            predicate,
+            object,
+            context,
+            pinned: false,
+        }
     }
 
     /// Create a pinned root constraint (hard + inherited).
     pub fn pinned(subject: u64, predicate: u64, object: u64, context: u64) -> Self {
-        Self { opcode: OP_CONSTRAINT_PIN, subject, predicate, object, context, pinned: true }
+        Self {
+            opcode: OP_CONSTRAINT_PIN,
+            subject,
+            predicate,
+            object,
+            context,
+            pinned: true,
+        }
     }
 
     /// Is this a hard constraint?
@@ -108,7 +129,10 @@ impl Constraint {
     /// Decode from an NQuin.
     pub fn from_quin(q: &NQuin) -> Option<Self> {
         let opcode = (q.predicate & 0xFF) as u8;
-        if opcode != OP_CONSTRAINT_HARD && opcode != OP_CONSTRAINT_SOFT && opcode != OP_CONSTRAINT_PIN {
+        if opcode != OP_CONSTRAINT_HARD
+            && opcode != OP_CONSTRAINT_SOFT
+            && opcode != OP_CONSTRAINT_PIN
+        {
             return None;
         }
         Some(Self {
@@ -186,7 +210,9 @@ impl Channel {
     /// Add a constraint to this channel.
     pub fn add_constraint(&mut self, constraint: Constraint) -> Result<(), String> {
         if self.constraints.len() >= MAX_CONSTRAINTS_PER_CHANNEL {
-            return Err(format!("max constraints ({MAX_CONSTRAINTS_PER_CHANNEL}) reached"));
+            return Err(format!(
+                "max constraints ({MAX_CONSTRAINTS_PER_CHANNEL}) reached"
+            ));
         }
         self.constraints.push(constraint);
         Ok(())
@@ -212,7 +238,11 @@ impl Channel {
 
     /// Get pinned constraints (for propagation to downstream).
     pub fn pinned_constraints(&self) -> Vec<Constraint> {
-        self.constraints.iter().filter(|c| c.is_pinned()).cloned().collect()
+        self.constraints
+            .iter()
+            .filter(|c| c.is_pinned())
+            .cloned()
+            .collect()
     }
 }
 
@@ -270,7 +300,9 @@ impl SemanticBlackboard {
     /// Create or get a channel by name.
     pub fn channel(&mut self, name: &str) -> &mut Channel {
         let hash = crate::q_hash(name);
-        self.channels.entry(hash).or_insert_with(|| Channel::new(hash))
+        self.channels
+            .entry(hash)
+            .or_insert_with(|| Channel::new(hash))
     }
 
     /// Get a channel by name (immutable).
@@ -366,12 +398,16 @@ impl SemanticBlackboard {
     /// Read all state from a named channel as a Vec (for DAG node input).
     /// Returns an empty Vec if the channel does not exist.
     pub fn read_channel_vec(&self, channel: &str) -> Vec<NQuin> {
-        self.get_channel(channel).map(|c| c.state.clone()).unwrap_or_default()
+        self.get_channel(channel)
+            .map(|c| c.state.clone())
+            .unwrap_or_default()
     }
 
     /// Check whether a named channel exists and has any state.
     pub fn channel_has_data(&self, channel: &str) -> bool {
-        self.get_channel(channel).map(|c| !c.state.is_empty()).unwrap_or(false)
+        self.get_channel(channel)
+            .map(|c| !c.state.is_empty())
+            .unwrap_or(false)
     }
 }
 
@@ -552,11 +588,8 @@ mod tests {
         let mut bus = BlackboardBus::new();
         let q1 = make_quin(1, 2, 3, 42);
         let q2 = make_quin(4, 5, 6, 42);
-        bus.write_outputs(&[
-            ("draft".into(), vec![q1]),
-            ("review".into(), vec![q2]),
-        ])
-        .unwrap();
+        bus.write_outputs(&[("draft".into(), vec![q1]), ("review".into(), vec![q2])])
+            .unwrap();
 
         let inputs = bus.read_inputs(&["draft".into(), "review".into()]);
         assert_eq!(inputs[0].1.len(), 1);
@@ -742,7 +775,9 @@ mod tests {
     #[test]
     fn blackboard_propagate_to_downstream() {
         let mut upstream = SemanticBlackboard::new();
-        upstream.add_root_constraint(Constraint::pinned(1, 2, 3, 42)).unwrap();
+        upstream
+            .add_root_constraint(Constraint::pinned(1, 2, 3, 42))
+            .unwrap();
         let mut downstream = SemanticBlackboard::new();
         upstream.propagate_to(&mut downstream).unwrap();
         // Downstream should now have the root constraint.
@@ -754,9 +789,12 @@ mod tests {
     #[test]
     fn blackboard_pinned_constraints_collection() {
         let mut bb = SemanticBlackboard::new();
-        bb.add_root_constraint(Constraint::pinned(1, 2, 3, 42)).unwrap();
-        bb.add_constraint("ch1", Constraint::pinned(4, 5, 6, 42)).unwrap();
-        bb.add_constraint("ch1", Constraint::hard(7, 8, 9, 42)).unwrap();
+        bb.add_root_constraint(Constraint::pinned(1, 2, 3, 42))
+            .unwrap();
+        bb.add_constraint("ch1", Constraint::pinned(4, 5, 6, 42))
+            .unwrap();
+        bb.add_constraint("ch1", Constraint::hard(7, 8, 9, 42))
+            .unwrap();
         let pinned = bb.pinned_constraints();
         assert_eq!(pinned.len(), 2); // root + channel pinned
     }
@@ -791,7 +829,8 @@ mod tests {
     fn channel_max_constraints() {
         let mut ch = Channel::new(42);
         for i in 0..MAX_CONSTRAINTS_PER_CHANNEL {
-            ch.add_constraint(Constraint::hard(i as u64, 2, 3, 42)).unwrap();
+            ch.add_constraint(Constraint::hard(i as u64, 2, 3, 42))
+                .unwrap();
         }
         // Adding one more should fail.
         let result = ch.add_constraint(Constraint::hard(99, 2, 3, 42));

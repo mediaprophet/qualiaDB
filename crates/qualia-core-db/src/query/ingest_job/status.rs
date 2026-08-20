@@ -110,8 +110,8 @@ fn format_status_line(
 mod tests {
     use super::*;
     use crate::query::ingest::IngestMode;
-    use crate::query::ingest_report::{IngestPhase, IngestReport};
     use crate::query::ingest_job::{IngestEncoding, IngestRdfFormat, IngestSourceKind};
+    use crate::query::ingest_report::{IngestPhase, IngestReport};
 
     #[test]
     fn status_reads_live_progress_file() {

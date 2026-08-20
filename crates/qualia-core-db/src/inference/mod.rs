@@ -139,15 +139,13 @@ pub mod prompt_lookup;
 // A2: DOMINO speculative constrained decoding (prefix-trie token masking).
 pub mod speculative_decode;
 pub use speculative_decode::{
-    DominoMasker, GrammarState, GrammarStateMachine, TokenTrie,
-    MAX_TRIE_DEPTH,
+    DominoMasker, GrammarState, GrammarStateMachine, TokenTrie, MAX_TRIE_DEPTH,
 };
 // A9: Semantic Skills — vectors, embeddings, scratchpads.
 pub mod semantic_skills;
 pub use semantic_skills::{
-    Scratchpad, ScratchpadEntry, ScratchpadError, SearchResult, StoredVector,
-    TextEmbedder, Vector, VectorStore,
-    EMBED_DIM, MAX_VECTORS, MAX_SCRATCHPAD_ENTRIES, DEFAULT_SCRATCHPAD_TTL,
+    Scratchpad, ScratchpadEntry, ScratchpadError, SearchResult, StoredVector, TextEmbedder, Vector,
+    VectorStore, DEFAULT_SCRATCHPAD_TTL, EMBED_DIM, MAX_SCRATCHPAD_ENTRIES, MAX_VECTORS,
 };
 // Metal mega-pass orchestrator (Apple Silicon). Stub on non-macOS.
 pub mod metal_lane;

@@ -13,11 +13,11 @@ pub mod ingest;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod ingest_formats;
 #[cfg(not(target_arch = "wasm32"))]
-pub mod ingest_resume;
-#[cfg(not(target_arch = "wasm32"))]
 pub mod ingest_job;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod ingest_report;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod ingest_resume;
 #[cfg(any(
     not(target_arch = "wasm32"),
     feature = "wasm-logic",

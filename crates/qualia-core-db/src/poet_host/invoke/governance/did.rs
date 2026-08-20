@@ -18,7 +18,11 @@ mod tests {
 
     #[test]
     fn parses_q42() {
-        let v = parse(&Value::String("did:q42:abc".into()), Span { start: 0, end: 0 }).unwrap();
+        let v = parse(
+            &Value::String("did:q42:abc".into()),
+            Span { start: 0, end: 0 },
+        )
+        .unwrap();
         match v {
             Value::U64(n) => assert!(n & (1u64 << 63) != 0),
             other => panic!("{other:?}"),

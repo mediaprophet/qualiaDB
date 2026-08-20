@@ -57,11 +57,7 @@ pub(crate) struct UniformBelt {
 impl UniformBelt {
     /// Create a new uniform belt with `pool_size` pre-allocated buffers, each
     /// `slot_size` bytes. All buffers are mapped at creation.
-    pub(crate) fn new(
-        device: &wgpu::Device,
-        slot_size: u64,
-        pool_size: usize,
-    ) -> Self {
+    pub(crate) fn new(device: &wgpu::Device, slot_size: u64, pool_size: usize) -> Self {
         let (tx, rx) = mpsc::channel();
         let mut slots = Vec::with_capacity(pool_size);
         for _ in 0..pool_size {
@@ -94,8 +90,14 @@ impl UniformBelt {
     pub(crate) fn write_and_unmap(&mut self, data: &[u8]) {
         let slot = &mut self.slots[self.current];
         debug_assert!(slot.mapped, "uniform belt slot must be mapped before write");
-        debug_assert!(slot.buffer.is_some(), "uniform belt slot must have a buffer");
-        debug_assert!(data.len() as u64 <= self.size, "uniform belt write exceeds slot size");
+        debug_assert!(
+            slot.buffer.is_some(),
+            "uniform belt slot must have a buffer"
+        );
+        debug_assert!(
+            data.len() as u64 <= self.size,
+            "uniform belt write exceeds slot size"
+        );
         slot.mapped = false;
         slot.written = data.len() as u64;
         let buffer = slot.buffer.as_ref().unwrap();
@@ -123,7 +125,10 @@ impl UniformBelt {
             !slot.mapped,
             "uniform belt slot must be unmapped before copy"
         );
-        let buffer = slot.buffer.as_ref().expect("uniform belt slot must have a buffer");
+        let buffer = slot
+            .buffer
+            .as_ref()
+            .expect("uniform belt slot must have a buffer");
         // wgpu copy_buffer_to_buffer requires size to be a multiple of 4.
         let copy_size = (slot.written + 3) & !3;
         if copy_size > 0 {
@@ -167,7 +172,10 @@ impl UniformBelt {
             let idx = self.current;
             // Take the buffer out of the slot. Clone it for the closure
             // (wgpu buffers are Arc-backed, so clone is cheap).
-            let buffer = self.slots[idx].buffer.take().expect("pending slot must have buffer");
+            let buffer = self.slots[idx]
+                .buffer
+                .take()
+                .expect("pending slot must have buffer");
             let buffer_for_closure = buffer.clone();
             let tx = self.tx.clone();
             // Start the async re-map. The cloned buffer is moved into the

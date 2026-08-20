@@ -19,10 +19,7 @@ pub use activation::spreading_activation;
 pub use path::shortest_path;
 
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
-fn missing(
-    span: poet_vibe::Span,
-    family: &str,
-) -> Result<poet_vibe::Value, poet_vibe::Diagnostic> {
+fn missing(span: poet_vibe::Span, family: &str) -> Result<poet_vibe::Value, poet_vibe::Diagnostic> {
     Err(super::args::need_scientific(span, family))
 }
 

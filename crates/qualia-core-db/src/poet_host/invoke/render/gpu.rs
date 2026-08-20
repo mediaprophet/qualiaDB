@@ -106,7 +106,10 @@ pub fn gpu_adapter_info(_args: &Value, _span: Span) -> Result<Value, Diagnostic>
         Ok(args::record([
             ("available", Value::Bool(true)),
             ("backend", Value::String(caps.backend_label().into())),
-            ("device_type", Value::String(caps.device_type_label().into())),
+            (
+                "device_type",
+                Value::String(caps.device_type_label().into()),
+            ),
             ("device_name", Value::String(caps.name.clone())),
             ("driver", Value::String(caps.driver.clone())),
             ("driver_info", Value::String(caps.driver_info.clone())),
@@ -114,7 +117,10 @@ pub fn gpu_adapter_info(_args: &Value, _span: Span) -> Result<Value, Diagnostic>
             ("device_id", Value::U64(caps.device as u64)),
             ("shader_f16", Value::Bool(caps.features.shader_f16)),
             ("subgroup", Value::Bool(caps.features.subgroup)),
-            ("cooperative_matrix", Value::Bool(caps.features.cooperative_matrix)),
+            (
+                "cooperative_matrix",
+                Value::Bool(caps.features.cooperative_matrix),
+            ),
             ("ray_query", Value::Bool(caps.features.ray_query)),
             ("max_buffer_size", Value::U64(caps.limits.max_buffer_size)),
             (
@@ -132,7 +138,10 @@ pub fn gpu_adapter_info(_args: &Value, _span: Span) -> Result<Value, Diagnostic>
         Ok(args::record([
             ("available", Value::Bool(false)),
             ("backend", Value::String("wasm".into())),
-            ("device_name", Value::String("WebGPU not available in wasm-logic".into())),
+            (
+                "device_name",
+                Value::String("WebGPU not available in wasm-logic".into()),
+            ),
         ]))
     }
 }
@@ -164,9 +173,8 @@ pub fn gpu_init(args: &Value, span: Span) -> Result<Value, Diagnostic> {
             ));
         }
 
-        let portal = PortalGpu::new_offscreen(width, height, particle_cap).map_err(|e| {
-            args::bad(span, format!("gpu_init failed: {e}"))
-        })?;
+        let portal = PortalGpu::new_offscreen(width, height, particle_cap)
+            .map_err(|e| args::bad(span, format!("gpu_init failed: {e}")))?;
         let handle = slot_insert(portal);
 
         Ok(args::record([
@@ -187,21 +195,16 @@ pub fn gpu_init(args: &Value, span: Span) -> Result<Value, Diagnostic> {
 pub fn gpu_render_frame(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     #[cfg(not(target_arch = "wasm32"))]
     {
-        let handle = args::rec_u64(args, "handle").ok_or_else(|| {
-            args::bad(span, "gpu_render_frame needs { handle: u64 }")
-        })?;
+        let handle = args::rec_u64(args, "handle")
+            .ok_or_else(|| args::bad(span, "gpu_render_frame needs { handle: u64 }"))?;
         let time = args::rec_f64(args, "time").unwrap_or(0.0) as f32;
         let telemetry = SystemTelemetry::default();
 
-        slot_with(handle, |portal| {
-            portal.render(time, &telemetry)
-        })
-        .ok_or_else(|| args::bad(span, "gpu_render_frame: invalid handle"))?
-        .map_err(|e| args::bad(span, format!("gpu_render_frame: {e}")))?;
+        slot_with(handle, |portal| portal.render(time, &telemetry))
+            .ok_or_else(|| args::bad(span, "gpu_render_frame: invalid handle"))?
+            .map_err(|e| args::bad(span, format!("gpu_render_frame: {e}")))?;
 
-        Ok(args::record([
-            ("rendered", Value::Bool(true)),
-        ]))
+        Ok(args::record([("rendered", Value::Bool(true))]))
     }
     #[cfg(target_arch = "wasm32")]
     {
@@ -214,9 +217,8 @@ pub fn gpu_render_frame(args: &Value, span: Span) -> Result<Value, Diagnostic> {
 pub fn gpu_read_pixels(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     #[cfg(not(target_arch = "wasm32"))]
     {
-        let handle = args::rec_u64(args, "handle").ok_or_else(|| {
-            args::bad(span, "gpu_read_pixels needs { handle: u64 }")
-        })?;
+        let handle = args::rec_u64(args, "handle")
+            .ok_or_else(|| args::bad(span, "gpu_read_pixels needs { handle: u64 }"))?;
 
         slot_with(handle, |portal| {
             let need = portal.required_rgba8_bytes();
@@ -230,7 +232,15 @@ pub fn gpu_read_pixels(args: &Value, span: Span) -> Result<Value, Diagnostic> {
         .map(|(buf, n)| {
             let (w, h) = slot_with(handle, |p| p.surface_size()).unwrap_or((0, 0));
             args::record([
-                ("rgba8", Value::List(buf.into_iter().take(n).map(|b| Value::U64(b as u64)).collect())),
+                (
+                    "rgba8",
+                    Value::List(
+                        buf.into_iter()
+                            .take(n)
+                            .map(|b| Value::U64(b as u64))
+                            .collect(),
+                    ),
+                ),
                 ("width", Value::U64(w as u64)),
                 ("height", Value::U64(h as u64)),
                 ("bytes", Value::U64(n as u64)),
@@ -249,9 +259,8 @@ pub fn gpu_read_pixels(args: &Value, span: Span) -> Result<Value, Diagnostic> {
 pub fn gpu_upload_mesh(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     #[cfg(not(target_arch = "wasm32"))]
     {
-        let handle = args::rec_u64(args, "handle").ok_or_else(|| {
-            args::bad(span, "gpu_upload_mesh needs { handle: u64 }")
-        })?;
+        let handle = args::rec_u64(args, "handle")
+            .ok_or_else(|| args::bad(span, "gpu_upload_mesh needs { handle: u64 }"))?;
 
         let pos_f64s = args::rec_f64_list(args, "positions")
             .ok_or_else(|| args::bad(span, "gpu_upload_mesh needs { positions: [f32] }"))?;
@@ -266,14 +275,13 @@ pub fn gpu_upload_mesh(args: &Value, span: Span) -> Result<Value, Diagnostic> {
             .collect();
         let indices: Vec<u32> = idx_u64s.into_iter().map(|n| n as u32).collect();
 
-        let tri_count = slot_with(handle, |portal| {
-            portal.upload_mesh(&positions, &indices)
-        })
-        .ok_or_else(|| args::bad(span, "gpu_upload_mesh: invalid handle"))?;
+        let tri_count = slot_with(handle, |portal| portal.upload_mesh(&positions, &indices))
+            .ok_or_else(|| args::bad(span, "gpu_upload_mesh: invalid handle"))?;
 
-        Ok(args::record([
-            ("triangle_count", Value::U64(tri_count as u64)),
-        ]))
+        Ok(args::record([(
+            "triangle_count",
+            Value::U64(tri_count as u64),
+        )]))
     }
     #[cfg(target_arch = "wasm32")]
     {
@@ -286,23 +294,21 @@ pub fn gpu_upload_mesh(args: &Value, span: Span) -> Result<Value, Diagnostic> {
 pub fn gpu_upload_tensor(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     #[cfg(not(target_arch = "wasm32"))]
     {
-        let handle = args::rec_u64(args, "handle").ok_or_else(|| {
-            args::bad(span, "gpu_upload_tensor needs { handle: u64 }")
-        })?;
+        let handle = args::rec_u64(args, "handle")
+            .ok_or_else(|| args::bad(span, "gpu_upload_tensor needs { handle: u64 }"))?;
 
         let bytes = args::rec(args, "buffer")
             .and_then(|v| args::u8s(v))
             .ok_or_else(|| args::bad(span, "gpu_upload_tensor needs { buffer: [u8] }"))?;
 
-        let node_count = slot_with(handle, |portal| {
-            portal.upload_tensor_buffer(&bytes)
-        })
-        .ok_or_else(|| args::bad(span, "gpu_upload_tensor: invalid handle"))?
-        .map_err(|e| args::bad(span, format!("gpu_upload_tensor: {e}")))?;
+        let node_count = slot_with(handle, |portal| portal.upload_tensor_buffer(&bytes))
+            .ok_or_else(|| args::bad(span, "gpu_upload_tensor: invalid handle"))?
+            .map_err(|e| args::bad(span, format!("gpu_upload_tensor: {e}")))?;
 
-        Ok(args::record([
-            ("node_count", Value::U64(node_count as u64)),
-        ]))
+        Ok(args::record([(
+            "node_count",
+            Value::U64(node_count as u64),
+        )]))
     }
     #[cfg(target_arch = "wasm32")]
     {
@@ -315,9 +321,8 @@ pub fn gpu_upload_tensor(args: &Value, span: Span) -> Result<Value, Diagnostic> 
 pub fn gpu_set_camera(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     #[cfg(not(target_arch = "wasm32"))]
     {
-        let handle = args::rec_u64(args, "handle").ok_or_else(|| {
-            args::bad(span, "gpu_set_camera needs { handle: u64 }")
-        })?;
+        let handle = args::rec_u64(args, "handle")
+            .ok_or_else(|| args::bad(span, "gpu_set_camera needs { handle: u64 }"))?;
         let yaw = args::rec_f64(args, "yaw").unwrap_or(0.0) as f32;
         let pitch = args::rec_f64(args, "pitch").unwrap_or(0.0) as f32;
         let zoom = args::rec_f64(args, "zoom").unwrap_or(1.0) as f32;
@@ -340,9 +345,8 @@ pub fn gpu_set_camera(args: &Value, span: Span) -> Result<Value, Diagnostic> {
 pub fn gpu_pick(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     #[cfg(not(target_arch = "wasm32"))]
     {
-        let handle = args::rec_u64(args, "handle").ok_or_else(|| {
-            args::bad(span, "gpu_pick needs { handle: u64 }")
-        })?;
+        let handle = args::rec_u64(args, "handle")
+            .ok_or_else(|| args::bad(span, "gpu_pick needs { handle: u64 }"))?;
         let x = args::rec_f64(args, "x").unwrap_or(0.0) as f32;
         let y = args::rec_f64(args, "y").unwrap_or(0.0) as f32;
 
@@ -364,23 +368,18 @@ pub fn gpu_pick(args: &Value, span: Span) -> Result<Value, Diagnostic> {
 pub fn gpu_poll_pick(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     #[cfg(not(target_arch = "wasm32"))]
     {
-        let handle = args::rec_u64(args, "handle").ok_or_else(|| {
-            args::bad(span, "gpu_poll_pick needs { handle: u64 }")
-        })?;
+        let handle = args::rec_u64(args, "handle")
+            .ok_or_else(|| args::bad(span, "gpu_poll_pick needs { handle: u64 }"))?;
 
-        let result = slot_with(handle, |portal| {
-            portal.poll_pick_readback()
-        })
-        .ok_or_else(|| args::bad(span, "gpu_poll_pick: invalid handle"))?;
+        let result = slot_with(handle, |portal| portal.poll_pick_readback())
+            .ok_or_else(|| args::bad(span, "gpu_poll_pick: invalid handle"))?;
 
         match result {
             Some(node_id) => Ok(args::record([
                 ("found", Value::Bool(true)),
                 ("node_id", Value::U64(node_id as u64)),
             ])),
-            None => Ok(args::record([
-                ("found", Value::Bool(false)),
-            ])),
+            None => Ok(args::record([("found", Value::Bool(false))])),
         }
     }
     #[cfg(target_arch = "wasm32")]
@@ -394,9 +393,8 @@ pub fn gpu_poll_pick(args: &Value, span: Span) -> Result<Value, Diagnostic> {
 pub fn gpu_resize(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     #[cfg(not(target_arch = "wasm32"))]
     {
-        let handle = args::rec_u64(args, "handle").ok_or_else(|| {
-            args::bad(span, "gpu_resize needs { handle: u64 }")
-        })?;
+        let handle = args::rec_u64(args, "handle")
+            .ok_or_else(|| args::bad(span, "gpu_resize needs { handle: u64 }"))?;
         let width = args::rec_u64(args, "width").unwrap_or(800) as u32;
         let height = args::rec_u64(args, "height").unwrap_or(600) as u32;
 
@@ -418,9 +416,8 @@ pub fn gpu_resize(args: &Value, span: Span) -> Result<Value, Diagnostic> {
 pub fn gpu_set_ambient(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     #[cfg(not(target_arch = "wasm32"))]
     {
-        let handle = args::rec_u64(args, "handle").ok_or_else(|| {
-            args::bad(span, "gpu_set_ambient needs { handle: u64 }")
-        })?;
+        let handle = args::rec_u64(args, "handle")
+            .ok_or_else(|| args::bad(span, "gpu_set_ambient needs { handle: u64 }"))?;
         let enabled = args::rec_bool(args, "enabled").unwrap_or(true);
 
         slot_with(handle, |portal| {
@@ -441,9 +438,8 @@ pub fn gpu_set_ambient(args: &Value, span: Span) -> Result<Value, Diagnostic> {
 pub fn gpu_destroy(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     #[cfg(not(target_arch = "wasm32"))]
     {
-        let handle = args::rec_u64(args, "handle").ok_or_else(|| {
-            args::bad(span, "gpu_destroy needs { handle: u64 }")
-        })?;
+        let handle = args::rec_u64(args, "handle")
+            .ok_or_else(|| args::bad(span, "gpu_destroy needs { handle: u64 }"))?;
 
         if slot_remove(handle) {
             Ok(args::record([("destroyed", Value::Bool(true))]))
@@ -517,13 +513,13 @@ mod tests {
         ]);
         let init_result = gpu_init(&init_args, span).expect("gpu_init should succeed");
         let handle = record_get(&init_result, "handle").expect("has handle");
-        let Value::U64(h) = handle else { panic!("handle not u64") };
+        let Value::U64(h) = handle else {
+            panic!("handle not u64")
+        };
 
-        let render_args = args::record([
-            ("handle", Value::U64(*h)),
-            ("time", Value::F64(0.0)),
-        ]);
-        let render_result = gpu_render_frame(&render_args, span).expect("gpu_render_frame should succeed");
+        let render_args = args::record([("handle", Value::U64(*h)), ("time", Value::F64(0.0))]);
+        let render_result =
+            gpu_render_frame(&render_args, span).expect("gpu_render_frame should succeed");
         assert_record(&render_result);
 
         let destroy_args = args::record([("handle", Value::U64(*h))]);
@@ -539,12 +535,11 @@ mod tests {
         }
 
         let span = dummy_span();
-        let init_args = args::record([
-            ("width", Value::U64(128)),
-            ("height", Value::U64(128)),
-        ]);
+        let init_args = args::record([("width", Value::U64(128)), ("height", Value::U64(128))]);
         let init_result = gpu_init(&init_args, span).expect("gpu_init should succeed");
-        let Value::U64(h) = record_get(&init_result, "handle").unwrap() else { panic!() };
+        let Value::U64(h) = record_get(&init_result, "handle").unwrap() else {
+            panic!()
+        };
 
         let cam_args = args::record([
             ("handle", Value::U64(*h)),
@@ -554,10 +549,7 @@ mod tests {
         ]);
         gpu_set_camera(&cam_args, span).expect("gpu_set_camera should succeed");
 
-        let render_args = args::record([
-            ("handle", Value::U64(*h)),
-            ("time", Value::F64(1.0)),
-        ]);
+        let render_args = args::record([("handle", Value::U64(*h)), ("time", Value::F64(1.0))]);
         gpu_render_frame(&render_args, span).expect("gpu_render_frame should succeed");
 
         let destroy_args = args::record([("handle", Value::U64(*h))]);
@@ -573,12 +565,11 @@ mod tests {
         }
 
         let span = dummy_span();
-        let init_args = args::record([
-            ("width", Value::U64(64)),
-            ("height", Value::U64(64)),
-        ]);
+        let init_args = args::record([("width", Value::U64(64)), ("height", Value::U64(64))]);
         let init_result = gpu_init(&init_args, span).expect("gpu_init should succeed");
-        let Value::U64(h) = record_get(&init_result, "handle").unwrap() else { panic!() };
+        let Value::U64(h) = record_get(&init_result, "handle").unwrap() else {
+            panic!()
+        };
 
         let resize_args = args::record([
             ("handle", Value::U64(*h)),
@@ -587,16 +578,11 @@ mod tests {
         ]);
         gpu_resize(&resize_args, span).expect("gpu_resize should succeed");
 
-        let ambient_args = args::record([
-            ("handle", Value::U64(*h)),
-            ("enabled", Value::Bool(true)),
-        ]);
+        let ambient_args =
+            args::record([("handle", Value::U64(*h)), ("enabled", Value::Bool(true))]);
         gpu_set_ambient(&ambient_args, span).expect("gpu_set_ambient should succeed");
 
-        let render_args = args::record([
-            ("handle", Value::U64(*h)),
-            ("time", Value::F64(0.0)),
-        ]);
+        let render_args = args::record([("handle", Value::U64(*h)), ("time", Value::F64(0.0))]);
         gpu_render_frame(&render_args, span).expect("gpu_render_frame should succeed");
 
         let destroy_args = args::record([("handle", Value::U64(*h))]);
@@ -612,12 +598,11 @@ mod tests {
         }
 
         let span = dummy_span();
-        let init_args = args::record([
-            ("width", Value::U64(128)),
-            ("height", Value::U64(128)),
-        ]);
+        let init_args = args::record([("width", Value::U64(128)), ("height", Value::U64(128))]);
         let init_result = gpu_init(&init_args, span).expect("gpu_init should succeed");
-        let Value::U64(h) = record_get(&init_result, "handle").unwrap() else { panic!() };
+        let Value::U64(h) = record_get(&init_result, "handle").unwrap() else {
+            panic!()
+        };
 
         let pick_args = args::record([
             ("handle", Value::U64(*h)),
@@ -626,10 +611,7 @@ mod tests {
         ]);
         gpu_pick(&pick_args, span).expect("gpu_pick should succeed");
 
-        let render_args = args::record([
-            ("handle", Value::U64(*h)),
-            ("time", Value::F64(0.0)),
-        ]);
+        let render_args = args::record([("handle", Value::U64(*h)), ("time", Value::F64(0.0))]);
         gpu_render_frame(&render_args, span).expect("gpu_render_frame should succeed");
 
         let poll_args = args::record([("handle", Value::U64(*h))]);

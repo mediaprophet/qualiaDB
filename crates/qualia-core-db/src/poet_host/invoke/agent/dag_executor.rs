@@ -141,10 +141,7 @@ pub fn execute_pipeline<E: NodeExecutor>(
         let upstream_ids = pipeline.upstream(node_id);
         for &upstream_id in upstream_ids {
             if let Some(upstream_node) = pipeline.get_node(upstream_id) {
-                let _ = bus.propagate_constraints(
-                    &upstream_node.outputs,
-                    &node.inputs,
-                );
+                let _ = bus.propagate_constraints(&upstream_node.outputs, &node.inputs);
             }
         }
 
@@ -175,12 +172,7 @@ pub fn execute_pipeline<E: NodeExecutor>(
         }
 
         // Execute the node.
-        let exec_result = executor.execute(
-            node_id,
-            &node.name,
-            &inputs,
-            &node.capabilities,
-        );
+        let exec_result = executor.execute(node_id, &node.name, &inputs, &node.capabilities);
 
         let (success, outputs, diagnostics) = match exec_result {
             Ok(outs) => (true, outs, Vec::new()),
@@ -322,10 +314,7 @@ mod tests {
     fn r3_sequential_pipeline() {
         let mut pipeline = DagPipeline::new();
         pipeline
-            .add_node(
-                DagNode::new(0, "researcher", NodeEffect::Cold)
-                    .with_output("draft"),
-            )
+            .add_node(DagNode::new(0, "researcher", NodeEffect::Cold).with_output("draft"))
             .unwrap();
         pipeline
             .add_node(
@@ -390,7 +379,8 @@ mod tests {
             quin: make_quin(1, 2, 3),
         };
 
-        let result = execute_pipeline(&pipeline, &mut bus, Some(&mut leaser), &mut executor).unwrap();
+        let result =
+            execute_pipeline(&pipeline, &mut bus, Some(&mut leaser), &mut executor).unwrap();
         assert!(!result.success);
         assert!(result.interrupt.is_some());
         assert_eq!(result.nodes_executed, 0); // Halted before execution.
@@ -418,7 +408,8 @@ mod tests {
             quin: make_quin(1, 2, 3),
         };
 
-        let result = execute_pipeline(&pipeline, &mut bus, Some(&mut leaser), &mut executor).unwrap();
+        let result =
+            execute_pipeline(&pipeline, &mut bus, Some(&mut leaser), &mut executor).unwrap();
         assert!(result.success);
         assert_eq!(result.nodes_executed, 1);
     }
@@ -426,8 +417,12 @@ mod tests {
     #[test]
     fn r3_cycle_detected() {
         let mut pipeline = DagPipeline::new();
-        pipeline.add_node(DagNode::new(0, "a", NodeEffect::Cold)).unwrap();
-        pipeline.add_node(DagNode::new(1, "b", NodeEffect::Cold)).unwrap();
+        pipeline
+            .add_node(DagNode::new(0, "a", NodeEffect::Cold))
+            .unwrap();
+        pipeline
+            .add_node(DagNode::new(1, "b", NodeEffect::Cold))
+            .unwrap();
         pipeline.add_edge(DagEdge::new(0, 1)).unwrap();
         pipeline.add_edge(DagEdge::new(1, 0)).unwrap();
 

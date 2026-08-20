@@ -19,17 +19,22 @@ use poet_vibe::{Diagnostic, Span, Value};
 /// Returns: `{ css: string, name: string, duration: f64 }`
 pub fn css_animation(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let name = args::rec_str(args_v, "name").ok_or_else(|| {
-        args::bad(span, "css_animation needs { name: string, property: string, keyframes: [...] }")
+        args::bad(
+            span,
+            "css_animation needs { name: string, property: string, keyframes: [...] }",
+        )
     })?;
     let property = args::rec_str(args_v, "property").unwrap_or("opacity");
     let unit = args::rec_str(args_v, "unit").unwrap_or("");
     let keyframes_v = args::rec(args_v, "keyframes").ok_or_else(|| {
-        args::bad(span, "css_animation needs keyframes: [{ time: f64, value: f64 }, ...]")
+        args::bad(
+            span,
+            "css_animation needs keyframes: [{ time: f64, value: f64 }, ...]",
+        )
     })?;
 
-    let keyframes = args::list(keyframes_v).ok_or_else(|| {
-        args::bad(span, "keyframes must be a list of { time, value } records")
-    })?;
+    let keyframes = args::list(keyframes_v)
+        .ok_or_else(|| args::bad(span, "keyframes must be a list of { time, value } records"))?;
 
     if keyframes.is_empty() {
         return Err(args::bad(span, "keyframes must be non-empty"));
@@ -43,14 +48,16 @@ pub fn css_animation(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let mut max_time = 0.0f64;
 
     for kf in keyframes {
-        let time = args::rec_f64(kf, "time").ok_or_else(|| {
-            args::bad(span, "each keyframe needs { time: f64, value: f64 }")
-        })?;
-        let value = args::rec_f64(kf, "value").ok_or_else(|| {
-            args::bad(span, "each keyframe needs { time: f64, value: f64 }")
-        })?;
+        let time = args::rec_f64(kf, "time")
+            .ok_or_else(|| args::bad(span, "each keyframe needs { time: f64, value: f64 }"))?;
+        let value = args::rec_f64(kf, "value")
+            .ok_or_else(|| args::bad(span, "each keyframe needs { time: f64, value: f64 }"))?;
         max_time = max_time.max(time);
-        let pct = if max_time > 0.0 { (time / max_time * 100.0).round() as u64 } else { 0 };
+        let pct = if max_time > 0.0 {
+            (time / max_time * 100.0).round() as u64
+        } else {
+            0
+        };
         css.push_str(&format!("  {pct}% {{ {property}: {value}{unit}; }}\n"));
     }
     css.push_str("}\n");
@@ -74,9 +81,8 @@ pub fn css_animation(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
 ///
 /// Returns: `{ css: string, r: u64, g: u64, b: u64 }`
 pub fn css_color(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
-    let alpha = args::rec_f64(args_v, "alpha").ok_or_else(|| {
-        args::bad(span, "css_color needs { alpha: f64, mu: f64, sigma: f64 }")
-    })?;
+    let alpha = args::rec_f64(args_v, "alpha")
+        .ok_or_else(|| args::bad(span, "css_color needs { alpha: f64, mu: f64, sigma: f64 }"))?;
     let mu = args::rec_f64(args_v, "mu").unwrap_or(0.0);
     let sigma = args::rec_f64(args_v, "sigma").unwrap_or(0.5);
     let lin = emf_to_linear_rgb(alpha as f32, mu as f32, sigma as f32);
@@ -104,8 +110,16 @@ pub fn css_transform(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     if let Some(translate) = args::rec_f64_list(args_v, "translate") {
         match translate.len() {
             2 => parts.push(format!("translate({}px, {}px)", translate[0], translate[1])),
-            3 => parts.push(format!("translate3d({}px, {}px, {}px)", translate[0], translate[1], translate[2])),
-            _ => return Err(args::bad(span, "translate must be [tx, ty] or [tx, ty, tz]")),
+            3 => parts.push(format!(
+                "translate3d({}px, {}px, {}px)",
+                translate[0], translate[1], translate[2]
+            )),
+            _ => {
+                return Err(args::bad(
+                    span,
+                    "translate must be [tx, ty] or [tx, ty, tz]",
+                ))
+            }
         }
     }
 
@@ -130,13 +144,14 @@ pub fn css_transform(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     }
 
     if parts.is_empty() {
-        return Err(args::bad(span, "css_transform needs at least one of: translate, rotate, scale, skew"));
+        return Err(args::bad(
+            span,
+            "css_transform needs at least one of: translate, rotate, scale, skew",
+        ));
     }
 
     let transform = parts.join(" ");
-    Ok(args::record([
-        ("transform", Value::String(transform)),
-    ]))
+    Ok(args::record([("transform", Value::String(transform))]))
 }
 
 #[cfg(test)]
@@ -214,7 +229,10 @@ mod tests {
     #[test]
     fn css_transform_combined() {
         let args = rec(&[
-            ("translate", Value::List(vec![Value::F64(10.0), Value::F64(20.0)])),
+            (
+                "translate",
+                Value::List(vec![Value::F64(10.0), Value::F64(20.0)]),
+            ),
             ("rotate", Value::F64(45.0)),
             ("scale", Value::List(vec![Value::F64(1.5)])),
         ]);

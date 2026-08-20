@@ -1053,8 +1053,7 @@ impl PortalGpu {
         // VC3: Use UniformBelt for zero-alloc buffer writes.
         let bytes = bytemuck::cast_slice(&model);
         self.uniform_belt.write_and_unmap(bytes);
-        self.uniform_belt
-            .record_copy(encoder, &self.model_buf, 0);
+        self.uniform_belt.record_copy(encoder, &self.model_buf, 0);
         self.uniform_belt.advance(&self.device);
     }
 
@@ -1261,8 +1260,7 @@ impl PortalGpu {
         // VC3: Use UniformBelt for zero-alloc buffer writes.
         let bytes = bytemuck::bytes_of(&uniform);
         self.uniform_belt.write_and_unmap(bytes);
-        self.uniform_belt
-            .record_copy(encoder, &self.camera_buf, 0);
+        self.uniform_belt.record_copy(encoder, &self.camera_buf, 0);
         self.uniform_belt.advance(&self.device);
     }
 
@@ -1481,9 +1479,10 @@ impl PortalGpu {
                 .clone()
                 .or_else(|| {
                     // Lazily create the view if it was invalidated (e.g. resize).
-                    let v = self.offscreen_texture.as_ref()?.create_view(
-                        &wgpu::TextureViewDescriptor::default(),
-                    );
+                    let v = self
+                        .offscreen_texture
+                        .as_ref()?
+                        .create_view(&wgpu::TextureViewDescriptor::default());
                     self.offscreen_view = Some(v.clone());
                     Some(v)
                 })
@@ -1724,9 +1723,9 @@ mod particles;
 mod resources;
 mod uniform_belt;
 
+use bloom::*;
 pub use compute::{ComputeBinding, ComputeBufferKind};
 pub use emf_pipeline::{EmfFieldCell, EmfSliceUniform};
-use bloom::*;
 pub use particles::particle_cap_for_mode;
 use particles::*;
 use resources::*;

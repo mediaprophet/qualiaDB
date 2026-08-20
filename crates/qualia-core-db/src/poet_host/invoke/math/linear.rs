@@ -3,7 +3,7 @@
 use super::super::args;
 use crate::solvers::linear_algebra::eigen::symmetric_eigen;
 use crate::solvers::linear_algebra::gemm::matmul;
-use crate::solvers::linear_algebra::lu::{lu_decompose, determinant as lu_determinant};
+use crate::solvers::linear_algebra::lu::{determinant as lu_determinant, lu_decompose};
 use crate::solvers::linear_algebra::spectral::eigenvalues_general;
 use crate::solvers::linear_algebra::svd::svd as svd_decompose;
 use poet_vibe::{Diagnostic, Span, Value};
@@ -115,12 +115,7 @@ pub fn eigenvalues(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
         .map_err(|e| args::bad(span, format!("eigenvalues: {e:?}")))?;
     let list: Vec<Value> = eigs
         .iter()
-        .map(|z| {
-            args::record([
-                ("re", Value::F64(z.re)),
-                ("im", Value::F64(z.im)),
-            ])
-        })
+        .map(|z| args::record([("re", Value::F64(z.re)), ("im", Value::F64(z.im))]))
         .collect();
     Ok(args::record([("eigenvalues", Value::List(list))]))
 }
@@ -160,7 +155,8 @@ struct Mat {
 }
 
 fn matrix(args_v: &Value, key: &str, span: Span) -> Result<Mat, Diagnostic> {
-    let rec = args::rec(args_v, key).ok_or_else(|| args::bad(span, format!("matmul needs {key}")))?;
+    let rec =
+        args::rec(args_v, key).ok_or_else(|| args::bad(span, format!("matmul needs {key}")))?;
     let rows = args::rec_u64(rec, "rows")
         .or_else(|| infer_rows(rec))
         .ok_or_else(|| args::bad(span, format!("{key}.rows missing")))? as usize;
@@ -220,14 +216,17 @@ mod tests {
                 assert_eq!(r.get("cols"), Some(&Value::U64(2)));
                 match r.get("data") {
                     Some(Value::List(xs)) => {
-                        assert_eq!(xs, &vec![
-                            Value::F64(1.0),
-                            Value::F64(4.0),
-                            Value::F64(2.0),
-                            Value::F64(5.0),
-                            Value::F64(3.0),
-                            Value::F64(6.0),
-                        ]);
+                        assert_eq!(
+                            xs,
+                            &vec![
+                                Value::F64(1.0),
+                                Value::F64(4.0),
+                                Value::F64(2.0),
+                                Value::F64(5.0),
+                                Value::F64(3.0),
+                                Value::F64(6.0),
+                            ]
+                        );
                     }
                     other => panic!("{other:?}"),
                 }

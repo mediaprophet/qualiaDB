@@ -3,7 +3,6 @@
 //! Folders are **future crate seams** (D16). Do not extract workspace crates yet.
 //! Add a family by adding a file in the matching seam folder and one match arm.
 
-pub mod ids;
 pub mod agent;
 mod args;
 mod clinical;
@@ -15,6 +14,7 @@ mod engineering;
 mod geometry;
 mod governance;
 mod graph;
+pub mod ids;
 mod logic;
 mod manifold;
 mod math;
@@ -125,7 +125,9 @@ pub fn dispatch(
         ids::NET_SONIC => net::sonic_pack(args, span),
         ids::FIN_PORTFOLIO => econ::portfolio_risk(args, span),
         ids::COVERAGE_MATRIX => Ok(coverage::as_value()),
-        ids::CATALOG_TTL => Ok(Value::String(crate::poet_host::catalog_ttl::vibe_catalog_ttl())),
+        ids::CATALOG_TTL => Ok(Value::String(
+            crate::poet_host::catalog_ttl::vibe_catalog_ttl(),
+        )),
         ids::RENDER_SCENE => render::scene(snap, args, span),
         ids::RENDER_CSS_ANIMATION => render::css_animation(args, span),
         ids::RENDER_CSS_COLOR => render::css_color(args, span),
@@ -165,9 +167,7 @@ pub fn dispatch(
         other => Err(Diagnostic::new(
             DiagCode::E300,
             span,
-            format!(
-                "capability.invoke({other}): unbound; add poet_host/invoke/<seam>/<family>.rs"
-            ),
+            format!("capability.invoke({other}): unbound; add poet_host/invoke/<seam>/<family>.rs"),
         )),
     }
 }

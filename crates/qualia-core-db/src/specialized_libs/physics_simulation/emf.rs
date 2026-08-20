@@ -94,10 +94,7 @@ impl PhysicsSimulationLibrary {
         }
         let c = if c > 0.0 { c } else { C_LIGHT };
 
-        let instant: f64 = sources
-            .iter()
-            .map(|s| s.field_at(x, y, z, t, c))
-            .sum();
+        let instant: f64 = sources.iter().map(|s| s.field_at(x, y, z, t, c)).sum();
 
         // Find the lowest frequency to determine the sampling period.
         let f_min = sources
@@ -111,10 +108,7 @@ impl PhysicsSimulationLibrary {
         let mut peak = 0.0f64;
         for i in 0..n_samples {
             let ti = t + (i as f64 / n_samples as f64) * period;
-            let val: f64 = sources
-                .iter()
-                .map(|s| s.field_at(x, y, z, ti, c))
-                .sum();
+            let val: f64 = sources.iter().map(|s| s.field_at(x, y, z, ti, c)).sum();
             peak = peak.max(val.abs());
         }
 
@@ -122,9 +116,9 @@ impl PhysicsSimulationLibrary {
         // For multi-frequency, use the phase of the dominant (highest amplitude) source.
         let (phase, freq_eff) = if sources.len() == 1
             || sources.iter().all(|s| {
-                (s.frequency - sources[0].frequency).abs() < 1e-10 * sources[0].frequency.abs().max(1e-10)
-            })
-        {
+                (s.frequency - sources[0].frequency).abs()
+                    < 1e-10 * sources[0].frequency.abs().max(1e-10)
+            }) {
             // Single frequency: combine analytically.
             // Σ A_i/r_i · sin(ω·t − k_i·r_i + φ_i) = R·sin(ω·t + Φ)
             // where R = |Σ (A_i/r_i)·e^{i(φ_i − k_i·r_i)}| and Φ = arg(Σ ...)
@@ -169,7 +163,11 @@ impl PhysicsSimulationLibrary {
                         min_diff = d;
                     }
                 }
-                if min_diff < f64::MAX { min_diff } else { 0.0 }
+                if min_diff < f64::MAX {
+                    min_diff
+                } else {
+                    0.0
+                }
             };
             (phase_dom, beat_freq)
         };
@@ -327,11 +325,23 @@ impl PhysicsSimulationLibrary {
         let dx = (x_max - x_min) / nx.max(1) as f64;
         let dy = (y_max - y_min) / ny.max(1) as f64;
         let dz = (z_max - z_min) / nz.max(1) as f64;
-        let dt = if nt > 1 { (t_end - t_start) / (nt - 1) as f64 } else { 0.0 };
+        let dt = if nt > 1 {
+            (t_end - t_start) / (nt - 1) as f64
+        } else {
+            0.0
+        };
 
         // Reference values for manifold normalization.
-        let max_amp = sources.iter().map(|s| s.amplitude).fold(0.0f64, f64::max).max(1e-12);
-        let max_freq = sources.iter().map(|s| s.frequency.abs()).fold(0.0f64, f64::max).max(1e-12);
+        let max_amp = sources
+            .iter()
+            .map(|s| s.amplitude)
+            .fold(0.0f64, f64::max)
+            .max(1e-12);
+        let max_freq = sources
+            .iter()
+            .map(|s| s.frequency.abs())
+            .fold(0.0f64, f64::max)
+            .max(1e-12);
         let t_span = (t_end - t_start).abs().max(1e-12);
 
         for it in 0..nt {
@@ -361,8 +371,12 @@ impl PhysicsSimulationLibrary {
                         let cx = (x_min + x_max) * 0.5;
                         let cy = (y_min + y_max) * 0.5;
                         let cz = (z_min + z_max) * 0.5;
-                        let dist_center = ((x - cx).powi(2) + (y - cy).powi(2) + (z - cz).powi(2)).sqrt();
-                        let max_dist = ((x_max - x_min).powi(2) + (y_max - y_min).powi(2) + (z_max - z_min).powi(2)).sqrt();
+                        let dist_center =
+                            ((x - cx).powi(2) + (y - cy).powi(2) + (z - cz).powi(2)).sqrt();
+                        let max_dist = ((x_max - x_min).powi(2)
+                            + (y_max - y_min).powi(2)
+                            + (z_max - z_min).powi(2))
+                        .sqrt();
                         let normalized_dist = (dist_center / max_dist.max(1e-12)) as f32;
 
                         manifold_coords[idx] = ManifoldCoordinate10D {
@@ -436,8 +450,16 @@ impl PhysicsSimulationLibrary {
         let (dx, dy, dz) = (dx / dlen, dy / dlen, dz / dlen);
         let [cx, cy, cz] = camera;
 
-        let max_amp = sources.iter().map(|s| s.amplitude).fold(0.0f64, f64::max).max(1e-12);
-        let max_freq = sources.iter().map(|s| s.frequency.abs()).fold(0.0f64, f64::max).max(1e-12);
+        let max_amp = sources
+            .iter()
+            .map(|s| s.amplitude)
+            .fold(0.0f64, f64::max)
+            .max(1e-12);
+        let max_freq = sources
+            .iter()
+            .map(|s| s.frequency.abs())
+            .fold(0.0f64, f64::max)
+            .max(1e-12);
 
         let mut samples = Vec::with_capacity(depths.len());
         for &depth in depths {
@@ -467,7 +489,8 @@ impl PhysicsSimulationLibrary {
             let normalized_amp = (result.amplitude / max_amp) as f32;
             let normalized_freq = (result.frequency_effective / max_freq) as f32;
             let normalized_phase = (result.phase / std::f64::consts::TAU) as f32;
-            let normalized_depth = (depth / depths.iter().cloned().fold(0.0f64, f64::max).max(1e-12)) as f32;
+            let normalized_depth =
+                (depth / depths.iter().cloned().fold(0.0f64, f64::max).max(1e-12)) as f32;
 
             let manifold_coord = ManifoldCoordinate10D {
                 scale: normalized_amp,
@@ -517,25 +540,65 @@ mod tests {
     fn two_source_constructive_interference() {
         // Two sources at same position, same frequency, same phase → constructive.
         let sources = vec![
-            EmfSource { x: 0.0, y: 0.0, z: 0.0, amplitude: 1.0, frequency: 1.0, phase: 0.0 },
-            EmfSource { x: 0.0, y: 0.0, z: 0.0, amplitude: 1.0, frequency: 1.0, phase: 0.0 },
+            EmfSource {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+                amplitude: 1.0,
+                frequency: 1.0,
+                phase: 0.0,
+            },
+            EmfSource {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+                amplitude: 1.0,
+                frequency: 1.0,
+                phase: 0.0,
+            },
         ];
-        let r = lib().run_emf_interference(&sources, 1.0, 0.0, 0.0, 0.0, 1.0).unwrap();
+        let r = lib()
+            .run_emf_interference(&sources, 1.0, 0.0, 0.0, 0.0, 1.0)
+            .unwrap();
         // At t=0, both contribute sin(−k·r) = sin(−2π·1/1) = sin(−2π) = 0.
         // But the peak amplitude should be ~2/r = 2.0 (two sources at same phase).
-        assert!(r.amplitude > 1.5, "constructive interference amplitude should be ~2.0, got {}", r.amplitude);
+        assert!(
+            r.amplitude > 1.5,
+            "constructive interference amplitude should be ~2.0, got {}",
+            r.amplitude
+        );
     }
 
     #[test]
     fn two_source_destructive_interference() {
         // Two sources at same position, same frequency, opposite phase → destructive.
         let sources = vec![
-            EmfSource { x: 0.0, y: 0.0, z: 0.0, amplitude: 1.0, frequency: 1.0, phase: 0.0 },
-            EmfSource { x: 0.0, y: 0.0, z: 0.0, amplitude: 1.0, frequency: 1.0, phase: std::f64::consts::PI },
+            EmfSource {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+                amplitude: 1.0,
+                frequency: 1.0,
+                phase: 0.0,
+            },
+            EmfSource {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+                amplitude: 1.0,
+                frequency: 1.0,
+                phase: std::f64::consts::PI,
+            },
         ];
-        let r = lib().run_emf_interference(&sources, 1.0, 0.0, 0.0, 0.0, 1.0).unwrap();
+        let r = lib()
+            .run_emf_interference(&sources, 1.0, 0.0, 0.0, 0.0, 1.0)
+            .unwrap();
         // Opposite phases cancel → amplitude near 0.
-        assert!(r.amplitude < 0.1, "destructive interference amplitude should be ~0, got {}", r.amplitude);
+        assert!(
+            r.amplitude < 0.1,
+            "destructive interference amplitude should be ~0, got {}",
+            r.amplitude
+        );
     }
 
     #[test]
@@ -545,67 +608,110 @@ mod tests {
         let r1 = lib.run_emf_attenuation(100.0, 1e9, 1.0, 0.0).unwrap();
         let r2 = lib.run_emf_attenuation(100.0, 1e9, 2.0, 0.0).unwrap();
         let ratio = r2.received_power / r1.received_power;
-        assert!((ratio - 0.25).abs() < 1e-10, "inverse-square: power at 2× distance should be ¼, got {}", ratio);
+        assert!(
+            (ratio - 0.25).abs() < 1e-10,
+            "inverse-square: power at 2× distance should be ¼, got {}",
+            ratio
+        );
     }
 
     #[test]
     fn doppler_approaching_increases_frequency() {
         // Source approaching at 0.1c → f_obs = f_src · √(1.1/0.9)
-        let r = lib().run_doppler_shift(1e9, 0.1 * C_LIGHT, C_LIGHT).unwrap();
+        let r = lib()
+            .run_doppler_shift(1e9, 0.1 * C_LIGHT, C_LIGHT)
+            .unwrap();
         let expected = 1e9_f64 * (1.1_f64 / 0.9_f64).sqrt();
-        assert!((r.observed_frequency - expected).abs() / expected < 1e-10,
-            "Doppler approaching: expected {}, got {}", expected, r.observed_frequency);
+        assert!(
+            (r.observed_frequency - expected).abs() / expected < 1e-10,
+            "Doppler approaching: expected {}, got {}",
+            expected,
+            r.observed_frequency
+        );
         assert!(r.shift_ratio > 1.0, "approaching should increase frequency");
     }
 
     #[test]
     fn doppler_receding_decreases_frequency() {
         // Source receding at 0.1c → f_obs = f_src · √(0.9/1.1)
-        let r = lib().run_doppler_shift(1e9, -0.1 * C_LIGHT, C_LIGHT).unwrap();
+        let r = lib()
+            .run_doppler_shift(1e9, -0.1 * C_LIGHT, C_LIGHT)
+            .unwrap();
         let expected = 1e9_f64 * (0.9_f64 / 1.1_f64).sqrt();
-        assert!((r.observed_frequency - expected).abs() / expected < 1e-10,
-            "Doppler receding: expected {}, got {}", expected, r.observed_frequency);
+        assert!(
+            (r.observed_frequency - expected).abs() / expected < 1e-10,
+            "Doppler receding: expected {}, got {}",
+            expected,
+            r.observed_frequency
+        );
         assert!(r.shift_ratio < 1.0, "receding should decrease frequency");
     }
 
     #[test]
     fn field_grid_finite_and_monotonic() {
         // Source at corner (-5,-5,-5) so cell (0,0,0) is close and cell (3,3,3) is far.
-        let sources = vec![
-            EmfSource { x: -5.0, y: -5.0, z: -5.0, amplitude: 1.0, frequency: 1.0, phase: 0.0 },
-        ];
-        let r = lib().run_emf_field_grid_3d(
-            &sources,
-            [-5.0, 5.0, -5.0, 5.0, -5.0, 5.0],
-            4, 4, 4, 2,
-            0.0, 1.0,
-            1.0,
-        ).unwrap();
+        let sources = vec![EmfSource {
+            x: -5.0,
+            y: -5.0,
+            z: -5.0,
+            amplitude: 1.0,
+            frequency: 1.0,
+            phase: 0.0,
+        }];
+        let r = lib()
+            .run_emf_field_grid_3d(
+                &sources,
+                [-5.0, 5.0, -5.0, 5.0, -5.0, 5.0],
+                4,
+                4,
+                4,
+                2,
+                0.0,
+                1.0,
+                1.0,
+            )
+            .unwrap();
         assert_eq!(r.amplitudes.len(), 4 * 4 * 4 * 2);
-        assert!(r.amplitudes.iter().all(|a| a.is_finite()), "all amplitudes must be finite");
-        assert!(r.phases.iter().all(|p| p.is_finite()), "all phases must be finite");
+        assert!(
+            r.amplitudes.iter().all(|a| a.is_finite()),
+            "all amplitudes must be finite"
+        );
+        assert!(
+            r.phases.iter().all(|p| p.is_finite()),
+            "all phases must be finite"
+        );
         // Cell (0,0,0) is at (-3.75,-3.75,-3.75) — close to source at (-5,-5,-5).
         let close_idx = 0 * (4 * 4 * 4) + 0 * (4 * 4) + 0 * 4 + 0;
         // Cell (3,3,3) is at (3.75,3.75,3.75) — far from source.
         let far_idx = 0 * (4 * 4 * 4) + 3 * (4 * 4) + 3 * 4 + 3;
-        assert!(r.amplitudes[close_idx] > r.amplitudes[far_idx],
+        assert!(
+            r.amplitudes[close_idx] > r.amplitudes[far_idx],
             "amplitude should decrease with distance: close={}, far={}",
-            r.amplitudes[close_idx], r.amplitudes[far_idx]);
+            r.amplitudes[close_idx],
+            r.amplitudes[far_idx]
+        );
     }
 
     #[test]
     fn sample_at_depth_perspective_scaling() {
-        let sources = vec![
-            EmfSource { x: 0.0, y: 0.0, z: 10.0, amplitude: 1.0, frequency: 1.0, phase: 0.0 },
-        ];
-        let r = lib().run_emf_sample_at_depth(
-            &sources,
-            [0.0, 0.0, 0.0],
-            [0.0, 0.0, 1.0],
-            &[1.0, 10.0, 100.0],
-            0.0,
-            1.0,
-        ).unwrap();
+        let sources = vec![EmfSource {
+            x: 0.0,
+            y: 0.0,
+            z: 10.0,
+            amplitude: 1.0,
+            frequency: 1.0,
+            phase: 0.0,
+        }];
+        let r = lib()
+            .run_emf_sample_at_depth(
+                &sources,
+                [0.0, 0.0, 0.0],
+                [0.0, 0.0, 1.0],
+                &[1.0, 10.0, 100.0],
+                0.0,
+                1.0,
+            )
+            .unwrap();
         assert_eq!(r.samples.len(), 3);
         // Perspective scale should decrease with depth.
         assert!(r.samples[0].perspective_scale > r.samples[1].perspective_scale);
@@ -617,7 +723,10 @@ mod tests {
         // All manifold coords should have finite values.
         for s in &r.samples {
             let arr = s.manifold_coord.as_f32_array();
-            assert!(arr.iter().all(|v| v.is_finite()), "manifold coords must be finite");
+            assert!(
+                arr.iter().all(|v| v.is_finite()),
+                "manifold coords must be finite"
+            );
         }
     }
 
@@ -625,12 +734,31 @@ mod tests {
     fn beat_frequency_two_sources() {
         // Two sources at 100 Hz and 105 Hz → beat frequency = 5 Hz.
         let sources = vec![
-            EmfSource { x: 0.0, y: 0.0, z: 0.0, amplitude: 1.0, frequency: 100.0, phase: 0.0 },
-            EmfSource { x: 0.0, y: 0.0, z: 0.0, amplitude: 1.0, frequency: 105.0, phase: 0.0 },
+            EmfSource {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+                amplitude: 1.0,
+                frequency: 100.0,
+                phase: 0.0,
+            },
+            EmfSource {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+                amplitude: 1.0,
+                frequency: 105.0,
+                phase: 0.0,
+            },
         ];
-        let r = lib().run_emf_interference(&sources, 1.0, 0.0, 0.0, 0.0, 340.0).unwrap();
-        assert!((r.frequency_effective - 5.0).abs() < 1e-6,
-            "beat frequency should be 5 Hz, got {}", r.frequency_effective);
+        let r = lib()
+            .run_emf_interference(&sources, 1.0, 0.0, 0.0, 0.0, 340.0)
+            .unwrap();
+        assert!(
+            (r.frequency_effective - 5.0).abs() < 1e-6,
+            "beat frequency should be 5 Hz, got {}",
+            r.frequency_effective
+        );
     }
 
     #[test]

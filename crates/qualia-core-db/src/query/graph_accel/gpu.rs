@@ -42,7 +42,11 @@ fn kernels() -> Option<&'static Kernels> {
     CELL.get_or_init(|| {
         let gpu = try_shared_gpu()?;
         let device = &gpu.device;
-        let hist = pipeline(device, include_str!("../../shaders/graph_radix_hist.wgsl"), "graph-radix-hist");
+        let hist = pipeline(
+            device,
+            include_str!("../../shaders/graph_radix_hist.wgsl"),
+            "graph-radix-hist",
+        );
         let scatter = pipeline(
             device,
             include_str!("../../shaders/graph_radix_scatter.wgsl"),
@@ -113,9 +117,8 @@ pub fn radix_sort_u64_indices_gpu(keys: &[u64]) -> Option<Vec<u32>> {
     let key_bytes = (n * 8) as u64;
     let idx_bytes = (n * 4) as u64;
 
-    let usage_st = wgpu::BufferUsages::STORAGE
-        | wgpu::BufferUsages::COPY_SRC
-        | wgpu::BufferUsages::COPY_DST;
+    let usage_st =
+        wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC | wgpu::BufferUsages::COPY_DST;
     let k0 = device.create_buffer(&wgpu::BufferDescriptor {
         label: Some("graph-radix-k0"),
         size: key_bytes,
@@ -312,11 +315,7 @@ pub fn radix_sort_u64_indices_gpu(keys: &[u64]) -> Option<Vec<u32>> {
     Some(idx)
 }
 
-pub fn sieve_eq_indices_gpu(
-    quins: &[NQuin],
-    field: QuinField,
-    needle: u64,
-) -> Option<Vec<u32>> {
+pub fn sieve_eq_indices_gpu(quins: &[NQuin], field: QuinField, needle: u64) -> Option<Vec<u32>> {
     if !gpu_available() || quins.is_empty() {
         return None;
     }

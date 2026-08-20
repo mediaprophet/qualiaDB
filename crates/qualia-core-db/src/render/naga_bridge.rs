@@ -11,10 +11,10 @@
 //! 3. Generate GLSL ES 300 via `naga::back::glsl::write`
 
 use naga::back::glsl::{Options, PipelineOptions, Version, Writer, WriterFlags};
-use naga::proc::BoundsCheckPolicies;
-use std::collections::BTreeMap;
 use naga::front::wgsl;
+use naga::proc::BoundsCheckPolicies;
 use naga::ShaderStage;
+use std::collections::BTreeMap;
 
 use super::naga_sanitize::{sanitize, SanitizeError};
 
@@ -78,15 +78,17 @@ pub fn compile_wgsl_to_glsl_es300(
     stage: ShaderStage,
 ) -> Result<CompiledGlsl, CompileError> {
     // Step 1: Parse WGSL.
-    let module = wgsl::parse_str(wgsl_src)
-        .map_err(|e| CompileError::WgslParse(format!("{e}")))?;
+    let module = wgsl::parse_str(wgsl_src).map_err(|e| CompileError::WgslParse(format!("{e}")))?;
 
     // Step 2: Sanitize for WebGL2.
     let sanitized = sanitize(&module, entry_point, stage)?;
 
     // Step 3: Configure GLSL ES 300 options.
     let options = Options {
-        version: Version::Embedded { version: 300, is_webgl: true },
+        version: Version::Embedded {
+            version: 300,
+            is_webgl: true,
+        },
         zero_initialize_workgroup_memory: false,
         binding_map: BTreeMap::new(),
         writer_flags: WriterFlags::empty(),
@@ -123,11 +125,8 @@ pub fn compile_wgsl_to_glsl_es300(
 /// Compile all entry points in a WGSL module to GLSL ES 300.
 ///
 /// Returns a vector of compiled shaders, one per entry point.
-pub fn compile_all_entry_points(
-    wgsl_src: &str,
-) -> Result<Vec<CompiledGlsl>, CompileError> {
-    let module = wgsl::parse_str(wgsl_src)
-        .map_err(|e| CompileError::WgslParse(format!("{e}")))?;
+pub fn compile_all_entry_points(wgsl_src: &str) -> Result<Vec<CompiledGlsl>, CompileError> {
+    let module = wgsl::parse_str(wgsl_src).map_err(|e| CompileError::WgslParse(format!("{e}")))?;
 
     let mut results = Vec::new();
 
@@ -138,7 +137,10 @@ pub fn compile_all_entry_points(
         let sanitized = sanitize(&module, name, stage)?;
 
         let options = Options {
-            version: Version::Embedded { version: 300, is_webgl: true },
+            version: Version::Embedded {
+                version: 300,
+                is_webgl: true,
+            },
             zero_initialize_workgroup_memory: false,
             binding_map: BTreeMap::new(),
             writer_flags: WriterFlags::empty(),
@@ -190,14 +192,17 @@ pub fn std140_layout(wgsl_struct_src: &str) -> Result<Vec<Std140Member>, Compile
     let full_src = format!(
         "{wgsl_struct_src}\n@vertex fn _dummy() -> @builtin(position) vec4<f32> {{ return vec4<f32>(0.0); }}"
     );
-    let module = wgsl::parse_str(&full_src)
-        .map_err(|e| CompileError::WgslParse(format!("{e}")))?;
+    let module = wgsl::parse_str(&full_src).map_err(|e| CompileError::WgslParse(format!("{e}")))?;
 
     // Find the struct type.
     let mut layout = Vec::new();
 
     for (_, ty) in module.types.iter() {
-        if let naga::TypeInner::Struct { members: struct_members, .. } = &ty.inner {
+        if let naga::TypeInner::Struct {
+            members: struct_members,
+            ..
+        } = &ty.inner
+        {
             let mut offset = 0u32;
             for member in struct_members {
                 let (size, align) = std140_size_align(&member.ty, &module);
@@ -212,12 +217,7 @@ pub fn std140_layout(wgsl_struct_src: &str) -> Result<Vec<Std140Member>, Compile
                 offset += size;
             }
             // Round up struct size to alignment of largest member (at least 16 for std140)
-            let struct_align = layout
-                .iter()
-                .map(|m| m.align)
-                .max()
-                .unwrap_or(16)
-                .max(16);
+            let struct_align = layout.iter().map(|m| m.align).max().unwrap_or(16).max(16);
             let _ = struct_align;
             let _struct_size = ((offset + struct_align - 1) / struct_align) * struct_align;
             break;
@@ -240,10 +240,7 @@ pub struct Std140Member {
     pub align: u32,
 }
 
-fn std140_size_align(
-    ty: &naga::Handle<naga::Type>,
-    module: &naga::Module,
-) -> (u32, u32) {
+fn std140_size_align(ty: &naga::Handle<naga::Type>, module: &naga::Module) -> (u32, u32) {
     let type_inner = &module.types[*ty];
 
     match &type_inner.inner {
@@ -259,7 +256,9 @@ fn std140_size_align(
                 naga::VectorSize::Quad => (elem * 4, elem * 4),
             }
         }
-        naga::TypeInner::Matrix { columns, scalar, .. } => {
+        naga::TypeInner::Matrix {
+            columns, scalar, ..
+        } => {
             let _elem = if scalar.width == 8 { 8 } else { 4 };
             let cols = match columns {
                 naga::VectorSize::Bi => 2,
@@ -326,7 +325,11 @@ fn fs_main(@location(0) uv: vec2<f32>) -> @location(0) vec4<f32> {
 }
 "#;
         let result = compile_wgsl_to_glsl_es300(wgsl, "fs_main", ShaderStage::Fragment);
-        assert!(result.is_ok(), "fragment compilation should succeed: {:?}", result);
+        assert!(
+            result.is_ok(),
+            "fragment compilation should succeed: {:?}",
+            result
+        );
     }
 
     #[test]
@@ -344,7 +347,11 @@ fn vs_main(@location(0) pos: vec3<f32>) -> @builtin(position) vec4<f32> {
 }
 "#;
         let result = compile_wgsl_to_glsl_es300(wgsl, "vs_main", ShaderStage::Vertex);
-        assert!(result.is_ok(), "uniform buffer shader should compile: {:?}", result);
+        assert!(
+            result.is_ok(),
+            "uniform buffer shader should compile: {:?}",
+            result
+        );
     }
 
     #[test]
@@ -359,7 +366,11 @@ fn cs_main(@builtin(global_invocation_id) id: vec3<u32>) {
 }
 "#;
         let result = compile_wgsl_to_glsl_es300(wgsl, "cs_main", ShaderStage::Compute);
-        assert!(result.is_err(), "compute shaders are not supported in GLSL ES 300: {:?}", result);
+        assert!(
+            result.is_err(),
+            "compute shaders are not supported in GLSL ES 300: {:?}",
+            result
+        );
     }
 
     #[test]
@@ -376,7 +387,11 @@ fn fs_main(@location(0) uv: vec2<f32>) -> @location(0) vec4<f32> {
 }
 "#;
         let results = compile_all_entry_points(wgsl);
-        assert!(results.is_ok(), "multi-entry-point compilation should succeed: {:?}", results);
+        assert!(
+            results.is_ok(),
+            "multi-entry-point compilation should succeed: {:?}",
+            results
+        );
         let shaders = results.unwrap();
         assert_eq!(shaders.len(), 2, "should have 2 entry points");
         assert!(shaders.iter().any(|s| s.stage == ShaderStage::Vertex));
@@ -425,7 +440,10 @@ struct Data {
         assert_eq!(members[0].align, 16, "vec3 aligns to 16 in std140");
         // 'b' should be at offset 12 (within the vec4 padding of 'a')
         assert_eq!(members[1].name, "b");
-        assert_eq!(members[1].offset, 12, "f32 after vec3 should be at offset 12");
+        assert_eq!(
+            members[1].offset, 12,
+            "f32 after vec3 should be at offset 12"
+        );
     }
 
     // ── VC2: GLSL ES 300 invariant verification ───────────────────────────

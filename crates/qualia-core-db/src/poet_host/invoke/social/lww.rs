@@ -27,7 +27,8 @@ pub fn merge(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
 }
 
 fn quin_at(args_v: &Value, key: &str, span: Span) -> Result<NQuin, Diagnostic> {
-    let v = args::rec(args_v, key).ok_or_else(|| args::bad(span, format!("{key} quin required")))?;
+    let v =
+        args::rec(args_v, key).ok_or_else(|| args::bad(span, format!("{key} quin required")))?;
     if let Value::Quin {
         subject,
         predicate,

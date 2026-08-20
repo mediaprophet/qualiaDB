@@ -9,9 +9,7 @@ use std::path::Path;
 
 use serde::Serialize;
 
-use super::super::{
-    Q42Volume, FLAG_FIELD_POSTINGS, FLAG_FIELD_RANGES, FLAG_OBJECT_SORTED,
-};
+use super::super::{Q42Volume, FLAG_FIELD_POSTINGS, FLAG_FIELD_RANGES, FLAG_OBJECT_SORTED};
 use super::manifest::Q42VolumeSet;
 use super::postings::validate_postings_section;
 
@@ -95,14 +93,22 @@ impl Q42VerifyReceipt {
         let mut checks = Vec::new();
         let run_structure = matches!(
             level,
-            VerifyLevel::Structure | VerifyLevel::Full | VerifyLevel::Blocks | VerifyLevel::Indexes | VerifyLevel::Lexicon
+            VerifyLevel::Structure
+                | VerifyLevel::Full
+                | VerifyLevel::Blocks
+                | VerifyLevel::Indexes
+                | VerifyLevel::Lexicon
         );
         let run_blocks = matches!(level, VerifyLevel::Blocks | VerifyLevel::Full);
         let run_lex = matches!(level, VerifyLevel::Lexicon | VerifyLevel::Full);
         let run_idx = matches!(level, VerifyLevel::Indexes | VerifyLevel::Full);
 
         if run_structure {
-            checks.push(check("structure.open", CheckStatus::Pass, "header and section bounds accepted on open"));
+            checks.push(check(
+                "structure.open",
+                CheckStatus::Pass,
+                "header and section bounds accepted on open",
+            ));
             let flags = volume.header().flags;
             if volume.block_count() > 0 && flags & FLAG_OBJECT_SORTED == 0 {
                 checks.push(check(
@@ -136,11 +142,9 @@ impl Q42VerifyReceipt {
                             receipt.blocks_verified, receipt.quins_verified
                         ),
                     )),
-                    Err(error) => checks.push(check(
-                        "blocks.decode",
-                        CheckStatus::Fail,
-                        error.to_string(),
-                    )),
+                    Err(error) => {
+                        checks.push(check("blocks.decode", CheckStatus::Fail, error.to_string()))
+                    }
                 }
             }
         } else if level == VerifyLevel::Full {
@@ -213,7 +217,10 @@ impl Q42VerifyReceipt {
                     CheckStatus::NotApplicable,
                     "lexicon shard has no SuperBlock DAG",
                 ),
-                (_, false) => (CheckStatus::Pass, "header merkle_root / DAG section present"),
+                (_, false) => (
+                    CheckStatus::Pass,
+                    "header merkle_root / DAG section present",
+                ),
                 _ => (CheckStatus::NotApplicable, "no data blocks"),
             };
             checks.push(check("structure.merkle", status, detail));
@@ -235,8 +242,14 @@ impl Q42VerifyReceipt {
                 ));
             } else {
                 match super::index::validate_bidx(bidx, volume.block_count() as usize) {
-                    Ok(()) => checks.push(check("indexes.bidx", CheckStatus::Pass, "BIDX layout and monotonicity ok")),
-                    Err(error) => checks.push(check("indexes.bidx", CheckStatus::Fail, error.to_string())),
+                    Ok(()) => checks.push(check(
+                        "indexes.bidx",
+                        CheckStatus::Pass,
+                        "BIDX layout and monotonicity ok",
+                    )),
+                    Err(error) => {
+                        checks.push(check("indexes.bidx", CheckStatus::Fail, error.to_string()))
+                    }
                 }
             }
             let flags = volume.header().flags;
@@ -258,18 +271,20 @@ impl Q42VerifyReceipt {
                     let start = offset as usize;
                     let end = start + length as usize;
                     match volume.as_bytes().get(start..end) {
-                        Some(bytes) => match validate_postings_section(bytes, volume.block_count() as usize) {
-                            Ok(()) => checks.push(check(
-                                "indexes.postings",
-                                CheckStatus::Pass,
-                                "PIDX layout ok",
-                            )),
-                            Err(error) => checks.push(check(
-                                "indexes.postings",
-                                CheckStatus::Fail,
-                                error.to_string(),
-                            )),
-                        },
+                        Some(bytes) => {
+                            match validate_postings_section(bytes, volume.block_count() as usize) {
+                                Ok(()) => checks.push(check(
+                                    "indexes.postings",
+                                    CheckStatus::Pass,
+                                    "PIDX layout ok",
+                                )),
+                                Err(error) => checks.push(check(
+                                    "indexes.postings",
+                                    CheckStatus::Fail,
+                                    error.to_string(),
+                                )),
+                            }
+                        }
                         None => checks.push(check(
                             "indexes.postings",
                             CheckStatus::Fail,
@@ -325,12 +340,10 @@ fn overall_status(level: VerifyLevel, checks: &[VerifyCheck]) -> CheckStatus {
         return CheckStatus::Fail;
     }
     if level == VerifyLevel::Full {
-        if checks.iter().any(|c| {
-            matches!(
-                c.status,
-                CheckStatus::NotChecked | CheckStatus::Incomplete
-            )
-        }) {
+        if checks
+            .iter()
+            .any(|c| matches!(c.status, CheckStatus::NotChecked | CheckStatus::Incomplete))
+        {
             return CheckStatus::Incomplete;
         }
     }
@@ -364,7 +377,10 @@ impl Q42VerifySetReport {
 }
 
 /// Verify a standalone file, or a volume-set root and every named child.
-pub fn verify_volume_set_from_root(path: &Path, level: VerifyLevel) -> io::Result<Q42VerifySetReport> {
+pub fn verify_volume_set_from_root(
+    path: &Path,
+    level: VerifyLevel,
+) -> io::Result<Q42VerifySetReport> {
     let root = Q42Volume::open(path)?;
     let Some(manifest) = root.volume_manifest()? else {
         let receipt = Q42VerifyReceipt::from_volume(path, &root, level);
@@ -388,11 +404,13 @@ pub fn verify_volume_set_from_root(path: &Path, level: VerifyLevel) -> io::Resul
     let digest_detail;
     match Q42VolumeSet::open_root(path) {
         Ok(set) => match set.verify_segment_hashes(path) {
-            Ok(()) => digest_detail = format!(
-                "{} data + {} lexicon shard digest(s) match the root manifest",
-                manifest.segments.len(),
-                manifest.lexicon_segments.len()
-            ),
+            Ok(()) => {
+                digest_detail = format!(
+                    "{} data + {} lexicon shard digest(s) match the root manifest",
+                    manifest.segments.len(),
+                    manifest.lexicon_segments.len()
+                )
+            }
             Err(error) => {
                 digest_ok = false;
                 digest_detail = error.to_string();
@@ -473,9 +491,7 @@ fn fold_set_overall(level: VerifyLevel, members: &[Q42VerifyReceipt]) -> CheckSt
     if members.iter().any(|m| m.overall == CheckStatus::Fail) {
         return CheckStatus::Fail;
     }
-    if members
-        .iter()
-        .any(|m| m.overall == CheckStatus::Incomplete)
+    if members.iter().any(|m| m.overall == CheckStatus::Incomplete)
         || (level == VerifyLevel::Full
             && members
                 .iter()
@@ -592,10 +608,9 @@ mod tests {
         let report = verify_volume_set_from_root(&root, VerifyLevel::Full).unwrap();
         assert_eq!(report.members.len(), 3, "{:?}", report.members);
         assert_eq!(report.overall, CheckStatus::Pass, "{}", report.to_text());
-        assert!(report
-            .members
+        assert!(report.members.iter().any(|m| m
+            .checks
             .iter()
-            .any(|m| m.checks.iter().any(|c| c.name == "set.digests"
-                && c.status == CheckStatus::Pass)));
+            .any(|c| c.name == "set.digests" && c.status == CheckStatus::Pass)));
     }
 }

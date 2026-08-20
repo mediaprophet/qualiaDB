@@ -5,8 +5,8 @@ use std::io;
 use std::path::{Path, PathBuf};
 
 use super::job::{IngestJob, JOB_RUNS};
-use super::source::IngestSourceKind;
 use super::source::IngestEncoding;
+use super::source::IngestSourceKind;
 use crate::query::ingest::IngestMode;
 
 /// A job can continue when it is not complete and we still have the source
@@ -198,4 +198,3 @@ mod tests {
         assert!(job.runs_dir().join("chunk_0.tmp").exists());
     }
 }
-

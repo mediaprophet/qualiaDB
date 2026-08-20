@@ -25,10 +25,7 @@ pub fn stats(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     Ok(args::record([
         ("count", Value::U64(cells.len() as u64)),
         ("sum", Value::F64(sum_slice(&cells))),
-        (
-            "mean",
-            Value::F64(mean_slice(&cells).unwrap_or(0.0)),
-        ),
+        ("mean", Value::F64(mean_slice(&cells).unwrap_or(0.0))),
         ("min", Value::F64(min)),
         ("max", Value::F64(max)),
     ]))

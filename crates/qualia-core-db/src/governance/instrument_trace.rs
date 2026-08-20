@@ -83,7 +83,10 @@ impl InstrumentTraceLedger {
 
     /// Filter entries by instrument ID.
     pub fn entries_for_instrument(&self, id: &str) -> Vec<&TraceEntry> {
-        self.entries.iter().filter(|e| e.instrument_id == id).collect()
+        self.entries
+            .iter()
+            .filter(|e| e.instrument_id == id)
+            .collect()
     }
 
     /// Filter entries by act type.
@@ -138,7 +141,12 @@ pub fn check_no_bylines(text: &str) -> Result<(), String> {
 mod tests {
     use super::*;
 
-    fn sample_entry(instrument_id: &str, act: &str, cost: Option<u64>, success: bool) -> TraceEntry {
+    fn sample_entry(
+        instrument_id: &str,
+        act: &str,
+        cost: Option<u64>,
+        success: bool,
+    ) -> TraceEntry {
         TraceEntry {
             instrument_id: instrument_id.to_string(),
             act: act.to_string(),

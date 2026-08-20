@@ -19,19 +19,23 @@ fn manifold_to_value(m: &ManifoldCoordinate10D) -> Value {
         ("temporal_decay", Value::F64(m.temporal_decay as f64)),
         ("entropy_bias", Value::F64(m.entropy_bias as f64)),
         ("spatial_phase", Value::F64(m.spatial_phase as f64)),
-        ("recurrence_frequency", Value::F64(m.recurrence_frequency as f64)),
+        (
+            "recurrence_frequency",
+            Value::F64(m.recurrence_frequency as f64),
+        ),
         ("density_threshold", Value::F64(m.density_threshold as f64)),
-        ("manifold_curvature", Value::F64(m.manifold_curvature as f64)),
+        (
+            "manifold_curvature",
+            Value::F64(m.manifold_curvature as f64),
+        ),
     ])
 }
 
 /// Parse sources from a Vibe `Value` (flat list of [x,y,z,A,f,φ, ...]).
 fn parse_sources(v: &Value, span: Span) -> Result<Vec<EmfSource>, Diagnostic> {
-    let flat = args::rec_f64_list(v, "sources").ok_or_else(|| {
-        args::bad(span, "needs { sources: [x,y,z,A,f,φ, ...], ... }")
-    })?;
-    EmfSource::parse_flat(&flat)
-        .map_err(|e| args::bad(span, format!("sources: {e}")))
+    let flat = args::rec_f64_list(v, "sources")
+        .ok_or_else(|| args::bad(span, "needs { sources: [x,y,z,A,f,φ, ...], ... }"))?;
+    EmfSource::parse_flat(&flat).map_err(|e| args::bad(span, format!("sources: {e}")))
 }
 
 /// `Physics.emf_interference` — superposition of N EMF sources at a 3D point.
@@ -58,7 +62,10 @@ pub fn emf_interference(args_v: &Value, span: Span) -> Result<Value, Diagnostic>
 /// `Physics.emf_attenuation` — inverse-square + atmospheric absorption.
 pub fn emf_attenuation(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let source_power = args::rec_f64(args_v, "source_power").ok_or_else(|| {
-        args::bad(span, "emf_attenuation needs { source_power, frequency, distance, absorption_coeff? }")
+        args::bad(
+            span,
+            "emf_attenuation needs { source_power, frequency, distance, absorption_coeff? }",
+        )
     })?;
     let frequency = args::rec_f64(args_v, "frequency").unwrap_or(1e9);
     let distance = args::rec_f64(args_v, "distance").unwrap_or(1.0);
@@ -80,7 +87,10 @@ pub fn emf_attenuation(args_v: &Value, span: Span) -> Result<Value, Diagnostic> 
 /// `Physics.doppler_shift` — relativistic Doppler effect.
 pub fn doppler_shift(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let source_frequency = args::rec_f64(args_v, "source_frequency").ok_or_else(|| {
-        args::bad(span, "doppler_shift needs { source_frequency, relative_velocity, c? }")
+        args::bad(
+            span,
+            "doppler_shift needs { source_frequency, relative_velocity, c? }",
+        )
     })?;
     let relative_velocity = args::rec_f64(args_v, "relative_velocity").unwrap_or(0.0);
     let c = args::rec_f64(args_v, "c").unwrap_or(0.0);
@@ -100,14 +110,21 @@ pub fn doppler_shift(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
 pub fn emf_field_grid_3d(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let sources = parse_sources(args_v, span)?;
     let bounds_flat = args::rec_f64_list(args_v, "bounds").ok_or_else(|| {
-        args::bad(span, "emf_field_grid_3d needs { bounds: [x_min,x_max,y_min,y_max,z_min,z_max] }")
+        args::bad(
+            span,
+            "emf_field_grid_3d needs { bounds: [x_min,x_max,y_min,y_max,z_min,z_max] }",
+        )
     })?;
     if bounds_flat.len() != 6 {
         return Err(args::bad(span, "bounds must have exactly 6 elements"));
     }
     let bounds = [
-        bounds_flat[0], bounds_flat[1], bounds_flat[2],
-        bounds_flat[3], bounds_flat[4], bounds_flat[5],
+        bounds_flat[0],
+        bounds_flat[1],
+        bounds_flat[2],
+        bounds_flat[3],
+        bounds_flat[4],
+        bounds_flat[5],
     ];
     let nx = args::rec_u64(args_v, "nx").unwrap_or(4) as usize;
     let ny = args::rec_u64(args_v, "ny").unwrap_or(4) as usize;
@@ -128,9 +145,15 @@ pub fn emf_field_grid_3d(args_v: &Value, span: Span) -> Result<Value, Diagnostic
         ("nt", Value::U64(r.nt as u64)),
         ("bounds", args::f64_list_value(r.bounds.iter().copied())),
         ("times", args::f64_list_value(r.times.iter().copied())),
-        ("amplitudes", args::f64_list_value(r.amplitudes.iter().copied())),
+        (
+            "amplitudes",
+            args::f64_list_value(r.amplitudes.iter().copied()),
+        ),
         ("phases", args::f64_list_value(r.phases.iter().copied())),
-        ("frequencies", args::f64_list_value(r.frequencies.iter().copied())),
+        (
+            "frequencies",
+            args::f64_list_value(r.frequencies.iter().copied()),
+        ),
         ("manifold_coords", Value::List(manifold_values)),
         ("num_sources", Value::U64(r.num_sources as u64)),
     ]))
@@ -255,7 +278,10 @@ mod tests {
         match r {
             Value::Record(m) => {
                 let f_obs = m.get("observed_frequency").and_then(args::as_f64).unwrap();
-                assert!(f_obs > 1e9, "approaching should increase frequency: {f_obs}");
+                assert!(
+                    f_obs > 1e9,
+                    "approaching should increase frequency: {f_obs}"
+                );
             }
             other => panic!("{other:?}"),
         }
@@ -281,7 +307,9 @@ mod tests {
                 assert!(amps.is_some());
                 if let Some(Value::List(xs)) = amps {
                     assert_eq!(xs.len(), 3 * 3 * 3 * 2);
-                    assert!(xs.iter().all(|v| args::as_f64(v).map(|f| f.is_finite()).unwrap_or(false)));
+                    assert!(xs
+                        .iter()
+                        .all(|v| args::as_f64(v).map(|f| f.is_finite()).unwrap_or(false)));
                 }
                 let mcs = m.get("manifold_coords");
                 assert!(mcs.is_some());

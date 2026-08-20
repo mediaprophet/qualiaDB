@@ -12,10 +12,7 @@ pub fn smiles(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     Ok(args::record([
         ("valid", Value::Bool(r.is_valid)),
         ("atom_count", Value::U64(r.atom_count as u64)),
-        (
-            "error",
-            r.error.map(Value::String).unwrap_or(Value::Null),
-        ),
+        ("error", r.error.map(Value::String).unwrap_or(Value::Null)),
     ]))
 }
 

@@ -230,13 +230,19 @@ impl std::fmt::Display for FieldSectionError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::BufferTooSmallForHeader => write!(f, "buffer too small for field section header"),
-            Self::BufferTooSmallForDescriptors => write!(f, "buffer too small for field descriptors"),
+            Self::BufferTooSmallForDescriptors => {
+                write!(f, "buffer too small for field descriptors")
+            }
             Self::BadMagic(m) => write!(f, "bad field section magic: 0x{m:08X}"),
             Self::UnsupportedVersion(v) => write!(f, "unsupported field section version: {v}"),
             Self::InvalidTypeKind(k) => write!(f, "invalid field type kind: {k}"),
             Self::InvalidSupportKind(k) => write!(f, "invalid field support kind: {k}"),
-            Self::InvalidRepresentationKind(k) => write!(f, "invalid field representation kind: {k}"),
-            Self::TooManyFields(n) => write!(f, "too many fields: {n} (max {MAX_FIELDS_PER_SECTION})"),
+            Self::InvalidRepresentationKind(k) => {
+                write!(f, "invalid field representation kind: {k}")
+            }
+            Self::TooManyFields(n) => {
+                write!(f, "too many fields: {n} (max {MAX_FIELDS_PER_SECTION})")
+            }
         }
     }
 }
@@ -266,7 +272,13 @@ impl FieldEntry {
         support: FieldSupportKind,
         representation: FieldRepresentationKind,
     ) -> Self {
-        Self { name_hash, unit_hash, type_kind, support, representation }
+        Self {
+            name_hash,
+            unit_hash,
+            type_kind,
+            support,
+            representation,
+        }
     }
 
     fn to_descriptor(&self) -> FieldDescriptor {
@@ -370,7 +382,9 @@ pub fn decode_field_section(
             return Err(FieldSectionError::InvalidSupportKind(desc.support));
         }
         if FieldRepresentationKind::from_u8(desc.representation).is_none() {
-            return Err(FieldSectionError::InvalidRepresentationKind(desc.representation));
+            return Err(FieldSectionError::InvalidRepresentationKind(
+                desc.representation,
+            ));
         }
     }
 
@@ -428,9 +442,27 @@ mod tests {
     #[test]
     fn multiple_fields_round_trip() {
         let entries = vec![
-            FieldEntry::new(100, 200, FieldTypeKind::Scalar, FieldSupportKind::Region, FieldRepresentationKind::Grid),
-            FieldEntry::new(101, 201, FieldTypeKind::Vector, FieldSupportKind::Point, FieldRepresentationKind::Mesh),
-            FieldEntry::new(102, 202, FieldTypeKind::Spectral, FieldSupportKind::Stream, FieldRepresentationKind::Sampled),
+            FieldEntry::new(
+                100,
+                200,
+                FieldTypeKind::Scalar,
+                FieldSupportKind::Region,
+                FieldRepresentationKind::Grid,
+            ),
+            FieldEntry::new(
+                101,
+                201,
+                FieldTypeKind::Vector,
+                FieldSupportKind::Point,
+                FieldRepresentationKind::Mesh,
+            ),
+            FieldEntry::new(
+                102,
+                202,
+                FieldTypeKind::Spectral,
+                FieldSupportKind::Stream,
+                FieldRepresentationKind::Sampled,
+            ),
         ];
         let size = field_section_size(3);
         let mut buf = vec![0u8; size];
@@ -440,7 +472,10 @@ mod tests {
         assert_eq!(descs.len(), 3);
         assert_eq!(descs[0].name_hash, 100);
         assert_eq!(descs[1].type_kind, FieldTypeKind::Vector as u8);
-        assert_eq!(descs[2].representation, FieldRepresentationKind::Sampled as u8);
+        assert_eq!(
+            descs[2].representation,
+            FieldRepresentationKind::Sampled as u8
+        );
     }
 
     #[test]
@@ -489,14 +524,23 @@ mod tests {
         };
         buf[..FIELD_SECTION_HEADER_SIZE].copy_from_slice(bytemuck::bytes_of(&header));
         let err = decode_field_section(&buf).unwrap_err();
-        assert!(matches!(err, FieldSectionError::BufferTooSmallForDescriptors));
+        assert!(matches!(
+            err,
+            FieldSectionError::BufferTooSmallForDescriptors
+        ));
     }
 
     #[test]
     fn invalid_type_kind_rejected() {
         let size = field_section_size(1);
         let mut buf = vec![0u8; size];
-        let entries = vec![FieldEntry::new(1, 2, FieldTypeKind::Scalar, FieldSupportKind::Region, FieldRepresentationKind::Grid)];
+        let entries = vec![FieldEntry::new(
+            1,
+            2,
+            FieldTypeKind::Scalar,
+            FieldSupportKind::Region,
+            FieldRepresentationKind::Grid,
+        )];
         encode_field_section(&entries, &mut buf).unwrap();
         // Corrupt the type_kind byte. Within FieldDescriptor, type_kind is at
         // offset 16 (after name_hash:u64 + unit_hash:u64). In the buffer, that's

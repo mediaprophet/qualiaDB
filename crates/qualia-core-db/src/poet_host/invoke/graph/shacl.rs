@@ -44,9 +44,8 @@ pub fn validate(snap: &PoetSnapshot, args_v: &Value, span: Span) -> Result<Value
             .unwrap_or_else(|| generate_60bit_token(RDF_REIFIES));
         let mut buf = [ShaclConstraint::MinCount(1); 8];
         let n = parse_constraints(args_v, &mut buf, span)?;
-        let ok = snap.with_live_quins(|quins| {
-            validate_shacl_property(quins, subject, path, &buf[..n])
-        });
+        let ok =
+            snap.with_live_quins(|quins| validate_shacl_property(quins, subject, path, &buf[..n]));
         return Ok(Value::Bool(ok));
     }
     #[cfg(not(any(
@@ -120,7 +119,9 @@ fn named(kind: &str, item: &Value, span: Span) -> Result<ShaclConstraint, Diagno
         "minCount" => ShaclConstraint::MinCount(args::rec_u64(item, "value").unwrap_or(1) as u32),
         "maxCount" => ShaclConstraint::MaxCount(args::rec_u64(item, "value").unwrap_or(1) as u32),
         "minLength" => ShaclConstraint::MinLength(args::rec_u64(item, "value").unwrap_or(0) as u32),
-        "maxLength" => ShaclConstraint::MaxLength(args::rec_u64(item, "value").unwrap_or(u32::MAX as u64) as u32),
+        "maxLength" => ShaclConstraint::MaxLength(
+            args::rec_u64(item, "value").unwrap_or(u32::MAX as u64) as u32,
+        ),
         "reifier" => ShaclConstraint::MinCount(1),
         "in" => {
             let values_list = args::rec(item, "values")
@@ -141,7 +142,10 @@ fn named(kind: &str, item: &Value, span: Span) -> Result<ShaclConstraint, Diagno
             if count == 0 {
                 return Err(args::bad(span, "in constraint needs at least one value"));
             }
-            ShaclConstraint::In { count, values: hashes }
+            ShaclConstraint::In {
+                count,
+                values: hashes,
+            }
         }
         "datatype" => {
             let dt = args::rec_str(item, "value").unwrap_or("xsd:integer");
@@ -184,7 +188,9 @@ mod tests {
     fn extensions_list_includes_reifier() {
         match extensions(&Value::Null, Span { start: 0, end: 0 }).unwrap() {
             Value::List(xs) => {
-                assert!(xs.iter().any(|v| matches!(v, Value::String(s) if s == "reifier")))
+                assert!(xs
+                    .iter()
+                    .any(|v| matches!(v, Value::String(s) if s == "reifier")))
             }
             other => panic!("{other:?}"),
         }
@@ -194,9 +200,15 @@ mod tests {
     fn extensions_list_includes_in_and_length() {
         match extensions(&Value::Null, Span { start: 0, end: 0 }).unwrap() {
             Value::List(xs) => {
-                assert!(xs.iter().any(|v| matches!(v, Value::String(s) if s == "in")));
-                assert!(xs.iter().any(|v| matches!(v, Value::String(s) if s == "minLength")));
-                assert!(xs.iter().any(|v| matches!(v, Value::String(s) if s == "maxLength")));
+                assert!(xs
+                    .iter()
+                    .any(|v| matches!(v, Value::String(s) if s == "in")));
+                assert!(xs
+                    .iter()
+                    .any(|v| matches!(v, Value::String(s) if s == "minLength")));
+                assert!(xs
+                    .iter()
+                    .any(|v| matches!(v, Value::String(s) if s == "maxLength")));
             }
             other => panic!("{other:?}"),
         }

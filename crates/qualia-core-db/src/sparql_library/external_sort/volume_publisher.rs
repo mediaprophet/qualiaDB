@@ -406,9 +406,7 @@ fn kway_merge_readers<R: QuinSource>(
                     0.0
                 };
                 if let Some(note) = note {
-                    note(&format!(
-                        "merge {pct:.1}%  SuperBlocks {blocks_written}"
-                    ));
+                    note(&format!("merge {pct:.1}%  SuperBlocks {blocks_written}"));
                 }
             }
             block_buffer.clear();

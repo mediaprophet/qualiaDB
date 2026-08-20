@@ -13,10 +13,10 @@
 use crate::query::ingest_report::CountingReader;
 use crate::{q_hash, NQuin};
 
+pub use crate::query::ingest_job;
 pub use crate::query::ingest_report::{
     format_bytes, format_count, IngestPhase, IngestReport, IngestSnapshot,
 };
-pub use crate::query::ingest_job;
 use log;
 
 use crate::query::ingest_formats::OBJECT_IRI_MASK as OBJECT_HASH_MASK;
@@ -193,7 +193,10 @@ fn repair_rdfxml_empty_base(src: &str, base: &str) -> String {
 fn empty_local_name_follows(bytes: &[u8], i: usize) -> bool {
     match bytes.get(i) {
         None => true,
-        Some(b) => matches!(*b, b' ' | b'\t' | b'\r' | b'\n' | b',' | b';' | b'.' | b')' | b']'),
+        Some(b) => matches!(
+            *b,
+            b' ' | b'\t' | b'\r' | b'\n' | b',' | b';' | b'.' | b')' | b']'
+        ),
     }
 }
 
@@ -303,21 +306,11 @@ pub fn streaming_import_rdf_with_report(
     max_segment_bytes: Option<u64>,
     report: IngestReport,
 ) -> std::io::Result<u64> {
-    streaming_import_rdf_with_mode_inner(
-        in_path,
-        out_path,
-        mode,
-        max_segment_bytes,
-        report,
-        None,
-    )
+    streaming_import_rdf_with_mode_inner(in_path, out_path, mode, max_segment_bytes, report, None)
 }
 
 /// Resume or run a durable job directory (`job.json` + `runs/`).
-pub fn streaming_import_rdf_with_job(
-    job_dir: &Path,
-    report: IngestReport,
-) -> std::io::Result<u64> {
+pub fn streaming_import_rdf_with_job(job_dir: &Path, report: IngestReport) -> std::io::Result<u64> {
     let job = crate::query::ingest_job::IngestJob::open(job_dir.to_path_buf())?;
     let out = job.spec.output.clone();
     let mode = if job.spec.mode == "strip_literals" {
@@ -327,7 +320,14 @@ pub fn streaming_import_rdf_with_job(
     };
     let segment = job.spec.segment_mib.map(|m| m.saturating_mul(1024 * 1024));
     let locator = job.spec.source.locator().to_string();
-    streaming_import_rdf_with_mode_inner(&locator, &out, mode, segment, report, Some(job.dir.clone()))
+    streaming_import_rdf_with_mode_inner(
+        &locator,
+        &out,
+        mode,
+        segment,
+        report,
+        Some(job.dir.clone()),
+    )
 }
 
 fn streaming_import_rdf_with_mode_inner(
@@ -340,11 +340,7 @@ fn streaming_import_rdf_with_mode_inner(
 ) -> std::io::Result<u64> {
     let start_time = Instant::now();
     let parse_started = Instant::now();
-    report.emit(
-        IngestPhase::Starting,
-        "initializing ingest pipeline",
-        None,
-    );
+    report.emit(IngestPhase::Starting, "initializing ingest pipeline", None);
 
     // 1. Hardware Detection & Scaling
     let mut sys = System::new_all();
@@ -543,15 +539,20 @@ fn streaming_import_rdf_with_mode_inner(
         .filter(|f| *f != crate::query::ingest_job::IngestRdfFormat::Auto)
         .unwrap_or_else(|| crate::query::ingest_formats::format_from_path(&path_lower));
 
-    let resume_cursor = job
-        .as_ref()
-        .and_then(|j| crate::query::ingest_resume::ResumeCursor::load(&j.dir).ok().flatten());
+    let resume_cursor = job.as_ref().and_then(|j| {
+        crate::query::ingest_resume::ResumeCursor::load(&j.dir)
+            .ok()
+            .flatten()
+    });
     let mut skip_triples = skip_triples;
     let mut source_reader = source_reader;
     if let (Some(j), Some(cur)) = (job.as_ref(), resume_cursor.as_ref()) {
         if cur.seekable
             && crate::query::ingest_resume::format_can_seek(fmt)
-            && matches!(j.spec.source, crate::query::ingest_job::IngestSourceKind::File { .. })
+            && matches!(
+                j.spec.source,
+                crate::query::ingest_job::IngestSourceKind::File { .. }
+            )
         {
             if let crate::query::ingest_job::IngestSourceKind::File { path } = &j.spec.source {
                 if let Ok((r, _off, _)) =
@@ -635,7 +636,10 @@ fn streaming_import_rdf_with_mode_inner(
         }
     }
 
-    log::info!("Ontology Ingest: streaming triples from {} ({fmt:?})", in_path);
+    log::info!(
+        "Ontology Ingest: streaming triples from {} ({fmt:?})",
+        in_path
+    );
     let stream_ttl = job.is_some();
     let base_iri = catalog_base_iri(Path::new(in_path));
     let mut parse_error: Option<String> = None;
@@ -684,7 +688,9 @@ fn streaming_import_rdf_with_mode_inner(
         );
     } else {
         const STREAM_AFTER: u64 = 32 * 1024 * 1024;
-        let src_len = std::fs::metadata(in_path).map(|m| m.len()).unwrap_or(u64::MAX);
+        let src_len = std::fs::metadata(in_path)
+            .map(|m| m.len())
+            .unwrap_or(u64::MAX);
         if matches!(fmt, crate::query::ingest_job::IngestRdfFormat::Turtle)
             && src_len <= STREAM_AFTER
             && !stream_ttl
@@ -762,9 +768,7 @@ fn streaming_import_rdf_with_mode_inner(
         drop(tx_raw);
         return Err(io::Error::new(
             io::ErrorKind::InvalidData,
-            format!(
-                "RDF parse failed after {triples_read} triples in {in_path}: {error}"
-            ),
+            format!("RDF parse failed after {triples_read} triples in {in_path}: {error}"),
         ));
     }
 
@@ -774,9 +778,9 @@ fn streaming_import_rdf_with_mode_inner(
     // 6. Join the workers first (this closes the collector's channel). Lexicon
     // strings are already interned on the collector via spilling runs.
     for handle in worker_handles {
-        let _ = handle.join().map_err(|_| {
-            std::io::Error::other("Q42 ingest hasher shard panicked")
-        })?;
+        let _ = handle
+            .join()
+            .map_err(|_| std::io::Error::other("Q42 ingest hasher shard panicked"))?;
     }
 
     let sorter = collector_handle
@@ -835,8 +839,8 @@ fn streaming_import_rdf_with_mode_inner(
                     }
                     for segment in manifest.lexicon_segments {
                         logical_bytes = logical_bytes.saturating_add(segment.byte_length);
-                    if let Ok(shard) =
-                        crate::q42_volume::Q42Volume::open(&parent.join(&segment.locator))
+                        if let Ok(shard) =
+                            crate::q42_volume::Q42Volume::open(&parent.join(&segment.locator))
                         {
                             lex_bytes = lex_bytes.saturating_add(shard.header().lex_length);
                         }
@@ -862,13 +866,9 @@ fn streaming_import_rdf_with_mode_inner(
     };
     report.emit(IngestPhase::Complete, summary, Some(out_path.to_string()));
     if let Some(j) = job.as_mut() {
-        let full = digest_outcome
-            .full
-            .lock()
-            .ok()
-            .and_then(|g| *g);
-        let windows = crate::query::ingest_job::read_window_hashes(&j.windows_path())
-            .unwrap_or_default();
+        let full = digest_outcome.full.lock().ok().and_then(|g| *g);
+        let windows =
+            crate::query::ingest_job::read_window_hashes(&j.windows_path()).unwrap_or_default();
         let commit = crate::query::ingest_job::window_commitment(&windows);
         let att = crate::query::ingest_job::SourceAttestation {
             locator: j.spec.source.locator().to_string(),
@@ -1069,10 +1069,7 @@ mod tests {
     fn multi_format_ingest_hashes_the_same_iri() {
         let dir = TempDir::new().unwrap();
         let samples: &[(&str, &str)] = &[
-            (
-                "in.nt",
-                "<http://ex/s> <http://ex/p> <http://ex/keep> .\n",
-            ),
+            ("in.nt", "<http://ex/s> <http://ex/p> <http://ex/keep> .\n"),
             (
                 "in.ttl",
                 "@prefix ex: <http://ex/> .\nex:s ex:p ex:keep .\n",
@@ -1152,7 +1149,10 @@ mod tests {
         .unwrap();
         let written =
             streaming_import_rdf(input.to_str().unwrap(), output.to_str().unwrap()).unwrap();
-        assert!(written >= 1, "expected at least one SuperBlock, got {written}");
+        assert!(
+            written >= 1,
+            "expected at least one SuperBlock, got {written}"
+        );
         let report = crate::q42_volume::Q42InspectReport::from_path(&output).unwrap();
         assert!(!report.lexicon_has_no_terms);
         assert!(report.flags & crate::q42_volume::FLAG_PERMISSIVE_COMMONS != 0);
@@ -1190,8 +1190,8 @@ mod tests {
         let input = dir.path().join("bad.ttl");
         let output = dir.path().join("bad.q42");
         std::fs::write(&input, "@prefix broken\n").unwrap();
-        let err = streaming_import_rdf(input.to_str().unwrap(), output.to_str().unwrap())
-            .unwrap_err();
+        let err =
+            streaming_import_rdf(input.to_str().unwrap(), output.to_str().unwrap()).unwrap_err();
         assert_eq!(err.kind(), io::ErrorKind::InvalidData);
         assert!(err.to_string().contains("parse failed"));
     }

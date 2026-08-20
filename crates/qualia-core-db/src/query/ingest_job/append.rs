@@ -5,9 +5,7 @@ use std::path::Path;
 
 use super::job::unix_now;
 use super::source::{open_ingest_source, IngestRdfFormat, IngestSourceKind};
-use crate::q42_volume::{
-    write_volume_root_for_commons, Q42Volume,
-};
+use crate::q42_volume::{write_volume_root_for_commons, Q42Volume};
 use crate::query::ingest::{streaming_import_rdf_with_report, IngestMode};
 use crate::query::ingest_report::IngestReport;
 
@@ -19,9 +17,9 @@ pub fn append_rdf_to_root(
     extra: &IngestSourceKind,
     report: IngestReport,
 ) -> io::Result<u64> {
-    let parent = root.parent().ok_or_else(|| {
-        io::Error::new(io::ErrorKind::InvalidInput, "volume root has no parent")
-    })?;
+    let parent = root
+        .parent()
+        .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidInput, "volume root has no parent"))?;
     let work = parent.join(format!(".append-{}", unix_now()));
     std::fs::create_dir_all(&work)?;
     let extra_root = work.join("extra-root.q42");
@@ -65,7 +63,10 @@ pub fn append_rdf_to_root(
     })?;
 
     for seg in extra_man.segments {
-        let src = extra_root.parent().unwrap_or(Path::new(".")).join(&seg.locator);
+        let src = extra_root
+            .parent()
+            .unwrap_or(Path::new("."))
+            .join(&seg.locator);
         let dest = dest_parent.join(&seg.locator);
         if src != dest {
             std::fs::copy(&src, &dest)?;
@@ -73,7 +74,10 @@ pub fn append_rdf_to_root(
         manifest.segments.push(seg);
     }
     for seg in extra_man.lexicon_segments {
-        let src = extra_root.parent().unwrap_or(Path::new(".")).join(&seg.locator);
+        let src = extra_root
+            .parent()
+            .unwrap_or(Path::new("."))
+            .join(&seg.locator);
         let dest = dest_parent.join(&seg.locator);
         if src != dest {
             std::fs::copy(&src, &dest)?;

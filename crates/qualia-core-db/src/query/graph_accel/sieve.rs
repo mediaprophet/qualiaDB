@@ -12,12 +12,7 @@ pub struct SieveOutcome {
 }
 
 /// Compact Quins whose `field == needle` into `out`. Returns count + path.
-pub fn sieve_eq(
-    quins: &[NQuin],
-    field: QuinField,
-    needle: u64,
-    out: &mut [NQuin],
-) -> SieveOutcome {
+pub fn sieve_eq(quins: &[NQuin], field: QuinField, needle: u64, out: &mut [NQuin]) -> SieveOutcome {
     if quins.is_empty() || out.is_empty() {
         return SieveOutcome {
             path: AccelPath::Cpu,

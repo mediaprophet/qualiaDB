@@ -24,16 +24,25 @@ fn build_adjacency(
     let mut max_idx = 0usize;
     for e in edges {
         if e.len() != 3 {
-            return Err(args::bad(span, "each edge must be [u, v, w] (three numbers)"));
+            return Err(args::bad(
+                span,
+                "each edge must be [u, v, w] (three numbers)",
+            ));
         }
         let u = e[0];
         let v = e[1];
         let w = e[2];
         if !u.is_finite() || u < 0.0 || u.fract() != 0.0 {
-            return Err(args::bad(span, "edge source u must be a non-negative integer"));
+            return Err(args::bad(
+                span,
+                "edge source u must be a non-negative integer",
+            ));
         }
         if !v.is_finite() || v < 0.0 || v.fract() != 0.0 {
-            return Err(args::bad(span, "edge target v must be a non-negative integer"));
+            return Err(args::bad(
+                span,
+                "edge target v must be a non-negative integer",
+            ));
         }
         if !w.is_finite() || w < 0.0 {
             return Err(args::bad(
@@ -197,7 +206,11 @@ mod tests {
         // 0->1 (1), 1->2 (2), 0->2 (4): shortest 0->2 is via 1 = 3, path [0,1,2].
         let v = shortest_path(
             &case(
-                vec![edge(0.0, 1.0, 1.0), edge(1.0, 2.0, 2.0), edge(0.0, 2.0, 4.0)],
+                vec![
+                    edge(0.0, 1.0, 1.0),
+                    edge(1.0, 2.0, 2.0),
+                    edge(0.0, 2.0, 4.0),
+                ],
                 0,
                 2,
             ),

@@ -131,10 +131,7 @@ impl Q42InspectReport {
     pub fn to_text(&self) -> String {
         let mut out = String::new();
         out.push_str(&format!("Q42  {}\n", self.path));
-        out.push_str(&format!(
-            "  file        {} bytes\n",
-            self.file_bytes
-        ));
+        out.push_str(&format!("  file        {} bytes\n", self.file_bytes));
         out.push_str(&format!(
             "  version     {}   flags 0x{:04x} ({})\n",
             self.version,
@@ -164,18 +161,9 @@ impl Q42InspectReport {
             yn(self.has_field_postings),
             yn(self.is_volume_root)
         ));
-        out.push_str(&format!(
-            "  publication {}\n",
-            self.publication_class
-        ));
-        out.push_str(&format!(
-            "  transport   {}\n",
-            self.publication_transport
-        ));
-        out.push_str(&format!(
-            "  public magnet {}\n",
-            yn(self.may_public_magnet)
-        ));
+        out.push_str(&format!("  publication {}\n", self.publication_class));
+        out.push_str(&format!("  transport   {}\n", self.publication_transport));
+        out.push_str(&format!("  public magnet {}\n", yn(self.may_public_magnet)));
         if !self.publication_reason.is_empty() {
             out.push_str(&format!("  publish note {}\n", self.publication_reason));
         }

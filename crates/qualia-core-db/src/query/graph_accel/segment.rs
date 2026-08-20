@@ -56,8 +56,7 @@ mod tests {
         let mut scratch = vec![NQuin::default(); 16];
         let mut out = vec![NQuin::default(); 16];
         let (hit, scanned) =
-            sieve_volume_file(&output, QuinField::Object, needle, &mut scratch, &mut out)
-                .unwrap();
+            sieve_volume_file(&output, QuinField::Object, needle, &mut scratch, &mut out).unwrap();
         assert_eq!(scanned, 3);
         assert_eq!(hit.written, 2);
     }

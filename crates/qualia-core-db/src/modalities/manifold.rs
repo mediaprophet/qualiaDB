@@ -639,7 +639,10 @@ mod tests {
         assert!(source.contains("T14"), "missing T14 reference");
         assert!(source.contains("T16"), "missing T16 reference");
         assert!(source.contains("Epistemic10D"), "missing Epistemic10D name");
-        assert!(source.contains("morphism"), "missing morphism documentation");
+        assert!(
+            source.contains("morphism"),
+            "missing morphism documentation"
+        );
         assert!(
             source.contains("Vibe never sees") || source.contains("VibeScript does NOT see"),
             "missing rule that Vibe doesn't see Epistemic10D directly"

@@ -81,10 +81,7 @@ impl IngestSnapshot {
             .rss_bytes
             .map(format_bytes)
             .unwrap_or_else(|| "n/a".into());
-        let eta = self
-            .eta_secs
-            .map(format_secs)
-            .unwrap_or_else(|| "—".into());
+        let eta = self.eta_secs.map(format_secs).unwrap_or_else(|| "—".into());
         let triples_col = if self.phase == IngestPhase::Skipping && self.skip_target > 0 {
             format!(
                 "{} / {} replayed",
@@ -304,8 +301,7 @@ impl IngestReport {
         if let Ok(mut last) = self.last_emit.lock() {
             *last = Instant::now();
         }
-        self.last_triples
-            .store(snap.triples, Ordering::Relaxed);
+        self.last_triples.store(snap.triples, Ordering::Relaxed);
     }
 
     fn write_progress_file(&self, snap: &IngestSnapshot) {
@@ -355,11 +351,7 @@ impl IngestReport {
         if due_count || due_time {
             self.emit(
                 IngestPhase::Skipping,
-                format!(
-                    "skip {} / {}",
-                    format_count(replayed),
-                    format_count(target)
-                ),
+                format!("skip {} / {}", format_count(replayed), format_count(target)),
                 None,
             );
         }

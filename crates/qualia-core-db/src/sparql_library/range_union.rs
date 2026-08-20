@@ -7,8 +7,9 @@
 use super::range_select_apply::{apply_select_wrappers, SelectWrapperState};
 use super::sparql_ast::{BindingRow, ExpressionId, SparqlQueryContext, VariableId, MAX_VARIABLES};
 use super::sparql_executor::{
-    execute_range_triple_page_into, execute_range_volume_set_triple_page_into, Q42RangeNestedLoopJoinPage,
-    Q42RangeSparqlCursor, Q42RangeTriplePattern, Q42RangeVolumeSetSparqlCursor,
+    execute_range_triple_page_into, execute_range_volume_set_triple_page_into,
+    Q42RangeNestedLoopJoinPage, Q42RangeSparqlCursor, Q42RangeTriplePattern,
+    Q42RangeVolumeSetSparqlCursor,
 };
 use super::sparql_planner::{ExecutionPlan, PhysicalOperatorType};
 use crate::NQuin;
@@ -83,7 +84,9 @@ impl Q42RangeUnionPlan {
                 }
                 PhysicalOperatorType::Filter { input, expression } => {
                     if filter_count == filters.len() {
-                        return Err("range UNION supports at most eight stacked FILTER operators".into());
+                        return Err(
+                            "range UNION supports at most eight stacked FILTER operators".into(),
+                        );
                     }
                     filters[filter_count] = expression;
                     filter_count += 1;

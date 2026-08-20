@@ -20,7 +20,7 @@ pub fn check(snap: &PoetSnapshot, args: &Value, span: Span) -> Result<Value, Dia
         .get(1)
         .and_then(hash_val)
         .ok_or_else(|| Diagnostic::new(DiagCode::E100, span, "subsumption missing super_class"))?;
-    Ok(Value::Bool(
-        snap.with_live_quins(|tbox| check_subsumption_quin(sub, sup, tbox)),
-    ))
+    Ok(Value::Bool(snap.with_live_quins(|tbox| {
+        check_subsumption_quin(sub, sup, tbox)
+    })))
 }

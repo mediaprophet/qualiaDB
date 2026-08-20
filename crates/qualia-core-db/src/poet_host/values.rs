@@ -80,7 +80,9 @@ pub(crate) fn reifier_quin(term: &Value, context: u64) -> Option<NQuin> {
 pub(crate) fn shape_local_name(shape: &Value) -> String {
     match shape {
         Value::Prefixed(_, local) => local.clone(),
-        Value::Iri(s) | Value::String(s) => s.rsplit(['#', '/', ':']).next().unwrap_or(s).to_string(),
+        Value::Iri(s) | Value::String(s) => {
+            s.rsplit(['#', '/', ':']).next().unwrap_or(s).to_string()
+        }
         _ => String::new(),
     }
 }

@@ -20,7 +20,9 @@ pub use join::{hash_join_u64, hash_join_u64_cpu, JoinOutcome};
 pub use path::{npu_available, AccelPath, AccelPolicy, GPU_JOIN_MIN, GPU_SIEVE_MIN, GPU_SORT_MIN};
 pub use segment::sieve_volume_file;
 pub use sieve::{sieve_eq, sieve_eq_indices, SieveOutcome};
-pub use sort::{sort_quins_by_object, sort_quins_by_object_cpu_only, sort_u64_indices, SortOutcome};
+pub use sort::{
+    sort_quins_by_object, sort_quins_by_object_cpu_only, sort_u64_indices, SortOutcome,
+};
 
 #[cfg(test)]
 mod tests;

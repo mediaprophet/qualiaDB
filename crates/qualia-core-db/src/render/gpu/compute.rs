@@ -224,10 +224,12 @@ impl super::PortalGpu {
 
         let key = cache_key(wgsl, entry_point, bindings);
         if !self.compute.cache.contains_key(&key) {
-            let module = self.device.create_shader_module(wgpu::ShaderModuleDescriptor {
-                label: Some("portal-compute-shader"),
-                source: wgpu::ShaderSource::Wgsl(wgsl.into()),
-            });
+            let module = self
+                .device
+                .create_shader_module(wgpu::ShaderModuleDescriptor {
+                    label: Some("portal-compute-shader"),
+                    source: wgpu::ShaderSource::Wgsl(wgsl.into()),
+                });
             let mut entries: Vec<wgpu::BindGroupLayoutEntry> = bindings
                 .iter()
                 .map(|b| wgpu::BindGroupLayoutEntry {
@@ -238,31 +240,32 @@ impl super::PortalGpu {
                 })
                 .collect();
             entries.sort_by_key(|e| e.binding);
-            let layout = self.device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                label: Some("portal-compute-bind-layout"),
-                entries: &entries,
-            });
-            let pipeline_layout =
-                self.device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                    label: Some("portal-compute-pipeline-layout"),
-                    bind_group_layouts: &[Some(&layout)],
-                    immediate_size: 0,
+            let layout = self
+                .device
+                .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                    label: Some("portal-compute-bind-layout"),
+                    entries: &entries,
                 });
-            let pipeline = self.device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-                label: Some("portal-compute-pipeline"),
-                layout: Some(&pipeline_layout),
-                module: &module,
-                entry_point: Some(entry_point),
-                compilation_options: wgpu::PipelineCompilationOptions::default(),
-                cache: None,
-            });
-            self.compute.cache.insert(
-                key,
-                CachedPipeline {
-                    pipeline,
-                    layout,
-                },
-            );
+            let pipeline_layout =
+                self.device
+                    .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+                        label: Some("portal-compute-pipeline-layout"),
+                        bind_group_layouts: &[Some(&layout)],
+                        immediate_size: 0,
+                    });
+            let pipeline = self
+                .device
+                .create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+                    label: Some("portal-compute-pipeline"),
+                    layout: Some(&pipeline_layout),
+                    module: &module,
+                    entry_point: Some(entry_point),
+                    compilation_options: wgpu::PipelineCompilationOptions::default(),
+                    cache: None,
+                });
+            self.compute
+                .cache
+                .insert(key, CachedPipeline { pipeline, layout });
         }
         // Clone the Arc-backed handles out of the cache to release the immutable
         // borrow of `self.compute.cache` before the pending-slot mutation below.
@@ -318,11 +321,12 @@ impl super::PortalGpu {
                         mapped_at_creation: false,
                     })
                 } else {
-                    self.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                        label: Some("portal-compute-buf"),
-                        contents: b.data,
-                        usage,
-                    })
+                    self.device
+                        .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                            label: Some("portal-compute-buf"),
+                            contents: b.data,
+                            usage,
+                        })
                 };
                 self.compute.pool.buffers.insert(
                     pool_key,
@@ -371,7 +375,13 @@ impl super::PortalGpu {
             });
             bg
         } else {
-            self.compute.pool.bind_group.as_ref().unwrap().bind_group.clone()
+            self.compute
+                .pool
+                .bind_group
+                .as_ref()
+                .unwrap()
+                .bind_group
+                .clone()
         };
 
         // VC3: Reuse staging buffer if capacity >= needed, otherwise create.
@@ -407,9 +417,11 @@ impl super::PortalGpu {
             (None, 0)
         };
 
-        let mut encoder = self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-            label: Some("portal-compute-encoder"),
-        });
+        let mut encoder = self
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("portal-compute-encoder"),
+            });
         {
             let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
                 label: Some("portal-compute-pass"),
@@ -424,7 +436,9 @@ impl super::PortalGpu {
                 .iter()
                 .find(|(b, _)| *b == rb)
                 .map(|(_, buf)| buf)
-                .ok_or_else(|| format!("compute_dispatch: readback_binding {rb} not in bindings"))?;
+                .ok_or_else(|| {
+                    format!("compute_dispatch: readback_binding {rb} not in bindings")
+                })?;
             encoder.copy_buffer_to_buffer(src, 0, staging, 0, copy_size as u64);
         }
         self.queue.submit(std::iter::once(encoder.finish()));
@@ -468,7 +482,9 @@ impl super::PortalGpu {
             // Map failed but the staging buffer may still be mapped; unmap defensively.
             staging.unmap();
             self.compute.pending = None;
-            return Some(Err(format!("compute_readback: dispatch {dispatch_id}: {e}")));
+            return Some(Err(format!(
+                "compute_readback: dispatch {dispatch_id}: {e}"
+            )));
         }
         let mapped = slice
             .get_mapped_range()
@@ -495,10 +511,12 @@ impl super::PortalGpu {
     /// pipelines internally).
     pub fn compile_shader_module(&mut self, wgsl: &str, entry: &str) -> Result<u64, String> {
         let _ = entry; // entry point validated at dispatch time, not module creation.
-        let module = self.device.create_shader_module(wgpu::ShaderModuleDescriptor {
-            label: Some("portal-compiled-shader"),
-            source: wgpu::ShaderSource::Wgsl(wgsl.into()),
-        });
+        let module = self
+            .device
+            .create_shader_module(wgpu::ShaderModuleDescriptor {
+                label: Some("portal-compiled-shader"),
+                source: wgpu::ShaderSource::Wgsl(wgsl.into()),
+            });
         // Find a free slot or push a new one.
         let id = {
             let cache = &mut self.compute.shader_cache;
@@ -525,7 +543,11 @@ impl super::PortalGpu {
 
     /// Number of cached shader modules (diagnostic / test helper).
     pub fn shader_cache_size(&self) -> usize {
-        self.compute.shader_cache.iter().filter(|s| s.is_some()).count()
+        self.compute
+            .shader_cache
+            .iter()
+            .filter(|s| s.is_some())
+            .count()
     }
 }
 
@@ -562,15 +584,30 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
         let a_bytes = bytemuck::cast_slice::<f32, u8>(&a).to_vec();
         let b_bytes = bytemuck::cast_slice::<f32, u8>(&b).to_vec();
         let bindings = vec![
-            ComputeBinding { binding: 0, kind: ComputeBufferKind::StorageRead, data: &a_bytes },
-            ComputeBinding { binding: 1, kind: ComputeBufferKind::StorageRead, data: &b_bytes },
-            ComputeBinding { binding: 2, kind: ComputeBufferKind::StorageReadWrite, data: &[] },
+            ComputeBinding {
+                binding: 0,
+                kind: ComputeBufferKind::StorageRead,
+                data: &a_bytes,
+            },
+            ComputeBinding {
+                binding: 1,
+                kind: ComputeBufferKind::StorageRead,
+                data: &b_bytes,
+            },
+            ComputeBinding {
+                binding: 2,
+                kind: ComputeBufferKind::StorageReadWrite,
+                data: &[],
+            },
         ];
         let id = p
             .compute_dispatch(VECTOR_ADD_WGSL, "main", [4, 1, 1], &bindings, Some(2), 16)
             .expect("dispatch");
         assert!(id > 0);
-        let out = p.compute_readback().expect("readback pending").expect("readback ok");
+        let out = p
+            .compute_readback()
+            .expect("readback pending")
+            .expect("readback ok");
         let floats: Vec<f32> = bytemuck::cast_slice::<u8, f32>(&out).to_vec();
         assert_eq!(floats, vec![11.0, 22.0, 33.0, 44.0]);
     }
@@ -583,9 +620,21 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
         let ab = bytemuck::cast_slice::<f32, u8>(&a).to_vec();
         let bb = bytemuck::cast_slice::<f32, u8>(&b).to_vec();
         let bindings = vec![
-            ComputeBinding { binding: 0, kind: ComputeBufferKind::StorageRead, data: &ab },
-            ComputeBinding { binding: 1, kind: ComputeBufferKind::StorageRead, data: &bb },
-            ComputeBinding { binding: 2, kind: ComputeBufferKind::StorageReadWrite, data: &[] },
+            ComputeBinding {
+                binding: 0,
+                kind: ComputeBufferKind::StorageRead,
+                data: &ab,
+            },
+            ComputeBinding {
+                binding: 1,
+                kind: ComputeBufferKind::StorageRead,
+                data: &bb,
+            },
+            ComputeBinding {
+                binding: 2,
+                kind: ComputeBufferKind::StorageReadWrite,
+                data: &[],
+            },
         ];
         p.compute_dispatch(VECTOR_ADD_WGSL, "main", [2, 1, 1], &bindings, Some(2), 8)
             .expect("dispatch 1");
@@ -645,9 +694,11 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
         // with no render passes or buffer writes.
         let guard0 = allocation_counter::AllocGuard::begin("vc3_wgpu_baseline", true);
         {
-            let enc = p.device().create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("vc3-baseline"),
-            });
+            let enc = p
+                .device()
+                .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                    label: Some("vc3-baseline"),
+                });
             p.queue().submit(std::iter::once(enc.finish()));
         }
         let _ = p.device().poll(wgpu::PollType::wait_indefinitely());
@@ -669,9 +720,11 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
         // that can only be fully resolved with a custom GPU backend.
         let guard1 = allocation_counter::AllocGuard::begin("vc3_belt_only", true);
         {
-            let mut enc = p.device().create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("vc3-belt"),
-            });
+            let mut enc = p
+                .device()
+                .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                    label: Some("vc3-belt"),
+                });
             let uniforms = super::super::AmbientUniforms {
                 time: 1.0,
                 view_width: 100.0,
@@ -741,9 +794,21 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
         let ab = bytemuck::cast_slice::<f32, u8>(&a).to_vec();
         let bb = bytemuck::cast_slice::<f32, u8>(&b).to_vec();
         let bindings = vec![
-            ComputeBinding { binding: 0, kind: ComputeBufferKind::StorageRead, data: &ab },
-            ComputeBinding { binding: 1, kind: ComputeBufferKind::StorageRead, data: &bb },
-            ComputeBinding { binding: 2, kind: ComputeBufferKind::StorageReadWrite, data: &[] },
+            ComputeBinding {
+                binding: 0,
+                kind: ComputeBufferKind::StorageRead,
+                data: &ab,
+            },
+            ComputeBinding {
+                binding: 1,
+                kind: ComputeBufferKind::StorageRead,
+                data: &bb,
+            },
+            ComputeBinding {
+                binding: 2,
+                kind: ComputeBufferKind::StorageReadWrite,
+                data: &[],
+            },
         ];
 
         // Warmup: first dispatch compiles the pipeline, creates buffers,
@@ -761,8 +826,7 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
         // Measure: pooled dispatch. Our code should not create new buffers
         // or bind groups. The remaining allocations are wgpu internals
         // (command encoder, compute pass recording, queue submission).
-        let guard =
-            allocation_counter::AllocGuard::begin("vc3_compute_dispatch_pooled", true);
+        let guard = allocation_counter::AllocGuard::begin("vc3_compute_dispatch_pooled", true);
         p.compute_dispatch(VECTOR_ADD_WGSL, "main", [4, 1, 1], &bindings, Some(2), 16)
             .expect("pooled dispatch");
         let result = guard.check();

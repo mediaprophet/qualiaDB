@@ -6,7 +6,8 @@ use poet_vibe::{Diagnostic, Span, Value};
 
 pub fn hill_climb(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let start = args::rec_f64(args_v, "start").unwrap_or(0.0);
-    let target = args::rec_f64(args_v, "target").ok_or_else(|| args::bad(span, "hill_climb needs target"))?;
+    let target = args::rec_f64(args_v, "target")
+        .ok_or_else(|| args::bad(span, "hill_climb needs target"))?;
     let step = args::rec_f64(args_v, "step").unwrap_or(0.25);
     let max_iter = args::rec_u64(args_v, "max_iter").unwrap_or(64) as usize;
     let (x, val) = hill_climbing(

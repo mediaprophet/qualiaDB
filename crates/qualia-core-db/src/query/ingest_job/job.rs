@@ -244,7 +244,10 @@ pub fn append_window_hash(path: &Path, hash: &[u8; 32]) -> io::Result<()> {
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent)?;
     }
-    let mut f = fs::OpenOptions::new().create(true).append(true).open(path)?;
+    let mut f = fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(path)?;
     writeln!(f, "{}", hex_encode(hash))
 }
 

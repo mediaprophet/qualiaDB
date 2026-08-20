@@ -123,7 +123,7 @@ impl LawPackage {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ed25519_dalek::{SigningKey, Signer};
+    use ed25519_dalek::{Signer, SigningKey};
 
     /// Generate a signing key from a fixed seed for deterministic tests.
     fn test_signing_key(seed: u8) -> SigningKey {
@@ -246,7 +246,10 @@ mod tests {
             "sha256:abc",
             1700000000,
         );
-        assert!(!pkg.verify_signature(&[0u8; 32]), "empty signature should fail");
+        assert!(
+            !pkg.verify_signature(&[0u8; 32]),
+            "empty signature should fail"
+        );
     }
 
     #[test]

@@ -141,8 +141,8 @@ fn copy_exact_slice(bytes: &[u8], range: Q42ByteRange, out: &mut [u8]) -> io::Re
     }
     let source_length = bytes.len() as u64;
     range.validate_for(source_length)?;
-    let start = usize::try_from(range.offset)
-        .map_err(|_| invalid("Q42 range offset exceeds platform"))?;
+    let start =
+        usize::try_from(range.offset).map_err(|_| invalid("Q42 range offset exceeds platform"))?;
     let end = start
         .checked_add(range.length)
         .ok_or_else(|| invalid("Q42 range overflows platform usize"))?;
@@ -186,13 +186,7 @@ mod tests {
         let length = usize::try_from(source.length().unwrap()).unwrap();
         let mut out = vec![0u8; length];
         source
-            .read_range_into(
-                Q42ByteRange {
-                    offset: 0,
-                    length,
-                },
-                &mut out,
-            )
+            .read_range_into(Q42ByteRange { offset: 0, length }, &mut out)
             .unwrap();
         out
     }
@@ -323,9 +317,7 @@ mod tests {
             slice.read_range_into(range, &mut slice_buf).unwrap();
         });
         assert_zero_alloc("q42_opfs_callback_range_read", || {
-            callback
-                .read_range_into(range, &mut callback_buf)
-                .unwrap();
+            callback.read_range_into(range, &mut callback_buf).unwrap();
         });
         assert_eq!(slice_buf, callback_buf);
     }

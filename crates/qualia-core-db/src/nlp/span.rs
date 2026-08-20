@@ -21,7 +21,10 @@ impl DocSpan {
     pub fn slice<'a>(self, source: &'a str) -> Option<&'a str> {
         let start = self.start_utf8 as usize;
         let end = self.end_utf8 as usize;
-        if start <= end && end <= source.len() && source.is_char_boundary(start) && source.is_char_boundary(end)
+        if start <= end
+            && end <= source.len()
+            && source.is_char_boundary(start)
+            && source.is_char_boundary(end)
         {
             Some(&source[start..end])
         } else {

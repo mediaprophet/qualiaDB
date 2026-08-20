@@ -27,8 +27,8 @@
 //! Evidential claims can be sealed into `crypto::verifiable_credential::Credential`
 //! artifacts, providing tamper-evident attestation of evidential assessments.
 
+use crate::modalities::paraconsistent::{global_saturation, is_saturated, Belnap};
 use crate::NQuin;
-use crate::modalities::paraconsistent::{Belnap, global_saturation, is_saturated};
 
 // ── Opcodes ────────────────────────────────────────────────────────────────
 
@@ -200,7 +200,10 @@ impl EvidentialPair {
 
 impl Default for EvidentialPair {
     fn default() -> Self {
-        Self { mu: 0.0, lambda: 0.0 }
+        Self {
+            mu: 0.0,
+            lambda: 0.0,
+        }
     }
 }
 
@@ -275,20 +278,32 @@ pub fn route_evidential_batch(
     for quin in quins {
         match route_evidential(quin) {
             EvidentialRoute::Normal => {
-                if n >= out_normal.len() { return Err(EvidentialError::BufferOverflow); }
-                out_normal[n] = *quin; n += 1;
+                if n >= out_normal.len() {
+                    return Err(EvidentialError::BufferOverflow);
+                }
+                out_normal[n] = *quin;
+                n += 1;
             }
             EvidentialRoute::Quarantine => {
-                if q >= out_quarantine.len() { return Err(EvidentialError::BufferOverflow); }
-                out_quarantine[q] = *quin; q += 1;
+                if q >= out_quarantine.len() {
+                    return Err(EvidentialError::BufferOverflow);
+                }
+                out_quarantine[q] = *quin;
+                q += 1;
             }
             EvidentialRoute::Reject => {
-                if r >= out_reject.len() { return Err(EvidentialError::BufferOverflow); }
-                out_reject[r] = *quin; r += 1;
+                if r >= out_reject.len() {
+                    return Err(EvidentialError::BufferOverflow);
+                }
+                out_reject[r] = *quin;
+                r += 1;
             }
             EvidentialRoute::Contradiction => {
-                if c >= out_contradiction.len() { return Err(EvidentialError::BufferOverflow); }
-                out_contradiction[c] = *quin; c += 1;
+                if c >= out_contradiction.len() {
+                    return Err(EvidentialError::BufferOverflow);
+                }
+                out_contradiction[c] = *quin;
+                c += 1;
             }
         }
     }
@@ -371,8 +386,14 @@ impl EvidentialClaim {
         };
         format!(
             "evidential claim: subject={} pred={} obj={} ctx={} μ={:.3} λ={:.3} G={:.3} route={}",
-            self.subject, self.predicate, self.object, self.context,
-            self.evidence.mu, self.evidence.lambda, self.evidence.g(), route_str
+            self.subject,
+            self.predicate,
+            self.object,
+            self.context,
+            self.evidence.mu,
+            self.evidence.lambda,
+            self.evidence.g(),
+            route_str
         )
     }
 }
@@ -479,7 +500,14 @@ mod tests {
 
     #[test]
     fn pack_evidential_into_quin() {
-        let q = NQuin { subject: 1, predicate: 2, object: 3, context: 4, metadata: 0, parity: 0 };
+        let q = NQuin {
+            subject: 1,
+            predicate: 2,
+            object: 3,
+            context: 4,
+            metadata: 0,
+            parity: 0,
+        };
         let packed = pack_evidential(q, 0.9, 0.1);
         // Opcode should be set.
         assert_eq!((packed.predicate & 0xFF) as u8, OP_EVIDENTIAL_PACK);
@@ -491,7 +519,14 @@ mod tests {
 
     #[test]
     fn evidential_score_from_quin() {
-        let q = NQuin { subject: 1, predicate: 2, object: 3, context: 4, metadata: 0, parity: 0 };
+        let q = NQuin {
+            subject: 1,
+            predicate: 2,
+            object: 3,
+            context: 4,
+            metadata: 0,
+            parity: 0,
+        };
         let packed = pack_evidential(q, 0.8, 0.2);
         let g = evidential_score(&packed);
         assert!((g - 0.6).abs() < 0.01);
@@ -523,16 +558,45 @@ mod tests {
 
     #[test]
     fn route_evidential_batch_all_four() {
-        let normal = pack_evidential(NQuin { subject: 1, ..Default::default() }, 0.3, 0.2);
-        let quarantine = pack_evidential(NQuin { subject: 2, ..Default::default() }, 0.9, 0.1);
-        let reject = pack_evidential(NQuin { subject: 3, ..Default::default() }, 0.1, 0.8);
-        let contradiction = pack_evidential(NQuin { subject: 4, ..Default::default() }, 0.7, 0.6);
+        let normal = pack_evidential(
+            NQuin {
+                subject: 1,
+                ..Default::default()
+            },
+            0.3,
+            0.2,
+        );
+        let quarantine = pack_evidential(
+            NQuin {
+                subject: 2,
+                ..Default::default()
+            },
+            0.9,
+            0.1,
+        );
+        let reject = pack_evidential(
+            NQuin {
+                subject: 3,
+                ..Default::default()
+            },
+            0.1,
+            0.8,
+        );
+        let contradiction = pack_evidential(
+            NQuin {
+                subject: 4,
+                ..Default::default()
+            },
+            0.7,
+            0.6,
+        );
         let quins = vec![normal, quarantine, reject, contradiction];
         let mut out_n = [NQuin::default(); 10];
         let mut out_q = [NQuin::default(); 10];
         let mut out_r = [NQuin::default(); 10];
         let mut out_c = [NQuin::default(); 10];
-        let (n, q, r, c) = route_evidential_batch(&quins, &mut out_n, &mut out_q, &mut out_r, &mut out_c).unwrap();
+        let (n, q, r, c) =
+            route_evidential_batch(&quins, &mut out_n, &mut out_q, &mut out_r, &mut out_c).unwrap();
         assert_eq!((n, q, r, c), (1, 1, 1, 1));
         assert_eq!(out_n[0].subject, 1);
         assert_eq!(out_q[0].subject, 2);
@@ -553,7 +617,18 @@ mod tests {
     fn evidential_claim_from_quin() {
         // NQuin predicate: [8..62]=property-path hash, [0..7]=opcode.
         // So predicate 100 must be stored as 100 << 8.
-        let q = pack_evidential(NQuin { subject: 42, predicate: 100 << 8, object: 200, context: 300, metadata: 0, parity: 0 }, 0.85, 0.15);
+        let q = pack_evidential(
+            NQuin {
+                subject: 42,
+                predicate: 100 << 8,
+                object: 200,
+                context: 300,
+                metadata: 0,
+                parity: 0,
+            },
+            0.85,
+            0.15,
+        );
         let claim = EvidentialClaim::from_quin(&q);
         assert_eq!(claim.subject, 42);
         assert_eq!(claim.predicate, 100); // opcode stripped by >> 8
@@ -565,7 +640,18 @@ mod tests {
 
     #[test]
     fn evidential_claim_to_quin_roundtrip() {
-        let original = pack_evidential(NQuin { subject: 1, predicate: 2 << 8, object: 3, context: 4, metadata: 0, parity: 0 }, 0.6, 0.4);
+        let original = pack_evidential(
+            NQuin {
+                subject: 1,
+                predicate: 2 << 8,
+                object: 3,
+                context: 4,
+                metadata: 0,
+                parity: 0,
+            },
+            0.6,
+            0.4,
+        );
         let claim = EvidentialClaim::from_quin(&original);
         let claim_quin = claim.to_claim_quin();
         // The claim quin should have the evidential VC opcode.
@@ -578,7 +664,18 @@ mod tests {
 
     #[test]
     fn evidential_claim_describe() {
-        let q = pack_evidential(NQuin { subject: 1, predicate: 2, object: 3, context: 4, metadata: 0, parity: 0 }, 0.8, 0.1);
+        let q = pack_evidential(
+            NQuin {
+                subject: 1,
+                predicate: 2,
+                object: 3,
+                context: 4,
+                metadata: 0,
+                parity: 0,
+            },
+            0.8,
+            0.1,
+        );
         let claim = EvidentialClaim::from_quin(&q);
         let desc = claim.describe();
         assert!(desc.contains("μ=0.8"));

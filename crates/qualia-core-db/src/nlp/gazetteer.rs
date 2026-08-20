@@ -187,7 +187,9 @@ mod tests {
         let hits = g.find(src);
         assert!(hits.iter().any(|h| h.surface == "North Spring"));
         assert!(hits.iter().any(|h| h.surface == "reference catchment"));
-        assert!(!hits.iter().any(|h| h.surface == "catchment" && h.span.start_utf8 > 20));
+        assert!(!hits
+            .iter()
+            .any(|h| h.surface == "catchment" && h.span.start_utf8 > 20));
     }
 
     #[test]
