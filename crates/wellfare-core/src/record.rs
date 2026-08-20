@@ -259,7 +259,7 @@ impl RecordEnvelope {
 /// Unix seconds + nanoseconds without pulling in `poet-vibe` as a
 /// dependency. When the `qualia` feature is enabled, it can convert
 /// to/from `poet_vibe::value::Instant`.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Serialize, Deserialize)]
 pub struct InstantBridge {
     /// Unix seconds
     pub secs: i64,
@@ -271,6 +271,12 @@ impl InstantBridge {
     /// Create a Unix instant from seconds + nanoseconds.
     pub fn unix(secs: i64, nanos: u32) -> Self {
         Self { secs, nanos }
+    }
+
+    /// True if this instant is the zero value (epoch + 0 nanos).
+    /// Used for serde `skip_serializing_if` on optional instant fields.
+    pub fn is_zero(&self) -> bool {
+        self.secs == 0 && self.nanos == 0
     }
 
     /// Project to Unix seconds (drops sub-second precision).

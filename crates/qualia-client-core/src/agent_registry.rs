@@ -637,9 +637,12 @@ pub fn validate_agent(agent: &AgentDefinition) -> Result<(), String> {
     if agent.data_policy.allowed_ontology_ids.len() > 32 {
         return Err("agent data policy supports at most 32 ontology IDs".to_string());
     }
-    if agent.data_policy.allowed_ontology_ids.iter().any(|id| {
-        id.trim().is_empty() || id.len() > 160 || id.contains(['/', '\\', '\0'])
-    }) {
+    if agent
+        .data_policy
+        .allowed_ontology_ids
+        .iter()
+        .any(|id| id.trim().is_empty() || id.len() > 160 || id.contains(['/', '\\', '\0']))
+    {
         return Err("agent data policy has an invalid ontology ID".to_string());
     }
     match &agent.backend {
@@ -799,12 +802,10 @@ mod tests {
             agent.semantic_profile.focus_terms(),
             vec!["researcher", "australian history"]
         );
-        assert!(
-            agent
-                .semantic_profile
-                .briefing()
-                .contains("Australian History")
-        );
+        assert!(agent
+            .semantic_profile
+            .briefing()
+            .contains("Australian History"));
         validate_agent(&agent).unwrap();
     }
 

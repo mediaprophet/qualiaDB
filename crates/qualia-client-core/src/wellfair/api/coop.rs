@@ -84,9 +84,11 @@ impl WebizenHostApi {
         let mut out = Vec::new();
         for row in self.list_contributions(limit)? {
             if let Some(ref summary) = row.summary {
-                if let Some(c) =
-                    contribution_from_summary(row.id.clone(), summary, row.asserted_time_unix)
-                {
+                if let Some(c) = contribution_from_summary(
+                    row.id.clone(),
+                    summary,
+                    row.asserted_instant.to_unix_secs() as u32,
+                ) {
                     out.push(c);
                 }
             }

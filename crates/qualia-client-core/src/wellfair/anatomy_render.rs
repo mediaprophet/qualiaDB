@@ -174,10 +174,7 @@ pub fn body_scene_with_fit(
     scene
 }
 
-fn fit_silhouette_point(
-    p: ScenePoint,
-    fit: &wellfare_core::anatomy::BodyFit,
-) -> ScenePoint {
+fn fit_silhouette_point(p: ScenePoint, fit: &wellfare_core::anatomy::BodyFit) -> ScenePoint {
     // Silhouette y is top→bottom (0 head, 1 feet) — invert for the CCF-style fit bands.
     let y_up = 1.0 - p.y as f32;
     let y_seg = if y_up < fit.pelvis_y_norm {

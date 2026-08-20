@@ -183,14 +183,16 @@ fn run_chat_inference_dispatch(
     session_id: &str,
     prompt: &str,
 ) -> crate::chat_inference::ChatInferenceResult {
-    use crate::chat_agents::{PromptDispatch, resolve_prompt_dispatch};
+    use crate::chat_agents::{resolve_prompt_dispatch, PromptDispatch};
 
     let storage = match crate::state::APP_STATE.get() {
-        Some(state) => state.config.lock().map(|c| c.storage_path.clone()).unwrap_or_default(),
+        Some(state) => state
+            .config
+            .lock()
+            .map(|c| c.storage_path.clone())
+            .unwrap_or_default(),
         None => {
-            return crate::chat_inference::run_chat_inference_with_options(
-                session_id, prompt, None,
-            )
+            return crate::chat_inference::run_chat_inference_with_options(session_id, prompt, None)
         }
     };
 
@@ -198,11 +200,16 @@ fn run_chat_inference_dispatch(
         PromptDispatch::Default => {
             crate::chat_inference::run_chat_inference_with_options(session_id, prompt, None)
         }
-        PromptDispatch::Agent { agent, clean_prompt } => {
+        PromptDispatch::Agent {
+            agent,
+            clean_prompt,
+        } => {
             // T9+: If the agent has a DAG pipeline, execute it through the
             // agent-turn handler. Otherwise, fall through to single-turn.
             if !agent.dag_pipeline_json.is_empty() {
-                use crate::agent_turn_handler::{execute_agent_turn, AgentTurnConfig, AgentTurnOutcome};
+                use crate::agent_turn_handler::{
+                    execute_agent_turn, AgentTurnConfig, AgentTurnOutcome,
+                };
                 let mut config = AgentTurnConfig {
                     session_id: session_id.to_string(),
                     storage_path: storage.clone(),

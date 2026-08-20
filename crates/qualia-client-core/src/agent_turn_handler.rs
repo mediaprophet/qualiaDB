@@ -15,14 +15,14 @@
 //! for each node. Each node execution is a local LLM inference turn with
 //! the node's inputs (from the blackboard) injected into the prompt context.
 
-use std::path::Path;
-use qualia_core_db::NQuin;
+use poet_vibe::dag::{DagEdge, DagNode, DagPipeline, NodeEffect};
+use poet_vibe::{DiagCode, Diagnostic, Span};
 use qualia_core_db::modalities::blackboard::BlackboardBus;
 use qualia_core_db::poet_host::invoke::agent::dag_executor::{
     execute_pipeline, NodeExecutor, PipelineResult,
 };
-use poet_vibe::dag::{DagEdge, DagNode, DagPipeline, NodeEffect};
-use poet_vibe::{DiagCode, Diagnostic, Span};
+use qualia_core_db::NQuin;
+use std::path::Path;
 
 use crate::agent_registry::{self, AgentBackendSpec};
 
@@ -167,11 +167,7 @@ impl AgentTurnExecutor {
     /// Build a prompt string from the blackboard inputs for a DAG node.
     /// The inputs are (channel_name, quins) pairs. Each channel's quins
     /// are rendered as a context block.
-    fn build_prompt_from_inputs(
-        &self,
-        node_name: &str,
-        inputs: &[(String, Vec<NQuin>)],
-    ) -> String {
+    fn build_prompt_from_inputs(&self, node_name: &str, inputs: &[(String, Vec<NQuin>)]) -> String {
         let mut prompt = format!("[DAG node: {node_name}]\n");
         if inputs.is_empty() {
             prompt.push_str("(no upstream inputs)\n");
@@ -266,10 +262,7 @@ pub fn execute_agent_turn(config: &mut AgentTurnConfig) -> AgentTurnOutcome {
     };
 
     if !agent.enabled {
-        return AgentTurnOutcome::AgentUnavailable(format!(
-            "Agent @{} is disabled",
-            agent.slug
-        ));
+        return AgentTurnOutcome::AgentUnavailable(format!("Agent @{} is disabled", agent.slug));
     }
 
     // Only local agents can use DAG pipelines.
@@ -315,16 +308,17 @@ mod tests {
     #[test]
     fn agent_turn_executor_builds_prompt_from_inputs() {
         let executor = AgentTurnExecutor::new("test-session", "researcher");
-        let inputs = vec![
-            ("context".to_string(), vec![NQuin {
+        let inputs = vec![(
+            "context".to_string(),
+            vec![NQuin {
                 subject: 1,
                 predicate: 2,
                 object: 3,
                 context: 4,
                 metadata: 0,
                 parity: 0,
-            }]),
-        ];
+            }],
+        )];
         let prompt = executor.build_prompt_from_inputs("analyze", &inputs);
         assert!(prompt.contains("[DAG node: analyze]"));
         assert!(prompt.contains("[input: context]"));
@@ -348,10 +342,7 @@ mod tests {
             dag_pipeline: None,
         };
         let outcome = execute_agent_turn(&mut config);
-        assert!(matches!(
-            outcome,
-            AgentTurnOutcome::AgentUnavailable(_)
-        ));
+        assert!(matches!(outcome, AgentTurnOutcome::AgentUnavailable(_)));
     }
 
     #[test]
@@ -367,10 +358,7 @@ mod tests {
         };
         // With a nonexistent path, get_agent returns None → AgentUnavailable.
         let outcome = execute_agent_turn(&mut config);
-        assert!(matches!(
-            outcome,
-            AgentTurnOutcome::AgentUnavailable(_)
-        ));
+        assert!(matches!(outcome, AgentTurnOutcome::AgentUnavailable(_)));
     }
 
     #[test]
@@ -386,10 +374,7 @@ mod tests {
             dag_pipeline: Some(pipeline),
         };
         let outcome = execute_agent_turn(&mut config);
-        assert!(matches!(
-            outcome,
-            AgentTurnOutcome::AgentUnavailable(_)
-        ));
+        assert!(matches!(outcome, AgentTurnOutcome::AgentUnavailable(_)));
     }
 
     #[test]

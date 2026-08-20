@@ -395,13 +395,8 @@ pub async fn import_catalog_ontology_with_options(
 
         let index = index_dir(storage_root);
         std::fs::create_dir_all(&index)?;
-        let quin_count = ingest_local_rdf_with_progress(
-            &source_path,
-            id,
-            storage_root,
-            Some(ont),
-            progress,
-        )?;
+        let quin_count =
+            ingest_local_rdf_with_progress(&source_path, id, storage_root, Some(ont), progress)?;
         let q42_path = index.join(format!("{id}.q42"));
         let wal_path = index.join("ontologies.wal");
         let catalog_quins = ont.to_quins().len();

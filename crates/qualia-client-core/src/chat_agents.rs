@@ -367,8 +367,7 @@ pub fn parse_mention(prompt: &str) -> Option<Mention> {
         }
         // A mention must be at the start of the string or preceded by a
         // word boundary (whitespace). This rejects `@@foo` and `x@foo`.
-        let at_word_boundary = i == 0
-            || bytes[i - 1].is_ascii_whitespace();
+        let at_word_boundary = i == 0 || bytes[i - 1].is_ascii_whitespace();
         if !at_word_boundary {
             i += 1;
             continue;
@@ -382,9 +381,7 @@ pub fn parse_mention(prompt: &str) -> Option<Mention> {
         // Scan the slug body: [a-z0-9_-]
         let mut j = slug_start;
         while j < bytes.len()
-            && (bytes[j].is_ascii_alphanumeric()
-                || bytes[j] == b'_'
-                || bytes[j] == b'-')
+            && (bytes[j].is_ascii_alphanumeric() || bytes[j] == b'_' || bytes[j] == b'-')
         {
             j += 1;
         }
@@ -414,9 +411,7 @@ pub fn strip_mention(prompt: &str) -> String {
                 after.trim_start().to_string()
             } else {
                 // Mid-prompt: remove the token, collapse whitespace.
-                format!("{}{}", before.trim_end(), after)
-                    .trim()
-                    .to_string()
+                format!("{}{}", before.trim_end(), after).trim().to_string()
             }
         }
     }
@@ -462,10 +457,7 @@ pub enum PromptDispatch {
 ///
 /// This is the single entry point for the chat layer: call this with the
 /// raw user prompt, then dispatch based on the result.
-pub fn resolve_prompt_dispatch(
-    storage_root: &Path,
-    prompt: &str,
-) -> PromptDispatch {
+pub fn resolve_prompt_dispatch(storage_root: &Path, prompt: &str) -> PromptDispatch {
     match parse_mention(prompt) {
         None => PromptDispatch::Default,
         Some(m) => match resolve_mention(storage_root, &m) {
@@ -899,9 +891,7 @@ mod tests {
 
     #[test]
     fn resolve_prompt_dispatch_known_agent() {
-        use crate::agent_registry::{
-            AgentDefinition, AgentBackendSpec, upsert_agent,
-        };
+        use crate::agent_registry::{upsert_agent, AgentBackendSpec, AgentDefinition};
         let storage = tmp_storage();
         let agent = AgentDefinition::new(
             "researcher",
@@ -926,9 +916,7 @@ mod tests {
 
     #[test]
     fn resolve_prompt_dispatch_disabled_agent() {
-        use crate::agent_registry::{
-            AgentDefinition, AgentBackendSpec, upsert_agent,
-        };
+        use crate::agent_registry::{upsert_agent, AgentBackendSpec, AgentDefinition};
         let storage = tmp_storage();
         let mut agent = AgentDefinition::new(
             "disabled-one",

@@ -319,7 +319,7 @@ impl WebizenHostApi {
             .vault
             .commit_envelope(envelope, &self.signing_key, principal_did, source, summary)
             .map_err(|e| e.to_string())?;
-        let ts = envelope.asserted_time_unix;
+        let ts = envelope.asserted_instant().to_unix_secs() as u32;
         let receipt = receipt_from_decision(
             qapp_id,
             &envelope.id,

@@ -19,7 +19,9 @@ fn valid_connection_id(id: &str) -> bool {
 
 fn entry(id: &str) -> Result<Entry, String> {
     if !valid_connection_id(id) {
-        return Err("connection ID must use lowercase letters, digits, and hyphens (max 80)".into());
+        return Err(
+            "connection ID must use lowercase letters, digits, and hyphens (max 80)".into(),
+        );
     }
     Entry::new(SERVICE, id).map_err(|error| format!("OS keychain unavailable: {error}"))
 }
@@ -45,12 +47,10 @@ pub fn remove_bearer_credential(id: &str) -> Result<(), String> {
 /// Retrieve a secret for the narrow duration of an authorized outbound call.
 /// This function is crate-visible so no UI/API layer can accidentally return it.
 pub(crate) fn bearer_credential(id: &str) -> Result<String, String> {
-    entry(id)?
-        .get_password()
-        .map_err(|error| match error {
-            keyring::Error::NoEntry => "no credential is saved for this connection".to_string(),
-            other => format!("could not read OS-keychain credential: {other}"),
-        })
+    entry(id)?.get_password().map_err(|error| match error {
+        keyring::Error::NoEntry => "no credential is saved for this connection".to_string(),
+        other => format!("could not read OS-keychain credential: {other}"),
+    })
 }
 
 #[cfg(test)]

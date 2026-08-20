@@ -47,9 +47,11 @@ impl AgentCharacteristics {
     pub fn record_turn(&mut self, capability: &str, response_len: usize) {
         self.turns_observed += 1;
         self.total_response_chars += response_len as u64;
-        self.avg_response_chars =
-            self.total_response_chars as f64 / self.turns_observed as f64;
-        *self.capability_counts.entry(capability.to_string()).or_insert(0) += 1;
+        self.avg_response_chars = self.total_response_chars as f64 / self.turns_observed as f64;
+        *self
+            .capability_counts
+            .entry(capability.to_string())
+            .or_insert(0) += 1;
         self.recompute_frequent_capabilities();
         self.last_observed_unix = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
@@ -69,11 +71,13 @@ impl AgentCharacteristics {
 
     /// Recompute the top-5 frequent capabilities from the counts map.
     fn recompute_frequent_capabilities(&mut self) {
-        let mut entries: Vec<(String, u64)> =
-            self.capability_counts.iter().map(|(k, v)| (k.clone(), *v)).collect();
+        let mut entries: Vec<(String, u64)> = self
+            .capability_counts
+            .iter()
+            .map(|(k, v)| (k.clone(), *v))
+            .collect();
         entries.sort_by(|a, b| b.1.cmp(&a.1));
-        self.frequent_capabilities =
-            entries.into_iter().take(5).map(|(k, _)| k).collect();
+        self.frequent_capabilities = entries.into_iter().take(5).map(|(k, _)| k).collect();
     }
 
     /// Serialize to JSON.
@@ -111,8 +115,9 @@ impl CharacteristicsStore {
         if let Some(parent) = path.parent() {
             std::fs::create_dir_all(parent)?;
         }
-        let json = profile.to_json().map_err(|e| std::io::Error::new(
-            std::io::ErrorKind::InvalidData, e))?;
+        let json = profile
+            .to_json()
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
         std::fs::write(path, json)
     }
 
@@ -123,9 +128,8 @@ impl CharacteristicsStore {
             return Ok(None);
         }
         let json = std::fs::read_to_string(path)?;
-        let profile = AgentCharacteristics::from_json(&json).map_err(|e| {
-            std::io::Error::new(std::io::ErrorKind::InvalidData, e)
-        })?;
+        let profile = AgentCharacteristics::from_json(&json)
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
         Ok(Some(profile))
     }
 }
@@ -154,7 +158,9 @@ mod tests {
         assert_eq!(c.turns_observed, 3);
         assert!((c.avg_response_chars - 116.666).abs() < 0.01);
         assert_eq!(c.frequent_capabilities[0], "graph.query");
-        assert!(c.frequent_capabilities.contains(&"pulse.publish".to_string()));
+        assert!(c
+            .frequent_capabilities
+            .contains(&"pulse.publish".to_string()));
     }
 
     #[test]
@@ -188,10 +194,8 @@ mod tests {
 
     #[test]
     fn store_persists_and_loads() {
-        let tmp = std::env::temp_dir().join(format!(
-            "qualia_agent_char_test_{}",
-            std::process::id()
-        ));
+        let tmp =
+            std::env::temp_dir().join(format!("qualia_agent_char_test_{}", std::process::id()));
         let store = CharacteristicsStore::new(&tmp);
         let mut c = AgentCharacteristics::new("agent-e");
         c.record_turn("graph.query", 100);
@@ -207,10 +211,8 @@ mod tests {
 
     #[test]
     fn store_load_nonexistent_returns_none() {
-        let tmp = std::env::temp_dir().join(format!(
-            "qualia_agent_char_none_{}",
-            std::process::id()
-        ));
+        let tmp =
+            std::env::temp_dir().join(format!("qualia_agent_char_none_{}", std::process::id()));
         let store = CharacteristicsStore::new(&tmp);
         let result = store.load("nonexistent").unwrap();
         assert!(result.is_none());
@@ -222,8 +224,13 @@ mod tests {
         let mut c = AgentCharacteristics::new("agent-f");
         // Add 7 distinct capabilities with different frequencies.
         for (cap, count) in [
-            ("a", 10), ("b", 8), ("c", 6), ("d", 4),
-            ("e", 2), ("f", 1), ("g", 1),
+            ("a", 10),
+            ("b", 8),
+            ("c", 6),
+            ("d", 4),
+            ("e", 2),
+            ("f", 1),
+            ("g", 1),
         ] {
             for _ in 0..count {
                 c.record_turn(cap, 10);

@@ -106,7 +106,9 @@ pub fn remote_mcp_infer(
     let resp = match transport {
         McpTransport::Tcp { host, port } => call_tcp(host, *port, &req)?,
         McpTransport::Stdio { command, args } => call_stdio(command, args, &req)?,
-        McpTransport::Http { url, credential_id } => call_http(url, credential_id.as_deref(), &req)?,
+        McpTransport::Http { url, credential_id } => {
+            call_http(url, credential_id.as_deref(), &req)?
+        }
     };
     parse_infer_response(&resp)
 }
@@ -218,8 +220,7 @@ fn call_http(
         let secret = crate::provider_credentials::bearer_credential(connection)?;
         request = request.bearer_auth(secret);
     }
-    let resp = request.send()
-        .map_err(|e| format!("http post: {e}"))?;
+    let resp = request.send().map_err(|e| format!("http post: {e}"))?;
     let status = resp.status();
     let text = resp.text().map_err(|e| e.to_string())?;
     if !status.is_success() {
@@ -238,10 +239,15 @@ pub fn remote_mcp_probe(transport: &McpTransport) -> Result<usize, String> {
     let response = match transport {
         McpTransport::Tcp { host, port } => call_tcp(host, *port, &req)?,
         McpTransport::Stdio { command, args } => call_stdio(command, args, &req)?,
-        McpTransport::Http { url, credential_id } => call_http(url, credential_id.as_deref(), &req)?,
+        McpTransport::Http { url, credential_id } => {
+            call_http(url, credential_id.as_deref(), &req)?
+        }
     };
     if let Some(error) = response.get("error") {
-        let message = error.get("message").and_then(|value| value.as_str()).unwrap_or("MCP error");
+        let message = error
+            .get("message")
+            .and_then(|value| value.as_str())
+            .unwrap_or("MCP error");
         return Err(format!("MCP tools/list failed: {message}"));
     }
     let tools = response

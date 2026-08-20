@@ -185,7 +185,10 @@ pub fn inspect_q42_volume(path: String) -> Result<Q42InspectReport, String> {
     Q42InspectReport::from_path(&path).map_err(|e| e.to_string())
 }
 
-pub fn verify_q42_volume(path: String, level: Option<String>) -> Result<Q42VerifySetReport, String> {
+pub fn verify_q42_volume(
+    path: String,
+    level: Option<String>,
+) -> Result<Q42VerifySetReport, String> {
     let path = require_q42_file(&path)?;
     let level = match level.as_deref() {
         None | Some("") => VerifyLevel::Full,

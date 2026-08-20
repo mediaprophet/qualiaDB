@@ -409,6 +409,7 @@ mod tests {
             id: id.to_string(),
             kind: kind.to_string(),
             asserted_time_unix: 0,
+            asserted_instant: wellfare_core::record::InstantBridge::default(),
             evidence_type: "SelfReported".to_string(),
             sensitivity: "Restricted".to_string(),
             blob_hash: None,

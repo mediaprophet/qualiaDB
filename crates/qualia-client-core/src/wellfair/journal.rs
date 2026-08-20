@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 use wellfare_core::conditions::journal_kind_for_record_id;
-use wellfare_core::record::RecordEnvelope;
+use wellfare_core::record::{InstantBridge, RecordEnvelope};
 
 pub const JOURNAL_FILE: &str = "wellfair/journal.jsonl";
 pub const MAX_LIST: usize = 256;
@@ -16,6 +16,11 @@ pub struct JournalEntry {
     pub id: String,
     pub kind: String,
     pub asserted_time_unix: u32,
+    /// High-resolution asserted instant (T71 one-clock migration).
+    /// Backward-compatible: derived from `asserted_time_unix` on deserialization
+    /// if absent. Eventually `asserted_time_unix` will be deprecated.
+    #[serde(default, skip_serializing_if = "InstantBridge::is_zero")]
+    pub asserted_instant: InstantBridge,
     pub evidence_type: String,
     pub sensitivity: String,
     pub blob_hash: Option<String>,
@@ -34,10 +39,12 @@ impl JournalEntry {
         summary: Option<String>,
     ) -> Self {
         let kind = infer_kind(&envelope.id);
+        let instant = envelope.asserted_instant();
         Self {
             id: envelope.id.clone(),
             kind,
-            asserted_time_unix: envelope.asserted_time_unix,
+            asserted_time_unix: instant.to_unix_secs() as u32,
+            asserted_instant: instant,
             evidence_type: format!("{:?}", envelope.evidence_type),
             sensitivity: format!("{:?}", envelope.sensitivity),
             blob_hash: envelope.blob_hash.clone(),
@@ -137,5 +144,17 @@ mod tests {
         let listed = journal.list_recent(10).unwrap();
         assert_eq!(listed.len(), 1);
         assert_eq!(listed[0].kind, "weight");
+        // T71: the asserted_instant should be populated from the bridge
+        assert_eq!(listed[0].asserted_instant.to_unix_secs(), 1_700_000_000);
+    }
+
+    #[test]
+    fn journal_backward_compat_missing_instant() {
+        // An old journal entry without `asserted_instant` should still deserialize
+        let json = r#"{"id":"test","kind":"weight","asserted_time_unix":1700000000,"evidence_type":"DeviceMeasured","sensitivity":"Restricted","blob_hash":null,"source":"test","committed_unix":1700000100,"summary":null}"#;
+        let entry: JournalEntry = serde_json::from_str(json).unwrap();
+        assert_eq!(entry.asserted_time_unix, 1_700_000_000);
+        // asserted_instant defaults to zero (backward compat)
+        assert!(entry.asserted_instant.is_zero());
     }
 }

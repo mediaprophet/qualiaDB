@@ -276,6 +276,9 @@ pub fn live_share_request_journal_entry(
         id: format!("urn:wellfair:live_share_request:{}", record.request.id),
         kind: "live_share_request".into(),
         asserted_time_unix: record.enqueued_at_unix as u32,
+        asserted_instant: wellfare_core::record::InstantBridge::from_coarse(
+            record.enqueued_at_unix as u32,
+        ),
         evidence_type: "SelfReported".into(),
         sensitivity: sensitivity.into(),
         blob_hash: None,
@@ -305,6 +308,9 @@ pub fn live_share_decision_journal_entry(
         id: format!("urn:wellfair:live_share_decision:{}", record.request.id),
         kind: "live_share_decision".into(),
         asserted_time_unix: record.decided_at_unix.unwrap_or(0) as u32,
+        asserted_instant: wellfare_core::record::InstantBridge::from_coarse(
+            record.decided_at_unix.unwrap_or(0) as u32,
+        ),
         evidence_type: "SelfReported".into(),
         sensitivity: if projection.iter().any(|k| is_sanctuary_protected_kind(k)) {
             "Classified".into()

@@ -141,7 +141,7 @@ impl WebizenHostApi {
             if let Some(ref summary) = row.summary {
                 if let Some((dur, eff)) = sleep_analytics::parse_sleep_summary_json(summary) {
                     samples.push(SleepNightSample {
-                        night_unix: row.asserted_time_unix,
+                        night_unix: row.asserted_instant.to_unix_secs() as u32,
                         duration_min: dur,
                         efficiency: eff,
                     });
