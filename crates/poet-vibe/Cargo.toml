@@ -12,5 +12,6 @@ name = "poet_vibe"
 path = "src/lib.rs"
 
 [dependencies]
+bytemuck = { version = "1.21", features = ["derive"] }
 
 [dev-dependencies]

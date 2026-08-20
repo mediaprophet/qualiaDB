@@ -9364,6 +9364,9 @@ dependencies = [
 [[package]]
 name = "poet-vibe"
 version = "0.0.31"
+dependencies = [
+ "bytemuck",
+]
 
 [[package]]
 name = "polling"

@@ -23,6 +23,7 @@ pub mod celestial;
 pub mod grounding;
 pub mod nested;
 pub mod observer;
+pub mod opcode;
 pub mod stardate;
 pub mod theory;
 pub mod transforms;
