@@ -39,6 +39,7 @@ pub mod translate;
 pub mod trivia;
 pub mod quantity;
 pub mod reflection;
+pub mod replay_clock;
 
 pub use ast::{Expr, Program};
 pub use ast_query::{
