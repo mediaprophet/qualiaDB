@@ -739,17 +739,17 @@ a unified multi-agent execution substrate.
 
 | # | Refactor | Priority | Risk | Depends on |
 |---|----------|----------|------|------------|
-| R1 | `pub use dag, deontic_interrupt, reflection` from `lib.rs` | P0 | Low | — |
-| R2 | Wire `PhaseLeaser` into `eval.rs` capability dispatch | P1 | Medium | R1 |
-| R3 | Wire `DagPipeline` execution into `poet_host` | P2 | Medium | R1, R5 |
+| R1 | `pub use dag, deontic_interrupt, reflection` from `lib.rs` | P0 | Low | **Done** — all three already re-exported from `lib.rs` |
+| R2 | Wire `PhaseLeaser` into `eval.rs` capability dispatch | P1 | Medium | **Done** — `Engine` has `phase_leaser: Option<&mut PhaseLeaser>` field, `with_phase_leaser()` constructor, and `check_phase_capability()` gate before every host dispatch. 4 R2-specific eval tests + 8 PhaseLeaser unit tests pass. |
+| R3 | Wire `DagPipeline` execution into `poet_host` | P2 | Medium | **Done** — `dag_executor.rs` in `poet_host/invoke/agent/` implements `execute_pipeline` with `DAG_EXECUTE`/`DAG_VALIDATE` capability IDs. 7 tests pass. |
 | R4 | Isolate `reflection::Stage3` on `PoetSnapshot` fork | P0 | Low | **Done** — `supports_isolation()` returns true; fork is unattached; staged writes isolated (1af6e1bf) |
-| R5 | Connect blackboard channels to DAG node I/O | P0 | Low | R1 |
-| R6 | Add `LocalJobKind::AgentTurn` to job scheduler | P2 | Low | — |
-| R7 | Resolve @mentions to roster agents | P2 | Medium | — |
+| R5 | Connect blackboard channels to DAG node I/O | P0 | Low | **Done** — `BlackboardBus` in `modalities/blackboard.rs` wires `read_inputs`/`write_outputs`/`propagate_constraints`/`freeze_output` to `SemanticBlackboard`. `execute_pipeline` in `dag_executor.rs` uses the bus for node I/O. 7 tests pass. |
+| R6 | Add `LocalJobKind::AgentTurn` to job scheduler | P2 | Low | **Done** — `LocalJobKind::AgentTurn { session_id, agent_slug, agent_updated_at_unix, prompt, context_snapshot }` in `local_job_scheduler.rs`. Includes roster revision guard. |
+| R7 | Resolve @mentions to roster agents | P2 | Medium | **Done** — `resolve_mention()`, `resolve_prompt_dispatch()`, and `PromptDispatch` enum in `chat_agents.rs`. Parses `@slug` mentions, resolves against roster, handles unknown/disabled agents. 5 tests. |
 | R8 | Wire `governance/coordination.rs` host seams | P1 | Medium | **Done** — `coord_seams.rs` wires `CoordHostSeams` to `CrdtResolver::verify_delegation`, `SuspendedTransactionQueue::push`, and `daemon_graph` VC minting (1af6e1bf) |
-| R9 | Wire DOMINO logit mask into `QTensorEngine` | P3 | High | — |
-| R10 | Add `DisclosureDenied` value type | P3 | Low | — |
-| R11 | Wire `compute_priority` into `daemon_swarm.rs` | P1 | Low | — |
+| R9 | Wire DOMINO logit mask into `QTensorEngine` | P3 | High | **Done** — `sample_constrained()` in `sampler.rs` applies `DominoMasker::apply_mask_preserving()` before sampling. `DominoMasker` in `speculative_decode.rs` handles grammar-constrained decoding. 4 tests in sampler. |
+| R10 | Add `DisclosureDenied` value type | P3 | Low | **Done** — `Value::DisclosureDenied { capability, reason }` in value.rs with `as_disclosure_denied()` extractor and `is_truthy()` returning false. 4 tests. |
+| R11 | Wire `compute_priority` into `daemon_swarm.rs` | P1 | Low | **Done** — `compute_priority` imported from `governance::coordination`, used in `AgentComputeCandidate::priority()`, `WorkerCell::compute_agent_priority()`, `DaemonOrchestrator::compute_agent_priority()`, `rank_agent_candidates()`, and `route_agent_task()`. Full test coverage. |
 | R12 | Instrument trace ledger (Kind B) | P4 | Low | **Done** — `InstrumentTraceLedger` wired into `PoetSnapshot` with `trace()` / `trace_invoke()` helpers; survives fork (1af6e1bf) |
 
 ### 9.3 Priority tiers
