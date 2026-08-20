@@ -678,16 +678,16 @@ AST nodes, then Species/Mixture, then CST, then HID, then pretty syntax last.
 
 ### 8.16 Decisions Needing Timothy (excellence-first §7)
 
-| # | Decision | Excellence default |
-|---|----------|-------------------|
-| X1 | Confirm immovable list (§1) vs breakable surface | As written |
-| X2 | Official name for `ManifoldCoordinate10D` in Vibe | `Attention10D` (or your term) — **not** "manifold" |
-| X3 | `t` vs `μ` as provenance | `t` = time axis; `μ` = carrier; Instant on receipts |
-| X4 | Grow grammar for `field` / `material` / `law` now? | **Yes**, as AST nodes + Tag 4200, not `nquin` |
-| X5 | `Quantity` mandatory in 0.2-that-replaces-0.1? | **Yes** |
-| X6 | Kill `time.unix` as primitive? | **Yes** — keep a projection helper |
-| X7 | Unicode identifiers this pass? | **No** unless BiDi/homoglyph is in the same pass |
-| X8 | First wish-list slice after the lattice | W2 WorldLine + W4 Mixture + W12 replay Instant |
+| # | Decision | Excellence default | Status |
+|---|----------|-------------------|--------|
+| X1 | Confirm immovable list (§1) vs breakable surface | As written | **Needs Timothy confirmation** |
+| X2 | Official name for `ManifoldCoordinate10D` in Vibe | `Attention10D` (or your term) — **not** "manifold" | **Partially resolved** — code uses `ManifoldCoordinate10D` aliased as `Epistemic10D`, with `Attention10D` as the Vibe-facing name. Needs confirmation. |
+| X3 | `t` vs `μ` as provenance | `t` = time axis; `μ` = carrier; Instant on receipts | **Needs Timothy confirmation** — T15 (resolve conflict in `tensor/mod.rs` vs `axis_role.rs`) still pending |
+| X4 | Grow grammar for `field` / `material` / `law` now? | **Yes**, as AST nodes + Tag 4200, not `nquin` | **Resolved by implementation** — FieldDecl/MaterialDecl/LawDecl exist as AST nodes with CBOR Tag 4200 |
+| X5 | `Quantity` mandatory in 0.2-that-replaces-0.1? | **Yes** | **Needs Timothy decision** — `quantity.rs` exists but Quantity is not yet mandatory |
+| X6 | Kill `time.unix` as primitive? | **Yes** — keep a projection helper | **Needs Timothy decision** — `time.unix` is still a primitive in `bind/mod.rs`. Breaking change. |
+| X7 | Unicode identifiers this pass? | **No** unless BiDi/homoglyph is in the same pass | **Resolved** — no Unicode identifiers shipped (T40 remains gated) |
+| X8 | First wish-list slice after the lattice | W2 WorldLine + W4 Mixture + W12 replay Instant | **Resolved by implementation** — WorldLine (W2) and Mixture (W4) implemented |
 
 ### 8.17 What NOT to do (excellence-first §5, recommendations §1)
 
