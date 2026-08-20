@@ -55,7 +55,7 @@ A package that uses only this document’s grammar, types, effects, and the **0.
 
 1. Source MUST be UTF-8. A leading U+FEFF BOM, if present, MUST be stripped and MUST NOT enter the source hash.
 2. Newlines `LF` and `CRLF` are equivalent. Canonical hash form is LF-only.
-3. Identifiers are ASCII `[A-Za-z_][A-Za-z0-9_]*`. Unicode identifiers are deferred.
+3. Identifiers follow UAX #31 with XID_Continue classification. ASCII `[A-Za-z_][A-Za-z0-9_]*` is the base; Unicode identifiers are accepted subject to the T40 security policy (BiDi control rejection per CVE-2021-42574, homoglyph/confusable detection per TR39, mixed-script restriction, max 255 chars). Identifiers are normalized to NFC form.
 4. Keywords (reserved):  
    `module` `import` `as` `prefix` `requires` `capability` `fn` `async` `on` `let` `mut` `const` `if` `else` `for` `in` `while` `match` `return` `yield` `transaction` `await` `true` `false` `null` `effect`
 5. Comments: `//` to end of line; `/* … */` non-nested. Comments are not tokens.

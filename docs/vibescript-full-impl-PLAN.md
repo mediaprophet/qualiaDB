@@ -588,7 +588,7 @@ AST nodes, then Species/Mixture, then CST, then HID, then pretty syntax last.
 | T37 | **Keyword locale tables** — `if` ↔ `如果` ↔ `إذا`. Ship `en` plus one second locale as proof of pipeline. | **Done** — locale module with en + zh tables | recommendations §4.4, multi-lingual doc, W18 |
 | T38 | **`poet translate` CLI** — bidirectional translation via canonical AST. | **Done** — translate.rs + poet CLI translate command | multi-lingual doc |
 | T39 | **Tier-2 identifiers via Aura `rdfs:label`** — multi-lingual labels that preserve meaning. | **Done** — tier-2 labels in translate.rs | recommendations §4.4 |
-| T40 | **Unicode identifiers** — requires UAX #9 BiDi isolation, NFC, homoglyph policy. **Do not ship without BiDi policy.** | Not started (gated) | recommendations §4.4, excellence-first §2.10, X7 |
+| T40 | **Unicode identifiers** — requires UAX #9 BiDi isolation, NFC, homoglyph policy. **Do not ship without BiDi policy.** | **Done** — `unicode_ident.rs` module with XID_Start/XID_Continue (via `unicode-xid`), BiDi control rejection (CVE-2021-42574), confusable/homoglyph detection (TR39), mixed-script restriction, max 255 chars. Lexer extended to consume UTF-8 identifier characters. 25 unit tests + 10 conformance tests (Cyrillic, CJK, Greek, Arabic, Hebrew, Korean, Hiragana, Latin Extended, BiDi rejection, homoglyph rejection). | recommendations §4.4, excellence-first §2.10, X7 |
 
 ### 8.9 HID / Sensors / Interactivity (recommendations §4.5, hid-sensors doc)
 
@@ -686,7 +686,7 @@ AST nodes, then Species/Mixture, then CST, then HID, then pretty syntax last.
 | X4 | Grow grammar for `field` / `material` / `law` now? | **Yes**, as AST nodes + Tag 4200, not `nquin` | **Resolved by implementation** — FieldDecl/MaterialDecl/LawDecl exist as AST nodes with CBOR Tag 4200 |
 | X5 | `Quantity` mandatory in 0.2-that-replaces-0.1? | **Yes** | **Resolved by Timothy 2026-08-20** — confirmed mandatory for physical/material/geometric fields. Pure math (math.sin, math.sqrt) stays numeric. Physical measurements require explicit unit IRI (or qudt:DimensionlessUnit). Type checker must reject unit mismatch (e.g. kPa + Pa) without explicit conversion. |
 | X6 | Kill `time.unix` as primitive? | **Yes** — keep a projection helper | **Resolved by Timothy 2026-08-20** — confirmed: kill `time.unix()` as primary primitive. Native primitive is `time.now() -> Instant` with nanosecond resolution, explicit TimeScale (Unix, Tai, Gps, Monotonic, Proper), optional receipt seal. Projection helper `instant.to_unix_secs()` for display/logging. Integer seconds cannot support sub-frame animation, physics dt, or deterministic WASM replay. |
-| X7 | Unicode identifiers this pass? | **No** unless BiDi/homoglyph is in the same pass | **Resolved** — no Unicode identifiers shipped (T40 remains gated) |
+| X7 | Unicode identifiers this pass? | **No** unless BiDi/homoglyph is in the same pass | **Resolved** — Unicode identifiers shipped with full BiDi/homoglyph policy (T40 done). `unicode-xid` for XID classification, BiDi control rejection (CVE-2021-42574), confusable detection (TR39), mixed-script restriction. |
 | X8 | First wish-list slice after the lattice | W2 WorldLine + W4 Mixture + W12 replay Instant | **Resolved by implementation** — WorldLine (W2) and Mixture (W4) implemented |
 
 ### 8.17 What NOT to do (excellence-first §5, recommendations §1)

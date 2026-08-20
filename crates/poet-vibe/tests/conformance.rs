@@ -1504,3 +1504,158 @@ fn m3_mut_in_block_succeeds() {
     let v = eval_function(&program, "main", vec![], &mut host, &mut env).unwrap();
     assert_eq!(v.as_i64(), Some(30));
 }
+
+// ── T40: Unicode identifiers ─────────────────────────────────────────────
+
+#[test]
+fn t40_unicode_ident_cyrillic_parses_and_evaluates() {
+    let src = r#"
+fn привет() {
+    return 42;
+}
+"#;
+    let program = load_program(src).expect("Cyrillic identifier should parse");
+    let mut host = MockHost::default();
+    let mut env = Env::default();
+    let v = eval_function(&program, "привет", vec![], &mut host, &mut env).unwrap();
+    assert_eq!(v.as_i64(), Some(42));
+}
+
+#[test]
+fn t40_unicode_ident_cjk_parses_and_evaluates() {
+    let src = r#"
+fn 変数() {
+    let 値 = 100;
+    return 値 + 1;
+}
+"#;
+    let program = load_program(src).expect("CJK identifier should parse");
+    let mut host = MockHost::default();
+    let mut env = Env::default();
+    let v = eval_function(&program, "変数", vec![], &mut host, &mut env).unwrap();
+    assert_eq!(v.as_i64(), Some(101));
+}
+
+#[test]
+fn t40_unicode_ident_greek_parses() {
+    let src = r#"
+fn μεταβλητή() {
+    return 7;
+}
+"#;
+    let program = load_program(src).expect("Greek identifier should parse");
+    let mut host = MockHost::default();
+    let mut env = Env::default();
+    let v = eval_function(&program, "μεταβλητή", vec![], &mut host, &mut env).unwrap();
+    assert_eq!(v.as_i64(), Some(7));
+}
+
+#[test]
+fn t40_unicode_ident_arabic_parses() {
+    let src = r#"
+fn متغير() {
+    return 9;
+}
+"#;
+    let program = load_program(src).expect("Arabic identifier should parse");
+    let mut host = MockHost::default();
+    let mut env = Env::default();
+    let v = eval_function(&program, "متغير", vec![], &mut host, &mut env).unwrap();
+    assert_eq!(v.as_i64(), Some(9));
+}
+
+#[test]
+fn t40_unicode_ident_latin_extended_parses() {
+    let src = r#"
+fn café() {
+    return 3;
+}
+"#;
+    let program = load_program(src).expect("Latin Extended identifier should parse");
+    let mut host = MockHost::default();
+    let mut env = Env::default();
+    let v = eval_function(&program, "café", vec![], &mut host, &mut env).unwrap();
+    assert_eq!(v.as_i64(), Some(3));
+}
+
+#[test]
+fn t40_bidi_control_rejected() {
+    // U+202E (RLO) in an identifier — Trojan Source attack
+    let src = format!(
+        r#"
+fn hello{evil}world() {{
+    return 1;
+}}
+"#,
+        evil = "\u{202E}"
+    );
+    let result = load_program(&src);
+    assert!(result.is_err());
+    let err = result.unwrap_err();
+    assert_eq!(err.code, DiagCode::E001);
+    assert!(err.message.contains("BiDi"));
+}
+
+#[test]
+fn t40_cyrillic_homoglyph_mixed_rejected() {
+    // Latin 'a' + Cyrillic 'а' (U+0430) — homoglyph attack
+    let src = format!(
+        r#"
+fn a{evil}bc() {{
+    return 1;
+}}
+"#,
+        evil = "\u{0430}"
+    );
+    let result = load_program(&src);
+    assert!(result.is_err());
+    let err = result.unwrap_err();
+    assert_eq!(err.code, DiagCode::E001);
+    assert!(err.message.contains("confusable") || err.message.contains("homoglyph"));
+}
+
+#[test]
+fn t40_pure_cyrillic_function_call_works() {
+    let src = r#"
+fn вычислить() {
+    return 5;
+}
+
+fn основной() {
+    return вычислить() * 2;
+}
+"#;
+    let program = load_program(src).expect("pure Cyrillic identifiers should parse");
+    let mut host = MockHost::default();
+    let mut env = Env::default();
+    let v = eval_function(&program, "основной", vec![], &mut host, &mut env).unwrap();
+    assert_eq!(v.as_i64(), Some(10));
+}
+
+#[test]
+fn t40_korean_identifier_parses() {
+    let src = r#"
+fn 변수() {
+    return 42;
+}
+"#;
+    let program = load_program(src).expect("Korean identifier should parse");
+    let mut host = MockHost::default();
+    let mut env = Env::default();
+    let v = eval_function(&program, "변수", vec![], &mut host, &mut env).unwrap();
+    assert_eq!(v.as_i64(), Some(42));
+}
+
+#[test]
+fn t40_japanese_hiragana_parses() {
+    let src = r#"
+fn へんすう() {
+    return 8;
+}
+"#;
+    let program = load_program(src).expect("Hiragana identifier should parse");
+    let mut host = MockHost::default();
+    let mut env = Env::default();
+    let v = eval_function(&program, "へんすう", vec![], &mut host, &mut env).unwrap();
+    assert_eq!(v.as_i64(), Some(8));
+}

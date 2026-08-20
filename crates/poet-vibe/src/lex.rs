@@ -115,7 +115,13 @@ impl<'a> Lexer<'a> {
             b'&' => self.lex_amp(start),
             b'|' => self.lex_pipe(start),
             b'_' if self.peek_at(1) == Some(b':') => self.lex_blank(start),
-            b'A'..=b'Z' | b'a'..=b'z' | b'_' => Ok(self.lex_ident_or_kw(start)),
+            b'A'..=b'Z' | b'a'..=b'z' | b'_' => self.lex_ident_or_kw(start),
+            // T40: Unicode identifiers — non-ASCII bytes that could be
+            // XID_Continue start a Unicode identifier. The byte must be
+            // a UTF-8 lead byte (0xC0–0xFF).
+            b if crate::unicode_ident::could_be_unicode_ident_start(b) => {
+                self.lex_unicode_ident_or_kw(start)
+            }
             _ => Err(Diagnostic::new(
                 DiagCode::E001,
                 Span::new(start as u32, (start + 1) as u32),
@@ -422,7 +428,7 @@ impl<'a> Lexer<'a> {
         Ok(self.tok(TokenKind::Ident, start))
     }
 
-    fn lex_ident_or_kw(&mut self, start: usize) -> Token {
+    fn lex_ident_or_kw(&mut self, start: usize) -> Result<Token, Diagnostic> {
         self.pos += 1;
         while matches!(
             self.peek(),
@@ -430,13 +436,105 @@ impl<'a> Lexer<'a> {
         ) {
             self.pos += 1;
         }
+        // T40: Also consume any trailing Unicode XID_Continue characters
+        // so that identifiers like "café" or "変数" are fully consumed.
+        self.consume_unicode_ident_tail();
         let text = &self.src[start..self.pos];
+        // T40: Validate Unicode identifier policy if the identifier
+        // contains any non-ASCII characters.
+        if text.bytes().any(|b| b >= 0x80) {
+            if let Err(policy_err) = crate::unicode_ident::validate_identifier(text) {
+                return Err(Diagnostic::new(
+                    DiagCode::E001,
+                    Span::new(start as u32, self.pos as u32),
+                    format!("invalid Unicode identifier: {policy_err}"),
+                ));
+            }
+        }
         let kind = if is_keyword(text) {
             TokenKind::Keyword
         } else {
             TokenKind::Ident
         };
-        self.tok(kind, start)
+        Ok(self.tok(kind, start))
+    }
+
+    /// T40: Lex a Unicode identifier starting with a non-ASCII byte.
+    /// Validates against the BiDi/NFC/homoglyph policy.
+    fn lex_unicode_ident_or_kw(&mut self, start: usize) -> Result<Token, Diagnostic> {
+        // Consume the first UTF-8 character
+        self.consume_utf8_char();
+        // Consume any continuation characters (ASCII or Unicode)
+        self.consume_unicode_ident_tail();
+        let text = &self.src[start..self.pos];
+        // Validate against the Unicode identifier policy
+        if let Err(policy_err) = crate::unicode_ident::validate_identifier(text) {
+            return Err(Diagnostic::new(
+                DiagCode::E001,
+                Span::new(start as u32, self.pos as u32),
+                format!("invalid Unicode identifier: {policy_err}"),
+            ));
+        }
+        let kind = if is_keyword(text) {
+            TokenKind::Keyword
+        } else {
+            TokenKind::Ident
+        };
+        Ok(self.tok(kind, start))
+    }
+
+    /// Consume one UTF-8 encoded character from the input.
+    fn consume_utf8_char(&mut self) {
+        if self.pos >= self.bytes.len() {
+            return;
+        }
+        let b = self.bytes[self.pos];
+        let len = if b < 0x80 {
+            1
+        } else if b < 0xC0 {
+            1 // Continuation byte without lead — shouldn't happen, but safe
+        } else if b < 0xE0 {
+            2
+        } else if b < 0xF0 {
+            3
+        } else {
+            4
+        };
+        self.pos += len.min(self.bytes.len() - self.pos);
+    }
+
+    /// Consume the tail of an identifier — ASCII or Unicode XID_Continue
+    /// characters. Stops at the first byte that is not part of an
+    /// identifier character.
+    fn consume_unicode_ident_tail(&mut self) {
+        loop {
+            // ASCII fast path
+            if matches!(
+                self.peek(),
+                Some(b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'_')
+            ) {
+                self.pos += 1;
+                continue;
+            }
+            // Unicode path: check if the next bytes form a valid UTF-8
+            // character that is XID_Continue
+            if let Some(b) = self.peek() {
+                if crate::unicode_ident::could_be_unicode_ident_start(b) {
+                    let char_start = self.pos;
+                    self.consume_utf8_char();
+                    if let Some(s) = self.src.get(char_start..self.pos) {
+                        if let Some(ch) = s.chars().next() {
+                            if crate::unicode_ident::is_xid_continue(ch) {
+                                continue;
+                            }
+                        }
+                    }
+                    // Not XID_Continue — rewind
+                    self.pos = char_start;
+                }
+            }
+            break;
+        }
     }
 
     fn bump_simple(&mut self, kind: TokenKind, start: usize) -> Result<Token, Diagnostic> {

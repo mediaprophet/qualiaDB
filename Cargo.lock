@@ -9366,6 +9366,7 @@ name = "poet-vibe"
 version = "0.0.31"
 dependencies = [
  "bytemuck",
+ "unicode-xid",
 ]
 
 [[package]]

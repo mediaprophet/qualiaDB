@@ -21,6 +21,7 @@ mod lex;
 mod parse;
 mod span;
 mod types;
+mod unicode_ident;
 mod value;
 
 pub mod cosmic;
@@ -71,6 +72,10 @@ pub use reflection::{
     ReflectionConfig, ReflectionEngine, ReflectionLoop, ReflectionResult, StageResult,
 };
 pub use span::Span;
+pub use unicode_ident::{
+    could_be_unicode_ident_start, is_bidi_control, is_xid_continue, is_xid_start,
+    validate_identifier, IdentifierPolicyError, MAX_IDENT_LEN,
+};
 pub use value::{
     CausalRelation, ConservationQuantity, ConservationResult, DisclosureBoundary, Duration,
     EnumValue, FieldRef, Frame, Instant, MaterialRef, Miscibility, Mixture, MixturePhase, Pose,
