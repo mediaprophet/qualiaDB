@@ -1,0 +1,1 @@
+fn bad() { let g = 0.0; return 9.81 / g; }

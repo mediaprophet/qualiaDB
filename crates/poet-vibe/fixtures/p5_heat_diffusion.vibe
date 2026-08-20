@@ -1,0 +1,17 @@
+module <https://qualiadb.org/modules/heat_diffusion>;
+import "vibe:0.1/math" as m;
+pure fn thermal_diffusivity(k: f64, rho: f64, cp: f64) -> f64 {
+    return k / (rho * cp);
+}
+pure fn steady_state_mean(temps: List<f64>) -> f64 {
+    let mut sum: f64 = 0.0;
+    let mut n: f64 = 0.0;
+    for t in temps {
+        sum = sum + t;
+        n = n + 1.0;
+    }
+    if n == 0.0 {
+        return 0.0;
+    }
+    return sum / n;
+}

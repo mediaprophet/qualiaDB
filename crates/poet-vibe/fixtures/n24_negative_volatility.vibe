@@ -1,0 +1,1 @@
+fn bad() { let sigma = -0.3; return sigma; }

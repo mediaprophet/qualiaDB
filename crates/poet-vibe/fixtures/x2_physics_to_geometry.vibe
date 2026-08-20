@@ -1,0 +1,10 @@
+module <https://qualiadb.org/modules/physics_to_geometry>;
+import "vibe:0.1/math" as m;
+pure fn trajectory_to_path(v: f64, angle_deg: f64, g: f64) -> f64 {
+    let angle_rad = angle_deg * 3.141592653589793 / 180.0;
+    let range = v * v * m.sin(2.0 * angle_rad) / g;
+    return m.max(0.0, range);
+}
+pure fn path_to_svg_length(range: f64, scale: f64) -> f64 {
+    return range * scale;
+}

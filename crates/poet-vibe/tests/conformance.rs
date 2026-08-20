@@ -1659,3 +1659,1240 @@ fn へんすう() {
     let v = eval_function(&program, "へんすう", vec![], &mut host, &mut env).unwrap();
     assert_eq!(v.as_i64(), Some(8));
 }
+
+// ── Phase G: Comprehensive golden corpus ───────────────────────────────────
+// Each fixture has a parse test + an evaluation test with golden vectors.
+
+// ── Physics: p5–p11 ────────────────────────────────────────────────────────
+
+#[test]
+fn p5_heat_diffusion_thermal_diffusivity() {
+    let src = include_str!("../fixtures/p5_heat_diffusion.vibe");
+    let program = load_program(src).expect("p5 fixture");
+    let mut host = MockHost::default();
+    let mut env = Env::default();
+    // α = k / (ρ * cp) = 1.0 / (2.0 * 4.0) = 0.125
+    let v = eval_function(
+        &program,
+        "thermal_diffusivity",
+        vec![Value::F64(1.0), Value::F64(2.0), Value::F64(4.0)],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
+    assert!((v.as_f64().unwrap() - 0.125).abs() < 1e-9);
+}
+
+#[test]
+fn p5_heat_diffusion_steady_state_mean() {
+    let src = include_str!("../fixtures/p5_heat_diffusion.vibe");
+    let program = load_program(src).expect("p5 fixture");
+    let mut host = MockHost::default();
+    let mut env = Env::default();
+    let v = eval_function(
+        &program,
+        "steady_state_mean",
+        vec![Value::List(vec![
+            Value::F64(10.0),
+            Value::F64(20.0),
+            Value::F64(30.0),
+        ])],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
+    assert!((v.as_f64().unwrap() - 20.0).abs() < 1e-9);
+}
+
+#[test]
+fn p6_advection_diffusion_cfl() {
+    let src = include_str!("../fixtures/p6_advection_diffusion.vibe");
+    let program = load_program(src).expect("p6 fixture");
+    let mut host = MockHost::default();
+    let mut env = Env::default();
+    // CFL = |v| * dt / dx = 1.0 * 0.01 / 0.02 = 0.5
+    let v = eval_function(
+        &program,
+        "courant_number",
+        vec![Value::F64(1.0), Value::F64(0.01), Value::F64(0.02)],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
+    assert!((v.as_f64().unwrap() - 0.5).abs() < 1e-9);
+}
+
+#[test]
+fn p6_advection_diffusion_stability() {
+    let src = include_str!("../fixtures/p6_advection_diffusion.vibe");
+    let program = load_program(src).expect("p6 fixture");
+    let mut host = MockHost::default();
+    let mut env = Env::default();
+    let v = eval_function(
+        &program,
+        "is_stable",
+        vec![Value::F64(0.5)],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
+    assert!(matches!(v, Value::Bool(true)));
+    let v = eval_function(
+        &program,
+        "is_stable",
+        vec![Value::F64(1.5)],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
+    assert!(matches!(v, Value::Bool(false)));
+}
+
+#[test]
+fn p7_pendulum_period() {
+    let src = include_str!("../fixtures/p7_pendulum.vibe");
+    let program = load_program(src).expect("p7 fixture");
+    let mut host = MockHost::default();
+    let mut env = Env::default();
+    // T = 2π * sqrt(L/g) = 2π * sqrt(1/9.81) ≈ 2.006
+    let v = eval_function(
+        &program,
+        "period",
+        vec![Value::F64(1.0), Value::F64(9.81)],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
+    let expected = 2.0 * std::f64::consts::PI * (1.0_f64 / 9.81).sqrt();
+    assert!((v.as_f64().unwrap() - expected).abs() < 1e-9);
+}
+
+#[test]
+fn p7_pendulum_angular_frequency() {
+    let src = include_str!("../fixtures/p7_pendulum.vibe");
+    let program = load_program(src).expect("p7 fixture");
+    let mut host = MockHost::default();
+    let mut env = Env::default();
+    // ω = sqrt(g/L) = sqrt(9.81/1.0) ≈ 3.132
+    let v = eval_function(
+        &program,
+        "angular_frequency",
+        vec![Value::F64(1.0), Value::F64(9.81)],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
+    assert!((v.as_f64().unwrap() - (9.81_f64).sqrt()).abs() < 1e-9);
+}
+
+#[test]
+fn p8_molecular_dynamics_lennard_jones() {
+    let src = include_str!("../fixtures/p8_molecular_dynamics.vibe");
+    let program = load_program(src).expect("p8 fixture");
+    let mut host = MockHost::default();
+    let mut env = Env::default();
+    // At r = sigma, LJ potential = 4ε(1 - 1) = 0
+    let v = eval_function(
+        &program,
+        "lennard_jones_potential",
+        vec![Value::F64(1.0), Value::F64(1.0), Value::F64(1.0)],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
+    assert!((v.as_f64().unwrap() - 0.0).abs() < 1e-9);
+}
+
+#[test]
+fn p8_molecular_dynamics_force() {
+    let src = include_str!("../fixtures/p8_molecular_dynamics.vibe");
+    let program = load_program(src).expect("p8 fixture");
+    let mut host = MockHost::default();
+    let mut env = Env::default();
+    // At r = sigma, force = 24ε/σ * (2*1 - 1) = 24ε/σ
+    let v = eval_function(
+        &program,
+        "force_magnitude",
+        vec![Value::F64(1.0), Value::F64(1.0), Value::F64(1.0)],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
+    assert!((v.as_f64().unwrap() - 24.0).abs() < 1e-9);
+}
+
+#[test]
+fn p9_cfd_reynolds_number() {
+    let src = include_str!("../fixtures/p9_cfd_step.vibe");
+    let program = load_program(src).expect("p9 fixture");
+    let mut host = MockHost::default();
+    let mut env = Env::default();
+    // Re = |v| * L / ν = 1.0 * 0.1 / 0.001 = 100
+    let v = eval_function(
+        &program,
+        "reynolds_number",
+        vec![Value::F64(1.0), Value::F64(0.1), Value::F64(0.001)],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
+    assert!((v.as_f64().unwrap() - 100.0).abs() < 1e-9);
+}
+
+#[test]
+fn p9_cfd_is_laminar() {
+    let src = include_str!("../fixtures/p9_cfd_step.vibe");
+    let program = load_program(src).expect("p9 fixture");
+    let mut host = MockHost::default();
+    let mut env = Env::default();
+    let v = eval_function(
+        &program,
+        "is_laminar",
+        vec![Value::F64(100.0)],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
+    assert!(matches!(v, Value::Bool(true)));
+    let v = eval_function(
+        &program,
+        "is_turbulent",
+        vec![Value::F64(100.0)],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
+    assert!(matches!(v, Value::Bool(false)));
+}
+
+#[test]
+fn p10_quantum_energy_level() {
+    let src = include_str!("../fixtures/p10_quantum_states.vibe");
+    let program = load_program(src).expect("p10 fixture");
+    let mut host = MockHost::default();
+    let mut env = Env::default();
+    // E_n = ℏω(n + 0.5) = 1.0 * 1.0 * (0 + 0.5) = 0.5
+    let v = eval_function(
+        &program,
+        "energy_level",
+        vec![Value::F64(0.0), Value::F64(1.0), Value::F64(1.0)],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
+    assert!((v.as_f64().unwrap() - 0.5).abs() < 1e-9);
+}
+
+#[test]
+fn p10_quantum_transition() {
+    let src = include_str!("../fixtures/p10_quantum_states.vibe");
+    let program = load_program(src).expect("p10 fixture");
+    let mut host = MockHost::default();
+    let mut env = Env::default();
+    // ΔE = E_2 - E_1 = ℏω(2.5 - 1.5) = ℏω
+    let v = eval_function(
+        &program,
+        "transition_energy",
+        vec![
+            Value::F64(1.0),
+            Value::F64(2.0),
+            Value::F64(1.0),
+            Value::F64(1.0),
+        ],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
+    assert!((v.as_f64().unwrap() - 1.0).abs() < 1e-9);
+}
+
+#[test]
+fn p11_logistic_growth_carrying() {
+    let src = include_str!("../fixtures/p11_logistic_growth.vibe");
+    let program = load_program(src).expect("p11 fixture");
+    let mut host = MockHost::default();
+    let mut env = Env::default();
+    // N(t) = K / (1 + ((K-N0)/N0) * e^(-rt))
+    // K=100, r=0.5, t=0, N0=10 → 100 / (1 + 9*1) = 10
+    let v = eval_function(
+        &program,
+        "carrying_capacity",
+        vec![
+            Value::F64(100.0),
+            Value::F64(0.5),
+            Value::F64(0.0),
+            Value::F64(10.0),
+        ],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
+    assert!((v.as_f64().unwrap() - 10.0).abs() < 1e-9);
+}
+
+#[test]
+fn p11_logistic_growth_rate() {
+    let src = include_str!("../fixtures/p11_logistic_growth.vibe");
+    let program = load_program(src).expect("p11 fixture");
+    let mut host = MockHost::default();
+    let mut env = Env::default();
+    // dN/dt = rN(1 - N/K) = 0.5 * 50 * (1 - 50/100) = 12.5
+    let v = eval_function(
+        &program,
+        "growth_rate_at",
+        vec![Value::F64(100.0), Value::F64(0.5), Value::F64(50.0)],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
+    assert!((v.as_f64().unwrap() - 12.5).abs() < 1e-9);
+}
+
+// ── EMF/Spectral: e5–e8 ────────────────────────────────────────────────────
+
+#[test]
+fn e5_spd_to_xyz_clamps_wavelength() {
+    let src = include_str!("../fixtures/e5_spd_to_xyz.vibe");
+    let program = load_program(src).expect("e5 fixture");
+    let mut host = MockHost::default();
+    let mut env = Env::default();
+    let v = eval_function(
+        &program,
+        "wavelength_to_xyz",
+        vec![Value::F64(200.0)],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
+    assert_eq!(v.as_f64(), Some(380.0));
+}
+
+#[test]
+fn e5_spd_to_xyz_chromaticity() {
+    let src = include_str!("../fixtures/e5_spd_to_xyz.vibe");
+    let program = load_program(src).expect("e5 fixture");
+    let mut host = MockHost::default();
+    let mut env = Env::default();
+    // x / (x + y + z) = 1 / (1 + 1 + 1) = 1/3
+    let v = eval_function(
+        &program,
+        "xyz_to_xy",
+        vec![Value::F64(1.0), Value::F64(1.0), Value::F64(1.0)],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
+    assert!((v.as_f64().unwrap() - 1.0 / 3.0).abs() < 1e-9);
+}
+
+#[test]
+fn e6_spectral_blend_wavelengths() {
+    let src = include_str!("../fixtures/e6_spectral_blend.vibe");
+    let program = load_program(src).expect("e6 fixture");
+    let mut host = MockHost::default();
+    let mut env = Env::default();
+    // blend(400, 700, 0.5) = 550
+    let v = eval_function(
+        &program,
+        "blend_wavelengths",
+        vec![Value::F64(400.0), Value::F64(700.0), Value::F64(0.5)],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
+    assert!((v.as_f64().unwrap() - 550.0).abs() < 1e-9);
+}
+
+#[test]
+fn e6_spectral_metamer_check() {
+    let src = include_str!("../fixtures/e6_spectral_blend.vibe");
+    let program = load_program(src).expect("e6 fixture");
+    let mut host = MockHost::default();
+    let mut env = Env::default();
+    let v = eval_function(
+        &program,
+        "metamer_check",
+        vec![
+            Value::F64(0.5),
+            Value::F64(0.5),
+            Value::F64(0.5),
+            Value::F64(0.5),
+        ],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
+    assert!(matches!(v, Value::Bool(true)));
+}
+
+#[test]
+fn e7_gamut_map_clamp_rgb() {
+    let src = include_str!("../fixtures/e7_gamut_map.vibe");
+    let program = load_program(src).expect("e7 fixture");
+    let mut host = MockHost::default();
+    let mut env = Env::default();
+    let v = eval_function(
+        &program,
+        "clamp_rgb_channel",
+        vec![Value::F64(1.5)],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
+    assert_eq!(v.as_f64(), Some(1.0));
+}
+
+#[test]
+fn e7_gamut_map_srgb_roundtrip() {
+    let src = include_str!("../fixtures/e7_gamut_map.vibe");
+    let program = load_program(src).expect("e7 fixture");
+    let mut host = MockHost::default();
+    let mut env = Env::default();
+    // sRGB → linear → sRGB should be identity (approximately)
+    let v = eval_function(
+        &program,
+        "srgb_to_linear",
+        vec![Value::F64(0.5)],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
+    let linear = v.as_f64().unwrap();
+    let v2 = eval_function(
+        &program,
+        "linear_to_srgb",
+        vec![Value::F64(linear)],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
+    assert!((v2.as_f64().unwrap() - 0.5).abs() < 1e-3);
+}
+
+#[test]
+fn e8_emf_inverse_square() {
+    let src = include_str!("../fixtures/e8_emf_field_grid.vibe");
+    let program = load_program(src).expect("e8 fixture");
+    let mut host = MockHost::default();
+    let mut env = Env::default();
+    // P / (4π * r²) = 100 / (4π * 1) ≈ 7.958
+    let v = eval_function(
+        &program,
+        "inverse_square",
+        vec![Value::F64(1.0), Value::F64(100.0)],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
+    let expected = 100.0 / (4.0 * std::f64::consts::PI);
+    assert!((v.as_f64().unwrap() - expected).abs() < 1e-6);
+}
+
+#[test]
+fn e8_emf_inverse_square_zero_distance() {
+    let src = include_str!("../fixtures/e8_emf_field_grid.vibe");
+    let program = load_program(src).expect("e8 fixture");
+    let mut host = MockHost::default();
+    let mut env = Env::default();
+    let v = eval_function(
+        &program,
+        "inverse_square",
+        vec![Value::F64(0.0), Value::F64(100.0)],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
+    assert_eq!(v.as_f64(), Some(0.0));
+}
+
+// ── Geometry: geo4–geo6 ────────────────────────────────────────────────────
+
+#[test]
+fn geo4_svg_circle_area() {
+    let src = include_str!("../fixtures/geo4_svg_circle.vibe");
+    let program = load_program(src).expect("geo4 fixture");
+    let mut host = MockHost::default();
+    let mut env = Env::default();
+    let v = eval_function(
+        &program,
+        "circle_area",
+        vec![Value::F64(2.0)],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
+    assert!((v.as_f64().unwrap() - 4.0 * std::f64::consts::PI).abs() < 1e-9);
+}
+
+#[test]
+fn geo5_cubic_bezier_endpoints() {
+    let src = include_str!("../fixtures/geo5_svg_bezier.vibe");
+    let program = load_program(src).expect("geo5 fixture");
+    let mut host = MockHost::default();
+    let mut env = Env::default();
+    // At t=0, B(0) = p0
+    let v = eval_function(
+        &program,
+        "cubic_bezier_point",
+        vec![
+            Value::F64(0.0),
+            Value::F64(1.0),
+            Value::F64(2.0),
+            Value::F64(3.0),
+            Value::F64(0.0),
+        ],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
+    assert_eq!(v.as_f64(), Some(0.0));
+    // At t=1, B(1) = p3
+    let v = eval_function(
+        &program,
+        "cubic_bezier_point",
+        vec![
+            Value::F64(0.0),
+            Value::F64(1.0),
+            Value::F64(2.0),
+            Value::F64(3.0),
+            Value::F64(1.0),
+        ],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
+    assert_eq!(v.as_f64(), Some(3.0));
+}
+
+#[test]
+fn geo5_quadratic_bezier_midpoint() {
+    let src = include_str!("../fixtures/geo5_svg_bezier.vibe");
+    let program = load_program(src).expect("geo5 fixture");
+    let mut host = MockHost::default();
+    let mut env = Env::default();
+    // At t=0.5, Q(0.5) = 0.25*p0 + 0.5*p1 + 0.25*p2 = 0.25*0 + 0.5*2 + 0.25*4 = 2.0
+    let v = eval_function(
+        &program,
+        "quadratic_bezier_point",
+        vec![
+            Value::F64(0.0),
+            Value::F64(2.0),
+            Value::F64(4.0),
+            Value::F64(0.5),
+        ],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
+    assert!((v.as_f64().unwrap() - 2.0).abs() < 1e-9);
+}
+
+#[test]
+fn geo6_triangle_area() {
+    let src = include_str!("../fixtures/geo6_point_in_polygon.vibe");
+    let program = load_program(src).expect("geo6 fixture");
+    let mut host = MockHost::default();
+    let mut env = Env::default();
+    // Triangle (0,0), (4,0), (0,3) → area = 6
+    let v = eval_function(
+        &program,
+        "triangle_area",
+        vec![
+            Value::F64(0.0),
+            Value::F64(0.0),
+            Value::F64(4.0),
+            Value::F64(0.0),
+            Value::F64(0.0),
+            Value::F64(3.0),
+        ],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
+    assert!((v.as_f64().unwrap() - 6.0).abs() < 1e-9);
+}
+
+// ── CSS Animation: c4–c6 ───────────────────────────────────────────────────
+
+#[test]
+fn c4_css_transform_rotate_to_radians() {
+    let src = include_str!("../fixtures/c4_css_transform.vibe");
+    let program = load_program(src).expect("c4 fixture");
+    let mut host = MockHost::default();
+    let mut env = Env::default();
+    // 180° = π radians
+    let v = eval_function(
+        &program,
+        "rotate_degrees_to_radians",
+        vec![Value::F64(180.0)],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
+    assert!((v.as_f64().unwrap() - std::f64::consts::PI).abs() < 1e-9);
+}
+
+#[test]
+fn c4_css_transform_scale_non_negative() {
+    let src = include_str!("../fixtures/c4_css_transform.vibe");
+    let program = load_program(src).expect("c4 fixture");
+    let mut host = MockHost::default();
+    let mut env = Env::default();
+    let v = eval_function(
+        &program,
+        "scale_factor",
+        vec![Value::F64(-1.0)],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
+    assert_eq!(v.as_f64(), Some(0.0));
+}
+
+#[test]
+fn c5_css_easing_in_out() {
+    let src = include_str!("../fixtures/c5_css_easing.vibe");
+    let program = load_program(src).expect("c5 fixture");
+    let mut host = MockHost::default();
+    let mut env = Env::default();
+    // ease_in_out(0.5) = 0.5 (symmetric)
+    let v = eval_function(
+        &program,
+        "ease_in_out",
+        vec![Value::F64(0.5)],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
+    assert!((v.as_f64().unwrap() - 0.5).abs() < 1e-9);
+}
+
+#[test]
+fn c5_css_easing_in_quadratic() {
+    let src = include_str!("../fixtures/c5_css_easing.vibe");
+    let program = load_program(src).expect("c5 fixture");
+    let mut host = MockHost::default();
+    let mut env = Env::default();
+    // ease_in(0.5) = 0.25
+    let v = eval_function(
+        &program,
+        "ease_in",
+        vec![Value::F64(0.5)],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
+    assert!((v.as_f64().unwrap() - 0.25).abs() < 1e-9);
+}
+
+#[test]
+fn c5_css_easing_linear() {
+    let src = include_str!("../fixtures/c5_css_easing.vibe");
+    let program = load_program(src).expect("c5 fixture");
+    let mut host = MockHost::default();
+    let mut env = Env::default();
+    let v = eval_function(
+        &program,
+        "linear_easing",
+        vec![Value::F64(0.3)],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
+    assert!((v.as_f64().unwrap() - 0.3).abs() < 1e-9);
+}
+
+#[test]
+fn c6_css_color_blend_linear() {
+    let src = include_str!("../fixtures/c6_css_color_blend.vibe");
+    let program = load_program(src).expect("c6 fixture");
+    let mut host = MockHost::default();
+    let mut env = Env::default();
+    // blend(0.2, 0.8, 0.5) = 0.5
+    let v = eval_function(
+        &program,
+        "blend_colors",
+        vec![Value::F64(0.2), Value::F64(0.8), Value::F64(0.5)],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
+    assert!((v.as_f64().unwrap() - 0.5).abs() < 1e-9);
+}
+
+#[test]
+fn c6_css_color_blend_multiply() {
+    let src = include_str!("../fixtures/c6_css_color_blend.vibe");
+    let program = load_program(src).expect("c6 fixture");
+    let mut host = MockHost::default();
+    let mut env = Env::default();
+    // multiply(0.5, 0.5) = 0.25
+    let v = eval_function(
+        &program,
+        "multiply_blend",
+        vec![Value::F64(0.5), Value::F64(0.5)],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
+    assert!((v.as_f64().unwrap() - 0.25).abs() < 1e-9);
+}
+
+#[test]
+fn c6_css_color_blend_screen() {
+    let src = include_str!("../fixtures/c6_css_color_blend.vibe");
+    let program = load_program(src).expect("c6 fixture");
+    let mut host = MockHost::default();
+    let mut env = Env::default();
+    // screen(0.5, 0.5) = 1 - 0.25 = 0.75
+    let v = eval_function(
+        &program,
+        "screen_blend",
+        vec![Value::F64(0.5), Value::F64(0.5)],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
+    assert!((v.as_f64().unwrap() - 0.75).abs() < 1e-9);
+}
+
+// ── Reactive cells: r4–r6 ──────────────────────────────────────────────────
+
+#[test]
+fn r4_reactive_compose_sum() {
+    let src = include_str!("../fixtures/r4_reactive_compose.vibe");
+    let program = load_program(src).expect("r4 fixture");
+    let mut host = MockHost::default();
+    let mut env = Env::default();
+    let v = eval_function(
+        &program,
+        "sum_quins",
+        vec![Value::List(vec![
+            Value::F64(1.0),
+            Value::F64(2.0),
+            Value::F64(3.0),
+        ])],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
+    assert!((v.as_f64().unwrap() - 6.0).abs() < 1e-9);
+}
+
+#[test]
+fn r5_threshold_alert_check() {
+    let src = include_str!("../fixtures/r5_threshold_alert.vibe");
+    let program = load_program(src).expect("r5 fixture");
+    let mut host = MockHost::default();
+    let mut env = Env::default();
+    let v = eval_function(
+        &program,
+        "check_threshold",
+        vec![Value::F64(5.0), Value::F64(10.0), Value::F64(20.0)],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
+    assert_eq!(v.as_i64(), Some(-1));
+    let v = eval_function(
+        &program,
+        "check_threshold",
+        vec![Value::F64(25.0), Value::F64(10.0), Value::F64(20.0)],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
+    assert_eq!(v.as_i64(), Some(1));
+    let v = eval_function(
+        &program,
+        "check_threshold",
+        vec![Value::F64(15.0), Value::F64(10.0), Value::F64(20.0)],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
+    assert_eq!(v.as_i64(), Some(0));
+}
+
+#[test]
+fn r6_reactive_chain_derive_rate() {
+    let src = include_str!("../fixtures/r6_reactive_chain.vibe");
+    let program = load_program(src).expect("r6 fixture");
+    let mut host = MockHost::default();
+    let mut env = Env::default();
+    // rate = (curr - prev) / dt = (20 - 10) / 2 = 5
+    let v = eval_function(
+        &program,
+        "derive_rate",
+        vec![Value::F64(10.0), Value::F64(20.0), Value::F64(2.0)],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
+    assert!((v.as_f64().unwrap() - 5.0).abs() < 1e-9);
+}
+
+#[test]
+fn r6_reactive_chain_zero_dt() {
+    let src = include_str!("../fixtures/r6_reactive_chain.vibe");
+    let program = load_program(src).expect("r6 fixture");
+    let mut host = MockHost::default();
+    let mut env = Env::default();
+    let v = eval_function(
+        &program,
+        "derive_rate",
+        vec![Value::F64(10.0), Value::F64(20.0), Value::F64(0.0)],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
+    assert_eq!(v.as_f64(), Some(0.0));
+}
+
+// ── Financial: f4–f6 ───────────────────────────────────────────────────────
+
+#[test]
+fn f4_options_greeks_delta_in_the_money() {
+    let src = include_str!("../fixtures/f4_options_greeks.vibe");
+    let program = load_program(src).expect("f4 fixture");
+    let mut host = MockHost::default();
+    let mut env = Env::default();
+    // S > K → delta = 1.0
+    let v = eval_function(
+        &program,
+        "delta_call",
+        vec![Value::F64(110.0), Value::F64(100.0)],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
+    assert!((v.as_f64().unwrap() - 1.0).abs() < 1e-9);
+}
+
+#[test]
+fn f4_options_greeks_delta_out_of_the_money() {
+    let src = include_str!("../fixtures/f4_options_greeks.vibe");
+    let program = load_program(src).expect("f4 fixture");
+    let mut host = MockHost::default();
+    let mut env = Env::default();
+    // S < K → delta = S/K = 90/100 = 0.9
+    let v = eval_function(
+        &program,
+        "delta_call",
+        vec![Value::F64(90.0), Value::F64(100.0)],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
+    assert!((v.as_f64().unwrap() - 0.9).abs() < 1e-9);
+}
+
+#[test]
+fn f5_bond_pricing_zero_yield() {
+    let src = include_str!("../fixtures/f5_bond_pricing.vibe");
+    let program = load_program(src).expect("f5 fixture");
+    let mut host = MockHost::default();
+    let mut env = Env::default();
+    // yield = 0 → PV = face + coupon * periods = 100 + 5 * 3 = 115
+    let v = eval_function(
+        &program,
+        "present_value",
+        vec![
+            Value::F64(100.0),
+            Value::F64(5.0),
+            Value::F64(0.0),
+            Value::F64(3.0),
+        ],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
+    assert!((v.as_f64().unwrap() - 115.0).abs() < 1e-9);
+}
+
+#[test]
+fn f6_risk_metrics_sharpe_ratio() {
+    let src = include_str!("../fixtures/f6_risk_metrics.vibe");
+    let program = load_program(src).expect("f6 fixture");
+    let mut host = MockHost::default();
+    let mut env = Env::default();
+    // returns = [0.1, 0.2, 0.3], rf = 0.0
+    // mean = 0.2, std = sqrt(((0.1-0.2)² + 0² + (0.3-0.2)²)/3) = sqrt(0.02/3) ≈ 0.0816
+    // Sharpe = 0.2 / 0.0816 ≈ 2.449
+    let v = eval_function(
+        &program,
+        "sharpe_ratio",
+        vec![
+            Value::List(vec![Value::F64(0.1), Value::F64(0.2), Value::F64(0.3)]),
+            Value::F64(0.0),
+        ],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
+    let sharpe = v.as_f64().unwrap();
+    assert!(sharpe > 2.0 && sharpe < 3.0);
+}
+
+#[test]
+fn f6_risk_metrics_max_drawdown() {
+    let src = include_str!("../fixtures/f6_risk_metrics.vibe");
+    let program = load_program(src).expect("f6 fixture");
+    let mut host = MockHost::default();
+    let mut env = Env::default();
+    // values = [100, 120, 80, 90] → peak=120, trough=80, dd = (120-80)/120 = 1/3
+    let v = eval_function(
+        &program,
+        "max_drawdown",
+        vec![Value::List(vec![
+            Value::F64(100.0),
+            Value::F64(120.0),
+            Value::F64(80.0),
+            Value::F64(90.0),
+        ])],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
+    assert!((v.as_f64().unwrap() - 1.0 / 3.0).abs() < 1e-6);
+}
+
+// ── Scientific: s4–s6 ──────────────────────────────────────────────────────
+
+#[test]
+fn s4_molar_mass_calculation() {
+    let src = include_str!("../fixtures/s4_molar_mass.vibe");
+    let program = load_program(src).expect("s4 fixture");
+    let mut host = MockHost::default();
+    let mut env = Env::default();
+    // H2O: 2*1.008 + 15.999 = 18.015
+    let v = eval_function(
+        &program,
+        "molar_mass",
+        vec![Value::List(vec![
+            Value::F64(1.008),
+            Value::F64(1.008),
+            Value::F64(15.999),
+        ])],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
+    assert!((v.as_f64().unwrap() - 18.015).abs() < 1e-3);
+}
+
+#[test]
+fn s4_moles_from_mass() {
+    let src = include_str!("../fixtures/s4_molar_mass.vibe");
+    let program = load_program(src).expect("s4 fixture");
+    let mut host = MockHost::default();
+    let mut env = Env::default();
+    // moles = mass / molar_mass = 36.03 / 18.015 = 2.0
+    let v = eval_function(
+        &program,
+        "moles_from_mass",
+        vec![Value::F64(36.03), Value::F64(18.015)],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
+    assert!((v.as_f64().unwrap() - 2.0).abs() < 1e-3);
+}
+
+#[test]
+fn s5_reaction_kinetics_half_life() {
+    let src = include_str!("../fixtures/s5_reaction_kinetics.vibe");
+    let program = load_program(src).expect("s5 fixture");
+    let mut host = MockHost::default();
+    let mut env = Env::default();
+    // t½ = ln(2)/k = 0.693/0.1 = 6.93
+    let v = eval_function(
+        &program,
+        "half_life_first_order",
+        vec![Value::F64(0.1)],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
+    assert!((v.as_f64().unwrap() - 6.931471805599453).abs() < 1e-6);
+}
+
+#[test]
+fn s5_reaction_kinetics_first_order() {
+    let src = include_str!("../fixtures/s5_reaction_kinetics.vibe");
+    let program = load_program(src).expect("s5 fixture");
+    let mut host = MockHost::default();
+    let mut env = Env::default();
+    // rate = k * [A] = 0.1 * 2.0 = 0.2
+    let v = eval_function(
+        &program,
+        "first_order_rate",
+        vec![Value::F64(0.1), Value::F64(2.0)],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
+    assert!((v.as_f64().unwrap() - 0.2).abs() < 1e-9);
+}
+
+#[test]
+fn s6_dna_gc_content() {
+    let src = include_str!("../fixtures/s6_dna_codon.vibe");
+    let program = load_program(src).expect("s6 fixture");
+    let mut host = MockHost::default();
+    let mut env = Env::default();
+    // bases: [1, 2, 3, 4] → GC = 2/4 = 0.5 (1=G, 2=C)
+    let v = eval_function(
+        &program,
+        "gc_content",
+        vec![Value::List(vec![
+            Value::F64(1.0),
+            Value::F64(2.0),
+            Value::F64(3.0),
+            Value::F64(4.0),
+        ])],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
+    assert!((v.as_f64().unwrap() - 0.5).abs() < 1e-9);
+}
+
+// ── Cross-domain: x1–x4 ────────────────────────────────────────────────────
+
+#[test]
+fn x1_emf_to_css_wavelength_mapping() {
+    let src = include_str!("../fixtures/x1_emf_to_css.vibe");
+    let program = load_program(src).expect("x1 fixture");
+    let mut host = MockHost::default();
+    let mut env = Env::default();
+    // 580nm → (580-380)/400 = 0.5
+    let v = eval_function(
+        &program,
+        "wavelength_to_css_rgb",
+        vec![Value::F64(580.0)],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
+    assert!((v.as_f64().unwrap() - 0.5).abs() < 1e-9);
+}
+
+#[test]
+fn x1_emf_to_css_opacity() {
+    let src = include_str!("../fixtures/x1_emf_to_css.vibe");
+    let program = load_program(src).expect("x1 fixture");
+    let mut host = MockHost::default();
+    let mut env = Env::default();
+    let v = eval_function(
+        &program,
+        "css_rgb_to_opacity",
+        vec![Value::F64(1.5)],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
+    assert_eq!(v.as_f64(), Some(1.0));
+}
+
+#[test]
+fn x2_physics_to_geometry_trajectory() {
+    let src = include_str!("../fixtures/x2_physics_to_geometry.vibe");
+    let program = load_program(src).expect("x2 fixture");
+    let mut host = MockHost::default();
+    let mut env = Env::default();
+    // 45° launch, v=10, g=9.81 → range = v²sin(90°)/g = 100/9.81 ≈ 10.19
+    let v = eval_function(
+        &program,
+        "trajectory_to_path",
+        vec![Value::F64(10.0), Value::F64(45.0), Value::F64(9.81)],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
+    let expected = 100.0 * (90.0_f64).to_radians().sin() / 9.81;
+    assert!((v.as_f64().unwrap() - expected).abs() < 1e-6);
+}
+
+#[test]
+fn x3_governance_to_pulse_severity() {
+    let src = include_str!("../fixtures/x3_governance_to_pulse.vibe");
+    let program = load_program(src).expect("x3 fixture");
+    let mut host = MockHost::default();
+    let mut env = Env::default();
+    let v = eval_function(
+        &program,
+        "severity_to_pulse_value",
+        vec![Value::I64(3)],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
+    assert_eq!(v.as_f64(), Some(1.0));
+    let v = eval_function(
+        &program,
+        "severity_to_pulse_value",
+        vec![Value::I64(0)],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
+    assert_eq!(v.as_f64(), Some(0.0));
+}
+
+#[test]
+fn x4_financial_to_graph_risk_classification() {
+    let src = include_str!("../fixtures/x4_financial_to_graph.vibe");
+    let program = load_program(src).expect("x4 fixture");
+    let mut host = MockHost::default();
+    let mut env = Env::default();
+    // sharpe > 2.0 → level 0 (low risk)
+    let v = eval_function(
+        &program,
+        "classify_risk",
+        vec![Value::F64(2.5)],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
+    assert_eq!(v.as_i64(), Some(0));
+    // sharpe < 0 → level 3 (high risk)
+    let v = eval_function(
+        &program,
+        "classify_risk",
+        vec![Value::F64(-1.0)],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
+    assert_eq!(v.as_i64(), Some(3));
+}
+
+// ── Negative fixtures: n10–n25 ─────────────────────────────────────────────
+// These should fail at parse, check, or eval time.
+
+#[test]
+fn n10_negative_sqrt_fails() {
+    let src = include_str!("../fixtures/n10_negative_sqrt.vibe");
+    let program = load_program(src).expect("n10 should parse");
+    let mut host = MockHost::default();
+    let mut env = Env::default();
+    let result = eval_function(&program, "bad", vec![], &mut host, &mut env);
+    // sqrt(-1) should produce NaN or error — either way it's not a valid result
+    assert!(result.is_err() || result.unwrap().as_f64().map(|f| f.is_nan()).unwrap_or(true));
+}
+
+#[test]
+fn n11_div_by_zero_physics_trapped() {
+    let src = include_str!("../fixtures/n11_div_by_zero_physics.vibe");
+    let program = load_program(src).expect("n11 should parse");
+    let mut host = MockHost::default();
+    let mut env = Env::default();
+    let result = eval_function(&program, "bad", vec![], &mut host, &mut env);
+    // VibeScript traps division by zero at runtime (E600)
+    assert!(result.is_err());
+    let err = result.unwrap_err();
+    assert_eq!(err.code, DiagCode::E600);
+    assert!(err.message.contains("division by zero"));
+}
+
+#[test]
+fn n12_negative_reynolds_parses() {
+    let src = include_str!("../fixtures/n12_negative_reynolds.vibe");
+    // This is a semantic error, not a parse error — it should parse fine
+    load_program(src).expect("n12 should parse (semantic issue, not syntax)");
+}
+
+#[test]
+fn n13_negative_log_emf_fails() {
+    let src = include_str!("../fixtures/n13_negative_log_emf.vibe");
+    let program = load_program(src).expect("n13 should parse");
+    let mut host = MockHost::default();
+    let mut env = Env::default();
+    let result = eval_function(&program, "bad", vec![], &mut host, &mut env);
+    assert!(result.is_err() || result.unwrap().as_f64().map(|f| f.is_nan()).unwrap_or(true));
+}
+
+#[test]
+fn n14_uv_outside_visible_parses() {
+    let src = include_str!("../fixtures/n14_uv_outside_visible.vibe");
+    // Semantic issue (100nm is UV, not visible), but syntactically valid
+    load_program(src).expect("n14 should parse");
+}
+
+#[test]
+fn n15_negative_radius_parses() {
+    let src = include_str!("../fixtures/n15_negative_radius.vibe");
+    load_program(src).expect("n15 should parse (semantic issue)");
+}
+
+#[test]
+fn n16_bezier_t_out_of_range_parses() {
+    let src = include_str!("../fixtures/n16_bezier_t_out_of_range.vibe");
+    load_program(src).expect("n16 should parse (semantic issue)");
+}
+
+#[test]
+fn n17_negative_scale_parses() {
+    let src = include_str!("../fixtures/n17_negative_scale.vibe");
+    load_program(src).expect("n17 should parse (semantic issue)");
+}
+
+#[test]
+fn n18_opacity_above_one_parses() {
+    let src = include_str!("../fixtures/n18_opacity_above_one.vibe");
+    load_program(src).expect("n18 should parse (semantic issue)");
+}
+
+#[test]
+fn n19_zero_dt_derivative_trapped() {
+    let src = include_str!("../fixtures/n19_zero_dt_derivative.vibe");
+    let program = load_program(src).expect("n19 should parse");
+    let mut host = MockHost::default();
+    let mut env = Env::default();
+    let result = eval_function(&program, "bad", vec![], &mut host, &mut env);
+    // VibeScript traps division by zero at runtime (E600)
+    assert!(result.is_err());
+    let err = result.unwrap_err();
+    assert_eq!(err.code, DiagCode::E600);
+}
+
+#[test]
+fn n20_unauthorized_pulse_rejected() {
+    let src = include_str!("../fixtures/n20_unauthorized_pulse.vibe");
+    // This should fail at check time — no capability declared
+    let result = load_program(src);
+    assert!(result.is_err());
+}
+
+#[test]
+fn n21_commit_without_capability_rejected() {
+    let src = include_str!("../fixtures/n21_commit_without_capability.vibe");
+    // graph.commit() without capability("graph.write") should fail at check
+    let result = load_program(src);
+    assert!(result.is_err());
+}
+
+#[test]
+fn n22_negative_rate_constant_parses() {
+    let src = include_str!("../fixtures/n22_negative_rate_constant.vibe");
+    load_program(src).expect("n22 should parse (semantic issue)");
+}
+
+#[test]
+fn n23_below_absolute_zero_parses() {
+    let src = include_str!("../fixtures/n23_below_absolute_zero.vibe");
+    load_program(src).expect("n23 should parse (semantic issue)");
+}
+
+#[test]
+fn n24_negative_volatility_parses() {
+    let src = include_str!("../fixtures/n24_negative_volatility.vibe");
+    load_program(src).expect("n24 should parse (semantic issue)");
+}
+
+#[test]
+fn n25_negative_yield_parses() {
+    let src = include_str!("../fixtures/n25_negative_yield.vibe");
+    load_program(src).expect("n25 should parse (semantic issue)");
+}

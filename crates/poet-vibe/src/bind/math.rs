@@ -162,6 +162,44 @@ pub fn call_math(path: &str, args: &[Value], span: Span) -> Result<Option<Value>
             })?;
             Ok(Some(Value::F64(a.exp())))
         }
+        "math.pow" => {
+            let base = args
+                .first()
+                .and_then(Value::as_f64)
+                .ok_or_else(|| Diagnostic::new(DiagCode::E100, span, "math.pow expects numbers"))?;
+            let exp = args
+                .get(1)
+                .and_then(Value::as_f64)
+                .ok_or_else(|| Diagnostic::new(DiagCode::E100, span, "math.pow expects numbers"))?;
+            Ok(Some(Value::F64(base.powf(exp))))
+        }
+        "math.log10" => {
+            let a = args.first().and_then(Value::as_f64).ok_or_else(|| {
+                Diagnostic::new(DiagCode::E100, span, "math.log10 expects a number")
+            })?;
+            Ok(Some(Value::F64(a.log10())))
+        }
+        "math.tan" => {
+            let a = args.first().and_then(Value::as_f64).ok_or_else(|| {
+                Diagnostic::new(DiagCode::E100, span, "math.tan expects a number")
+            })?;
+            Ok(Some(Value::F64(a.tan())))
+        }
+        "math.atan" => {
+            let a = args.first().and_then(Value::as_f64).ok_or_else(|| {
+                Diagnostic::new(DiagCode::E100, span, "math.atan expects a number")
+            })?;
+            Ok(Some(Value::F64(a.atan())))
+        }
+        "math.atan2" => {
+            let y = args.first().and_then(Value::as_f64).ok_or_else(|| {
+                Diagnostic::new(DiagCode::E100, span, "math.atan2 expects numbers")
+            })?;
+            let x = args.get(1).and_then(Value::as_f64).ok_or_else(|| {
+                Diagnostic::new(DiagCode::E100, span, "math.atan2 expects numbers")
+            })?;
+            Ok(Some(Value::F64(y.atan2(x))))
+        }
         _ => Ok(None),
     }
 }

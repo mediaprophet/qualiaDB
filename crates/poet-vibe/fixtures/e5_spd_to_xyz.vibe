@@ -1,0 +1,12 @@
+module <https://qualiadb.org/modules/spd_to_xyz>;
+import "vibe:0.1/math" as m;
+pure fn wavelength_to_xyz(wavelength: f64) -> f64 {
+    return m.clamp(wavelength, 380.0, 780.0);
+}
+pure fn xyz_to_xy(x: f64, y: f64, z: f64) -> f64 {
+    let total = x + y + z;
+    if total == 0.0 {
+        return 0.0;
+    }
+    return x / total;
+}

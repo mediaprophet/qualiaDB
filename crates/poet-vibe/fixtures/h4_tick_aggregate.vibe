@@ -1,0 +1,9 @@
+module <https://qualiadb.org/modules/tick_aggregate>;
+requires [ capability("pulse.publish", topic: "tick/aggregate") ];
+effect fn emit_aggregate(count: f64, sum: f64) {
+    effect pulse.publish("tick/aggregate", sum);
+    return null;
+}
+on tick() {
+    return emit_aggregate(1.0, 1.0);
+}

@@ -347,6 +347,31 @@ pub fn default_catalog() -> ModuleCatalog {
                 name: "sqrt".into(),
                 kind: ExportKind::Function,
                 signature: Some("(x: number) -> f64".into()),
+            })
+            .with_export(ModuleExport {
+                name: "pow".into(),
+                kind: ExportKind::Function,
+                signature: Some("(base: number, exp: number) -> f64".into()),
+            })
+            .with_export(ModuleExport {
+                name: "log10".into(),
+                kind: ExportKind::Function,
+                signature: Some("(x: number) -> f64".into()),
+            })
+            .with_export(ModuleExport {
+                name: "tan".into(),
+                kind: ExportKind::Function,
+                signature: Some("(x: number) -> f64".into()),
+            })
+            .with_export(ModuleExport {
+                name: "atan".into(),
+                kind: ExportKind::Function,
+                signature: Some("(x: number) -> f64".into()),
+            })
+            .with_export(ModuleExport {
+                name: "atan2".into(),
+                kind: ExportKind::Function,
+                signature: Some("(y: number, x: number) -> f64".into()),
             }),
     );
 

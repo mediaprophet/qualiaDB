@@ -1,0 +1,1 @@
+fn bad() { return math.log10(-1.0); }

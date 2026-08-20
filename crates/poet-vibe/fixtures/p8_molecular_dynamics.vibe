@@ -1,0 +1,17 @@
+module <https://qualiadb.org/modules/molecular_dynamics>;
+import "vibe:0.1/math" as m;
+pure fn lennard_jones_potential(r: f64, epsilon: f64, sigma: f64) -> f64 {
+    let sr = sigma / r;
+    let sr6 = sr * sr * sr * sr * sr * sr;
+    let sr12 = sr6 * sr6;
+    return 4.0 * epsilon * (sr12 - sr6);
+}
+pure fn force_magnitude(r: f64, epsilon: f64, sigma: f64) -> f64 {
+    let sr = sigma / r;
+    let sr6 = sr * sr * sr * sr * sr * sr;
+    let sr12 = sr6 * sr6;
+    return 24.0 * epsilon / r * (2.0 * sr12 - sr6);
+}
+pure fn equilibrium_distance(sigma: f64) -> f64 {
+    return m.pow(sigma, 1.0 / 6.0) * sigma;
+}

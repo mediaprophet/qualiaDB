@@ -1,0 +1,28 @@
+module <https://qualiadb.org/modules/deontic_priority>;
+prefix policy: <https://qualiadb.org/policy/>;
+requires [
+    capability("graph.read"),
+    capability("graph.write"),
+    capability("aura.validate")
+];
+pure fn priority_level(duty: i64) -> i64 {
+    if duty > 100 {
+        return 3;
+    }
+    if duty > 10 {
+        return 2;
+    }
+    if duty > 0 {
+        return 1;
+    }
+    return 0;
+}
+effect fn enforce_duty(actor: Iri, duty: Iri, level: i64) {
+    let claim = <<( actor policy:must duty )>>;
+    graph.stage(claim);
+    if level >= 2 {
+        aura.validate(actor, policy:StrictDutyShape)?;
+    }
+    graph.commit()?;
+    return null;
+}

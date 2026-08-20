@@ -1,0 +1,14 @@
+module <https://qualiadb.org/modules/quantum_states>;
+import "vibe:0.1/math" as m;
+pure fn energy_level(n: f64, hbar: f64, omega: f64) -> f64 {
+    return hbar * omega * (n + 0.5);
+}
+pure fn ground_state(hbar: f64, omega: f64) -> f64 {
+    return 0.5 * hbar * omega;
+}
+pure fn zero_point_energy(hbar: f64, omega: f64) -> f64 {
+    return ground_state(hbar, omega);
+}
+pure fn transition_energy(n1: f64, n2: f64, hbar: f64, omega: f64) -> f64 {
+    return energy_level(n2, hbar, omega) - energy_level(n1, hbar, omega);
+}

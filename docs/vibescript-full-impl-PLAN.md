@@ -196,9 +196,9 @@ Lift `graph.read`/`graph.write` catalog honesty from "partial" to "live" when at
 
 ---
 
-### Phase G: Golden corpus expansion (needs Timothy's curation)
+### Phase G: Golden corpus expansion — ✅ DONE
 
-Grow the fixture corpus from 22 tests to comprehensive domain coverage.
+Comprehensive golden corpus across all 9 domains with negative fixtures and cross-domain integration tests.
 
 **New fixture categories:**
 1. **Physics** — wave propagation, harmonic oscillator, projectile, N-body

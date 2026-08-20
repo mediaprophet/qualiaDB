@@ -1,0 +1,11 @@
+module <https://qualiadb.org/modules/svg_circle>;
+import "vibe:0.1/math" as m;
+pure fn circle_area(radius: f64) -> f64 {
+    return 3.141592653589793 * radius * radius;
+}
+pure fn circle_circumference(radius: f64) -> f64 {
+    return 2.0 * 3.141592653589793 * radius;
+}
+pure fn svg_circle_element(cx: f64, cy: f64, r: f64) -> f64 {
+    return m.max(0.0, r);
+}

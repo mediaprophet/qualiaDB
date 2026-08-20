@@ -1,0 +1,9 @@
+module <https://qualiadb.org/modules/spectral_blend>;
+import "vibe:0.1/math" as m;
+pure fn blend_wavelengths(w1: f64, w2: f64, t: f64) -> f64 {
+    let tc = m.clamp(t, 0.0, 1.0);
+    return w1 * (1.0 - tc) + w2 * tc;
+}
+pure fn metamer_check(x1: f64, y1: f64, x2: f64, y2: f64) -> bool {
+    return m.abs(x1 - x2) < 0.001 && m.abs(y1 - y2) < 0.001;
+}

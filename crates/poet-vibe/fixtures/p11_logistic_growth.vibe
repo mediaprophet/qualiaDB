@@ -1,0 +1,11 @@
+module <https://qualiadb.org/modules/logistic_growth>;
+import "vibe:0.1/math" as m;
+pure fn carrying_capacity(k: f64, r: f64, t: f64, n0: f64) -> f64 {
+    return k / (1.0 + ((k - n0) / n0) * m.exp(-r * t));
+}
+pure fn growth_rate_at(k: f64, r: f64, n: f64) -> f64 {
+    return r * n * (1.0 - n / k);
+}
+pure fn inflection_point(k: f64) -> f64 {
+    return k / 2.0;
+}

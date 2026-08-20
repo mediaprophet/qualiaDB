@@ -1,0 +1,12 @@
+module <https://qualiadb.org/modules/tick_debounce>;
+requires [ capability("pulse.publish", topic: "tick/debounced") ];
+pure fn should_emit(last_tick: i64, current_tick: i64, min_interval: i64) -> bool {
+    return (current_tick - last_tick) >= min_interval;
+}
+effect fn emit_debounced(value: f64) {
+    effect pulse.publish("tick/debounced", value);
+    return null;
+}
+on tick() {
+    return emit_debounced(1.0);
+}

@@ -1,0 +1,15 @@
+module <https://qualiadb.org/modules/reactive_threshold_alert>;
+requires [ capability("graph.read"), capability("pulse.publish", topic: "alert/threshold") ];
+pure fn check_threshold(value: f64, lo: f64, hi: f64) -> i64 {
+    if value < lo {
+        return -1;
+    }
+    if value > hi {
+        return 1;
+    }
+    return 0;
+}
+effect fn emit_alert(value: f64, direction: i64) {
+    effect pulse.publish("alert/threshold", value);
+    return null;
+}

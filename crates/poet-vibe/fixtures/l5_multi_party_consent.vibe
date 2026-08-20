@@ -1,0 +1,23 @@
+module <https://qualiadb.org/modules/multi_party_consent>;
+prefix policy: <https://qualiadb.org/policy/>;
+requires [
+    capability("graph.read"),
+    capability("graph.write"),
+    capability("aura.validate")
+];
+effect fn record_consent(subject: Iri, action: Iri, scope: Iri) {
+    let claim = <<( subject policy:consents action )>>;
+    graph.stage(claim);
+    let scope_claim = <<( subject policy:within_scope scope )>>;
+    graph.stage(scope_claim);
+    aura.validate(subject, policy:ConsentShape)?;
+    graph.commit()?;
+    return null;
+}
+effect fn withdraw_consent(subject: Iri, action: Iri) {
+    let claim = <<( subject policy:withdraws action )>>;
+    graph.stage(claim);
+    aura.validate(subject, policy:WithdrawalShape)?;
+    graph.commit()?;
+    return null;
+}

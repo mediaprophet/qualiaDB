@@ -1,0 +1,23 @@
+module <https://qualiadb.org/modules/dna_codon>;
+import "vibe:0.1/math" as m;
+pure fn gc_content(bases: List<f64>) -> f64 {
+    let mut gc: f64 = 0.0;
+    let mut total: f64 = 0.0;
+    for b in bases {
+        total = total + 1.0;
+        if b == 1.0 || b == 2.0 {
+            gc = gc + 1.0;
+        }
+    }
+    if total == 0.0 {
+        return 0.0;
+    }
+    return gc / total;
+}
+pure fn melting_temp(gc_count: f64, length: f64) -> f64 {
+    return 64.9 + 41.0 * (gc_count - 16.4) / length;
+}
+pure fn molecular_weight_dna(length: f64, gc_fraction: f64) -> f64 {
+    let avg_bp_weight = 607.4 + 331.2 * gc_fraction;
+    return length * avg_bp_weight;
+}

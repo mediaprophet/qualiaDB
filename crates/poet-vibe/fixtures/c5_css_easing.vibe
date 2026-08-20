@@ -1,0 +1,20 @@
+module <https://qualiadb.org/modules/css_easing>;
+import "vibe:0.1/math" as m;
+pure fn ease_in(t: f64) -> f64 {
+    let tc = m.clamp(t, 0.0, 1.0);
+    return tc * tc;
+}
+pure fn ease_out(t: f64) -> f64 {
+    let tc = m.clamp(t, 0.0, 1.0);
+    return 1.0 - (1.0 - tc) * (1.0 - tc);
+}
+pure fn ease_in_out(t: f64) -> f64 {
+    let tc = m.clamp(t, 0.0, 1.0);
+    if tc < 0.5 {
+        return 2.0 * tc * tc;
+    }
+    return 1.0 - 2.0 * (1.0 - tc) * (1.0 - tc);
+}
+pure fn linear_easing(t: f64) -> f64 {
+    return m.clamp(t, 0.0, 1.0);
+}

@@ -1,0 +1,1 @@
+fn bad() { let t = 2.0; return t; }
