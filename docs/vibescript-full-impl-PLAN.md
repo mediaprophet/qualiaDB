@@ -636,7 +636,7 @@ AST nodes, then Species/Mixture, then CST, then HID, then pretty syntax last.
 | T60 | **LSP server** — `tower-lsp` based; autocomplete, go-to-definition, find-references, real-time diagnostics. | **Done** — poet-lsp crate with tower-lsp | ecosystem §3.1, topics-yet-considered §1 |
 | T61 | **WASM playground** — Monaco editor + live output; zero-install. | Not started (deferred) | ecosystem §3.2, topics-yet-considered §2 |
 | T62 | **CLI toolchain** — REPL, formatter, linter/static analyzer. | **Done** — poet CLI with check/fmt/eval/translate/repl | ecosystem §3.3, topics-yet-considered §3 |
-| T63 | **Module system / package manager** — `import <iri> as name`; catalog is the module graph. No npm. No `vibe.toml` dependency solver in 0.x. | Not started | excellence-first §2.7, ecosystem §3.4 |
+| T63 | **Module system / package manager** — `import <iri> as name`; catalog is the module graph. No npm. No `vibe.toml` dependency solver in 0.x. | **Done** — module_system.rs with ModuleId, ModuleEntry, ModuleCatalog (cycle detection, topological order), ModuleResolver (strips vibe:0.1/ prefix), default_catalog with built-in modules (math, time, graph, crypto, zk, hid) | excellence-first §2.7, ecosystem §3.4 |
 | T64 | **One import / capability story** — kill `vibe:0.1/` prefix as sacred string; language version lives on module header / AST tag. | **Done** — optional vibe:0.1/ prefix | excellence-first §2.7 |
 | T65 | **Interactive onboarding / "Tour of..."** — walk new users through paradigms. | Not started (deferred) | ecosystem §3.5, topics-yet-considered §5 |
 
