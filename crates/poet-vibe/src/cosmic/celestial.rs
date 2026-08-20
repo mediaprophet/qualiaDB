@@ -237,6 +237,152 @@ pub fn mars_profile() -> CelestialBodyProfile {
     }
 }
 
+/// Jupiter — gas giant (OCS §2.1).
+pub fn jupiter_profile() -> CelestialBodyProfile {
+    CelestialBodyProfile {
+        name: "Jupiter".into(),
+        class: CelestialBodyClass::GasGiant,
+        usri: "urn:omni:v1:physical:observable:standard:sol:jupiter".into(),
+        mass_kg: 1.898e27,
+        equatorial_radius_m: 71_492_000.0, // At 1-bar level
+        rotation_period_s: 35_718.0,       // ~9h 55m
+        surface: ReferenceSurface::Equipotential {
+            name: "1-bar level".into(),
+        },
+        gravity: GravitationalField::newtonian(1.26686534e17, 71_492_000.0),
+    }
+}
+
+/// Saturn — gas giant (OCS §2.1).
+pub fn saturn_profile() -> CelestialBodyProfile {
+    CelestialBodyProfile {
+        name: "Saturn".into(),
+        class: CelestialBodyClass::GasGiant,
+        usri: "urn:omni:v1:physical:observable:standard:sol:saturn".into(),
+        mass_kg: 5.683e26,
+        equatorial_radius_m: 60_268_000.0,
+        rotation_period_s: 38_352.0, // ~10h 39m
+        surface: ReferenceSurface::Equipotential {
+            name: "1-bar level".into(),
+        },
+        gravity: GravitationalField::newtonian(3.7931187e16, 60_268_000.0),
+    }
+}
+
+/// Earth's Moon — natural satellite (OCS §2.1).
+pub fn moon_profile() -> CelestialBodyProfile {
+    CelestialBodyProfile {
+        name: "Moon".into(),
+        class: CelestialBodyClass::NaturalSatellite,
+        usri: "urn:omni:v1:physical:observable:standard:sol:earth:moon".into(),
+        mass_kg: 7.342e22,
+        equatorial_radius_m: 1_737_400.0,
+        rotation_period_s: 2_360_591.6, // Sidereal month
+        surface: ReferenceSurface::Biaxial {
+            a: 1_737_400.0,
+            c: 1_735_970.0,
+        },
+        gravity: GravitationalField::newtonian(4.9048695e12, 1_737_400.0),
+    }
+}
+
+/// Europa — icy moon with subsurface ocean (OCS §2.6).
+pub fn europa_profile() -> CelestialBodyProfile {
+    CelestialBodyProfile {
+        name: "Europa".into(),
+        class: CelestialBodyClass::NaturalSatellite,
+        usri: "urn:omni:v1:physical:observable:standard:sol:jupiter:europa".into(),
+        mass_kg: 4.8e22,
+        equatorial_radius_m: 1_560_800.0,
+        rotation_period_s: 271_558.8, // Tidally locked
+        surface: ReferenceSurface::Biaxial {
+            a: 1_560_800.0,
+            c: 1_560_300.0,
+        },
+        gravity: GravitationalField::newtonian(3.202e12, 1_560_800.0),
+    }
+}
+
+/// Neutron star — compact relativistic object (OCS §2.1).
+pub fn neutron_star_profile() -> CelestialBodyProfile {
+    CelestialBodyProfile {
+        name: "Neutron Star (typical)".into(),
+        class: CelestialBodyClass::CompactRelativistic,
+        usri: "urn:omni:v1:physical:observable:standard:neutron-star".into(),
+        mass_kg: 2.8e30,               // ~1.4 solar masses
+        equatorial_radius_m: 12_000.0, // ~12 km
+        rotation_period_s: 0.001,      // ~1ms pulsar
+        surface: ReferenceSurface::Biaxial {
+            a: 12_000.0,
+            c: 11_990.0,
+        },
+        gravity: GravitationalField {
+            mu: 1.867e20,
+            r_ref: 12_000.0,
+            jn: vec![],
+            schwarzschild_r: 2.0 * 1.867e20 / (C * C), // ~4.16 km
+            kerr_spin_a: 1000.0,                       // Spinning pulsar
+        },
+    }
+}
+
+/// Sagittarius A* — supermassive black hole (OCS §2.1, §2.3).
+pub fn sgr_a_profile() -> CelestialBodyProfile {
+    CelestialBodyProfile {
+        name: "Sagittarius A*".into(),
+        class: CelestialBodyClass::BlackHole,
+        usri: "urn:omni:v1:physical:observable:standard:milkyway:sgr-a".into(),
+        mass_kg: 8.26e36,              // ~4.15 million solar masses
+        equatorial_radius_m: 1.227e10, // Event horizon (~12.27 million km)
+        rotation_period_s: 1.0e4,      // Slowly spinning SMBH
+        surface: ReferenceSurface::Equipotential {
+            name: "event horizon".into(),
+        },
+        gravity: GravitationalField {
+            mu: 5.514e26,
+            r_ref: 1.227e10,
+            jn: vec![],
+            schwarzschild_r: 1.227e10,         // r_s = 2GM/c²
+            kerr_spin_a: 0.9 * 1.227e10 / 2.0, // High spin: a ≈ 0.9 * r_s/2
+        },
+    }
+}
+
+/// The Sun — main sequence star (OCS §2.1).
+pub fn sun_profile() -> CelestialBodyProfile {
+    CelestialBodyProfile {
+        name: "Sun".into(),
+        class: CelestialBodyClass::Star,
+        usri: "urn:omni:v1:physical:observable:standard:sol:sun".into(),
+        mass_kg: 1.989e30,
+        equatorial_radius_m: 696_340_000.0,
+        rotation_period_s: 2_192_320.0, // ~25.4 days (equatorial)
+        surface: ReferenceSurface::Equipotential {
+            name: "photosphere".into(),
+        },
+        gravity: GravitationalField::newtonian(1.32712440018e20, 6_963_400_000.0),
+    }
+}
+
+/// Look up a body profile by name (OCS §2).
+pub fn body_profile_by_name(name: &str) -> Option<CelestialBodyProfile> {
+    match name {
+        "earth" => Some(earth_profile()),
+        "mars" => Some(mars_profile()),
+        "jupiter" => Some(jupiter_profile()),
+        "saturn" => Some(saturn_profile()),
+        "moon" => Some(moon_profile()),
+        "europa" => Some(europa_profile()),
+        "neutron-star" => Some(neutron_star_profile()),
+        "sgr-a" => Some(sgr_a_profile()),
+        "sun" => Some(sun_profile()),
+        _ => None,
+    }
+}
+
+/// Speed of light constant (m/s).
+const C: f64 = 299_792_458.0;
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -255,6 +401,62 @@ mod tests {
         let g = mars.surface_gravity();
         // Should be ~3.71 m/s²
         assert!((g - 3.71).abs() < 0.1, "got {} expected ~3.71", g);
+    }
+
+    #[test]
+    fn jupiter_surface_gravity() {
+        let j = jupiter_profile();
+        let g = j.surface_gravity();
+        // Should be ~24.79 m/s²
+        assert!((g - 24.79).abs() < 1.0, "got {} expected ~24.79", g);
+    }
+
+    #[test]
+    fn moon_surface_gravity() {
+        let m = moon_profile();
+        let g = m.surface_gravity();
+        // Should be ~1.62 m/s²
+        assert!((g - 1.62).abs() < 0.1, "got {} expected ~1.62", g);
+    }
+
+    #[test]
+    fn sun_surface_gravity() {
+        let s = sun_profile();
+        let g = s.surface_gravity();
+        // Should be ~274 m/s²
+        assert!((g - 274.0).abs() < 10.0, "got {} expected ~274", g);
+    }
+
+    #[test]
+    fn neutron_star_has_schwarzschild() {
+        let ns = neutron_star_profile();
+        assert!(ns.gravity.schwarzschild_r > 0.0);
+        assert!(ns.gravity.kerr_spin_a > 0.0);
+        assert!(ns.class.is_relativistic());
+    }
+
+    #[test]
+    fn sgr_a_is_black_hole() {
+        let sgr = sgr_a_profile();
+        assert_eq!(sgr.class, CelestialBodyClass::BlackHole);
+        assert!(sgr.gravity.schwarzschild_r > 0.0);
+        // Horizon should be positive
+        assert!(sgr.gravity.kerr_horizon_r() > 0.0);
+    }
+
+    #[test]
+    fn body_profile_lookup() {
+        assert!(body_profile_by_name("earth").is_some());
+        assert!(body_profile_by_name("jupiter").is_some());
+        assert!(body_profile_by_name("sgr-a").is_some());
+        assert!(body_profile_by_name("pluto").is_none());
+    }
+
+    #[test]
+    fn europa_is_natural_satellite() {
+        let e = europa_profile();
+        assert_eq!(e.class, CelestialBodyClass::NaturalSatellite);
+        assert!(e.surface_gravity() < 2.0); // Low gravity
     }
 
     #[test]

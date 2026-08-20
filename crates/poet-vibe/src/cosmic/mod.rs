@@ -18,12 +18,18 @@
 //!
 //! Reference: OCS Specification v2.2.0, Timothy Charles Holborn.
 
+pub mod ar;
+pub mod atmosphere;
 pub mod cb_usri;
 pub mod celestial;
+pub mod colocated;
+pub mod flrw;
 pub mod grounding;
+pub mod microverse;
 pub mod nested;
 pub mod observer;
 pub mod opcode;
+pub mod parallel;
 pub mod stardate;
 pub mod theory;
 pub mod transforms;
