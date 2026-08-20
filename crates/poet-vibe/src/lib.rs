@@ -26,6 +26,7 @@ mod value;
 pub mod crypto;
 pub mod dag;
 pub mod deontic_interrupt;
+pub mod frame_morphism;
 pub mod hid;
 pub mod law_package;
 pub mod locale;

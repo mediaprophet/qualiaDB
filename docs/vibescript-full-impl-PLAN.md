@@ -555,7 +555,7 @@ AST nodes, then Species/Mixture, then CST, then HID, then pretty syntax last.
 | T24 | **Wire `dag.rs` into `eval` / `capability_invoke`** — or rename `proto_dag` and strip "A8 hardware interrupt" claim. | **Done** — dag.execute/dag.validate dispatch in bind/mod.rs, DAG executor in qualia-core-db | excellence-first §2.9, recommendations §4.6 |
 | T25 | **Wire `deontic_interrupt.rs` into `capability_invoke`** — a prohibition must be a sealed receipt, not an internal module. | **Done** — deontic.check dispatch in bind/mod.rs, deontic_interrupt module | excellence-first §2.9 |
 | T26 | **Wire `reflection.rs` to run on isolated `PoetSnapshot`** — must not write the live graph. | **Done** — reflection.rs module exists | recommendations §4.3 |
-| T27 | **Fix `Manifold.project`** — currently echoes x,y,z,t and stamps a presentation level. Either implement a real presentation morphism or honesty-label it `"stub"`. | Not started | excellence-first §2.9 |
+| T27 | **Fix `Manifold.project`** — currently echoes x,y,z,t and stamps a presentation level. Either implement a real presentation morphism or honesty-label it `"stub"`. | **Done** — honesty-labeled as "stub" in project.rs. Returns x,y,z,t + level + spatial flag + honesty="stub". | excellence-first §2.9 |
 
 ### 8.5 Field, Material, Law as Language (excellence-first §2.4, fields-materials)
 
@@ -661,7 +661,7 @@ AST nodes, then Species/Mixture, then CST, then HID, then pretty syntax last.
 | W2 | WorldLine as the continuant's time-like self | **Done** — WorldLine implemented in value.rs | excellence-first §4 |
 | W3 | Conservation hooks on glue | **Done** (tracked as T34) | excellence-first §4 |
 | W4 | Mixture / phase diagrams as data | **Done** (tracked as T33) | excellence-first §4 |
-| W5 | Frame morphisms (Galilean → Lorentz later) | Not started | excellence-first §4 |
+| W5 | Frame morphisms (Galilean → Lorentz later) | **Done** — frame_morphism.rs with GalileanMorphism (translation, rotation, velocity, compose, inverse, transform_position/pose) + LorentzMorphism (gamma factor, honesty-labeled "stub") | excellence-first §4 |
 | W6 | Causal cone on pulse / graph | **Done** (tracked as T35) | excellence-first §4 |
 | W7 | Measurement context / observer stalk | **Done** — MeasurementContext in observer.rs | excellence-first §4 |
 | W8 | Assistive I/O in the first HID vertical | Not started (tracked as T43) | excellence-first §4 |
