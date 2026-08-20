@@ -520,8 +520,8 @@ AST nodes, then Species/Mixture, then CST, then HID, then pretty syntax last.
 | T4 | **Add `Frame` / `Pose` / `Transform` types** — origin + basis; local by default. Morphism, not naked mat4. | **Done** — Frame, Pose, Transform in value.rs | excellence-first §2.2, recommendations §4.8 |
 | T5 | **Add `FieldRef` / `MaterialRef` types** — handles to sampled fields and signed signatures; never the grid. | **Done** — FieldRef, MaterialRef in types.rs | excellence-first §2.2, fields-materials §0 |
 | T6 | **Add `WorldLine` type** — continuant through Instant × Pose. Kills UUID-as-identity. | **Done** — WorldLine in value.rs (W2) | excellence-first §2.2, W2 |
-| T7 | **Add `QuinRef` type** — opaque 48-byte handle; scripts do not see raw metadata/parity. Replace `Value::Quin { s,p,o,c }`. | **Done** — QuinRef in value.rs with from_raw/from_quin, content_hash | excellence-first §2.5 |
-| T8 | **Delete `Value::Identish`** — parser-shaped hole in the type lattice. | Not started (breaking change, deferred to W17) | excellence-first §2.5 |
+| T7 | **Add `QuinRef` type** — opaque 48-byte handle; scripts do not see raw metadata/parity. Replace `Value::Quin { s,p,o,c }`. | **Done** — QuinRef in value.rs with from_raw/from_quin, content_hash. `Value::Quin` removed (06178cf8); all consumers migrated to QuinRef. | excellence-first §2.5 |
+| T8 | **Delete `Value::Identish`** — parser-shaped hole in the type lattice. | **Done** — Identish already absent from codebase. W17 breaking pass complete (06178cf8). | excellence-first §2.5 |
 | T9 | **User `enum` / `match` as real ADTs** — not only `Ok`/`Err`/`Some`/`None` patterns. | **Done** — EnumDecl in ast.rs, Type::Enum in types.rs | excellence-first §2.6, recommendations §2 |
 | T10 | **Enforce `mut` in check and eval** — currently lexed but not enforced. | **Done** — check.rs and eval.rs both track mutables set, reject assignment to immutable bindings with E200 | recommendations §2 |
 | T11 | **Integer ops are `checked_*` → `E600`** — currently specified but not implemented. | **Done** — checked_add fixtures (i1, i2, i3) pass, E600 on overflow | recommendations §2 |
@@ -649,7 +649,7 @@ AST nodes, then Species/Mixture, then CST, then HID, then pretty syntax last.
 | T68 | **Tick policy under load** — drop / coalesce / tear. Unspecified, so animation and sensor fusion will lie. | **Done** — tick_policy.rs with Drop/Coalesce/Tear policies, TickQueue, (μ,λ) tear evidence | excellence-first §3.9 |
 | T69 | **Presentation morphism as sheaf** — visual / haptic / auditory / Braille. Not `Render.css_*` plus hope. | **Done** — presentation.rs with PresentationMorphism, PresentationSheaf, PresentationModality (Visual/Haptic/Auditory/Braille) | excellence-first §3.10 |
 | T70 | **Identifier vs continuant in type system** — `Did` vs something that is allowed to mean a person. Prose-only is how UUID-identity comes back. | **Done** — Did and Continuant are distinct Type variants with clear semantics: Did refers to, Continuant has a Did and endures | excellence-first §3.11, recommendations §4.7 |
-| T71 | **One clock story in Wellfair / pulse / poet** — `asserted_time_unix: u32` in wellfare-core is another coarse Unix. Replace together, or Vibe Instant won't compose. | **Partially done** — `InstantBridge` + `DurationBridge` bridge types with full comparison/arithmetic API, re-exported from lib root. `RecordEnvelope` has `asserted_instant()`, `with_instants()`, `valid_time_duration()`. Converts to/from `poet_vibe::Instant`/`Duration` under `qualia` feature. 131 `u32` field references across wellfare-core (75) and qualia-client-core (45) not yet migrated (commits `ea565e40`, `d154b6a3`). 20 tests. | excellence-first §3.14 |
+| T71 | **One clock story in Wellfair / pulse / poet** — `asserted_time_unix: u32` in wellfare-core is another coarse Unix. Replace together, or Vibe Instant won't compose. | **Partially done** — `InstantBridge` + `DurationBridge` bridge types with full comparison/arithmetic API, `Default` derive, `is_zero()` for serde skip. `RecordEnvelope` has `asserted_instant()`, `with_instants()`, `valid_time_duration()`. Converts to/from `poet_vibe::Instant`/`Duration` under `qualia` feature. `JournalEntry` now carries `asserted_instant: InstantBridge` (backward-compatible serde). Key API consumers migrated: `host_core.rs`, `journal.rs`, `export_package.rs`, `pwa.rs`, `disclosure.rs`, `coop.rs`, `live_share.rs` (commit `abf42763`). Remaining ~100 `u32` field references in wellfare-core internal modules and test struct literals still pending. 20+ tests. | excellence-first §3.14 |
 | T72 | **Law packages as signed content** — who authored the dissolve rate; under what licence; whether it is physical or fictional. Provenance must travel. | **Done** — law_package.rs with LawPackage, LawKind, LawStore, canonical bytes for signing | excellence-first §3.8, W10 |
 | T73 | **Quantity dimension algebra** — Pa = N/m². Conversions are not a host lookup table of strings. | **Done** — quantity.rs with Dimension struct, Mul/Div for derived dimensions, Unit::convert() with dimension mismatch checking, lookup_unit() | excellence-first §3.7 |
 
@@ -673,7 +673,7 @@ AST nodes, then Species/Mixture, then CST, then HID, then pretty syntax last.
 | W14 | Multi-scale / filtered sheaves (LOD as physics) | **Done** — MultiScaleSheaf + LevelOfDetail in observer.rs | excellence-first §4 |
 | W15 | Civic time + authority to assert it | **Done** — CivicInstant in observer.rs | excellence-first §4 |
 | W16 | Pretty material/field syntax that is 100% CST sugar | **Done** — pretty.rs with PrettyField, PrettyMaterial, PrettyLaw, PrettyDocument. CST sugar over FieldDecl/MaterialDecl/LawDecl AST nodes. Property separators, blank line options, full document formatting. | excellence-first §4 |
-| W17 | Delete Identish, four-field Quin, time.unix-as-primary in one breaking pass | **Partially done** — time.unix-as-primary killed (X6). Identish and four-field Quin still pending (T8, T7). | excellence-first §4 |
+| W17 | Delete Identish, four-field Quin, time.unix-as-primary in one breaking pass | **Done** — time.unix-as-primary killed (X6). Identish already absent. Four-field `Value::Quin` removed and all consumers migrated to `Value::QuinRef` (06178cf8). | excellence-first §4 |
 | W18 | Keyword locale views with English or another locale as first pretty dialect | **Done** (tracked as T37) — locale.rs with en + zh tables, translate.rs | excellence-first §4 |
 
 ### 8.16 Decisions Needing Timothy (excellence-first §7)
@@ -742,15 +742,15 @@ a unified multi-agent execution substrate.
 | R1 | `pub use dag, deontic_interrupt, reflection` from `lib.rs` | P0 | Low | — |
 | R2 | Wire `PhaseLeaser` into `eval.rs` capability dispatch | P1 | Medium | R1 |
 | R3 | Wire `DagPipeline` execution into `poet_host` | P2 | Medium | R1, R5 |
-| R4 | Isolate `reflection::Stage3` on `PoetSnapshot` fork | P0 | Low | — |
+| R4 | Isolate `reflection::Stage3` on `PoetSnapshot` fork | P0 | Low | **Done** — `supports_isolation()` returns true; fork is unattached; staged writes isolated (1af6e1bf) |
 | R5 | Connect blackboard channels to DAG node I/O | P0 | Low | R1 |
 | R6 | Add `LocalJobKind::AgentTurn` to job scheduler | P2 | Low | — |
 | R7 | Resolve @mentions to roster agents | P2 | Medium | — |
-| R8 | Wire `governance/coordination.rs` host seams | P1 | Medium | — |
+| R8 | Wire `governance/coordination.rs` host seams | P1 | Medium | **Done** — `coord_seams.rs` wires `CoordHostSeams` to `CrdtResolver::verify_delegation`, `SuspendedTransactionQueue::push`, and `daemon_graph` VC minting (1af6e1bf) |
 | R9 | Wire DOMINO logit mask into `QTensorEngine` | P3 | High | — |
 | R10 | Add `DisclosureDenied` value type | P3 | Low | — |
 | R11 | Wire `compute_priority` into `daemon_swarm.rs` | P1 | Low | — |
-| R12 | Instrument trace ledger (Kind B) | P4 | Low | — |
+| R12 | Instrument trace ledger (Kind B) | P4 | Low | **Done** — `InstrumentTraceLedger` wired into `PoetSnapshot` with `trace()` / `trace_invoke()` helpers; survives fork (1af6e1bf) |
 
 ### 9.3 Priority tiers
 
