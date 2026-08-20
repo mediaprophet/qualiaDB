@@ -12,7 +12,9 @@
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::record::{EpistemicStatus, EvidenceType, RecordEnvelope, SensitivityClass};
+use crate::record::{
+    EpistemicStatus, EvidenceType, InstantBridge, RecordEnvelope, SensitivityClass,
+};
 
 /// Role a member holds within a cooperative project.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -42,6 +44,10 @@ pub struct Project {
     #[serde(default)]
     pub licensing_ontologies: Vec<String>,
     pub created_at_unix: u32,
+    /// High-resolution instant (T71 bridge). Preferred over `created_at_unix`
+    /// when present; the u32 field is kept for backward-compatible deserialization.
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub created_at_instant: Option<InstantBridge>,
 }
 
 impl Project {
@@ -57,7 +63,15 @@ impl Project {
             description: description.into(),
             licensing_ontologies,
             created_at_unix,
+            created_at_instant: Some(InstantBridge::from_coarse(created_at_unix)),
         }
+    }
+
+    /// Resolve the created-at instant, preferring the high-resolution
+    /// `InstantBridge` field when present (T71 bridge).
+    pub fn created_at(&self) -> InstantBridge {
+        self.created_at_instant
+            .unwrap_or_else(|| InstantBridge::from_coarse(self.created_at_unix))
     }
 }
 
@@ -70,6 +84,10 @@ pub struct ProjectMembership {
     #[serde(default)]
     pub role: ProjectRole,
     pub agreed_at_unix: u32,
+    /// High-resolution instant (T71 bridge). Preferred over `agreed_at_unix`
+    /// when present; the u32 field is kept for backward-compatible deserialization.
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub agreed_at_instant: Option<InstantBridge>,
 }
 
 impl ProjectMembership {
@@ -85,7 +103,15 @@ impl ProjectMembership {
             member_did: member_did.into(),
             role,
             agreed_at_unix,
+            agreed_at_instant: Some(InstantBridge::from_coarse(agreed_at_unix)),
         }
+    }
+
+    /// Resolve the agreed-at instant, preferring the high-resolution
+    /// `InstantBridge` field when present (T71 bridge).
+    pub fn agreed_at(&self) -> InstantBridge {
+        self.agreed_at_instant
+            .unwrap_or_else(|| InstantBridge::from_coarse(self.agreed_at_unix))
     }
 }
 
@@ -123,6 +149,10 @@ pub struct Contribution {
     #[serde(default)]
     pub privacy_level: ContributionPrivacy,
     pub occurred_at_unix: u32,
+    /// High-resolution instant (T71 bridge). Preferred over `occurred_at_unix`
+    /// when present; the u32 field is kept for backward-compatible deserialization.
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub occurred_at_instant: Option<InstantBridge>,
     /// Prior contribution in this contributor's chain, if any.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub predecessor_id: Option<String>,
@@ -153,8 +183,16 @@ impl Contribution {
             roi_multiplier,
             privacy_level,
             occurred_at_unix,
+            occurred_at_instant: Some(InstantBridge::from_coarse(occurred_at_unix)),
             predecessor_id: None,
         }
+    }
+
+    /// Resolve the occurred-at instant, preferring the high-resolution
+    /// `InstantBridge` field when present (T71 bridge).
+    pub fn occurred_at(&self) -> InstantBridge {
+        self.occurred_at_instant
+            .unwrap_or_else(|| InstantBridge::from_coarse(self.occurred_at_unix))
     }
 
     /// Link this contribution as the successor of `predecessor`, forming the author chain.
@@ -287,8 +325,11 @@ fn project_envelope(
         evidence_type: EvidenceType::SelfReported,
         sensitivity: SensitivityClass::Restricted,
         asserted_time_unix: asserted_unix,
+        asserted_instant: None,
         valid_time_start_unix: Some(valid_start_unix),
+        valid_time_start_instant: None,
         valid_time_end_unix: None,
+        valid_time_end_instant: None,
         predecessor_id,
         blob_hash,
         tombstone: false,
@@ -413,6 +454,7 @@ mod tests {
             roi_multiplier: 1.0,
             privacy_level: ContributionPrivacy::default(),
             occurred_at_unix: at,
+            occurred_at_instant: None,
             predecessor_id: None,
         }
     }

@@ -85,8 +85,20 @@ pub struct RecordEnvelope {
     pub evidence_type: EvidenceType,
     pub sensitivity: SensitivityClass,
     pub asserted_time_unix: u32,
+    /// High-resolution instant (T71 bridge). Preferred over `asserted_time_unix`
+    /// when present; the u32 field is kept for backward-compatible deserialization.
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub asserted_instant: Option<InstantBridge>,
     pub valid_time_start_unix: Option<u32>,
+    /// High-resolution valid-time start (T71 bridge). Preferred over
+    /// `valid_time_start_unix` when present.
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub valid_time_start_instant: Option<InstantBridge>,
     pub valid_time_end_unix: Option<u32>,
+    /// High-resolution valid-time end (T71 bridge). Preferred over
+    /// `valid_time_end_unix` when present.
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub valid_time_end_instant: Option<InstantBridge>,
     pub predecessor_id: Option<String>,
     pub blob_hash: Option<String>, // Document/Media reference
     pub tombstone: bool,
@@ -159,27 +171,32 @@ impl RecordEnvelope {
         count
     }
 
-    /// Convert the coarse `asserted_time_unix: u32` to an `InstantBridge`
-    /// with nanosecond resolution (T71 bridge).
-    ///
-    /// This is the bridge for the one-clock migration. New code should
-    /// use this to obtain a high-resolution instant for composition with
-    /// VibeScript time operations. The full migration (replacing the u32
-    /// field) is deferred until all consumers are updated.
+    /// Resolve the asserted instant, preferring the high-resolution
+    /// `InstantBridge` field when present and falling back to the coarse
+    /// `u32` Unix seconds otherwise (T71 bridge).
     pub fn asserted_instant(&self) -> InstantBridge {
-        InstantBridge::unix(self.asserted_time_unix as i64, 0)
+        self.asserted_instant
+            .unwrap_or_else(|| InstantBridge::unix(self.asserted_time_unix as i64, 0))
     }
 
-    /// Convert valid_time_start to an InstantBridge (T71 bridge).
+    /// Resolve the valid-time start instant, preferring the high-resolution
+    /// `InstantBridge` field when present and falling back to the coarse
+    /// `u32` Unix seconds otherwise (T71 bridge).
     pub fn valid_time_start_instant(&self) -> Option<InstantBridge> {
-        self.valid_time_start_unix
-            .map(|t| InstantBridge::unix(t as i64, 0))
+        self.valid_time_start_instant.or_else(|| {
+            self.valid_time_start_unix
+                .map(|t| InstantBridge::unix(t as i64, 0))
+        })
     }
 
-    /// Convert valid_time_end to an InstantBridge (T71 bridge).
+    /// Resolve the valid-time end instant, preferring the high-resolution
+    /// `InstantBridge` field when present and falling back to the coarse
+    /// `u32` Unix seconds otherwise (T71 bridge).
     pub fn valid_time_end_instant(&self) -> Option<InstantBridge> {
-        self.valid_time_end_unix
-            .map(|t| InstantBridge::unix(t as i64, 0))
+        self.valid_time_end_instant.or_else(|| {
+            self.valid_time_end_unix
+                .map(|t| InstantBridge::unix(t as i64, 0))
+        })
     }
 
     /// Create a RecordEnvelope with an InstantBridge for asserted time (T71 bridge).
@@ -204,8 +221,11 @@ impl RecordEnvelope {
             evidence_type,
             sensitivity,
             asserted_time_unix: asserted_unix,
+            asserted_instant: Some(*asserted),
             valid_time_start_unix: None,
+            valid_time_start_instant: None,
             valid_time_end_unix: None,
+            valid_time_end_instant: None,
             predecessor_id: None,
             blob_hash,
             tombstone: false,
@@ -236,8 +256,11 @@ impl RecordEnvelope {
             evidence_type,
             sensitivity,
             asserted_time_unix: asserted.secs as u32,
+            asserted_instant: Some(*asserted),
             valid_time_start_unix: valid_start.map(|i| i.secs as u32),
+            valid_time_start_instant: valid_start.copied(),
             valid_time_end_unix: valid_end.map(|i| i.secs as u32),
+            valid_time_end_instant: valid_end.copied(),
             predecessor_id: None,
             blob_hash,
             tombstone: false,
@@ -501,8 +524,11 @@ mod tests {
             evidence_type: EvidenceType::SelfReported,
             sensitivity: SensitivityClass::Public,
             asserted_time_unix: 1_700_000_000,
+            asserted_instant: None,
             valid_time_start_unix: None,
+            valid_time_start_instant: None,
             valid_time_end_unix: None,
+            valid_time_end_instant: None,
             predecessor_id: None,
             blob_hash: None,
             tombstone: false,
@@ -541,8 +567,11 @@ mod tests {
             evidence_type: EvidenceType::SelfReported,
             sensitivity: SensitivityClass::Public,
             asserted_time_unix: 1_700_000_000,
+            asserted_instant: None,
             valid_time_start_unix: Some(1_699_000_000),
+            valid_time_start_instant: None,
             valid_time_end_unix: Some(1_701_000_000),
+            valid_time_end_instant: None,
             predecessor_id: None,
             blob_hash: None,
             tombstone: false,
@@ -679,8 +708,11 @@ mod tests {
             evidence_type: EvidenceType::SelfReported,
             sensitivity: SensitivityClass::Public,
             asserted_time_unix: 1_700_000_000,
+            asserted_instant: None,
             valid_time_start_unix: Some(1_699_000_000),
+            valid_time_start_instant: None,
             valid_time_end_unix: Some(1_701_000_000),
+            valid_time_end_instant: None,
             predecessor_id: None,
             blob_hash: None,
             tombstone: false,
@@ -701,8 +733,11 @@ mod tests {
             evidence_type: EvidenceType::SelfReported,
             sensitivity: SensitivityClass::Public,
             asserted_time_unix: 1_700_000_000,
+            asserted_instant: None,
             valid_time_start_unix: None,
+            valid_time_start_instant: None,
             valid_time_end_unix: None,
+            valid_time_end_instant: None,
             predecessor_id: None,
             blob_hash: None,
             tombstone: false,

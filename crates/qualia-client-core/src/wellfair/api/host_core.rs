@@ -530,7 +530,9 @@ impl WebizenHostApi {
             schedule_times,
             prescriber: None,
             ceased_at_unix: None,
+            ceased_at_instant: None,
             created_at_unix: now,
+            created_at_instant: None,
         };
         let packed = medication::medication_envelope(&entry, &self.owner_did, &self.author_did);
         self.submit_record_with_summary(
@@ -560,6 +562,7 @@ impl WebizenHostApi {
             medication_name: medication_name.to_string(),
             status,
             administered_at_unix: now,
+            administered_at_instant: None,
             notes,
         };
         let packed = medication::administration_envelope(&admin, &self.owner_did, &self.author_did);
@@ -589,6 +592,7 @@ impl WebizenHostApi {
             meal_type: meal_type.to_string(),
             calories_kcal,
             logged_at_unix: now,
+            logged_at_instant: None,
         };
         let packed = medication::diet_envelope(&diet, &self.owner_did, &self.author_did);
         self.submit_record_with_summary(

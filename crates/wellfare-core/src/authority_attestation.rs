@@ -19,7 +19,9 @@
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::record::{EpistemicStatus, EvidenceType, RecordEnvelope, SensitivityClass};
+use crate::record::{
+    EpistemicStatus, EvidenceType, InstantBridge, RecordEnvelope, SensitivityClass,
+};
 
 /// Well-known upper-level authority type ids.
 ///
@@ -155,6 +157,10 @@ pub struct AuthorityAttestation {
     #[serde(default)]
     pub action_required: bool,
     pub issued_unix: u32,
+    /// High-resolution instant (T71 bridge). Preferred over `issued_unix`
+    /// when present; the u32 field is kept for backward-compatible deserialization.
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub issued_instant: Option<InstantBridge>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub blob_hash: Option<String>,
 }
@@ -177,8 +183,16 @@ impl AuthorityAttestation {
             statement: statement.into(),
             action_required: false,
             issued_unix,
+            issued_instant: Some(InstantBridge::from_coarse(issued_unix)),
             blob_hash: None,
         }
+    }
+
+    /// Resolve the issued instant, preferring the high-resolution
+    /// `InstantBridge` field when present (T71 bridge).
+    pub fn issued_at(&self) -> InstantBridge {
+        self.issued_instant
+            .unwrap_or_else(|| InstantBridge::from_coarse(self.issued_unix))
     }
 
     /// Attach the agent-in-capacity who issued the attestation.
@@ -264,8 +278,11 @@ pub fn build_authority_attestation_envelope(
         evidence_type,
         sensitivity: SensitivityClass::Restricted,
         asserted_time_unix: asserted_unix,
+        asserted_instant: None,
         valid_time_start_unix: Some(att.issued_unix),
+        valid_time_start_instant: att.issued_instant,
         valid_time_end_unix: None,
+        valid_time_end_instant: None,
         predecessor_id: None,
         blob_hash: att.blob_hash.clone(),
         tombstone: false,

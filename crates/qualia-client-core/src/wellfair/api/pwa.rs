@@ -178,6 +178,7 @@ impl WebizenHostApi {
                         counterparty: None,
                         project_id: None,
                         occurred_at_unix: row.asserted_instant.to_unix_secs() as u32,
+                        occurred_at_instant: None,
                     });
                 }
             }

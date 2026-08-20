@@ -5,7 +5,9 @@
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
-use crate::record::{EpistemicStatus, EvidenceType, RecordEnvelope, SensitivityClass};
+use crate::record::{
+    EpistemicStatus, EvidenceType, InstantBridge, RecordEnvelope, SensitivityClass,
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -25,7 +27,15 @@ pub struct MedicationCatalogEntry {
     pub schedule_times: Vec<String>,
     pub prescriber: Option<String>,
     pub ceased_at_unix: Option<u32>,
+    /// High-resolution instant (T71 bridge). Preferred over `ceased_at_unix`
+    /// when present; the u32 field is kept for backward-compatible deserialization.
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub ceased_at_instant: Option<InstantBridge>,
     pub created_at_unix: u32,
+    /// High-resolution instant (T71 bridge). Preferred over `created_at_unix`
+    /// when present; the u32 field is kept for backward-compatible deserialization.
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub created_at_instant: Option<InstantBridge>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -35,6 +45,10 @@ pub struct MedicationAdministration {
     pub medication_name: String,
     pub status: AdministrationStatus,
     pub administered_at_unix: u32,
+    /// High-resolution instant (T71 bridge). Preferred over `administered_at_unix`
+    /// when present; the u32 field is kept for backward-compatible deserialization.
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub administered_at_instant: Option<InstantBridge>,
     pub notes: Option<String>,
 }
 
@@ -45,6 +59,10 @@ pub struct DietEntry {
     pub meal_type: String,
     pub calories_kcal: Option<u32>,
     pub logged_at_unix: u32,
+    /// High-resolution instant (T71 bridge). Preferred over `logged_at_unix`
+    /// when present; the u32 field is kept for backward-compatible deserialization.
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub logged_at_instant: Option<InstantBridge>,
 }
 
 fn content_hash_hex(payload: &str) -> String {
@@ -94,8 +112,11 @@ fn self_reported_envelope(
         evidence_type: EvidenceType::SelfReported,
         sensitivity: SensitivityClass::Restricted,
         asserted_time_unix: asserted_unix,
+        asserted_instant: None,
         valid_time_start_unix: Some(asserted_unix),
+        valid_time_start_instant: None,
         valid_time_end_unix: None,
+        valid_time_end_instant: None,
         predecessor_id: None,
         blob_hash: Some(content_hash_hex(payload_json)),
         tombstone: false,
@@ -192,7 +213,9 @@ mod tests {
             schedule_times: vec!["08:00".into()],
             prescriber: None,
             ceased_at_unix: None,
+            ceased_at_instant: None,
             created_at_unix: 1_700_000_000,
+            created_at_instant: None,
         };
         let packed = medication_envelope(&entry, "did:wf:owner", "did:wf:owner");
         assert!(packed.envelope.id.contains(":medication:"));

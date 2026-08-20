@@ -309,6 +309,10 @@ These are **library functions**, not grammar. Hosts MUST implement the ones mark
 | Binding | Effect | Required | Notes |
 |---|---|---|---|
 | `math.abs` `math.min` `math.max` `math.clamp` | Pure | yes | i64/f64 overloads |
+| `math.sqrt` `math.sin` `math.cos` `math.tan` | Pure | yes | f64 only |
+| `math.exp` `math.log` `math.log10` | Pure | yes | natural log and base-10 |
+| `math.pow` `math.atan` `math.atan2` | Pure | yes | power and inverse trig |
+| `math.floor` `math.ceil` `math.round` | Pure | yes | i64/f64 overloads |
 | `time.unix()` | External | no | forbidden in Pure cells |
 | `rdf.triple(s,p,o)` | Pure | yes | builds `TripleTerm` |
 | `rdf.reify(term, reifier)` | Pure | yes | |
@@ -325,6 +329,35 @@ These are **library functions**, not grammar. Hosts MUST implement the ones mark
 > **Note on Time Bindings (0.1 vs Post-0.1):** `time.unix() -> i64` (seconds) is the 0.1 binding. Structured `Instant`, `time.unix_nanos`, and `time.monotonic_nanos` are post-0.1 (per the decisions register X6 and vibe-design to-do T19).
 
 Logic, geometry, inference, vision, audio, and extension codecs are **out of 0.1** except as later `capability.invoke` IDs.
+
+### 11.1 Cosmic coordinate bindings (OCS)
+
+The Omniversal Coordinate System (OCS) bindings expose the `poet_vibe::cosmic` library via `capability.invoke` IDs in the `Cosmic.*` namespace. These are post-0.1 extensions available on `native-desktop` targets.
+
+| Binding | Effect | Input | Output |
+|---|---|---|---|
+| `Cosmic.geodetic_to_ecef` | Pure | `{ lat_deg, lon_deg, alt_m }` | `{ x, y, z }` |
+| `Cosmic.ecef_to_geodetic` | Pure | `{ x, y, z }` | `{ lat_deg, lon_deg, alt_m }` |
+| `Cosmic.ecef_to_enu` | Pure | `{ x, y, z, ref_lat_deg, ref_lon_deg, ref_alt_m }` | `{ east, north, up }` |
+| `Cosmic.enu_to_ecef` | Pure | `{ east, north, up, ref_lat_deg, ref_lon_deg, ref_alt_m }` | `{ x, y, z }` |
+| `Cosmic.geodetic_distance` | Pure | `{ lat_deg, lon_deg, lat2_deg, lon2_deg }` | `f64` (meters) |
+| `Cosmic.body_profile` | Pure | `{ name: string }` | `{ name, class, equatorial_radius_m, mass_kg, rotation_period_s }` |
+| `Cosmic.surface_gravity` | Pure | `{ name: string }` | `f64` (m/s²) |
+| `Cosmic.flrw_distance` | Pure | `{ z: f64 }` | `f64` (meters, comoving) |
+| `Cosmic.flrw_redshift` | Pure | `{ a_emit: f64 }` | `f64` (redshift z) |
+| `Cosmic.flrw_hubble_velocity` | Pure | `{ distance_m: f64 }` | `f64` (m/s) |
+| `Cosmic.stardate_to_gregorian` | Pure | `{ stardate: f64 }` | `f64` (Gregorian year) |
+| `Cosmic.warp_velocity` | Pure | `{ warp: f64, scale: "tos"\|"tng" }` | `f64` (m/s) |
+| `Cosmic.cochrane_units` | Pure | `{ warp: f64, scale: "tos"\|"tng" }` | `f64` (cochranes) |
+| `Cosmic.atmosphere_pressure` | Pure | `{ body: string, altitude_m: f64 }` | `f64` (Pa) |
+| `Cosmic.atmosphere_temperature` | Pure | `{ body: string, altitude_m: f64 }` | `f64` (K) |
+| `Cosmic.magnetosphere_field` | Pure | `{ body: string, distance_m: f64, body_radius_m: f64 }` | `f64` (T) |
+| `Cosmic.scale_factor` | Pure | `{ from_level: string, to_level: string }` | `f64` |
+| `Cosmic.compton_wavelength` | Pure | `{ particle: "electron"\|"proton" }` | `f64` (meters) |
+| `Cosmic.de_broglie_wavelength` | Pure | `{ particle: string, velocity_m_s: f64 }` | `f64` (meters) |
+| `Cosmic.usri_parse` | Pure | `{ uri: string }` | `Record` (parsed USRI) |
+
+Hierarchy levels for `Cosmic.scale_factor`: `L-2` through `L12` (Planck scale through cosmological horizon).
 
 ---
 

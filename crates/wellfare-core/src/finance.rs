@@ -8,7 +8,9 @@
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::record::{EpistemicStatus, EvidenceType, RecordEnvelope, SensitivityClass};
+use crate::record::{
+    EpistemicStatus, EvidenceType, InstantBridge, RecordEnvelope, SensitivityClass,
+};
 
 /// A single immutable ledger entry. Amount is signed minor units (cents):
 /// positive = credit/income, negative = debit/expense. Entries are never mutated;
@@ -29,6 +31,10 @@ pub struct LedgerEntry {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub project_id: Option<String>,
     pub occurred_at_unix: u32,
+    /// High-resolution instant (T71 bridge). Preferred over `occurred_at_unix`
+    /// when present; the u32 field is kept for backward-compatible deserialization.
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub occurred_at_instant: Option<InstantBridge>,
 }
 
 impl LedgerEntry {
@@ -47,7 +53,15 @@ impl LedgerEntry {
             counterparty: None,
             project_id: None,
             occurred_at_unix,
+            occurred_at_instant: Some(InstantBridge::from_coarse(occurred_at_unix)),
         }
+    }
+
+    /// Resolve the occurred-at instant, preferring the high-resolution
+    /// `InstantBridge` field when present (T71 bridge).
+    pub fn occurred_at(&self) -> InstantBridge {
+        self.occurred_at_instant
+            .unwrap_or_else(|| InstantBridge::from_coarse(self.occurred_at_unix))
     }
 }
 
@@ -135,8 +149,11 @@ pub fn build_ledger_entry_envelope(
         evidence_type: EvidenceType::SelfReported,
         sensitivity: SensitivityClass::Restricted,
         asserted_time_unix: asserted_unix,
+        asserted_instant: None,
         valid_time_start_unix: Some(entry.occurred_at_unix),
+        valid_time_start_instant: entry.occurred_at_instant,
         valid_time_end_unix: None,
+        valid_time_end_instant: None,
         predecessor_id: None,
         blob_hash,
         tombstone: false,
@@ -177,6 +194,7 @@ mod tests {
             counterparty: None,
             project_id: None,
             occurred_at_unix: at,
+            occurred_at_instant: None,
         }
     }
 

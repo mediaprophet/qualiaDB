@@ -58,6 +58,7 @@ fn contribution_from_summary(
             .unwrap_or(1.0),
         privacy_level: Default::default(),
         occurred_at_unix,
+        occurred_at_instant: None,
         predecessor_id: None,
     })
 }
