@@ -71,7 +71,7 @@ Fully implement VibeScript so that:
 
 ## 2. Implementation phases
 
-### Phase A: Physics capability.invoke wrappers (medium)
+### Phase A: Physics capability.invoke wrappers (medium) — ✅ DONE
 
 Wrap the existing physics simulation library functions as `capability.invoke` IDs so Vibe scripts can call them.
 
@@ -100,7 +100,7 @@ Wrap the existing physics simulation library functions as `capability.invoke` ID
 
 ---
 
-### Phase B: EMF + spectral capability.invoke wrappers (medium)
+### Phase B: EMF + spectral capability.invoke wrappers (medium) — ✅ DONE
 
 Wrap the EMF → spectral → color pipeline so Vibe scripts can compute color from field parameters.
 
