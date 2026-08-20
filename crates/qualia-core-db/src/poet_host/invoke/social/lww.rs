@@ -29,20 +29,14 @@ pub fn merge(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
 fn quin_at(args_v: &Value, key: &str, span: Span) -> Result<NQuin, Diagnostic> {
     let v =
         args::rec(args_v, key).ok_or_else(|| args::bad(span, format!("{key} quin required")))?;
-    if let Value::Quin {
-        subject,
-        predicate,
-        object,
-        context,
-    } = v
-    {
-        let metadata = 0;
-        let parity = NQuin::calculate_parity(*subject, *predicate, *object, *context, metadata);
+    if let Value::QuinRef(qr) = v {
+        let [subject, predicate, object, context, metadata, _] = qr.raw_fields();
+        let parity = NQuin::calculate_parity(subject, predicate, object, context, metadata);
         return Ok(NQuin {
-            subject: *subject,
-            predicate: *predicate,
-            object: *object,
-            context: *context,
+            subject,
+            predicate,
+            object,
+            context,
             metadata,
             parity,
         });

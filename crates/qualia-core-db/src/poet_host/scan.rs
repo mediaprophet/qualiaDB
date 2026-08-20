@@ -22,12 +22,12 @@ pub fn collect_matches(
         if !term_match(o, q.object) {
             continue;
         }
-        out.push(Value::Quin {
-            subject: q.subject,
-            predicate: q.predicate,
-            object: q.object,
-            context: q.context,
-        });
+        out.push(Value::QuinRef(poet_vibe::QuinRef::from_quin(
+            q.subject,
+            q.predicate,
+            q.object,
+            q.context,
+        )));
         if out.len() as u64 >= take {
             break;
         }
@@ -47,7 +47,7 @@ fn term_match(filter: Option<&Value>, field: u64) -> bool {
         Some(Value::I64(n)) => *n as u64 == field,
         Some(Value::Iri(s) | Value::String(s)) => generate_60bit_token(s.as_bytes()) == field,
         Some(Value::Prefixed(p, l)) => generate_60bit_token(format!("{p}:{l}").as_bytes()) == field,
-        Some(Value::Quin { subject, .. }) => *subject == field,
+        Some(Value::QuinRef(qr)) => qr.raw_fields()[0] == field,
         _ => false,
     }
 }

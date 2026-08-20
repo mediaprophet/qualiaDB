@@ -676,12 +676,9 @@ impl Host for PoetSnapshot {
     ) -> Result<Value, Diagnostic> {
         let metadata = 0;
         let _parity = NQuin::calculate_parity(subject, predicate, object, context, metadata);
-        Ok(Value::Quin {
-            subject,
-            predicate,
-            object,
-            context,
-        })
+        Ok(Value::QuinRef(poet_vibe::QuinRef::from_raw(
+            subject, predicate, object, context, metadata, _parity,
+        )))
     }
 
     fn hash_iri(&self, iri: &str) -> u64 {
@@ -2045,7 +2042,7 @@ fn make() {
 }
 "#;
         let v = snap.eval_fn(src, "make", vec![]).unwrap();
-        assert!(matches!(v, Value::Quin { .. }));
+        assert!(matches!(v, Value::QuinRef(_)));
     }
 
     #[test]
@@ -2209,7 +2206,7 @@ fn find() {
             Value::List(xs) => {
                 assert!(xs.iter().any(|row| matches!(
                     row,
-                    Value::Quin { subject, .. } if *subject == seed.subject
+                    Value::QuinRef(qr) if qr.raw_fields()[0] == seed.subject
                 )));
             }
             other => panic!("{other:?}"),

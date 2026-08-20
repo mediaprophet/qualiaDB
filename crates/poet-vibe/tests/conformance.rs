@@ -231,7 +231,7 @@ fn make() {
     let mut host = MockHost::default();
     let mut env = Env::default();
     let v = eval_function(&program, "make", vec![], &mut host, &mut env).unwrap();
-    assert!(matches!(v, Value::Quin { .. }));
+    assert!(matches!(v, Value::QuinRef(_)));
 }
 
 #[test]

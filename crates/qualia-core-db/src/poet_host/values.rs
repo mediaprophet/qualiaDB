@@ -12,26 +12,21 @@ pub(crate) fn hash_val(v: &Value) -> Option<u64> {
         Value::I64(n) => Some(*n as u64),
         Value::Iri(s) | Value::String(s) => Some(generate_60bit_token(s.as_bytes())),
         Value::Prefixed(p, l) => Some(generate_60bit_token(format!("{p}:{l}").as_bytes())),
-        Value::Quin { subject, .. } => Some(*subject),
+        Value::QuinRef(qr) => Some(qr.raw_fields()[0]),
         _ => None,
     }
 }
 
 pub(crate) fn value_to_quin(term: &Value, context: u64) -> Option<NQuin> {
     match term {
-        Value::Quin {
-            subject,
-            predicate,
-            object,
-            context: ctx,
-        } => {
-            let metadata = 0;
-            let parity = NQuin::calculate_parity(*subject, *predicate, *object, *ctx, metadata);
+        Value::QuinRef(qr) => {
+            let [subject, predicate, object, ctx, metadata, _parity] = qr.raw_fields();
+            let parity = NQuin::calculate_parity(subject, predicate, object, ctx, metadata);
             Some(NQuin {
-                subject: *subject,
-                predicate: *predicate,
-                object: *object,
-                context: *ctx,
+                subject,
+                predicate,
+                object,
+                context: ctx,
                 metadata,
                 parity,
             })
@@ -110,12 +105,13 @@ pub fn format_value(v: &Value) -> String {
                 .collect();
             format!("{{{}}}", parts.join(", "))
         }
-        Value::Quin {
-            subject,
-            predicate,
-            object,
-            context,
-        } => format!("Quin(s={subject:#x},p={predicate:#x},o={object:#x},c={context:#x})"),
+        Value::QuinRef(qr) => {
+            let f = qr.raw_fields();
+            format!(
+                "Quin(s={:#x},p={:#x},o={:#x},c={:#x})",
+                f[0], f[1], f[2], f[3]
+            )
+        }
         Value::Triple(s, p, o) => format!(
             "<<( {} {} {} )>>",
             format_value(s),

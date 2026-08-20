@@ -10,7 +10,7 @@ pub use rdf::call_rdf;
 
 use crate::error::{DiagCode, Diagnostic};
 use crate::span::Span;
-use crate::value::{Instant, Value};
+use crate::value::{Instant, QuinRef, Value};
 
 /// Host supplied by Qualia / tests.
 pub trait Host {
@@ -98,12 +98,9 @@ pub trait Host {
         span: Span,
     ) -> Result<Value, Diagnostic> {
         let _ = span;
-        Ok(Value::Quin {
-            subject,
-            predicate,
-            object,
-            context,
-        })
+        Ok(Value::QuinRef(QuinRef::from_quin(
+            subject, predicate, object, context,
+        )))
     }
 
     fn hash_iri(&self, iri: &str) -> u64 {

@@ -437,12 +437,6 @@ pub enum Value {
         o: Box<Value>,
         r: Box<Value>,
     },
-    Quin {
-        subject: u64,
-        predicate: u64,
-        object: u64,
-        context: u64,
-    },
     Receipt,
     Ok(Box<Value>),
     Err(Box<Value>),
