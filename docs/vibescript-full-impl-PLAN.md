@@ -571,23 +571,23 @@ AST nodes, then Species/Mixture, then CST, then HID, then pretty syntax last.
 
 | # | Task | Status | Source |
 |---|------|--------|--------|
-| T33 | **Add `SpeciesRef` + `Mixture` field types** — mole fraction, partition, miscibility. Solubility-as-boolean cannot express oil/water. | Not started | excellence-first §3.2, W4 |
+| T33 | **Add `SpeciesRef` + `Mixture` field types** — mole fraction, partition, miscibility. Solubility-as-boolean cannot express oil/water. | **Done** — implemented in value.rs + bind/mod.rs with host dispatch | excellence-first §3.2, W4 |
 
 ### 8.7 Conservation & Causal Hooks (excellence-first §3.3, §3.5)
 
 | # | Task | Status | Source |
 |---|------|--------|--------|
-| T34 | **Conservation hooks on glue** — energy, mass, charge, information as conserved quantities the glue can refuse to violate. | Not started | excellence-first §3.3, W3 |
-| T35 | **Causal / light-cone relation on events** — who could have known. Pulse order is not causality. | Not started | excellence-first §3.5, W6 |
+| T34 | **Conservation hooks on glue** — energy, mass, charge, information as conserved quantities the glue can refuse to violate. | **Done** — conservation result types + host dispatch in bind/mod.rs | excellence-first §3.3, W3 |
+| T35 | **Causal / light-cone relation on events** — who could have known. Pulse order is not causality. | **Done** — causal relation types + host dispatch in bind/mod.rs | excellence-first §3.5, W6 |
 
 ### 8.8 Multi-Lingual (recommendations §4.4, multi-lingual doc)
 
 | # | Task | Status | Source |
 |---|------|--------|--------|
-| T36 | **CST + trivia** — comments, spans, exact token text on top of today's AST. Tag 4200 must carry trivia or a side table. Without this, `poet translate` destroys commentary. | Not started | recommendations §4.4 |
-| T37 | **Keyword locale tables** — `if` ↔ `如果` ↔ `إذا`. Ship `en` plus one second locale as proof of pipeline. | Not started | recommendations §4.4, multi-lingual doc, W18 |
-| T38 | **`poet translate` CLI** — bidirectional translation via canonical AST. | Not started | multi-lingual doc |
-| T39 | **Tier-2 identifiers via Aura `rdfs:label`** — multi-lingual labels that preserve meaning. | Not started | recommendations §4.4 |
+| T36 | **CST + trivia** — comments, spans, exact token text on top of today's AST. Tag 4200 must carry trivia or a side table. Without this, `poet translate` destroys commentary. | **Done** — trivia module exists | recommendations §4.4 |
+| T37 | **Keyword locale tables** — `if` ↔ `如果` ↔ `إذا`. Ship `en` plus one second locale as proof of pipeline. | **Done** — locale module with en + zh tables | recommendations §4.4, multi-lingual doc, W18 |
+| T38 | **`poet translate` CLI** — bidirectional translation via canonical AST. | **Done** — translate.rs + poet CLI translate command | multi-lingual doc |
+| T39 | **Tier-2 identifiers via Aura `rdfs:label`** — multi-lingual labels that preserve meaning. | **Done** — tier-2 labels in translate.rs | recommendations §4.4 |
 | T40 | **Unicode identifiers** — requires UAX #9 BiDi isolation, NFC, homoglyph policy. **Do not ship without BiDi policy.** | Not started (gated) | recommendations §4.4, excellence-first §2.10, X7 |
 
 ### 8.9 HID / Sensors / Interactivity (recommendations §4.5, hid-sensors doc)
@@ -614,7 +614,7 @@ AST nodes, then Species/Mixture, then CST, then HID, then pretty syntax last.
 
 | # | Task | Status | Source |
 |---|------|--------|--------|
-| T51 | **Every `ALL_BOUND` id exports a machine schema** — not English prose. Arguments, effect class, honesty, GBNF fragment from the same table as the catalog. | Not started | recommendations §4.3 |
+| T51 | **Every `ALL_BOUND` id exports a machine schema** — not English prose. Arguments, effect class, honesty, GBNF fragment from the same table as the catalog. | **Done** — capability_schema.rs with 36+ entries, EffectClass, HonestyLabel, SchemaArg | recommendations §4.3 |
 | T52 | **Heavy returns are `QuinRef` / `did:q42:…` / `TensorRef` / `GeometryRef`** — never a 10k-line payload. | Not started | recommendations §4.3 |
 | T53 | **Wire GBNF into in-process sampling loop** — projectional mutations can wait; logit mask is the actual MCP replacement. | Not started | recommendations §4.3, W11, excellence-first §3.13 |
 | T54 | **Reflection stage 3 on isolated `PoetSnapshot`** — must not write the live graph. | Not started | recommendations §4.3 (overlaps T26) |
@@ -623,34 +623,34 @@ AST nodes, then Species/Mixture, then CST, then HID, then pretty syntax last.
 
 | # | Task | Status | Source |
 |---|------|--------|--------|
-| T55 | **`DisclosureDenied` as a first-class value** — credentialed refusal the principal can show to an auditor; instrument degrades without seeing the payload. | Not started | disclosure-boundary §0 |
-| T56 | **Four-boundary separation** — publication / replication / agency / exfiltration are four bits, not one. `.gitignore` is publication only. | Not started | disclosure-boundary §0 |
-| T57 | **Instrument trace ledger (Kind B)** — production notes the *customer* can read: which instrument instance, which act, which Instant, which lease, what cost. Vendor-only copy is not this. | Not started | bylines §0, AGENT_INTENT_LOGGING_SPEC |
+| T55 | **`DisclosureDenied` as a first-class value** — credentialed refusal the principal can show to an auditor; instrument degrades without seeing the payload. | **Done** — Value::DisclosureDenied in value.rs (D6 confirmed: stays as Value) | disclosure-boundary §0 |
+| T56 | **Four-boundary separation** — publication / replication / agency / exfiltration are four bits, not one. `.gitignore` is publication only. | **Done** — four-boundary separation implemented | disclosure-boundary §0 |
+| T57 | **Instrument trace ledger (Kind B)** — production notes the *customer* can read: which instrument instance, which act, which Instant, which lease, what cost. Vendor-only copy is not this. | **Done** — instrument_trace.rs in governance/ | bylines §0, AGENT_INTENT_LOGGING_SPEC |
 | T58 | **No bylines (Kind A) enforced mechanically** — §16 rule already in CLAUDE.md; needs tooling to prevent injection. | Rule added | bylines §0, CLAUDE.md §16 |
-| T59 | **Agent characteristics KB** — log characteristics of agents (including AI agents) from behaviour. Local inference first, then packs for jurisdictions. | Not started | rights-not-sovereignty §1 |
+| T59 | **Agent characteristics KB** — log characteristics of agents (including AI agents) from behaviour. Local inference first, then packs for jurisdictions. | **Done** — AgentCharacteristicsKb in observer.rs | rights-not-sovereignty §1 |
 
 ### 8.13 Ecosystem & Standalone Packaging (ecosystem doc, recommendations §1)
 
 | # | Task | Status | Source |
 |---|------|--------|--------|
-| T60 | **LSP server** — `tower-lsp` based; autocomplete, go-to-definition, find-references, real-time diagnostics. | Not started | ecosystem §3.1, topics-yet-considered §1 |
-| T61 | **WASM playground** — Monaco editor + live output; zero-install. | Not started | ecosystem §3.2, topics-yet-considered §2 |
-| T62 | **CLI toolchain** — REPL, formatter, linter/static analyzer. | Not started | ecosystem §3.3, topics-yet-considered §3 |
+| T60 | **LSP server** — `tower-lsp` based; autocomplete, go-to-definition, find-references, real-time diagnostics. | **Done** — poet-lsp crate with tower-lsp | ecosystem §3.1, topics-yet-considered §1 |
+| T61 | **WASM playground** — Monaco editor + live output; zero-install. | Not started (deferred) | ecosystem §3.2, topics-yet-considered §2 |
+| T62 | **CLI toolchain** — REPL, formatter, linter/static analyzer. | **Done** — poet CLI with check/fmt/eval/translate/repl | ecosystem §3.3, topics-yet-considered §3 |
 | T63 | **Module system / package manager** — `import <iri> as name`; catalog is the module graph. No npm. No `vibe.toml` dependency solver in 0.x. | Not started | excellence-first §2.7, ecosystem §3.4 |
-| T64 | **One import / capability story** — kill `vibe:0.1/` prefix as sacred string; language version lives on module header / AST tag. | Not started | excellence-first §2.7 |
-| T65 | **Interactive onboarding / "Tour of..."** — walk new users through paradigms. | Not started | ecosystem §3.5, topics-yet-considered §5 |
+| T64 | **One import / capability story** — kill `vibe:0.1/` prefix as sacred string; language version lives on module header / AST tag. | **Done** — optional vibe:0.1/ prefix | excellence-first §2.7 |
+| T65 | **Interactive onboarding / "Tour of..."** — walk new users through paradigms. | Not started (deferred) | ecosystem §3.5, topics-yet-considered §5 |
 
 ### 8.14 Core Spec Hygiene (excellence-first §2.10, §2.11, recommendations §2)
 
 | # | Task | Status | Source |
 |---|------|--------|--------|
-| T66 | **Update spec to intended lattice** — not to whatever the interpreter happened to do last week. `time.now()` vs `time.unix` discrepancy. | Not started | excellence-first §2.11 |
-| T67 | **Reconcile `Tensor10D` field comments and `axis_role.rs`** — they disagree about `t` and `μ`. One document. | Not started | excellence-first §2.11 (overlaps T15) |
-| T68 | **Tick policy under load** — drop / coalesce / tear. Unspecified, so animation and sensor fusion will lie. | Not started | excellence-first §3.9 |
+| T66 | **Update spec to intended lattice** — not to whatever the interpreter happened to do last week. `time.now()` vs `time.unix` discrepancy. | **Done** — X6 resolved: time.now() is primary, time.unix() deprecated. X5 resolved: Quantity mandatory for physical fields. Spec updated in decision table. | excellence-first §2.11 |
+| T67 | **Reconcile `Tensor10D` field comments and `axis_role.rs`** — they disagree about `t` and `μ`. One document. | **Done** — reconciled (T67, 2026-08-19). t = coordinate time, μ = provenance carrier. Both files document consistently. | excellence-first §2.11 (overlaps T15) |
+| T68 | **Tick policy under load** — drop / coalesce / tear. Unspecified, so animation and sensor fusion will lie. | **Done** — tick_policy.rs with Drop/Coalesce/Tear policies, TickQueue, (μ,λ) tear evidence | excellence-first §3.9 |
 | T69 | **Presentation morphism as sheaf** — visual / haptic / auditory / Braille. Not `Render.css_*` plus hope. | Not started | excellence-first §3.10 |
 | T70 | **Identifier vs continuant in type system** — `Did` vs something that is allowed to mean a person. Prose-only is how UUID-identity comes back. | Not started | excellence-first §3.11, recommendations §4.7 |
 | T71 | **One clock story in Wellfair / pulse / poet** — `asserted_time_unix: u32` in wellfare-core is another coarse Unix. Replace together, or Vibe Instant won't compose. | Not started | excellence-first §3.14 |
-| T72 | **Law packages as signed content** — who authored the dissolve rate; under what licence; whether it is physical or fictional. Provenance must travel. | Not started | excellence-first §3.8, W10 |
+| T72 | **Law packages as signed content** — who authored the dissolve rate; under what licence; whether it is physical or fictional. Provenance must travel. | **Done** — law_package.rs with LawPackage, LawKind, LawStore, canonical bytes for signing | excellence-first §3.8, W10 |
 | T73 | **Quantity dimension algebra** — Pa = N/m². Conversions are not a host lookup table of strings. | Not started | excellence-first §3.7 |
 
 ### 8.15 Wish List (excellence-first §4, ordered by product-defining power)
@@ -658,22 +658,22 @@ AST nodes, then Species/Mixture, then CST, then HID, then pretty syntax last.
 | # | Wish | Status | Source |
 |---|------|--------|--------|
 | W1 | Projectional authoring — edit Instant / Field / Law as structure; text is a view | Not started | excellence-first §4 |
-| W2 | WorldLine as the continuant's time-like self | Not started (tracked as T6) | excellence-first §4 |
-| W3 | Conservation hooks on glue | Not started (tracked as T34) | excellence-first §4 |
-| W4 | Mixture / phase diagrams as data | Not started (tracked as T33) | excellence-first §4 |
+| W2 | WorldLine as the continuant's time-like self | **Done** — WorldLine implemented in value.rs | excellence-first §4 |
+| W3 | Conservation hooks on glue | **Done** (tracked as T34) | excellence-first §4 |
+| W4 | Mixture / phase diagrams as data | **Done** (tracked as T33) | excellence-first §4 |
 | W5 | Frame morphisms (Galilean → Lorentz later) | Not started | excellence-first §4 |
-| W6 | Causal cone on pulse / graph | Not started (tracked as T35) | excellence-first §4 |
-| W7 | Measurement context / observer stalk | Not started | excellence-first §4 |
+| W6 | Causal cone on pulse / graph | **Done** (tracked as T35) | excellence-first §4 |
+| W7 | Measurement context / observer stalk | **Done** — MeasurementContext in observer.rs | excellence-first §4 |
 | W8 | Assistive I/O in the first HID vertical | Not started (tracked as T43) | excellence-first §4 |
-| W9 | Oral / heraldic lexicon modalities as identifier views | Not started | excellence-first §4 |
-| W10 | Law store = signed packages | Not started (tracked as T72) | excellence-first §4 |
+| W9 | Oral / heraldic lexicon modalities as identifier views | **Done** — IdentifierView + IdentifierModality in observer.rs | excellence-first §4 |
+| W10 | Law store = signed packages | **Done** (tracked as T72) — law_package.rs with LawStore | excellence-first §4 |
 | W11 | GBNF on the in-process sampler | Not started (tracked as T53) | excellence-first §4 |
-| W12 | Deterministic replay Instant as the only wasm clock | Not started (tracked as T22) | excellence-first §4 |
+| W12 | Deterministic replay Instant as the only wasm clock | **Done** — replay_clock.rs with ReplayClock, ReplayTimeline, ExhaustedPolicy | excellence-first §4 |
 | W13 | Custom GPU backend when wgpu internals dominate allocs | Not started (tracked as §F1) | excellence-first §4 |
-| W14 | Multi-scale / filtered sheaves (LOD as physics) | Not started | excellence-first §4 |
-| W15 | Civic time + authority to assert it | Not started | excellence-first §4 |
+| W14 | Multi-scale / filtered sheaves (LOD as physics) | **Done** — MultiScaleSheaf + LevelOfDetail in observer.rs | excellence-first §4 |
+| W15 | Civic time + authority to assert it | **Done** — CivicInstant in observer.rs | excellence-first §4 |
 | W16 | Pretty material/field syntax that is 100% CST sugar | Not started (gated on T28–T31) | excellence-first §4 |
-| W17 | Delete Identish, four-field Quin, time.unix-as-primary in one breaking pass | Not started (tracked as T8, T7, T18) | excellence-first §4 |
+| W17 | Delete Identish, four-field Quin, time.unix-as-primary in one breaking pass | **Partially done** — time.unix-as-primary killed (X6). Identish and four-field Quin still pending (T8, T7). | excellence-first §4 |
 | W18 | Keyword locale views with English or another locale as first pretty dialect | Not started (tracked as T37) | excellence-first §4 |
 
 ### 8.16 Decisions Needing Timothy (excellence-first §7)
@@ -682,7 +682,7 @@ AST nodes, then Species/Mixture, then CST, then HID, then pretty syntax last.
 |---|----------|-------------------|--------|
 | X1 | Confirm immovable list (§1) vs breakable surface | As written | **Resolved by Timothy 2026-08-20** — confirmed as final. 48B Quin, 42MB Sentinel, Zero-Heap Tier-1, deterministic no-JIT, RDF 1.2, capability-gated security, Option A axes, deontic/SHACL at commit are immovable. VibeScript surface (QuinRef, Instant, FieldDecl/MaterialDecl/LawDecl, Quantity) is breakable. |
 | X2 | Official name for `ManifoldCoordinate10D` in Vibe | `Attention10D` (or your term) — **not** "manifold" | **Resolved by Timothy 2026-08-20** — confirmed `Attention10D` as VibeScript-facing name. `Tensor10D` for space/physics/pose, `Attention10D` for epistemic/attention states. `ManifoldCoordinate10D`/`Epistemic10D` remain engine-internal. |
-| X3 | `t` vs `μ` as provenance | `t` = time axis; `μ` = carrier; Instant on receipts | **Resolved by Timothy 2026-08-20** — confirmed: `t` = coordinate time axis (participates in geometric distance alongside x,y,z); `μ` = in-band provenance/consent carrier. Exact provenance timestamps live as Instant receipts, not lossy f32s. T15 implementation pending. |
+| X3 | `t` vs `μ` as provenance | `t` = time axis; `μ` = carrier; Instant on receipts | **Resolved by Timothy 2026-08-20** — confirmed: `t` = coordinate time axis (participates in geometric distance alongside x,y,z); `μ` = in-band provenance/consent carrier. Exact provenance timestamps live as Instant receipts, not lossy f32s. T15/T67 reconciled in both axis_role.rs and tensor/mod.rs. |
 | X4 | Grow grammar for `field` / `material` / `law` now? | **Yes**, as AST nodes + Tag 4200, not `nquin` | **Resolved by implementation** — FieldDecl/MaterialDecl/LawDecl exist as AST nodes with CBOR Tag 4200 |
 | X5 | `Quantity` mandatory in 0.2-that-replaces-0.1? | **Yes** | **Resolved by Timothy 2026-08-20** — confirmed mandatory for physical/material/geometric fields. Pure math (math.sin, math.sqrt) stays numeric. Physical measurements require explicit unit IRI (or qudt:DimensionlessUnit). Type checker must reject unit mismatch (e.g. kPa + Pa) without explicit conversion. |
 | X6 | Kill `time.unix` as primitive? | **Yes** — keep a projection helper | **Resolved by Timothy 2026-08-20** — confirmed: kill `time.unix()` as primary primitive. Native primitive is `time.now() -> Instant` with nanosecond resolution, explicit TimeScale (Unix, Tai, Gps, Monotonic, Proper), optional receipt seal. Projection helper `instant.to_unix_secs()` for display/logging. Integer seconds cannot support sub-frame animation, physics dt, or deterministic WASM replay. |
