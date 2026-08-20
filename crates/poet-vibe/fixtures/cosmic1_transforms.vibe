@@ -1,0 +1,14 @@
+module <https://qualiadb.org/modules/cosmic_transforms>;
+requires [ capability("cosmic") ];
+pure fn sf_to_ecef(lat: f64, lon: f64, alt: f64) -> Record {
+    return Cosmic.geodetic_to_ecef({ lat_deg: lat, lon_deg: lon, alt_m: alt });
+}
+pure fn ecef_roundtrip(lat: f64, lon: f64, alt: f64) -> Record {
+    let ecef = Cosmic.geodetic_to_ecef({ lat_deg: lat, lon_deg: lon, alt_m: alt });
+    return Cosmic.ecef_to_geodetic(ecef);
+}
+pure fn ground_distance(lat1: f64, lon1: f64, lat2: f64, lon2: f64) -> f64 {
+    return Cosmic.geodetic_distance({
+        lat_deg: lat1, lon_deg: lon1, lat2_deg: lat2, lon2_deg: lon2
+    });
+}

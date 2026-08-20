@@ -1,0 +1,11 @@
+module <https://qualiadb.org/modules/cosmic_quantum>;
+requires [ capability("cosmic") ];
+pure fn electron_compton() -> f64 {
+    return Cosmic.compton_wavelength({ particle: "electron" });
+}
+pure fn electron_de_broglie(velocity: f64) -> f64 {
+    return Cosmic.de_broglie_wavelength({ particle: "electron", velocity_m_s: velocity });
+}
+pure fn scale_l0_to_l5() -> f64 {
+    return Cosmic.scale_factor({ from_level: "L0", to_level: "L5" });
+}

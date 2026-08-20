@@ -1,0 +1,11 @@
+module <https://qualiadb.org/modules/cosmic_celestial>;
+requires [ capability("cosmic") ];
+pure fn earth_gravity() -> f64 {
+    return Cosmic.surface_gravity({ name: "earth" });
+}
+pure fn mars_gravity() -> f64 {
+    return Cosmic.surface_gravity({ name: "mars" });
+}
+pure fn earth_profile() -> Record {
+    return Cosmic.body_profile({ name: "earth" });
+}

@@ -8,6 +8,7 @@ mod args;
 mod asset_bind;
 mod biosignal;
 mod clinical;
+mod cosmic_bind;
 pub mod coverage;
 mod crypto;
 mod docs;
@@ -181,6 +182,26 @@ pub fn dispatch(
         ids::ASSET_COMPILE => asset_bind::compile(args, span),
         ids::ASSET_TEMPORAL_SPAN => asset_bind::temporal_span(args, span),
         ids::ASSET_QUERY_ASPECTS => asset_bind::query_aspects(args, span),
+        ids::COSMIC_GEODETIC_TO_ECEF => cosmic_bind::geodetic_to_ecef(args, span),
+        ids::COSMIC_ECEF_TO_GEODETIC => cosmic_bind::ecef_to_geodetic(args, span),
+        ids::COSMIC_ECEF_TO_ENU => cosmic_bind::ecef_to_enu(args, span),
+        ids::COSMIC_ENU_TO_ECEF => cosmic_bind::enu_to_ecef(args, span),
+        ids::COSMIC_GEODETIC_DISTANCE => cosmic_bind::geodetic_distance(args, span),
+        ids::COSMIC_BODY_PROFILE => cosmic_bind::body_profile(args, span),
+        ids::COSMIC_SURFACE_GRAVITY => cosmic_bind::surface_gravity(args, span),
+        ids::COSMIC_FLRW_DISTANCE => cosmic_bind::flrw_distance(args, span),
+        ids::COSMIC_FLRW_REDSHIFT => cosmic_bind::flrw_redshift(args, span),
+        ids::COSMIC_FLRW_HUBBLE_VELOCITY => cosmic_bind::flrw_hubble_velocity(args, span),
+        ids::COSMIC_STARDATE_TO_GREGORIAN => cosmic_bind::stardate_to_gregorian(args, span),
+        ids::COSMIC_WARP_VELOCITY => cosmic_bind::warp_velocity(args, span),
+        ids::COSMIC_COCHRANE_UNITS => cosmic_bind::cochrane_units(args, span),
+        ids::COSMIC_ATMOSPHERE_PRESSURE => cosmic_bind::atmosphere_pressure(args, span),
+        ids::COSMIC_ATMOSPHERE_TEMPERATURE => cosmic_bind::atmosphere_temperature(args, span),
+        ids::COSMIC_MAGNETOSPHERE_FIELD => cosmic_bind::magnetosphere_field(args, span),
+        ids::COSMIC_SCALE_FACTOR => cosmic_bind::scale_factor(args, span),
+        ids::COSMIC_COMPTON_WAVELENGTH => cosmic_bind::compton_wavelength(args, span),
+        ids::COSMIC_DE_BROGLIE => cosmic_bind::de_broglie_wavelength(args, span),
+        ids::COSMIC_USRI_PARSE => cosmic_bind::usri_parse(args, span),
         other => Err(Diagnostic::new(
             DiagCode::E300,
             span,

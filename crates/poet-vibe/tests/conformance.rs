@@ -2896,3 +2896,35 @@ fn n25_negative_yield_parses() {
     let src = include_str!("../fixtures/n25_negative_yield.vibe");
     load_program(src).expect("n25 should parse (semantic issue)");
 }
+
+// ── Cosmic coordinate fixtures (parse-only; evaluation tested in qualia-core-db) ──
+
+#[test]
+fn cosmic1_transforms_parses() {
+    let src = include_str!("../fixtures/cosmic1_transforms.vibe");
+    load_program(src).expect("cosmic1 fixture");
+}
+
+#[test]
+fn cosmic2_celestial_parses() {
+    let src = include_str!("../fixtures/cosmic2_celestial.vibe");
+    load_program(src).expect("cosmic2 fixture");
+}
+
+#[test]
+fn cosmic3_fictional_parses() {
+    let src = include_str!("../fixtures/cosmic3_fictional.vibe");
+    load_program(src).expect("cosmic3 fixture");
+}
+
+#[test]
+fn cosmic4_cosmology_parses() {
+    let src = include_str!("../fixtures/cosmic4_cosmology.vibe");
+    load_program(src).expect("cosmic4 fixture");
+}
+
+#[test]
+fn cosmic5_quantum_parses() {
+    let src = include_str!("../fixtures/cosmic5_quantum.vibe");
+    load_program(src).expect("cosmic5 fixture");
+}

@@ -170,6 +170,28 @@ pub const DAG_EXECUTE: &str = "agent.dag.execute";
 pub const DAG_VALIDATE: &str = "agent.dag.validate";
 pub const DAG_STATUS: &str = "agent.dag.status";
 
+// ── Cosmic coordinate system (OCS) bindings ───────────────────────────────
+pub const COSMIC_GEODETIC_TO_ECEF: &str = "Cosmic.geodetic_to_ecef";
+pub const COSMIC_ECEF_TO_GEODETIC: &str = "Cosmic.ecef_to_geodetic";
+pub const COSMIC_ECEF_TO_ENU: &str = "Cosmic.ecef_to_enu";
+pub const COSMIC_ENU_TO_ECEF: &str = "Cosmic.enu_to_ecef";
+pub const COSMIC_GEODETIC_DISTANCE: &str = "Cosmic.geodetic_distance";
+pub const COSMIC_BODY_PROFILE: &str = "Cosmic.body_profile";
+pub const COSMIC_SURFACE_GRAVITY: &str = "Cosmic.surface_gravity";
+pub const COSMIC_FLRW_DISTANCE: &str = "Cosmic.flrw_distance";
+pub const COSMIC_FLRW_REDSHIFT: &str = "Cosmic.flrw_redshift";
+pub const COSMIC_FLRW_HUBBLE_VELOCITY: &str = "Cosmic.flrw_hubble_velocity";
+pub const COSMIC_STARDATE_TO_GREGORIAN: &str = "Cosmic.stardate_to_gregorian";
+pub const COSMIC_WARP_VELOCITY: &str = "Cosmic.warp_velocity";
+pub const COSMIC_COCHRANE_UNITS: &str = "Cosmic.cochrane_units";
+pub const COSMIC_ATMOSPHERE_PRESSURE: &str = "Cosmic.atmosphere_pressure";
+pub const COSMIC_ATMOSPHERE_TEMPERATURE: &str = "Cosmic.atmosphere_temperature";
+pub const COSMIC_MAGNETOSPHERE_FIELD: &str = "Cosmic.magnetosphere_field";
+pub const COSMIC_SCALE_FACTOR: &str = "Cosmic.scale_factor";
+pub const COSMIC_COMPTON_WAVELENGTH: &str = "Cosmic.compton_wavelength";
+pub const COSMIC_DE_BROGLIE: &str = "Cosmic.de_broglie_wavelength";
+pub const COSMIC_USRI_PARSE: &str = "Cosmic.usri_parse";
+
 pub const ALL_BOUND: &[&str] = &[
     DAG_EXECUTE,
     DAG_VALIDATE,
@@ -306,6 +328,26 @@ pub const ALL_BOUND: &[&str] = &[
     ASSET_COMPILE,
     ASSET_TEMPORAL_SPAN,
     ASSET_QUERY_ASPECTS,
+    COSMIC_GEODETIC_TO_ECEF,
+    COSMIC_ECEF_TO_GEODETIC,
+    COSMIC_ECEF_TO_ENU,
+    COSMIC_ENU_TO_ECEF,
+    COSMIC_GEODETIC_DISTANCE,
+    COSMIC_BODY_PROFILE,
+    COSMIC_SURFACE_GRAVITY,
+    COSMIC_FLRW_DISTANCE,
+    COSMIC_FLRW_REDSHIFT,
+    COSMIC_FLRW_HUBBLE_VELOCITY,
+    COSMIC_STARDATE_TO_GREGORIAN,
+    COSMIC_WARP_VELOCITY,
+    COSMIC_COCHRANE_UNITS,
+    COSMIC_ATMOSPHERE_PRESSURE,
+    COSMIC_ATMOSPHERE_TEMPERATURE,
+    COSMIC_MAGNETOSPHERE_FIELD,
+    COSMIC_SCALE_FACTOR,
+    COSMIC_COMPTON_WAVELENGTH,
+    COSMIC_DE_BROGLIE,
+    COSMIC_USRI_PARSE,
 ];
 
 /// Future extract target for an invoke id. Not a crate today.
@@ -374,6 +416,26 @@ pub fn seam_for(id: &str) -> &'static str {
         | SAMPLER_SAMPLE => "sampler",
         ASSET_CREATE | ASSET_ADD_TEMPORAL | ASSET_ADD_TOPIC | ASSET_SET_SPATIAL | ASSET_COMPILE
         | ASSET_TEMPORAL_SPAN | ASSET_QUERY_ASPECTS => "asset",
+        COSMIC_GEODETIC_TO_ECEF
+        | COSMIC_ECEF_TO_GEODETIC
+        | COSMIC_ECEF_TO_ENU
+        | COSMIC_ENU_TO_ECEF
+        | COSMIC_GEODETIC_DISTANCE
+        | COSMIC_BODY_PROFILE
+        | COSMIC_SURFACE_GRAVITY
+        | COSMIC_FLRW_DISTANCE
+        | COSMIC_FLRW_REDSHIFT
+        | COSMIC_FLRW_HUBBLE_VELOCITY
+        | COSMIC_STARDATE_TO_GREGORIAN
+        | COSMIC_WARP_VELOCITY
+        | COSMIC_COCHRANE_UNITS
+        | COSMIC_ATMOSPHERE_PRESSURE
+        | COSMIC_ATMOSPHERE_TEMPERATURE
+        | COSMIC_MAGNETOSPHERE_FIELD
+        | COSMIC_SCALE_FACTOR
+        | COSMIC_COMPTON_WAVELENGTH
+        | COSMIC_DE_BROGLIE
+        | COSMIC_USRI_PARSE => "cosmic",
         _ => "unbound",
     }
 }

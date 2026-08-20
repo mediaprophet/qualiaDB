@@ -1,0 +1,11 @@
+module <https://qualiadb.org/modules/cosmic_fictional>;
+requires [ capability("cosmic") ];
+pure fn stardate_year(stardate: f64) -> f64 {
+    return Cosmic.stardate_to_gregorian({ stardate: stardate });
+}
+pure fn warp_speed(w: f64) -> f64 {
+    return Cosmic.warp_velocity({ warp: w, scale: "tng" });
+}
+pure fn cochrane(w: f64) -> f64 {
+    return Cosmic.cochrane_units({ warp: w, scale: "tng" });
+}
