@@ -34,6 +34,8 @@ pub const SPEC_BESSEL: &str = "SpecialFunctionsAndTransforms.bessel_j";
 pub const STAT_MEAN: &str = "Statistics.mean";
 pub const STAT_PEARSON: &str = "Statistics.pearson";
 pub const ML_OLS: &str = "MachineLearning.ols";
+pub const BIOSIGNAL_DP_FILTER: &str = "biosignal.dp_filter";
+pub const BIOSIGNAL_DP_CONFIG: &str = "biosignal.dp_config";
 pub const PHYS_PROJECTILE: &str = "PhysicsAndODE.projectile";
 pub const BIO_ALIGN: &str = "Bioinformatics.align";
 pub const CHEM_SMILES: &str = "OrganicChemistry.validate_smiles";
@@ -319,6 +321,7 @@ pub fn seam_for(id: &str) -> &'static str {
         SPECTRAL_EMF_TO_SPD | SPECTRAL_SPD_TO_XYZ | SPECTRAL_EMF_TO_RGB | SPECTRAL_BLEND
         | SPECTRAL_GAMUT_MAP => "spectral",
         CLIN_FRAMINGHAM => "clinical",
+        BIOSIGNAL_DP_FILTER | BIOSIGNAL_DP_CONFIG => "biosignal",
         FIN_BS => "econ",
         ENG_KIN => "engineering",
         ID_DID_Q42 => "governance",

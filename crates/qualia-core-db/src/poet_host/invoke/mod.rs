@@ -5,6 +5,7 @@
 
 pub mod agent;
 mod args;
+mod biosignal;
 mod clinical;
 pub mod coverage;
 mod crypto;
@@ -89,6 +90,8 @@ pub fn dispatch(
         ids::GEOM_HULL2 => geometry::hull2(args, span),
         ids::VISION_AHASH => vision::ahash(args, span),
         ids::ML_OLS => ml::fit_ols(args, span),
+        ids::BIOSIGNAL_DP_FILTER => biosignal::dp_filter(args, span),
+        ids::BIOSIGNAL_DP_CONFIG => biosignal::dp_config(args, span),
         ids::PHYS_PROJECTILE => science::projectile(args, span),
         ids::PHYS_WAVE_1D => science::wave_1d(args, span),
         ids::PHYS_HEAT_DIFFUSION_1D => science::heat_diffusion_1d(args, span),
