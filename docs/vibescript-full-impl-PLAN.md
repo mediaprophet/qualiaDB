@@ -680,12 +680,12 @@ AST nodes, then Species/Mixture, then CST, then HID, then pretty syntax last.
 
 | # | Decision | Excellence default | Status |
 |---|----------|-------------------|--------|
-| X1 | Confirm immovable list (§1) vs breakable surface | As written | **Needs Timothy confirmation** |
-| X2 | Official name for `ManifoldCoordinate10D` in Vibe | `Attention10D` (or your term) — **not** "manifold" | **Partially resolved** — code uses `ManifoldCoordinate10D` aliased as `Epistemic10D`, with `Attention10D` as the Vibe-facing name. Needs confirmation. |
-| X3 | `t` vs `μ` as provenance | `t` = time axis; `μ` = carrier; Instant on receipts | **Needs Timothy confirmation** — T15 (resolve conflict in `tensor/mod.rs` vs `axis_role.rs`) still pending |
+| X1 | Confirm immovable list (§1) vs breakable surface | As written | **Resolved by Timothy 2026-08-20** — confirmed as final. 48B Quin, 42MB Sentinel, Zero-Heap Tier-1, deterministic no-JIT, RDF 1.2, capability-gated security, Option A axes, deontic/SHACL at commit are immovable. VibeScript surface (QuinRef, Instant, FieldDecl/MaterialDecl/LawDecl, Quantity) is breakable. |
+| X2 | Official name for `ManifoldCoordinate10D` in Vibe | `Attention10D` (or your term) — **not** "manifold" | **Resolved by Timothy 2026-08-20** — confirmed `Attention10D` as VibeScript-facing name. `Tensor10D` for space/physics/pose, `Attention10D` for epistemic/attention states. `ManifoldCoordinate10D`/`Epistemic10D` remain engine-internal. |
+| X3 | `t` vs `μ` as provenance | `t` = time axis; `μ` = carrier; Instant on receipts | **Resolved by Timothy 2026-08-20** — confirmed: `t` = coordinate time axis (participates in geometric distance alongside x,y,z); `μ` = in-band provenance/consent carrier. Exact provenance timestamps live as Instant receipts, not lossy f32s. T15 implementation pending. |
 | X4 | Grow grammar for `field` / `material` / `law` now? | **Yes**, as AST nodes + Tag 4200, not `nquin` | **Resolved by implementation** — FieldDecl/MaterialDecl/LawDecl exist as AST nodes with CBOR Tag 4200 |
-| X5 | `Quantity` mandatory in 0.2-that-replaces-0.1? | **Yes** | **Needs Timothy decision** — `quantity.rs` exists but Quantity is not yet mandatory |
-| X6 | Kill `time.unix` as primitive? | **Yes** — keep a projection helper | **Needs Timothy decision** — `time.unix` is still a primitive in `bind/mod.rs`. Breaking change. |
+| X5 | `Quantity` mandatory in 0.2-that-replaces-0.1? | **Yes** | **Resolved by Timothy 2026-08-20** — confirmed mandatory for physical/material/geometric fields. Pure math (math.sin, math.sqrt) stays numeric. Physical measurements require explicit unit IRI (or qudt:DimensionlessUnit). Type checker must reject unit mismatch (e.g. kPa + Pa) without explicit conversion. |
+| X6 | Kill `time.unix` as primitive? | **Yes** — keep a projection helper | **Resolved by Timothy 2026-08-20** — confirmed: kill `time.unix()` as primary primitive. Native primitive is `time.now() -> Instant` with nanosecond resolution, explicit TimeScale (Unix, Tai, Gps, Monotonic, Proper), optional receipt seal. Projection helper `instant.to_unix_secs()` for display/logging. Integer seconds cannot support sub-frame animation, physics dt, or deterministic WASM replay. |
 | X7 | Unicode identifiers this pass? | **No** unless BiDi/homoglyph is in the same pass | **Resolved** — no Unicode identifiers shipped (T40 remains gated) |
 | X8 | First wish-list slice after the lattice | W2 WorldLine + W4 Mixture + W12 replay Instant | **Resolved by implementation** — WorldLine (W2) and Mixture (W4) implemented |
 
