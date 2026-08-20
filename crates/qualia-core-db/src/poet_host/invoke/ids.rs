@@ -92,6 +92,13 @@ pub const EMF_UPLOAD_FIELD: &str = "Render.emf_upload_field";
 pub const EMF_RENDER_SLICE: &str = "Render.emf_render_slice";
 pub const EMF_FIELD_INFO: &str = "Render.emf_field_info";
 
+// ── GBNF constrained sampler (T53/W11) ─────────────────────────────────────
+pub const SAMPLER_CONFIGURE: &str = "sampler.configure";
+pub const SAMPLER_CONSTRAIN_ENABLE: &str = "sampler.constrain_enable";
+pub const SAMPLER_CONSTRAIN_DISABLE: &str = "sampler.constrain_disable";
+pub const SAMPLER_CONSTRAIN_RESET: &str = "sampler.constrain_reset";
+pub const SAMPLER_SAMPLE: &str = "sampler.sample";
+
 // ── Physics wrappers (wrap specialized_libs::physics_simulation) ───────────
 pub const PHYS_WAVE_1D: &str = "Physics.wave_1d";
 pub const PHYS_HEAT_DIFFUSION_1D: &str = "Physics.heat_diffusion_1d";
@@ -278,6 +285,11 @@ pub const ALL_BOUND: &[&str] = &[
     EMF_UPLOAD_FIELD,
     EMF_RENDER_SLICE,
     EMF_FIELD_INFO,
+    SAMPLER_CONFIGURE,
+    SAMPLER_CONSTRAIN_ENABLE,
+    SAMPLER_CONSTRAIN_DISABLE,
+    SAMPLER_CONSTRAIN_RESET,
+    SAMPLER_SAMPLE,
 ];
 
 /// Future extract target for an invoke id. Not a crate today.
@@ -339,6 +351,11 @@ pub fn seam_for(id: &str) -> &'static str {
         | GPU_POLL_PICK | GPU_RESIZE | GPU_SET_AMBIENT | GPU_DESTROY | GPU_COMPUTE_DISPATCH
         | GPU_COMPUTE_READBACK | GPU_VALIDATE_SHADER | GPU_COMPILE_SHADER | GPU_COMPILE_TO_GLSL
         | GPU_BACKEND_INFO | EMF_UPLOAD_FIELD | EMF_RENDER_SLICE | EMF_FIELD_INFO => "render",
+        SAMPLER_CONFIGURE
+        | SAMPLER_CONSTRAIN_ENABLE
+        | SAMPLER_CONSTRAIN_DISABLE
+        | SAMPLER_CONSTRAIN_RESET
+        | SAMPLER_SAMPLE => "sampler",
         _ => "unbound",
     }
 }

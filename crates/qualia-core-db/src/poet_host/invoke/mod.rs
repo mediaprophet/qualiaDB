@@ -24,6 +24,7 @@ mod net;
 mod nlp;
 mod render;
 mod runtime;
+mod sampler_bind;
 mod science;
 mod sheet;
 mod social;
@@ -167,6 +168,11 @@ pub fn dispatch(
         ids::EMF_UPLOAD_FIELD => render::emf_upload_field(args, span),
         ids::EMF_RENDER_SLICE => render::emf_render_slice(args, span),
         ids::EMF_FIELD_INFO => render::emf_field_info(args, span),
+        ids::SAMPLER_CONFIGURE => sampler_bind::configure(args, span),
+        ids::SAMPLER_CONSTRAIN_ENABLE => sampler_bind::constrain_enable(args, span),
+        ids::SAMPLER_CONSTRAIN_DISABLE => sampler_bind::constrain_disable(args, span),
+        ids::SAMPLER_CONSTRAIN_RESET => sampler_bind::constrain_reset(args, span),
+        ids::SAMPLER_SAMPLE => sampler_bind::sample(args, span),
         other => Err(Diagnostic::new(
             DiagCode::E300,
             span,

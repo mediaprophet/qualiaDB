@@ -987,6 +987,14 @@ impl LocalLlmAgent {
                     }
                     let next = (top_i as u32) % vlen;
 
+                    // T53/W11: feed the selected token back into the DOMINO
+                    // grammar state machine so the mask advances for the next
+                    // token. No-op when DOMINO is not active.
+                    if crate::llm_bench::domino_active() {
+                        let token_bytes = tok.decode(&[next]);
+                        crate::llm_bench::domino_feed_token(token_bytes.as_bytes());
+                    }
+
                     if let Some(ref mut s) = sieve {
                         match s.apply_token(next) {
                             Ok(()) => {
@@ -1503,6 +1511,14 @@ impl LocalLlmAgent {
                         );
                     }
                     let next = (top_i as u32) % vlen;
+
+                    // T53/W11: feed the selected token back into the DOMINO
+                    // grammar state machine so the mask advances for the next
+                    // token. No-op when DOMINO is not active.
+                    if crate::llm_bench::domino_active() {
+                        let token_bytes = tok.decode(&[next]);
+                        crate::llm_bench::domino_feed_token(token_bytes.as_bytes());
+                    }
 
                     if let Some(ref mut s) = sieve {
                         match s.apply_token(next) {

@@ -2579,4 +2579,64 @@ on tick() {
         assert!(!ctrl.in_flight);
         assert_eq!(ctrl.total_processed, 1);
     }
+
+    // ── T53/W11: GBNF constrained sampler invoke fixtures ──────────────────
+
+    #[test]
+    fn g_sampler_configure_invoke() {
+        let mut snap = PoetSnapshot::default();
+        let src = r#"
+requires [ capability("capability.invoke") ];
+effect fn go() {
+    return capability.invoke("sampler.configure", {
+        temperature: 0.0,
+        top_k: 0,
+        top_p: 1.0,
+        seed: 42
+    });
+}
+"#;
+        let v = snap.eval_fn(src, "go", vec![]).unwrap();
+        assert_eq!(v, Value::Bool(true));
+    }
+
+    #[test]
+    fn g_sampler_sample_greedy_invoke() {
+        let mut snap = PoetSnapshot::default();
+        let src = r#"
+requires [ capability("capability.invoke") ];
+effect fn go() {
+    return capability.invoke("sampler.sample", [0.1, 0.9, 0.3, 0.7]);
+}
+"#;
+        let v = snap.eval_fn(src, "go", vec![]).unwrap();
+        // Greedy (temperature 0) → argmax = 1
+        assert_eq!(v, Value::U64(1));
+    }
+
+    #[test]
+    fn g_sampler_constrain_disable_invoke() {
+        let mut snap = PoetSnapshot::default();
+        let src = r#"
+requires [ capability("capability.invoke") ];
+effect fn go() {
+    return capability.invoke("sampler.constrain_disable", null);
+}
+"#;
+        let v = snap.eval_fn(src, "go", vec![]).unwrap();
+        assert_eq!(v, Value::Bool(true));
+    }
+
+    #[test]
+    fn g_sampler_constrain_reset_invoke() {
+        let mut snap = PoetSnapshot::default();
+        let src = r#"
+requires [ capability("capability.invoke") ];
+effect fn go() {
+    return capability.invoke("sampler.constrain_reset", null);
+}
+"#;
+        let v = snap.eval_fn(src, "go", vec![]).unwrap();
+        assert_eq!(v, Value::Bool(true));
+    }
 }

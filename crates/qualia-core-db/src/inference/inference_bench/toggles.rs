@@ -384,6 +384,31 @@ pub fn domino_sample(
     Some(sampler.sample_constrained(logits, ctx, masker))
 }
 
+/// Feed a decoded token's bytes back into the DOMINO grammar state machine
+/// so the grammar advances for the next token's mask. No-op when no masker
+/// is installed or it is inactive (T53/W11).
+///
+/// This MUST be called after every token selected under constrained decoding,
+/// otherwise the grammar state never advances and every token gets masked
+/// against the initial state.
+pub fn domino_feed_token(bytes: &[u8]) {
+    if let Ok(mut g) = DOMINO_MASKER.lock() {
+        if let Some(masker) = g.as_mut() {
+            masker.feed_token(bytes);
+        }
+    }
+}
+
+/// Reset the DOMINO grammar state to the initial state (e.g. for a new
+/// generation turn). No-op when no masker is installed (T53/W11).
+pub fn domino_reset() {
+    if let Ok(mut g) = DOMINO_MASKER.lock() {
+        if let Some(masker) = g.as_mut() {
+            masker.reset();
+        }
+    }
+}
+
 // ── Phase 3: FFN fusion toggle ────────────────────────────────────────────────
 // Default ON (native). Runs the whole pre-norm FFN — gate GEMM, up GEMM, GPU SiLU·mul,
 // down GEMM — in ONE command submit with intermediates kept in VRAM, so a layer costs ONE
