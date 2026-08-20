@@ -523,9 +523,9 @@ AST nodes, then Species/Mixture, then CST, then HID, then pretty syntax last.
 | T7 | **Add `QuinRef` type** — opaque 48-byte handle; scripts do not see raw metadata/parity. Replace `Value::Quin { s,p,o,c }`. | **Done** — QuinRef in value.rs with from_raw/from_quin, content_hash | excellence-first §2.5 |
 | T8 | **Delete `Value::Identish`** — parser-shaped hole in the type lattice. | Not started (breaking change, deferred to W17) | excellence-first §2.5 |
 | T9 | **User `enum` / `match` as real ADTs** — not only `Ok`/`Err`/`Some`/`None` patterns. | **Done** — EnumDecl in ast.rs, Type::Enum in types.rs | excellence-first §2.6, recommendations §2 |
-| T10 | **Enforce `mut` in check and eval** — currently lexed but not enforced. | Not started | recommendations §2 |
+| T10 | **Enforce `mut` in check and eval** — currently lexed but not enforced. | **Done** — check.rs and eval.rs both track mutables set, reject assignment to immutable bindings with E200 | recommendations §2 |
 | T11 | **Integer ops are `checked_*` → `E600`** — currently specified but not implemented. | **Done** — checked_add fixtures (i1, i2, i3) pass, E600 on overflow | recommendations §2 |
-| T12 | **`math.*` preserves integer domain** when all inputs are integers; no secret `F64`. | Not started | recommendations §2 |
+| T12 | **`math.*` preserves integer domain** when all inputs are integers; no secret `F64`. | **Done** — bind/math.rs: abs/min/max/floor/ceil/round/clamp preserve I64/U64. Only transcendental functions (sqrt/sin/cos/log/exp) return F64. | recommendations §2 |
 | T13 | **`i32`/`f32` either exist in `Value` or leave the spec.** | **Done** — i32/u32/f32 map to i64/u64/f64 in Type::from_ast | excellence-first §2.6 |
 
 ### 8.2 Two 10Ds Reconciliation (excellence-first §2.1)
@@ -546,7 +546,7 @@ AST nodes, then Species/Mixture, then CST, then HID, then pretty syntax last.
 | T20 | **Add `time.monotonic_nanos()` → `u64`** — jitter-free, non-decreasing; for frame timing, physics dt, agent budgets. | **Done** — time_monotonic_nanos() in bind/mod.rs | recommendations §4.1 |
 | T21 | **Add `time.proper_time(worldline_id)` → `f64`** — local proper time from 10D manifold metric. Behind a capability. | **Done** — time_proper_time() in bind/mod.rs | grok §6, recommendations §4.1 |
 | T22 | **Add `receipt_clock()` → `Option<Instant>`** — deterministic replay path for WASM. | **Done** — ReplayClock in replay_clock.rs (W12) | recommendations §4.1, W12 |
-| T23 | **Add `field_sample(field, pose)` → `Quantity`** and `law_apply(law, args)` → `Receipt` to Host. | Not started | excellence-first §2.8 |
+| T23 | **Add `field_sample(field, pose)` → `Quantity`** and `law_apply(law, args)` → `Receipt` to Host. | **Done** — field_sample and law_apply in Host trait with fail-closed defaults, dispatched via field.sample/law.apply | excellence-first §2.8 |
 
 ### 8.4 Wire or Delete Shadow Runtime (excellence-first §2.9, recommendations §4.6)
 
@@ -605,10 +605,10 @@ AST nodes, then Species/Mixture, then CST, then HID, then pretty syntax last.
 
 | # | Task | Status | Source |
 |---|------|--------|--------|
-| T47 | **Stalk as isolated `PoetSnapshot` + capability lease + pulse topic prefix** — agent context is a pointer, not a copied transcript. | Not started | recommendations §4.6, grok §2 |
-| T48 | **Glue / sheaf condition as Pure predicate at commit of staged deltas** — failure is a diagnostic, not an exception unwind. | Not started | recommendations §4.6 |
-| T49 | **Simplex as named record of jointly-required cells/graph shapes** — missing member ⇒ load or commit reject. | Not started | recommendations §4.6 |
-| T50 | **Topological tear as `Diagnostic` + evidential (μ, λ) on sealed receipt** — quarantine context is a host routing decision. | Not started | recommendations §4.6 |
+| T47 | **Stalk as isolated `PoetSnapshot` + capability lease + pulse topic prefix** — agent context is a pointer, not a copied transcript. | **Done** — Stalk in sheaf.rs with snapshot_id, capability_lease_id, topic_prefix, agent_did | recommendations §4.6, grok §2 |
+| T48 | **Glue / sheaf condition as Pure predicate at commit of staged deltas** — failure is a diagnostic, not an exception unwind. | **Done** — SheafCondition in sheaf.rs, checked as Pure predicate | recommendations §4.6 |
+| T49 | **Simplex as named record of jointly-required cells/graph shapes** — missing member ⇒ load or commit reject. | **Done** — Simplex in sheaf.rs with required members, validation | recommendations §4.6 |
+| T50 | **Topological tear as `Diagnostic` + evidential (μ, λ) on sealed receipt** — quarantine context is a host routing decision. | **Done** — TopologicalTear in sheaf.rs with (μ, λ) evidence, Diagnostic emission | recommendations §4.6 |
 
 ### 8.11 MCP Replacement / Agent-Native (recommendations §4.3, grok §2)
 
@@ -617,7 +617,7 @@ AST nodes, then Species/Mixture, then CST, then HID, then pretty syntax last.
 | T51 | **Every `ALL_BOUND` id exports a machine schema** — not English prose. Arguments, effect class, honesty, GBNF fragment from the same table as the catalog. | **Done** — capability_schema.rs with 36+ entries, EffectClass, HonestyLabel, SchemaArg | recommendations §4.3 |
 | T52 | **Heavy returns are `QuinRef` / `did:q42:…` / `TensorRef` / `GeometryRef`** — never a 10k-line payload. | **Done** — QuinRef, TensorRef, GeometryRef, AssetRef are Value variants with extractors | recommendations §4.3 |
 | T53 | **Wire GBNF into in-process sampling loop** — projectional mutations can wait; logit mask is the actual MCP replacement. | Not started | recommendations §4.3, W11, excellence-first §3.13 |
-| T54 | **Reflection stage 3 on isolated `PoetSnapshot`** — must not write the live graph. | Not started | recommendations §4.3 (overlaps T26) |
+| T54 | **Reflection stage 3 on isolated `PoetSnapshot`** — must not write the live graph. | **Done** — reflection.rs with stage3_dry_run, isolated host support, PoetSnapshot fork | recommendations §4.3 (overlaps T26) |
 
 ### 8.12 Disclosure Boundary & Instrument Traces (disclosure-boundary, bylines docs)
 
