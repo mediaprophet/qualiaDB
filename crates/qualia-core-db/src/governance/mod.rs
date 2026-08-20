@@ -1,5 +1,6 @@
 //! `governance` category (reorg).
 
+pub mod coord_seams;
 #[cfg(any(
     not(target_arch = "wasm32"),
     feature = "wasm-logic",

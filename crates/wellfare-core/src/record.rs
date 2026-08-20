@@ -259,7 +259,7 @@ impl RecordEnvelope {
 /// Unix seconds + nanoseconds without pulling in `poet-vibe` as a
 /// dependency. When the `qualia` feature is enabled, it can convert
 /// to/from `poet_vibe::value::Instant`.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct InstantBridge {
     /// Unix seconds
     pub secs: i64,
@@ -357,7 +357,7 @@ impl PartialOrd for InstantBridge {
 ///
 /// Stores seconds + nanoseconds. Can be negative (for "earlier - later").
 /// Converts to/from `poet_vibe::Duration` when the `qualia` feature is enabled.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct DurationBridge {
     /// Seconds (may be negative)
     pub secs: i64,

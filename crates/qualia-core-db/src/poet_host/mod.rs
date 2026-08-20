@@ -152,6 +152,9 @@ pub struct PoetSnapshot {
     /// HID event ring buffer (T46). 4096-sample quota — host constant,
     /// not a language constant. Fail-closed when full.
     pub hid_events: HidEventBuffer,
+    /// Instrument trace ledger (R12). Records instrument acts for
+    /// customer-readable audit. NOT a provider byline (CLAUDE.md §16).
+    pub trace_ledger: crate::governance::instrument_trace::InstrumentTraceLedger,
 }
 
 /// Maximum number of HID events buffered in the host (T46).
@@ -253,6 +256,7 @@ impl PoetSnapshot {
             time_read_during_eval: false,
             tick_controller: TickController::default(),
             hid_events: HidEventBuffer::new(),
+            trace_ledger: crate::governance::instrument_trace::InstrumentTraceLedger::new(),
         }
     }
 
@@ -279,6 +283,7 @@ impl PoetSnapshot {
             time_read_during_eval: false,
             tick_controller: TickController::default(),
             hid_events: HidEventBuffer::new(),
+            trace_ledger: crate::governance::instrument_trace::InstrumentTraceLedger::new(),
         }
     }
 
@@ -359,6 +364,7 @@ impl PoetSnapshot {
             time_read_during_eval: false,
             tick_controller: self.tick_controller.clone(),
             hid_events: self.hid_events.clone(),
+            trace_ledger: self.trace_ledger.clone(),
         }
     }
 
@@ -377,6 +383,28 @@ impl PoetSnapshot {
     /// Number of staged (uncommitted) quins.
     pub fn staged_count(&self) -> usize {
         self.staged.len()
+    }
+
+    /// Record an instrument trace entry (R12).
+    /// This is a customer-readable audit trail, NOT a provider byline.
+    pub fn trace(&mut self, entry: crate::governance::instrument_trace::TraceEntry) {
+        self.trace_ledger.record(entry);
+    }
+
+    /// Convenience: record a simple trace entry for a capability invoke.
+    pub fn trace_invoke(&mut self, invoke_id: &str, success: bool, cost: Option<u64>) {
+        use crate::governance::instrument_trace::TraceEntry;
+        self.trace(TraceEntry {
+            instrument_id: "poet_host".into(),
+            act: format!("invoke:{}", invoke_id),
+            targets: Vec::new(),
+            started_at: 0,
+            completed_at: 0,
+            lease_id: None,
+            cost,
+            success,
+            diagnostic: None,
+        });
     }
 
     pub fn eval_cell_src(&mut self, src: &str) -> Result<Value, Diagnostic> {
@@ -1260,6 +1288,13 @@ impl Host for PoetSnapshot {
             None => Ok(Value::Null),
             Some(slot) => Ok(hid_slot_to_value(&slot)),
         }
+    }
+
+    /// R4: PoetSnapshot supports isolation via `fork()`.
+    /// A forked snapshot has `attached = false`, so graph writes stay in
+    /// the fork's staged deltas and never reach the daemon graph.
+    fn supports_isolation(&self) -> bool {
+        true
     }
 }
 
@@ -2638,5 +2673,82 @@ effect fn go() {
 "#;
         let v = snap.eval_fn(src, "go", vec![]).unwrap();
         assert_eq!(v, Value::Bool(true));
+    }
+
+    /// R4: PoetSnapshot reports supports_isolation = true.
+    #[test]
+    fn r4_supports_isolation() {
+        let snap = PoetSnapshot::default();
+        assert!(snap.supports_isolation());
+    }
+
+    /// R4: A forked snapshot is not attached to the daemon graph.
+    #[test]
+    fn r4_fork_is_not_attached() {
+        let snap = PoetSnapshot::default();
+        let forked = snap.fork();
+        assert!(!forked.attached);
+        assert!(forked.supports_isolation());
+    }
+
+    /// R4: A forked snapshot's staged writes do not reach the parent.
+    #[test]
+    fn r4_fork_staged_isolation() {
+        use poet_vibe::Host;
+        let parent = PoetSnapshot::default();
+        let mut forked = parent.fork();
+        // Stage a triple in the fork
+        let term = poet_vibe::Value::Triple(
+            Box::new(poet_vibe::Value::U64(1)),
+            Box::new(poet_vibe::Value::U64(2)),
+            Box::new(poet_vibe::Value::U64(3)),
+        );
+        let _ = forked.graph_stage(&term, poet_vibe::Span::point(0));
+        // Parent should have no staged deltas
+        assert!(parent.staged.is_empty());
+        // Fork should have staged deltas
+        assert!(!forked.staged.is_empty());
+    }
+
+    /// R12: PoetSnapshot has an instrument trace ledger.
+    #[test]
+    fn r12_trace_ledger_exists() {
+        let snap = PoetSnapshot::default();
+        assert_eq!(snap.trace_ledger.entries().len(), 0);
+    }
+
+    /// R12: trace_invoke records an entry.
+    #[test]
+    fn r12_trace_invoke_records() {
+        let mut snap = PoetSnapshot::default();
+        snap.trace_invoke("sampler.configure", true, Some(42));
+        assert_eq!(snap.trace_ledger.entries().len(), 1);
+        let e = &snap.trace_ledger.entries()[0];
+        assert_eq!(e.act, "invoke:sampler.configure");
+        assert!(e.success);
+        assert_eq!(e.cost, Some(42));
+    }
+
+    /// R12: trace ledger survives fork.
+    #[test]
+    fn r12_trace_ledger_fork() {
+        let mut snap = PoetSnapshot::default();
+        snap.trace_invoke("graph.commit", true, None);
+        let forked = snap.fork();
+        // Fork should have the same trace history
+        assert_eq!(forked.trace_ledger.entries().len(), 1);
+    }
+
+    /// R12: trace ledger filters by act.
+    #[test]
+    fn r12_trace_ledger_filter() {
+        let mut snap = PoetSnapshot::default();
+        snap.trace_invoke("sampler.configure", true, None);
+        snap.trace_invoke("graph.commit", false, None);
+        snap.trace_invoke("sampler.sample", true, None);
+        assert_eq!(snap.trace_ledger.entries().len(), 3);
+        let commits = snap.trace_ledger.entries_for_act("invoke:graph.commit");
+        assert_eq!(commits.len(), 1);
+        assert!(!commits[0].success);
     }
 }

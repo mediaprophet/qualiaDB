@@ -1,5 +1,6 @@
 pub mod anatomy;
 pub mod assessment;
+pub mod asset_aspects;
 pub mod authority_attestation;
 pub mod clinical;
 pub mod companion_pairing;
