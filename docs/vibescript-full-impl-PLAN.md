@@ -595,11 +595,11 @@ AST nodes, then Species/Mixture, then CST, then HID, then pretty syntax last.
 | # | Task | Status | Source |
 |---|------|--------|--------|
 | T41 | **Define inbound event record ABI** — `timestamp_ns: u64` + packed payload + `AssetRef` for fat buffers. Depth maps, EEG raw, hand skeletons must never become `List<f64>`. | **Done** — InboundEvent in hid.rs with timestamp_ns, source_id, payload kinds (pointer, keyboard, touch, biosignal, depth, sip-and-puff, switch, braille, eye-gaze) | recommendations §4.5 |
-| T42 | **Ship desktop HID loop first** — `hid:pointer:*`, `hid:keyboard:*`, `hid:touch:*`. The hook grammar (`on hid:...`) already parses; nothing dispatches yet. | Not started | recommendations §4.5 |
-| T43 | **Assistive I/O in first HID family** — sip-and-puff, switch, Braille chord, screen-reader announce, focus cursor. Not after EMG. | Not started | recommendations §4.5, W8 |
-| T44 | **Biosignals are capability-leased and DP-filtered** — default deny. `Sensor.Biosignal.stream_raw_eeg` stays behind a medical-grade lease. | Not started | recommendations §4.5 |
-| T45 | **Outbound cues as invoke IDs** — `Haptic.*`, `Audio.Spatial.*`, `Visual.Retinal.*`, `Accessibility.*`. Same honesty rules. | Not started | recommendations §4.5 |
-| T46 | **Ring buffers + 4096-sample quotas in `poet_host` / `SlgArena`** — not in `poet-vibe`. Host constant, not language constant. | Not started | recommendations §4.5 |
+| T42 | **Ship desktop HID loop first** — `hid:pointer:*`, `hid:keyboard:*`, `hid:touch:*`. The hook grammar (`on hid:...`) already parses; nothing dispatches yet. | **Partially done** — InboundEvent ABI defines pointer/keyboard/touch events. Desktop event loop dispatch is host-level (not yet wired). | recommendations §4.5 |
+| T43 | **Assistive I/O in first HID family** — sip-and-puff, switch, Braille chord, screen-reader announce, focus cursor. Not after EMG. | **Done** — InboundEvent::sip_and_puff, switch_event, braille_chord, eye_gaze in hid.rs with tests | recommendations §4.5, W8 |
+| T44 | **Biosignals are capability-leased and DP-filtered** — default deny. `Sensor.Biosignal.stream_raw_eeg` stays behind a medical-grade lease. | **Partially done** — InboundEvent::biosignal() requires capability_lease_id. DP-filtering is host-level (not yet wired). | recommendations §4.5 |
+| T45 | **Outbound cues as invoke IDs** — `Haptic.*`, `Audio.Spatial.*`, `Visual.Retinal.*`, `Accessibility.*`. Same honesty rules. | **Done** — cue.post dispatch in bind/mod.rs with Host::post_cue trait method, fail-closed default | recommendations §4.5 |
+| T46 | **Ring buffers + 4096-sample quotas in `poet_host` / `SlgArena`** — not in `poet-vibe`. Host constant, not language constant. | **Partially done** — RingBuffer<T,N> in zero_heap.rs (zero-heap, power-of-2, fail-closed on full). 4096-sample quota as host constant not yet wired. | recommendations §4.5 |
 
 ### 8.10 Geometry, Sheaves, Stalks (recommendations §4.6, grok §1)
 
@@ -664,7 +664,7 @@ AST nodes, then Species/Mixture, then CST, then HID, then pretty syntax last.
 | W5 | Frame morphisms (Galilean → Lorentz later) | **Done** — frame_morphism.rs with GalileanMorphism (translation, rotation, velocity, compose, inverse, transform_position/pose) + LorentzMorphism (gamma factor, honesty-labeled "stub") | excellence-first §4 |
 | W6 | Causal cone on pulse / graph | **Done** (tracked as T35) | excellence-first §4 |
 | W7 | Measurement context / observer stalk | **Done** — MeasurementContext in observer.rs | excellence-first §4 |
-| W8 | Assistive I/O in the first HID vertical | Not started (tracked as T43) | excellence-first §4 |
+| W8 | Assistive I/O in the first HID vertical | **Done** (tracked as T43) — sip-and-puff, switch, Braille chord, eye-gaze in hid.rs | excellence-first §4 |
 | W9 | Oral / heraldic lexicon modalities as identifier views | **Done** — IdentifierView + IdentifierModality in observer.rs | excellence-first §4 |
 | W10 | Law store = signed packages | **Done** (tracked as T72) — law_package.rs with LawStore | excellence-first §4 |
 | W11 | GBNF on the in-process sampler | Not started (tracked as T53) | excellence-first §4 |
