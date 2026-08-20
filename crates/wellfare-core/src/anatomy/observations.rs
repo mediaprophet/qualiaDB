@@ -219,8 +219,17 @@ mod tests {
     fn stature_and_weight_and_appearance_are_seeded() {
         assert_eq!(bind_for_code("8302-2"), RepresentationBind::FitStature);
         assert_eq!(bind_for_code("29463-7"), RepresentationBind::FitWeight);
-        assert_eq!(bind_for_code("q42:eye-colour"), RepresentationBind::AppearanceEye);
-        assert_eq!(bind_for_code("q42:hair-colour"), RepresentationBind::AppearanceHair);
-        assert_eq!(bind_for_code("q42:skin-tone"), RepresentationBind::AppearanceSkin);
+        assert_eq!(
+            bind_for_code("q42:eye-colour"),
+            RepresentationBind::AppearanceEye
+        );
+        assert_eq!(
+            bind_for_code("q42:hair-colour"),
+            RepresentationBind::AppearanceHair
+        );
+        assert_eq!(
+            bind_for_code("q42:skin-tone"),
+            RepresentationBind::AppearanceSkin
+        );
     }
 }

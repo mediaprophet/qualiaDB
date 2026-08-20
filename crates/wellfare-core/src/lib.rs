@@ -48,7 +48,10 @@ mod tests {
         let t: AssertedTime = 1700000000;
         assert_eq!(t, 1700000000u32);
         // Verify it's the same size as u32.
-        assert_eq!(std::mem::size_of::<AssertedTime>(), std::mem::size_of::<u32>());
+        assert_eq!(
+            std::mem::size_of::<AssertedTime>(),
+            std::mem::size_of::<u32>()
+        );
     }
 
     #[test]

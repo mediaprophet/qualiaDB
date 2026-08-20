@@ -50,6 +50,11 @@ pub use bridge::{
     BridgeResult, RecordRef, build_view_from_records, knowledge_key_candidates, records_to_factors,
     records_to_timeline,
 };
+pub use constitution::{
+    AbsenceReason, AbsentPart, BodyAttributes, BodyCharacteristics, BodyConstitution, BodyFit,
+    BodyMeasurements, DominantSide, ReferenceGirths, VH_FEMALE_STATURE_MM, VH_MALE_STATURE_MM,
+};
+pub use coverage::{SystemCoverage, seed_system_coverage, seed_system_coverage_markdown};
 pub use dyad::{
     ConsiderationKind, DyadConsideration, DyadInvalid, EmergingChild, InterfaceKind, MaternalBody,
     MaternalFetalDyad, Parentage, PrincipalRef, Progenitor, RightsStage, SocialRightsThreshold,
@@ -60,27 +65,22 @@ pub use knowledge::{
     import_condition_map, import_entries, seed_knowledge_base,
 };
 pub use knowledge_context::{
-    AncestryInvalid, AncestryRecord, ContextEdgeKind, EthnicityAffiliation,
-    KnowledgeConsideration, KnowledgeContextEdge, SubjectKnowledgeContext,
-    affiliations_from_observations, considerations_for_context, illustrative_context_pack,
+    AncestryInvalid, AncestryRecord, ContextEdgeKind, EthnicityAffiliation, KnowledgeConsideration,
+    KnowledgeContextEdge, SubjectKnowledgeContext, affiliations_from_observations,
+    considerations_for_context, illustrative_context_pack,
 };
 pub use lens::{AnatomyView, Lens, SystemView, WellbeingLevel, build_view, burden_to_sigma};
-pub use coverage::{seed_system_coverage, seed_system_coverage_markdown, SystemCoverage};
-pub use constitution::{
-    AbsenceReason, AbsentPart, BodyAttributes, BodyCharacteristics, BodyConstitution, BodyFit,
-    BodyMeasurements, DominantSide, ReferenceGirths, VH_FEMALE_STATURE_MM, VH_MALE_STATURE_MM,
-};
 pub use measurements::{
-    measurement_catalog_json, MeasurementGroup, MeasurementInputUnit, MeasurementSpec,
-    MeasurementUse, MEASUREMENT_CATALOG, CIRC_MM_RANGE, STATURE_MM_RANGE, WEIGHT_G_RANGE,
-};
-pub use observations::{
-    bind_for_code, is_known_code, BodyObservation, InstrumentKind, KnownObservationCode,
-    RepresentationBind, KNOWN_OBSERVATION_CODES,
+    CIRC_MM_RANGE, MEASUREMENT_CATALOG, MeasurementGroup, MeasurementInputUnit, MeasurementSpec,
+    MeasurementUse, STATURE_MM_RANGE, WEIGHT_G_RANGE, measurement_catalog_json,
 };
 pub use model::{
     AnatomyModel, Karyotype, SystemRepresentation, body_system_for_organ, normalize_organ_key,
     overlay_host_systems, system_memberships_for_organ, system_representation,
+};
+pub use observations::{
+    BodyObservation, InstrumentKind, KNOWN_OBSERVATION_CODES, KnownObservationCode,
+    RepresentationBind, bind_for_code, is_known_code,
 };
 pub use pathway::{
     Hypothesis, InvestigativePathway, InvestigativeStep, RankedStep, StepKind,

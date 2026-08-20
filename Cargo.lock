@@ -14750,6 +14750,7 @@ dependencies = [
  "hex 0.4.3",
  "js-sys",
  "oxigraph",
+ "poet-vibe",
  "qualia-core-db",
  "serde",
  "serde-wasm-bindgen",
