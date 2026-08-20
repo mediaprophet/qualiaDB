@@ -32,6 +32,7 @@ pub mod physics;
 pub mod presentation;
 pub mod pretty;
 pub mod sheaf;
+pub mod translate;
 pub mod trivia;
 pub mod quantity;
 pub mod reflection;
