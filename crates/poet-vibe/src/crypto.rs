@@ -55,10 +55,18 @@ pub fn hash_result_value(algorithm: &str, hex: &str, bytes: usize) -> Value {
 
 /// Build an encrypted data Record value.
 /// `{ ciphertext_hex: String, tag_hex: String, nonce_hex: String, algorithm: String }`
-pub fn encrypted_data_value(algorithm: &str, ciphertext_hex: &str, tag_hex: &str, nonce_hex: &str) -> Value {
+pub fn encrypted_data_value(
+    algorithm: &str,
+    ciphertext_hex: &str,
+    tag_hex: &str,
+    nonce_hex: &str,
+) -> Value {
     let mut rec = BTreeMap::new();
     rec.insert("algorithm".into(), Value::String(algorithm.into()));
-    rec.insert("ciphertext_hex".into(), Value::String(ciphertext_hex.into()));
+    rec.insert(
+        "ciphertext_hex".into(),
+        Value::String(ciphertext_hex.into()),
+    );
     rec.insert("tag_hex".into(), Value::String(tag_hex.into()));
     rec.insert("nonce_hex".into(), Value::String(nonce_hex.into()));
     Value::Record(rec)
@@ -164,24 +172,13 @@ pub const CRYPTO_CAPABILITIES: &[&str] = &[
 ];
 
 /// Supported AEAD algorithms.
-pub const AEAD_ALGORITHMS: &[&str] = &[
-    "AES-256-GCM",
-    "ChaCha20-Poly1305",
-    "XChaCha20-Poly1305",
-];
+pub const AEAD_ALGORITHMS: &[&str] = &["AES-256-GCM", "ChaCha20-Poly1305", "XChaCha20-Poly1305"];
 
 /// Supported hash algorithms.
-pub const HASH_ALGORITHMS: &[&str] = &[
-    "SHA-256",
-    "SHA-512",
-    "BLAKE3",
-];
+pub const HASH_ALGORITHMS: &[&str] = &["SHA-256", "SHA-512", "BLAKE3"];
 
 /// Supported signing algorithms.
-pub const SIGNING_ALGORITHMS: &[&str] = &[
-    "Ed25519",
-    "ML-DSA-65",
-];
+pub const SIGNING_ALGORITHMS: &[&str] = &["Ed25519", "ML-DSA-65"];
 
 // ── ZK proofs (zk-SNARKs) ─────────────────────────────────────────────────────
 
@@ -213,7 +210,10 @@ pub fn zk_verification_value(valid: bool, proof_id: &str, verification_time_ms: 
     let mut rec = BTreeMap::new();
     rec.insert("valid".into(), Value::Bool(valid));
     rec.insert("proof_id".into(), Value::String(proof_id.into()));
-    rec.insert("verification_time_ms".into(), Value::U64(verification_time_ms));
+    rec.insert(
+        "verification_time_ms".into(),
+        Value::U64(verification_time_ms),
+    );
     Value::Record(rec)
 }
 
@@ -240,18 +240,27 @@ mod tests {
             Value::Record(r) => r,
             _ => panic!("expected Record"),
         };
-        assert_eq!(match rec.get("algorithm").unwrap() {
-            Value::String(s) => s.as_str(),
-            _ => panic!("expected String"),
-        }, "SHA-256");
-        assert_eq!(match rec.get("hex").unwrap() {
-            Value::String(s) => s.as_str(),
-            _ => panic!("expected String"),
-        }, "abc123");
-        assert_eq!(match rec.get("bytes").unwrap() {
-            Value::U64(n) => *n,
-            _ => panic!("expected U64"),
-        }, 32);
+        assert_eq!(
+            match rec.get("algorithm").unwrap() {
+                Value::String(s) => s.as_str(),
+                _ => panic!("expected String"),
+            },
+            "SHA-256"
+        );
+        assert_eq!(
+            match rec.get("hex").unwrap() {
+                Value::String(s) => s.as_str(),
+                _ => panic!("expected String"),
+            },
+            "abc123"
+        );
+        assert_eq!(
+            match rec.get("bytes").unwrap() {
+                Value::U64(n) => *n,
+                _ => panic!("expected U64"),
+            },
+            32
+        );
     }
 
     #[test]
@@ -365,14 +374,20 @@ mod tests {
             _ => panic!("expected Record"),
         };
         assert_eq!(rec.len(), 3);
-        assert_eq!(match rec.get("valid").unwrap() {
-            Value::Bool(b) => *b,
-            _ => panic!("expected Bool"),
-        }, true);
-        assert_eq!(match rec.get("verification_time_ms").unwrap() {
-            Value::U64(n) => *n,
-            _ => panic!("expected U64"),
-        }, 42);
+        assert_eq!(
+            match rec.get("valid").unwrap() {
+                Value::Bool(b) => *b,
+                _ => panic!("expected Bool"),
+            },
+            true
+        );
+        assert_eq!(
+            match rec.get("verification_time_ms").unwrap() {
+                Value::U64(n) => *n,
+                _ => panic!("expected U64"),
+            },
+            42
+        );
     }
 
     #[test]
@@ -383,10 +398,13 @@ mod tests {
             _ => panic!("expected Record"),
         };
         assert_eq!(rec.len(), 2);
-        assert_eq!(match rec.get("valid").unwrap() {
-            Value::Bool(b) => *b,
-            _ => panic!("expected Bool"),
-        }, true);
+        assert_eq!(
+            match rec.get("valid").unwrap() {
+                Value::Bool(b) => *b,
+                _ => panic!("expected Bool"),
+            },
+            true
+        );
         match rec.get("result").unwrap() {
             Value::List(xs) => assert_eq!(xs.len(), 3),
             _ => panic!("expected List"),

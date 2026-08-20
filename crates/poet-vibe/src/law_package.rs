@@ -153,12 +153,21 @@ impl LawPackage {
     pub fn to_value(&self) -> Value {
         let mut rec = BTreeMap::new();
         rec.insert("name".into(), Value::String(self.name.clone()));
-        rec.insert("condition".into(), Value::String(self.condition_text.clone()));
-        rec.insert("consequence".into(), Value::String(self.consequence_text.clone()));
+        rec.insert(
+            "condition".into(),
+            Value::String(self.condition_text.clone()),
+        );
+        rec.insert(
+            "consequence".into(),
+            Value::String(self.consequence_text.clone()),
+        );
         rec.insert("author".into(), Value::String(self.author.clone()));
         rec.insert("licence".into(), Value::String(self.licence.clone()));
         rec.insert("kind".into(), Value::String(self.kind.as_str().into()));
-        rec.insert("asserted_at".into(), Value::Instant(self.asserted_at.clone()));
+        rec.insert(
+            "asserted_at".into(),
+            Value::Instant(self.asserted_at.clone()),
+        );
         rec.insert("is_signed".into(), Value::Bool(self.is_signed()));
         if let Some(ref v) = self.version {
             rec.insert("version".into(), Value::String(v.clone()));
@@ -311,12 +320,22 @@ mod tests {
     #[test]
     fn t72_canonical_bytes_deterministic() {
         let law1 = LawPackage::new(
-            "crush", "cond", "cons", "did:alice", "MIT",
-            LawKind::Physical, make_instant(),
+            "crush",
+            "cond",
+            "cons",
+            "did:alice",
+            "MIT",
+            LawKind::Physical,
+            make_instant(),
         );
         let law2 = LawPackage::new(
-            "crush", "cond", "cons", "did:alice", "MIT",
-            LawKind::Physical, make_instant(),
+            "crush",
+            "cond",
+            "cons",
+            "did:alice",
+            "MIT",
+            LawKind::Physical,
+            make_instant(),
         );
         assert_eq!(law1.canonical_bytes(), law2.canonical_bytes());
     }
@@ -324,12 +343,22 @@ mod tests {
     #[test]
     fn t72_canonical_bytes_differ_on_content() {
         let law1 = LawPackage::new(
-            "crush", "cond1", "cons", "did:alice", "MIT",
-            LawKind::Physical, make_instant(),
+            "crush",
+            "cond1",
+            "cons",
+            "did:alice",
+            "MIT",
+            LawKind::Physical,
+            make_instant(),
         );
         let law2 = LawPackage::new(
-            "crush", "cond2", "cons", "did:alice", "MIT",
-            LawKind::Physical, make_instant(),
+            "crush",
+            "cond2",
+            "cons",
+            "did:alice",
+            "MIT",
+            LawKind::Physical,
+            make_instant(),
         );
         assert_ne!(law1.canonical_bytes(), law2.canonical_bytes());
     }
@@ -337,12 +366,22 @@ mod tests {
     #[test]
     fn t72_canonical_bytes_differ_on_kind() {
         let law1 = LawPackage::new(
-            "crush", "cond", "cons", "did:alice", "MIT",
-            LawKind::Physical, make_instant(),
+            "crush",
+            "cond",
+            "cons",
+            "did:alice",
+            "MIT",
+            LawKind::Physical,
+            make_instant(),
         );
         let law2 = LawPackage::new(
-            "crush", "cond", "cons", "did:alice", "MIT",
-            LawKind::Fictional, make_instant(),
+            "crush",
+            "cond",
+            "cons",
+            "did:alice",
+            "MIT",
+            LawKind::Fictional,
+            make_instant(),
         );
         assert_ne!(law1.canonical_bytes(), law2.canonical_bytes());
     }
@@ -350,8 +389,13 @@ mod tests {
     #[test]
     fn t72_to_value() {
         let law = LawPackage::new(
-            "crush", "cond", "cons", "did:alice", "MIT",
-            LawKind::Physical, make_instant(),
+            "crush",
+            "cond",
+            "cons",
+            "did:alice",
+            "MIT",
+            LawKind::Physical,
+            make_instant(),
         )
         .with_version("1.0");
         let v = law.to_value();
@@ -378,16 +422,31 @@ mod tests {
     fn t72_law_store_register_and_query() {
         let mut store = LawStore::new();
         store.register(LawPackage::new(
-            "crush", "cond1", "cons1", "did:alice", "MIT",
-            LawKind::Physical, make_instant(),
+            "crush",
+            "cond1",
+            "cons1",
+            "did:alice",
+            "MIT",
+            LawKind::Physical,
+            make_instant(),
         ));
         store.register(LawPackage::new(
-            "melt", "cond2", "cons2", "did:bob", "Apache",
-            LawKind::Physical, make_instant(),
+            "melt",
+            "cond2",
+            "cons2",
+            "did:bob",
+            "Apache",
+            LawKind::Physical,
+            make_instant(),
         ));
         store.register(LawPackage::new(
-            "respawn", "cond3", "cons3", "did:game-dev", "GameLic",
-            LawKind::Fictional, make_instant(),
+            "respawn",
+            "cond3",
+            "cons3",
+            "did:game-dev",
+            "GameLic",
+            LawKind::Fictional,
+            make_instant(),
         ));
         assert_eq!(store.len(), 3);
         assert_eq!(store.by_author("did:alice").len(), 1);
@@ -401,13 +460,26 @@ mod tests {
     fn t72_law_store_signed_filter() {
         let mut store = LawStore::new();
         store.register(LawPackage::new(
-            "crush", "cond", "cons", "did:alice", "MIT",
-            LawKind::Physical, make_instant(),
+            "crush",
+            "cond",
+            "cons",
+            "did:alice",
+            "MIT",
+            LawKind::Physical,
+            make_instant(),
         ));
-        store.register(LawPackage::new(
-            "melt", "cond", "cons", "did:bob", "MIT",
-            LawKind::Physical, make_instant(),
-        ).with_signature([1u8; 64]));
+        store.register(
+            LawPackage::new(
+                "melt",
+                "cond",
+                "cons",
+                "did:bob",
+                "MIT",
+                LawKind::Physical,
+                make_instant(),
+            )
+            .with_signature([1u8; 64]),
+        );
         assert_eq!(store.signed().len(), 1);
     }
 

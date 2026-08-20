@@ -211,7 +211,10 @@ impl<'a> Lexer<'a> {
     fn lex_number(&mut self, start: usize) -> Result<Token, Diagnostic> {
         if self.bytes[self.pos] == b'0' && self.peek_at(1) == Some(b'x') {
             self.pos += 2;
-            while matches!(self.peek(), Some(b'0'..=b'9' | b'a'..=b'f' | b'A'..=b'F' | b'_')) {
+            while matches!(
+                self.peek(),
+                Some(b'0'..=b'9' | b'a'..=b'f' | b'A'..=b'F' | b'_')
+            ) {
                 self.pos += 1;
             }
             self.skip_int_suffix();
@@ -259,10 +262,7 @@ impl<'a> Lexer<'a> {
     }
 
     fn lex_question(&mut self, start: usize) -> Result<Token, Diagnostic> {
-        if matches!(
-            self.peek_at(1),
-            Some(b'A'..=b'Z' | b'a'..=b'z' | b'_')
-        ) {
+        if matches!(self.peek_at(1), Some(b'A'..=b'Z' | b'a'..=b'z' | b'_')) {
             self.pos += 1;
             while matches!(
                 self.peek(),
@@ -301,14 +301,10 @@ impl<'a> Lexer<'a> {
         // (`:` `/` `#`). Otherwise it is a type-argument `<` (`Result<T, E>`).
         if let Some(n) = self.peek_at(1) {
             if !n.is_ascii_whitespace() {
-                if let Some(gt) = self.bytes[self.pos + 1..]
-                    .iter()
-                    .position(|&c| c == b'>')
-                {
+                if let Some(gt) = self.bytes[self.pos + 1..].iter().position(|&c| c == b'>') {
                     let inner = &self.bytes[self.pos + 1..self.pos + 1 + gt];
-                    let looks_iri = inner.contains(&b':')
-                        || inner.contains(&b'/')
-                        || inner.contains(&b'#');
+                    let looks_iri =
+                        inner.contains(&b':') || inner.contains(&b'/') || inner.contains(&b'#');
                     if looks_iri {
                         self.pos += 2 + gt;
                         return Ok(self.tok(TokenKind::Iri, start));
@@ -407,7 +403,10 @@ impl<'a> Lexer<'a> {
 
     fn lex_blank(&mut self, start: usize) -> Result<Token, Diagnostic> {
         self.pos += 2;
-        if !matches!(self.peek(), Some(b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'_')) {
+        if !matches!(
+            self.peek(),
+            Some(b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'_')
+        ) {
             return Err(Diagnostic::new(
                 DiagCode::E001,
                 Span::new(start as u32, self.pos as u32),

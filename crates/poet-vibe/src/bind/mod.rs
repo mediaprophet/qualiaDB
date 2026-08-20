@@ -14,12 +14,7 @@ use crate::value::{Instant, Value};
 
 /// Host supplied by Qualia / tests.
 pub trait Host {
-    fn graph_query(
-        &mut self,
-        args: &[Value],
-        take: u64,
-        span: Span,
-    ) -> Result<Value, Diagnostic>;
+    fn graph_query(&mut self, args: &[Value], take: u64, span: Span) -> Result<Value, Diagnostic>;
 
     fn graph_stage(&mut self, term: &Value, span: Span) -> Result<Value, Diagnostic>;
 
@@ -35,11 +30,19 @@ pub trait Host {
         Ok(())
     }
 
-    fn aura_validate(&mut self, node: &Value, shape: &Value, span: Span)
-        -> Result<Value, Diagnostic>;
+    fn aura_validate(
+        &mut self,
+        node: &Value,
+        shape: &Value,
+        span: Span,
+    ) -> Result<Value, Diagnostic>;
 
-    fn pulse_publish(&mut self, topic: &str, payload: &Value, span: Span)
-        -> Result<Value, Diagnostic>;
+    fn pulse_publish(
+        &mut self,
+        topic: &str,
+        payload: &Value,
+        span: Span,
+    ) -> Result<Value, Diagnostic>;
 
     /// Wall clock as seconds since Unix epoch. External (core §11): forbidden
     /// in Pure cells. Default fails closed with E702 (WASM / hosts without a clock);
@@ -147,8 +150,7 @@ pub trait Host {
 
     /// Proper time along a worldline, in seconds. Default: not available
     /// (E702). Hosts with a manifold metric implementation override this.
-    fn time_proper_time(&mut self, _worldline_id: u64, span: Span)
-        -> Result<Value, Diagnostic> {
+    fn time_proper_time(&mut self, _worldline_id: u64, span: Span) -> Result<Value, Diagnostic> {
         Err(Diagnostic::new(
             DiagCode::E702,
             span,
@@ -263,11 +265,7 @@ pub trait Host {
     /// Validate a DAG pipeline definition (T24). Returns Ok(Null) if
     /// valid, Err with diagnostic if invalid (cycle, missing budget,
     /// missing capability). Default: E702.
-    fn dag_validate(
-        &mut self,
-        _pipeline: &Value,
-        span: Span,
-    ) -> Result<Value, Diagnostic> {
+    fn dag_validate(&mut self, _pipeline: &Value, span: Span) -> Result<Value, Diagnostic> {
         Err(Diagnostic::new(
             DiagCode::E702,
             span,
@@ -307,11 +305,7 @@ pub trait Host {
     /// Wait for the next inbound HID event with a timeout (T42).
     /// Returns the next event, or Null if the timeout expired.
     /// Default: E702.
-    fn hid_wait(
-        &mut self,
-        _timeout_ns: u64,
-        span: Span,
-    ) -> Result<Value, Diagnostic> {
+    fn hid_wait(&mut self, _timeout_ns: u64, span: Span) -> Result<Value, Diagnostic> {
         Err(Diagnostic::new(
             DiagCode::E702,
             span,
@@ -411,12 +405,7 @@ pub trait Host {
     /// Sign data with a key (T-crypto). The key_id identifies the key
     /// in the host's key vault. Returns a Record
     /// `{ key_id, signature_hex, algorithm }`. Default: E702.
-    fn crypto_sign(
-        &mut self,
-        _key_id: &str,
-        _data: &str,
-        span: Span,
-    ) -> Result<Value, Diagnostic> {
+    fn crypto_sign(&mut self, _key_id: &str, _data: &str, span: Span) -> Result<Value, Diagnostic> {
         Err(Diagnostic::new(
             DiagCode::E702,
             span,
@@ -441,11 +430,7 @@ pub trait Host {
 
     /// Generate a new key (T-crypto). The algorithm is one of "Ed25519",
     /// "ML-DSA-65". Returns the key_id String. Default: E702.
-    fn crypto_generate_key(
-        &mut self,
-        _algorithm: &str,
-        span: Span,
-    ) -> Result<Value, Diagnostic> {
+    fn crypto_generate_key(&mut self, _algorithm: &str, span: Span) -> Result<Value, Diagnostic> {
         Err(Diagnostic::new(
             DiagCode::E702,
             span,
@@ -689,9 +674,9 @@ pub fn dispatch<H: Host>(
             host.graph_query(args, take, span)
         }
         "graph.stage" => {
-            let term = args.first().ok_or_else(|| {
-                Diagnostic::new(DiagCode::E100, span, "graph.stage needs a term")
-            })?;
+            let term = args
+                .first()
+                .ok_or_else(|| Diagnostic::new(DiagCode::E100, span, "graph.stage needs a term"))?;
             host.graph_stage(term, span)
         }
         "graph.commit" => host.graph_commit(span),
@@ -722,44 +707,44 @@ pub fn dispatch<H: Host>(
         "instant.to_unix_secs" => {
             let inst = match args.first() {
                 Some(Value::Instant(i)) => i.clone(),
-                _ => return Err(Diagnostic::new(
-                    DiagCode::E100,
-                    span,
-                    "instant.to_unix_secs needs an Instant argument",
-                )),
+                _ => {
+                    return Err(Diagnostic::new(
+                        DiagCode::E100,
+                        span,
+                        "instant.to_unix_secs needs an Instant argument",
+                    ))
+                }
             };
             Ok(Value::I64(inst.secs))
         }
         "instant.to_unix_nanos" => {
             let inst = match args.first() {
                 Some(Value::Instant(i)) => i.clone(),
-                _ => return Err(Diagnostic::new(
-                    DiagCode::E100,
-                    span,
-                    "instant.to_unix_nanos needs an Instant argument",
-                )),
+                _ => {
+                    return Err(Diagnostic::new(
+                        DiagCode::E100,
+                        span,
+                        "instant.to_unix_nanos needs an Instant argument",
+                    ))
+                }
             };
-            Ok(Value::U64((inst.secs as u64) * 1_000_000_000 + inst.nanos as u64))
+            Ok(Value::U64(
+                (inst.secs as u64) * 1_000_000_000 + inst.nanos as u64,
+            ))
         }
         "host.version" => Ok(Value::String(host.host_version().into())),
         "time.proper_time" => {
-            let worldline_id = args.first()
-                .and_then(|v| v.as_i64())
-                .unwrap_or(0) as u64;
+            let worldline_id = args.first().and_then(|v| v.as_i64()).unwrap_or(0) as u64;
             host.time_proper_time(worldline_id, span)
         }
         "receipt.clock" => host.receipt_clock(span),
         "field.sample" => {
-            let field_ref = args.first()
-                .and_then(|v| v.as_i64())
-                .unwrap_or(0) as u64;
+            let field_ref = args.first().and_then(|v| v.as_i64()).unwrap_or(0) as u64;
             let pose = args.get(1).unwrap_or(&Value::Null);
             host.field_sample(field_ref, pose, span)
         }
         "law.apply" => {
-            let law_ref = args.first()
-                .and_then(|v| v.as_i64())
-                .unwrap_or(0) as u64;
+            let law_ref = args.first().and_then(|v| v.as_i64()).unwrap_or(0) as u64;
             let law_args: &[Value] = match args.get(1) {
                 Some(Value::List(xs)) => xs.as_slice(),
                 _ => &[],
@@ -913,10 +898,13 @@ pub fn dispatch<H: Host>(
             let key_hex = crate::crypto::extract_string_arg(args, 1, "aead_encrypt", span)?;
             let nonce_hex = crate::crypto::extract_string_arg(args, 2, "aead_encrypt", span)?;
             let plaintext = crate::crypto::extract_string_arg(args, 3, "aead_encrypt", span)?;
-            let aad = args.get(4).and_then(|v| match v {
-                Value::String(s) => Some(s.as_str()),
-                _ => None,
-            }).unwrap_or("");
+            let aad = args
+                .get(4)
+                .and_then(|v| match v {
+                    Value::String(s) => Some(s.as_str()),
+                    _ => None,
+                })
+                .unwrap_or("");
             host.crypto_aead_encrypt(&algorithm, &key_hex, &nonce_hex, &plaintext, aad, span)
         }
         "crypto.aead_decrypt" => {
@@ -925,11 +913,22 @@ pub fn dispatch<H: Host>(
             let nonce_hex = crate::crypto::extract_string_arg(args, 2, "aead_decrypt", span)?;
             let ciphertext_hex = crate::crypto::extract_string_arg(args, 3, "aead_decrypt", span)?;
             let tag_hex = crate::crypto::extract_string_arg(args, 4, "aead_decrypt", span)?;
-            let aad = args.get(5).and_then(|v| match v {
-                Value::String(s) => Some(s.as_str()),
-                _ => None,
-            }).unwrap_or("");
-            host.crypto_aead_decrypt(&algorithm, &key_hex, &nonce_hex, &ciphertext_hex, &tag_hex, aad, span)
+            let aad = args
+                .get(5)
+                .and_then(|v| match v {
+                    Value::String(s) => Some(s.as_str()),
+                    _ => None,
+                })
+                .unwrap_or("");
+            host.crypto_aead_decrypt(
+                &algorithm,
+                &key_hex,
+                &nonce_hex,
+                &ciphertext_hex,
+                &tag_hex,
+                aad,
+                span,
+            )
         }
         "crypto.sign" => {
             let key_id = crate::crypto::extract_string_arg(args, 0, "sign", span)?;
@@ -977,37 +976,53 @@ pub fn dispatch<H: Host>(
             let n = crate::crypto::extract_u64_arg(args, 2, "prove_matmul", span)? as usize;
             // args[3] = a (List<I64>), args[4] = b (List<I64>)
             let a: Vec<i128> = match args.get(3) {
-                Some(Value::List(xs)) => xs.iter().filter_map(|v| match v {
-                    Value::I64(n) => Some(*n as i128),
-                    Value::U64(n) => Some(*n as i128),
-                    _ => None,
-                }).collect(),
-                _ => return Err(Diagnostic::new(
-                    DiagCode::E100, span,
-                    "zk.prove_matmul: expected a List at position 3",
-                )),
+                Some(Value::List(xs)) => xs
+                    .iter()
+                    .filter_map(|v| match v {
+                        Value::I64(n) => Some(*n as i128),
+                        Value::U64(n) => Some(*n as i128),
+                        _ => None,
+                    })
+                    .collect(),
+                _ => {
+                    return Err(Diagnostic::new(
+                        DiagCode::E100,
+                        span,
+                        "zk.prove_matmul: expected a List at position 3",
+                    ))
+                }
             };
             let b: Vec<i128> = match args.get(4) {
-                Some(Value::List(xs)) => xs.iter().filter_map(|v| match v {
-                    Value::I64(n) => Some(*n as i128),
-                    Value::U64(n) => Some(*n as i128),
-                    _ => None,
-                }).collect(),
-                _ => return Err(Diagnostic::new(
-                    DiagCode::E100, span,
-                    "zk.prove_matmul: expected a List at position 4",
-                )),
+                Some(Value::List(xs)) => xs
+                    .iter()
+                    .filter_map(|v| match v {
+                        Value::I64(n) => Some(*n as i128),
+                        Value::U64(n) => Some(*n as i128),
+                        _ => None,
+                    })
+                    .collect(),
+                _ => {
+                    return Err(Diagnostic::new(
+                        DiagCode::E100,
+                        span,
+                        "zk.prove_matmul: expected a List at position 4",
+                    ))
+                }
             };
             host.zk_prove_matmul(m as u64, k as u64, n as u64, &a, &b, span)
         }
-        "zk.list_circuits" => {
-            host.zk_list_circuits(span)
-        }
+        "zk.list_circuits" => host.zk_list_circuits(span),
         // ── Cosmic coordinate operations (OCS) ─────────────────────────
         "cosmic.usri.parse" => {
             let s = match args.first() {
                 Some(Value::String(s)) | Some(Value::Iri(s)) => s.as_str(),
-                _ => return Err(Diagnostic::new(DiagCode::E100, span, "cosmic.usri.parse needs a USRI string")),
+                _ => {
+                    return Err(Diagnostic::new(
+                        DiagCode::E100,
+                        span,
+                        "cosmic.usri.parse needs a USRI string",
+                    ))
+                }
             };
             match crate::cosmic::usri::Usri::parse(s) {
                 Ok(u) => Ok(u.to_value()),
@@ -1018,18 +1033,23 @@ pub fn dispatch<H: Host>(
             let lat = crate::crypto::extract_f64_arg(args, 0, "geodetic_to_ecef", span)?;
             let lon = crate::crypto::extract_f64_arg(args, 1, "geodetic_to_ecef", span)?;
             let alt = crate::crypto::extract_f64_arg(args, 2, "geodetic_to_ecef", span)?;
-            let e = crate::cosmic::transforms::geodetic_to_ecef(
-                crate::cosmic::transforms::Geodetic { lat_deg: lat, lon_deg: lon, alt_m: alt },
-            );
+            let e =
+                crate::cosmic::transforms::geodetic_to_ecef(crate::cosmic::transforms::Geodetic {
+                    lat_deg: lat,
+                    lon_deg: lon,
+                    alt_m: alt,
+                });
             Ok(crate::cosmic::transforms::ecef_to_value(e))
         }
         "cosmic.ecef_to_geodetic" => {
             let x = crate::crypto::extract_f64_arg(args, 0, "ecef_to_geodetic", span)?;
             let y = crate::crypto::extract_f64_arg(args, 1, "ecef_to_geodetic", span)?;
             let z = crate::crypto::extract_f64_arg(args, 2, "ecef_to_geodetic", span)?;
-            let g = crate::cosmic::transforms::ecef_to_geodetic(
-                crate::cosmic::transforms::Ecef { x, y, z },
-            );
+            let g = crate::cosmic::transforms::ecef_to_geodetic(crate::cosmic::transforms::Ecef {
+                x,
+                y,
+                z,
+            });
             Ok(crate::cosmic::transforms::geodetic_to_value(g))
         }
         "cosmic.geodetic_distance" => {
@@ -1038,8 +1058,16 @@ pub fn dispatch<H: Host>(
             let lat2 = crate::crypto::extract_f64_arg(args, 2, "geodetic_distance", span)?;
             let lon2 = crate::crypto::extract_f64_arg(args, 3, "geodetic_distance", span)?;
             let d = crate::cosmic::transforms::geodetic_distance(
-                crate::cosmic::transforms::Geodetic { lat_deg: lat1, lon_deg: lon1, alt_m: 0.0 },
-                crate::cosmic::transforms::Geodetic { lat_deg: lat2, lon_deg: lon2, alt_m: 0.0 },
+                crate::cosmic::transforms::Geodetic {
+                    lat_deg: lat1,
+                    lon_deg: lon1,
+                    alt_m: 0.0,
+                },
+                crate::cosmic::transforms::Geodetic {
+                    lat_deg: lat2,
+                    lon_deg: lon2,
+                    alt_m: 0.0,
+                },
             );
             Ok(Value::F64(d))
         }
@@ -1059,12 +1087,24 @@ pub fn dispatch<H: Host>(
         "cosmic.body.gravity" => {
             let name = match args.first() {
                 Some(Value::String(s)) | Some(Value::Iri(s)) => s.as_str(),
-                _ => return Err(Diagnostic::new(DiagCode::E100, span, "cosmic.body.gravity needs a body name")),
+                _ => {
+                    return Err(Diagnostic::new(
+                        DiagCode::E100,
+                        span,
+                        "cosmic.body.gravity needs a body name",
+                    ))
+                }
             };
             let profile = match name {
                 "earth" => crate::cosmic::celestial::earth_profile(),
                 "mars" => crate::cosmic::celestial::mars_profile(),
-                _ => return Err(Diagnostic::new(DiagCode::E100, span, format!("unknown body: {name}"))),
+                _ => {
+                    return Err(Diagnostic::new(
+                        DiagCode::E100,
+                        span,
+                        format!("unknown body: {name}"),
+                    ))
+                }
             };
             Ok(Value::F64(profile.surface_gravity()))
         }
@@ -1097,10 +1137,20 @@ mod tests {
         fn graph_commit(&mut self, _span: Span) -> Result<Value, Diagnostic> {
             Ok(Value::Null)
         }
-        fn aura_validate(&mut self, _node: &Value, _shape: &Value, _span: Span) -> Result<Value, Diagnostic> {
+        fn aura_validate(
+            &mut self,
+            _node: &Value,
+            _shape: &Value,
+            _span: Span,
+        ) -> Result<Value, Diagnostic> {
             Ok(Value::Bool(true))
         }
-        fn pulse_publish(&mut self, _topic: &str, _payload: &Value, _span: Span) -> Result<Value, Diagnostic> {
+        fn pulse_publish(
+            &mut self,
+            _topic: &str,
+            _payload: &Value,
+            _span: Span,
+        ) -> Result<Value, Diagnostic> {
             Ok(Value::Null)
         }
     }
@@ -1144,7 +1194,10 @@ mod tests {
     #[test]
     fn time_monotonic_nanos_default_zero() {
         let mut host = MockHost::default();
-        assert_eq!(host.time_monotonic_nanos(Span::point(0)).unwrap(), Value::U64(0));
+        assert_eq!(
+            host.time_monotonic_nanos(Span::point(0)).unwrap(),
+            Value::U64(0)
+        );
     }
 
     #[test]
@@ -1209,7 +1262,8 @@ mod tests {
             &[inst],
             &[],
             Span::point(0),
-        ).unwrap();
+        )
+        .unwrap();
         assert_eq!(res, Value::I64(1234567890));
     }
 
@@ -1236,7 +1290,8 @@ mod tests {
             &[inst],
             &[],
             Span::point(0),
-        ).unwrap();
+        )
+        .unwrap();
         assert_eq!(res, Value::U64(1_500_000_000));
     }
 
@@ -1249,7 +1304,12 @@ mod tests {
 
     struct CustomVersionHost;
     impl Host for CustomVersionHost {
-        fn graph_query(&mut self, _args: &[Value], _take: u64, _span: Span) -> Result<Value, Diagnostic> {
+        fn graph_query(
+            &mut self,
+            _args: &[Value],
+            _take: u64,
+            _span: Span,
+        ) -> Result<Value, Diagnostic> {
             Ok(Value::Null)
         }
         fn graph_stage(&mut self, _term: &Value, _span: Span) -> Result<Value, Diagnostic> {
@@ -1258,10 +1318,20 @@ mod tests {
         fn graph_commit(&mut self, _span: Span) -> Result<Value, Diagnostic> {
             Ok(Value::Null)
         }
-        fn aura_validate(&mut self, _node: &Value, _shape: &Value, _span: Span) -> Result<Value, Diagnostic> {
+        fn aura_validate(
+            &mut self,
+            _node: &Value,
+            _shape: &Value,
+            _span: Span,
+        ) -> Result<Value, Diagnostic> {
             Ok(Value::Bool(true))
         }
-        fn pulse_publish(&mut self, _topic: &str, _payload: &Value, _span: Span) -> Result<Value, Diagnostic> {
+        fn pulse_publish(
+            &mut self,
+            _topic: &str,
+            _payload: &Value,
+            _span: Span,
+        ) -> Result<Value, Diagnostic> {
             Ok(Value::Null)
         }
         fn host_version(&self) -> &str {
@@ -1299,7 +1369,12 @@ mod tests {
 
     struct ProperTimeHost;
     impl Host for ProperTimeHost {
-        fn graph_query(&mut self, _args: &[Value], _take: u64, _span: Span) -> Result<Value, Diagnostic> {
+        fn graph_query(
+            &mut self,
+            _args: &[Value],
+            _take: u64,
+            _span: Span,
+        ) -> Result<Value, Diagnostic> {
             Ok(Value::Null)
         }
         fn graph_stage(&mut self, _term: &Value, _span: Span) -> Result<Value, Diagnostic> {
@@ -1308,13 +1383,27 @@ mod tests {
         fn graph_commit(&mut self, _span: Span) -> Result<Value, Diagnostic> {
             Ok(Value::Null)
         }
-        fn aura_validate(&mut self, _node: &Value, _shape: &Value, _span: Span) -> Result<Value, Diagnostic> {
+        fn aura_validate(
+            &mut self,
+            _node: &Value,
+            _shape: &Value,
+            _span: Span,
+        ) -> Result<Value, Diagnostic> {
             Ok(Value::Bool(true))
         }
-        fn pulse_publish(&mut self, _topic: &str, _payload: &Value, _span: Span) -> Result<Value, Diagnostic> {
+        fn pulse_publish(
+            &mut self,
+            _topic: &str,
+            _payload: &Value,
+            _span: Span,
+        ) -> Result<Value, Diagnostic> {
             Ok(Value::Null)
         }
-        fn time_proper_time(&mut self, worldline_id: u64, _span: Span) -> Result<Value, Diagnostic> {
+        fn time_proper_time(
+            &mut self,
+            worldline_id: u64,
+            _span: Span,
+        ) -> Result<Value, Diagnostic> {
             Ok(Value::F64(worldline_id as f64 * 0.001))
         }
     }
@@ -1344,7 +1433,12 @@ mod tests {
 
     struct ReceiptClockHost;
     impl Host for ReceiptClockHost {
-        fn graph_query(&mut self, _args: &[Value], _take: u64, _span: Span) -> Result<Value, Diagnostic> {
+        fn graph_query(
+            &mut self,
+            _args: &[Value],
+            _take: u64,
+            _span: Span,
+        ) -> Result<Value, Diagnostic> {
             Ok(Value::Null)
         }
         fn graph_stage(&mut self, _term: &Value, _span: Span) -> Result<Value, Diagnostic> {
@@ -1353,10 +1447,20 @@ mod tests {
         fn graph_commit(&mut self, _span: Span) -> Result<Value, Diagnostic> {
             Ok(Value::Null)
         }
-        fn aura_validate(&mut self, _node: &Value, _shape: &Value, _span: Span) -> Result<Value, Diagnostic> {
+        fn aura_validate(
+            &mut self,
+            _node: &Value,
+            _shape: &Value,
+            _span: Span,
+        ) -> Result<Value, Diagnostic> {
             Ok(Value::Bool(true))
         }
-        fn pulse_publish(&mut self, _topic: &str, _payload: &Value, _span: Span) -> Result<Value, Diagnostic> {
+        fn pulse_publish(
+            &mut self,
+            _topic: &str,
+            _payload: &Value,
+            _span: Span,
+        ) -> Result<Value, Diagnostic> {
             Ok(Value::Null)
         }
         fn receipt_clock(&mut self, _span: Span) -> Result<Value, Diagnostic> {
@@ -1398,7 +1502,12 @@ mod tests {
 
     struct FieldLawHost;
     impl Host for FieldLawHost {
-        fn graph_query(&mut self, _args: &[Value], _take: u64, _span: Span) -> Result<Value, Diagnostic> {
+        fn graph_query(
+            &mut self,
+            _args: &[Value],
+            _take: u64,
+            _span: Span,
+        ) -> Result<Value, Diagnostic> {
             Ok(Value::Null)
         }
         fn graph_stage(&mut self, _term: &Value, _span: Span) -> Result<Value, Diagnostic> {
@@ -1407,16 +1516,39 @@ mod tests {
         fn graph_commit(&mut self, _span: Span) -> Result<Value, Diagnostic> {
             Ok(Value::Null)
         }
-        fn aura_validate(&mut self, _node: &Value, _shape: &Value, _span: Span) -> Result<Value, Diagnostic> {
+        fn aura_validate(
+            &mut self,
+            _node: &Value,
+            _shape: &Value,
+            _span: Span,
+        ) -> Result<Value, Diagnostic> {
             Ok(Value::Bool(true))
         }
-        fn pulse_publish(&mut self, _topic: &str, _payload: &Value, _span: Span) -> Result<Value, Diagnostic> {
+        fn pulse_publish(
+            &mut self,
+            _topic: &str,
+            _payload: &Value,
+            _span: Span,
+        ) -> Result<Value, Diagnostic> {
             Ok(Value::Null)
         }
-        fn field_sample(&mut self, field_ref: u64, _pose: &Value, _span: Span) -> Result<Value, Diagnostic> {
-            Ok(Value::Quantity(crate::value::Quantity::new(field_ref as f64, "qudt:Meter")))
+        fn field_sample(
+            &mut self,
+            field_ref: u64,
+            _pose: &Value,
+            _span: Span,
+        ) -> Result<Value, Diagnostic> {
+            Ok(Value::Quantity(crate::value::Quantity::new(
+                field_ref as f64,
+                "qudt:Meter",
+            )))
         }
-        fn law_apply(&mut self, law_ref: u64, _args: &[Value], _span: Span) -> Result<Value, Diagnostic> {
+        fn law_apply(
+            &mut self,
+            law_ref: u64,
+            _args: &[Value],
+            _span: Span,
+        ) -> Result<Value, Diagnostic> {
             let mut rec = std::collections::BTreeMap::new();
             rec.insert("law_id".into(), Value::U64(law_ref));
             Ok(Value::Record(rec))
@@ -1451,14 +1583,19 @@ mod tests {
         let res = dispatch(
             &mut host,
             "cosmic.usri.parse",
-            &[Value::String("urn:omni:v1:physical:observable:standard:earth:wgs84".into())],
+            &[Value::String(
+                "urn:omni:v1:physical:observable:standard:earth:wgs84".into(),
+            )],
             &[],
             Span::point(0),
         );
         assert!(res.is_ok());
         match res.unwrap() {
             Value::Record(r) => {
-                assert_eq!(r.get("realm_class"), Some(&Value::String("physical".into())));
+                assert_eq!(
+                    r.get("realm_class"),
+                    Some(&Value::String("physical".into()))
+                );
             }
             other => panic!("expected record, got {other:?}"),
         }

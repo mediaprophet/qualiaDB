@@ -201,7 +201,10 @@ impl PhaseLeaser {
         if self.interrupted {
             return Err(LeaseError::Interrupted);
         }
-        let phase = self.phases.get(phase_name).ok_or(LeaseError::UnknownPhase)?;
+        let phase = self
+            .phases
+            .get(phase_name)
+            .ok_or(LeaseError::UnknownPhase)?;
         // Revoke all previous leases.
         self.leased_caps.clear();
         // Grant new leases.
@@ -228,21 +231,22 @@ impl PhaseLeaser {
 
     /// Verify that a capability use is allowed. If not, trigger an interrupt.
     /// Returns Ok(()) if allowed, Err(LeaseError) if not.
-    pub fn verify_capability(
-        &mut self,
-        cap: &str,
-        node_id: Option<u32>,
-    ) -> Result<(), LeaseError> {
+    pub fn verify_capability(&mut self, cap: &str, node_id: Option<u32>) -> Result<(), LeaseError> {
         if self.interrupted {
             return Err(LeaseError::Interrupted);
         }
-        let phase_name = self.active_phase.as_ref().ok_or(LeaseError::NoActivePhase)?;
-        let phase = self.phases.get(phase_name).ok_or(LeaseError::UnknownPhase)?;
+        let phase_name = self
+            .active_phase
+            .as_ref()
+            .ok_or(LeaseError::NoActivePhase)?;
+        let phase = self
+            .phases
+            .get(phase_name)
+            .ok_or(LeaseError::UnknownPhase)?;
 
         // Check if forbidden — this triggers a ProhibitionBreach interrupt.
         if phase.is_forbidden(cap) {
-            let interrupt =
-                DeonticInterrupt::prohibition_breach(cap, phase_name, node_id);
+            let interrupt = DeonticInterrupt::prohibition_breach(cap, phase_name, node_id);
             self.trigger_interrupt(interrupt);
             return Err(LeaseError::CapabilityForbidden);
         }
@@ -250,8 +254,7 @@ impl PhaseLeaser {
         // Check if allowed.
         if !phase.is_allowed(cap) {
             // Not in the allow-list — trigger a PhaseViolation interrupt.
-            let interrupt =
-                DeonticInterrupt::phase_violation(cap, phase_name, node_id);
+            let interrupt = DeonticInterrupt::phase_violation(cap, phase_name, node_id);
             self.trigger_interrupt(interrupt);
             return Err(LeaseError::CapabilityNotAllowed);
         }
@@ -365,7 +368,10 @@ impl AgentSandbox {
         if self.global_interrupt {
             return Err(LeaseError::Interrupted);
         }
-        let leaser = self.leasers.get_mut(&agent_id).ok_or(LeaseError::NoActivePhase)?;
+        let leaser = self
+            .leasers
+            .get_mut(&agent_id)
+            .ok_or(LeaseError::NoActivePhase)?;
         leaser.verify_capability(cap, node_id).map_err(|e| {
             // If this agent is interrupted, trigger a global interrupt.
             if leaser.is_interrupted() {
@@ -413,16 +419,12 @@ mod tests {
 
     fn test_phases() -> Vec<Phase> {
         vec![
-            Phase::new("init")
-                .allow("math")
-                .allow("rdf"),
+            Phase::new("init").allow("math").allow("rdf"),
             Phase::new("execute")
                 .allow("math")
                 .allow("graph")
                 .forbid("capability"),
-            Phase::new("commit")
-                .allow("graph")
-                .allow("capability"),
+            Phase::new("commit").allow("graph").allow("capability"),
         ]
     }
 
@@ -492,7 +494,10 @@ mod tests {
         assert!(leaser.is_interrupted());
         assert!(!leaser.is_leased("math")); // All caps revoked.
         assert!(!leaser.interrupts().is_empty());
-        assert_eq!(leaser.interrupts()[0].interrupt_type, InterruptType::ProhibitionBreach);
+        assert_eq!(
+            leaser.interrupts()[0].interrupt_type,
+            InterruptType::ProhibitionBreach
+        );
     }
 
     #[test]
@@ -506,7 +511,10 @@ mod tests {
         let result = leaser.verify_capability("graph", Some(0));
         assert_eq!(result, Err(LeaseError::CapabilityNotAllowed));
         assert!(leaser.is_interrupted());
-        assert_eq!(leaser.interrupts()[0].interrupt_type, InterruptType::PhaseViolation);
+        assert_eq!(
+            leaser.interrupts()[0].interrupt_type,
+            InterruptType::PhaseViolation
+        );
     }
 
     #[test]
@@ -546,7 +554,9 @@ mod tests {
         }
         leaser.enter_phase("execute").unwrap();
         leaser.trigger_interrupt(DeonticInterrupt::prohibition_breach(
-            "capability", "execute", None,
+            "capability",
+            "execute",
+            None,
         ));
         // After interrupt, nothing is leased.
         assert!(!leaser.is_leased("math"));
@@ -563,7 +573,9 @@ mod tests {
         }
         leaser.enter_phase("execute").unwrap();
         leaser.trigger_interrupt(DeonticInterrupt::prohibition_breach(
-            "capability", "execute", None,
+            "capability",
+            "execute",
+            None,
         ));
         assert!(leaser.is_interrupted());
         leaser.resume().unwrap();
@@ -618,10 +630,14 @@ mod tests {
     fn agent_sandbox_global_halt() {
         let mut sandbox = AgentSandbox::new();
         let mut leaser1 = PhaseLeaser::new();
-        leaser1.register_phase(Phase::new("init").allow("math")).unwrap();
+        leaser1
+            .register_phase(Phase::new("init").allow("math"))
+            .unwrap();
         leaser1.enter_phase("init").unwrap();
         let mut leaser2 = PhaseLeaser::new();
-        leaser2.register_phase(Phase::new("init").allow("rdf")).unwrap();
+        leaser2
+            .register_phase(Phase::new("init").allow("rdf"))
+            .unwrap();
         leaser2.enter_phase("init").unwrap();
         sandbox.register_agent(0, leaser1).unwrap();
         sandbox.register_agent(1, leaser2).unwrap();
@@ -657,7 +673,9 @@ mod tests {
     fn phase_leaser_too_many_phases() {
         let mut leaser = PhaseLeaser::new();
         for i in 0..MAX_PHASES {
-            leaser.register_phase(Phase::new(&format!("phase{i}"))).unwrap();
+            leaser
+                .register_phase(Phase::new(&format!("phase{i}")))
+                .unwrap();
         }
         let result = leaser.register_phase(Phase::new("overflow"));
         assert_eq!(result, Err(LeaseError::TooManyPhases));
@@ -694,9 +712,7 @@ mod tests {
             }
             leaser.enter_phase("execute").unwrap();
 
-            let interrupt = DeonticInterrupt::prohibition_breach(
-                "capability", "execute", None,
-            );
+            let interrupt = DeonticInterrupt::prohibition_breach("capability", "execute", None);
             let start = std::time::Instant::now();
             leaser.trigger_interrupt(interrupt);
             let elapsed = start.elapsed();
@@ -715,7 +731,8 @@ mod tests {
         assert!(
             best_ns < 1000,
             "deontic hard-stop trigger must complete in < 1µs (best of {}), best took {}ns",
-            MEASUREMENTS, best_ns
+            MEASUREMENTS,
+            best_ns
         );
     }
 
@@ -732,10 +749,14 @@ mod tests {
         for _ in 0..MEASUREMENTS {
             let mut sandbox = AgentSandbox::new();
             let mut leaser1 = PhaseLeaser::new();
-            leaser1.register_phase(Phase::new("init").allow("math")).unwrap();
+            leaser1
+                .register_phase(Phase::new("init").allow("math"))
+                .unwrap();
             leaser1.enter_phase("init").unwrap();
             let mut leaser2 = PhaseLeaser::new();
-            leaser2.register_phase(Phase::new("init").allow("rdf")).unwrap();
+            leaser2
+                .register_phase(Phase::new("init").allow("rdf"))
+                .unwrap();
             leaser2.enter_phase("init").unwrap();
             sandbox.register_agent(0, leaser1).unwrap();
             sandbox.register_agent(1, leaser2).unwrap();
@@ -757,7 +778,8 @@ mod tests {
         assert!(
             best_ns < 100_000,
             "global halt must complete in < 100µs (best of {}), best took {}ns",
-            MEASUREMENTS, best_ns
+            MEASUREMENTS,
+            best_ns
         );
     }
 }

@@ -41,18 +41,29 @@ impl Default for Env {
 
 /// The valid 0.1 namespace import paths. `vibe:0.1/{ns}`.
 pub const VIBE_0_1_NAMESPACES: &[&str] = &[
-    "math", "rdf", "quin", "graph", "aura", "pulse", "capability", "time",
-    "conservation", "causal", "dag", "deontic", "hid", "cue", "crypto", "zk",
+    "math",
+    "rdf",
+    "quin",
+    "graph",
+    "aura",
+    "pulse",
+    "capability",
+    "time",
+    "conservation",
+    "causal",
+    "dag",
+    "deontic",
+    "hid",
+    "cue",
+    "crypto",
+    "zk",
 ];
 
 /// Populate `env.aliases` from a program's import declarations.
 /// Each `import "vibe:0.1/graph" as g;` maps `g` → `graph`.
 /// If no alias is given, the namespace basename is used (e.g. `graph`).
 /// Returns an error if the import path is not a valid 0.1 namespace.
-pub fn populate_import_aliases(
-    env: &mut Env,
-    imports: &[ImportDecl],
-) -> Result<(), Diagnostic> {
+pub fn populate_import_aliases(env: &mut Env, imports: &[ImportDecl]) -> Result<(), Diagnostic> {
     let mut seen = HashSet::new();
     for imp in imports {
         // The vibe:0.1/ prefix is optional (T64). Both
@@ -219,15 +230,18 @@ impl<'a, H: Host> Engine<'a, H> {
                 match op {
                     UnOp::Not => Ok(Value::Bool(!v.is_truthy())),
                     UnOp::Neg => match v {
-                        Value::I64(n) => n
-                            .checked_neg()
-                            .map(Value::I64)
-                            .ok_or_else(|| Diagnostic::new(DiagCode::E600, expr.span, "integer overflow")),
+                        Value::I64(n) => n.checked_neg().map(Value::I64).ok_or_else(|| {
+                            Diagnostic::new(DiagCode::E600, expr.span, "integer overflow")
+                        }),
                         Value::U64(n) => {
                             if n == 0 {
                                 Ok(Value::U64(0))
                             } else {
-                                Err(Diagnostic::new(DiagCode::E600, expr.span, "integer underflow"))
+                                Err(Diagnostic::new(
+                                    DiagCode::E600,
+                                    expr.span,
+                                    "integer underflow",
+                                ))
                             }
                         }
                         Value::F64(n) => Ok(Value::F64(-n)),
@@ -246,10 +260,14 @@ impl<'a, H: Host> Engine<'a, H> {
             ExprKind::Binary { op, left, right } => {
                 let l = self.eval_expr(left, env)?;
                 if *op == BinOp::And {
-                    return Ok(Value::Bool(l.is_truthy() && self.eval_expr(right, env)?.is_truthy()));
+                    return Ok(Value::Bool(
+                        l.is_truthy() && self.eval_expr(right, env)?.is_truthy(),
+                    ));
                 }
                 if *op == BinOp::Or {
-                    return Ok(Value::Bool(l.is_truthy() || self.eval_expr(right, env)?.is_truthy()));
+                    return Ok(Value::Bool(
+                        l.is_truthy() || self.eval_expr(right, env)?.is_truthy(),
+                    ));
                 }
                 let r = self.eval_expr(right, env)?;
                 binop(*op, &l, &r, expr.span)
@@ -260,7 +278,11 @@ impl<'a, H: Host> Engine<'a, H> {
                 // ident). `EnumName.Variant` (no call) → unit enum value.
                 if let ExprKind::Ident(enum_name) = &recv.kind {
                     if let Some(enum_decl) = env.enums.get(enum_name) {
-                        if enum_decl.variants.iter().any(|v| v.name == *name && v.payload.is_empty()) {
+                        if enum_decl
+                            .variants
+                            .iter()
+                            .any(|v| v.name == *name && v.payload.is_empty())
+                        {
                             return Ok(Value::Enum(EnumValue::unit(enum_name, name)));
                         }
                     }
@@ -398,9 +420,11 @@ impl<'a, H: Host> Engine<'a, H> {
         // Try resolving as a user-defined function in the attached program.
         if let Some(program_ptr) = self.program {
             let program = unsafe { &*program_ptr };
-            if let Some(Item::Function(f)) = program.items.iter().find(|i| {
-                matches!(i, Item::Function(f) if f.name == path)
-            }) {
+            if let Some(Item::Function(f)) = program
+                .items
+                .iter()
+                .find(|i| matches!(i, Item::Function(f) if f.name == path))
+            {
                 if let Some(steps) = budget_steps(&f.budget, env, self) {
                     self.budget.steps_left = self.budget.steps_left.min(steps);
                 }
@@ -480,7 +504,9 @@ impl<'a, H: Host> Engine<'a, H> {
                         return Err(Diagnostic::new(
                             DiagCode::E701,
                             *span,
-                            format!("cannot assign to immutable binding `{n}` (declare with `let mut`)"),
+                            format!(
+                                "cannot assign to immutable binding `{n}` (declare with `let mut`)"
+                            ),
                         ));
                     }
                     env.vars.insert(n.to_string(), v.clone());
@@ -501,7 +527,9 @@ impl<'a, H: Host> Engine<'a, H> {
                     Ok(Flow::Next(Value::Null))
                 }
             }
-            Stmt::For { name, iter, body, .. } => {
+            Stmt::For {
+                name, iter, body, ..
+            } => {
                 let list = self.eval_expr(iter, env)?;
                 let xs = match list {
                     Value::List(xs) => xs,
@@ -566,7 +594,9 @@ impl<'a, H: Host> Engine<'a, H> {
                 };
                 Ok(Flow::Next(v))
             }
-            Stmt::Match { scrutinee, arms, .. } => {
+            Stmt::Match {
+                scrutinee, arms, ..
+            } => {
                 let v = self.eval_expr(scrutinee, env)?;
                 for arm in arms {
                     if match_pat(&arm.pattern, &v, env) {
@@ -647,7 +677,11 @@ impl<'a, H: Host> Engine<'a, H> {
             _ => None,
         });
         let f = f.ok_or_else(|| {
-            Diagnostic::new(DiagCode::E600, Span::point(0), format!("no function {name}"))
+            Diagnostic::new(
+                DiagCode::E600,
+                Span::point(0),
+                format!("no function {name}"),
+            )
         })?;
         if let Some(steps) = budget_steps(&f.budget, env, self) {
             self.budget.steps_left = self.budget.steps_left.min(steps);
@@ -729,34 +763,31 @@ fn binop(op: BinOp, l: &Value, r: &Value, span: Span) -> Result<Value, Diagnosti
 
     if let (Value::I64(a), Value::I64(b)) = (l, r) {
         return match op {
-            BinOp::Add => a
-                .checked_add(*b)
-                .map(Value::I64)
-                .ok_or_else(|| Diagnostic::new(DiagCode::E600, span, "integer overflow on addition")),
-            BinOp::Sub => a
-                .checked_sub(*b)
-                .map(Value::I64)
-                .ok_or_else(|| Diagnostic::new(DiagCode::E600, span, "integer overflow on subtraction")),
-            BinOp::Mul => a
-                .checked_mul(*b)
-                .map(Value::I64)
-                .ok_or_else(|| Diagnostic::new(DiagCode::E600, span, "integer overflow on multiplication")),
+            BinOp::Add => a.checked_add(*b).map(Value::I64).ok_or_else(|| {
+                Diagnostic::new(DiagCode::E600, span, "integer overflow on addition")
+            }),
+            BinOp::Sub => a.checked_sub(*b).map(Value::I64).ok_or_else(|| {
+                Diagnostic::new(DiagCode::E600, span, "integer overflow on subtraction")
+            }),
+            BinOp::Mul => a.checked_mul(*b).map(Value::I64).ok_or_else(|| {
+                Diagnostic::new(DiagCode::E600, span, "integer overflow on multiplication")
+            }),
             BinOp::Div => {
                 if *b == 0 {
                     Err(Diagnostic::new(DiagCode::E600, span, "division by zero"))
                 } else {
-                    a.checked_div(*b)
-                        .map(Value::I64)
-                        .ok_or_else(|| Diagnostic::new(DiagCode::E600, span, "integer overflow on division"))
+                    a.checked_div(*b).map(Value::I64).ok_or_else(|| {
+                        Diagnostic::new(DiagCode::E600, span, "integer overflow on division")
+                    })
                 }
             }
             BinOp::Rem => {
                 if *b == 0 {
                     Err(Diagnostic::new(DiagCode::E600, span, "division by zero"))
                 } else {
-                    a.checked_rem(*b)
-                        .map(Value::I64)
-                        .ok_or_else(|| Diagnostic::new(DiagCode::E600, span, "integer overflow on remainder"))
+                    a.checked_rem(*b).map(Value::I64).ok_or_else(|| {
+                        Diagnostic::new(DiagCode::E600, span, "integer overflow on remainder")
+                    })
                 }
             }
             BinOp::Lt => Ok(Value::Bool(a < b)),
@@ -769,34 +800,31 @@ fn binop(op: BinOp, l: &Value, r: &Value, span: Span) -> Result<Value, Diagnosti
 
     if let (Value::U64(a), Value::U64(b)) = (l, r) {
         return match op {
-            BinOp::Add => a
-                .checked_add(*b)
-                .map(Value::U64)
-                .ok_or_else(|| Diagnostic::new(DiagCode::E600, span, "integer overflow on addition")),
-            BinOp::Sub => a
-                .checked_sub(*b)
-                .map(Value::U64)
-                .ok_or_else(|| Diagnostic::new(DiagCode::E600, span, "integer overflow on subtraction")),
-            BinOp::Mul => a
-                .checked_mul(*b)
-                .map(Value::U64)
-                .ok_or_else(|| Diagnostic::new(DiagCode::E600, span, "integer overflow on multiplication")),
+            BinOp::Add => a.checked_add(*b).map(Value::U64).ok_or_else(|| {
+                Diagnostic::new(DiagCode::E600, span, "integer overflow on addition")
+            }),
+            BinOp::Sub => a.checked_sub(*b).map(Value::U64).ok_or_else(|| {
+                Diagnostic::new(DiagCode::E600, span, "integer overflow on subtraction")
+            }),
+            BinOp::Mul => a.checked_mul(*b).map(Value::U64).ok_or_else(|| {
+                Diagnostic::new(DiagCode::E600, span, "integer overflow on multiplication")
+            }),
             BinOp::Div => {
                 if *b == 0 {
                     Err(Diagnostic::new(DiagCode::E600, span, "division by zero"))
                 } else {
-                    a.checked_div(*b)
-                        .map(Value::U64)
-                        .ok_or_else(|| Diagnostic::new(DiagCode::E600, span, "integer overflow on division"))
+                    a.checked_div(*b).map(Value::U64).ok_or_else(|| {
+                        Diagnostic::new(DiagCode::E600, span, "integer overflow on division")
+                    })
                 }
             }
             BinOp::Rem => {
                 if *b == 0 {
                     Err(Diagnostic::new(DiagCode::E600, span, "division by zero"))
                 } else {
-                    a.checked_rem(*b)
-                        .map(Value::U64)
-                        .ok_or_else(|| Diagnostic::new(DiagCode::E600, span, "integer overflow on remainder"))
+                    a.checked_rem(*b).map(Value::U64).ok_or_else(|| {
+                        Diagnostic::new(DiagCode::E600, span, "integer overflow on remainder")
+                    })
                 }
             }
             BinOp::Lt => Ok(Value::Bool(a < b)),
@@ -811,34 +839,31 @@ fn binop(op: BinOp, l: &Value, r: &Value, span: Span) -> Result<Value, Diagnosti
         if *b >= 0 {
             let b_u64 = *b as u64;
             return match op {
-                BinOp::Add => a
-                    .checked_add(b_u64)
-                    .map(Value::U64)
-                    .ok_or_else(|| Diagnostic::new(DiagCode::E600, span, "integer overflow on addition")),
-                BinOp::Sub => a
-                    .checked_sub(b_u64)
-                    .map(Value::U64)
-                    .ok_or_else(|| Diagnostic::new(DiagCode::E600, span, "integer overflow on subtraction")),
-                BinOp::Mul => a
-                    .checked_mul(b_u64)
-                    .map(Value::U64)
-                    .ok_or_else(|| Diagnostic::new(DiagCode::E600, span, "integer overflow on multiplication")),
+                BinOp::Add => a.checked_add(b_u64).map(Value::U64).ok_or_else(|| {
+                    Diagnostic::new(DiagCode::E600, span, "integer overflow on addition")
+                }),
+                BinOp::Sub => a.checked_sub(b_u64).map(Value::U64).ok_or_else(|| {
+                    Diagnostic::new(DiagCode::E600, span, "integer overflow on subtraction")
+                }),
+                BinOp::Mul => a.checked_mul(b_u64).map(Value::U64).ok_or_else(|| {
+                    Diagnostic::new(DiagCode::E600, span, "integer overflow on multiplication")
+                }),
                 BinOp::Div => {
                     if b_u64 == 0 {
                         Err(Diagnostic::new(DiagCode::E600, span, "division by zero"))
                     } else {
-                        a.checked_div(b_u64)
-                            .map(Value::U64)
-                            .ok_or_else(|| Diagnostic::new(DiagCode::E600, span, "integer overflow on division"))
+                        a.checked_div(b_u64).map(Value::U64).ok_or_else(|| {
+                            Diagnostic::new(DiagCode::E600, span, "integer overflow on division")
+                        })
                     }
                 }
                 BinOp::Rem => {
                     if b_u64 == 0 {
                         Err(Diagnostic::new(DiagCode::E600, span, "division by zero"))
                     } else {
-                        a.checked_rem(b_u64)
-                            .map(Value::U64)
-                            .ok_or_else(|| Diagnostic::new(DiagCode::E600, span, "integer overflow on remainder"))
+                        a.checked_rem(b_u64).map(Value::U64).ok_or_else(|| {
+                            Diagnostic::new(DiagCode::E600, span, "integer overflow on remainder")
+                        })
                     }
                 }
                 BinOp::Lt => Ok(Value::Bool(*a < b_u64)),
@@ -850,15 +875,17 @@ fn binop(op: BinOp, l: &Value, r: &Value, span: Span) -> Result<Value, Diagnosti
         } else {
             let neg_b = (-*b) as u64;
             return match op {
-                BinOp::Add => a
-                    .checked_sub(neg_b)
-                    .map(Value::U64)
-                    .ok_or_else(|| Diagnostic::new(DiagCode::E600, span, "integer underflow on addition")),
-                BinOp::Sub => a
-                    .checked_add(neg_b)
-                    .map(Value::U64)
-                    .ok_or_else(|| Diagnostic::new(DiagCode::E600, span, "integer overflow on subtraction")),
-                _ => Err(Diagnostic::new(DiagCode::E600, span, "unsupported op on unsigned and negative integer")),
+                BinOp::Add => a.checked_sub(neg_b).map(Value::U64).ok_or_else(|| {
+                    Diagnostic::new(DiagCode::E600, span, "integer underflow on addition")
+                }),
+                BinOp::Sub => a.checked_add(neg_b).map(Value::U64).ok_or_else(|| {
+                    Diagnostic::new(DiagCode::E600, span, "integer overflow on subtraction")
+                }),
+                _ => Err(Diagnostic::new(
+                    DiagCode::E600,
+                    span,
+                    "unsupported op on unsigned and negative integer",
+                )),
             };
         }
     }
@@ -867,36 +894,31 @@ fn binop(op: BinOp, l: &Value, r: &Value, span: Span) -> Result<Value, Diagnosti
         if *a >= 0 {
             let a_u64 = *a as u64;
             return match op {
-                BinOp::Add => a_u64
-                    .checked_add(*b)
-                    .map(Value::U64)
-                    .ok_or_else(|| Diagnostic::new(DiagCode::E600, span, "integer overflow on addition")),
-                BinOp::Sub => a_u64
-                    .checked_sub(*b)
-                    .map(Value::U64)
-                    .ok_or_else(|| Diagnostic::new(DiagCode::E600, span, "integer overflow on subtraction")),
-                BinOp::Mul => a_u64
-                    .checked_mul(*b)
-                    .map(Value::U64)
-                    .ok_or_else(|| Diagnostic::new(DiagCode::E600, span, "integer overflow on multiplication")),
+                BinOp::Add => a_u64.checked_add(*b).map(Value::U64).ok_or_else(|| {
+                    Diagnostic::new(DiagCode::E600, span, "integer overflow on addition")
+                }),
+                BinOp::Sub => a_u64.checked_sub(*b).map(Value::U64).ok_or_else(|| {
+                    Diagnostic::new(DiagCode::E600, span, "integer overflow on subtraction")
+                }),
+                BinOp::Mul => a_u64.checked_mul(*b).map(Value::U64).ok_or_else(|| {
+                    Diagnostic::new(DiagCode::E600, span, "integer overflow on multiplication")
+                }),
                 BinOp::Div => {
                     if *b == 0 {
                         Err(Diagnostic::new(DiagCode::E600, span, "division by zero"))
                     } else {
-                        a_u64
-                            .checked_div(*b)
-                            .map(Value::U64)
-                            .ok_or_else(|| Diagnostic::new(DiagCode::E600, span, "integer overflow on division"))
+                        a_u64.checked_div(*b).map(Value::U64).ok_or_else(|| {
+                            Diagnostic::new(DiagCode::E600, span, "integer overflow on division")
+                        })
                     }
                 }
                 BinOp::Rem => {
                     if *b == 0 {
                         Err(Diagnostic::new(DiagCode::E600, span, "division by zero"))
                     } else {
-                        a_u64
-                            .checked_rem(*b)
-                            .map(Value::U64)
-                            .ok_or_else(|| Diagnostic::new(DiagCode::E600, span, "integer overflow on remainder"))
+                        a_u64.checked_rem(*b).map(Value::U64).ok_or_else(|| {
+                            Diagnostic::new(DiagCode::E600, span, "integer overflow on remainder")
+                        })
                     }
                 }
                 BinOp::Lt => Ok(Value::Bool(a_u64 < *b)),
@@ -906,16 +928,20 @@ fn binop(op: BinOp, l: &Value, r: &Value, span: Span) -> Result<Value, Diagnosti
                 _ => Ok(Value::U64(a_u64)),
             };
         } else {
-            return Err(Diagnostic::new(DiagCode::E600, span, "unsupported op on negative integer and unsigned"));
+            return Err(Diagnostic::new(
+                DiagCode::E600,
+                span,
+                "unsupported op on negative integer and unsigned",
+            ));
         }
     }
 
-    let a = l.as_f64().ok_or_else(|| {
-        Diagnostic::new(DiagCode::E600, span, "numeric operator on non-number")
-    })?;
-    let b = r.as_f64().ok_or_else(|| {
-        Diagnostic::new(DiagCode::E600, span, "numeric operator on non-number")
-    })?;
+    let a = l
+        .as_f64()
+        .ok_or_else(|| Diagnostic::new(DiagCode::E600, span, "numeric operator on non-number"))?;
+    let b = r
+        .as_f64()
+        .ok_or_else(|| Diagnostic::new(DiagCode::E600, span, "numeric operator on non-number"))?;
     if matches!(op, BinOp::Div | BinOp::Rem) && b == 0.0 {
         return Err(Diagnostic::new(DiagCode::E600, span, "division by zero"));
     }
@@ -977,7 +1003,11 @@ fn match_pat(p: &Pattern, v: &Value, env: &mut Env) -> bool {
 fn budget_steps<H: Host>(args: &[NamedArg], env: &mut Env, eng: &mut Engine<H>) -> Option<u64> {
     for a in args {
         if a.name == "steps" {
-            return eng.eval_expr(&a.value, env).ok().and_then(|v| v.as_i64()).map(|n| n as u64);
+            return eng
+                .eval_expr(&a.value, env)
+                .ok()
+                .and_then(|v| v.as_i64())
+                .map(|n| n as u64);
         }
     }
     None
@@ -1452,9 +1482,15 @@ mod tests {
         let result = eval_program_src(src).unwrap();
         match result {
             Value::Record(r) => {
-                assert_eq!(r.get("name"), Some(&Value::String("pressure_ambient".into())));
+                assert_eq!(
+                    r.get("name"),
+                    Some(&Value::String("pressure_ambient".into()))
+                );
                 assert_eq!(r.get("ty"), Some(&Value::String("Pressure".into())));
-                assert_eq!(r.get("unit"), Some(&Value::String("qudt:KiloPascal".into())));
+                assert_eq!(
+                    r.get("unit"),
+                    Some(&Value::String("qudt:KiloPascal".into()))
+                );
                 assert_eq!(r.get("support"), Some(&Value::String("region".into())));
                 assert_eq!(r.get("representation"), Some(&Value::String("grid".into())));
             }
@@ -1478,7 +1514,10 @@ mod tests {
                 assert_eq!(r.get("name"), Some(&Value::String("temperature".into())));
                 assert!(r.get("unit").is_none());
                 assert_eq!(r.get("support"), Some(&Value::String("point".into())));
-                assert_eq!(r.get("representation"), Some(&Value::String("sampled".into())));
+                assert_eq!(
+                    r.get("representation"),
+                    Some(&Value::String("sampled".into()))
+                );
             }
             other => panic!("expected record, got {other:?}"),
         }

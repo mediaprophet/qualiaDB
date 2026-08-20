@@ -119,7 +119,9 @@ pub fn parse_query(src: &str) -> Result<QueryPattern, String> {
         return Ok(QueryPattern::Wildcard);
     }
     if !src.starts_with('(') || !src.ends_with(')') {
-        return Err(format!("query must be an S-expression: (head :key val ...) or _"));
+        return Err(format!(
+            "query must be an S-expression: (head :key val ...) or _"
+        ));
     }
     let inner = &src[1..src.len() - 1];
     let parts: Vec<&str> = inner.split_whitespace().collect();
@@ -129,24 +131,47 @@ pub fn parse_query(src: &str) -> Result<QueryPattern, String> {
     let head = parts[0];
     let kwargs = parse_kwargs(&parts[1..]);
     match head {
-        "for" => Ok(QueryPattern::For { no_take: kwargs.has("no-take") }),
-        "while" => Ok(QueryPattern::While { unbounded: kwargs.has("unbounded") }),
-        "call" => Ok(QueryPattern::Call { name: kwargs.get_string("name") }),
+        "for" => Ok(QueryPattern::For {
+            no_take: kwargs.has("no-take"),
+        }),
+        "while" => Ok(QueryPattern::While {
+            unbounded: kwargs.has("unbounded"),
+        }),
+        "call" => Ok(QueryPattern::Call {
+            name: kwargs.get_string("name"),
+        }),
         "effect" => Ok(QueryPattern::Effect {
-            class: kwargs.get_string("class").map(|s| parse_effect_class(&s)).transpose()?,
+            class: kwargs
+                .get_string("class")
+                .map(|s| parse_effect_class(&s))
+                .transpose()?,
         }),
-        "hook" => Ok(QueryPattern::Hook { path: kwargs.get_string("path") }),
+        "hook" => Ok(QueryPattern::Hook {
+            path: kwargs.get_string("path"),
+        }),
         "function" => Ok(QueryPattern::Function {
-            effect: kwargs.get_string("effect").map(|s| parse_effect_class(&s)).transpose()?,
+            effect: kwargs
+                .get_string("effect")
+                .map(|s| parse_effect_class(&s))
+                .transpose()?,
         }),
-        "require" => Ok(QueryPattern::Require { id: kwargs.get_string("id") }),
-        "import" => Ok(QueryPattern::Import { path: kwargs.get_string("path") }),
+        "require" => Ok(QueryPattern::Require {
+            id: kwargs.get_string("id"),
+        }),
+        "import" => Ok(QueryPattern::Import {
+            path: kwargs.get_string("path"),
+        }),
         "return" => Ok(QueryPattern::Return),
         "yield" => Ok(QueryPattern::Yield),
         "transaction" => Ok(QueryPattern::Transaction),
-        "literal" => Ok(QueryPattern::Literal { kind: kwargs.get_string("kind") }),
+        "literal" => Ok(QueryPattern::Literal {
+            kind: kwargs.get_string("kind"),
+        }),
         "binary" => Ok(QueryPattern::Binary {
-            op: kwargs.get_string("op").map(|s| parse_binop_str(&s)).transpose()?,
+            op: kwargs
+                .get_string("op")
+                .map(|s| parse_binop_str(&s))
+                .transpose()?,
         }),
         "triple" => Ok(QueryPattern::Triple),
         "reified" => Ok(QueryPattern::Reified),
@@ -162,8 +187,12 @@ struct Kwargs {
 }
 
 impl Kwargs {
-    fn has(&self, key: &str) -> bool { self.flags.contains(key) }
-    fn get_string(&self, key: &str) -> Option<String> { self.map.get(key).cloned() }
+    fn has(&self, key: &str) -> bool {
+        self.flags.contains(key)
+    }
+    fn get_string(&self, key: &str) -> Option<String> {
+        self.map.get(key).cloned()
+    }
 }
 
 fn parse_kwargs(parts: &[&str]) -> Kwargs {
@@ -256,7 +285,9 @@ pub fn builtin_policies() -> Vec<Policy> {
         .with_fix("add `take: 100` or `budget(steps: N)` to the for-loop"),
         Policy::new(
             "tick-no-external",
-            QueryPattern::Hook { path: Some("tick".to_string()) },
+            QueryPattern::Hook {
+                path: Some("tick".to_string()),
+            },
             "on tick hooks must not perform external effects",
         ),
         Policy::new(
@@ -362,7 +393,9 @@ fn query_block(block: &Block, pattern: &QueryPattern, results: &mut Vec<PolicyVi
 
 fn query_stmt(stmt: &Stmt, pattern: &QueryPattern, results: &mut Vec<PolicyViolation>) {
     match stmt {
-        Stmt::For { span, iter, body, .. } => {
+        Stmt::For {
+            span, iter, body, ..
+        } => {
             // Check for take: limit — look at the iter expression for a take() call
             // or check if the for-loop has a budget.
             if let QueryPattern::For { no_take: true } = pattern {
@@ -376,7 +409,9 @@ fn query_stmt(stmt: &Stmt, pattern: &QueryPattern, results: &mut Vec<PolicyViola
             query_expr(iter, pattern, results);
             query_block(body, pattern, results);
         }
-        Stmt::While { span, cond, body, .. } => {
+        Stmt::While {
+            span, cond, body, ..
+        } => {
             if let QueryPattern::While { unbounded: true } = pattern {
                 if !stmt_has_budget(stmt) {
                     results.push(PolicyViolation::new("while", *span, ""));
@@ -388,7 +423,12 @@ fn query_stmt(stmt: &Stmt, pattern: &QueryPattern, results: &mut Vec<PolicyViola
             query_expr(cond, pattern, results);
             query_block(body, pattern, results);
         }
-        Stmt::If { cond, then_block, else_block, .. } => {
+        Stmt::If {
+            cond,
+            then_block,
+            else_block,
+            ..
+        } => {
             if matches!(pattern, QueryPattern::If) {
                 results.push(PolicyViolation::new("if", Span::new(0, 0), ""));
             }
@@ -398,7 +438,9 @@ fn query_stmt(stmt: &Stmt, pattern: &QueryPattern, results: &mut Vec<PolicyViola
                 query_stmt(els, pattern, results);
             }
         }
-        Stmt::Match { scrutinee, arms, .. } => {
+        Stmt::Match {
+            scrutinee, arms, ..
+        } => {
             if matches!(pattern, QueryPattern::Match) {
                 results.push(PolicyViolation::new("match", Span::new(0, 0), ""));
             }
@@ -495,12 +537,20 @@ fn query_expr(expr: &Expr, pattern: &QueryPattern, results: &mut Vec<PolicyViola
         }
         ExprKind::Try(e) => query_expr(e, pattern, results),
         ExprKind::List(es) => {
-            for e in es { query_expr(e, pattern, results); }
+            for e in es {
+                query_expr(e, pattern, results);
+            }
         }
         ExprKind::Record(args) => {
-            for arg in args { query_expr(&arg.value, pattern, results); }
+            for arg in args {
+                query_expr(&arg.value, pattern, results);
+            }
         }
-        ExprKind::Triple { subject, predicate, object } => {
+        ExprKind::Triple {
+            subject,
+            predicate,
+            object,
+        } => {
             if matches!(pattern, QueryPattern::Triple) {
                 results.push(PolicyViolation::new("triple", expr.span, ""));
             }
@@ -508,7 +558,12 @@ fn query_expr(expr: &Expr, pattern: &QueryPattern, results: &mut Vec<PolicyViola
             query_expr(predicate, pattern, results);
             query_expr(object, pattern, results);
         }
-        ExprKind::Reified { subject, predicate, object, reifier } => {
+        ExprKind::Reified {
+            subject,
+            predicate,
+            object,
+            reifier,
+        } => {
             if matches!(pattern, QueryPattern::Reified) {
                 results.push(PolicyViolation::new("reified", expr.span, ""));
             }
@@ -582,14 +637,15 @@ pub fn check_policies(program: &Program) -> Vec<PolicyViolation> {
 }
 
 /// Run a custom set of policy queries against a program.
-pub fn check_custom_policies(program: &Program, policy_specs: &[(&str, &str)]) -> Vec<PolicyViolation> {
+pub fn check_custom_policies(
+    program: &Program,
+    policy_specs: &[(&str, &str)],
+) -> Vec<PolicyViolation> {
     let policies: Vec<Policy> = policy_specs
         .iter()
-        .filter_map(|(name, query)| {
-            match parse_query(query) {
-                Ok(pattern) => Some(Policy::new(name, pattern, "")),
-                Err(_) => None,
-            }
+        .filter_map(|(name, query)| match parse_query(query) {
+            Ok(pattern) => Some(Policy::new(name, pattern, "")),
+            Err(_) => None,
         })
         .collect();
     run_policies(program, &policies)
@@ -617,25 +673,45 @@ mod tests {
     #[test]
     fn parse_query_call_named() {
         let q = parse_query(r#"(call :name "foo")"#).unwrap();
-        assert_eq!(q, QueryPattern::Call { name: Some("foo".to_string()) });
+        assert_eq!(
+            q,
+            QueryPattern::Call {
+                name: Some("foo".to_string())
+            }
+        );
     }
 
     #[test]
     fn parse_query_hook_path() {
         let q = parse_query(r#"(hook :path "tick")"#).unwrap();
-        assert_eq!(q, QueryPattern::Hook { path: Some("tick".to_string()) });
+        assert_eq!(
+            q,
+            QueryPattern::Hook {
+                path: Some("tick".to_string())
+            }
+        );
     }
 
     #[test]
     fn parse_query_effect_class() {
         let q = parse_query("(effect :class External)").unwrap();
-        assert_eq!(q, QueryPattern::Effect { class: Some(EffectClass::External) });
+        assert_eq!(
+            q,
+            QueryPattern::Effect {
+                class: Some(EffectClass::External)
+            }
+        );
     }
 
     #[test]
     fn parse_query_binary_op() {
         let q = parse_query("(binary :op Add)").unwrap();
-        assert_eq!(q, QueryPattern::Binary { op: Some(BinOp::Add) });
+        assert_eq!(
+            q,
+            QueryPattern::Binary {
+                op: Some(BinOp::Add)
+            }
+        );
     }
 
     #[test]
@@ -657,7 +733,10 @@ mod tests {
 }"#;
         let prog = parse_program(src).unwrap();
         let violations = check_policies(&prog);
-        assert!(violations.is_empty(), "clean program should have no violations: {violations:?}");
+        assert!(
+            violations.is_empty(),
+            "clean program should have no violations: {violations:?}"
+        );
     }
 
     #[test]
@@ -672,8 +751,10 @@ mod tests {
         let prog = parse_program(src).unwrap();
         let violations = check_policies(&prog);
         // The mandatory-take policy should flag this for-loop.
-        assert!(violations.iter().any(|v| v.policy == "mandatory-take"),
-            "expected mandatory-take violation, got: {violations:?}");
+        assert!(
+            violations.iter().any(|v| v.policy == "mandatory-take"),
+            "expected mandatory-take violation, got: {violations:?}"
+        );
     }
 
     #[test]
@@ -686,8 +767,10 @@ mod tests {
 }"#;
         let prog = parse_program(src).unwrap();
         let violations = check_policies(&prog);
-        assert!(!violations.iter().any(|v| v.policy == "mandatory-take"),
-            "for-loop with take() should not trigger mandatory-take: {violations:?}");
+        assert!(
+            !violations.iter().any(|v| v.policy == "mandatory-take"),
+            "for-loop with take() should not trigger mandatory-take: {violations:?}"
+        );
     }
 
     #[test]
@@ -739,9 +822,10 @@ mod tests {
     dangerous_fn();
 }"#;
         let prog = parse_program(src).unwrap();
-        let violations = check_custom_policies(&prog, &[
-            ("forbidden-call", r#"(call :name "dangerous_fn")"#),
-        ]);
+        let violations = check_custom_policies(
+            &prog,
+            &[("forbidden-call", r#"(call :name "dangerous_fn")"#)],
+        );
         assert!(!violations.is_empty(), "should find forbidden call");
         assert_eq!(violations[0].policy, "forbidden-call");
     }
@@ -752,9 +836,10 @@ mod tests {
     safe_fn();
 }"#;
         let prog = parse_program(src).unwrap();
-        let violations = check_custom_policies(&prog, &[
-            ("forbidden-call", r#"(call :name "dangerous_fn")"#),
-        ]);
+        let violations = check_custom_policies(
+            &prog,
+            &[("forbidden-call", r#"(call :name "dangerous_fn")"#)],
+        );
         assert!(violations.is_empty(), "should not find any violations");
     }
 

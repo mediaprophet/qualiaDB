@@ -171,12 +171,7 @@ pub struct InboundEvent {
 
 impl InboundEvent {
     /// Create a new inbound event.
-    pub fn new(
-        timestamp_ns: u64,
-        source_id: &str,
-        kind: EventKind,
-        payload: EventPayload,
-    ) -> Self {
+    pub fn new(timestamp_ns: u64, source_id: &str, kind: EventKind, payload: EventPayload) -> Self {
         Self {
             timestamp_ns,
             source_id: source_id.to_string(),
@@ -235,7 +230,14 @@ impl InboundEvent {
     }
 
     /// Create a pointer button event.
-    pub fn pointer_button(timestamp_ns: u64, source_id: &str, x: f64, y: f64, button: i64, pressed: bool) -> Self {
+    pub fn pointer_button(
+        timestamp_ns: u64,
+        source_id: &str,
+        x: f64,
+        y: f64,
+        button: i64,
+        pressed: bool,
+    ) -> Self {
         Self::new(
             timestamp_ns,
             source_id,
@@ -244,7 +246,10 @@ impl InboundEvent {
                 ("x", Value::F64(x)),
                 ("y", Value::F64(y)),
                 ("button", Value::I64(button)),
-                ("state", Value::String(if pressed { "down" } else { "up" }.into())),
+                (
+                    "state",
+                    Value::String(if pressed { "down" } else { "up" }.into()),
+                ),
             ]),
         )
     }
@@ -257,13 +262,23 @@ impl InboundEvent {
             EventKind::Keyboard,
             EventPayload::inline_pairs(&[
                 ("key_code", Value::I64(key_code)),
-                ("state", Value::String(if pressed { "down" } else { "up" }.into())),
+                (
+                    "state",
+                    Value::String(if pressed { "down" } else { "up" }.into()),
+                ),
             ]),
         )
     }
 
     /// Create a touch event.
-    pub fn touch(timestamp_ns: u64, source_id: &str, touch_id: i64, x: f64, y: f64, phase: &str) -> Self {
+    pub fn touch(
+        timestamp_ns: u64,
+        source_id: &str,
+        touch_id: i64,
+        x: f64,
+        y: f64,
+        phase: &str,
+    ) -> Self {
         Self::new(
             timestamp_ns,
             source_id,
@@ -278,13 +293,20 @@ impl InboundEvent {
     }
 
     /// Create a biosignal event (with capability lease).
-    pub fn biosignal(timestamp_ns: u64, source_id: &str, iri: &str, hash: u64, lease_id: u64) -> Self {
+    pub fn biosignal(
+        timestamp_ns: u64,
+        source_id: &str,
+        iri: &str,
+        hash: u64,
+        lease_id: u64,
+    ) -> Self {
         Self::new(
             timestamp_ns,
             source_id,
             EventKind::Biosignal,
             EventPayload::fat_buffer(iri, hash),
-        ).with_lease(lease_id)
+        )
+        .with_lease(lease_id)
     }
 
     /// Create a depth map event (fat buffer).
@@ -302,7 +324,12 @@ impl InboundEvent {
     /// Create a sip-and-puff event (assistive input).
     /// `strength` is 0.0–1.0 (no puff → hard puff).
     /// `duration_ms` is the duration of the sip/puff in milliseconds.
-    pub fn sip_and_puff(timestamp_ns: u64, source_id: &str, strength: f64, duration_ms: u64) -> Self {
+    pub fn sip_and_puff(
+        timestamp_ns: u64,
+        source_id: &str,
+        strength: f64,
+        duration_ms: u64,
+    ) -> Self {
         Self::new(
             timestamp_ns,
             source_id,
@@ -324,7 +351,10 @@ impl InboundEvent {
             EventPayload::inline_pairs(&[
                 ("device", Value::String("switch".into())),
                 ("switch_id", Value::I64(switch_id)),
-                ("state", Value::String(if pressed { "down" } else { "up" }.into())),
+                (
+                    "state",
+                    Value::String(if pressed { "down" } else { "up" }.into()),
+                ),
             ]),
         )
     }
@@ -493,9 +523,15 @@ mod tests {
     #[test]
     fn event_kind_round_trip() {
         for kind in [
-            EventKind::Pointer, EventKind::Keyboard, EventKind::Touch,
-            EventKind::Biosignal, EventKind::Depth, EventKind::Skeleton,
-            EventKind::Imu, EventKind::Audio, EventKind::Sensor,
+            EventKind::Pointer,
+            EventKind::Keyboard,
+            EventKind::Touch,
+            EventKind::Biosignal,
+            EventKind::Depth,
+            EventKind::Skeleton,
+            EventKind::Imu,
+            EventKind::Audio,
+            EventKind::Sensor,
             EventKind::Assistive,
         ] {
             let s = kind.as_str();
@@ -669,14 +705,20 @@ mod tests {
         assert_eq!(e.kind, EventKind::Assistive);
         assert!(e.payload.is_inline());
         if let EventPayload::Inline(m) = &e.payload {
-            assert_eq!(match m.get("device").unwrap() {
-                Value::String(s) => s.as_str(),
-                _ => panic!("expected String"),
-            }, "sip_puff");
-            assert_eq!(match m.get("strength").unwrap() {
-                Value::F64(f) => *f,
-                _ => panic!("expected F64"),
-            }, 0.7);
+            assert_eq!(
+                match m.get("device").unwrap() {
+                    Value::String(s) => s.as_str(),
+                    _ => panic!("expected String"),
+                },
+                "sip_puff"
+            );
+            assert_eq!(
+                match m.get("strength").unwrap() {
+                    Value::F64(f) => *f,
+                    _ => panic!("expected F64"),
+                },
+                0.7
+            );
         }
     }
 
@@ -684,10 +726,13 @@ mod tests {
     fn t43_sip_and_puff_clamps_strength() {
         let e = InboundEvent::sip_and_puff(1000, "sip_puff:0", 1.5, 100);
         if let EventPayload::Inline(m) = &e.payload {
-            assert_eq!(match m.get("strength").unwrap() {
-                Value::F64(f) => *f,
-                _ => panic!("expected F64"),
-            }, 1.0); // clamped
+            assert_eq!(
+                match m.get("strength").unwrap() {
+                    Value::F64(f) => *f,
+                    _ => panic!("expected F64"),
+                },
+                1.0
+            ); // clamped
         }
     }
 
@@ -696,14 +741,20 @@ mod tests {
         let e = InboundEvent::switch_event(2000, "switch:0", 1, true);
         assert_eq!(e.kind, EventKind::Assistive);
         if let EventPayload::Inline(m) = &e.payload {
-            assert_eq!(match m.get("switch_id").unwrap() {
-                Value::I64(n) => *n,
-                _ => panic!("expected I64"),
-            }, 1);
-            assert_eq!(match m.get("state").unwrap() {
-                Value::String(s) => s.as_str(),
-                _ => panic!("expected String"),
-            }, "down");
+            assert_eq!(
+                match m.get("switch_id").unwrap() {
+                    Value::I64(n) => *n,
+                    _ => panic!("expected I64"),
+                },
+                1
+            );
+            assert_eq!(
+                match m.get("state").unwrap() {
+                    Value::String(s) => s.as_str(),
+                    _ => panic!("expected String"),
+                },
+                "down"
+            );
         }
     }
 
@@ -712,10 +763,13 @@ mod tests {
         let e = InboundEvent::braille_chord(3000, "braille:0", 0b00010111);
         assert_eq!(e.kind, EventKind::Assistive);
         if let EventPayload::Inline(m) = &e.payload {
-            assert_eq!(match m.get("dots").unwrap() {
-                Value::I64(n) => *n,
-                _ => panic!("expected I64"),
-            }, 0b00010111);
+            assert_eq!(
+                match m.get("dots").unwrap() {
+                    Value::I64(n) => *n,
+                    _ => panic!("expected I64"),
+                },
+                0b00010111
+            );
         }
     }
 
@@ -724,20 +778,31 @@ mod tests {
         let e = InboundEvent::eye_gaze(4000, "eye:0", 150.0, 200.0, 500);
         assert_eq!(e.kind, EventKind::Assistive);
         if let EventPayload::Inline(m) = &e.payload {
-            assert_eq!(match m.get("device").unwrap() {
-                Value::String(s) => s.as_str(),
-                _ => panic!("expected String"),
-            }, "eye_gaze");
-            assert_eq!(match m.get("fixation_ms").unwrap() {
-                Value::U64(n) => *n,
-                _ => panic!("expected U64"),
-            }, 500);
+            assert_eq!(
+                match m.get("device").unwrap() {
+                    Value::String(s) => s.as_str(),
+                    _ => panic!("expected String"),
+                },
+                "eye_gaze"
+            );
+            assert_eq!(
+                match m.get("fixation_ms").unwrap() {
+                    Value::U64(n) => *n,
+                    _ => panic!("expected U64"),
+                },
+                500
+            );
         }
     }
 
     #[test]
     fn t43_cue_kind_round_trip() {
-        for kind in [CueKind::Haptic, CueKind::Audio, CueKind::Visual, CueKind::Accessibility] {
+        for kind in [
+            CueKind::Haptic,
+            CueKind::Audio,
+            CueKind::Visual,
+            CueKind::Accessibility,
+        ] {
             let s = kind.as_str();
             assert_eq!(CueKind::from_str(s), Some(kind));
         }
@@ -783,14 +848,20 @@ mod tests {
             Value::Record(r) => r,
             _ => panic!("expected Record"),
         };
-        assert_eq!(match rec.get("kind").unwrap() {
-            Value::String(s) => s.as_str(),
-            _ => panic!("expected String"),
-        }, "Haptic");
-        assert_eq!(match rec.get("name").unwrap() {
-            Value::String(s) => s.as_str(),
-            _ => panic!("expected String"),
-        }, "Haptic.buzz");
+        assert_eq!(
+            match rec.get("kind").unwrap() {
+                Value::String(s) => s.as_str(),
+                _ => panic!("expected String"),
+            },
+            "Haptic"
+        );
+        assert_eq!(
+            match rec.get("name").unwrap() {
+                Value::String(s) => s.as_str(),
+                _ => panic!("expected String"),
+            },
+            "Haptic.buzz"
+        );
     }
 
     #[test]

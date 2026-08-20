@@ -80,11 +80,7 @@ impl Diagnostic {
     }
 
     /// Create a disclosure-denied diagnostic (R10).
-    pub fn disclosure_denied(
-        span: Span,
-        capability: &str,
-        reason: &str,
-    ) -> Self {
+    pub fn disclosure_denied(span: Span, capability: &str, reason: &str) -> Self {
         Diagnostic::new(
             DiagCode::E800,
             span,
@@ -105,7 +101,10 @@ impl Diagnostic {
     pub fn to_json(&self) -> String {
         let mut s = String::from("{\"valid\":false,");
         push_kv(&mut s, "error_code", self.code.as_str());
-        s.push_str(&format!("\"span\":[{},{}],", self.span.start, self.span.end));
+        s.push_str(&format!(
+            "\"span\":[{},{}],",
+            self.span.start, self.span.end
+        ));
         push_kv(&mut s, "message", &self.message);
         match &self.suggested_fix {
             Some(fix) => push_kv(&mut s, "suggested_fix", fix),
@@ -123,7 +122,10 @@ impl Diagnostic {
 fn infer_fix(code: DiagCode, message: &str) -> Option<String> {
     let m = message.to_ascii_lowercase();
     if m.contains("<<[") || m.contains("raw quin") {
-        return Some("use quin.statement(subject, predicate, object, context) — <<[ overlay is illegal".into());
+        return Some(
+            "use quin.statement(subject, predicate, object, context) — <<[ overlay is illegal"
+                .into(),
+        );
     }
     if m.contains("without space") || (m.contains("relational") && m.contains('<')) {
         return Some("put spaces around < > <= >=".into());

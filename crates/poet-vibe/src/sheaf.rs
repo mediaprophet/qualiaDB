@@ -44,7 +44,12 @@ pub struct Stalk {
 }
 
 impl Stalk {
-    pub fn new(snapshot_id: u64, capability_lease_id: u64, topic_prefix: &str, agent_did: &str) -> Self {
+    pub fn new(
+        snapshot_id: u64,
+        capability_lease_id: u64,
+        topic_prefix: &str,
+        agent_did: &str,
+    ) -> Self {
         Self {
             snapshot_id,
             capability_lease_id,
@@ -57,8 +62,14 @@ impl Stalk {
     pub fn to_value(&self) -> Value {
         let mut rec = BTreeMap::new();
         rec.insert("snapshot_id".into(), Value::U64(self.snapshot_id));
-        rec.insert("capability_lease_id".into(), Value::U64(self.capability_lease_id));
-        rec.insert("topic_prefix".into(), Value::String(self.topic_prefix.clone()));
+        rec.insert(
+            "capability_lease_id".into(),
+            Value::U64(self.capability_lease_id),
+        );
+        rec.insert(
+            "topic_prefix".into(),
+            Value::String(self.topic_prefix.clone()),
+        );
         rec.insert("agent_did".into(), Value::String(self.agent_did.clone()));
         Value::Record(rec)
     }
@@ -126,7 +137,10 @@ impl SheafCondition {
     pub fn to_value(&self) -> Value {
         let mut rec = BTreeMap::new();
         rec.insert("name".into(), Value::String(self.name.clone()));
-        rec.insert("predicate_name".into(), Value::String(self.predicate_name.clone()));
+        rec.insert(
+            "predicate_name".into(),
+            Value::String(self.predicate_name.clone()),
+        );
         rec.insert("required".into(), Value::Bool(self.required));
         Value::Record(rec)
     }

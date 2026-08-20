@@ -152,7 +152,8 @@ fn hook_dispatch_pulse_message_routes_to_function() {
     assert!(matches!(v, Value::Ok(_)), "hook should return Ok: {v:?}");
     assert_eq!(host.committed, 1, "hook dispatch should commit the alert");
     assert_eq!(
-        host.published, vec!["clinic/alerts".to_string()],
+        host.published,
+        vec!["clinic/alerts".to_string()],
         "hook dispatch should publish the pulse"
     );
 }
@@ -355,7 +356,11 @@ fn g2_tick_time_effect_fn() {
     let mut host = MockHost::default();
     let mut env = Env::default();
     let v = eval_function(&program, "now", vec![], &mut host, &mut env).unwrap();
-    assert_eq!(v.as_i64(), Some(1_000_000_000), "MockHost returns deterministic epoch");
+    assert_eq!(
+        v.as_i64(),
+        Some(1_000_000_000),
+        "MockHost returns deterministic epoch"
+    );
 }
 
 #[test]
@@ -419,11 +424,32 @@ fn g5_import_math_clamp() {
     let program = load_program(src).expect("g5 fixture");
     let mut host = MockHost::default();
     let mut env = Env::default();
-    let v = eval_function(&program, "clamp", vec![Value::I64(0), Value::I64(100), Value::I64(42)], &mut host, &mut env).unwrap();
+    let v = eval_function(
+        &program,
+        "clamp",
+        vec![Value::I64(0), Value::I64(100), Value::I64(42)],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
     assert_eq!(v.as_i64(), Some(42));
-    let v = eval_function(&program, "clamp", vec![Value::I64(0), Value::I64(100), Value::I64(150)], &mut host, &mut env).unwrap();
+    let v = eval_function(
+        &program,
+        "clamp",
+        vec![Value::I64(0), Value::I64(100), Value::I64(150)],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
     assert_eq!(v.as_i64(), Some(100));
-    let v = eval_function(&program, "clamp", vec![Value::I64(0), Value::I64(100), Value::I64(-5)], &mut host, &mut env).unwrap();
+    let v = eval_function(
+        &program,
+        "clamp",
+        vec![Value::I64(0), Value::I64(100), Value::I64(-5)],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
     assert_eq!(v.as_i64(), Some(0));
 }
 
@@ -474,11 +500,32 @@ fn p1_wave_propagation_clamps_amplitude() {
     let program = load_program(src).expect("p1 fixture");
     let mut host = MockHost::default();
     let mut env = Env::default();
-    let v = eval_function(&program, "wave_clamp", vec![Value::F64(1.5)], &mut host, &mut env).unwrap();
+    let v = eval_function(
+        &program,
+        "wave_clamp",
+        vec![Value::F64(1.5)],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
     assert_eq!(v.as_f64(), Some(1.0));
-    let v = eval_function(&program, "wave_clamp", vec![Value::F64(-2.0)], &mut host, &mut env).unwrap();
+    let v = eval_function(
+        &program,
+        "wave_clamp",
+        vec![Value::F64(-2.0)],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
     assert_eq!(v.as_f64(), Some(-1.0));
-    let v = eval_function(&program, "wave_clamp", vec![Value::F64(0.5)], &mut host, &mut env).unwrap();
+    let v = eval_function(
+        &program,
+        "wave_clamp",
+        vec![Value::F64(0.5)],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
     assert_eq!(v.as_f64(), Some(0.5));
 }
 
@@ -488,9 +535,23 @@ fn p2_harmonic_oscillator_energy() {
     let program = load_program(src).expect("p2 fixture");
     let mut host = MockHost::default();
     let mut env = Env::default();
-    let v = eval_function(&program, "energy_clamp", vec![Value::F64(3.0), Value::F64(4.0)], &mut host, &mut env).unwrap();
+    let v = eval_function(
+        &program,
+        "energy_clamp",
+        vec![Value::F64(3.0), Value::F64(4.0)],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
     assert_eq!(v.as_f64(), Some(7.0));
-    let v = eval_function(&program, "energy_clamp", vec![Value::F64(-10.0), Value::F64(3.0)], &mut host, &mut env).unwrap();
+    let v = eval_function(
+        &program,
+        "energy_clamp",
+        vec![Value::F64(-10.0), Value::F64(3.0)],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
     assert_eq!(v.as_f64(), Some(0.0));
 }
 
@@ -500,7 +561,14 @@ fn p3_projectile_range() {
     let program = load_program(src).expect("p3 fixture");
     let mut host = MockHost::default();
     let mut env = Env::default();
-    let v = eval_function(&program, "range_estimate", vec![Value::F64(10.0), Value::F64(45.0)], &mut host, &mut env).unwrap();
+    let v = eval_function(
+        &program,
+        "range_estimate",
+        vec![Value::F64(10.0), Value::F64(45.0)],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
     let r = v.as_f64().unwrap();
     assert!(r > 0.0, "range should be positive: {r}");
     assert!((r - 10.193).abs() < 0.1, "expected ~10.19, got {r}");
@@ -512,9 +580,23 @@ fn p4_n_body_bounded_force() {
     let program = load_program(src).expect("p4 fixture");
     let mut host = MockHost::default();
     let mut env = Env::default();
-    let v = eval_function(&program, "bounded_force", vec![Value::F64(100.0), Value::F64(10.0)], &mut host, &mut env).unwrap();
+    let v = eval_function(
+        &program,
+        "bounded_force",
+        vec![Value::F64(100.0), Value::F64(10.0)],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
     assert_eq!(v.as_f64(), Some(10.0));
-    let v = eval_function(&program, "bounded_force", vec![Value::F64(-50.0), Value::F64(10.0)], &mut host, &mut env).unwrap();
+    let v = eval_function(
+        &program,
+        "bounded_force",
+        vec![Value::F64(-50.0), Value::F64(10.0)],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
     assert_eq!(v.as_f64(), Some(-10.0));
 }
 
@@ -526,9 +608,23 @@ fn e1_emf_to_color_clamps_wavelength() {
     let program = load_program(src).expect("e1 fixture");
     let mut host = MockHost::default();
     let mut env = Env::default();
-    let v = eval_function(&program, "wavelength_to_rgb_channel", vec![Value::F64(800.0), Value::F64(380.0), Value::F64(780.0)], &mut host, &mut env).unwrap();
+    let v = eval_function(
+        &program,
+        "wavelength_to_rgb_channel",
+        vec![Value::F64(800.0), Value::F64(380.0), Value::F64(780.0)],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
     assert_eq!(v.as_f64(), Some(780.0));
-    let v = eval_function(&program, "wavelength_to_rgb_channel", vec![Value::F64(200.0), Value::F64(380.0), Value::F64(780.0)], &mut host, &mut env).unwrap();
+    let v = eval_function(
+        &program,
+        "wavelength_to_rgb_channel",
+        vec![Value::F64(200.0), Value::F64(380.0), Value::F64(780.0)],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
     assert_eq!(v.as_f64(), Some(380.0));
 }
 
@@ -538,9 +634,23 @@ fn e2_emf_interference_clamps() {
     let program = load_program(src).expect("e2 fixture");
     let mut host = MockHost::default();
     let mut env = Env::default();
-    let v = eval_function(&program, "interference_amplitude", vec![Value::F64(0.8), Value::F64(0.5)], &mut host, &mut env).unwrap();
+    let v = eval_function(
+        &program,
+        "interference_amplitude",
+        vec![Value::F64(0.8), Value::F64(0.5)],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
     assert_eq!(v.as_f64(), Some(1.0));
-    let v = eval_function(&program, "interference_amplitude", vec![Value::F64(-0.6), Value::F64(-0.7)], &mut host, &mut env).unwrap();
+    let v = eval_function(
+        &program,
+        "interference_amplitude",
+        vec![Value::F64(-0.6), Value::F64(-0.7)],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
     assert_eq!(v.as_f64(), Some(-1.0));
 }
 
@@ -550,9 +660,19 @@ fn e3_doppler_shift_positive() {
     let program = load_program(src).expect("e3 fixture");
     let mut host = MockHost::default();
     let mut env = Env::default();
-    let v = eval_function(&program, "shifted_frequency", vec![Value::F64(440.0), Value::F64(10.0), Value::F64(340.0)], &mut host, &mut env).unwrap();
+    let v = eval_function(
+        &program,
+        "shifted_frequency",
+        vec![Value::F64(440.0), Value::F64(10.0), Value::F64(340.0)],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
     let f = v.as_f64().unwrap();
-    assert!(f > 440.0, "approaching source should increase frequency: {f}");
+    assert!(
+        f > 440.0,
+        "approaching source should increase frequency: {f}"
+    );
 }
 
 #[test]
@@ -561,10 +681,27 @@ fn e4_emf_attenuation_inverse_square() {
     let program = load_program(src).expect("e4 fixture");
     let mut host = MockHost::default();
     let mut env = Env::default();
-    let v = eval_function(&program, "attenuated_intensity", vec![Value::F64(100.0), Value::F64(2.0)], &mut host, &mut env).unwrap();
+    let v = eval_function(
+        &program,
+        "attenuated_intensity",
+        vec![Value::F64(100.0), Value::F64(2.0)],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
     assert_eq!(v.as_f64(), Some(25.0));
-    let v = eval_function(&program, "attenuated_intensity", vec![Value::F64(100.0), Value::F64(0.0)], &mut host, &mut env).unwrap();
-    assert!(v.as_f64().unwrap() > 0.0, "zero distance should not divide by zero");
+    let v = eval_function(
+        &program,
+        "attenuated_intensity",
+        vec![Value::F64(100.0), Value::F64(0.0)],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
+    assert!(
+        v.as_f64().unwrap() > 0.0,
+        "zero distance should not divide by zero"
+    );
 }
 
 // ── Geometry / SVG ──────────────────────────────────────────────────────────
@@ -575,9 +712,33 @@ fn geo1_convex_hull_cross_product() {
     let program = load_program(src).expect("geo1 fixture");
     let mut host = MockHost::default();
     let mut env = Env::default();
-    let v = eval_function(&program, "cross_product", vec![Value::F64(1.0), Value::F64(0.0), Value::F64(0.0), Value::F64(1.0)], &mut host, &mut env).unwrap();
+    let v = eval_function(
+        &program,
+        "cross_product",
+        vec![
+            Value::F64(1.0),
+            Value::F64(0.0),
+            Value::F64(0.0),
+            Value::F64(1.0),
+        ],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
     assert_eq!(v.as_f64(), Some(1.0));
-    let v = eval_function(&program, "cross_product", vec![Value::F64(2.0), Value::F64(3.0), Value::F64(4.0), Value::F64(6.0)], &mut host, &mut env).unwrap();
+    let v = eval_function(
+        &program,
+        "cross_product",
+        vec![
+            Value::F64(2.0),
+            Value::F64(3.0),
+            Value::F64(4.0),
+            Value::F64(6.0),
+        ],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
     assert_eq!(v.as_f64(), Some(0.0));
 }
 
@@ -587,7 +748,19 @@ fn geo2_svg_path_distance() {
     let program = load_program(src).expect("geo2 fixture");
     let mut host = MockHost::default();
     let mut env = Env::default();
-    let v = eval_function(&program, "point_distance", vec![Value::F64(0.0), Value::F64(0.0), Value::F64(3.0), Value::F64(4.0)], &mut host, &mut env).unwrap();
+    let v = eval_function(
+        &program,
+        "point_distance",
+        vec![
+            Value::F64(0.0),
+            Value::F64(0.0),
+            Value::F64(3.0),
+            Value::F64(4.0),
+        ],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
     assert_eq!(v.as_f64(), Some(25.0));
 }
 
@@ -597,7 +770,14 @@ fn geo3_field_viz_magnitude() {
     let program = load_program(src).expect("geo3 fixture");
     let mut host = MockHost::default();
     let mut env = Env::default();
-    let v = eval_function(&program, "field_magnitude", vec![Value::F64(1.0), Value::F64(2.0), Value::F64(2.0)], &mut host, &mut env).unwrap();
+    let v = eval_function(
+        &program,
+        "field_magnitude",
+        vec![Value::F64(1.0), Value::F64(2.0), Value::F64(2.0)],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
     assert_eq!(v.as_f64(), Some(9.0));
 }
 
@@ -609,11 +789,32 @@ fn c1_css_keyframe_interpolation() {
     let program = load_program(src).expect("c1 fixture");
     let mut host = MockHost::default();
     let mut env = Env::default();
-    let v = eval_function(&program, "interpolate_keyframe", vec![Value::F64(0.0), Value::F64(100.0), Value::F64(0.5)], &mut host, &mut env).unwrap();
+    let v = eval_function(
+        &program,
+        "interpolate_keyframe",
+        vec![Value::F64(0.0), Value::F64(100.0), Value::F64(0.5)],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
     assert_eq!(v.as_f64(), Some(50.0));
-    let v = eval_function(&program, "interpolate_keyframe", vec![Value::F64(0.0), Value::F64(100.0), Value::F64(1.5)], &mut host, &mut env).unwrap();
+    let v = eval_function(
+        &program,
+        "interpolate_keyframe",
+        vec![Value::F64(0.0), Value::F64(100.0), Value::F64(1.5)],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
     assert_eq!(v.as_f64(), Some(100.0));
-    let v = eval_function(&program, "interpolate_keyframe", vec![Value::F64(0.0), Value::F64(100.0), Value::F64(-0.5)], &mut host, &mut env).unwrap();
+    let v = eval_function(
+        &program,
+        "interpolate_keyframe",
+        vec![Value::F64(0.0), Value::F64(100.0), Value::F64(-0.5)],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
     assert_eq!(v.as_f64(), Some(0.0));
 }
 
@@ -623,9 +824,23 @@ fn c2_reactive_color_hue_clamp() {
     let program = load_program(src).expect("c2 fixture");
     let mut host = MockHost::default();
     let mut env = Env::default();
-    let v = eval_function(&program, "temperature_to_hue", vec![Value::F64(400.0)], &mut host, &mut env).unwrap();
+    let v = eval_function(
+        &program,
+        "temperature_to_hue",
+        vec![Value::F64(400.0)],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
     assert_eq!(v.as_f64(), Some(360.0));
-    let v = eval_function(&program, "temperature_to_hue", vec![Value::F64(-10.0)], &mut host, &mut env).unwrap();
+    let v = eval_function(
+        &program,
+        "temperature_to_hue",
+        vec![Value::F64(-10.0)],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
     assert_eq!(v.as_f64(), Some(0.0));
 }
 
@@ -635,9 +850,23 @@ fn c3_css_opacity_ratio() {
     let program = load_program(src).expect("c3 fixture");
     let mut host = MockHost::default();
     let mut env = Env::default();
-    let v = eval_function(&program, "fade_opacity", vec![Value::F64(50.0), Value::F64(100.0)], &mut host, &mut env).unwrap();
+    let v = eval_function(
+        &program,
+        "fade_opacity",
+        vec![Value::F64(50.0), Value::F64(100.0)],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
     assert_eq!(v.as_f64(), Some(0.5));
-    let v = eval_function(&program, "fade_opacity", vec![Value::F64(150.0), Value::F64(100.0)], &mut host, &mut env).unwrap();
+    let v = eval_function(
+        &program,
+        "fade_opacity",
+        vec![Value::F64(150.0), Value::F64(100.0)],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
     assert_eq!(v.as_f64(), Some(1.0));
 }
 
@@ -647,7 +876,10 @@ fn c3_css_opacity_ratio() {
 fn r1_reactive_sum_counts_rows() {
     let src = include_str!("../fixtures/r1_reactive_sum.vibe");
     let program = load_program(src).expect("r1 fixture");
-    let mut host = MockHost { query_rows: 7, ..MockHost::default() };
+    let mut host = MockHost {
+        query_rows: 7,
+        ..MockHost::default()
+    };
     let mut env = Env::default();
     let v = eval_function(&program, "count_rows", vec![], &mut host, &mut env).unwrap();
     match v {
@@ -660,9 +892,19 @@ fn r1_reactive_sum_counts_rows() {
 fn r2_reactive_threshold_caps_count() {
     let src = include_str!("../fixtures/r2_reactive_threshold.vibe");
     let program = load_program(src).expect("r2 fixture");
-    let mut host = MockHost { query_rows: 10, ..MockHost::default() };
+    let mut host = MockHost {
+        query_rows: 10,
+        ..MockHost::default()
+    };
     let mut env = Env::default();
-    let v = eval_function(&program, "above_threshold", vec![Value::I64(3)], &mut host, &mut env).unwrap();
+    let v = eval_function(
+        &program,
+        "above_threshold",
+        vec![Value::I64(3)],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
     match v {
         Value::Ok(inner) => assert_eq!(inner.as_i64(), Some(3)),
         other => panic!("{other:?}"),
@@ -691,7 +933,14 @@ fn h1_tick_counter_publishes() {
     let program = load_program(src).expect("h1 fixture");
     let mut host = MockHost::default();
     let mut env = Env::default();
-    let v = dispatch_hook(&program, &vec!["tick".to_string()], vec![], &mut host, &mut env).unwrap();
+    let v = dispatch_hook(
+        &program,
+        &vec!["tick".to_string()],
+        vec![],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
     assert_eq!(v, Value::Null);
     assert_eq!(host.published, vec!["tick/count".to_string()]);
 }
@@ -704,11 +953,25 @@ fn h2_pulse_filter_positive_only() {
     let mut env = Env::default();
     let path = vec!["pulse".to_string(), "message".to_string()];
     // Positive value → publish.
-    let v = dispatch_hook(&program, &path, vec![Value::String("test".into()), Value::F64(42.0)], &mut host, &mut env).unwrap();
+    let v = dispatch_hook(
+        &program,
+        &path,
+        vec![Value::String("test".into()), Value::F64(42.0)],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
     assert_eq!(v, Value::Null);
     assert_eq!(host.published.len(), 1);
     // Zero value → no publish.
-    let v = dispatch_hook(&program, &path, vec![Value::String("test".into()), Value::F64(0.0)], &mut host, &mut env).unwrap();
+    let v = dispatch_hook(
+        &program,
+        &path,
+        vec![Value::String("test".into()), Value::F64(0.0)],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
     assert_eq!(v, Value::Null);
     assert_eq!(host.published.len(), 1, "zero should not publish");
 }
@@ -719,7 +982,14 @@ fn h3_tick_time_publish_uses_time() {
     let program = load_program(src).expect("h3 fixture");
     let mut host = MockHost::default();
     let mut env = Env::default();
-    let v = dispatch_hook(&program, &vec!["tick".to_string()], vec![], &mut host, &mut env).unwrap();
+    let v = dispatch_hook(
+        &program,
+        &vec!["tick".to_string()],
+        vec![],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
     assert_eq!(v, Value::Null);
     assert_eq!(host.published, vec!["time/tick".to_string()]);
 }
@@ -735,7 +1005,10 @@ fn l1_deontic_permit_commits() {
     let v = eval_function(
         &program,
         "permit_action",
-        vec![Value::Iri("actor:alice".into()), Value::Iri("action:read".into())],
+        vec![
+            Value::Iri("actor:alice".into()),
+            Value::Iri("action:read".into()),
+        ],
         &mut host,
         &mut env,
     )
@@ -754,7 +1027,10 @@ fn l2_deontic_forbid_commits_and_publishes() {
     let v = eval_function(
         &program,
         "forbid_action",
-        vec![Value::Iri("actor:bob".into()), Value::Iri("action:delete".into())],
+        vec![
+            Value::Iri("actor:bob".into()),
+            Value::Iri("action:delete".into()),
+        ],
         &mut host,
         &mut env,
     )
@@ -773,7 +1049,10 @@ fn l3_contract_validate_commits() {
     let v = eval_function(
         &program,
         "validate_contract",
-        vec![Value::Iri("party:alice".into()), Value::Iri("contract:c1".into())],
+        vec![
+            Value::Iri("party:alice".into()),
+            Value::Iri("contract:c1".into()),
+        ],
         &mut host,
         &mut env,
     )
@@ -791,9 +1070,23 @@ fn s1_smiles_validate_atom_count() {
     let program = load_program(src).expect("s1 fixture");
     let mut host = MockHost::default();
     let mut env = Env::default();
-    let v = eval_function(&program, "atom_count_valid", vec![Value::F64(500.0)], &mut host, &mut env).unwrap();
+    let v = eval_function(
+        &program,
+        "atom_count_valid",
+        vec![Value::F64(500.0)],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
     assert_eq!(v.as_f64(), Some(500.0));
-    let v = eval_function(&program, "atom_count_valid", vec![Value::F64(2000.0)], &mut host, &mut env).unwrap();
+    let v = eval_function(
+        &program,
+        "atom_count_valid",
+        vec![Value::F64(2000.0)],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
     assert_eq!(v.as_f64(), Some(1000.0));
 }
 
@@ -803,9 +1096,23 @@ fn s2_bio_alignment_score() {
     let program = load_program(src).expect("s2 fixture");
     let mut host = MockHost::default();
     let mut env = Env::default();
-    let v = eval_function(&program, "alignment_score", vec![Value::F64(10.0), Value::F64(3.0)], &mut host, &mut env).unwrap();
+    let v = eval_function(
+        &program,
+        "alignment_score",
+        vec![Value::F64(10.0), Value::F64(3.0)],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
     assert_eq!(v.as_f64(), Some(17.0));
-    let v = eval_function(&program, "alignment_score", vec![Value::F64(1.0), Value::F64(5.0)], &mut host, &mut env).unwrap();
+    let v = eval_function(
+        &program,
+        "alignment_score",
+        vec![Value::F64(1.0), Value::F64(5.0)],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
     assert_eq!(v.as_f64(), Some(0.0));
 }
 
@@ -815,7 +1122,14 @@ fn s3_mol_weight_calculates() {
     let program = load_program(src).expect("s3 fixture");
     let mut host = MockHost::default();
     let mut env = Env::default();
-    let v = eval_function(&program, "molecular_weight", vec![Value::F64(6.0), Value::F64(12.0)], &mut host, &mut env).unwrap();
+    let v = eval_function(
+        &program,
+        "molecular_weight",
+        vec![Value::F64(6.0), Value::F64(12.0)],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
     assert_eq!(v.as_f64(), Some(72.0));
 }
 
@@ -827,9 +1141,23 @@ fn f1_black_scholes_intrinsic() {
     let program = load_program(src).expect("f1 fixture");
     let mut host = MockHost::default();
     let mut env = Env::default();
-    let v = eval_function(&program, "intrinsic_value", vec![Value::F64(110.0), Value::F64(100.0)], &mut host, &mut env).unwrap();
+    let v = eval_function(
+        &program,
+        "intrinsic_value",
+        vec![Value::F64(110.0), Value::F64(100.0)],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
     assert_eq!(v.as_f64(), Some(10.0));
-    let v = eval_function(&program, "intrinsic_value", vec![Value::F64(80.0), Value::F64(100.0)], &mut host, &mut env).unwrap();
+    let v = eval_function(
+        &program,
+        "intrinsic_value",
+        vec![Value::F64(80.0), Value::F64(100.0)],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
     assert_eq!(v.as_f64(), Some(0.0));
 }
 
@@ -839,7 +1167,19 @@ fn f2_portfolio_opt_weighted_return() {
     let program = load_program(src).expect("f2 fixture");
     let mut host = MockHost::default();
     let mut env = Env::default();
-    let v = eval_function(&program, "weighted_return", vec![Value::F64(0.1), Value::F64(0.6), Value::F64(0.05), Value::F64(0.4)], &mut host, &mut env).unwrap();
+    let v = eval_function(
+        &program,
+        "weighted_return",
+        vec![
+            Value::F64(0.1),
+            Value::F64(0.6),
+            Value::F64(0.05),
+            Value::F64(0.4),
+        ],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
     let r = v.as_f64().unwrap();
     assert!((r - 0.08).abs() < 0.001, "expected 0.08, got {r}");
 }
@@ -850,9 +1190,23 @@ fn f3_var_calc_clamps_confidence() {
     let program = load_program(src).expect("f3 fixture");
     let mut host = MockHost::default();
     let mut env = Env::default();
-    let v = eval_function(&program, "value_at_risk", vec![Value::F64(1000.0), Value::F64(0.95)], &mut host, &mut env).unwrap();
+    let v = eval_function(
+        &program,
+        "value_at_risk",
+        vec![Value::F64(1000.0), Value::F64(0.95)],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
     assert!((v.as_f64().unwrap() - 50.0).abs() < 0.001);
-    let v = eval_function(&program, "value_at_risk", vec![Value::F64(1000.0), Value::F64(1.5)], &mut host, &mut env).unwrap();
+    let v = eval_function(
+        &program,
+        "value_at_risk",
+        vec![Value::F64(1000.0), Value::F64(1.5)],
+        &mut host,
+        &mut env,
+    )
+    .unwrap();
     assert_eq!(v.as_f64(), Some(0.0));
 }
 
@@ -918,7 +1272,7 @@ fn all_phase_g_fixtures_on_disk_are_valid() {
         let path = format!("../fixtures/{name}.vibe");
         let src = include_str!(concat!("../fixtures/p1_wave_propagation.vibe"));
         let _ = src; // suppress unused
-        // Just verify the files exist and parse — individual tests above check semantics.
+                     // Just verify the files exist and parse — individual tests above check semantics.
     }
     // This is a compile-time include check: if any file is missing, compilation fails.
     let _ = include_str!("../fixtures/p1_wave_propagation.vibe");
@@ -1048,7 +1402,8 @@ fn ad3_enum_match_evaluates() {
     let program = load_program(src).expect("ad3 fixture");
     let mut host = MockHost::default();
     let mut env = Env::default();
-    let mut engine = poet_vibe::Engine::with_program(&mut host, poet_vibe::Budget::default(), &program);
+    let mut engine =
+        poet_vibe::Engine::with_program(&mut host, poet_vibe::Budget::default(), &program);
     engine.eval_program(&program, &mut env).unwrap();
     let v = eval_function(&program, "main", vec![], &mut host, &mut env).unwrap();
     assert_eq!(v.as_f64(), Some(12.0));

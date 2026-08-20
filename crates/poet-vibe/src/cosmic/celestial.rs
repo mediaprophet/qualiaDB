@@ -70,10 +70,7 @@ impl CelestialBodyClass {
 
     /// Whether this body type requires relativistic metric handling.
     pub fn is_relativistic(&self) -> bool {
-        matches!(
-            self,
-            Self::CompactRelativistic | Self::BlackHole
-        )
+        matches!(self, Self::CompactRelativistic | Self::BlackHole)
     }
 }
 
@@ -186,8 +183,14 @@ impl CelestialBodyProfile {
         rec.insert("class".into(), Value::String(self.class.as_str().into()));
         rec.insert("usri".into(), Value::String(self.usri.clone()));
         rec.insert("mass_kg".into(), Value::F64(self.mass_kg));
-        rec.insert("equatorial_radius_m".into(), Value::F64(self.equatorial_radius_m));
-        rec.insert("rotation_period_s".into(), Value::F64(self.rotation_period_s));
+        rec.insert(
+            "equatorial_radius_m".into(),
+            Value::F64(self.equatorial_radius_m),
+        );
+        rec.insert(
+            "rotation_period_s".into(),
+            Value::F64(self.rotation_period_s),
+        );
         rec.insert("surface_gravity".into(), Value::F64(self.surface_gravity()));
         Value::Record(rec)
     }

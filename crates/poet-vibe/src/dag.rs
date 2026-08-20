@@ -197,7 +197,10 @@ impl DagPipeline {
         }
         self.edges.push(edge);
         self.adjacency.entry(edge.from).or_default().push(edge.to);
-        self.reverse_adjacency.entry(edge.to).or_default().push(edge.from);
+        self.reverse_adjacency
+            .entry(edge.to)
+            .or_default()
+            .push(edge.from);
         Ok(())
     }
 
@@ -270,7 +273,13 @@ impl DagPipeline {
         }
         let mut in_degree: HashMap<u32, usize> = HashMap::new();
         for &id in self.nodes.keys() {
-            in_degree.insert(id, self.reverse_adjacency.get(&id).map(|v| v.len()).unwrap_or(0));
+            in_degree.insert(
+                id,
+                self.reverse_adjacency
+                    .get(&id)
+                    .map(|v| v.len())
+                    .unwrap_or(0),
+            );
         }
         let mut queue: Vec<u32> = in_degree
             .iter()
@@ -385,10 +394,7 @@ pub enum RouterStrategy {
 
 impl ControlUnit {
     pub fn new(node_id: u32, strategy: RouterStrategy) -> Self {
-        Self {
-            node_id,
-            strategy,
-        }
+        Self { node_id, strategy }
     }
 
     /// Select the next node(s) to execute given the current pipeline state
@@ -399,25 +405,24 @@ impl ControlUnit {
         channel_has_data: &dyn Fn(&str) -> bool,
     ) -> Vec<u32> {
         match &self.strategy {
-            RouterStrategy::AllDownstream => {
-                pipeline.downstream(self.node_id).to_vec()
-            }
-            RouterStrategy::FirstDownstream => {
-                pipeline.downstream(self.node_id).first().copied().into_iter().collect()
-            }
-            RouterStrategy::Named(name) => {
-                pipeline
-                    .downstream(self.node_id)
-                    .iter()
-                    .filter(|&&id| {
-                        pipeline
-                            .get_node(id)
-                            .map(|n| n.name == *name)
-                            .unwrap_or(false)
-                    })
-                    .copied()
-                    .collect()
-            }
+            RouterStrategy::AllDownstream => pipeline.downstream(self.node_id).to_vec(),
+            RouterStrategy::FirstDownstream => pipeline
+                .downstream(self.node_id)
+                .first()
+                .copied()
+                .into_iter()
+                .collect(),
+            RouterStrategy::Named(name) => pipeline
+                .downstream(self.node_id)
+                .iter()
+                .filter(|&&id| {
+                    pipeline
+                        .get_node(id)
+                        .map(|n| n.name == *name)
+                        .unwrap_or(false)
+                })
+                .copied()
+                .collect(),
             RouterStrategy::Conditional {
                 channel,
                 if_present,
@@ -457,7 +462,10 @@ impl ExecutionState {
 
     /// Get the status of a node.
     pub fn status(&self, id: u32) -> NodeStatus {
-        self.statuses.get(&id).copied().unwrap_or(NodeStatus::Pending)
+        self.statuses
+            .get(&id)
+            .copied()
+            .unwrap_or(NodeStatus::Pending)
     }
 
     /// Set the status of a node.
@@ -613,9 +621,12 @@ mod tests {
     #[test]
     fn dag_pipeline_add_nodes_and_edges() {
         let mut dag = DagPipeline::new();
-        dag.add_node(DagNode::new(0, "a", NodeEffect::Pure)).unwrap();
-        dag.add_node(DagNode::new(1, "b", NodeEffect::Pure)).unwrap();
-        dag.add_node(DagNode::new(2, "c", NodeEffect::Pure)).unwrap();
+        dag.add_node(DagNode::new(0, "a", NodeEffect::Pure))
+            .unwrap();
+        dag.add_node(DagNode::new(1, "b", NodeEffect::Pure))
+            .unwrap();
+        dag.add_node(DagNode::new(2, "c", NodeEffect::Pure))
+            .unwrap();
         dag.add_edge(DagEdge::new(0, 1)).unwrap();
         dag.add_edge(DagEdge::new(1, 2)).unwrap();
         assert_eq!(dag.node_count(), 3);
@@ -625,7 +636,8 @@ mod tests {
     #[test]
     fn dag_pipeline_duplicate_node() {
         let mut dag = DagPipeline::new();
-        dag.add_node(DagNode::new(0, "a", NodeEffect::Pure)).unwrap();
+        dag.add_node(DagNode::new(0, "a", NodeEffect::Pure))
+            .unwrap();
         let result = dag.add_node(DagNode::new(0, "b", NodeEffect::Pure));
         assert_eq!(result, Err(DagError::DuplicateNode));
     }
@@ -633,7 +645,8 @@ mod tests {
     #[test]
     fn dag_pipeline_invalid_edge() {
         let mut dag = DagPipeline::new();
-        dag.add_node(DagNode::new(0, "a", NodeEffect::Pure)).unwrap();
+        dag.add_node(DagNode::new(0, "a", NodeEffect::Pure))
+            .unwrap();
         let result = dag.add_edge(DagEdge::new(0, 99));
         assert_eq!(result, Err(DagError::InvalidEdge));
     }
@@ -641,9 +654,12 @@ mod tests {
     #[test]
     fn dag_pipeline_no_cycle() {
         let mut dag = DagPipeline::new();
-        dag.add_node(DagNode::new(0, "a", NodeEffect::Pure)).unwrap();
-        dag.add_node(DagNode::new(1, "b", NodeEffect::Pure)).unwrap();
-        dag.add_node(DagNode::new(2, "c", NodeEffect::Pure)).unwrap();
+        dag.add_node(DagNode::new(0, "a", NodeEffect::Pure))
+            .unwrap();
+        dag.add_node(DagNode::new(1, "b", NodeEffect::Pure))
+            .unwrap();
+        dag.add_node(DagNode::new(2, "c", NodeEffect::Pure))
+            .unwrap();
         dag.add_edge(DagEdge::new(0, 1)).unwrap();
         dag.add_edge(DagEdge::new(1, 2)).unwrap();
         assert!(!dag.has_cycle());
@@ -652,8 +668,10 @@ mod tests {
     #[test]
     fn dag_pipeline_cycle_detected() {
         let mut dag = DagPipeline::new();
-        dag.add_node(DagNode::new(0, "a", NodeEffect::Pure)).unwrap();
-        dag.add_node(DagNode::new(1, "b", NodeEffect::Pure)).unwrap();
+        dag.add_node(DagNode::new(0, "a", NodeEffect::Pure))
+            .unwrap();
+        dag.add_node(DagNode::new(1, "b", NodeEffect::Pure))
+            .unwrap();
         dag.add_edge(DagEdge::new(0, 1)).unwrap();
         dag.add_edge(DagEdge::new(1, 0)).unwrap();
         assert!(dag.has_cycle());
@@ -662,9 +680,12 @@ mod tests {
     #[test]
     fn dag_topological_sort() {
         let mut dag = DagPipeline::new();
-        dag.add_node(DagNode::new(0, "a", NodeEffect::Pure)).unwrap();
-        dag.add_node(DagNode::new(1, "b", NodeEffect::Pure)).unwrap();
-        dag.add_node(DagNode::new(2, "c", NodeEffect::Pure)).unwrap();
+        dag.add_node(DagNode::new(0, "a", NodeEffect::Pure))
+            .unwrap();
+        dag.add_node(DagNode::new(1, "b", NodeEffect::Pure))
+            .unwrap();
+        dag.add_node(DagNode::new(2, "c", NodeEffect::Pure))
+            .unwrap();
         dag.add_edge(DagEdge::new(0, 1)).unwrap();
         dag.add_edge(DagEdge::new(1, 2)).unwrap();
         let sorted = dag.topological_sort().unwrap();
@@ -674,8 +695,10 @@ mod tests {
     #[test]
     fn dag_topological_sort_cycle_fails() {
         let mut dag = DagPipeline::new();
-        dag.add_node(DagNode::new(0, "a", NodeEffect::Pure)).unwrap();
-        dag.add_node(DagNode::new(1, "b", NodeEffect::Pure)).unwrap();
+        dag.add_node(DagNode::new(0, "a", NodeEffect::Pure))
+            .unwrap();
+        dag.add_node(DagNode::new(1, "b", NodeEffect::Pure))
+            .unwrap();
         dag.add_edge(DagEdge::new(0, 1)).unwrap();
         dag.add_edge(DagEdge::new(1, 0)).unwrap();
         assert_eq!(dag.topological_sort(), Err(DagError::CycleDetected));
@@ -684,9 +707,12 @@ mod tests {
     #[test]
     fn dag_entry_and_exit_nodes() {
         let mut dag = DagPipeline::new();
-        dag.add_node(DagNode::new(0, "a", NodeEffect::Pure)).unwrap();
-        dag.add_node(DagNode::new(1, "b", NodeEffect::Pure)).unwrap();
-        dag.add_node(DagNode::new(2, "c", NodeEffect::Pure)).unwrap();
+        dag.add_node(DagNode::new(0, "a", NodeEffect::Pure))
+            .unwrap();
+        dag.add_node(DagNode::new(1, "b", NodeEffect::Pure))
+            .unwrap();
+        dag.add_node(DagNode::new(2, "c", NodeEffect::Pure))
+            .unwrap();
         dag.add_edge(DagEdge::new(0, 1)).unwrap();
         dag.add_edge(DagEdge::new(1, 2)).unwrap();
         let entries = dag.entry_nodes();
@@ -706,9 +732,13 @@ mod tests {
     #[test]
     fn dag_validate_missing_capability() {
         let mut dag = DagPipeline::new();
-        dag.add_node(DagNode::new(0, "a", NodeEffect::Pure).with_capability("missing")).unwrap();
+        dag.add_node(DagNode::new(0, "a", NodeEffect::Pure).with_capability("missing"))
+            .unwrap();
         let result = dag.validate(&[]);
-        assert_eq!(result, Err(DagError::MissingCapability("missing".to_string())));
+        assert_eq!(
+            result,
+            Err(DagError::MissingCapability("missing".to_string()))
+        );
     }
 
     #[test]
@@ -727,9 +757,12 @@ mod tests {
     #[test]
     fn control_unit_all_downstream() {
         let mut dag = DagPipeline::new();
-        dag.add_node(DagNode::new(0, "router", NodeEffect::Pure)).unwrap();
-        dag.add_node(DagNode::new(1, "a", NodeEffect::Pure)).unwrap();
-        dag.add_node(DagNode::new(2, "b", NodeEffect::Pure)).unwrap();
+        dag.add_node(DagNode::new(0, "router", NodeEffect::Pure))
+            .unwrap();
+        dag.add_node(DagNode::new(1, "a", NodeEffect::Pure))
+            .unwrap();
+        dag.add_node(DagNode::new(2, "b", NodeEffect::Pure))
+            .unwrap();
         dag.add_edge(DagEdge::new(0, 1)).unwrap();
         dag.add_edge(DagEdge::new(0, 2)).unwrap();
         let cu = ControlUnit::new(0, RouterStrategy::AllDownstream);
@@ -741,9 +774,12 @@ mod tests {
     #[test]
     fn control_unit_first_downstream() {
         let mut dag = DagPipeline::new();
-        dag.add_node(DagNode::new(0, "router", NodeEffect::Pure)).unwrap();
-        dag.add_node(DagNode::new(1, "a", NodeEffect::Pure)).unwrap();
-        dag.add_node(DagNode::new(2, "b", NodeEffect::Pure)).unwrap();
+        dag.add_node(DagNode::new(0, "router", NodeEffect::Pure))
+            .unwrap();
+        dag.add_node(DagNode::new(1, "a", NodeEffect::Pure))
+            .unwrap();
+        dag.add_node(DagNode::new(2, "b", NodeEffect::Pure))
+            .unwrap();
         dag.add_edge(DagEdge::new(0, 1)).unwrap();
         dag.add_edge(DagEdge::new(0, 2)).unwrap();
         let cu = ControlUnit::new(0, RouterStrategy::FirstDownstream);
@@ -754,9 +790,12 @@ mod tests {
     #[test]
     fn control_unit_named() {
         let mut dag = DagPipeline::new();
-        dag.add_node(DagNode::new(0, "router", NodeEffect::Pure)).unwrap();
-        dag.add_node(DagNode::new(1, "alpha", NodeEffect::Pure)).unwrap();
-        dag.add_node(DagNode::new(2, "beta", NodeEffect::Pure)).unwrap();
+        dag.add_node(DagNode::new(0, "router", NodeEffect::Pure))
+            .unwrap();
+        dag.add_node(DagNode::new(1, "alpha", NodeEffect::Pure))
+            .unwrap();
+        dag.add_node(DagNode::new(2, "beta", NodeEffect::Pure))
+            .unwrap();
         dag.add_edge(DagEdge::new(0, 1)).unwrap();
         dag.add_edge(DagEdge::new(0, 2)).unwrap();
         let cu = ControlUnit::new(0, RouterStrategy::Named("beta".to_string()));
@@ -767,9 +806,12 @@ mod tests {
     #[test]
     fn control_unit_conditional_if_present() {
         let mut dag = DagPipeline::new();
-        dag.add_node(DagNode::new(0, "router", NodeEffect::Pure)).unwrap();
-        dag.add_node(DagNode::new(1, "yes", NodeEffect::Pure)).unwrap();
-        dag.add_node(DagNode::new(2, "no", NodeEffect::Pure)).unwrap();
+        dag.add_node(DagNode::new(0, "router", NodeEffect::Pure))
+            .unwrap();
+        dag.add_node(DagNode::new(1, "yes", NodeEffect::Pure))
+            .unwrap();
+        dag.add_node(DagNode::new(2, "no", NodeEffect::Pure))
+            .unwrap();
         let cu = ControlUnit::new(
             0,
             RouterStrategy::Conditional {
@@ -785,9 +827,12 @@ mod tests {
     #[test]
     fn control_unit_conditional_if_empty() {
         let mut dag = DagPipeline::new();
-        dag.add_node(DagNode::new(0, "router", NodeEffect::Pure)).unwrap();
-        dag.add_node(DagNode::new(1, "yes", NodeEffect::Pure)).unwrap();
-        dag.add_node(DagNode::new(2, "no", NodeEffect::Pure)).unwrap();
+        dag.add_node(DagNode::new(0, "router", NodeEffect::Pure))
+            .unwrap();
+        dag.add_node(DagNode::new(1, "yes", NodeEffect::Pure))
+            .unwrap();
+        dag.add_node(DagNode::new(2, "no", NodeEffect::Pure))
+            .unwrap();
         let cu = ControlUnit::new(
             0,
             RouterStrategy::Conditional {
@@ -803,8 +848,10 @@ mod tests {
     #[test]
     fn execution_state_ready_nodes() {
         let mut dag = DagPipeline::new();
-        dag.add_node(DagNode::new(0, "a", NodeEffect::Pure)).unwrap();
-        dag.add_node(DagNode::new(1, "b", NodeEffect::Pure)).unwrap();
+        dag.add_node(DagNode::new(0, "a", NodeEffect::Pure))
+            .unwrap();
+        dag.add_node(DagNode::new(1, "b", NodeEffect::Pure))
+            .unwrap();
         dag.add_edge(DagEdge::new(0, 1)).unwrap();
         let mut state = ExecutionState::new(&dag);
         // Initially, only node 0 is ready (no upstream).
@@ -820,8 +867,10 @@ mod tests {
     #[test]
     fn execution_state_all_completed() {
         let mut dag = DagPipeline::new();
-        dag.add_node(DagNode::new(0, "a", NodeEffect::Pure)).unwrap();
-        dag.add_node(DagNode::new(1, "b", NodeEffect::Pure)).unwrap();
+        dag.add_node(DagNode::new(0, "a", NodeEffect::Pure))
+            .unwrap();
+        dag.add_node(DagNode::new(1, "b", NodeEffect::Pure))
+            .unwrap();
         dag.add_edge(DagEdge::new(0, 1)).unwrap();
         let mut state = ExecutionState::new(&dag);
         assert!(!state.all_completed());
@@ -834,8 +883,10 @@ mod tests {
     #[test]
     fn execution_state_completed_order() {
         let mut dag = DagPipeline::new();
-        dag.add_node(DagNode::new(0, "a", NodeEffect::Pure)).unwrap();
-        dag.add_node(DagNode::new(1, "b", NodeEffect::Pure)).unwrap();
+        dag.add_node(DagNode::new(0, "a", NodeEffect::Pure))
+            .unwrap();
+        dag.add_node(DagNode::new(1, "b", NodeEffect::Pure))
+            .unwrap();
         let mut state = ExecutionState::new(&dag);
         state.set_status(1, NodeStatus::Completed);
         state.set_status(0, NodeStatus::Completed);
@@ -845,9 +896,12 @@ mod tests {
     #[test]
     fn execution_state_count_by_status() {
         let mut dag = DagPipeline::new();
-        dag.add_node(DagNode::new(0, "a", NodeEffect::Pure)).unwrap();
-        dag.add_node(DagNode::new(1, "b", NodeEffect::Pure)).unwrap();
-        dag.add_node(DagNode::new(2, "c", NodeEffect::Pure)).unwrap();
+        dag.add_node(DagNode::new(0, "a", NodeEffect::Pure))
+            .unwrap();
+        dag.add_node(DagNode::new(1, "b", NodeEffect::Pure))
+            .unwrap();
+        dag.add_node(DagNode::new(2, "c", NodeEffect::Pure))
+            .unwrap();
         let mut state = ExecutionState::new(&dag);
         state.set_status(0, NodeStatus::Completed);
         state.set_status(1, NodeStatus::Failed);

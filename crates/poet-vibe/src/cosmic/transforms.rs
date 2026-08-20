@@ -130,13 +130,9 @@ pub fn enu_to_ecef(enu: Enu, ref_geo: Geodetic) -> Ecef {
 
     // Inverse rotation: ENU → ECEF
     Ecef {
-        x: ref_ecef.x
-            - sin_lon * enu.east
-            - sin_lat * cos_lon * enu.north
+        x: ref_ecef.x - sin_lon * enu.east - sin_lat * cos_lon * enu.north
             + cos_lat * cos_lon * enu.up,
-        y: ref_ecef.y
-            + cos_lon * enu.east
-            - sin_lat * sin_lon * enu.north
+        y: ref_ecef.y + cos_lon * enu.east - sin_lat * sin_lon * enu.north
             + cos_lat * sin_lon * enu.up,
         z: ref_ecef.z + cos_lat * enu.north + sin_lat * enu.up,
     }
@@ -183,7 +179,11 @@ mod tests {
     #[test]
     fn geodetic_to_ecef_origin() {
         // At (0, 0, 0) — equator/prime meridian on the ellipsoid
-        let g = Geodetic { lat_deg: 0.0, lon_deg: 0.0, alt_m: 0.0 };
+        let g = Geodetic {
+            lat_deg: 0.0,
+            lon_deg: 0.0,
+            alt_m: 0.0,
+        };
         let e = geodetic_to_ecef(g);
         assert!((e.x - WGS84_A).abs() < 1e-6, "x should be WGS84_A");
         assert!(e.y.abs() < 1e-6);
@@ -192,7 +192,11 @@ mod tests {
 
     #[test]
     fn geodetic_to_ecef_north_pole() {
-        let g = Geodetic { lat_deg: 90.0, lon_deg: 0.0, alt_m: 0.0 };
+        let g = Geodetic {
+            lat_deg: 90.0,
+            lon_deg: 0.0,
+            alt_m: 0.0,
+        };
         let e = geodetic_to_ecef(g);
         assert!(e.x.abs() < 1e-6);
         assert!(e.y.abs() < 1e-6);
@@ -201,17 +205,34 @@ mod tests {
 
     #[test]
     fn ecef_to_geodetic_round_trip() {
-        let original = Geodetic { lat_deg: 37.8080, lon_deg: -122.4177, alt_m: 10.0 };
+        let original = Geodetic {
+            lat_deg: 37.8080,
+            lon_deg: -122.4177,
+            alt_m: 10.0,
+        };
         let ecef = geodetic_to_ecef(original);
         let recovered = ecef_to_geodetic(ecef);
-        assert!((recovered.lat_deg - original.lat_deg).abs() < 1e-6, "lat mismatch");
-        assert!((recovered.lon_deg - original.lon_deg).abs() < 1e-6, "lon mismatch");
-        assert!((recovered.alt_m - original.alt_m).abs() < 1e-3, "alt mismatch");
+        assert!(
+            (recovered.lat_deg - original.lat_deg).abs() < 1e-6,
+            "lat mismatch"
+        );
+        assert!(
+            (recovered.lon_deg - original.lon_deg).abs() < 1e-6,
+            "lon mismatch"
+        );
+        assert!(
+            (recovered.alt_m - original.alt_m).abs() < 1e-3,
+            "alt mismatch"
+        );
     }
 
     #[test]
     fn ecef_to_geodetic_round_trip_high_lat() {
-        let original = Geodetic { lat_deg: 78.5, lon_deg: 15.0, alt_m: 500.0 };
+        let original = Geodetic {
+            lat_deg: 78.5,
+            lon_deg: 15.0,
+            alt_m: 500.0,
+        };
         let ecef = geodetic_to_ecef(original);
         let recovered = ecef_to_geodetic(ecef);
         assert!((recovered.lat_deg - original.lat_deg).abs() < 1e-6);
@@ -221,42 +242,84 @@ mod tests {
 
     #[test]
     fn ecef_enu_round_trip() {
-        let ref_geo = Geodetic { lat_deg: 37.8080, lon_deg: -122.4177, alt_m: 10.0 };
-        let original = Enu { east: 100.0, north: 200.0, up: 50.0 };
+        let ref_geo = Geodetic {
+            lat_deg: 37.8080,
+            lon_deg: -122.4177,
+            alt_m: 10.0,
+        };
+        let original = Enu {
+            east: 100.0,
+            north: 200.0,
+            up: 50.0,
+        };
         let ecef = enu_to_ecef(original, ref_geo);
         let recovered = ecef_to_enu(ecef, ref_geo);
-        assert!((recovered.east - original.east).abs() < 1e-6, "east mismatch");
-        assert!((recovered.north - original.north).abs() < 1e-6, "north mismatch");
+        assert!(
+            (recovered.east - original.east).abs() < 1e-6,
+            "east mismatch"
+        );
+        assert!(
+            (recovered.north - original.north).abs() < 1e-6,
+            "north mismatch"
+        );
         assert!((recovered.up - original.up).abs() < 1e-6, "up mismatch");
     }
 
     #[test]
     fn geodetic_distance_sf_to_la() {
         // San Francisco to Los Angeles — ~559 km
-        let sf = Geodetic { lat_deg: 37.7749, lon_deg: -122.4194, alt_m: 0.0 };
-        let la = Geodetic { lat_deg: 34.0522, lon_deg: -118.2437, alt_m: 0.0 };
+        let sf = Geodetic {
+            lat_deg: 37.7749,
+            lon_deg: -122.4194,
+            alt_m: 0.0,
+        };
+        let la = Geodetic {
+            lat_deg: 34.0522,
+            lon_deg: -118.2437,
+            alt_m: 0.0,
+        };
         let d = geodetic_distance(sf, la);
         assert!((d - 559_000.0).abs() < 5_000.0, "got {} expected ~559km", d);
     }
 
     #[test]
     fn geodetic_distance_same_point() {
-        let g = Geodetic { lat_deg: 45.0, lon_deg: 90.0, alt_m: 0.0 };
+        let g = Geodetic {
+            lat_deg: 45.0,
+            lon_deg: 90.0,
+            alt_m: 0.0,
+        };
         assert!(geodetic_distance(g, g).abs() < 1e-6);
     }
 
     #[test]
     fn geodetic_distance_antipode() {
         // Antipodal points — ~20015 km (half circumference)
-        let a = Geodetic { lat_deg: 0.0, lon_deg: 0.0, alt_m: 0.0 };
-        let b = Geodetic { lat_deg: 0.0, lon_deg: 180.0, alt_m: 0.0 };
+        let a = Geodetic {
+            lat_deg: 0.0,
+            lon_deg: 0.0,
+            alt_m: 0.0,
+        };
+        let b = Geodetic {
+            lat_deg: 0.0,
+            lon_deg: 180.0,
+            alt_m: 0.0,
+        };
         let d = geodetic_distance(a, b);
-        assert!((d - 20_015_000.0).abs() < 50_000.0, "got {} expected ~20015km", d);
+        assert!(
+            (d - 20_015_000.0).abs() < 50_000.0,
+            "got {} expected ~20015km",
+            d
+        );
     }
 
     #[test]
     fn ecef_to_geodetic_at_pole() {
-        let e = Ecef { x: 0.0, y: 0.0, z: WGS84_B };
+        let e = Ecef {
+            x: 0.0,
+            y: 0.0,
+            z: WGS84_B,
+        };
         let g = ecef_to_geodetic(e);
         assert!((g.lat_deg - 90.0).abs() < 1e-6);
     }

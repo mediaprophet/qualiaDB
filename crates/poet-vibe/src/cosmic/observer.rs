@@ -51,11 +51,26 @@ impl AffectiveStatus {
 
     pub fn to_value(&self) -> Value {
         let mut rec = BTreeMap::new();
-        rec.insert("safety_threat_index".into(), Value::F64(self.safety_threat_index as f64));
-        rec.insert("emotional_valence".into(), Value::F64(self.emotional_valence as f64));
-        rec.insert("arousal_level".into(), Value::F64(self.arousal_level as f64));
-        rec.insert("dissociation_index".into(), Value::F64(self.dissociation_index as f64));
-        rec.insert("trauma_reactivity".into(), Value::F64(self.trauma_reactivity as f64));
+        rec.insert(
+            "safety_threat_index".into(),
+            Value::F64(self.safety_threat_index as f64),
+        );
+        rec.insert(
+            "emotional_valence".into(),
+            Value::F64(self.emotional_valence as f64),
+        );
+        rec.insert(
+            "arousal_level".into(),
+            Value::F64(self.arousal_level as f64),
+        );
+        rec.insert(
+            "dissociation_index".into(),
+            Value::F64(self.dissociation_index as f64),
+        );
+        rec.insert(
+            "trauma_reactivity".into(),
+            Value::F64(self.trauma_reactivity as f64),
+        );
         Value::Record(rec)
     }
 }
@@ -119,7 +134,11 @@ impl ObserverFiber {
     /// Simple scalar version: the L2 norm of the difference between
     /// the perceived frame and the empirical frame, weighted by
     /// dissociation and trauma reactivity.
-    pub fn epistemic_divergence(&self, empirical_frame_coords: &[f64], perceived_coords: &[f64]) -> f64 {
+    pub fn epistemic_divergence(
+        &self,
+        empirical_frame_coords: &[f64],
+        perceived_coords: &[f64],
+    ) -> f64 {
         if empirical_frame_coords.len() != perceived_coords.len() {
             return f64::INFINITY;
         }
@@ -133,25 +152,31 @@ impl ObserverFiber {
             .sum();
         let base = sum_sq.sqrt();
         // Weight by dissociation + trauma reactivity
-        let weight = 1.0 + self.affective_state.dissociation_index as f64
+        let weight = 1.0
+            + self.affective_state.dissociation_index as f64
             + self.affective_state.trauma_reactivity as f64;
         base * weight
     }
 
     /// Whether this observer needs grounding intervention (OCS-T11).
     pub fn needs_grounding(&self) -> bool {
-        self.affective_state.is_hyper_vigilant()
-            || self.affective_state.dissociation_index > 0.7
+        self.affective_state.is_hyper_vigilant() || self.affective_state.dissociation_index > 0.7
     }
 
     pub fn to_value(&self) -> Value {
         let mut rec = BTreeMap::new();
-        rec.insert("observer_did".into(), Value::String(self.observer_did.clone()));
+        rec.insert(
+            "observer_did".into(),
+            Value::String(self.observer_did.clone()),
+        );
         if let Some(cohort) = &self.semantic_cohort {
             rec.insert("semantic_cohort".into(), Value::String(cohort.clone()));
         }
         rec.insert("affective_state".into(), self.affective_state.to_value());
-        rec.insert("perceived_frame_usi".into(), Value::String(self.perceived_frame_usi.clone()));
+        rec.insert(
+            "perceived_frame_usi".into(),
+            Value::String(self.perceived_frame_usi.clone()),
+        );
         Value::Record(rec)
     }
 }
@@ -248,7 +273,10 @@ mod tests {
         let v = obs.to_value();
         match v {
             Value::Record(r) => {
-                assert_eq!(r.get("observer_did"), Some(&Value::String("did:q42:person:alice".into())));
+                assert_eq!(
+                    r.get("observer_did"),
+                    Some(&Value::String("did:q42:person:alice".into()))
+                );
                 assert!(r.contains_key("affective_state"));
             }
             _ => panic!("expected Record"),

@@ -140,11 +140,7 @@ impl KeywordTranslator {
 ///
 /// The source is first normalised to canonical English (by the parser),
 /// then re-emitted with the target locale's keywords.
-pub fn translate_source(
-    registry: &LocaleRegistry,
-    source: &str,
-    target: Locale,
-) -> Option<String> {
+pub fn translate_source(registry: &LocaleRegistry, source: &str, target: Locale) -> Option<String> {
     let translator = KeywordTranslator::for_locale(registry, target)?;
     Some(translator.translate_source(source))
 }
@@ -203,10 +199,7 @@ impl Tier2Registry {
 
     /// Get all labels for an IRI.
     pub fn labels_for(&self, iri: &str) -> &[Tier2Label] {
-        self.labels
-            .get(iri)
-            .map(|v| v.as_slice())
-            .unwrap_or(&[])
+        self.labels.get(iri).map(|v| v.as_slice()).unwrap_or(&[])
     }
 
     /// Get the label for an IRI in a specific locale.
@@ -332,13 +325,20 @@ mod tests {
     fn t39_tier2_label_with_description() {
         let l = Tier2Label::new("clinic:hasCondition", "en", "has condition")
             .with_description("The patient has this medical condition.");
-        assert_eq!(l.description, Some("The patient has this medical condition.".into()));
+        assert_eq!(
+            l.description,
+            Some("The patient has this medical condition.".into())
+        );
     }
 
     #[test]
     fn t39_registry_register_and_query() {
         let mut reg = Tier2Registry::new();
-        reg.register(Tier2Label::new("clinic:hasCondition", "en", "has condition"));
+        reg.register(Tier2Label::new(
+            "clinic:hasCondition",
+            "en",
+            "has condition",
+        ));
         reg.register(Tier2Label::new("clinic:hasCondition", "zh", "有病情"));
         reg.register(Tier2Label::new("clinic:hasPatient", "en", "has patient"));
 
@@ -352,7 +352,11 @@ mod tests {
     #[test]
     fn t39_registry_label_in_locale() {
         let mut reg = Tier2Registry::new();
-        reg.register(Tier2Label::new("clinic:hasCondition", "en", "has condition"));
+        reg.register(Tier2Label::new(
+            "clinic:hasCondition",
+            "en",
+            "has condition",
+        ));
         reg.register(Tier2Label::new("clinic:hasCondition", "zh", "有病情"));
 
         let en = reg.label_in_locale("clinic:hasCondition", "en").unwrap();
@@ -365,7 +369,11 @@ mod tests {
     #[test]
     fn t39_registry_labels_in_locale() {
         let mut reg = Tier2Registry::new();
-        reg.register(Tier2Label::new("clinic:hasCondition", "en", "has condition"));
+        reg.register(Tier2Label::new(
+            "clinic:hasCondition",
+            "en",
+            "has condition",
+        ));
         reg.register(Tier2Label::new("clinic:hasPatient", "en", "has patient"));
         reg.register(Tier2Label::new("clinic:hasCondition", "zh", "有病情"));
 

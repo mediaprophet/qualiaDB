@@ -34,5 +34,7 @@ pub fn call_quin<H: Host>(
     let predicate = get("predicate")?;
     let object = get("object")?;
     let context = get("context")?;
-    Ok(Some(host.quin_seal(subject, predicate, object, context, span)?))
+    Ok(Some(
+        host.quin_seal(subject, predicate, object, context, span)?,
+    ))
 }

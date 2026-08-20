@@ -72,7 +72,11 @@ impl PrettyField {
     pub fn format(&self, opts: &PrettyOptions, out: &mut String) {
         writeln!(out, "field {} : {}", self.name, self.field_type).unwrap();
         for (i, (k, v)) in self.properties.iter().enumerate() {
-            let sep = if i + 1 < self.properties.len() { "," } else { "" };
+            let sep = if i + 1 < self.properties.len() {
+                ","
+            } else {
+                ""
+            };
             writeln!(out, "{}{}: {}{}", opts.indent, k, v, sep).unwrap();
         }
         writeln!(out, ";").unwrap();
@@ -104,7 +108,11 @@ impl PrettyMaterial {
     pub fn format(&self, opts: &PrettyOptions, out: &mut String) {
         writeln!(out, "material {} : {}", self.name, self.material_type).unwrap();
         for (i, (k, v)) in self.properties.iter().enumerate() {
-            let sep = if i + 1 < self.properties.len() { "," } else { "" };
+            let sep = if i + 1 < self.properties.len() {
+                ","
+            } else {
+                ""
+            };
             writeln!(out, "{}{}: {}{}", opts.indent, k, v, sep).unwrap();
         }
         writeln!(out, ";").unwrap();
@@ -253,8 +261,7 @@ mod tests {
 
     #[test]
     fn pretty_material_single_prop_no_comma() {
-        let m = PrettyMaterial::new("aluminum", "Material")
-            .prop("yield", "95.0");
+        let m = PrettyMaterial::new("aluminum", "Material").prop("yield", "95.0");
         let opts = PrettyOptions::default();
         let mut out = String::new();
         m.format(&opts, &mut out);
@@ -276,10 +283,8 @@ mod tests {
     #[test]
     fn pretty_document_full() {
         let mut doc = PrettyDocument::new();
-        doc.add_field(PrettyField::new("pressure", "Pressure")
-            .prop("unit", "<qudt:KiloPascal>"));
-        doc.add_material(PrettyMaterial::new("steel", "Material")
-            .prop("yield", "250.0"));
+        doc.add_field(PrettyField::new("pressure", "Pressure").prop("unit", "<qudt:KiloPascal>"));
+        doc.add_material(PrettyMaterial::new("steel", "Material").prop("yield", "250.0"));
         doc.add_law(PrettyLaw::new("crush", "pressure > steel.yield", "1"));
         let opts = PrettyOptions::default();
         let out = doc.format(&opts);
@@ -293,7 +298,10 @@ mod tests {
         let mut doc = PrettyDocument::new();
         doc.add_field(PrettyField::new("a", "A"));
         doc.add_field(PrettyField::new("b", "B"));
-        let opts = PrettyOptions { blank_lines_between_decls: 2, ..Default::default() };
+        let opts = PrettyOptions {
+            blank_lines_between_decls: 2,
+            ..Default::default()
+        };
         let out = doc.format(&opts);
         // Two blank lines between declarations.
         assert!(out.contains(";\n\n\nfield b : B"));
@@ -310,7 +318,10 @@ mod tests {
     #[test]
     fn pretty_options_custom_indent() {
         let f = PrettyField::new("x", "X").prop("a", "1");
-        let opts = PrettyOptions { indent: "    ".into(), ..Default::default() };
+        let opts = PrettyOptions {
+            indent: "    ".into(),
+            ..Default::default()
+        };
         let mut out = String::new();
         f.format(&opts, &mut out);
         assert!(out.contains("    a: 1"));

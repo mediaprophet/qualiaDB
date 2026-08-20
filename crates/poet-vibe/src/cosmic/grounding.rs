@@ -40,7 +40,12 @@ impl GroundingStatus {
     pub fn to_value(&self) -> Value {
         let mut rec = BTreeMap::new();
         rec.insert("status".into(), Value::String(self.as_str().into()));
-        if let Self::EmpiricallyAnchored { anchor_iri, confidence, stratum_or_epoch } = self {
+        if let Self::EmpiricallyAnchored {
+            anchor_iri,
+            confidence,
+            stratum_or_epoch,
+        } = self
+        {
             rec.insert("anchor_iri".into(), Value::String(anchor_iri.clone()));
             rec.insert("confidence".into(), Value::F64(*confidence as f64));
             if let Some(s) = stratum_or_epoch {
@@ -96,7 +101,10 @@ impl NarrativeEntity {
 /// Given a set of narrative entities, returns only those that are
 /// empirically anchored (collapsible onto physical spacetime).
 pub fn collapse_entities(entities: &[NarrativeEntity]) -> Vec<&NarrativeEntity> {
-    entities.iter().filter(|e| e.grounding.is_collapsible()).collect()
+    entities
+        .iter()
+        .filter(|e| e.grounding.is_collapsible())
+        .collect()
 }
 
 #[cfg(test)]
@@ -131,10 +139,7 @@ mod tests {
             "urn:omni:v1:physical:earth:hisarlik",
             0.95,
         );
-        let athena = NarrativeEntity::mythos(
-            "goddess_athena",
-            "urn:omni:v1:narrative:homer:iliad",
-        );
+        let athena = NarrativeEntity::mythos("goddess_athena", "urn:omni:v1:narrative:homer:iliad");
         let entities = vec![troy.clone(), athena];
         let collapsed = collapse_entities(&entities);
         assert_eq!(collapsed.len(), 1);
@@ -151,7 +156,10 @@ mod tests {
         let v = status.to_value();
         match v {
             Value::Record(r) => {
-                assert_eq!(r.get("status"), Some(&Value::String("EmpiricallyAnchored".into())));
+                assert_eq!(
+                    r.get("status"),
+                    Some(&Value::String("EmpiricallyAnchored".into()))
+                );
                 // f32 0.8 → f64 may not be exactly 0.8
                 if let Some(Value::F64(c)) = r.get("confidence") {
                     assert!((*c - 0.8).abs() < 1e-6, "confidence mismatch: {}", c);

@@ -70,7 +70,10 @@ impl Trivia {
 
     /// Is this trivia a comment?
     pub fn is_comment(&self) -> bool {
-        matches!(self.kind, TriviaKind::LineComment | TriviaKind::BlockComment)
+        matches!(
+            self.kind,
+            TriviaKind::LineComment | TriviaKind::BlockComment
+        )
     }
 
     /// Is this trivia whitespace?
@@ -191,7 +194,11 @@ pub struct CstNode<T> {
 
 impl<T> CstNode<T> {
     pub fn new(node: T, leading: Vec<Trivia>, trailing: Vec<Trivia>) -> Self {
-        Self { node, leading, trailing }
+        Self {
+            node,
+            leading,
+            trailing,
+        }
     }
 
     /// Get the leading comments.

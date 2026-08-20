@@ -137,12 +137,18 @@ impl ModuleEntry {
 
     /// Get all function exports.
     pub fn functions(&self) -> Vec<&ModuleExport> {
-        self.exports.iter().filter(|e| e.kind == ExportKind::Function).collect()
+        self.exports
+            .iter()
+            .filter(|e| e.kind == ExportKind::Function)
+            .collect()
     }
 
     /// Get all capability exports.
     pub fn capabilities(&self) -> Vec<&ModuleExport> {
-        self.exports.iter().filter(|e| e.kind == ExportKind::Capability).collect()
+        self.exports
+            .iter()
+            .filter(|e| e.kind == ExportKind::Capability)
+            .collect()
     }
 }
 
@@ -282,9 +288,9 @@ impl<'a> ModuleResolver<'a> {
 
     /// Resolve an import IRI to a module entry.
     pub fn resolve(&self, iri: &str) -> Result<&ModuleEntry, String> {
-        self.catalog.get(iri).ok_or_else(|| {
-            format!("module not found in catalog: {iri}")
-        })
+        self.catalog
+            .get(iri)
+            .ok_or_else(|| format!("module not found in catalog: {iri}"))
     }
 
     /// Resolve an import with a stripped `vibe:0.1/` prefix (T64).
@@ -319,7 +325,9 @@ pub fn default_catalog() -> ModuleCatalog {
     catalog.register(
         ModuleEntry::new("math", "0.1.0")
             .builtin()
-            .with_description("Pure math functions: abs, min, max, floor, ceil, round, sqrt, sin, cos, log, exp")
+            .with_description(
+                "Pure math functions: abs, min, max, floor, ceil, round, sqrt, sin, cos, log, exp",
+            )
             .with_export(ModuleExport {
                 name: "abs".into(),
                 kind: ExportKind::Function,
@@ -375,7 +383,9 @@ pub fn default_catalog() -> ModuleCatalog {
     catalog.register(
         ModuleEntry::new("crypto", "0.1.0")
             .builtin()
-            .with_description("Cryptographic operations: sha256, sha512, blake3, hkdf, aead, sign, verify")
+            .with_description(
+                "Cryptographic operations: sha256, sha512, blake3, hkdf, aead, sign, verify",
+            )
             .with_export(ModuleExport {
                 name: "sha256".into(),
                 kind: ExportKind::Function,
@@ -427,12 +437,11 @@ mod tests {
 
     #[test]
     fn t63_module_entry_exports() {
-        let entry = ModuleEntry::new("math", "0.1.0")
-            .with_export(ModuleExport {
-                name: "abs".into(),
-                kind: ExportKind::Function,
-                signature: None,
-            });
+        let entry = ModuleEntry::new("math", "0.1.0").with_export(ModuleExport {
+            name: "abs".into(),
+            kind: ExportKind::Function,
+            signature: None,
+        });
         assert!(entry.exports_name("abs"));
         assert!(!entry.exports_name("nonexistent"));
         assert_eq!(entry.functions().len(), 1);

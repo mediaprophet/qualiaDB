@@ -185,7 +185,10 @@ impl Presentation {
     /// Convert to a VibeScript Record value.
     pub fn to_value(&self) -> Value {
         let mut rec = BTreeMap::new();
-        rec.insert("modality".into(), Value::String(self.modality.as_str().into()));
+        rec.insert(
+            "modality".into(),
+            Value::String(self.modality.as_str().into()),
+        );
         rec.insert("kind".into(), Value::String(self.kind.as_str().into()));
         rec.insert("payload".into(), self.payload.clone());
         Value::Record(rec)
@@ -239,11 +242,8 @@ impl PresentationSheaf {
 
     /// Check which modalities are present.
     pub fn modalities(&self) -> Vec<PresentationModality> {
-        let mut mods: Vec<PresentationModality> = self
-            .presentations
-            .iter()
-            .map(|p| p.modality)
-            .collect();
+        let mut mods: Vec<PresentationModality> =
+            self.presentations.iter().map(|p| p.modality).collect();
         mods.sort_by_key(|m| m.as_str());
         mods.dedup();
         mods
@@ -297,7 +297,10 @@ pub fn present(value: &Value) -> PresentationSheaf {
         }
         Value::Bool(b) => {
             let mut props = BTreeMap::new();
-            props.insert("display".into(), Value::String(if *b { "block" } else { "none" }.into()));
+            props.insert(
+                "display".into(),
+                Value::String(if *b { "block" } else { "none" }.into()),
+            );
             sheaf.add(Presentation::css(props));
         }
         _ => {
@@ -382,10 +385,13 @@ mod tests {
             Value::Record(r) => r,
             _ => panic!("expected Record"),
         };
-        assert_eq!(match rec.get("modality").unwrap() {
-            Value::String(s) => s.as_str(),
-            _ => panic!("expected String"),
-        }, "auditory");
+        assert_eq!(
+            match rec.get("modality").unwrap() {
+                Value::String(s) => s.as_str(),
+                _ => panic!("expected String"),
+            },
+            "auditory"
+        );
     }
 
     #[test]
@@ -464,7 +470,9 @@ mod tests {
         let sheaf = present(&Value::String("hello".into()));
         // String gets visual, auditory, and Braille presentations.
         assert!(!sheaf.for_modality(PresentationModality::Visual).is_empty());
-        assert!(!sheaf.for_modality(PresentationModality::Auditory).is_empty());
+        assert!(!sheaf
+            .for_modality(PresentationModality::Auditory)
+            .is_empty());
         assert!(!sheaf.for_modality(PresentationModality::Braille).is_empty());
     }
 

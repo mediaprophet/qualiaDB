@@ -116,13 +116,40 @@ pub fn chinese_table() -> LocaleTable {
 
 /// The canonical English keyword list.
 pub const ENGLISH_KEYWORDS: &[&str] = &[
-    "module", "import", "as", "prefix", "requires", "capability",
-    "fn", "async", "on", "let", "mut", "const", "enum",
-    "field", "material", "law", "when",
-    "if", "else", "for", "in", "while", "match", "return", "yield",
-    "transaction", "await",
-    "true", "false", "null",
-    "effect", "pure", "hot", "cold",
+    "module",
+    "import",
+    "as",
+    "prefix",
+    "requires",
+    "capability",
+    "fn",
+    "async",
+    "on",
+    "let",
+    "mut",
+    "const",
+    "enum",
+    "field",
+    "material",
+    "law",
+    "when",
+    "if",
+    "else",
+    "for",
+    "in",
+    "while",
+    "match",
+    "return",
+    "yield",
+    "transaction",
+    "await",
+    "true",
+    "false",
+    "null",
+    "effect",
+    "pure",
+    "hot",
+    "cold",
 ];
 
 /// A registry of locale tables.
@@ -153,7 +180,10 @@ impl LocaleRegistry {
                 keyword_index.insert(kw, (table.locale, canonical));
             }
         }
-        Self { tables, keyword_index }
+        Self {
+            tables,
+            keyword_index,
+        }
     }
 
     /// Resolve a keyword from any locale to its canonical English form.

@@ -90,7 +90,9 @@ pub struct Usri {
 impl Usri {
     /// Parse a USRI string into its components.
     pub fn parse(s: &str) -> Result<Self, String> {
-        let s = s.strip_prefix("urn:omni:").ok_or("USRI must start with 'urn:omni:'")?;
+        let s = s
+            .strip_prefix("urn:omni:")
+            .ok_or("USRI must start with 'urn:omni:'")?;
 
         // Split on '#' to separate anchor
         let (main, anchor) = match s.split_once('#') {
@@ -171,23 +173,42 @@ impl Usri {
     pub fn to_value(&self) -> Value {
         let mut rec = BTreeMap::new();
         rec.insert("version".into(), Value::String(self.version.clone()));
-        rec.insert("realm_class".into(), Value::String(self.realm_class.as_str().into()));
+        rec.insert(
+            "realm_class".into(),
+            Value::String(self.realm_class.as_str().into()),
+        );
         rec.insert(
             "universe_or_observer".into(),
             Value::String(self.universe_or_observer.clone()),
         );
-        rec.insert("branch_or_state".into(), Value::String(self.branch_or_state.clone()));
-        rec.insert("hierarchy_path".into(), Value::String(self.hierarchy_path.clone()));
+        rec.insert(
+            "branch_or_state".into(),
+            Value::String(self.branch_or_state.clone()),
+        );
+        rec.insert(
+            "hierarchy_path".into(),
+            Value::String(self.hierarchy_path.clone()),
+        );
         if !self.nested.is_empty() {
             rec.insert(
                 "nested".into(),
-                Value::List(self.nested.iter().map(|s| Value::String(s.clone())).collect()),
+                Value::List(
+                    self.nested
+                        .iter()
+                        .map(|s| Value::String(s.clone()))
+                        .collect(),
+                ),
             );
         }
         if !self.collapsed.is_empty() {
             rec.insert(
                 "collapsed".into(),
-                Value::List(self.collapsed.iter().map(|s| Value::String(s.clone())).collect()),
+                Value::List(
+                    self.collapsed
+                        .iter()
+                        .map(|s| Value::String(s.clone()))
+                        .collect(),
+                ),
             );
         }
         if !self.anchor.is_empty() {
@@ -295,7 +316,10 @@ mod tests {
         let v = u.to_value();
         match v {
             Value::Record(r) => {
-                assert_eq!(r.get("realm_class"), Some(&Value::String("physical".into())));
+                assert_eq!(
+                    r.get("realm_class"),
+                    Some(&Value::String("physical".into()))
+                );
                 assert_eq!(r.get("version"), Some(&Value::String("v1".into())));
             }
             _ => panic!("expected Record"),

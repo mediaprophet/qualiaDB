@@ -4,23 +4,19 @@ use crate::error::{DiagCode, Diagnostic};
 use crate::span::Span;
 use crate::value::Value;
 
-pub fn call_math(
-    path: &str,
-    args: &[Value],
-    span: Span,
-) -> Result<Option<Value>, Diagnostic> {
+pub fn call_math(path: &str, args: &[Value], span: Span) -> Result<Option<Value>, Diagnostic> {
     match path {
         "math.abs" => {
-            let first = args
-                .first()
-                .ok_or_else(|| Diagnostic::new(DiagCode::E100, span, "math.abs expects a number"))?;
+            let first = args.first().ok_or_else(|| {
+                Diagnostic::new(DiagCode::E100, span, "math.abs expects a number")
+            })?;
             match first {
                 Value::I64(n) => Ok(Some(Value::I64(n.checked_abs().unwrap_or(i64::MAX)))),
                 Value::U64(n) => Ok(Some(Value::U64(*n))),
                 _ => {
-                    let a = first
-                        .as_f64()
-                        .ok_or_else(|| Diagnostic::new(DiagCode::E100, span, "math.abs expects a number"))?;
+                    let a = first.as_f64().ok_or_else(|| {
+                        Diagnostic::new(DiagCode::E100, span, "math.abs expects a number")
+                    })?;
                     Ok(Some(Value::F64(a.abs())))
                 }
             }
@@ -37,12 +33,12 @@ pub fn call_math(
             } else if let (Value::U64(x), Value::U64(y)) = (a, b) {
                 Ok(Some(Value::U64(*x.min(y))))
             } else {
-                let x = a
-                    .as_f64()
-                    .ok_or_else(|| Diagnostic::new(DiagCode::E100, span, "math.min expects numbers"))?;
-                let y = b
-                    .as_f64()
-                    .ok_or_else(|| Diagnostic::new(DiagCode::E100, span, "math.min expects numbers"))?;
+                let x = a.as_f64().ok_or_else(|| {
+                    Diagnostic::new(DiagCode::E100, span, "math.min expects numbers")
+                })?;
+                let y = b.as_f64().ok_or_else(|| {
+                    Diagnostic::new(DiagCode::E100, span, "math.min expects numbers")
+                })?;
                 Ok(Some(Value::F64(f64::min(x, y))))
             }
         }
@@ -58,116 +54,112 @@ pub fn call_math(
             } else if let (Value::U64(x), Value::U64(y)) = (a, b) {
                 Ok(Some(Value::U64(*x.max(y))))
             } else {
-                let x = a
-                    .as_f64()
-                    .ok_or_else(|| Diagnostic::new(DiagCode::E100, span, "math.max expects numbers"))?;
-                let y = b
-                    .as_f64()
-                    .ok_or_else(|| Diagnostic::new(DiagCode::E100, span, "math.max expects numbers"))?;
+                let x = a.as_f64().ok_or_else(|| {
+                    Diagnostic::new(DiagCode::E100, span, "math.max expects numbers")
+                })?;
+                let y = b.as_f64().ok_or_else(|| {
+                    Diagnostic::new(DiagCode::E100, span, "math.max expects numbers")
+                })?;
                 Ok(Some(Value::F64(f64::max(x, y))))
             }
         }
         "math.floor" => {
-            let first = args
-                .first()
-                .ok_or_else(|| Diagnostic::new(DiagCode::E100, span, "math.floor expects a number"))?;
+            let first = args.first().ok_or_else(|| {
+                Diagnostic::new(DiagCode::E100, span, "math.floor expects a number")
+            })?;
             match first {
                 Value::I64(n) => Ok(Some(Value::I64(*n))),
                 Value::U64(n) => Ok(Some(Value::U64(*n))),
                 _ => {
-                    let a = first
-                        .as_f64()
-                        .ok_or_else(|| Diagnostic::new(DiagCode::E100, span, "math.floor expects a number"))?;
+                    let a = first.as_f64().ok_or_else(|| {
+                        Diagnostic::new(DiagCode::E100, span, "math.floor expects a number")
+                    })?;
                     Ok(Some(Value::F64(a.floor())))
                 }
             }
         }
         "math.ceil" => {
-            let first = args
-                .first()
-                .ok_or_else(|| Diagnostic::new(DiagCode::E100, span, "math.ceil expects a number"))?;
+            let first = args.first().ok_or_else(|| {
+                Diagnostic::new(DiagCode::E100, span, "math.ceil expects a number")
+            })?;
             match first {
                 Value::I64(n) => Ok(Some(Value::I64(*n))),
                 Value::U64(n) => Ok(Some(Value::U64(*n))),
                 _ => {
-                    let a = first
-                        .as_f64()
-                        .ok_or_else(|| Diagnostic::new(DiagCode::E100, span, "math.ceil expects a number"))?;
+                    let a = first.as_f64().ok_or_else(|| {
+                        Diagnostic::new(DiagCode::E100, span, "math.ceil expects a number")
+                    })?;
                     Ok(Some(Value::F64(a.ceil())))
                 }
             }
         }
         "math.round" => {
-            let first = args
-                .first()
-                .ok_or_else(|| Diagnostic::new(DiagCode::E100, span, "math.round expects a number"))?;
+            let first = args.first().ok_or_else(|| {
+                Diagnostic::new(DiagCode::E100, span, "math.round expects a number")
+            })?;
             match first {
                 Value::I64(n) => Ok(Some(Value::I64(*n))),
                 Value::U64(n) => Ok(Some(Value::U64(*n))),
                 _ => {
-                    let a = first
-                        .as_f64()
-                        .ok_or_else(|| Diagnostic::new(DiagCode::E100, span, "math.round expects a number"))?;
+                    let a = first.as_f64().ok_or_else(|| {
+                        Diagnostic::new(DiagCode::E100, span, "math.round expects a number")
+                    })?;
                     Ok(Some(Value::F64(a.round())))
                 }
             }
         }
         "math.clamp" => {
-            let v = args
-                .first()
-                .ok_or_else(|| Diagnostic::new(DiagCode::E100, span, "math.clamp expects numbers"))?;
-            let lo = args
-                .get(1)
-                .ok_or_else(|| Diagnostic::new(DiagCode::E100, span, "math.clamp expects numbers"))?;
-            let hi = args
-                .get(2)
-                .ok_or_else(|| Diagnostic::new(DiagCode::E100, span, "math.clamp expects numbers"))?;
+            let v = args.first().ok_or_else(|| {
+                Diagnostic::new(DiagCode::E100, span, "math.clamp expects numbers")
+            })?;
+            let lo = args.get(1).ok_or_else(|| {
+                Diagnostic::new(DiagCode::E100, span, "math.clamp expects numbers")
+            })?;
+            let hi = args.get(2).ok_or_else(|| {
+                Diagnostic::new(DiagCode::E100, span, "math.clamp expects numbers")
+            })?;
             if let (Value::I64(v_val), Value::I64(lo_val), Value::I64(hi_val)) = (v, lo, hi) {
                 Ok(Some(Value::I64(*v_val.clamp(lo_val, hi_val))))
-            } else if let (Value::U64(v_val), Value::U64(lo_val), Value::U64(hi_val)) = (v, lo, hi) {
+            } else if let (Value::U64(v_val), Value::U64(lo_val), Value::U64(hi_val)) = (v, lo, hi)
+            {
                 Ok(Some(Value::U64(*v_val.clamp(lo_val, hi_val))))
             } else {
-                let v_f = v
-                    .as_f64()
-                    .ok_or_else(|| Diagnostic::new(DiagCode::E100, span, "math.clamp expects numbers"))?;
+                let v_f = v.as_f64().ok_or_else(|| {
+                    Diagnostic::new(DiagCode::E100, span, "math.clamp expects numbers")
+                })?;
                 let lo_f = lo.as_f64().unwrap_or(0.0);
                 let hi_f = hi.as_f64().unwrap_or(0.0);
                 Ok(Some(Value::F64(v_f.clamp(lo_f, hi_f))))
             }
         }
         "math.sqrt" => {
-            let a = args
-                .first()
-                .and_then(Value::as_f64)
-                .ok_or_else(|| Diagnostic::new(DiagCode::E100, span, "math.sqrt expects a number"))?;
+            let a = args.first().and_then(Value::as_f64).ok_or_else(|| {
+                Diagnostic::new(DiagCode::E100, span, "math.sqrt expects a number")
+            })?;
             Ok(Some(Value::F64(a.sqrt())))
         }
         "math.sin" => {
-            let a = args
-                .first()
-                .and_then(Value::as_f64)
-                .ok_or_else(|| Diagnostic::new(DiagCode::E100, span, "math.sin expects a number"))?;
+            let a = args.first().and_then(Value::as_f64).ok_or_else(|| {
+                Diagnostic::new(DiagCode::E100, span, "math.sin expects a number")
+            })?;
             Ok(Some(Value::F64(a.sin())))
         }
         "math.cos" => {
-            let a = args
-                .first()
-                .and_then(Value::as_f64)
-                .ok_or_else(|| Diagnostic::new(DiagCode::E100, span, "math.cos expects a number"))?;
+            let a = args.first().and_then(Value::as_f64).ok_or_else(|| {
+                Diagnostic::new(DiagCode::E100, span, "math.cos expects a number")
+            })?;
             Ok(Some(Value::F64(a.cos())))
         }
         "math.log" => {
-            let a = args
-                .first()
-                .and_then(Value::as_f64)
-                .ok_or_else(|| Diagnostic::new(DiagCode::E100, span, "math.log expects a number"))?;
+            let a = args.first().and_then(Value::as_f64).ok_or_else(|| {
+                Diagnostic::new(DiagCode::E100, span, "math.log expects a number")
+            })?;
             Ok(Some(Value::F64(a.ln())))
         }
         "math.exp" => {
-            let a = args
-                .first()
-                .and_then(Value::as_f64)
-                .ok_or_else(|| Diagnostic::new(DiagCode::E100, span, "math.exp expects a number"))?;
+            let a = args.first().and_then(Value::as_f64).ok_or_else(|| {
+                Diagnostic::new(DiagCode::E100, span, "math.exp expects a number")
+            })?;
             Ok(Some(Value::F64(a.exp())))
         }
         _ => Ok(None),

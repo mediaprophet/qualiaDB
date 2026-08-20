@@ -20,21 +20,30 @@ pub fn check_program(program: &Program) -> Result<CheckResult, Diagnostic> {
         // the AST tag, not in a sacred string prefix. Both
         // `import "vibe:0.1/math" as math;` and `import "math" as math;`
         // are valid.
-        let ns = path
-            .strip_prefix("vibe:0.1/")
-            .unwrap_or(path);
+        let ns = path.strip_prefix("vibe:0.1/").unwrap_or(path);
         const VALID: &[&str] = &[
-            "math", "rdf", "quin", "graph", "aura", "pulse", "capability", "time",
-            "conservation", "causal", "dag", "deontic", "hid", "cue", "crypto", "zk",
+            "math",
+            "rdf",
+            "quin",
+            "graph",
+            "aura",
+            "pulse",
+            "capability",
+            "time",
+            "conservation",
+            "causal",
+            "dag",
+            "deontic",
+            "hid",
+            "cue",
+            "crypto",
+            "zk",
         ];
         if !VALID.contains(&ns) {
             return Err(Diagnostic::new(
                 DiagCode::E100,
                 imp.span,
-                format!(
-                    "unknown namespace '{ns}'; valid: {}",
-                    VALID.join(", ")
-                ),
+                format!("unknown namespace '{ns}'; valid: {}", VALID.join(", ")),
             ));
         }
         let alias = imp.alias.as_deref().unwrap_or(ns);
@@ -64,7 +73,15 @@ pub fn check_program(program: &Program) -> Result<CheckResult, Diagnostic> {
                 walk_expr(&c.value, &mut env, &granted, Effect::Pure, false, false)?;
             }
             Item::Statement(s) => {
-                walk_stmt(s, &mut env, &mut mutables, &granted, Effect::External, false, false)?;
+                walk_stmt(
+                    s,
+                    &mut env,
+                    &mut mutables,
+                    &granted,
+                    Effect::External,
+                    false,
+                    false,
+                )?;
             }
             Item::Enum(_) => {
                 // Enum declarations are pure type declarations — no effect.
@@ -110,7 +127,14 @@ pub fn check_program(program: &Program) -> Result<CheckResult, Diagnostic> {
                 // The condition is a Pure predicate; the consequence is an
                 // External effect (it transforms state).
                 walk_expr(&l.condition, &mut env, &granted, Effect::Pure, false, false)?;
-                walk_expr(&l.consequence, &mut env, &granted, Effect::External, false, false)?;
+                walk_expr(
+                    &l.consequence,
+                    &mut env,
+                    &granted,
+                    Effect::External,
+                    false,
+                    false,
+                )?;
                 max_effect = max_effect.join(Effect::External);
             }
         }
@@ -131,10 +155,7 @@ pub fn check_cell(expr: &Expr) -> Result<CheckResult, Diagnostic> {
     Ok(CheckResult { effect })
 }
 
-fn check_function(
-    f: &FunctionDecl,
-    granted: &[&str],
-) -> Result<Effect, Diagnostic> {
+fn check_function(f: &FunctionDecl, granted: &[&str]) -> Result<Effect, Diagnostic> {
     let declared = f.effect.map(Effect::from_class).unwrap_or(Effect::Pure);
     let mut env = HashMap::new();
     let mut mutables = HashSet::new();
@@ -142,7 +163,15 @@ fn check_function(
         env.insert(p.name.clone(), Type::from_ast(&p.ty));
     }
     let has_budget = !f.budget.is_empty();
-    let body = walk_block(&f.body, &mut env, &mut mutables, granted, declared, false, has_budget)?;
+    let body = walk_block(
+        &f.body,
+        &mut env,
+        &mut mutables,
+        granted,
+        declared,
+        false,
+        has_budget,
+    )?;
     if body > declared && f.effect.is_some() {
         return Err(Diagnostic::new(
             DiagCode::E200,
@@ -155,7 +184,11 @@ fn check_function(
 
 fn check_hook(h: &HookDecl, granted: &[&str]) -> Result<Effect, Diagnostic> {
     let is_tick = h.path == ["tick"];
-    let declared = if is_tick { Effect::Hot } else { Effect::External };
+    let declared = if is_tick {
+        Effect::Hot
+    } else {
+        Effect::External
+    };
     if is_tick {
         // N7: on tick must not query the graph
     }
@@ -165,7 +198,15 @@ fn check_hook(h: &HookDecl, granted: &[&str]) -> Result<Effect, Diagnostic> {
         env.insert(p.name.clone(), Type::from_ast(&p.ty));
     }
     let has_budget = !h.budget.is_empty();
-    walk_block(&h.body, &mut env, &mut mutables, granted, declared, is_tick, has_budget)
+    walk_block(
+        &h.body,
+        &mut env,
+        &mut mutables,
+        granted,
+        declared,
+        is_tick,
+        has_budget,
+    )
 }
 
 fn walk_block(
@@ -181,7 +222,15 @@ fn walk_block(
     let mut scoped_mutables = mutables.clone();
     let mut e = Effect::Pure;
     for s in &block.stmts {
-        e = e.join(walk_stmt(s, &mut scoped_env, &mut scoped_mutables, granted, ambient, tick, budgeted)?);
+        e = e.join(walk_stmt(
+            s,
+            &mut scoped_env,
+            &mut scoped_mutables,
+            granted,
+            ambient,
+            tick,
+            budgeted,
+        )?);
     }
     Ok(e)
 }
@@ -196,8 +245,17 @@ fn walk_stmt(
     budgeted: bool,
 ) -> Result<Effect, Diagnostic> {
     match stmt {
-        Stmt::Let { mutable, name, value, ty, .. } => {
-            let t = if value.as_ref().is_some_and(|v| expr_is_bounded_source(v, env)) {
+        Stmt::Let {
+            mutable,
+            name,
+            value,
+            ty,
+            ..
+        } => {
+            let t = if value
+                .as_ref()
+                .is_some_and(|v| expr_is_bounded_source(v, env))
+            {
                 Type::List(Box::new(Type::Unknown))
             } else {
                 ty.as_ref().map(Type::from_ast).unwrap_or(Type::Unknown)
@@ -213,13 +271,19 @@ fn walk_stmt(
             }
             Ok(Effect::Pure)
         }
-        Stmt::Assign { target, value, span } => {
+        Stmt::Assign {
+            target,
+            value,
+            span,
+        } => {
             if let Some(n) = target.ident_name() {
                 if !mutables.contains(n) {
                     return Err(Diagnostic::new(
                         DiagCode::E701,
                         *span,
-                        format!("cannot assign to immutable binding `{n}` (declare with `let mut`)"),
+                        format!(
+                            "cannot assign to immutable binding `{n}` (declare with `let mut`)"
+                        ),
                     ));
                 }
             }
@@ -234,13 +298,23 @@ fn walk_stmt(
             ..
         } => {
             let mut e = walk_expr(cond, env, granted, ambient, tick, budgeted)?;
-            e = e.join(walk_block(then_block, env, mutables, granted, ambient, tick, budgeted)?);
+            e = e.join(walk_block(
+                then_block, env, mutables, granted, ambient, tick, budgeted,
+            )?);
             if let Some(els) = else_block {
-                e = e.join(walk_stmt(els, env, mutables, granted, ambient, tick, budgeted)?);
+                e = e.join(walk_stmt(
+                    els, env, mutables, granted, ambient, tick, budgeted,
+                )?);
             }
             Ok(e)
         }
-        Stmt::For { iter, body, name, span, .. } => {
+        Stmt::For {
+            iter,
+            body,
+            name,
+            span,
+            ..
+        } => {
             let e = walk_expr(iter, env, granted, ambient, tick, budgeted)?;
             if !iter_is_bounded(iter, env) && !budgeted {
                 return Err(Diagnostic::new(
@@ -250,9 +324,13 @@ fn walk_stmt(
                 ));
             }
             env.insert(name.clone(), Type::Unknown);
-            Ok(e.join(walk_block(body, env, mutables, granted, ambient, tick, budgeted)?))
+            Ok(e.join(walk_block(
+                body, env, mutables, granted, ambient, tick, budgeted,
+            )?))
         }
-        Stmt::While { cond, body, span, .. } => {
+        Stmt::While {
+            cond, body, span, ..
+        } => {
             if is_literal_true(cond) && !budgeted {
                 return Err(Diagnostic::new(
                     DiagCode::E400,
@@ -268,14 +346,20 @@ fn walk_stmt(
                 ));
             }
             let e = walk_expr(cond, env, granted, ambient, tick, budgeted)?;
-            Ok(e.join(walk_block(body, env, mutables, granted, ambient, tick, budgeted)?))
+            Ok(e.join(walk_block(
+                body, env, mutables, granted, ambient, tick, budgeted,
+            )?))
         }
-        Stmt::Match { scrutinee, arms, .. } => {
+        Stmt::Match {
+            scrutinee, arms, ..
+        } => {
             let mut e = walk_expr(scrutinee, env, granted, ambient, tick, budgeted)?;
             for arm in arms {
                 match &arm.body {
                     ArmBody::Block(b) => {
-                        e = e.join(walk_block(b, env, mutables, granted, ambient, tick, budgeted)?);
+                        e = e.join(walk_block(
+                            b, env, mutables, granted, ambient, tick, budgeted,
+                        )?);
                     }
                     ArmBody::Expr(x) => {
                         e = e.join(walk_expr(x, env, granted, ambient, tick, budgeted)?);
@@ -381,10 +465,7 @@ fn walk_expr(
                     ));
                 }
             }
-            let mut e = path
-                .as_deref()
-                .map(binding_effect)
-                .unwrap_or(Effect::Pure);
+            let mut e = path.as_deref().map(binding_effect).unwrap_or(Effect::Pure);
             e = e.join(walk_expr(callee, env, granted, ambient, tick, budgeted)?);
             for a in args {
                 let ex = match a {
@@ -466,4 +547,3 @@ fn expr_is_bounded_source(expr: &Expr, env: &HashMap<String, Type>) -> bool {
 fn iter_is_bounded(expr: &Expr, env: &HashMap<String, Type>) -> bool {
     expr_is_bounded_source(expr, env)
 }
-

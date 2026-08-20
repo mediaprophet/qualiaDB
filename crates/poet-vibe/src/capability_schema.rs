@@ -98,7 +98,10 @@ impl SchemaArg {
         rec.insert("type".into(), Value::String(self.ty.clone()));
         rec.insert("required".into(), Value::Bool(self.required));
         if !self.description.is_empty() {
-            rec.insert("description".into(), Value::String(self.description.clone()));
+            rec.insert(
+                "description".into(),
+                Value::String(self.description.clone()),
+            );
         }
         Value::Record(rec)
     }
@@ -147,14 +150,20 @@ impl SchemaEntry {
         let mut rec = BTreeMap::new();
         rec.insert("id".into(), Value::String(self.id.clone()));
         rec.insert("effect".into(), Value::String(self.effect.as_str().into()));
-        rec.insert("honesty".into(), Value::String(self.honesty.as_str().into()));
+        rec.insert(
+            "honesty".into(),
+            Value::String(self.honesty.as_str().into()),
+        );
         rec.insert(
             "args".into(),
             Value::List(self.args.iter().map(|a| a.to_value()).collect()),
         );
         rec.insert("returns".into(), Value::String(self.returns.clone()));
         if !self.description.is_empty() {
-            rec.insert("description".into(), Value::String(self.description.clone()));
+            rec.insert(
+                "description".into(),
+                Value::String(self.description.clone()),
+            );
         }
         Value::Record(rec)
     }
@@ -168,171 +177,350 @@ impl SchemaEntry {
 pub fn all_schemas() -> Vec<SchemaEntry> {
     vec![
         // ── Graph ─────────────────────────────────────────────────────
-        SchemaEntry::new("graph.query", EffectClass::Read, HonestyLabel::CapabilityLease, "Value")
-            .with_arg(SchemaArg::new("query", "string", true))
-            .with_description("Query the graph with a SPARQL-like pattern"),
-        SchemaEntry::new("graph.stage", EffectClass::Write, HonestyLabel::CapabilityLease, "Value")
-            .with_arg(SchemaArg::new("term", "Value", true))
-            .with_description("Stage a term for later commit"),
-        SchemaEntry::new("graph.commit", EffectClass::Write, HonestyLabel::CapabilityLease, "Value")
-            .with_description("Commit staged terms to the graph"),
-        SchemaEntry::new("graph.snapshot", EffectClass::Read, HonestyLabel::CapabilityLease, "Value")
-            .with_description("Take a snapshot of the current graph state"),
-
+        SchemaEntry::new(
+            "graph.query",
+            EffectClass::Read,
+            HonestyLabel::CapabilityLease,
+            "Value",
+        )
+        .with_arg(SchemaArg::new("query", "string", true))
+        .with_description("Query the graph with a SPARQL-like pattern"),
+        SchemaEntry::new(
+            "graph.stage",
+            EffectClass::Write,
+            HonestyLabel::CapabilityLease,
+            "Value",
+        )
+        .with_arg(SchemaArg::new("term", "Value", true))
+        .with_description("Stage a term for later commit"),
+        SchemaEntry::new(
+            "graph.commit",
+            EffectClass::Write,
+            HonestyLabel::CapabilityLease,
+            "Value",
+        )
+        .with_description("Commit staged terms to the graph"),
+        SchemaEntry::new(
+            "graph.snapshot",
+            EffectClass::Read,
+            HonestyLabel::CapabilityLease,
+            "Value",
+        )
+        .with_description("Take a snapshot of the current graph state"),
         // ── Pulse ─────────────────────────────────────────────────────
-        SchemaEntry::new("pulse.publish", EffectClass::External, HonestyLabel::CapabilityLease, "Value")
-            .with_arg(SchemaArg::new("topic", "string", true))
-            .with_arg(SchemaArg::new("payload", "Value", false))
-            .with_description("Publish a payload to a pulse topic"),
-
+        SchemaEntry::new(
+            "pulse.publish",
+            EffectClass::External,
+            HonestyLabel::CapabilityLease,
+            "Value",
+        )
+        .with_arg(SchemaArg::new("topic", "string", true))
+        .with_arg(SchemaArg::new("payload", "Value", false))
+        .with_description("Publish a payload to a pulse topic"),
         // ── Time ──────────────────────────────────────────────────────
-        SchemaEntry::new("time.now", EffectClass::Read, HonestyLabel::FailClosed, "Instant")
-            .with_description("Primary time primitive — returns Instant with nanosecond resolution (X6)"),
-        SchemaEntry::new("time.unix", EffectClass::Read, HonestyLabel::Deprecated, "i64")
-            .with_description("DEPRECATED (X6) — use time.now + instant.to_unix_secs"),
-        SchemaEntry::new("time.unix_nanos", EffectClass::Read, HonestyLabel::Deprecated, "Record")
-            .with_description("DEPRECATED (X6) — use time.now"),
-        SchemaEntry::new("time.monotonic_nanos", EffectClass::Read, HonestyLabel::FailClosed, "u64")
-            .with_description("Monotonic nanos for frame timing and physics dt"),
-        SchemaEntry::new("time.proper_time", EffectClass::Read, HonestyLabel::FailClosed, "Value")
-            .with_arg(SchemaArg::new("worldline_id", "u64", true))
-            .with_description("Proper time along a worldline"),
-
+        SchemaEntry::new(
+            "time.now",
+            EffectClass::Read,
+            HonestyLabel::FailClosed,
+            "Instant",
+        )
+        .with_description(
+            "Primary time primitive — returns Instant with nanosecond resolution (X6)",
+        ),
+        SchemaEntry::new(
+            "time.unix",
+            EffectClass::Read,
+            HonestyLabel::Deprecated,
+            "i64",
+        )
+        .with_description("DEPRECATED (X6) — use time.now + instant.to_unix_secs"),
+        SchemaEntry::new(
+            "time.unix_nanos",
+            EffectClass::Read,
+            HonestyLabel::Deprecated,
+            "Record",
+        )
+        .with_description("DEPRECATED (X6) — use time.now"),
+        SchemaEntry::new(
+            "time.monotonic_nanos",
+            EffectClass::Read,
+            HonestyLabel::FailClosed,
+            "u64",
+        )
+        .with_description("Monotonic nanos for frame timing and physics dt"),
+        SchemaEntry::new(
+            "time.proper_time",
+            EffectClass::Read,
+            HonestyLabel::FailClosed,
+            "Value",
+        )
+        .with_arg(SchemaArg::new("worldline_id", "u64", true))
+        .with_description("Proper time along a worldline"),
         // ── Instant projections ────────────────────────────────────────
-        SchemaEntry::new("instant.to_unix_secs", EffectClass::Pure, HonestyLabel::Always, "i64")
-            .with_arg(SchemaArg::new("instant", "Instant", true))
-            .with_description("Project an Instant to Unix seconds (X6)"),
-        SchemaEntry::new("instant.to_unix_nanos", EffectClass::Pure, HonestyLabel::Always, "u64")
-            .with_arg(SchemaArg::new("instant", "Instant", true))
-            .with_description("Project an Instant to Unix nanoseconds (X6)"),
-
+        SchemaEntry::new(
+            "instant.to_unix_secs",
+            EffectClass::Pure,
+            HonestyLabel::Always,
+            "i64",
+        )
+        .with_arg(SchemaArg::new("instant", "Instant", true))
+        .with_description("Project an Instant to Unix seconds (X6)"),
+        SchemaEntry::new(
+            "instant.to_unix_nanos",
+            EffectClass::Pure,
+            HonestyLabel::Always,
+            "u64",
+        )
+        .with_arg(SchemaArg::new("instant", "Instant", true))
+        .with_description("Project an Instant to Unix nanoseconds (X6)"),
         // ── Host ──────────────────────────────────────────────────────
-        SchemaEntry::new("host.version", EffectClass::Pure, HonestyLabel::Always, "string")
-            .with_description("Get the host version string"),
-
+        SchemaEntry::new(
+            "host.version",
+            EffectClass::Pure,
+            HonestyLabel::Always,
+            "string",
+        )
+        .with_description("Get the host version string"),
         // ── Capability ────────────────────────────────────────────────
-        SchemaEntry::new("capability.resolve", EffectClass::Read, HonestyLabel::CapabilityLease, "Value")
-            .with_arg(SchemaArg::new("id", "string", true))
-            .with_description("Resolve a capability id to its metadata"),
-        SchemaEntry::new("capability.invoke", EffectClass::External, HonestyLabel::CapabilityLease, "Value")
-            .with_arg(SchemaArg::new("id", "string", true))
-            .with_arg(SchemaArg::new("payload", "Value", false))
-            .with_description("Invoke a capability by id"),
-
+        SchemaEntry::new(
+            "capability.resolve",
+            EffectClass::Read,
+            HonestyLabel::CapabilityLease,
+            "Value",
+        )
+        .with_arg(SchemaArg::new("id", "string", true))
+        .with_description("Resolve a capability id to its metadata"),
+        SchemaEntry::new(
+            "capability.invoke",
+            EffectClass::External,
+            HonestyLabel::CapabilityLease,
+            "Value",
+        )
+        .with_arg(SchemaArg::new("id", "string", true))
+        .with_arg(SchemaArg::new("payload", "Value", false))
+        .with_description("Invoke a capability by id"),
         // ── Conservation ──────────────────────────────────────────────
-        SchemaEntry::new("conservation.check", EffectClass::Pure, HonestyLabel::FailClosed, "ConservationResult")
-            .with_arg(SchemaArg::new("quantity", "string", true))
-            .with_arg(SchemaArg::new("before", "f64", true))
-            .with_arg(SchemaArg::new("after", "f64", true))
-            .with_arg(SchemaArg::new("tolerance", "f64", false))
-            .with_description("Check if a transformation preserves a conserved quantity (T34)"),
-
+        SchemaEntry::new(
+            "conservation.check",
+            EffectClass::Pure,
+            HonestyLabel::FailClosed,
+            "ConservationResult",
+        )
+        .with_arg(SchemaArg::new("quantity", "string", true))
+        .with_arg(SchemaArg::new("before", "f64", true))
+        .with_arg(SchemaArg::new("after", "f64", true))
+        .with_arg(SchemaArg::new("tolerance", "f64", false))
+        .with_description("Check if a transformation preserves a conserved quantity (T34)"),
         // ── Causal ────────────────────────────────────────────────────
-        SchemaEntry::new("causal.relation", EffectClass::Pure, HonestyLabel::FailClosed, "CausalRelation")
-            .with_arg(SchemaArg::new("event_a", "Value", true))
-            .with_arg(SchemaArg::new("event_b", "Value", true))
-            .with_description("Determine the causal relation between two events (T35)"),
-
+        SchemaEntry::new(
+            "causal.relation",
+            EffectClass::Pure,
+            HonestyLabel::FailClosed,
+            "CausalRelation",
+        )
+        .with_arg(SchemaArg::new("event_a", "Value", true))
+        .with_arg(SchemaArg::new("event_b", "Value", true))
+        .with_description("Determine the causal relation between two events (T35)"),
         // ── DAG ───────────────────────────────────────────────────────
-        SchemaEntry::new("dag.execute", EffectClass::External, HonestyLabel::CapabilityLease, "Value")
-            .with_arg(SchemaArg::new("pipeline", "Value", true))
-            .with_description("Execute a DAG pipeline in topological order (T24)"),
-        SchemaEntry::new("dag.validate", EffectClass::Pure, HonestyLabel::CapabilityLease, "Value")
-            .with_arg(SchemaArg::new("pipeline", "Value", true))
-            .with_description("Validate a DAG pipeline without executing (T24)"),
-
+        SchemaEntry::new(
+            "dag.execute",
+            EffectClass::External,
+            HonestyLabel::CapabilityLease,
+            "Value",
+        )
+        .with_arg(SchemaArg::new("pipeline", "Value", true))
+        .with_description("Execute a DAG pipeline in topological order (T24)"),
+        SchemaEntry::new(
+            "dag.validate",
+            EffectClass::Pure,
+            HonestyLabel::CapabilityLease,
+            "Value",
+        )
+        .with_arg(SchemaArg::new("pipeline", "Value", true))
+        .with_description("Validate a DAG pipeline without executing (T24)"),
         // ── Deontic ───────────────────────────────────────────────────
-        SchemaEntry::new("deontic.check", EffectClass::Pure, HonestyLabel::FailClosed, "Value")
-            .with_arg(SchemaArg::new("capability", "string", true))
-            .with_arg(SchemaArg::new("phase", "string", true))
-            .with_description("Check if a capability is permitted in a deontic phase (T25)"),
-
+        SchemaEntry::new(
+            "deontic.check",
+            EffectClass::Pure,
+            HonestyLabel::FailClosed,
+            "Value",
+        )
+        .with_arg(SchemaArg::new("capability", "string", true))
+        .with_arg(SchemaArg::new("phase", "string", true))
+        .with_description("Check if a capability is permitted in a deontic phase (T25)"),
         // ── HID ───────────────────────────────────────────────────────
-        SchemaEntry::new("hid.poll", EffectClass::External, HonestyLabel::FailClosed, "Value")
-            .with_description("Poll for HID events (T42)"),
-        SchemaEntry::new("hid.wait", EffectClass::External, HonestyLabel::FailClosed, "Value")
-            .with_arg(SchemaArg::new("timeout_ms", "u64", false))
-            .with_description("Wait for HID events with optional timeout (T42)"),
-
+        SchemaEntry::new(
+            "hid.poll",
+            EffectClass::External,
+            HonestyLabel::FailClosed,
+            "Value",
+        )
+        .with_description("Poll for HID events (T42)"),
+        SchemaEntry::new(
+            "hid.wait",
+            EffectClass::External,
+            HonestyLabel::FailClosed,
+            "Value",
+        )
+        .with_arg(SchemaArg::new("timeout_ms", "u64", false))
+        .with_description("Wait for HID events with optional timeout (T42)"),
         // ── Cue ───────────────────────────────────────────────────────
-        SchemaEntry::new("cue.post", EffectClass::External, HonestyLabel::FailClosed, "Value")
-            .with_arg(SchemaArg::new("cue_id", "string", true))
-            .with_arg(SchemaArg::new("payload", "Value", false))
-            .with_description("Post an outbound cue (haptic/audio/visual/accessibility) (T45)"),
-
+        SchemaEntry::new(
+            "cue.post",
+            EffectClass::External,
+            HonestyLabel::FailClosed,
+            "Value",
+        )
+        .with_arg(SchemaArg::new("cue_id", "string", true))
+        .with_arg(SchemaArg::new("payload", "Value", false))
+        .with_description("Post an outbound cue (haptic/audio/visual/accessibility) (T45)"),
         // ── Crypto ────────────────────────────────────────────────────
-        SchemaEntry::new("crypto.sha256", EffectClass::Pure, HonestyLabel::FailClosed, "HashResult")
-            .with_arg(SchemaArg::new("data", "bytes", true))
-            .with_description("SHA-256 hash"),
-        SchemaEntry::new("crypto.sha512", EffectClass::Pure, HonestyLabel::FailClosed, "HashResult")
-            .with_arg(SchemaArg::new("data", "bytes", true))
-            .with_description("SHA-512 hash"),
-        SchemaEntry::new("crypto.blake3", EffectClass::Pure, HonestyLabel::FailClosed, "HashResult")
-            .with_arg(SchemaArg::new("data", "bytes", true))
-            .with_description("BLAKE3 hash"),
-        SchemaEntry::new("crypto.hkdf_sha256", EffectClass::Pure, HonestyLabel::FailClosed, "bytes")
-            .with_arg(SchemaArg::new("ikm", "bytes", true))
-            .with_arg(SchemaArg::new("info", "bytes", false))
-            .with_arg(SchemaArg::new("len", "u64", true))
-            .with_description("HKDF-SHA256 key derivation"),
-        SchemaEntry::new("crypto.aead_encrypt", EffectClass::Pure, HonestyLabel::FailClosed, "EncryptedData")
-            .with_arg(SchemaArg::new("algorithm", "string", true))
-            .with_arg(SchemaArg::new("key", "bytes", true))
-            .with_arg(SchemaArg::new("nonce", "bytes", true))
-            .with_arg(SchemaArg::new("plaintext", "bytes", true))
-            .with_arg(SchemaArg::new("aad", "bytes", false))
-            .with_description("AEAD encrypt (AES-256-GCM, ChaCha20-Poly1305, XChaCha20-Poly1305)"),
-        SchemaEntry::new("crypto.aead_decrypt", EffectClass::Pure, HonestyLabel::FailClosed, "bytes")
-            .with_arg(SchemaArg::new("algorithm", "string", true))
-            .with_arg(SchemaArg::new("key", "bytes", true))
-            .with_arg(SchemaArg::new("nonce", "bytes", true))
-            .with_arg(SchemaArg::new("ciphertext", "bytes", true))
-            .with_arg(SchemaArg::new("tag", "bytes", true))
-            .with_arg(SchemaArg::new("aad", "bytes", false))
-            .with_description("AEAD decrypt"),
-        SchemaEntry::new("crypto.sign", EffectClass::Pure, HonestyLabel::FailClosed, "Signature")
-            .with_arg(SchemaArg::new("key_id", "string", true))
-            .with_arg(SchemaArg::new("data", "bytes", true))
-            .with_description("Sign data (fail-closed: key vault not wired)"),
-        SchemaEntry::new("crypto.verify", EffectClass::Pure, HonestyLabel::FailClosed, "bool")
-            .with_arg(SchemaArg::new("key_id", "string", true))
-            .with_arg(SchemaArg::new("data", "bytes", true))
-            .with_arg(SchemaArg::new("signature", "bytes", true))
-            .with_description("Verify a signature (fail-closed: key vault not wired)"),
-        SchemaEntry::new("crypto.generate_key", EffectClass::Pure, HonestyLabel::FailClosed, "CryptoKey")
-            .with_arg(SchemaArg::new("algorithm", "string", true))
-            .with_description("Generate a cryptographic key (fail-closed: key vault not wired)"),
-
+        SchemaEntry::new(
+            "crypto.sha256",
+            EffectClass::Pure,
+            HonestyLabel::FailClosed,
+            "HashResult",
+        )
+        .with_arg(SchemaArg::new("data", "bytes", true))
+        .with_description("SHA-256 hash"),
+        SchemaEntry::new(
+            "crypto.sha512",
+            EffectClass::Pure,
+            HonestyLabel::FailClosed,
+            "HashResult",
+        )
+        .with_arg(SchemaArg::new("data", "bytes", true))
+        .with_description("SHA-512 hash"),
+        SchemaEntry::new(
+            "crypto.blake3",
+            EffectClass::Pure,
+            HonestyLabel::FailClosed,
+            "HashResult",
+        )
+        .with_arg(SchemaArg::new("data", "bytes", true))
+        .with_description("BLAKE3 hash"),
+        SchemaEntry::new(
+            "crypto.hkdf_sha256",
+            EffectClass::Pure,
+            HonestyLabel::FailClosed,
+            "bytes",
+        )
+        .with_arg(SchemaArg::new("ikm", "bytes", true))
+        .with_arg(SchemaArg::new("info", "bytes", false))
+        .with_arg(SchemaArg::new("len", "u64", true))
+        .with_description("HKDF-SHA256 key derivation"),
+        SchemaEntry::new(
+            "crypto.aead_encrypt",
+            EffectClass::Pure,
+            HonestyLabel::FailClosed,
+            "EncryptedData",
+        )
+        .with_arg(SchemaArg::new("algorithm", "string", true))
+        .with_arg(SchemaArg::new("key", "bytes", true))
+        .with_arg(SchemaArg::new("nonce", "bytes", true))
+        .with_arg(SchemaArg::new("plaintext", "bytes", true))
+        .with_arg(SchemaArg::new("aad", "bytes", false))
+        .with_description("AEAD encrypt (AES-256-GCM, ChaCha20-Poly1305, XChaCha20-Poly1305)"),
+        SchemaEntry::new(
+            "crypto.aead_decrypt",
+            EffectClass::Pure,
+            HonestyLabel::FailClosed,
+            "bytes",
+        )
+        .with_arg(SchemaArg::new("algorithm", "string", true))
+        .with_arg(SchemaArg::new("key", "bytes", true))
+        .with_arg(SchemaArg::new("nonce", "bytes", true))
+        .with_arg(SchemaArg::new("ciphertext", "bytes", true))
+        .with_arg(SchemaArg::new("tag", "bytes", true))
+        .with_arg(SchemaArg::new("aad", "bytes", false))
+        .with_description("AEAD decrypt"),
+        SchemaEntry::new(
+            "crypto.sign",
+            EffectClass::Pure,
+            HonestyLabel::FailClosed,
+            "Signature",
+        )
+        .with_arg(SchemaArg::new("key_id", "string", true))
+        .with_arg(SchemaArg::new("data", "bytes", true))
+        .with_description("Sign data (fail-closed: key vault not wired)"),
+        SchemaEntry::new(
+            "crypto.verify",
+            EffectClass::Pure,
+            HonestyLabel::FailClosed,
+            "bool",
+        )
+        .with_arg(SchemaArg::new("key_id", "string", true))
+        .with_arg(SchemaArg::new("data", "bytes", true))
+        .with_arg(SchemaArg::new("signature", "bytes", true))
+        .with_description("Verify a signature (fail-closed: key vault not wired)"),
+        SchemaEntry::new(
+            "crypto.generate_key",
+            EffectClass::Pure,
+            HonestyLabel::FailClosed,
+            "CryptoKey",
+        )
+        .with_arg(SchemaArg::new("algorithm", "string", true))
+        .with_description("Generate a cryptographic key (fail-closed: key vault not wired)"),
         // ── ZK ────────────────────────────────────────────────────────
-        SchemaEntry::new("zk.prove_threshold", EffectClass::Pure, HonestyLabel::FailClosed, "ZkProof")
-            .with_arg(SchemaArg::new("value", "f64", true))
-            .with_arg(SchemaArg::new("threshold", "f64", true))
-            .with_description("Prove value >= threshold (Groth16/BLS12-381)"),
-        SchemaEntry::new("zk.verify_threshold", EffectClass::Pure, HonestyLabel::FailClosed, "ZkVerification")
-            .with_arg(SchemaArg::new("proof_hex", "string", true))
-            .with_arg(SchemaArg::new("vk_hex", "string", true))
-            .with_arg(SchemaArg::new("threshold", "f64", true))
-            .with_description("Verify a threshold proof"),
-        SchemaEntry::new("zk.prove_range", EffectClass::Pure, HonestyLabel::FailClosed, "ZkProof")
-            .with_arg(SchemaArg::new("value", "f64", true))
-            .with_arg(SchemaArg::new("lo", "f64", true))
-            .with_arg(SchemaArg::new("hi", "f64", true))
-            .with_description("Prove lo <= value <= hi"),
-        SchemaEntry::new("zk.verify_range", EffectClass::Pure, HonestyLabel::FailClosed, "ZkVerification")
-            .with_arg(SchemaArg::new("proof_hex", "string", true))
-            .with_arg(SchemaArg::new("vk_hex", "string", true))
-            .with_arg(SchemaArg::new("lo", "f64", true))
-            .with_arg(SchemaArg::new("hi", "f64", true))
-            .with_description("Verify a range proof"),
-        SchemaEntry::new("zk.prove_matmul", EffectClass::Pure, HonestyLabel::FailClosed, "ZkMatmulResult")
-            .with_arg(SchemaArg::new("m", "u64", true))
-            .with_arg(SchemaArg::new("k", "u64", true))
-            .with_arg(SchemaArg::new("n", "u64", true))
-            .with_arg(SchemaArg::new("a", "List<f64>", true))
-            .with_arg(SchemaArg::new("b", "List<f64>", true))
-            .with_description("Prove matrix multiplication result"),
-        SchemaEntry::new("zk.list_circuits", EffectClass::Pure, HonestyLabel::Always, "List<string>")
-            .with_description("List available ZK circuits"),
+        SchemaEntry::new(
+            "zk.prove_threshold",
+            EffectClass::Pure,
+            HonestyLabel::FailClosed,
+            "ZkProof",
+        )
+        .with_arg(SchemaArg::new("value", "f64", true))
+        .with_arg(SchemaArg::new("threshold", "f64", true))
+        .with_description("Prove value >= threshold (Groth16/BLS12-381)"),
+        SchemaEntry::new(
+            "zk.verify_threshold",
+            EffectClass::Pure,
+            HonestyLabel::FailClosed,
+            "ZkVerification",
+        )
+        .with_arg(SchemaArg::new("proof_hex", "string", true))
+        .with_arg(SchemaArg::new("vk_hex", "string", true))
+        .with_arg(SchemaArg::new("threshold", "f64", true))
+        .with_description("Verify a threshold proof"),
+        SchemaEntry::new(
+            "zk.prove_range",
+            EffectClass::Pure,
+            HonestyLabel::FailClosed,
+            "ZkProof",
+        )
+        .with_arg(SchemaArg::new("value", "f64", true))
+        .with_arg(SchemaArg::new("lo", "f64", true))
+        .with_arg(SchemaArg::new("hi", "f64", true))
+        .with_description("Prove lo <= value <= hi"),
+        SchemaEntry::new(
+            "zk.verify_range",
+            EffectClass::Pure,
+            HonestyLabel::FailClosed,
+            "ZkVerification",
+        )
+        .with_arg(SchemaArg::new("proof_hex", "string", true))
+        .with_arg(SchemaArg::new("vk_hex", "string", true))
+        .with_arg(SchemaArg::new("lo", "f64", true))
+        .with_arg(SchemaArg::new("hi", "f64", true))
+        .with_description("Verify a range proof"),
+        SchemaEntry::new(
+            "zk.prove_matmul",
+            EffectClass::Pure,
+            HonestyLabel::FailClosed,
+            "ZkMatmulResult",
+        )
+        .with_arg(SchemaArg::new("m", "u64", true))
+        .with_arg(SchemaArg::new("k", "u64", true))
+        .with_arg(SchemaArg::new("n", "u64", true))
+        .with_arg(SchemaArg::new("a", "List<f64>", true))
+        .with_arg(SchemaArg::new("b", "List<f64>", true))
+        .with_description("Prove matrix multiplication result"),
+        SchemaEntry::new(
+            "zk.list_circuits",
+            EffectClass::Pure,
+            HonestyLabel::Always,
+            "List<string>",
+        )
+        .with_description("List available ZK circuits"),
     ]
 }
 
@@ -358,7 +546,11 @@ mod tests {
     #[test]
     fn t51_schema_has_entries() {
         let schemas = all_schemas();
-        assert!(schemas.len() > 30, "expected 30+ schema entries, got {}", schemas.len());
+        assert!(
+            schemas.len() > 30,
+            "expected 30+ schema entries, got {}",
+            schemas.len()
+        );
     }
 
     #[test]
@@ -450,8 +642,7 @@ mod tests {
 
     #[test]
     fn t51_schema_arg_to_value() {
-        let arg = SchemaArg::new("data", "bytes", true)
-            .with_description("the data to hash");
+        let arg = SchemaArg::new("data", "bytes", true).with_description("the data to hash");
         let v = arg.to_value();
         match v {
             Value::Record(r) => {

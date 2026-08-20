@@ -34,7 +34,11 @@ pub struct Waypoint {
 
 impl Waypoint {
     pub fn new(t_secs: i64, t_nanos: u32, pose: Pose) -> Self {
-        Self { t_secs, t_nanos, pose }
+        Self {
+            t_secs,
+            t_nanos,
+            pose,
+        }
     }
 
     /// Total time in nanoseconds.
@@ -67,9 +71,9 @@ impl WorldLineTrajectory {
 
     /// Add a waypoint. Waypoints are kept sorted by time.
     pub fn add(&mut self, waypoint: Waypoint) -> &mut Self {
-        let insert_pos = self.waypoints.partition_point(|w| {
-            w.total_nanos() < waypoint.total_nanos()
-        });
+        let insert_pos = self
+            .waypoints
+            .partition_point(|w| w.total_nanos() < waypoint.total_nanos());
         self.waypoints.insert(insert_pos, waypoint);
         self
     }
@@ -104,7 +108,11 @@ impl WorldLineTrajectory {
         let alpha = (target - t0) as f64 / (t1 - t0) as f64;
 
         // Linear interpolation of position.
-        let pos: Vec<f64> = w0.pose.position.iter().zip(w1.pose.position.iter())
+        let pos: Vec<f64> = w0
+            .pose
+            .position
+            .iter()
+            .zip(w1.pose.position.iter())
             .map(|(a, b)| a + (b - a) * alpha)
             .collect();
         Some(Pose {
@@ -200,7 +208,10 @@ impl LorentzMorphism {
     const C: f64 = 299_792_458.0;
 
     pub fn new(velocity: f64) -> Self {
-        Self { velocity, c: Self::C }
+        Self {
+            velocity,
+            c: Self::C,
+        }
     }
 
     /// Create with a custom speed of light (for testing).
@@ -406,7 +417,7 @@ mod tests {
     #[test]
     fn w5_lorentz_transform_time_dilation() {
         let m = LorentzMorphism::with_c(10.0, 10.0); // v = c, but that's singular
-        // Use v = 0.6c instead
+                                                     // Use v = 0.6c instead
         let m = LorentzMorphism::with_c(6.0, 10.0);
         let g = m.gamma();
         // t' = gamma * (t - v*x/c²)

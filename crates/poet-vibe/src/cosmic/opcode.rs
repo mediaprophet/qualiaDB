@@ -253,9 +253,8 @@ impl CosmicNQuin {
         let clock_bits = ((lamport_clock as u64) & 0x1FFF_FFFF) << 32;
         // Lower 32 bits: [0..7] = realm class (derived from CB-USRI), [8..15] = level, [16..23] = depth
         let realm_class = derive_realm_class_from_usri(realm_usri);
-        let lower32 = (realm_class as u64)
-            | ((level.as_u8() as u64) << 8)
-            | ((nesting_depth as u64) << 16);
+        let lower32 =
+            (realm_class as u64) | ((level.as_u8() as u64) << 8) | ((nesting_depth as u64) << 16);
         let metadata = lane_bits | clock_bits | lower32;
 
         // Parity: XOR fold

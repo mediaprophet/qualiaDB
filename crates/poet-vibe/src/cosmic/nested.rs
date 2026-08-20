@@ -90,12 +90,13 @@ impl NestingStack {
     /// Push a new nested realm onto the stack.
     pub fn push(&mut self, realm_usri: &str, time_dilation: f64) -> &NestedRealm {
         let depth = self.realms.len() as u32;
-        let parent_context = self
-            .realms
-            .last()
-            .map(|r| r.context_hash())
-            .unwrap_or(0); // Physical base has context 0
-        self.realms.push(NestedRealm::new(depth, realm_usri, time_dilation, parent_context));
+        let parent_context = self.realms.last().map(|r| r.context_hash()).unwrap_or(0); // Physical base has context 0
+        self.realms.push(NestedRealm::new(
+            depth,
+            realm_usri,
+            time_dilation,
+            parent_context,
+        ));
         self.realms.last().unwrap()
     }
 
@@ -137,7 +138,12 @@ mod tests {
 
     #[test]
     fn nested_realm_context_hash() {
-        let r = NestedRealm::new(1, "urn:omni:v1:simulation:holodeck:vicorian-london", 20.0, 0);
+        let r = NestedRealm::new(
+            1,
+            "urn:omni:v1:simulation:holodeck:vicorian-london",
+            20.0,
+            0,
+        );
         let h = r.context_hash();
         // Should be deterministic
         assert_eq!(h, r.context_hash());

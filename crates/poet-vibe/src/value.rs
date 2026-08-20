@@ -377,7 +377,14 @@ pub struct QuinRef {
 
 impl QuinRef {
     /// Create a QuinRef from raw NQuin fields (host-side only).
-    pub fn from_raw(subject: u64, predicate: u64, object: u64, context: u64, metadata: u64, parity: u64) -> Self {
+    pub fn from_raw(
+        subject: u64,
+        predicate: u64,
+        object: u64,
+        context: u64,
+        metadata: u64,
+        parity: u64,
+    ) -> Self {
         Self {
             payload: [subject, predicate, object, context, metadata, parity],
         }
@@ -780,7 +787,10 @@ mod tests {
 
     #[test]
     fn duration_total_nanos() {
-        let d = Duration { secs: 2, nanos: 500_000_000 };
+        let d = Duration {
+            secs: 2,
+            nanos: 500_000_000,
+        };
         assert_eq!(d.total_nanos(), 2_500_000_000);
     }
 
@@ -885,7 +895,10 @@ mod tests {
 
     #[test]
     fn t52_tensor_ref_construction_and_extract() {
-        let t = TensorRef { handle: 42, hash: 0xABCD };
+        let t = TensorRef {
+            handle: 42,
+            hash: 0xABCD,
+        };
         let v = Value::TensorRef(t);
         let tr = v.as_tensor_ref().unwrap();
         assert_eq!(tr.handle, 42);
@@ -894,7 +907,10 @@ mod tests {
 
     #[test]
     fn t52_geometry_ref_construction_and_extract() {
-        let g = GeometryRef { handle: 7, hash: 0x1234 };
+        let g = GeometryRef {
+            handle: 7,
+            hash: 0x1234,
+        };
         let v = Value::GeometryRef(g);
         let gr = v.as_geometry_ref().unwrap();
         assert_eq!(gr.handle, 7);
@@ -903,7 +919,10 @@ mod tests {
 
     #[test]
     fn t52_asset_ref_construction_and_extract() {
-        let a = AssetRef { iri: "asset:model.glb".to_string(), hash: 0xBEEF };
+        let a = AssetRef {
+            iri: "asset:model.glb".to_string(),
+            hash: 0xBEEF,
+        };
         let v = Value::AssetRef(a);
         let ar = v.as_asset_ref().unwrap();
         assert_eq!(ar.iri, "asset:model.glb");
@@ -920,9 +939,18 @@ mod tests {
 
     #[test]
     fn t52_tensor_ref_equality() {
-        let t1 = TensorRef { handle: 1, hash: 100 };
-        let t2 = TensorRef { handle: 1, hash: 100 };
-        let t3 = TensorRef { handle: 2, hash: 100 };
+        let t1 = TensorRef {
+            handle: 1,
+            hash: 100,
+        };
+        let t2 = TensorRef {
+            handle: 1,
+            hash: 100,
+        };
+        let t3 = TensorRef {
+            handle: 2,
+            hash: 100,
+        };
         assert_eq!(t1, t2);
         assert_ne!(t1, t3);
     }
@@ -1105,20 +1133,28 @@ mod tests {
             hash: 1,
         };
         let solid = Mixture {
-            iri: None, components: vec![(s.clone(), 1.0)],
-            phase: MixturePhase::Solid, miscibility: Miscibility::Miscible,
+            iri: None,
+            components: vec![(s.clone(), 1.0)],
+            phase: MixturePhase::Solid,
+            miscibility: Miscibility::Miscible,
         };
         let gas = Mixture {
-            iri: None, components: vec![(s.clone(), 1.0)],
-            phase: MixturePhase::Gas, miscibility: Miscibility::Miscible,
+            iri: None,
+            components: vec![(s.clone(), 1.0)],
+            phase: MixturePhase::Gas,
+            miscibility: Miscibility::Miscible,
         };
         let plasma = Mixture {
-            iri: None, components: vec![(s.clone(), 1.0)],
-            phase: MixturePhase::Plasma, miscibility: Miscibility::Miscible,
+            iri: None,
+            components: vec![(s.clone(), 1.0)],
+            phase: MixturePhase::Plasma,
+            miscibility: Miscibility::Miscible,
         };
         let supercritical = Mixture {
-            iri: None, components: vec![(s, 1.0)],
-            phase: MixturePhase::Supercritical, miscibility: Miscibility::Miscible,
+            iri: None,
+            components: vec![(s, 1.0)],
+            phase: MixturePhase::Supercritical,
+            miscibility: Miscibility::Miscible,
         };
         assert_ne!(solid.phase, gas.phase);
         assert_ne!(gas.phase, plasma.phase);

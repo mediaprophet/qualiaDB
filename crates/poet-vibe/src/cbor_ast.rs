@@ -59,21 +59,30 @@ pub fn decode(bytes: &[u8]) -> Result<Program, DecodeError> {
 
 fn encode_program(enc: &mut CborEncoder, p: &Program) {
     enc.map(7);
-    enc.str("type"); enc.str("Program");
-    enc.str("span"); encode_span(enc, p.span);
-    enc.str("module"); encode_opt_module(enc, &p.module);
-    enc.str("imports"); encode_imports(enc, &p.imports);
-    enc.str("prefixes"); encode_prefixes(enc, &p.prefixes);
-    enc.str("requires"); encode_caps(enc, &p.requires);
-    enc.str("items"); encode_items(enc, &p.items);
+    enc.str("type");
+    enc.str("Program");
+    enc.str("span");
+    encode_span(enc, p.span);
+    enc.str("module");
+    encode_opt_module(enc, &p.module);
+    enc.str("imports");
+    encode_imports(enc, &p.imports);
+    enc.str("prefixes");
+    encode_prefixes(enc, &p.prefixes);
+    enc.str("requires");
+    encode_caps(enc, &p.requires);
+    enc.str("items");
+    encode_items(enc, &p.items);
 }
 
 fn encode_opt_module(enc: &mut CborEncoder, m: &Option<ModuleDecl>) {
     match m {
         Some(m) => {
             enc.map(2);
-            enc.str("name"); encode_name(enc, &m.name);
-            enc.str("span"); encode_span(enc, m.span);
+            enc.str("name");
+            encode_name(enc, &m.name);
+            enc.str("span");
+            encode_span(enc, m.span);
         }
         None => enc.null(),
     }
@@ -81,8 +90,16 @@ fn encode_opt_module(enc: &mut CborEncoder, m: &Option<ModuleDecl>) {
 
 fn encode_name(enc: &mut CborEncoder, n: &Name) {
     match n {
-        Name::Ident(s) => { enc.map(1); enc.str("Ident"); enc.str(s); }
-        Name::Iri(s) => { enc.map(1); enc.str("Iri"); enc.str(s); }
+        Name::Ident(s) => {
+            enc.map(1);
+            enc.str("Ident");
+            enc.str(s);
+        }
+        Name::Iri(s) => {
+            enc.map(1);
+            enc.str("Iri");
+            enc.str(s);
+        }
     }
 }
 
@@ -90,12 +107,15 @@ fn encode_imports(enc: &mut CborEncoder, imports: &[ImportDecl]) {
     enc.array(imports.len() as u64);
     for imp in imports {
         enc.map(3);
-        enc.str("path"); enc.str(&imp.path);
-        enc.str("alias"); match &imp.alias {
+        enc.str("path");
+        enc.str(&imp.path);
+        enc.str("alias");
+        match &imp.alias {
             Some(a) => enc.str(a),
             None => enc.null(),
         };
-        enc.str("span"); encode_span(enc, imp.span);
+        enc.str("span");
+        encode_span(enc, imp.span);
     }
 }
 
@@ -103,9 +123,12 @@ fn encode_prefixes(enc: &mut CborEncoder, prefixes: &[PrefixDecl]) {
     enc.array(prefixes.len() as u64);
     for pre in prefixes {
         enc.map(3);
-        enc.str("prefix"); enc.str(&pre.prefix);
-        enc.str("iri"); enc.str(&pre.iri);
-        enc.str("span"); encode_span(enc, pre.span);
+        enc.str("prefix");
+        enc.str(&pre.prefix);
+        enc.str("iri");
+        enc.str(&pre.iri);
+        enc.str("span");
+        encode_span(enc, pre.span);
     }
 }
 
@@ -113,9 +136,12 @@ fn encode_caps(enc: &mut CborEncoder, caps: &[CapSpec]) {
     enc.array(caps.len() as u64);
     for cap in caps {
         enc.map(3);
-        enc.str("id"); enc.str(&cap.id);
-        enc.str("args"); encode_named_args(enc, &cap.args);
-        enc.str("span"); encode_span(enc, cap.span);
+        enc.str("id");
+        enc.str(&cap.id);
+        enc.str("args");
+        encode_named_args(enc, &cap.args);
+        enc.str("span");
+        encode_span(enc, cap.span);
     }
 }
 
@@ -123,9 +149,12 @@ fn encode_named_args(enc: &mut CborEncoder, args: &[NamedArg]) {
     enc.array(args.len() as u64);
     for arg in args {
         enc.map(3);
-        enc.str("name"); enc.str(&arg.name);
-        enc.str("value"); encode_expr(enc, &arg.value);
-        enc.str("span"); encode_span(enc, arg.span);
+        enc.str("name");
+        enc.str(&arg.name);
+        enc.str("value");
+        encode_expr(enc, &arg.value);
+        enc.str("span");
+        encode_span(enc, arg.span);
     }
 }
 
@@ -140,43 +169,65 @@ fn encode_item(enc: &mut CborEncoder, item: &Item) {
     match item {
         Item::Function(f) => {
             enc.map(7);
-            enc.str("type"); enc.str("Function");
-            enc.str("name"); enc.str(&f.name);
-            enc.str("effect"); encode_effect(enc, &f.effect);
-            enc.str("async"); enc.bool(f.is_async);
-            enc.str("params"); encode_params(enc, &f.params);
-            enc.str("budget"); encode_named_args(enc, &f.budget);
-            enc.str("body"); encode_block(enc, &f.body);
+            enc.str("type");
+            enc.str("Function");
+            enc.str("name");
+            enc.str(&f.name);
+            enc.str("effect");
+            encode_effect(enc, &f.effect);
+            enc.str("async");
+            enc.bool(f.is_async);
+            enc.str("params");
+            encode_params(enc, &f.params);
+            enc.str("budget");
+            encode_named_args(enc, &f.budget);
+            enc.str("body");
+            encode_block(enc, &f.body);
         }
         Item::Hook(h) => {
             enc.map(4);
-            enc.str("type"); enc.str("Hook");
-            enc.str("path"); encode_str_list(enc, &h.path);
-            enc.str("params"); encode_params(enc, &h.params);
-            enc.str("body"); encode_block(enc, &h.body);
+            enc.str("type");
+            enc.str("Hook");
+            enc.str("path");
+            encode_str_list(enc, &h.path);
+            enc.str("params");
+            encode_params(enc, &h.params);
+            enc.str("body");
+            encode_block(enc, &h.body);
         }
         Item::Const(c) => {
             enc.map(4);
-            enc.str("type"); enc.str("Const");
-            enc.str("name"); enc.str(&c.name);
-            enc.str("value"); encode_expr(enc, &c.value);
-            enc.str("span"); encode_span(enc, c.span);
+            enc.str("type");
+            enc.str("Const");
+            enc.str("name");
+            enc.str(&c.name);
+            enc.str("value");
+            encode_expr(enc, &c.value);
+            enc.str("span");
+            encode_span(enc, c.span);
         }
         Item::Statement(s) => {
             enc.map(2);
-            enc.str("type"); enc.str("Statement");
-            enc.str("stmt"); encode_stmt(enc, s);
+            enc.str("type");
+            enc.str("Statement");
+            enc.str("stmt");
+            encode_stmt(enc, s);
         }
         Item::Enum(e) => {
             enc.map(3);
-            enc.str("type"); enc.str("Enum");
-            enc.str("name"); enc.str(&e.name);
-            enc.str("variants"); {
+            enc.str("type");
+            enc.str("Enum");
+            enc.str("name");
+            enc.str(&e.name);
+            enc.str("variants");
+            {
                 enc.array(e.variants.len() as u64);
                 for v in &e.variants {
                     enc.map(2);
-                    enc.str("name"); enc.str(&v.name);
-                    enc.str("payload"); {
+                    enc.str("name");
+                    enc.str(&v.name);
+                    enc.str("payload");
+                    {
                         enc.array(v.payload.len() as u64);
                         for t in &v.payload {
                             encode_type_expr(enc, t);
@@ -187,20 +238,26 @@ fn encode_item(enc: &mut CborEncoder, item: &Item) {
         }
         Item::Field(f) => {
             enc.map(6);
-            enc.str("type"); enc.str("Field");
-            enc.str("name"); enc.str(&f.name);
-            enc.str("ty"); encode_type_expr(enc, &f.ty);
-            enc.str("unit"); match &f.unit {
+            enc.str("type");
+            enc.str("Field");
+            enc.str("name");
+            enc.str(&f.name);
+            enc.str("ty");
+            encode_type_expr(enc, &f.ty);
+            enc.str("unit");
+            match &f.unit {
                 Some(u) => enc.str(u),
                 None => enc.null(),
             };
-            enc.str("support"); enc.str(match f.support {
+            enc.str("support");
+            enc.str(match f.support {
                 FieldSupport::Region => "region",
                 FieldSupport::Point => "point",
                 FieldSupport::Continuant => "continuant",
                 FieldSupport::Stream => "stream",
             });
-            enc.str("representation"); enc.str(match f.representation {
+            enc.str("representation");
+            enc.str(match f.representation {
                 FieldRepresentation::Grid => "grid",
                 FieldRepresentation::Mesh => "mesh",
                 FieldRepresentation::Particles => "particles",
@@ -210,16 +267,23 @@ fn encode_item(enc: &mut CborEncoder, item: &Item) {
         }
         Item::Material(m) => {
             enc.map(3);
-            enc.str("type"); enc.str("Material");
-            enc.str("name"); enc.str(&m.name);
-            enc.str("properties"); encode_named_args(enc, &m.properties);
+            enc.str("type");
+            enc.str("Material");
+            enc.str("name");
+            enc.str(&m.name);
+            enc.str("properties");
+            encode_named_args(enc, &m.properties);
         }
         Item::Law(l) => {
             enc.map(4);
-            enc.str("type"); enc.str("Law");
-            enc.str("name"); enc.str(&l.name);
-            enc.str("condition"); encode_expr(enc, &l.condition);
-            enc.str("consequence"); encode_expr(enc, &l.consequence);
+            enc.str("type");
+            enc.str("Law");
+            enc.str("name");
+            enc.str(&l.name);
+            enc.str("condition");
+            encode_expr(enc, &l.condition);
+            enc.str("consequence");
+            encode_expr(enc, &l.consequence);
         }
     }
 }
@@ -244,104 +308,163 @@ fn encode_params(enc: &mut CborEncoder, params: &[Param]) {
     enc.array(params.len() as u64);
     for p in params {
         enc.map(3);
-        enc.str("name"); enc.str(&p.name);
-        enc.str("ty"); encode_type_expr(enc, &p.ty);
-        enc.str("span"); encode_span(enc, p.span);
+        enc.str("name");
+        enc.str(&p.name);
+        enc.str("ty");
+        encode_type_expr(enc, &p.ty);
+        enc.str("span");
+        encode_span(enc, p.span);
     }
 }
 
 fn encode_type_expr(enc: &mut CborEncoder, t: &TypeExpr) {
     enc.map(3);
-    enc.str("name"); enc.str(&t.name);
-    enc.str("args"); {
+    enc.str("name");
+    enc.str(&t.name);
+    enc.str("args");
+    {
         enc.array(t.args.len() as u64);
         for a in &t.args {
             encode_type_expr(enc, a);
         }
     };
-    enc.str("span"); encode_span(enc, t.span);
+    enc.str("span");
+    encode_span(enc, t.span);
 }
 
 fn encode_block(enc: &mut CborEncoder, b: &Block) {
     enc.map(2);
-    enc.str("stmts"); {
+    enc.str("stmts");
+    {
         enc.array(b.stmts.len() as u64);
         for s in &b.stmts {
             encode_stmt(enc, s);
         }
     };
-    enc.str("span"); encode_span(enc, b.span);
+    enc.str("span");
+    encode_span(enc, b.span);
 }
 
 fn encode_stmt(enc: &mut CborEncoder, s: &Stmt) {
     match s {
-        Stmt::Let { span, mutable, name, ty, value } => {
+        Stmt::Let {
+            span,
+            mutable,
+            name,
+            ty,
+            value,
+        } => {
             enc.map(5);
-            enc.str("type"); enc.str("Let");
-            enc.str("name"); enc.str(name);
-            enc.str("mutable"); enc.bool(*mutable);
-            enc.str("ty"); match ty {
+            enc.str("type");
+            enc.str("Let");
+            enc.str("name");
+            enc.str(name);
+            enc.str("mutable");
+            enc.bool(*mutable);
+            enc.str("ty");
+            match ty {
                 Some(t) => encode_type_expr(enc, t),
                 None => enc.null(),
             };
-            enc.str("value"); match value {
+            enc.str("value");
+            match value {
                 Some(v) => encode_expr(enc, v),
                 None => enc.null(),
             };
             let _ = span;
         }
-        Stmt::Assign { span, target, value } => {
+        Stmt::Assign {
+            span,
+            target,
+            value,
+        } => {
             enc.map(3);
-            enc.str("type"); enc.str("Assign");
-            enc.str("target"); encode_expr(enc, target);
-            enc.str("value"); encode_expr(enc, value);
+            enc.str("type");
+            enc.str("Assign");
+            enc.str("target");
+            encode_expr(enc, target);
+            enc.str("value");
+            encode_expr(enc, value);
             let _ = span;
         }
-        Stmt::If { span, cond, then_block, else_block } => {
+        Stmt::If {
+            span,
+            cond,
+            then_block,
+            else_block,
+        } => {
             enc.map(4);
-            enc.str("type"); enc.str("If");
-            enc.str("cond"); encode_expr(enc, cond);
-            enc.str("then"); encode_block(enc, then_block);
-            enc.str("else"); match else_block {
+            enc.str("type");
+            enc.str("If");
+            enc.str("cond");
+            encode_expr(enc, cond);
+            enc.str("then");
+            encode_block(enc, then_block);
+            enc.str("else");
+            match else_block {
                 Some(b) => encode_stmt(enc, b),
                 None => enc.null(),
             };
             let _ = span;
         }
-        Stmt::For { span, name, iter, body } => {
+        Stmt::For {
+            span,
+            name,
+            iter,
+            body,
+        } => {
             enc.map(4);
-            enc.str("type"); enc.str("For");
-            enc.str("name"); enc.str(name);
-            enc.str("iter"); encode_expr(enc, iter);
-            enc.str("body"); encode_block(enc, body);
+            enc.str("type");
+            enc.str("For");
+            enc.str("name");
+            enc.str(name);
+            enc.str("iter");
+            encode_expr(enc, iter);
+            enc.str("body");
+            encode_block(enc, body);
             let _ = span;
         }
         Stmt::While { span, cond, body } => {
             enc.map(3);
-            enc.str("type"); enc.str("While");
-            enc.str("cond"); encode_expr(enc, cond);
-            enc.str("body"); encode_block(enc, body);
+            enc.str("type");
+            enc.str("While");
+            enc.str("cond");
+            encode_expr(enc, cond);
+            enc.str("body");
+            encode_block(enc, body);
             let _ = span;
         }
-        Stmt::Match { span, scrutinee, arms } => {
+        Stmt::Match {
+            span,
+            scrutinee,
+            arms,
+        } => {
             enc.map(3);
-            enc.str("type"); enc.str("Match");
-            enc.str("scrutinee"); encode_expr(enc, scrutinee);
-            enc.str("arms"); {
+            enc.str("type");
+            enc.str("Match");
+            enc.str("scrutinee");
+            encode_expr(enc, scrutinee);
+            enc.str("arms");
+            {
                 enc.array(arms.len() as u64);
                 for arm in arms {
                     enc.map(3);
-                    enc.str("pattern"); encode_pattern(enc, &arm.pattern);
-                    enc.str("body"); encode_arm_body(enc, &arm.body);
-                    enc.str("span"); encode_span(enc, arm.span);
+                    enc.str("pattern");
+                    encode_pattern(enc, &arm.pattern);
+                    enc.str("body");
+                    encode_arm_body(enc, &arm.body);
+                    enc.str("span");
+                    encode_span(enc, arm.span);
                 }
             };
             let _ = span;
         }
         Stmt::Return { span, value } => {
             enc.map(2);
-            enc.str("type"); enc.str("Return");
-            enc.str("value"); match value {
+            enc.str("type");
+            enc.str("Return");
+            enc.str("value");
+            match value {
                 Some(v) => encode_expr(enc, v),
                 None => enc.null(),
             };
@@ -349,8 +472,10 @@ fn encode_stmt(enc: &mut CborEncoder, s: &Stmt) {
         }
         Stmt::Yield { span, value } => {
             enc.map(2);
-            enc.str("type"); enc.str("Yield");
-            enc.str("value"); match value {
+            enc.str("type");
+            enc.str("Yield");
+            enc.str("value");
+            match value {
                 Some(v) => encode_expr(enc, v),
                 None => enc.null(),
             };
@@ -358,46 +483,101 @@ fn encode_stmt(enc: &mut CborEncoder, s: &Stmt) {
         }
         Stmt::Transaction { span, args, body } => {
             enc.map(3);
-            enc.str("type"); enc.str("Transaction");
-            enc.str("args"); encode_named_args(enc, args);
-            enc.str("body"); encode_block(enc, body);
+            enc.str("type");
+            enc.str("Transaction");
+            enc.str("args");
+            encode_named_args(enc, args);
+            enc.str("body");
+            encode_block(enc, body);
             let _ = span;
         }
         Stmt::Effect { span, expr } => {
             enc.map(2);
-            enc.str("type"); enc.str("Effect");
-            enc.str("expr"); encode_expr(enc, expr);
+            enc.str("type");
+            enc.str("Effect");
+            enc.str("expr");
+            encode_expr(enc, expr);
             let _ = span;
         }
         Stmt::Expr { span, expr } => {
             enc.map(2);
-            enc.str("type"); enc.str("Expr");
-            enc.str("expr"); encode_expr(enc, expr);
+            enc.str("type");
+            enc.str("Expr");
+            enc.str("expr");
+            encode_expr(enc, expr);
             let _ = span;
         }
         Stmt::Block(b) => {
             enc.map(2);
-            enc.str("type"); enc.str("Block");
-            enc.str("block"); encode_block(enc, b);
+            enc.str("type");
+            enc.str("Block");
+            enc.str("block");
+            encode_block(enc, b);
         }
     }
 }
 
 fn encode_pattern(enc: &mut CborEncoder, p: &Pattern) {
     match p {
-        Pattern::Wildcard => { enc.map(1); enc.str("type"); enc.str("Wildcard"); }
-        Pattern::Ident(s) => { enc.map(2); enc.str("type"); enc.str("Ident"); enc.str("name"); enc.str(s); }
-        Pattern::Literal(l) => { enc.map(2); enc.str("type"); enc.str("Literal"); enc.str("lit"); encode_literal(enc, l); }
-        Pattern::Ok(p) => { enc.map(2); enc.str("type"); enc.str("Ok"); enc.str("inner"); encode_pattern(enc, p); }
-        Pattern::Err(p) => { enc.map(2); enc.str("type"); enc.str("Err"); enc.str("inner"); encode_pattern(enc, p); }
-        Pattern::Some(p) => { enc.map(2); enc.str("type"); enc.str("Some"); enc.str("inner"); encode_pattern(enc, p); }
-        Pattern::None => { enc.map(1); enc.str("type"); enc.str("None"); }
-        Pattern::Variant { enum_name, variant_name, args } => {
+        Pattern::Wildcard => {
+            enc.map(1);
+            enc.str("type");
+            enc.str("Wildcard");
+        }
+        Pattern::Ident(s) => {
+            enc.map(2);
+            enc.str("type");
+            enc.str("Ident");
+            enc.str("name");
+            enc.str(s);
+        }
+        Pattern::Literal(l) => {
+            enc.map(2);
+            enc.str("type");
+            enc.str("Literal");
+            enc.str("lit");
+            encode_literal(enc, l);
+        }
+        Pattern::Ok(p) => {
+            enc.map(2);
+            enc.str("type");
+            enc.str("Ok");
+            enc.str("inner");
+            encode_pattern(enc, p);
+        }
+        Pattern::Err(p) => {
+            enc.map(2);
+            enc.str("type");
+            enc.str("Err");
+            enc.str("inner");
+            encode_pattern(enc, p);
+        }
+        Pattern::Some(p) => {
+            enc.map(2);
+            enc.str("type");
+            enc.str("Some");
+            enc.str("inner");
+            encode_pattern(enc, p);
+        }
+        Pattern::None => {
+            enc.map(1);
+            enc.str("type");
+            enc.str("None");
+        }
+        Pattern::Variant {
+            enum_name,
+            variant_name,
+            args,
+        } => {
             enc.map(4);
-            enc.str("type"); enc.str("Variant");
-            enc.str("enum"); enc.str(enum_name);
-            enc.str("variant"); enc.str(variant_name);
-            enc.str("args"); {
+            enc.str("type");
+            enc.str("Variant");
+            enc.str("enum");
+            enc.str(enum_name);
+            enc.str("variant");
+            enc.str(variant_name);
+            enc.str("args");
+            {
                 enc.array(args.len() as u64);
                 for a in args {
                     encode_pattern(enc, a);
@@ -409,83 +589,163 @@ fn encode_pattern(enc: &mut CborEncoder, p: &Pattern) {
 
 fn encode_arm_body(enc: &mut CborEncoder, b: &ArmBody) {
     match b {
-        ArmBody::Block(blk) => { enc.map(1); enc.str("Block"); encode_block(enc, blk); }
-        ArmBody::Expr(e) => { enc.map(1); enc.str("Expr"); encode_expr(enc, e); }
+        ArmBody::Block(blk) => {
+            enc.map(1);
+            enc.str("Block");
+            encode_block(enc, blk);
+        }
+        ArmBody::Expr(e) => {
+            enc.map(1);
+            enc.str("Expr");
+            encode_expr(enc, e);
+        }
     }
 }
 
 fn encode_expr(enc: &mut CborEncoder, e: &Expr) {
     enc.map(2);
-    enc.str("kind"); encode_expr_kind(enc, &e.kind);
-    enc.str("span"); encode_span(enc, e.span);
+    enc.str("kind");
+    encode_expr_kind(enc, &e.kind);
+    enc.str("span");
+    encode_span(enc, e.span);
 }
 
 fn encode_expr_kind(enc: &mut CborEncoder, k: &ExprKind) {
     match k {
-        ExprKind::Literal(l) => { enc.map(1); enc.str("Literal"); encode_literal(enc, l); }
-        ExprKind::Ident(s) => { enc.map(1); enc.str("Ident"); enc.str(s); }
-        ExprKind::QueryVar(s) => { enc.map(1); enc.str("QueryVar"); enc.str(s); }
-        ExprKind::Iri(s) => { enc.map(1); enc.str("Iri"); enc.str(s); }
-        ExprKind::Prefixed(p, l) => { enc.map(2); enc.str("prefix"); enc.str(p); enc.str("local"); enc.str(l); }
-        ExprKind::Blank(s) => { enc.map(1); enc.str("Blank"); enc.str(s); }
+        ExprKind::Literal(l) => {
+            enc.map(1);
+            enc.str("Literal");
+            encode_literal(enc, l);
+        }
+        ExprKind::Ident(s) => {
+            enc.map(1);
+            enc.str("Ident");
+            enc.str(s);
+        }
+        ExprKind::QueryVar(s) => {
+            enc.map(1);
+            enc.str("QueryVar");
+            enc.str(s);
+        }
+        ExprKind::Iri(s) => {
+            enc.map(1);
+            enc.str("Iri");
+            enc.str(s);
+        }
+        ExprKind::Prefixed(p, l) => {
+            enc.map(2);
+            enc.str("prefix");
+            enc.str(p);
+            enc.str("local");
+            enc.str(l);
+        }
+        ExprKind::Blank(s) => {
+            enc.map(1);
+            enc.str("Blank");
+            enc.str(s);
+        }
         ExprKind::Binary { op, left, right } => {
             enc.map(4);
-            enc.str("type"); enc.str("Binary");
-            enc.str("op"); encode_binop(enc, op);
-            enc.str("left"); encode_expr(enc, left);
-            enc.str("right"); encode_expr(enc, right);
+            enc.str("type");
+            enc.str("Binary");
+            enc.str("op");
+            encode_binop(enc, op);
+            enc.str("left");
+            encode_expr(enc, left);
+            enc.str("right");
+            encode_expr(enc, right);
         }
         ExprKind::Unary { op, expr } => {
             enc.map(3);
-            enc.str("type"); enc.str("Unary");
-            enc.str("op"); encode_unop(enc, op);
-            enc.str("expr"); encode_expr(enc, expr);
+            enc.str("type");
+            enc.str("Unary");
+            enc.str("op");
+            encode_unop(enc, op);
+            enc.str("expr");
+            encode_expr(enc, expr);
         }
-        ExprKind::Await(e) => { enc.map(1); enc.str("Await"); encode_expr(enc, e); }
+        ExprKind::Await(e) => {
+            enc.map(1);
+            enc.str("Await");
+            encode_expr(enc, e);
+        }
         ExprKind::Member { recv, name } => {
             enc.map(3);
-            enc.str("type"); enc.str("Member");
-            enc.str("recv"); encode_expr(enc, recv);
-            enc.str("name"); enc.str(name);
+            enc.str("type");
+            enc.str("Member");
+            enc.str("recv");
+            encode_expr(enc, recv);
+            enc.str("name");
+            enc.str(name);
         }
         ExprKind::Call { callee, args } => {
             enc.map(3);
-            enc.str("type"); enc.str("Call");
-            enc.str("callee"); encode_expr(enc, callee);
-            enc.str("args"); encode_args(enc, args);
+            enc.str("type");
+            enc.str("Call");
+            enc.str("callee");
+            encode_expr(enc, callee);
+            enc.str("args");
+            encode_args(enc, args);
         }
         ExprKind::Index { recv, index } => {
             enc.map(3);
-            enc.str("type"); enc.str("Index");
-            enc.str("recv"); encode_expr(enc, recv);
-            enc.str("index"); encode_expr(enc, index);
+            enc.str("type");
+            enc.str("Index");
+            enc.str("recv");
+            encode_expr(enc, recv);
+            enc.str("index");
+            encode_expr(enc, index);
         }
-        ExprKind::Try(e) => { enc.map(1); enc.str("Try"); encode_expr(enc, e); }
+        ExprKind::Try(e) => {
+            enc.map(1);
+            enc.str("Try");
+            encode_expr(enc, e);
+        }
         ExprKind::List(es) => {
             enc.map(1);
             enc.str("List");
             enc.array(es.len() as u64);
-            for e in es { encode_expr(enc, e); }
+            for e in es {
+                encode_expr(enc, e);
+            }
         }
         ExprKind::Record(args) => {
             enc.map(1);
             enc.str("Record");
             encode_named_args(enc, args);
         }
-        ExprKind::Triple { subject, predicate, object } => {
+        ExprKind::Triple {
+            subject,
+            predicate,
+            object,
+        } => {
             enc.map(4);
-            enc.str("type"); enc.str("Triple");
-            enc.str("subject"); encode_expr(enc, subject);
-            enc.str("predicate"); encode_expr(enc, predicate);
-            enc.str("object"); encode_expr(enc, object);
+            enc.str("type");
+            enc.str("Triple");
+            enc.str("subject");
+            encode_expr(enc, subject);
+            enc.str("predicate");
+            encode_expr(enc, predicate);
+            enc.str("object");
+            encode_expr(enc, object);
         }
-        ExprKind::Reified { subject, predicate, object, reifier } => {
+        ExprKind::Reified {
+            subject,
+            predicate,
+            object,
+            reifier,
+        } => {
             enc.map(5);
-            enc.str("type"); enc.str("Reified");
-            enc.str("subject"); encode_expr(enc, subject);
-            enc.str("predicate"); encode_expr(enc, predicate);
-            enc.str("object"); encode_expr(enc, object);
-            enc.str("reifier"); encode_expr(enc, reifier);
+            enc.str("type");
+            enc.str("Reified");
+            enc.str("subject");
+            encode_expr(enc, subject);
+            enc.str("predicate");
+            encode_expr(enc, predicate);
+            enc.str("object");
+            encode_expr(enc, object);
+            enc.str("reifier");
+            encode_expr(enc, reifier);
         }
     }
 }
@@ -494,27 +754,44 @@ fn encode_args(enc: &mut CborEncoder, args: &[Arg]) {
     enc.array(args.len() as u64);
     for arg in args {
         match arg {
-            Arg::Pos(e) => { enc.map(1); enc.str("Pos"); encode_expr(enc, e); }
-            Arg::Named(na) => { enc.map(1); enc.str("Named"); encode_named_arg(enc, na); }
+            Arg::Pos(e) => {
+                enc.map(1);
+                enc.str("Pos");
+                encode_expr(enc, e);
+            }
+            Arg::Named(na) => {
+                enc.map(1);
+                enc.str("Named");
+                encode_named_arg(enc, na);
+            }
         }
     }
 }
 
 fn encode_named_arg(enc: &mut CborEncoder, na: &NamedArg) {
     enc.map(3);
-    enc.str("name"); enc.str(&na.name);
-    enc.str("value"); encode_expr(enc, &na.value);
-    enc.str("span"); encode_span(enc, na.span);
+    enc.str("name");
+    enc.str(&na.name);
+    enc.str("value");
+    encode_expr(enc, &na.value);
+    enc.str("span");
+    encode_span(enc, na.span);
 }
 
 fn encode_binop(enc: &mut CborEncoder, op: &BinOp) {
     let s = match op {
-        BinOp::Or => "Or", BinOp::And => "And",
-        BinOp::Eq => "Eq", BinOp::Ne => "Ne",
-        BinOp::Lt => "Lt", BinOp::Le => "Le",
-        BinOp::Gt => "Gt", BinOp::Ge => "Ge",
-        BinOp::Add => "Add", BinOp::Sub => "Sub",
-        BinOp::Mul => "Mul", BinOp::Div => "Div",
+        BinOp::Or => "Or",
+        BinOp::And => "And",
+        BinOp::Eq => "Eq",
+        BinOp::Ne => "Ne",
+        BinOp::Lt => "Lt",
+        BinOp::Le => "Le",
+        BinOp::Gt => "Gt",
+        BinOp::Ge => "Ge",
+        BinOp::Add => "Add",
+        BinOp::Sub => "Sub",
+        BinOp::Mul => "Mul",
+        BinOp::Div => "Div",
         BinOp::Rem => "Rem",
     };
     enc.str(s);
@@ -522,19 +799,55 @@ fn encode_binop(enc: &mut CborEncoder, op: &BinOp) {
 
 fn encode_unop(enc: &mut CborEncoder, op: &UnOp) {
     let s = match op {
-        UnOp::Not => "Not", UnOp::Neg => "Neg", UnOp::Plus => "Plus",
+        UnOp::Not => "Not",
+        UnOp::Neg => "Neg",
+        UnOp::Plus => "Plus",
     };
     enc.str(s);
 }
 
 fn encode_literal(enc: &mut CborEncoder, l: &Literal) {
     match l {
-        Literal::Null => { enc.map(1); enc.str("type"); enc.str("Null"); }
-        Literal::Bool(b) => { enc.map(2); enc.str("type"); enc.str("Bool"); enc.str("value"); enc.bool(*b); }
-        Literal::Int(n) => { enc.map(2); enc.str("type"); enc.str("Int"); enc.str("value"); enc.int(*n); }
-        Literal::UInt(n) => { enc.map(2); enc.str("type"); enc.str("UInt"); enc.str("value"); enc.uint(*n); }
-        Literal::Float(bits) => { enc.map(2); enc.str("type"); enc.str("Float"); enc.str("bits"); enc.uint(*bits); }
-        Literal::String(s) => { enc.map(2); enc.str("type"); enc.str("String"); enc.str("value"); enc.str(s); }
+        Literal::Null => {
+            enc.map(1);
+            enc.str("type");
+            enc.str("Null");
+        }
+        Literal::Bool(b) => {
+            enc.map(2);
+            enc.str("type");
+            enc.str("Bool");
+            enc.str("value");
+            enc.bool(*b);
+        }
+        Literal::Int(n) => {
+            enc.map(2);
+            enc.str("type");
+            enc.str("Int");
+            enc.str("value");
+            enc.int(*n);
+        }
+        Literal::UInt(n) => {
+            enc.map(2);
+            enc.str("type");
+            enc.str("UInt");
+            enc.str("value");
+            enc.uint(*n);
+        }
+        Literal::Float(bits) => {
+            enc.map(2);
+            enc.str("type");
+            enc.str("Float");
+            enc.str("bits");
+            enc.uint(*bits);
+        }
+        Literal::String(s) => {
+            enc.map(2);
+            enc.str("type");
+            enc.str("String");
+            enc.str("value");
+            enc.str(s);
+        }
     }
 }
 
@@ -546,7 +859,9 @@ fn encode_span(enc: &mut CborEncoder, s: Span) {
 
 fn encode_str_list(enc: &mut CborEncoder, list: &[String]) {
     enc.array(list.len() as u64);
-    for s in list { enc.str(s); }
+    for s in list {
+        enc.str(s);
+    }
 }
 
 // ── Decode ─────────────────────────────────────────────────────────────────
@@ -585,7 +900,9 @@ fn decode_program(dec: &mut CborDecoder) -> Result<Program, DecodeError> {
     for _ in 0..map_len {
         let key = dec.str()?;
         match key.as_str() {
-            "type" => { let _ = dec.str()?; }
+            "type" => {
+                let _ = dec.str()?;
+            }
             "span" => span = decode_span(dec)?,
             "module" => module = decode_opt_module(dec)?,
             "imports" => imports = decode_imports(dec)?,
@@ -595,7 +912,14 @@ fn decode_program(dec: &mut CborDecoder) -> Result<Program, DecodeError> {
             _ => dec.skip()?,
         }
     }
-    Ok(Program { span, module, imports, prefixes, requires, items })
+    Ok(Program {
+        span,
+        module,
+        imports,
+        prefixes,
+        requires,
+        items,
+    })
 }
 
 fn decode_opt_module(dec: &mut CborDecoder) -> Result<Option<ModuleDecl>, DecodeError> {
@@ -619,10 +943,16 @@ fn decode_opt_module(dec: &mut CborDecoder) -> Result<Option<ModuleDecl>, Decode
 
 fn decode_name(dec: &mut CborDecoder) -> Result<Name, DecodeError> {
     let map_len = dec.map()?;
-    if map_len < 1 { return Err(DecodeError::InvalidCbor("empty Name map".into())); }
+    if map_len < 1 {
+        return Err(DecodeError::InvalidCbor("empty Name map".into()));
+    }
     let key = dec.str()?;
     let val = dec.str()?;
-    if map_len > 1 { for _ in 1..map_len { dec.skip()?; } }
+    if map_len > 1 {
+        for _ in 1..map_len {
+            dec.skip()?;
+        }
+    }
     match key.as_str() {
         "Ident" => Ok(Name::Ident(val)),
         "Iri" => Ok(Name::Iri(val)),
@@ -643,8 +973,12 @@ fn decode_imports(dec: &mut CborDecoder) -> Result<Vec<ImportDecl>, DecodeError>
             match key.as_str() {
                 "path" => path = dec.str()?,
                 "alias" => {
-                    if dec.is_null()? { dec.skip()?; alias = None; }
-                    else { alias = Some(dec.str()?); }
+                    if dec.is_null()? {
+                        dec.skip()?;
+                        alias = None;
+                    } else {
+                        alias = Some(dec.str()?);
+                    }
                 }
                 "span" => span = decode_span(dec)?,
                 _ => dec.skip()?,
@@ -705,7 +1039,10 @@ fn decode_named_args(dec: &mut CborDecoder) -> Result<Vec<NamedArg>, DecodeError
     for _ in 0..n {
         let map_len = dec.map()?;
         let mut name = String::new();
-        let mut value = Expr { span: Span::new(0, 0), kind: ExprKind::Literal(Literal::Null) };
+        let mut value = Expr {
+            span: Span::new(0, 0),
+            kind: ExprKind::Literal(Literal::Null),
+        };
         let mut span = Span::new(0, 0);
         for _ in 0..map_len {
             let key = dec.str()?;
@@ -754,7 +1091,10 @@ fn decode_item(dec: &mut CborDecoder) -> Result<Item, DecodeError> {
             let mut is_async = false;
             let mut params = Vec::new();
             let mut budget = Vec::new();
-            let mut body = Block { span: Span::new(0, 0), stmts: Vec::new() };
+            let mut body = Block {
+                span: Span::new(0, 0),
+                stmts: Vec::new(),
+            };
             for (k, v) in fields {
                 match (k.as_str(), v) {
                     ("name", ItemField::Str(s)) => name = s,
@@ -768,14 +1108,22 @@ fn decode_item(dec: &mut CborDecoder) -> Result<Item, DecodeError> {
             }
             Ok(Item::Function(FunctionDecl {
                 span: Span::new(0, 0),
-                effect, is_async, name, params, budget,
-                ret: None, body,
+                effect,
+                is_async,
+                name,
+                params,
+                budget,
+                ret: None,
+                body,
             }))
         }
         "Hook" => {
             let mut path = Vec::new();
             let mut params = Vec::new();
-            let mut body = Block { span: Span::new(0, 0), stmts: Vec::new() };
+            let mut body = Block {
+                span: Span::new(0, 0),
+                stmts: Vec::new(),
+            };
             for (k, v) in fields {
                 match (k.as_str(), v) {
                     ("path", ItemField::StrList(s)) => path = s,
@@ -785,13 +1133,20 @@ fn decode_item(dec: &mut CborDecoder) -> Result<Item, DecodeError> {
                 }
             }
             Ok(Item::Hook(HookDecl {
-                span: Span::new(0, 0), path, params,
-                budget: Vec::new(), ret: None, body,
+                span: Span::new(0, 0),
+                path,
+                params,
+                budget: Vec::new(),
+                ret: None,
+                body,
             }))
         }
         "Const" => {
             let mut name = String::new();
-            let mut value = Expr { span: Span::new(0, 0), kind: ExprKind::Literal(Literal::Null) };
+            let mut value = Expr {
+                span: Span::new(0, 0),
+                kind: ExprKind::Literal(Literal::Null),
+            };
             let mut span = Span::new(0, 0);
             for (k, v) in fields {
                 match (k.as_str(), v) {
@@ -801,7 +1156,12 @@ fn decode_item(dec: &mut CborDecoder) -> Result<Item, DecodeError> {
                     _ => {}
                 }
             }
-            Ok(Item::Const(ConstDecl { span, name, ty: None, value }))
+            Ok(Item::Const(ConstDecl {
+                span,
+                name,
+                ty: None,
+                value,
+            }))
         }
         "Statement" => {
             for (k, v) in fields {
@@ -831,7 +1191,11 @@ fn decode_item(dec: &mut CborDecoder) -> Result<Item, DecodeError> {
         }
         "Field" => {
             let mut name = String::new();
-            let mut ty = TypeExpr { span: Span::new(0, 0), name: String::new(), args: Vec::new() };
+            let mut ty = TypeExpr {
+                span: Span::new(0, 0),
+                name: String::new(),
+                args: Vec::new(),
+            };
             let mut unit = None;
             let mut support = FieldSupport::Region;
             let mut representation = FieldRepresentation::Grid;
@@ -889,8 +1253,14 @@ fn decode_item(dec: &mut CborDecoder) -> Result<Item, DecodeError> {
         }
         "Law" => {
             let mut name = String::new();
-            let mut condition = Expr { span: Span::new(0, 0), kind: ExprKind::Literal(Literal::Null) };
-            let mut consequence = Expr { span: Span::new(0, 0), kind: ExprKind::Literal(Literal::Null) };
+            let mut condition = Expr {
+                span: Span::new(0, 0),
+                kind: ExprKind::Literal(Literal::Null),
+            };
+            let mut consequence = Expr {
+                span: Span::new(0, 0),
+                kind: ExprKind::Literal(Literal::Null),
+            };
             for (k, v) in fields {
                 match (k.as_str(), v) {
                     ("name", ItemField::Str(s)) => name = s,
@@ -931,8 +1301,10 @@ fn decode_item_field(key: &str, dec: &mut CborDecoder) -> Result<ItemField, Deco
         "name" | "path" => Ok(ItemField::Str(dec.str()?)),
         "async" => Ok(ItemField::Bool(dec.bool()?)),
         "effect" => {
-            if dec.is_null()? { dec.skip()?; Ok(ItemField::Effect(None)) }
-            else {
+            if dec.is_null()? {
+                dec.skip()?;
+                Ok(ItemField::Effect(None))
+            } else {
                 let s = dec.str()?;
                 let e = match s.as_str() {
                     "Pure" => EffectClass::Pure,
@@ -992,11 +1364,18 @@ fn decode_item_field(key: &str, dec: &mut CborDecoder) -> Result<ItemField, Deco
         }
         "ty" => Ok(ItemField::TypeExpr(decode_type_expr(dec)?)),
         "unit" => {
-            if dec.is_null()? { dec.skip()?; Ok(ItemField::Str(String::new())) }
-            else { Ok(ItemField::Str(dec.str()?)) }
+            if dec.is_null()? {
+                dec.skip()?;
+                Ok(ItemField::Str(String::new()))
+            } else {
+                Ok(ItemField::Str(dec.str()?))
+            }
         }
         "support" | "representation" => Ok(ItemField::Str(dec.str()?)),
-        _ => { dec.skip()?; Ok(ItemField::Str(String::new())) }
+        _ => {
+            dec.skip()?;
+            Ok(ItemField::Str(String::new()))
+        }
     }
 }
 
@@ -1007,10 +1386,16 @@ struct CborEncoder {
 }
 
 impl CborEncoder {
-    fn new() -> Self { Self { buf: Vec::new() } }
-    fn finish(self) -> Vec<u8> { self.buf }
+    fn new() -> Self {
+        Self { buf: Vec::new() }
+    }
+    fn finish(self) -> Vec<u8> {
+        self.buf
+    }
 
-    fn write_u8(&mut self, b: u8) { self.buf.push(b); }
+    fn write_u8(&mut self, b: u8) {
+        self.buf.push(b);
+    }
 
     fn write_type_and_len(&mut self, major: u8, len: u64) {
         if len < 24 {
@@ -1030,10 +1415,15 @@ impl CborEncoder {
         }
     }
 
-    fn uint(&mut self, n: u64) { self.write_type_and_len(0, n); }
+    fn uint(&mut self, n: u64) {
+        self.write_type_and_len(0, n);
+    }
     fn int(&mut self, n: i64) {
-        if n >= 0 { self.uint(n as u64); }
-        else { self.write_type_and_len(1, (-1 - n) as u64); }
+        if n >= 0 {
+            self.uint(n as u64);
+        } else {
+            self.write_type_and_len(1, (-1 - n) as u64);
+        }
     }
     fn str(&mut self, s: &str) {
         self.write_type_and_len(3, s.len() as u64);
@@ -1042,10 +1432,18 @@ impl CborEncoder {
     fn bool(&mut self, b: bool) {
         self.buf.push(if b { 0xF5 } else { 0xF4 });
     }
-    fn null(&mut self) { self.buf.push(0xF6); }
-    fn array(&mut self, len: u64) { self.write_type_and_len(4, len); }
-    fn map(&mut self, len: u64) { self.write_type_and_len(5, len); }
-    fn tag(&mut self, tag: u64) { self.write_type_and_len(6, tag); }
+    fn null(&mut self) {
+        self.buf.push(0xF6);
+    }
+    fn array(&mut self, len: u64) {
+        self.write_type_and_len(4, len);
+    }
+    fn map(&mut self, len: u64) {
+        self.write_type_and_len(5, len);
+    }
+    fn tag(&mut self, tag: u64) {
+        self.write_type_and_len(6, tag);
+    }
 }
 
 // ── Minimal CBOR decoder (pure Rust, no deps) ──────────────────────────────
@@ -1056,18 +1454,26 @@ struct CborDecoder<'a> {
 }
 
 impl<'a> CborDecoder<'a> {
-    fn new(buf: &'a [u8]) -> Self { Self { buf, pos: 0 } }
-    fn pos(&self) -> usize { self.pos }
+    fn new(buf: &'a [u8]) -> Self {
+        Self { buf, pos: 0 }
+    }
+    fn pos(&self) -> usize {
+        self.pos
+    }
 
     fn read_u8(&mut self) -> Result<u8, DecodeError> {
-        if self.pos >= self.buf.len() { return Err(DecodeError::Eof); }
+        if self.pos >= self.buf.len() {
+            return Err(DecodeError::Eof);
+        }
         let b = self.buf[self.pos];
         self.pos += 1;
         Ok(b)
     }
 
     fn peek(&self) -> Result<u8, DecodeError> {
-        if self.pos >= self.buf.len() { return Err(DecodeError::Eof); }
+        if self.pos >= self.buf.len() {
+            return Err(DecodeError::Eof);
+        }
         Ok(self.buf[self.pos])
     }
 
@@ -1079,39 +1485,57 @@ impl<'a> CborDecoder<'a> {
             0..=23 => ai as u64,
             24 => self.read_u8()? as u64,
             25 => {
-                if self.pos + 2 > self.buf.len() { return Err(DecodeError::Eof); }
+                if self.pos + 2 > self.buf.len() {
+                    return Err(DecodeError::Eof);
+                }
                 let v = u16::from_be_bytes([self.buf[self.pos], self.buf[self.pos + 1]]);
                 self.pos += 2;
                 v as u64
             }
             26 => {
-                if self.pos + 4 > self.buf.len() { return Err(DecodeError::Eof); }
+                if self.pos + 4 > self.buf.len() {
+                    return Err(DecodeError::Eof);
+                }
                 let v = u32::from_be_bytes([
-                    self.buf[self.pos], self.buf[self.pos + 1],
-                    self.buf[self.pos + 2], self.buf[self.pos + 3],
+                    self.buf[self.pos],
+                    self.buf[self.pos + 1],
+                    self.buf[self.pos + 2],
+                    self.buf[self.pos + 3],
                 ]);
                 self.pos += 4;
                 v as u64
             }
             27 => {
-                if self.pos + 8 > self.buf.len() { return Err(DecodeError::Eof); }
+                if self.pos + 8 > self.buf.len() {
+                    return Err(DecodeError::Eof);
+                }
                 let v = u64::from_be_bytes([
-                    self.buf[self.pos], self.buf[self.pos + 1],
-                    self.buf[self.pos + 2], self.buf[self.pos + 3],
-                    self.buf[self.pos + 4], self.buf[self.pos + 5],
-                    self.buf[self.pos + 6], self.buf[self.pos + 7],
+                    self.buf[self.pos],
+                    self.buf[self.pos + 1],
+                    self.buf[self.pos + 2],
+                    self.buf[self.pos + 3],
+                    self.buf[self.pos + 4],
+                    self.buf[self.pos + 5],
+                    self.buf[self.pos + 6],
+                    self.buf[self.pos + 7],
                 ]);
                 self.pos += 8;
                 v
             }
-            _ => return Err(DecodeError::InvalidCbor(format!("invalid additional info {ai}"))),
+            _ => {
+                return Err(DecodeError::InvalidCbor(format!(
+                    "invalid additional info {ai}"
+                )))
+            }
         };
         Ok((major, len))
     }
 
     fn uint(&mut self) -> Result<u64, DecodeError> {
         let (major, len) = self.read_type_and_len()?;
-        if major != 0 { return Err(DecodeError::UnexpectedType("expected uint")); }
+        if major != 0 {
+            return Err(DecodeError::UnexpectedType("expected uint"));
+        }
         Ok(len)
     }
 
@@ -1126,9 +1550,13 @@ impl<'a> CborDecoder<'a> {
 
     fn str(&mut self) -> Result<String, DecodeError> {
         let (major, len) = self.read_type_and_len()?;
-        if major != 3 { return Err(DecodeError::UnexpectedType("expected string")); }
+        if major != 3 {
+            return Err(DecodeError::UnexpectedType("expected string"));
+        }
         let len = len as usize;
-        if self.pos + len > self.buf.len() { return Err(DecodeError::Eof); }
+        if self.pos + len > self.buf.len() {
+            return Err(DecodeError::Eof);
+        }
         let s = std::str::from_utf8(&self.buf[self.pos..self.pos + len])
             .map_err(|e| DecodeError::InvalidCbor(format!("invalid UTF-8: {e}")))?;
         self.pos += len;
@@ -1146,7 +1574,11 @@ impl<'a> CborDecoder<'a> {
 
     fn null(&mut self) -> Result<(), DecodeError> {
         let b = self.read_u8()?;
-        if b == 0xF6 { Ok(()) } else { Err(DecodeError::UnexpectedType("expected null")) }
+        if b == 0xF6 {
+            Ok(())
+        } else {
+            Err(DecodeError::UnexpectedType("expected null"))
+        }
     }
 
     fn is_null(&self) -> Result<bool, DecodeError> {
@@ -1155,19 +1587,25 @@ impl<'a> CborDecoder<'a> {
 
     fn array(&mut self) -> Result<u64, DecodeError> {
         let (major, len) = self.read_type_and_len()?;
-        if major != 4 { return Err(DecodeError::UnexpectedType("expected array")); }
+        if major != 4 {
+            return Err(DecodeError::UnexpectedType("expected array"));
+        }
         Ok(len)
     }
 
     fn map(&mut self) -> Result<u64, DecodeError> {
         let (major, len) = self.read_type_and_len()?;
-        if major != 5 { return Err(DecodeError::UnexpectedType("expected map")); }
+        if major != 5 {
+            return Err(DecodeError::UnexpectedType("expected map"));
+        }
         Ok(len)
     }
 
     fn tag(&mut self) -> Result<u64, DecodeError> {
         let (major, len) = self.read_type_and_len()?;
-        if major != 6 { return Err(DecodeError::UnexpectedType("expected tag")); }
+        if major != 6 {
+            return Err(DecodeError::UnexpectedType("expected tag"));
+        }
         Ok(len)
     }
 
@@ -1175,22 +1613,53 @@ impl<'a> CborDecoder<'a> {
         let (major, len) = self.read_type_and_len()?;
         match major {
             0 | 1 | 6 => Ok(()),
-            2 => { self.pos += len as usize; if self.pos > self.buf.len() { Err(DecodeError::Eof) } else { Ok(()) } }
-            3 => { self.pos += len as usize; if self.pos > self.buf.len() { Err(DecodeError::Eof) } else { Ok(()) } }
-            4 => { for _ in 0..len { self.skip()?; } Ok(()) }
-            5 => { for _ in 0..len { self.skip()?; self.skip()?; } Ok(()) }
+            2 => {
+                self.pos += len as usize;
+                if self.pos > self.buf.len() {
+                    Err(DecodeError::Eof)
+                } else {
+                    Ok(())
+                }
+            }
+            3 => {
+                self.pos += len as usize;
+                if self.pos > self.buf.len() {
+                    Err(DecodeError::Eof)
+                } else {
+                    Ok(())
+                }
+            }
+            4 => {
+                for _ in 0..len {
+                    self.skip()?;
+                }
+                Ok(())
+            }
+            5 => {
+                for _ in 0..len {
+                    self.skip()?;
+                    self.skip()?;
+                }
+                Ok(())
+            }
             7 => Ok(()),
-            _ => Err(DecodeError::InvalidCbor(format!("unknown major type {major}"))),
+            _ => Err(DecodeError::InvalidCbor(format!(
+                "unknown major type {major}"
+            ))),
         }
     }
 }
 
 fn decode_span(dec: &mut CborDecoder) -> Result<Span, DecodeError> {
     let n = dec.array()?;
-    if n < 2 { return Err(DecodeError::InvalidCbor("span needs 2 elements".into())); }
+    if n < 2 {
+        return Err(DecodeError::InvalidCbor("span needs 2 elements".into()));
+    }
     let start = dec.uint()? as u32;
     let end = dec.uint()? as u32;
-    for _ in 2..n { dec.skip()?; }
+    for _ in 2..n {
+        dec.skip()?;
+    }
     Ok(Span::new(start, end))
 }
 
@@ -1212,7 +1681,9 @@ fn decode_expr(dec: &mut CborDecoder) -> Result<Expr, DecodeError> {
 fn decode_expr_kind(dec: &mut CborDecoder) -> Result<ExprKind, DecodeError> {
     // ExprKind is encoded as a single-key map where the key is the variant name.
     let map_len = dec.map()?;
-    if map_len < 1 { return Err(DecodeError::InvalidCbor("empty ExprKind map".into())); }
+    if map_len < 1 {
+        return Err(DecodeError::InvalidCbor("empty ExprKind map".into()));
+    }
     let variant = dec.str()?;
     let kind = match variant.as_str() {
         "Literal" => ExprKind::Literal(decode_literal(dec)?),
@@ -1222,8 +1693,14 @@ fn decode_expr_kind(dec: &mut CborDecoder) -> Result<ExprKind, DecodeError> {
         "Blank" => ExprKind::Blank(dec.str()?),
         "Binary" => {
             let mut op = BinOp::Add;
-            let mut left = Expr { span: Span::new(0, 0), kind: ExprKind::Literal(Literal::Null) };
-            let mut right = Expr { span: Span::new(0, 0), kind: ExprKind::Literal(Literal::Null) };
+            let mut left = Expr {
+                span: Span::new(0, 0),
+                kind: ExprKind::Literal(Literal::Null),
+            };
+            let mut right = Expr {
+                span: Span::new(0, 0),
+                kind: ExprKind::Literal(Literal::Null),
+            };
             for _ in 0..map_len - 1 {
                 let k = dec.str()?;
                 match k.as_str() {
@@ -1233,11 +1710,18 @@ fn decode_expr_kind(dec: &mut CborDecoder) -> Result<ExprKind, DecodeError> {
                     _ => dec.skip()?,
                 }
             }
-            ExprKind::Binary { op, left: Box::new(left), right: Box::new(right) }
+            ExprKind::Binary {
+                op,
+                left: Box::new(left),
+                right: Box::new(right),
+            }
         }
         "Unary" => {
             let mut op = UnOp::Not;
-            let mut expr = Expr { span: Span::new(0, 0), kind: ExprKind::Literal(Literal::Null) };
+            let mut expr = Expr {
+                span: Span::new(0, 0),
+                kind: ExprKind::Literal(Literal::Null),
+            };
             for _ in 0..map_len - 1 {
                 let k = dec.str()?;
                 match k.as_str() {
@@ -1246,15 +1730,23 @@ fn decode_expr_kind(dec: &mut CborDecoder) -> Result<ExprKind, DecodeError> {
                     _ => dec.skip()?,
                 }
             }
-            ExprKind::Unary { op, expr: Box::new(expr) }
+            ExprKind::Unary {
+                op,
+                expr: Box::new(expr),
+            }
         }
         "Await" => {
             let e = decode_expr(dec)?;
-            for _ in 1..map_len { dec.skip()?; }
+            for _ in 1..map_len {
+                dec.skip()?;
+            }
             ExprKind::Await(Box::new(e))
         }
         "Member" => {
-            let mut recv = Expr { span: Span::new(0, 0), kind: ExprKind::Literal(Literal::Null) };
+            let mut recv = Expr {
+                span: Span::new(0, 0),
+                kind: ExprKind::Literal(Literal::Null),
+            };
             let mut name = String::new();
             for _ in 0..map_len - 1 {
                 let k = dec.str()?;
@@ -1264,10 +1756,16 @@ fn decode_expr_kind(dec: &mut CborDecoder) -> Result<ExprKind, DecodeError> {
                     _ => dec.skip()?,
                 }
             }
-            ExprKind::Member { recv: Box::new(recv), name }
+            ExprKind::Member {
+                recv: Box::new(recv),
+                name,
+            }
         }
         "Call" => {
-            let mut callee = Expr { span: Span::new(0, 0), kind: ExprKind::Literal(Literal::Null) };
+            let mut callee = Expr {
+                span: Span::new(0, 0),
+                kind: ExprKind::Literal(Literal::Null),
+            };
             let mut args = Vec::new();
             for _ in 0..map_len - 1 {
                 let k = dec.str()?;
@@ -1277,11 +1775,20 @@ fn decode_expr_kind(dec: &mut CborDecoder) -> Result<ExprKind, DecodeError> {
                     _ => dec.skip()?,
                 }
             }
-            ExprKind::Call { callee: Box::new(callee), args }
+            ExprKind::Call {
+                callee: Box::new(callee),
+                args,
+            }
         }
         "Index" => {
-            let mut recv = Expr { span: Span::new(0, 0), kind: ExprKind::Literal(Literal::Null) };
-            let mut index = Expr { span: Span::new(0, 0), kind: ExprKind::Literal(Literal::Null) };
+            let mut recv = Expr {
+                span: Span::new(0, 0),
+                kind: ExprKind::Literal(Literal::Null),
+            };
+            let mut index = Expr {
+                span: Span::new(0, 0),
+                kind: ExprKind::Literal(Literal::Null),
+            };
             for _ in 0..map_len - 1 {
                 let k = dec.str()?;
                 match k.as_str() {
@@ -1290,26 +1797,40 @@ fn decode_expr_kind(dec: &mut CborDecoder) -> Result<ExprKind, DecodeError> {
                     _ => dec.skip()?,
                 }
             }
-            ExprKind::Index { recv: Box::new(recv), index: Box::new(index) }
+            ExprKind::Index {
+                recv: Box::new(recv),
+                index: Box::new(index),
+            }
         }
         "Try" => {
             let e = decode_expr(dec)?;
-            for _ in 1..map_len { dec.skip()?; }
+            for _ in 1..map_len {
+                dec.skip()?;
+            }
             ExprKind::Try(Box::new(e))
         }
         "List" => {
             let n = dec.array()?;
             let mut es = Vec::with_capacity(n as usize);
-            for _ in 0..n { es.push(decode_expr(dec)?); }
+            for _ in 0..n {
+                es.push(decode_expr(dec)?);
+            }
             ExprKind::List(es)
         }
-        "Record" => {
-            ExprKind::Record(decode_named_args(dec)?)
-        }
+        "Record" => ExprKind::Record(decode_named_args(dec)?),
         "Triple" => {
-            let mut subject = Expr { span: Span::new(0, 0), kind: ExprKind::Literal(Literal::Null) };
-            let mut predicate = Expr { span: Span::new(0, 0), kind: ExprKind::Literal(Literal::Null) };
-            let mut object = Expr { span: Span::new(0, 0), kind: ExprKind::Literal(Literal::Null) };
+            let mut subject = Expr {
+                span: Span::new(0, 0),
+                kind: ExprKind::Literal(Literal::Null),
+            };
+            let mut predicate = Expr {
+                span: Span::new(0, 0),
+                kind: ExprKind::Literal(Literal::Null),
+            };
+            let mut object = Expr {
+                span: Span::new(0, 0),
+                kind: ExprKind::Literal(Literal::Null),
+            };
             for _ in 0..map_len - 1 {
                 let k = dec.str()?;
                 match k.as_str() {
@@ -1319,13 +1840,29 @@ fn decode_expr_kind(dec: &mut CborDecoder) -> Result<ExprKind, DecodeError> {
                     _ => dec.skip()?,
                 }
             }
-            ExprKind::Triple { subject: Box::new(subject), predicate: Box::new(predicate), object: Box::new(object) }
+            ExprKind::Triple {
+                subject: Box::new(subject),
+                predicate: Box::new(predicate),
+                object: Box::new(object),
+            }
         }
         "Reified" => {
-            let mut subject = Expr { span: Span::new(0, 0), kind: ExprKind::Literal(Literal::Null) };
-            let mut predicate = Expr { span: Span::new(0, 0), kind: ExprKind::Literal(Literal::Null) };
-            let mut object = Expr { span: Span::new(0, 0), kind: ExprKind::Literal(Literal::Null) };
-            let mut reifier = Expr { span: Span::new(0, 0), kind: ExprKind::Literal(Literal::Null) };
+            let mut subject = Expr {
+                span: Span::new(0, 0),
+                kind: ExprKind::Literal(Literal::Null),
+            };
+            let mut predicate = Expr {
+                span: Span::new(0, 0),
+                kind: ExprKind::Literal(Literal::Null),
+            };
+            let mut object = Expr {
+                span: Span::new(0, 0),
+                kind: ExprKind::Literal(Literal::Null),
+            };
+            let mut reifier = Expr {
+                span: Span::new(0, 0),
+                kind: ExprKind::Literal(Literal::Null),
+            };
             for _ in 0..map_len - 1 {
                 let k = dec.str()?;
                 match k.as_str() {
@@ -1336,17 +1873,26 @@ fn decode_expr_kind(dec: &mut CborDecoder) -> Result<ExprKind, DecodeError> {
                     _ => dec.skip()?,
                 }
             }
-            ExprKind::Reified { subject: Box::new(subject), predicate: Box::new(predicate), object: Box::new(object), reifier: Box::new(reifier) }
+            ExprKind::Reified {
+                subject: Box::new(subject),
+                predicate: Box::new(predicate),
+                object: Box::new(object),
+                reifier: Box::new(reifier),
+            }
         }
         "prefix" => {
             // Prefixed(prefix, local)
             let prefix = dec.str()?;
             let local = dec.str()?;
-            for _ in 1..map_len { dec.skip()?; }
+            for _ in 1..map_len {
+                dec.skip()?;
+            }
             ExprKind::Prefixed(prefix, local)
         }
         _ => {
-            for _ in 0..map_len - 1 { dec.skip()?; }
+            for _ in 0..map_len - 1 {
+                dec.skip()?;
+            }
             ExprKind::Ident(variant)
         }
     };
@@ -1359,21 +1905,29 @@ fn decode_args(dec: &mut CborDecoder) -> Result<Vec<Arg>, DecodeError> {
     let mut out = Vec::with_capacity(n as usize);
     for _ in 0..n {
         let map_len = dec.map()?;
-        if map_len < 1 { return Err(DecodeError::InvalidCbor("empty Arg map".into())); }
+        if map_len < 1 {
+            return Err(DecodeError::InvalidCbor("empty Arg map".into()));
+        }
         let key = dec.str()?;
         match key.as_str() {
             "Pos" => {
                 let e = decode_expr(dec)?;
-                for _ in 1..map_len { dec.skip()?; }
+                for _ in 1..map_len {
+                    dec.skip()?;
+                }
                 out.push(Arg::Pos(e));
             }
             "Named" => {
                 let na = decode_named_arg(dec)?;
-                for _ in 1..map_len { dec.skip()?; }
+                for _ in 1..map_len {
+                    dec.skip()?;
+                }
                 out.push(Arg::Named(na));
             }
             _ => {
-                for _ in 0..map_len - 1 { dec.skip()?; }
+                for _ in 0..map_len - 1 {
+                    dec.skip()?;
+                }
             }
         }
     }
@@ -1383,7 +1937,10 @@ fn decode_args(dec: &mut CborDecoder) -> Result<Vec<Arg>, DecodeError> {
 fn decode_named_arg(dec: &mut CborDecoder) -> Result<NamedArg, DecodeError> {
     let map_len = dec.map()?;
     let mut name = String::new();
-    let mut value = Expr { span: Span::new(0, 0), kind: ExprKind::Literal(Literal::Null) };
+    let mut value = Expr {
+        span: Span::new(0, 0),
+        kind: ExprKind::Literal(Literal::Null),
+    };
     let mut span = Span::new(0, 0);
     for _ in 0..map_len {
         let key = dec.str()?;
@@ -1400,12 +1957,18 @@ fn decode_named_arg(dec: &mut CborDecoder) -> Result<NamedArg, DecodeError> {
 fn decode_binop(dec: &mut CborDecoder) -> Result<BinOp, DecodeError> {
     let s = dec.str()?;
     match s.as_str() {
-        "Or" => Ok(BinOp::Or), "And" => Ok(BinOp::And),
-        "Eq" => Ok(BinOp::Eq), "Ne" => Ok(BinOp::Ne),
-        "Lt" => Ok(BinOp::Lt), "Le" => Ok(BinOp::Le),
-        "Gt" => Ok(BinOp::Gt), "Ge" => Ok(BinOp::Ge),
-        "Add" => Ok(BinOp::Add), "Sub" => Ok(BinOp::Sub),
-        "Mul" => Ok(BinOp::Mul), "Div" => Ok(BinOp::Div),
+        "Or" => Ok(BinOp::Or),
+        "And" => Ok(BinOp::And),
+        "Eq" => Ok(BinOp::Eq),
+        "Ne" => Ok(BinOp::Ne),
+        "Lt" => Ok(BinOp::Lt),
+        "Le" => Ok(BinOp::Le),
+        "Gt" => Ok(BinOp::Gt),
+        "Ge" => Ok(BinOp::Ge),
+        "Add" => Ok(BinOp::Add),
+        "Sub" => Ok(BinOp::Sub),
+        "Mul" => Ok(BinOp::Mul),
+        "Div" => Ok(BinOp::Div),
         "Rem" => Ok(BinOp::Rem),
         _ => Err(DecodeError::UnexpectedType("BinOp")),
     }
@@ -1414,7 +1977,9 @@ fn decode_binop(dec: &mut CborDecoder) -> Result<BinOp, DecodeError> {
 fn decode_unop(dec: &mut CborDecoder) -> Result<UnOp, DecodeError> {
     let s = dec.str()?;
     match s.as_str() {
-        "Not" => Ok(UnOp::Not), "Neg" => Ok(UnOp::Neg), "Plus" => Ok(UnOp::Plus),
+        "Not" => Ok(UnOp::Not),
+        "Neg" => Ok(UnOp::Neg),
+        "Plus" => Ok(UnOp::Plus),
         _ => Err(DecodeError::UnexpectedType("UnOp")),
     }
 }
@@ -1464,7 +2029,11 @@ fn decode_params(dec: &mut CborDecoder) -> Result<Vec<Param>, DecodeError> {
     for _ in 0..n {
         let map_len = dec.map()?;
         let mut name = String::new();
-        let mut ty = TypeExpr { span: Span::new(0, 0), name: String::new(), args: Vec::new() };
+        let mut ty = TypeExpr {
+            span: Span::new(0, 0),
+            name: String::new(),
+            args: Vec::new(),
+        };
         let mut span = Span::new(0, 0);
         for _ in 0..map_len {
             let key = dec.str()?;
@@ -1492,7 +2061,9 @@ fn decode_type_expr(dec: &mut CborDecoder) -> Result<TypeExpr, DecodeError> {
             "args" => {
                 let n = dec.array()?;
                 args = Vec::with_capacity(n as usize);
-                for _ in 0..n { args.push(decode_type_expr(dec)?); }
+                for _ in 0..n {
+                    args.push(decode_type_expr(dec)?);
+                }
             }
             "span" => span = decode_span(dec)?,
             _ => dec.skip()?,
@@ -1511,7 +2082,9 @@ fn decode_block(dec: &mut CborDecoder) -> Result<Block, DecodeError> {
             "stmts" => {
                 let n = dec.array()?;
                 stmts = Vec::with_capacity(n as usize);
-                for _ in 0..n { stmts.push(decode_stmt(dec)?); }
+                for _ in 0..n {
+                    stmts.push(decode_stmt(dec)?);
+                }
             }
             "span" => span = decode_span(dec)?,
             _ => dec.skip()?,
@@ -1522,7 +2095,9 @@ fn decode_block(dec: &mut CborDecoder) -> Result<Block, DecodeError> {
 
 fn decode_stmt(dec: &mut CborDecoder) -> Result<Stmt, DecodeError> {
     let map_len = dec.map()?;
-    if map_len < 1 { return Err(DecodeError::InvalidCbor("empty Stmt map".into())); }
+    if map_len < 1 {
+        return Err(DecodeError::InvalidCbor("empty Stmt map".into()));
+    }
     let mut stmt_type = String::new();
     // Single-pass decode: buffer field values as StmtVal, construct at end.
     let mut fields: Vec<(String, StmtVal)> = Vec::with_capacity(map_len as usize);
@@ -1549,11 +2124,23 @@ fn decode_stmt(dec: &mut CborDecoder) -> Result<Stmt, DecodeError> {
                     _ => {}
                 }
             }
-            Ok(Stmt::Let { span: Span::new(0, 0), mutable, name, ty: None, value })
+            Ok(Stmt::Let {
+                span: Span::new(0, 0),
+                mutable,
+                name,
+                ty: None,
+                value,
+            })
         }
         "Assign" => {
-            let mut target = Expr { span: Span::new(0, 0), kind: ExprKind::Literal(Literal::Null) };
-            let mut value = Expr { span: Span::new(0, 0), kind: ExprKind::Literal(Literal::Null) };
+            let mut target = Expr {
+                span: Span::new(0, 0),
+                kind: ExprKind::Literal(Literal::Null),
+            };
+            let mut value = Expr {
+                span: Span::new(0, 0),
+                kind: ExprKind::Literal(Literal::Null),
+            };
             for (k, v) in fields {
                 match (k.as_str(), v) {
                     ("target", StmtVal::Expr(e)) => target = e,
@@ -1561,11 +2148,21 @@ fn decode_stmt(dec: &mut CborDecoder) -> Result<Stmt, DecodeError> {
                     _ => {}
                 }
             }
-            Ok(Stmt::Assign { span: Span::new(0, 0), target, value })
+            Ok(Stmt::Assign {
+                span: Span::new(0, 0),
+                target,
+                value,
+            })
         }
         "If" => {
-            let mut cond = Expr { span: Span::new(0, 0), kind: ExprKind::Literal(Literal::Null) };
-            let mut then_block = Block { span: Span::new(0, 0), stmts: Vec::new() };
+            let mut cond = Expr {
+                span: Span::new(0, 0),
+                kind: ExprKind::Literal(Literal::Null),
+            };
+            let mut then_block = Block {
+                span: Span::new(0, 0),
+                stmts: Vec::new(),
+            };
             let mut else_block = None;
             for (k, v) in fields {
                 match (k.as_str(), v) {
@@ -1575,12 +2172,23 @@ fn decode_stmt(dec: &mut CborDecoder) -> Result<Stmt, DecodeError> {
                     _ => {}
                 }
             }
-            Ok(Stmt::If { span: Span::new(0, 0), cond, then_block, else_block })
+            Ok(Stmt::If {
+                span: Span::new(0, 0),
+                cond,
+                then_block,
+                else_block,
+            })
         }
         "For" => {
             let mut name = String::new();
-            let mut iter = Expr { span: Span::new(0, 0), kind: ExprKind::Literal(Literal::Null) };
-            let mut body = Block { span: Span::new(0, 0), stmts: Vec::new() };
+            let mut iter = Expr {
+                span: Span::new(0, 0),
+                kind: ExprKind::Literal(Literal::Null),
+            };
+            let mut body = Block {
+                span: Span::new(0, 0),
+                stmts: Vec::new(),
+            };
             for (k, v) in fields {
                 match (k.as_str(), v) {
                     ("name", StmtVal::Str(s)) => name = s,
@@ -1589,11 +2197,22 @@ fn decode_stmt(dec: &mut CborDecoder) -> Result<Stmt, DecodeError> {
                     _ => {}
                 }
             }
-            Ok(Stmt::For { span: Span::new(0, 0), name, iter, body })
+            Ok(Stmt::For {
+                span: Span::new(0, 0),
+                name,
+                iter,
+                body,
+            })
         }
         "While" => {
-            let mut cond = Expr { span: Span::new(0, 0), kind: ExprKind::Literal(Literal::Null) };
-            let mut body = Block { span: Span::new(0, 0), stmts: Vec::new() };
+            let mut cond = Expr {
+                span: Span::new(0, 0),
+                kind: ExprKind::Literal(Literal::Null),
+            };
+            let mut body = Block {
+                span: Span::new(0, 0),
+                stmts: Vec::new(),
+            };
             for (k, v) in fields {
                 match (k.as_str(), v) {
                     ("cond", StmtVal::Expr(e)) => cond = e,
@@ -1601,10 +2220,17 @@ fn decode_stmt(dec: &mut CborDecoder) -> Result<Stmt, DecodeError> {
                     _ => {}
                 }
             }
-            Ok(Stmt::While { span: Span::new(0, 0), cond, body })
+            Ok(Stmt::While {
+                span: Span::new(0, 0),
+                cond,
+                body,
+            })
         }
         "Match" => {
-            let mut scrutinee = Expr { span: Span::new(0, 0), kind: ExprKind::Literal(Literal::Null) };
+            let mut scrutinee = Expr {
+                span: Span::new(0, 0),
+                kind: ExprKind::Literal(Literal::Null),
+            };
             let mut arms = Vec::new();
             for (k, v) in fields {
                 match (k.as_str(), v) {
@@ -1613,29 +2239,46 @@ fn decode_stmt(dec: &mut CborDecoder) -> Result<Stmt, DecodeError> {
                     _ => {}
                 }
             }
-            Ok(Stmt::Match { span: Span::new(0, 0), scrutinee, arms })
+            Ok(Stmt::Match {
+                span: Span::new(0, 0),
+                scrutinee,
+                arms,
+            })
         }
         "Return" => {
             let mut value = None;
             for (k, v) in fields {
                 if k == "value" {
-                    if let StmtVal::Expr(e) = v { value = Some(e); }
+                    if let StmtVal::Expr(e) = v {
+                        value = Some(e);
+                    }
                 }
             }
-            Ok(Stmt::Return { span: Span::new(0, 0), value })
+            Ok(Stmt::Return {
+                span: Span::new(0, 0),
+                value,
+            })
         }
         "Yield" => {
             let mut value = None;
             for (k, v) in fields {
                 if k == "value" {
-                    if let StmtVal::Expr(e) = v { value = Some(e); }
+                    if let StmtVal::Expr(e) = v {
+                        value = Some(e);
+                    }
                 }
             }
-            Ok(Stmt::Yield { span: Span::new(0, 0), value })
+            Ok(Stmt::Yield {
+                span: Span::new(0, 0),
+                value,
+            })
         }
         "Transaction" => {
             let mut args = Vec::new();
-            let mut body = Block { span: Span::new(0, 0), stmts: Vec::new() };
+            let mut body = Block {
+                span: Span::new(0, 0),
+                stmts: Vec::new(),
+            };
             for (k, v) in fields {
                 match (k.as_str(), v) {
                     ("args", StmtVal::NamedArgs(na)) => args = na,
@@ -1643,25 +2286,45 @@ fn decode_stmt(dec: &mut CborDecoder) -> Result<Stmt, DecodeError> {
                     _ => {}
                 }
             }
-            Ok(Stmt::Transaction { span: Span::new(0, 0), args, body })
+            Ok(Stmt::Transaction {
+                span: Span::new(0, 0),
+                args,
+                body,
+            })
         }
         "Effect" => {
-            let mut expr = Expr { span: Span::new(0, 0), kind: ExprKind::Literal(Literal::Null) };
+            let mut expr = Expr {
+                span: Span::new(0, 0),
+                kind: ExprKind::Literal(Literal::Null),
+            };
             for (k, v) in fields {
                 if k == "expr" {
-                    if let StmtVal::Expr(e) = v { expr = e; }
+                    if let StmtVal::Expr(e) = v {
+                        expr = e;
+                    }
                 }
             }
-            Ok(Stmt::Effect { span: Span::new(0, 0), expr })
+            Ok(Stmt::Effect {
+                span: Span::new(0, 0),
+                expr,
+            })
         }
         "Expr" => {
-            let mut expr = Expr { span: Span::new(0, 0), kind: ExprKind::Literal(Literal::Null) };
+            let mut expr = Expr {
+                span: Span::new(0, 0),
+                kind: ExprKind::Literal(Literal::Null),
+            };
             for (k, v) in fields {
                 if k == "expr" {
-                    if let StmtVal::Expr(e) = v { expr = e; }
+                    if let StmtVal::Expr(e) = v {
+                        expr = e;
+                    }
                 }
             }
-            Ok(Stmt::Expr { span: Span::new(0, 0), expr })
+            Ok(Stmt::Expr {
+                span: Span::new(0, 0),
+                expr,
+            })
         }
         "Block" => {
             for (k, v) in fields {
@@ -1693,13 +2356,27 @@ fn decode_stmt_field(key: &str, dec: &mut CborDecoder) -> Result<StmtVal, Decode
         "name" => Ok(StmtVal::Str(dec.str()?)),
         "mutable" => Ok(StmtVal::Bool(dec.bool()?)),
         "cond" | "target" | "iter" | "scrutinee" | "expr" | "value" => {
-            if dec.is_null()? { dec.skip()?; Ok(StmtVal::Expr(Expr { span: Span::new(0, 0), kind: ExprKind::Literal(Literal::Null) })) }
-            else { Ok(StmtVal::Expr(decode_expr(dec)?)) }
+            if dec.is_null()? {
+                dec.skip()?;
+                Ok(StmtVal::Expr(Expr {
+                    span: Span::new(0, 0),
+                    kind: ExprKind::Literal(Literal::Null),
+                }))
+            } else {
+                Ok(StmtVal::Expr(decode_expr(dec)?))
+            }
         }
         "then" | "body" | "block" => Ok(StmtVal::Block(decode_block(dec)?)),
         "else" => {
-            if dec.is_null()? { dec.skip()?; Ok(StmtVal::Expr(Expr { span: Span::new(0, 0), kind: ExprKind::Literal(Literal::Null) })) }
-            else { Ok(StmtVal::Stmt(decode_stmt(dec)?)) }
+            if dec.is_null()? {
+                dec.skip()?;
+                Ok(StmtVal::Expr(Expr {
+                    span: Span::new(0, 0),
+                    kind: ExprKind::Literal(Literal::Null),
+                }))
+            } else {
+                Ok(StmtVal::Stmt(decode_stmt(dec)?))
+            }
         }
         "args" => Ok(StmtVal::NamedArgs(decode_named_args(dec)?)),
         "arms" => {
@@ -1708,27 +2385,41 @@ fn decode_stmt_field(key: &str, dec: &mut CborDecoder) -> Result<StmtVal, Decode
             for _ in 0..n {
                 let m = dec.map()?;
                 let mut pattern = Pattern::Wildcard;
-                let mut body = ArmBody::Expr(Expr { span: Span::new(0, 0), kind: ExprKind::Literal(Literal::Null) });
+                let mut body = ArmBody::Expr(Expr {
+                    span: Span::new(0, 0),
+                    kind: ExprKind::Literal(Literal::Null),
+                });
                 for _ in 0..m {
                     let k = dec.str()?;
                     match k.as_str() {
                         "pattern" => pattern = decode_pattern(dec)?,
                         "body" => body = decode_arm_body(dec)?,
-                        "span" => { let _ = decode_span(dec)?; }
+                        "span" => {
+                            let _ = decode_span(dec)?;
+                        }
                         _ => dec.skip()?,
                     }
                 }
-                arms.push(MatchArm { span: Span::new(0, 0), pattern, body });
+                arms.push(MatchArm {
+                    span: Span::new(0, 0),
+                    pattern,
+                    body,
+                });
             }
             Ok(StmtVal::Arms(arms))
         }
-        _ => { dec.skip()?; Ok(StmtVal::Str(String::new())) }
+        _ => {
+            dec.skip()?;
+            Ok(StmtVal::Str(String::new()))
+        }
     }
 }
 
 fn decode_pattern(dec: &mut CborDecoder) -> Result<Pattern, DecodeError> {
     let map_len = dec.map()?;
-    if map_len < 1 { return Err(DecodeError::InvalidCbor("empty Pattern map".into())); }
+    if map_len < 1 {
+        return Err(DecodeError::InvalidCbor("empty Pattern map".into()));
+    }
     let key = dec.str()?;
     let pat = match key.as_str() {
         "Wildcard" => Pattern::Wildcard,
@@ -1755,24 +2446,34 @@ fn decode_pattern(dec: &mut CborDecoder) -> Result<Pattern, DecodeError> {
                     _ => dec.skip()?,
                 }
             }
-            return Ok(Pattern::Variant { enum_name, variant_name, args });
+            return Ok(Pattern::Variant {
+                enum_name,
+                variant_name,
+                args,
+            });
         }
         _ => return Err(DecodeError::UnexpectedType("Pattern")),
     };
-    for _ in 1..map_len { dec.skip()?; }
+    for _ in 1..map_len {
+        dec.skip()?;
+    }
     Ok(pat)
 }
 
 fn decode_arm_body(dec: &mut CborDecoder) -> Result<ArmBody, DecodeError> {
     let map_len = dec.map()?;
-    if map_len < 1 { return Err(DecodeError::InvalidCbor("empty ArmBody map".into())); }
+    if map_len < 1 {
+        return Err(DecodeError::InvalidCbor("empty ArmBody map".into()));
+    }
     let key = dec.str()?;
     let body = match key.as_str() {
         "Block" => ArmBody::Block(decode_block(dec)?),
         "Expr" => ArmBody::Expr(decode_expr(dec)?),
         _ => return Err(DecodeError::UnexpectedType("ArmBody")),
     };
-    for _ in 1..map_len { dec.skip()?; }
+    for _ in 1..map_len {
+        dec.skip()?;
+    }
     Ok(body)
 }
 
@@ -1870,8 +2571,10 @@ mod tests {
     fn cbor_encoder_map() {
         let mut enc = CborEncoder::new();
         enc.map(2);
-        enc.str("a"); enc.uint(1);
-        enc.str("b"); enc.uint(2);
+        enc.str("a");
+        enc.uint(1);
+        enc.str("b");
+        enc.uint(2);
         let bytes = enc.finish();
         assert_eq!(bytes[0], (5 << 5) | 2); // map, len 2
     }
@@ -2023,7 +2726,11 @@ effect fn go() {
         if let Item::Function(f) = &decoded.items[0] {
             assert_eq!(f.body.stmts.len(), 1);
             match &f.body.stmts[0] {
-                Stmt::If { then_block, else_block, .. } => {
+                Stmt::If {
+                    then_block,
+                    else_block,
+                    ..
+                } => {
                     assert_eq!(then_block.stmts.len(), 1);
                     assert!(else_block.is_some());
                 }

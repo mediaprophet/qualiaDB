@@ -408,11 +408,7 @@ impl ReflectionLoop {
 
     /// Actually evaluate the source against the dry-run host.
     /// Returns `Some(diagnostic)` if evaluation fails, `None` on success.
-    fn dry_run_eval<H: crate::bind::Host>(
-        &self,
-        source: &str,
-        host: &mut H,
-    ) -> Option<Diagnostic> {
+    fn dry_run_eval<H: crate::bind::Host>(&self, source: &str, host: &mut H) -> Option<Diagnostic> {
         let trimmed = source.trim_start_matches('\u{feff}').trim_start();
         let mut env = crate::eval::Env::default();
         let mut engine = crate::eval::Engine::new(host, crate::budget::Budget::default());
@@ -436,14 +432,12 @@ impl ReflectionLoop {
                         if let crate::ast::Item::Function(func) = item {
                             // Only test functions that take no arguments.
                             if func.params.is_empty() {
-                                let mut h2 =
-                                    crate::eval::Engine::new(host, crate::budget::Budget::default());
-                                let _ = h2.call_function(
-                                    &program,
-                                    &func.name,
-                                    Vec::new(),
-                                    &mut env,
+                                let mut h2 = crate::eval::Engine::new(
+                                    host,
+                                    crate::budget::Budget::default(),
                                 );
+                                let _ =
+                                    h2.call_function(&program, &func.name, Vec::new(), &mut env);
                             }
                         }
                     }
@@ -482,7 +476,11 @@ impl ReflectionLoop {
         match stmt {
             Stmt::Expr { expr, .. } => self.check_expr_for_unbounded_loops(expr),
             Stmt::Block(block) => self.check_stmts_for_unbounded_loops(&block.stmts),
-            Stmt::If { then_block, else_block, .. } => {
+            Stmt::If {
+                then_block,
+                else_block,
+                ..
+            } => {
                 if let Some(d) = self.check_stmts_for_unbounded_loops(&then_block.stmts) {
                     return Some(d);
                 }
@@ -698,7 +696,11 @@ fn make() {
 }
 "#;
         let report2 = crate::diagnose::diagnose(fixed_src);
-        assert!(report2.valid, "fixed source should be valid: {:?}", report2.error);
+        assert!(
+            report2.valid,
+            "fixed source should be valid: {:?}",
+            report2.error
+        );
     }
 
     #[test]
@@ -711,7 +713,11 @@ fn make() {
         // Apply the fix: close the parenthesis.
         let fixed_src = "= math.max(0, 1)";
         let report2 = crate::diagnose::diagnose(fixed_src);
-        assert!(report2.valid, "fixed source should be valid: {:?}", report2.error);
+        assert!(
+            report2.valid,
+            "fixed source should be valid: {:?}",
+            report2.error
+        );
     }
 
     #[test]
@@ -724,7 +730,11 @@ fn make() {
         // Apply the fix: use a valid expression.
         let fixed_src = "= 42";
         let report2 = crate::diagnose::diagnose(fixed_src);
-        assert!(report2.valid, "fixed source should be valid: {:?}", report2.error);
+        assert!(
+            report2.valid,
+            "fixed source should be valid: {:?}",
+            report2.error
+        );
     }
 
     #[test]
@@ -736,31 +746,32 @@ fn make() {
         let cases: &[(&str, &str)] = &[
             // (bad, fixed)
             // 1. Quin overlay → quin.statement
-            ("fn bad() { return <<[ s p o g prov ]>>; }",
-             "fn ok() { return 42; }"),
+            (
+                "fn bad() { return <<[ s p o g prov ]>>; }",
+                "fn ok() { return 42; }",
+            ),
             // 2. Unclosed paren → closed
-            ("= math.max(",
-             "= math.max(0, 1)"),
+            ("= math.max(", "= math.max(0, 1)"),
             // 3. Illegal overlay in cell → valid expression
-            ("= <<[ s p o g prov ]>>",
-             "= 42"),
+            ("= <<[ s p o g prov ]>>", "= 42"),
             // 4. Missing closing brace → added
-            ("fn broken() { return 1;",
-             "fn fixed() { return 1; }"),
+            ("fn broken() { return 1;", "fn fixed() { return 1; }"),
             // 5. Invalid syntax → valid
-            ("= !!!",
-             "= 0"),
+            ("= !!!", "= 0"),
             // 6. Valid source — no fix needed
             ("= math.max(0, 1)", "= math.max(0, 1)"),
             // 7. Valid module — no fix needed
-            ("fn add(a: i32, b: i32) -> i32 { return a; }",
-             "fn add(a: i32, b: i32) -> i32 { return a; }"),
+            (
+                "fn add(a: i32, b: i32) -> i32 { return a; }",
+                "fn add(a: i32, b: i32) -> i32 { return a; }",
+            ),
             // 8. Broken function → fixed function
-            ("fn f() { return math.min(;",
-             "fn f() { return math.min(0, 1); }"),
+            (
+                "fn f() { return math.min(;",
+                "fn f() { return math.min(0, 1); }",
+            ),
             // 9. Cell with parse error → fixed
-            ("= 1 +",
-             "= 1 + 2"),
+            ("= 1 +", "= 1 + 2"),
             // 10. Valid cell — no fix needed
             ("= 42", "= 42"),
         ];
@@ -784,7 +795,9 @@ fn make() {
         assert!(
             rate > 0.95,
             "self-repair convergence rate should be > 95%, got {:.1}% ({}/{})",
-            rate * 100.0, resolved, total
+            rate * 100.0,
+            resolved,
+            total
         );
     }
 
@@ -826,7 +839,12 @@ fn make() {
 
     struct IsolationHost;
     impl crate::bind::Host for IsolationHost {
-        fn graph_query(&mut self, _args: &[Value], _take: u64, _span: Span) -> Result<Value, Diagnostic> {
+        fn graph_query(
+            &mut self,
+            _args: &[Value],
+            _take: u64,
+            _span: Span,
+        ) -> Result<Value, Diagnostic> {
             Ok(Value::Null)
         }
         fn graph_stage(&mut self, _term: &Value, _span: Span) -> Result<Value, Diagnostic> {
@@ -835,10 +853,20 @@ fn make() {
         fn graph_commit(&mut self, _span: Span) -> Result<Value, Diagnostic> {
             Ok(Value::Null)
         }
-        fn aura_validate(&mut self, _node: &Value, _shape: &Value, _span: Span) -> Result<Value, Diagnostic> {
+        fn aura_validate(
+            &mut self,
+            _node: &Value,
+            _shape: &Value,
+            _span: Span,
+        ) -> Result<Value, Diagnostic> {
             Ok(Value::Bool(true))
         }
-        fn pulse_publish(&mut self, _topic: &str, _payload: &Value, _span: Span) -> Result<Value, Diagnostic> {
+        fn pulse_publish(
+            &mut self,
+            _topic: &str,
+            _payload: &Value,
+            _span: Span,
+        ) -> Result<Value, Diagnostic> {
             Ok(Value::Null)
         }
         fn supports_isolation(&self) -> bool {
@@ -857,7 +885,9 @@ fn make() {
         assert!(s3.passed, "stage 3 should pass with isolation host");
         // No warning diagnostic when isolation is supported.
         assert!(
-            !s3.diagnostics.iter().any(|d| d.message.contains("isolation")),
+            !s3.diagnostics
+                .iter()
+                .any(|d| d.message.contains("isolation")),
             "should not have isolation warning: {:?}",
             s3.diagnostics
         );
@@ -875,7 +905,9 @@ fn make() {
         assert!(s3.passed, "stage 3 should still pass without isolation");
         // Should have a warning diagnostic about missing isolation.
         assert!(
-            s3.diagnostics.iter().any(|d| d.message.contains("isolation")),
+            s3.diagnostics
+                .iter()
+                .any(|d| d.message.contains("isolation")),
             "should have isolation warning: {:?}",
             s3.diagnostics
         );

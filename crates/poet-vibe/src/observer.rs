@@ -102,7 +102,10 @@ impl MeasurementContext {
         rec.insert("observer".into(), Value::String(self.observer.clone()));
         rec.insert("instrument".into(), Value::String(self.instrument.clone()));
         rec.insert("instant_secs".into(), Value::I64(self.instant_secs));
-        rec.insert("instant_nanos".into(), Value::U64(self.instant_nanos as u64));
+        rec.insert(
+            "instant_nanos".into(),
+            Value::U64(self.instant_nanos as u64),
+        );
         if let Some(ref f) = self.frame {
             rec.insert("frame".into(), Value::String(f.clone()));
         }
@@ -228,7 +231,10 @@ impl IdentifierView {
     pub fn to_value(&self) -> Value {
         let mut rec = BTreeMap::new();
         rec.insert("iri".into(), Value::String(self.iri.clone()));
-        rec.insert("modality".into(), Value::String(self.modality.as_str().into()));
+        rec.insert(
+            "modality".into(),
+            Value::String(self.modality.as_str().into()),
+        );
         rec.insert("content".into(), Value::String(self.content.clone()));
         if let Some(ref l) = self.locale {
             rec.insert("locale".into(), Value::String(l.clone()));
@@ -439,7 +445,10 @@ impl AgentCharacteristicsKb {
 
     /// Get all characteristics for a given agent.
     pub fn for_agent(&self, agent_id: &str) -> Vec<&AgentCharacteristic> {
-        self.entries.iter().filter(|e| e.agent_id == agent_id).collect()
+        self.entries
+            .iter()
+            .filter(|e| e.agent_id == agent_id)
+            .collect()
     }
 
     /// Get the latest value of a named characteristic for an agent.
@@ -452,7 +461,8 @@ impl AgentCharacteristicsKb {
 
     /// Get the mean value of a named characteristic for an agent.
     pub fn mean(&self, agent_id: &str, name: &str) -> Option<f64> {
-        let matches: Vec<&AgentCharacteristic> = self.entries
+        let matches: Vec<&AgentCharacteristic> = self
+            .entries
             .iter()
             .filter(|e| e.agent_id == agent_id && e.name == name)
             .collect();
@@ -554,8 +564,8 @@ mod tests {
 
     #[test]
     fn w9_identifier_view_with_locale() {
-        let v = IdentifierView::new("did:alice", IdentifierModality::Oral, "爱丽丝")
-            .with_locale("zh");
+        let v =
+            IdentifierView::new("did:alice", IdentifierModality::Oral, "爱丽丝").with_locale("zh");
         assert_eq!(v.locale, Some("zh".into()));
     }
 
@@ -684,9 +694,24 @@ mod tests {
     #[test]
     fn t59_kb_log_and_query() {
         let mut kb = AgentCharacteristicsKb::new();
-        kb.log(AgentCharacteristic::new("did:agent-1", "latency_ms", 42.0, 1000));
-        kb.log(AgentCharacteristic::new("did:agent-1", "latency_ms", 38.0, 2000));
-        kb.log(AgentCharacteristic::new("did:agent-2", "latency_ms", 55.0, 1000));
+        kb.log(AgentCharacteristic::new(
+            "did:agent-1",
+            "latency_ms",
+            42.0,
+            1000,
+        ));
+        kb.log(AgentCharacteristic::new(
+            "did:agent-1",
+            "latency_ms",
+            38.0,
+            2000,
+        ));
+        kb.log(AgentCharacteristic::new(
+            "did:agent-2",
+            "latency_ms",
+            55.0,
+            1000,
+        ));
         assert_eq!(kb.len(), 3);
         let a1 = kb.for_agent("did:agent-1");
         assert_eq!(a1.len(), 2);
@@ -697,9 +722,24 @@ mod tests {
     #[test]
     fn t59_kb_latest() {
         let mut kb = AgentCharacteristicsKb::new();
-        kb.log(AgentCharacteristic::new("did:agent-1", "latency_ms", 42.0, 1000));
-        kb.log(AgentCharacteristic::new("did:agent-1", "latency_ms", 38.0, 2000));
-        kb.log(AgentCharacteristic::new("did:agent-1", "latency_ms", 40.0, 1500));
+        kb.log(AgentCharacteristic::new(
+            "did:agent-1",
+            "latency_ms",
+            42.0,
+            1000,
+        ));
+        kb.log(AgentCharacteristic::new(
+            "did:agent-1",
+            "latency_ms",
+            38.0,
+            2000,
+        ));
+        kb.log(AgentCharacteristic::new(
+            "did:agent-1",
+            "latency_ms",
+            40.0,
+            1500,
+        ));
         let latest = kb.latest("did:agent-1", "latency_ms").unwrap();
         assert_eq!(latest.value, 38.0);
         assert_eq!(latest.observed_at, 2000);
@@ -708,8 +748,18 @@ mod tests {
     #[test]
     fn t59_kb_mean() {
         let mut kb = AgentCharacteristicsKb::new();
-        kb.log(AgentCharacteristic::new("did:agent-1", "latency_ms", 40.0, 1000));
-        kb.log(AgentCharacteristic::new("did:agent-1", "latency_ms", 60.0, 2000));
+        kb.log(AgentCharacteristic::new(
+            "did:agent-1",
+            "latency_ms",
+            40.0,
+            1000,
+        ));
+        kb.log(AgentCharacteristic::new(
+            "did:agent-1",
+            "latency_ms",
+            60.0,
+            2000,
+        ));
         let mean = kb.mean("did:agent-1", "latency_ms").unwrap();
         assert!((mean - 50.0).abs() < 1e-9);
     }
@@ -736,7 +786,12 @@ mod tests {
     #[test]
     fn t59_kb_to_value_list() {
         let mut kb = AgentCharacteristicsKb::new();
-        kb.log(AgentCharacteristic::new("did:agent-1", "latency_ms", 42.0, 1000));
+        kb.log(AgentCharacteristic::new(
+            "did:agent-1",
+            "latency_ms",
+            42.0,
+            1000,
+        ));
         let v = kb.to_value_list();
         match &v {
             Value::List(xs) => assert_eq!(xs.len(), 1),

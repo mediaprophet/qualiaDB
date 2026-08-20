@@ -32,7 +32,9 @@ impl DiagnoseReport {
 /// (e.g. conflicting types, conflicting graph assertions, forbidden effect in pure cell).
 pub fn is_contradiction(diag: &Diagnostic) -> bool {
     match diag.code {
-        crate::error::DiagCode::E100 | crate::error::DiagCode::E200 | crate::error::DiagCode::E700 => true,
+        crate::error::DiagCode::E100
+        | crate::error::DiagCode::E200
+        | crate::error::DiagCode::E700 => true,
         _ => {
             let m = diag.message.to_ascii_lowercase();
             m.contains("conflict") || m.contains("contradiction") || m.contains("mismatch")
@@ -93,7 +95,11 @@ mod tests {
         assert!(r.to_json().contains("suggested_fix"));
         let err = r.error.as_ref().unwrap();
         assert_eq!(err.code, DiagCode::E001);
-        assert!(err.suggested_fix.as_deref().unwrap().contains("quin.statement"));
+        assert!(err
+            .suggested_fix
+            .as_deref()
+            .unwrap()
+            .contains("quin.statement"));
     }
 
     #[test]
@@ -110,7 +116,10 @@ mod tests {
         let r = diagnose("= pulse.publish(\"t\", 1)");
         assert!(!r.valid);
         let err = r.error.as_ref().unwrap();
-        assert!(err.evidential.is_some(), "Contradiction diagnostic must carry evidential annotation");
+        assert!(
+            err.evidential.is_some(),
+            "Contradiction diagnostic must carry evidential annotation"
+        );
         let (mu, lambda) = err.evidential.unwrap();
         assert_eq!(mu, 1.0);
         assert_eq!(lambda, 0.0);
@@ -123,7 +132,10 @@ mod tests {
         assert!(!r.valid);
         let err = r.error.as_ref().unwrap();
         assert_eq!(err.code, DiagCode::E001);
-        assert!(err.evidential.is_none(), "Syntax error must not carry evidential annotation");
+        assert!(
+            err.evidential.is_none(),
+            "Syntax error must not carry evidential annotation"
+        );
     }
 
     #[test]

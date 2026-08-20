@@ -19,8 +19,8 @@ use std::path::Path;
 use std::process::ExitCode;
 
 use poet_vibe::{
-    MockHost, Env, load_program, parse_program, check_program,
-    eval_function, eval_cell, Value, Diagnostic,
+    check_program, eval_cell, eval_function, load_program, parse_program, Diagnostic, Env,
+    MockHost, Value,
 };
 
 fn main() -> ExitCode {
@@ -81,18 +81,16 @@ fn cmd_check(args: &[String]) -> ExitCode {
     };
 
     match parse_program(&src) {
-        Ok(program) => {
-            match check_program(&program) {
-                Ok(_) => {
-                    println!("ok: {} ({} items)", args[0], program.items.len());
-                    ExitCode::from(0)
-                }
-                Err(diag) => {
-                    print_diagnostic(&diag, &src);
-                    ExitCode::from(3)
-                }
+        Ok(program) => match check_program(&program) {
+            Ok(_) => {
+                println!("ok: {} ({} items)", args[0], program.items.len());
+                ExitCode::from(0)
             }
-        }
+            Err(diag) => {
+                print_diagnostic(&diag, &src);
+                ExitCode::from(3)
+            }
+        },
         Err(diag) => {
             print_diagnostic(&diag, &src);
             ExitCode::from(3)
@@ -146,10 +144,7 @@ fn cmd_eval(args: &[String]) -> ExitCode {
     };
 
     let fn_name = args.get(1).map(|s| s.as_str()).unwrap_or("main");
-    let fn_args: Vec<Value> = args[2..]
-        .iter()
-        .map(|s| Value::String(s.clone()))
-        .collect();
+    let fn_args: Vec<Value> = args[2..].iter().map(|s| Value::String(s.clone())).collect();
 
     let mut host = MockHost::default();
     let mut env = Env::default();
@@ -271,8 +266,14 @@ fn print_value(val: &Value, out: &mut impl Write) {
 fn print_diagnostic(diag: &Diagnostic, src: &str) {
     // Span uses byte offsets. Find the line containing the start.
     let start = diag.span.start as usize;
-    let line_start = src[..start.min(src.len())].rfind('\n').map(|i| i + 1).unwrap_or(0);
-    let line_end = src[start.min(src.len())..].find('\n').map(|i| start + i).unwrap_or(src.len());
+    let line_start = src[..start.min(src.len())]
+        .rfind('\n')
+        .map(|i| i + 1)
+        .unwrap_or(0);
+    let line_end = src[start.min(src.len())..]
+        .find('\n')
+        .map(|i| start + i)
+        .unwrap_or(src.len());
     let line = &src[line_start..line_end.min(src.len())];
     let col = start - line_start;
     eprintln!("error: {} (byte {}, col {})", diag.message, start, col + 1);

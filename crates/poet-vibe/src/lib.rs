@@ -23,8 +23,8 @@ mod span;
 mod types;
 mod value;
 
-pub mod crypto;
 pub mod cosmic;
+pub mod crypto;
 pub mod dag;
 pub mod deontic_interrupt;
 pub mod frame_morphism;
@@ -36,27 +36,27 @@ pub mod observer;
 pub mod physics;
 pub mod presentation;
 pub mod pretty;
+pub mod quantity;
+pub mod reflection;
+pub mod replay_clock;
 pub mod sheaf;
 pub mod tick_policy;
 pub mod translate;
 pub mod trivia;
-pub mod quantity;
-pub mod reflection;
-pub mod replay_clock;
 
 pub use ast::{Expr, Program};
 pub use ast_query::{
-    builtin_policies, check_custom_policies, check_policies, function_has_budget,
-    hook_has_budget, parse_query, run_policies, Policy, PolicyViolation, QueryPattern,
+    builtin_policies, check_custom_policies, check_policies, function_has_budget, hook_has_budget,
+    parse_query, run_policies, Policy, PolicyViolation, QueryPattern,
 };
 pub use bind::{Host, MockHost};
 pub use budget::Budget;
 pub use cbor_ast::{decode, encode, DecodeError, TAG_VIBE_AST};
 pub use check::{check_cell, check_program, CheckResult};
 pub use dag::{
-    ControlUnit, DagEdge, DagError, DagNode, DagPipeline, ExecutionState, JudgeClaim,
-    JudgeFrame, NodeEffect, NodeStatus, RouterStrategy,
-    MAX_DAG_EDGES, MAX_DAG_NODES, MAX_JUDGE_CLAIMS, MAX_NODE_IO,
+    ControlUnit, DagEdge, DagError, DagNode, DagPipeline, ExecutionState, JudgeClaim, JudgeFrame,
+    NodeEffect, NodeStatus, RouterStrategy, MAX_DAG_EDGES, MAX_DAG_NODES, MAX_JUDGE_CLAIMS,
+    MAX_NODE_IO,
 };
 pub use deontic_interrupt::{
     AgentSandbox, DeonticInterrupt, InterruptType, LeaseError, Phase, PhaseLeaser,
@@ -73,16 +73,12 @@ pub use reflection::{
 pub use span::Span;
 pub use value::{
     CausalRelation, ConservationQuantity, ConservationResult, DisclosureBoundary, Duration,
-    EnumValue, FieldRef, Frame, Instant, MaterialRef, Mixture, MixturePhase, Miscibility, Pose,
+    EnumValue, FieldRef, Frame, Instant, MaterialRef, Miscibility, Mixture, MixturePhase, Pose,
     Quantity, QuinRef, SpeciesRef, TimeScale, Transform, Value, WorldLine,
 };
 
 /// Parse, check, and evaluate a Pure cell (`= expr`).
-pub fn eval_cell<H: Host>(
-    src: &str,
-    host: &mut H,
-    env: &mut Env,
-) -> Result<Value, Diagnostic> {
+pub fn eval_cell<H: Host>(src: &str, host: &mut H, env: &mut Env) -> Result<Value, Diagnostic> {
     let expr = parse_cell(src)?;
     check_cell(&expr)?;
     let mut engine = Engine::new(host, Budget::default());

@@ -79,7 +79,9 @@ impl<'a> Parser<'a> {
             let s = self.expect_ident()?;
             Name::Ident(s)
         };
-        let end = self.expect(TokenKind::Semicolon, "expected ';' after module")?.end;
+        let end = self
+            .expect(TokenKind::Semicolon, "expected ';' after module")?
+            .end;
         Ok(ModuleDecl {
             span: Span::new(start, end),
             name,
@@ -104,7 +106,9 @@ impl<'a> Parser<'a> {
         } else {
             None
         };
-        let end = self.expect(TokenKind::Semicolon, "expected ';' after import")?.end;
+        let end = self
+            .expect(TokenKind::Semicolon, "expected ';' after import")?
+            .end;
         Ok(ImportDecl {
             span: Span::new(start, end),
             path,
@@ -122,7 +126,9 @@ impl<'a> Parser<'a> {
         }
         let iri = strip_iri(self.text());
         self.bump()?;
-        let end = self.expect(TokenKind::Semicolon, "expected ';' after prefix")?.end;
+        let end = self
+            .expect(TokenKind::Semicolon, "expected ';' after prefix")?
+            .end;
         Ok(PrefixDecl {
             span: Span::new(start, end),
             prefix,
@@ -330,7 +336,10 @@ impl<'a> Parser<'a> {
                     }
                     break;
                 }
-                self.expect(TokenKind::RParen, "expected ')' after variant payload types")?;
+                self.expect(
+                    TokenKind::RParen,
+                    "expected ')' after variant payload types",
+                )?;
             }
             variants.push(EnumVariant {
                 span: Span::new(vstart, self.cur.span.start),
@@ -343,7 +352,9 @@ impl<'a> Parser<'a> {
             }
             break;
         }
-        let end = self.expect(TokenKind::RBrace, "expected '}' after enum variants")?.end;
+        let end = self
+            .expect(TokenKind::RBrace, "expected '}' after enum variants")?
+            .end;
         Ok(EnumDecl {
             span: Span::new(start, end),
             name,
@@ -454,7 +465,10 @@ impl<'a> Parser<'a> {
             }
             break;
         }
-        self.expect(TokenKind::Semicolon, "expected ';' after material declaration")?;
+        self.expect(
+            TokenKind::Semicolon,
+            "expected ';' after material declaration",
+        )?;
         Ok(MaterialDecl {
             span: Span::new(start, self.cur.span.start),
             name,
@@ -477,7 +491,7 @@ impl<'a> Parser<'a> {
             return Err(self.err("expected 'when' after law name"));
         }
         self.bump()?; // 'when'
-        // Parse the condition expression up to '=>'
+                      // Parse the condition expression up to '=>'
         let condition = self.parse_expr()?;
         self.expect(TokenKind::FatArrow, "expected '=>' after law condition")?;
         let consequence = self.parse_expr()?;
@@ -596,7 +610,9 @@ impl<'a> Parser<'a> {
                 value,
             });
         }
-        let end = self.expect(TokenKind::Semicolon, "expected ';' after expression")?.end;
+        let end = self
+            .expect(TokenKind::Semicolon, "expected ';' after expression")?
+            .end;
         Ok(Stmt::Expr {
             span: Span::new(expr.span.start, end),
             expr,
@@ -759,7 +775,10 @@ impl<'a> Parser<'a> {
             self.cur.kind,
             TokenKind::String | TokenKind::Int | TokenKind::Float | TokenKind::Keyword
         ) && matches!(self.text(), "true" | "false" | "null")
-            || matches!(self.cur.kind, TokenKind::String | TokenKind::Int | TokenKind::Float)
+            || matches!(
+                self.cur.kind,
+                TokenKind::String | TokenKind::Int | TokenKind::Float
+            )
         {
             if let Ok(lit) = self.take_literal() {
                 return Ok(Pattern::Literal(lit));
@@ -1438,7 +1457,9 @@ impl<'a> Parser<'a> {
                 }
                 break;
             }
-            end = self.expect(TokenKind::Gt, "expected '>' after type args")?.end;
+            end = self
+                .expect(TokenKind::Gt, "expected '>' after type args")?
+                .end;
         }
         Ok(TypeExpr {
             span: Span::new(start, end),
@@ -1582,8 +1603,22 @@ fn is_named_arg_key(s: &str) -> bool {
 fn is_stmt_kw(s: &str) -> bool {
     matches!(
         s,
-        "let" | "if" | "else" | "for" | "while" | "match" | "return" | "yield" | "transaction" | "fn"
-            | "on" | "const" | "module" | "import" | "prefix" | "requires"
+        "let"
+            | "if"
+            | "else"
+            | "for"
+            | "while"
+            | "match"
+            | "return"
+            | "yield"
+            | "transaction"
+            | "fn"
+            | "on"
+            | "const"
+            | "module"
+            | "import"
+            | "prefix"
+            | "requires"
     )
 }
 
@@ -1693,7 +1728,11 @@ fn parse_int(s: &str) -> Result<Literal, Diagnostic> {
         } else if let Ok(u) = u64::from_str_radix(hex, 16) {
             Ok(Literal::UInt(u))
         } else {
-            Err(Diagnostic::new(DiagCode::E001, Span::point(0), "bad hex integer"))
+            Err(Diagnostic::new(
+                DiagCode::E001,
+                Span::point(0),
+                "bad hex integer",
+            ))
         }
     } else if is_unsigned {
         raw.parse::<u64>()
@@ -1704,7 +1743,11 @@ fn parse_int(s: &str) -> Result<Literal, Diagnostic> {
     } else if let Ok(u) = raw.parse::<u64>() {
         Ok(Literal::UInt(u))
     } else {
-        Err(Diagnostic::new(DiagCode::E001, Span::point(0), "bad integer"))
+        Err(Diagnostic::new(
+            DiagCode::E001,
+            Span::point(0),
+            "bad integer",
+        ))
     }
 }
 

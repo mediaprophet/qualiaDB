@@ -56,13 +56,16 @@ impl ReplayTimeline {
     pub fn from_secs_nanos(name: &str, scale: TimeScale, pts: &[(i64, u32)]) -> Self {
         let mut tl = Self::new(name, scale.clone());
         for &(secs, nanos) in pts {
-            tl.push(Instant {
-                scale: scale.clone(),
-                secs,
-                nanos,
-                frame: None,
-                seal: None,
-            }, None);
+            tl.push(
+                Instant {
+                    scale: scale.clone(),
+                    secs,
+                    nanos,
+                    frame: None,
+                    seal: None,
+                },
+                None,
+            );
         }
         tl
     }
@@ -151,9 +154,10 @@ impl ReplayClock {
             Ok(instant)
         } else {
             match self.exhausted_policy {
-                ExhaustedPolicy::RepeatLast => {
-                    self.last_instant.clone().ok_or_else(|| "empty timeline".into())
-                }
+                ExhaustedPolicy::RepeatLast => self
+                    .last_instant
+                    .clone()
+                    .ok_or_else(|| "empty timeline".into()),
                 ExhaustedPolicy::FailClosed => {
                     Err("replay timeline exhausted (fail-closed)".into())
                 }
@@ -189,7 +193,10 @@ impl ReplayClock {
     /// Get the payload at the current cursor position (before tick).
     pub fn current_payload(&self) -> Option<&Value> {
         if self.cursor < self.timeline.len() {
-            self.timeline.payloads.get(self.cursor).and_then(|p| p.as_ref())
+            self.timeline
+                .payloads
+                .get(self.cursor)
+                .and_then(|p| p.as_ref())
         } else {
             None
         }
@@ -204,11 +211,14 @@ impl ReplayClock {
         rec.insert("exhausted".into(), Value::Bool(self.is_exhausted()));
         rec.insert(
             "exhausted_policy".into(),
-            Value::String(match self.exhausted_policy {
-                ExhaustedPolicy::RepeatLast => "repeat_last",
-                ExhaustedPolicy::FailClosed => "fail_closed",
-                ExhaustedPolicy::Loop => "loop",
-            }.into()),
+            Value::String(
+                match self.exhausted_policy {
+                    ExhaustedPolicy::RepeatLast => "repeat_last",
+                    ExhaustedPolicy::FailClosed => "fail_closed",
+                    ExhaustedPolicy::Loop => "loop",
+                }
+                .into(),
+            ),
         );
         Value::Record(rec)
     }
@@ -222,7 +232,12 @@ mod tests {
         ReplayTimeline::from_secs_nanos(
             "test",
             TimeScale::Unix,
-            &[(1000, 0), (1000, 500_000_000), (1001, 0), (1001, 500_000_000)],
+            &[
+                (1000, 0),
+                (1000, 500_000_000),
+                (1001, 0),
+                (1001, 500_000_000),
+            ],
         )
     }
 
@@ -256,14 +271,8 @@ mod tests {
     #[test]
     fn w12_timeline_with_payloads() {
         let mut tl = ReplayTimeline::new("sensors", TimeScale::Monotonic);
-        tl.push(
-            Instant::monotonic(1000),
-            Some(Value::F64(42.0)),
-        );
-        tl.push(
-            Instant::monotonic(2000),
-            None,
-        );
+        tl.push(Instant::monotonic(1000), Some(Value::F64(42.0)));
+        tl.push(Instant::monotonic(2000), None);
         assert_eq!(tl.len(), 2);
         assert_eq!(tl.payload(0), Some(&Value::F64(42.0)));
         assert_eq!(tl.payload(1), None);
@@ -300,8 +309,8 @@ mod tests {
 
     #[test]
     fn w12_clock_exhausted_fail_closed() {
-        let mut clock = ReplayClock::new(make_timeline())
-            .with_exhausted_policy(ExhaustedPolicy::FailClosed);
+        let mut clock =
+            ReplayClock::new(make_timeline()).with_exhausted_policy(ExhaustedPolicy::FailClosed);
         for _ in 0..4 {
             clock.tick().unwrap();
         }
@@ -312,8 +321,8 @@ mod tests {
 
     #[test]
     fn w12_clock_exhausted_loop() {
-        let mut clock = ReplayClock::new(make_timeline())
-            .with_exhausted_policy(ExhaustedPolicy::Loop);
+        let mut clock =
+            ReplayClock::new(make_timeline()).with_exhausted_policy(ExhaustedPolicy::Loop);
         for _ in 0..4 {
             clock.tick().unwrap();
         }

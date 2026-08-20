@@ -32,21 +32,21 @@ fn fnv1a_64(s: &str) -> u64 {
 /// Planck scale to cosmological horizons.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum HierarchyLevel {
-    LNeg2,  // Sub-Planck / theoretical
-    LNeg1,  // Planck scale
-    L0,     // Quantum field
-    L1,     // Nuclear subatomic
-    L2,     // Atomic / orbitals
-    L3,     // Macromolecular
-    L4,     // Cellular / tissue
-    L5,     // Celestial body / geodesy
-    L6,     // Terrestrial AR / local
-    L7,     // Planetary system
-    L8,     // Interstellar
-    L9,     // Galactic
-    L10,    // Galaxy cluster
-    L11,    // Supercluster
-    L12,    // Cosmological horizon
+    LNeg2, // Sub-Planck / theoretical
+    LNeg1, // Planck scale
+    L0,    // Quantum field
+    L1,    // Nuclear subatomic
+    L2,    // Atomic / orbitals
+    L3,    // Macromolecular
+    L4,    // Cellular / tissue
+    L5,    // Celestial body / geodesy
+    L6,    // Terrestrial AR / local
+    L7,    // Planetary system
+    L8,    // Interstellar
+    L9,    // Galactic
+    L10,   // Galaxy cluster
+    L11,   // Supercluster
+    L12,   // Cosmological horizon
 }
 
 impl HierarchyLevel {
@@ -207,7 +207,11 @@ impl CompactBinaryUsri {
         anchor: &str,
     ) -> Self {
         let path_hash = fnv1a_64(usri_str);
-        let anchor_hash = if anchor.is_empty() { 0 } else { fnv1a_64(anchor) };
+        let anchor_hash = if anchor.is_empty() {
+            0
+        } else {
+            fnv1a_64(anchor)
+        };
         Self::new(realm_class, path_hash, level, nesting_depth, anchor_hash)
     }
 
@@ -217,7 +221,10 @@ impl CompactBinaryUsri {
         rec.insert("realm_class".into(), Value::U64(self.realm_class() as u64));
         rec.insert("path_hash".into(), Value::U64(self.path_hash()));
         rec.insert("level".into(), Value::U64(self.level() as u64));
-        rec.insert("nesting_depth".into(), Value::U64(self.nesting_depth() as u64));
+        rec.insert(
+            "nesting_depth".into(),
+            Value::U64(self.nesting_depth() as u64),
+        );
         rec.insert("anchor_hash".into(), Value::U64(self.anchor_hash_48()));
         Value::Record(rec)
     }
@@ -278,15 +285,39 @@ mod tests {
 
     #[test]
     fn cb_usri_different_realms_differ() {
-        let physical = CompactBinaryUsri::from_usri("path", RealmClass::Physical, HierarchyLevel::L5, 0, "anchor");
-        let fiction = CompactBinaryUsri::from_usri("path", RealmClass::Fiction, HierarchyLevel::L5, 0, "anchor");
+        let physical = CompactBinaryUsri::from_usri(
+            "path",
+            RealmClass::Physical,
+            HierarchyLevel::L5,
+            0,
+            "anchor",
+        );
+        let fiction = CompactBinaryUsri::from_usri(
+            "path",
+            RealmClass::Fiction,
+            HierarchyLevel::L5,
+            0,
+            "anchor",
+        );
         assert_ne!(physical, fiction);
     }
 
     #[test]
     fn cb_usri_different_levels_differ() {
-        let l5 = CompactBinaryUsri::from_usri("path", RealmClass::Physical, HierarchyLevel::L5, 0, "anchor");
-        let l6 = CompactBinaryUsri::from_usri("path", RealmClass::Physical, HierarchyLevel::L6, 0, "anchor");
+        let l5 = CompactBinaryUsri::from_usri(
+            "path",
+            RealmClass::Physical,
+            HierarchyLevel::L5,
+            0,
+            "anchor",
+        );
+        let l6 = CompactBinaryUsri::from_usri(
+            "path",
+            RealmClass::Physical,
+            HierarchyLevel::L6,
+            0,
+            "anchor",
+        );
         assert_ne!(l5, l6);
     }
 
@@ -324,7 +355,8 @@ mod tests {
 
     #[test]
     fn cb_usri_empty_anchor() {
-        let cb = CompactBinaryUsri::from_usri("test", RealmClass::Physical, HierarchyLevel::L0, 0, "");
+        let cb =
+            CompactBinaryUsri::from_usri("test", RealmClass::Physical, HierarchyLevel::L0, 0, "");
         assert_eq!(cb.anchor_hash_48(), 0);
     }
 }

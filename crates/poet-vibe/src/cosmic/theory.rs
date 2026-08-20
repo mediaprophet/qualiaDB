@@ -131,7 +131,13 @@ pub struct TheoryPackage {
 
 impl TheoryPackage {
     /// Create a new theory package.
-    pub fn new(id: &str, name: &str, author_did: &str, nature: LawNature, assurance: AssuranceLevel) -> Self {
+    pub fn new(
+        id: &str,
+        name: &str,
+        author_did: &str,
+        nature: LawNature,
+        assurance: AssuranceLevel,
+    ) -> Self {
         Self {
             theory_id: id.into(),
             name: name.into(),
@@ -192,18 +198,35 @@ impl TheoryPackage {
         rec.insert("name".into(), Value::String(self.name.clone()));
         rec.insert("author_did".into(), Value::String(self.author_did.clone()));
         rec.insert("nature".into(), Value::String(self.nature.as_str().into()));
-        rec.insert("assurance_level".into(), Value::String(self.assurance_level.as_str().into()));
+        rec.insert(
+            "assurance_level".into(),
+            Value::String(self.assurance_level.as_str().into()),
+        );
         rec.insert("mu".into(), Value::F64(self.evidential_interval.0 as f64));
-        rec.insert("lambda".into(), Value::F64(self.evidential_interval.1 as f64));
-        rec.insert("residual_chi_squared".into(), Value::F64(self.residual_chi_squared));
+        rec.insert(
+            "lambda".into(),
+            Value::F64(self.evidential_interval.1 as f64),
+        );
+        rec.insert(
+            "residual_chi_squared".into(),
+            Value::F64(self.residual_chi_squared),
+        );
         if let Some((rel, target)) = &self.lineage {
-            rec.insert("lineage_relation".into(), Value::String(rel.as_str().into()));
+            rec.insert(
+                "lineage_relation".into(),
+                Value::String(rel.as_str().into()),
+            );
             rec.insert("lineage_target".into(), Value::String(target.clone()));
         }
         if !self.empirical_anchors.is_empty() {
             rec.insert(
                 "empirical_anchors".into(),
-                Value::List(self.empirical_anchors.iter().map(|s| Value::String(s.clone())).collect()),
+                Value::List(
+                    self.empirical_anchors
+                        .iter()
+                        .map(|s| Value::String(s.clone()))
+                        .collect(),
+                ),
             );
         }
         Value::Record(rec)
@@ -216,7 +239,11 @@ mod tests {
 
     #[test]
     fn law_nature_round_trip() {
-        for n in [LawNature::Physical, LawNature::TheoreticalHypothesis, LawNature::Fictional] {
+        for n in [
+            LawNature::Physical,
+            LawNature::TheoreticalHypothesis,
+            LawNature::Fictional,
+        ] {
             assert_eq!(LawNature::from_str(n.as_str()), Some(n));
         }
     }
@@ -229,10 +256,16 @@ mod tests {
 
     #[test]
     fn theory_package_basic() {
-        let t = TheoryPackage::new("lcdm", "ΛCDM Standard", "did:q42:person:author", LawNature::Physical, AssuranceLevel::A3)
-            .with_evidence(0.85, 0.15)
-            .with_chi_squared(1.04)
-            .with_anchor("urn:omni:v1:physical:gaia-dr3");
+        let t = TheoryPackage::new(
+            "lcdm",
+            "ΛCDM Standard",
+            "did:q42:person:author",
+            LawNature::Physical,
+            AssuranceLevel::A3,
+        )
+        .with_evidence(0.85, 0.15)
+        .with_chi_squared(1.04)
+        .with_anchor("urn:omni:v1:physical:gaia-dr3");
         assert!(t.is_empirically_calibrated());
         assert!(!t.is_fictional());
         assert_eq!(t.evidential_interval, (0.85, 0.15));
@@ -240,15 +273,27 @@ mod tests {
 
     #[test]
     fn theory_package_fictional() {
-        let t = TheoryPackage::new("warp", "Warp Drive", "did:q42:person:author", LawNature::Fictional, AssuranceLevel::A0);
+        let t = TheoryPackage::new(
+            "warp",
+            "Warp Drive",
+            "did:q42:person:author",
+            LawNature::Fictional,
+            AssuranceLevel::A0,
+        );
         assert!(t.is_fictional());
         assert!(!t.is_empirically_calibrated());
     }
 
     #[test]
     fn theory_package_lineage() {
-        let t = TheoryPackage::new("mond", "MOND", "did:q42:person:author", LawNature::TheoreticalHypothesis, AssuranceLevel::A1)
-            .with_lineage(TheoryLineage::CompetesWith, "lcdm");
+        let t = TheoryPackage::new(
+            "mond",
+            "MOND",
+            "did:q42:person:author",
+            LawNature::TheoreticalHypothesis,
+            AssuranceLevel::A1,
+        )
+        .with_lineage(TheoryLineage::CompetesWith, "lcdm");
         assert!(t.lineage.is_some());
         let (rel, target) = t.lineage.unwrap();
         assert_eq!(rel, TheoryLineage::CompetesWith);
@@ -257,8 +302,14 @@ mod tests {
 
     #[test]
     fn theory_to_value() {
-        let t = TheoryPackage::new("test", "Test Theory", "did:q42:person:x", LawNature::Physical, AssuranceLevel::A2)
-            .with_evidence(0.5, 0.3);
+        let t = TheoryPackage::new(
+            "test",
+            "Test Theory",
+            "did:q42:person:x",
+            LawNature::Physical,
+            AssuranceLevel::A2,
+        )
+        .with_evidence(0.5, 0.3);
         let v = t.to_value();
         match v {
             Value::Record(r) => {
