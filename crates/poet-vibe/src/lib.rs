@@ -24,6 +24,7 @@ mod types;
 mod value;
 
 pub mod crypto;
+pub mod cosmic;
 pub mod dag;
 pub mod deontic_interrupt;
 pub mod frame_morphism;
