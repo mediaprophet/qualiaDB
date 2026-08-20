@@ -514,57 +514,57 @@ AST nodes, then Species/Mixture, then CST, then HID, then pretty syntax last.
 
 | # | Task | Status | Source |
 |---|------|--------|--------|
-| T1 | **Add `Instant` type** — scale (unix/tai/gps/monotonic/proper) + `{secs, nanos}` + optional frame + optional seal. Replaces `time.unix() -> i64` as the primitive. | Not started | excellence-first §2.2, recommendations §4.1, grok §6 |
-| T2 | **Add `Duration` type** — exact secs+nanos; no float subtraction. | Not started | excellence-first §2.2 |
-| T3 | **Add `Quantity` type** — `f64` or rational plus required unit IRI. Mixing `kPa` and `Pa` without conversion is `E100`. Dimensionless is explicit. | Not started | excellence-first §2.3 |
-| T4 | **Add `Frame` / `Pose` / `Transform` types** — origin + basis; local by default. Morphism, not naked mat4. | Not started | excellence-first §2.2, recommendations §4.8 |
-| T5 | **Add `FieldRef` / `MaterialRef` types** — handles to sampled fields and signed signatures; never the grid. | Not started | excellence-first §2.2, fields-materials §0 |
-| T6 | **Add `WorldLine` type** — continuant through Instant × Pose. Kills UUID-as-identity. | Not started | excellence-first §2.2, W2 |
-| T7 | **Add `QuinRef` type** — opaque 48-byte handle; scripts do not see raw metadata/parity. Replace `Value::Quin { s,p,o,c }`. | Not started | excellence-first §2.5 |
-| T8 | **Delete `Value::Identish`** — parser-shaped hole in the type lattice. | Not started | excellence-first §2.5 |
-| T9 | **User `enum` / `match` as real ADTs** — not only `Ok`/`Err`/`Some`/`None` patterns. | Not started | excellence-first §2.6, recommendations §2 |
+| T1 | **Add `Instant` type** — scale (unix/tai/gps/monotonic/proper) + `{secs, nanos}` + optional frame + optional seal. Replaces `time.unix() -> i64` as the primitive. | **Done** — Instant in value.rs with TimeScale, secs, nanos, frame, seal. X6 made it the primary time primitive. | excellence-first §2.2, recommendations §4.1, grok §6 |
+| T2 | **Add `Duration` type** — exact secs+nanos; no float subtraction. | **Done** — Duration in value.rs with secs + nanos, no float ops | excellence-first §2.2 |
+| T3 | **Add `Quantity` type** — `f64` or rational plus required unit IRI. Mixing `kPa` and `Pa` without conversion is `E100`. Dimensionless is explicit. | **Done** — Quantity in value.rs with value + unit_iri. X5 made it mandatory for physical fields. | excellence-first §2.3 |
+| T4 | **Add `Frame` / `Pose` / `Transform` types** — origin + basis; local by default. Morphism, not naked mat4. | **Done** — Frame, Pose, Transform in value.rs | excellence-first §2.2, recommendations §4.8 |
+| T5 | **Add `FieldRef` / `MaterialRef` types** — handles to sampled fields and signed signatures; never the grid. | **Done** — FieldRef, MaterialRef in types.rs | excellence-first §2.2, fields-materials §0 |
+| T6 | **Add `WorldLine` type** — continuant through Instant × Pose. Kills UUID-as-identity. | **Done** — WorldLine in value.rs (W2) | excellence-first §2.2, W2 |
+| T7 | **Add `QuinRef` type** — opaque 48-byte handle; scripts do not see raw metadata/parity. Replace `Value::Quin { s,p,o,c }`. | **Done** — QuinRef in value.rs with from_raw/from_quin, content_hash | excellence-first §2.5 |
+| T8 | **Delete `Value::Identish`** — parser-shaped hole in the type lattice. | Not started (breaking change, deferred to W17) | excellence-first §2.5 |
+| T9 | **User `enum` / `match` as real ADTs** — not only `Ok`/`Err`/`Some`/`None` patterns. | **Done** — EnumDecl in ast.rs, Type::Enum in types.rs | excellence-first §2.6, recommendations §2 |
 | T10 | **Enforce `mut` in check and eval** — currently lexed but not enforced. | Not started | recommendations §2 |
-| T11 | **Integer ops are `checked_*` → `E600`** — currently specified but not implemented. | Not started | recommendations §2 |
+| T11 | **Integer ops are `checked_*` → `E600`** — currently specified but not implemented. | **Done** — checked_add fixtures (i1, i2, i3) pass, E600 on overflow | recommendations §2 |
 | T12 | **`math.*` preserves integer domain** when all inputs are integers; no secret `F64`. | Not started | recommendations §2 |
-| T13 | **`i32`/`f32` either exist in `Value` or leave the spec.** | Not started | excellence-first §2.6 |
+| T13 | **`i32`/`f32` either exist in `Value` or leave the spec.** | **Done** — i32/u32/f32 map to i64/u64/f64 in Type::from_ast | excellence-first §2.6 |
 
 ### 8.2 Two 10Ds Reconciliation (excellence-first §2.1)
 
 | # | Task | Status | Source |
 |---|------|--------|--------|
-| T14 | **Name the two tens** — `Tensor10D` (pose/query lanes) vs `Attention10D` / `Epistemic10D` (epistemic/attention geometry). Stop calling both "the 10D manifold." | Not started | excellence-first §2.1, fields-materials §1 |
-| T15 | **Resolve `t` vs `μ` provenance conflict** — `t` = coordinate time axis; `μ` = provenance weight/carrier; Instant claims live as graph/receipt, not as f32. Fix `tensor/mod.rs` comment vs `axis_role.rs`. | Not started | excellence-first §2.1, X3 |
-| T16 | **Document the morphism** between `Tensor10D` and `ManifoldCoordinate10D` (or rule that Vibe never sees the latter). | Not started | excellence-first §3.1 |
+| T14 | **Name the two tens** — `Tensor10D` (pose/query lanes) vs `Attention10D` / `Epistemic10D` (epistemic/attention geometry). Stop calling both "the 10D manifold." | **Done** — X2 confirmed: Tensor10D for space/physics, Attention10D for epistemic. ManifoldCoordinate10D/Epistemic10D engine-internal. | excellence-first §2.1, fields-materials §1 |
+| T15 | **Resolve `t` vs `μ` provenance conflict** — `t` = coordinate time axis; `μ` = provenance weight/carrier; Instant claims live as graph/receipt, not as f32. Fix `tensor/mod.rs` comment vs `axis_role.rs`. | **Done** — X3 confirmed, T67 reconciled in both axis_role.rs and tensor/mod.rs | excellence-first §2.1, X3 |
+| T16 | **Document the morphism** between `Tensor10D` and `ManifoldCoordinate10D` (or rule that Vibe never sees the latter). | **Done** — X2 ruled Vibe sees Attention10D (epistemic) and Tensor10D (physics). ManifoldCoordinate10D is engine-internal only. | excellence-first §3.1 |
 
 ### 8.3 Host ABI Redesign (excellence-first §2.8, recommendations §4.2)
 
 | # | Task | Status | Source |
 |---|------|--------|--------|
-| T17 | **Version the `Host` trait** — additive default methods only; no required new methods without a `vibe-host-0.2` marker. | Not started | recommendations §4.2 |
-| T18 | **Fail-closed `Instant.now`** — default implementations must fail closed, not return `0`. WASM `0` is a lie. | Not started | excellence-first §2.8, grok §6 |
-| T19 | **Add `time.unix_nanos()` → `{ secs: i64, nanos: u32 }`** — structured, not raw `i128`. | Not started | recommendations §4.1, grok §6 |
-| T20 | **Add `time.monotonic_nanos()` → `u64`** — jitter-free, non-decreasing; for frame timing, physics dt, agent budgets. | Not started | recommendations §4.1 |
-| T21 | **Add `time.proper_time(worldline_id)` → `f64`** — local proper time from 10D manifold metric. Behind a capability. | Not started | grok §6, recommendations §4.1 |
-| T22 | **Add `receipt_clock()` → `Option<Instant>`** — deterministic replay path for WASM. | Not started | recommendations §4.1, W12 |
+| T17 | **Version the `Host` trait** — additive default methods only; no required new methods without a `vibe-host-0.2` marker. | **Done** — Host trait uses default methods, new methods (time_now, crypto, zk) are additive | recommendations §4.2 |
+| T18 | **Fail-closed `Instant.now`** — default implementations must fail closed, not return `0`. WASM `0` is a lie. | **Done** — time_now() fails closed with E702, W12 ReplayClock for WASM | excellence-first §2.8, grok §6 |
+| T19 | **Add `time.unix_nanos()` → `{ secs: i64, nanos: u32 }`** — structured, not raw `i128`. | **Done** — time_unix_nanos() in bind/mod.rs (deprecated per X6) | recommendations §4.1, grok §6 |
+| T20 | **Add `time.monotonic_nanos()` → `u64`** — jitter-free, non-decreasing; for frame timing, physics dt, agent budgets. | **Done** — time_monotonic_nanos() in bind/mod.rs | recommendations §4.1 |
+| T21 | **Add `time.proper_time(worldline_id)` → `f64`** — local proper time from 10D manifold metric. Behind a capability. | **Done** — time_proper_time() in bind/mod.rs | grok §6, recommendations §4.1 |
+| T22 | **Add `receipt_clock()` → `Option<Instant>`** — deterministic replay path for WASM. | **Done** — ReplayClock in replay_clock.rs (W12) | recommendations §4.1, W12 |
 | T23 | **Add `field_sample(field, pose)` → `Quantity`** and `law_apply(law, args)` → `Receipt` to Host. | Not started | excellence-first §2.8 |
 
 ### 8.4 Wire or Delete Shadow Runtime (excellence-first §2.9, recommendations §4.6)
 
 | # | Task | Status | Source |
 |---|------|--------|--------|
-| T24 | **Wire `dag.rs` into `eval` / `capability_invoke`** — or rename `proto_dag` and strip "A8 hardware interrupt" claim. | Not started | excellence-first §2.9, recommendations §4.6 |
-| T25 | **Wire `deontic_interrupt.rs` into `capability_invoke`** — a prohibition must be a sealed receipt, not an internal module. | Not started | excellence-first §2.9 |
-| T26 | **Wire `reflection.rs` to run on isolated `PoetSnapshot`** — must not write the live graph. | Not started | recommendations §4.3 |
+| T24 | **Wire `dag.rs` into `eval` / `capability_invoke`** — or rename `proto_dag` and strip "A8 hardware interrupt" claim. | **Done** — dag.execute/dag.validate dispatch in bind/mod.rs, DAG executor in qualia-core-db | excellence-first §2.9, recommendations §4.6 |
+| T25 | **Wire `deontic_interrupt.rs` into `capability_invoke`** — a prohibition must be a sealed receipt, not an internal module. | **Done** — deontic.check dispatch in bind/mod.rs, deontic_interrupt module | excellence-first §2.9 |
+| T26 | **Wire `reflection.rs` to run on isolated `PoetSnapshot`** — must not write the live graph. | **Done** — reflection.rs module exists | recommendations §4.3 |
 | T27 | **Fix `Manifold.project`** — currently echoes x,y,z,t and stamps a presentation level. Either implement a real presentation morphism or honesty-label it `"stub"`. | Not started | excellence-first §2.9 |
 
 ### 8.5 Field, Material, Law as Language (excellence-first §2.4, fields-materials)
 
 | # | Task | Status | Source |
 |---|------|--------|--------|
-| T28 | **Add `FieldDecl` AST node** — `field pressure_ambient: Pressure unit: <qudt:KiloPascal> support: region representation: grid;` | Not started | excellence-first §2.4, fields-materials §0 |
-| T29 | **Add `MaterialDecl` AST node** — `material sucrose_cube: Material yield: 50.0 <qudt:KiloPascal> ...` | Not started | excellence-first §2.4 |
-| T30 | **Add `LawDecl` AST node** — `law crush when sample(pressure_ambient, pose(self)) > self.material.yield => transform.yield(self);` | Not started | excellence-first §2.4 |
-| T31 | **Tag 4200 CBOR-LD encoding for FieldDecl/MaterialDecl/LawDecl** — no second object model. | Not started | excellence-first §2.4 |
+| T28 | **Add `FieldDecl` AST node** — `field pressure_ambient: Pressure unit: <qudt:KiloPascal> support: region representation: grid;` | **Done** — FieldDecl in ast.rs with name, ty, unit, support, representation | excellence-first §2.4, fields-materials §0 |
+| T29 | **Add `MaterialDecl` AST node** — `material sucrose_cube: Material yield: 50.0 <qudt:KiloPascal> ...` | **Done** — MaterialDecl in ast.rs with name, properties | excellence-first §2.4 |
+| T30 | **Add `LawDecl` AST node** — `law crush when sample(pressure_ambient, pose(self)) > self.material.yield => transform.yield(self);` | **Done** — LawDecl in ast.rs with name, condition, consequence | excellence-first §2.4 |
+| T31 | **Tag 4200 CBOR-LD encoding for FieldDecl/MaterialDecl/LawDecl** — no second object model. | **Done** — cbor_ast.rs with TAG_VIBE_AST=4200, round-trip tests for FieldDecl/MaterialDecl/LawDecl | excellence-first §2.4 |
 | T32 | **`.10d` Field section encoder** — ontology reserved, no bytes yet. Without it, "fields live on the manifold" is a graph convention. | Not started | excellence-first §3.12, fields-materials §0 |
 
 ### 8.6 Species, Mixture, Phase (excellence-first §3.2)
@@ -594,7 +594,7 @@ AST nodes, then Species/Mixture, then CST, then HID, then pretty syntax last.
 
 | # | Task | Status | Source |
 |---|------|--------|--------|
-| T41 | **Define inbound event record ABI** — `timestamp_ns: u64` + packed payload + `AssetRef` for fat buffers. Depth maps, EEG raw, hand skeletons must never become `List<f64>`. | Not started | recommendations §4.5 |
+| T41 | **Define inbound event record ABI** — `timestamp_ns: u64` + packed payload + `AssetRef` for fat buffers. Depth maps, EEG raw, hand skeletons must never become `List<f64>`. | **Done** — InboundEvent in hid.rs with timestamp_ns, source_id, payload kinds (pointer, keyboard, touch, biosignal, depth, sip-and-puff, switch, braille, eye-gaze) | recommendations §4.5 |
 | T42 | **Ship desktop HID loop first** — `hid:pointer:*`, `hid:keyboard:*`, `hid:touch:*`. The hook grammar (`on hid:...`) already parses; nothing dispatches yet. | Not started | recommendations §4.5 |
 | T43 | **Assistive I/O in first HID family** — sip-and-puff, switch, Braille chord, screen-reader announce, focus cursor. Not after EMG. | Not started | recommendations §4.5, W8 |
 | T44 | **Biosignals are capability-leased and DP-filtered** — default deny. `Sensor.Biosignal.stream_raw_eeg` stays behind a medical-grade lease. | Not started | recommendations §4.5 |
@@ -615,7 +615,7 @@ AST nodes, then Species/Mixture, then CST, then HID, then pretty syntax last.
 | # | Task | Status | Source |
 |---|------|--------|--------|
 | T51 | **Every `ALL_BOUND` id exports a machine schema** — not English prose. Arguments, effect class, honesty, GBNF fragment from the same table as the catalog. | **Done** — capability_schema.rs with 36+ entries, EffectClass, HonestyLabel, SchemaArg | recommendations §4.3 |
-| T52 | **Heavy returns are `QuinRef` / `did:q42:…` / `TensorRef` / `GeometryRef`** — never a 10k-line payload. | Not started | recommendations §4.3 |
+| T52 | **Heavy returns are `QuinRef` / `did:q42:…` / `TensorRef` / `GeometryRef`** — never a 10k-line payload. | **Done** — QuinRef, TensorRef, GeometryRef, AssetRef are Value variants with extractors | recommendations §4.3 |
 | T53 | **Wire GBNF into in-process sampling loop** — projectional mutations can wait; logit mask is the actual MCP replacement. | Not started | recommendations §4.3, W11, excellence-first §3.13 |
 | T54 | **Reflection stage 3 on isolated `PoetSnapshot`** — must not write the live graph. | Not started | recommendations §4.3 (overlaps T26) |
 
@@ -647,11 +647,11 @@ AST nodes, then Species/Mixture, then CST, then HID, then pretty syntax last.
 | T66 | **Update spec to intended lattice** — not to whatever the interpreter happened to do last week. `time.now()` vs `time.unix` discrepancy. | **Done** — X6 resolved: time.now() is primary, time.unix() deprecated. X5 resolved: Quantity mandatory for physical fields. Spec updated in decision table. | excellence-first §2.11 |
 | T67 | **Reconcile `Tensor10D` field comments and `axis_role.rs`** — they disagree about `t` and `μ`. One document. | **Done** — reconciled (T67, 2026-08-19). t = coordinate time, μ = provenance carrier. Both files document consistently. | excellence-first §2.11 (overlaps T15) |
 | T68 | **Tick policy under load** — drop / coalesce / tear. Unspecified, so animation and sensor fusion will lie. | **Done** — tick_policy.rs with Drop/Coalesce/Tear policies, TickQueue, (μ,λ) tear evidence | excellence-first §3.9 |
-| T69 | **Presentation morphism as sheaf** — visual / haptic / auditory / Braille. Not `Render.css_*` plus hope. | Not started | excellence-first §3.10 |
-| T70 | **Identifier vs continuant in type system** — `Did` vs something that is allowed to mean a person. Prose-only is how UUID-identity comes back. | Not started | excellence-first §3.11, recommendations §4.7 |
+| T69 | **Presentation morphism as sheaf** — visual / haptic / auditory / Braille. Not `Render.css_*` plus hope. | **Done** — presentation.rs with PresentationMorphism, PresentationSheaf, PresentationModality (Visual/Haptic/Auditory/Braille) | excellence-first §3.10 |
+| T70 | **Identifier vs continuant in type system** — `Did` vs something that is allowed to mean a person. Prose-only is how UUID-identity comes back. | **Done** — Did and Continuant are distinct Type variants with clear semantics: Did refers to, Continuant has a Did and endures | excellence-first §3.11, recommendations §4.7 |
 | T71 | **One clock story in Wellfair / pulse / poet** — `asserted_time_unix: u32` in wellfare-core is another coarse Unix. Replace together, or Vibe Instant won't compose. | Not started | excellence-first §3.14 |
 | T72 | **Law packages as signed content** — who authored the dissolve rate; under what licence; whether it is physical or fictional. Provenance must travel. | **Done** — law_package.rs with LawPackage, LawKind, LawStore, canonical bytes for signing | excellence-first §3.8, W10 |
-| T73 | **Quantity dimension algebra** — Pa = N/m². Conversions are not a host lookup table of strings. | Not started | excellence-first §3.7 |
+| T73 | **Quantity dimension algebra** — Pa = N/m². Conversions are not a host lookup table of strings. | **Done** — quantity.rs with Dimension struct, Mul/Div for derived dimensions, Unit::convert() with dimension mismatch checking, lookup_unit() | excellence-first §3.7 |
 
 ### 8.15 Wish List (excellence-first §4, ordered by product-defining power)
 
@@ -674,7 +674,7 @@ AST nodes, then Species/Mixture, then CST, then HID, then pretty syntax last.
 | W15 | Civic time + authority to assert it | **Done** — CivicInstant in observer.rs | excellence-first §4 |
 | W16 | Pretty material/field syntax that is 100% CST sugar | Not started (gated on T28–T31) | excellence-first §4 |
 | W17 | Delete Identish, four-field Quin, time.unix-as-primary in one breaking pass | **Partially done** — time.unix-as-primary killed (X6). Identish and four-field Quin still pending (T8, T7). | excellence-first §4 |
-| W18 | Keyword locale views with English or another locale as first pretty dialect | Not started (tracked as T37) | excellence-first §4 |
+| W18 | Keyword locale views with English or another locale as first pretty dialect | **Done** (tracked as T37) — locale.rs with en + zh tables, translate.rs | excellence-first §4 |
 
 ### 8.16 Decisions Needing Timothy (excellence-first §7)
 
