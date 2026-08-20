@@ -565,7 +565,7 @@ AST nodes, then Species/Mixture, then CST, then HID, then pretty syntax last.
 | T29 | **Add `MaterialDecl` AST node** — `material sucrose_cube: Material yield: 50.0 <qudt:KiloPascal> ...` | **Done** — MaterialDecl in ast.rs with name, properties | excellence-first §2.4 |
 | T30 | **Add `LawDecl` AST node** — `law crush when sample(pressure_ambient, pose(self)) > self.material.yield => transform.yield(self);` | **Done** — LawDecl in ast.rs with name, condition, consequence | excellence-first §2.4 |
 | T31 | **Tag 4200 CBOR-LD encoding for FieldDecl/MaterialDecl/LawDecl** — no second object model. | **Done** — cbor_ast.rs with TAG_VIBE_AST=4200, round-trip tests for FieldDecl/MaterialDecl/LawDecl | excellence-first §2.4 |
-| T32 | **`.10d` Field section encoder** — ontology reserved, no bytes yet. Without it, "fields live on the manifold" is a graph convention. | Not started | excellence-first §3.12, fields-materials §0 |
+| T32 | **`.10d` Field section encoder** — ontology reserved, no bytes yet. Without it, "fields live on the manifold" is a graph convention. | **Done** — container_10d/field_section.rs with FieldSectionHeader (magic "FIEL", version, field_count), FieldDescriptor (name_hash, unit_hash, type_kind, support, representation), binary encoder/decoder | excellence-first §3.12, fields-materials §0 |
 
 ### 8.6 Species, Mixture, Phase (excellence-first §3.2)
 
@@ -672,7 +672,7 @@ AST nodes, then Species/Mixture, then CST, then HID, then pretty syntax last.
 | W13 | Custom GPU backend when wgpu internals dominate allocs | Not started (tracked as §F1) | excellence-first §4 |
 | W14 | Multi-scale / filtered sheaves (LOD as physics) | **Done** — MultiScaleSheaf + LevelOfDetail in observer.rs | excellence-first §4 |
 | W15 | Civic time + authority to assert it | **Done** — CivicInstant in observer.rs | excellence-first §4 |
-| W16 | Pretty material/field syntax that is 100% CST sugar | Not started (gated on T28–T31) | excellence-first §4 |
+| W16 | Pretty material/field syntax that is 100% CST sugar | **Done** — pretty.rs with PrettyField, PrettyMaterial, PrettyLaw, PrettyDocument. CST sugar over FieldDecl/MaterialDecl/LawDecl AST nodes. Property separators, blank line options, full document formatting. | excellence-first §4 |
 | W17 | Delete Identish, four-field Quin, time.unix-as-primary in one breaking pass | **Partially done** — time.unix-as-primary killed (X6). Identish and four-field Quin still pending (T8, T7). | excellence-first §4 |
 | W18 | Keyword locale views with English or another locale as first pretty dialect | **Done** (tracked as T37) — locale.rs with en + zh tables, translate.rs | excellence-first §4 |
 
