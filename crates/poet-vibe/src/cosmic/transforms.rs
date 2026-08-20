@@ -158,6 +158,24 @@ pub fn geodetic_distance(a: Geodetic, b: Geodetic) -> f64 {
     2.0 * r * h.sqrt().asin()
 }
 
+/// Convert Ecef to a Value::Record.
+pub fn ecef_to_value(e: Ecef) -> crate::value::Value {
+    let mut rec = std::collections::BTreeMap::new();
+    rec.insert("x".into(), crate::value::Value::F64(e.x));
+    rec.insert("y".into(), crate::value::Value::F64(e.y));
+    rec.insert("z".into(), crate::value::Value::F64(e.z));
+    crate::value::Value::Record(rec)
+}
+
+/// Convert Geodetic to a Value::Record.
+pub fn geodetic_to_value(g: Geodetic) -> crate::value::Value {
+    let mut rec = std::collections::BTreeMap::new();
+    rec.insert("lat".into(), crate::value::Value::F64(g.lat_deg));
+    rec.insert("lon".into(), crate::value::Value::F64(g.lon_deg));
+    rec.insert("alt".into(), crate::value::Value::F64(g.alt_m));
+    crate::value::Value::Record(rec)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

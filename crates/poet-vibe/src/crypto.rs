@@ -109,6 +109,25 @@ pub fn extract_u64_arg(
     }
 }
 
+/// Extract an f64 argument from args, or return a diagnostic.
+pub fn extract_f64_arg(
+    args: &[Value],
+    index: usize,
+    name: &str,
+    span: Span,
+) -> Result<f64, crate::error::Diagnostic> {
+    match args.get(index) {
+        Some(Value::F64(n)) => Ok(*n),
+        Some(Value::I64(n)) => Ok(*n as f64),
+        Some(Value::U64(n)) => Ok(*n as f64),
+        _ => Err(crate::error::Diagnostic::new(
+            crate::error::DiagCode::E100,
+            span,
+            format!("{name} expects a number at position {index}"),
+        )),
+    }
+}
+
 /// Convert bytes to a hex string.
 pub fn to_hex(bytes: &[u8]) -> String {
     let mut s = String::with_capacity(bytes.len() * 2);

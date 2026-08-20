@@ -1003,6 +1003,71 @@ pub fn dispatch<H: Host>(
         "zk.list_circuits" => {
             host.zk_list_circuits(span)
         }
+        // ── Cosmic coordinate operations (OCS) ─────────────────────────
+        "cosmic.usri.parse" => {
+            let s = match args.first() {
+                Some(Value::String(s)) | Some(Value::Iri(s)) => s.as_str(),
+                _ => return Err(Diagnostic::new(DiagCode::E100, span, "cosmic.usri.parse needs a USRI string")),
+            };
+            match crate::cosmic::usri::Usri::parse(s) {
+                Ok(u) => Ok(u.to_value()),
+                Err(e) => Err(Diagnostic::new(DiagCode::E100, span, e)),
+            }
+        }
+        "cosmic.geodetic_to_ecef" => {
+            let lat = crate::crypto::extract_f64_arg(args, 0, "geodetic_to_ecef", span)?;
+            let lon = crate::crypto::extract_f64_arg(args, 1, "geodetic_to_ecef", span)?;
+            let alt = crate::crypto::extract_f64_arg(args, 2, "geodetic_to_ecef", span)?;
+            let e = crate::cosmic::transforms::geodetic_to_ecef(
+                crate::cosmic::transforms::Geodetic { lat_deg: lat, lon_deg: lon, alt_m: alt },
+            );
+            Ok(crate::cosmic::transforms::ecef_to_value(e))
+        }
+        "cosmic.ecef_to_geodetic" => {
+            let x = crate::crypto::extract_f64_arg(args, 0, "ecef_to_geodetic", span)?;
+            let y = crate::crypto::extract_f64_arg(args, 1, "ecef_to_geodetic", span)?;
+            let z = crate::crypto::extract_f64_arg(args, 2, "ecef_to_geodetic", span)?;
+            let g = crate::cosmic::transforms::ecef_to_geodetic(
+                crate::cosmic::transforms::Ecef { x, y, z },
+            );
+            Ok(crate::cosmic::transforms::geodetic_to_value(g))
+        }
+        "cosmic.geodetic_distance" => {
+            let lat1 = crate::crypto::extract_f64_arg(args, 0, "geodetic_distance", span)?;
+            let lon1 = crate::crypto::extract_f64_arg(args, 1, "geodetic_distance", span)?;
+            let lat2 = crate::crypto::extract_f64_arg(args, 2, "geodetic_distance", span)?;
+            let lon2 = crate::crypto::extract_f64_arg(args, 3, "geodetic_distance", span)?;
+            let d = crate::cosmic::transforms::geodetic_distance(
+                crate::cosmic::transforms::Geodetic { lat_deg: lat1, lon_deg: lon1, alt_m: 0.0 },
+                crate::cosmic::transforms::Geodetic { lat_deg: lat2, lon_deg: lon2, alt_m: 0.0 },
+            );
+            Ok(Value::F64(d))
+        }
+        "cosmic.stardate_to_year" => {
+            let s = crate::crypto::extract_f64_arg(args, 0, "stardate_to_year", span)?;
+            let sd = crate::cosmic::stardate::Stardate::new(s);
+            Ok(Value::F64(sd.to_gregorian_year()))
+        }
+        "cosmic.warp_velocity" => {
+            let w = crate::crypto::extract_f64_arg(args, 0, "warp_velocity", span)?;
+            let scale = match args.get(1) {
+                Some(Value::String(s)) if s == "tos" => crate::cosmic::warp::WarpScale::Tos,
+                _ => crate::cosmic::warp::WarpScale::Tng,
+            };
+            Ok(Value::F64(crate::cosmic::warp::warp_velocity(w, scale)))
+        }
+        "cosmic.body.gravity" => {
+            let name = match args.first() {
+                Some(Value::String(s)) | Some(Value::Iri(s)) => s.as_str(),
+                _ => return Err(Diagnostic::new(DiagCode::E100, span, "cosmic.body.gravity needs a body name")),
+            };
+            let profile = match name {
+                "earth" => crate::cosmic::celestial::earth_profile(),
+                "mars" => crate::cosmic::celestial::mars_profile(),
+                _ => return Err(Diagnostic::new(DiagCode::E100, span, format!("unknown body: {name}"))),
+            };
+            Ok(Value::F64(profile.surface_gravity()))
+        }
         _ => Err(Diagnostic::new(
             DiagCode::E100,
             span,
@@ -1376,5 +1441,146 @@ mod tests {
             Value::Record(r) => assert_eq!(r.get("law_id"), Some(&Value::U64(7))),
             other => panic!("expected record, got {other:?}"),
         }
+    }
+
+    // ── Cosmic coordinate binding tests (OCS) ───────────────────────────
+
+    #[test]
+    fn cosmic_usri_parse() {
+        let mut host = MockHost::default();
+        let res = dispatch(
+            &mut host,
+            "cosmic.usri.parse",
+            &[Value::String("urn:omni:v1:physical:observable:standard:earth:wgs84".into())],
+            &[],
+            Span::point(0),
+        );
+        assert!(res.is_ok());
+        match res.unwrap() {
+            Value::Record(r) => {
+                assert_eq!(r.get("realm_class"), Some(&Value::String("physical".into())));
+            }
+            other => panic!("expected record, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn cosmic_geodetic_to_ecef() {
+        let mut host = MockHost::default();
+        let res = dispatch(
+            &mut host,
+            "cosmic.geodetic_to_ecef",
+            &[Value::F64(0.0), Value::F64(0.0), Value::F64(0.0)],
+            &[],
+            Span::point(0),
+        );
+        assert!(res.is_ok());
+        match res.unwrap() {
+            Value::Record(r) => {
+                // At (0,0,0) geodetic, x should be ~WGS84_A
+                if let Some(Value::F64(x)) = r.get("x") {
+                    assert!((*x - 6_378_137.0).abs() < 1.0);
+                } else {
+                    panic!("expected x coordinate");
+                }
+            }
+            other => panic!("expected record, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn cosmic_geodetic_distance() {
+        let mut host = MockHost::default();
+        let res = dispatch(
+            &mut host,
+            "cosmic.geodetic_distance",
+            &[
+                Value::F64(37.7749),
+                Value::F64(-122.4194),
+                Value::F64(34.0522),
+                Value::F64(-118.2437),
+            ],
+            &[],
+            Span::point(0),
+        );
+        assert!(res.is_ok());
+        match res.unwrap() {
+            Value::F64(d) => {
+                // SF to LA: ~559 km
+                assert!(d > 500_000.0 && d < 600_000.0, "got {} expected ~559km", d);
+            }
+            other => panic!("expected f64, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn cosmic_stardate_to_year() {
+        let mut host = MockHost::default();
+        let res = dispatch(
+            &mut host,
+            "cosmic.stardate_to_year",
+            &[Value::F64(47634.44)],
+            &[],
+            Span::point(0),
+        );
+        assert!(res.is_ok());
+        match res.unwrap() {
+            Value::F64(year) => {
+                assert!((year - 2370.63444).abs() < 0.01);
+            }
+            other => panic!("expected f64, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn cosmic_warp_velocity() {
+        let mut host = MockHost::default();
+        let res = dispatch(
+            &mut host,
+            "cosmic.warp_velocity",
+            &[Value::F64(1.0), Value::String("tos".into())],
+            &[],
+            Span::point(0),
+        );
+        assert!(res.is_ok());
+        match res.unwrap() {
+            Value::F64(v) => {
+                // Warp 1 = c
+                assert!((v - 299_792_458.0).abs() < 1.0);
+            }
+            other => panic!("expected f64, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn cosmic_body_gravity_earth() {
+        let mut host = MockHost::default();
+        let res = dispatch(
+            &mut host,
+            "cosmic.body.gravity",
+            &[Value::String("earth".into())],
+            &[],
+            Span::point(0),
+        );
+        assert!(res.is_ok());
+        match res.unwrap() {
+            Value::F64(g) => {
+                assert!((g - 9.81).abs() < 0.1, "got {} expected ~9.81", g);
+            }
+            other => panic!("expected f64, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn cosmic_body_gravity_unknown() {
+        let mut host = MockHost::default();
+        let res = dispatch(
+            &mut host,
+            "cosmic.body.gravity",
+            &[Value::String("pluto".into())],
+            &[],
+            Span::point(0),
+        );
+        assert!(res.is_err());
     }
 }
