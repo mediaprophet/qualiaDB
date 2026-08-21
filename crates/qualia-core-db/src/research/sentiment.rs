@@ -184,7 +184,7 @@ impl SentimentAssessment {
             "love love",
         ];
         let positive_count = positive_words.iter().filter(|w| lower.contains(*w)).count();
-        exclamation_count > 3 || positive_count > 2
+        exclamation_count >= 3 || positive_count > 2
     }
 
     /// Detect sentiment manipulation — coordinated messaging patterns.

@@ -175,12 +175,12 @@ impl Cue {
         let mut result = BTreeMap::new();
         for (key, &value) in &self.channel_values {
             let next_value = next.channel_values.get(key).copied().unwrap_or(value);
-            let interpolated = (value as f32 * (1.0 - t) + next_value as f32 * t) as u8;
+            let interpolated = (value as f32 * (1.0 - t) + next_value as f32 * t).round() as u8;
             result.insert(*key, interpolated);
         }
         for (key, &value) in &next.channel_values {
             if !self.channel_values.contains_key(key) {
-                result.insert(*key, (value as f32 * t) as u8);
+                result.insert(*key, (value as f32 * t).round() as u8);
             }
         }
         result

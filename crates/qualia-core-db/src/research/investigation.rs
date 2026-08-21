@@ -96,9 +96,9 @@ impl Hypothesis {
             return;
         }
         self.confidence = support_count as f64 / total as f64;
-        self.status = if self.confidence > 0.7 {
+        self.status = if self.confidence >= 2.0 / 3.0 {
             HypothesisStatus::Supported
-        } else if self.confidence < 0.3 {
+        } else if self.confidence <= 1.0 / 3.0 {
             HypothesisStatus::Refuted
         } else {
             HypothesisStatus::UnderEvaluation
