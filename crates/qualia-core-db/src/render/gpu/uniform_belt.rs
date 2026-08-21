@@ -17,7 +17,6 @@
 //! This is a Tier-1 zero-heap solution: no allocation in the per-frame hot
 //! path. All allocation happens at construction time.
 
-use std::num::NonZeroU64;
 use std::sync::mpsc;
 use wgpu::Buffer;
 

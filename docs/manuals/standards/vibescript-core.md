@@ -359,6 +359,153 @@ The Omniversal Coordinate System (OCS) bindings expose the `poet_vibe::cosmic` l
 
 Hierarchy levels for `Cosmic.scale_factor`: `L-2` through `L12` (Planck scale through cosmological horizon).
 
+### 11.2 Computational economics bindings
+
+Post-0.1 extensions exposing the `specialized_libs::computational_economics` backend via `capability.invoke` IDs in the `Econ.*` namespace. Available on `native-desktop` and `wasm32` (with `wasm-scientific` feature).
+
+| Binding | Effect | Input | Output |
+|---|---|---|---|
+| `Econ.capm_expected_return` | Pure | `{ risk_free, beta, market_return }` | `f64` |
+| `Econ.capm_beta` | Pure | `{ asset_returns: [f64], market_returns: [f64] }` | `f64` |
+| `Econ.gordon_growth_price` | Pure | `{ dividend, growth_rate, discount_rate }` | `f64` |
+| `Econ.multi_period_ddm` | Pure | `{ dividends: [f64], terminal_price, discount_rate }` | `f64` |
+| `Econ.ccapm_equity_premium` | Pure | `{ gamma, consumption_growth }` | `f64` |
+| `Econ.lucas_asset_price` | Pure | `{ dividend_paths: [f64], consumption_paths: [f64], n_paths, n_periods, beta, gamma }` | `f64` |
+| `Econ.black_scholes` | Pure | `{ spot, strike, rate, vol, time, kind: "call"\|"put", dividend_yield }` | `{ price, delta, gamma, vega, theta, rho }` |
+| `Econ.binomial_option` | Pure | `{ spot, strike, rate, vol, time, steps, kind, style: "european"\|"american", dividend_yield }` | `f64` |
+| `Econ.put_call_parity` | Pure | `{ spot, strike, rate, time, dividend_yield }` | `{ call, put }` |
+| `Econ.prospect_value` | Pure | `{ x, alpha, beta, lambda }` | `f64` |
+| `Econ.probability_weight` | Pure | `{ p, gamma }` | `f64` |
+| `Econ.hyperbolic_discount` | Pure | `{ t, beta, delta }` | `f64` |
+| `Econ.endowment_effect_wta` | Pure | `{ wtp, lambda }` | `f64` |
+| `Econ.present_biased_utility` | Pure | `{ utilities: [f64], beta, delta }` | `f64` |
+| `Econ.reference_dependent_utility` | Pure | `{ x, reference, alpha, beta, lambda }` | `f64` |
+| `Econ.mixed_nash_2x2` | Pure | `{ row_payoffs: [f64], col_payoffs: [f64] }` | `{ p1, p2, q1, q2 }` |
+| `Econ.cournot_duopoly` | Pure | `{ a, b, c1, c2 }` | `{ q1, q2, price }` |
+| `Econ.bertrand_duopoly` | Pure | `{ c1, c2 }` | `{ p1, p2 }` |
+| `Econ.bertrand_with_demand` | Pure | `{ demand_intercept, demand_slope, cost_1, cost_2 }` | `{ price, quantity }` |
+| `Econ.stackelberg_duopoly` | Pure | `{ a, b, c1, c2 }` | `{ q1, q2, price }` |
+| `Econ.pure_nash_equilibria` | Pure | `{ payoff_row: [f64], payoff_col: [f64], n_row, n_col }` | `{ equilibria: [{row, col}], count }` |
+| `Econ.repeated_game_payoff` | Pure | `{ stage_payoffs: [f64], discount, n_rounds }` | `f64` |
+| `Econ.solow_steady_state` | Pure | `{ s, alpha, delta, n, g }` | `{ k_star, y_star }` |
+| `Econ.olg_steady_state` | Pure | `{ alpha, beta, n_pop_growth }` | `{ k_star, c_star }` |
+| `Econ.ramsey_steady_state` | Pure | `{ alpha, beta, delta }` | `f64` |
+| `Econ.ramsey_euler_residual` | Pure | `{ capital, capital_next, beta, alpha, delta, sigma }` | `f64` |
+| `Econ.new_keynesian_solve` | Pure | `{ r_prev, beta, kappa, sigma, phi_pi, phi_y, rho_r, r_nat }` | `{ output_gap, inflation, interest_rate }` |
+| `Econ.gini_coefficient` | Pure | `{ incomes: [f64] }` | `f64` |
+| `Econ.lorenz_curve` | Pure | `{ incomes: [f64] }` | `{ lorenz_points: [f64], count }` |
+| `Econ.atkinson_inequality` | Pure | `{ incomes: [f64], epsilon }` | `f64` |
+| `Econ.headcount_poverty` | Pure | `{ incomes: [f64], poverty_line }` | `{ headcount, poverty_rate }` |
+| `Econ.poverty_gap` | Pure | `{ incomes: [f64], poverty_line }` | `f64` |
+| `Econ.utilitarian_welfare` | Pure | `{ utilities: [f64] }` | `f64` |
+| `Econ.rawlsian_welfare` | Pure | `{ utilities: [f64] }` | `f64` |
+| `Econ.nash_welfare` | Pure | `{ utilities: [f64] }` | `f64` |
+| `Econ.npv` | Pure | `{ benefits: [f64], costs: [f64], discount_rate, n_periods }` | `f64` |
+| `Econ.distributional_npv` | Pure | `{ benefits: [f64], costs: [f64], weights: [f64], discount_rate, n_periods }` | `{ weighted_npv, unweighted_npv, assumptions }` |
+| `Econ.mean_return` | Pure | `{ returns: [f64] }` | `f64` |
+| `Econ.sample_variance` | Pure | `{ returns: [f64] }` | `f64` |
+| `Econ.portfolio_returns` | Pure | `{ asset_returns: [f64], weights: [f64], n_periods, n_assets }` | `{ portfolio_returns: [f64], count }` |
+| `Econ.covariance_matrix` | Pure | `{ returns: [f64], n_periods, n_assets }` | `{ covariance: [f64], n_assets }` |
+| `Econ.portfolio_variance` | Pure | `{ weights: [f64], covariance: [f64], n_assets }` | `f64` |
+| `Econ.max_drawdown` | Pure | `{ returns: [f64] }` | `f64` |
+| `Econ.historical_var` | Pure | `{ returns: [f64], confidence }` | `f64` |
+| `Econ.historical_cvar` | Pure | `{ returns: [f64], confidence }` | `f64` |
+| `Econ.gaussian_var` | Pure | `{ mean, std_dev, confidence }` | `f64` |
+| `Econ.simple_returns` | Pure | `{ prices: [f64] }` | `{ returns: [f64], count }` |
+| `Econ.log_returns` | Pure | `{ prices: [f64] }` | `{ returns: [f64], count }` |
+| `Econ.cumulative_wealth` | Pure | `{ returns: [f64] }` | `{ wealth: [f64], count }` |
+| `Econ.drawdown` | Pure | `{ wealth: [f64] }` | `{ drawdown: [f64], count }` |
+| `Econ.rolling_mean` | Pure | `{ values: [f64], window }` | `{ rolling_mean: [f64], count }` |
+| `Econ.rolling_variance` | Pure | `{ values: [f64], window }` | `{ rolling_variance: [f64], count }` |
+| `Econ.autocorrelation` | Pure | `{ values: [f64], lag }` | `f64` |
+| `Econ.cross_correlation` | Pure | `{ a: [f64], b: [f64], lag }` | `f64` |
+| `Econ.gbm_simulate` | Pure | `{ s0, mu, sigma, dt, n_steps, seed }` | `{ path: [f64] }` |
+| `Econ.stress_scenario` | Pure | `{ returns: [f64], shock }` | `{ stressed_returns: [f64], count }` |
+| `Econ.block_bootstrap` | Pure | `{ returns: [f64], block_size, n_resamples, seed }` | `{ bootstrap_means: [f64] }` |
+| `Econ.interpolate_zero_rate` | Pure | `{ maturities: [f64], rates: [f64], target_maturity }` | `{ zero_rate }` |
+| `Econ.discount_factor` | Pure | `{ maturities: [f64], rates: [f64], target_maturity, compounding_per_year }` | `{ discount_factor }` |
+| `Econ.forward_rate` | Pure | `{ maturities: [f64], rates: [f64], t1, t2, compounding_per_year }` | `{ forward_rate }` |
+| `Econ.par_yield` | Pure | `{ maturities: [f64], rates: [f64], target_maturity, compounding_per_year }` | `{ par_yield }` |
+| `Econ.gravity_flow` | Pure | `{ mass_1, mass_2, distance, alpha, beta, gamma }` | `{ flow }` |
+| `Econ.total_transport_cost` | Pure | `{ flows: [f64], distances: [f64], n }` | `{ total_cost }` |
+| `Econ.morans_i` | Pure | `{ values: [f64], weights: [f64], n }` | `{ morans_i }` |
+| `Econ.nearest_facility` | Pure | `{ demands: [f64], facilities: [f64], n_demands, n_facilities }` | `{ assignments: [u64] }` |
+| `Econ.transfer_payment` | Pure | `{ base, income, threshold, phaseout_rate }` | `{ transfer }` |
+| `Econ.fiscal_multiplier` | Pure | `{ initial_spending, mpc, leakage_rate }` | `{ gdp_impact }` |
+| `Econ.laffer_curve` | Pure | `{ tax_rate, tax_base, elasticity }` | `{ revenue }` |
+| `Econ.progressive_tax` | Pure | `{ thresholds: [f64], rates: [f64], income }` | `{ tax_per_bracket: [f64], total_tax, effective_rate }` |
+| `Econ.check_ir` | Pure | `{ valuations: [f64], payments: [f64] }` | `{ individually_rational }` |
+| `Econ.check_budget_balance` | Pure | `{ payments: [f64] }` | `{ is_balanced, net_transfer }` |
+| `Econ.vcg_payment` | Pure | `{ valuations: [f64] }` | `{ payments: [f64], total_revenue }` |
+| `Econ.strategy_proofness` | Pure | `{ valuations: [f64], allocation: [bool], payments: [f64] }` | `{ strategy_proof }` |
+| `Econ.validate_transition_matrix` | Pure | `{ matrix: [f64], n }` | `{ valid }` |
+| `Econ.transition_probability` | Pure | `{ matrix: [f64], n, from, to }` | `{ probability }` |
+| `Econ.expected_holding_time` | Pure | `{ matrix: [f64], n, state }` | `{ holding_time }` |
+| `Econ.stationary_distribution` | Pure | `{ matrix: [f64], n, max_iter, tolerance }` | `{ distribution: [f64] }` |
+| `Econ.simulate_chain` | Pure | `{ matrix: [f64], n, start, n_steps, seed }` | `{ path: [u64] }` |
+| `Econ.mean_first_passage` | Pure | `{ matrix: [f64], n, target, max_iter, tolerance }` | `{ first_passage_times: [f64] }` |
+| `Econ.labor_supply` | Pure | `{ wage, time_endowment, non_labor_income, alpha }` | `{ labor, consumption }` |
+| `Econ.household_production_ces` | Pure | `{ time, goods, alpha, rho }` | `{ output }` |
+| `Econ.efficiency_units` | Pure | `{ raw_labor, human_capital }` | `f64` |
+| `Econ.social_cost_of_carbon` | Pure | `{ emissions_tons, damage_per_ton }` | `f64` |
+| `Econ.pollution_damage` | Pure | `{ emissions, damage_coeff }` | `f64` |
+| `Econ.marginal_damage` | Pure | `{ emissions, damage_coeff }` | `f64` |
+| `Econ.optimal_pollution` | Pure | `{ baseline_emissions, abatement_coeff, damage_coeff }` | `f64` |
+| `Econ.optimal_abatement` | Pure | `{ baseline_emissions, abatement_coeff, damage_coeff }` | `f64` |
+| `Econ.abatement_net_benefit` | Pure | `{ baseline_emissions, actual_emissions, abatement_coeff, damage_coeff }` | `f64` |
+| `Econ.bellman_update` | Pure | `{ rewards: [f64], transitions: [f64], discount, values: [f64], n_states, n_actions, state }` | `f64` |
+| `Econ.value_iteration` | Pure | `{ rewards: [f64], transitions: [f64], discount, n_states, n_actions, max_iter, tolerance }` | `{ values: [f64], policy: [u64] }` |
+| `Econ.malfeasance_delta` | Pure | `{ capital_allocated, delivered, inverted }` | `{ capital_allocated, delivered_utility, delta, governance_yield_inverted }` |
+| `Econ.narrative_divergence` | Pure | — | `{ status }` (requires NquinVector structs) |
+| `Econ.ols` | Pure | `{ x: [f64], y: [f64], n_obs, n_reg }` | `{ beta: [f64], residuals: [f64], r_squared }` |
+| `Econ.wls` | Pure | `{ x: [f64], y: [f64], weights: [f64], n_obs, n_reg }` | `{ beta: [f64], r_squared }` |
+| `Econ.iv_2sls` | Pure | `{ x_endogenous: [f64], z_instruments: [f64], y: [f64], n_obs, n_reg, n_instr }` | `{ beta: [f64], r_squared }` |
+| `Econ.logistic_mle` | Pure | `{ x: [f64], y: [f64], n_obs, n_reg, max_iter, tolerance }` | `{ beta: [f64] }` |
+| `Econ.eigenvector_centrality` | Pure | `{ adjacency: [f64], n, max_iter, tolerance }` | `{ centrality: [f64] }` |
+| `Econ.degree_centrality` | Pure | `{ adjacency: [f64], n }` | `{ centrality: [f64] }` |
+| `Econ.interbank_clearing` | Pure | `{ exposures: [f64], capital: [f64], n, max_rounds, tolerance }` | `{ clearing_payments: [f64] }` |
+| `Econ.leontief_inverse` | Pure | `{ matrix: [f64], n, max_rounds, tolerance }` | `{ inverse: [f64] }` |
+| `Econ.output_multipliers` | Pure | `{ leontief_inverse: [f64], n }` | `{ multipliers: [f64] }` |
+| `Econ.validate_scalar_constraint` | Pure | `{ value, min, max }` | `{ valid }` |
+| `Econ.aggregate_wealth` | Pure | — | `{ status }` (requires Agent structs) |
+| `Econ.agent_based_aggregate_wealth` | Pure | — | `{ status }` (requires Agent structs) |
+| `Econ.aggregate_paper_fills` | Pure | — | `{ status }` (requires Fill structs) |
+
+### 11.3 Multi-agent orchestration bindings
+
+Post-0.1 extensions exposing the agent runtime orchestration layer via `capability.invoke` IDs in the `Orchestration.*` namespace.
+
+| Binding | Effect | Input | Output |
+|---|---|---|---|
+| `Orchestration.session_create` | External | `{ id: string, task: string }` | `{ id, task, status }` |
+| `Orchestration.session_plan` | External | `{ id: string }` | `{ id, step_count, status }` |
+| `Orchestration.session_execute` | External | `{ id: string }` | `{ id, status, node_count, results: [{node_id, node_name, success, agent_id}] }` |
+| `Orchestration.session_status` | External | `{ id: string }` | `Record` (summary fields) |
+| `Orchestration.roster_register` | External | `{ session_id, agent_id, did, name, role?, capabilities?: [string] }` | `{ session_id, agent_id, registered }` |
+| `Orchestration.roster_list` | External | `{ session_id: string }` | `{ session_id, agents: [Record], count }` |
+| `Orchestration.roster_capabilities` | External | `{ session_id: string }` | `{ session_id, capabilities: [string], count }` |
+
+### 11.4 Asset persistence bindings
+
+Post-0.1 extensions exposing the persistent asset store via `capability.invoke` IDs in the `Asset.persist_*` namespace. These complement the existing transient `Asset.create`/`add_temporal`/`add_topic`/`set_spatial` bindings.
+
+| Binding | Effect | Input | Output |
+|---|---|---|---|
+| `Asset.persist` | External | `{ asset_id: string, kind: string, owner_did?: string }` | `{ asset_id, persisted }` |
+| `Asset.persist_create` | External | `{ asset_id: string, kind: string, owner_did?: string }` | `{ asset_id, kind, persisted }` |
+| `Asset.persist_add_temporal` | External | `{ asset_id, kind_iri, seconds, nanos?, duration_secs?, asserted_by?, confidence? }` | `{ asset_id, added }` |
+| `Asset.persist_add_topic` | External | `{ asset_id: string, topic: string }` | `{ asset_id, topic, added }` |
+| `Asset.persist_set_spatial` | External | `{ asset_id, anchor_iri, latitude?, longitude?, altitude? }` | `{ asset_id, anchor_iri, set }` |
+| `Asset.persist_compile` | External | `{ asset_id: string }` | `{ asset_id, quin_count }` |
+| `Asset.persist_temporal_span` | External | `{ asset_id: string }` | `{ asset_id, span_seconds }` |
+| `Asset.persist_query_aspects` | External | `{ asset_id: string, kind_iri: string }` | `{ asset_id, kind_iri, aspects: [Record], count }` |
+| `Asset.resolve` | Pure | `{ asset_id: string }` | `Record` (asset or null) |
+| `Asset.resolve_by_spatial` | Pure | `{ anchor_iri: string }` | `{ assets: [Record], count }` |
+| `Asset.resolve_by_topic` | Pure | `{ topic: string }` | `{ assets: [Record], count }` |
+| `Asset.resolve_by_temporal` | Pure | `{ kind_iri: string }` | `{ assets: [Record], count }` |
+| `Asset.list` | Pure | `{}` | `{ asset_ids: [string], count }` |
+| `Asset.count` | Pure | `{}` | `{ count }` |
+
 ---
 
 ## 12. Normative examples (MUST parse and type-check)

@@ -19,7 +19,8 @@ pub use emf::{
 };
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 pub use physics::{
-    advection_diffusion_1d, cfd_step, harmonic_oscillator, heat_diffusion_1d, logistic_growth,
+    advection_diffusion_1d, cfd_step, creator_evaluate_interaction, creator_field_sample,
+    creator_material_query, harmonic_oscillator, heat_diffusion_1d, logistic_growth,
     molecular_dynamics, n_body, pendulum, projectile, quantum_states_1d, wave_1d,
 };
 

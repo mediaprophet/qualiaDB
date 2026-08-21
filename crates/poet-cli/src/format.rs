@@ -54,7 +54,8 @@ mod tests {
     #[test]
     fn format_indentation() {
         let input = "effect fn go() {\nlet x = 1;\nif x > 0 {\nreturn x;\n}\n}\n";
-        let expected = "effect fn go() {\n    let x = 1;\n    if x > 0 {\n        return x;\n    }\n}\n";
+        let expected =
+            "effect fn go() {\n    let x = 1;\n    if x > 0 {\n        return x;\n    }\n}\n";
         assert_eq!(format_source(input), expected);
     }
 

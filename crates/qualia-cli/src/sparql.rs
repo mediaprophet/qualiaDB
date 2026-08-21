@@ -526,8 +526,8 @@ fn run_range_union_query(
     };
     use qualia_core_db::sparql_ast::BindingRow;
     use qualia_core_db::{
-        execute_range_union_page_into, execute_range_volume_set_union_page_into, Q42RangeUnionState,
-        Q42RangeVolumeSetUnionState,
+        execute_range_union_page_into, execute_range_volume_set_union_page_into,
+        Q42RangeUnionState, Q42RangeVolumeSetUnionState,
     };
 
     const PAGE_ROWS: usize = 128;

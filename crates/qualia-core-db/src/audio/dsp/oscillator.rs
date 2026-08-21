@@ -141,7 +141,7 @@ mod tests {
     fn oscillator_gain() {
         let mut osc = Oscillator::new(Waveform::Sine, 440.0, 44100.0);
         osc.set_gain(0.5);
-        let v = osc.tick();
+        let _ = osc.tick();
         // At phase 0, sine is 0, so check a later sample.
         let v2 = osc.tick();
         assert!(v2.abs() <= 0.5 + 1e-10);

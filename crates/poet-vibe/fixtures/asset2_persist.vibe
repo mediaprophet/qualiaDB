@@ -1,0 +1,81 @@
+// N16 fixture: persistent asset aspect graph lifecycle.
+// Tests: persist_create → persist_add_temporal → persist_add_topic →
+//        persist_set_spatial → persist_compile → persist_query_aspects →
+//        persist_temporal_span → resolve → resolve_by_topic → count
+
+cell asset_id = "recording-2026-001";
+
+// Step 1: Create and persist the asset.
+cell created = capability.invoke("Asset.persist_create", {
+  asset_id: asset_id,
+  kind: "q42:Recording",
+  owner_did: "did:q42:timothy",
+});
+
+// Step 2: Add temporal aspects — recording date and publication date.
+cell temporal1 = capability.invoke("Asset.persist_add_temporal", {
+  asset_id: asset_id,
+  kind_iri: "q42:recordingDate",
+  seconds: 1750000000,
+  nanos: 0,
+  asserted_by: "did:q42:timothy",
+  confidence: 0.95,
+});
+
+cell temporal2 = capability.invoke("Asset.persist_add_temporal", {
+  asset_id: asset_id,
+  kind_iri: "q42:publicationDate",
+  seconds: 1750100000,
+  nanos: 0,
+  asserted_by: "did:q42:timothy",
+  confidence: 0.90,
+});
+
+// Step 3: Add topics.
+cell topic1 = capability.invoke("Asset.persist_add_topic", {
+  asset_id: asset_id,
+  topic: "semantic-web",
+});
+
+cell topic2 = capability.invoke("Asset.persist_add_topic", {
+  asset_id: asset_id,
+  topic: "digital-preservation",
+});
+
+// Step 4: Set the spatial anchor.
+cell spatial = capability.invoke("Asset.persist_set_spatial", {
+  asset_id: asset_id,
+  anchor_iri: "q42:location:melbourne",
+  latitude: -37.8136,
+  longitude: 144.9631,
+  altitude: 31.0,
+});
+
+// Step 5: Compile the asset to graph quins.
+cell compiled = capability.invoke("Asset.persist_compile", {
+  asset_id: asset_id,
+});
+
+// Step 6: Query temporal aspects by kind.
+cell aspects = capability.invoke("Asset.persist_query_aspects", {
+  asset_id: asset_id,
+  kind_iri: "q42:recordingDate",
+});
+
+// Step 7: Get the temporal span.
+cell span = capability.invoke("Asset.persist_temporal_span", {
+  asset_id: asset_id,
+});
+
+// Step 8: Resolve the asset by ID.
+cell resolved = capability.invoke("Asset.resolve", {
+  asset_id: asset_id,
+});
+
+// Step 9: Resolve by topic.
+cell by_topic = capability.invoke("Asset.resolve_by_topic", {
+  topic: "semantic-web",
+});
+
+// Step 10: Count all persisted assets.
+cell total = capability.invoke("Asset.count", {});

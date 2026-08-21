@@ -11,7 +11,8 @@ pub fn RichTextTool(#[props(default = ToolbarSpec::OFFICE)] spec: ToolbarSpec) -
     });
     let mut gaz = use_signal(PoetGazetteerResult::default);
     let mut busy = use_signal(|| false);
-    let mut status = use_signal(|| "Marks wrap the selection. Gazetteer is NLP, not Vibe.".to_string());
+    let mut status =
+        use_signal(|| "Marks wrap the selection. Gazetteer is NLP, not Vibe.".to_string());
 
     rsx! {
         div { class: "poet-rich-text", style: "display:grid;gap:8px;min-height:0;flex:1;",

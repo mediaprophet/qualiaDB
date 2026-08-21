@@ -1263,16 +1263,14 @@ fn n9_non_vibe_import_rejected() {
 #[test]
 fn all_phase_g_fixtures_on_disk_are_valid() {
     // Physics
-    for (name, is_cell) in [
+    for (_name, _is_cell) in [
         ("p1_wave_propagation", false),
         ("p2_harmonic_oscillator", false),
         ("p3_projectile", false),
         ("p4_n_body", false),
     ] {
-        let path = format!("../fixtures/{name}.vibe");
-        let src = include_str!(concat!("../fixtures/p1_wave_propagation.vibe"));
-        let _ = src; // suppress unused
-                     // Just verify the files exist and parse — individual tests above check semantics.
+        let _src = include_str!(concat!("../fixtures/p1_wave_propagation.vibe"));
+        // Just verify the files exist and parse — individual tests above check semantics.
     }
     // This is a compile-time include check: if any file is missing, compilation fails.
     let _ = include_str!("../fixtures/p1_wave_propagation.vibe");
@@ -2716,7 +2714,7 @@ fn x2_physics_to_geometry_trajectory() {
 
 // ── Phase H: vibe-bc-0.1 bytecode conformance ────────────────────────
 
-use poet_vibe::bytecode::{compile, compile_expr, decode_chunk, encode_chunk, Chunk, Vm};
+use poet_vibe::bytecode::{compile, compile_expr, decode_chunk, encode_chunk, Vm};
 
 #[test]
 fn bc1_cell_arithmetic() {

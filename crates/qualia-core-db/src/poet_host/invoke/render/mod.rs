@@ -4,6 +4,7 @@
 //! through `webizen-render` (PNG or native swapchain). HTML/GPU canvas stays
 //! canvas (D13).
 
+mod animation;
 mod backend;
 mod css;
 mod emf_visualizer;
@@ -15,6 +16,9 @@ mod shader_compile;
 pub mod spectral;
 mod svg;
 
+pub use animation::{
+    animation_eval_curve, animation_eval_preset, animation_sclerp, animation_spring_step,
+};
 pub use backend::gpu_backend_info;
 pub use css::{css_animation, css_color, css_transform};
 pub use emf_visualizer::{emf_field_info, emf_render_slice, emf_upload_field};
@@ -26,8 +30,10 @@ pub use gpu::{
 pub use gpu_compute::{gpu_compute_dispatch, gpu_compute_readback};
 pub use scene::scene;
 pub use scene_graph::{
-    scene_add_camera, scene_add_node, scene_capture_frame, scene_create, scene_render,
-    scene_set_clear_colour, scene_set_mesh, scene_set_transform, scene_set_viewport,
+    scene_add_camera, scene_add_light, scene_add_node, scene_capture_frame, scene_create,
+    scene_duplicate_node, scene_ik_ccd, scene_ik_look_at, scene_link_semantic, scene_render,
+    scene_set_clear_colour, scene_set_mesh, scene_set_render_budget, scene_set_transform,
+    scene_set_viewport, scene_smooth_damp, scene_smooth_damp_vec3,
 };
 pub use shader_compile::{gpu_compile_shader, gpu_compile_to_glsl, gpu_validate_shader};
 pub use svg::{svg_bezier, svg_circle, svg_field, svg_line, svg_path, svg_rect};

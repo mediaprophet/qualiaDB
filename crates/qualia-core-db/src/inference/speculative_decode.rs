@@ -913,8 +913,7 @@ mod tests {
         // Valid tokens should have their original values, invalid should be -inf.
         let has_neg_inf = logits.iter().any(|&l| l == f32::NEG_INFINITY);
         assert!(has_neg_inf, "some tokens should be masked");
-        // At least one token should retain its original value.
-        let has_original = logits.iter().any(|&l| l > 0.0);
+        let has_original = logits.iter().enumerate().any(|(i, &l)| l == original[i]);
         assert!(has_original, "some tokens should be unmasked");
     }
 

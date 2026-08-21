@@ -128,24 +128,12 @@ fn apply_move(mut wb: Signal<Workbench>, g: Gesture, x: f64, y: f64, zoom: f64) 
             s.pan_y = py + (y - sy);
             wb.set(s);
         }
-        Gesture::Move {
-            id,
-            sx,
-            sy,
-            nx,
-            ny,
-        } => {
+        Gesture::Move { id, sx, sy, nx, ny } => {
             let mut s = wb();
             s.move_node(&id, nx + (x - sx) / z, ny + (y - sy) / z);
             wb.set(s);
         }
-        Gesture::Resize {
-            id,
-            sx,
-            sy,
-            nw,
-            nh,
-        } => {
+        Gesture::Resize { id, sx, sy, nw, nh } => {
             let mut s = wb();
             s.resize_node(&id, nw + (x - sx) / z, nh + (y - sy) / z);
             wb.set(s);

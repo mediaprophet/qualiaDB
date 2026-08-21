@@ -177,7 +177,10 @@ mod tests {
     fn viewport_backend_from_str() {
         assert_eq!(ViewportBackend::from_str("webgpu"), ViewportBackend::Webgpu);
         assert_eq!(ViewportBackend::from_str("WebGL2"), ViewportBackend::Webgl2);
-        assert_eq!(ViewportBackend::from_str("canvas2d"), ViewportBackend::Canvas2d);
+        assert_eq!(
+            ViewportBackend::from_str("canvas2d"),
+            ViewportBackend::Canvas2d
+        );
         assert_eq!(ViewportBackend::from_str("unknown"), ViewportBackend::None);
     }
 

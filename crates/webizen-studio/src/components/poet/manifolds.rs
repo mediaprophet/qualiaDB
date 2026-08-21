@@ -1,8 +1,6 @@
 //! Seed desks from `C:\Projects\NLP\Canvas_Workbench\manifolds\`.
 
-use super::kinds::{
-    CanvasNode, ContainerKind, Epistemic, ManifoldId, Strata, Wire,
-};
+use super::kinds::{CanvasNode, ContainerKind, Epistemic, ManifoldId, Strata, Wire};
 
 pub struct ManifoldSeed {
     pub id: ManifoldId,

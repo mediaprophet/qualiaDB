@@ -215,6 +215,7 @@ mod tests {
         crate::poet_host::PoetSnapshot::default()
     }
 
+    #[allow(dead_code)]
     fn eval(src: &str) -> Value {
         let mut snap = snap();
         snap.eval_fn(src, "go", vec![]).expect("script should eval")

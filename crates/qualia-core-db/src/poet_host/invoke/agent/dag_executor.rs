@@ -26,7 +26,7 @@ use crate::modalities::blackboard::BlackboardBus;
 use crate::NQuin;
 use poet_vibe::dag::{DagError, DagPipeline};
 use poet_vibe::deontic_interrupt::{DeonticInterrupt, PhaseLeaser};
-use poet_vibe::{Diagnostic, Span};
+use poet_vibe::Diagnostic;
 
 /// Result of executing a single DAG node.
 #[derive(Debug, Clone)]
@@ -233,6 +233,7 @@ mod tests {
     use crate::modalities::blackboard::BlackboardBus;
     use poet_vibe::dag::{DagEdge, DagNode, DagPipeline, NodeEffect};
     use poet_vibe::deontic_interrupt::{Phase, PhaseLeaser};
+    use poet_vibe::Span;
 
     fn make_quin(s: u64, p: u64, o: u64) -> NQuin {
         let q = NQuin {

@@ -112,6 +112,7 @@ pub fn compare_attestation_file_to_path(
 }
 
 /// Hash a reader the same way ingest does (tests / local files).
+#[allow(dead_code)]
 pub fn sha256_reader(mut reader: impl Read) -> io::Result<([u8; 32], u64)> {
     let mut hasher = Sha256::new();
     let mut buf = [0u8; 64 * 1024];

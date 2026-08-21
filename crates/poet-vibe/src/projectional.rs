@@ -19,11 +19,11 @@
 use std::fmt::Write;
 
 use crate::ast::{
-    Arg, BinOp, Block, ConstDecl, EffectClass, EnumDecl, EnumVariant, Expr, ExprKind, FieldDecl,
+    Arg, BinOp, Block, ConstDecl, EffectClass, EnumDecl, Expr, ExprKind, FieldDecl,
     FieldRepresentation, FieldSupport, FunctionDecl, HookDecl, Item, LawDecl, Literal,
-    MaterialDecl, NamedArg, Param, Pattern, Program, Stmt, TypeExpr, UnOp,
+    MaterialDecl, NamedArg, Pattern, Program, Stmt, TypeExpr, UnOp,
 };
-use crate::trivia::{CstNode, Trivia, TriviaSink};
+use crate::trivia::CstNode;
 
 // ── projection options ─────────────────────────────────────────────
 
@@ -1063,7 +1063,9 @@ pub fn make_member(recv: &str, name: &str) -> Expr {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::ast::{EnumVariant, Param};
     use crate::parse::parse_program;
+    use crate::trivia::Trivia;
 
     // ── projection tests ───────────────────────────────────────────
 

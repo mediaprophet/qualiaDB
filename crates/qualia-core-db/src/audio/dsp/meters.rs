@@ -146,19 +146,31 @@ impl LoudnessMeter {
         }
     }
 
-    /// K-weighting filter (simplified — stage 1 high-shelf + stage 2 high-pass).
+    /// K-weighting filter (ITU-R BS.1770 stage 1 high-shelf + stage 2 high-pass RLB).
     fn k_weight(&mut self, input: f64) -> f64 {
-        // Stage 1: high-shelf boost (simplified first-order).
-        // Coefficients approximated for 48kHz; close enough for metering.
-        let output = input + 0.0;
-        // Stage 2: high-pass (RLB filter).
-        let hp_out =
-            input - 2.0 * self.rlb_x1 + self.rlb_x2 + 1.99 * self.rlb_y1 - 0.99 * self.rlb_y2;
+        // Stage 1: high-shelf boost (48kHz biquad approximation).
+        let b0 = 1.53512485958697;
+        let b1 = -2.69169618940638;
+        let b2 = 1.19839281085285;
+        let a1 = -1.69065929318241;
+        let a2 = 0.73248077421585;
+
+        let hs_out =
+            b0 * input + b1 * self.hp_x1 + b2 * self.hp_x2 - a1 * self.hp_y1 - a2 * self.hp_y2;
+        self.hp_x2 = self.hp_x1;
+        self.hp_x1 = input;
+        self.hp_y2 = self.hp_y1;
+        self.hp_y1 = hs_out;
+
+        // Stage 2: high-pass (RLB filter) applied to the high-shelf output.
+        let rlb_out =
+            hs_out - 2.0 * self.rlb_x1 + self.rlb_x2 + 1.99 * self.rlb_y1 - 0.99 * self.rlb_y2;
         self.rlb_x2 = self.rlb_x1;
-        self.rlb_x1 = input;
+        self.rlb_x1 = hs_out;
         self.rlb_y2 = self.rlb_y1;
-        self.rlb_y1 = hp_out;
-        output + hp_out * 0.3
+        self.rlb_y1 = rlb_out;
+
+        rlb_out
     }
 
     /// Process one sample.
@@ -254,9 +266,16 @@ mod tests {
     #[test]
     fn loudness_meter_loud_signal() {
         let mut meter = LoudnessMeter::new(44100.0);
-        let signal: Vec<f64> = (0..20000).map(|_| 0.5).collect();
+        // Use a 1kHz sine wave — K-weighting includes a high-pass that removes DC.
+        let signal: Vec<f64> = (0..20000)
+            .map(|i| (2.0 * std::f64::consts::PI * 1000.0 * i as f64 / 44100.0).sin() * 0.5)
+            .collect();
         meter.process(&signal);
-        // A constant 0.5 amplitude should produce a finite LUFS.
-        assert!(meter.momentary_lufs > -70.0);
+        // A loud sine should produce a finite, non-silence LUFS.
+        assert!(
+            meter.momentary_lufs > -70.0,
+            "momentary_lufs={}",
+            meter.momentary_lufs
+        );
     }
 }

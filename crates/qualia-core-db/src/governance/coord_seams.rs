@@ -15,7 +15,7 @@
 //!   with a performance VC quin, returns the `perf_vc_hash`
 
 use crate::foundation::crdt::{DelegatedAccess, SuspendedTransaction, SuspendedTransactionQueue};
-use crate::governance::coordination::{perf_vc_hash, CoordHostSeams, PerformanceRecord};
+use crate::governance::coordination::{perf_vc_hash, CoordHostSeams};
 use crate::NQuin;
 use std::sync::Mutex;
 

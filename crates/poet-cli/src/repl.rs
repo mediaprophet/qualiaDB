@@ -1,16 +1,10 @@
 //! VibeScript interactive REPL (T62).
 
-use poet_vibe::{
-    eval_cell, load_program, Budget, Diagnostic, Engine, Env, Host, MockHost, Value,
-};
+use poet_vibe::{eval_cell, load_program, Budget, Diagnostic, Engine, Env, Host, MockHost, Value};
 use std::io::{self, BufRead, Write};
 
 /// Evaluate a single REPL line/cell within a persistent host and environment.
-pub fn eval_line(
-    line: &str,
-    host: &mut impl Host,
-    env: &mut Env,
-) -> Result<Value, Diagnostic> {
+pub fn eval_line(line: &str, host: &mut impl Host, env: &mut Env) -> Result<Value, Diagnostic> {
     let trimmed = line.trim();
     if trimmed.is_empty() {
         return Ok(Value::Null);

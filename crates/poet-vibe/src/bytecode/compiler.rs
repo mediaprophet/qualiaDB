@@ -15,8 +15,7 @@
 //!   `Op::ReturnNull`.
 
 use crate::ast::*;
-use crate::bytecode::op::{Chunk, Const, FuncMeta, Op};
-use crate::span::Span;
+use crate::bytecode::op::{Chunk, FuncMeta, Op};
 use std::collections::HashMap;
 
 /// Compiler error.
@@ -170,6 +169,7 @@ impl Compiler {
         self.check_code_size()
     }
 
+    #[allow(dead_code)]
     fn emit_f64(&mut self, v: f64) -> Result<(), CompileError> {
         self.chunk.emit_f64(v);
         self.check_code_size()
@@ -752,32 +752,19 @@ impl Compiler {
 
     // ── Function compilation ─────────────────────────────────────
 
-    fn compile_function(&mut self, fd: &FunctionDecl) -> Result<(), CompileError> {
-        let fn_idx = self.chunk.functions.len() as u16;
-        if fn_idx as usize >= crate::bytecode::op::MAX_FUNCTIONS {
-            return Err(CompileError::TooManyFunctions);
-        }
-
+    fn compile_function(
+        &mut self,
+        fd: &FunctionDecl,
+        func_iter: usize,
+    ) -> Result<(), CompileError> {
         let code_offset = self.chunk.current_offset();
 
-        // Register the function name → index mapping so calls can resolve.
-        self.func_indices.insert(fd.name.clone(), fn_idx);
-
-        // Parse budget steps if present.
-        let budget_steps = fd
-            .budget
-            .iter()
-            .find(|a| a.name == "steps")
-            .and_then(|a| match &a.value.kind {
-                ExprKind::Literal(Literal::UInt(n)) => Some(*n),
-                ExprKind::Literal(Literal::Int(n)) if *n >= 0 => Some(*n as u64),
-                _ => None,
-            })
-            .unwrap_or(0);
-
-        // Set up function scope with parameters.
+        // Reset local counter for this function.
+        // Each function has its own local slot space starting at 0.
         let saved_next_local = self.next_local;
         self.next_local = 0;
+
+        // Set up function scope with parameters.
         self.push_scope();
         for p in &fd.params {
             let _ = self.declare_var(&p.name)?;
@@ -796,14 +783,22 @@ impl Compiler {
         self.pop_scope();
         self.next_local = saved_next_local;
 
-        // Record function metadata.
-        self.chunk.functions.push(FuncMeta {
-            name: fd.name.clone(),
-            param_count: fd.params.len() as u8,
-            local_count,
-            code_offset,
-            budget_steps,
-        });
+        // Parse budget steps if present.
+        let budget_steps = fd
+            .budget
+            .iter()
+            .find(|a| a.name == "steps")
+            .and_then(|a| match &a.value.kind {
+                ExprKind::Literal(Literal::UInt(n)) => Some(*n),
+                ExprKind::Literal(Literal::Int(n)) if *n >= 0 => Some(*n as u64),
+                _ => None,
+            })
+            .unwrap_or(0);
+
+        // Record/update function metadata.
+        self.chunk.functions[func_iter].code_offset = code_offset;
+        self.chunk.functions[func_iter].local_count = local_count;
+        self.chunk.functions[func_iter].budget_steps = budget_steps;
 
         Ok(())
     }
@@ -855,48 +850,7 @@ impl Compiler {
         let mut func_iter = 0;
         for item in &program.items {
             if let Item::Function(fd) = item {
-                let code_offset = self.chunk.current_offset();
-
-                // Reset local counter for this function.
-                // Each function has its own local slot space starting at 0.
-                let saved_next_local = self.next_local;
-                self.next_local = 0;
-
-                // Set up function scope.
-                self.push_scope();
-                for p in &fd.params {
-                    let _ = self.declare_var(&p.name)?;
-                }
-                let local_count = self.next_local;
-
-                self.compile_block(&fd.body)?;
-
-                let last_byte = *self.chunk.code.last().unwrap_or(&0);
-                if last_byte != Op::Return as u8 && last_byte != Op::ReturnNull as u8 {
-                    self.emit_op(Op::ReturnNull)?;
-                }
-
-                self.pop_scope();
-
-                // Restore the local counter.
-                self.next_local = saved_next_local;
-
-                // Update the FuncMeta that was reserved in the first pass.
-                let budget_steps = fd
-                    .budget
-                    .iter()
-                    .find(|a| a.name == "steps")
-                    .and_then(|a| match &a.value.kind {
-                        ExprKind::Literal(Literal::UInt(n)) => Some(*n),
-                        ExprKind::Literal(Literal::Int(n)) if *n >= 0 => Some(*n as u64),
-                        _ => None,
-                    })
-                    .unwrap_or(0);
-
-                self.chunk.functions[func_iter].code_offset = code_offset;
-                self.chunk.functions[func_iter].local_count = local_count;
-                self.chunk.functions[func_iter].budget_steps = budget_steps;
-
+                self.compile_function(fd, func_iter)?;
                 func_iter += 1;
             }
         }
@@ -924,6 +878,7 @@ pub fn compile_expr(expr: &Expr) -> Result<Chunk, CompileError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::bytecode::op::Const;
     use crate::parse::parse_program;
 
     fn compile_src(src: &str) -> Result<Chunk, CompileError> {

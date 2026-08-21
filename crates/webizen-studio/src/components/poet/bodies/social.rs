@@ -48,18 +48,15 @@ pub fn SocialBody() -> Element {
     }
 }
 
-fn run(
-    src: &'static str,
-    name: &'static str,
-    busy: &mut Signal<bool>,
-    out: &mut Signal<String>,
-) {
+fn run(src: &'static str, name: &'static str, busy: &mut Signal<bool>, out: &mut Signal<String>) {
     busy.set(true);
     let mut busy = *busy;
     let mut out = *out;
     spawn(async move {
         match engine::eval(src.into(), false, Some(name.into())).await {
-            Ok(PoetEvalResult { ok: true, value, .. }) => out.set(value),
+            Ok(PoetEvalResult {
+                ok: true, value, ..
+            }) => out.set(value),
             Ok(v) => out.set(v.diagnostic.unwrap_or_else(|| "rejected".into())),
             Err(e) => out.set(e),
         }

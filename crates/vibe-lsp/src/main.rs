@@ -7,7 +7,7 @@
 mod server;
 
 use server::LspServer;
-use std::io::{self, BufReader};
+use std::io;
 
 fn main() -> io::Result<()> {
     let stdin = io::stdin();

@@ -10,8 +10,7 @@ use wasm_bindgen::prelude::*;
 
 use poet_vibe::{
     bytecode::{self, compile, compile_expr, decode_chunk, encode_chunk, Vm},
-    check_cell, check_program, eval_cell, load_program, parse_cell, parse_program, Budget, Env,
-    MockHost, Value,
+    check_cell, eval_cell, load_program, parse_cell, parse_program, Budget, Env, MockHost, Value,
 };
 
 // ── helpers ────────────────────────────────────────────────────────

@@ -5,6 +5,7 @@ use crate::components::settings::host::invoke_json;
 use serde::Deserialize;
 use serde_json::json;
 
+#[allow(dead_code)]
 #[derive(Clone, Deserialize, Default)]
 pub struct PoetEvalResult {
     pub ok: bool,
@@ -23,6 +24,7 @@ pub struct PoetEvalResult {
     pub value_cbor_hex: String,
 }
 
+#[allow(dead_code)]
 #[derive(Clone, Deserialize, Default)]
 pub struct PoetGazetteerResult {
     #[serde(default)]
@@ -35,6 +37,7 @@ pub struct PoetGazetteerResult {
     pub hits: Vec<GazetteerHitDto>,
 }
 
+#[allow(dead_code)]
 #[derive(Clone, Deserialize, Default)]
 pub struct GazetteerHitDto {
     pub surface: String,
@@ -42,6 +45,7 @@ pub struct GazetteerHitDto {
     pub kind: String,
 }
 
+#[allow(dead_code)]
 #[derive(Clone, Deserialize, Default)]
 pub struct PoetRenderResult {
     #[serde(default)]

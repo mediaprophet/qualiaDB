@@ -23,7 +23,6 @@ pub mod zero_copy_views;
 
 // Re-export main types for convenience
 pub use math::{AlignedBufferF32, Motor, MotorEncoder, RenderQuin};
-pub use zero_copy_views::{CameraUniform, ModelUniform, Std140Field, Std140Type, TimeUniform};
 pub use pipeline::{BindGroupManager, RenderBindGroups};
 pub use scene_contract::{RenderScene, SceneCamera, SceneEdge, SceneFace, SceneNode, ScenePoint};
 pub use shaders::{EPISTEMIC_WGSL, PROJECTOR_WGSL};
@@ -38,6 +37,7 @@ pub use wgpu_renderer::{
     render_scene_png_with_time,
 };
 pub use wgpu_renderer::{Camera, ScreenPoint, Vec3, WgpuRenderer};
+pub use zero_copy_views::{CameraUniform, ModelUniform, Std140Field, Std140Type, TimeUniform};
 
 #[cfg(test)]
 mod tests {

@@ -15,7 +15,14 @@ pub struct LintIssue {
 }
 
 const BUILTIN_NAMES: &[&str] = &[
-    "null", "true", "false", "time", "pulse", "capability", "graph", "math",
+    "null",
+    "true",
+    "false",
+    "time",
+    "pulse",
+    "capability",
+    "graph",
+    "math",
 ];
 
 /// Run static lint checks on VibeScript source code.
@@ -100,21 +107,29 @@ mod tests {
     fn lint_detects_unused_binding() {
         let src = "let unused_var = 42;\nlet used_var = 1;\nreturn used_var;\n";
         let issues = lint_source(src);
-        assert!(issues.iter().any(|i| i.message.contains("unused binding 'unused_var'")));
-        assert!(!issues.iter().any(|i| i.message.contains("unused binding 'used_var'")));
+        assert!(issues
+            .iter()
+            .any(|i| i.message.contains("unused binding 'unused_var'")));
+        assert!(!issues
+            .iter()
+            .any(|i| i.message.contains("unused binding 'used_var'")));
     }
 
     #[test]
     fn lint_detects_unreachable_code() {
         let src = "return 1;\nlet x = 2;\n";
         let issues = lint_source(src);
-        assert!(issues.iter().any(|i| i.message.contains("unreachable code after return")));
+        assert!(issues
+            .iter()
+            .any(|i| i.message.contains("unreachable code after return")));
     }
 
     #[test]
     fn lint_detects_builtin_shadowing() {
         let src = "let time = 100;\nreturn time;\n";
         let issues = lint_source(src);
-        assert!(issues.iter().any(|i| i.message.contains("shadows built-in name")));
+        assert!(issues
+            .iter()
+            .any(|i| i.message.contains("shadows built-in name")));
     }
 }

@@ -90,59 +90,135 @@ impl ToolboxId {
             Self::Epistemic => &[(
                 "Objective vs Subjective Grounding",
                 &[
-                    ToolSpec { label: "🔬 Tag Objective Telemetry", places: None, honesty: "present" },
-                    ToolSpec { label: "🧠 Tag Subjective Qualia", places: None, honesty: "present" },
-                    ToolSpec { label: "🌊 Tag Intersubjective Agreement", places: None, honesty: "present" },
-                    ToolSpec { label: "⚖️ Tag Normative Mandate", places: None, honesty: "present" },
+                    ToolSpec {
+                        label: "🔬 Tag Objective Telemetry",
+                        places: None,
+                        honesty: "present",
+                    },
+                    ToolSpec {
+                        label: "🧠 Tag Subjective Qualia",
+                        places: None,
+                        honesty: "present",
+                    },
+                    ToolSpec {
+                        label: "🌊 Tag Intersubjective Agreement",
+                        places: None,
+                        honesty: "present",
+                    },
+                    ToolSpec {
+                        label: "⚖️ Tag Normative Mandate",
+                        places: None,
+                        honesty: "present",
+                    },
                 ],
             )],
             Self::Office => &[(
                 "Containers & Templates",
                 &[
-                    ToolSpec { label: "+ Document Container", places: Some(ContainerKind::Doc), honesty: "live" },
-                    ToolSpec { label: "+ Ontology Mapping Node", places: Some(ContainerKind::Ontology), honesty: "live" },
+                    ToolSpec {
+                        label: "+ Document Container",
+                        places: Some(ContainerKind::Doc),
+                        honesty: "live",
+                    },
+                    ToolSpec {
+                        label: "+ Ontology Mapping Node",
+                        places: Some(ContainerKind::Ontology),
+                        honesty: "live",
+                    },
                 ],
             )],
             Self::Image => &[(
                 "Generative Assets",
-                &[ToolSpec { label: "+ Visual Asset Card", places: Some(ContainerKind::Media), honesty: "live" }],
+                &[ToolSpec {
+                    label: "+ Visual Asset Card",
+                    places: Some(ContainerKind::Media),
+                    honesty: "live",
+                }],
             )],
             Self::Sheet => &[(
                 "Data Containers",
-                &[ToolSpec { label: "+ Columnar Tensor Sheet", places: Some(ContainerKind::Sheet), honesty: "live" }],
+                &[ToolSpec {
+                    label: "+ Columnar Tensor Sheet",
+                    places: Some(ContainerKind::Sheet),
+                    honesty: "live",
+                }],
             )],
             Self::Spatial => &[(
                 "Spatial & GIS Containers",
                 &[
-                    ToolSpec { label: "+ Geospatial Case Map", places: Some(ContainerKind::Map), honesty: "live" },
-                    ToolSpec { label: "+ 3D Mesh Container", places: Some(ContainerKind::Mesh3d), honesty: "present" },
-                    ToolSpec { label: "+ Wormhole Portal", places: Some(ContainerKind::Portal), honesty: "present" },
-                    ToolSpec { label: "+ Sub-manifold", places: Some(ContainerKind::Subcanvas), honesty: "partial" },
+                    ToolSpec {
+                        label: "+ Geospatial Case Map",
+                        places: Some(ContainerKind::Map),
+                        honesty: "live",
+                    },
+                    ToolSpec {
+                        label: "+ 3D Mesh Container",
+                        places: Some(ContainerKind::Mesh3d),
+                        honesty: "present",
+                    },
+                    ToolSpec {
+                        label: "+ Wormhole Portal",
+                        places: Some(ContainerKind::Portal),
+                        honesty: "present",
+                    },
+                    ToolSpec {
+                        label: "+ Sub-manifold",
+                        places: Some(ContainerKind::Subcanvas),
+                        honesty: "partial",
+                    },
                 ],
             )],
             Self::Communication => &[(
                 "Collaborative Containers",
                 &[
-                    ToolSpec { label: "+ Social AI Chat Graph", places: Some(ContainerKind::Social), honesty: "live" },
-                    ToolSpec { label: "+ WebRTC Live Video", places: Some(ContainerKind::WebRtc), honesty: "present" },
-                    ToolSpec { label: "+ Webview Browser Frame", places: Some(ContainerKind::Webview), honesty: "present" },
+                    ToolSpec {
+                        label: "+ Social AI Chat Graph",
+                        places: Some(ContainerKind::Social),
+                        honesty: "live",
+                    },
+                    ToolSpec {
+                        label: "+ WebRTC Live Video",
+                        places: Some(ContainerKind::WebRtc),
+                        honesty: "present",
+                    },
+                    ToolSpec {
+                        label: "+ Webview Browser Frame",
+                        places: Some(ContainerKind::Webview),
+                        honesty: "present",
+                    },
                 ],
             )],
             Self::Rights => &[(
                 "Permission Groups & Scopes",
-                &[ToolSpec { label: "✍️ Sign with DID Key", places: None, honesty: "present" }],
+                &[ToolSpec {
+                    label: "✍️ Sign with DID Key",
+                    places: None,
+                    honesty: "present",
+                }],
             )],
             Self::Health => &[(
                 "Clinical Containers",
-                &[ToolSpec { label: "+ Health Telemetry Node", places: Some(ContainerKind::Health), honesty: "live" }],
+                &[ToolSpec {
+                    label: "+ Health Telemetry Node",
+                    places: Some(ContainerKind::Health),
+                    honesty: "live",
+                }],
             )],
             Self::Code => &[(
                 "DSL Containers & Cells",
-                &[ToolSpec { label: "+ VibeScript Container", places: Some(ContainerKind::Code), honesty: "live" }],
+                &[ToolSpec {
+                    label: "+ VibeScript Container",
+                    places: Some(ContainerKind::Code),
+                    honesty: "live",
+                }],
             )],
             Self::Ai => &[(
                 "Mindware Co-Authors & Agents",
-                &[ToolSpec { label: "🤖 LLM Semantic Co-Author", places: None, honesty: "present" }],
+                &[ToolSpec {
+                    label: "🤖 LLM Semantic Co-Author",
+                    places: None,
+                    honesty: "present",
+                }],
             )],
         }
     }

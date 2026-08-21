@@ -10,7 +10,7 @@ mod differential_privacy;
 mod bfv;
 
 pub use differential_privacy::{
-    CompositionMethod, DifferentialPrivacy, NoiseMechanism, NoiseSource, OsNoise,
+    gaussian_sigma, CompositionMethod, DifferentialPrivacy, NoiseMechanism, NoiseSource, OsNoise,
     PrivacyAccountant, PrivacyBudget, PrivacyError,
 };
 

@@ -80,9 +80,8 @@ impl Workbench {
     }
 
     pub fn dimmed(&self, node: &CanvasNode) -> bool {
-        let strata_off = !self.strata.is_empty()
-            && self.strata.len() < 5
-            && !self.strata.contains(&node.strata);
+        let strata_off =
+            !self.strata.is_empty() && self.strata.len() < 5 && !self.strata.contains(&node.strata);
         let epi_off = self.epistemic != Epistemic::All && node.epistemic != self.epistemic;
         strata_off || epi_off
     }

@@ -119,8 +119,7 @@ pub fn handle_q42(action: &Q42Action) -> Result<(), Box<dyn std::error::Error>> 
         }
         Q42Action::Verify { path, level } => {
             let level = qualia_core_db::q42_volume::VerifyLevel::parse(level)?;
-            let report =
-                qualia_core_db::q42_volume::verify_volume_set_from_root(path, level)?;
+            let report = qualia_core_db::q42_volume::verify_volume_set_from_root(path, level)?;
             print!("{}", report.to_text());
             match report.overall {
                 qualia_core_db::q42_volume::CheckStatus::Fail => {
@@ -159,14 +158,12 @@ pub fn handle_q42(action: &Q42Action) -> Result<(), Box<dyn std::error::Error>> 
                     println!("{}", child.magnet_uri);
                 }
             } else {
-                let display = name
-                    .clone()
-                    .unwrap_or_else(|| {
-                        path.file_name()
-                            .and_then(|n| n.to_str())
-                            .unwrap_or("volume.q42")
-                            .to_string()
-                    });
+                let display = name.clone().unwrap_or_else(|| {
+                    path.file_name()
+                        .and_then(|n| n.to_str())
+                        .unwrap_or("volume.q42")
+                        .to_string()
+                });
                 let magnet = if let Some(ws) = webseed {
                     qualia_core_db::q42_volume::Q42Magnet::for_path_named_with_intent(
                         path,
@@ -450,9 +447,7 @@ pub fn handle_import(
     use qualia_core_db::ingest::{
         streaming_import_rdf_with_job, streaming_import_rdf_with_report, IngestMode, IngestReport,
     };
-    use qualia_core_db::ingest_job::{
-        infer_rdf_format, IngestJob, IngestSourceKind,
-    };
+    use qualia_core_db::ingest_job::{infer_rdf_format, IngestJob, IngestSourceKind};
 
     if progress != ImportProgressFormat::Json {
         eprintln!("============================================================");
@@ -523,7 +518,9 @@ pub fn handle_import(
     }
 
     let IngestSourceKind::File { path } = source else {
-        eprintln!("--url requires --job-dir so the stream can be attested and resumed policy is explicit");
+        eprintln!(
+            "--url requires --job-dir so the stream can be attested and resumed policy is explicit"
+        );
         return;
     };
 
@@ -538,26 +535,32 @@ pub fn handle_import(
         None => None,
     };
 
-    match streaming_import_rdf_with_report(&path, &output.to_string_lossy(), mode, segment_bytes, report)
-    {
+    match streaming_import_rdf_with_report(
+        &path,
+        &output.to_string_lossy(),
+        mode,
+        segment_bytes,
+        report,
+    ) {
         Ok(quin_count) => {
             if progress != ImportProgressFormat::Json {
-                eprintln!("Done. Wrote {quin_count} Super-Quins to {}.", output.display());
+                eprintln!(
+                    "Done. Wrote {quin_count} Super-Quins to {}.",
+                    output.display()
+                );
             }
         }
         Err(e) => eprintln!("Import failed: {e}"),
     }
 }
 
-pub fn handle_ingest_job(
-    action: &IngestJobAction,
-) -> Result<(), Box<dyn std::error::Error>> {
+pub fn handle_ingest_job(action: &IngestJobAction) -> Result<(), Box<dyn std::error::Error>> {
+    use qualia_core_db::ingest::{streaming_import_rdf_with_job, IngestMode, IngestReport};
     use qualia_core_db::ingest_job::{
         adopt_legacy_scratch, append_rdf_to_root, compare_attestation_file_to_path, inspect_job,
         inspect_legacy_scratch, inspect_volume_root, job_status, publish_job, IngestJob,
         IngestSourceKind,
     };
-    use qualia_core_db::ingest::{streaming_import_rdf_with_job, IngestMode, IngestReport};
 
     match action {
         IngestJobAction::Status { dir, watch } => loop {
@@ -565,7 +568,10 @@ pub fn handle_ingest_job(
             println!("{}", st.summary);
             if !*watch {
                 println!("dir: {}", st.dir);
-                println!("checkpoint: {:?} accepted {}", st.phase, st.accepted_triples);
+                println!(
+                    "checkpoint: {:?} accepted {}",
+                    st.phase, st.accepted_triples
+                );
                 println!(
                     "chunks: {}  lex: {}  runs: {}",
                     st.quin_chunks, st.lex_runs, st.run_bytes
@@ -750,9 +756,7 @@ fn spawn_detached_continue(dir: &std::path::Path) -> Result<u32, Box<dyn std::er
         const CREATE_BREAKAWAY_FROM_JOB: u32 = 0x0100_0000;
         const DETACHED_PROCESS: u32 = 0x0000_0008;
         const CREATE_NEW_PROCESS_GROUP: u32 = 0x0000_0200;
-        cmd.creation_flags(
-            CREATE_BREAKAWAY_FROM_JOB | DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP,
-        );
+        cmd.creation_flags(CREATE_BREAKAWAY_FROM_JOB | DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP);
     }
     let child = cmd.spawn()?;
     Ok(child.id())
@@ -776,9 +780,7 @@ fn spawn_detached_publish(dir: &std::path::Path) -> Result<u32, Box<dyn std::err
         const CREATE_BREAKAWAY_FROM_JOB: u32 = 0x0100_0000;
         const DETACHED_PROCESS: u32 = 0x0000_0008;
         const CREATE_NEW_PROCESS_GROUP: u32 = 0x0000_0200;
-        cmd.creation_flags(
-            CREATE_BREAKAWAY_FROM_JOB | DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP,
-        );
+        cmd.creation_flags(CREATE_BREAKAWAY_FROM_JOB | DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP);
     }
     let child = cmd.spawn()?;
     Ok(child.id())

@@ -44,7 +44,7 @@ pub fn gazetteer_run(args: &Value, span: Span) -> Result<Value, Diagnostic> {
 /// pattern surfaces. The engine uses a compiled default lexicon; this returns
 /// metadata about it rather than accepting arbitrary entries (which would
 /// require a lexicon-loading host capability).
-pub fn gazetteer_build(_args: &Value, span: Span) -> Result<Value, Diagnostic> {
+pub fn gazetteer_build(_args: &Value, _span: Span) -> Result<Value, Diagnostic> {
     let g = Gazetteer::default();
     let count = g.pattern_count();
     let mut rec = BTreeMap::new();

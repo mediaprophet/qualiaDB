@@ -385,6 +385,172 @@ pub fn logistic_growth(args_v: &Value, span: Span) -> Result<Value, Diagnostic> 
     ]))
 }
 
+/// `Physics.field_sample` — Evaluates an ambient field at a given 3D position [x, y, z].
+pub fn creator_field_sample(args_v: &Value, _span: Span) -> Result<Value, Diagnostic> {
+    use poet_vibe::physics::FieldDeclaration;
+
+    let field_type = args::rec_str(args_v, "field").unwrap_or("atmosphere");
+    let pos_list = args::rec_f64_list(args_v, "position").unwrap_or_else(|| vec![0.0, 0.0, 0.0]);
+
+    let field = match field_type {
+        "temperature" | "room_temperature" => FieldDeclaration::ambient_room_temperature(),
+        "water" | "solvent" => {
+            let conc = args::rec_f64(args_v, "concentration").unwrap_or(55500.0);
+            FieldDeclaration::water_solvent(conc)
+        }
+        _ => FieldDeclaration::standard_atmosphere(),
+    };
+
+    let sample_val = field.sample_at(&pos_list);
+
+    Ok(args::record([
+        ("id", Value::String(field.id)),
+        (
+            "quantity",
+            Value::String(field.quantity.as_iri().to_string()),
+        ),
+        ("unit", Value::String(field.unit.as_iri().to_string())),
+        ("value", Value::F64(sample_val)),
+    ]))
+}
+
+/// `Physics.material_query` — Returns faceted signature traits for a physical material.
+pub fn creator_material_query(args_v: &Value, _span: Span) -> Result<Value, Diagnostic> {
+    use poet_vibe::physics::MaterialSignature;
+
+    let mat_id = args::rec_str(args_v, "material").unwrap_or("sugar_cube");
+    let sig = match mat_id {
+        "water" | "liquid_water" => MaterialSignature::liquid_water(),
+        "oil" | "mineral_oil" => MaterialSignature::mineral_oil(),
+        _ => MaterialSignature::sugar_cube(),
+    };
+
+    let mut map = std::collections::BTreeMap::new();
+    map.insert("id".to_string(), Value::String(sig.id));
+    map.insert("name".to_string(), Value::String(sig.name));
+
+    if let Some(m) = sig.mechanical {
+        let mut mech_map = std::collections::BTreeMap::new();
+        mech_map.insert("yield_kpa".to_string(), Value::F64(m.yield_kpa));
+        mech_map.insert(
+            "youngs_modulus_gpa".to_string(),
+            Value::F64(m.youngs_modulus_gpa),
+        );
+        mech_map.insert("density_kg_m3".to_string(), Value::F64(m.density_kg_m3));
+        mech_map.insert("poisson_ratio".to_string(), Value::F64(m.poisson_ratio));
+        map.insert("mechanical".to_string(), Value::Record(mech_map));
+    }
+
+    if let Some(o) = sig.optical {
+        let mut opt_map = std::collections::BTreeMap::new();
+        opt_map.insert("albedo".to_string(), Value::F64(o.albedo));
+        opt_map.insert("ior".to_string(), Value::F64(o.ior));
+        opt_map.insert("absorption".to_string(), Value::F64(o.absorption));
+        map.insert("optical".to_string(), Value::Record(opt_map));
+    }
+
+    if let Some(c) = sig.chemical {
+        let mut chem_map = std::collections::BTreeMap::new();
+        if let Some(s) = c.soluble_in {
+            chem_map.insert("soluble_in".to_string(), Value::String(s));
+        }
+        chem_map.insert(
+            "dissolve_rate_per_s".to_string(),
+            Value::F64(c.dissolve_rate_per_s),
+        );
+        if let Some(p) = c.dissolve_products {
+            chem_map.insert("dissolve_products".to_string(), Value::String(p));
+        }
+        chem_map.insert(
+            "immiscible_with".to_string(),
+            Value::List(c.immiscible_with.into_iter().map(Value::String).collect()),
+        );
+        map.insert("chemical".to_string(), Value::Record(chem_map));
+    }
+
+    Ok(Value::Record(map))
+}
+
+/// `Physics.evaluate_interaction` — Applies interaction laws to continuants and ambient fields.
+pub fn creator_evaluate_interaction(args_v: &Value, _span: Span) -> Result<Value, Diagnostic> {
+    use poet_vibe::physics::{
+        evaluate_field_interactions, ContinuantState, FieldDeclaration, InteractionEvent,
+        MaterialSignature,
+    };
+    use poet_vibe::Pose;
+
+    let id = args::rec_str(args_v, "id").unwrap_or("body_01").to_string();
+    let mat_id = args::rec_str(args_v, "material").unwrap_or("sugar_cube");
+    let mass_kg = args::rec_f64(args_v, "mass_kg").unwrap_or(0.01);
+    let pos_list = args::rec_f64_list(args_v, "position").unwrap_or_else(|| vec![0.0, 0.0, 0.0]);
+    let pressure_kpa = args::rec_f64(args_v, "ambient_pressure_kpa");
+
+    let mat = match mat_id {
+        "water" | "liquid_water" => MaterialSignature::liquid_water(),
+        "oil" | "mineral_oil" => MaterialSignature::mineral_oil(),
+        _ => MaterialSignature::sugar_cube(),
+    };
+
+    let mut continuant = ContinuantState {
+        id: id.clone(),
+        pose: Pose {
+            position: pos_list,
+            orientation: vec![1.0, 0.0, 0.0, 0.0],
+            frame: None,
+        },
+        material: mat,
+        mass_kg,
+        is_solid: true,
+        is_crushed: false,
+        current_temperature_k: 293.15,
+    };
+
+    let mut fields = Vec::new();
+    if let Some(p) = pressure_kpa {
+        fields.push(FieldDeclaration {
+            id: "did:q42:field:custom_pressure".to_string(),
+            quantity: poet_vibe::physics::FieldQuantity::Pressure,
+            unit: poet_vibe::physics::FieldUnit::KiloPascal,
+            support: poet_vibe::FieldSupport::Region,
+            representation: poet_vibe::FieldRepresentation::Analytic,
+            profile: poet_vibe::physics::AnalyticFieldProfile::Uniform(p),
+        });
+    } else {
+        fields.push(FieldDeclaration::standard_atmosphere());
+    }
+
+    let mut events = Vec::new();
+    evaluate_field_interactions(&mut continuant, &fields, &mut events);
+
+    let event_strs: Vec<Value> = events
+        .iter()
+        .map(|e| match e {
+            InteractionEvent::YieldExceeded { crush_ratio, .. } => {
+                Value::String(format!("YieldExceeded(crush_ratio={crush_ratio:.2})"))
+            }
+            InteractionEvent::PhaseChange { new_phase, .. } => {
+                Value::String(format!("PhaseChange(new_phase={new_phase})"))
+            }
+            InteractionEvent::DissolutionStep {
+                dissolved_mass_kg, ..
+            } => Value::String(format!(
+                "DissolutionStep(dissolved_kg={dissolved_mass_kg:.4})"
+            )),
+            InteractionEvent::ImmiscibleBarrier { .. } => {
+                Value::String("ImmiscibleBarrier".to_string())
+            }
+        })
+        .collect();
+
+    Ok(args::record([
+        ("id", Value::String(continuant.id)),
+        ("mass_kg", Value::F64(continuant.mass_kg)),
+        ("is_crushed", Value::Bool(continuant.is_crushed)),
+        ("is_solid", Value::Bool(continuant.is_solid)),
+        ("events", Value::List(event_strs)),
+    ]))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -677,6 +843,56 @@ mod tests {
                     (f0 - i0).abs() / i0.abs().max(1e-10) < 0.05,
                     "total should be conserved: i0={i0} f0={f0}"
                 );
+            }
+            other => panic!("{other:?}"),
+        }
+    }
+
+    #[test]
+    fn invoke_creator_field_sample() {
+        let args = rec(&[
+            ("field", Value::String("atmosphere".to_string())),
+            (
+                "position",
+                Value::List(vec![Value::F64(0.0), Value::F64(0.0), Value::F64(0.0)]),
+            ),
+        ]);
+        let res = creator_field_sample(&args, Span::new(0, 0)).expect("field_sample");
+        match res {
+            Value::Record(m) => {
+                let v = m.get("value").and_then(args::as_f64).unwrap();
+                assert!((v - 101.325).abs() < 1e-4);
+            }
+            other => panic!("{other:?}"),
+        }
+    }
+
+    #[test]
+    fn invoke_creator_material_query() {
+        let args = rec(&[("material", Value::String("sugar_cube".to_string()))]);
+        let res = creator_material_query(&args, Span::new(0, 0)).expect("material_query");
+        match res {
+            Value::Record(m) => {
+                assert!(m.contains_key("mechanical"));
+                assert!(m.contains_key("chemical"));
+            }
+            other => panic!("{other:?}"),
+        }
+    }
+
+    #[test]
+    fn invoke_creator_evaluate_interaction() {
+        let args = rec(&[
+            ("id", Value::String("sugar_sample".to_string())),
+            ("material", Value::String("sugar_cube".to_string())),
+            ("ambient_pressure_kpa", Value::F64(200.0)),
+        ]);
+        let res =
+            creator_evaluate_interaction(&args, Span::new(0, 0)).expect("evaluate_interaction");
+        match res {
+            Value::Record(m) => {
+                let crushed = m.get("is_crushed").unwrap();
+                assert_eq!(crushed, &Value::Bool(true));
             }
             other => panic!("{other:?}"),
         }

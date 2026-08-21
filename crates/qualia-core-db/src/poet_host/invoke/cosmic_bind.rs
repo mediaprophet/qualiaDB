@@ -291,7 +291,7 @@ pub fn scale_factor(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
 }
 
 /// `Cosmic.compton_wavelength` — { particle: string } → wavelength in meters
-pub fn compton_wavelength(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
+pub fn compton_wavelength(args_v: &Value, _span: Span) -> Result<Value, Diagnostic> {
     let name = args::rec_str(args_v, "particle").unwrap_or("electron");
     let particle = match name {
         "proton" => cosmic::microverse::ParticleProfile::proton(),

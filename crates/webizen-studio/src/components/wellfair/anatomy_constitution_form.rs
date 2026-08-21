@@ -6,9 +6,7 @@ use std::collections::BTreeMap;
 use super::anatomy_measurement_fields::{
     fields_in, MeasureField, MeasureGroup, MeasureInput, MEASURE_FIELDS,
 };
-use super::host_client::{
-    get_body_constitution, reset_body_constitution, set_body_constitution,
-};
+use super::host_client::{get_body_constitution, reset_body_constitution, set_body_constitution};
 use dioxus::prelude::*;
 
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -76,13 +74,22 @@ fn parse_stored(field: &MeasureField, typed: &str) -> Result<Option<u64>, String
 }
 
 fn fill_from_json(v: &serde_json::Value) -> FormState {
-    let c = v.get("constitution").cloned().unwrap_or(serde_json::json!({}));
-    let m = c.get("measurements").cloned().unwrap_or(serde_json::json!({}));
+    let c = v
+        .get("constitution")
+        .cloned()
+        .unwrap_or(serde_json::json!({}));
+    let m = c
+        .get("measurements")
+        .cloned()
+        .unwrap_or(serde_json::json!({}));
     let ch = c
         .get("characteristics")
         .cloned()
         .unwrap_or(serde_json::json!({}));
-    let a = c.get("attributes").cloned().unwrap_or(serde_json::json!({}));
+    let a = c
+        .get("attributes")
+        .cloned()
+        .unwrap_or(serde_json::json!({}));
     let karyotype = match ch.get("karyotype").and_then(|k| k.as_str()) {
         Some("Xy") | Some("XY") => "XY".to_string(),
         Some("Xx") | Some("XX") => "XX".to_string(),
@@ -162,7 +169,11 @@ fn fill_from_json(v: &serde_json::Value) -> FormState {
 fn build_json(form: &FormState) -> Result<String, String> {
     let mut measurements = serde_json::Map::new();
     for field in MEASURE_FIELDS {
-        let typed = form.measures.get(field.id).map(String::as_str).unwrap_or("");
+        let typed = form
+            .measures
+            .get(field.id)
+            .map(String::as_str)
+            .unwrap_or("");
         if let Some(n) = parse_stored(field, typed)? {
             measurements.insert(field.id.to_string(), serde_json::json!(n));
         }
@@ -205,10 +216,16 @@ fn build_json(form: &FormState) -> Result<String, String> {
         attributes.insert("notes".into(), serde_json::json!(form.notes.trim()));
     }
     if !form.eye_colour.trim().is_empty() {
-        attributes.insert("eye_colour".into(), serde_json::json!(form.eye_colour.trim()));
+        attributes.insert(
+            "eye_colour".into(),
+            serde_json::json!(form.eye_colour.trim()),
+        );
     }
     if !form.hair_colour.trim().is_empty() {
-        attributes.insert("hair_colour".into(), serde_json::json!(form.hair_colour.trim()));
+        attributes.insert(
+            "hair_colour".into(),
+            serde_json::json!(form.hair_colour.trim()),
+        );
     }
     if !form.skin_tone.trim().is_empty() {
         attributes.insert("skin_tone".into(), serde_json::json!(form.skin_tone.trim()));

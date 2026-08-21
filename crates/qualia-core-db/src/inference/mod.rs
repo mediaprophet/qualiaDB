@@ -37,6 +37,7 @@ pub mod ambient_orchestration;
 pub mod compute_universe;
 #[cfg(target_os = "windows")]
 pub mod directml_bridge;
+pub mod domino_gbnf;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
 pub mod ggml_quants;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]

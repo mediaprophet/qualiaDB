@@ -107,6 +107,19 @@ pub fn rec_u8_list(v: &Value, key: &str) -> Option<Vec<u8>> {
     rec(v, key).and_then(u8s)
 }
 
+/// Extract a record field as `Vec<bool>` (field must be a `List` of booleans).
+pub fn rec_bool_list(v: &Value, key: &str) -> Option<Vec<bool>> {
+    rec(v, key).and_then(|val| {
+        list(val)?
+            .iter()
+            .map(|v| match v {
+                Value::Bool(b) => Some(*b),
+                _ => None,
+            })
+            .collect()
+    })
+}
+
 pub fn list(v: &Value) -> Option<&[Value]> {
     match v {
         Value::List(xs) => Some(xs.as_slice()),

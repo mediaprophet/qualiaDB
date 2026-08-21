@@ -46,7 +46,10 @@ pub fn VibeConsole() -> Element {
                             value.language, value.honesty, value.revision
                         )
                     } else {
-                        value.diagnostic.clone().unwrap_or_else(|| "rejected".into())
+                        value
+                            .diagnostic
+                            .clone()
+                            .unwrap_or_else(|| "rejected".into())
                     });
                     result.set(value);
                 }

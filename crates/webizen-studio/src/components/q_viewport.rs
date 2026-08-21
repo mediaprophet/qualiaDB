@@ -34,12 +34,10 @@
 //! - The loop stops when the component unmounts.
 
 use dioxus::prelude::*;
-use serde_json::{json, Value};
+use serde_json::json;
 
 use crate::components::qapp_engine::invoke_json;
-use crate::render::q_viewport::{
-    self, ViewportBackend, ViewportConfig, ViewportState,
-};
+use crate::render::q_viewport::{self, ViewportBackend, ViewportConfig, ViewportState};
 
 // ── Async invoke helpers ──────────────────────────────────────────────────
 // These call VibeScript `capability.invoke` through the `poet_eval` Tauri
@@ -103,6 +101,7 @@ effect fn go() {{
 }
 
 /// Resize the GPU viewport.
+#[allow(dead_code)]
 async fn resize_gpu(handle: u64, width: u32, height: u32) -> Result<(), String> {
     let script = format!(
         r#"requires [ capability("capability.invoke") ];
@@ -221,10 +220,7 @@ pub fn QViewport(
                         running: true,
                         last_error: None,
                     });
-                    status_msg.set(format!(
-                        "Mounted: {:?} (handle={})",
-                        backend, handle
-                    ));
+                    status_msg.set(format!("Mounted: {:?} (handle={})", backend, handle));
 
                     // Send initial camera state.
                     let _ = set_camera(
@@ -281,10 +277,11 @@ pub fn QViewport(
                                     let cb = wasm_bindgen::closure::Closure::once(move || {
                                         let _ = resolve.call0(&wasm_bindgen::JsValue::NULL);
                                     });
-                                    let _ = window.set_timeout_with_callback_and_timeout_and_arguments_0(
-                                        cb.as_ref().unchecked_ref(),
-                                        0,
-                                    );
+                                    let _ = window
+                                        .set_timeout_with_callback_and_timeout_and_arguments_0(
+                                            cb.as_ref().unchecked_ref(),
+                                            0,
+                                        );
                                     cb.forget();
                                 } else {
                                     let _ = resolve.call0(&wasm_bindgen::JsValue::NULL);
@@ -457,10 +454,8 @@ pub fn QViewport(
 /// Convenience component: a full-page `<q-viewport>` with a header.
 #[component]
 pub fn QViewportPage(
-    #[props(default = 1200u32)]
-    width: u32,
-    #[props(default = 800u32)]
-    height: u32,
+    #[props(default = 1200u32)] width: u32,
+    #[props(default = 800u32)] height: u32,
 ) -> Element {
     rsx! {
         div {

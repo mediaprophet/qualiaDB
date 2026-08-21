@@ -491,9 +491,8 @@ mod tests {
 
     #[test]
     fn vector_store_capacity() {
-        let mut store = VectorStore::new();
         let embedder = TextEmbedder::new(8, 2);
-        store = VectorStore::with_embedder(embedder);
+        let mut store = VectorStore::with_embedder(embedder);
         for i in 0..MAX_VECTORS {
             assert!(store.add_text(&format!("k{i}"), &format!("text{i}"), None));
         }

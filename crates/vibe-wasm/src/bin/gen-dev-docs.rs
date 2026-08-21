@@ -5,7 +5,6 @@
 
 use std::collections::BTreeMap;
 use std::fs;
-use std::io::Write;
 use std::path::{Path, PathBuf};
 
 #[derive(serde::Serialize)]
@@ -84,7 +83,7 @@ fn process_file(path: &Path, module_name: &str) -> ApiModule {
         // Determine item kind and extract name
         let (kind, name, signature) = if let Some(rest) = trimmed.strip_prefix("pub ") {
             extract_item(rest, trimmed)
-        } else if let Some(rest) = trimmed.strip_prefix("pub(crate) ") {
+        } else if trimmed.starts_with("pub(crate) ") {
             // Skip crate-private items
             continue;
         } else {
@@ -252,7 +251,7 @@ fn scan_directory(dir: &Path, prefix: &str) -> Vec<ApiModule> {
             } else {
                 prefix.to_string()
             };
-            let mut module = process_file(mod_path, &module_name);
+            let module = process_file(mod_path, &module_name);
 
             // Find submodules
             let content = fs::read_to_string(mod_path).unwrap_or_default();

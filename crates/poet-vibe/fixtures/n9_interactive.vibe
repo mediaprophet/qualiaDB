@@ -1,0 +1,26 @@
+// VibeScript 0.1 — Interactive HbbTV fixture
+// Tests: HbbTV.new_app, HbbTV.add_page, HbbTV.navigate, HbbTV.set_state,
+//        SecondScreen.sync, Interactive.add_trigger, Interactive.add_social_post
+
+let app = HbbTV.new_app({ id: "app1", name: "Show Companion" });
+
+HbbTV.add_page({ id: "app1", title: "Home" });
+HbbTV.add_page({ id: "app1", title: "Info" });
+
+HbbTV.navigate({ id: "app1", page_id: "p2" });
+
+HbbTV.set_state({ id: "app1", key: "score", value: "42" });
+
+SecondScreen.sync({ id: "ss1", content_id: "show_ep1", offset: 1.5 });
+
+Interactive.add_trigger({
+  id: "stream1",
+  timestamp: 30.0,
+  event: "red_button",
+});
+
+Interactive.add_social_post({
+  id: "stream1",
+  author: "viewer_42",
+  content: "Great show!",
+});

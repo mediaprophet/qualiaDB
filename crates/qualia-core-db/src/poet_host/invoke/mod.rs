@@ -6,27 +6,32 @@
 pub mod agent;
 mod args;
 mod asset_bind;
+mod asset_store;
 mod audio;
 mod biosignal;
+mod chemistry;
 mod clinical;
 mod cosmic_bind;
 pub mod coverage;
 mod crypto;
 mod docs;
-mod econ;
+pub mod econ;
 mod engineering;
 mod geometry;
 mod governance;
 mod graph;
+mod hypermedia;
 pub mod ids;
 mod inference;
 mod logic;
 mod manifold;
 mod math;
+mod medical;
 mod ml;
 mod net;
 mod nlp;
 mod render;
+mod research;
 mod runtime;
 mod sampler_bind;
 mod science;
@@ -48,6 +53,15 @@ pub fn dispatch(
         ids::DAG_EXECUTE => agent::dag_execute(args, span),
         ids::DAG_VALIDATE => agent::dag_validate(args, span),
         ids::DAG_STATUS => agent::dag_status(args, span),
+        // ── N15: Multi-agent orchestration ─────────────────────────────────
+        ids::ORCH_SESSION_CREATE => agent::orchestration::session_create(args, span),
+        ids::ORCH_SESSION_PLAN => agent::orchestration::session_plan(args, span),
+        ids::ORCH_SESSION_EXECUTE => agent::orchestration::session_execute(args, span),
+        ids::ORCH_SESSION_STATUS => agent::orchestration::session_status(args, span),
+        ids::ORCH_ROSTER_REGISTER => agent::orchestration::roster_register(args, span),
+        ids::ORCH_ROSTER_LIST => agent::orchestration::roster_list(args, span),
+        ids::ORCH_ROSTER_CAPABILITIES => agent::orchestration::roster_capabilities(args, span),
+        ids::ORCH_ASSIGN_AGENTS => agent::orchestration::assign_agents_seam(args, span),
         ids::AGENT_PLAN => agent::runtime::agent_plan(args, span),
         ids::AGENT_EXECUTE => agent::runtime::agent_execute(args, span),
         ids::AGENT_EVALUATE => agent::runtime::agent_evaluate(args, span),
@@ -98,7 +112,21 @@ pub fn dispatch(
         ids::STAT_PEARSON => stats::pearson_r(args, span),
         ids::STAT_LINEAR_REGRESSION => stats::linear_regression(args, span),
         ids::GEOM_HULL2 => geometry::hull2(args, span),
+        ids::GEOM_DISTANCE_2D => geometry::distance_2d(args, span),
+        ids::GEOM_DISTANCE_3D => geometry::distance_3d(args, span),
+        ids::GEOM_POINT_SEGMENT_DISTANCE_2D => geometry::point_segment_distance_2d(args, span),
+        ids::GEOM_POINT_SEGMENT_DISTANCE_3D => geometry::point_segment_distance_3d(args, span),
+        ids::GEOM_POINT_TRIANGLE_DISTANCE_3D => geometry::point_triangle_distance_3d(args, span),
         ids::VISION_AHASH => vision::ahash(args, span),
+        ids::VISION_GAUSSIAN_BLUR => vision::gaussian_blur(args, span),
+        ids::VISION_SOBEL_MAGNITUDE => vision::sobel_magnitude(args, span),
+        ids::VISION_CANNY_EDGES => vision::canny_edges(args, span),
+        ids::VISION_HISTOGRAM => vision::histogram(args, span),
+        ids::VISION_EQUALIZE_HIST => vision::equalize_hist(args, span),
+        ids::VISION_RGB_TO_GRAY => vision::rgb_to_gray(args, span),
+        ids::VISION_DHASH => vision::dhash(args, span),
+        ids::VISION_HAMMING_DISTANCE => vision::hamming_distance(args, span),
+        ids::VISION_COSINE_SIMILARITY => vision::cosine_similarity(args, span),
         ids::ML_OLS => ml::fit_ols(args, span),
         ids::BIOSIGNAL_DP_FILTER => biosignal::dp_filter(args, span),
         ids::BIOSIGNAL_DP_CONFIG => biosignal::dp_config(args, span),
@@ -118,15 +146,32 @@ pub fn dispatch(
         ids::PHYS_DOPPLER_SHIFT => science::doppler_shift(args, span),
         ids::PHYS_EMF_FIELD_GRID_3D => science::emf_field_grid_3d(args, span),
         ids::PHYS_EMF_SAMPLE_AT_DEPTH => science::emf_sample_at_depth(args, span),
+        ids::PHYS_FIELD_SAMPLE => science::creator_field_sample(args, span),
+        ids::PHYS_MATERIAL_QUERY => science::creator_material_query(args, span),
+        ids::PHYS_EVALUATE_INTERACTION => science::creator_evaluate_interaction(args, span),
         ids::BIO_ALIGN => science::align(args, span),
         ids::CHEM_SMILES => science::smiles(args, span),
         ids::CLIN_FRAMINGHAM => clinical::framingham(args, span),
         ids::FIN_BS => econ::black_scholes(args, span),
         ids::ENG_KIN => engineering::kinematics(args, span),
+        ids::ENG_CAUCHY_STRESS => engineering::cauchy_stress(args, span),
+        ids::ENG_DRAG_FORCE => engineering::drag_force(args, span),
+        ids::ENG_REYNOLDS => engineering::reynolds_number(args, span),
+        ids::ENG_FATIGUE_CYCLES => engineering::fatigue_cycles(args, span),
+        ids::ENG_MINER_DAMAGE => engineering::miner_damage(args, span),
+        ids::CHEM_ELEMENT_SYMBOL => chemistry::element_symbol(args, span),
+        ids::CHEM_ATOMIC_NUMBER => chemistry::atomic_number(args, span),
+        ids::CHEM_ATOMIC_WEIGHT => chemistry::standard_atomic_weight(args, span),
+        ids::CHEM_LDA_EXCHANGE => chemistry::lda_exchange(args, span),
+        ids::CHEM_LDA_CORRELATION_VWN => chemistry::lda_correlation_vwn(args, span),
+        ids::MED_TANIMOTO => medical::tanimoto(args, span),
+        ids::MED_STRUCTURAL_FINGERPRINT => medical::structural_fingerprint(args, span),
+        ids::MED_ANALYZE_INTENSITY_GRID => medical::analyze_intensity_grid(args, span),
         ids::ID_DID_Q42 => governance::parse_did_q42(args, span),
         ids::CRYPTO_SHA256 => crypto::sha256(args, span),
         ids::CRYPTO_SHA512 => crypto::sha512(args, span),
         ids::CRYPTO_BLAKE3 => crypto::blake3(args, span),
+        ids::PRIVACY_GAUSSIAN_SIGMA => crypto::gaussian_sigma(args, span),
         ids::MANIFOLD_DISTANCE => manifold::distance(args, span),
         ids::MANIFOLD_AXES => manifold::axes(args, span),
         ids::MANIFOLD_PROJECT => manifold::project(args, span),
@@ -136,6 +181,16 @@ pub fn dispatch(
         ids::SOCIAL_LWW => social::lww_merge(args, span),
         ids::NET_PEER => net::peer_hash(args, span),
         ids::NET_SONIC => net::sonic_pack(args, span),
+        ids::PULSE_PUBLISH => net::pulse::pulse_publish(args, span),
+        ids::PULSE_PUBLISH_GRAPH_MUTATION => net::pulse::pulse_publish_graph_mutation(args, span),
+        ids::PULSE_PUBLISH_NOTIFICATION => net::pulse::pulse_publish_notification(args, span),
+        ids::PULSE_PUBLISH_TELEMETRY => net::pulse::pulse_publish_telemetry(args, span),
+        ids::PULSE_PUBLISH_AGENT_MESSAGE => net::pulse::pulse_publish_agent_message(args, span),
+        ids::PULSE_PUBLISH_PRESENCE => net::pulse::pulse_publish_presence(args, span),
+        ids::PULSE_PUBLISH_SYNC => net::pulse::pulse_publish_sync(args, span),
+        ids::PULSE_OPEN_CHANNEL => net::pulse::pulse_open_channel(args, span),
+        ids::PULSE_CLOSE_CHANNEL => net::pulse::pulse_close_channel(args, span),
+        ids::PULSE_SET_TRANSPORT => net::pulse::pulse_set_transport(args, span),
         ids::FIN_PORTFOLIO => econ::portfolio_risk(args, span),
         ids::COVERAGE_MATRIX => Ok(coverage::as_value()),
         ids::CATALOG_TTL => Ok(Value::String(
@@ -145,6 +200,10 @@ pub fn dispatch(
         ids::RENDER_CSS_ANIMATION => render::css_animation(args, span),
         ids::RENDER_CSS_COLOR => render::css_color(args, span),
         ids::RENDER_CSS_TRANSFORM => render::css_transform(args, span),
+        ids::RENDER_ANIMATION_EVAL_CURVE => render::animation_eval_curve(args, span),
+        ids::RENDER_ANIMATION_SPRING_STEP => render::animation_spring_step(args, span),
+        ids::RENDER_ANIMATION_SCLERP => render::animation_sclerp(args, span),
+        ids::RENDER_ANIMATION_EVAL_PRESET => render::animation_eval_preset(args, span),
         ids::RENDER_SVG_PATH => render::svg_path(args, span),
         ids::RENDER_SVG_CIRCLE => render::svg_circle(args, span),
         ids::RENDER_SVG_RECT => render::svg_rect(args, span),
@@ -189,6 +248,21 @@ pub fn dispatch(
         ids::ASSET_COMPILE => asset_bind::compile(args, span),
         ids::ASSET_TEMPORAL_SPAN => asset_bind::temporal_span(args, span),
         ids::ASSET_QUERY_ASPECTS => asset_bind::query_aspects(args, span),
+        // ── N16: Persistent asset aspect-graph store ───────────────────────
+        ids::ASSET_PERSIST => asset_store::persist_seam(args, span),
+        ids::ASSET_RESOLVE => asset_store::resolve_seam(args, span),
+        ids::ASSET_RESOLVE_BY_SPATIAL => asset_store::resolve_by_spatial_seam(args, span),
+        ids::ASSET_RESOLVE_BY_TOPIC => asset_store::resolve_by_topic_seam(args, span),
+        ids::ASSET_RESOLVE_BY_TEMPORAL => asset_store::resolve_by_temporal_seam(args, span),
+        ids::ASSET_LIST => asset_store::list_seam(args, span),
+        ids::ASSET_COUNT => asset_store::count_seam(args, span),
+        ids::ASSET_PERSIST_CREATE => asset_store::persist_create_seam(args, span),
+        ids::ASSET_PERSIST_ADD_TEMPORAL => asset_store::persist_add_temporal_seam(args, span),
+        ids::ASSET_PERSIST_ADD_TOPIC => asset_store::persist_add_topic_seam(args, span),
+        ids::ASSET_PERSIST_SET_SPATIAL => asset_store::persist_set_spatial_seam(args, span),
+        ids::ASSET_PERSIST_COMPILE => asset_store::persist_compile_seam(args, span),
+        ids::ASSET_PERSIST_TEMPORAL_SPAN => asset_store::persist_temporal_span_seam(args, span),
+        ids::ASSET_PERSIST_QUERY_ASPECTS => asset_store::persist_query_aspects_seam(args, span),
         ids::COSMIC_GEODETIC_TO_ECEF => cosmic_bind::geodetic_to_ecef(args, span),
         ids::COSMIC_ECEF_TO_GEODETIC => cosmic_bind::ecef_to_geodetic(args, span),
         ids::COSMIC_ECEF_TO_ENU => cosmic_bind::ecef_to_enu(args, span),
@@ -232,10 +306,126 @@ pub fn dispatch(
         ids::FINANCE_CONVERT_CURRENCY => econ::convert_currency(args, span),
         ids::FINANCE_MULTISIG_CHECK => econ::multisig_check(args, span),
         ids::FINANCE_LEDGER_BALANCE => econ::ledger_balance(args, span),
+        // ── N14: Computational economics ───────────────────────────────────
+        ids::ECON_CAPM_EXPECTED_RETURN => econ::econ::econ_capm_expected_return(args, span),
+        ids::ECON_CAPM_BETA => econ::econ::econ_capm_beta(args, span),
+        ids::ECON_GORDON_GROWTH => econ::econ::econ_gordon_growth(args, span),
+        ids::ECON_MULTI_PERIOD_DDM => econ::econ::econ_multi_period_ddm(args, span),
+        ids::ECON_CCAPM_EQUITY_PREMIUM => econ::econ::econ_ccapm_equity_premium(args, span),
+        ids::ECON_CCAPM_SDF => econ::econ::econ_ccapm_sdf(args, span),
+        ids::ECON_PROSPECT_VALUE => econ::econ::econ_prospect_value(args, span),
+        ids::ECON_PROBABILITY_WEIGHT => econ::econ::econ_probability_weight(args, span),
+        ids::ECON_HYPERBOLIC_DISCOUNT => econ::econ::econ_hyperbolic_discount(args, span),
+        ids::ECON_ENDOWMENT_EFFECT => econ::econ::econ_endowment_effect(args, span),
+        ids::ECON_BLACK_SCHOLES => econ::econ::econ_black_scholes(args, span),
+        ids::ECON_PUT_CALL_PARITY => econ::econ::econ_put_call_parity(args, span),
+        ids::ECON_BINOMIAL_OPTION => econ::econ::econ_binomial_option(args, span),
+        ids::ECON_MIXED_NASH_2X2 => econ::econ::econ_mixed_nash_2x2(args, span),
+        ids::ECON_COURNOT_DUOPOLY => econ::econ::econ_cournot_duopoly(args, span),
+        ids::ECON_BERTRAND_DUOPOLY => econ::econ::econ_bertrand_duopoly(args, span),
+        ids::ECON_STACKELBERG_DUOPOLY => econ::econ::econ_stackelberg_duopoly(args, span),
+        ids::ECON_SOLOW_STEADY_STATE => econ::econ::econ_solow_steady_state(args, span),
+        ids::ECON_RAMSEY_STEADY_STATE => econ::econ::econ_ramsey_steady_state(args, span),
+        ids::ECON_OLG_STEADY_STATE => econ::econ::econ_olg_steady_state(args, span),
+        ids::ECON_GINI => econ::econ::econ_gini(args, span),
+        ids::ECON_ATKINSON => econ::econ::econ_atkinson(args, span),
+        ids::ECON_HEADCOUNT_POVERTY => econ::econ::econ_headcount_poverty(args, span),
+        ids::ECON_POVERTY_GAP => econ::econ::econ_poverty_gap(args, span),
+        ids::ECON_UTILITARIAN_WELFARE => econ::econ::econ_utilitarian_welfare(args, span),
+        ids::ECON_RAWLSIAN_WELFARE => econ::econ::econ_rawlsian_welfare(args, span),
+        ids::ECON_NASH_WELFARE => econ::econ::econ_nash_welfare(args, span),
+        ids::ECON_NPV => econ::econ::econ_npv(args, span),
+        ids::ECON_MEAN_RETURN => econ::econ::econ_mean_return(args, span),
+        ids::ECON_SAMPLE_VARIANCE => econ::econ::econ_sample_variance(args, span),
+        ids::ECON_PORTFOLIO_MAX_DRAWDOWN => econ::econ::econ_portfolio_max_drawdown(args, span),
+        ids::ECON_HISTORICAL_VAR => econ::econ::econ_historical_var(args, span),
+        ids::ECON_HISTORICAL_CVAR => econ::econ::econ_historical_cvar(args, span),
+        ids::ECON_PARAMETRIC_VAR => econ::econ::econ_parametric_var(args, span),
+        ids::ECON_AUTOCORRELATION => econ::econ::econ_autocorrelation(args, span),
+        ids::ECON_CROSS_CORRELATION => econ::econ::econ_cross_correlation(args, span),
+        ids::ECON_INTERPOLATE_ZERO_RATE => econ::econ::econ_interpolate_zero_rate(args, span),
+        ids::ECON_DISCOUNT_FACTOR => econ::econ::econ_discount_factor(args, span),
+        ids::ECON_FORWARD_RATE => econ::econ::econ_forward_rate(args, span),
+        ids::ECON_GRAVITY_FLOW => econ::econ::econ_gravity_flow(args, span),
+        ids::ECON_MORANS_I => econ::econ::econ_morans_i(args, span),
+        ids::ECON_TRANSFER_PAYMENT => econ::econ::econ_transfer_payment(args, span),
+        ids::ECON_FISCAL_MULTIPLIER => econ::econ::econ_fiscal_multiplier(args, span),
+        ids::ECON_LAFFER_CURVE => econ::econ::econ_laffer_curve(args, span),
+        ids::ECON_CHECK_IR => econ::econ::econ_check_ir(args, span),
+        ids::ECON_CHECK_BUDGET_BALANCE => econ::econ::econ_check_budget_balance(args, span),
+        ids::ECON_VALIDATE_TRANSITION_MATRIX => {
+            econ::econ::econ_validate_transition_matrix(args, span)
+        }
+        ids::ECON_TRANSITION_PROBABILITY => econ::econ::econ_transition_probability(args, span),
+        ids::ECON_EXPECTED_HOLDING_TIME => econ::econ::econ_expected_holding_time(args, span),
+        ids::ECON_LABOR_SUPPLY => econ::econ::econ_labor_supply(args, span),
+        ids::ECON_EFFICIENCY_UNITS => econ::econ::econ_efficiency_units(args, span),
+        ids::ECON_SOCIAL_COST_OF_CARBON => econ::econ::econ_social_cost_of_carbon(args, span),
+        ids::ECON_OPTIMAL_POLLUTION => econ::econ::econ_optimal_pollution(args, span),
+        ids::ECON_OPTIMAL_ABATEMENT => econ::econ::econ_optimal_abatement(args, span),
+        ids::ECON_BELLMAN_UPDATE => econ::econ::econ_bellman_update(args, span),
+        ids::ECON_MALFEASANCE_DELTA => econ::econ::econ_malfeasance_delta(args, span),
+        ids::ECON_OLS => econ::econ::econ_ols(args, span),
+        ids::ECON_AGGREGATE_WEALTH => econ::econ::econ_aggregate_wealth(args, span),
+        ids::ECON_TOTAL_TRANSPORT_COST => econ::econ::econ_total_transport_cost(args, span),
+        ids::ECON_LUCAS_ASSET_PRICE => econ::econ::econ_lucas_asset_price(args, span),
+        ids::ECON_PRESENT_BIASED_UTILITY => econ::econ::econ_present_biased_utility(args, span),
+        ids::ECON_REFERENCE_DEPENDENT_UTILITY => {
+            econ::econ::econ_reference_dependent_utility(args, span)
+        }
+        ids::ECON_PURE_NASH_EQUILIBRIA => econ::econ::econ_pure_nash_equilibria(args, span),
+        ids::ECON_REPEATED_GAME_PAYOFF => econ::econ::econ_repeated_game_payoff(args, span),
+        ids::ECON_BERTRAND_WITH_DEMAND => econ::econ::econ_bertrand_with_demand(args, span),
+        ids::ECON_RAMSEY_EULER_RESIDUAL => econ::econ::econ_ramsey_euler_residual(args, span),
+        ids::ECON_NEW_KEYNESIAN_SOLVE => econ::econ::econ_new_keynesian_solve(args, span),
+        ids::ECON_LORENZ_CURVE => econ::econ::econ_lorenz_curve(args, span),
+        ids::ECON_DISTRIBUTIONAL_NPV => econ::econ::econ_distributional_npv(args, span),
+        ids::ECON_PORTFOLIO_RETURNS => econ::econ::econ_portfolio_returns(args, span),
+        ids::ECON_COVARIANCE_MATRIX => econ::econ::econ_covariance_matrix(args, span),
+        ids::ECON_PORTFOLIO_VARIANCE => econ::econ::econ_portfolio_variance(args, span),
+        ids::ECON_SIMPLE_RETURNS => econ::econ::econ_simple_returns(args, span),
+        ids::ECON_LOG_RETURNS => econ::econ::econ_log_returns(args, span),
+        ids::ECON_CUMULATIVE_WEALTH => econ::econ::econ_cumulative_wealth(args, span),
+        ids::ECON_DRAWDOWN => econ::econ::econ_drawdown(args, span),
+        ids::ECON_ROLLING_MEAN => econ::econ::econ_rolling_mean(args, span),
+        ids::ECON_ROLLING_VARIANCE => econ::econ::econ_rolling_variance(args, span),
+        ids::ECON_GBM_SIMULATE => econ::econ::econ_gbm_simulate(args, span),
+        ids::ECON_STRESS_SCENARIO => econ::econ::econ_stress_scenario(args, span),
+        ids::ECON_BLOCK_BOOTSTRAP => econ::econ::econ_block_bootstrap(args, span),
+        ids::ECON_PAR_YIELD => econ::econ::econ_par_yield(args, span),
+        ids::ECON_NEAREST_FACILITY => econ::econ::econ_nearest_facility(args, span),
+        ids::ECON_PROGRESSIVE_TAX => econ::econ::econ_progressive_tax(args, span),
+        ids::ECON_VCG_PAYMENT => econ::econ::econ_vcg_payment(args, span),
+        ids::ECON_STRATEGY_PROOFNESS => econ::econ::econ_strategy_proofness(args, span),
+        ids::ECON_STATIONARY_DISTRIBUTION => econ::econ::econ_stationary_distribution(args, span),
+        ids::ECON_SIMULATE_CHAIN => econ::econ::econ_simulate_chain(args, span),
+        ids::ECON_MEAN_FIRST_PASSAGE => econ::econ::econ_mean_first_passage(args, span),
+        ids::ECON_HOUSEHOLD_PRODUCTION_CES => econ::econ::econ_household_production_ces(args, span),
+        ids::ECON_POLLUTION_DAMAGE => econ::econ::econ_pollution_damage(args, span),
+        ids::ECON_MARGINAL_DAMAGE => econ::econ::econ_marginal_damage(args, span),
+        ids::ECON_ABATEMENT_NET_BENEFIT => econ::econ::econ_abatement_net_benefit(args, span),
+        ids::ECON_WLS => econ::econ::econ_wls(args, span),
+        ids::ECON_IV_2SLS => econ::econ::econ_iv_2sls(args, span),
+        ids::ECON_LOGISTIC_MLE => econ::econ::econ_logistic_mle(args, span),
+        ids::ECON_VALUE_ITERATION => econ::econ::econ_value_iteration(args, span),
+        ids::ECON_NARRATIVE_DIVERGENCE => econ::econ::econ_narrative_divergence(args, span),
+        ids::ECON_EIGENVECTOR_CENTRALITY => econ::econ::econ_eigenvector_centrality(args, span),
+        ids::ECON_DEGREE_CENTRALITY => econ::econ::econ_degree_centrality(args, span),
+        ids::ECON_INTERBANK_CLEARING => econ::econ::econ_interbank_clearing(args, span),
+        ids::ECON_LEONTIEF_INVERSE => econ::econ::econ_leontief_inverse(args, span),
+        ids::ECON_OUTPUT_MULTIPLIERS => econ::econ::econ_output_multipliers(args, span),
+        ids::ECON_AGENT_BASED_AGGREGATE_WEALTH => {
+            econ::econ::econ_agent_based_aggregate_wealth(args, span)
+        }
+        ids::ECON_VALIDATE_SCALAR_CONSTRAINT => {
+            econ::econ::econ_validate_scalar_constraint(args, span)
+        }
+        ids::ECON_AGGREGATE_PAPER_FILLS => econ::econ::econ_aggregate_paper_fills(args, span),
         ids::CAPABILITY_GRANT => governance::capability_grant(args, span),
         ids::CAPABILITY_REVOKE => governance::capability_revoke(args, span),
         ids::CAPABILITY_TEST_GATING => governance::capability_test_gating(args, span),
         ids::CAPABILITY_AUDIT => governance::capability_audit(args, span),
+        ids::CAPABILITY_DECLARE => governance::capability_declare(args, span),
         ids::SENTINEL_INSPECT => governance::sentinel_inspect(args, span),
         ids::SENTINEL_GATE => governance::sentinel_gate(args, span),
         ids::AGENT_TRACE => governance::agent_trace(args, span),
@@ -267,6 +457,183 @@ pub fn dispatch(
         ids::SCENE_SET_VIEWPORT => render::scene_set_viewport(args, span),
         ids::SCENE_SET_CLEAR_COLOUR => render::scene_set_clear_colour(args, span),
         ids::SCENE_CAPTURE_FRAME => render::scene_capture_frame(args, span),
+        ids::SCENE_ADD_LIGHT => render::scene_add_light(args, span),
+        ids::SCENE_LINK_SEMANTIC => render::scene_link_semantic(args, span),
+        ids::SCENE_DUPLICATE_NODE => render::scene_duplicate_node(args, span),
+        ids::SCENE_SET_RENDER_BUDGET => render::scene_set_render_budget(args, span),
+        ids::SCENE_IK_LOOK_AT => render::scene_ik_look_at(args, span),
+        ids::SCENE_IK_CCD => render::scene_ik_ccd(args, span),
+        ids::SCENE_SMOOTH_DAMP => render::scene_smooth_damp(args, span),
+        ids::SCENE_SMOOTH_DAMP_VEC3 => render::scene_smooth_damp_vec3(args, span),
+        // ── N8: Research / epistemics ───────────────────────────────────────
+        ids::RESEARCH_NEW => research::research_new(args, span),
+        ids::RESEARCH_SET_PURPOSE => research::research_set_purpose(args, span),
+        ids::RESEARCH_DEFINE_SCOPE => research::research_define_scope(args, span),
+        ids::RESEARCH_ADD_CONSTRAINT => research::research_add_constraint(args, span),
+        ids::RESEARCH_ADD_QUESTION => research::research_add_question(args, span),
+        ids::RESEARCH_LINK_QUESTIONS => research::research_link_questions(args, span),
+        ids::RESEARCH_ADD_CORPUS_ITEM => research::research_add_corpus_item(args, span),
+        ids::RESEARCH_IMPORT_LITERATURE => research::research_import_literature(args, span),
+        ids::RESEARCH_IMPORT_DATASET => research::research_import_dataset(args, span),
+        ids::RESEARCH_SET_CORPUS_CONFIDENCE => research::research_set_corpus_confidence(args, span),
+        ids::RESEARCH_EXTRACT_FROM_CORPUS => research::research_extract_from_corpus(args, span),
+        ids::RESEARCH_INFER_DARK_LINK => research::research_infer_dark_link(args, span),
+        ids::RESEARCH_DETECT_PROVENANCE_GAPS => {
+            research::research_detect_provenance_gaps(args, span)
+        }
+        ids::RESEARCH_DETECT_CONCEALMENT => research::research_detect_concealment(args, span),
+        ids::RESEARCH_CONFIRM_DARK_LINK => research::research_confirm_dark_link(args, span),
+        ids::RESEARCH_REFUTE_DARK_LINK => research::research_refute_dark_link(args, span),
+        ids::RESEARCH_MAKE_INFERENCE => research::research_make_inference(args, span),
+        ids::RESEARCH_CHAIN_INFERENCE => research::research_chain_inference(args, span),
+        ids::RESEARCH_SET_INFERENCE_CONFIDENCE => {
+            research::research_set_inference_confidence(args, span)
+        }
+        ids::RESEARCH_VALIDATE_INFERENCE => research::research_validate_inference(args, span),
+        ids::RESEARCH_NEW_INVESTIGATION => research::research_new_investigation(args, span),
+        ids::RESEARCH_COLLECT_EVIDENCE => research::research_collect_evidence(args, span),
+        ids::RESEARCH_SET_RELIABILITY => research::research_set_reliability(args, span),
+        ids::RESEARCH_PROPOSE_HYPOTHESIS => research::research_propose_hypothesis(args, span),
+        ids::RESEARCH_EVALUATE_EVIDENCE => research::research_evaluate_evidence(args, span),
+        ids::RESEARCH_CREATE_TIMELINE => research::research_create_timeline(args, span),
+        ids::RESEARCH_ADD_LINK => research::research_add_link(args, span),
+        ids::RESEARCH_FIND_PATH => research::research_find_path(args, span),
+        ids::RESEARCH_CREATE_HYPOTHESIS_GRAPH => {
+            research::research_create_hypothesis_graph(args, span)
+        }
+        ids::RESEARCH_CONTRIBUTE_EVALUATION => research::research_contribute_evaluation(args, span),
+        ids::RESEARCH_BRIDGE_DARK_LINK => research::research_bridge_dark_link(args, span),
+        ids::RESEARCH_REFRAME_HYPOTHESIS => research::research_reframe_hypothesis(args, span),
+        ids::RESEARCH_MERGE_HYPOTHESES => research::research_merge_hypotheses(args, span),
+        ids::RESEARCH_FLAG_GAP => research::research_flag_gap(args, span),
+        ids::RESEARCH_CLOSE_GAP => research::research_close_gap(args, span),
+        ids::RESEARCH_CREATE_REVISION => research::research_create_revision(args, span),
+        ids::RESEARCH_DIFF_REVISIONS => research::research_diff_revisions(args, span),
+        ids::RESEARCH_SUBSCRIBE_UPDATES => research::research_subscribe_updates(args, span),
+        ids::RESEARCH_CREATE_ASSESSMENT => research::research_create_assessment(args, span),
+        ids::RESEARCH_SET_EPISTEMIC_MODE => research::research_set_epistemic_mode(args, span),
+        ids::RESEARCH_SET_REALITY_CATEGORY => research::research_set_reality_category(args, span),
+        ids::RESEARCH_CLASSIFY_REALITY => research::research_classify_reality(args, span),
+        ids::RESEARCH_DETECT_BLENDED => research::research_detect_blended(args, span),
+        ids::RESEARCH_DETECT_DECEPTIVE_FICTION => {
+            research::research_detect_deceptive_fiction(args, span)
+        }
+        ids::RESEARCH_TRACE_FICTION => research::research_trace_fiction(args, span),
+        ids::RESEARCH_ASSESS_SENTIMENT => research::research_assess_sentiment(args, span),
+        ids::RESEARCH_DETECT_SENTIMENT_MANIPULATION => {
+            research::research_detect_sentiment_manipulation(args, span)
+        }
+        ids::RESEARCH_DETECT_PERFORMED_SENTIMENT => {
+            research::research_detect_performed_sentiment(args, span)
+        }
+        ids::RESEARCH_MAP_SENTIMENT_NETWORK => research::research_map_sentiment_network(args, span),
+        ids::RESEARCH_ANALYSE_SENTIMENT_TRENDS => {
+            research::research_analyse_sentiment_trends(args, span)
+        }
+        ids::RESEARCH_REGISTER_PERSPECTIVE => research::research_register_perspective(args, span),
+        ids::RESEARCH_ADD_BIAS => research::research_add_bias(args, span),
+        ids::RESEARCH_COMPARE_PERSPECTIVES => research::research_compare_perspectives(args, span),
+        ids::RESEARCH_DETECT_PERSPECTIVE_CONFLICT => {
+            research::research_detect_perspective_conflict(args, span)
+        }
+        ids::RESEARCH_RECONCILE_PERSPECTIVES => {
+            research::research_reconcile_perspectives(args, span)
+        }
+        ids::RESEARCH_ASSESS_INTENTIONALITY => research::research_assess_intentionality(args, span),
+        ids::RESEARCH_CLASSIFY_MISTAKE => research::research_classify_mistake(args, span),
+        ids::RESEARCH_DEFINE_SOCIAL_DYNAMICS => {
+            research::research_define_social_dynamics(args, span)
+        }
+        ids::RESEARCH_DEFINE_ECONOMIC_DYNAMICS => {
+            research::research_define_economic_dynamics(args, span)
+        }
+        ids::RESEARCH_DEFINE_SPATIOTEMPORAL_DYNAMICS => {
+            research::research_define_spatiotemporal_dynamics(args, span)
+        }
+        ids::RESEARCH_ANALYSE_SOCIAL_NETWORK => {
+            research::research_analyse_social_network(args, span)
+        }
+        ids::RESEARCH_ANALYSE_INEQUALITY => research::research_analyse_inequality(args, span),
+        ids::RESEARCH_ANALYSE_DIFFUSION => research::research_analyse_diffusion(args, span),
+        ids::RESEARCH_ASSESS_GROUNDING => research::research_assess_grounding(args, span),
+        ids::RESEARCH_VERIFY_GROUNDING => research::research_verify_grounding(args, span),
+        ids::RESEARCH_DETECT_UNGROUNDED_BEHAVIOUR => {
+            research::research_detect_ungrounded_behaviour(args, span)
+        }
+        ids::RESEARCH_CREATE_UG_INSTANCE => research::research_create_ug_instance(args, span),
+        ids::RESEARCH_SET_UG_CAUSE => research::research_set_ug_cause(args, span),
+        ids::RESEARCH_SET_UG_CONSEQUENCE => research::research_set_ug_consequence(args, span),
+        ids::RESEARCH_SET_UG_DETECTION => research::research_set_ug_detection(args, span),
+        ids::RESEARCH_SET_UG_MITIGATION => research::research_set_ug_mitigation(args, span),
+        ids::RESEARCH_SET_UG_CALIBRATION => research::research_set_ug_calibration(args, span),
+        ids::RESEARCH_DETECT_UG_PATTERNS => research::research_detect_ug_patterns(args, span),
+        // ── N9: Hypermedia authoring ────────────────────────────────────────
+        ids::IMAGE_NEW => hypermedia::image_new(args, span),
+        ids::IMAGE_ADD_LAYER => hypermedia::image_add_layer(args, span),
+        ids::IMAGE_REMOVE_LAYER => hypermedia::image_remove_layer(args, span),
+        ids::IMAGE_SET_PIXEL => hypermedia::image_set_pixel(args, span),
+        ids::IMAGE_FILL => hypermedia::image_fill(args, span),
+        ids::IMAGE_BRUSH => hypermedia::image_brush(args, span),
+        ids::IMAGE_APPLY_FILTER => hypermedia::image_apply_filter(args, span),
+        ids::IMAGE_SET_OPACITY => hypermedia::image_set_opacity(args, span),
+        ids::IMAGE_SET_BLEND_MODE => hypermedia::image_set_blend_mode(args, span),
+        ids::IMAGE_SET_VISIBLE => hypermedia::image_set_visible(args, span),
+        ids::IMAGE_SET_MASK => hypermedia::image_set_mask(args, span),
+        ids::IMAGE_CLEAR_MASK => hypermedia::image_clear_mask(args, span),
+        ids::IMAGE_COMPOSITE => hypermedia::image_composite(args, span),
+        ids::IMAGE_ADD_SELECTION => hypermedia::image_add_selection(args, span),
+        ids::IMAGE_CLEAR_SELECTIONS => hypermedia::image_clear_selections(args, span),
+        ids::VIDEO_NEW_PROJECT => hypermedia::video_new_project(args, span),
+        ids::VIDEO_ADD_TRACK => hypermedia::video_add_track(args, span),
+        ids::VIDEO_ADD_CLIP => hypermedia::video_add_clip(args, span),
+        ids::VIDEO_TRIM_CLIP => hypermedia::video_trim_clip(args, span),
+        ids::VIDEO_SET_SPEED => hypermedia::video_set_speed(args, span),
+        ids::VIDEO_COLOUR_GRADE => hypermedia::video_colour_grade(args, span),
+        ids::VIDEO_ADD_TRANSITION => hypermedia::video_add_transition(args, span),
+        ids::VIDEO_SET_RENDER_FORMAT => hypermedia::video_set_render_format(args, span),
+        ids::VIDEO_SET_RENDER_BITRATE => hypermedia::video_set_render_bitrate(args, span),
+        ids::VIDEO_REMOVE_CLIP => hypermedia::video_remove_clip(args, span),
+        ids::THREE_D_ADD_OBJECT => hypermedia::three_d_add_object(args, span),
+        ids::THREE_D_SET_TRANSFORM => hypermedia::three_d_set_transform(args, span),
+        ids::THREE_D_SET_MATERIAL => hypermedia::three_d_set_material(args, span),
+        ids::THREE_D_ADD_CAMERA => hypermedia::three_d_add_camera(args, span),
+        ids::THREE_D_ADD_LIGHT => hypermedia::three_d_add_light(args, span),
+        ids::THREE_D_ADD_RIG => hypermedia::three_d_add_rig(args, span),
+        ids::THREE_D_ADD_ANIMATION => hypermedia::three_d_add_animation(args, span),
+        ids::THREE_D_SET_MESH => hypermedia::three_d_set_mesh(args, span),
+        ids::HBBTV_NEW_APP => hypermedia::hbbtv_new_app(args, span),
+        ids::HBBTV_ADD_PAGE => hypermedia::hbbtv_add_page(args, span),
+        ids::HBBTV_NAVIGATE => hypermedia::hbbtv_navigate(args, span),
+        ids::HBBTV_SET_STATE => hypermedia::hbbtv_set_state(args, span),
+        ids::SECOND_SCREEN_SYNC => hypermedia::second_screen_sync(args, span),
+        ids::INTERACTIVE_ADD_TRIGGER => hypermedia::interactive_add_trigger(args, span),
+        ids::INTERACTIVE_ADD_SOCIAL_POST => hypermedia::interactive_add_social_post(args, span),
+        ids::WORLD_NEW => hypermedia::world_new(args, span),
+        ids::WORLD_ADD_OBJECT => hypermedia::world_add_object(args, span),
+        ids::WORLD_ADD_PORTAL => hypermedia::world_add_portal(args, span),
+        ids::WORLD_ADD_AVATAR => hypermedia::world_add_avatar(args, span),
+        ids::WORLD_SET_GRAVITY => hypermedia::world_set_gravity(args, span),
+        ids::WORLD_OBJECT_APPLY_FORCE => hypermedia::world_object_apply_force(args, span),
+        ids::WORLD_OBJECT_STEP_PHYSICS => hypermedia::world_object_step_physics(args, span),
+        ids::PORTAL_SET_TARGET => hypermedia::portal_set_target(args, span),
+        ids::PORTAL_ACTIVATE => hypermedia::portal_activate(args, span),
+        ids::PORTAL_DEACTIVATE => hypermedia::portal_deactivate(args, span),
+        ids::AVATAR_MOVE => hypermedia::avatar_move(args, span),
+        ids::AVATAR_SET_APPEARANCE => hypermedia::avatar_set_appearance(args, span),
+        ids::DMX_NEW_UNIVERSE => hypermedia::dmx_new_universe(args, span),
+        ids::DMX_SET_CHANNEL => hypermedia::dmx_set_channel(args, span),
+        ids::DMX_ADD_FIXTURE => hypermedia::dmx_add_fixture(args, span),
+        ids::DMX_FIXTURE_SET_COLOUR => hypermedia::dmx_fixture_set_colour(args, span),
+        ids::DMX_FIXTURE_SET_INTENSITY => hypermedia::dmx_fixture_set_intensity(args, span),
+        ids::DMX_FIXTURE_SET_PAN_TILT => hypermedia::dmx_fixture_set_pan_tilt(args, span),
+        ids::DMX_NEW_CUE => hypermedia::dmx_new_cue(args, span),
+        ids::DMX_CUE_SET_CHANNEL => hypermedia::dmx_cue_set_channel(args, span),
+        ids::DMX_CUE_SET_FADE => hypermedia::dmx_cue_set_fade(args, span),
+        ids::DMX_NEW_CUE_STACK => hypermedia::dmx_new_cue_stack(args, span),
+        ids::DMX_CUE_STACK_ADD => hypermedia::dmx_cue_stack_add(args, span),
+        ids::DMX_CUE_STACK_GO => hypermedia::dmx_cue_stack_go(args, span),
+        ids::DMX_CUE_STACK_GO_BACK => hypermedia::dmx_cue_stack_go_back(args, span),
+        ids::DMX_CUE_STACK_RESET => hypermedia::dmx_cue_stack_reset(args, span),
         // ── N2: Partial extensions ──────────────────────────────────────────
         ids::SOCIAL_GINI => social::gini(args, span),
         ids::SOCIAL_LORENZ => social::lorenz(args, span),

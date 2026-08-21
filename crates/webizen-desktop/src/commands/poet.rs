@@ -4,10 +4,10 @@
 //! Gazetteer is document NLP (`qualia_core_db::nlp`), not the language.
 //! Honesty: graph is an in-process snapshot until daemon wiring (Partial).
 
+use qualia_core_db::nlp::analyze_document;
 use qualia_core_db::poet_host::catalog::{engine_families_mcp_only, VIBE_0_1};
 use qualia_core_db::poet_host::{format_value, PoetSnapshot, PulseRecord};
 use qualia_core_db::text_span::{annotation_quin, TextSpan};
-use qualia_core_db::nlp::analyze_document;
 use serde::Serialize;
 use std::sync::Mutex;
 use tauri::State;
@@ -54,6 +54,7 @@ impl Default for PoetHarnessState {
     }
 }
 
+#[allow(dead_code)]
 #[derive(Serialize)]
 pub struct PulseRecordDto {
     pub topic: String,
@@ -71,6 +72,7 @@ impl From<&PulseRecord> for PulseRecordDto {
     }
 }
 
+#[allow(dead_code)]
 #[derive(Serialize)]
 pub struct PoetEvalResult {
     pub ok: bool,
@@ -84,6 +86,7 @@ pub struct PoetEvalResult {
     pub value_cbor_hex: String,
 }
 
+#[allow(dead_code)]
 #[derive(Serialize)]
 pub struct GazetteerHitDto {
     pub surface: String,
@@ -93,6 +96,7 @@ pub struct GazetteerHitDto {
     pub end_utf8: u32,
 }
 
+#[allow(dead_code)]
 #[derive(Serialize)]
 pub struct PoetGazetteerResult {
     pub ok: bool,
@@ -106,7 +110,12 @@ pub struct PoetGazetteerResult {
     pub honesty: &'static str,
 }
 
-fn snapshot_result(snap: &PoetSnapshot, ok: bool, value: String, diagnostic: Option<String>) -> PoetEvalResult {
+fn snapshot_result(
+    snap: &PoetSnapshot,
+    ok: bool,
+    value: String,
+    diagnostic: Option<String>,
+) -> PoetEvalResult {
     PoetEvalResult {
         ok,
         value: value.clone(),

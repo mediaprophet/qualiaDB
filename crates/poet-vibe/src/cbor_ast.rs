@@ -1298,7 +1298,19 @@ enum ItemField {
 
 fn decode_item_field(key: &str, dec: &mut CborDecoder) -> Result<ItemField, DecodeError> {
     match key {
-        "name" | "path" => Ok(ItemField::Str(dec.str()?)),
+        "name" => Ok(ItemField::Str(dec.str()?)),
+        "path" => {
+            if (dec.peek()? >> 5) == 4 {
+                let n = dec.array()?;
+                let mut parts = Vec::new();
+                for _ in 0..n {
+                    parts.push(dec.str()?);
+                }
+                Ok(ItemField::StrList(parts))
+            } else {
+                Ok(ItemField::Str(dec.str()?))
+            }
+        }
         "async" => Ok(ItemField::Bool(dec.bool()?)),
         "effect" => {
             if dec.is_null()? {
@@ -1393,6 +1405,7 @@ impl CborEncoder {
         self.buf
     }
 
+    #[allow(dead_code)]
     fn write_u8(&mut self, b: u8) {
         self.buf.push(b);
     }
@@ -1457,6 +1470,7 @@ impl<'a> CborDecoder<'a> {
     fn new(buf: &'a [u8]) -> Self {
         Self { buf, pos: 0 }
     }
+    #[allow(dead_code)]
     fn pos(&self) -> usize {
         self.pos
     }
@@ -1572,6 +1586,7 @@ impl<'a> CborDecoder<'a> {
         }
     }
 
+    #[allow(dead_code)]
     fn null(&mut self) -> Result<(), DecodeError> {
         let b = self.read_u8()?;
         if b == 0xF6 {

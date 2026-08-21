@@ -39,6 +39,7 @@ pub enum Type {
     MaterialRef,
     WorldLine,
     // ── T9: User-defined enum type ─────────────────────────────────────
+    #[allow(dead_code)]
     Enum(String),
     // ── T33: Species and Mixture types ─────────────────────────────────
     SpeciesRef,
@@ -113,6 +114,7 @@ impl Type {
         }
     }
 
+    #[allow(dead_code)]
     pub fn is_numeric(&self) -> bool {
         matches!(self, Type::I64 | Type::U64 | Type::F64)
     }

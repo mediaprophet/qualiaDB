@@ -256,7 +256,6 @@ pub fn decode_chunk(data: &[u8]) -> Result<Chunk, ChunkDecodeError> {
         return Err(ChunkDecodeError::Truncated);
     }
     let code = data[pos..pos + code_len].to_vec();
-    pos += code_len;
 
     Ok(Chunk {
         constants,
@@ -272,7 +271,7 @@ mod tests {
     use crate::bind::MockHost;
     use crate::budget::Budget;
     use crate::bytecode::compiler::compile_expr;
-    use crate::bytecode::vm::{Vm, VmError};
+    use crate::bytecode::vm::Vm;
     use crate::parse::parse_cell;
 
     #[test]
@@ -381,7 +380,6 @@ mod tests {
         use crate::parse::parse_program;
         use crate::value::Value;
 
-        let src = "fn fact(n: i64) budget(steps: 10000) -> i64 { if n <= 1 { return 1; } return n * fact(n - 1); }";
         // Note: recursion is not supported in the 0.1 VM (no self-call).
         // Use iterative version instead.
         let src = "fn fact(n: i64) budget(steps: 10000) -> i64 { let r = 1; let i = 1; while i <= n { r = r * i; i = i + 1; } return r; }";

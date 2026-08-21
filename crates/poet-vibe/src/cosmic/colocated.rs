@@ -6,7 +6,6 @@
 //! Reference: OCS Specification v2.2.0 §9.
 
 use crate::cosmic::transforms::Geodetic;
-use crate::cosmic::usri::Usri;
 use crate::value::Value;
 use std::collections::BTreeMap;
 

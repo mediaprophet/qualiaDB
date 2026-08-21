@@ -302,10 +302,8 @@ mod tests {
 
     #[test]
     fn std140_layout_camera_struct() {
-        let (layout, total) = std140_layout(&[
-            ("view", Std140Type::Mat4),
-            ("proj", Std140Type::Mat4),
-        ]);
+        let (layout, total) =
+            std140_layout(&[("view", Std140Type::Mat4), ("proj", Std140Type::Mat4)]);
         assert_eq!(layout.len(), 2);
         assert_eq!(layout[0].name, "view");
         assert_eq!(layout[0].offset, 0);
@@ -321,10 +319,7 @@ mod tests {
         // vec3 at offset 0 (size 12, align 16), then f32 at offset 12
         // (fits in the vec4 padding, no extra alignment needed since 12 is
         // 4-byte aligned for a scalar).
-        let (layout, total) = std140_layout(&[
-            ("a", Std140Type::Vec3),
-            ("b", Std140Type::Scalar),
-        ]);
+        let (layout, total) = std140_layout(&[("a", Std140Type::Vec3), ("b", Std140Type::Scalar)]);
         assert_eq!(layout[0].offset, 0);
         assert_eq!(layout[0].size, 12);
         assert_eq!(layout[0].align, 16);
@@ -370,10 +365,7 @@ mod tests {
 
     #[test]
     fn camera_uniform_bytes_roundtrip() {
-        let cam = CameraUniform::new(
-            [[1.0; 4]; 4],
-            [[2.0; 4]; 4],
-        );
+        let cam = CameraUniform::new([[1.0; 4]; 4], [[2.0; 4]; 4]);
         let bytes = cam.as_bytes();
         assert_eq!(bytes.len(), 128);
         // First 4 bytes should be 1.0f32 (view matrix [0][0])

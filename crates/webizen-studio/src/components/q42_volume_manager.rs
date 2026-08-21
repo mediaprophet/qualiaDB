@@ -137,7 +137,9 @@ fn status_color(status: &str) -> &'static str {
 fn class_color(class: &str) -> &'static str {
     if class.contains("commons") {
         "#4ade80"
-    } else if class.contains("sanctuary") || class.contains("medical") || class.contains("bilateral")
+    } else if class.contains("sanctuary")
+        || class.contains("medical")
+        || class.contains("bilateral")
     {
         "#fb7185"
     } else if class.contains("unreadable") {

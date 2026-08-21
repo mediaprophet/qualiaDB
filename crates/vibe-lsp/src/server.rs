@@ -1,7 +1,6 @@
 //! LSP server implementation — JSON-RPC over stdin/stdout.
 
 use poet_vibe::{check_program, parse_program, Diagnostic};
-use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::collections::HashMap;
 use std::io::{self, BufRead, Write};
@@ -176,9 +175,7 @@ impl<R: BufRead, W: Write> LspServer<R, W> {
             }
             "textDocument/didOpen" => {
                 if let Some(params) = msg.get("params") {
-                    if let Some(uri) = params
-                        .pointer("/textDocument/uri")
-                        .and_then(|v| v.as_str())
+                    if let Some(uri) = params.pointer("/textDocument/uri").and_then(|v| v.as_str())
                     {
                         let text = params
                             .pointer("/textDocument/text")
@@ -191,12 +188,12 @@ impl<R: BufRead, W: Write> LspServer<R, W> {
             }
             "textDocument/didChange" => {
                 if let Some(params) = msg.get("params") {
-                    if let Some(uri) = params
-                        .pointer("/textDocument/uri")
-                        .and_then(|v| v.as_str())
+                    if let Some(uri) = params.pointer("/textDocument/uri").and_then(|v| v.as_str())
                     {
                         // Full sync: take the last change.
-                        if let Some(changes) = params.pointer("/contentChanges").and_then(|v| v.as_array()) {
+                        if let Some(changes) =
+                            params.pointer("/contentChanges").and_then(|v| v.as_array())
+                        {
                             if let Some(last) = changes.last() {
                                 if let Some(text) = last.get("text").and_then(|v| v.as_str()) {
                                     self.documents.insert(uri.to_string(), text.to_string());
@@ -256,9 +253,7 @@ mod tests {
 
     #[test]
     fn initialize_response() {
-        let input = encode_message(
-            r#"{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}"#,
-        );
+        let input = encode_message(r#"{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}"#);
         let mut output = Vec::new();
         {
             let reader = BufReader::new(Cursor::new(input.as_bytes()));
@@ -302,7 +297,8 @@ mod tests {
                     "text": bad_src,
                 }
             }
-        })).unwrap();
+        }))
+        .unwrap();
         let input = encode_message(&body);
         let mut output = Vec::new();
         {
@@ -318,12 +314,8 @@ mod tests {
 
     #[test]
     fn shutdown_then_exit() {
-        let shutdown = encode_message(
-            r#"{"jsonrpc":"2.0","id":1,"method":"shutdown"}"#,
-        );
-        let exit = encode_message(
-            r#"{"jsonrpc":"2.0","method":"exit"}"#,
-        );
+        let shutdown = encode_message(r#"{"jsonrpc":"2.0","id":1,"method":"shutdown"}"#);
+        let exit = encode_message(r#"{"jsonrpc":"2.0","method":"exit"}"#);
         let input = format!("{shutdown}{exit}");
         let mut output = Vec::new();
         {

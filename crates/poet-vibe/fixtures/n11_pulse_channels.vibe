@@ -1,0 +1,19 @@
+// VibeScript 0.1 — Pulse / social communication fixture
+// Tests: Pulse.publish, Pulse.publish_graph_mutation, Pulse.publish_notification,
+//        Pulse.publish_telemetry, Pulse.publish_agent_message, Pulse.publish_presence,
+//        Pulse.publish_sync, Pulse.open_channel, Pulse.close_channel, Pulse.set_transport
+
+Pulse.open_channel({ channel: "ch1", channel_type: "topic" });
+
+Pulse.set_transport({ channel: "ch1", transport: "webrtc" });
+
+Pulse.publish({ channel: "ch1", payload_type: "generic" });
+
+Pulse.publish_graph_mutation({ channel: "ch1" });
+Pulse.publish_notification({ channel: "ch1" });
+Pulse.publish_telemetry({ channel: "ch1" });
+Pulse.publish_agent_message({ channel: "ch1" });
+Pulse.publish_presence({ channel: "ch1" });
+Pulse.publish_sync({ channel: "ch1" });
+
+Pulse.close_channel({ channel: "ch1" });

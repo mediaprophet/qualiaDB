@@ -790,13 +790,20 @@ impl Host for PoetSnapshot {
                         "AES-256-GCM key must be 32 bytes",
                     )
                 })?;
+                let nonce_arr: &[u8; 12] = nonce.as_slice().try_into().map_err(|_| {
+                    Diagnostic::new(
+                        poet_vibe::DiagCode::E100,
+                        span,
+                        "AES-256-GCM nonce must be 12 bytes",
+                    )
+                })?;
                 let cipher = Aes256Gcm::new(key_arr.into());
-                let nonce_arr = Nonce::from_slice(&nonce);
+                let nonce_obj = Nonce::from(*nonce_arr);
                 let payload = aes_gcm::aead::Payload {
                     msg: pt_bytes,
                     aad: aad_bytes,
                 };
-                let ct = cipher.encrypt(nonce_arr, payload).map_err(|e| {
+                let ct = cipher.encrypt(&nonce_obj, payload).map_err(|e| {
                     Diagnostic::new(
                         poet_vibe::DiagCode::E100,
                         span,
@@ -818,13 +825,20 @@ impl Host for PoetSnapshot {
                         "ChaCha20 key must be 32 bytes",
                     )
                 })?;
+                let nonce_arr: &[u8; 12] = nonce.as_slice().try_into().map_err(|_| {
+                    Diagnostic::new(
+                        poet_vibe::DiagCode::E100,
+                        span,
+                        "ChaCha20 nonce must be 12 bytes",
+                    )
+                })?;
                 let cipher = ChaCha20Poly1305::new(key_arr.into());
-                let nonce_arr = Nonce::from_slice(&nonce);
+                let nonce_obj = Nonce::from(*nonce_arr);
                 let payload = chacha20poly1305::aead::Payload {
                     msg: pt_bytes,
                     aad: aad_bytes,
                 };
-                let ct = cipher.encrypt(nonce_arr, payload).map_err(|e| {
+                let ct = cipher.encrypt(&nonce_obj, payload).map_err(|e| {
                     Diagnostic::new(
                         poet_vibe::DiagCode::E100,
                         span,
@@ -845,13 +859,20 @@ impl Host for PoetSnapshot {
                         "XChaCha20 key must be 32 bytes",
                     )
                 })?;
+                let nonce_arr: &[u8; 24] = nonce.as_slice().try_into().map_err(|_| {
+                    Diagnostic::new(
+                        poet_vibe::DiagCode::E100,
+                        span,
+                        "XChaCha20 nonce must be 24 bytes",
+                    )
+                })?;
                 let cipher = XChaCha20Poly1305::new(key_arr.into());
-                let nonce_arr = XNonce::from_slice(&nonce);
+                let nonce_obj = XNonce::from(*nonce_arr);
                 let payload = chacha20poly1305::aead::Payload {
                     msg: pt_bytes,
                     aad: aad_bytes,
                 };
-                let ct = cipher.encrypt(nonce_arr, payload).map_err(|e| {
+                let ct = cipher.encrypt(&nonce_obj, payload).map_err(|e| {
                     Diagnostic::new(
                         poet_vibe::DiagCode::E100,
                         span,
@@ -934,13 +955,20 @@ impl Host for PoetSnapshot {
                         "AES-256-GCM key must be 32 bytes",
                     )
                 })?;
+                let nonce_arr: &[u8; 12] = nonce.as_slice().try_into().map_err(|_| {
+                    Diagnostic::new(
+                        poet_vibe::DiagCode::E100,
+                        span,
+                        "AES-256-GCM nonce must be 12 bytes",
+                    )
+                })?;
                 let cipher = Aes256Gcm::new(key_arr.into());
-                let nonce_arr = Nonce::from_slice(&nonce);
+                let nonce_obj = Nonce::from(*nonce_arr);
                 let payload = aes_gcm::aead::Payload {
                     msg: &ct_tag,
                     aad: aad_bytes,
                 };
-                cipher.decrypt(nonce_arr, payload).map_err(|e| {
+                cipher.decrypt(&nonce_obj, payload).map_err(|e| {
                     Diagnostic::new(
                         poet_vibe::DiagCode::E100,
                         span,
@@ -958,13 +986,20 @@ impl Host for PoetSnapshot {
                         "ChaCha20 key must be 32 bytes",
                     )
                 })?;
+                let nonce_arr: &[u8; 12] = nonce.as_slice().try_into().map_err(|_| {
+                    Diagnostic::new(
+                        poet_vibe::DiagCode::E100,
+                        span,
+                        "ChaCha20 nonce must be 12 bytes",
+                    )
+                })?;
                 let cipher = ChaCha20Poly1305::new(key_arr.into());
-                let nonce_arr = Nonce::from_slice(&nonce);
+                let nonce_obj = Nonce::from(*nonce_arr);
                 let payload = chacha20poly1305::aead::Payload {
                     msg: &ct_tag,
                     aad: aad_bytes,
                 };
-                cipher.decrypt(nonce_arr, payload).map_err(|e| {
+                cipher.decrypt(&nonce_obj, payload).map_err(|e| {
                     Diagnostic::new(
                         poet_vibe::DiagCode::E100,
                         span,
@@ -982,13 +1017,20 @@ impl Host for PoetSnapshot {
                         "XChaCha20 key must be 32 bytes",
                     )
                 })?;
+                let nonce_arr: &[u8; 24] = nonce.as_slice().try_into().map_err(|_| {
+                    Diagnostic::new(
+                        poet_vibe::DiagCode::E100,
+                        span,
+                        "XChaCha20 nonce must be 24 bytes",
+                    )
+                })?;
                 let cipher = XChaCha20Poly1305::new(key_arr.into());
-                let nonce_arr = XNonce::from_slice(&nonce);
+                let nonce_obj = XNonce::from(*nonce_arr);
                 let payload = chacha20poly1305::aead::Payload {
                     msg: &ct_tag,
                     aad: aad_bytes,
                 };
-                cipher.decrypt(nonce_arr, payload).map_err(|e| {
+                cipher.decrypt(&nonce_obj, payload).map_err(|e| {
                     Diagnostic::new(
                         poet_vibe::DiagCode::E100,
                         span,
@@ -1249,7 +1291,7 @@ impl Host for PoetSnapshot {
         }
     }
 
-    fn zk_list_circuits(&mut self, span: poet_vibe::Span) -> Result<Value, Diagnostic> {
+    fn zk_list_circuits(&mut self, _span: poet_vibe::Span) -> Result<Value, Diagnostic> {
         #[cfg(feature = "zk-culling")]
         {
             use crate::crypto::zk_proofs::ZkProofSystem;
@@ -1259,10 +1301,9 @@ impl Host for PoetSnapshot {
         }
         #[cfg(not(feature = "zk-culling"))]
         {
-            let _ = span;
             Err(Diagnostic::new(
                 poet_vibe::DiagCode::E702,
-                span,
+                _span,
                 "zk.list_circuits: zk-culling feature not enabled",
             ))
         }
@@ -1270,7 +1311,7 @@ impl Host for PoetSnapshot {
 
     /// Poll for the next HID event from the ring buffer (T42).
     /// Non-blocking: returns Null if no event is available.
-    fn hid_poll(&mut self, span: poet_vibe::Span) -> Result<Value, Diagnostic> {
+    fn hid_poll(&mut self, _span: poet_vibe::Span) -> Result<Value, Diagnostic> {
         match self.hid_events.dequeue() {
             None => Ok(Value::Null),
             Some(slot) => Ok(hid_slot_to_value(&slot)),

@@ -39,7 +39,7 @@ pub fn capability_grant(args: &Value, span: Span) -> Result<Value, Diagnostic> {
 
 /// `Capability.revoke` — check if a capability should be revoked based on
 /// faults and usury. Returns a priority score; higher = more urgent.
-pub fn capability_revoke(args: &Value, span: Span) -> Result<Value, Diagnostic> {
+pub fn capability_revoke(args: &Value, _span: Span) -> Result<Value, Diagnostic> {
     let faults = args::rec_u64(args, "windowed_faults").unwrap_or(0) as u32;
     let usury = args::rec_bool(args, "usury_event").unwrap_or(false);
     let priority = coordination::compute_priority(faults, usury);
@@ -52,7 +52,7 @@ pub fn capability_revoke(args: &Value, span: Span) -> Result<Value, Diagnostic> 
 
 /// `Capability.test_gating` — test whether the sentinel daemon would allow
 /// an action. Returns `allowed: bool`.
-pub fn capability_test_gating(args: &Value, span: Span) -> Result<Value, Diagnostic> {
+pub fn capability_test_gating(args: &Value, _span: Span) -> Result<Value, Diagnostic> {
     let is_sentinel = args::rec_bool(args, "is_sentinel").unwrap_or(false);
     match coordination::require_privileged(is_sentinel) {
         Ok(()) => Ok(args::record([("allowed", Value::Bool(true))])),
@@ -72,6 +72,23 @@ pub fn capability_audit(_args: &Value, _span: Span) -> Result<Value, Diagnostic>
     Ok(args::record([
         ("bylines_enforced", Value::Bool(bylines_ok)),
         ("status", Value::String("ledger_available".into())),
+    ]))
+}
+
+/// `Capability.declare` — declare a resource capability scope.
+/// Takes `scope` (string), `reason` (string), and optional `module_iri` (string).
+/// Returns the declaration record.
+pub fn capability_declare(args: &Value, span: Span) -> Result<Value, Diagnostic> {
+    let scope = args::rec_str(args, "scope")
+        .ok_or_else(|| args::bad(span, "Capability.declare needs scope"))?;
+    let reason = args::rec_str(args, "reason")
+        .ok_or_else(|| args::bad(span, "Capability.declare needs reason"))?;
+    let module_iri = args::rec_str(args, "module_iri").unwrap_or("");
+    Ok(args::record([
+        ("scope", Value::String(scope.to_string())),
+        ("reason", Value::String(reason.to_string())),
+        ("module_iri", Value::String(module_iri.to_string())),
+        ("status", Value::String("declared".into())),
     ]))
 }
 
@@ -133,7 +150,7 @@ pub fn agent_verify(args: &Value, _span: Span) -> Result<Value, Diagnostic> {
 /// `Identity.current_user` — return the current user's DID.
 /// On native targets, this returns the principal DID.
 /// On WASM without identity features, this fails closed.
-pub fn current_user(_args: &Value, span: Span) -> Result<Value, Diagnostic> {
+pub fn current_user(_args: &Value, _span: Span) -> Result<Value, Diagnostic> {
     // The principal DID per NLP project AGENTS.md §0:
     // "Demo identities must be Timothy Charles Holborn (did:qualia:timothy_charles_holborn)"
     Ok(args::record([

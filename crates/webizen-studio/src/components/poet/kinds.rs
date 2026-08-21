@@ -152,8 +152,14 @@ impl ContainerKind {
 
     pub fn honesty(self) -> &'static str {
         match self {
-            Self::Code | Self::Doc | Self::Sheet | Self::Map | Self::Media | Self::Social
-            | Self::Health | Self::Ontology => "live",
+            Self::Code
+            | Self::Doc
+            | Self::Sheet
+            | Self::Map
+            | Self::Media
+            | Self::Social
+            | Self::Health
+            | Self::Ontology => "live",
             Self::Subcanvas => "partial",
             Self::WebRtc | Self::Webview | Self::Portal | Self::Mesh3d => "present",
         }

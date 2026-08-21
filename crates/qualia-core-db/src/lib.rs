@@ -428,11 +428,16 @@ pub mod agent_runtime;
 /// Entity-view kernel: entity id, observer status, rights filter, attribution, packages (shared by whole desktop; not "mindware-only").
 pub mod entity_view;
 pub mod hypermedia;
+/// N9: Hypermedia asset authoring — image, video, 3D, interactive, portals, DMX.
+pub mod hypermedia_authoring;
 /// Document NLP (tokenize, gazetteer, span plans). Engine capability, not Vibe.
 pub mod nlp;
 pub mod poet_host;
 pub mod qubo_compiler;
 pub mod render;
+/// N8: Research / investigation / epistemics — enquiry, corpus, dark links, inference chains,
+/// investigations, hypothesis graphs, epistemic assessment, sentiment analysis.
+pub mod research;
 #[cfg(all(target_arch = "wasm32", feature = "portal"))]
 pub mod spatial_wasm;
 pub mod text_span;

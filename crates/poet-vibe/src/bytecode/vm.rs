@@ -6,7 +6,7 @@
 
 use crate::bind::{dispatch, Host};
 use crate::budget::Budget;
-use crate::bytecode::op::{Chunk, Const, FuncMeta, Op};
+use crate::bytecode::op::{Chunk, Const, Op};
 use crate::error::{DiagCode, Diagnostic};
 use crate::span::Span;
 use crate::value::Value;
@@ -112,6 +112,7 @@ struct Frame {
     /// Local variable slots for this frame.
     locals: Vec<Value>,
     /// Number of arguments passed.
+    #[allow(dead_code)]
     arg_count: u8,
 }
 
@@ -131,7 +132,7 @@ impl<'a, H: Host> Vm<'a, H> {
     pub fn run(&mut self) -> Result<Value, VmError> {
         let mut pc: usize = 0;
         // Top-level locals.
-        let mut top_locals = vec![Value::Null; self.chunk.top_locals as usize];
+        let top_locals = vec![Value::Null; self.chunk.top_locals as usize];
         self.frames.push(Frame {
             return_pc: usize::MAX,
             locals: top_locals.clone(),
@@ -891,7 +892,6 @@ mod tests {
 
     #[test]
     fn vm_record_literal() {
-        use std::collections::BTreeMap;
         let v = run_cell("= { x: 1, y: 2 }").expect("vm");
         match v {
             Value::Record(fields) => {

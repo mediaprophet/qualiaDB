@@ -5,3 +5,8 @@
 //! - **`viewport/`** — U2 display (ambient, projector, epistemic, screen)
 
 pub mod viewport;
+
+pub const PGA_SCLERP_EVAL_WGSL: &str = include_str!("pga_sclerp_eval.wgsl");
+pub const SPRING_DAMPER_GRID_WGSL: &str = include_str!("spring_damper_grid.wgsl");
+pub const HUD_GLASS_BLUR_WGSL: &str = include_str!("hud_glass_blur.wgsl");
+pub const WAVE_INTERFERENCE_WGSL: &str = include_str!("wave_interference.wgsl");

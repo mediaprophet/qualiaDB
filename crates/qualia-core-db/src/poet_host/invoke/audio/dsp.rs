@@ -4,7 +4,7 @@
 
 use super::super::args;
 use crate::audio::dsp;
-use poet_vibe::{DiagCode, Diagnostic, Span, Value};
+use poet_vibe::{Diagnostic, Span, Value};
 
 /// `Audio.oscillator` — render a waveform buffer.
 ///
@@ -44,7 +44,7 @@ pub fn oscillator(args: &Value, span: Span) -> Result<Value, Diagnostic> {
 /// Takes `attack`, `decay`, `sustain`, `release` (f64, seconds/level),
 /// `sample_rate` (f64), `n` (u64, sample count), and `note_on_samples`
 /// (u64, when to trigger note-off). Returns list of f64 values.
-pub fn envelope(args: &Value, span: Span) -> Result<Value, Diagnostic> {
+pub fn envelope(args: &Value, _span: Span) -> Result<Value, Diagnostic> {
     let attack = args::rec_f64(args, "attack").unwrap_or(0.01);
     let decay = args::rec_f64(args, "decay").unwrap_or(0.1);
     let sustain = args::rec_f64(args, "sustain").unwrap_or(0.7);

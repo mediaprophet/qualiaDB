@@ -13,6 +13,8 @@
 //! Reference: `docs/vibescript-full-impl-PLAN.md` §8.11 T51,
 //! recommendations §4.3.
 
+#![allow(dead_code)]
+
 use crate::value::Value;
 use std::collections::BTreeMap;
 

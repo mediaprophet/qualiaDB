@@ -615,8 +615,8 @@ mod tests {
         // Tensor10D = pose/query lanes (q,v,w,x,y,z,t,alpha,mu,sigma)
         // Epistemic10D = attention/epistemic geometry (scale, attention_depth, ...)
         use crate::tensor::Tensor10D;
-        let pose = Tensor10D::default();
-        let epistemic = Epistemic10D::default();
+        let _pose = Tensor10D::default();
+        let _epistemic = Epistemic10D::default();
         // They have different field sets — just verify they're different types.
         assert_ne!(
             std::mem::size_of::<Tensor10D>(),

@@ -53,6 +53,7 @@ fn s(v: &serde_json::Value, key: &str) -> String {
         .to_string()
 }
 
+#[allow(dead_code)]
 fn comma_list(value: &serde_json::Value, key: &str) -> String {
     value
         .get(key)

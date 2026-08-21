@@ -65,6 +65,10 @@ pub fn extract_frames(text: &str) -> Vec<FrameInstance> {
             "TRANSFER" => extract_transfer(text, &tokens, i),
             _ => Vec::new(),
         };
+        let elements = elements
+            .into_iter()
+            .filter(|e| trig.roles.contains(&e.role.as_str()))
+            .collect();
         out.push(FrameInstance {
             frame_type: trig.frame_type.to_string(),
             elements,

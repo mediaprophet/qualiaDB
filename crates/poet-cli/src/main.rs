@@ -9,7 +9,10 @@ use std::fs;
 use std::process;
 
 fn print_usage() {
-    println!("Poet CLI toolchain for VibeScript (v{})", poet_vibe::LANGUAGE_VERSION);
+    println!(
+        "Poet CLI toolchain for VibeScript (v{})",
+        poet_vibe::LANGUAGE_VERSION
+    );
     println!("\nUsage:");
     println!("  poet repl           Start an interactive VibeScript REPL");
     println!("  poet format <file>  Format a .vibe file");
@@ -66,7 +69,10 @@ fn main() {
                         println!("No issues found in {}", path);
                     } else {
                         for issue in &issues {
-                            println!("{}:{}: {:?}: {}", path, issue.line, issue.severity, issue.message);
+                            println!(
+                                "{}:{}: {:?}: {}",
+                                path, issue.line, issue.severity, issue.message
+                            );
                         }
                     }
                 }

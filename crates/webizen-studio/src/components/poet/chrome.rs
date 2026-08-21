@@ -213,7 +213,11 @@ pub fn StatusBar(wb: Signal<Workbench>) -> Element {
     let strata = if w.strata.len() >= 5 {
         "All (5 Levels Active)".into()
     } else {
-        w.strata.iter().map(|s| s.id()).collect::<Vec<_>>().join(", ")
+        w.strata
+            .iter()
+            .map(|s| s.id())
+            .collect::<Vec<_>>()
+            .join(", ")
     };
     rsx! {
         footer { class: "bottom-statusbar",

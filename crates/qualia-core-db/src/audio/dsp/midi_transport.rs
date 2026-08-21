@@ -159,6 +159,7 @@ impl Transport {
         let samples_per_beat = 60.0 * self.sample_rate / self.tempo;
         let beat_position = self.position_samples as f64 / samples_per_beat;
         let beat_phase = beat_position - beat_position.floor();
+        self.metronome_phase = beat_phase;
 
         // Metronome click at beat boundaries.
         let click = self.is_metronome_on && beat_phase < 1.0 / samples_per_beat;
@@ -177,6 +178,30 @@ impl Transport {
         }
 
         click
+    }
+
+    /// Current metronome phase within the active beat [0.0, 1.0).
+    pub fn metronome_phase(&self) -> f64 {
+        self.metronome_phase
+    }
+
+    /// Generate an audio sample for the metronome click (1kHz pulse decaying over 20ms).
+    pub fn metronome_sample(&self) -> f64 {
+        if !self.is_metronome_on || self.state == TransportState::Stopped {
+            return 0.0;
+        }
+        let samples_per_beat = 60.0 * self.sample_rate / self.tempo;
+        let sample_in_beat = self.metronome_phase * samples_per_beat;
+        let click_len = (0.02 * self.sample_rate).min(samples_per_beat * 0.5);
+        if sample_in_beat < click_len {
+            let decay = 1.0 - (sample_in_beat / click_len);
+            let freq = 1000.0;
+            let sine =
+                (2.0 * std::f64::consts::PI * freq * (sample_in_beat / self.sample_rate)).sin();
+            sine * decay * 0.5
+        } else {
+            0.0
+        }
     }
 
     /// Current position in beats.

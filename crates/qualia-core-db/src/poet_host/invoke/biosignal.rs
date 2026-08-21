@@ -98,6 +98,7 @@ pub struct BiosignalDpFilter {
     total_samples: u64,
 }
 
+#[allow(dead_code)]
 impl BiosignalDpFilter {
     /// Create a new biosignal DP filter with the given configuration.
     pub fn new(config: BiosignalDpConfig) -> Result<Self, PrivacyError> {

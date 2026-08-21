@@ -431,6 +431,7 @@ fn first_incomplete_foundation(completed: &[String]) -> Option<&'static str> {
         .find(|id| !completed.iter().any(|done| done == id))
 }
 
+#[allow(dead_code)]
 fn comma_values(value: &str) -> Vec<String> {
     value
         .split(',')
@@ -448,8 +449,8 @@ pub fn OnboardingGate() -> Element {
     let mut config = use_signal(AgentConfigSnapshot::default);
     let mut status = use_signal(String::new);
     let mut saving = use_signal(|| false);
-    let mut display_name = use_signal(String::new);
-    let mut profile = use_signal(SetupProfileSnapshot::default);
+    let display_name = use_signal(String::new);
+    let profile = use_signal(SetupProfileSnapshot::default);
 
     use_hook(move || {
         #[cfg(target_arch = "wasm32")]

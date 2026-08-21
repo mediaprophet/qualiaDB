@@ -3,12 +3,16 @@
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 mod black_scholes;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+pub mod computational_economics;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 mod finance_ext;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 mod portfolio;
 
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 pub use black_scholes::price as black_scholes;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+pub use computational_economics as econ;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 pub use finance_ext::{convert_currency, ledger_balance, multisig_check};
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]

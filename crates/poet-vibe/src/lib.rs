@@ -25,9 +25,12 @@ mod types;
 mod unicode_ident;
 mod value;
 
+pub mod animation;
+pub mod ast_merge;
 pub mod cosmic;
 pub mod crypto;
 pub mod dag;
+pub mod decompiler;
 pub mod deontic_interrupt;
 pub mod frame_morphism;
 pub mod hid;

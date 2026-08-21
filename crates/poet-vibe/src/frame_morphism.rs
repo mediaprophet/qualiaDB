@@ -33,7 +33,7 @@
 //! Reference: `docs/vibescript-full-impl-PLAN.md` §8.15 W5,
 //! excellence-first §4.
 
-use crate::value::{Frame, Pose, Transform, Value};
+use crate::value::{Pose, Value};
 use std::collections::BTreeMap;
 
 /// A Galilean frame morphism — translation + rotation + velocity (W5).

@@ -27,9 +27,9 @@ pub use wellfair::{
 };
 pub mod directory;
 pub mod ingest;
-pub mod q42;
 pub mod mail;
 pub mod personal_directory;
+pub mod q42;
 pub mod qapp_host;
 pub mod qapp_telemetry;
 pub mod semantic;
@@ -43,12 +43,12 @@ pub use render::{
 };
 pub mod browser_10d;
 pub mod native_bindings;
+pub mod poet;
+pub mod poet_render;
 pub mod semantic_logic;
 pub mod telemetry;
 pub mod updater;
 pub mod vision_audio;
-pub mod poet;
-pub mod poet_render;
 
 // ── Shared types & helpers ────────────────────────────────────────────────────
 
