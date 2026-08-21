@@ -44,10 +44,10 @@ A package that uses only this document’s grammar, types, effects, and the **0.
 | Source | UTF-8 `.vibe` | Human-authored, hashed |
 | Cell body | UTF-8 starting with `=` | Pure formula; only legal in an HCF/QApp cell, not in a `.vibe` module |
 | Canonical AST | versioned nodes (later RDF/CBOR-LD) | Interchange / agents |
-| Bytecode | later (`vibe-bc-0.1`) | Optional; 0.1 MAY interpret AST directly |
+| Bytecode | `vibe-bc-0.1` (implemented) | Stack-based VM; binary encode/decode; optional fast path |
 | Package manifest | later | Capabilities, profile, hashes, signature |
 
-0.1 implementers MUST parse source → typed AST → evaluate. Bytecode is not required to claim 0.1.
+0.1 implementers MUST parse source → typed AST → evaluate. Bytecode (`vibe-bc-0.1`) is implemented as an optional execution path: `poet_vibe::bytecode::compile` compiles a checked AST into a `Chunk`, `poet_vibe::bytecode::Vm` executes it, and `poet_vibe::bytecode::encode_chunk`/`decode_chunk` provide binary serialization. The bytecode VM supports arithmetic, comparison, logical operators, control flow (if/else, while, for, match), user-defined functions with proper local scoping, list/record construction and access, and host capability dispatch.
 
 ---
 
@@ -467,4 +467,4 @@ Until those six hold, documents MUST say **0.1-draft**, not v1.0.
 
 ## 16. Out of 0.1 (explicit)
 
-Closures; generics beyond `Option`/`Result`/`List`; interpolation; Unicode identifiers; bytecode; package signatures; SHACL-AF / ShEx as complete engines; Bao HMC v2; “mathematically perfect” speech; `no_std` edge; enumerating Qualia’s full capability matrix as keywords.
+Closures; generics beyond `Option`/`Result`/`List`; interpolation; Unicode identifiers; package signatures; SHACL-AF / ShEx as complete engines; Bao HMC v2; “mathematically perfect” speech; `no_std` edge; enumerating Qualia’s full capability matrix as keywords. (Note: `vibe-bc-0.1` bytecode was originally listed here but has been implemented as an optional stack-based VM with binary codec — see §1.)

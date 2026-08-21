@@ -2714,6 +2714,210 @@ fn x2_physics_to_geometry_trajectory() {
     assert!((v.as_f64().unwrap() - expected).abs() < 1e-6);
 }
 
+// ── Phase H: vibe-bc-0.1 bytecode conformance ────────────────────────
+
+use poet_vibe::bytecode::{compile, compile_expr, decode_chunk, encode_chunk, Chunk, Vm};
+
+#[test]
+fn bc1_cell_arithmetic() {
+    let expr = parse_cell("= 1 + 2 * 3 - 4").expect("parse");
+    check_cell(&expr).expect("check");
+    let chunk = compile_expr(&expr).expect("compile");
+    let mut host = MockHost::default();
+    let mut vm = Vm::new(&chunk, &mut host, poet_vibe::Budget::default());
+    let result = vm.run().expect("vm");
+    assert_eq!(result, Value::I64(3));
+}
+
+#[test]
+fn bc2_cell_float_math() {
+    let expr = parse_cell("= 3.14 * 2.0").expect("parse");
+    let chunk = compile_expr(&expr).expect("compile");
+    let mut host = MockHost::default();
+    let mut vm = Vm::new(&chunk, &mut host, poet_vibe::Budget::default());
+    let result = vm.run().expect("vm");
+    assert_eq!(result, Value::F64(6.28));
+}
+
+#[test]
+fn bc3_function_call() {
+    let src =
+        r#"fn square(x: i64) -> i64 { return x * x; } fn main() -> i64 { return square(7); }"#;
+    let prog = parse_program(src).expect("parse");
+    check_program(&prog).expect("check");
+    let chunk = compile(&prog).expect("compile");
+    let mut host = MockHost::default();
+    let mut vm = Vm::new(&chunk, &mut host, poet_vibe::Budget::default());
+    vm.run().expect("preamble");
+    let idx = chunk.find_function("main").expect("main");
+    let result = vm.call_function(idx, &[]).expect("call");
+    assert_eq!(result, Value::I64(49));
+}
+
+#[test]
+fn bc4_while_loop() {
+    let src = r#"fn sum_to(n: i64) budget(steps: 10000) -> i64 { let s = 0; let i = 0; while i < n { s = s + i; i = i + 1; } return s; }"#;
+    let prog = parse_program(src).expect("parse");
+    let chunk = compile(&prog).expect("compile");
+    let mut host = MockHost::default();
+    let mut vm = Vm::new(&chunk, &mut host, poet_vibe::Budget::default());
+    vm.run().expect("preamble");
+    let idx = chunk.find_function("sum_to").expect("sum_to");
+    let result = vm.call_function(idx, &[Value::I64(100)]).expect("call");
+    assert_eq!(result, Value::I64(4950));
+}
+
+#[test]
+fn bc5_for_loop() {
+    let src = r#"fn sum_list() budget(steps: 10000) -> i64 { let s = 0; for x in [10, 20, 30, 40, 50] { s = s + x; } return s; }"#;
+    let prog = parse_program(src).expect("parse");
+    let chunk = compile(&prog).expect("compile");
+    let mut host = MockHost::default();
+    let mut vm = Vm::new(&chunk, &mut host, poet_vibe::Budget::default());
+    vm.run().expect("preamble");
+    let idx = chunk.find_function("sum_list").expect("sum_list");
+    let result = vm.call_function(idx, &[]).expect("call");
+    assert_eq!(result, Value::I64(150));
+}
+
+#[test]
+fn bc6_if_else() {
+    let src = r#"fn classify(x: i64) -> i64 { if x > 0 { return 1; } else { if x < 0 { return -1; } else { return 0; } } }"#;
+    let prog = parse_program(src).expect("parse");
+    let chunk = compile(&prog).expect("compile");
+    let mut host = MockHost::default();
+    let mut vm = Vm::new(&chunk, &mut host, poet_vibe::Budget::default());
+    vm.run().expect("preamble");
+    let idx = chunk.find_function("classify").expect("classify");
+    assert_eq!(
+        vm.call_function(idx, &[Value::I64(5)]).expect("pos"),
+        Value::I64(1)
+    );
+    assert_eq!(
+        vm.call_function(idx, &[Value::I64(-5)]).expect("neg"),
+        Value::I64(-1)
+    );
+    assert_eq!(
+        vm.call_function(idx, &[Value::I64(0)]).expect("zero"),
+        Value::I64(0)
+    );
+}
+
+#[test]
+fn bc7_list_and_index() {
+    let expr = parse_cell("= [1, 2, 3, 4, 5][2]").expect("parse");
+    let chunk = compile_expr(&expr).expect("compile");
+    let mut host = MockHost::default();
+    let mut vm = Vm::new(&chunk, &mut host, poet_vibe::Budget::default());
+    let result = vm.run().expect("vm");
+    assert_eq!(result, Value::I64(3));
+}
+
+#[test]
+fn bc8_record_member() {
+    let expr = parse_cell("= { name: \"alice\", age: 30 }.age").expect("parse");
+    let chunk = compile_expr(&expr).expect("compile");
+    let mut host = MockHost::default();
+    let mut vm = Vm::new(&chunk, &mut host, poet_vibe::Budget::default());
+    let result = vm.run().expect("vm");
+    assert_eq!(result, Value::I64(30));
+}
+
+#[test]
+fn bc9_encode_decode_roundtrip() {
+    let expr = parse_cell("= 42").expect("parse");
+    let chunk = compile_expr(&expr).expect("compile");
+    let bytes = encode_chunk(&chunk);
+    let decoded = decode_chunk(&bytes).expect("decode");
+    assert_eq!(chunk, decoded);
+}
+
+#[test]
+fn bc10_encode_decode_execute() {
+    let src = r#"fn fib_iter(n: i64) budget(steps: 100000) -> i64 { let a = 0; let b = 1; let i = 0; while i < n { let t = a + b; a = b; b = t; i = i + 1; } return a; }"#;
+    let prog = parse_program(src).expect("parse");
+    let chunk = compile(&prog).expect("compile");
+    let bytes = encode_chunk(&chunk);
+    let decoded = decode_chunk(&bytes).expect("decode");
+
+    let mut host = MockHost::default();
+    let mut vm = Vm::new(&decoded, &mut host, poet_vibe::Budget::default());
+    vm.run().expect("preamble");
+    let idx = decoded.find_function("fib_iter").expect("fib_iter");
+    // fib(10) = 55
+    let result = vm.call_function(idx, &[Value::I64(10)]).expect("call");
+    assert_eq!(result, Value::I64(55));
+}
+
+#[test]
+fn bc11_division_by_zero() {
+    let expr = parse_cell("= 1 / 0").expect("parse");
+    let chunk = compile_expr(&expr).expect("compile");
+    let mut host = MockHost::default();
+    let mut vm = Vm::new(&chunk, &mut host, poet_vibe::Budget::default());
+    let err = vm.run().expect_err("should error");
+    assert!(err.to_string().contains("division by zero"));
+}
+
+#[test]
+fn bc12_logical_short_circuit() {
+    let expr = parse_cell("= true && false").expect("parse");
+    let chunk = compile_expr(&expr).expect("compile");
+    let mut host = MockHost::default();
+    let mut vm = Vm::new(&chunk, &mut host, poet_vibe::Budget::default());
+    let result = vm.run().expect("vm");
+    assert_eq!(result, Value::Bool(false));
+}
+
+#[test]
+fn bc13_match_statement() {
+    let src = r#"fn describe(x: i64) -> i64 { match x { 0 => { return 100; } 1 => { return 200; } _ => { return 999; } } }"#;
+    let prog = parse_program(src).expect("parse");
+    let chunk = compile(&prog).expect("compile");
+    let mut host = MockHost::default();
+    let mut vm = Vm::new(&chunk, &mut host, poet_vibe::Budget::default());
+    vm.run().expect("preamble");
+    let idx = chunk.find_function("describe").expect("describe");
+    assert_eq!(
+        vm.call_function(idx, &[Value::I64(0)]).expect("0"),
+        Value::I64(100)
+    );
+    assert_eq!(
+        vm.call_function(idx, &[Value::I64(1)]).expect("1"),
+        Value::I64(200)
+    );
+    assert_eq!(
+        vm.call_function(idx, &[Value::I64(42)]).expect("42"),
+        Value::I64(999)
+    );
+}
+
+#[test]
+fn bc14_string_equality() {
+    let expr = parse_cell(r#"= "hello" == "hello""#).expect("parse");
+    let chunk = compile_expr(&expr).expect("compile");
+    let mut host = MockHost::default();
+    let mut vm = Vm::new(&chunk, &mut host, poet_vibe::Budget::default());
+    let result = vm.run().expect("vm");
+    assert_eq!(result, Value::Bool(true));
+}
+
+#[test]
+fn bc15_nested_functions() {
+    let src = r#"fn add(a: i64, b: i64) -> i64 { return a + b; } fn mul(a: i64, b: i64) -> i64 { return a * b; } fn compute(x: i64) -> i64 { return mul(add(x, 1), add(x, 2)); }"#;
+    let prog = parse_program(src).expect("parse");
+    let chunk = compile(&prog).expect("compile");
+    let mut host = MockHost::default();
+    let mut vm = Vm::new(&chunk, &mut host, poet_vibe::Budget::default());
+    vm.run().expect("preamble");
+    let idx = chunk.find_function("compute").expect("compute");
+    // compute(5) = (5+1) * (5+2) = 6 * 7 = 42
+    let result = vm.call_function(idx, &[Value::I64(5)]);
+    assert!(result.is_ok(), "call failed: {:?}", result.err());
+    let r = result.unwrap();
+    assert_eq!(r, Value::I64(42), "got {:?} instead of 42", r);
+}
+
 #[test]
 fn x3_governance_to_pulse_severity() {
     let src = include_str!("../fixtures/x3_governance_to_pulse.vibe");

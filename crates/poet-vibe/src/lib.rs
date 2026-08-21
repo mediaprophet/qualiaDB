@@ -9,6 +9,7 @@ mod ast;
 mod ast_query;
 mod bind;
 mod budget;
+pub mod bytecode;
 mod capability_schema;
 mod cbor_ast;
 mod check;

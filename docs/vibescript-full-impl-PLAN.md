@@ -221,11 +221,16 @@ Comprehensive golden corpus across all 9 domains with negative fixtures and cros
 
 ---
 
-### Phase H: vibe-bc-0.1 bytecode (v1.0 destination, post-0.1)
+### Phase H: vibe-bc-0.1 bytecode
 
-The 0.1 spec explicitly lists bytecode as "out of 0.1". This is the natural v1.0 workstream but is not needed for 0.1 conformance.
+**Done.** Implemented as a stack-based VM with binary codec.
 
-**Not started. Awaiting 0.1 completion + Timothy's go-ahead.**
+- **Opcodes** (`bytecode/op.rs`): 35 opcodes covering null/bool/int/uint/float/string/IRI literals, variable load/store, arithmetic (add/sub/mul/div/rem/neg), comparison (eq/ne/lt/le/gt/ge), logical (and/or/not with short-circuit), control flow (jump/jump_if_false/jump_if_true), calls (host/user/return), data structures (list/record/member/index), try-unwrap, effect, and halt.
+- **Compiler** (`bytecode/compiler.rs`): AST → Chunk compiler with forward/backward jump patching, per-function local scoping, constant pool interning, function metadata registration, support for if/else, while, for, match, let/assign, return, expressions, and host/user calls.
+- **VM** (`bytecode/vm.rs`): Stack-based execution with call frames, budget enforcement, division-by-zero trapping (E600), type-checked arithmetic, host capability dispatch via `bind::dispatch`, user function calls with proper frame management.
+- **Codec** (`bytecode/codec.rs`): Binary encode/decode with magic "VBC1", version, constant pool, function metadata, and code segment. Full roundtrip verified.
+- **Tests**: 53 unit tests (op/compiler/vm/codec) + 15 conformance tests (bc1–bc15) covering arithmetic, floats, functions, while/for loops, if/else, match, lists, records, encode/decode roundtrip, division by zero, logical short-circuit, nested function calls, and iterative fibonacci.
+- **API**: `poet_vibe::bytecode::{compile, compile_expr, Vm, encode_chunk, decode_chunk, Chunk, Op}`
 
 ---
 
