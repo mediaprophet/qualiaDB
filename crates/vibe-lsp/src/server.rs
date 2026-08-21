@@ -156,7 +156,7 @@ impl<R: BufRead, W: Write> LspServer<R, W> {
                             "diagnosticProvider": true,
                         },
                         "serverInfo": {
-                            "name": "poet-lsp",
+                            "name": "vibe-lsp",
                             "version": "0.0.32",
                         }
                     }
@@ -267,7 +267,7 @@ mod tests {
             server.run().unwrap();
         }
         let output_str = String::from_utf8(output).unwrap();
-        assert!(output_str.contains("poet-lsp"));
+        assert!(output_str.contains("vibe-lsp"));
         assert!(output_str.contains("capabilities"));
         assert!(output_str.contains("textDocumentSync"));
     }

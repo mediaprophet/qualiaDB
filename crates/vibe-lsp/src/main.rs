@@ -1,4 +1,4 @@
-//! poet-lsp — a minimal LSP server for VibeScript.
+//! vibe-lsp — a minimal LSP server for VibeScript.
 //!
 //! Implements JSON-RPC over stdin/stdout with Content-Length framing.
 //! Handles initialize, initialized, didOpen, didChange, and publishes

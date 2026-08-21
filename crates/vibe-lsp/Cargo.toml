@@ -1,5 +1,5 @@
 [package]
-name = "poet-lsp"
+name = "vibe-lsp"
 version = "0.0.32"
 edition = "2021"
 
@@ -9,5 +9,5 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 
 [[bin]]
-name = "poet-lsp"
+name = "vibe-lsp"
 path = "src/main.rs"
