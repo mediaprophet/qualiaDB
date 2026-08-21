@@ -12,7 +12,11 @@ mod descriptive;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 mod descriptive_more;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+mod distributions;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 mod extended;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+mod extra;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 mod hypothesis;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
@@ -29,10 +33,14 @@ pub use descriptive_more::{
     covariance, kurtosis, max, median, min, quantile, skewness, std_dev, sum, variance,
 };
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+pub use distributions::*;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 pub use extended::{
     autocorrelation, entropy, exponential_smoothing, iqr, kl_divergence, median_abs_deviation,
     moving_average, trimmed_mean, z_score_outliers,
 };
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+pub use extra::*;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 pub use hypothesis::{chi_square_gof, one_sample_t, one_way_anova, paired_t, two_sample_t};
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
@@ -104,5 +112,55 @@ stats_stub!(
     median_abs_deviation,
     entropy,
     kl_divergence,
-    z_score_outliers
+    z_score_outliers,
+    // distributions
+    normal_pdf,
+    normal_cdf,
+    normal_quantile,
+    standard_normal_cdf,
+    two_sided_p,
+    students_t_pdf,
+    students_t_cdf,
+    students_t_two_sided_p,
+    chi_squared_pdf,
+    chi_squared_cdf,
+    chi_squared_upper_p,
+    fisher_f_pdf,
+    fisher_f_cdf,
+    fisher_f_upper_p,
+    binomial_pmf,
+    binomial_cdf,
+    poisson_pmf,
+    poisson_cdf,
+    exponential_pdf,
+    exponential_cdf,
+    gamma_pdf,
+    beta_pdf,
+    weibull_pdf,
+    lognormal_pdf,
+    uniform_pdf,
+    laplace_pdf,
+    ln_gamma,
+    gamma_fn,
+    erf,
+    erfc,
+    empirical_cdf,
+    // extra
+    mode,
+    winsorized_mean,
+    cross_entropy,
+    mutual_information,
+    histogram,
+    correlation_p_value,
+    chi_square_independence,
+    modified_z_score_outliers,
+    iqr_outliers,
+    grubbs_test,
+    mann_whitney_u,
+    ks_1sample,
+    friedman,
+    mcnemar,
+    bootstrap_means,
+    ljung_box,
+    adf_proxy
 );

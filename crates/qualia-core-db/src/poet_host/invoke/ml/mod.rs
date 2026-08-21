@@ -6,10 +6,14 @@
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 mod extended;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+mod extra;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 mod ols;
 
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 pub use extended::{accuracy, kmeans, mae, mse, r2_score, rmse, roc_auc, train_test_split};
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+pub use extra::*;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 pub use ols::fit_ols;
 
@@ -44,5 +48,18 @@ ml_stub!(
     accuracy,
     roc_auc,
     kmeans,
-    train_test_split
+    train_test_split,
+    log_loss,
+    confusion_binary,
+    k_fold,
+    bootstrap_indices,
+    bonferroni,
+    holm,
+    benjamini_hochberg,
+    pca,
+    ab_test,
+    power_two_sample,
+    required_sample_size,
+    transe_score,
+    distmult_score
 );

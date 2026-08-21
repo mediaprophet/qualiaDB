@@ -74,6 +74,56 @@ pub const STAT_MAD: &str = "Statistics.median_abs_deviation";
 pub const STAT_ENTROPY: &str = "Statistics.entropy";
 pub const STAT_KL_DIVERGENCE: &str = "Statistics.kl_divergence";
 pub const STAT_Z_SCORE_OUTLIERS: &str = "Statistics.z_score_outliers";
+// Distributions
+pub const STAT_NORMAL_PDF: &str = "Statistics.normal_pdf";
+pub const STAT_NORMAL_CDF: &str = "Statistics.normal_cdf";
+pub const STAT_NORMAL_QUANTILE: &str = "Statistics.normal_quantile";
+pub const STAT_STANDARD_NORMAL_CDF: &str = "Statistics.standard_normal_cdf";
+pub const STAT_TWO_SIDED_P: &str = "Statistics.two_sided_p";
+pub const STAT_STUDENTS_T_PDF: &str = "Statistics.students_t_pdf";
+pub const STAT_STUDENTS_T_CDF: &str = "Statistics.students_t_cdf";
+pub const STAT_STUDENTS_T_TWO_SIDED_P: &str = "Statistics.students_t_two_sided_p";
+pub const STAT_CHI_SQUARED_PDF: &str = "Statistics.chi_squared_pdf";
+pub const STAT_CHI_SQUARED_CDF: &str = "Statistics.chi_squared_cdf";
+pub const STAT_CHI_SQUARED_UPPER_P: &str = "Statistics.chi_squared_upper_p";
+pub const STAT_FISHER_F_PDF: &str = "Statistics.fisher_f_pdf";
+pub const STAT_FISHER_F_CDF: &str = "Statistics.fisher_f_cdf";
+pub const STAT_FISHER_F_UPPER_P: &str = "Statistics.fisher_f_upper_p";
+pub const STAT_BINOMIAL_PMF: &str = "Statistics.binomial_pmf";
+pub const STAT_BINOMIAL_CDF: &str = "Statistics.binomial_cdf";
+pub const STAT_POISSON_PMF: &str = "Statistics.poisson_pmf";
+pub const STAT_POISSON_CDF: &str = "Statistics.poisson_cdf";
+pub const STAT_EXPONENTIAL_PDF: &str = "Statistics.exponential_pdf";
+pub const STAT_EXPONENTIAL_CDF: &str = "Statistics.exponential_cdf";
+pub const STAT_GAMMA_PDF: &str = "Statistics.gamma_pdf";
+pub const STAT_BETA_PDF: &str = "Statistics.beta_pdf";
+pub const STAT_WEIBULL_PDF: &str = "Statistics.weibull_pdf";
+pub const STAT_LOGNORMAL_PDF: &str = "Statistics.lognormal_pdf";
+pub const STAT_UNIFORM_PDF: &str = "Statistics.uniform_pdf";
+pub const STAT_LAPLACE_PDF: &str = "Statistics.laplace_pdf";
+pub const STAT_LN_GAMMA: &str = "Statistics.ln_gamma";
+pub const STAT_GAMMA_FN: &str = "Statistics.gamma_fn";
+pub const STAT_ERF: &str = "Statistics.erf";
+pub const STAT_ERFC: &str = "Statistics.erfc";
+pub const STAT_EMPIRICAL_CDF: &str = "Statistics.empirical_cdf";
+// Extra stats
+pub const STAT_MODE: &str = "Statistics.mode";
+pub const STAT_WINSORIZED_MEAN: &str = "Statistics.winsorized_mean";
+pub const STAT_CROSS_ENTROPY: &str = "Statistics.cross_entropy";
+pub const STAT_MUTUAL_INFORMATION: &str = "Statistics.mutual_information";
+pub const STAT_HISTOGRAM: &str = "Statistics.histogram";
+pub const STAT_CORRELATION_P_VALUE: &str = "Statistics.correlation_p_value";
+pub const STAT_CHI_SQUARE_INDEPENDENCE: &str = "Statistics.chi_square_independence";
+pub const STAT_MODIFIED_Z_SCORE_OUTLIERS: &str = "Statistics.modified_z_score_outliers";
+pub const STAT_IQR_OUTLIERS: &str = "Statistics.iqr_outliers";
+pub const STAT_GRUBBS_TEST: &str = "Statistics.grubbs_test";
+pub const STAT_MANN_WHITNEY_U: &str = "Statistics.mann_whitney_u";
+pub const STAT_KS_1SAMPLE: &str = "Statistics.ks_1sample";
+pub const STAT_FRIEDMAN: &str = "Statistics.friedman";
+pub const STAT_MCNEMAR: &str = "Statistics.mcnemar";
+pub const STAT_BOOTSTRAP_MEANS: &str = "Statistics.bootstrap_means";
+pub const STAT_LJUNG_BOX: &str = "Statistics.ljung_box";
+pub const STAT_ADF_PROXY: &str = "Statistics.adf_proxy";
 pub const ML_OLS: &str = "MachineLearning.ols";
 pub const ML_MSE: &str = "MachineLearning.mse";
 pub const ML_RMSE: &str = "MachineLearning.rmse";
@@ -83,6 +133,19 @@ pub const ML_ACCURACY: &str = "MachineLearning.accuracy";
 pub const ML_ROC_AUC: &str = "MachineLearning.roc_auc";
 pub const ML_KMEANS: &str = "MachineLearning.kmeans";
 pub const ML_TRAIN_TEST_SPLIT: &str = "MachineLearning.train_test_split";
+pub const ML_LOG_LOSS: &str = "MachineLearning.log_loss";
+pub const ML_CONFUSION_BINARY: &str = "MachineLearning.confusion_binary";
+pub const ML_K_FOLD: &str = "MachineLearning.k_fold";
+pub const ML_BOOTSTRAP_INDICES: &str = "MachineLearning.bootstrap_indices";
+pub const ML_BONFERRONI: &str = "MachineLearning.bonferroni";
+pub const ML_HOLM: &str = "MachineLearning.holm";
+pub const ML_BH: &str = "MachineLearning.benjamini_hochberg";
+pub const ML_PCA: &str = "MachineLearning.pca";
+pub const ML_AB_TEST: &str = "MachineLearning.ab_test";
+pub const ML_POWER_TWO_SAMPLE: &str = "MachineLearning.power_two_sample";
+pub const ML_REQUIRED_SAMPLE_SIZE: &str = "MachineLearning.required_sample_size";
+pub const ML_TRANSE_SCORE: &str = "MachineLearning.transe_score";
+pub const ML_DISTMULT_SCORE: &str = "MachineLearning.distmult_score";
 pub const BIOSIGNAL_DP_FILTER: &str = "biosignal.dp_filter";
 pub const BIOSIGNAL_DP_CONFIG: &str = "biosignal.dp_config";
 pub const PHYS_PROJECTILE: &str = "PhysicsAndODE.projectile";
@@ -722,6 +785,56 @@ pub const ALL_BOUND: &[&str] = &[
     STAT_ENTROPY,
     STAT_KL_DIVERGENCE,
     STAT_Z_SCORE_OUTLIERS,
+    // Distributions
+    STAT_NORMAL_PDF,
+    STAT_NORMAL_CDF,
+    STAT_NORMAL_QUANTILE,
+    STAT_STANDARD_NORMAL_CDF,
+    STAT_TWO_SIDED_P,
+    STAT_STUDENTS_T_PDF,
+    STAT_STUDENTS_T_CDF,
+    STAT_STUDENTS_T_TWO_SIDED_P,
+    STAT_CHI_SQUARED_PDF,
+    STAT_CHI_SQUARED_CDF,
+    STAT_CHI_SQUARED_UPPER_P,
+    STAT_FISHER_F_PDF,
+    STAT_FISHER_F_CDF,
+    STAT_FISHER_F_UPPER_P,
+    STAT_BINOMIAL_PMF,
+    STAT_BINOMIAL_CDF,
+    STAT_POISSON_PMF,
+    STAT_POISSON_CDF,
+    STAT_EXPONENTIAL_PDF,
+    STAT_EXPONENTIAL_CDF,
+    STAT_GAMMA_PDF,
+    STAT_BETA_PDF,
+    STAT_WEIBULL_PDF,
+    STAT_LOGNORMAL_PDF,
+    STAT_UNIFORM_PDF,
+    STAT_LAPLACE_PDF,
+    STAT_LN_GAMMA,
+    STAT_GAMMA_FN,
+    STAT_ERF,
+    STAT_ERFC,
+    STAT_EMPIRICAL_CDF,
+    // Extra stats
+    STAT_MODE,
+    STAT_WINSORIZED_MEAN,
+    STAT_CROSS_ENTROPY,
+    STAT_MUTUAL_INFORMATION,
+    STAT_HISTOGRAM,
+    STAT_CORRELATION_P_VALUE,
+    STAT_CHI_SQUARE_INDEPENDENCE,
+    STAT_MODIFIED_Z_SCORE_OUTLIERS,
+    STAT_IQR_OUTLIERS,
+    STAT_GRUBBS_TEST,
+    STAT_MANN_WHITNEY_U,
+    STAT_KS_1SAMPLE,
+    STAT_FRIEDMAN,
+    STAT_MCNEMAR,
+    STAT_BOOTSTRAP_MEANS,
+    STAT_LJUNG_BOX,
+    STAT_ADF_PROXY,
     STAT_PEARSON,
     ML_OLS,
     ML_MSE,
@@ -732,6 +845,19 @@ pub const ALL_BOUND: &[&str] = &[
     ML_ROC_AUC,
     ML_KMEANS,
     ML_TRAIN_TEST_SPLIT,
+    ML_LOG_LOSS,
+    ML_CONFUSION_BINARY,
+    ML_K_FOLD,
+    ML_BOOTSTRAP_INDICES,
+    ML_BONFERRONI,
+    ML_HOLM,
+    ML_BH,
+    ML_PCA,
+    ML_AB_TEST,
+    ML_POWER_TWO_SAMPLE,
+    ML_REQUIRED_SAMPLE_SIZE,
+    ML_TRANSE_SCORE,
+    ML_DISTMULT_SCORE,
     PHYS_PROJECTILE,
     BIO_ALIGN,
     CHEM_SMILES,
@@ -1280,7 +1406,55 @@ pub fn seam_for(id: &str) -> &'static str {
         | STAT_MAD
         | STAT_ENTROPY
         | STAT_KL_DIVERGENCE
-        | STAT_Z_SCORE_OUTLIERS => "stats",
+        | STAT_Z_SCORE_OUTLIERS
+        | STAT_NORMAL_PDF
+        | STAT_NORMAL_CDF
+        | STAT_NORMAL_QUANTILE
+        | STAT_STANDARD_NORMAL_CDF
+        | STAT_TWO_SIDED_P
+        | STAT_STUDENTS_T_PDF
+        | STAT_STUDENTS_T_CDF
+        | STAT_STUDENTS_T_TWO_SIDED_P
+        | STAT_CHI_SQUARED_PDF
+        | STAT_CHI_SQUARED_CDF
+        | STAT_CHI_SQUARED_UPPER_P
+        | STAT_FISHER_F_PDF
+        | STAT_FISHER_F_CDF
+        | STAT_FISHER_F_UPPER_P
+        | STAT_BINOMIAL_PMF
+        | STAT_BINOMIAL_CDF
+        | STAT_POISSON_PMF
+        | STAT_POISSON_CDF
+        | STAT_EXPONENTIAL_PDF
+        | STAT_EXPONENTIAL_CDF
+        | STAT_GAMMA_PDF
+        | STAT_BETA_PDF
+        | STAT_WEIBULL_PDF
+        | STAT_LOGNORMAL_PDF
+        | STAT_UNIFORM_PDF
+        | STAT_LAPLACE_PDF
+        | STAT_LN_GAMMA
+        | STAT_GAMMA_FN
+        | STAT_ERF
+        | STAT_ERFC
+        | STAT_EMPIRICAL_CDF
+        | STAT_MODE
+        | STAT_WINSORIZED_MEAN
+        | STAT_CROSS_ENTROPY
+        | STAT_MUTUAL_INFORMATION
+        | STAT_HISTOGRAM
+        | STAT_CORRELATION_P_VALUE
+        | STAT_CHI_SQUARE_INDEPENDENCE
+        | STAT_MODIFIED_Z_SCORE_OUTLIERS
+        | STAT_IQR_OUTLIERS
+        | STAT_GRUBBS_TEST
+        | STAT_MANN_WHITNEY_U
+        | STAT_KS_1SAMPLE
+        | STAT_FRIEDMAN
+        | STAT_MCNEMAR
+        | STAT_BOOTSTRAP_MEANS
+        | STAT_LJUNG_BOX
+        | STAT_ADF_PROXY => "stats",
         GEOM_HULL2
         | GEOM_DISTANCE_2D
         | GEOM_DISTANCE_3D
@@ -1297,8 +1471,28 @@ pub fn seam_for(id: &str) -> &'static str {
         | VISION_DHASH
         | VISION_HAMMING_DISTANCE
         | VISION_COSINE_SIMILARITY => "vision",
-        ML_OLS | ML_MSE | ML_RMSE | ML_MAE | ML_R2 | ML_ACCURACY | ML_ROC_AUC | ML_KMEANS
-        | ML_TRAIN_TEST_SPLIT => "ml",
+        ML_OLS
+        | ML_MSE
+        | ML_RMSE
+        | ML_MAE
+        | ML_R2
+        | ML_ACCURACY
+        | ML_ROC_AUC
+        | ML_KMEANS
+        | ML_TRAIN_TEST_SPLIT
+        | ML_LOG_LOSS
+        | ML_CONFUSION_BINARY
+        | ML_K_FOLD
+        | ML_BOOTSTRAP_INDICES
+        | ML_BONFERRONI
+        | ML_HOLM
+        | ML_BH
+        | ML_PCA
+        | ML_AB_TEST
+        | ML_POWER_TWO_SAMPLE
+        | ML_REQUIRED_SAMPLE_SIZE
+        | ML_TRANSE_SCORE
+        | ML_DISTMULT_SCORE => "ml",
         PHYS_PROJECTILE | BIO_ALIGN | CHEM_SMILES => "science",
         CHEM_ELEMENT_SYMBOL
         | CHEM_ATOMIC_NUMBER

@@ -1,0 +1,18 @@
+# Statistics — extra tests, anomaly detection, nonparametric, bootstrap
+invoke Statistics.mode { values: [1.0, 2.0, 2.0, 3.0, 3.0, 3.0] }
+invoke Statistics.winsorized_mean { values: [1.0, 2.0, 3.0, 4.0, 100.0], proportion: 0.2 }
+invoke Statistics.cross_entropy { p: [0.5, 0.5], q: [0.25, 0.75] }
+invoke Statistics.mutual_information { x: [0, 1, 0, 1], y: [0, 0, 1, 1] }
+invoke Statistics.histogram { values: [1.0, 2.0, 3.0, 4.0, 5.0], bins: 5 }
+invoke Statistics.correlation_p_value { r: 0.9, n: 10 }
+invoke Statistics.chi_square_independence { table: [[10.0, 20.0], [30.0, 40.0]] }
+invoke Statistics.modified_z_score_outliers { values: [1.0, 2.0, 3.0, 100.0, 4.0], threshold: 3.5 }
+invoke Statistics.iqr_outliers { values: [1.0, 2.0, 3.0, 100.0, 4.0], k: 1.5 }
+invoke Statistics.grubbs_test { values: [1.0, 2.0, 3.0, 100.0, 4.0], alpha: 0.05 }
+invoke Statistics.mann_whitney_u { x: [1.0, 2.0, 3.0], y: [4.0, 5.0, 6.0] }
+invoke Statistics.ks_1sample { values: [0.1, 0.3, 0.5, 0.7, 0.9] }
+invoke Statistics.friedman { groups: [[1.0, 2.0, 3.0], [2.0, 3.0, 1.0], [3.0, 1.0, 2.0]] }
+invoke Statistics.mcnemar { b: 5, c: 15 }
+invoke Statistics.bootstrap_means { values: [1.0, 2.0, 3.0, 4.0, 5.0], iterations: 100, seed: 42 }
+invoke Statistics.ljung_box { acf: [0.5, 0.3, 0.1], n: 100, h: 3 }
+invoke Statistics.adf_proxy { series: [1.0, 2.0, 3.0, 4.0, 5.0, 6.0] }
