@@ -8,8 +8,8 @@ use poet_vibe::{DiagCode, Diagnostic, Span, Value};
 
 /// `Inference.embed` — embed text into a vector using the default TextEmbedder.
 pub fn embed(args: &Value, span: Span) -> Result<Value, Diagnostic> {
-    let text = args::as_str(args)
-        .ok_or_else(|| args::bad(span, "Inference.embed needs a string"))?;
+    let text =
+        args::as_str(args).ok_or_else(|| args::bad(span, "Inference.embed needs a string"))?;
     if text.len() > 64 * 1024 {
         return Err(Diagnostic::new(
             DiagCode::E400,
@@ -96,7 +96,10 @@ mod tests {
 
     #[test]
     fn embed_returns_vector() {
-        let result = embed(&Value::String("hello world".into()), Span { start: 0, end: 0 });
+        let result = embed(
+            &Value::String("hello world".into()),
+            Span { start: 0, end: 0 },
+        );
         assert!(result.is_ok());
         match result.unwrap() {
             Value::List(dims) => assert!(!dims.is_empty()),
@@ -113,8 +116,14 @@ mod tests {
     #[test]
     fn grounding_returns_record() {
         let mut m = BTreeMap::new();
-        m.insert("prompt".into(), Value::String("What is the capital of France?".into()));
-        m.insert("text".into(), Value::String("The capital of France is Paris.".into()));
+        m.insert(
+            "prompt".into(),
+            Value::String("What is the capital of France?".into()),
+        );
+        m.insert(
+            "text".into(),
+            Value::String("The capital of France is Paris.".into()),
+        );
         let result = grounding(&Value::Record(m), Span { start: 0, end: 0 });
         assert!(result.is_ok());
         match result.unwrap() {
@@ -157,4 +166,3 @@ mod tests {
         }
     }
 }
-

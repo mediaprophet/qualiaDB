@@ -35,7 +35,10 @@ pub fn convert_currency(
     _args: &poet_vibe::Value,
     span: poet_vibe::Span,
 ) -> Result<poet_vibe::Value, poet_vibe::Diagnostic> {
-    Err(super::args::need_scientific(span, "Finance.convert_currency"))
+    Err(super::args::need_scientific(
+        span,
+        "Finance.convert_currency",
+    ))
 }
 
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]

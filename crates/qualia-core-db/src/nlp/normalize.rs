@@ -1,4 +1,4 @@
-//! Narrow date / number normalizers. Not TIMEX3.
+//! Narrow date / number normalizers. Extended with QUDT unit vocabulary.
 
 use super::span::DocSpan;
 
@@ -14,6 +14,14 @@ pub enum Normalized {
         unit: Option<&'static str>,
     },
 }
+
+/// QUDT-compatible unit symbols recognized by the normalizer.
+const KNOWN_UNITS: &[&str] = &[
+    "mm", "cm", "m", "km", "in", "ft", "yd", "mi", "mg", "g", "kg", "t", "lb", "oz", "ms", "s",
+    "min", "h", "d", "ml", "l", "gal", "Pa", "kPa", "MPa", "bar", "psi", "K", "°C", "°F", "Hz",
+    "kHz", "MHz", "GHz", "V", "A", "W", "kW", "MW", "J", "kJ", "cal", "kcal", "mol", "ppm", "ppb",
+    "rad", "deg", "m/s", "km/h", "mph",
+];
 
 pub fn normalize_dates_and_numbers(source: &str) -> Vec<Normalized> {
     let mut out = Vec::new();
@@ -101,9 +109,32 @@ fn try_number(source: &str, i: usize) -> Option<Normalized> {
     let value: f64 = source[i..j].parse().ok()?;
     let mut unit = None;
     let mut end = j;
-    if j < source.len() && source[j..].starts_with(" mm") {
-        unit = Some("mm");
-        end = j + 3;
+    // Try to match a known unit after the number (preceded by space or directly)
+    if j < source.len() {
+        let rest = &source[j..];
+        // Try space-separated units first
+        if rest.starts_with(' ') {
+            let after_space = &rest[1..];
+            for &u in KNOWN_UNITS {
+                if after_space.starts_with(u) {
+                    // Check word boundary after unit
+                    let after_unit = &after_space[u.len()..];
+                    if after_unit.is_empty() || !after_unit.as_bytes()[0].is_ascii_alphanumeric() {
+                        unit = Some(u);
+                        end = j + 1 + u.len();
+                        break;
+                    }
+                }
+            }
+        }
+        // Try direct attachment (no space) for degree units
+        if unit.is_none() && rest.starts_with("°C") {
+            unit = Some("°C");
+            end = j + 2;
+        } else if unit.is_none() && rest.starts_with("°F") {
+            unit = Some("°F");
+            end = j + 2;
+        }
     }
     Some(Normalized::Number {
         span: DocSpan::new(i as u32, end as u32),
@@ -128,5 +159,21 @@ mod tests {
         let n = normalize_dates_and_numbers(src);
         assert!(n.iter().any(|x| matches!(x, Normalized::Number { value, unit: Some("mm"), .. } if (*value - 12.5).abs() < 1e-9)));
         assert!(n.iter().any(|x| matches!(x, Normalized::DateIso { .. })));
+    }
+
+    #[test]
+    fn multi_unit_normalization() {
+        let src = "100 kg and 25 °C and 50 Hz";
+        let n = normalize_dates_and_numbers(src);
+        assert!(n.iter().any(|x| matches!(x, Normalized::Number { value, unit: Some("kg"), .. } if (*value - 100.0).abs() < 1e-9)));
+        assert!(n.iter().any(|x| matches!(x, Normalized::Number { value, unit: Some("°C"), .. } if (*value - 25.0).abs() < 1e-9)));
+        assert!(n.iter().any(|x| matches!(x, Normalized::Number { value, unit: Some("Hz"), .. } if (*value - 50.0).abs() < 1e-9)));
+    }
+
+    #[test]
+    fn no_unit_for_bare_numbers() {
+        let src = "There are 42 items.";
+        let n = normalize_dates_and_numbers(src);
+        assert!(n.iter().any(|x| matches!(x, Normalized::Number { unit: None, value, .. } if (*value - 42.0).abs() < 1e-9)));
     }
 }

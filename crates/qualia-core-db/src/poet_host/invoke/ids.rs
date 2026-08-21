@@ -222,6 +222,21 @@ pub const SCENE_SET_VIEWPORT: &str = "Scene.set_viewport";
 pub const SCENE_SET_CLEAR_COLOUR: &str = "Scene.set_clear_colour";
 pub const SCENE_CAPTURE_FRAME: &str = "Scene.capture_frame";
 
+// ── N3: FST morphology, coreference, frames, relations, substrate, graphrag ─
+pub const NLP_FST_LOOKUP: &str = "NLP.fst_lookup";
+pub const NLP_COREF_RESOLVE: &str = "NLP.coref_resolve";
+pub const NLP_FRAME_EXTRACT: &str = "NLP.frame_extract";
+pub const NLP_RELATION_EXTRACT: &str = "NLP.relation_extract";
+pub const NLP_SUBSTRATE_EXTRACT: &str = "NLP.substrate_extract";
+pub const NLP_GRAPHRAG_QUERY: &str = "NLP.graphrag_query";
+
+// ── N2: Partial extensions — social dynamics, forensic economics ───────────
+pub const SOCIAL_GINI: &str = "Social.gini";
+pub const SOCIAL_LORENZ: &str = "Social.lorenz";
+pub const SOCIAL_DEGREE_CENTRALITY: &str = "Social.degree_centrality";
+pub const FORENSIC_MALFEASANCE_DELTA: &str = "Forensic.malfeasance_delta";
+pub const FORENSIC_NARRATIVE_DIVERGENCE: &str = "Forensic.narrative_divergence";
+
 pub const ALL_BOUND: &[&str] = &[
     DAG_EXECUTE,
     DAG_VALIDATE,
@@ -406,6 +421,17 @@ pub const ALL_BOUND: &[&str] = &[
     SCENE_SET_VIEWPORT,
     SCENE_SET_CLEAR_COLOUR,
     SCENE_CAPTURE_FRAME,
+    SOCIAL_GINI,
+    SOCIAL_LORENZ,
+    SOCIAL_DEGREE_CENTRALITY,
+    FORENSIC_MALFEASANCE_DELTA,
+    FORENSIC_NARRATIVE_DIVERGENCE,
+    NLP_FST_LOOKUP,
+    NLP_COREF_RESOLVE,
+    NLP_FRAME_EXTRACT,
+    NLP_RELATION_EXTRACT,
+    NLP_SUBSTRATE_EXTRACT,
+    NLP_GRAPHRAG_QUERY,
 ];
 
 /// Future extract target for an invoke id. Not a crate today.
@@ -495,6 +521,12 @@ pub fn seam_for(id: &str) -> &'static str {
         | COSMIC_DE_BROGLIE
         | COSMIC_USRI_PARSE => "cosmic",
         NLP_GAZETTEER_RUN | NLP_GAZETTEER_BUILD => "nlp",
+        NLP_FST_LOOKUP
+        | NLP_COREF_RESOLVE
+        | NLP_FRAME_EXTRACT
+        | NLP_RELATION_EXTRACT
+        | NLP_SUBSTRATE_EXTRACT
+        | NLP_GRAPHRAG_QUERY => "nlp",
         INFERENCE_EMBED
         | INFERENCE_GROUNDING
         | INFERENCE_VERIFY_TURN
@@ -519,6 +551,8 @@ pub fn seam_for(id: &str) -> &'static str {
         | SCENE_SET_VIEWPORT
         | SCENE_SET_CLEAR_COLOUR
         | SCENE_CAPTURE_FRAME => "render",
+        SOCIAL_GINI | SOCIAL_LORENZ | SOCIAL_DEGREE_CENTRALITY => "social",
+        FORENSIC_MALFEASANCE_DELTA | FORENSIC_NARRATIVE_DIVERGENCE => "social",
         _ => "unbound",
     }
 }

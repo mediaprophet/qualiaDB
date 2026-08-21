@@ -50,9 +50,15 @@ pub fn spectrum(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     }
 
     Ok(args::record([
-        ("flux", args::f64_list_value(flux[..flux_count].iter().map(|&x| x as f64))),
+        (
+            "flux",
+            args::f64_list_value(flux[..flux_count].iter().map(|&x| x as f64)),
+        ),
         ("total_energy", Value::F64(total_energy as f64)),
-        ("frame_energy", args::f64_list_value(frame_energies.iter().map(|&x| x as f64))),
+        (
+            "frame_energy",
+            args::f64_list_value(frame_energies.iter().map(|&x| x as f64)),
+        ),
         ("frame_count", Value::U64(frame_count as u64)),
         ("bin_count", Value::U64(bin_count as u64)),
     ]))
@@ -68,7 +74,10 @@ mod tests {
         // 4 frames x 3 bins = 12 values
         let raster: Vec<f64> = (0..12).map(|i| (i as f64) * 0.1).collect();
         let mut m = BTreeMap::new();
-        m.insert("raster".into(), Value::List(raster.into_iter().map(Value::F64).collect()));
+        m.insert(
+            "raster".into(),
+            Value::List(raster.into_iter().map(Value::F64).collect()),
+        );
         m.insert("frame_count".into(), Value::U64(4));
         m.insert("bin_count".into(), Value::U64(3));
         m.insert("sample_rate".into(), Value::U64(44100));
@@ -97,4 +106,3 @@ mod tests {
         assert!(result.is_err());
     }
 }
-

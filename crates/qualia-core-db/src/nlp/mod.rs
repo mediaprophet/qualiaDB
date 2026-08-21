@@ -3,12 +3,18 @@
 //! Lives next to `text_span` and `lexicon`. Not VibeScript. Not an MCP-only tool.
 //! Year-one is tokenize + gazetteer + spans. Not FrameNet, RST, OpenIE, NLI, or MT.
 
+pub mod coref;
 pub mod emit;
+pub mod frame;
+pub mod fst;
 pub mod gazetteer;
+pub mod graphrag;
 pub mod hash;
 pub mod link;
 pub mod normalize;
+pub mod relation;
 pub mod span;
+pub mod substrate;
 pub mod terms;
 pub mod tokenize;
 

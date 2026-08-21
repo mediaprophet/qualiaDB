@@ -220,8 +220,32 @@ pub fn dag_validate(args: &Value, span: Span) -> Result<Value, Diagnostic> {
 }
 
 /// Status of a DAG pipeline via capability.invoke (R3).
-pub fn dag_status(_args: &Value, _span: Span) -> Result<Value, Diagnostic> {
-    Ok(Value::Null)
+/// Returns a record describing the pipeline's node count, edge count, and
+/// validation status. If a pipeline is passed, it validates and reports;
+/// if null is passed, it reports the executor's readiness.
+pub fn dag_status(args: &Value, span: Span) -> Result<Value, Diagnostic> {
+    if matches!(args, Value::Null) {
+        let mut rec = std::collections::BTreeMap::new();
+        rec.insert("status".into(), Value::String("ready".into()));
+        return Ok(Value::Record(rec));
+    }
+    let pipeline = build_pipeline_from_value(args, span)?;
+    let node_count = pipeline.node_count();
+    let edge_count = pipeline.edge_count();
+    let valid = pipeline.validate(&[]).is_ok();
+    let mut rec = std::collections::BTreeMap::new();
+    rec.insert("nodes".into(), Value::U64(node_count as u64));
+    rec.insert("edges".into(), Value::U64(edge_count as u64));
+    rec.insert("valid".into(), Value::Bool(valid));
+    rec.insert(
+        "status".into(),
+        Value::String(if valid {
+            "valid".into()
+        } else {
+            "invalid".into()
+        }),
+    );
+    Ok(Value::Record(rec))
 }
 
 #[cfg(test)]

@@ -7,8 +7,8 @@ use poet_vibe::{DiagCode, Diagnostic, Span, Value};
 /// `Scene.create` — create a new scene by name. Returns a scene handle
 /// record. Wraps the existing `Render.scene` infrastructure.
 pub fn scene_create(args: &Value, span: Span) -> Result<Value, Diagnostic> {
-    let name = args::rec_str(args, "name")
-        .ok_or_else(|| args::bad(span, "Scene.create needs name"))?;
+    let name =
+        args::rec_str(args, "name").ok_or_else(|| args::bad(span, "Scene.create needs name"))?;
     Ok(args::record([
         ("name", Value::String(name.to_string())),
         ("nodes", Value::List(vec![])),
@@ -20,8 +20,7 @@ pub fn scene_create(args: &Value, span: Span) -> Result<Value, Diagnostic> {
 
 /// `Scene.add_node` — add a node to a scene graph. Returns the node record.
 pub fn scene_add_node(args: &Value, span: Span) -> Result<Value, Diagnostic> {
-    let id = args::rec_u64(args, "id")
-        .ok_or_else(|| args::bad(span, "Scene.add_node needs id"))?;
+    let id = args::rec_u64(args, "id").ok_or_else(|| args::bad(span, "Scene.add_node needs id"))?;
     let x = args::rec_f64(args, "x").unwrap_or(0.0);
     let y = args::rec_f64(args, "y").unwrap_or(0.0);
     let z = args::rec_f64(args, "z").unwrap_or(0.0);
@@ -94,8 +93,8 @@ pub fn scene_add_camera(args: &Value, span: Span) -> Result<Value, Diagnostic> {
 /// `Scene.render` — high-level render request. Wraps `Render.gpu_render_frame`.
 /// The actual rendering is done by the GPU invoke; this is a planning record.
 pub fn scene_render(args: &Value, span: Span) -> Result<Value, Diagnostic> {
-    let scene_name = args::rec_str(args, "scene")
-        .ok_or_else(|| args::bad(span, "Scene.render needs scene"))?;
+    let scene_name =
+        args::rec_str(args, "scene").ok_or_else(|| args::bad(span, "Scene.render needs scene"))?;
     let camera_id = args::rec_u64(args, "camera_id").unwrap_or(0);
     Ok(args::record([
         ("scene", Value::String(scene_name.to_string())),
@@ -209,4 +208,3 @@ mod tests {
         }
     }
 }
-

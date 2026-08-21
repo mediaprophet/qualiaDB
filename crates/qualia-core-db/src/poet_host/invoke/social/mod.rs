@@ -8,6 +8,9 @@
 ))]
 mod lww;
 
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+mod dynamics;
+
 #[cfg(any(
     not(target_arch = "wasm32"),
     feature = "wasm-logic",
@@ -15,6 +18,9 @@ mod lww;
     feature = "wasm-full"
 ))]
 pub use lww::merge as lww_merge;
+
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+pub use dynamics::{degree_centrality, gini, lorenz, malfeasance_delta, narrative_divergence};
 
 #[cfg(not(any(
     not(target_arch = "wasm32"),

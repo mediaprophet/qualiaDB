@@ -66,7 +66,10 @@ pub fn ledger_balance(args: &Value, span: Span) -> Result<Value, Diagnostic> {
                 "expense" => AccountType::Expense,
                 _ => AccountType::Asset,
             };
-            Account { id, account_type: ty }
+            Account {
+                id,
+                account_type: ty,
+            }
         })
         .collect();
 
@@ -122,10 +125,7 @@ pub fn ledger_balance(args: &Value, span: Span) -> Result<Value, Diagnostic> {
 }
 
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
-pub fn ledger_balance(
-    _args: &Value,
-    span: Span,
-) -> Result<Value, Diagnostic> {
+pub fn ledger_balance(_args: &Value, span: Span) -> Result<Value, Diagnostic> {
     Err(args::need_scientific(span, "Finance.ledger_balance"))
 }
 
@@ -182,4 +182,3 @@ mod tests {
         }
     }
 }
-

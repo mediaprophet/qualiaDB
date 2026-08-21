@@ -207,6 +207,12 @@ pub fn dispatch(
         // ── N1: Expose-only bindings ────────────────────────────────────────
         ids::NLP_GAZETTEER_RUN => nlp::gazetteer_run(args, span),
         ids::NLP_GAZETTEER_BUILD => nlp::gazetteer_build(args, span),
+        ids::NLP_FST_LOOKUP => nlp::fst_lookup(args, span),
+        ids::NLP_COREF_RESOLVE => nlp::coref_resolve(args, span),
+        ids::NLP_FRAME_EXTRACT => nlp::frame_extract(args, span),
+        ids::NLP_RELATION_EXTRACT => nlp::relation_extract(args, span),
+        ids::NLP_SUBSTRATE_EXTRACT => nlp::substrate_extract(args, span),
+        ids::NLP_GRAPHRAG_QUERY => nlp::graphrag_query(args, span),
         ids::INFERENCE_EMBED => inference::embed(args, span),
         ids::INFERENCE_GROUNDING => inference::grounding(args, span),
         ids::INFERENCE_VERIFY_TURN => inference::verify_turn(args, span),
@@ -233,6 +239,12 @@ pub fn dispatch(
         ids::SCENE_SET_VIEWPORT => render::scene_set_viewport(args, span),
         ids::SCENE_SET_CLEAR_COLOUR => render::scene_set_clear_colour(args, span),
         ids::SCENE_CAPTURE_FRAME => render::scene_capture_frame(args, span),
+        // ── N2: Partial extensions ──────────────────────────────────────────
+        ids::SOCIAL_GINI => social::gini(args, span),
+        ids::SOCIAL_LORENZ => social::lorenz(args, span),
+        ids::SOCIAL_DEGREE_CENTRALITY => social::degree_centrality(args, span),
+        ids::FORENSIC_MALFEASANCE_DELTA => social::malfeasance_delta(args, span),
+        ids::FORENSIC_NARRATIVE_DIVERGENCE => social::narrative_divergence(args, span),
         other => Err(Diagnostic::new(
             DiagCode::E300,
             span,

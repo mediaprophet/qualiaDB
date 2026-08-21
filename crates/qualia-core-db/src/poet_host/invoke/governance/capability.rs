@@ -17,7 +17,13 @@ pub fn capability_grant(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let current_epoch = args::rec_u64(args, "current_epoch").unwrap_or(0);
     let delegated = args::rec_bool(args, "delegated").unwrap_or(false);
 
-    match coordination::eval_authorization_grant(agent, root, metadata_ts, current_epoch, |_a, _r| delegated) {
+    match coordination::eval_authorization_grant(
+        agent,
+        root,
+        metadata_ts,
+        current_epoch,
+        |_a, _r| delegated,
+    ) {
         Ok(granted) => Ok(args::record([
             ("granted", Value::Bool(granted)),
             ("agent_did_hash", Value::U64(agent)),
@@ -104,7 +110,10 @@ pub fn agent_trace(args: &Value, span: Span) -> Result<Value, Diagnostic> {
         .ok_or_else(|| args::bad(span, "Agent.trace needs instrument_id"))?;
     Ok(args::record([
         ("instrument_id", Value::String(instrument_id.to_string())),
-        ("max_entries", Value::U64(instrument_trace::InstrumentTraceLedger::DEFAULT_MAX_ENTRIES as u64)),
+        (
+            "max_entries",
+            Value::U64(instrument_trace::InstrumentTraceLedger::DEFAULT_MAX_ENTRIES as u64),
+        ),
         ("status", Value::String("ledger_ready".into())),
     ]))
 }
@@ -128,7 +137,10 @@ pub fn current_user(_args: &Value, span: Span) -> Result<Value, Diagnostic> {
     // The principal DID per NLP project AGENTS.md §0:
     // "Demo identities must be Timothy Charles Holborn (did:qualia:timothy_charles_holborn)"
     Ok(args::record([
-        ("did", Value::String("did:qualia:timothy_charles_holborn".into())),
+        (
+            "did",
+            Value::String("did:qualia:timothy_charles_holborn".into()),
+        ),
         ("source", Value::String("principal_default".into())),
     ]))
 }
@@ -205,4 +217,3 @@ mod tests {
         }
     }
 }
-
