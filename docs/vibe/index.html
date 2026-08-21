@@ -1,91 +1,313 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vibe / Poet — QualiaDB</title>
-    <link rel="stylesheet" href="../css/tailwind-built.css">
-    <link rel="stylesheet" href="../css/site-nav.css">
-    <script src="../js/menu-loader.js"></script>
-</head>
-<body class="bg-zinc-950 text-zinc-200 min-h-screen">
-    <nav class="sticky top-0 z-50 border-b border-white/10" style="background:rgba(17,23,31,0.88);backdrop-filter:blur(32px)">
-        <div class="max-w-screen-2xl mx-auto px-4 sm:px-8">
-            <div class="flex items-center justify-between gap-3 min-h-[4rem] py-2">
-                <a href="../index.html" class="flex items-center gap-3 shrink-0">
-                    <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-cyan-400 rounded-xl flex items-center justify-center">
-                        <span class="text-black font-bold text-xl">Q</span>
-                    </div>
-                    <div class="hidden sm:block"><span class="font-semibold text-xl">Qualia</span><span class="text-blue-400 text-xl">DB</span></div>
-                </a>
-                <div id="dynamic-nav" class="relative flex items-center text-sm min-w-0 flex-1 justify-center lg:justify-start px-2"></div>
-            </div>
-        </div>
-    </nav>
-    <main class="max-w-3xl mx-auto px-6 py-12">
-        <p class="text-xs uppercase tracking-widest text-slate-500 mb-3">Language · Engine · Agent overlay</p>
-        <h1 class="text-3xl font-semibold mb-3">Vibe / VibeScript</h1>
-        <p class="text-slate-400 mb-8">
-            Poet is the engine. Vibe is the language. This hub is what should be published for humans and agents.
-            Language version <span class="font-mono text-slate-300">vibe-0.1</span>.
-            Not v1.0 until core §15 holds.
-        </p>
+---
+layout: qualia
+title: VibeScript
+---
 
-        <h2 class="text-lg font-medium text-cyan-300 mb-2">Read in this order</h2>
-        <ol class="list-decimal list-inside space-y-2 text-slate-300 mb-10">
-            <li>
-                <a class="text-cyan-400 hover:underline font-medium" href="../manuals/standards/vibescript-core.md">vibescript-core.md</a>
-                <span class="text-slate-500 text-sm"> — normative 0.1 grammar, types, effects, bindings</span>
-            </li>
-            <li>
-                <a class="text-cyan-400 hover:underline" href="../manuals/standards/vibescript-specification.md">vibescript-specification.md</a>
-                <span class="text-slate-500 text-sm"> — architectural essay; not the parser contract</span>
-            </li>
-            <li>
-                <a class="text-cyan-400 hover:underline" href="../manuals/ai-agent-vibescript-readiness.md">AI agent readiness</a>
-                <span class="text-slate-500 text-sm"> — ontology / GBNF / corpus / diagnostics overlay</span>
-            </li>
-            <li>
-                <a class="text-cyan-400 hover:underline" href="../rustdoc/poet_vibe/index.html">poet-vibe rustdoc</a>
-                <span class="text-slate-500 text-sm"> — after workspace rustdoc is on Pages</span>
-            </li>
-        </ol>
+<div class="vibe-landing">
+  <style>
+    .vibe-hero {
+      text-align: center;
+      padding: 3rem 1rem 2rem;
+    }
+    .vibe-hero h1 {
+      font-size: 3rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, #22d3ee, #a78bfa);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 0.5rem;
+    }
+    .vibe-hero .tagline {
+      font-size: 1.25rem;
+      color: #94a3b8;
+      max-width: 36rem;
+      margin: 0 auto 1.5rem;
+    }
+    .vibe-hero .cta {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .vibe-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 24px;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.15s;
+      border: 1px solid transparent;
+    }
+    .vibe-btn-primary {
+      background: linear-gradient(135deg, #06b6d4, #8b5cf6);
+      color: #fff;
+    }
+    .vibe-btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 20px rgba(34,211,238,0.3); }
+    .vibe-btn-secondary {
+      background: rgba(30,41,59,0.6);
+      color: #e2e8f0;
+      border-color: rgba(148,163,184,0.2);
+    }
+    .vibe-btn-secondary:hover { border-color: #22d3ee; color: #22d3ee; }
 
-        <h2 class="text-lg font-medium text-cyan-300 mb-2">Agent artifacts</h2>
-        <ul class="space-y-2 text-slate-300 mb-10">
-            <li><a class="text-cyan-400 hover:underline" href="SKILL.md">SKILL.md</a> — what coding agents should load</li>
-            <li><span class="font-mono text-slate-400">poet_vibe::diagnose(src)</span> — JSON diagnostics + safe <span class="font-mono">suggested_fix</span></li>
-            <li><span class="font-mono text-slate-400">CapabilityDiscovery.catalog</span> — Turtle of live bindings and invoke ids</li>
-            <li><a class="text-cyan-400 hover:underline" href="https://github.com/mediaprophet/qualiaDB/tree/0.0.31-dev/crates/poet-vibe/grammar">poet-vibe/grammar/</a> — EBNF, GBNF, JSON Schema</li>
-        </ul>
+    .vibe-features {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+      margin: 2rem 0;
+    }
+    .vibe-feature {
+      padding: 1.25rem;
+      border-radius: 12px;
+      background: rgba(15,23,42,0.6);
+      border: 1px solid rgba(148,163,184,0.1);
+      transition: border-color 0.15s;
+    }
+    .vibe-feature:hover { border-color: rgba(34,211,238,0.3); }
+    .vibe-feature .icon { font-size: 1.5rem; margin-bottom: 0.5rem; }
+    .vibe-feature h3 { font-size: 1rem; font-weight: 600; color: #e2e8f0; margin: 0 0 0.5rem; }
+    .vibe-feature p { font-size: 0.85rem; color: #94a3b8; line-height: 1.5; margin: 0; }
 
-        <h2 class="text-lg font-medium text-cyan-300 mb-2">Workbench vocabulary</h2>
-        <p class="text-slate-400 mb-3">
-            <a class="text-cyan-400 hover:underline" href="../manuals/poet-ui-concepts.md">poet-ui-concepts.md</a>
-            — manifolds (surfaces), tool chest (holds toolboxes of tools), containers (occupants).
-            HTML/GPU <span class="font-mono">canvas</span> stays a drawing surface.
-        </p>
+    .vibe-code-block {
+      background: rgba(10,14,23,0.9);
+      border: 1px solid rgba(148,163,184,0.15);
+      border-radius: 12px;
+      padding: 1.25rem;
+      margin: 1.5rem 0;
+      overflow-x: auto;
+    }
+    .vibe-code-block pre {
+      margin: 0;
+      font-family: ui-monospace, "Cascadia Code", monospace;
+      font-size: 0.85rem;
+      line-height: 1.6;
+      color: #e2e8f0;
+    }
+    .vibe-code-block .kw { color: #c4b5fd; }
+    .vibe-code-block .ty { color: #22d3ee; }
+    .vibe-code-block .fn { color: #4ade80; }
+    .vibe-code-block .st { color: #fbbf24; }
+    .vibe-code-block .cm { color: #64748b; }
 
-        <h2 class="text-lg font-medium text-cyan-300 mb-2">Runtime</h2>
-        <ul class="space-y-2 text-slate-300 mb-10">
-            <li><span class="font-mono text-slate-400">capability.invoke</span> — engine families; <span class="font-mono">CapabilityDiscovery.coverage</span> lists bound vs unbound</li>
-            <li><span class="font-mono text-slate-400">GraphDatabase.sparql</span> / <span class="font-mono">SHACL.validate</span> — graph + SPARQL-star + extension catalog</li>
-            <li>Desktop Poet harness: View → Shell: Poet → <span class="font-mono">/poet</span> (Classic stays default)</li>
-        </ul>
+    .vibe-section { margin: 2.5rem 0; }
+    .vibe-section h2 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #e2e8f0;
+      margin-bottom: 1rem;
+    }
+    .vibe-section p { color: #cbd5e1; line-height: 1.7; }
 
-        <h2 class="text-lg font-medium text-cyan-300 mb-2">How this gets published</h2>
-        <p class="text-slate-400 mb-3">
-            These files live under <span class="font-mono">docs/</span>. GitHub Pages (Jekyll) deploys that tree from
-            <span class="font-mono">main</span> / <span class="font-mono">0.0.30</span> via
-            <span class="font-mono">.github/workflows/pages.yml</span>.
-        </p>
-        <ul class="list-disc list-inside space-y-2 text-slate-400 mb-8">
-            <li>Do <strong class="text-slate-300">not</strong> point Pages at <span class="font-mono">0.0.31-dev</span> wholesale — that would replace the production playground.</li>
-            <li>To ship this hub: merge (or cherry-pick) <span class="font-mono">docs/vibe/</span> + the manuals above onto the Pages branch.</li>
-            <li>NLP TechDesign stays the authoring copy; product tree is what Pages serves.</li>
-        </ul>
+    .vibe-stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 12px;
+      margin: 1.5rem 0;
+    }
+    .vibe-stat {
+      text-align: center;
+      padding: 1rem;
+      border-radius: 8px;
+      background: rgba(15,23,42,0.4);
+    }
+    .vibe-stat .num { font-size: 1.75rem; font-weight: 800; color: #22d3ee; }
+    .vibe-stat .label { font-size: 0.75rem; color: #64748b; margin-top: 0.25rem; }
 
-        <p class="text-xs text-slate-600">Copyright © 2026 Timothy Charles Holborn.</p>
-    </main>
-</body>
-</html>
+    .vibe-links {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+      margin: 1.5rem 0;
+    }
+    .vibe-link {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 16px;
+      border-radius: 8px;
+      background: rgba(15,23,42,0.4);
+      border: 1px solid rgba(148,163,184,0.1);
+      text-decoration: none;
+      color: #e2e8f0;
+      transition: all 0.15s;
+    }
+    .vibe-link:hover { border-color: #22d3ee; color: #22d3ee; }
+    .vibe-link .icon { font-size: 1.1rem; }
+    .vibe-link .label { font-size: 0.9rem; }
+  </style>
+
+  <div class="vibe-hero">
+    <h1>VibeScript</h1>
+    <p class="tagline">
+      A typed, capability-bounded, non-JIT interpreted language for reactive
+      formulas, signed graph transactions, and agent orchestration. Runs
+      natively and in the browser via WebAssembly.
+    </p>
+    <div class="cta">
+      <a href="{{ '/vibe/playground.html' | relative_url }}" class="vibe-btn vibe-btn-primary">
+        <i class="fas fa-play"></i> Try the Playground
+      </a>
+      <a href="{{ '/vibe/spec.html' | relative_url }}" class="vibe-btn vibe-btn-secondary">
+        <i class="fas fa-book"></i> Read the Spec
+      </a>
+      <a href="{{ '/vibe/dev-docs.html' | relative_url }}" class="vibe-btn vibe-btn-secondary">
+        <i class="fas fa-code"></i> Dev Docs
+      </a>
+    </div>
+  </div>
+
+  <div class="vibe-stats">
+    <div class="vibe-stat"><div class="num">35</div><div class="label">Opcodes</div></div>
+    <div class="vibe-stat"><div class="num">1026</div><div class="label">Tests</div></div>
+    <div class="vibe-stat"><div class="num">560KB</div><div class="label">WASM</div></div>
+    <div class="vibe-stat"><div class="num">0.1</div><div class="label">Version</div></div>
+  </div>
+
+  <div class="vibe-section">
+    <h2>What is VibeScript?</h2>
+    <p>
+      VibeScript (or <strong>Vibe</strong> for short) is the scripting language of the
+      QualiaDB semantic engine. It is designed for three roles:
+    </p>
+    <ul style="color:#cbd5e1;line-height:1.8;">
+      <li><strong>Reactive cell formulas</strong> — pure expressions like <code>= math.max(0, math.min(100, score))</code> that drive HCF/QApp cells</li>
+      <li><strong>Signed document/agent modules</strong> — programs that query and transact on a graph snapshot with full capability enforcement</li>
+      <li><strong>Host event handlers</strong> — <code>on pulse:message(...)</code> and <code>on tick()</code> hooks dispatched by the Poet engine</li>
+    </ul>
+    <p>
+      VibeScript is <strong>not</strong> a JavaScript clone or a general-purpose language.
+      It is a closed, typed core with no <code>eval</code>, no DOM, and no JIT —
+      making it safe for sandboxed execution, deterministic replay, and edge deployment.
+    </p>
+  </div>
+
+  <div class="vibe-features">
+    <div class="vibe-feature">
+      <div class="icon">🔒</div>
+      <h3>Capability-Bounded</h3>
+      <p>Every effect requires an explicit capability grant. Scripts cannot access the graph, network, or sensors without declared permissions.</p>
+    </div>
+    <div class="vibe-feature">
+      <div class="icon">⚡</div>
+      <h3>Bytecode VM</h3>
+      <p>Optional stack-based bytecode (<code>vibe-bc-0.1</code>) with binary encode/decode for fast pre-compiled execution.</p>
+    </div>
+    <div class="vibe-feature">
+      <div class="icon">📐</div>
+      <h3>Typed</h3>
+      <p>Static type checking with i64/u64/f64/string/bool, Result/Option, lists, records, IRIs, and domain types (Instant, Quantity, Field, Material, Law).</p>
+    </div>
+    <div class="vibe-feature">
+      <div class="icon">🌐</div>
+      <h3>RDF-Native</h3>
+      <p>First-class RDF triples, reified triples, prefixed names, blank nodes, and graph queries built into the language.</p>
+    </div>
+    <div class="vibe-feature">
+      <div class="icon">🧪</div>
+      <h3>Physics & Spectral</h3>
+      <p>Built-in wrappers for wave equations, thermodynamics, EMF-to-color, spectral blending, and gamut mapping.</p>
+    </div>
+    <div class="vibe-feature">
+      <div class="icon">🌍</div>
+      <h3>Multi-Lingual</h3>
+      <p>Unicode identifiers with BiDi isolation, homoglyph detection, and keyword locale tables (English + Chinese).</p>
+    </div>
+    <div class="vibe-feature">
+      <div class="icon">⏱️</div>
+      <h3>Temporal Honesty</h3>
+      <p>First-class Instant, Duration, and proper-time types. No raw Unix timestamps — time has scale, frame, and optional seal.</p>
+    </div>
+    <div class="vibe-feature">
+      <div class="icon">🛡️</div>
+      <h3>Deontic Logic</h3>
+      <p>Obligation, permission, and prohibition as first-class values. Prohibition breach produces a sealed receipt, not a crash.</p>
+    </div>
+    <div class="vibe-feature">
+      <div class="icon">🤖</div>
+      <h3>Agent Orchestration</h3>
+      <p>DAG pipelines, multi-agent blackboards, semantic skills, and reflection loops for autonomous agent scripting.</p>
+    </div>
+  </div>
+
+  <div class="vibe-section">
+    <h2>Example: Cell Formula</h2>
+    <div class="vibe-code-block">
+<pre><span class="cm">-- Clamp a score to [0, 100]</span>
+= math.max(0, math.min(100, score))</pre>
+    </div>
+  </div>
+
+  <div class="vibe-section">
+    <h2>Example: Signed Module</h2>
+    <div class="vibe-code-block">
+<pre><span class="kw">module</span> &lt;https://qualiadb.org/modules/clinic_alerts&gt;;
+<span class="kw">prefix</span> clinic: &lt;https://qualiadb.org/clinic/&gt;;
+
+<span class="kw">requires</span> [
+    <span class="fn">capability</span>(<span class="st">"graph.read"</span>, context: clinic:telemetry),
+    <span class="fn">capability</span>(<span class="st">"graph.write"</span>, context: clinic:alerts),
+    <span class="fn">capability</span>(<span class="st">"pulse.publish"</span>, topic: <span class="st">"clinic/alerts"</span>)
+];
+
+<span class="kw">effect fn</span> raise_alert(sensor: <span class="ty">Iri</span>, value: <span class="ty">f64</span>) <span class="kw">budget</span>(steps: 20000) -&gt; <span class="ty">Result</span>&lt;<span class="ty">Receipt</span>, string&gt; {
+    <span class="kw">if</span> value &lt;= 85.0 {
+        <span class="kw">return</span> <span class="fn">Ok</span>(<span class="fn">receipt_empty</span>());
+    }
+    <span class="kw">let</span> stated = &lt;&lt; sensor clinic:emitsAlert clinic:Overheat ~ clinic:claim_1 &gt;&gt;;
+    <span class="kw">transaction</span> {
+        <span class="fn">graph.stage</span>(stated);
+        <span class="fn">aura.validate</span>(clinic:claim_1, clinic:EmergencyAlertShape)?;
+        <span class="fn">graph.commit</span>()?;
+    };
+    <span class="kw">effect</span> <span class="fn">pulse.publish</span>(<span class="st">"clinic/alerts"</span>, { sensor: sensor, value: value })?;
+    <span class="kw">return</span> <span class="fn">Ok</span>(<span class="fn">receipt_empty</span>());
+}</pre>
+    </div>
+  </div>
+
+  <div class="vibe-section">
+    <h2>Example: Bytecode Round-Trip</h2>
+    <div class="vibe-code-block">
+<pre><span class="cm">-- Source</span>
+= 1 + 2 * 3
+
+<span class="cm">-- Compiles to bytecode (35 opcodes, VBC1 binary format)</span>
+PushInt 1
+PushInt 2
+PushInt 3
+Mul
+Add
+Return
+
+<span class="cm">-- Encodes to 19 bytes, decodes losslessly, executes identically</span></pre>
+    </div>
+  </div>
+
+  <div class="vibe-section">
+    <h2>Explore</h2>
+    <div class="vibe-links">
+      <a href="{{ '/vibe/playground.html' | relative_url }}" class="vibe-link">
+        <i class="fas fa-play icon"></i><span class="label">Playground — live editor + eval</span>
+      </a>
+      <a href="{{ '/vibe/spec.html' | relative_url }}" class="vibe-link">
+        <i class="fas fa-book icon"></i><span class="label">Specification — full language standard</span>
+      </a>
+      <a href="{{ '/vibe/dev-docs.html' | relative_url }}" class="vibe-link">
+        <i class="fas fa-code icon"></i><span class="label">Dev Docs — API reference from source</span>
+      </a>
+      <a href="{{ '/vibe/showcase.html' | relative_url }}" class="vibe-link">
+        <i class="fas fa-star icon"></i><span class="label">Showcase — interactive demos</span>
+      </a>
+      <a href="{{ '/vibe/benchmarks.html' | relative_url }}" class="vibe-link">
+        <i class="fas fa-gauge-high icon"></i><span class="label">Benchmarks — vs JS and others</span>
+      </a>
+      <a href="{{ '/manuals/standards/vibescript-core.md' | relative_url }}" class="vibe-link">
+        <i class="fas fa-file-lines icon"></i><span class="label">Raw standard (Markdown)</span>
+      </a>
+    </div>
+  </div>
+</div>

@@ -299,7 +299,7 @@ After each phase:
 | E: Reactive animation loop | **Done** | 2026-08-18 | 2026-08-18 | +4 (time_read_during_eval, tick hook, no-hook, reset) |
 | F: Graph honesty lift | **Done** | 2026-08-18 | 2026-08-18 | +3 (dynamic honesty: graph.read live when attached, pulse.publish live when attached, capability.invoke stays partial) |
 | G: Golden corpus expansion | **Done** | 2026-08-19 | 2026-08-19 | +69 conformance tests (102 fixtures total: 35 new across 9 domains + 16 negative + 4 cross-domain) + math module expansion (pow, log10, tan, atan, atan2) |
-| H: vibe-bc-0.1 bytecode | Not started (post-0.1) | — | — | — |
+| H: vibe-bc-0.1 bytecode | **Done** | 2026-08-21 | 2026-08-21 | +53 unit tests + 15 conformance tests (35 opcodes, stack-based VM, AST compiler with jump patching, binary codec with VBC1 format) |
 | OCS: Cosmic coordinate bindings | **Done** | 2026-08-20 | 2026-08-20 | +20 capability.invoke IDs (geodetic/ECEF/ENU transforms, celestial profiles, FLRW cosmology, stardate/warp, atmosphere, quantum scale, USRI parsing) + 10 unit tests + 5 VibeScript fixtures |
 | VC3: Zero-alloc uniform belt + compute pool | **Done** | 2026-08-19 | 2026-08-19 | +3 (uniform belt, render frame, compute dispatch — diagnostic, documenting wgpu internals) |
 

@@ -285,6 +285,43 @@
       "href": "playground/wordnet-demo.html",
       "icon": "fa-diagram-project",
       "group": "Data"
+    },
+    {
+      "label": "VibeScript",
+      "href": "vibe/index.html",
+      "icon": "fa-code",
+      "highlight": true,
+      "group": "VibeScript"
+    },
+    {
+      "label": "Playground",
+      "href": "vibe/playground.html",
+      "icon": "fa-play",
+      "group": "VibeScript"
+    },
+    {
+      "label": "Specification",
+      "href": "vibe/spec.html",
+      "icon": "fa-book",
+      "group": "VibeScript"
+    },
+    {
+      "label": "Dev Docs",
+      "href": "vibe/dev-docs.html",
+      "icon": "fa-code-branch",
+      "group": "VibeScript"
+    },
+    {
+      "label": "Showcase",
+      "href": "vibe/showcase.html",
+      "icon": "fa-star",
+      "group": "VibeScript"
+    },
+    {
+      "label": "Benchmarks",
+      "href": "vibe/benchmarks.html",
+      "icon": "fa-gauge-high",
+      "group": "VibeScript"
     }
   ],
   "footer": {

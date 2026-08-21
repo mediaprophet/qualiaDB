@@ -46,7 +46,7 @@ pub mod tick_policy;
 pub mod translate;
 pub mod trivia;
 
-pub use ast::{Expr, Program};
+pub use ast::{Expr, Item, Program};
 pub use ast_query::{
     builtin_policies, check_custom_policies, check_policies, function_has_budget, hook_has_budget,
     parse_query, run_policies, Policy, PolicyViolation, QueryPattern,

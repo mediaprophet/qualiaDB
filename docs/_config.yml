@@ -32,6 +32,8 @@ include:
   - "pkg/**/*.js"
   - "pkg/**/*.wasm"
   - "pkg/**/package.json"
+  - "vibe/*.html"
+  - "vibe/*.json"
   - "resources/*.json"
   - "tests/**/*.js"
 

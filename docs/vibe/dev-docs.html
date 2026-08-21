@@ -1,0 +1,281 @@
+---
+layout: qualia
+title: VibeScript Dev Docs
+---
+
+<div class="vibe-devdocs">
+  <style>
+    .vibe-devdocs .dd-layout {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      gap: 20px;
+      max-width: 100%;
+    }
+    .vibe-devdocs .dd-sidebar {
+      position: sticky;
+      top: 70px;
+      max-height: calc(100vh - 90px);
+      overflow-y: auto;
+      font-size: 0.8rem;
+    }
+    .vibe-devdocs .dd-search {
+      width: 100%;
+      padding: 8px 12px;
+      border-radius: 6px;
+      background: rgba(15,23,42,0.8);
+      border: 1px solid rgba(148,163,184,0.2);
+      color: #e2e8f0;
+      font-size: 0.85rem;
+      margin-bottom: 8px;
+    }
+    .vibe-devdocs .dd-search:focus { outline: none; border-color: #22d3ee; }
+    .vibe-devdocs .dd-module-list { list-style: none; padding: 0; margin: 0; }
+    .vibe-devdocs .dd-module {
+      padding: 6px 12px;
+      cursor: pointer;
+      color: #94a3b8;
+      border-left: 2px solid transparent;
+      transition: all 0.1s;
+      font-family: ui-monospace, monospace;
+      font-size: 0.8rem;
+    }
+    .vibe-devdocs .dd-module:hover { color: #22d3ee; border-left-color: #22d3ee; }
+    .vibe-devdocs .dd-module.active {
+      color: #22d3ee; border-left-color: #22d3ee;
+      background: rgba(34,211,238,0.05);
+    }
+    .vibe-devdocs .dd-module .count {
+      font-size: 0.7rem; color: #475569; margin-left: 4px;
+    }
+    .vibe-devdocs .dd-content { max-width: 52rem; }
+    .vibe-devdocs .dd-module-header {
+      margin-bottom: 1rem;
+    }
+    .vibe-devdocs .dd-module-header h2 {
+      font-size: 1.5rem; font-weight: 700; color: #e2e8f0;
+      font-family: ui-monospace, monospace; margin: 0 0 0.25rem;
+    }
+    .vibe-devdocs .dd-module-header .file {
+      font-size: 0.8rem; color: #64748b;
+    }
+    .vibe-devdocs .dd-module-doc {
+      color: #94a3b8; font-size: 0.85rem; line-height: 1.6;
+      margin-bottom: 1rem; padding: 0.75rem;
+      background: rgba(15,23,42,0.4); border-radius: 6px;
+    }
+    .vibe-devdocs .dd-item {
+      margin-bottom: 1rem;
+      padding: 1rem;
+      background: rgba(15,23,42,0.4);
+      border-radius: 8px;
+      border: 1px solid rgba(148,163,184,0.08);
+    }
+    .vibe-devdocs .dd-item-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 0.5rem;
+    }
+    .vibe-devdocs .dd-item-kind {
+      font-size: 0.7rem;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+    .vibe-devdocs .dd-kind-struct { background: rgba(34,211,238,0.15); color: #22d3ee; }
+    .vibe-devdocs .dd-kind-enum { background: rgba(167,139,250,0.15); color: #a78bfa; }
+    .vibe-devdocs .dd-kind-fn { background: rgba(74,222,128,0.15); color: #4ade80; }
+    .vibe-devdocs .dd-kind-trait { background: rgba(251,191,36,0.15); color: #fbbf24; }
+    .vibe-devdocs .dd-kind-const { background: rgba(248,113,113,0.15); color: #f87171; }
+    .vibe-devdocs .dd-kind-type { background: rgba(244,114,182,0.15); color: #f472b6; }
+    .vibe-devdocs .dd-kind-use { background: rgba(100,116,139,0.15); color: #94a3b8; }
+    .vibe-devdocs .dd-kind-module { background: rgba(100,116,139,0.15); color: #94a3b8; }
+    .vibe-devdocs .dd-item-name {
+      font-family: ui-monospace, monospace;
+      font-size: 1rem;
+      font-weight: 600;
+      color: #e2e8f0;
+    }
+    .vibe-devdocs .dd-item-sig {
+      font-family: ui-monospace, monospace;
+      font-size: 0.8rem;
+      color: #64748b;
+      margin-bottom: 0.5rem;
+    }
+    .vibe-devdocs .dd-item-doc {
+      font-size: 0.85rem;
+      color: #94a3b8;
+      line-height: 1.6;
+    }
+    .vibe-devdocs .dd-item-loc {
+      font-size: 0.75rem;
+      color: #475569;
+      margin-top: 0.5rem;
+    }
+    .vibe-devdocs .dd-loading { color: #64748b; text-align: center; padding: 3rem; }
+    .vibe-devdocs .dd-stats {
+      font-size: 0.8rem; color: #64748b; margin-bottom: 1rem;
+    }
+
+    @media (max-width: 768px) {
+      .vibe-devdocs .dd-layout { grid-template-columns: 1fr; }
+      .vibe-devdocs .dd-sidebar { display: none; }
+    }
+  </style>
+
+  <div class="dd-layout">
+    <nav class="dd-sidebar">
+      <input type="text" class="dd-search" id="dd-search" placeholder="Search items..." />
+      <div id="dd-module-list"></div>
+    </nav>
+    <div class="dd-content" id="dd-content">
+      <div class="dd-loading">Loading dev docs...</div>
+    </div>
+  </div>
+</div>
+
+<script>
+  let allModules = [];
+  let currentModule = null;
+
+  (async function() {
+    try {
+      const resp = await fetch("{{ '/vibe/dev-docs.json' | relative_url }}");
+      allModules = await resp.json();
+
+      // Sort modules alphabetically
+      allModules.sort((a, b) => a.name.localeCompare(b.name));
+
+      // Build sidebar
+      const sidebar = document.getElementById('dd-module-list');
+      const list = document.createElement('ul');
+      list.className = 'dd-module-list';
+      let totalItems = 0;
+      allModules.forEach((mod, i) => {
+        totalItems += mod.items.length;
+        const li = document.createElement('li');
+        li.className = 'dd-module';
+        li.dataset.idx = i;
+        li.innerHTML = `${mod.name || '(root)'} <span class="count">${mod.items.length}</span>`;
+        li.addEventListener('click', () => selectModule(i));
+        list.appendChild(li);
+      });
+      sidebar.appendChild(list);
+
+      // Search
+      document.getElementById('dd-search').addEventListener('input', (e) => {
+        const query = e.target.value.toLowerCase();
+        if (!query) {
+          // Show module list
+          document.querySelectorAll('.dd-module').forEach(el => el.style.display = '');
+          return;
+        }
+        // Search across all items
+        const results = [];
+        allModules.forEach((mod, mi) => {
+          mod.items.forEach(item => {
+            if (item.name.toLowerCase().includes(query) ||
+                item.doc.toLowerCase().includes(query) ||
+                item.kind.toLowerCase().includes(query)) {
+              results.push({ module: mod.name, mi, ...item });
+            }
+          });
+        });
+        renderSearchResults(results);
+      });
+
+      // Select first module by default
+      if (allModules.length > 0) {
+        selectModule(0);
+      }
+
+      document.getElementById('dd-content').insertAdjacentHTML('afterbegin',
+        `<div class="dd-stats">${allModules.length} modules · ${totalItems} public items · generated from source</div>`);
+    } catch (err) {
+      document.getElementById('dd-content').innerHTML =
+        `<p style="color:#f87171;">Failed to load dev docs: ${err.message}</p>`;
+    }
+  })();
+
+  function selectModule(idx) {
+    currentModule = allModules[idx];
+    document.querySelectorAll('.dd-module').forEach((el, i) => {
+      el.classList.toggle('active', i === idx);
+    });
+    renderModule(currentModule);
+  }
+
+  function renderModule(mod) {
+    const content = document.getElementById('dd-content');
+    let html = `<div class="dd-module-header">
+      <h2>${mod.name || '(root)'}</h2>
+    </div>`;
+
+    if (mod.doc) {
+      html += `<div class="dd-module-doc">${escapeHtml(mod.doc)}</div>`;
+    }
+
+    // Group items by kind
+    const byKind = {};
+    mod.items.forEach(item => {
+      if (!byKind[item.kind]) byKind[item.kind] = [];
+      byKind[item.kind].push(item);
+    });
+
+    const kindOrder = ['struct', 'enum', 'trait', 'fn', 'const', 'type', 'use', 'module', 'static'];
+
+    kindOrder.forEach(kind => {
+      if (byKind[kind]) {
+        byKind[kind].forEach(item => {
+          html += renderItem(item);
+        });
+      }
+    });
+
+    content.innerHTML = html;
+  }
+
+  function renderItem(item) {
+    let html = `<div class="dd-item">
+      <div class="dd-item-header">
+        <span class="dd-item-kind dd-kind-${item.kind}">${item.kind}</span>
+        <span class="dd-item-name">${escapeHtml(item.name)}</span>
+      </div>`;
+    if (item.signature) {
+      html += `<div class="dd-item-sig">${escapeHtml(item.signature)}</div>`;
+    }
+    if (item.doc) {
+      html += `<div class="dd-item-doc">${escapeHtml(item.doc)}</div>`;
+    }
+    html += `<div class="dd-item-loc">${item.file}:${item.line}</div>`;
+    html += `</div>`;
+    return html;
+  }
+
+  function renderSearchResults(results) {
+    const content = document.getElementById('dd-content');
+    if (results.length === 0) {
+      content.innerHTML = `<p style="color:#64748b;">No results found.</p>`;
+      return;
+    }
+    let html = `<div class="dd-stats">${results.length} results</div>`;
+    results.forEach(r => {
+      html += `<div class="dd-item">
+        <div class="dd-item-header">
+          <span class="dd-item-kind dd-kind-${r.kind}">${r.kind}</span>
+          <span class="dd-item-name">${escapeHtml(r.name)}</span>
+          <span style="font-size:0.75rem;color:#64748b;font-family:monospace;">${r.module}</span>
+        </div>
+        ${r.signature ? `<div class="dd-item-sig">${escapeHtml(r.signature)}</div>` : ''}
+        ${r.doc ? `<div class="dd-item-doc">${escapeHtml(r.doc)}</div>` : ''}
+        <div class="dd-item-loc">${r.file}:${r.line}</div>
+      </div>`;
+    });
+    content.innerHTML = html;
+  }
+
+  function escapeHtml(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+</script>

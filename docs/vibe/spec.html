@@ -1,0 +1,139 @@
+---
+layout: qualia
+title: VibeScript Specification
+---
+
+<div class="vibe-spec">
+  <style>
+    .vibe-spec .spec-layout {
+      display: grid;
+      grid-template-columns: 240px 1fr;
+      gap: 24px;
+      max-width: 100%;
+    }
+    .vibe-spec .spec-sidebar {
+      position: sticky;
+      top: 70px;
+      max-height: calc(100vh - 90px);
+      overflow-y: auto;
+      font-size: 0.8rem;
+    }
+    .vibe-spec .spec-sidebar a {
+      display: block;
+      padding: 4px 12px;
+      color: #64748b;
+      text-decoration: none;
+      border-left: 2px solid transparent;
+      transition: all 0.1s;
+    }
+    .vibe-spec .spec-sidebar a:hover {
+      color: #22d3ee;
+      border-left-color: #22d3ee;
+    }
+    .vibe-spec .spec-sidebar a.active {
+      color: #22d3ee;
+      border-left-color: #22d3ee;
+      background: rgba(34,211,238,0.05);
+    }
+    .vibe-spec .spec-content {
+      max-width: 52rem;
+    }
+    .vibe-spec .spec-content h1 { font-size: 2rem; font-weight: 700; margin-bottom: 1rem; }
+    .vibe-spec .spec-content h2 {
+      font-size: 1.35rem; font-weight: 600; margin-top: 2rem; margin-bottom: 0.75rem;
+      color: #e2e8f0; scroll-margin-top: 70px;
+    }
+    .vibe-spec .spec-content h3 {
+      font-size: 1.1rem; font-weight: 600; margin-top: 1.5rem; margin-bottom: 0.5rem;
+      color: #cbd5e1; scroll-margin-top: 70px;
+    }
+    .vibe-spec .spec-content p, .vibe-spec .spec-content li { color: #cbd5e1; line-height: 1.7; }
+    .vibe-spec .spec-content a { color: #22d3ee; text-decoration: underline; }
+    .vibe-spec .spec-content code {
+      font-family: ui-monospace, monospace; font-size: 0.9em;
+      background: rgba(15,23,42,0.8); padding: 0.1rem 0.35rem; border-radius: 0.25rem;
+    }
+    .vibe-spec .spec-content pre {
+      background: rgba(10,14,23,0.9); border: 1px solid rgba(148,163,184,0.15);
+      border-radius: 0.75rem; padding: 1rem; overflow-x: auto;
+    }
+    .vibe-spec .spec-content pre code { background: transparent; padding: 0; }
+    .vibe-spec .spec-content table {
+      width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.9rem;
+    }
+    .vibe-spec .spec-content th, .vibe-spec .spec-content td {
+      border: 1px solid rgba(148,163,184,0.15); padding: 0.5rem 0.75rem; text-align: left;
+    }
+    .vibe-spec .spec-content th { background: rgba(30,41,59,0.6); color: #94a3b8; }
+    .vibe-spec .spec-content blockquote {
+      border-left: 3px solid #22d3ee; padding-left: 1rem; margin: 1rem 0;
+      color: #94a3b8;
+    }
+    .vibe-spec .loading { color: #64748b; text-align: center; padding: 3rem; }
+
+    @media (max-width: 768px) {
+      .vibe-spec .spec-layout { grid-template-columns: 1fr; }
+      .vibe-spec .spec-sidebar { display: none; }
+    }
+  </style>
+
+  <div class="spec-layout">
+    <nav class="spec-sidebar" id="spec-toc">
+      <div style="padding:4px 12px;color:#475569;font-size:0.7rem;text-transform:uppercase;letter-spacing:0.05em;">Contents</div>
+    </nav>
+    <div class="spec-content" id="spec-content">
+      <div class="loading">Loading specification...</div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
+<script>
+  (async function() {
+    try {
+      // Fetch the markdown spec
+      const resp = await fetch("{{ '/manuals/standards/vibescript-core.md' | relative_url }}");
+      const md = await resp.text();
+
+      // Render markdown
+      const html = marked.parse(md);
+      document.getElementById('spec-content').innerHTML = html;
+
+      // Build TOC from headings
+      const toc = document.getElementById('spec-toc');
+      const headings = document.querySelectorAll('#spec-content h2, #spec-content h3');
+      headings.forEach((h, i) => {
+        const id = `sec-${i}`;
+        h.id = id;
+        const a = document.createElement('a');
+        a.href = `#${id}`;
+        a.textContent = h.textContent.replace(/^#+\s*/, '');
+        if (h.tagName === 'H3') a.style.paddingLeft = '24px';
+        a.addEventListener('click', (e) => {
+          e.preventDefault();
+          document.querySelectorAll('.spec-sidebar a').forEach(x => x.classList.remove('active'));
+          a.classList.add('active');
+          document.getElementById(id).scrollIntoView({ behavior: 'smooth' });
+        });
+        toc.appendChild(a);
+      });
+
+      // Track scroll position for active TOC entry
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            const id = entry.target.id;
+            document.querySelectorAll('.spec-sidebar a').forEach(a => {
+              a.classList.toggle('active', a.getAttribute('href') === `#${id}`);
+            });
+          }
+        });
+      }, { rootMargin: '-80px 0px -70% 0px' });
+      headings.forEach(h => observer.observe(h));
+
+    } catch (err) {
+      document.getElementById('spec-content').innerHTML =
+        `<p style="color:#f87171;">Failed to load spec: ${err.message}</p>`;
+    }
+  })();
+</script>

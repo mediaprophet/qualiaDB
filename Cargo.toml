@@ -23,6 +23,7 @@ members = [
     "crates/qualia-audio",
     "crates/poet-cli",
     "crates/poet-lsp",
+    "crates/vibe-wasm",
 ]
 resolver = "2"
 

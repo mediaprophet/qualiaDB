@@ -1,0 +1,278 @@
+---
+layout: qualia
+title: VibeScript Benchmarks
+---
+
+<div class="vibe-bench">
+  <style>
+    .vibe-bench .bench-section { margin: 1.5rem 0; }
+    .vibe-bench .bench-section h2 {
+      font-size: 1.35rem; font-weight: 700; color: #e2e8f0; margin-bottom: 0.75rem;
+    }
+    .vibe-bench .bench-section p { color: #cbd5e1; line-height: 1.7; }
+
+    .vibe-bench .bench-controls {
+      display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin-bottom: 1rem;
+    }
+    .vibe-bench .bench-btn {
+      padding: 8px 20px; border-radius: 6px; font-size: 0.9rem; cursor: pointer;
+      border: 1px solid rgba(34,211,238,0.3); background: rgba(34,211,238,0.1);
+      color: #22d3ee; transition: all 0.15s;
+    }
+    .vibe-bench .bench-btn:hover { background: rgba(34,211,238,0.2); }
+    .vibe-bench .bench-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .vibe-bench .bench-select {
+      padding: 8px 12px; border-radius: 6px; background: rgba(30,41,59,0.6);
+      color: #e2e8f0; border: 1px solid rgba(148,163,184,0.2); font-size: 0.85rem;
+    }
+
+    .vibe-bench .bench-table {
+      width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.85rem;
+    }
+    .vibe-bench .bench-table th, .vibe-bench .bench-table td {
+      border: 1px solid rgba(148,163,184,0.15); padding: 8px 12px; text-align: left;
+    }
+    .vibe-bench .bench-table th {
+      background: rgba(30,41,59,0.6); color: #94a3b8; font-weight: 600;
+    }
+    .vibe-bench .bench-table td { color: #e2e8f0; font-family: ui-monospace, monospace; }
+    .vibe-bench .bench-table .winner { color: #4ade80; font-weight: 600; }
+    .vibe-bench .bench-table .loser { color: #f87171; }
+
+    .vibe-bench .bench-chart {
+      margin: 1rem 0; padding: 1rem; background: rgba(15,23,42,0.4);
+      border-radius: 8px; border: 1px solid rgba(148,163,184,0.08);
+    }
+    .vibe-bench .bench-bar {
+      display: flex; align-items: center; gap: 8px; margin: 6px 0;
+    }
+    .vibe-bench .bench-bar-label {
+      width: 120px; font-size: 0.8rem; color: #94a3b8; font-family: monospace;
+    }
+    .vibe-bench .bench-bar-track {
+      flex: 1; height: 24px; background: rgba(15,23,42,0.6); border-radius: 4px;
+      position: relative; overflow: hidden;
+    }
+    .vibe-bench .bench-bar-fill {
+      height: 100%; border-radius: 4px; transition: width 0.5s ease;
+      display: flex; align-items: center; justify-content: flex-end;
+      padding-right: 8px; font-size: 0.75rem; color: #fff; font-weight: 600;
+    }
+    .vibe-bench .bench-bar-vibe { background: linear-gradient(90deg, #06b6d4, #22d3ee); }
+    .vibe-bench .bench-bar-js { background: linear-gradient(90deg, #eab308, #fbbf24); }
+    .vibe-bench .bench-bar-wasm { background: linear-gradient(90deg, #8b5cf6, #a78bfa); }
+
+    .vibe-bench .bench-status {
+      font-size: 0.85rem; color: #64748b; margin: 0.5rem 0;
+    }
+    .vibe-bench .bench-note {
+      font-size: 0.8rem; color: #475569; margin-top: 1rem;
+      padding: 0.75rem; background: rgba(15,23,42,0.3); border-radius: 6px;
+    }
+  </style>
+
+  <div class="bench-section">
+    <h2>Performance: VibeScript WASM vs JavaScript</h2>
+    <p>
+      These benchmarks compare VibeScript executed via WebAssembly against
+      equivalent JavaScript implementations. Both run in the same browser,
+      on the same machine, with the same algorithms. The VibeScript path
+      goes through: source → parse → type-check → compile to bytecode →
+      VM execution. The JS path is native V8 JIT.
+    </p>
+  </div>
+
+  <div class="bench-controls">
+    <button class="bench-btn" id="bench-run">▶ Run All Benchmarks</button>
+    <select class="bench-select" id="bench-iterations">
+      <option value="100">100 iterations</option>
+      <option value="1000" selected>1000 iterations</option>
+      <option value="10000">10,000 iterations</option>
+    </select>
+    <span class="bench-status" id="bench-status">Ready.</span>
+  </div>
+
+  <div id="bench-results"></div>
+
+  <div class="bench-note">
+    <strong>Note:</strong> VibeScript is not designed to outperform JIT-compiled JavaScript.
+    It is a safe, capability-bounded, deterministic language. These benchmarks show the
+    overhead of the VibeScript pipeline (parse + check + compile + VM) relative to raw JS.
+    The bytecode VM is a stack-based interpreter — no JIT. For pre-compiled chunks
+    (encode → decode → run), the parse/check overhead is eliminated.
+  </div>
+</div>
+
+<script type="module">
+  import init, { eval_cell_src, run_program_bytecode, compile_cell_bytecode, run_cell_bytecode } from "{{ '/pkg/vibe/vibe_wasm.js' | relative_url }}";
+
+  const benchmarks = [
+    {
+      name: "Arithmetic (1+2*3-4)",
+      vibeSrc: "= 1 + 2 * 3 - 4",
+      vibeMode: "cell",
+      jsFn: () => 1 + 2 * 3 - 4,
+    },
+    {
+      name: "Fibonacci(15) iterative",
+      vibeSrc: `fn fib_iter(n: i64) budget(steps: 100000) -> i64 {
+  let a = 0; let b = 1; let i = 0;
+  while i < n { let t = a + b; a = b; b = t; i = i + 1; }
+  return a;
+}
+fn main() -> i64 { return fib_iter(15); }`,
+      vibeMode: "program",
+      jsFn: () => {
+        let a = 0, b = 1, i = 0;
+        while (i < 15) { let t = a + b; a = b; b = t; i++; }
+        return a;
+      },
+    },
+    {
+      name: "Sum 1..100 (while loop)",
+      vibeSrc: `fn sum_to(n: i64) budget(steps: 10000) -> i64 {
+  let s = 0; let i = 0;
+  while i < n { s = s + i; i = i + 1; }
+  return s;
+}
+fn main() -> i64 { return sum_to(100); }`,
+      vibeMode: "program",
+      jsFn: () => {
+        let s = 0, i = 0;
+        while (i < 100) { s += i; i++; }
+        return s;
+      },
+    },
+    {
+      name: "List sum (for loop)",
+      vibeSrc: `fn sum_list() budget(steps: 10000) -> i64 {
+  let s = 0;
+  for x in [10, 20, 30, 40, 50] { s = s + x; }
+  return s;
+}
+fn main() -> i64 { return sum_list(); }`,
+      vibeMode: "program",
+      jsFn: () => {
+        let s = 0;
+        for (const x of [10, 20, 30, 40, 50]) { s += x; }
+        return s;
+      },
+    },
+    {
+      name: "Float math (π*2*10)",
+      vibeSrc: "= 3.14159 * 2.0 * 10.0",
+      vibeMode: "cell",
+      jsFn: () => 3.14159 * 2.0 * 10.0,
+    },
+    {
+      name: "Pre-compiled bytecode (arithmetic)",
+      vibeSrc: "= 1 + 2 * 3 - 4",
+      vibeMode: "cell-compiled",
+      jsFn: () => 1 + 2 * 3 - 4,
+    },
+  ];
+
+  let wasmReady = false;
+
+  async function ensureWasm() {
+    if (!wasmReady) {
+      await init();
+      wasmReady = true;
+    }
+  }
+
+  function time(fn, iterations) {
+    // Warmup
+    for (let i = 0; i < 10; i++) fn();
+    const start = performance.now();
+    for (let i = 0; i < iterations; i++) fn();
+    const end = performance.now();
+    return (end - start) / iterations; // ms per iteration
+  }
+
+  async function runBenchmarks() {
+    await ensureWasm();
+    const iterations = parseInt(document.getElementById('bench-iterations').value);
+    const statusEl = document.getElementById('bench-status');
+    const resultsEl = document.getElementById('bench-results');
+    resultsEl.innerHTML = '';
+    const runBtn = document.getElementById('bench-run');
+    runBtn.disabled = true;
+
+    const results = [];
+
+    for (let i = 0; i < benchmarks.length; i++) {
+      const bench = benchmarks[i];
+      statusEl.textContent = `Running ${i+1}/${benchmarks.length}: ${bench.name}...`;
+
+      // Run VibeScript
+      let vibeTime;
+      if (bench.vibeMode === 'cell') {
+        vibeTime = time(() => eval_cell_src(bench.vibeSrc), iterations);
+      } else if (bench.vibeMode === 'cell-compiled') {
+        // Pre-compile, then just run the bytecode
+        vibeTime = time(() => run_cell_bytecode(bench.vibeSrc), iterations);
+      } else {
+        vibeTime = time(() => run_program_bytecode(bench.vibeSrc, 'main', []), iterations);
+      }
+
+      // Run JS
+      const jsTime = time(bench.jsFn, iterations);
+
+      results.push({ name: bench.name, vibeTime, jsTime, iterations });
+    }
+
+    // Render results
+    let html = '<div class="bench-section"><h2>Results</h2>';
+    html += `<p>Averaged over ${iterations} iterations per benchmark. Times in milliseconds.</p>`;
+
+    // Table
+    html += '<table class="bench-table"><thead><tr><th>Benchmark</th><th>VibeScript (ms)</th><th>JavaScript (ms)</th><th>Ratio</th><th>Faster</th></tr></thead><tbody>';
+    results.forEach(r => {
+      const ratio = (r.vibeTime / r.jsTime).toFixed(1);
+      const faster = r.vibeTime < r.jsTime ? 'VibeScript' : 'JavaScript';
+      const winnerClass = r.vibeTime < r.jsTime ? 'winner' : 'loser';
+      html += `<tr>
+        <td>${r.name}</td>
+        <td class="${winnerClass}">${r.vibeTime.toFixed(4)}</td>
+        <td>${r.jsTime.toFixed(6)}</td>
+        <td>${ratio}×</td>
+        <td>${faster}</td>
+      </tr>`;
+    });
+    html += '</tbody></table>';
+
+    // Chart
+    html += '<div class="bench-chart">';
+    const maxTime = Math.max(...results.map(r => Math.max(r.vibeTime, r.jsTime)));
+    results.forEach(r => {
+      const vibePct = (r.vibeTime / maxTime * 100).toFixed(1);
+      const jsPct = (r.jsTime / maxTime * 100).toFixed(1);
+      html += `
+        <div style="margin-bottom:12px;">
+          <div style="font-size:0.8rem;color:#94a3b8;margin-bottom:4px;">${r.name}</div>
+          <div class="bench-bar">
+            <div class="bench-bar-label">VibeScript</div>
+            <div class="bench-bar-track">
+              <div class="bench-bar-fill bench-bar-vibe" style="width:${vibePct}%">${r.vibeTime.toFixed(4)}ms</div>
+            </div>
+          </div>
+          <div class="bench-bar">
+            <div class="bench-bar-label">JavaScript</div>
+            <div class="bench-bar-track">
+              <div class="bench-bar-fill bench-bar-js" style="width:${jsPct}%">${r.jsTime.toFixed(6)}ms</div>
+            </div>
+          </div>
+        </div>
+      `;
+    });
+    html += '</div>';
+
+    html += '</div>';
+    resultsEl.innerHTML = html;
+    statusEl.textContent = 'Done.';
+    runBtn.disabled = false;
+  }
+
+  document.getElementById('bench-run').addEventListener('click', runBenchmarks);
+</script>

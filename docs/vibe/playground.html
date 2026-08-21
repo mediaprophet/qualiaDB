@@ -1,0 +1,526 @@
+---
+layout: qualia
+title: VibeScript Playground
+---
+
+<div id="vibe-playground" style="max-width:100%;margin:0;padding:0;">
+  <style>
+    #vibe-playground .pg-layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: auto 1fr auto;
+      gap: 12px;
+      max-width: 100%;
+    }
+    #vibe-playground .pg-header {
+      grid-column: 1 / 3;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    #vibe-playground .pg-editor-wrap {
+      position: relative;
+      min-height: 400px;
+      border: 1px solid rgba(148,163,184,0.2);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    #vibe-playground #pg-editor {
+      width: 100%;
+      height: 400px;
+    }
+    #vibe-playground .pg-output-wrap {
+      display: flex;
+      flex-direction: column;
+      min-height: 400px;
+      border: 1px solid rgba(148,163,184,0.2);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    #vibe-playground .pg-tabs {
+      display: flex;
+      border-bottom: 1px solid rgba(148,163,184,0.15);
+      background: rgba(15,23,42,0.6);
+    }
+    #vibe-playground .pg-tab {
+      padding: 8px 16px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      color: #94a3b8;
+      border-bottom: 2px solid transparent;
+      transition: all 0.15s;
+    }
+    #vibe-playground .pg-tab:hover { color: #e2e8f0; }
+    #vibe-playground .pg-tab.active {
+      color: #22d3ee;
+      border-bottom-color: #22d3ee;
+      background: rgba(34,211,238,0.05);
+    }
+    #vibe-playground .pg-output {
+      flex: 1;
+      padding: 12px;
+      overflow: auto;
+      font-family: ui-monospace, monospace;
+      font-size: 0.85rem;
+      line-height: 1.5;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+    #vibe-playground .pg-result {
+      color: #4ade80;
+    }
+    #vibe-playground .pg-error {
+      color: #f87171;
+    }
+    #vibe-playground .pg-info {
+      color: #94a3b8;
+    }
+    #vibe-playground .pg-disasm {
+      color: #c4b5fd;
+      white-space: pre;
+      font-size: 0.8rem;
+    }
+    #vibe-playground .pg-footer {
+      grid-column: 1 / 3;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    #vibe-playground .pg-btn {
+      padding: 6px 16px;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      cursor: pointer;
+      border: 1px solid rgba(148,163,184,0.2);
+      background: rgba(30,41,59,0.6);
+      color: #e2e8f0;
+      transition: all 0.15s;
+    }
+    #vibe-playground .pg-btn:hover {
+      background: rgba(34,211,238,0.1);
+      border-color: #22d3ee;
+    }
+    #vibe-playground .pg-btn-primary {
+      background: rgba(34,211,238,0.15);
+      border-color: #22d3ee;
+      color: #22d3ee;
+    }
+    #vibe-playground .pg-btn-primary:hover {
+      background: rgba(34,211,238,0.25);
+    }
+    #vibe-playground .pg-select {
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      background: rgba(30,41,59,0.6);
+      color: #e2e8f0;
+      border: 1px solid rgba(148,163,184,0.2);
+    }
+    #vibe-playground .pg-status {
+      font-size: 0.8rem;
+      color: #64748b;
+      margin-left: auto;
+    }
+    #vibe-playground .pg-loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 400px;
+      color: #64748b;
+      font-size: 1rem;
+    }
+    #vibe-playground .pg-json-view {
+      color: #e2e8f0;
+    }
+    #vibe-playground .pg-json-key { color: #22d3ee; }
+    #vibe-playground .pg-json-string { color: #4ade80; }
+    #vibe-playground .pg-json-number { color: #fbbf24; }
+    #vibe-playground .pg-json-bool { color: #f472b6; }
+    #vibe-playground .pg-json-null { color: #64748b; }
+
+    @media (max-width: 768px) {
+      #vibe-playground .pg-layout {
+        grid-template-columns: 1fr;
+      }
+      #vibe-playground .pg-header,
+      #vibe-playground .pg-footer {
+        grid-column: 1;
+      }
+    }
+  </style>
+
+  <div class="pg-layout">
+    <div class="pg-header">
+      <div>
+        <h2 style="margin:0;font-size:1.5rem;">VibeScript Playground</h2>
+        <p style="margin:4px 0 0;color:#64748b;font-size:0.85rem;">
+          Parse, check, evaluate, and compile VibeScript 0.1 — entirely in your browser via WebAssembly.
+        </p>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <select id="pg-mode" class="pg-select">
+          <option value="cell">Cell (= expr)</option>
+          <option value="program">Program (module)</option>
+        </select>
+        <span id="pg-version" class="pg-status">loading...</span>
+      </div>
+    </div>
+
+    <div class="pg-editor-wrap" id="pg-editor-container">
+      <div id="pg-editor"></div>
+    </div>
+
+    <div class="pg-output-wrap">
+      <div class="pg-tabs">
+        <div class="pg-tab active" data-tab="result">Result</div>
+        <div class="pg-tab" data-tab="bytecode">Bytecode</div>
+        <div class="pg-tab" data-tab="ast">AST / Check</div>
+        <div class="pg-tab" data-tab="grammar">Grammar</div>
+      </div>
+      <div class="pg-output" id="pg-output">
+        <div class="pg-loading">Loading WebAssembly module...</div>
+      </div>
+    </div>
+
+    <div class="pg-footer">
+      <button class="pg-btn pg-btn-primary" id="pg-run">▶ Run (Ctrl+Enter)</button>
+      <button class="pg-btn" id="pg-check">✓ Check</button>
+      <button class="pg-btn" id="pg-bytecode">⚙ Compile</button>
+      <button class="pg-btn" id="pg-encode">↓ Encode</button>
+      <select id="pg-examples" class="pg-select">
+        <option value="">— Examples —</option>
+        <option value="arith">Arithmetic</option>
+        <option value="fib">Fibonacci (function)</option>
+        <option value="list">List operations</option>
+        <option value="record">Record access</option>
+        <option value="logic">Logical operators</option>
+        <option value="forloop">For loop</option>
+        <option value="while">While loop</option>
+        <option value="match">Match expression</option>
+        <option value="string">String equality</option>
+        <option value="physics">Physics (Quantity)</option>
+        <option value="triple">RDF Triple</option>
+      </select>
+      <span id="pg-stats" class="pg-status"></span>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+  import init, {
+    language_version,
+    eval_cell_src,
+    check_cell_src,
+    parse_cell_src,
+    parse_program_src,
+    check_program_src,
+    compile_cell_bytecode,
+    run_cell_bytecode,
+    run_program_bytecode,
+    encode_cell_bytecode,
+    decode_and_run,
+    ebnf_grammar,
+    gbnf_grammar,
+    ast_schema_json,
+  } from "{{ '/pkg/vibe/vibe_wasm.js' | relative_url }}";
+
+  let wasmReady = false;
+  let editor = null;
+  let currentTab = 'result';
+
+  // Example snippets
+  const examples = {
+    arith: { mode: 'cell', code: '= 1 + 2 * 3 - 4' },
+    fib: { mode: 'program', code: 'fn fib_iter(n: i64) budget(steps: 100000) -> i64 {\n  let a = 0;\n  let b = 1;\n  let i = 0;\n  while i < n {\n    let t = a + b;\n    a = b;\n    b = t;\n    i = i + 1;\n  }\n  return a;\n}\n\nfn main() -> i64 {\n  return fib_iter(10);\n}' },
+    list: { mode: 'cell', code: '= [1, 2, 3, 4, 5][2]' },
+    record: { mode: 'cell', code: '= { name: "alice", age: 30 }.age' },
+    logic: { mode: 'cell', code: '= true && (false || true)' },
+    forloop: { mode: 'program', code: 'fn sum_list() budget(steps: 10000) -> i64 {\n  let s = 0;\n  for x in [10, 20, 30, 40, 50] {\n    s = s + x;\n  }\n  return s;\n}\n\nfn main() -> i64 {\n  return sum_list();\n}' },
+    while: { mode: 'program', code: 'fn sum_to(n: i64) budget(steps: 10000) -> i64 {\n  let s = 0;\n  let i = 0;\n  while i < n {\n    s = s + i;\n    i = i + 1;\n  }\n  return s;\n}\n\nfn main() -> i64 {\n  return sum_to(100);\n}' },
+    match: { mode: 'program', code: 'fn classify(x: i64) -> i64 {\n  match x {\n    0 => { return 100; }\n    1 => { return 200; }\n    _ => { return 999; }\n  }\n}\n\nfn main() -> i64 {\n  return classify(1);\n}' },
+    string: { mode: 'cell', code: '= "hello" == "hello"' },
+    physics: { mode: 'cell', code: '= 42.0 * 9.81' },
+    triple: { mode: 'cell', code: '= <<( <ex:s1> ex:emitsAlert ex:Overheat )>>' },
+  };
+
+  // Tab switching
+  document.querySelectorAll('.pg-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.pg-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      currentTab = tab.dataset.tab;
+      rerun();
+    });
+  });
+
+  // Mode switching
+  const modeSelect = document.getElementById('pg-mode');
+  modeSelect.addEventListener('change', () => {
+    if (editor) {
+      const lang = modeSelect.value === 'cell' ? 'vibe-cell' : 'vibe-module';
+      monaco.editor.setModelLanguage(editor.getModel(), lang);
+    }
+  });
+
+  // Examples
+  document.getElementById('pg-examples').addEventListener('change', (e) => {
+    const ex = examples[e.target.value];
+    if (ex && editor) {
+      modeSelect.value = ex.mode;
+      editor.setValue(ex.code);
+      e.target.value = '';
+      rerun();
+    }
+  });
+
+  // Run button
+  document.getElementById('pg-run').addEventListener('click', rerun);
+  document.getElementById('pg-check').addEventListener('click', () => { currentTab = 'ast'; rerun(); });
+  document.getElementById('pg-bytecode').addEventListener('click', () => { currentTab = 'bytecode'; rerun(); });
+  document.getElementById('pg-encode').addEventListener('click', encodeDecode);
+
+  function getMode() { return modeSelect.value; }
+  function getSource() { return editor ? editor.getValue() : ''; }
+
+  function rerun() {
+    if (!wasmReady) return;
+    const src = getSource();
+    const mode = getMode();
+    const output = document.getElementById('pg-output');
+
+    if (currentTab === 'result') {
+      if (mode === 'cell') {
+        const result = eval_cell_src(src);
+        output.innerHTML = formatResult(result);
+      } else {
+        // For programs, try to run main()
+        const result = run_program_bytecode(src, 'main', []);
+        output.innerHTML = formatResult(result);
+      }
+    } else if (currentTab === 'bytecode') {
+      if (mode === 'cell') {
+        const result = compile_cell_bytecode(src);
+        output.innerHTML = formatBytecode(result);
+      } else {
+        output.innerHTML = '<div class="pg-info">Bytecode view for programs: click "Encode" to see binary.</div>';
+      }
+    } else if (currentTab === 'ast') {
+      if (mode === 'cell') {
+        const result = check_cell_src(src);
+        output.innerHTML = formatCheck(result);
+      } else {
+        const result = check_program_src(src);
+        output.innerHTML = formatCheck(result);
+      }
+    } else if (currentTab === 'grammar') {
+      output.innerHTML = `<div class="pg-disasm">${escapeHtml(ebnf_grammar())}</div>`;
+    }
+    updateStats();
+  }
+
+  function encodeDecode() {
+    if (!wasmReady) return;
+    const src = getSource();
+    const mode = getMode();
+    const output = document.getElementById('pg-output');
+    currentTab = 'result';
+    document.querySelectorAll('.pg-tab').forEach(t => t.classList.remove('active'));
+    document.querySelector('.pg-tab[data-tab="result"]').classList.add('active');
+
+    if (mode !== 'cell') {
+      output.innerHTML = '<div class="pg-info">Encode is for cell expressions. Switch to Cell mode.</div>';
+      return;
+    }
+
+    const bytes = encode_cell_bytecode(src);
+    if (bytes instanceof Uint8Array) {
+      const hex = Array.from(bytes.slice(0, 64)).map(b => b.toString(16).padStart(2, '0')).join(' ');
+      const decoded = decode_and_run(bytes);
+      output.innerHTML = `
+        <div class="pg-info">Encoded: ${bytes.length} bytes</div>
+        <div class="pg-disasm">Hex: ${hex}${bytes.length > 64 ? ' ...' : ''}</div>
+        <div class="pg-result" style="margin-top:8px;">Decoded & run result:</div>
+        ${formatResult(decoded)}
+      `;
+    } else {
+      output.innerHTML = `<div class="pg-error">Encode error: ${JSON.stringify(bytes)}</div>`;
+    }
+    updateStats();
+  }
+
+  function formatResult(result) {
+    if (result.ok) {
+      return `<div class="pg-result">${syntaxHighlight(JSON.stringify(result.value, null, 2))}</div>`;
+    } else {
+      return `<div class="pg-error">Error: ${JSON.stringify(result.error, null, 2)}</div>`;
+    }
+  }
+
+  function formatBytecode(result) {
+    if (result.ok) {
+      return `
+        <div class="pg-info">Code: ${result.code_size} bytes | Constants: ${result.constants} | Functions: ${result.functions} | Locals: ${result.top_locals}</div>
+        <div class="pg-disasm" style="margin-top:8px;">${escapeHtml(result.disassembly)}</div>
+      `;
+    } else {
+      return `<div class="pg-error">Compile error: ${JSON.stringify(result.error)}</div>`;
+    }
+  }
+
+  function formatCheck(result) {
+    if (result.ok) {
+      let html = `<div class="pg-result">✓ Check passed</div>`;
+      if (result.functions) {
+        html += `<div class="pg-info">Functions: ${result.functions.length}</div>`;
+      }
+      return html;
+    } else {
+      return `<div class="pg-error">✗ Check failed: ${JSON.stringify(result.error, null, 2)}</div>`;
+    }
+  }
+
+  function syntaxHighlight(json) {
+    json = json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+\.?\d*)/g, (match) => {
+      let cls = 'pg-json-number';
+      if (/^"/.test(match)) {
+        if (/:$/.test(match)) cls = 'pg-json-key';
+        else cls = 'pg-json-string';
+      } else if (/true|false/.test(match)) cls = 'pg-json-bool';
+      else if (/null/.test(match)) cls = 'pg-json-null';
+      return `<span class="${cls}">${match}</span>`;
+    });
+  }
+
+  function escapeHtml(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  function updateStats() {
+    const src = getSource();
+    document.getElementById('pg-stats').textContent = `${src.length} chars | ${src.split('\n').length} lines`;
+  }
+
+  // Initialize WASM and Monaco
+  async function init_() {
+    try {
+      await init();
+      wasmReady = true;
+      document.getElementById('pg-version').textContent = `vibe-${language_version()}`;
+
+      // Load Monaco
+      require.config({
+        paths: { vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs' }
+      });
+      require(['vs/editor/editor.main'], () => {
+        // Register VibeScript language
+        monaco.languages.register({ id: 'vibe-cell' });
+        monaco.languages.register({ id: 'vibe-module' });
+
+        monaco.languages.setMonarchTokensProvider('vibe-cell', {
+          tokenizer: {
+            root: [
+              [/^=/, 'keyword'],
+              [/\d+\.\d+/, 'number.float'],
+              [/\d+/, 'number'],
+              [/"[^"]*"/, 'string'],
+              [/'[^'*'/, 'string'],
+              [/\b(true|false|null)\b/, 'keyword'],
+              [/\b(let|mut|fn|return|if|else|while|for|in|match|effect|transaction)\b/, 'keyword'],
+              [/\b(i64|u64|f64|string|bool|Result|Option|List|Iri)\b/, 'type'],
+              [/[+\-*/%]/, 'operator'],
+              [/[<>=!]=/, 'operator'],
+              [/[&|]/, 'operator'],
+              [/[{}()\[\]]/, 'bracket'],
+              [/[;,]/, 'delimiter'],
+            ]
+          }
+        });
+
+        monaco.languages.setMonarchTokensProvider('vibe-module', {
+          tokenizer: {
+            root: [
+              [/(module|prefix|requires|capability|import|on)\b/, 'keyword'],
+              [/\b(let|mut|fn|return|if|else|while|for|in|match|effect|transaction|pure|budget|steps)\b/, 'keyword'],
+              [/\b(i64|u64|f64|string|bool|Result|Option|List|Iri|Receipt)\b/, 'type'],
+              [/\d+\.\d+/, 'number.float'],
+              [/\d+/, 'number'],
+              [/"[^"]*"/, 'string'],
+              [/<<[^>]*>>/, 'string.special'],
+              [/[<][^>]*[>]/, 'string.special'],
+              [/[+\-*/%]/, 'operator'],
+              [/[<>=!]=/, 'operator'],
+              [/[&|]/, 'operator'],
+              [/[{}()\[\]]/, 'bracket'],
+              [/[;,]/, 'delimiter'],
+              [/\/\/.*$/, 'comment'],
+            ]
+          }
+        });
+
+        monaco.languages.setLanguageConfiguration('vibe-cell', {
+          brackets: [['(', ')'], ['[', ']'], ['{', '}']],
+          autoClosingPairs: [
+            { open: '(', close: ')' },
+            { open: '[', close: ']' },
+            { open: '{', close: '}' },
+            { open: '"', close: '"' },
+          ],
+        });
+
+        monaco.languages.setLanguageConfiguration('vibe-module', {
+          brackets: [['(', ')'], ['[', ']'], ['{', '}']],
+          autoClosingPairs: [
+            { open: '(', close: ')' },
+            { open: '[', close: ']' },
+            { open: '{', close: '}' },
+            { open: '"', close: '"' },
+          ],
+        });
+
+        editor = monaco.editor.create(document.getElementById('pg-editor'), {
+          value: '= 1 + 2 * 3 - 4',
+          language: 'vibe-cell',
+          theme: 'vs-dark',
+          fontSize: 14,
+          fontFamily: 'ui-monospace, "Cascadia Code", monospace',
+          lineNumbers: 'on',
+          minimap: { enabled: false },
+          scrollBeyondLastLine: false,
+          automaticLayout: true,
+          tabSize: 2,
+        });
+
+        // Ctrl+Enter to run
+        editor.addAction({
+          id: 'run',
+          label: 'Run',
+          keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter],
+          run: rerun,
+        });
+
+        // Auto-run on change (debounced)
+        let timer = null;
+        editor.onDidChangeModelContent(() => {
+          if (timer) clearTimeout(timer);
+          timer = setTimeout(rerun, 500);
+          updateStats();
+        });
+
+        // Initial run
+        rerun();
+      });
+    } catch (err) {
+      document.getElementById('pg-output').innerHTML =
+        `<div class="pg-error">Failed to load WASM: ${err.message}</div>`;
+      document.getElementById('pg-version').textContent = 'load failed';
+    }
+  }
+
+  init_();
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs/loader.min.js"></script>
