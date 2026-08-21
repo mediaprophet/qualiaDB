@@ -6,6 +6,7 @@
 pub mod agent;
 mod args;
 mod asset_bind;
+mod audio;
 mod biosignal;
 mod clinical;
 mod cosmic_bind;
@@ -18,6 +19,7 @@ mod geometry;
 mod governance;
 mod graph;
 pub mod ids;
+mod inference;
 mod logic;
 mod manifold;
 mod math;
@@ -202,6 +204,35 @@ pub fn dispatch(
         ids::COSMIC_COMPTON_WAVELENGTH => cosmic_bind::compton_wavelength(args, span),
         ids::COSMIC_DE_BROGLIE => cosmic_bind::de_broglie_wavelength(args, span),
         ids::COSMIC_USRI_PARSE => cosmic_bind::usri_parse(args, span),
+        // ── N1: Expose-only bindings ────────────────────────────────────────
+        ids::NLP_GAZETTEER_RUN => nlp::gazetteer_run(args, span),
+        ids::NLP_GAZETTEER_BUILD => nlp::gazetteer_build(args, span),
+        ids::INFERENCE_EMBED => inference::embed(args, span),
+        ids::INFERENCE_GROUNDING => inference::grounding(args, span),
+        ids::INFERENCE_VERIFY_TURN => inference::verify_turn(args, span),
+        ids::INFERENCE_DETECT_UNGROUNDED => inference::detect_ungrounded(args, span),
+        ids::FINANCE_CONVERT_CURRENCY => econ::convert_currency(args, span),
+        ids::FINANCE_MULTISIG_CHECK => econ::multisig_check(args, span),
+        ids::FINANCE_LEDGER_BALANCE => econ::ledger_balance(args, span),
+        ids::CAPABILITY_GRANT => governance::capability_grant(args, span),
+        ids::CAPABILITY_REVOKE => governance::capability_revoke(args, span),
+        ids::CAPABILITY_TEST_GATING => governance::capability_test_gating(args, span),
+        ids::CAPABILITY_AUDIT => governance::capability_audit(args, span),
+        ids::SENTINEL_INSPECT => governance::sentinel_inspect(args, span),
+        ids::SENTINEL_GATE => governance::sentinel_gate(args, span),
+        ids::AGENT_TRACE => governance::agent_trace(args, span),
+        ids::AGENT_VERIFY => governance::agent_verify(args, span),
+        ids::IDENTITY_CURRENT_USER => governance::current_user(args, span),
+        ids::AUDIO_SPECTRUM => audio::spectrum(args, span),
+        ids::SCENE_CREATE => render::scene_create(args, span),
+        ids::SCENE_ADD_NODE => render::scene_add_node(args, span),
+        ids::SCENE_SET_TRANSFORM => render::scene_set_transform(args, span),
+        ids::SCENE_SET_MESH => render::scene_set_mesh(args, span),
+        ids::SCENE_ADD_CAMERA => render::scene_add_camera(args, span),
+        ids::SCENE_RENDER => render::scene_render(args, span),
+        ids::SCENE_SET_VIEWPORT => render::scene_set_viewport(args, span),
+        ids::SCENE_SET_CLEAR_COLOUR => render::scene_set_clear_colour(args, span),
+        ids::SCENE_CAPTURE_FRAME => render::scene_capture_frame(args, span),
         other => Err(Diagnostic::new(
             DiagCode::E300,
             span,

@@ -787,3 +787,245 @@ See strategy document §6. Defaults provided for speed.
 - Strategy: `docs/plans/multi-agent-orchestration-strategy-2026-08-19.md`
 - Progress: `docs/plans/multi-agent-orchestration-PROGRESS-LOG.md`
 - Coordination: `coordination/NOTICES.md` (CLAIM/PROGRESS/RELEASE)
+
+---
+
+## 10. Poet Interface Gap Closure (2026-08-21)
+
+**Source audit:** `docs/plans/vibe-design/20260821_vibescript-capability-gap-audit.md`
+
+The Poet interface project (`C:\Projects\NLP`) requires ~430+ VibeScript functions across 17 domains. The current VibeScript surface exposes ~156 capability invoke IDs and ~80 built-in functions. A backend audit revealed that ~120 of the ~300+ gap functions have **real backend implementations** that only need VibeScript exposure (invoke ID + dispatch arm + argument marshalling). ~40 are partial (backend exists but needs extension), and ~140 need to be built from scratch.
+
+### 10.1 Gap Summary by Domain
+
+| Domain | Total Gap | Expose-only | Partial | Build-new |
+|--------|-----------|-------------|---------|-----------|
+| NLP / Symbolic AI | 15 | 2 | 2 | 11 |
+| Neural / LLM Inference | 6 | 3 | 2 | 1 |
+| Agent Runtime | 9 | 4 | 2 | 3 |
+| Spatial / 3D / Rendering | 17 | 7 | 2 | 8 |
+| Audio / Speech | 22 | 1 | 3 | 18 |
+| Health / Clinical | 5 | 0 | 3 | 2 |
+| Finance / Economics | 3 | 3 | 0 | 0 |
+| Research / Investigation | 45 | 0 | 3 | 42 |
+| Epistemics | 32 | 2 | 1 | 29 |
+| Social / Communication | 3 | 0 | 1 | 2 |
+| Rights / Fiduciary | 7 | 7 | 0 | 0 |
+| Hypermedia Authoring | ~210 | 0 | 0 | ~210 |
+| **Total** | **~370** | **~29** | **~19** | **~326** |
+
+### 10.2 Implementation Phases
+
+Phases are ordered by: (1) expose-only work first (fastest, highest ROI), (2) then partial extensions, (3) then build-new in priority order.
+
+#### Phase N1: Expose-Only Bindings (P1, fast ROI)
+
+Expose existing backend implementations via VibeScript invoke IDs. Each function needs: ID constant in `ids.rs`, dispatch arm in `invoke/mod.rs`, argument marshalling, and a test.
+
+| Work Item | Backend Location | New Invoke ID |
+|-----------|-----------------|---------------|
+| `run-gazetteer` / `build-gazetteer` | `nlp/gazetteer.rs` | `NLP.gazetteer_run` / `NLP.gazetteer_build` |
+| `verify-grounding` | `inference/quant_graph_grounding.rs` | `Inference.verify_grounding` |
+| `run-embedder` | `inference/semantic_skills.rs` | `Inference.embed` |
+| `run-transformer` | `gguf_bridge/forward.rs` | `Inference.transformer` |
+| `run-constrained-decode` (wrapper) | `speculative_decode.rs` | `Inference.constrained_decode` |
+| `load-model` | `gguf_bridge/load.rs` | `Inference.load_model` |
+| `agent-verify` | `governance/coordination.rs` | `Agent.verify` |
+| `agent-trace` | `governance/instrument_trace.rs` | `Agent.trace` |
+| `sentinel-inspect` | `governance/webizen/` | `Sentinel.inspect` |
+| `sentinel-gate` | `governance/coordination.rs` | `Sentinel.gate` |
+| `agency:evaluate` | `identity/agency.rs` | `Agency.evaluate` |
+| `declare-capability` | `governance/coordination.rs` | `Capability.declare` |
+| `inspect-sentinel` | `governance/webizen/` | `Sentinel.inspect_module` |
+| `test-capability-gating` | `governance/coordination.rs` | `Capability.test_gating` |
+| `grant-capability` | `governance/coordination.rs` | `Capability.grant` |
+| `revoke-capability` | `governance/coordination.rs` | `Capability.revoke` |
+| `audit-capabilities` | `governance/instrument_trace.rs` | `Capability.audit` |
+| `did.current_user()` | `identity/key_vault.rs` | `Identity.current_user` |
+| Multi-currency conversion | `modalities/value_flow.rs` | `Finance.convert_currency` |
+| Multi-sig wallet | `modalities/carrier.rs` | `Finance.multisig_check` |
+| Per-currency ledger | `specialized_libs/computational_economics/accounting.rs` | `Finance.ledger_balance` |
+| `create-scene` / `add-node` | `render/scene.rs` | `Scene.create` / `Scene.add_node` |
+| `set-transform` | `render/physics/joint.rs` | `Scene.set_transform` |
+| `set-mesh` | `render/gpu/` + `assets.rs` | `Scene.set_mesh` |
+| `add-camera` | `render/camera.rs` | `Scene.add_camera` |
+| `render-scene` (high-level) | `gpu_render_frame` | `Scene.render` |
+| `set-viewport` | `gpu_resize` | `Scene.set_viewport` |
+| `set-clear-colour` | `gpu_set_ambient` | `Scene.set_clear_colour` |
+| `capture-frame` | `gpu_read_pixels` | `Scene.capture_frame` |
+| `spectrum-analyser` | `audio/tf_surface.rs` | `Audio.spectrum` |
+| `assess-grounding` | `inference/quant_graph_grounding.rs` | `Epistemics.grounding` |
+| `detect-ungrounded-behaviour` | `inference/post_turn_verify.rs` | `Epistemics.detect_ungrounded` |
+| `verify-grounding` (epistemics) | `inference/quant_graph_grounding.rs` | `Epistemics.verify_grounding` |
+| Ungrounded generation diagnosis | `inference/post_turn_verify.rs` | `Epistemics.ug_diagnose` |
+
+**Estimated effort:** ~29 invoke IDs, each wrapping an existing function. Low risk — argument marshalling and tests only.
+
+**Files to touch:**
+- `crates/qualia-core-db/src/poet_host/invoke/ids.rs` — new ID constants
+- `crates/qualia-core-db/src/poet_host/invoke/mod.rs` — dispatch arms
+- New seam files: `invoke/nlp/gazetteer.rs`, `invoke/inference.rs`, `invoke/agent/sentinel.rs`, `invoke/governance_bind.rs`, `invoke/identity_bind.rs`, `invoke/scene.rs`, `invoke/audio_bind.rs`, `invoke/epistemics.rs`
+- `crates/qualia-core-db/src/poet_host/invoke/coverage.rs` — update coverage matrix
+
+**Verification:** One test per invoke ID. `cargo test -p qualia-core-db --lib poet_host`. `cargo check` for WASM.
+
+#### Phase N2: Partial Extensions (P1/P2)
+
+Extend existing backend implementations and expose them.
+
+| Work Item | Backend Location | Extension Needed |
+|-----------|-----------------|------------------|
+| `run-temporal-parser` | `nlp/normalize.rs:42` | Extend ISO date parsing to TIMEX3 |
+| `run-quantity-normalizer` | `nlp/normalize.rs:80` | Extend to full QUDT unit vocabulary |
+| `feedback-loop` | `inference/post_turn_verify.rs` | Wrap as iterative loop, not one-shot |
+| `unload-model` | `gguf_bridge/load.rs` | Add explicit unload API |
+| `run-classifier` | `solvers/learning/classification/` | Add neural classifier path (use transformer embeddings) |
+| `agent-execute` | `agent_turn_handler.rs` (client-core) | Move to core-db, expose via VibeScript |
+| `agent.dag.status` | `invoke/agent/mod.rs` | Replace Null stub with real status |
+| `set-material` | `render/physics/material.rs` | Add node-material assignment API |
+| `add-post-process` | `gpu_compute_dispatch` | Add post-process pass wrapper |
+| `osc-config` | `audio/dsp_kernel.rs:9` | Add oscillator type selection |
+| `lfo-config` | `audio/dsp_kernel.rs:35` | Add dedicated LFO config |
+| `transpose` | `audio/tf_surface_edit.rs:231` | Expose pitch-shift as MIDI transpose |
+| Spectral Acoustic Tomography | `audio/` spectral engine | Add slice rendering (1-64) |
+| Bio-acoustic telemetry | `audio/` + `biosignal` | Combine audio spectral + biosignal DP |
+| Wellfair anatomy RenderScene | `medical/dicom.rs` + `render/` | Add anatomy-specific scene builder |
+| Corpus management | `nlp/` + `hypermedia/` | Build corpus manager on top of NLP + hypermedia |
+| Dynamics analysis | `economics/welfare.rs` + `network_economics.rs` | Expose Gini/Lorenz/centrality as VibeScript |
+| Investigation / forensic | `forensic_economics.rs` + `graph::shortest_path` | Build investigation workflow on top |
+| Epistemic assessment | `invoke/logic/epistemic.rs` | Build assessment workflow on top of EpistemicVerdict |
+| Pulse channel/transport routing | `pulse_publish` | Add channel/transport parameters |
+
+**Estimated effort:** ~20 items, each extending existing code. Medium risk — changes to working code.
+
+#### Phase N3: NLP Build-New (P1, blocks project mission)
+
+Build the missing NLP pipelines from scratch. These are the project's primary mission.
+
+| Work Item | Description |
+|-----------|-------------|
+| FST morphology | Finite-State Transducer for dictionary lookups and morphology |
+| Coreference resolution | Multi-pass sieve-based coreference/anaphora resolution |
+| Frame semantics | Frame element identification from text |
+| Geo parser | GeoSPARQL-compatible geographic entity extraction from text |
+| Relation extractor | RDF-Star triple extraction from text |
+| Substrate extraction | Full symbolic pipeline: tokenize → gazetteer → normalize → relation extract → substrate |
+| Graph index builder | Build graph index from triples and entities |
+| GraphRAG retrieval | Graph-augmented retrieval (vector + graph traversal) |
+| Substrate inspector | Inspect structured substrate by IRI |
+
+**Estimated effort:** High — these are real NLP implementations. Each needs a dedicated module under `nlp/` with tests. Follow NLP project constraints (WASM-compatible, deterministic, byte-span provenance).
+
+**Files to create:**
+- `crates/qualia-core-db/src/nlp/fst.rs`
+- `crates/qualia-core-db/src/nlp/coref.rs`
+- `crates/qualia-core-db/src/nlp/frame.rs`
+- `crates/qualia-core-db/src/nlp/geo.rs`
+- `crates/qualia-core-db/src/nlp/relation.rs`
+- `crates/qualia-core-db/src/nlp/substrate.rs`
+- `crates/qualia-core-db/src/nlp/graphrag.rs`
+- Corresponding `invoke/nlp/*.rs` seam files
+
+#### Phase N4: Agent Runtime Build-New (P1)
+
+| Work Item | Description |
+|-----------|-------------|
+| Agent planning | Plan agent task from goal + capabilities |
+| Golden corpus loader | Load golden corpus by IRI |
+| Agent evaluation | Evaluate agent execution against golden corpus |
+
+**Estimated effort:** Medium — build on existing DAG executor and governance infrastructure.
+
+#### Phase N5: Neural Build-New (P1)
+
+| Work Item | Description |
+|-----------|-------------|
+| Neural reranker | Rerank retrieval candidates using transformer embeddings + cosine similarity |
+
+**Estimated effort:** Low — can be built on existing embedding + vector store infrastructure.
+
+#### Phase N6: Audio DAW Build-New (P2)
+
+Build the traditional DAW surface (synthesis, effects, MIDI, transport) that the spectral-first audio engine does not have.
+
+| Work Item Group | Count | Description |
+|-----------------|-------|-------------|
+| Transport (play, stop, record, loop, metronome, tempo) | 6 | Transport state machine |
+| Synthesis (oscillator, filter, envelope, LFO, mod routing) | 5 | Synth voice configuration |
+| Effects (reverb, delay, compressor, EQ, add-effect) | 5 | Audio effect processors |
+| MIDI (note-draw, quantise) | 2 | MIDI event rendering |
+| Meters (waveform, phase, loudness) | 3 | Audio metering |
+| Articulatory speech synthesis | 1 | Vocal tract model |
+
+**Estimated effort:** High — ~22 new functions. The audio backend is spectral-first; DAW primitives need to be built. Consider whether to build a traditional DAW or extend the spectral engine to cover these use cases.
+
+#### Phase N7: Scene Graph Build-New (P2)
+
+| Work Item | Description |
+|-----------|-------------|
+| `remove-node` | Node removal from scene graph |
+| `add-light` | Light source API |
+| `link-semantic` | Link scene node to knowledge graph |
+| `duplicate-node` | Node duplication |
+| `set-render-budget` | Frame time budget |
+| `ik.look_at` | Procedural look-at IK |
+| `inverse-kinematics` | IK chain solver |
+| `physics.smooth_damp` | PGA spring-damper smoothing |
+
+**Estimated effort:** Medium — build on existing render + PGA + joint infrastructure.
+
+#### Phase N8: Research / Epistemics Build-New (P2)
+
+| Work Item Group | Count | Description |
+|-----------------|-------|-------------|
+| Research enquiry | 6 | Research project CRUD |
+| Dark link inference | 5 | Hidden connection inference |
+| Inference chain | 4 | Inference chaining |
+| Hypothesis graph (multi-agent) | 11 | Living hypothesis graph |
+| Perspective analysis | 5 | Agent perspective modeling |
+| Intentionality assessment | 2 | Intention classification |
+| Fiction classification | 4 | Fiction/non-fiction/blended |
+| Sentiment analysis | 6 | Multi-dimensional sentiment |
+
+**Estimated effort:** High — ~43 new functions. These are domain-specific workflow layers built on top of the graph engine, modalities, and NLP.
+
+#### Phase N9: Hypermedia Authoring Build-New (P3, large surface)
+
+~210 functions across 7 domains: image editing, video editing, 3D editing, HbbTV/interactive, portals/worlds, DMX/projection. None exist in the backend. These are high-level authoring operations that would be implemented as capability invoke IDs routing to host-side implementations.
+
+**Estimated effort:** Very high — ~210 functions. This is the largest gap and the lowest priority for the project's primary mission. Consider whether these are VibeScript capability.invoke targets or UI-layer operations that don't need VibeScript bindings.
+
+### 10.3 Architecture Notes
+
+Most gaps are **host capability** gaps, not language-level gaps. VibeScript's `capability.invoke(id, args)` mechanism and the Host trait can dispatch to any registered capability. The work is:
+
+1. **Register new capability invoke IDs** in `qualia-core-db/src/poet_host/invoke/ids.rs`
+2. **Implement host-side handlers** — for expose-only, wrap existing functions; for build-new, implement new logic
+3. **Add VibeScript-level wrapper functions** where ergonomic (e.g. `nlp.gazetteer(text, ontology)` instead of `capability.invoke("NLP.gazetteer_run", ...)`)
+4. **Add Value types** for new domain values (audio buffers, scene nodes, research projects, epistemic assessments, etc.)
+
+The language itself (parser, checker, evaluator, bytecode VM, projectional authoring) does not need changes for most of these.
+
+### 10.4 Verification Plan
+
+After each phase:
+- `cargo test -p poet-vibe` — language tests
+- `cargo test -p qualia-core-db --lib poet_host` — host tests
+- `cargo check -p qualia-core-db --target wasm32-unknown-unknown` — WASM build
+- New tests for each new invoke ID
+- Update gap audit with status changes
+- Update this plan with phase status
+
+### 10.5 Phase Status Tracker
+
+| Phase | Status | Started | Completed | Items |
+|-------|--------|---------|-----------|-------|
+| N1: Expose-only bindings | **Done** | 2026-08-21 | 2026-08-21 | 29 invoke IDs |
+| N2: Partial extensions | Not started | — | — | ~20 items |
+| N3: NLP build-new | Not started | — | — | ~9 modules |
+| N4: Agent runtime build-new | Not started | — | — | ~3 modules |
+| N5: Neural build-new | Not started | — | — | ~1 module |
+| N6: Audio DAW build-new | Not started | — | — | ~22 functions |
+| N7: Scene graph build-new | Not started | — | — | ~8 functions |
+| N8: Research/epistemics build-new | Not started | — | — | ~43 functions |
+| N9: Hypermedia authoring build-new | Not started | — | — | ~210 functions |

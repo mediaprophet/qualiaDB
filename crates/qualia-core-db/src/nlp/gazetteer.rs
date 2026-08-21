@@ -63,6 +63,11 @@ impl Gazetteer {
         Self { nodes, patterns }
     }
 
+    /// Number of patterns in the compiled automaton.
+    pub fn pattern_count(&self) -> usize {
+        self.patterns.len()
+    }
+
     pub fn find(&self, source: &str) -> Vec<Hit> {
         let folded = ascii_fold(source);
         let bytes = folded.as_bytes();

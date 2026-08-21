@@ -192,6 +192,36 @@ pub const COSMIC_COMPTON_WAVELENGTH: &str = "Cosmic.compton_wavelength";
 pub const COSMIC_DE_BROGLIE: &str = "Cosmic.de_broglie_wavelength";
 pub const COSMIC_USRI_PARSE: &str = "Cosmic.usri_parse";
 
+// ── N1: Expose-only bindings for Poet interface gap closure ────────────────
+pub const NLP_GAZETTEER_RUN: &str = "NLP.gazetteer_run";
+pub const NLP_GAZETTEER_BUILD: &str = "NLP.gazetteer_build";
+pub const INFERENCE_EMBED: &str = "Inference.embed";
+pub const INFERENCE_GROUNDING: &str = "Inference.grounding";
+pub const INFERENCE_VERIFY_TURN: &str = "Inference.verify_turn";
+pub const INFERENCE_DETECT_UNGROUNDED: &str = "Inference.detect_ungrounded";
+pub const FINANCE_CONVERT_CURRENCY: &str = "Finance.convert_currency";
+pub const FINANCE_MULTISIG_CHECK: &str = "Finance.multisig_check";
+pub const FINANCE_LEDGER_BALANCE: &str = "Finance.ledger_balance";
+pub const CAPABILITY_GRANT: &str = "Capability.grant";
+pub const CAPABILITY_REVOKE: &str = "Capability.revoke";
+pub const CAPABILITY_TEST_GATING: &str = "Capability.test_gating";
+pub const CAPABILITY_AUDIT: &str = "Capability.audit";
+pub const SENTINEL_INSPECT: &str = "Sentinel.inspect";
+pub const SENTINEL_GATE: &str = "Sentinel.gate";
+pub const AGENT_TRACE: &str = "Agent.trace";
+pub const AGENT_VERIFY: &str = "Agent.verify";
+pub const IDENTITY_CURRENT_USER: &str = "Identity.current_user";
+pub const AUDIO_SPECTRUM: &str = "Audio.spectrum";
+pub const SCENE_CREATE: &str = "Scene.create";
+pub const SCENE_ADD_NODE: &str = "Scene.add_node";
+pub const SCENE_SET_TRANSFORM: &str = "Scene.set_transform";
+pub const SCENE_SET_MESH: &str = "Scene.set_mesh";
+pub const SCENE_ADD_CAMERA: &str = "Scene.add_camera";
+pub const SCENE_RENDER: &str = "Scene.render";
+pub const SCENE_SET_VIEWPORT: &str = "Scene.set_viewport";
+pub const SCENE_SET_CLEAR_COLOUR: &str = "Scene.set_clear_colour";
+pub const SCENE_CAPTURE_FRAME: &str = "Scene.capture_frame";
+
 pub const ALL_BOUND: &[&str] = &[
     DAG_EXECUTE,
     DAG_VALIDATE,
@@ -348,6 +378,34 @@ pub const ALL_BOUND: &[&str] = &[
     COSMIC_COMPTON_WAVELENGTH,
     COSMIC_DE_BROGLIE,
     COSMIC_USRI_PARSE,
+    NLP_GAZETTEER_RUN,
+    NLP_GAZETTEER_BUILD,
+    INFERENCE_EMBED,
+    INFERENCE_GROUNDING,
+    INFERENCE_VERIFY_TURN,
+    INFERENCE_DETECT_UNGROUNDED,
+    FINANCE_CONVERT_CURRENCY,
+    FINANCE_MULTISIG_CHECK,
+    FINANCE_LEDGER_BALANCE,
+    CAPABILITY_GRANT,
+    CAPABILITY_REVOKE,
+    CAPABILITY_TEST_GATING,
+    CAPABILITY_AUDIT,
+    SENTINEL_INSPECT,
+    SENTINEL_GATE,
+    AGENT_TRACE,
+    AGENT_VERIFY,
+    IDENTITY_CURRENT_USER,
+    AUDIO_SPECTRUM,
+    SCENE_CREATE,
+    SCENE_ADD_NODE,
+    SCENE_SET_TRANSFORM,
+    SCENE_SET_MESH,
+    SCENE_ADD_CAMERA,
+    SCENE_RENDER,
+    SCENE_SET_VIEWPORT,
+    SCENE_SET_CLEAR_COLOUR,
+    SCENE_CAPTURE_FRAME,
 ];
 
 /// Future extract target for an invoke id. Not a crate today.
@@ -436,6 +494,31 @@ pub fn seam_for(id: &str) -> &'static str {
         | COSMIC_COMPTON_WAVELENGTH
         | COSMIC_DE_BROGLIE
         | COSMIC_USRI_PARSE => "cosmic",
+        NLP_GAZETTEER_RUN | NLP_GAZETTEER_BUILD => "nlp",
+        INFERENCE_EMBED
+        | INFERENCE_GROUNDING
+        | INFERENCE_VERIFY_TURN
+        | INFERENCE_DETECT_UNGROUNDED => "inference",
+        FINANCE_CONVERT_CURRENCY | FINANCE_MULTISIG_CHECK | FINANCE_LEDGER_BALANCE => "econ",
+        CAPABILITY_GRANT
+        | CAPABILITY_REVOKE
+        | CAPABILITY_TEST_GATING
+        | CAPABILITY_AUDIT
+        | SENTINEL_INSPECT
+        | SENTINEL_GATE
+        | AGENT_TRACE
+        | AGENT_VERIFY
+        | IDENTITY_CURRENT_USER => "governance",
+        AUDIO_SPECTRUM => "audio",
+        SCENE_CREATE
+        | SCENE_ADD_NODE
+        | SCENE_SET_TRANSFORM
+        | SCENE_SET_MESH
+        | SCENE_ADD_CAMERA
+        | SCENE_RENDER
+        | SCENE_SET_VIEWPORT
+        | SCENE_SET_CLEAR_COLOUR
+        | SCENE_CAPTURE_FRAME => "render",
         _ => "unbound",
     }
 }
