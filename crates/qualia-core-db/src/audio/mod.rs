@@ -5,6 +5,8 @@ pub mod acoustic_sab;
 pub mod audio_sidecar_link;
 pub mod audio_spectral_sheet;
 pub mod cqt_bake;
+/// N6: Traditional DAW DSP — oscillator, ADSR, filter, LFO, effects, MIDI, transport, meters.
+pub mod dsp;
 pub mod dsp_kernel;
 pub mod hrtf;
 /// AU-CORE-DSP — real inverse STFT (WOLA resynthesis; reuses `qualia-audio`). Native only.

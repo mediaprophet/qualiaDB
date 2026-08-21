@@ -1,5 +1,7 @@
 //! Audio invoke seam — spectrum analysis from the time-frequency surface engine.
 
+pub mod dsp;
+
 use super::args;
 use crate::audio::tf_surface::TfSurface;
 use poet_vibe::{DiagCode, Diagnostic, Span, Value};

@@ -254,6 +254,23 @@ pub const INFERENCE_RUN_RERANKER: &str = "Inference.run_reranker";
 pub const INFERENCE_VECTOR_SEARCH: &str = "Inference.vector_search";
 pub const INFERENCE_CONSTRAINED_DECODE: &str = "Inference.constrained_decode";
 
+// ── N6: Audio DAW — oscillator, envelope, filter, LFO, effects, MIDI, transport, meters ─
+pub const AUDIO_OSCILLATOR: &str = "Audio.oscillator";
+pub const AUDIO_ENVELOPE: &str = "Audio.envelope";
+pub const AUDIO_FILTER: &str = "Audio.filter";
+pub const AUDIO_LFO: &str = "Audio.lfo";
+pub const AUDIO_DELAY: &str = "Audio.delay";
+pub const AUDIO_REVERB: &str = "Audio.reverb";
+pub const AUDIO_COMPRESSOR: &str = "Audio.compressor";
+pub const AUDIO_EQ: &str = "Audio.eq";
+pub const AUDIO_MIDI_NOTE: &str = "Audio.midi_note";
+pub const AUDIO_QUANTIZE: &str = "Audio.quantize";
+pub const AUDIO_TRANSPOSE: &str = "Audio.transpose";
+pub const AUDIO_TRANSPORT: &str = "Audio.transport";
+pub const AUDIO_WAVEFORM_METER: &str = "Audio.waveform_meter";
+pub const AUDIO_PHASE_METER: &str = "Audio.phase_meter";
+pub const AUDIO_LOUDNESS_METER: &str = "Audio.loudness_meter";
+
 pub const ALL_BOUND: &[&str] = &[
     DAG_EXECUTE,
     DAG_VALIDATE,
@@ -462,6 +479,21 @@ pub const ALL_BOUND: &[&str] = &[
     INFERENCE_RUN_RERANKER,
     INFERENCE_VECTOR_SEARCH,
     INFERENCE_CONSTRAINED_DECODE,
+    AUDIO_OSCILLATOR,
+    AUDIO_ENVELOPE,
+    AUDIO_FILTER,
+    AUDIO_LFO,
+    AUDIO_DELAY,
+    AUDIO_REVERB,
+    AUDIO_COMPRESSOR,
+    AUDIO_EQ,
+    AUDIO_MIDI_NOTE,
+    AUDIO_QUANTIZE,
+    AUDIO_TRANSPOSE,
+    AUDIO_TRANSPORT,
+    AUDIO_WAVEFORM_METER,
+    AUDIO_PHASE_METER,
+    AUDIO_LOUDNESS_METER,
 ];
 
 /// Future extract target for an invoke id. Not a crate today.
@@ -579,6 +611,10 @@ pub fn seam_for(id: &str) -> &'static str {
         | AGENT_VERIFY
         | IDENTITY_CURRENT_USER => "governance",
         AUDIO_SPECTRUM => "audio",
+        AUDIO_OSCILLATOR | AUDIO_ENVELOPE | AUDIO_FILTER | AUDIO_LFO | AUDIO_DELAY
+        | AUDIO_REVERB | AUDIO_COMPRESSOR | AUDIO_EQ | AUDIO_MIDI_NOTE | AUDIO_QUANTIZE
+        | AUDIO_TRANSPOSE | AUDIO_TRANSPORT | AUDIO_WAVEFORM_METER | AUDIO_PHASE_METER
+        | AUDIO_LOUDNESS_METER => "audio",
         SCENE_CREATE
         | SCENE_ADD_NODE
         | SCENE_SET_TRANSFORM
