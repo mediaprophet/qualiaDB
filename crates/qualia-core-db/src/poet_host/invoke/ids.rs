@@ -32,6 +32,20 @@ pub const GEOM_POINT_SEGMENT_DISTANCE_2D: &str = "ComputationalGeometry.point_se
 pub const GEOM_POINT_SEGMENT_DISTANCE_3D: &str = "ComputationalGeometry.point_segment_distance_3d";
 pub const GEOM_POINT_TRIANGLE_DISTANCE_3D: &str =
     "ComputationalGeometry.point_triangle_distance_3d";
+pub const GEOM_TRIANGULATE_POLYGON: &str = "ComputationalGeometry.triangulate_polygon";
+pub const GEOM_SURFACE_AREA: &str = "ComputationalGeometry.surface_area";
+pub const GEOM_SIGNED_VOLUME: &str = "ComputationalGeometry.signed_volume";
+pub const GEOM_MORTON_ENCODE_2D: &str = "ComputationalGeometry.morton_encode_2d";
+pub const GEOM_MORTON_DECODE_2D: &str = "ComputationalGeometry.morton_decode_2d";
+pub const GEOM_MORTON_ENCODE_3D: &str = "ComputationalGeometry.morton_encode_3d";
+pub const GEOM_HILBERT_ENCODE_2D: &str = "ComputationalGeometry.hilbert_encode_2d";
+pub const GEOM_ORIENTATION_2: &str = "ComputationalGeometry.orientation_2";
+pub const GEOM_CIRCUMCENTER: &str = "ComputationalGeometry.circumcenter";
+pub const GEOM_LINE_SEGMENT_INTERSECTION_2: &str =
+    "ComputationalGeometry.line_segment_intersection_2";
+pub const GEOM_BEZIER_EVAL: &str = "ComputationalGeometry.bezier_eval";
+pub const GEOM_NEAREST_SITE: &str = "ComputationalGeometry.nearest_site_brute_force";
+pub const GEOM_ORIENT_3D: &str = "ComputationalGeometry.orient_3d";
 pub const VISION_AHASH: &str = "ComputerVision.ahash";
 pub const VISION_GAUSSIAN_BLUR: &str = "ComputerVision.gaussian_blur";
 pub const VISION_SOBEL_MAGNITUDE: &str = "ComputerVision.sobel_magnitude";
@@ -167,6 +181,7 @@ pub const CHEM_LDA_CORRELATION_VWN: &str = "Chemistry.lda_correlation_vwn";
 pub const MED_TANIMOTO: &str = "Medical.tanimoto";
 pub const MED_STRUCTURAL_FINGERPRINT: &str = "Medical.structural_fingerprint";
 pub const MED_ANALYZE_INTENSITY_GRID: &str = "Medical.analyze_intensity_grid";
+pub const MED_ANALYZE_DIFFERENTIAL: &str = "MedicalComputing.analyze_differential";
 pub const ID_DID_Q42: &str = "ContractsIdentityAndConsensus.parse_did_q42";
 pub const CRYPTO_SHA256: &str = "QuantumAndCryptographic.sha256";
 pub const NLP_ANALYZE: &str = "nlp.analyze";
@@ -744,6 +759,19 @@ pub const ALL_BOUND: &[&str] = &[
     GEOM_POINT_SEGMENT_DISTANCE_2D,
     GEOM_POINT_SEGMENT_DISTANCE_3D,
     GEOM_POINT_TRIANGLE_DISTANCE_3D,
+    GEOM_TRIANGULATE_POLYGON,
+    GEOM_SURFACE_AREA,
+    GEOM_SIGNED_VOLUME,
+    GEOM_MORTON_ENCODE_2D,
+    GEOM_MORTON_DECODE_2D,
+    GEOM_MORTON_ENCODE_3D,
+    GEOM_HILBERT_ENCODE_2D,
+    GEOM_ORIENTATION_2,
+    GEOM_CIRCUMCENTER,
+    GEOM_LINE_SEGMENT_INTERSECTION_2,
+    GEOM_BEZIER_EVAL,
+    GEOM_NEAREST_SITE,
+    GEOM_ORIENT_3D,
     VISION_AHASH,
     VISION_GAUSSIAN_BLUR,
     VISION_SOBEL_MAGNITUDE,
@@ -877,6 +905,7 @@ pub const ALL_BOUND: &[&str] = &[
     MED_TANIMOTO,
     MED_STRUCTURAL_FINGERPRINT,
     MED_ANALYZE_INTENSITY_GRID,
+    MED_ANALYZE_DIFFERENTIAL,
     ID_DID_Q42,
     CRYPTO_SHA256,
     NLP_ANALYZE,
@@ -1460,7 +1489,20 @@ pub fn seam_for(id: &str) -> &'static str {
         | GEOM_DISTANCE_3D
         | GEOM_POINT_SEGMENT_DISTANCE_2D
         | GEOM_POINT_SEGMENT_DISTANCE_3D
-        | GEOM_POINT_TRIANGLE_DISTANCE_3D => "geometry",
+        | GEOM_POINT_TRIANGLE_DISTANCE_3D
+        | GEOM_TRIANGULATE_POLYGON
+        | GEOM_SURFACE_AREA
+        | GEOM_SIGNED_VOLUME
+        | GEOM_MORTON_ENCODE_2D
+        | GEOM_MORTON_DECODE_2D
+        | GEOM_MORTON_ENCODE_3D
+        | GEOM_HILBERT_ENCODE_2D
+        | GEOM_ORIENTATION_2
+        | GEOM_CIRCUMCENTER
+        | GEOM_LINE_SEGMENT_INTERSECTION_2
+        | GEOM_BEZIER_EVAL
+        | GEOM_NEAREST_SITE
+        | GEOM_ORIENT_3D => "geometry",
         VISION_AHASH
         | VISION_GAUSSIAN_BLUR
         | VISION_SOBEL_MAGNITUDE
@@ -1499,7 +1541,10 @@ pub fn seam_for(id: &str) -> &'static str {
         | CHEM_ATOMIC_WEIGHT
         | CHEM_LDA_EXCHANGE
         | CHEM_LDA_CORRELATION_VWN => "chemistry",
-        MED_TANIMOTO | MED_STRUCTURAL_FINGERPRINT | MED_ANALYZE_INTENSITY_GRID => "medical",
+        MED_TANIMOTO
+        | MED_STRUCTURAL_FINGERPRINT
+        | MED_ANALYZE_INTENSITY_GRID
+        | MED_ANALYZE_DIFFERENTIAL => "medical",
         ENG_CAUCHY_STRESS | ENG_DRAG_FORCE | ENG_REYNOLDS | ENG_FATIGUE_CYCLES
         | ENG_MINER_DAMAGE => "engineering",
         PHYS_WAVE_1D

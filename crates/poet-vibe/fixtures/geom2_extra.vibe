@@ -1,0 +1,31 @@
+# Computational geometry — triangulation, mesh measures, spatial ordering,
+# intersections, CAD curves, orientation, Voronoi
+invoke ComputationalGeometry.triangulate_polygon { vertices: [[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]] }
+invoke ComputationalGeometry.surface_area {
+  vertices: [[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]],
+  triangles: [[0, 1, 2]]
+}
+invoke ComputationalGeometry.signed_volume {
+  vertices: [[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]],
+  triangles: [[0, 1, 2]]
+}
+invoke ComputationalGeometry.morton_encode_2d { x: 3, y: 5 }
+invoke ComputationalGeometry.morton_decode_2d { code: 123 }
+invoke ComputationalGeometry.morton_encode_3d { x: 3, y: 5, z: 7 }
+invoke ComputationalGeometry.hilbert_encode_2d { x: 3, y: 5 }
+invoke ComputationalGeometry.orientation_2 { a: [0.0, 0.0], b: [1.0, 0.0], c: [0.5, 0.5] }
+invoke ComputationalGeometry.circumcenter { a: [0.0, 0.0], b: [1.0, 0.0], c: [0.0, 1.0] }
+invoke ComputationalGeometry.line_segment_intersection_2 {
+  a: [0.0, 0.0], b: [1.0, 1.0], c: [0.0, 1.0], d: [1.0, 0.0]
+}
+invoke ComputationalGeometry.bezier_eval {
+  control: [[0.0, 0.0, 0.0], [1.0, 1.0, 0.0], [2.0, 0.0, 0.0]],
+  t: 0.5
+}
+invoke ComputationalGeometry.nearest_site_brute_force {
+  sites: [[0.0, 0.0], [5.0, 5.0], [10.0, 0.0]],
+  query: [1.0, 1.0]
+}
+invoke ComputationalGeometry.orient_3d {
+  a: [0.0, 0.0, 0.0], b: [1.0, 0.0, 0.0], c: [0.0, 1.0, 0.0], d: [0.0, 0.0, 1.0]
+}

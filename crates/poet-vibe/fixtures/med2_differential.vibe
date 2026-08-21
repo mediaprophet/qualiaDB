@@ -1,0 +1,18 @@
+# Medical computing — Bayesian differential analysis over a caller-supplied KB
+# NOTE: This is an epistemic proposal, NOT a diagnosis. The KB is illustrative.
+invoke MedicalComputing.analyze_differential {
+  findings: ["fever", "cough"],
+  unlisted_finding_likelihood: 0.5,
+  conditions: [
+    {
+      id: "cold",
+      prior: 0.7,
+      likelihoods: { fever: 0.3, cough: 0.8 }
+    },
+    {
+      id: "flu",
+      prior: 0.3,
+      likelihoods: { fever: 0.9, cough: 0.7 }
+    }
+  ]
+}

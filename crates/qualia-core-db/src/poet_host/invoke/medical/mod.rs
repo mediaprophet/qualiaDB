@@ -3,6 +3,12 @@
 //! Exposes `specialized_libs::medical_computing` functions through VibeScript
 //! invoke IDs in the `Medical.*` namespace.
 
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+mod extra;
+
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+pub use extra::analyze_differential;
+
 use super::args;
 use poet_vibe::{Diagnostic, Span, Value};
 
@@ -101,4 +107,12 @@ pub fn analyze_intensity_grid(args: &Value, span: Span) -> Result<Value, Diagnos
         ])),
         Err(e) => Err(args::bad(span, format!("analyze_intensity_grid: {e:?}"))),
     }
+}
+
+#[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+pub fn analyze_differential(
+    _args: &poet_vibe::Value,
+    span: poet_vibe::Span,
+) -> Result<poet_vibe::Value, poet_vibe::Diagnostic> {
+    Err(super::args::need_scientific(span, "MedicalComputing"))
 }
