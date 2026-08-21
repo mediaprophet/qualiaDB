@@ -20,6 +20,8 @@ mod extra;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 mod hypothesis;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+mod more;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 mod regression;
 
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
@@ -43,6 +45,8 @@ pub use extended::{
 pub use extra::*;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 pub use hypothesis::{chi_square_gof, one_sample_t, one_way_anova, paired_t, two_sample_t};
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+pub use more::*;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 pub use regression::linear_regression;
 
@@ -162,5 +166,26 @@ stats_stub!(
     mcnemar,
     bootstrap_means,
     ljung_box,
-    adf_proxy
+    adf_proxy,
+    // more
+    argmax,
+    standard_pdf,
+    standard_quantile,
+    lognormal_cdf,
+    uniform_cdf,
+    laplace_cdf,
+    students_t_quantile,
+    students_t_upper_p,
+    chi_squared_quantile,
+    fisher_f_quantile,
+    gammp,
+    gammq,
+    betai,
+    entropy_from_counts,
+    tukey_fences,
+    mahalanobis_sq,
+    mvn_log_pdf,
+    mvn_pdf,
+    mvn_sample,
+    mvn_mle
 );

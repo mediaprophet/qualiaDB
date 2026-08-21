@@ -4,16 +4,24 @@
 //! in the `MachineLearning.*` namespace.
 
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+mod active;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 mod extended;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 mod extra;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+mod more;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 mod ols;
 
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+pub use active::*;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 pub use extended::{accuracy, kmeans, mae, mse, r2_score, rmse, roc_auc, train_test_split};
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 pub use extra::*;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+pub use more::*;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 pub use ols::fit_ols;
 
@@ -61,5 +69,32 @@ ml_stub!(
     power_two_sample,
     required_sample_size,
     transe_score,
-    distmult_score
+    distmult_score,
+    // more
+    complex_score,
+    rotate_score,
+    kg_mean_rank,
+    kg_mean_reciprocal_rank,
+    kg_hits_at_k,
+    polynomial_regression,
+    bootstrap_estimate,
+    bootstrap_ci,
+    permutation_test,
+    required_sample_size_two_proportion,
+    loocv,
+    n_rejected,
+    // active learning
+    al_row_score,
+    al_score,
+    al_rank_informative,
+    al_most_informative,
+    al_cosine_similarity,
+    al_representativeness,
+    al_information_density,
+    al_rank_by_density,
+    al_vote_entropy,
+    al_consensus,
+    al_consensus_entropy,
+    al_average_kl_disagreement,
+    al_rank_by_disagreement
 );

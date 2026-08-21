@@ -138,6 +138,26 @@ pub const STAT_MCNEMAR: &str = "Statistics.mcnemar";
 pub const STAT_BOOTSTRAP_MEANS: &str = "Statistics.bootstrap_means";
 pub const STAT_LJUNG_BOX: &str = "Statistics.ljung_box";
 pub const STAT_ADF_PROXY: &str = "Statistics.adf_proxy";
+pub const STAT_ARGMAX: &str = "Statistics.argmax";
+pub const STAT_STANDARD_PDF: &str = "Statistics.standard_pdf";
+pub const STAT_STANDARD_QUANTILE: &str = "Statistics.standard_quantile";
+pub const STAT_LOGNORMAL_CDF: &str = "Statistics.lognormal_cdf";
+pub const STAT_UNIFORM_CDF: &str = "Statistics.uniform_cdf";
+pub const STAT_LAPLACE_CDF: &str = "Statistics.laplace_cdf";
+pub const STAT_STUDENTS_T_QUANTILE: &str = "Statistics.students_t_quantile";
+pub const STAT_STUDENTS_T_UPPER_P: &str = "Statistics.students_t_upper_p";
+pub const STAT_CHI_SQUARED_QUANTILE: &str = "Statistics.chi_squared_quantile";
+pub const STAT_FISHER_F_QUANTILE: &str = "Statistics.fisher_f_quantile";
+pub const STAT_GAMMP: &str = "Statistics.gammp";
+pub const STAT_GAMMQ: &str = "Statistics.gammq";
+pub const STAT_BETAI: &str = "Statistics.betai";
+pub const STAT_ENTROPY_FROM_COUNTS: &str = "Statistics.entropy_from_counts";
+pub const STAT_TUKEY_FENCES: &str = "Statistics.tukey_fences";
+pub const STAT_MAHALANOBIS_SQ: &str = "Statistics.mahalanobis_sq";
+pub const STAT_MVN_LOG_PDF: &str = "Statistics.mvn_log_pdf";
+pub const STAT_MVN_PDF: &str = "Statistics.mvn_pdf";
+pub const STAT_MVN_SAMPLE: &str = "Statistics.mvn_sample";
+pub const STAT_MVN_MLE: &str = "Statistics.mvn_mle";
 pub const ML_OLS: &str = "MachineLearning.ols";
 pub const ML_MSE: &str = "MachineLearning.mse";
 pub const ML_RMSE: &str = "MachineLearning.rmse";
@@ -160,6 +180,32 @@ pub const ML_POWER_TWO_SAMPLE: &str = "MachineLearning.power_two_sample";
 pub const ML_REQUIRED_SAMPLE_SIZE: &str = "MachineLearning.required_sample_size";
 pub const ML_TRANSE_SCORE: &str = "MachineLearning.transe_score";
 pub const ML_DISTMULT_SCORE: &str = "MachineLearning.distmult_score";
+pub const ML_COMPLEX_SCORE: &str = "MachineLearning.complex_score";
+pub const ML_ROTATE_SCORE: &str = "MachineLearning.rotate_score";
+pub const ML_KG_MEAN_RANK: &str = "MachineLearning.kg_mean_rank";
+pub const ML_KG_MRR: &str = "MachineLearning.kg_mean_reciprocal_rank";
+pub const ML_KG_HITS_AT_K: &str = "MachineLearning.kg_hits_at_k";
+pub const ML_POLYNOMIAL_REGRESSION: &str = "MachineLearning.polynomial_regression";
+pub const ML_BOOTSTRAP_ESTIMATE: &str = "MachineLearning.bootstrap_estimate";
+pub const ML_BOOTSTRAP_CI: &str = "MachineLearning.bootstrap_ci";
+pub const ML_PERMUTATION_TEST: &str = "MachineLearning.permutation_test";
+pub const ML_REQUIRED_SAMPLE_SIZE_TWO_PROPORTION: &str =
+    "MachineLearning.required_sample_size_two_proportion";
+pub const ML_LOOCV: &str = "MachineLearning.loocv";
+pub const ML_N_REJECTED: &str = "MachineLearning.n_rejected";
+pub const ML_AL_ROW_SCORE: &str = "MachineLearning.al_row_score";
+pub const ML_AL_SCORE: &str = "MachineLearning.al_score";
+pub const ML_AL_RANK_INFORMATIVE: &str = "MachineLearning.al_rank_informative";
+pub const ML_AL_MOST_INFORMATIVE: &str = "MachineLearning.al_most_informative";
+pub const ML_AL_COSINE_SIMILARITY: &str = "MachineLearning.al_cosine_similarity";
+pub const ML_AL_REPRESENTATIVENESS: &str = "MachineLearning.al_representativeness";
+pub const ML_AL_INFORMATION_DENSITY: &str = "MachineLearning.al_information_density";
+pub const ML_AL_RANK_BY_DENSITY: &str = "MachineLearning.al_rank_by_density";
+pub const ML_AL_VOTE_ENTROPY: &str = "MachineLearning.al_vote_entropy";
+pub const ML_AL_CONSENSUS: &str = "MachineLearning.al_consensus";
+pub const ML_AL_CONSENSUS_ENTROPY: &str = "MachineLearning.al_consensus_entropy";
+pub const ML_AL_AVERAGE_KL_DISAGREEMENT: &str = "MachineLearning.al_average_kl_disagreement";
+pub const ML_AL_RANK_BY_DISAGREEMENT: &str = "MachineLearning.al_rank_by_disagreement";
 pub const BIOSIGNAL_DP_FILTER: &str = "biosignal.dp_filter";
 pub const BIOSIGNAL_DP_CONFIG: &str = "biosignal.dp_config";
 pub const PHYS_PROJECTILE: &str = "PhysicsAndODE.projectile";
@@ -867,6 +913,26 @@ pub const ALL_BOUND: &[&str] = &[
     STAT_BOOTSTRAP_MEANS,
     STAT_LJUNG_BOX,
     STAT_ADF_PROXY,
+    STAT_ARGMAX,
+    STAT_STANDARD_PDF,
+    STAT_STANDARD_QUANTILE,
+    STAT_LOGNORMAL_CDF,
+    STAT_UNIFORM_CDF,
+    STAT_LAPLACE_CDF,
+    STAT_STUDENTS_T_QUANTILE,
+    STAT_STUDENTS_T_UPPER_P,
+    STAT_CHI_SQUARED_QUANTILE,
+    STAT_FISHER_F_QUANTILE,
+    STAT_GAMMP,
+    STAT_GAMMQ,
+    STAT_BETAI,
+    STAT_ENTROPY_FROM_COUNTS,
+    STAT_TUKEY_FENCES,
+    STAT_MAHALANOBIS_SQ,
+    STAT_MVN_LOG_PDF,
+    STAT_MVN_PDF,
+    STAT_MVN_SAMPLE,
+    STAT_MVN_MLE,
     STAT_PEARSON,
     ML_OLS,
     ML_MSE,
@@ -890,6 +956,31 @@ pub const ALL_BOUND: &[&str] = &[
     ML_REQUIRED_SAMPLE_SIZE,
     ML_TRANSE_SCORE,
     ML_DISTMULT_SCORE,
+    ML_COMPLEX_SCORE,
+    ML_ROTATE_SCORE,
+    ML_KG_MEAN_RANK,
+    ML_KG_MRR,
+    ML_KG_HITS_AT_K,
+    ML_POLYNOMIAL_REGRESSION,
+    ML_BOOTSTRAP_ESTIMATE,
+    ML_BOOTSTRAP_CI,
+    ML_PERMUTATION_TEST,
+    ML_REQUIRED_SAMPLE_SIZE_TWO_PROPORTION,
+    ML_LOOCV,
+    ML_N_REJECTED,
+    ML_AL_ROW_SCORE,
+    ML_AL_SCORE,
+    ML_AL_RANK_INFORMATIVE,
+    ML_AL_MOST_INFORMATIVE,
+    ML_AL_COSINE_SIMILARITY,
+    ML_AL_REPRESENTATIVENESS,
+    ML_AL_INFORMATION_DENSITY,
+    ML_AL_RANK_BY_DENSITY,
+    ML_AL_VOTE_ENTROPY,
+    ML_AL_CONSENSUS,
+    ML_AL_CONSENSUS_ENTROPY,
+    ML_AL_AVERAGE_KL_DISAGREEMENT,
+    ML_AL_RANK_BY_DISAGREEMENT,
     PHYS_PROJECTILE,
     BIO_ALIGN,
     CHEM_SMILES,
@@ -1491,7 +1582,27 @@ pub fn seam_for(id: &str) -> &'static str {
         | STAT_MCNEMAR
         | STAT_BOOTSTRAP_MEANS
         | STAT_LJUNG_BOX
-        | STAT_ADF_PROXY => "stats",
+        | STAT_ADF_PROXY
+        | STAT_ARGMAX
+        | STAT_STANDARD_PDF
+        | STAT_STANDARD_QUANTILE
+        | STAT_LOGNORMAL_CDF
+        | STAT_UNIFORM_CDF
+        | STAT_LAPLACE_CDF
+        | STAT_STUDENTS_T_QUANTILE
+        | STAT_STUDENTS_T_UPPER_P
+        | STAT_CHI_SQUARED_QUANTILE
+        | STAT_FISHER_F_QUANTILE
+        | STAT_GAMMP
+        | STAT_GAMMQ
+        | STAT_BETAI
+        | STAT_ENTROPY_FROM_COUNTS
+        | STAT_TUKEY_FENCES
+        | STAT_MAHALANOBIS_SQ
+        | STAT_MVN_LOG_PDF
+        | STAT_MVN_PDF
+        | STAT_MVN_SAMPLE
+        | STAT_MVN_MLE => "stats",
         GEOM_HULL2
         | GEOM_DISTANCE_2D
         | GEOM_DISTANCE_3D
@@ -1542,7 +1653,32 @@ pub fn seam_for(id: &str) -> &'static str {
         | ML_POWER_TWO_SAMPLE
         | ML_REQUIRED_SAMPLE_SIZE
         | ML_TRANSE_SCORE
-        | ML_DISTMULT_SCORE => "ml",
+        | ML_DISTMULT_SCORE
+        | ML_COMPLEX_SCORE
+        | ML_ROTATE_SCORE
+        | ML_KG_MEAN_RANK
+        | ML_KG_MRR
+        | ML_KG_HITS_AT_K
+        | ML_POLYNOMIAL_REGRESSION
+        | ML_BOOTSTRAP_ESTIMATE
+        | ML_BOOTSTRAP_CI
+        | ML_PERMUTATION_TEST
+        | ML_REQUIRED_SAMPLE_SIZE_TWO_PROPORTION
+        | ML_LOOCV
+        | ML_N_REJECTED
+        | ML_AL_ROW_SCORE
+        | ML_AL_SCORE
+        | ML_AL_RANK_INFORMATIVE
+        | ML_AL_MOST_INFORMATIVE
+        | ML_AL_COSINE_SIMILARITY
+        | ML_AL_REPRESENTATIVENESS
+        | ML_AL_INFORMATION_DENSITY
+        | ML_AL_RANK_BY_DENSITY
+        | ML_AL_VOTE_ENTROPY
+        | ML_AL_CONSENSUS
+        | ML_AL_CONSENSUS_ENTROPY
+        | ML_AL_AVERAGE_KL_DISAGREEMENT
+        | ML_AL_RANK_BY_DISAGREEMENT => "ml",
         PHYS_PROJECTILE | BIO_ALIGN | CHEM_SMILES => "science",
         CHEM_ELEMENT_SYMBOL
         | CHEM_ATOMIC_NUMBER

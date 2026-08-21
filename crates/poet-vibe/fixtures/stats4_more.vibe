@@ -1,0 +1,22 @@
+# Statistics extras — remaining distribution CDFs/quantiles, special functions,
+# multivariate normal, anomaly detection
+invoke Statistics.argmax { values: [3.0, 1.0, 4.0, 1.0, 5.0, 9.0, 2.0, 6.0] }
+invoke Statistics.standard_pdf { z: 0.0 }
+invoke Statistics.standard_quantile { p: 0.975 }
+invoke Statistics.lognormal_cdf { x: 2.0, mu: 0.0, sigma: 1.0 }
+invoke Statistics.uniform_cdf { x: 0.5, a: 0.0, b: 1.0 }
+invoke Statistics.laplace_cdf { x: 0.0, mu: 0.0, b: 1.0 }
+invoke Statistics.students_t_quantile { p: 0.975, nu: 10.0 }
+invoke Statistics.students_t_upper_p { t: 2.0, nu: 10.0 }
+invoke Statistics.chi_squared_quantile { p: 0.95, k: 5.0 }
+invoke Statistics.fisher_f_quantile { p: 0.95, d1: 3.0, d2: 10.0 }
+invoke Statistics.gammp { a: 2.0, x: 3.0 }
+invoke Statistics.gammq { a: 2.0, x: 3.0 }
+invoke Statistics.betai { a: 2.0, b: 3.0, x: 0.5 }
+invoke Statistics.entropy_from_counts { counts: [10, 20, 30, 40] }
+invoke Statistics.tukey_fences { values: [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 100.0], k: 1.5 }
+invoke Statistics.mahalanobis_sq { x: [1.0, 2.0], mean: [0.0, 0.0], inv_cov: [1.0, 0.0, 0.0, 1.0] }
+invoke Statistics.mvn_log_pdf { x: [0.0, 0.0], mean: [0.0, 0.0], cov: [1.0, 0.0, 0.0, 1.0], p: 2 }
+invoke Statistics.mvn_pdf { x: [0.0, 0.0], mean: [0.0, 0.0], cov: [1.0, 0.0, 0.0, 1.0], p: 2 }
+invoke Statistics.mvn_sample { mean: [0.0, 0.0], cov: [1.0, 0.0, 0.0, 1.0], p: 2, seed: 42 }
+invoke Statistics.mvn_mle { data: [1.0, 2.0, 3.0, 4.0, 5.0, 6.0], n: 3, p: 2 }

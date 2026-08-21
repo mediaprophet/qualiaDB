@@ -1,0 +1,30 @@
+# ML extras — KG embedding scores, ranking, polynomial regression,
+# bootstrap CI, permutation test, power analysis, LOOCV, active learning
+invoke MachineLearning.complex_score { h: [0.3, 0.4, 0.1, 0.2], r: [0.5, 0.1, 0.2, 0.3], t: [0.2, 0.3, 0.4, 0.1], k: 2 }
+invoke MachineLearning.rotate_score { h: [0.3, 0.4, 0.1, 0.2], r: [0.5, 0.1], t: [0.2, 0.3, 0.4, 0.1], k: 2 }
+invoke MachineLearning.polynomial_regression { x: [0.0, 1.0, 2.0, 3.0, 4.0], y: [1.0, 2.0, 5.0, 10.0, 17.0], n: 5, degree: 2 }
+invoke MachineLearning.bootstrap_estimate { data: [1.0, 2.0, 3.0, 4.0, 5.0], b: 100, seed: 42, statistic: "mean" }
+invoke MachineLearning.bootstrap_ci { data: [1.0, 2.0, 3.0, 4.0, 5.0], b: 100, alpha: 0.05, seed: 42, method: "percentile", statistic: "mean" }
+invoke MachineLearning.permutation_test { a: [1.0, 2.0, 3.0, 4.0, 5.0], b: [3.0, 4.0, 5.0, 6.0, 7.0], n_perm: 200, seed: 42, statistic: "mean" }
+invoke MachineLearning.required_sample_size_two_proportion { p1: 0.1, p2: 0.2, alpha: 0.05, power: 0.8 }
+invoke MachineLearning.loocv { n: 5 }
+invoke MachineLearning.n_rejected { adjusted: [0.01, 0.04, 0.03, 0.08], alpha: 0.05 }
+
+# Active learning — uncertainty sampling
+invoke MachineLearning.al_row_score { row: [0.7, 0.2, 0.1], strategy: "Entropy" }
+invoke MachineLearning.al_score { probs: [[0.7, 0.2, 0.1], [0.3, 0.3, 0.4]], strategy: "Entropy" }
+invoke MachineLearning.al_rank_informative { probs: [[0.7, 0.2, 0.1], [0.3, 0.3, 0.4]], strategy: "Entropy" }
+invoke MachineLearning.al_most_informative { probs: [[0.7, 0.2, 0.1], [0.3, 0.3, 0.4]], strategy: "Entropy" }
+
+# Active learning — density
+invoke MachineLearning.al_cosine_similarity { a: [1.0, 0.0], b: [0.0, 1.0] }
+invoke MachineLearning.al_representativeness { features: [[1.0, 0.0], [0.0, 1.0], [1.0, 1.0]] }
+invoke MachineLearning.al_information_density { uncertainty: [0.5, 0.8, 0.3], features: [[1.0, 0.0], [0.0, 1.0], [1.0, 1.0]], beta: 1.0 }
+invoke MachineLearning.al_rank_by_density { uncertainty: [0.5, 0.8, 0.3], features: [[1.0, 0.0], [0.0, 1.0], [1.0, 1.0]], beta: 1.0 }
+
+# Active learning — query-by-committee
+invoke MachineLearning.al_vote_entropy { votes: [0, 1, 0, 2, 1], n_classes: 3 }
+invoke MachineLearning.al_consensus { members: [[0.7, 0.2, 0.1], [0.3, 0.4, 0.3]] }
+invoke MachineLearning.al_consensus_entropy { members: [[0.7, 0.2, 0.1], [0.3, 0.4, 0.3]] }
+invoke MachineLearning.al_average_kl_disagreement { members: [[0.7, 0.2, 0.1], [0.3, 0.4, 0.3]] }
+invoke MachineLearning.al_rank_by_disagreement { pool: [[[0.7, 0.2, 0.1], [0.3, 0.4, 0.3]], [[0.5, 0.4, 0.1], [0.5, 0.4, 0.1]]] }
