@@ -455,6 +455,16 @@ pub const LA_EIGENVALUES_GENERAL: &str = "LinearAlgebra.eigenvalues_general";
 pub const ONTOLOGY_ALIGN: &str = "OntologyAlignment.align";
 pub const GRAPH_FUZZY_JACCARD: &str = "GraphMatch.fuzzy_jaccard";
 pub const GRAPH_FUZZY_DICE: &str = "GraphMatch.fuzzy_dice";
+pub const GRAPH_APPROXIMATE_MATCH: &str = "GraphMatch.approximate_match";
+pub const CALC_POISSON_DIRICHLET: &str = "Calculus.solve_poisson_dirichlet";
+pub const CALC_DMP_HOLDS: &str = "Calculus.discrete_maximum_principle_holds";
+pub const GA_GEOMETRIC_PRODUCT: &str = "GeometricAlgebra.geometric_product";
+pub const GA_OUTER_PRODUCT: &str = "GeometricAlgebra.outer_product";
+pub const GA_ROTOR_FROM_ANGLE_AXIS: &str = "GeometricAlgebra.rotor_from_angle_axis";
+pub const GA_APPLY_ROTOR: &str = "GeometricAlgebra.apply_rotor";
+pub const GA_TRANSLATOR_FROM_DISPLACEMENT: &str = "GeometricAlgebra.translator_from_displacement";
+pub const GA_APPLY_TRANSLATOR: &str = "GeometricAlgebra.apply_translator";
+pub const GA_IS_SIMD_AVAILABLE: &str = "GeometricAlgebra.is_simd_available";
 
 // ── CAS extensions (wrap specialized_libs::symbolic_algebra) ──────────────
 pub const CAS_DIFFERENTIATE: &str = "SymbolicAlgebra.differentiate";
@@ -1231,6 +1241,16 @@ pub const ALL_BOUND: &[&str] = &[
     ONTOLOGY_ALIGN,
     GRAPH_FUZZY_JACCARD,
     GRAPH_FUZZY_DICE,
+    GRAPH_APPROXIMATE_MATCH,
+    CALC_POISSON_DIRICHLET,
+    CALC_DMP_HOLDS,
+    GA_GEOMETRIC_PRODUCT,
+    GA_OUTER_PRODUCT,
+    GA_ROTOR_FROM_ANGLE_AXIS,
+    GA_APPLY_ROTOR,
+    GA_TRANSLATOR_FROM_DISPLACEMENT,
+    GA_APPLY_TRANSLATOR,
+    GA_IS_SIMD_AVAILABLE,
     CAS_DIFFERENTIATE,
     CAS_SIMPLIFY,
     CAS_EXPAND,
@@ -1706,6 +1726,16 @@ pub fn seam_for(id: &str) -> &'static str {
         | ONTOLOGY_ALIGN
         | GRAPH_FUZZY_JACCARD
         | GRAPH_FUZZY_DICE
+        | GRAPH_APPROXIMATE_MATCH
+        | CALC_POISSON_DIRICHLET
+        | CALC_DMP_HOLDS
+        | GA_GEOMETRIC_PRODUCT
+        | GA_OUTER_PRODUCT
+        | GA_ROTOR_FROM_ANGLE_AXIS
+        | GA_APPLY_ROTOR
+        | GA_TRANSLATOR_FROM_DISPLACEMENT
+        | GA_APPLY_TRANSLATOR
+        | GA_IS_SIMD_AVAILABLE
         | CAS_DIFFERENTIATE
         | CAS_SIMPLIFY
         | CAS_EXPAND

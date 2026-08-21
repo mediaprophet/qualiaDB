@@ -118,6 +118,18 @@ pub fn dispatch(
         ids::ONTOLOGY_ALIGN => solvers::ontology_align(args, span),
         ids::GRAPH_FUZZY_JACCARD => solvers::fuzzy_jaccard(args, span),
         ids::GRAPH_FUZZY_DICE => solvers::fuzzy_dice(args, span),
+        ids::GRAPH_APPROXIMATE_MATCH => solvers::approximate_match(args, span),
+        ids::CALC_POISSON_DIRICHLET => solvers::solve_poisson_dirichlet(args, span),
+        ids::CALC_DMP_HOLDS => solvers::discrete_maximum_principle_holds(args, span),
+        ids::GA_GEOMETRIC_PRODUCT => solvers::ga_geometric_product(args, span),
+        ids::GA_OUTER_PRODUCT => solvers::ga_outer_product(args, span),
+        ids::GA_ROTOR_FROM_ANGLE_AXIS => solvers::ga_rotor_from_angle_axis(args, span),
+        ids::GA_APPLY_ROTOR => solvers::ga_apply_rotor(args, span),
+        ids::GA_TRANSLATOR_FROM_DISPLACEMENT => {
+            solvers::ga_translator_from_displacement(args, span)
+        }
+        ids::GA_APPLY_TRANSLATOR => solvers::ga_apply_translator(args, span),
+        ids::GA_IS_SIMD_AVAILABLE => solvers::ga_is_simd_available(args, span),
         ids::STAT_MEAN => stats::arithmetic_mean(args, span),
         ids::STAT_PEARSON => stats::pearson_r(args, span),
         ids::STAT_LINEAR_REGRESSION => stats::linear_regression(args, span),

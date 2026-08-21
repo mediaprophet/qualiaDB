@@ -616,3 +616,299 @@ fn parse_fuzzy_triples(
     }
     Ok(triples)
 }
+
+// ── Approximate graph matching ──────────────────────────────────────
+
+/// `GraphMatch.approximate_match` — hill-climbing fuzzy graph correspondence.
+/// Args: { pattern: [{ s, p, o, degree }], data: [{ s, p, o, degree }], n_pattern_nodes: u64, n_data_nodes: u64, restarts: u64, seed: u64 }
+pub fn approximate_match(args: &Value, span: Span) -> Result<Value, Diagnostic> {
+    let pattern = parse_fuzzy_triples(args, "pattern", "approximate_match", span)?;
+    let data = parse_fuzzy_triples(args, "data", "approximate_match", span)?;
+    let n_pattern = args::rec_u64(args, "n_pattern_nodes")
+        .ok_or_else(|| args::bad(span, "approximate_match needs n_pattern_nodes"))?
+        as usize;
+    let n_data = args::rec_u64(args, "n_data_nodes")
+        .ok_or_else(|| args::bad(span, "approximate_match needs n_data_nodes"))?
+        as usize;
+    let restarts = args::rec_u64(args, "restarts").unwrap_or(10) as usize;
+    let seed = args::rec_u64(args, "seed").unwrap_or(0);
+    match solvers::graph_match::approximate_match(
+        &pattern, &data, n_pattern, n_data, restarts, seed,
+    ) {
+        Some(result) => Ok(args::record([
+            (
+                "mapping",
+                Value::List(
+                    result
+                        .mapping
+                        .iter()
+                        .map(|&m| Value::U64(m as u64))
+                        .collect(),
+                ),
+            ),
+            ("score", Value::F64(result.score)),
+        ])),
+        None => Err(args::bad(span, "approximate_match: degenerate input")),
+    }
+}
+
+// ── Poisson solver ──────────────────────────────────────────────────
+
+/// `Calculus.solve_poisson_dirichlet` — 2D Poisson equation with Dirichlet BCs.
+/// Args: { width: u64, height: u64, spacing: f64, source: [f64], boundary: [f64], tolerance: f64, max_iterations: u64 }
+pub fn solve_poisson_dirichlet(args: &Value, span: Span) -> Result<Value, Diagnostic> {
+    let width = args::rec_u64(args, "width")
+        .ok_or_else(|| args::bad(span, "solve_poisson_dirichlet needs width"))?
+        as usize;
+    let height = args::rec_u64(args, "height")
+        .ok_or_else(|| args::bad(span, "solve_poisson_dirichlet needs height"))?
+        as usize;
+    let spacing = args::rec_f64(args, "spacing")
+        .ok_or_else(|| args::bad(span, "solve_poisson_dirichlet needs spacing"))?;
+    let source = args::rec_f64_list(args, "source")
+        .ok_or_else(|| args::bad(span, "solve_poisson_dirichlet needs source"))?;
+    let boundary = args::rec_f64_list(args, "boundary")
+        .ok_or_else(|| args::bad(span, "solve_poisson_dirichlet needs boundary"))?;
+    let tolerance = args::rec_f64(args, "tolerance").unwrap_or(1e-6);
+    let max_iter = args::rec_u64(args, "max_iterations").unwrap_or(10000) as u32;
+    let grid = solvers::calculus::potential::PoissonGrid {
+        width,
+        height,
+        spacing,
+    };
+    let count = grid
+        .point_count()
+        .ok_or_else(|| args::bad(span, "solve_poisson_dirichlet: grid overflow"))?;
+    let mut solution = vec![0.0; count];
+    match solvers::calculus::potential::solve_poisson_dirichlet(
+        grid,
+        &source,
+        &boundary,
+        &mut solution,
+        tolerance,
+        max_iter,
+    ) {
+        Ok(report) => Ok(args::record([
+            ("solution", args::f64_list_value(solution)),
+            ("iterations", Value::U64(report.iterations as u64)),
+            ("residual", Value::F64(report.residual_inf)),
+            ("minimum", Value::F64(report.minimum)),
+            ("maximum", Value::F64(report.maximum)),
+        ])),
+        Err(e) => Err(args::bad(span, format!("solve_poisson_dirichlet: {e:?}"))),
+    }
+}
+
+/// `Calculus.discrete_maximum_principle_holds` — verify DMP on a solution.
+/// Args: { width: u64, height: u64, spacing: f64, source: [f64], boundary: [f64], solution: [f64], tolerance: f64 }
+pub fn discrete_maximum_principle_holds(args: &Value, span: Span) -> Result<Value, Diagnostic> {
+    let width = args::rec_u64(args, "width")
+        .ok_or_else(|| args::bad(span, "discrete_maximum_principle_holds needs width"))?
+        as usize;
+    let height = args::rec_u64(args, "height")
+        .ok_or_else(|| args::bad(span, "discrete_maximum_principle_holds needs height"))?
+        as usize;
+    let spacing = args::rec_f64(args, "spacing")
+        .ok_or_else(|| args::bad(span, "discrete_maximum_principle_holds needs spacing"))?;
+    let source = args::rec_f64_list(args, "source")
+        .ok_or_else(|| args::bad(span, "discrete_maximum_principle_holds needs source"))?;
+    let boundary = args::rec_f64_list(args, "boundary")
+        .ok_or_else(|| args::bad(span, "discrete_maximum_principle_holds needs boundary"))?;
+    let solution = args::rec_f64_list(args, "solution")
+        .ok_or_else(|| args::bad(span, "discrete_maximum_principle_holds needs solution"))?;
+    let tolerance = args::rec_f64(args, "tolerance").unwrap_or(1e-6);
+    let grid = solvers::calculus::potential::PoissonGrid {
+        width,
+        height,
+        spacing,
+    };
+    match solvers::calculus::potential::discrete_maximum_principle_holds(
+        grid, &source, &boundary, &solution, tolerance,
+    ) {
+        Ok(holds) => Ok(Value::Bool(holds)),
+        Err(e) => Err(args::bad(
+            span,
+            format!("discrete_maximum_principle_holds: {e:?}"),
+        )),
+    }
+}
+
+// ── Geometric algebra ───────────────────────────────────────────────
+
+/// `GeometricAlgebra.geometric_product` — Cl(3,0) geometric product of two multivectors.
+/// Args: { a: [f64], b: [f64] }  (8 coefficients each: scalar, e1, e2, e3, e12, e13, e23, e123)
+pub fn ga_geometric_product(args: &Value, span: Span) -> Result<Value, Diagnostic> {
+    let a = parse_ga_coeffs(args, "a", "ga_geometric_product", span)?;
+    let b = parse_ga_coeffs(args, "b", "ga_geometric_product", span)?;
+    let result = solvers::geometric_algebra::geometric_product(&a, &b);
+    Ok(args::record([
+        (
+            "coeffs",
+            args::f64_list_value(result.coeffs.iter().map(|&c| c as f64)),
+        ),
+        ("grade_mask", Value::U64(result.grade_mask as u64)),
+    ]))
+}
+
+/// `GeometricAlgebra.outer_product` — Cl(3,0) outer (wedge) product.
+pub fn ga_outer_product(args: &Value, span: Span) -> Result<Value, Diagnostic> {
+    let a = parse_ga_coeffs(args, "a", "ga_outer_product", span)?;
+    let b = parse_ga_coeffs(args, "b", "ga_outer_product", span)?;
+    let result = solvers::geometric_algebra::outer_product(&a, &b);
+    Ok(args::record([
+        (
+            "coeffs",
+            args::f64_list_value(result.coeffs.iter().map(|&c| c as f64)),
+        ),
+        ("grade_mask", Value::U64(result.grade_mask as u64)),
+    ]))
+}
+
+/// `GeometricAlgebra.rotor_from_angle_axis` — construct a rotor from angle + axis.
+/// Args: { angle: f64, axis: [f64] }  (3 components)
+pub fn ga_rotor_from_angle_axis(args: &Value, span: Span) -> Result<Value, Diagnostic> {
+    let angle = args::rec_f64(args, "angle")
+        .ok_or_else(|| args::bad(span, "ga_rotor_from_angle_axis needs angle"))?;
+    let axis_vals = args::rec_f64_list(args, "axis")
+        .ok_or_else(|| args::bad(span, "ga_rotor_from_angle_axis needs axis: [f64; 3]"))?;
+    if axis_vals.len() != 3 {
+        return Err(args::bad(
+            span,
+            "ga_rotor_from_angle_axis: axis must have 3 elements",
+        ));
+    }
+    let axis = [
+        axis_vals[0] as f32,
+        axis_vals[1] as f32,
+        axis_vals[2] as f32,
+    ];
+    let rotor = solvers::geometric_algebra::rotor_from_angle_axis(angle as f32, axis);
+    Ok(args::record([(
+        "components",
+        args::f64_list_value(rotor.components.iter().map(|&c| c as f64)),
+    )]))
+}
+
+/// `GeometricAlgebra.apply_rotor` — rotate a vector by a rotor.
+/// Args: { rotor: [f64], vector: [f64] }  (rotor: 4 components, vector: 3)
+pub fn ga_apply_rotor(args: &Value, span: Span) -> Result<Value, Diagnostic> {
+    let rotor_vals = args::rec_f64_list(args, "rotor")
+        .ok_or_else(|| args::bad(span, "ga_apply_rotor needs rotor: [f64; 4]"))?;
+    if rotor_vals.len() != 4 {
+        return Err(args::bad(
+            span,
+            "ga_apply_rotor: rotor must have 4 components",
+        ));
+    }
+    let vec_vals = args::rec_f64_list(args, "vector")
+        .ok_or_else(|| args::bad(span, "ga_apply_rotor needs vector: [f64; 3]"))?;
+    if vec_vals.len() != 3 {
+        return Err(args::bad(
+            span,
+            "ga_apply_rotor: vector must have 3 components",
+        ));
+    }
+    let rotor = solvers::geometric_algebra::Rotor {
+        components: [
+            rotor_vals[0] as f32,
+            rotor_vals[1] as f32,
+            rotor_vals[2] as f32,
+            rotor_vals[3] as f32,
+        ],
+    };
+    let vector = [vec_vals[0] as f32, vec_vals[1] as f32, vec_vals[2] as f32];
+    let result = solvers::geometric_algebra::apply_rotor(&rotor, &vector);
+    Ok(args::f64_list_value(vec![
+        result[0] as f64,
+        result[1] as f64,
+        result[2] as f64,
+    ]))
+}
+
+/// `GeometricAlgebra.translator_from_displacement` — construct a translator.
+/// Args: { displacement: [f64] }  (3 components)
+pub fn ga_translator_from_displacement(args: &Value, span: Span) -> Result<Value, Diagnostic> {
+    let disp = args::rec_f64_list(args, "displacement").ok_or_else(|| {
+        args::bad(
+            span,
+            "ga_translator_from_displacement needs displacement: [f64; 3]",
+        )
+    })?;
+    if disp.len() != 3 {
+        return Err(args::bad(
+            span,
+            "ga_translator_from_displacement: displacement must have 3 elements",
+        ));
+    }
+    let displacement = [disp[0] as f32, disp[1] as f32, disp[2] as f32];
+    let translator = solvers::geometric_algebra::translator_from_displacement(displacement);
+    Ok(args::record([(
+        "components",
+        args::f64_list_value(translator.components.iter().map(|&c| c as f64)),
+    )]))
+}
+
+/// `GeometricAlgebra.apply_translator` — translate a vector.
+/// Args: { translator: [f64], vector: [f64] }  (translator: 4, vector: 3)
+pub fn ga_apply_translator(args: &Value, span: Span) -> Result<Value, Diagnostic> {
+    let trans_vals = args::rec_f64_list(args, "translator")
+        .ok_or_else(|| args::bad(span, "ga_apply_translator needs translator: [f64; 4]"))?;
+    if trans_vals.len() != 4 {
+        return Err(args::bad(
+            span,
+            "ga_apply_translator: translator must have 4 components",
+        ));
+    }
+    let vec_vals = args::rec_f64_list(args, "vector")
+        .ok_or_else(|| args::bad(span, "ga_apply_translator needs vector: [f64; 3]"))?;
+    if vec_vals.len() != 3 {
+        return Err(args::bad(
+            span,
+            "ga_apply_translator: vector must have 3 components",
+        ));
+    }
+    let translator = solvers::geometric_algebra::Translator {
+        components: [
+            trans_vals[0] as f32,
+            trans_vals[1] as f32,
+            trans_vals[2] as f32,
+            trans_vals[3] as f32,
+        ],
+    };
+    let vector = [vec_vals[0] as f32, vec_vals[1] as f32, vec_vals[2] as f32];
+    let result = solvers::geometric_algebra::apply_translator(&translator, &vector);
+    Ok(args::f64_list_value(vec![
+        result[0] as f64,
+        result[1] as f64,
+        result[2] as f64,
+    ]))
+}
+
+/// `GeometricAlgebra.is_simd_available` — check if AVX2 is available for GA kernels.
+pub fn ga_is_simd_available(_args: &Value, _span: Span) -> Result<Value, Diagnostic> {
+    Ok(Value::Bool(solvers::geometric_algebra::is_simd_available()))
+}
+
+fn parse_ga_coeffs(
+    v: &Value,
+    key: &str,
+    fn_name: &str,
+    span: Span,
+) -> Result<solvers::geometric_algebra::Multivector, Diagnostic> {
+    let coeffs_f64 = args::rec_f64_list(v, key)
+        .ok_or_else(|| args::bad(span, format!("{fn_name} needs {key}: [f64; 8]")))?;
+    if coeffs_f64.len() != 8 {
+        return Err(args::bad(
+            span,
+            format!("{fn_name}: {key} must have 8 coefficients"),
+        ));
+    }
+    let mut coeffs = [0.0f32; 8];
+    for (i, &c) in coeffs_f64.iter().enumerate() {
+        coeffs[i] = c as f32;
+    }
+    Ok(solvers::geometric_algebra::Multivector {
+        coeffs,
+        grade_mask: 0,
+    })
+}
