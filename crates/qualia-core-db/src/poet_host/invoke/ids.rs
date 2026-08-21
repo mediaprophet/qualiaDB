@@ -245,6 +245,15 @@ pub const CORPUS_LOAD: &str = "Corpus.load";
 pub const CORPUS_PARSE: &str = "Corpus.parse";
 pub const AGENCY_EVALUATE: &str = "Agency.evaluate";
 
+// ── N5: Neural / LLM inference — load, unload, transformer, classifier, reranker ─
+pub const INFERENCE_LOAD_MODEL: &str = "Inference.load_model";
+pub const INFERENCE_UNLOAD_MODEL: &str = "Inference.unload_model";
+pub const INFERENCE_RUN_TRANSFORMER: &str = "Inference.run_transformer";
+pub const INFERENCE_RUN_CLASSIFIER: &str = "Inference.run_classifier";
+pub const INFERENCE_RUN_RERANKER: &str = "Inference.run_reranker";
+pub const INFERENCE_VECTOR_SEARCH: &str = "Inference.vector_search";
+pub const INFERENCE_CONSTRAINED_DECODE: &str = "Inference.constrained_decode";
+
 pub const ALL_BOUND: &[&str] = &[
     DAG_EXECUTE,
     DAG_VALIDATE,
@@ -446,6 +455,13 @@ pub const ALL_BOUND: &[&str] = &[
     CORPUS_LOAD,
     CORPUS_PARSE,
     AGENCY_EVALUATE,
+    INFERENCE_LOAD_MODEL,
+    INFERENCE_UNLOAD_MODEL,
+    INFERENCE_RUN_TRANSFORMER,
+    INFERENCE_RUN_CLASSIFIER,
+    INFERENCE_RUN_RERANKER,
+    INFERENCE_VECTOR_SEARCH,
+    INFERENCE_CONSTRAINED_DECODE,
 ];
 
 /// Future extract target for an invoke id. Not a crate today.
@@ -544,7 +560,14 @@ pub fn seam_for(id: &str) -> &'static str {
         INFERENCE_EMBED
         | INFERENCE_GROUNDING
         | INFERENCE_VERIFY_TURN
-        | INFERENCE_DETECT_UNGROUNDED => "inference",
+        | INFERENCE_DETECT_UNGROUNDED
+        | INFERENCE_LOAD_MODEL
+        | INFERENCE_UNLOAD_MODEL
+        | INFERENCE_RUN_TRANSFORMER
+        | INFERENCE_RUN_CLASSIFIER
+        | INFERENCE_RUN_RERANKER
+        | INFERENCE_VECTOR_SEARCH
+        | INFERENCE_CONSTRAINED_DECODE => "inference",
         FINANCE_CONVERT_CURRENCY | FINANCE_MULTISIG_CHECK | FINANCE_LEDGER_BALANCE => "econ",
         CAPABILITY_GRANT
         | CAPABILITY_REVOKE

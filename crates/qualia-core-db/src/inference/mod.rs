@@ -147,6 +147,8 @@ pub use semantic_skills::{
     Scratchpad, ScratchpadEntry, ScratchpadError, SearchResult, StoredVector, TextEmbedder, Vector,
     VectorStore, DEFAULT_SCRATCHPAD_TTL, EMBED_DIM, MAX_SCRATCHPAD_ENTRIES, MAX_VECTORS,
 };
+// N5: Cross-encoder reranker for candidate re-scoring.
+pub mod reranker;
 // Metal mega-pass orchestrator (Apple Silicon). Stub on non-macOS.
 pub mod metal_lane;
 // Paged KV cache: block-paged KV storage (vLLM-style). Re-exports `runtime::kv::paged`, so it
