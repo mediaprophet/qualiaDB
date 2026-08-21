@@ -37,6 +37,7 @@ mod sampler_bind;
 mod science;
 mod sheet;
 mod social;
+mod solvers;
 mod stats;
 mod vision;
 
@@ -316,6 +317,53 @@ pub fn dispatch(
         ids::ML_RANDOM_FOREST_FIT_REGRESSOR => ml::random_forest_fit_regressor(args, span),
         ids::ML_RANDOM_FOREST_FIT_CLASSIFIER => ml::random_forest_fit_classifier(args, span),
         ids::ML_GRADIENT_BOOSTING_FIT_REGRESSOR => ml::gradient_boosting_fit_regressor(args, span),
+        ids::ML_FACTOR_GRAPH_MARGINALS => ml::factor_graph_marginals(args, span),
+        ids::ML_STANDARD_SCALER_FIT_TRANSFORM => ml::standard_scaler_fit_transform(args, span),
+        ids::ML_BART_FIT => ml::bart_fit(args, span),
+        // Number theory
+        ids::NT_NEXT_PRIME => solvers::next_prime(args, span),
+        ids::NT_PRIME_FACTORS => solvers::prime_factors(args, span),
+        ids::NT_DIVISORS => solvers::divisors(args, span),
+        ids::NT_EULER_TOTIENT => solvers::euler_totient(args, span),
+        ids::NT_MOBIUS => solvers::mobius(args, span),
+        ids::NT_DIVISOR_COUNT => solvers::divisor_count(args, span),
+        ids::NT_DIVISOR_SUM => solvers::divisor_sum(args, span),
+        ids::NT_MOD_POW => solvers::mod_pow(args, span),
+        ids::NT_MOD_INVERSE => solvers::mod_inverse(args, span),
+        ids::NT_FACTORIAL => solvers::factorial(args, span),
+        ids::NT_BINOMIAL => solvers::binomial(args, span),
+        ids::NT_PARTITIONS => solvers::partitions(args, span),
+        ids::NT_CATALAN => solvers::catalan(args, span),
+        ids::NT_STIRLING_SECOND => solvers::stirling_second(args, span),
+        ids::NT_STIRLING_FIRST => solvers::stirling_first(args, span),
+        // Special functions
+        ids::SF_AIRY_AI => solvers::airy_ai(args, span),
+        ids::SF_AIRY_BI => solvers::airy_bi(args, span),
+        ids::SF_ZETA => solvers::zeta(args, span),
+        ids::SF_LEGENDRE => solvers::legendre(args, span),
+        ids::SF_CHEBYSHEV_T => solvers::chebyshev_t(args, span),
+        ids::SF_CHEBYSHEV_U => solvers::chebyshev_u(args, span),
+        ids::SF_HERMITE => solvers::hermite(args, span),
+        ids::SF_LAGUERRE => solvers::laguerre(args, span),
+        ids::SF_BESSEL_J => solvers::bessel_j(args, span),
+        ids::SF_BESSEL_I => solvers::bessel_i(args, span),
+        ids::SF_BESSEL_Y => solvers::bessel_y(args, span),
+        ids::SF_BESSEL_K => solvers::bessel_k(args, span),
+        // Interpolation
+        ids::INTERP_LINEAR => solvers::linear_interp(args, span),
+        ids::INTERP_LAGRANGE => solvers::lagrange_eval(args, span),
+        ids::INTERP_NEWTON_COEF => solvers::newton_coefficients(args, span),
+        ids::INTERP_NEWTON_EVAL => solvers::newton_eval(args, span),
+        ids::INTERP_POLY_FIT => solvers::poly_fit(args, span),
+        ids::INTERP_POLY_EVAL => solvers::poly_eval(args, span),
+        // Fuzzy query
+        ids::FQ_TRIANGULAR => solvers::fuzzy_triangular(args, span),
+        ids::FQ_TRAPEZOIDAL => solvers::fuzzy_trapezoidal(args, span),
+        ids::FQ_APPROXIMATELY => solvers::fuzzy_approximately(args, span),
+        ids::FQ_RAMP_UP => solvers::fuzzy_ramp_up(args, span),
+        ids::FQ_RAMP_DOWN => solvers::fuzzy_ramp_down(args, span),
+        ids::FQ_MUCH_GREATER_THAN => solvers::fuzzy_much_greater_than(args, span),
+        ids::FQ_MUCH_LESS_THAN => solvers::fuzzy_much_less_than(args, span),
         ids::BIOSIGNAL_DP_FILTER => biosignal::dp_filter(args, span),
         ids::BIOSIGNAL_DP_CONFIG => biosignal::dp_config(args, span),
         ids::PHYS_PROJECTILE => science::projectile(args, span),

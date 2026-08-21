@@ -238,7 +238,58 @@ pub const ML_RANDOM_FOREST_FIT_REGRESSOR: &str = "MachineLearning.random_forest_
 pub const ML_RANDOM_FOREST_FIT_CLASSIFIER: &str = "MachineLearning.random_forest_fit_classifier";
 pub const ML_GRADIENT_BOOSTING_FIT_REGRESSOR: &str =
     "MachineLearning.gradient_boosting_fit_regressor";
+pub const ML_FACTOR_GRAPH_MARGINALS: &str = "MachineLearning.factor_graph_marginals";
+pub const ML_STANDARD_SCALER_FIT_TRANSFORM: &str = "MachineLearning.standard_scaler_fit_transform";
+pub const ML_BART_FIT: &str = "MachineLearning.bart_fit";
 pub const BIOSIGNAL_DP_FILTER: &str = "biosignal.dp_filter";
+
+// Number theory
+pub const NT_NEXT_PRIME: &str = "NumberTheory.next_prime";
+pub const NT_PRIME_FACTORS: &str = "NumberTheory.prime_factors";
+pub const NT_DIVISORS: &str = "NumberTheory.divisors";
+pub const NT_EULER_TOTIENT: &str = "NumberTheory.euler_totient";
+pub const NT_MOBIUS: &str = "NumberTheory.mobius";
+pub const NT_DIVISOR_COUNT: &str = "NumberTheory.divisor_count";
+pub const NT_DIVISOR_SUM: &str = "NumberTheory.divisor_sum";
+pub const NT_MOD_POW: &str = "NumberTheory.mod_pow";
+pub const NT_MOD_INVERSE: &str = "NumberTheory.mod_inverse";
+pub const NT_FACTORIAL: &str = "NumberTheory.factorial";
+pub const NT_BINOMIAL: &str = "NumberTheory.binomial";
+pub const NT_PARTITIONS: &str = "NumberTheory.partitions";
+pub const NT_CATALAN: &str = "NumberTheory.catalan";
+pub const NT_STIRLING_SECOND: &str = "NumberTheory.stirling_second";
+pub const NT_STIRLING_FIRST: &str = "NumberTheory.stirling_first";
+
+// Special functions
+pub const SF_AIRY_AI: &str = "SpecialFunctions.airy_ai";
+pub const SF_AIRY_BI: &str = "SpecialFunctions.airy_bi";
+pub const SF_ZETA: &str = "SpecialFunctions.zeta";
+pub const SF_LEGENDRE: &str = "SpecialFunctions.legendre";
+pub const SF_CHEBYSHEV_T: &str = "SpecialFunctions.chebyshev_t";
+pub const SF_CHEBYSHEV_U: &str = "SpecialFunctions.chebyshev_u";
+pub const SF_HERMITE: &str = "SpecialFunctions.hermite";
+pub const SF_LAGUERRE: &str = "SpecialFunctions.laguerre";
+pub const SF_BESSEL_J: &str = "SpecialFunctions.bessel_j";
+pub const SF_BESSEL_I: &str = "SpecialFunctions.bessel_i";
+pub const SF_BESSEL_Y: &str = "SpecialFunctions.bessel_y";
+pub const SF_BESSEL_K: &str = "SpecialFunctions.bessel_k";
+
+// Interpolation
+pub const INTERP_LINEAR: &str = "Interpolation.linear_interp";
+pub const INTERP_LAGRANGE: &str = "Interpolation.lagrange_eval";
+pub const INTERP_NEWTON_COEF: &str = "Interpolation.newton_coefficients";
+pub const INTERP_NEWTON_EVAL: &str = "Interpolation.newton_eval";
+pub const INTERP_POLY_FIT: &str = "Interpolation.poly_fit";
+pub const INTERP_POLY_EVAL: &str = "Interpolation.poly_eval";
+
+// Fuzzy query membership
+pub const FQ_TRIANGULAR: &str = "FuzzyQuery.triangular";
+pub const FQ_TRAPEZOIDAL: &str = "FuzzyQuery.trapezoidal";
+pub const FQ_APPROXIMATELY: &str = "FuzzyQuery.approximately";
+pub const FQ_RAMP_UP: &str = "FuzzyQuery.ramp_up";
+pub const FQ_RAMP_DOWN: &str = "FuzzyQuery.ramp_down";
+pub const FQ_MUCH_GREATER_THAN: &str = "FuzzyQuery.much_greater_than";
+pub const FQ_MUCH_LESS_THAN: &str = "FuzzyQuery.much_less_than";
 pub const BIOSIGNAL_DP_CONFIG: &str = "biosignal.dp_config";
 pub const PHYS_PROJECTILE: &str = "PhysicsAndODE.projectile";
 pub const BIO_ALIGN: &str = "Bioinformatics.align";
@@ -1044,6 +1095,53 @@ pub const ALL_BOUND: &[&str] = &[
     ML_RANDOM_FOREST_FIT_REGRESSOR,
     ML_RANDOM_FOREST_FIT_CLASSIFIER,
     ML_GRADIENT_BOOSTING_FIT_REGRESSOR,
+    ML_FACTOR_GRAPH_MARGINALS,
+    ML_STANDARD_SCALER_FIT_TRANSFORM,
+    ML_BART_FIT,
+    // Number theory
+    NT_NEXT_PRIME,
+    NT_PRIME_FACTORS,
+    NT_DIVISORS,
+    NT_EULER_TOTIENT,
+    NT_MOBIUS,
+    NT_DIVISOR_COUNT,
+    NT_DIVISOR_SUM,
+    NT_MOD_POW,
+    NT_MOD_INVERSE,
+    NT_FACTORIAL,
+    NT_BINOMIAL,
+    NT_PARTITIONS,
+    NT_CATALAN,
+    NT_STIRLING_SECOND,
+    NT_STIRLING_FIRST,
+    // Special functions
+    SF_AIRY_AI,
+    SF_AIRY_BI,
+    SF_ZETA,
+    SF_LEGENDRE,
+    SF_CHEBYSHEV_T,
+    SF_CHEBYSHEV_U,
+    SF_HERMITE,
+    SF_LAGUERRE,
+    SF_BESSEL_J,
+    SF_BESSEL_I,
+    SF_BESSEL_Y,
+    SF_BESSEL_K,
+    // Interpolation
+    INTERP_LINEAR,
+    INTERP_LAGRANGE,
+    INTERP_NEWTON_COEF,
+    INTERP_NEWTON_EVAL,
+    INTERP_POLY_FIT,
+    INTERP_POLY_EVAL,
+    // Fuzzy query
+    FQ_TRIANGULAR,
+    FQ_TRAPEZOIDAL,
+    FQ_APPROXIMATELY,
+    FQ_RAMP_UP,
+    FQ_RAMP_DOWN,
+    FQ_MUCH_GREATER_THAN,
+    FQ_MUCH_LESS_THAN,
     PHYS_PROJECTILE,
     BIO_ALIGN,
     CHEM_SMILES,
@@ -1772,7 +1870,27 @@ pub fn seam_for(id: &str) -> &'static str {
         | ML_KALMAN_NEW
         | ML_RANDOM_FOREST_FIT_REGRESSOR
         | ML_RANDOM_FOREST_FIT_CLASSIFIER
-        | ML_GRADIENT_BOOSTING_FIT_REGRESSOR => "ml",
+        | ML_GRADIENT_BOOSTING_FIT_REGRESSOR
+        | ML_FACTOR_GRAPH_MARGINALS
+        | ML_STANDARD_SCALER_FIT_TRANSFORM
+        | ML_BART_FIT => "ml",
+        // Number theory
+        NT_NEXT_PRIME | NT_PRIME_FACTORS | NT_DIVISORS | NT_EULER_TOTIENT | NT_MOBIUS
+        | NT_DIVISOR_COUNT | NT_DIVISOR_SUM | NT_MOD_POW | NT_MOD_INVERSE | NT_FACTORIAL
+        | NT_BINOMIAL | NT_PARTITIONS | NT_CATALAN | NT_STIRLING_SECOND | NT_STIRLING_FIRST => {
+            "number_theory"
+        }
+        // Special functions
+        SF_AIRY_AI | SF_AIRY_BI | SF_ZETA | SF_LEGENDRE | SF_CHEBYSHEV_T | SF_CHEBYSHEV_U
+        | SF_HERMITE | SF_LAGUERRE | SF_BESSEL_J | SF_BESSEL_I | SF_BESSEL_Y | SF_BESSEL_K => {
+            "special_functions"
+        }
+        // Interpolation
+        INTERP_LINEAR | INTERP_LAGRANGE | INTERP_NEWTON_COEF | INTERP_NEWTON_EVAL
+        | INTERP_POLY_FIT | INTERP_POLY_EVAL => "interpolation",
+        // Fuzzy query
+        FQ_TRIANGULAR | FQ_TRAPEZOIDAL | FQ_APPROXIMATELY | FQ_RAMP_UP | FQ_RAMP_DOWN
+        | FQ_MUCH_GREATER_THAN | FQ_MUCH_LESS_THAN => "fuzzy_query",
         PHYS_PROJECTILE | BIO_ALIGN | CHEM_SMILES => "science",
         CHEM_ELEMENT_SYMBOL
         | CHEM_ATOMIC_NUMBER

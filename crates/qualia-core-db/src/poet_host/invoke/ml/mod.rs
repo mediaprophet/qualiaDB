@@ -16,6 +16,8 @@ mod fitters2;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 mod fitters3;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+mod fitters4;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 mod more;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 mod ols;
@@ -32,6 +34,8 @@ pub use fitters::*;
 pub use fitters2::*;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 pub use fitters3::*;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+pub use fitters4::*;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 pub use more::*;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
@@ -142,5 +146,9 @@ ml_stub!(
     kalman_new,
     random_forest_fit_regressor,
     random_forest_fit_classifier,
-    gradient_boosting_fit_regressor
+    gradient_boosting_fit_regressor,
+    // fitters4
+    factor_graph_marginals,
+    standard_scaler_fit_transform,
+    bart_fit
 );
