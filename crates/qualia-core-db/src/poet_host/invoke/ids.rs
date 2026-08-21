@@ -446,6 +446,12 @@ pub const LA_EIGEN_SYM: &str = "LinearAlgebra.eigen_symmetric";
 pub const LA_EIGENVALUES: &str = "LinearAlgebra.eigenvalues";
 pub const LA_SVD: &str = "LinearAlgebra.svd";
 pub const LA_POLY_ROOTS: &str = "LinearAlgebra.polynomial_roots";
+pub const LA_LU_DECOMPOSE: &str = "LinearAlgebra.lu_decompose";
+pub const LA_LU_SOLVE: &str = "LinearAlgebra.lu_solve";
+pub const LA_CHOLESKY_FACTOR: &str = "LinearAlgebra.cholesky_factor";
+pub const LA_CHOLESKY_DET: &str = "LinearAlgebra.cholesky_determinant";
+pub const LA_CHARPOLY: &str = "LinearAlgebra.characteristic_polynomial";
+pub const LA_EIGENVALUES_GENERAL: &str = "LinearAlgebra.eigenvalues_general";
 
 // ── CAS extensions (wrap specialized_libs::symbolic_algebra) ──────────────
 pub const CAS_DIFFERENTIATE: &str = "SymbolicAlgebra.differentiate";
@@ -1213,6 +1219,12 @@ pub const ALL_BOUND: &[&str] = &[
     LA_EIGENVALUES,
     LA_SVD,
     LA_POLY_ROOTS,
+    LA_LU_DECOMPOSE,
+    LA_LU_SOLVE,
+    LA_CHOLESKY_FACTOR,
+    LA_CHOLESKY_DET,
+    LA_CHARPOLY,
+    LA_EIGENVALUES_GENERAL,
     CAS_DIFFERENTIATE,
     CAS_SIMPLIFY,
     CAS_EXPAND,
@@ -1663,10 +1675,35 @@ pub fn seam_for(id: &str) -> &'static str {
         DEONTIC_EVAL | EPISTEMIC_EVAL | PARACONSISTENT_ROUTE | LTL_GLOBALLY | LTL_FINALLY
         | DL_SUBSUMES | ASP_ENUMERATE | CAUSAL_CAUSED | FUZZY_TNORM => "logic",
         NLP_ANALYZE => "nlp",
-        NT_GCD | NT_LCM | NT_PRIME | LINALG_MATMUL | SYMBOLIC_EVAL | CALC_SIMPSON | OPT_HILL
-        | GA_DOT | SPEC_BESSEL | LA_TRANSPOSE | LA_DET | LA_SOLVE | LA_EIGEN_SYM
-        | LA_EIGENVALUES | LA_SVD | LA_POLY_ROOTS | CAS_DIFFERENTIATE | CAS_SIMPLIFY
-        | CAS_EXPAND | CAS_FACTOR | CAS_SOLVE_QUADRATIC | XFORM_DFT | UNITS_CONVERT => "math",
+        NT_GCD
+        | NT_LCM
+        | NT_PRIME
+        | LINALG_MATMUL
+        | SYMBOLIC_EVAL
+        | CALC_SIMPSON
+        | OPT_HILL
+        | GA_DOT
+        | SPEC_BESSEL
+        | LA_TRANSPOSE
+        | LA_DET
+        | LA_SOLVE
+        | LA_EIGEN_SYM
+        | LA_EIGENVALUES
+        | LA_SVD
+        | LA_POLY_ROOTS
+        | LA_LU_DECOMPOSE
+        | LA_LU_SOLVE
+        | LA_CHOLESKY_FACTOR
+        | LA_CHOLESKY_DET
+        | LA_CHARPOLY
+        | LA_EIGENVALUES_GENERAL
+        | CAS_DIFFERENTIATE
+        | CAS_SIMPLIFY
+        | CAS_EXPAND
+        | CAS_FACTOR
+        | CAS_SOLVE_QUADRATIC
+        | XFORM_DFT
+        | UNITS_CONVERT => "math",
         STAT_MEAN
         | STAT_PEARSON
         | STAT_LINEAR_REGRESSION

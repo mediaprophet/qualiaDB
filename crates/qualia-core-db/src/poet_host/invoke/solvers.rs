@@ -410,3 +410,120 @@ pub fn fuzzy_much_less_than(args: &Value, span: Span) -> Result<Value, Diagnosti
         solvers::fuzzy_query::membership::much_less_than(x, reference, spread),
     ))
 }
+
+// ── Linear algebra (decompositions not already in math module) ─────
+
+/// `LinearAlgebra.lu_decompose` — LU decomposition with partial pivoting.
+/// Args: { a: [[f64]] }
+pub fn lu_decompose(args: &Value, span: Span) -> Result<Value, Diagnostic> {
+    let (data, n, _) = parse_square_matrix(args, "a", "lu_decompose", span)?;
+    match solvers::linear_algebra::lu::lu_decompose(n, &data) {
+        Ok(lu) => Ok(args::record([
+            ("lu", args::f64_list_value(lu.lu)),
+            (
+                "pivots",
+                Value::List(lu.pivots.iter().map(|&p| Value::U64(p as u64)).collect()),
+            ),
+            ("sign", Value::F64(lu.sign)),
+            ("singular", Value::Bool(lu.singular)),
+            ("n", Value::U64(n as u64)),
+        ])),
+        Err(e) => Err(args::bad(span, format!("lu_decompose: {e:?}"))),
+    }
+}
+
+/// `LinearAlgebra.lu_solve` — solve Ax=b using LU decomposition.
+/// Args: { a: [[f64]], b: [f64] }
+pub fn lu_solve(args: &Value, span: Span) -> Result<Value, Diagnostic> {
+    let (data, n, _) = parse_square_matrix(args, "a", "lu_solve", span)?;
+    let b = args::rec_f64_list(args, "b").ok_or_else(|| args::bad(span, "lu_solve needs b"))?;
+    match solvers::linear_algebra::lu::lu_solve(n, &data, &b) {
+        Some(x) => Ok(args::f64_list_value(x)),
+        None => Err(args::bad(span, "lu_solve: singular matrix")),
+    }
+}
+
+/// `LinearAlgebra.cholesky_factor` — Cholesky decomposition of SPD matrix.
+/// Args: { a: [[f64]] }
+pub fn cholesky_factor(args: &Value, span: Span) -> Result<Value, Diagnostic> {
+    let (data, n, _) = parse_square_matrix(args, "a", "cholesky_factor", span)?;
+    let mut l = vec![0.0; n * n];
+    match solvers::linear_algebra::cholesky::cholesky_factor(n, &data, &mut l) {
+        Ok(()) => Ok(args::record([
+            ("l", args::f64_list_value(l)),
+            ("n", Value::U64(n as u64)),
+        ])),
+        Err(e) => Err(args::bad(span, format!("cholesky_factor: {e:?}"))),
+    }
+}
+
+/// `LinearAlgebra.cholesky_determinant` — determinant via Cholesky factor.
+/// Args: { l: [f64], n: u64 }
+pub fn cholesky_determinant(args: &Value, span: Span) -> Result<Value, Diagnostic> {
+    let l = args::rec_f64_list(args, "l")
+        .ok_or_else(|| args::bad(span, "cholesky_determinant needs l"))?;
+    let n = args::rec_u64(args, "n")
+        .ok_or_else(|| args::bad(span, "cholesky_determinant needs n"))? as usize;
+    Ok(Value::F64(
+        solvers::linear_algebra::cholesky::cholesky_determinant(n, &l),
+    ))
+}
+
+/// `LinearAlgebra.characteristic_polynomial` — coefficients of char poly.
+/// Args: { a: [[f64]] }
+pub fn characteristic_polynomial(args: &Value, span: Span) -> Result<Value, Diagnostic> {
+    let (data, n, _) = parse_square_matrix(args, "a", "characteristic_polynomial", span)?;
+    match solvers::linear_algebra::spectral::characteristic_polynomial(n, &data) {
+        Ok(coeffs) => Ok(args::f64_list_value(coeffs)),
+        Err(e) => Err(args::bad(span, format!("characteristic_polynomial: {e:?}"))),
+    }
+}
+
+/// `LinearAlgebra.eigenvalues_general` — eigenvalues of a general matrix.
+/// Args: { a: [[f64]] }
+pub fn eigenvalues_general(args: &Value, span: Span) -> Result<Value, Diagnostic> {
+    let (data, n, _) = parse_square_matrix(args, "a", "eigenvalues_general", span)?;
+    match solvers::linear_algebra::spectral::eigenvalues_general(n, &data) {
+        Ok(eigs) => {
+            let records: Vec<Value> = eigs
+                .iter()
+                .map(|c| args::record([("re", Value::F64(c.re)), ("im", Value::F64(c.im))]))
+                .collect();
+            Ok(Value::List(records))
+        }
+        Err(e) => Err(args::bad(span, format!("eigenvalues_general: {e:?}"))),
+    }
+}
+
+/// Parse a square matrix from a VibeScript list-of-lists record field.
+fn parse_square_matrix(
+    v: &Value,
+    key: &str,
+    fn_name: &str,
+    span: Span,
+) -> Result<(Vec<f64>, usize, usize), Diagnostic> {
+    let list_val = args::rec(v, key)
+        .ok_or_else(|| args::bad(span, format!("{fn_name} needs {key}: [[f64]]")))?;
+    let rows = args::list(&list_val)
+        .ok_or_else(|| args::bad(span, format!("{fn_name}: {key} must be a list")))?;
+    let n = rows.len();
+    if n == 0 {
+        return Err(args::bad(span, format!("{fn_name}: empty matrix")));
+    }
+    let p = args::f64s(&rows[0])
+        .ok_or_else(|| args::bad(span, format!("{fn_name}: invalid row")))?
+        .len();
+    if p != n {
+        return Err(args::bad(span, format!("{fn_name}: matrix must be square")));
+    }
+    let mut data = Vec::with_capacity(n * n);
+    for row in rows {
+        let cells =
+            args::f64s(row).ok_or_else(|| args::bad(span, format!("{fn_name}: invalid row")))?;
+        if cells.len() != p {
+            return Err(args::bad(span, format!("{fn_name}: ragged matrix")));
+        }
+        data.extend_from_slice(&cells);
+    }
+    Ok((data, n, p))
+}
