@@ -87,6 +87,26 @@ pub fn rec_f64_list(v: &Value, key: &str) -> Option<Vec<f64>> {
     rec(v, key).and_then(f64s)
 }
 
+/// Extract a record field as `Vec<String>` (field must be a `List` of strings).
+pub fn rec_str_list(v: &Value, key: &str) -> Option<Vec<String>> {
+    rec(v, key).and_then(|val| {
+        list(val)?
+            .iter()
+            .map(|x| as_str(x).map(|s| s.to_string()))
+            .collect()
+    })
+}
+
+/// Extract a record field as `Vec<u64>` (field must be a `List` of integers).
+pub fn rec_u64_list(v: &Value, key: &str) -> Option<Vec<u64>> {
+    rec(v, key).and_then(|val| list(val)?.iter().map(as_u64).collect())
+}
+
+/// Extract a record field as `Vec<u8>` (field must be a `List` of integers 0-255).
+pub fn rec_u8_list(v: &Value, key: &str) -> Option<Vec<u8>> {
+    rec(v, key).and_then(u8s)
+}
+
 pub fn list(v: &Value) -> Option<&[Value]> {
     match v {
         Value::List(xs) => Some(xs.as_slice()),

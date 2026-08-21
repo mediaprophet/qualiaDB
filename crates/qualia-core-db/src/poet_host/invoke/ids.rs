@@ -237,6 +237,14 @@ pub const SOCIAL_DEGREE_CENTRALITY: &str = "Social.degree_centrality";
 pub const FORENSIC_MALFEASANCE_DELTA: &str = "Forensic.malfeasance_delta";
 pub const FORENSIC_NARRATIVE_DIVERGENCE: &str = "Forensic.narrative_divergence";
 
+// ── N4: Agent runtime build-new — planner, corpus, evaluator, agency ──────
+pub const AGENT_PLAN: &str = "Agent.plan";
+pub const AGENT_EXECUTE: &str = "Agent.execute";
+pub const AGENT_EVALUATE: &str = "Agent.evaluate";
+pub const CORPUS_LOAD: &str = "Corpus.load";
+pub const CORPUS_PARSE: &str = "Corpus.parse";
+pub const AGENCY_EVALUATE: &str = "Agency.evaluate";
+
 pub const ALL_BOUND: &[&str] = &[
     DAG_EXECUTE,
     DAG_VALIDATE,
@@ -432,6 +440,12 @@ pub const ALL_BOUND: &[&str] = &[
     NLP_RELATION_EXTRACT,
     NLP_SUBSTRATE_EXTRACT,
     NLP_GRAPHRAG_QUERY,
+    AGENT_PLAN,
+    AGENT_EXECUTE,
+    AGENT_EVALUATE,
+    CORPUS_LOAD,
+    CORPUS_PARSE,
+    AGENCY_EVALUATE,
 ];
 
 /// Future extract target for an invoke id. Not a crate today.
@@ -553,6 +567,9 @@ pub fn seam_for(id: &str) -> &'static str {
         | SCENE_CAPTURE_FRAME => "render",
         SOCIAL_GINI | SOCIAL_LORENZ | SOCIAL_DEGREE_CENTRALITY => "social",
         FORENSIC_MALFEASANCE_DELTA | FORENSIC_NARRATIVE_DIVERGENCE => "social",
+        AGENT_PLAN | AGENT_EXECUTE | AGENT_EVALUATE => "agent",
+        CORPUS_LOAD | CORPUS_PARSE => "agent",
+        AGENCY_EVALUATE => "governance",
         _ => "unbound",
     }
 }

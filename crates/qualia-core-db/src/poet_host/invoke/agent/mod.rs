@@ -5,6 +5,7 @@
 //! primitives (A1–A9) to the host capability dispatch and blackboard.
 
 pub mod dag_executor;
+pub mod runtime;
 
 use crate::modalities::blackboard::BlackboardBus;
 use crate::NQuin;

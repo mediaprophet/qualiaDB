@@ -422,10 +422,11 @@ pub mod clinical_engine {
         }
     }
 }
-/// Entity-view kernel: entity id, observer status, rights filter, attribution, packages (shared by whole desktop; not "mindware-only").
-pub mod entity_view;
 /// Hypermedia semantic library — asset ⊕ analytics ⊕ related-assets bound as a semantic graph (not a
 /// directory). See `docs/plans/hypermedia-semantic-library.md`.
+pub mod agent_runtime;
+/// Entity-view kernel: entity id, observer status, rights filter, attribution, packages (shared by whole desktop; not "mindware-only").
+pub mod entity_view;
 pub mod hypermedia;
 /// Document NLP (tokenize, gazetteer, span plans). Engine capability, not Vibe.
 pub mod nlp;

@@ -145,6 +145,83 @@ pub fn current_user(_args: &Value, span: Span) -> Result<Value, Diagnostic> {
     ]))
 }
 
+/// `Agency.evaluate` — evaluate human agency via Ed25519 signature verification.
+///
+/// Takes `frame` (list of u64 — quin subject hashes), `author_did` (u64),
+/// `verifying_key` (list of u8 — 32-byte Ed25519 public key), and
+/// `signature` (list of u8 — 64-byte Ed25519 signature).
+/// Returns `verified: bool`.
+///
+/// On WASM without crypto features, returns E300.
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+pub fn agency_evaluate(args: &Value, span: Span) -> Result<Value, Diagnostic> {
+    use crate::identity::agency;
+    use ed25519_dalek::{Signature, VerifyingKey};
+
+    let frame_vals = args::rec_u64_list(args, "frame")
+        .ok_or_else(|| args::bad(span, "Agency.evaluate needs frame (list of u64)"))?;
+    let author_did = args::rec_u64(args, "author_did")
+        .ok_or_else(|| args::bad(span, "Agency.evaluate needs author_did"))?;
+    let key_bytes = args::rec_u8_list(args, "verifying_key")
+        .ok_or_else(|| args::bad(span, "Agency.evaluate needs verifying_key (list of u8)"))?;
+    let sig_bytes = args::rec_u8_list(args, "signature")
+        .ok_or_else(|| args::bad(span, "Agency.evaluate needs signature (list of u8)"))?;
+
+    let key_arr: [u8; 32] = if key_bytes.len() == 32 {
+        key_bytes[..32].try_into().unwrap()
+    } else {
+        return Err(args::bad(
+            span,
+            "Agency.evaluate: verifying_key must be exactly 32 bytes",
+        ));
+    };
+    let sig_arr: [u8; 64] = if sig_bytes.len() == 64 {
+        sig_bytes[..64].try_into().unwrap()
+    } else {
+        return Err(args::bad(
+            span,
+            "Agency.evaluate: signature must be exactly 64 bytes",
+        ));
+    };
+
+    let verifying_key = match VerifyingKey::from_bytes(&key_arr) {
+        Ok(k) => k,
+        Err(e) => {
+            return Err(Diagnostic::new(
+                DiagCode::E100,
+                span,
+                format!("Agency.evaluate: invalid verifying key: {e}"),
+            ))
+        }
+    };
+    let signature = Signature::from_bytes(&sig_arr);
+
+    let frame: Vec<crate::NQuin> = frame_vals
+        .iter()
+        .map(|h| crate::NQuin {
+            subject: *h,
+            ..Default::default()
+        })
+        .collect();
+
+    match agency::verify_human_agency(&frame, author_did, &verifying_key, &signature) {
+        Ok(()) => Ok(args::record([
+            ("verified", Value::Bool(true)),
+            ("author_did", Value::U64(author_did)),
+        ])),
+        Err(e) => Ok(args::record([
+            ("verified", Value::Bool(false)),
+            ("author_did", Value::U64(author_did)),
+            ("error", Value::String(format!("{e:?}"))),
+        ])),
+    }
+}
+
+#[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+pub fn agency_evaluate(_args: &Value, span: Span) -> Result<Value, Diagnostic> {
+    Err(args::need_scientific(span, "Agency.evaluate"))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
