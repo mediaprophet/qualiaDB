@@ -1,0 +1,16 @@
+# Ontology alignment and fuzzy graph similarity
+
+# Ontology alignment from a 2×3 similarity matrix
+invoke OntologyAlignment.align { sim: [0.9, 0.1, 0.2, 0.1, 0.8, 0.3], n_source: 2, n_target: 3, threshold: 0.5 }
+
+# Fuzzy Jaccard similarity between two fuzzy RDF graphs
+invoke GraphMatch.fuzzy_jaccard {
+  g1: [{ s: 1, p: 2, o: 3, degree: 0.9 }, { s: 1, p: 4, o: 5, degree: 0.7 }],
+  g2: [{ s: 1, p: 2, o: 3, degree: 0.8 }, { s: 1, p: 4, o: 5, degree: 0.6 }]
+}
+
+# Fuzzy Dice similarity
+invoke GraphMatch.fuzzy_dice {
+  g1: [{ s: 1, p: 2, o: 3, degree: 0.9 }, { s: 1, p: 4, o: 5, degree: 0.7 }],
+  g2: [{ s: 1, p: 2, o: 3, degree: 0.8 }, { s: 1, p: 4, o: 5, degree: 0.6 }]
+}

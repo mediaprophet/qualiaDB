@@ -452,6 +452,9 @@ pub const LA_CHOLESKY_FACTOR: &str = "LinearAlgebra.cholesky_factor";
 pub const LA_CHOLESKY_DET: &str = "LinearAlgebra.cholesky_determinant";
 pub const LA_CHARPOLY: &str = "LinearAlgebra.characteristic_polynomial";
 pub const LA_EIGENVALUES_GENERAL: &str = "LinearAlgebra.eigenvalues_general";
+pub const ONTOLOGY_ALIGN: &str = "OntologyAlignment.align";
+pub const GRAPH_FUZZY_JACCARD: &str = "GraphMatch.fuzzy_jaccard";
+pub const GRAPH_FUZZY_DICE: &str = "GraphMatch.fuzzy_dice";
 
 // ── CAS extensions (wrap specialized_libs::symbolic_algebra) ──────────────
 pub const CAS_DIFFERENTIATE: &str = "SymbolicAlgebra.differentiate";
@@ -1225,6 +1228,9 @@ pub const ALL_BOUND: &[&str] = &[
     LA_CHOLESKY_DET,
     LA_CHARPOLY,
     LA_EIGENVALUES_GENERAL,
+    ONTOLOGY_ALIGN,
+    GRAPH_FUZZY_JACCARD,
+    GRAPH_FUZZY_DICE,
     CAS_DIFFERENTIATE,
     CAS_SIMPLIFY,
     CAS_EXPAND,
@@ -1697,6 +1703,9 @@ pub fn seam_for(id: &str) -> &'static str {
         | LA_CHOLESKY_DET
         | LA_CHARPOLY
         | LA_EIGENVALUES_GENERAL
+        | ONTOLOGY_ALIGN
+        | GRAPH_FUZZY_JACCARD
+        | GRAPH_FUZZY_DICE
         | CAS_DIFFERENTIATE
         | CAS_SIMPLIFY
         | CAS_EXPAND

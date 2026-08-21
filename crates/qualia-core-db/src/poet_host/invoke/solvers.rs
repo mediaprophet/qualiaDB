@@ -527,3 +527,92 @@ fn parse_square_matrix(
     }
     Ok((data, n, p))
 }
+
+// ── Ontology alignment ──────────────────────────────────────────────
+
+/// `OntologyAlignment.align` — greedy + hill-climb ontology alignment.
+/// Args: { sim: [f64], n_source: u64, n_target: u64, threshold: f64 }
+pub fn ontology_align(args: &Value, span: Span) -> Result<Value, Diagnostic> {
+    let sim = args::rec_f64_list(args, "sim")
+        .ok_or_else(|| args::bad(span, "ontology_align needs sim"))?;
+    let n_source = args::rec_u64(args, "n_source")
+        .ok_or_else(|| args::bad(span, "ontology_align needs n_source"))?
+        as usize;
+    let n_target = args::rec_u64(args, "n_target")
+        .ok_or_else(|| args::bad(span, "ontology_align needs n_target"))?
+        as usize;
+    let threshold = args::rec_f64(args, "threshold").unwrap_or(0.5);
+    match solvers::ontology_align::align::align(&sim, n_source, n_target, threshold) {
+        Some(alignment) => {
+            let corrs: Vec<Value> = alignment
+                .correspondences
+                .iter()
+                .map(|c| {
+                    args::record([
+                        ("source", Value::U64(c.source as u64)),
+                        ("target", Value::U64(c.target as u64)),
+                        ("degree", Value::F64(c.degree)),
+                        (
+                            "requires_human_review",
+                            Value::Bool(c.requires_human_review),
+                        ),
+                    ])
+                })
+                .collect();
+            Ok(args::record([
+                ("correspondences", Value::List(corrs)),
+                ("quality", Value::F64(alignment.quality)),
+            ]))
+        }
+        None => Err(args::bad(span, "ontology_align: invalid input")),
+    }
+}
+
+// ── Fuzzy graph similarity ──────────────────────────────────────────
+
+/// `GraphMatch.fuzzy_jaccard` — fuzzy Jaccard similarity between two fuzzy RDF graphs.
+/// Args: { g1: [{ s: u64, p: u64, o: u64, degree: f64 }], g2: [...] }
+pub fn fuzzy_jaccard(args: &Value, span: Span) -> Result<Value, Diagnostic> {
+    let g1 = parse_fuzzy_triples(args, "g1", "fuzzy_jaccard", span)?;
+    let g2 = parse_fuzzy_triples(args, "g2", "fuzzy_jaccard", span)?;
+    Ok(Value::F64(
+        solvers::graph_match::fuzzy_similarity::fuzzy_jaccard(&g1, &g2),
+    ))
+}
+
+/// `GraphMatch.fuzzy_dice` — fuzzy Dice similarity between two fuzzy RDF graphs.
+pub fn fuzzy_dice(args: &Value, span: Span) -> Result<Value, Diagnostic> {
+    let g1 = parse_fuzzy_triples(args, "g1", "fuzzy_dice", span)?;
+    let g2 = parse_fuzzy_triples(args, "g2", "fuzzy_dice", span)?;
+    Ok(Value::F64(
+        solvers::graph_match::fuzzy_similarity::fuzzy_dice(&g1, &g2),
+    ))
+}
+
+fn parse_fuzzy_triples(
+    v: &Value,
+    key: &str,
+    fn_name: &str,
+    span: Span,
+) -> Result<Vec<solvers::graph_match::fuzzy_similarity::FuzzyTriple>, Diagnostic> {
+    let list_val =
+        args::rec(v, key).ok_or_else(|| args::bad(span, format!("{fn_name} needs {key}")))?;
+    let items = args::list(&list_val)
+        .ok_or_else(|| args::bad(span, format!("{fn_name}: {key} must be a list")))?;
+    let mut triples = Vec::new();
+    for item in items {
+        let s = args::rec_u64(item, "s")
+            .ok_or_else(|| args::bad(span, format!("{fn_name}: triple needs s")))?
+            as usize;
+        let p = args::rec_u64(item, "p")
+            .ok_or_else(|| args::bad(span, format!("{fn_name}: triple needs p")))?
+            as usize;
+        let o = args::rec_u64(item, "o")
+            .ok_or_else(|| args::bad(span, format!("{fn_name}: triple needs o")))?
+            as usize;
+        let degree = args::rec_f64(item, "degree")
+            .ok_or_else(|| args::bad(span, format!("{fn_name}: triple needs degree")))?;
+        triples.push(solvers::graph_match::fuzzy_similarity::FuzzyTriple { s, p, o, degree });
+    }
+    Ok(triples)
+}
