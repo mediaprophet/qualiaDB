@@ -663,7 +663,7 @@ AST nodes, then Species/Mixture, then CST, then HID, then pretty syntax last.
 
 | # | Wish | Status | Source |
 |---|------|--------|--------|
-| W1 | Projectional authoring — edit Instant / Field / Law as structure; text is a view | Not started | excellence-first §4 |
+| W1 | Projectional authoring — edit Instant / Field / Law as structure; text is a view | **Done** — `poet_vibe::projectional` module: `project_program` (AST → canonical text), `Edit` enum (15 typed structural operations: add/remove/replace/rename items, set field unit/support/representation, add/remove material properties, set law condition/consequence, add/remove prefixes, add/remove requires), `apply_edit`/`apply_edits` (immutable structural edits), `project_with_trivia` (CST-aware projection preserving comments), AST builder helpers (`make_field`, `make_material`, `make_law`, `make_int`, `make_float`, etc.). WASM bindings: `project_source`, `apply_structural_edit`, `apply_structural_edits` (JSON-based edit API for browser/LLM). 35 tests covering projection, round-trip (parse→project→parse), structural edits, and trivia preservation. | excellence-first §4 |
 | W2 | WorldLine as the continuant's time-like self | **Done** — WorldLine implemented in value.rs | excellence-first §4 |
 | W3 | Conservation hooks on glue | **Done** (tracked as T34) | excellence-first §4 |
 | W4 | Mixture / phase diagrams as data | **Done** (tracked as T33) | excellence-first §4 |

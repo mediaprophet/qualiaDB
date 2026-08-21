@@ -38,6 +38,7 @@ pub mod observer;
 pub mod physics;
 pub mod presentation;
 pub mod pretty;
+pub mod projectional;
 pub mod quantity;
 pub mod reflection;
 pub mod replay_clock;
@@ -46,7 +47,12 @@ pub mod tick_policy;
 pub mod translate;
 pub mod trivia;
 
-pub use ast::{Expr, Item, Program};
+pub use ast::{
+    Arg, ArmBody, BinOp, Block, CapSpec, ConstDecl, EffectClass, EnumDecl, EnumVariant, Expr,
+    ExprKind, FieldDecl, FieldRepresentation, FieldSupport, FunctionDecl, HookDecl, ImportDecl,
+    Item, LawDecl, Literal, MatchArm, MaterialDecl, ModuleDecl, NamedArg, Param, Pattern,
+    PrefixDecl, Program, Stmt, TypeExpr, UnOp,
+};
 pub use ast_query::{
     builtin_policies, check_custom_policies, check_policies, function_has_budget, hook_has_budget,
     parse_query, run_policies, Policy, PolicyViolation, QueryPattern,
@@ -69,6 +75,10 @@ pub use error::{DiagCode, Diagnostic};
 pub use eval::{populate_import_aliases, Engine, Env};
 pub use grammar::{DIAGNOSTIC_SCHEMA_JSON, EBNF, GBNF, SOURCE_SCHEMA_JSON};
 pub use parse::{parse_cell, parse_program};
+pub use projectional::{
+    apply_edit, apply_edits, make_binary, make_call, make_field, make_float, make_ident, make_int,
+    make_law, make_material, make_member, make_string, project_program, Edit, ProjectOptions,
+};
 pub use reflection::{
     ReflectionConfig, ReflectionEngine, ReflectionLoop, ReflectionResult, StageResult,
 };

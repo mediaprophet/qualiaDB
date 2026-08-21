@@ -642,3 +642,351 @@ fn disassemble(chunk: &bytecode::Chunk) -> String {
     }
     out
 }
+
+// ── projectional authoring (W1) ────────────────────────────────────
+
+use poet_vibe::projectional::{apply_edit, apply_edits, project_program, Edit, ProjectOptions};
+use poet_vibe::{FieldRepresentation, FieldSupport, NamedArg, Span as VibeSpan};
+
+/// Project a VibeScript program source to canonical form.
+/// Parses the source, then re-projects it from the AST.
+/// This is the core of projectional authoring: structure → text.
+#[wasm_bindgen]
+pub fn project_source(src: &str) -> JsValue {
+    match parse_program(src) {
+        Ok(prog) => {
+            let projected = project_program(&prog, &ProjectOptions::default());
+            let o = Object::new();
+            Reflect::set(&o, &"ok".into(), &JsValue::from_bool(true)).ok();
+            Reflect::set(&o, &"source".into(), &JsValue::from_str(&projected)).ok();
+            o.into()
+        }
+        Err(d) => {
+            let o = Object::new();
+            Reflect::set(&o, &"ok".into(), &JsValue::from_bool(false)).ok();
+            Reflect::set(&o, &"error".into(), &JsValue::from_str(&d.message)).ok();
+            o.into()
+        }
+    }
+}
+
+/// Apply a structural edit to a VibeScript program and project the result.
+///
+/// The edit is specified as a JSON object with an `op` field and
+/// operation-specific fields. This enables LLMs and browsers to
+/// edit program structure without text patching.
+///
+/// Supported ops:
+/// - `add_field`: { op, name, ty, unit?, support?, representation? }
+/// - `add_material`: { op, name, properties: [{name, value}] }
+/// - `add_law`: { op, name, condition, consequence }
+/// - `remove_item`: { op, index }
+/// - `rename_item`: { op, index, new_name }
+/// - `set_field_unit`: { op, index, unit? }
+/// - `set_field_support`: { op, index, support }
+/// - `set_field_representation`: { op, index, representation }
+/// - `add_material_property`: { op, index, name, value }
+/// - `remove_material_property`: { op, index, name }
+/// - `add_prefix`: { op, prefix, iri }
+/// - `remove_prefix`: { op, prefix }
+#[wasm_bindgen]
+pub fn apply_structural_edit(src: &str, edit_json: &str) -> JsValue {
+    let edit = match parse_edit_json(edit_json) {
+        Ok(e) => e,
+        Err(msg) => {
+            let o = Object::new();
+            Reflect::set(&o, &"ok".into(), &JsValue::from_bool(false)).ok();
+            Reflect::set(&o, &"error".into(), &JsValue::from_str(&msg)).ok();
+            return o.into();
+        }
+    };
+
+    match parse_program(src) {
+        Ok(prog) => {
+            let edited = apply_edit(&prog, &edit);
+            let projected = project_program(&edited, &ProjectOptions::default());
+            let o = Object::new();
+            Reflect::set(&o, &"ok".into(), &JsValue::from_bool(true)).ok();
+            Reflect::set(&o, &"source".into(), &JsValue::from_str(&projected)).ok();
+            o.into()
+        }
+        Err(d) => {
+            let o = Object::new();
+            Reflect::set(&o, &"ok".into(), &JsValue::from_bool(false)).ok();
+            Reflect::set(&o, &"error".into(), &JsValue::from_str(&d.message)).ok();
+            o.into()
+        }
+    }
+}
+
+/// Apply multiple structural edits in sequence.
+/// `edits_json` is a JSON array of edit objects.
+#[wasm_bindgen]
+pub fn apply_structural_edits(src: &str, edits_json: &str) -> JsValue {
+    let edits = match parse_edits_json(edits_json) {
+        Ok(e) => e,
+        Err(msg) => {
+            let o = Object::new();
+            Reflect::set(&o, &"ok".into(), &JsValue::from_bool(false)).ok();
+            Reflect::set(&o, &"error".into(), &JsValue::from_str(&msg)).ok();
+            return o.into();
+        }
+    };
+
+    match parse_program(src) {
+        Ok(prog) => {
+            let edited = apply_edits(&prog, &edits);
+            let projected = project_program(&edited, &ProjectOptions::default());
+            let o = Object::new();
+            Reflect::set(&o, &"ok".into(), &JsValue::from_bool(true)).ok();
+            Reflect::set(&o, &"source".into(), &JsValue::from_str(&projected)).ok();
+            o.into()
+        }
+        Err(d) => {
+            let o = Object::new();
+            Reflect::set(&o, &"ok".into(), &JsValue::from_bool(false)).ok();
+            Reflect::set(&o, &"error".into(), &JsValue::from_str(&d.message)).ok();
+            o.into()
+        }
+    }
+}
+
+fn parse_edit_json(json: &str) -> Result<Edit, String> {
+    let v: serde_json::Value = serde_json::from_str(json).map_err(|e| e.to_string())?;
+    let op = v
+        .get("op")
+        .and_then(|o| o.as_str())
+        .ok_or("missing 'op' field")?;
+
+    match op {
+        "add_field" => {
+            let name = v
+                .get("name")
+                .and_then(|n| n.as_str())
+                .ok_or("missing 'name'")?;
+            let ty = v.get("ty").and_then(|t| t.as_str()).ok_or("missing 'ty'")?;
+            let unit = v
+                .get("unit")
+                .and_then(|u| u.as_str())
+                .map(|s| s.to_string());
+            let support = v
+                .get("support")
+                .and_then(|s| s.as_str())
+                .map(|s| match s {
+                    "region" => FieldSupport::Region,
+                    "point" => FieldSupport::Point,
+                    "continuant" => FieldSupport::Continuant,
+                    "stream" => FieldSupport::Stream,
+                    _ => FieldSupport::Region,
+                })
+                .unwrap_or(FieldSupport::Region);
+            let representation = v
+                .get("representation")
+                .and_then(|r| r.as_str())
+                .map(|r| match r {
+                    "grid" => FieldRepresentation::Grid,
+                    "mesh" => FieldRepresentation::Mesh,
+                    "particles" => FieldRepresentation::Particles,
+                    "analytic" => FieldRepresentation::Analytic,
+                    "sampled" => FieldRepresentation::Sampled,
+                    _ => FieldRepresentation::Grid,
+                })
+                .unwrap_or(FieldRepresentation::Grid);
+            let index = v.get("index").and_then(|i| i.as_u64()).map(|i| i as usize);
+            Ok(Edit::AddItem {
+                item: poet_vibe::projectional::make_field(
+                    name,
+                    ty,
+                    unit.as_deref(),
+                    support,
+                    representation,
+                ),
+                index,
+            })
+        }
+        "add_material" => {
+            let name = v
+                .get("name")
+                .and_then(|n| n.as_str())
+                .ok_or("missing 'name'")?;
+            let props = v
+                .get("properties")
+                .and_then(|p| p.as_array())
+                .ok_or("missing 'properties' array")?;
+            let properties: Vec<(&str, poet_vibe::Expr)> = props
+                .iter()
+                .filter_map(|p| {
+                    let n = p.get("name")?.as_str()?;
+                    let val = p.get("value")?.as_f64()?;
+                    Some((n, poet_vibe::projectional::make_float(val)))
+                })
+                .collect();
+            let index = v.get("index").and_then(|i| i.as_u64()).map(|i| i as usize);
+            Ok(Edit::AddItem {
+                item: poet_vibe::projectional::make_material(name, properties),
+                index,
+            })
+        }
+        "add_law" => {
+            let name = v
+                .get("name")
+                .and_then(|n| n.as_str())
+                .ok_or("missing 'name'")?;
+            let condition = v
+                .get("condition")
+                .and_then(|c| c.as_str())
+                .ok_or("missing 'condition'")?;
+            let consequence = v
+                .get("consequence")
+                .and_then(|c| c.as_str())
+                .ok_or("missing 'consequence'")?;
+            // For simplicity, parse condition/consequence as cell expressions
+            let cond_expr = poet_vibe::parse_cell(&format!("= {}", condition))
+                .map_err(|e| format!("condition parse: {}", e.message))?;
+            let cons_expr = poet_vibe::parse_cell(&format!("= {}", consequence))
+                .map_err(|e| format!("consequence parse: {}", e.message))?;
+            let index = v.get("index").and_then(|i| i.as_u64()).map(|i| i as usize);
+            Ok(Edit::AddItem {
+                item: poet_vibe::projectional::make_law(name, cond_expr, cons_expr),
+                index,
+            })
+        }
+        "remove_item" => {
+            let index = v
+                .get("index")
+                .and_then(|i| i.as_u64())
+                .ok_or("missing 'index'")? as usize;
+            Ok(Edit::RemoveItem { index })
+        }
+        "rename_item" => {
+            let index = v
+                .get("index")
+                .and_then(|i| i.as_u64())
+                .ok_or("missing 'index'")? as usize;
+            let new_name = v
+                .get("new_name")
+                .and_then(|n| n.as_str())
+                .ok_or("missing 'new_name'")?
+                .to_string();
+            Ok(Edit::RenameItem { index, new_name })
+        }
+        "set_field_unit" => {
+            let index = v
+                .get("index")
+                .and_then(|i| i.as_u64())
+                .ok_or("missing 'index'")? as usize;
+            let unit = v
+                .get("unit")
+                .and_then(|u| u.as_str())
+                .map(|s| s.to_string());
+            Ok(Edit::SetFieldUnit { index, unit })
+        }
+        "set_field_support" => {
+            let index = v
+                .get("index")
+                .and_then(|i| i.as_u64())
+                .ok_or("missing 'index'")? as usize;
+            let support = v
+                .get("support")
+                .and_then(|s| s.as_str())
+                .ok_or("missing 'support'")?;
+            let support = match support {
+                "region" => FieldSupport::Region,
+                "point" => FieldSupport::Point,
+                "continuant" => FieldSupport::Continuant,
+                "stream" => FieldSupport::Stream,
+                _ => return Err(format!("unknown support '{}'", support)),
+            };
+            Ok(Edit::SetFieldSupport { index, support })
+        }
+        "set_field_representation" => {
+            let index = v
+                .get("index")
+                .and_then(|i| i.as_u64())
+                .ok_or("missing 'index'")? as usize;
+            let representation = v
+                .get("representation")
+                .and_then(|r| r.as_str())
+                .ok_or("missing 'representation'")?;
+            let representation = match representation {
+                "grid" => FieldRepresentation::Grid,
+                "mesh" => FieldRepresentation::Mesh,
+                "particles" => FieldRepresentation::Particles,
+                "analytic" => FieldRepresentation::Analytic,
+                "sampled" => FieldRepresentation::Sampled,
+                _ => return Err(format!("unknown representation '{}'", representation)),
+            };
+            Ok(Edit::SetFieldRepresentation {
+                index,
+                representation,
+            })
+        }
+        "add_material_property" => {
+            let index = v
+                .get("index")
+                .and_then(|i| i.as_u64())
+                .ok_or("missing 'index'")? as usize;
+            let name = v
+                .get("name")
+                .and_then(|n| n.as_str())
+                .ok_or("missing 'name'")?;
+            let value = v
+                .get("value")
+                .and_then(|v| v.as_f64())
+                .ok_or("missing 'value' (must be a number)")?;
+            Ok(Edit::AddMaterialProperty {
+                index,
+                property: NamedArg {
+                    span: VibeSpan::point(0),
+                    name: name.to_string(),
+                    value: poet_vibe::projectional::make_float(value),
+                },
+            })
+        }
+        "remove_material_property" => {
+            let index = v
+                .get("index")
+                .and_then(|i| i.as_u64())
+                .ok_or("missing 'index'")? as usize;
+            let name = v
+                .get("name")
+                .and_then(|n| n.as_str())
+                .ok_or("missing 'name'")?
+                .to_string();
+            Ok(Edit::RemoveMaterialProperty { index, name })
+        }
+        "add_prefix" => {
+            let prefix = v
+                .get("prefix")
+                .and_then(|p| p.as_str())
+                .ok_or("missing 'prefix'")?
+                .to_string();
+            let iri = v
+                .get("iri")
+                .and_then(|i| i.as_str())
+                .ok_or("missing 'iri'")?
+                .to_string();
+            Ok(Edit::AddPrefix { prefix, iri })
+        }
+        "remove_prefix" => {
+            let prefix = v
+                .get("prefix")
+                .and_then(|p| p.as_str())
+                .ok_or("missing 'prefix'")?
+                .to_string();
+            Ok(Edit::RemovePrefix { prefix })
+        }
+        _ => Err(format!("unknown op '{}'", op)),
+    }
+}
+
+fn parse_edits_json(json: &str) -> Result<Vec<Edit>, String> {
+    let arr: serde_json::Value = serde_json::from_str(json).map_err(|e| e.to_string())?;
+    let arr = arr.as_array().ok_or("expected a JSON array")?;
+    arr.iter()
+        .map(|v| {
+            let s = serde_json::to_string(v).map_err(|e| e.to_string())?;
+            parse_edit_json(&s)
+        })
+        .collect()
+}
