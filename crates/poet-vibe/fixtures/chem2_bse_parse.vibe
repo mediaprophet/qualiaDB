@@ -1,0 +1,6 @@
+# Chemistry — BSE basis-set JSON parsing
+# Minimal BSE JSON for a hydrogen atom (STO-3G style)
+invoke Chemistry.parse_bse_json {
+  json: "{\"basis_set_name\": \"STO-3G\", \"basis_set_family\": \"sto\", \"basis_set_description\": \"STO-3G minimal basis\", \"elements\": {\"1\": {\"electron_shells\": [{\"angular_momentum\": [0], \"exponents\": [3.42525091, 0.62391373, 0.1688554], \"coefficients\": [[0.15432897, 0.53532814, 0.44463454]]}]}}}",
+  atoms: [{ z: 1, symbol: "H", x: 0.0, y: 0.0, z_coord: 0.0 }]
+}

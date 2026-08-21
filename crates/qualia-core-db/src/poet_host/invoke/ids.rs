@@ -173,15 +173,19 @@ pub const ENG_DRAG_FORCE: &str = "EngineeringAnalysis.drag_force";
 pub const ENG_REYNOLDS: &str = "EngineeringAnalysis.reynolds_number";
 pub const ENG_FATIGUE_CYCLES: &str = "EngineeringAnalysis.fatigue_cycles";
 pub const ENG_MINER_DAMAGE: &str = "EngineeringAnalysis.miner_damage";
+pub const ENG_ANALYZE_CONDUCTION: &str = "EngineeringAnalysis.analyze_conduction";
+pub const ENG_FEM_STATIC: &str = "EngineeringAnalysis.fem_static";
 pub const CHEM_ELEMENT_SYMBOL: &str = "Chemistry.element_symbol";
 pub const CHEM_ATOMIC_NUMBER: &str = "Chemistry.atomic_number";
 pub const CHEM_ATOMIC_WEIGHT: &str = "Chemistry.standard_atomic_weight";
 pub const CHEM_LDA_EXCHANGE: &str = "Chemistry.lda_exchange";
 pub const CHEM_LDA_CORRELATION_VWN: &str = "Chemistry.lda_correlation_vwn";
+pub const CHEM_PARSE_BSE_JSON: &str = "Chemistry.parse_bse_json";
 pub const MED_TANIMOTO: &str = "Medical.tanimoto";
 pub const MED_STRUCTURAL_FINGERPRINT: &str = "Medical.structural_fingerprint";
 pub const MED_ANALYZE_INTENSITY_GRID: &str = "Medical.analyze_intensity_grid";
 pub const MED_ANALYZE_DIFFERENTIAL: &str = "MedicalComputing.analyze_differential";
+pub const MED_SCREEN_COMPOUNDS: &str = "MedicalComputing.screen_compounds";
 pub const ID_DID_Q42: &str = "ContractsIdentityAndConsensus.parse_did_q42";
 pub const CRYPTO_SHA256: &str = "QuantumAndCryptographic.sha256";
 pub const NLP_ANALYZE: &str = "nlp.analyze";
@@ -897,15 +901,19 @@ pub const ALL_BOUND: &[&str] = &[
     ENG_REYNOLDS,
     ENG_FATIGUE_CYCLES,
     ENG_MINER_DAMAGE,
+    ENG_ANALYZE_CONDUCTION,
+    ENG_FEM_STATIC,
     CHEM_ELEMENT_SYMBOL,
     CHEM_ATOMIC_NUMBER,
     CHEM_ATOMIC_WEIGHT,
     CHEM_LDA_EXCHANGE,
     CHEM_LDA_CORRELATION_VWN,
+    CHEM_PARSE_BSE_JSON,
     MED_TANIMOTO,
     MED_STRUCTURAL_FINGERPRINT,
     MED_ANALYZE_INTENSITY_GRID,
     MED_ANALYZE_DIFFERENTIAL,
+    MED_SCREEN_COMPOUNDS,
     ID_DID_Q42,
     CRYPTO_SHA256,
     NLP_ANALYZE,
@@ -1540,13 +1548,20 @@ pub fn seam_for(id: &str) -> &'static str {
         | CHEM_ATOMIC_NUMBER
         | CHEM_ATOMIC_WEIGHT
         | CHEM_LDA_EXCHANGE
-        | CHEM_LDA_CORRELATION_VWN => "chemistry",
+        | CHEM_LDA_CORRELATION_VWN
+        | CHEM_PARSE_BSE_JSON => "chemistry",
         MED_TANIMOTO
         | MED_STRUCTURAL_FINGERPRINT
         | MED_ANALYZE_INTENSITY_GRID
-        | MED_ANALYZE_DIFFERENTIAL => "medical",
-        ENG_CAUCHY_STRESS | ENG_DRAG_FORCE | ENG_REYNOLDS | ENG_FATIGUE_CYCLES
-        | ENG_MINER_DAMAGE => "engineering",
+        | MED_ANALYZE_DIFFERENTIAL
+        | MED_SCREEN_COMPOUNDS => "medical",
+        ENG_CAUCHY_STRESS
+        | ENG_DRAG_FORCE
+        | ENG_REYNOLDS
+        | ENG_FATIGUE_CYCLES
+        | ENG_MINER_DAMAGE
+        | ENG_ANALYZE_CONDUCTION
+        | ENG_FEM_STATIC => "engineering",
         PHYS_WAVE_1D
         | PHYS_HEAT_DIFFUSION_1D
         | PHYS_ADVECTION_DIFFUSION_1D

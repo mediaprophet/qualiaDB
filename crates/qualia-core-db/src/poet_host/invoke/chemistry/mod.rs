@@ -3,6 +3,12 @@
 //! Exposes `specialized_libs::chemistry_modeling` functions through VibeScript
 //! invoke IDs in the `Chemistry.*` namespace.
 
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+mod extra;
+
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+pub use extra::parse_bse_json;
+
 use super::args;
 use poet_vibe::{Diagnostic, Span, Value};
 
@@ -80,4 +86,12 @@ pub fn lda_correlation_vwn(args: &Value, span: Span) -> Result<Value, Diagnostic
         ("energy", Value::F64(energy)),
         ("potential", Value::F64(potential)),
     ]))
+}
+
+#[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+pub fn parse_bse_json(
+    _args: &poet_vibe::Value,
+    span: poet_vibe::Span,
+) -> Result<poet_vibe::Value, poet_vibe::Diagnostic> {
+    Err(super::args::need_scientific(span, "Chemistry"))
 }
