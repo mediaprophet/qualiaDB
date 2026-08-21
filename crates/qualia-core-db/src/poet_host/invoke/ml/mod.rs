@@ -10,6 +10,12 @@ mod extended;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 mod extra;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+mod fitters;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+mod fitters2;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+mod fitters3;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 mod more;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 mod ols;
@@ -20,6 +26,12 @@ pub use active::*;
 pub use extended::{accuracy, kmeans, mae, mse, r2_score, rmse, roc_auc, train_test_split};
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 pub use extra::*;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+pub use fitters::*;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+pub use fitters2::*;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+pub use fitters3::*;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 pub use more::*;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
@@ -96,5 +108,39 @@ ml_stub!(
     al_consensus,
     al_consensus_entropy,
     al_average_kl_disagreement,
-    al_rank_by_disagreement
+    al_rank_by_disagreement,
+    // fitters
+    ridge_fit,
+    lasso_fit,
+    pls_fit,
+    kmeans_fit,
+    gmm_fit,
+    logistic_fit,
+    poisson_fit,
+    cox_fit,
+    svm_fit,
+    // fitters2
+    decision_tree_fit_regressor,
+    decision_tree_fit_classifier,
+    hmm_baum_welch,
+    variational_gaussian_fit,
+    mcmc_metropolis,
+    gp_fit,
+    // fitters3
+    naive_bayes_fit,
+    knn_fit,
+    lda_fit,
+    qda_fit,
+    multinomial_logistic_fit,
+    svm_multiclass_fit,
+    hierarchical_fit,
+    hierarchical_labels,
+    kaplan_meier_fit,
+    pcr_fit,
+    bayesian_linear_fit,
+    som_train,
+    kalman_new,
+    random_forest_fit_regressor,
+    random_forest_fit_classifier,
+    gradient_boosting_fit_regressor
 );

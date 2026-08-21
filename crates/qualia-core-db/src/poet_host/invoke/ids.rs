@@ -206,6 +206,38 @@ pub const ML_AL_CONSENSUS: &str = "MachineLearning.al_consensus";
 pub const ML_AL_CONSENSUS_ENTROPY: &str = "MachineLearning.al_consensus_entropy";
 pub const ML_AL_AVERAGE_KL_DISAGREEMENT: &str = "MachineLearning.al_average_kl_disagreement";
 pub const ML_AL_RANK_BY_DISAGREEMENT: &str = "MachineLearning.al_rank_by_disagreement";
+pub const ML_RIDGE_FIT: &str = "MachineLearning.ridge_fit";
+pub const ML_LASSO_FIT: &str = "MachineLearning.lasso_fit";
+pub const ML_PLS_FIT: &str = "MachineLearning.pls_fit";
+pub const ML_KMEANS_FIT: &str = "MachineLearning.kmeans_fit";
+pub const ML_GMM_FIT: &str = "MachineLearning.gmm_fit";
+pub const ML_LOGISTIC_FIT: &str = "MachineLearning.logistic_fit";
+pub const ML_POISSON_FIT: &str = "MachineLearning.poisson_fit";
+pub const ML_COX_FIT: &str = "MachineLearning.cox_fit";
+pub const ML_SVM_FIT: &str = "MachineLearning.svm_fit";
+pub const ML_DECISION_TREE_FIT_REGRESSOR: &str = "MachineLearning.decision_tree_fit_regressor";
+pub const ML_DECISION_TREE_FIT_CLASSIFIER: &str = "MachineLearning.decision_tree_fit_classifier";
+pub const ML_HMM_BAUM_WELCH: &str = "MachineLearning.hmm_baum_welch";
+pub const ML_VARIATIONAL_GAUSSIAN_FIT: &str = "MachineLearning.variational_gaussian_fit";
+pub const ML_MCMC_METROPOLIS: &str = "MachineLearning.mcmc_metropolis";
+pub const ML_GP_FIT: &str = "MachineLearning.gp_fit";
+pub const ML_NAIVE_BAYES_FIT: &str = "MachineLearning.naive_bayes_fit";
+pub const ML_KNN_FIT: &str = "MachineLearning.knn_fit";
+pub const ML_LDA_FIT: &str = "MachineLearning.lda_fit";
+pub const ML_QDA_FIT: &str = "MachineLearning.qda_fit";
+pub const ML_MULTINOMIAL_LOGISTIC_FIT: &str = "MachineLearning.multinomial_logistic_fit";
+pub const ML_SVM_MULTICLASS_FIT: &str = "MachineLearning.svm_multiclass_fit";
+pub const ML_HIERARCHICAL_FIT: &str = "MachineLearning.hierarchical_fit";
+pub const ML_HIERARCHICAL_LABELS: &str = "MachineLearning.hierarchical_labels";
+pub const ML_KAPLAN_MEIER_FIT: &str = "MachineLearning.kaplan_meier_fit";
+pub const ML_PCR_FIT: &str = "MachineLearning.pcr_fit";
+pub const ML_BAYESIAN_LINEAR_FIT: &str = "MachineLearning.bayesian_linear_fit";
+pub const ML_SOM_TRAIN: &str = "MachineLearning.som_train";
+pub const ML_KALMAN_NEW: &str = "MachineLearning.kalman_new";
+pub const ML_RANDOM_FOREST_FIT_REGRESSOR: &str = "MachineLearning.random_forest_fit_regressor";
+pub const ML_RANDOM_FOREST_FIT_CLASSIFIER: &str = "MachineLearning.random_forest_fit_classifier";
+pub const ML_GRADIENT_BOOSTING_FIT_REGRESSOR: &str =
+    "MachineLearning.gradient_boosting_fit_regressor";
 pub const BIOSIGNAL_DP_FILTER: &str = "biosignal.dp_filter";
 pub const BIOSIGNAL_DP_CONFIG: &str = "biosignal.dp_config";
 pub const PHYS_PROJECTILE: &str = "PhysicsAndODE.projectile";
@@ -981,6 +1013,37 @@ pub const ALL_BOUND: &[&str] = &[
     ML_AL_CONSENSUS_ENTROPY,
     ML_AL_AVERAGE_KL_DISAGREEMENT,
     ML_AL_RANK_BY_DISAGREEMENT,
+    ML_RIDGE_FIT,
+    ML_LASSO_FIT,
+    ML_PLS_FIT,
+    ML_KMEANS_FIT,
+    ML_GMM_FIT,
+    ML_LOGISTIC_FIT,
+    ML_POISSON_FIT,
+    ML_COX_FIT,
+    ML_SVM_FIT,
+    ML_DECISION_TREE_FIT_REGRESSOR,
+    ML_DECISION_TREE_FIT_CLASSIFIER,
+    ML_HMM_BAUM_WELCH,
+    ML_VARIATIONAL_GAUSSIAN_FIT,
+    ML_MCMC_METROPOLIS,
+    ML_GP_FIT,
+    ML_NAIVE_BAYES_FIT,
+    ML_KNN_FIT,
+    ML_LDA_FIT,
+    ML_QDA_FIT,
+    ML_MULTINOMIAL_LOGISTIC_FIT,
+    ML_SVM_MULTICLASS_FIT,
+    ML_HIERARCHICAL_FIT,
+    ML_HIERARCHICAL_LABELS,
+    ML_KAPLAN_MEIER_FIT,
+    ML_PCR_FIT,
+    ML_BAYESIAN_LINEAR_FIT,
+    ML_SOM_TRAIN,
+    ML_KALMAN_NEW,
+    ML_RANDOM_FOREST_FIT_REGRESSOR,
+    ML_RANDOM_FOREST_FIT_CLASSIFIER,
+    ML_GRADIENT_BOOSTING_FIT_REGRESSOR,
     PHYS_PROJECTILE,
     BIO_ALIGN,
     CHEM_SMILES,
@@ -1678,7 +1741,38 @@ pub fn seam_for(id: &str) -> &'static str {
         | ML_AL_CONSENSUS
         | ML_AL_CONSENSUS_ENTROPY
         | ML_AL_AVERAGE_KL_DISAGREEMENT
-        | ML_AL_RANK_BY_DISAGREEMENT => "ml",
+        | ML_AL_RANK_BY_DISAGREEMENT
+        | ML_RIDGE_FIT
+        | ML_LASSO_FIT
+        | ML_PLS_FIT
+        | ML_KMEANS_FIT
+        | ML_GMM_FIT
+        | ML_LOGISTIC_FIT
+        | ML_POISSON_FIT
+        | ML_COX_FIT
+        | ML_SVM_FIT
+        | ML_DECISION_TREE_FIT_REGRESSOR
+        | ML_DECISION_TREE_FIT_CLASSIFIER
+        | ML_HMM_BAUM_WELCH
+        | ML_VARIATIONAL_GAUSSIAN_FIT
+        | ML_MCMC_METROPOLIS
+        | ML_GP_FIT
+        | ML_NAIVE_BAYES_FIT
+        | ML_KNN_FIT
+        | ML_LDA_FIT
+        | ML_QDA_FIT
+        | ML_MULTINOMIAL_LOGISTIC_FIT
+        | ML_SVM_MULTICLASS_FIT
+        | ML_HIERARCHICAL_FIT
+        | ML_HIERARCHICAL_LABELS
+        | ML_KAPLAN_MEIER_FIT
+        | ML_PCR_FIT
+        | ML_BAYESIAN_LINEAR_FIT
+        | ML_SOM_TRAIN
+        | ML_KALMAN_NEW
+        | ML_RANDOM_FOREST_FIT_REGRESSOR
+        | ML_RANDOM_FOREST_FIT_CLASSIFIER
+        | ML_GRADIENT_BOOSTING_FIT_REGRESSOR => "ml",
         PHYS_PROJECTILE | BIO_ALIGN | CHEM_SMILES => "science",
         CHEM_ELEMENT_SYMBOL
         | CHEM_ATOMIC_NUMBER

@@ -62,7 +62,7 @@ pub fn signed_volume(args: &Value, span: Span) -> Result<Value, Diagnostic> {
 
 /// `ComputationalGeometry.morton_encode_2d` — Morton (Z-order) code for 2D.
 /// Args: { x: u64, y: u64 }
-pub fn morton_encode_2d(args: &Value, span: Span) -> Result<Value, Diagnostic> {
+pub fn morton_encode_2d(args: &Value, _span: Span) -> Result<Value, Diagnostic> {
     let x = args::rec_u64(args, "x").unwrap_or(0) as u16;
     let y = args::rec_u64(args, "y").unwrap_or(0) as u16;
     Ok(Value::U64(cg::morton_encode_2d(x, y) as u64))
@@ -70,7 +70,7 @@ pub fn morton_encode_2d(args: &Value, span: Span) -> Result<Value, Diagnostic> {
 
 /// `ComputationalGeometry.morton_decode_2d` — decode a 2D Morton code.
 /// Args: { code: u64 }
-pub fn morton_decode_2d(args: &Value, span: Span) -> Result<Value, Diagnostic> {
+pub fn morton_decode_2d(args: &Value, _span: Span) -> Result<Value, Diagnostic> {
     let code = args::rec_u64(args, "code").unwrap_or(0) as u32;
     let (x, y) = cg::morton_decode_2d(code);
     Ok(args::record([
@@ -81,7 +81,7 @@ pub fn morton_decode_2d(args: &Value, span: Span) -> Result<Value, Diagnostic> {
 
 /// `ComputationalGeometry.morton_encode_3d` — Morton code for 3D.
 /// Args: { x: u64, y: u64, z: u64 }
-pub fn morton_encode_3d(args: &Value, span: Span) -> Result<Value, Diagnostic> {
+pub fn morton_encode_3d(args: &Value, _span: Span) -> Result<Value, Diagnostic> {
     let x = args::rec_u64(args, "x").unwrap_or(0) as u16;
     let y = args::rec_u64(args, "y").unwrap_or(0) as u16;
     let z = args::rec_u64(args, "z").unwrap_or(0) as u16;
@@ -90,7 +90,7 @@ pub fn morton_encode_3d(args: &Value, span: Span) -> Result<Value, Diagnostic> {
 
 /// `ComputationalGeometry.hilbert_encode_2d` — Hilbert curve code for 2D.
 /// Args: { x: u64, y: u64 }
-pub fn hilbert_encode_2d(args: &Value, span: Span) -> Result<Value, Diagnostic> {
+pub fn hilbert_encode_2d(args: &Value, _span: Span) -> Result<Value, Diagnostic> {
     let x = args::rec_u64(args, "x").unwrap_or(0) as u16;
     let y = args::rec_u64(args, "y").unwrap_or(0) as u16;
     Ok(Value::U64(cg::hilbert_encode_2d(x, y) as u64))
