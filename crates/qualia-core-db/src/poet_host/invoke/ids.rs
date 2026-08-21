@@ -48,7 +48,41 @@ pub const NT_PRIME: &str = "NumberTheory.is_prime";
 pub const SPEC_BESSEL: &str = "SpecialFunctionsAndTransforms.bessel_j";
 pub const STAT_MEAN: &str = "Statistics.mean";
 pub const STAT_PEARSON: &str = "Statistics.pearson";
+pub const STAT_MEDIAN: &str = "Statistics.median";
+pub const STAT_VARIANCE: &str = "Statistics.variance";
+pub const STAT_STD_DEV: &str = "Statistics.std_dev";
+pub const STAT_SKEWNESS: &str = "Statistics.skewness";
+pub const STAT_KURTOSIS: &str = "Statistics.kurtosis";
+pub const STAT_QUANTILE: &str = "Statistics.quantile";
+pub const STAT_COVARIANCE: &str = "Statistics.covariance";
+pub const STAT_MIN: &str = "Statistics.min";
+pub const STAT_MAX: &str = "Statistics.max";
+pub const STAT_SUM: &str = "Statistics.sum";
+pub const STAT_SPEARMAN: &str = "Statistics.spearman";
+pub const STAT_KENDALL: &str = "Statistics.kendall";
+pub const STAT_ONE_SAMPLE_T: &str = "Statistics.one_sample_t";
+pub const STAT_TWO_SAMPLE_T: &str = "Statistics.two_sample_t";
+pub const STAT_PAIRED_T: &str = "Statistics.paired_t";
+pub const STAT_CHI_SQUARE_GOF: &str = "Statistics.chi_square_gof";
+pub const STAT_ONE_WAY_ANOVA: &str = "Statistics.one_way_anova";
+pub const STAT_AUTOCORRELATION: &str = "Statistics.autocorrelation";
+pub const STAT_MOVING_AVERAGE: &str = "Statistics.moving_average";
+pub const STAT_EXPONENTIAL_SMOOTHING: &str = "Statistics.exponential_smoothing";
+pub const STAT_TRIMMED_MEAN: &str = "Statistics.trimmed_mean";
+pub const STAT_IQR: &str = "Statistics.iqr";
+pub const STAT_MAD: &str = "Statistics.median_abs_deviation";
+pub const STAT_ENTROPY: &str = "Statistics.entropy";
+pub const STAT_KL_DIVERGENCE: &str = "Statistics.kl_divergence";
+pub const STAT_Z_SCORE_OUTLIERS: &str = "Statistics.z_score_outliers";
 pub const ML_OLS: &str = "MachineLearning.ols";
+pub const ML_MSE: &str = "MachineLearning.mse";
+pub const ML_RMSE: &str = "MachineLearning.rmse";
+pub const ML_MAE: &str = "MachineLearning.mae";
+pub const ML_R2: &str = "MachineLearning.r2_score";
+pub const ML_ACCURACY: &str = "MachineLearning.accuracy";
+pub const ML_ROC_AUC: &str = "MachineLearning.roc_auc";
+pub const ML_KMEANS: &str = "MachineLearning.kmeans";
+pub const ML_TRAIN_TEST_SPLIT: &str = "MachineLearning.train_test_split";
 pub const BIOSIGNAL_DP_FILTER: &str = "biosignal.dp_filter";
 pub const BIOSIGNAL_DP_CONFIG: &str = "biosignal.dp_config";
 pub const PHYS_PROJECTILE: &str = "PhysicsAndODE.projectile";
@@ -662,8 +696,42 @@ pub const ALL_BOUND: &[&str] = &[
     NT_PRIME,
     SPEC_BESSEL,
     STAT_MEAN,
+    STAT_MEDIAN,
+    STAT_VARIANCE,
+    STAT_STD_DEV,
+    STAT_SKEWNESS,
+    STAT_KURTOSIS,
+    STAT_QUANTILE,
+    STAT_COVARIANCE,
+    STAT_MIN,
+    STAT_MAX,
+    STAT_SUM,
+    STAT_SPEARMAN,
+    STAT_KENDALL,
+    STAT_ONE_SAMPLE_T,
+    STAT_TWO_SAMPLE_T,
+    STAT_PAIRED_T,
+    STAT_CHI_SQUARE_GOF,
+    STAT_ONE_WAY_ANOVA,
+    STAT_AUTOCORRELATION,
+    STAT_MOVING_AVERAGE,
+    STAT_EXPONENTIAL_SMOOTHING,
+    STAT_TRIMMED_MEAN,
+    STAT_IQR,
+    STAT_MAD,
+    STAT_ENTROPY,
+    STAT_KL_DIVERGENCE,
+    STAT_Z_SCORE_OUTLIERS,
     STAT_PEARSON,
     ML_OLS,
+    ML_MSE,
+    ML_RMSE,
+    ML_MAE,
+    ML_R2,
+    ML_ACCURACY,
+    ML_ROC_AUC,
+    ML_KMEANS,
+    ML_TRAIN_TEST_SPLIT,
     PHYS_PROJECTILE,
     BIO_ALIGN,
     CHEM_SMILES,
@@ -1184,7 +1252,35 @@ pub fn seam_for(id: &str) -> &'static str {
         | GA_DOT | SPEC_BESSEL | LA_TRANSPOSE | LA_DET | LA_SOLVE | LA_EIGEN_SYM
         | LA_EIGENVALUES | LA_SVD | LA_POLY_ROOTS | CAS_DIFFERENTIATE | CAS_SIMPLIFY
         | CAS_EXPAND | CAS_FACTOR | CAS_SOLVE_QUADRATIC | XFORM_DFT | UNITS_CONVERT => "math",
-        STAT_MEAN | STAT_PEARSON | STAT_LINEAR_REGRESSION => "stats",
+        STAT_MEAN
+        | STAT_PEARSON
+        | STAT_LINEAR_REGRESSION
+        | STAT_MEDIAN
+        | STAT_VARIANCE
+        | STAT_STD_DEV
+        | STAT_SKEWNESS
+        | STAT_KURTOSIS
+        | STAT_QUANTILE
+        | STAT_COVARIANCE
+        | STAT_MIN
+        | STAT_MAX
+        | STAT_SUM
+        | STAT_SPEARMAN
+        | STAT_KENDALL
+        | STAT_ONE_SAMPLE_T
+        | STAT_TWO_SAMPLE_T
+        | STAT_PAIRED_T
+        | STAT_CHI_SQUARE_GOF
+        | STAT_ONE_WAY_ANOVA
+        | STAT_AUTOCORRELATION
+        | STAT_MOVING_AVERAGE
+        | STAT_EXPONENTIAL_SMOOTHING
+        | STAT_TRIMMED_MEAN
+        | STAT_IQR
+        | STAT_MAD
+        | STAT_ENTROPY
+        | STAT_KL_DIVERGENCE
+        | STAT_Z_SCORE_OUTLIERS => "stats",
         GEOM_HULL2
         | GEOM_DISTANCE_2D
         | GEOM_DISTANCE_3D
@@ -1201,7 +1297,8 @@ pub fn seam_for(id: &str) -> &'static str {
         | VISION_DHASH
         | VISION_HAMMING_DISTANCE
         | VISION_COSINE_SIMILARITY => "vision",
-        ML_OLS => "ml",
+        ML_OLS | ML_MSE | ML_RMSE | ML_MAE | ML_R2 | ML_ACCURACY | ML_ROC_AUC | ML_KMEANS
+        | ML_TRAIN_TEST_SPLIT => "ml",
         PHYS_PROJECTILE | BIO_ALIGN | CHEM_SMILES => "science",
         CHEM_ELEMENT_SYMBOL
         | CHEM_ATOMIC_NUMBER
