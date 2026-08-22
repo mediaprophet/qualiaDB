@@ -72,6 +72,13 @@ pub fn NodeBody(kind: ContainerKind) -> Element {
                 }
             },
             ContainerKind::GitForge => rsx! { GitBody {} },
+            ContainerKind::SolidHub => rsx! { SolidBody {} },
+            ContainerKind::Economics => rsx! { EconomicsBody {} },
+            ContainerKind::JobCenter => rsx! { JobCenterBody {} },
+            ContainerKind::Bookmarks => rsx! { BookmarksBody {} },
+            ContainerKind::Shaders => rsx! { ShadersBody {} },
+            ContainerKind::Codecs => rsx! { CodecsBody {} },
+            ContainerKind::Domains => rsx! { DomainsBody {} },
         }
     }
 }

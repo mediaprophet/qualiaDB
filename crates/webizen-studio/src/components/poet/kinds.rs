@@ -158,6 +158,13 @@ pub enum ContainerKind {
     Chora,
     ErpKanban,
     GitForge,
+    SolidHub,
+    Economics,
+    JobCenter,
+    Bookmarks,
+    Shaders,
+    Codecs,
+    Domains,
 }
 
 impl ContainerKind {
@@ -180,6 +187,13 @@ impl ContainerKind {
             Self::Chora => "chora",
             Self::ErpKanban => "kanban",
             Self::GitForge => "git",
+            Self::SolidHub => "solid",
+            Self::Economics => "economics",
+            Self::JobCenter => "jobs",
+            Self::Bookmarks => "bookmarks",
+            Self::Shaders => "shaders",
+            Self::Codecs => "codecs",
+            Self::Domains => "domains",
         }
     }
 
@@ -202,6 +216,13 @@ impl ContainerKind {
             Self::Chora => "Chora Dialectical",
             Self::ErpKanban => "Cooperative Kanban",
             Self::GitForge => "Distributed Git",
+            Self::SolidHub => "W3C Solid Hub",
+            Self::Economics => "Cooperative Economics",
+            Self::JobCenter => "Job Centre",
+            Self::Bookmarks => "Meaning Shelf",
+            Self::Shaders => "WGSL Forge",
+            Self::Codecs => "Media Codecs",
+            Self::Domains => "Domain Presence",
         }
     }
 
@@ -217,7 +238,14 @@ impl ContainerKind {
             | Self::Ontology
             | Self::Mail
             | Self::ErpKanban
-            | Self::GitForge => "live",
+            | Self::GitForge
+            | Self::SolidHub
+            | Self::Economics
+            | Self::JobCenter
+            | Self::Bookmarks
+            | Self::Shaders
+            | Self::Codecs
+            | Self::Domains => "live",
             Self::Subcanvas | Self::Chora => "partial",
             Self::WebRtc | Self::Webview | Self::Portal | Self::Mesh3d => "present",
         }
