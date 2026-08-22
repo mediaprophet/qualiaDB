@@ -30,7 +30,7 @@ nvml = ["dep:nvml-wrapper"]
 # binaries only when explicitly enabled.
 vision-onnx = ["dep:ort"]
 dxc = []
-portal = ["wasm_simd", "gpu-runtime"]
+portal = ["wasm_simd", "gpu-runtime", "wasm-logic"]
 wasm-ontology = []
 wasm-logic = []
 wasm-scientific = ["gpu-runtime"]

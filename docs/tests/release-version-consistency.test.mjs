@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 
-const releaseVersion = '0.0.30';
+const releaseVersion = '0.0.33';
 const root = path.resolve(import.meta.dirname, '..', '..');
 const read = (relativePath) => fs.readFileSync(path.join(root, relativePath), 'utf8');
 
@@ -11,7 +11,7 @@ const workspaceMembers = [...rootManifest.matchAll(/^\s*"([^"]+)",?\s*$/gm)]
   .map((match) => match[1])
   .filter((member) => member.startsWith('crates/'));
 
-assert.equal(workspaceMembers.length, 20, 'expected all 20 workspace crates');
+assert.equal(workspaceMembers.length, 24, 'expected all 24 workspace crates');
 
 const workspacePackageNames = [];
 for (const member of workspaceMembers) {
@@ -77,8 +77,8 @@ assert.match(apiExplorer, /href="\.\.\/css\/site-nav\.css"/,
 assert.match(apiExplorer, /menu-loader\.js/,
   'API Explorer must load the shared navigation renderer');
 
-assert.match(read('.github/workflows/pages.yml'), /- "0\.0\.30"/);
-assert.match(read('.github/workflows/release-p64-models.yml'), /- 0\.0\.30/);
+assert.match(read('.github/workflows/pages.yml'), /- "0\.0\.33"/);
+assert.match(read('.github/workflows/release-p64-models.yml'), /- 0\.0\.33/);
 
 const comparative = JSON.parse(read('docs/comparative_benchmark_results.json'));
 assert.equal(

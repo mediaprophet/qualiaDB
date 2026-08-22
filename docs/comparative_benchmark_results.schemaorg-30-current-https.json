@@ -75,7 +75,7 @@
         "native_q42_file_mb": 1.12,
         "native_q42_file_bytes": 1174091
       },
-      "engine_version": "0.0.30"
+      "engine_version": "0.0.33"
     },
     "qualia_q42": {
       "dataset_file_bytes": 1174091,
@@ -152,7 +152,7 @@
         "native_q42_file_mb": 1.12,
         "native_q42_file_bytes": 1174091
       },
-      "engine_version": "0.0.30"
+      "engine_version": "0.0.33"
     },
     "oxigraph": {
       "engine": "oxigraph",
@@ -404,7 +404,7 @@
       "dataset_file_mb": 2.246,
       "dataset_format": "ntriples",
       "native_q42_file_mb": 1.12,
-      "engine_version": "0.0.30"
+      "engine_version": "0.0.33"
     }
   },
   "last_updated": "2026-08-14T18:08:42.345425Z",
@@ -435,7 +435,7 @@
   "methodology": "Each engine is run in complete isolation. 512 MB ceiling enforced. Latency: 10 warmup + 30 samples (p50/p95/p99). RDF engines (Oxigraph, SurrealDB, Comunica, WASM-Prolog, Qualia WASM) load N-Triples text. Schema.org profile adds two Qualia format rows on the same ontology: N-Triples parse (qualia_nt) and native .q42 SuperBlocks (qualia_q42). Qualia daemon row (when present) measured via local daemon on port 4242. Qualia WASM uses execute_ntriples_query on flat QualiaQuin bytes in Node.",
   "execution_environment": {
     "runner": "github-actions-comparative-harness",
-    "engine_version": "0.0.30",
+    "engine_version": "0.0.33",
     "memory_ceiling_mb": 512,
     "measurement_path": "harness_isolated_subprocess",
     "topology": {

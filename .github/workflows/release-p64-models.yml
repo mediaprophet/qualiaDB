@@ -3,7 +3,7 @@ name: Release P64 models
 on:
   push:
     branches:
-      - 0.0.30
+      - 0.0.33
     paths:
       - .github/workflows/release-p64-models.yml
       - crates/qualia-core-db/examples/build_p64_release.rs
