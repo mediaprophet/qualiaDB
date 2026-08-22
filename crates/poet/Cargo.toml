@@ -1,0 +1,76 @@
+[package]
+name = "poet"
+version = "0.0.34"
+edition = "2021"
+authors = ["Timothy Charles Holborn <timothy.holborn@gmail.com>"]
+license = "CC-BY-NC-ND-4.0"
+description = "Poet HyperCanvas — Spatial Hypermedia Workspace & Living Document Environment"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+ciborium = "0.2"
+uuid = { version = "1", features = ["v4", "js"] }
+chrono = { version = "0.4", features = ["wasmbind"] }
+console_error_panic_hook = "0.1"
+base64 = "0.22"
+
+# WASM / browser
+wasm-bindgen = "0.2"
+wasm-bindgen-futures = "0.4"
+js-sys = "0.3"
+web-sys = { version = "0.3", features = [
+    "Document",
+    "Element",
+    "HtmlElement",
+    "Window",
+    "console",
+    "Node",
+    "Text",
+    "DocumentFragment",
+    "DomTokenList",
+    "Event",
+    "EventTarget",
+    "HtmlDivElement",
+    "HtmlButtonElement",
+    "HtmlInputElement",
+    "HtmlSelectElement",
+    "HtmlTextAreaElement",
+    "HtmlHeadElement",
+    "HtmlCanvasElement",
+    "CanvasRenderingContext2d",
+    "NodeList",
+    "CssStyleDeclaration",
+    "MouseEvent",
+    "WheelEvent",
+    "KeyboardEvent",
+    "InputEvent",
+    "DragEvent",
+    "DataTransfer",
+    "Storage",
+    "Location",
+    "Performance",
+    "Headers",
+    "Request",
+    "RequestInit",
+    "RequestMode",
+    "Response",
+    "WebSocket",
+    "MessageEvent",
+    "CloseEvent",
+    "SvgElement",
+    "HtmlAnchorElement",
+    "DomRect",
+    "Selection",
+    "Range",
+] }
+
+[dev-dependencies]
+wasm-bindgen-test = "0.3"
+
+[profile.release]
+opt-level = "s"
+lto = true

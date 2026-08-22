@@ -24,6 +24,7 @@ members = [
     "crates/poet-cli",
     "crates/vibe-lsp",
     "crates/vibe-wasm",
+    "crates/poet",
 ]
 resolver = "2"
 
