@@ -424,6 +424,15 @@ pub mod clinical_engine {
 }
 /// Hypermedia semantic library — asset ⊕ analytics ⊕ related-assets bound as a semantic graph (not a
 /// directory). See `docs/plans/hypermedia-semantic-library.md`.
+#[cfg(not(all(
+    target_arch = "wasm32",
+    feature = "wasm-ontology",
+    not(any(
+        feature = "wasm-logic",
+        feature = "wasm-scientific",
+        feature = "wasm-full"
+    ))
+)))]
 pub mod agent_runtime;
 /// Entity-view kernel: entity id, observer status, rights filter, attribution, packages (shared by whole desktop; not "mindware-only").
 pub mod entity_view;
@@ -432,7 +441,33 @@ pub mod hypermedia;
 pub mod hypermedia_authoring;
 /// Document NLP (tokenize, gazetteer, span plans). Engine capability, not Vibe.
 pub mod nlp;
-pub mod poet_host;
+// The ontology MCP binary deliberately contains only its explicit reasoning
+// kernel (`modalities_lite`); it has no VibeScript runtime. Other WASM
+// profiles retain the full browser capability host.
+#[cfg(not(all(
+    target_arch = "wasm32",
+    feature = "wasm-ontology",
+    not(any(
+        feature = "wasm-logic",
+        feature = "wasm-scientific",
+        feature = "wasm-full"
+    ))
+)))]
+#[path = "poet_host/mod.rs"]
+pub mod vibe_host;
+/// Compatibility name for code written before the Vibe execution layer was
+/// separated from Poet, its current UI/client. New integrations use
+/// [`vibe_host`].
+#[cfg(not(all(
+    target_arch = "wasm32",
+    feature = "wasm-ontology",
+    not(any(
+        feature = "wasm-logic",
+        feature = "wasm-scientific",
+        feature = "wasm-full"
+    ))
+)))]
+pub use vibe_host as poet_host;
 pub mod qubo_compiler;
 pub mod render;
 /// N8: Research / investigation / epistemics — enquiry, corpus, dark links, inference chains,
@@ -519,7 +554,16 @@ pub use crypto::zk_proofs;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod csd_storage;
 // pub mod clinical_engine; // Temporarily disabled
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+// The portal uses the portable portions of this tree (geometry, symbolic
+// algebra, and computational economics). Individual native-only libraries are
+// gated within `specialized_libs`, so the top-level registry must be present
+// for the corresponding Vibe capabilities to resolve in the browser.
+#[cfg(any(
+    not(target_arch = "wasm32"),
+    feature = "portal",
+    feature = "wasm-logic",
+    feature = "wasm-scientific"
+))]
 pub mod specialized_libs;
 
 // pub use specialized_libs::linear_algebra;
@@ -1555,7 +1599,12 @@ pub mod mcp;
 pub use mcp::mcp_cooperation;
 #[cfg(not(target_arch = "wasm32"))]
 pub use mcp::mcp_server;
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+#[cfg(any(
+    not(target_arch = "wasm32"),
+    feature = "portal",
+    feature = "wasm-logic",
+    feature = "wasm-scientific"
+))]
 pub mod ode_solver;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod qpu_ingress;
@@ -1899,9 +1948,19 @@ mod tests {
 #[cfg(not(target_arch = "wasm32"))]
 pub mod p2p;
 
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+#[cfg(any(
+    not(target_arch = "wasm32"),
+    feature = "portal",
+    feature = "wasm-logic",
+    feature = "wasm-scientific"
+))]
 pub mod domains;
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+#[cfg(any(
+    not(target_arch = "wasm32"),
+    feature = "portal",
+    feature = "wasm-logic",
+    feature = "wasm-scientific"
+))]
 pub mod solvers;
 
 #[cfg(target_os = "linux")]

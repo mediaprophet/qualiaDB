@@ -1,24 +1,22 @@
 //! Future seam: `qualia-econ` (`financial_modeling` + `computational_economics`).
 
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+#[cfg(not(target_arch = "wasm32"))]
 mod black_scholes;
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 pub mod computational_economics;
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+#[cfg(not(target_arch = "wasm32"))]
 mod finance_ext;
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+#[cfg(not(target_arch = "wasm32"))]
 mod portfolio;
 
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+#[cfg(not(target_arch = "wasm32"))]
 pub use black_scholes::price as black_scholes;
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 pub use computational_economics as econ;
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+#[cfg(not(target_arch = "wasm32"))]
 pub use finance_ext::{convert_currency, ledger_balance, multisig_check};
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+#[cfg(not(target_arch = "wasm32"))]
 pub use portfolio::risk as portfolio_risk;
 
-#[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+#[cfg(target_arch = "wasm32")]
 pub fn black_scholes(
     _args: &vibe::Value,
     span: vibe::Span,
@@ -26,7 +24,7 @@ pub fn black_scholes(
     Err(super::args::need_scientific(span, "FinancialModeling"))
 }
 
-#[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+#[cfg(target_arch = "wasm32")]
 pub fn portfolio_risk(
     args: &vibe::Value,
     span: vibe::Span,
@@ -34,7 +32,7 @@ pub fn portfolio_risk(
     black_scholes(args, span)
 }
 
-#[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+#[cfg(target_arch = "wasm32")]
 pub fn convert_currency(
     _args: &vibe::Value,
     span: vibe::Span,
@@ -45,7 +43,7 @@ pub fn convert_currency(
     ))
 }
 
-#[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+#[cfg(target_arch = "wasm32")]
 pub fn multisig_check(
     _args: &vibe::Value,
     span: vibe::Span,
@@ -53,7 +51,7 @@ pub fn multisig_check(
     Err(super::args::need_scientific(span, "Finance.multisig_check"))
 }
 
-#[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+#[cfg(target_arch = "wasm32")]
 pub fn ledger_balance(
     _args: &vibe::Value,
     span: vibe::Span,

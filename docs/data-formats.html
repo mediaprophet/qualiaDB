@@ -43,7 +43,20 @@
     <div class="max-w-screen-2xl mx-auto px-8 pt-12 pb-16">
         <div class="mb-8">
             <h1 class="text-5xl font-semibold tracking-tighter mb-4">Data Format Parsing</h1>
-            <p class="text-xl text-slate-400">Comprehensive examples of parsing CSV, JSON, RDF, and other formats into QualiaDB</p>
+            <p class="text-xl text-slate-400">Stream RDF and mapped tabular data into verified, portable Q42 volumes.</p>
+        </div>
+
+        <div class="glass-strong rounded-3xl p-8 mb-8 border border-cyan-500/30">
+            <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
+                <div>
+                    <h2 class="text-2xl font-semibold text-cyan-300 mb-2">The RDF → Q42 path</h2>
+                    <p class="text-white/70 max-w-3xl">The current RDF importer streams a source directly into a Q42 v3 volume. It can emit machine-readable progress, segment a large result, and use a durable job directory for attested restart and publication.</p>
+                </div>
+                <a href="rdf-q42-vibe-demo.html" class="shrink-0 px-5 py-3 rounded-xl bg-cyan-500/15 border border-cyan-400/40 text-cyan-200 hover:bg-cyan-500/25 font-semibold">Open the end-to-end demo <i class="fas fa-arrow-right ml-2"></i></a>
+            </div>
+            <pre class="mt-6"><code>qualia-cli import ./data/example.ttl ./data/example.q42 --job-dir ./jobs/example --progress json
+qualia-cli ingest-job status ./jobs/example
+qualia-cli q42 verify ./data/example.q42 --level full</code></pre>
         </div>
 
         <!-- CSV Parsing -->
@@ -63,10 +76,11 @@ Bob Jones,35,Los Angeles
 Carol White,28,Chicago</code></pre>
 
             <h3 class="text-lg font-medium mb-3">Conversion Command</h3>
-            <pre class="mb-6"><code>qualia ingest --format csv people.csv people.q42 --mapping "name=ex:name,age=ex:age,city=ex:city"</code></pre>
+            <pre class="mb-6"><code>qualia-cli ingest csv people.csv --map people-shape.ttl
+# writes people.q42 alongside people.csv</code></pre>
 
             <h3 class="text-lg font-medium mb-3">Resulting Triples (Turtle)</h3>
-            <pre class="mb-6"><code>@prefix ex: <http://example.org/> .
+            <pre class="mb-6"><code>@prefix ex: &lt;http://example.org/&gt; .
 
 _:row1 a ex:Person ;
     ex:name "Alice Smith" ;
@@ -118,7 +132,7 @@ _:row3 a ex:Person ;
 }</code></pre>
 
             <h3 class="text-lg font-medium mb-3">Conversion Command</h3>
-            <pre class="mb-6"><code>qualia ingest data.jsonld data.q42</code></pre>
+            <pre class="mb-6"><code>qualia-cli import data.jsonld data.q42 --progress text</code></pre>
 
             <h3 class="text-lg font-medium mb-3">Plain JSON with Schema</h3>
             <p class="text-white/70 mb-3">For plain JSON, provide a JSON-LD context to map keys to predicates:</p>
@@ -146,7 +160,7 @@ _:row3 a ex:Person ;
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                 <div>
                     <h3 class="text-lg font-medium mb-3">Turtle (.ttl)</h3>
-                    <pre><code>@prefix ex: <http://example.org/> .
+                    <pre><code>@prefix ex: &lt;http://example.org/&gt; .
 
 ex:alice a ex:Person ;
     ex:name "Alice" ;
@@ -154,40 +168,44 @@ ex:alice a ex:Person ;
                 </div>
                 <div>
                     <h3 class="text-lg font-medium mb-3">N-Triples (.nt)</h3>
-                    <pre><code><http://example.org/alice> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://example.org/Person> .
-<http://example.org/alice> <http://example.org/name> "Alice" .
-<http://example.org/alice> <http://example.org/age> "30"^^<http://www.w3.org/2001/XMLSchema#integer> .</code></pre>
+                    <pre><code>&lt;http://example.org/alice&gt; &lt;http://www.w3.org/1999/02/22-rdf-syntax-ns#type&gt; &lt;http://example.org/Person&gt; .
+&lt;http://example.org/alice&gt; &lt;http://example.org/name&gt; "Alice" .
+&lt;http://example.org/alice&gt; &lt;http://example.org/age&gt; "30"^^&lt;http://www.w3.org/2001/XMLSchema#integer&gt; .</code></pre>
                 </div>
                 <div>
                     <h3 class="text-lg font-medium mb-3">RDF/XML (.rdf)</h3>
-                    <pre><code><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+                    <pre><code>&lt;rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
          xmlns:ex="http://example.org/">
-  <rdf:Description rdf:about="http://example.org/alice">
-    <rdf:type rdf:resource="http://example.org/Person"/>
-    <ex:name>Alice</ex:name>
-    <ex:age>30</ex:age>
-  </rdf:Description>
-</rdf:RDF></code></pre>
+  &lt;rdf:Description rdf:about="http://example.org/alice"&gt;
+    &lt;rdf:type rdf:resource="http://example.org/Person"/&gt;
+    &lt;ex:name&gt;Alice&lt;/ex:name&gt;
+    &lt;ex:age&gt;30&lt;/ex:age&gt;
+  &lt;/rdf:Description&gt;
+&lt;/rdf:RDF&gt;</code></pre>
                 </div>
                 <div>
                     <h3 class="text-lg font-medium mb-3">N-Quads (.nq)</h3>
-                    <pre><code><http://example.org/alice> <http://example.org/name> "Alice" <http://example.org/graph1> .
-<http://example.org/alice> <http://example.org/age> "30"^^<http://www.w3.org/2001/XMLSchema#integer> <http://example.org/graph1> .</code></pre>
+                    <pre><code>&lt;http://example.org/alice&gt; &lt;http://example.org/name&gt; "Alice" &lt;http://example.org/graph1&gt; .
+&lt;http://example.org/alice&gt; &lt;http://example.org/age&gt; "30"^^&lt;http://www.w3.org/2001/XMLSchema#integer&gt; &lt;http://example.org/graph1&gt; .</code></pre>
                 </div>
             </div>
 
             <h3 class="text-lg font-medium mb-3">Ingest Commands</h3>
             <pre><code># Turtle
-qualia ingest data.ttl data.q42
+qualia-cli import data.ttl data.q42
 
 # N-Triples
-qualia ingest data.nt data.q42
+qualia-cli import data.nt data.q42
 
 # RDF/XML
-qualia ingest data.rdf data.q42
+qualia-cli import data.rdf data.q42
 
 # N-Quads (with named graphs)
-qualia ingest data.nq data.q42</code></pre>
+qualia-cli import data.nq data.q42
+
+# remote, resumable, attested import
+qualia-cli import data.q42 --url https://example.org/catalog.ttl --job-dir ./jobs/catalog
+qualia-cli ingest-job continue ./jobs/catalog</code></pre>
         </div>
 
         <!-- CBOR-LD -->
@@ -207,68 +225,26 @@ qualia ingest data.nq data.q42</code></pre>
                 <li>Web-friendly (can be used in browser)</li>
             </ul>
 
-            <h3 class="text-lg font-medium mb-3">Export to CBOR-LD</h3>
-            <pre class="mb-6"><code>qualia export --format cbor-ld data.q42 data.cborld</code></pre>
-
             <h3 class="text-lg font-medium mb-3">Import from CBOR-LD</h3>
-            <pre><code>qualia ingest data.cborld data.q42</code></pre>
+            <pre><code>qualia-cli import data.cborld data.q42 --progress json</code></pre>
+            <p class="text-white/50 text-sm mt-4">Q42 is the native durable volume format. Use the Q42 inspection and verification commands below to establish what was written.</p>
         </div>
 
         <!-- Performance Comparison -->
         <div class="glass-strong rounded-3xl p-8">
             <h2 class="text-2xl font-semibold mb-6 flex items-center gap-3">
                 <i class="fas fa-tachometer-alt text-cyan-400"></i>
-                Performance Comparison
+                Reproducibility and verification
             </h2>
             
-            <p class="text-white/70 mb-6">Benchmark results for ingesting a 100K triple dataset (WordNet subset):</p>
-            
-            <div class="overflow-x-auto">
-                <table class="w-full text-left">
-                    <thead>
-                        <tr class="border-b border-white/10">
-                            <th class="py-3 px-4">Format</th>
-                            <th class="py-3 px-4">File Size</th>
-                            <th class="py-3 px-4">Ingest Time</th>
-                            <th class="py-3 px-4">Memory Usage</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr class="border-b border-white/5">
-                            <td class="py-3 px-4">Turtle</td>
-                            <td class="py-3 px-4">15.2 MB</td>
-                            <td class="py-3 px-4">2.3s</td>
-                            <td class="py-3 px-4">45 MB</td>
-                        </tr>
-                        <tr class="border-b border-white/5">
-                            <td class="py-3 px-4">N-Triples</td>
-                            <td class="py-3 px-4">18.7 MB</td>
-                            <td class="py-3 px-4">1.8s</td>
-                            <td class="py-3 px-4">38 MB</td>
-                        </tr>
-                        <tr class="border-b border-white/5">
-                            <td class="py-3 px-4">JSON-LD</td>
-                            <td class="py-3 px-4">22.1 MB</td>
-                            <td class="py-3 px-4">3.1s</td>
-                            <td class="py-3 px-4">52 MB</td>
-                        </tr>
-                        <tr class="border-b border-white/5">
-                            <td class="py-3 px-4">CBOR-LD</td>
-                            <td class="py-3 px-4">8.4 MB</td>
-                            <td class="py-3 px-4">0.9s</td>
-                            <td class="py-3 px-4">28 MB</td>
-                        </tr>
-                        <tr class="bg-emerald-500/10">
-                            <td class="py-3 px-4 font-medium">.q42 (Native)</td>
-                            <td class="py-3 px-4 font-medium">2.1 MB</td>
-                            <td class="py-3 px-4 font-medium">0.0s (mmap)</td>
-                            <td class="py-3 px-4 font-medium">12 MB</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
+            <p class="text-white/70 mb-4">An ingest result is useful only when it can be checked. Keep the input and output together, then use the bounded encoded-set proof rather than treating a size or a legacy XOR result as equivalence.</p>
+            <pre><code># inspect the physical Q42 v3 volume
+qualia-cli q42 inspect data.q42
+qualia-cli q42 verify data.q42 --level full
 
-            <p class="text-white/50 text-sm mt-4">* Benchmarks run on 512 MB constraint, measured with native CLI</p>
+# prove that the encoded graph agrees with the input within explicit bounds
+qualia-cli verify-graph --input data.ttl --dataset data.q42 --memory-mib 32 --temp-gib 24</code></pre>
+            <p class="text-white/50 text-sm mt-4">Publish benchmark figures only with the command, input version, hardware, and raw result artifact. This keeps performance claims comparable and auditable.</p>
         </div>
     </div>
 

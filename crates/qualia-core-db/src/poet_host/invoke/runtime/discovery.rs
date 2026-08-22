@@ -2,8 +2,8 @@
 
 use super::super::ids;
 use crate::CAPABILITY_DESCRIPTORS;
-use vibe::Value;
 use std::collections::BTreeMap;
+use vibe::Value;
 
 pub fn list() -> Value {
     let families: Vec<Value> = CAPABILITY_DESCRIPTORS

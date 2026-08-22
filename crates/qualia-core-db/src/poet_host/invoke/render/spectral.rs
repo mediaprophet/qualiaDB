@@ -112,8 +112,8 @@ pub fn gamut_map_fn(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vibe::Value;
     use std::collections::BTreeMap;
+    use vibe::Value;
 
     fn rec(pairs: &[(&str, Value)]) -> Value {
         let mut m = BTreeMap::new();

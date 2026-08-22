@@ -316,7 +316,7 @@ title: VibeScript
     <p class="tagline">
       A capability-bounded, typed, deterministic scripting engine built for reactive UI cells,
       provable agent orchestration, and signed RDF/SPARQL graph transactions.
-      Replaces JavaScript and Node.js without V8 bloat, ambient I/O vulnerabilities, or garbage collection spikes.
+      Complements JavaScript where ordinary web UI is useful, while making semantic data, authority, and eligible deterministic execution explicit.
     </p>
     <div class="cta-row">
       <a href="{{ '/vibe/playground.html' | relative_url }}" class="vibe-btn vibe-btn-primary">
@@ -333,6 +333,9 @@ title: VibeScript
       </a>
       <a href="{{ '/vibe/benchmarks.html' | relative_url }}" class="vibe-btn vibe-btn-secondary">
         <i class="fa-solid fa-gauge-high"></i> Benchmarks
+      </a>
+      <a href="{{ '/rdf-q42-vibe-demo.html' | relative_url }}" class="vibe-btn vibe-btn-secondary">
+        <i class="fa-solid fa-diagram-project"></i> RDF → Q42 Demo
       </a>
     </div>
   </div>
@@ -352,31 +355,31 @@ title: VibeScript
       <div class="label">Sentinel Ceiling</div>
     </div>
     <div class="vibe-stat-box">
-      <div class="num">238</div>
-      <div class="label">Engine Tests Passed</div>
+      <div class="num">3</div>
+      <div class="label">Execution Routes</div>
     </div>
     <div class="vibe-stat-box">
-      <div class="num">1,290+</div>
-      <div class="label">Bound Public Items</div>
+      <div class="num">Q42</div>
+      <div class="label">Portable Graph Volume</div>
     </div>
     <div class="vibe-stat-box">
-      <div class="num">100%</div>
-      <div class="label">Deterministic Replay</div>
+      <div class="num">Explicit</div>
+      <div class="label">Capability Boundary</div>
     </div>
   </div>
 
   <!-- Section: What is VibeScript? -->
   <div class="vibe-section">
-    <h2>Why VibeScript? The JavaScript Replacement</h2>
+    <h2>Why VibeScript? A semantic execution layer</h2>
     <p>
-      Modern application platforms and autonomous AI agents have outgrown JavaScript and Node.js.
-      Web engines suffer from ambient authority vulnerabilities, unconstrained memory allocation loops,
-      non-deterministic asynchronous scheduling, and multi-gigabyte runtimes unsuitable for local-first computing.
+      VibeScript is for programs whose data meaning, authority, and replay semantics are part of the product.
+      It does not ask a browser runtime to infer those boundaries from ad-hoc objects, network calls, and framework conventions.
     </p>
     <p>
       <strong>VibeScript</strong> (or <strong>Vibe</strong>) is the native scripting layer of QualiaDB and the Poet creative environment.
       It is an interpreted, typed, capability-bounded language engineered with zero heap allocations in hot paths,
-      first-class RDF 1.2 and SPARQL semantics, verifiable deontic norms, and deterministic execution.
+      first-class RDF 1.2 and SPARQL semantics, verifiable deontic norms, and deterministic execution for eligible programs.
+      JavaScript remains useful for conventional DOM integration and its broad web ecosystem; Vibe supplies the semantic and authority-bearing layer beneath a UI.
     </p>
 
     <!-- Three Main Roles -->
@@ -386,7 +389,7 @@ title: VibeScript
         <h3>Reactive Cell Graphs</h3>
         <p>
           Pure, high-frequency formulas driving desktop UI manifolds and QApps.
-          Cells form dependency DAGs, batch up to 512 computations simultaneously, and update with sub-microsecond latency without garbage collection pauses.
+          Cells form dependency DAGs with bounded evaluation and strict cycle detection. Performance depends on the selected target and workload; the important invariant is that the hot evaluator does not allocate.
         </p>
       </div>
       <div class="vibe-role-card">
@@ -394,7 +397,7 @@ title: VibeScript
         <h3>Signed Agent Modules</h3>
         <p>
           Cryptographically signed programs that query and mutate knowledge graphs.
-          Every external capability (graph query, network pulse, sensor feed) requires an explicit compile-time lease grant, preventing unauthorized data exfiltration.
+          Every external capability (graph query, network pulse, sensor feed) requires an explicit lease grant and execution route, allowing a host to deny or diagnose unavailable authority.
         </p>
       </div>
       <div class="vibe-role-card">
@@ -402,7 +405,7 @@ title: VibeScript
         <h3>Deontic & Event Hooks</h3>
         <p>
           Deterministic lifecycle handlers like <code>on pulse:message(...)</code> and <code>on tick()</code>.
-          Prohibitions and obligations are verified mathematically, producing cryptographically sealed receipts rather than unhandled runtime crashes.
+          Prohibitions and obligations can be checked against the QualiaDB logic surface; host effects remain explicit rather than being silently substituted in a standalone browser target.
         </p>
       </div>
     </div>
@@ -410,9 +413,9 @@ title: VibeScript
 
   <!-- Section: Deep Language Comparison -->
   <div class="vibe-section">
-    <h2>Head-to-Head Comparison: VibeScript vs Other Scripting Languages</h2>
+    <h2>Where Vibe fits beside other runtimes</h2>
     <p>
-      How does VibeScript compare against traditional scripting runtimes like JavaScript / Node.js, Python, Lua, and Rust-embedded interpreters (Rhai / WASM)?
+      Vibe is not a universal replacement for JavaScript, Python, Lua, or embedded Rust interpreters. Its advantage appears when a program needs a typed semantic graph, declared authority, Q42 portability, or an auditable execution boundary.
     </p>
 
     <div class="vibe-compare-wrap">
@@ -431,7 +434,7 @@ title: VibeScript
           <tr>
             <td><strong>Security & Sandboxing</strong></td>
             <td class="highlight-col"><span class="vibe-badge-yes">Capability-Bounded</span><br><small>Strict compile-time leases; no ambient I/O</small></td>
-            <td><span class="vibe-badge-no">Ambient Authority</span><br><small>Global access (fetch, fs, process, prototype pollution)</small></td>
+            <td><span class="vibe-badge-warn">Host-Defined</span><br><small>Web and Node hosts expose different permission and sandbox models</small></td>
             <td><span class="vibe-badge-no">Open Ambient</span><br><small>Full OS/filesystem reach; monkey-patchable</small></td>
             <td><span class="vibe-badge-warn">Manual Sandbox</span><br><small>Requires table-stripping; easily bypassed</small></td>
             <td><span class="vibe-badge-warn">Engine Bounded</span><br><small>Host bindings, but lacks deontic norm leases</small></td>
@@ -439,7 +442,7 @@ title: VibeScript
           <tr>
             <td><strong>Hot-Path Allocation</strong></td>
             <td class="highlight-col"><span class="vibe-badge-yes">Tier-1 Zero Heap</span><br><small>Fixed stack buffers &amp; 42MB Sentinel arena</small></td>
-            <td><span class="vibe-badge-no">Unbounded Heap</span><br><small>GC pauses, object allocation thrashing</small></td>
+            <td><span class="vibe-badge-warn">Managed Heap</span><br><small>Excellent general-purpose tooling; allocation is not the Vibe hot-path contract</small></td>
             <td><span class="vibe-badge-no">Heavy Heap</span><br><small>Reference counting + cyclic GC pauses</small></td>
             <td><span class="vibe-badge-warn">Incremental GC</span><br><small>Lightweight, but non-zero heap allocation</small></td>
             <td><span class="vibe-badge-no">Heap Allocations</span><br><small>Extensive Box/Vec/String usage</small></td>
@@ -447,23 +450,23 @@ title: VibeScript
           <tr>
             <td><strong>Graph &amp; RDF Native</strong></td>
             <td class="highlight-col"><span class="vibe-badge-yes">Native RDF 1.2 &amp; SPARQL</span><br><small>48-byte Super-Quins, <code>&lt;&lt;( s p o )&gt;&gt;</code>, <code>graph?</code></small></td>
-            <td><span class="vibe-badge-no">Third-party Libs</span><br><small>Slow JSON/string serialization overhead</small></td>
+            <td><span class="vibe-badge-warn">Libraries available</span><br><small>Flexible RDF tooling, with graph semantics chosen by the application</small></td>
             <td><span class="vibe-badge-no">rdflib / networkx</span><br><small>Extremely slow Python object graphs</small></td>
             <td><span class="vibe-badge-no">None</span><br><small>No native semantic data structures</small></td>
             <td><span class="vibe-badge-no">None</span><br><small>Generic map/arrays only</small></td>
           </tr>
           <tr>
             <td><strong>Determinism &amp; Audit</strong></td>
-            <td class="highlight-col"><span class="vibe-badge-yes">100% Bit-Deterministic</span><br><small>Lamport clocks, canonical AST CBOR hashing</small></td>
-            <td><span class="vibe-badge-no">Non-Deterministic</span><br><small>Async event loops, microtask re-ordering</small></td>
-            <td><span class="vibe-badge-no">Non-Deterministic</span><br><small>GIL scheduling, system clock dependencies</small></td>
+            <td class="highlight-col"><span class="vibe-badge-yes">Eligible programs replay</span><br><small>Pure evaluation and canonical representations are deterministic; host effects are declared separately</small></td>
+            <td><span class="vibe-badge-warn">Application-defined</span><br><small>Determinism is achievable, but framework scheduling and host APIs are application choices</small></td>
+            <td><span class="vibe-badge-warn">Application-defined</span><br><small>Determinism is achievable, but clock, I/O, and dependency choices remain external</small></td>
             <td><span class="vibe-badge-warn">Partially Deterministic</span><br><small>Hash table order nondeterminism</small></td>
             <td><span class="vibe-badge-warn">Varies</span><br><small>Depends on host engine configuration</small></td>
           </tr>
           <tr>
             <td><strong>Modal &amp; Deontic Logic</strong></td>
             <td class="highlight-col"><span class="vibe-badge-yes">Built-In Modalities</span><br><small><code>obligate</code>, <code>permit</code>, <code>knows</code>, <code>always</code></small></td>
-            <td><span class="vibe-badge-no">None</span><br><small>No modal logic verification layer</small></td>
+            <td><span class="vibe-badge-warn">Libraries / services</span><br><small>Can integrate solvers, but has no equivalent language-level QualiaDB modality surface</small></td>
             <td><span class="vibe-badge-no">None</span><br><small>External SAT/Z3 solver bindings only</small></td>
             <td><span class="vibe-badge-no">None</span><br><small>No formal verification support</small></td>
             <td><span class="vibe-badge-no">None</span><br><small>Basic conditional control flow only</small></td>
@@ -486,7 +489,7 @@ title: VibeScript
           </tr>
           <tr>
             <td><strong>Runtime Footprint</strong></td>
-            <td class="highlight-col"><span class="vibe-badge-yes">&lt; 600 KB WASM / Embedded</span><br><small>No external libc/V8 runtime required</small></td>
+            <td class="highlight-col"><span class="vibe-badge-yes">Target-dependent WASM</span><br><small>Small standalone modules are possible; portal, science, and model profiles deliberately differ</small></td>
             <td><span class="vibe-badge-no">30 MB – 100 MB+</span><br><small>V8 engine binary footprint</small></td>
             <td><span class="vibe-badge-no">20 MB – 50 MB</span><br><small>CPython standard library footprint</small></td>
             <td><span class="vibe-badge-yes">~300 KB</span><br><small>Minimal C runtime</small></td>
@@ -607,7 +610,7 @@ title: VibeScript
   <div class="vibe-section">
     <h2>VibeScript Ecosystem &amp; Developer Tooling</h2>
     <p>
-      The VibeScript developer ecosystem is distributed across standalone tooling crates and extensions in <code>C:\Projects\vibe-script\</code>:
+      The VibeScript developer ecosystem is distributed across standalone tooling crates and extensions. Tooling validates a selected execution profile before a native-only call reaches a browser-only target:
     </p>
     <div class="vibe-quick-links">
       <a href="{{ '/vibe/playground.html' | relative_url }}" class="vibe-qlink">
@@ -635,14 +638,28 @@ title: VibeScript
         <i class="fa-solid fa-code-branch"></i>
         <div>
           <strong>Dev Docs (API)</strong>
-          <div style="font-size:0.78rem;color:#94a3b8;">104 modules &amp; 1,290+ API items</div>
+          <div style="font-size:0.78rem;color:#94a3b8;">Searchable generated API index</div>
         </div>
       </a>
       <a href="{{ '/vibe/benchmarks.html' | relative_url }}" class="vibe-qlink">
         <i class="fa-solid fa-gauge-high"></i>
         <div>
           <strong>Performance Benchmarks</strong>
-          <div style="font-size:0.78rem;color:#94a3b8;">Live WASM vs V8 JS execution comparisons</div>
+          <div style="font-size:0.78rem;color:#94a3b8;">Measured profiles and reproducibility notes</div>
+        </div>
+      </a>
+      <a href="{{ '/vibe-host-native-bridge.html' | relative_url }}" class="vibe-qlink">
+        <i class="fa-solid fa-link"></i>
+        <div>
+          <strong>Execution Profiles</strong>
+          <div style="font-size:0.78rem;color:#94a3b8;">Standalone WASM, snapshot, and paired-native semantics</div>
+        </div>
+      </a>
+      <a href="{{ '/rdf-q42-vibe-demo.html' | relative_url }}" class="vibe-qlink">
+        <i class="fa-solid fa-diagram-project"></i>
+        <div>
+          <strong>RDF → Q42 → Vibe</strong>
+          <div style="font-size:0.78rem;color:#94a3b8;">One semantic source across CLI, WASM, and a local daemon</div>
         </div>
       </a>
       <a href="https://github.com/mediaprophet/qualiaDB" target="_blank" class="vibe-qlink">

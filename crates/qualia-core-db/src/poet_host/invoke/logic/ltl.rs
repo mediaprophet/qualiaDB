@@ -14,7 +14,11 @@ pub fn finally(snap: &PoetSnapshot, args: &Value, span: Span) -> Result<Value, D
 
 fn run(snap: &PoetSnapshot, args: &Value, span: Span, globally: bool) -> Result<Value, Diagnostic> {
     let pred = predicate_hash(args).ok_or_else(|| {
-        Diagnostic::new(DiagCode::E100, span, "ltl needs a predicate IRI, hash, or modal body")
+        Diagnostic::new(
+            DiagCode::E100,
+            span,
+            "ltl needs a predicate IRI, hash, or modal body",
+        )
     })?;
     let formula = if globally {
         LtlFormula::Globally(pred)

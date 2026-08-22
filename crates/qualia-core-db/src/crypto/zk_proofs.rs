@@ -728,6 +728,18 @@ impl ZkProofSystem {
         Ok((result.is_valid, c))
     }
 
+    #[cfg(not(feature = "zk-culling"))]
+    pub fn prove_matrix_multiply(
+        &mut self,
+        _m: usize,
+        _k: usize,
+        _n: usize,
+        _a: &[i128],
+        _b: &[i128],
+    ) -> Result<(bool, Vec<i128>), ZkError> {
+        Err(ZkError::EngineError("zk-culling feature not enabled".to_string()))
+    }
+
     /// Get performance statistics
     pub fn get_performance_stats(&self) -> ZkGlobalMetrics {
         self.performance_monitor.get_global_stats()

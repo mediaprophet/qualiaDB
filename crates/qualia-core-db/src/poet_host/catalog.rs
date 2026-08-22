@@ -3,9 +3,9 @@
 //! Humans and apps reach the engine through these IDs. MCP is a separate
 //! bot door; it must not be the only listing.
 
-use crate::{CapabilityDescriptor, CAPABILITY_DESCRIPTORS};
-use vibe::Value;
+use crate::{vibe_host::bridge, CapabilityDescriptor, CAPABILITY_DESCRIPTORS};
 use std::collections::BTreeMap;
+use vibe::Value;
 
 /// A 0.1 Vibe binding and whether the live host actually implements it.
 #[derive(Debug, Clone, Copy)]
@@ -139,6 +139,23 @@ pub fn resolve_id_with(id: &str, attached: bool) -> Value {
     rec.insert("vibe_bound".into(), Value::Bool(binding.is_some()));
     rec.insert("honesty".into(), Value::String(honesty.to_string()));
     rec.insert("human_surface".into(), Value::String("poet".into()));
+    rec.insert("execution_host".into(), Value::String("vibe-host".into()));
+    let bridge_metadata = bridge::capability_json(id, attached);
+    if let Some(mode) = bridge_metadata.get("mode").and_then(|value| value.as_str()) {
+        rec.insert("execution_mode".into(), Value::String(mode.into()));
+    }
+    if let Some(semantics) = bridge_metadata
+        .get("semantics")
+        .and_then(|value| value.as_str())
+    {
+        rec.insert("semantics".into(), Value::String(semantics.into()));
+    }
+    if let Some(requires_native) = bridge_metadata
+        .get("requires_native")
+        .and_then(|value| value.as_bool())
+    {
+        rec.insert("requires_native".into(), Value::Bool(requires_native));
+    }
     if let Some(b) = binding {
         rec.insert("required".into(), Value::Bool(b.required));
         rec.insert("family".into(), Value::String(b.family.into()));
@@ -215,6 +232,23 @@ mod tests {
         match resolve_id("logic.deontic.evaluate") {
             Value::Record(r) => {
                 assert_eq!(r.get("vibe_bound"), Some(&Value::Bool(false)));
+            }
+            other => panic!("{other:?}"),
+        }
+    }
+
+    #[test]
+    fn detached_graph_write_is_marked_as_an_isolated_snapshot() {
+        match resolve_id("graph.write") {
+            Value::Record(r) => {
+                assert_eq!(
+                    r.get("execution_mode"),
+                    Some(&Value::String("standalone-snapshot".into()))
+                );
+                assert_eq!(
+                    r.get("semantics"),
+                    Some(&Value::String("isolated-snapshot".into()))
+                );
             }
             other => panic!("{other:?}"),
         }

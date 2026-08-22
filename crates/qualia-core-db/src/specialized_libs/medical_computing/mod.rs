@@ -10,6 +10,15 @@
 // split into single-concern submodules. mod.rs retains the module doc and
 // re-exports the full public surface unchanged.
 
+// The browser profile keeps clinical formulae and record processing available.
+// The rule-based SMILES screen is enabled with the scientific profile because
+// it depends on the broader organic-chemistry domain tree.
+#[cfg(any(
+    not(target_arch = "wasm32"),
+    feature = "portal",
+    feature = "wasm-logic",
+    feature = "wasm-scientific"
+))]
 mod cheminformatics;
 mod clinical_formulas;
 mod compliance;
@@ -24,6 +33,12 @@ mod privacy;
 mod records;
 mod types;
 
+#[cfg(any(
+    not(target_arch = "wasm32"),
+    feature = "portal",
+    feature = "wasm-logic",
+    feature = "wasm-scientific"
+))]
 pub use cheminformatics::*;
 pub use clinical_formulas::*;
 pub use compliance::*;

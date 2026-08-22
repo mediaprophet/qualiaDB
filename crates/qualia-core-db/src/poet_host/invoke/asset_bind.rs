@@ -15,8 +15,8 @@
 
 use super::args;
 use crate::q_hash;
-use vibe::{DiagCode, Diagnostic, Span, Value};
 use std::collections::BTreeMap;
+use vibe::{DiagCode, Diagnostic, Span, Value};
 
 /// Parse a temporal aspect kind from a string.
 fn parse_aspect_kind(s: &str) -> Option<&'static str> {

@@ -1,8 +1,8 @@
 //! `NLP.graphrag_query` — graph-augmented retrieval.
 
 use crate::nlp::graphrag::GraphRagIndex;
-use vibe::{DiagCode, Diagnostic, Span, Value};
 use std::collections::BTreeMap;
+use vibe::{DiagCode, Diagnostic, Span, Value};
 
 /// `NLP.graphrag_query` — build an index from a list of `[s, p, o]` triples
 /// and run a keyword query. Argument record: `{ query: string, k: int,

@@ -11,9 +11,9 @@ pub mod runtime;
 use crate::modalities::blackboard::BlackboardBus;
 use crate::NQuin;
 use dag_executor::{execute_pipeline, NodeExecutor};
+use std::collections::HashMap;
 use vibe::dag::{DagEdge, DagNode, DagPipeline, NodeEffect};
 use vibe::{DiagCode, Diagnostic, Span, Value};
-use std::collections::HashMap;
 
 fn parse_node_effect(s: &str) -> NodeEffect {
     match s.to_ascii_lowercase().as_str() {

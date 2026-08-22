@@ -280,6 +280,18 @@ jobs:
           CARGO_TARGET_WASM32_UNKNOWN_UNKNOWN_RUSTFLAGS: ""
         run: |
           export PATH="$HOME/.cargo/bin:$PATH"
+          # `dx build --release` invokes Rust's target-specific `rust-objcopy`
+          # to strip the generated wasm. On macos-14 the helper's libLLVM is
+          # present in the Rust sysroot but is not in dyld's default search
+          # path, producing `Library not loaded: @rpath/libLLVM.dylib`.
+          # Scope the loader path to this browser build; native Tauri keeps its
+          # normal Apple-Silicon flags and runtime environment below.
+          rust_sysroot="$(rustc --print sysroot)"
+          export DYLD_FALLBACK_LIBRARY_PATH="$rust_sysroot/lib${DYLD_FALLBACK_LIBRARY_PATH:+:$DYLD_FALLBACK_LIBRARY_PATH}"
+          rust_host="$(rustc -vV | sed -n 's/^host: //p')"
+          rust_objcopy="$rust_sysroot/lib/rustlib/$rust_host/bin/rust-objcopy"
+          test -x "$rust_objcopy"
+          "$rust_objcopy" --version
           bash scripts/build_frontend.sh
           dist="crates/webizen-studio/dist"
           portal="crates/webizen-desktop/static/portal"

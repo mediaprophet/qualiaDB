@@ -59,10 +59,7 @@ pub fn arithmetic_mean(
 }
 
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
-pub fn pearson_r(
-    args: &vibe::Value,
-    span: vibe::Span,
-) -> Result<vibe::Value, vibe::Diagnostic> {
+pub fn pearson_r(args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     arithmetic_mean(args, span)
 }
 

@@ -5,6 +5,7 @@
 //! meaningful from a script (not device/queue internals) has an invoke id.
 
 use super::super::args;
+#[cfg(not(target_arch = "wasm32"))]
 use super::gpu::slot_with;
 use vibe::{Diagnostic, Span, Value};
 
@@ -21,7 +22,8 @@ fn native_only(span: Span, name: &str) -> Result<Value, Diagnostic> {
 }
 
 fn handle_of(args: &Value, span: Span, name: &str) -> Result<u64, Diagnostic> {
-    args::rec_u64(args, "handle").ok_or_else(|| args::bad(span, format!("{name} needs {{ handle: u64 }}")))
+    args::rec_u64(args, "handle")
+        .ok_or_else(|| args::bad(span, format!("{name} needs {{ handle: u64 }}")))
 }
 
 fn vec3(args: &Value, key: &str) -> Option<[f32; 3]> {
@@ -83,7 +85,10 @@ pub fn gpu_upload_mesh_colored(args: &Value, span: Span) -> Result<Value, Diagno
         })
         .ok_or_else(|| args::bad(span, "gpu_upload_mesh_colored: invalid handle"))?;
 
-        Ok(args::record([("triangle_count", Value::U64(tri_count as u64))]))
+        Ok(args::record([(
+            "triangle_count",
+            Value::U64(tri_count as u64),
+        )]))
     }
     #[cfg(target_arch = "wasm32")]
     {
@@ -135,7 +140,10 @@ pub fn gpu_observer_standpoint(args: &Value, span: Span) -> Result<Value, Diagno
             ("t_window", Value::F64(o.t_window as f64)),
             ("deontic_lane", Value::U64(o.deontic_lane as u64)),
             ("standpoint_class", Value::U64(o.standpoint_class as u64)),
-            ("class", Value::String(class_name(o.standpoint_class).into())),
+            (
+                "class",
+                Value::String(class_name(o.standpoint_class).into()),
+            ),
             ("fabric_gate", Value::U64(o.fabric_gate as u64)),
         ]))
     }
@@ -342,7 +350,9 @@ pub fn gpu_required_rgba8_bytes(args: &Value, span: Span) -> Result<Value, Diagn
 mod tests {
     use super::*;
     use crate::gpu_context;
-    use crate::poet_host::invoke::render::gpu::{gpu_destroy, gpu_init, gpu_set_camera, gpu_upload_mesh};
+    use crate::poet_host::invoke::render::gpu::{
+        gpu_destroy, gpu_init, gpu_set_camera, gpu_upload_mesh,
+    };
 
     fn dummy_span() -> Span {
         Span::new(0, 0)
@@ -413,7 +423,8 @@ mod tests {
             span,
         )
         .unwrap();
-        let obs = gpu_observer_standpoint(&args::record([("handle", Value::U64(h))]), span).unwrap();
+        let obs =
+            gpu_observer_standpoint(&args::record([("handle", Value::U64(h))]), span).unwrap();
         match obs {
             Value::Record(m) => {
                 assert_eq!(m.get("class"), Some(&Value::String("did".into())));
@@ -485,7 +496,8 @@ mod tests {
         )
         .unwrap();
         gpu_sync_bloom(&args::record([("handle", Value::U64(h))]), span).unwrap();
-        let bytes = gpu_required_rgba8_bytes(&args::record([("handle", Value::U64(h))]), span).unwrap();
+        let bytes =
+            gpu_required_rgba8_bytes(&args::record([("handle", Value::U64(h))]), span).unwrap();
         assert_eq!(rec_u64(&bytes, "bytes"), 64 * 64 * 4);
 
         let colored = gpu_upload_mesh_colored(

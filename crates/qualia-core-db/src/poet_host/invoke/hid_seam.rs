@@ -70,7 +70,17 @@ pub fn set_cursor(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
         .or_else(|| args::rec_str(args_v, "cursor"))
         .unwrap_or("default");
 
-    let valid_styles = ["default", "pointer", "crosshair", "grab", "grabbing", "text", "move", "not-allowed", "custom"];
+    let valid_styles = [
+        "default",
+        "pointer",
+        "crosshair",
+        "grab",
+        "grabbing",
+        "text",
+        "move",
+        "not-allowed",
+        "custom",
+    ];
     if !valid_styles.contains(&style) {
         return Err(Diagnostic::new(
             DiagCode::E001,
@@ -93,24 +103,34 @@ pub fn gamepad_poll(args_v: &Value, _span: Span) -> Result<Value, Diagnostic> {
     rec.insert("index".into(), Value::U64(index));
     rec.insert("connected".into(), Value::Bool(true));
     rec.insert("buttons_mask".into(), Value::U64(0));
-    rec.insert("axes".into(), Value::List(vec![
-        Value::F64(0.0), // Left Stick X
-        Value::F64(0.0), // Left Stick Y
-        Value::F64(0.0), // Right Stick X
-        Value::F64(0.0), // Right Stick Y
-    ]));
-    rec.insert("triggers".into(), Value::List(vec![
-        Value::F64(0.0), // LT
-        Value::F64(0.0), // RT
-    ]));
+    rec.insert(
+        "axes".into(),
+        Value::List(vec![
+            Value::F64(0.0), // Left Stick X
+            Value::F64(0.0), // Left Stick Y
+            Value::F64(0.0), // Right Stick X
+            Value::F64(0.0), // Right Stick Y
+        ]),
+    );
+    rec.insert(
+        "triggers".into(),
+        Value::List(vec![
+            Value::F64(0.0), // LT
+            Value::F64(0.0), // RT
+        ]),
+    );
     Ok(Value::Record(rec))
 }
 
 /// Trigger gamepad vibration / rumble feedback motors.
 pub fn gamepad_vibrate(args_v: &Value, _span: Span) -> Result<Value, Diagnostic> {
     let index = args::rec_u64(args_v, "index").unwrap_or(0);
-    let weak = args::rec_f64(args_v, "weak_magnitude").unwrap_or(0.5).clamp(0.0, 1.0);
-    let strong = args::rec_f64(args_v, "strong_magnitude").unwrap_or(0.5).clamp(0.0, 1.0);
+    let weak = args::rec_f64(args_v, "weak_magnitude")
+        .unwrap_or(0.5)
+        .clamp(0.0, 1.0);
+    let strong = args::rec_f64(args_v, "strong_magnitude")
+        .unwrap_or(0.5)
+        .clamp(0.0, 1.0);
     let duration_ms = args::rec_u64(args_v, "duration_ms").unwrap_or(100);
 
     let mut rec = BTreeMap::new();
@@ -165,7 +185,9 @@ pub fn midi_poll(args_v: &Value, _span: Span) -> Result<Value, Diagnostic> {
 /// Trigger an immediate haptic pulse.
 pub fn haptic_pulse(args_v: &Value, _span: Span) -> Result<Value, Diagnostic> {
     let duration_ms = args::rec_f64(args_v, "duration_ms").unwrap_or(50.0);
-    let intensity = args::rec_f64(args_v, "intensity").unwrap_or(1.0).clamp(0.0, 1.0);
+    let intensity = args::rec_f64(args_v, "intensity")
+        .unwrap_or(1.0)
+        .clamp(0.0, 1.0);
     let freq_hz = args::rec_f64(args_v, "frequency_hz").unwrap_or(160.0);
 
     let mut rec = BTreeMap::new();
@@ -179,9 +201,20 @@ pub fn haptic_pulse(args_v: &Value, _span: Span) -> Result<Value, Diagnostic> {
 /// Play a predefined or parameterized haptic waveform pattern.
 pub fn haptic_pattern(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let pattern = args::rec_str(args_v, "pattern").unwrap_or("click");
-    let intensity = args::rec_f64(args_v, "intensity").unwrap_or(1.0).clamp(0.0, 1.0);
+    let intensity = args::rec_f64(args_v, "intensity")
+        .unwrap_or(1.0)
+        .clamp(0.0, 1.0);
 
-    let valid_patterns = ["click", "double_click", "buzz", "tick", "ramp_up", "ramp_down", "heartbeat", "alert"];
+    let valid_patterns = [
+        "click",
+        "double_click",
+        "buzz",
+        "tick",
+        "ramp_up",
+        "ramp_down",
+        "heartbeat",
+        "alert",
+    ];
     if !valid_patterns.contains(&pattern) {
         return Err(Diagnostic::new(
             DiagCode::E001,
@@ -200,10 +233,27 @@ pub fn haptic_pattern(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
 /// Retrieve the active 6-DoF spatial head pose in coordinate meters and quaternion orientation.
 pub fn spatial_head_pose(_args_v: &Value, _span: Span) -> Result<Value, Diagnostic> {
     let mut rec = BTreeMap::new();
-    rec.insert("position".into(), Value::List(vec![Value::F64(0.0), Value::F64(1.7), Value::F64(0.0)]));
-    rec.insert("orientation".into(), Value::List(vec![Value::F64(0.0), Value::F64(0.0), Value::F64(0.0), Value::F64(1.0)]));
-    rec.insert("linear_velocity".into(), Value::List(vec![Value::F64(0.0), Value::F64(0.0), Value::F64(0.0)]));
-    rec.insert("angular_velocity".into(), Value::List(vec![Value::F64(0.0), Value::F64(0.0), Value::F64(0.0)]));
+    rec.insert(
+        "position".into(),
+        Value::List(vec![Value::F64(0.0), Value::F64(1.7), Value::F64(0.0)]),
+    );
+    rec.insert(
+        "orientation".into(),
+        Value::List(vec![
+            Value::F64(0.0),
+            Value::F64(0.0),
+            Value::F64(0.0),
+            Value::F64(1.0),
+        ]),
+    );
+    rec.insert(
+        "linear_velocity".into(),
+        Value::List(vec![Value::F64(0.0), Value::F64(0.0), Value::F64(0.0)]),
+    );
+    rec.insert(
+        "angular_velocity".into(),
+        Value::List(vec![Value::F64(0.0), Value::F64(0.0), Value::F64(0.0)]),
+    );
     rec.insert("vergence_distance_m".into(), Value::F64(1.5));
     Ok(Value::Record(rec))
 }
@@ -219,7 +269,14 @@ pub fn spatial_hand_skeleton(args_v: &Value, _span: Span) -> Result<Value, Diagn
     rec.insert("joint_count".into(), Value::U64(26));
     rec.insert("pinch_confidence".into(), Value::F64(0.0));
     rec.insert("grab_confidence".into(), Value::F64(0.0));
-    rec.insert("wrist_position".into(), Value::List(vec![Value::F64(if is_left { -0.2 } else { 0.2 }), Value::F64(1.0), Value::F64(-0.3)]));
+    rec.insert(
+        "wrist_position".into(),
+        Value::List(vec![
+            Value::F64(if is_left { -0.2 } else { 0.2 }),
+            Value::F64(1.0),
+            Value::F64(-0.3),
+        ]),
+    );
     rec.insert("tracking_state".into(), Value::String("valid".into()));
     Ok(Value::Record(rec))
 }
@@ -227,8 +284,14 @@ pub fn spatial_hand_skeleton(args_v: &Value, _span: Span) -> Result<Value, Diagn
 /// Retrieve foveated eye-gaze direction ray and pupil diameter telemetry.
 pub fn spatial_gaze_ray(_args_v: &Value, _span: Span) -> Result<Value, Diagnostic> {
     let mut rec = BTreeMap::new();
-    rec.insert("origin".into(), Value::List(vec![Value::F64(0.0), Value::F64(1.65), Value::F64(0.0)]));
-    rec.insert("direction".into(), Value::List(vec![Value::F64(0.0), Value::F64(0.0), Value::F64(-1.0)]));
+    rec.insert(
+        "origin".into(),
+        Value::List(vec![Value::F64(0.0), Value::F64(1.65), Value::F64(0.0)]),
+    );
+    rec.insert(
+        "direction".into(),
+        Value::List(vec![Value::F64(0.0), Value::F64(0.0), Value::F64(-1.0)]),
+    );
     rec.insert("confidence".into(), Value::F64(0.98));
     rec.insert("pupil_diameter_mm".into(), Value::F64(3.4));
     rec.insert("fixation_target_id".into(), Value::Null);
@@ -251,12 +314,15 @@ pub fn biosignal_poll(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let mut rec = BTreeMap::new();
     rec.insert("modality".into(), Value::String(modality.into()));
     rec.insert("sample_rate_hz".into(), Value::F64(250.0));
-    rec.insert("channels".into(), Value::List(vec![
-        Value::String("Fp1".into()),
-        Value::String("Fp2".into()),
-        Value::String("C3".into()),
-        Value::String("C4".into()),
-    ]));
+    rec.insert(
+        "channels".into(),
+        Value::List(vec![
+            Value::String("Fp1".into()),
+            Value::String("Fp2".into()),
+            Value::String("C3".into()),
+            Value::String("C4".into()),
+        ]),
+    );
     rec.insert("dp_epsilon".into(), Value::F64(epsilon));
     rec.insert("calibrated".into(), Value::Bool(true));
     Ok(Value::Record(rec))
@@ -282,13 +348,30 @@ mod tests {
 
     #[test]
     fn test_pointer_capture_and_cursor() {
-        let cap = pointer_capture(&Value::Record(BTreeMap::from([("target_id".into(), Value::U64(42))])), Span::point(0)).unwrap();
+        let cap = pointer_capture(
+            &Value::Record(BTreeMap::from([("target_id".into(), Value::U64(42))])),
+            Span::point(0),
+        )
+        .unwrap();
         assert!(matches!(cap, Value::Record(_)));
 
-        let cur = set_cursor(&Value::Record(BTreeMap::from([("style".into(), Value::String("crosshair".into()))])), Span::point(0)).unwrap();
+        let cur = set_cursor(
+            &Value::Record(BTreeMap::from([(
+                "style".into(),
+                Value::String("crosshair".into()),
+            )])),
+            Span::point(0),
+        )
+        .unwrap();
         assert!(matches!(cur, Value::Record(_)));
 
-        let invalid = set_cursor(&Value::Record(BTreeMap::from([("style".into(), Value::String("invalid_cursor".into()))])), Span::point(0));
+        let invalid = set_cursor(
+            &Value::Record(BTreeMap::from([(
+                "style".into(),
+                Value::String("invalid_cursor".into()),
+            )])),
+            Span::point(0),
+        );
         assert!(invalid.is_err());
     }
 
@@ -297,43 +380,64 @@ mod tests {
         let gp = gamepad_poll(&Value::Null, Span::point(0)).unwrap();
         assert!(matches!(gp, Value::Record(_)));
 
-        let vib = gamepad_vibrate(&Value::Record(BTreeMap::from([
-            ("weak_magnitude".into(), Value::F64(0.8)),
-            ("duration_ms".into(), Value::U64(200)),
-        ])), Span::point(0)).unwrap();
+        let vib = gamepad_vibrate(
+            &Value::Record(BTreeMap::from([
+                ("weak_magnitude".into(), Value::F64(0.8)),
+                ("duration_ms".into(), Value::U64(200)),
+            ])),
+            Span::point(0),
+        )
+        .unwrap();
         assert!(matches!(vib, Value::Record(_)));
 
-        let m_send = midi_send(&Value::Record(BTreeMap::from([
-            ("status".into(), Value::U64(0x90)),
-            ("data1".into(), Value::U64(60)),
-            ("data2".into(), Value::U64(100)),
-        ])), Span::point(0)).unwrap();
+        let m_send = midi_send(
+            &Value::Record(BTreeMap::from([
+                ("status".into(), Value::U64(0x90)),
+                ("data1".into(), Value::U64(60)),
+                ("data2".into(), Value::U64(100)),
+            ])),
+            Span::point(0),
+        )
+        .unwrap();
         assert!(matches!(m_send, Value::Record(_)));
     }
 
     #[test]
     fn test_haptic_and_spatial() {
-        let hap = haptic_pattern(&Value::Record(BTreeMap::from([
-            ("pattern".into(), Value::String("heartbeat".into())),
-            ("intensity".into(), Value::F64(0.9)),
-        ])), Span::point(0)).unwrap();
+        let hap = haptic_pattern(
+            &Value::Record(BTreeMap::from([
+                ("pattern".into(), Value::String("heartbeat".into())),
+                ("intensity".into(), Value::F64(0.9)),
+            ])),
+            Span::point(0),
+        )
+        .unwrap();
         assert!(matches!(hap, Value::Record(_)));
 
         let head = spatial_head_pose(&Value::Null, Span::point(0)).unwrap();
         assert!(matches!(head, Value::Record(_)));
 
-        let hand = spatial_hand_skeleton(&Value::Record(BTreeMap::from([
-            ("hand".into(), Value::String("left".into())),
-        ])), Span::point(0)).unwrap();
+        let hand = spatial_hand_skeleton(
+            &Value::Record(BTreeMap::from([(
+                "hand".into(),
+                Value::String("left".into()),
+            )])),
+            Span::point(0),
+        )
+        .unwrap();
         assert!(matches!(hand, Value::Record(_)));
 
         let gaze = spatial_gaze_ray(&Value::Null, Span::point(0)).unwrap();
         assert!(matches!(gaze, Value::Record(_)));
 
-        let bio = biosignal_poll(&Value::Record(BTreeMap::from([
-            ("modality".into(), Value::String("eeg".into())),
-            ("epsilon".into(), Value::F64(0.5)),
-        ])), Span::point(0)).unwrap();
+        let bio = biosignal_poll(
+            &Value::Record(BTreeMap::from([
+                ("modality".into(), Value::String("eeg".into())),
+                ("epsilon".into(), Value::F64(0.5)),
+            ])),
+            Span::point(0),
+        )
+        .unwrap();
         assert!(matches!(bio, Value::Record(_)));
     }
 }

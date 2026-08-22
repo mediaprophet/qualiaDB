@@ -554,8 +554,8 @@ pub fn creator_evaluate_interaction(args_v: &Value, _span: Span) -> Result<Value
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vibe::Value;
     use std::collections::BTreeMap;
+    use vibe::Value;
 
     fn rec(pairs: &[(&str, Value)]) -> Value {
         let mut m = BTreeMap::new();

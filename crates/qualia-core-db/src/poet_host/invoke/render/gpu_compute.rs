@@ -19,6 +19,7 @@
 //! `readback_bytes` at the readback binding).
 
 use super::super::args;
+#[cfg(not(target_arch = "wasm32"))]
 use super::gpu::slot_with;
 use vibe::{Diagnostic, Span, Value};
 
@@ -162,7 +163,8 @@ pub fn animation_compute_pass(args: &Value, _span: Span) -> Result<Value, Diagno
         let preset = args::rec_str(args, "preset").unwrap_or("orbit");
         let dt = args::rec_f64(args, "dt").unwrap_or(1.0 / 60.0) as f32;
 
-        let wgsl = format!(r#"
+        let wgsl = format!(
+            r#"
 struct Particle {{
     pos: vec4<f32>,
     vel: vec4<f32>,
@@ -182,7 +184,8 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {{
     p.pos.w = angle;
     particles[idx] = p;
 }}
-"#);
+"#
+        );
 
         let mut rec = std::collections::BTreeMap::new();
         rec.insert("preset".into(), Value::String(preset.into()));

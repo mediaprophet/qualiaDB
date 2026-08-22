@@ -3,11 +3,14 @@
 //! Exposes `specialized_libs::chemistry_modeling` functions through VibeScript
 //! invoke IDs in the `Chemistry.*` namespace.
 
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+#[cfg(not(target_arch = "wasm32"))]
 mod extra;
 
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+#[cfg(not(target_arch = "wasm32"))]
 pub use extra::parse_bse_json;
+
+#[cfg(target_arch = "wasm32")]
+mod portable;
 
 use super::args;
 use vibe::{Diagnostic, Span, Value};
@@ -17,7 +20,11 @@ use vibe::{Diagnostic, Span, Value};
 pub fn element_symbol(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let z = args::rec_u64(args, "atomic_number")
         .ok_or_else(|| args::bad(span, "Chemistry.element_symbol needs atomic_number"))?;
-    match crate::specialized_libs::chemistry_modeling::basis_set::element_symbol(z as u32) {
+    #[cfg(not(target_arch = "wasm32"))]
+    let symbol = crate::specialized_libs::chemistry_modeling::basis_set::element_symbol(z as u32);
+    #[cfg(target_arch = "wasm32")]
+    let symbol = portable::element_symbol(z as u32);
+    match symbol {
         Some(sym) => Ok(args::record([
             ("symbol", Value::String(sym.to_string())),
             ("atomic_number", Value::U64(z)),
@@ -34,7 +41,11 @@ pub fn element_symbol(args: &Value, span: Span) -> Result<Value, Diagnostic> {
 pub fn atomic_number(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let sym = args::rec_str(args, "symbol")
         .ok_or_else(|| args::bad(span, "Chemistry.atomic_number needs symbol"))?;
-    match crate::specialized_libs::chemistry_modeling::basis_set::atomic_number(sym) {
+    #[cfg(not(target_arch = "wasm32"))]
+    let number = crate::specialized_libs::chemistry_modeling::basis_set::atomic_number(sym);
+    #[cfg(target_arch = "wasm32")]
+    let number = portable::atomic_number(sym);
+    match number {
         Some(z) => Ok(args::record([
             ("atomic_number", Value::U64(z as u64)),
             ("symbol", Value::String(sym.to_string())),
@@ -51,7 +62,11 @@ pub fn atomic_number(args: &Value, span: Span) -> Result<Value, Diagnostic> {
 pub fn standard_atomic_weight(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let elem = args::rec_str(args, "element")
         .ok_or_else(|| args::bad(span, "Chemistry.standard_atomic_weight needs element"))?;
-    match crate::specialized_libs::chemistry_modeling::standard_atomic_weight(elem) {
+    #[cfg(not(target_arch = "wasm32"))]
+    let weight = crate::specialized_libs::chemistry_modeling::standard_atomic_weight(elem);
+    #[cfg(target_arch = "wasm32")]
+    let weight = portable::standard_atomic_weight(elem);
+    match weight {
         Some(weight) => Ok(args::record([
             ("element", Value::String(elem.to_string())),
             ("atomic_weight", Value::F64(weight)),
@@ -68,7 +83,10 @@ pub fn standard_atomic_weight(args: &Value, span: Span) -> Result<Value, Diagnos
 pub fn lda_exchange(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let rho = args::rec_f64(args, "rho")
         .ok_or_else(|| args::bad(span, "Chemistry.lda_exchange needs rho"))?;
+    #[cfg(not(target_arch = "wasm32"))]
     let (energy, potential) = crate::specialized_libs::chemistry_modeling::dft::lda_exchange(rho);
+    #[cfg(target_arch = "wasm32")]
+    let (energy, potential) = portable::lda_exchange(rho);
     Ok(args::record([
         ("energy", Value::F64(energy)),
         ("potential", Value::F64(potential)),
@@ -80,15 +98,18 @@ pub fn lda_exchange(args: &Value, span: Span) -> Result<Value, Diagnostic> {
 pub fn lda_correlation_vwn(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let rho = args::rec_f64(args, "rho")
         .ok_or_else(|| args::bad(span, "Chemistry.lda_correlation_vwn needs rho"))?;
+    #[cfg(not(target_arch = "wasm32"))]
     let (energy, potential) =
         crate::specialized_libs::chemistry_modeling::dft::lda_correlation_vwn(rho);
+    #[cfg(target_arch = "wasm32")]
+    let (energy, potential) = portable::lda_correlation_vwn(rho);
     Ok(args::record([
         ("energy", Value::F64(energy)),
         ("potential", Value::F64(potential)),
     ]))
 }
 
-#[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+#[cfg(target_arch = "wasm32")]
 pub fn parse_bse_json(
     _args: &vibe::Value,
     span: vibe::Span,

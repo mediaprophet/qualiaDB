@@ -24,7 +24,7 @@ _Branch: `0.0.33` | Last updated: 2026-08-15_
 
 ```bash
 cargo build --release -p qualia-cli
-./target/release/qualia --help
+./target/release/qualia-cli --help
 ```
 
 ### Webizen Studio desktop app (primary shipped desktop target)
@@ -147,26 +147,32 @@ cd scripts/cross-linux
 ## CLI Command Reference
 
 ```bash
-# ── Ingestion ──────────────────────────────────────────────────────────
-qualia ingest data.ttl output.q42
-qualia ingest --profile health.qchk data.ttl output.q42   # profile-bound
+# ── Streaming RDF → Q42 ingestion ─────────────────────────────────────
+qualia-cli import data.ttl output.q42 --progress text
+qualia-cli import data.ttl output.q42 --job-dir ./jobs/data --progress json
+qualia-cli ingest-job status ./jobs/data
+qualia-cli ingest-job continue ./jobs/data                 # restartable after interruption
+qualia-cli verify-graph --input data.ttl --dataset output.q42 --memory-mib 32 --temp-gib 24
+
+# ── Mapped tabular ingestion (writes beside the source) ───────────────
+qualia-cli ingest csv people.csv --map people-shape.ttl
+qualia-cli ingest json people.json --map people-shape.ttl
 
 # ── Inspection & volume ops (unified v3) ───────────────────────────────
-qualia q42 inspect output.q42            # header, flags, lex, FIDX/PIDX
-qualia q42 verify output.q42             # SuperBlock walk + five-field ECC
-qualia q42 magnet output.q42             # fail-closed public magnet
-qualia q42 compact output.q42            # rewrite to current v3
-qualia inspect output.q42                # decode and display Quin fields
-qualia dump output.q42                   # stream-dump raw Quins
-qualia export-solid output.q42 ./solid-pod/   # W3C Solid LDP export
+qualia-cli q42 inspect output.q42            # header, flags, lex, FIDX/PIDX
+qualia-cli q42 verify output.q42 --level full # layered SuperBlock / volume-set walk
+qualia-cli q42 magnet output.q42             # fail-closed public magnet
+qualia-cli q42 compact output.q42            # rewrite to current v3
+qualia-cli inspect output.q42                # decode and display Quin fields
+qualia-cli dump output.q42                   # stream-dump raw Quins
+qualia-cli export-solid --input output.q42 --output ./solid-pod/ # W3C Solid LDP export
 
 # ── Querying ───────────────────────────────────────────────────────────
-qualia query output.q42                  # interactive SPARQL-like query
-qualia import                            # import from external source
+qualia-cli query sparql output.q42        # interactive SPARQL query
 
 # ── Daemon ─────────────────────────────────────────────────────────────
-qualia daemon start                      # start on http://localhost:4242
-qualia daemon stop
+qualia-cli daemon start                   # start on http://localhost:4242
+qualia-cli daemon stop
 
 # ── Capability profiles ────────────────────────────────────────────────
 qualia profile compile profile.jsonld profile.qchk
@@ -206,7 +212,7 @@ Full subcommand list: `qualia --help`
 cargo test -p qualia-core-db
 ```
 
-The `qualia-core-db` crate contains 539+ test functions covering SPARQL, SHACL, biosciences/biomedical/chemistry engines, SPARQL-Star, temporal graph queries, WAL/DAG linking, and WASM bridge paths.
+The `qualia-core-db` test suite covers SPARQL, SHACL, biosciences/biomedical/chemistry engines, SPARQL-Star, temporal graph queries, WAL/DAG linking, and WASM bridge paths. Use the current CI result rather than a hard-coded count when reporting coverage.
 
 ### Run SPARQL-specific tests
 
@@ -249,11 +255,11 @@ qualia bench --suite full
 ```
 
 ```bash
-# Ingest DBpedia:
-qualia ingest ./data/mappingbased-objects.ttl.bz2 ./data/dbpedia.q42
+# Ingest DBpedia with a durable checkpoint:
+qualia-cli import ./data/mappingbased-objects.ttl.bz2 ./data/dbpedia.q42 --job-dir ./jobs/dbpedia --segment-mib 512
 
 # Memory-mapped query:
-qualia query ./data/dbpedia.q42
+qualia-cli query sparql ./data/dbpedia.q42
 ```
 
 ### Building the WordNet playground dataset
@@ -276,13 +282,13 @@ Commit `docs/playground/` artefacts to trigger a GitHub Pages deploy.
 
 ## Running the Daemon Locally
 
-The native daemon listens on `http://localhost:4242`. Endpoints: `/health`, `/query` (SPARQL), `/chat/publish`, `/chat/pull`, WebTorrent routes.
+The native daemon listens on `http://localhost:4242`. Endpoints include `/health`, `/query` (SPARQL), `/update`, `/vibe/capabilities`, `/chat/publish`, `/chat/pull`, and WebTorrent routes. The Vibe capability endpoint is open in development mode; production requests require a local `X-Qualia-Token`.
 
 ```bash
 cargo run --release -p qualia-cli -- daemon start
 ```
 
-The Flutter desktop app and browser playground both connect to this endpoint. The UI connection badge turns green when the daemon is reachable.
+The browser may probe a paired daemon only after a user gesture. A standalone browser graph is an isolated snapshot, not a persistent native graph transaction; see [WASM capability profiles](wasm-capability-profiles.html).
 
 ---
 
@@ -295,7 +301,7 @@ In-process LLM inference uses a platform-specific GPU backend selected at startu
 | Windows x86_64 | DirectML 1.15 | `directml_bridge.rs`; requires D3D12-capable GPU |
 | macOS (Apple Silicon) | Accelerate / AMX | `metal_bridge.rs`; `cblas_sgemm` via Accelerate framework |
 | Linux / all others | wgpu / Vulkan | `gguf_bridge.rs` + `fused_transformer.wgsl` shader |
-| WASM | Mock ring-buffer | GPU path not available in browser; mock path used |
+| WASM | Profile-dependent WebGPU / fallback | Browser surfaces use the compiled capability profile; the native real-model path and browser fallback are documented separately |
 
 The backend selection is automatic and falls through in priority order: DirectML → Accelerate → wgpu. No configuration required.
 
@@ -331,7 +337,7 @@ SPARQL-Star tests: `crates/qualia-core-db/tests/sparql_star_tests.rs`
 
 ## RDF Parsers
 
-Supported input formats for `qualia ingest`:
+Supported RDF input formats for `qualia-cli import`:
 
 | Format | Module | Notes |
 |---|---|---|
@@ -345,16 +351,9 @@ Supported input formats for `qualia ingest`:
 
 ---
 
-## Known Build Issues (v0.0.33)
+## Build status
 
-All crates compile cleanly except where noted:
-
-| Crate / module | Status | Notes |
-|---|---|---|
-| `qualia-core-db` — SPARQL modules | ⚠️ Build errors under resolution | `sparql_executor`, `sparql_endpoint`, `sparql_extensions`, `sparql_mm`, `sparql_websocket` |
-| All other crates | ✅ Clean | |
-
-Tracking: [BUILD_ERRORS_TRACKING.md](../../BUILD_ERRORS_TRACKING.md)
+Do not treat this manual as a static build-status ledger. The CI workflows and the commands above are the current source of truth; record a failing crate, target, command, and log link in the issue or tracking document that owns it. This avoids leaving historical resolution failures in public setup instructions after they have been fixed.
 
 ---
 

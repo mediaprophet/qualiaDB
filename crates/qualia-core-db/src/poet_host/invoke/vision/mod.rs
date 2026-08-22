@@ -17,10 +17,7 @@ pub use cv::{
 };
 
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
-pub fn ahash(
-    _args: &vibe::Value,
-    span: vibe::Span,
-) -> Result<vibe::Value, vibe::Diagnostic> {
+pub fn ahash(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     Err(super::args::need_scientific(span, "ComputerVision"))
 }
 
@@ -41,18 +38,12 @@ pub fn sobel_magnitude(
 }
 
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
-pub fn canny_edges(
-    _args: &vibe::Value,
-    span: vibe::Span,
-) -> Result<vibe::Value, vibe::Diagnostic> {
+pub fn canny_edges(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     Err(super::args::need_scientific(span, "ComputerVision"))
 }
 
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
-pub fn histogram(
-    _args: &vibe::Value,
-    span: vibe::Span,
-) -> Result<vibe::Value, vibe::Diagnostic> {
+pub fn histogram(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     Err(super::args::need_scientific(span, "ComputerVision"))
 }
 
@@ -65,18 +56,12 @@ pub fn equalize_hist(
 }
 
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
-pub fn rgb_to_gray(
-    _args: &vibe::Value,
-    span: vibe::Span,
-) -> Result<vibe::Value, vibe::Diagnostic> {
+pub fn rgb_to_gray(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     Err(super::args::need_scientific(span, "ComputerVision"))
 }
 
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
-pub fn dhash(
-    _args: &vibe::Value,
-    span: vibe::Span,
-) -> Result<vibe::Value, vibe::Diagnostic> {
+pub fn dhash(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     Err(super::args::need_scientific(span, "ComputerVision"))
 }
 

@@ -64,6 +64,19 @@
       "group": "VibeScript"
     },
     {
+      "label": "RDF → Q42 → Vibe",
+      "href": "rdf-q42-vibe-demo.html",
+      "icon": "fa-diagram-project",
+      "highlight": true,
+      "group": "VibeScript"
+    },
+    {
+      "label": "Execution Profiles",
+      "href": "vibe-host-native-bridge.html",
+      "icon": "fa-link",
+      "group": "VibeScript"
+    },
+    {
       "label": "Specification",
       "href": "vibe/spec.html",
       "icon": "fa-book",

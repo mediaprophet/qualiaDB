@@ -308,6 +308,7 @@ pub fn spawn_loopback_server(
 
                     // REST
                     .route("/health", get(health_handler).options(preflight_handler))
+                    .route("/vibe/capabilities", get(vibe_capabilities_handler).options(preflight_handler))
                     .route(
                         "/tensor/slice",
                         get(tensor_slice_handler).options(preflight_handler),
@@ -711,6 +712,46 @@ async fn health_handler(State(state): State<Arc<WebizenState>>) -> impl IntoResp
             "execution_environment": crate::services::daemon::execution_environment_json(),
         })),
     )
+}
+
+/// Capability negotiation for local browser/WASM adapters. This describes the
+/// real daemon boundary; it does not execute a Vibe call over the synchronous
+/// `Host` trait. Clients must keep native invocation asynchronous and obtain a
+/// user-mediated pairing token before making stateful requests.
+async fn vibe_capabilities_handler(
+    State(state): State<Arc<WebizenState>>,
+    headers: HeaderMap,
+) -> impl IntoResponse {
+    if !state.dev && !bridge_probe_authorized(&state, &headers) {
+        return (
+            StatusCode::UNAUTHORIZED,
+            Json(json!({"error": "missing or invalid x-qualia-token"})),
+        )
+            .into_response();
+    }
+    (
+        StatusCode::OK,
+        Json(crate::vibe_host::bridge::negotiation_document(true)),
+    )
+        .into_response()
+}
+
+fn bridge_probe_authorized(state: &WebizenState, headers: &HeaderMap) -> bool {
+    let Some(token) = headers
+        .get("x-qualia-token")
+        .and_then(|value| value.to_str().ok())
+    else {
+        return false;
+    };
+    if state.token.as_deref() == Some(token) {
+        return true;
+    }
+    state
+        .vault
+        .lock()
+        .ok()
+        .and_then(|vault| vault.verify_qapp_token(token, "localhost").ok())
+        .is_some()
 }
 
 async fn proxy_fetch_handler(

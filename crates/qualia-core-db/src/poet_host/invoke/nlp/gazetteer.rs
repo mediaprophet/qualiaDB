@@ -1,8 +1,8 @@
 //! Gazetteer invoke — Aho-Corasick matching with byte spans.
 
 use crate::nlp::gazetteer::Gazetteer;
-use vibe::{DiagCode, Diagnostic, Span, Value};
 use std::collections::BTreeMap;
+use vibe::{DiagCode, Diagnostic, Span, Value};
 
 /// `NLP.gazetteer_run` — run the default gazetteer over a text, returning hits
 /// with exact byte spans and matched IRIs.

@@ -24,9 +24,9 @@ use crate::agent_runtime::orchestration::{
     assign_agents, create_session, execute_session, plan_session, session_summary, AgentRole,
     OrchestrationSession, RosterAgent,
 };
-use vibe::{Diagnostic, Span, Value};
 use std::collections::BTreeMap;
 use std::sync::Mutex;
+use vibe::{Diagnostic, Span, Value};
 
 /// Process-local registry of orchestration sessions.
 static SESSIONS: Mutex<Option<BTreeMap<String, OrchestrationSession>>> = Mutex::new(None);

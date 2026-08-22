@@ -1,5 +1,14 @@
 //! `governance` category (reorg).
 
+#[cfg(not(all(
+    target_arch = "wasm32",
+    feature = "wasm-ontology",
+    not(any(
+        feature = "wasm-logic",
+        feature = "wasm-scientific",
+        feature = "wasm-full"
+    ))
+)))]
 pub mod coord_seams;
 #[cfg(any(
     not(target_arch = "wasm32"),

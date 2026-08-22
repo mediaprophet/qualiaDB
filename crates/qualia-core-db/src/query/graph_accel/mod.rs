@@ -11,6 +11,9 @@ mod cpu;
 mod gpu;
 mod join;
 mod path;
+// Q42 volume files use the native mmap-backed reader. Browser builds work on
+// caller-provided Quin frames and must not pull that filesystem surface in.
+#[cfg(not(target_arch = "wasm32"))]
 mod segment;
 mod sieve;
 mod sort;
@@ -18,6 +21,7 @@ mod sort;
 pub use cpu::QuinField;
 pub use join::{hash_join_u64, hash_join_u64_cpu, JoinOutcome};
 pub use path::{npu_available, AccelPath, AccelPolicy, GPU_JOIN_MIN, GPU_SIEVE_MIN, GPU_SORT_MIN};
+#[cfg(not(target_arch = "wasm32"))]
 pub use segment::sieve_volume_file;
 pub use sieve::{sieve_eq, sieve_eq_indices, SieveOutcome};
 pub use sort::{

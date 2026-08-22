@@ -3,8 +3,8 @@
 use super::super::args;
 use crate::specialized_libs::symbolic_algebra as sa;
 use crate::specialized_libs::symbolic_algebra::{add, c, mul, pow, var, Expr};
-use vibe::{Diagnostic, Span, Value};
 use std::collections::HashMap;
+use vibe::{Diagnostic, Span, Value};
 
 pub fn eval_poly(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let coeffs = args::rec(args_v, "coeffs")

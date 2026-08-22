@@ -14,8 +14,8 @@
 
 use super::ids;
 use crate::CAPABILITY_DESCRIPTORS;
-use vibe::Value;
 use std::collections::BTreeMap;
+use vibe::Value;
 
 /// Where a candidate lives.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

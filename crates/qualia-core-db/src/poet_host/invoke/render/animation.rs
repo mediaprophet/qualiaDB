@@ -218,7 +218,14 @@ pub fn animation_list_presets(args_v: &Value, _span: Span) -> Result<Value, Diag
 
     let list: Vec<Value> = all
         .iter()
-        .filter(|p| filter.map(|f| p.family.eq_ignore_ascii_case(f) || p.family.replace('_', "-").eq_ignore_ascii_case(f)).unwrap_or(true))
+        .filter(|p| {
+            filter
+                .map(|f| {
+                    p.family.eq_ignore_ascii_case(f)
+                        || p.family.replace('_', "-").eq_ignore_ascii_case(f)
+                })
+                .unwrap_or(true)
+        })
         .map(|p| {
             let mut rec = BTreeMap::new();
             rec.insert("family".into(), Value::String(p.family.into()));
@@ -346,11 +353,31 @@ mod tests {
 
     #[test]
     fn invoke_animation_squad_and_list() {
-        let squad_res = animation_squad_step(&Value::Record(BTreeMap::from([
-            ("q0".into(), Value::List(vec![Value::F64(1.0), Value::F64(0.0), Value::F64(0.0), Value::F64(0.0)])),
-            ("q1".into(), Value::List(vec![Value::F64(0.0), Value::F64(1.0), Value::F64(0.0), Value::F64(0.0)])),
-            ("t".into(), Value::F64(0.5)),
-        ])), Span::new(0, 0)).expect("squad");
+        let squad_res = animation_squad_step(
+            &Value::Record(BTreeMap::from([
+                (
+                    "q0".into(),
+                    Value::List(vec![
+                        Value::F64(1.0),
+                        Value::F64(0.0),
+                        Value::F64(0.0),
+                        Value::F64(0.0),
+                    ]),
+                ),
+                (
+                    "q1".into(),
+                    Value::List(vec![
+                        Value::F64(0.0),
+                        Value::F64(1.0),
+                        Value::F64(0.0),
+                        Value::F64(0.0),
+                    ]),
+                ),
+                ("t".into(), Value::F64(0.5)),
+            ])),
+            Span::new(0, 0),
+        )
+        .expect("squad");
         assert!(matches!(squad_res, Value::Record(_)));
 
         let list_res = animation_list_presets(&Value::Null, Span::new(0, 0)).expect("list_presets");

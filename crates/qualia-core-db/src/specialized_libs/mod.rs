@@ -17,7 +17,7 @@ pub mod computational_economics;
 pub mod computational_geometry;
 /// Computer vision pure kernels (MIG-V2 from `qualia-vision`).
 /// Native/desktop only — portal WASM browses sealed `.10d` without this tree.
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 pub mod computer_vision;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod constructibility;
@@ -27,11 +27,21 @@ pub mod cryptographic_library;
 pub mod engineering_analysis;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod financial_modeling;
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(any(
+    not(target_arch = "wasm32"),
+    feature = "portal",
+    feature = "wasm-logic",
+    feature = "wasm-scientific"
+))]
 pub mod linear_algebra;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod machine_learning;
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(any(
+    not(target_arch = "wasm32"),
+    feature = "portal",
+    feature = "wasm-logic",
+    feature = "wasm-scientific"
+))]
 pub mod medical_computing;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod multivar_calculus;
@@ -62,7 +72,17 @@ pub mod symbolic_solve;
 pub mod symbolic_trig;
 
 // Shared zero-heap utilities
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(any(
+    not(target_arch = "wasm32"),
+    feature = "portal",
+    feature = "wasm-logic",
+    feature = "wasm-scientific"
+))]
 pub mod shared;
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(any(
+    not(target_arch = "wasm32"),
+    feature = "portal",
+    feature = "wasm-logic",
+    feature = "wasm-scientific"
+))]
 pub use shared::{FixedArray, FixedQueue, FixedStack, RingBuffer};

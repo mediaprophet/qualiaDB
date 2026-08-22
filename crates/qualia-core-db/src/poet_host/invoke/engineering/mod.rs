@@ -1,28 +1,25 @@
 //! Future seam: `qualia-engineering` (`specialized_libs/engineering_analysis`).
 
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+#[cfg(not(target_arch = "wasm32"))]
 mod extra;
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+#[cfg(not(target_arch = "wasm32"))]
 mod kinematics;
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+#[cfg(not(target_arch = "wasm32"))]
 mod survival;
 
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+#[cfg(not(target_arch = "wasm32"))]
 pub use extra::{analyze_conduction, fem_static};
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+#[cfg(not(target_arch = "wasm32"))]
 pub use kinematics::run as kinematics;
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+#[cfg(not(target_arch = "wasm32"))]
 pub use survival::{cauchy_stress, drag_force, fatigue_cycles, miner_damage, reynolds_number};
 
-#[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
-pub fn kinematics(
-    _args: &vibe::Value,
-    span: vibe::Span,
-) -> Result<vibe::Value, vibe::Diagnostic> {
+#[cfg(target_arch = "wasm32")]
+pub fn kinematics(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     Err(super::args::need_scientific(span, "EngineeringAnalysis"))
 }
 
-#[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+#[cfg(target_arch = "wasm32")]
 pub fn cauchy_stress(
     _args: &vibe::Value,
     span: vibe::Span,
@@ -30,15 +27,12 @@ pub fn cauchy_stress(
     Err(super::args::need_scientific(span, "EngineeringAnalysis"))
 }
 
-#[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
-pub fn drag_force(
-    _args: &vibe::Value,
-    span: vibe::Span,
-) -> Result<vibe::Value, vibe::Diagnostic> {
+#[cfg(target_arch = "wasm32")]
+pub fn drag_force(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     Err(super::args::need_scientific(span, "EngineeringAnalysis"))
 }
 
-#[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+#[cfg(target_arch = "wasm32")]
 pub fn reynolds_number(
     _args: &vibe::Value,
     span: vibe::Span,
@@ -46,7 +40,7 @@ pub fn reynolds_number(
     Err(super::args::need_scientific(span, "EngineeringAnalysis"))
 }
 
-#[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+#[cfg(target_arch = "wasm32")]
 pub fn fatigue_cycles(
     _args: &vibe::Value,
     span: vibe::Span,
@@ -54,7 +48,7 @@ pub fn fatigue_cycles(
     Err(super::args::need_scientific(span, "EngineeringAnalysis"))
 }
 
-#[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+#[cfg(target_arch = "wasm32")]
 pub fn miner_damage(
     _args: &vibe::Value,
     span: vibe::Span,
@@ -62,7 +56,7 @@ pub fn miner_damage(
     Err(super::args::need_scientific(span, "EngineeringAnalysis"))
 }
 
-#[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+#[cfg(target_arch = "wasm32")]
 pub fn analyze_conduction(
     _args: &vibe::Value,
     span: vibe::Span,
@@ -70,10 +64,7 @@ pub fn analyze_conduction(
     Err(super::args::need_scientific(span, "EngineeringAnalysis"))
 }
 
-#[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
-pub fn fem_static(
-    _args: &vibe::Value,
-    span: vibe::Span,
-) -> Result<vibe::Value, vibe::Diagnostic> {
+#[cfg(target_arch = "wasm32")]
+pub fn fem_static(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     Err(super::args::need_scientific(span, "EngineeringAnalysis"))
 }

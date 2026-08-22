@@ -3,7 +3,6 @@
 
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 mod calculus;
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 pub mod closure_solvers;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 mod ga;
@@ -59,66 +58,39 @@ fn missing(span: vibe::Span, family: &str) -> Result<vibe::Value, vibe::Diagnost
 }
 
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
-pub fn gcd(
-    _args: &vibe::Value,
-    span: vibe::Span,
-) -> Result<vibe::Value, vibe::Diagnostic> {
+pub fn gcd(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     missing(span, "NumberTheory")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
-pub fn lcm(
-    args: &vibe::Value,
-    span: vibe::Span,
-) -> Result<vibe::Value, vibe::Diagnostic> {
+pub fn lcm(args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     gcd(args, span)
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
-pub fn is_prime(
-    args: &vibe::Value,
-    span: vibe::Span,
-) -> Result<vibe::Value, vibe::Diagnostic> {
+pub fn is_prime(args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     gcd(args, span)
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
-pub fn matmul(
-    args: &vibe::Value,
-    span: vibe::Span,
-) -> Result<vibe::Value, vibe::Diagnostic> {
+pub fn matmul(args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     missing(span, "LinearAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
-pub fn eval_poly(
-    _args: &vibe::Value,
-    span: vibe::Span,
-) -> Result<vibe::Value, vibe::Diagnostic> {
+pub fn eval_poly(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     missing(span, "SymbolicAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
-pub fn simpson(
-    _args: &vibe::Value,
-    span: vibe::Span,
-) -> Result<vibe::Value, vibe::Diagnostic> {
+pub fn simpson(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     missing(span, "NumericalCalculus")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
-pub fn hill_climb(
-    _args: &vibe::Value,
-    span: vibe::Span,
-) -> Result<vibe::Value, vibe::Diagnostic> {
+pub fn hill_climb(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     missing(span, "Optimization")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
-pub fn ga_dot(
-    _args: &vibe::Value,
-    span: vibe::Span,
-) -> Result<vibe::Value, vibe::Diagnostic> {
+pub fn ga_dot(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     missing(span, "GeometricAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
-pub fn bessel_jn(
-    _args: &vibe::Value,
-    span: vibe::Span,
-) -> Result<vibe::Value, vibe::Diagnostic> {
+pub fn bessel_jn(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     missing(span, "SpecialFunctionsAndTransforms")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
@@ -143,10 +115,7 @@ pub fn la_determinant(
     missing(span, "LinearAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
-pub fn la_solve(
-    _args: &vibe::Value,
-    span: vibe::Span,
-) -> Result<vibe::Value, vibe::Diagnostic> {
+pub fn la_solve(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     missing(span, "LinearAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
@@ -164,10 +133,7 @@ pub fn la_eigenvalues(
     missing(span, "LinearAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
-pub fn la_svd(
-    _args: &vibe::Value,
-    span: vibe::Span,
-) -> Result<vibe::Value, vibe::Diagnostic> {
+pub fn la_svd(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     missing(span, "LinearAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
@@ -185,17 +151,11 @@ pub fn cas_simplify(
     missing(span, "SymbolicAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
-pub fn cas_expand(
-    _args: &vibe::Value,
-    span: vibe::Span,
-) -> Result<vibe::Value, vibe::Diagnostic> {
+pub fn cas_expand(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     missing(span, "SymbolicAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
-pub fn cas_factor(
-    _args: &vibe::Value,
-    span: vibe::Span,
-) -> Result<vibe::Value, vibe::Diagnostic> {
+pub fn cas_factor(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     missing(span, "SymbolicAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
@@ -206,10 +166,7 @@ pub fn cas_solve_quadratic(
     missing(span, "SymbolicAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
-pub fn dft(
-    _args: &vibe::Value,
-    span: vibe::Span,
-) -> Result<vibe::Value, vibe::Diagnostic> {
+pub fn dft(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     missing(span, "IntegralTransforms")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
@@ -220,30 +177,18 @@ pub fn convert_unit(
     missing(span, "PhysicalUnits")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
-pub fn gradient(
-    _args: &vibe::Value,
-    span: vibe::Span,
-) -> Result<vibe::Value, vibe::Diagnostic> {
+pub fn gradient(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     missing(span, "VectorCalculus")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
-pub fn divergence(
-    _args: &vibe::Value,
-    span: vibe::Span,
-) -> Result<vibe::Value, vibe::Diagnostic> {
+pub fn divergence(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     missing(span, "VectorCalculus")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
-pub fn curl(
-    _args: &vibe::Value,
-    span: vibe::Span,
-) -> Result<vibe::Value, vibe::Diagnostic> {
+pub fn curl(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     missing(span, "VectorCalculus")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
-pub fn laplacian(
-    _args: &vibe::Value,
-    span: vibe::Span,
-) -> Result<vibe::Value, vibe::Diagnostic> {
+pub fn laplacian(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     missing(span, "VectorCalculus")
 }

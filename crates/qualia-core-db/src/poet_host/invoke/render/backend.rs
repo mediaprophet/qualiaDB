@@ -112,11 +112,10 @@ pub fn gpu_backend_info(_args: &Value, _span: Span) -> Result<Value, Diagnostic>
 /// Probe whether `navigator.gpu` is present in the browser.
 #[cfg(target_arch = "wasm32")]
 fn webgpu_available_wasm() -> bool {
-    use wasm_bindgen::JsCast;
-    let navigator = web_sys::window().and_then(|w| w.navigator());
-    let Some(navigator) = navigator else {
+    let Some(window) = web_sys::window() else {
         return false;
     };
+    let navigator = window.navigator();
     // `navigator.gpu` is the WebGPU entry point. If it's `undefined`, WebGPU
     // is not available in this browser.
     let gpu = js_sys::Reflect::get(&navigator, &"gpu".into());
@@ -131,10 +130,11 @@ fn webgpu_available_wasm() -> bool {
 /// canvas element from the caller.
 #[cfg(target_arch = "wasm32")]
 fn webgl2_context_available_wasm() -> bool {
+    use wasm_bindgen::JsCast;
     let Some(window) = web_sys::window() else {
         return false;
     };
-    let Ok(Some(document)) = window.document().map(|d| Some(d)) else {
+    let Some(document) = window.document() else {
         return false;
     };
     // Create a 1×1 test canvas and try to get a webgl2 context.

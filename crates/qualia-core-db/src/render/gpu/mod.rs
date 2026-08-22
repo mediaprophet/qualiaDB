@@ -1710,6 +1710,11 @@ impl PortalGpu {
         Ok(need)
     }
 
+    #[cfg(target_arch = "wasm32")]
+    pub fn read_rgba8_into(&self, _out: &mut [u8]) -> Result<usize, String> {
+        Err("Synchronous RGBA8 readback is not supported on wasm32 targets".to_string())
+    }
+
     pub fn particle_count(&self) -> u32 {
         self.particle_count
     }

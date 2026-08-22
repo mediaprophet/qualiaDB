@@ -7,10 +7,7 @@ mod framingham;
 pub use framingham::score as framingham;
 
 #[cfg(target_arch = "wasm32")]
-pub fn framingham(
-    _args: &vibe::Value,
-    span: vibe::Span,
-) -> Result<vibe::Value, vibe::Diagnostic> {
+pub fn framingham(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     Err(vibe::Diagnostic::new(
         vibe::DiagCode::E300,
         span,

@@ -42,6 +42,12 @@ fn sampler_slot() -> &'static Mutex<Option<crate::sampler::SamplerConfig>> {
     SLOT.get_or_init(|| Mutex::new(None))
 }
 
+fn domino_slot() -> &'static Mutex<Option<crate::inference::speculative_decode::DominoMasker>> {
+    static SLOT: OnceLock<Mutex<Option<crate::inference::speculative_decode::DominoMasker>>> =
+        OnceLock::new();
+    SLOT.get_or_init(|| Mutex::new(None))
+}
+
 #[inline]
 pub fn set_decode_budget_override(n: u32) {
     DECODE_BUDGET_OVERRIDE.store(n, Ordering::Relaxed);
@@ -272,6 +278,51 @@ pub fn set_sampler_config(cfg: Option<crate::sampler::SamplerConfig>) {
 
 pub fn sampler_config() -> Option<crate::sampler::SamplerConfig> {
     sampler_slot().lock().ok().and_then(|slot| slot.clone())
+}
+
+/// Install (or remove) the browser's constrained-decoding masker. Constructing
+/// it is an authoring action; sampling reuses the masker's internal scratch.
+pub fn set_domino_masker(masker: Option<crate::inference::speculative_decode::DominoMasker>) {
+    if let Ok(mut slot) = domino_slot().lock() {
+        *slot = masker;
+    }
+}
+
+pub fn domino_active() -> bool {
+    domino_slot()
+        .lock()
+        .map(|slot| slot.as_ref().is_some_and(|masker| masker.is_active()))
+        .unwrap_or(false)
+}
+
+pub fn domino_reset() {
+    if let Ok(mut slot) = domino_slot().lock() {
+        if let Some(masker) = slot.as_mut() {
+            masker.reset();
+        }
+    }
+}
+
+pub fn domino_feed_token(bytes: &[u8]) {
+    if let Ok(mut slot) = domino_slot().lock() {
+        if let Some(masker) = slot.as_mut() {
+            masker.feed_token(bytes);
+        }
+    }
+}
+
+pub fn domino_sample(
+    state: &mut crate::sampler::SamplerState,
+    logits: &mut [f32],
+    context: &[u32],
+) -> Option<u32> {
+    let mut slot = domino_slot().lock().ok()?;
+    let masker = slot.as_mut()?;
+    if !masker.is_active() {
+        return None;
+    }
+    masker.apply_mask_preserving(logits);
+    Some(state.sample(logits, context))
 }
 
 #[inline]

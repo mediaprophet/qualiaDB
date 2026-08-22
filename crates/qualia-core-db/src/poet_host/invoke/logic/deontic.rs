@@ -98,10 +98,7 @@ fn verdict_record(honesty: &'static str, n: usize, verdicts: &[DeonticVerdict]) 
                     let mut row = BTreeMap::new();
                     row.insert("opcode".into(), Value::U64(v.opcode as u64));
                     row.insert("status_code".into(), Value::U64(v.status as u8 as u64));
-                    row.insert(
-                        "status".into(),
-                        Value::String(status_name(v.status).into()),
-                    );
+                    row.insert("status".into(), Value::String(status_name(v.status).into()));
                     Value::Record(row)
                 })
                 .collect(),
@@ -157,7 +154,9 @@ mod tests {
                 assert_eq!(m.get("opcode"), Some(&Value::U64(OP_OBLIGATE as u64)));
                 match m.get("verdicts") {
                     Some(Value::List(xs)) => {
-                        assert!(!xs.iter().any(|v| matches!(v, Value::String(s) if s.contains("opcode="))));
+                        assert!(!xs
+                            .iter()
+                            .any(|v| matches!(v, Value::String(s) if s.contains("opcode="))));
                     }
                     other => panic!("{other:?}"),
                 }

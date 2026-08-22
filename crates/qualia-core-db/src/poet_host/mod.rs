@@ -1,9 +1,10 @@
-//! Live Poet host over a caller-owned Quin snapshot (P5).
+//! Vibe execution host over a caller-owned Quin snapshot (P5).
 //!
 //! Scripts never write `parity`. The host seals via `NQuin::calculate_parity`.
-//! Vibe is the human/app path into existing Qualia capabilities. Document NLP
+//! The host is independent of Poet, which is one UI/client of it. Document NLP
 //! lives in `crate::nlp`, next to `text_span` and `lexicon`.
 
+pub mod bridge;
 pub mod catalog;
 pub mod catalog_ttl;
 pub mod invoke;
@@ -158,6 +159,14 @@ pub struct PoetSnapshot {
     /// Remaining 42 MB Sentinel budget after the last eval (P16.6).
     pub last_eval_workspace_left: u64,
 }
+
+/// Canonical name for the mutable Vibe execution environment.
+///
+/// `PoetSnapshot` remains available for source compatibility with the Poet UI.
+pub type VibeHost = PoetSnapshot;
+
+/// Canonical name for a Vibe host's caller-owned Quin snapshot.
+pub type VibeHostSnapshot = PoetSnapshot;
 
 /// Maximum number of HID events buffered in the host (T46).
 /// 4096 samples = ~4 seconds at 1000 Hz, enough for one frame batch.
@@ -400,7 +409,7 @@ impl PoetSnapshot {
     pub fn trace_invoke(&mut self, invoke_id: &str, success: bool, cost: Option<u64>) {
         use crate::governance::instrument_trace::TraceEntry;
         self.trace(TraceEntry {
-            instrument_id: "poet_host".into(),
+            instrument_id: "vibe_host".into(),
             act: format!("invoke:{}", invoke_id),
             targets: Vec::new(),
             started_at: 0,
@@ -711,11 +720,7 @@ impl Host for PoetSnapshot {
         Ok(Value::U64(self.revision))
     }
 
-    fn capability_resolve(
-        &mut self,
-        id: &str,
-        _span: vibe::Span,
-    ) -> Result<Value, Diagnostic> {
+    fn capability_resolve(&mut self, id: &str, _span: vibe::Span) -> Result<Value, Diagnostic> {
         Ok(catalog::resolve_id_with(id, self.attached))
     }
 
@@ -881,11 +886,7 @@ impl Host for PoetSnapshot {
                 use chacha20poly1305::aead::Aead;
                 use chacha20poly1305::{ChaCha20Poly1305, KeyInit, Nonce};
                 let key_arr: &[u8; 32] = key.as_slice().try_into().map_err(|_| {
-                    Diagnostic::new(
-                        vibe::DiagCode::E100,
-                        span,
-                        "ChaCha20 key must be 32 bytes",
-                    )
+                    Diagnostic::new(vibe::DiagCode::E100, span, "ChaCha20 key must be 32 bytes")
                 })?;
                 let nonce_arr: &[u8; 12] = nonce.as_slice().try_into().map_err(|_| {
                     Diagnostic::new(
@@ -915,11 +916,7 @@ impl Host for PoetSnapshot {
                 use chacha20poly1305::aead::Aead;
                 use chacha20poly1305::{KeyInit, XChaCha20Poly1305, XNonce};
                 let key_arr: &[u8; 32] = key.as_slice().try_into().map_err(|_| {
-                    Diagnostic::new(
-                        vibe::DiagCode::E100,
-                        span,
-                        "XChaCha20 key must be 32 bytes",
-                    )
+                    Diagnostic::new(vibe::DiagCode::E100, span, "XChaCha20 key must be 32 bytes")
                 })?;
                 let nonce_arr: &[u8; 24] = nonce.as_slice().try_into().map_err(|_| {
                     Diagnostic::new(
@@ -1042,11 +1039,7 @@ impl Host for PoetSnapshot {
                 use chacha20poly1305::aead::Aead;
                 use chacha20poly1305::{ChaCha20Poly1305, KeyInit, Nonce};
                 let key_arr: &[u8; 32] = key.as_slice().try_into().map_err(|_| {
-                    Diagnostic::new(
-                        vibe::DiagCode::E100,
-                        span,
-                        "ChaCha20 key must be 32 bytes",
-                    )
+                    Diagnostic::new(vibe::DiagCode::E100, span, "ChaCha20 key must be 32 bytes")
                 })?;
                 let nonce_arr: &[u8; 12] = nonce.as_slice().try_into().map_err(|_| {
                     Diagnostic::new(
@@ -1073,11 +1066,7 @@ impl Host for PoetSnapshot {
                 use chacha20poly1305::aead::Aead;
                 use chacha20poly1305::{KeyInit, XChaCha20Poly1305, XNonce};
                 let key_arr: &[u8; 32] = key.as_slice().try_into().map_err(|_| {
-                    Diagnostic::new(
-                        vibe::DiagCode::E100,
-                        span,
-                        "XChaCha20 key must be 32 bytes",
-                    )
+                    Diagnostic::new(vibe::DiagCode::E100, span, "XChaCha20 key must be 32 bytes")
                 })?;
                 let nonce_arr: &[u8; 24] = nonce.as_slice().try_into().map_err(|_| {
                     Diagnostic::new(
@@ -1249,11 +1238,7 @@ impl Host for PoetSnapshot {
         {
             use crate::crypto::zk_predicates;
             let proof = zk_predicates::prove_range(value, lo, hi).map_err(|e| {
-                Diagnostic::new(
-                    vibe::DiagCode::E100,
-                    span,
-                    format!("zk.prove_range: {e}"),
-                )
+                Diagnostic::new(vibe::DiagCode::E100, span, format!("zk.prove_range: {e}"))
             })?;
             let proof_hex = vibe::crypto::to_hex(&proof.proof);
             let vk_hex = vibe::crypto::to_hex(&proof.vk);
@@ -1334,11 +1319,7 @@ impl Host for PoetSnapshot {
             let (valid, result) = zk
                 .prove_matrix_multiply(m as usize, k as usize, n as usize, a, b)
                 .map_err(|e| {
-                    Diagnostic::new(
-                        vibe::DiagCode::E100,
-                        span,
-                        format!("zk.prove_matmul: {e}"),
-                    )
+                    Diagnostic::new(vibe::DiagCode::E100, span, format!("zk.prove_matmul: {e}"))
                 })?;
             Ok(vibe::crypto::zk_matmul_result_value(valid, &result))
         }
@@ -1512,10 +1493,7 @@ mod tests {
         snap.eval_program_src(src)
             .unwrap_or_else(|e| panic!("PoetHost lamp: {e}"));
         assert_eq!(snap.environment(), vibe::HostEnvironment::NativeDesktop);
-        assert_eq!(
-            snap.acceleration_tier(),
-            vibe::AccelerationTier::ScalarCpu
-        );
+        assert_eq!(snap.acceleration_tier(), vibe::AccelerationTier::ScalarCpu);
     }
 
     #[test]

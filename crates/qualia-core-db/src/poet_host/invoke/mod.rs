@@ -161,12 +161,16 @@ pub fn dispatch(
         ids::ODE_BDF => math::closure_solvers::ode_bdf(args, span),
         ids::ODE_SYMPLECTIC_STEP => math::closure_solvers::ode_symplectic_step(args, span),
         ids::CALC_ADAPTIVE_SIMPSON => math::closure_solvers::calc_adaptive_simpson(args, span),
-        ids::CALC_ADAPTIVE_DERIVATIVE => math::closure_solvers::calc_adaptive_derivative(args, span),
+        ids::CALC_ADAPTIVE_DERIVATIVE => {
+            math::closure_solvers::calc_adaptive_derivative(args, span)
+        }
         ids::CALC_NUMERICAL_JACOBIAN => math::closure_solvers::calc_numerical_jacobian(args, span),
         ids::CALC_NUMERICAL_HESSIAN => math::closure_solvers::calc_numerical_hessian(args, span),
         ids::CALC_NEWTON_SOLVE => math::closure_solvers::calc_newton_solve(args, span),
         ids::OPT_SIMULATED_ANNEALING => math::closure_solvers::opt_simulated_annealing(args, span),
-        ids::OPT_ARTIFICIAL_BEE_COLONY => math::closure_solvers::opt_artificial_bee_colony(args, span),
+        ids::OPT_ARTIFICIAL_BEE_COLONY => {
+            math::closure_solvers::opt_artificial_bee_colony(args, span)
+        }
         ids::VC_LINE_INTEGRAL_SCALAR => math::closure_solvers::vc_line_integral_scalar(args, span),
         ids::VC_LINE_INTEGRAL_WORK => math::closure_solvers::vc_line_integral_work(args, span),
         ids::VC_SURFACE_FLUX => math::closure_solvers::vc_surface_flux(args, span),

@@ -104,10 +104,7 @@ fn verdict_record(honesty: &'static str, n: usize, verdicts: &[EpistemicVerdict]
                 .map(|v| {
                     let mut row = BTreeMap::new();
                     row.insert("certainty".into(), Value::U64(v.certainty as u64));
-                    row.insert(
-                        "status".into(),
-                        Value::String(status_name(v.status).into()),
-                    );
+                    row.insert("status".into(), Value::String(status_name(v.status).into()));
                     Value::Record(row)
                 })
                 .collect(),

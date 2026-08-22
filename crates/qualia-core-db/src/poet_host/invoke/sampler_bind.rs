@@ -20,9 +20,65 @@
 
 use crate::inference::sampler::{SamplerConfig, SamplerState};
 use crate::inference::speculative_decode::DominoMasker;
-use crate::llm_bench;
-use vibe::{DiagCode, Diagnostic, Span, Value};
 use std::collections::BTreeMap;
+use vibe::{DiagCode, Diagnostic, Span, Value};
+
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
+use crate::llm_bench;
+
+// Browser profiles still expose the pure CPU sampler. Keep its control state
+// local to the WASM instance rather than coupling it to the native benchmark
+// decode loop.
+#[cfg(all(target_arch = "wasm32", not(feature = "wasm-llm")))]
+mod llm_bench {
+    use super::*;
+    use std::cell::RefCell;
+
+    thread_local! {
+        static CONFIG: RefCell<Option<SamplerConfig>> = const { RefCell::new(None) };
+        static MASKER: RefCell<Option<DominoMasker>> = const { RefCell::new(None) };
+    }
+
+    pub fn set_sampler_config(cfg: Option<SamplerConfig>) {
+        CONFIG.with(|slot| *slot.borrow_mut() = cfg);
+    }
+
+    pub fn sampler_config() -> Option<SamplerConfig> {
+        CONFIG.with(|slot| *slot.borrow())
+    }
+
+    pub fn set_domino_masker(masker: Option<DominoMasker>) {
+        MASKER.with(|slot| *slot.borrow_mut() = masker);
+    }
+
+    pub fn domino_active() -> bool {
+        MASKER.with(|slot| slot.borrow().as_ref().is_some_and(DominoMasker::is_active))
+    }
+
+    pub fn domino_reset() {
+        MASKER.with(|slot| {
+            if let Some(masker) = slot.borrow_mut().as_mut() {
+                masker.reset();
+            }
+        });
+    }
+
+    pub fn domino_sample(
+        state: &mut SamplerState,
+        logits: &mut [f32],
+        context: &[u32],
+    ) -> Option<u32> {
+        MASKER.with(|slot| {
+            let mut slot = slot.borrow_mut();
+            let masker = slot.as_mut()?;
+            if !masker.is_active() {
+                return None;
+            }
+            masker.apply_mask_preserving(logits);
+            Some(state.sample(logits, context))
+        })
+    }
+}
 
 /// Parse a `SamplerConfig` from a VibeScript record.
 fn parse_config(rec: &BTreeMap<String, Value>) -> SamplerConfig {
@@ -215,18 +271,18 @@ pub fn sample(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     }
 
     let mut logits: Vec<f32> = logits_f64.iter().map(|&v| v as f32).collect();
-    let cfg = llm_bench::sampler_config().unwrap_or_default();
-    let mut state = SamplerState::new(cfg);
-
-    let token = if llm_bench::domino_active() {
-        match llm_bench::domino_sample(&mut state, &mut logits, &ctx) {
-            Some(tid) => tid,
-            None => state.sample(&mut logits, &ctx),
+    let token = {
+        let cfg = llm_bench::sampler_config().unwrap_or_default();
+        let mut state = SamplerState::new(cfg);
+        if llm_bench::domino_active() {
+            match llm_bench::domino_sample(&mut state, &mut logits, &ctx) {
+                Some(tid) => tid,
+                None => state.sample(&mut logits, &ctx),
+            }
+        } else {
+            state.sample(&mut logits, &ctx)
         }
-    } else {
-        state.sample(&mut logits, &ctx)
     };
-
     Ok(Value::U64(token as u64))
 }
 

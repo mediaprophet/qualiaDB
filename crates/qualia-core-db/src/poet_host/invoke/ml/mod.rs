@@ -42,10 +42,7 @@ pub use more::*;
 pub use ols::fit_ols;
 
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
-pub fn fit_ols(
-    _args: &vibe::Value,
-    span: vibe::Span,
-) -> Result<vibe::Value, vibe::Diagnostic> {
+pub fn fit_ols(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     Err(super::args::need_scientific(span, "MachineLearning"))
 }
 

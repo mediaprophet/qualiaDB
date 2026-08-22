@@ -2,8 +2,8 @@
 
 use crate::nlp::coref::{resolve_coreferences, CorefMention, MentionKind};
 use crate::nlp::span::DocSpan;
-use vibe::{DiagCode, Diagnostic, Span, Value};
 use std::collections::BTreeMap;
+use vibe::{DiagCode, Diagnostic, Span, Value};
 
 /// `NLP.coref_resolve` — resolve coreferences over `text` given a list of
 /// mentions. Each mention is `{ start, end, text, kind }` where kind is

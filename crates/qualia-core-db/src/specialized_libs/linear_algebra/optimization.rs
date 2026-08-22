@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use super::computation::*;
 use super::core_types::*;
-use super::storage::*;
+use super::storage::AccessPattern;
 
 /// Optimization engine for matrix operations
 pub struct OptimizationEngine {

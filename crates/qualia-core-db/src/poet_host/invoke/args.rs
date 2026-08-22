@@ -4,8 +4,8 @@
 
 #![allow(dead_code)]
 
-use vibe::{DiagCode, Diagnostic, Span, Value};
 use std::collections::BTreeMap;
+use vibe::{DiagCode, Diagnostic, Span, Value};
 
 pub fn bad(span: Span, msg: impl Into<String>) -> Diagnostic {
     Diagnostic::new(DiagCode::E100, span, msg.into())

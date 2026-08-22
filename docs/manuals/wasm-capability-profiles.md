@@ -20,6 +20,34 @@ The compile-time source of truth is
 | LLM | `qualia-core-db --no-default-features --features wasm-llm` | Browser model runtime | Logic + scientific prerequisites, GGUF/Q42 model loading, WebGPU inference, streaming decode | Portal |
 | Full playground | `qualia-core-db --no-default-features --features wasm-full` | API explorer and local development | Portal + logic + scientific + LLM + playground exports | Native daemon/network/filesystem-only facilities |
 
+## Vibe execution boundary
+
+Vibe programs use **vibe-host** as their execution/adapter boundary. Poet is a
+user interface that can use that host; it is not the host ABI. A WASM profile
+does not silently claim native persistence or substitute a different result for
+a missing capability.
+
+| Route | Browser meaning | Native meaning |
+|---|---|---|
+| `standalone-wasm` | The loaded WASM module performs the operation exactly. | The same capability runs directly in-process. |
+| `standalone-snapshot` | The operation uses the browser's isolated graph snapshot; it is not a persistent native graph read or transaction. | The operation can use the persistent native graph. |
+| `native-bridge` | Requires a paired local daemon; unavailable when no pairing exists. | Reached through the authenticated local adapter. |
+| `native-direct` | Not a browser route. | Uses the in-process native engine directly. |
+
+The daemon publishes a versioned `qualia-vibe-bridge/1` negotiation document at
+`GET /vibe/capabilities`. A browser probes after a user gesture and uses its
+pairing token; production daemon requests require `X-Qualia-Token`. The
+current Vibe `Host` trait is synchronous, so browser calls that need native IPC
+remain an explicit asynchronous bridge integration rather than a blocking host
+call.
+
+Tooling should select a target before execution. In a `wasm-standalone`
+workspace, native-only bindings are surfaced as diagnostic `QDB0402` rather
+than left to fail ambiguously at runtime.
+
+See [Vibe-host native bridge](../vibe-host-native-bridge.html) for the
+protocol, security boundary, and capability examples.
+
 ## Ontology MCP contract
 
 `webizen-lite-wasm` exports only `mcp_jsonrpc(message)` and `version()`. Its MCP

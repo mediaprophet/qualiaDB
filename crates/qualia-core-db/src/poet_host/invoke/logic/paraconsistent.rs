@@ -3,8 +3,8 @@
 use crate::modalities::paraconsistent::route_paraconsistent;
 use crate::poet_host::{value_to_quin, PoetSnapshot};
 use crate::NQuin;
-use vibe::{DiagCode, Diagnostic, Span, Value};
 use std::collections::BTreeMap;
+use vibe::{DiagCode, Diagnostic, Span, Value};
 
 const MAX: usize = 64;
 
