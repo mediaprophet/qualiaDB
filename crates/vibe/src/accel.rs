@@ -26,15 +26,16 @@ pub fn cell_batch_cap() -> usize {
 pub fn detect_available_tier() -> AccelerationTier {
     #[cfg(target_arch = "wasm32")]
     {
-        return AccelerationTier::ScalarCpu;
+        AccelerationTier::ScalarCpu
     }
-    #[cfg(all(target_arch = "x86_64", not(target_arch = "wasm32")))]
+    #[cfg(not(target_arch = "wasm32"))]
     {
+        #[cfg(target_arch = "x86_64")]
         if is_x86_feature_detected!("avx512f") {
             return AccelerationTier::VectorSimd512;
         }
+        AccelerationTier::ScalarCpu
     }
-    AccelerationTier::ScalarCpu
 }
 
 /// Elementwise `out[i] = a[i] + b[i]`. AVX-512 when present; else scalar.
