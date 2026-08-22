@@ -213,11 +213,23 @@ coordination/NOTICES.md
 **/NOTICES.md
 
 
-# Private Development Documents, not for GitHub (do not publish)
-
-# Plan Files
-/docs/plans/*
-
+# Private Development Documents, Plans & Internal Audits, not for GitHub (do not publish)
+/docs/plans/
+docs/plans/
+plans/
+/docs/audits/
+docs/audits/
+/docs/notebooklm/
+docs/notebooklm/
+/docs/to-do/
+docs/to-do/
+/docs/reports/
+docs/reports/
+/docs/development/
+docs/development/
+/docs/manuals/planning/
+docs/manuals/planning/
+planning/
 # Vision vendor weights (large binaries) — manifests/README tracked; fetch via vendor/vision/download.ps1
 /vendor/vision/**/*.onnx
 /vendor/vision/**/*.tflite
@@ -231,9 +243,6 @@ coordination/NOTICES.md
 !/vendor/vision/**/FETCH.json
 !/vendor/vision/**/README.md
 !/vendor/vision/**/.gitkeep
-
-/docs/manuals/planning/
-docs/to-do/
 
 # W5b: full WordNet gloss corpus (derived from Princeton data.rdf; ~20MB) — sample is committed
 benchmarks/data/wordnet_glosses.txt
