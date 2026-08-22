@@ -257,6 +257,7 @@ pub fn PhysicsSimulator() -> Element {
     let mut wireframe = use_signal(|| true);
     let mut paused = use_signal(|| false);
     let status = use_signal(|| "Booting spatial viewport...".to_string());
+    #[allow(unused_mut)]
     let mut forge_status =
         use_signal(|| "Run the bounded native probe to certify the Forge kernel.".to_string());
     let forge_running = use_signal(|| false);
