@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 
-const releaseVersion = '0.0.33';
+const releaseVersion = '0.0.34';
 const root = path.resolve(import.meta.dirname, '..', '..');
 const read = (relativePath) => fs.readFileSync(path.join(root, relativePath), 'utf8');
 
@@ -77,8 +77,8 @@ assert.match(apiExplorer, /href="\.\.\/css\/site-nav\.css"/,
 assert.match(apiExplorer, /menu-loader\.js/,
   'API Explorer must load the shared navigation renderer');
 
-assert.match(read('.github/workflows/pages.yml'), /- "0\.0\.33"/);
-assert.match(read('.github/workflows/release-p64-models.yml'), /- 0\.0\.33/);
+assert.match(read('.github/workflows/pages.yml'), /- "0\.0\.34"/);
+assert.match(read('.github/workflows/release-p64-models.yml'), /- 0\.0\.34/);
 
 const comparative = JSON.parse(read('docs/comparative_benchmark_results.json'));
 assert.equal(

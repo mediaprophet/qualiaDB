@@ -28,6 +28,6 @@ assert.match(html, /returned no visible text/);
 const wasmVersion = wasmPackage.version.replaceAll('.', '\\.');
 assert.match(html, new RegExp(`qualia_core_db\\.js\\?v=${wasmVersion}-`));
 assert.match(html, new RegExp(`qualia_core_db_bg\\.wasm\\?v=${wasmVersion}-`));
-assert.equal(wasmPackage.version, '0.0.33');
+assert.equal(wasmPackage.version, '0.0.34');
 
 console.log('Online LLM demo catalogue tests passed.');

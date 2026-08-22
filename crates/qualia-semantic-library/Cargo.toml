@@ -1,6 +1,6 @@
 [package]
 name = "qualia-semantic-library"
-version = "0.0.33"
+version = "0.0.34"
 edition = "2021"
 description = "Rust-native semantic library: ingest a document corpus into .hmc hypermedia containers (original + derived HTML/CML/text/embeddings), route/dedup on an embedding manifold, reorganise the library, and feed CML into QualiaDB. Offline dev tool — external LLM reached over HTTP behind a swappable backend; not wired into core inference."
 license = "MIT OR Apache-2.0"

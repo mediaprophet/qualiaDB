@@ -9347,7 +9347,7 @@ dependencies = [
 
 [[package]]
 name = "poet-cli"
-version = "0.0.33"
+version = "0.0.34"
 dependencies = [
  "vibe",
 ]
@@ -9741,14 +9741,14 @@ checksum = "d55d956fa96f5ec02be2e13af0e20391a5aa83d6a074e3ad368959d0fab299ea"
 
 [[package]]
 name = "qualia-audio"
-version = "0.0.33"
+version = "0.0.34"
 dependencies = [
  "cpal",
 ]
 
 [[package]]
 name = "qualia-cli"
-version = "0.0.33"
+version = "0.0.34"
 dependencies = [
  "atoi",
  "bytemuck",
@@ -9784,7 +9784,7 @@ dependencies = [
 
 [[package]]
 name = "qualia-client-core"
-version = "0.0.33"
+version = "0.0.34"
 dependencies = [
  "base64 0.22.1",
  "bech32",
@@ -9845,7 +9845,7 @@ dependencies = [
 
 [[package]]
 name = "qualia-cooperative-core"
-version = "0.0.33"
+version = "0.0.34"
 dependencies = [
  "serde",
  "serde_json",
@@ -9855,7 +9855,7 @@ dependencies = [
 
 [[package]]
 name = "qualia-core-db"
-version = "0.0.33"
+version = "0.0.34"
 dependencies = [
  "aead 0.6.1",
  "aes-gcm 0.11.0",
@@ -9974,7 +9974,7 @@ dependencies = [
 
 [[package]]
 name = "qualia-extensions"
-version = "0.0.33"
+version = "0.0.34"
 dependencies = [
  "approx",
  "async-trait",
@@ -10001,11 +10001,11 @@ dependencies = [
 
 [[package]]
 name = "qualia-inference-kernel"
-version = "0.0.33"
+version = "0.0.34"
 
 [[package]]
 name = "qualia-mobile-harness"
-version = "0.0.33"
+version = "0.0.34"
 dependencies = [
  "dioxus",
  "ed25519-dalek 3.0.0",
@@ -10024,14 +10024,14 @@ dependencies = [
 
 [[package]]
 name = "qualia-q-forge"
-version = "0.0.33"
+version = "0.0.34"
 dependencies = [
  "qualia-core-db",
 ]
 
 [[package]]
 name = "qualia-semantic-library"
-version = "0.0.33"
+version = "0.0.34"
 dependencies = [
  "anyhow",
  "blake3",
@@ -10051,7 +10051,7 @@ dependencies = [
 
 [[package]]
 name = "qualia-solid-bridge"
-version = "0.0.33"
+version = "0.0.34"
 dependencies = [
  "bytes",
  "core_affinity",
@@ -10066,7 +10066,7 @@ dependencies = [
 
 [[package]]
 name = "qualia-vision"
-version = "0.0.33"
+version = "0.0.34"
 dependencies = [
  "image",
  "ort",
@@ -10075,7 +10075,7 @@ dependencies = [
 
 [[package]]
 name = "qualia-wasm"
-version = "0.0.33"
+version = "0.0.34"
 dependencies = [
  "js-sys",
  "qualia-core-db",
@@ -13961,7 +13961,7 @@ checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
 
 [[package]]
 name = "vibe"
-version = "0.0.33"
+version = "0.0.34"
 dependencies = [
  "bytemuck",
  "unicode-xid",
@@ -13969,7 +13969,7 @@ dependencies = [
 
 [[package]]
 name = "vibe-lsp"
-version = "0.0.33"
+version = "0.0.34"
 dependencies = [
  "serde",
  "serde_json",
@@ -13978,7 +13978,7 @@ dependencies = [
 
 [[package]]
 name = "vibe-wasm"
-version = "0.0.33"
+version = "0.0.34"
 dependencies = [
  "js-sys",
  "serde",
@@ -14342,7 +14342,7 @@ dependencies = [
 
 [[package]]
 name = "webizen-component-harvester"
-version = "0.0.33"
+version = "0.0.34"
 dependencies = [
  "anyhow",
  "reqwest 0.13.4",
@@ -14352,7 +14352,7 @@ dependencies = [
 
 [[package]]
 name = "webizen-desktop"
-version = "0.0.33"
+version = "0.0.34"
 dependencies = [
  "axum",
  "base64 0.22.1",
@@ -14407,7 +14407,7 @@ dependencies = [
 
 [[package]]
 name = "webizen-lite-wasm"
-version = "0.0.33"
+version = "0.0.34"
 dependencies = [
  "qualia-core-db",
  "serde_json",
@@ -14416,7 +14416,7 @@ dependencies = [
 
 [[package]]
 name = "webizen-render"
-version = "0.0.33"
+version = "0.0.34"
 dependencies = [
  "base64 0.22.1",
  "bytemuck",
@@ -14434,7 +14434,7 @@ dependencies = [
 
 [[package]]
 name = "webizen-runtime"
-version = "0.0.33"
+version = "0.0.34"
 dependencies = [
  "bytemuck",
  "crossbeam-channel",
@@ -14445,7 +14445,7 @@ dependencies = [
 
 [[package]]
 name = "webizen-studio"
-version = "0.0.33"
+version = "0.0.34"
 dependencies = [
  "base64 0.22.1",
  "console_error_panic_hook",
@@ -14756,7 +14756,7 @@ checksum = "d4ca08e5ef825b65b056d9efbd95c8750683f0a6d0466d02e96dc2e4e360f3d2"
 
 [[package]]
 name = "wellfare-core"
-version = "0.0.33"
+version = "0.0.34"
 dependencies = [
  "chrono",
  "csv",

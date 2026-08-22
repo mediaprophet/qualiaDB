@@ -4,14 +4,14 @@ import fs from 'node:fs';
 const { fetchWasmBinary, withAssetVersion, isTransientHttpStatus, WASM_ASSET_VERSION } =
     await import('../js/wasm-fetch.js');
 
-assert.equal(WASM_ASSET_VERSION, '0.0.33-wasm-retry1');
+assert.equal(WASM_ASSET_VERSION, '0.0.34-wasm-retry1');
 assert.equal(isTransientHttpStatus(503), true);
 assert.equal(isTransientHttpStatus(404), false);
 
 const versioned = withAssetVersion('https://example.test/playground/qualia_core_db_bg.wasm');
 assert.equal(
     versioned.href,
-    'https://example.test/playground/qualia_core_db_bg.wasm?v=0.0.33-wasm-retry1',
+    'https://example.test/playground/qualia_core_db_bg.wasm?v=0.0.34-wasm-retry1',
 );
 const pinned = withAssetVersion(
     'https://example.test/playground/qualia_core_db_bg.wasm?v=already',
@@ -35,7 +35,7 @@ try {
     );
     assert.equal(resp.status, 200);
     assert.equal(calls.length, 3);
-    assert.match(calls[0], /\?v=0\.0\.33-wasm-retry1$/);
+    assert.match(calls[0], /\?v=0\.0\.34-wasm-retry1$/);
 } finally {
     globalThis.fetch = originalFetch;
 }

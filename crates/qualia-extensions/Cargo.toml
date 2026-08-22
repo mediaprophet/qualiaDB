@@ -1,6 +1,6 @@
 [package]
 name = "qualia-extensions"
-version = "0.0.33"
+version = "0.0.34"
 edition = "2021"
 description = "Advanced computational extensions for QualiaDB"
 license = "MIT"

@@ -6,11 +6,11 @@
 // an ambient-field channel (off by default) and a per-body-system channel row.
 // Mobile: full-viewport canvas + bottom-sheet controls, pinch zoom, orbit drag.
 
-import { ensureCanvasBackingStore, loadQualiaPortal } from "../js/qualia-shell.js?v=0.0.33-mobile-recovery4";
+import { ensureCanvasBackingStore, loadQualiaPortal } from "../js/qualia-shell.js?v=0.0.34-mobile-recovery4";
 import {
   getBrowserCapabilityReceipt,
   recordBackendDeviceOutcome,
-} from "../js/browser-capability.js?v=0.0.33-mobile-recovery4";
+} from "../js/browser-capability.js?v=0.0.34-mobile-recovery4";
 
 const container = document.getElementById("canvas-container");
 const statusEl = document.getElementById("status");
@@ -95,7 +95,7 @@ const BP3D_SOURCE = {
 };
 
 // Keep in lockstep with crates/qualia-core-db Cargo.toml / release tag.
-const ENGINE_VERSION = "0.0.33";
+const ENGINE_VERSION = "0.0.34";
 const RELEASE_BASE = `https://github.com/mediaprophet/qualiaDB/releases/download/v${ENGINE_VERSION}`;
 const isCoarsePointer = () =>
   (typeof window !== "undefined" &&
