@@ -47,6 +47,12 @@ pub fn TopMenubar(wb: Signal<Workbench>) -> Element {
                 }
             }
             div { class: "menu-items-group", style: "display:flex;align-items:center;gap:12px;",
+                button {
+                    class: "habitat-switch-btn",
+                    style: "background:rgba(56,189,248,0.15);border:1px solid rgba(56,189,248,0.35);color:var(--accent-cyan);font-size:11px;font-weight:600;padding:2px 8px;border-radius:6px;cursor:pointer;",
+                    title: "Pivot Habitat: Switch to Webizen Classic Console (Alt+U)",
+                    "✨ Poet / ⚙️ Admin ⇄"
+                }
                 // Ambient Job Indicator
                 div {
                     class: "ambient-job-indicator",
