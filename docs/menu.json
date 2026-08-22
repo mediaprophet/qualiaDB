@@ -14,14 +14,14 @@
     },
     {
       "label": "0.0.33 Progress",
-      "href": "progress-0.0.30.html",
+      "href": "progress-0.0.33.html",
       "icon": "fa-heart-pulse",
       "highlight": true,
       "group": "Core"
     },
     {
-      "label": "0.0.33 Archive",
-      "href": "progress-0.0.28.html",
+      "label": "0.0.30 Archive",
+      "href": "progress-0.0.30.html",
       "icon": "fa-clock-rotate-left",
       "group": "Core"
     },
