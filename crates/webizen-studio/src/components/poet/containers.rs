@@ -3,7 +3,9 @@
 //! Copyright (c) 2026 Timothy Charles Holborn. All rights reserved.
 
 use super::bodies::{
-    DocBody, HealthBody, MapBody, MediaBody, OntologyBody, SheetBody, SocialBody, SubmanifoldBody,
+    BookmarksBody, CodecsBody, DocBody, DomainsBody, EconomicsBody, GitBody, HealthBody, IdeBody,
+    JobCenterBody, MapBody, MediaBody, OntologyBody, ShadersBody, SheetBody, SocialBody, SolidBody,
+    SubmanifoldBody,
 };
 use super::kinds::ContainerKind;
 use super::vibe_console::VibeConsole;
@@ -46,18 +48,7 @@ pub fn NodeBody(kind: ContainerKind) -> Element {
                     p { style: muted(), "Wormhole portal to inalienable commons network graph." }
                 }
             },
-            ContainerKind::Mail => rsx! {
-                div { style: "padding:12px;display:grid;gap:8px;",
-                    div { style: "display:flex;justify-content:space-between;border-bottom:1px solid rgba(255,255,255,0.08);padding-bottom:6px;",
-                        span { style: "font-weight:600;font-size:12px;color:var(--accent-cyan);", "Inbox: inquiry@domain.tld" }
-                        span { style: "font-size:11px;color:var(--text-muted);", "3 Unread" }
-                    }
-                    div { style: "font-size:11px;color:var(--text-secondary);",
-                        p { style: "margin:0 0 4px;font-weight:500;color:var(--text-primary);", "✉️ Fiduciary Consortium — Quarterly Review Draft" }
-                        p { style: "margin:0;", "Attestation bundle attached with 4 verified Super-Quins." }
-                    }
-                }
-            },
+            ContainerKind::Mail => rsx! { DomainsBody {} },
             ContainerKind::Chora => rsx! {
                 div { style: "padding:12px;",
                     h4 { style: "margin:0 0 6px;color:var(--accent-teal);font-size:12px;", "Chora 4D Dialectical Reader" }
@@ -80,13 +71,7 @@ pub fn NodeBody(kind: ContainerKind) -> Element {
                     }
                 }
             },
-            ContainerKind::GitForge => rsx! {
-                div { style: "padding:12px;font-family:var(--font-mono);font-size:11px;",
-                    div { style: "color:var(--accent-emerald);margin-bottom:6px;", "Branch: 0.0.17-dev (Clean)" }
-                    div { style: "color:var(--text-secondary);margin-bottom:4px;", "commit a4f8e91 (HEAD -> 0.0.17-dev)" }
-                    div { style: "color:var(--text-muted);", "Author: did:qualia:timothy_charles_holborn [Signed Ed25519]" }
-                }
-            },
+            ContainerKind::GitForge => rsx! { GitBody {} },
         }
     }
 }
