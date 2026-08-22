@@ -272,7 +272,8 @@ pub enum ToolboxId {
 }
 
 impl ToolboxId {
-    pub const ALL: [Self; 12] = [
+    pub const ALL: [Self; 15] = [
+        Self::Epistemic,
         Self::Office,
         Self::Sheet,
         Self::Image,
@@ -284,6 +285,8 @@ impl ToolboxId {
         Self::Scientific,
         Self::Ai,
         Self::Rights,
+        Self::Communication,
+        Self::Health,
         Self::Sdn,
     ];
 
