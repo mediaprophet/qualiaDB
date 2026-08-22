@@ -1,6 +1,6 @@
 # Native Super-Resolution Excellence (2026)
 
-**Branch:** `0.0.28`  
+**Branch:** `0.0.33`  
 **Owner:** Qualia vision / `qualia-vision`  
 **Ambition:** Production-grade SR **as a native Rust library** inside Qualia — not OpenCV product ABI, not Python, not NCNN as a required runtime. External projects supply **permissive weights + reference algorithms**; Qualia owns inference, tiling, GPU path, and honesty.  
 **Status:** Plan ready for execute (swarm tracks SR0–SR8).

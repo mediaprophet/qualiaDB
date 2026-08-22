@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Qualia-DB • Benchmark Hub v0.0.30</title>
+    <title>Qualia-DB • Benchmark Hub v0.0.33</title>
     <link rel="stylesheet" href="css/tailwind-built.css">
     <link rel="stylesheet" href="css/site-nav.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -56,7 +56,7 @@
     <div class="text-center">
         <div class="loading-spinner mx-auto mb-4"></div>
         <div class="text-emerald-400 font-semibold">Loading QualiaDB WASM Engine...</div>
-        <div class="text-white/50 text-sm mt-2" id="loading-status">Initializing benchmark suite v0.0.30</div>
+        <div class="text-white/50 text-sm mt-2" id="loading-status">Initializing benchmark suite v0.0.33</div>
     </div>
 </div>
 
@@ -112,7 +112,7 @@
     <div class="text-center mb-10">
         <div class="inline-flex items-center gap-2 px-4 py-1 rounded-2xl bg-emerald-500/10 text-emerald-400 text-sm mb-4">
             <i class="fas fa-tachometer-alt"></i>
-            <span>WASM-only · Zero-Heap · v0.0.30</span>
+            <span>WASM-only · Zero-Heap · v0.0.33</span>
         </div>
         <h1 class="text-5xl font-semibold tracking-tighter mb-3">Benchmark Hub</h1>
         <p class="text-white/60 max-w-2xl mx-auto">CI platform suite (graph, Sentinel, streaming, ontology) plus interactive browser probes. Not graph-only anymore — see <a href="comparative_benchmarks.html" class="text-cyan-400 hover:underline">comparative benchmarks</a> for multi-engine graph shoot-outs.</p>
@@ -625,14 +625,14 @@ LIMIT 100</textarea>
 
     <!-- Footer -->
     <div class="text-center text-white/50 text-sm mt-12">
-        <p>QualiaDB v0.0.30 • Zero-Heap Semantic Graph Engine • Built for the Edge</p>
+        <p>QualiaDB v0.0.33 • Zero-Heap Semantic Graph Engine • Built for the Edge</p>
     </div>
 </div>
 
 <script type="module">
     import { fetchJson, renderPlatformSuite } from './js/benchmark-shared.js';
     import { Object3DViewer, GraphViewer, runSpatialLive, runGraphLive, runSparqlLive, runSciLive, initializeGraphBenchmarkUi } from './js/benchmark-live.js';
-    import { fetchWasmBinary } from './js/wasm-fetch.js?v=0.0.30-wasm-retry1';
+    import { fetchWasmBinary } from './js/wasm-fetch.js?v=0.0.33-wasm-retry1';
 
     // ── Live (real-WASM) Spatial & Graph tabs + interactive viewers ──
     let obj3d = null, graphViz = null, sparqlGraphViz = null;

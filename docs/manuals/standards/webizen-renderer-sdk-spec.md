@@ -3,8 +3,8 @@
 **Version:** 0.2
 **Date:** 2026-06-30
 **Status:** Draft Standard
-**Target Environment:** QualiaDB / Webizen `0.0.28`
-**Repository:** https://github.com/mediaprophet/qualiaDB/tree/0.0.28
+**Target Environment:** QualiaDB / Webizen `0.0.33`
+**Repository:** https://github.com/mediaprophet/qualiaDB/tree/0.0.33
 
 > **Why this is a draft, and why it exists before the implementation is "finished."**
 > A renderer SDK is defined by the *contract an embedder programs against* — its data

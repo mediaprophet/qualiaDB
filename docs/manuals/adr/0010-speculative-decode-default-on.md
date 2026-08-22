@@ -1,7 +1,7 @@
 # ADR 0010: Prompt-lookup speculative decode is default-ON, with a runtime mode switch
 
 ## Status
-Accepted (2026-07-05, 0.0.28) — directed by Timothy. Ships the W6a prompt-lookup speculative decoder
+Accepted (2026-07-05, 0.0.33) — directed by Timothy. Ships the W6a prompt-lookup speculative decoder
 **on by default**, accepting rare benign near-tie divergence from single-token decode, with an explicit
 mode switch so either mode can be selected at launch or at runtime (incl. from the desktop UI).
 

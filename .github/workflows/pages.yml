@@ -7,7 +7,7 @@ on:
   push:
     branches:
       - main
-      - "0.0.30"
+      - "0.0.33"
     tags:
       - "v*"
   workflow_dispatch:
@@ -132,7 +132,7 @@ jobs:
           cp crates/qualia-core-db/pkg-qualia/qualia_core_db.d.ts docs/pkg/qualia/qualia.d.ts
           cp crates/qualia-core-db/pkg-qualia/qualia_core_db_bg.wasm.d.ts docs/pkg/qualia/qualia_bg.wasm.d.ts 2>/dev/null || true
           bash scripts/patch-portal-wasm-js.sh docs/pkg/qualia/qualia.js
-          printf '%s\n' '{"name":"qualia-portal","type":"module","version":"0.0.30","main":"qualia.js","types":"qualia.d.ts"}' > docs/pkg/qualia/package.json
+          printf '%s\n' '{"name":"qualia-portal","type":"module","version":"0.0.33","main":"qualia.js","types":"qualia.d.ts"}' > docs/pkg/qualia/package.json
           ls -la docs/pkg/qualia/qualia.js docs/pkg/qualia/qualia_bg.wasm docs/pkg/qualia/qualia.d.ts
           grep -q 'qualia_bg.wasm' docs/pkg/qualia/qualia.js
 

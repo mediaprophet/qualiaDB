@@ -1,6 +1,6 @@
 [package]
 name = "vibe"
-version = "0.0.31"
+version = "0.0.33"
 edition = "2021"
 description = "VibeScript 0.1 engine: lexer, parser, type/effect checker, and AST interpreter. No JIT. No wgpu."
 license-file = "LICENSE"

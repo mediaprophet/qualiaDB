@@ -2,7 +2,7 @@ name: Comparative Benchmarks
 
 on:
   push:
-    branches: [ "main", "0.0.30" ]
+    branches: [ "main", "0.0.33" ]
   schedule:
     - cron: '0 3 * * 1'   # Weekly on Monday at 03:00 UTC
   workflow_dispatch:
@@ -168,7 +168,7 @@ jobs:
         # Persist onto the branch that ran. Pages and the release line live on
         # 0.0.30; main still gets weekly/scheduled numbers. Do not push from
         # tags or arbitrary feature branches — that used to rebase them onto main.
-        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/0.0.30'
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/0.0.33'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -271,7 +271,7 @@ jobs:
             --output docs/comparative_benchmark_results.schemaorg-30-current-https.json
 
       - name: Commit Schema.org benchmark results
-        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/0.0.30'
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/0.0.33'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"

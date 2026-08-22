@@ -1,6 +1,6 @@
 [package]
 name = "qualia-core-db"
-version = "0.0.30"
+version = "0.0.33"
 edition = "2021"
 authors = ["Timothy Charles Holborn <timothy.holborn@gmail.com>"]
 description = "QualiaDB semantic graph, inference, ontology, spatial, and browser-WASM runtime"

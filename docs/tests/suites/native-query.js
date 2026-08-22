@@ -1,5 +1,5 @@
 // Native Query Engine tests — precise assertions against running qualia-cli daemon.
-// Verified against v0.0.28-dev --dev mode on port 4242.
+// Verified against v0.0.33-dev --dev mode on port 4242.
 
 import { TestRunner } from '../test-runner.js';
 

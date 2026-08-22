@@ -1,6 +1,6 @@
 [package]
 name = "qualia-audio"
-version = "0.0.30"
+version = "0.0.33"
 edition = "2021"
 authors = ["Timothy Charles Holborn <timothy.holborn@gmail.com>"]
 description = "Native auditory intelligence for QualiaDB — AudioView ABI, features, events, language/music scaffolds"

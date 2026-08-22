@@ -3,7 +3,7 @@
 **Workstream:** Full VibeScript implementation (Phases A–H)
 **Plan:** `docs/vibescript-full-impl-PLAN.md`
 **Handover:** `docs/vibescript-full-impl-HANDOVER.md`
-**Branch:** `0.0.31-dev`
+**Branch:** `0.0.33-dev`
 
 ---
 

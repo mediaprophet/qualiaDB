@@ -1,6 +1,6 @@
 # Handover: WebGPU Support — W0 Complete
 
-**Date:** 2026-08-19 | **Branch:** `0.0.17-dev` | **Prev:** `handover-webgpu-plan-20260818.md`
+**Date:** 2026-08-19 | **Branch:** `0.0.33-dev` | **Prev:** `handover-webgpu-plan-20260818.md`
 
 ---
 

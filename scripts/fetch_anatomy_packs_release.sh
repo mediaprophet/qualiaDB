@@ -3,7 +3,7 @@
 # docs/playground/ so Pages deploys same-origin assets for anatomy.html.
 #
 # Prefer the canonical engine version from crates/qualia-core-db/Cargo.toml so
-# we do not pin an old tag (e.g. v0.0.24) after a release bump.
+# we do not pin an old tag (e.g. v0.0.33) after a release bump.
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -17,7 +17,7 @@ if [[ -f "$CARGO_TOML" ]]; then
     PREFERRED_TAG="v${VER}"
   fi
 fi
-PREFERRED_TAG="${ANATOMY_RELEASE_TAG:-${PREFERRED_TAG:-v0.0.30}}"
+PREFERRED_TAG="${ANATOMY_RELEASE_TAG:-${PREFERRED_TAG:-v0.0.33}}"
 
 REPO="${QUALIA_GITHUB_REPO:-mediaprophet/qualiaDB}"
 OUT_DIR="$REPO_ROOT/docs/playground"
@@ -38,7 +38,7 @@ OPTIONAL=(
 )
 
 # Prefer current tag, then recent known anatomy-bearing releases.
-FALLBACK_TAGS=("$PREFERRED_TAG" "v0.0.29" "v0.0.28" "v0.0.27" "v0.0.26" "v0.0.24")
+FALLBACK_TAGS=("$PREFERRED_TAG" "v0.0.33" "v0.0.33" "v0.0.33" "v0.0.33" "v0.0.33")
 
 echo "=== Fetch anatomy packs from GitHub Release ==="
 echo "  Repo : $REPO"

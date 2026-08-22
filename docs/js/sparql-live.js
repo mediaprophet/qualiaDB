@@ -4,7 +4,7 @@
  * execute_ntriples_query (WASM). No mock rows and no HTTP Range paging.
  */
 
-import { flattenUnifiedVolumeQuins, QUIN_SIZE } from '../playground/vfs.js?v=0.0.30-vfs-fullget2';
+import { flattenUnifiedVolumeQuins, QUIN_SIZE } from '../playground/vfs.js?v=0.0.33-vfs-fullget2';
 
 const DEFAULT_DATASET = 'schemaorg-30';
 const SCHEMAORG_Q42 = new URL(

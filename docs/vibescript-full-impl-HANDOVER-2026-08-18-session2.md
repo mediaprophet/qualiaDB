@@ -4,7 +4,7 @@
 **Previous handover:** `docs/vibescript-full-impl-HANDOVER.md` (covers sessions up to Phase A+B+F)
 **Progress log:** `docs/vibescript-full-impl-PROGRESS-LOG.md` (updated through this session)
 **Plan:** `docs/vibescript-full-impl-PLAN.md` (phase tracker updated)
-**Branch:** `0.0.31-dev`
+**Branch:** `0.0.33-dev`
 
 ---
 

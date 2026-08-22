@@ -1,7 +1,7 @@
 # Vision → 10D Browser Excellence — Progress Log
 
 **Programme:** `vision-10d-browser-excellence-programme-2026.md`  
-**Branch:** `0.0.28`
+**Branch:** `0.0.33`
 
 ---
 

@@ -1,7 +1,7 @@
-# WASM LLM + Anatomy regression handoff (0.0.29-dev)
+# WASM LLM + Anatomy regression handoff (0.0.33-dev)
 
 **Date:** 2026-08-02  
-**Branch:** `0.0.29-dev` (cut from `0.0.28` @ `59b249c8`)  
+**Branch:** `0.0.33-dev` (cut from `0.0.33` @ `59b249c8`)  
 **Purpose:** Unblock the other machine to restore desktop WASM LLM throughput and verify anatomy.  
 **Author of this note:** audit of tree history only (this machine has no models, no Node, no usable Python for live re-measure).
 
@@ -21,13 +21,13 @@ CHANGELOG’s own arc is explicit: Phase 5 lifted browser decode **from ~0.6 tok
 
 ---
 
-## Commit timeline (origin/0.0.28)
+## Commit timeline (origin/0.0.33)
 
 | When | Commit | What |
 |------|--------|------|
 | 2026-07-29 | `b073d6ff` | Resident WebGPU inference pipeline checkpoint (competitive era) |
 | 2026-07-29 | `c509e178` | WebGPU benchmarks exact / cache-safe |
-| 2026-07-29 | `ec097139` | 0.0.28 release prep (wasm binary rewrite) |
+| 2026-07-29 | `ec097139` | 0.0.33 release prep (wasm binary rewrite) |
 | 2026-07-31 14:59 | `937213e8` | **Last commit that updated** `docs/playground/qualia_core_db_bg.wasm` (hash `a02f5ecf…`, 3 709 248 B) |
 | 2026-07-31 19:18 | `1ea63995` | Mobile anatomy/LLM: adapter limits, compile yield, demo timeouts, anatomy phone path |
 | 2026-08-01 18:27 | `1b378c5f` | Anatomy: Rust `.hmc` decode, OPFS, DPR cap, mute heavy systems; LLM demo heartbeats/timeouts |
@@ -56,8 +56,8 @@ git log -- docs/playground/qualia_core_db_bg.wasm
 
 Demos cache-bust as if a restore shipped:
 
-- `docs/online-llm-demo.html` → `?v=0.0.28-llm-restore`
-- `docs/wasm-llm-test.html` → `?v=0.0.28-q4fix3`
+- `docs/online-llm-demo.html` → `?v=0.0.33-llm-restore`
+- `docs/wasm-llm-test.html` → `?v=0.0.33-q4fix3`
 
 …but `docs/playground/qualia_core_db_bg.wasm` is still the **31 Jul** artifact. **Source and shipped browser engine are desynced.** Any machine testing GitHub Pages / this tree’s `docs/` is **not** running the post-`c2b5bd12` Rust.
 
@@ -160,7 +160,7 @@ Acceptance: desktop decode back to **wllama-competitive class** (principal’s ~
 
 | Item | Status |
 |------|--------|
-| Workspace | `C:\github\qualiaDB` on `0.0.28` (= origin) |
+| Workspace | `C:\github\qualiaDB` on `0.0.33` (= origin) |
 | Models (`C:\LLM_Models`, `docs/models`) | **Absent** |
 | Node / wasm-pack | **Not on PATH** |
 | Python | Store stub only — `docs/serve.py` not runnable as-is |
@@ -173,14 +173,14 @@ Acceptance: desktop decode back to **wllama-competitive class** (principal’s ~
 
 | Item | Status |
 |------|--------|
-| Branch | `0.0.29-dev` (local tracking `origin/0.0.29-dev`) |
+| Branch | `0.0.33-dev` (local tracking `origin/0.0.33-dev`) |
 | GPU | NVIDIA RTX A2000 12GB + Intel HD 530 |
 | Models | **`C:\Projects\qualia-27062026\models\`** (gitignored). Junction: `docs/models` → `../models` so demos’ `/models/` and `../models/` paths resolve. |
 | Disk | Removed regenerable `target/` (~42 GB); free space restored before wasm-pack |
 | Playground WASM | Rebuilt + copied to `docs/playground/` + `docs/llmdemo/` (`portal,wasm-llm,wasm-logic,wasm-scientific,wasm-playground`) |
 | Portal WASM | `scripts/package-qualia-wasm.ps1` → `docs/pkg/qualia` + desktop `static/portal/pkg/qualia` |
 | Anatomy iframe | Wired `anatomy-load-body` in `docs/js/design-studio-app.js` (synced to desktop static) |
-| Cache-bust | `?v=0.0.29-llm-restore` on `online-llm-demo.html` / `wasm-llm-test.html` |
+| Cache-bust | `?v=0.0.33-llm-restore` on `online-llm-demo.html` / `wasm-llm-test.html` |
 
 ### WASM LLM measurements (SmolLM2-360M Q8_0, Chrome WebGPU, A2000)
 
@@ -202,9 +202,9 @@ Acceptance: desktop decode back to **wllama-competitive class** (principal’s ~
 
 ## Branch intent
 
-`0.0.29-dev` carries:
+`0.0.33-dev` carries:
 
-1. Full `0.0.28` tip (including failed mobile series + source restore).  
+1. Full `0.0.33` tip (including failed mobile series + source restore).  
 2. This handoff document.  
 3. Repair-machine rebuild + residency restore + anatomy postMessage wiring (2026-08-02).
 

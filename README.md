@@ -126,7 +126,7 @@ Full build instructions, CLI reference, and benchmark guide: [docs/manuals/DEVEL
 
 ## Current status
 
-**0.0.30 (active branch)** — active development, pre-release. Unified Q42 v3 is the
+**0.0.33 (active branch)** — active development, pre-release. Unified Q42 v3 is the
 only new-write graph container.
 
 Recent verification of the implemented surfaces includes:
@@ -159,7 +159,7 @@ capabilities, and remaining pre-v0.1 work, see the
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Full technical architecture — Quin bit layout, all modalities, inference stack, every module |
 | [docs/manuals/qualia_db_functionality_manual.md](docs/manuals/qualia_db_functionality_manual.md) | Per-crate functionality manual — what each part of the workspace actually does today |
 | [docs/manuals/DEVELOPMENT.md](docs/manuals/DEVELOPMENT.md) | Build, test, benchmark, CLI reference, cross-compilation |
-| [docs/progress-0.0.30.html](docs/progress-0.0.30.html) | 0.0.30 progress — Q42 v3 volumes, Pages, desktop |
+| [docs/progress-0.0.33.html](docs/progress-0.0.33.html) | 0.0.33 progress — Q42 v3 volumes, Pages, desktop |
 | [docs/manuals/standards/q42-format-internal-draft.md](docs/manuals/standards/q42-format-internal-draft.md) | Canonical Q42 v3 physical layout (48-byte NQuin, 40,960-byte SuperBlock, 256-byte header) |
 | [docs/manuals/qapps_specification.md](docs/manuals/qapps_specification.md) | QApp manifest spec — build apps for the Webizen platform |
 | [CHANGELOG.md](CHANGELOG.md) | Release history |

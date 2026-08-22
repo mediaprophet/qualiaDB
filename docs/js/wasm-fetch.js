@@ -7,7 +7,7 @@
  * and retry transient statuses / network errors.
  */
 
-export const WASM_ASSET_VERSION = '0.0.30-wasm-retry1';
+export const WASM_ASSET_VERSION = '0.0.33-wasm-retry1';
 
 const TRANSIENT_STATUS = new Set([408, 425, 429, 500, 502, 503, 504]);
 

@@ -1,6 +1,6 @@
 # Qualia-DB Glossary
 
-_Branch: `0.0.30` | Last updated: 2026-08-15_
+_Branch: `0.0.33` | Last updated: 2026-08-15_
 
 ---
 
@@ -8,7 +8,7 @@ _Branch: `0.0.30` | Last updated: 2026-08-15_
 
 - **Super-Quin (NQuin)**: 48-byte struct — six `u64` fields: subject, predicate, object, context, metadata, parity. Replaces RDF triples. All semantic meaning is bit-packed; no pointers, no heap references.
 - **FrameLayout ABI** (`frame_layout.rs`): the single canonical registry for the NQuin's ~6 "computational" bytes — predicate opcode/path/defeater, object inline datatype tags, the role-keyed `metadata` overlay, and parity. Modalities read/write those bits only through it; no-collision invariants are test-enforced. See [ADR 0008](adr/0008-frame-layout-abi-and-inline-tags.md).
-- **Inline datatype tags** (`resolver.rs`, object field, MSB clear): `0b001` xsd:integer, `0b010` xsd:decimal, `0b011` xsd:boolean, **`0b101` xsd:float** (allocated 0.0.28 — formerly clashed with integer), `0b1000` Webizen WebID. Bits `[60..62]` select; `[0..59]` carry the value.
+- **Inline datatype tags** (`resolver.rs`, object field, MSB clear): `0b001` xsd:integer, `0b010` xsd:decimal, `0b011` xsd:boolean, **`0b101` xsd:float** (allocated 0.0.33 — formerly clashed with integer), `0b1000` Webizen WebID. Bits `[60..62]` select; `[0..59]` carry the value.
 - **SuperBlock**: 40,960-byte (10 sectors) physical I/O unit. 160-byte header + 850 × 48-byte Quins. New writes store each SuperBlock LZ4-compressed inside a unified v3 volume.
 - **`.q42`**: Native graph volume. **New writes are unified Q42 v3**: 256-byte `Q42\0` header, embedded Q42LEX + object-range BIDX, optional FIDX (S/P/C ranges) and PIDX (postings), block directory, LZ4 SuperBlock payloads. One file. See [q42-format-internal-draft.md](standards/q42-format-internal-draft.md).
 - **BIDX**: Embedded object-hash min/max per SuperBlock. Binary search decides which blocks to decompress. Not a sidecar on v3 writes.
@@ -59,7 +59,7 @@ All are zero-allocation Rust engines wired from `webizen.rs::execute_vm_frame`. 
 
 ---
 
-## Algebra & Symbolic (0.0.28)
+## Algebra & Symbolic (0.0.33)
 
 - **Numeric algebra** (`specialized_libs/linear_algebra.rs`): `solve_quadratic` (stable), `polynomial_roots` (Durand–Kerner), `determinant`/`lu_decompose` (LU, partial pivoting), `eigen_symmetric` (Jacobi), `eigenvalues_general` (Faddeev–LeVerrier char-poly → roots), `svd` (AᵀA eigendecomposition), `Complex`.
 - **Symbolic algebra / CAS** (`specialized_libs/symbolic_algebra.rs`): an `Expr` tree with `parse`, `simplify`, `differentiate`, `expand`, `factor_quadratic`, `solve_quadratic_symbolic`, `eval`, plus `to_quins`/`from_quins` (lossless `Expr` ↔ `NQuin` round-trip) and `expr_citation_hash`. **Distinct** from `solvers/symbolic_logic`, which is a SAT / defeasible-logic engine, not computer algebra. See the [Q42 Symbolic Algebra Encoding standard](standards/q42-symbolic-algebra-encoding.md).
@@ -114,7 +114,7 @@ All are zero-allocation Rust engines wired from `webizen.rs::execute_vm_frame`. 
 - **Sonic Token**: 8-byte packed `u64` event (NoteOn/Off, Parametric) referencing a `tensor_index`. Hot-path transport U0/U1 → U3 SPSC ring.
 - **σ parity**: Phenomenal mapping where the same `fract(σ)` drives visual wavelength (400–700 nm) and auditory center frequency (1760–110 Hz). See `portal_acoustic.rs`.
 - **Q3AS SAB**: 1024-byte `SharedArrayBuffer` layout (`AcousticSabHeader` + uniform + token ring + float mirror) for zero-copy U3 handoff; requires COOP/COEP.
-- **qualia-client** + **qualia-desktop** (`crates/qualia-client/`, `crates/qualia-desktop/`): **Legacy** Tauri/React prototype — not in release CI since v0.0.28.
+- **qualia-client** + **qualia-desktop** (`crates/qualia-client/`, `crates/qualia-desktop/`): **Legacy** Tauri/React prototype — not in release CI since v0.0.33.
 - **Loopback qapp asset server** (`qapps_protocol.rs`): Serves `{data_dir}/Qapps/{qapp_name}/` over `http://127.0.0.1:{port}/` (started by Flutter via `startQualiaProtocol()`).
 - **QappPackageManifest** (`qapp_registry.rs`): JSON (`qapp.json`) describing a Qualia qapp — `name`, `version`, `required_shapes` (SHACL shape IRIs the qapp needs from the graph).
 - **QappTarget**: Where a qapp's files live — `LocalDevDirectory(PathBuf)`, `LocalProxyPort(u16)`, or `IsolatedVault(String)`.
