@@ -2,7 +2,7 @@
 
 use super::super::args;
 use crate::specialized_libs::chemistry_modeling::basis_set::{parse_bse_json as bse_parse, Vec3};
-use poet_vibe::{Diagnostic, Span, Value};
+use vibe::{Diagnostic, Span, Value};
 
 /// `Chemistry.parse_bse_json` — parse a Basis Set Exchange JSON string into a
 /// molecular basis set. Returns a summary (name, family, description, atom

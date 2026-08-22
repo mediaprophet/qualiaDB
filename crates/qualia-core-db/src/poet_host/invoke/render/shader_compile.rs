@@ -16,7 +16,7 @@
 //! | `Render.gpu_compile_shader` | `{ handle, wgsl, entry? }` | `{ compiled, shader_id, errors[] }` |
 
 use super::super::args;
-use poet_vibe::{Diagnostic, Span, Value};
+use vibe::{Diagnostic, Span, Value};
 
 #[cfg(any(feature = "webgl2", feature = "wgsl-forge"))]
 use crate::render::naga_bridge::{compile_wgsl_to_glsl_es300, CompileError};
@@ -297,6 +297,7 @@ fn vs_main(@location(0) pos: vec2<f32>) -> @builtin(position) vec4<f32> {
     #[cfg(any(feature = "webgl2", feature = "wgsl-forge"))]
     fn g_gpu_validate_shader_via_vibescript() {
         let src = r#"
+        using Render;
         requires [ capability("capability.invoke") ];
         effect fn go() {
             return capability.invoke("Render.gpu_validate_shader", {

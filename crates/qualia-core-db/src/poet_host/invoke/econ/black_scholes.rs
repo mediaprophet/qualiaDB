@@ -4,7 +4,7 @@ use super::super::args;
 use crate::specialized_libs::computational_economics::derivatives::{
     black_scholes_price_and_greeks, OptionKind,
 };
-use poet_vibe::{Diagnostic, Span, Value};
+use vibe::{Diagnostic, Span, Value};
 
 pub fn price(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let kind = match args::rec_str(args_v, "kind").unwrap_or("call") {

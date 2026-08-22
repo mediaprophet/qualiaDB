@@ -4,7 +4,7 @@
 
 use super::super::args;
 use crate::solvers::learning as ml;
-use poet_vibe::{Diagnostic, Span, Value};
+use vibe::{Diagnostic, Span, Value};
 
 /// Parse a row-major `n × p` matrix from a VibeScript list-of-lists.
 pub(super) fn parse_matrix(v: &Value, key: &str) -> Option<(Vec<f64>, usize, usize)> {

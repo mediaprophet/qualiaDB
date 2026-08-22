@@ -22,13 +22,14 @@ pub struct DualStudioProps {
 }
 
 fn default_initial_script() -> String {
-    r#"requires [ capability("capability.invoke") ];
+    r#"using Render;
+using Animation;
 
 const SPRING_K: f64 = 280.0;
 const SPRING_C: f64 = 30.0;
 
 pure fn compute_pose(t: f64) -> f64 {
-    return capability.invoke("Render.animation_eval_preset", {
+    return Animation.evaluate_preset({
         family: "hud-glass-ui",
         preset: "glass_reveal",
         t: t
@@ -69,7 +70,7 @@ pub fn DualStudio(props: DualStudioProps) -> Element {
                 "poet_eval",
                 json!({
                     "script": format!(
-                        "requires [ capability(\"capability.invoke\") ]; effect fn go() {{ return capability.invoke(\"Render.animation_eval_preset\", {{ family: \"{}\", preset: \"{}\", t: {} }}); }}",
+                        "using Animation; effect fn go() {{ return Animation.evaluate_preset({{ family: \"{}\", preset: \"{}\", t: {} }}); }}",
                         family, preset, new_time
                     )
                 }),
@@ -82,7 +83,10 @@ pub fn DualStudio(props: DualStudioProps) -> Element {
                 }
             }
 
-            gloo_timers::future::TimeoutFuture::new((1000 / props.target_fps) as u32).await;
+            #[cfg(target_arch = "wasm32")]
+            gloo_timers::future::TimeoutFuture::new((1000 / props.target_fps.max(1)) as u32).await;
+            #[cfg(not(target_arch = "wasm32"))]
+            tokio::time::sleep(std::time::Duration::from_millis((1000 / props.target_fps.max(1)) as u64)).await;
         }
     });
 

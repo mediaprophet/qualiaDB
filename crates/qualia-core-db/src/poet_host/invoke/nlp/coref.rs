@@ -2,7 +2,7 @@
 
 use crate::nlp::coref::{resolve_coreferences, CorefMention, MentionKind};
 use crate::nlp::span::DocSpan;
-use poet_vibe::{DiagCode, Diagnostic, Span, Value};
+use vibe::{DiagCode, Diagnostic, Span, Value};
 use std::collections::BTreeMap;
 
 /// `NLP.coref_resolve` — resolve coreferences over `text` given a list of

@@ -4,7 +4,7 @@
 
 use super::args;
 use crate::inference::{post_turn_verify, quant_graph_grounding};
-use poet_vibe::{DiagCode, Diagnostic, Span, Value};
+use vibe::{DiagCode, Diagnostic, Span, Value};
 
 /// `Inference.embed` — embed text into a vector using the default TextEmbedder.
 pub fn embed(args: &Value, span: Span) -> Result<Value, Diagnostic> {
@@ -114,7 +114,7 @@ pub fn load_model(args: &Value, span: Span) -> Result<Value, Diagnostic> {
         Err(e) => Err(Diagnostic::new(
             DiagCode::E100,
             span,
-            format!("Inference.load_model: {e}"),
+            vibe::llm_missing(format!("Inference.load_model: {e}")),
         )),
     }
 }

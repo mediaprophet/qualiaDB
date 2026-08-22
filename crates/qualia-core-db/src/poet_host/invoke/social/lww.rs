@@ -4,7 +4,7 @@
 use super::super::args;
 use crate::foundation::crdt::CrdtResolver;
 use crate::NQuin;
-use poet_vibe::{Diagnostic, Span, Value};
+use vibe::{Diagnostic, Span, Value};
 
 pub fn merge(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let mut local = quin_at(args_v, "local", span)?;

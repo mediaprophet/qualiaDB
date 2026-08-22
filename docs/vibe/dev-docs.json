@@ -1,5 +1,639 @@
 [
   {
+    "name": "accel",
+    "doc": "Acceleration detection and fail-closed numeric kernels (P16.3).\n\nDefault Vibe eval stays scalar AST. SIMD is used only by the numeric\nslice kernel when the CPU advertises it. WASM stays sequential and\ncaps a cell cluster at 64.",
+    "items": [
+      {
+        "name": "CELL_BATCH_NATIVE",
+        "kind": "const",
+        "doc": "Native ready-cluster ceiling (P16.2).",
+        "file": "accel.rs",
+        "line": 10,
+        "signature": "pub const CELL_BATCH_NATIVE: usize = 512"
+      },
+      {
+        "name": "CELL_BATCH_WASM",
+        "kind": "const",
+        "doc": "WASM sequential chunk (P16.3).",
+        "file": "accel.rs",
+        "line": 12,
+        "signature": "pub const CELL_BATCH_WASM: usize = 64"
+      },
+      {
+        "name": "cell_batch_cap",
+        "kind": "fn",
+        "doc": "",
+        "file": "accel.rs",
+        "line": 14,
+        "signature": "pub fn cell_batch_cap() -> usize {"
+      },
+      {
+        "name": "detect_available_tier",
+        "kind": "fn",
+        "doc": "What the CPU/adapter could run. Not what this eval pass is using.",
+        "file": "accel.rs",
+        "line": 26,
+        "signature": "pub fn detect_available_tier() -> AccelerationTier {"
+      },
+      {
+        "name": "add_f64_slices",
+        "kind": "fn",
+        "doc": "Elementwise `out[i] = a[i] + b[i]`. AVX-512 when present; else scalar.",
+        "file": "accel.rs",
+        "line": 41,
+        "signature": "pub fn add_f64_slices(a: &[f64], b: &[f64], out: &mut [f64]) {"
+      }
+    ]
+  },
+  {
+    "name": "animation",
+    "doc": "VibeScript Zero-Heap Animation System.\n\nProvides the complete 10-family animation taxonomy, analytical spring dynamics,\n3D Projective Geometric Algebra (PGA 𝒢_{3,0,1}) ScLERP motor interpolation,\nSQUAD quaternion spline paths, and parametric curve evaluators.",
+    "items": [
+      {
+        "name": "curves",
+        "kind": "module",
+        "doc": "",
+        "file": "mod.rs",
+        "line": 7,
+        "signature": "pub mod curves;"
+      },
+      {
+        "name": "pga",
+        "kind": "module",
+        "doc": "",
+        "file": "mod.rs",
+        "line": 8,
+        "signature": "pub mod pga;"
+      },
+      {
+        "name": "presets",
+        "kind": "module",
+        "doc": "",
+        "file": "mod.rs",
+        "line": 9,
+        "signature": "pub mod presets;"
+      },
+      {
+        "name": "spring",
+        "kind": "module",
+        "doc": "",
+        "file": "mod.rs",
+        "line": 10,
+        "signature": "pub mod spring;"
+      },
+      {
+        "name": "squad",
+        "kind": "module",
+        "doc": "",
+        "file": "mod.rs",
+        "line": 11,
+        "signature": "pub mod squad;"
+      },
+      {
+        "name": "EasingCurve}",
+        "kind": "use",
+        "doc": "",
+        "file": "mod.rs",
+        "line": 13,
+        "signature": "pub use curves::{CubicBezier, EasingCurve};"
+      },
+      {
+        "name": "MotorBivector}",
+        "kind": "use",
+        "doc": "",
+        "file": "mod.rs",
+        "line": 14,
+        "signature": "pub use pga::{Motor, MotorBivector};"
+      },
+      {
+        "name": "PresetInfo}",
+        "kind": "use",
+        "doc": "",
+        "file": "mod.rs",
+        "line": 15,
+        "signature": "pub use presets::{evaluate_preset, list_all_presets, AnimationFamily, AnimationSample, PresetInfo};"
+      },
+      {
+        "name": "SpringState3D}",
+        "kind": "use",
+        "doc": "",
+        "file": "mod.rs",
+        "line": 16,
+        "signature": "pub use spring::{SpringConfig, SpringState1D, SpringState3D};"
+      },
+      {
+        "name": "Quat",
+        "kind": "use",
+        "doc": "",
+        "file": "mod.rs",
+        "line": 17,
+        "signature": "pub use squad::Quat;"
+      }
+    ]
+  },
+  {
+    "name": "animation::curves",
+    "doc": "Zero-heap mathematical easing curves and parametric interpolators.\n\nProvides standard CSS / Penner easings, cubic Bézier parametric solvers,\nand relativistic time-warp mappings without heap allocation.",
+    "items": [
+      {
+        "name": "EasingCurve",
+        "kind": "enum",
+        "doc": "",
+        "file": "curves.rs",
+        "line": 10,
+        "signature": "pub enum EasingCurve"
+      },
+      {
+        "name": "from_name",
+        "kind": "fn",
+        "doc": "Parse an easing curve from its canonical name (e.g., \"ease-in-out\", \"cubic-in\").",
+        "file": "curves.rs",
+        "line": 46,
+        "signature": "pub fn from_name(name: &str) -> Option<Self> {"
+      },
+      {
+        "name": "eval",
+        "kind": "fn",
+        "doc": "",
+        "file": "curves.rs",
+        "line": 85,
+        "signature": "pub fn eval(&self, t: f64) -> f64 {"
+      },
+      {
+        "name": "CubicBezier",
+        "kind": "struct",
+        "doc": "",
+        "file": "curves.rs",
+        "line": 251,
+        "signature": "pub struct CubicBezier"
+      },
+      {
+        "name": "fn",
+        "kind": "const",
+        "doc": "Create a cubic Bézier easing curve.",
+        "file": "curves.rs",
+        "line": 260,
+        "signature": "pub const fn new(x1: f64, y1: f64, x2: f64, y2: f64) -> Self {"
+      },
+      {
+        "name": "fn",
+        "kind": "const",
+        "doc": "Standard CSS ease: cubic-bezier(0.25, 0.1, 0.25, 1.0)",
+        "file": "curves.rs",
+        "line": 265,
+        "signature": "pub const fn ease() -> Self {"
+      },
+      {
+        "name": "fn",
+        "kind": "const",
+        "doc": "Standard CSS ease-in: cubic-bezier(0.42, 0.0, 1.0, 1.0)",
+        "file": "curves.rs",
+        "line": 270,
+        "signature": "pub const fn ease_in() -> Self {"
+      },
+      {
+        "name": "fn",
+        "kind": "const",
+        "doc": "Standard CSS ease-out: cubic-bezier(0.0, 0.0, 0.58, 1.0)",
+        "file": "curves.rs",
+        "line": 275,
+        "signature": "pub const fn ease_out() -> Self {"
+      },
+      {
+        "name": "fn",
+        "kind": "const",
+        "doc": "Standard CSS ease-in-out: cubic-bezier(0.42, 0.0, 0.58, 1.0)",
+        "file": "curves.rs",
+        "line": 280,
+        "signature": "pub const fn ease_in_out() -> Self {"
+      },
+      {
+        "name": "solve_t",
+        "kind": "fn",
+        "doc": "Solve for parametric parameter `t` given progress `x` using Newton-Raphson.",
+        "file": "curves.rs",
+        "line": 310,
+        "signature": "pub fn solve_t(&self, x: f64) -> f64 {"
+      },
+      {
+        "name": "eval",
+        "kind": "fn",
+        "doc": "",
+        "file": "curves.rs",
+        "line": 347,
+        "signature": "pub fn eval(&self, x: f64) -> f64 {"
+      }
+    ]
+  },
+  {
+    "name": "animation::pga",
+    "doc": "3D Projective Geometric Algebra (PGA 𝒢_{3,0,1}) / Dual Quaternion Motor Algebra.\n\nRepresents rigid 3D spatial transformations (rotation + translation) as motors M = R + εD.\nEnables constant-speed Screw Linear Interpolation (ScLERP) along Riemannian geodesics\nin SE(3) without singularity, gimbal lock, or heap allocation.",
+    "items": [
+      {
+        "name": "Motor",
+        "kind": "struct",
+        "doc": "",
+        "file": "pga.rs",
+        "line": 11,
+        "signature": "pub struct Motor"
+      },
+      {
+        "name": "MotorBivector",
+        "kind": "struct",
+        "doc": "",
+        "file": "pga.rs",
+        "line": 24,
+        "signature": "pub struct MotorBivector"
+      },
+      {
+        "name": "fn",
+        "kind": "const",
+        "doc": "Identity motor (no rotation, zero translation).",
+        "file": "pga.rs",
+        "line": 35,
+        "signature": "pub const fn identity() -> Self {"
+      },
+      {
+        "name": "from_rotation_translation",
+        "kind": "fn",
+        "doc": "Construct a motor from a rotation quaternion [w, x, y, z] and translation [x, y, z].",
+        "file": "pga.rs",
+        "line": 49,
+        "signature": "pub fn from_rotation_translation(rot: [f64; 4], trans: [f64; 3]) -> Self {"
+      },
+      {
+        "name": "to_rotation_translation",
+        "kind": "fn",
+        "doc": "Extract the rotation quaternion [w, x, y, z] and translation vector [x, y, z].",
+        "file": "pga.rs",
+        "line": 73,
+        "signature": "pub fn to_rotation_translation(&self) -> ([f64; 4], [f64; 3]) {"
+      },
+      {
+        "name": "mul",
+        "kind": "fn",
+        "doc": "Geometric product (motor multiplication: M_a * M_b).",
+        "file": "pga.rs",
+        "line": 91,
+        "signature": "pub fn mul(&self, other: &Self) -> Self {"
+      },
+      {
+        "name": "conjugate",
+        "kind": "fn",
+        "doc": "Conjugate of motor (R*, D*).",
+        "file": "pga.rs",
+        "line": 150,
+        "signature": "pub fn conjugate(&self) -> Self {"
+      },
+      {
+        "name": "normalize",
+        "kind": "fn",
+        "doc": "Normalize motor so that |R| = 1 and R · D = 0.",
+        "file": "pga.rs",
+        "line": 164,
+        "signature": "pub fn normalize(&self) -> Self {"
+      },
+      {
+        "name": "log",
+        "kind": "fn",
+        "doc": "Logarithmic map: log(M) ∈ se(3).",
+        "file": "pga.rs",
+        "line": 197,
+        "signature": "pub fn log(&self) -> MotorBivector {"
+      },
+      {
+        "name": "sclerp",
+        "kind": "fn",
+        "doc": "Screw Linear Interpolation (ScLERP): Geodesic shortest-path SE(3) interpolation.\nReturns M(t) = M0 * (M0^(-1) * M1)^t.",
+        "file": "pga.rs",
+        "line": 256,
+        "signature": "pub fn sclerp(m0: &Self, m1: &Self, t: f64) -> Self {"
+      },
+      {
+        "name": "transform_point",
+        "kind": "fn",
+        "doc": "Transform a 3D point using the motor: p' = M * p * M^~.",
+        "file": "pga.rs",
+        "line": 297,
+        "signature": "pub fn transform_point(&self, p: [f64; 3]) -> [f64; 3] {"
+      },
+      {
+        "name": "exp",
+        "kind": "fn",
+        "doc": "Exponential map: exp(B) ∈ SE(3).",
+        "file": "pga.rs",
+        "line": 318,
+        "signature": "pub fn exp(&self) -> Motor {"
+      }
+    ]
+  },
+  {
+    "name": "animation::presets",
+    "doc": "The 10-Family Animation Presets Catalog for VibeScript (Zero-Heap).\n\nProvides canonical animation templates across:\n1. Spatial Kinematics\n2. Dynamics & Material Physics\n3. Mesh & Topology\n4. Thermodynamic Phase\n5. Optics & Spectral Waves\n6. Acoustic Synthesis\n7. Multi-Track Timelines\n8. HUD & UI Glassmorphism\n9. Sensory Outbound Haptics\n10. Generative Stochastic Fields",
+    "items": [
+      {
+        "name": "AnimationFamily",
+        "kind": "enum",
+        "doc": "",
+        "file": "presets.rs",
+        "line": 21,
+        "signature": "pub enum AnimationFamily"
+      },
+      {
+        "name": "from_name",
+        "kind": "fn",
+        "doc": "",
+        "file": "presets.rs",
+        "line": 35,
+        "signature": "pub fn from_name(name: &str) -> Option<Self> {"
+      },
+      {
+        "name": "name",
+        "kind": "fn",
+        "doc": "",
+        "file": "presets.rs",
+        "line": 51,
+        "signature": "pub fn name(&self) -> &'static str {"
+      },
+      {
+        "name": "AnimationSample",
+        "kind": "struct",
+        "doc": "",
+        "file": "presets.rs",
+        "line": 69,
+        "signature": "pub struct AnimationSample"
+      },
+      {
+        "name": "PresetInfo",
+        "kind": "struct",
+        "doc": "",
+        "file": "presets.rs",
+        "line": 91,
+        "signature": "pub struct PresetInfo"
+      },
+      {
+        "name": "list_all_presets",
+        "kind": "fn",
+        "doc": "Return a static list of all available presets across all 10 families.",
+        "file": "presets.rs",
+        "line": 98,
+        "signature": "pub fn list_all_presets() -> &'static [PresetInfo] {"
+      },
+      {
+        "name": "evaluate_preset",
+        "kind": "fn",
+        "doc": "Evaluate a preset by family name and preset name at time `t` (seconds).",
+        "file": "presets.rs",
+        "line": 152,
+        "signature": "pub fn evaluate_preset(family: AnimationFamily, preset: &str, t: f64) -> AnimationSample {"
+      }
+    ]
+  },
+  {
+    "name": "animation::spring",
+    "doc": "Analytical Mass-Spring-Damper dynamics in 1D, 2D, and 3D (Zero-Heap).\n\nEvaluates the continuous analytical closed-form solution of:\n  m·x''(t) + c·x'(t) + k·(x(t) - x_target) = 0\nSupports under-damped (ζ < 1), critically-damped (ζ = 1), and over-damped (ζ > 1)\nregimes without numerical drift, time-step sensitivity, or heap allocation.",
+    "items": [
+      {
+        "name": "SpringConfig",
+        "kind": "struct",
+        "doc": "",
+        "file": "spring.rs",
+        "line": 10,
+        "signature": "pub struct SpringConfig"
+      },
+      {
+        "name": "fn",
+        "kind": "const",
+        "doc": "Create a custom spring configuration.",
+        "file": "spring.rs",
+        "line": 25,
+        "signature": "pub const fn new(stiffness: f64, damping: f64) -> Self {"
+      },
+      {
+        "name": "fn",
+        "kind": "const",
+        "doc": "Snappy UI response (high stiffness, critical damping).",
+        "file": "spring.rs",
+        "line": 36,
+        "signature": "pub const fn snappy() -> Self {"
+      },
+      {
+        "name": "fn",
+        "kind": "const",
+        "doc": "Smooth & gentle deceleration.",
+        "file": "spring.rs",
+        "line": 41,
+        "signature": "pub const fn gentle() -> Self {"
+      },
+      {
+        "name": "fn",
+        "kind": "const",
+        "doc": "Bouncy spring with noticeable overshoot.",
+        "file": "spring.rs",
+        "line": 46,
+        "signature": "pub const fn bouncy() -> Self {"
+      },
+      {
+        "name": "fn",
+        "kind": "const",
+        "doc": "Exaggerated wobbly spring.",
+        "file": "spring.rs",
+        "line": 51,
+        "signature": "pub const fn wobbly() -> Self {"
+      },
+      {
+        "name": "fn",
+        "kind": "const",
+        "doc": "Extremely stiff instant-snap spring.",
+        "file": "spring.rs",
+        "line": 56,
+        "signature": "pub const fn stiff() -> Self {"
+      },
+      {
+        "name": "natural_frequency",
+        "kind": "fn",
+        "doc": "",
+        "file": "spring.rs",
+        "line": 62,
+        "signature": "pub fn natural_frequency(&self) -> f64 {"
+      },
+      {
+        "name": "damping_ratio",
+        "kind": "fn",
+        "doc": "",
+        "file": "spring.rs",
+        "line": 68,
+        "signature": "pub fn damping_ratio(&self) -> f64 {"
+      },
+      {
+        "name": "SpringState1D",
+        "kind": "struct",
+        "doc": "",
+        "file": "spring.rs",
+        "line": 81,
+        "signature": "pub struct SpringState1D"
+      },
+      {
+        "name": "fn",
+        "kind": "const",
+        "doc": "",
+        "file": "spring.rs",
+        "line": 88,
+        "signature": "pub const fn new(position: f64, velocity: f64, target: f64) -> Self {"
+      },
+      {
+        "name": "evaluate_at",
+        "kind": "fn",
+        "doc": "Closed-form analytical evaluation at time `t` seconds into the future.",
+        "file": "spring.rs",
+        "line": 97,
+        "signature": "pub fn evaluate_at(&self, config: &SpringConfig, t: f64) -> (f64, f64, bool) {"
+      },
+      {
+        "name": "step",
+        "kind": "fn",
+        "doc": "Advance the state by `dt` seconds using the closed-form equation.",
+        "file": "spring.rs",
+        "line": 152,
+        "signature": "pub fn step(&mut self, config: &SpringConfig, dt: f64) -> bool {"
+      },
+      {
+        "name": "SpringState3D",
+        "kind": "struct",
+        "doc": "",
+        "file": "spring.rs",
+        "line": 168,
+        "signature": "pub struct SpringState3D"
+      },
+      {
+        "name": "fn",
+        "kind": "const",
+        "doc": "",
+        "file": "spring.rs",
+        "line": 175,
+        "signature": "pub const fn new(position: [f64; 3], velocity: [f64; 3], target: [f64; 3]) -> Self {"
+      },
+      {
+        "name": "evaluate_at",
+        "kind": "fn",
+        "doc": "Evaluate 3D spring state at `t` seconds.",
+        "file": "spring.rs",
+        "line": 184,
+        "signature": "pub fn evaluate_at(&self, config: &SpringConfig, t: f64) -> ([f64; 3], [f64; 3], bool) {"
+      },
+      {
+        "name": "step",
+        "kind": "fn",
+        "doc": "Advance the 3D spring state by `dt` seconds.",
+        "file": "spring.rs",
+        "line": 203,
+        "signature": "pub fn step(&mut self, config: &SpringConfig, dt: f64) -> bool {"
+      }
+    ]
+  },
+  {
+    "name": "animation::squad",
+    "doc": "Spherical and Quadrangle (SQUAD) Quaternion Spline Interpolation (Zero-Heap).\n\nProvides C¹-continuous orientation interpolation across multi-keyframe paths,\neliminating instantaneous angular acceleration spikes characteristic of linear SLERP.",
+    "items": [
+      {
+        "name": "Quat",
+        "kind": "struct",
+        "doc": "",
+        "file": "squad.rs",
+        "line": 8,
+        "signature": "pub struct Quat"
+      },
+      {
+        "name": "fn",
+        "kind": "const",
+        "doc": "",
+        "file": "squad.rs",
+        "line": 16,
+        "signature": "pub const fn identity() -> Self {"
+      },
+      {
+        "name": "fn",
+        "kind": "const",
+        "doc": "",
+        "file": "squad.rs",
+        "line": 25,
+        "signature": "pub const fn new(w: f64, x: f64, y: f64, z: f64) -> Self {"
+      },
+      {
+        "name": "dot",
+        "kind": "fn",
+        "doc": "",
+        "file": "squad.rs",
+        "line": 30,
+        "signature": "pub fn dot(&self, other: &Self) -> f64 {"
+      },
+      {
+        "name": "normalize",
+        "kind": "fn",
+        "doc": "",
+        "file": "squad.rs",
+        "line": 34,
+        "signature": "pub fn normalize(&self) -> Self {"
+      },
+      {
+        "name": "conjugate",
+        "kind": "fn",
+        "doc": "",
+        "file": "squad.rs",
+        "line": 48,
+        "signature": "pub fn conjugate(&self) -> Self {"
+      },
+      {
+        "name": "mul",
+        "kind": "fn",
+        "doc": "",
+        "file": "squad.rs",
+        "line": 57,
+        "signature": "pub fn mul(&self, other: &Self) -> Self {"
+      },
+      {
+        "name": "log",
+        "kind": "fn",
+        "doc": "Quaternion logarithm: ln(q) -> imaginary vector [x, y, z].",
+        "file": "squad.rs",
+        "line": 67,
+        "signature": "pub fn log(&self) -> [f64; 3] {"
+      },
+      {
+        "name": "exp",
+        "kind": "fn",
+        "doc": "Quaternion exponential: exp([x, y, z]) -> unit quaternion.",
+        "file": "squad.rs",
+        "line": 79,
+        "signature": "pub fn exp(v: [f64; 3]) -> Self {"
+      },
+      {
+        "name": "slerp",
+        "kind": "fn",
+        "doc": "Standard Spherical Linear Interpolation (SLERP) along the shortest arc.",
+        "file": "squad.rs",
+        "line": 96,
+        "signature": "pub fn slerp(q0: &Self, q1: &Self, t: f64) -> Self {"
+      },
+      {
+        "name": "compute_inner_control_point",
+        "kind": "fn",
+        "doc": "Compute intermediate control point `a_i` for SQUAD given three consecutive orientations (q_{i-1}, q_i, q_{i+1}).",
+        "file": "squad.rs",
+        "line": 143,
+        "signature": "pub fn compute_inner_control_point(q_prev: &Self, q_curr: &Self, q_next: &Self) -> Self {"
+      },
+      {
+        "name": "squad",
+        "kind": "fn",
+        "doc": "Spherical and Quadrangle Spline (SQUAD) interpolation between `q_i` and `q_{i+1}`.\nUses inner control points `a_i` and `b_{i+1}` for C¹ continuity.",
+        "file": "squad.rs",
+        "line": 159,
+        "signature": "pub fn squad(q_i: &Self, q_next: &Self, a_i: &Self, b_next: &Self, t: f64) -> Self {"
+      }
+    ]
+  },
+  {
     "name": "ast",
     "doc": "vibe-0.1 AST. Spans are UTF-8 byte offsets.",
     "items": [
@@ -12,11 +646,19 @@
         "signature": "pub struct Program"
       },
       {
+        "name": "LocaleDecl",
+        "kind": "struct",
+        "doc": "",
+        "file": "ast.rs",
+        "line": 18,
+        "signature": "pub struct LocaleDecl"
+      },
+      {
         "name": "ModuleDecl",
         "kind": "struct",
         "doc": "",
         "file": "ast.rs",
-        "line": 16,
+        "line": 24,
         "signature": "pub struct ModuleDecl"
       },
       {
@@ -24,7 +666,7 @@
         "kind": "struct",
         "doc": "",
         "file": "ast.rs",
-        "line": 22,
+        "line": 30,
         "signature": "pub struct ImportDecl"
       },
       {
@@ -32,7 +674,7 @@
         "kind": "struct",
         "doc": "",
         "file": "ast.rs",
-        "line": 29,
+        "line": 37,
         "signature": "pub struct PrefixDecl"
       },
       {
@@ -40,7 +682,7 @@
         "kind": "struct",
         "doc": "",
         "file": "ast.rs",
-        "line": 36,
+        "line": 44,
         "signature": "pub struct CapSpec"
       },
       {
@@ -48,15 +690,47 @@
         "kind": "enum",
         "doc": "",
         "file": "ast.rs",
-        "line": 43,
+        "line": 51,
         "signature": "pub enum Item"
+      },
+      {
+        "name": "BindDecl",
+        "kind": "struct",
+        "doc": "",
+        "file": "ast.rs",
+        "line": 67,
+        "signature": "pub struct BindDecl"
+      },
+      {
+        "name": "BindResolve",
+        "kind": "enum",
+        "doc": "",
+        "file": "ast.rs",
+        "line": 76,
+        "signature": "pub enum BindResolve"
+      },
+      {
+        "name": "PresentDecl",
+        "kind": "struct",
+        "doc": "",
+        "file": "ast.rs",
+        "line": 84,
+        "signature": "pub struct PresentDecl"
+      },
+      {
+        "name": "CellDecl",
+        "kind": "struct",
+        "doc": "",
+        "file": "ast.rs",
+        "line": 92,
+        "signature": "pub struct CellDecl"
       },
       {
         "name": "FunctionDecl",
         "kind": "struct",
         "doc": "",
         "file": "ast.rs",
-        "line": 55,
+        "line": 102,
         "signature": "pub struct FunctionDecl"
       },
       {
@@ -64,7 +738,7 @@
         "kind": "struct",
         "doc": "",
         "file": "ast.rs",
-        "line": 67,
+        "line": 114,
         "signature": "pub struct HookDecl"
       },
       {
@@ -72,7 +746,7 @@
         "kind": "struct",
         "doc": "",
         "file": "ast.rs",
-        "line": 77,
+        "line": 124,
         "signature": "pub struct ConstDecl"
       },
       {
@@ -80,7 +754,7 @@
         "kind": "struct",
         "doc": "",
         "file": "ast.rs",
-        "line": 95,
+        "line": 142,
         "signature": "pub struct EnumDecl"
       },
       {
@@ -88,7 +762,7 @@
         "kind": "struct",
         "doc": "",
         "file": "ast.rs",
-        "line": 103,
+        "line": 150,
         "signature": "pub struct EnumVariant"
       },
       {
@@ -96,7 +770,7 @@
         "kind": "struct",
         "doc": "",
         "file": "ast.rs",
-        "line": 119,
+        "line": 166,
         "signature": "pub struct FieldDecl"
       },
       {
@@ -104,7 +778,7 @@
         "kind": "enum",
         "doc": "",
         "file": "ast.rs",
-        "line": 137,
+        "line": 184,
         "signature": "pub enum FieldSupport"
       },
       {
@@ -112,7 +786,7 @@
         "kind": "enum",
         "doc": "",
         "file": "ast.rs",
-        "line": 156,
+        "line": 203,
         "signature": "pub enum FieldRepresentation"
       },
       {
@@ -120,7 +794,7 @@
         "kind": "struct",
         "doc": "",
         "file": "ast.rs",
-        "line": 183,
+        "line": 230,
         "signature": "pub struct MaterialDecl"
       },
       {
@@ -128,7 +802,7 @@
         "kind": "struct",
         "doc": "",
         "file": "ast.rs",
-        "line": 200,
+        "line": 247,
         "signature": "pub struct LawDecl"
       },
       {
@@ -136,7 +810,7 @@
         "kind": "enum",
         "doc": "",
         "file": "ast.rs",
-        "line": 210,
+        "line": 257,
         "signature": "pub enum EffectClass"
       },
       {
@@ -144,7 +818,7 @@
         "kind": "struct",
         "doc": "",
         "file": "ast.rs",
-        "line": 219,
+        "line": 266,
         "signature": "pub struct Param"
       },
       {
@@ -152,7 +826,7 @@
         "kind": "struct",
         "doc": "",
         "file": "ast.rs",
-        "line": 226,
+        "line": 273,
         "signature": "pub struct NamedArg"
       },
       {
@@ -160,7 +834,7 @@
         "kind": "struct",
         "doc": "",
         "file": "ast.rs",
-        "line": 233,
+        "line": 280,
         "signature": "pub struct Block"
       },
       {
@@ -168,7 +842,7 @@
         "kind": "enum",
         "doc": "",
         "file": "ast.rs",
-        "line": 239,
+        "line": 286,
         "signature": "pub enum Stmt"
       },
       {
@@ -176,7 +850,7 @@
         "kind": "struct",
         "doc": "",
         "file": "ast.rs",
-        "line": 299,
+        "line": 353,
         "signature": "pub struct MatchArm"
       },
       {
@@ -184,7 +858,7 @@
         "kind": "enum",
         "doc": "",
         "file": "ast.rs",
-        "line": 306,
+        "line": 360,
         "signature": "pub enum ArmBody"
       },
       {
@@ -192,7 +866,7 @@
         "kind": "enum",
         "doc": "",
         "file": "ast.rs",
-        "line": 312,
+        "line": 366,
         "signature": "pub enum Pattern"
       },
       {
@@ -200,7 +874,7 @@
         "kind": "struct",
         "doc": "",
         "file": "ast.rs",
-        "line": 331,
+        "line": 391,
         "signature": "pub struct Expr"
       },
       {
@@ -208,15 +882,23 @@
         "kind": "enum",
         "doc": "",
         "file": "ast.rs",
-        "line": 337,
+        "line": 397,
         "signature": "pub enum ExprKind"
+      },
+      {
+        "name": "ModalKind",
+        "kind": "enum",
+        "doc": "",
+        "file": "ast.rs",
+        "line": 472,
+        "signature": "pub enum ModalKind"
       },
       {
         "name": "Arg",
         "kind": "enum",
         "doc": "",
         "file": "ast.rs",
-        "line": 383,
+        "line": 487,
         "signature": "pub enum Arg"
       },
       {
@@ -224,7 +906,7 @@
         "kind": "enum",
         "doc": "",
         "file": "ast.rs",
-        "line": 389,
+        "line": 493,
         "signature": "pub enum BinOp"
       },
       {
@@ -232,7 +914,7 @@
         "kind": "enum",
         "doc": "",
         "file": "ast.rs",
-        "line": 406,
+        "line": 510,
         "signature": "pub enum UnOp"
       },
       {
@@ -240,15 +922,23 @@
         "kind": "enum",
         "doc": "",
         "file": "ast.rs",
-        "line": 413,
+        "line": 517,
         "signature": "pub enum Literal"
+      },
+      {
+        "name": "ColorLit",
+        "kind": "struct",
+        "doc": "",
+        "file": "ast.rs",
+        "line": 530,
+        "signature": "pub struct ColorLit"
       },
       {
         "name": "TypeExpr",
         "kind": "struct",
         "doc": "",
         "file": "ast.rs",
-        "line": 423,
+        "line": 538,
         "signature": "pub struct TypeExpr"
       },
       {
@@ -256,7 +946,7 @@
         "kind": "enum",
         "doc": "",
         "file": "ast.rs",
-        "line": 430,
+        "line": 545,
         "signature": "pub enum Name"
       },
       {
@@ -264,7 +954,7 @@
         "kind": "fn",
         "doc": "",
         "file": "ast.rs",
-        "line": 436,
+        "line": 551,
         "signature": "pub fn ident_name(&self) -> Option<&str> {"
       },
       {
@@ -272,8 +962,38 @@
         "kind": "fn",
         "doc": "",
         "file": "ast.rs",
-        "line": 445,
+        "line": 560,
         "signature": "pub fn span(&self) -> Span {"
+      }
+    ]
+  },
+  {
+    "name": "ast_merge",
+    "doc": "3-Way AST Structural Merge for VibeScript.\n\nReconciles concurrent edits from the visual Studio canvas (`ours`) and the textual\ncode editor (`theirs`) against a shared ancestor AST (`base`). Non-conflicting additions,\nmodifications, and property edits are merged deterministically.",
+    "items": [
+      {
+        "name": "MergeResult",
+        "kind": "struct",
+        "doc": "",
+        "file": "ast_merge.rs",
+        "line": 12,
+        "signature": "pub struct MergeResult"
+      },
+      {
+        "name": "MergeConflict",
+        "kind": "struct",
+        "doc": "",
+        "file": "ast_merge.rs",
+        "line": 21,
+        "signature": "pub struct MergeConflict"
+      },
+      {
+        "name": "merge_programs",
+        "kind": "fn",
+        "doc": "Perform a 3-way structural merge on VibeScript programs.",
+        "file": "ast_merge.rs",
+        "line": 29,
+        "signature": "pub fn merge_programs(base: &Program, ours: &Program, theirs: &Program) -> MergeResult {"
       }
     ]
   },
@@ -382,7 +1102,7 @@
         "kind": "fn",
         "doc": "Check if a function has a budget.",
         "file": "ast_query.rs",
-        "line": 621,
+        "line": 643,
         "signature": "pub fn function_has_budget(f: &FunctionDecl) -> bool {"
       },
       {
@@ -390,7 +1110,7 @@
         "kind": "fn",
         "doc": "Check if a hook has a budget.",
         "file": "ast_query.rs",
-        "line": 626,
+        "line": 648,
         "signature": "pub fn hook_has_budget(h: &HookDecl) -> bool {"
       },
       {
@@ -398,7 +1118,7 @@
         "kind": "fn",
         "doc": "Run all built-in policies against a program.\nReturns a list of violations. If empty, the program passes all policies.",
         "file": "ast_query.rs",
-        "line": 634,
+        "line": 656,
         "signature": "pub fn check_policies(program: &Program) -> Vec<PolicyViolation> {"
       },
       {
@@ -406,21 +1126,21 @@
         "kind": "fn",
         "doc": "Run a custom set of policy queries against a program.",
         "file": "ast_query.rs",
-        "line": 640,
+        "line": 662,
         "signature": "pub fn check_custom_policies("
       }
     ]
   },
   {
     "name": "bind",
-    "doc": "0.1 host bindings.",
+    "doc": "0.1 host bindings.\n\n`Host` is the seam Poet (and other environments) implement.\n[`LocalHost`] is the in-process host used by the Vibe REPL, WASM playground,\nand tests: real catalog kernels, in-memory graph/pulse/time.",
     "items": [
       {
         "name": "call_math",
         "kind": "use",
         "doc": "",
         "file": "mod.rs",
-        "line": 7,
+        "line": 14,
         "signature": "pub use math::call_math;"
       },
       {
@@ -428,7 +1148,7 @@
         "kind": "use",
         "doc": "",
         "file": "mod.rs",
-        "line": 8,
+        "line": 15,
         "signature": "pub use quin::call_quin;"
       },
       {
@@ -436,32 +1156,90 @@
         "kind": "use",
         "doc": "",
         "file": "mod.rs",
-        "line": 9,
+        "line": 16,
         "signature": "pub use rdf::call_rdf;"
+      },
+      {
+        "name": "HostEnvironment}",
+        "kind": "use",
+        "doc": "",
+        "file": "mod.rs",
+        "line": 17,
+        "signature": "pub use host::{AccelerationTier, Host, HostEnvironment};"
+      },
+      {
+        "name": "LocalHost",
+        "kind": "use",
+        "doc": "",
+        "file": "mod.rs",
+        "line": 18,
+        "signature": "pub use local::LocalHost;"
+      },
+      {
+        "name": "dispatch",
+        "kind": "use",
+        "doc": "",
+        "file": "mod.rs",
+        "line": 19,
+        "signature": "pub use dispatch::dispatch;"
+      }
+    ]
+  },
+  {
+    "name": "bind::dispatch",
+    "doc": "Path dispatch for native Vibe bindings and catalog ids.",
+    "items": [
+      {
+        "name": "dispatch",
+        "kind": "fn",
+        "doc": "",
+        "file": "dispatch.rs",
+        "line": 9,
+        "signature": "pub fn dispatch<H: Host>("
+      }
+    ]
+  },
+  {
+    "name": "bind::host",
+    "doc": "Host trait — Poet and other environments implement this.",
+    "items": [
+      {
+        "name": "HostEnvironment",
+        "kind": "enum",
+        "doc": "",
+        "file": "host.rs",
+        "line": 9,
+        "signature": "pub enum HostEnvironment"
+      },
+      {
+        "name": "AccelerationTier",
+        "kind": "enum",
+        "doc": "",
+        "file": "host.rs",
+        "line": 17,
+        "signature": "pub enum AccelerationTier"
       },
       {
         "name": "Host",
         "kind": "trait",
         "doc": "Host supplied by Qualia / tests.",
-        "file": "mod.rs",
-        "line": 16,
+        "file": "host.rs",
+        "line": 24,
         "signature": "pub trait Host"
-      },
+      }
+    ]
+  },
+  {
+    "name": "bind::local",
+    "doc": "In-process Vibe host.",
+    "items": [
       {
-        "name": "MockHost",
+        "name": "LocalHost",
         "kind": "struct",
-        "doc": "In-memory host for unit tests.",
-        "file": "mod.rs",
-        "line": 540,
-        "signature": "pub struct MockHost"
-      },
-      {
-        "name": "dispatch",
-        "kind": "fn",
-        "doc": "",
-        "file": "mod.rs",
-        "line": 647,
-        "signature": "pub fn dispatch<H: Host>("
+        "doc": "In-process host: graph/pulse/time in memory, catalog kernels for Animation/HID/etc.",
+        "file": "local.rs",
+        "line": 9,
+        "signature": "pub struct LocalHost"
       }
     ]
   },
@@ -508,6 +1286,11 @@
     ]
   },
   {
+    "name": "bind::tests",
+    "doc": "",
+    "items": []
+  },
+  {
     "name": "budget",
     "doc": "Instruction budget.",
     "items": [
@@ -520,19 +1303,35 @@
         "signature": "pub struct Budget"
       },
       {
+        "name": "SENTINEL_BYTES",
+        "kind": "const",
+        "doc": "42 MB Prolog Sentinel ceiling (AGENTS.md).",
+        "file": "budget.rs",
+        "line": 13,
+        "signature": "pub const SENTINEL_BYTES: u64 = 42 * 1024 * 1024"
+      },
+      {
         "name": "from_steps",
         "kind": "fn",
         "doc": "",
         "file": "budget.rs",
-        "line": 22,
+        "line": 25,
         "signature": "pub fn from_steps(steps: u64) -> Self {"
+      },
+      {
+        "name": "charge",
+        "kind": "fn",
+        "doc": "",
+        "file": "budget.rs",
+        "line": 32,
+        "signature": "pub fn charge(&mut self, bytes: u64, span: Span) -> Result<(), Diagnostic> {"
       },
       {
         "name": "tick",
         "kind": "fn",
         "doc": "",
         "file": "budget.rs",
-        "line": 29,
+        "line": 47,
         "signature": "pub fn tick(&mut self, span: Span) -> Result<(), Diagnostic> {"
       }
     ]
@@ -639,14 +1438,14 @@
   },
   {
     "name": "bytecode::compiler",
-    "doc": "AST → bytecode compiler.\n\nCompiles a checked `poet_vibe::ast::Program` into a `Chunk`. The\ncompiler walks each function body and top-level statement, emitting\nstack-based opcodes. Local variables are assigned slot indices; string\nand IRI literals are interned into the constant pool.\n\n## Compilation model\n\n- Each user function gets a `FuncMeta` entry and a code region.\n- Top-level statements are emitted into a preamble that runs before\n  any function call.\n- Control flow uses forward/backward jumps with patching.\n- `return` emits `Op::Return`; falling off the end of a function emits\n  `Op::ReturnNull`.",
+    "doc": "AST → bytecode compiler.\n\nCompiles a checked `vibe::ast::Program` into a `Chunk`. The\ncompiler walks each function body and top-level statement, emitting\nstack-based opcodes. Local variables are assigned slot indices; string\nand IRI literals are interned into the constant pool.\n\n## Compilation model\n\n- Each user function gets a `FuncMeta` entry and a code region.\n- Top-level statements are emitted into a preamble that runs before\n  any function call.\n- Control flow uses forward/backward jumps with patching.\n- `return` emits `Op::Return`; falling off the end of a function emits\n  `Op::ReturnNull`.",
     "items": [
       {
         "name": "CompileError",
         "kind": "enum",
         "doc": "",
         "file": "compiler.rs",
-        "line": 24,
+        "line": 23,
         "signature": "pub enum CompileError"
       },
       {
@@ -654,7 +1453,7 @@
         "kind": "fn",
         "doc": "Compile a full `Program` AST into a `Chunk`.",
         "file": "compiler.rs",
-        "line": 909,
+        "line": 952,
         "signature": "pub fn compile(program: &Program) -> Result<Chunk, CompileError> {"
       },
       {
@@ -662,7 +1461,7 @@
         "kind": "fn",
         "doc": "Compile a single expression (for cell bodies) into a `Chunk`.\nThe chunk's preamble evaluates the expression and returns it.",
         "file": "compiler.rs",
-        "line": 917,
+        "line": 960,
         "signature": "pub fn compile_expr(expr: &Expr) -> Result<Chunk, CompileError> {"
       }
     ]
@@ -732,7 +1531,7 @@
         "kind": "fn",
         "doc": "Decode an opcode from a byte.",
         "file": "op.rs",
-        "line": 171,
+        "line": 173,
         "signature": "pub fn from_byte(b: u8) -> Option<Self> {"
       },
       {
@@ -740,7 +1539,7 @@
         "kind": "fn",
         "doc": "Number of operand bytes following this opcode (not counting the opcode itself).",
         "file": "op.rs",
-        "line": 218,
+        "line": 221,
         "signature": "pub fn operand_size(self) -> usize {"
       },
       {
@@ -748,7 +1547,7 @@
         "kind": "enum",
         "doc": "",
         "file": "op.rs",
-        "line": 264,
+        "line": 268,
         "signature": "pub enum Const"
       },
       {
@@ -756,7 +1555,7 @@
         "kind": "struct",
         "doc": "",
         "file": "op.rs",
-        "line": 271,
+        "line": 275,
         "signature": "pub struct FuncMeta"
       },
       {
@@ -764,7 +1563,7 @@
         "kind": "struct",
         "doc": "",
         "file": "op.rs",
-        "line": 286,
+        "line": 290,
         "signature": "pub struct Chunk"
       },
       {
@@ -772,7 +1571,7 @@
         "kind": "fn",
         "doc": "Create an empty chunk.",
         "file": "op.rs",
-        "line": 299,
+        "line": 303,
         "signature": "pub fn new() -> Self {"
       },
       {
@@ -780,7 +1579,7 @@
         "kind": "fn",
         "doc": "Add a string constant and return its index.",
         "file": "op.rs",
-        "line": 309,
+        "line": 313,
         "signature": "pub fn add_string(&mut self, s: &str) -> u16 {"
       },
       {
@@ -788,7 +1587,7 @@
         "kind": "fn",
         "doc": "Add an IRI constant and return its index.",
         "file": "op.rs",
-        "line": 323,
+        "line": 327,
         "signature": "pub fn add_iri(&mut self, s: &str) -> u16 {"
       },
       {
@@ -796,7 +1595,7 @@
         "kind": "fn",
         "doc": "Find a function by name. Returns its index in `functions`.",
         "file": "op.rs",
-        "line": 337,
+        "line": 341,
         "signature": "pub fn find_function(&self, name: &str) -> Option<u16> {"
       },
       {
@@ -804,7 +1603,7 @@
         "kind": "fn",
         "doc": "Current code offset (where the next instruction will be emitted).",
         "file": "op.rs",
-        "line": 345,
+        "line": 349,
         "signature": "pub fn current_offset(&self) -> u16 {"
       },
       {
@@ -812,7 +1611,7 @@
         "kind": "fn",
         "doc": "Emit a raw byte.",
         "file": "op.rs",
-        "line": 350,
+        "line": 354,
         "signature": "pub fn emit(&mut self, b: u8) {"
       },
       {
@@ -820,7 +1619,7 @@
         "kind": "fn",
         "doc": "Emit an opcode.",
         "file": "op.rs",
-        "line": 355,
+        "line": 359,
         "signature": "pub fn emit_op(&mut self, op: Op) {"
       },
       {
@@ -828,7 +1627,7 @@
         "kind": "fn",
         "doc": "Emit a u16 operand (little-endian).",
         "file": "op.rs",
-        "line": 360,
+        "line": 364,
         "signature": "pub fn emit_u16(&mut self, v: u16) {"
       },
       {
@@ -836,7 +1635,7 @@
         "kind": "fn",
         "doc": "Emit a u8 operand.",
         "file": "op.rs",
-        "line": 366,
+        "line": 370,
         "signature": "pub fn emit_u8(&mut self, v: u8) {"
       },
       {
@@ -844,7 +1643,7 @@
         "kind": "fn",
         "doc": "Emit an i64 operand (little-endian).",
         "file": "op.rs",
-        "line": 371,
+        "line": 375,
         "signature": "pub fn emit_i64(&mut self, v: i64) {"
       },
       {
@@ -852,7 +1651,7 @@
         "kind": "fn",
         "doc": "Emit a u64 operand (little-endian).",
         "file": "op.rs",
-        "line": 376,
+        "line": 380,
         "signature": "pub fn emit_u64(&mut self, v: u64) {"
       },
       {
@@ -860,7 +1659,7 @@
         "kind": "fn",
         "doc": "Emit an f64 operand (little-endian bits).",
         "file": "op.rs",
-        "line": 381,
+        "line": 385,
         "signature": "pub fn emit_f64(&mut self, v: f64) {"
       },
       {
@@ -868,7 +1667,7 @@
         "kind": "fn",
         "doc": "Patch a u16 operand at the given code offset.",
         "file": "op.rs",
-        "line": 386,
+        "line": 390,
         "signature": "pub fn patch_u16(&mut self, offset: usize, value: u16) {"
       }
     ]
@@ -898,7 +1697,7 @@
         "kind": "fn",
         "doc": "Create a new VM for executing the given chunk.",
         "file": "vm.rs",
-        "line": 120,
+        "line": 121,
         "signature": "pub fn new(chunk: &'a Chunk, host: &'a mut H, budget: Budget) -> Self {"
       },
       {
@@ -906,7 +1705,7 @@
         "kind": "fn",
         "doc": "Execute the chunk's top-level preamble and return the last value on the stack.",
         "file": "vm.rs",
-        "line": 131,
+        "line": 132,
         "signature": "pub fn run(&mut self) -> Result<Value, VmError> {"
       },
       {
@@ -914,7 +1713,7 @@
         "kind": "fn",
         "doc": "Execute a specific user function by index with the given arguments.",
         "file": "vm.rs",
-        "line": 173,
+        "line": 174,
         "signature": "pub fn call_function(&mut self, fn_idx: u16, args: &[Value]) -> Result<Value, VmError> {"
       }
     ]
@@ -928,7 +1727,7 @@
         "kind": "enum",
         "doc": "",
         "file": "capability_schema.rs",
-        "line": 21,
+        "line": 23,
         "signature": "pub enum EffectClass"
       },
       {
@@ -936,7 +1735,7 @@
         "kind": "fn",
         "doc": "",
         "file": "capability_schema.rs",
-        "line": 33,
+        "line": 35,
         "signature": "pub fn as_str(&self) -> &'static str {"
       },
       {
@@ -944,7 +1743,7 @@
         "kind": "enum",
         "doc": "",
         "file": "capability_schema.rs",
-        "line": 45,
+        "line": 47,
         "signature": "pub enum HonestyLabel"
       },
       {
@@ -952,7 +1751,7 @@
         "kind": "fn",
         "doc": "",
         "file": "capability_schema.rs",
-        "line": 57,
+        "line": 59,
         "signature": "pub fn as_str(&self) -> &'static str {"
       },
       {
@@ -960,7 +1759,7 @@
         "kind": "struct",
         "doc": "",
         "file": "capability_schema.rs",
-        "line": 69,
+        "line": 71,
         "signature": "pub struct SchemaArg"
       },
       {
@@ -968,7 +1767,7 @@
         "kind": "fn",
         "doc": "",
         "file": "capability_schema.rs",
-        "line": 81,
+        "line": 83,
         "signature": "pub fn new(name: &str, ty: &str, required: bool) -> Self {"
       },
       {
@@ -976,7 +1775,7 @@
         "kind": "fn",
         "doc": "",
         "file": "capability_schema.rs",
-        "line": 90,
+        "line": 92,
         "signature": "pub fn with_description(mut self, desc: &str) -> Self {"
       },
       {
@@ -984,7 +1783,7 @@
         "kind": "fn",
         "doc": "",
         "file": "capability_schema.rs",
-        "line": 95,
+        "line": 97,
         "signature": "pub fn to_value(&self) -> Value {"
       },
       {
@@ -992,7 +1791,7 @@
         "kind": "struct",
         "doc": "",
         "file": "capability_schema.rs",
-        "line": 112,
+        "line": 114,
         "signature": "pub struct SchemaEntry"
       },
       {
@@ -1000,7 +1799,7 @@
         "kind": "fn",
         "doc": "",
         "file": "capability_schema.rs",
-        "line": 128,
+        "line": 130,
         "signature": "pub fn new(id: &str, effect: EffectClass, honesty: HonestyLabel, returns: &str) -> Self {"
       },
       {
@@ -1008,7 +1807,7 @@
         "kind": "fn",
         "doc": "",
         "file": "capability_schema.rs",
-        "line": 139,
+        "line": 141,
         "signature": "pub fn with_arg(mut self, arg: SchemaArg) -> Self {"
       },
       {
@@ -1016,7 +1815,7 @@
         "kind": "fn",
         "doc": "",
         "file": "capability_schema.rs",
-        "line": 144,
+        "line": 146,
         "signature": "pub fn with_description(mut self, desc: &str) -> Self {"
       },
       {
@@ -1024,7 +1823,7 @@
         "kind": "fn",
         "doc": "",
         "file": "capability_schema.rs",
-        "line": 149,
+        "line": 151,
         "signature": "pub fn to_value(&self) -> Value {"
       },
       {
@@ -1032,7 +1831,7 @@
         "kind": "fn",
         "doc": "The full capability schema — all bound host call ids (T51).\n\nThis is generated from the dispatch table so it never drifts from\nthe actual implementation. New host calls must be added here AND\nin the dispatch table — the schema test verifies they match.",
         "file": "capability_schema.rs",
-        "line": 177,
+        "line": 179,
         "signature": "pub fn all_schemas() -> Vec<SchemaEntry> {"
       },
       {
@@ -1040,7 +1839,7 @@
         "kind": "fn",
         "doc": "Get the schema for a single host call id.",
         "file": "capability_schema.rs",
-        "line": 528,
+        "line": 530,
         "signature": "pub fn schema_for(id: &str) -> Option<SchemaEntry> {"
       },
       {
@@ -1048,7 +1847,7 @@
         "kind": "fn",
         "doc": "Get all schema ids.",
         "file": "capability_schema.rs",
-        "line": 533,
+        "line": 535,
         "signature": "pub fn all_ids() -> Vec<String> {"
       },
       {
@@ -1056,46 +1855,271 @@
         "kind": "fn",
         "doc": "Get the full schema as a Value::List of Value::Records.",
         "file": "capability_schema.rs",
-        "line": 538,
+        "line": 540,
         "signature": "pub fn schema_to_value() -> Value {"
       }
     ]
   },
   {
+    "name": "catalog",
+    "doc": "Catalog of host `Family.method` invoke ids.\n\nVibe is the language; Poet (and other hosts) supply capabilities.\nDotted calls such as `Animation.orbit_spin(t)` resolve against this\ncatalog at compile time and lower to `Host::capability_invoke`.\nUnknown `Family.method` names fail closed.",
+    "items": [
+      {
+        "name": "INVOKE_ID_COUNT}",
+        "kind": "use",
+        "doc": "",
+        "file": "mod.rs",
+        "line": 12,
+        "signature": "pub use ids::{ALL_INVOKE_IDS, INVOKE_ID_COUNT};"
+      },
+      {
+        "name": "sample_to_value}",
+        "kind": "use",
+        "doc": "",
+        "file": "mod.rs",
+        "line": 13,
+        "signature": "pub use local::{invoke_local, payload_from_args, sample_to_value};"
+      },
+      {
+        "name": "did_you_mean",
+        "kind": "use",
+        "doc": "",
+        "file": "mod.rs",
+        "line": 14,
+        "signature": "pub use suggest::did_you_mean;"
+      },
+      {
+        "name": "canonical_id",
+        "kind": "fn",
+        "doc": "Resolve a dotted path to a canonical invoke id.\n\n`Animation.evaluate_preset` is already canonical.\n`Animation.orbit_spin` is a preset alias of `Animation.evaluate_preset`.",
+        "file": "mod.rs",
+        "line": 24,
+        "signature": "pub fn canonical_id(path: &str) -> Option<&'static str> {"
+      },
+      {
+        "name": "is_known",
+        "kind": "fn",
+        "doc": "",
+        "file": "mod.rs",
+        "line": 34,
+        "signature": "pub fn is_known(path: &str) -> bool {"
+      },
+      {
+        "name": "family_of",
+        "kind": "fn",
+        "doc": "`Family` grant: `using Animation;` covers every `Animation.*` catalog id\nand every animation preset alias.",
+        "file": "mod.rs",
+        "line": 40,
+        "signature": "pub fn family_of(path: &str) -> Option<&str> {"
+      },
+      {
+        "name": "granted_covers",
+        "kind": "fn",
+        "doc": "",
+        "file": "mod.rs",
+        "line": 45,
+        "signature": "pub fn granted_covers(granted: &[&str], path: &str) -> bool {"
+      },
+      {
+        "name": "looks_like_catalog_path",
+        "kind": "fn",
+        "doc": "Known catalog family + dotted method, e.g. `HID.poll`.\nUser enums such as `Shape.Circle` are **not** catalog paths.",
+        "file": "mod.rs",
+        "line": 70,
+        "signature": "pub fn looks_like_catalog_path(path: &str) -> bool {"
+      },
+      {
+        "name": "animation_preset",
+        "kind": "fn",
+        "doc": "",
+        "file": "mod.rs",
+        "line": 81,
+        "signature": "pub fn animation_preset(path: &str) -> Option<(&'static str, &'static str)> {"
+      },
+      {
+        "name": "apply_preset_alias",
+        "kind": "fn",
+        "doc": "When `Animation.orbit_spin(t)` lowers to `Animation.evaluate_preset`,\nfill `family`/`preset` on the payload so every Host sees the alias.\nNamed fields already present win.",
+        "file": "mod.rs",
+        "line": 94,
+        "signature": "pub fn apply_preset_alias(path: &str, payload: &mut Value) {"
+      },
+      {
+        "name": "parse_family_from_preset",
+        "kind": "fn",
+        "doc": "",
+        "file": "mod.rs",
+        "line": 107,
+        "signature": "pub fn parse_family_from_preset(family: &str) -> Option<AnimationFamily> {"
+      },
+      {
+        "name": "family_grant",
+        "kind": "fn",
+        "doc": "Expand `using Animation;` into the family grant id.",
+        "file": "mod.rs",
+        "line": 116,
+        "signature": "pub fn family_grant(family: &str) -> String {"
+      },
+      {
+        "name": "methods_for_family",
+        "kind": "fn",
+        "doc": "",
+        "file": "mod.rs",
+        "line": 120,
+        "signature": "pub fn methods_for_family(family: &str) -> Vec<&'static str> {"
+      },
+      {
+        "name": "families",
+        "kind": "fn",
+        "doc": "Unique catalog family names, in catalog order.",
+        "file": "mod.rs",
+        "line": 130,
+        "signature": "pub fn families() -> Vec<&'static str> {"
+      },
+      {
+        "name": "describe",
+        "kind": "fn",
+        "doc": "One-line hover text for a catalog path or identifier.",
+        "file": "mod.rs",
+        "line": 143,
+        "signature": "pub fn describe(path: &str) -> String {"
+      }
+    ]
+  },
+  {
+    "name": "catalog::ids",
+    "doc": "Generated from qualia-core-db poet_host/invoke/ids.rs — keep in sync when adding host IDs.",
+    "items": [
+      {
+        "name": "ALL_INVOKE_IDS",
+        "kind": "const",
+        "doc": "Every bound Family.method invoke id the Vibe catalog knows.",
+        "file": "ids.rs",
+        "line": 4,
+        "signature": "pub const ALL_INVOKE_IDS: &[&str] = &["
+      },
+      {
+        "name": "INVOKE_ID_COUNT",
+        "kind": "const",
+        "doc": "",
+        "file": "ids.rs",
+        "line": 864,
+        "signature": "pub const INVOKE_ID_COUNT: usize = ALL_INVOKE_IDS.len()"
+      }
+    ]
+  },
+  {
+    "name": "catalog::local",
+    "doc": "In-process catalog kernels for hosts that do not attach Poet.\n\nThese are real Vibe kernels (animation, HID-shaped records, empty SPARQL).\nUnknown ids still fail closed. Poet overrides `Host::capability_invoke`\nto reach the engine.",
+    "items": [
+      {
+        "name": "invoke_local",
+        "kind": "fn",
+        "doc": "Run a catalog id in-process.",
+        "file": "local.rs",
+        "line": 17,
+        "signature": "pub fn invoke_local(id: &str, args: &Value, span: Span) -> Result<Value, Diagnostic> {"
+      },
+      {
+        "name": "sample_to_value",
+        "kind": "fn",
+        "doc": "",
+        "file": "local.rs",
+        "line": 92,
+        "signature": "pub fn sample_to_value(s: AnimationSample) -> Value {"
+      },
+      {
+        "name": "payload_from_args",
+        "kind": "fn",
+        "doc": "",
+        "file": "local.rs",
+        "line": 108,
+        "signature": "pub fn payload_from_args(pos: &[Value], named: &[(String, Value)]) -> Value {"
+      }
+    ]
+  },
+  {
+    "name": "catalog::suggest",
+    "doc": "Closest-match suggestions for unknown catalog ids.",
+    "items": [
+      {
+        "name": "did_you_mean",
+        "kind": "fn",
+        "doc": "",
+        "file": "suggest.rs",
+        "line": 6,
+        "signature": "pub fn did_you_mean(path: &str) -> Option<String> {"
+      }
+    ]
+  },
+  {
     "name": "cbor_ast",
-    "doc": "Homoiconic CBOR-LD AST Codec (Tag 4200) — plan §7.3 A1.\n\nBidirectional zero-copy serialization between `poet_vibe::ast` and\nCBOR-LD 1.0 binary trees. The VibeScript AST is encoded as a CBOR map\ntagged with Tag 4200, where each node has a `type` string identifying\nthe AST kind and the remaining fields carry the node's data.\n\n## Design\n\n- **Authoring format:** N3 / VibeScript source text (human-readable).\n- **Runtime format:** CBOR-LD binary (compact, zero-copy, machine-readable).\n- **Tag 4200:** marks a CBOR-LD value as a VibeScript AST node.\n- **Spans:** encoded as `[start: u32, end: u32]` CBOR arrays.\n- **Bidirectional:** `encode` and `decode` are exact inverses.\n\n## CBOR-LD node encoding\n\nEach AST node is a CBOR map:\n```text\ntag(4200, {\n  \"type\": \"Program\",\n  \"span\": [start, end],\n  ...node-specific fields...\n})\n```\n\nThe codec uses a minimal pure-Rust CBOR encoder/decoder (no external\ndependencies) since `poet-vibe` is dependency-free.",
+    "doc": "Homoiconic CBOR-LD AST Codec (Tag 4200).",
     "items": [
       {
         "name": "TAG_VIBE_AST",
         "kind": "const",
-        "doc": "CBOR-LD tag marking a VibeScript AST node.",
-        "file": "cbor_ast.rs",
-        "line": 36,
+        "doc": "",
+        "file": "mod.rs",
+        "line": 7,
         "signature": "pub const TAG_VIBE_AST: u64 = 4200"
-      },
-      {
-        "name": "encode",
-        "kind": "fn",
-        "doc": "Encode a `Program` AST into CBOR-LD bytes (Tag 4200).",
-        "file": "cbor_ast.rs",
-        "line": 41,
-        "signature": "pub fn encode(program: &Program) -> Vec<u8> {"
-      },
-      {
-        "name": "decode",
-        "kind": "fn",
-        "doc": "Decode a `Program` AST from CBOR-LD bytes (Tag 4200).",
-        "file": "cbor_ast.rs",
-        "line": 49,
-        "signature": "pub fn decode(bytes: &[u8]) -> Result<Program, DecodeError> {"
       },
       {
         "name": "DecodeError",
         "kind": "enum",
         "doc": "",
-        "file": "cbor_ast.rs",
-        "line": 870,
+        "file": "mod.rs",
+        "line": 10,
         "signature": "pub enum DecodeError"
+      },
+      {
+        "name": "encode",
+        "kind": "use",
+        "doc": "",
+        "file": "mod.rs",
+        "line": 32,
+        "signature": "pub use encode::encode;"
+      },
+      {
+        "name": "decode",
+        "kind": "use",
+        "doc": "",
+        "file": "mod.rs",
+        "line": 33,
+        "signature": "pub use decode::decode;"
+      }
+    ]
+  },
+  {
+    "name": "cbor_ast::codec",
+    "doc": "Minimal CBOR encoder/decoder.",
+    "items": []
+  },
+  {
+    "name": "cbor_ast::decode",
+    "doc": "Decode CBOR-LD to Program.",
+    "items": [
+      {
+        "name": "decode",
+        "kind": "fn",
+        "doc": "",
+        "file": "decode.rs",
+        "line": 8,
+        "signature": "pub fn decode(bytes: &[u8]) -> Result<Program, DecodeError> {"
+      }
+    ]
+  },
+  {
+    "name": "cbor_ast::encode",
+    "doc": "Encode Program to CBOR-LD.",
+    "items": [
+      {
+        "name": "encode",
+        "kind": "fn",
+        "doc": "",
+        "file": "encode.rs",
+        "line": 8,
+        "signature": "pub fn encode(program: &Program) -> Vec<u8> {"
       }
     ]
   },
@@ -1112,19 +2136,43 @@
         "signature": "pub struct CheckResult"
       },
       {
+        "name": "MAX_DIAGNOSTICS",
+        "kind": "const",
+        "doc": "Collect up to 8 diagnostics instead of stopping at the first (audit §7.12).",
+        "file": "check.rs",
+        "line": 15,
+        "signature": "pub const MAX_DIAGNOSTICS: usize = 8"
+      },
+      {
+        "name": "check_program_all",
+        "kind": "fn",
+        "doc": "",
+        "file": "check.rs",
+        "line": 36,
+        "signature": "pub fn check_program_all(program: &Program) -> (CheckResult, Vec<Diagnostic>) {"
+      },
+      {
         "name": "check_program",
         "kind": "fn",
         "doc": "",
         "file": "check.rs",
-        "line": 14,
+        "line": 64,
         "signature": "pub fn check_program(program: &Program) -> Result<CheckResult, Diagnostic> {"
+      },
+      {
+        "name": "check_program_with_vocab",
+        "kind": "fn",
+        "doc": "After a successful check, fail closed on prefixed names missing from a loaded vocab chunk.",
+        "file": "check.rs",
+        "line": 73,
+        "signature": "pub fn check_program_with_vocab("
       },
       {
         "name": "check_cell",
         "kind": "fn",
         "doc": "",
         "file": "check.rs",
-        "line": 145,
+        "line": 261,
         "signature": "pub fn check_cell(expr: &Expr) -> Result<CheckResult, Diagnostic> {"
       }
     ]
@@ -1928,7 +2976,7 @@
         "kind": "struct",
         "doc": "",
         "file": "colocated.rs",
-        "line": 15,
+        "line": 14,
         "signature": "pub struct CoLocatedLayer"
       },
       {
@@ -1936,7 +2984,7 @@
         "kind": "fn",
         "doc": "Create a physical base layer (OCS §9).",
         "file": "colocated.rs",
-        "line": 28,
+        "line": 27,
         "signature": "pub fn physical_base(geodetic: Geodetic) -> Self {"
       },
       {
@@ -1944,7 +2992,7 @@
         "kind": "fn",
         "doc": "Create a co-located fictional layer (OCS §9.1).",
         "file": "colocated.rs",
-        "line": 38,
+        "line": 37,
         "signature": "pub fn fictional(name: &str, usri: &str, geodetic: Geodetic) -> Self {"
       },
       {
@@ -1952,7 +3000,7 @@
         "kind": "fn",
         "doc": "Create a co-located historical layer (OCS §9.1).",
         "file": "colocated.rs",
-        "line": 48,
+        "line": 47,
         "signature": "pub fn historical(name: &str, usri: &str, geodetic: Geodetic) -> Self {"
       },
       {
@@ -1960,7 +3008,7 @@
         "kind": "fn",
         "doc": "",
         "file": "colocated.rs",
-        "line": 57,
+        "line": 56,
         "signature": "pub fn to_value(&self) -> Value {"
       },
       {
@@ -1968,7 +3016,7 @@
         "kind": "struct",
         "doc": "",
         "file": "colocated.rs",
-        "line": 74,
+        "line": 73,
         "signature": "pub struct CoLocatedStack"
       },
       {
@@ -1976,7 +3024,7 @@
         "kind": "fn",
         "doc": "",
         "file": "colocated.rs",
-        "line": 80,
+        "line": 79,
         "signature": "pub fn new(physical: CoLocatedLayer) -> Self {"
       },
       {
@@ -1984,7 +3032,7 @@
         "kind": "fn",
         "doc": "Add a co-located layer (OCS §9).",
         "file": "colocated.rs",
-        "line": 87,
+        "line": 86,
         "signature": "pub fn add_layer(&mut self, layer: CoLocatedLayer) {"
       },
       {
@@ -1992,7 +3040,7 @@
         "kind": "fn",
         "doc": "Get the physical base layer.",
         "file": "colocated.rs",
-        "line": 99,
+        "line": 98,
         "signature": "pub fn physical_base(&self) -> &CoLocatedLayer {"
       },
       {
@@ -2000,7 +3048,7 @@
         "kind": "fn",
         "doc": "Get all non-physical layers.",
         "file": "colocated.rs",
-        "line": 104,
+        "line": 103,
         "signature": "pub fn fictional_layers(&self) -> Vec<&CoLocatedLayer> {"
       },
       {
@@ -2008,7 +3056,7 @@
         "kind": "fn",
         "doc": "Verify paraconsistent isolation (OCS §9.2).\n\nThe lexical isolation rule: inner layers inherit spatial anchors\nfrom outer containers, but mutations in inner layers can never\nmutate or leak into parent layers.",
         "file": "colocated.rs",
-        "line": 113,
+        "line": 112,
         "signature": "pub fn verify_isolation(&self) -> bool {"
       },
       {
@@ -2016,7 +3064,7 @@
         "kind": "fn",
         "doc": "Check that a mutation in a layer index doesn't affect the physical base (OCS-T06).",
         "file": "colocated.rs",
-        "line": 123,
+        "line": 122,
         "signature": "pub fn check_no_mutation_leak(&self, layer_index: usize) -> bool {"
       },
       {
@@ -2024,7 +3072,7 @@
         "kind": "fn",
         "doc": "",
         "file": "colocated.rs",
-        "line": 136,
+        "line": 135,
         "signature": "pub fn to_value(&self) -> Value {"
       }
     ]
@@ -3564,7 +4612,7 @@
   },
   {
     "name": "crypto",
-    "doc": "Cryptographic operations — hashing, AEAD, KDF, signing (T-crypto).\n\nThis module defines the VibeScript crypto namespace. The actual\ncrypto implementations live in the host (qualia-core-db's\ncryptographic_library), so all operations dispatch through the\nHost ABI. poet-vibe itself has no crypto dependencies — it\ndefines the types and the dispatch contract.\n\n## Namespace\n\n```vibe\nimport \"crypto\" as crypto;\n\nfn main() {\n  let h = crypto.sha256(\"hello\");\n  let sig = crypto.sign(\"key:ed25519:0\", h);\n  let ok = crypto.verify(\"key:ed25519:0\", h, sig);\n}\n```\n\n## Operations\n\n- **Hashing:** `crypto.sha256`, `crypto.sha512`, `crypto.blake3`\n  — pure, deterministic. Input: String or hex. Output: Record\n  `{ algorithm, hex, bytes }`.\n- **KDF:** `crypto.hkdf_sha256(ikm, info, length)` — key derivation.\n- **AEAD encrypt:** `crypto.aead_encrypt(algorithm, key, nonce,\n  plaintext, aad)` — returns Record `{ ciphertext, tag, nonce }`.\n- **AEAD decrypt:** `crypto.aead_decrypt(algorithm, key, nonce,\n  ciphertext, tag, aad)` — returns plaintext or error.\n- **Signing:** `crypto.sign(key_id, data)` — returns signature.\n- **Verification:** `crypto.verify(key_id, data, signature)` —\n  returns Bool.\n\n## Fail-closed\n\nDefault Host behavior is E702 (no crypto provider on this host).\nA host with a crypto library overrides these methods.\n\nReference: qualia-core-db `specialized_libs/cryptographic_library/`.",
+    "doc": "Cryptographic operations — hashing, AEAD, KDF, signing (T-crypto).\n\nThis module defines the VibeScript crypto namespace. The actual\ncrypto implementations live in the host (qualia-core-db's\ncryptographic_library), so all operations dispatch through the\nHost ABI. vibe itself has no crypto dependencies — it\ndefines the types and the dispatch contract.\n\n## Namespace\n\n```vibe\nimport \"crypto\" as crypto;\n\nfn main() {\n  let h = crypto.sha256(\"hello\");\n  let sig = crypto.sign(\"key:ed25519:0\", h);\n  let ok = crypto.verify(\"key:ed25519:0\", h, sig);\n}\n```\n\n## Operations\n\n- **Hashing:** `crypto.sha256`, `crypto.sha512`, `crypto.blake3`\n  — pure, deterministic. Input: String or hex. Output: Record\n  `{ algorithm, hex, bytes }`.\n- **KDF:** `crypto.hkdf_sha256(ikm, info, length)` — key derivation.\n- **AEAD encrypt:** `crypto.aead_encrypt(algorithm, key, nonce,\n  plaintext, aad)` — returns Record `{ ciphertext, tag, nonce }`.\n- **AEAD decrypt:** `crypto.aead_decrypt(algorithm, key, nonce,\n  ciphertext, tag, aad)` — returns plaintext or error.\n- **Signing:** `crypto.sign(key_id, data)` — returns signature.\n- **Verification:** `crypto.verify(key_id, data, signature)` —\n  returns Bool.\n\n## Fail-closed\n\nDefault Host behavior is E702 (no crypto provider on this host).\nA host with a crypto library overrides these methods.\n\nReference: qualia-core-db `specialized_libs/cryptographic_library/`.",
     "items": [
       {
         "name": "hash_result_value",
@@ -4127,6 +5175,106 @@
     ]
   },
   {
+    "name": "decompiler",
+    "doc": "Bi-directional Poetic Decompiler for VibeScript (Zero-Heap friendly).\n\nDecompiles `vibe-bc-0.1` bytecode chunks and parsed AST structures into clean,\nformatted, human-readable VibeScript source code. Supports round-trip AST formatting,\nexpression precedence reconstruction, and block indentation.",
+    "items": [
+      {
+        "name": "DecompileOptions",
+        "kind": "struct",
+        "doc": "",
+        "file": "decompiler.rs",
+        "line": 13,
+        "signature": "pub struct DecompileOptions"
+      },
+      {
+        "name": "decompile_program",
+        "kind": "fn",
+        "doc": "Decompile an entire `Program` AST back into formatted VibeScript source.",
+        "file": "decompiler.rs",
+        "line": 33,
+        "signature": "pub fn decompile_program(program: &Program, opts: &DecompileOptions) -> String {"
+      },
+      {
+        "name": "decompile_item",
+        "kind": "fn",
+        "doc": "Decompile a single AST Item.",
+        "file": "decompiler.rs",
+        "line": 95,
+        "signature": "pub fn decompile_item(out: &mut String, item: &Item, indent: usize, opts: &DecompileOptions) {"
+      },
+      {
+        "name": "decompile_block",
+        "kind": "fn",
+        "doc": "Decompile a statement block.",
+        "file": "decompiler.rs",
+        "line": 282,
+        "signature": "pub fn decompile_block(out: &mut String, block: &Block, indent: usize, opts: &DecompileOptions) {"
+      },
+      {
+        "name": "decompile_stmt",
+        "kind": "fn",
+        "doc": "Decompile a single statement.",
+        "file": "decompiler.rs",
+        "line": 299,
+        "signature": "pub fn decompile_stmt(out: &mut String, stmt: &Stmt, indent: usize, opts: &DecompileOptions) {"
+      },
+      {
+        "name": "decompile_expr",
+        "kind": "fn",
+        "doc": "Decompile an expression.",
+        "file": "decompiler.rs",
+        "line": 461,
+        "signature": "pub fn decompile_expr(out: &mut String, expr: &Expr) {"
+      },
+      {
+        "name": "decompile_pattern",
+        "kind": "fn",
+        "doc": "Decompile a pattern.",
+        "file": "decompiler.rs",
+        "line": 717,
+        "signature": "pub fn decompile_pattern(out: &mut String, pat: &Pattern) {"
+      },
+      {
+        "name": "decompile_type_expr",
+        "kind": "fn",
+        "doc": "Decompile a type expression.",
+        "file": "decompiler.rs",
+        "line": 823,
+        "signature": "pub fn decompile_type_expr(ty: &TypeExpr) -> String {"
+      },
+      {
+        "name": "decompile_chunk",
+        "kind": "fn",
+        "doc": "Decompile a raw Bytecode Chunk into symbolic disassembly.",
+        "file": "decompiler.rs",
+        "line": 841,
+        "signature": "pub fn decompile_chunk(chunk: &Chunk) -> String {"
+      }
+    ]
+  },
+  {
+    "name": "degrade",
+    "doc": "Graceful degradation copy (P16.7). Fail closed; never pretend GPU/LLM ran.",
+    "items": [
+      {
+        "name": "gpu_missing",
+        "kind": "fn",
+        "doc": "GPU missing → stay on bytecode / scalar CPU.",
+        "file": "degrade.rs",
+        "line": 4,
+        "signature": "pub fn gpu_missing(detail: impl AsRef<str>) -> String {"
+      },
+      {
+        "name": "llm_missing",
+        "kind": "fn",
+        "doc": "Local model missing → diagnostic. Consented remote is not implied.",
+        "file": "degrade.rs",
+        "line": 12,
+        "signature": "pub fn llm_missing(detail: impl AsRef<str>) -> String {"
+      }
+    ]
+  },
+  {
     "name": "deontic_interrupt",
     "doc": "A8 — Hardware Deontic F(φ) Interrupts & Phase Leasing.\n\nImmediate seL4-style capability revocation upon prohibition breach, plus\nphase-based capability allow-listing. Inspired by seL4's capability\nmodel: capabilities are explicitly granted per phase, and any breach\ntriggers an immediate interrupt that revokes all capabilities and halts\nthe agent.\n\n## Design\n\n- **Phase**: A named execution phase with an associated capability\n  allow-list. Capabilities are leased for the duration of the phase.\n- **PhaseLeaser**: Manages phase transitions, granting and revoking\n  capabilities as phases change.\n- **DeonticInterrupt**: Triggered when a prohibition is breached. Immediately\n  revokes all capabilities and halts execution.\n- **InterruptHandler**: Processes interrupts, recording the breach and\n  notifying the governance layer.\n\n## Integration\n\n- Uses A6 (`dag`) for execution state tracking.\n- Uses the existing `deontic_logic` module for prohibition definitions.\n- Designed for seL4-style immediate revocation (no deferred cleanup).",
     "items": [
@@ -4453,7 +5601,7 @@
         "kind": "fn",
         "doc": "",
         "file": "diagnose.rs",
-        "line": 16,
+        "line": 19,
         "signature": "pub fn to_json(&self) -> String {"
       },
       {
@@ -4461,7 +5609,7 @@
         "kind": "fn",
         "doc": "Helper to detect if a diagnostic represents a contradiction or semantic conflict\n(e.g. conflicting types, conflicting graph assertions, forbidden effect in pure cell).",
         "file": "diagnose.rs",
-        "line": 33,
+        "line": 36,
         "signature": "pub fn is_contradiction(diag: &Diagnostic) -> bool {"
       },
       {
@@ -4469,7 +5617,7 @@
         "kind": "fn",
         "doc": "Parse and type/effect-check. Cells start with `=`. Does not evaluate.\nWhen a contradiction/conflict is detected, attaches evidential annotations (μ = 1.0, λ = 0.0).",
         "file": "diagnose.rs",
-        "line": 47,
+        "line": 50,
         "signature": "pub fn diagnose(src: &str) -> DiagnoseReport {"
       }
     ]
@@ -4515,7 +5663,7 @@
         "kind": "fn",
         "doc": "",
         "file": "effects.rs",
-        "line": 45,
+        "line": 48,
         "signature": "pub fn capability_for(path: &str) -> Option<&'static str> {"
       }
     ]
@@ -4598,91 +5746,121 @@
         "name": "Env",
         "kind": "struct",
         "doc": "",
-        "file": "eval.rs",
-        "line": 11,
+        "file": "mod.rs",
+        "line": 16,
         "signature": "pub struct Env"
       },
       {
         "name": "VIBE_0_1_NAMESPACES",
         "kind": "const",
         "doc": "The valid 0.1 namespace import paths. `vibe:0.1/{ns}`.",
-        "file": "eval.rs",
-        "line": 43,
+        "file": "mod.rs",
+        "line": 48,
         "signature": "pub const VIBE_0_1_NAMESPACES: &[&str] = &["
       },
       {
         "name": "populate_import_aliases",
         "kind": "fn",
-        "doc": "Populate `env.aliases` from a program's import declarations.\nEach `import \"vibe:0.1/graph\" as g;` maps `g` → `graph`.\nIf no alias is given, the namespace basename is used (e.g. `graph`).\nReturns an error if the import path is not a valid 0.1 namespace.",
-        "file": "eval.rs",
-        "line": 66,
+        "doc": "Populate `env.aliases` from a program's import declarations.\nEach `import \"vibe:0.1/graph\" as g;` maps `g` â†’ `graph`.\nIf no alias is given, the namespace basename is used (e.g. `graph`).\nReturns an error if the import path is not a valid 0.1 namespace.",
+        "file": "mod.rs",
+        "line": 71,
         "signature": "pub fn populate_import_aliases(env: &mut Env, imports: &[ImportDecl]) -> Result<(), Diagnostic> {"
       },
       {
         "name": "Engine",
         "kind": "struct",
         "doc": "",
-        "file": "eval.rs",
-        "line": 97,
+        "file": "mod.rs",
+        "line": 102,
         "signature": "pub struct Engine<'a, H: Host>"
+      },
+      {
+        "name": "workspace_left",
+        "kind": "fn",
+        "doc": "",
+        "file": "mod.rs",
+        "line": 134,
+        "signature": "pub fn workspace_left(&self) -> u64 {"
       },
       {
         "name": "new",
         "kind": "fn",
         "doc": "",
-        "file": "eval.rs",
-        "line": 127,
+        "file": "mod.rs",
+        "line": 138,
         "signature": "pub fn new(host: &'a mut H, budget: Budget) -> Self {"
       },
       {
         "name": "with_program",
         "kind": "fn",
         "doc": "Attach a program so `eval_call` can resolve user-defined functions.",
-        "file": "eval.rs",
-        "line": 138,
+        "file": "mod.rs",
+        "line": 150,
         "signature": "pub fn with_program(host: &'a mut H, budget: Budget, program: &Program) -> Self {"
       },
       {
         "name": "with_phase_leaser",
         "kind": "fn",
         "doc": "Attach a deontic phase leaser (R2). When set, every host dispatch\nis checked against the active phase's capability allow-list.",
-        "file": "eval.rs",
-        "line": 150,
+        "file": "mod.rs",
+        "line": 163,
         "signature": "pub fn with_phase_leaser("
-      },
+      }
+    ]
+  },
+  {
+    "name": "eval::call",
+    "doc": "",
+    "items": []
+  },
+  {
+    "name": "eval::expr",
+    "doc": "",
+    "items": [
       {
         "name": "eval_expr",
         "kind": "fn",
         "doc": "",
-        "file": "eval.rs",
-        "line": 197,
+        "file": "expr.rs",
+        "line": 6,
         "signature": "pub fn eval_expr(&mut self, expr: &Expr, env: &mut Env) -> Result<Value, Diagnostic> {"
-      },
+      }
+    ]
+  },
+  {
+    "name": "eval::program",
+    "doc": "",
+    "items": [
       {
         "name": "eval_program",
         "kind": "fn",
         "doc": "",
-        "file": "eval.rs",
-        "line": 614,
+        "file": "program.rs",
+        "line": 4,
         "signature": "pub fn eval_program(&mut self, program: &Program, env: &mut Env) -> Result<Value, Diagnostic> {"
       },
       {
         "name": "call_function",
         "kind": "fn",
         "doc": "",
-        "file": "eval.rs",
-        "line": 668,
+        "file": "program.rs",
+        "line": 172,
         "signature": "pub fn call_function("
       },
       {
         "name": "call_hook",
         "kind": "fn",
-        "doc": "Dispatch a hook by event path (e.g. `[\"pulse\", \"message\"]` or `[\"tick\"]`).\n\nFinds the first `on <path>(…)` hook in the program whose path matches,\nbinds the supplied argument values to its parameters, and evaluates its\nbody. Returns `Ok(Value::Null)` if no matching hook exists (the host\nmay choose to ignore unhandled events silently).",
-        "file": "eval.rs",
-        "line": 714,
+        "doc": "Dispatch a hook by event path (e.g. `[\"pulse\", \"message\"]` or `[\"tick\"]`).\n\nFinds the first `on <path>(â€¦)` hook in the program whose path matches,\nbinds the supplied argument values to its parameters, and evaluates its\nbody. Returns `Ok(Value::Null)` if no matching hook exists (the host\nmay choose to ignore unhandled events silently).",
+        "file": "program.rs",
+        "line": 218,
         "signature": "pub fn call_hook("
       }
     ]
+  },
+  {
+    "name": "eval::stmt",
+    "doc": "",
+    "items": []
   },
   {
     "name": "frame_morphism",
@@ -4819,7 +5997,7 @@
         "kind": "const",
         "doc": "",
         "file": "mod.rs",
-        "line": 19,
+        "line": 27,
         "signature": "pub const DIAGNOSTIC_SCHEMA_JSON: &str = r#\"{"
       }
     ]
@@ -4841,7 +6019,7 @@
         "kind": "fn",
         "doc": "Get the string name of this event kind.",
         "file": "hid.rs",
-        "line": 60,
+        "line": 72,
         "signature": "pub fn as_str(&self) -> &'static str {"
       },
       {
@@ -4849,7 +6027,7 @@
         "kind": "fn",
         "doc": "Parse from a string.",
         "file": "hid.rs",
-        "line": 76,
+        "line": 94,
         "signature": "pub fn from_str(s: &str) -> Option<Self> {"
       },
       {
@@ -4857,7 +6035,7 @@
         "kind": "enum",
         "doc": "",
         "file": "hid.rs",
-        "line": 96,
+        "line": 120,
         "signature": "pub enum EventPayload"
       },
       {
@@ -4865,7 +6043,7 @@
         "kind": "fn",
         "doc": "Create an inline payload with a single key-value pair.",
         "file": "hid.rs",
-        "line": 108,
+        "line": 132,
         "signature": "pub fn inline_kv(key: &str, val: Value) -> Self {"
       },
       {
@@ -4873,7 +6051,7 @@
         "kind": "fn",
         "doc": "Create an inline payload from a slice of key-value pairs.",
         "file": "hid.rs",
-        "line": 115,
+        "line": 139,
         "signature": "pub fn inline_pairs(pairs: &[(&str, Value)]) -> Self {"
       },
       {
@@ -4881,7 +6059,7 @@
         "kind": "fn",
         "doc": "Create a fat buffer payload.",
         "file": "hid.rs",
-        "line": 124,
+        "line": 148,
         "signature": "pub fn fat_buffer(iri: &str, hash: u64) -> Self {"
       },
       {
@@ -4889,7 +6067,7 @@
         "kind": "fn",
         "doc": "Is this payload empty?",
         "file": "hid.rs",
-        "line": 132,
+        "line": 156,
         "signature": "pub fn is_empty(&self) -> bool {"
       },
       {
@@ -4897,7 +6075,7 @@
         "kind": "fn",
         "doc": "Is this payload inline?",
         "file": "hid.rs",
-        "line": 137,
+        "line": 161,
         "signature": "pub fn is_inline(&self) -> bool {"
       },
       {
@@ -4905,7 +6083,7 @@
         "kind": "fn",
         "doc": "Is this payload a fat buffer?",
         "file": "hid.rs",
-        "line": 142,
+        "line": 166,
         "signature": "pub fn is_fat_buffer(&self) -> bool {"
       },
       {
@@ -4913,7 +6091,7 @@
         "kind": "struct",
         "doc": "",
         "file": "hid.rs",
-        "line": 157,
+        "line": 181,
         "signature": "pub struct InboundEvent"
       },
       {
@@ -4921,7 +6099,7 @@
         "kind": "fn",
         "doc": "Create a new inbound event.",
         "file": "hid.rs",
-        "line": 174,
+        "line": 198,
         "signature": "pub fn new(timestamp_ns: u64, source_id: &str, kind: EventKind, payload: EventPayload) -> Self {"
       },
       {
@@ -4929,7 +6107,7 @@
         "kind": "fn",
         "doc": "Set the capability lease ID.",
         "file": "hid.rs",
-        "line": 186,
+        "line": 210,
         "signature": "pub fn with_lease(mut self, lease_id: u64) -> Self {"
       },
       {
@@ -4937,7 +6115,7 @@
         "kind": "fn",
         "doc": "Set the span.",
         "file": "hid.rs",
-        "line": 192,
+        "line": 216,
         "signature": "pub fn with_span(mut self, span: Span) -> Self {"
       },
       {
@@ -4945,7 +6123,7 @@
         "kind": "fn",
         "doc": "Convert to a VibeScript Record value.",
         "file": "hid.rs",
-        "line": 198,
+        "line": 222,
         "signature": "pub fn to_value(&self) -> Value {"
       },
       {
@@ -4953,7 +6131,7 @@
         "kind": "fn",
         "doc": "Create a pointer move event.",
         "file": "hid.rs",
-        "line": 218,
+        "line": 242,
         "signature": "pub fn pointer_move(timestamp_ns: u64, source_id: &str, x: f64, y: f64) -> Self {"
       },
       {
@@ -4961,7 +6139,7 @@
         "kind": "fn",
         "doc": "Create a pointer button event.",
         "file": "hid.rs",
-        "line": 233,
+        "line": 257,
         "signature": "pub fn pointer_button("
       },
       {
@@ -4969,7 +6147,7 @@
         "kind": "fn",
         "doc": "Create a keyboard event.",
         "file": "hid.rs",
-        "line": 258,
+        "line": 282,
         "signature": "pub fn keyboard(timestamp_ns: u64, source_id: &str, key_code: i64, pressed: bool) -> Self {"
       },
       {
@@ -4977,7 +6155,7 @@
         "kind": "fn",
         "doc": "Create a touch event.",
         "file": "hid.rs",
-        "line": 274,
+        "line": 298,
         "signature": "pub fn touch("
       },
       {
@@ -4985,7 +6163,7 @@
         "kind": "fn",
         "doc": "Create a biosignal event (with capability lease).",
         "file": "hid.rs",
-        "line": 296,
+        "line": 320,
         "signature": "pub fn biosignal("
       },
       {
@@ -4993,7 +6171,7 @@
         "kind": "fn",
         "doc": "Create a depth map event (fat buffer).",
         "file": "hid.rs",
-        "line": 313,
+        "line": 337,
         "signature": "pub fn depth(timestamp_ns: u64, source_id: &str, iri: &str, hash: u64) -> Self {"
       },
       {
@@ -5001,7 +6179,7 @@
         "kind": "fn",
         "doc": "Create a sip-and-puff event (assistive input).\n`strength` is 0.0–1.0 (no puff → hard puff).\n`duration_ms` is the duration of the sip/puff in milliseconds.",
         "file": "hid.rs",
-        "line": 327,
+        "line": 351,
         "signature": "pub fn sip_and_puff("
       },
       {
@@ -5009,7 +6187,7 @@
         "kind": "fn",
         "doc": "Create a switch event (assistive input — single switch, binary).",
         "file": "hid.rs",
-        "line": 346,
+        "line": 370,
         "signature": "pub fn switch_event(timestamp_ns: u64, source_id: &str, switch_id: i64, pressed: bool) -> Self {"
       },
       {
@@ -5017,7 +6195,7 @@
         "kind": "fn",
         "doc": "Create a Braille chord event (assistive input).\n`dots` is a bitmask of the 8 Braille dots (bits 0–7).",
         "file": "hid.rs",
-        "line": 364,
+        "line": 388,
         "signature": "pub fn braille_chord(timestamp_ns: u64, source_id: &str, dots: u8) -> Self {"
       },
       {
@@ -5025,15 +6203,63 @@
         "kind": "fn",
         "doc": "Create an eye-gaze event (assistive input — eye tracking).",
         "file": "hid.rs",
-        "line": 377,
+        "line": 401,
         "signature": "pub fn eye_gaze(timestamp_ns: u64, source_id: &str, x: f64, y: f64, fixation_ms: u64) -> Self {"
+      },
+      {
+        "name": "gamepad",
+        "kind": "fn",
+        "doc": "Create a Gamepad event (buttons + axes).",
+        "file": "hid.rs",
+        "line": 416,
+        "signature": "pub fn gamepad(timestamp_ns: u64, source_id: &str, buttons: u32, axes: &[f64]) -> Self {"
+      },
+      {
+        "name": "spatial_head",
+        "kind": "fn",
+        "doc": "Create a 6-DoF Spatial Head pose event.",
+        "file": "hid.rs",
+        "line": 430,
+        "signature": "pub fn spatial_head(timestamp_ns: u64, source_id: &str, pos: [f64; 3], ori: [f64; 4]) -> Self {"
+      },
+      {
+        "name": "spatial_hand",
+        "kind": "fn",
+        "doc": "Create a 26-joint Spatial Hand skeleton tracking event.",
+        "file": "hid.rs",
+        "line": 448,
+        "signature": "pub fn spatial_hand("
+      },
+      {
+        "name": "spatial_gaze",
+        "kind": "fn",
+        "doc": "Create a Spatial Gaze tracking ray event.",
+        "file": "hid.rs",
+        "line": 470,
+        "signature": "pub fn spatial_gaze("
+      },
+      {
+        "name": "midi",
+        "kind": "fn",
+        "doc": "Create a MIDI controller message event.",
+        "file": "hid.rs",
+        "line": 494,
+        "signature": "pub fn midi(timestamp_ns: u64, source_id: &str, status: u8, data1: u8, data2: u8) -> Self {"
+      },
+      {
+        "name": "haptic",
+        "kind": "fn",
+        "doc": "Create a Haptic actuation event.",
+        "file": "hid.rs",
+        "line": 508,
+        "signature": "pub fn haptic("
       },
       {
         "name": "CueKind",
         "kind": "enum",
         "doc": "",
         "file": "hid.rs",
-        "line": 394,
+        "line": 530,
         "signature": "pub enum CueKind"
       },
       {
@@ -5041,7 +6267,7 @@
         "kind": "fn",
         "doc": "",
         "file": "hid.rs",
-        "line": 406,
+        "line": 542,
         "signature": "pub fn as_str(&self) -> &'static str {"
       },
       {
@@ -5049,7 +6275,7 @@
         "kind": "fn",
         "doc": "",
         "file": "hid.rs",
-        "line": 415,
+        "line": 551,
         "signature": "pub fn from_str(s: &str) -> Option<Self> {"
       },
       {
@@ -5057,7 +6283,7 @@
         "kind": "struct",
         "doc": "",
         "file": "hid.rs",
-        "line": 428,
+        "line": 564,
         "signature": "pub struct OutboundCue"
       },
       {
@@ -5065,7 +6291,7 @@
         "kind": "fn",
         "doc": "Create a haptic buzz cue.",
         "file": "hid.rs",
-        "line": 440,
+        "line": 576,
         "signature": "pub fn haptic_buzz(duration_ms: u64, strength: f64) -> Self {"
       },
       {
@@ -5073,7 +6299,7 @@
         "kind": "fn",
         "doc": "Create an audio earcon cue.",
         "file": "hid.rs",
-        "line": 452,
+        "line": 588,
         "signature": "pub fn audio_earcon(earcon_id: &str) -> Self {"
       },
       {
@@ -5081,7 +6307,7 @@
         "kind": "fn",
         "doc": "Create a screen reader announcement cue.",
         "file": "hid.rs",
-        "line": 463,
+        "line": 599,
         "signature": "pub fn accessibility_announce(message: &str) -> Self {"
       },
       {
@@ -5089,7 +6315,7 @@
         "kind": "fn",
         "doc": "Create a visual flash cue.",
         "file": "hid.rs",
-        "line": 474,
+        "line": 610,
         "signature": "pub fn visual_flash(color: &str, duration_ms: u64) -> Self {"
       },
       {
@@ -5097,7 +6323,7 @@
         "kind": "fn",
         "doc": "Convert to a VibeScript cue.post argument value.",
         "file": "hid.rs",
-        "line": 486,
+        "line": 622,
         "signature": "pub fn to_value(&self) -> Value {"
       },
       {
@@ -5105,7 +6331,7 @@
         "kind": "fn",
         "doc": "Get the cue ID string for cue.post (e.g. \"Haptic.buzz\").",
         "file": "hid.rs",
-        "line": 495,
+        "line": 631,
         "signature": "pub fn cue_id(&self) -> &str {"
       }
     ]
@@ -5293,7 +6519,7 @@
         "kind": "struct",
         "doc": "",
         "file": "lex.rs",
-        "line": 53,
+        "line": 62,
         "signature": "pub struct Token"
       },
       {
@@ -5301,7 +6527,7 @@
         "kind": "struct",
         "doc": "",
         "file": "lex.rs",
-        "line": 58,
+        "line": 67,
         "signature": "pub struct Lexer<'a>"
       },
       {
@@ -5309,15 +6535,23 @@
         "kind": "fn",
         "doc": "",
         "file": "lex.rs",
-        "line": 67,
+        "line": 78,
         "signature": "pub fn new(src: &'a str) -> Self {"
+      },
+      {
+        "name": "enable_locale",
+        "kind": "fn",
+        "doc": "Activate a second (or further) keyword locale for this source.\nEnglish keywords remain recognized.",
+        "file": "lex.rs",
+        "line": 91,
+        "signature": "pub fn enable_locale(&mut self, loc: crate::locale::Locale) {"
       },
       {
         "name": "source",
         "kind": "fn",
         "doc": "",
         "file": "lex.rs",
-        "line": 77,
+        "line": 97,
         "signature": "pub fn source(&self) -> &'a str {"
       },
       {
@@ -5325,7 +6559,7 @@
         "kind": "fn",
         "doc": "",
         "file": "lex.rs",
-        "line": 81,
+        "line": 101,
         "signature": "pub fn next_token(&mut self) -> Result<Token, Diagnostic> {"
       },
       {
@@ -5333,7 +6567,7 @@
         "kind": "fn",
         "doc": "",
         "file": "lex.rs",
-        "line": 569,
+        "line": 690,
         "signature": "pub fn is_keyword(text: &str) -> bool {"
       },
       {
@@ -5341,7 +6575,7 @@
         "kind": "fn",
         "doc": "",
         "file": "lex.rs",
-        "line": 610,
+        "line": 713,
         "signature": "pub fn tokenize(src: &str) -> Result<Vec<Token>, Diagnostic> {"
       }
     ]
@@ -5369,17 +6603,65 @@
       {
         "name": "ZH",
         "kind": "const",
-        "doc": "Chinese locale (second locale, proof of pipeline).",
+        "doc": "Chinese locale.",
         "file": "locale.rs",
         "line": 34,
         "signature": "pub const ZH: Locale = Locale(\"zh\")"
+      },
+      {
+        "name": "ES",
+        "kind": "const",
+        "doc": "Spanish locale.",
+        "file": "locale.rs",
+        "line": 36,
+        "signature": "pub const ES: Locale = Locale(\"es\")"
+      },
+      {
+        "name": "JA",
+        "kind": "const",
+        "doc": "Japanese locale.",
+        "file": "locale.rs",
+        "line": 38,
+        "signature": "pub const JA: Locale = Locale(\"ja\")"
+      },
+      {
+        "name": "AR",
+        "kind": "const",
+        "doc": "Arabic locale.",
+        "file": "locale.rs",
+        "line": 40,
+        "signature": "pub const AR: Locale = Locale(\"ar\")"
+      },
+      {
+        "name": "HI",
+        "kind": "const",
+        "doc": "Hindi locale.",
+        "file": "locale.rs",
+        "line": 42,
+        "signature": "pub const HI: Locale = Locale(\"hi\")"
+      },
+      {
+        "name": "FR",
+        "kind": "const",
+        "doc": "French locale.",
+        "file": "locale.rs",
+        "line": 44,
+        "signature": "pub const FR: Locale = Locale(\"fr\")"
+      },
+      {
+        "name": "DE",
+        "kind": "const",
+        "doc": "German locale.",
+        "file": "locale.rs",
+        "line": 46,
+        "signature": "pub const DE: Locale = Locale(\"de\")"
       },
       {
         "name": "code",
         "kind": "fn",
         "doc": "Get the locale code as a string.",
         "file": "locale.rs",
-        "line": 37,
+        "line": 49,
         "signature": "pub fn code(&self) -> &'static str {"
       },
       {
@@ -5387,7 +6669,7 @@
         "kind": "struct",
         "doc": "",
         "file": "locale.rs",
-        "line": 51,
+        "line": 63,
         "signature": "pub struct LocaleTable"
       },
       {
@@ -5395,7 +6677,7 @@
         "kind": "fn",
         "doc": "Create a new empty table for the given locale.",
         "file": "locale.rs",
-        "line": 60,
+        "line": 72,
         "signature": "pub fn new(locale: Locale) -> Self {"
       },
       {
@@ -5403,7 +6685,7 @@
         "kind": "fn",
         "doc": "Look up the canonical form of a locale-specific keyword.",
         "file": "locale.rs",
-        "line": 68,
+        "line": 80,
         "signature": "pub fn resolve(&self, keyword: &str) -> Option<&'static str> {"
       },
       {
@@ -5411,7 +6693,7 @@
         "kind": "fn",
         "doc": "Number of keywords in this table.",
         "file": "locale.rs",
-        "line": 73,
+        "line": 85,
         "signature": "pub fn len(&self) -> usize {"
       },
       {
@@ -5419,7 +6701,7 @@
         "kind": "fn",
         "doc": "Is this table empty?",
         "file": "locale.rs",
-        "line": 78,
+        "line": 90,
         "signature": "pub fn is_empty(&self) -> bool {"
       },
       {
@@ -5427,23 +6709,71 @@
         "kind": "fn",
         "doc": "The English locale table (canonical — keywords map to themselves).",
         "file": "locale.rs",
-        "line": 84,
+        "line": 96,
         "signature": "pub fn english_table() -> LocaleTable {"
       },
       {
         "name": "chinese_table",
         "kind": "fn",
-        "doc": "The Chinese locale table (second locale, proof of pipeline).",
+        "doc": "The Chinese locale table.",
         "file": "locale.rs",
-        "line": 94,
+        "line": 105,
         "signature": "pub fn chinese_table() -> LocaleTable {"
+      },
+      {
+        "name": "spanish_table",
+        "kind": "fn",
+        "doc": "The Spanish locale table.",
+        "file": "locale.rs",
+        "line": 158,
+        "signature": "pub fn spanish_table() -> LocaleTable {"
+      },
+      {
+        "name": "japanese_table",
+        "kind": "fn",
+        "doc": "The Japanese locale table.",
+        "file": "locale.rs",
+        "line": 211,
+        "signature": "pub fn japanese_table() -> LocaleTable {"
+      },
+      {
+        "name": "arabic_table",
+        "kind": "fn",
+        "doc": "The Arabic locale table.",
+        "file": "locale.rs",
+        "line": 264,
+        "signature": "pub fn arabic_table() -> LocaleTable {"
+      },
+      {
+        "name": "hindi_table",
+        "kind": "fn",
+        "doc": "The Hindi locale table.",
+        "file": "locale.rs",
+        "line": 317,
+        "signature": "pub fn hindi_table() -> LocaleTable {"
+      },
+      {
+        "name": "french_table",
+        "kind": "fn",
+        "doc": "The French locale table.",
+        "file": "locale.rs",
+        "line": 370,
+        "signature": "pub fn french_table() -> LocaleTable {"
+      },
+      {
+        "name": "german_table",
+        "kind": "fn",
+        "doc": "The German locale table.",
+        "file": "locale.rs",
+        "line": 423,
+        "signature": "pub fn german_table() -> LocaleTable {"
       },
       {
         "name": "ENGLISH_KEYWORDS",
         "kind": "const",
         "doc": "The canonical English keyword list.",
         "file": "locale.rs",
-        "line": 118,
+        "line": 476,
         "signature": "pub const ENGLISH_KEYWORDS: &[&str] = &["
       },
       {
@@ -5451,15 +6781,23 @@
         "kind": "struct",
         "doc": "",
         "file": "locale.rs",
-        "line": 157,
+        "line": 528,
         "signature": "pub struct LocaleRegistry"
+      },
+      {
+        "name": "with_all_locales",
+        "kind": "fn",
+        "doc": "Create a registry with all supported locales: en, zh, es, ja, ar, hi, fr, de.",
+        "file": "locale.rs",
+        "line": 542,
+        "signature": "pub fn with_all_locales() -> Self {"
       },
       {
         "name": "with_en_and_zh",
         "kind": "fn",
         "doc": "Create a registry with English and Chinese tables.",
         "file": "locale.rs",
-        "line": 171,
+        "line": 556,
         "signature": "pub fn with_en_and_zh() -> Self {"
       },
       {
@@ -5467,7 +6805,7 @@
         "kind": "fn",
         "doc": "Create a registry with the given tables.",
         "file": "locale.rs",
-        "line": 176,
+        "line": 561,
         "signature": "pub fn new(tables: Vec<LocaleTable>) -> Self {"
       },
       {
@@ -5475,7 +6813,7 @@
         "kind": "fn",
         "doc": "Resolve a keyword from any locale to its canonical English form.\nReturns (locale, canonical_keyword) if found.",
         "file": "locale.rs",
-        "line": 191,
+        "line": 576,
         "signature": "pub fn resolve(&self, keyword: &str) -> Option<(Locale, &'static str)> {"
       },
       {
@@ -5483,7 +6821,7 @@
         "kind": "fn",
         "doc": "Check if a string is a keyword in any locale.",
         "file": "locale.rs",
-        "line": 196,
+        "line": 581,
         "signature": "pub fn is_keyword(&self, text: &str) -> bool {"
       },
       {
@@ -5491,7 +6829,7 @@
         "kind": "fn",
         "doc": "Get the table for a specific locale.",
         "file": "locale.rs",
-        "line": 201,
+        "line": 586,
         "signature": "pub fn table_for(&self, locale: Locale) -> Option<&LocaleTable> {"
       },
       {
@@ -5499,7 +6837,7 @@
         "kind": "fn",
         "doc": "Number of registered locales.",
         "file": "locale.rs",
-        "line": 206,
+        "line": 591,
         "signature": "pub fn locale_count(&self) -> usize {"
       },
       {
@@ -5507,7 +6845,7 @@
         "kind": "fn",
         "doc": "Total number of keywords across all locales.",
         "file": "locale.rs",
-        "line": 211,
+        "line": 596,
         "signature": "pub fn total_keywords(&self) -> usize {"
       }
     ]
@@ -6092,231 +7430,553 @@
         "name": "Parser",
         "kind": "struct",
         "doc": "",
-        "file": "parse.rs",
-        "line": 8,
+        "file": "mod.rs",
+        "line": 13,
         "signature": "pub struct Parser<'a>"
       },
       {
         "name": "new",
         "kind": "fn",
         "doc": "",
-        "file": "parse.rs",
-        "line": 14,
+        "file": "mod.rs",
+        "line": 19,
         "signature": "pub fn new(src: &'a str) -> Result<Self, Diagnostic> {"
       },
       {
         "name": "source",
         "kind": "fn",
         "doc": "",
-        "file": "parse.rs",
-        "line": 21,
+        "file": "mod.rs",
+        "line": 26,
         "signature": "pub fn source(&self) -> &'a str {"
       },
       {
         "name": "parse_program",
         "kind": "fn",
         "doc": "",
-        "file": "parse.rs",
-        "line": 25,
+        "file": "mod.rs",
+        "line": 30,
         "signature": "pub fn parse_program(&mut self) -> Result<Program, Diagnostic> {"
       },
       {
         "name": "parse_cell_body",
         "kind": "fn",
         "doc": "",
-        "file": "parse.rs",
-        "line": 62,
+        "file": "mod.rs",
+        "line": 80,
         "signature": "pub fn parse_cell_body(&mut self) -> Result<Expr, Diagnostic> {"
       },
       {
         "name": "parse_program",
         "kind": "fn",
         "doc": "",
-        "file": "parse.rs",
-        "line": 1764,
+        "file": "mod.rs",
+        "line": 490,
         "signature": "pub fn parse_program(src: &str) -> Result<Program, Diagnostic> {"
       },
       {
         "name": "parse_cell",
         "kind": "fn",
         "doc": "",
-        "file": "parse.rs",
-        "line": 1768,
+        "file": "mod.rs",
+        "line": 494,
         "signature": "pub fn parse_cell(src: &str) -> Result<Expr, Diagnostic> {"
       }
     ]
   },
   {
+    "name": "parse::expr",
+    "doc": "",
+    "items": []
+  },
+  {
+    "name": "parse::items",
+    "doc": "",
+    "items": []
+  },
+  {
+    "name": "parse::preamble",
+    "doc": "",
+    "items": []
+  },
+  {
+    "name": "parse::stmt",
+    "doc": "",
+    "items": []
+  },
+  {
     "name": "physics",
-    "doc": "Physics primitives — WorldLine continuants and frame morphisms (W2, W5).\n\n## W2: WorldLine as continuant's time-like self\n\nA WorldLine is not just an IRI — it is the time-like identity of a\ncontinuant. This module adds the temporal trajectory: a sequence of\n(Instant, Pose) waypoints that trace the continuant through time.\nThe WorldLine IS the continuant's persistence — it is what stays\nthe same while the continuant changes.\n\n## W5: Frame morphisms (Galilean → Lorentz)\n\nA Frame morphism transforms coordinates from one frame to another.\nThe Galilean morphism is the low-velocity limit (t' = t, x' = x - vt).\nThe Lorentz morphism is the relativistic transform (with time dilation\nand length contraction). The morphism is explicit — no implicit\nconversion between frames.\n\nReference: `docs/vibescript-full-impl-PLAN.md` wish list W2, W5.",
+    "doc": "Physics & Creator Physics module (Fields, Materials, Interaction Laws, Continuant WorldLines, and Frame Morphisms).\n\nProvides first-class physical domain primitives for VibeScript without consuming\nor reallocating the ten manifold axes (XYZD+T Option A).",
     "items": [
       {
-        "name": "Waypoint",
+        "name": "fields",
+        "kind": "module",
+        "doc": "",
+        "file": "mod.rs",
+        "line": 6,
+        "signature": "pub mod fields;"
+      },
+      {
+        "name": "laws",
+        "kind": "module",
+        "doc": "",
+        "file": "mod.rs",
+        "line": 7,
+        "signature": "pub mod laws;"
+      },
+      {
+        "name": "materials",
+        "kind": "module",
+        "doc": "",
+        "file": "mod.rs",
+        "line": 8,
+        "signature": "pub mod materials;"
+      },
+      {
+        "name": "morphism",
+        "kind": "module",
+        "doc": "",
+        "file": "mod.rs",
+        "line": 9,
+        "signature": "pub mod morphism;"
+      },
+      {
+        "name": "trajectory",
+        "kind": "module",
+        "doc": "",
+        "file": "mod.rs",
+        "line": 10,
+        "signature": "pub mod trajectory;"
+      },
+      {
+        "name": "FieldUnit}",
+        "kind": "use",
+        "doc": "",
+        "file": "mod.rs",
+        "line": 12,
+        "signature": "pub use fields::{AnalyticFieldProfile, FieldDeclaration, FieldQuantity, FieldUnit};"
+      },
+      {
+        "name": "{",
+        "kind": "use",
+        "doc": "",
+        "file": "mod.rs",
+        "line": 13,
+        "signature": "pub use laws::{"
+      },
+      {
+        "name": "{",
+        "kind": "use",
+        "doc": "",
+        "file": "mod.rs",
+        "line": 16,
+        "signature": "pub use materials::{"
+      },
+      {
+        "name": "LorentzMorphism}",
+        "kind": "use",
+        "doc": "",
+        "file": "mod.rs",
+        "line": 19,
+        "signature": "pub use morphism::{transform_frame, GalileanMorphism, LorentzMorphism};"
+      },
+      {
+        "name": "WorldLineTrajectory}",
+        "kind": "use",
+        "doc": "",
+        "file": "mod.rs",
+        "line": 20,
+        "signature": "pub use trajectory::{Waypoint, WorldLineTrajectory};"
+      }
+    ]
+  },
+  {
+    "name": "physics::fields",
+    "doc": "Ambient Fields — spatial-physical field declarations and samplers.\n\nRepresents physical quantities defined over manifold space (pressure, temperature,\nEM / IOR medium, acoustic impedance, chemical species) without consuming 10D tensor axes.\n\nReference: `docs/plans/vibe-design/20260819_fields-materials-and-creator-physics.md` §2.1.",
+    "items": [
+      {
+        "name": "FieldQuantity",
+        "kind": "enum",
+        "doc": "",
+        "file": "fields.rs",
+        "line": 12,
+        "signature": "pub enum FieldQuantity"
+      },
+      {
+        "name": "as_iri",
+        "kind": "fn",
+        "doc": "",
+        "file": "fields.rs",
+        "line": 23,
+        "signature": "pub fn as_iri(&self) -> &str {"
+      },
+      {
+        "name": "FieldUnit",
+        "kind": "enum",
+        "doc": "",
+        "file": "fields.rs",
+        "line": 38,
+        "signature": "pub enum FieldUnit"
+      },
+      {
+        "name": "as_iri",
+        "kind": "fn",
+        "doc": "",
+        "file": "fields.rs",
+        "line": 52,
+        "signature": "pub fn as_iri(&self) -> &str {"
+      },
+      {
+        "name": "AnalyticFieldProfile",
+        "kind": "enum",
+        "doc": "",
+        "file": "fields.rs",
+        "line": 70,
+        "signature": "pub enum AnalyticFieldProfile"
+      },
+      {
+        "name": "FieldDeclaration",
         "kind": "struct",
         "doc": "",
-        "file": "physics.rs",
+        "file": "fields.rs",
+        "line": 91,
+        "signature": "pub struct FieldDeclaration"
+      },
+      {
+        "name": "standard_atmosphere",
+        "kind": "fn",
+        "doc": "Create standard atmospheric sea-level pressure field (101.325 kPa at z=0, scale height 8500m).",
+        "file": "fields.rs",
+        "line": 108,
+        "signature": "pub fn standard_atmosphere() -> Self {"
+      },
+      {
+        "name": "ambient_room_temperature",
+        "kind": "fn",
+        "doc": "Create room-temperature thermal field (293.15 K uniform).",
+        "file": "fields.rs",
+        "line": 123,
+        "signature": "pub fn ambient_room_temperature() -> Self {"
+      },
+      {
+        "name": "water_solvent",
+        "kind": "fn",
+        "doc": "Create a water solvent presence field (H2O concentration mol/m³).",
+        "file": "fields.rs",
+        "line": 135,
+        "signature": "pub fn water_solvent(concentration: f64) -> Self {"
+      },
+      {
+        "name": "sample_at",
+        "kind": "fn",
+        "doc": "",
+        "file": "fields.rs",
+        "line": 148,
+        "signature": "pub fn sample_at(&self, position: &[f64]) -> f64 {"
+      }
+    ]
+  },
+  {
+    "name": "physics::laws",
+    "doc": "Interaction Laws — physical transformation rules and evaluation engine.\n\nEvaluates interaction conditions when ambient fields, material signatures,\nand spatial continuants meet, producing deterministic transformation events.\n\nReference: `docs/plans/vibe-design/20260819_fields-materials-and-creator-physics.md` §2.3.",
+    "items": [
+      {
+        "name": "ContinuantState",
+        "kind": "struct",
+        "doc": "",
+        "file": "laws.rs",
+        "line": 14,
+        "signature": "pub struct ContinuantState"
+      },
+      {
+        "name": "InteractionEvent",
+        "kind": "enum",
+        "doc": "",
+        "file": "laws.rs",
         "line": 26,
-        "signature": "pub struct Waypoint"
+        "signature": "pub enum InteractionEvent"
       },
       {
-        "name": "new",
+        "name": "evaluate_field_interactions",
         "kind": "fn",
-        "doc": "",
-        "file": "physics.rs",
-        "line": 36,
-        "signature": "pub fn new(t_secs: i64, t_nanos: u32, pose: Pose) -> Self {"
+        "doc": "Evaluates ambient field interaction laws against a continuant.",
+        "file": "laws.rs",
+        "line": 58,
+        "signature": "pub fn evaluate_field_interactions("
       },
       {
-        "name": "total_nanos",
+        "name": "evaluate_pairwise_interactions",
         "kind": "fn",
-        "doc": "Total time in nanoseconds.",
-        "file": "physics.rs",
-        "line": 45,
-        "signature": "pub fn total_nanos(&self) -> i128 {"
-      },
+        "doc": "Evaluates pairwise proximity interactions between two continuants (solvation, immiscibility).",
+        "file": "laws.rs",
+        "line": 127,
+        "signature": "pub fn evaluate_pairwise_interactions("
+      }
+    ]
+  },
+  {
+    "name": "physics::materials",
+    "doc": "Material Signatures — physical continuant properties and response traits.\n\nEncodes mechanical, optical, acoustic, chemical, and thermal facets on continuants\nas unit-bearing signed records without polluting 10D tensor coordinates.\n\nReference: `docs/plans/vibe-design/20260819_fields-materials-and-creator-physics.md` §2.2.",
+    "items": [
       {
-        "name": "WorldLineTrajectory",
+        "name": "MechanicalFacet",
         "kind": "struct",
         "doc": "",
-        "file": "physics.rs",
-        "line": 57,
-        "signature": "pub struct WorldLineTrajectory"
+        "file": "materials.rs",
+        "line": 10,
+        "signature": "pub struct MechanicalFacet"
       },
       {
-        "name": "new",
-        "kind": "fn",
+        "name": "OpticalFacet",
+        "kind": "struct",
         "doc": "",
-        "file": "physics.rs",
-        "line": 65,
-        "signature": "pub fn new(worldline: WorldLine) -> Self {"
+        "file": "materials.rs",
+        "line": 23,
+        "signature": "pub struct OpticalFacet"
       },
       {
-        "name": "add",
-        "kind": "fn",
-        "doc": "Add a waypoint. Waypoints are kept sorted by time.",
-        "file": "physics.rs",
-        "line": 73,
-        "signature": "pub fn add(&mut self, waypoint: Waypoint) -> &mut Self {"
+        "name": "AcousticFacet",
+        "kind": "struct",
+        "doc": "",
+        "file": "materials.rs",
+        "line": 34,
+        "signature": "pub struct AcousticFacet"
       },
       {
-        "name": "pose_at",
-        "kind": "fn",
-        "doc": "Get the pose at a given time by linear interpolation.\nReturns None if the time is outside the waypoint range.",
-        "file": "physics.rs",
-        "line": 83,
-        "signature": "pub fn pose_at(&self, t_secs: i64, t_nanos: u32) -> Option<Pose> {"
+        "name": "ChemicalFacet",
+        "kind": "struct",
+        "doc": "",
+        "file": "materials.rs",
+        "line": 43,
+        "signature": "pub struct ChemicalFacet"
       },
       {
-        "name": "len",
-        "kind": "fn",
-        "doc": "Number of waypoints.",
-        "file": "physics.rs",
-        "line": 126,
-        "signature": "pub fn len(&self) -> usize {"
+        "name": "ThermalFacet",
+        "kind": "struct",
+        "doc": "",
+        "file": "materials.rs",
+        "line": 56,
+        "signature": "pub struct ThermalFacet"
       },
       {
-        "name": "is_empty",
-        "kind": "fn",
-        "doc": "Is the trajectory empty?",
-        "file": "physics.rs",
-        "line": 131,
-        "signature": "pub fn is_empty(&self) -> bool {"
+        "name": "MaterialSignature",
+        "kind": "struct",
+        "doc": "",
+        "file": "materials.rs",
+        "line": 69,
+        "signature": "pub struct MaterialSignature"
       },
       {
-        "name": "span_nanos",
+        "name": "sugar_cube",
         "kind": "fn",
-        "doc": "Total time span in nanoseconds (last - first).",
-        "file": "physics.rs",
-        "line": 136,
-        "signature": "pub fn span_nanos(&self) -> Option<i128> {"
+        "doc": "Sugar Cube (Sucrose) canonical specification from primer §2.2.",
+        "file": "materials.rs",
+        "line": 88,
+        "signature": "pub fn sugar_cube() -> Self {"
       },
+      {
+        "name": "liquid_water",
+        "kind": "fn",
+        "doc": "Liquid Water canonical specification.",
+        "file": "materials.rs",
+        "line": 123,
+        "signature": "pub fn liquid_water() -> Self {"
+      },
+      {
+        "name": "mineral_oil",
+        "kind": "fn",
+        "doc": "Mineral Oil specification (immiscible with water).",
+        "file": "materials.rs",
+        "line": 158,
+        "signature": "pub fn mineral_oil() -> Self {"
+      }
+    ]
+  },
+  {
+    "name": "physics::morphism",
+    "doc": "Frame morphisms (Galilean → Lorentz) (W5).",
+    "items": [
       {
         "name": "GalileanMorphism",
         "kind": "struct",
         "doc": "",
-        "file": "physics.rs",
-        "line": 155,
+        "file": "morphism.rs",
+        "line": 12,
         "signature": "pub struct GalileanMorphism"
       },
       {
         "name": "new",
         "kind": "fn",
         "doc": "",
-        "file": "physics.rs",
-        "line": 161,
+        "file": "morphism.rs",
+        "line": 18,
         "signature": "pub fn new(velocity: Vec<f64>) -> Self {"
       },
       {
         "name": "transform",
         "kind": "fn",
         "doc": "Transform a position [x, y, z, t] from source to target frame.\nReturns [x', y', z', t'].",
-        "file": "physics.rs",
-        "line": 167,
+        "file": "morphism.rs",
+        "line": 24,
         "signature": "pub fn transform(&self, position: &[f64]) -> Vec<f64> {"
       },
       {
         "name": "inverse",
         "kind": "fn",
         "doc": "The inverse morphism (target → source).",
-        "file": "physics.rs",
-        "line": 182,
+        "file": "morphism.rs",
+        "line": 39,
         "signature": "pub fn inverse(&self) -> Self {"
       },
       {
         "name": "LorentzMorphism",
         "kind": "struct",
         "doc": "",
-        "file": "physics.rs",
-        "line": 200,
+        "file": "morphism.rs",
+        "line": 57,
         "signature": "pub struct LorentzMorphism"
+      },
+      {
+        "name": "C",
+        "kind": "const",
+        "doc": "",
+        "file": "morphism.rs",
+        "line": 65,
+        "signature": "pub const C: f64 = 299_792_458.0"
       },
       {
         "name": "new",
         "kind": "fn",
         "doc": "",
-        "file": "physics.rs",
-        "line": 210,
+        "file": "morphism.rs",
+        "line": 67,
         "signature": "pub fn new(velocity: f64) -> Self {"
       },
       {
         "name": "with_c",
         "kind": "fn",
         "doc": "Create with a custom speed of light (for testing).",
-        "file": "physics.rs",
-        "line": 218,
+        "file": "morphism.rs",
+        "line": 75,
         "signature": "pub fn with_c(velocity: f64, c: f64) -> Self {"
       },
       {
         "name": "gamma",
         "kind": "fn",
         "doc": "Lorentz factor gamma = 1/sqrt(1 - v²/c²).",
-        "file": "physics.rs",
-        "line": 223,
+        "file": "morphism.rs",
+        "line": 80,
         "signature": "pub fn gamma(&self) -> f64 {"
       },
       {
         "name": "transform",
         "kind": "fn",
         "doc": "Transform [t, x, y, z] from source to target frame.\nReturns [t', x', y', z'].",
-        "file": "physics.rs",
-        "line": 230,
+        "file": "morphism.rs",
+        "line": 87,
         "signature": "pub fn transform(&self, coords: &[f64]) -> Vec<f64> {"
       },
       {
         "name": "inverse",
         "kind": "fn",
         "doc": "The inverse morphism (target → source).",
-        "file": "physics.rs",
-        "line": 247,
+        "file": "morphism.rs",
+        "line": 104,
         "signature": "pub fn inverse(&self) -> Self {"
       },
       {
         "name": "transform_frame",
         "kind": "fn",
         "doc": "Apply a frame morphism to a Frame, producing the transformed frame.",
-        "file": "physics.rs",
-        "line": 256,
+        "file": "morphism.rs",
+        "line": 113,
         "signature": "pub fn transform_frame(frame: &Frame, morphism: &GalileanMorphism) -> Frame {"
+      }
+    ]
+  },
+  {
+    "name": "physics::trajectory",
+    "doc": "WorldLine trajectory & temporal persistence (W2).",
+    "items": [
+      {
+        "name": "Waypoint",
+        "kind": "struct",
+        "doc": "",
+        "file": "trajectory.rs",
+        "line": 7,
+        "signature": "pub struct Waypoint"
+      },
+      {
+        "name": "new",
+        "kind": "fn",
+        "doc": "",
+        "file": "trajectory.rs",
+        "line": 17,
+        "signature": "pub fn new(t_secs: i64, t_nanos: u32, pose: Pose) -> Self {"
+      },
+      {
+        "name": "total_nanos",
+        "kind": "fn",
+        "doc": "Total time in nanoseconds.",
+        "file": "trajectory.rs",
+        "line": 26,
+        "signature": "pub fn total_nanos(&self) -> i128 {"
+      },
+      {
+        "name": "WorldLineTrajectory",
+        "kind": "struct",
+        "doc": "",
+        "file": "trajectory.rs",
+        "line": 33,
+        "signature": "pub struct WorldLineTrajectory"
+      },
+      {
+        "name": "new",
+        "kind": "fn",
+        "doc": "",
+        "file": "trajectory.rs",
+        "line": 41,
+        "signature": "pub fn new(worldline: WorldLine) -> Self {"
+      },
+      {
+        "name": "add",
+        "kind": "fn",
+        "doc": "Add a waypoint. Waypoints are kept sorted by time.",
+        "file": "trajectory.rs",
+        "line": 49,
+        "signature": "pub fn add(&mut self, waypoint: Waypoint) -> &mut Self {"
+      },
+      {
+        "name": "pose_at",
+        "kind": "fn",
+        "doc": "Get the pose at a given time by linear interpolation.\nReturns None if the time is outside the waypoint range.",
+        "file": "trajectory.rs",
+        "line": 59,
+        "signature": "pub fn pose_at(&self, t_secs: i64, t_nanos: u32) -> Option<Pose> {"
+      },
+      {
+        "name": "len",
+        "kind": "fn",
+        "doc": "Number of waypoints.",
+        "file": "trajectory.rs",
+        "line": 102,
+        "signature": "pub fn len(&self) -> usize {"
+      },
+      {
+        "name": "is_empty",
+        "kind": "fn",
+        "doc": "Is the trajectory empty?",
+        "file": "trajectory.rs",
+        "line": 107,
+        "signature": "pub fn is_empty(&self) -> bool {"
+      },
+      {
+        "name": "span_nanos",
+        "kind": "fn",
+        "doc": "Total time span in nanoseconds (last - first).",
+        "file": "trajectory.rs",
+        "line": 112,
+        "signature": "pub fn span_nanos(&self) -> Option<i128> {"
       }
     ]
   },
@@ -6637,6 +8297,148 @@
     ]
   },
   {
+    "name": "projectional",
+    "doc": "Projectional authoring — structure is the source of truth, text is a view (W1).\n\nThis module implements the projectional authoring model for VibeScript:\n\n- **Project**: Convert an AST `Program` back to canonical source text.\n  The AST is the source of truth; the text is a *projection* of it.\n- **Edit**: Apply structural edits to a `Program` without round-tripping\n  through text. Edits are typed operations, not string patches.\n- **Round-trip**: `parse → project → parse` yields an equivalent AST.\n- **Trivia preservation**: When a CST is available (trivia collected),\n  the projector can interleave comments and whitespace from the original\n  source.\n\nThis stops LLMs and humans from forking a second syntax: the structure\nis authoritative, and text is always derivable from it.\n\nReference: `docs/vibescript-full-impl-PLAN.md` W1.",
+    "items": [
+      {
+        "name": "ProjectOptions",
+        "kind": "struct",
+        "doc": "",
+        "file": "projectional.rs",
+        "line": 32,
+        "signature": "pub struct ProjectOptions"
+      },
+      {
+        "name": "project_program",
+        "kind": "fn",
+        "doc": "Project a `Program` AST to canonical source text.\n\nThe output is valid VibeScript that, when re-parsed, yields an\nequivalent AST (modulo spans and trivia).",
+        "file": "projectional.rs",
+        "line": 57,
+        "signature": "pub fn project_program(prog: &Program, opts: &ProjectOptions) -> String {"
+      },
+      {
+        "name": "project_item",
+        "kind": "fn",
+        "doc": "Project a single top-level item.",
+        "file": "projectional.rs",
+        "line": 117,
+        "signature": "pub fn project_item(item: &Item, opts: &ProjectOptions, out: &mut String) {"
+      },
+      {
+        "name": "Edit",
+        "kind": "enum",
+        "doc": "",
+        "file": "projectional.rs",
+        "line": 955,
+        "signature": "pub enum Edit"
+      },
+      {
+        "name": "apply_edit",
+        "kind": "fn",
+        "doc": "Apply a structural edit to a program, returning a new program.\n\nThis does not modify the original — projectional authoring treats\nthe AST as immutable structure; edits produce new structure.",
+        "file": "projectional.rs",
+        "line": 995,
+        "signature": "pub fn apply_edit(prog: &Program, edit: &Edit) -> Program {"
+      },
+      {
+        "name": "apply_edits",
+        "kind": "fn",
+        "doc": "Apply a sequence of edits, producing the final program.",
+        "file": "projectional.rs",
+        "line": 1079,
+        "signature": "pub fn apply_edits(prog: &Program, edits: &[Edit]) -> Program {"
+      },
+      {
+        "name": "project_with_trivia",
+        "kind": "fn",
+        "doc": "Project a program with trivia preservation.\n\nGiven a CST (program with trivia), the projector interleaves\ncomments and whitespace from the original source into the\nprojected text. This is a best-effort process — structural edits\nmay invalidate original trivia positions.",
+        "file": "projectional.rs",
+        "line": 1107,
+        "signature": "pub fn project_with_trivia("
+      },
+      {
+        "name": "make_field",
+        "kind": "fn",
+        "doc": "Helper: build a simple field declaration.",
+        "file": "projectional.rs",
+        "line": 1189,
+        "signature": "pub fn make_field("
+      },
+      {
+        "name": "make_material",
+        "kind": "fn",
+        "doc": "Helper: build a simple material declaration.",
+        "file": "projectional.rs",
+        "line": 1211,
+        "signature": "pub fn make_material(name: &str, properties: Vec<(&str, Expr)>) -> Item {"
+      },
+      {
+        "name": "make_law",
+        "kind": "fn",
+        "doc": "Helper: build a simple law declaration.",
+        "file": "projectional.rs",
+        "line": 1227,
+        "signature": "pub fn make_law(name: &str, condition: Expr, consequence: Expr) -> Item {"
+      },
+      {
+        "name": "make_int",
+        "kind": "fn",
+        "doc": "Helper: build an integer literal expression.",
+        "file": "projectional.rs",
+        "line": 1237,
+        "signature": "pub fn make_int(n: i64) -> Expr {"
+      },
+      {
+        "name": "make_float",
+        "kind": "fn",
+        "doc": "Helper: build a float literal expression.",
+        "file": "projectional.rs",
+        "line": 1245,
+        "signature": "pub fn make_float(f: f64) -> Expr {"
+      },
+      {
+        "name": "make_string",
+        "kind": "fn",
+        "doc": "Helper: build a string literal expression.",
+        "file": "projectional.rs",
+        "line": 1253,
+        "signature": "pub fn make_string(s: &str) -> Expr {"
+      },
+      {
+        "name": "make_ident",
+        "kind": "fn",
+        "doc": "Helper: build an identifier expression.",
+        "file": "projectional.rs",
+        "line": 1261,
+        "signature": "pub fn make_ident(s: &str) -> Expr {"
+      },
+      {
+        "name": "make_binary",
+        "kind": "fn",
+        "doc": "Helper: build a binary expression.",
+        "file": "projectional.rs",
+        "line": 1269,
+        "signature": "pub fn make_binary(op: BinOp, left: Expr, right: Expr) -> Expr {"
+      },
+      {
+        "name": "make_call",
+        "kind": "fn",
+        "doc": "Helper: build a call expression.",
+        "file": "projectional.rs",
+        "line": 1281,
+        "signature": "pub fn make_call(callee: &str, args: Vec<Expr>) -> Expr {"
+      },
+      {
+        "name": "make_member",
+        "kind": "fn",
+        "doc": "Helper: build a member access expression.",
+        "file": "projectional.rs",
+        "line": 1292,
+        "signature": "pub fn make_member(recv: &str, name: &str) -> Expr {"
+      }
+    ]
+  },
+  {
     "name": "quantity",
     "doc": "Quantity dimension algebra and unit conversions (T73).\n\nSI base dimensions and derived unit conversions computed via dimensional exponents.",
     "items": [
@@ -6686,7 +8488,7 @@
         "doc": "",
         "file": "quantity.rs",
         "line": 51,
-        "signature": "pub const fn current() -> Self {"
+        "signature": "pub const fn frequency() -> Self {"
       },
       {
         "name": "fn",
@@ -6694,7 +8496,7 @@
         "doc": "",
         "file": "quantity.rs",
         "line": 57,
-        "signature": "pub const fn temperature() -> Self {"
+        "signature": "pub const fn current() -> Self {"
       },
       {
         "name": "fn",
@@ -6702,7 +8504,7 @@
         "doc": "",
         "file": "quantity.rs",
         "line": 63,
-        "signature": "pub const fn amount() -> Self {"
+        "signature": "pub const fn temperature() -> Self {"
       },
       {
         "name": "fn",
@@ -6710,6 +8512,14 @@
         "doc": "",
         "file": "quantity.rs",
         "line": 69,
+        "signature": "pub const fn amount() -> Self {"
+      },
+      {
+        "name": "fn",
+        "kind": "const",
+        "doc": "",
+        "file": "quantity.rs",
+        "line": 75,
         "signature": "pub const fn luminous() -> Self {"
       },
       {
@@ -6717,7 +8527,7 @@
         "kind": "const",
         "doc": "",
         "file": "quantity.rs",
-        "line": 76,
+        "line": 82,
         "signature": "pub const fn area() -> Self {"
       },
       {
@@ -6725,7 +8535,7 @@
         "kind": "const",
         "doc": "",
         "file": "quantity.rs",
-        "line": 82,
+        "line": 88,
         "signature": "pub const fn volume() -> Self {"
       },
       {
@@ -6733,7 +8543,7 @@
         "kind": "const",
         "doc": "",
         "file": "quantity.rs",
-        "line": 88,
+        "line": 94,
         "signature": "pub const fn velocity() -> Self {"
       },
       {
@@ -6741,7 +8551,7 @@
         "kind": "const",
         "doc": "",
         "file": "quantity.rs",
-        "line": 95,
+        "line": 101,
         "signature": "pub const fn acceleration() -> Self {"
       },
       {
@@ -6749,7 +8559,7 @@
         "kind": "const",
         "doc": "",
         "file": "quantity.rs",
-        "line": 102,
+        "line": 108,
         "signature": "pub const fn force() -> Self {"
       },
       {
@@ -6757,7 +8567,7 @@
         "kind": "const",
         "doc": "",
         "file": "quantity.rs",
-        "line": 110,
+        "line": 116,
         "signature": "pub const fn pressure() -> Self {"
       },
       {
@@ -6765,7 +8575,7 @@
         "kind": "const",
         "doc": "",
         "file": "quantity.rs",
-        "line": 118,
+        "line": 124,
         "signature": "pub const fn energy() -> Self {"
       },
       {
@@ -6773,7 +8583,7 @@
         "kind": "const",
         "doc": "",
         "file": "quantity.rs",
-        "line": 126,
+        "line": 132,
         "signature": "pub const fn power() -> Self {"
       },
       {
@@ -6781,7 +8591,7 @@
         "kind": "struct",
         "doc": "",
         "file": "quantity.rs",
-        "line": 169,
+        "line": 175,
         "signature": "pub struct Unit"
       },
       {
@@ -6789,7 +8599,7 @@
         "kind": "fn",
         "doc": "",
         "file": "quantity.rs",
-        "line": 177,
+        "line": 183,
         "signature": "pub fn new(symbol: impl Into<String>, dimension: Dimension, scale: f64) -> Self {"
       },
       {
@@ -6797,7 +8607,7 @@
         "kind": "fn",
         "doc": "",
         "file": "quantity.rs",
-        "line": 186,
+        "line": 192,
         "signature": "pub fn with_offset("
       },
       {
@@ -6805,7 +8615,7 @@
         "kind": "fn",
         "doc": "Convert a numeric value from `self` to `target`.\nReturns Err if the dimensions do not match.",
         "file": "quantity.rs",
-        "line": 202,
+        "line": 208,
         "signature": "pub fn convert(&self, value: f64, target: &Unit) -> Result<f64, String> {"
       },
       {
@@ -6813,8 +8623,182 @@
         "kind": "fn",
         "doc": "Look up standard units by symbol.",
         "file": "quantity.rs",
-        "line": 219,
+        "line": 225,
         "signature": "pub fn lookup_unit(symbol: &str) -> Option<Unit> {"
+      },
+      {
+        "name": "UnitId",
+        "kind": "struct",
+        "doc": "",
+        "file": "quantity.rs",
+        "line": 269,
+        "signature": "pub struct UnitId"
+      },
+      {
+        "name": "new",
+        "kind": "fn",
+        "doc": "",
+        "file": "quantity.rs",
+        "line": 274,
+        "signature": "pub fn new(symbol: impl Into<String>) -> Self {"
+      },
+      {
+        "name": "compatible",
+        "kind": "fn",
+        "doc": "",
+        "file": "quantity.rs",
+        "line": 280,
+        "signature": "pub fn compatible(&self, other: &Self) -> bool {"
+      },
+      {
+        "name": "tween",
+        "kind": "fn",
+        "doc": "Linear tween of two same-unit scalars. `t` is clamped to `[0, 1]`.",
+        "file": "quantity.rs",
+        "line": 289,
+        "signature": "pub fn tween(a: f64, a_unit: &str, b: f64, b_unit: &str, t: f64) -> Result<f64, String> {"
+      }
+    ]
+  },
+  {
+    "name": "reactive_cell",
+    "doc": "",
+    "items": [
+      {
+        "name": "ReactiveCellError",
+        "kind": "enum",
+        "doc": "",
+        "file": "reactive_cell.rs",
+        "line": 11,
+        "signature": "pub enum ReactiveCellError"
+      },
+      {
+        "name": "ReactiveCell",
+        "kind": "struct",
+        "doc": "",
+        "file": "reactive_cell.rs",
+        "line": 44,
+        "signature": "pub struct ReactiveCell"
+      },
+      {
+        "name": "ReactiveCellGraph",
+        "kind": "struct",
+        "doc": "",
+        "file": "reactive_cell.rs",
+        "line": 65,
+        "signature": "pub struct ReactiveCellGraph"
+      },
+      {
+        "name": "new",
+        "kind": "fn",
+        "doc": "Construct a new empty reactive cell graph.",
+        "file": "reactive_cell.rs",
+        "line": 80,
+        "signature": "pub fn new() -> Self {"
+      },
+      {
+        "name": "from_program",
+        "kind": "fn",
+        "doc": "Build a reactive cell graph from an AST Program.",
+        "file": "reactive_cell.rs",
+        "line": 91,
+        "signature": "pub fn from_program(program: &Program) -> Result<Self, ReactiveCellError> {"
+      },
+      {
+        "name": "add_cell",
+        "kind": "fn",
+        "doc": "Add a cell declaration to the graph.",
+        "file": "reactive_cell.rs",
+        "line": 103,
+        "signature": "pub fn add_cell(&mut self, decl: CellDecl) -> usize {"
+      },
+      {
+        "name": "is_dirty_bit",
+        "kind": "fn",
+        "doc": "True if cell `idx` is marked dirty. Works past 64 cells.",
+        "file": "reactive_cell.rs",
+        "line": 152,
+        "signature": "pub fn is_dirty_bit(&self, idx: usize) -> bool {"
+      },
+      {
+        "name": "dirty_mask",
+        "kind": "fn",
+        "doc": "First 64 dirty bits (debug / HUD). Prefer [`Self::is_dirty_bit`].",
+        "file": "reactive_cell.rs",
+        "line": 161,
+        "signature": "pub fn dirty_mask(&self) -> u64 {"
+      },
+      {
+        "name": "compile",
+        "kind": "fn",
+        "doc": "Compile dependencies, wire dependents, check cycles, and compute topological order.",
+        "file": "reactive_cell.rs",
+        "line": 166,
+        "signature": "pub fn compile(&mut self) -> Result<(), ReactiveCellError> {"
+      },
+      {
+        "name": "mark_dirty",
+        "kind": "fn",
+        "doc": "Mark a single cell and all its transitive downstream dependents as dirty.",
+        "file": "reactive_cell.rs",
+        "line": 220,
+        "signature": "pub fn mark_dirty(&mut self, name: &str) {"
+      },
+      {
+        "name": "mark_all_dirty",
+        "kind": "fn",
+        "doc": "Mark all cells in the graph as dirty.",
+        "file": "reactive_cell.rs",
+        "line": 235,
+        "signature": "pub fn mark_all_dirty(&mut self) {"
+      },
+      {
+        "name": "set_input",
+        "kind": "fn",
+        "doc": "Set an external input signal / variable and mark downstream cells dirty.",
+        "file": "reactive_cell.rs",
+        "line": 251,
+        "signature": "pub fn set_input(&mut self, name: &str, value: Value, env: &mut Env) {"
+      },
+      {
+        "name": "step",
+        "kind": "fn",
+        "doc": "Advance time and evaluate dirty cells on a **local** in-process host.\n\nPrefer [`Self::step_with`] when a live `Host` (Poet, tests with\nquery rows, GPU) must dispatch capability.invoke.",
+        "file": "reactive_cell.rs",
+        "line": 269,
+        "signature": "pub fn step("
+      },
+      {
+        "name": "CELL_BATCH_512",
+        "kind": "const",
+        "doc": "Homogeneous ready-cluster size for P16.2. Scalar path still\nevaluates one cell at a time; the batch is the set of dirty cells\nwhose dependencies are already clean, capped at 512.",
+        "file": "reactive_cell.rs",
+        "line": 282,
+        "signature": "pub const CELL_BATCH_512: usize = 512"
+      },
+      {
+        "name": "evaluate_cell_batch_512",
+        "kind": "fn",
+        "doc": "One ready cluster of up to 512 dirty cells, then stop.\nCallers loop until the dirty set is empty.",
+        "file": "reactive_cell.rs",
+        "line": 286,
+        "signature": "pub fn evaluate_cell_batch_512<H: Host>("
+      },
+      {
+        "name": "step_with",
+        "kind": "fn",
+        "doc": "Advance time and evaluate dirty cells through the caller's engine/host.",
+        "file": "reactive_cell.rs",
+        "line": 361,
+        "signature": "pub fn step_with<H: Host>("
+      },
+      {
+        "name": "get_value",
+        "kind": "fn",
+        "doc": "Retrieve the current cached value of a cell by name.",
+        "file": "reactive_cell.rs",
+        "line": 423,
+        "signature": "pub fn get_value(&self, name: &str) -> Option<&Value> {"
       }
     ]
   },
@@ -7064,30 +9048,54 @@
   },
   {
     "name": "root",
-    "doc": "Poet engine — VibeScript 0.1.\n\nCopyright © 2026 Timothy Charles Holborn. All rights reserved.\nLanguage version `vibe-0.1`. No JIT. No raw Quin overlay literals.",
+    "doc": "VibeScript (`vibe-0.1`) — a language for humans and machines.\n\nVibe is the scripting language (the JS replacement). Poet is the human\ncreative environment and CLI that *hosts* Vibe; other hosts may too.\n\nCopyright © 2026 Timothy Charles Holborn. All rights reserved.\nNo JIT. No raw Quin overlay literals.",
     "items": [
       {
         "name": "LANGUAGE_VERSION",
         "kind": "const",
         "doc": "",
         "file": "lib.rs",
-        "line": 6,
+        "line": 9,
         "signature": "pub const LANGUAGE_VERSION: &str = \"vibe-0.1\""
+      },
+      {
+        "name": "catalog",
+        "kind": "module",
+        "doc": "",
+        "file": "lib.rs",
+        "line": 15,
+        "signature": "pub mod catalog;"
       },
       {
         "name": "bytecode",
         "kind": "module",
         "doc": "",
         "file": "lib.rs",
-        "line": 12,
+        "line": 17,
         "signature": "pub mod bytecode;"
+      },
+      {
+        "name": "animation",
+        "kind": "module",
+        "doc": "",
+        "file": "lib.rs",
+        "line": 34,
+        "signature": "pub mod animation;"
+      },
+      {
+        "name": "ast_merge",
+        "kind": "module",
+        "doc": "",
+        "file": "lib.rs",
+        "line": 35,
+        "signature": "pub mod ast_merge;"
       },
       {
         "name": "cosmic",
         "kind": "module",
         "doc": "",
         "file": "lib.rs",
-        "line": 28,
+        "line": 36,
         "signature": "pub mod cosmic;"
       },
       {
@@ -7095,7 +9103,7 @@
         "kind": "module",
         "doc": "",
         "file": "lib.rs",
-        "line": 29,
+        "line": 37,
         "signature": "pub mod crypto;"
       },
       {
@@ -7103,15 +9111,23 @@
         "kind": "module",
         "doc": "",
         "file": "lib.rs",
-        "line": 30,
+        "line": 38,
         "signature": "pub mod dag;"
+      },
+      {
+        "name": "decompiler",
+        "kind": "module",
+        "doc": "",
+        "file": "lib.rs",
+        "line": 39,
+        "signature": "pub mod decompiler;"
       },
       {
         "name": "deontic_interrupt",
         "kind": "module",
         "doc": "",
         "file": "lib.rs",
-        "line": 31,
+        "line": 40,
         "signature": "pub mod deontic_interrupt;"
       },
       {
@@ -7119,7 +9135,7 @@
         "kind": "module",
         "doc": "",
         "file": "lib.rs",
-        "line": 32,
+        "line": 41,
         "signature": "pub mod frame_morphism;"
       },
       {
@@ -7127,7 +9143,7 @@
         "kind": "module",
         "doc": "",
         "file": "lib.rs",
-        "line": 33,
+        "line": 42,
         "signature": "pub mod hid;"
       },
       {
@@ -7135,7 +9151,7 @@
         "kind": "module",
         "doc": "",
         "file": "lib.rs",
-        "line": 34,
+        "line": 43,
         "signature": "pub mod law_package;"
       },
       {
@@ -7143,7 +9159,7 @@
         "kind": "module",
         "doc": "",
         "file": "lib.rs",
-        "line": 35,
+        "line": 44,
         "signature": "pub mod locale;"
       },
       {
@@ -7151,7 +9167,7 @@
         "kind": "module",
         "doc": "",
         "file": "lib.rs",
-        "line": 36,
+        "line": 45,
         "signature": "pub mod module_system;"
       },
       {
@@ -7159,7 +9175,7 @@
         "kind": "module",
         "doc": "",
         "file": "lib.rs",
-        "line": 37,
+        "line": 46,
         "signature": "pub mod observer;"
       },
       {
@@ -7167,7 +9183,7 @@
         "kind": "module",
         "doc": "",
         "file": "lib.rs",
-        "line": 38,
+        "line": 47,
         "signature": "pub mod physics;"
       },
       {
@@ -7175,7 +9191,7 @@
         "kind": "module",
         "doc": "",
         "file": "lib.rs",
-        "line": 39,
+        "line": 48,
         "signature": "pub mod presentation;"
       },
       {
@@ -7183,23 +9199,39 @@
         "kind": "module",
         "doc": "",
         "file": "lib.rs",
-        "line": 40,
+        "line": 49,
         "signature": "pub mod pretty;"
+      },
+      {
+        "name": "projectional",
+        "kind": "module",
+        "doc": "",
+        "file": "lib.rs",
+        "line": 50,
+        "signature": "pub mod projectional;"
       },
       {
         "name": "quantity",
         "kind": "module",
         "doc": "",
         "file": "lib.rs",
-        "line": 41,
+        "line": 51,
         "signature": "pub mod quantity;"
+      },
+      {
+        "name": "reactive_cell",
+        "kind": "module",
+        "doc": "",
+        "file": "lib.rs",
+        "line": 52,
+        "signature": "pub mod reactive_cell;"
       },
       {
         "name": "reflection",
         "kind": "module",
         "doc": "",
         "file": "lib.rs",
-        "line": 42,
+        "line": 53,
         "signature": "pub mod reflection;"
       },
       {
@@ -7207,7 +9239,7 @@
         "kind": "module",
         "doc": "",
         "file": "lib.rs",
-        "line": 43,
+        "line": 54,
         "signature": "pub mod replay_clock;"
       },
       {
@@ -7215,7 +9247,7 @@
         "kind": "module",
         "doc": "",
         "file": "lib.rs",
-        "line": 44,
+        "line": 55,
         "signature": "pub mod sheaf;"
       },
       {
@@ -7223,7 +9255,7 @@
         "kind": "module",
         "doc": "",
         "file": "lib.rs",
-        "line": 45,
+        "line": 56,
         "signature": "pub mod tick_policy;"
       },
       {
@@ -7231,7 +9263,7 @@
         "kind": "module",
         "doc": "",
         "file": "lib.rs",
-        "line": 46,
+        "line": 57,
         "signature": "pub mod translate;"
       },
       {
@@ -7239,63 +9271,87 @@
         "kind": "module",
         "doc": "",
         "file": "lib.rs",
-        "line": 47,
+        "line": 58,
         "signature": "pub mod trivia;"
       },
       {
-        "name": "Program}",
-        "kind": "use",
+        "name": "vocab",
+        "kind": "module",
         "doc": "",
         "file": "lib.rs",
-        "line": 49,
-        "signature": "pub use ast::{Expr, Item, Program};"
+        "line": 59,
+        "signature": "pub mod vocab;"
       },
       {
         "name": "{",
         "kind": "use",
         "doc": "",
         "file": "lib.rs",
-        "line": 50,
+        "line": 61,
+        "signature": "pub use ast::{"
+      },
+      {
+        "name": "{",
+        "kind": "use",
+        "doc": "",
+        "file": "lib.rs",
+        "line": 67,
         "signature": "pub use ast_query::{"
       },
       {
-        "name": "MockHost}",
+        "name": "{",
         "kind": "use",
         "doc": "",
         "file": "lib.rs",
-        "line": 54,
-        "signature": "pub use bind::{Host, MockHost};"
+        "line": 71,
+        "signature": "pub use accel::{"
       },
       {
-        "name": "Budget",
+        "name": "LocalHost}",
         "kind": "use",
         "doc": "",
         "file": "lib.rs",
-        "line": 55,
-        "signature": "pub use budget::Budget;"
+        "line": 74,
+        "signature": "pub use bind::{AccelerationTier, Host, HostEnvironment, LocalHost};"
+      },
+      {
+        "name": "SENTINEL_BYTES}",
+        "kind": "use",
+        "doc": "",
+        "file": "lib.rs",
+        "line": 75,
+        "signature": "pub use budget::{Budget, SENTINEL_BYTES};"
+      },
+      {
+        "name": "llm_missing}",
+        "kind": "use",
+        "doc": "",
+        "file": "lib.rs",
+        "line": 76,
+        "signature": "pub use degrade::{gpu_missing, llm_missing};"
       },
       {
         "name": "TAG_VIBE_AST}",
         "kind": "use",
         "doc": "",
         "file": "lib.rs",
-        "line": 56,
+        "line": 77,
         "signature": "pub use cbor_ast::{decode, encode, DecodeError, TAG_VIBE_AST};"
-      },
-      {
-        "name": "CheckResult}",
-        "kind": "use",
-        "doc": "",
-        "file": "lib.rs",
-        "line": 57,
-        "signature": "pub use check::{check_cell, check_program, CheckResult};"
       },
       {
         "name": "{",
         "kind": "use",
         "doc": "",
         "file": "lib.rs",
-        "line": 58,
+        "line": 78,
+        "signature": "pub use check::{"
+      },
+      {
+        "name": "{",
+        "kind": "use",
+        "doc": "",
+        "file": "lib.rs",
+        "line": 82,
         "signature": "pub use dag::{"
       },
       {
@@ -7303,7 +9359,7 @@
         "kind": "use",
         "doc": "",
         "file": "lib.rs",
-        "line": 63,
+        "line": 87,
         "signature": "pub use deontic_interrupt::{"
       },
       {
@@ -7311,7 +9367,7 @@
         "kind": "use",
         "doc": "",
         "file": "lib.rs",
-        "line": 67,
+        "line": 91,
         "signature": "pub use diagnose::{diagnose, DiagnoseReport};"
       },
       {
@@ -7319,7 +9375,7 @@
         "kind": "use",
         "doc": "",
         "file": "lib.rs",
-        "line": 68,
+        "line": 92,
         "signature": "pub use error::{DiagCode, Diagnostic};"
       },
       {
@@ -7327,7 +9383,7 @@
         "kind": "use",
         "doc": "",
         "file": "lib.rs",
-        "line": 69,
+        "line": 93,
         "signature": "pub use eval::{populate_import_aliases, Engine, Env};"
       },
       {
@@ -7335,7 +9391,7 @@
         "kind": "use",
         "doc": "",
         "file": "lib.rs",
-        "line": 70,
+        "line": 94,
         "signature": "pub use grammar::{DIAGNOSTIC_SCHEMA_JSON, EBNF, GBNF, SOURCE_SCHEMA_JSON};"
       },
       {
@@ -7343,7 +9399,7 @@
         "kind": "use",
         "doc": "",
         "file": "lib.rs",
-        "line": 71,
+        "line": 95,
         "signature": "pub use parse::{parse_cell, parse_program};"
       },
       {
@@ -7351,7 +9407,23 @@
         "kind": "use",
         "doc": "",
         "file": "lib.rs",
-        "line": 72,
+        "line": 96,
+        "signature": "pub use projectional::{"
+      },
+      {
+        "name": "ReactiveCellGraph}",
+        "kind": "use",
+        "doc": "",
+        "file": "lib.rs",
+        "line": 100,
+        "signature": "pub use reactive_cell::{ReactiveCell, ReactiveCellError, ReactiveCellGraph};"
+      },
+      {
+        "name": "{",
+        "kind": "use",
+        "doc": "",
+        "file": "lib.rs",
+        "line": 101,
         "signature": "pub use reflection::{"
       },
       {
@@ -7359,7 +9431,7 @@
         "kind": "use",
         "doc": "",
         "file": "lib.rs",
-        "line": 75,
+        "line": 104,
         "signature": "pub use span::Span;"
       },
       {
@@ -7367,7 +9439,7 @@
         "kind": "use",
         "doc": "",
         "file": "lib.rs",
-        "line": 76,
+        "line": 105,
         "signature": "pub use unicode_ident::{"
       },
       {
@@ -7375,7 +9447,7 @@
         "kind": "use",
         "doc": "",
         "file": "lib.rs",
-        "line": 80,
+        "line": 109,
         "signature": "pub use value::{"
       },
       {
@@ -7383,7 +9455,7 @@
         "kind": "fn",
         "doc": "Parse, check, and evaluate a Pure cell (`= expr`).",
         "file": "lib.rs",
-        "line": 87,
+        "line": 116,
         "signature": "pub fn eval_cell<H: Host>(src: &str, host: &mut H, env: &mut Env) -> Result<Value, Diagnostic> {"
       },
       {
@@ -7391,7 +9463,7 @@
         "kind": "fn",
         "doc": "Parse and check a module. Does not run hooks.",
         "file": "lib.rs",
-        "line": 95,
+        "line": 124,
         "signature": "pub fn load_program(src: &str) -> Result<Program, Diagnostic> {"
       },
       {
@@ -7399,7 +9471,7 @@
         "kind": "fn",
         "doc": "Evaluate a named function from a checked program.\nImport aliases from the program are populated into `env` before evaluation.",
         "file": "lib.rs",
-        "line": 103,
+        "line": 132,
         "signature": "pub fn eval_function<H: Host>("
       },
       {
@@ -7407,7 +9479,7 @@
         "kind": "fn",
         "doc": "Dispatch a hook event on a checked program.\n\n`path` is the event path (e.g. `[\"pulse\", \"message\"]` for `on pulse:message(…)`\nor `[\"tick\"]` for `on tick(…)`). `args` are bound to the hook's parameters\nin declaration order. Returns `Ok(Value::Null)` if no matching hook exists.",
         "file": "lib.rs",
-        "line": 120,
+        "line": 149,
         "signature": "pub fn dispatch_hook<H: Host>("
       }
     ]
@@ -8091,7 +10163,7 @@
         "kind": "fn",
         "doc": "",
         "file": "types.rs",
-        "line": 58,
+        "line": 59,
         "signature": "pub fn from_ast(t: &TypeExpr) -> Type {"
       },
       {
@@ -8099,7 +10171,7 @@
         "kind": "fn",
         "doc": "",
         "file": "types.rs",
-        "line": 116,
+        "line": 118,
         "signature": "pub fn is_numeric(&self) -> bool {"
       }
     ]
@@ -8471,7 +10543,7 @@
         "kind": "fn",
         "doc": "",
         "file": "value.rs",
-        "line": 495,
+        "line": 500,
         "signature": "pub fn is_truthy(&self) -> bool {"
       },
       {
@@ -8479,7 +10551,7 @@
         "kind": "fn",
         "doc": "",
         "file": "value.rs",
-        "line": 506,
+        "line": 511,
         "signature": "pub fn as_f64(&self) -> Option<f64> {"
       },
       {
@@ -8487,7 +10559,7 @@
         "kind": "fn",
         "doc": "",
         "file": "value.rs",
-        "line": 516,
+        "line": 521,
         "signature": "pub fn as_i64(&self) -> Option<i64> {"
       },
       {
@@ -8495,7 +10567,7 @@
         "kind": "fn",
         "doc": "Extract an Instant if this value is one.",
         "file": "value.rs",
-        "line": 526,
+        "line": 531,
         "signature": "pub fn as_instant(&self) -> Option<&Instant> {"
       },
       {
@@ -8503,7 +10575,7 @@
         "kind": "fn",
         "doc": "Extract a Duration if this value is one.",
         "file": "value.rs",
-        "line": 534,
+        "line": 539,
         "signature": "pub fn as_duration(&self) -> Option<&Duration> {"
       },
       {
@@ -8511,7 +10583,7 @@
         "kind": "fn",
         "doc": "Extract a Quantity if this value is one.",
         "file": "value.rs",
-        "line": 542,
+        "line": 547,
         "signature": "pub fn as_quantity(&self) -> Option<&Quantity> {"
       },
       {
@@ -8519,7 +10591,7 @@
         "kind": "fn",
         "doc": "Extract a Frame if this value is one.",
         "file": "value.rs",
-        "line": 550,
+        "line": 555,
         "signature": "pub fn as_frame(&self) -> Option<&Frame> {"
       },
       {
@@ -8527,7 +10599,7 @@
         "kind": "fn",
         "doc": "Extract a Pose if this value is one.",
         "file": "value.rs",
-        "line": 558,
+        "line": 563,
         "signature": "pub fn as_pose(&self) -> Option<&Pose> {"
       },
       {
@@ -8535,7 +10607,7 @@
         "kind": "fn",
         "doc": "Extract a Transform if this value is one.",
         "file": "value.rs",
-        "line": 566,
+        "line": 571,
         "signature": "pub fn as_transform(&self) -> Option<&Transform> {"
       },
       {
@@ -8543,7 +10615,7 @@
         "kind": "fn",
         "doc": "Extract a FieldRef if this value is one.",
         "file": "value.rs",
-        "line": 574,
+        "line": 579,
         "signature": "pub fn as_field_ref(&self) -> Option<&FieldRef> {"
       },
       {
@@ -8551,7 +10623,7 @@
         "kind": "fn",
         "doc": "Extract a MaterialRef if this value is one.",
         "file": "value.rs",
-        "line": 582,
+        "line": 587,
         "signature": "pub fn as_material_ref(&self) -> Option<&MaterialRef> {"
       },
       {
@@ -8559,7 +10631,7 @@
         "kind": "fn",
         "doc": "Extract a TensorRef if this value is one (T52).",
         "file": "value.rs",
-        "line": 590,
+        "line": 595,
         "signature": "pub fn as_tensor_ref(&self) -> Option<&TensorRef> {"
       },
       {
@@ -8567,7 +10639,7 @@
         "kind": "fn",
         "doc": "Extract a GeometryRef if this value is one (T52).",
         "file": "value.rs",
-        "line": 598,
+        "line": 603,
         "signature": "pub fn as_geometry_ref(&self) -> Option<&GeometryRef> {"
       },
       {
@@ -8575,7 +10647,7 @@
         "kind": "fn",
         "doc": "Extract an AssetRef if this value is one (T52).",
         "file": "value.rs",
-        "line": 606,
+        "line": 611,
         "signature": "pub fn as_asset_ref(&self) -> Option<&AssetRef> {"
       },
       {
@@ -8583,7 +10655,7 @@
         "kind": "fn",
         "doc": "Extract a WorldLine if this value is one.",
         "file": "value.rs",
-        "line": 614,
+        "line": 619,
         "signature": "pub fn as_worldline(&self) -> Option<&WorldLine> {"
       },
       {
@@ -8591,7 +10663,7 @@
         "kind": "fn",
         "doc": "Extract a QuinRef if this value is one (T7).",
         "file": "value.rs",
-        "line": 622,
+        "line": 627,
         "signature": "pub fn as_quin_ref(&self) -> Option<&QuinRef> {"
       },
       {
@@ -8599,7 +10671,7 @@
         "kind": "fn",
         "doc": "Extract an EnumValue if this value is one (T9).",
         "file": "value.rs",
-        "line": 630,
+        "line": 635,
         "signature": "pub fn as_enum(&self) -> Option<&EnumValue> {"
       },
       {
@@ -8607,7 +10679,7 @@
         "kind": "fn",
         "doc": "Extract a SpeciesRef if this value is one (T33).",
         "file": "value.rs",
-        "line": 638,
+        "line": 643,
         "signature": "pub fn as_species_ref(&self) -> Option<&SpeciesRef> {"
       },
       {
@@ -8615,7 +10687,7 @@
         "kind": "fn",
         "doc": "Extract a Mixture if this value is one (T33).",
         "file": "value.rs",
-        "line": 646,
+        "line": 651,
         "signature": "pub fn as_mixture(&self) -> Option<&Mixture> {"
       },
       {
@@ -8623,7 +10695,7 @@
         "kind": "fn",
         "doc": "Extract a ConservationResult if this value is one (T34).",
         "file": "value.rs",
-        "line": 654,
+        "line": 659,
         "signature": "pub fn as_conservation(&self) -> Option<&ConservationResult> {"
       },
       {
@@ -8631,7 +10703,7 @@
         "kind": "fn",
         "doc": "Extract a CausalRelation if this value is one (T35).",
         "file": "value.rs",
-        "line": 662,
+        "line": 667,
         "signature": "pub fn as_causal(&self) -> Option<CausalRelation> {"
       },
       {
@@ -8639,7 +10711,7 @@
         "kind": "fn",
         "doc": "Extract a DisclosureDenied if this value is one (T55).\nReturns (capability, reason).",
         "file": "value.rs",
-        "line": 671,
+        "line": 676,
         "signature": "pub fn as_disclosure_denied(&self) -> Option<(&str, &str)> {"
       },
       {
@@ -8647,7 +10719,7 @@
         "kind": "fn",
         "doc": "Extract a DisclosureBoundary if this value is one (T56).",
         "file": "value.rs",
-        "line": 681,
+        "line": 686,
         "signature": "pub fn as_disclosure_boundary(&self) -> Option<&DisclosureBoundary> {"
       },
       {
@@ -8655,7 +10727,7 @@
         "kind": "fn",
         "doc": "",
         "file": "value.rs",
-        "line": 692,
+        "line": 697,
         "signature": "pub fn unix(secs: i64, nanos: u32) -> Self {"
       },
       {
@@ -8663,7 +10735,7 @@
         "kind": "fn",
         "doc": "",
         "file": "value.rs",
-        "line": 702,
+        "line": 707,
         "signature": "pub fn monotonic(nanos: u64) -> Self {"
       },
       {
@@ -8671,7 +10743,7 @@
         "kind": "fn",
         "doc": "",
         "file": "value.rs",
-        "line": 714,
+        "line": 719,
         "signature": "pub fn from_secs(secs: i64) -> Self {"
       },
       {
@@ -8679,7 +10751,7 @@
         "kind": "fn",
         "doc": "",
         "file": "value.rs",
-        "line": 718,
+        "line": 723,
         "signature": "pub fn from_nanos(nanos: i64) -> Self {"
       },
       {
@@ -8687,7 +10759,7 @@
         "kind": "fn",
         "doc": "Total nanoseconds (may overflow for very large durations).",
         "file": "value.rs",
-        "line": 726,
+        "line": 731,
         "signature": "pub fn total_nanos(&self) -> i128 {"
       },
       {
@@ -8695,7 +10767,7 @@
         "kind": "fn",
         "doc": "",
         "file": "value.rs",
-        "line": 732,
+        "line": 749,
         "signature": "pub fn new(value: f64, unit: &str) -> Self {"
       },
       {
@@ -8703,8 +10775,162 @@
         "kind": "fn",
         "doc": "",
         "file": "value.rs",
-        "line": 739,
+        "line": 756,
         "signature": "pub fn dimensionless(value: f64) -> Self {"
+      }
+    ]
+  },
+  {
+    "name": "vocab",
+    "doc": "Vocab chunks: bounded N3/Turtle slices with a content hash (P17.1).\n\nOntology extends Vibe by compiling **referenced terms**, not by shipping\nSNOMED (or any whole ontology) in the binary. Canonical IRIs stay so\nSPARQL/N3/SHACL need no rename layer. Versioning (hash-lock vs latest)\nis a principal decision (P17.5); this module stores the hash and can\nverify a lock, but never fetches \"latest\".",
+    "items": [
+      {
+        "name": "MAX_TERMS}",
+        "kind": "use",
+        "doc": "",
+        "file": "mod.rs",
+        "line": 12,
+        "signature": "pub use parse::{parse_chunk, VocabChunk, VocabError, VocabTerm, MAX_CHUNK_BYTES, MAX_TERMS};"
+      },
+      {
+        "name": "unknown_prefixed}",
+        "kind": "use",
+        "doc": "",
+        "file": "mod.rs",
+        "line": 13,
+        "signature": "pub use shake::{project_referenced_iris, tree_shake, unknown_prefixed};"
+      }
+    ]
+  },
+  {
+    "name": "vocab::parse",
+    "doc": "Bounded vocab-chunk parser. Not a full N3 engine.",
+    "items": [
+      {
+        "name": "MAX_CHUNK_BYTES",
+        "kind": "const",
+        "doc": "",
+        "file": "parse.rs",
+        "line": 5,
+        "signature": "pub const MAX_CHUNK_BYTES: usize = 256 * 1024"
+      },
+      {
+        "name": "MAX_TERMS",
+        "kind": "const",
+        "doc": "",
+        "file": "parse.rs",
+        "line": 6,
+        "signature": "pub const MAX_TERMS: usize = 4096"
+      },
+      {
+        "name": "VocabTerm",
+        "kind": "struct",
+        "doc": "",
+        "file": "parse.rs",
+        "line": 9,
+        "signature": "pub struct VocabTerm"
+      },
+      {
+        "name": "VocabChunk",
+        "kind": "struct",
+        "doc": "",
+        "file": "parse.rs",
+        "line": 16,
+        "signature": "pub struct VocabChunk"
+      },
+      {
+        "name": "VocabError",
+        "kind": "enum",
+        "doc": "",
+        "file": "parse.rs",
+        "line": 23,
+        "signature": "pub enum VocabError"
+      },
+      {
+        "name": "prefix_iri",
+        "kind": "fn",
+        "doc": "",
+        "file": "parse.rs",
+        "line": 44,
+        "signature": "pub fn prefix_iri(&self, prefix: &str) -> Option<&str> {"
+      },
+      {
+        "name": "expand",
+        "kind": "fn",
+        "doc": "",
+        "file": "parse.rs",
+        "line": 48,
+        "signature": "pub fn expand(&self, prefixed: &str) -> Option<String> {"
+      },
+      {
+        "name": "has_local",
+        "kind": "fn",
+        "doc": "",
+        "file": "parse.rs",
+        "line": 54,
+        "signature": "pub fn has_local(&self, prefix: &str, local: &str) -> bool {"
+      },
+      {
+        "name": "hash_hex",
+        "kind": "fn",
+        "doc": "",
+        "file": "parse.rs",
+        "line": 61,
+        "signature": "pub fn hash_hex(&self) -> String {"
+      },
+      {
+        "name": "lock_matches",
+        "kind": "fn",
+        "doc": "P17.5 lock check. Does not fetch latest.",
+        "file": "parse.rs",
+        "line": 66,
+        "signature": "pub fn lock_matches(&self, expected_hex: &str) -> bool {"
+      },
+      {
+        "name": "parse_chunk",
+        "kind": "fn",
+        "doc": "",
+        "file": "parse.rs",
+        "line": 71,
+        "signature": "pub fn parse_chunk(bytes: &[u8]) -> Result<VocabChunk, VocabError> {"
+      },
+      {
+        "name": "content_hash",
+        "kind": "fn",
+        "doc": "Deterministic 32-byte identity (four FNV-1a 64 streams). Not SHA-256.",
+        "file": "parse.rs",
+        "line": 194,
+        "signature": "pub fn content_hash(bytes: &[u8]) -> [u8; 32] {"
+      }
+    ]
+  },
+  {
+    "name": "vocab::shake",
+    "doc": "Tree-shake referenced terms and keep parent IRIs (P17.2).",
+    "items": [
+      {
+        "name": "tree_shake",
+        "kind": "fn",
+        "doc": "Keep referenced terms plus `rdfs:subClassOf` parents. Canonical IRIs unchanged.",
+        "file": "shake.rs",
+        "line": 9,
+        "signature": "pub fn tree_shake(chunk: &VocabChunk, referenced: &[&str]) -> VocabChunk {"
+      },
+      {
+        "name": "project_referenced_iris",
+        "kind": "fn",
+        "doc": "Canonical IRIs used by `prefix:local` names in the program that this chunk owns.",
+        "file": "shake.rs",
+        "line": 51,
+        "signature": "pub fn project_referenced_iris(program: &Program, chunk: &VocabChunk) -> Vec<String> {"
+      },
+      {
+        "name": "unknown_prefixed",
+        "kind": "fn",
+        "doc": "Prefixed names whose prefix is in a chunk but whose local name is not.",
+        "file": "shake.rs",
+        "line": 64,
+        "signature": "pub fn unknown_prefixed(program: &Program, chunks: &[VocabChunk]) -> Vec<(String, String, Span)> {"
       }
     ]
   }

@@ -2,7 +2,7 @@
 
 use super::super::args;
 use crate::solvers::statistics::descriptive::mean;
-use poet_vibe::{Diagnostic, Span, Value};
+use vibe::{Diagnostic, Span, Value};
 
 pub fn arithmetic_mean(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let xs = args::f64s(args_v)

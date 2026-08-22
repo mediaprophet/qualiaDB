@@ -1,7 +1,7 @@
 //! `NLP.frame_extract` — frame semantics extraction.
 
 use crate::nlp::frame::extract_frames;
-use poet_vibe::{DiagCode, Diagnostic, Span, Value};
+use vibe::{DiagCode, Diagnostic, Span, Value};
 use std::collections::BTreeMap;
 
 /// `NLP.frame_extract` — extract frame instances from a text. Returns a list

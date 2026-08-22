@@ -15,8 +15,8 @@
 //! for each node. Each node execution is a local LLM inference turn with
 //! the node's inputs (from the blackboard) injected into the prompt context.
 
-use poet_vibe::dag::{DagEdge, DagNode, DagPipeline, NodeEffect};
-use poet_vibe::{DiagCode, Diagnostic, Span};
+use vibe::dag::{DagEdge, DagNode, DagPipeline, NodeEffect};
+use vibe::{DiagCode, Diagnostic, Span};
 use qualia_core_db::modalities::blackboard::BlackboardBus;
 use qualia_core_db::poet_host::invoke::agent::dag_executor::{
     execute_pipeline, NodeExecutor, PipelineResult,
@@ -364,7 +364,7 @@ mod tests {
     #[test]
     fn agent_turn_outcome_with_dag_unavailable_agent() {
         // A DAG pipeline is provided but the agent doesn't exist.
-        use poet_vibe::dag::{DagNode, DagPipeline, NodeEffect};
+        use vibe::dag::{DagNode, DagPipeline, NodeEffect};
         let mut pipeline = DagPipeline::new();
         let _ = pipeline.add_node(DagNode::new(0, "test", NodeEffect::Hot));
         let mut config = AgentTurnConfig {

@@ -2,7 +2,7 @@
 members = [
     "crates/qualia-inference-kernel",
     "crates/qualia-core-db",
-    "crates/poet-vibe",
+    "crates/vibe",
     "crates/qualia-cli",
     "crates/qualia-solid-bridge",
     "crates/qualia-client-core",

@@ -14,7 +14,7 @@
 //! | `Render.emf_field_info` | `{ handle }` | `{ has_field, nx, ny, nz, nt, cell_count }` |
 
 use super::super::args;
-use poet_vibe::{Diagnostic, Span, Value};
+use vibe::{Diagnostic, Span, Value};
 
 #[cfg(not(target_arch = "wasm32"))]
 use crate::render::gpu::EmfFieldCell;
@@ -364,6 +364,7 @@ mod tests {
         // returns an error for an invalid handle — confirming the dispatch
         // arm is wired.
         let src = r#"
+        using Render;
         requires [ capability("capability.invoke") ];
         effect fn go() {
             return capability.invoke("Render.emf_field_info", { handle: 99999 });

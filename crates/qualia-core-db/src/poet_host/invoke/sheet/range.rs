@@ -1,7 +1,7 @@
 //! Spreadsheet start: stats over a numeric grid + A1:B2 range sum.
 
 use super::super::args;
-use poet_vibe::{Diagnostic, Span, Value};
+use vibe::{Diagnostic, Span, Value};
 
 fn sum_slice(xs: &[f64]) -> f64 {
     xs.iter().copied().sum()

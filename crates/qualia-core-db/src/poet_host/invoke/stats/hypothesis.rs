@@ -2,7 +2,7 @@
 
 use super::super::args;
 use crate::solvers::statistics::hypothesis;
-use poet_vibe::{Diagnostic, Span, Value};
+use vibe::{Diagnostic, Span, Value};
 
 /// `Statistics.one_sample_t` — one-sample t-test.
 /// Args: { values: [f64], mu: f64 }

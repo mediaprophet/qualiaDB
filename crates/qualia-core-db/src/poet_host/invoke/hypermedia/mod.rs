@@ -4,7 +4,7 @@
 
 use crate::hypermedia_authoring::{dmx, image};
 use crate::poet_host::invoke::args;
-use poet_vibe::{Diagnostic, Span, Value};
+use vibe::{Diagnostic, Span, Value};
 
 // ── Image editing ────────────────────────────────────────────────────────────
 

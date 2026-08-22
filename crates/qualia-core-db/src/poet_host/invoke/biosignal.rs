@@ -14,7 +14,7 @@
 use crate::specialized_libs::linear_algebra::privacy::{
     CompositionMethod, DifferentialPrivacy, PrivacyError,
 };
-use poet_vibe::{DiagCode, Diagnostic, Span, Value};
+use vibe::{DiagCode, Diagnostic, Span, Value};
 
 /// Configuration for biosignal DP filtering (T44).
 #[derive(Debug, Clone)]

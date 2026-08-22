@@ -1,4 +1,6 @@
 //! 4-way tool chest + floating palette — `toolbox-registry.js` structure.
+//!
+//! Copyright (c) 2026 Timothy Charles Holborn. All rights reserved.
 
 use super::kinds::{ContainerKind, DockPos, ToolSpec, ToolboxId};
 use super::store::Workbench;
@@ -15,6 +17,7 @@ pub fn ToolChest(wb: Signal<Workbench>) -> Element {
                 for d in [DockPos::Left, DockPos::Top, DockPos::Bottom, DockPos::Right] {
                     button {
                         class: if w.dock == d { "dock-pos-btn active" } else { "dock-pos-btn" },
+                        title: "Dock position",
                         onclick: move |_| { let mut s = wb(); s.dock = d; wb.set(s); },
                         match d {
                             DockPos::Left => "◀",
@@ -93,68 +96,102 @@ impl ToolboxId {
                     ToolSpec {
                         label: "🔬 Tag Objective Telemetry",
                         places: None,
-                        honesty: "present",
+                        honesty: "live",
                     },
                     ToolSpec {
                         label: "🧠 Tag Subjective Qualia",
                         places: None,
-                        honesty: "present",
+                        honesty: "live",
                     },
                     ToolSpec {
                         label: "🌊 Tag Intersubjective Agreement",
                         places: None,
-                        honesty: "present",
+                        honesty: "live",
                     },
                     ToolSpec {
                         label: "⚖️ Tag Normative Mandate",
                         places: None,
-                        honesty: "present",
+                        honesty: "live",
                     },
                 ],
             )],
             Self::Office => &[(
-                "Containers & Templates",
+                "Document & CML Tools",
                 &[
                     ToolSpec {
-                        label: "+ Document Container",
+                        label: "+ HyperDoc Container",
                         places: Some(ContainerKind::Doc),
                         honesty: "live",
                     },
                     ToolSpec {
-                        label: "+ Ontology Mapping Node",
-                        places: Some(ContainerKind::Ontology),
+                        label: "🏷️ Insert CML Entity (<q-entity>)",
+                        places: None,
+                        honesty: "live",
+                    },
+                    ToolSpec {
+                        label: "🔗 Insert Relation (<q-relation>)",
+                        places: None,
+                        honesty: "live",
+                    },
+                    ToolSpec {
+                        label: "📜 Insert Citation (<q-citation>)",
+                        places: None,
                         honesty: "live",
                     },
                 ],
             )],
             Self::Image => &[(
-                "Generative Assets",
-                &[ToolSpec {
-                    label: "+ Visual Asset Card",
-                    places: Some(ContainerKind::Media),
-                    honesty: "live",
-                }],
+                "Visual & Graphics Tools",
+                &[
+                    ToolSpec {
+                        label: "+ Media Studio Container",
+                        places: Some(ContainerKind::Media),
+                        honesty: "live",
+                    },
+                    ToolSpec {
+                        label: "✒️ Vector Pen / Bezier",
+                        places: None,
+                        honesty: "present",
+                    },
+                    ToolSpec {
+                        label: "🖌️ Brush & Color Palette",
+                        places: None,
+                        honesty: "present",
+                    },
+                ],
             )],
             Self::Sheet => &[(
-                "Data Containers",
-                &[ToolSpec {
-                    label: "+ Columnar Tensor Sheet",
-                    places: Some(ContainerKind::Sheet),
-                    honesty: "live",
-                }],
+                "Spreadsheets & Vibe Formulas",
+                &[
+                    ToolSpec {
+                        label: "+ Columnar Tensor Sheet",
+                        places: Some(ContainerKind::Sheet),
+                        honesty: "live",
+                    },
+                    ToolSpec {
+                        label: "⚡ Insert Vibe Formula (=VIBE)",
+                        places: None,
+                        honesty: "live",
+                    },
+                    ToolSpec {
+                        label: "📈 Generate Quick Chart",
+                        places: None,
+                        honesty: "present",
+                    },
+                ],
             )],
             Self::Spatial => &[(
-                "Spatial & GIS Containers",
+                "3D Kinematics & Anatomy",
                 &[
+                    ToolSpec {
+                        label: "+ 3D Anatomy Mesh (.10d)",
+                        places: Some(ContainerKind::Mesh3d),
+                        honesty: "live",
+                    },
                     ToolSpec {
                         label: "+ Geospatial Case Map",
                         places: Some(ContainerKind::Map),
                         honesty: "live",
-                    },
-                    ToolSpec {
-                        label: "+ 3D Mesh Container",
-                        places: Some(ContainerKind::Mesh3d),
-                        honesty: "present",
                     },
                     ToolSpec {
                         label: "+ Wormhole Portal",
@@ -162,14 +199,159 @@ impl ToolboxId {
                         honesty: "present",
                     },
                     ToolSpec {
-                        label: "+ Sub-manifold",
+                        label: "+ Sub-Manifold Canvas",
                         places: Some(ContainerKind::Subcanvas),
                         honesty: "partial",
                     },
                 ],
             )],
+            Self::Audio => &[(
+                "Triad Synthesis & Audio",
+                &[
+                    ToolSpec {
+                        label: "+ Triad Formant Synthesizer",
+                        places: Some(ContainerKind::Media),
+                        honesty: "live",
+                    },
+                    ToolSpec {
+                        label: "🎙️ Mic Capture (PCM Stream)",
+                        places: None,
+                        honesty: "live",
+                    },
+                    ToolSpec {
+                        label: "🫀 Neural Audio Latents (P64)",
+                        places: None,
+                        honesty: "live",
+                    },
+                ],
+            )],
+            Self::Code => &[(
+                "VibeScript IDE & Shaders",
+                &[
+                    ToolSpec {
+                        label: "+ VibeScript IDE Container",
+                        places: Some(ContainerKind::Code),
+                        honesty: "live",
+                    },
+                    ToolSpec {
+                        label: "▶ Run Reactive Cell (<q-cell>)",
+                        places: None,
+                        honesty: "live",
+                    },
+                    ToolSpec {
+                        label: "🛡️ Check Capability Manifest",
+                        places: None,
+                        honesty: "live",
+                    },
+                    ToolSpec {
+                        label: "+ Distributed Git Forge",
+                        places: Some(ContainerKind::GitForge),
+                        honesty: "live",
+                    },
+                ],
+            )],
+            Self::Erp => &[(
+                "Cooperative ERP & Workstream A",
+                &[
+                    ToolSpec {
+                        label: "+ Cooperative Kanban Board",
+                        places: Some(ContainerKind::ErpKanban),
+                        honesty: "live",
+                    },
+                    ToolSpec {
+                        label: "📊 Gantt Timeline Cascade",
+                        places: None,
+                        honesty: "present",
+                    },
+                    ToolSpec {
+                        label: "🗳️ M-of-N Voting Ballot",
+                        places: None,
+                        honesty: "live",
+                    },
+                ],
+            )],
+            Self::Mail => &[(
+                "Inalienable Domain Communications",
+                &[
+                    ToolSpec {
+                        label: "+ Inalienable Mail Inbox",
+                        places: Some(ContainerKind::Mail),
+                        honesty: "live",
+                    },
+                    ToolSpec {
+                        label: "✉️ CML Mail Composer",
+                        places: None,
+                        honesty: "live",
+                    },
+                    ToolSpec {
+                        label: "🌐 Web Site Publisher",
+                        places: None,
+                        honesty: "live",
+                    },
+                ],
+            )],
+            Self::Scientific => &[(
+                "Clinical & Physics Labs",
+                &[
+                    ToolSpec {
+                        label: "+ Health & Clinical Node",
+                        places: Some(ContainerKind::Health),
+                        honesty: "live",
+                    },
+                    ToolSpec {
+                        label: "🧪 Molecular 3D Viewer",
+                        places: None,
+                        honesty: "present",
+                    },
+                    ToolSpec {
+                        label: "📈 Thermodynamics MCMC",
+                        places: None,
+                        honesty: "live",
+                    },
+                ],
+            )],
+            Self::Ai => &[(
+                "Local AI Mindware & Co-Pilots",
+                &[
+                    ToolSpec {
+                        label: "🤖 Resident GGUF Model Co-Pilot",
+                        places: None,
+                        honesty: "live",
+                    },
+                    ToolSpec {
+                        label: "📜 Deontic Rule Assistant",
+                        places: None,
+                        honesty: "live",
+                    },
+                    ToolSpec {
+                        label: "👥 AI Agent Swarm Dispatch",
+                        places: None,
+                        honesty: "present",
+                    },
+                ],
+            )],
+            Self::Rights => &[(
+                "Inalienable Rights & Sanctuary",
+                &[
+                    ToolSpec {
+                        label: "✍️ Sign with Root DID Key",
+                        places: None,
+                        honesty: "live",
+                    },
+                    ToolSpec {
+                        label: "🔒 Sanctuary Decoy Vault",
+                        places: None,
+                        honesty: "live",
+                    },
+                    ToolSpec {
+                        label: "🤝 AgreementDID M-of-N Signer",
+                        places: None,
+                        honesty: "live",
+                    },
+                ],
+            )],
             Self::Communication => &[(
-                "Collaborative Containers",
+                "Social & P2P WebRTC",
                 &[
                     ToolSpec {
                         label: "+ Social AI Chat Graph",
@@ -177,48 +359,46 @@ impl ToolboxId {
                         honesty: "live",
                     },
                     ToolSpec {
-                        label: "+ WebRTC Live Video",
+                        label: "+ WebRTC P2P Data Channel",
                         places: Some(ContainerKind::WebRtc),
-                        honesty: "present",
+                        honesty: "live",
                     },
                     ToolSpec {
                         label: "+ Webview Browser Frame",
                         places: Some(ContainerKind::Webview),
-                        honesty: "present",
+                        honesty: "live",
                     },
                 ],
             )],
-            Self::Rights => &[(
-                "Permission Groups & Scopes",
-                &[ToolSpec {
-                    label: "✍️ Sign with DID Key",
-                    places: None,
-                    honesty: "present",
-                }],
-            )],
             Self::Health => &[(
-                "Clinical Containers",
-                &[ToolSpec {
-                    label: "+ Health Telemetry Node",
-                    places: Some(ContainerKind::Health),
-                    honesty: "live",
-                }],
+                "Health & Sensory Telemetry",
+                &[
+                    ToolSpec {
+                        label: "+ Health Telemetry Node",
+                        places: Some(ContainerKind::Health),
+                        honesty: "live",
+                    },
+                ],
             )],
-            Self::Code => &[(
-                "DSL Containers & Cells",
-                &[ToolSpec {
-                    label: "+ VibeScript Container",
-                    places: Some(ContainerKind::Code),
-                    honesty: "live",
-                }],
-            )],
-            Self::Ai => &[(
-                "Mindware Co-Authors & Agents",
-                &[ToolSpec {
-                    label: "🤖 LLM Semantic Co-Author",
-                    places: None,
-                    honesty: "present",
-                }],
+            Self::Sdn => &[(
+                "SDN & Cooperative Economics",
+                &[
+                    ToolSpec {
+                        label: "🌐 WebTorrent Swarm Seeder",
+                        places: None,
+                        honesty: "live",
+                    },
+                    ToolSpec {
+                        label: "💰 Unit Economics Modeler",
+                        places: None,
+                        honesty: "live",
+                    },
+                    ToolSpec {
+                        label: "⚡ Battery & Solar Governor",
+                        places: None,
+                        honesty: "live",
+                    },
+                ],
             )],
         }
     }

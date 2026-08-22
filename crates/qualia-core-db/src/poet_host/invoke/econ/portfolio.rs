@@ -6,7 +6,7 @@ use crate::specialized_libs::financial_modeling::{
     Asset, AssetType, InvestmentStrategy, LiquidityNeeds, Portfolio, RiskProfile, RiskTolerance,
     TimeHorizon,
 };
-use poet_vibe::{Diagnostic, Span, Value};
+use vibe::{Diagnostic, Span, Value};
 
 pub fn risk(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let prices = args::rec(args_v, "prices")

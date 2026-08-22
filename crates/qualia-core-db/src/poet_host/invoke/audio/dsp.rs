@@ -4,7 +4,7 @@
 
 use super::super::args;
 use crate::audio::dsp;
-use poet_vibe::{Diagnostic, Span, Value};
+use vibe::{Diagnostic, Span, Value};
 
 /// `Audio.oscillator` — render a waveform buffer.
 ///

@@ -1359,7 +1359,7 @@ fn vc9_e400_is_the_sentinel_error_code() {
     // E400 is used across the invoke paths for fixed-size buffer overflow.
     // This test verifies the error code exists and is distinct from other
     // codes, ensuring the sentinel's fail-closed behaviour is wired.
-    use poet_vibe::DiagCode;
+    use vibe::DiagCode;
     // E400 must exist and be distinct from E001/E100/E200/E300.
     assert_ne!(
         DiagCode::E400,

@@ -34,7 +34,7 @@ pub mod welfare_support;
 pub use record::{DurationBridge, InstantBridge};
 
 /// Legacy coarse Unix timestamp (T71). To be replaced with
-/// `poet_vibe::value::Instant` in a future migration. Until then,
+/// `vibe::value::Instant` in a future migration. Until then,
 /// this is the bridge type. Do not add new uses — use Instant
 /// where possible.
 pub type AssertedTime = u32;

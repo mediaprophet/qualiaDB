@@ -20,9 +20,13 @@
 //! | `Render.gpu_poll_pick` | Poll for pick result |
 //! | `Render.gpu_resize` | Resize the viewport |
 //! | `Render.gpu_set_ambient` | Enable/disable ambient particle field |
+//!
+//! Query/standpoint/artefact/mesh-color IDs live in `gpu_state.rs` so this
+//! file stays the init/render/upload/pick loop. Together they cover every
+//! public `PortalGpu` method that is script-meaningful (not device/queue).
 
 use super::super::args;
-use poet_vibe::{Diagnostic, Span, Value};
+use vibe::{Diagnostic, Span, Value};
 
 use std::collections::BTreeMap;
 use std::sync::Mutex;
@@ -169,7 +173,9 @@ pub fn gpu_init(args: &Value, span: Span) -> Result<Value, Diagnostic> {
         if ctx.is_none() {
             return Err(args::bad(
                 span,
-                "gpu_init: no WebGPU adapter available (WebGL2 fallback is browser-only)",
+                vibe::gpu_missing(
+                    "gpu_init: no WebGPU adapter available (WebGL2 fallback is browser-only)",
+                ),
             ));
         }
 
@@ -188,6 +194,44 @@ pub fn gpu_init(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     {
         let _ = (args, span);
         Err(args::bad(span, "gpu_init requires native build with gpu-runtime; on WASM, use the portal facade for WebGPU/WebGL2 canvas rendering"))
+    }
+}
+
+/// `Render.gpu_init_surface` — native swapchain `PortalGpu` bound to a window handle.
+///
+/// Native desktop path: presents to the OS swapchain (HWND on Windows). This is
+/// the surface constructor, not the offscreen PNG path. `hwnd` is the raw
+/// window handle as a signed integer (Windows `HWND` cast to `isize`).
+pub fn gpu_init_surface(args: &Value, span: Span) -> Result<Value, Diagnostic> {
+    #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
+    {
+        let hwnd = args::rec_i64(args, "hwnd")
+            .or_else(|| args::rec_u64(args, "hwnd").map(|n| n as i64))
+            .ok_or_else(|| args::bad(span, "gpu_init_surface needs { hwnd }"))?;
+        if hwnd == 0 {
+            return Err(args::bad(span, "gpu_init_surface: hwnd must be non-zero"));
+        }
+        let width = args::rec_u64(args, "width").unwrap_or(800) as u32;
+        let height = args::rec_u64(args, "height").unwrap_or(600) as u32;
+        let particle_cap = args::rec_u64(args, "particle_cap").unwrap_or(5000) as usize;
+
+        let portal = PortalGpu::new_surface(hwnd as isize, width, height, particle_cap)
+            .map_err(|e| args::bad(span, format!("gpu_init_surface failed: {e}")))?;
+        let handle = slot_insert(portal);
+        Ok(args::record([
+            ("handle", Value::U64(handle)),
+            ("width", Value::U64(width as u64)),
+            ("height", Value::U64(height as u64)),
+            ("backend", Value::String("webgpu-surface".into())),
+        ]))
+    }
+    #[cfg(not(all(not(target_arch = "wasm32"), feature = "gpu-runtime")))]
+    {
+        let _ = args;
+        Err(args::bad(
+            span,
+            "gpu_init_surface requires native gpu-runtime (HWND swapchain)",
+        ))
     }
 }
 
@@ -274,9 +318,20 @@ pub fn gpu_upload_mesh(args: &Value, span: Span) -> Result<Value, Diagnostic> {
             .map(|c| [c[0] as f32, c[1] as f32, c[2] as f32])
             .collect();
         let indices: Vec<u32> = idx_u64s.into_iter().map(|n| n as u32).collect();
+        let colors: Vec<[f32; 4]> = args::rec_f64_list(args, "colors")
+            .unwrap_or_default()
+            .chunks_exact(4)
+            .map(|c| [c[0] as f32, c[1] as f32, c[2] as f32, c[3] as f32])
+            .collect();
 
-        let tri_count = slot_with(handle, |portal| portal.upload_mesh(&positions, &indices))
-            .ok_or_else(|| args::bad(span, "gpu_upload_mesh: invalid handle"))?;
+        let tri_count = slot_with(handle, |portal| {
+            if colors.is_empty() {
+                portal.upload_mesh(&positions, &indices)
+            } else {
+                portal.upload_mesh_colored(&positions, &colors, &indices)
+            }
+        })
+        .ok_or_else(|| args::bad(span, "gpu_upload_mesh: invalid handle"))?;
 
         Ok(args::record([(
             "triangle_count",
@@ -486,8 +541,23 @@ mod tests {
     }
 
     #[test]
+    fn g_gpu_init_surface_requires_hwnd() {
+        let span = dummy_span();
+        let err = gpu_init_surface(&args::record([("width", Value::U64(64))]), span)
+            .expect_err("hwnd required");
+        assert!(err.message.contains("hwnd"));
+        let err = gpu_init_surface(
+            &args::record([("hwnd", Value::I64(0)), ("width", Value::U64(64))]),
+            span,
+        )
+        .expect_err("zero hwnd");
+        assert!(err.message.contains("non-zero"));
+    }
+
+    #[test]
     fn g_gpu_adapter_info_returns_record() {
         let src = r#"
+        using Render;
         requires [ capability("capability.invoke") ];
         effect fn go() {
             return capability.invoke("Render.gpu_adapter_info", {});

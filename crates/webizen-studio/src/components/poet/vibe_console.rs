@@ -20,9 +20,9 @@ effect fn ask() {
     return capability.invoke("GraphDatabase.sparql", "ASK WHERE { ?s ?p ?o }");
 }
 "#;
-const SAMPLE_RENDER: &str = r#"requires [ capability("capability.invoke") ];
+const SAMPLE_RENDER: &str = r#"using Render;
 effect fn scene() {
-    return capability.invoke("Render.scene", { kind: "media" });
+    return Render.gpu_adapter_info();
 }
 "#;
 

@@ -2,7 +2,7 @@
 
 use crate::modalities::dl::check_subsumption_quin;
 use crate::poet_host::{hash_val, PoetSnapshot};
-use poet_vibe::{DiagCode, Diagnostic, Span, Value};
+use vibe::{DiagCode, Diagnostic, Span, Value};
 
 pub fn check(snap: &PoetSnapshot, args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let Value::List(xs) = args else {

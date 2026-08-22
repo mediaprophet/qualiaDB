@@ -4,7 +4,7 @@ version = "0.0.32"
 edition = "2021"
 
 [dependencies]
-poet-vibe = { path = "../poet-vibe" }
+vibe = { path = "../vibe" }
 
 [[bin]]
 name = "poet"

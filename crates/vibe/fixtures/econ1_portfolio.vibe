@@ -1,0 +1,72 @@
+// N14 fixture: computational economics — portfolio and risk analysis.
+using Econ;
+// Tests: simple_returns → mean_return → sample_variance → historical_var →
+//        covariance_matrix → portfolio_variance → max_drawdown
+
+// Sample price series for 3 assets over 5 periods (flat row-major).
+cell prices_a = [100.0, 102.0, 101.0, 105.0, 107.0];
+cell prices_b = [50.0, 51.0, 52.0, 50.0, 53.0];
+
+// Compute simple returns.
+effect cell returns_a := Econ.simple_returns({
+  prices: prices_a,
+});
+
+effect cell returns_b := Econ.simple_returns({
+  prices: prices_b,
+});
+
+// Mean return for asset A.
+effect cell mean_a := Econ.mean_return({
+  returns: returns_a.returns,
+});
+
+// Sample variance for asset A.
+effect cell var_a := Econ.sample_variance({
+  returns: returns_a.returns,
+});
+
+// Historical VaR at 95% confidence.
+effect cell var_95 := Econ.historical_var({
+  returns: returns_a.returns,
+  confidence: 0.95,
+});
+
+// Historical CVaR at 95% confidence.
+effect cell cvar_95 := Econ.historical_cvar({
+  returns: returns_a.returns,
+  confidence: 0.95,
+});
+
+// Max drawdown.
+effect cell mdd := Econ.drawdown({
+  returns: returns_a.returns,
+});
+
+// CAPM expected return.
+effect cell capm := Econ.capm_expected_return({
+  risk_free: 0.02,
+  beta: 1.2,
+  market_return: 0.08,
+});
+
+// Black-Scholes option pricing.
+effect cell bs := Econ.black_scholes({
+  spot: 100.0,
+  strike: 105.0,
+  rate: 0.05,
+  vol: 0.2,
+  time: 1.0,
+  kind: "call",
+  dividend_yield: 0.0,
+});
+
+// Gini coefficient for income inequality.
+effect cell gini := Econ.gini({
+  incomes: [20000.0, 35000.0, 50000.0, 75000.0, 120000.0],
+});
+
+// Nash welfare.
+effect cell nash := Econ.nash_welfare({
+  utilities: [10.0, 20.0, 15.0, 25.0],
+});

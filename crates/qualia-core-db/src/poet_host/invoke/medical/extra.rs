@@ -3,7 +3,7 @@
 
 use super::super::args;
 use crate::specialized_libs::medical_computing as med;
-use poet_vibe::{Diagnostic, Span, Value};
+use vibe::{Diagnostic, Span, Value};
 
 /// `MedicalComputing.analyze_differential` — transparent naive-Bayes
 /// differential over a caller-supplied, non-authoritative knowledge base.

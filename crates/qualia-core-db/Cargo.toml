@@ -90,7 +90,7 @@ neon_simd_unroll = []
 vm_tracing = []
 
 [dependencies]
-poet-vibe = { path = "../poet-vibe" }
+vibe = { path = "../vibe" }
 qualia-inference-kernel = { path = "../qualia-inference-kernel" }
 minicbor = { version = "2.2.2", features = ["std"] }
 futures-core = { version = "0.3", default-features = false }

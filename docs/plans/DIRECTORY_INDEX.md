@@ -39,7 +39,7 @@ Webizen, inference, rendering, desktop/QApps, and supporting compute infrastruct
   image-to-3D, canonical GLB-to-Q42 asset compilation, and tiered engineering/biological
   digital twins.
 - `phone-console.md`: Mobile/phone console, linking, storage, and interaction plan.
-- `poet-vibe-nlp-desktop-TRACKER-2026-08-15.md`: Swarm-ready implementation tracker for Vibe 0.1, Poet backend, desktop harness, and document NLP (0.0.31-dev).
+- `vibe-nlp-desktop-TRACKER-2026-08-15.md`: Swarm-ready implementation tracker for Vibe 0.1, Poet backend, desktop harness, and document NLP (0.0.31-dev).
 - `poet-webizen-desktop-implementation-plan-2026-08-15.md`: Research note that the tracker supersedes for execution.
 - `sprint-inference-handover-native-viewport.md`: Inference and native viewport sprint handover.
 - `vibescript-webgl-and-advanced-llm-agent-interface-plan-2026-08-18.md`: Architecture and implementation plan expanding VibeScript to support hardware-accelerated WebGL/WebGL2 rendering (zero-copy WASM buffer streaming, Naga WGSL-to-GLSL transpilation, std140 struct alignment) and an advanced scripting interface for in-process LLM agents (homoiconic CBOR-LD ASTs, DOMINO speculative decoding, 3-stage reflection loops, Q42 Semantic Blackboard shared context, multi-agent DAGs with autonomous routers, Paraconsistent Annotated Evidential Logic E-tau in 48-byte NQuins, and W3C Verifiable Credentials).

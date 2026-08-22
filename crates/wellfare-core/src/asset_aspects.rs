@@ -17,10 +17,10 @@
 //! - `TemporalAspect` — a single named temporal assertion (e.g., "production_date")
 //! - `AssetAspectGraph` — the full sub-graph for an asset
 //! - `TopicAssociation` — a topic/concept in relation to a subject
-//! - `SpatialAnchorLite` — lightweight geodetic position (no poet-vibe dependency)
+//! - `SpatialAnchorLite` — lightweight geodetic position (no vibe dependency)
 //!
 //! The `SpatialAnchorLite` type mirrors the essential fields of
-//! `poet_vibe::cosmic::ar::SpatialAnchor` without pulling in poet-vibe as a
+//! `vibe::cosmic::ar::SpatialAnchor` without pulling in vibe as a
 //! hard dependency. Under the `qualia` feature, it converts to/from
 //! `SpatialAnchor`.
 
@@ -29,11 +29,11 @@ use serde::{Deserialize, Serialize};
 
 // ── Spatial anchor lite ───────────────────────────────────────────────────
 
-/// Lightweight geodetic spatial anchor for assets (no poet-vibe dependency).
+/// Lightweight geodetic spatial anchor for assets (no vibe dependency).
 ///
 /// Stores WGS84 [lat, lon, alt] plus an optional ENU offset and confidence
 /// radius. Under the `qualia` feature, converts to/from
-/// `poet_vibe::cosmic::ar::SpatialAnchor`.
+/// `vibe::cosmic::ar::SpatialAnchor`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct SpatialAnchorLite {
     /// Unique anchor identifier
@@ -478,20 +478,20 @@ impl AssetAspectGraph {
     }
 }
 
-// ── poet-vibe integration (qualia feature) ────────────────────────────────
+// ── vibe integration (qualia feature) ────────────────────────────────
 
 #[cfg(feature = "qualia")]
-impl From<&SpatialAnchorLite> for poet_vibe::cosmic::ar::SpatialAnchor {
+impl From<&SpatialAnchorLite> for vibe::cosmic::ar::SpatialAnchor {
     fn from(lite: &SpatialAnchorLite) -> Self {
-        poet_vibe::cosmic::ar::SpatialAnchor::new(&lite.anchor_id, lite.geodetic)
+        vibe::cosmic::ar::SpatialAnchor::new(&lite.anchor_id, lite.geodetic)
             .with_enu_offset(lite.enu_offset[0], lite.enu_offset[1], lite.enu_offset[2])
             .with_confidence(lite.confidence_radius_mm)
     }
 }
 
 #[cfg(feature = "qualia")]
-impl From<&poet_vibe::cosmic::ar::SpatialAnchor> for SpatialAnchorLite {
-    fn from(anchor: &poet_vibe::cosmic::ar::SpatialAnchor) -> Self {
+impl From<&vibe::cosmic::ar::SpatialAnchor> for SpatialAnchorLite {
+    fn from(anchor: &vibe::cosmic::ar::SpatialAnchor) -> Self {
         Self {
             anchor_id: anchor.anchor_id.clone(),
             geodetic: anchor.geodetic_anchor,

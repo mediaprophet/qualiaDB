@@ -42,7 +42,7 @@ This means the EMF physics → visual output pipeline is a priority, not just ca
 
 | Area | Status | Test count |
 |---|---|---|
-| Language core (lexer, parser, checker, AST interpreter) | Complete | 25 poet-vibe tests |
+| Language core (lexer, parser, checker, AST interpreter) | Complete | 25 vibe tests |
 | 0.1 binding profile (math, rdf, quin, graph, aura, pulse, capability, time) | Complete | All §12/§13 fixtures pass |
 | Hook dispatch (`on pulse:message`, `on tick`) | Complete | 4 hook dispatch tests |
 | User-defined function resolution in eval_call | Complete | §12.2 CLINIC module works end-to-end |
@@ -60,7 +60,7 @@ All 6 requirements met:
 3. No public API writes Quin parity
 4. Pure cells cannot reach Pulse, graph write, or time
 5. `graph.query` without `take` is a type/effect error
-6. Tests live in `poet-vibe` and don't require a GPU
+6. Tests live in `vibe` and don't require a GPU
 
 ---
 
@@ -85,15 +85,15 @@ The full plan is in `docs/vibescript-full-impl-PLAN.md`. Summary:
 
 ## 4. Key files
 
-### Core language crate (`poet-vibe`)
+### Core language crate (`vibe`)
 
 | File | Purpose |
 |---|---|
-| `crates/poet-vibe/src/lib.rs` | Public API: `eval_cell`, `eval_function`, `dispatch_hook`, `load_program` |
-| `crates/poet-vibe/src/eval.rs` | AST interpreter. `Engine` holds optional program ref for user-defined function resolution |
-| `crates/poet-vibe/src/bind/mod.rs` | `Host` trait + `dispatch` function. All 0.1 bindings routed here |
-| `crates/poet-vibe/src/check.rs` | Type/effect checker. Enforces `graph.query` requires `take`, capability gating, etc. |
-| `crates/poet-vibe/tests/conformance.rs` | 22 conformance tests (§12/§13 fixtures + hook dispatch) |
+| `crates/vibe/src/lib.rs` | Public API: `eval_cell`, `eval_function`, `dispatch_hook`, `load_program` |
+| `crates/vibe/src/eval.rs` | AST interpreter. `Engine` holds optional program ref for user-defined function resolution |
+| `crates/vibe/src/bind/mod.rs` | `Host` trait + `dispatch` function. All 0.1 bindings routed here |
+| `crates/vibe/src/check.rs` | Type/effect checker. Enforces `graph.query` requires `take`, capability gating, etc. |
+| `crates/vibe/tests/conformance.rs` | 22 conformance tests (§12/§13 fixtures + hook dispatch) |
 
 ### Host crate (`qualia-core-db`)
 
@@ -172,14 +172,14 @@ These are in section 4 of the plan file. Timothy has not yet answered them:
 Run these after each phase:
 
 ```
-cargo test -p poet-vibe
+cargo test -p vibe
 cargo test -p qualia-core-db --lib poet_host
 cargo check -p webizen-desktop
-cargo check -p poet-vibe --target wasm32-unknown-unknown
+cargo check -p vibe --target wasm32-unknown-unknown
 ```
 
 Current baseline (as of commit `938ce191`):
-- `poet-vibe`: 25 passed, 0 failed
+- `vibe`: 25 passed, 0 failed
 - `poet_host`: 89 passed, 0 failed
 - `webizen-desktop`: clean
 - `wasm32`: clean

@@ -12,7 +12,7 @@
 //! dynamic_programming, agent_based, paper_trading, accounting.
 
 use crate::poet_host::invoke::args;
-use poet_vibe::{Diagnostic, Span, Value};
+use vibe::{Diagnostic, Span, Value};
 
 // ── Asset pricing ────────────────────────────────────────────────────────────
 

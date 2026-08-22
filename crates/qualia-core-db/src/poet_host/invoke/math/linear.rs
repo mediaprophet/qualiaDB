@@ -6,7 +6,7 @@ use crate::solvers::linear_algebra::gemm::matmul;
 use crate::solvers::linear_algebra::lu::{determinant as lu_determinant, lu_decompose};
 use crate::solvers::linear_algebra::spectral::eigenvalues_general;
 use crate::solvers::linear_algebra::svd::svd as svd_decompose;
-use poet_vibe::{Diagnostic, Span, Value};
+use vibe::{Diagnostic, Span, Value};
 
 pub fn multiply(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let a = matrix(args_v, "a", span)?;

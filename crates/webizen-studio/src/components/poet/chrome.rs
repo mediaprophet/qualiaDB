@@ -1,4 +1,6 @@
 //! Menubar, pager, strata, epistemic, 4D ribbon, exposé, status — NLP chrome.
+//!
+//! Copyright (c) 2026 Timothy Charles Holborn. All rights reserved.
 
 use super::kinds::{DimMode, Epistemic, ManifoldId, Strata};
 use super::store::Workbench;
@@ -11,19 +13,23 @@ pub fn TopMenubar(wb: Signal<Workbench>) -> Element {
         header { class: "top-menubar",
             div { class: "menu-items-group",
                 span { class: "brand-icon", "🌌" }
+                span { style: "font-weight:700;font-size:13px;letter-spacing:0.04em;color:var(--accent-cyan);margin-right:8px;", "POET" }
                 Menu { name: "file", label: "File", open, wb,
-                    Item { left: "New 4D Canvas", right: "Ctrl+N" }
-                    Item { left: "Open Canvas...", right: "Ctrl+O" }
-                    Item { left: "Import HCF / HMC Archive", right: "" }
+                    Item { left: "New Manifold Desk", right: "Ctrl+N" }
+                    Item { left: "Open HyperDoc / Desk...", right: "Ctrl+O" }
+                    Item { left: "Import .hcf Container", right: "" }
                     Divider {}
                     Item { left: "Save to Merkle DAG", right: "Ctrl+S" }
                     Item { left: "Export RDF 1.2 Triples", right: "" }
+                    Item { left: "Export Solid Pod Turtle", right: "" }
                 }
-                Menu { name: "canvases", label: "Canvases", open, wb,
+                Menu { name: "canvases", label: "Manifolds", open, wb,
                     CanvasItem { wb, id: ManifoldId::Research, hint: "Alt+1" }
                     CanvasItem { wb, id: ManifoldId::Media, hint: "Alt+2" }
                     CanvasItem { wb, id: ManifoldId::Social, hint: "Alt+3" }
-                    CanvasItem { wb, id: ManifoldId::Settings, hint: "Alt+4" }
+                    CanvasItem { wb, id: ManifoldId::Mail, hint: "Alt+4" }
+                    CanvasItem { wb, id: ManifoldId::Chora, hint: "Alt+5" }
+                    CanvasItem { wb, id: ManifoldId::Settings, hint: "Alt+6" }
                     Divider {}
                     div { class: "dropdown-item",
                         onclick: move |_| { let mut w = wb(); w.expose = !w.expose; w.menu = None; wb.set(w); },
@@ -39,9 +45,15 @@ pub fn TopMenubar(wb: Signal<Workbench>) -> Element {
                 Menu { name: "insert", label: "Insert", open, wb,
                     span { style: "padding:6px 14px;color:var(--text-muted);font-size:11px;", "Use the tool chest to place containers." }
                 }
-                button { class: "menu-btn", "Help" }
             }
-            div { class: "menu-items-group",
+            div { class: "menu-items-group", style: "display:flex;align-items:center;gap:12px;",
+                // Ambient Job Indicator
+                div {
+                    class: "ambient-job-indicator",
+                    style: "display:flex;align-items:center;gap:6px;padding:3px 10px;background:rgba(0,200,255,0.08);border:1px solid rgba(0,200,255,0.25);border-radius:12px;font-size:11px;color:var(--accent-cyan);",
+                    span { style: "display:inline-block;width:7px;height:7px;border-radius:50%;background:#00E676;box-shadow:0 0 6px #00E676;" }
+                    span { "Mesh Active · 42MB Sentinel OK" }
+                }
                 span { style: "font-family:var(--font-mono);font-size:11px;color:var(--text-muted);", "Poet HyperCanvas · vibe-0.1" }
             }
         }
@@ -228,7 +240,7 @@ pub fn StatusBar(wb: Signal<Workbench>) -> Element {
             }
             div { style: "display:flex;gap:16px;",
                 span { strong { "Identity:" } " did:qualia:timothy_charles_holborn" }
-                span { strong { "Fiduciary Gate:" } " " span { style: "color:var(--accent-emerald);", "Level 3 Sovereign" } }
+                span { strong { "Fiduciary Gate:" } " " span { style: "color:var(--accent-emerald);", "Level 3 Inalienable Custody" } }
             }
         }
     }

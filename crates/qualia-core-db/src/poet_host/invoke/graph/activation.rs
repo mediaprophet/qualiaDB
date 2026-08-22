@@ -8,7 +8,7 @@
 
 use super::super::args;
 use crate::solvers::graph_opt::{spreading_activation as sa_solver, top_k, Edge};
-use poet_vibe::{Diagnostic, Span, Value};
+use vibe::{Diagnostic, Span, Value};
 
 /// Parse a flat edge list `[[u, v, w], ..]` (each a list of three f64) into the
 /// validated `(n_from_edges, Edge[])` pair. Validates that indices are

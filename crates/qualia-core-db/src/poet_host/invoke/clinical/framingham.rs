@@ -2,7 +2,7 @@
 
 use super::super::args;
 use crate::clinical_engine::{framingham_10yr_risk, FraminghamInput};
-use poet_vibe::{Diagnostic, Span, Value};
+use vibe::{Diagnostic, Span, Value};
 
 pub fn score(args_v: &Value, _span: Span) -> Result<Value, Diagnostic> {
     let input = FraminghamInput {

@@ -239,6 +239,86 @@ fn main() -> i64 {
       mode: "cell",
       fn: null,
     },
+    {
+      icon: "🪐",
+      title: "3D Orbit Spin (Animation)",
+      badge: "program",
+      code: `using Animation;
+
+fn main() -> Record {
+  return Animation.orbit_spin(0.25);
+}`,
+      mode: "program",
+      fn: "main",
+    },
+    {
+      icon: "💡",
+      title: "Lamp Presentation Sheaf",
+      badge: "program",
+      code: `using Animation;
+
+cell pose := Animation.orbit_spin(1.0);
+cell glow := oklch(0.72, 0.12, 230.0);
+
+present lamp {
+    color: glow
+    pose: pose
+}
+
+fn main() -> Record {
+  return glow;
+}`,
+      mode: "program",
+      fn: "main",
+    },
+    {
+      icon: "🔗",
+      title: "Two-Way Bind & Tween",
+      badge: "program",
+      code: `let mut volume = 0.2;
+let mut slider = 0.2;
+bind slider <-> volume using Clamp[0.0, 1.0] resolve latest;
+
+fn main() -> f64 {
+  return 0.0 ~ 10.0 over 400ms ease linear;
+}`,
+      mode: "program",
+      fn: "main",
+    },
+    {
+      icon: "λ",
+      title: "Pure Lambdas (.map)",
+      badge: "program",
+      code: `fn main() {
+  return [1, 2, 3, 4, 5].map(|x| x * x);
+}`,
+      mode: "program",
+      fn: "main",
+    },
+    {
+      icon: "⏱️",
+      title: "Physical Quantities",
+      badge: "cell",
+      code: "= 500ms + 250ms",
+      mode: "cell",
+      fn: null,
+    },
+    {
+      icon: "🌏",
+      title: "Chinese Keyword Locale",
+      badge: "program",
+      code: `locale zh;
+
+函数 compute(a: i64, b: i64) -> i64 {
+  返回 a * b + 42;
+}
+
+函数 main() -> i64 {
+  返回 compute(10, 5);
+}`,
+      mode: "program",
+      fn: "main",
+    },
   ];
 
   async function run() {

@@ -6,7 +6,7 @@
 use super::super::args;
 use crate::specialized_libs::computational_geometry::parametric_cad::bezier_eval;
 use crate::specialized_libs::computational_geometry::Point3;
-use poet_vibe::{Diagnostic, Span, Value};
+use vibe::{Diagnostic, Span, Value};
 
 /// Format an SVG `<path>` element from a list of [x, y] points.
 ///
@@ -282,7 +282,7 @@ mod tests {
             ("points", f64_list(&[0.0, 0.0, 10.0, 20.0, 30.0, 40.0])),
             ("stroke", Value::String("red".into())),
         ]);
-        let r = svg_path(&args, poet_vibe::Span::new(0, 0)).unwrap();
+        let r = svg_path(&args, vibe::Span::new(0, 0)).unwrap();
         if let Value::Record(m) = r {
             let svg = m.get("svg").and_then(args::as_str).unwrap();
             assert!(svg.contains("<path"));
@@ -301,7 +301,7 @@ mod tests {
             ("points", f64_list(&[0.0, 0.0, 10.0, 0.0, 10.0, 10.0])),
             ("closed", Value::Bool(true)),
         ]);
-        let r = svg_path(&args, poet_vibe::Span::new(0, 0)).unwrap();
+        let r = svg_path(&args, vibe::Span::new(0, 0)).unwrap();
         if let Value::Record(m) = r {
             let d = m.get("d").and_then(args::as_str).unwrap();
             assert!(d.ends_with(" Z"));
@@ -316,7 +316,7 @@ mod tests {
             ("r", Value::F64(10.0)),
             ("fill", Value::String("blue".into())),
         ]);
-        let r = svg_circle(&args, poet_vibe::Span::new(0, 0)).unwrap();
+        let r = svg_circle(&args, vibe::Span::new(0, 0)).unwrap();
         if let Value::Record(m) = r {
             let svg = m.get("svg").and_then(args::as_str).unwrap();
             assert!(svg.contains("<circle"));
@@ -335,7 +335,7 @@ mod tests {
             ("height", Value::F64(50.0)),
             ("rx", Value::F64(5.0)),
         ]);
-        let r = svg_rect(&args, poet_vibe::Span::new(0, 0)).unwrap();
+        let r = svg_rect(&args, vibe::Span::new(0, 0)).unwrap();
         if let Value::Record(m) = r {
             let svg = m.get("svg").and_then(args::as_str).unwrap();
             assert!(svg.contains("<rect"));
@@ -351,7 +351,7 @@ mod tests {
             ("x2", Value::F64(100.0)),
             ("y2", Value::F64(100.0)),
         ]);
-        let r = svg_line(&args, poet_vibe::Span::new(0, 0)).unwrap();
+        let r = svg_line(&args, vibe::Span::new(0, 0)).unwrap();
         if let Value::Record(m) = r {
             let svg = m.get("svg").and_then(args::as_str).unwrap();
             assert!(svg.contains("<line"));
@@ -370,7 +370,7 @@ mod tests {
             ),
             ("segments", Value::U64(16)),
         ]);
-        let r = svg_bezier(&args, poet_vibe::Span::new(0, 0)).unwrap();
+        let r = svg_bezier(&args, vibe::Span::new(0, 0)).unwrap();
         if let Value::Record(m) = r {
             let d = m.get("d").and_then(args::as_str).unwrap();
             assert!(d.starts_with("M "));
@@ -391,7 +391,7 @@ mod tests {
             ("ny", Value::U64(2)),
             ("cell_size", Value::F64(20.0)),
         ]);
-        let r = svg_field(&args, poet_vibe::Span::new(0, 0)).unwrap();
+        let r = svg_field(&args, vibe::Span::new(0, 0)).unwrap();
         if let Value::Record(m) = r {
             let svg = m.get("svg").and_then(args::as_str).unwrap();
             assert!(svg.contains("<circle"));
@@ -403,12 +403,12 @@ mod tests {
     #[test]
     fn svg_path_too_few_points_errors() {
         let args = rec(&[("points", f64_list(&[0.0, 0.0]))]);
-        assert!(svg_path(&args, poet_vibe::Span::new(0, 0)).is_err());
+        assert!(svg_path(&args, vibe::Span::new(0, 0)).is_err());
     }
 
     #[test]
     fn svg_bezier_too_few_controls_errors() {
         let args = rec(&[("control_points", f64_list(&[0.0, 0.0, 0.0]))]);
-        assert!(svg_bezier(&args, poet_vibe::Span::new(0, 0)).is_err());
+        assert!(svg_bezier(&args, vibe::Span::new(0, 0)).is_err());
     }
 }

@@ -1,7 +1,7 @@
 //! `NLP.substrate_extract` — full symbolic pipeline.
 
 use crate::nlp::substrate::extract_substrate;
-use poet_vibe::{DiagCode, Diagnostic, Span, Value};
+use vibe::{DiagCode, Diagnostic, Span, Value};
 use std::collections::BTreeMap;
 
 /// `NLP.substrate_extract` — run the full pipeline (tokenize → gazetteer →

@@ -29,11 +29,11 @@ pub use dynamics::{degree_centrality, gini, lorenz, malfeasance_delta, narrative
     feature = "wasm-full"
 )))]
 pub fn lww_merge(
-    _args: &poet_vibe::Value,
-    span: poet_vibe::Span,
-) -> Result<poet_vibe::Value, poet_vibe::Diagnostic> {
-    Err(poet_vibe::Diagnostic::new(
-        poet_vibe::DiagCode::E300,
+    _args: &vibe::Value,
+    span: vibe::Span,
+) -> Result<vibe::Value, vibe::Diagnostic> {
+    Err(vibe::Diagnostic::new(
+        vibe::DiagCode::E300,
         span,
         "Social.lww needs native or wasm-logic",
     ))

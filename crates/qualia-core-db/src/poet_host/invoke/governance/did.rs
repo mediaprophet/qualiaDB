@@ -2,7 +2,7 @@
 
 use super::super::args;
 use crate::identifier::parse_did_q42;
-use poet_vibe::{Diagnostic, Span, Value};
+use vibe::{Diagnostic, Span, Value};
 
 pub fn parse(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let s = args::as_str(args_v).ok_or_else(|| args::bad(span, "parse_did_q42 needs a string"))?;

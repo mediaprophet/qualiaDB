@@ -2,7 +2,7 @@
 
 use super::super::args;
 use crate::specialized_libs::engineering_analysis::MechanicalAnalyzer;
-use poet_vibe::{Diagnostic, Span, Value};
+use vibe::{Diagnostic, Span, Value};
 
 pub fn run(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let x0 = args::rec_f64(args_v, "x0").unwrap_or(0.0);

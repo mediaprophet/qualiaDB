@@ -4,7 +4,7 @@
 //! economics functions from specialized_libs::computational_economics.
 
 use super::super::args;
-use poet_vibe::{DiagCode, Diagnostic, Span, Value};
+use vibe::{DiagCode, Diagnostic, Span, Value};
 
 /// `Social.gini` — compute the Gini coefficient of a distribution.
 /// Takes `incomes` (list of f64). Returns the Gini coefficient (0 = equal, 1 = unequal).

@@ -7,7 +7,7 @@
 
 use super::super::args;
 use crate::specialized_libs::physics_simulation::PhysicsSimulationLibrary;
-use poet_vibe::{Diagnostic, Span, Value};
+use vibe::{Diagnostic, Span, Value};
 
 /// Convert `Vec<Vec<f64>>` snapshots into a Vipe `List<List<F64>>`.
 fn f64_matrix(xs: &[Vec<f64>]) -> Value {
@@ -387,7 +387,7 @@ pub fn logistic_growth(args_v: &Value, span: Span) -> Result<Value, Diagnostic> 
 
 /// `Physics.field_sample` — Evaluates an ambient field at a given 3D position [x, y, z].
 pub fn creator_field_sample(args_v: &Value, _span: Span) -> Result<Value, Diagnostic> {
-    use poet_vibe::physics::FieldDeclaration;
+    use vibe::physics::FieldDeclaration;
 
     let field_type = args::rec_str(args_v, "field").unwrap_or("atmosphere");
     let pos_list = args::rec_f64_list(args_v, "position").unwrap_or_else(|| vec![0.0, 0.0, 0.0]);
@@ -416,7 +416,7 @@ pub fn creator_field_sample(args_v: &Value, _span: Span) -> Result<Value, Diagno
 
 /// `Physics.material_query` — Returns faceted signature traits for a physical material.
 pub fn creator_material_query(args_v: &Value, _span: Span) -> Result<Value, Diagnostic> {
-    use poet_vibe::physics::MaterialSignature;
+    use vibe::physics::MaterialSignature;
 
     let mat_id = args::rec_str(args_v, "material").unwrap_or("sugar_cube");
     let sig = match mat_id {
@@ -473,11 +473,11 @@ pub fn creator_material_query(args_v: &Value, _span: Span) -> Result<Value, Diag
 
 /// `Physics.evaluate_interaction` — Applies interaction laws to continuants and ambient fields.
 pub fn creator_evaluate_interaction(args_v: &Value, _span: Span) -> Result<Value, Diagnostic> {
-    use poet_vibe::physics::{
+    use vibe::physics::{
         evaluate_field_interactions, ContinuantState, FieldDeclaration, InteractionEvent,
         MaterialSignature,
     };
-    use poet_vibe::Pose;
+    use vibe::Pose;
 
     let id = args::rec_str(args_v, "id").unwrap_or("body_01").to_string();
     let mat_id = args::rec_str(args_v, "material").unwrap_or("sugar_cube");
@@ -509,11 +509,11 @@ pub fn creator_evaluate_interaction(args_v: &Value, _span: Span) -> Result<Value
     if let Some(p) = pressure_kpa {
         fields.push(FieldDeclaration {
             id: "did:q42:field:custom_pressure".to_string(),
-            quantity: poet_vibe::physics::FieldQuantity::Pressure,
-            unit: poet_vibe::physics::FieldUnit::KiloPascal,
-            support: poet_vibe::FieldSupport::Region,
-            representation: poet_vibe::FieldRepresentation::Analytic,
-            profile: poet_vibe::physics::AnalyticFieldProfile::Uniform(p),
+            quantity: vibe::physics::FieldQuantity::Pressure,
+            unit: vibe::physics::FieldUnit::KiloPascal,
+            support: vibe::FieldSupport::Region,
+            representation: vibe::FieldRepresentation::Analytic,
+            profile: vibe::physics::AnalyticFieldProfile::Uniform(p),
         });
     } else {
         fields.push(FieldDeclaration::standard_atmosphere());
@@ -554,7 +554,7 @@ pub fn creator_evaluate_interaction(args_v: &Value, _span: Span) -> Result<Value
 #[cfg(test)]
 mod tests {
     use super::*;
-    use poet_vibe::Value;
+    use vibe::Value;
     use std::collections::BTreeMap;
 
     fn rec(pairs: &[(&str, Value)]) -> Value {
@@ -586,7 +586,7 @@ mod tests {
             ("total_time", Value::F64(0.5)),
             ("samples", Value::U64(10)),
         ]);
-        let r = wave_1d(&args, poet_vibe::Span::new(0, 0)).unwrap();
+        let r = wave_1d(&args, vibe::Span::new(0, 0)).unwrap();
         match r {
             Value::Record(m) => {
                 let ei = m.get("energy_initial").and_then(args::as_f64).unwrap();
@@ -614,7 +614,7 @@ mod tests {
             ("total_time", Value::F64(5.0)),
             ("samples", Value::U64(10)),
         ]);
-        let r = heat_diffusion_1d(&args, poet_vibe::Span::new(0, 0)).unwrap();
+        let r = heat_diffusion_1d(&args, vibe::Span::new(0, 0)).unwrap();
         match r {
             Value::Record(m) => {
                 let dev = m
@@ -637,7 +637,7 @@ mod tests {
             ("total_time", Value::F64(20.0)),
             ("samples", Value::U64(200)),
         ]);
-        let r = harmonic_oscillator(&args, poet_vibe::Span::new(0, 0)).unwrap();
+        let r = harmonic_oscillator(&args, vibe::Span::new(0, 0)).unwrap();
         match r {
             Value::Record(m) => {
                 let analytic = m.get("analytic_period").and_then(args::as_f64).unwrap();
@@ -661,7 +661,7 @@ mod tests {
             ("total_time", Value::F64(10.0)),
             ("samples", Value::U64(100)),
         ]);
-        let r = pendulum(&args, poet_vibe::Span::new(0, 0)).unwrap();
+        let r = pendulum(&args, vibe::Span::new(0, 0)).unwrap();
         match r {
             Value::Record(m) => {
                 let small = m.get("small_angle_period").and_then(args::as_f64).unwrap();
@@ -700,7 +700,7 @@ mod tests {
             ("total_time", Value::F64(0.5)),
             ("samples", Value::U64(10)),
         ]);
-        let r = n_body(&args, poet_vibe::Span::new(0, 0)).unwrap();
+        let r = n_body(&args, vibe::Span::new(0, 0)).unwrap();
         match r {
             Value::Record(m) => {
                 let drift = m.get("energy_drift_rel").and_then(args::as_f64).unwrap();
@@ -729,7 +729,7 @@ mod tests {
             ("total_time", Value::F64(0.1)),
             ("samples", Value::U64(5)),
         ]);
-        let r = molecular_dynamics(&args, poet_vibe::Span::new(0, 0)).unwrap();
+        let r = molecular_dynamics(&args, vibe::Span::new(0, 0)).unwrap();
         match r {
             Value::Record(m) => {
                 let n = m.get("num_particles").and_then(args::as_u64).unwrap();
@@ -748,7 +748,7 @@ mod tests {
             "velocity",
             Value::List(velocity.iter().map(|x| Value::F64(*x)).collect()),
         )]);
-        let r = cfd_step(&args, poet_vibe::Span::new(0, 0)).unwrap();
+        let r = cfd_step(&args, vibe::Span::new(0, 0)).unwrap();
         match r {
             Value::Record(m) => {
                 let residual = m.get("residual_norm").and_then(args::as_f64).unwrap();
@@ -776,7 +776,7 @@ mod tests {
             ("hbar", Value::F64(1.0)),
             ("levels", Value::U64(3)),
         ]);
-        let r = quantum_states_1d(&args, poet_vibe::Span::new(0, 0)).unwrap();
+        let r = quantum_states_1d(&args, vibe::Span::new(0, 0)).unwrap();
         match r {
             Value::Record(m) => {
                 let eigs = m.get("eigenvalues");
@@ -801,7 +801,7 @@ mod tests {
             ("total_time", Value::F64(20.0)),
             ("samples", Value::U64(50)),
         ]);
-        let r = logistic_growth(&args, poet_vibe::Span::new(0, 0)).unwrap();
+        let r = logistic_growth(&args, vibe::Span::new(0, 0)).unwrap();
         match r {
             Value::Record(m) => {
                 if let Some(Value::List(pop)) = m.get("population") {
@@ -834,7 +834,7 @@ mod tests {
             ("total_time", Value::F64(0.5)),
             ("samples", Value::U64(10)),
         ]);
-        let r = advection_diffusion_1d(&args, poet_vibe::Span::new(0, 0)).unwrap();
+        let r = advection_diffusion_1d(&args, vibe::Span::new(0, 0)).unwrap();
         match r {
             Value::Record(m) => {
                 let i0 = m.get("initial_total").and_then(args::as_f64).unwrap();

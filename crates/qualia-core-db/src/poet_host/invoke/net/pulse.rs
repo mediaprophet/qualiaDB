@@ -3,7 +3,7 @@
 //! Exposes pulse payload type routing, channel management, and transport selection.
 
 use crate::poet_host::invoke::args;
-use poet_vibe::{Diagnostic, Span, Value};
+use vibe::{Diagnostic, Span, Value};
 
 /// `Pulse.publish` — publish a generic pulse message.
 pub fn pulse_publish(args: &Value, span: Span) -> Result<Value, Diagnostic> {

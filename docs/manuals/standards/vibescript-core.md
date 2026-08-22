@@ -2,7 +2,8 @@
 
 **Status:** Normative for implementation (conformance verified: 64 conformance tests across 9 domain verticals)  
 **Language version:** `vibe-0.1`  
-**Engine:** Poet  
+**Language:** Vibe / VibeScript (the JS replacement, for humans and machines)  
+**Host / creative environment:** Poet (UI, CLI, and other hosts)  
 **Copyright © 2026 Timothy Charles Holborn.** All rights reserved.  
 **Principal / inventor:** Timothy Charles Holborn &lt;timothy.holborn@gmail.com&gt;  
 Assignment: [`COPYRIGHT.md`](../COPYRIGHT.md) · Licence: [`LICENSE`](../LICENSE)
@@ -16,7 +17,7 @@ Consult inputs incorporated here (not restated as competing specs):
 |---|---|
 | `consult/20260815_codex.md` | Small closed grammar; generated capability bindings; no raw NQuin overlays; exact RDF 1.2 Turtle spellings; QApp stays declarative; effects, budgets, receipts; staged delivery |
 | `consult/20260815_qapp-script-gemini.md` | Three-tier split (UI / interpreted DSL / compiled engine); document+graph DSL not a JS replacement; zero JIT (iOS); mobile FFI and edge profiles as *profiles*, not extra grammars |
-| `consult/branding.md` | Poet = engine; Vibe / VibeScript = language; Pulse = transport/events; Aura = ontology/schema |
+| `consult/branding.md` | Vibe / VibeScript = language; Poet = human creative environment (UI/CLI) that hosts Vibe; Pulse = transport/events; Aura = ontology/schema |
 | `consult/Rust Extensible Runtime Architecture.pdf` | Scripts call **capabilities**, never plugins. Sandboxed extensions = WASM components. Hardware/GPU/HSM/codecs = native child processes under Qualia, registered into the same capability table |
 
 RFC 2119 words (`MUST`, `MUST NOT`, `SHOULD`, `MAY`) apply only in numbered normative sections.
@@ -29,7 +30,11 @@ RFC 2119 words (`MUST`, `MUST NOT`, `SHOULD`, `MAY`) apply only in numbered norm
 
 - reactive HCF cell formulas (Pure only);
 - signed document/agent modules that query and transact on a graph snapshot;
-- host event handlers (`on pulse…`, `on ui…`) that the Poet host dispatches.
+- host event handlers (`on pulse…`, `on ui…`) that Poet (or any host) dispatches.
+
+**Human dialect (workshop).** Authors write `using Animation;`, `cell score := …;`, `present lamp { color: #ff8800 }`, color literals, and catalog `Family.method()` calls. `capability.invoke("Family.method", {…})` remains the JNI/catalog spelling. Both are the same language; `using` is the lease, not a second grammar.
+
+**Locale.** English keywords are always legal. Additional keyword locales are opt-in (`locale zh;`) and MUST round-trip on the AST (`Program.locales`).
 
 **Vibe 0.1 is not** a general-purpose language, a JavaScript clone, a second Webizen VM opcode set, a replacement for `SlgOpcode`, or a surface that authors raw 48-byte Quin overlays. It MUST NOT grow a DOM or `eval`. Replacing JavaScript as Qualia’s *application* language is the product destination; 0.1 is the closed core that destination builds on, not a denial of it. The matching wire is CBOR-LD (HCF), not JSON — Canonical AST in the table below.
 
@@ -47,7 +52,7 @@ A package that uses only this document’s grammar, types, effects, and the **0.
 | Bytecode | `vibe-bc-0.1` (implemented) | Stack-based VM; binary encode/decode; optional fast path |
 | Package manifest | later | Capabilities, profile, hashes, signature |
 
-0.1 implementers MUST parse source → typed AST → evaluate. Bytecode (`vibe-bc-0.1`) is implemented as an optional execution path: `poet_vibe::bytecode::compile` compiles a checked AST into a `Chunk`, `poet_vibe::bytecode::Vm` executes it, and `poet_vibe::bytecode::encode_chunk`/`decode_chunk` provide binary serialization. The bytecode VM supports arithmetic, comparison, logical operators, control flow (if/else, while, for, match), user-defined functions with proper local scoping, list/record construction and access, and host capability dispatch.
+0.1 implementers MUST parse source → typed AST → evaluate. Bytecode (`vibe-bc-0.1`) is implemented as an optional execution path: `vibe::bytecode::compile` compiles a checked AST into a `Chunk`, `vibe::bytecode::Vm` executes it, and `vibe::bytecode::encode_chunk`/`decode_chunk` provide binary serialization. The bytecode VM supports arithmetic, comparison, logical operators, control flow (if/else, while, for, match), user-defined functions with proper local scoping, list/record construction and access, and host capability dispatch.
 
 ---
 
@@ -57,7 +62,7 @@ A package that uses only this document’s grammar, types, effects, and the **0.
 2. Newlines `LF` and `CRLF` are equivalent. Canonical hash form is LF-only.
 3. Identifiers follow UAX #31 with XID_Continue classification. ASCII `[A-Za-z_][A-Za-z0-9_]*` is the base; Unicode identifiers are accepted subject to the T40 security policy (BiDi control rejection per CVE-2021-42574, homoglyph/confusable detection per TR39, mixed-script restriction, max 255 chars). Identifiers are normalized to NFC form.
 4. Keywords (reserved):  
-   `module` `import` `as` `prefix` `requires` `capability` `fn` `async` `on` `let` `mut` `const` `if` `else` `for` `in` `while` `match` `return` `yield` `transaction` `await` `true` `false` `null` `effect`
+   `module` `import` `as` `prefix` `requires` `capability` `using` `locale` `fn` `async` `on` `let` `mut` `const` `cell` `present` `enum` `field` `material` `law` `if` `else` `for` `in` `while` `match` `return` `yield` `transaction` `await` `true` `false` `null` `effect` `pure` `hot` `cold`
 5. Comments: `//` to end of line; `/* … */` non-nested. Comments are not tokens.
 6. Strings: `"…"` with escapes `\\` `\"` `\n` `\r` `\t` `\u{XXXX}`. No interpolation in 0.1. No backtick strings in 0.1.
 7. Integers: decimal digits, optional `_` separators, optional suffix `i32` `u32` `i64` `u64`. Unsuffixed integer is `i64`. Hex `0x…` is `u64` if unsuffixed.
@@ -76,15 +81,24 @@ A package that uses only this document’s grammar, types, effects, and the **0.
 Every fenced `vibe` example in **this** document MUST be accepted by this grammar. Examples in older essays are non-normative.
 
 ```ebnf
-Program        ::= ModuleDecl? ImportDecl* PrefixDecl* RequiresDecl? Item* ;
+Program        ::= LocaleDecl* ModuleDecl? ImportDecl* PrefixDecl* (UsingDecl | RequiresDecl)* Item* ;
+LocaleDecl     ::= 'locale' Identifier ';' ;
 ModuleDecl     ::= 'module' (IRI | Identifier) ';' ;
 ImportDecl     ::= 'import' StringLiteral ('as' Identifier)? ';' ;
 PrefixDecl     ::= 'prefix' Identifier ':' IRI ';' ;
+UsingDecl      ::= 'using' UsingSpec (',' UsingSpec)* ';' ;
+UsingSpec      ::= Identifier ( '.' '{' Identifier (',' Identifier)* '}' )? ;
 RequiresDecl   ::= 'requires' '[' CapList? ']' ';' ;
 CapList        ::= CapSpec (',' CapSpec)* ;
 CapSpec        ::= 'capability' '(' StringLiteral (',' NamedArg)* ')' ;
 
-Item           ::= FunctionDecl | HookDecl | ConstDecl | Statement ;
+Item           ::= FunctionDecl | HookDecl | ConstDecl | CellDecl | PresentDecl
+                 | BindDecl | EnumDecl | FieldDecl | MaterialDecl | LawDecl | Statement ;
+BindDecl       ::= 'bind' Expression '<->' Expression
+                   ('using' Identifier '[' Expression ',' Expression ']')?
+                   ('resolve' Identifier)? ';' ;
+CellDecl       ::= EffectClass? 'cell' Identifier ParamList? ('when' Expression)? (':=' | '=') Expression ';' ;
+PresentDecl    ::= 'present' Identifier '{' PresentProp* '}' ;
 ConstDecl      ::= 'const' Identifier (':' Type)? '=' Expression ';' ;
 FunctionDecl   ::= EffectClass? 'async'? 'fn' Identifier '(' Params? ')'
                    BudgetClause? ('->' Type)? Block ;
@@ -116,7 +130,10 @@ Block          ::= '{' Statement* '}' ;
 (* Cell host only — not part of Program *)
 CellBody       ::= '=' Expression ;
 
-Expression     ::= LogicalOr ;
+Expression     ::= Pipeline ;
+Pipeline       ::= TweenExpr ('|>' TweenExpr)* ;
+TweenExpr      ::= LogicalOr ('~' LogicalOr 'over' LogicalOr
+                   (('ease' Identifier) | ('spring' '(' NamedArg* ')'))? )? ;
 LogicalOr      ::= LogicalAnd ('||' LogicalAnd)* ;
 LogicalAnd     ::= Equality ('&&' Equality)* ;
 Equality       ::= Relational (('==' | '!=') Relational)* ;
@@ -130,7 +147,16 @@ Arg            ::= (Identifier ':')? Expression ;
 
 Primary        ::= Literal | Identifier | QueryVar | IRI | PrefixedName
                  | BlankNode | TripleTerm | ReifiedTerm
-                 | ListLiteral | RecordLiteral | '(' Expression ')' ;
+                 | ListLiteral | RecordLiteral | LambdaExpr | GraphQuery | Modal
+                 | ColorLit | QuantityLit | '(' Expression ')' ;
+
+LambdaExpr     ::= '|' (Identifier (',' Identifier)*)? '|' Expression ;
+GraphQuery     ::= 'graph?' 'ask'? '{' Expression* '}' ;
+Modal          ::= ('obligate' | 'permit' | 'forbid' | 'knows' | 'believes'
+                 | 'always' | 'eventually') '{' Expression '}' ;
+PrefixedName   ::= Identifier ':' (Identifier | IntegerLiteral) ;
+ColorLit       ::= '#' HexDigits ;
+QuantityLit    ::= (IntegerLiteral | FloatLiteral) UnitSuffix ;
 
 Literal        ::= StringLiteral | IntegerLiteral | FloatLiteral
                  | 'true' | 'false' | 'null' ;
@@ -332,7 +358,7 @@ Logic, geometry, inference, vision, audio, and extension codecs are **out of 0.1
 
 ### 11.1 Cosmic coordinate bindings (OCS)
 
-The Omniversal Coordinate System (OCS) bindings expose the `poet_vibe::cosmic` library via `capability.invoke` IDs in the `Cosmic.*` namespace. These are post-0.1 extensions available on `native-desktop` targets.
+The Omniversal Coordinate System (OCS) bindings expose the `vibe::cosmic` library via `capability.invoke` IDs in the `Cosmic.*` namespace. These are post-0.1 extensions available on `native-desktop` targets.
 
 | Binding | Effect | Input | Output |
 |---|---|---|---|
@@ -588,10 +614,10 @@ pure fn count_conditions(kind: Iri) -> Result<i64, string> {
 
 | Piece | Crate | Reason |
 |---|---|---|
-| Lexer, parser, AST, type/effect check, AST interpreter | new workspace crate `poet-vibe` | Must not grow `qualia-core-db` monolith |
+| Lexer, parser, AST, type/effect check, AST interpreter | new workspace crate `vibe` | Must not grow `qualia-core-db` monolith |
 | Quin seal, graph snapshot, SHACL, telemetry | `qualia-core-db` / `qualia-client-core` | Existing truth |
 | Desktop host (load module, grant caps, dispatch `on`) | `webizen-desktop` + studio pane | UI is the test harness |
-| WASM | `poet-vibe` with `wasm32-unknown-unknown` | Same interpreter |
+| WASM | `vibe` with `wasm32-unknown-unknown` | Same interpreter |
 
 Parser implementation: custom (e.g. `logos` + recursive descent or `chumsky`). **Do not** embed Rhai as the Vibe surface — RDF literals, `requires`, and effect checking would become a second language (Gemini’s Rhai path is recorded as a rejected 0.1 option).
 
@@ -606,7 +632,7 @@ Extensions later: WASM Component Model for sandboxed codecs; **child processes**
 3. No public API writes Quin `parity` or metadata overlays.
 4. Pure cells cannot reach Pulse, graph write, or time.
 5. `graph.query` without `take` is a type/effect error.
-6. Tests live in `poet-vibe` and do not require a GPU.
+6. Tests live in `vibe` and do not require a GPU.
 
 Until those six hold, documents MUST say **0.1-draft**, not v1.0.
 
@@ -614,4 +640,4 @@ Until those six hold, documents MUST say **0.1-draft**, not v1.0.
 
 ## 16. Out of 0.1 (explicit)
 
-Closures; generics beyond `Option`/`Result`/`List`; interpolation; Unicode identifiers; package signatures; SHACL-AF / ShEx as complete engines; Bao HMC v2; “mathematically perfect” speech; `no_std` edge; enumerating Qualia’s full capability matrix as keywords. (Note: `vibe-bc-0.1` bytecode was originally listed here but has been implemented as an optional stack-based VM with binary codec — see §1.)
+Capturing closures (non-capturing `|x| expr` **is** in 0.1); generics beyond `Option`/`Result`/`List`; interpolation; package signatures; SHACL-AF / ShEx as complete engines; Bao HMC v2; “mathematically perfect” speech; `no_std` edge; enumerating Qualia’s full capability matrix as keywords. Optional stack bytecode (`vibe-bc-0.1`) does not compile lambda/tween/graph/modal — the AST interpreter is the 0.1 authoring runtime.

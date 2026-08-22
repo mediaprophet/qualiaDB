@@ -10,7 +10,7 @@ mod extra;
 pub use extra::parse_bse_json;
 
 use super::args;
-use poet_vibe::{Diagnostic, Span, Value};
+use vibe::{Diagnostic, Span, Value};
 
 /// `Chemistry.element_symbol` — get element symbol from atomic number.
 /// Args: { atomic_number: u64 }
@@ -90,8 +90,8 @@ pub fn lda_correlation_vwn(args: &Value, span: Span) -> Result<Value, Diagnostic
 
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
 pub fn parse_bse_json(
-    _args: &poet_vibe::Value,
-    span: poet_vibe::Span,
-) -> Result<poet_vibe::Value, poet_vibe::Diagnostic> {
+    _args: &vibe::Value,
+    span: vibe::Span,
+) -> Result<vibe::Value, vibe::Diagnostic> {
     Err(super::args::need_scientific(span, "Chemistry"))
 }

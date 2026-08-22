@@ -4,7 +4,7 @@
 
 #![allow(dead_code)]
 
-use poet_vibe::{DiagCode, Diagnostic, Span, Value};
+use vibe::{DiagCode, Diagnostic, Span, Value};
 use std::collections::BTreeMap;
 
 pub fn bad(span: Span, msg: impl Into<String>) -> Diagnostic {

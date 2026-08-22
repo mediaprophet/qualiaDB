@@ -6,7 +6,7 @@
 use super::super::args;
 use super::fitters::parse_matrix;
 use crate::solvers::learning as ml;
-use poet_vibe::{Diagnostic, Span, Value};
+use vibe::{Diagnostic, Span, Value};
 
 // ── Classifiers ─────────────────────────────────────────────────────
 

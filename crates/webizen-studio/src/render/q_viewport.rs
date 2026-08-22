@@ -7,6 +7,9 @@
 //! 4. **Resize** — call `Render.gpu_resize` when the canvas dimensions change.
 //! 5. **Camera** — call `Render.gpu_set_camera` on mouse/wheel input.
 //! 6. **Destroy** — call `Render.gpu_destroy` on unmount.
+//! 7. **After resize** — `Render.gpu_sync_bloom` then `Render.gpu_surface_size`.
+//! 8. **Pick** — `Render.gpu_pick` + `Render.gpu_poll_pick` on click.
+//! 9. **Camera readback** — `Render.gpu_camera_state` after orbit.
 //!
 //! This module contains only the types and pure logic (no UI dependencies).
 //! The async invoke functions live in the component module, which has access
@@ -123,6 +126,12 @@ pub struct ViewportState {
     pub running: bool,
     /// Last error message (if any).
     pub last_error: Option<String>,
+    /// Last `Render.gpu_surface_size` width.
+    pub surface_width: u32,
+    /// Last `Render.gpu_surface_size` height.
+    pub surface_height: u32,
+    /// Last pick node id, if any.
+    pub last_pick: Option<u32>,
 }
 
 impl ViewportState {
@@ -135,6 +144,11 @@ impl ViewportState {
     pub fn is_gpu(&self) -> bool {
         self.backend.is_gpu()
     }
+}
+
+/// Workshop-dialect Vibe body for GPU invokes (`using Render;`).
+pub fn vibe_gpu_script(body: &str) -> String {
+    format!("using Render;\neffect fn go() {{\n    {body}\n}}")
 }
 
 /// Extract the GPU handle from a `poet_eval` result JSON.
@@ -151,6 +165,31 @@ pub fn extract_handle(result: &Value) -> Result<u64, String> {
         return Ok(handle);
     }
     Err("no handle in gpu_init result".into())
+}
+
+fn nested_record(result: &Value) -> Option<Value> {
+    if let Some(value_str) = result.get("value").and_then(|v| v.as_str()) {
+        serde_json::from_str::<Value>(value_str).ok()
+    } else {
+        Some(result.clone())
+    }
+}
+
+/// Extract `{width, height}` from `Render.gpu_surface_size`.
+pub fn extract_surface_size(result: &Value) -> Option<(u32, u32)> {
+    let rec = nested_record(result)?;
+    let w = rec.get("width").and_then(|v| v.as_u64())? as u32;
+    let h = rec.get("height").and_then(|v| v.as_u64())? as u32;
+    Some((w, h))
+}
+
+/// Extract pick result from `Render.gpu_poll_pick`.
+pub fn extract_pick(result: &Value) -> Option<u32> {
+    let rec = nested_record(result)?;
+    if rec.get("found").and_then(|v| v.as_bool()) != Some(true) {
+        return None;
+    }
+    rec.get("node_id").and_then(|v| v.as_u64()).map(|n| n as u32)
 }
 
 /// Extract the backend string from a `poet_eval` result JSON.
@@ -260,5 +299,27 @@ mod tests {
         assert_eq!(decoded.particle_cap, 8192);
         assert_eq!(decoded.target_fps, 30);
         assert!(!decoded.auto_mount);
+    }
+
+    #[test]
+    fn vibe_gpu_script_uses_render_family() {
+        let src = vibe_gpu_script("return Render.gpu_adapter_info();");
+        assert!(src.contains("using Render;"));
+        assert!(src.contains("Render.gpu_adapter_info"));
+        assert!(!src.contains("capability.invoke"));
+    }
+
+    #[test]
+    fn extract_surface_size_direct() {
+        let result = json!({ "width": 128, "height": 64 });
+        assert_eq!(extract_surface_size(&result), Some((128, 64)));
+    }
+
+    #[test]
+    fn extract_pick_found() {
+        let result = json!({ "found": true, "node_id": 7 });
+        assert_eq!(extract_pick(&result), Some(7));
+        let miss = json!({ "found": false });
+        assert_eq!(extract_pick(&miss), None);
     }
 }

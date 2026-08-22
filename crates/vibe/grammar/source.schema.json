@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "vibe-0.1-source",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["language", "kind", "source"],
+  "properties": {
+    "language": { "const": "vibe-0.1" },
+    "kind": { "enum": ["cell", "module"] },
+    "source": { "type": "string", "minLength": 1 },
+    "locales": {
+      "type": "array",
+      "items": { "type": "string", "enum": ["en", "zh", "es", "ja", "ar", "hi", "fr", "de"] }
+    },
+    "using": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Catalog family grants, e.g. Animation, Render, GraphDatabase"
+    }
+  }
+}

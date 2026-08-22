@@ -2,7 +2,7 @@
 
 use super::super::args;
 use crate::specialized_libs::computational_geometry::{convex_hull_2, Point2};
-use poet_vibe::{Diagnostic, Span, Value};
+use vibe::{Diagnostic, Span, Value};
 
 pub fn hull2(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let rows = args::list(args_v)

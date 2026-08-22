@@ -4,7 +4,7 @@
 
 use super::super::args;
 use crate::solvers::statistics as stats;
-use poet_vibe::{Diagnostic, Span, Value};
+use vibe::{Diagnostic, Span, Value};
 
 // ── Descriptive extras ──────────────────────────────────────────────
 

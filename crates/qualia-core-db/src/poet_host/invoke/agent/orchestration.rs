@@ -24,7 +24,7 @@ use crate::agent_runtime::orchestration::{
     assign_agents, create_session, execute_session, plan_session, session_summary, AgentRole,
     OrchestrationSession, RosterAgent,
 };
-use poet_vibe::{Diagnostic, Span, Value};
+use vibe::{Diagnostic, Span, Value};
 use std::collections::BTreeMap;
 use std::sync::Mutex;
 
@@ -268,6 +268,8 @@ mod tests {
     use super::*;
     use std::collections::BTreeMap;
 
+    static TEST_MUTEX: Mutex<()> = Mutex::new(());
+
     fn clear_sessions() {
         let mut guard = SESSIONS.lock().unwrap();
         *guard = None;
@@ -275,6 +277,7 @@ mod tests {
 
     #[test]
     fn session_create_and_status() {
+        let _lock = TEST_MUTEX.lock().unwrap();
         clear_sessions();
         let mut m = BTreeMap::new();
         m.insert("id".into(), Value::String("s1".into()));
@@ -290,6 +293,7 @@ mod tests {
 
     #[test]
     fn roster_register_and_list() {
+        let _lock = TEST_MUTEX.lock().unwrap();
         clear_sessions();
         let mut m = BTreeMap::new();
         m.insert("id".into(), Value::String("s2".into()));
@@ -317,6 +321,7 @@ mod tests {
 
     #[test]
     fn full_lifecycle() {
+        let _lock = TEST_MUTEX.lock().unwrap();
         clear_sessions();
         // Create session.
         let mut m = BTreeMap::new();

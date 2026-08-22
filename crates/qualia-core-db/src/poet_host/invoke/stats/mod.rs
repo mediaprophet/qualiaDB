@@ -52,25 +52,25 @@ pub use regression::linear_regression;
 
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
 pub fn arithmetic_mean(
-    _args: &poet_vibe::Value,
-    span: poet_vibe::Span,
-) -> Result<poet_vibe::Value, poet_vibe::Diagnostic> {
+    _args: &vibe::Value,
+    span: vibe::Span,
+) -> Result<vibe::Value, vibe::Diagnostic> {
     Err(super::args::need_scientific(span, "Statistics"))
 }
 
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
 pub fn pearson_r(
-    args: &poet_vibe::Value,
-    span: poet_vibe::Span,
-) -> Result<poet_vibe::Value, poet_vibe::Diagnostic> {
+    args: &vibe::Value,
+    span: vibe::Span,
+) -> Result<vibe::Value, vibe::Diagnostic> {
     arithmetic_mean(args, span)
 }
 
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
 pub fn linear_regression(
-    _args: &poet_vibe::Value,
-    span: poet_vibe::Span,
-) -> Result<poet_vibe::Value, poet_vibe::Diagnostic> {
+    _args: &vibe::Value,
+    span: vibe::Span,
+) -> Result<vibe::Value, vibe::Diagnostic> {
     Err(super::args::need_scientific(span, "Statistics"))
 }
 
@@ -80,9 +80,9 @@ macro_rules! stats_stub {
     ($($name:ident),*) => {
         $(
             pub fn $name(
-                _args: &poet_vibe::Value,
-                span: poet_vibe::Span,
-            ) -> Result<poet_vibe::Value, poet_vibe::Diagnostic> {
+                _args: &vibe::Value,
+                span: vibe::Span,
+            ) -> Result<vibe::Value, vibe::Diagnostic> {
                 Err(super::args::need_scientific(span, "Statistics"))
             }
         )*

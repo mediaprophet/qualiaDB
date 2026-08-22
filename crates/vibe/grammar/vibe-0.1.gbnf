@@ -1,0 +1,68 @@
+# vibe-0.1 GBNF — derived from vibescript-core.md §3 and grammar/vibe-0.1.ebnf.
+# For Qualia's in-process constrained decode. Not an Ollama artifact.
+# Does not accept the forbidden Quin overlay literal.
+
+root ::= cell | module
+
+cell ::= "=" ws expr
+
+module ::= locale-decl* module-decl? import-decl* prefix-decl* (using-decl | requires-decl)* item*
+
+locale-decl ::= "locale" ws ident ws ";"
+module-decl ::= "module" ws ( iri | ident ) ws ";"
+import-decl ::= "import" ws string ws ( "as" ws ident ws )? ";"
+prefix-decl ::= "prefix" ws ident ws ":" ws iri ws ";"
+using-decl ::= "using" ws using-spec ( ws "," ws using-spec )* ws ";"
+using-spec ::= ident ( "." "{" ident ( "," ident )* "}" )?
+requires-decl ::= "requires" ws "[" ws cap-list? "]" ws ";"
+cap-list ::= cap-spec ( ws "," ws cap-spec )*
+cap-spec ::= "capability" "(" ws string ( ws "," ws ident ws ":" ws expr )* ws ")"
+
+item ::= fn-decl | hook-decl | const-decl | cell-decl | present-decl | bind-decl | enum-decl | field-decl | material-decl | law-decl | stmt
+bind-decl ::= "bind" ws expr ws "<->" ws expr ( ws "using" ws ident ws "[" ws expr ws "," ws expr ws "]" )? ( ws "resolve" ws ident )? ws ";"
+fn-decl ::= effect-class? ws "async"? ws "fn" ws ident ws "(" ws params? ")" ws budget? ( "->" ws type-name )? ws block
+hook-decl ::= "on" ws ident ( ":" ident )* ws "(" ws params? ")" ws budget? ( "->" ws type-name )? ws block
+const-decl ::= "const" ws ident ( ws ":" ws type-name )? ws "=" ws expr ws ";"
+cell-decl ::= effect-class? ws "cell" ws ident ( "(" ws params? ")" )? ( ws "when" ws expr )? ws ( ":=" | "=" ) ws expr ws ";"
+present-decl ::= "present" ws ident ws "{" ws present-prop* "}"
+present-prop ::= ident ws ":" ws expr
+enum-decl ::= "enum" ws ident ws "{" ws ident ( ws "," ws ident )* ws "}"
+field-decl ::= "field" ws ident ws ":" ws type-name ( ws "unit" ws ":" ws iri )? ws ";"
+material-decl ::= "material" ws ident ws "{" ws ident ws ":" ws expr ( ws "," ws ident ws ":" ws expr )* ws "}"
+law-decl ::= "law" ws ident ws "when" ws expr ws "=>" ws expr ws ";"
+effect-class ::= "pure" | "effect" | "hot" | "cold"
+budget ::= "budget" "(" ws ident ws ":" ws expr ( ws "," ws ident ws ":" ws expr )* ws ")"
+
+params ::= ident ws ":" ws type-name ( ws "," ws ident ws ":" ws type-name )*
+type-name ::= "i32" | "u32" | "i64" | "u64" | "f32" | "f64" | "bool" | "string" | "Iri" | "Quin" | "Result" | "Receipt" | ident
+
+stmt ::= let-stmt | return-stmt | expr ws ";"
+let-stmt ::= "let" ws "mut"? ws ident ( ws ":" ws type-name )? ( ws "=" ws expr )? ";"
+return-stmt ::= "return" ws expr? ";"
+block ::= "{" ws stmt* "}"
+
+expr ::= tween ( ws "|>" ws tween )*
+tween ::= term ( ws "~" ws term ws "over" ws term ( ws "ease" ws ident | ws "spring" "(" ws named-args ws ")" )? )?
+term ::= primary ( ws postfix )*
+postfix ::= "." ident | "(" ws args? ")" | "?"
+args ::= expr ( ws "," ws expr )*
+named-args ::= ident ws ":" ws expr ( ws "," ws ident ws ":" ws expr )*
+primary ::= number | string | color | ident | query-var | iri | prefixed | triple | reified | list | record | "(" ws expr ws ")" | graph-query | modal | lambda
+lambda ::= "|" ws ( ident ( ws "," ws ident )* )? ws "|" ws expr
+
+graph-query ::= "graph?" ws ( "ask" ws )? "{" ws expr* "}"
+modal ::= ( "obligate" | "permit" | "forbid" | "knows" | "believes" ) ws "{" ws expr ws "}"
+
+triple ::= "<<(" ws expr ws expr ws expr ws ")>>"
+reified ::= "<<" ws expr ws expr ws expr ws "~" ws expr ws ">>"
+
+list ::= "[" ws ( expr ( ws "," ws expr )* )? "]"
+record ::= "{" ws ( ident ws ":" ws expr ( ws "," ws ident ws ":" ws expr )* )? "}"
+ident ::= [A-Za-z_] [A-Za-z0-9_]*
+query-var ::= "?" ident
+prefixed ::= ident ":" [A-Za-z0-9_] [A-Za-z0-9_.-]*
+iri ::= "<" [^<>\s]+ ">"
+string ::= "\"" ( [^"\\] | "\\" ["\\nrt] )* "\""
+color ::= "#" [0-9A-Fa-f] [0-9A-Fa-f] [0-9A-Fa-f] [0-9A-Fa-f]? [0-9A-Fa-f]? [0-9A-Fa-f]? [0-9A-Fa-f]? [0-9A-Fa-f]?
+number ::= "-"? [0-9]+ ( "." [0-9]+ )?
+ws ::= [ \t\n\r]*

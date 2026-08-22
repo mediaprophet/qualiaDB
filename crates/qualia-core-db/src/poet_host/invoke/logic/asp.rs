@@ -2,7 +2,7 @@
 
 use crate::modalities::asp::{enumerate_stable_models, MAX_STABLE_MODELS};
 use crate::poet_host::PoetSnapshot;
-use poet_vibe::{Diagnostic, Span, Value};
+use vibe::{Diagnostic, Span, Value};
 
 pub fn enumerate(snap: &PoetSnapshot, span: Span) -> Result<Value, Diagnostic> {
     let _ = span;

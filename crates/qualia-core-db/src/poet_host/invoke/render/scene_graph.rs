@@ -2,7 +2,7 @@
 //! the existing render infrastructure.
 
 use super::super::args;
-use poet_vibe::{Diagnostic, Span, Value};
+use vibe::{Diagnostic, Span, Value};
 
 /// `Scene.create` — create a new scene by name. Returns a scene handle
 /// record. Wraps the existing `Render.scene` infrastructure.

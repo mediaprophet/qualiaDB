@@ -2,7 +2,7 @@
 
 use super::super::ids;
 use crate::CAPABILITY_DESCRIPTORS;
-use poet_vibe::Value;
+use vibe::Value;
 use std::collections::BTreeMap;
 
 pub fn list() -> Value {

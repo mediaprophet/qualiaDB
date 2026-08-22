@@ -1,6 +1,6 @@
 //! R3 — DAG Executor.
 //!
-//! Executes a [`poet_vibe::dag::DagPipeline`] node-by-node in topological
+//! Executes a [`vibe::dag::DagPipeline`] node-by-node in topological
 //! order, wiring blackboard I/O, phase leases, and deontic gates between
 //! nodes.
 //!
@@ -24,9 +24,9 @@
 
 use crate::modalities::blackboard::BlackboardBus;
 use crate::NQuin;
-use poet_vibe::dag::{DagError, DagPipeline};
-use poet_vibe::deontic_interrupt::{DeonticInterrupt, PhaseLeaser};
-use poet_vibe::Diagnostic;
+use vibe::dag::{DagError, DagPipeline};
+use vibe::deontic_interrupt::{DeonticInterrupt, PhaseLeaser};
+use vibe::Diagnostic;
 
 /// Result of executing a single DAG node.
 #[derive(Debug, Clone)]
@@ -231,9 +231,9 @@ pub fn execute_pipeline<E: NodeExecutor>(
 mod tests {
     use super::*;
     use crate::modalities::blackboard::BlackboardBus;
-    use poet_vibe::dag::{DagEdge, DagNode, DagPipeline, NodeEffect};
-    use poet_vibe::deontic_interrupt::{Phase, PhaseLeaser};
-    use poet_vibe::Span;
+    use vibe::dag::{DagEdge, DagNode, DagPipeline, NodeEffect};
+    use vibe::deontic_interrupt::{Phase, PhaseLeaser};
+    use vibe::Span;
 
     fn make_quin(s: u64, p: u64, o: u64) -> NQuin {
         let q = NQuin {
@@ -279,7 +279,7 @@ mod tests {
             _capabilities: &[String],
         ) -> Result<Vec<(String, Vec<NQuin>)>, Diagnostic> {
             Err(Diagnostic::new(
-                poet_vibe::DiagCode::E600,
+                vibe::DiagCode::E600,
                 Span::point(0),
                 "intentional failure",
             ))

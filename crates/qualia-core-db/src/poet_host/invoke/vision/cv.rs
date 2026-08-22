@@ -4,7 +4,7 @@
 //! invoke IDs in the `ComputerVision.*` namespace.
 
 use super::super::args;
-use poet_vibe::{Diagnostic, Span, Value};
+use vibe::{Diagnostic, Span, Value};
 
 /// `ComputerVision.gaussian_blur` — fixed 3×3 Gaussian blur on a grayscale image.
 /// Args: { data: [u8], width: u64, height: u64, stride?: u64 }

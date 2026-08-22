@@ -4,7 +4,7 @@ use super::super::args;
 use crate::hypermedia::{
     content_digest, AssetRef, AssetRole, HypermediaContainer, Processor, TextProcessor,
 };
-use poet_vibe::{Diagnostic, Span, Value};
+use vibe::{Diagnostic, Span, Value};
 
 pub fn ingest(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let text = args::as_str(args_v)

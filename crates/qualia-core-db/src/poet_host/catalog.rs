@@ -4,7 +4,7 @@
 //! bot door; it must not be the only listing.
 
 use crate::{CapabilityDescriptor, CAPABILITY_DESCRIPTORS};
-use poet_vibe::Value;
+use vibe::Value;
 use std::collections::BTreeMap;
 
 /// A 0.1 Vibe binding and whether the live host actually implements it.

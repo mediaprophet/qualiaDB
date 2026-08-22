@@ -2,7 +2,7 @@
 
 use super::super::args;
 use crate::solvers::learning::regression::linear::fit;
-use poet_vibe::{Diagnostic, Span, Value};
+use vibe::{Diagnostic, Span, Value};
 
 pub fn fit_ols(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let rows = args::rec(args_v, "x")

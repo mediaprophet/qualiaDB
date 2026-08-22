@@ -4,7 +4,7 @@
 
 use super::args;
 use crate::solvers;
-use poet_vibe::{Diagnostic, Span, Value};
+use vibe::{Diagnostic, Span, Value};
 
 // ── Number theory ───────────────────────────────────────────────────
 
@@ -911,4 +911,104 @@ fn parse_ga_coeffs(
         coeffs,
         grade_mask: 0,
     })
+}
+
+// ── Integral transforms (IDFT, Z-transform) ─────────────────────────
+
+/// `IntegralTransforms.idft` — inverse discrete Fourier transform.
+/// Args: { spectrum: [[f64]] }  (list of [re, im] pairs)
+pub fn idft(args: &Value, span: Span) -> Result<Value, Diagnostic> {
+    let spectrum = parse_cplx_list(args, "spectrum", "idft", span)?;
+    let result = solvers::transforms::idft(&spectrum);
+    Ok(cplx_list_value(&result))
+}
+
+/// `IntegralTransforms.z_transform_finite` — Z-transform of a finite sequence at a complex z.
+/// Args: { x: [f64], z: [f64, f64] }  (z = [re, im])
+pub fn z_transform_finite(args: &Value, span: Span) -> Result<Value, Diagnostic> {
+    let x = args::rec_f64_list(args, "x")
+        .ok_or_else(|| args::bad(span, "z_transform_finite needs x: [f64]"))?;
+    let z_vals = args::rec_f64_list(args, "z")
+        .ok_or_else(|| args::bad(span, "z_transform_finite needs z: [re, im]"))?;
+    if z_vals.len() != 2 {
+        return Err(args::bad(span, "z_transform_finite: z must be [re, im]"));
+    }
+    let z = (z_vals[0], z_vals[1]);
+    match solvers::transforms::z_transform_finite(&x, z) {
+        Some(result) => Ok(args::record([
+            ("re", Value::F64(result.0)),
+            ("im", Value::F64(result.1)),
+        ])),
+        None => Err(args::bad(span, "z_transform_finite: invalid z (|z| = 0)")),
+    }
+}
+
+/// `IntegralTransforms.unit_step_z` — Z-transform of the unit step sequence at z.
+/// Args: { z: [f64, f64] }
+pub fn unit_step_z(args: &Value, span: Span) -> Result<Value, Diagnostic> {
+    let z_vals = args::rec_f64_list(args, "z")
+        .ok_or_else(|| args::bad(span, "unit_step_z needs z: [re, im]"))?;
+    if z_vals.len() != 2 {
+        return Err(args::bad(span, "unit_step_z: z must be [re, im]"));
+    }
+    let z = (z_vals[0], z_vals[1]);
+    match solvers::transforms::unit_step_z(z) {
+        Some(result) => Ok(args::record([
+            ("re", Value::F64(result.0)),
+            ("im", Value::F64(result.1)),
+        ])),
+        None => Err(args::bad(span, "unit_step_z: invalid z (|z| <= 1)")),
+    }
+}
+
+/// `IntegralTransforms.geometric_z` — Z-transform of a^n at z.
+/// Args: { a: f64, z: [f64, f64] }
+pub fn geometric_z(args: &Value, span: Span) -> Result<Value, Diagnostic> {
+    let a = args::rec_f64(args, "a").ok_or_else(|| args::bad(span, "geometric_z needs a: f64"))?;
+    let z_vals = args::rec_f64_list(args, "z")
+        .ok_or_else(|| args::bad(span, "geometric_z needs z: [re, im]"))?;
+    if z_vals.len() != 2 {
+        return Err(args::bad(span, "geometric_z: z must be [re, im]"));
+    }
+    let z = (z_vals[0], z_vals[1]);
+    match solvers::transforms::geometric_z(a, z) {
+        Some(result) => Ok(args::record([
+            ("re", Value::F64(result.0)),
+            ("im", Value::F64(result.1)),
+        ])),
+        None => Err(args::bad(span, "geometric_z: invalid parameters")),
+    }
+}
+
+fn parse_cplx_list(
+    v: &Value,
+    key: &str,
+    fn_name: &str,
+    span: Span,
+) -> Result<Vec<solvers::transforms::Cplx>, Diagnostic> {
+    let list_val = args::rec(v, key)
+        .ok_or_else(|| args::bad(span, format!("{fn_name} needs {key}: [[f64]]")))?;
+    let items = args::list(&list_val)
+        .ok_or_else(|| args::bad(span, format!("{fn_name}: {key} must be a list")))?;
+    let mut result = Vec::new();
+    for item in items {
+        let pair = args::f64s(item)
+            .ok_or_else(|| args::bad(span, format!("{fn_name}: each element must be [re, im]")))?;
+        if pair.len() != 2 {
+            return Err(args::bad(
+                span,
+                format!("{fn_name}: each element must be [re, im]"),
+            ));
+        }
+        result.push((pair[0], pair[1]));
+    }
+    Ok(result)
+}
+
+fn cplx_list_value(items: &[solvers::transforms::Cplx]) -> Value {
+    let records: Vec<Value> = items
+        .iter()
+        .map(|(re, im)| args::record([("re", Value::F64(*re)), ("im", Value::F64(*im))]))
+        .collect();
+    Value::List(records)
 }

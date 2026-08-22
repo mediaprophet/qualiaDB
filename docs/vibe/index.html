@@ -3,28 +3,48 @@ layout: qualia
 title: VibeScript
 ---
 
-<div class="vibe-landing">
+<div class="vibe-landing" style="max-width: 72rem; margin: 0 auto;">
   <style>
+    .vibe-landing {
+      color: #e2e8f0;
+    }
     .vibe-hero {
       text-align: center;
-      padding: 3rem 1rem 2rem;
+      padding: 3.5rem 1rem 2.5rem;
+      position: relative;
+    }
+    .vibe-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 4px 14px;
+      border-radius: 9999px;
+      background: rgba(34, 211, 238, 0.1);
+      border: 1px solid rgba(34, 211, 238, 0.25);
+      color: #22d3ee;
+      font-size: 0.82rem;
+      font-weight: 600;
+      letter-spacing: 0.03em;
+      margin-bottom: 1.25rem;
     }
     .vibe-hero h1 {
-      font-size: 3rem;
+      font-size: 3.25rem;
       font-weight: 800;
-      background: linear-gradient(135deg, #22d3ee, #a78bfa);
+      letter-spacing: -0.03em;
+      line-height: 1.15;
+      background: linear-gradient(135deg, #38bdf8 0%, #818cf8 50%, #c084fc 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
-      background-clip: text;
-      margin-bottom: 0.5rem;
+      margin-bottom: 1rem;
     }
     .vibe-hero .tagline {
       font-size: 1.25rem;
       color: #94a3b8;
-      max-width: 36rem;
-      margin: 0 auto 1.5rem;
+      max-width: 44rem;
+      margin: 0 auto 2rem;
+      line-height: 1.6;
     }
-    .vibe-hero .cta {
+    .vibe-hero .cta-row {
       display: flex;
       gap: 12px;
       justify-content: center;
@@ -34,279 +54,603 @@ title: VibeScript
       display: inline-flex;
       align-items: center;
       gap: 8px;
-      padding: 10px 24px;
+      padding: 10px 22px;
       border-radius: 8px;
-      font-size: 0.95rem;
+      font-size: 0.92rem;
       font-weight: 600;
-      text-decoration: none;
-      transition: all 0.15s;
+      text-decoration: none !important;
+      transition: all 0.15s ease-in-out;
       border: 1px solid transparent;
     }
     .vibe-btn-primary {
-      background: linear-gradient(135deg, #06b6d4, #8b5cf6);
-      color: #fff;
+      background: linear-gradient(135deg, #0284c7, #6366f1);
+      color: #ffffff !important;
+      box-shadow: 0 4px 14px rgba(2, 132, 199, 0.35);
     }
-    .vibe-btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 20px rgba(34,211,238,0.3); }
+    .vibe-btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(2, 132, 199, 0.45);
+      color: #ffffff !important;
+    }
     .vibe-btn-secondary {
-      background: rgba(30,41,59,0.6);
-      color: #e2e8f0;
-      border-color: rgba(148,163,184,0.2);
+      background: rgba(30, 41, 59, 0.7);
+      color: #e2e8f0 !important;
+      border-color: rgba(148, 163, 184, 0.2);
     }
-    .vibe-btn-secondary:hover { border-color: #22d3ee; color: #22d3ee; }
+    .vibe-btn-secondary:hover {
+      border-color: #38bdf8;
+      color: #38bdf8 !important;
+      background: rgba(30, 41, 59, 0.9);
+    }
 
-    .vibe-features {
+    .vibe-stats-bar {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+      gap: 12px;
+      margin: 2.5rem 0 3.5rem;
+    }
+    .vibe-stat-box {
+      text-align: center;
+      padding: 1.25rem 0.75rem;
+      border-radius: 10px;
+      background: rgba(15, 23, 42, 0.5);
+      border: 1px solid rgba(148, 163, 184, 0.1);
+      backdrop-filter: blur(8px);
+    }
+    .vibe-stat-box .num {
+      font-size: 1.85rem;
+      font-weight: 800;
+      color: #38bdf8;
+      letter-spacing: -0.02em;
+    }
+    .vibe-stat-box .label {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #64748b;
+      margin-top: 0.25rem;
+    }
+
+    .vibe-section {
+      margin: 3.5rem 0;
+    }
+    .vibe-section h2 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      color: #f8fafc;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.75rem;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+      padding-bottom: 0.5rem;
+    }
+    .vibe-section p {
+      color: #cbd5e1;
+      line-height: 1.75;
+      font-size: 0.98rem;
+    }
+
+    .vibe-roles {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
+      margin: 2rem 0;
+    }
+    .vibe-role-card {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid rgba(148, 163, 184, 0.12);
+      border-radius: 12px;
+      padding: 1.5rem;
+      position: relative;
+      transition: border-color 0.2s, transform 0.2s;
+    }
+    .vibe-role-card:hover {
+      border-color: rgba(56, 189, 248, 0.4);
+      transform: translateY(-2px);
+    }
+    .vibe-role-card .role-num {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: #38bdf8;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 0.5rem;
+    }
+    .vibe-role-card h3 {
+      font-size: 1.15rem;
+      font-weight: 600;
+      color: #f1f5f9;
+      margin: 0 0 0.75rem;
+    }
+    .vibe-role-card p {
+      font-size: 0.88rem;
+      color: #94a3b8;
+      line-height: 1.6;
+      margin: 0;
+    }
+
+    .vibe-features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
       gap: 16px;
       margin: 2rem 0;
     }
-    .vibe-feature {
+    .vibe-feature-item {
       padding: 1.25rem;
-      border-radius: 12px;
-      background: rgba(15,23,42,0.6);
-      border: 1px solid rgba(148,163,184,0.1);
+      border-radius: 10px;
+      background: rgba(15, 23, 42, 0.55);
+      border: 1px solid rgba(148, 163, 184, 0.1);
       transition: border-color 0.15s;
     }
-    .vibe-feature:hover { border-color: rgba(34,211,238,0.3); }
-    .vibe-feature .icon { font-size: 1.5rem; margin-bottom: 0.5rem; }
-    .vibe-feature h3 { font-size: 1rem; font-weight: 600; color: #e2e8f0; margin: 0 0 0.5rem; }
-    .vibe-feature p { font-size: 0.85rem; color: #94a3b8; line-height: 1.5; margin: 0; }
+    .vibe-feature-item:hover {
+      border-color: rgba(56, 189, 248, 0.3);
+    }
+    .vibe-feature-item .icon {
+      font-size: 1.4rem;
+      margin-bottom: 0.6rem;
+    }
+    .vibe-feature-item h3 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #f1f5f9;
+      margin: 0 0 0.4rem;
+    }
+    .vibe-feature-item p {
+      font-size: 0.85rem;
+      color: #94a3b8;
+      line-height: 1.55;
+      margin: 0;
+    }
 
-    .vibe-code-block {
-      background: rgba(10,14,23,0.9);
-      border: 1px solid rgba(148,163,184,0.15);
+    /* Comparison Table Styling */
+    .vibe-compare-wrap {
+      overflow-x: auto;
+      margin: 2rem 0;
+      border: 1px solid rgba(148, 163, 184, 0.15);
       border-radius: 12px;
+      background: rgba(10, 14, 23, 0.75);
+    }
+    .vibe-compare-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.88rem;
+      text-align: left;
+    }
+    .vibe-compare-table th, .vibe-compare-table td {
+      padding: 12px 16px;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+    }
+    .vibe-compare-table th {
+      background: rgba(15, 23, 42, 0.9);
+      color: #94a3b8;
+      font-weight: 600;
+      font-size: 0.82rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .vibe-compare-table th.highlight-col {
+      color: #38bdf8;
+      background: rgba(14, 165, 233, 0.12);
+      border-bottom: 2px solid #38bdf8;
+    }
+    .vibe-compare-table td.highlight-col {
+      background: rgba(14, 165, 233, 0.05);
+      color: #f1f5f9;
+      font-weight: 500;
+    }
+    .vibe-compare-table tr:hover {
+      background: rgba(255, 255, 255, 0.02);
+    }
+    .vibe-badge-yes {
+      color: #4ade80;
+      font-weight: 600;
+    }
+    .vibe-badge-no {
+      color: #f87171;
+    }
+    .vibe-badge-warn {
+      color: #fbbf24;
+    }
+
+    /* Code Blocks */
+    .vibe-code-box {
+      background: rgba(10, 14, 23, 0.92);
+      border: 1px solid rgba(148, 163, 184, 0.15);
+      border-radius: 10px;
       padding: 1.25rem;
-      margin: 1.5rem 0;
+      margin: 1.25rem 0;
       overflow-x: auto;
     }
-    .vibe-code-block pre {
+    .vibe-code-box pre {
       margin: 0;
-      font-family: ui-monospace, "Cascadia Code", monospace;
-      font-size: 0.85rem;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.86rem;
       line-height: 1.6;
       color: #e2e8f0;
+      background: transparent;
+      border: none;
+      padding: 0;
     }
-    .vibe-code-block .kw { color: #c4b5fd; }
-    .vibe-code-block .ty { color: #22d3ee; }
-    .vibe-code-block .fn { color: #4ade80; }
-    .vibe-code-block .st { color: #fbbf24; }
-    .vibe-code-block .cm { color: #64748b; }
+    .vibe-code-box .kw { color: #c084fc; font-weight: 600; }
+    .vibe-code-box .ty { color: #38bdf8; }
+    .vibe-code-box .fn { color: #4ade80; }
+    .vibe-code-box .st { color: #fbbf24; }
+    .vibe-code-box .cm { color: #64748b; font-style: italic; }
+    .vibe-code-box .op { color: #f472b6; }
 
-    .vibe-section { margin: 2.5rem 0; }
-    .vibe-section h2 {
-      font-size: 1.5rem;
-      font-weight: 700;
-      color: #e2e8f0;
-      margin-bottom: 1rem;
-    }
-    .vibe-section p { color: #cbd5e1; line-height: 1.7; }
-
-    .vibe-stats {
+    .vibe-quick-links {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-      gap: 12px;
-      margin: 1.5rem 0;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 14px;
+      margin: 2rem 0;
     }
-    .vibe-stat {
-      text-align: center;
-      padding: 1rem;
-      border-radius: 8px;
-      background: rgba(15,23,42,0.4);
-    }
-    .vibe-stat .num { font-size: 1.75rem; font-weight: 800; color: #22d3ee; }
-    .vibe-stat .label { font-size: 0.75rem; color: #64748b; margin-top: 0.25rem; }
-
-    .vibe-links {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 12px;
-      margin: 1.5rem 0;
-    }
-    .vibe-link {
+    .vibe-qlink {
       display: flex;
       align-items: center;
-      gap: 10px;
-      padding: 12px 16px;
-      border-radius: 8px;
-      background: rgba(15,23,42,0.4);
-      border: 1px solid rgba(148,163,184,0.1);
-      text-decoration: none;
-      color: #e2e8f0;
-      transition: all 0.15s;
+      gap: 12px;
+      padding: 14px 16px;
+      border-radius: 10px;
+      background: rgba(15, 23, 42, 0.5);
+      border: 1px solid rgba(148, 163, 184, 0.12);
+      text-decoration: none !important;
+      color: #e2e8f0 !important;
+      transition: all 0.15s ease;
     }
-    .vibe-link:hover { border-color: #22d3ee; color: #22d3ee; }
-    .vibe-link .icon { font-size: 1.1rem; }
-    .vibe-link .label { font-size: 0.9rem; }
+    .vibe-qlink:hover {
+      border-color: #38bdf8;
+      color: #38bdf8 !important;
+      transform: translateY(-1px);
+      background: rgba(15, 23, 42, 0.75);
+    }
+    .vibe-qlink i {
+      font-size: 1.25rem;
+      color: #38bdf8;
+    }
   </style>
 
+  <!-- Hero Section -->
   <div class="vibe-hero">
-    <h1>VibeScript</h1>
+    <div class="vibe-pill">
+      <i class="fa-solid fa-bolt"></i> VibeScript 0.1 · Dialect Frozen · Zero-Heap Hot Paths
+    </div>
+    <h1>The Human & Machine<br>Semantic Scripting Language</h1>
     <p class="tagline">
-      A typed, capability-bounded, non-JIT interpreted language for reactive
-      formulas, signed graph transactions, and agent orchestration. Runs
-      natively and in the browser via WebAssembly.
+      A capability-bounded, typed, deterministic scripting engine built for reactive UI cells,
+      provable agent orchestration, and signed RDF/SPARQL graph transactions.
+      Replaces JavaScript and Node.js without V8 bloat, ambient I/O vulnerabilities, or garbage collection spikes.
     </p>
-    <div class="cta">
+    <div class="cta-row">
       <a href="{{ '/vibe/playground.html' | relative_url }}" class="vibe-btn vibe-btn-primary">
-        <i class="fas fa-play"></i> Try the Playground
+        <i class="fa-solid fa-play"></i> Live Playground
+      </a>
+      <a href="{{ '/vibe/showcase.html' | relative_url }}" class="vibe-btn vibe-btn-secondary">
+        <i class="fa-solid fa-star"></i> Showcase & Demos
       </a>
       <a href="{{ '/vibe/spec.html' | relative_url }}" class="vibe-btn vibe-btn-secondary">
-        <i class="fas fa-book"></i> Read the Spec
+        <i class="fa-solid fa-book"></i> Language Spec
       </a>
       <a href="{{ '/vibe/dev-docs.html' | relative_url }}" class="vibe-btn vibe-btn-secondary">
-        <i class="fas fa-code"></i> Dev Docs
+        <i class="fa-solid fa-code-branch"></i> Dev Docs (API)
+      </a>
+      <a href="{{ '/vibe/benchmarks.html' | relative_url }}" class="vibe-btn vibe-btn-secondary">
+        <i class="fa-solid fa-gauge-high"></i> Benchmarks
       </a>
     </div>
   </div>
 
-  <div class="vibe-stats">
-    <div class="vibe-stat"><div class="num">35</div><div class="label">Opcodes</div></div>
-    <div class="vibe-stat"><div class="num">1026</div><div class="label">Tests</div></div>
-    <div class="vibe-stat"><div class="num">560KB</div><div class="label">WASM</div></div>
-    <div class="vibe-stat"><div class="num">0.1</div><div class="label">Version</div></div>
+  <!-- Engine Telemetry Bar -->
+  <div class="vibe-stats-bar">
+    <div class="vibe-stat-box">
+      <div class="num">0.1</div>
+      <div class="label">Frozen Dialect</div>
+    </div>
+    <div class="vibe-stat-box">
+      <div class="num">0 Heap</div>
+      <div class="label">Hot-Path Eval</div>
+    </div>
+    <div class="vibe-stat-box">
+      <div class="num">42 MB</div>
+      <div class="label">Sentinel Ceiling</div>
+    </div>
+    <div class="vibe-stat-box">
+      <div class="num">238</div>
+      <div class="label">Engine Tests Passed</div>
+    </div>
+    <div class="vibe-stat-box">
+      <div class="num">1,290+</div>
+      <div class="label">Bound Public Items</div>
+    </div>
+    <div class="vibe-stat-box">
+      <div class="num">100%</div>
+      <div class="label">Deterministic Replay</div>
+    </div>
   </div>
 
+  <!-- Section: What is VibeScript? -->
   <div class="vibe-section">
-    <h2>What is VibeScript?</h2>
+    <h2>Why VibeScript? The JavaScript Replacement</h2>
     <p>
-      VibeScript (or <strong>Vibe</strong> for short) is the scripting language of the
-      QualiaDB semantic engine. It is designed for three roles:
+      Modern application platforms and autonomous AI agents have outgrown JavaScript and Node.js.
+      Web engines suffer from ambient authority vulnerabilities, unconstrained memory allocation loops,
+      non-deterministic asynchronous scheduling, and multi-gigabyte runtimes unsuitable for local-first computing.
     </p>
-    <ul style="color:#cbd5e1;line-height:1.8;">
-      <li><strong>Reactive cell formulas</strong> — pure expressions like <code>= math.max(0, math.min(100, score))</code> that drive HCF/QApp cells</li>
-      <li><strong>Signed document/agent modules</strong> — programs that query and transact on a graph snapshot with full capability enforcement</li>
-      <li><strong>Host event handlers</strong> — <code>on pulse:message(...)</code> and <code>on tick()</code> hooks dispatched by the Poet engine</li>
-    </ul>
     <p>
-      VibeScript is <strong>not</strong> a JavaScript clone or a general-purpose language.
-      It is a closed, typed core with no <code>eval</code>, no DOM, and no JIT —
-      making it safe for sandboxed execution, deterministic replay, and edge deployment.
+      <strong>VibeScript</strong> (or <strong>Vibe</strong>) is the native scripting layer of QualiaDB and the Poet creative environment.
+      It is an interpreted, typed, capability-bounded language engineered with zero heap allocations in hot paths,
+      first-class RDF 1.2 and SPARQL semantics, verifiable deontic norms, and deterministic execution.
     </p>
-  </div>
 
-  <div class="vibe-features">
-    <div class="vibe-feature">
-      <div class="icon">🔒</div>
-      <h3>Capability-Bounded</h3>
-      <p>Every effect requires an explicit capability grant. Scripts cannot access the graph, network, or sensors without declared permissions.</p>
-    </div>
-    <div class="vibe-feature">
-      <div class="icon">⚡</div>
-      <h3>Bytecode VM</h3>
-      <p>Optional stack-based bytecode (<code>vibe-bc-0.1</code>) with binary encode/decode for fast pre-compiled execution.</p>
-    </div>
-    <div class="vibe-feature">
-      <div class="icon">📐</div>
-      <h3>Typed</h3>
-      <p>Static type checking with i64/u64/f64/string/bool, Result/Option, lists, records, IRIs, and domain types (Instant, Quantity, Field, Material, Law).</p>
-    </div>
-    <div class="vibe-feature">
-      <div class="icon">🌐</div>
-      <h3>RDF-Native</h3>
-      <p>First-class RDF triples, reified triples, prefixed names, blank nodes, and graph queries built into the language.</p>
-    </div>
-    <div class="vibe-feature">
-      <div class="icon">🧪</div>
-      <h3>Physics & Spectral</h3>
-      <p>Built-in wrappers for wave equations, thermodynamics, EMF-to-color, spectral blending, and gamut mapping.</p>
-    </div>
-    <div class="vibe-feature">
-      <div class="icon">🌍</div>
-      <h3>Multi-Lingual</h3>
-      <p>Unicode identifiers with BiDi isolation, homoglyph detection, and keyword locale tables (English + Chinese).</p>
-    </div>
-    <div class="vibe-feature">
-      <div class="icon">⏱️</div>
-      <h3>Temporal Honesty</h3>
-      <p>First-class Instant, Duration, and proper-time types. No raw Unix timestamps — time has scale, frame, and optional seal.</p>
-    </div>
-    <div class="vibe-feature">
-      <div class="icon">🛡️</div>
-      <h3>Deontic Logic</h3>
-      <p>Obligation, permission, and prohibition as first-class values. Prohibition breach produces a sealed receipt, not a crash.</p>
-    </div>
-    <div class="vibe-feature">
-      <div class="icon">🤖</div>
-      <h3>Agent Orchestration</h3>
-      <p>DAG pipelines, multi-agent blackboards, semantic skills, and reflection loops for autonomous agent scripting.</p>
+    <!-- Three Main Roles -->
+    <div class="vibe-roles">
+      <div class="vibe-role-card">
+        <div class="role-num">Role 01</div>
+        <h3>Reactive Cell Graphs</h3>
+        <p>
+          Pure, high-frequency formulas driving desktop UI manifolds and QApps.
+          Cells form dependency DAGs, batch up to 512 computations simultaneously, and update with sub-microsecond latency without garbage collection pauses.
+        </p>
+      </div>
+      <div class="vibe-role-card">
+        <div class="role-num">Role 02</div>
+        <h3>Signed Agent Modules</h3>
+        <p>
+          Cryptographically signed programs that query and mutate knowledge graphs.
+          Every external capability (graph query, network pulse, sensor feed) requires an explicit compile-time lease grant, preventing unauthorized data exfiltration.
+        </p>
+      </div>
+      <div class="vibe-role-card">
+        <div class="role-num">Role 03</div>
+        <h3>Deontic & Event Hooks</h3>
+        <p>
+          Deterministic lifecycle handlers like <code>on pulse:message(...)</code> and <code>on tick()</code>.
+          Prohibitions and obligations are verified mathematically, producing cryptographically sealed receipts rather than unhandled runtime crashes.
+        </p>
+      </div>
     </div>
   </div>
 
+  <!-- Section: Deep Language Comparison -->
   <div class="vibe-section">
-    <h2>Example: Cell Formula</h2>
-    <div class="vibe-code-block">
-<pre><span class="cm">-- Clamp a score to [0, 100]</span>
-= math.max(0, math.min(100, score))</pre>
+    <h2>Head-to-Head Comparison: VibeScript vs Other Scripting Languages</h2>
+    <p>
+      How does VibeScript compare against traditional scripting runtimes like JavaScript / Node.js, Python, Lua, and Rust-embedded interpreters (Rhai / WASM)?
+    </p>
+
+    <div class="vibe-compare-wrap">
+      <table class="vibe-compare-table">
+        <thead>
+          <tr>
+            <th>Dimension</th>
+            <th class="highlight-col">VibeScript (vibe-0.1)</th>
+            <th>JavaScript / Node.js</th>
+            <th>Python (CPython)</th>
+            <th>Lua / LuaJIT</th>
+            <th>Rhai / WASM Lite</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Security & Sandboxing</strong></td>
+            <td class="highlight-col"><span class="vibe-badge-yes">Capability-Bounded</span><br><small>Strict compile-time leases; no ambient I/O</small></td>
+            <td><span class="vibe-badge-no">Ambient Authority</span><br><small>Global access (fetch, fs, process, prototype pollution)</small></td>
+            <td><span class="vibe-badge-no">Open Ambient</span><br><small>Full OS/filesystem reach; monkey-patchable</small></td>
+            <td><span class="vibe-badge-warn">Manual Sandbox</span><br><small>Requires table-stripping; easily bypassed</small></td>
+            <td><span class="vibe-badge-warn">Engine Bounded</span><br><small>Host bindings, but lacks deontic norm leases</small></td>
+          </tr>
+          <tr>
+            <td><strong>Hot-Path Allocation</strong></td>
+            <td class="highlight-col"><span class="vibe-badge-yes">Tier-1 Zero Heap</span><br><small>Fixed stack buffers &amp; 42MB Sentinel arena</small></td>
+            <td><span class="vibe-badge-no">Unbounded Heap</span><br><small>GC pauses, object allocation thrashing</small></td>
+            <td><span class="vibe-badge-no">Heavy Heap</span><br><small>Reference counting + cyclic GC pauses</small></td>
+            <td><span class="vibe-badge-warn">Incremental GC</span><br><small>Lightweight, but non-zero heap allocation</small></td>
+            <td><span class="vibe-badge-no">Heap Allocations</span><br><small>Extensive Box/Vec/String usage</small></td>
+          </tr>
+          <tr>
+            <td><strong>Graph &amp; RDF Native</strong></td>
+            <td class="highlight-col"><span class="vibe-badge-yes">Native RDF 1.2 &amp; SPARQL</span><br><small>48-byte Super-Quins, <code>&lt;&lt;( s p o )&gt;&gt;</code>, <code>graph?</code></small></td>
+            <td><span class="vibe-badge-no">Third-party Libs</span><br><small>Slow JSON/string serialization overhead</small></td>
+            <td><span class="vibe-badge-no">rdflib / networkx</span><br><small>Extremely slow Python object graphs</small></td>
+            <td><span class="vibe-badge-no">None</span><br><small>No native semantic data structures</small></td>
+            <td><span class="vibe-badge-no">None</span><br><small>Generic map/arrays only</small></td>
+          </tr>
+          <tr>
+            <td><strong>Determinism &amp; Audit</strong></td>
+            <td class="highlight-col"><span class="vibe-badge-yes">100% Bit-Deterministic</span><br><small>Lamport clocks, canonical AST CBOR hashing</small></td>
+            <td><span class="vibe-badge-no">Non-Deterministic</span><br><small>Async event loops, microtask re-ordering</small></td>
+            <td><span class="vibe-badge-no">Non-Deterministic</span><br><small>GIL scheduling, system clock dependencies</small></td>
+            <td><span class="vibe-badge-warn">Partially Deterministic</span><br><small>Hash table order nondeterminism</small></td>
+            <td><span class="vibe-badge-warn">Varies</span><br><small>Depends on host engine configuration</small></td>
+          </tr>
+          <tr>
+            <td><strong>Modal &amp; Deontic Logic</strong></td>
+            <td class="highlight-col"><span class="vibe-badge-yes">Built-In Modalities</span><br><small><code>obligate</code>, <code>permit</code>, <code>knows</code>, <code>always</code></small></td>
+            <td><span class="vibe-badge-no">None</span><br><small>No modal logic verification layer</small></td>
+            <td><span class="vibe-badge-no">None</span><br><small>External SAT/Z3 solver bindings only</small></td>
+            <td><span class="vibe-badge-no">None</span><br><small>No formal verification support</small></td>
+            <td><span class="vibe-badge-no">None</span><br><small>Basic conditional control flow only</small></td>
+          </tr>
+          <tr>
+            <td><strong>AI / LLM Generation</strong></td>
+            <td class="highlight-col"><span class="vibe-badge-yes">GBNF &amp; EBNF Constrained</span><br><small>Strict grammar decode guarantees valid code</small></td>
+            <td><span class="vibe-badge-warn">Grammar Ambiguous</span><br><small>Vulnerable to runtime syntax &amp; type hallucinations</small></td>
+            <td><span class="vibe-badge-warn">Indentation Fragile</span><br><small>Whitespace errors frequently break generation</small></td>
+            <td><span class="vibe-badge-yes">Small Grammar</span><br><small>Clean syntax, but runtime fails silently</small></td>
+            <td><span class="vibe-badge-warn">Medium</span><br><small>Custom syntax not widely trained into LLMs</small></td>
+          </tr>
+          <tr>
+            <td><strong>Physical &amp; Temporal Types</strong></td>
+            <td class="highlight-col"><span class="vibe-badge-yes">First-Class Quantities</span><br><small><code>400ms</code>, <code>oklch(...)</code>, <code>500nm</code> with checked units</small></td>
+            <td><span class="vibe-badge-no">Raw Numbers</span><br><small>No built-in unit dimension algebra</small></td>
+            <td><span class="vibe-badge-no">Pint / astropy</span><br><small>Heavyweight external dependencies</small></td>
+            <td><span class="vibe-badge-no">Raw Doubles</span><br><small>No unit or color space abstractions</small></td>
+            <td><span class="vibe-badge-no">Primitive Types</span><br><small>Requires custom Rust type registration</small></td>
+          </tr>
+          <tr>
+            <td><strong>Runtime Footprint</strong></td>
+            <td class="highlight-col"><span class="vibe-badge-yes">&lt; 600 KB WASM / Embedded</span><br><small>No external libc/V8 runtime required</small></td>
+            <td><span class="vibe-badge-no">30 MB – 100 MB+</span><br><small>V8 engine binary footprint</small></td>
+            <td><span class="vibe-badge-no">20 MB – 50 MB</span><br><small>CPython standard library footprint</small></td>
+            <td><span class="vibe-badge-yes">~300 KB</span><br><small>Minimal C runtime</small></td>
+            <td><span class="vibe-badge-yes">~1 MB – 3 MB</span><br><small>Rust interpreter bundle</small></td>
+          </tr>
+        </tbody>
+      </table>
     </div>
   </div>
 
+  <!-- Section: Key Language Features -->
   <div class="vibe-section">
-    <h2>Example: Signed Module</h2>
-    <div class="vibe-code-block">
-<pre><span class="kw">module</span> &lt;https://qualiadb.org/modules/clinic_alerts&gt;;
-<span class="kw">prefix</span> clinic: &lt;https://qualiadb.org/clinic/&gt;;
+    <h2>VibeScript 0.1 Feature Highlights</h2>
+    <div class="vibe-features-grid">
+      <div class="vibe-feature-item">
+        <div class="icon">✨</div>
+        <h3>Workshop Dialect</h3>
+        <p>Human-friendly syntax <code>using Animation;</code> with clean method calls like <code>Animation.orbit_spin(t)</code>. Unleased method paths fail closed at check-time.</p>
+      </div>
+      <div class="vibe-feature-item">
+        <div class="icon">🔗</div>
+        <h3>Two-Way Data Binding</h3>
+        <p>Native <code>bind slider &lt;-&gt; volume using Clamp[0.0, 1.0] resolve latest;</code> keeps reactive states synchronised across UI widgets.</p>
+      </div>
+      <div class="vibe-feature-item">
+        <div class="icon">⏱️</div>
+        <h3>Temporal Tweens &amp; Springs</h3>
+        <p>First-class interpolation with <code>0.0 ~ 10.0 over 400ms ease linear</code> and dynamic physics dampening via <code>spring(stiffness, damping)</code>.</p>
+      </div>
+      <div class="vibe-feature-item">
+        <div class="icon">λ</div>
+        <h3>Pure Non-Capturing Lambdas</h3>
+        <p>Lightweight <code>|x| expr</code> pipelines for transformation like <code>[1, 2, 3].map(|x| x * 2).filter(|x| x &gt; 2)</code> with zero closure escape overhead.</p>
+      </div>
+      <div class="vibe-feature-item">
+        <div class="icon">📜</div>
+        <h3>Ontological Vocab Chunks</h3>
+        <p>Load domain ontologies (SNOMED, QUDT) as tree-shaken <code>.n3</code> dependency chunks. Canonical IRIs are preserved with zero string table bloat.</p>
+      </div>
+      <div class="vibe-feature-item">
+        <div class="icon">🎨</div>
+        <h3>Presentation Sheaves</h3>
+        <p>Declare multisensory visual entities with <code>present lamp { color: glow, pose: pose }</code>, mapping directly to WebGPU viewport pipelines.</p>
+      </div>
+      <div class="vibe-feature-item">
+        <div class="icon">🌏</div>
+        <h3>Multi-Lingual Identifiers</h3>
+        <p>Support for Chinese (<code>locale zh;</code>), Cyrillic, and Arabic identifiers. Golden CBOR-AST hashing guarantees identical execution across all locales.</p>
+      </div>
+      <div class="vibe-feature-item">
+        <div class="icon">🛡️</div>
+        <h3>Deontic Norm Enforcement</h3>
+        <p>First-class <code>obligate</code>, <code>permit</code>, and <code>forbid</code> operators evaluate against the verified deontic engine, securing autonomous agent actions.</p>
+      </div>
+      <div class="vibe-feature-item">
+        <div class="icon">⚡</div>
+        <h3>Stack Bytecode VM</h3>
+        <p>VBC1 stack-based bytecode compiler and VM with 35 opcodes for instant zero-copy serialization and deterministic sandboxed execution.</p>
+      </div>
+    </div>
+  </div>
 
-<span class="kw">requires</span> [
-    <span class="fn">capability</span>(<span class="st">"graph.read"</span>, context: clinic:telemetry),
-    <span class="fn">capability</span>(<span class="st">"graph.write"</span>, context: clinic:alerts),
-    <span class="fn">capability</span>(<span class="st">"pulse.publish"</span>, topic: <span class="st">"clinic/alerts"</span>)
-];
+  <!-- Section: Live Code Demos -->
+  <div class="vibe-section">
+    <h2>Canonical VibeScript Demos</h2>
+    <p>Explore real VibeScript programs demonstrating reactive graphics, two-way bindings, and clinical knowledge graphs:</p>
 
-<span class="kw">effect fn</span> raise_alert(sensor: <span class="ty">Iri</span>, value: <span class="ty">f64</span>) <span class="kw">budget</span>(steps: 20000) -&gt; <span class="ty">Result</span>&lt;<span class="ty">Receipt</span>, string&gt; {
-    <span class="kw">if</span> value &lt;= 85.0 {
-        <span class="kw">return</span> <span class="fn">Ok</span>(<span class="fn">receipt_empty</span>());
-    }
-    <span class="kw">let</span> stated = &lt;&lt; sensor clinic:emitsAlert clinic:Overheat ~ clinic:claim_1 &gt;&gt;;
-    <span class="kw">transaction</span> {
-        <span class="fn">graph.stage</span>(stated);
-        <span class="fn">aura.validate</span>(clinic:claim_1, clinic:EmergencyAlertShape)?;
-        <span class="fn">graph.commit</span>()?;
-    };
-    <span class="kw">effect</span> <span class="fn">pulse.publish</span>(<span class="st">"clinic/alerts"</span>, { sensor: sensor, value: value })?;
-    <span class="kw">return</span> <span class="fn">Ok</span>(<span class="fn">receipt_empty</span>());
+    <!-- Demo 1: Presentation & 3D Animation -->
+    <h3>1. 3D Manifold Animation &amp; Presentation Sheaf</h3>
+    <div class="vibe-code-box">
+<pre><span class="kw">using</span> <span class="ty">Animation</span>, <span class="ty">HID</span>;
+
+<span class="cm">// Reactive cells stepping on live temporal ticks</span>
+<span class="kw">effect cell</span> t := <span class="fn">time.now</span>();
+<span class="kw">cell</span> pose := <span class="ty">Animation</span>.<span class="fn">orbit_spin</span>(1.0);
+<span class="kw">cell</span> glow := <span class="fn">oklch</span>(0.72, 0.12, 230.0);
+
+<span class="cm">// Declarative visual surface present block</span>
+<span class="kw">present</span> lamp {
+    color: glow
+    pose: pose
+}</pre>
+    </div>
+
+    <!-- Demo 2: Two-Way Data Binding -->
+    <h3>2. Two-Way UI Data Binding with Clamp &amp; Resolve</h3>
+    <div class="vibe-code-box">
+<pre><span class="kw">let mut</span> volume = 0.2;
+<span class="kw">let mut</span> slider = 0.2;
+
+<span class="cm">// Two-way reactive bind with bounding clamp</span>
+<span class="kw">bind</span> slider <span class="op">&lt;-&gt;</span> volume <span class="kw">using</span> <span class="ty">Clamp</span>[0.0, 1.0] <span class="kw">resolve</span> latest;
+
+<span class="kw">fn</span> <span class="fn">main</span>() -&gt; <span class="ty">f64</span> {
+    <span class="cm">// Temporal tween easing</span>
+    <span class="kw">return</span> 0.0 <span class="op">~</span> 10.0 <span class="kw">over</span> 400ms <span class="kw">ease</span> linear;
+}</pre>
+    </div>
+
+    <!-- Demo 3: Clinical SNOMED Vocab -->
+    <h3>3. Clinical Knowledge Graph &amp; Tree-Shaken SNOMED Vocab</h3>
+    <div class="vibe-code-box">
+<pre><span class="kw">prefix</span> snomed: &lt;http://snomed.info/id/&gt;;
+<span class="kw">using</span> <span class="ty">GraphDatabase</span>;
+
+<span class="cm">// Tree-shaken vocabulary query resolved against bounded clinic chunk</span>
+<span class="kw">pure fn</span> <span class="fn">get_diagnosis</span>() -&gt; <span class="ty">Iri</span> {
+    <span class="kw">return</span> snomed:386661006; <span class="cm">// Fever (finding)</span>
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() -&gt; <span class="ty">Iri</span> {
+    <span class="kw">return</span> <span class="fn">get_diagnosis</span>();
 }</pre>
     </div>
   </div>
 
+  <!-- Section: Tooling & Ecosystem -->
   <div class="vibe-section">
-    <h2>Example: Bytecode Round-Trip</h2>
-    <div class="vibe-code-block">
-<pre><span class="cm">-- Source</span>
-= 1 + 2 * 3
-
-<span class="cm">-- Compiles to bytecode (35 opcodes, VBC1 binary format)</span>
-PushInt 1
-PushInt 2
-PushInt 3
-Mul
-Add
-Return
-
-<span class="cm">-- Encodes to 19 bytes, decodes losslessly, executes identically</span></pre>
-    </div>
-  </div>
-
-  <div class="vibe-section">
-    <h2>Explore</h2>
-    <div class="vibe-links">
-      <a href="{{ '/vibe/playground.html' | relative_url }}" class="vibe-link">
-        <i class="fas fa-play icon"></i><span class="label">Playground — live editor + eval</span>
+    <h2>VibeScript Ecosystem &amp; Developer Tooling</h2>
+    <p>
+      The VibeScript developer ecosystem is distributed across standalone tooling crates and extensions in <code>C:\Projects\vibe-script\</code>:
+    </p>
+    <div class="vibe-quick-links">
+      <a href="{{ '/vibe/playground.html' | relative_url }}" class="vibe-qlink">
+        <i class="fa-solid fa-play"></i>
+        <div>
+          <strong>Web Playground</strong>
+          <div style="font-size:0.78rem;color:#94a3b8;">Diagnose, eval, and format in-browser</div>
+        </div>
       </a>
-      <a href="{{ '/vibe/spec.html' | relative_url }}" class="vibe-link">
-        <i class="fas fa-book icon"></i><span class="label">Specification — full language standard</span>
+      <a href="{{ '/vibe/showcase.html' | relative_url }}" class="vibe-qlink">
+        <i class="fa-solid fa-star"></i>
+        <div>
+          <strong>Interactive Showcase</strong>
+          <div style="font-size:0.78rem;color:#94a3b8;">Live runnable AST and bytecode demos</div>
+        </div>
       </a>
-      <a href="{{ '/vibe/dev-docs.html' | relative_url }}" class="vibe-link">
-        <i class="fas fa-code icon"></i><span class="label">Dev Docs — API reference from source</span>
+      <a href="{{ '/vibe/spec.html' | relative_url }}" class="vibe-qlink">
+        <i class="fa-solid fa-book"></i>
+        <div>
+          <strong>Language Specification</strong>
+          <div style="font-size:0.78rem;color:#94a3b8;">Normative standard and EBNF grammar</div>
+        </div>
       </a>
-      <a href="{{ '/vibe/showcase.html' | relative_url }}" class="vibe-link">
-        <i class="fas fa-star icon"></i><span class="label">Showcase — interactive demos</span>
+      <a href="{{ '/vibe/dev-docs.html' | relative_url }}" class="vibe-qlink">
+        <i class="fa-solid fa-code-branch"></i>
+        <div>
+          <strong>Dev Docs (API)</strong>
+          <div style="font-size:0.78rem;color:#94a3b8;">104 modules &amp; 1,290+ API items</div>
+        </div>
       </a>
-      <a href="{{ '/vibe/benchmarks.html' | relative_url }}" class="vibe-link">
-        <i class="fas fa-gauge-high icon"></i><span class="label">Benchmarks — vs JS and others</span>
+      <a href="{{ '/vibe/benchmarks.html' | relative_url }}" class="vibe-qlink">
+        <i class="fa-solid fa-gauge-high"></i>
+        <div>
+          <strong>Performance Benchmarks</strong>
+          <div style="font-size:0.78rem;color:#94a3b8;">Live WASM vs V8 JS execution comparisons</div>
+        </div>
       </a>
-      <a href="{{ '/manuals/standards/vibescript-core.md' | relative_url }}" class="vibe-link">
-        <i class="fas fa-file-lines icon"></i><span class="label">Raw standard (Markdown)</span>
+      <a href="https://github.com/mediaprophet/qualiaDB" target="_blank" class="vibe-qlink">
+        <i class="fa-brands fa-github"></i>
+        <div>
+          <strong>VS Code &amp; LSP Tooling</strong>
+          <div style="font-size:0.78rem;color:#94a3b8;">JSON-RPC LSP server &amp; TextMate grammar</div>
+        </div>
       </a>
     </div>
   </div>

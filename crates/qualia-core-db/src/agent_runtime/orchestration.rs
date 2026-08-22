@@ -14,8 +14,8 @@
 
 use crate::modalities::blackboard::BlackboardBus;
 use crate::NQuin;
-use poet_vibe::dag::{DagEdge, DagNode, DagPipeline, NodeEffect};
-use poet_vibe::deontic_interrupt::{Phase, PhaseLeaser};
+use vibe::dag::{DagEdge, DagNode, DagPipeline, NodeEffect};
+use vibe::deontic_interrupt::{Phase, PhaseLeaser};
 use std::collections::BTreeMap;
 
 /// An agent in the roster.
@@ -215,7 +215,7 @@ impl crate::poet_host::invoke::agent::dag_executor::NodeExecutor for RosterNodeE
         node_name: &str,
         inputs: &[(String, Vec<NQuin>)],
         capabilities: &[String],
-    ) -> Result<Vec<(String, Vec<NQuin>)>, poet_vibe::Diagnostic> {
+    ) -> Result<Vec<(String, Vec<NQuin>)>, vibe::Diagnostic> {
         // Find the assigned agent for this node.
         let _agent_id = self
             .assignments

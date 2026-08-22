@@ -2,7 +2,7 @@
 
 use super::super::args;
 use crate::specialized_libs::computer_vision::{ahash_u64, GrayView};
-use poet_vibe::{Diagnostic, Span, Value};
+use vibe::{Diagnostic, Span, Value};
 
 pub fn ahash(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let bytes = args::rec(args_v, "bytes")

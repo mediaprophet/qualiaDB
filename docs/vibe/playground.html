@@ -202,6 +202,14 @@ title: VibeScript Playground
         <option value="match">Match expression</option>
         <option value="string">String equality</option>
         <option value="physics">Physics (Quantity)</option>
+        <option value="color">Color hex</option>
+        <option value="orbit">Orbit (Animation)</option>
+        <option value="lamp">Lamp (present)</option>
+        <option value="clinic">Clinic law</option>
+        <option value="zh">Chinese locale</option>
+        <option value="lambda">List map (lambda)</option>
+        <option value="tween">Tween ease</option>
+        <option value="bind">Two-way bind</option>
         <option value="triple">RDF Triple</option>
       </select>
       <span id="pg-stats" class="pg-status"></span>
@@ -242,7 +250,15 @@ title: VibeScript Playground
     while: { mode: 'program', code: 'fn sum_to(n: i64) budget(steps: 10000) -> i64 {\n  let s = 0;\n  let i = 0;\n  while i < n {\n    s = s + i;\n    i = i + 1;\n  }\n  return s;\n}\n\nfn main() -> i64 {\n  return sum_to(100);\n}' },
     match: { mode: 'program', code: 'fn classify(x: i64) -> i64 {\n  match x {\n    0 => { return 100; }\n    1 => { return 200; }\n    _ => { return 999; }\n  }\n}\n\nfn main() -> i64 {\n  return classify(1);\n}' },
     string: { mode: 'cell', code: '= "hello" == "hello"' },
-    physics: { mode: 'cell', code: '= 42.0 * 9.81' },
+    physics: { mode: 'cell', code: '= 500ms + 20ms' },
+    color: { mode: 'cell', code: '= #ff2d95' },
+    orbit: { mode: 'program', code: 'using Animation;\n\nfn main() -> Record {\n  return Animation.orbit_spin(0.25);\n}' },
+    lamp: { mode: 'program', code: 'module lamp;\nimport "vibe:0.1/math" as math;\nusing Animation;\n\ncell pose := Animation.orbit_spin(1.0);\ncell hue := 230.0 + 20.0 * math.sin(1.0);\ncell glow := oklch(0.72, 0.12, hue);\n\npresent lamp {\n    color: glow\n    pose: pose\n    speech: "lamp on"\n}\n\nfn main() -> Record {\n  return glow;\n}' },
+    clinic: { mode: 'program', code: 'using DeonticLogic;\n\nlaw overheat\n    when 90.0 > 80.0\n    => forbid { "haptic" };\n\nfn main() -> Record {\n  return obligate { "sign" };\n}' },
+    zh: { mode: 'program', code: 'locale zh;\n函数 main() -> i64 {\n  返回 1;\n}' },
+    lambda: { mode: 'program', code: 'fn main() {\n  return [1, 2, 3].map(|x| x * x);\n}' },
+    tween: { mode: 'program', code: 'fn main() {\n  let t = 200ms;\n  return 0.0 ~ 10.0 over 400ms ease linear;\n}' },
+    bind: { mode: 'program', code: 'let volume = 1.5;\nlet slider = { value: 0.2 };\nbind slider.value <-> volume using Clamp[0, 1] resolve latest;\n\nfn main() {\n  return 1;\n}' },
     triple: { mode: 'cell', code: '= <<( <ex:s1> ex:emitsAlert ex:Overheat )>>' },
   };
 

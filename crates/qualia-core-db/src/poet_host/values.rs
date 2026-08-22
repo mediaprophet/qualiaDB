@@ -2,7 +2,7 @@
 
 use crate::lexicon::generate_60bit_token;
 use crate::NQuin;
-use poet_vibe::Value;
+use vibe::Value;
 
 const RDF_REIFIES: &[u8] = b"http://www.w3.org/1999/02/22-rdf-syntax-ns#reifies";
 

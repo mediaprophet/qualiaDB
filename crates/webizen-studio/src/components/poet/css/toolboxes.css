@@ -285,3 +285,31 @@
   border-color: var(--accent-cyan);
   color: var(--accent-cyan);
 }
+
+/* Radial Action Ring */
+.radial-action-ring-overlay {
+  animation: radialPop 0.15s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes radialPop {
+  from {
+    transform: translate(-50%, -50%) scale(0.92);
+    opacity: 0;
+  }
+  to {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+}
+
+.radial-sector:hover path {
+  fill: rgba(30, 42, 60, 0.95);
+  stroke-width: 2px;
+  filter: drop-shadow(0 0 8px var(--accent-cyan));
+}
+
+.radial-sector:hover text {
+  transform: scale(1.15);
+  transform-origin: center;
+}
+

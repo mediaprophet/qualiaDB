@@ -13,7 +13,7 @@
 //! | `Render.gpu_backend_info` | `{}` | `{ backend, available, webgl2_fallback, device_name?, limits? }` |
 
 use super::super::args;
-use poet_vibe::{Diagnostic, Span, Value};
+use vibe::{Diagnostic, Span, Value};
 
 /// `Render.gpu_backend_info` — probe the best available GPU backend.
 ///
@@ -187,6 +187,7 @@ mod tests {
     #[test]
     fn g_gpu_backend_info_via_vibescript() {
         let src = r#"
+        using Render;
         requires [ capability("capability.invoke") ];
         effect fn go() {
             return capability.invoke("Render.gpu_backend_info", {});

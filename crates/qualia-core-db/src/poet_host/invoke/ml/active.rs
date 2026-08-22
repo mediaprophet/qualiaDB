@@ -3,7 +3,7 @@
 
 use super::super::args;
 use crate::solvers::learning::active as al;
-use poet_vibe::{Diagnostic, Span, Value};
+use vibe::{Diagnostic, Span, Value};
 
 fn parse_strategy(v: &Value) -> al::Strategy {
     match args::rec_str(v, "strategy").unwrap_or("entropy") {

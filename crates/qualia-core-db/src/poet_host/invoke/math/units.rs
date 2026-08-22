@@ -10,7 +10,7 @@
 use super::super::args;
 use crate::solvers::units::conversion::{convert, Unit};
 use crate::solvers::units::UnitsError;
-use poet_vibe::{Diagnostic, Span, Value};
+use vibe::{Diagnostic, Span, Value};
 
 /// Resolve a unit name (canonical symbol or ASCII alias) to its `Unit` const.
 /// Replicates `wasm_bridge/engine/units.rs::unit_by_name`.

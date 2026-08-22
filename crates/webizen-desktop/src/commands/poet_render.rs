@@ -4,7 +4,7 @@
 //! webview; native swapchain stays on `/gpu-viewport`).
 
 use super::poet::PoetHarnessState;
-use poet_vibe::Value;
+use vibe::Value;
 use qualia_core_db::poet_host::invoke::ids;
 use serde::Serialize;
 use tauri::State;

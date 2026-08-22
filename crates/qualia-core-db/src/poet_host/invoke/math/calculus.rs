@@ -2,7 +2,7 @@
 
 use super::super::args;
 use crate::solvers::calculus::dense::simpson;
-use poet_vibe::{Diagnostic, Span, Value};
+use vibe::{Diagnostic, Span, Value};
 
 pub fn integrate(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let a = args::rec_f64(args_v, "a").ok_or_else(|| args::bad(span, "simpson needs a"))?;

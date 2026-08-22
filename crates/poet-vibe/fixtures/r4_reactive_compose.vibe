@@ -1,9 +1,0 @@
-module <https://qualiadb.org/modules/reactive_compose>;
-requires [ capability("graph.read") ];
-pure fn sum_quins(rows: List<f64>) -> f64 {
-    let mut total: f64 = 0.0;
-    for v in rows {
-        total = total + v;
-    }
-    return total;
-}

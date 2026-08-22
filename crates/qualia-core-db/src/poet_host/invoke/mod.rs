@@ -20,6 +20,7 @@ mod engineering;
 mod geometry;
 mod governance;
 mod graph;
+mod hid_seam;
 mod hypermedia;
 pub mod ids;
 mod inference;
@@ -42,7 +43,7 @@ mod stats;
 mod vision;
 
 use super::PoetSnapshot;
-use poet_vibe::{DiagCode, Diagnostic, Span, Value};
+use vibe::{DiagCode, Diagnostic, Span, Value};
 
 pub fn dispatch(
     snap: &mut PoetSnapshot,
@@ -68,6 +69,23 @@ pub fn dispatch(
         ids::AGENT_EVALUATE => agent::runtime::agent_evaluate(args, span),
         ids::CORPUS_LOAD => agent::runtime::corpus_load(args, span),
         ids::CORPUS_PARSE => agent::runtime::corpus_parse(args, span),
+        // ── HID & Sensor Telemetry capability invocations ─────────────────
+        ids::HID_POLL => hid_seam::hid_poll(snap, args, span),
+        ids::HID_WAIT => hid_seam::hid_wait(snap, args, span),
+        ids::HID_CLEAR => hid_seam::hid_clear(snap, args, span),
+        ids::HID_POINTER_CAPTURE => hid_seam::pointer_capture(args, span),
+        ids::HID_POINTER_RELEASE => hid_seam::pointer_release(args, span),
+        ids::HID_SET_CURSOR => hid_seam::set_cursor(args, span),
+        ids::HID_GAMEPAD_POLL => hid_seam::gamepad_poll(args, span),
+        ids::HID_GAMEPAD_VIBRATE => hid_seam::gamepad_vibrate(args, span),
+        ids::HID_MIDI_SEND => hid_seam::midi_send(args, span),
+        ids::HID_MIDI_POLL => hid_seam::midi_poll(args, span),
+        ids::HID_HAPTIC_PULSE => hid_seam::haptic_pulse(args, span),
+        ids::HID_HAPTIC_PATTERN => hid_seam::haptic_pattern(args, span),
+        ids::HID_SPATIAL_HEAD_POSE => hid_seam::spatial_head_pose(args, span),
+        ids::HID_SPATIAL_HAND_SKELETON => hid_seam::spatial_hand_skeleton(args, span),
+        ids::HID_SPATIAL_GAZE_RAY => hid_seam::spatial_gaze_ray(args, span),
+        ids::HID_BIOSIGNAL_POLL => hid_seam::biosignal_poll(args, span),
         ids::DISCOVERY_LIST | "CapabilityDiscovery" | "list_capabilities" => Ok(runtime::list()),
         ids::HASH_IRI => runtime::iri(args, span),
         ids::SHACL_VALIDATE => graph::shacl_validate(snap, args, span),
@@ -76,9 +94,9 @@ pub fn dispatch(
         ids::GRAPH_SPARQL => graph::sparql(snap, args, span),
         ids::GRAPH_SHORTEST_PATH => graph::shortest_path(args, span),
         ids::GRAPH_SPREADING_ACTIVATION => graph::spreading_activation(args, span),
-        ids::DEONTIC_EVAL => logic::deontic_evaluate(snap, span),
-        ids::EPISTEMIC_EVAL => logic::epistemic_evaluate(snap, span),
-        ids::PARACONSISTENT_ROUTE => logic::paraconsistent_route(snap, span),
+        ids::DEONTIC_EVAL => logic::deontic_evaluate(snap, args, span),
+        ids::EPISTEMIC_EVAL => logic::epistemic_evaluate(snap, args, span),
+        ids::PARACONSISTENT_ROUTE => logic::paraconsistent_route(snap, args, span),
         ids::LTL_GLOBALLY => logic::ltl_globally(snap, args, span),
         ids::LTL_FINALLY => logic::ltl_finally(snap, args, span),
         ids::DL_SUBSUMES => logic::subsumption_check(snap, args, span),
@@ -130,6 +148,30 @@ pub fn dispatch(
         }
         ids::GA_APPLY_TRANSLATOR => solvers::ga_apply_translator(args, span),
         ids::GA_IS_SIMD_AVAILABLE => solvers::ga_is_simd_available(args, span),
+        ids::XFORM_IDFT => solvers::idft(args, span),
+        ids::XFORM_Z_TRANSFORM_FINITE => solvers::z_transform_finite(args, span),
+        ids::XFORM_UNIT_STEP_Z => solvers::unit_step_z(args, span),
+        ids::XFORM_GEOMETRIC_Z => solvers::geometric_z(args, span),
+        ids::VC_GRADIENT => math::gradient(args, span),
+        ids::VC_DIVERGENCE => math::divergence(args, span),
+        ids::VC_CURL => math::curl(args, span),
+        ids::VC_LAPLACIAN => math::laplacian(args, span),
+        ids::ODE_RK4_INTEGRATE => math::closure_solvers::ode_rk4_integrate(args, span),
+        ids::ODE_DOPRI5 => math::closure_solvers::ode_dopri5(args, span),
+        ids::ODE_BDF => math::closure_solvers::ode_bdf(args, span),
+        ids::ODE_SYMPLECTIC_STEP => math::closure_solvers::ode_symplectic_step(args, span),
+        ids::CALC_ADAPTIVE_SIMPSON => math::closure_solvers::calc_adaptive_simpson(args, span),
+        ids::CALC_ADAPTIVE_DERIVATIVE => math::closure_solvers::calc_adaptive_derivative(args, span),
+        ids::CALC_NUMERICAL_JACOBIAN => math::closure_solvers::calc_numerical_jacobian(args, span),
+        ids::CALC_NUMERICAL_HESSIAN => math::closure_solvers::calc_numerical_hessian(args, span),
+        ids::CALC_NEWTON_SOLVE => math::closure_solvers::calc_newton_solve(args, span),
+        ids::OPT_SIMULATED_ANNEALING => math::closure_solvers::opt_simulated_annealing(args, span),
+        ids::OPT_ARTIFICIAL_BEE_COLONY => math::closure_solvers::opt_artificial_bee_colony(args, span),
+        ids::VC_LINE_INTEGRAL_SCALAR => math::closure_solvers::vc_line_integral_scalar(args, span),
+        ids::VC_LINE_INTEGRAL_WORK => math::closure_solvers::vc_line_integral_work(args, span),
+        ids::VC_SURFACE_FLUX => math::closure_solvers::vc_surface_flux(args, span),
+        ids::XFORM_LAPLACE_NUMERIC => math::closure_solvers::xform_laplace_numeric(args, span),
+        ids::XFORM_LAPLACE_SYMBOLIC => math::closure_solvers::xform_laplace_symbolic(args, span),
         ids::STAT_MEAN => stats::arithmetic_mean(args, span),
         ids::STAT_PEARSON => stats::pearson_r(args, span),
         ids::STAT_LINEAR_REGRESSION => stats::linear_regression(args, span),
@@ -462,10 +504,25 @@ pub fn dispatch(
         ids::RENDER_CSS_ANIMATION => render::css_animation(args, span),
         ids::RENDER_CSS_COLOR => render::css_color(args, span),
         ids::RENDER_CSS_TRANSFORM => render::css_transform(args, span),
-        ids::RENDER_ANIMATION_EVAL_CURVE => render::animation_eval_curve(args, span),
-        ids::RENDER_ANIMATION_SPRING_STEP => render::animation_spring_step(args, span),
-        ids::RENDER_ANIMATION_SCLERP => render::animation_sclerp(args, span),
-        ids::RENDER_ANIMATION_EVAL_PRESET => render::animation_eval_preset(args, span),
+        ids::RENDER_ANIMATION_EVAL_CURVE | ids::ANIMATION_BEZIER_EVAL | ids::ANIMATION_EASING => {
+            render::animation_eval_curve(args, span)
+        }
+        ids::RENDER_ANIMATION_SPRING_STEP | ids::ANIMATION_SPRING_STEP => {
+            render::animation_spring_step(args, span)
+        }
+        ids::RENDER_ANIMATION_SCLERP | ids::ANIMATION_SCLERP_STEP => {
+            render::animation_sclerp(args, span)
+        }
+        ids::RENDER_ANIMATION_SQUAD_STEP | ids::ANIMATION_SQUAD_STEP => {
+            render::animation_squad_step(args, span)
+        }
+        ids::RENDER_ANIMATION_EVAL_PRESET | ids::ANIMATION_EVALUATE_PRESET => {
+            render::animation_eval_preset(args, span)
+        }
+        ids::RENDER_ANIMATION_LIST_PRESETS | ids::ANIMATION_LIST_PRESETS => {
+            render::animation_list_presets(args, span)
+        }
+        ids::RENDER_ANIMATION_COMPUTE_PASS => render::animation_compute_pass(args, span),
         ids::RENDER_SVG_PATH => render::svg_path(args, span),
         ids::RENDER_SVG_CIRCLE => render::svg_circle(args, span),
         ids::RENDER_SVG_RECT => render::svg_rect(args, span),
@@ -479,6 +536,7 @@ pub fn dispatch(
         ids::SPECTRAL_GAMUT_MAP => render::spectral::gamut_map_fn(args, span),
         ids::GPU_ADAPTER_INFO => render::gpu_adapter_info(args, span),
         ids::GPU_INIT => render::gpu_init(args, span),
+        ids::GPU_INIT_SURFACE => render::gpu_init_surface(args, span),
         ids::GPU_RENDER_FRAME => render::gpu_render_frame(args, span),
         ids::GPU_READ_PIXELS => render::gpu_read_pixels(args, span),
         ids::GPU_UPLOAD_MESH => render::gpu_upload_mesh(args, span),
@@ -495,6 +553,20 @@ pub fn dispatch(
         ids::GPU_COMPILE_SHADER => render::gpu_compile_shader(args, span),
         ids::GPU_COMPILE_TO_GLSL => render::gpu_compile_to_glsl(args, span),
         ids::GPU_BACKEND_INFO => render::gpu_backend_info(args, span),
+        ids::GPU_UPLOAD_MESH_COLORED => render::gpu_upload_mesh_colored(args, span),
+        ids::GPU_SET_STANDPOINT => render::gpu_set_standpoint(args, span),
+        ids::GPU_OBSERVER_STANDPOINT => render::gpu_observer_standpoint(args, span),
+        ids::GPU_CAMERA_STATE => render::gpu_camera_state(args, span),
+        ids::GPU_SURFACE_SIZE => render::gpu_surface_size(args, span),
+        ids::GPU_HAS_MESH => render::gpu_has_mesh(args, span),
+        ids::GPU_HAS_TENSOR => render::gpu_has_tensor(args, span),
+        ids::GPU_TENSOR_NODE_COUNT => render::gpu_tensor_node_count(args, span),
+        ids::GPU_PARTICLE_COUNT => render::gpu_particle_count(args, span),
+        ids::GPU_SYNC_BLOOM => render::gpu_sync_bloom(args, span),
+        ids::GPU_SET_ARTEFACT_JOINT => render::gpu_set_artefact_joint(args, span),
+        ids::GPU_SET_ARTEFACT_WORLD => render::gpu_set_artefact_world(args, span),
+        ids::GPU_ARTEFACT_REFUSED => render::gpu_artefact_refused(args, span),
+        ids::GPU_REQUIRED_RGBA8_BYTES => render::gpu_required_rgba8_bytes(args, span),
         ids::EMF_UPLOAD_FIELD => render::emf_upload_field(args, span),
         ids::EMF_RENDER_SLICE => render::emf_render_slice(args, span),
         ids::EMF_FIELD_INFO => render::emf_field_info(args, span),

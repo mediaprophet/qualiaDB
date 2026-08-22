@@ -2,7 +2,7 @@
 
 use super::super::args;
 use crate::governance::{coordination, instrument_trace};
-use poet_vibe::{DiagCode, Diagnostic, Span, Value};
+use vibe::{DiagCode, Diagnostic, Span, Value};
 
 /// `Capability.grant` — evaluate an authorization grant.
 /// Takes `agent_did_hash`, `root_did_hash`, `metadata_timestamp`,

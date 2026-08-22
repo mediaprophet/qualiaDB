@@ -2,7 +2,7 @@
 
 use crate::lexicon::generate_60bit_token;
 use crate::NQuin;
-use poet_vibe::Value;
+use vibe::Value;
 
 pub fn collect_matches(
     quins: &[NQuin],
@@ -22,7 +22,7 @@ pub fn collect_matches(
         if !term_match(o, q.object) {
             continue;
         }
-        out.push(Value::QuinRef(poet_vibe::QuinRef::from_quin(
+        out.push(Value::QuinRef(vibe::QuinRef::from_quin(
             q.subject,
             q.predicate,
             q.object,

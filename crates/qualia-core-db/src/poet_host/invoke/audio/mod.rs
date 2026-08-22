@@ -4,7 +4,7 @@ pub mod dsp;
 
 use super::args;
 use crate::audio::tf_surface::TfSurface;
-use poet_vibe::{DiagCode, Diagnostic, Span, Value};
+use vibe::{DiagCode, Diagnostic, Span, Value};
 
 /// `Audio.spectrum` — compute spectral flux and energy from a time-frequency
 /// raster. Takes `raster` (list of f32), `frame_count`, `bin_count`,

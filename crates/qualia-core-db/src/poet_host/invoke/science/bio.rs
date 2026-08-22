@@ -2,7 +2,7 @@
 
 use super::super::args;
 use crate::domains::biological::bioinformatics::align_nucleotide;
-use poet_vibe::{Diagnostic, Span, Value};
+use vibe::{Diagnostic, Span, Value};
 
 pub fn align(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let (q, t) = pair_seq(args_v, span)?;

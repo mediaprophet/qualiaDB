@@ -3,7 +3,7 @@
 
 use super::super::args;
 use crate::solvers::learning;
-use poet_vibe::{Diagnostic, Span, Value};
+use vibe::{Diagnostic, Span, Value};
 
 /// `MachineLearning.log_loss` — logistic loss (cross-entropy).
 /// Args: { probs: [f64], labels: [bool] }

@@ -279,9 +279,9 @@ impl RecordEnvelope {
 /// Lightweight nanosecond-resolution instant bridge (T71).
 ///
 /// This is a bridge type for the one-clock migration. It stores
-/// Unix seconds + nanoseconds without pulling in `poet-vibe` as a
+/// Unix seconds + nanoseconds without pulling in `vibe` as a
 /// dependency. When the `qualia` feature is enabled, it can convert
-/// to/from `poet_vibe::value::Instant`.
+/// to/from `vibe::value::Instant`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Serialize, Deserialize)]
 pub struct InstantBridge {
     /// Unix seconds
@@ -385,7 +385,7 @@ impl PartialOrd for InstantBridge {
 /// Lightweight duration bridge (T71).
 ///
 /// Stores seconds + nanoseconds. Can be negative (for "earlier - later").
-/// Converts to/from `poet_vibe::Duration` when the `qualia` feature is enabled.
+/// Converts to/from `vibe::Duration` when the `qualia` feature is enabled.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct DurationBridge {
     /// Seconds (may be negative)
@@ -453,15 +453,15 @@ impl DurationBridge {
 }
 
 #[cfg(feature = "qualia")]
-impl From<InstantBridge> for poet_vibe::Instant {
+impl From<InstantBridge> for vibe::Instant {
     fn from(b: InstantBridge) -> Self {
-        poet_vibe::Instant::unix(b.secs, b.nanos)
+        vibe::Instant::unix(b.secs, b.nanos)
     }
 }
 
 #[cfg(feature = "qualia")]
-impl From<&poet_vibe::Instant> for InstantBridge {
-    fn from(i: &poet_vibe::Instant) -> Self {
+impl From<&vibe::Instant> for InstantBridge {
+    fn from(i: &vibe::Instant) -> Self {
         Self {
             secs: i.secs,
             nanos: i.nanos,
@@ -470,9 +470,9 @@ impl From<&poet_vibe::Instant> for InstantBridge {
 }
 
 #[cfg(feature = "qualia")]
-impl From<DurationBridge> for poet_vibe::Duration {
+impl From<DurationBridge> for vibe::Duration {
     fn from(d: DurationBridge) -> Self {
-        poet_vibe::Duration {
+        vibe::Duration {
             secs: d.secs,
             nanos: d.nanos,
         }
@@ -480,8 +480,8 @@ impl From<DurationBridge> for poet_vibe::Duration {
 }
 
 #[cfg(feature = "qualia")]
-impl From<&poet_vibe::Duration> for DurationBridge {
-    fn from(d: &poet_vibe::Duration) -> Self {
+impl From<&vibe::Duration> for DurationBridge {
+    fn from(d: &vibe::Duration) -> Self {
         Self {
             secs: d.secs,
             nanos: d.nanos,

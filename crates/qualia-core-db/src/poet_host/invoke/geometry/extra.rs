@@ -3,7 +3,7 @@
 
 use super::super::args;
 use crate::specialized_libs::computational_geometry as cg;
-use poet_vibe::{Diagnostic, Span, Value};
+use vibe::{Diagnostic, Span, Value};
 
 /// `ComputationalGeometry.triangulate_polygon` — ear-clipping triangulation.
 /// Args: { vertices: [[f64; 2]] }

@@ -2,7 +2,7 @@
 
 use super::super::args;
 use crate::solvers::statistics::regression::simple_linear_regression;
-use poet_vibe::{Diagnostic, Span, Value};
+use vibe::{Diagnostic, Span, Value};
 
 /// Ordinary-least-squares fit of `y = intercept + slope·x`.
 ///

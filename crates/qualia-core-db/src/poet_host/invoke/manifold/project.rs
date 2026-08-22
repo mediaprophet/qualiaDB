@@ -2,7 +2,7 @@
 
 use super::super::args;
 use crate::entity_view::projection::PresentationLevel;
-use poet_vibe::{Diagnostic, Span, Value};
+use vibe::{Diagnostic, Span, Value};
 
 // STUB (T27): real presentation morphism not yet implemented.
 // Currently echoes x,y,z,t. See docs/vibescript-full-impl-PLAN.md §8.4 T27.

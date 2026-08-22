@@ -1,7 +1,7 @@
 //! Document NLP via invoke — not a Vibe keyword.
 
 use crate::nlp::analyze_document;
-use poet_vibe::{DiagCode, Diagnostic, Span, Value};
+use vibe::{DiagCode, Diagnostic, Span, Value};
 use std::collections::BTreeMap;
 
 pub fn analyze(args: &Value, span: Span) -> Result<Value, Diagnostic> {

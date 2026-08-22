@@ -1,7 +1,7 @@
 //! 60-bit FNV IRI hash — same as lexicon.
 
 use crate::lexicon::generate_60bit_token;
-use poet_vibe::{DiagCode, Diagnostic, Span, Value};
+use vibe::{DiagCode, Diagnostic, Span, Value};
 
 pub fn iri(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let s = match args {

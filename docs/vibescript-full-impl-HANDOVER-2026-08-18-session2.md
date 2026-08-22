@@ -51,8 +51,8 @@ All wrap `render::spectral_kernel` and `render::spectral_blend` (deterministic, 
 - `capability.invoke` and `time.unix` stay "partial" regardless
 
 ### Verification baseline (as of `a6cda55f`)
-- `poet-vibe` lib: 22 passed, 0 failed
-- `poet-vibe` conformance: 22 passed, 0 failed
+- `vibe` lib: 22 passed, 0 failed
+- `vibe` conformance: 22 passed, 0 failed
 - `poet_host`: **107 passed**, 0 failed (was 89; +18 new tests)
 - `webizen-desktop`: clean
 - `wasm32`: clean
@@ -182,10 +182,10 @@ H (vibe-bc-0.1 bytecode — post-0.1)
 6. Claim in NOTICES, implement Phase C, test, verify, commit, append to progress log
 7. Verification commands:
    ```
-   cargo test -p poet-vibe
+   cargo test -p vibe
    cargo test -p qualia-core-db --lib poet_host
    cargo check -p webizen-desktop
-   cargo check -p poet-vibe --target wasm32-unknown-unknown
+   cargo check -p vibe --target wasm32-unknown-unknown
    ```
 
 ---

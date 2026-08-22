@@ -2,7 +2,7 @@
 
 use super::super::args;
 use crate::solvers::statistics::distributions;
-use poet_vibe::{Diagnostic, Span, Value};
+use vibe::{Diagnostic, Span, Value};
 
 // ── Normal ──────────────────────────────────────────────────────────
 

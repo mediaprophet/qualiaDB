@@ -3,7 +3,7 @@
 
 use super::super::args;
 use crate::specialized_libs::engineering_analysis as eng;
-use poet_vibe::{Diagnostic, Span, Value};
+use vibe::{Diagnostic, Span, Value};
 
 /// `EngineeringAnalysis.analyze_conduction` — 1-D steady-state thermal
 /// conduction analysis.

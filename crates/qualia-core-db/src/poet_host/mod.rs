@@ -12,12 +12,12 @@ mod values;
 
 use scan::{collect_matches, subject_present};
 pub use values::format_value;
-pub(crate) use values::hash_val;
-use values::{reifier_quin, shape_local_name, value_to_quin};
+pub(crate) use values::{hash_val, value_to_quin};
+use values::{reifier_quin, shape_local_name};
 
 use crate::lexicon::generate_60bit_token;
 use crate::NQuin;
-use poet_vibe::{eval_cell, eval_function, load_program, Diagnostic, Env, Host, Value};
+use vibe::{eval_cell, eval_function, load_program, Diagnostic, Env, Host, Value};
 
 /// Topics `pulse.publish` may use in 0.1. Anything else is E500.
 pub const PULSE_ALLOW_PREFIXES: &[&str] = &["clinic/", "poet/", "pulse/"];
@@ -155,6 +155,8 @@ pub struct PoetSnapshot {
     /// Instrument trace ledger (R12). Records instrument acts for
     /// customer-readable audit. NOT a provider byline (CLAUDE.md §16).
     pub trace_ledger: crate::governance::instrument_trace::InstrumentTraceLedger,
+    /// Remaining 42 MB Sentinel budget after the last eval (P16.6).
+    pub last_eval_workspace_left: u64,
 }
 
 /// Maximum number of HID events buffered in the host (T46).
@@ -257,6 +259,7 @@ impl PoetSnapshot {
             tick_controller: TickController::default(),
             hid_events: HidEventBuffer::new(),
             trace_ledger: crate::governance::instrument_trace::InstrumentTraceLedger::new(),
+            last_eval_workspace_left: vibe::SENTINEL_BYTES,
         }
     }
 
@@ -284,6 +287,7 @@ impl PoetSnapshot {
             tick_controller: TickController::default(),
             hid_events: HidEventBuffer::new(),
             trace_ledger: crate::governance::instrument_trace::InstrumentTraceLedger::new(),
+            last_eval_workspace_left: vibe::SENTINEL_BYTES,
         }
     }
 
@@ -365,6 +369,7 @@ impl PoetSnapshot {
             tick_controller: self.tick_controller.clone(),
             hid_events: self.hid_events.clone(),
             trace_ledger: self.trace_ledger.clone(),
+            last_eval_workspace_left: self.last_eval_workspace_left,
         }
     }
 
@@ -407,6 +412,29 @@ impl PoetSnapshot {
         });
     }
 
+    pub fn eval_program_src(&mut self, src: &str) -> Result<Value, Diagnostic> {
+        self.graph_read_during_eval = false;
+        self.time_read_during_eval = false;
+        let program = vibe::parse_program(src)?;
+        vibe::check_program(&program)?;
+        let mut env = Env::default();
+        let mut engine = vibe::Engine::with_program(self, vibe::Budget::default(), &program);
+        let result = engine.eval_program(&program, &mut env);
+        self.last_eval_workspace_left = engine.workspace_left();
+        result
+    }
+
+    /// Write committed + staged quins into the 42 MB Sentinel arena (P16.6).
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn seal_eval_quins_into_arena(&self, arena: &mut crate::webizen::SlgArena) -> usize {
+        let mut n = 0usize;
+        for q in self.committed.iter().chain(self.staged.iter()) {
+            arena.write_table(*q);
+            n += 1;
+        }
+        n
+    }
+
     pub fn eval_cell_src(&mut self, src: &str) -> Result<Value, Diagnostic> {
         self.graph_read_during_eval = false;
         self.time_read_during_eval = false;
@@ -441,12 +469,12 @@ impl PoetSnapshot {
     ) -> Result<Value, Diagnostic> {
         let program = load_program(src)?;
         let mut env = Env::default();
-        poet_vibe::dispatch_hook(&program, path, args, self, &mut env)
+        vibe::dispatch_hook(&program, path, args, self, &mut env)
     }
 
     /// Direct capability.invoke from a host (desktop renderer, tests).
     pub fn invoke_id(&mut self, id: &str, args: Value) -> Result<Value, Diagnostic> {
-        invoke::dispatch(self, id, &args, poet_vibe::Span { start: 0, end: 0 })
+        invoke::dispatch(self, id, &args, vibe::Span { start: 0, end: 0 })
     }
 }
 
@@ -455,7 +483,7 @@ impl Host for PoetSnapshot {
         &mut self,
         args: &[Value],
         take: u64,
-        _span: poet_vibe::Span,
+        _span: vibe::Span,
     ) -> Result<Value, Diagnostic> {
         self.graph_read_during_eval = true;
         let s = args.first();
@@ -473,7 +501,7 @@ impl Host for PoetSnapshot {
         Ok(Value::List(out))
     }
 
-    fn graph_stage(&mut self, term: &Value, span: poet_vibe::Span) -> Result<Value, Diagnostic> {
+    fn graph_stage(&mut self, term: &Value, span: vibe::Span) -> Result<Value, Diagnostic> {
         let mut pushed = 0usize;
         if let Some(q) = value_to_quin(term, 0) {
             self.staged.push(q);
@@ -487,22 +515,22 @@ impl Host for PoetSnapshot {
             return Ok(Value::Null);
         }
         Err(Diagnostic::new(
-            poet_vibe::DiagCode::E600,
+            vibe::DiagCode::E600,
             span,
             "graph.stage expects a triple, reified term, or Quin",
         ))
     }
 
-    fn graph_begin(&mut self, _span: poet_vibe::Span) -> Result<(), Diagnostic> {
+    fn graph_begin(&mut self, _span: vibe::Span) -> Result<(), Diagnostic> {
         Ok(())
     }
 
-    fn graph_abort(&mut self, _span: poet_vibe::Span) -> Result<(), Diagnostic> {
+    fn graph_abort(&mut self, _span: vibe::Span) -> Result<(), Diagnostic> {
         self.staged.clear();
         Ok(())
     }
 
-    fn graph_commit(&mut self, _span: poet_vibe::Span) -> Result<Value, Diagnostic> {
+    fn graph_commit(&mut self, _span: vibe::Span) -> Result<Value, Diagnostic> {
         if !self.staged.is_empty() {
             #[cfg(not(target_arch = "wasm32"))]
             if self.attached {
@@ -526,7 +554,7 @@ impl Host for PoetSnapshot {
         &mut self,
         node: &Value,
         shape: &Value,
-        _span: poet_vibe::Span,
+        _span: vibe::Span,
     ) -> Result<Value, Diagnostic> {
         let Some(id) = hash_val(node) else {
             return Ok(Value::Bool(false));
@@ -588,14 +616,14 @@ impl Host for PoetSnapshot {
         &mut self,
         topic: &str,
         payload: &Value,
-        span: poet_vibe::Span,
+        span: vibe::Span,
     ) -> Result<Value, Diagnostic> {
         if !PULSE_ALLOW_PREFIXES
             .iter()
             .any(|prefix| topic == *prefix || topic.starts_with(prefix))
         {
             return Err(Diagnostic::new(
-                poet_vibe::DiagCode::E500,
+                vibe::DiagCode::E500,
                 span,
                 format!("pulse topic `{topic}` is not on the 0.1 allowlist"),
             ));
@@ -619,7 +647,41 @@ impl Host for PoetSnapshot {
         Ok(Value::Null)
     }
 
-    fn time_unix(&mut self, span: poet_vibe::Span) -> Result<Value, Diagnostic> {
+    fn time_now(&mut self, span: vibe::Span) -> Result<Value, Diagnostic> {
+        let secs = match self.time_unix(span)? {
+            Value::I64(s) => s,
+            Value::Instant(i) => return Ok(Value::Instant(i)),
+            other => {
+                return Err(Diagnostic::new(
+                    vibe::DiagCode::E600,
+                    span,
+                    format!("time_unix produced {other}"),
+                ));
+            }
+        };
+        Ok(Value::Instant(vibe::Instant::unix(secs, 0)))
+    }
+
+    fn environment(&self) -> vibe::HostEnvironment {
+        #[cfg(target_arch = "wasm32")]
+        {
+            vibe::HostEnvironment::WasmSandbox
+        }
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            vibe::HostEnvironment::NativeDesktop
+        }
+    }
+
+    fn acceleration_tier(&self) -> vibe::AccelerationTier {
+        vibe::AccelerationTier::ScalarCpu
+    }
+
+    fn available_acceleration(&self) -> vibe::AccelerationTier {
+        vibe::detect_available_tier()
+    }
+
+    fn time_unix(&mut self, span: vibe::Span) -> Result<Value, Diagnostic> {
         self.time_read_during_eval = true;
         // WASM has no wall clock; the host injects replay clocks via receipts.
         #[cfg(target_arch = "wasm32")]
@@ -633,7 +695,7 @@ impl Host for PoetSnapshot {
             match SystemTime::now().duration_since(UNIX_EPOCH) {
                 Ok(d) => Ok(Value::I64(d.as_secs() as i64)),
                 Err(_) => Err(Diagnostic::new(
-                    poet_vibe::DiagCode::E600,
+                    vibe::DiagCode::E600,
                     span,
                     "system clock is before Unix epoch",
                 )),
@@ -641,7 +703,7 @@ impl Host for PoetSnapshot {
         }
     }
 
-    fn graph_snapshot(&mut self, _span: poet_vibe::Span) -> Result<Value, Diagnostic> {
+    fn graph_snapshot(&mut self, _span: vibe::Span) -> Result<Value, Diagnostic> {
         #[cfg(not(target_arch = "wasm32"))]
         if self.attached {
             self.revision = crate::daemon_graph::graph_revision().max(1);
@@ -652,7 +714,7 @@ impl Host for PoetSnapshot {
     fn capability_resolve(
         &mut self,
         id: &str,
-        _span: poet_vibe::Span,
+        _span: vibe::Span,
     ) -> Result<Value, Diagnostic> {
         Ok(catalog::resolve_id_with(id, self.attached))
     }
@@ -661,7 +723,7 @@ impl Host for PoetSnapshot {
         &mut self,
         id: &str,
         args: &Value,
-        span: poet_vibe::Span,
+        span: vibe::Span,
     ) -> Result<Value, Diagnostic> {
         invoke::dispatch(self, id, args, span)
     }
@@ -672,11 +734,11 @@ impl Host for PoetSnapshot {
         predicate: u64,
         object: u64,
         context: u64,
-        _span: poet_vibe::Span,
+        _span: vibe::Span,
     ) -> Result<Value, Diagnostic> {
         let metadata = 0;
         let _parity = NQuin::calculate_parity(subject, predicate, object, context, metadata);
-        Ok(Value::QuinRef(poet_vibe::QuinRef::from_raw(
+        Ok(Value::QuinRef(vibe::QuinRef::from_raw(
             subject, predicate, object, context, metadata, _parity,
         )))
     }
@@ -691,7 +753,7 @@ impl Host for PoetSnapshot {
         &mut self,
         algorithm: &str,
         data: &str,
-        span: poet_vibe::Span,
+        span: vibe::Span,
     ) -> Result<Value, Diagnostic> {
         let bytes = data.as_bytes();
         let (hash_hex, hash_bytes_len) = match algorithm {
@@ -700,29 +762,29 @@ impl Host for PoetSnapshot {
                 let mut hasher = Sha256::new();
                 hasher.update(bytes);
                 let digest = hasher.finalize();
-                (poet_vibe::crypto::to_hex(&digest), digest.len())
+                (vibe::crypto::to_hex(&digest), digest.len())
             }
             "SHA-512" => {
                 use sha2::{Digest, Sha512};
                 let mut hasher = Sha512::new();
                 hasher.update(bytes);
                 let digest = hasher.finalize();
-                (poet_vibe::crypto::to_hex(&digest), digest.len())
+                (vibe::crypto::to_hex(&digest), digest.len())
             }
             "BLAKE3" => {
                 let digest = blake3::hash(bytes);
                 let bytes_arr = digest.as_bytes();
-                (poet_vibe::crypto::to_hex(bytes_arr), bytes_arr.len())
+                (vibe::crypto::to_hex(bytes_arr), bytes_arr.len())
             }
             _ => {
                 return Err(Diagnostic::new(
-                    poet_vibe::DiagCode::E100,
+                    vibe::DiagCode::E100,
                     span,
                     format!("crypto.hash: unsupported algorithm {algorithm}"),
                 ));
             }
         };
-        Ok(poet_vibe::crypto::hash_result_value(
+        Ok(vibe::crypto::hash_result_value(
             algorithm,
             &hash_hex,
             hash_bytes_len,
@@ -734,7 +796,7 @@ impl Host for PoetSnapshot {
         ikm: &str,
         info: &str,
         length: u64,
-        span: poet_vibe::Span,
+        span: vibe::Span,
     ) -> Result<Value, Diagnostic> {
         use hkdf::Hkdf;
         use sha2::Sha256;
@@ -744,12 +806,12 @@ impl Host for PoetSnapshot {
         let mut okm = vec![0u8; length as usize];
         hk.expand(info_bytes, &mut okm).map_err(|e| {
             Diagnostic::new(
-                poet_vibe::DiagCode::E100,
+                vibe::DiagCode::E100,
                 span,
                 format!("crypto.hkdf: expansion failed: {e}"),
             )
         })?;
-        Ok(Value::String(poet_vibe::crypto::to_hex(&okm)))
+        Ok(Value::String(vibe::crypto::to_hex(&okm)))
     }
 
     fn crypto_aead_encrypt(
@@ -759,18 +821,18 @@ impl Host for PoetSnapshot {
         nonce_hex: &str,
         plaintext: &str,
         aad: &str,
-        span: poet_vibe::Span,
+        span: vibe::Span,
     ) -> Result<Value, Diagnostic> {
-        let key = poet_vibe::crypto::from_hex(key_hex).ok_or_else(|| {
+        let key = vibe::crypto::from_hex(key_hex).ok_or_else(|| {
             Diagnostic::new(
-                poet_vibe::DiagCode::E100,
+                vibe::DiagCode::E100,
                 span,
                 "crypto.aead_encrypt: invalid key hex",
             )
         })?;
-        let nonce = poet_vibe::crypto::from_hex(nonce_hex).ok_or_else(|| {
+        let nonce = vibe::crypto::from_hex(nonce_hex).ok_or_else(|| {
             Diagnostic::new(
-                poet_vibe::DiagCode::E100,
+                vibe::DiagCode::E100,
                 span,
                 "crypto.aead_encrypt: invalid nonce hex",
             )
@@ -785,14 +847,14 @@ impl Host for PoetSnapshot {
                 use aes_gcm::{Aes256Gcm, KeyInit, Nonce};
                 let key_arr: &[u8; 32] = key.as_slice().try_into().map_err(|_| {
                     Diagnostic::new(
-                        poet_vibe::DiagCode::E100,
+                        vibe::DiagCode::E100,
                         span,
                         "AES-256-GCM key must be 32 bytes",
                     )
                 })?;
                 let nonce_arr: &[u8; 12] = nonce.as_slice().try_into().map_err(|_| {
                     Diagnostic::new(
-                        poet_vibe::DiagCode::E100,
+                        vibe::DiagCode::E100,
                         span,
                         "AES-256-GCM nonce must be 12 bytes",
                     )
@@ -805,7 +867,7 @@ impl Host for PoetSnapshot {
                 };
                 let ct = cipher.encrypt(&nonce_obj, payload).map_err(|e| {
                     Diagnostic::new(
-                        poet_vibe::DiagCode::E100,
+                        vibe::DiagCode::E100,
                         span,
                         format!("AES-256-GCM encrypt failed: {e}"),
                     )
@@ -820,14 +882,14 @@ impl Host for PoetSnapshot {
                 use chacha20poly1305::{ChaCha20Poly1305, KeyInit, Nonce};
                 let key_arr: &[u8; 32] = key.as_slice().try_into().map_err(|_| {
                     Diagnostic::new(
-                        poet_vibe::DiagCode::E100,
+                        vibe::DiagCode::E100,
                         span,
                         "ChaCha20 key must be 32 bytes",
                     )
                 })?;
                 let nonce_arr: &[u8; 12] = nonce.as_slice().try_into().map_err(|_| {
                     Diagnostic::new(
-                        poet_vibe::DiagCode::E100,
+                        vibe::DiagCode::E100,
                         span,
                         "ChaCha20 nonce must be 12 bytes",
                     )
@@ -840,7 +902,7 @@ impl Host for PoetSnapshot {
                 };
                 let ct = cipher.encrypt(&nonce_obj, payload).map_err(|e| {
                     Diagnostic::new(
-                        poet_vibe::DiagCode::E100,
+                        vibe::DiagCode::E100,
                         span,
                         format!("ChaCha20 encrypt failed: {e}"),
                     )
@@ -854,14 +916,14 @@ impl Host for PoetSnapshot {
                 use chacha20poly1305::{KeyInit, XChaCha20Poly1305, XNonce};
                 let key_arr: &[u8; 32] = key.as_slice().try_into().map_err(|_| {
                     Diagnostic::new(
-                        poet_vibe::DiagCode::E100,
+                        vibe::DiagCode::E100,
                         span,
                         "XChaCha20 key must be 32 bytes",
                     )
                 })?;
                 let nonce_arr: &[u8; 24] = nonce.as_slice().try_into().map_err(|_| {
                     Diagnostic::new(
-                        poet_vibe::DiagCode::E100,
+                        vibe::DiagCode::E100,
                         span,
                         "XChaCha20 nonce must be 24 bytes",
                     )
@@ -874,7 +936,7 @@ impl Host for PoetSnapshot {
                 };
                 let ct = cipher.encrypt(&nonce_obj, payload).map_err(|e| {
                     Diagnostic::new(
-                        poet_vibe::DiagCode::E100,
+                        vibe::DiagCode::E100,
                         span,
                         format!("XChaCha20 encrypt failed: {e}"),
                     )
@@ -885,18 +947,18 @@ impl Host for PoetSnapshot {
             }
             _ => {
                 return Err(Diagnostic::new(
-                    poet_vibe::DiagCode::E100,
+                    vibe::DiagCode::E100,
                     span,
                     format!("crypto.aead_encrypt: unsupported algorithm {algorithm}"),
                 ));
             }
         };
 
-        Ok(poet_vibe::crypto::encrypted_data_value(
+        Ok(vibe::crypto::encrypted_data_value(
             algorithm,
-            &poet_vibe::crypto::to_hex(&ciphertext),
-            &poet_vibe::crypto::to_hex(&tag),
-            &poet_vibe::crypto::to_hex(&nonce),
+            &vibe::crypto::to_hex(&ciphertext),
+            &vibe::crypto::to_hex(&tag),
+            &vibe::crypto::to_hex(&nonce),
         ))
     }
 
@@ -908,32 +970,32 @@ impl Host for PoetSnapshot {
         ciphertext_hex: &str,
         tag_hex: &str,
         aad: &str,
-        span: poet_vibe::Span,
+        span: vibe::Span,
     ) -> Result<Value, Diagnostic> {
-        let key = poet_vibe::crypto::from_hex(key_hex).ok_or_else(|| {
+        let key = vibe::crypto::from_hex(key_hex).ok_or_else(|| {
             Diagnostic::new(
-                poet_vibe::DiagCode::E100,
+                vibe::DiagCode::E100,
                 span,
                 "crypto.aead_decrypt: invalid key hex",
             )
         })?;
-        let nonce = poet_vibe::crypto::from_hex(nonce_hex).ok_or_else(|| {
+        let nonce = vibe::crypto::from_hex(nonce_hex).ok_or_else(|| {
             Diagnostic::new(
-                poet_vibe::DiagCode::E100,
+                vibe::DiagCode::E100,
                 span,
                 "crypto.aead_decrypt: invalid nonce hex",
             )
         })?;
-        let ciphertext = poet_vibe::crypto::from_hex(ciphertext_hex).ok_or_else(|| {
+        let ciphertext = vibe::crypto::from_hex(ciphertext_hex).ok_or_else(|| {
             Diagnostic::new(
-                poet_vibe::DiagCode::E100,
+                vibe::DiagCode::E100,
                 span,
                 "crypto.aead_decrypt: invalid ciphertext hex",
             )
         })?;
-        let tag = poet_vibe::crypto::from_hex(tag_hex).ok_or_else(|| {
+        let tag = vibe::crypto::from_hex(tag_hex).ok_or_else(|| {
             Diagnostic::new(
-                poet_vibe::DiagCode::E100,
+                vibe::DiagCode::E100,
                 span,
                 "crypto.aead_decrypt: invalid tag hex",
             )
@@ -950,14 +1012,14 @@ impl Host for PoetSnapshot {
                 use aes_gcm::{Aes256Gcm, KeyInit, Nonce};
                 let key_arr: &[u8; 32] = key.as_slice().try_into().map_err(|_| {
                     Diagnostic::new(
-                        poet_vibe::DiagCode::E100,
+                        vibe::DiagCode::E100,
                         span,
                         "AES-256-GCM key must be 32 bytes",
                     )
                 })?;
                 let nonce_arr: &[u8; 12] = nonce.as_slice().try_into().map_err(|_| {
                     Diagnostic::new(
-                        poet_vibe::DiagCode::E100,
+                        vibe::DiagCode::E100,
                         span,
                         "AES-256-GCM nonce must be 12 bytes",
                     )
@@ -970,7 +1032,7 @@ impl Host for PoetSnapshot {
                 };
                 cipher.decrypt(&nonce_obj, payload).map_err(|e| {
                     Diagnostic::new(
-                        poet_vibe::DiagCode::E100,
+                        vibe::DiagCode::E100,
                         span,
                         format!("AES-256-GCM decrypt failed: {e}"),
                     )
@@ -981,14 +1043,14 @@ impl Host for PoetSnapshot {
                 use chacha20poly1305::{ChaCha20Poly1305, KeyInit, Nonce};
                 let key_arr: &[u8; 32] = key.as_slice().try_into().map_err(|_| {
                     Diagnostic::new(
-                        poet_vibe::DiagCode::E100,
+                        vibe::DiagCode::E100,
                         span,
                         "ChaCha20 key must be 32 bytes",
                     )
                 })?;
                 let nonce_arr: &[u8; 12] = nonce.as_slice().try_into().map_err(|_| {
                     Diagnostic::new(
-                        poet_vibe::DiagCode::E100,
+                        vibe::DiagCode::E100,
                         span,
                         "ChaCha20 nonce must be 12 bytes",
                     )
@@ -1001,7 +1063,7 @@ impl Host for PoetSnapshot {
                 };
                 cipher.decrypt(&nonce_obj, payload).map_err(|e| {
                     Diagnostic::new(
-                        poet_vibe::DiagCode::E100,
+                        vibe::DiagCode::E100,
                         span,
                         format!("ChaCha20 decrypt failed: {e}"),
                     )
@@ -1012,14 +1074,14 @@ impl Host for PoetSnapshot {
                 use chacha20poly1305::{KeyInit, XChaCha20Poly1305, XNonce};
                 let key_arr: &[u8; 32] = key.as_slice().try_into().map_err(|_| {
                     Diagnostic::new(
-                        poet_vibe::DiagCode::E100,
+                        vibe::DiagCode::E100,
                         span,
                         "XChaCha20 key must be 32 bytes",
                     )
                 })?;
                 let nonce_arr: &[u8; 24] = nonce.as_slice().try_into().map_err(|_| {
                     Diagnostic::new(
-                        poet_vibe::DiagCode::E100,
+                        vibe::DiagCode::E100,
                         span,
                         "XChaCha20 nonce must be 24 bytes",
                     )
@@ -1032,7 +1094,7 @@ impl Host for PoetSnapshot {
                 };
                 cipher.decrypt(&nonce_obj, payload).map_err(|e| {
                     Diagnostic::new(
-                        poet_vibe::DiagCode::E100,
+                        vibe::DiagCode::E100,
                         span,
                         format!("XChaCha20 decrypt failed: {e}"),
                     )
@@ -1040,7 +1102,7 @@ impl Host for PoetSnapshot {
             }
             _ => {
                 return Err(Diagnostic::new(
-                    poet_vibe::DiagCode::E100,
+                    vibe::DiagCode::E100,
                     span,
                     format!("crypto.aead_decrypt: unsupported algorithm {algorithm}"),
                 ));
@@ -1056,13 +1118,13 @@ impl Host for PoetSnapshot {
         &mut self,
         _key_id: &str,
         _data: &str,
-        span: poet_vibe::Span,
+        span: vibe::Span,
     ) -> Result<Value, Diagnostic> {
         // Signing requires access to the key vault, which is not
         // available in the snapshot. This is a fail-closed stub that
         // signals the key vault is not wired into the poet host yet.
         Err(Diagnostic::new(
-            poet_vibe::DiagCode::E702,
+            vibe::DiagCode::E702,
             span,
             "crypto.sign: key vault not wired into poet host (use the identity layer directly)",
         ))
@@ -1073,11 +1135,11 @@ impl Host for PoetSnapshot {
         _key_id: &str,
         _data: &str,
         _signature_hex: &str,
-        span: poet_vibe::Span,
+        span: vibe::Span,
     ) -> Result<Value, Diagnostic> {
         // Verification requires access to the key vault.
         Err(Diagnostic::new(
-            poet_vibe::DiagCode::E702,
+            vibe::DiagCode::E702,
             span,
             "crypto.verify: key vault not wired into poet host (use the identity layer directly)",
         ))
@@ -1086,11 +1148,11 @@ impl Host for PoetSnapshot {
     fn crypto_generate_key(
         &mut self,
         _algorithm: &str,
-        span: poet_vibe::Span,
+        span: vibe::Span,
     ) -> Result<Value, Diagnostic> {
         // Key generation requires access to the key vault.
         Err(Diagnostic::new(
-            poet_vibe::DiagCode::E702,
+            vibe::DiagCode::E702,
             span,
             "crypto.generate_key: key vault not wired into poet host (use the identity layer directly)",
         ))
@@ -1102,21 +1164,21 @@ impl Host for PoetSnapshot {
         &mut self,
         value: u64,
         threshold: u64,
-        span: poet_vibe::Span,
+        span: vibe::Span,
     ) -> Result<Value, Diagnostic> {
         #[cfg(feature = "zk-culling")]
         {
             use crate::crypto::zk_predicates;
             let proof = zk_predicates::prove_threshold(value, threshold).map_err(|e| {
                 Diagnostic::new(
-                    poet_vibe::DiagCode::E100,
+                    vibe::DiagCode::E100,
                     span,
                     format!("zk.prove_threshold: {e}"),
                 )
             })?;
-            let proof_hex = poet_vibe::crypto::to_hex(&proof.proof);
-            let vk_hex = poet_vibe::crypto::to_hex(&proof.vk);
-            Ok(poet_vibe::crypto::zk_proof_value(
+            let proof_hex = vibe::crypto::to_hex(&proof.proof);
+            let vk_hex = vibe::crypto::to_hex(&proof.vk);
+            Ok(vibe::crypto::zk_proof_value(
                 &proof_hex,
                 &vk_hex,
                 &format!("zk_threshold_{}_{}", value, threshold),
@@ -1127,7 +1189,7 @@ impl Host for PoetSnapshot {
         {
             let _ = (value, threshold);
             Err(Diagnostic::new(
-                poet_vibe::DiagCode::E702,
+                vibe::DiagCode::E702,
                 span,
                 "zk.prove_threshold: zk-culling feature not enabled",
             ))
@@ -1139,21 +1201,21 @@ impl Host for PoetSnapshot {
         proof_hex: &str,
         vk_hex: &str,
         threshold: u64,
-        span: poet_vibe::Span,
+        span: vibe::Span,
     ) -> Result<Value, Diagnostic> {
         #[cfg(feature = "zk-culling")]
         {
             use crate::crypto::zk_predicates::{verify_threshold, PredicateProof};
-            let proof_bytes = poet_vibe::crypto::from_hex(proof_hex).ok_or_else(|| {
+            let proof_bytes = vibe::crypto::from_hex(proof_hex).ok_or_else(|| {
                 Diagnostic::new(
-                    poet_vibe::DiagCode::E100,
+                    vibe::DiagCode::E100,
                     span,
                     "zk.verify_threshold: invalid proof hex",
                 )
             })?;
-            let vk_bytes = poet_vibe::crypto::from_hex(vk_hex).ok_or_else(|| {
+            let vk_bytes = vibe::crypto::from_hex(vk_hex).ok_or_else(|| {
                 Diagnostic::new(
-                    poet_vibe::DiagCode::E100,
+                    vibe::DiagCode::E100,
                     span,
                     "zk.verify_threshold: invalid vk hex",
                 )
@@ -1169,7 +1231,7 @@ impl Host for PoetSnapshot {
         {
             let _ = (proof_hex, vk_hex, threshold);
             Err(Diagnostic::new(
-                poet_vibe::DiagCode::E702,
+                vibe::DiagCode::E702,
                 span,
                 "zk.verify_threshold: zk-culling feature not enabled",
             ))
@@ -1181,21 +1243,21 @@ impl Host for PoetSnapshot {
         value: u64,
         lo: u64,
         hi: u64,
-        span: poet_vibe::Span,
+        span: vibe::Span,
     ) -> Result<Value, Diagnostic> {
         #[cfg(feature = "zk-culling")]
         {
             use crate::crypto::zk_predicates;
             let proof = zk_predicates::prove_range(value, lo, hi).map_err(|e| {
                 Diagnostic::new(
-                    poet_vibe::DiagCode::E100,
+                    vibe::DiagCode::E100,
                     span,
                     format!("zk.prove_range: {e}"),
                 )
             })?;
-            let proof_hex = poet_vibe::crypto::to_hex(&proof.proof);
-            let vk_hex = poet_vibe::crypto::to_hex(&proof.vk);
-            Ok(poet_vibe::crypto::zk_proof_value(
+            let proof_hex = vibe::crypto::to_hex(&proof.proof);
+            let vk_hex = vibe::crypto::to_hex(&proof.vk);
+            Ok(vibe::crypto::zk_proof_value(
                 &proof_hex,
                 &vk_hex,
                 &format!("zk_range_{}_{}_{}", value, lo, hi),
@@ -1206,7 +1268,7 @@ impl Host for PoetSnapshot {
         {
             let _ = (value, lo, hi);
             Err(Diagnostic::new(
-                poet_vibe::DiagCode::E702,
+                vibe::DiagCode::E702,
                 span,
                 "zk.prove_range: zk-culling feature not enabled",
             ))
@@ -1219,21 +1281,21 @@ impl Host for PoetSnapshot {
         vk_hex: &str,
         lo: u64,
         hi: u64,
-        span: poet_vibe::Span,
+        span: vibe::Span,
     ) -> Result<Value, Diagnostic> {
         #[cfg(feature = "zk-culling")]
         {
             use crate::crypto::zk_predicates::{verify_range, PredicateProof};
-            let proof_bytes = poet_vibe::crypto::from_hex(proof_hex).ok_or_else(|| {
+            let proof_bytes = vibe::crypto::from_hex(proof_hex).ok_or_else(|| {
                 Diagnostic::new(
-                    poet_vibe::DiagCode::E100,
+                    vibe::DiagCode::E100,
                     span,
                     "zk.verify_range: invalid proof hex",
                 )
             })?;
-            let vk_bytes = poet_vibe::crypto::from_hex(vk_hex).ok_or_else(|| {
+            let vk_bytes = vibe::crypto::from_hex(vk_hex).ok_or_else(|| {
                 Diagnostic::new(
-                    poet_vibe::DiagCode::E100,
+                    vibe::DiagCode::E100,
                     span,
                     "zk.verify_range: invalid vk hex",
                 )
@@ -1249,7 +1311,7 @@ impl Host for PoetSnapshot {
         {
             let _ = (proof_hex, vk_hex, lo, hi);
             Err(Diagnostic::new(
-                poet_vibe::DiagCode::E702,
+                vibe::DiagCode::E702,
                 span,
                 "zk.verify_range: zk-culling feature not enabled",
             ))
@@ -1263,7 +1325,7 @@ impl Host for PoetSnapshot {
         n: u64,
         a: &[i128],
         b: &[i128],
-        span: poet_vibe::Span,
+        span: vibe::Span,
     ) -> Result<Value, Diagnostic> {
         #[cfg(feature = "zk-culling")]
         {
@@ -1273,25 +1335,25 @@ impl Host for PoetSnapshot {
                 .prove_matrix_multiply(m as usize, k as usize, n as usize, a, b)
                 .map_err(|e| {
                     Diagnostic::new(
-                        poet_vibe::DiagCode::E100,
+                        vibe::DiagCode::E100,
                         span,
                         format!("zk.prove_matmul: {e}"),
                     )
                 })?;
-            Ok(poet_vibe::crypto::zk_matmul_result_value(valid, &result))
+            Ok(vibe::crypto::zk_matmul_result_value(valid, &result))
         }
         #[cfg(not(feature = "zk-culling"))]
         {
             let _ = (m, k, n, a, b);
             Err(Diagnostic::new(
-                poet_vibe::DiagCode::E702,
+                vibe::DiagCode::E702,
                 span,
                 "zk.prove_matmul: zk-culling feature not enabled",
             ))
         }
     }
 
-    fn zk_list_circuits(&mut self, _span: poet_vibe::Span) -> Result<Value, Diagnostic> {
+    fn zk_list_circuits(&mut self, _span: vibe::Span) -> Result<Value, Diagnostic> {
         #[cfg(feature = "zk-culling")]
         {
             use crate::crypto::zk_proofs::ZkProofSystem;
@@ -1302,7 +1364,7 @@ impl Host for PoetSnapshot {
         #[cfg(not(feature = "zk-culling"))]
         {
             Err(Diagnostic::new(
-                poet_vibe::DiagCode::E702,
+                vibe::DiagCode::E702,
                 _span,
                 "zk.list_circuits: zk-culling feature not enabled",
             ))
@@ -1311,7 +1373,7 @@ impl Host for PoetSnapshot {
 
     /// Poll for the next HID event from the ring buffer (T42).
     /// Non-blocking: returns Null if no event is available.
-    fn hid_poll(&mut self, _span: poet_vibe::Span) -> Result<Value, Diagnostic> {
+    fn hid_poll(&mut self, _span: vibe::Span) -> Result<Value, Diagnostic> {
         match self.hid_events.dequeue() {
             None => Ok(Value::Null),
             Some(slot) => Ok(hid_slot_to_value(&slot)),
@@ -1321,7 +1383,7 @@ impl Host for PoetSnapshot {
     /// Wait for the next HID event with a timeout (T42).
     /// Currently non-blocking (polls once). A blocking implementation
     /// would require platform-specific async infrastructure.
-    fn hid_wait(&mut self, _timeout_ns: u64, _span: poet_vibe::Span) -> Result<Value, Diagnostic> {
+    fn hid_wait(&mut self, _timeout_ns: u64, _span: vibe::Span) -> Result<Value, Diagnostic> {
         match self.hid_events.dequeue() {
             None => Ok(Value::Null),
             Some(slot) => Ok(hid_slot_to_value(&slot)),
@@ -1358,37 +1420,46 @@ impl PoetSnapshot {
     /// Returns Err if the buffer is full (fail-closed).
     pub fn enqueue_hid_event(
         &mut self,
-        event: &poet_vibe::hid::InboundEvent,
+        event: &vibe::hid::InboundEvent,
     ) -> Result<(), &'static str> {
         let source_hash = crate::lexicon::generate_60bit_token(event.source_id.as_bytes());
         let event_kind = match event.kind {
-            poet_vibe::hid::EventKind::Pointer => 0,
-            poet_vibe::hid::EventKind::Keyboard => 1,
-            poet_vibe::hid::EventKind::Touch => 2,
-            poet_vibe::hid::EventKind::Biosignal => 3,
-            poet_vibe::hid::EventKind::Depth => 4,
-            poet_vibe::hid::EventKind::Skeleton => 5,
-            poet_vibe::hid::EventKind::Imu => 6,
-            poet_vibe::hid::EventKind::Audio => 7,
-            poet_vibe::hid::EventKind::Sensor => 8,
-            poet_vibe::hid::EventKind::Assistive => 9,
+            vibe::hid::EventKind::Pointer => 0,
+            vibe::hid::EventKind::Keyboard => 1,
+            vibe::hid::EventKind::Touch => 2,
+            vibe::hid::EventKind::Biosignal => 3,
+            vibe::hid::EventKind::Depth => 4,
+            vibe::hid::EventKind::Skeleton => 5,
+            vibe::hid::EventKind::Imu => 6,
+            vibe::hid::EventKind::Audio => 7,
+            vibe::hid::EventKind::Sensor => 8,
+            vibe::hid::EventKind::Assistive => 9,
+            vibe::hid::EventKind::Gamepad => 10,
+            vibe::hid::EventKind::SpatialHead => 11,
+            vibe::hid::EventKind::SpatialHand => 12,
+            vibe::hid::EventKind::SpatialGaze => 13,
+            vibe::hid::EventKind::Midi => 14,
+            vibe::hid::EventKind::Haptic => 15,
         };
         // Extract x/y/z from inline payload if available
         let (x, y, z) = match &event.payload {
-            poet_vibe::hid::EventPayload::Inline(m) => {
-                let x = match m.get("x") {
+            vibe::hid::EventPayload::Inline(m) => {
+                let x = match m.get("x").or_else(|| m.get("ox")) {
                     Some(Value::F64(v)) => *v as f32,
                     Some(Value::I64(v)) => *v as f32,
+                    Some(Value::U64(v)) => *v as f32,
                     _ => 0.0,
                 };
-                let y = match m.get("y") {
+                let y = match m.get("y").or_else(|| m.get("oy")) {
                     Some(Value::F64(v)) => *v as f32,
                     Some(Value::I64(v)) => *v as f32,
+                    Some(Value::U64(v)) => *v as f32,
                     _ => 0.0,
                 };
-                let z = match m.get("z") {
+                let z = match m.get("z").or_else(|| m.get("oz")) {
                     Some(Value::F64(v)) => *v as f32,
                     Some(Value::I64(v)) => *v as f32,
+                    Some(Value::U64(v)) => *v as f32,
                     _ => 0.0,
                 };
                 (x, y, z)
@@ -1435,14 +1506,116 @@ mod tests {
     }
 
     #[test]
+    fn lamp_evals_on_poet_snapshot() {
+        let src = include_str!("../../../vibe/fixtures/lamp.vibe");
+        let mut snap = PoetSnapshot::default();
+        snap.eval_program_src(src)
+            .unwrap_or_else(|e| panic!("PoetHost lamp: {e}"));
+        assert_eq!(snap.environment(), vibe::HostEnvironment::NativeDesktop);
+        assert_eq!(
+            snap.acceleration_tier(),
+            vibe::AccelerationTier::ScalarCpu
+        );
+    }
+
+    #[test]
+    fn obligate_term_lowers_to_nquin_on_poet_host() {
+        let src = r#"
+            using DeonticLogic;
+            pure fn term() -> Record {
+                return obligate { "sign" };
+            }
+        "#;
+        let mut snap = PoetSnapshot::default();
+        let v = snap
+            .eval_fn(src, "term", Vec::new())
+            .unwrap_or_else(|e| panic!("PoetHost deontic: {e}"));
+        let Value::Record(m) = v else {
+            panic!("expected record, got {v}");
+        };
+        assert_eq!(
+            m.get("id"),
+            Some(&Value::String("DeonticLogic.evaluate".into()))
+        );
+        assert_eq!(m.get("evaluated"), Some(&Value::Bool(true)));
+        match m.get("verdicts") {
+            Some(Value::List(xs)) => {
+                assert!(!xs.is_empty());
+                assert!(
+                    !xs.iter()
+                        .any(|row| matches!(row, Value::String(s) if s.contains("opcode="))),
+                    "verdicts must be records, not JSON-ish strings"
+                );
+            }
+            other => panic!("expected verdict list, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn knows_term_lowers_to_nquin_on_poet_host() {
+        let src = r#"
+            using EpistemicLogic;
+            pure fn term() -> Record {
+                return knows { "fever" };
+            }
+        "#;
+        let mut snap = PoetSnapshot::default();
+        let v = snap
+            .eval_fn(src, "term", Vec::new())
+            .unwrap_or_else(|e| panic!("PoetHost epistemic: {e}"));
+        let Value::Record(m) = v else {
+            panic!("expected record, got {v}");
+        };
+        assert_eq!(
+            m.get("id"),
+            Some(&Value::String("EpistemicLogic.evaluate".into()))
+        );
+        assert_eq!(m.get("evaluated"), Some(&Value::Bool(true)));
+        assert!(m.get("verdict_count").is_some());
+    }
+
+    #[test]
+    fn eval_records_sentinel_workspace() {
+        let mut snap = PoetSnapshot::default();
+        snap.eval_program_src("cell a := 1;\n")
+            .unwrap_or_else(|e| panic!("{e}"));
+        assert!(
+            snap.last_eval_workspace_left <= vibe::SENTINEL_BYTES,
+            "workspace {} exceeds Sentinel",
+            snap.last_eval_workspace_left
+        );
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    #[test]
+    fn eval_quins_seal_into_slg_arena() {
+        let q = crate::modalities::logic::deontic::compile_norm_quin(
+            crate::lexicon::generate_60bit_token(b"did:q:test"),
+            crate::modalities::logic::deontic::OP_OBLIGATE,
+            crate::lexicon::generate_60bit_token(b"vibe:action"),
+            crate::lexicon::generate_60bit_token(b"sign"),
+            crate::lexicon::generate_60bit_token(b"vibe:contract"),
+            0,
+            false,
+        );
+        let snap = PoetSnapshot::with_seed(vec![q]);
+        let mut arena = crate::webizen::SlgArena::new();
+        let n = snap.seal_eval_quins_into_arena(&mut arena);
+        assert_eq!(n, 1);
+        assert!(arena
+            .check_table(q.subject, q.predicate, q.object)
+            .is_some());
+    }
+
+    #[test]
     fn t42_enqueue_and_poll_hid_event() {
         let mut snap = PoetSnapshot::default();
-        let event = poet_vibe::hid::InboundEvent::pointer_move(1000, "mouse:0", 10.5, 20.5);
+        let event = vibe::hid::InboundEvent::pointer_move(1000, "mouse:0", 10.5, 20.5);
         assert!(snap.enqueue_hid_event(&event).is_ok());
         assert_eq!(snap.hid_event_count(), 1);
 
         // Poll via Host trait
-        let v = snap.hid_poll(poet_vibe::Span::point(0)).unwrap();
+        let v = snap.hid_poll(vibe::Span::point(0)).unwrap();
         match v {
             Value::Record(r) => {
                 assert_eq!(r.get("timestamp_ns"), Some(&Value::U64(1000)));
@@ -1462,17 +1635,17 @@ mod tests {
     #[test]
     fn t42_hid_poll_empty_returns_null() {
         let mut snap = PoetSnapshot::default();
-        let v = snap.hid_poll(poet_vibe::Span::point(0)).unwrap();
+        let v = snap.hid_poll(vibe::Span::point(0)).unwrap();
         assert_eq!(v, Value::Null);
     }
 
     #[test]
     fn t42_enqueue_keyboard_event() {
         let mut snap = PoetSnapshot::default();
-        let event = poet_vibe::hid::InboundEvent::keyboard(2000, "keyboard:0", 65, true);
+        let event = vibe::hid::InboundEvent::keyboard(2000, "keyboard:0", 65, true);
         assert!(snap.enqueue_hid_event(&event).is_ok());
 
-        let v = snap.hid_poll(poet_vibe::Span::point(0)).unwrap();
+        let v = snap.hid_poll(vibe::Span::point(0)).unwrap();
         match v {
             Value::Record(r) => {
                 assert_eq!(r.get("event_kind"), Some(&Value::U64(1))); // Keyboard
@@ -1485,7 +1658,7 @@ mod tests {
     fn t42_drain_hid_events() {
         let mut snap = PoetSnapshot::default();
         for i in 0..5 {
-            let event = poet_vibe::hid::InboundEvent::pointer_move(i * 1000, "mouse:0", 0.0, 0.0);
+            let event = vibe::hid::InboundEvent::pointer_move(i * 1000, "mouse:0", 0.0, 0.0);
             snap.enqueue_hid_event(&event).unwrap();
         }
         assert_eq!(snap.hid_event_count(), 5);
@@ -1497,10 +1670,10 @@ mod tests {
     #[test]
     fn t42_hid_wait_returns_event() {
         let mut snap = PoetSnapshot::default();
-        let event = poet_vibe::hid::InboundEvent::pointer_move(5000, "mouse:0", 1.0, 2.0);
+        let event = vibe::hid::InboundEvent::pointer_move(5000, "mouse:0", 1.0, 2.0);
         snap.enqueue_hid_event(&event).unwrap();
 
-        let v = snap.hid_wait(1_000_000, poet_vibe::Span::point(0)).unwrap();
+        let v = snap.hid_wait(1_000_000, vibe::Span::point(0)).unwrap();
         match v {
             Value::Record(r) => {
                 assert_eq!(r.get("timestamp_ns"), Some(&Value::U64(5000)));
@@ -1512,14 +1685,14 @@ mod tests {
     #[test]
     fn t42_hid_wait_empty_returns_null() {
         let mut snap = PoetSnapshot::default();
-        let v = snap.hid_wait(0, poet_vibe::Span::point(0)).unwrap();
+        let v = snap.hid_wait(0, vibe::Span::point(0)).unwrap();
         assert_eq!(v, Value::Null);
     }
 
     #[test]
     fn t42_hid_vibescript_poll() {
         let mut snap = PoetSnapshot::default();
-        let event = poet_vibe::hid::InboundEvent::pointer_move(100, "mouse:0", 5.0, 10.0);
+        let event = vibe::hid::InboundEvent::pointer_move(100, "mouse:0", 5.0, 10.0);
         snap.enqueue_hid_event(&event).unwrap();
 
         // Test via VibeScript
@@ -2118,7 +2291,7 @@ effect fn go() {
 }
 "#;
         let err = snap.eval_fn(src, "go", vec![]).unwrap_err();
-        assert_eq!(err.code, poet_vibe::DiagCode::E500);
+        assert_eq!(err.code, vibe::DiagCode::E500);
     }
 
     #[test]
@@ -2305,7 +2478,7 @@ effect fn boom() {
                 vec![],
             )
             .unwrap_err();
-        assert_eq!(err.code, poet_vibe::DiagCode::E300);
+        assert_eq!(err.code, vibe::DiagCode::E300);
     }
 
     #[test]
@@ -2732,16 +2905,16 @@ effect fn go() {
     /// R4: A forked snapshot's staged writes do not reach the parent.
     #[test]
     fn r4_fork_staged_isolation() {
-        use poet_vibe::Host;
+        use vibe::Host;
         let parent = PoetSnapshot::default();
         let mut forked = parent.fork();
         // Stage a triple in the fork
-        let term = poet_vibe::Value::Triple(
-            Box::new(poet_vibe::Value::U64(1)),
-            Box::new(poet_vibe::Value::U64(2)),
-            Box::new(poet_vibe::Value::U64(3)),
+        let term = vibe::Value::Triple(
+            Box::new(vibe::Value::U64(1)),
+            Box::new(vibe::Value::U64(2)),
+            Box::new(vibe::Value::U64(3)),
         );
-        let _ = forked.graph_stage(&term, poet_vibe::Span::point(0));
+        let _ = forked.graph_stage(&term, vibe::Span::point(0));
         // Parent should have no staged deltas
         assert!(parent.staged.is_empty());
         // Fork should have staged deltas

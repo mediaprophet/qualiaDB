@@ -2,7 +2,7 @@
 
 use super::super::args;
 use crate::container_10d::axis_role::{AxisRole, AXIS_ORDER, COORDINATE_AXES, SELECTOR_AXES};
-use poet_vibe::{Diagnostic, Span, Value};
+use vibe::{Diagnostic, Span, Value};
 
 pub fn taxonomy(_args: &Value, _span: Span) -> Result<Value, Diagnostic> {
     let roles: Vec<Value> = AXIS_ORDER

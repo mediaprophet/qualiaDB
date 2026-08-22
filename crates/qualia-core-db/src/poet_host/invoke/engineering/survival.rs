@@ -4,7 +4,7 @@
 //! through VibeScript invoke IDs.
 
 use super::super::args;
-use poet_vibe::{Diagnostic, Span, Value};
+use vibe::{Diagnostic, Span, Value};
 
 /// `EngineeringAnalysis.cauchy_stress` — analyse a 3×3 Cauchy stress tensor.
 /// Args: { tensor: [f64] (9 values, row-major 3×3) }

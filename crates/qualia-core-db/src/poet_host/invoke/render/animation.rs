@@ -1,14 +1,15 @@
-//! `Render.animation_*` invoke wrappers for zero-heap mathematical curves and presets.
+//! `Render.animation_*` and `Animation.*` invoke wrappers for zero-heap mathematical curves and presets.
 
 use std::collections::BTreeMap;
 
 use super::super::args;
-use poet_vibe::animation::{
-    evaluate_preset, AnimationFamily, CubicBezier, EasingCurve, Motor, SpringConfig, SpringState1D,
+use vibe::animation::{
+    evaluate_preset, list_all_presets, AnimationFamily, CubicBezier, EasingCurve, Motor, Quat,
+    SpringConfig, SpringState1D,
 };
-use poet_vibe::{Diagnostic, Span, Value};
+use vibe::{Diagnostic, Span, Value};
 
-/// `Render.animation_eval_curve` — Evaluate an easing curve at normalized progress `t`.
+/// `Render.animation_eval_curve` / `Animation.bezier_eval` / `Animation.easing` — Evaluate an easing curve at normalized progress `t`.
 ///
 /// Args:
 /// - `curve`: curve name (e.g. "cubic-in-out", "ease-out-bounce", "elastic-out")
@@ -37,28 +38,34 @@ pub fn animation_eval_curve(args_v: &Value, span: Span) -> Result<Value, Diagnos
     }
 }
 
-/// `Render.animation_spring_step` — Step an analytical spring-damper system.
+/// `Render.animation_spring_step` / `Animation.spring_step` — Step an analytical spring-damper system.
 ///
 /// Args:
-/// - `current`: current position (f64)
+/// - `current` / `initial`: current position (f64)
 /// - `target`: target equilibrium position (f64)
 /// - `velocity`: current velocity (f64, optional default 0.0)
-/// - `stiffness`: spring constant k (f64, default 280.0)
-/// - `damping`: damping coefficient c (f64, default 30.0)
+/// - `stiffness` / `tension`: spring constant k (f64, default 280.0)
+/// - `damping` / `friction`: damping coefficient c (f64, default 30.0)
 /// - `dt`: delta time in seconds (f64, default 1/60)
 ///
 /// Returns: `{ position: f64, velocity: f64, settled: bool }`
 pub fn animation_spring_step(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
-    let current = args::rec_f64(args_v, "current").ok_or_else(|| {
-        args::bad(
-            span,
-            "animation_spring_step needs { current: float, target: float, ... }",
-        )
-    })?;
+    let current = args::rec_f64(args_v, "current")
+        .or_else(|| args::rec_f64(args_v, "initial"))
+        .ok_or_else(|| {
+            args::bad(
+                span,
+                "animation_spring_step needs { current: float, target: float, ... }",
+            )
+        })?;
     let target = args::rec_f64(args_v, "target").unwrap_or(0.0);
     let velocity = args::rec_f64(args_v, "velocity").unwrap_or(0.0);
-    let stiffness = args::rec_f64(args_v, "stiffness").unwrap_or(280.0);
-    let damping = args::rec_f64(args_v, "damping").unwrap_or(30.0);
+    let stiffness = args::rec_f64(args_v, "stiffness")
+        .or_else(|| args::rec_f64(args_v, "tension"))
+        .unwrap_or(280.0);
+    let damping = args::rec_f64(args_v, "damping")
+        .or_else(|| args::rec_f64(args_v, "friction"))
+        .unwrap_or(30.0);
     let dt = args::rec_f64(args_v, "dt").unwrap_or(1.0 / 60.0);
 
     let config = SpringConfig::new(stiffness, damping);
@@ -73,7 +80,7 @@ pub fn animation_spring_step(args_v: &Value, span: Span) -> Result<Value, Diagno
     Ok(Value::Record(map))
 }
 
-/// `Render.animation_sclerp` — Screw Linear Interpolation between two 3D PGA Motors.
+/// `Render.animation_sclerp` / `Animation.sclerp_step` — Screw Linear Interpolation between two 3D PGA Motors.
 ///
 /// Args:
 /// - `m0`: starting motor [r_w, r_x, r_y, r_z, d_w, d_x, d_y, d_z] or `{ rot: [w,x,y,z], trans: [x,y,z] }`
@@ -120,7 +127,47 @@ pub fn animation_sclerp(args_v: &Value, _span: Span) -> Result<Value, Diagnostic
     Ok(Value::Record(map))
 }
 
-/// `Render.animation_eval_preset` — Evaluate a standardized preset from the 10 animation families.
+/// `Animation.squad_step` — Spherical and Quadrangle Spline (SQUAD) Quaternion Interpolation.
+///
+/// Args:
+/// - `q0`: starting quaternion [w, x, y, z]
+/// - `q1`: ending quaternion [w, x, y, z]
+/// - `a`: inner control quaternion for q0 (optional, default auto-computed)
+/// - `b`: inner control quaternion for q1 (optional, default auto-computed)
+/// - `t`: interpolation progress [0.0, 1.0]
+///
+/// Returns: `{ q: [f64; 4], w: f64, x: f64, y: f64, z: f64 }`
+pub fn animation_squad_step(args_v: &Value, _span: Span) -> Result<Value, Diagnostic> {
+    let t = args::rec_f64(args_v, "t").unwrap_or(0.0);
+
+    let q0 = extract_quat(args_v, "q0").unwrap_or_else(Quat::identity);
+    let q1 = extract_quat(args_v, "q1").unwrap_or_else(Quat::identity);
+    let a = extract_quat(args_v, "a")
+        .unwrap_or_else(|| Quat::compute_inner_control_point(&q0, &q0, &q1));
+    let b = extract_quat(args_v, "b")
+        .unwrap_or_else(|| Quat::compute_inner_control_point(&q0, &q1, &q1));
+
+    let res = Quat::squad(&q0, &q1, &a, &b, t);
+
+    let mut map = BTreeMap::new();
+    map.insert("w".to_string(), Value::F64(res.w));
+    map.insert("x".to_string(), Value::F64(res.x));
+    map.insert("y".to_string(), Value::F64(res.y));
+    map.insert("z".to_string(), Value::F64(res.z));
+    map.insert(
+        "q".to_string(),
+        Value::List(vec![
+            Value::F64(res.w),
+            Value::F64(res.x),
+            Value::F64(res.y),
+            Value::F64(res.z),
+        ]),
+    );
+
+    Ok(Value::Record(map))
+}
+
+/// `Render.animation_eval_preset` / `Animation.evaluate_preset` — Evaluate a standardized preset from the 10 animation families.
 ///
 /// Args:
 /// - `family`: family name (e.g. "hud-glass-ui", "spatial-kinematics", "dynamics")
@@ -129,19 +176,15 @@ pub fn animation_sclerp(args_v: &Value, _span: Span) -> Result<Value, Diagnostic
 ///
 /// Returns: `{ scalar: f64, vector: [f64; 3], secondary: f64, settled: bool }`
 pub fn animation_eval_preset(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
-    let family_str = args::rec_str(args_v, "family").ok_or_else(|| {
-        args::bad(
-            span,
-            "animation_eval_preset needs { family: string, preset: string, t: float }",
-        )
-    })?;
-    let preset = args::rec_str(args_v, "preset").ok_or_else(|| {
-        args::bad(
-            span,
-            "animation_eval_preset needs preset name (e.g. 'glass_reveal')",
-        )
-    })?;
-    let t = args::rec_f64(args_v, "t").unwrap_or(0.0);
+    // Workshop `Animation.orbit_spin(t)` lowers to evaluate_preset with
+    // family/preset filled by vibe catalog aliases. Bare `evaluate_preset(t)`
+    // keeps the same LocalHost defaults so PoetHost and LocalHost agree.
+    let family_str = args::rec_str(args_v, "family").unwrap_or("spatial_kinematics");
+    let preset = args::rec_str(args_v, "preset").unwrap_or("orbit_spin");
+    let t = args::rec_f64(args_v, "t")
+        .or_else(|| args::rec_f64(args_v, "value"))
+        .or_else(|| args::as_f64(args_v))
+        .unwrap_or(0.0);
 
     let family = AnimationFamily::from_name(family_str)
         .ok_or_else(|| args::bad(span, format!("unknown animation family '{family_str}'")))?;
@@ -163,6 +206,31 @@ pub fn animation_eval_preset(args_v: &Value, span: Span) -> Result<Value, Diagno
     Ok(Value::Record(map))
 }
 
+/// `Animation.list_presets` — Introspect and list all presets across the 10 families.
+///
+/// Args:
+/// - `family`: optional filter by family name
+///
+/// Returns: `[{ family: string, preset: string, description: string }]`
+pub fn animation_list_presets(args_v: &Value, _span: Span) -> Result<Value, Diagnostic> {
+    let filter = args::rec_str(args_v, "family");
+    let all = list_all_presets();
+
+    let list: Vec<Value> = all
+        .iter()
+        .filter(|p| filter.map(|f| p.family.eq_ignore_ascii_case(f) || p.family.replace('_', "-").eq_ignore_ascii_case(f)).unwrap_or(true))
+        .map(|p| {
+            let mut rec = BTreeMap::new();
+            rec.insert("family".into(), Value::String(p.family.into()));
+            rec.insert("preset".into(), Value::String(p.preset.into()));
+            rec.insert("description".into(), Value::String(p.description.into()));
+            Value::Record(rec)
+        })
+        .collect();
+
+    Ok(Value::List(list))
+}
+
 fn extract_motor(args_v: &Value, key: &str) -> Option<Motor> {
     let v = args::rec(args_v, key)?;
     if let Value::List(elems) = v {
@@ -177,6 +245,21 @@ fn extract_motor(args_v: &Value, key: &str) -> Option<Motor> {
                 d_y: num_val(&elems[6]),
                 d_z: num_val(&elems[7]),
             });
+        }
+    }
+    None
+}
+
+fn extract_quat(args_v: &Value, key: &str) -> Option<Quat> {
+    let v = args::rec(args_v, key)?;
+    if let Value::List(elems) = v {
+        if elems.len() >= 4 {
+            return Some(Quat::new(
+                num_val(&elems[0]),
+                num_val(&elems[1]),
+                num_val(&elems[2]),
+                num_val(&elems[3]),
+            ));
         }
     }
     None
@@ -249,6 +332,31 @@ mod tests {
                 assert!(fields.contains_key("vector"));
             }
             other => panic!("expected record, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn invoke_animation_eval_preset_scalar_t_defaults() {
+        let mut map = BTreeMap::new();
+        map.insert("t".to_string(), Value::F64(1.0));
+        let res = animation_eval_preset(&Value::Record(map), Span::new(0, 0))
+            .expect("scalar t defaults to orbit_spin");
+        assert!(matches!(res, Value::Record(_)));
+    }
+
+    #[test]
+    fn invoke_animation_squad_and_list() {
+        let squad_res = animation_squad_step(&Value::Record(BTreeMap::from([
+            ("q0".into(), Value::List(vec![Value::F64(1.0), Value::F64(0.0), Value::F64(0.0), Value::F64(0.0)])),
+            ("q1".into(), Value::List(vec![Value::F64(0.0), Value::F64(1.0), Value::F64(0.0), Value::F64(0.0)])),
+            ("t".into(), Value::F64(0.5)),
+        ])), Span::new(0, 0)).expect("squad");
+        assert!(matches!(squad_res, Value::Record(_)));
+
+        let list_res = animation_list_presets(&Value::Null, Span::new(0, 0)).expect("list_presets");
+        match list_res {
+            Value::List(items) => assert!(items.len() >= 30),
+            other => panic!("expected list, got {other:?}"),
         }
     }
 }

@@ -1,7 +1,7 @@
 //! `NLP.fst_lookup` — FST morphology lookup over a word.
 
 use crate::nlp::fst::FstDict;
-use poet_vibe::{DiagCode, Diagnostic, Span, Value};
+use vibe::{DiagCode, Diagnostic, Span, Value};
 use std::collections::BTreeMap;
 
 /// `NLP.fst_lookup` — look up a word in a dictionary built from the

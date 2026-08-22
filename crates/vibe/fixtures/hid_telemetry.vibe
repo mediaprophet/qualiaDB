@@ -1,0 +1,23 @@
+// HID telemetry — catalog calls via `using HID`.
+using HID;
+
+effect fn test_hid_poll() {
+    let r = HID.poll();
+    return r;
+}
+
+effect fn test_pointer_control() {
+    let cap = HID.pointer_capture({ target_id: 101 });
+    let cur = HID.set_cursor({ style: "crosshair" });
+    let rel = HID.pointer_release();
+    return cap.captured;
+}
+
+effect fn test_haptics() {
+    let pulse = HID.haptic_pulse({
+        duration_ms: 60.0,
+        intensity: 0.9,
+        frequency_hz: 180.0
+    });
+    return pulse.actuated;
+}

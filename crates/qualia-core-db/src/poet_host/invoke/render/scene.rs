@@ -5,7 +5,7 @@
 
 use super::super::{args, clinical, engineering, geometry};
 use crate::poet_host::PoetSnapshot;
-use poet_vibe::{Diagnostic, Span, Value};
+use vibe::{Diagnostic, Span, Value};
 
 pub fn scene(snap: &PoetSnapshot, args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let kind = args::rec_str(args_v, "kind")

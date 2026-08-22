@@ -2,7 +2,7 @@
 
 use crate::solvers::number_theory::modular::{gcd as nt_gcd, lcm as nt_lcm};
 use crate::solvers::number_theory::primes::is_prime as nt_is_prime;
-use poet_vibe::{DiagCode, Diagnostic, Span, Value};
+use vibe::{DiagCode, Diagnostic, Span, Value};
 
 fn pair(args: &Value, span: Span) -> Result<(u64, u64), Diagnostic> {
     let Value::List(xs) = args else {

@@ -15,7 +15,7 @@ refactors), and establishes priority and dependency ordering.
 
 It synthesizes three layers of existing work:
 
-1. **VibeScript agent primitives** (A1–A9 in `poet-vibe`): CBOR-LD AST codec,
+1. **VibeScript agent primitives** (A1–A9 in `vibe`): CBOR-LD AST codec,
    DOMINO constrained decoding, 3-stage reflection, AST query engine, semantic
    blackboard, multi-agent DAGs, paraconsistent Eτ evidential logic, hardware
    deontic interrupts, semantic skills.
@@ -40,14 +40,14 @@ results are sealed as VCs with performance ratings."
 
 | Layer | Module | Status | Tests | What it does |
 |-------|--------|--------|-------|--------------|
-| **A1** CBOR-LD AST | `poet-vibe/src/cbor_ast.rs` | ✅ Done | Tag 4200 bidirectional codec | Lossless AST serialization for agent manipulation |
+| **A1** CBOR-LD AST | `vibe/src/cbor_ast.rs` | ✅ Done | Tag 4200 bidirectional codec | Lossless AST serialization for agent manipulation |
 | **A2** DOMINO | `inference/speculative_decode.rs` | ✅ Done | Prefix-trie token masking | Constrained decoding for in-process LLM |
-| **A3** Reflection | `poet-vibe/src/reflection.rs` | ✅ Done | 3-stage self-healing | Search match → semantic lint → dry-run injection |
-| **A4** AST query | `poet-vibe/src/ast_query.rs` | ✅ Done | S-expression policy engine | Static architectural policy enforcement |
+| **A3** Reflection | `vibe/src/reflection.rs` | ✅ Done | 3-stage self-healing | Search match → semantic lint → dry-run injection |
+| **A4** AST query | `vibe/src/ast_query.rs` | ✅ Done | S-expression policy engine | Static architectural policy enforcement |
 | **A5** Blackboard | `modalities/blackboard.rs` | ✅ Done | Q42 CRDT channels | Observable state channels with hard/soft constraints |
-| **A6** DAGs | `poet-vibe/src/dag.rs` | ✅ Done | DagPipeline, ControlUnit, JudgeFrame | Native DAG pipeline definitions + autonomous routers |
+| **A6** DAGs | `vibe/src/dag.rs` | ✅ Done | DagPipeline, ControlUnit, JudgeFrame | Native DAG pipeline definitions + autonomous routers |
 | **A7** Eτ evidential | `modalities/evidential_etau.rs` | ✅ Done | (μ, λ) packing + W3C VCs | Paraconsistent evidence + verifiable credentials |
-| **A8** Deontic interrupts | `poet-vibe/src/deontic_interrupt.rs` | ✅ Done | PhaseLeaser, AgentSandbox, F(φ) | seL4-style capability revocation + phase leasing |
+| **A8** Deontic interrupts | `vibe/src/deontic_interrupt.rs` | ✅ Done | PhaseLeaser, AgentSandbox, F(φ) | seL4-style capability revocation + phase leasing |
 | **A9** Semantic skills | `inference/semantic_skills.rs` | ✅ Done | Vector cosine, embeddings, scratchpad | First-class RAG, semantic search, ephemeral memory |
 | **Coord ISA** | `governance/coordination.rs` | ✅ Done | 0x70–0x72 opcodes | Authorization grants, resource contracts, performance VCs |
 | **Agent roster** | `qualia-client-core/agent_registry.rs` | ✅ Done | AgentDefinition, backend specs | Durable agent definitions with context/execution policies |
@@ -224,7 +224,7 @@ not 10,000 lines of dumped text.
 
 | # | Refactor | Reason | Blast radius | Risk |
 |---|----------|--------|--------------|------|
-| **R1** | `pub use dag, deontic_interrupt, reflection` from `poet-vibe/src/lib.rs` | A6/A8/A3 are internal modules not on the public surface. They must be exportable for the host to call. | Low — adding `pub use` is additive. | Low |
+| **R1** | `pub use dag, deontic_interrupt, reflection` from `vibe/src/lib.rs` | A6/A8/A3 are internal modules not on the public surface. They must be exportable for the host to call. | Low — adding `pub use` is additive. | Low |
 | **R2** | Wire `deontic_interrupt::PhaseLeaser` into `eval.rs` capability dispatch | G2: prohibitions must gate eval. The eval loop's `capability_invoke` path needs to check the active phase lease before dispatching. | Medium — touches the eval hot path. Must be zero-heap (Tier 1). | Medium |
 | **R3** | Wire `dag::DagPipeline` execution into `poet_host` | G1: DAGs need an executor that runs nodes in topological order, reading/writing blackboard channels between nodes. | Medium — new `dag_executor` module in `poet_host`. | Medium |
 | **R4** | Isolate `reflection::Stage3` on a `PoetSnapshot` fork | G3: reflection stage 3 must not write the live graph. Need `PoetSnapshot::fork()` or equivalent. | Low — additive method on PoetSnapshot. | Low |
@@ -252,7 +252,7 @@ not 10,000 lines of dumped text.
 | Module | Extension | Reason |
 |--------|-----------|--------|
 | `eval.rs` | Phase lease check before `capability_invoke` dispatch | R2 / G2 |
-| `lib.rs` (poet-vibe) | `pub use dag, deontic_interrupt, reflection` | R1 / G1 |
+| `lib.rs` (vibe) | `pub use dag, deontic_interrupt, reflection` | R1 / G1 |
 | `chat_agents.rs` | @mention → roster resolution, display name, backend selection | R7 / G6 |
 | `chat_inference.rs` | Agent context from A9 semantic skills, not raw text | G10 |
 | `local_job_scheduler.rs` | `AgentTurn` job kind + bounded job groups + cron | R6 / G8 |

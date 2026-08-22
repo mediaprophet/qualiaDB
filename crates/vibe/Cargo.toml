@@ -1,0 +1,22 @@
+[package]
+name = "vibe"
+version = "0.0.31"
+edition = "2021"
+description = "VibeScript 0.1 engine: lexer, parser, type/effect checker, and AST interpreter. No JIT. No wgpu."
+license-file = "LICENSE"
+authors = ["Timothy Charles Holborn <timothy.holborn@gmail.com>"]
+repository = "https://github.com/mediaprophet/qualiaDB"
+
+[lib]
+name = "vibe"
+path = "src/lib.rs"
+
+[[bin]]
+name = "vibe"
+path = "src/bin/vibe.rs"
+
+[dependencies]
+bytemuck = { version = "1.21", features = ["derive"] }
+unicode-xid = "0.2.6"
+
+[dev-dependencies]

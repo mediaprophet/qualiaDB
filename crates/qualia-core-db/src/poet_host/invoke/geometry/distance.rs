@@ -5,7 +5,7 @@
 
 use super::super::args;
 use crate::specialized_libs::computational_geometry as cg;
-use poet_vibe::{Diagnostic, Span, Value};
+use vibe::{Diagnostic, Span, Value};
 
 /// `ComputationalGeometry.distance_2d` — Euclidean distance between two 2D points.
 /// Args: { ax, ay, bx, by }

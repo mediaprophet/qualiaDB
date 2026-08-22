@@ -21,7 +21,7 @@
 use crate::inference::sampler::{SamplerConfig, SamplerState};
 use crate::inference::speculative_decode::DominoMasker;
 use crate::llm_bench;
-use poet_vibe::{DiagCode, Diagnostic, Span, Value};
+use vibe::{DiagCode, Diagnostic, Span, Value};
 use std::collections::BTreeMap;
 
 /// Parse a `SamplerConfig` from a VibeScript record.

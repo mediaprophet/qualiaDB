@@ -6,7 +6,7 @@ use crate::sparql_ast::SparqlQuery;
 use crate::sparql_executor::QueryExecutor;
 use crate::sparql_parser::parse_sparql_full;
 use crate::sparql_planner::QueryPlanner;
-use poet_vibe::{Diagnostic, Span, Value};
+use vibe::{Diagnostic, Span, Value};
 
 pub fn query(snap: &PoetSnapshot, args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let q = args::as_str(args_v)

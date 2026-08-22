@@ -2,7 +2,7 @@
 
 use super::super::args;
 use crate::solvers::learning;
-use poet_vibe::{Diagnostic, Span, Value};
+use vibe::{Diagnostic, Span, Value};
 
 /// `MachineLearning.mse` — mean squared error.
 /// Args: { y_true: [f64], y_pred: [f64] }

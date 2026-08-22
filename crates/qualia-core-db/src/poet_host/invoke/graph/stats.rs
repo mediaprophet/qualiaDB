@@ -1,7 +1,7 @@
 //! Resident graph size.
 
 use crate::poet_host::PoetSnapshot;
-use poet_vibe::Value;
+use vibe::Value;
 use std::collections::BTreeMap;
 
 pub fn stats(snap: &PoetSnapshot) -> Value {

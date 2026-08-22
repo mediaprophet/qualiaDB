@@ -2,7 +2,7 @@
 
 use super::super::args;
 use crate::solvers::statistics::correlation::pearson;
-use poet_vibe::{Diagnostic, Span, Value};
+use vibe::{Diagnostic, Span, Value};
 
 pub fn pearson_r(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let x = args::rec(args_v, "x")

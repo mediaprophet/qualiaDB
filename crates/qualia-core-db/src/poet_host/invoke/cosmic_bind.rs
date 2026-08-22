@@ -1,13 +1,13 @@
 //! Cosmic coordinate system (OCS) capability.invoke bindings.
 //!
-//! Exposes the `poet_vibe::cosmic` library to VibeScript via stable
+//! Exposes the `vibe::cosmic` library to VibeScript via stable
 //! capability.invoke IDs. Each function takes a `Value` record (or list)
 //! and returns a `Value` record (or scalar).
 
 #![allow(dead_code)]
 
-use poet_vibe::cosmic;
-use poet_vibe::{DiagCode, Diagnostic, Span, Value};
+use vibe::cosmic;
+use vibe::{DiagCode, Diagnostic, Span, Value};
 
 use super::args;
 
@@ -362,7 +362,7 @@ fn parse_hierarchy_level(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use poet_vibe::Value;
+    use vibe::Value;
     use std::collections::BTreeMap;
 
     fn rec(pairs: &[(&str, Value)]) -> Value {

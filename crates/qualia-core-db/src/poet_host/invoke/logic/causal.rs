@@ -2,7 +2,7 @@
 
 use super::super::args;
 use crate::poet_host::{hash_val, PoetSnapshot};
-use poet_vibe::{Diagnostic, Span, Value};
+use vibe::{Diagnostic, Span, Value};
 
 #[cfg(any(
     not(target_arch = "wasm32"),
@@ -43,8 +43,8 @@ pub fn caused(snap: &PoetSnapshot, args_v: &Value, span: Span) -> Result<Value, 
     feature = "wasm-full"
 )))]
 pub fn caused(_snap: &PoetSnapshot, _args: &Value, span: Span) -> Result<Value, Diagnostic> {
-    Err(poet_vibe::Diagnostic::new(
-        poet_vibe::DiagCode::E300,
+    Err(vibe::Diagnostic::new(
+        vibe::DiagCode::E300,
         span,
         "CausalFuzzyAndControl is not in the wasm-ontology lite profile",
     ))

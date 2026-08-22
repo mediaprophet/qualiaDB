@@ -1,9 +1,11 @@
-//! LSP server implementation — JSON-RPC over stdin/stdout.
+//! LSP server implementation — JSON-RPC over stdin/stdout (P1.3).
 
-use poet_vibe::{check_program, parse_program, Diagnostic};
 use serde_json::{json, Value};
 use std::collections::HashMap;
 use std::io::{self, BufRead, Write};
+use crate::catalog_intel::{completions_at, hover_at, workspace_edit_for_fix};
+use vibe::projectional::{project_program, ProjectOptions};
+use vibe::{check_program, parse_program, Diagnostic};
 
 /// LSP message framing: Content-Length header + blank line + JSON body.
 pub fn encode_message(json: &str) -> String {
@@ -41,9 +43,56 @@ pub fn read_message<R: BufRead>(reader: &mut R) -> io::Result<Option<String>> {
     Ok(Some(String::from_utf8_lossy(&body).to_string()))
 }
 
-/// Convert a poet-vibe Diagnostic to an LSP diagnostic JSON value.
+/// Convert a byte offset to an LSP (0-based line, 0-based character) position.
+pub fn offset_to_position(src: &str, offset: usize) -> (usize, usize) {
+    let mut line = 0;
+    let mut character = 0;
+    let mut current_offset = 0;
+
+    for ch in src.chars() {
+        if current_offset >= offset {
+            break;
+        }
+        if ch == '\n' {
+            line += 1;
+            character = 0;
+        } else {
+            character += ch.len_utf16();
+        }
+        current_offset += ch.len_utf8();
+    }
+    (line, character)
+}
+
+/// Convert a vibe Diagnostic to an LSP diagnostic JSON value (with source text for exact line/col).
+pub fn diagnostic_to_lsp_with_src(diag: &Diagnostic, src: &str) -> Value {
+    let (start_line, start_char) = offset_to_position(src, diag.span.start as usize);
+    let (end_line, mut end_char) = offset_to_position(src, diag.span.end as usize);
+    if start_line == end_line && start_char == end_char {
+        end_char = start_char + 1;
+    }
+
+    let mut map = serde_json::Map::new();
+    map.insert(
+        "range".to_string(),
+        json!({
+            "start": { "line": start_line, "character": start_char },
+            "end": { "line": end_line, "character": end_char }
+        }),
+    );
+    map.insert("severity".to_string(), json!(severity_for_code(&diag.code)));
+    map.insert("code".to_string(), json!(format!("{:?}", diag.code)));
+    map.insert("message".to_string(), json!(diag.message));
+    if let Some(fix) = &diag.suggested_fix {
+        map.insert("data".to_string(), json!({ "suggested_fix": fix }));
+    }
+
+    Value::Object(map)
+}
+
+#[allow(dead_code)]
 pub fn diagnostic_to_lsp(diag: &Diagnostic) -> Value {
-    let (line, character) = span_to_lsp_position(diag.span.start as usize);
+    let (line, character) = (0, diag.span.start as usize);
     json!({
         "range": {
             "start": { "line": line, "character": character },
@@ -55,24 +104,16 @@ pub fn diagnostic_to_lsp(diag: &Diagnostic) -> Value {
     })
 }
 
-/// Convert a byte offset to an LSP (0-based line, 0-based character) position.
-/// This is approximate — it counts newlines up to the offset.
-fn span_to_lsp_position(offset: usize) -> (usize, usize) {
-    // Without the source text we can't compute line/char precisely.
-    // LSP positions are per-document; the caller should adjust.
-    // For now, return offset as character on line 0.
-    // A proper implementation would track the document text.
-    (0, offset)
-}
-
 /// Map a DiagCode to an LSP severity (1=Error, 2=Warning, 3=Info, 4=Hint).
-fn severity_for_code(code: &poet_vibe::DiagCode) -> u8 {
+fn severity_for_code(code: &vibe::DiagCode) -> u8 {
     match code {
-        poet_vibe::DiagCode::E001 => 1, // parse error
-        poet_vibe::DiagCode::E100 => 1, // unknown binding
-        poet_vibe::DiagCode::E600 => 1, // runtime error
-        poet_vibe::DiagCode::E701 => 1, // mut violation
-        poet_vibe::DiagCode::E702 => 2, // capability unavailable — warning
+        vibe::DiagCode::E001 => 1, // parse error
+        vibe::DiagCode::E100 => 1, // unknown binding
+        vibe::DiagCode::E200 => 1, // effect mismatch
+        vibe::DiagCode::E300 => 1, // missing capability
+        vibe::DiagCode::E600 => 1, // runtime error
+        vibe::DiagCode::E701 => 1, // mut violation
+        vibe::DiagCode::E702 => 2, // capability unavailable — warning
         _ => 1,
     }
 }
@@ -82,9 +123,9 @@ pub fn get_diagnostics(src: &str) -> Vec<Value> {
     match parse_program(src) {
         Ok(program) => match check_program(&program) {
             Ok(_) => Vec::new(),
-            Err(diag) => vec![diagnostic_to_lsp(&diag)],
+            Err(diag) => vec![diagnostic_to_lsp_with_src(&diag, src)],
         },
-        Err(diag) => vec![diagnostic_to_lsp(&diag)],
+        Err(diag) => vec![diagnostic_to_lsp_with_src(&diag, src)],
     }
 }
 
@@ -153,6 +194,12 @@ impl<R: BufRead, W: Write> LspServer<R, W> {
                         "capabilities": {
                             "textDocumentSync": 1, // full sync
                             "diagnosticProvider": true,
+                            "completionProvider": {
+                                "triggerCharacters": [".", ":", "\"", "(", "{"]
+                            },
+                            "hoverProvider": true,
+                            "codeActionProvider": true,
+                            "documentFormattingProvider": true,
                         },
                         "serverInfo": {
                             "name": "vibe-lsp",
@@ -204,6 +251,90 @@ impl<R: BufRead, W: Write> LspServer<R, W> {
                     }
                 }
             }
+            "textDocument/completion" => {
+                let (src, line, character) = self.completion_context(msg.get("params"));
+                let completions = completions_at(&src, line, character);
+                let response = json!({
+                    "jsonrpc": "2.0",
+                    "id": id,
+                    "result": completions,
+                });
+                self.send_response(response)?;
+            }
+            "textDocument/hover" => {
+                let (src, line, character) = self.completion_context(msg.get("params"));
+                let hover_text = hover_at(&src, line, character);
+                let response = json!({
+                    "jsonrpc": "2.0",
+                    "id": id,
+                    "result": {
+                        "contents": {
+                            "kind": "markdown",
+                            "value": hover_text,
+                        }
+                    }
+                });
+                self.send_response(response)?;
+            }
+            "textDocument/codeAction" => {
+                let mut actions = Vec::new();
+                if let Some(params) = msg.get("params") {
+                    let uri = params.pointer("/textDocument/uri").and_then(|v| v.as_str()).unwrap_or("");
+                    let src = self.documents.get(uri).cloned().unwrap_or_default();
+                    if let Some(diags) = params.pointer("/context/diagnostics").and_then(|v| v.as_array()) {
+                        for d in diags {
+                            if let Some(fix) = d.pointer("/data/suggested_fix").and_then(|v| v.as_str()) {
+                                let mut action = json!({
+                                    "title": format!("Apply fix: {fix}"),
+                                    "kind": "quickfix",
+                                    "diagnostics": [d],
+                                    "isPreferred": true,
+                                });
+                                if let Some(edit) = workspace_edit_for_fix(uri, d, &src) {
+                                    action["edit"] = edit;
+                                }
+                                actions.push(action);
+                            }
+                        }
+                    }
+                }
+                let response = json!({
+                    "jsonrpc": "2.0",
+                    "id": id,
+                    "result": actions,
+                });
+                self.send_response(response)?;
+            }
+            "textDocument/formatting" => {
+                let mut edits = Vec::new();
+                if let Some(params) = msg.get("params") {
+                    if let Some(uri) = params.pointer("/textDocument/uri").and_then(|v| v.as_str()) {
+                        if let Some(text) = self.documents.get(uri) {
+                            if let Ok(prog) = parse_program(text) {
+                                let formatted = project_program(&prog, &ProjectOptions {
+                                    indent: "  ".to_string(),
+                                    blank_lines_between_decls: 1,
+                                    max_line_width: 80,
+                                });
+                                let (end_line, end_char) = offset_to_position(text, text.len());
+                                edits.push(json!({
+                                    "range": {
+                                        "start": { "line": 0, "character": 0 },
+                                        "end": { "line": end_line, "character": end_char }
+                                    },
+                                    "newText": formatted,
+                                }));
+                            }
+                        }
+                    }
+                }
+                let response = json!({
+                    "jsonrpc": "2.0",
+                    "id": id,
+                    "result": edits,
+                });
+                self.send_response(response)?;
+            }
             _ => {
                 // Unknown method — send method not found if it has an id.
                 if let Some(id) = id {
@@ -217,6 +348,26 @@ impl<R: BufRead, W: Write> LspServer<R, W> {
             }
         }
         Ok(())
+    }
+
+    fn completion_context(&self, params: Option<&Value>) -> (String, usize, usize) {
+        let Some(params) = params else {
+            return (String::new(), 0, 0);
+        };
+        let uri = params
+            .pointer("/textDocument/uri")
+            .and_then(|v| v.as_str())
+            .unwrap_or("");
+        let src = self.documents.get(uri).cloned().unwrap_or_default();
+        let line = params
+            .pointer("/position/line")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0) as usize;
+        let character = params
+            .pointer("/position/character")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0) as usize;
+        (src, line, character)
     }
 
     fn publish_diagnostics(&mut self, uri: &str) -> io::Result<()> {
@@ -265,15 +416,16 @@ mod tests {
         assert!(output_str.contains("vibe-lsp"));
         assert!(output_str.contains("capabilities"));
         assert!(output_str.contains("textDocumentSync"));
+        assert!(output_str.contains("completionProvider"));
     }
 
     #[test]
     fn diagnostics_on_parse_error() {
-        // A malformed VibeScript should produce diagnostics.
         let bad_src = "fn main() { let x = ; }";
         let diags = get_diagnostics(bad_src);
         assert!(!diags.is_empty());
         assert!(diags[0].get("message").is_some());
+        assert!(diags[0].get("range").is_some());
     }
 
     #[test]
@@ -310,6 +462,51 @@ mod tests {
         let output_str = String::from_utf8(output).unwrap();
         assert!(output_str.contains("publishDiagnostics"));
         assert!(output_str.contains("file:///test.vibe"));
+    }
+
+    #[test]
+    fn completion_response() {
+        let input = encode_message(r#"{"jsonrpc":"2.0","id":2,"method":"textDocument/completion","params":{"textDocument":{"uri":"file:///test.vibe"},"position":{"line":0,"character":0}}}"#);
+        let mut output = Vec::new();
+        {
+            let reader = BufReader::new(Cursor::new(input.as_bytes()));
+            let writer = Cursor::new(&mut output);
+            let mut server = LspServer::new(reader, writer);
+            server.run().unwrap();
+        }
+        let output_str = String::from_utf8(output).unwrap();
+        assert!(output_str.contains("cell"));
+        assert!(output_str.contains("Animation"));
+        assert!(output_str.contains("using"));
+    }
+
+    #[test]
+    fn formatting_response() {
+        let unformatted = "fn main(){return 42;}";
+        let body = serde_json::to_string(&json!({
+            "jsonrpc": "2.0",
+            "method": "textDocument/didOpen",
+            "params": {
+                "textDocument": {
+                    "uri": "file:///test.vibe",
+                    "languageId": "vibe",
+                    "version": 1,
+                    "text": unformatted,
+                }
+            }
+        }))
+        .unwrap();
+        let format_req = encode_message(r#"{"jsonrpc":"2.0","id":3,"method":"textDocument/formatting","params":{"textDocument":{"uri":"file:///test.vibe"},"options":{"tabSize":2,"insertSpaces":true}}}"#);
+        let input = format!("{}{}", encode_message(&body), format_req);
+        let mut output = Vec::new();
+        {
+            let reader = BufReader::new(Cursor::new(input.as_bytes()));
+            let writer = Cursor::new(&mut output);
+            let mut server = LspServer::new(reader, writer);
+            server.run().unwrap();
+        }
+        let output_str = String::from_utf8(output).unwrap();
+        assert!(output_str.contains("newText"));
     }
 
     #[test]

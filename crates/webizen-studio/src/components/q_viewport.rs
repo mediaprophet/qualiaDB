@@ -35,129 +35,95 @@
 
 use dioxus::prelude::*;
 use serde_json::json;
+#[cfg(target_arch = "wasm32")]
+use wasm_bindgen::JsCast;
 
 use crate::components::qapp_engine::invoke_json;
 use crate::render::q_viewport::{self, ViewportBackend, ViewportConfig, ViewportState};
 
 // ── Async invoke helpers ──────────────────────────────────────────────────
-// These call VibeScript `capability.invoke` through the `poet_eval` Tauri
-// command, which evaluates the script and returns the result.
+// Workshop dialect: `using Render;` then `Render.gpu_*` through `poet_eval`.
 
-/// Detect the available GPU backend.
-async fn detect_backend() -> Result<ViewportBackend, String> {
-    let script = r#"requires [ capability("capability.invoke") ];
-effect fn go() {
-    return capability.invoke("Render.gpu_backend_info", null);
-}"#;
-    let result = invoke_json(
+async fn poet_go(script: &str) -> Result<serde_json::Value, String> {
+    invoke_json(
         "poet_eval",
         json!({ "source": script, "as_cell": false, "function": "go" }),
     )
-    .await?;
+    .await
+}
+
+/// Detect the available GPU backend.
+async fn detect_backend() -> Result<ViewportBackend, String> {
+    let script = q_viewport::vibe_gpu_script("return Render.gpu_backend_info();");
+    let result = poet_go(&script).await?;
     Ok(q_viewport::extract_backend(&result))
 }
 
 /// Initialize the GPU viewport.
 async fn mount_gpu(config: &ViewportConfig) -> Result<(u64, ViewportBackend), String> {
     let backend = detect_backend().await.unwrap_or(ViewportBackend::None);
-    let script = format!(
-        r#"requires [ capability("capability.invoke") ];
-effect fn go() {{
-    return capability.invoke("Render.gpu_init", {{
-        width: {width}, height: {height}, particle_cap: {particle_cap}
-    }});
-}}"#,
-        width = config.width,
-        height = config.height,
-        particle_cap = config.particle_cap
-    );
-    let result = invoke_json(
-        "poet_eval",
-        json!({ "source": script, "as_cell": false, "function": "go" }),
-    )
-    .await?;
+    let script = q_viewport::vibe_gpu_script(&format!(
+        "return Render.gpu_init({{ width: {w}, height: {h}, particle_cap: {p} }});",
+        w = config.width,
+        h = config.height,
+        p = config.particle_cap
+    ));
+    let result = poet_go(&script).await?;
     let handle = q_viewport::extract_handle(&result)?;
     Ok((handle, backend))
 }
 
 /// Render one frame.
 async fn render_frame(handle: u64, time: f32) -> Result<(), String> {
-    let script = format!(
-        r#"requires [ capability("capability.invoke") ];
-effect fn go() {{
-    return capability.invoke("Render.gpu_render_frame", {{
-        handle: {handle}, time: {time}
-    }});
-}}"#,
-        handle = handle,
-        time = time
-    );
-    let _ = invoke_json(
-        "poet_eval",
-        json!({ "source": script, "as_cell": false, "function": "go" }),
-    )
-    .await?;
+    let script = q_viewport::vibe_gpu_script(&format!(
+        "return Render.gpu_render_frame({{ handle: {handle}, time: {time} }});"
+    ));
+    let _ = poet_go(&script).await?;
     Ok(())
 }
 
-/// Resize the GPU viewport.
-#[allow(dead_code)]
-async fn resize_gpu(handle: u64, width: u32, height: u32) -> Result<(), String> {
-    let script = format!(
-        r#"requires [ capability("capability.invoke") ];
-effect fn go() {{
-    return capability.invoke("Render.gpu_resize", {{
-        handle: {handle}, width: {width}, height: {height}
-    }});
-}}"#,
-        handle = handle,
-        width = width,
-        height = height
-    );
-    let _ = invoke_json(
-        "poet_eval",
-        json!({ "source": script, "as_cell": false, "function": "go" }),
-    )
-    .await?;
-    Ok(())
+/// Resize, rebuild bloom, and read the engine's surface size.
+async fn resize_gpu(
+    handle: u64,
+    width: u32,
+    height: u32,
+) -> Result<(u32, u32), String> {
+    let script = q_viewport::vibe_gpu_script(&format!(
+        "Render.gpu_resize({{ handle: {handle}, width: {width}, height: {height} }});
+    Render.gpu_sync_bloom({{ handle: {handle} }});
+    return Render.gpu_surface_size({{ handle: {handle} }});"
+    ));
+    let result = poet_go(&script).await?;
+    q_viewport::extract_surface_size(&result).ok_or_else(|| "no surface size".into())
 }
 
-/// Set the camera.
+/// Set the camera and read the clamped orbit back.
 async fn set_camera(handle: u64, yaw: f32, pitch: f32, zoom: f32) -> Result<(), String> {
-    let script = format!(
-        r#"requires [ capability("capability.invoke") ];
-effect fn go() {{
-    return capability.invoke("Render.gpu_set_camera", {{
-        handle: {handle}, yaw: {yaw}, pitch: {pitch}, zoom: {zoom}
-    }});
-}}"#,
-        handle = handle,
-        yaw = yaw,
-        pitch = pitch,
-        zoom = zoom
-    );
-    let _ = invoke_json(
-        "poet_eval",
-        json!({ "source": script, "as_cell": false, "function": "go" }),
-    )
-    .await?;
+    let script = q_viewport::vibe_gpu_script(&format!(
+        "Render.gpu_set_camera({{ handle: {handle}, yaw: {yaw}, pitch: {pitch}, zoom: {zoom} }});
+    return Render.gpu_camera_state({{ handle: {handle} }});"
+    ));
+    let _ = poet_go(&script).await?;
     Ok(())
+}
+
+/// Queue a pick and poll after the next frame.
+async fn pick_at(handle: u64, x: f32, y: f32, time: f32) -> Result<Option<u32>, String> {
+    let script = q_viewport::vibe_gpu_script(&format!(
+        "Render.gpu_pick({{ handle: {handle}, x: {x}, y: {y} }});
+    Render.gpu_render_frame({{ handle: {handle}, time: {time} }});
+    return Render.gpu_poll_pick({{ handle: {handle} }});"
+    ));
+    let result = poet_go(&script).await?;
+    Ok(q_viewport::extract_pick(&result))
 }
 
 /// Destroy the GPU viewport.
 async fn unmount_gpu(handle: u64) -> Result<(), String> {
-    let script = format!(
-        r#"requires [ capability("capability.invoke") ];
-effect fn go() {{
-    return capability.invoke("Render.gpu_destroy", {{ handle: {handle} }});
-}}"#,
-        handle = handle
-    );
-    let _ = invoke_json(
-        "poet_eval",
-        json!({ "source": script, "as_cell": false, "function": "go" }),
-    )
-    .await?;
+    let script = q_viewport::vibe_gpu_script(&format!(
+        "return Render.gpu_destroy({{ handle: {handle} }});"
+    ));
+    let _ = poet_go(&script).await?;
     Ok(())
 }
 
@@ -219,6 +185,9 @@ pub fn QViewport(
                         last_time: 0.0,
                         running: true,
                         last_error: None,
+                        surface_width: config.width,
+                        surface_height: config.height,
+                        last_pick: None,
                     });
                     status_msg.set(format!("Mounted: {:?} (handle={})", backend, handle));
 
@@ -307,6 +276,23 @@ pub fn QViewport(
         });
     });
 
+    // Resize the GPU surface when the component size changes.
+    use_effect(move || {
+        let s = state.read();
+        if !s.is_mounted() {
+            return;
+        }
+        let handle = s.handle.unwrap();
+        drop(s);
+        spawn(async move {
+            if let Ok((w, h)) = resize_gpu(handle, width, height).await {
+                let mut st = state.write();
+                st.surface_width = w;
+                st.surface_height = h;
+            }
+        });
+    });
+
     // Send camera updates when camera state changes.
     use_effect(move || {
         let s = state.read();
@@ -348,8 +334,26 @@ pub fn QViewport(
         *pitch = pitch.clamp(-1.5, 1.5);
     };
 
-    let onmouseup = move |_e: MouseEvent| {
+    let onmouseup = move |e: MouseEvent| {
+        let was_dragging = *dragging.read();
         dragging.set(false);
+        if was_dragging {
+            return;
+        }
+        let s = state.read();
+        if !s.is_mounted() {
+            return;
+        }
+        let handle = s.handle.unwrap();
+        let time = s.last_time;
+        drop(s);
+        let coords = e.data().client_coordinates();
+        spawn(async move {
+            if let Ok(Some(node)) = pick_at(handle, coords.x as f32, coords.y as f32, time).await {
+                let mut st = state.write();
+                st.last_pick = Some(node);
+            }
+        });
     };
 
     let onwheel = move |e: WheelEvent| {
@@ -383,12 +387,18 @@ pub fn QViewport(
     };
 
     let s = state.read();
+    let pick_info = s
+        .last_pick
+        .map(|n| format!(" · pick {n}"))
+        .unwrap_or_default();
     let camera_info = format!(
-        "Yaw: {:.1}° Pitch: {:.1}° Zoom: {:.2} · Frame: {}",
+        "Yaw: {:.1}° Pitch: {:.1}° Zoom: {:.2} · Frame: {} · {}×{}{pick_info}",
         *camera_yaw.read() * 57.2958,
         *camera_pitch.read() * 57.2958,
         *camera_zoom.read(),
         s.frame_count,
+        s.surface_width,
+        s.surface_height,
     );
 
     rsx! {

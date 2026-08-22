@@ -7,7 +7,7 @@
 use super::super::args;
 use crate::modalities::manifold::ManifoldCoordinate10D;
 use crate::specialized_libs::physics_simulation::{EmfSource, PhysicsSimulationLibrary};
-use poet_vibe::{Diagnostic, Span, Value};
+use vibe::{Diagnostic, Span, Value};
 
 /// Convert a `ManifoldCoordinate10D` to a Vibe `Record`.
 fn manifold_to_value(m: &ManifoldCoordinate10D) -> Value {
@@ -237,7 +237,7 @@ mod tests {
             ("t", Value::F64(0.0)),
             ("c", Value::F64(1.0)),
         ]);
-        let r = emf_interference(&args, poet_vibe::Span::new(0, 0)).unwrap();
+        let r = emf_interference(&args, vibe::Span::new(0, 0)).unwrap();
         match r {
             Value::Record(m) => {
                 let amp = m.get("amplitude").and_then(args::as_f64).unwrap();
@@ -256,7 +256,7 @@ mod tests {
             ("frequency", Value::F64(1e9)),
             ("distance", Value::F64(2.0)),
         ]);
-        let r = emf_attenuation(&args, poet_vibe::Span::new(0, 0)).unwrap();
+        let r = emf_attenuation(&args, vibe::Span::new(0, 0)).unwrap();
         match r {
             Value::Record(m) => {
                 let p = m.get("received_power").and_then(args::as_f64).unwrap();
@@ -274,7 +274,7 @@ mod tests {
             ("source_frequency", Value::F64(1e9)),
             ("relative_velocity", Value::F64(0.1 * 299_792_458.0)),
         ]);
-        let r = doppler_shift(&args, poet_vibe::Span::new(0, 0)).unwrap();
+        let r = doppler_shift(&args, vibe::Span::new(0, 0)).unwrap();
         match r {
             Value::Record(m) => {
                 let f_obs = m.get("observed_frequency").and_then(args::as_f64).unwrap();
@@ -300,7 +300,7 @@ mod tests {
             ("nt", Value::U64(2)),
             ("c", Value::F64(1.0)),
         ]);
-        let r = emf_field_grid_3d(&args, poet_vibe::Span::new(0, 0)).unwrap();
+        let r = emf_field_grid_3d(&args, vibe::Span::new(0, 0)).unwrap();
         match r {
             Value::Record(m) => {
                 let amps = m.get("amplitudes");
@@ -334,7 +334,7 @@ mod tests {
             ("depths", depths),
             ("c", Value::F64(1.0)),
         ]);
-        let r = emf_sample_at_depth(&args, poet_vibe::Span::new(0, 0)).unwrap();
+        let r = emf_sample_at_depth(&args, vibe::Span::new(0, 0)).unwrap();
         match r {
             Value::Record(m) => {
                 if let Some(Value::List(xs)) = m.get("samples") {

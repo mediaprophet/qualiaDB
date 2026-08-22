@@ -4,7 +4,7 @@
 
 use super::super::args;
 use crate::solvers::learning as ml;
-use poet_vibe::{Diagnostic, Span, Value};
+use vibe::{Diagnostic, Span, Value};
 
 // ── KG embedding scores ─────────────────────────────────────────────
 

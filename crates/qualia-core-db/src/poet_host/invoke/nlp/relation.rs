@@ -1,7 +1,7 @@
 //! `NLP.relation_extract` — RDF-Star triple extraction.
 
 use crate::nlp::relation::extract_relations;
-use poet_vibe::{DiagCode, Diagnostic, Span, Value};
+use vibe::{DiagCode, Diagnostic, Span, Value};
 use std::collections::BTreeMap;
 
 /// `NLP.relation_extract` — extract relations from a text. Returns a list of

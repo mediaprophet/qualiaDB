@@ -9,7 +9,7 @@
 
 use super::super::args;
 use crate::solvers::graph_opt::{dijkstra, Edge};
-use poet_vibe::{Diagnostic, Span, Value};
+use vibe::{Diagnostic, Span, Value};
 
 /// Build a directed adjacency list (`edges_of[i] = [(neighbour, weight), ..]`)
 /// from a flat edge list `[[u, v, w], ..]`, validating indices and non-negative

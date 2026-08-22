@@ -421,7 +421,7 @@ impl Default for SemanticBlackboard {
 //
 // Connects DAG node I/O declarations to SemanticBlackboard channels.
 // Each DAG node declares `inputs` and `outputs` as channel name strings
-// (see `poet_vibe::dag::DagNode`). The bus reads from input channels and
+// (see `vibe::dag::DagNode`). The bus reads from input channels and
 // writes to output channels, propagating pinned constraints from upstream
 // to downstream nodes.
 

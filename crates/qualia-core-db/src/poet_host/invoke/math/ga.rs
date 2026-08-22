@@ -2,7 +2,7 @@
 
 use super::super::args;
 use crate::solvers::geometric_algebra::utils::dot_product;
-use poet_vibe::{Diagnostic, Span, Value};
+use vibe::{Diagnostic, Span, Value};
 
 pub fn dot(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let a = vec3(args_v, "a", span)?;

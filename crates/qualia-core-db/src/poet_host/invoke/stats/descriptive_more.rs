@@ -2,7 +2,7 @@
 
 use super::super::args;
 use crate::solvers::statistics::descriptive;
-use poet_vibe::{Diagnostic, Span, Value};
+use vibe::{Diagnostic, Span, Value};
 
 /// `Statistics.median` — median of a number list.
 pub fn median(args: &Value, span: Span) -> Result<Value, Diagnostic> {

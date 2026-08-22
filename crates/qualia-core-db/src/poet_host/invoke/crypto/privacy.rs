@@ -4,7 +4,7 @@
 //! VibeScript invoke IDs in the `Privacy.*` namespace.
 
 use super::super::args;
-use poet_vibe::{Diagnostic, Span, Value};
+use vibe::{Diagnostic, Span, Value};
 
 /// `Privacy.gaussian_sigma` — compute the Gaussian noise sigma for (ε, δ)-DP.
 /// Args: { sensitivity: f64, epsilon: f64, delta: f64 }

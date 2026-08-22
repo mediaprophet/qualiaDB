@@ -4,7 +4,7 @@ use super::super::args;
 use crate::lexicon::generate_60bit_token;
 use crate::poet_host::{hash_val, PoetSnapshot};
 use crate::query::shacl_compiler::{validate_shacl_property, ShaclConstraint, ShaclDatatype};
-use poet_vibe::{Diagnostic, Span, Value};
+use vibe::{Diagnostic, Span, Value};
 
 const RDF_REIFIES: &[u8] = b"http://www.w3.org/1999/02/22-rdf-syntax-ns#reifies";
 
@@ -57,8 +57,8 @@ pub fn validate(snap: &PoetSnapshot, args_v: &Value, span: Span) -> Result<Value
     )))]
     {
         let _ = (snap, args_v);
-        Err(poet_vibe::Diagnostic::new(
-            poet_vibe::DiagCode::E300,
+        Err(vibe::Diagnostic::new(
+            vibe::DiagCode::E300,
             span,
             "SHACL is not in this wasm profile",
         ))

@@ -11,7 +11,7 @@ use std::process;
 fn print_usage() {
     println!(
         "Poet CLI toolchain for VibeScript (v{})",
-        poet_vibe::LANGUAGE_VERSION
+        vibe::LANGUAGE_VERSION
     );
     println!("\nUsage:");
     println!("  poet repl           Start an interactive VibeScript REPL");
@@ -90,9 +90,9 @@ fn main() {
             let path = &args[2];
             match fs::read_to_string(path) {
                 Ok(content) => {
-                    let mut host = poet_vibe::MockHost::default();
-                    let mut env = poet_vibe::Env::default();
-                    match poet_vibe::eval_cell(&content, &mut host, &mut env) {
+                    let mut host = vibe::LocalHost::default();
+                    let mut env = vibe::Env::default();
+                    match vibe::eval_cell(&content, &mut host, &mut env) {
                         Ok(val) => println!("{val:?}"),
                         Err(diag) => {
                             eprintln!("Eval error: {}", diag.message);

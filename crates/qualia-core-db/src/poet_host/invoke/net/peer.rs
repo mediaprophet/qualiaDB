@@ -3,7 +3,7 @@
 use super::super::args;
 use crate::net::sonic_token::{SonicEventType, SonicToken};
 use crate::q_hash;
-use poet_vibe::{Diagnostic, Span, Value};
+use vibe::{Diagnostic, Span, Value};
 
 pub fn peer_hash(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let s = args::as_str(args_v)

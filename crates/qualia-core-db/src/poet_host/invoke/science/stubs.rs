@@ -1,7 +1,7 @@
 //! WASM-ontology fallbacks: physics wrappers need native or wasm-scientific.
 
 use super::super::args;
-use poet_vibe::{Diagnostic, Span, Value};
+use vibe::{Diagnostic, Span, Value};
 
 macro_rules! stub {
     ($name:ident, $family:expr) => {

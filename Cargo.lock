@@ -9349,15 +9349,7 @@ dependencies = [
 name = "poet-cli"
 version = "0.0.32"
 dependencies = [
- "poet-vibe",
-]
-
-[[package]]
-name = "poet-vibe"
-version = "0.0.31"
-dependencies = [
- "bytemuck",
- "unicode-xid",
+ "vibe",
 ]
 
 [[package]]
@@ -9818,7 +9810,6 @@ dependencies = [
  "lz4_flex",
  "native-tls",
  "pdf-extract",
- "poet-vibe",
  "qualia-audio",
  "qualia-cooperative-core",
  "qualia-core-db",
@@ -9845,6 +9836,7 @@ dependencies = [
  "url",
  "urlencoding",
  "uuid",
+ "vibe",
  "webizen-render",
  "wellfare-core",
  "winreg 0.56.0",
@@ -9933,7 +9925,6 @@ dependencies = [
  "oxiri",
  "pbkdf2 0.13.0",
  "png 0.17.16",
- "poet-vibe",
  "pollster",
  "proptest",
  "qualia-audio",
@@ -9970,6 +9961,7 @@ dependencies = [
  "tower-http 0.7.0",
  "trust-dns-resolver",
  "urlencoding",
+ "vibe",
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",
@@ -13968,12 +13960,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
 
 [[package]]
+name = "vibe"
+version = "0.0.31"
+dependencies = [
+ "bytemuck",
+ "unicode-xid",
+]
+
+[[package]]
 name = "vibe-lsp"
 version = "0.0.32"
 dependencies = [
- "poet-vibe",
  "serde",
  "serde_json",
+ "vibe",
 ]
 
 [[package]]
@@ -13981,10 +13981,10 @@ name = "vibe-wasm"
 version = "0.0.31"
 dependencies = [
  "js-sys",
- "poet-vibe",
  "serde",
  "serde-wasm-bindgen",
  "serde_json",
+ "vibe",
  "wasm-bindgen",
 ]
 
@@ -14370,7 +14370,6 @@ dependencies = [
  "mime_guess",
  "open",
  "pdf-extract",
- "poet-vibe",
  "pollster",
  "qualia-audio",
  "qualia-client-core",
@@ -14395,6 +14394,7 @@ dependencies = [
  "tower-http 0.7.0",
  "urlencoding",
  "uuid",
+ "vibe",
  "webizen-render",
  "webizen-runtime",
  "webizen-studio",
@@ -14763,13 +14763,13 @@ dependencies = [
  "hex 0.4.3",
  "js-sys",
  "oxigraph",
- "poet-vibe",
  "qualia-core-db",
  "serde",
  "serde-wasm-bindgen",
  "serde_json",
  "sha2 0.11.0",
  "uuid",
+ "vibe",
  "wasm-bindgen",
 ]
 

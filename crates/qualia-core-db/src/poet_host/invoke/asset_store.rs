@@ -322,7 +322,7 @@ pub fn asset_count() -> usize {
 // ── VibeScript invoke seams ─────────────────────────────────────────────────
 
 use super::args;
-use poet_vibe::{Diagnostic, Span, Value};
+use vibe::{Diagnostic, Span, Value};
 
 /// `Asset.persist` — persist an asset record to the store.
 /// Args: { asset_id: String, kind: String, owner_did?: String }
@@ -626,8 +626,11 @@ fn asset_to_value(asset: &PersistedAsset) -> Value {
 mod tests {
     use super::*;
 
+    static TEST_MUTEX: Mutex<()> = Mutex::new(());
+
     #[test]
     fn persist_and_get() {
+        let _lock = TEST_MUTEX.lock().unwrap();
         clear_store();
         let asset = PersistedAsset::new("asset1", "q42:Recording", Some("did:q42:alice"));
         assert!(persist_asset(asset));
@@ -641,8 +644,10 @@ mod tests {
 
     #[test]
     fn add_temporal_and_query() {
+        let _lock = TEST_MUTEX.lock().unwrap();
         clear_store();
-        persist_asset(PersistedAsset::new("a1", "q42:Recording", None));
+        let asset = PersistedAsset::new("a1", "q42:Recording", None);
+        assert!(persist_asset(asset));
         let aspect = TemporalAspect {
             kind_iri: "q42:recordingDate".into(),
             seconds: 1000,
@@ -659,6 +664,7 @@ mod tests {
 
     #[test]
     fn add_topic_and_resolve() {
+        let _lock = TEST_MUTEX.lock().unwrap();
         clear_store();
         persist_asset(PersistedAsset::new("a1", "q42:Recording", None));
         assert!(add_topic_to_asset("a1", "music"));
@@ -668,6 +674,7 @@ mod tests {
 
     #[test]
     fn set_spatial_and_resolve() {
+        let _lock = TEST_MUTEX.lock().unwrap();
         clear_store();
         persist_asset(PersistedAsset::new("a1", "q42:Recording", None));
         let anchor = SpatialAnchor {
@@ -683,6 +690,7 @@ mod tests {
 
     #[test]
     fn temporal_span_calculation() {
+        let _lock = TEST_MUTEX.lock().unwrap();
         clear_store();
         persist_asset(PersistedAsset::new("a1", "q42:Recording", None));
         add_temporal_aspect(
@@ -713,6 +721,7 @@ mod tests {
 
     #[test]
     fn compile_to_quins() {
+        let _lock = TEST_MUTEX.lock().unwrap();
         clear_store();
         persist_asset(PersistedAsset::new(
             "a1",
@@ -747,6 +756,7 @@ mod tests {
 
     #[test]
     fn resolve_by_temporal_kind_test() {
+        let _lock = TEST_MUTEX.lock().unwrap();
         clear_store();
         persist_asset(PersistedAsset::new("a1", "q42:Recording", None));
         persist_asset(PersistedAsset::new("a2", "q42:Recording", None));
@@ -767,6 +777,7 @@ mod tests {
 
     #[test]
     fn list_and_count() {
+        let _lock = TEST_MUTEX.lock().unwrap();
         clear_store();
         persist_asset(PersistedAsset::new("a1", "q42:Recording", None));
         persist_asset(PersistedAsset::new("a2", "q42:Recording", None));
@@ -776,6 +787,7 @@ mod tests {
 
     #[test]
     fn independent_aspects_preserved() {
+        let _lock = TEST_MUTEX.lock().unwrap();
         clear_store();
         persist_asset(PersistedAsset::new("a1", "q42:Recording", None));
         add_temporal_aspect(

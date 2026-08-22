@@ -1,0 +1,108 @@
+(* vibe-0.1 — copy of vibescript-core.md §3. Normative source is that document. *)
+Program        ::= LocaleDecl* ModuleDecl? ImportDecl* PrefixDecl* (UsingDecl | RequiresDecl)* Item* ;
+LocaleDecl     ::= 'locale' Identifier ';' ;
+ModuleDecl     ::= 'module' (IRI | Identifier) ';' ;
+ImportDecl     ::= 'import' StringLiteral ('as' Identifier)? ';' ;
+PrefixDecl     ::= 'prefix' Identifier ':' IRI ';' ;
+UsingDecl      ::= 'using' UsingSpec (',' UsingSpec)* ';' ;
+UsingSpec      ::= Identifier ( '.' '{' Identifier (',' Identifier)* '}' )? ;
+RequiresDecl   ::= 'requires' '[' CapList? ']' ';' ;
+CapList        ::= CapSpec (',' CapSpec)* ;
+CapSpec        ::= 'capability' '(' StringLiteral (',' NamedArg)* ')' ;
+
+Item           ::= FunctionDecl | HookDecl | ConstDecl | CellDecl | PresentDecl
+                 | BindDecl | EnumDecl | FieldDecl | MaterialDecl | LawDecl | Statement ;
+BindDecl       ::= 'bind' Expression '<->' Expression
+                   ('using' Identifier '[' Expression ',' Expression ']')?
+                   ('resolve' Identifier)? ';' ;
+CellDecl       ::= EffectClass? 'cell' Identifier ParamList? ('when' Expression)? (':=' | '=') Expression ';' ;
+PresentDecl    ::= 'present' Identifier '{' PresentProp* '}' ;
+PresentProp    ::= Identifier ':' Expression ;
+ConstDecl      ::= 'const' Identifier (':' Type)? '=' Expression ';' ;
+FunctionDecl   ::= EffectClass? 'async'? 'fn' Identifier '(' Params? ')'
+                   BudgetClause? ('->' Type)? Block ;
+HookDecl       ::= 'on' EventPath '(' Params? ')' BudgetClause? ('->' Type)? Block ;
+EventPath      ::= Identifier (':' Identifier)* ;
+EffectClass    ::= 'pure' | 'hot' | 'cold' | 'async' | 'effect' ;
+BudgetClause   ::= 'budget' '(' NamedArg (',' NamedArg)* ')' ;
+EnumDecl       ::= 'enum' Identifier '{' Identifier (',' Identifier)* '}' ;
+FieldDecl      ::= 'field' Identifier ':' Type ('unit' ':' IRI)? ';' ;
+MaterialDecl   ::= 'material' Identifier '{' NamedArg (',' NamedArg)* '}' ;
+LawDecl        ::= 'law' Identifier 'when' Expression '=>' Expression ';' ;
+
+Params         ::= Param (',' Param)* ;
+Param          ::= Identifier ':' Type ;
+NamedArg       ::= Identifier ':' Expression ;
+ParamList      ::= '(' Params? ')' ;
+
+Statement      ::= LetStmt | AssignStmt | IfStmt | ForStmt | WhileStmt
+                 | MatchStmt | ReturnStmt | YieldStmt | TransactionStmt
+                 | EffectStmt | Expression ';' ;
+LetStmt        ::= 'let' 'mut'? Identifier (':' Type)? ('=' Expression)? ';' ;
+AssignStmt     ::= PostfixExpr '=' Expression ';' ;
+IfStmt         ::= 'if' Expression Block ('else' (IfStmt | Block))? ;
+ForStmt        ::= 'for' Identifier 'in' Expression Block ;
+WhileStmt      ::= 'while' Expression Block ;
+MatchStmt      ::= 'match' Expression '{' MatchArm* '}' ;
+MatchArm       ::= Pattern '=>' (Block | (Expression ',')) ;
+ReturnStmt     ::= 'return' Expression? ';' ;
+YieldStmt      ::= 'yield' Expression? ';' ;
+TransactionStmt::= 'transaction' ('(' NamedArg (',' NamedArg)* ')')? Block ;
+EffectStmt     ::= 'effect' Expression ';' ;
+Block          ::= '{' Statement* '}' ;
+
+(* Cell host only — not part of Program *)
+CellBody       ::= '=' Expression ;
+
+Expression     ::= Pipeline ;
+Pipeline       ::= TweenExpr ('|>' TweenExpr)* ;
+TweenExpr      ::= LogicalOr ('~' LogicalOr 'over' LogicalOr
+                   (('ease' Identifier) | ('spring' '(' NamedArg* ')'))? )? ;
+LogicalOr      ::= LogicalAnd ('||' LogicalAnd)* ;
+LogicalAnd     ::= Equality ('&&' Equality)* ;
+Equality       ::= Relational (('==' | '!=') Relational)* ;
+Relational     ::= Additive (('<' | '<=' | '>' | '>=') Additive)* ;
+Additive       ::= Multiplicative (('+' | '-') Multiplicative)* ;
+Multiplicative ::= Unary (('*' | '/' | '%') Unary)* ;
+Unary          ::= ('!' | '-' | '+' | 'await')? PostfixExpr ;
+PostfixExpr    ::= Primary ('.' Identifier | '(' Args? ')' | '[' Expression ']' | '?')* ;
+Args           ::= Arg (',' Arg)* ;
+Arg            ::= (Identifier ':')? Expression ;
+
+Primary        ::= Literal | Identifier | QueryVar | IRI | PrefixedName
+                 | BlankNode | TripleTerm | ReifiedTerm
+                 | ListLiteral | RecordLiteral | LambdaExpr | GraphQuery | Modal
+                 | ColorLit | QuantityLit | '(' Expression ')' ;
+
+LambdaExpr     ::= '|' (Identifier (',' Identifier)*)? '|' Expression ;
+GraphQuery     ::= 'graph?' 'ask'? '{' Expression* '}' ;
+Modal          ::= ('obligate' | 'permit' | 'forbid' | 'knows' | 'believes'
+                 | 'always' | 'eventually') '{' Expression '}' ;
+PrefixedName   ::= Identifier ':' (Identifier | IntegerLiteral) ;
+ColorLit       ::= '#' HexDigits ;
+QuantityLit    ::= (IntegerLiteral | FloatLiteral) UnitSuffix ;
+UnitSuffix     ::= Identifier ;
+
+Literal        ::= StringLiteral | IntegerLiteral | FloatLiteral
+                 | 'true' | 'false' | 'null' ;
+ListLiteral    ::= '[' (Expression (',' Expression)*)? ']' ;
+RecordLiteral  ::= '{' (NamedArg (',' NamedArg)*)? '}' ;
+
+TripleTerm     ::= '<<(' Subject Predicate Object ')>>' ;
+ReifiedTerm    ::= '<<' Subject Predicate Object '~' Reifier '>>' ;
+Subject        ::= IRI | PrefixedName | BlankNode | TripleTerm | Identifier | QueryVar ;
+Predicate      ::= IRI | PrefixedName | Identifier ;
+Object         ::= Subject | Literal ;
+Reifier        ::= IRI | PrefixedName | BlankNode | Identifier ;
+
+Type           ::= TypeName ('<' Type (',' Type)* '>')? ;
+TypeName       ::= 'i32' | 'u32' | 'i64' | 'u64' | 'f32' | 'f64'
+                 | 'bool' | 'string' | 'bytes'
+                 | 'Iri' | 'BlankNode' | 'Did' | 'Hash' | 'Var'
+                 | 'Literal' | 'TripleTerm' | 'Reifier' | 'Quin' | 'QuinRef'
+                 | 'AssetRef' | 'TensorRef' | 'GeometryRef'
+                 | 'Option' | 'Result' | 'List' | 'Record'
+                 | 'Receipt' | 'Stream' | 'Future' | Identifier ;
+
+Pattern        ::= '_' | Identifier | Literal | 'Ok' '(' Pattern ')'
+                 | 'Err' '(' Pattern ')' | 'Some' '(' Pattern ')' | 'None' ;

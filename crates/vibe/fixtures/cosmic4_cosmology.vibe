@@ -1,0 +1,14 @@
+module <https://qualiadb.org/modules/cosmic_cosmology>;
+requires [ capability("cosmic") ];
+effect fn hubble_distance(z: f64) -> f64 {
+    return Cosmic.flrw_distance({ z: z });
+}
+effect fn hubble_velocity(distance_m: f64) -> f64 {
+    return Cosmic.flrw_hubble_velocity({ distance_m: distance_m });
+}
+effect fn atmosphere_pressure(altitude: f64) -> f64 {
+    return Cosmic.atmosphere_pressure({ body: "earth", altitude_m: altitude });
+}
+effect fn atmosphere_temp(altitude: f64) -> f64 {
+    return Cosmic.atmosphere_temperature({ body: "earth", altitude_m: altitude });
+}

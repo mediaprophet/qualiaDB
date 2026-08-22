@@ -2,8 +2,9 @@
 //!
 //! Implements JSON-RPC over stdin/stdout with Content-Length framing.
 //! Handles initialize, initialized, didOpen, didChange, and publishes
-//! diagnostics by parsing with poet-vibe.
+//! diagnostics by parsing with vibe.
 
+mod catalog_intel;
 mod server;
 
 use server::LspServer;

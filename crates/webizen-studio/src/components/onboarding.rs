@@ -449,8 +449,8 @@ pub fn OnboardingGate() -> Element {
     let mut config = use_signal(AgentConfigSnapshot::default);
     let mut status = use_signal(String::new);
     let mut saving = use_signal(|| false);
-    let display_name = use_signal(String::new);
-    let profile = use_signal(SetupProfileSnapshot::default);
+    let mut display_name = use_signal(String::new);
+    let mut profile = use_signal(SetupProfileSnapshot::default);
 
     use_hook(move || {
         #[cfg(target_arch = "wasm32")]

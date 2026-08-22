@@ -9,7 +9,7 @@ use crate::research::{
     register_perspective, CorpusConfidence, DarkLink, EpistemicAssessment, EpistemicMode,
     EvidenceReliability, Investigation, ResearchEnquiry, SentimentAssessment, SentimentTrend,
 };
-use poet_vibe::{Diagnostic, Span, Value};
+use vibe::{Diagnostic, Span, Value};
 
 fn confidence_from_str(s: &str) -> CorpusConfidence {
     match s {

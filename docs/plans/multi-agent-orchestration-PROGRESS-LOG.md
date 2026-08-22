@@ -36,12 +36,12 @@ wired together. Drafted a comprehensive orchestration strategy with:
 ## Step 1: Round 1 Implementation (DONE — commits 13b7d094..ebbaa271, 519e91d7)
 
 **What was done:**
-- **R1 (G1):** Export internal agent modules (`dag`, `deontic_interrupt`, `reflection`) and re-export main types from `poet-vibe::lib.rs`.
+- **R1 (G1):** Export internal agent modules (`dag`, `deontic_interrupt`, `reflection`) and re-export main types from `vibe::lib.rs`.
 - **G2:** Reconciled `Tensor10D` field comments vs `axis_role.rs` documenting `t` vs `μ` provenance disagreement (Decision X3 pending).
 - **R11 (G3):** Wired Darwinian `compute_priority` from governance into `daemon_swarm.rs` routing with `AgentComputeCandidate`.
 - **R6 (G4):** Added `LocalJobKind::AgentTurn` with `context_snapshot: Vec<u8>` to `local_job_scheduler.rs` and wired validation against agent roster.
 - **T66 (G5):** Updated VibeScript core spec in `vibescript-core.md` fixing `time.now()` vs `time.unix()` discrepancy and updated conformance status to 64 tests verified across 9 domain verticals.
-- **G9 (G6):** Added evidential (μ, λ) annotation support to `Diagnostic` in `poet-vibe` with automatic contradiction detection.
+- **G9 (G6):** Added evidential (μ, λ) annotation support to `Diagnostic` in `vibe` with automatic contradiction detection.
 - **R2+R3+R4+R5 (Devin):** Deontic phase gating in `eval.rs`, DAG executor in `poet_host/invoke/agent/dag_executor.rs`, reflection isolation via `PoetSnapshot::fork()`, and `BlackboardBus` state channels.
 
 ---
@@ -50,7 +50,7 @@ wired together. Drafted a comprehensive orchestration strategy with:
 
 **What was done:**
 - **R8 (G7):** Wired Coordination ISA host seams (`CoordHostSeams`, `default_seams`, `CoordSeamContext`, `execute_coordination_with_seams`) in `governance/coordination.rs` with fail-closed defaults.
-- **R10 (G8):** Added `DisclosureDenied` diagnostic code (`E800`) and `Diagnostic::disclosure_denied` helper in `poet-vibe` as a first-class credentialed refusal.
+- **R10 (G8):** Added `DisclosureDenied` diagnostic code (`E800`) and `Diagnostic::disclosure_denied` helper in `vibe` as a first-class credentialed refusal.
 - **R12 (G9):** Created customer-readable `InstrumentTraceLedger` and `TraceEntry` in `governance/instrument_trace.rs` (audit trail, non-byline per CLAUDE.md §16).
 - **R3 Extension (G10):** Wired DAG executor into `capability.invoke` dispatch (`agent.dag.execute`, `agent.dag.validate`, `agent.dag.status`) in `poet_host/invoke/ids.rs`, `invoke/mod.rs`, and `invoke/agent/mod.rs`.
 - **R7+R9 (Devin):** @mention roster resolution in `chat_agents.rs` and DOMINO logit masking in `sampler.rs`.
@@ -60,19 +60,19 @@ wired together. Drafted a comprehensive orchestration strategy with:
 ## Step 3: Round 3 Implementation (DONE — all 14 tasks G12–G25 complete)
 
 **What was done:**
-- **Task G12 (T8):** Removed `Value::Identish` temporary variant from `crates/poet-vibe/src/value.rs` and replaced with typed member evaluation in `eval.rs`.
+- **Task G12 (T8):** Removed `Value::Identish` temporary variant from `crates/vibe/src/value.rs` and replaced with typed member evaluation in `eval.rs`.
 - **Task G13 (T10):** Enforced `mut` in `check.rs` and `eval.rs`. Assignment to immutable bindings produces `DiagCode::E701`.
-- **Task G14 (T11):** Implemented checked integer arithmetic (`checked_add`, `checked_sub`, `checked_mul`, `checked_div`, `checked_rem`) across `I64` and `U64` in `crates/poet-vibe/src/eval.rs` and `parse.rs`. Overflow produces `DiagCode::E600`.
-- **Task G15 (T12):** `math.*` preserves integer domain when all inputs are integers (`math.abs`, `math.min`, `math.max`, `math.floor`, `math.ceil`, `math.round`, `math.clamp`, `math.sqrt`, `math.sin`, `math.cos`, `math.log`, `math.exp`) in `crates/poet-vibe/src/bind/math.rs`.
+- **Task G14 (T11):** Implemented checked integer arithmetic (`checked_add`, `checked_sub`, `checked_mul`, `checked_div`, `checked_rem`) across `I64` and `U64` in `crates/vibe/src/eval.rs` and `parse.rs`. Overflow produces `DiagCode::E600`.
+- **Task G15 (T12):** `math.*` preserves integer domain when all inputs are integers (`math.abs`, `math.min`, `math.max`, `math.floor`, `math.ceil`, `math.round`, `math.clamp`, `math.sqrt`, `math.sin`, `math.cos`, `math.log`, `math.exp`) in `crates/vibe/src/bind/math.rs`.
 - **Task G16 (T27):** Honesty-labeled `Manifold.project` as stub (`crates/qualia-core-db/src/poet_host/invoke/manifold/project.rs`). Added `"honesty": "stub"` output record. 53 manifold tests pass.
 - **Task G17 (T51):** Created machine schemas (`MachineSchema`) for all 8 `ALL_BOUND` capability IDs in `crates/qualia-core-db/src/poet_host/invoke/coverage.rs`. Added `schema_for(id)` and `all_schemas()`. 10 coverage tests pass.
 - **Task G18 (T58):** Implemented mechanical no-bylines enforcement `check_no_bylines(text: &str)` in `crates/qualia-core-db/src/governance/instrument_trace.rs` per CLAUDE.md §16. 12 instrument_trace tests pass.
 - **Task G19 (T19, T20):** Added structured `time.unix_nanos` (`{ secs: I64, nanos: U64 }`) and `time.monotonic_nanos` to `Host` ABI and VibeScript runtime dispatch.
-- **Task G20 (T18):** Implemented fail-closed `Host::time_unix` returning `E702: no clock available` on unclocked hosts. Added `DiagCode::E702` to `crates/poet-vibe/src/error.rs`.
+- **Task G20 (T18):** Implemented fail-closed `Host::time_unix` returning `E702: no clock available` on unclocked hosts. Added `DiagCode::E702` to `crates/vibe/src/error.rs`.
 - **Task G21 (T68):** Implemented `TickPolicy` (`ProcessAll`, `Coalesce` default, `Drop`) and `TickController` under load in `crates/qualia-core-db/src/poet_host/mod.rs`. 178 poet_host tests pass.
-- **Task G22 (T73):** Implemented quantity dimension algebra (SI base dimensions, Mul/Div exponent algebra) and unit conversions (including affine Celsius/Kelvin offsets) in `crates/poet-vibe/src/quantity.rs`.
+- **Task G22 (T73):** Implemented quantity dimension algebra (SI base dimensions, Mul/Div exponent algebra) and unit conversions (including affine Celsius/Kelvin offsets) in `crates/vibe/src/quantity.rs`.
 - **Task G23 (T62):** Created `crates/poet-cli` toolchain supporting interactive REPL, source formatting, and static linting (`poet repl`, `poet format`, `poet lint`). 7 poet-cli tests pass.
-- **Task G24 (T63):** Added dynamic module import syntax `import <iri> as name` in `crates/poet-vibe/src/parse.rs` and `eval.rs` with duplicate alias detection in `check.rs` and `eval.rs`.
+- **Task G24 (T63):** Added dynamic module import syntax `import <iri> as name` in `crates/vibe/src/parse.rs` and `eval.rs` with duplicate alias detection in `check.rs` and `eval.rs`.
 - **Task G25 (Docs):** Updated progress log and `coordination/NOTICES.md`.
 
 ---
@@ -81,7 +81,7 @@ wired together. Drafted a comprehensive orchestration strategy with:
 
 | Refactor | Workstream | Description | Status | Verification |
 |---|---|---|---|---|
-| **R1** | Core | Export `dag`, `deontic_interrupt`, `reflection` from `poet-vibe` | ✅ Done | 174+64 poet-vibe tests pass |
+| **R1** | Core | Export `dag`, `deontic_interrupt`, `reflection` from `vibe` | ✅ Done | 174+64 vibe tests pass |
 | **R2** | Core | Deontic phase gating in VibeScript evaluation | ✅ Done | Deontic lease tests pass |
 | **R3** | Core | DAG executor + `agent.dag.*` invoke capability dispatch | ✅ Done | 16 DAG executor tests pass |
 | **R4** | Core | Reflection loop isolation via snapshot fork | ✅ Done | Dry-run isolation tests pass |
@@ -127,7 +127,7 @@ wired together. Drafted a comprehensive orchestration strategy with:
 
 ## Round 4 Summary (2026-08-19)
 
-**Test counts before:** poet-vibe 174 lib + 64 conformance, qualia-client-core agent_turn 8/8.
+**Test counts before:** vibe 174 lib + 64 conformance, qualia-client-core agent_turn 8/8.
 
 ### Completed by Round4-Cascade (parallel agent, commits already in tree)
 
@@ -161,8 +161,8 @@ wired together. Drafted a comprehensive orchestration strategy with:
 
 ### Test counts after
 
-- **poet-vibe lib:** 236 passed (up from 174)
-- **poet-vibe conformance:** 78 passed (up from 64; +6 checked-integer/mut + +4 field/material/law + +4 enum/ADT)
+- **vibe lib:** 236 passed (up from 174)
+- **vibe conformance:** 78 passed (up from 64; +6 checked-integer/mut + +4 field/material/law + +4 enum/ADT)
 - **poet-lsp:** 7 passed (new crate)
 - **qualia-client-core agent_characteristics:** 8 passed (new module)
 - **qualia-core-db law_packages:** 7 passed (new module)
@@ -211,8 +211,8 @@ After completing H1-H20, swept the remaining T-tasks from the full implementatio
 
 ### Test counts after batch 2
 
-- **poet-vibe lib:** 264 passed (was 243 after H1-H20)
-- **poet-vibe conformance:** 78 passed (unchanged)
+- **vibe lib:** 264 passed (was 243 after H1-H20)
+- **vibe conformance:** 78 passed (unchanged)
 - **qualia-core-db field_section:** 11 passed (new)
 - **qualia-core-db law_packages:** 7 passed (from H19)
 - **qualia-core-db instrument_trace:** 12 passed (existing, verified)
@@ -269,7 +269,7 @@ without external dependencies or breaking changes.
 
 ### Test counts after batch 3
 
-- **poet-vibe lib:** 381 passed (was 264 after batch 2)
+- **vibe lib:** 381 passed (was 264 after batch 2)
 - **qualia-core-db speculative_decode:** 15 passed (existing, verified)
 - New modules: trivia.rs, locale.rs, hid.rs, presentation.rs, physics.rs, pretty.rs
 
@@ -294,7 +294,7 @@ Exposed qualia-core-db's cryptographic_library to VibeScript.
 
 | Commit | Description |
 |--------|-------------|
-| `d996c151` | poet-vibe crypto module — namespace, Value types, Host ABI, dispatch |
+| `d996c151` | vibe crypto module — namespace, Value types, Host ABI, dispatch |
 | `dca88837` | qualia-core-db Host impl — real SHA-256/512, BLAKE3, HKDF, AES-256-GCM, ChaCha20-Poly1305, XChaCha20-Poly1305 |
 
 ### Crypto operations exposed
@@ -320,8 +320,8 @@ those operations.
 
 ### Test counts after batch 4
 
-- **poet-vibe lib:** 402 passed (was 381)
-- **poet-vibe conformance:** 79 passed (was 78)
+- **vibe lib:** 402 passed (was 381)
+- **vibe conformance:** 79 passed (was 78)
 - **qualia-core-db poet_host crypto:** 5 passed (new)
   - Real SHA-256 hash verification (known hash match)
   - Real BLAKE3 digest size verification
@@ -340,7 +340,7 @@ arkworks 0.6) to VibeScript via the `zk` namespace.
 
 | Commit | Description |
 |--------|-------------|
-| `af53026e` | poet-vibe zk namespace + qualia-core-db Host impl — real Groth16 |
+| `af53026e` | vibe zk namespace + qualia-core-db Host impl — real Groth16 |
 
 ### ZK operations exposed
 
@@ -364,8 +364,8 @@ arkworks 0.6) to VibeScript via the `zk` namespace.
 
 ### Test counts after batch 5
 
-- **poet-vibe lib:** 413 passed (was 402)
-- **poet-vibe conformance:** 80 passed (was 79)
+- **vibe lib:** 413 passed (was 402)
+- **vibe conformance:** 80 passed (was 79)
 - **qualia-core-db poet_host ZK:** 6 passed (new)
   - Threshold prove + verify (21 >= 18 → true)
   - Wrong threshold fails (verify against 21 → false)
@@ -384,7 +384,7 @@ Implemented five wish-list conceptual modules in a new `observer.rs`.
 
 | Commit | Description |
 |--------|-------------|
-| `85925fbf` | poet-vibe observer.rs — W7, W9, W14, W15, T59 |
+| `85925fbf` | vibe observer.rs — W7, W9, W14, W15, T59 |
 
 ### Modules
 
@@ -398,7 +398,7 @@ Implemented five wish-list conceptual modules in a new `observer.rs`.
 
 ### Test counts after batch 6
 
-- **poet-vibe lib:** 438 passed (was 413)
+- **vibe lib:** 438 passed (was 413)
 - 25 new tests in observer.rs
 
 ---
@@ -411,7 +411,7 @@ Implemented T38 (poet translate) and T39 (tier-2 identifiers) in a new `translat
 
 | Commit | Description |
 |--------|-------------|
-| `ce6eae56` | poet-vibe translate.rs — T38, T39 |
+| `ce6eae56` | vibe translate.rs — T38, T39 |
 
 ### Modules
 
@@ -422,14 +422,14 @@ Implemented T38 (poet translate) and T39 (tier-2 identifiers) in a new `translat
 
 ### Test counts after batch 7
 
-- **poet-vibe lib:** 452 passed (was 438)
+- **vibe lib:** 452 passed (was 438)
 - 14 new tests in translate.rs
 
 ---
 
 ## Round 4 Batch 8 — CLI toolchain (2026-08-20)
 
-Implemented T62 (poet CLI) as a zero-dependency binary in `crates/poet-vibe/src/bin/poet.rs`.
+Implemented T62 (poet CLI) as a zero-dependency binary in `crates/vibe/src/bin/poet.rs`.
 
 ### Newly implemented
 

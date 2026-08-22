@@ -1,4 +1,4 @@
-//! Future seam: host/runtime (stays with poet-vibe + thin invoke).
+//! Future seam: host/runtime (stays with vibe + thin invoke).
 
 mod discovery;
 mod hash;

@@ -2,7 +2,7 @@
 
 use super::super::args;
 use crate::solvers::statistics::correlation;
-use poet_vibe::{Diagnostic, Span, Value};
+use vibe::{Diagnostic, Span, Value};
 
 /// `Statistics.spearman` — Spearman rank correlation.
 /// Args: { x: [f64], y: [f64] }

@@ -1,7 +1,7 @@
 //! `NLP.graphrag_query` — graph-augmented retrieval.
 
 use crate::nlp::graphrag::GraphRagIndex;
-use poet_vibe::{DiagCode, Diagnostic, Span, Value};
+use vibe::{DiagCode, Diagnostic, Span, Value};
 use std::collections::BTreeMap;
 
 /// `NLP.graphrag_query` — build an index from a list of `[s, p, o]` triples

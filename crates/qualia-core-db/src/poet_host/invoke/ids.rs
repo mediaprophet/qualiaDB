@@ -350,6 +350,18 @@ pub const RENDER_ANIMATION_EVAL_CURVE: &str = "Render.animation_eval_curve";
 pub const RENDER_ANIMATION_SPRING_STEP: &str = "Render.animation_spring_step";
 pub const RENDER_ANIMATION_SCLERP: &str = "Render.animation_sclerp";
 pub const RENDER_ANIMATION_EVAL_PRESET: &str = "Render.animation_eval_preset";
+pub const RENDER_ANIMATION_SQUAD_STEP: &str = "Render.animation_squad_step";
+pub const RENDER_ANIMATION_LIST_PRESETS: &str = "Render.animation_list_presets";
+pub const RENDER_ANIMATION_COMPUTE_PASS: &str = "Render.animation_compute_pass";
+
+// ── Animation first-class aliases (T47) ───────────────────────────────────
+pub const ANIMATION_EVALUATE_PRESET: &str = "Animation.evaluate_preset";
+pub const ANIMATION_SPRING_STEP: &str = "Animation.spring_step";
+pub const ANIMATION_SCLERP_STEP: &str = "Animation.sclerp_step";
+pub const ANIMATION_SQUAD_STEP: &str = "Animation.squad_step";
+pub const ANIMATION_BEZIER_EVAL: &str = "Animation.bezier_eval";
+pub const ANIMATION_EASING: &str = "Animation.easing";
+pub const ANIMATION_LIST_PRESETS: &str = "Animation.list_presets";
 pub const RENDER_SVG_PATH: &str = "Render.svg_path";
 pub const RENDER_SVG_CIRCLE: &str = "Render.svg_circle";
 pub const RENDER_SVG_RECT: &str = "Render.svg_rect";
@@ -360,6 +372,7 @@ pub const RENDER_SVG_FIELD: &str = "Render.svg_field";
 // ── WebGPU invoke surface (wraps render::gpu::PortalGpu) ──────────────────
 pub const GPU_ADAPTER_INFO: &str = "Render.gpu_adapter_info";
 pub const GPU_INIT: &str = "Render.gpu_init";
+pub const GPU_INIT_SURFACE: &str = "Render.gpu_init_surface";
 pub const GPU_RENDER_FRAME: &str = "Render.gpu_render_frame";
 pub const GPU_READ_PIXELS: &str = "Render.gpu_read_pixels";
 pub const GPU_UPLOAD_MESH: &str = "Render.gpu_upload_mesh";
@@ -376,6 +389,20 @@ pub const GPU_VALIDATE_SHADER: &str = "Render.gpu_validate_shader";
 pub const GPU_COMPILE_SHADER: &str = "Render.gpu_compile_shader";
 pub const GPU_COMPILE_TO_GLSL: &str = "Render.gpu_compile_to_glsl";
 pub const GPU_BACKEND_INFO: &str = "Render.gpu_backend_info";
+pub const GPU_UPLOAD_MESH_COLORED: &str = "Render.gpu_upload_mesh_colored";
+pub const GPU_SET_STANDPOINT: &str = "Render.gpu_set_standpoint";
+pub const GPU_OBSERVER_STANDPOINT: &str = "Render.gpu_observer_standpoint";
+pub const GPU_CAMERA_STATE: &str = "Render.gpu_camera_state";
+pub const GPU_SURFACE_SIZE: &str = "Render.gpu_surface_size";
+pub const GPU_HAS_MESH: &str = "Render.gpu_has_mesh";
+pub const GPU_HAS_TENSOR: &str = "Render.gpu_has_tensor";
+pub const GPU_TENSOR_NODE_COUNT: &str = "Render.gpu_tensor_node_count";
+pub const GPU_PARTICLE_COUNT: &str = "Render.gpu_particle_count";
+pub const GPU_SYNC_BLOOM: &str = "Render.gpu_sync_bloom";
+pub const GPU_SET_ARTEFACT_JOINT: &str = "Render.gpu_set_artefact_joint";
+pub const GPU_SET_ARTEFACT_WORLD: &str = "Render.gpu_set_artefact_world";
+pub const GPU_ARTEFACT_REFUSED: &str = "Render.gpu_artefact_refused";
+pub const GPU_REQUIRED_RGBA8_BYTES: &str = "Render.gpu_required_rgba8_bytes";
 pub const EMF_UPLOAD_FIELD: &str = "Render.emf_upload_field";
 pub const EMF_RENDER_SLICE: &str = "Render.emf_render_slice";
 pub const EMF_FIELD_INFO: &str = "Render.emf_field_info";
@@ -465,6 +492,30 @@ pub const GA_APPLY_ROTOR: &str = "GeometricAlgebra.apply_rotor";
 pub const GA_TRANSLATOR_FROM_DISPLACEMENT: &str = "GeometricAlgebra.translator_from_displacement";
 pub const GA_APPLY_TRANSLATOR: &str = "GeometricAlgebra.apply_translator";
 pub const GA_IS_SIMD_AVAILABLE: &str = "GeometricAlgebra.is_simd_available";
+pub const XFORM_IDFT: &str = "IntegralTransforms.idft";
+pub const XFORM_Z_TRANSFORM_FINITE: &str = "IntegralTransforms.z_transform_finite";
+pub const XFORM_UNIT_STEP_Z: &str = "IntegralTransforms.unit_step_z";
+pub const XFORM_GEOMETRIC_Z: &str = "IntegralTransforms.geometric_z";
+pub const VC_GRADIENT: &str = "VectorCalculus.gradient";
+pub const VC_DIVERGENCE: &str = "VectorCalculus.divergence";
+pub const VC_CURL: &str = "VectorCalculus.curl";
+pub const VC_LAPLACIAN: &str = "VectorCalculus.laplacian";
+pub const ODE_RK4_INTEGRATE: &str = "Ode.rk4_integrate";
+pub const ODE_DOPRI5: &str = "Ode.dopri5";
+pub const ODE_BDF: &str = "Ode.bdf";
+pub const ODE_SYMPLECTIC_STEP: &str = "Ode.symplectic_step";
+pub const CALC_ADAPTIVE_SIMPSON: &str = "Calculus.adaptive_simpson";
+pub const CALC_ADAPTIVE_DERIVATIVE: &str = "Calculus.adaptive_derivative";
+pub const CALC_NUMERICAL_JACOBIAN: &str = "Calculus.numerical_jacobian";
+pub const CALC_NUMERICAL_HESSIAN: &str = "Calculus.numerical_hessian";
+pub const CALC_NEWTON_SOLVE: &str = "Calculus.newton_solve";
+pub const OPT_SIMULATED_ANNEALING: &str = "Optimization.simulated_annealing";
+pub const OPT_ARTIFICIAL_BEE_COLONY: &str = "Optimization.artificial_bee_colony";
+pub const VC_LINE_INTEGRAL_SCALAR: &str = "VectorCalculus.line_integral_scalar";
+pub const VC_LINE_INTEGRAL_WORK: &str = "VectorCalculus.line_integral_work";
+pub const VC_SURFACE_FLUX: &str = "VectorCalculus.surface_flux";
+pub const XFORM_LAPLACE_NUMERIC: &str = "IntegralTransforms.laplace_numeric";
+pub const XFORM_LAPLACE_SYMBOLIC: &str = "IntegralTransforms.laplace_symbolic";
 
 // ── CAS extensions (wrap specialized_libs::symbolic_algebra) ──────────────
 pub const CAS_DIFFERENTIATE: &str = "SymbolicAlgebra.differentiate";
@@ -504,6 +555,24 @@ pub const ORCH_ROSTER_REGISTER: &str = "Orchestration.roster_register";
 pub const ORCH_ROSTER_LIST: &str = "Orchestration.roster_list";
 pub const ORCH_ROSTER_CAPABILITIES: &str = "Orchestration.roster_capabilities";
 pub const ORCH_ASSIGN_AGENTS: &str = "Orchestration.assign_agents";
+
+// ── HID & Sensor Telemetry capability invoke ids (T41–T46) ────────────────
+pub const HID_POLL: &str = "HID.poll";
+pub const HID_WAIT: &str = "HID.wait";
+pub const HID_CLEAR: &str = "HID.clear";
+pub const HID_POINTER_CAPTURE: &str = "HID.pointer_capture";
+pub const HID_POINTER_RELEASE: &str = "HID.pointer_release";
+pub const HID_SET_CURSOR: &str = "HID.set_cursor";
+pub const HID_GAMEPAD_POLL: &str = "HID.gamepad_poll";
+pub const HID_GAMEPAD_VIBRATE: &str = "HID.gamepad_vibrate";
+pub const HID_MIDI_SEND: &str = "HID.midi_send";
+pub const HID_MIDI_POLL: &str = "HID.midi_poll";
+pub const HID_HAPTIC_PULSE: &str = "HID.haptic_pulse";
+pub const HID_HAPTIC_PATTERN: &str = "HID.haptic_pattern";
+pub const HID_SPATIAL_HEAD_POSE: &str = "HID.spatial_head_pose";
+pub const HID_SPATIAL_HAND_SKELETON: &str = "HID.spatial_hand_skeleton";
+pub const HID_SPATIAL_GAZE_RAY: &str = "HID.spatial_gaze_ray";
+pub const HID_BIOSIGNAL_POLL: &str = "HID.biosignal_poll";
 
 // ── Cosmic coordinate system (OCS) bindings ───────────────────────────────
 pub const COSMIC_GEODETIC_TO_ECEF: &str = "Cosmic.geodetic_to_ecef";
@@ -875,6 +944,22 @@ pub const DMX_CUE_STACK_GO_BACK: &str = "Dmx.cue_stack_go_back";
 pub const DMX_CUE_STACK_RESET: &str = "Dmx.cue_stack_reset";
 
 pub const ALL_BOUND: &[&str] = &[
+    HID_POLL,
+    HID_WAIT,
+    HID_CLEAR,
+    HID_POINTER_CAPTURE,
+    HID_POINTER_RELEASE,
+    HID_SET_CURSOR,
+    HID_GAMEPAD_POLL,
+    HID_GAMEPAD_VIBRATE,
+    HID_MIDI_SEND,
+    HID_MIDI_POLL,
+    HID_HAPTIC_PULSE,
+    HID_HAPTIC_PATTERN,
+    HID_SPATIAL_HEAD_POSE,
+    HID_SPATIAL_HAND_SKELETON,
+    HID_SPATIAL_GAZE_RAY,
+    HID_BIOSIGNAL_POLL,
     DAG_EXECUTE,
     DAG_VALIDATE,
     DAG_STATUS,
@@ -1219,6 +1304,16 @@ pub const ALL_BOUND: &[&str] = &[
     RENDER_ANIMATION_SPRING_STEP,
     RENDER_ANIMATION_SCLERP,
     RENDER_ANIMATION_EVAL_PRESET,
+    RENDER_ANIMATION_SQUAD_STEP,
+    RENDER_ANIMATION_LIST_PRESETS,
+    RENDER_ANIMATION_COMPUTE_PASS,
+    ANIMATION_EVALUATE_PRESET,
+    ANIMATION_SPRING_STEP,
+    ANIMATION_SCLERP_STEP,
+    ANIMATION_SQUAD_STEP,
+    ANIMATION_BEZIER_EVAL,
+    ANIMATION_EASING,
+    ANIMATION_LIST_PRESETS,
     RENDER_SVG_PATH,
     RENDER_SVG_CIRCLE,
     RENDER_SVG_RECT,
@@ -1251,6 +1346,14 @@ pub const ALL_BOUND: &[&str] = &[
     GA_TRANSLATOR_FROM_DISPLACEMENT,
     GA_APPLY_TRANSLATOR,
     GA_IS_SIMD_AVAILABLE,
+    XFORM_IDFT,
+    XFORM_Z_TRANSFORM_FINITE,
+    XFORM_UNIT_STEP_Z,
+    XFORM_GEOMETRIC_Z,
+    VC_GRADIENT,
+    VC_DIVERGENCE,
+    VC_CURL,
+    VC_LAPLACIAN,
     CAS_DIFFERENTIATE,
     CAS_SIMPLIFY,
     CAS_EXPAND,
@@ -1289,6 +1392,7 @@ pub const ALL_BOUND: &[&str] = &[
     SPECTRAL_GAMUT_MAP,
     GPU_ADAPTER_INFO,
     GPU_INIT,
+    GPU_INIT_SURFACE,
     GPU_RENDER_FRAME,
     GPU_READ_PIXELS,
     GPU_UPLOAD_MESH,
@@ -1305,6 +1409,20 @@ pub const ALL_BOUND: &[&str] = &[
     GPU_COMPILE_SHADER,
     GPU_COMPILE_TO_GLSL,
     GPU_BACKEND_INFO,
+    GPU_UPLOAD_MESH_COLORED,
+    GPU_SET_STANDPOINT,
+    GPU_OBSERVER_STANDPOINT,
+    GPU_CAMERA_STATE,
+    GPU_SURFACE_SIZE,
+    GPU_HAS_MESH,
+    GPU_HAS_TENSOR,
+    GPU_TENSOR_NODE_COUNT,
+    GPU_PARTICLE_COUNT,
+    GPU_SYNC_BLOOM,
+    GPU_SET_ARTEFACT_JOINT,
+    GPU_SET_ARTEFACT_WORLD,
+    GPU_ARTEFACT_REFUSED,
+    GPU_REQUIRED_RGBA8_BYTES,
     EMF_UPLOAD_FIELD,
     EMF_RENDER_SLICE,
     EMF_FIELD_INFO,
@@ -1675,6 +1793,22 @@ pub const ALL_BOUND: &[&str] = &[
     DMX_CUE_STACK_GO,
     DMX_CUE_STACK_GO_BACK,
     DMX_CUE_STACK_RESET,
+    ODE_RK4_INTEGRATE,
+    ODE_DOPRI5,
+    ODE_BDF,
+    ODE_SYMPLECTIC_STEP,
+    CALC_ADAPTIVE_SIMPSON,
+    CALC_ADAPTIVE_DERIVATIVE,
+    CALC_NUMERICAL_JACOBIAN,
+    CALC_NUMERICAL_HESSIAN,
+    CALC_NEWTON_SOLVE,
+    OPT_SIMULATED_ANNEALING,
+    OPT_ARTIFICIAL_BEE_COLONY,
+    VC_LINE_INTEGRAL_SCALAR,
+    VC_LINE_INTEGRAL_WORK,
+    VC_SURFACE_FLUX,
+    XFORM_LAPLACE_NUMERIC,
+    XFORM_LAPLACE_SYMBOLIC,
 ];
 
 /// Future extract target for an invoke id. Not a crate today.
@@ -1736,6 +1870,30 @@ pub fn seam_for(id: &str) -> &'static str {
         | GA_TRANSLATOR_FROM_DISPLACEMENT
         | GA_APPLY_TRANSLATOR
         | GA_IS_SIMD_AVAILABLE
+        | XFORM_IDFT
+        | XFORM_Z_TRANSFORM_FINITE
+        | XFORM_UNIT_STEP_Z
+        | XFORM_GEOMETRIC_Z
+        | VC_GRADIENT
+        | VC_DIVERGENCE
+        | VC_CURL
+        | VC_LAPLACIAN
+        | ODE_RK4_INTEGRATE
+        | ODE_DOPRI5
+        | ODE_BDF
+        | ODE_SYMPLECTIC_STEP
+        | CALC_ADAPTIVE_SIMPSON
+        | CALC_ADAPTIVE_DERIVATIVE
+        | CALC_NUMERICAL_JACOBIAN
+        | CALC_NUMERICAL_HESSIAN
+        | CALC_NEWTON_SOLVE
+        | OPT_SIMULATED_ANNEALING
+        | OPT_ARTIFICIAL_BEE_COLONY
+        | VC_LINE_INTEGRAL_SCALAR
+        | VC_LINE_INTEGRAL_WORK
+        | VC_SURFACE_FLUX
+        | XFORM_LAPLACE_NUMERIC
+        | XFORM_LAPLACE_SYMBOLIC
         | CAS_DIFFERENTIATE
         | CAS_SIMPLIFY
         | CAS_EXPAND
@@ -2037,6 +2195,16 @@ pub fn seam_for(id: &str) -> &'static str {
         | RENDER_ANIMATION_SPRING_STEP
         | RENDER_ANIMATION_SCLERP
         | RENDER_ANIMATION_EVAL_PRESET
+        | RENDER_ANIMATION_SQUAD_STEP
+        | RENDER_ANIMATION_LIST_PRESETS
+        | RENDER_ANIMATION_COMPUTE_PASS
+        | ANIMATION_EVALUATE_PRESET
+        | ANIMATION_SPRING_STEP
+        | ANIMATION_SCLERP_STEP
+        | ANIMATION_SQUAD_STEP
+        | ANIMATION_BEZIER_EVAL
+        | ANIMATION_EASING
+        | ANIMATION_LIST_PRESETS
         | RENDER_SVG_PATH
         | RENDER_SVG_CIRCLE
         | RENDER_SVG_RECT
@@ -2045,6 +2213,7 @@ pub fn seam_for(id: &str) -> &'static str {
         | RENDER_SVG_FIELD
         | GPU_ADAPTER_INFO
         | GPU_INIT
+        | GPU_INIT_SURFACE
         | GPU_RENDER_FRAME
         | GPU_READ_PIXELS
         | GPU_UPLOAD_MESH
@@ -2061,6 +2230,20 @@ pub fn seam_for(id: &str) -> &'static str {
         | GPU_COMPILE_SHADER
         | GPU_COMPILE_TO_GLSL
         | GPU_BACKEND_INFO
+        | GPU_UPLOAD_MESH_COLORED
+        | GPU_SET_STANDPOINT
+        | GPU_OBSERVER_STANDPOINT
+        | GPU_CAMERA_STATE
+        | GPU_SURFACE_SIZE
+        | GPU_HAS_MESH
+        | GPU_HAS_TENSOR
+        | GPU_TENSOR_NODE_COUNT
+        | GPU_PARTICLE_COUNT
+        | GPU_SYNC_BLOOM
+        | GPU_SET_ARTEFACT_JOINT
+        | GPU_SET_ARTEFACT_WORLD
+        | GPU_ARTEFACT_REFUSED
+        | GPU_REQUIRED_RGBA8_BYTES
         | EMF_UPLOAD_FIELD
         | EMF_RENDER_SLICE
         | EMF_FIELD_INFO => "render",
@@ -2413,6 +2596,22 @@ pub fn seam_for(id: &str) -> &'static str {
         AGENT_PLAN | AGENT_EXECUTE | AGENT_EVALUATE => "agent",
         CORPUS_LOAD | CORPUS_PARSE => "agent",
         AGENCY_EVALUATE => "governance",
+        HID_POLL
+        | HID_WAIT
+        | HID_CLEAR
+        | HID_POINTER_CAPTURE
+        | HID_POINTER_RELEASE
+        | HID_SET_CURSOR
+        | HID_GAMEPAD_POLL
+        | HID_GAMEPAD_VIBRATE
+        | HID_MIDI_SEND
+        | HID_MIDI_POLL
+        | HID_HAPTIC_PULSE
+        | HID_HAPTIC_PATTERN
+        | HID_SPATIAL_HEAD_POSE
+        | HID_SPATIAL_HAND_SKELETON
+        | HID_SPATIAL_GAZE_RAY
+        | HID_BIOSIGNAL_POLL => "hid",
         _ => "unbound",
     }
 }

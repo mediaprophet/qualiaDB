@@ -1,0 +1,23 @@
+module <https://qualiadb.org/modules/css_color_blend>;
+import "vibe:0.1/math" as m;
+
+present blend {
+    color: #ff8800
+}
+
+pure fn blend_colors(c1: f64, c2: f64, t: f64) -> f64 {
+    let tc = m.clamp(t, 0.0, 1.0);
+    return c1 * (1.0 - tc) + c2 * tc;
+}
+pure fn screen_blend(a: f64, b: f64) -> f64 {
+    return 1.0 - (1.0 - a) * (1.0 - b);
+}
+pure fn multiply_blend(a: f64, b: f64) -> f64 {
+    return a * b;
+}
+pure fn overlay_blend(a: f64, b: f64) -> f64 {
+    if a < 0.5 {
+        return 2.0 * a * b;
+    }
+    return 1.0 - 2.0 * (1.0 - a) * (1.0 - b);
+}

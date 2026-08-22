@@ -14,7 +14,7 @@
 
 use super::ids;
 use crate::CAPABILITY_DESCRIPTORS;
-use poet_vibe::Value;
+use vibe::Value;
 use std::collections::BTreeMap;
 
 /// Where a candidate lives.

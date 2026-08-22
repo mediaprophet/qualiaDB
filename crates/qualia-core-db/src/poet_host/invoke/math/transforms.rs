@@ -7,7 +7,7 @@
 
 use super::super::args;
 use crate::solvers::transforms::fourier::{dft as fourier_dft, Cplx};
-use poet_vibe::{Diagnostic, Span, Value};
+use vibe::{Diagnostic, Span, Value};
 
 /// Forward Discrete Fourier Transform of a real signal.
 ///

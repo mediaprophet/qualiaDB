@@ -4,7 +4,7 @@
 
 use super::super::args;
 use crate::solvers::statistics;
-use poet_vibe::{Diagnostic, Span, Value};
+use vibe::{Diagnostic, Span, Value};
 
 /// `Statistics.mode` — modal value of a list.
 /// Args: { values: [f64] }

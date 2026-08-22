@@ -2,7 +2,7 @@
 
 use super::super::args;
 use crate::domains::chemical::organic_chemistry::validate_smiles;
-use poet_vibe::{Diagnostic, Span, Value};
+use vibe::{Diagnostic, Span, Value};
 
 pub fn smiles(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let s = args::as_str(args_v)

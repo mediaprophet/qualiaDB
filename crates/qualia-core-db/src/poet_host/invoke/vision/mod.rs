@@ -18,80 +18,80 @@ pub use cv::{
 
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
 pub fn ahash(
-    _args: &poet_vibe::Value,
-    span: poet_vibe::Span,
-) -> Result<poet_vibe::Value, poet_vibe::Diagnostic> {
+    _args: &vibe::Value,
+    span: vibe::Span,
+) -> Result<vibe::Value, vibe::Diagnostic> {
     Err(super::args::need_scientific(span, "ComputerVision"))
 }
 
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
 pub fn gaussian_blur(
-    _args: &poet_vibe::Value,
-    span: poet_vibe::Span,
-) -> Result<poet_vibe::Value, poet_vibe::Diagnostic> {
+    _args: &vibe::Value,
+    span: vibe::Span,
+) -> Result<vibe::Value, vibe::Diagnostic> {
     Err(super::args::need_scientific(span, "ComputerVision"))
 }
 
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
 pub fn sobel_magnitude(
-    _args: &poet_vibe::Value,
-    span: poet_vibe::Span,
-) -> Result<poet_vibe::Value, poet_vibe::Diagnostic> {
+    _args: &vibe::Value,
+    span: vibe::Span,
+) -> Result<vibe::Value, vibe::Diagnostic> {
     Err(super::args::need_scientific(span, "ComputerVision"))
 }
 
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
 pub fn canny_edges(
-    _args: &poet_vibe::Value,
-    span: poet_vibe::Span,
-) -> Result<poet_vibe::Value, poet_vibe::Diagnostic> {
+    _args: &vibe::Value,
+    span: vibe::Span,
+) -> Result<vibe::Value, vibe::Diagnostic> {
     Err(super::args::need_scientific(span, "ComputerVision"))
 }
 
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
 pub fn histogram(
-    _args: &poet_vibe::Value,
-    span: poet_vibe::Span,
-) -> Result<poet_vibe::Value, poet_vibe::Diagnostic> {
+    _args: &vibe::Value,
+    span: vibe::Span,
+) -> Result<vibe::Value, vibe::Diagnostic> {
     Err(super::args::need_scientific(span, "ComputerVision"))
 }
 
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
 pub fn equalize_hist(
-    _args: &poet_vibe::Value,
-    span: poet_vibe::Span,
-) -> Result<poet_vibe::Value, poet_vibe::Diagnostic> {
+    _args: &vibe::Value,
+    span: vibe::Span,
+) -> Result<vibe::Value, vibe::Diagnostic> {
     Err(super::args::need_scientific(span, "ComputerVision"))
 }
 
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
 pub fn rgb_to_gray(
-    _args: &poet_vibe::Value,
-    span: poet_vibe::Span,
-) -> Result<poet_vibe::Value, poet_vibe::Diagnostic> {
+    _args: &vibe::Value,
+    span: vibe::Span,
+) -> Result<vibe::Value, vibe::Diagnostic> {
     Err(super::args::need_scientific(span, "ComputerVision"))
 }
 
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
 pub fn dhash(
-    _args: &poet_vibe::Value,
-    span: poet_vibe::Span,
-) -> Result<poet_vibe::Value, poet_vibe::Diagnostic> {
+    _args: &vibe::Value,
+    span: vibe::Span,
+) -> Result<vibe::Value, vibe::Diagnostic> {
     Err(super::args::need_scientific(span, "ComputerVision"))
 }
 
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
 pub fn hamming_distance(
-    _args: &poet_vibe::Value,
-    span: poet_vibe::Span,
-) -> Result<poet_vibe::Value, poet_vibe::Diagnostic> {
+    _args: &vibe::Value,
+    span: vibe::Span,
+) -> Result<vibe::Value, vibe::Diagnostic> {
     Err(super::args::need_scientific(span, "ComputerVision"))
 }
 
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
 pub fn cosine_similarity(
-    _args: &poet_vibe::Value,
-    span: poet_vibe::Span,
-) -> Result<poet_vibe::Value, poet_vibe::Diagnostic> {
+    _args: &vibe::Value,
+    span: vibe::Span,
+) -> Result<vibe::Value, vibe::Diagnostic> {
     Err(super::args::need_scientific(span, "ComputerVision"))
 }

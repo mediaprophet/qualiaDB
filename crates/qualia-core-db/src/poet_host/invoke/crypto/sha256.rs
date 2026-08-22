@@ -2,7 +2,7 @@
 //! Future seam: `crypto/` (already a folder in core-db).
 
 use super::super::args;
-use poet_vibe::{Diagnostic, Span, Value};
+use vibe::{Diagnostic, Span, Value};
 use sha2::{Digest, Sha256, Sha512};
 
 pub fn digest(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {

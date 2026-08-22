@@ -6,7 +6,7 @@
 
 use super::super::args;
 use crate::render::spectral_kernel::{emf_to_linear_rgb, linear_rgb_to_display};
-use poet_vibe::{Diagnostic, Span, Value};
+use vibe::{Diagnostic, Span, Value};
 
 /// `Render.css_animation` — generate `@keyframes` CSS from a value curve.
 ///
@@ -178,7 +178,7 @@ mod tests {
             ("property", Value::String("opacity".into())),
             ("keyframes", Value::List(vec![kf(0.0, 0.0), kf(1.0, 1.0)])),
         ]);
-        let r = css_animation(&args, poet_vibe::Span::new(0, 0)).unwrap();
+        let r = css_animation(&args, vibe::Span::new(0, 0)).unwrap();
         if let Value::Record(m) = r {
             let css = m.get("css").and_then(args::as_str).unwrap();
             assert!(css.contains("@keyframes fade"));
@@ -197,7 +197,7 @@ mod tests {
             ("unit", Value::String("px".into())),
             ("keyframes", Value::List(vec![kf(0.0, 0.0), kf(2.0, 100.0)])),
         ]);
-        let r = css_animation(&args, poet_vibe::Span::new(0, 0)).unwrap();
+        let r = css_animation(&args, vibe::Span::new(0, 0)).unwrap();
         if let Value::Record(m) = r {
             let css = m.get("css").and_then(args::as_str).unwrap();
             assert!(css.contains("transform: 0px"));
@@ -214,7 +214,7 @@ mod tests {
             ("mu", Value::F64(0.0)),
             ("sigma", Value::F64(0.5)),
         ]);
-        let r = css_color(&args, poet_vibe::Span::new(0, 0)).unwrap();
+        let r = css_color(&args, vibe::Span::new(0, 0)).unwrap();
         if let Value::Record(m) = r {
             let css = m.get("css").and_then(args::as_str).unwrap();
             assert!(css.starts_with("rgb("));
@@ -236,7 +236,7 @@ mod tests {
             ("rotate", Value::F64(45.0)),
             ("scale", Value::List(vec![Value::F64(1.5)])),
         ]);
-        let r = css_transform(&args, poet_vibe::Span::new(0, 0)).unwrap();
+        let r = css_transform(&args, vibe::Span::new(0, 0)).unwrap();
         if let Value::Record(m) = r {
             let t = m.get("transform").and_then(args::as_str).unwrap();
             assert!(t.contains("translate(10px, 20px)"));
@@ -252,12 +252,12 @@ mod tests {
             ("property", Value::String("opacity".into())),
             ("keyframes", Value::List(vec![])),
         ]);
-        assert!(css_animation(&args, poet_vibe::Span::new(0, 0)).is_err());
+        assert!(css_animation(&args, vibe::Span::new(0, 0)).is_err());
     }
 
     #[test]
     fn css_transform_no_args_errors() {
         let args = rec(&[]);
-        assert!(css_transform(&args, poet_vibe::Span::new(0, 0)).is_err());
+        assert!(css_transform(&args, vibe::Span::new(0, 0)).is_err());
     }
 }

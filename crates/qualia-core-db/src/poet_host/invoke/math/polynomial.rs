@@ -2,7 +2,7 @@
 
 use super::super::args;
 use crate::solvers::polynomial::polynomial_roots;
-use poet_vibe::{Diagnostic, Span, Value};
+use vibe::{Diagnostic, Span, Value};
 
 /// Find all complex roots of a real polynomial (DESCENDING coefficients,
 /// `coeffs[0]·x^n + … + coeffs[n]`).

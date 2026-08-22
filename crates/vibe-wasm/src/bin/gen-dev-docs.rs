@@ -1,4 +1,4 @@
-//! Dev-docs generator: scans poet-vibe source files, extracts public API
+//! Dev-docs generator: scans vibe source files, extracts public API
 //! items with their doc comments, and emits a JSON file for the docs site.
 //!
 //! Usage: cargo run -p vibe-wasm --bin gen-dev-docs -- output.json
@@ -315,20 +315,20 @@ fn main() {
         PathBuf::from("docs/vibe/dev-docs.json")
     };
 
-    // Find poet-vibe source directory
+    // Find vibe source directory
     let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap_or_else(|_| ".".to_string());
-    let poet_vibe_src = PathBuf::from(&manifest_dir)
+    let vibe_src = PathBuf::from(&manifest_dir)
         .join("..")
-        .join("poet-vibe")
+        .join("vibe-script")
         .join("src");
 
-    if !poet_vibe_src.exists() {
-        eprintln!("poet-vibe source not found at {:?}", poet_vibe_src);
+    if !vibe_src.exists() {
+        eprintln!("vibe source not found at {:?}", vibe_src);
         std::process::exit(1);
     }
 
-    eprintln!("Scanning {:?} ...", poet_vibe_src);
-    let modules = scan_directory(&poet_vibe_src, "");
+    eprintln!("Scanning {:?} ...", vibe_src);
+    let modules = scan_directory(&vibe_src, "");
 
     // Sort modules by name
     let mut module_map: BTreeMap<String, ApiModule> = BTreeMap::new();

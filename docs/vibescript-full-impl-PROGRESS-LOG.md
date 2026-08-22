@@ -62,11 +62,11 @@ Files touched:
 
 | Verification | Result |
 |---|---|
-| `cargo test -p poet-vibe` (lib) | 22 passed, 0 failed |
-| `cargo test -p poet-vibe --test conformance` | 22 passed, 0 failed |
+| `cargo test -p vibe` (lib) | 22 passed, 0 failed |
+| `cargo test -p vibe --test conformance` | 22 passed, 0 failed |
 | `cargo test -p qualia-core-db --lib poet_host` | **107 passed**, 0 failed (was 89; +18 new tests) |
 | `cargo check -p webizen-desktop` | clean |
-| `cargo check -p poet-vibe --target wasm32-unknown-unknown` | clean |
+| `cargo check -p vibe --target wasm32-unknown-unknown` | clean |
 
 New test breakdown: 10 physics + 5 spectral + 3 catalog (dynamic honesty) = 18.
 
@@ -154,7 +154,7 @@ Phase C was claimed in NOTICES but the session OOM'd before any code was written
 **Verification:**
 - poet_host: 112 passed (was 107, +5 new)
 - EMF physics tests: 23 passed (10 unit + 5 invoke + 8 existing matched)
-- poet-vibe lib: 3 passed, conformance: 22 passed
+- vibe lib: 3 passed, conformance: 22 passed
 - webizen-desktop: clean
 - wasm32: clean
 
@@ -185,7 +185,7 @@ Phase C was claimed in NOTICES but the session OOM'd before any code was written
 
 **Verification:**
 - poet_host: 127 passed (was 112, +15 new)
-- poet-vibe lib: 3 passed, conformance: 22 passed
+- vibe lib: 3 passed, conformance: 22 passed
 - webizen-desktop: clean
 - wasm32: clean
 
@@ -210,7 +210,7 @@ Phase C was claimed in NOTICES but the session OOM'd before any code was written
 
 **Verification:**
 - poet_host: 131 passed (was 127, +4 new)
-- poet-vibe conformance: 22 passed
+- vibe conformance: 22 passed
 - webizen-desktop: clean
 - wasm32: clean
 

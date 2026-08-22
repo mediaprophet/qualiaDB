@@ -8,9 +8,10 @@
 use js_sys::{Array, Object, Reflect, Uint8Array};
 use wasm_bindgen::prelude::*;
 
-use poet_vibe::{
+use vibe::{
     bytecode::{self, compile, compile_expr, decode_chunk, encode_chunk, Vm},
-    check_cell, eval_cell, load_program, parse_cell, parse_program, Budget, Env, MockHost, Value,
+    check_cell, check_program, diagnose, eval_cell, load_program, parse_cell, parse_program,
+    Budget, Engine, Env, LocalHost, Value,
 };
 
 // ── helpers ────────────────────────────────────────────────────────
@@ -91,7 +92,7 @@ fn value_to_js(v: &Value) -> JsValue {
 }
 
 /// Convert a `Diagnostic` into a JS error object.
-fn diag_to_js(d: &poet_vibe::Diagnostic) -> JsValue {
+fn diag_to_js(d: &vibe::Diagnostic) -> JsValue {
     let o = Object::new();
     Reflect::set(
         &o,
@@ -120,7 +121,7 @@ fn diag_to_js(d: &poet_vibe::Diagnostic) -> JsValue {
 /// Get the VibeScript language version string.
 #[wasm_bindgen]
 pub fn language_version() -> String {
-    poet_vibe::LANGUAGE_VERSION.to_string()
+    vibe::LANGUAGE_VERSION.to_string()
 }
 
 /// Parse a cell expression (`= expr`).
@@ -174,10 +175,10 @@ pub fn check_cell_src(src: &str) -> JsValue {
     }
 }
 
-/// Evaluate a cell expression (`= expr`) with a mock host.
+/// Evaluate a cell expression (`= expr`) with the in-process local host.
 #[wasm_bindgen]
 pub fn eval_cell_src(src: &str) -> JsValue {
-    let mut host = MockHost::default();
+    let mut host = LocalHost::default();
     let mut env = Env::default();
     match eval_cell(src, &mut host, &mut env) {
         Ok(v) => {
@@ -210,7 +211,7 @@ pub fn parse_program_src(src: &str) -> JsValue {
             Reflect::set(&o, &"items".into(), &items).ok();
             let funcs = Array::new();
             for item in &prog.items {
-                if let poet_vibe::Item::Function(fd) = item {
+                if let vibe::Item::Function(fd) = item {
                     funcs.push(&JsValue::from_str(&fd.name));
                 }
             }
@@ -235,7 +236,7 @@ pub fn check_program_src(src: &str) -> JsValue {
             Reflect::set(&o, &"ok".into(), &JsValue::from_bool(true)).ok();
             let funcs = Array::new();
             for item in &prog.items {
-                if let poet_vibe::Item::Function(fd) = item {
+                if let vibe::Item::Function(fd) = item {
                     funcs.push(&JsValue::from_str(&fd.name));
                 }
             }
@@ -256,6 +257,53 @@ pub fn check_program_src(src: &str) -> JsValue {
 #[wasm_bindgen]
 pub fn eval_cell_json(src: &str) -> JsValue {
     eval_cell_src(src)
+}
+
+/// Parse + check a module; collect up to eight diagnostics.
+#[wasm_bindgen]
+pub fn diagnose_src(src: &str) -> JsValue {
+    let report = diagnose(src);
+    let o = Object::new();
+    Reflect::set(&o, &"ok".into(), &JsValue::from_bool(report.valid)).ok();
+    Reflect::set(&o, &"kind".into(), &JsValue::from_str(report.kind)).ok();
+    let errors = Array::new();
+    for e in &report.errors {
+        errors.push(&diag_to_js(e));
+    }
+    Reflect::set(&o, &"errors".into(), &errors).ok();
+    o.into()
+}
+
+/// Evaluate a full program on LocalHost (workshop dialect).
+#[wasm_bindgen]
+pub fn eval_program_src(src: &str) -> JsValue {
+    match parse_program(src).and_then(|p| check_program(&p).map(|_| p)) {
+        Ok(prog) => {
+            let mut host = LocalHost::default();
+            let mut env = Env::default();
+            let mut engine = Engine::with_program(&mut host, Budget::default(), &prog);
+            match engine.eval_program(&prog, &mut env) {
+                Ok(v) => {
+                    let o = Object::new();
+                    Reflect::set(&o, &"ok".into(), &JsValue::from_bool(true)).ok();
+                    Reflect::set(&o, &"value".into(), &value_to_js(&v)).ok();
+                    o.into()
+                }
+                Err(d) => {
+                    let o = Object::new();
+                    Reflect::set(&o, &"ok".into(), &JsValue::from_bool(false)).ok();
+                    Reflect::set(&o, &"error".into(), &diag_to_js(&d)).ok();
+                    o.into()
+                }
+            }
+        }
+        Err(d) => {
+            let o = Object::new();
+            Reflect::set(&o, &"ok".into(), &JsValue::from_bool(false)).ok();
+            Reflect::set(&o, &"error".into(), &diag_to_js(&d)).ok();
+            o.into()
+        }
+    }
 }
 
 /// Compile a cell expression to bytecode and return chunk metadata.
@@ -318,7 +366,7 @@ pub fn run_cell_bytecode(src: &str) -> JsValue {
     match parse_cell(src) {
         Ok(expr) => match compile_expr(&expr) {
             Ok(chunk) => {
-                let mut host = MockHost::default();
+                let mut host = LocalHost::default();
                 let mut vm = Vm::new(&chunk, &mut host, Budget::default());
                 match vm.run() {
                     Ok(v) => {
@@ -390,7 +438,7 @@ pub fn run_program_bytecode(src: &str, fn_name: &str, args: Vec<JsValue>) -> JsV
                 // Convert JS args to Values.
                 let vibe_args: Vec<Value> = args.iter().map(js_to_value).collect();
 
-                let mut host = MockHost::default();
+                let mut host = LocalHost::default();
                 let mut vm = Vm::new(&decoded, &mut host, Budget::default());
                 // Run the preamble first.
                 if let Err(e) = vm.run() {
@@ -471,7 +519,7 @@ pub fn encode_cell_bytecode(src: &str) -> JsValue {
 pub fn decode_and_run(bytes: &[u8]) -> JsValue {
     match decode_chunk(bytes) {
         Ok(chunk) => {
-            let mut host = MockHost::default();
+            let mut host = LocalHost::default();
             let mut vm = Vm::new(&chunk, &mut host, Budget::default());
             match vm.run() {
                 Ok(v) => {
@@ -500,25 +548,25 @@ pub fn decode_and_run(bytes: &[u8]) -> JsValue {
 /// Get the EBNF grammar string.
 #[wasm_bindgen]
 pub fn ebnf_grammar() -> String {
-    poet_vibe::EBNF.to_string()
+    vibe::EBNF.to_string()
 }
 
 /// Get the GBNF grammar (for LLM constrained decoding).
 #[wasm_bindgen]
 pub fn gbnf_grammar() -> String {
-    poet_vibe::GBNF.to_string()
+    vibe::GBNF.to_string()
 }
 
 /// Get the JSON schema for the AST.
 #[wasm_bindgen]
 pub fn ast_schema_json() -> String {
-    poet_vibe::SOURCE_SCHEMA_JSON.to_string()
+    vibe::SOURCE_SCHEMA_JSON.to_string()
 }
 
 /// Get the JSON schema for diagnostics.
 #[wasm_bindgen]
 pub fn diagnostic_schema_json() -> String {
-    poet_vibe::DIAGNOSTIC_SCHEMA_JSON.to_string()
+    vibe::DIAGNOSTIC_SCHEMA_JSON.to_string()
 }
 
 // ── internal helpers ───────────────────────────────────────────────
@@ -644,8 +692,8 @@ fn disassemble(chunk: &bytecode::Chunk) -> String {
 
 // ── projectional authoring (W1) ────────────────────────────────────
 
-use poet_vibe::projectional::{apply_edit, apply_edits, project_program, Edit, ProjectOptions};
-use poet_vibe::{FieldRepresentation, FieldSupport, NamedArg, Span as VibeSpan};
+use vibe::projectional::{apply_edit, apply_edits, project_program, Edit, ProjectOptions};
+use vibe::{FieldRepresentation, FieldSupport, NamedArg, Span as VibeSpan};
 
 /// Project a VibeScript program source to canonical form.
 /// Parses the source, then re-projects it from the AST.
@@ -793,7 +841,7 @@ fn parse_edit_json(json: &str) -> Result<Edit, String> {
                 .unwrap_or(FieldRepresentation::Grid);
             let index = v.get("index").and_then(|i| i.as_u64()).map(|i| i as usize);
             Ok(Edit::AddItem {
-                item: poet_vibe::projectional::make_field(
+                item: vibe::projectional::make_field(
                     name,
                     ty,
                     unit.as_deref(),
@@ -812,17 +860,17 @@ fn parse_edit_json(json: &str) -> Result<Edit, String> {
                 .get("properties")
                 .and_then(|p| p.as_array())
                 .ok_or("missing 'properties' array")?;
-            let properties: Vec<(&str, poet_vibe::Expr)> = props
+            let properties: Vec<(&str, vibe::Expr)> = props
                 .iter()
                 .filter_map(|p| {
                     let n = p.get("name")?.as_str()?;
                     let val = p.get("value")?.as_f64()?;
-                    Some((n, poet_vibe::projectional::make_float(val)))
+                    Some((n, vibe::projectional::make_float(val)))
                 })
                 .collect();
             let index = v.get("index").and_then(|i| i.as_u64()).map(|i| i as usize);
             Ok(Edit::AddItem {
-                item: poet_vibe::projectional::make_material(name, properties),
+                item: vibe::projectional::make_material(name, properties),
                 index,
             })
         }
@@ -840,13 +888,13 @@ fn parse_edit_json(json: &str) -> Result<Edit, String> {
                 .and_then(|c| c.as_str())
                 .ok_or("missing 'consequence'")?;
             // For simplicity, parse condition/consequence as cell expressions
-            let cond_expr = poet_vibe::parse_cell(&format!("= {}", condition))
+            let cond_expr = vibe::parse_cell(&format!("= {}", condition))
                 .map_err(|e| format!("condition parse: {}", e.message))?;
-            let cons_expr = poet_vibe::parse_cell(&format!("= {}", consequence))
+            let cons_expr = vibe::parse_cell(&format!("= {}", consequence))
                 .map_err(|e| format!("consequence parse: {}", e.message))?;
             let index = v.get("index").and_then(|i| i.as_u64()).map(|i| i as usize);
             Ok(Edit::AddItem {
-                item: poet_vibe::projectional::make_law(name, cond_expr, cons_expr),
+                item: vibe::projectional::make_law(name, cond_expr, cons_expr),
                 index,
             })
         }
@@ -938,7 +986,7 @@ fn parse_edit_json(json: &str) -> Result<Edit, String> {
                 property: NamedArg {
                     span: VibeSpan::point(0),
                     name: name.to_string(),
-                    value: poet_vibe::projectional::make_float(value),
+                    value: vibe::projectional::make_float(value),
                 },
             })
         }

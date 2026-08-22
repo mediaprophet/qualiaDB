@@ -124,7 +124,7 @@ fn snapshot_result(
         committed: snap.visible_count(),
         published: snap.published.iter().map(PulseRecordDto::from).collect(),
         honesty: snap.honesty(),
-        language: poet_vibe::LANGUAGE_VERSION,
+        language: vibe::LANGUAGE_VERSION,
         value_cbor_hex: encode_cbor_text(&value),
     }
 }
@@ -265,7 +265,7 @@ pub fn poet_dispatch_hook(
 /// Parse a JSON array of hook arguments into Vibe `Value`s.
 /// Supports numbers, strings, booleans, and null. Unknown JSON types
 /// fall back to `Value::Null`.
-fn parse_hook_args(json: &str) -> Vec<poet_vibe::Value> {
+fn parse_hook_args(json: &str) -> Vec<vibe::Value> {
     if json.trim().is_empty() || json.trim() == "[]" {
         return Vec::new();
     }
@@ -273,21 +273,21 @@ fn parse_hook_args(json: &str) -> Vec<poet_vibe::Value> {
     parsed.into_iter().map(json_to_vibe).collect()
 }
 
-fn json_to_vibe(v: serde_json::Value) -> poet_vibe::Value {
+fn json_to_vibe(v: serde_json::Value) -> vibe::Value {
     match v {
-        serde_json::Value::Null => poet_vibe::Value::Null,
-        serde_json::Value::Bool(b) => poet_vibe::Value::Bool(b),
+        serde_json::Value::Null => vibe::Value::Null,
+        serde_json::Value::Bool(b) => vibe::Value::Bool(b),
         serde_json::Value::Number(n) => {
             if let Some(i) = n.as_i64() {
-                poet_vibe::Value::I64(i)
+                vibe::Value::I64(i)
             } else if let Some(u) = n.as_u64() {
-                poet_vibe::Value::U64(u)
+                vibe::Value::U64(u)
             } else {
-                poet_vibe::Value::F64(n.as_f64().unwrap_or(0.0))
+                vibe::Value::F64(n.as_f64().unwrap_or(0.0))
             }
         }
-        serde_json::Value::String(s) => poet_vibe::Value::String(s),
-        _ => poet_vibe::Value::Null,
+        serde_json::Value::String(s) => vibe::Value::String(s),
+        _ => vibe::Value::Null,
     }
 }
 
@@ -425,12 +425,12 @@ pub fn poet_pulse_event(
 
     // Parse payload from JSON.
     let payload = if payload_json.trim().is_empty() {
-        poet_vibe::Value::Null
+        vibe::Value::Null
     } else {
         json_to_vibe(serde_json::from_str(&payload_json).unwrap_or(serde_json::Value::Null))
     };
 
-    let args = vec![poet_vibe::Value::String(topic.clone()), payload];
+    let args = vec![vibe::Value::String(topic.clone()), payload];
 
     for prog in &programs {
         let run = snap.dispatch_hook_src(&prog.source, &pulse_path, args.clone());
@@ -566,7 +566,7 @@ pub fn poet_capabilities(state: State<PoetHarnessState>) -> PoetCatalog {
         })
         .collect();
     PoetCatalog {
-        language: poet_vibe::LANGUAGE_VERSION,
+        language: vibe::LANGUAGE_VERSION,
         honesty: overall_honesty,
         vibe,
         engine_not_yet_on_vibe,

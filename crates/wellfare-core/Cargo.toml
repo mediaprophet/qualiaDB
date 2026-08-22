@@ -20,11 +20,11 @@ oxigraph = { version = "0.5", default-features = false, features = ["js"] }
 # qualia-core-db: reserved for W2/W3 wiring once the WASM-safe API is confirmed
 # (v0.0.1 depends on wgpu — keep as optional to avoid pulling wgpu into the WASM binary)
 qualia-core-db = { path = "../qualia-core-db", optional = true }
-# poet-vibe: for InstantBridge ↔ Instant conversion (T71 one-clock migration)
-poet-vibe = { path = "../poet-vibe", optional = true }
+# vibe: for InstantBridge ↔ Instant conversion (T71 one-clock migration)
+vibe = { path = "../vibe", optional = true }
 
 [features]
-qualia = ["qualia-core-db", "poet-vibe"]
+qualia = ["qualia-core-db", "vibe"]
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 wasm-bindgen = "0.2"

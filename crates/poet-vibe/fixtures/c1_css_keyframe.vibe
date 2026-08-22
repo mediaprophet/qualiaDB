@@ -1,6 +1,0 @@
-module <https://qualiadb.org/modules/css_keyframe>;
-import "vibe:0.1/math" as m;
-pure fn interpolate_keyframe(from: f64, to: f64, t: f64) -> f64 {
-    let tc = m.clamp(t, 0.0, 1.0);
-    return from + (to - from) * tc;
-}

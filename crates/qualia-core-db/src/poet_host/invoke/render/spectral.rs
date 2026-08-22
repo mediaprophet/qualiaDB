@@ -10,7 +10,7 @@ use crate::render::spectral_blend::spectral_blend_emf;
 use crate::render::spectral_kernel::{
     emf_to_linear_rgb, emf_to_spd, linear_rgb_to_display, spd_to_xyz, Spd, SPD_SAMPLES,
 };
-use poet_vibe::{Diagnostic, Span, Value};
+use vibe::{Diagnostic, Span, Value};
 
 /// `Spectral.emf_to_spd` — EMF `[α, μ, σ]` → 41-sample SPD (380–780 nm).
 pub fn emf_to_spd_fn(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
@@ -112,7 +112,7 @@ pub fn gamut_map_fn(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use poet_vibe::Value;
+    use vibe::Value;
     use std::collections::BTreeMap;
 
     fn rec(pairs: &[(&str, Value)]) -> Value {
@@ -130,7 +130,7 @@ mod tests {
             ("mu", Value::F64(0.0)),
             ("sigma", Value::F64(0.5)),
         ]);
-        let r = emf_to_spd_fn(&args, poet_vibe::Span::new(0, 0)).unwrap();
+        let r = emf_to_spd_fn(&args, vibe::Span::new(0, 0)).unwrap();
         match r {
             Value::List(xs) => assert_eq!(xs.len(), SPD_SAMPLES),
             other => panic!("{other:?}"),
@@ -144,7 +144,7 @@ mod tests {
             ("mu", Value::F64(0.1)),
             ("sigma", Value::F64(0.5)),
         ]);
-        let r = emf_to_rgb_fn(&args, poet_vibe::Span::new(0, 0)).unwrap();
+        let r = emf_to_rgb_fn(&args, vibe::Span::new(0, 0)).unwrap();
         match r {
             Value::Record(m) => {
                 let g = m.get("display_g").and_then(args::as_u64).unwrap();
@@ -172,7 +172,7 @@ mod tests {
             ("sigma_b", Value::F64(0.8)),
             ("t", Value::F64(0.0)),
         ]);
-        let r = blend_fn(&args, poet_vibe::Span::new(0, 0)).unwrap();
+        let r = blend_fn(&args, vibe::Span::new(0, 0)).unwrap();
         if let Value::Record(m) = r {
             let x = m.get("x").and_then(args::as_f64).unwrap();
             assert!(x.is_finite());
@@ -186,7 +186,7 @@ mod tests {
             ("y", Value::F64(0.5)),
             ("z", Value::F64(0.0)),
         ]);
-        let r = gamut_map_fn(&args, poet_vibe::Span::new(0, 0)).unwrap();
+        let r = gamut_map_fn(&args, vibe::Span::new(0, 0)).unwrap();
         if let Value::Record(m) = r {
             let x = m.get("x").and_then(args::as_f64).unwrap();
             assert!(x <= 2.0, "gamut map should not increase x");
@@ -201,9 +201,9 @@ mod tests {
             ("mu", Value::F64(0.0)),
             ("sigma", Value::F64(0.5)),
         ]);
-        let spd_val = emf_to_spd_fn(&spd_args, poet_vibe::Span::new(0, 0)).unwrap();
+        let spd_val = emf_to_spd_fn(&spd_args, vibe::Span::new(0, 0)).unwrap();
         let xyz_args = rec(&[("spd", spd_val)]);
-        let r = spd_to_xyz_fn(&xyz_args, poet_vibe::Span::new(0, 0)).unwrap();
+        let r = spd_to_xyz_fn(&xyz_args, vibe::Span::new(0, 0)).unwrap();
         if let Value::Record(m) = r {
             let y = m.get("y").and_then(args::as_f64).unwrap();
             assert!(

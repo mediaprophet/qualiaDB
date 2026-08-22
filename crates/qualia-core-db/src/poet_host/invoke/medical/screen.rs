@@ -2,7 +2,7 @@
 
 use super::super::args;
 use crate::specialized_libs::medical_computing as med;
-use poet_vibe::{Diagnostic, Span, Value};
+use vibe::{Diagnostic, Span, Value};
 
 /// `MedicalComputing.screen_compounds` — rule-based compound screening with
 /// Lipinski/Veber filters and optional Tanimoto similarity ranking.

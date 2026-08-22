@@ -2,7 +2,7 @@
 
 use super::super::args;
 use crate::tensor::Tensor10D;
-use poet_vibe::{Diagnostic, Span, Value};
+use vibe::{Diagnostic, Span, Value};
 
 pub fn distance(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let a = tensor(args_v, "a", span)?;

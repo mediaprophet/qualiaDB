@@ -5,7 +5,7 @@
 
 use super::super::args;
 use crate::agent_runtime::{corpus, evaluator, planner};
-use poet_vibe::{DiagCode, Diagnostic, Span, Value};
+use vibe::{DiagCode, Diagnostic, Span, Value};
 
 /// `Agent.plan` — plan an agent task given a task description and capabilities.
 ///

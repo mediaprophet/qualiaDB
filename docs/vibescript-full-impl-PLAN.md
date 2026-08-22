@@ -23,7 +23,7 @@ Fully implement VibeScript so that:
 
 | Area | Status | Tests |
 |---|---|---|
-| Language core (lexer, parser, checker, AST interpreter) | Complete | 25 poet-vibe tests |
+| Language core (lexer, parser, checker, AST interpreter) | Complete | 25 vibe tests |
 | 0.1 binding profile (math, rdf, quin, graph, aura, pulse, capability, time) | Complete | All §12/§13 fixtures pass |
 | Hook dispatch (`on pulse:message`, `on tick`) | Complete | 4 hook dispatch tests |
 | User-defined function resolution | Complete | §12.2 CLINIC module works end-to-end |
@@ -140,7 +140,7 @@ These are the functions Timothy specifically asked about — EMF frequency shift
 
 **Files modified:** results.rs, physics_simulation/mod.rs, science/mod.rs, stubs.rs, ids.rs, invoke/mod.rs
 
-**Verification:** poet_host 112 tests, EMF 23 tests, poet-vibe 22+3, desktop+wasm clean.
+**Verification:** poet_host 112 tests, EMF 23 tests, vibe 22+3, desktop+wasm clean.
 
 ---
 
@@ -160,7 +160,7 @@ Enable Vibe scripts to generate CSS animation properties and SVG elements from c
 **Files created:** `render/css.rs` (3 fn, 6 tests), `render/svg.rs` (6 fn, 9 tests)
 **Files modified:** `render/mod.rs`, `ids.rs`, `invoke/mod.rs`
 
-**Verification:** poet_host 127 tests, poet-vibe 22+3, desktop+wasm clean.
+**Verification:** poet_host 127 tests, vibe 22+3, desktop+wasm clean.
 
 ---
 
@@ -178,7 +178,7 @@ Wire the desktop harness to drive `on tick()` hooks on a timer, so reactive cell
 - `poet_pulse_event` — inject `pulse:message` event, dispatch hooks on stored programs.
 
 **Files modified:** `poet_host/mod.rs`, `commands/poet.rs`, `commands/mod.rs`
-**Verification:** poet_host 131 tests, poet-vibe 22, desktop+wasm clean.
+**Verification:** poet_host 131 tests, vibe 22, desktop+wasm clean.
 
 ---
 
@@ -230,7 +230,7 @@ Comprehensive golden corpus across all 9 domains with negative fixtures and cros
 - **VM** (`bytecode/vm.rs`): Stack-based execution with call frames, budget enforcement, division-by-zero trapping (E600), type-checked arithmetic, host capability dispatch via `bind::dispatch`, user function calls with proper frame management.
 - **Codec** (`bytecode/codec.rs`): Binary encode/decode with magic "VBC1", version, constant pool, function metadata, and code segment. Full roundtrip verified.
 - **Tests**: 53 unit tests (op/compiler/vm/codec) + 15 conformance tests (bc1–bc15) covering arithmetic, floats, functions, while/for loops, if/else, match, lists, records, encode/decode roundtrip, division by zero, logical short-circuit, nested function calls, and iterative fibonacci.
-- **API**: `poet_vibe::bytecode::{compile, compile_expr, Vm, encode_chunk, decode_chunk, Chunk, Op}`
+- **API**: `vibe::bytecode::{compile, compile_expr, Vm, encode_chunk, decode_chunk, Chunk, Op}`
 
 ---
 
@@ -278,10 +278,10 @@ Phases A and B can run in parallel. Phase C depends on A. Phase D depends on B a
 ## 5. Verification plan
 
 After each phase:
-- `cargo test -p poet-vibe` — language tests
+- `cargo test -p vibe` — language tests
 - `cargo test -p qualia-core-db --lib poet_host` — host tests
 - `cargo check -p webizen-desktop` — desktop build
-- `cargo check -p poet-vibe --target wasm32-unknown-unknown` — WASM build
+- `cargo check -p vibe --target wasm32-unknown-unknown` — WASM build
 - New tests for each new invoke ID
 - Update `ai-agent-vibescript-readiness.md` with new test counts and capabilities
 - Update this plan file with phase status
@@ -372,9 +372,9 @@ The source plan is architecturally sound. The following corrections should be ap
 | **W1** | Naga IR-Level WebGL2 Sanitizer | In-memory Naga Module IR transform: validate WGSL for WebGL2 compatibility, compile to GLSL ES 300. Add `glsl-out` feature to naga dep. | `render/naga_sanitize.rs`, `render/naga_bridge.rs` | naga `glsl-out` feature | **✅ Done** |
 | **W2** | Zero-Copy WASM Buffer Views & std140 Structs | `Float32Array::view` streaming with `#[repr(C, align(16))]` compile-time verified layouts. std140 layout calculator integrated. | `webizen-render/src/zero_copy_views.rs`, `render/anatomy/webgl2.rs` | W1 | **✅ Done** |
 | **W3** | Unified GPU Capability Invoke (WebGL2 fallback) | `Render.gpu_init` detects WebGPU availability; falls back to WebGL2 via naga-compiled GLSL ES 300. Same invoke IDs, transparent backend selection. | `poet_host/invoke/render/gpu.rs` (extend), `render/naga_bridge.rs` (runtime compile) | W0, W1, W2 | **✅ Done** |
-| **A1** | Homoiconic CBOR-LD AST Codec (Tag 4200) | Zero-copy bidirectional serialization between `poet_vibe::ast` and CBOR-LD 1.0 binary trees. | `poet-vibe/src/cbor_ast.rs`, `lib.rs` | None (independent) | **✅ Done** |
-| **A2** | Speculative Constrained Decoding (DOMINO) | Subword-aligned prefix-trie token masking integrated into in-process `QTensorEngine`. | `inference/speculative_decode.rs`, `poet-vibe/src/grammar/` | A1 (AST representation) | **✅ Done** |
-| **A3** | Dynamic Reflection & Self-Healing Loop | 3-stage reflection: Stage 1 search match, Stage 2 semantic shape linting, Stage 3 dry-run state injection. Configurable retry budget. | `poet-vibe/src/reflection.rs`, `diagnose.rs` | A1, A2 | **✅ Done** |
+| **A1** | Homoiconic CBOR-LD AST Codec (Tag 4200) | Zero-copy bidirectional serialization between `vibe::ast` and CBOR-LD 1.0 binary trees. | `vibe/src/cbor_ast.rs`, `lib.rs` | None (independent) | **✅ Done** |
+| **A2** | Speculative Constrained Decoding (DOMINO) | Subword-aligned prefix-trie token masking integrated into in-process `QTensorEngine`. | `inference/speculative_decode.rs`, `vibe/src/grammar/` | A1 (AST representation) | **✅ Done** |
+| **A3** | Dynamic Reflection & Self-Healing Loop | 3-stage reflection: Stage 1 search match, Stage 2 semantic shape linting, Stage 3 dry-run state injection. Configurable retry budget. | `vibe/src/reflection.rs`, `diagnose.rs` | A1, A2 | **✅ Done** |
 
 ### 7.3 Phase 2: Advanced Rendering & Orchestration
 
@@ -385,11 +385,11 @@ The source plan is architecturally sound. The following corrections should be ap
 | **W6** | WebGPU Compute Pipeline Invoke | `Render.gpu_compute_dispatch` — exposes WebGPU compute shaders to VibeScript for GPU-accelerated physics (wave equation, N-body, CFD on GPU). Compute shader source from WGSL, validated by naga. | `poet_host/invoke/render/gpu_compute.rs`, `shaders/compute/*.wgsl` | W0 | **✅ Done** |
 | **W7** | Runtime Shader Compilation & Hot-Reload | `Render.gpu_compile_shader` — VibeScript can submit WGSL source at runtime, validated by naga sanitizer, compiled to backend-specific shader (wgpu SPIR-V or GLSL ES 300). Enables live shader editing in Studio. | `poet_host/invoke/render/shader_compile.rs`, `render/naga_bridge.rs` (extend) | W0, W1 | **✅ Done** |
 | **W8** | Automatic Backend Detection & Fallback | `Render.gpu_backend_info` — probes WebGPU adapter availability; if absent, falls back to WebGL2. Returns backend type, capabilities, limits, texture format support. VibeScript scripts can query capabilities and adapt. | `poet_host/invoke/render/backend.rs` | W0, W3 | **✅ Done** |
-| **A4** | Structural AST Query Engine | S-expression query engine enforcing static architectural policies (mandatory `take:` limits, forbidden API calls). | `poet-vibe/src/ast_query.rs` | A1 | **✅ Done** |
+| **A4** | Structural AST Query Engine | S-expression query engine enforcing static architectural policies (mandatory `take:` limits, forbidden API calls). | `vibe/src/ast_query.rs` | A1 | **✅ Done** |
 | **A5** | Q42 Semantic Blackboard & Constraint Context | Observable state channels on Q42 CRDT graphs with pinned hard/soft constraint propagation. | `modalities/blackboard.rs` | None | **✅ Done** |
-| **A6** | Multi-Agent DAGs & Autonomous Control Units | Native DAG pipeline definitions, LLM-driven Control Units / Autonomous Routers, isolated `SlgArena` Judge verification frames. | `poet-vibe/src/dag.rs`, `deontic_interrupt.rs` | A4, A5 | **✅ Done** |
+| **A6** | Multi-Agent DAGs & Autonomous Control Units | Native DAG pipeline definitions, LLM-driven Control Units / Autonomous Routers, isolated `SlgArena` Judge verification frames. | `vibe/src/dag.rs`, `deontic_interrupt.rs` | A4, A5 | **✅ Done** |
 | **A7** | Paraconsistent Eτ Evidential Logic & W3C VCs | Evidential (μ, λ) packing into `NQuin` metadata (see review note 1 for bitfield layout) + W3C Verifiable Credential artifact outputs. Extends existing `paraconsistent.rs`. | `modalities/evidential_etau.rs` | None | **✅ Done** |
-| **A8** | Hardware Deontic F(φ) Interrupts & Phase Leasing | Immediate seL4-style capability revocation upon prohibition breach + phase-based capability allow-listing. | `poet-vibe/src/deontic_interrupt.rs` | A6 | **✅ Done** |
+| **A8** | Hardware Deontic F(φ) Interrupts & Phase Leasing | Immediate seL4-style capability revocation upon prohibition breach + phase-based capability allow-listing. | `vibe/src/deontic_interrupt.rs` | A6 | **✅ Done** |
 | **A9** | Semantic Skills: Vectors, Embeddings & Scratchpads | First-class vector cosine distance, in-process text embedding, semantic search, ephemeral scratchpad memory. | `inference/semantic_skills.rs` | A5 | **✅ Done** |
 
 ### 7.4 WebGPU Invoke Surface Detail (W0)
@@ -605,7 +605,7 @@ AST nodes, then Species/Mixture, then CST, then HID, then pretty syntax last.
 | T43 | **Assistive I/O in first HID family** — sip-and-puff, switch, Braille chord, screen-reader announce, focus cursor. Not after EMG. | **Done** — InboundEvent::sip_and_puff, switch_event, braille_chord, eye_gaze in hid.rs with tests | recommendations §4.5, W8 |
 | T44 | **Biosignals are capability-leased and DP-filtered** — default deny. `Sensor.Biosignal.stream_raw_eeg` stays behind a medical-grade lease. | **Done** — InboundEvent::biosignal() requires capability_lease_id. Host-side DP filtering via real `DifferentialPrivacy` engine (Laplace/Gaussian), budget accounting, capability-lease validation (commit `f822e514`). 12 tests. | recommendations §4.5 |
 | T45 | **Outbound cues as invoke IDs** — `Haptic.*`, `Audio.Spatial.*`, `Visual.Retinal.*`, `Accessibility.*`. Same honesty rules. | **Done** — cue.post dispatch in bind/mod.rs with Host::post_cue trait method, fail-closed default | recommendations §4.5 |
-| T46 | **Ring buffers + 4096-sample quotas in `poet_host` / `SlgArena`** — not in `poet-vibe`. Host constant, not language constant. | **Done** — RingBuffer<T,N> in zero_heap.rs (zero-heap, power-of-2, fail-closed on full). 4096-sample quota wired as host constant via `HidEventBuffer` with `HidEventSlot` (Copy, fixed-size). `PoetSnapshot` owns the buffer (commit `c2b9dc53`). 6 tests. | recommendations §4.5 |
+| T46 | **Ring buffers + 4096-sample quotas in `poet_host` / `SlgArena`** — not in `vibe`. Host constant, not language constant. | **Done** — RingBuffer<T,N> in zero_heap.rs (zero-heap, power-of-2, fail-closed on full). 4096-sample quota wired as host constant via `HidEventBuffer` with `HidEventSlot` (Copy, fixed-size). `PoetSnapshot` owns the buffer (commit `c2b9dc53`). 6 tests. | recommendations §4.5 |
 
 ### 8.10 Geometry, Sheaves, Stalks (recommendations §4.6, grok §1)
 
@@ -663,7 +663,7 @@ AST nodes, then Species/Mixture, then CST, then HID, then pretty syntax last.
 
 | # | Wish | Status | Source |
 |---|------|--------|--------|
-| W1 | Projectional authoring — edit Instant / Field / Law as structure; text is a view | **Done** — `poet_vibe::projectional` module: `project_program` (AST → canonical text), `Edit` enum (15 typed structural operations: add/remove/replace/rename items, set field unit/support/representation, add/remove material properties, set law condition/consequence, add/remove prefixes, add/remove requires), `apply_edit`/`apply_edits` (immutable structural edits), `project_with_trivia` (CST-aware projection preserving comments), AST builder helpers (`make_field`, `make_material`, `make_law`, `make_int`, `make_float`, etc.). WASM bindings: `project_source`, `apply_structural_edit`, `apply_structural_edits` (JSON-based edit API for browser/LLM). 35 tests covering projection, round-trip (parse→project→parse), structural edits, and trivia preservation. | excellence-first §4 |
+| W1 | Projectional authoring — edit Instant / Field / Law as structure; text is a view | **Done** — `vibe::projectional` module: `project_program` (AST → canonical text), `Edit` enum (15 typed structural operations: add/remove/replace/rename items, set field unit/support/representation, add/remove material properties, set law condition/consequence, add/remove prefixes, add/remove requires), `apply_edit`/`apply_edits` (immutable structural edits), `project_with_trivia` (CST-aware projection preserving comments), AST builder helpers (`make_field`, `make_material`, `make_law`, `make_int`, `make_float`, etc.). WASM bindings: `project_source`, `apply_structural_edit`, `apply_structural_edits` (JSON-based edit API for browser/LLM). 35 tests covering projection, round-trip (parse→project→parse), structural edits, and trivia preservation. | excellence-first §4 |
 | W2 | WorldLine as the continuant's time-like self | **Done** — WorldLine implemented in value.rs | excellence-first §4 |
 | W3 | Conservation hooks on glue | **Done** (tracked as T34) | excellence-first §4 |
 | W4 | Mixture / phase diagrams as data | **Done** (tracked as T33) | excellence-first §4 |
@@ -1009,7 +1009,7 @@ The language itself (parser, checker, evaluator, bytecode VM, projectional autho
 ### 10.4 Verification Plan
 
 After each phase:
-- `cargo test -p poet-vibe` — language tests
+- `cargo test -p vibe` — language tests
 - `cargo test -p qualia-core-db --lib poet_host` — host tests
 - `cargo check -p qualia-core-db --target wasm32-unknown-unknown` — WASM build
 - New tests for each new invoke ID

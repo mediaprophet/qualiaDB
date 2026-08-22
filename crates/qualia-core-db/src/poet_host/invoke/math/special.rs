@@ -2,7 +2,7 @@
 
 use super::super::args;
 use crate::solvers::special_functions::bessel::bessel_j;
-use poet_vibe::{Diagnostic, Span, Value};
+use vibe::{Diagnostic, Span, Value};
 
 pub fn bessel_jn(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let n = args::rec_i64(args_v, "n")

@@ -2,7 +2,7 @@
 
 use super::super::args;
 use crate::modalities::{carrier, value_flow};
-use poet_vibe::{DiagCode, Diagnostic, Span, Value};
+use vibe::{DiagCode, Diagnostic, Span, Value};
 
 /// `Finance.convert_currency` — convert an amount using a rate in micros.
 /// `amount` is the source amount; `rate_micros` is target units per source

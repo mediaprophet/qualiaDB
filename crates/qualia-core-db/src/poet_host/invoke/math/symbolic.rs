@@ -3,7 +3,7 @@
 use super::super::args;
 use crate::specialized_libs::symbolic_algebra as sa;
 use crate::specialized_libs::symbolic_algebra::{add, c, mul, pow, var, Expr};
-use poet_vibe::{Diagnostic, Span, Value};
+use vibe::{Diagnostic, Span, Value};
 use std::collections::HashMap;
 
 pub fn eval_poly(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
@@ -105,6 +105,89 @@ pub fn solve_quadratic(args_v: &Value, span: Span) -> Result<Value, Diagnostic> 
         })
         .collect();
     Ok(Value::List(list))
+}
+
+/// `VectorCalculus.gradient` — symbolic gradient of an expression.
+/// Args: { expr: string, vars: [string] }
+pub fn gradient(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
+    let expr_str = args::rec_str(args_v, "expr")
+        .ok_or_else(|| args::bad(span, "VectorCalculus.gradient needs expr: string"))?;
+    let vars = args::rec_str_list(args_v, "vars")
+        .ok_or_else(|| args::bad(span, "VectorCalculus.gradient needs vars: [string]"))?;
+    let expr = sa::parse(expr_str).map_err(|e| args::bad(span, format!("parse error: {e}")))?;
+    let var_refs: Vec<&str> = vars.iter().map(|s| s.as_str()).collect();
+    let grad = crate::solvers::vector_calculus::gradient(&expr, &var_refs);
+    let grad_strs: Vec<Value> = grad.iter().map(|e| Value::String(e.to_string())).collect();
+    Ok(args::record([("gradient", Value::List(grad_strs))]))
+}
+
+/// `VectorCalculus.divergence` — symbolic divergence of a vector field.
+/// Args: { field: [string], vars: [string] }
+pub fn divergence(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
+    let field_strs = args::rec_str_list(args_v, "field")
+        .ok_or_else(|| args::bad(span, "VectorCalculus.divergence needs field: [string]"))?;
+    let vars = args::rec_str_list(args_v, "vars")
+        .ok_or_else(|| args::bad(span, "VectorCalculus.divergence needs vars: [string]"))?;
+    let mut field = Vec::new();
+    for s in &field_strs {
+        field.push(sa::parse(s).map_err(|e| args::bad(span, format!("parse error: {e}")))?);
+    }
+    let var_refs: Vec<&str> = vars.iter().map(|s| s.as_str()).collect();
+    match crate::solvers::vector_calculus::divergence(&field, &var_refs) {
+        Ok(div) => Ok(args::record([(
+            "divergence",
+            Value::String(div.to_string()),
+        )])),
+        Err(e) => Err(args::bad(span, format!("divergence: {e}"))),
+    }
+}
+
+/// `VectorCalculus.curl` — symbolic curl of a 3-component vector field.
+/// Args: { field: [string], vars: [string] }
+pub fn curl(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
+    let field_strs = args::rec_str_list(args_v, "field")
+        .ok_or_else(|| args::bad(span, "VectorCalculus.curl needs field: [string]"))?;
+    let vars = args::rec_str_list(args_v, "vars")
+        .ok_or_else(|| args::bad(span, "VectorCalculus.curl needs vars: [string]"))?;
+    if field_strs.len() != 3 {
+        return Err(args::bad(
+            span,
+            "VectorCalculus.curl: field must have 3 components",
+        ));
+    }
+    let mut field = Vec::new();
+    for s in &field_strs {
+        field.push(sa::parse(s).map_err(|e| args::bad(span, format!("parse error: {e}")))?);
+    }
+    let var_refs: Vec<&str> = vars.iter().map(|s| s.as_str()).collect();
+    match crate::solvers::vector_calculus::curl(&field, &var_refs) {
+        Ok(curl_vec) => {
+            let curl_strs: Vec<Value> = curl_vec
+                .iter()
+                .map(|e| Value::String(e.to_string()))
+                .collect();
+            Ok(args::record([("curl", Value::List(curl_strs))]))
+        }
+        Err(e) => Err(args::bad(span, format!("curl: {e}"))),
+    }
+}
+
+/// `VectorCalculus.laplacian` — symbolic Laplacian of an expression.
+/// Args: { expr: string, vars: [string] }
+pub fn laplacian(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
+    let expr_str = args::rec_str(args_v, "expr")
+        .ok_or_else(|| args::bad(span, "VectorCalculus.laplacian needs expr: string"))?;
+    let vars = args::rec_str_list(args_v, "vars")
+        .ok_or_else(|| args::bad(span, "VectorCalculus.laplacian needs vars: [string]"))?;
+    let expr = sa::parse(expr_str).map_err(|e| args::bad(span, format!("parse error: {e}")))?;
+    let var_refs: Vec<&str> = vars.iter().map(|s| s.as_str()).collect();
+    match crate::solvers::vector_calculus::laplacian(&expr, &var_refs) {
+        Ok(lap) => Ok(args::record([(
+            "laplacian",
+            Value::String(lap.to_string()),
+        )])),
+        Err(e) => Err(args::bad(span, format!("laplacian: {e}"))),
+    }
 }
 
 #[cfg(test)]

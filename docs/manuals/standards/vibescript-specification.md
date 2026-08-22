@@ -8,7 +8,7 @@
 >
 > **This document is an architectural essay, not the parser contract.** It predates
 > the implemented `vibe-0.1` language and describes a v1.0 destination. Several
-> constructs below are **rejected by the real parser** (`poet-vibe`) and **must not
+> constructs below are **rejected by the real parser** (`vibe`) and **must not
 > be taught to agents or used in examples**:
 >
 > | In this essay | Status in `vibe-0.1` | Use instead |
@@ -25,7 +25,7 @@
 > | `.d10` as canonical 10D extension | Non-normative alias | `.10d` (core §10) |
 >
 > **Normative 0.1 language:** [`vibescript-core.md`](vibescript-core.md). The live
-> parser is `crates/poet-vibe/`; the live host is
+> parser is `crates/vibe/`; the live host is
 > `crates/qualia-core-db/src/poet_host/`. Where this essay and the core spec
 > disagree, **the core spec wins**. The essay is retained as the architectural
 > rationale for the v1.0 destination (CBOR-LD AST, SHACL-AF, N3Logic interop,
@@ -79,7 +79,7 @@
 > **⚠ Not the implemented grammar.** This is the v1.0 essay grammar. The
 > implemented `vibe-0.1` grammar is in
 > [`vibescript-core.md` §3](vibescript-core.md) and
-> `crates/poet-vibe/grammar/vibe-0.1.ebnf`. Lines below marked `✗ REJECTED`
+> `crates/vibe/grammar/vibe-0.1.ebnf`. Lines below marked `✗ REJECTED`
 > produce `E001` in the real parser and must not be taught:
 
 ```ebnf
@@ -193,7 +193,7 @@ Identifier        ::= [a-zA-Z_][a-zA-Z0-9_]* ;
 > They are retained as architectural illustration only. For examples that
 > actually parse and evaluate today, see
 > [`vibescript-core.md` §12](vibescript-core.md) and
-> `crates/poet-vibe/fixtures/`. Each block below is marked with what 0.1 rejects.
+> `crates/vibe/fixtures/`. Each block below is marked with what 0.1 rejects.
 
 ### A. Reacting to a Network "Pulse" to Update an "Aura"
 > ✗ `on_pulse`, `pulse.broadcast`, `aura.apply_schema`, `graph.get_node` are not 0.1.

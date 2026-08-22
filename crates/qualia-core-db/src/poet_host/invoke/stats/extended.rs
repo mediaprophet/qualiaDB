@@ -2,7 +2,7 @@
 
 use super::super::args;
 use crate::solvers::statistics;
-use poet_vibe::{Diagnostic, Span, Value};
+use vibe::{Diagnostic, Span, Value};
 
 /// `Statistics.autocorrelation` — autocorrelation at a given lag.
 /// Args: { values: [f64], lag: u64 }
