@@ -271,18 +271,18 @@ pub fn sample(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     }
 
     let mut logits: Vec<f32> = logits_f64.iter().map(|&v| v as f32).collect();
-    let token = {
-        let cfg = llm_bench::sampler_config().unwrap_or_default();
-        let mut state = SamplerState::new(cfg);
-        if llm_bench::domino_active() {
-            match llm_bench::domino_sample(&mut state, &mut logits, &ctx) {
-                Some(tid) => tid,
-                None => state.sample(&mut logits, &ctx),
-            }
-        } else {
-            state.sample(&mut logits, &ctx)
+    let cfg = llm_bench::sampler_config().unwrap_or_default();
+    let mut state = SamplerState::new(cfg);
+
+    let token = if llm_bench::domino_active() {
+        match llm_bench::domino_sample(&mut state, &mut logits, &ctx) {
+            Some(tid) => tid,
+            None => state.sample(&mut logits, &ctx),
         }
+    } else {
+        state.sample(&mut logits, &ctx)
     };
+
     Ok(Value::U64(token as u64))
 }
 
