@@ -363,8 +363,8 @@ pub fn build_ontology_graph_canvas_view(document: &Document) -> Element {
     svg.set_attribute("preserveAspectRatio", "none").unwrap();
 
     for (from, to, _rel) in EDGES {
-        let (n1, _, x1, y1, _) = NODES[*from];
-        let (n2, _, x2, y2, _) = NODES[*to];
+        let (_n1, _, x1, y1, _) = NODES[*from];
+        let (_n2, _, x2, y2, _) = NODES[*to];
 
         let line = document.create_element_ns(Some(svg_ns), "line").unwrap();
         line.set_attribute("x1", &format!("{}", x1 + 5.0)).unwrap();

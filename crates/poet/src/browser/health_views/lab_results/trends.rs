@@ -224,7 +224,7 @@ pub fn build_trends_tab(document: &Document) -> Element {
         tr.append_child(&td_svg).unwrap();
 
         // Latest value
-        let (latest_date, latest_val) = h.points[h.points.len() - 1];
+        let (_latest_date, latest_val) = h.points[h.points.len() - 1];
         let flag = classify_value(
             latest_val,
             h.ref_low,

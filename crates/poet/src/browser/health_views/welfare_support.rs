@@ -108,7 +108,7 @@ pub fn build_welfare_support_view(document: &Document) -> Element {
         ))
         .unwrap();
 
-    for (i, (tab_id, _)) in TABS.iter().enumerate().skip(1) {
+    for (_i, (tab_id, _)) in TABS.iter().enumerate().skip(1) {
         let (headers, data) = match *tab_id {
             "streams" => (
                 &["ID", "Stream", "Started", "Status", "Amount"][..],

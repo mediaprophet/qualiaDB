@@ -14,19 +14,19 @@ use web_sys::{Document, Element, HtmlElement};
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum CodecTier {
     /// Pure Rust / WebAssembly core (zero native C dependencies).
-    TierA_PureRustWasm,
+    TierAPureRustWasm,
     /// Hardware-accelerated GPU / Neural engine.
-    TierB_HardwareNeural,
+    TierBHardwareNeural,
     /// Isolated sandboxed subprocess sidecar.
-    TierC_IsolatedSidecar,
+    TierCIsolatedSidecar,
 }
 
 impl CodecTier {
     pub fn label(&self) -> &'static str {
         match self {
-            Self::TierA_PureRustWasm => "Tier A (Pure Rust / WASM)",
-            Self::TierB_HardwareNeural => "Tier B (Hardware & Neural GPU)",
-            Self::TierC_IsolatedSidecar => "Tier C (Sandboxed Sidecar)",
+            Self::TierAPureRustWasm => "Tier A (Pure Rust / WASM)",
+            Self::TierBHardwareNeural => "Tier B (Hardware & Neural GPU)",
+            Self::TierCIsolatedSidecar => "Tier C (Sandboxed Sidecar)",
         }
     }
 }
@@ -84,7 +84,7 @@ impl MediaCodecSpec {
             Self {
                 domain: MediaDomain::Audio,
                 format_extensions: vec!["wav".into(), "flac".into(), "mp3".into(), "ogg".into(), "aac".into()],
-                tier: CodecTier::TierA_PureRustWasm,
+                tier: CodecTier::TierAPureRustWasm,
                 engine_name: "symphonia + Web Audio API".into(),
                 output_representation: "&mut [f32] PCM Buffers + EnCodec P64".into(),
                 max_streaming_chunk_bytes: 4 * 1024 * 1024, // 4MB
@@ -93,7 +93,7 @@ impl MediaCodecSpec {
             Self {
                 domain: MediaDomain::Video,
                 format_extensions: vec!["mp4".into(), "webm".into(), "mkv".into(), "mov".into(), "avi".into()],
-                tier: CodecTier::TierC_IsolatedSidecar,
+                tier: CodecTier::TierCIsolatedSidecar,
                 engine_name: "FFmpeg Sidecar / WebCodecs API".into(),
                 output_representation: "Flat RGBA8 Byte Slices + .10d Point Cloud".into(),
                 max_streaming_chunk_bytes: 8 * 1024 * 1024, // 8MB
@@ -102,7 +102,7 @@ impl MediaCodecSpec {
             Self {
                 domain: MediaDomain::Spatial3D,
                 format_extensions: vec!["glb".into(), "gltf".into(), "obj".into(), "stl".into(), "anatml".into()],
-                tier: CodecTier::TierA_PureRustWasm,
+                tier: CodecTier::TierAPureRustWasm,
                 engine_name: "gltf-rs + glb_ingest".into(),
                 output_representation: ".10d CCF Mesh + wgpu 30 Vertex Buffers".into(),
                 max_streaming_chunk_bytes: 8 * 1024 * 1024, // 8MB
@@ -111,7 +111,7 @@ impl MediaCodecSpec {
             Self {
                 domain: MediaDomain::MedicalDicom,
                 format_extensions: vec!["dcm".into(), "dicom".into()],
-                tier: CodecTier::TierA_PureRustWasm,
+                tier: CodecTier::TierAPureRustWasm,
                 engine_name: "dicom-rs + JPEG-LS SIMD".into(),
                 output_representation: "3D Texture Atlases for Raymarcher".into(),
                 max_streaming_chunk_bytes: 8 * 1024 * 1024, // 8MB
@@ -120,7 +120,7 @@ impl MediaCodecSpec {
             Self {
                 domain: MediaDomain::VectorDocument,
                 format_extensions: vec!["pdf".into(), "epub".into(), "svg".into(), "md".into()],
-                tier: CodecTier::TierA_PureRustWasm,
+                tier: CodecTier::TierAPureRustWasm,
                 engine_name: "pdf-extract + pulldown-cmark".into(),
                 output_representation: "<q-doc> CML Trees + .10d Vector Graphemes".into(),
                 max_streaming_chunk_bytes: 4 * 1024 * 1024, // 4MB
@@ -129,7 +129,7 @@ impl MediaCodecSpec {
             Self {
                 domain: MediaDomain::RasterImage,
                 format_extensions: vec!["avif".into(), "webp".into(), "png".into(), "jpeg".into(), "tiff".into(), "hdr".into()],
-                tier: CodecTier::TierA_PureRustWasm,
+                tier: CodecTier::TierAPureRustWasm,
                 engine_name: "image-rs + zune-jpeg".into(),
                 output_representation: "GPU Texture2D + Color Embeddings".into(),
                 max_streaming_chunk_bytes: 8 * 1024 * 1024, // 8MB

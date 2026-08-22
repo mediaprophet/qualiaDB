@@ -516,6 +516,7 @@ pub struct ToolSpec {
     pub honesty: &'static str,
 }
 
+#[allow(dead_code)]
 #[derive(Clone, Debug, PartialEq)]
 pub struct ContainerInstance {
     pub id: String,

@@ -178,7 +178,7 @@ fn build_grid_tab(document: &Document) -> Element {
     g_el.style()
         .set_css_text("display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;");
 
-    for (name, atype, license, owner, status, sensitivity) in ASSETS {
+    for (name, atype, license, owner, _status, sensitivity) in ASSETS {
         let card = document.create_element("div").unwrap();
         let c_el: HtmlElement = card.clone().dyn_into().unwrap();
         let border = match *sensitivity {

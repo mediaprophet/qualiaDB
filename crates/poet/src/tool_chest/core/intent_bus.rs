@@ -375,6 +375,7 @@ pub struct IntentReceipt {
 /// The trait uses native `async fn` (stabilised in Rust 1.75). For
 /// `wasm32-unknown-unknown` targets the future is single-threaded
 /// and non-blocking, compatible with `wasm-bindgen` async bridges.
+#[allow(async_fn_in_trait)]
 pub trait IntentBus: Send + Sync {
     /// The error type for dispatch failures (transport, serialisation).
     type Error: fmt::Debug + Send;

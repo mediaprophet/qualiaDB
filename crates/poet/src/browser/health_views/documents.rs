@@ -97,7 +97,7 @@ pub fn build_documents_view(document: &Document) -> Element {
         .append_child(&build_docs_tab(document, "library"))
         .unwrap();
 
-    for (i, (tab_id, _)) in TABS.iter().enumerate().skip(1) {
+    for (_i, (tab_id, _)) in TABS.iter().enumerate().skip(1) {
         let panel = build_docs_tab(document, tab_id);
         let p_el: HtmlElement = panel.clone().dyn_into().unwrap();
         p_el.style().set_css_text("display: none;");

@@ -82,7 +82,7 @@ pub fn build_clinical_reports_view(document: &Document) -> Element {
         .append_child(&build_reports_tab(document, "all"))
         .unwrap();
 
-    for (i, (tab_id, _)) in TABS.iter().enumerate().skip(1) {
+    for (_i, (tab_id, _)) in TABS.iter().enumerate().skip(1) {
         let panel = build_reports_tab(document, tab_id);
         let p_el: HtmlElement = panel.clone().dyn_into().unwrap();
         p_el.style().set_css_text("display: none;");

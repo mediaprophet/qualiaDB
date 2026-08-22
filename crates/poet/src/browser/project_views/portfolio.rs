@@ -252,7 +252,7 @@ fn build_tab_panel(document: &Document, tab_id: &str) -> Element {
             for (name, budget, spent, remaining) in BUDGET {
                 let tr = document.create_element("tr").unwrap();
                 let is_total = *name == "TOTAL";
-                for (i, val) in [name, budget, spent, remaining].iter().enumerate() {
+                for (_i, val) in [name, budget, spent, remaining].iter().enumerate() {
                     let td = document.create_element("td").unwrap();
                     td.set_text_content(Some(val));
                     let td_el: HtmlElement = td.clone().dyn_into().unwrap();

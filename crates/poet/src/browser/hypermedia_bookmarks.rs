@@ -191,7 +191,7 @@ impl BookmarkLibrary {
         let mark = self.bookmarks.iter().find(|b| b.id == mark_id)
             .ok_or_else(|| "Bookmark not found".to_string())?;
 
-        if let Some(script) = &mark.vibemark_script {
+        if let Some(_script) = &mark.vibemark_script {
             Ok(format!(
                 "VibeMark '{}' polled successfully. Ingested {} triples. Emitted telemetry pulse: 'weather.heavy_rain'",
                 mark.title, mark.extracted_triples.len()
@@ -365,7 +365,7 @@ mod tests {
 
     #[test]
     fn test_bookmark_library_pin_and_filters() {
-        let mut lib = BookmarkLibrary::default();
+        let lib = BookmarkLibrary::default();
         assert_eq!(lib.pinned_bookmarks().len(), 2);
 
         let hydrology_marks = lib.filter_by_tag("qualia:Hydrology");

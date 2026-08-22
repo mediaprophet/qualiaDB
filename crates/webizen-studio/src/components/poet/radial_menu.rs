@@ -24,6 +24,7 @@ impl Default for RadialState {
 }
 
 pub struct RadialSector {
+    #[allow(dead_code)]
     pub label: &'static str,
     pub icon: &'static str,
     pub color: &'static str,

@@ -66,7 +66,7 @@ pub fn build_sleep_view(document: &Document) -> Element {
         .set_css_text("flex: 1; overflow-y: auto; padding: 8px;");
 
     let max_val: f64 = 8.0;
-    for (date, duration, times, quality, score) in SLEEP {
+    for (date, duration, _times, quality, score) in SLEEP {
         let row = document.create_element("div").unwrap();
         let r_el: HtmlElement = row.clone().dyn_into().unwrap();
         r_el.style()

@@ -15,7 +15,12 @@ use dioxus::prelude::*;
 pub fn NodeBody(kind: ContainerKind) -> Element {
     rsx! {
         match kind {
-            ContainerKind::Code => rsx! { VibeConsole {} },
+            ContainerKind::Code => rsx! {
+                div { style: "display:grid;gap:8px;padding:4px;",
+                    IdeBody {}
+                    VibeConsole {}
+                }
+            },
             ContainerKind::Doc => rsx! { DocBody {} },
             ContainerKind::Sheet => rsx! { SheetBody {} },
             ContainerKind::Ontology => rsx! { OntologyBody {} },

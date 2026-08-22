@@ -58,7 +58,7 @@ pub fn build_review_view(document: &Document) -> Element {
         .append_child(&build_assignments_tab(document))
         .unwrap();
 
-    for (i, (tab_id, _)) in TABS.iter().enumerate().skip(1) {
+    for (_i, (tab_id, _)) in TABS.iter().enumerate().skip(1) {
         let panel = build_tab_panel(document, tab_id);
         content.append_child(&panel).unwrap();
     }

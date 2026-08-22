@@ -80,7 +80,7 @@ pub fn build_asset_library_view(document: &Document) -> Element {
     g_el.style()
         .set_css_text("display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;");
 
-    for (name, atype, fmt, size, lod, sens) in ASSETS {
+    for (name, atype, _fmt, size, lod, sens) in ASSETS {
         let card = document.create_element("div").unwrap();
         let cd_el: HtmlElement = card.clone().dyn_into().unwrap();
         cd_el.style().set_css_text(

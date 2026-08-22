@@ -3,8 +3,7 @@
 //! Copyright (c) 2026 Timothy Charles Holborn. All rights reserved.
 
 use crate::tool_chest::core::registry::SeedContainer;
-use wasm_bindgen::JsCast;
-use web_sys::{Document, Element, HtmlElement};
+use web_sys::{Document, Element};
 
 use super::container_inline_views::{
     build_connection_requests_view, build_conversations_view, build_gis_map_view,
