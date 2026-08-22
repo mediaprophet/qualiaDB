@@ -151,8 +151,13 @@ fn WirePath(a: CanvasNode, b: CanvasNode, kind: String, label: String) -> Elemen
     let d = format!("M {x1} {y1} C {mx} {y1}, {mx} {y2}, {x2} {y2}");
     let class = format!("connection-wire wire-{kind}");
     rsx! {
-        path { class: "{class}", d: "{d}" }
-        text { class: "wire-label-text", x: "{mx}", y: "{(y1 + y2) / 2.0 - 6.0}", "{label}" }
+        g { class: "wire-group",
+            path { class: "{class}", d: "{d}" }
+            circle { cx: "{x1}", cy: "{y1}", r: "4", class: "wire-port-out", fill: "var(--accent-cyan, #38bdf8)" }
+            circle { cx: "{x2}", cy: "{y2}", r: "4", class: "wire-port-in", fill: "var(--accent-emerald, #34d399)" }
+            circle { cx: "{mx}", cy: "{(y1 + y2) / 2.0}", r: "3", class: "wire-pulse-particle", fill: "#f8fafc" }
+            text { class: "wire-label-text", x: "{mx}", y: "{(y1 + y2) / 2.0 - 6.0}", "{label}" }
+        }
     }
 }
 
