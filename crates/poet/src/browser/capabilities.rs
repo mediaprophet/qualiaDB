@@ -19,13 +19,13 @@ pub enum HostSurface {
     PublicWeb,
 }
 
-/// Detect whether the app is running inside the Tauri desktop webview.
-///
-/// Tauri injects `window.__TAURI_INTERNALS__` (or `window.__TAURI__`)
-/// when running inside the native host.
+/// Detect whether the app has native acceleration available (via Tauri webview OR connected local daemon).
 pub fn is_native_host() -> bool {
-    let window = web_sys::window().unwrap();
-    has_tauri_internals(&window)
+    let window = match web_sys::window() {
+        Some(w) => w,
+        None => return false,
+    };
+    has_tauri_internals(&window) || super::native_daemon::is_daemon_connected()
 }
 
 /// Detect the current host surface.
@@ -37,12 +37,12 @@ pub fn current_host_surface() -> HostSurface {
     }
 }
 
-/// Browser panes are only available on the desktop host.
+/// Browser panes are only available on the desktop host or connected native daemon.
 pub fn supports_browser_pane() -> bool {
     is_native_host()
 }
 
-/// GPU surface (wgpu) is only available on the desktop host.
+/// GPU surface (wgpu) is only available on the desktop host or connected native daemon.
 pub fn supports_gpu_surface() -> bool {
     is_native_host()
 }
@@ -52,8 +52,11 @@ pub fn supports_telemetry_stream() -> bool {
     is_native_host()
 }
 
-/// Construct the daemon base URL (if native host).
+/// Construct the daemon base URL (if native host or connected daemon).
 pub fn daemon_base_url() -> Option<String> {
+    if let Some(url) = super::native_daemon::get_connected_daemon_url() {
+        return Some(url);
+    }
     if !is_native_host() {
         return None;
     }
@@ -67,8 +70,12 @@ pub fn daemon_base_url() -> Option<String> {
     Some(format!("http://127.0.0.1:{}", port))
 }
 
-/// Construct the telemetry WebSocket URL (if native host).
+/// Construct the telemetry WebSocket URL (if native host or connected daemon).
 pub fn telemetry_ws_url() -> Option<String> {
+    if let Some(url) = super::native_daemon::get_connected_daemon_url() {
+        let ws_url = url.replace("http://", "ws://").replace("https://", "wss://");
+        return Some(format!("{ws_url}/telemetry/ws"));
+    }
     if !is_native_host() {
         return None;
     }

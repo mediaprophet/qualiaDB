@@ -1,6 +1,6 @@
 [package]
 name = "qualia-vision"
-version = "0.0.34"
+version = "0.0.35"
 edition = "2021"
 authors = ["Timothy Charles Holborn <timothy.holborn@gmail.com>"]
 description = "Native visual intelligence for QualiaDB — detection/classify ABI, epistemic observations, Phase-1 CPU reference"

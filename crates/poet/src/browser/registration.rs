@@ -115,7 +115,7 @@ fn register_epistemic_toolbox(reg: &mut Registry) {
 }
 
 fn register_office_toolbox(reg: &mut Registry) {
-    let tools: Vec<Box<dyn crate::tool_chest::core::tool::Tool>> = vec![
+    let container_tools: Vec<Box<dyn crate::tool_chest::core::tool::Tool>> = vec![
         Box::new(SimpleTool::new(
             ToolMetadata {
                 id: "office:place_doc".into(),
@@ -157,31 +157,51 @@ fn register_office_toolbox(reg: &mut Registry) {
     reg.register_toolbox(Toolbox::new(
         ToolboxMetadata {
             id: "office".into(),
-            label: "Office Toolbox".into(),
+            label: "Word Processor & CML".into(),
             icon: "office".into(),
             ontology_prefix: "hm".into(),
-            description: "Documents, ontologies, slides.".into(),
+            description: "Documents, typography, ontologies, and presentation slides.".into(),
             enabled_by_default: true,
             family: "authoring".into(),
         },
-        vec![ToolChain::new(
-            ToolChainMetadata {
-                id: "office:containers".into(),
-                label: "Containers".into(),
-                icon: "containers".into(),
-                description: "Place office containers.".into(),
-            },
-            tools,
-        )],
+        vec![
+            ToolChain::new(
+                ToolChainMetadata {
+                    id: "office:typography".into(),
+                    label: "Typography & Fonts".into(),
+                    icon: "doc".into(),
+                    description: "Select font family, size, styles (Bold/Italic/Code), and text colors.".into(),
+                },
+                vec![],
+            ),
+            ToolChain::new(
+                ToolChainMetadata {
+                    id: "office:paragraph".into(),
+                    label: "Paragraph & Headings".into(),
+                    icon: "slide".into(),
+                    description: "Configure heading levels, text alignment, and block formats.".into(),
+                },
+                vec![],
+            ),
+            ToolChain::new(
+                ToolChainMetadata {
+                    id: "office:containers".into(),
+                    label: "Office Containers".into(),
+                    icon: "containers".into(),
+                    description: "Place documents, ontology lenses, and slides on canvas.".into(),
+                },
+                container_tools,
+            ),
+        ],
     ));
 }
 
 fn register_image_toolbox(reg: &mut Registry) {
-    let tools: Vec<Box<dyn crate::tool_chest::core::tool::Tool>> = vec![
+    let shape_tools: Vec<Box<dyn crate::tool_chest::core::tool::Tool>> = vec![
         Box::new(SimpleTool::new(
             ToolMetadata {
                 id: "image:place_media".into(),
-                label: "+ Media".into(),
+                label: "+ Media Viewport".into(),
                 icon: "media".into(),
                 kind: ToolKind::PlaceContainer,
                 capability_scope: Some("graph:read".into()),
@@ -219,22 +239,42 @@ fn register_image_toolbox(reg: &mut Registry) {
     reg.register_toolbox(Toolbox::new(
         ToolboxMetadata {
             id: "image".into(),
-            label: "Image Toolbox".into(),
+            label: "Graphics & Vector Drawing".into(),
             icon: "image".into(),
             ontology_prefix: "hm".into(),
-            description: "Media, markers, heatmaps.".into(),
+            description: "Brushes, color palettes, vector geometry, and media viewports.".into(),
             enabled_by_default: true,
             family: "media".into(),
         },
-        vec![ToolChain::new(
-            ToolChainMetadata {
-                id: "image:tools".into(),
-                label: "Image Tools".into(),
-                icon: "tools".into(),
-                description: "Image and media tools.".into(),
-            },
-            tools,
-        )],
+        vec![
+            ToolChain::new(
+                ToolChainMetadata {
+                    id: "image:brushes".into(),
+                    label: "Brushes & Stroke".into(),
+                    icon: "media".into(),
+                    description: "Select brush type, adjust brush stroke size and opacity.".into(),
+                },
+                vec![],
+            ),
+            ToolChain::new(
+                ToolChainMetadata {
+                    id: "image:palette".into(),
+                    label: "Color & Palette".into(),
+                    icon: "heatmap".into(),
+                    description: "Stroke & fill color pickers with preset swatches and geometry modes.".into(),
+                },
+                vec![],
+            ),
+            ToolChain::new(
+                ToolChainMetadata {
+                    id: "image:tools".into(),
+                    label: "Vector Shapes & Media".into(),
+                    icon: "tools".into(),
+                    description: "Place media viewports, markers, and heatmaps.".into(),
+                },
+                shape_tools,
+            ),
+        ],
     ));
 }
 
@@ -243,7 +283,7 @@ fn register_sheet_toolbox(reg: &mut Registry) {
         Box::new(SimpleTool::new(
             ToolMetadata {
                 id: "sheet:place_sheet".into(),
-                label: "+ Sheet".into(),
+                label: "+ Spreadsheet".into(),
                 icon: "sheet".into(),
                 kind: ToolKind::PlaceContainer,
                 capability_scope: Some("graph:read".into()),
@@ -255,12 +295,12 @@ fn register_sheet_toolbox(reg: &mut Registry) {
         Box::new(SimpleTool::new(
             ToolMetadata {
                 id: "sheet:import".into(),
-                label: "Import".into(),
+                label: "Import Data".into(),
                 icon: "import".into(),
                 kind: ToolKind::RunAction,
                 capability_scope: Some("graph:write".into()),
                 ontology_prefix: "hm".into(),
-                description: "Import data into the active sheet.".into(),
+                description: "Import CSV/HCF data into active sheet.".into(),
             },
             ActionType::Mutate,
         )),
@@ -269,22 +309,33 @@ fn register_sheet_toolbox(reg: &mut Registry) {
     reg.register_toolbox(Toolbox::new(
         ToolboxMetadata {
             id: "sheet".into(),
-            label: "Sheet Toolbox".into(),
+            label: "Spreadsheet & Tensors".into(),
             icon: "sheet".into(),
             ontology_prefix: "hm".into(),
-            description: "Spreadsheets, import, resonance.".into(),
+            description: "Spreadsheets, tensor arrays, formulas, and data import.".into(),
             enabled_by_default: true,
             family: "authoring".into(),
         },
-        vec![ToolChain::new(
-            ToolChainMetadata {
-                id: "sheet:tools".into(),
-                label: "Sheet Tools".into(),
-                icon: "tools".into(),
-                description: "Spreadsheet tools.".into(),
-            },
-            tools,
-        )],
+        vec![
+            ToolChain::new(
+                ToolChainMetadata {
+                    id: "sheet:grid".into(),
+                    label: "Tensor Dimensions & Formats".into(),
+                    icon: "sheet".into(),
+                    description: "Configure 1D/2D/3D/10D tensor dimensions and cell formatting.".into(),
+                },
+                vec![],
+            ),
+            ToolChain::new(
+                ToolChainMetadata {
+                    id: "sheet:tools".into(),
+                    label: "Spreadsheet Tools".into(),
+                    icon: "tools".into(),
+                    description: "Place spreadsheets and import external tabular data.".into(),
+                },
+                tools,
+            ),
+        ],
     ));
 }
 
@@ -305,36 +356,36 @@ fn register_spatial_toolbox(reg: &mut Registry) {
         Box::new(SimpleTool::new(
             ToolMetadata {
                 id: "spatial:place_3d".into(),
-                label: "+ 3D".into(),
+                label: "+ 3D Viewport".into(),
                 icon: "3d".into(),
                 kind: ToolKind::PlaceContainer,
                 capability_scope: Some("graph:read".into()),
                 ontology_prefix: "hm".into(),
-                description: "Place a 3D viewport container.".into(),
+                description: "Place a 3D WebGPU viewport container.".into(),
             },
             ActionType::Query,
         )),
         Box::new(SimpleTool::new(
             ToolMetadata {
                 id: "spatial:pin".into(),
-                label: "Pin".into(),
+                label: "Drop Pin".into(),
                 icon: "pin".into(),
                 kind: ToolKind::RunAction,
                 capability_scope: Some("graph:annotate".into()),
                 ontology_prefix: "geo".into(),
-                description: "Drop a pin on the active map.".into(),
+                description: "Drop a geo-pin on the active map.".into(),
             },
             ActionType::Annotate,
         )),
         Box::new(SimpleTool::new(
             ToolMetadata {
                 id: "spatial:track".into(),
-                label: "Track".into(),
+                label: "Track Agent".into(),
                 icon: "track".into(),
                 kind: ToolKind::RunAction,
                 capability_scope: Some("graph:read".into()),
                 ontology_prefix: "geo".into(),
-                description: "Track an agent on the active map.".into(),
+                description: "Track an agent trajectory on the map.".into(),
             },
             ActionType::Query,
         )),
@@ -343,22 +394,33 @@ fn register_spatial_toolbox(reg: &mut Registry) {
     reg.register_toolbox(Toolbox::new(
         ToolboxMetadata {
             id: "spatial".into(),
-            label: "Spatial Toolbox".into(),
+            label: "3D Spatial & Geospatial".into(),
             icon: "spatial".into(),
             ontology_prefix: "geo".into(),
-            description: "Maps, 3D, portals, pins, tracks.".into(),
+            description: "3D scenes, GIS maps, WGSL shaders, and spatial tracking.".into(),
             enabled_by_default: true,
             family: "media".into(),
         },
-        vec![ToolChain::new(
-            ToolChainMetadata {
-                id: "spatial:tools".into(),
-                label: "Spatial Tools".into(),
-                icon: "tools".into(),
-                description: "Spatial and GIS tools.".into(),
-            },
-            tools,
-        )],
+        vec![
+            ToolChain::new(
+                ToolChainMetadata {
+                    id: "spatial:viewport".into(),
+                    label: "3D Cameras & Shaders".into(),
+                    icon: "3d".into(),
+                    description: "Select perspective/orthographic projections and WGSL pipelines.".into(),
+                },
+                vec![],
+            ),
+            ToolChain::new(
+                ToolChainMetadata {
+                    id: "spatial:tools".into(),
+                    label: "GIS Maps & Tracking".into(),
+                    icon: "tools".into(),
+                    description: "Place 3D/GIS viewports and drop spatial pins.".into(),
+                },
+                tools,
+            ),
+        ],
     ));
 }
 
@@ -367,7 +429,7 @@ fn register_communication_toolbox(reg: &mut Registry) {
         Box::new(SimpleTool::new(
             ToolMetadata {
                 id: "comm:place_social".into(),
-                label: "+ Social".into(),
+                label: "+ Social Graph".into(),
                 icon: "social".into(),
                 kind: ToolKind::PlaceContainer,
                 capability_scope: Some("graph:read".into()),
@@ -379,7 +441,7 @@ fn register_communication_toolbox(reg: &mut Registry) {
         Box::new(SimpleTool::new(
             ToolMetadata {
                 id: "comm:place_webrtc".into(),
-                label: "+ WebRTC".into(),
+                label: "+ WebRTC Audio/Video".into(),
                 icon: "webrtc".into(),
                 kind: ToolKind::PlaceContainer,
                 capability_scope: None,
@@ -391,7 +453,7 @@ fn register_communication_toolbox(reg: &mut Registry) {
         Box::new(SimpleTool::new(
             ToolMetadata {
                 id: "comm:place_webview".into(),
-                label: "+ Webview".into(),
+                label: "+ Web Presence".into(),
                 icon: "webview".into(),
                 kind: ToolKind::PlaceContainer,
                 capability_scope: None,
@@ -405,22 +467,33 @@ fn register_communication_toolbox(reg: &mut Registry) {
     reg.register_toolbox(Toolbox::new(
         ToolboxMetadata {
             id: "communication".into(),
-            label: "Communication Toolbox".into(),
+            label: "Communication & Presence".into(),
             icon: "comm".into(),
             ontology_prefix: "comm".into(),
-            description: "Social, WebRTC, webview.".into(),
+            description: "Pulse streams, social graphs, WebRTC, and web presence.".into(),
             enabled_by_default: true,
             family: "communication".into(),
         },
-        vec![ToolChain::new(
-            ToolChainMetadata {
-                id: "comm:containers".into(),
-                label: "Containers".into(),
-                icon: "containers".into(),
-                description: "Communication containers.".into(),
-            },
-            tools,
-        )],
+        vec![
+            ToolChain::new(
+                ToolChainMetadata {
+                    id: "comm:pulse".into(),
+                    label: "Pulse Streams & Messaging".into(),
+                    icon: "comm".into(),
+                    description: "Select protocol and encryption tiers.".into(),
+                },
+                vec![],
+            ),
+            ToolChain::new(
+                ToolChainMetadata {
+                    id: "comm:containers".into(),
+                    label: "Presence Containers".into(),
+                    icon: "containers".into(),
+                    description: "Communication and streaming containers.".into(),
+                },
+                tools,
+            ),
+        ],
     ));
 }
 
@@ -441,7 +514,7 @@ fn register_rights_toolbox(reg: &mut Registry) {
         Box::new(SimpleTool::new(
             ToolMetadata {
                 id: "rights:fiduciary_sign".into(),
-                label: "Fiduciary Sign".into(),
+                label: "✍️ Sign Contract".into(),
                 icon: "sign".into(),
                 kind: ToolKind::RunAction,
                 capability_scope: Some("capability:invoke".into()),
@@ -467,22 +540,33 @@ fn register_rights_toolbox(reg: &mut Registry) {
     reg.register_toolbox(Toolbox::new(
         ToolboxMetadata {
             id: "rights".into(),
-            label: "Rights Toolbox".into(),
+            label: "Governance & Rights".into(),
             icon: "rights".into(),
             ontology_prefix: "rights".into(),
-            description: "Authors group, fiduciary, DID sign.".into(),
+            description: "Fiduciary contracts, Hohfeldian rights, and DID signing.".into(),
             enabled_by_default: true,
             family: "governance".into(),
         },
-        vec![ToolChain::new(
-            ToolChainMetadata {
-                id: "rights:tools".into(),
-                label: "Rights Tools".into(),
-                icon: "tools".into(),
-                description: "Fiduciary and rights tools.".into(),
-            },
-            tools,
-        )],
+        vec![
+            ToolChain::new(
+                ToolChainMetadata {
+                    id: "rights:fiduciary".into(),
+                    label: "Fiduciary & Routing Lanes".into(),
+                    icon: "rights".into(),
+                    description: "Select privacy routing lane (00/01/10/11) and Hohfeldian modalities.".into(),
+                },
+                vec![],
+            ),
+            ToolChain::new(
+                ToolChainMetadata {
+                    id: "rights:tools".into(),
+                    label: "Identity & Signatures".into(),
+                    icon: "tools".into(),
+                    description: "Fiduciary and rights signing tools.".into(),
+                },
+                tools,
+            ),
+        ],
     ));
 }
 
@@ -491,7 +575,7 @@ fn register_health_toolbox(reg: &mut Registry) {
         Box::new(SimpleTool::new(
             ToolMetadata {
                 id: "health:place_health".into(),
-                label: "+ Health".into(),
+                label: "+ Health Vault".into(),
                 icon: "health".into(),
                 kind: ToolKind::PlaceContainer,
                 capability_scope: Some("graph:read".into()),
@@ -503,19 +587,19 @@ fn register_health_toolbox(reg: &mut Registry) {
         Box::new(SimpleTool::new(
             ToolMetadata {
                 id: "health:pathology".into(),
-                label: "Pathology".into(),
+                label: "🔬 Pathology Assay".into(),
                 icon: "pathology".into(),
                 kind: ToolKind::RunAction,
                 capability_scope: Some("capability:invoke".into()),
                 ontology_prefix: "health".into(),
-                description: "Run pathology analysis.".into(),
+                description: "Run pathology and diagnostic assay.".into(),
             },
             ActionType::Invoke,
         )),
         Box::new(SimpleTool::new(
             ToolMetadata {
                 id: "health:anatomy_10d".into(),
-                label: "10D Anatomy".into(),
+                label: "+ 10D Anatomy".into(),
                 icon: "anatomy".into(),
                 kind: ToolKind::PlaceContainer,
                 capability_scope: None,
@@ -529,22 +613,33 @@ fn register_health_toolbox(reg: &mut Registry) {
     reg.register_toolbox(Toolbox::new(
         ToolboxMetadata {
             id: "health".into(),
-            label: "Health Toolbox".into(),
+            label: "Scientific & Clinical Lab".into(),
             icon: "health".into(),
             ontology_prefix: "health".into(),
-            description: "Health, pathology, 10D anatomy.".into(),
+            description: "Cardiovascular risk engines, SMILES chemistry, and 10D anatomy.".into(),
             enabled_by_default: false,
             family: "life".into(),
         },
-        vec![ToolChain::new(
-            ToolChainMetadata {
-                id: "health:tools".into(),
-                label: "Health Tools".into(),
-                icon: "tools".into(),
-                description: "Health and anatomy tools.".into(),
-            },
-            tools,
-        )],
+        vec![
+            ToolChain::new(
+                ToolChainMetadata {
+                    id: "health:clinical".into(),
+                    label: "Clinical Engines & Biomarkers".into(),
+                    icon: "health".into(),
+                    description: "Select CVD risk models and adjust blood pressure biomarkers.".into(),
+                },
+                vec![],
+            ),
+            ToolChain::new(
+                ToolChainMetadata {
+                    id: "health:tools".into(),
+                    label: "Lab Viewports & Assays".into(),
+                    icon: "tools".into(),
+                    description: "Place health vaults and run pathology assays.".into(),
+                },
+                tools,
+            ),
+        ],
     ));
 }
 
@@ -553,12 +648,12 @@ fn register_code_toolbox(reg: &mut Registry) {
         Box::new(SimpleTool::new(
             ToolMetadata {
                 id: "code:place_vibe".into(),
-                label: "+ Vibe Cell".into(),
+                label: "+ VibeScript Cell".into(),
                 icon: "vibe".into(),
                 kind: ToolKind::PlaceContainer,
                 capability_scope: Some("vibe:diagnose".into()),
                 ontology_prefix: "vibe".into(),
-                description: "Place a VibeScript cell container.".into(),
+                description: "Place a reactive VibeScript cell container.".into(),
             },
             ActionType::Invoke,
         )),
@@ -579,22 +674,33 @@ fn register_code_toolbox(reg: &mut Registry) {
     reg.register_toolbox(Toolbox::new(
         ToolboxMetadata {
             id: "code".into(),
-            label: "Code Toolbox".into(),
+            label: "Code IDE & Vibe REPL".into(),
             icon: "code".into(),
             ontology_prefix: "vibe".into(),
-            description: "Vibe cells, quin.statement, requires[].".into(),
+            description: "VibeScript 0.1, WebGPU WGSL, SPARQL, and reactive AST cells.".into(),
             enabled_by_default: true,
             family: "authoring".into(),
         },
-        vec![ToolChain::new(
-            ToolChainMetadata {
-                id: "code:tools".into(),
-                label: "Code Tools".into(),
-                icon: "tools".into(),
-                description: "VibeScript and code tools.".into(),
-            },
-            tools,
-        )],
+        vec![
+            ToolChain::new(
+                ToolChainMetadata {
+                    id: "code:repl".into(),
+                    label: "Runtime & Language Dialects".into(),
+                    icon: "code".into(),
+                    description: "Select language dialect (Vibe/WGSL/Turtle) and configure gas budget.".into(),
+                },
+                vec![],
+            ),
+            ToolChain::new(
+                ToolChainMetadata {
+                    id: "code:tools".into(),
+                    label: "IDE Cells & Statements".into(),
+                    icon: "tools".into(),
+                    description: "Place VibeScript cells and construct quin statements.".into(),
+                },
+                tools,
+            ),
+        ],
     ));
 }
 
@@ -627,7 +733,7 @@ fn register_ai_toolbox(reg: &mut Registry) {
         Box::new(SimpleTool::new(
             ToolMetadata {
                 id: "ai:sentinel".into(),
-                label: "Sentinel".into(),
+                label: "Sentinel Guard".into(),
                 icon: "sentinel".into(),
                 kind: ToolKind::RunAction,
                 capability_scope: Some("capability:invoke".into()),
@@ -639,7 +745,7 @@ fn register_ai_toolbox(reg: &mut Registry) {
         Box::new(SimpleTool::new(
             ToolMetadata {
                 id: "ai:triad".into(),
-                label: "Triad".into(),
+                label: "+ Triad Viewport".into(),
                 icon: "triad".into(),
                 kind: ToolKind::PlaceContainer,
                 capability_scope: None,
@@ -653,21 +759,32 @@ fn register_ai_toolbox(reg: &mut Registry) {
     reg.register_toolbox(Toolbox::new(
         ToolboxMetadata {
             id: "ai".into(),
-            label: "AI Toolbox".into(),
+            label: "AI Co-Pilot & Sentinel".into(),
             icon: "ai".into(),
             ontology_prefix: "ai".into(),
-            description: "Co-author, extractor, sentinel, triad.".into(),
+            description: "Resident GGUF LLMs, Epistemic Halo guard, and Triad execution.".into(),
             enabled_by_default: true,
             family: "intelligence".into(),
         },
-        vec![ToolChain::new(
-            ToolChainMetadata {
-                id: "ai:tools".into(),
-                label: "AI Tools".into(),
-                icon: "tools".into(),
-                description: "AI and ML tools.".into(),
-            },
-            tools,
-        )],
+        vec![
+            ToolChain::new(
+                ToolChainMetadata {
+                    id: "ai:copilot".into(),
+                    label: "Sentinel Guard & Model".into(),
+                    icon: "ai".into(),
+                    description: "Select resident GGUF model, halo confidence threshold, and temperature.".into(),
+                },
+                vec![],
+            ),
+            ToolChain::new(
+                ToolChainMetadata {
+                    id: "ai:tools".into(),
+                    label: "Co-Pilot Capabilities".into(),
+                    icon: "tools".into(),
+                    description: "Invoke co-authoring, text extraction, and triad viewports.".into(),
+                },
+                tools,
+            ),
+        ],
     ));
 }

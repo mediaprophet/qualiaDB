@@ -42,10 +42,24 @@ pub fn PoetWorkbench() -> Element {
             },
             onkeydown: move |e| {
                 let key = e.data().key().to_string();
-                if key == "o" && e.data().modifiers().alt() {
-                    let mut s = wb();
-                    s.expose = !s.expose;
-                    wb.set(s);
+                let alt = e.data().modifiers().alt();
+                if alt {
+                    if key.eq_ignore_ascii_case("o") {
+                        let mut s = wb();
+                        s.expose = !s.expose;
+                        wb.set(s);
+                    } else if key.eq_ignore_ascii_case("a") {
+                        let mut s = wb();
+                        s.auto_arrange();
+                        wb.set(s);
+                    } else if let Ok(digit) = key.parse::<usize>() {
+                        let idx = if digit == 0 { 9 } else { digit - 1 };
+                        if let Some(id) = super::kinds::ManifoldId::ALL.get(idx) {
+                            let mut s = wb();
+                            s.switch(*id);
+                            wb.set(s);
+                        }
+                    }
                 }
             },
             TopMenubar { wb }

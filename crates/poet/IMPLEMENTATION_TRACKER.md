@@ -535,3 +535,16 @@ Core surfaces required:
 - QApp capability requirements display
 - Featured workspace templates (6)
 - QApp configuration editor
+
+### Workstream F — VibeScript-Driven Dynamic UI & Collapsible Dock Engine
+
+**Source:** `vibescript-core.md`, `poet-mindware-workbench-ui.md`
+**Status:** [complete] — Vibe UI Engine, Collapsible Panels, and Live Hot-Reloading
+
+Implemented items:
+- **Collapsible Docks & Trays**: `create_collapsible_dock_panel` and `render_subtray` with interactive chevrons, badges, and flex management in `docks.rs` and `diagnostics.rs`.
+- **Aura Tray Sub-Trays**: Divided into SHACL Shapes, Ontologies & Schemas, and Super-Quin Sentinel sub-trays with violation expanders.
+- **Vibe UI Dynamic AST & Reconciler**: `vibe_ui.rs` mapping evaluated VibeScript records (`type: "dock_panel"`, `"subtray"`, `"shacl_shape"`, `"metric"`, `"button"`) into DOM elements.
+- **Live Re-evaluation & Hot-Reloading**: `<q-vibe-ui>` component hosting live VibeScript source editor, evaluation through `vibe::Engine`, and DOM reconciliation without WASM recompilation.
+- **Fixtures & Tests**: `ui_dock_trays.vibe` fixture in `crates/vibe/fixtures/`, 168 passing tests in `poet`, 238 passing tests in `vibe`. Browser verification validated live reload.
+

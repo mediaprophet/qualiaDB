@@ -16,11 +16,15 @@ pub struct ManifoldSeed {
 pub fn load_manifold(id: ManifoldId) -> ManifoldSeed {
     match id {
         ManifoldId::Research => research(),
-        ManifoldId::Media => media(),
         ManifoldId::Social => social(),
-        ManifoldId::Mail => mail(),
-        ManifoldId::Chora => chora(),
+        ManifoldId::Knowledge => knowledge(),
+        ManifoldId::Projects => projects(),
+        ManifoldId::Rights => rights(),
+        ManifoldId::Sanctuary => sanctuary(),
+        ManifoldId::Media => media(),
+        ManifoldId::Communications => communications(),
         ManifoldId::Settings => settings(),
+        ManifoldId::Vibe => vibe(),
     }
 }
 
@@ -243,17 +247,193 @@ fn social() -> ManifoldSeed {
     }
 }
 
-fn mail() -> ManifoldSeed {
+fn knowledge() -> ManifoldSeed {
     ManifoldSeed {
-        id: ManifoldId::Mail,
-        title: ManifoldId::Mail.title(),
-        graph_iri: ManifoldId::Mail.graph_iri(),
+        id: ManifoldId::Knowledge,
+        title: ManifoldId::Knowledge.title(),
+        graph_iri: ManifoldId::Knowledge.graph_iri(),
+        strata: vec![Strata::Environmental, Strata::Social, Strata::Technical],
+        nodes: vec![
+            node(
+                "container-ont-01",
+                ContainerKind::Ontology,
+                "SHACL / RDF-Star Knowledge Graph & Ontology Browser",
+                80.0,
+                70.0,
+                480.0,
+                340.0,
+                0.0,
+                1.0,
+                Strata::Technical,
+                Epistemic::Objective,
+            ),
+            node(
+                "container-solid-01",
+                ContainerKind::SolidHub,
+                "W3C Solid Pod LDP Storage & Type Indexes",
+                580.0,
+                70.0,
+                440.0,
+                340.0,
+                0.0,
+                1.0,
+                Strata::Technical,
+                Epistemic::Objective,
+            ),
+        ],
+        wires: vec![wire(
+            "wire-ont-1",
+            "container-ont-01",
+            "container-solid-01",
+            "data-pipe",
+            "qualia:exportsSolidLdp",
+        )],
+    }
+}
+
+fn projects() -> ManifoldSeed {
+    ManifoldSeed {
+        id: ManifoldId::Projects,
+        title: ManifoldId::Projects.title(),
+        graph_iri: ManifoldId::Projects.graph_iri(),
+        strata: vec![Strata::Social, Strata::Financial, Strata::Technical],
+        nodes: vec![
+            node(
+                "container-kanban-01",
+                ContainerKind::ErpKanban,
+                "Poet Agile Sprint Board & Task Tracker",
+                80.0,
+                70.0,
+                460.0,
+                340.0,
+                0.0,
+                1.0,
+                Strata::Social,
+                Epistemic::Intersubjective,
+            ),
+            node(
+                "container-git-02",
+                ContainerKind::GitForge,
+                "Git Pull Requests & Change Pipeline",
+                560.0,
+                70.0,
+                440.0,
+                340.0,
+                0.0,
+                1.0,
+                Strata::Technical,
+                Epistemic::Objective,
+            ),
+        ],
+        wires: vec![wire(
+            "wire-prj-1",
+            "container-kanban-01",
+            "container-git-02",
+            "data-pipe",
+            "qualia:tracksDelivery",
+        )],
+    }
+}
+
+fn rights() -> ManifoldSeed {
+    ManifoldSeed {
+        id: ManifoldId::Rights,
+        title: ManifoldId::Rights.title(),
+        graph_iri: ManifoldId::Rights.graph_iri(),
+        strata: vec![Strata::Legal, Strata::Social, Strata::Technical],
+        nodes: vec![
+            node(
+                "container-rights-01",
+                ContainerKind::Doc,
+                "Fiduciary Custody L3 & Inalienable WebID Agreement",
+                80.0,
+                70.0,
+                480.0,
+                340.0,
+                0.0,
+                1.0,
+                Strata::Legal,
+                Epistemic::Normative,
+            ),
+            node(
+                "container-econ-01",
+                ContainerKind::Economics,
+                "Cooperative Micro-Commons & Resource Allocation",
+                580.0,
+                70.0,
+                440.0,
+                340.0,
+                0.0,
+                1.0,
+                Strata::Financial,
+                Epistemic::Intersubjective,
+            ),
+        ],
+        wires: vec![wire(
+            "wire-rg-1",
+            "container-rights-01",
+            "container-econ-01",
+            "social-link",
+            "qualia:allocatesRightsBudget",
+        )],
+    }
+}
+
+fn sanctuary() -> ManifoldSeed {
+    ManifoldSeed {
+        id: ManifoldId::Sanctuary,
+        title: ManifoldId::Sanctuary.title(),
+        graph_iri: ManifoldId::Sanctuary.graph_iri(),
+        strata: vec![Strata::Environmental, Strata::Legal, Strata::Technical],
+        nodes: vec![
+            node(
+                "container-sanctuary-doc",
+                ContainerKind::Doc,
+                "Sanctuary Intimacy Vault (Zero-Telemetry Airgap)",
+                80.0,
+                70.0,
+                480.0,
+                340.0,
+                0.0,
+                1.0,
+                Strata::Legal,
+                Epistemic::Subjective,
+            ),
+            node(
+                "container-sanctuary-health",
+                ContainerKind::Health,
+                "Private Biometric & Holistic Health Archive",
+                580.0,
+                70.0,
+                440.0,
+                340.0,
+                0.0,
+                1.0,
+                Strata::Social,
+                Epistemic::Subjective,
+            ),
+        ],
+        wires: vec![wire(
+            "wire-sanc-1",
+            "container-sanctuary-doc",
+            "container-sanctuary-health",
+            "data-pipe",
+            "qualia:vaultEncrypted",
+        )],
+    }
+}
+
+fn communications() -> ManifoldSeed {
+    ManifoldSeed {
+        id: ManifoldId::Communications,
+        title: ManifoldId::Communications.title(),
+        graph_iri: ManifoldId::Communications.graph_iri(),
         strata: vec![Strata::Social, Strata::Legal, Strata::Technical],
         nodes: vec![
             node(
                 "container-mail-01",
                 ContainerKind::Mail,
-                "Inalienable Domain Purpose Inboxes (inquiry@, research@)",
+                "Inalienable Domain Inboxes (inquiry@, research@)",
                 80.0,
                 70.0,
                 480.0,
@@ -287,34 +467,34 @@ fn mail() -> ManifoldSeed {
     }
 }
 
-fn chora() -> ManifoldSeed {
+fn vibe() -> ManifoldSeed {
     ManifoldSeed {
-        id: ManifoldId::Chora,
-        title: ManifoldId::Chora.title(),
-        graph_iri: ManifoldId::Chora.graph_iri(),
-        strata: vec![Strata::Environmental, Strata::Social, Strata::Technical],
+        id: ManifoldId::Vibe,
+        title: ManifoldId::Vibe.title(),
+        graph_iri: ManifoldId::Vibe.graph_iri(),
+        strata: vec![Strata::Technical, Strata::Environmental],
         nodes: vec![
             node(
-                "container-chora-01",
-                ContainerKind::Chora,
-                "Chora 4D Spatio-Temporal Commons & Dialectical Reader",
+                "container-vibe-ide",
+                ContainerKind::Code,
+                "VibeScript Live Compiler & Reactive Visual Cell",
                 80.0,
                 70.0,
                 520.0,
-                340.0,
+                360.0,
                 0.0,
-                1.2,
-                Strata::Environmental,
-                Epistemic::Intersubjective,
+                1.0,
+                Strata::Technical,
+                Epistemic::Objective,
             ),
             node(
-                "container-webview-01",
-                ContainerKind::Webview,
-                "Dialectical Webview Browser & RDFa Harvester",
+                "container-vibe-shaders",
+                ContainerKind::Shaders,
+                "WGSL Forge & GPU Shader Pipelines",
                 620.0,
                 70.0,
-                480.0,
-                340.0,
+                440.0,
+                360.0,
                 0.0,
                 1.0,
                 Strata::Technical,
@@ -322,11 +502,11 @@ fn chora() -> ManifoldSeed {
             ),
         ],
         wires: vec![wire(
-            "wire-chora-1",
-            "container-webview-01",
-            "container-chora-01",
-            "epistemic-link",
-            "qualia:harvestsWebClaims",
+            "wire-vibe-1",
+            "container-vibe-ide",
+            "container-vibe-shaders",
+            "data-pipe",
+            "vibe:compilesShaderKernel",
         )],
     }
 }

@@ -5,6 +5,7 @@
 //! SQUAD quaternion spline paths, and parametric curve evaluators.
 
 pub mod curves;
+pub mod families;
 pub mod pga;
 pub mod presets;
 pub mod spring;

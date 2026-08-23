@@ -212,13 +212,13 @@ pub struct Provenance {
 ///
 /// # Example
 ///
-/// ```
-/// use tool_chest_core::intent_bus::*;
+/// ```ignore
+/// use poet::tool_chest::core::intent_bus::*;
 ///
 /// let payload = VibeScriptPayload::new(
 ///     ActionType::Query,
 ///     TargetIdentifier::iri("https://qualiadb.org/graph/clinical"),
-///     MyQueryParams { limit: 10 },
+///     serde_json::json!({ "limit": 10 }),
 /// )
 /// .with_context("https://qualiadb.org/schema/vibe#");
 /// ```

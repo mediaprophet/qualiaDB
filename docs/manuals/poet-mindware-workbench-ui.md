@@ -82,3 +82,5 @@ Since no Node.js is used, the mock-up can be previewed instantly via any lightwe
 1. **Phase 1 (Visual & Interaction Mock-up):** Dial in the UX for context markup, entity tagging, split-pane navigation, and hypermedia asset embedding using HTML/CSS/JS.
 2. **Phase 2 (Protocol & API Alignment):** Connect the UI to live QualiaDB endpoints to validate data contracts (RDF 1.2, CBOR-LD, Solid LDP).
 3. **Phase 3 (Progressive Rust/WASM Core):** Move intensive data processing, symbolic NLP parsers, and the Poet Engine (VibeScript runtime) into Rust crates compiled via `wasm-bindgen`, keeping the UI layer decoupled and responsive.
+4. **Phase 4 (VibeScript-Driven Dynamic UI & Live Reconciler):** The compiled WASM host embeds the VibeScript 0.1 AST/Bytecode interpreter, allowing UI furniture (Aura Tray, collapsible subtrays, diagnostics, metrics, action buttons) to be declared in `.vibe` scripts. Editing or hot-reloading scripts live in the browser `<q-vibe-ui>` reconciles the DOM instantly without recompiling the WASM binary.
+

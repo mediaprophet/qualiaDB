@@ -400,28 +400,7 @@ pub mod q42_lex {
         }
     }
 }
-#[cfg(not(target_arch = "wasm32"))]
 pub mod clinical_engine;
-#[cfg(target_arch = "wasm32")]
-pub mod clinical_engine {
-    pub struct GeneExpressionResult {
-        pub fold_change: f64,
-        pub log2_fold_change: f64,
-        pub is_significant: bool,
-    }
-    pub fn evaluate_gene_expression(
-        _gene_id: u64,
-        _baseline: f64,
-        _treatment: f64,
-        _fc_threshold: f64,
-    ) -> GeneExpressionResult {
-        GeneExpressionResult {
-            fold_change: 0.0,
-            log2_fold_change: 0.0,
-            is_significant: false,
-        }
-    }
-}
 /// Hypermedia semantic library — asset ⊕ analytics ⊕ related-assets bound as a semantic graph (not a
 /// directory). See `docs/plans/hypermedia-semantic-library.md`.
 #[cfg(not(all(

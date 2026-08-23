@@ -16,7 +16,7 @@ pub mod catalog;
 mod budget;
 pub mod bytecode;
 mod degrade;
-mod capability_schema;
+pub mod capability_schema;
 mod cbor_ast;
 mod check;
 mod diagnose;

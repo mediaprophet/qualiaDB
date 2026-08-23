@@ -69,7 +69,10 @@ impl Motor {
         .normalize()
     }
 
-    /// Extract the rotation quaternion [w, x, y, z] and translation vector [x, y, z].
+    /// Construct a pure translation motor.
+    pub fn from_translation(tx: f64, ty: f64, tz: f64) -> Self {
+        Self::from_rotation_translation([1.0, 0.0, 0.0, 0.0], [tx, ty, tz])
+    }
     pub fn to_rotation_translation(&self) -> ([f64; 4], [f64; 3]) {
         let rot = [self.r_w, self.r_x, self.r_y, self.r_z];
         // Translation T = 2 * D * R^(-1)

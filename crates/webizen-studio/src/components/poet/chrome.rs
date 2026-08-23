@@ -25,12 +25,21 @@ pub fn TopMenubar(wb: Signal<Workbench>) -> Element {
                 }
                 Menu { name: "canvases", label: "Manifolds", open, wb,
                     CanvasItem { wb, id: ManifoldId::Research, hint: "Alt+1" }
-                    CanvasItem { wb, id: ManifoldId::Media, hint: "Alt+2" }
-                    CanvasItem { wb, id: ManifoldId::Social, hint: "Alt+3" }
-                    CanvasItem { wb, id: ManifoldId::Mail, hint: "Alt+4" }
-                    CanvasItem { wb, id: ManifoldId::Chora, hint: "Alt+5" }
-                    CanvasItem { wb, id: ManifoldId::Settings, hint: "Alt+6" }
+                    CanvasItem { wb, id: ManifoldId::Social, hint: "Alt+2" }
+                    CanvasItem { wb, id: ManifoldId::Knowledge, hint: "Alt+3" }
+                    CanvasItem { wb, id: ManifoldId::Projects, hint: "Alt+4" }
+                    CanvasItem { wb, id: ManifoldId::Rights, hint: "Alt+5" }
+                    CanvasItem { wb, id: ManifoldId::Sanctuary, hint: "Alt+6" }
+                    CanvasItem { wb, id: ManifoldId::Media, hint: "Alt+7" }
+                    CanvasItem { wb, id: ManifoldId::Communications, hint: "Alt+8" }
+                    CanvasItem { wb, id: ManifoldId::Settings, hint: "Alt+9" }
+                    CanvasItem { wb, id: ManifoldId::Vibe, hint: "Alt+0" }
                     Divider {}
+                    div { class: "dropdown-item",
+                        onclick: move |_| { let mut w = wb(); w.auto_arrange(); w.menu = None; wb.set(w); },
+                        span { "✨ Auto-Arrange Desktops" }
+                        span { class: "shortcut-hint", "Alt+A" }
+                    }
                     div { class: "dropdown-item",
                         onclick: move |_| { let mut w = wb(); w.expose = !w.expose; w.menu = None; wb.set(w); },
                         span { "🗂️ Exposé Overview (All Desktops)" }
@@ -150,6 +159,17 @@ pub fn ControlBar(wb: Signal<Workbench>) -> Element {
                     }
                 }
                 button { class: "pager-add-btn", title: "Create New Manifold Workspace", "+" }
+                button {
+                    class: "pager-tidy-btn",
+                    style: "background:rgba(56,189,248,0.12);border:1px solid rgba(56,189,248,0.3);color:var(--accent-cyan);font-size:11px;font-weight:600;padding:2px 8px;border-radius:4px;cursor:pointer;margin-left:4px;",
+                    title: "Auto-Arrange Non-Overlapping Layout (Alt+A)",
+                    onclick: move |_| {
+                        let mut s = wb();
+                        s.auto_arrange();
+                        wb.set(s);
+                    },
+                    "✨ Tidy"
+                }
             }
             div { class: "canvas-title-box",
                 input { class: "canvas-title-input", value: "{w.title}", readonly: true }

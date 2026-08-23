@@ -45,6 +45,7 @@ pub mod logic_workbench;
 pub mod manifest;
 pub mod mail_composer;
 pub mod media_codecs;
+pub mod native_daemon;
 pub mod ontology_views;
 pub mod project_views;
 pub mod projections;
@@ -57,8 +58,10 @@ pub mod solid_interop;
 pub mod studio_views;
 pub mod submanifold_nav;
 pub mod theme;
+pub mod tool_widgets;
 pub mod topbar;
 pub mod vibe_cell;
+pub mod vibe_ui;
 pub mod vision_10d_scrubber;
 pub mod wire_inspector;
 pub mod workflow_panels;
@@ -161,6 +164,9 @@ fn try_start(document: &Document) -> Result<(), String> {
         loading.remove();
     }
 
+    // Probe local Webizen daemon
+    native_daemon::spawn_daemon_probe();
+
     Ok(())
 }
 
@@ -231,6 +237,10 @@ fn build_app(document: &Document) -> HtmlElement {
     // Wire up manifold switching
     wire_manifold_tabs(document, &seeds);
 
+    // Wire up top control bar pods (Strata, Epistemic Lens, Dim/Time) & title rename
+    topbar::wire_pods(document);
+    topbar::wire_title_rename(document, &seeds);
+
     // Wire up canvas interactions
     interactions::wire_container_selection(document);
     interactions::wire_container_dragging(document);
@@ -281,6 +291,10 @@ fn build_app(document: &Document) -> HtmlElement {
             }
         }
     }
+
+    // Open default tool-chest drawer on startup (Word Processor & CML)
+    docks::show_flyout(document, "office");
+    interactions::wire_flyout_tools(document);
 
     app.dyn_into::<HtmlElement>().unwrap()
 }
@@ -344,7 +358,10 @@ fn wire_manifold_tabs(document: &Document, seeds: &[ManifoldSeed]) {
     for i in 0..tabs.length() {
         let tab = tabs.get(i).unwrap();
         let tab_el: Element = tab.dyn_into().unwrap();
-        let manifold_id = tab_el.get_attribute("data-manifold").unwrap();
+        let manifold_id = match tab_el.get_attribute("data-manifold") {
+            Some(id) => id,
+            None => continue,
+        };
 
         let seeds_clone: Vec<ManifoldSeed> = seeds.to_vec();
         let closure = Closure::wrap(Box::new(move || {
@@ -366,8 +383,7 @@ fn switch_manifold(manifold_id: &str, seeds: &[ManifoldSeed]) {
     for i in 0..tabs.length() {
         let tab = tabs.get(i).unwrap();
         let tab_el: Element = tab.dyn_into().unwrap();
-        let id = tab_el.get_attribute("data-manifold").unwrap();
-        if id == manifold_id {
+        if tab_el.get_attribute("data-manifold").as_deref() == Some(manifold_id) {
             tab_el.class_list().add_1("active").unwrap();
         } else {
             tab_el.class_list().remove_1("active").unwrap();
@@ -521,6 +537,11 @@ fn wire_alt_shortcuts(document: &Document, seeds: &[ManifoldSeed]) {
         // Alt+O → toggle Exposé
         if key == "o" || key == "O" {
             toggle_expose(&doc_clone, &seeds_clone);
+        }
+
+        // Alt+A → auto-arrange manifold containers (Tidy)
+        if key == "a" || key == "A" {
+            interactions::auto_arrange_manifold(&doc_clone);
         }
     }) as Box<dyn FnMut(web_sys::KeyboardEvent)>);
 

@@ -1,6 +1,6 @@
 [package]
 name = "poet"
-version = "0.0.34"
+version = "0.0.35"
 edition = "2021"
 authors = ["Timothy Charles Holborn <timothy.holborn@gmail.com>"]
 license = "CC-BY-NC-ND-4.0"
@@ -8,6 +8,10 @@ description = "Poet HyperCanvas — Spatial Hypermedia Workspace & Living Docume
 
 [lib]
 crate-type = ["cdylib", "rlib"]
+
+[[bin]]
+name = "poet-ui"
+path = "src/main.rs"
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }
@@ -17,6 +21,8 @@ uuid = { version = "1", features = ["v4", "js"] }
 chrono = { version = "0.4", features = ["wasmbind"] }
 console_error_panic_hook = "0.1"
 base64 = "0.22"
+serde-wasm-bindgen = "0.6"
+vibe = { path = "../vibe" }
 
 # WASM / browser
 wasm-bindgen = "0.2"

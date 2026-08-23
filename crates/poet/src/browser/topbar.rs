@@ -79,6 +79,11 @@ pub fn build_top_menubar(document: &Document) -> Element {
             ("Toggle Toolbox Dock", "view:toggle-dock", "\u{1F9ED}"),
             ("Toggle Telemetry", "view:toggle-telemetry", "\u{2699}"),
             ("Toggle Expos\u{00E9}", "view:expose", "\u{1F4F7}"),
+            (
+                "Auto-Arrange Manifold (Tidy)",
+                "view:auto-arrange",
+                "\u{2728}",
+            ),
             ("separator", "", ""),
             ("Zoom In", "view:zoom-in", "\u{1F50D}+"),
             ("Zoom Out", "view:zoom-out", "\u{1F50D}\u{2212}"),
@@ -183,9 +188,13 @@ pub fn build_top_menubar(document: &Document) -> Element {
     lb_closure.forget();
     right.append_child(&logic_btn).unwrap();
 
+    // Webizen Native Daemon Status Badge
+    let daemon_badge = super::native_daemon::build_daemon_status_badge(document);
+    right.append_child(&daemon_badge).unwrap();
+
     let version = document.create_element("span").unwrap();
     version.set_class_name("version-badge");
-    version.set_text_content(Some("0.0.31-dev"));
+    version.set_text_content(Some("0.0.34-dev"));
     right.append_child(&version).unwrap();
     let badge = document.create_element("span").unwrap();
     badge.set_class_name("fiduciary-badge");
@@ -348,6 +357,9 @@ fn handle_menu_action(document: &Document, action: &str, label: &str) {
         }
         "view:a11y" => {
             show_a11y_notification(document);
+        }
+        "view:auto-arrange" => {
+            super::interactions::auto_arrange_manifold(document);
         }
         "insert:doc"
         | "insert:sheet"
@@ -946,6 +958,26 @@ pub fn build_canvas_control_bar(document: &Document, seeds: &[ManifoldSeed]) -> 
     let actions_shelf = document.create_element("div").unwrap();
     actions_shelf.set_class_name("top-actions-shelf");
 
+    let tidy_btn = document.create_element("button").unwrap();
+    tidy_btn.set_class_name("top-action-btn");
+    tidy_btn.set_id("btn-auto-arrange");
+    tidy_btn.set_text_content(Some("\u{2728} Tidy"));
+    tidy_btn
+        .set_attribute(
+            "title",
+            "Auto-arrange manifold containers into non-overlapping grid (Alt+A)",
+        )
+        .unwrap();
+    let tidy_closure = Closure::wrap(Box::new(move |_e: Event| {
+        let doc = web_sys::window().unwrap().document().unwrap();
+        super::interactions::auto_arrange_manifold(&doc);
+    }) as Box<dyn FnMut(Event)>);
+    tidy_btn
+        .add_event_listener_with_callback("click", tidy_closure.as_ref().unchecked_ref())
+        .unwrap();
+    tidy_closure.forget();
+    actions_shelf.append_child(&tidy_btn).unwrap();
+
     let a11y_btn = document.create_element("button").unwrap();
     a11y_btn.set_class_name("top-action-btn");
     a11y_btn.set_id("btn-toggle-a11y");
@@ -973,12 +1005,6 @@ pub fn build_canvas_control_bar(document: &Document, seeds: &[ManifoldSeed]) -> 
     let dt_el: HtmlElement = drop_tray.clone().dyn_into().unwrap();
     dt_el.style().set_property("display", "none").unwrap();
     bar.append_child(&drop_tray).unwrap();
-
-    // Wire pod interactions
-    wire_pods(document);
-
-    // Wire title rename
-    wire_title_rename(document, seeds);
 
     bar
 }
@@ -1021,7 +1047,8 @@ fn build_pod_button(
     btn
 }
 
-fn wire_pods(document: &Document) {
+/// Wire up control bar socket-case pod dropdowns and tech sidebar toggle.
+pub fn wire_pods(document: &Document) {
     let pods = document.query_selector_all(".top-pod-btn").unwrap();
     for i in 0..pods.length() {
         let pod = pods.get(i).unwrap();
@@ -1513,7 +1540,8 @@ fn populate_dim_tray(document: &Document, tray: &Element) {
     tray.append_child(&time_group).unwrap();
 }
 
-fn wire_title_rename(document: &Document, seeds: &[ManifoldSeed]) {
+/// Wire up live manifold title rename input.
+pub fn wire_title_rename(document: &Document, seeds: &[ManifoldSeed]) {
     if let Some(input) = document.get_element_by_id("manifold-title-input") {
         let input_el: HtmlInputElement = input.dyn_into().unwrap();
         let _seeds = seeds.to_vec();

@@ -86,17 +86,80 @@ impl Workbench {
         strata_off || epi_off
     }
 
+    pub fn find_smart_placement_slot(&self, width: f64, height: f64) -> (f64, f64) {
+        let margin = 24.0;
+        let cols = 4;
+        let rows = 6;
+        let start_x = 80.0;
+        let start_y = 60.0;
+        let step_x = width + 40.0;
+        let step_y = height + 40.0;
+
+        for r in 0..rows {
+            for c in 0..cols {
+                let test_x = start_x + (c as f64) * step_x;
+                let test_y = start_y + (r as f64) * step_y;
+
+                let overlaps = self.nodes.iter().any(|node| {
+                    let r1_left = test_x;
+                    let r1_right = test_x + width;
+                    let r1_top = test_y;
+                    let r1_bottom = test_y + height;
+
+                    let r2_left = node.x;
+                    let r2_right = node.x + node.width;
+                    let r2_top = node.y;
+                    let r2_bottom = node.y + node.height;
+
+                    !(r1_right + margin <= r2_left
+                        || r1_left >= r2_right + margin
+                        || r1_bottom + margin <= r2_top
+                        || r1_top >= r2_bottom + margin)
+                });
+
+                if !overlaps {
+                    return (test_x, test_y);
+                }
+            }
+        }
+
+        // Fallback to primary focus position
+        (start_x, start_y)
+    }
+
+    pub fn auto_arrange(&mut self) {
+        let cols = 3;
+        let start_x = 80.0;
+        let start_y = 60.0;
+        let gap_x = 40.0;
+        let gap_y = 40.0;
+
+        for (i, node) in self.nodes.iter_mut().enumerate() {
+            let col = i % cols;
+            let row = i / cols;
+            let target_w = node.width.max(380.0);
+            let target_h = node.height.max(260.0);
+            node.x = start_x + (col as f64) * (target_w + gap_x);
+            node.y = start_y + (row as f64) * (target_h + gap_y);
+        }
+    }
+
     pub fn place(&mut self, kind: ContainerKind) {
         let n = self.next_id;
         self.next_id += 1;
+        let default_w = 400.0;
+        let default_h = 300.0;
+
+        let (slot_x, slot_y) = self.find_smart_placement_slot(default_w, default_h);
+
         let node = CanvasNode {
             id: format!("container-{n}"),
             kind,
             title: kind.title().into(),
-            x: 180.0 + (n as f64 % 5.0) * 36.0,
-            y: 140.0 + (n as f64 % 4.0) * 28.0,
-            width: 380.0,
-            height: 260.0,
+            x: slot_x,
+            y: slot_y,
+            width: default_w,
+            height: default_h,
             z: 0.0,
             d: 1.0,
             strata: Strata::Technical,

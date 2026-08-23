@@ -259,6 +259,85 @@ impl TopologicalTear {
     }
 }
 
+// ── Čech Cohomology Restriction & Gluing Verification ─────────────────────────
+
+/// A local section of a sheaf over open set / simplex U_i.
+#[derive(Debug, Clone)]
+pub struct LocalSection {
+    pub open_set_id: u64,
+    pub values: BTreeMap<String, Value>,
+}
+
+impl LocalSection {
+    pub fn new(open_set_id: u64, values: BTreeMap<String, Value>) -> Self {
+        Self {
+            open_set_id,
+            values,
+        }
+    }
+
+    /// Restrict the local section to an intersection / common key set.
+    pub fn restrict(&self, keys: &[&str]) -> BTreeMap<String, Value> {
+        let mut restricted = BTreeMap::new();
+        for &k in keys {
+            if let Some(v) = self.values.get(k) {
+                restricted.insert(k.to_string(), v.clone());
+            }
+        }
+        restricted
+    }
+}
+
+/// An open cover consisting of local sections.
+#[derive(Debug, Clone, Default)]
+pub struct CechCover {
+    pub sections: Vec<LocalSection>,
+}
+
+impl CechCover {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn add_section(&mut self, s: LocalSection) {
+        self.sections.push(s);
+    }
+
+    /// Verify 0-cocycle Čech gluing condition: for all pairs (i, j),
+    /// sections s_i and s_j must agree on all shared keys (overlap U_i ∩ U_j).
+    pub fn verify_gluing(&self) -> Result<(), String> {
+        for i in 0..self.sections.len() {
+            for j in (i + 1)..self.sections.len() {
+                let s_i = &self.sections[i];
+                let s_j = &self.sections[j];
+                for (k, v_i) in &s_i.values {
+                    if let Some(v_j) = s_j.values.get(k) {
+                        if v_i != v_j {
+                            return Err(format!(
+                                "Čech gluing mismatch on overlap (U_{}, U_{}) for key '{}': {:?} vs {:?}",
+                                s_i.open_set_id, s_j.open_set_id, k, v_i, v_j
+                            ));
+                        }
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
+
+    /// Glue all local sections into a single global section if gluing passes.
+    pub fn glue_global_section(&self) -> Result<BTreeMap<String, Value>, String> {
+        self.verify_gluing()?;
+        let mut global = BTreeMap::new();
+        for s in &self.sections {
+            for (k, v) in &s.values {
+                global.insert(k.clone(), v.clone());
+            }
+        }
+        Ok(global)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -440,5 +519,40 @@ mod tests {
             },
             20
         );
+    }
+
+    #[test]
+    fn test_cech_gluing_consistent() {
+        let mut cover = CechCover::new();
+        let mut s1 = BTreeMap::new();
+        s1.insert("x".into(), Value::I64(10));
+        s1.insert("shared".into(), Value::String("agree".into()));
+        cover.add_section(LocalSection::new(1, s1));
+
+        let mut s2 = BTreeMap::new();
+        s2.insert("y".into(), Value::I64(20));
+        s2.insert("shared".into(), Value::String("agree".into()));
+        cover.add_section(LocalSection::new(2, s2));
+
+        assert!(cover.verify_gluing().is_ok());
+        let global = cover.glue_global_section().unwrap();
+        assert_eq!(global.len(), 3);
+        assert_eq!(global.get("shared"), Some(&Value::String("agree".into())));
+    }
+
+    #[test]
+    fn test_cech_gluing_inconsistent() {
+        let mut cover = CechCover::new();
+        let mut s1 = BTreeMap::new();
+        s1.insert("shared".into(), Value::String("value_a".into()));
+        cover.add_section(LocalSection::new(1, s1));
+
+        let mut s2 = BTreeMap::new();
+        s2.insert("shared".into(), Value::String("value_b".into()));
+        cover.add_section(LocalSection::new(2, s2));
+
+        let res = cover.verify_gluing();
+        assert!(res.is_err());
+        assert!(res.unwrap_err().contains("Čech gluing mismatch"));
     }
 }

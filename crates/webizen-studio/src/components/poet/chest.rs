@@ -50,6 +50,12 @@ pub fn ToolChest(wb: Signal<Workbench>) -> Element {
 #[component]
 fn Palette(wb: Signal<Workbench>, toolbox: ToolboxId) -> Element {
     let pos = wb().dock.id();
+    let mut selected_font = use_signal(|| "Inter".to_string());
+    let mut selected_size = use_signal(|| "14px".to_string());
+    let mut selected_color = use_signal(|| "#38bdf8".to_string());
+    let mut brush_size = use_signal(|| 8.0);
+    let mut brush_type = use_signal(|| "Round".to_string());
+
     rsx! {
         div { class: "floating-toolbox-palette dock-{pos} open", id: "floating-toolbox-palette",
             div { class: "palette-header",
@@ -60,6 +66,71 @@ fn Palette(wb: Signal<Workbench>, toolbox: ToolboxId) -> Element {
                 }
             }
             div { class: "palette-body",
+                // Specialized domain widgets
+                if toolbox == ToolboxId::Office {
+                    div { class: "tool-section", style: "background:rgba(255,255,255,0.02);padding:8px;border-radius:6px;margin-bottom:8px;display:grid;gap:6px;",
+                        span { class: "tool-section-title", "Typography & Styling" }
+                        div { style: "display:flex;gap:6px;align-items:center;",
+                            select {
+                                style: "flex:1;background:#141a23;color:var(--text-primary);border:1px solid rgba(255,255,255,0.1);border-radius:4px;padding:3px 6px;font-size:11px;",
+                                value: "{selected_font}",
+                                onchange: move |e| selected_font.set(e.value()),
+                                option { value: "Inter", "Inter (Sans)" }
+                                option { value: "Fira Code", "Fira Code (Mono)" }
+                                option { value: "Merriweather", "Merriweather (Serif)" }
+                                option { value: "JetBrains Mono", "JetBrains Mono" }
+                            }
+                            select {
+                                style: "width:70px;background:#141a23;color:var(--text-primary);border:1px solid rgba(255,255,255,0.1);border-radius:4px;padding:3px 6px;font-size:11px;",
+                                value: "{selected_size}",
+                                onchange: move |e| selected_size.set(e.value()),
+                                option { value: "11px", "11px" }
+                                option { value: "13px", "13px" }
+                                option { value: "14px", "14px" }
+                                option { value: "16px", "16px" }
+                                option { value: "20px", "20px" }
+                            }
+                        }
+                    }
+                } else if toolbox == ToolboxId::Image {
+                    div { class: "tool-section", style: "background:rgba(255,255,255,0.02);padding:8px;border-radius:6px;margin-bottom:8px;display:grid;gap:6px;",
+                        span { class: "tool-section-title", "Brush & Palette" }
+                        div { style: "display:flex;gap:6px;align-items:center;",
+                            select {
+                                style: "flex:1;background:#141a23;color:var(--text-primary);border:1px solid rgba(255,255,255,0.1);border-radius:4px;padding:3px 6px;font-size:11px;",
+                                value: "{brush_type}",
+                                onchange: move |e| brush_type.set(e.value()),
+                                option { value: "Round", "🖌️ Round Brush" }
+                                option { value: "Flat", "🖊️ Flat Chisel" }
+                                option { value: "Marker", "🖍️ Marker" }
+                                option { value: "Airbrush", "💨 Airbrush" }
+                            }
+                            span { style: "font-size:11px;color:var(--text-muted);", "{brush_size()}px" }
+                        }
+                        input {
+                            r#type: "range", min: "1", max: "64", value: "{brush_size}",
+                            style: "width:100%;accent-color:var(--accent-cyan);",
+                            oninput: move |e| {
+                                if let Ok(v) = e.value().parse::<f64>() {
+                                    brush_size.set(v);
+                                }
+                            }
+                        }
+                        div { style: "display:flex;gap:6px;margin-top:4px;",
+                            for color in ["#38bdf8", "#00E676", "#fbbf24", "#f43f5e", "#a855f7", "#ffffff", "#000000"] {
+                                button {
+                                    style: format!(
+                                        "width:20px;height:20px;border-radius:50%;background:{};border:{};cursor:pointer;",
+                                        color,
+                                        if selected_color() == color { "2px solid #ffffff" } else { "1px solid rgba(255,255,255,0.2)" }
+                                    ),
+                                    onclick: move |_| selected_color.set(color.to_string()),
+                                }
+                            }
+                        }
+                    }
+                }
+
                 for (section, tools) in toolbox.sections() {
                     div { class: "tool-section",
                         span { class: "tool-section-title", "{section}" }

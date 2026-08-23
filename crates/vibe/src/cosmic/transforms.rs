@@ -172,6 +172,99 @@ pub fn geodetic_to_value(g: Geodetic) -> crate::value::Value {
     crate::value::Value::Record(rec)
 }
 
+// ── Relativistic Lorentz Boost (SO+(1,3)) ──────────────────────────────────────
+
+/// A relativistic 4-vector in Minkowski spacetime: (c*t, x, y, z).
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct FourVector {
+    pub ct: f64,
+    pub x: f64,
+    pub y: f64,
+    pub z: f64,
+}
+
+impl FourVector {
+    pub fn new(ct: f64, x: f64, y: f64, z: f64) -> Self {
+        Self { ct, x, y, z }
+    }
+
+    /// Minkowski spacetime interval s^2 = -(c*t)^2 + x^2 + y^2 + z^2.
+    pub fn spacetime_interval_sq(&self) -> f64 {
+        -self.ct * self.ct + self.x * self.x + self.y * self.y + self.z * self.z
+    }
+}
+
+/// Relativistic Lorentz Boost SO+(1,3) parameterised by dimensionless velocity vector beta = v / c.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct LorentzBoost {
+    pub beta_x: f64,
+    pub beta_y: f64,
+    pub beta_z: f64,
+}
+
+impl LorentzBoost {
+    pub fn new(beta_x: f64, beta_y: f64, beta_z: f64) -> Result<Self, &'static str> {
+        let beta_sq = beta_x * beta_x + beta_y * beta_y + beta_z * beta_z;
+        if beta_sq >= 1.0 {
+            return Err("Superluminal boost rejected: |beta| >= 1.0");
+        }
+        Ok(Self {
+            beta_x,
+            beta_y,
+            beta_z,
+        })
+    }
+
+    /// Lorentz gamma factor: gamma = 1 / sqrt(1 - beta^2).
+    pub fn gamma(&self) -> f64 {
+        let beta_sq = self.beta_x * self.beta_x + self.beta_y * self.beta_y + self.beta_z * self.beta_z;
+        1.0 / (1.0 - beta_sq).sqrt()
+    }
+
+    /// Exact 4x4 matrix representation Lambda^mu_nu in SO+(1,3).
+    pub fn matrix(&self) -> [[f64; 4]; 4] {
+        let g = self.gamma();
+        let beta_sq = self.beta_x * self.beta_x + self.beta_y * self.beta_y + self.beta_z * self.beta_z;
+        if beta_sq < 1e-15 {
+            return [
+                [1.0, 0.0, 0.0, 0.0],
+                [0.0, 1.0, 0.0, 0.0],
+                [0.0, 0.0, 1.0, 0.0],
+                [0.0, 0.0, 0.0, 1.0],
+            ];
+        }
+        let factor = (g - 1.0) / beta_sq;
+        let bx = self.beta_x;
+        let by = self.beta_y;
+        let bz = self.beta_z;
+
+        [
+            [g, -g * bx, -g * by, -g * bz],
+            [-g * bx, 1.0 + factor * bx * bx, factor * bx * by, factor * bx * bz],
+            [-g * by, factor * by * bx, 1.0 + factor * by * by, factor * by * bz],
+            [-g * bz, factor * bz * bx, factor * bz * by, 1.0 + factor * bz * bz],
+        ]
+    }
+
+    /// Transform a 4-vector under this Lorentz boost.
+    pub fn transform(&self, v: FourVector) -> FourVector {
+        let m = self.matrix();
+        let in_vec = [v.ct, v.x, v.y, v.z];
+        let mut out = [0.0; 4];
+        for i in 0..4 {
+            for j in 0..4 {
+                out[i] += m[i][j] * in_vec[j];
+            }
+        }
+        FourVector {
+            ct: out[0],
+            x: out[1],
+            y: out[2],
+            z: out[3],
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -322,5 +415,42 @@ mod tests {
         };
         let g = ecef_to_geodetic(e);
         assert!((g.lat_deg - 90.0).abs() < 1e-6);
+    }
+
+    #[test]
+    fn test_lorentz_boost_spacetime_interval_invariance() {
+        let v = FourVector::new(10.0, 3.0, 4.0, 5.0);
+        let s2_before = v.spacetime_interval_sq();
+
+        let boost = LorentzBoost::new(0.6, 0.0, 0.0).unwrap();
+        assert!((boost.gamma() - 1.25).abs() < 1e-6);
+
+        let v_prime = boost.transform(v);
+        let s2_after = v_prime.spacetime_interval_sq();
+
+        assert!(
+            (s2_before - s2_after).abs() < 1e-10,
+            "Minkowski interval must be invariant: before={}, after={}",
+            s2_before,
+            s2_after
+        );
+    }
+
+    #[test]
+    fn test_lorentz_boost_3d_velocity() {
+        let v = FourVector::new(50.0, 10.0, 20.0, 30.0);
+        let s2_before = v.spacetime_interval_sq();
+
+        let boost = LorentzBoost::new(0.3, 0.4, 0.5).unwrap();
+        let v_prime = boost.transform(v);
+        let s2_after = v_prime.spacetime_interval_sq();
+
+        assert!((s2_before - s2_after).abs() < 1e-9);
+    }
+
+    #[test]
+    fn test_lorentz_boost_superluminal_rejected() {
+        let res = LorentzBoost::new(0.8, 0.8, 0.0);
+        assert!(res.is_err());
     }
 }

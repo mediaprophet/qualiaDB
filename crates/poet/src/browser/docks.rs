@@ -2,11 +2,13 @@
 //!
 //! Copyright (c) 2026 Timothy Charles Holborn. All rights reserved.
 
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
+use std::rc::Rc;
 
 use wasm_bindgen::{closure::Closure, JsCast};
 use web_sys::{Document, Element, Event, HtmlElement};
 
+use crate::browser::tool_widgets::ToolWidget;
 use crate::tool_chest::core::tool::ToolKind;
 use crate::tool_chest::core::tool_chain::ToolChainMetadata;
 use crate::tool_chest::core::toolbox::{Toolbox, ToolboxMetadata};
@@ -26,11 +28,12 @@ pub struct ToolView {
     pub description: String,
 }
 
-/// A cloneable view of a tool-chain with its tools.
+/// A cloneable view of a tool-chain with its tools and domain widgets.
 #[derive(Clone, Debug)]
 pub struct ToolChainView {
     pub metadata: ToolChainMetadata,
     pub tools: Vec<ToolView>,
+    pub widgets: Vec<ToolWidget>,
 }
 
 /// A cloneable view of a toolbox with its tool-chains.
@@ -148,6 +151,388 @@ pub fn family_order() -> Vec<ToolboxFamily> {
     ]
 }
 
+/// Build specialized domain widgets for a tool-chain based on its ID and tools.
+pub fn build_toolchain_widgets(chain_id: &str, tools: &[ToolView]) -> Vec<ToolWidget> {
+    let mut widgets = Vec::new();
+
+    match chain_id {
+        // Typography in Word Processor / Authoring
+        id if id.contains("typography") || id.contains("font") => {
+            widgets.push(ToolWidget::Dropdown {
+                id: format!("{id}:font_family"),
+                label: "Font Family".into(),
+                options: vec![
+                    ("Inter".into(), "Inter (System Sans)".into()),
+                    ("JetBrains Mono".into(), "JetBrains Mono (Code)".into()),
+                    ("Outfit".into(), "Outfit (Modern Geometric)".into()),
+                    ("Lora".into(), "Lora (Editorial Serif)".into()),
+                    ("Cinzel".into(), "Cinzel (Classical Display)".into()),
+                ],
+                default_val: "Inter".into(),
+            });
+            widgets.push(ToolWidget::Dropdown {
+                id: format!("{id}:font_size"),
+                label: "Font Size".into(),
+                options: vec![
+                    ("12px".into(), "12px — Caption".into()),
+                    ("14px".into(), "14px — Compact".into()),
+                    ("16px".into(), "16px — Body".into()),
+                    ("18px".into(), "18px — Lead".into()),
+                    ("24px".into(), "24px — Heading".into()),
+                    ("32px".into(), "32px — Title".into()),
+                ],
+                default_val: "16px".into(),
+            });
+            widgets.push(ToolWidget::ToggleGroup {
+                id: format!("{id}:style"),
+                label: "Text Style".into(),
+                options: vec![
+                    ("bold".into(), "B".into(), "Bold (Ctrl+B)".into()),
+                    ("italic".into(), "I".into(), "Italic (Ctrl+I)".into()),
+                    ("underline".into(), "U".into(), "Underline (Ctrl+U)".into()),
+                    ("code".into(), "</>".into(), "Inline Code".into()),
+                ],
+                default_selected: "".into(),
+            });
+            widgets.push(ToolWidget::ColorPicker {
+                id: format!("{id}:color"),
+                label: "Text Color".into(),
+                default_hex: "#00f2a9".into(),
+                presets: vec![
+                    "#00f2a9".into(),
+                    "#38bdf8".into(),
+                    "#ffb834".into(),
+                    "#f43f5e".into(),
+                    "#ffffff".into(),
+                    "#94a3b8".into(),
+                ],
+            });
+        }
+
+        // Paragraph & Headings in Authoring
+        id if id.contains("paragraph") || id.contains("layout") => {
+            widgets.push(ToolWidget::Dropdown {
+                id: format!("{id}:heading_level"),
+                label: "Block Style".into(),
+                options: vec![
+                    ("p".into(), "Paragraph".into()),
+                    ("h1".into(), "H1 — Chapter Title".into()),
+                    ("h2".into(), "H2 — Section Header".into()),
+                    ("h3".into(), "H3 — Subsection".into()),
+                    ("callout".into(), "Callout Box 💡".into()),
+                    ("quote".into(), "Blockquote ❝".into()),
+                ],
+                default_val: "p".into(),
+            });
+            widgets.push(ToolWidget::ToggleGroup {
+                id: format!("{id}:align"),
+                label: "Alignment".into(),
+                options: vec![
+                    ("left".into(), "≡".into(), "Align Left".into()),
+                    ("center".into(), "⫼".into(), "Align Center".into()),
+                    ("right".into(), "⫹".into(), "Align Right".into()),
+                    ("justify".into(), "▤".into(), "Justify".into()),
+                ],
+                default_selected: "left".into(),
+            });
+        }
+
+        // Brushes & Stroke in Graphics
+        id if id.contains("brush") || id.contains("pen") || id.contains("ink") => {
+            widgets.push(ToolWidget::Dropdown {
+                id: format!("{id}:brush_type"),
+                label: "Brush Type".into(),
+                options: vec![
+                    ("round".into(), "Round Pen 🖊️".into()),
+                    ("calligraphy".into(), "Calligraphy Nib ✒️".into()),
+                    ("airbrush".into(), "Airbrush 💨".into()),
+                    ("vector".into(), "Vector Inker ⚡".into()),
+                    ("highlighter".into(), "Highlighter 🖍️".into()),
+                    ("eraser".into(), "Precision Eraser 🧹".into()),
+                ],
+                default_val: "round".into(),
+            });
+            widgets.push(ToolWidget::Slider {
+                id: format!("{id}:brush_size"),
+                label: "Brush Size".into(),
+                min: 1.0,
+                max: 64.0,
+                step: 1.0,
+                default_val: 6.0,
+                unit: "px".into(),
+            });
+            widgets.push(ToolWidget::Slider {
+                id: format!("{id}:opacity"),
+                label: "Stroke Opacity".into(),
+                min: 5.0,
+                max: 100.0,
+                step: 5.0,
+                default_val: 100.0,
+                unit: "%".into(),
+            });
+        }
+
+        // Color & Palette in Graphics
+        id if id.contains("palette") || id.contains("color") => {
+            widgets.push(ToolWidget::ColorPicker {
+                id: format!("{id}:stroke_color"),
+                label: "Stroke Color".into(),
+                default_hex: "#38bdf8".into(),
+                presets: vec![
+                    "#00f2a9".into(),
+                    "#38bdf8".into(),
+                    "#ffb834".into(),
+                    "#f43f5e".into(),
+                    "#a855f7".into(),
+                    "#ffffff".into(),
+                    "#030508".into(),
+                ],
+            });
+            widgets.push(ToolWidget::ColorPicker {
+                id: format!("{id}:fill_color"),
+                label: "Fill Color".into(),
+                default_hex: "#ffb834".into(),
+                presets: vec![
+                    "#ffb834".into(),
+                    "#00f2a9".into(),
+                    "#38bdf8".into(),
+                    "#f43f5e".into(),
+                    "#818cf8".into(),
+                    "#1e293b".into(),
+                ],
+            });
+            widgets.push(ToolWidget::ToggleGroup {
+                id: format!("{id}:shape_mode"),
+                label: "Geometry Mode".into(),
+                options: vec![
+                    ("rect".into(), "▭".into(), "Rectangle".into()),
+                    ("circle".into(), "◯".into(), "Circle / Ellipse".into()),
+                    ("poly".into(), "⬡".into(), "Polygon".into()),
+                    ("arrow".into(), "➔".into(), "Arrow Vector".into()),
+                    ("spline".into(), "〰".into(), "Bézier Spline".into()),
+                ],
+                default_selected: "rect".into(),
+            });
+        }
+
+        // Spreadsheet / Tensor Grid
+        id if id.contains("sheet") || id.contains("grid") || id.contains("tensor") => {
+            widgets.push(ToolWidget::Dropdown {
+                id: format!("{id}:dimension"),
+                label: "Tensor Dimensionality".into(),
+                options: vec![
+                    ("1d".into(), "1D Vector Array".into()),
+                    ("2d".into(), "2D Matrix / Table".into()),
+                    ("3d".into(), "3D Volume Tensor".into()),
+                    ("10d".into(), "10D Manifold State".into()),
+                ],
+                default_val: "2d".into(),
+            });
+            widgets.push(ToolWidget::Dropdown {
+                id: format!("{id}:format"),
+                label: "Cell Number Format".into(),
+                options: vec![
+                    ("standard".into(), "General / Automatic".into()),
+                    ("currency".into(), "Currency ($ USD)".into()),
+                    ("percent".into(), "Percentage (%)".into()),
+                    ("scientific".into(), "Scientific (1.23e+4)".into()),
+                    ("formula".into(), "Formula (=fx)".into()),
+                    ("quin".into(), "48-byte Super-Quin".into()),
+                ],
+                default_val: "standard".into(),
+            });
+        }
+
+        // Code IDE & Vibe REPL
+        id if id.contains("code") || id.contains("repl") || id.contains("lang") => {
+            widgets.push(ToolWidget::Dropdown {
+                id: format!("{id}:dialect"),
+                label: "Execution Dialect".into(),
+                options: vec![
+                    ("vibe".into(), "VibeScript 0.1 AST".into()),
+                    ("wgsl".into(), "WGSL WebGPU Shader".into()),
+                    ("turtle".into(), "Turtle RDF 1.2".into()),
+                    ("sparql".into(), "SPARQL 1.1 Query".into()),
+                    ("wasm".into(), "Rust WASM Engine".into()),
+                ],
+                default_val: "vibe".into(),
+            });
+            widgets.push(ToolWidget::Slider {
+                id: format!("{id}:gas_limit"),
+                label: "Gas Budget".into(),
+                min: 5000.0,
+                max: 200000.0,
+                step: 5000.0,
+                default_val: 50000.0,
+                unit: " gas".into(),
+            });
+        }
+
+        // Audio Synth
+        id if id.contains("audio") || id.contains("synth") => {
+            widgets.push(ToolWidget::Dropdown {
+                id: format!("{id}:waveform"),
+                label: "Oscillator Waveform".into(),
+                options: vec![
+                    ("sine".into(), "Pure Sine Wave ∿".into()),
+                    ("triangle".into(), "Triangle Wave ⋀".into()),
+                    ("sawtooth".into(), "Sawtooth Wave ⩘".into()),
+                    ("square".into(), "Square Wave ⊓".into()),
+                    ("formant".into(), "Triad Vocal Formant 🗣️".into()),
+                ],
+                default_val: "sine".into(),
+            });
+            widgets.push(ToolWidget::Slider {
+                id: format!("{id}:freq"),
+                label: "Pitch / Base Frequency".into(),
+                min: 110.0,
+                max: 1760.0,
+                step: 10.0,
+                default_val: 440.0,
+                unit: " Hz".into(),
+            });
+            widgets.push(ToolWidget::Dropdown {
+                id: format!("{id}:vowel"),
+                label: "Formant Vowel".into(),
+                options: vec![
+                    ("a".into(), "/a/ — Open (Father)".into()),
+                    ("i".into(), "/i/ — Front (See)".into()),
+                    ("u".into(), "/u/ — Back (Too)".into()),
+                    ("e".into(), "/e/ — Mid (Bed)".into()),
+                    ("o".into(), "/o/ — Rounded (Call)".into()),
+                ],
+                default_val: "a".into(),
+            });
+        }
+
+        // 3D Spatial
+        id if id.contains("spatial") || id.contains("3d") || id.contains("viewport") => {
+            widgets.push(ToolWidget::Dropdown {
+                id: format!("{id}:projection"),
+                label: "Camera Projection".into(),
+                options: vec![
+                    ("perspective".into(), "Perspective (FOV 60°)".into()),
+                    ("orthographic".into(), "Orthographic Parallel".into()),
+                    ("isometric".into(), "Isometric 30° / 60°".into()),
+                    ("tensor10d".into(), "10D Tensor Projector".into()),
+                ],
+                default_val: "perspective".into(),
+            });
+            widgets.push(ToolWidget::Dropdown {
+                id: format!("{id}:pipeline"),
+                label: "WGSL Render Pipeline".into(),
+                options: vec![
+                    ("cyber_glass".into(), "Cyber Glass (Bloom + Glass)".into()),
+                    ("wireframe".into(), "Wireframe Topology".into()),
+                    ("pbr_metallic".into(), "PBR Metallic Roughness".into()),
+                    ("normals".into(), "Geometric Normals Debug".into()),
+                ],
+                default_val: "cyber_glass".into(),
+            });
+        }
+
+        // AI Co-Pilot & Sentinel
+        id if id.contains("ai") || id.contains("copilot") || id.contains("sentinel") => {
+            widgets.push(ToolWidget::Dropdown {
+                id: format!("{id}:model"),
+                label: "Resident Model".into(),
+                options: vec![
+                    ("q42_sentinel".into(), "Q42-Sentinel 1.5B (GGUF)".into()),
+                    ("llama3_8b".into(), "Llama-3-8B (Q4_K_M)".into()),
+                    ("directml_gpu".into(), "DirectML GPU Autoregressive".into()),
+                ],
+                default_val: "q42_sentinel".into(),
+            });
+            widgets.push(ToolWidget::Slider {
+                id: format!("{id}:halo"),
+                label: "Epistemic Halo Threshold".into(),
+                min: 60.0,
+                max: 99.0,
+                step: 1.0,
+                default_val: 85.0,
+                unit: "%".into(),
+            });
+            widgets.push(ToolWidget::Slider {
+                id: format!("{id}:temp"),
+                label: "Sampling Temperature".into(),
+                min: 0.0,
+                max: 1.2,
+                step: 0.05,
+                default_val: 0.7,
+                unit: "".into(),
+            });
+        }
+
+        // Governance & Rights
+        id if id.contains("rights") || id.contains("governance") || id.contains("fiduciary") => {
+            widgets.push(ToolWidget::Dropdown {
+                id: format!("{id}:lane"),
+                label: "Privacy Routing Lane".into(),
+                options: vec![
+                    ("00".into(), "Public Commons (00)".into()),
+                    ("01".into(), "Bilateral Micro-Commons (01)".into()),
+                    ("11".into(), "Spatial Commons (11)".into()),
+                    ("10".into(), "Classified Sanctuary (10)".into()),
+                ],
+                default_val: "01".into(),
+            });
+            widgets.push(ToolWidget::Dropdown {
+                id: format!("{id}:hohfeld"),
+                label: "Hohfeldian Modality".into(),
+                options: vec![
+                    ("privilege".into(), "Privilege (Liberty)".into()),
+                    ("duty".into(), "Duty (Obligation)".into()),
+                    ("right".into(), "Right (Claim)".into()),
+                    ("no_right".into(), "No-Right".into()),
+                    ("immunity".into(), "Immunity".into()),
+                    ("disability".into(), "Disability".into()),
+                ],
+                default_val: "privilege".into(),
+            });
+        }
+
+        // Clinical Lab & Science
+        id if id.contains("health") || id.contains("clinical") || id.contains("lab") => {
+            widgets.push(ToolWidget::Dropdown {
+                id: format!("{id}:calc"),
+                label: "Clinical / Assay Engine".into(),
+                options: vec![
+                    ("framingham".into(), "Framingham 10-Year CVD Risk".into()),
+                    ("cha2ds2_vasc".into(), "CHA₂DS₂-VASc Stroke Risk".into()),
+                    ("score2".into(), "SCORE2 European Mortality".into()),
+                    ("smiles_mol".into(), "SMILES Molecular Weight & LogP".into()),
+                    ("protein_sw".into(), "Smith-Waterman Protein Align".into()),
+                ],
+                default_val: "framingham".into(),
+            });
+            widgets.push(ToolWidget::Slider {
+                id: format!("{id}:sbp"),
+                label: "Systolic Blood Pressure (SBP)".into(),
+                min: 80.0,
+                max: 220.0,
+                step: 1.0,
+                default_val: 125.0,
+                unit: " mmHg".into(),
+            });
+        }
+
+        _ => {}
+    }
+
+    // Append standard Tool buttons for all tools in this chain
+    for tool in tools {
+        widgets.push(ToolWidget::Button {
+            id: tool.id.clone(),
+            label: tool.label.clone(),
+            icon: tool_glyph(&tool.icon).to_string(),
+            kind_badge: kind_label(tool.kind).to_string(),
+            action: tool.id.clone(),
+        });
+    }
+
+    widgets
+}
+
 /// Extract cloneable views from the registry's toolboxes.
 pub fn extract_toolbox_views(toolboxes: &[Toolbox]) -> Vec<ToolboxView> {
     toolboxes
@@ -157,9 +542,8 @@ pub fn extract_toolbox_views(toolboxes: &[Toolbox]) -> Vec<ToolboxView> {
             chains: tb
                 .chains()
                 .iter()
-                .map(|chain| ToolChainView {
-                    metadata: chain.metadata().clone(),
-                    tools: chain
+                .map(|chain| {
+                    let tools: Vec<ToolView> = chain
                         .tools()
                         .iter()
                         .map(|tool| {
@@ -173,7 +557,15 @@ pub fn extract_toolbox_views(toolboxes: &[Toolbox]) -> Vec<ToolboxView> {
                                 description: m.description.clone(),
                             }
                         })
-                        .collect(),
+                        .collect();
+
+                    let widgets = build_toolchain_widgets(&chain.metadata().id, &tools);
+
+                    ToolChainView {
+                        metadata: chain.metadata().clone(),
+                        tools,
+                        widgets,
+                    }
                 })
                 .collect(),
         })
@@ -440,27 +832,79 @@ pub fn show_flyout(document: &Document, toolbox_id: &str) {
     let flyout = document.create_element("div").unwrap();
     flyout.set_class_name("toolbox-flyout");
 
-    // Header
+    // Header: Icon + Title + Ontology Badge + Close button
     let header = document.create_element("div").unwrap();
     header.set_class_name("toolbox-flyout-header");
-    header.set_text_content(Some(&view.metadata.label));
+
+    let header_left = document.create_element("div").unwrap();
+    header_left.set_class_name("flyout-header-left");
+
+    let tb_icon = document.create_element("span").unwrap();
+    tb_icon.set_class_name("flyout-header-icon");
+    tb_icon.set_text_content(Some(toolbox_glyph(&view.metadata.id)));
+    header_left.append_child(&tb_icon).unwrap();
+
+    let title_wrap = document.create_element("div").unwrap();
+    title_wrap.set_class_name("flyout-title-wrap");
+
+    let title = document.create_element("div").unwrap();
+    title.set_class_name("flyout-title-text");
+    title.set_text_content(Some(&view.metadata.label));
+    title_wrap.append_child(&title).unwrap();
+
+    let desc = document.create_element("div").unwrap();
+    desc.set_class_name("flyout-desc-text");
+    desc.set_text_content(Some(&view.metadata.description));
+    title_wrap.append_child(&desc).unwrap();
+
+    header_left.append_child(&title_wrap).unwrap();
+    header.append_child(&header_left).unwrap();
+
+    let header_right = document.create_element("div").unwrap();
+    header_right.set_class_name("flyout-header-right");
+
+    let ont_badge = document.create_element("span").unwrap();
+    ont_badge.set_class_name("flyout-ont-badge");
+    ont_badge.set_text_content(Some(&format!("{}:", view.metadata.ontology_prefix)));
+    header_right.append_child(&ont_badge).unwrap();
+
+    let close_btn = document.create_element("button").unwrap();
+    close_btn.set_class_name("flyout-close-btn");
+    close_btn.set_attribute("title", "Close Drawer").unwrap();
+    close_btn.set_text_content(Some("\u{2715}"));
+
+    let close_closure = Closure::wrap(Box::new(move |_e: web_sys::MouseEvent| {
+        let doc = web_sys::window().unwrap().document().unwrap();
+        hide_flyout(&doc);
+    }) as Box<dyn FnMut(web_sys::MouseEvent)>);
+    close_btn
+        .add_event_listener_with_callback("click", close_closure.as_ref().unchecked_ref())
+        .unwrap();
+    close_closure.forget();
+
+    header_right.append_child(&close_btn).unwrap();
+    header.append_child(&header_right).unwrap();
+
     flyout.append_child(&header).unwrap();
 
-    // Tool-chains
+    // Tool-chains & Interactive Domain Controls
+    let chains_scroll = document.create_element("div").unwrap();
+    chains_scroll.set_class_name("toolbox-flyout-body");
+
     for chain in &view.chains {
         let group = document.create_element("div").unwrap();
         group.set_class_name("toolchain-group");
 
-        let chain_label = document.create_element("div").unwrap();
-        chain_label.set_class_name("toolchain-label");
-        chain_label
+        let chain_header = document.create_element("div").unwrap();
+        chain_header.set_class_name("toolchain-label");
+        chain_header
             .set_attribute("data-chain-id", &chain.metadata.id)
             .unwrap();
-        chain_label
+        chain_header
             .set_attribute("data-toolbox-id", &view.metadata.id)
             .unwrap();
-        chain_label.set_attribute("draggable", "true").unwrap();
-        chain_label
+        chain_header.set_attribute("draggable", "true").unwrap();
+        chain_header
             .set_attribute(
                 "title",
                 "Click to activate on focused surface, or drag onto a container",
@@ -470,43 +914,64 @@ pub fn show_flyout(document: &Document, toolbox_id: &str) {
         let chain_icon = document.create_element("span").unwrap();
         chain_icon.set_class_name("toolchain-label-icon");
         chain_icon.set_text_content(Some("\u{2630}"));
-        chain_label.append_child(&chain_icon).unwrap();
+        chain_header.append_child(&chain_icon).unwrap();
 
         let chain_text = document.create_element("span").unwrap();
         chain_text.set_class_name("toolchain-label-text");
         chain_text.set_text_content(Some(&chain.metadata.label));
-        chain_label.append_child(&chain_text).unwrap();
+        chain_header.append_child(&chain_text).unwrap();
 
-        group.append_child(&chain_label).unwrap();
-
-        for tool in &chain.tools {
-            let btn = document.create_element("button").unwrap();
-            btn.set_class_name("tool-btn");
-            btn.set_attribute("data-tool-id", &tool.id).unwrap();
-            btn.set_attribute("data-chain-id", &chain.metadata.id)
-                .unwrap();
-            btn.set_attribute("title", &tool.description).unwrap();
-
-            let icon_el = document.create_element("span").unwrap();
-            icon_el.set_class_name("tool-btn-icon");
-            icon_el.set_text_content(Some(tool_glyph(&tool.icon)));
-            btn.append_child(&icon_el).unwrap();
-
-            let label_el = document.create_element("span").unwrap();
-            label_el.set_class_name("tool-btn-label");
-            label_el.set_text_content(Some(&tool.label));
-            btn.append_child(&label_el).unwrap();
-
-            let kind_el = document.create_element("span").unwrap();
-            kind_el.set_class_name("tool-btn-kind");
-            kind_el.set_text_content(Some(kind_label(tool.kind)));
-            btn.append_child(&kind_el).unwrap();
-
-            group.append_child(&btn).unwrap();
+        if !chain.metadata.description.is_empty() {
+            let chain_hint = document.create_element("span").unwrap();
+            chain_hint.set_class_name("toolchain-label-hint");
+            chain_hint.set_text_content(Some(&chain.metadata.description));
+            chain_header.append_child(&chain_hint).unwrap();
         }
 
-        flyout.append_child(&group).unwrap();
+        group.append_child(&chain_header).unwrap();
+
+        // Widgets container
+        let widgets_box = document.create_element("div").unwrap();
+        widgets_box.set_class_name("toolchain-widgets-container");
+
+        if !chain.widgets.is_empty() {
+            for widget in &chain.widgets {
+                widgets_box.append_child(&widget.render(document)).unwrap();
+            }
+        } else {
+            // Fallback for tools without rich widgets
+            for tool in &chain.tools {
+                let btn = document.create_element("button").unwrap();
+                btn.set_class_name("tool-btn");
+                btn.set_attribute("data-tool-id", &tool.id).unwrap();
+                btn.set_attribute("data-chain-id", &chain.metadata.id)
+                    .unwrap();
+                btn.set_attribute("title", &tool.description).unwrap();
+
+                let icon_el = document.create_element("span").unwrap();
+                icon_el.set_class_name("tool-btn-icon");
+                icon_el.set_text_content(Some(tool_glyph(&tool.icon)));
+                btn.append_child(&icon_el).unwrap();
+
+                let label_el = document.create_element("span").unwrap();
+                label_el.set_class_name("tool-btn-label");
+                label_el.set_text_content(Some(&tool.label));
+                btn.append_child(&label_el).unwrap();
+
+                let kind_el = document.create_element("span").unwrap();
+                kind_el.set_class_name("tool-btn-kind");
+                kind_el.set_text_content(Some(kind_label(tool.kind)));
+                btn.append_child(&kind_el).unwrap();
+
+                widgets_box.append_child(&btn).unwrap();
+            }
+        }
+
+        group.append_child(&widgets_box).unwrap();
+        chains_scroll.append_child(&group).unwrap();
     }
+
+    flyout.append_child(&chains_scroll).unwrap();
 
     // Append to the workspace (so it positions relative to the dock)
     if let Some(workspace) = document.query_selector(".main-workspace").unwrap() {
@@ -523,7 +988,109 @@ pub fn hide_flyout(document: &Document) {
     }
 }
 
-/// Build the right dock (aura tray + pulse stream).
+/// Create a collapsible dock panel with an interactive header, chevron indicator, title, optional badge, and collapsible body.
+pub fn create_collapsible_dock_panel(
+    document: &Document,
+    title: &str,
+    badge_text: Option<&str>,
+    body: Element,
+    initially_expanded: bool,
+    flex_grow: bool,
+) -> Element {
+    let panel = document.create_element("div").unwrap();
+    panel.set_class_name("dock-panel");
+    let p_el: HtmlElement = panel.clone().dyn_into().unwrap();
+    if flex_grow {
+        p_el.style()
+            .set_css_text("flex: 1; min-height: 32px; overflow: hidden; display: flex; flex-direction: column;");
+    } else {
+        p_el.style()
+            .set_css_text("min-height: 32px; display: flex; flex-direction: column;");
+    }
+
+    let header = document.create_element("div").unwrap();
+    header.set_class_name("dock-panel-header");
+
+    let left = document.create_element("div").unwrap();
+    let l_el: HtmlElement = left.clone().dyn_into().unwrap();
+    l_el.style()
+        .set_css_text("display: flex; align-items: center; gap: 6px;");
+
+    let chevron = document.create_element("span").unwrap();
+    chevron.set_class_name("dock-panel-chevron");
+    chevron.set_text_content(Some(if initially_expanded {
+        "\u{25BE}" // ▾
+    } else {
+        "\u{25B8}" // ▸
+    }));
+    left.append_child(&chevron).unwrap();
+
+    let title_span = document.create_element("span").unwrap();
+    title_span.set_text_content(Some(title));
+    left.append_child(&title_span).unwrap();
+    header.append_child(&left).unwrap();
+
+    if let Some(badge) = badge_text {
+        let badge_span = document.create_element("span").unwrap();
+        badge_span.set_class_name("dock-panel-badge");
+        badge_span.set_text_content(Some(badge));
+        header.append_child(&badge_span).unwrap();
+    }
+
+    panel.append_child(&header).unwrap();
+
+    let b_el: HtmlElement = body.clone().dyn_into().unwrap();
+    if !initially_expanded {
+        b_el.style().set_property("display", "none").unwrap();
+        let _ = panel.class_list().add_1("collapsed");
+        if flex_grow {
+            let _ = p_el.style().set_property("flex", "0 0 auto");
+        }
+    }
+    panel.append_child(&body).unwrap();
+
+    let is_exp = Rc::new(Cell::new(initially_expanded));
+    let is_exp_c = is_exp.clone();
+    let body_c = body.clone();
+    let panel_c = panel.clone();
+    let chev_c = chevron.clone();
+
+    let toggle_closure = Closure::wrap(Box::new(move |_e: Event| {
+        let next = !is_exp_c.get();
+        is_exp_c.set(next);
+
+        let body_h: HtmlElement = body_c.clone().dyn_into().unwrap();
+        let pan_h: HtmlElement = panel_c.clone().dyn_into().unwrap();
+        let chev_h: HtmlElement = chev_c.clone().dyn_into().unwrap();
+
+        if next {
+            body_h.style().set_property("display", "").unwrap();
+            let _ = panel_c.class_list().remove_1("collapsed");
+            chev_h.set_text_content(Some("\u{25BE}")); // ▾
+            if flex_grow {
+                let _ = pan_h.style().set_property("flex", "1");
+                let _ = pan_h.style().set_property("overflow", "hidden");
+            }
+        } else {
+            body_h.style().set_property("display", "none").unwrap();
+            let _ = panel_c.class_list().add_1("collapsed");
+            chev_h.set_text_content(Some("\u{25B8}")); // ▸
+            if flex_grow {
+                let _ = pan_h.style().set_property("flex", "0 0 auto");
+                let _ = pan_h.style().set_property("overflow", "visible");
+            }
+        }
+    }) as Box<dyn FnMut(Event)>);
+
+    header
+        .add_event_listener_with_callback("click", toggle_closure.as_ref().unchecked_ref())
+        .unwrap();
+    toggle_closure.forget();
+
+    panel
+}
+
+/// Build the right dock (aura tray + pulse stream + job center).
 pub fn build_right_dock(document: &Document) -> Element {
     let dock = document.create_element("div").unwrap();
     dock.set_class_name("right-dock");
@@ -564,41 +1131,65 @@ pub fn build_right_dock(document: &Document) -> Element {
     collapse_btn.set_text_content(Some("\u{25B6}"));
     content.append_child(&collapse_btn).unwrap();
 
-    // Aura Tray — wired to diagnostics module
-    let aura = document.create_element("div").unwrap();
-    aura.set_class_name("dock-panel");
-    let aura_header = document.create_element("div").unwrap();
-    aura_header.set_class_name("dock-panel-header");
-    aura_header.set_text_content(Some("Aura Tray"));
-    aura.append_child(&aura_header).unwrap();
-
+    // 1. Aura Tray — wired to diagnostics module with collapsible sub-trays
     let shacl_results = super::diagnostics::default_shacl_results();
+    let passed = shacl_results.iter().filter(|r| r.conformant).count();
+    let aura_badge = format!("{}/{} valid", passed, shacl_results.len());
     let aura_body = super::diagnostics::render_aura_tray(document, &shacl_results);
-    aura.append_child(&aura_body).unwrap();
-    content.append_child(&aura).unwrap();
+    let aura_panel = create_collapsible_dock_panel(
+        document,
+        "Aura Tray",
+        Some(&aura_badge),
+        aura_body,
+        true,  // initially expanded
+        false, // flex_grow
+    );
+    content.append_child(&aura_panel).unwrap();
 
-    // Pulse Stream — wired to diagnostics module
-    let pulse = document.create_element("div").unwrap();
-    pulse.set_class_name("dock-panel");
-    let pulse_el: HtmlElement = pulse.clone().dyn_into().unwrap();
-    pulse_el
-        .style()
-        .set_css_text("flex: 1; overflow: hidden; display: flex; flex-direction: column;");
-
-    let pulse_header = document.create_element("div").unwrap();
-    pulse_header.set_class_name("dock-panel-header");
-    pulse_header.set_text_content(Some("Pulse Stream"));
-    pulse.append_child(&pulse_header).unwrap();
-
+    // 2. Pulse Stream — wired to diagnostics module
     let pulse_events = super::diagnostics::default_pulse_events();
+    let pulse_badge = format!("{} events", pulse_events.len());
     let pulse_body = super::diagnostics::render_pulse_stream(document, &pulse_events);
-    pulse.append_child(&pulse_body).unwrap();
-    content.append_child(&pulse).unwrap();
+    let pulse_panel = create_collapsible_dock_panel(
+        document,
+        "Pulse Stream",
+        Some(&pulse_badge),
+        pulse_body,
+        true, // initially expanded
+        true, // flex_grow (occupies remaining height)
+    );
+    content.append_child(&pulse_panel).unwrap();
 
-    // Job Center — background job queue
+    // 3. Job Center — background job queue
     let jobs = super::diagnostics::default_jobs();
-    let job_panel = super::diagnostics::render_job_center(document, &jobs);
+    let active_jobs = jobs
+        .iter()
+        .filter(|j| j.status == super::diagnostics::JobStatus::Running)
+        .count();
+    let jobs_badge = format!("{} running", active_jobs);
+    let job_body = super::diagnostics::render_job_body(document, &jobs);
+    let job_panel = create_collapsible_dock_panel(
+        document,
+        "Job Center",
+        Some(&jobs_badge),
+        job_body,
+        true,  // initially expanded
+        false, // flex_grow
+    );
     content.append_child(&job_panel).unwrap();
+
+    // 4. Live VibeScript UI Host (<q-vibe-ui>)
+    let vibe_ui_script = super::vibe_ui::default_aura_tray_vibe_script();
+    let vibe_ui_host = super::vibe_ui::render_live_vibe_ui(document, vibe_ui_script);
+    let vibe_ui_panel = create_collapsible_dock_panel(
+        document,
+        "Vibe UI Live Engine",
+        Some("Hot-Reload"),
+        vibe_ui_host,
+        false, // collapsed by default
+        false, // flex_grow
+    );
+    content.append_child(&vibe_ui_panel).unwrap();
 
     dock.append_child(&content).unwrap();
 

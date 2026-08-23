@@ -24,14 +24,204 @@ const SVG_NS: &str = "http://www.w3.org/2000/svg";
 /// Global z-index counter — increments each time a container is focused.
 static HIGHEST_Z: AtomicU32 = AtomicU32::new(100);
 
-// Thread-local for the currently selected container id.
+/// Active drag, resize, pan, or wire drawing state across the canvas.
+enum ActivePointerInteraction {
+    DraggingContainer {
+        container: Element,
+        start_mx: f32,
+        start_my: f32,
+        orig_x: f32,
+        orig_y: f32,
+    },
+    ResizingContainer {
+        container: Element,
+        start_mx: f32,
+        start_my: f32,
+        orig_w: f32,
+        orig_h: f32,
+        style: String,
+    },
+    PanningCanvas {
+        canvas: Element,
+        start_mx: f32,
+        start_my: f32,
+        start_scroll_x: i32,
+        start_scroll_y: i32,
+    },
+    DraggingPort {
+        source_container: Element,
+        drag_svg: Element,
+        drag_path: Element,
+        start_x: f32,
+        start_y: f32,
+        canvas_rect_left: f32,
+        canvas_rect_top: f32,
+    },
+}
+
+// Thread-local for the currently active pointer interaction and selected container.
 thread_local! {
+    static ACTIVE_INTERACTION: RefCell<Option<ActivePointerInteraction>> = RefCell::new(None);
+    static GLOBAL_LISTENERS_INITIALIZED: RefCell<bool> = RefCell::new(false);
     static SELECTED_CONTAINER: RefCell<Option<String>> = RefCell::new(None);
+}
+
+/// Initialize the single, shared global pointer event listeners on the document.
+/// This prevents listener leaks where temporary move handlers stick to the mouse pointer.
+pub fn init_global_pointer_listeners(document: &Document) {
+    GLOBAL_LISTENERS_INITIALIZED.with(|init| {
+        if *init.borrow() {
+            return;
+        }
+        *init.borrow_mut() = true;
+
+        // Global mousemove handler
+        let on_move = Closure::wrap(Box::new(move |e: Event| {
+            let me: MouseEvent = match e.dyn_into() {
+                Ok(m) => m,
+                Err(_) => return,
+            };
+            let mx = me.client_x() as f32;
+            let my = me.client_y() as f32;
+
+            ACTIVE_INTERACTION.with(|ai| {
+                if let Some(ref interaction) = *ai.borrow() {
+                    match interaction {
+                        ActivePointerInteraction::DraggingContainer {
+                            container,
+                            start_mx,
+                            start_my,
+                            orig_x,
+                            orig_y,
+                        } => {
+                            let dx = mx - start_mx;
+                            let dy = my - start_my;
+                            let new_x = snap_to_grid(orig_x + dx);
+                            let new_y = snap_to_grid(orig_y + dy);
+                            let style = container.get_attribute("style").unwrap_or_default();
+                            let new_style = update_position(&style, new_x, new_y);
+                            let _ = container.set_attribute("style", &new_style);
+                        }
+                        ActivePointerInteraction::ResizingContainer {
+                            container,
+                            start_mx,
+                            start_my,
+                            orig_w,
+                            orig_h,
+                            style,
+                        } => {
+                            let dx = mx - start_mx;
+                            let dy = my - start_my;
+                            let new_w = snap_to_grid((orig_w + dx).max(280.0));
+                            let new_h = snap_to_grid((orig_h + dy).max(180.0));
+                            let new_style = update_size(style, new_w, new_h);
+                            let _ = container.set_attribute("style", &new_style);
+                        }
+                        ActivePointerInteraction::PanningCanvas {
+                            canvas,
+                            start_mx,
+                            start_my,
+                            start_scroll_x,
+                            start_scroll_y,
+                        } => {
+                            let dx = mx - start_mx;
+                            let dy = my - start_my;
+                            if let Ok(canvas_el) = canvas.clone().dyn_into::<HtmlElement>() {
+                                canvas_el.set_scroll_left(start_scroll_x - dx as i32);
+                                canvas_el.set_scroll_top(start_scroll_y - dy as i32);
+                            }
+                        }
+                        ActivePointerInteraction::DraggingPort {
+                            drag_path,
+                            start_x,
+                            start_y,
+                            canvas_rect_left,
+                            canvas_rect_top,
+                            ..
+                        } => {
+                            let rel_x = mx - canvas_rect_left;
+                            let rel_y = my - canvas_rect_top;
+                            let dx = ((rel_x - start_x).abs()) * 0.5;
+                            let path_d = format!(
+                                "M {} {} C {} {}, {} {}, {} {}",
+                                start_x,
+                                start_y,
+                                start_x + dx,
+                                start_y,
+                                rel_x - dx,
+                                rel_y,
+                                rel_x,
+                                rel_y
+                            );
+                            let _ = drag_path.set_attribute("d", &path_d);
+                        }
+                    }
+                }
+            });
+        }) as Box<dyn FnMut(Event)>);
+
+        // Global mouseup handler
+        let on_up = Closure::wrap(Box::new(move |e: Event| {
+            let me: MouseEvent = match e.dyn_into() {
+                Ok(m) => m,
+                Err(_) => return,
+            };
+            let mx = me.client_x() as f32;
+            let my = me.client_y() as f32;
+
+            let prev_interaction = ACTIVE_INTERACTION.with(|ai| ai.borrow_mut().take());
+            if let Some(interaction) = prev_interaction {
+                let doc = match web_sys::window().and_then(|w| w.document()) {
+                    Some(d) => d,
+                    None => return,
+                };
+                match interaction {
+                    ActivePointerInteraction::DraggingContainer { container, .. } => {
+                        let _ = container.class_list().remove_1("dragging");
+                        super::history::push_current_frame("drag container");
+                    }
+                    ActivePointerInteraction::ResizingContainer { .. } => {
+                        super::history::push_current_frame("resize container");
+                    }
+                    ActivePointerInteraction::PanningCanvas { .. } => {}
+                    ActivePointerInteraction::DraggingPort {
+                        source_container,
+                        drag_svg,
+                        ..
+                    } => {
+                        drag_svg.remove();
+                        if let Some(el) = doc.element_from_point(mx, my) {
+                            if let Ok(el) = el.dyn_into::<Element>() {
+                                if el.class_list().contains("port-in") {
+                                    if let Ok(Some(target_container)) =
+                                        el.closest(".canvas-container-node")
+                                    {
+                                        if target_container != source_container {
+                                            create_wire(&doc, &source_container, &target_container);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }) as Box<dyn FnMut(Event)>);
+
+        let _ = document
+            .add_event_listener_with_callback("mousemove", on_move.as_ref().unchecked_ref());
+        let _ = document
+            .add_event_listener_with_callback("mouseup", on_up.as_ref().unchecked_ref());
+        on_move.forget();
+        on_up.forget();
+    });
 }
 
 /// Wire up port-to-port wire drawing. Drag from an output port to an
 /// input port to create a connection wire between two containers.
 pub fn wire_port_dragging(document: &Document) {
+    init_global_pointer_listeners(document);
+
     let out_ports = document.query_selector_all(".port-out").unwrap();
     for i in 0..out_ports.length() {
         let port = out_ports.get(i).unwrap();
@@ -61,6 +251,10 @@ pub fn wire_port_dragging(document: &Document) {
                 Some(c) => c,
                 None => return,
             };
+
+            let canvas_rect = canvas.get_bounding_client_rect();
+            let canvas_rect_left = canvas_rect.left() as f32;
+            let canvas_rect_top = canvas_rect.top() as f32;
 
             // Create a temporary SVG for the drag wire
             let drag_svg = doc.create_element_ns(Some(SVG_NS), "svg").unwrap();
@@ -96,69 +290,17 @@ pub fn wire_port_dragging(document: &Document) {
 
             canvas.append_child(&drag_svg).unwrap();
 
-            // Track mouse move to update the drag path
-            let drag_path_clone = drag_path.clone();
-            let start_x_clone = start_x;
-            let start_y_clone = start_y;
-            let canvas_clone = canvas.clone();
-            let on_move = Closure::wrap(Box::new(move |ev: Event| {
-                let mev: MouseEvent = ev.dyn_into().unwrap();
-                // Get canvas rect to compute relative coordinates
-                let canvas_rect = canvas_clone.get_bounding_client_rect();
-                let rel_x = mev.client_x() as f32 - canvas_rect.left() as f32;
-                let rel_y = mev.client_y() as f32 - canvas_rect.top() as f32;
-                let dx = ((rel_x - start_x_clone).abs()) * 0.5;
-                let path_d = format!(
-                    "M {} {} C {} {}, {} {}, {} {}",
-                    start_x_clone,
-                    start_y_clone,
-                    start_x_clone + dx,
-                    start_y_clone,
-                    rel_x - dx,
-                    rel_y,
-                    rel_x,
-                    rel_y
-                );
-                drag_path_clone.set_attribute("d", &path_d).unwrap();
-            }) as Box<dyn FnMut(Event)>);
-
-            doc.add_event_listener_with_callback("mousemove", on_move.as_ref().unchecked_ref())
-                .unwrap();
-            on_move.forget();
-
-            // On mouseup, check if we're over a port-in
-            let drag_svg_for_up = drag_svg.clone();
-            let source_container_for_up = source_container.clone();
-            let on_up = Closure::wrap(Box::new(move |ev: Event| {
-                let mev: MouseEvent = ev.dyn_into().unwrap();
-                let doc = web_sys::window().unwrap().document().unwrap();
-
-                // Get the element under the cursor
-                let target_el =
-                    doc.element_from_point(mev.client_x() as f32, mev.client_y() as f32);
-
-                // Remove the drag overlay
-                drag_svg_for_up.remove();
-
-                if let Some(el) = target_el {
-                    let el: Element = el.dyn_into().unwrap();
-                    // Check if we dropped on a port-in
-                    if el.class_list().contains("port-in") {
-                        if let Some(target_container) =
-                            el.closest(".canvas-container-node").unwrap()
-                        {
-                            // Don't connect to self
-                            if target_container != source_container_for_up {
-                                create_wire(&doc, &source_container_for_up, &target_container);
-                            }
-                        }
-                    }
-                }
-            }) as Box<dyn FnMut(Event)>);
-
-            doc.add_event_listener_with_callback("mouseup", on_up.as_ref().unchecked_ref())
-                .unwrap();
-            on_up.forget();
+            ACTIVE_INTERACTION.with(|ai| {
+                *ai.borrow_mut() = Some(ActivePointerInteraction::DraggingPort {
+                    source_container,
+                    drag_svg,
+                    drag_path,
+                    start_x,
+                    start_y,
+                    canvas_rect_left,
+                    canvas_rect_top,
+                });
+            });
         }) as Box<dyn FnMut(Event)>);
 
         port_el
@@ -596,6 +738,8 @@ pub fn wire_delete_key(document: &Document) {
 
 /// Wire up container dragging via header mousedown.
 pub fn wire_container_dragging(document: &Document) {
+    init_global_pointer_listeners(document);
+
     let headers = document.query_selector_all(".container-header").unwrap();
     for i in 0..headers.length() {
         let header = headers.get(i).unwrap();
@@ -605,7 +749,6 @@ pub fn wire_container_dragging(document: &Document) {
             let me: MouseEvent = e.dyn_into().unwrap();
             me.stop_propagation();
 
-            let doc = web_sys::window().unwrap().document().unwrap();
             let target = me.current_target().unwrap();
             let header: Element = target.dyn_into().unwrap();
             let parent = header.parent_element().unwrap();
@@ -617,30 +760,15 @@ pub fn wire_container_dragging(document: &Document) {
             let style = parent.get_attribute("style").unwrap_or_default();
             let (orig_x, orig_y) = parse_position(&style);
 
-            let parent_clone = parent.clone();
-            let on_move = Closure::wrap(Box::new(move |ev: Event| {
-                let mev: MouseEvent = ev.dyn_into().unwrap();
-                let dx = mev.client_x() as f32 - start_mx;
-                let dy = mev.client_y() as f32 - start_my;
-                let new_x = snap_to_grid(orig_x + dx);
-                let new_y = snap_to_grid(orig_y + dy);
-                let new_style = update_position(&style, new_x, new_y);
-                parent_clone.set_attribute("style", &new_style).unwrap();
-            }) as Box<dyn FnMut(Event)>);
-
-            let parent_clone2 = parent.clone();
-            let on_up = Closure::wrap(Box::new(move |_ev: Event| {
-                parent_clone2.class_list().remove_1("dragging").unwrap();
-                // Push a history frame after drag completes.
-                super::history::push_current_frame("drag container");
-            }) as Box<dyn FnMut(Event)>);
-
-            doc.add_event_listener_with_callback("mousemove", on_move.as_ref().unchecked_ref())
-                .unwrap();
-            doc.add_event_listener_with_callback("mouseup", on_up.as_ref().unchecked_ref())
-                .unwrap();
-            on_move.forget();
-            on_up.forget();
+            ACTIVE_INTERACTION.with(|ai| {
+                *ai.borrow_mut() = Some(ActivePointerInteraction::DraggingContainer {
+                    container: parent,
+                    start_mx,
+                    start_my,
+                    orig_x,
+                    orig_y,
+                });
+            });
         }) as Box<dyn FnMut(Event)>);
 
         header_el
@@ -652,6 +780,8 @@ pub fn wire_container_dragging(document: &Document) {
 
 /// Wire up canvas pan (drag on empty canvas) and zoom (wheel).
 pub fn wire_canvas_pan_zoom(document: &Document) {
+    init_global_pointer_listeners(document);
+
     let canvas = match document.get_element_by_id("manifold-canvas") {
         Some(c) => c,
         None => return,
@@ -674,29 +804,18 @@ pub fn wire_canvas_pan_zoom(document: &Document) {
 
         let start_mx = me.client_x() as f32;
         let start_my = me.client_y() as f32;
-        let canvas_ref = canvas_clone.clone();
+        let start_scroll_x = canvas_clone.scroll_left();
+        let start_scroll_y = canvas_clone.scroll_top();
 
-        let on_move = Closure::wrap(Box::new(move |ev: Event| {
-            let mev: MouseEvent = ev.dyn_into().unwrap();
-            let dx = mev.client_x() as f32 - start_mx;
-            let dy = mev.client_y() as f32 - start_my;
-            canvas_ref.set_scroll_left(((canvas_ref.scroll_left() as f32 - dx) as i32).into());
-            canvas_ref.set_scroll_top(((canvas_ref.scroll_top() as f32 - dy) as i32).into());
-        }) as Box<dyn FnMut(Event)>);
-
-        let doc = web_sys::window().unwrap().document().unwrap();
-        doc.add_event_listener_with_callback("mousemove", on_move.as_ref().unchecked_ref())
-            .unwrap();
-        on_move.forget();
-
-        let on_up = Closure::wrap(Box::new(move |_ev: Event| {
-            // Listeners are forgotten; in a production app we'd track and remove them.
-            // For the UX preview this is acceptable.
-        }) as Box<dyn FnMut(Event)>);
-
-        doc.add_event_listener_with_callback("mouseup", on_up.as_ref().unchecked_ref())
-            .unwrap();
-        on_up.forget();
+        ACTIVE_INTERACTION.with(|ai| {
+            *ai.borrow_mut() = Some(ActivePointerInteraction::PanningCanvas {
+                canvas: canvas_clone.clone(),
+                start_mx,
+                start_my,
+                start_scroll_x,
+                start_scroll_y,
+            });
+        });
     }) as Box<dyn FnMut(Event)>);
 
     canvas
@@ -773,6 +892,14 @@ pub fn wire_toolbox_dock(document: &Document) {
                         children.class_list().remove_1("expanded").unwrap();
                     } else {
                         children.class_list().add_1("expanded").unwrap();
+                        // Open first toolbox in this family
+                        if let Ok(Some(first_btn)) = children.query_selector(".toolbox-dock-btn") {
+                            let tb_id = first_btn.get_attribute("data-toolbox").unwrap_or_default();
+                            if !tb_id.is_empty() {
+                                super::docks::show_flyout(&doc, &tb_id);
+                                wire_flyout_tools(&doc);
+                            }
+                        }
                     }
                 }
             }
@@ -840,7 +967,7 @@ pub fn wire_toolbox_dock(document: &Document) {
 /// show an honest "present — awaiting backend wiring" notification.
 /// Tool-chain labels are clickable (activate on focused surface) and draggable
 /// (drag onto a container to activate there).
-fn wire_flyout_tools(document: &Document) {
+pub fn wire_flyout_tools(document: &Document) {
     // Wire tool-chain label clicks (select/activate chain)
     let chain_labels = document.query_selector_all(".toolchain-label").unwrap();
     for i in 0..chain_labels.length() {
@@ -994,9 +1121,139 @@ fn wire_flyout_tools(document: &Document) {
     }
 }
 
-/// Place a new container on the canvas at a default position.
-/// The container is placed at a slight offset from the top-left to
-/// avoid overlapping existing containers.
+/// Represents a container's 2D bounding box on the manifold.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct ContainerRect {
+    pub x: f32,
+    pub y: f32,
+    pub w: f32,
+    pub h: f32,
+}
+
+impl ContainerRect {
+    pub fn overlaps(&self, other: &ContainerRect, margin: f32) -> bool {
+        let left_a = self.x - margin;
+        let right_a = self.x + self.w + margin;
+        let top_a = self.y - margin;
+        let bottom_a = self.y + self.h + margin;
+
+        let left_b = other.x;
+        let right_b = other.x + other.w;
+        let top_b = other.y;
+        let bottom_b = other.y + other.h;
+
+        !(right_a <= left_b || left_a >= right_b || bottom_a <= top_b || top_a >= bottom_b)
+    }
+}
+
+/// Parse all existing container rectangles from the DOM.
+pub fn get_existing_container_rects(document: &Document) -> Vec<ContainerRect> {
+    let mut rects = Vec::new();
+    if let Ok(nodes) = document.query_selector_all(".canvas-container-node") {
+        for i in 0..nodes.length() {
+            if let Some(node) = nodes.get(i) {
+                if let Ok(el) = node.dyn_into::<Element>() {
+                    let style = el.get_attribute("style").unwrap_or_default();
+                    let (x, y) = parse_position(&style);
+                    let (w, h) = parse_size(&style);
+                    rects.push(ContainerRect { x, y, w, h });
+                }
+            }
+        }
+    }
+    rects
+}
+
+/// Find an optimal non-overlapping slot on the manifold for a new container.
+pub fn find_smart_placement_slot(document: &Document, new_w: f32, new_h: f32) -> (f32, f32) {
+    let existing_rects = get_existing_container_rects(document);
+
+    // Search candidate slots across 4 columns x 6 rows (with 40px margin/gap)
+    let margin = 24.0;
+    for row in 0..6 {
+        for col in 0..4 {
+            let cand_x = 80.0 + (col as f32) * (new_w + 40.0);
+            let cand_y = 60.0 + (row as f32) * (new_h + 40.0);
+            let cand = ContainerRect {
+                x: cand_x,
+                y: cand_y,
+                w: new_w,
+                h: new_h,
+            };
+
+            let has_overlap = existing_rects.iter().any(|r| cand.overlaps(&r, margin));
+            if !has_overlap {
+                return (cand_x, cand_y);
+            }
+        }
+    }
+
+    // If canvas is completely filled/crowded, smoothly rearrange existing containers
+    // to open up a primary slot at (80, 60)
+    reorganize_manifold_internal(document, true);
+    (80.0, 60.0)
+}
+
+/// Smoothly auto-arrange all containers on the current manifold into an organized non-overlapping grid.
+pub fn auto_arrange_manifold(document: &Document) {
+    reorganize_manifold_internal(document, false);
+    super::history::push_current_frame("auto-arrange manifold");
+    show_tool_notification(
+        document,
+        "auto-arrange",
+        "Manifold containers auto-arranged \u{2728}",
+    );
+}
+
+fn reorganize_manifold_internal(document: &Document, reserve_first_slot: bool) {
+    let nodes = match document.query_selector_all(".canvas-container-node") {
+        Ok(n) => n,
+        Err(_) => return,
+    };
+    let total = nodes.length();
+    if total == 0 {
+        return;
+    }
+
+    let offset = if reserve_first_slot { 1 } else { 0 };
+    for i in 0..total {
+        if let Some(node) = nodes.get(i) {
+            if let Ok(el) = node.dyn_into::<Element>() {
+                // Apply smooth CSS transition class
+                let _ = el.class_list().add_1("manifold-rearranging");
+
+                let slot_idx = i + offset;
+                let col = slot_idx % 3;
+                let row = slot_idx / 3;
+                let target_x = 80.0 + (col as f32) * 440.0;
+                let target_y = 60.0 + (row as f32) * 340.0;
+
+                let style = el.get_attribute("style").unwrap_or_default();
+                let new_style = update_position(&style, target_x, target_y);
+                let _ = el.set_attribute("style", &new_style);
+            }
+        }
+    }
+
+    // Schedule cleanup of transition class after 480ms
+    let doc_clone = document.clone();
+    let timeout = Closure::wrap(Box::new(move || {
+        if let Ok(all) = doc_clone.query_selector_all(".canvas-container-node.manifold-rearranging")
+        {
+            for j in 0..all.length() {
+                if let Some(n) = all.get(j) {
+                    if let Ok(el) = n.dyn_into::<Element>() {
+                        let _ = el.class_list().remove_1("manifold-rearranging");
+                    }
+                }
+            }
+        }
+    }) as Box<dyn FnMut()>);
+    set_timeout(timeout.as_ref().unchecked_ref(), 480);
+    timeout.forget();
+}
+
+/// Place a new container on the canvas at an intelligent non-overlapping position.
 /// Place a container on the canvas via a menu action (public, for topbar).
 pub fn place_container_via_menu(document: &Document, container_type: &str, label: &str) {
     place_container_on_canvas(document, container_type, label);
@@ -1005,28 +1262,26 @@ pub fn place_container_via_menu(document: &Document, container_type: &str, label
 fn place_container_on_canvas(document: &Document, container_type: &str, label: &str) {
     use crate::tool_chest::core::registry::SeedContainer;
 
-    // Count existing containers to offset new ones
-    let existing = document
-        .query_selector_all(".canvas-container-node")
-        .unwrap();
-    let count = existing.length() as f32;
-    let x = 80.0 + (count % 5.0) * 40.0;
-    let y = 60.0 + (count % 5.0) * 40.0;
+    let width = 400.0;
+    let height = 300.0;
+    let (x, y) = find_smart_placement_slot(document, width, height);
 
+    let next_z = HIGHEST_Z.fetch_add(1, Ordering::SeqCst) + 1;
     let container = SeedContainer {
         container_type: container_type.into(),
         title: label.trim_start_matches("+ ").to_string(),
         x,
         y,
-        width: 400.0,
-        height: 300.0,
-        z: 100.0 + count,
+        width,
+        height,
+        z: next_z as f32,
         honesty: "missing".into(),
         ..Default::default()
     };
 
     if let Some(canvas) = document.get_element_by_id("manifold-canvas") {
         let el = super::containers::build_container(document, &container);
+        let _ = el.class_list().add_1("newly-placed");
 
         // Append to the content layer if it exists, otherwise to the canvas
         if let Some(content) = canvas.query_selector(".canvas-content-layer").unwrap() {
@@ -1035,12 +1290,32 @@ fn place_container_on_canvas(document: &Document, container_type: &str, label: &
             canvas.append_child(&el).unwrap();
         }
 
+        // Deselect all existing containers and select this newly placed one
+        if let Ok(all) = document.query_selector_all(".canvas-container-node") {
+            for j in 0..all.length() {
+                if let Some(n) = all.get(j) {
+                    if let Ok(ne) = n.dyn_into::<Element>() {
+                        let _ = ne.class_list().remove_1("selected");
+                    }
+                }
+            }
+        }
+        let _ = el.class_list().add_1("selected");
+
         // Re-wire interactions for the new container
         wire_container_selection(document);
         wire_container_dragging(document);
         wire_container_resize(document);
         wire_container_deletion(document);
         wire_port_dragging(document);
+
+        // Auto-scroll canvas so the new container is smoothly visible
+        if let Ok(canvas_el) = canvas.dyn_into::<HtmlElement>() {
+            let target_scroll_x = (x - 80.0).max(0.0) as i32;
+            let target_scroll_y = (y - 60.0).max(0.0) as i32;
+            canvas_el.set_scroll_left(target_scroll_x);
+            canvas_el.set_scroll_top(target_scroll_y);
+        }
 
         // Push a history frame
         super::history::push_current_frame("place container");
@@ -1156,6 +1431,8 @@ pub fn wire_selector_buttons(document: &Document) {
 
 /// Wire up container resize handles (bottom-right grip).
 pub fn wire_container_resize(document: &Document) {
+    init_global_pointer_listeners(document);
+
     let handles = document.query_selector_all(".resize-handle").unwrap();
     for i in 0..handles.length() {
         let handle = handles.get(i).unwrap();
@@ -1174,28 +1451,16 @@ pub fn wire_container_resize(document: &Document) {
             let style = parent.get_attribute("style").unwrap_or_default();
             let (orig_w, orig_h) = parse_size(&style);
 
-            let parent_clone = parent.clone();
-            let on_move = Closure::wrap(Box::new(move |ev: Event| {
-                let mev: MouseEvent = ev.dyn_into().unwrap();
-                let dx = mev.client_x() as f32 - start_mx;
-                let dy = mev.client_y() as f32 - start_my;
-                let new_w = snap_to_grid((orig_w + dx).max(280.0));
-                let new_h = snap_to_grid((orig_h + dy).max(180.0));
-                let new_style = update_size(&style, new_w, new_h);
-                parent_clone.set_attribute("style", &new_style).unwrap();
-            }) as Box<dyn FnMut(Event)>);
-
-            let doc = web_sys::window().unwrap().document().unwrap();
-            doc.add_event_listener_with_callback("mousemove", on_move.as_ref().unchecked_ref())
-                .unwrap();
-            on_move.forget();
-
-            let on_up = Closure::wrap(Box::new(move |_ev: Event| {
-                super::history::push_current_frame("resize container");
-            }) as Box<dyn FnMut(Event)>);
-            doc.add_event_listener_with_callback("mouseup", on_up.as_ref().unchecked_ref())
-                .unwrap();
-            on_up.forget();
+            ACTIVE_INTERACTION.with(|ai| {
+                *ai.borrow_mut() = Some(ActivePointerInteraction::ResizingContainer {
+                    container: parent,
+                    start_mx,
+                    start_my,
+                    orig_w,
+                    orig_h,
+                    style,
+                });
+            });
         }) as Box<dyn FnMut(Event)>);
 
         handle_el
@@ -1380,5 +1645,17 @@ mod tests {
 
         let (x2, _) = snap_clamp_position(700.0, 0.0, 800.0, 600.0, 200.0, 150.0);
         assert_eq!(x2, 600.0);
+    }
+
+    #[test]
+    fn test_container_rect_overlaps() {
+        let r1 = ContainerRect { x: 80.0, y: 60.0, w: 400.0, h: 300.0 };
+        let r2_overlapping = ContainerRect { x: 120.0, y: 100.0, w: 400.0, h: 300.0 };
+        let r3_separate = ContainerRect { x: 520.0, y: 60.0, w: 400.0, h: 300.0 };
+        let r4_below = ContainerRect { x: 80.0, y: 400.0, w: 400.0, h: 300.0 };
+
+        assert!(r1.overlaps(&r2_overlapping, 20.0));
+        assert!(!r1.overlaps(&r3_separate, 20.0));
+        assert!(!r1.overlaps(&r4_below, 20.0));
     }
 }

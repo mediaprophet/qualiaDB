@@ -295,6 +295,10 @@ pub const PHYS_PROJECTILE: &str = "PhysicsAndODE.projectile";
 pub const BIO_ALIGN: &str = "Bioinformatics.align";
 pub const CHEM_SMILES: &str = "OrganicChemistry.validate_smiles";
 pub const CLIN_FRAMINGHAM: &str = "ClinicalRisk.framingham";
+pub const CLIN_CHA2DS2: &str = "ClinicalRisk.cha2ds2_vasc";
+pub const CLIN_SCORE2: &str = "ClinicalRisk.score2";
+pub const CLIN_DRUG_INTERACTION: &str = "ClinicalRisk.drug_interaction";
+pub const CLIN_CONTRAINDICATION: &str = "ClinicalRisk.contraindication";
 pub const FIN_BS: &str = "FinancialModeling.black_scholes";
 pub const ENG_KIN: &str = "EngineeringAnalysis.kinematics";
 pub const ENG_CAUCHY_STRESS: &str = "EngineeringAnalysis.cauchy_stress";
@@ -310,6 +314,7 @@ pub const CHEM_ATOMIC_WEIGHT: &str = "Chemistry.standard_atomic_weight";
 pub const CHEM_LDA_EXCHANGE: &str = "Chemistry.lda_exchange";
 pub const CHEM_LDA_CORRELATION_VWN: &str = "Chemistry.lda_correlation_vwn";
 pub const CHEM_PARSE_BSE_JSON: &str = "Chemistry.parse_bse_json";
+pub const CHEM_STO3G: &str = "Chemistry.sto3g_h2";
 pub const MED_TANIMOTO: &str = "Medical.tanimoto";
 pub const MED_STRUCTURAL_FINGERPRINT: &str = "Medical.structural_fingerprint";
 pub const MED_ANALYZE_INTENSITY_GRID: &str = "Medical.analyze_intensity_grid";
@@ -944,6 +949,27 @@ pub const DMX_CUE_STACK_GO_BACK: &str = "Dmx.cue_stack_go_back";
 pub const DMX_CUE_STACK_RESET: &str = "Dmx.cue_stack_reset";
 
 pub const ALL_BOUND: &[&str] = &[
+    CLIN_FRAMINGHAM,
+    CLIN_CHA2DS2,
+    CLIN_SCORE2,
+    CLIN_DRUG_INTERACTION,
+    CLIN_CONTRAINDICATION,
+    NLP_ANALYZE,
+    NLP_GAZETTEER_RUN,
+    NLP_GAZETTEER_BUILD,
+    NLP_FST_LOOKUP,
+    NLP_COREF_RESOLVE,
+    NLP_FRAME_EXTRACT,
+    NLP_RELATION_EXTRACT,
+    NLP_SUBSTRATE_EXTRACT,
+    NLP_GRAPHRAG_QUERY,
+    CHEM_ELEMENT_SYMBOL,
+    CHEM_ATOMIC_NUMBER,
+    CHEM_ATOMIC_WEIGHT,
+    CHEM_LDA_EXCHANGE,
+    CHEM_LDA_CORRELATION_VWN,
+    CHEM_PARSE_BSE_JSON,
+    CHEM_STO3G,
     HID_POLL,
     HID_WAIT,
     HID_CLEAR,
@@ -2131,7 +2157,8 @@ pub fn seam_for(id: &str) -> &'static str {
         | CHEM_ATOMIC_WEIGHT
         | CHEM_LDA_EXCHANGE
         | CHEM_LDA_CORRELATION_VWN
-        | CHEM_PARSE_BSE_JSON => "chemistry",
+        | CHEM_PARSE_BSE_JSON
+        | CHEM_STO3G => "chemistry",
         MED_TANIMOTO
         | MED_STRUCTURAL_FINGERPRINT
         | MED_ANALYZE_INTENSITY_GRID
@@ -2164,7 +2191,11 @@ pub fn seam_for(id: &str) -> &'static str {
         | PHYS_EVALUATE_INTERACTION => "physics",
         SPECTRAL_EMF_TO_SPD | SPECTRAL_SPD_TO_XYZ | SPECTRAL_EMF_TO_RGB | SPECTRAL_BLEND
         | SPECTRAL_GAMUT_MAP => "spectral",
-        CLIN_FRAMINGHAM => "clinical",
+        CLIN_FRAMINGHAM
+        | CLIN_CHA2DS2
+        | CLIN_SCORE2
+        | CLIN_DRUG_INTERACTION
+        | CLIN_CONTRAINDICATION => "clinical",
         BIOSIGNAL_DP_FILTER | BIOSIGNAL_DP_CONFIG => "biosignal",
         FIN_BS => "econ",
         ENG_KIN => "engineering",

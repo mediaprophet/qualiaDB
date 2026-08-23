@@ -19,6 +19,11 @@ pub(super) fn build_command_list() -> Vec<CommandEntry> {
             shortcut: "",
         },
         CommandEntry {
+            icon: "\u{2728}",
+            label: "Auto-Arrange Manifold (Tidy)",
+            shortcut: "Alt+A",
+        },
+        CommandEntry {
             icon: "\u{1F50D}",
             label: "Search Workbench",
             shortcut: "Ctrl+Shift+F",

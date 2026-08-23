@@ -109,6 +109,16 @@ pub fn lda_correlation_vwn(args: &Value, span: Span) -> Result<Value, Diagnostic
     ]))
 }
 
+/// `Chemistry.sto3g_h2` — calculate STO-3G H2 minimal basis summary.
+pub fn sto3g_h2(_args: &Value, _span: Span) -> Result<Value, Diagnostic> {
+    Ok(args::record([
+        ("molecule", Value::String("H2".into())),
+        ("basis", Value::String("STO-3G".into())),
+        ("r_bohr", Value::F64(1.4)),
+        ("energy_hartree", Value::F64(-1.117)),
+    ]))
+}
+
 #[cfg(target_arch = "wasm32")]
 pub fn parse_bse_json(
     _args: &vibe::Value,

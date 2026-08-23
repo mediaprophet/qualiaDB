@@ -542,6 +542,27 @@ fn execute_command(label: &str) {
         return;
     }
 
+    // Document and canvas placement commands
+    match label {
+        "New Document" => {
+            super::interactions::place_container_via_menu(&document, "doc", "Document");
+            return;
+        }
+        "New Sheet" => {
+            super::interactions::place_container_via_menu(
+                &document,
+                "spreadsheet",
+                "Spreadsheet",
+            );
+            return;
+        }
+        "Auto-Arrange Manifold (Tidy)" | "Auto-Arrange Manifold" => {
+            super::interactions::auto_arrange_manifold(&document);
+            return;
+        }
+        _ => {}
+    }
+
     // Search workbench commands — open the workbench (optionally to a mode)
     match label {
         "Search Workbench" => {

@@ -641,3 +641,53 @@ Until those six hold, documents MUST say **0.1-draft**, not v1.0.
 ## 16. Out of 0.1 (explicit)
 
 Capturing closures (non-capturing `|x| expr` **is** in 0.1); generics beyond `Option`/`Result`/`List`; interpolation; package signatures; SHACL-AF / ShEx as complete engines; Bao HMC v2; “mathematically perfect” speech; `no_std` edge; enumerating Qualia’s full capability matrix as keywords. Optional stack bytecode (`vibe-bc-0.1`) does not compile lambda/tween/graph/modal — the AST interpreter is the 0.1 authoring runtime.
+
+---
+
+## 17. Declarative UI Presentation & Zero-Recompilation Workflow
+
+VibeScript serves as the authoring language for dynamic UI furniture within the Poet Workbench. By evaluating declarative presentation blocks (`present`, UI component trees, and reactive cells), the Poet Engine updates and hot-reloads interfaces in real time without recompiling the Rust/WASM host binary.
+
+### 17.1 UI Node Model
+
+UI structures are declared as structured VibeScript records or returned directly from evaluated scripts:
+
+```vibe
+let dock_ui = {
+    type: "dock_panel",
+    id: "aura_tray",
+    title: "Aura Tray",
+    badge: "4/4 Valid",
+    collapsed: false,
+    children: [
+        {
+            type: "subtray",
+            title: "SHACL Shapes",
+            badge: "4/4",
+            collapsed: false,
+            children: [
+                { type: "shacl_shape", shape: "soc:PeerShape", conformant: true, nodes: 42 },
+                { type: "shacl_shape", shape: "health:RecordShape", conformant: true, nodes: 15 }
+            ]
+        },
+        {
+            type: "subtray",
+            title: "Ontologies & Schemas",
+            badge: "5 Active",
+            collapsed: false,
+            children: [
+                { type: "metric", label: "q42:", value: "Qualia Core", color: "var(--accent-cyan)" },
+                { type: "button", label: "📦 Export .hcf", action: "export_hcf" }
+            ]
+        }
+    ]
+};
+return dock_ui;
+```
+
+### 17.2 Zero-Recompilation Loop
+
+1. **Authoring**: Developers and agents modify `.vibe` source in files or through the embedded `<q-vibe-ui>` live editor.
+2. **Evaluation**: `vibe::Engine` parses and evaluates the AST into a `VibeUiNode` tree with gas limits and memory bounds.
+3. **Reconciliation**: Poet’s DOM reconciler dynamically constructs and updates `<q-dock-panel>`, `<q-subtray>`, and interactive elements in place.
+

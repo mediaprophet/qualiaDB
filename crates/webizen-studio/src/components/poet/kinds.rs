@@ -5,92 +5,125 @@
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum ManifoldId {
     Research,
-    Media,
     Social,
-    Mail,
-    Chora,
+    Knowledge,
+    Projects,
+    Rights,
+    Sanctuary,
+    Media,
+    Communications,
     Settings,
+    Vibe,
 }
 
 impl ManifoldId {
-    pub const ALL: [Self; 6] = [
+    pub const ALL: [Self; 10] = [
         Self::Research,
-        Self::Media,
         Self::Social,
-        Self::Mail,
-        Self::Chora,
+        Self::Knowledge,
+        Self::Projects,
+        Self::Rights,
+        Self::Sanctuary,
+        Self::Media,
+        Self::Communications,
         Self::Settings,
+        Self::Vibe,
     ];
 
     pub fn id(self) -> &'static str {
         match self {
             Self::Research => "manifold-research-01",
-            Self::Media => "manifold-media-01",
             Self::Social => "manifold-social-01",
-            Self::Mail => "manifold-mail-01",
-            Self::Chora => "manifold-chora-01",
+            Self::Knowledge => "manifold-knowledge-01",
+            Self::Projects => "manifold-projects-01",
+            Self::Rights => "manifold-rights-01",
+            Self::Sanctuary => "manifold-sanctuary-01",
+            Self::Media => "manifold-media-01",
+            Self::Communications => "manifold-communications-01",
             Self::Settings => "manifold-settings-01",
+            Self::Vibe => "manifold-vibe-01",
         }
     }
 
     pub fn title(self) -> &'static str {
         match self {
-            Self::Research => "Research & Epistemological Mindware Manifold",
+            Self::Research => "Research & Epistemological Mindware",
+            Self::Social => "Social ERP & Multi-Agent Collaboration",
+            Self::Knowledge => "Knowledge Graphs & Ontological Mindware",
+            Self::Projects => "Projects & Agile Delivery Workspace",
+            Self::Rights => "Rights, Consent & Legal Engineering",
+            Self::Sanctuary => "Sanctuary Mode & Private Intimacy Vault",
             Self::Media => "Media Production & Creative 3D Studio",
-            Self::Social => "Social Governance & Multi-Agent Collaboration",
-            Self::Mail => "Inalienable Communications & Domain Presence",
-            Self::Chora => "Chora 4D Spatio-Temporal Commons",
-            Self::Settings => "Webizen Node Admin & Sentinel Governance",
+            Self::Communications => "Inalienable Communications & Domain Mail",
+            Self::Settings => "System Governance & Sentinel Watchdog",
+            Self::Vibe => "VibeScript & Live Reactive Canvas",
         }
     }
 
     pub fn short(self) -> &'static str {
         match self {
             Self::Research => "Research",
+            Self::Social => "Social",
+            Self::Knowledge => "Knowledge",
+            Self::Projects => "Projects",
+            Self::Rights => "Rights",
+            Self::Sanctuary => "Sanctuary",
             Self::Media => "Media",
-            Self::Social => "Social ERP",
-            Self::Mail => "Mail",
-            Self::Chora => "Chora",
+            Self::Communications => "Mail",
             Self::Settings => "Settings",
+            Self::Vibe => "Vibe",
         }
     }
 
     pub fn icon(self) -> &'static str {
         match self {
             Self::Research => "🔬",
-            Self::Media => "🎨",
             Self::Social => "👥",
-            Self::Mail => "✉️",
-            Self::Chora => "🌐",
+            Self::Knowledge => "📚",
+            Self::Projects => "📋",
+            Self::Rights => "⚖️",
+            Self::Sanctuary => "🛡️",
+            Self::Media => "🎨",
+            Self::Communications => "✉️",
             Self::Settings => "⚙️",
+            Self::Vibe => "⚡",
         }
     }
 
     pub fn blurb(self) -> &'static str {
         match self {
             Self::Research => "Hypermedia document synthesis, ontology graphs, and clinical calculators.",
-            Self::Media => "3D CCF anatomy meshes, EnCodec P64 audio streams, and graphics editing.",
             Self::Social => "Cooperative ERP, Workstream A deliverable cards, and voting ballots.",
-            Self::Mail => "Domain-first inalienable email, CML composer, and WebID publishing.",
-            Self::Chora => "Dialectical web reader, 4D vision point clouds, and spatial commons.",
+            Self::Knowledge => "W3C Solid Pods, RDF-Star knowledge graphs, and SHACL validation.",
+            Self::Projects => "Gantt timeline, agile sprint board, milestone dashboard, and wiki pages.",
+            Self::Rights => "Fiduciary L3 custody, Hohfeldian legal position visualizer, consent ledger.",
+            Self::Sanctuary => "Zero-telemetry cryptographic vault, local-only offline storage.",
+            Self::Media => "3D CCF anatomy meshes, EnCodec P64 audio streams, and graphics editing.",
+            Self::Communications => "Domain-first inalienable email, CML composer, and WebID publishing.",
             Self::Settings => "42MB Sentinel watchdog, local GGUF models, and P2P SDN swarms.",
+            Self::Vibe => "Interactive live VibeScript runtime evaluating reactive visual cells.",
         }
     }
 
     pub fn graph_iri(self) -> &'static str {
         match self {
             Self::Research => "graph:manifold:research_epistemology_01",
-            Self::Media => "graph:manifold:media_production_01",
             Self::Social => "graph:manifold:social_governance_01",
-            Self::Mail => "graph:manifold:domain_communications_01",
-            Self::Chora => "graph:manifold:chora_commons_01",
+            Self::Knowledge => "graph:manifold:knowledge_graphs_01",
+            Self::Projects => "graph:manifold:projects_agile_01",
+            Self::Rights => "graph:manifold:rights_consent_01",
+            Self::Sanctuary => "graph:manifold:sanctuary_vault_01",
+            Self::Media => "graph:manifold:media_production_01",
+            Self::Communications => "graph:manifold:domain_communications_01",
             Self::Settings => "graph:manifold:system_settings_01",
+            Self::Vibe => "graph:manifold:vibe_reactive_01",
         }
     }
 
     pub fn default_dim(self) -> DimMode {
         match self {
-            Self::Media | Self::Chora => DimMode::D3,
+            Self::Media | Self::Knowledge => DimMode::D3,
+            Self::Vibe => DimMode::D4,
             _ => DimMode::D2,
         }
     }
@@ -104,6 +137,33 @@ impl ManifoldId {
                 ToolboxId::Health,
                 ToolboxId::Scientific,
             ],
+            Self::Social => &[
+                ToolboxId::Erp,
+                ToolboxId::Communication,
+                ToolboxId::Rights,
+                ToolboxId::Sdn,
+            ],
+            Self::Knowledge => &[
+                ToolboxId::Office,
+                ToolboxId::Epistemic,
+                ToolboxId::Spatial,
+                ToolboxId::Rights,
+            ],
+            Self::Projects => &[
+                ToolboxId::Erp,
+                ToolboxId::Office,
+                ToolboxId::Communication,
+            ],
+            Self::Rights => &[
+                ToolboxId::Rights,
+                ToolboxId::Epistemic,
+                ToolboxId::Erp,
+            ],
+            Self::Sanctuary => &[
+                ToolboxId::Rights,
+                ToolboxId::Office,
+                ToolboxId::Sdn,
+            ],
             Self::Media => &[
                 ToolboxId::Image,
                 ToolboxId::Spatial,
@@ -111,29 +171,23 @@ impl ManifoldId {
                 ToolboxId::Code,
                 ToolboxId::Ai,
             ],
-            Self::Social => &[
-                ToolboxId::Erp,
-                ToolboxId::Communication,
-                ToolboxId::Rights,
-                ToolboxId::Sdn,
-            ],
-            Self::Mail => &[
+            Self::Communications => &[
                 ToolboxId::Mail,
                 ToolboxId::Office,
                 ToolboxId::Communication,
                 ToolboxId::Rights,
-            ],
-            Self::Chora => &[
-                ToolboxId::Spatial,
-                ToolboxId::Epistemic,
-                ToolboxId::Image,
-                ToolboxId::Sdn,
             ],
             Self::Settings => &[
                 ToolboxId::Rights,
                 ToolboxId::Code,
                 ToolboxId::Sdn,
                 ToolboxId::Ai,
+            ],
+            Self::Vibe => &[
+                ToolboxId::Code,
+                ToolboxId::Ai,
+                ToolboxId::Spatial,
+                ToolboxId::Office,
             ],
         }
     }
