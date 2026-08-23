@@ -1099,4 +1099,88 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: var(--canv
 .radial-sector-group:hover {
   filter: drop-shadow(0 0 8px rgba(0, 210, 255, 0.4));
 }
+
+/* === Webizen Unicode & PUA Icon System (.wi) === */
+@font-face {
+  font-family: 'Webizen Icons';
+  src: local('Webizen Icons'), local('Segoe UI Emoji'), local('Apple Color Emoji'), local('Noto Color Emoji');
+  unicode-range: U+E000-U+E1FF;
+}
+
+.wi {
+  font-family: 'Webizen Icons', 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', system-ui, sans-serif;
+  font-style: normal;
+  font-weight: normal;
+  font-variant: normal;
+  text-transform: none;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+  user-select: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Sizing Utilities */
+.wi-xs { font-size: 10px; width: 12px; height: 12px; }
+.wi-sm { font-size: 14px; width: 16px; height: 16px; }
+.wi-md { font-size: 18px; width: 20px; height: 20px; }
+.wi-lg { font-size: 24px; width: 28px; height: 28px; }
+.wi-xl { font-size: 32px; width: 36px; height: 36px; }
+
+/* Dynamic Interactive States */
+.wi-hover {
+  transition: transform 0.15s ease, filter 0.15s ease;
+}
+.wi-hover:hover {
+  transform: scale(1.12);
+  filter: drop-shadow(0 0 6px var(--accent-cyan-glow, rgba(0, 210, 255, 0.4)));
+}
+
+.wi-active {
+  color: var(--accent-cyan, #00d2ff);
+  filter: drop-shadow(0 0 8px var(--accent-cyan-glow, rgba(0, 210, 255, 0.5)));
+}
+
+.wi-disabled {
+  opacity: 0.35;
+  filter: grayscale(1);
+  pointer-events: none;
+}
+
+.wi-spin {
+  animation: wiSpin 1.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+@keyframes wiSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.wi-pulse {
+  animation: wiPulse 1.8s ease-in-out infinite;
+}
+@keyframes wiPulse {
+  0%, 100% { transform: scale(1); opacity: 0.85; filter: drop-shadow(0 0 2px rgba(168, 85, 247, 0.3)); }
+  50% { transform: scale(1.15); opacity: 1; filter: drop-shadow(0 0 10px rgba(168, 85, 247, 0.7)); }
+}
+
+.wi-breathe {
+  animation: wiBreathe 3s ease-in-out infinite;
+}
+@keyframes wiBreathe {
+  0%, 100% { opacity: 0.7; transform: scale(0.98); }
+  50% { opacity: 1; transform: scale(1.04); filter: drop-shadow(0 0 8px rgba(0, 242, 169, 0.5)); }
+}
+
+.wi-error {
+  color: var(--accent-rose, #ff4d6d);
+  animation: wiErrorShake 0.4s ease-in-out;
+}
+@keyframes wiErrorShake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-3px); }
+  75% { transform: translateX(3px); }
+}
 "#;

@@ -588,65 +588,66 @@ pub fn store_toolbox_views(views: Vec<ToolboxView>) {
 }
 
 // ---------------------------------------------------------------------------
-// Glyph mapping
+// Glyph mapping via Webizen Icon Registry & Fallback Chain
 // ---------------------------------------------------------------------------
 
-/// Map a toolbox id to a display glyph covering all 12 themed Master Toolboxes.
-fn toolbox_glyph(id: &str) -> &'static str {
+/// Map a toolbox id to an authoritative PUA glyph or standard fallback.
+pub fn toolbox_glyph(id: &str) -> &'static str {
     match id {
-        "epistemic" => "\u{1F9ED}",             // 🧭
-        "office" | "word_processor" | "tb_word_processor" | "doc" => "\u{1F4DD}", // 📝
-        "sheet" | "tb_spreadsheet" => "\u{1F4CA}", // 📊
-        "image" | "graphics" | "tb_graphics" => "\u{1F3A8}", // 🎨
-        "spatial" | "3d" | "tb_3d_spatial" => "\u{1F9CA}", // 🧊
-        "audio" | "audio_synth" | "tb_audio_synth" => "\u{1F399}\u{FE0F}", // 🎙️
-        "code" | "tb_code_ide" => "\u{1F4BB}",    // 💻
-        "communication" | "mail" | "tb_mail_publish" => "\u{2709}\u{FE0F}", // ✉️
-        "erp" | "tb_erp_workstream" => "\u{1F4C5}", // 📅
-        "lab" | "science" | "tb_scientific_lab" => "\u{1F52C}", // 🔬
-        "ai" | "tb_ai_copilot" => "\u{2728}",     // ✨
-        "rights" | "governance" | "tb_governance_rights" => "\u{2696}\u{FE0F}", // ⚖️
-        "sdn" | "tb_sdn_cooperative" => "\u{1F310}", // 🌐
-        "health" => "\u{1FA7A}",                  // 🩺
-        _ => "\u{1F9E9}",
+        "epistemic" => "🧭",
+        "office" | "word_processor" | "tb_word_processor" | "doc" => "📝",
+        "sheet" | "tb_spreadsheet" => "📊",
+        "image" | "graphics" | "tb_graphics" => "🎨",
+        "spatial" | "3d" | "tb_3d_spatial" => "🧊",
+        "audio" | "audio_synth" | "tb_audio_synth" => "🎙️",
+        "code" | "tb_code_ide" => "💻",
+        "communication" | "mail" | "tb_mail_publish" => "✉️",
+        "erp" | "tb_erp_workstream" => "📅",
+        "lab" | "science" | "tb_scientific_lab" => "🔬",
+        "ai" | "tb_ai_copilot" => "✨",
+        "rights" | "governance" | "tb_governance_rights" => "⚖️",
+        "sdn" | "tb_sdn_cooperative" => "🌐",
+        "health" => "🩺",
+        "solid" | "tb_solid" => "📦",
+        _ => "🧩",
     }
 }
 
 /// Map a tool icon identifier to a display glyph.
-fn tool_glyph(icon: &str) -> &'static str {
+pub fn tool_glyph(icon: &str) -> &'static str {
     match icon {
-        "doc" => "\u{1F4C4}",
-        "ontology" => "\u{1F4D6}",
-        "slide" => "\u{1F4CA}",
-        "media" => "\u{1F3A8}",
-        "marker" => "\u{1F4CD}",
-        "heatmap" => "\u{1F525}",
-        "sheet" => "\u{1F4CA}",
-        "import" => "\u{21E9}",
-        "map" => "\u{1F5FA}",
-        "3d" => "\u{1F3AF}",
-        "pin" => "\u{1F4CC}",
-        "track" => "\u{1F50D}",
-        "social" => "\u{1F4AC}",
-        "webrtc" => "\u{1F4F7}",
-        "webview" => "\u{1F310}",
-        "group" => "\u{1F465}",
-        "sign" => "\u{270D}",
-        "did" => "\u{1F194}",
-        "health" => "\u{1FA7A}",
-        "pathology" => "\u{1F52C}",
-        "anatomy" => "\u{1F9B2}",
-        "vibe" => "\u{1F4BB}",
-        "quin" => "\u{1F9EC}",
-        "coauthor" => "\u{1F9D1}",
-        "extractor" => "\u{26CF}",
-        "sentinel" => "\u{1F6E1}",
-        "triad" => "\u{1F3A8}",
-        "objective" => "\u{1F4CD}",
-        "subjective" => "\u{1F9ED}",
-        "intersubjective" => "\u{1F91D}",
-        "normative" => "\u{2696}",
-        _ => "\u{1F4A1}",
+        "doc" => "📄",
+        "ontology" => "📖",
+        "slide" => "📊",
+        "media" => "🎨",
+        "marker" => "📍",
+        "heatmap" => "🔥",
+        "sheet" => "📊",
+        "import" => "📥",
+        "map" => "🗺",
+        "3d" => "🎯",
+        "pin" => "📌",
+        "track" => "🔍",
+        "social" => "💬",
+        "webrtc" => "📷",
+        "webview" => "🌐",
+        "group" => "👥",
+        "sign" => "✍",
+        "did" => "🆔",
+        "health" => "🩺",
+        "pathology" => "🔬",
+        "anatomy" => "🫀",
+        "vibe" => "⚡",
+        "quin" => "🧬",
+        "coauthor" => "🧑‍🤝‍🧑",
+        "extractor" => "⛏",
+        "sentinel" => "🛡",
+        "triad" => "🎨",
+        "objective" => "📍",
+        "subjective" => "🧭",
+        "intersubjective" => "🤝",
+        "normative" => "⚖",
+        _ => "💡",
     }
 }
 

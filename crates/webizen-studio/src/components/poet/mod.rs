@@ -10,6 +10,7 @@ mod chrome;
 mod containers;
 mod engine;
 mod gpu_frame;
+pub mod icons;
 mod kinds;
 mod manifolds;
 mod radial_menu;
@@ -20,6 +21,7 @@ mod tools;
 mod vibe_console;
 mod workbench;
 
+pub use icons::IconBadge;
 pub use kinds::{ContainerKind, ManifoldId, ToolboxId};
 pub use radial_menu::{RadialActionRing, RadialState};
 pub use workbench::PoetWorkbench;
