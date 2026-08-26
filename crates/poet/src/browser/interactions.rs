@@ -96,11 +96,20 @@ pub fn init_global_pointer_listeners(document: &Document) {
                         } => {
                             let dx = mx - start_mx;
                             let dy = my - start_my;
-                            let new_x = snap_to_grid(orig_x + dx);
-                            let new_y = snap_to_grid(orig_y + dy);
+                            let new_x = snap_to_grid((orig_x + dx).max(0.0));
+                            let new_y = snap_to_grid((orig_y + dy).max(0.0));
                             let style = container.get_attribute("style").unwrap_or_default();
                             let new_style = update_position(&style, new_x, new_y);
                             let _ = container.set_attribute("style", &new_style);
+                            if let Ok(c_html) = container.clone().dyn_into::<HtmlElement>() {
+                                let _ = c_html.style().set_property("left", &format!("{}px", new_x as u32));
+                                let _ = c_html.style().set_property("top", &format!("{}px", new_y as u32));
+                            }
+                            if let Some(win) = web_sys::window() {
+                                if let Some(doc) = win.document() {
+                                    update_all_wires(&doc);
+                                }
+                            }
                         }
                         ActivePointerInteraction::ResizingContainer {
                             container,
@@ -116,6 +125,15 @@ pub fn init_global_pointer_listeners(document: &Document) {
                             let new_h = snap_to_grid((orig_h + dy).max(180.0));
                             let new_style = update_size(style, new_w, new_h);
                             let _ = container.set_attribute("style", &new_style);
+                            if let Ok(c_html) = container.clone().dyn_into::<HtmlElement>() {
+                                let _ = c_html.style().set_property("width", &format!("{}px", new_w as u32));
+                                let _ = c_html.style().set_property("height", &format!("{}px", new_h as u32));
+                            }
+                            if let Some(win) = web_sys::window() {
+                                if let Some(doc) = win.document() {
+                                    update_all_wires(&doc);
+                                }
+                            }
                         }
                         ActivePointerInteraction::PanningCanvas {
                             canvas,
@@ -178,9 +196,11 @@ pub fn init_global_pointer_listeners(document: &Document) {
                 match interaction {
                     ActivePointerInteraction::DraggingContainer { container, .. } => {
                         let _ = container.class_list().remove_1("dragging");
+                        update_all_wires(&doc);
                         super::history::push_current_frame("drag container");
                     }
                     ActivePointerInteraction::ResizingContainer { .. } => {
+                        update_all_wires(&doc);
                         super::history::push_current_frame("resize container");
                     }
                     ActivePointerInteraction::PanningCanvas { .. } => {}
@@ -192,13 +212,18 @@ pub fn init_global_pointer_listeners(document: &Document) {
                         drag_svg.remove();
                         if let Some(el) = doc.element_from_point(mx, my) {
                             if let Ok(el) = el.dyn_into::<Element>() {
-                                if el.class_list().contains("port-in") {
-                                    if let Ok(Some(target_container)) =
-                                        el.closest(".canvas-container-node")
-                                    {
-                                        if target_container != source_container {
-                                            create_wire(&doc, &source_container, &target_container);
-                                        }
+                                let is_port_in = el.class_list().contains("port-in");
+                                let target_container_opt = if is_port_in {
+                                    el.closest(".canvas-container-node").ok().flatten()
+                                } else if el.class_list().contains("canvas-container-node") {
+                                    Some(el)
+                                } else {
+                                    el.closest(".canvas-container-node").ok().flatten()
+                                };
+
+                                if let Some(target_container) = target_container_opt {
+                                    if target_container != source_container {
+                                        create_wire(&doc, &source_container, &target_container);
                                     }
                                 }
                             }
@@ -310,12 +335,15 @@ pub fn wire_port_dragging(document: &Document) {
     }
 }
 
-/// Create a permanent wire between two containers.
-fn create_wire(document: &Document, source: &Element, target: &Element) {
+/// Create a permanent wire between two containers and prompt for semantic definition.
+pub fn create_wire(document: &Document, source: &Element, target: &Element) {
     let canvas = match document.get_element_by_id("manifold-canvas") {
         Some(c) => c,
         None => return,
     };
+
+    let src_id = source.get_attribute("data-id").unwrap_or_else(|| "source".into());
+    let tgt_id = target.get_attribute("data-id").unwrap_or_else(|| "target".into());
 
     let src_style = source.get_attribute("style").unwrap_or_default();
     let (src_x, src_y) = parse_position(&src_style);
@@ -350,7 +378,11 @@ fn create_wire(document: &Document, source: &Element, target: &Element) {
             new_svg.set_attribute("class", "wire-overlay").unwrap();
             new_svg.set_attribute("width", "100%").unwrap();
             new_svg.set_attribute("height", "100%").unwrap();
-            canvas.append_child(&new_svg).unwrap();
+            if let Some(content_layer) = canvas.query_selector(".canvas-content-layer").unwrap() {
+                content_layer.append_child(&new_svg).unwrap();
+            } else {
+                canvas.append_child(&new_svg).unwrap();
+            }
             new_svg
         }
     };
@@ -359,8 +391,12 @@ fn create_wire(document: &Document, source: &Element, target: &Element) {
     let wire_id = format!("wire-{}", js_sys::Date::now() as u64);
     let path = document.create_element_ns(Some(SVG_NS), "path").unwrap();
     path.set_attribute("d", &path_d).unwrap();
-    path.set_attribute("class", "wire-active").unwrap();
+    path.set_attribute("class", "wire-active wire-selected").unwrap();
     path.set_attribute("data-id", &wire_id).unwrap();
+    path.set_attribute("data-source-id", &src_id).unwrap();
+    path.set_attribute("data-target-id", &tgt_id).unwrap();
+    path.set_attribute("data-predicate", "doc:references").unwrap();
+    path.set_attribute("data-modality", "active").unwrap();
     svg.append_child(&path).unwrap();
 
     // Midpoint label
@@ -370,17 +406,20 @@ fn create_wire(document: &Document, source: &Element, target: &Element) {
     text.set_attribute("x", &mid_x.to_string()).unwrap();
     text.set_attribute("y", &mid_y.to_string()).unwrap();
     text.set_attribute("class", "wire-label-text").unwrap();
-    text.set_text_content(Some("new connection"));
+    text.set_text_content(Some("doc:references"));
     svg.append_child(&text).unwrap();
 
     // Re-wire wire inspector for the new wire
     super::wire_inspector::wire_wire_inspector(document);
 
+    // Immediately open wire inspector so user can define semantics
+    super::wire_inspector::show_inspector(document, &wire_id);
+
     // Push a history frame
     super::history::push_current_frame("draw wire");
 
     // Show notification
-    show_tool_notification(document, "wire-draw", "Wire connected");
+    show_tool_notification(document, "wire-draw", &format!("\u{26A1} Wire linked: [{}] \u{27F6} [{}] \u{00B7} Define Semantics", src_id, tgt_id));
 }
 
 /// Render connection wires as SVG bezier curves between containers.
@@ -423,7 +462,13 @@ pub fn render_wires(document: &Document, canvas: &Element, seed: &ManifoldSeed) 
         path.set_attribute("d", &path_d).unwrap();
         path.set_attribute("class", &format!("wire-{}", conn.wire_type))
             .unwrap();
+        let src_id = format!("container-{}", src.container_type);
+        let tgt_id = format!("container-{}", tgt.container_type);
         path.set_attribute("data-id", &conn.id).unwrap();
+        path.set_attribute("data-source-id", &src_id).unwrap();
+        path.set_attribute("data-target-id", &tgt_id).unwrap();
+        path.set_attribute("data-predicate", &conn.label).unwrap();
+        path.set_attribute("data-modality", &conn.wire_type).unwrap();
         svg_el.append_child(&path).unwrap();
 
         // Midpoint label
@@ -439,6 +484,61 @@ pub fn render_wires(document: &Document, canvas: &Element, seed: &ManifoldSeed) 
     }
 
     canvas.append_child(&svg).unwrap();
+}
+
+/// Dynamically recompute and update SVG paths and label positions for all wires on the canvas.
+pub fn update_all_wires(document: &Document) {
+    if let Ok(paths) = document.query_selector_all(".wire-overlay path") {
+        for i in 0..paths.length() {
+            if let Some(path) = paths.item(i).and_then(|n| n.dyn_into::<Element>().ok()) {
+                let src_id = path.get_attribute("data-source-id").unwrap_or_default();
+                let tgt_id = path.get_attribute("data-target-id").unwrap_or_default();
+
+                if src_id.is_empty() || tgt_id.is_empty() {
+                    continue;
+                }
+
+                let src_opt = document.query_selector(&format!(".canvas-container-node[data-id=\"{}\"]", src_id)).ok().flatten();
+                let tgt_opt = document.query_selector(&format!(".canvas-container-node[data-id=\"{}\"]", tgt_id)).ok().flatten();
+
+                if let (Some(src), Some(tgt)) = (src_opt, tgt_opt) {
+                    let src_style = src.get_attribute("style").unwrap_or_default();
+                    let (src_x, src_y) = parse_position(&src_style);
+                    let (src_w, src_h) = parse_size(&src_style);
+                    let start_x = src_x + src_w;
+                    let start_y = src_y + src_h / 2.0;
+
+                    let tgt_style = tgt.get_attribute("style").unwrap_or_default();
+                    let (tgt_x, tgt_y) = parse_position(&tgt_style);
+                    let (_, tgt_h) = parse_size(&tgt_style);
+                    let end_x = tgt_x;
+                    let end_y = tgt_y + tgt_h / 2.0;
+
+                    let dx = ((end_x - start_x).abs()) * 0.5;
+                    let path_d = format!(
+                        "M {} {} C {} {}, {} {}, {} {}",
+                        start_x, start_y,
+                        start_x + dx, start_y,
+                        end_x - dx, end_y,
+                        end_x, end_y
+                    );
+                    let _ = path.set_attribute("d", &path_d);
+
+                    // Update corresponding label text at midpoint
+                    if let Some(svg) = path.parent_element() {
+                        if let Ok(labels) = svg.query_selector_all(".wire-label-text") {
+                            if let Some(label_el) = labels.item(i).and_then(|n| n.dyn_into::<Element>().ok()) {
+                                let mid_x = (start_x + end_x) / 2.0;
+                                let mid_y = (start_y + end_y) / 2.0 - 6.0;
+                                let _ = label_el.set_attribute("x", &mid_x.to_string());
+                                let _ = label_el.set_attribute("y", &mid_y.to_string());
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
 /// Wire up container selection — clicking a container selects it and
@@ -558,12 +658,6 @@ fn delete_wire(document: &Document, wire_path: &Element) {
     if let Some(parent) = wire_path.parent_element() {
         let labels = parent.query_selector_all(".wire-label-text").unwrap();
         for i in 0..labels.length() {
-            // Remove all labels — in the current model, labels aren't
-            // explicitly linked to paths by ID. A more precise approach
-            // would match by data-id, but the current renderer doesn't
-            // set data-id on labels. For now, we remove the first label
-            // (which corresponds to the first wire in render order).
-            // TODO: link labels to paths by data-id for precise deletion.
             let label = labels.get(i).unwrap();
             let label_el: Element = label.dyn_into().unwrap();
             label_el.remove();
@@ -577,6 +671,11 @@ fn delete_wire(document: &Document, wire_path: &Element) {
     super::history::push_current_frame("delete wire");
     // Show notification
     show_tool_notification(document, "delete-wire", "Wire deleted");
+}
+
+/// Public wrapper to delete a wire element.
+pub fn delete_wire_element(document: &Document, wire_path: &Element) {
+    delete_wire(document, wire_path);
 }
 
 /// Duplicate the selected container(s). Ctrl+D triggers this.
@@ -645,6 +744,117 @@ pub fn wire_container_duplication(document: &Document) {
         .add_event_listener_with_callback("keydown", closure.as_ref().unchecked_ref())
         .unwrap();
     closure.forget();
+}
+
+/// Programmatic duplication of selected containers (for top menubar and palette actions).
+pub fn duplicate_selected_containers(document: &Document) {
+    let selected = document
+        .query_selector_all(".canvas-container-node.selected")
+        .unwrap();
+    if selected.length() == 0 {
+        show_tool_notification(document, "dup", "No container selected to duplicate");
+        return;
+    }
+
+    let mut count = 0u32;
+    for i in 0..selected.length() {
+        let node = selected.get(i).unwrap();
+        let el: Element = node.dyn_into().unwrap();
+        duplicate_container(document, &el);
+        count += 1;
+    }
+
+    super::history::push_current_frame("duplicate container");
+    show_tool_notification(document, "dup", &format!("{} container(s) duplicated", count));
+
+    wire_container_selection(document);
+    wire_container_dragging(document);
+    wire_container_resize(document);
+    wire_container_deletion(document);
+    super::wire_inspector::wire_wire_inspector(document);
+}
+
+/// Apply zoom delta or absolute zoom scale to the canvas viewport.
+pub fn apply_canvas_zoom(document: &Document, zoom_delta: f32, absolute: bool) {
+    if let Some(canvas_node) = document.get_element_by_id("manifold-canvas") {
+        let canvas_el: Element = canvas_node.dyn_into().unwrap();
+        let current_zoom: f32 = canvas_el
+            .get_attribute("data-zoom")
+            .and_then(|z| z.parse().ok())
+            .unwrap_or(1.0);
+
+        let new_zoom = if absolute {
+            zoom_delta.clamp(0.25, 3.0)
+        } else {
+            (current_zoom + zoom_delta).clamp(0.25, 3.0)
+        };
+
+        canvas_el
+            .set_attribute("data-zoom", &new_zoom.to_string())
+            .unwrap();
+
+        if let Some(content) = canvas_el.query_selector(".canvas-content-layer").unwrap() {
+            let content_el: web_sys::HtmlElement = content.dyn_into().unwrap();
+            content_el
+                .style()
+                .set_property("transform", &format!("scale({})", new_zoom))
+                .unwrap();
+            content_el
+                .style()
+                .set_property("transform-origin", "0 0")
+                .unwrap();
+        }
+
+        if let Some(indicator) = canvas_el.query_selector(".canvas-zoom-indicator").unwrap() {
+            indicator.set_text_content(Some(&format!("{:.0}%", new_zoom * 100.0)));
+        }
+    }
+}
+
+/// Auto-arrange all containers on the canvas into a clean, responsive grid layout.
+pub fn auto_arrange_containers(document: &Document) {
+    let containers = document
+        .query_selector_all(".canvas-container-node")
+        .unwrap();
+    let count = containers.length();
+    if count == 0 {
+        return;
+    }
+
+    let margin_x = 40.0;
+    let margin_y = 40.0;
+    let gap = 24.0;
+    let max_cols = if count > 6 { 3 } else { 2 };
+
+    let mut current_col = 0;
+    let mut col_y = vec![margin_y; max_cols];
+
+    for i in 0..count {
+        let node = containers.get(i).unwrap();
+        let el: Element = node.dyn_into().unwrap();
+
+        let style = el.get_attribute("style").unwrap_or_default();
+        let (w, h) = parse_size(&style);
+
+        let x = margin_x + (current_col as f32) * (w + gap);
+        let y = col_y[current_col];
+
+        let new_style = format!(
+            "left: {}px; top: {}px; width: {}px; height: {}px; z-index: {}; transition: left 0.3s ease, top 0.3s ease;",
+            x as u32,
+            y as u32,
+            w as u32,
+            h as u32,
+            i + 1
+        );
+        el.set_attribute("style", &new_style).unwrap();
+
+        col_y[current_col] += h + gap;
+        current_col = (current_col + 1) % max_cols;
+    }
+
+    super::history::push_current_frame("auto-arrange containers");
+    show_tool_notification(document, "tidy", "Containers auto-arranged in clean grid");
 }
 
 /// Duplicate a single container — clone it with a 30px offset.
@@ -746,19 +956,37 @@ pub fn wire_container_dragging(document: &Document) {
         let header_el: Element = header.dyn_into().unwrap();
 
         let closure = Closure::wrap(Box::new(move |e: Event| {
-            let me: MouseEvent = e.dyn_into().unwrap();
+            let me: MouseEvent = match e.dyn_into() {
+                Ok(m) => m,
+                Err(_) => return,
+            };
             me.stop_propagation();
+            me.prevent_default();
 
-            let target = me.current_target().unwrap();
-            let header: Element = target.dyn_into().unwrap();
-            let parent = header.parent_element().unwrap();
+            let target = match me.current_target() {
+                Some(t) => t,
+                None => return,
+            };
+            let header: Element = match target.dyn_into() {
+                Ok(h) => h,
+                Err(_) => return,
+            };
+            let parent = match header.closest(".canvas-container-node").ok().flatten() {
+                Some(p) => p,
+                None => return,
+            };
 
-            parent.class_list().add_1("dragging").unwrap();
+            let _ = parent.class_list().add_1("dragging");
 
+            // Bring to front
+            let next_z = HIGHEST_Z.fetch_add(1, Ordering::SeqCst) + 1;
+            let style = parent.get_attribute("style").unwrap_or_default();
+            let new_style = update_z_index(&style, next_z);
+            let _ = parent.set_attribute("style", &new_style);
+
+            let (orig_x, orig_y) = parse_position(&style);
             let start_mx = me.client_x() as f32;
             let start_my = me.client_y() as f32;
-            let style = parent.get_attribute("style").unwrap_or_default();
-            let (orig_x, orig_y) = parse_position(&style);
 
             ACTIVE_INTERACTION.with(|ai| {
                 *ai.borrow_mut() = Some(ActivePointerInteraction::DraggingContainer {
@@ -1433,18 +1661,31 @@ pub fn wire_selector_buttons(document: &Document) {
 pub fn wire_container_resize(document: &Document) {
     init_global_pointer_listeners(document);
 
-    let handles = document.query_selector_all(".resize-handle").unwrap();
+    let handles = document.query_selector_all(".resize-handle, .container-resizer").unwrap();
     for i in 0..handles.length() {
         let handle = handles.get(i).unwrap();
         let handle_el: Element = handle.dyn_into().unwrap();
 
         let closure = Closure::wrap(Box::new(move |e: Event| {
-            let me: MouseEvent = e.dyn_into().unwrap();
+            let me: MouseEvent = match e.dyn_into() {
+                Ok(m) => m,
+                Err(_) => return,
+            };
             me.stop_propagation();
+            me.prevent_default();
 
-            let target = me.current_target().unwrap();
-            let handle: Element = target.dyn_into().unwrap();
-            let parent = handle.parent_element().unwrap();
+            let target = match me.current_target() {
+                Some(t) => t,
+                None => return,
+            };
+            let handle: Element = match target.dyn_into() {
+                Ok(h) => h,
+                Err(_) => return,
+            };
+            let parent = match handle.closest(".canvas-container-node").ok().flatten() {
+                Some(p) => p,
+                None => return,
+            };
 
             let start_mx = me.client_x() as f32;
             let start_my = me.client_y() as f32;

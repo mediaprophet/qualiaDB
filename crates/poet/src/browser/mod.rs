@@ -66,6 +66,7 @@ pub mod vibe_cell;
 pub mod vibe_ui;
 pub mod vision_10d_scrubber;
 pub mod wire_inspector;
+pub mod webrtc_sync;
 pub mod workflow_panels;
 pub mod workspace_pivot;
 

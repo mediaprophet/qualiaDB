@@ -229,6 +229,76 @@ pub fn build_cooperative_economics_view(document: &Document, cost_model: &TrueCo
     let matrix_text_el: HtmlElement = matrix_text.clone().dyn_into().unwrap();
     matrix_text_el.style().set_css_text("font-family: var(--font-mono); font-size: 10px; color: #94a3b8; margin: 4px 0 0 0; background: rgba(0,0,0,0.3); padding: 6px; border-radius: 4px;");
     card2.append_child(&matrix_text).unwrap();
+
+    // Interactive Peer Policy Evaluator
+    let eval_row = document.create_element("div").unwrap();
+    let eval_row_el: HtmlElement = eval_row.clone().dyn_into().unwrap();
+    eval_row_el.style().set_css_text("display: flex; gap: 6px; align-items: center; margin-top: 4px;");
+
+    let peer_select = document.create_element("select").unwrap();
+    let ps_el: HtmlElement = peer_select.clone().dyn_into().unwrap();
+    ps_el.style().set_css_text("flex: 1; font-family: var(--font-mono); font-size: 10px; background: rgba(0,0,0,0.4); color: #cbd5e1; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; padding: 2px 4px;");
+
+    for (val, label) in &[
+        ("human", "Natural Person (Verified)"),
+        ("unverified", "Natural Person (Unverified)"),
+        ("lab", "Research Collective (Lab)"),
+        ("corp", "Commercial Corporation"),
+        ("anon", "Anonymous / Unverified"),
+    ] {
+        let opt = document.create_element("option").unwrap();
+        opt.set_attribute("value", val).unwrap();
+        opt.set_text_content(Some(label));
+        peer_select.append_child(&opt).unwrap();
+    }
+    eval_row.append_child(&peer_select).unwrap();
+
+    let eval_btn = document.create_element("button").unwrap();
+    eval_btn.set_class_name("vibe-run-btn");
+    eval_btn.set_text_content(Some("\u{26A1} Evaluate"));
+    let eb_el: HtmlElement = eval_btn.clone().dyn_into().unwrap();
+    eb_el.style().set_css_text("background: var(--accent-emerald, #00f2a9); color: #020617; font-weight: 700; font-size: 10px; padding: 3px 8px; border-radius: 4px; border: none; cursor: pointer;");
+    eval_row.append_child(&eval_btn).unwrap();
+    card2.append_child(&eval_row).unwrap();
+
+    let verdict_display = document.create_element("div").unwrap();
+    let vd_el: HtmlElement = verdict_display.clone().dyn_into().unwrap();
+    vd_el.style().set_css_text("font-family: var(--font-mono); font-size: 10px; color: var(--accent-emerald); background: rgba(0, 242, 169, 0.08); padding: 4px 6px; border-radius: 4px; border: 1px solid rgba(0, 242, 169, 0.2);");
+    verdict_display.set_text_content(Some("\u{2713} Verdict: PermitFree (25GB Commons Quota)"));
+    card2.append_child(&verdict_display).unwrap();
+
+    let ps_clone = peer_select.clone();
+    let vd_clone = verdict_display.clone();
+    let eval_closure = wasm_bindgen::closure::Closure::wrap(Box::new(move |_e: web_sys::MouseEvent| {
+        let select_el: web_sys::HtmlSelectElement = ps_clone.clone().dyn_into().unwrap();
+        let val = select_el.value();
+        let peer_class = match val.as_str() {
+            "human" => PeerOntologyClass::NaturalPerson { is_human_verified: true },
+            "unverified" => PeerOntologyClass::NaturalPerson { is_human_verified: false },
+            "lab" => PeerOntologyClass::ResearchCollective { lab_name: "OpenAnatomyLab".into() },
+            "corp" => PeerOntologyClass::Corporation { company_name: "Acme Corp".into(), tax_id: None },
+            _ => PeerOntologyClass::AnonymousOrUnverified,
+        };
+        let verdict = OntologicalPricingEngine::evaluate_peer(&peer_class);
+        let text = match verdict {
+            AccessVerdict::PermitFree { free_bandwidth_gb, reason } => {
+                format!("\u{2713} PermitFree ({}GB Quota) \u{2014} {}", free_bandwidth_gb, reason)
+            }
+            AccessVerdict::ReciprocalBarter { allowed_storage_gb, required_return } => {
+                format!("\u{21C4} ReciprocalBarter ({}GB Storage) \u{2014} Req: {}", allowed_storage_gb, required_return)
+            }
+            AccessVerdict::MeteredPayment { rate_per_gb_cents, rate_per_gpu_sec_cents } => {
+                format!("\u{1F4B3} MeteredPayment: ${:.2}/GB, ${:.2}/GPU-s", rate_per_gb_cents as f64 / 100.0, rate_per_gpu_sec_cents as f64 / 100.0)
+            }
+            AccessVerdict::Deny { reason } => {
+                format!("\u{26A0} Deny: {}", reason)
+            }
+        };
+        vd_clone.set_text_content(Some(&text));
+    }) as Box<dyn FnMut(web_sys::MouseEvent)>);
+    eval_btn.add_event_listener_with_callback("click", eval_closure.as_ref().unchecked_ref()).unwrap();
+    eval_closure.forget();
+
     grid.append_child(&card2).unwrap();
 
     // Card 3: True-Cost Unit Economics

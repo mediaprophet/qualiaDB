@@ -332,18 +332,78 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: var(--canv
 }
 .toolbox-dock-btn:hover .dock-tooltip { opacity: 1; }
 
+.dock-quick-spawn-btn:hover {
+  background: var(--surface-panel-elevated) !important;
+  color: var(--accent-cyan) !important;
+  border-color: var(--accent-cyan) !important;
+  box-shadow: 0 0 8px rgba(0, 210, 255, 0.3) !important;
+}
+.dock-quick-spawn-btn:active {
+  transform: scale(0.96);
+}
+
+/* === 4-Way Docking Architecture === */
+.toolbox-dock.dock-pos-left {
+  width: 180px; order: 1; border-right: 1px solid var(--border-subtle); border-left: none; flex-direction: column;
+}
+.toolbox-dock.dock-pos-right {
+  width: 180px; order: 3; border-left: 1px solid var(--border-subtle); border-right: none; flex-direction: column;
+}
+.toolbox-dock.dock-pos-top {
+  width: 100%; height: 48px; order: 1; border-bottom: 1px solid var(--border-subtle); border-right: none;
+  flex-direction: row; align-items: center; overflow-x: auto; overflow-y: hidden; padding: 4px 8px;
+}
+.toolbox-dock.dock-pos-bottom {
+  width: 100%; height: 48px; order: 3; border-top: 1px solid var(--border-subtle); border-right: none;
+  flex-direction: row; align-items: center; overflow-x: auto; overflow-y: hidden; padding: 4px 8px;
+}
+.toolbox-dock.dock-pos-top .dock-master-header,
+.toolbox-dock.dock-pos-bottom .dock-master-header {
+  border-bottom: none; border-right: 1px solid var(--border-subtle); padding-right: 8px; margin-right: 6px; margin-bottom: 0;
+}
+.toolbox-dock.dock-pos-top .dock-family-section,
+.toolbox-dock.dock-pos-bottom .dock-family-section {
+  flex-direction: row; align-items: center;
+}
+
 /* === Toolbox Flyout (tool-chains + tools) === */
 .toolbox-flyout {
-  position: fixed; left: 180px; top: 48px; width: 320px; max-height: calc(100vh - 110px);
+  position: fixed; left: 184px; top: 48px; width: 320px; max-height: calc(100vh - 110px);
   background: var(--surface-glass-heavy); backdrop-filter: blur(24px);
   border: 1px solid var(--border-medium); border-radius: var(--radius-md);
   box-shadow: 0 12px 36px rgba(0, 0, 0, 0.45); z-index: 400; overflow-y: auto;
   padding: 10px; display: flex; flex-direction: column; gap: 8px;
   animation: flyoutSlideIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
+.toolbox-flyout.dock-right {
+  left: auto; right: 184px; top: 48px;
+}
+.toolbox-flyout.dock-top {
+  left: 16px; top: 96px; width: 340px;
+}
+.toolbox-flyout.dock-bottom {
+  left: 16px; top: auto; bottom: 64px; width: 340px;
+}
 @keyframes flyoutSlideIn {
   from { opacity: 0; transform: translateX(-8px); }
   to { opacity: 1; transform: translateX(0); }
+}
+
+/* === Ambient Mesh Sentinel & Habitat Pivot === */
+.mesh-sentinel-badge {
+  background: rgba(0, 242, 169, 0.12); color: var(--accent-emerald, #00f2a9);
+  border: 1px solid rgba(0, 242, 169, 0.3); font-family: var(--font-mono);
+  font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: var(--radius-xs);
+  display: inline-flex; align-items: center; gap: 4px; user-select: none;
+}
+.habitat-pivot-btn {
+  background: rgba(56, 189, 248, 0.12); color: var(--accent-cyan, #38bdf8);
+  border: 1px solid rgba(56, 189, 248, 0.3); font-family: var(--font-mono);
+  font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: var(--radius-xs);
+  cursor: pointer; transition: all 0.2s;
+}
+.habitat-pivot-btn:hover {
+  background: rgba(56, 189, 248, 0.24); border-color: var(--accent-cyan);
 }
 .toolbox-flyout-header {
   display: flex; align-items: flex-start; justify-content: space-between;
@@ -1182,5 +1242,66 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: var(--canv
   0%, 100% { transform: translateX(0); }
   25% { transform: translateX(-3px); }
   75% { transform: translateX(3px); }
+}
+
+/* Modal Dialogs & HUD Backdrop */
+#save-mode-dialog,
+#new-manifold-dialog,
+#shortcuts-dialog,
+#honesty-dialog,
+#about-dialog {
+  animation: poetModalFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+#save-mode-dialog > div,
+#new-manifold-dialog > div,
+#shortcuts-dialog > div,
+#honesty-dialog > div,
+#about-dialog > div {
+  animation: poetModalSlideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes poetModalFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes poetModalSlideUp {
+  from { opacity: 0; transform: translateY(16px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.save-cancel-btn {
+  padding: 6px 14px;
+  background: var(--surface-panel);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xs);
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  cursor: pointer;
+  transition: var(--trans-fast);
+}
+.save-cancel-btn:hover {
+  background: var(--surface-panel-elevated);
+  color: var(--text-primary);
+  border-color: var(--border-medium);
+}
+
+.save-confirm-btn {
+  padding: 6px 14px;
+  background: var(--accent-cyan);
+  border: 1px solid var(--accent-cyan);
+  border-radius: var(--radius-xs);
+  color: var(--text-inverse);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: var(--trans-fast);
+}
+.save-confirm-btn:hover {
+  filter: brightness(1.15);
+  box-shadow: 0 0 12px var(--accent-cyan-glow);
 }
 "#;

@@ -21,6 +21,124 @@ pub struct RadialSector {
     pub description: &'static str,
 }
 
+pub const CONTAINER_SECTORS: [RadialSector; 8] = [
+    RadialSector {
+        id: "wire",
+        label: "Connect Wire",
+        glyph: "\u{26A1}", // ⚡
+        color_accent: "var(--accent-amber, #ffb834)",
+        description: "Initiate port-to-port reactive wire",
+    },
+    RadialSector {
+        id: "semantics",
+        label: "Define RDF",
+        glyph: "\u{1F3F7}\u{FE0F}", // 🏷️
+        color_accent: "var(--accent-violet, #a855f7)",
+        description: "Define semantic predicate and triple",
+    },
+    RadialSector {
+        id: "inspect",
+        label: "Inspect DAG",
+        glyph: "\u{1F50D}", // 🔍
+        color_accent: "var(--accent-cyan, #00d2ff)",
+        description: "Open DAG Telemetry & Inspector",
+    },
+    RadialSector {
+        id: "clip",
+        label: "Clip Tray",
+        glyph: "\u{1F9FA}", // 🧺
+        color_accent: "var(--accent-emerald, #00f2a9)",
+        description: "Stage container to multi-flavor clipboard",
+    },
+    RadialSector {
+        id: "duplicate",
+        label: "Duplicate",
+        glyph: "\u{1F4D1}", // 📑
+        color_accent: "var(--accent-cyan, #38bdf8)",
+        description: "Clone container and state",
+    },
+    RadialSector {
+        id: "snap",
+        label: "Snap 8px",
+        glyph: "\u{1F4D0}", // 📐
+        color_accent: "var(--accent-rose, #f97316)",
+        description: "Re-snap coordinates to 8px grid",
+    },
+    RadialSector {
+        id: "vibe",
+        label: "Vibe REPL",
+        glyph: "\u{1F4BB}", // 💻
+        color_accent: "var(--accent-emerald, #10b981)",
+        description: "Spawn VibeScript interactive console",
+    },
+    RadialSector {
+        id: "delete",
+        label: "Delete",
+        glyph: "\u{1F5D1}\u{FE0F}", // 🗑️
+        color_accent: "var(--accent-rose, #ef4444)",
+        description: "Close and remove container",
+    },
+];
+
+pub const CANVAS_SECTORS: [RadialSector; 8] = [
+    RadialSector {
+        id: "new_doc",
+        label: "+ Document",
+        glyph: "\u{1F4C4}", // 📄
+        color_accent: "var(--accent-cyan, #38bdf8)",
+        description: "Spawn new rich document container",
+    },
+    RadialSector {
+        id: "new_sheet",
+        label: "+ Sheet",
+        glyph: "\u{1F4CA}", // 📊
+        color_accent: "var(--accent-emerald, #00f2a9)",
+        description: "Spawn new tensor spreadsheet",
+    },
+    RadialSector {
+        id: "new_code",
+        label: "+ Vibe Code",
+        glyph: "\u{1F4BB}", // 💻
+        color_accent: "var(--accent-amber, #ffb834)",
+        description: "Spawn new VibeScript editor & REPL",
+    },
+    RadialSector {
+        id: "new_anatomy",
+        label: "+ Anatomy",
+        glyph: "\u{1FAC0}", // 🫀
+        color_accent: "var(--accent-rose, #f43f5e)",
+        description: "Spawn 10D Visceral & Connectome Anatomy",
+    },
+    RadialSector {
+        id: "new_3d",
+        label: "+ 3D Scene",
+        glyph: "\u{1F9CA}", // 🧊
+        color_accent: "var(--accent-violet, #a855f7)",
+        description: "Spawn 3D Spatial geometry canvas",
+    },
+    RadialSector {
+        id: "new_social",
+        label: "+ Social Chat",
+        glyph: "\u{1F4AC}", // 💬
+        color_accent: "var(--accent-cyan, #00d2ff)",
+        description: "Spawn P2P CRDT chat graph",
+    },
+    RadialSector {
+        id: "arrange",
+        label: "Auto-Arrange",
+        glyph: "\u{1F4D0}", // 📐
+        color_accent: "var(--accent-amber, #ffb834)",
+        description: "Auto-arrange all containers in clean grid",
+    },
+    RadialSector {
+        id: "inspect_canvas",
+        label: "Inspect Canvas",
+        glyph: "\u{1F50D}", // 🔍
+        color_accent: "var(--accent-emerald, #10b981)",
+        description: "Open Manifold DAG Telemetry",
+    },
+];
+
 pub const RADIAL_SECTORS: [RadialSector; 8] = [
     RadialSector {
         id: "inspect",
@@ -91,7 +209,7 @@ pub fn wire_radial_menu(document: &Document) {
         };
 
         // If inside contenteditable text selection, allow text popover
-        if target.closest(".doc-editor").unwrap().is_some() {
+        if let Ok(Some(_)) = target.closest(".doc-editor") {
             let window = web_sys::window().unwrap();
             if let Ok(Some(sel)) = window.get_selection() {
                 if !sel.to_string().as_string().unwrap_or_default().trim().is_empty() {
@@ -102,8 +220,9 @@ pub fn wire_radial_menu(document: &Document) {
 
         // Prevent default browser context menu
         e.prevent_default();
+        e.stop_propagation();
 
-        let container_opt = target.closest(".container-card").unwrap();
+        let container_opt = target.closest(".canvas-container-node").ok().flatten();
         show_radial_ring(&doc_clone, e.client_x() as f64, e.client_y() as f64, container_opt.as_ref());
     }) as Box<dyn FnMut(MouseEvent)>);
 
@@ -119,7 +238,7 @@ pub fn wire_radial_menu(document: &Document) {
             Some(t) => t,
             None => return,
         };
-        if target.closest("#radial-action-ring").unwrap().is_none() {
+        if target.closest("#radial-action-ring").ok().flatten().is_none() {
             hide_radial_ring(&doc_clone2);
         }
     }) as Box<dyn FnMut(MouseEvent)>);
@@ -144,6 +263,11 @@ pub fn show_radial_ring(document: &Document, cx: f64, cy: f64, target_container:
     ));
 
     let container_id = target_container.and_then(|c| c.get_attribute("data-id"));
+    let sectors = if target_container.is_some() {
+        &CONTAINER_SECTORS
+    } else {
+        &CANVAS_SECTORS
+    };
 
     // Build SVG element
     let svg = document.create_element_ns(Some("http://www.w3.org/2000/svg"), "svg").unwrap();
@@ -157,7 +281,7 @@ pub fn show_radial_ring(document: &Document, cx: f64, cy: f64, target_container:
     let r_outer = 110.0;
     let center = 120.0;
 
-    for (i, sector) in RADIAL_SECTORS.iter().enumerate() {
+    for (i, sector) in sectors.iter().enumerate() {
         let start_deg = i as f64 * 45.0 - 90.0;
         let end_deg = (i + 1) as f64 * 45.0 - 90.0;
         let mid_deg = (start_deg + end_deg) / 2.0;
@@ -298,14 +422,26 @@ pub fn show_radial_ring(document: &Document, cx: f64, cy: f64, target_container:
 fn execute_radial_action(document: &Document, sector_id: &str, container_id_opt: Option<&str>) {
     match sector_id {
         "inspect" => {
+            super::topbar::toggle_tech_sidebar(document);
             if let Some(cid) = container_id_opt {
                 show_toast(document, &format!("\u{1F50D} Inspecting container: {} \u{00B7} Telemetry DAG Linked", cid));
             } else {
                 show_toast(document, "\u{1F50D} Canvas Telemetry: 42MB SlgArena Active \u{00B7} Zero Heap Hot Paths");
             }
         }
+        "semantics" => {
+            if let Some(cid) = container_id_opt {
+                super::wire_inspector::show_semantic_dialog_for_container(document, cid);
+            } else {
+                show_toast(document, "\u{1F3F7}\u{FE0F} Right-click a container or wire to define its Semantic RDF Predicate");
+            }
+        }
         "wire" => {
-            show_toast(document, "\u{26A1} Wire Connection Mode: Drag from any Output Port to an Input Port");
+            if let Some(cid) = container_id_opt {
+                show_toast(document, &format!("\u{26A1} Initiated Wire Link from [{}]: Drag from Output Port (Right) to Target Port", cid));
+            } else {
+                show_toast(document, "\u{26A1} Wire Connection Mode: Drag from any Output Port to an Input Port");
+            }
         }
         "clip" => {
             show_toast(document, "\u{1F9FA} Container state captured to Clip Tray (Multi-Modal Provenance)");
@@ -336,6 +472,38 @@ fn execute_radial_action(document: &Document, sector_id: &str, container_id_opt:
             } else {
                 show_toast(document, "\u{1F5D1} Select a container to delete");
             }
+        }
+        // Canvas-level quick container creation
+        "new_doc" => {
+            super::interactions::place_container_via_menu(document, "doc", "+ Document");
+            show_toast(document, "\u{1F4C4} Spawned Document Container");
+        }
+        "new_sheet" => {
+            super::interactions::place_container_via_menu(document, "sheet", "+ Spreadsheet");
+            show_toast(document, "\u{1F4CA} Spawned Spreadsheet Container");
+        }
+        "new_code" => {
+            super::interactions::place_container_via_menu(document, "code", "+ Code IDE");
+            show_toast(document, "\u{1F4BB} Spawned VibeScript IDE Container");
+        }
+        "new_anatomy" => {
+            super::interactions::place_container_via_menu(document, "anatomy", "+ 10D Anatomy");
+            show_toast(document, "\u{1FAC0} Spawned 10D Anatomy Container");
+        }
+        "new_3d" => {
+            super::interactions::place_container_via_menu(document, "3d", "+ 3D Spatial");
+            show_toast(document, "\u{1F9CA} Spawned 3D Spatial Container");
+        }
+        "new_social" => {
+            super::interactions::place_container_via_menu(document, "social", "+ Social Chat");
+            show_toast(document, "\u{1F4AC} Spawned Social Chat Container");
+        }
+        "arrange" => {
+            super::interactions::auto_arrange_containers(document);
+        }
+        "inspect_canvas" => {
+            super::topbar::toggle_tech_sidebar(document);
+            show_toast(document, "\u{1F50D} Canvas Telemetry \u{00B7} 42MB Prolog Sentinel Active");
         }
         _ => {}
     }

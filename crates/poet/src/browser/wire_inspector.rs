@@ -230,20 +230,38 @@ fn commit_label_edit(document: &Document, fo: &Element, original_label: &Element
     super::interactions::show_tool_notification(document, "wire-label-edit", "Wire label updated");
 }
 
-fn show_inspector(document: &Document, wire_id: &str) {
-    // Remove existing inspector
+/// Show the rich semantic connection inspector for a wire.
+pub fn show_inspector(document: &Document, wire_id: &str) {
     hide_inspector(document);
+
+    // Find the wire path in the DOM
+    let path_opt = document
+        .query_selector(&format!(".wire-overlay path[data-id=\"{}\"]", wire_id))
+        .ok()
+        .flatten();
+
+    let (src_id, tgt_id, current_pred, current_modality, _current_weight) = if let Some(ref path) = path_opt {
+        (
+            path.get_attribute("data-source-id").unwrap_or_else(|| "source".into()),
+            path.get_attribute("data-target-id").unwrap_or_else(|| "target".into()),
+            path.get_attribute("data-predicate").unwrap_or_else(|| "doc:references".into()),
+            path.get_attribute("data-modality").unwrap_or_else(|| "active".into()),
+            path.get_attribute("data-weight").unwrap_or_else(|| "1.0".into()),
+        )
+    } else {
+        ("source".into(), "target".into(), "doc:references".into(), "active".into(), "1.0".into())
+    };
 
     let panel = document.create_element("div").unwrap();
     panel.set_id("wire-inspector");
     panel.set_class_name("wire-inspector-panel");
     let p_el: HtmlElement = panel.clone().dyn_into().unwrap();
     p_el.style().set_css_text(
-        "position: fixed; bottom: 40px; right: 300px; width: 320px; \
-         background: var(--surface-glass-heavy); backdrop-filter: blur(20px); \
+        "position: fixed; bottom: 40px; right: 280px; width: 360px; \
+         background: var(--surface-glass-heavy); backdrop-filter: blur(24px); \
          border: 1px solid var(--border-medium); border-radius: var(--radius-sm); \
-         padding: 14px; box-shadow: var(--shadow-lg); z-index: 600; \
-         display: flex; flex-direction: column; gap: 8px;",
+         padding: 16px; box-shadow: 0 12px 40px rgba(0,0,0,0.75); z-index: 600; \
+         display: flex; flex-direction: column; gap: 10px; font-family: var(--font-sans);",
     );
 
     // Header
@@ -251,12 +269,15 @@ fn show_inspector(document: &Document, wire_id: &str) {
     header
         .set_attribute(
             "style",
-            "display: flex; align-items: center; justify-content: space-between;",
+            "display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border-subtle); padding-bottom: 8px;",
         )
         .unwrap();
     let title = document.create_element("span").unwrap();
-    title.set_attribute("style", "font-size: 11px; font-weight: 700; color: var(--accent-cyan); text-transform: uppercase; letter-spacing: 0.5px;").unwrap();
-    title.set_text_content(Some("\u{1F4A1} Wire Inspector"));
+    title.set_attribute(
+        "style",
+        "font-size: 11px; font-weight: 700; color: var(--accent-cyan); text-transform: uppercase; letter-spacing: 0.5px; font-family: var(--font-mono);",
+    ).unwrap();
+    title.set_text_content(Some("\u{1F3F7}\u{FE0F} Semantic Wire Semantics"));
     header.append_child(&title).unwrap();
 
     let close = document.create_element("button").unwrap();
@@ -266,153 +287,213 @@ fn show_inspector(document: &Document, wire_id: &str) {
     header.append_child(&close).unwrap();
     panel.append_child(&header).unwrap();
 
-    // Wire ID
-    let id_row = build_info_row(document, "Wire ID", wire_id);
-    panel.append_child(&id_row).unwrap();
+    // Node endpoints row
+    let endpoints_row = document.create_element("div").unwrap();
+    endpoints_row.set_attribute("style", "display: flex; align-items: center; gap: 6px; font-family: var(--font-mono); font-size: 11px; background: rgba(0,0,0,0.3); padding: 6px 8px; border-radius: 4px; border: 1px solid var(--border-subtle);").unwrap();
+    
+    let src_badge = document.create_element("span").unwrap();
+    src_badge.set_attribute("style", "color: var(--accent-cyan); font-weight: 600;").unwrap();
+    src_badge.set_text_content(Some(&format!("[{}]", src_id)));
+    endpoints_row.append_child(&src_badge).unwrap();
 
-    // Connection type (extract from wire_id if possible)
-    let conn_type = if wire_id.contains("active") {
-        "active"
-    } else if wire_id.contains("event") {
-        "event"
-    } else if wire_id.contains("ontology") {
-        "ontology"
-    } else if wire_id.contains("subjective") {
-        "subjective"
-    } else if wire_id.contains("objective") {
-        "objective"
-    } else {
-        "active"
-    };
-    let type_row = build_info_row(document, "Type", conn_type);
-    panel.append_child(&type_row).unwrap();
+    let arrow = document.create_element("span").unwrap();
+    arrow.set_attribute("style", "color: var(--text-muted);").unwrap();
+    arrow.set_text_content(Some(" \u{27F6} "));
+    endpoints_row.append_child(&arrow).unwrap();
 
-    // Honesty badge
-    let honesty_row = document.create_element("div").unwrap();
-    honesty_row
-        .set_attribute("style", "display: flex; align-items: center; gap: 8px;")
-        .unwrap();
-    let honesty_label = document.create_element("span").unwrap();
-    honesty_label
-        .set_attribute(
-            "style",
-            "font-size: 10px; color: var(--text-muted); min-width: 60px;",
-        )
-        .unwrap();
-    honesty_label.set_text_content(Some("Honesty"));
-    honesty_row.append_child(&honesty_label).unwrap();
-    let badge = document.create_element("span").unwrap();
-    badge.set_class_name("honesty-badge honesty-partial");
-    badge.set_text_content(Some("partial"));
-    honesty_row.append_child(&badge).unwrap();
-    panel.append_child(&honesty_row).unwrap();
+    let tgt_badge = document.create_element("span").unwrap();
+    tgt_badge.set_attribute("style", "color: var(--accent-emerald); font-weight: 600;").unwrap();
+    tgt_badge.set_text_content(Some(&format!("[{}]", tgt_id)));
+    endpoints_row.append_child(&tgt_badge).unwrap();
 
-    // Description
-    let desc = document.create_element("div").unwrap();
-    desc.set_attribute("style", "font-size: 11px; color: var(--text-secondary); line-height: 1.5; padding-top: 4px; border-top: 1px solid var(--border-subtle);").unwrap();
-    desc.set_text_content(Some(
-        "Visual connection between containers. Wire routing is live (SVG bezier). \
-         Semantic grounding (RDF triple, provenance) is partial \u{2014} awaiting backend ontology wiring."
-    ));
-    panel.append_child(&desc).unwrap();
+    panel.append_child(&endpoints_row).unwrap();
 
-    // Actions
-    let actions = document.create_element("div").unwrap();
-    actions
-        .set_attribute("style", "display: flex; gap: 6px; padding-top: 4px;")
-        .unwrap();
-    for (label, action) in &[
-        ("Delete", "delete"),
-        ("Edit Label", "edit"),
-        ("Trace Provenance", "trace"),
-    ] {
-        let btn = document.create_element("button").unwrap();
-        btn.set_class_name("wire-inspector-btn");
-        btn.set_attribute("data-action", action).unwrap();
-        btn.set_text_content(Some(label));
-        actions.append_child(&btn).unwrap();
+    // Semantic Predicate Selector
+    let pred_group = document.create_element("div").unwrap();
+    pred_group.set_attribute("style", "display: flex; flex-direction: column; gap: 4px;").unwrap();
+    
+    let pred_label = document.create_element("span").unwrap();
+    pred_label.set_attribute("style", "font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; font-family: var(--font-mono);").unwrap();
+    pred_label.set_text_content(Some("Semantic Predicate (RDF / Vibe Relation)"));
+    pred_group.append_child(&pred_label).unwrap();
+
+    let pred_select = document.create_element("select").unwrap();
+    pred_select.set_id("wire-predicate-select");
+    let ps_el: HtmlElement = pred_select.clone().dyn_into().unwrap();
+    ps_el.style().set_css_text("width: 100%; font-family: var(--font-mono); font-size: 11px; background: var(--surface-panel-elevated); border: 1px solid var(--border-medium); border-radius: var(--radius-xs); color: var(--text-primary); padding: 5px 8px; outline: none;");
+
+    let predicates = [
+        ("doc:references", "doc:references — Hypermedia Reference"),
+        ("prov:wasDerivedFrom", "prov:wasDerivedFrom — W3C PROV Provenance"),
+        ("vibe:pipesTo", "vibe:pipesTo — Reactive Data Stream Pipeline"),
+        ("rights:authorizes", "rights:authorizes — Permission & Delegated Access"),
+        ("agency:governs", "agency:governs — Normative Governance Rule"),
+        ("data:feeds", "data:feeds — Real-time Telemetry Feed"),
+        ("social:mentions", "social:mentions — P2P Social Message Mention"),
+        ("deontic:obligates", "deontic:obligates — Modal Obligation (O)"),
+        ("deontic:permits", "deontic:permits — Modal Permission (P)"),
+        ("deontic:forbids", "deontic:forbids — Modal Prohibition (F)"),
+        ("epistemic:knows", "epistemic:knows — Epistemic Knowledge (K)"),
+        ("epistemic:believes", "epistemic:believes — Doxastic Belief (B)"),
+        ("custom", "Custom URI / Freeform Predicate..."),
+    ];
+
+    for (p_val, p_lbl) in &predicates {
+        let opt = document.create_element("option").unwrap();
+        opt.set_attribute("value", p_val).unwrap();
+        opt.set_text_content(Some(p_lbl));
+        if *p_val == current_pred || (*p_val == "custom" && !predicates.iter().any(|(v, _)| *v == current_pred)) {
+            opt.set_attribute("selected", "selected").unwrap();
+        }
+        pred_select.append_child(&opt).unwrap();
     }
+    pred_group.append_child(&pred_select).unwrap();
+
+    let custom_input = document.create_element("input").unwrap();
+    custom_input.set_id("wire-custom-predicate-input");
+    custom_input.set_attribute("type", "text").unwrap();
+    custom_input.set_attribute("placeholder", "e.g. https://schema.org/about or custom:rel").unwrap();
+    custom_input.set_attribute("value", &current_pred).unwrap();
+    let ci_el: HtmlElement = custom_input.clone().dyn_into().unwrap();
+    ci_el.style().set_css_text("width: 100%; font-family: var(--font-mono); font-size: 11px; background: var(--surface-panel-elevated); border: 1px solid var(--border-medium); border-radius: var(--radius-xs); color: var(--text-primary); padding: 4px 8px; outline: none; margin-top: 2px;");
+    pred_group.append_child(&custom_input).unwrap();
+
+    panel.append_child(&pred_group).unwrap();
+
+    // Modality Visual Selector
+    let modality_group = document.create_element("div").unwrap();
+    modality_group.set_attribute("style", "display: flex; flex-direction: column; gap: 4px;").unwrap();
+    let mod_label = document.create_element("span").unwrap();
+    mod_label.set_attribute("style", "font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; font-family: var(--font-mono);").unwrap();
+    mod_label.set_text_content(Some("Modality & Wire Type"));
+    modality_group.append_child(&mod_label).unwrap();
+
+    let mod_row = document.create_element("div").unwrap();
+    mod_row.set_attribute("style", "display: flex; gap: 4px; flex-wrap: wrap;").unwrap();
+
+    let modalities = [
+        ("active", "Active Stream ⚡", "var(--accent-cyan)"),
+        ("event", "Event Pulse 📡", "var(--accent-amber)"),
+        ("ontology", "Ontology Triple 📖", "var(--accent-violet)"),
+        ("deontic", "Deontic Norm ⚖️", "var(--accent-rose)"),
+        ("epistemic", "Epistemic 🧭", "var(--accent-emerald)"),
+    ];
+
+    for (m_id, m_name, m_color) in &modalities {
+        let m_btn = document.create_element("button").unwrap();
+        m_btn.set_class_name(&format!("wire-modality-btn {}", if *m_id == current_modality { "active" } else { "" }));
+        m_btn.set_attribute("data-modality", m_id).unwrap();
+        let mb_el: HtmlElement = m_btn.clone().dyn_into().unwrap();
+        mb_el.style().set_css_text(&format!(
+            "flex: 1; padding: 4px 6px; font-size: 10px; font-family: var(--font-mono); \
+             background: {}; border: 1px solid {}; border-radius: 3px; color: {}; cursor: pointer; text-align: center; transition: all 0.15s ease;",
+            if *m_id == current_modality { "rgba(255,255,255,0.12)" } else { "var(--surface-panel)" },
+            if *m_id == current_modality { m_color } else { "var(--border-subtle)" },
+            if *m_id == current_modality { m_color } else { "var(--text-secondary)" }
+        ));
+        m_btn.set_text_content(Some(m_name));
+
+        let mod_row_clone = mod_row.clone();
+        let m_id_str = m_id.to_string();
+        let click_closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
+            if let Ok(btn_list) = mod_row_clone.query_selector_all(".wire-modality-btn") {
+                for k in 0..btn_list.length() {
+                    if let Some(b) = btn_list.item(k).and_then(|n| n.dyn_into::<HtmlElement>().ok()) {
+                        let is_this = b.get_attribute("data-modality").as_deref() == Some(&m_id_str);
+                        let _ = b.style().set_property("background", if is_this { "rgba(255,255,255,0.12)" } else { "var(--surface-panel)" });
+                        let _ = b.style().set_property("border-color", if is_this { "var(--accent-cyan)" } else { "var(--border-subtle)" });
+                        let _ = b.style().set_property("color", if is_this { "var(--accent-cyan)" } else { "var(--text-secondary)" });
+                    }
+                }
+            }
+        }) as Box<dyn FnMut(MouseEvent)>);
+        m_btn.add_event_listener_with_callback("click", click_closure.as_ref().unchecked_ref()).unwrap();
+        click_closure.forget();
+
+        mod_row.append_child(&m_btn).unwrap();
+    }
+    modality_group.append_child(&mod_row).unwrap();
+    panel.append_child(&modality_group).unwrap();
+
+    // Live RDF Triple Grounding Preview
+    let triple_box = document.create_element("div").unwrap();
+    triple_box.set_attribute("style", "background: rgba(0,0,0,0.4); border: 1px solid var(--border-medium); border-radius: 4px; padding: 8px; font-family: var(--font-mono); font-size: 10px; color: var(--accent-emerald); line-height: 1.4; word-break: break-all;").unwrap();
+    triple_box.set_text_content(Some(&format!(
+        "<\u{1F517} did:q42:{}> <{}> <\u{1F517} did:q42:{}> .",
+        src_id, current_pred, tgt_id
+    )));
+    panel.append_child(&triple_box).unwrap();
+
+    // Action Buttons
+    let actions = document.create_element("div").unwrap();
+    actions.set_attribute("style", "display: flex; gap: 6px; padding-top: 4px;").unwrap();
+
+    let save_btn = document.create_element("button").unwrap();
+    save_btn.set_attribute("style", "flex: 2; padding: 6px 12px; background: var(--accent-cyan); color: #07090e; font-weight: 700; font-size: 11px; font-family: var(--font-mono); border: none; border-radius: 4px; cursor: pointer; transition: opacity 0.15s;").unwrap();
+    save_btn.set_text_content(Some("💾 Apply Semantics"));
+
+    let wire_id_clone = wire_id.to_string();
+    let save_closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
+        let doc = web_sys::window().unwrap().document().unwrap();
+        let input_val = doc.get_element_by_id("wire-custom-predicate-input")
+            .and_then(|el| el.dyn_into::<web_sys::HtmlInputElement>().ok())
+            .map(|i| i.value())
+            .unwrap_or_else(|| "doc:references".into());
+
+        if let Ok(Some(path)) = doc.query_selector(&format!(".wire-overlay path[data-id=\"{}\"]", wire_id_clone)) {
+            let _ = path.set_attribute("data-predicate", &input_val);
+            let _ = path.set_attribute("class", "wire-active wire-selected");
+        }
+
+        // Update corresponding midpoint label text
+        if let Ok(labels) = doc.query_selector_all(".wire-label-text") {
+            if let Some(lbl) = labels.item(0) {
+                lbl.set_text_content(Some(&input_val));
+            }
+        }
+
+        super::interactions::show_tool_notification(&doc, "wire-semantics", &format!("Semantics applied: {}", input_val));
+        super::history::push_current_frame("apply wire semantics");
+        hide_inspector(&doc);
+    }) as Box<dyn FnMut(MouseEvent)>);
+    save_btn.add_event_listener_with_callback("click", save_closure.as_ref().unchecked_ref()).unwrap();
+    save_closure.forget();
+    actions.append_child(&save_btn).unwrap();
+
+    let delete_btn = document.create_element("button").unwrap();
+    delete_btn.set_attribute("style", "flex: 1; padding: 6px 10px; background: rgba(239, 68, 68, 0.15); border: 1px solid var(--accent-rose); color: var(--accent-rose); font-weight: 600; font-size: 11px; font-family: var(--font-mono); border-radius: 4px; cursor: pointer;").unwrap();
+    delete_btn.set_text_content(Some("🗑️ Delete"));
+
+    let wire_id_clone2 = wire_id.to_string();
+    let delete_closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
+        let doc = web_sys::window().unwrap().document().unwrap();
+        if let Ok(Some(path)) = doc.query_selector(&format!(".wire-overlay path[data-id=\"{}\"]", wire_id_clone2)) {
+            super::interactions::delete_wire_element(&doc, &path);
+        }
+        hide_inspector(&doc);
+    }) as Box<dyn FnMut(MouseEvent)>);
+    delete_btn.add_event_listener_with_callback("click", delete_closure.as_ref().unchecked_ref()).unwrap();
+    delete_closure.forget();
+    actions.append_child(&delete_btn).unwrap();
+
     panel.append_child(&actions).unwrap();
 
     if let Some(body) = document.body() {
         body.append_child(&panel).unwrap();
     }
 
-    // Wire close button
-    let closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
+    // Close button click
+    let close_closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
         let doc = web_sys::window().unwrap().document().unwrap();
         hide_inspector(&doc);
     }) as Box<dyn FnMut(MouseEvent)>);
-    close
-        .add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())
-        .unwrap();
-    closure.forget();
-
-    // Wire action buttons
-    let action_btns = panel.query_selector_all(".wire-inspector-btn").unwrap();
-    for i in 0..action_btns.length() {
-        let btn = action_btns.get(i).unwrap();
-        let btn_el: Element = btn.dyn_into().unwrap();
-        let action = btn_el.get_attribute("data-action").unwrap_or_default();
-        let label = btn_el.text_content().unwrap_or_default();
-
-        let closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
-            let doc = web_sys::window().unwrap().document().unwrap();
-            show_action_notification(&doc, &label, &action);
-        }) as Box<dyn FnMut(MouseEvent)>);
-
-        btn_el
-            .add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())
-            .unwrap();
-        closure.forget();
-    }
+    close.add_event_listener_with_callback("click", close_closure.as_ref().unchecked_ref()).unwrap();
+    close_closure.forget();
 }
 
-fn build_info_row(document: &Document, label: &str, value: &str) -> Element {
-    let row = document.create_element("div").unwrap();
-    row.set_attribute("style", "display: flex; align-items: center; gap: 8px;")
-        .unwrap();
-    let lbl = document.create_element("span").unwrap();
-    lbl.set_attribute(
-        "style",
-        "font-size: 10px; color: var(--text-muted); min-width: 60px;",
-    )
-    .unwrap();
-    lbl.set_text_content(Some(label));
-    row.append_child(&lbl).unwrap();
-    let val = document.create_element("span").unwrap();
-    val.set_attribute(
-        "style",
-        "font-size: 11px; color: var(--text-primary); font-family: var(--font-mono);",
-    )
-    .unwrap();
-    val.set_text_content(Some(value));
-    row.append_child(&val).unwrap();
-    row
-}
-
-fn show_action_notification(document: &Document, label: &str, _action: &str) {
-    let notif = document.create_element("div").unwrap();
-    let n_el: HtmlElement = notif.clone().dyn_into().unwrap();
-    n_el.style().set_css_text(
-        "position: fixed; bottom: 40px; right: 16px; background: var(--surface-panel-elevated); \
-         border: 1px solid var(--border-medium); border-radius: var(--radius-sm); \
-         padding: 10px 14px; font-size: 12px; color: var(--text-primary); \
-         box-shadow: var(--shadow-lg); z-index: 700; max-width: 320px;",
-    );
-    notif.set_text_content(Some(&format!(
-        "\u{1F4A1} {} \u{2014} present, engine wiring pending",
-        label
-    )));
-    if let Some(body) = document.body() {
-        body.append_child(&notif).unwrap();
-    }
-    let notif_clone = notif.clone();
-    let timeout = Closure::wrap(Box::new(move || {
-        notif_clone.remove();
-    }) as Box<dyn FnMut()>);
-    super::interactions::set_timeout(timeout.as_ref().unchecked_ref(), 2500);
-    timeout.forget();
+/// Public function to show semantic triple dialog for a container.
+pub fn show_semantic_dialog_for_container(document: &Document, container_id: &str) {
+    show_inspector(document, &format!("wire-{}", container_id));
 }
 
 fn hide_inspector(document: &Document) {
@@ -422,13 +503,10 @@ fn hide_inspector(document: &Document) {
 }
 
 /// Public hide — removes the wire inspector panel if present.
-/// Used by interactions.rs when deleting wires.
 pub fn hide() {
     if let Some(window) = web_sys::window() {
         if let Some(doc) = window.document() {
-            if let Some(existing) = doc.get_element_by_id("wire-inspector") {
-                existing.remove();
-            }
+            hide_inspector(&doc);
         }
     }
 }

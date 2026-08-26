@@ -456,3 +456,344 @@ pub fn build_media_3d_view(document: &Document) -> Element {
     viewport.append_child(&inner).unwrap();
     viewport
 }
+
+// ---------------------------------------------------------------------------
+// Rich Interactive Panels (Reputation, Capabilities, Settings, Channels, Presence)
+// ---------------------------------------------------------------------------
+
+/// Reputation & Trustworthiness governance panel.
+pub fn build_reputation_view(document: &Document) -> Element {
+    let wrapper = document.create_element("div").unwrap();
+    let wrapper_el: HtmlElement = wrapper.clone().dyn_into().unwrap();
+    wrapper_el.style().set_css_text(
+        "display: flex; flex-direction: column; flex: 1; padding: 10px; gap: 8px; \
+         background: var(--surface-glass); color: var(--text-primary); font-family: var(--font-mono); overflow-y: auto;"
+    );
+
+    // Summary Header
+    let header = document.create_element("div").unwrap();
+    header.set_class_name("vibe-toolbar");
+    let header_el: HtmlElement = header.clone().dyn_into().unwrap();
+    header_el.style().set_css_text("justify-content: space-between; padding: 4px 8px;");
+
+    let title = document.create_element("span").unwrap();
+    title.set_text_content(Some("\u{1F91D} Fiduciary Reputation Index"));
+    let title_el: HtmlElement = title.clone().dyn_into().unwrap();
+    title_el.style().set_css_text("font-weight: 700; color: var(--accent-cyan); font-size: 11px;");
+    header.append_child(&title).unwrap();
+
+    let score = document.create_element("span").unwrap();
+    score.set_text_content(Some("Score: 99.3% \u{00B7} Tier: AAA+"));
+    let score_el: HtmlElement = score.clone().dyn_into().unwrap();
+    score_el.style().set_css_text("font-size: 10px; color: var(--accent-emerald); font-weight: 600;");
+    header.append_child(&score).unwrap();
+    wrapper.append_child(&header).unwrap();
+
+    // 4 Pillar Meters
+    let pillars = [
+        ("Trustworthiness", 99.4, "var(--accent-cyan)", "Ed25519 signature consensus verified"),
+        ("Competence", 98.1, "var(--accent-emerald)", "SHACL & formal proof verification: 100% pass"),
+        ("Integrity", 100.0, "var(--accent-violet)", "42MB Sentinel budget adhered; 0 heap leaks"),
+        ("Conduct", 99.8, "var(--accent-amber)", "Cooperative integrity permanent audit log clean"),
+    ];
+
+    for (name, pct, color, desc) in pillars {
+        let card = document.create_element("div").unwrap();
+        let card_el: HtmlElement = card.clone().dyn_into().unwrap();
+        card_el.style().set_css_text(
+            "background: var(--surface-panel); border: 1px solid var(--border-subtle); \
+             border-radius: var(--radius-xs); padding: 6px 8px; display: flex; flex-direction: column; gap: 3px;"
+        );
+
+        let row = document.create_element("div").unwrap();
+        let row_el: HtmlElement = row.clone().dyn_into().unwrap();
+        row_el.style().set_css_text("display: flex; justify-content: space-between; font-size: 10px;");
+
+        let name_el = document.create_element("span").unwrap();
+        name_el.set_text_content(Some(name));
+        name_el.set_attribute("style", "font-weight: 600;").unwrap();
+        row.append_child(&name_el).unwrap();
+
+        let val_el = document.create_element("span").unwrap();
+        val_el.set_text_content(Some(&format!("{:.1}%", pct)));
+        val_el.set_attribute("style", &format!("color: {}; font-weight: 700;", color)).unwrap();
+        row.append_child(&val_el).unwrap();
+        card.append_child(&row).unwrap();
+
+        // Progress track
+        let track = document.create_element("div").unwrap();
+        let track_el: HtmlElement = track.clone().dyn_into().unwrap();
+        track_el.style().set_css_text(
+            "height: 4px; background: rgba(255,255,255,0.08); border-radius: 2px; overflow: hidden;"
+        );
+        let bar = document.create_element("div").unwrap();
+        let bar_el: HtmlElement = bar.clone().dyn_into().unwrap();
+        bar_el.style().set_css_text(&format!(
+            "height: 100%; width: {}%; background: {}; border-radius: 2px;",
+            pct, color
+        ));
+        track.append_child(&bar).unwrap();
+        card.append_child(&track).unwrap();
+
+        let desc_el = document.create_element("span").unwrap();
+        desc_el.set_text_content(Some(desc));
+        desc_el.set_attribute("style", "font-size: 9px; color: var(--text-muted);").unwrap();
+        card.append_child(&desc_el).unwrap();
+
+        wrapper.append_child(&card).unwrap();
+    }
+
+    wrapper
+}
+
+/// Capability badge registry & permission grants panel.
+pub fn build_capabilities_view(document: &Document) -> Element {
+    let wrapper = document.create_element("div").unwrap();
+    let wrapper_el: HtmlElement = wrapper.clone().dyn_into().unwrap();
+    wrapper_el.style().set_css_text(
+        "display: flex; flex-direction: column; flex: 1; padding: 10px; gap: 8px; \
+         background: var(--surface-glass); color: var(--text-primary); font-family: var(--font-mono); overflow-y: auto;"
+    );
+
+    let header = document.create_element("div").unwrap();
+    header.set_class_name("vibe-toolbar");
+    let title = document.create_element("span").unwrap();
+    title.set_text_content(Some("\u{1F511} Active Capability Manifests"));
+    let title_el: HtmlElement = title.clone().dyn_into().unwrap();
+    title_el.style().set_css_text("font-weight: 700; color: var(--accent-cyan); font-size: 11px;");
+    header.append_child(&title).unwrap();
+    wrapper.append_child(&header).unwrap();
+
+    let caps = [
+        ("graph:read_triple", "Active", "var(--accent-emerald)", "Query quads within author scope"),
+        ("graph:write_quin", "Active", "var(--accent-emerald)", "Emit 48-byte Super-Quins into 42MB arena"),
+        ("spatial:matrix_transform", "Active", "var(--accent-emerald)", "10D affine manifold coordinate projection"),
+        ("webrtc:p2p_channel", "Active", "var(--accent-emerald)", "Swarm DataChannel state synchronization"),
+        ("qpu:vqe_scheduler", "Scoped", "var(--accent-amber)", "Quantum chemistry job queue execution"),
+        ("daemon:native_exec", "Restricted", "var(--accent-rose)", "Loopback IPC command dispatch"),
+    ];
+
+    for (name, status, status_color, detail) in caps {
+        let card = document.create_element("div").unwrap();
+        let card_el: HtmlElement = card.clone().dyn_into().unwrap();
+        card_el.style().set_css_text(
+            "background: var(--surface-panel); border: 1px solid var(--border-subtle); \
+             border-radius: var(--radius-xs); padding: 6px 8px; display: flex; align-items: center; justify-content: space-between;"
+        );
+
+        let left = document.create_element("div").unwrap();
+        let left_el: HtmlElement = left.clone().dyn_into().unwrap();
+        left_el.style().set_css_text("display: flex; flex-direction: column; gap: 2px;");
+
+        let name_el = document.create_element("span").unwrap();
+        name_el.set_text_content(Some(name));
+        name_el.set_attribute("style", "font-weight: 600; font-size: 11px;").unwrap();
+        left.append_child(&name_el).unwrap();
+
+        let detail_el = document.create_element("span").unwrap();
+        detail_el.set_text_content(Some(detail));
+        detail_el.set_attribute("style", "font-size: 9px; color: var(--text-muted);").unwrap();
+        left.append_child(&detail_el).unwrap();
+        card.append_child(&left).unwrap();
+
+        let badge = document.create_element("span").unwrap();
+        badge.set_text_content(Some(status));
+        let badge_el: HtmlElement = badge.clone().dyn_into().unwrap();
+        badge_el.style().set_css_text(&format!(
+            "padding: 2px 6px; border-radius: 4px; font-size: 9px; font-weight: 700; \
+             background: rgba(255,255,255,0.06); color: {}; border: 1px solid {};",
+            status_color, status_color
+        ));
+        card.append_child(&badge).unwrap();
+
+        wrapper.append_child(&card).unwrap();
+    }
+
+    wrapper
+}
+
+/// Preferences & Environment Settings panel.
+pub fn build_settings_view(document: &Document) -> Element {
+    let wrapper = document.create_element("div").unwrap();
+    let wrapper_el: HtmlElement = wrapper.clone().dyn_into().unwrap();
+    wrapper_el.style().set_css_text(
+        "display: flex; flex-direction: column; flex: 1; padding: 10px; gap: 8px; \
+         background: var(--surface-glass); color: var(--text-primary); font-family: var(--font-mono); overflow-y: auto;"
+    );
+
+    let header = document.create_element("div").unwrap();
+    header.set_class_name("vibe-toolbar");
+    let title = document.create_element("span").unwrap();
+    title.set_text_content(Some("\u{2699}\u{FE0F} Poet System Preferences"));
+    let title_el: HtmlElement = title.clone().dyn_into().unwrap();
+    title_el.style().set_css_text("font-weight: 700; color: var(--accent-cyan); font-size: 11px;");
+    header.append_child(&title).unwrap();
+    wrapper.append_child(&header).unwrap();
+
+    let settings = [
+        ("Theme Palette", "Cyber Dark (Default)"),
+        ("42MB Prolog Sentinel", "Active \u{00B7} Zero-Leak Enforced"),
+        ("DirectML / WebGPU Backend", "wgpu 30 Shared Context"),
+        ("Daemon SSE Transport", "Connected \u{00B7} 127.0.0.1:3001"),
+        ("Quantum Chemistry Engine", "Pure Rust Autodiff DFT Enabled"),
+        ("Auto-Save & WAL Journals", "Continuous Real-Time Checkpointing"),
+    ];
+
+    for (label, val) in settings {
+        let row = document.create_element("div").unwrap();
+        let row_el: HtmlElement = row.clone().dyn_into().unwrap();
+        row_el.style().set_css_text(
+            "background: var(--surface-panel); border: 1px solid var(--border-subtle); \
+             border-radius: var(--radius-xs); padding: 8px; display: flex; justify-content: space-between; align-items: center; font-size: 10px;"
+        );
+
+        let label_el = document.create_element("span").unwrap();
+        label_el.set_text_content(Some(label));
+        label_el.set_attribute("style", "color: var(--text-secondary);").unwrap();
+        row.append_child(&label_el).unwrap();
+
+        let val_el = document.create_element("span").unwrap();
+        val_el.set_text_content(Some(val));
+        val_el.set_attribute("style", "color: var(--accent-cyan); font-weight: 600;").unwrap();
+        row.append_child(&val_el).unwrap();
+
+        wrapper.append_child(&row).unwrap();
+    }
+
+    wrapper
+}
+
+/// Swarm Communications & Broadcast Channels panel.
+pub fn build_channels_view(document: &Document) -> Element {
+    let wrapper = document.create_element("div").unwrap();
+    let wrapper_el: HtmlElement = wrapper.clone().dyn_into().unwrap();
+    wrapper_el.style().set_css_text(
+        "display: flex; flex-direction: column; flex: 1; padding: 10px; gap: 8px; \
+         background: var(--surface-glass); color: var(--text-primary); font-family: var(--font-mono); overflow-y: auto;"
+    );
+
+    let header = document.create_element("div").unwrap();
+    header.set_class_name("vibe-toolbar");
+    let title = document.create_element("span").unwrap();
+    title.set_text_content(Some("\u{1F4E1} Swarm Federation Channels"));
+    let title_el: HtmlElement = title.clone().dyn_into().unwrap();
+    title_el.style().set_css_text("font-weight: 700; color: var(--accent-cyan); font-size: 11px;");
+    header.append_child(&title).unwrap();
+    wrapper.append_child(&header).unwrap();
+
+    let channels = [
+        ("#direct-fiduciary", "1:1 Consent Pipeline", "Online", "2 peers"),
+        ("#topic:catchment:water-quality", "Hydrology Sensor Telemetry", "Active", "12 nodes"),
+        ("#topic:chemistry:vqe-grid", "Distributed Q-Forge Scheduler", "Syncing", "6 nodes"),
+        ("#federation:mesh-commons", "Cross-Domain Interoperability", "Online", "34 peers"),
+    ];
+
+    for (name, desc, status, peers) in channels {
+        let row = document.create_element("div").unwrap();
+        let row_el: HtmlElement = row.clone().dyn_into().unwrap();
+        row_el.style().set_css_text(
+            "background: var(--surface-panel); border: 1px solid var(--border-subtle); \
+             border-radius: var(--radius-xs); padding: 8px; display: flex; justify-content: space-between; align-items: center;"
+        );
+
+        let left = document.create_element("div").unwrap();
+        let left_el: HtmlElement = left.clone().dyn_into().unwrap();
+        left_el.style().set_css_text("display: flex; flex-direction: column; gap: 2px;");
+
+        let name_el = document.create_element("span").unwrap();
+        name_el.set_text_content(Some(name));
+        name_el.set_attribute("style", "font-weight: 600; font-size: 11px; color: var(--accent-cyan);").unwrap();
+        left.append_child(&name_el).unwrap();
+
+        let desc_el = document.create_element("span").unwrap();
+        desc_el.set_text_content(Some(desc));
+        desc_el.set_attribute("style", "font-size: 9px; color: var(--text-muted);").unwrap();
+        left.append_child(&desc_el).unwrap();
+        row.append_child(&left).unwrap();
+
+        let right = document.create_element("div").unwrap();
+        let right_el: HtmlElement = right.clone().dyn_into().unwrap();
+        right_el.style().set_css_text("text-align: right; font-size: 9px;");
+
+        let status_el = document.create_element("span").unwrap();
+        status_el.set_text_content(Some(&format!("\u{25CF} {}", status)));
+        status_el.set_attribute("style", "color: var(--accent-emerald); font-weight: 600; display: block;").unwrap();
+        right.append_child(&status_el).unwrap();
+
+        let peers_el = document.create_element("span").unwrap();
+        peers_el.set_text_content(Some(peers));
+        peers_el.set_attribute("style", "color: var(--text-muted);").unwrap();
+        right.append_child(&peers_el).unwrap();
+        row.append_child(&right).unwrap();
+
+        wrapper.append_child(&row).unwrap();
+    }
+
+    wrapper
+}
+
+/// Agent & Peer Presence roster panel.
+pub fn build_presence_view(document: &Document) -> Element {
+    let wrapper = document.create_element("div").unwrap();
+    let wrapper_el: HtmlElement = wrapper.clone().dyn_into().unwrap();
+    wrapper_el.style().set_css_text(
+        "display: flex; flex-direction: column; flex: 1; padding: 10px; gap: 8px; \
+         background: var(--surface-glass); color: var(--text-primary); font-family: var(--font-mono); overflow-y: auto;"
+    );
+
+    let header = document.create_element("div").unwrap();
+    header.set_class_name("vibe-toolbar");
+    let title = document.create_element("span").unwrap();
+    title.set_text_content(Some("\u{1F465} Swarm Node Presence"));
+    let title_el: HtmlElement = title.clone().dyn_into().unwrap();
+    title_el.style().set_css_text("font-weight: 700; color: var(--accent-cyan); font-size: 11px;");
+    header.append_child(&title).unwrap();
+    wrapper.append_child(&header).unwrap();
+
+    let peers = [
+        ("did:qualia:timothy_charles_holborn", "Human Principal", "\u{1F468}\u{200D}\u{1F4BB}", "Online \u{2014} Active", "var(--accent-emerald)"),
+        ("did:qualia:agent-sentinel-42", "42MB Sentinel Daemon", "\u{1F6E1}\u{FE0F}", "Online \u{2014} Monitoring", "var(--accent-emerald)"),
+        ("did:qualia:agent-qforge-gpu", "Q-Forge Accelerator", "\u{26A1}", "Active \u{2014} Compute Loop", "var(--accent-amber)"),
+        ("did:qualia:peer-melbourne-node", "Edge Swarm Node", "\u{1F310}", "Idle \u{2014} Ping 12ms", "var(--text-secondary)"),
+    ];
+
+    for (did, role, icon, status, color) in peers {
+        let row = document.create_element("div").unwrap();
+        let row_el: HtmlElement = row.clone().dyn_into().unwrap();
+        row_el.style().set_css_text(
+            "background: var(--surface-panel); border: 1px solid var(--border-subtle); \
+             border-radius: var(--radius-xs); padding: 8px; display: flex; align-items: center; gap: 8px;"
+        );
+
+        let icon_el = document.create_element("span").unwrap();
+        icon_el.set_text_content(Some(icon));
+        icon_el.set_attribute("style", "font-size: 16px;").unwrap();
+        row.append_child(&icon_el).unwrap();
+
+        let mid = document.create_element("div").unwrap();
+        let mid_el: HtmlElement = mid.clone().dyn_into().unwrap();
+        mid_el.style().set_css_text("flex: 1; display: flex; flex-direction: column; gap: 1px;");
+
+        let did_el = document.create_element("span").unwrap();
+        did_el.set_text_content(Some(did));
+        did_el.set_attribute("style", "font-weight: 600; font-size: 10px; color: var(--text-primary);").unwrap();
+        mid.append_child(&did_el).unwrap();
+
+        let role_el = document.create_element("span").unwrap();
+        role_el.set_text_content(Some(role));
+        role_el.set_attribute("style", "font-size: 9px; color: var(--text-muted);").unwrap();
+        mid.append_child(&role_el).unwrap();
+        row.append_child(&mid).unwrap();
+
+        let status_el = document.create_element("span").unwrap();
+        status_el.set_text_content(Some(status));
+        let s_el: HtmlElement = status_el.clone().dyn_into().unwrap();
+        s_el.style().set_css_text(&format!("font-size: 9px; color: {}; font-weight: 600;", color));
+        row.append_child(&status_el).unwrap();
+
+        wrapper.append_child(&row).unwrap();
+    }
+
+    wrapper
+}
+

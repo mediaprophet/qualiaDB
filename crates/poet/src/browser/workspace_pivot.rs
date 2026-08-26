@@ -65,6 +65,27 @@ impl WorkspacePivotManager {
     }
 }
 
+thread_local! {
+    static GLOBAL_PIVOT: std::cell::RefCell<WorkspacePivotManager> = std::cell::RefCell::new(WorkspacePivotManager::new());
+}
+
+/// Toggle workspace pivot between Poet and Webizen Classic.
+pub fn toggle_workspace_pivot(document: &Document) {
+    let new_paradigm = GLOBAL_PIVOT.with(|p| p.borrow_mut().pivot());
+    if let Ok(Some(btn)) = document.query_selector(".habitat-pivot-btn") {
+        btn.set_text_content(Some(match new_paradigm {
+            UiParadigm::PoetHyperCanvas => "\u{2728} Poet / \u{2699}\u{FE0F} Admin \u{21C4}",
+            UiParadigm::WebizenClassicConsole => "\u{2699}\u{FE0F} Admin Mode Active \u{21C4}",
+        }));
+    }
+    web_sys::console::log_1(&format!("[Habitat Pivot] Switched to: {}", new_paradigm.label()).into());
+}
+
+/// Get current active UI paradigm.
+pub fn get_active_paradigm() -> UiParadigm {
+    GLOBAL_PIVOT.with(|p| p.borrow().active_paradigm)
+}
+
 // ---------------------------------------------------------------------------
 // DOM UI Component Builders
 // ---------------------------------------------------------------------------

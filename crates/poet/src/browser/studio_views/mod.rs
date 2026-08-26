@@ -10,6 +10,7 @@ pub mod automation_lanes;
 pub mod channel_strip;
 pub mod desk_persistence;
 pub mod desk_surface;
+pub mod dual_studio;
 pub mod gis_maps;
 pub mod hrtf_personalization;
 pub mod lighting_editor;

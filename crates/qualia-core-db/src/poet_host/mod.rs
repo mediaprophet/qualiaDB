@@ -2528,7 +2528,7 @@ on pulse:message(topic: string) {
     fn g_physics_wave_1d_invoke() {
         let mut snap = PoetSnapshot::default();
         let src = r#"
-requires [ capability("capability.invoke") ];
+requires [ capability("capability.invoke"), capability("Physics.wave_1d") ];
 effect fn go() {
     return capability.invoke("Physics.wave_1d", {
         u0: [0.0, 0.5, 1.0, 0.5, 0.0],
@@ -2560,7 +2560,7 @@ effect fn go() {
     fn g_physics_harmonic_oscillator_invoke() {
         let mut snap = PoetSnapshot::default();
         let src = r#"
-requires [ capability("capability.invoke") ];
+requires [ capability("capability.invoke"), capability("Physics.harmonic_oscillator") ];
 effect fn go() {
     return capability.invoke("Physics.harmonic_oscillator", {
         mass: 1.0,
@@ -2589,7 +2589,7 @@ effect fn go() {
     fn g_spectral_emf_to_rgb_invoke() {
         let mut snap = PoetSnapshot::default();
         let src = r#"
-requires [ capability("capability.invoke") ];
+requires [ capability("capability.invoke"), capability("Spectral.emf_to_rgb") ];
 effect fn go() {
     return capability.invoke("Spectral.emf_to_rgb", {
         alpha: 1.0,
@@ -2618,7 +2618,7 @@ effect fn go() {
     fn g_render_svg_path_invoke() {
         let mut snap = PoetSnapshot::default();
         let src = r##"
-requires [ capability("capability.invoke") ];
+requires [ capability("capability.invoke"), capability("Render.svg_path") ];
 effect fn go() {
     return capability.invoke("Render.svg_path", {
         points: [10.0, 10.0, 90.0, 90.0, 50.0, 30.0],
@@ -2654,7 +2654,7 @@ effect fn go() {
     fn g_render_css_animation_invoke() {
         let mut snap = PoetSnapshot::default();
         let src = r#"
-requires [ capability("capability.invoke") ];
+requires [ capability("capability.invoke"), capability("Render.css_animation") ];
 effect fn go() {
     return capability.invoke("Render.css_animation", {
         name: "fade",
@@ -2692,7 +2692,7 @@ effect fn go() {
     fn g_render_svg_circle_invoke() {
         let mut snap = PoetSnapshot::default();
         let src = r##"
-requires [ capability("capability.invoke") ];
+requires [ capability("capability.invoke"), capability("Render.svg_circle") ];
 effect fn go() {
     return capability.invoke("Render.svg_circle", {
         cx: 50.0,
@@ -2810,7 +2810,7 @@ on tick() {
     fn g_sampler_configure_invoke() {
         let mut snap = PoetSnapshot::default();
         let src = r#"
-requires [ capability("capability.invoke") ];
+requires [ capability("capability.invoke"), capability("sampler.configure") ];
 effect fn go() {
     return capability.invoke("sampler.configure", {
         temperature: 0.0,
@@ -2828,7 +2828,7 @@ effect fn go() {
     fn g_sampler_sample_greedy_invoke() {
         let mut snap = PoetSnapshot::default();
         let src = r#"
-requires [ capability("capability.invoke") ];
+requires [ capability("capability.invoke"), capability("sampler.sample") ];
 effect fn go() {
     return capability.invoke("sampler.sample", [0.1, 0.9, 0.3, 0.7]);
 }
@@ -2842,7 +2842,7 @@ effect fn go() {
     fn g_sampler_constrain_disable_invoke() {
         let mut snap = PoetSnapshot::default();
         let src = r#"
-requires [ capability("capability.invoke") ];
+requires [ capability("capability.invoke"), capability("sampler.constrain_disable") ];
 effect fn go() {
     return capability.invoke("sampler.constrain_disable", null);
 }
@@ -2855,7 +2855,7 @@ effect fn go() {
     fn g_sampler_constrain_reset_invoke() {
         let mut snap = PoetSnapshot::default();
         let src = r#"
-requires [ capability("capability.invoke") ];
+requires [ capability("capability.invoke"), capability("sampler.constrain_reset") ];
 effect fn go() {
     return capability.invoke("sampler.constrain_reset", null);
 }

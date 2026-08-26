@@ -6,15 +6,20 @@ use crate::tool_chest::core::registry::SeedContainer;
 use web_sys::{Document, Element};
 
 use super::container_inline_views::{
-    build_connection_requests_view, build_conversations_view, build_gis_map_view,
-    build_media_3d_view, build_protection_policies_view, build_social_chat_view,
-    build_vibescript_console,
+    build_capabilities_view, build_channels_view, build_connection_requests_view,
+    build_conversations_view, build_gis_map_view, build_media_3d_view,
+    build_presence_view, build_protection_policies_view, build_reputation_view,
+    build_settings_view, build_social_chat_view, build_vibescript_console,
 };
 
 /// Build a single container node on the canvas.
 pub fn build_container(document: &Document, container: &SeedContainer) -> Element {
     let el = document.create_element("div").unwrap();
-    el.set_class_name("canvas-container-node");
+    el.set_class_name(&format!(
+        "canvas-container-node container-card container-kind-{}",
+        container.kind.class_suffix()
+    ));
+    el.set_attribute("data-id", &format!("container-{}", container.container_type)).unwrap();
     el.set_attribute("data-container-type", &container.container_type)
         .unwrap();
 
@@ -794,52 +799,55 @@ pub fn build_container(document: &Document, container: &SeedContainer) -> Elemen
             .unwrap();
         }
         "reputation" => {
-            let ph = document.create_element("div").unwrap();
-            ph.set_class_name("container-placeholder");
-            ph.set_text_content(Some(
-                "Reputation panels \u{2014} trustworthiness, competence, integrity, conduct.",
-            ));
-            body.append_child(&ph).unwrap();
+            body.append_child(&build_reputation_view(document)).unwrap();
         }
         "protection-policies" => {
             body.append_child(&build_protection_policies_view(document))
                 .unwrap();
         }
         "capabilities" => {
-            let ph = document.create_element("div").unwrap();
-            ph.set_class_name("container-placeholder");
-            ph.set_text_content(Some(
-                "Capability badges \u{2014} active, suspended, revoked, expired.",
-            ));
-            body.append_child(&ph).unwrap();
+            body.append_child(&build_capabilities_view(document)).unwrap();
         }
         "settings" => {
-            let ph = document.create_element("div").unwrap();
-            ph.set_class_name("container-placeholder");
-            ph.set_text_content(Some(
-                "Preferences \u{2014} accessibility, privacy, communication, workflow.",
-            ));
-            body.append_child(&ph).unwrap();
+            body.append_child(&build_settings_view(document)).unwrap();
         }
         "conversations" => {
             body.append_child(&build_conversations_view(document))
                 .unwrap();
         }
         "channels" => {
-            let ph = document.create_element("div").unwrap();
-            ph.set_class_name("container-placeholder");
-            ph.set_text_content(Some(
-                "Channels \u{2014} direct, topic, request-response, stream, group, federation.",
-            ));
-            body.append_child(&ph).unwrap();
+            body.append_child(&build_channels_view(document)).unwrap();
         }
         "presence" => {
-            let ph = document.create_element("div").unwrap();
-            ph.set_class_name("container-placeholder");
-            ph.set_text_content(Some(
-                "Presence indicators \u{2014} online, away, busy, offline.",
-            ));
-            body.append_child(&ph).unwrap();
+            body.append_child(&build_presence_view(document)).unwrap();
+        }
+        "dual_studio" | "dual-studio" => {
+            body.append_child(&super::studio_views::dual_studio::build_dual_studio_view(document))
+                .unwrap();
+        }
+        "webrtc_sync" | "webrtc-sync" => {
+            body.append_child(&super::webrtc_sync::build_webrtc_sync_view(document))
+                .unwrap();
+        }
+        "admin_launcher" | "admin-launcher" | "app_launcher" => {
+            body.append_child(&super::app_launcher::build_admin_launcher_view(document))
+                .unwrap();
+        }
+        "solid_interop" | "solid-interop" => {
+            let bundle = super::solid_interop::SolidPodBundle::new("https://solid.webizen.id/profile/card#me");
+            body.append_child(&super::solid_interop::build_solid_pod_hub_view(document, &bundle))
+                .unwrap();
+        }
+        "shader_pipelines" | "shader-pipelines" => {
+            body.append_child(&super::shader_pipelines::build_shader_pipeline_view(document))
+                .unwrap();
+        }
+        "cooperative_economics" | "cooperative-economics" => {
+            body.append_child(&super::cooperative_economics::build_cooperative_economics_view(
+                document,
+                &super::cooperative_economics::TrueCostModel::default(),
+            ))
+            .unwrap();
         }
         "map" => {
             body.append_child(&build_gis_map_view(document)).unwrap();
@@ -1011,16 +1019,19 @@ pub fn build_container(document: &Document, container: &SeedContainer) -> Elemen
     let port_in = document.create_element("div").unwrap();
     port_in.set_class_name("container-port port-in");
     port_in.set_attribute("data-port", "in").unwrap();
+    port_in.set_attribute("title", "Input Port: drop incoming reactive wire here").unwrap();
     el.append_child(&port_in).unwrap();
 
     let port_out = document.create_element("div").unwrap();
     port_out.set_class_name("container-port port-out");
     port_out.set_attribute("data-port", "out").unwrap();
+    port_out.set_attribute("title", "Output Port: drag to connect reactive wire to another container").unwrap();
     el.append_child(&port_out).unwrap();
 
     // Resize handle
     let resizer = document.create_element("div").unwrap();
-    resizer.set_class_name("container-resizer");
+    resizer.set_class_name("container-resizer resize-handle");
+    resizer.set_attribute("title", "Drag to resize container").unwrap();
     el.append_child(&resizer).unwrap();
 
     el

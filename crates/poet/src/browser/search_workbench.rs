@@ -1704,9 +1704,41 @@ fn run_mock_query(document: &Document, results_id: &str) {
     };
     results.set_inner_html("");
 
-    // Generate mock results
+    let query_text = document
+        .get_element_by_id("sparql-editor")
+        .and_then(|e| e.dyn_into::<HtmlTextAreaElement>().ok())
+        .map(|ta| ta.value())
+        .unwrap_or_default();
+
+    if crate::browser::native_daemon::is_daemon_connected() {
+        results.set_inner_html("<div style=\"padding: 8px; color: var(--accent-cyan); font-size: 11px;\">\u{25CB} Executing query on native daemon\u{2026}</div>");
+        let results_id_owned = results_id.to_string();
+        wasm_bindgen_futures::spawn_local(async move {
+            let res = crate::browser::native_daemon::daemon_query(&query_text).await;
+            if let Some(window) = web_sys::window() {
+                if let Some(doc) = window.document() {
+                    if let Some(target) = doc.get_element_by_id(&results_id_owned) {
+                        match res {
+                            Ok(output) => {
+                                let mut html = String::new();
+                                html.push_str("<div style=\"padding: 4px 8px; border-bottom: 1px solid var(--border-subtle); font-size: 9px; color: var(--accent-emerald); margin-bottom: 4px;\">\u{25CF} Live Results from Native Daemon</div>");
+                                html.push_str(&format!("<pre style=\"margin: 0; padding: 6px; font-family: var(--font-mono); font-size: 11px; color: var(--text-primary); white-space: pre-wrap; max-height: 240px; overflow-y: auto;\">{}</pre>", output.replace('<', "&lt;").replace('>', "&gt;")));
+                                target.set_inner_html(&html);
+                            }
+                            Err(err) => {
+                                target.set_inner_html(&format!("<div style=\"padding: 8px; color: var(--accent-amber); font-size: 11px;\">\u{26A0} Daemon Query Error: {}</div>", err));
+                            }
+                        }
+                    }
+                }
+            }
+        });
+        return;
+    }
+
+    // Generate mock results when offline
     let mut html = String::new();
-    html.push_str("<div style=\"padding: 4px 8px; border-bottom: 1px solid var(--border-subtle); font-size: 9px; color: var(--text-muted); margin-bottom: 4px;\">Mock results \u{2014} SPARQL execution requires QualiaDB daemon</div>");
+    html.push_str("<div style=\"padding: 4px 8px; border-bottom: 1px solid var(--border-subtle); font-size: 9px; color: var(--text-muted); margin-bottom: 4px;\">Mock results \u{2014} Standalone WASM mode (QualiaDB daemon offline)</div>");
 
     for i in 0..10 {
         html.push_str(&format!(

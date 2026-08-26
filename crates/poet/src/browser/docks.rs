@@ -719,6 +719,31 @@ pub fn build_toolbox_dock(document: &Document, toolboxes: &[Toolbox]) -> Element
         let pos_closure = Closure::wrap(Box::new(move |_e: web_sys::MouseEvent| {
             let d_el: HtmlElement = dock_clone.clone().dyn_into().unwrap();
             d_el.set_class_name(&format!("toolbox-dock dock-pos-{}", pos_str));
+
+            if let Some(win) = web_sys::window() {
+                if let Some(doc) = win.document() {
+                    // Update flyout if open
+                    if let Ok(Some(flyout_el)) = doc.query_selector(".toolbox-flyout") {
+                        let f_html: HtmlElement = flyout_el.dyn_into().unwrap();
+                        f_html.set_class_name(&format!("toolbox-flyout dock-{}", pos_str));
+                    }
+                    // Update active button state
+                    if let Ok(btn_list) = doc.query_selector_all(".dock-pos-btn") {
+                        for k in 0..btn_list.length() {
+                            if let Some(b) = btn_list.item(k).and_then(|n| n.dyn_into::<HtmlElement>().ok()) {
+                                if b.get_attribute("data-pos").as_deref() == Some(&pos_str) {
+                                    let _ = b.style().set_property("color", "var(--accent-cyan)");
+                                    let _ = b.style().set_property("border-color", "var(--accent-cyan)");
+                                } else {
+                                    let _ = b.style().set_property("color", "var(--text-muted)");
+                                    let _ = b.style().set_property("border-color", "transparent");
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
             if let Some(storage) = web_sys::window().and_then(|w| w.local_storage().ok()).flatten() {
                 let _ = storage.set_item("qualia_dock_pos", &pos_str);
             }
@@ -730,6 +755,54 @@ pub fn build_toolbox_dock(document: &Document, toolboxes: &[Toolbox]) -> Element
     }
     dock_header.append_child(&anchor_bar).unwrap();
     dock.append_child(&dock_header).unwrap();
+
+    // Quick Spawn Tiles in Tool Chest
+    let quick_grid = document.create_element("div").unwrap();
+    quick_grid.set_class_name("dock-quick-grid");
+    let qg_el: HtmlElement = quick_grid.clone().dyn_into().unwrap();
+    qg_el.style().set_css_text(
+        "display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px; padding: 4px 6px; \
+         border-bottom: 1px solid var(--border-subtle); margin-bottom: 6px;",
+    );
+
+    let quick_containers = [
+        ("doc", "📄 Doc"),
+        ("sheet", "📊 Sheet"),
+        ("code", "💻 Vibe"),
+        ("anatomy", "🫀 Anatomy"),
+        ("3d", "🧊 3D Scene"),
+        ("social", "💬 Social"),
+        ("webrtc", "📹 Swarm"),
+        ("finance", "💰 Finance"),
+    ];
+
+    for (c_type, c_lbl) in &quick_containers {
+        let q_btn = document.create_element("button").unwrap();
+        q_btn.set_class_name("dock-quick-spawn-btn");
+        let qb_el: HtmlElement = q_btn.clone().dyn_into().unwrap();
+        qb_el.style().set_css_text(
+            "display: flex; align-items: center; justify-content: center; gap: 4px; \
+             padding: 4px 2px; font-size: 10px; font-family: var(--font-mono); font-weight: 600; \
+             background: var(--surface-panel); border: 1px solid var(--border-subtle); \
+             border-radius: 4px; color: var(--text-secondary); cursor: pointer; transition: all 0.15s ease;",
+        );
+        q_btn.set_text_content(Some(c_lbl));
+
+        let c_type_str = c_type.to_string();
+        let c_lbl_str = c_lbl.to_string();
+        let click_closure = Closure::wrap(Box::new(move |_e: web_sys::MouseEvent| {
+            if let Some(win) = web_sys::window() {
+                if let Some(doc) = win.document() {
+                    super::interactions::place_container_via_menu(&doc, &c_type_str, &format!("+ {}", c_lbl_str));
+                }
+            }
+        }) as Box<dyn FnMut(web_sys::MouseEvent)>);
+        q_btn.add_event_listener_with_callback("click", click_closure.as_ref().unchecked_ref()).unwrap();
+        click_closure.forget();
+
+        quick_grid.append_child(&q_btn).unwrap();
+    }
+    dock.append_child(&quick_grid).unwrap();
 
     let families = family_order();
     let mut first_toolbox = true;
@@ -830,8 +903,22 @@ pub fn show_flyout(document: &Document, toolbox_id: &str) {
         None => return,
     };
 
+    let curr_pos = if let Ok(Some(dock_el)) = document.query_selector(".toolbox-dock") {
+        if dock_el.class_list().contains("dock-pos-top") {
+            "top"
+        } else if dock_el.class_list().contains("dock-pos-right") {
+            "right"
+        } else if dock_el.class_list().contains("dock-pos-bottom") {
+            "bottom"
+        } else {
+            "left"
+        }
+    } else {
+        "left"
+    };
+
     let flyout = document.create_element("div").unwrap();
-    flyout.set_class_name("toolbox-flyout");
+    flyout.set_class_name(&format!("toolbox-flyout dock-{}", curr_pos));
 
     // Header: Icon + Title + Ontology Badge + Close button
     let header = document.create_element("div").unwrap();

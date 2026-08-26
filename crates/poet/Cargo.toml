@@ -40,6 +40,7 @@ web-sys = { version = "0.3", features = [
     "DomTokenList",
     "Event",
     "EventTarget",
+    "HtmlDocument",
     "HtmlDivElement",
     "HtmlButtonElement",
     "HtmlInputElement",
@@ -72,6 +73,7 @@ web-sys = { version = "0.3", features = [
     "DomRect",
     "Selection",
     "Range",
+    "EventSource",
 ] }
 
 [dev-dependencies]

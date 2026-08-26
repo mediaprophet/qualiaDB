@@ -207,7 +207,7 @@ See `SAVE_ARCHITECTURE.md` for the full specification.
 | # | Item | Status | Notes |
 |---|------|--------|-------|
 | 3.3.1 | Menubar with File/Edit/View/Insert/Help | [done] | `src/browser/topbar.rs` |
-| 3.3.2 | Version badge (0.0.31-dev) | [done] | |
+| 3.3.2 | Version badge (0.0.35-dev) | [done] | `src/browser/topbar.rs` — 0.0.35-dev with Habitat Pivot and Sentinel Badge |
 | 3.3.3 | Fiduciary badge | [done] | |
 | 3.3.4 | Menu items have dropdown menus | [done] | `src/browser/topbar.rs` — `build_menu_dropdown` + `wire_menu_dropdowns` |
 | 3.3.5 | File menu: new manifold, save, export | [done] | Save writes CBOR-LD to localStorage; export/import are present (file picker pending) |
@@ -339,14 +339,14 @@ See `SAVE_ARCHITECTURE.md` for the full specification.
 
 ---
 
-## 9. Backend Integration (out of scope for UI phase, tracked for completeness)
+## 9. Backend Integration & Native Daemon IPC
 
 | # | Item | Status | Notes |
 |---|------|--------|-------|
-| 9.1 | IntentBus implementation | [blocked] | Needs daemon repo |
-| 9.2 | Backend transport (WebSocket/HTTP) | [blocked] | Needs daemon repo |
+| 9.1 | IntentBus implementation | [partial] | `tool_chest::core::intent_bus` wired for CBOR-LD serialisation + action payloads |
+| 9.2 | Backend transport (HTTP/REST + SSE) | [done] | `native_daemon.rs` probes candidate ports, executes `POST /query`, `POST /eval`, `POST /gazetteer`, and subscribes to `/pulse/events` & `/tensor/events` SSE |
 | 9.3 | Ontology loading (CBOR-LD) | [blocked] | Needs build pipeline |
-| 9.4 | SPARQL query execution | [blocked] | Needs daemon |
+| 9.4 | SPARQL query execution | [done] | `search_workbench.rs` dynamically executes via `daemon_query` when connected; fallbacks to honest standalone preview |
 | 9.5 | SHACL validation | [blocked] | Needs daemon |
 | 9.6 | Chat graph LWW CRDT | [blocked] | Needs daemon |
 | 9.7 | WebRTC stream | [blocked] | Needs desktop host |
@@ -362,7 +362,7 @@ See `SAVE_ARCHITECTURE.md` for the full specification.
 | # | Item | Status | Notes |
 |---|------|--------|-------|
 | 10.1 | `cargo check` passes | [done] | |
-| 10.2 | `cargo test` — 73 tests pass | [done] | |
+| 10.2 | `cargo test` — 182 tests pass | [done] | `crates/poet` 182 passed, 0 failed |
 | 10.3 | Trunk WASM build succeeds | [done] | |
 | 10.4 | App loads in browser preview | [done] | `http://127.0.0.1:8080` |
 | 10.5 | No unused import warnings | [done] | |
