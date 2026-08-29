@@ -111,9 +111,11 @@ fn main() {
                             println!("  not found   : {}", r.curated_not_found.join(", "));
                         }
                         if !r.failed.is_empty() {
-                            had_err = true;
                             for (k, e) in &r.failed {
                                 eprintln!("  FAILED {k}: {e}");
+                            }
+                            if r.organs_packed == 0 {
+                                had_err = true;
                             }
                         }
                     }
