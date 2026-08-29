@@ -28,7 +28,9 @@
 use super::super::args;
 use vibe::{Diagnostic, Span, Value};
 
+#[cfg(not(target_arch = "wasm32"))]
 use std::collections::BTreeMap;
+#[cfg(not(target_arch = "wasm32"))]
 use std::sync::Mutex;
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -38,6 +40,7 @@ use crate::render::gpu::PortalGpu;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::render::telemetry::SystemTelemetry;
 /// Slot-map handle for a PortalGpu instance.
+#[cfg(not(target_arch = "wasm32"))]
 pub type GpuHandle = u64;
 
 #[cfg(not(target_arch = "wasm32"))]

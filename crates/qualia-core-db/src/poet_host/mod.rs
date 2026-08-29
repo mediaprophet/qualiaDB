@@ -2431,7 +2431,7 @@ fn find() {
     fn invoke_lists_engine_and_rejects_unknown() {
         let mut snap = PoetSnapshot::default();
         let src = r#"
-requires [ capability("capability.invoke") ];
+requires [ capability("capability.invoke"), capability("CapabilityDiscovery.list") ];
 effect fn list() {
     return capability.invoke("CapabilityDiscovery.list", null);
 }

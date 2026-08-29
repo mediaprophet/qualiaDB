@@ -74,7 +74,7 @@ pub fn is_prime(args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vib
     gcd(args, span)
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
-pub fn matmul(args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
+pub fn matmul(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     missing(span, "LinearAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]

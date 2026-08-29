@@ -9,12 +9,6 @@ use crate::solvers::{SolverConfig, SolverResult, SolverState};
 /// General-dimension metaheuristic optimizers (hill-climbing / simulated annealing /
 /// Artificial Bee Colony) — global search beyond the fixed-`[f64;4]` solvers below.
 /// Heap-using batch-analytics layer; the engine ontology alignment consumes it.
-#[cfg(any(
-    not(target_arch = "wasm32"),
-    feature = "portal",
-    feature = "wasm-logic",
-    feature = "wasm-scientific"
-))]
 pub mod metaheuristics;
 
 /// Nelder-Mead simplex optimizer for unconstrained optimization

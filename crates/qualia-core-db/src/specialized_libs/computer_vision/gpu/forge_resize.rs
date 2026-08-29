@@ -11,8 +11,8 @@
 //! a GPU-less box it returns `None`, so this function fails closed and the caller degrades to the
 //! CPU oracle. It never panics.
 
-use super::dispatch::{VisionComputeDevice, VisionComputeReport};
-use crate::specialized_libs::computer_vision::types::VisionError;
+use super::dispatch::VisionComputeReport;
+use crate::specialized_libs::computer_vision::{types::VisionError, VisionComputeDevice};
 
 /// Attempt GPU resize on the process-wide shared device.
 ///

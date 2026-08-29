@@ -5,7 +5,7 @@
 
 use super::super::args;
 use crate::agent_runtime::{corpus, evaluator, planner};
-use vibe::{DiagCode, Diagnostic, Span, Value};
+use vibe::{Diagnostic, Span, Value};
 
 /// `Agent.plan` — plan an agent task given a task description and capabilities.
 ///
@@ -133,11 +133,7 @@ pub fn corpus_load(args: &Value, span: Span) -> Result<Value, Diagnostic> {
                 ("loaded", Value::Bool(true)),
             ]))
         }
-        Err(e) => Err(Diagnostic::new(
-            DiagCode::E100,
-            span,
-            format!("Corpus.load: {e}"),
-        )),
+        Err(e) => Err(args::bad(span, format!("Corpus.load: {e}"))),
     }
 }
 

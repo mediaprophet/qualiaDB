@@ -11,8 +11,8 @@
 //! a GPU-less box it returns `None`, so this function reports `BackendUnavailable` and the caller
 //! ([`super::dispatch`]) degrades to the CPU oracle. It never panics.
 
-use super::dispatch::{VisionComputeDevice, VisionComputeReport};
-use crate::specialized_libs::computer_vision::types::VisionError;
+use super::dispatch::VisionComputeReport;
+use crate::specialized_libs::computer_vision::{types::VisionError, VisionComputeDevice};
 
 pub const BICUBIC_ENTRY: &str = "bicubic2d_main";
 

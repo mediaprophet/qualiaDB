@@ -11,17 +11,7 @@ pub mod fuzzy_rdf_schema;
 pub mod fuzzy_type2;
 pub mod modal;
 pub use asp::{compute_answer_sets, enumerate_stable_models, AspRule, MAX_STABLE_MODELS};
-#[cfg(any(
-    not(target_arch = "wasm32"),
-    feature = "wasm-scientific",
-    feature = "wasm-full"
-))]
 pub mod calculus;
-#[cfg(any(
-    not(target_arch = "wasm32"),
-    feature = "wasm-scientific",
-    feature = "wasm-full"
-))]
 pub use calculus::{
     detect_simd_width, pack_f32_pair, resolve_aligned_byte_offset, unpack_f32_pair, AlignmentError,
     CalculusError, ContinuousGrid, SimdWidth, OP_ADAPTIVE_STEP, OP_GPU_INTEGRATION, OP_RK4_STEP,
@@ -36,17 +26,7 @@ pub use defeasible::{
     evaluate_defeasible_frame, DefeasibleError, DefeasibleStatus, DefeasibleVerdict, DEFEATER_BIT,
     OP_DEFEASIBLE_OVERRIDE,
 };
-#[cfg(any(
-    not(target_arch = "wasm32"),
-    feature = "wasm-scientific",
-    feature = "wasm-full"
-))]
 pub mod diffusion;
-#[cfg(any(
-    not(target_arch = "wasm32"),
-    feature = "wasm-scientific",
-    feature = "wasm-full"
-))]
 pub use diffusion::{execute_diffusion_pass, trigger_diffusion};
 pub mod dl;
 pub use dl::check_subsumption_quin;
@@ -147,17 +127,7 @@ pub mod identity_fabric;
 pub use identity_fabric::{
     identifier_is_not_identity, identity_survives_loss, recompute_fabric, surviving_anchors,
 };
-#[cfg(any(
-    not(target_arch = "wasm32"),
-    feature = "wasm-scientific",
-    feature = "wasm-full"
-))]
 pub mod legal_compose;
-#[cfg(any(
-    not(target_arch = "wasm32"),
-    feature = "wasm-scientific",
-    feature = "wasm-full"
-))]
 pub use legal_compose::{
     selective_disclosure, translation_status, zk_eligibility, Eligibility, MatchStatus,
 };
@@ -178,15 +148,5 @@ pub use temporal_ltl::{
     evaluate_ltl_trace, LtlFormula, OP_LTL_FINALLY, OP_LTL_GLOBALLY, OP_LTL_NEXT, OP_LTL_RELEASE,
     OP_LTL_UNTIL,
 };
-#[cfg(any(
-    not(target_arch = "wasm32"),
-    feature = "wasm-scientific",
-    feature = "wasm-full"
-))]
 pub mod manifold;
-#[cfg(any(
-    not(target_arch = "wasm32"),
-    feature = "wasm-scientific",
-    feature = "wasm-full"
-))]
 pub use manifold::project_10d_to_quaternion;

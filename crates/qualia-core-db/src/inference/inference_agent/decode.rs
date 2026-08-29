@@ -8,10 +8,12 @@
 
 #[cfg(not(target_arch = "wasm32"))]
 use super::config::effective_inference_timeout_ms;
+#[allow(unused_imports)]
 use super::config::{DECODE_TOKEN_BUDGET, TEST_TRANSFORMER_LAYER_CAP, TEST_VOCAB_CHUNK_CAP};
 use super::control::DecodeControl;
 #[cfg(not(target_arch = "wasm32"))]
 use super::decode_helpers::get_prefix_cache;
+#[cfg(any(not(target_arch = "wasm32"), feature = "portal", feature = "wasm-llm"))]
 use super::decode_helpers::{
     apply_model_helper_stops, build_sieve, drain_tensor_context_inject, embedding_fallback_logits,
     try_accept_topology_draft, TopologyDraftStep,
@@ -19,7 +21,9 @@ use super::decode_helpers::{
 use super::local_agent::LocalLlmAgent;
 #[cfg(not(target_arch = "wasm32"))]
 use super::sticky_infer;
+#[allow(unused_imports)]
 use super::types::AgentBackend;
+#[allow(unused_imports)]
 use crate::{q_hash, NQuin};
 
 impl LocalLlmAgent {
@@ -1148,8 +1152,7 @@ impl LocalLlmAgent {
             return (text, prov, tokens, semantic_quin);
         }
 
-        // ── Native GPU path ─────────────────────────────────────────────────
-        #[cfg(target_arch = "wasm32")]
+        #[cfg(all(target_arch = "wasm32", any(feature = "portal", feature = "wasm-llm")))]
         {
             use crate::gguf_bridge::QTensor;
             use crate::gguf_sharder::GgufTokenizer;
@@ -1641,6 +1644,25 @@ impl LocalLlmAgent {
                 return (text, prov, tokens, None);
             }
             return (text, prov, tokens, semantic_quin);
+        }
+
+        #[cfg(all(target_arch = "wasm32", not(any(feature = "portal", feature = "wasm-llm"))))]
+        {
+            if crate::extension_bus::wasm_bus::is_connected() {
+                if let Some(cb) = on_token {
+                    let _ = crate::extension_bus::wasm_bus::send_intent(prompt, graph_context, cb);
+                } else {
+                    let _ =
+                        crate::extension_bus::wasm_bus::send_intent(prompt, graph_context, |_| {});
+                }
+                return (String::new(), vec![prov_hash], 0, None);
+            }
+            (
+                String::from("[local LLM execution not compiled into this WASM profile]"),
+                vec![prov_hash],
+                0,
+                None,
+            )
         }
     }
 }

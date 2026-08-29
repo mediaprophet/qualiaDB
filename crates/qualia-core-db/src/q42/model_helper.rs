@@ -329,7 +329,6 @@ impl ModelHelper {
     }
 
     /// Merge stop-token ids from this helper into a loaded tokenizer.
-    #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
     pub fn apply_stops_to_tokenizer(&self, tok: &mut crate::gguf_sharder::GgufTokenizer) {
         tok.merge_stop_token_ids(&self.tokenizer.stop_token_ids);
     }

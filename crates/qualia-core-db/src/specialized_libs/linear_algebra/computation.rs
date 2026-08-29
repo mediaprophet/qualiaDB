@@ -623,6 +623,7 @@ impl SIMDCapabilities {
     /// other architecture no SIMD instructions are reported and a scalar
     /// (width 1, alignment 1) configuration is returned.
     pub fn detect() -> Self {
+        #[allow(unused_mut)]
         let mut instructions: Vec<SIMDInstruction> = Vec::new();
         let mut vector_width = 0usize;
         let mut alignment = 1usize;

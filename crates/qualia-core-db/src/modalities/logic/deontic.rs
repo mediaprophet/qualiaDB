@@ -136,7 +136,7 @@
     feature = "wasm-scientific",
     feature = "wasm-full"
 ))]
-use crate::modalities::logic::n3_parser::{RuleType, Term};
+use crate::modalities::logic::n3_parser::Term;
 use crate::q_hash;
 use crate::NQuin;
 
@@ -497,30 +497,14 @@ pub fn term_uri_hash(term: &Term) -> Option<u64> {
 // (hashes only - the predicate IRI string is gone), so the deontic opcode is
 // recovered by matching the premise predicate hash against these. Both the full
 // IRI and the CURIE token are listed, because `@prefix` is not expanded on the
-// parsed-from-file path (matching is by raw token via `q_hash`).
-#[cfg(any(
-    not(target_arch = "wasm32"),
-    feature = "wasm-scientific",
-    feature = "wasm-full"
-))]
 const FORBID_HASHES: [u64; 2] = [
     q_hash("https://ns.webcivics.net/values/forbids"),
     q_hash("values:forbids"),
 ];
-#[cfg(any(
-    not(target_arch = "wasm32"),
-    feature = "wasm-scientific",
-    feature = "wasm-full"
-))]
 const PERMIT_HASHES: [u64; 2] = [
     q_hash("https://ns.webcivics.net/values/permits"),
     q_hash("values:permits"),
 ];
-#[cfg(any(
-    not(target_arch = "wasm32"),
-    feature = "wasm-scientific",
-    feature = "wasm-full"
-))]
 const OBLIGATE_HASHES: [u64; 4] = [
     q_hash("https://ns.webcivics.net/values/requires"),
     q_hash("values:requires"),
@@ -534,12 +518,8 @@ const OBLIGATE_HASHES: [u64; 4] = [
 /// recognised `values:` operator picks the opcode; an unrecognised predicate
 /// falls back to the rule-type default (Strict/Linear => obligation, Defeasible =>
 /// permission), preserving behaviour for non-`values` contract predicates.
-#[cfg(any(
-    not(target_arch = "wasm32"),
-    feature = "wasm-scientific",
-    feature = "wasm-full"
-))]
-fn opcode_from_predicate_hash(pred_hash: u64, rule_type: RuleType) -> (u8, bool) {
+fn opcode_from_predicate_hash(pred_hash: u64, rule_type: crate::modalities::logic::n3_parser::RuleType) -> (u8, bool) {
+    use crate::modalities::logic::n3_parser::RuleType;
     if matches!(rule_type, RuleType::Defeater) {
         return (OP_PERMIT, true);
     }
@@ -562,11 +542,6 @@ fn opcode_from_predicate_hash(pred_hash: u64, rule_type: RuleType) -> (u8, bool)
 /// Compile an N3 [`Rule`] into a norm Quin (or defeater Quin for `^>` rules).
 ///
 /// Maps premise triple → party / property / action; `rule_type` → opcode + defeater flag.
-#[cfg(any(
-    not(target_arch = "wasm32"),
-    feature = "wasm-scientific",
-    feature = "wasm-full"
-))]
 pub fn compile_n3_rule_to_norm(
     rule: &crate::modalities::logic::n3_compiler::CompiledRule,
     contract_hash: u64,

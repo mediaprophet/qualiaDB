@@ -31,19 +31,9 @@ pub mod qubo;
 
 // ─── N3 Rule Processing ────────────────────────────────────────────────────────
 
-#[cfg(any(
-    not(target_arch = "wasm32"),
-    feature = "wasm-scientific",
-    feature = "wasm-full"
-))]
 pub mod n3_compiler;
 pub mod n3_parser;
 pub mod n3logic;
-#[cfg(any(
-    not(target_arch = "wasm32"),
-    feature = "wasm-scientific",
-    feature = "wasm-full"
-))]
 pub use n3_compiler::{
     validate_rule_against_shapes, AgentIntentFrame, N3CompileError, N3CompiledProgram,
     N3OutputMode, SentinelError, MAX_CONTEXT_NAMESPACE_SLOTS, MAX_INTENT_SCOPE_SLOTS,
@@ -52,17 +42,7 @@ pub use n3_parser::{N3Event, N3Parser, Rule, RuleType, Term};
 
 // ─── SHACL Constraint Compilation ───────────────────────────────────────────────
 
-#[cfg(any(
-    not(target_arch = "wasm32"),
-    feature = "wasm-scientific",
-    feature = "wasm-full"
-))]
 pub mod shacl;
-#[cfg(any(
-    not(target_arch = "wasm32"),
-    feature = "wasm-scientific",
-    feature = "wasm-full"
-))]
 pub use shacl::{
     CalcComputeTarget, ClinicalRiskModel, CompiledShape, NodeKindType, PropertyPath,
     ProteinScoringMatrix, ShaclCompiler, ShaclConstraint, ShaclSeverity,
@@ -89,32 +69,12 @@ pub use shacl_extensions::{
 
 // ─── SHACL Extensions for Specialized Libraries ─────────────────────────────────
 
-#[cfg(any(
-    not(target_arch = "wasm32"),
-    feature = "wasm-scientific",
-    feature = "wasm-full"
-))]
 pub mod geometry_asset_shacl;
-#[cfg(any(
-    not(target_arch = "wasm32"),
-    feature = "wasm-scientific",
-    feature = "wasm-full"
-))]
 pub mod specialized_libs_shacl;
-#[cfg(any(
-    not(target_arch = "wasm32"),
-    feature = "wasm-scientific",
-    feature = "wasm-full"
-))]
 pub use geometry_asset_shacl::{
     validate_geometry_manifest, GeometryAssetConfiguration, GeometryConstraintViolation,
     GeometryManifestFacts, MAX_GEOMETRY_COUNT,
 };
-#[cfg(any(
-    not(target_arch = "wasm32"),
-    feature = "wasm-scientific",
-    feature = "wasm-full"
-))]
 pub use specialized_libs_shacl::{
     // Quantum Biology
     BiomolecularConfiguration,
@@ -168,17 +128,7 @@ pub use specialized_libs_shacl::{
 
 // ─── SHACL Extensions for the Computational-Mathematics Engine ──────────────────
 
-#[cfg(any(
-    not(target_arch = "wasm32"),
-    feature = "wasm-scientific",
-    feature = "wasm-full"
-))]
 pub mod computational_maths_shacl;
-#[cfg(any(
-    not(target_arch = "wasm32"),
-    feature = "wasm-scientific",
-    feature = "wasm-full"
-))]
 pub use computational_maths_shacl::{
     get_computational_maths_shacl_ttl, AssumptionConfiguration, ExactArithmeticConfiguration,
     IntegralTransformConfiguration, InterpolationConfiguration, NumberTheoryConfiguration,
@@ -191,17 +141,7 @@ pub use computational_maths_shacl::{
 pub mod logic_modalities_shacl;
 pub use logic_modalities_shacl::{get_logic_modalities_shacl_ttl, LOGIC_MODALITY_SHAPES};
 
-#[cfg(any(
-    not(target_arch = "wasm32"),
-    feature = "wasm-scientific",
-    feature = "wasm-full"
-))]
 pub mod core_modalities_shacl;
-#[cfg(any(
-    not(target_arch = "wasm32"),
-    feature = "wasm-scientific",
-    feature = "wasm-full"
-))]
 pub use core_modalities_shacl::{
     // ASP
     ASPConfiguration,
@@ -253,17 +193,7 @@ pub use core_modalities_shacl::{
 
 // ─── SHACL Extensions for Infrastructure ───────────────────────────────────────
 
-#[cfg(any(
-    not(target_arch = "wasm32"),
-    feature = "wasm-scientific",
-    feature = "wasm-full"
-))]
 pub mod infrastructure_shacl;
-#[cfg(any(
-    not(target_arch = "wasm32"),
-    feature = "wasm-scientific",
-    feature = "wasm-full"
-))]
 pub use infrastructure_shacl::{
     // Domain-Specific
     BiologicalDomainConfiguration,
@@ -295,17 +225,7 @@ pub mod owl;
 
 // ─── Rules ─────────────────────────────────────────────────────────────────────
 
-#[cfg(any(
-    not(target_arch = "wasm32"),
-    feature = "wasm-scientific",
-    feature = "wasm-full"
-))]
 pub mod rules;
-#[cfg(any(
-    not(target_arch = "wasm32"),
-    feature = "wasm-scientific",
-    feature = "wasm-full"
-))]
 pub use rules::{RuleEngine, RuleSet, GUARDIANSHIP_RULESET};
 
 // ─── Opcodes ─────────────────────────────────────────────────────────────────

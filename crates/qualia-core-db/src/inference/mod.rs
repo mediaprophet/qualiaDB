@@ -3,25 +3,22 @@
 // Inference-runtime components. These run model inference (a tensor program) — the underlying
 // mathematics now lives in `crate::solvers` (GEMM, activations, softmax, normalization, attention,
 // RoPE, FFN). The old `llm_*` names are kept as transitional aliases; "inference" is what these are.
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
 pub mod inference_agent;
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
 pub use inference_agent as llm_agent; // transitional alias
 pub mod inference_awq;
 pub use inference_awq as llm_awq; // transitional alias
 #[cfg(not(target_arch = "wasm32"))]
 pub mod inference_bench;
-#[cfg(all(target_arch = "wasm32", feature = "wasm-llm"))]
+#[cfg(target_arch = "wasm32")]
 pub mod inference_bench_wasm;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod kv_capture;
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
 pub mod kv_dict;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod kv_dict_runtime;
 #[cfg(not(target_arch = "wasm32"))]
 pub use inference_bench as llm_bench; // transitional alias
-#[cfg(all(target_arch = "wasm32", feature = "wasm-llm"))]
+#[cfg(target_arch = "wasm32")]
 pub use inference_bench_wasm as llm_bench; // transitional alias
 pub mod inference_eval;
 pub use inference_eval as llm_eval; // transitional alias
@@ -38,34 +35,25 @@ pub mod compute_universe;
 #[cfg(target_os = "windows")]
 pub mod directml_bridge;
 pub mod domino_gbnf;
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
 pub mod ggml_quants;
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
 pub mod gguf_sharder;
 #[cfg(any(target_os = "macos", target_os = "ios"))]
 pub mod metal_bridge;
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
 pub mod neuro_symbolic_sieve;
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
 pub mod orchestrator;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod residency_planner;
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
 pub mod resident_model;
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
 pub mod safetensor;
 pub mod semantic_culler;
 pub mod spatial_sieve;
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
 pub mod tensor_roles;
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
 pub mod ternary;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod ternary_gpu;
 /// Stage-by-stage library probe tests for the inference optim toolkit.
 #[cfg(test)]
 pub mod toolkit_probe;
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
 pub mod topk;
 // W2: exact CPU sampling chain (pure, wasm-safe — no GPU, no `rand`, no file I/O).
 pub mod sampler;

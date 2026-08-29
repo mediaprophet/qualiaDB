@@ -1,6 +1,4 @@
 use crate::NQuin;
-use std::borrow::Cow;
-use std::sync::mpsc;
 
 /// Trigger a diffusion pass for the named graph. Returns `true` if enqueued,
 /// `false` if the graph_id is empty (no-op). The actual GPU pass runs async
@@ -9,6 +7,12 @@ pub fn trigger_diffusion(graph_id: &str) -> bool {
     !graph_id.is_empty()
 }
 
+#[cfg(any(not(target_arch = "wasm32"), feature = "portal", feature = "wasm-llm"))]
+use std::borrow::Cow;
+#[cfg(any(not(target_arch = "wasm32"), feature = "portal", feature = "wasm-llm"))]
+use std::sync::mpsc;
+
+#[cfg(any(not(target_arch = "wasm32"), feature = "portal", feature = "wasm-llm"))]
 pub async fn execute_diffusion_pass(graph: &mut [NQuin]) -> Result<(), String> {
     if graph.is_empty() {
         return Ok(());
@@ -121,6 +125,11 @@ pub async fn execute_diffusion_pass(graph: &mut [NQuin]) -> Result<(), String> {
     } else {
         Err("Failed to read back from GPU".to_string())
     }
+}
+
+#[cfg(not(any(not(target_arch = "wasm32"), feature = "portal", feature = "wasm-llm")))]
+pub async fn execute_diffusion_pass(_graph: &mut [NQuin]) -> Result<(), String> {
+    Ok(())
 }
 
 // ─── CPU-side belief diffusion / energy / annealing (zero-heap, GPU-independent) ──

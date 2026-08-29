@@ -15,9 +15,6 @@ pub mod computational_economics;
 /// Q42/10D adapters, and the computational-geometry algorithm families. Unlike the older
 /// specialized libraries this module is available to browser/WASM builds.
 pub mod computational_geometry;
-/// Computer vision pure kernels (MIG-V2 from `qualia-vision`).
-/// Native/desktop only — portal WASM browses sealed `.10d` without this tree.
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 pub mod computer_vision;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod constructibility;

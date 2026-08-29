@@ -16,11 +16,11 @@ use std::sync::OnceLock;
 // `caps` reports wgpu adapter capabilities, so it only compiles where the wgpu
 // dependency is present: native always, or wasm with the `gpu-runtime` feature.
 // Without this gate the module fails the `wasm-logic` build (no wgpu crate).
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm", feature = "portal"))]
 mod caps;
 #[cfg(not(target_arch = "wasm32"))]
 pub(crate) use caps::experimental_features_allowed;
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm", feature = "portal"))]
 pub(crate) use caps::requested_native_llm_features;
 #[cfg(not(target_arch = "wasm32"))]
 pub use caps::{

@@ -21,11 +21,13 @@ fn native_only(span: Span, name: &str) -> Result<Value, Diagnostic> {
     Err(args::bad(span, format!("{name} requires native build")))
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 fn handle_of(args: &Value, span: Span, name: &str) -> Result<u64, Diagnostic> {
     args::rec_u64(args, "handle")
         .ok_or_else(|| args::bad(span, format!("{name} needs {{ handle: u64 }}")))
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 fn vec3(args: &Value, key: &str) -> Option<[f32; 3]> {
     let xs = args::rec_f64_list(args, key)?;
     if xs.len() != 3 {
@@ -34,6 +36,7 @@ fn vec3(args: &Value, key: &str) -> Option<[f32; 3]> {
     Some([xs[0] as f32, xs[1] as f32, xs[2] as f32])
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 fn class_from(s: &str) -> u32 {
     match s {
         "ephemeral" => 1,
@@ -43,6 +46,7 @@ fn class_from(s: &str) -> u32 {
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 fn class_name(c: u32) -> &'static str {
     match c {
         1 => "ephemeral",
@@ -53,9 +57,10 @@ fn class_name(c: u32) -> &'static str {
 }
 
 /// `Render.gpu_upload_mesh_colored` — triangle mesh with per-vertex RGBA.
-pub fn gpu_upload_mesh_colored(args: &Value, span: Span) -> Result<Value, Diagnostic> {
+pub fn gpu_upload_mesh_colored(_args: &Value, span: Span) -> Result<Value, Diagnostic> {
     #[cfg(not(target_arch = "wasm32"))]
     {
+        let args = _args;
         let handle = handle_of(args, span, "gpu_upload_mesh_colored")?;
         let pos_f64s = args::rec_f64_list(args, "positions")
             .ok_or_else(|| args::bad(span, "gpu_upload_mesh_colored needs { positions: [f32] }"))?;
@@ -97,9 +102,10 @@ pub fn gpu_upload_mesh_colored(args: &Value, span: Span) -> Result<Value, Diagno
 }
 
 /// `Render.gpu_set_standpoint` — human-centric observer standpoint.
-pub fn gpu_set_standpoint(args: &Value, span: Span) -> Result<Value, Diagnostic> {
+pub fn gpu_set_standpoint(_args: &Value, span: Span) -> Result<Value, Diagnostic> {
     #[cfg(not(target_arch = "wasm32"))]
     {
+        let args = _args;
         let handle = handle_of(args, span, "gpu_set_standpoint")?;
         let class = args::rec_str(args, "class")
             .map(class_from)
@@ -126,9 +132,10 @@ pub fn gpu_set_standpoint(args: &Value, span: Span) -> Result<Value, Diagnostic>
 }
 
 /// `Render.gpu_observer_standpoint` — read the current observer standpoint.
-pub fn gpu_observer_standpoint(args: &Value, span: Span) -> Result<Value, Diagnostic> {
+pub fn gpu_observer_standpoint(_args: &Value, span: Span) -> Result<Value, Diagnostic> {
     #[cfg(not(target_arch = "wasm32"))]
     {
+        let args = _args;
         let handle = handle_of(args, span, "gpu_observer_standpoint")?;
         let o = slot_with(handle, |portal| portal.observer_standpoint())
             .ok_or_else(|| args::bad(span, "gpu_observer_standpoint: invalid handle"))?;
@@ -154,9 +161,10 @@ pub fn gpu_observer_standpoint(args: &Value, span: Span) -> Result<Value, Diagno
 }
 
 /// `Render.gpu_camera_state` — read yaw/pitch/zoom.
-pub fn gpu_camera_state(args: &Value, span: Span) -> Result<Value, Diagnostic> {
+pub fn gpu_camera_state(_args: &Value, span: Span) -> Result<Value, Diagnostic> {
     #[cfg(not(target_arch = "wasm32"))]
     {
+        let args = _args;
         let handle = handle_of(args, span, "gpu_camera_state")?;
         let cam = slot_with(handle, |portal| portal.camera_state())
             .ok_or_else(|| args::bad(span, "gpu_camera_state: invalid handle"))?;
@@ -173,9 +181,10 @@ pub fn gpu_camera_state(args: &Value, span: Span) -> Result<Value, Diagnostic> {
 }
 
 /// `Render.gpu_surface_size` — configured color/depth extent.
-pub fn gpu_surface_size(args: &Value, span: Span) -> Result<Value, Diagnostic> {
+pub fn gpu_surface_size(_args: &Value, span: Span) -> Result<Value, Diagnostic> {
     #[cfg(not(target_arch = "wasm32"))]
     {
+        let args = _args;
         let handle = handle_of(args, span, "gpu_surface_size")?;
         let (w, h) = slot_with(handle, |portal| portal.surface_size())
             .ok_or_else(|| args::bad(span, "gpu_surface_size: invalid handle"))?;
@@ -191,9 +200,10 @@ pub fn gpu_surface_size(args: &Value, span: Span) -> Result<Value, Diagnostic> {
 }
 
 /// `Render.gpu_has_mesh`
-pub fn gpu_has_mesh(args: &Value, span: Span) -> Result<Value, Diagnostic> {
+pub fn gpu_has_mesh(_args: &Value, span: Span) -> Result<Value, Diagnostic> {
     #[cfg(not(target_arch = "wasm32"))]
     {
+        let args = _args;
         let handle = handle_of(args, span, "gpu_has_mesh")?;
         let has = slot_with(handle, |portal| portal.has_mesh())
             .ok_or_else(|| args::bad(span, "gpu_has_mesh: invalid handle"))?;
@@ -206,9 +216,10 @@ pub fn gpu_has_mesh(args: &Value, span: Span) -> Result<Value, Diagnostic> {
 }
 
 /// `Render.gpu_has_tensor`
-pub fn gpu_has_tensor(args: &Value, span: Span) -> Result<Value, Diagnostic> {
+pub fn gpu_has_tensor(_args: &Value, span: Span) -> Result<Value, Diagnostic> {
     #[cfg(not(target_arch = "wasm32"))]
     {
+        let args = _args;
         let handle = handle_of(args, span, "gpu_has_tensor")?;
         let has = slot_with(handle, |portal| portal.has_tensor_buffer())
             .ok_or_else(|| args::bad(span, "gpu_has_tensor: invalid handle"))?;
@@ -221,9 +232,10 @@ pub fn gpu_has_tensor(args: &Value, span: Span) -> Result<Value, Diagnostic> {
 }
 
 /// `Render.gpu_tensor_node_count`
-pub fn gpu_tensor_node_count(args: &Value, span: Span) -> Result<Value, Diagnostic> {
+pub fn gpu_tensor_node_count(_args: &Value, span: Span) -> Result<Value, Diagnostic> {
     #[cfg(not(target_arch = "wasm32"))]
     {
+        let args = _args;
         let handle = handle_of(args, span, "gpu_tensor_node_count")?;
         let n = slot_with(handle, |portal| portal.tensor_node_count())
             .ok_or_else(|| args::bad(span, "gpu_tensor_node_count: invalid handle"))?;
@@ -236,9 +248,10 @@ pub fn gpu_tensor_node_count(args: &Value, span: Span) -> Result<Value, Diagnost
 }
 
 /// `Render.gpu_particle_count`
-pub fn gpu_particle_count(args: &Value, span: Span) -> Result<Value, Diagnostic> {
+pub fn gpu_particle_count(_args: &Value, span: Span) -> Result<Value, Diagnostic> {
     #[cfg(not(target_arch = "wasm32"))]
     {
+        let args = _args;
         let handle = handle_of(args, span, "gpu_particle_count")?;
         let n = slot_with(handle, |portal| portal.particle_count())
             .ok_or_else(|| args::bad(span, "gpu_particle_count: invalid handle"))?;
@@ -251,9 +264,10 @@ pub fn gpu_particle_count(args: &Value, span: Span) -> Result<Value, Diagnostic>
 }
 
 /// `Render.gpu_sync_bloom` — reconcile HDR bloom targets with VRAM mode.
-pub fn gpu_sync_bloom(args: &Value, span: Span) -> Result<Value, Diagnostic> {
+pub fn gpu_sync_bloom(_args: &Value, span: Span) -> Result<Value, Diagnostic> {
     #[cfg(not(target_arch = "wasm32"))]
     {
+        let args = _args;
         let handle = handle_of(args, span, "gpu_sync_bloom")?;
         slot_with(handle, |portal| portal.sync_bloom_targets())
             .ok_or_else(|| args::bad(span, "gpu_sync_bloom: invalid handle"))?;
@@ -266,9 +280,10 @@ pub fn gpu_sync_bloom(args: &Value, span: Span) -> Result<Value, Diagnostic> {
 }
 
 /// `Render.gpu_set_artefact_joint` — kinematic joint (revolute/prismatic) or clear.
-pub fn gpu_set_artefact_joint(args: &Value, span: Span) -> Result<Value, Diagnostic> {
+pub fn gpu_set_artefact_joint(_args: &Value, span: Span) -> Result<Value, Diagnostic> {
     #[cfg(not(target_arch = "wasm32"))]
     {
+        let args = _args;
         let handle = handle_of(args, span, "gpu_set_artefact_joint")?;
         let clear = args::rec_bool(args, "clear").unwrap_or(false);
         let joint = if clear {
@@ -293,9 +308,10 @@ pub fn gpu_set_artefact_joint(args: &Value, span: Span) -> Result<Value, Diagnos
 }
 
 /// `Render.gpu_set_artefact_world` — world AABB constraint, or clear.
-pub fn gpu_set_artefact_world(args: &Value, span: Span) -> Result<Value, Diagnostic> {
+pub fn gpu_set_artefact_world(_args: &Value, span: Span) -> Result<Value, Diagnostic> {
     #[cfg(not(target_arch = "wasm32"))]
     {
+        let args = _args;
         let handle = handle_of(args, span, "gpu_set_artefact_world")?;
         let clear = args::rec_bool(args, "clear").unwrap_or(false);
         let world = if clear {
@@ -316,9 +332,10 @@ pub fn gpu_set_artefact_world(args: &Value, span: Span) -> Result<Value, Diagnos
 }
 
 /// `Render.gpu_artefact_refused` — last frame's joint pose was refused.
-pub fn gpu_artefact_refused(args: &Value, span: Span) -> Result<Value, Diagnostic> {
+pub fn gpu_artefact_refused(_args: &Value, span: Span) -> Result<Value, Diagnostic> {
     #[cfg(not(target_arch = "wasm32"))]
     {
+        let args = _args;
         let handle = handle_of(args, span, "gpu_artefact_refused")?;
         let refused = slot_with(handle, |portal| portal.artefact_refused())
             .ok_or_else(|| args::bad(span, "gpu_artefact_refused: invalid handle"))?;
@@ -331,9 +348,10 @@ pub fn gpu_artefact_refused(args: &Value, span: Span) -> Result<Value, Diagnosti
 }
 
 /// `Render.gpu_required_rgba8_bytes` — readback buffer size for current surface.
-pub fn gpu_required_rgba8_bytes(args: &Value, span: Span) -> Result<Value, Diagnostic> {
+pub fn gpu_required_rgba8_bytes(_args: &Value, span: Span) -> Result<Value, Diagnostic> {
     #[cfg(not(target_arch = "wasm32"))]
     {
+        let args = _args;
         let handle = handle_of(args, span, "gpu_required_rgba8_bytes")?;
         let n = slot_with(handle, |portal| portal.required_rgba8_bytes())
             .ok_or_else(|| args::bad(span, "gpu_required_rgba8_bytes: invalid handle"))?;

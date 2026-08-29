@@ -324,7 +324,6 @@ pub fn domino_sample(
     masker.apply_mask_preserving(logits);
     Some(state.sample(logits, context))
 }
-
 #[inline]
 pub fn set_ffn_fusion(_on: bool) {}
 
@@ -415,7 +414,14 @@ pub fn empty_rt() -> (u64, u64) {
 
 #[inline]
 pub fn gpu_wait_count() -> u64 {
-    crate::gguf_bridge::gpu_wait_count()
+    #[cfg(any(not(target_arch = "wasm32"), feature = "portal", feature = "wasm-llm"))]
+    {
+        crate::gguf_bridge::gpu_wait_count()
+    }
+    #[cfg(not(any(not(target_arch = "wasm32"), feature = "portal", feature = "wasm-llm")))]
+    {
+        0
+    }
 }
 
 #[inline]
@@ -459,6 +465,7 @@ pub fn reset_phase_metrics() {
     DECODE_FFN_NS.store(0, Ordering::Relaxed);
     DECODE_EMPTY_RT_NS.store(0, Ordering::Relaxed);
     DECODE_EMPTY_RT_N.store(0, Ordering::Relaxed);
+    #[cfg(any(not(target_arch = "wasm32"), feature = "portal", feature = "wasm-llm"))]
     crate::gguf_bridge::reset_gpu_wait_count();
 }
 

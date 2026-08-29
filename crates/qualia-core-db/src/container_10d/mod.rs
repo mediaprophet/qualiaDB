@@ -62,19 +62,7 @@ pub mod section;
 // and carry the same gate, so this is symmetric — no portal-path regression
 // (the portal renderer upload path uses `mesh_section`, which has no
 // `specialized_libs` dependency).
-#[cfg(any(
-    not(target_arch = "wasm32"),
-    feature = "portal",
-    feature = "wasm-logic",
-    feature = "wasm-scientific"
-))]
 pub mod spatial_index_section;
-#[cfg(any(
-    not(target_arch = "wasm32"),
-    feature = "portal",
-    feature = "wasm-logic",
-    feature = "wasm-scientific"
-))]
 pub mod topology_section;
 
 pub use axis_role::{

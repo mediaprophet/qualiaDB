@@ -299,6 +299,11 @@ fn interval_pair(args_v: &Value, key: &str, span: Span) -> Result<[i64; 2], Diag
     Ok([start, end])
 }
 
+#[cfg(any(
+    not(target_arch = "wasm32"),
+    feature = "wasm-scientific",
+    feature = "wasm-full"
+))]
 fn manifold_10d(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let values = args::rec_f64_list(args_v, "parameters")
         .ok_or_else(|| args::bad(span, "manifold_10d mode needs 10 parameters"))?;
@@ -317,6 +322,15 @@ fn manifold_10d(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
         ),
         ("quaternion", args::f64_list_value(quaternion.data)),
     ]))
+}
+
+#[cfg(not(any(
+    not(target_arch = "wasm32"),
+    feature = "wasm-scientific",
+    feature = "wasm-full"
+)))]
+fn manifold_10d(_args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
+    Err(args::need_scientific(span, "Manifold10D"))
 }
 
 fn epistemic_boundaries(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {

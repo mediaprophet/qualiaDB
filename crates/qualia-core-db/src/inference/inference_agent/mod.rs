@@ -42,6 +42,7 @@ mod sticky_infer;
 mod config;
 mod control;
 mod decode;
+#[cfg(any(not(target_arch = "wasm32"), feature = "portal", feature = "wasm-llm"))]
 mod decode_helpers;
 mod local_agent;
 mod runtime;

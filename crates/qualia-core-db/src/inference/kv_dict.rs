@@ -12,7 +12,6 @@
 //! produces, engine runs", so only the data + codec + the small numeric helpers they share live here.
 //! Pure CPU + `f32`; the GPU reconstruction shader (Phase 4b step 5) mirrors [`reconstruct`] in WGSL.
 
-#![cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
 
 /// A learned per-layer KV dictionary: `n_atoms` atoms, each of length `dim`, row-major in `atoms`.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
