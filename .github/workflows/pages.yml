@@ -8,6 +8,7 @@ on:
     branches:
       - main
       - "0.0.34"
+      - "0.0.35"
     tags:
       - "v*"
   workflow_dispatch:

@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Webizen Poet — Tool-Chest & Manifolds</title>
+  <meta name="author" content="Timothy Charles Holborn">
+  <meta name="copyright" content="Copyright (c) 2026 Timothy Charles Holborn. All rights reserved.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    html, body { margin: 0; padding: 0; height: 100%; background: #07090e; }
+    #loading {
+      display: flex; align-items: center; justify-content: center;
+      height: 100vh; color: #6b7689; font-family: 'Inter', sans-serif; font-size: 14px;
+    }
+  </style>
+  
+<script type="module">
+import init, * as bindings from './poet-ui-885c15495c01aa11.js';
+const wasm = await init({ module_or_path: './poet-ui-885c15495c01aa11_bg.wasm' });
+
+
+window.wasmBindings = bindings;
+
+
+dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
+
+</script>
+<link rel="modulepreload" href="./poet-ui-885c15495c01aa11.js" crossorigin="anonymous" integrity="sha384-BahSnreXvZXOy/nFx528aacU9NioY9UFbFHkF4eMogYcL6Gaa8IUoCZByU0Y1JdP"><link rel="preload" href="./poet-ui-885c15495c01aa11_bg.wasm" crossorigin="anonymous" integrity="sha384-bEUnT5A4AsZEmVvxBOylwjmjJbsWOgi5bS2q2xrbIpkMQx5BAyQ/Z5uZ/CJyjI6e" as="fetch" type="application/wasm"></head>
+<body>
+  <script>
+    // Error catchers — must be first to catch WASM init failures
+    window.addEventListener('error', (e) => {
+      console.error('[qualia-ui] window error:', e.error || e.message, e.filename, e.lineno);
+      const el = document.getElementById('loading');
+      if (el && !document.querySelector('.app')) {
+        const msg = e.error ? String(e.error) : (e.message || 'Unknown error');
+        el.innerHTML = '<div style="color:#ff4444;font-family:monospace;font-size:12px;padding:20px;max-width:600px;">' +
+          '<h3 style="margin:0 0 10px;">Webizen Poet — Window Error</h3>' +
+          '<pre style="white-space:pre-wrap;word-break:break-all;">' + msg.replace(/</g,'&lt;').replace(/>/g,'&gt;') +
+          '\n\nat ' + (e.filename||'') + ':' + (e.lineno||'') + '</pre></div>';
+        el.style.cssText = 'display:flex;align-items:center;justify-content:center;height:100vh;background:#0a0a0a;';
+      }
+    });
+    window.addEventListener('unhandledrejection', (e) => {
+      console.error('[qualia-ui] unhandled rejection:', e.reason);
+      const el = document.getElementById('loading');
+      if (el && !document.querySelector('.app')) {
+        el.innerHTML = '<div style="color:#ff4444;font-family:monospace;font-size:12px;padding:20px;max-width:600px;">' +
+          '<h3 style="margin:0 0 10px;">Webizen Poet — WASM Init Error</h3>' +
+          '<pre style="white-space:pre-wrap;word-break:break-all;">' + String(e.reason).replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</pre>' +
+          '</div>';
+        el.style.cssText = 'display:flex;align-items:center;justify-content:center;height:100vh;background:#0a0a0a;';
+      }
+    });
+  </script>
+  <div id="loading">Loading Webizen Poet…</div>
+  <script type="module">
+    // Fallback: if app doesn't appear within 10s, show error
+    setTimeout(() => {
+      if (!document.querySelector('.app')) {
+        const el = document.getElementById('loading');
+        if (el) {
+          el.innerHTML = '<div style="color:#ff4444;font-family:monospace;font-size:12px;padding:20px;max-width:600px;">' +
+            '<h3 style="margin:0 0 10px;">Webizen Poet — Timeout</h3>' +
+            '<p>WASM did not initialize within 10 seconds. Check browser console (F12) for errors.</p>' +
+            '</div>';
+          el.style.cssText = 'display:flex;align-items:center;justify-content:center;height:100vh;background:#0a0a0a;';
+        }
+      }
+    }, 10000);
+
+    // Safety net: remove loading indicator once the app mounts.
+    // start() already removes it on success; this covers any edge case.
+    function checkReady() {
+      if (document.querySelector('.app')) {
+        document.getElementById('loading')?.remove();
+      } else {
+        requestAnimationFrame(checkReady);
+      }
+    }
+    requestAnimationFrame(checkReady);
+  </script>
+</body>
+</html>
