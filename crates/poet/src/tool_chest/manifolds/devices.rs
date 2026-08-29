@@ -101,5 +101,6 @@ pub fn devices_manifold_seed() -> ManifoldSeed {
             },
         ],
         panels: vec![],
+        ..Default::default()
     }
 }

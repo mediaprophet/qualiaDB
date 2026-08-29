@@ -131,8 +131,7 @@ impl<'a, H: Host> Engine<'a, H> {
                 for x in xs {
                     out.push(self.eval_expr(x, env)?);
                 }
-                self.budget
-                    .charge(24 + out.len() as u64 * 16, expr.span)?;
+                self.budget.charge(24 + out.len() as u64 * 16, expr.span)?;
                 Ok(Value::List(out))
             }
             ExprKind::Record(fs) => {
@@ -140,8 +139,7 @@ impl<'a, H: Host> Engine<'a, H> {
                 for f in fs {
                     m.insert(f.name.clone(), self.eval_expr(&f.value, env)?);
                 }
-                self.budget
-                    .charge(24 + m.len() as u64 * 32, expr.span)?;
+                self.budget.charge(24 + m.len() as u64 * 32, expr.span)?;
                 Ok(Value::Record(m))
             }
             ExprKind::Triple {
@@ -180,23 +178,20 @@ impl<'a, H: Host> Engine<'a, H> {
                     ExprKind::Call { callee, args } => {
                         self.eval_call_with_first_val(callee, left_val, args, expr.span, env)
                     }
-                    _ => {
-                        self.eval_call_with_first_val(right, left_val, &[], expr.span, env)
-                    }
+                    _ => self.eval_call_with_first_val(right, left_val, &[], expr.span, env),
                 }
             }
-            ExprKind::GraphQuery { is_ask, pattern, variables } => {
+            ExprKind::GraphQuery {
+                is_ask,
+                pattern,
+                variables,
+            } => {
                 let mut rec = std::collections::BTreeMap::new();
                 rec.insert("query".to_string(), Value::String(pattern.clone()));
                 rec.insert("is_ask".to_string(), Value::Bool(*is_ask));
                 rec.insert(
                     "variables".to_string(),
-                    Value::List(
-                        variables
-                            .iter()
-                            .map(|v| Value::String(v.clone()))
-                            .collect(),
-                    ),
+                    Value::List(variables.iter().map(|v| Value::String(v.clone())).collect()),
                 );
                 let payload = Value::Record(rec);
                 crate::bind::dispatch(
@@ -207,7 +202,11 @@ impl<'a, H: Host> Engine<'a, H> {
                     expr.span,
                 )
             }
-            ExprKind::ModalLogic { modality, args, body } => {
+            ExprKind::ModalLogic {
+                modality,
+                args,
+                body,
+            } => {
                 let mut evaluated_args = Vec::new();
                 for a in args {
                     evaluated_args.push(self.eval_expr(a, env)?);
@@ -231,7 +230,10 @@ impl<'a, H: Host> Engine<'a, H> {
                     ModalKind::N3Defeasible => "defeasible_rule",
                 };
                 let mut rec = std::collections::BTreeMap::new();
-                rec.insert("modality".to_string(), Value::String(modal_name.to_string()));
+                rec.insert(
+                    "modality".to_string(),
+                    Value::String(modal_name.to_string()),
+                );
                 rec.insert("args".to_string(), Value::List(evaluated_args));
                 rec.insert("body".to_string(), body_val);
                 rec.insert("kind".to_string(), Value::String("term".to_string()));
@@ -314,7 +316,15 @@ impl<'a, H: Host> Engine<'a, H> {
                 over,
                 ease,
                 spring,
-            } => self.eval_tween(from, to, over, ease.as_deref(), spring.as_deref(), env, expr.span),
+            } => self.eval_tween(
+                from,
+                to,
+                over,
+                ease.as_deref(),
+                spring.as_deref(),
+                env,
+                expr.span,
+            ),
         }
     }
 
@@ -363,16 +373,13 @@ impl<'a, H: Host> Engine<'a, H> {
             state.evaluate_at(&cfg, elapsed).0
         } else {
             let name = ease.unwrap_or("linear");
-            let curve = crate::animation::curves::EasingCurve::from_name(name).ok_or_else(|| {
-                let hint = crate::catalog::did_you_mean(&format!("ease.{name}"))
-                    .map(|s| format!("; did you mean `{s}`?"))
-                    .unwrap_or_default();
-                Diagnostic::new(
-                    DiagCode::E100,
-                    span,
-                    format!("unknown ease `{name}`{hint}"),
-                )
-            })?;
+            let curve =
+                crate::animation::curves::EasingCurve::from_name(name).ok_or_else(|| {
+                    let hint = crate::catalog::did_you_mean(&format!("ease.{name}"))
+                        .map(|s| format!("; did you mean `{s}`?"))
+                        .unwrap_or_default();
+                    Diagnostic::new(DiagCode::E100, span, format!("unknown ease `{name}`{hint}"))
+                })?;
             let u = curve.eval(progress);
             a + (b - a) * u
         };
@@ -389,9 +396,8 @@ impl<'a, H: Host> Engine<'a, H> {
 }
 
 fn numeric(v: &Value, span: Span) -> Result<f64, Diagnostic> {
-    v.as_f64().ok_or_else(|| {
-        Diagnostic::new(DiagCode::E600, span, "tween operand is not numeric")
-    })
+    v.as_f64()
+        .ok_or_else(|| Diagnostic::new(DiagCode::E600, span, "tween operand is not numeric"))
 }
 
 fn duration_seconds(v: &Value, span: Span) -> Result<f64, Diagnostic> {
@@ -400,9 +406,9 @@ fn duration_seconds(v: &Value, span: Span) -> Result<f64, Diagnostic> {
         Value::Quantity(q) => {
             if let Some(u) = crate::quantity::lookup_unit(&q.unit) {
                 if let Some(s) = crate::quantity::lookup_unit("s") {
-                    return u.convert(q.value, &s).map_err(|e| {
-                        Diagnostic::new(DiagCode::E100, span, e)
-                    });
+                    return u
+                        .convert(q.value, &s)
+                        .map_err(|e| Diagnostic::new(DiagCode::E100, span, e));
                 }
             }
             match q.unit.as_str() {
@@ -464,7 +470,15 @@ fn collect_free_idents(expr: &Expr, params: &[String], env: &Env, out: &mut Vec<
                 || env.vars.contains_key(n)
                     && matches!(
                         n.as_str(),
-                        "math" | "true" | "false" | "null" | "Ok" | "Err" | "vec2" | "vec3" | "vec4"
+                        "math"
+                            | "true"
+                            | "false"
+                            | "null"
+                            | "Ok"
+                            | "Err"
+                            | "vec2"
+                            | "vec3"
+                            | "vec4"
                     )
             {
                 return;
@@ -517,14 +531,15 @@ fn collect_free_idents(expr: &Expr, params: &[String], env: &Env, out: &mut Vec<
                 collect_free_idents(&f.value, params, env, out);
             }
         }
-        ExprKind::Lambda { params: inner, body } => {
+        ExprKind::Lambda {
+            params: inner,
+            body,
+        } => {
             let mut nested = params.to_vec();
             nested.extend(inner.iter().cloned());
             collect_free_idents(body, &nested, env, out);
         }
-        ExprKind::Tween {
-            from, to, over, ..
-        } => {
+        ExprKind::Tween { from, to, over, .. } => {
             collect_free_idents(from, params, env, out);
             collect_free_idents(to, params, env, out);
             collect_free_idents(over, params, env, out);

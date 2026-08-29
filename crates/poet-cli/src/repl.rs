@@ -1,7 +1,7 @@
 //! VibeScript interactive REPL (T62).
 
-use vibe::{eval_cell, load_program, Budget, Diagnostic, Engine, Env, Host, LocalHost, Value};
 use std::io::{self, BufRead, Write};
+use vibe::{eval_cell, load_program, Budget, Diagnostic, Engine, Env, Host, LocalHost, Value};
 
 /// Evaluate a single REPL line/cell within a persistent host and environment.
 pub fn eval_line(line: &str, host: &mut impl Host, env: &mut Env) -> Result<Value, Diagnostic> {

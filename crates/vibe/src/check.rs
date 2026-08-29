@@ -75,7 +75,9 @@ pub fn check_program_with_vocab(
     chunks: &[crate::vocab::VocabChunk],
 ) -> Result<CheckResult, Diagnostic> {
     let result = check_program(program)?;
-    if let Some((prefix, local, span)) = crate::vocab::unknown_prefixed(program, chunks).into_iter().next()
+    if let Some((prefix, local, span)) = crate::vocab::unknown_prefixed(program, chunks)
+        .into_iter()
+        .next()
     {
         return Err(Diagnostic::new(
             DiagCode::E100,
@@ -106,7 +108,10 @@ fn collect_import_errors(
             errors.push(Diagnostic::new(
                 DiagCode::E100,
                 imp.span,
-                format!("unknown namespace '{ns}'; valid: {}", VALID_IMPORT_NS.join(", ")),
+                format!(
+                    "unknown namespace '{ns}'; valid: {}",
+                    VALID_IMPORT_NS.join(", ")
+                ),
             ));
             continue;
         }
@@ -223,7 +228,15 @@ fn check_item(
             Ok(Effect::External)
         }
         Item::Bind(b) => {
-            walk_expr(&b.left, env, aliases, granted, Effect::External, false, false)?;
+            walk_expr(
+                &b.left,
+                env,
+                aliases,
+                granted,
+                Effect::External,
+                false,
+                false,
+            )?;
             walk_expr(
                 &b.right,
                 env,
@@ -498,7 +511,9 @@ fn walk_stmt(
                         )?);
                     }
                     ArmBody::Expr(x) => {
-                        e = e.join(walk_expr(x, env, aliases, granted, ambient, tick, budgeted)?);
+                        e = e.join(walk_expr(
+                            x, env, aliases, granted, ambient, tick, budgeted,
+                        )?);
                     }
                 }
             }
@@ -512,7 +527,9 @@ fn walk_stmt(
             }
         }
         Stmt::Transaction { body, .. } => {
-            let e = walk_block(body, env, mutables, aliases, granted, ambient, tick, budgeted)?;
+            let e = walk_block(
+                body, env, mutables, aliases, granted, ambient, tick, budgeted,
+            )?;
             Ok(e.join(Effect::External))
         }
         Stmt::Effect { expr, span, .. } => {
@@ -523,7 +540,10 @@ fn walk_stmt(
                     "on tick cannot perform external effects",
                 ));
             }
-            Ok(walk_expr(expr, env, aliases, granted, ambient, tick, budgeted)?.join(Effect::External))
+            Ok(
+                walk_expr(expr, env, aliases, granted, ambient, tick, budgeted)?
+                    .join(Effect::External),
+            )
         }
         Stmt::Expr { expr, .. } => walk_expr(expr, env, aliases, granted, ambient, tick, budgeted),
         Stmt::Block(b) => walk_block(b, env, mutables, aliases, granted, ambient, tick, budgeted),
@@ -556,9 +576,7 @@ fn walk_expr(
                         return Err(Diagnostic::new(
                             DiagCode::E100,
                             expr.span,
-                            format!(
-                                "unit mismatch: cannot {op:?} quantities of `{u1}` and `{u2}`"
-                            ),
+                            format!("unit mismatch: cannot {op:?} quantities of `{u1}` and `{u2}`"),
                         ));
                     }
                 }
@@ -570,7 +588,9 @@ fn walk_expr(
         ExprKind::Unary { expr, .. } | ExprKind::Await(expr) | ExprKind::Try(expr) => {
             walk_expr(expr, env, aliases, granted, ambient, tick, budgeted)
         }
-        ExprKind::Member { recv, .. } => walk_expr(recv, env, aliases, granted, ambient, tick, budgeted),
+        ExprKind::Member { recv, .. } => {
+            walk_expr(recv, env, aliases, granted, ambient, tick, budgeted)
+        }
         ExprKind::Index { recv, index, .. } => {
             let a = walk_expr(recv, env, aliases, granted, ambient, tick, budgeted)?;
             let b = walk_expr(index, env, aliases, granted, ambient, tick, budgeted)?;
@@ -603,8 +623,19 @@ fn walk_expr(
             if let Some(p) = &path {
                 if p == "capability.invoke" {
                     let target_id = args.iter().find_map(|a| match a {
-                        Arg::Pos(Expr { kind: ExprKind::Literal(Literal::String(s)), .. }) => Some(s.as_str()),
-                        Arg::Named(NamedArg { name, value: Expr { kind: ExprKind::Literal(Literal::String(s)), .. }, .. }) if name == "capability" || name == "id" => Some(s.as_str()),
+                        Arg::Pos(Expr {
+                            kind: ExprKind::Literal(Literal::String(s)),
+                            ..
+                        }) => Some(s.as_str()),
+                        Arg::Named(NamedArg {
+                            name,
+                            value:
+                                Expr {
+                                    kind: ExprKind::Literal(Literal::String(s)),
+                                    ..
+                                },
+                            ..
+                        }) if name == "capability" || name == "id" => Some(s.as_str()),
                         _ => None,
                     });
                     if let Some(target) = target_id {
@@ -645,9 +676,7 @@ fn walk_expr(
                             expr.span,
                             format!("missing capability(\"{cap}\") for {p}"),
                         )
-                        .with_fix(format!(
-                            "add requires [ capability(\"{cap}\") ];"
-                        )));
+                        .with_fix(format!("add requires [ capability(\"{cap}\") ];")));
                     }
                 }
                 if p == "graph.query" && !args.iter().any(is_take_arg) {
@@ -659,26 +688,34 @@ fn walk_expr(
                 }
             }
             let mut e = path.as_deref().map(binding_effect).unwrap_or(Effect::Pure);
-            e = e.join(walk_expr(callee, env, aliases, granted, ambient, tick, budgeted)?);
+            e = e.join(walk_expr(
+                callee, env, aliases, granted, ambient, tick, budgeted,
+            )?);
             for a in args {
                 let ex = match a {
                     Arg::Pos(x) | Arg::Named(NamedArg { value: x, .. }) => x,
                 };
-                e = e.join(walk_expr(ex, env, aliases, granted, ambient, tick, budgeted)?);
+                e = e.join(walk_expr(
+                    ex, env, aliases, granted, ambient, tick, budgeted,
+                )?);
             }
             Ok(e)
         }
         ExprKind::List(xs) => {
             let mut e = Effect::Pure;
             for x in xs {
-                e = e.join(walk_expr(x, env, aliases, granted, ambient, tick, budgeted)?);
+                e = e.join(walk_expr(
+                    x, env, aliases, granted, ambient, tick, budgeted,
+                )?);
             }
             Ok(e)
         }
         ExprKind::Record(fs) => {
             let mut e = Effect::Pure;
             for f in fs {
-                e = e.join(walk_expr(&f.value, env, aliases, granted, ambient, tick, budgeted)?);
+                e = e.join(walk_expr(
+                    &f.value, env, aliases, granted, ambient, tick, budgeted,
+                )?);
             }
             Ok(e)
         }
@@ -694,10 +731,16 @@ fn walk_expr(
             ..
         } => {
             let mut e = walk_expr(subject, env, aliases, granted, ambient, tick, budgeted)?;
-            e = e.join(walk_expr(predicate, env, aliases, granted, ambient, tick, budgeted)?);
-            e = e.join(walk_expr(object, env, aliases, granted, ambient, tick, budgeted)?);
+            e = e.join(walk_expr(
+                predicate, env, aliases, granted, ambient, tick, budgeted,
+            )?);
+            e = e.join(walk_expr(
+                object, env, aliases, granted, ambient, tick, budgeted,
+            )?);
             if let ExprKind::Reified { reifier, .. } = &expr.kind {
-                e = e.join(walk_expr(reifier, env, aliases, granted, ambient, tick, budgeted)?);
+                e = e.join(walk_expr(
+                    reifier, env, aliases, granted, ambient, tick, budgeted,
+                )?);
             }
             Ok(e)
         }
@@ -718,24 +761,32 @@ fn walk_expr(
                     expr.span,
                     "graph? requires capability(\"graph.read\") or using GraphDatabase",
                 )
-                .with_fix("add `using GraphDatabase;` or requires [ capability(\"graph.read\") ];"));
+                .with_fix(
+                    "add `using GraphDatabase;` or requires [ capability(\"graph.read\") ];",
+                ));
             }
             Ok(Effect::External)
         }
         ExprKind::ModalLogic { args, body, .. } => {
             let mut e = Effect::Pure;
             for a in args {
-                e = e.join(walk_expr(a, env, aliases, granted, ambient, tick, budgeted)?);
+                e = e.join(walk_expr(
+                    a, env, aliases, granted, ambient, tick, budgeted,
+                )?);
             }
             if let Some(b) = body {
-                e = e.join(walk_expr(b, env, aliases, granted, ambient, tick, budgeted)?);
+                e = e.join(walk_expr(
+                    b, env, aliases, granted, ambient, tick, budgeted,
+                )?);
             }
             Ok(e)
         }
         ExprKind::Interpolate(parts) => {
             let mut e = Effect::Pure;
             for p in parts {
-                e = e.join(walk_expr(p, env, aliases, granted, ambient, tick, budgeted)?);
+                e = e.join(walk_expr(
+                    p, env, aliases, granted, ambient, tick, budgeted,
+                )?);
             }
             Ok(e)
         }
@@ -746,9 +797,7 @@ fn walk_expr(
             }
             walk_expr(body, &mut inner, aliases, granted, ambient, tick, budgeted)
         }
-        ExprKind::Tween {
-            from, to, over, ..
-        } => {
+        ExprKind::Tween { from, to, over, .. } => {
             let a = walk_expr(from, env, aliases, granted, ambient, tick, budgeted)?;
             let b = walk_expr(to, env, aliases, granted, ambient, tick, budgeted)?;
             let c = walk_expr(over, env, aliases, granted, ambient, tick, budgeted)?;
@@ -823,19 +872,28 @@ fn is_literal_true(expr: &Expr) -> bool {
     matches!(expr.kind, ExprKind::Literal(Literal::Bool(true)))
 }
 
-fn expr_is_bounded_source(expr: &Expr, env: &HashMap<String, Type>, aliases: &HashMap<String, String>) -> bool {
+fn expr_is_bounded_source(
+    expr: &Expr,
+    env: &HashMap<String, Type>,
+    aliases: &HashMap<String, String>,
+) -> bool {
     match &expr.kind {
         ExprKind::Try(inner) => expr_is_bounded_source(inner, env, aliases),
         ExprKind::List(_) => true,
         ExprKind::Ident(n) => matches!(env.get(n), Some(Type::List(_))),
         ExprKind::Call { callee, args, .. } => {
-            call_path(callee, aliases).as_deref() == Some("graph.query") && args.iter().any(is_take_arg)
+            call_path(callee, aliases).as_deref() == Some("graph.query")
+                && args.iter().any(is_take_arg)
         }
         _ => false,
     }
 }
 
-fn iter_is_bounded(iter: &Expr, env: &HashMap<String, Type>, aliases: &HashMap<String, String>) -> bool {
+fn iter_is_bounded(
+    iter: &Expr,
+    env: &HashMap<String, Type>,
+    aliases: &HashMap<String, String>,
+) -> bool {
     expr_is_bounded_source(iter, env, aliases)
 }
 
@@ -874,10 +932,8 @@ mod tests {
 
     #[test]
     fn vocab_unknown_term_is_check_error() {
-        let chunk = crate::vocab::parse_chunk(
-            include_bytes!("../fixtures/vocab/clinic.n3"),
-        )
-        .expect("chunk");
+        let chunk = crate::vocab::parse_chunk(include_bytes!("../fixtures/vocab/clinic.n3"))
+            .expect("chunk");
         let program = parse_program(
             r#"
             prefix snomed: <http://snomed.info/id/>;
@@ -892,10 +948,8 @@ mod tests {
 
     #[test]
     fn vocab_known_clinic_term_checks() {
-        let chunk = crate::vocab::parse_chunk(
-            include_bytes!("../fixtures/vocab/clinic.n3"),
-        )
-        .expect("chunk");
+        let chunk = crate::vocab::parse_chunk(include_bytes!("../fixtures/vocab/clinic.n3"))
+            .expect("chunk");
         let program = parse_program(
             r#"
             prefix snomed: <http://snomed.info/id/>;

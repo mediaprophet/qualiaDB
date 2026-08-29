@@ -290,7 +290,9 @@ pub fn tween(a: f64, a_unit: &str, b: f64, b_unit: &str, t: f64) -> Result<f64, 
     let ua = UnitId::new(a_unit);
     let ub = UnitId::new(b_unit);
     if !ua.compatible(&ub) {
-        return Err(format!("unit mismatch: cannot tween `{a_unit}` with `{b_unit}`"));
+        return Err(format!(
+            "unit mismatch: cannot tween `{a_unit}` with `{b_unit}`"
+        ));
     }
     let t = t.clamp(0.0, 1.0);
     Ok(a + (b - a) * t)

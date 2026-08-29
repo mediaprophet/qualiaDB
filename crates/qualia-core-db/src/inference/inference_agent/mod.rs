@@ -40,6 +40,7 @@ pub use crate::modalities::logic::n3_compiler::{
 mod sticky_infer;
 
 mod config;
+mod control;
 mod decode;
 mod decode_helpers;
 mod local_agent;
@@ -48,6 +49,7 @@ mod types;
 mod validation;
 
 pub use config::*;
+pub use control::*;
 pub use local_agent::*;
 pub use types::*;
 

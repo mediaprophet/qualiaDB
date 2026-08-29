@@ -189,7 +189,9 @@ pub fn extract_pick(result: &Value) -> Option<u32> {
     if rec.get("found").and_then(|v| v.as_bool()) != Some(true) {
         return None;
     }
-    rec.get("node_id").and_then(|v| v.as_u64()).map(|n| n as u32)
+    rec.get("node_id")
+        .and_then(|v| v.as_u64())
+        .map(|n| n as u32)
 }
 
 /// Extract the backend string from a `poet_eval` result JSON.

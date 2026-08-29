@@ -82,7 +82,7 @@ pub(super) fn build_deontic_panel(document: &Document) -> Element {
         .append_child(&make_results_area(
             document,
             "deontic-results",
-            "Click \"Evaluate Norms\" to check rules against the live graph (mock).",
+            "Evaluate the selected deontic modality against the connected live graph.",
         ))
         .unwrap();
 
@@ -102,10 +102,7 @@ pub(super) fn wire_deontic_editor(document: &Document) {
     if let Some(btn) = document.get_element_by_id("deontic-compile") {
         let closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
             let doc = web_sys::window().unwrap().document().unwrap();
-            show_logic_notification(
-                &doc,
-                "Deontic contract compiled (mock \u{2014} engine wiring pending)",
-            );
+            show_mock_results(&doc, "deontic-results", "deontic-compile");
         }) as Box<dyn FnMut(MouseEvent)>);
         btn.add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())
             .unwrap();
@@ -123,13 +120,13 @@ pub(super) fn build_n3_panel(document: &Document) -> Element {
         ))
         .unwrap();
 
+    let default_rules = "# Notation3 rules example\n<did:alice> <must> <act>.\n{ <did:alice> <must> <act> } => { <contract> <obligate> <act> }.";
+    let saved_rules = web_sys::window()
+        .and_then(|window| window.local_storage().ok().flatten())
+        .and_then(|storage| storage.get_item("poet.n3.ruleset").ok().flatten())
+        .unwrap_or_else(|| default_rules.to_string());
     panel
-        .append_child(&make_textarea(
-            document,
-            "n3-editor",
-            "# Notation3 rules example\n@prefix log: <http://www.w3.org/2000/10/swap/log#>.\n@prefix var: <http://www.w3.org/2000/10/swap/var#>.\n\n# Rule: if someone is a contributor and has effort, they have obligation\n{\n  var:person a ont:Contributor .\n  var:person ont:hasEffort var:effort .\n}\n=>\n{\n  var:person ont:hasObligation var:effort .\n}.",
-            "200px",
-        ))
+        .append_child(&make_textarea(document, "n3-editor", &saved_rules, "200px"))
         .unwrap();
 
     let actions = document.create_element("div").unwrap();
@@ -165,7 +162,7 @@ pub(super) fn build_n3_panel(document: &Document) -> Element {
         .append_child(&make_results_area(
             document,
             "n3-results",
-            "Click \"Evaluate Rules\" to run N3 inference (mock).",
+            "Parse or evaluate the ruleset through the native N3 parser and Webizen rule engine.",
         ))
         .unwrap();
 
@@ -185,10 +182,7 @@ pub(super) fn wire_n3_editor(document: &Document) {
     if let Some(btn) = document.get_element_by_id("n3-parse") {
         let closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
             let doc = web_sys::window().unwrap().document().unwrap();
-            show_logic_notification(
-                &doc,
-                "N3 parsed successfully (mock \u{2014} no syntax errors)",
-            );
+            show_mock_results(&doc, "n3-results", "n3-parse");
         }) as Box<dyn FnMut(MouseEvent)>);
         btn.add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())
             .unwrap();
@@ -197,7 +191,18 @@ pub(super) fn wire_n3_editor(document: &Document) {
     if let Some(btn) = document.get_element_by_id("n3-save") {
         let closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
             let doc = web_sys::window().unwrap().document().unwrap();
-            show_logic_notification(&doc, "N3 ruleset saved to localStorage (mock)");
+            let source = super::helpers::field_value(&doc, "n3-editor");
+            let saved = web_sys::window()
+                .and_then(|window| window.local_storage().ok().flatten())
+                .is_some_and(|storage| storage.set_item("poet.n3.ruleset", &source).is_ok());
+            show_logic_notification(
+                &doc,
+                if saved {
+                    "N3 ruleset saved to browser storage."
+                } else {
+                    "Unable to save the N3 ruleset in browser storage."
+                },
+            );
         }) as Box<dyn FnMut(MouseEvent)>);
         btn.add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())
             .unwrap();
@@ -312,7 +317,7 @@ pub(super) fn build_shacl_panel(document: &Document) -> Element {
         .append_child(&make_results_area(
             document,
             "shacl-results",
-            "Click \"Validate Graph\" to run SHACL validation (mock).",
+            "Validate the target class against the connected live graph.",
         ))
         .unwrap();
 

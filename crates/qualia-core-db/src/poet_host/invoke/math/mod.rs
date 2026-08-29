@@ -3,6 +3,8 @@
 
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 mod calculus;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+mod calculus_workbench;
 pub mod closure_solvers;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 mod ga;
@@ -25,6 +27,8 @@ mod units;
 
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 pub use calculus::integrate as simpson;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+pub use calculus_workbench::compute as calculus_compute;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 pub use ga::dot as ga_dot;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
@@ -80,6 +84,13 @@ pub fn eval_poly(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, v
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
 pub fn simpson(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     missing(span, "NumericalCalculus")
+}
+#[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+pub fn calculus_compute(
+    _args: &vibe::Value,
+    span: vibe::Span,
+) -> Result<vibe::Value, vibe::Diagnostic> {
+    missing(span, "CalculusWorkbench")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
 pub fn hill_climb(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {

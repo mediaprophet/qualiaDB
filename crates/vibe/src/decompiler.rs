@@ -618,7 +618,9 @@ pub fn decompile_expr(out: &mut String, expr: &Expr) {
             out.push_str(" |> ");
             decompile_expr(out, right);
         }
-        ExprKind::GraphQuery { is_ask, pattern, .. } => {
+        ExprKind::GraphQuery {
+            is_ask, pattern, ..
+        } => {
             if *is_ask {
                 out.push_str("graph? { ");
             } else {
@@ -627,7 +629,11 @@ pub fn decompile_expr(out: &mut String, expr: &Expr) {
             out.push_str(pattern);
             out.push_str(" }");
         }
-        ExprKind::ModalLogic { modality, args, body } => {
+        ExprKind::ModalLogic {
+            modality,
+            args,
+            body,
+        } => {
             let name = match modality {
                 ModalKind::DeonticObligate => "obligate",
                 ModalKind::DeonticPermit => "permit",

@@ -161,61 +161,386 @@ macro_rules! define_icon {
 /// Compile-time registry of all foundational Webizen / Poet icons.
 pub const ALL_ICONS: &[IconEntry] = &[
     // ── System & Foundation (0xE000 - 0xE00F) ──────────────────────────
-    define_icon!("webizen-logo", '\u{E000}', '🌐', "Webizen", System, "Webizen network emblem"),
-    define_icon!("nquin", '\u{E001}', '🧬', "NQuin", System, "48-byte Super-Quin semantic datum"),
-    define_icon!("tensor-10d", '\u{E002}', '🔮', "Tensor10D", System, "10-dimensional manifold state vector"),
-    define_icon!("sanctuary", '\u{E003}', '🛡', "Sanctuary", System, "Zero-telemetry cryptographic vault"),
-    define_icon!("did-q42", '\u{E004}', '🔑', "DID:Q42", System, "Topological hardware DID pointer"),
-    define_icon!("tool-chest", '\u{E005}', '🧰', "ToolChest", System, "Docked palette and domain tools"),
-    define_icon!("aura-tray", '\u{E006}', '✨', "AuraTray", System, "Ambient reactive dock status tray"),
-
+    define_icon!(
+        "webizen-logo",
+        '\u{E000}',
+        '🌐',
+        "Webizen",
+        System,
+        "Webizen network emblem"
+    ),
+    define_icon!(
+        "nquin",
+        '\u{E001}',
+        '🧬',
+        "NQuin",
+        System,
+        "48-byte Super-Quin semantic datum"
+    ),
+    define_icon!(
+        "tensor-10d",
+        '\u{E002}',
+        '🔮',
+        "Tensor10D",
+        System,
+        "10-dimensional manifold state vector"
+    ),
+    define_icon!(
+        "sanctuary",
+        '\u{E003}',
+        '🛡',
+        "Sanctuary",
+        System,
+        "Zero-telemetry cryptographic vault"
+    ),
+    define_icon!(
+        "did-q42",
+        '\u{E004}',
+        '🔑',
+        "DID:Q42",
+        System,
+        "Topological hardware DID pointer"
+    ),
+    define_icon!(
+        "tool-chest",
+        '\u{E005}',
+        '🧰',
+        "ToolChest",
+        System,
+        "Docked palette and domain tools"
+    ),
+    define_icon!(
+        "aura-tray",
+        '\u{E006}',
+        '✨',
+        "AuraTray",
+        System,
+        "Ambient reactive dock status tray"
+    ),
     // ── Modalities & Formal Logic (0xE010 - 0xE04F) ────────────────────
-    define_icon!("deontic-obligate", '\u{E010}', '⚖', "Obligate", Modality, "Deontic obligation operator O(φ)"),
-    define_icon!("deontic-permit", '\u{E011}', '✓', "Permit", Modality, "Deontic permission operator P(φ)"),
-    define_icon!("deontic-forbid", '\u{E012}', '⊘', "Forbid", Modality, "Deontic prohibition operator F(φ)"),
-    define_icon!("epistemic-knows", '\u{E020}', '💡', "Knows", Modality, "Epistemic knowledge K_a(φ)"),
-    define_icon!("epistemic-believes", '\u{E021}', '💭', "Believes", Modality, "Doxastic belief B_a(φ)"),
-    define_icon!("epistemic-common", '\u{E022}', '👥', "CommonKnowledge", Modality, "Epistemic common knowledge C(φ)"),
-    define_icon!("paraconsistent-isolate", '\u{E030}', '🔒', "Isolate", Modality, "Paraconsistent quarantine context"),
-    define_icon!("paraconsistent-score", '\u{E031}', '⚡', "ContradictionScore", Modality, "Contradiction severity metric"),
-    define_icon!("paraconsistent-merge", '\u{E032}', '🔀', "MergeContext", Modality, "Paraconsistent context ratification"),
-    define_icon!("ltl-globally", '\u{E040}', '⊡', "Globally", Modality, "LTL Globally operator G(φ)"),
-    define_icon!("ltl-finally", '\u{E041}', '◇', "Finally", Modality, "LTL Finally operator F(φ)"),
-    define_icon!("ltl-next", '\u{E042}', '○', "Next", Modality, "LTL Next operator X(φ)"),
-    define_icon!("ltl-until", '\u{E043}', '⊔', "Until", Modality, "LTL Until operator φ U ψ"),
-    define_icon!("ltl-release", '\u{E044}', '⊓', "Release", Modality, "LTL Release operator φ R ψ"),
-
+    define_icon!(
+        "deontic-obligate",
+        '\u{E010}',
+        '⚖',
+        "Obligate",
+        Modality,
+        "Deontic obligation operator O(φ)"
+    ),
+    define_icon!(
+        "deontic-permit",
+        '\u{E011}',
+        '✓',
+        "Permit",
+        Modality,
+        "Deontic permission operator P(φ)"
+    ),
+    define_icon!(
+        "deontic-forbid",
+        '\u{E012}',
+        '⊘',
+        "Forbid",
+        Modality,
+        "Deontic prohibition operator F(φ)"
+    ),
+    define_icon!(
+        "epistemic-knows",
+        '\u{E020}',
+        '💡',
+        "Knows",
+        Modality,
+        "Epistemic knowledge K_a(φ)"
+    ),
+    define_icon!(
+        "epistemic-believes",
+        '\u{E021}',
+        '💭',
+        "Believes",
+        Modality,
+        "Doxastic belief B_a(φ)"
+    ),
+    define_icon!(
+        "epistemic-common",
+        '\u{E022}',
+        '👥',
+        "CommonKnowledge",
+        Modality,
+        "Epistemic common knowledge C(φ)"
+    ),
+    define_icon!(
+        "paraconsistent-isolate",
+        '\u{E030}',
+        '🔒',
+        "Isolate",
+        Modality,
+        "Paraconsistent quarantine context"
+    ),
+    define_icon!(
+        "paraconsistent-score",
+        '\u{E031}',
+        '⚡',
+        "ContradictionScore",
+        Modality,
+        "Contradiction severity metric"
+    ),
+    define_icon!(
+        "paraconsistent-merge",
+        '\u{E032}',
+        '🔀',
+        "MergeContext",
+        Modality,
+        "Paraconsistent context ratification"
+    ),
+    define_icon!(
+        "ltl-globally",
+        '\u{E040}',
+        '⊡',
+        "Globally",
+        Modality,
+        "LTL Globally operator G(φ)"
+    ),
+    define_icon!(
+        "ltl-finally",
+        '\u{E041}',
+        '◇',
+        "Finally",
+        Modality,
+        "LTL Finally operator F(φ)"
+    ),
+    define_icon!(
+        "ltl-next",
+        '\u{E042}',
+        '○',
+        "Next",
+        Modality,
+        "LTL Next operator X(φ)"
+    ),
+    define_icon!(
+        "ltl-until",
+        '\u{E043}',
+        '⊔',
+        "Until",
+        Modality,
+        "LTL Until operator φ U ψ"
+    ),
+    define_icon!(
+        "ltl-release",
+        '\u{E044}',
+        '⊓',
+        "Release",
+        Modality,
+        "LTL Release operator φ R ψ"
+    ),
     // ── Virtual Manifolds & Workbenches (0xE050 - 0xE05F) ───────────────
-    define_icon!("manifold-research", '\u{E050}', '🔬', "Research", Toolbox, "Research manifold: hypermedia synthesis"),
-    define_icon!("manifold-social", '\u{E051}', '👥', "Social", Toolbox, "Social manifold: ERP & multi-agent mesh"),
-    define_icon!("manifold-knowledge", '\u{E052}', '📚', "Knowledge", Toolbox, "Knowledge manifold: Solid Pods & RDF-Star"),
-    define_icon!("manifold-projects", '\u{E053}', '📋', "Projects", Toolbox, "Projects manifold: agile & sprint delivery"),
-    define_icon!("manifold-rights", '\u{E054}', '⚖', "Rights", Toolbox, "Rights manifold: fiduciary & legal engineering"),
-    define_icon!("manifold-sanctuary", '\u{E055}', '🛡', "Sanctuary", Toolbox, "Sanctuary manifold: zero-telemetry vault"),
-    define_icon!("manifold-media", '\u{E056}', '🎨', "Media", Toolbox, "Media manifold: 3D CCF meshes & audio"),
-    define_icon!("manifold-communications", '\u{E057}', '✉', "Communications", Toolbox, "Communications manifold: CML inboxes"),
-    define_icon!("manifold-settings", '\u{E058}', '⚙', "Settings", Toolbox, "Settings manifold: 42MB Sentinel governance"),
-    define_icon!("manifold-vibe", '\u{E059}', '⚡', "Vibe", Toolbox, "Vibe manifold: reactive cell compiler"),
-
+    define_icon!(
+        "manifold-research",
+        '\u{E050}',
+        '🔬',
+        "Research",
+        Toolbox,
+        "Research manifold: hypermedia synthesis"
+    ),
+    define_icon!(
+        "manifold-social",
+        '\u{E051}',
+        '👥',
+        "Social",
+        Toolbox,
+        "Social manifold: ERP & multi-agent mesh"
+    ),
+    define_icon!(
+        "manifold-knowledge",
+        '\u{E052}',
+        '📚',
+        "Knowledge",
+        Toolbox,
+        "Knowledge manifold: Solid Pods & RDF-Star"
+    ),
+    define_icon!(
+        "manifold-projects",
+        '\u{E053}',
+        '📋',
+        "Projects",
+        Toolbox,
+        "Projects manifold: agile & sprint delivery"
+    ),
+    define_icon!(
+        "manifold-rights",
+        '\u{E054}',
+        '⚖',
+        "Rights",
+        Toolbox,
+        "Rights manifold: fiduciary & legal engineering"
+    ),
+    define_icon!(
+        "manifold-sanctuary",
+        '\u{E055}',
+        '🛡',
+        "Sanctuary",
+        Toolbox,
+        "Sanctuary manifold: zero-telemetry vault"
+    ),
+    define_icon!(
+        "manifold-media",
+        '\u{E056}',
+        '🎨',
+        "Media",
+        Toolbox,
+        "Media manifold: 3D CCF meshes & audio"
+    ),
+    define_icon!(
+        "manifold-communications",
+        '\u{E057}',
+        '✉',
+        "Communications",
+        Toolbox,
+        "Communications manifold: CML inboxes"
+    ),
+    define_icon!(
+        "manifold-settings",
+        '\u{E058}',
+        '⚙',
+        "Settings",
+        Toolbox,
+        "Settings manifold: 42MB Sentinel governance"
+    ),
+    define_icon!(
+        "manifold-vibe",
+        '\u{E059}',
+        '⚡',
+        "Vibe",
+        Toolbox,
+        "Vibe manifold: reactive cell compiler"
+    ),
     // ── Toolboxes & Body Views (0xE060 - 0xE07F) ────────────────────────
-    define_icon!("tb-word-processor", '\u{E060}', '📝', "Document", Toolbox, "CML Rich Word Processor & Editor"),
-    define_icon!("tb-graphics", '\u{E061}', '🖌', "Graphics", Toolbox, "Vector & Raster Graphics Suite"),
-    define_icon!("tb-code-ide", '\u{E062}', '💻', "IDE", Toolbox, "VibeScript / Rust Code IDE"),
-    define_icon!("tb-clinical", '\u{E063}', '🩺', "Clinical", Clinical, "Clinical Engine: Framingham, CHA2DS2, SCORE2"),
-    define_icon!("tb-solid", '\u{E064}', '📦', "SolidPod", Governance, "W3C Solid Pod Inspector & Exporter"),
-    define_icon!("tb-search", '\u{E065}', '🔍', "Search", Toolbox, "SPARQL / SLG Query Workbench"),
-    define_icon!("tb-logic", '\u{E066}', '📐', "Logic", Modality, "Modal Logic & Deontic Rule Forge"),
-    define_icon!("tb-cooperative", '\u{E067}', '🤝', "Cooperative", Governance, "Cooperative Economics & Ledger"),
-    define_icon!("tb-audio-synth", '\u{E068}', '🎵', "AudioSynth", Media, "WASM WebAudio Synthesis Engine"),
-
+    define_icon!(
+        "tb-word-processor",
+        '\u{E060}',
+        '📝',
+        "Document",
+        Toolbox,
+        "CML Rich Word Processor & Editor"
+    ),
+    define_icon!(
+        "tb-graphics",
+        '\u{E061}',
+        '🖌',
+        "Graphics",
+        Toolbox,
+        "Vector & Raster Graphics Suite"
+    ),
+    define_icon!(
+        "tb-code-ide",
+        '\u{E062}',
+        '💻',
+        "IDE",
+        Toolbox,
+        "VibeScript / Rust Code IDE"
+    ),
+    define_icon!(
+        "tb-clinical",
+        '\u{E063}',
+        '🩺',
+        "Clinical",
+        Clinical,
+        "Clinical Engine: Framingham, CHA2DS2, SCORE2"
+    ),
+    define_icon!(
+        "tb-solid",
+        '\u{E064}',
+        '📦',
+        "SolidPod",
+        Governance,
+        "W3C Solid Pod Inspector & Exporter"
+    ),
+    define_icon!(
+        "tb-search",
+        '\u{E065}',
+        '🔍',
+        "Search",
+        Toolbox,
+        "SPARQL / SLG Query Workbench"
+    ),
+    define_icon!(
+        "tb-logic",
+        '\u{E066}',
+        '📐',
+        "Logic",
+        Modality,
+        "Modal Logic & Deontic Rule Forge"
+    ),
+    define_icon!(
+        "tb-cooperative",
+        '\u{E067}',
+        '🤝',
+        "Cooperative",
+        Governance,
+        "Cooperative Economics & Ledger"
+    ),
+    define_icon!(
+        "tb-audio-synth",
+        '\u{E068}',
+        '🎵',
+        "AudioSynth",
+        Media,
+        "WASM WebAudio Synthesis Engine"
+    ),
     // ── Status & Dynamic Telemetry (0xE080 - 0xE09F) ────────────────────
-    define_icon!("state-connected", '\u{E080}', '🟢', "Connected", Status, "Daemon connected & healthy"),
-    define_icon!("state-inferring", '\u{E081}', '🟣', "Inferring", Status, "Autoregressive neural inference active"),
-    define_icon!("state-error", '\u{E082}', '🔴', "Error", Status, "Sentinel or execution fault detected"),
-    define_icon!("state-locked", '\u{E083}', '🔒', "Locked", Status, "Sanctuary cryptographic lock engaged"),
-    define_icon!("state-syncing", '\u{E084}', '🔄', "Syncing", Status, "P2P CRDT replication in progress"),
-    define_icon!("state-standalone", '\u{E085}', '🟡', "Standalone", Status, "Running offline / standalone WASM"),
-    define_icon!("state-tidy", '\u{E086}', '✨', "Tidy", Status, "Collision-free smart auto-arrangement"),
+    define_icon!(
+        "state-connected",
+        '\u{E080}',
+        '🟢',
+        "Connected",
+        Status,
+        "Daemon connected & healthy"
+    ),
+    define_icon!(
+        "state-inferring",
+        '\u{E081}',
+        '🟣',
+        "Inferring",
+        Status,
+        "Autoregressive neural inference active"
+    ),
+    define_icon!(
+        "state-error",
+        '\u{E082}',
+        '🔴',
+        "Error",
+        Status,
+        "Sentinel or execution fault detected"
+    ),
+    define_icon!(
+        "state-locked",
+        '\u{E083}',
+        '🔒',
+        "Locked",
+        Status,
+        "Sanctuary cryptographic lock engaged"
+    ),
+    define_icon!(
+        "state-syncing",
+        '\u{E084}',
+        '🔄',
+        "Syncing",
+        Status,
+        "P2P CRDT replication in progress"
+    ),
+    define_icon!(
+        "state-standalone",
+        '\u{E085}',
+        '🟡',
+        "Standalone",
+        Status,
+        "Running offline / standalone WASM"
+    ),
+    define_icon!(
+        "state-tidy",
+        '\u{E086}',
+        '✨',
+        "Tidy",
+        Status,
+        "Collision-free smart auto-arrangement"
+    ),
 ];
 
 /// Zero-heap, constant-time lookup of an icon entry by 60-bit hash.
@@ -278,10 +603,16 @@ pub fn icon_label(id: &str) -> &'static str {
 pub fn format_degraded(id: &str, tier: u8) -> String {
     let entry = icon_entry(id);
     match tier {
-        1 => entry.map(|e| e.pua.to_string()).unwrap_or_else(|| "?".to_string()),
-        2 => entry.map(|e| e.unicode_fallback.to_string()).unwrap_or_else(|| "▫".to_string()),
+        1 => entry
+            .map(|e| e.pua.to_string())
+            .unwrap_or_else(|| "?".to_string()),
+        2 => entry
+            .map(|e| e.unicode_fallback.to_string())
+            .unwrap_or_else(|| "▫".to_string()),
         3 => format!("wi wi-{}", id),
-        _ => entry.map(|e| format!("[{}]", e.ascii_label)).unwrap_or_else(|| format!("[{}]", id)),
+        _ => entry
+            .map(|e| format!("[{}]", e.ascii_label))
+            .unwrap_or_else(|| format!("[{}]", id)),
     }
 }
 
@@ -292,7 +623,7 @@ pub fn icon_span(id: &str, state: IconState, size: IconSize) -> String {
     let label = entry.map(|e| e.ascii_label).unwrap_or(id);
     let state_class = state.css_class_suffix();
     let size_class = size.css_class();
-    
+
     if state_class.is_empty() {
         format!(
             r#"<span class="wi {}" aria-hidden="true" title="{}">{}</span>"#,
@@ -315,11 +646,9 @@ mod tests {
         for i in 0..ALL_ICONS.len() {
             for j in (i + 1)..ALL_ICONS.len() {
                 assert_ne!(
-                    ALL_ICONS[i].id_hash,
-                    ALL_ICONS[j].id_hash,
+                    ALL_ICONS[i].id_hash, ALL_ICONS[j].id_hash,
                     "Hash collision between '{}' and '{}'",
-                    ALL_ICONS[i].id,
-                    ALL_ICONS[j].id
+                    ALL_ICONS[i].id, ALL_ICONS[j].id
                 );
             }
         }

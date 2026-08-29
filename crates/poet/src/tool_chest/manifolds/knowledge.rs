@@ -74,5 +74,6 @@ pub fn knowledge_manifold_seed() -> ManifoldSeed {
                 dock: DockPosition::Right,
             },
         ],
+        ..Default::default()
     }
 }

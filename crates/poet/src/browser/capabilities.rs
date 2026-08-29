@@ -73,7 +73,9 @@ pub fn daemon_base_url() -> Option<String> {
 /// Construct the telemetry WebSocket URL (if native host or connected daemon).
 pub fn telemetry_ws_url() -> Option<String> {
     if let Some(url) = super::native_daemon::get_connected_daemon_url() {
-        let ws_url = url.replace("http://", "ws://").replace("https://", "wss://");
+        let ws_url = url
+            .replace("http://", "ws://")
+            .replace("https://", "wss://");
         return Some(format!("{ws_url}/telemetry/ws"));
     }
     if !is_native_host() {

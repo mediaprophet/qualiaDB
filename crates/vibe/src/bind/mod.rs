@@ -4,19 +4,19 @@
 //! [`LocalHost`] is the in-process host used by the Vibe REPL, WASM playground,
 //! and tests: real catalog kernels, in-memory graph/pulse/time.
 
+mod dispatch;
+mod host;
+mod local;
 mod math;
 mod quin;
 mod rdf;
-mod host;
-mod local;
-mod dispatch;
 
+pub use dispatch::dispatch;
+pub use host::{AccelerationTier, Host, HostEnvironment};
+pub use local::LocalHost;
 pub use math::call_math;
 pub use quin::call_quin;
 pub use rdf::call_rdf;
-pub use host::{AccelerationTier, Host, HostEnvironment};
-pub use local::LocalHost;
-pub use dispatch::dispatch;
 
 #[cfg(test)]
 mod tests;

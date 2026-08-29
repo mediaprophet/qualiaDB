@@ -3,7 +3,7 @@
 
 use super::helpers::{
     make_button, make_results_area, make_section_label, make_select, make_text_input,
-    make_textarea, make_tool_panel, show_logic_notification, show_mock_results,
+    make_textarea, make_tool_panel, show_mock_results,
 };
 use wasm_bindgen::prelude::Closure;
 use wasm_bindgen::JsCast;
@@ -101,7 +101,7 @@ pub(super) fn build_jural_panel(document: &Document) -> Element {
         .append_child(&make_results_area(
             document,
             "jural-results",
-            "Click \"Analyze Positions\" to find unmet correlatives (mock).",
+            "Scan the connected graph for the role's jural positions and unmet correlatives.",
         ))
         .unwrap();
 
@@ -155,7 +155,7 @@ pub(super) fn build_stit_panel(document: &Document) -> Element {
         .append_child(&make_textarea(
             document,
             "stit-context",
-            "# STIT context\nstit(alice, deliverReport).\nstit(bob, reviewReport).\njoint(alice, bob, signContract).\n\n# Query: is alice the duty bearer for deliverReport?",
+            "brought_about=true\ncould_do_otherwise=true\nmembers=[alice|bob]\njoint_acted=false",
             "120px",
         ))
         .unwrap();
@@ -183,7 +183,7 @@ pub(super) fn build_stit_panel(document: &Document) -> Element {
         .append_child(&make_results_area(
             document,
             "stit-results",
-            "Click \"Evaluate Agency\" to check agentive status (mock).",
+            "Evaluate Chellas/deliberative agency and bounded joint liability.",
         ))
         .unwrap();
     panel
@@ -202,10 +202,7 @@ pub(super) fn wire_stit_panel(document: &Document) {
     if let Some(btn) = document.get_element_by_id("stit-joint") {
         let closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
             let doc = web_sys::window().unwrap().document().unwrap();
-            show_logic_notification(
-                &doc,
-                "Joint liability analysis: 2 liable members found (mock)",
-            );
+            show_mock_results(&doc, "stit-results", "stit-joint");
         }) as Box<dyn FnMut(MouseEvent)>);
         btn.add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())
             .unwrap();
@@ -225,7 +222,7 @@ pub(super) fn build_causal_panel(document: &Document) -> Element {
         .append_child(&make_textarea(
             document,
             "causal-editor",
-            "# Causal graph\ncause(alice, delay).\ncause(delay, missedDeadline).\ncause(bob, delay).\n\n# Query: but-for cause of missedDeadline?\n# Query: is missedDeadline overdetermined (alice + bob)?",
+            "target=missedDeadline\nedges=[alice:delay|delay:missedDeadline|bob:delay]",
             "140px",
         ))
         .unwrap();
@@ -253,7 +250,7 @@ pub(super) fn build_causal_panel(document: &Document) -> Element {
         .append_child(&make_results_area(
             document,
             "causal-results",
-            "Click \"Trace Causation\" to find but-for causes (mock).",
+            "Trace root causes and detect independent overdetermination in a bounded graph.",
         ))
         .unwrap();
     panel
@@ -272,10 +269,7 @@ pub(super) fn wire_causal_panel(document: &Document) {
     if let Some(btn) = document.get_element_by_id("causal-overdetermine") {
         let closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
             let doc = web_sys::window().unwrap().document().unwrap();
-            show_logic_notification(
-                &doc,
-                "Overdetermination check: joint liability applies (mock)",
-            );
+            show_mock_results(&doc, "causal-results", "causal-overdetermination");
         }) as Box<dyn FnMut(MouseEvent)>);
         btn.add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())
             .unwrap();
@@ -295,7 +289,7 @@ pub(super) fn build_responsibility_panel(document: &Document) -> Element {
         .append_child(&make_textarea(
             document,
             "resp-editor",
-            "# Responsibility records\nallege(alice, bob, breachOfContract).\nallege(carol, bob, fiduciaryFailure).\n\n# Adjudicate\nadjudicate(bob, breachOfContract, adjudicated).\n\n# Query: accountability vacuum for fiduciaryFailure?",
+            "confirmed=true\ndismissed=false\nharm_occurred=true\naccountable_person=false",
             "140px",
         ))
         .unwrap();
@@ -323,7 +317,7 @@ pub(super) fn build_responsibility_panel(document: &Document) -> Element {
         .append_child(&make_results_area(
             document,
             "resp-results",
-            "Click \"Adjudicate\" to evaluate responsibility (mock).",
+            "Apply the allegation/adjudication gate and systemic accountability guard.",
         ))
         .unwrap();
     panel
@@ -342,10 +336,7 @@ pub(super) fn wire_responsibility_panel(document: &Document) {
     if let Some(btn) = document.get_element_by_id("resp-vacuum") {
         let closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
             let doc = web_sys::window().unwrap().document().unwrap();
-            show_logic_notification(
-                &doc,
-                "Accountability vacuum: 1 unadjudicated allegation (mock)",
-            );
+            show_mock_results(&doc, "resp-results", "responsibility-vacuum");
         }) as Box<dyn FnMut(MouseEvent)>);
         btn.add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())
             .unwrap();
@@ -382,7 +373,7 @@ pub(super) fn build_capacity_panel(document: &Document) -> Element {
         .append_child(&make_textarea(
             document,
             "capacity-context",
-            "# Capacity context\ncapacity(alice, full).\ncapacity(bob, limited, guardianship:carol).\n\n# Query: is alice an effective principal?",
+            "status=intact\ndependent=bob\nguardianship=false\ndeceased=false\nrepresentative=false\nimbalance=0.0\nexplicit_threat=false\nduress_threshold=0.7",
             "100px",
         ))
         .unwrap();
@@ -402,7 +393,7 @@ pub(super) fn build_capacity_panel(document: &Document) -> Element {
         .append_child(&make_results_area(
             document,
             "capacity-results",
-            "Click \"Evaluate Capacity\" to check standing (mock).",
+            "Evaluate binding, duress/voidability, principal identity, and standing.",
         ))
         .unwrap();
     panel
@@ -432,7 +423,7 @@ pub(super) fn build_delegation_panel(document: &Document) -> Element {
         .append_child(&make_textarea(
             document,
             "deleg-editor",
-            "# Delegation chain\ndelegate(alice, bob, scope:projectX).\ndelegate(bob, carol, scope:projectX).\nrevoke(alice, bob, scope:projectX).\n\n# Query: has carol delegated authority after revocation of bob?",
+            "parent_domains=[projectX|reports]\nchild_domains=[projectX]\nrevoked_domains=[projectX]\nrequested_domain=projectX",
             "140px",
         ))
         .unwrap();
@@ -460,7 +451,7 @@ pub(super) fn build_delegation_panel(document: &Document) -> Element {
         .append_child(&make_results_area(
             document,
             "deleg-results",
-            "Click \"Trace Delegation\" to check authority chains (mock).",
+            "Check attenuation and cascading domain revocation with the native capacity core.",
         ))
         .unwrap();
     panel
@@ -479,7 +470,7 @@ pub(super) fn wire_delegation_panel(document: &Document) {
     if let Some(btn) = document.get_element_by_id("deleg-revoke") {
         let closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
             let doc = web_sys::window().unwrap().document().unwrap();
-            show_logic_notification(&doc, "Revocation check: 2 revoked descendants found (mock)");
+            show_mock_results(&doc, "deleg-results", "delegation-revocation");
         }) as Box<dyn FnMut(MouseEvent)>);
         btn.add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())
             .unwrap();
@@ -499,7 +490,7 @@ pub(super) fn build_contract_panel(document: &Document) -> Element {
         .append_child(&make_textarea(
             document,
             "contract-editor",
-            "# Contract formation stages\noffer(alice, bob, \"deliver software by Q3\").\naccept(bob, offer(alice, bob, \"deliver software by Q3\")).\nconsideration(alice, \"payment of $50k\").\nconsideration(bob, \"software delivery\").\nincorporates(contract1, standardTerms).\n\n# Query: is contract1 a binding contract?",
+            "stipulated=true\naccepted=true\nofferor_capacity=intact\nacceptor_capacity=intact\ninstrument=standardTerms",
             "140px",
         ))
         .unwrap();
@@ -519,7 +510,7 @@ pub(super) fn build_contract_panel(document: &Document) -> Element {
         .append_child(&make_results_area(
             document,
             "contract-results",
-            "Click \"Check Formation\" to verify contract validity (mock).",
+            "Compute formation stage, capacity-gated binding, and incorporation by reference.",
         ))
         .unwrap();
     panel
@@ -570,7 +561,7 @@ pub(super) fn build_consensus_panel(document: &Document) -> Element {
         .append_child(&make_textarea(
             document,
             "consensus-context",
-            "# Consensus context\nvote(alice, approve).\nvote(bob, approve).\nvote(carol, reject).\nvote(dave, approve).\n\n# Partition: {alice, bob} | {carol, dave}\n# Query: can joint decision form during partition?",
+            "partitioned=true",
             "120px",
         ))
         .unwrap();
@@ -590,7 +581,7 @@ pub(super) fn build_consensus_panel(document: &Document) -> Element {
         .append_child(&make_results_area(
             document,
             "consensus-results",
-            "Click \"Evaluate Consensus\" to check transaction status (mock).",
+            "Compute transaction status, BFT quorum, commit, and partition formation rules.",
         ))
         .unwrap();
     panel
@@ -620,7 +611,7 @@ pub(super) fn build_meta_deontic_panel(document: &Document) -> Element {
         .append_child(&make_textarea(
             document,
             "meta-deontic-editor",
-            "# Breach records\nbreach(breach_001, alice, missedDeadline, provenance: witness_bob).\nbreach(breach_002, carol, unauthorizedAccess, provenance: log_entry_456).\n\n# Query: build breach record for breach_001\n# Query: endorsement credential for alice",
+            "actor=alice\naction=missedDeadline\ninstrument=witness_bob\nnow=1787865600",
             "140px",
         ))
         .unwrap();
@@ -648,7 +639,7 @@ pub(super) fn build_meta_deontic_panel(document: &Document) -> Element {
         .append_child(&make_results_area(
             document,
             "meta-deontic-results",
-            "Click \"Build Breach Record\" to generate WAL entry (mock).",
+            "Build a provenance-anchored breach Quin; endorsement reports its signing requirement.",
         ))
         .unwrap();
     panel
@@ -667,7 +658,7 @@ pub(super) fn wire_meta_deontic_panel(document: &Document) {
     if let Some(btn) = document.get_element_by_id("meta-deontic-endorse") {
         let closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
             let doc = web_sys::window().unwrap().document().unwrap();
-            show_logic_notification(&doc, "Endorsement credential generated (mock)");
+            show_mock_results(&doc, "meta-deontic-results", "meta-deontic-endorse");
         }) as Box<dyn FnMut(MouseEvent)>);
         btn.add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())
             .unwrap();
@@ -689,7 +680,7 @@ pub(super) fn build_argumentation_panel(document: &Document) -> Element {
         .append_child(&make_textarea(
             document,
             "arg-editor",
-            "# Argumentation framework\n# Arguments\narg(a1, \"The project meets all safety standards\").\narg(a2, \"The inspection found structural issues\").\narg(a3, \"The inspection was conducted by a certified engineer\").\n\n# Attacks\nattack(a2, a1).\nattack(a3, a2).\n\n# Query: what is the grounded extension?",
+            "arguments=[a1|a2|a3]\nattacks=[a2:a1|a3:a2]",
             "160px",
         ))
         .unwrap();
@@ -716,8 +707,6 @@ pub(super) fn build_argumentation_panel(document: &Document) -> Element {
             ("preferred", "Preferred"),
             ("stable", "Stable"),
             ("complete", "Complete"),
-            ("bipolar", "Bipolar"),
-            ("vaf", "Value-based (VAF)"),
         ],
     ))
     .unwrap();
@@ -738,7 +727,7 @@ pub(super) fn build_argumentation_panel(document: &Document) -> Element {
         .append_child(&make_button(
             document,
             "arg-visualize",
-            "\u{1F5FA} Visualize Graph",
+            "\u{1F5FA} Graph Data",
             false,
         ))
         .unwrap();
@@ -748,7 +737,7 @@ pub(super) fn build_argumentation_panel(document: &Document) -> Element {
         .append_child(&make_results_area(
             document,
             "arg-results",
-            "Click \"Compute Extension\" to find acceptable arguments (mock).",
+            "Compute native Dung extensions and return bounded node/attack graph data.",
         ))
         .unwrap();
 
@@ -773,7 +762,7 @@ pub(super) fn wire_argumentation_panel(document: &Document) {
     if let Some(btn) = document.get_element_by_id("arg-visualize") {
         let closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
             let doc = web_sys::window().unwrap().document().unwrap();
-            show_logic_notification(&doc, "Argument graph visualization: place a graph container and wire attacks as edges (mock)");
+            show_mock_results(&doc, "arg-results", "argumentation-visualize");
         }) as Box<dyn FnMut(MouseEvent)>);
         btn.add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())
             .unwrap();

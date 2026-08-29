@@ -6,6 +6,30 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [Unreleased] — POET product-integrity remediation — 2026-08-29
+
+### Accountability / corrected claims
+
+- Withdrew broad 0.0.35-dev claims that the non-QApps POET UI was fully
+  implemented. An audit found 115 domain view files reduced to delegations and
+  30,870 lines removed from those files, while the authoritative Workstream A
+  plan still held 545 todo markers.
+- Recorded the resulting harm as lost product utility and trust, with costs in
+  principal time, rework, and delayed delivery. Passing structural tests and
+  generic COP persistence did not establish task-level product parity.
+- Opened `docs/POET_PRODUCT_INTEGRITY_REMEDIATION_2026-08-29.md`. Completion now
+  requires user outcomes, domain interactions, real state/actions, derived
+  decision support, lifecycle behavior, accessibility, and human UAT evidence.
+- QApps remain scheduled for refactoring into native POET constructs,
+  manifolds, containers, capabilities, and Library entries; structural
+  conversion may not discard the user job or create a second runtime.
+
+### Remediation
+
+- Reopened Agreement/Rights, Project, Dataset/Ontology, Studio, Health,
+  Governance, Device, Social, and related specialist families in the parity
+  tracker instead of treating generic record forms as completion.
+
 ## [0.0.30] — 2026-08-15
 
 ### Changed

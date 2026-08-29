@@ -8,11 +8,13 @@ mod chem;
 mod emf;
 #[cfg(not(target_arch = "wasm32"))]
 mod physics;
+#[cfg(not(target_arch = "wasm32"))]
+mod physics_workbench;
 
 #[cfg(not(target_arch = "wasm32"))]
-pub use bio::align;
+pub use bio::{align, bio_compute};
 #[cfg(not(target_arch = "wasm32"))]
-pub use chem::smiles;
+pub use chem::{organic_compute, smiles};
 #[cfg(not(target_arch = "wasm32"))]
 pub use emf::{
     doppler_shift, emf_attenuation, emf_field_grid_3d, emf_interference, emf_sample_at_depth,
@@ -23,6 +25,8 @@ pub use physics::{
     creator_material_query, harmonic_oscillator, heat_diffusion_1d, logistic_growth,
     molecular_dynamics, n_body, pendulum, projectile, quantum_states_1d, wave_1d,
 };
+#[cfg(not(target_arch = "wasm32"))]
+pub use physics_workbench::compute as physics_compute;
 
 #[cfg(target_arch = "wasm32")]
 mod stubs;

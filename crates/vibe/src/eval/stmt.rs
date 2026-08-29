@@ -12,7 +12,11 @@ impl<'a, H: Host> Engine<'a, H> {
         Ok(Flow::Next(last))
     }
 
-    pub(crate) fn finish_block(&mut self, block: &Block, env: &mut Env) -> Result<Value, Diagnostic> {
+    pub(crate) fn finish_block(
+        &mut self,
+        block: &Block,
+        env: &mut Env,
+    ) -> Result<Value, Diagnostic> {
         match self.eval_block(block, env)? {
             Flow::Return(v) | Flow::Next(v) => Ok(v),
         }

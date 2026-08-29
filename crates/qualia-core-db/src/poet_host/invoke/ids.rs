@@ -11,18 +11,29 @@ pub const SHACL_VALIDATE: &str = "SHACL.validate";
 pub const SHACL_EXTENSIONS: &str = "SHACL.extensions";
 pub const GRAPH_STATS: &str = "GraphDatabase.stats";
 pub const GRAPH_SPARQL: &str = "GraphDatabase.sparql";
+pub const N3_EVALUATE: &str = "N3Logic.evaluate";
+pub const GRAPH_AUTHORING: &str = "GraphAuthoring.process";
 pub const DEONTIC_EVAL: &str = "DeonticLogic.evaluate";
 pub const EPISTEMIC_EVAL: &str = "EpistemicLogic.evaluate";
 pub const PARACONSISTENT_ROUTE: &str = "ParaconsistentLogic.route";
 pub const LTL_GLOBALLY: &str = "TemporalAndDescriptionLogic.ltl.globally";
 pub const LTL_FINALLY: &str = "TemporalAndDescriptionLogic.ltl.finally";
+pub const LTL_EVALUATE: &str = "TemporalAndDescriptionLogic.ltl.evaluate";
 pub const DL_SUBSUMES: &str = "TemporalAndDescriptionLogic.subsumption";
 pub const ASP_ENUMERATE: &str = "SymbolicAndDefeasibleLogic.asp";
 pub const CAUSAL_CAUSED: &str = "CausalFuzzyAndControl.caused";
 pub const FUZZY_TNORM: &str = "CausalFuzzyAndControl.t_norm";
+pub const ADVANCED_LOGIC_WORKBENCH: &str = "AdvancedLogic.compute";
+pub const FORMAL_LOGIC_WORKBENCH: &str = "FormalLogic.compute";
+pub const LEGAL_LOGIC_WORKBENCH: &str = "LegalLogic.compute";
+pub const GOVERNANCE_LOGIC_WORKBENCH: &str = "GovernanceLogic.compute";
+pub const SPATIAL_LOGIC_WORKBENCH: &str = "SpatialLogic.compute";
+pub const INFRA_LOGIC_WORKBENCH: &str = "InfraLogic.compute";
+pub const INFRA_EXT_LOGIC_WORKBENCH: &str = "InfraExtLogic.compute";
 pub const SYMBOLIC_EVAL: &str = "SymbolicAlgebra.eval";
 pub const LINALG_MATMUL: &str = "LinearAlgebra.matmul";
 pub const CALC_SIMPSON: &str = "NumericalCalculus.simpson";
+pub const CALCULUS_WORKBENCH: &str = "CalculusWorkbench.compute";
 pub const OPT_HILL: &str = "Optimization.hill_climb";
 pub const GA_DOT: &str = "GeometricAlgebra.dot";
 pub const GEOM_HULL2: &str = "ComputationalGeometry.convex_hull_2";
@@ -292,14 +303,21 @@ pub const FQ_MUCH_GREATER_THAN: &str = "FuzzyQuery.much_greater_than";
 pub const FQ_MUCH_LESS_THAN: &str = "FuzzyQuery.much_less_than";
 pub const BIOSIGNAL_DP_CONFIG: &str = "biosignal.dp_config";
 pub const PHYS_PROJECTILE: &str = "PhysicsAndODE.projectile";
+pub const PHYS_WORKBENCH: &str = "PhysicsWorkbench.compute";
 pub const BIO_ALIGN: &str = "Bioinformatics.align";
+pub const BIO_WORKBENCH: &str = "Bioinformatics.compute";
 pub const CHEM_SMILES: &str = "OrganicChemistry.validate_smiles";
+pub const CHEM_WORKBENCH: &str = "OrganicChemistry.compute";
 pub const CLIN_FRAMINGHAM: &str = "ClinicalRisk.framingham";
 pub const CLIN_CHA2DS2: &str = "ClinicalRisk.cha2ds2_vasc";
 pub const CLIN_SCORE2: &str = "ClinicalRisk.score2";
 pub const CLIN_DRUG_INTERACTION: &str = "ClinicalRisk.drug_interaction";
 pub const CLIN_CONTRAINDICATION: &str = "ClinicalRisk.contraindication";
+pub const CLIN_FHIR_OBSERVATION: &str = "ClinicalRisk.fhir_observation";
+pub const CLIN_COMORBIDITY: &str = "ClinicalRisk.comorbidity";
+pub const MEDICAL_HU_WINDOW: &str = "MedicalImaging.hu_window";
 pub const FIN_BS: &str = "FinancialModeling.black_scholes";
+pub const FIN_GBM_VAR: &str = "FinancialModeling.gbm_var";
 pub const ENG_KIN: &str = "EngineeringAnalysis.kinematics";
 pub const ENG_CAUCHY_STRESS: &str = "EngineeringAnalysis.cauchy_stress";
 pub const ENG_DRAG_FORCE: &str = "EngineeringAnalysis.drag_force";
@@ -948,12 +966,22 @@ pub const DMX_CUE_STACK_GO: &str = "Dmx.cue_stack_go";
 pub const DMX_CUE_STACK_GO_BACK: &str = "Dmx.cue_stack_go_back";
 pub const DMX_CUE_STACK_RESET: &str = "Dmx.cue_stack_reset";
 
+/// POET shell authoring receipts (layout, not 10D geometry). Vibe 0.1, no version bump.
+pub const POET_MANIFOLD_CREATE: &str = "Poet.manifold_create";
+pub const POET_CONTAINER_PLACE: &str = "Poet.container_place";
+pub const POET_NESTED_LINK: &str = "Poet.nested_link";
+pub const POET_SUBJECT_DECLARE: &str = "Poet.subject_declare";
+pub const POET_PARTICIPANT_INVITE: &str = "Poet.participant_invite";
+
 pub const ALL_BOUND: &[&str] = &[
     CLIN_FRAMINGHAM,
     CLIN_CHA2DS2,
     CLIN_SCORE2,
     CLIN_DRUG_INTERACTION,
     CLIN_CONTRAINDICATION,
+    CLIN_FHIR_OBSERVATION,
+    CLIN_COMORBIDITY,
+    MEDICAL_HU_WINDOW,
     NLP_ANALYZE,
     NLP_GAZETTEER_RUN,
     NLP_GAZETTEER_BUILD,
@@ -1002,18 +1030,29 @@ pub const ALL_BOUND: &[&str] = &[
     SHACL_EXTENSIONS,
     GRAPH_STATS,
     GRAPH_SPARQL,
+    N3_EVALUATE,
+    GRAPH_AUTHORING,
     DEONTIC_EVAL,
     EPISTEMIC_EVAL,
     PARACONSISTENT_ROUTE,
     LTL_GLOBALLY,
     LTL_FINALLY,
+    LTL_EVALUATE,
     DL_SUBSUMES,
     ASP_ENUMERATE,
     CAUSAL_CAUSED,
     FUZZY_TNORM,
+    ADVANCED_LOGIC_WORKBENCH,
+    FORMAL_LOGIC_WORKBENCH,
+    LEGAL_LOGIC_WORKBENCH,
+    GOVERNANCE_LOGIC_WORKBENCH,
+    SPATIAL_LOGIC_WORKBENCH,
+    INFRA_LOGIC_WORKBENCH,
+    INFRA_EXT_LOGIC_WORKBENCH,
     SYMBOLIC_EVAL,
     LINALG_MATMUL,
     CALC_SIMPSON,
+    CALCULUS_WORKBENCH,
     OPT_HILL,
     GA_DOT,
     GEOM_HULL2,
@@ -1273,10 +1312,14 @@ pub const ALL_BOUND: &[&str] = &[
     FQ_MUCH_GREATER_THAN,
     FQ_MUCH_LESS_THAN,
     PHYS_PROJECTILE,
+    PHYS_WORKBENCH,
     BIO_ALIGN,
+    BIO_WORKBENCH,
     CHEM_SMILES,
+    CHEM_WORKBENCH,
     CLIN_FRAMINGHAM,
     FIN_BS,
+    FIN_GBM_VAR,
     ENG_KIN,
     ENG_CAUCHY_STRESS,
     ENG_DRAG_FORCE,
@@ -1819,6 +1862,11 @@ pub const ALL_BOUND: &[&str] = &[
     DMX_CUE_STACK_GO,
     DMX_CUE_STACK_GO_BACK,
     DMX_CUE_STACK_RESET,
+    POET_MANIFOLD_CREATE,
+    POET_CONTAINER_PLACE,
+    POET_NESTED_LINK,
+    POET_SUBJECT_DECLARE,
+    POET_PARTICIPANT_INVITE,
     ODE_RK4_INTEGRATE,
     ODE_DOPRI5,
     ODE_BDF,
@@ -1856,10 +1904,27 @@ pub fn seam_for(id: &str) -> &'static str {
         | SHACL_EXTENSIONS
         | GRAPH_STATS
         | GRAPH_SPARQL
+        | N3_EVALUATE
+        | GRAPH_AUTHORING
         | GRAPH_SHORTEST_PATH
         | GRAPH_SPREADING_ACTIVATION => "graph",
-        DEONTIC_EVAL | EPISTEMIC_EVAL | PARACONSISTENT_ROUTE | LTL_GLOBALLY | LTL_FINALLY
-        | DL_SUBSUMES | ASP_ENUMERATE | CAUSAL_CAUSED | FUZZY_TNORM => "logic",
+        DEONTIC_EVAL
+        | EPISTEMIC_EVAL
+        | PARACONSISTENT_ROUTE
+        | LTL_GLOBALLY
+        | LTL_FINALLY
+        | LTL_EVALUATE
+        | DL_SUBSUMES
+        | ASP_ENUMERATE
+        | CAUSAL_CAUSED
+        | FUZZY_TNORM
+        | ADVANCED_LOGIC_WORKBENCH => "logic",
+        FORMAL_LOGIC_WORKBENCH
+        | LEGAL_LOGIC_WORKBENCH
+        | GOVERNANCE_LOGIC_WORKBENCH
+        | SPATIAL_LOGIC_WORKBENCH
+        | INFRA_LOGIC_WORKBENCH
+        | INFRA_EXT_LOGIC_WORKBENCH => "logic",
         NLP_ANALYZE => "nlp",
         NT_GCD
         | NT_LCM
@@ -1867,6 +1932,7 @@ pub fn seam_for(id: &str) -> &'static str {
         | LINALG_MATMUL
         | SYMBOLIC_EVAL
         | CALC_SIMPSON
+        | CALCULUS_WORKBENCH
         | OPT_HILL
         | GA_DOT
         | SPEC_BESSEL
@@ -2151,7 +2217,8 @@ pub fn seam_for(id: &str) -> &'static str {
         // Fuzzy query
         FQ_TRIANGULAR | FQ_TRAPEZOIDAL | FQ_APPROXIMATELY | FQ_RAMP_UP | FQ_RAMP_DOWN
         | FQ_MUCH_GREATER_THAN | FQ_MUCH_LESS_THAN => "fuzzy_query",
-        PHYS_PROJECTILE | BIO_ALIGN | CHEM_SMILES => "science",
+        PHYS_PROJECTILE | PHYS_WORKBENCH | BIO_ALIGN | BIO_WORKBENCH | CHEM_SMILES
+        | CHEM_WORKBENCH => "science",
         CHEM_ELEMENT_SYMBOL
         | CHEM_ATOMIC_NUMBER
         | CHEM_ATOMIC_WEIGHT
@@ -2195,9 +2262,12 @@ pub fn seam_for(id: &str) -> &'static str {
         | CLIN_CHA2DS2
         | CLIN_SCORE2
         | CLIN_DRUG_INTERACTION
-        | CLIN_CONTRAINDICATION => "clinical",
+        | CLIN_CONTRAINDICATION
+        | CLIN_FHIR_OBSERVATION
+        | CLIN_COMORBIDITY => "clinical",
+        MEDICAL_HU_WINDOW => "clinical",
         BIOSIGNAL_DP_FILTER | BIOSIGNAL_DP_CONFIG => "biosignal",
-        FIN_BS => "econ",
+        FIN_BS | FIN_GBM_VAR => "econ",
         ENG_KIN => "engineering",
         ID_DID_Q42 => "governance",
         CRYPTO_SHA256 | CRYPTO_SHA512 | CRYPTO_BLAKE3 | PRIVACY_GAUSSIAN_SIGMA => "crypto",
@@ -2622,6 +2692,11 @@ pub fn seam_for(id: &str) -> &'static str {
         | DMX_CUE_STACK_GO
         | DMX_CUE_STACK_GO_BACK
         | DMX_CUE_STACK_RESET => "hypermedia",
+        POET_MANIFOLD_CREATE
+        | POET_CONTAINER_PLACE
+        | POET_NESTED_LINK
+        | POET_SUBJECT_DECLARE
+        | POET_PARTICIPANT_INVITE => "docs",
         SOCIAL_GINI | SOCIAL_LORENZ | SOCIAL_DEGREE_CENTRALITY => "social",
         FORENSIC_MALFEASANCE_DELTA | FORENSIC_NARRATIVE_DIVERGENCE => "social",
         AGENT_PLAN | AGENT_EXECUTE | AGENT_EVALUATE => "agent",
@@ -2674,5 +2749,20 @@ mod tests {
         assert_eq!(seam_for(VISION_AHASH), "vision");
         assert_eq!(seam_for(ML_OLS), "ml");
         assert_eq!(seam_for("DoesNotExist.nope"), "unbound");
+    }
+
+    #[test]
+    fn vibe_catalog_contains_every_bound_invoke_id() {
+        let catalog: std::collections::BTreeSet<&str> =
+            vibe::catalog::ALL_INVOKE_IDS.iter().copied().collect();
+        let missing: Vec<&str> = ALL_BOUND
+            .iter()
+            .copied()
+            .filter(|id| !catalog.contains(id))
+            .collect();
+        assert!(
+            missing.is_empty(),
+            "vibe catalog/ids.rs is missing host IDs (0.1 catalog, no version bump): {missing:?}"
+        );
     }
 }

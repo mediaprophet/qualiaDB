@@ -83,11 +83,7 @@ async fn render_frame(handle: u64, time: f32) -> Result<(), String> {
 }
 
 /// Resize, rebuild bloom, and read the engine's surface size.
-async fn resize_gpu(
-    handle: u64,
-    width: u32,
-    height: u32,
-) -> Result<(u32, u32), String> {
+async fn resize_gpu(handle: u64, width: u32, height: u32) -> Result<(u32, u32), String> {
     let script = q_viewport::vibe_gpu_script(&format!(
         "Render.gpu_resize({{ handle: {handle}, width: {width}, height: {height} }});
     Render.gpu_sync_bloom({{ handle: {handle} }});

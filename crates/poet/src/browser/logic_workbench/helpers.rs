@@ -2,7 +2,9 @@
 
 use wasm_bindgen::prelude::Closure;
 use wasm_bindgen::JsCast;
-use web_sys::{Document, Element, HtmlElement, HtmlInputElement, HtmlTextAreaElement};
+use web_sys::{
+    Document, Element, HtmlElement, HtmlInputElement, HtmlSelectElement, HtmlTextAreaElement,
+};
 
 pub(super) fn make_textarea(document: &Document, id: &str, value: &str, height: &str) -> Element {
     let ta = document.create_element("textarea").unwrap();
@@ -27,11 +29,38 @@ pub(super) fn make_button(document: &Document, id: &str, label: &str, primary: b
     btn.set_text_content(Some(label));
     let el: HtmlElement = btn.clone().dyn_into().unwrap();
     if primary {
+        btn.set_attribute("data-primary-action", "true").unwrap();
         el.style().set_css_text(
             "padding: 8px 16px; background: var(--accent-violet); color: #fff; \
              border: 1px solid var(--accent-violet); border-radius: var(--radius-xs); \
              font-family: var(--font-mono); font-size: 11px; font-weight: 700; cursor: pointer;",
         );
+        btn.set_attribute("data-enabled-title", label).unwrap();
+        let contract = super::requests::capability_contract_for_button(id);
+        if let Some((attribute, value)) = contract {
+            btn.set_attribute("data-requires-daemon", "true").unwrap();
+            btn.set_attribute(attribute, value).unwrap();
+        }
+        let capability_available = contract.is_some_and(|(attribute, value)| {
+            crate::browser::native_daemon::is_daemon_connected()
+                && match attribute {
+                    "data-capability-id" => {
+                        crate::browser::native_daemon::native_capability_available(value)
+                    }
+                    "data-capability-prefix" => true,
+                    _ => false,
+                }
+        });
+        if !capability_available {
+            btn.set_attribute("disabled", "").unwrap();
+            btn.set_attribute("aria-disabled", "true").unwrap();
+            let reason = if contract.is_some() {
+                "Unavailable until a connected daemon advertises this native capability."
+            } else {
+                "Unavailable: this panel's native capability binding is still incomplete."
+            };
+            btn.set_attribute("title", reason).unwrap();
+        }
     } else {
         el.style().set_css_text(
             "padding: 8px 16px; background: var(--surface-panel); color: var(--text-secondary); \
@@ -51,7 +80,12 @@ pub(super) fn make_results_area(document: &Document, id: &str, placeholder: &str
          border-radius: var(--radius-xs); padding: 8px; min-height: 80px; \
          font-family: var(--font-mono); font-size: 11px; color: var(--text-muted);",
     );
-    results.set_text_content(Some(placeholder));
+    let initial = if placeholder.to_ascii_lowercase().contains("mock") {
+        "No result yet. Availability is shown on the evaluation control."
+    } else {
+        placeholder
+    };
+    results.set_text_content(Some(initial));
     results
 }
 
@@ -111,6 +145,15 @@ pub(super) fn make_text_input(document: &Document, id: &str, placeholder: &str) 
 }
 
 pub(super) fn show_logic_notification(document: &Document, message: &str) {
+    if message.to_ascii_lowercase().contains("mock") {
+        crate::browser::interactions::show_tool_status(
+            document,
+            "Logic workbench",
+            "Unavailable: this operation has no registered native execution contract yet.",
+            "unavailable",
+        );
+        return;
+    }
     let notif = document.create_element("div").unwrap();
     let n_el: HtmlElement = notif.clone().dyn_into().unwrap();
     n_el.style().set_css_text(
@@ -132,35 +175,73 @@ pub(super) fn show_logic_notification(document: &Document, message: &str) {
     timeout.forget();
 }
 
+pub(super) fn field_value(document: &Document, id: &str) -> String {
+    let Some(element) = document.get_element_by_id(id) else {
+        return String::new();
+    };
+    if let Ok(input) = element.clone().dyn_into::<HtmlInputElement>() {
+        input.value()
+    } else if let Ok(select) = element.clone().dyn_into::<HtmlSelectElement>() {
+        select.value()
+    } else if let Ok(textarea) = element.dyn_into::<HtmlTextAreaElement>() {
+        textarea.value()
+    } else {
+        String::new()
+    }
+}
+
 pub(super) fn show_mock_results(document: &Document, results_id: &str, tool_name: &str) {
     let results = match document.get_element_by_id(results_id) {
         Some(r) => r,
         None => return,
     };
-    results.set_inner_html("");
-
-    let mut html = String::new();
-    html.push_str(&format!(
-        "<div style=\"padding: 4px 8px; border-bottom: 1px solid var(--border-subtle); \
-         font-size: 9px; color: var(--text-muted); margin-bottom: 4px;\">\
-         Mock {} evaluation \u{2014} engine wiring pending (MCP evaluate_modality)</div>",
-        tool_name
-    ));
-
-    for i in 0..5 {
-        html.push_str(&format!(
-            "<div style=\"padding: 4px 8px; border-bottom: 1px solid var(--border-subtle); \
-             display: flex; gap: 8px;\">\
-            <span style=\"color: var(--accent-violet); font-size: 10px;\">#{:02}</span>\
-            <span style=\"color: var(--text-primary);\">{} derivation step {}</span>\
-            <span style=\"color: var(--text-muted); font-size: 9px; margin-left: auto;\">\
-             confidence: {:.2}</span></div>",
-            i + 1,
-            tool_name,
-            i + 1,
-            1.0 - (i as f64 * 0.15),
+    let (capability, args) = match super::requests::logic_request(document, tool_name) {
+        Ok(request) => request,
+        Err(reason) => {
+            results.set_attribute("data-honesty", "unavailable").ok();
+            results.set_text_content(Some(&format!("Unavailable: {reason}")));
+            return;
+        }
+    };
+    if !crate::browser::native_daemon::is_daemon_connected() {
+        results.set_attribute("data-honesty", "unavailable").ok();
+        results.set_text_content(Some(
+            "Unavailable: start the local QualiaDB daemon to evaluate this panel against the live graph.",
         ));
+        return;
     }
 
-    results.set_inner_html(&html);
+    results.set_attribute("data-honesty", "running").ok();
+    results.set_text_content(Some(&format!(
+        "Running {capability} against the live graph…"
+    )));
+    let results_id = results_id.to_string();
+    wasm_bindgen_futures::spawn_local(async move {
+        let response = crate::browser::native_daemon::daemon_invoke(capability, args).await;
+        let Some(document) = web_sys::window().and_then(|window| window.document()) else {
+            return;
+        };
+        let Some(results) = document.get_element_by_id(&results_id) else {
+            return;
+        };
+        match response {
+            Ok(response) if response.ok => {
+                results.set_attribute("data-honesty", "live").ok();
+                results.set_text_content(Some(&response.value));
+            }
+            Ok(response) => {
+                results.set_attribute("data-honesty", "error").ok();
+                results.set_text_content(Some(
+                    response
+                        .diagnostic
+                        .as_deref()
+                        .unwrap_or("Native evaluation failed without a diagnostic."),
+                ));
+            }
+            Err(error) => {
+                results.set_attribute("data-honesty", "error").ok();
+                results.set_text_content(Some(&error));
+            }
+        }
+    });
 }

@@ -11,7 +11,7 @@ use std::collections::VecDeque;
 
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
-use web_sys::{Document, Element, KeyboardEvent};
+use web_sys::{Document, KeyboardEvent};
 
 use crate::tool_chest::core::registry::ManifoldSeed;
 
@@ -126,8 +126,8 @@ pub fn init_history(seed: ManifoldSeed) {
 pub fn push_current_frame(label: &str) {
     CANVAS_HISTORY.with(|h| {
         if let Some(history) = h.borrow_mut().as_mut() {
-            let mut seed = history.current().seed.clone();
-            sync_seed_from_dom(&mut seed);
+            let seed = snapshot_current_seed(&history.current().seed);
+            super::replace_current_seed(&seed);
             history.push(CanvasFrame {
                 seed,
                 label: label.into(),
@@ -143,8 +143,8 @@ pub fn switch_to_manifold(new_seed: ManifoldSeed) {
     CANVAS_HISTORY.with(|h| {
         if let Some(history) = h.borrow_mut().as_mut() {
             // Sync current from DOM so the past frame is accurate.
-            let mut current = history.current().seed.clone();
-            sync_seed_from_dom(&mut current);
+            let current = snapshot_current_seed(&history.current().seed);
+            super::replace_current_seed(&current);
             history.replace_current(CanvasFrame {
                 seed: current,
                 label: "synced".into(),
@@ -169,6 +169,7 @@ pub fn perform_undo() {
         }
     });
     if let Some(seed) = seed {
+        super::replace_current_seed(&seed);
         super::rerender_canvas(&seed);
     }
 }
@@ -185,6 +186,7 @@ pub fn perform_redo() {
         }
     });
     if let Some(seed) = seed {
+        super::replace_current_seed(&seed);
         super::rerender_canvas(&seed);
     }
 }
@@ -216,68 +218,55 @@ pub fn wire_undo_redo(document: &Document) {
     closure.forget();
 }
 
+/// Capture contenteditable document changes when editing focus leaves the
+/// surface. This keeps typing responsive while still producing one coherent
+/// undo frame per editing session.
+pub fn wire_editable_history(document: &Document) {
+    let Ok(editors) = document.query_selector_all(".doc-editor[contenteditable=\"true\"]") else {
+        return;
+    };
+    for index in 0..editors.length() {
+        let Some(node) = editors.get(index) else {
+            continue;
+        };
+        let Ok(editor) = node.dyn_into::<web_sys::Element>() else {
+            continue;
+        };
+        if !super::dom_bindings::claim(&editor, "editable-history") {
+            continue;
+        }
+        let closure = Closure::wrap(Box::new(move || {
+            push_current_frame("edit document");
+        }) as Box<dyn FnMut()>);
+        let _ = editor.add_event_listener_with_callback("blur", closure.as_ref().unchecked_ref());
+        closure.forget();
+    }
+}
+
 // ---------------------------------------------------------------------------
 // DOM sync — read container positions back into a seed
 // ---------------------------------------------------------------------------
 
-/// Read all `.canvas-container-node` elements' positions/sizes from the
-/// DOM and update the seed's containers in place. Containers are matched
-/// by index (they are rendered in seed order).
-fn sync_seed_from_dom(seed: &mut ManifoldSeed) {
+/// Rebuild the complete serialisable manifold from the mounted canvas.
+fn snapshot_current_seed(seed: &ManifoldSeed) -> ManifoldSeed {
     let document = match web_sys::window().and_then(|w| w.document()) {
         Some(d) => d,
-        None => return,
+        None => return seed.clone(),
     };
-    let nodes = match document.query_selector_all(".canvas-container-node") {
-        Ok(n) => n,
-        Err(_) => return,
-    };
-    for i in 0..nodes.length() {
-        let idx = i as usize;
-        if idx >= seed.containers.len() {
-            break;
-        }
-        let node = match nodes.get(i) {
-            Some(n) => n,
-            None => break,
-        };
-        let el: Element = node.dyn_into().unwrap();
-        let style = el.get_attribute("style").unwrap_or_default();
-        let (x, y) = parse_style_position(&style);
-        let (w, h) = parse_style_size(&style);
-        seed.containers[idx].x = x;
-        seed.containers[idx].y = y;
-        seed.containers[idx].width = w;
-        seed.containers[idx].height = h;
-    }
+    super::canvas_state::snapshot_seed_from_dom(&document, seed)
 }
 
-fn parse_style_position(style: &str) -> (f32, f32) {
-    let mut x = 0.0;
-    let mut y = 0.0;
-    for part in style.split(';') {
-        let part = part.trim();
-        if let Some(val) = part.strip_prefix("left: ") {
-            x = val.trim_end_matches("px").parse().unwrap_or(0.0);
-        } else if let Some(val) = part.strip_prefix("top: ") {
-            y = val.trim_end_matches("px").parse().unwrap_or(0.0);
+/// Flush the mounted canvas into the persistence store without creating an
+/// undo entry. Used immediately before save/export operations.
+pub fn sync_persistence_state() {
+    CANVAS_HISTORY.with(|slot| {
+        if let Some(history) = slot.borrow_mut().as_mut() {
+            let seed = snapshot_current_seed(&history.current().seed);
+            super::replace_current_seed(&seed);
+            let label = history.current().label.clone();
+            history.replace_current(CanvasFrame { seed, label });
         }
-    }
-    (x, y)
-}
-
-fn parse_style_size(style: &str) -> (f32, f32) {
-    let mut w = 400.0;
-    let mut h = 300.0;
-    for part in style.split(';') {
-        let part = part.trim();
-        if let Some(val) = part.strip_prefix("width: ") {
-            w = val.trim_end_matches("px").parse().unwrap_or(400.0);
-        } else if let Some(val) = part.strip_prefix("height: ") {
-            h = val.trim_end_matches("px").parse().unwrap_or(300.0);
-        }
-    }
-    (w, h)
+    });
 }
 
 // ---------------------------------------------------------------------------
@@ -299,6 +288,7 @@ mod tests {
             containers: vec![],
             connections: vec![],
             panels: vec![],
+            ..Default::default()
         }
     }
 

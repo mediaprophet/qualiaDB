@@ -2,7 +2,7 @@
 //!
 //! Copyright (c) 2026 Timothy Charles Holborn. All rights reserved.
 //!
-//! Registers all 10 toolboxes with their tool-chains and tools,
+//! Registers all 15 toolboxes with their tool-chains and tools,
 //! plus all manifold seeds, into a shared Registry.
 
 use crate::tool_chest::core::intent_bus::ActionType;
@@ -22,18 +22,296 @@ pub fn build_registry() -> Registry {
     register_image_toolbox(&mut reg);
     register_sheet_toolbox(&mut reg);
     register_spatial_toolbox(&mut reg);
+    register_audio_toolbox(&mut reg);
     register_communication_toolbox(&mut reg);
+    register_erp_toolbox(&mut reg);
+    register_mail_toolbox(&mut reg);
+    register_scientific_toolbox(&mut reg);
     register_rights_toolbox(&mut reg);
     register_health_toolbox(&mut reg);
     register_code_toolbox(&mut reg);
     register_ai_toolbox(&mut reg);
+    register_sdn_toolbox(&mut reg);
 
     // Register all manifold seeds
     for seed in manifolds::all_seeds() {
         reg.register_manifold(seed);
     }
 
+    for construct in crate::tool_chest::constructs::all_constructs() {
+        reg.register_construct(construct);
+    }
+
     reg
+}
+
+struct CompactTool {
+    id: &'static str,
+    label: &'static str,
+    icon: &'static str,
+    kind: ToolKind,
+    action: ActionType,
+    description: &'static str,
+}
+
+fn register_compact_toolbox(
+    reg: &mut Registry,
+    id: &str,
+    label: &str,
+    icon: &str,
+    prefix: &str,
+    family: &str,
+    description: &str,
+    chain_label: &str,
+    tools: &[CompactTool],
+) {
+    let registered = tools
+        .iter()
+        .map(|tool| {
+            Box::new(SimpleTool::new(
+                ToolMetadata {
+                    id: format!("{}:{}", id, tool.id),
+                    label: tool.label.into(),
+                    icon: tool.icon.into(),
+                    kind: tool.kind,
+                    capability_scope: Some(
+                        if tool.kind == ToolKind::PlaceContainer {
+                            "graph:read"
+                        } else {
+                            "capability:invoke"
+                        }
+                        .into(),
+                    ),
+                    ontology_prefix: prefix.into(),
+                    description: tool.description.into(),
+                },
+                tool.action,
+            )) as Box<dyn crate::tool_chest::core::tool::Tool>
+        })
+        .collect();
+    reg.register_toolbox(Toolbox::new(
+        ToolboxMetadata {
+            id: id.into(),
+            label: label.into(),
+            icon: icon.into(),
+            ontology_prefix: prefix.into(),
+            description: description.into(),
+            enabled_by_default: true,
+            family: family.into(),
+        },
+        vec![ToolChain::new(
+            ToolChainMetadata {
+                id: format!("{}:tools", id),
+                label: chain_label.into(),
+                icon: icon.into(),
+                description: description.into(),
+            },
+            registered,
+        )],
+    ));
+}
+
+fn register_audio_toolbox(reg: &mut Registry) {
+    register_compact_toolbox(
+        reg,
+        "audio",
+        "Audio, Triad Synth & Speech",
+        "audio",
+        "p64",
+        "audio",
+        "Triad formant synthesis, PCM capture, and neural audio latents.",
+        "Triad Synthesis & Audio",
+        &[
+            CompactTool {
+                id: "place_audio_session",
+                label: "+ Audio session",
+                icon: "audio",
+                kind: ToolKind::PlaceContainer,
+                action: ActionType::Query,
+                description: "Place an Audio session (transport + oscillator). Not a nested DAW.",
+            },
+            CompactTool {
+                id: "place_media",
+                label: "+ Triad Formant Synthesizer",
+                icon: "media",
+                kind: ToolKind::PlaceContainer,
+                action: ActionType::Query,
+                description: "Place the live media/audio synthesis surface.",
+            },
+            CompactTool {
+                id: "mic_capture",
+                label: "Mic Capture (PCM Stream)",
+                icon: "audio",
+                kind: ToolKind::RunAction,
+                action: ActionType::Invoke,
+                description: "Capture a bounded PCM stream.",
+            },
+            CompactTool {
+                id: "neural_latents",
+                label: "Neural Audio Latents (P64)",
+                icon: "audio",
+                kind: ToolKind::RunAction,
+                action: ActionType::Invoke,
+                description: "Inspect P64 audio latent state.",
+            },
+        ],
+    );
+}
+
+fn register_erp_toolbox(reg: &mut Registry) {
+    register_compact_toolbox(
+        reg,
+        "erp",
+        "Cooperative ERP & Workstream",
+        "erp",
+        "erp",
+        "erp",
+        "Cooperative project planning, timelines, and M-of-N decisions.",
+        "Cooperative ERP & Workstream A",
+        &[
+            CompactTool {
+                id: "place_kanban",
+                label: "+ Cooperative Kanban Board",
+                icon: "kanban",
+                kind: ToolKind::PlaceContainer,
+                action: ActionType::Query,
+                description: "Place the cooperative Kanban board.",
+            },
+            CompactTool {
+                id: "place_gantt",
+                label: "+ Gantt Timeline Cascade",
+                icon: "gantt",
+                kind: ToolKind::PlaceContainer,
+                action: ActionType::Query,
+                description: "Place a Gantt planning surface.",
+            },
+            CompactTool {
+                id: "place_voting",
+                label: "+ M-of-N Voting Ballot",
+                icon: "voting",
+                kind: ToolKind::PlaceContainer,
+                action: ActionType::Query,
+                description: "Place the live M-of-N voting surface.",
+            },
+        ],
+    );
+}
+
+fn register_mail_toolbox(reg: &mut Registry) {
+    register_compact_toolbox(
+        reg,
+        "mail",
+        "Inalienable Mail & Web Publisher",
+        "mail",
+        "mail",
+        "mail",
+        "DID-addressed mail, CML composition, and web publishing.",
+        "Inalienable Domain Communications",
+        &[
+            CompactTool {
+                id: "place_mail",
+                label: "+ Inalienable Mail Inbox",
+                icon: "mail",
+                kind: ToolKind::PlaceContainer,
+                action: ActionType::Query,
+                description: "Place the inalienable mail workspace.",
+            },
+            CompactTool {
+                id: "composer",
+                label: "CML Mail Composer",
+                icon: "doc",
+                kind: ToolKind::RunAction,
+                action: ActionType::Navigate,
+                description: "Open the CML mail composer.",
+            },
+            CompactTool {
+                id: "publisher",
+                label: "Web Site Publisher",
+                icon: "webview",
+                kind: ToolKind::RunAction,
+                action: ActionType::Publish,
+                description: "Publish an authorised web artefact.",
+            },
+        ],
+    );
+}
+
+fn register_scientific_toolbox(reg: &mut Registry) {
+    register_compact_toolbox(
+        reg,
+        "scientific",
+        "Scientific Labs & Physics",
+        "lab",
+        "sci",
+        "lab",
+        "Clinical, molecular, and bounded physics laboratory surfaces.",
+        "Clinical & Physics Labs",
+        &[
+            CompactTool {
+                id: "place_health",
+                label: "+ Health & Clinical Node",
+                icon: "health",
+                kind: ToolKind::PlaceContainer,
+                action: ActionType::Query,
+                description: "Place the clinical workbench.",
+            },
+            CompactTool {
+                id: "place_3d",
+                label: "+ Molecular 3D Viewer",
+                icon: "3d",
+                kind: ToolKind::PlaceContainer,
+                action: ActionType::Query,
+                description: "Place the available 3D scientific viewer.",
+            },
+            CompactTool {
+                id: "thermodynamics",
+                label: "Thermodynamics MCMC",
+                icon: "physics",
+                kind: ToolKind::RunAction,
+                action: ActionType::Invoke,
+                description: "Run the bounded thermodynamics capability.",
+            },
+        ],
+    );
+}
+
+fn register_sdn_toolbox(reg: &mut Registry) {
+    register_compact_toolbox(
+        reg,
+        "sdn",
+        "SDN & Cooperative Economics",
+        "sdn",
+        "sdn",
+        "sdn",
+        "Peer distribution, cooperative economics, and energy governance.",
+        "SDN & Cooperative Economics",
+        &[
+            CompactTool {
+                id: "place_webrtc",
+                label: "+ WebTorrent Swarm Seeder",
+                icon: "webrtc",
+                kind: ToolKind::PlaceContainer,
+                action: ActionType::Publish,
+                description: "Place the peer distribution surface.",
+            },
+            CompactTool {
+                id: "place_finance",
+                label: "+ Unit Economics Modeler",
+                icon: "finance",
+                kind: ToolKind::PlaceContainer,
+                action: ActionType::Query,
+                description: "Place the unit economics model.",
+            },
+            CompactTool {
+                id: "energy_governor",
+                label: "Battery & Solar Governor",
+                icon: "energy",
+                kind: ToolKind::RunAction,
+                action: ActionType::Invoke,
+                description: "Invoke the energy governor capability.",
+            },
+        ],
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -170,7 +448,9 @@ fn register_office_toolbox(reg: &mut Registry) {
                     id: "office:typography".into(),
                     label: "Typography & Fonts".into(),
                     icon: "doc".into(),
-                    description: "Select font family, size, styles (Bold/Italic/Code), and text colors.".into(),
+                    description:
+                        "Select font family, size, styles (Bold/Italic/Code), and text colors."
+                            .into(),
                 },
                 vec![],
             ),
@@ -179,7 +459,8 @@ fn register_office_toolbox(reg: &mut Registry) {
                     id: "office:paragraph".into(),
                     label: "Paragraph & Headings".into(),
                     icon: "slide".into(),
-                    description: "Configure heading levels, text alignment, and block formats.".into(),
+                    description: "Configure heading levels, text alignment, and block formats."
+                        .into(),
                 },
                 vec![],
             ),
@@ -244,7 +525,7 @@ fn register_image_toolbox(reg: &mut Registry) {
             ontology_prefix: "hm".into(),
             description: "Brushes, color palettes, vector geometry, and media viewports.".into(),
             enabled_by_default: true,
-            family: "media".into(),
+            family: "graphics".into(),
         },
         vec![
             ToolChain::new(
@@ -261,7 +542,9 @@ fn register_image_toolbox(reg: &mut Registry) {
                     id: "image:palette".into(),
                     label: "Color & Palette".into(),
                     icon: "heatmap".into(),
-                    description: "Stroke & fill color pickers with preset swatches and geometry modes.".into(),
+                    description:
+                        "Stroke & fill color pickers with preset swatches and geometry modes."
+                            .into(),
                 },
                 vec![],
             ),
@@ -314,7 +597,7 @@ fn register_sheet_toolbox(reg: &mut Registry) {
             ontology_prefix: "hm".into(),
             description: "Spreadsheets, tensor arrays, formulas, and data import.".into(),
             enabled_by_default: true,
-            family: "authoring".into(),
+            family: "sheet".into(),
         },
         vec![
             ToolChain::new(
@@ -322,7 +605,8 @@ fn register_sheet_toolbox(reg: &mut Registry) {
                     id: "sheet:grid".into(),
                     label: "Tensor Dimensions & Formats".into(),
                     icon: "sheet".into(),
-                    description: "Configure 1D/2D/3D/10D tensor dimensions and cell formatting.".into(),
+                    description: "Configure 1D/2D/3D/10D tensor dimensions and cell formatting."
+                        .into(),
                 },
                 vec![],
             ),
@@ -350,6 +634,31 @@ fn register_spatial_toolbox(reg: &mut Registry) {
                 capability_scope: Some("graph:read".into()),
                 ontology_prefix: "geo".into(),
                 description: "Place a GIS map container.".into(),
+            },
+            ActionType::Query,
+        )),
+        Box::new(SimpleTool::new(
+            ToolMetadata {
+                id: "spatial:place_dual_studio".into(),
+                label: "+ Dual Studio".into(),
+                icon: "studio".into(),
+                kind: ToolKind::PlaceContainer,
+                capability_scope: Some("graph:read".into()),
+                ontology_prefix: "hm".into(),
+                description: "Place Dual Studio (VibeScript + GPU) on the active manifold.".into(),
+            },
+            ActionType::Query,
+        )),
+        Box::new(SimpleTool::new(
+            ToolMetadata {
+                id: "spatial:place_scene_view".into(),
+                label: "+ Scene session".into(),
+                icon: "3d".into(),
+                kind: ToolKind::PlaceContainer,
+                capability_scope: Some("graph:read".into()),
+                ontology_prefix: "hm".into(),
+                description: "Place a Scene session inspector. GPU frames live in Dual Studio."
+                    .into(),
             },
             ActionType::Query,
         )),
@@ -397,9 +706,9 @@ fn register_spatial_toolbox(reg: &mut Registry) {
             label: "3D Spatial & Geospatial".into(),
             icon: "spatial".into(),
             ontology_prefix: "geo".into(),
-            description: "3D scenes, GIS maps, WGSL shaders, and spatial tracking.".into(),
+            description: "Dual Studio, Scene sessions, GIS maps, and spatial tracking — tools on POET manifolds, not a nested DCC.".into(),
             enabled_by_default: true,
-            family: "media".into(),
+            family: "spatial".into(),
         },
         vec![
             ToolChain::new(
@@ -407,7 +716,8 @@ fn register_spatial_toolbox(reg: &mut Registry) {
                     id: "spatial:viewport".into(),
                     label: "3D Cameras & Shaders".into(),
                     icon: "3d".into(),
-                    description: "Select perspective/orthographic projections and WGSL pipelines.".into(),
+                    description: "Select perspective/orthographic projections and WGSL pipelines."
+                        .into(),
                 },
                 vec![],
             ),
@@ -416,7 +726,7 @@ fn register_spatial_toolbox(reg: &mut Registry) {
                     id: "spatial:tools".into(),
                     label: "GIS Maps & Tracking".into(),
                     icon: "tools".into(),
-                    description: "Place 3D/GIS viewports and drop spatial pins.".into(),
+                    description: "Place Dual Studio, Scene sessions, GIS maps, and spatial pins.".into(),
                 },
                 tools,
             ),
@@ -472,7 +782,7 @@ fn register_communication_toolbox(reg: &mut Registry) {
             ontology_prefix: "comm".into(),
             description: "Pulse streams, social graphs, WebRTC, and web presence.".into(),
             enabled_by_default: true,
-            family: "communication".into(),
+            family: "mail".into(),
         },
         vec![
             ToolChain::new(
@@ -553,7 +863,9 @@ fn register_rights_toolbox(reg: &mut Registry) {
                     id: "rights:fiduciary".into(),
                     label: "Fiduciary & Routing Lanes".into(),
                     icon: "rights".into(),
-                    description: "Select privacy routing lane (00/01/10/11) and Hohfeldian modalities.".into(),
+                    description:
+                        "Select privacy routing lane (00/01/10/11) and Hohfeldian modalities."
+                            .into(),
                 },
                 vec![],
             ),
@@ -572,6 +884,55 @@ fn register_rights_toolbox(reg: &mut Registry) {
 
 fn register_health_toolbox(reg: &mut Registry) {
     let tools: Vec<Box<dyn crate::tool_chest::core::tool::Tool>> = vec![
+        Box::new(SimpleTool::new(
+            ToolMetadata {
+                id: "health:place_health_overview".into(),
+                label: "+ Health overview".into(),
+                icon: "health".into(),
+                kind: ToolKind::PlaceContainer,
+                capability_scope: Some("graph:read".into()),
+                ontology_prefix: "health".into(),
+                description: "Place the Health overview (live COP counts).".into(),
+            },
+            ActionType::Query,
+        )),
+        Box::new(SimpleTool::new(
+            ToolMetadata {
+                id: "health:place_health_documents".into(),
+                label: "+ Health documents".into(),
+                icon: "health".into(),
+                kind: ToolKind::PlaceContainer,
+                capability_scope: Some("graph:read".into()),
+                ontology_prefix: "health".into(),
+                description: "Place NLP + Semantic Library document ingest (classified/secret)."
+                    .into(),
+            },
+            ActionType::Query,
+        )),
+        Box::new(SimpleTool::new(
+            ToolMetadata {
+                id: "health:place_disclosure_log".into(),
+                label: "+ Share / disclosure".into(),
+                icon: "health".into(),
+                kind: ToolKind::PlaceContainer,
+                capability_scope: Some("graph:read".into()),
+                ontology_prefix: "health".into(),
+                description: "Place private/permissive share to a clinician DID.".into(),
+            },
+            ActionType::Query,
+        )),
+        Box::new(SimpleTool::new(
+            ToolMetadata {
+                id: "health:place_conditions".into(),
+                label: "+ Conditions".into(),
+                icon: "health".into(),
+                kind: ToolKind::PlaceContainer,
+                capability_scope: Some("graph:read".into()),
+                ontology_prefix: "health".into(),
+                description: "Place condition records (possessions of the Principal).".into(),
+            },
+            ActionType::Query,
+        )),
         Box::new(SimpleTool::new(
             ToolMetadata {
                 id: "health:place_health".into(),
@@ -616,9 +977,9 @@ fn register_health_toolbox(reg: &mut Registry) {
             label: "Scientific & Clinical Lab".into(),
             icon: "health".into(),
             ontology_prefix: "health".into(),
-            description: "Cardiovascular risk engines, SMILES chemistry, and 10D anatomy.".into(),
+            description: "Health overview, NLP document ingest, clinician share, conditions. Clinical risk engines stay on entered vitals.".into(),
             enabled_by_default: false,
-            family: "life".into(),
+            family: "lab".into(),
         },
         vec![
             ToolChain::new(
@@ -626,7 +987,8 @@ fn register_health_toolbox(reg: &mut Registry) {
                     id: "health:clinical".into(),
                     label: "Clinical Engines & Biomarkers".into(),
                     icon: "health".into(),
-                    description: "Select CVD risk models and adjust blood pressure biomarkers.".into(),
+                    description: "Select CVD risk models and adjust blood pressure biomarkers."
+                        .into(),
                 },
                 vec![],
             ),
@@ -679,7 +1041,7 @@ fn register_code_toolbox(reg: &mut Registry) {
             ontology_prefix: "vibe".into(),
             description: "VibeScript 0.1, WebGPU WGSL, SPARQL, and reactive AST cells.".into(),
             enabled_by_default: true,
-            family: "authoring".into(),
+            family: "code".into(),
         },
         vec![
             ToolChain::new(
@@ -687,7 +1049,9 @@ fn register_code_toolbox(reg: &mut Registry) {
                     id: "code:repl".into(),
                     label: "Runtime & Language Dialects".into(),
                     icon: "code".into(),
-                    description: "Select language dialect (Vibe/WGSL/Turtle) and configure gas budget.".into(),
+                    description:
+                        "Select language dialect (Vibe/WGSL/Turtle) and configure gas budget."
+                            .into(),
                 },
                 vec![],
             ),
@@ -764,7 +1128,7 @@ fn register_ai_toolbox(reg: &mut Registry) {
             ontology_prefix: "ai".into(),
             description: "Resident GGUF LLMs, Epistemic Halo guard, and Triad execution.".into(),
             enabled_by_default: true,
-            family: "intelligence".into(),
+            family: "ai".into(),
         },
         vec![
             ToolChain::new(
@@ -772,7 +1136,9 @@ fn register_ai_toolbox(reg: &mut Registry) {
                     id: "ai:copilot".into(),
                     label: "Sentinel Guard & Model".into(),
                     icon: "ai".into(),
-                    description: "Select resident GGUF model, halo confidence threshold, and temperature.".into(),
+                    description:
+                        "Select resident GGUF model, halo confidence threshold, and temperature."
+                            .into(),
                 },
                 vec![],
             ),
@@ -781,10 +1147,61 @@ fn register_ai_toolbox(reg: &mut Registry) {
                     id: "ai:tools".into(),
                     label: "Co-Pilot Capabilities".into(),
                     icon: "tools".into(),
-                    description: "Invoke co-authoring, text extraction, and triad viewports.".into(),
+                    description: "Invoke co-authoring, text extraction, and triad viewports."
+                        .into(),
                 },
                 tools,
             ),
         ],
     ));
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn standalone_tool_chest_matches_all_dioxus_families() {
+        let registry = build_registry();
+        let expected = [
+            "epistemic",
+            "office",
+            "image",
+            "sheet",
+            "spatial",
+            "audio",
+            "code",
+            "erp",
+            "mail",
+            "scientific",
+            "ai",
+            "rights",
+            "communication",
+            "health",
+            "sdn",
+        ];
+        assert_eq!(registry.toolboxes().len(), expected.len());
+        let rendered_families: Vec<String> = crate::browser::docks::family_order()
+            .into_iter()
+            .map(|family| family.id)
+            .collect();
+        assert!(
+            registry.construct("health").is_some(),
+            "Health construct must be registered"
+        );
+        assert!(
+            registry.construct("anatomy").is_none(),
+            "Anatomy is a manifold, not a construct"
+        );
+        assert!(registry.manifold("anatomy").is_some());
+
+        for id in expected {
+            let toolbox = registry
+                .toolboxes()
+                .iter()
+                .find(|toolbox| toolbox.metadata().id == id);
+            assert!(toolbox.is_some(), "missing toolbox {id}");
+            assert!(rendered_families.contains(&toolbox.unwrap().metadata().family));
+        }
+    }
 }

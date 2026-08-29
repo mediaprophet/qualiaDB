@@ -9,8 +9,8 @@ use super::{ALL_MODALITIES, RDFSTAR_ROLES};
 use wasm_bindgen::prelude::Closure;
 use wasm_bindgen::JsCast;
 use web_sys::{
-    Document, Element, HtmlElement, HtmlInputElement, HtmlSelectElement, HtmlTextAreaElement,
-    MouseEvent,
+    Document, Element, Event, FileReader, HtmlElement, HtmlInputElement, HtmlSelectElement,
+    HtmlTextAreaElement, MouseEvent,
 };
 
 pub(super) fn build_rdfstar_panel(document: &Document) -> Element {
@@ -65,6 +65,18 @@ pub(super) fn build_rdfstar_panel(document: &Document) -> Element {
             true,
         ))
         .unwrap();
+    let import_file = document.create_element("input").unwrap();
+    import_file.set_id("onto-import-file");
+    import_file.set_attribute("type", "file").unwrap();
+    import_file
+        .set_attribute(
+            "accept",
+            ".ttl,.n3,.rdf,.owl,text/turtle,application/rdf+xml",
+        )
+        .unwrap();
+    let import_el: HtmlElement = import_file.clone().dyn_into().unwrap();
+    import_el.style().set_property("display", "none").unwrap();
+    actions.append_child(&import_file).unwrap();
     actions
         .append_child(&make_button(
             document,
@@ -79,7 +91,7 @@ pub(super) fn build_rdfstar_panel(document: &Document) -> Element {
         .append_child(&make_results_area(
             document,
             "rdfstar-results",
-            "Click \"Resolve Triples\" to resolve quoted triples against the graph (mock).",
+            "Parse and resolve the RDF-Star document with the bounded semantic graph parser.",
         ))
         .unwrap();
 
@@ -140,10 +152,7 @@ pub(super) fn wire_rdfstar_editor(document: &Document) {
     if let Some(btn) = document.get_element_by_id("rdfstar-extract") {
         let closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
             let doc = web_sys::window().unwrap().document().unwrap();
-            show_logic_notification(
-                &doc,
-                "NLP extraction requires daemon \u{2014} engine wiring pending",
-            );
+            show_mock_results(&doc, "rdfstar-results", "rdfstar-extract");
         }) as Box<dyn FnMut(MouseEvent)>);
         btn.add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())
             .unwrap();
@@ -201,7 +210,7 @@ pub(super) fn build_ontology_builder_panel(document: &Document) -> Element {
         .append_child(&make_textarea(
             document,
             "onto-editor",
-            "# Cooperative Projects ontology (stub)\n@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>.\n@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#>.\n@prefix owl: <http://www.w3.org/2002/07/owl#>.\n@prefix coop: <http://qualia.org/cooperative#>.\n\ncoop:Project a owl:Class ;\n  rdfs:label \"Project\" ;\n  rdfs:comment \"A cooperative or collaborative project.\" .\n\ncoop:hasMember a owl:ObjectProperty ;\n  rdfs:domain coop:Project ;\n  rdfs:range coop:Contributor .\n\ncoop:Contributor a owl:Class ;\n  rdfs:label \"Contributor\" .",
+            "# Cooperative Projects ontology\n@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>.\n@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#>.\n@prefix owl: <http://www.w3.org/2002/07/owl#>.\n@prefix coop: <http://qualia.org/cooperative#>.\n\ncoop:Project a owl:Class ;\n  rdfs:label \"Project\" ;\n  rdfs:comment \"A cooperative or collaborative project.\" .\n\ncoop:hasMember a owl:ObjectProperty ;\n  rdfs:domain coop:Project ;\n  rdfs:range coop:Contributor .\n\ncoop:Contributor a owl:Class ;\n  rdfs:label \"Contributor\" .",
             "220px",
         ))
         .unwrap();
@@ -239,7 +248,7 @@ pub(super) fn build_ontology_builder_panel(document: &Document) -> Element {
         .append_child(&make_results_area(
             document,
             "onto-results",
-            "Click \"Compile to CBOR-LD\" to compile the ontology (mock).",
+            "Compile the current Turtle ontology to a real bounded CBOR-LD payload.",
         ))
         .unwrap();
 
@@ -259,19 +268,74 @@ pub(super) fn wire_ontology_builder(document: &Document) {
     if let Some(btn) = document.get_element_by_id("onto-import") {
         let closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
             let doc = web_sys::window().unwrap().document().unwrap();
-            show_logic_notification(
-                &doc,
-                "Domain ontology import requires daemon \u{2014} fetch_domain_ontology pending",
-            );
+            if let Some(input) = doc
+                .get_element_by_id("onto-import-file")
+                .and_then(|element| element.dyn_into::<HtmlInputElement>().ok())
+            {
+                input.click();
+            }
         }) as Box<dyn FnMut(MouseEvent)>);
         btn.add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())
+            .unwrap();
+        closure.forget();
+    }
+    if let Some(input) = document.get_element_by_id("onto-import-file") {
+        let closure = Closure::wrap(Box::new(move |_e: Event| {
+            let doc = web_sys::window().unwrap().document().unwrap();
+            let Some(file) = doc
+                .get_element_by_id("onto-import-file")
+                .and_then(|element| element.dyn_into::<HtmlInputElement>().ok())
+                .and_then(|input| input.files())
+                .and_then(|files| files.get(0))
+            else {
+                return;
+            };
+            if file.size() > 256.0 * 1024.0 {
+                show_logic_notification(&doc, "Ontology import exceeds the 256 KiB limit.");
+                return;
+            }
+            let Ok(reader) = FileReader::new() else {
+                show_logic_notification(&doc, "This browser cannot read the selected ontology.");
+                return;
+            };
+            let reader_for_load = reader.clone();
+            let onload = Closure::wrap(Box::new(move |_e: Event| {
+                let doc = web_sys::window().unwrap().document().unwrap();
+                match reader_for_load
+                    .result()
+                    .ok()
+                    .and_then(|value| value.as_string())
+                {
+                    Some(source) => {
+                        if let Some(editor) = doc
+                            .get_element_by_id("onto-editor")
+                            .and_then(|element| element.dyn_into::<HtmlTextAreaElement>().ok())
+                        {
+                            editor.set_value(&source);
+                            show_logic_notification(
+                                &doc,
+                                "Ontology loaded locally; compile or validate it next.",
+                            );
+                        }
+                    }
+                    None => show_logic_notification(&doc, "The ontology file was not text."),
+                }
+            }) as Box<dyn FnMut(Event)>);
+            reader.set_onload(Some(onload.as_ref().unchecked_ref()));
+            if reader.read_as_text(&file).is_err() {
+                show_logic_notification(&doc, "The ontology file could not be read.");
+            }
+            onload.forget();
+        }) as Box<dyn FnMut(Event)>);
+        input
+            .add_event_listener_with_callback("change", closure.as_ref().unchecked_ref())
             .unwrap();
         closure.forget();
     }
     if let Some(btn) = document.get_element_by_id("onto-validate") {
         let closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
             let doc = web_sys::window().unwrap().document().unwrap();
-            show_logic_notification(&doc, "OWL DL validation: no violations found (mock)");
+            show_mock_results(&doc, "onto-results", "ontology-validate");
         }) as Box<dyn FnMut(MouseEvent)>);
         btn.add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())
             .unwrap();
@@ -285,7 +349,7 @@ pub(super) fn build_modality_panel(document: &Document) -> Element {
     panel
         .append_child(&make_section_label(
             document,
-            "Evaluate Modality \u{2014} select a logic modality and evaluate against the live graph",
+            "Modality Navigator \u{2014} open the typed workbench for a logic or governance modality",
         ))
         .unwrap();
 
@@ -318,35 +382,15 @@ pub(super) fn build_modality_panel(document: &Document) -> Element {
     desc.set_text_content(Some("Select a modality to see its description."));
     panel.append_child(&desc).unwrap();
 
-    panel
-        .append_child(&make_section_label(document, "Input formula / rules:"))
-        .unwrap();
-    panel
-        .append_child(&make_textarea(
-            document,
-            "modality-input",
-            "# Enter the formula or rules to evaluate\n# Example for deontic: OBLIGATE(payTax)\n# Example for LTL: G(data_integrity) & F(publication_submitted)\n# Example for epistemic: K(agent, fact)",
-            "120px",
-        ))
-        .unwrap();
-
     let actions = document.create_element("div").unwrap();
     let a_el: HtmlElement = actions.clone().dyn_into().unwrap();
     a_el.style().set_css_text("display: flex; gap: 8px;");
     actions
         .append_child(&make_button(
             document,
-            "modality-evaluate",
-            "\u{1F9E0} Evaluate",
+            "modality-open",
+            "\u{1F9E0} Open Typed Workbench",
             true,
-        ))
-        .unwrap();
-    actions
-        .append_child(&make_button(
-            document,
-            "modality-satisfiable",
-            "\u{2753} Check Satisfiability",
-            false,
         ))
         .unwrap();
     panel.append_child(&actions).unwrap();
@@ -355,7 +399,7 @@ pub(super) fn build_modality_panel(document: &Document) -> Element {
         .append_child(&make_results_area(
             document,
             "modality-results",
-            "Click \"Evaluate\" to run the selected modality (mock).",
+            "Each modality opens its validated editor and negotiated native capability contract.",
         ))
         .unwrap();
 
@@ -379,7 +423,7 @@ pub(super) fn wire_modality_panel(document: &Document) {
         closure.forget();
     }
 
-    if let Some(btn) = document.get_element_by_id("modality-evaluate") {
+    if let Some(btn) = document.get_element_by_id("modality-open") {
         let closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
             let doc = web_sys::window().unwrap().document().unwrap();
             let modality = doc
@@ -387,16 +431,7 @@ pub(super) fn wire_modality_panel(document: &Document) {
                 .and_then(|e| e.dyn_into::<HtmlSelectElement>().ok())
                 .map(|s| s.value())
                 .unwrap_or_default();
-            show_mock_results(&doc, "modality-results", &modality);
-        }) as Box<dyn FnMut(MouseEvent)>);
-        btn.add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())
-            .unwrap();
-        closure.forget();
-    }
-    if let Some(btn) = document.get_element_by_id("modality-satisfiable") {
-        let closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
-            let doc = web_sys::window().unwrap().document().unwrap();
-            show_logic_notification(&doc, "Satisfiability check: formula is satisfiable (mock)");
+            super::open_to_tool(&doc, &modality);
         }) as Box<dyn FnMut(MouseEvent)>);
         btn.add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())
             .unwrap();
@@ -431,13 +466,7 @@ pub(super) fn build_infer_panel(document: &Document) -> Element {
     row.append_child(&make_select(
         document,
         "infer-mode",
-        &[
-            ("forward", "Forward chaining"),
-            ("backward", "Backward chaining"),
-            ("resolution", "Resolution"),
-            ("tableaux", "Tableaux"),
-            ("model", "Model checking"),
-        ],
+        &[("forward", "Bounded N3 forward matching")],
     ))
     .unwrap();
     panel.append_child(&row).unwrap();
@@ -452,7 +481,7 @@ pub(super) fn build_infer_panel(document: &Document) -> Element {
         .append_child(&make_textarea(
             document,
             "infer-kb",
-            "# Facts\nont:alice a ont:Contributor .\nont:alice ont:hasEffort \"100h\" .\n\n# Rules\n{ ?p a ont:Contributor . ?p ont:hasEffort ?e . } => { ?p ont:hasObligation ?e . } .\n\n# Query\n?who ont:hasObligation ?what .",
+            "# Ground facts and single-triple N3 rules.\n<did:alice> <must> <act> .\n\n{ <did:alice> <must> <act> } => { <contract> <obligate> <act> } .",
             "180px",
         ))
         .unwrap();
@@ -482,7 +511,7 @@ pub(super) fn build_infer_panel(document: &Document) -> Element {
         .append_child(&make_results_area(
             document,
             "infer-results",
-            "Click \"Run Inference\" to derive new facts (mock).",
+            "Run bounded N3 rule matching; Explain returns rule and fact-hash evidence.",
         ))
         .unwrap();
 
@@ -502,10 +531,7 @@ pub(super) fn wire_infer_panel(document: &Document) {
     if let Some(btn) = document.get_element_by_id("infer-explain") {
         let closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
             let doc = web_sys::window().unwrap().document().unwrap();
-            show_logic_notification(
-                &doc,
-                "Derivation explanation requires daemon \u{2014} engine wiring pending",
-            );
+            show_mock_results(&doc, "infer-results", "inference-explain");
         }) as Box<dyn FnMut(MouseEvent)>);
         btn.add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())
             .unwrap();

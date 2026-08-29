@@ -6,6 +6,8 @@ pub mod computational_economics;
 #[cfg(not(target_arch = "wasm32"))]
 mod finance_ext;
 #[cfg(not(target_arch = "wasm32"))]
+mod gbm_var;
+#[cfg(not(target_arch = "wasm32"))]
 mod portfolio;
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -13,6 +15,8 @@ pub use black_scholes::price as black_scholes;
 pub use computational_economics as econ;
 #[cfg(not(target_arch = "wasm32"))]
 pub use finance_ext::{convert_currency, ledger_balance, multisig_check};
+#[cfg(not(target_arch = "wasm32"))]
+pub use gbm_var::simulate as gbm_var;
 #[cfg(not(target_arch = "wasm32"))]
 pub use portfolio::risk as portfolio_risk;
 
@@ -29,6 +33,11 @@ pub fn portfolio_risk(
     args: &vibe::Value,
     span: vibe::Span,
 ) -> Result<vibe::Value, vibe::Diagnostic> {
+    black_scholes(args, span)
+}
+
+#[cfg(target_arch = "wasm32")]
+pub fn gbm_var(args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     black_scholes(args, span)
 }
 

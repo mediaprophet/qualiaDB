@@ -15,6 +15,16 @@ pub mod daemon_tensor;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod ilp_dispatcher;
 #[cfg(not(target_arch = "wasm32"))]
+pub mod poet_api;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod poet_library_api;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod poet_llm_api;
+pub mod poet_llm_jobs;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod poet_record_api;
+pub mod poet_render_api;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod pulse_transport;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod rpc;

@@ -14,14 +14,14 @@ pub(super) fn build_abductive_panel(document: &Document) -> Element {
     panel
         .append_child(&make_section_label(
             document,
-            "Abductive Reasoning \u{2014} ATMS, best explanation inference, probabilistic abduction",
+            "Abductive Reasoning \u{2014} bounded Bayesian best-explanation ranking",
         ))
         .unwrap();
     panel
         .append_child(&make_textarea(
             document,
             "abductive-editor",
-            "# Abductive context\nobserve(symptom(fever)).\nobserve(symptom(cough)).\nhypothesis(flu, explains([fever, cough])).\nhypothesis(cold, explains([cough])).\n\n# Query: best explanation for [fever, cough]?\n# Query: ATMS label for flu?",
+            "# id:prior:P(observation|id)\nhypotheses=[flu:0.2:0.9|cold:0.8:0.1]",
             "140px",
         ))
         .unwrap();
@@ -41,7 +41,7 @@ pub(super) fn build_abductive_panel(document: &Document) -> Element {
         .append_child(&make_results_area(
             document,
             "abductive-results",
-            "Click \"Best Explanation\" to rank hypotheses (mock).",
+            "Rank 1\u{2013}32 hypotheses using the native Bayesian abduction evaluator.",
         ))
         .unwrap();
     panel
@@ -64,14 +64,14 @@ pub(super) fn build_fuzzy_panel(document: &Document) -> Element {
     panel
         .append_child(&make_section_label(
             document,
-            "Fuzzy Logic \u{2014} t-norm (G\u{00F6}del), quantifiers, type-2 fuzzy sets, fuzzy RDF schema",
+            "Fuzzy Logic \u{2014} G\u{00F6}del, \u{0141}ukasiewicz, product, and drastic t-norm/t-conorm families",
         ))
         .unwrap();
     panel
         .append_child(&make_textarea(
             document,
             "fuzzy-editor",
-            "# Fuzzy context\nmembership(alice, contributor, 0.8).\nmembership(bob, contributor, 0.6).\nmembership(carol, contributor, 0.3).\n\n# Quantifiers: most, many, few, about_half\n# Query: t_norm_godel(0.8, 0.6)?\n# Query: type-2 fuzzy union of alice and bob?",
+            "# operations: godel_and, godel_or, lukasiewicz_and, lukasiewicz_or,\n# product_and, product_or, drastic_and, drastic_or\noperation=godel_and\na=0.8\nb=0.6",
             "140px",
         ))
         .unwrap();
@@ -91,7 +91,7 @@ pub(super) fn build_fuzzy_panel(document: &Document) -> Element {
         .append_child(&make_results_area(
             document,
             "fuzzy-results",
-            "Click \"Evaluate Fuzzy\" to compute membership (mock).",
+            "Evaluate two truth degrees with a native fuzzy operator.",
         ))
         .unwrap();
     panel
@@ -114,14 +114,14 @@ pub(super) fn build_probabilistic_panel(document: &Document) -> Element {
     panel
         .append_child(&make_section_label(
             document,
-            "Probabilistic Reasoning \u{2014} Bayesian networks, threshold evaluation, evidence weighting",
+            "Probabilistic Reasoning \u{2014} Bayesian evidence update and posterior thresholding",
         ))
         .unwrap();
     panel
         .append_child(&make_textarea(
             document,
             "probabilistic-editor",
-            "# Bayesian network\nnode(rain, [yes, no]).\nnode(sprinkler, [on, off]).\nnode(wetGrass, [true, false]).\np(rain=yes)=0.2.\np(sprinkler=on|rain=yes)=0.01.\np(sprinkler=on|rain=no)=0.4.\np(wetGrass=true|rain=yes,sprinkler=on)=0.99.\n\n# Query: P(rain=yes|wetGrass=true)?\n# Query: evaluate_threshold(0.5)?",
+            "# P(hypothesis), P(evidence|hypothesis), P(evidence|not hypothesis)\nprior=0.2\nlikelihood_true=0.9\nlikelihood_false=0.1\nthreshold=0.5",
             "160px",
         ))
         .unwrap();
@@ -141,7 +141,7 @@ pub(super) fn build_probabilistic_panel(document: &Document) -> Element {
         .append_child(&make_results_area(
             document,
             "probabilistic-results",
-            "Click \"Evaluate Bayesian\" to compute posterior (mock).",
+            "Compute a two-state Bayesian posterior and threshold decision.",
         ))
         .unwrap();
     panel
@@ -164,14 +164,14 @@ pub(super) fn build_graph_theory_panel(document: &Document) -> Element {
     panel
         .append_child(&make_section_label(
             document,
-            "Graph Theory \u{2014} topology, centrality, communities, motifs, subgraph isomorphism",
+            "Graph Theory \u{2014} bounded topology, centrality, communities, and motifs",
         ))
         .unwrap();
     panel
         .append_child(&make_textarea(
             document,
             "graph-theory-editor",
-            "# Graph context\nedge(alice, bob).\nedge(bob, carol).\nedge(carol, alice).\nedge(alice, dave).\n\n# Query: bounded topology analysis (zero-heap, 128 nodes)?\n# Query: community spans?\n# Query: motif count (triangles)?\n# Query: subgraph pattern match?",
+            "# directed from:to pairs (maximum 128 edges)\nedges=[alice:bob|bob:carol|carol:alice|alice:dave]",
             "140px",
         ))
         .unwrap();
@@ -191,7 +191,7 @@ pub(super) fn build_graph_theory_panel(document: &Document) -> Element {
         .append_child(&make_results_area(
             document,
             "graph-theory-results",
-            "Click \"Analyze Topology\" to compute graph metrics (mock).",
+            "Analyze the bounded graph with the native topology engine.",
         ))
         .unwrap();
     panel
@@ -221,7 +221,7 @@ pub(super) fn build_interval_panel(document: &Document) -> Element {
         .append_child(&make_textarea(
             document,
             "interval-editor",
-            "# Interval context\ninterval(task1, [0, 10]).\ninterval(task2, [5, 15]).\ninterval(task3, [15, 25]).\n\n# Allen relations: Before, Meets, Overlaps, Starts, During, Finishes, Equals\n# Query: Allen relation between task1 and task2?\n# Query: Minkowski sum of [0,10] and [5,15]?",
+            "# closed integer intervals\na=[0,10]\nb=[5,15]\n# Returns the full 13-relation Allen classification, sum, and intersection.",
             "140px",
         ))
         .unwrap();
@@ -241,7 +241,7 @@ pub(super) fn build_interval_panel(document: &Document) -> Element {
         .append_child(&make_results_area(
             document,
             "interval-results",
-            "Click \"Evaluate Intervals\" to compute Allen relations (mock).",
+            "Classify two intervals and compute their Minkowski sum.",
         ))
         .unwrap();
     panel
@@ -271,7 +271,7 @@ pub(super) fn build_manifold_10d_panel(document: &Document) -> Element {
         .append_child(&make_textarea(
             document,
             "manifold-10d-editor",
-            "# 10D manifold coordinate\n# Dimensions: scale, attention_depth, epistemic_weight, topological_spin,\n#   temporal_decay, entropy_bias, spatial_phase, recurrence_frequency,\n#   density_threshold, manifold_curvature\n\nstate(s0, [1.0, 0.5, 0.8, 0.2, 0.9, 0.1, 0.3, 0.7, 0.4, 0.6]).\nstate(s1, [1.2, 0.6, 0.7, 0.3, 0.8, 0.2, 0.4, 0.6, 0.5, 0.5]).\n\n# Query: project 10D to quaternion?\n# Query: manifold LTL trace evaluation?\n# Query: manifold answer sets (ASP)?",
+            "# Upper triangle of a symmetric 4x4 matrix (10 finite values).\n# The native fixed Lanczos solver returns its smallest-eigenvector quaternion.\nparameters=[1.0,0.5,0.8,0.2,0.9,0.1,0.3,0.7,0.4,0.6]",
             "160px",
         ))
         .unwrap();
@@ -291,7 +291,7 @@ pub(super) fn build_manifold_10d_panel(document: &Document) -> Element {
         .append_child(&make_results_area(
             document,
             "manifold-10d-results",
-            "Click \"Project 10D\" to compute manifold state (mock).",
+            "Project 10D parameters to a normalized quaternion with the native manifold solver.",
         ))
         .unwrap();
     panel
@@ -321,7 +321,7 @@ pub(super) fn build_epistemic_boundaries_panel(document: &Document) -> Element {
         .append_child(&make_textarea(
             document,
             "epistemic-boundaries-editor",
-            "# Epistemic boundaries context\nclaim(alice, \"patient has condition X\").\nseverity(medical, high).\nseverity(legal, medium).\n\n# Socratic degradation: definitive -> probable -> possible -> speculative -> socratic\n# Referral domains: medical, legal, bio\n# Query: degrade claim to socratic?\n# Query: requires physiological quarantine?\n# Query: forbids definitive classification?",
+            "# Known predicates include q42:medicalDiagnosis, q42:genomicAlignment,\n# q42:legalVerdict, q42:governancePolicy, and q42:investmentDirective.\nsubject=alice\npredicate=q42:medicalDiagnosis\nseverity=200",
             "140px",
         ))
         .unwrap();
@@ -341,7 +341,7 @@ pub(super) fn build_epistemic_boundaries_panel(document: &Document) -> Element {
         .append_child(&make_results_area(
             document,
             "epistemic-boundaries-results",
-            "Click \"Check Boundaries\" to evaluate safety (mock).",
+            "Apply structural refusal, quarantine, Socratic degradation, and referral gates.",
         ))
         .unwrap();
     panel
@@ -371,7 +371,7 @@ pub(super) fn build_modal_panel(document: &Document) -> Element {
         .append_child(&make_textarea(
             document,
             "modal-editor",
-            "# Modal logic context\nnecessary(data_integrity).\npossible(publication_delay).\nnecessary(necessary(access_control)).\n\n# Systems: K (no reflexivity), T (reflexive), S4 (reflexive+transitive), S5 (equivalence)\n# Query: evaluate in S5: necessary(data_integrity) -> possible(data_integrity)?\n# Query: evaluate in S4: necessary(necessary(p)) -> necessary(p)?",
+            "# Systems: K, T, D, B, S4, S5. Operators: necessary, possible.\nsystem=K\noperator=necessary\nworld=w0\nproposition=data_integrity\nworlds=[w0|w1]\naccesses=[w0:w1]\nholds_in=[w1]",
             "140px",
         ))
         .unwrap();
@@ -391,7 +391,7 @@ pub(super) fn build_modal_panel(document: &Document) -> Element {
         .append_child(&make_results_area(
             document,
             "modal-results",
-            "Click \"Evaluate Modal\" to check modal formula (mock).",
+            "Evaluate a Kripke frame and verify its selected normal modal system.",
         ))
         .unwrap();
     panel

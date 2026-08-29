@@ -238,7 +238,8 @@ pub fn render_aura_tray(document: &Document, results: &[ShaclResult]) -> Element
 
         let p_span = document.create_element("span").unwrap();
         let p_el: HtmlElement = p_span.clone().dyn_into().unwrap();
-        p_el.style().set_css_text("color: var(--accent-cyan); font-weight: 600;");
+        p_el.style()
+            .set_css_text("color: var(--accent-cyan); font-weight: 600;");
         p_span.set_text_content(Some(prefix));
         o_row.append_child(&p_span).unwrap();
 
@@ -265,19 +266,31 @@ pub fn render_aura_tray(document: &Document, results: &[ShaclResult]) -> Element
     quin_sub_body.set_class_name("dock-subtray-body");
 
     let q_info1 = document.create_element("div").unwrap();
-    q_info1.set_attribute("style", "display: flex; justify-content: space-between; font-size: 9.5px; padding: 2px 0;").unwrap();
+    q_info1
+        .set_attribute(
+            "style",
+            "display: flex; justify-content: space-between; font-size: 9.5px; padding: 2px 0;",
+        )
+        .unwrap();
     let q_k1 = document.create_element("span").unwrap();
     q_k1.set_text_content(Some("Certainty:"));
     let q_v1 = document.create_element("span").unwrap();
     let q_v1_el: HtmlElement = q_v1.clone().dyn_into().unwrap();
-    q_v1_el.style().set_css_text("color: var(--accent-emerald); font-weight: 600;");
+    q_v1_el
+        .style()
+        .set_css_text("color: var(--accent-emerald); font-weight: 600;");
     q_v1.set_text_content(Some("96% (Epistemic Halo)"));
     q_info1.append_child(&q_k1).unwrap();
     q_info1.append_child(&q_v1).unwrap();
     quin_sub_body.append_child(&q_info1).unwrap();
 
     let q_info2 = document.create_element("div").unwrap();
-    q_info2.set_attribute("style", "display: flex; justify-content: space-between; font-size: 9.5px; padding: 2px 0;").unwrap();
+    q_info2
+        .set_attribute(
+            "style",
+            "display: flex; justify-content: space-between; font-size: 9.5px; padding: 2px 0;",
+        )
+        .unwrap();
     let q_k2 = document.create_element("span").unwrap();
     q_k2.set_text_content(Some("Hot Path:"));
     let q_v2 = document.create_element("span").unwrap();
@@ -289,11 +302,18 @@ pub fn render_aura_tray(document: &Document, results: &[ShaclResult]) -> Element
     quin_sub_body.append_child(&q_info2).unwrap();
 
     let export_div = document.create_element("div").unwrap();
-    export_div.set_attribute("style", "margin-top: 6px; display: flex; justify-content: flex-end;").unwrap();
+    export_div
+        .set_attribute(
+            "style",
+            "margin-top: 6px; display: flex; justify-content: flex-end;",
+        )
+        .unwrap();
     let export_btn = document.create_element("button").unwrap();
     export_btn.set_class_name("vibe-run-btn");
     let eb_el: HtmlElement = export_btn.clone().dyn_into().unwrap();
-    eb_el.style().set_css_text("padding: 2px 8px; font-size: 9px; cursor: pointer;");
+    eb_el
+        .style()
+        .set_css_text("padding: 2px 8px; font-size: 9px; cursor: pointer;");
     export_btn.set_text_content(Some("\u{1F4E6} Export .hcf"));
     export_div.append_child(&export_btn).unwrap();
     quin_sub_body.append_child(&export_div).unwrap();
@@ -480,9 +500,9 @@ pub fn render_job_body(document: &Document, jobs: &[JobEntry]) -> Element {
         let row = document.create_element("div").unwrap();
         row.set_class_name("vibe-out-line");
         let row_el: HtmlElement = row.clone().dyn_into().unwrap();
-        row_el
-            .style()
-            .set_css_text("display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 4px;");
+        row_el.style().set_css_text(
+            "display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 4px;",
+        );
 
         let badge = document.create_element("span").unwrap();
         badge.set_class_name(&format!("honesty-badge {}", job.status.css_class()));

@@ -66,7 +66,7 @@ pub(super) fn build_crdt_sync_panel(document: &Document) -> Element {
         .append_child(&make_textarea(
             document,
             "crdt-sync-input",
-            "# CRDT sync context\n# DelegatedAccess: principal_did[32], delegate_did[32], context_bound, expiration, proof[64]\n# SuspendedTransaction: agreement_id, threshold, collected_signatures, registers[16]\n# Queue depth: 32\n\n# Query: resolve LWW for key X?\n# Query: verify delegation?\n# Query: apply consensus token?\n# Query: list suspended transactions?",
+            "local_clock=1\nremote_clock=2\nlocal_object=10\nremote_object=20\nselfhood=false\nprincipal=did:alice\ndelegate=did:bob\ncontext=graph:1\nexpiry=100\nnow=1",
             "120px",
         ))
         .unwrap();
@@ -86,7 +86,7 @@ pub(super) fn build_crdt_sync_panel(document: &Document) -> Element {
         .append_child(&make_results_area(
             document,
             "crdt-sync-results",
-            "Click \"Resolve\" to check CRDT state (mock).",
+            "Resolve LWW by Lamport clock and verify the typed delegation window.",
         ))
         .unwrap();
     panel
@@ -123,7 +123,7 @@ pub(super) fn build_agency_merkle_panel(document: &Document) -> Element {
         .append_child(&make_textarea(
             document,
             "agency-merkle-input",
-            "# Agency inspection\n# compute_scoped_merkle_root: subgraph \u{2192} BLAKE3 root\n# sign_agency_root: Ed25519 signature over root\n# verify_human_agency: checks human principal\n# stamp_fiduciary_metadata: adds fiduciary tag\n# derive_lane_key: PBKDF2, 310,000 iterations\n\n# Query: compute scoped Merkle root for subgraph X?\n# Query: verify human agency for did:qualia:...?",
+            "claims=[contribution|attestation|key-rotation]",
             "120px",
         ))
         .unwrap();
@@ -143,7 +143,7 @@ pub(super) fn build_agency_merkle_panel(document: &Document) -> Element {
         .append_child(&make_results_area(
             document,
             "agency-merkle-results",
-            "Click \"Inspect Agency\" to verify agency state (mock).",
+            "Compute the author-scoped SHA-256 Merkle sub-root over the supplied claims.",
         ))
         .unwrap();
     panel
@@ -173,7 +173,7 @@ pub(super) fn build_key_vault_panel(document: &Document) -> Element {
         .append_child(&make_textarea(
             document,
             "key-vault-input",
-            "# Key vault operations\n# HomomorphicKeyManager: keys[8], KeyRotationPolicy\n# Operations: generate, rotate, revoke, list\n# Key types: BFV HE keys, Ed25519 signing keys\n\n# Query: list active keys?\n# Query: rotate key at index 0?\n# Query: generate new BFV key?",
+            "operation=register\nkey_id=key-0\ncreated_at=1\nexpires_at=1000\nnow=10",
             "100px",
         ))
         .unwrap();
@@ -193,7 +193,7 @@ pub(super) fn build_key_vault_panel(document: &Document) -> Element {
         .append_child(&make_results_area(
             document,
             "key-vault-results",
-            "Click \"Manage Keys\" to view vault state (mock).",
+            "Register HE key metadata in the 8-slot vault and drop expired entries. This does not generate BFV ciphertext keys.",
         ))
         .unwrap();
     panel
@@ -223,7 +223,7 @@ pub(super) fn build_policy_evaluator_panel(document: &Document) -> Element {
         .append_child(&make_textarea(
             document,
             "policy-evaluator-input",
-            "# Policy evaluation context\n# wellfair_evaluate_policy: subject, resource, action, sensitivity, epistemic_status\n# Sensitivity levels: public, internal, confidential, restricted, top_secret\n# Epistemic status: active, uncertain, skipped\n\n# Query: evaluate access for subject X to resource Y?\npolicy(subject=\"did:qualia:alice\", resource=\"doc:42\", action=\"read\", sensitivity=\"confidential\").",
+            "subject=did:alice\nresource=doc:42\nclearance=restricted\nsensitivity=confidential\nepistemic=active",
             "120px",
         ))
         .unwrap();
@@ -243,7 +243,7 @@ pub(super) fn build_policy_evaluator_panel(document: &Document) -> Element {
         .append_child(&make_results_area(
             document,
             "policy-evaluator-results",
-            "Click \"Evaluate Policy\" to check access (mock).",
+            "Compare clearance to resource sensitivity and fail closed on uncertain epistemic status.",
         ))
         .unwrap();
     panel
@@ -295,7 +295,7 @@ pub(super) fn build_consent_manager_panel(document: &Document) -> Element {
         .append_child(&make_textarea(
             document,
             "consent-input",
-            "# Consent management context\n# wellfair_grant_consent: scope, subject, recipient, duration\n# wellfair_revoke_consent: consent_id\n# wellfair_list_consents: subject\n\n# Consent states: pending, granted, denied, revoked, expired",
+            "expiry=100\nnow=10\nrevoked=false",
             "80px",
         ))
         .unwrap();
@@ -315,7 +315,7 @@ pub(super) fn build_consent_manager_panel(document: &Document) -> Element {
         .append_child(&make_results_area(
             document,
             "consent-results",
-            "Click \"Execute\" to manage consent (mock).",
+            "Evaluate whether the scoped grant is in force at `now`, including revoke.",
         ))
         .unwrap();
     panel
@@ -345,7 +345,7 @@ pub(super) fn build_carrier_panel(document: &Document) -> Element {
         .append_child(&make_textarea(
             document,
             "carrier-input",
-            "# Carrier operations\n# extract_payload: carrier_quin \u{2192} payload bytes\n# media_tag: media_type, codec, duration, sample_rate\n# verify_binding: carrier_hash, payload_hash, signature\n\n# Query: extract payload from carrier X?\n# Query: verify binding integrity?",
+            "payload=hello",
             "100px",
         ))
         .unwrap();
@@ -365,7 +365,7 @@ pub(super) fn build_carrier_panel(document: &Document) -> Element {
         .append_child(&make_results_area(
             document,
             "carrier-results",
-            "Click \"Process Carrier\" to inspect media binding (mock).",
+            "BLAKE3-tag the payload and verify the carrier binding.",
         ))
         .unwrap();
     panel
@@ -395,7 +395,7 @@ pub(super) fn build_control_feedback_panel(document: &Document) -> Element {
         .append_child(&make_textarea(
             document,
             "control-feedback-input",
-            "# Control feedback context\n# ControlState: setpoint, measured, error, integral, derivative\n# Bits: CONTROL_BIT, FEEDBACK_BIT, STABILIZATION_BIT\n# Operations: PID compute, state update, stabilization check\n\n# Query: compute PID output for setpoint=100, measured=95?\n# Query: check stabilization?",
+            "setpoint=100\nmeasured=95\nt=1",
             "100px",
         ))
         .unwrap();
@@ -415,7 +415,7 @@ pub(super) fn build_control_feedback_panel(document: &Document) -> Element {
         .append_child(&make_results_area(
             document,
             "control-feedback-results",
-            "Click \"Compute\" to evaluate control feedback (mock).",
+            "Run one conservative PID step against the native control-feedback kernel.",
         ))
         .unwrap();
     panel
@@ -445,7 +445,7 @@ pub(super) fn build_likeliness_panel(document: &Document) -> Element {
         .append_child(&make_textarea(
             document,
             "likeliness-input",
-            "# Likeliness context\n# Likeliness struct: value, confidence, evidence_count\n# Operations: combine, compare, rank\n# Used for: hypothesis ranking, evidence weighting\n\n# Query: compute likeliness of hypothesis H given evidence E1, E2, E3?\n# Query: rank hypotheses by likeliness?",
+            "premises=[2,1,-1]",
             "100px",
         ))
         .unwrap();
@@ -465,7 +465,7 @@ pub(super) fn build_likeliness_panel(document: &Document) -> Element {
         .append_child(&make_results_area(
             document,
             "likeliness-results",
-            "Click \"Evaluate\" to compute likeliness (mock).",
+            "Combine ordinal likeliness premises with the Kleene/De Morgan meet.",
         ))
         .unwrap();
     panel
@@ -495,7 +495,7 @@ pub(super) fn build_qubo_panel(document: &Document) -> Element {
         .append_child(&make_textarea(
             document,
             "qubo-input",
-            "# QUBO compilation context\n# Input: cost matrix Q (n x n), variable count n\n# Output: compiled QUBO program for annealing\n# Used for: combinatorial optimization, scheduling, clustering\n\n# Query: compile QUBO for 10-variable problem?\n# Query: decompose into sub-QUBOs?",
+            "edges=[a:b|b:c]",
             "100px",
         ))
         .unwrap();
@@ -515,7 +515,7 @@ pub(super) fn build_qubo_panel(document: &Document) -> Element {
         .append_child(&make_results_area(
             document,
             "qubo-results",
-            "Click \"Compile\" to build QUBO program (mock).",
+            "Compile obligation edges into a QUBO and run the classical greedy solver.",
         ))
         .unwrap();
     panel
@@ -561,7 +561,7 @@ pub(super) fn build_owl_converter_panel(document: &Document) -> Element {
         .append_child(&make_textarea(
             document,
             "owl-input",
-            "# OWL conversion context\n# shacl_convert: OWL ontology \u{2192} SHACL shapes\n# materialize: OWL ontology \u{2192} inferred triples\n# classify: OWL DL classification (SROIQ)\n# consistency: OWL consistency checking\n\n# Input: OWL/Turtle ontology document\n\n@prefix ex: <http://example.org/> .\nex:Person a owl:Class ; rdfs:subClassOf ex:Agent .\nex:Student a owl:Class ; rdfs:subClassOf ex:Person .",
+            "triples=[Student:subClassOf:Person|Person:subClassOf:Agent]",
             "120px",
         ))
         .unwrap();
@@ -581,7 +581,7 @@ pub(super) fn build_owl_converter_panel(document: &Document) -> Element {
         .append_child(&make_results_area(
             document,
             "owl-results",
-            "Click \"Convert\" to process OWL ontology (mock).",
+            "Run bounded OWL 2 RL materialization over subject:predicate:object axioms.",
         ))
         .unwrap();
     panel

@@ -1,6 +1,7 @@
 //! Contradiction isolation. Does not explode. Args are scanned as extra NQuins when provided.
 
-use crate::modalities::paraconsistent::route_paraconsistent;
+use super::super::args;
+use crate::modalities::paraconsistent::{global_saturation, is_saturated, route_paraconsistent};
 use crate::poet_host::{value_to_quin, PoetSnapshot};
 use crate::NQuin;
 use std::collections::BTreeMap;
@@ -35,6 +36,17 @@ pub fn route(snap: &PoetSnapshot, args: &Value, span: Span) -> Result<Value, Dia
         rec.insert("honesty".into(), Value::String(snap.honesty().into()));
         rec.insert("consistent".into(), Value::U64(c as u64));
         rec.insert("isolated".into(), Value::U64(i as u64));
+        let saturation = global_saturation(c, i);
+        let threshold = args::rec_f64(args, "threshold").unwrap_or(0.5) as f32;
+        rec.insert("global_saturation".into(), Value::F64(saturation as f64));
+        rec.insert(
+            "threshold".into(),
+            Value::F64(threshold.clamp(0.0, 1.0) as f64),
+        );
+        rec.insert(
+            "saturated".into(),
+            Value::Bool(is_saturated(saturation, threshold.clamp(0.0, 1.0))),
+        );
         Ok(Value::Record(rec))
     })
 }

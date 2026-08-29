@@ -97,53 +97,205 @@ pub struct PresetInfo {
 pub fn list_all_presets() -> &'static [PresetInfo] {
     &[
         // 1. Spatial Kinematics
-        PresetInfo { family: "spatial_kinematics", preset: "orbit_spin", description: "Harmonic circular orbit in XZ plane with rotational tracking" },
-        PresetInfo { family: "spatial_kinematics", preset: "hero_drift", description: "Smooth cinematic ScLERP glide between two 3D rigid poses" },
-        PresetInfo { family: "spatial_kinematics", preset: "elastic_snap", description: "High-stiffness overshoot translation to target coordinate" },
-        PresetInfo { family: "spatial_kinematics", preset: "geodesic_warp", description: "Non-Euclidean metric contraction across space-time manifold" },
+        PresetInfo {
+            family: "spatial_kinematics",
+            preset: "orbit_spin",
+            description: "Harmonic circular orbit in XZ plane with rotational tracking",
+        },
+        PresetInfo {
+            family: "spatial_kinematics",
+            preset: "hero_drift",
+            description: "Smooth cinematic ScLERP glide between two 3D rigid poses",
+        },
+        PresetInfo {
+            family: "spatial_kinematics",
+            preset: "elastic_snap",
+            description: "High-stiffness overshoot translation to target coordinate",
+        },
+        PresetInfo {
+            family: "spatial_kinematics",
+            preset: "geodesic_warp",
+            description: "Non-Euclidean metric contraction across space-time manifold",
+        },
         // 2. Physical Dynamics
-        PresetInfo { family: "physical_dynamics", preset: "spring_settle", description: "1D critically damped spring relaxation" },
-        PresetInfo { family: "physical_dynamics", preset: "bouncy_drop", description: "Underdamped gravitational restitution bounce" },
-        PresetInfo { family: "physical_dynamics", preset: "verlet_wave", description: "Symplectic Verlet wave height propagation" },
-        PresetInfo { family: "physical_dynamics", preset: "gravity_well", description: "Inverse-square orbital attraction toward central attractor" },
-        PresetInfo { family: "physical_dynamics", preset: "collision_rebound", description: "Instantaneous momentum-conserving impulse decay" },
+        PresetInfo {
+            family: "physical_dynamics",
+            preset: "spring_settle",
+            description: "1D critically damped spring relaxation",
+        },
+        PresetInfo {
+            family: "physical_dynamics",
+            preset: "bouncy_drop",
+            description: "Underdamped gravitational restitution bounce",
+        },
+        PresetInfo {
+            family: "physical_dynamics",
+            preset: "verlet_wave",
+            description: "Symplectic Verlet wave height propagation",
+        },
+        PresetInfo {
+            family: "physical_dynamics",
+            preset: "gravity_well",
+            description: "Inverse-square orbital attraction toward central attractor",
+        },
+        PresetInfo {
+            family: "physical_dynamics",
+            preset: "collision_rebound",
+            description: "Instantaneous momentum-conserving impulse decay",
+        },
         // 3. Mesh Topology
-        PresetInfo { family: "mesh_topology", preset: "morph_laplacian", description: "Smooth geometric Laplacian surface interpolation" },
-        PresetInfo { family: "mesh_topology", preset: "origami_unfold", description: "Simplicial complex dimension unfolding from 0-simplex to 2-simplex" },
-        PresetInfo { family: "mesh_topology", preset: "stalk_focus", description: "Topological sheaf restriction focusing on active subtree" },
-        PresetInfo { family: "mesh_topology", preset: "topology_collapse", description: "Homotopy contraction to single singular boundary point" },
+        PresetInfo {
+            family: "mesh_topology",
+            preset: "morph_laplacian",
+            description: "Smooth geometric Laplacian surface interpolation",
+        },
+        PresetInfo {
+            family: "mesh_topology",
+            preset: "origami_unfold",
+            description: "Simplicial complex dimension unfolding from 0-simplex to 2-simplex",
+        },
+        PresetInfo {
+            family: "mesh_topology",
+            preset: "stalk_focus",
+            description: "Topological sheaf restriction focusing on active subtree",
+        },
+        PresetInfo {
+            family: "mesh_topology",
+            preset: "topology_collapse",
+            description: "Homotopy contraction to single singular boundary point",
+        },
         // 4. Thermodynamic Phase
-        PresetInfo { family: "thermodynamic_phase", preset: "heat_diffuse", description: "Exponential thermal dissipation and entropy expansion" },
-        PresetInfo { family: "thermodynamic_phase", preset: "crystallize", description: "First-order nucleation phase transition boundary" },
-        PresetInfo { family: "thermodynamic_phase", preset: "thermal_glow", description: "Blackbody spectral radiation intensity curve" },
-        PresetInfo { family: "thermodynamic_phase", preset: "implode", description: "High-pressure volumetric collapse into core singularity" },
+        PresetInfo {
+            family: "thermodynamic_phase",
+            preset: "heat_diffuse",
+            description: "Exponential thermal dissipation and entropy expansion",
+        },
+        PresetInfo {
+            family: "thermodynamic_phase",
+            preset: "crystallize",
+            description: "First-order nucleation phase transition boundary",
+        },
+        PresetInfo {
+            family: "thermodynamic_phase",
+            preset: "thermal_glow",
+            description: "Blackbody spectral radiation intensity curve",
+        },
+        PresetInfo {
+            family: "thermodynamic_phase",
+            preset: "implode",
+            description: "High-pressure volumetric collapse into core singularity",
+        },
         // 5. Optics & Waves
-        PresetInfo { family: "optics_waves", preset: "doppler_shift", description: "Relativistic wavefront compression and frequency shift" },
-        PresetInfo { family: "optics_waves", preset: "fresnel_glow", description: "Schlick approximation rim radiance curve" },
-        PresetInfo { family: "optics_waves", preset: "refractive_pulse", description: "Snell law refractive index modulation across D7 manifold" },
-        PresetInfo { family: "optics_waves", preset: "chromatic_aberration", description: "Wavelength dispersion splitting RGB channels" },
-        PresetInfo { family: "optics_waves", preset: "caustic_flow", description: "Interferometric specular caustic illumination envelope" },
+        PresetInfo {
+            family: "optics_waves",
+            preset: "doppler_shift",
+            description: "Relativistic wavefront compression and frequency shift",
+        },
+        PresetInfo {
+            family: "optics_waves",
+            preset: "fresnel_glow",
+            description: "Schlick approximation rim radiance curve",
+        },
+        PresetInfo {
+            family: "optics_waves",
+            preset: "refractive_pulse",
+            description: "Snell law refractive index modulation across D7 manifold",
+        },
+        PresetInfo {
+            family: "optics_waves",
+            preset: "chromatic_aberration",
+            description: "Wavelength dispersion splitting RGB channels",
+        },
+        PresetInfo {
+            family: "optics_waves",
+            preset: "caustic_flow",
+            description: "Interferometric specular caustic illumination envelope",
+        },
         // 6. Acoustic Spectral
-        PresetInfo { family: "acoustic_spectral", preset: "adsr_pulse", description: "Standard Attack-Decay-Sustain-Release amplitude envelope" },
-        PresetInfo { family: "acoustic_spectral", preset: "binaural_sweep", description: "Stereo interaural phase disparity spatial pan" },
-        PresetInfo { family: "acoustic_spectral", preset: "resonant_formant", description: "Multi-pole acoustic vocal tract resonant peak sweep" },
+        PresetInfo {
+            family: "acoustic_spectral",
+            preset: "adsr_pulse",
+            description: "Standard Attack-Decay-Sustain-Release amplitude envelope",
+        },
+        PresetInfo {
+            family: "acoustic_spectral",
+            preset: "binaural_sweep",
+            description: "Stereo interaural phase disparity spatial pan",
+        },
+        PresetInfo {
+            family: "acoustic_spectral",
+            preset: "resonant_formant",
+            description: "Multi-pole acoustic vocal tract resonant peak sweep",
+        },
         // 7. Multi-Track Timelines
-        PresetInfo { family: "multitrack_timelines", preset: "polymetric_sync", description: "Polymetric 3:4:5 cross-rhythm phase synchronization" },
-        PresetInfo { family: "multitrack_timelines", preset: "keyframe_blend", description: "Smooth Hermite spline curve through multi-channel keys" },
-        PresetInfo { family: "multitrack_timelines", preset: "stagger_cascade", description: "Progressive cascade delay across N entity indices" },
+        PresetInfo {
+            family: "multitrack_timelines",
+            preset: "polymetric_sync",
+            description: "Polymetric 3:4:5 cross-rhythm phase synchronization",
+        },
+        PresetInfo {
+            family: "multitrack_timelines",
+            preset: "keyframe_blend",
+            description: "Smooth Hermite spline curve through multi-channel keys",
+        },
+        PresetInfo {
+            family: "multitrack_timelines",
+            preset: "stagger_cascade",
+            description: "Progressive cascade delay across N entity indices",
+        },
         // 8. HUD & UI Glassmorphism
-        PresetInfo { family: "hud_glass_ui", preset: "glass_reveal", description: "Smooth frosted-glass backdrop blur and scale-up reveal" },
-        PresetInfo { family: "hud_glass_ui", preset: "chromatic_pulse", description: "Micro-dispersion neon border accent wave" },
-        PresetInfo { family: "hud_glass_ui", preset: "frosted_fade", description: "Background surface transmission depth interpolation" },
-        PresetInfo { family: "hud_glass_ui", preset: "focus_halo", description: "Radial gaze-tracking luminance focus vignette" },
+        PresetInfo {
+            family: "hud_glass_ui",
+            preset: "glass_reveal",
+            description: "Smooth frosted-glass backdrop blur and scale-up reveal",
+        },
+        PresetInfo {
+            family: "hud_glass_ui",
+            preset: "chromatic_pulse",
+            description: "Micro-dispersion neon border accent wave",
+        },
+        PresetInfo {
+            family: "hud_glass_ui",
+            preset: "frosted_fade",
+            description: "Background surface transmission depth interpolation",
+        },
+        PresetInfo {
+            family: "hud_glass_ui",
+            preset: "focus_halo",
+            description: "Radial gaze-tracking luminance focus vignette",
+        },
         // 9. Outbound Haptics
-        PresetInfo { family: "outbound_haptics", preset: "vibro_click", description: "30ms sharp tactile mechanical click transient" },
-        PresetInfo { family: "outbound_haptics", preset: "heartbeat_pulse", description: "Dual-impulse systolic / diastolic cardiac envelope" },
-        PresetInfo { family: "outbound_haptics", preset: "kinesthetic_resist", description: "Nonlinear motor torque brake resistance against velocity" },
+        PresetInfo {
+            family: "outbound_haptics",
+            preset: "vibro_click",
+            description: "30ms sharp tactile mechanical click transient",
+        },
+        PresetInfo {
+            family: "outbound_haptics",
+            preset: "heartbeat_pulse",
+            description: "Dual-impulse systolic / diastolic cardiac envelope",
+        },
+        PresetInfo {
+            family: "outbound_haptics",
+            preset: "kinesthetic_resist",
+            description: "Nonlinear motor torque brake resistance against velocity",
+        },
         // 10. Generative Stochastic Fields
-        PresetInfo { family: "generative_fields", preset: "simplex_flow", description: "Coherent turbulent vector field velocity advection" },
-        PresetInfo { family: "generative_fields", preset: "vortex_swirl", description: "Logarithmic spiral angular momentum vortex" },
-        PresetInfo { family: "generative_fields", preset: "brownian_drift", description: "Continuous Wiener process stochastic random walk" },
+        PresetInfo {
+            family: "generative_fields",
+            preset: "simplex_flow",
+            description: "Coherent turbulent vector field velocity advection",
+        },
+        PresetInfo {
+            family: "generative_fields",
+            preset: "vortex_swirl",
+            description: "Logarithmic spiral angular momentum vortex",
+        },
+        PresetInfo {
+            family: "generative_fields",
+            preset: "brownian_drift",
+            description: "Continuous Wiener process stochastic random walk",
+        },
     ]
 }
 

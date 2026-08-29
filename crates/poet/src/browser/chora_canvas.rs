@@ -66,7 +66,9 @@ impl ChoraManager {
 
         let sample_claim = DialecticalClaimPair {
             thesis: "Centralized aquifer allocation maximizes agricultural productivity.".into(),
-            antithesis: "Polycentric watershed commons preserves long-term subterranean water tables.".into(),
+            antithesis:
+                "Polycentric watershed commons preserves long-term subterranean water tables."
+                    .into(),
             synthesis_status: "Verified Ostrom Equivalence in Super-Quin Quad-Store".into(),
             epistemic_certainty: 0.88,
         };
@@ -112,7 +114,7 @@ pub fn build_chora_view(document: &Document, manager: &ChoraManager) -> Element 
     let root_el: HtmlElement = root.clone().dyn_into().unwrap();
     root_el.style().set_css_text(
         "display: flex; flex-direction: column; flex: 1; padding: 12px; gap: 10px; \
-         background: #020617; color: #f8fafc; overflow-y: auto; font-family: sans-serif;"
+         background: #020617; color: #f8fafc; overflow-y: auto; font-family: sans-serif;",
     );
 
     // Header Toolbar
@@ -121,19 +123,30 @@ pub fn build_chora_view(document: &Document, manager: &ChoraManager) -> Element 
     let header_el: HtmlElement = header.clone().dyn_into().unwrap();
     header_el.style().set_css_text(
         "justify-content: space-between; background: rgba(30, 41, 59, 0.7); \
-         border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; padding: 8px 12px;"
+         border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; padding: 8px 12px;",
     );
 
     let title = document.create_element("span").unwrap();
-    title.set_text_content(Some(&format!("\u{1F310} Chora 4D Spatio-Temporal Commons [ Epoch: {} CE ]", manager.active_year)));
+    title.set_text_content(Some(&format!(
+        "\u{1F310} Chora 4D Spatio-Temporal Commons [ Epoch: {} CE ]",
+        manager.active_year
+    )));
     let title_el: HtmlElement = title.clone().dyn_into().unwrap();
-    title_el.style().set_css_text("font-weight: 700; font-size: 13px; color: #38bdf8;");
+    title_el
+        .style()
+        .set_css_text("font-weight: 700; font-size: 13px; color: #38bdf8;");
     header.append_child(&title).unwrap();
 
     let status = document.create_element("span").unwrap();
-    status.set_text_content(Some(&format!("GeoSPARQL Pins: {} \u{25CF} Dialectical Claims: {}", manager.pins.len(), manager.active_claims.len())));
+    status.set_text_content(Some(&format!(
+        "GeoSPARQL Pins: {} \u{25CF} Dialectical Claims: {}",
+        manager.pins.len(),
+        manager.active_claims.len()
+    )));
     let status_el: HtmlElement = status.clone().dyn_into().unwrap();
-    status_el.style().set_css_text("font-size: 11px; font-family: var(--font-mono); color: #34d399;");
+    status_el
+        .style()
+        .set_css_text("font-size: 11px; font-family: var(--font-mono); color: #34d399;");
     header.append_child(&status).unwrap();
 
     root.append_child(&header).unwrap();
@@ -141,7 +154,9 @@ pub fn build_chora_view(document: &Document, manager: &ChoraManager) -> Element 
     // 2-Column Split: Map & Pins on Left, Dialectical Claims on Right
     let split = document.create_element("div").unwrap();
     let split_el: HtmlElement = split.clone().dyn_into().unwrap();
-    split_el.style().set_css_text("display: grid; grid-template-columns: 1fr 1fr; gap: 10px;");
+    split_el
+        .style()
+        .set_css_text("display: grid; grid-template-columns: 1fr 1fr; gap: 10px;");
 
     // Left: 4D Pins
     let left = document.create_element("div").unwrap();
@@ -151,7 +166,9 @@ pub fn build_chora_view(document: &Document, manager: &ChoraManager) -> Element 
     let left_title = document.create_element("span").unwrap();
     left_title.set_text_content(Some("\u{1F4CD} Attributed GeoSPARQL Entity Pins"));
     let left_title_el: HtmlElement = left_title.clone().dyn_into().unwrap();
-    left_title_el.style().set_css_text("font-weight: 700; font-size: 12px; color: #38bdf8;");
+    left_title_el
+        .style()
+        .set_css_text("font-weight: 700; font-size: 12px; color: #38bdf8;");
     left.append_child(&left_title).unwrap();
 
     for pin in &manager.pins {
@@ -170,14 +187,18 @@ pub fn build_chora_view(document: &Document, manager: &ChoraManager) -> Element 
         let epoch = document.create_element("span").unwrap();
         epoch.set_text_content(Some(&format!("{} CE", pin.year_epoch)));
         let epoch_el: HtmlElement = epoch.clone().dyn_into().unwrap();
-        epoch_el.style().set_css_text("font-size: 10px; font-family: var(--font-mono); color: #fbbf24;");
+        epoch_el
+            .style()
+            .set_css_text("font-size: 10px; font-family: var(--font-mono); color: #fbbf24;");
         top.append_child(&epoch).unwrap();
         card.append_child(&top).unwrap();
 
         let summary = document.create_element("div").unwrap();
         summary.set_text_content(Some(&pin.claim_summary));
         let summary_el: HtmlElement = summary.clone().dyn_into().unwrap();
-        summary_el.style().set_css_text("font-size: 11px; color: #cbd5e1;");
+        summary_el
+            .style()
+            .set_css_text("font-size: 11px; color: #cbd5e1;");
         card.append_child(&summary).unwrap();
 
         let meta = document.create_element("div").unwrap();
@@ -190,7 +211,12 @@ pub fn build_chora_view(document: &Document, manager: &ChoraManager) -> Element 
 
         let trust = document.create_element("span").unwrap();
         trust.set_text_content(Some(&format!("Trust: {:.0}%", pin.trust_weight * 100.0)));
-        trust.clone().dyn_into::<HtmlElement>().unwrap().style().set_css_text("color: #34d399; font-weight: 700;");
+        trust
+            .clone()
+            .dyn_into::<HtmlElement>()
+            .unwrap()
+            .style()
+            .set_css_text("color: #34d399; font-weight: 700;");
         meta.append_child(&trust).unwrap();
 
         card.append_child(&meta).unwrap();
@@ -206,7 +232,9 @@ pub fn build_chora_view(document: &Document, manager: &ChoraManager) -> Element 
     let right_title = document.create_element("span").unwrap();
     right_title.set_text_content(Some("\u{2696}\u{FE0F} Dialectical Perspective Synthesis"));
     let right_title_el: HtmlElement = right_title.clone().dyn_into().unwrap();
-    right_title_el.style().set_css_text("font-weight: 700; font-size: 12px; color: #38bdf8;");
+    right_title_el
+        .style()
+        .set_css_text("font-weight: 700; font-size: 12px; color: #38bdf8;");
     right.append_child(&right_title).unwrap();
 
     for claim in &manager.active_claims {
@@ -217,17 +245,24 @@ pub fn build_chora_view(document: &Document, manager: &ChoraManager) -> Element 
         let thesis = document.create_element("div").unwrap();
         thesis.set_text_content(Some(&format!("\u{25B6} Thesis: {}", claim.thesis)));
         let thesis_el: HtmlElement = thesis.clone().dyn_into().unwrap();
-        thesis_el.style().set_css_text("font-size: 11px; color: #38bdf8;");
+        thesis_el
+            .style()
+            .set_css_text("font-size: 11px; color: #38bdf8;");
         claim_box.append_child(&thesis).unwrap();
 
         let antithesis = document.create_element("div").unwrap();
         antithesis.set_text_content(Some(&format!("\u{25B6} Antithesis: {}", claim.antithesis)));
         let antithesis_el: HtmlElement = antithesis.clone().dyn_into().unwrap();
-        antithesis_el.style().set_css_text("font-size: 11px; color: #f472b6;");
+        antithesis_el
+            .style()
+            .set_css_text("font-size: 11px; color: #f472b6;");
         claim_box.append_child(&antithesis).unwrap();
 
         let synth = document.create_element("div").unwrap();
-        synth.set_text_content(Some(&format!("\u{2728} Synthesis: {}", claim.synthesis_status)));
+        synth.set_text_content(Some(&format!(
+            "\u{2728} Synthesis: {}",
+            claim.synthesis_status
+        )));
         let synth_el: HtmlElement = synth.clone().dyn_into().unwrap();
         synth_el.style().set_css_text("font-size: 10px; font-family: var(--font-mono); color: #34d399; background: rgba(0,0,0,0.4); padding: 4px; border-radius: 4px;");
         claim_box.append_child(&synth).unwrap();

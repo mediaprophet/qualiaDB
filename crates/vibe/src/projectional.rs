@@ -755,7 +755,9 @@ fn project_expr(expr: &Expr, opts: &ProjectOptions, out: &mut String) {
             out.push_str(" |> ");
             project_expr(right, opts, out);
         }
-        ExprKind::GraphQuery { is_ask, pattern, .. } => {
+        ExprKind::GraphQuery {
+            is_ask, pattern, ..
+        } => {
             if *is_ask {
                 out.push_str("graph? { ");
             } else {
@@ -764,7 +766,11 @@ fn project_expr(expr: &Expr, opts: &ProjectOptions, out: &mut String) {
             out.push_str(pattern);
             out.push_str(" }");
         }
-        ExprKind::ModalLogic { modality, args, body } => {
+        ExprKind::ModalLogic {
+            modality,
+            args,
+            body,
+        } => {
             let name = match modality {
                 ModalKind::DeonticObligate => "obligate",
                 ModalKind::DeonticPermit => "permit",

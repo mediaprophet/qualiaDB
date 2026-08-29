@@ -737,7 +737,9 @@ impl ZkProofSystem {
         _a: &[i128],
         _b: &[i128],
     ) -> Result<(bool, Vec<i128>), ZkError> {
-        Err(ZkError::EngineError("zk-culling feature not enabled".to_string()))
+        Err(ZkError::EngineError(
+            "zk-culling feature not enabled".to_string(),
+        ))
     }
 
     /// Get performance statistics

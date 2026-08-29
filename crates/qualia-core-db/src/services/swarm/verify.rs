@@ -150,7 +150,7 @@ fn verify_artifact(
             Err(_) => {
                 return VerificationVerdict::Rejected {
                     reason: "artifact could not be scored",
-                }
+                };
             }
         };
         // Pessimistic rank: 1 + #{ other candidates scoring ≥ the true tail }.
@@ -165,7 +165,7 @@ fn verify_artifact(
                 Err(_) => {
                     return VerificationVerdict::Rejected {
                         reason: "artifact could not be scored",
-                    }
+                    };
                 }
             }
         }

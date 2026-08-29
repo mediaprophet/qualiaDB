@@ -281,19 +281,17 @@ impl Compiler {
                 self.emit_op(Op::MakeRecord)?;
                 self.emit_u16(fields.len() as u16)
             }
-            ExprKind::Pipe { left, right } => {
-                match &right.kind {
-                    ExprKind::Call { callee, args } => {
-                        let mut all_args = vec![crate::ast::Arg::Pos((**left).clone())];
-                        all_args.extend(args.iter().cloned());
-                        self.compile_call(callee, &all_args)
-                    }
-                    _ => {
-                        let all_args = vec![crate::ast::Arg::Pos((**left).clone())];
-                        self.compile_call(right, &all_args)
-                    }
+            ExprKind::Pipe { left, right } => match &right.kind {
+                ExprKind::Call { callee, args } => {
+                    let mut all_args = vec![crate::ast::Arg::Pos((**left).clone())];
+                    all_args.extend(args.iter().cloned());
+                    self.compile_call(callee, &all_args)
                 }
-            }
+                _ => {
+                    let all_args = vec![crate::ast::Arg::Pos((**left).clone())];
+                    self.compile_call(right, &all_args)
+                }
+            },
             ExprKind::Interpolate(parts) => {
                 if parts.is_empty() {
                     let idx = self.add_string("")?;
@@ -1084,8 +1082,8 @@ mod tests {
 
     #[test]
     fn compile_quantity_keeps_unit_opcode() {
-        let chunk = compile_expr(&crate::parse::parse_cell("= 500ms").expect("parse"))
-            .expect("compile");
+        let chunk =
+            compile_expr(&crate::parse::parse_cell("= 500ms").expect("parse")).expect("compile");
         assert!(
             chunk.code.contains(&(Op::PushQuantity as u8)),
             "quantity literal must emit PushQuantity, not a bare float"

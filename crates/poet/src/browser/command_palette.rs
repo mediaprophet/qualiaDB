@@ -3,6 +3,7 @@
 //! Copyright (c) 2026 Timothy Charles Holborn. All rights reserved.
 
 mod commands;
+mod placements;
 
 use commands::{build_command_list, CommandEntry};
 use wasm_bindgen::prelude::Closure;
@@ -542,6 +543,56 @@ fn execute_command(label: &str) {
         return;
     }
 
+    if let Some(name) = label.strip_prefix("Open Construct: ") {
+        let id = match name {
+            "POET" => "poet",
+            "Health" => "health",
+            "Research lab" => "research-lab",
+            "Studio" => "studio",
+            "Rights" => "rights",
+            "Knowledge" => "knowledge",
+            "Projects" => "projects",
+            _ => return,
+        };
+        super::open_construct(id, None);
+        return;
+    }
+    match label {
+        "Construct Shelf" => {
+            super::open_construct("poet", Some("settings"));
+            return;
+        }
+        "Anatomy manifold" => {
+            super::dive_nested_manifold("anatomy");
+            return;
+        }
+        "Author manifold" => {
+            super::manifold_authoring::open_authoring_dialog_kind(&document, "lens");
+            return;
+        }
+        "Author container" => {
+            super::manifold_authoring::open_authoring_dialog_kind(&document, "container");
+            return;
+        }
+        "Author nested link" => {
+            super::manifold_authoring::open_authoring_dialog_kind(&document, "nested");
+            return;
+        }
+        "Author subject" => {
+            super::manifold_authoring::open_authoring_dialog_kind(&document, "subject");
+            return;
+        }
+        "Pop nested manifold" => {
+            super::pop_nested_manifold();
+            return;
+        }
+        "Invite participant" => {
+            super::manifold_social::open_invite_dialog(&document);
+            return;
+        }
+        _ => {}
+    }
+
     // Document and canvas placement commands
     match label {
         "New Document" => {
@@ -549,11 +600,7 @@ fn execute_command(label: &str) {
             return;
         }
         "New Sheet" => {
-            super::interactions::place_container_via_menu(
-                &document,
-                "spreadsheet",
-                "Spreadsheet",
-            );
+            super::interactions::place_container_via_menu(&document, "spreadsheet", "Spreadsheet");
             return;
         }
         "Auto-Arrange Manifold (Tidy)" | "Auto-Arrange Manifold" => {
@@ -585,6 +632,10 @@ fn execute_command(label: &str) {
             super::search_workbench::open_to_mode(&document, "saved");
             return;
         }
+        "Run SPARQL Query" => {
+            super::search_workbench::open_to_mode(&document, "sparql");
+            return;
+        }
         _ => {}
     }
 
@@ -593,7 +644,12 @@ fn execute_command(label: &str) {
         return;
     }
 
-    // For other commands — show honest "present" notification
+    if let Some((container_type, title)) = placements::container_for(label) {
+        super::interactions::place_container_via_menu(&document, container_type, title);
+        return;
+    }
+
+    // Fail closed if a catalogue entry ever drifts away from a real handler.
     let notif = document.create_element("div").unwrap();
     let n_el: HtmlElement = notif.clone().dyn_into().unwrap();
     n_el.style().set_css_text(
@@ -603,8 +659,7 @@ fn execute_command(label: &str) {
          box-shadow: var(--shadow-lg); z-index: 500; max-width: 320px;",
     );
     notif.set_text_content(Some(&format!(
-        "\u{1F4A1} {} \u{2014} present, engine wiring pending",
-        label
+        "Unavailable: `{label}` has no registered command implementation."
     )));
     if let Some(body) = document.body() {
         body.append_child(&notif).unwrap();

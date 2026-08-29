@@ -8,15 +8,23 @@ This is how the workbench is named. HTML `<canvas>` / wgpu / Canvas2D stay **can
 
 ---
 
-## 1. Three kinds of thing (many types of each)
+## 1. Four kinds of thing (plus furniture)
+
+See [ADR 0012](adr/0012-construct-is-the-distributable-composition.md). QApp is **not** a runtime type.
 
 | Kind | What it is | Many of… |
 |---|---|---|
-| **Manifold** | A work *surface* (virtual desktop). Same word as the engine 10D manifold. | Research, Media, Social, Settings, Vibe, … |
-| **Container** | A typed *occupant* placed on a manifold. | doc, sheet, code, map, social, health, … |
+| **Construct** | **This user’s** Qualia/Webizen/POET environment on their hardware: interconnected manifolds of interactivism, unique to them. Not the infosphere/noosphere (those are broader layers their construct may join). Not an app; not a person. | POET, Health, Research lab, Studio, Rights, Knowledge |
+| **Subject** | The *thing under consideration* (plant, place, diegetic world). Aspects become nested manifolds. Declared with `Poet.subject_declare`; stored as `SubjectSeed` (not a construct). | A plant; Star Trek; a catchment |
+| **Project** | Shared, time-bound delivery (camping network, SDG programme). Authored *from* constructs; already a POET family. | Camping sites; an SDG programme |
+| **Manifold** | A *lens* / work surface. Lives on a construct; may be an aspect of a subject. May be **personal** (one observer) or **social** (many people — especially projects). Anatomy is a manifold, not a construct. | Research, Media, Social, Health, Anatomy, Projects, … |
+| **Container** | A typed *occupant* placed on a manifold. May portal to another manifold or construct. | doc, sheet, nested_manifold, construct_shelf, domain_lab, … |
+| **Workspace** | Live projection of an open construct onto this machine’s devices. | (one session) |
 | **Tool chest** | The *furniture* that holds toolboxes. One chest per workbench, dockable. | (usually one) |
 | **Toolbox** | A *themed drawer* inside the chest. | Vibe, Documents, Sheets, Spatial, Social, Rights, Health, Epistemic |
 | **Tool** | One *action* in a toolbox (often “place this container”). | + Document, Run cell, Gazetteer, … |
+
+**Library Software** is how you *find* a scope. The **construct shelf** (Settings) is the desk of scopes this observer holds. Stubs stay in the library until they have lenses (manifolds).
 
 A **tool chest** is not a toolbox. The chest is the rack; a toolbox is a drawer; a tool is what you pick up.
 
@@ -26,7 +34,7 @@ Legacy mock folder `toolboxes/` is the chest’s contents. Do not rename HTML/GP
 
 ## 2. Manifolds
 
-Switchable surfaces, like a pager of virtual desktops. A container on one manifold can target another (**sub-manifold**).
+Lenses inside a construct — switchable surfaces, like a pager of virtual desktops. A container on one manifold can target another (**nested manifold**). Anatomy is a lens, not a construct.
 
 | Id | Role |
 |---|---|
@@ -36,7 +44,9 @@ Switchable surfaces, like a pager of virtual desktops. A container on one manifo
 | `settings` | capabilities, fiduciary VM, sub-manifolds |
 | `vibe` | VibeScript console + diagnose (human door into Qualia) |
 
-Pager: Overview + numbered surfaces + `+`. Shortcuts later: Alt+1… 
+Pager: Overview + numbered surfaces + `+`. Shortcuts later: Alt+1…
+
+The manifold surface is **not a fixed box**. Drag, place, and pan extend it in any direction (including left and up). The viewport is a window onto that world.
 
 ---
 
@@ -54,6 +64,8 @@ Placed by tools. Each type may be implemented at different honesty:
 | `media` | live | kinematics poses → `Render.scene`; swapchain on `/gpu-viewport` |
 | `social` | live | LWW + peer hash; ring is the renderer contract (no fake chat) |
 | `health` | live | Framingham on a **reference adult profile**, not a named person |
+| `nested_manifold` | live | portal; pager + breadcrumb dive/pop |
+| `subject` | live | `Poet.subject_declare` card; `SubjectSeed` |
 | `submanifold` | partial | nested `Manifold.axes` + same scene contract |
 | `webview` `webrtc` `portal` | present | not placed yet; do not fake streams |
 

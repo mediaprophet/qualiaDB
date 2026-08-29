@@ -142,11 +142,21 @@ pub fn families() -> Vec<&'static str> {
 /// One-line hover text for a catalog path or identifier.
 pub fn describe(path: &str) -> String {
     if let Some((family, preset)) = animation_preset(path) {
-        return format!("Animation preset `{preset}` (family {family}) → `Animation.evaluate_preset`");
+        return format!(
+            "Animation preset `{preset}` (family {family}) → `Animation.evaluate_preset`"
+        );
     }
     if let Some(id) = canonical_id(path) {
+        if id == "GraphAuthoring.process" || id == "N3Logic.evaluate" {
+            return format!(
+                "catalog `{id}` — graph host invoke (fail-closed; lease with `using {}`). Natural persons are rdfs:Class + SHACL/ShEx; owl:Thing is forbidden for persons.",
+                family_of(id).unwrap_or("graph")
+            );
+        }
         if let Some(fam) = family_of(id) {
-            return format!("catalog `{id}` — {fam} host invoke (fail-closed; lease with `using {fam};`)");
+            return format!(
+                "catalog `{id}` — {fam} host invoke (fail-closed; lease with `using {fam};`)"
+            );
         }
         return format!("catalog `{id}` — host invoke (fail-closed)");
     }
@@ -169,6 +179,10 @@ mod tests {
         assert!(is_known("HID.poll"));
         assert!(is_known("GraphDatabase.sparql"));
         assert!(is_known("DeonticLogic.evaluate"));
+        assert!(is_known("N3Logic.evaluate"));
+        assert!(is_known("GraphAuthoring.process"));
+        assert!(is_known("LegalLogic.compute"));
+        assert!(describe("GraphAuthoring.process").contains("owl:Thing"));
     }
 
     #[test]

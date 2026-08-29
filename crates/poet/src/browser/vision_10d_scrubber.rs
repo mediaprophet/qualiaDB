@@ -70,9 +70,13 @@ impl Vision10dManager {
     pub fn visible_point_count(&self) -> usize {
         match self.filter_mode {
             PointCloudFilterMode::AllPoints => self.header.point_count,
-            PointCloudFilterMode::LowPassSurface => (self.header.point_count as f64 * 0.75) as usize,
+            PointCloudFilterMode::LowPassSurface => {
+                (self.header.point_count as f64 * 0.75) as usize
+            }
             PointCloudFilterMode::BandPassEdge => (self.header.point_count as f64 * 0.40) as usize,
-            PointCloudFilterMode::HighPassFeature => (self.header.point_count as f64 * 0.15) as usize,
+            PointCloudFilterMode::HighPassFeature => {
+                (self.header.point_count as f64 * 0.15) as usize
+            }
         }
     }
 }
@@ -87,7 +91,7 @@ pub fn build_vision_10d_view(document: &Document, manager: &Vision10dManager) ->
     let root_el: HtmlElement = root.clone().dyn_into().unwrap();
     root_el.style().set_css_text(
         "display: flex; flex-direction: column; flex: 1; padding: 12px; gap: 10px; \
-         background: #020617; color: #f8fafc; overflow-y: auto; font-family: sans-serif;"
+         background: #020617; color: #f8fafc; overflow-y: auto; font-family: sans-serif;",
     );
 
     // Header Toolbar
@@ -96,24 +100,34 @@ pub fn build_vision_10d_view(document: &Document, manager: &Vision10dManager) ->
     let header_el: HtmlElement = header.clone().dyn_into().unwrap();
     header_el.style().set_css_text(
         "justify-content: space-between; background: rgba(30, 41, 59, 0.7); \
-         border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; padding: 8px 12px;"
+         border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; padding: 8px 12px;",
     );
 
     let title = document.create_element("span").unwrap();
-    title.set_text_content(Some("\u{1F52C} 4D Vision Reconstruction & .10d Container Scrubber"));
+    title.set_text_content(Some(
+        "\u{1F52C} 4D Vision Reconstruction & .10d Container Scrubber",
+    ));
     let title_el: HtmlElement = title.clone().dyn_into().unwrap();
-    title_el.style().set_css_text("font-weight: 700; font-size: 13px; color: #38bdf8;");
+    title_el
+        .style()
+        .set_css_text("font-weight: 700; font-size: 13px; color: #38bdf8;");
     header.append_child(&title).unwrap();
 
     let status = document.create_element("span").unwrap();
     status.set_text_content(Some(&format!(
         "CRC-32C: 0x{:08X} \u{25CF} Checksum: {} \u{25CF} Audio: {} Hz",
         manager.header.crc32c_checksum,
-        if manager.header.is_checksum_valid { "Valid \u{2713}" } else { "Mismatch \u{274C}" },
+        if manager.header.is_checksum_valid {
+            "Valid \u{2713}"
+        } else {
+            "Mismatch \u{274C}"
+        },
         manager.header.audio_sample_rate
     )));
     let status_el: HtmlElement = status.clone().dyn_into().unwrap();
-    status_el.style().set_css_text("font-size: 11px; font-family: var(--font-mono); color: #34d399;");
+    status_el
+        .style()
+        .set_css_text("font-size: 11px; font-family: var(--font-mono); color: #34d399;");
     header.append_child(&status).unwrap();
 
     root.append_child(&header).unwrap();
@@ -121,7 +135,9 @@ pub fn build_vision_10d_view(document: &Document, manager: &Vision10dManager) ->
     // 2-Column Split: Scrubber & 3D Visualizer on Left, Container Specs on Right
     let split = document.create_element("div").unwrap();
     let split_el: HtmlElement = split.clone().dyn_into().unwrap();
-    split_el.style().set_css_text("display: grid; grid-template-columns: 1fr 1fr; gap: 10px;");
+    split_el
+        .style()
+        .set_css_text("display: grid; grid-template-columns: 1fr 1fr; gap: 10px;");
 
     // Left: 4D Temporal Controls & Point Cloud Status
     let left = document.create_element("div").unwrap();
@@ -131,11 +147,18 @@ pub fn build_vision_10d_view(document: &Document, manager: &Vision10dManager) ->
     let left_title = document.create_element("span").unwrap();
     left_title.set_text_content(Some("\u{23EF}\u{FE0F} 4D Point Cloud Temporal Playhead"));
     let left_title_el: HtmlElement = left_title.clone().dyn_into().unwrap();
-    left_title_el.style().set_css_text("font-weight: 700; font-size: 12px; color: #38bdf8;");
+    left_title_el
+        .style()
+        .set_css_text("font-weight: 700; font-size: 12px; color: #38bdf8;");
     left.append_child(&left_title).unwrap();
 
     let playhead = document.create_element("div").unwrap();
-    playhead.set_text_content(Some(&format!("Time: {:.2}s / {:.2}s \u{00B7} Active Points: {}", manager.current_time_sec, manager.max_duration_sec, manager.visible_point_count())));
+    playhead.set_text_content(Some(&format!(
+        "Time: {:.2}s / {:.2}s \u{00B7} Active Points: {}",
+        manager.current_time_sec,
+        manager.max_duration_sec,
+        manager.visible_point_count()
+    )));
     let playhead_el: HtmlElement = playhead.clone().dyn_into().unwrap();
     playhead_el.style().set_css_text("font-size: 11px; font-family: var(--font-mono); color: #fbbf24; background: rgba(0,0,0,0.3); padding: 6px; border-radius: 4px;");
     left.append_child(&playhead).unwrap();
@@ -156,7 +179,9 @@ pub fn build_vision_10d_view(document: &Document, manager: &Vision10dManager) ->
     let right_title = document.create_element("span").unwrap();
     right_title.set_text_content(Some("\u{1F4E6} .10d Binary Container Geometry & Tensors"));
     let right_title_el: HtmlElement = right_title.clone().dyn_into().unwrap();
-    right_title_el.style().set_css_text("font-weight: 700; font-size: 12px; color: #38bdf8;");
+    right_title_el
+        .style()
+        .set_css_text("font-weight: 700; font-size: 12px; color: #38bdf8;");
     right.append_child(&right_title).unwrap();
 
     let spec_info = document.create_element("pre").unwrap();

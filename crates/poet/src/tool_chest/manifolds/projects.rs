@@ -5,6 +5,7 @@
 use super::super::core::registry::{
     DockPosition, ManifoldSeed, SeedConnection, SeedContainer, SeedPanel,
 };
+use super::super::core::ManifoldSociality;
 
 pub fn projects_manifold_seed() -> ManifoldSeed {
     ManifoldSeed {
@@ -12,7 +13,7 @@ pub fn projects_manifold_seed() -> ManifoldSeed {
         label: "Projects".into(),
         icon: "projects".into(),
         ontology_prefix: "coop".into(),
-        description: "Collaborative projects \u{2014} sheet, kanban, budget, cost base, deliverables, reviews, discussion, roadmap, commons, pulse stream."
+        description: "Collaborative projects \u{2014} a social manifold: many people, members, presence, sheet, kanban, budget, discussion, commons."
             .into(),
         containers: vec![
             SeedContainer {
@@ -587,6 +588,28 @@ pub fn projects_manifold_seed() -> ManifoldSeed {
                 honesty: "present".into(),
                 ..Default::default()
             },
+            SeedContainer {
+                container_type: "participants".into(),
+                title: "People on this project".into(),
+                x: 30.0,
+                y: 9110.0,
+                width: 660.0,
+                height: 240.0,
+                z: 1.0,
+                honesty: "live".into(),
+                ..Default::default()
+            },
+            SeedContainer {
+                container_type: "presence".into(),
+                title: "Who is here".into(),
+                x: 710.0,
+                y: 9110.0,
+                width: 660.0,
+                height: 240.0,
+                z: 1.0,
+                honesty: "live".into(),
+                ..Default::default()
+            },
         ],
         connections: vec![
             SeedConnection {
@@ -951,5 +974,7 @@ pub fn projects_manifold_seed() -> ManifoldSeed {
             panel_type: "aura".into(),
             dock: DockPosition::Right,
         }],
+        sociality: ManifoldSociality::Social,
+        ..Default::default()
     }
 }

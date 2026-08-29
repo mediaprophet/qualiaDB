@@ -6,11 +6,9 @@ use crate::tool_chest::core::registry::SeedContainer;
 use web_sys::{Document, Element};
 
 use super::container_inline_views::{
-    build_capabilities_view, build_channels_view, build_connection_requests_view,
-    build_conversations_view, build_gis_map_view, build_media_3d_view,
-    build_presence_view, build_protection_policies_view, build_reputation_view,
-    build_settings_view, build_social_chat_view, build_vibescript_console,
+    build_gis_map_view, build_media_3d_view, build_vibescript_console,
 };
+use super::specialist_persist;
 
 /// Build a single container node on the canvas.
 pub fn build_container(document: &Document, container: &SeedContainer) -> Element {
@@ -19,9 +17,33 @@ pub fn build_container(document: &Document, container: &SeedContainer) -> Elemen
         "canvas-container-node container-card container-kind-{}",
         container.kind.class_suffix()
     ));
-    el.set_attribute("data-id", &format!("container-{}", container.container_type)).unwrap();
+    let container_id = if container.id.is_empty() {
+        super::canvas_state::next_container_id(&container.container_type)
+    } else {
+        container.id.clone()
+    };
+    el.set_attribute("data-id", &container_id).unwrap();
     el.set_attribute("data-container-type", &container.container_type)
         .unwrap();
+    el.set_attribute("data-semantic-type", &container.semantic_type)
+        .unwrap();
+    el.set_attribute("data-semantic-uri", &container.semantic_uri)
+        .unwrap();
+    if !container.target_manifold.is_empty() {
+        el.set_attribute("data-target-manifold", &container.target_manifold)
+            .unwrap();
+    }
+    if !container.target_construct.is_empty() {
+        el.set_attribute("data-target-construct", &container.target_construct)
+            .unwrap();
+    }
+    el.set_attribute("role", "group").unwrap();
+    el.set_attribute("tabindex", "0").unwrap();
+    el.set_attribute(
+        "aria-label",
+        &format!("{} {} container", container.title, container.container_type),
+    )
+    .unwrap();
 
     // Set strata and epistemic data attributes for filtering
     let (strata, epistemic) = container_type_filter_attrs(&container.container_type);
@@ -30,11 +52,11 @@ pub fn build_container(document: &Document, container: &SeedContainer) -> Elemen
 
     let style = format!(
         "left: {}px; top: {}px; width: {}px; height: {}px; z-index: {};",
-        container.x as u32,
-        container.y as u32,
-        container.width as u32,
-        container.height as u32,
-        container.z as u32
+        container.x.round() as i32,
+        container.y.round() as i32,
+        container.width.round() as i32,
+        container.height.round() as i32,
+        container.z.round() as i32
     );
     el.set_attribute("style", &style).unwrap();
 
@@ -94,12 +116,14 @@ pub fn build_container(document: &Document, container: &SeedContainer) -> Elemen
 
     match container.container_type.as_str() {
         "social" => {
-            body.append_child(&build_social_chat_view(document))
+            body.append_child(&super::social_workspace::build_social_view(document))
                 .unwrap();
         }
         "connection-requests" => {
-            body.append_child(&build_connection_requests_view(document))
-                .unwrap();
+            body.append_child(&specialist_persist::build_connection_requests_view(
+                document,
+            ))
+            .unwrap();
         }
         // --- Project container types (Workstream A) ---
         "kanban" => {
@@ -514,6 +538,12 @@ pub fn build_container(document: &Document, container: &SeedContainer) -> Elemen
             )
             .unwrap();
         }
+        "audio_session" => {
+            body.append_child(&super::studio_views::persist::build_audio_session_view(
+                document,
+            ))
+            .unwrap();
+        }
         "scene_view" => {
             body.append_child(&super::studio_views::scene_view::build_scene_view(document))
                 .unwrap();
@@ -799,31 +829,40 @@ pub fn build_container(document: &Document, container: &SeedContainer) -> Elemen
             .unwrap();
         }
         "reputation" => {
-            body.append_child(&build_reputation_view(document)).unwrap();
-        }
-        "protection-policies" => {
-            body.append_child(&build_protection_policies_view(document))
+            body.append_child(&specialist_persist::build_reputation_view(document))
                 .unwrap();
         }
+        "protection-policies" => {
+            body.append_child(&specialist_persist::build_protection_policies_view(
+                document,
+            ))
+            .unwrap();
+        }
         "capabilities" => {
-            body.append_child(&build_capabilities_view(document)).unwrap();
+            body.append_child(&specialist_persist::build_capabilities_view(document))
+                .unwrap();
         }
         "settings" => {
-            body.append_child(&build_settings_view(document)).unwrap();
+            body.append_child(&specialist_persist::build_settings_view(document))
+                .unwrap();
         }
         "conversations" => {
-            body.append_child(&build_conversations_view(document))
+            body.append_child(&specialist_persist::build_conversations_view(document))
                 .unwrap();
         }
         "channels" => {
-            body.append_child(&build_channels_view(document)).unwrap();
+            body.append_child(&specialist_persist::build_channels_view(document))
+                .unwrap();
         }
         "presence" => {
-            body.append_child(&build_presence_view(document)).unwrap();
+            body.append_child(&specialist_persist::build_presence_view(document))
+                .unwrap();
         }
         "dual_studio" | "dual-studio" => {
-            body.append_child(&super::studio_views::dual_studio::build_dual_studio_view(document))
-                .unwrap();
+            body.append_child(&super::studio_views::dual_studio::build_dual_studio_view(
+                document,
+            ))
+            .unwrap();
         }
         "webrtc_sync" | "webrtc-sync" => {
             body.append_child(&super::webrtc_sync::build_webrtc_sync_view(document))
@@ -834,19 +873,27 @@ pub fn build_container(document: &Document, container: &SeedContainer) -> Elemen
                 .unwrap();
         }
         "solid_interop" | "solid-interop" => {
-            let bundle = super::solid_interop::SolidPodBundle::new("https://solid.webizen.id/profile/card#me");
-            body.append_child(&super::solid_interop::build_solid_pod_hub_view(document, &bundle))
-                .unwrap();
+            let bundle = super::solid_interop::SolidPodBundle::new(
+                "https://solid.webizen.id/profile/card#me",
+            );
+            body.append_child(&super::solid_interop::build_solid_pod_hub_view(
+                document, &bundle,
+            ))
+            .unwrap();
         }
         "shader_pipelines" | "shader-pipelines" => {
-            body.append_child(&super::shader_pipelines::build_shader_pipeline_view(document))
-                .unwrap();
+            body.append_child(&super::shader_pipelines::build_shader_pipeline_view(
+                document,
+            ))
+            .unwrap();
         }
         "cooperative_economics" | "cooperative-economics" => {
-            body.append_child(&super::cooperative_economics::build_cooperative_economics_view(
-                document,
-                &super::cooperative_economics::TrueCostModel::default(),
-            ))
+            body.append_child(
+                &super::cooperative_economics::build_cooperative_economics_view(
+                    document,
+                    &super::cooperative_economics::TrueCostModel::default(),
+                ),
+            )
             .unwrap();
         }
         "map" => {
@@ -884,154 +931,224 @@ pub fn build_container(document: &Document, container: &SeedContainer) -> Elemen
                 .unwrap();
         }
         "wallet" => {
-            body.append_child(&super::rights_views::build_wallet_view(document))
+            body.append_child(&specialist_persist::build_wallet_view(document))
                 .unwrap();
         }
         "library" => {
-            body.append_child(&super::container_views_ext::build_library_view(document))
+            body.append_child(&super::semantic_library_view::build(document))
                 .unwrap();
         }
         "aura" => {
-            body.append_child(&super::container_views_ext::build_aura_view(document))
+            body.append_child(&specialist_persist::build_aura_view(document))
                 .unwrap();
         }
         "latex" => {
-            body.append_child(&super::container_views_ext::build_latex_view(document))
+            body.append_child(&super::local_container_views::build_latex_view(document))
                 .unwrap();
         }
         "health" => {
-            body.append_child(&super::container_views_ext::build_health_view(document))
+            body.append_child(&specialist_persist::build_health_vault_view(document))
                 .unwrap();
         }
+        "mail" => {
+            let mailbox = super::mail_composer::MailboxManager::new("personal.example");
+            body.append_child(&super::mail_composer::build_mailbox_view(
+                document, &mailbox,
+            ))
+            .unwrap();
+        }
         "anatomy" => {
-            body.append_child(&super::container_views_ext::build_anatomy_view(document))
+            body.append_child(&specialist_persist::build_anatomy_view(document))
                 .unwrap();
         }
         "webview" => {
-            body.append_child(&super::container_views_ext::build_webview_view(document))
+            body.append_child(&specialist_persist::build_webview_view(document))
                 .unwrap();
         }
         "webrtc" => {
-            body.append_child(&super::container_views_ext::build_webrtc_view(document))
+            body.append_child(&specialist_persist::build_webrtc_view(document))
                 .unwrap();
         }
         "finance" => {
-            body.append_child(&super::container_views_ext::build_finance_view(document))
+            body.append_child(&specialist_persist::build_finance_view(document))
                 .unwrap();
         }
         "vision" => {
-            body.append_child(&super::container_views_ext::build_vision_view(document))
+            body.append_child(&specialist_persist::build_vision_view(document))
                 .unwrap();
         }
         "listen" => {
-            body.append_child(&super::container_views_ext::build_listen_view(document))
+            body.append_child(&specialist_persist::build_listen_view(document))
                 .unwrap();
         }
         "triad" => {
-            body.append_child(&super::container_views_ext::build_triad_view(document))
+            body.append_child(&specialist_persist::build_triad_view(document))
                 .unwrap();
         }
         "portal" => {
-            body.append_child(&super::container_views_ext::build_portal_view(document))
+            body.append_child(&specialist_persist::build_portal_view(document))
                 .unwrap();
         }
         "slide" => {
-            body.append_child(&super::container_views_ext::build_slide_view(document))
+            body.append_child(&super::local_container_views::build_slide_view(document))
                 .unwrap();
         }
         "3d" => {
-            body.append_child(&super::container_views_ext::build_3d_view(document))
+            body.append_child(&specialist_persist::build_3d_view(document))
                 .unwrap();
         }
-        "subcanvas" => {
-            body.append_child(&super::container_views_ext::build_subcanvas_view(document))
+        "subcanvas" | "nested_manifold" => {
+            let target = if container.target_manifold.is_empty() {
+                "research"
+            } else {
+                container.target_manifold.as_str()
+            };
+            body.append_child(&super::construct_shelf::build_nested_manifold_view(
+                document, target,
+            ))
+            .unwrap();
+        }
+        "construct_shelf" => {
+            body.append_child(&super::construct_shelf::build_construct_shelf_view(
+                document,
+            ))
+            .unwrap();
+        }
+        "construct_portal" => {
+            body.append_child(&super::construct_shelf::build_construct_portal_view(
+                document,
+                &container.target_construct,
+                &container.target_manifold,
+            ))
+            .unwrap();
+        }
+        "domain_lab" => {
+            body.append_child(&super::logic_workbench::build_domain_lab_view(document))
+                .unwrap();
+        }
+        "subject" => {
+            body.append_child(&super::construct_shelf::build_subject_view(
+                document, container,
+            ))
+            .unwrap();
+        }
+        "participants" => {
+            body.append_child(&super::manifold_social::build_participants_view(document))
                 .unwrap();
         }
         // --- Workflow panel containers (see SAVE_ARCHITECTURE.md) ---
         "checkpoint-tray" => {
-            body.append_child(&super::workflow_panels::build_checkpoint_tray_view(
+            body.append_child(&super::checkpoint_panel::build_checkpoint_tray_view(
                 document,
             ))
             .unwrap();
         }
         "credential-inspector" => {
-            body.append_child(&super::workflow_panels::build_credential_inspector_view(
-                document,
-            ))
-            .unwrap();
+            body.append_child(&super::governance_workflow::build_credential_view(document))
+                .unwrap();
         }
         "context-markup-editor" => {
-            body.append_child(&super::workflow_panels::build_context_markup_editor_view(
+            body.append_child(&super::governance_workflow::build_context_markup_view(
                 document,
             ))
             .unwrap();
         }
         "provenance-panel" => {
-            body.append_child(&super::workflow_panels::build_provenance_panel_view(
-                document,
-            ))
-            .unwrap();
+            body.append_child(&super::governance_workflow::build_provenance_view(document))
+                .unwrap();
         }
         "publication-workflow" => {
-            body.append_child(&super::workflow_panels::build_publication_workflow_view(
+            body.append_child(&super::publication_panel::build_publication_workflow_view(
                 document,
             ))
             .unwrap();
         }
         "constituency-manager" => {
-            body.append_child(&super::workflow_panels::build_constituency_manager_view(
+            body.append_child(&super::governance_workflow::build_constituency_view(
                 document,
             ))
             .unwrap();
         }
         // --- Widget containers ---
         "capability-badge" => {
-            body.append_child(&super::workflow_panels::build_capability_badge_view(
+            body.append_child(&super::governance_workflow::build_capability_badge_view(
                 document,
             ))
             .unwrap();
         }
         "checkpoint-indicator" => {
-            body.append_child(&super::workflow_panels::build_checkpoint_indicator_view(
+            body.append_child(&super::checkpoint_panel::build_checkpoint_indicator_view(
                 document,
             ))
             .unwrap();
         }
         "consent-indicator" => {
-            body.append_child(&super::workflow_panels::build_consent_indicator_view(
-                document,
-            ))
-            .unwrap();
+            body.append_child(&super::governance_workflow::build_consent_view(document))
+                .unwrap();
         }
         _ => {
             let ph = document.create_element("div").unwrap();
             ph.set_class_name("container-placeholder");
             ph.set_text_content(Some(&format!(
-                "{} \u{2014} awaiting backend wiring.",
-                container.title
+                "Unavailable: no standalone renderer is registered for container type `{}` ({}).",
+                container.container_type, container.title
             )));
+            ph.set_attribute("role", "status").unwrap();
+            ph.set_attribute("data-honesty", "unavailable").unwrap();
             body.append_child(&ph).unwrap();
         }
     }
+    if !container.content_html.is_empty() {
+        if let Ok(Some(editor)) = body.query_selector(".doc-editor") {
+            editor.set_inner_html(&container.content_html);
+        }
+    }
     el.append_child(&body).unwrap();
+    super::tool_widgets::restore_container_settings(&el, &container.tool_settings);
+    super::view_state::restore(&el, &container.view_state);
+    super::surface_honesty::enforce(document, &body, &container.container_type);
 
     // Connection ports
-    let port_in = document.create_element("div").unwrap();
+    let port_in = document.create_element("button").unwrap();
     port_in.set_class_name("container-port port-in");
+    port_in.set_attribute("type", "button").unwrap();
+    port_in
+        .set_attribute(
+            "aria-label",
+            "Input port: connect an incoming semantic wire",
+        )
+        .unwrap();
     port_in.set_attribute("data-port", "in").unwrap();
-    port_in.set_attribute("title", "Input Port: drop incoming reactive wire here").unwrap();
+    port_in
+        .set_attribute("title", "Input Port: drop incoming reactive wire here")
+        .unwrap();
     el.append_child(&port_in).unwrap();
 
-    let port_out = document.create_element("div").unwrap();
+    let port_out = document.create_element("button").unwrap();
     port_out.set_class_name("container-port port-out");
+    port_out.set_attribute("type", "button").unwrap();
+    port_out
+        .set_attribute("aria-label", "Output port: start a semantic wire")
+        .unwrap();
     port_out.set_attribute("data-port", "out").unwrap();
-    port_out.set_attribute("title", "Output Port: drag to connect reactive wire to another container").unwrap();
+    port_out
+        .set_attribute(
+            "title",
+            "Output Port: drag to connect reactive wire to another container",
+        )
+        .unwrap();
     el.append_child(&port_out).unwrap();
 
     // Resize handle
     let resizer = document.create_element("div").unwrap();
     resizer.set_class_name("container-resizer resize-handle");
-    resizer.set_attribute("title", "Drag to resize container").unwrap();
+    resizer
+        .set_attribute("title", "Drag to resize container")
+        .unwrap();
+    resizer.set_attribute("role", "separator").unwrap();
+    resizer
+        .set_attribute("aria-label", "Resize container")
+        .unwrap();
     el.append_child(&resizer).unwrap();
 
     el
@@ -1056,6 +1173,8 @@ fn container_type_filter_attrs(container_type: &str) -> (&'static str, &'static 
         "map"
         | "media"
         | "3d"
+        | "dual_studio"
+        | "audio_session"
         | "vision"
         | "listen"
         | "triad"
@@ -1309,6 +1428,8 @@ fn container_type_tag(container_type: &str) -> (&'static str, &'static str) {
         "authority_attestations" => ("tag-health", "ATT"),
         "safeguards" => ("tag-health", "SAFE"),
         "disclosure_log" => ("tag-health", "DCL"),
+        "audio_session" => ("tag-studio", "AUD"),
+        "dual_studio" => ("tag-studio", "DUAL"),
         "scene_view" => ("tag-studio", "3D"),
         "animation_timeline" => ("tag-studio", "ANI"),
         "desk_surface" => ("tag-studio", "DESK"),
@@ -1355,6 +1476,10 @@ fn container_type_tag(container_type: &str) -> (&'static str, &'static str) {
         "workspace_sync" => ("tag-device", "SYNC"),
         "device_role_assigner" => ("tag-device", "ROLE"),
         "remote_control" => ("tag-device", "RMOT"),
+        "subject" => ("tag-knowledge", "SUBJ"),
+        "participants" => ("tag-social", "PEOPLE"),
+        "nested_manifold" | "subcanvas" => ("tag-default", "NEST"),
+        "construct_portal" | "construct_shelf" => ("tag-default", "CSTR"),
         _ => ("tag-default", "CONTAINER"),
     }
 }

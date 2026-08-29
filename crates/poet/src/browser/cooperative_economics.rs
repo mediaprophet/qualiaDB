@@ -33,19 +33,37 @@ impl SocialRoutingLane {
 /// Ontological classification of a requesting network peer.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum PeerOntologyClass {
-    NaturalPerson { is_human_verified: bool },
-    ResearchCollective { lab_name: String },
-    Corporation { company_name: String, tax_id: Option<String> },
+    NaturalPerson {
+        is_human_verified: bool,
+    },
+    ResearchCollective {
+        lab_name: String,
+    },
+    Corporation {
+        company_name: String,
+        tax_id: Option<String>,
+    },
     AnonymousOrUnverified,
 }
 
 /// Verdict returned by the Ontological Pricing Engine.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum AccessVerdict {
-    PermitFree { free_bandwidth_gb: u32, reason: String },
-    ReciprocalBarter { allowed_storage_gb: u32, required_return: String },
-    MeteredPayment { rate_per_gb_cents: u32, rate_per_gpu_sec_cents: u32 },
-    Deny { reason: String },
+    PermitFree {
+        free_bandwidth_gb: u32,
+        reason: String,
+    },
+    ReciprocalBarter {
+        allowed_storage_gb: u32,
+        required_return: String,
+    },
+    MeteredPayment {
+        rate_per_gb_cents: u32,
+        rate_per_gpu_sec_cents: u32,
+    },
+    Deny {
+        reason: String,
+    },
 }
 
 /// Evaluator for Ontological Economic Access Policies.
@@ -54,35 +72,31 @@ pub struct OntologicalPricingEngine;
 impl OntologicalPricingEngine {
     pub fn evaluate_peer(peer: &PeerOntologyClass) -> AccessVerdict {
         match peer {
-            PeerOntologyClass::NaturalPerson { is_human_verified: true } => {
-                AccessVerdict::PermitFree {
-                    free_bandwidth_gb: 25,
-                    reason: "Universal human commons quota (inquiry & basic research)".into(),
-                }
-            }
-            PeerOntologyClass::NaturalPerson { is_human_verified: false } => {
-                AccessVerdict::PermitFree {
-                    free_bandwidth_gb: 5,
-                    reason: "Unverified human trial quota".into(),
-                }
-            }
-            PeerOntologyClass::ResearchCollective { lab_name } => {
-                AccessVerdict::ReciprocalBarter {
-                    allowed_storage_gb: 50,
-                    required_return: format!("qualia:FederatedGradientAccess with {}", lab_name),
-                }
-            }
+            PeerOntologyClass::NaturalPerson {
+                is_human_verified: true,
+            } => AccessVerdict::PermitFree {
+                free_bandwidth_gb: 25,
+                reason: "Universal human commons quota (inquiry & basic research)".into(),
+            },
+            PeerOntologyClass::NaturalPerson {
+                is_human_verified: false,
+            } => AccessVerdict::PermitFree {
+                free_bandwidth_gb: 5,
+                reason: "Unverified human trial quota".into(),
+            },
+            PeerOntologyClass::ResearchCollective { lab_name } => AccessVerdict::ReciprocalBarter {
+                allowed_storage_gb: 50,
+                required_return: format!("qualia:FederatedGradientAccess with {}", lab_name),
+            },
             PeerOntologyClass::Corporation { .. } => {
                 AccessVerdict::MeteredPayment {
-                    rate_per_gb_cents: 15,       // $0.15 AUD / GB
-                    rate_per_gpu_sec_cents: 5,   // $0.05 AUD / GPU-sec
+                    rate_per_gb_cents: 15,     // $0.15 AUD / GB
+                    rate_per_gpu_sec_cents: 5, // $0.05 AUD / GPU-sec
                 }
             }
-            PeerOntologyClass::AnonymousOrUnverified => {
-                AccessVerdict::Deny {
-                    reason: "Anonymous requests require DID credential or PoW token".into(),
-                }
-            }
+            PeerOntologyClass::AnonymousOrUnverified => AccessVerdict::Deny {
+                reason: "Anonymous requests require DID credential or PoW token".into(),
+            },
         }
     }
 }
@@ -90,11 +104,11 @@ impl OntologicalPricingEngine {
 /// True-Cost Personal Unit Economics Parameters.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct TrueCostModel {
-    pub hardware_purchase_price_aud: f64, // e.g. $3,600 AUD
-    pub lifespan_months: f64,             // e.g. 36 months
-    pub monthly_isp_bill_aud: f64,        // e.g. $85 AUD
-    pub monthly_data_cap_gb: f64,         // e.g. 1,000 GB
-    pub system_power_draw_kw: f64,        // e.g. 0.350 kW
+    pub hardware_purchase_price_aud: f64,    // e.g. $3,600 AUD
+    pub lifespan_months: f64,                // e.g. 36 months
+    pub monthly_isp_bill_aud: f64,           // e.g. $85 AUD
+    pub monthly_data_cap_gb: f64,            // e.g. 1,000 GB
+    pub system_power_draw_kw: f64,           // e.g. 0.350 kW
     pub electricity_tariff_per_kwh_aud: f64, // e.g. $0.32 AUD / kWh
 }
 
@@ -115,12 +129,20 @@ impl TrueCostModel {
     /// Calculate hardware amortization per hour ($C_hw).
     pub fn hardware_cost_per_hour(&self) -> f64 {
         let total_hours = self.lifespan_months * 730.0;
-        if total_hours > 0.0 { self.hardware_purchase_price_aud / total_hours } else { 0.0 }
+        if total_hours > 0.0 {
+            self.hardware_purchase_price_aud / total_hours
+        } else {
+            0.0
+        }
     }
 
     /// Calculate internet bandwidth cost per GB ($C_net).
     pub fn network_cost_per_gb(&self) -> f64 {
-        if self.monthly_data_cap_gb > 0.0 { self.monthly_isp_bill_aud / self.monthly_data_cap_gb } else { 0.0 }
+        if self.monthly_data_cap_gb > 0.0 {
+            self.monthly_isp_bill_aud / self.monthly_data_cap_gb
+        } else {
+            0.0
+        }
     }
 
     /// Calculate power and thermal cost per hour ($C_pwr).
@@ -140,12 +162,15 @@ impl TrueCostModel {
 // ---------------------------------------------------------------------------
 
 /// Build the Cooperative Systems & Ontological Economics Viewport.
-pub fn build_cooperative_economics_view(document: &Document, cost_model: &TrueCostModel) -> Element {
+pub fn build_cooperative_economics_view(
+    document: &Document,
+    cost_model: &TrueCostModel,
+) -> Element {
     let root = document.create_element("div").unwrap();
     let root_el: HtmlElement = root.clone().dyn_into().unwrap();
     root_el.style().set_css_text(
         "display: flex; flex-direction: column; flex: 1; padding: 12px; gap: 10px; \
-         background: #020617; color: #f8fafc; overflow-y: auto; font-family: sans-serif;"
+         background: #020617; color: #f8fafc; overflow-y: auto; font-family: sans-serif;",
     );
 
     // Header Toolbar
@@ -154,13 +179,17 @@ pub fn build_cooperative_economics_view(document: &Document, cost_model: &TrueCo
     let header_el: HtmlElement = header.clone().dyn_into().unwrap();
     header_el.style().set_css_text(
         "justify-content: space-between; background: rgba(30, 41, 59, 0.7); \
-         border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; padding: 8px 12px;"
+         border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; padding: 8px 12px;",
     );
 
     let title = document.create_element("span").unwrap();
-    title.set_text_content(Some("\u{1F310} Socially Defined Networking & Ontological Economics"));
+    title.set_text_content(Some(
+        "\u{1F310} Socially Defined Networking & Ontological Economics",
+    ));
     let title_el: HtmlElement = title.clone().dyn_into().unwrap();
-    title_el.style().set_css_text("font-weight: 700; font-size: 13px; color: #38bdf8;");
+    title_el
+        .style()
+        .set_css_text("font-weight: 700; font-size: 13px; color: #38bdf8;");
     header.append_child(&title).unwrap();
 
     let cost_hud = document.create_element("span").unwrap();
@@ -171,7 +200,9 @@ pub fn build_cooperative_economics_view(document: &Document, cost_model: &TrueCo
         cost_model.power_cost_per_hour()
     )));
     let cost_hud_el: HtmlElement = cost_hud.clone().dyn_into().unwrap();
-    cost_hud_el.style().set_css_text("font-size: 11px; font-family: var(--font-mono); color: #34d399;");
+    cost_hud_el
+        .style()
+        .set_css_text("font-size: 11px; font-family: var(--font-mono); color: #34d399;");
     header.append_child(&cost_hud).unwrap();
 
     root.append_child(&header).unwrap();
@@ -179,19 +210,23 @@ pub fn build_cooperative_economics_view(document: &Document, cost_model: &TrueCo
     // 3 Cards Row
     let grid = document.create_element("div").unwrap();
     let grid_el: HtmlElement = grid.clone().dyn_into().unwrap();
-    grid_el.style().set_css_text("display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 10px;");
+    grid_el.style().set_css_text(
+        "display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 10px;",
+    );
 
     // Card 1: SDN Routing Lanes
     let card1 = document.create_element("div").unwrap();
     let card1_el: HtmlElement = card1.clone().dyn_into().unwrap();
     card1_el.style().set_css_text(
         "background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255, 255, 255, 0.08); \
-         border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 6px;"
+         border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 6px;",
     );
     let c1_title = document.create_element("span").unwrap();
     c1_title.set_text_content(Some("\u{1F500} SDN Permissive Routing Lanes"));
     let c1_title_el: HtmlElement = c1_title.clone().dyn_into().unwrap();
-    c1_title_el.style().set_css_text("font-weight: 700; font-size: 12px; color: #38bdf8;");
+    c1_title_el
+        .style()
+        .set_css_text("font-weight: 700; font-size: 12px; color: #38bdf8;");
     card1.append_child(&c1_title).unwrap();
 
     let lanes_text = document.create_element("pre").unwrap();
@@ -199,7 +234,7 @@ pub fn build_cooperative_economics_view(document: &Document, cost_model: &TrueCo
         "\u{2022} Lane::Commons: Public Open-Access\n\
          \u{2022} Lane::Bilateral: 1-on-1 Projects\n\
          \u{2022} Lane::Federated: Swarm Compute\n\
-         \u{2022} Lane::Commercial: Metered Transit"
+         \u{2022} Lane::Commercial: Metered Transit",
     ));
     let lanes_text_el: HtmlElement = lanes_text.clone().dyn_into().unwrap();
     lanes_text_el.style().set_css_text("font-family: var(--font-mono); font-size: 10px; color: #94a3b8; margin: 4px 0 0 0; background: rgba(0,0,0,0.3); padding: 6px; border-radius: 4px;");
@@ -211,12 +246,14 @@ pub fn build_cooperative_economics_view(document: &Document, cost_model: &TrueCo
     let card2_el: HtmlElement = card2.clone().dyn_into().unwrap();
     card2_el.style().set_css_text(
         "background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255, 255, 255, 0.08); \
-         border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 6px;"
+         border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 6px;",
     );
     let c2_title = document.create_element("span").unwrap();
     c2_title.set_text_content(Some("\u{1F39B}\u{FE0F} Ontological Pricing Matrix"));
     let c2_title_el: HtmlElement = c2_title.clone().dyn_into().unwrap();
-    c2_title_el.style().set_css_text("font-weight: 700; font-size: 12px; color: #38bdf8;");
+    c2_title_el
+        .style()
+        .set_css_text("font-weight: 700; font-size: 12px; color: #38bdf8;");
     card2.append_child(&c2_title).unwrap();
 
     let matrix_text = document.create_element("pre").unwrap();
@@ -224,7 +261,7 @@ pub fn build_cooperative_economics_view(document: &Document, cost_model: &TrueCo
         "\u{2022} Person: 25GB Free Commons Quota\n\
          \u{2022} ResearchLab: Reciprocal Barter\n\
          \u{2022} Corporation: $0.15/GB + $0.05/GPU-s\n\
-         \u{2022} Anonymous: Gated Challenge"
+         \u{2022} Anonymous: Gated Challenge",
     ));
     let matrix_text_el: HtmlElement = matrix_text.clone().dyn_into().unwrap();
     matrix_text_el.style().set_css_text("font-family: var(--font-mono); font-size: 10px; color: #94a3b8; margin: 4px 0 0 0; background: rgba(0,0,0,0.3); padding: 6px; border-radius: 4px;");
@@ -233,7 +270,9 @@ pub fn build_cooperative_economics_view(document: &Document, cost_model: &TrueCo
     // Interactive Peer Policy Evaluator
     let eval_row = document.create_element("div").unwrap();
     let eval_row_el: HtmlElement = eval_row.clone().dyn_into().unwrap();
-    eval_row_el.style().set_css_text("display: flex; gap: 6px; align-items: center; margin-top: 4px;");
+    eval_row_el
+        .style()
+        .set_css_text("display: flex; gap: 6px; align-items: center; margin-top: 4px;");
 
     let peer_select = document.create_element("select").unwrap();
     let ps_el: HtmlElement = peer_select.clone().dyn_into().unwrap();
@@ -269,34 +308,65 @@ pub fn build_cooperative_economics_view(document: &Document, cost_model: &TrueCo
 
     let ps_clone = peer_select.clone();
     let vd_clone = verdict_display.clone();
-    let eval_closure = wasm_bindgen::closure::Closure::wrap(Box::new(move |_e: web_sys::MouseEvent| {
-        let select_el: web_sys::HtmlSelectElement = ps_clone.clone().dyn_into().unwrap();
-        let val = select_el.value();
-        let peer_class = match val.as_str() {
-            "human" => PeerOntologyClass::NaturalPerson { is_human_verified: true },
-            "unverified" => PeerOntologyClass::NaturalPerson { is_human_verified: false },
-            "lab" => PeerOntologyClass::ResearchCollective { lab_name: "OpenAnatomyLab".into() },
-            "corp" => PeerOntologyClass::Corporation { company_name: "Acme Corp".into(), tax_id: None },
-            _ => PeerOntologyClass::AnonymousOrUnverified,
-        };
-        let verdict = OntologicalPricingEngine::evaluate_peer(&peer_class);
-        let text = match verdict {
-            AccessVerdict::PermitFree { free_bandwidth_gb, reason } => {
-                format!("\u{2713} PermitFree ({}GB Quota) \u{2014} {}", free_bandwidth_gb, reason)
-            }
-            AccessVerdict::ReciprocalBarter { allowed_storage_gb, required_return } => {
-                format!("\u{21C4} ReciprocalBarter ({}GB Storage) \u{2014} Req: {}", allowed_storage_gb, required_return)
-            }
-            AccessVerdict::MeteredPayment { rate_per_gb_cents, rate_per_gpu_sec_cents } => {
-                format!("\u{1F4B3} MeteredPayment: ${:.2}/GB, ${:.2}/GPU-s", rate_per_gb_cents as f64 / 100.0, rate_per_gpu_sec_cents as f64 / 100.0)
-            }
-            AccessVerdict::Deny { reason } => {
-                format!("\u{26A0} Deny: {}", reason)
-            }
-        };
-        vd_clone.set_text_content(Some(&text));
-    }) as Box<dyn FnMut(web_sys::MouseEvent)>);
-    eval_btn.add_event_listener_with_callback("click", eval_closure.as_ref().unchecked_ref()).unwrap();
+    let eval_closure =
+        wasm_bindgen::closure::Closure::wrap(Box::new(move |_e: web_sys::MouseEvent| {
+            let select_el: web_sys::HtmlSelectElement = ps_clone.clone().dyn_into().unwrap();
+            let val = select_el.value();
+            let peer_class = match val.as_str() {
+                "human" => PeerOntologyClass::NaturalPerson {
+                    is_human_verified: true,
+                },
+                "unverified" => PeerOntologyClass::NaturalPerson {
+                    is_human_verified: false,
+                },
+                "lab" => PeerOntologyClass::ResearchCollective {
+                    lab_name: "OpenAnatomyLab".into(),
+                },
+                "corp" => PeerOntologyClass::Corporation {
+                    company_name: "Acme Corp".into(),
+                    tax_id: None,
+                },
+                _ => PeerOntologyClass::AnonymousOrUnverified,
+            };
+            let verdict = OntologicalPricingEngine::evaluate_peer(&peer_class);
+            let text = match verdict {
+                AccessVerdict::PermitFree {
+                    free_bandwidth_gb,
+                    reason,
+                } => {
+                    format!(
+                        "\u{2713} PermitFree ({}GB Quota) \u{2014} {}",
+                        free_bandwidth_gb, reason
+                    )
+                }
+                AccessVerdict::ReciprocalBarter {
+                    allowed_storage_gb,
+                    required_return,
+                } => {
+                    format!(
+                        "\u{21C4} ReciprocalBarter ({}GB Storage) \u{2014} Req: {}",
+                        allowed_storage_gb, required_return
+                    )
+                }
+                AccessVerdict::MeteredPayment {
+                    rate_per_gb_cents,
+                    rate_per_gpu_sec_cents,
+                } => {
+                    format!(
+                        "\u{1F4B3} MeteredPayment: ${:.2}/GB, ${:.2}/GPU-s",
+                        rate_per_gb_cents as f64 / 100.0,
+                        rate_per_gpu_sec_cents as f64 / 100.0
+                    )
+                }
+                AccessVerdict::Deny { reason } => {
+                    format!("\u{26A0} Deny: {}", reason)
+                }
+            };
+            vd_clone.set_text_content(Some(&text));
+        }) as Box<dyn FnMut(web_sys::MouseEvent)>);
+    eval_btn
+        .add_event_listener_with_callback("click", eval_closure.as_ref().unchecked_ref())
+        .unwrap();
     eval_closure.forget();
 
     grid.append_child(&card2).unwrap();
@@ -306,12 +376,14 @@ pub fn build_cooperative_economics_view(document: &Document, cost_model: &TrueCo
     let card3_el: HtmlElement = card3.clone().dyn_into().unwrap();
     card3_el.style().set_css_text(
         "background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255, 255, 255, 0.08); \
-         border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 6px;"
+         border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 6px;",
     );
     let c3_title = document.create_element("span").unwrap();
     c3_title.set_text_content(Some("\u{1F4B0} True-Cost Personal Unit Economics"));
     let c3_title_el: HtmlElement = c3_title.clone().dyn_into().unwrap();
-    c3_title_el.style().set_css_text("font-weight: 700; font-size: 12px; color: #38bdf8;");
+    c3_title_el
+        .style()
+        .set_css_text("font-weight: 700; font-size: 12px; color: #38bdf8;");
     card3.append_child(&c3_title).unwrap();
 
     let cost_breakdown = document.create_element("pre").unwrap();
@@ -340,20 +412,30 @@ mod tests {
 
     #[test]
     fn test_ontological_pricing_human_quota() {
-        let human = PeerOntologyClass::NaturalPerson { is_human_verified: true };
+        let human = PeerOntologyClass::NaturalPerson {
+            is_human_verified: true,
+        };
         let verdict = OntologicalPricingEngine::evaluate_peer(&human);
-        assert_eq!(verdict, AccessVerdict::PermitFree {
-            free_bandwidth_gb: 25,
-            reason: "Universal human commons quota (inquiry & basic research)".into(),
-        });
+        assert_eq!(
+            verdict,
+            AccessVerdict::PermitFree {
+                free_bandwidth_gb: 25,
+                reason: "Universal human commons quota (inquiry & basic research)".into(),
+            }
+        );
     }
 
     #[test]
     fn test_ontological_pricing_research_barter() {
-        let lab = PeerOntologyClass::ResearchCollective { lab_name: "OpenAnatomyLab".into() };
+        let lab = PeerOntologyClass::ResearchCollective {
+            lab_name: "OpenAnatomyLab".into(),
+        };
         let verdict = OntologicalPricingEngine::evaluate_peer(&lab);
         match verdict {
-            AccessVerdict::ReciprocalBarter { allowed_storage_gb, required_return } => {
+            AccessVerdict::ReciprocalBarter {
+                allowed_storage_gb,
+                required_return,
+            } => {
                 assert_eq!(allowed_storage_gb, 50);
                 assert!(required_return.contains("OpenAnatomyLab"));
             }
@@ -369,8 +451,8 @@ mod tests {
         let pwr_cost = model.power_cost_per_hour();
 
         assert!(hw_cost > 0.13 && hw_cost < 0.14); // ~$0.137/hr
-        assert!((net_cost - 0.085).abs() < 1e-6);  // $0.085/GB
-        assert!((pwr_cost - 0.112).abs() < 1e-6);  // $0.112/hr
+        assert!((net_cost - 0.085).abs() < 1e-6); // $0.085/GB
+        assert!((pwr_cost - 0.112).abs() < 1e-6); // $0.112/hr
 
         let job_cost = model.total_job_cost(2.0, 10.0);
         // (0.137 + 0.112) * 2 + 0.085 * 10 = ~0.498 + 0.850 = ~$1.348 AUD

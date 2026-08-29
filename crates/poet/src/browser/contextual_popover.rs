@@ -22,6 +22,9 @@ pub fn wire_contextual_popover(document: &Document) {
     for i in 0..editors.length() {
         let editor = editors.get(i).unwrap();
         let editor_el: Element = editor.dyn_into().unwrap();
+        if !super::dom_bindings::claim(&editor_el, "cml-selection") {
+            continue;
+        }
 
         // Mouseup selection handler
         let closure = Closure::wrap(Box::new(move |e: MouseEvent| {
@@ -67,6 +70,14 @@ pub fn wire_contextual_popover(document: &Document) {
     wire_entity_hover_inspectors(document);
 
     // Hide popover when clicking outside
+    let should_wire_dismiss = document
+        .body()
+        .and_then(|body| body.dyn_into::<Element>().ok())
+        .map(|body| super::dom_bindings::claim(&body, "cml-dismiss"))
+        .unwrap_or(false);
+    if !should_wire_dismiss {
+        return;
+    }
     let doc_clone = document.clone();
     let dismiss_closure = Closure::wrap(Box::new(move |e: MouseEvent| {
         let target: Element = match e.target().and_then(|t| t.dyn_into::<Element>().ok()) {
@@ -74,8 +85,9 @@ pub fn wire_contextual_popover(document: &Document) {
             None => return,
         };
         // Don't hide if clicking inside the popover or inspector
-        if target.closest("#rdf-popover").unwrap().is_some() 
-            || target.closest("#cml-entity-inspector").unwrap().is_some() {
+        if target.closest("#rdf-popover").unwrap().is_some()
+            || target.closest("#cml-entity-inspector").unwrap().is_some()
+        {
             return;
         }
         hide_popover(&doc_clone);
@@ -93,23 +105,39 @@ pub fn wire_entity_hover_inspectors(document: &Document) {
     for i in 0..entities.length() {
         let entity = entities.get(i).unwrap();
         let entity_el: Element = entity.dyn_into().unwrap();
+        if !super::dom_bindings::claim(&entity_el, "cml-hover") {
+            continue;
+        }
         let entity_el_clone = entity_el.clone();
 
         let hover_closure = Closure::wrap(Box::new(move |e: MouseEvent| {
             let doc = web_sys::window().unwrap().document().unwrap();
-            let cat_code = entity_el_clone.get_attribute("data-category")
+            let cat_code = entity_el_clone
+                .get_attribute("data-category")
                 .or_else(|| entity_el_clone.get_attribute("data-entity-type"))
                 .unwrap_or_else(|| "entity".into());
-            let iri = entity_el_clone.get_attribute("data-iri")
+            let iri = entity_el_clone
+                .get_attribute("data-iri")
                 .unwrap_or_else(|| "did:qualia:entity:unresolved".into());
-            let certainty = entity_el_clone.get_attribute("data-certainty")
+            let certainty = entity_el_clone
+                .get_attribute("data-certainty")
                 .unwrap_or_else(|| "95".into());
-            let prov = entity_el_clone.get_attribute("data-provenance")
+            let prov = entity_el_clone
+                .get_attribute("data-provenance")
                 .unwrap_or_else(|| "Gazetteer:System".into());
             let label = entity_el_clone.text_content().unwrap_or_default();
 
-            show_entity_inspector(&doc, e.client_x() as i32, e.client_y() as i32, 
-                &cat_code, &iri, &certainty, &prov, &label, &entity_el_clone);
+            show_entity_inspector(
+                &doc,
+                e.client_x() as i32,
+                e.client_y() as i32,
+                &cat_code,
+                &iri,
+                &certainty,
+                &prov,
+                &label,
+                &entity_el_clone,
+            );
         }) as Box<dyn FnMut(MouseEvent)>);
 
         entity_el
@@ -152,7 +180,7 @@ fn show_popover(document: &Document, x: i32, y: i32, selected_text: &str) {
          display: flex; align-items: center; justify-content: space-between;",
     );
     header.set_text_content(Some("\u{1F50D} CML Context Markup"));
-    
+
     let chip = document.create_element("span").unwrap();
     chip.set_class_name("cml-chip");
     let chip_el: HtmlElement = chip.clone().dyn_into().unwrap();
@@ -177,7 +205,10 @@ fn show_popover(document: &Document, x: i32, y: i32, selected_text: &str) {
     } else {
         selected_text.to_string()
     };
-    preview.set_text_content(Some(&format!("\u{201C}{}\u{2026}\u{201D}", preview_text.trim())));
+    preview.set_text_content(Some(&format!(
+        "\u{201C}{}\u{2026}\u{201D}",
+        preview_text.trim()
+    )));
     popover.append_child(&preview).unwrap();
 
     // Category Grid container
@@ -203,13 +234,17 @@ fn show_popover(document: &Document, x: i32, y: i32, selected_text: &str) {
         let ic = document.create_element("span").unwrap();
         ic.set_text_content(Some(cat.glyph()));
         let ic_el: HtmlElement = ic.clone().dyn_into().unwrap();
-        ic_el.style().set_css_text("font-size: 11px; width: 14px; text-align: center;");
+        ic_el
+            .style()
+            .set_css_text("font-size: 11px; width: 14px; text-align: center;");
         btn.append_child(&ic).unwrap();
 
         let lbl = document.create_element("span").unwrap();
         lbl.set_text_content(Some(cat.label()));
         let lbl_el: HtmlElement = lbl.clone().dyn_into().unwrap();
-        lbl_el.style().set_css_text("overflow: hidden; text-overflow: ellipsis; white-space: nowrap;");
+        lbl_el
+            .style()
+            .set_css_text("overflow: hidden; text-overflow: ellipsis; white-space: nowrap;");
         btn.append_child(&lbl).unwrap();
 
         // Wire click to annotate
@@ -272,7 +307,9 @@ fn show_entity_inspector(
          border-radius: var(--radius-sm); box-shadow: var(--shadow-lg); z-index: 8600; \
          padding: 10px 14px; min-width: 220px; max-width: 320px; font-family: var(--font-sans); \
          display: flex; flex-direction: column; gap: 6px; font-size: 11px;",
-        px, py, cat_obj.color_accent()
+        px,
+        py,
+        cat_obj.color_accent()
     ));
 
     // Header badge
@@ -281,7 +318,7 @@ fn show_entity_inspector(
     h_el.style().set_css_text(
         "display: flex; align-items: center; justify-content: space-between; gap: 8px;",
     );
-    
+
     let cat_badge = document.create_element("span").unwrap();
     let badge_el: HtmlElement = cat_badge.clone().dyn_into().unwrap();
     badge_el.style().set_css_text(&format!(
@@ -304,7 +341,9 @@ fn show_entity_inspector(
     // Entity Label
     let name_div = document.create_element("div").unwrap();
     let name_el: HtmlElement = name_div.clone().dyn_into().unwrap();
-    name_el.style().set_css_text("font-weight: 600; color: var(--text-primary); font-size: 12px;");
+    name_el
+        .style()
+        .set_css_text("font-weight: 600; color: var(--text-primary); font-size: 12px;");
     name_div.set_text_content(Some(label.trim()));
     inspector.append_child(&name_div).unwrap();
 
@@ -322,7 +361,9 @@ fn show_entity_inspector(
     // Provenance
     let prov_div = document.create_element("div").unwrap();
     let prov_el: HtmlElement = prov_div.clone().dyn_into().unwrap();
-    prov_el.style().set_css_text("color: var(--text-muted); font-size: 9px; font-family: var(--font-mono);");
+    prov_el
+        .style()
+        .set_css_text("color: var(--text-muted); font-size: 9px; font-family: var(--font-mono);");
     prov_div.set_text_content(Some(&format!("Source: {}", provenance)));
     inspector.append_child(&prov_div).unwrap();
 
@@ -356,7 +397,8 @@ fn show_entity_inspector(
         hide_inspector(&doc);
         super::history::push_current_frame("remove entity tag");
     }) as Box<dyn FnMut(MouseEvent)>);
-    remove_btn.add_event_listener_with_callback("click", remove_closure.as_ref().unchecked_ref())
+    remove_btn
+        .add_event_listener_with_callback("click", remove_closure.as_ref().unchecked_ref())
         .unwrap();
     remove_closure.forget();
     btn_row.append_child(&remove_btn).unwrap();
@@ -398,11 +440,17 @@ fn annotate_selection(document: &Document, cat_code: &str, cat_label: &str) {
     let q_entity = document.create_element("q-entity").unwrap();
     q_entity.set_class_name("cml-entity-tag");
     q_entity.set_attribute("data-category", cat_code).unwrap();
-    q_entity.set_attribute("data-entity-type", cat_code).unwrap();
+    q_entity
+        .set_attribute("data-entity-type", cat_code)
+        .unwrap();
     q_entity.set_attribute("data-iri", &auto_iri).unwrap();
     q_entity.set_attribute("data-certainty", "95").unwrap();
-    q_entity.set_attribute("data-provenance", "CML:AuthorManual").unwrap();
-    q_entity.set_attribute("title", &format!("{}: {}", cat_label, auto_iri)).unwrap();
+    q_entity
+        .set_attribute("data-provenance", "CML:AuthorManual")
+        .unwrap();
+    q_entity
+        .set_attribute("title", &format!("{}: {}", cat_label, auto_iri))
+        .unwrap();
 
     let q_el: HtmlElement = q_entity.clone().dyn_into().unwrap();
     q_el.style().set_css_text(&format!(

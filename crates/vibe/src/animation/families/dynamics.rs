@@ -39,7 +39,10 @@ pub fn eval(preset: &str, t: f64) -> AnimationSample {
             AnimationSample {
                 scalar: height,
                 vector: [0.0, height, 0.0],
-                motor: Motor::from_rotation_translation([1.0, 0.0, slope * 0.1, 0.0], [0.0, height, 0.0]),
+                motor: Motor::from_rotation_translation(
+                    [1.0, 0.0, slope * 0.1, 0.0],
+                    [0.0, height, 0.0],
+                ),
                 secondary: slope,
                 settled: false,
             }

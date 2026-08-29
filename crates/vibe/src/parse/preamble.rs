@@ -159,7 +159,9 @@ impl<'a> Parser<'a> {
                 self.bump()?;
             }
         }
-        let end = self.expect(TokenKind::RBrace, "expected '}' after present")?.end;
+        let end = self
+            .expect(TokenKind::RBrace, "expected '}' after present")?
+            .end;
         if self.cur.kind == TokenKind::Semicolon {
             self.bump()?;
         }

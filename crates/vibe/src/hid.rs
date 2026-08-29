@@ -690,7 +690,8 @@ mod tests {
         let h = InboundEvent::spatial_head(2000, "xr:head", [0.0, 1.7, -0.5], [0.0, 0.0, 0.0, 1.0]);
         assert_eq!(h.kind, EventKind::SpatialHead);
 
-        let gaze = InboundEvent::spatial_gaze(3000, "xr:eye", [0.0, 1.6, 0.0], [0.0, 0.0, -1.0], 3.5);
+        let gaze =
+            InboundEvent::spatial_gaze(3000, "xr:eye", [0.0, 1.6, 0.0], [0.0, 0.0, -1.0], 3.5);
         assert_eq!(gaze.kind, EventKind::SpatialGaze);
 
         let m = InboundEvent::midi(4000, "midi:0", 0x90, 60, 127);

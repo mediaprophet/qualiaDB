@@ -13,6 +13,8 @@ pub mod squad;
 
 pub use curves::{CubicBezier, EasingCurve};
 pub use pga::{Motor, MotorBivector};
-pub use presets::{evaluate_preset, list_all_presets, AnimationFamily, AnimationSample, PresetInfo};
+pub use presets::{
+    evaluate_preset, list_all_presets, AnimationFamily, AnimationSample, PresetInfo,
+};
 pub use spring::{SpringConfig, SpringState1D, SpringState3D};
 pub use squad::Quat;

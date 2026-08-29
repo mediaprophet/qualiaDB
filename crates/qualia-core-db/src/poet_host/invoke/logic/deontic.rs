@@ -19,6 +19,26 @@ const MAX_VERDICTS: usize = 32;
 
 pub fn evaluate(snap: &PoetSnapshot, args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let compiled = compile_term_quin(args);
+    if matches!(args, Value::Record(record) if matches!(record.get("operation"), Some(Value::String(operation)) if operation == "compile"))
+    {
+        let quin = compiled.ok_or_else(|| {
+            Diagnostic::new(
+                DiagCode::E100,
+                span,
+                "deontic compilation needs an obligate, permit, or forbid modality",
+            )
+        })?;
+        let mut record = BTreeMap::new();
+        record.insert("operation".into(), Value::String("compile".into()));
+        record.insert("compiled".into(), Value::Bool(true));
+        record.insert("subject".into(), Value::U64(quin.subject));
+        record.insert("predicate".into(), Value::U64(quin.predicate));
+        record.insert("object".into(), Value::U64(quin.object));
+        record.insert("context".into(), Value::U64(quin.context));
+        record.insert("metadata".into(), Value::U64(quin.metadata));
+        record.insert("parity".into(), Value::U64(quin.parity));
+        return Ok(Value::Record(record));
+    }
     snap.with_live_quins(|quins| {
         let mut scan = Vec::with_capacity(quins.len() + usize::from(compiled.is_some()));
         if let Some(q) = compiled {
@@ -163,5 +183,20 @@ mod tests {
             }
             other => panic!("{other:?}"),
         }
+    }
+
+    #[test]
+    fn compile_operation_returns_the_real_quin_layout() {
+        let mut rec = BTreeMap::new();
+        rec.insert("operation".into(), Value::String("compile".into()));
+        rec.insert("modality".into(), Value::String("permit".into()));
+        rec.insert("body".into(), Value::String("publish".into()));
+        let snap = PoetSnapshot::default();
+        let Value::Record(result) = evaluate(&snap, &Value::Record(rec), Span::new(0, 0)).unwrap()
+        else {
+            panic!("expected record")
+        };
+        assert_eq!(result.get("compiled"), Some(&Value::Bool(true)));
+        assert!(matches!(result.get("parity"), Some(Value::U64(_))));
     }
 }

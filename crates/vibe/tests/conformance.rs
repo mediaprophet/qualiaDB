@@ -1400,8 +1400,7 @@ fn ad3_enum_match_evaluates() {
     let program = load_program(src).expect("ad3 fixture");
     let mut host = LocalHost::default();
     let mut env = Env::default();
-    let mut engine =
-        vibe::Engine::with_program(&mut host, vibe::Budget::default(), &program);
+    let mut engine = vibe::Engine::with_program(&mut host, vibe::Budget::default(), &program);
     engine.eval_program(&program, &mut env).unwrap();
     let v = eval_function(&program, "main", vec![], &mut host, &mut env).unwrap();
     assert_eq!(v.as_f64(), Some(12.0));

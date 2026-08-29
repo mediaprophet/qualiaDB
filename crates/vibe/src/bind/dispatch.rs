@@ -1,10 +1,10 @@
 //! Path dispatch for native Vibe bindings and catalog ids.
 
 use super::Host;
+use crate::bind::{call_math, call_quin, call_rdf};
 use crate::error::{DiagCode, Diagnostic};
 use crate::span::Span;
 use crate::value::Value;
-use crate::bind::{call_math, call_quin, call_rdf};
 
 pub fn dispatch<H: Host>(
     host: &mut H,

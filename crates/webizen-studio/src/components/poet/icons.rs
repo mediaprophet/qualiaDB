@@ -101,7 +101,7 @@ pub fn IconBadge(
     let descriptor = lookup_icon(id);
     let glyph = descriptor.map(|d| d.pua).unwrap_or('?');
     let label = descriptor.map(|d| d.label).unwrap_or(id);
-    
+
     let size_class = format!("wi-{}", size);
     let state_class = state.map(|s| format!("wi-{}", s)).unwrap_or_default();
     let extra = extra_class.unwrap_or_default();

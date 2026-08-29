@@ -92,14 +92,24 @@ impl ManifoldId {
 
     pub fn blurb(self) -> &'static str {
         match self {
-            Self::Research => "Hypermedia document synthesis, ontology graphs, and clinical calculators.",
+            Self::Research => {
+                "Hypermedia document synthesis, ontology graphs, and clinical calculators."
+            }
             Self::Social => "Cooperative ERP, Workstream A deliverable cards, and voting ballots.",
             Self::Knowledge => "W3C Solid Pods, RDF-Star knowledge graphs, and SHACL validation.",
-            Self::Projects => "Gantt timeline, agile sprint board, milestone dashboard, and wiki pages.",
-            Self::Rights => "Fiduciary L3 custody, Hohfeldian legal position visualizer, consent ledger.",
+            Self::Projects => {
+                "Gantt timeline, agile sprint board, milestone dashboard, and wiki pages."
+            }
+            Self::Rights => {
+                "Fiduciary L3 custody, Hohfeldian legal position visualizer, consent ledger."
+            }
             Self::Sanctuary => "Zero-telemetry cryptographic vault, local-only offline storage.",
-            Self::Media => "3D CCF anatomy meshes, EnCodec P64 audio streams, and graphics editing.",
-            Self::Communications => "Domain-first inalienable email, CML composer, and WebID publishing.",
+            Self::Media => {
+                "3D CCF anatomy meshes, EnCodec P64 audio streams, and graphics editing."
+            }
+            Self::Communications => {
+                "Domain-first inalienable email, CML composer, and WebID publishing."
+            }
             Self::Settings => "42MB Sentinel watchdog, local GGUF models, and P2P SDN swarms.",
             Self::Vibe => "Interactive live VibeScript runtime evaluating reactive visual cells.",
         }
@@ -149,21 +159,9 @@ impl ManifoldId {
                 ToolboxId::Spatial,
                 ToolboxId::Rights,
             ],
-            Self::Projects => &[
-                ToolboxId::Erp,
-                ToolboxId::Office,
-                ToolboxId::Communication,
-            ],
-            Self::Rights => &[
-                ToolboxId::Rights,
-                ToolboxId::Epistemic,
-                ToolboxId::Erp,
-            ],
-            Self::Sanctuary => &[
-                ToolboxId::Rights,
-                ToolboxId::Office,
-                ToolboxId::Sdn,
-            ],
+            Self::Projects => &[ToolboxId::Erp, ToolboxId::Office, ToolboxId::Communication],
+            Self::Rights => &[ToolboxId::Rights, ToolboxId::Epistemic, ToolboxId::Erp],
+            Self::Sanctuary => &[ToolboxId::Rights, ToolboxId::Office, ToolboxId::Sdn],
             Self::Media => &[
                 ToolboxId::Image,
                 ToolboxId::Spatial,

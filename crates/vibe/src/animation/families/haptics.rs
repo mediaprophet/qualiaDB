@@ -22,8 +22,16 @@ pub fn eval(preset: &str, t: f64) -> AnimationSample {
         }
         "heartbeat_pulse" | "heartbeat" => {
             let cycle = t % 0.85; // ~70 BPM
-            let s1 = if cycle < 0.12 { (cycle / 0.12 * std::f64::consts::PI).sin() } else { 0.0 };
-            let s2 = if cycle > 0.22 && cycle < 0.34 { ((cycle - 0.22) / 0.12 * std::f64::consts::PI).sin() * 0.6 } else { 0.0 };
+            let s1 = if cycle < 0.12 {
+                (cycle / 0.12 * std::f64::consts::PI).sin()
+            } else {
+                0.0
+            };
+            let s2 = if cycle > 0.22 && cycle < 0.34 {
+                ((cycle - 0.22) / 0.12 * std::f64::consts::PI).sin() * 0.6
+            } else {
+                0.0
+            };
             let amp = s1 + s2;
             AnimationSample {
                 scalar: amp,

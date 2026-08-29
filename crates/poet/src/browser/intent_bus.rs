@@ -6,8 +6,8 @@
 //! when running inside the Tauri webview, or fails closed on public web.
 
 use std::sync::atomic::{AtomicU64, Ordering};
+use wasm_bindgen::JsCast;
 
-use super::capabilities;
 use crate::tool_chest::core::intent_bus::{
     ActionType, IntentBus, IntentReceipt, IntentStatus, Provenance, VibeScriptPayload,
 };
@@ -100,20 +100,6 @@ fn capability_scope_for(action: ActionType) -> Option<String> {
     }
 }
 
-/// Map an ActionType to a daemon endpoint path.
-fn endpoint_path_for(action: ActionType) -> &'static str {
-    match action {
-        ActionType::Query => "/api/query",
-        ActionType::Mutate => "/api/mutate",
-        ActionType::Publish => "/api/pulse",
-        ActionType::Validate => "/api/aura",
-        ActionType::Invoke => "/api/invoke",
-        ActionType::Navigate => "/api/navigate",
-        ActionType::Annotate => "/api/annotate",
-        ActionType::Cancel => "/api/cancel",
-    }
-}
-
 // ---------------------------------------------------------------------------
 // IntentBus impl
 // ---------------------------------------------------------------------------
@@ -132,22 +118,20 @@ impl IntentBus for WasmIntentBus {
         self.stamp_provenance(&mut payload);
         let dispatch_id = payload.provenance.as_ref().unwrap().intent_counter;
 
-        // Capability gate: fail closed on public web
-        if !capabilities::is_native_host() {
+        // Capability gate: fail closed unless the loopback daemon was probed.
+        let Some(base) = super::native_daemon::get_connected_daemon_url() else {
             return Ok(IntentReceipt {
                 dispatch_id,
-                status: IntentStatus::Rejected("public web — engine unreachable".into()),
+                status: IntentStatus::Rejected("local QualiaDB daemon is not connected".into()),
                 provenance: payload.provenance,
             });
-        }
+        };
 
         // Encode to CBOR-LD
         let cbor_bytes = self.encode_cbor_ld(&payload)?;
 
         // Route to daemon
-        let base = capabilities::daemon_base_url().ok_or(WasmBusError::NotNativeHost)?;
-        let path = endpoint_path_for(payload.action_type);
-        let url = format!("{}{}", base, path);
+        let url = format!("{base}/intent");
 
         // Use fetch API
         let window = web_sys::window().unwrap();
@@ -169,9 +153,27 @@ impl IntentBus for WasmIntentBus {
             .map_err(|e| WasmBusError::FetchError(format!("{:?}", e)))?;
 
         let promise = window.fetch_with_request(&request);
-        let _response = wasm_bindgen_futures::JsFuture::from(promise)
+        let response_value = wasm_bindgen_futures::JsFuture::from(promise)
             .await
             .map_err(|e| WasmBusError::FetchError(format!("{:?}", e)))?;
+        let response: web_sys::Response = response_value
+            .dyn_into()
+            .map_err(|_| WasmBusError::FetchError("invalid daemon response".into()))?;
+        if !response.ok() {
+            let diagnostic = match response.text() {
+                Ok(text) => wasm_bindgen_futures::JsFuture::from(text)
+                    .await
+                    .ok()
+                    .and_then(|value| value.as_string())
+                    .unwrap_or_else(|| format!("daemon returned HTTP {}", response.status())),
+                Err(_) => format!("daemon returned HTTP {}", response.status()),
+            };
+            return Ok(IntentReceipt {
+                dispatch_id,
+                status: IntentStatus::Rejected(diagnostic),
+                provenance: payload.provenance,
+            });
+        }
 
         Ok(IntentReceipt {
             dispatch_id,
@@ -181,18 +183,11 @@ impl IntentBus for WasmIntentBus {
     }
 
     async fn cancel(&self, dispatch_id: u64) -> Result<IntentReceipt, Self::Error> {
-        if !capabilities::is_native_host() {
-            return Ok(IntentReceipt {
-                dispatch_id,
-                status: IntentStatus::Rejected("public web — cannot cancel".into()),
-                provenance: None,
-            });
-        }
-
-        // Best-effort cancel via daemon
         Ok(IntentReceipt {
             dispatch_id,
-            status: IntentStatus::Cancelled,
+            status: IntentStatus::Rejected(
+                "No cancellable native job contract is registered for this dispatch".into(),
+            ),
             provenance: None,
         })
     }

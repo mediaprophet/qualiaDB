@@ -7,8 +7,8 @@
 //! over encrypted `RTCDataChannel` streams without central coordinator dependence.
 
 use serde::{Deserialize, Serialize};
-use wasm_bindgen::closure::Closure;
 use wasm_bindgen::JsCast;
+use wasm_bindgen::closure::Closure;
 use web_sys::{Document, Element, HtmlElement, HtmlInputElement};
 
 /// Connection state of a WebRTC Swarm Peer.
@@ -133,7 +133,7 @@ pub fn build_webrtc_sync_view(document: &Document) -> Element {
     let root_el: HtmlElement = root.clone().dyn_into().unwrap();
     root_el.style().set_css_text(
         "display: flex; flex-direction: column; flex: 1; padding: 12px; gap: 10px; \
-         background: #060913; color: #f8fafc; overflow-y: auto; font-family: sans-serif;"
+         background: #060913; color: #f8fafc; overflow-y: auto; font-family: sans-serif;",
     );
 
     let peers = SwarmPeerDescriptor::mock_swarm();
@@ -144,22 +144,29 @@ pub fn build_webrtc_sync_view(document: &Document) -> Element {
     let header_el: HtmlElement = header.clone().dyn_into().unwrap();
     header_el.style().set_css_text(
         "justify-content: space-between; background: rgba(15, 23, 42, 0.85); \
-         border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; padding: 8px 12px;"
+         border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; padding: 8px 12px;",
     );
 
     let title = document.create_element("span").unwrap();
     title.set_text_content(Some("\u{1F310} WebRTC P2P Swarm Synchronization (Spec 20)"));
     let title_el: HtmlElement = title.clone().dyn_into().unwrap();
-    title_el.style().set_css_text("font-weight: 700; font-size: 13px; color: #38bdf8;");
+    title_el
+        .style()
+        .set_css_text("font-weight: 700; font-size: 13px; color: #38bdf8;");
     header.append_child(&title).unwrap();
 
     let meta = document.create_element("span").unwrap();
     meta.set_text_content(Some(&format!(
         "Active Peers: {} \u{00B7} Protocol: RTCDataChannel Encrypted \u{00B7} Zero-Heap: \u{2713}",
-        peers.iter().filter(|p| p.connection_state == SwarmPeerState::Connected).count()
+        peers
+            .iter()
+            .filter(|p| p.connection_state == SwarmPeerState::Connected)
+            .count()
     )));
     let meta_el: HtmlElement = meta.clone().dyn_into().unwrap();
-    meta_el.style().set_css_text("font-size: 11px; font-family: var(--font-mono); color: #00f2a9;");
+    meta_el
+        .style()
+        .set_css_text("font-size: 11px; font-family: var(--font-mono); color: #00f2a9;");
     header.append_child(&meta).unwrap();
 
     root.append_child(&header).unwrap();
@@ -167,20 +174,24 @@ pub fn build_webrtc_sync_view(document: &Document) -> Element {
     // 2. Peer List & Connection Matrix
     let grid = document.create_element("div").unwrap();
     let grid_el: HtmlElement = grid.clone().dyn_into().unwrap();
-    grid_el.style().set_css_text("display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 10px;");
+    grid_el
+        .style()
+        .set_css_text("display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 10px;");
 
     // Left Column: Active Swarm Peers
     let left = document.create_element("div").unwrap();
     let left_el: HtmlElement = left.clone().dyn_into().unwrap();
     left_el.style().set_css_text(
         "background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255, 255, 255, 0.08); \
-         border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 8px;"
+         border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 8px;",
     );
 
     let left_title = document.create_element("span").unwrap();
     left_title.set_text_content(Some("\u{1F465} Connected Swarm Nodes"));
     let lt_el: HtmlElement = left_title.clone().dyn_into().unwrap();
-    lt_el.style().set_css_text("font-weight: 700; font-size: 12px; color: #38bdf8;");
+    lt_el
+        .style()
+        .set_css_text("font-weight: 700; font-size: 12px; color: #38bdf8;");
     left.append_child(&left_title).unwrap();
 
     for p in &peers {
@@ -188,17 +199,20 @@ pub fn build_webrtc_sync_view(document: &Document) -> Element {
         let c_el: HtmlElement = card.clone().dyn_into().unwrap();
         c_el.style().set_css_text(
             "background: rgba(0,0,0,0.3); border: 1px solid rgba(255, 255, 255, 0.06); \
-             border-radius: 6px; padding: 8px; display: flex; flex-direction: column; gap: 4px;"
+             border-radius: 6px; padding: 8px; display: flex; flex-direction: column; gap: 4px;",
         );
 
         let row = document.create_element("div").unwrap();
         let r_el: HtmlElement = row.clone().dyn_into().unwrap();
-        r_el.style().set_css_text("display: flex; justify-content: space-between; align-items: center;");
+        r_el.style()
+            .set_css_text("display: flex; justify-content: space-between; align-items: center;");
 
         let did = document.create_element("span").unwrap();
         did.set_text_content(Some(&p.peer_did));
         let did_el: HtmlElement = did.clone().dyn_into().unwrap();
-        did_el.style().set_css_text("font-family: var(--font-mono); font-size: 11px; font-weight: 700; color: #f1f5f9;");
+        did_el.style().set_css_text(
+            "font-family: var(--font-mono); font-size: 11px; font-weight: 700; color: #f1f5f9;",
+        );
         row.append_child(&did).unwrap();
 
         let badge = document.create_element("span").unwrap();
@@ -207,7 +221,8 @@ pub fn build_webrtc_sync_view(document: &Document) -> Element {
         b_el.style().set_css_text(&format!(
             "font-size: 9px; font-family: var(--font-mono); padding: 2px 6px; border-radius: 4px; \
              background: rgba(255,255,255,0.05); color: {}; border: 1px solid {};",
-            p.connection_state.color(), p.connection_state.color()
+            p.connection_state.color(),
+            p.connection_state.color()
         ));
         row.append_child(&badge).unwrap();
         card.append_child(&row).unwrap();
@@ -217,7 +232,13 @@ pub fn build_webrtc_sync_view(document: &Document) -> Element {
         s_el.style().set_css_text("display: flex; gap: 12px; font-size: 10px; font-family: var(--font-mono); color: #94a3b8;");
         stats.set_text_content(Some(&format!(
             "RTT Latency: {:.1}ms \u{00B7} Synced Quads: {} \u{00B7} Direct Route: {}",
-            p.rtt_latency_ms, p.quads_synced_count, if p.is_direct_route { "Yes (\u{2713})" } else { "Relayed (TURN)" }
+            p.rtt_latency_ms,
+            p.quads_synced_count,
+            if p.is_direct_route {
+                "Yes (\u{2713})"
+            } else {
+                "Relayed (TURN)"
+            }
         )));
         card.append_child(&stats).unwrap();
 
@@ -231,19 +252,25 @@ pub fn build_webrtc_sync_view(document: &Document) -> Element {
     let right_el: HtmlElement = right.clone().dyn_into().unwrap();
     right_el.style().set_css_text(
         "background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255, 255, 255, 0.08); \
-         border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 8px;"
+         border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 8px;",
     );
 
     let right_title = document.create_element("span").unwrap();
     right_title.set_text_content(Some("\u{26A1} P2P Signaling & Mutation Broadcast"));
     let rt_el: HtmlElement = right_title.clone().dyn_into().unwrap();
-    rt_el.style().set_css_text("font-weight: 700; font-size: 12px; color: #38bdf8;");
+    rt_el
+        .style()
+        .set_css_text("font-weight: 700; font-size: 12px; color: #38bdf8;");
     right.append_child(&right_title).unwrap();
 
     let peer_input = document.create_element("input").unwrap();
     peer_input.set_attribute("type", "text").unwrap();
-    peer_input.set_attribute("placeholder", "Enter Remote Peer DID or SDP Offer").unwrap();
-    peer_input.set_attribute("value", "did:qualia:peer_gateway_88").unwrap();
+    peer_input
+        .set_attribute("placeholder", "Enter Remote Peer DID or SDP Offer")
+        .unwrap();
+    peer_input
+        .set_attribute("value", "did:qualia:peer_gateway_88")
+        .unwrap();
     let pi_el: HtmlInputElement = peer_input.clone().dyn_into().unwrap();
     pi_el.style().set_css_text(
         "font-family: var(--font-mono); font-size: 10px; background: rgba(0,0,0,0.4); \
@@ -253,7 +280,9 @@ pub fn build_webrtc_sync_view(document: &Document) -> Element {
 
     let btn_row = document.create_element("div").unwrap();
     let br_el: HtmlElement = btn_row.clone().dyn_into().unwrap();
-    br_el.style().set_css_text("display: flex; gap: 6px; flex-wrap: wrap;");
+    br_el
+        .style()
+        .set_css_text("display: flex; gap: 6px; flex-wrap: wrap;");
 
     let connect_btn = document.create_element("button").unwrap();
     connect_btn.set_class_name("vibe-run-btn");
@@ -261,7 +290,7 @@ pub fn build_webrtc_sync_view(document: &Document) -> Element {
     let cb_el: HtmlElement = connect_btn.clone().dyn_into().unwrap();
     cb_el.style().set_css_text(
         "background: var(--accent-cyan, #38bdf8); color: #020617; font-weight: 700; \
-         font-size: 10px; padding: 4px 10px; border-radius: 4px; border: none; cursor: pointer;"
+         font-size: 10px; padding: 4px 10px; border-radius: 4px; border: none; cursor: pointer;",
     );
 
     let broadcast_btn = document.create_element("button").unwrap();
@@ -270,7 +299,7 @@ pub fn build_webrtc_sync_view(document: &Document) -> Element {
     let bb_el: HtmlElement = broadcast_btn.clone().dyn_into().unwrap();
     bb_el.style().set_css_text(
         "background: var(--accent-emerald, #00f2a9); color: #020617; font-weight: 700; \
-         font-size: 10px; padding: 4px 10px; border-radius: 4px; border: none; cursor: pointer;"
+         font-size: 10px; padding: 4px 10px; border-radius: 4px; border: none; cursor: pointer;",
     );
 
     let log_box = document.create_element("div").unwrap();
@@ -279,26 +308,36 @@ pub fn build_webrtc_sync_view(document: &Document) -> Element {
         "font-family: var(--font-mono); font-size: 9px; color: #94a3b8; background: rgba(0,0,0,0.3); \
          padding: 6px; border-radius: 4px; height: 70px; overflow-y: auto; white-space: pre-wrap;"
     );
-    log_box.set_text_content(Some("[WebRTC] P2P Swarm initialized. RTCDataChannel ready on port 0x42.\n"));
+    log_box.set_text_content(Some(
+        "[WebRTC] P2P Swarm initialized. RTCDataChannel ready on port 0x42.\n",
+    ));
 
     let lb_clone1 = log_box.clone();
     let cb_closure = Closure::wrap(Box::new(move |_e: web_sys::MouseEvent| {
-        let text = format!("[WebRTC] Initiated WebRTC Offer to 'did:qualia:peer_gateway_88' \u{2014} ICE gathering...\n");
+        let text = format!(
+            "[WebRTC] Initiated WebRTC Offer to 'did:qualia:peer_gateway_88' \u{2014} ICE gathering...\n"
+        );
         let mut cur = lb_clone1.text_content().unwrap_or_default();
         cur.push_str(&text);
         lb_clone1.set_text_content(Some(&cur));
     }) as Box<dyn FnMut(web_sys::MouseEvent)>);
-    connect_btn.add_event_listener_with_callback("click", cb_closure.as_ref().unchecked_ref()).unwrap();
+    connect_btn
+        .add_event_listener_with_callback("click", cb_closure.as_ref().unchecked_ref())
+        .unwrap();
     cb_closure.forget();
 
     let lb_clone2 = log_box.clone();
     let bb_closure = Closure::wrap(Box::new(move |_e: web_sys::MouseEvent| {
-        let text = format!("[WebRTC] Broadcasted QuadMutationBatch (16 Super-Quins, Lane::Commons) to 2 peers.\n");
+        let text = format!(
+            "[WebRTC] Broadcasted QuadMutationBatch (16 Super-Quins, Lane::Commons) to 2 peers.\n"
+        );
         let mut cur = lb_clone2.text_content().unwrap_or_default();
         cur.push_str(&text);
         lb_clone2.set_text_content(Some(&cur));
     }) as Box<dyn FnMut(web_sys::MouseEvent)>);
-    broadcast_btn.add_event_listener_with_callback("click", bb_closure.as_ref().unchecked_ref()).unwrap();
+    broadcast_btn
+        .add_event_listener_with_callback("click", bb_closure.as_ref().unchecked_ref())
+        .unwrap();
     bb_closure.forget();
 
     btn_row.append_child(&connect_btn).unwrap();
@@ -356,6 +395,10 @@ mod tests {
     fn test_swarm_peer_descriptor_catalog() {
         let peers = SwarmPeerDescriptor::mock_swarm();
         assert_eq!(peers.len(), 3);
-        assert!(peers.iter().any(|p| p.connection_state == SwarmPeerState::Connected));
+        assert!(
+            peers
+                .iter()
+                .any(|p| p.connection_state == SwarmPeerState::Connected)
+        );
     }
 }

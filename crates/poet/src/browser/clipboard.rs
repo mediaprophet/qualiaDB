@@ -7,11 +7,19 @@
 //! and the multi-item "Collect & Paste" staging tray.
 
 use serde::{Deserialize, Serialize};
+use std::cell::RefCell;
 use std::collections::HashMap;
+use wasm_bindgen::prelude::Closure;
 use wasm_bindgen::JsCast;
-use web_sys::{Document, Element, HtmlElement};
+use web_sys::{Document, Element, HtmlElement, KeyboardEvent};
+
+use crate::tool_chest::core::registry::SeedContainer;
 
 pub const MAX_RING_BUFFER_CAPACITY: usize = 64;
+
+thread_local! {
+    static CLIPBOARD_RING: RefCell<ClipboardRingBuffer> = RefCell::new(ClipboardRingBuffer::new());
+}
 
 /// Supported clipboard mime/modality flavors.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -41,12 +49,12 @@ pub enum ClipCategory {
 impl ClipCategory {
     pub fn glyph(&self) -> &'static str {
         match self {
-            Self::Text => "\u{1F4C4}",      // 📄
+            Self::Text => "\u{1F4C4}",           // 📄
             Self::Entity => "\u{1F3F7}\u{FE0F}", // 🏷️
-            Self::Code => "\u{26A1}",        // ⚡
-            Self::Media => "\u{1F9CA}",       // 🧊
-            Self::Table => "\u{1F4CA}",       // 📊
-            Self::Container => "\u{1F4E6}",   // 📦
+            Self::Code => "\u{26A1}",            // ⚡
+            Self::Media => "\u{1F9CA}",          // 🧊
+            Self::Table => "\u{1F4CA}",          // 📊
+            Self::Container => "\u{1F4E6}",      // 📦
         }
     }
 
@@ -107,7 +115,11 @@ impl ClipboardItem {
             is_pinned: false,
             flavors,
             preview: ClipPreview {
-                title: if text.len() > 30 { format!("{}...", &text[..30]) } else { text.to_string() },
+                title: if text.len() > 30 {
+                    format!("{}...", &text[..30])
+                } else {
+                    text.to_string()
+                },
                 snippet: text.to_string(),
                 category: ClipCategory::Text,
                 item_count: 1,
@@ -124,8 +136,14 @@ impl ClipboardItem {
     ) -> Self {
         let mut flavors = HashMap::new();
         let plain = format!("{}: {}", entity_category, entity_name);
-        let cml_json = format!(r#"{{"entity":"{}","category":"{}"}}"#, entity_name, entity_category);
-        let rdf = format!(r#"<did:q42:entity:{}> a qualia:{} ."#, entity_name, entity_category);
+        let cml_json = format!(
+            r#"{{"entity":"{}","category":"{}"}}"#,
+            entity_name, entity_category
+        );
+        let rdf = format!(
+            r#"<did:q42:entity:{}> a qualia:{} ."#,
+            entity_name, entity_category
+        );
 
         flavors.insert(ClipFlavor::PlainText, plain.as_bytes().to_vec());
         flavors.insert(ClipFlavor::CmlSemanticSpan, cml_json.into_bytes());
@@ -141,7 +159,10 @@ impl ClipboardItem {
             flavors,
             preview: ClipPreview {
                 title: format!("🏷️ {}", entity_name),
-                snippet: format!("Category: {} · Provenance: {}", entity_category, source_doc_uri),
+                snippet: format!(
+                    "Category: {} · Provenance: {}",
+                    entity_category, source_doc_uri
+                ),
                 category: ClipCategory::Entity,
                 item_count: 1,
             },
@@ -171,7 +192,8 @@ impl ClipboardRingBuffer {
     /// If capacity is exceeded, evicts the oldest unpinned item.
     pub fn push(&mut self, item: ClipboardItem) {
         // Remove duplicate if same clip_id already exists
-        self.items.retain(|existing| existing.clip_id != item.clip_id);
+        self.items
+            .retain(|existing| existing.clip_id != item.clip_id);
 
         if self.items.len() >= MAX_RING_BUFFER_CAPACITY {
             // Find oldest unpinned item to evict (from back)
@@ -222,6 +244,76 @@ impl ClipboardRingBuffer {
                 }
             })
             .collect()
+    }
+}
+
+/// Stage a full container definition with plain-text and RDF-compatible views.
+pub fn stage_container(container: &SeedContainer) -> usize {
+    let json = serde_json::to_vec(container).unwrap_or_default();
+    let mut item = ClipboardItem::new_text(&container.title, super::manifest::DEFAULT_ACTOR_DID);
+    item.clip_id = fnv1a_hash(&json);
+    item.preview = ClipPreview {
+        title: format!("\u{1F4E6} {}", container.title),
+        snippet: format!("{} · {}", container.container_type, container.id),
+        category: ClipCategory::Container,
+        item_count: 1,
+    };
+    item.add_flavor(ClipFlavor::ContainerDefinition, json);
+    item.add_flavor(
+        ClipFlavor::RdfNQuins,
+        format!(
+            "<did:q42:{}> a <poet:{}> .",
+            container.id, container.container_type
+        )
+        .into_bytes(),
+    );
+    CLIPBOARD_RING.with(|ring| {
+        let mut ring = ring.borrow_mut();
+        ring.push(item);
+        ring.items().len()
+    })
+}
+
+pub fn wire_clipboard_shortcut(document: &Document) {
+    let Some(body) = document.body() else { return };
+    let body_element: Element = body.dyn_into().unwrap();
+    if !super::dom_bindings::claim(&body_element, "clipboard") {
+        return;
+    }
+    let closure = Closure::wrap(Box::new(move |event: KeyboardEvent| {
+        let ctrl = event.ctrl_key() || event.meta_key();
+        if ctrl && event.shift_key() && (event.key() == "v" || event.key() == "V") {
+            event.prevent_default();
+            let Some(document) = web_sys::window().and_then(|window| window.document()) else {
+                return;
+            };
+            if let Some(existing) = document.get_element_by_id("poet-clipboard-hud") {
+                existing.remove();
+            } else {
+                show_clipboard_hud(&document);
+            }
+        } else if event.key() == "Escape" {
+            if let Some(document) = web_sys::window().and_then(|window| window.document()) {
+                if let Some(existing) = document.get_element_by_id("poet-clipboard-hud") {
+                    existing.remove();
+                }
+            }
+        }
+    }) as Box<dyn FnMut(KeyboardEvent)>);
+    document
+        .add_event_listener_with_callback("keydown", closure.as_ref().unchecked_ref())
+        .unwrap();
+    closure.forget();
+}
+
+pub fn show_clipboard_hud(document: &Document) {
+    let hud = CLIPBOARD_RING.with(|ring| build_clipboard_hud_modal(document, &ring.borrow()));
+    hud.set_id("poet-clipboard-hud");
+    hud.set_attribute("role", "dialog").unwrap();
+    hud.set_attribute("aria-label", "Clipboard history")
+        .unwrap();
+    if let Some(body) = document.body() {
+        body.append_child(&hud).unwrap();
     }
 }
 
@@ -335,11 +427,13 @@ pub fn build_clipboard_hud_modal(document: &Document, ring: &ClipboardRingBuffer
 
     let search_input = document.create_element("input").unwrap();
     search_input.set_attribute("type", "text").unwrap();
-    search_input.set_attribute("placeholder", "Search clipboard history... (Ctrl+Shift+V)").unwrap();
+    search_input
+        .set_attribute("placeholder", "Search clipboard history... (Ctrl+Shift+V)")
+        .unwrap();
     let search_input_el: HtmlElement = search_input.clone().dyn_into().unwrap();
     search_input_el.style().set_css_text(
         "flex: 1; background: rgba(30, 41, 59, 0.7); border: 1px solid rgba(255, 255, 255, 0.12); \
-         border-radius: 6px; padding: 8px 12px; color: #fff; font-size: 13px; outline: none;"
+         border-radius: 6px; padding: 8px 12px; color: #fff; font-size: 13px; outline: none;",
     );
     header.append_child(&search_input).unwrap();
     modal.append_child(&header).unwrap();
@@ -347,7 +441,9 @@ pub fn build_clipboard_hud_modal(document: &Document, ring: &ClipboardRingBuffer
     // List container
     let list = document.create_element("div").unwrap();
     let list_el: HtmlElement = list.clone().dyn_into().unwrap();
-    list_el.style().set_css_text("display: flex; flex-direction: column; overflow-y: auto; padding: 6px; gap: 4px;");
+    list_el.style().set_css_text(
+        "display: flex; flex-direction: column; overflow-y: auto; padding: 6px; gap: 4px;",
+    );
 
     for (idx, item) in ring.items().iter().enumerate() {
         let row = document.create_element("div").unwrap();
@@ -356,12 +452,14 @@ pub fn build_clipboard_hud_modal(document: &Document, ring: &ClipboardRingBuffer
         row_el.style().set_css_text(
             "display: flex; align-items: center; justify-content: space-between; \
              padding: 8px 10px; background: rgba(30, 41, 59, 0.4); border-radius: 6px; \
-             cursor: pointer; transition: background 0.15s ease;"
+             cursor: pointer; transition: background 0.15s ease;",
         );
 
         let left = document.create_element("div").unwrap();
         let left_el: HtmlElement = left.clone().dyn_into().unwrap();
-        left_el.style().set_css_text("display: flex; align-items: center; gap: 8px; overflow: hidden;");
+        left_el
+            .style()
+            .set_css_text("display: flex; align-items: center; gap: 8px; overflow: hidden;");
 
         let glyph = document.create_element("span").unwrap();
         glyph.set_text_content(Some(item.preview.category.glyph()));
@@ -369,18 +467,24 @@ pub fn build_clipboard_hud_modal(document: &Document, ring: &ClipboardRingBuffer
 
         let text_box = document.create_element("div").unwrap();
         let text_box_el: HtmlElement = text_box.clone().dyn_into().unwrap();
-        text_box_el.style().set_css_text("display: flex; flex-direction: column; overflow: hidden;");
+        text_box_el
+            .style()
+            .set_css_text("display: flex; flex-direction: column; overflow: hidden;");
 
         let title = document.create_element("span").unwrap();
         title.set_text_content(Some(&item.preview.title));
         let title_el: HtmlElement = title.clone().dyn_into().unwrap();
-        title_el.style().set_css_text("font-size: 12px; font-weight: 500; text-overflow: ellipsis; white-space: nowrap;");
+        title_el.style().set_css_text(
+            "font-size: 12px; font-weight: 500; text-overflow: ellipsis; white-space: nowrap;",
+        );
         text_box.append_child(&title).unwrap();
 
         let meta = document.create_element("span").unwrap();
         meta.set_text_content(Some(&format!("#{}: {}", idx + 1, item.preview.snippet)));
         let meta_el: HtmlElement = meta.clone().dyn_into().unwrap();
-        meta_el.style().set_css_text("font-size: 10px; color: #94a3b8; text-overflow: ellipsis; white-space: nowrap;");
+        meta_el.style().set_css_text(
+            "font-size: 10px; color: #94a3b8; text-overflow: ellipsis; white-space: nowrap;",
+        );
         text_box.append_child(&meta).unwrap();
 
         left.append_child(&text_box).unwrap();

@@ -841,7 +841,11 @@ fn encode_expr_kind(enc: &mut CborEncoder, k: &ExprKind) {
             enc.str("right");
             encode_expr(enc, right);
         }
-        ExprKind::GraphQuery { is_ask, pattern, variables } => {
+        ExprKind::GraphQuery {
+            is_ask,
+            pattern,
+            variables,
+        } => {
             enc.map(3);
             enc.str("is_ask");
             enc.bool(*is_ask);
@@ -853,7 +857,11 @@ fn encode_expr_kind(enc: &mut CborEncoder, k: &ExprKind) {
                 enc.str(v);
             }
         }
-        ExprKind::ModalLogic { modality, args, body } => {
+        ExprKind::ModalLogic {
+            modality,
+            args,
+            body,
+        } => {
             enc.map(3);
             enc.str("modality");
             enc.str(match modality {

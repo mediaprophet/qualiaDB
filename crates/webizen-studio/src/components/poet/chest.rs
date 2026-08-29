@@ -443,13 +443,11 @@ impl ToolboxId {
             )],
             Self::Health => &[(
                 "Health & Sensory Telemetry",
-                &[
-                    ToolSpec {
-                        label: "+ Health Telemetry Node",
-                        places: Some(ContainerKind::Health),
-                        honesty: "live",
-                    },
-                ],
+                &[ToolSpec {
+                    label: "+ Health Telemetry Node",
+                    places: Some(ContainerKind::Health),
+                    honesty: "live",
+                }],
             )],
             Self::Sdn => &[(
                 "SDN & Cooperative Economics",

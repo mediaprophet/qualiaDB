@@ -102,7 +102,9 @@ fn test_destructuring_let_record() {
     let mut engine = Engine::new(&mut host, Budget::default());
     let mut env = Env::default();
 
-    let res = engine.call_function(&prog, "main", vec![], &mut env).expect("eval failed");
+    let res = engine
+        .call_function(&prog, "main", vec![], &mut env)
+        .expect("eval failed");
     assert_eq!(res, Value::I64(35));
 }
 
@@ -120,7 +122,9 @@ fn test_destructuring_let_list() {
     let mut engine = Engine::new(&mut host, Budget::default());
     let mut env = Env::default();
 
-    let res = engine.call_function(&prog, "main", vec![], &mut env).expect("eval failed");
+    let res = engine
+        .call_function(&prog, "main", vec![], &mut env)
+        .expect("eval failed");
     assert_eq!(res, Value::I64(600));
 }
 
@@ -138,7 +142,9 @@ fn test_destructuring_let_constructor() {
     let mut engine = Engine::new(&mut host, Budget::default());
     let mut env = Env::default();
 
-    let res = engine.call_function(&prog, "main", vec![], &mut env).expect("eval failed");
+    let res = engine
+        .call_function(&prog, "main", vec![], &mut env)
+        .expect("eval failed");
     assert_eq!(res, Value::F64(7.0));
 }
 
@@ -156,7 +162,9 @@ fn test_string_interpolation_evaluation() {
     let mut engine = Engine::new(&mut host, Budget::default());
     let mut env = Env::default();
 
-    let res = engine.call_function(&prog, "main", vec![], &mut env).expect("eval failed");
+    let res = engine
+        .call_function(&prog, "main", vec![], &mut env)
+        .expect("eval failed");
     assert_eq!(res, Value::String("Welcome to Qualia v1!".to_string()));
 }
 
@@ -246,11 +254,14 @@ fn render() -> String {
     assert_eq!(re_parsed.items.len(), prog.items.len());
 
     // Test Projectional authoring
-    let projected = project_program(&prog, &ProjectOptions {
-        indent: "  ".to_string(),
-        blank_lines_between_decls: 1,
-        max_line_width: 80,
-    });
+    let projected = project_program(
+        &prog,
+        &ProjectOptions {
+            indent: "  ".to_string(),
+            blank_lines_between_decls: 1,
+            max_line_width: 80,
+        },
+    );
     assert!(projected.contains("cell position := 42;"));
     assert!(projected.contains("let { x, y }"));
     assert!(projected.contains("let [a, b]"));

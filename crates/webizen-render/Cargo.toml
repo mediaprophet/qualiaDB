@@ -15,6 +15,10 @@ serde = { version = "1.0", features = ["derive"] }
 path = "../qualia-core-db"
 optional = true
 
+[dependencies.vibe]
+path = "../vibe"
+optional = true
+
 # Offscreen frame delivery is native-only: the wasm/web build renders to a <canvas>
 # via WebGPU/WebGL instead of reading pixels back. png codec only, to keep the
 # dependency lean (image@0.25 is already in the workspace lock).
@@ -29,7 +33,7 @@ wasm-bindgen = "0.2"
 
 [features]
 default = ["qualia"]
-qualia = ["qualia-core-db"]
+qualia = ["qualia-core-db", "vibe"]
 
 [build-dependencies]
 cfg_aliases = "0.2"

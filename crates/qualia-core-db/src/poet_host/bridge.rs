@@ -149,18 +149,7 @@ const fn str_eq(left: &str, right: &str) -> bool {
 
 /// The JSON-shaped, allocation-permitted cold-path view of the contract.
 pub fn negotiation_document(native_available: bool) -> serde_json::Value {
-    let bindings = [
-        "math.abs",
-        "rdf.triple",
-        "graph.read",
-        "graph.write",
-        "aura.validate",
-        "pulse.publish",
-        "GraphDatabase.sparql",
-        "Inference.load_model",
-        "Inference.run_transformer",
-    ];
-    let capabilities: Vec<serde_json::Value> = bindings
+    let capabilities: Vec<serde_json::Value> = crate::poet_host::invoke::ids::ALL_BOUND
         .iter()
         .map(|id| capability_json(id, native_available))
         .collect();
@@ -187,6 +176,7 @@ pub fn negotiation_document(native_available: bool) -> serde_json::Value {
 /// One capability entry for both machine and human tooling.
 pub fn capability_json(id: &str, native_available: bool) -> serde_json::Value {
     let boundary = boundary_for(id);
+    let schema = crate::poet_host::invoke::coverage::schema_for(id);
     let (route, semantics, available) = if native_available {
         (boundary.native_route, boundary.native_semantics, true)
     } else {
@@ -203,6 +193,15 @@ pub fn capability_json(id: &str, native_available: bool) -> serde_json::Value {
         "available": available,
         "requires_native": boundary.standalone_semantics == SemanticGuarantee::Unavailable,
         "transport": if route == CapabilityRoute::NativeBridge { "browser-loopback-http" } else { "none" },
+        "family": schema.map(|value| value.family).unwrap_or("unclassified"),
+        "honesty": schema.map(|value| value.honesty).unwrap_or("unclassified"),
+        "effect_class": schema.map(|value| value.effect_class).unwrap_or("unknown"),
+        "arg_schema": schema
+            .and_then(|value| serde_json::from_str::<serde_json::Value>(value.arg_shape).ok())
+            .unwrap_or(serde_json::Value::Null),
+        "return_schema": schema
+            .and_then(|value| serde_json::from_str::<serde_json::Value>(value.return_shape).ok())
+            .unwrap_or(serde_json::Value::Null),
     })
 }
 
@@ -230,5 +229,16 @@ mod tests {
         let document = negotiation_document(true);
         assert_eq!(document["protocol"], BRIDGE_PROTOCOL);
         assert_eq!(document["execution_host"], "vibe-host");
+        let capabilities = document["capabilities"].as_array().unwrap();
+        assert_eq!(
+            capabilities.len(),
+            crate::poet_host::invoke::ids::ALL_BOUND.len()
+        );
+        assert!(capabilities
+            .iter()
+            .any(|entry| entry["id"] == "Audio.oscillator"));
+        assert!(capabilities
+            .iter()
+            .any(|entry| entry["id"] == "Scene.render"));
     }
 }

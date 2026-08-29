@@ -48,6 +48,17 @@ pub fn settings_manifold_seed() -> ManifoldSeed {
                 honesty: "missing".into(),
                 ..Default::default()
             },
+            SeedContainer {
+                container_type: "construct_shelf".into(),
+                title: "Construct shelf".into(),
+                x: 80.0,
+                y: 400.0,
+                width: 420.0,
+                height: 360.0,
+                z: 100.0,
+                honesty: "live".into(),
+                ..Default::default()
+            },
         ],
         connections: vec![],
         panels: vec![
@@ -60,5 +71,6 @@ pub fn settings_manifold_seed() -> ManifoldSeed {
                 dock: DockPosition::Right,
             },
         ],
+        ..Default::default()
     }
 }

@@ -44,6 +44,7 @@ pub fn show_for_container(document: &Document, container: &Element) {
         btn.set_class_name("instrument-panel-tool-btn");
         btn.set_attribute("data-tool", tool.id).unwrap();
         btn.set_attribute("title", tool.description).unwrap();
+        configure_tool_button(&btn, &tool);
 
         let icon = document.create_element("span").unwrap();
         icon.set_class_name("instrument-panel-tool-icon");
@@ -86,6 +87,554 @@ pub fn hide(document: &Document) {
     }
 }
 
+fn local_instrument_action(tool_id: &str) -> bool {
+    matches!(
+        tool_id,
+        "doc:bold"
+            | "doc:italic"
+            | "doc:code"
+            | "doc:entity"
+            | "doc:objective"
+            | "doc:subjective"
+            | "doc:view-md"
+            | "doc:view-rdf"
+            | "code:run"
+            | "graph:sparql"
+            | "epi:objective"
+            | "epi:subjective"
+            | "epi:inter"
+            | "epi:normative"
+            | "office:doc"
+            | "office:ont"
+            | "office:slide"
+            | "img:media"
+            | "img:marker"
+            | "sheet:place"
+            | "sheet:fx"
+            | "sheet:sum"
+            | "sheet:avg"
+            | "ont:add-row"
+            | "ont:shacl"
+            | "ont:classes"
+            | "ont:export"
+            | "social:connect"
+            | "social:chat"
+            | "social:agent"
+            | "social:graph"
+            | "graph:expand"
+            | "graph:collapse"
+            | "graph:layout"
+            | "map:pin"
+            | "3d:orbit"
+            | "3d:pan"
+            | "3d:zoom"
+            | "3d:wireframe"
+            | "health:biomarker"
+            | "health:tomography"
+            | "health:anatomy"
+            | "code:ast"
+            | "code:pulse"
+            | "code:cap"
+            | "rights:sign"
+            | "rights:audit"
+            | "rights:consent"
+            | "webview:clip"
+            | "spatial:map"
+            | "spatial:3d"
+            | "spatial:pin"
+            | "comm:social"
+            | "comm:webrtc"
+            | "comm:webview"
+            | "rights:group"
+            | "health:place"
+            | "health:anat"
+            | "code:vibe"
+            | "ai:extractor"
+            | "ai:sentinel"
+            | "ai:triad"
+            | "scene:create"
+            | "render:gpu_adapter"
+            | "audio:transport_play"
+            | "audio:transport_stop"
+            | "audio:oscillator"
+            | "health:nlp_ingest"
+    )
+}
+
+fn instrument_requires_daemon(tool_id: &str) -> bool {
+    matches!(
+        tool_id,
+        "code:run"
+            | "graph:sparql"
+            | "ai:extractor"
+            | "ai:sentinel"
+            | "scene:create"
+            | "render:gpu_adapter"
+            | "audio:transport_play"
+            | "audio:transport_stop"
+            | "audio:oscillator"
+            | "health:nlp_ingest"
+            | "sheet:sum"
+            | "sheet:avg"
+            | "ont:shacl"
+            | "ont:classes"
+            | "ont:export"
+            | "social:connect"
+            | "social:chat"
+            | "social:agent"
+            | "social:graph"
+            | "graph:expand"
+            | "graph:collapse"
+            | "graph:layout"
+            | "3d:orbit"
+            | "3d:pan"
+            | "3d:zoom"
+            | "3d:wireframe"
+            | "health:biomarker"
+            | "health:tomography"
+            | "rights:sign"
+            | "rights:audit"
+            | "webview:clip"
+    )
+}
+
+fn configure_tool_button(button: &Element, tool: &RibbonTool) {
+    if !local_instrument_action(tool.id) {
+        button.set_attribute("disabled", "").unwrap();
+        button.set_attribute("aria-disabled", "true").unwrap();
+        button
+            .set_attribute(
+                "title",
+                &format!(
+                    "Unavailable in standalone POET: {} requires a dedicated typed runtime contract.",
+                    tool.description
+                ),
+            )
+            .unwrap();
+        button.set_attribute("data-honesty", "unavailable").unwrap();
+    } else if instrument_requires_daemon(tool.id) {
+        button
+            .set_attribute("data-requires-daemon", "true")
+            .unwrap();
+        button
+            .set_attribute("data-enabled-title", tool.description)
+            .unwrap();
+        if !super::native_daemon::is_daemon_connected() {
+            button.set_attribute("disabled", "").unwrap();
+            button.set_attribute("aria-disabled", "true").unwrap();
+            button
+                .set_attribute(
+                    "title",
+                    "Unavailable until the local QualiaDB daemon is connected.",
+                )
+                .unwrap();
+        }
+    }
+}
+
+fn selected_container(document: &Document) -> Option<Element> {
+    document
+        .query_selector(".canvas-container-node.selected")
+        .ok()
+        .flatten()
+}
+
+fn click_selected(document: &Document, selector: &str, label: &str) {
+    let target = selected_container(document)
+        .and_then(|container| container.query_selector(selector).ok().flatten());
+    if let Some(target) = target.and_then(|element| element.dyn_into::<HtmlElement>().ok()) {
+        target.click();
+    } else {
+        super::interactions::show_tool_status(
+            document,
+            label,
+            "The selected container does not expose this operation.",
+            "error",
+        );
+    }
+}
+
+fn exec_document_command(document: &Document, command: &str, value: Option<&str>, label: &str) {
+    let result = document
+        .clone()
+        .dyn_into::<web_sys::HtmlDocument>()
+        .ok()
+        .map(|html| match value {
+            Some(value) => html.exec_command_with_show_ui_and_value(command, false, value),
+            None => html.exec_command(command),
+        });
+    match result {
+        Some(Ok(true)) => {
+            super::history::push_current_frame("format document");
+            super::interactions::show_tool_status(
+                document,
+                label,
+                "Applied to the active document selection.",
+                "success",
+            );
+        }
+        _ => super::interactions::show_tool_status(
+            document,
+            label,
+            "Focus a document editor and select text before applying this operation.",
+            "error",
+        ),
+    }
+}
+
+fn insert_into_editor(document: &Document, snippet: &str, label: &str) {
+    let editor = selected_container(document)
+        .and_then(|container| container.query_selector(".vibe-editor").ok().flatten());
+    if let Some(editor) = editor {
+        let current = editor.text_content().unwrap_or_default();
+        let next = if current.trim().is_empty() {
+            snippet.to_string()
+        } else {
+            format!("{current}\n{snippet}")
+        };
+        editor.set_text_content(Some(&next));
+        super::history::push_current_frame("insert vibe snippet");
+        super::interactions::show_tool_status(
+            document,
+            label,
+            "Inserted into the Vibe editor.",
+            "success",
+        );
+    } else {
+        super::interactions::show_tool_status(
+            document,
+            label,
+            "Select a code/Vibe container with an editor first.",
+            "error",
+        );
+    }
+}
+
+fn sheet_grid_args(document: &Document) -> serde_json::Value {
+    let mut grid = Vec::new();
+    let root = selected_container(document);
+    for row in 1..=6 {
+        let mut cells = Vec::new();
+        for col in ['A', 'B', 'C', 'D', 'E'] {
+            let selector = format!("[data-cell-ref=\"{col}{row}\"]");
+            let text = root
+                .as_ref()
+                .and_then(|container| container.query_selector(&selector).ok().flatten())
+                .and_then(|cell| cell.text_content())
+                .unwrap_or_default();
+            cells.push(text.trim().parse::<f64>().unwrap_or(0.0));
+        }
+        grid.push(cells);
+    }
+    serde_json::json!({ "grid": grid, "range": "A1:E6" })
+}
+
+fn invoke_session(
+    document: &Document,
+    label: &str,
+    capability: &'static str,
+    args: serde_json::Value,
+) {
+    if !super::native_daemon::is_daemon_connected() {
+        super::interactions::show_tool_status(
+            document,
+            label,
+            "Unavailable: start the local QualiaDB daemon.",
+            "unavailable",
+        );
+        return;
+    }
+    super::interactions::show_tool_status(
+        document,
+        label,
+        &format!("Running {capability}…"),
+        "running",
+    );
+    let label = label.to_string();
+    wasm_bindgen_futures::spawn_local(async move {
+        let Some(document) = web_sys::window().and_then(|window| window.document()) else {
+            return;
+        };
+        match super::native_daemon::daemon_invoke(capability, args).await {
+            Ok(response) if response.ok => {
+                super::interactions::show_tool_status(&document, &label, &response.value, "success")
+            }
+            Ok(response) => super::interactions::show_tool_status(
+                &document,
+                &label,
+                response
+                    .diagnostic
+                    .as_deref()
+                    .unwrap_or("Native session invoke failed."),
+                "error",
+            ),
+            Err(error) => super::interactions::show_tool_status(&document, &label, &error, "error"),
+        }
+    });
+}
+
+fn dispatch_instrument_action(document: &Document, tool_id: &str, label: &str) {
+    match tool_id {
+        "doc:bold" => exec_document_command(document, "bold", None, label),
+        "doc:italic" => exec_document_command(document, "italic", None, label),
+        "doc:code" => exec_document_command(
+            document,
+            "insertHTML",
+            Some("<code class=\"cml-code\">code</code>"),
+            label,
+        ),
+        "doc:entity" => exec_document_command(
+            document,
+            "insertHTML",
+            Some(
+                "<q-entity category=\"entity\" iri=\"did:qualia:entity#term\" class=\"cml-entity\">Tagged Entity</q-entity>",
+            ),
+            label,
+        ),
+        "doc:objective" | "epi:objective" => super::tool_actions::dispatch(
+            document,
+            "epistemic:tag_objective",
+            label,
+            crate::tool_chest::core::intent_bus::ActionType::Annotate,
+        ),
+        "doc:subjective" | "epi:subjective" => super::tool_actions::dispatch(
+            document,
+            "epistemic:tag_subjective",
+            label,
+            crate::tool_chest::core::intent_bus::ActionType::Annotate,
+        ),
+        "epi:inter" => super::tool_actions::dispatch(
+            document,
+            "epistemic:tag_intersubjective",
+            label,
+            crate::tool_chest::core::intent_bus::ActionType::Annotate,
+        ),
+        "epi:normative" => super::tool_actions::dispatch(
+            document,
+            "epistemic:tag_normative",
+            label,
+            crate::tool_chest::core::intent_bus::ActionType::Annotate,
+        ),
+        "doc:view-md" => {
+            click_selected(document, ".doc-view-tab[data-doc-view=\"markdown\"]", label)
+        }
+        "doc:view-rdf" => click_selected(document, ".doc-view-tab[data-doc-view=\"rdf\"]", label),
+        "code:run" | "graph:sparql" | "health:nlp_ingest" => click_selected(
+            document,
+            &format!("[data-instrument-action=\"{tool_id}\"]"),
+            label,
+        ),
+        "office:doc" => super::interactions::place_container_via_menu(document, "doc", label),
+        "office:ont" => super::interactions::place_container_via_menu(document, "ontology", label),
+        "office:slide" => super::interactions::place_container_via_menu(document, "slide", label),
+        "img:media" => super::interactions::place_container_via_menu(document, "media", label),
+        "sheet:place" => super::interactions::place_container_via_menu(document, "sheet", label),
+        "spatial:map" => super::interactions::place_container_via_menu(document, "map", label),
+        "spatial:3d" => super::interactions::place_container_via_menu(document, "3d", label),
+        "comm:social" => super::interactions::place_container_via_menu(document, "social", label),
+        "comm:webrtc" => super::interactions::place_container_via_menu(document, "webrtc", label),
+        "comm:webview" => super::interactions::place_container_via_menu(document, "webview", label),
+        "health:place" => super::interactions::place_container_via_menu(document, "health", label),
+        "health:anat" => super::interactions::place_container_via_menu(document, "anatomy", label),
+        "code:vibe" => super::interactions::place_container_via_menu(document, "code", label),
+        "ai:triad" => super::interactions::place_container_via_menu(document, "triad", label),
+        "img:marker" => super::tool_actions::dispatch(
+            document,
+            "image:marker",
+            label,
+            crate::tool_chest::core::intent_bus::ActionType::Annotate,
+        ),
+        "spatial:pin" => super::tool_actions::dispatch(
+            document,
+            "spatial:pin",
+            label,
+            crate::tool_chest::core::intent_bus::ActionType::Annotate,
+        ),
+        "rights:group" => super::tool_actions::dispatch(
+            document,
+            "rights:authors_group",
+            label,
+            crate::tool_chest::core::intent_bus::ActionType::Invoke,
+        ),
+        "ai:extractor" | "ai:sentinel" => super::tool_actions::dispatch(
+            document,
+            tool_id,
+            label,
+            crate::tool_chest::core::intent_bus::ActionType::Invoke,
+        ),
+        "scene:create" => invoke_session(
+            document,
+            label,
+            "Scene.create",
+            serde_json::json!({ "name": "poet-scene-session" }),
+        ),
+        "render:gpu_adapter" => invoke_session(
+            document,
+            label,
+            "Render.gpu_adapter_info",
+            serde_json::json!({}),
+        ),
+        "audio:transport_play" => invoke_session(
+            document,
+            label,
+            "Audio.transport",
+            serde_json::json!({ "action": "play", "tempo": 120.0 }),
+        ),
+        "audio:transport_stop" => invoke_session(
+            document,
+            label,
+            "Audio.transport",
+            serde_json::json!({ "action": "stop", "tempo": 120.0 }),
+        ),
+        "audio:oscillator" => invoke_session(
+            document,
+            label,
+            "Audio.oscillator",
+            serde_json::json!({
+                "waveform": "sine",
+                "frequency": 440.0,
+                "sample_rate": 44100.0,
+                "n": 512
+            }),
+        ),
+        "sheet:fx" => {
+            if let Some(input) = selected_container(document).and_then(|container| {
+                container
+                    .query_selector(".vibe-toolbar input")
+                    .ok()
+                    .flatten()
+                    .and_then(|element| element.dyn_into::<HtmlElement>().ok())
+            }) {
+                let _ = input.focus();
+                super::interactions::show_tool_status(
+                    document,
+                    label,
+                    "Formula bar focused. Enter =SUM(A1:A10) in a cell.",
+                    "success",
+                );
+            } else {
+                super::interactions::show_tool_status(
+                    document,
+                    label,
+                    "Select a sheet container first.",
+                    "error",
+                );
+            }
+        }
+        "sheet:sum" => invoke_session(
+            document,
+            label,
+            "Sheet.sum_range",
+            sheet_grid_args(document),
+        ),
+        "sheet:avg" => invoke_session(document, label, "Sheet.stats", sheet_grid_args(document)),
+        "ont:add-row" => click_selected(document, "[data-cop-family] button", label),
+        "ont:shacl" => invoke_session(document, label, "SHACL.extensions", serde_json::json!({})),
+        "ont:classes" => invoke_session(
+            document,
+            label,
+            "GraphDatabase.stats",
+            serde_json::json!({}),
+        ),
+        "ont:export" => invoke_session(
+            document,
+            label,
+            "GraphAuthoring.process",
+            serde_json::json!({
+                "source": crate::browser::ontology_views::persist::PERSON_SAFE_N3,
+                "mode": "ontology_compile",
+                "format": "turtle"
+            }),
+        ),
+        "social:connect" => invoke_session(
+            document,
+            label,
+            "Pulse.publish_notification",
+            serde_json::json!({ "channel": "poet/social-requests" }),
+        ),
+        "social:chat" => invoke_session(
+            document,
+            label,
+            "Pulse.publish",
+            serde_json::json!({ "channel": "poet/social", "payload_type": "agent-message" }),
+        ),
+        "social:agent" => invoke_session(
+            document,
+            label,
+            "Pulse.publish_agent_message",
+            serde_json::json!({ "channel": "poet/social" }),
+        ),
+        "social:graph" | "graph:expand" | "graph:collapse" | "graph:layout" => invoke_session(
+            document,
+            label,
+            "GraphDatabase.stats",
+            serde_json::json!({}),
+        ),
+        "map:pin" => super::tool_actions::dispatch(
+            document,
+            "spatial:pin",
+            label,
+            crate::tool_chest::core::intent_bus::ActionType::Annotate,
+        ),
+        "3d:orbit" | "3d:pan" | "3d:zoom" | "3d:wireframe" => invoke_session(
+            document,
+            label,
+            "Render.gpu_adapter_info",
+            serde_json::json!({}),
+        ),
+        "health:biomarker" => invoke_session(
+            document,
+            label,
+            "ClinicalRisk.cha2ds2_vasc",
+            serde_json::json!({ "age": 65, "sex_female": false }),
+        ),
+        "health:tomography" => invoke_session(
+            document,
+            label,
+            "MedicalImaging.hu_window",
+            serde_json::json!({
+                "study_uid": "urn:poet:anatomy:demo-slice",
+                "width": 2,
+                "height": 2,
+                "pixels": [-160.0, 40.0, 240.0, 1000.0],
+                "window": 400.0,
+                "level": 40.0
+            }),
+        ),
+        "health:anatomy" => {
+            super::interactions::place_container_via_menu(document, "anatomy", label)
+        }
+        "code:ast" => click_selected(document, "[data-instrument-action=\"code:run\"]", label),
+        "code:pulse" => {
+            insert_into_editor(document, "pulse::emit(\"poet/topic\", \"payload\")", label)
+        }
+        "code:cap" => insert_into_editor(
+            document,
+            "capability.invoke(\"Poet.manifold_create\", { label: \"New lens\", nest: true })",
+            label,
+        ),
+        "rights:sign" | "rights:audit" => invoke_session(
+            document,
+            label,
+            "DeonticLogic.evaluate",
+            serde_json::json!({ "modality": "obligate", "body": "rights" }),
+        ),
+        "rights:consent" => click_selected(document, "[data-cop-family] button", label),
+        "webview:clip" => invoke_session(
+            document,
+            label,
+            "Document.ingest",
+            serde_json::json!({ "text": "sandbox navigation record", "uri": "urn:poet:webview" }),
+        ),
+        _ => super::interactions::show_tool_status(
+            document,
+            label,
+            "Unavailable: this instrument has no registered standalone runtime contract.",
+            "unavailable",
+        ),
+    }
+}
+
 /// Wire instrument panel button clicks and the close button.
 fn wire_instrument_panel(document: &Document) {
     // Tool buttons
@@ -104,7 +653,7 @@ fn wire_instrument_panel(document: &Document) {
 
         let closure = Closure::wrap(Box::new(move |_e: Event| {
             let doc = web_sys::window().unwrap().document().unwrap();
-            show_tool_notification(&doc, &tool_id, &label);
+            dispatch_instrument_action(&doc, &tool_id, &label);
         }) as Box<dyn FnMut(Event)>);
 
         btn_el
@@ -127,36 +676,6 @@ fn wire_instrument_panel(document: &Document) {
             .unwrap();
         closure.forget();
     }
-}
-
-fn show_tool_notification(document: &Document, tool_id: &str, label: &str) {
-    // Remove existing notification
-    if let Some(existing) = document.query_selector(".tool-notification").unwrap() {
-        existing.remove();
-    }
-
-    let notif = document.create_element("div").unwrap();
-    notif.set_class_name("tool-notification");
-    let n_el: HtmlElement = notif.clone().dyn_into().unwrap();
-    n_el.style().set_css_text(
-        "position: fixed; bottom: 40px; right: 16px; background: var(--surface-panel-elevated); \
-         border: 1px solid var(--border-medium); border-radius: var(--radius-sm); \
-         padding: 10px 14px; font-size: 12px; color: var(--text-primary); \
-         box-shadow: var(--shadow-lg); z-index: 500; max-width: 320px;",
-    );
-    notif.set_text_content(Some(&format!(
-        "\u{1F4A1} {} ({}) \u{2014} present, engine wiring pending",
-        label, tool_id
-    )));
-    if let Some(body) = document.body() {
-        body.append_child(&notif).unwrap();
-    }
-    let notif_clone = notif.clone();
-    let timeout = Closure::wrap(Box::new(move || {
-        notif_clone.remove();
-    }) as Box<dyn FnMut()>);
-    super::interactions::set_timeout(timeout.as_ref().unchecked_ref(), 2500);
-    timeout.forget();
 }
 
 // ---------------------------------------------------------------------------
@@ -254,6 +773,60 @@ fn tools_for_type(container_type: &str) -> Vec<RibbonTool> {
                 description: "Insert chart",
             },
         ],
+        "dual_studio" | "scene_view" => vec![
+            RibbonTool {
+                id: "scene:create",
+                icon: "SCN",
+                label: "Scene.create",
+                description: "Create a Scene session on the daemon",
+            },
+            RibbonTool {
+                id: "render:gpu_adapter",
+                icon: "GPU",
+                label: "GPU adapter",
+                description: "Query Render.gpu_adapter_info",
+            },
+            RibbonTool {
+                id: "audio:transport_play",
+                icon: "\u{25B6}",
+                label: "Play",
+                description: "Audio.transport play",
+            },
+            RibbonTool {
+                id: "audio:transport_stop",
+                icon: "\u{23F9}",
+                label: "Stop",
+                description: "Audio.transport stop",
+            },
+        ],
+        "health_overview" | "health_documents" | "disclosure_log" | "conditions" => {
+            vec![RibbonTool {
+                id: "health:nlp_ingest",
+                icon: "NLP",
+                label: "NLP ingest",
+                description: "Run nlp.analyze + gazetteer + Semantic Library ingest on pasted text",
+            }]
+        }
+        "audio_session" => vec![
+            RibbonTool {
+                id: "audio:transport_play",
+                icon: "\u{25B6}",
+                label: "Play",
+                description: "Audio.transport play",
+            },
+            RibbonTool {
+                id: "audio:transport_stop",
+                icon: "\u{23F9}",
+                label: "Stop",
+                description: "Audio.transport stop",
+            },
+            RibbonTool {
+                id: "audio:oscillator",
+                icon: "Hz",
+                label: "Oscillator",
+                description: "Audio.oscillator 440 Hz sine",
+            },
+        ],
         "code" => vec![
             RibbonTool {
                 id: "code:run",
@@ -283,7 +856,7 @@ fn tools_for_type(container_type: &str) -> Vec<RibbonTool> {
                 id: "code:cap",
                 icon: "\u{1F511}",
                 label: "capability.invoke",
-                description: "Insert capability.invoke",
+                description: "Insert Poet.manifold_create (author a lens / container / subject)",
             },
         ],
         "ontology" => vec![
@@ -540,6 +1113,7 @@ pub fn activate_chain(document: &Document, chain_id: &str) {
         btn.set_class_name("instrument-panel-tool-btn");
         btn.set_attribute("data-tool", tool.id).unwrap();
         btn.set_attribute("title", tool.description).unwrap();
+        configure_tool_button(&btn, tool);
 
         let icon = document.create_element("span").unwrap();
         icon.set_class_name("instrument-panel-tool-icon");
@@ -632,6 +1206,7 @@ pub fn activate_chain_on_container(document: &Document, chain_id: &str) {
         btn.set_class_name("instrument-panel-tool-btn");
         btn.set_attribute("data-tool", tool.id).unwrap();
         btn.set_attribute("title", tool.description).unwrap();
+        configure_tool_button(&btn, tool);
 
         let icon = document.create_element("span").unwrap();
         icon.set_class_name("instrument-panel-tool-icon");

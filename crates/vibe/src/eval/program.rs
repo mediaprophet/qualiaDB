@@ -7,9 +7,8 @@ impl<'a, H: Host> Engine<'a, H> {
         let has_cells = program.items.iter().any(|i| matches!(i, Item::Cell(_)));
         let mut cell_graph = if has_cells {
             Some(
-                crate::reactive_cell::ReactiveCellGraph::from_program(program).map_err(|e| {
-                    Diagnostic::new(DiagCode::E600, program.span, e.to_string())
-                })?,
+                crate::reactive_cell::ReactiveCellGraph::from_program(program)
+                    .map_err(|e| Diagnostic::new(DiagCode::E600, program.span, e.to_string()))?,
             )
         } else {
             None

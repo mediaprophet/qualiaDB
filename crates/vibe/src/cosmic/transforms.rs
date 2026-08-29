@@ -217,14 +217,16 @@ impl LorentzBoost {
 
     /// Lorentz gamma factor: gamma = 1 / sqrt(1 - beta^2).
     pub fn gamma(&self) -> f64 {
-        let beta_sq = self.beta_x * self.beta_x + self.beta_y * self.beta_y + self.beta_z * self.beta_z;
+        let beta_sq =
+            self.beta_x * self.beta_x + self.beta_y * self.beta_y + self.beta_z * self.beta_z;
         1.0 / (1.0 - beta_sq).sqrt()
     }
 
     /// Exact 4x4 matrix representation Lambda^mu_nu in SO+(1,3).
     pub fn matrix(&self) -> [[f64; 4]; 4] {
         let g = self.gamma();
-        let beta_sq = self.beta_x * self.beta_x + self.beta_y * self.beta_y + self.beta_z * self.beta_z;
+        let beta_sq =
+            self.beta_x * self.beta_x + self.beta_y * self.beta_y + self.beta_z * self.beta_z;
         if beta_sq < 1e-15 {
             return [
                 [1.0, 0.0, 0.0, 0.0],
@@ -240,9 +242,24 @@ impl LorentzBoost {
 
         [
             [g, -g * bx, -g * by, -g * bz],
-            [-g * bx, 1.0 + factor * bx * bx, factor * bx * by, factor * bx * bz],
-            [-g * by, factor * by * bx, 1.0 + factor * by * by, factor * by * bz],
-            [-g * bz, factor * bz * bx, factor * bz * by, 1.0 + factor * bz * bz],
+            [
+                -g * bx,
+                1.0 + factor * bx * bx,
+                factor * bx * by,
+                factor * bx * bz,
+            ],
+            [
+                -g * by,
+                factor * by * bx,
+                1.0 + factor * by * by,
+                factor * by * bz,
+            ],
+            [
+                -g * bz,
+                factor * bz * bx,
+                factor * bz * by,
+                1.0 + factor * bz * bz,
+            ],
         ]
     }
 

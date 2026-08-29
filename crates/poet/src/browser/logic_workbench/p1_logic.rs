@@ -3,7 +3,7 @@
 
 use super::helpers::{
     make_button, make_results_area, make_section_label, make_select, make_text_input,
-    make_textarea, make_tool_panel, show_logic_notification, show_mock_results,
+    make_textarea, make_tool_panel, show_mock_results,
 };
 use wasm_bindgen::prelude::Closure;
 use wasm_bindgen::JsCast;
@@ -60,7 +60,7 @@ pub(super) fn build_epistemic_panel(document: &Document) -> Element {
         .append_child(&make_results_area(
             document,
             "epistemic-results",
-            "Click \"Evaluate Frame\" to check epistemic status (mock).",
+            "Evaluate the epistemic frame through the connected native logic engine.",
         ))
         .unwrap();
     panel
@@ -90,7 +90,7 @@ pub(super) fn build_paraconsistent_panel(document: &Document) -> Element {
         .append_child(&make_textarea(
             document,
             "paraconsistent-editor",
-            "# Paraconsistent context\nasserts(alice, \"project is complete\").\nasserts(bob, \"project is not complete\").\n\n# Belnap values: Neither, True, False, Both\n# Query: route paraconsistent for \"project is complete\"?\n# Query: global saturation score?",
+            "# Route contradictions in the connected live graph.\n# Saturation is isolated / (consistent + isolated).\nthreshold=0.5",
             "140px",
         ))
         .unwrap();
@@ -118,7 +118,7 @@ pub(super) fn build_paraconsistent_panel(document: &Document) -> Element {
         .append_child(&make_results_area(
             document,
             "paraconsistent-results",
-            "Click \"Route\" to evaluate contradictions (mock).",
+            "Route contradictions through the native paraconsistent evaluator.",
         ))
         .unwrap();
     panel
@@ -137,7 +137,7 @@ pub(super) fn wire_paraconsistent_panel(document: &Document) {
     if let Some(btn) = document.get_element_by_id("paraconsistent-saturation") {
         let closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
             let doc = web_sys::window().unwrap().document().unwrap();
-            show_logic_notification(&doc, "Saturation: 1 isolated, 3 consistent, 0 both (mock)");
+            show_mock_results(&doc, "paraconsistent-results", "paraconsistent-saturation");
         }) as Box<dyn FnMut(MouseEvent)>);
         btn.add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())
             .unwrap();
@@ -157,7 +157,7 @@ pub(super) fn build_ltl_panel(document: &Document) -> Element {
         .append_child(&make_textarea(
             document,
             "ltl-editor",
-            "# LTL trace + formula\n# Trace: [t0: dataIntegrity, t1: dataIntegrity, t2: publicationSubmitted]\n\n# Formula: G(data_integrity) & F(publication_submitted)\n# Formula: data_integrity U publication_submitted\n# Formula: G(data_integrity) -> F(publication_submitted)\n\n# Safety monitor: G(access_control_enabled)",
+            "# Operators: G, F, X, U, R. Trace items are predicate IRIs/names.\noperator=U\nleft=data_integrity\nright=publication_submitted\ntrace=[data_integrity|data_integrity|publication_submitted]\n\n# Safety Monitor uses G(invariant) over the same trace.\ninvariant=data_integrity",
             "140px",
         ))
         .unwrap();
@@ -185,7 +185,7 @@ pub(super) fn build_ltl_panel(document: &Document) -> Element {
         .append_child(&make_results_area(
             document,
             "ltl-results",
-            "Click \"Evaluate Trace\" to check LTL formula (mock).",
+            "Evaluate a bounded temporal trace through the native LTL evaluator.",
         ))
         .unwrap();
     panel
@@ -204,7 +204,7 @@ pub(super) fn wire_ltl_panel(document: &Document) {
     if let Some(btn) = document.get_element_by_id("ltl-safety") {
         let closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
             let doc = web_sys::window().unwrap().document().unwrap();
-            show_logic_notification(&doc, "Safety monitor: invariant holds, no violation (mock)");
+            show_mock_results(&doc, "ltl-results", "ltl-safety");
         }) as Box<dyn FnMut(MouseEvent)>);
         btn.add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())
             .unwrap();
@@ -224,7 +224,7 @@ pub(super) fn build_ctl_panel(document: &Document) -> Element {
         .append_child(&make_textarea(
             document,
             "ctl-editor",
-            "# CTL state graph + formula\n# States: [s0: init, s1: review, s2: approved, s3: rejected]\n# Transitions: s0->s1, s1->s2, s1->s3, s2->s2, s3->s3\n\n# Formula: AG(init -> EF(approved))\n# Formula: AG(review -> AX(approved | rejected))\n# Formula: EF(approved)",
+            "# Operators: EF, AG, EX, AX, EU, AU, EG, AF.\noperator=EF\nstart=s0\nproposition=approved\n# `phi` is used by EU/AU.\nphi=review\ntransitions=[s0:s1|s1:s2|s1:s3|s2:s2|s3:s3]\nholds=[s0:init|s1:review|s2:approved|s3:rejected]",
             "140px",
         ))
         .unwrap();
@@ -244,7 +244,7 @@ pub(super) fn build_ctl_panel(document: &Document) -> Element {
         .append_child(&make_results_area(
             document,
             "ctl-results",
-            "Click \"Model Check\" to verify CTL formula (mock).",
+            "Model-check a bounded branching-time frame with the native CTL evaluator.",
         ))
         .unwrap();
     panel
@@ -274,7 +274,7 @@ pub(super) fn build_asp_panel(document: &Document) -> Element {
         .append_child(&make_textarea(
             document,
             "asp-editor",
-            "# ASP program\n:- assign(X,Y), assign(X,Z), Y != Z.\n:- assign(X,Y), assign(U,Y), X != U.\nassign(X,1) :- task(X), not assign(X,2), not assign(X,3).\n\n# Weak constraint: :~ assign(X,Y). [1@1,X]\n# Query: compute answer sets\n# Query: cautious consequences\n# Query: brave consequences",
+            "# Bounded normal ASP (maximum 12 declared atoms).\natoms=[permit|forbid]\nrule=permit <- not forbid\nrule=forbid <- not permit\n# Weak constraints minimize incurred weight.\nweak=forbid : 1",
             "160px",
         ))
         .unwrap();
@@ -302,7 +302,7 @@ pub(super) fn build_asp_panel(document: &Document) -> Element {
         .append_child(&make_results_area(
             document,
             "asp-results",
-            "Click \"Compute Answer Sets\" to enumerate stable models (mock).",
+            "Enumerate bounded stable models through the native ASP evaluator.",
         ))
         .unwrap();
     panel
@@ -321,7 +321,7 @@ pub(super) fn wire_asp_panel(document: &Document) {
     if let Some(btn) = document.get_element_by_id("asp-optimal") {
         let closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
             let doc = web_sys::window().unwrap().document().unwrap();
-            show_logic_notification(&doc, "Optimal answer set: 1 model with penalty=0 (mock)");
+            show_mock_results(&doc, "asp-results", "asp-optimal");
         }) as Box<dyn FnMut(MouseEvent)>);
         btn.add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())
             .unwrap();
@@ -334,14 +334,14 @@ pub(super) fn build_defeasible_panel(document: &Document) -> Element {
     panel
         .append_child(&make_section_label(
             document,
-            "Defeasible Logic \u{2014} defaults, defeaters, superiority relations, ambiguity modes",
+            "Defeasible Logic \u{2014} strict/default/defeater conflict, superiority, and grounded justification",
         ))
         .unwrap();
     panel
         .append_child(&make_textarea(
             document,
             "defeasible-editor",
-            "# Defeasible rules\nr1: => eligible(X) :- hasCredential(X).\nr2: => not eligible(X) :- hasSanction(X).\nr3: > r2 :- superior(r1, r2).\n\n# Query: holds_by_default(eligible(alice))?\n# Query: grounded_justified_rules?",
+            "literal=eligible\nrule_a=r1\nkind_a=defeasible\npositive_a=true\nrule_b=r2\nkind_b=defeasible\npositive_b=false\n# superior: r1, r2, or none\nsuperior=r1\nambiguity=blocking",
             "140px",
         ))
         .unwrap();
@@ -361,7 +361,7 @@ pub(super) fn build_defeasible_panel(document: &Document) -> Element {
         .append_child(&make_results_area(
             document,
             "defeasible-results",
-            "Click \"Evaluate Frame\" to check defaults (mock).",
+            "Resolve the opposing rules and compute their grounded justification.",
         ))
         .unwrap();
     panel
@@ -384,14 +384,14 @@ pub(super) fn build_linear_panel(document: &Document) -> Element {
     panel
         .append_child(&make_section_label(
             document,
-            "Linear Logic \u{2014} resource consumption, tensor, proof nets, structural rules",
+            "Linear Logic \u{2014} tensor resource consumption and structural-rule licensing",
         ))
         .unwrap();
     panel
         .append_child(&make_textarea(
             document,
             "linear-editor",
-            "# Linear logic context\nresource(budget, 50000).\nconsume(budget, 20000, deliverable1).\nconsume(budget, 15000, deliverable2).\n\n# Query: is budget consumed for 20000?\n# Query: tensor_consume valid?\n# Query: structural derivation valid?",
+            "resource_a=budget\nresource_b=deliverable\nconsumed_a=false\nconsumed_b=false\nreusable_a=false\nreusable_b=false\n# weakening, contraction, or exchange\nstructural_rule=exchange",
             "140px",
         ))
         .unwrap();
@@ -411,7 +411,7 @@ pub(super) fn build_linear_panel(document: &Document) -> Element {
         .append_child(&make_results_area(
             document,
             "linear-results",
-            "Click \"Check Resources\" to verify consumption (mock).",
+            "Attempt native tensor consumption and validate the selected structural rule.",
         ))
         .unwrap();
     panel
@@ -461,7 +461,7 @@ pub(super) fn build_description_panel(document: &Document) -> Element {
         .append_child(&make_results_area(
             document,
             "dl-results",
-            "Click \"Check Subsumption\" to verify DL axioms (mock).",
+            "Check class subsumption against the connected native TBox.",
         ))
         .unwrap();
     panel
@@ -484,14 +484,14 @@ pub(super) fn build_dialectical_panel(document: &Document) -> Element {
     panel
         .append_child(&make_section_label(
             document,
-            "Dialectical Logic \u{2014} do-calculus, counterfactuals, IBIS synthesis, confounding",
+            "Dialectical Logic \u{2014} contradictory synthesis, IBIS support, and causal counterfactuals",
         ))
         .unwrap();
     panel
         .append_child(&make_textarea(
             document,
             "dialectical-editor",
-            "# Dialectical context\nthesis(alice, \"use Rust for performance\").\nantithesis(bob, \"use Python for speed of development\").\n\n# IBIS positions\nposition(p1, \"Rust\").\nposition(p2, \"Python\").\nfavours(p1, performance).\nfavours(p2, developerVelocity).\n\n# Query: synthesize(p1, p2)?\n# Query: counterfactual(do(useRust), outcome)?",
+            "subject=architecture_decision\npredicate=preferred_stack\nthesis=rust\nantithesis=python\nsupporting=3\nobjecting=1\n\n# Counterfactual fields used by the secondary action.\ncausal_edges=[language:performance|performance:outcome]\nfactual_outcome=baseline\nintervention=language\nintervention_value=rust\ntarget=outcome",
             "140px",
         ))
         .unwrap();
@@ -519,7 +519,7 @@ pub(super) fn build_dialectical_panel(document: &Document) -> Element {
         .append_child(&make_results_area(
             document,
             "dialectical-results",
-            "Click \"Synthesize\" to find dialectical synthesis (mock).",
+            "Synthesize the contradiction or run the bounded causal counterfactual.",
         ))
         .unwrap();
     panel
@@ -538,10 +538,7 @@ pub(super) fn wire_dialectical_panel(document: &Document) {
     if let Some(btn) = document.get_element_by_id("dialectical-counter") {
         let closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
             let doc = web_sys::window().unwrap().document().unwrap();
-            show_logic_notification(
-                &doc,
-                "Counterfactual: do(useRust) -> outcome=performance gain (mock)",
-            );
+            show_mock_results(&doc, "dialectical-results", "dialectical-counterfactual");
         }) as Box<dyn FnMut(MouseEvent)>);
         btn.add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())
             .unwrap();

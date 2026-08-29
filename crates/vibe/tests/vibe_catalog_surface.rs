@@ -1,8 +1,6 @@
 //! Catalog desugaring, using, color, present, locale opt-in.
 
-use vibe::{
-    parse_program, Budget, Engine, Env, LocalHost, Value,
-};
+use vibe::{parse_program, Budget, Engine, Env, LocalHost, Value};
 
 #[test]
 fn using_animation_glass_reveal_is_not_orbit_spin() {
@@ -32,7 +30,10 @@ fn using_animation_glass_reveal_is_not_orbit_spin() {
     let orbit_v = engine
         .call_function(&prog_o, "run", t, &mut env)
         .expect("eval orbit");
-    assert_ne!(glass, orbit_v, "preset alias must not collapse to orbit_spin");
+    assert_ne!(
+        glass, orbit_v,
+        "preset alias must not collapse to orbit_spin"
+    );
 }
 
 #[test]
@@ -62,9 +63,15 @@ fn workshop_invoke_fixtures_parse_and_check() {
     for (name, src) in [
         ("econ1", include_str!("../fixtures/econ1_portfolio.vibe")),
         ("orch1", include_str!("../fixtures/orch1_session.vibe")),
-        ("asset1", include_str!("../fixtures/asset1_aspect_graph.vibe")),
+        (
+            "asset1",
+            include_str!("../fixtures/asset1_aspect_graph.vibe"),
+        ),
         ("asset2", include_str!("../fixtures/asset2_persist.vibe")),
-        ("solvers5", include_str!("../fixtures/solvers5_higher_order.vibe")),
+        (
+            "solvers5",
+            include_str!("../fixtures/solvers5_higher_order.vibe"),
+        ),
     ] {
         assert!(
             !src.contains("capability.invoke"),
@@ -222,7 +229,8 @@ fn locale_ast_round_trips() {
     let bytes = vibe::encode(&prog);
     let back = vibe::decode(&bytes).expect("cbor");
     assert_eq!(back.locales[0].code, "zh");
-    let text = vibe::decompiler::decompile_program(&back, &vibe::decompiler::DecompileOptions::default());
+    let text =
+        vibe::decompiler::decompile_program(&back, &vibe::decompiler::DecompileOptions::default());
     assert!(text.contains("locale zh;"));
 }
 
@@ -322,10 +330,12 @@ fn locale_zh_en_projected_ast_hash_equal() {
     let en = parse_program("fn f() -> i64 { return 1; }\n").expect("en");
     let mut zh_items = zh.clone();
     zh_items.locales.clear();
-    let projected_zh =
-        vibe::project_program(&zh_items, &vibe::ProjectOptions::default());
+    let projected_zh = vibe::project_program(&zh_items, &vibe::ProjectOptions::default());
     let projected_en = vibe::project_program(&en, &vibe::ProjectOptions::default());
-    assert_eq!(projected_zh, projected_en, "locale is a view; AST is English");
+    assert_eq!(
+        projected_zh, projected_en,
+        "locale is a view; AST is English"
+    );
     let a = parse_program(&projected_zh).expect("reparse zh projection");
     let b = parse_program(&projected_en).expect("reparse en projection");
     assert_eq!(vibe::encode(&a), vibe::encode(&b));

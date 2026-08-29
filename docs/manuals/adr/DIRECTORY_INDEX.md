@@ -20,6 +20,7 @@ Comprehensive index of functionality for `adr`. This document serves as the grou
 - 📄 `0008-frame-layout-abi-and-inline-tags.md`
 - 📄 `0009-shex-scoped-alongside-shacl.md`
 - 📄 `0010-speculative-decode-default-on.md` — W6a prompt-lookup speculative decode ships default-ON (env/runtime mode switch); accepts benign near-tie divergence.
+- 📄 `0012-construct-is-the-distributable-composition.md` — Construct is the packaged composition; QApp is not a runtime type.
 - 📄 `004-sentinel-to-webizen-rebrand.md`
 - 📄 `005-dns-frontdoor-and-hcai-agreements.md`
 - 📄 `006-zero-allocation-solid-bridge.md`

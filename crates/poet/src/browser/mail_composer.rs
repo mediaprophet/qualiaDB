@@ -76,7 +76,8 @@ impl MailboxManager {
             from: "marcus@research-consortium.id".into(),
             to: format!("inquiry@{}", domain),
             subject: "Quarterly Epistemic Synthesis Draft".into(),
-            body_cml: "Attached are the ratified Super-Quins for the Catchment Basin survey.".into(),
+            body_cml: "Attached are the ratified Super-Quins for the Catchment Basin survey."
+                .into(),
             timestamp_lamport: 42,
             attached_quin_count: 4,
             is_did_signed: true,
@@ -159,7 +160,7 @@ pub fn build_mailbox_view(document: &Document, manager: &MailboxManager) -> Elem
     let root_el: HtmlElement = root.clone().dyn_into().unwrap();
     root_el.style().set_css_text(
         "display: flex; flex-direction: column; flex: 1; padding: 12px; gap: 10px; \
-         background: #020617; color: #f8fafc; overflow-y: auto; font-family: sans-serif;"
+         background: #020617; color: #f8fafc; overflow-y: auto; font-family: sans-serif;",
     );
 
     // Top Header
@@ -168,19 +169,28 @@ pub fn build_mailbox_view(document: &Document, manager: &MailboxManager) -> Elem
     let header_el: HtmlElement = header.clone().dyn_into().unwrap();
     header_el.style().set_css_text(
         "justify-content: space-between; background: rgba(30, 41, 59, 0.7); \
-         border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; padding: 8px 12px;"
+         border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; padding: 8px 12px;",
     );
 
     let title = document.create_element("span").unwrap();
-    title.set_text_content(Some(&format!("\u{2709}\u{FE0F} Inalienable Domain Mail: @{}", manager.active_domain)));
+    title.set_text_content(Some(&format!(
+        "\u{2709}\u{FE0F} Inalienable Domain Mail: @{}",
+        manager.active_domain
+    )));
     let title_el: HtmlElement = title.clone().dyn_into().unwrap();
-    title_el.style().set_css_text("font-weight: 700; font-size: 13px; color: #38bdf8;");
+    title_el
+        .style()
+        .set_css_text("font-weight: 700; font-size: 13px; color: #38bdf8;");
     header.append_child(&title).unwrap();
 
     let status = document.create_element("span").unwrap();
-    status.set_text_content(Some("Local SMTP: Active \u{25CF} Port 25/587 \u{25CF} SPF/DKIM: Verified"));
+    status.set_text_content(Some(
+        "Local SMTP: Active \u{25CF} Port 25/587 \u{25CF} SPF/DKIM: Verified",
+    ));
     let status_el: HtmlElement = status.clone().dyn_into().unwrap();
-    status_el.style().set_css_text("font-size: 11px; font-family: var(--font-mono); color: #34d399;");
+    status_el
+        .style()
+        .set_css_text("font-size: 11px; font-family: var(--font-mono); color: #34d399;");
     header.append_child(&status).unwrap();
 
     root.append_child(&header).unwrap();
@@ -188,7 +198,9 @@ pub fn build_mailbox_view(document: &Document, manager: &MailboxManager) -> Elem
     // 2-Column Split: Inboxes on Left, Message Viewer on Right
     let split = document.create_element("div").unwrap();
     let split_el: HtmlElement = split.clone().dyn_into().unwrap();
-    split_el.style().set_css_text("display: grid; grid-template-columns: 240px 1fr; gap: 10px;");
+    split_el
+        .style()
+        .set_css_text("display: grid; grid-template-columns: 240px 1fr; gap: 10px;");
 
     // Left: Purpose Folders
     let left = document.create_element("div").unwrap();
@@ -216,7 +228,11 @@ pub fn build_mailbox_view(document: &Document, manager: &MailboxManager) -> Elem
         item_el.style().set_css_text(&format!(
             "display: flex; justify-content: space-between; align-items: center; padding: 6px 8px; \
              border-radius: 6px; font-size: 11px; cursor: pointer; background: {}; color: {};",
-            if is_active { "rgba(56, 189, 248, 0.15)" } else { "transparent" },
+            if is_active {
+                "rgba(56, 189, 248, 0.15)"
+            } else {
+                "transparent"
+            },
             if is_active { "#38bdf8" } else { "#cbd5e1" }
         ));
 
@@ -224,11 +240,17 @@ pub fn build_mailbox_view(document: &Document, manager: &MailboxManager) -> Elem
         name.set_text_content(Some(inbox.label()));
         item.append_child(&name).unwrap();
 
-        let count = manager.messages.iter().filter(|m| m.purpose_kind == inbox).count();
+        let count = manager
+            .messages
+            .iter()
+            .filter(|m| m.purpose_kind == inbox)
+            .count();
         let badge = document.create_element("span").unwrap();
         badge.set_text_content(Some(&count.to_string()));
         let badge_el: HtmlElement = badge.clone().dyn_into().unwrap();
-        badge_el.style().set_css_text("font-size: 10px; background: rgba(0,0,0,0.3); padding: 1px 6px; border-radius: 10px;");
+        badge_el.style().set_css_text(
+            "font-size: 10px; background: rgba(0,0,0,0.3); padding: 1px 6px; border-radius: 10px;",
+        );
         item.append_child(&badge).unwrap();
 
         left.append_child(&item).unwrap();
@@ -245,7 +267,9 @@ pub fn build_mailbox_view(document: &Document, manager: &MailboxManager) -> Elem
         let empty = document.create_element("span").unwrap();
         empty.set_text_content(Some("No messages in this purpose inbox."));
         let empty_el: HtmlElement = empty.clone().dyn_into().unwrap();
-        empty_el.style().set_css_text("font-size: 11px; color: #64748b; font-style: italic;");
+        empty_el
+            .style()
+            .set_css_text("font-size: 11px; color: #64748b; font-style: italic;");
         right.append_child(&empty).unwrap();
     } else {
         for msg in msgs {
@@ -264,14 +288,18 @@ pub fn build_mailbox_view(document: &Document, manager: &MailboxManager) -> Elem
             let sender = document.create_element("span").unwrap();
             sender.set_text_content(Some(&msg.from));
             let sender_el: HtmlElement = sender.clone().dyn_into().unwrap();
-            sender_el.style().set_css_text("font-size: 10px; font-family: var(--font-mono); color: #94a3b8;");
+            sender_el
+                .style()
+                .set_css_text("font-size: 10px; font-family: var(--font-mono); color: #94a3b8;");
             header_row.append_child(&sender).unwrap();
             card.append_child(&header_row).unwrap();
 
             let body = document.create_element("div").unwrap();
             body.set_text_content(Some(&msg.body_cml));
             let body_el: HtmlElement = body.clone().dyn_into().unwrap();
-            body_el.style().set_css_text("font-size: 11px; color: #cbd5e1; line-height: 1.4;");
+            body_el
+                .style()
+                .set_css_text("font-size: 11px; color: #cbd5e1; line-height: 1.4;");
             card.append_child(&body).unwrap();
 
             let footer = document.create_element("div").unwrap();
@@ -279,13 +307,26 @@ pub fn build_mailbox_view(document: &Document, manager: &MailboxManager) -> Elem
             footer_el.style().set_css_text("display: flex; gap: 8px; font-size: 9px; font-family: var(--font-mono); color: #64748b; margin-top: 4px;");
 
             let quins = document.create_element("span").unwrap();
-            quins.set_text_content(Some(&format!("Super-Quins: {} \u{2713}", msg.attached_quin_count)));
-            quins.clone().dyn_into::<HtmlElement>().unwrap().style().set_css_text("color: #38bdf8;");
+            quins.set_text_content(Some(&format!(
+                "Super-Quins: {} \u{2713}",
+                msg.attached_quin_count
+            )));
+            quins
+                .clone()
+                .dyn_into::<HtmlElement>()
+                .unwrap()
+                .style()
+                .set_css_text("color: #38bdf8;");
             footer.append_child(&quins).unwrap();
 
             let signed = document.create_element("span").unwrap();
             signed.set_text_content(Some("DID Signature: Valid \u{2713}"));
-            signed.clone().dyn_into::<HtmlElement>().unwrap().style().set_css_text("color: #34d399;");
+            signed
+                .clone()
+                .dyn_into::<HtmlElement>()
+                .unwrap()
+                .style()
+                .set_css_text("color: #34d399;");
             footer.append_child(&signed).unwrap();
 
             card.append_child(&footer).unwrap();
@@ -310,7 +351,10 @@ mod tests {
 
         let inquiry_msgs = mgr.filtered_messages();
         assert_eq!(inquiry_msgs.len(), 1);
-        assert_eq!(inquiry_msgs[0].subject, "Quarterly Epistemic Synthesis Draft");
+        assert_eq!(
+            inquiry_msgs[0].subject,
+            "Quarterly Epistemic Synthesis Draft"
+        );
     }
 
     #[test]

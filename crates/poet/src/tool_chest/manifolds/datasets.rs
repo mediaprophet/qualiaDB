@@ -110,5 +110,6 @@ pub fn datasets_manifold_seed() -> ManifoldSeed {
             panel_type: "aura".into(),
             dock: DockPosition::Right,
         }],
+        ..Default::default()
     }
 }

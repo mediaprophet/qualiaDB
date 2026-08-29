@@ -7,6 +7,7 @@
 use super::super::core::registry::{
     DockPosition, ManifoldSeed, SeedConnection, SeedContainer, SeedPanel,
 };
+use super::super::core::ManifoldSociality;
 
 /// Social manifold seed: social graph + connection requests + reputation.
 pub fn social_manifold_seed() -> ManifoldSeed {
@@ -77,5 +78,7 @@ pub fn social_manifold_seed() -> ManifoldSeed {
                 dock: DockPosition::Bottom,
             },
         ],
+        sociality: ManifoldSociality::Social,
+        ..Default::default()
     }
 }

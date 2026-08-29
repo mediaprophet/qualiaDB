@@ -304,7 +304,10 @@ impl IdeState {
         let (resp, gas) = if trimmed.starts_with("let ") {
             ("Variable bound in local workspace context".to_string(), 15)
         } else if trimmed.contains("graph::") {
-            ("[\"did:q42:node:alpha\", \"did:q42:node:beta\"]".to_string(), 85)
+            (
+                "[\"did:q42:node:alpha\", \"did:q42:node:beta\"]".to_string(),
+                85,
+            )
         } else {
             (format!("Evaluated: {}", trimmed), 10)
         };
@@ -328,16 +331,39 @@ pub fn syntax_highlight_vibe(code: &str) -> String {
     for line in code.lines() {
         let trimmed = line.trim_start();
         if trimmed.starts_with("//") || trimmed.starts_with('#') {
-            out.push_str(&format!("<span style=\"color: #64748b; font-style: italic;\">{}</span>\n", line));
+            out.push_str(&format!(
+                "<span style=\"color: #64748b; font-style: italic;\">{}</span>\n",
+                line
+            ));
             continue;
         }
 
         let mut line_html = line.to_string();
-        for kw in &["entity", "requires:", "cell", "fn", "let", "return", "if", "else", "animate", "emit"] {
-            line_html = line_html.replace(kw, &format!("<span style=\"color: #f43f5e; font-weight: 600;\">{}</span>", kw));
+        for kw in &[
+            "entity",
+            "requires:",
+            "cell",
+            "fn",
+            "let",
+            "return",
+            "if",
+            "else",
+            "animate",
+            "emit",
+        ] {
+            line_html = line_html.replace(
+                kw,
+                &format!(
+                    "<span style=\"color: #f43f5e; font-weight: 600;\">{}</span>",
+                    kw
+                ),
+            );
         }
         for typ in &["f32", "f64", "u64", "u32", "String", "bool"] {
-            line_html = line_html.replace(typ, &format!("<span style=\"color: #38bdf8;\">{}</span>", typ));
+            line_html = line_html.replace(
+                typ,
+                &format!("<span style=\"color: #38bdf8;\">{}</span>", typ),
+            );
         }
         out.push_str(&line_html);
         out.push('\n');
@@ -356,13 +382,15 @@ pub fn build_ide_view(document: &Document, state: &IdeState) -> Element {
     let root_el: HtmlElement = root.clone().dyn_into().unwrap();
     root_el.style().set_css_text(
         "display: flex; flex-direction: column; width: 100%; height: 100%; \
-         background: #020617; color: #f8fafc; font-family: sans-serif; overflow: hidden;"
+         background: #020617; color: #f8fafc; font-family: sans-serif; overflow: hidden;",
     );
 
     // Middle Area: Activity Bar + Sidebar + Editor + Secondary Inspector
     let main_area = document.create_element("div").unwrap();
     let main_area_el: HtmlElement = main_area.clone().dyn_into().unwrap();
-    main_area_el.style().set_css_text("display: flex; flex: 1; overflow: hidden;");
+    main_area_el
+        .style()
+        .set_css_text("display: flex; flex: 1; overflow: hidden;");
 
     // Zone A: Activity Rail (Left 48px)
     let activity_rail = document.create_element("div").unwrap();
@@ -402,19 +430,23 @@ pub fn build_ide_view(document: &Document, state: &IdeState) -> Element {
     let sidebar_el: HtmlElement = sidebar.clone().dyn_into().unwrap();
     sidebar_el.style().set_css_text(
         "width: 220px; background: #090e1a; border-right: 1px solid rgba(255, 255, 255, 0.08); \
-         display: flex; flex-direction: column; padding: 10px; gap: 8px; overflow-y: auto;"
+         display: flex; flex-direction: column; padding: 10px; gap: 8px; overflow-y: auto;",
     );
 
     let sidebar_title = document.create_element("span").unwrap();
     sidebar_title.set_text_content(Some("EXPLORER: QUALIA-WORKSPACE"));
     let sidebar_title_el: HtmlElement = sidebar_title.clone().dyn_into().unwrap();
-    sidebar_title_el.style().set_css_text("font-size: 10px; font-weight: 700; color: #94a3b8; letter-spacing: 0.5px;");
+    sidebar_title_el
+        .style()
+        .set_css_text("font-size: 10px; font-weight: 700; color: #94a3b8; letter-spacing: 0.5px;");
     sidebar.append_child(&sidebar_title).unwrap();
 
     for node in &state.file_tree {
         let node_el = document.create_element("div").unwrap();
         let node_html_el: HtmlElement = node_el.clone().dyn_into().unwrap();
-        node_html_el.style().set_css_text("font-size: 12px; font-family: var(--font-mono); color: #cbd5e1; cursor: pointer;");
+        node_html_el.style().set_css_text(
+            "font-size: 12px; font-family: var(--font-mono); color: #cbd5e1; cursor: pointer;",
+        );
         node_el.set_text_content(Some(&format!("\u{1F4C1} {}", node.name)));
         sidebar.append_child(&node_el).unwrap();
 
@@ -423,7 +455,7 @@ pub fn build_ide_view(document: &Document, state: &IdeState) -> Element {
             let child_html_el: HtmlElement = child_el.clone().dyn_into().unwrap();
             child_html_el.style().set_css_text(
                 "padding-left: 16px; font-size: 12px; font-family: var(--font-mono); \
-                 color: #94a3b8; cursor: pointer; padding-top: 2px;"
+                 color: #94a3b8; cursor: pointer; padding-top: 2px;",
             );
             child_el.set_text_content(Some(&format!("\u{1F4C4} {}", child.name)));
             sidebar.append_child(&child_el).unwrap();
@@ -434,7 +466,9 @@ pub fn build_ide_view(document: &Document, state: &IdeState) -> Element {
     // Zone C & D: Central Editor Workspace + Bottom Drawer
     let central = document.create_element("div").unwrap();
     let central_el: HtmlElement = central.clone().dyn_into().unwrap();
-    central_el.style().set_css_text("display: flex; flex-direction: column; flex: 1; overflow: hidden;");
+    central_el
+        .style()
+        .set_css_text("display: flex; flex-direction: column; flex: 1; overflow: hidden;");
 
     // Zone C: Tab bar + Editor Pane
     let tab_bar = document.create_element("div").unwrap();
@@ -482,7 +516,7 @@ pub fn build_ide_view(document: &Document, state: &IdeState) -> Element {
     let drawer_el: HtmlElement = drawer.clone().dyn_into().unwrap();
     drawer_el.style().set_css_text(
         "height: 160px; background: #090e1a; border-top: 1px solid rgba(255, 255, 255, 0.08); \
-         display: flex; flex-direction: column;"
+         display: flex; flex-direction: column;",
     );
 
     let drawer_tabs = document.create_element("div").unwrap();
@@ -494,13 +528,20 @@ pub fn build_ide_view(document: &Document, state: &IdeState) -> Element {
     let repl_tab = document.create_element("span").unwrap();
     repl_tab.set_text_content(Some("\u{26A1} Vibe REPL"));
     let repl_tab_el: HtmlElement = repl_tab.clone().dyn_into().unwrap();
-    repl_tab_el.style().set_css_text("font-weight: 600; color: #38bdf8; cursor: pointer;");
+    repl_tab_el
+        .style()
+        .set_css_text("font-weight: 600; color: #38bdf8; cursor: pointer;");
     drawer_tabs.append_child(&repl_tab).unwrap();
 
     let problems_tab = document.create_element("span").unwrap();
-    problems_tab.set_text_content(Some(&format!("\u{1F6A8} Problems ({})", state.problems.len())));
+    problems_tab.set_text_content(Some(&format!(
+        "\u{1F6A8} Problems ({})",
+        state.problems.len()
+    )));
     let problems_tab_el: HtmlElement = problems_tab.clone().dyn_into().unwrap();
-    problems_tab_el.style().set_css_text("color: #94a3b8; cursor: pointer;");
+    problems_tab_el
+        .style()
+        .set_css_text("color: #94a3b8; cursor: pointer;");
     drawer_tabs.append_child(&problems_tab).unwrap();
 
     drawer.append_child(&drawer_tabs).unwrap();
@@ -511,9 +552,14 @@ pub fn build_ide_view(document: &Document, state: &IdeState) -> Element {
 
     for entry in &state.repl_history {
         let entry_div = document.create_element("div").unwrap();
-        entry_div.set_text_content(Some(&format!("vibe> {}\n\u{2794} {} [Gas: {}u]", entry.prompt, entry.response, entry.gas_consumed)));
+        entry_div.set_text_content(Some(&format!(
+            "vibe> {}\n\u{2794} {} [Gas: {}u]",
+            entry.prompt, entry.response, entry.gas_consumed
+        )));
         let entry_div_el: HtmlElement = entry_div.clone().dyn_into().unwrap();
-        entry_div_el.style().set_css_text("color: #34d399; margin-bottom: 4px; white-space: pre-line;");
+        entry_div_el
+            .style()
+            .set_css_text("color: #34d399; margin-bottom: 4px; white-space: pre-line;");
         drawer_body.append_child(&entry_div).unwrap();
     }
     drawer.append_child(&drawer_body).unwrap();
@@ -528,11 +574,14 @@ pub fn build_ide_view(document: &Document, state: &IdeState) -> Element {
     status_bar_el.style().set_css_text(
         "height: 24px; background: #0f172a; border-top: 1px solid rgba(255, 255, 255, 0.08); \
          display: flex; align-items: center; justify-content: space-between; padding: 0 12px; \
-         font-size: 11px; font-family: var(--font-mono); color: #94a3b8;"
+         font-size: 11px; font-family: var(--font-mono); color: #94a3b8;",
     );
 
     let sb_left = document.create_element("span").unwrap();
-    sb_left.set_text_content(Some(&format!("\u{1F33F} branch: {} \u{00B7} \u{2713} LSP Ready", state.git_branch)));
+    sb_left.set_text_content(Some(&format!(
+        "\u{1F33F} branch: {} \u{00B7} \u{2713} LSP Ready",
+        state.git_branch
+    )));
     status_bar.append_child(&sb_left).unwrap();
 
     let sb_right = document.create_element("span").unwrap();

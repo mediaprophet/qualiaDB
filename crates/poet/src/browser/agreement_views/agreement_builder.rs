@@ -5,6 +5,9 @@
 use wasm_bindgen::JsCast;
 use web_sys::{Document, Element, HtmlElement};
 
+use super::super::cop_records::{build_family_panel, CopField};
+use super::super::live_invoke;
+
 const TABS: &[(&str, &str)] = &[
     ("instruments", "Instruments"),
     ("clauses", "Clauses"),
@@ -264,9 +267,39 @@ pub fn build_agreement_builder_view(document: &Document) -> Element {
          font-family: var(--font-mono); border-bottom: 1px solid var(--border-subtle);",
     );
     header.set_text_content(Some(
-        "Agreement: Humanitarian ICT Commons Accord v0.1 \u{2014} Status: Draft",
+        "Agreement composer \u{2014} persist the working instrument set as a COP agreement record.",
     ));
     wrapper.append_child(&header).unwrap();
+    let ledger = build_family_panel(
+        document,
+        "agreement",
+        "Saved agreements. Instrument classes below are the COP library, not a fake executed contract.",
+        &[
+            CopField {
+                key: "status",
+                placeholder: "draft|review|active",
+            },
+            CopField {
+                key: "instruments",
+                placeholder: "Selected instruments (COP-R4, ICCPR, \u{2026})",
+            },
+            CopField {
+                key: "threshold",
+                placeholder: "Consensus threshold",
+            },
+        ],
+    );
+    ledger
+        .append_child(&live_invoke::action_bar(
+            document,
+            &[(
+                "DeonticLogic.evaluate",
+                "DeonticLogic.evaluate",
+                serde_json::json!({ "modality": "obligate", "body": "agreement" }),
+            )],
+        ))
+        .unwrap();
+    wrapper.append_child(&ledger).unwrap();
 
     let tab_bar = document.create_element("div").unwrap();
     let tb_el: HtmlElement = tab_bar.clone().dyn_into().unwrap();
@@ -320,7 +353,7 @@ pub fn build_agreement_builder_view(document: &Document) -> Element {
 
     let footer = document.create_element("div").unwrap();
     footer.set_text_content(Some(
-        "\u{26A0} Mock data \u{2014} agreement composition requires COP-R4 deontic norm compilation engine command.",
+        "COP agreement records persist on the daemon. The instrument catalog is the COP library, not an executed contract.",
     ));
     let f_el: HtmlElement = footer.clone().dyn_into().unwrap();
     f_el.style().set_css_text(

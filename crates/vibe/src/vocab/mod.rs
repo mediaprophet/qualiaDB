@@ -55,7 +55,10 @@ snomed:64572001 rdfs:subClassOf snomed:404684003 .
         while src.len() < MAX_CHUNK_BYTES + 8 {
             src.push_str("x:a rdfs:label \"pad\" .\n");
         }
-        assert!(matches!(parse_chunk(src.as_bytes()), Err(VocabError::TooLarge { .. })));
+        assert!(matches!(
+            parse_chunk(src.as_bytes()),
+            Err(VocabError::TooLarge { .. })
+        ));
     }
 
     #[test]

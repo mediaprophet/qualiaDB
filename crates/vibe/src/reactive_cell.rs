@@ -10,9 +10,7 @@ use crate::value::{Instant, Value};
 #[derive(Debug, Clone, PartialEq)]
 pub enum ReactiveCellError {
     /// A cyclic dependency was detected among reactive cells.
-    CycleDetected {
-        cycle: Vec<String>,
-    },
+    CycleDetected { cycle: Vec<String> },
     /// A cell with the given name was not found.
     CellNotFound(String),
     /// Evaluation error during cell computation.
@@ -23,7 +21,11 @@ impl std::fmt::Display for ReactiveCellError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::CycleDetected { cycle } => {
-                write!(f, "cycle detected in reactive cell graph: {}", cycle.join(" -> "))
+                write!(
+                    f,
+                    "cycle detected in reactive cell graph: {}",
+                    cycle.join(" -> ")
+                )
             }
             Self::CellNotFound(name) => write!(f, "reactive cell '{name}' not found"),
             Self::EvaluationError(msg) => write!(f, "evaluation error in cell: {msg}"),
@@ -308,13 +310,12 @@ impl ReactiveCellGraph {
             if !self.cells[idx].is_dirty {
                 continue;
             }
-            let deps_ready = self.cells[idx]
-                .dependencies
-                .iter()
-                .all(|name| match self.name_to_index.get(name) {
+            let deps_ready = self.cells[idx].dependencies.iter().all(|name| {
+                match self.name_to_index.get(name) {
                     Some(&dep) => !self.cells[dep].is_dirty,
                     None => true,
-                });
+                }
+            });
             if deps_ready {
                 ready.push(idx);
             }
@@ -421,7 +422,9 @@ impl ReactiveCellGraph {
 
     /// Retrieve the current cached value of a cell by name.
     pub fn get_value(&self, name: &str) -> Option<&Value> {
-        self.name_to_index.get(name).map(|&idx| &self.cells[idx].value)
+        self.name_to_index
+            .get(name)
+            .map(|&idx| &self.cells[idx].value)
     }
 }
 
@@ -447,9 +450,7 @@ fn walk_expr_deps(expr: &Expr, deps: &mut HashSet<String>) {
             walk_expr_deps(left, deps);
             walk_expr_deps(right, deps);
         }
-        ExprKind::Unary { expr, .. }
-        | ExprKind::Await(expr)
-        | ExprKind::Try(expr) => {
+        ExprKind::Unary { expr, .. } | ExprKind::Await(expr) | ExprKind::Try(expr) => {
             walk_expr_deps(expr, deps);
         }
         ExprKind::Member { recv, .. } => {
@@ -487,21 +488,28 @@ fn walk_expr_deps(expr: &Expr, deps: &mut HashSet<String>) {
             walk_expr_deps(left, deps);
             walk_expr_deps(right, deps);
         }
-        ExprKind::Triple { subject, predicate, object } => {
+        ExprKind::Triple {
+            subject,
+            predicate,
+            object,
+        } => {
             walk_expr_deps(subject, deps);
             walk_expr_deps(predicate, deps);
             walk_expr_deps(object, deps);
         }
-        ExprKind::Reified { subject, predicate, object, reifier } => {
+        ExprKind::Reified {
+            subject,
+            predicate,
+            object,
+            reifier,
+        } => {
             walk_expr_deps(subject, deps);
             walk_expr_deps(predicate, deps);
             walk_expr_deps(object, deps);
             walk_expr_deps(reifier, deps);
         }
         ExprKind::Lambda { body, .. } => walk_expr_deps(body, deps),
-        ExprKind::Tween {
-            from, to, over, ..
-        } => {
+        ExprKind::Tween { from, to, over, .. } => {
             walk_expr_deps(from, deps);
             walk_expr_deps(to, deps);
             walk_expr_deps(over, deps);
@@ -529,7 +537,10 @@ mod tests {
         assert!(graph.is_dirty_bit(69));
         let mut env = Env::default();
         graph.step(&mut env, 0.0).expect("step");
-        assert!(!graph.is_dirty_bit(69), "step should clear dirty bits past 64");
+        assert!(
+            !graph.is_dirty_bit(69),
+            "step should clear dirty bits past 64"
+        );
         graph.mark_dirty("c0");
         assert!(graph.is_dirty_bit(0));
         assert!(

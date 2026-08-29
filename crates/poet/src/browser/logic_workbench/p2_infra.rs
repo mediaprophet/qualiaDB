@@ -4,7 +4,7 @@
 
 use super::helpers::{
     make_button, make_results_area, make_section_label, make_select, make_text_input,
-    make_textarea, make_tool_panel, show_logic_notification, show_mock_results,
+    make_textarea, make_tool_panel, show_mock_results,
 };
 use wasm_bindgen::prelude::Closure;
 use wasm_bindgen::JsCast;
@@ -64,7 +64,7 @@ pub(super) fn build_bytecode_vm_panel(document: &Document) -> Element {
         .append_child(&make_textarea(
             document,
             "bytecode-vm-input",
-            "# WebizenVM bytecode inspection\n# MSB=1 \u{2192} did:q42 topological pointer (direct jump)\n# MSB=0 \u{2192} FNV-1a dictionary hash (lexicon lookup)\n# Registers: 16, Bytecode buffer: 64 bytes\n\n# Opcodes: OP_END, OP_HALT_IF_FALSE, OP_MATCH_SUBJECT/PREDICATE/OBJECT,\n# OP_EVAL_PERMIT/OBLIGATE/FORBID, OP_HALT_VIOLATION\n\n# Query: trace execution of program X?\n# Query: dump register state after step 10?",
+            "<did:alice> <schema:knows> ?who .",
             "120px",
         ))
         .unwrap();
@@ -92,7 +92,7 @@ pub(super) fn build_bytecode_vm_panel(document: &Document) -> Element {
         .append_child(&make_results_area(
             document,
             "bytecode-vm-results",
-            "Click \"Trace Execution\" to inspect VM state (mock).",
+            "Compile the N-Triples pattern to WebizenVM bytecode and list the native opcodes.",
         ))
         .unwrap();
     panel
@@ -111,10 +111,7 @@ pub(super) fn wire_bytecode_vm_panel(document: &Document) {
     if let Some(btn) = document.get_element_by_id("bytecode-vm-stats") {
         let closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
             let doc = web_sys::window().unwrap().document().unwrap();
-            show_logic_notification(
-                &doc,
-                "Execution stats: 42 matches, 128 cycles, 3 direct jumps (mock)",
-            );
+            show_mock_results(&doc, "bytecode-vm-results", "bytecode-vm-stats");
         }) as Box<dyn FnMut(MouseEvent)>);
         btn.add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())
             .unwrap();
@@ -134,7 +131,7 @@ pub(super) fn build_slg_arena_panel(document: &Document) -> Element {
         .append_child(&make_textarea(
             document,
             "slg-arena-input",
-            "# SLG Arena parameters\n# ARENA_SIZE = 42 * 1024 * 1024 (42MB)\n# QUIN_SIZE = 48, MAX_SLOTS = 917,504\n# RECENT_SLOT_RING = 512, MAX_RULE_VARS = 16\n# MAX_GUARD_CONCLUSIONS = 256, MAX_PREMISE_DEPTH = 16\n# MAX_FIXPOINT_ROUNDS = 16\n\n# Query: slot usage summary?\n# Query: rule registry dump?\n# Query: fixpoint round count?",
+            "# Sentinel 42MB ring: 48-byte Quins, 917504 slots\nused_slots=917",
             "100px",
         ))
         .unwrap();
@@ -154,7 +151,7 @@ pub(super) fn build_slg_arena_panel(document: &Document) -> Element {
         .append_child(&make_results_area(
             document,
             "slg-arena-results",
-            "Click \"Inspect Arena\" to view slot usage (mock).",
+            "Report the 42MB Sentinel arena ceiling and occupancy for used_slots.",
         ))
         .unwrap();
     panel
@@ -216,7 +213,7 @@ pub(super) fn build_forge_compute_panel(document: &Document) -> Element {
         .append_child(&make_textarea(
             document,
             "forge-compute-input",
-            "# Forge compute probe parameters\n# Top-K: input_size=4096, k=10\n# GEMM: M=512, N=512, K=512, dtype=f16\n# FFT: size=1024, inverse=false\n# Certify: kernel_name, tolerance=1e-4\n# Roofline: adapter_name, compute_units",
+            "# top_k\nvalues=[9,1,7,3,5]\nk=3\n\n# gemm identity * [[2,3],[4,5]]\nm=2\nK=2\nn=2\na=[1,0,0,1]\nb=[2,3,4,5]\n\n# fft power-of-two reals\nsamples=[1,0,-1,0]\n\n# roofline\nflops=1024\nbytes=256",
             "100px",
         ))
         .unwrap();
@@ -236,7 +233,7 @@ pub(super) fn build_forge_compute_panel(document: &Document) -> Element {
         .append_child(&make_results_area(
             document,
             "forge-compute-results",
-            "Click \"Run Probe\" to execute forge compute (mock).",
+            "Run the selected CPU GEMM, top-k, FFT, or roofline contract. Certification needs a live GPU Forge session.",
         ))
         .unwrap();
     panel
@@ -246,7 +243,16 @@ pub(super) fn wire_forge_compute_panel(document: &Document) {
     if let Some(btn) = document.get_element_by_id("forge-compute-evaluate") {
         let closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
             let doc = web_sys::window().unwrap().document().unwrap();
-            show_mock_results(&doc, "forge-compute-results", "forge-compute");
+            let op = doc
+                .get_element_by_id("forge-compute-op")
+                .and_then(|e| e.dyn_into::<web_sys::HtmlSelectElement>().ok())
+                .map(|s| s.value())
+                .unwrap_or_else(|| "top_k".into());
+            show_mock_results(
+                &doc,
+                "forge-compute-results",
+                &format!("forge-compute-{op}"),
+            );
         }) as Box<dyn FnMut(MouseEvent)>);
         btn.add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())
             .unwrap();
@@ -286,7 +292,7 @@ pub(super) fn build_compute_profile_panel(document: &Document) -> Element {
         .append_child(&make_results_area(
             document,
             "compute-profile-results",
-            "Click \"Get Profile\" to query compute capabilities (mock).",
+            "Probe the host GPU adapter through Render.gpu_backend_info.",
         ))
         .unwrap();
     panel
@@ -337,7 +343,7 @@ pub(super) fn build_privacy_panel(document: &Document) -> Element {
         .append_child(&make_textarea(
             document,
             "privacy-input",
-            "# Privacy engine parameters\n# BFV: plaintext=[1,2,3,4], key_index=0\n# DP Laplace: sensitivity=1.0, epsilon=0.1\n# DP Gaussian: sensitivity=1.0, epsilon=0.1, delta=1e-5\n# Secure Aggregation: participants=5, threshold=3\n# Key rotation: key_index=0, new_index=1",
+            "plaintext=[4,5]\nsensitivity=0\nepsilon=0.5\ndelta=1e-5\nparticipants=5\nthreshold=3",
             "100px",
         ))
         .unwrap();
@@ -357,7 +363,7 @@ pub(super) fn build_privacy_panel(document: &Document) -> Element {
         .append_child(&make_results_area(
             document,
             "privacy-results",
-            "Click \"Execute\" to run privacy computation (mock).",
+            "Run a calibrated DP release, Gaussian sigma, or aggregation quorum. BFV ciphertext ops require a BfvEngine session.",
         ))
         .unwrap();
     panel
@@ -394,7 +400,7 @@ pub(super) fn build_model_lifecycle_panel(document: &Document) -> Element {
         .append_child(&make_textarea(
             document,
             "model-lifecycle-input",
-            "# Model lifecycle query\n# State machine: Discovered \u{2192} MappedToDisk \u{2192} StreamingVRAM \u{2192} Active \u{2192} Scrubbing\n# Thermal governor: Cool / Warm / Critical\n# Orchestration: Committed / Blocked / Failed\n\n# Query: lifecycle status for llama-3-8b?\n# Query: thermal state?\n# Query: orchestrate inference?",
+            "state=active\naction=status",
             "100px",
         ))
         .unwrap();
@@ -422,7 +428,7 @@ pub(super) fn build_model_lifecycle_panel(document: &Document) -> Element {
         .append_child(&make_results_area(
             document,
             "model-lifecycle-results",
-            "Click \"Get Status\" to check model lifecycle (mock).",
+            "Apply the engine ModelLifecycle transition table. Evict maps Active \u{2192} Scrubbing.",
         ))
         .unwrap();
     panel
@@ -441,7 +447,7 @@ pub(super) fn wire_model_lifecycle_panel(document: &Document) {
     if let Some(btn) = document.get_element_by_id("model-lifecycle-evict") {
         let closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
             let doc = web_sys::window().unwrap().document().unwrap();
-            show_logic_notification(&doc, "Model eviction: async scrubbing initiated (mock)");
+            show_mock_results(&doc, "model-lifecycle-results", "model-lifecycle-evict");
         }) as Box<dyn FnMut(MouseEvent)>);
         btn.add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())
             .unwrap();
@@ -481,7 +487,7 @@ pub(super) fn build_inference_monitor_panel(document: &Document) -> Element {
         .append_child(&make_results_area(
             document,
             "inference-monitor-results",
-            "Click \"Get Telemetry\" to view inference stats (mock).",
+            "LLM telemetry requires an active LocalLlmAgent decode session on this daemon.",
         ))
         .unwrap();
     panel
@@ -518,7 +524,7 @@ pub(super) fn build_gguf_tokenizer_panel(document: &Document) -> Element {
         .append_child(&make_textarea(
             document,
             "gguf-tokenizer-input",
-            "# GGUF tokenizer inspection\n# GgufTokenizer: vocab, bos_token_id, eos_token_id, add_bos_token\n# Pre-types: BPE, SentencePiece, Llama3, ChatML\n# Stop tokens: up to 8\n\n# Query: vocab size?\n# Query: tokenize \"Hello world\"?\n# Query: detect chat family?\n# Query: list special tokens?",
+            "text=Hello",
             "100px",
         ))
         .unwrap();
@@ -538,7 +544,7 @@ pub(super) fn build_gguf_tokenizer_panel(document: &Document) -> Element {
         .append_child(&make_results_area(
             document,
             "gguf-tokenizer-results",
-            "Click \"Inspect Tokenizer\" to view tokenizer details (mock).",
+            "Encode text with the engine tokenizer. Without a GGUF file this is the 256-entry byte-level fallback.",
         ))
         .unwrap();
     panel
@@ -568,7 +574,7 @@ pub(super) fn build_p64_weight_panel(document: &Document) -> Element {
         .append_child(&make_textarea(
             document,
             "p64-weight-input",
-            "# P64 weight container inspection\n# MAGIC = b\"p64\\0\", VERSION = 4\n# DEFAULT_PAGE_LOG2 = 14 (16KB pages)\n# Layout: P64WeightHeader(64B) + P64TensorEntry[](64B each) + pad + tensor blob\n\n# Query: header inspection?\n# Query: tensor entry list?\n# Query: CRC-32C verification?",
+            "bytes=70363400",
             "100px",
         ))
         .unwrap();
@@ -588,7 +594,7 @@ pub(super) fn build_p64_weight_panel(document: &Document) -> Element {
         .append_child(&make_results_area(
             document,
             "p64-weight-results",
-            "Click \"Inspect Container\" to view P64 structure (mock).",
+            "Report canonical P64 magic, version, page size, and whether supplied hex starts with p64\\0.",
         ))
         .unwrap();
     panel

@@ -32,3 +32,4 @@ stub!(smiles, "OrganicChemistry");
 stub!(creator_field_sample, "Physics");
 stub!(creator_material_query, "Physics");
 stub!(creator_evaluate_interaction, "Physics");
+stub!(physics_compute, "PhysicsWorkbench");

@@ -33,7 +33,7 @@ pub fn research_manifold_seed() -> ManifoldSeed {
                 width: 420.0,
                 height: 360.0,
                 z: 100.0,
-                honesty: "missing".into(),
+                honesty: "live".into(),
                 ..Default::default()
             },
             SeedContainer {
@@ -63,10 +63,46 @@ pub fn research_manifold_seed() -> ManifoldSeed {
                 title: "Slides".into(),
                 x: 80.0,
                 y: 740.0,
-                width: 920.0,
+                width: 440.0,
                 height: 240.0,
                 z: 100.0,
                 honesty: "missing".into(),
+                ..Default::default()
+            },
+            SeedContainer {
+                container_type: "domain_lab".into(),
+                title: "Domain Lab".into(),
+                x: 540.0,
+                y: 740.0,
+                width: 460.0,
+                height: 240.0,
+                z: 100.0,
+                honesty: "live".into(),
+                ..Default::default()
+            },
+            SeedContainer {
+                container_type: "construct_portal".into(),
+                title: "Knowledge construct".into(),
+                x: 1020.0,
+                y: 740.0,
+                width: 220.0,
+                height: 110.0,
+                z: 100.0,
+                honesty: "live".into(),
+                target_construct: "knowledge".into(),
+                target_manifold: "knowledge".into(),
+                ..Default::default()
+            },
+            SeedContainer {
+                container_type: "nested_manifold".into(),
+                title: "Health manifold".into(),
+                x: 1020.0,
+                y: 870.0,
+                width: 220.0,
+                height: 110.0,
+                z: 100.0,
+                honesty: "live".into(),
+                target_manifold: "health".into(),
                 ..Default::default()
             },
         ],
@@ -81,5 +117,6 @@ pub fn research_manifold_seed() -> ManifoldSeed {
                 dock: DockPosition::Right,
             },
         ],
+        ..Default::default()
     }
 }

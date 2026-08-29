@@ -59,7 +59,10 @@ impl VocabChunk {
     }
 
     pub fn hash_hex(&self) -> String {
-        self.content_hash.iter().map(|b| format!("{b:02x}")).collect()
+        self.content_hash
+            .iter()
+            .map(|b| format!("{b:02x}"))
+            .collect()
     }
 
     /// P17.5 lock check. Does not fetch latest.
@@ -108,7 +111,9 @@ pub fn parse_chunk(bytes: &[u8]) -> Result<VocabChunk, VocabError> {
     }
 
     if by_iri.len() > MAX_TERMS {
-        return Err(VocabError::TooManyTerms { count: by_iri.len() });
+        return Err(VocabError::TooManyTerms {
+            count: by_iri.len(),
+        });
     }
     let terms: Vec<VocabTerm> = by_iri.into_values().collect();
     if terms.is_empty() {

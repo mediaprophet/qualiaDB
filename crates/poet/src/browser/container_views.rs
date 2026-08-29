@@ -7,6 +7,8 @@ use wasm_bindgen::JsCast;
 use web_sys::{Document, Element, HtmlElement};
 
 use super::cml_document::CmlDocument;
+use super::cop_records::{build_family_panel, CopField};
+use super::live_invoke;
 
 /// Rich text CML HyperDoc container — contenteditable with Context Markup Language
 /// (<q-entity>, <q-relation>), Tri-View switcher (Visual / Markdown / RDF-Star),
@@ -24,7 +26,9 @@ pub fn build_doc_view(document: &Document) -> Element {
     // View switcher tabs & Header
     let switcher_row = document.create_element("div").unwrap();
     let sr_el: HtmlElement = switcher_row.clone().dyn_into().unwrap();
-    sr_el.style().set_css_text("display: flex; align-items: center; justify-content: space-between; gap: 8px;");
+    sr_el.style().set_css_text(
+        "display: flex; align-items: center; justify-content: space-between; gap: 8px;",
+    );
 
     let switcher = document.create_element("div").unwrap();
     switcher.set_class_name("doc-view-switcher");
@@ -84,7 +88,10 @@ pub fn build_doc_view(document: &Document) -> Element {
          display: flex; align-items: center; gap: 6px; padding: 2px 8px; \
          background: var(--surface-panel); border-radius: var(--radius-xs);",
     );
-    meta_chip.set_text_content(Some(&format!("\u{1F4C4} {} \u{00B7} Level {}", cml_doc.title, cml_doc.sensitivity_class)));
+    meta_chip.set_text_content(Some(&format!(
+        "\u{1F4C4} {} \u{00B7} Level {}",
+        cml_doc.title, cml_doc.sensitivity_class
+    )));
     switcher_row.append_child(&meta_chip).unwrap();
 
     wrapper.append_child(&switcher_row).unwrap();
@@ -97,13 +104,21 @@ pub fn build_doc_view(document: &Document) -> Element {
         .unwrap();
     let gazetteer_chips_bar = document.create_element("div").unwrap();
     gazetteer_chips_bar.set_class_name("doc-view-panel cml-gazetteer-chips-bar");
-    gazetteer_chips_bar.set_attribute("data-doc-view-panel", "visual").unwrap();
+    gazetteer_chips_bar
+        .set_attribute("data-doc-view-panel", "visual")
+        .unwrap();
     let gcb_el: HtmlElement = gazetteer_chips_bar.clone().dyn_into().unwrap();
     gcb_el.style().set_css_text("display: none; flex-wrap: wrap; gap: 4px; padding: 4px 8px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-subtle); border-radius: var(--radius-xs); margin-bottom: 4px;");
 
     for label in &[
-        "B", "I", "U", "\u{1F517} Link", "\u{1F4CD} Tag Entity", 
-        "\u{2696}\u{FE0F} Deontic Rule", "\u{1F50D} CML Gazetteer", "\u{26A1} Reactive Cell"
+        "B",
+        "I",
+        "U",
+        "\u{1F517} Link",
+        "\u{1F4CD} Tag Entity",
+        "\u{2696}\u{FE0F} Deontic Rule",
+        "\u{1F50D} CML Gazetteer",
+        "\u{26A1} Reactive Cell",
     ] {
         let btn = document.create_element("button").unwrap();
         btn.set_class_name("vibe-run-btn");
@@ -111,110 +126,215 @@ pub fn build_doc_view(document: &Document) -> Element {
 
         match *label {
             "B" => {
-                let closure = wasm_bindgen::closure::Closure::wrap(Box::new(move |_e: web_sys::MouseEvent| {
-                    if let Some(doc) = web_sys::window().and_then(|w| w.document()) {
-                        if let Ok(html_doc) = doc.dyn_into::<web_sys::HtmlDocument>() {
-                            let _ = html_doc.exec_command("bold");
+                let closure =
+                    wasm_bindgen::closure::Closure::wrap(Box::new(move |_e: web_sys::MouseEvent| {
+                        if let Some(doc) = web_sys::window().and_then(|w| w.document()) {
+                            if let Ok(html_doc) = doc.dyn_into::<web_sys::HtmlDocument>() {
+                                let _ = html_doc.exec_command("bold");
+                            }
                         }
-                    }
-                }) as Box<dyn FnMut(web_sys::MouseEvent)>);
-                btn.add_event_listener_with_callback("click", closure.as_ref().unchecked_ref()).unwrap();
+                    })
+                        as Box<dyn FnMut(web_sys::MouseEvent)>);
+                btn.add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())
+                    .unwrap();
                 closure.forget();
             }
             "I" => {
-                let closure = wasm_bindgen::closure::Closure::wrap(Box::new(move |_e: web_sys::MouseEvent| {
-                    if let Some(doc) = web_sys::window().and_then(|w| w.document()) {
-                        if let Ok(html_doc) = doc.dyn_into::<web_sys::HtmlDocument>() {
-                            let _ = html_doc.exec_command("italic");
+                let closure =
+                    wasm_bindgen::closure::Closure::wrap(Box::new(move |_e: web_sys::MouseEvent| {
+                        if let Some(doc) = web_sys::window().and_then(|w| w.document()) {
+                            if let Ok(html_doc) = doc.dyn_into::<web_sys::HtmlDocument>() {
+                                let _ = html_doc.exec_command("italic");
+                            }
                         }
-                    }
-                }) as Box<dyn FnMut(web_sys::MouseEvent)>);
-                btn.add_event_listener_with_callback("click", closure.as_ref().unchecked_ref()).unwrap();
+                    })
+                        as Box<dyn FnMut(web_sys::MouseEvent)>);
+                btn.add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())
+                    .unwrap();
                 closure.forget();
             }
             "U" => {
-                let closure = wasm_bindgen::closure::Closure::wrap(Box::new(move |_e: web_sys::MouseEvent| {
-                    if let Some(doc) = web_sys::window().and_then(|w| w.document()) {
-                        if let Ok(html_doc) = doc.dyn_into::<web_sys::HtmlDocument>() {
-                            let _ = html_doc.exec_command("underline");
+                let closure =
+                    wasm_bindgen::closure::Closure::wrap(Box::new(move |_e: web_sys::MouseEvent| {
+                        if let Some(doc) = web_sys::window().and_then(|w| w.document()) {
+                            if let Ok(html_doc) = doc.dyn_into::<web_sys::HtmlDocument>() {
+                                let _ = html_doc.exec_command("underline");
+                            }
                         }
-                    }
-                }) as Box<dyn FnMut(web_sys::MouseEvent)>);
-                btn.add_event_listener_with_callback("click", closure.as_ref().unchecked_ref()).unwrap();
+                    })
+                        as Box<dyn FnMut(web_sys::MouseEvent)>);
+                btn.add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())
+                    .unwrap();
                 closure.forget();
             }
             "\u{1F517} Link" => {
-                let closure = wasm_bindgen::closure::Closure::wrap(Box::new(move |_e: web_sys::MouseEvent| {
-                    if let Some(doc) = web_sys::window().and_then(|w| w.document()) {
-                        if let Ok(html_doc) = doc.dyn_into::<web_sys::HtmlDocument>() {
-                            let _ = html_doc.exec_command_with_show_ui_and_value("createLink", false, "https://qualia.network/");
+                let closure =
+                    wasm_bindgen::closure::Closure::wrap(Box::new(move |_e: web_sys::MouseEvent| {
+                        if let Some(doc) = web_sys::window().and_then(|w| w.document()) {
+                            if let Ok(html_doc) = doc.dyn_into::<web_sys::HtmlDocument>() {
+                                let _ = html_doc.exec_command_with_show_ui_and_value(
+                                    "createLink",
+                                    false,
+                                    "https://qualia.network/",
+                                );
+                            }
                         }
-                    }
-                }) as Box<dyn FnMut(web_sys::MouseEvent)>);
-                btn.add_event_listener_with_callback("click", closure.as_ref().unchecked_ref()).unwrap();
+                    })
+                        as Box<dyn FnMut(web_sys::MouseEvent)>);
+                btn.add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())
+                    .unwrap();
                 closure.forget();
             }
             "\u{1F4CD} Tag Entity" => {
-                let closure = wasm_bindgen::closure::Closure::wrap(Box::new(move |_e: web_sys::MouseEvent| {
-                    if let Some(doc) = web_sys::window().and_then(|w| w.document()) {
-                        if let Ok(html_doc) = doc.dyn_into::<web_sys::HtmlDocument>() {
-                            let html = "<q-entity category=\"entity\" iri=\"did:qualia:entity#term\" class=\"cml-entity\">Tagged Entity</q-entity>";
-                            let _ = html_doc.exec_command_with_show_ui_and_value("insertHTML", false, html);
+                let closure = wasm_bindgen::closure::Closure::wrap(Box::new(
+                    move |_e: web_sys::MouseEvent| {
+                        if let Some(doc) = web_sys::window().and_then(|w| w.document()) {
+                            if let Ok(html_doc) = doc.dyn_into::<web_sys::HtmlDocument>() {
+                                let html = "<q-entity category=\"entity\" iri=\"did:qualia:entity#term\" class=\"cml-entity\">Tagged Entity</q-entity>";
+                                let _ = html_doc.exec_command_with_show_ui_and_value(
+                                    "insertHTML",
+                                    false,
+                                    html,
+                                );
+                            }
                         }
-                    }
-                }) as Box<dyn FnMut(web_sys::MouseEvent)>);
-                btn.add_event_listener_with_callback("click", closure.as_ref().unchecked_ref()).unwrap();
+                    },
+                )
+                    as Box<dyn FnMut(web_sys::MouseEvent)>);
+                btn.add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())
+                    .unwrap();
                 closure.forget();
             }
             "\u{2696}\u{FE0F} Deontic Rule" => {
-                let closure = wasm_bindgen::closure::Closure::wrap(Box::new(move |_e: web_sys::MouseEvent| {
-                    if let Some(doc) = web_sys::window().and_then(|w| w.document()) {
-                        if let Ok(html_doc) = doc.dyn_into::<web_sys::HtmlDocument>() {
-                            let html = "<q-deontic opcode=\"0x10\" class=\"cml-deontic\" style=\"border-bottom: 2px solid #ef4444; background: rgba(239,68,68,0.1); padding: 0 4px; border-radius: 2px;\">\u{2696}\u{FE0F} Obligate(Action)</q-deontic>";
-                            let _ = html_doc.exec_command_with_show_ui_and_value("insertHTML", false, html);
+                let closure = wasm_bindgen::closure::Closure::wrap(Box::new(
+                    move |_e: web_sys::MouseEvent| {
+                        if let Some(doc) = web_sys::window().and_then(|w| w.document()) {
+                            if let Ok(html_doc) = doc.dyn_into::<web_sys::HtmlDocument>() {
+                                let html = "<q-deontic opcode=\"0x10\" class=\"cml-deontic\" style=\"border-bottom: 2px solid #ef4444; background: rgba(239,68,68,0.1); padding: 0 4px; border-radius: 2px;\">\u{2696}\u{FE0F} Obligate(Action)</q-deontic>";
+                                let _ = html_doc.exec_command_with_show_ui_and_value(
+                                    "insertHTML",
+                                    false,
+                                    html,
+                                );
+                            }
                         }
-                    }
-                }) as Box<dyn FnMut(web_sys::MouseEvent)>);
-                btn.add_event_listener_with_callback("click", closure.as_ref().unchecked_ref()).unwrap();
+                    },
+                )
+                    as Box<dyn FnMut(web_sys::MouseEvent)>);
+                btn.add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())
+                    .unwrap();
                 closure.forget();
             }
             "\u{26A1} Reactive Cell" => {
-                let closure = wasm_bindgen::closure::Closure::wrap(Box::new(move |_e: web_sys::MouseEvent| {
-                    if let Some(doc) = web_sys::window().and_then(|w| w.document()) {
-                        if let Ok(html_doc) = doc.dyn_into::<web_sys::HtmlDocument>() {
-                            let html = "<span class=\"cml-cell-tag\" contenteditable=\"false\" style=\"display: inline-block; background: rgba(0,242,169,0.15); color: #00f2a9; padding: 2px 6px; border-radius: 4px; font-family: monospace; font-size: 11px; margin: 0 4px;\">\u{26A1} = 2.5 * 10 \u{2794} 25.0</span>&nbsp;";
-                            let _ = html_doc.exec_command_with_show_ui_and_value("insertHTML", false, html);
+                let closure = wasm_bindgen::closure::Closure::wrap(Box::new(
+                    move |_e: web_sys::MouseEvent| {
+                        if let Some(doc) = web_sys::window().and_then(|w| w.document()) {
+                            if let Ok(html_doc) = doc.dyn_into::<web_sys::HtmlDocument>() {
+                                let html = "<span class=\"cml-cell-tag\" contenteditable=\"false\" style=\"display: inline-block; background: rgba(0,242,169,0.15); color: #00f2a9; padding: 2px 6px; border-radius: 4px; font-family: monospace; font-size: 11px; margin: 0 4px;\">\u{26A1} = 2.5 * 10 \u{2794} 25.0</span>&nbsp;";
+                                let _ = html_doc.exec_command_with_show_ui_and_value(
+                                    "insertHTML",
+                                    false,
+                                    html,
+                                );
+                            }
                         }
-                    }
-                }) as Box<dyn FnMut(web_sys::MouseEvent)>);
-                btn.add_event_listener_with_callback("click", closure.as_ref().unchecked_ref()).unwrap();
+                    },
+                )
+                    as Box<dyn FnMut(web_sys::MouseEvent)>);
+                btn.add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())
+                    .unwrap();
                 closure.forget();
             }
             "\u{1F50D} CML Gazetteer" => {
+                btn.set_attribute("data-requires-daemon", "true").unwrap();
+                btn.set_attribute(
+                    "data-enabled-title",
+                    "Analyse the current document with the native gazetteer",
+                )
+                .unwrap();
+                if !super::native_daemon::is_daemon_connected() {
+                    btn.set_attribute("disabled", "").unwrap();
+                    btn.set_attribute("aria-disabled", "true").unwrap();
+                    btn.set_attribute(
+                        "title",
+                        "Unavailable until the local QualiaDB daemon is connected.",
+                    )
+                    .unwrap();
+                }
                 let gcb_clone = gazetteer_chips_bar.clone();
-                let cml_doc_clone = cml_doc.clone();
-                let gz_closure = wasm_bindgen::closure::Closure::wrap(Box::new(move |_e: web_sys::MouseEvent| {
-                    let gcb_html: HtmlElement = gcb_clone.clone().dyn_into().unwrap();
-                    let is_hidden = gcb_html.style().get_property_value("display").unwrap_or_default() == "none";
-                    if is_hidden {
-                        gcb_clone.set_inner_html("");
-                        if let Some(win) = web_sys::window() {
-                            if let Some(doc) = win.document() {
-                                for span in &cml_doc_clone.spans {
-                                    let chip = doc.create_element("span").unwrap();
-                                    let c_el: HtmlElement = chip.clone().dyn_into().unwrap();
-                                    c_el.style().set_css_text("font-family: var(--font-mono); font-size: 9px; padding: 2px 6px; border-radius: 3px; background: rgba(56, 189, 248, 0.15); color: var(--accent-cyan); border: 1px solid rgba(56, 189, 248, 0.3);");
-                                    chip.set_text_content(Some(&format!("{} {} \u{2794} <{}>", span.category.glyph(), span.label, span.iri)));
-                                    gcb_clone.append_child(&chip).unwrap();
+                let wrapper_clone = wrapper.clone();
+                let gz_closure = wasm_bindgen::closure::Closure::wrap(Box::new(
+                    move |_e: web_sys::MouseEvent| {
+                        let gcb_html: HtmlElement = gcb_clone.clone().dyn_into().unwrap();
+                        let is_hidden = gcb_html
+                            .style()
+                            .get_property_value("display")
+                            .unwrap_or_default()
+                            == "none";
+                        if is_hidden {
+                            gcb_clone.set_inner_html("");
+                            let _ = gcb_html.style().set_property("display", "flex");
+                            let source = wrapper_clone
+                                .query_selector(".doc-editor")
+                                .ok()
+                                .flatten()
+                                .and_then(|editor| editor.text_content())
+                                .unwrap_or_default();
+                            gcb_clone.set_text_content(Some("Analysing current document…"));
+                            let target = gcb_clone.clone();
+                            wasm_bindgen_futures::spawn_local(async move {
+                                match super::native_daemon::daemon_gazetteer(&source).await {
+                                    Ok(response) if response.ok => {
+                                        target.set_inner_html("");
+                                        let Some(document) =
+                                            web_sys::window().and_then(|window| window.document())
+                                        else {
+                                            return;
+                                        };
+                                        let summary = document.create_element("span").unwrap();
+                                        summary.set_text_content(Some(&format!(
+                                            "{} tokens · {} sentences · {} sealed",
+                                            response.token_count,
+                                            response.sentence_count,
+                                            response.sealed
+                                        )));
+                                        summary.set_attribute("data-honesty", "live").unwrap();
+                                        target.append_child(&summary).unwrap();
+                                        for hit in response.hits {
+                                            let chip = document.create_element("span").unwrap();
+                                            let chip_html: HtmlElement =
+                                                chip.clone().dyn_into().unwrap();
+                                            chip_html.style().set_css_text("font-family: var(--font-mono); font-size: 9px; padding: 2px 6px; border-radius: 3px; background: rgba(56, 189, 248, 0.15); color: var(--accent-cyan); border: 1px solid rgba(56, 189, 248, 0.3);");
+                                            chip.set_text_content(Some(&format!(
+                                                "{} \u{2794} <{}>",
+                                                hit.surface, hit.iri
+                                            )));
+                                            target.append_child(&chip).unwrap();
+                                        }
+                                    }
+                                    Ok(response) => {
+                                        target.set_attribute("data-honesty", "error").ok();
+                                        target.set_text_content(Some(
+                                            response
+                                                .diagnostic
+                                                .as_deref()
+                                                .unwrap_or("Gazetteer analysis failed."),
+                                        ));
+                                    }
+                                    Err(error) => {
+                                        target.set_attribute("data-honesty", "error").ok();
+                                        target.set_text_content(Some(&error));
+                                    }
                                 }
-                            }
+                            });
+                        } else {
+                            let _ = gcb_html.style().set_property("display", "none");
                         }
-                        let _ = gcb_html.style().set_property("display", "flex");
-                    } else {
-                        let _ = gcb_html.style().set_property("display", "none");
-                    }
-                }) as Box<dyn FnMut(web_sys::MouseEvent)>);
-                btn.add_event_listener_with_callback("click", gz_closure.as_ref().unchecked_ref()).unwrap();
+                    },
+                )
+                    as Box<dyn FnMut(web_sys::MouseEvent)>);
+                btn.add_event_listener_with_callback("click", gz_closure.as_ref().unchecked_ref())
+                    .unwrap();
                 gz_closure.forget();
             }
             _ => {}
@@ -242,9 +362,12 @@ pub fn build_doc_view(document: &Document) -> Element {
     wrapper.append_child(&editor).unwrap();
 
     // Embedded Reactive Calculation Cell (<q-cell>)
-    let embedded_cell = super::vibe_cell::build_q_cell_element(document, super::vibe_cell::VibeCell::default());
+    let embedded_cell =
+        super::vibe_cell::build_q_cell_element(document, super::vibe_cell::VibeCell::default());
     embedded_cell.set_class_name("doc-view-panel q-cell-widget");
-    embedded_cell.set_attribute("data-doc-view-panel", "visual").unwrap();
+    embedded_cell
+        .set_attribute("data-doc-view-panel", "visual")
+        .unwrap();
     wrapper.append_child(&embedded_cell).unwrap();
 
     // Markdown view (hidden by default)
@@ -295,7 +418,8 @@ pub fn build_doc_view(document: &Document) -> Element {
     );
     rdf_info.set_text_content(Some(&format!(
         "\u{1F4CB} Extracted RDF-Star Triples: {} terms \u{00B7} 48-byte Super-Quins: {}",
-        cml_doc.to_rdf_star_triples().len(), report.quin_count
+        cml_doc.to_rdf_star_triples().len(),
+        report.quin_count
     )));
     rdf_view.append_child(&rdf_info).unwrap();
 
@@ -333,7 +457,7 @@ pub fn build_doc_view(document: &Document) -> Element {
         row_el
             .style()
             .set_css_text("display: flex; border-bottom: 1px solid var(--border-subtle);");
-        
+
         let conf_pct = format!("{:.0}%", triple.confidence * 100.0);
         let vals = [
             triple.subject.as_str(),
@@ -351,7 +475,10 @@ pub fn build_doc_view(document: &Document) -> Element {
                  text-overflow: ellipsis; white-space: nowrap;",
             );
             if i == 3 {
-                cell_el.style().set_property("color", "var(--accent-emerald)").unwrap();
+                cell_el
+                    .style()
+                    .set_property("color", "var(--accent-emerald)")
+                    .unwrap();
             }
             cell.set_text_content(Some(val));
             row.append_child(&cell).unwrap();
@@ -376,7 +503,11 @@ pub fn build_doc_view(document: &Document) -> Element {
     // Left: SHACL Conformance Badge
     let shacl_badge = document.create_element("div").unwrap();
     let sb_el: HtmlElement = shacl_badge.clone().dyn_into().unwrap();
-    let badge_color = if report.conforms { "var(--accent-emerald)" } else { "var(--accent-rose)" };
+    let badge_color = if report.conforms {
+        "var(--accent-emerald)"
+    } else {
+        "var(--accent-rose)"
+    };
     sb_el.style().set_css_text(&format!(
         "display: flex; align-items: center; gap: 5px; color: {}; font-weight: 600;",
         badge_color
@@ -387,7 +518,9 @@ pub fn build_doc_view(document: &Document) -> Element {
     // Middle: Modality & Quins Metric
     let metric_div = document.create_element("div").unwrap();
     let md_el: HtmlElement = metric_div.clone().dyn_into().unwrap();
-    md_el.style().set_css_text("color: var(--text-muted); display: flex; gap: 8px;");
+    md_el
+        .style()
+        .set_css_text("color: var(--text-muted); display: flex; gap: 8px;");
     metric_div.set_text_content(Some(&format!(
         "\u{1F9E0} Certainty: 96% \u{00B7} {} Quins (Sentinel Bounded)",
         report.quin_count
@@ -398,7 +531,9 @@ pub fn build_doc_view(document: &Document) -> Element {
     let export_btn = document.create_element("button").unwrap();
     export_btn.set_class_name("vibe-run-btn");
     let eb_el: HtmlElement = export_btn.clone().dyn_into().unwrap();
-    eb_el.style().set_css_text("padding: 2px 8px; font-size: 9px;");
+    eb_el
+        .style()
+        .set_css_text("padding: 2px 8px; font-size: 9px;");
     export_btn.set_text_content(Some("\u{1F4E6} Export .hcf"));
     aura_tray.append_child(&export_btn).unwrap();
 
@@ -884,12 +1019,22 @@ pub fn build_graph_view(document: &Document) -> Element {
     query_bar.set_class_name("vibe-toolbar");
     let run_btn = document.create_element("button").unwrap();
     run_btn.set_class_name("vibe-run-btn");
+    run_btn
+        .set_attribute("data-instrument-action", "graph:sparql")
+        .unwrap();
     run_btn.set_text_content(Some("\u{25B6} Run SPARQL"));
     query_bar.append_child(&run_btn).unwrap();
     wrapper.append_child(&query_bar).unwrap();
 
     let editor = document.create_element("div").unwrap();
     editor.set_class_name("vibe-editor");
+    editor.set_attribute("contenteditable", "true").unwrap();
+    editor
+        .set_attribute("data-state-key", "sparql-source")
+        .unwrap();
+    editor
+        .set_attribute("aria-label", "SPARQL query source")
+        .unwrap();
     editor.set_text_content(Some(
         "PREFIX soc: <https://qualiadb.org/ontology/social#>\n\
          SELECT ?peer ?modality WHERE {\n\
@@ -902,86 +1047,107 @@ pub fn build_graph_view(document: &Document) -> Element {
     // Results
     let results = document.create_element("div").unwrap();
     results.set_class_name("vibe-output");
-    let line1 = document.create_element("div").unwrap();
-    line1.set_class_name("vibe-out-line");
-    line1.set_text_content(Some(
-        "peer=\u{2014}did:qualia:alice, modality=\u{2014}objective",
-    ));
-    let line2 = document.create_element("div").unwrap();
-    line2.set_class_name("vibe-out-line");
-    line2.set_text_content(Some(
-        "peer=\u{2014}did:qualia:bob, modality=\u{2014}subjective",
-    ));
-    let line3 = document.create_element("div").unwrap();
-    line3.set_class_name("vibe-out-line");
-    line3.set_text_content(Some(
-        "\u{2139}\u{FE0F} 2 results \u{00B7} 12ms \u{00B7} CBOR-LD: 48 bytes",
-    ));
-    results.append_child(&line1).unwrap();
-    results.append_child(&line2).unwrap();
-    results.append_child(&line3).unwrap();
+    results.set_text_content(Some("No SPARQL query has been executed in this container."));
     wrapper.append_child(&results).unwrap();
+
+    let editor_for_run = editor.clone();
+    let results_for_run = results.clone();
+    let closure = Closure::wrap(Box::new(move |_event: web_sys::Event| {
+        let query = editor_for_run.text_content().unwrap_or_default();
+        if query.trim().is_empty() {
+            results_for_run.set_attribute("data-honesty", "error").ok();
+            results_for_run.set_text_content(Some("Enter a SPARQL query before running."));
+            return;
+        }
+        if !super::native_daemon::is_daemon_connected() {
+            results_for_run
+                .set_attribute("data-honesty", "unavailable")
+                .ok();
+            results_for_run.set_text_content(Some(
+                "Unavailable: start the local QualiaDB daemon to execute SPARQL.",
+            ));
+            return;
+        }
+        results_for_run
+            .set_attribute("data-honesty", "running")
+            .ok();
+        results_for_run.set_text_content(Some("Executing SPARQL on the native daemon…"));
+        let output = results_for_run.clone();
+        wasm_bindgen_futures::spawn_local(async move {
+            match super::native_daemon::daemon_query(&query).await {
+                Ok(result) => {
+                    output.set_attribute("data-honesty", "live").ok();
+                    output.set_text_content(Some(&result));
+                }
+                Err(error) => {
+                    output.set_attribute("data-honesty", "error").ok();
+                    output.set_text_content(Some(&error));
+                }
+            }
+        });
+    }) as Box<dyn FnMut(web_sys::Event)>);
+    run_btn
+        .add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())
+        .unwrap();
+    closure.forget();
 
     wrapper
 }
 
-/// Ontology browser container — tree view of classes and properties.
+/// Ontology browser container — live graph stats, not a fabricated class tree.
 pub fn build_ontology_view(document: &Document) -> Element {
     let wrapper = document.create_element("div").unwrap();
     wrapper.set_class_name("ontology-tree");
-
-    let tree = document.create_element("div").unwrap();
-    let tree_el: HtmlElement = tree.clone().dyn_into().unwrap();
-    tree_el
-        .style()
-        .set_css_text("overflow-y: auto; flex: 1; padding: 8px;");
-
-    let entries = &[
-        ("soc:", "Social", "class", 0),
-        ("  soc:hasPeer", "hasPeer", "prop", 1),
-        ("  soc:epistemicModality", "epistemicModality", "prop", 1),
-        ("  soc:requestsConnection", "requestsConnection", "prop", 1),
-        ("health:", "Health", "class", 0),
-        ("  health:hasCondition", "hasCondition", "prop", 1),
-        ("  health:hasMedication", "hasMedication", "prop", 1),
-        ("geo:", "Geospatial", "class", 0),
-        ("  geo:hasGeometry", "hasGeometry", "prop", 1),
-        ("  geo:withinHull", "withinHull", "prop", 1),
-        ("vibe:", "VibeScript", "class", 0),
-        ("  vibe:Intent", "Intent", "class", 1),
-        ("  vibe:Receipt", "Receipt", "class", 1),
-    ];
-
-    for (prefix, label, kind, depth) in entries {
-        let node = document.create_element("div").unwrap();
-        node.set_class_name("ontology-tree-node");
-        let node_el: HtmlElement = node.clone().dyn_into().unwrap();
-        node_el
-            .style()
-            .set_css_text(&format!("padding-left: {}px;", depth * 16));
-
-        let pfx = document.create_element("span").unwrap();
-        pfx.set_class_name("ot-prefix");
-        pfx.set_text_content(Some(prefix));
-        node.append_child(&pfx).unwrap();
-
-        let cls = document.create_element("span").unwrap();
-        cls.set_class_name(if *kind == "class" {
-            "ot-class"
-        } else {
-            "ot-prop"
-        });
-        cls.set_text_content(Some(label));
-        node.append_child(&cls).unwrap();
-
-        tree.append_child(&node).unwrap();
-    }
-
-    wrapper.append_child(&tree).unwrap();
+    let note = document.create_element("div").unwrap();
+    note.set_text_content(Some(
+        "Live graph stats from GraphDatabase.stats. Class trees come from COP ontology records and N3 authoring, not a canned prefix list.",
+    ));
+    let note_el: HtmlElement = note.clone().dyn_into().unwrap();
+    note_el.style().set_css_text(
+        "font-size: 10px; color: var(--text-muted); font-family: var(--font-mono); padding: 8px;",
+    );
+    wrapper.append_child(&note).unwrap();
+    wrapper
+        .append_child(&live_invoke::action_bar(
+            document,
+            &[
+                (
+                    "GraphDatabase.stats",
+                    "GraphDatabase.stats",
+                    serde_json::json!({}),
+                ),
+                (
+                    "SHACL.extensions",
+                    "SHACL.extensions",
+                    serde_json::json!({}),
+                ),
+            ],
+        ))
+        .unwrap();
+    let panel = build_family_panel(
+        document,
+        "ontology_term",
+        "Ontology terms you record. Natural persons are rdfs:Class, never owl:Thing.",
+        &[
+            CopField {
+                key: "iri",
+                placeholder: "IRI",
+            },
+            CopField {
+                key: "kind",
+                placeholder: "Kind (class|property)",
+            },
+            CopField {
+                key: "paradigm",
+                placeholder: "Paradigm (rdfs|shacl|shex)",
+            },
+        ],
+    );
+    wrapper.append_child(&panel).unwrap();
     wrapper
 }
 
-/// Pulse stream container — event log with publish allowlist.
+/// Pulse stream container — live Pulse.publish + COP pulse_event ledger.
 pub fn build_pulse_view(document: &Document) -> Element {
     let wrapper = document.create_element("div").unwrap();
     let wrapper_el: HtmlElement = wrapper.clone().dyn_into().unwrap();
@@ -989,43 +1155,56 @@ pub fn build_pulse_view(document: &Document) -> Element {
         .style()
         .set_css_text("display: flex; flex-direction: column; flex: 1; gap: 4px;");
 
-    // Publish bar
-    let bar = document.create_element("div").unwrap();
-    bar.set_class_name("vibe-toolbar");
-    let label = document.create_element("span").unwrap();
-    label.set_text_content(Some("topic:"));
-    let label_el: HtmlElement = label.clone().dyn_into().unwrap();
-    label_el
-        .style()
-        .set_css_text("color: var(--text-muted); font-size: 10px; font-family: var(--font-mono);");
-    bar.append_child(&label).unwrap();
-    let input = document.create_element("input").unwrap();
-    let input_el: web_sys::HtmlInputElement = input.clone().dyn_into().unwrap();
-    input_el.set_placeholder("pulse:topic:event");
-    input.set_attribute("style", "flex: 1; background: var(--canvas-bg); border: 1px solid var(--border-subtle); border-radius: var(--radius-xs); padding: 3px 6px; color: var(--accent-cyan); font-family: var(--font-mono); font-size: 10px;").unwrap();
-    bar.append_child(&input).unwrap();
-    let btn = document.create_element("button").unwrap();
-    btn.set_class_name("vibe-run-btn");
-    btn.set_text_content(Some("Publish"));
-    bar.append_child(&btn).unwrap();
-    wrapper.append_child(&bar).unwrap();
+    let note = document.create_element("div").unwrap();
+    note.set_text_content(Some(
+        "Topics must be poet/, pulse/, or clinic/. Unprefixed channels are rewritten to poet/{channel}. The log is the COP pulse_event ledger, not a canned stream.",
+    ));
+    let note_el: HtmlElement = note.clone().dyn_into().unwrap();
+    note_el.style().set_css_text(
+        "font-size: 10px; color: var(--text-muted); font-family: var(--font-mono); padding: 4px 8px;",
+    );
+    wrapper.append_child(&note).unwrap();
 
-    // Event log
-    let log = document.create_element("div").unwrap();
-    log.set_class_name("vibe-output");
-    let events = &[
-        "12:04:01 \u{00B7} pulse:social:connect \u{00B7} did:qualia:alice \u{2192} did:qualia:bob",
-        "12:03:45 \u{00B7} pulse:graph:mutate \u{00B7} quin.statement #a42",
-        "12:03:12 \u{00B7} pulse:aura:validate \u{00B7} SHACL shape:ok",
-        "12:02:58 \u{00B7} pulse:telemetry:tick \u{00B7} wavefunction collapse",
-    ];
-    for ev in events {
-        let line = document.create_element("div").unwrap();
-        line.set_class_name("vibe-out-line");
-        line.set_text_content(Some(ev));
-        log.append_child(&line).unwrap();
-    }
-    wrapper.append_child(&log).unwrap();
-
+    let panel = build_family_panel(
+        document,
+        "pulse_event",
+        "Pulse events persist here after Pulse.publish. Empty until you publish or save.",
+        &[
+            CopField {
+                key: "channel",
+                placeholder: "Channel (poet/social)",
+            },
+            CopField {
+                key: "payload_type",
+                placeholder: "Payload type (agent-message|telemetry|presence)",
+            },
+        ],
+    );
+    panel
+        .append_child(&live_invoke::action_bar(
+            document,
+            &[
+                (
+                    "Pulse.publish",
+                    "Pulse.publish",
+                    serde_json::json!({ "channel": "poet/pulse", "payload_type": "generic" }),
+                ),
+                (
+                    "Pulse.publish_telemetry",
+                    "Pulse.publish_telemetry",
+                    serde_json::json!({ "channel": "poet/telemetry" }),
+                ),
+                (
+                    "Pulse.open_channel",
+                    "Pulse.open_channel",
+                    serde_json::json!({ "channel": "poet/pulse", "channel_type": "topic" }),
+                ),
+            ],
+        ))
+        .unwrap();
+    wrapper
+        .append_child(&super::pulse_stream::build_live_stream(document))
+        .unwrap();
+    wrapper.append_child(&panel).unwrap();
     wrapper
 }

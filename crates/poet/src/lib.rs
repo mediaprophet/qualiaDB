@@ -5,6 +5,7 @@
 //! Assignment: COPYRIGHT.md  Licence: LICENSE (CC BY-NC-ND 4.0)
 
 pub mod tool_chest {
+    pub mod constructs;
     pub mod core;
     pub mod manifolds;
     pub mod payloads;
@@ -13,9 +14,10 @@ pub mod tool_chest {
 pub mod browser;
 
 pub use tool_chest::core::{
-    build_payload, ActionType, ContextRef, DockPosition, IntentBus, IntentReceipt, IntentStatus,
-    Manifest, ManifestChain, ManifestTool, ManifoldSeed, OntologyClass, OntologyModule,
-    OntologyProperty, OntologyRegistry, Provenance, Registry, SeedConnection, SeedContainer,
-    SeedPanel, SimpleTool, TargetIdentifier, TargetKind, Tool, ToolChain, ToolChainMetadata,
-    ToolKind, ToolMetadata, Toolbox, ToolboxMetadata, VibeScriptPayload,
+    build_payload, ActionType, ConstructSeed, ConstructSource, ContextRef, DockPosition, IntentBus,
+    IntentReceipt, IntentStatus, Manifest, ManifestChain, ManifestTool, ManifoldParticipant,
+    ManifoldSeed, ManifoldSociality, OntologyClass, OntologyModule, OntologyProperty,
+    OntologyRegistry, Provenance, Registry, SeedConnection, SeedContainer, SeedPanel, SimpleTool,
+    SubjectSeed, TargetIdentifier, TargetKind, Tool, ToolChain, ToolChainMetadata, ToolKind,
+    ToolMetadata, Toolbox, ToolboxMetadata, VibeScriptPayload,
 };

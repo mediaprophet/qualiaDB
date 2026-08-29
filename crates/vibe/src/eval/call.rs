@@ -61,9 +61,7 @@ impl<'a, H: Host> Engine<'a, H> {
         let path = match &callee.kind {
             ExprKind::Member { recv, name } => {
                 if let ExprKind::Ident(ns) = &recv.kind {
-                    if env.vars.contains_key(ns)
-                        && matches!(name.as_str(), "map" | "filter")
-                    {
+                    if env.vars.contains_key(ns) && matches!(name.as_str(), "map" | "filter") {
                         return self.eval_collection_method(name, recv, args, span, env);
                     }
                     // Resolve import aliases: `g.query` → `graph.query`

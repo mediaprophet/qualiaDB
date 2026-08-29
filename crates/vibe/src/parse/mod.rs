@@ -5,10 +5,10 @@ use crate::error::{DiagCode, Diagnostic};
 use crate::lex::{Lexer, Token, TokenKind};
 use crate::span::Span;
 
-mod preamble;
-mod items;
-mod stmt;
 mod expr;
+mod items;
+mod preamble;
+mod stmt;
 
 pub struct Parser<'a> {
     pub(crate) lex: Lexer<'a>,
@@ -369,11 +369,7 @@ pub(super) fn unquote(s: &str, span: Span) -> Result<String, Diagnostic> {
                 Some('u') => {
                     // \u{XXXX}
                     if chars.next() != Some('{') {
-                        return Err(Diagnostic::new(
-                            DiagCode::E001,
-                            span,
-                            "expected \\u{XXXX}",
-                        ));
+                        return Err(Diagnostic::new(DiagCode::E001, span, "expected \\u{XXXX}"));
                     }
                     let mut hex = String::new();
                     loop {
@@ -389,20 +385,13 @@ pub(super) fn unquote(s: &str, span: Span) -> Result<String, Diagnostic> {
                             }
                         }
                     }
-                    let cp = u32::from_str_radix(&hex, 16).map_err(|_| {
-                        Diagnostic::new(DiagCode::E001, span, "bad unicode escape")
-                    })?;
+                    let cp = u32::from_str_radix(&hex, 16)
+                        .map_err(|_| Diagnostic::new(DiagCode::E001, span, "bad unicode escape"))?;
                     out.push(char::from_u32(cp).ok_or_else(|| {
                         Diagnostic::new(DiagCode::E001, span, "invalid codepoint")
                     })?);
                 }
-                _ => {
-                    return Err(Diagnostic::new(
-                        DiagCode::E001,
-                        span,
-                        "bad string escape",
-                    ))
-                }
+                _ => return Err(Diagnostic::new(DiagCode::E001, span, "bad string escape")),
             }
         } else {
             out.push(c);

@@ -1,6 +1,7 @@
-//! Health manifold seed — health & wellbeing containers (Workstream B).
+//! Health manifold — overview, documents (NLP + library), share, conditions.
 //!
-//! Copyright (c) 2026 Timothy Charles Holborn. All rights reserved.
+//! Not a nested clinical EHR. Record kinds are tools/containers on this
+//! manifold. Conditions are possessions of a Principal, not owl:Thing.
 
 use super::super::core::registry::{
     DockPosition, ManifoldSeed, SeedConnection, SeedContainer, SeedPanel,
@@ -12,16 +13,39 @@ pub fn health_manifold_seed() -> ManifoldSeed {
         label: "Health".into(),
         icon: "health".into(),
         ontology_prefix: "med".into(),
-        description: "Health & wellbeing: conditions, lab results, medications, mental wellbeing, \
-             biometrics, welfare support, safeguards. Consent-gated. Sanctuary-respecting."
+        description: "Consent-gated health records on the Semantic Library: classified/secret \
+             by default, permissive share to a named clinician DID, NLP ingest of \
+             extracted PDF/report text. Not a nested EHR."
             .into(),
         containers: vec![
             SeedContainer {
                 container_type: "health_overview".into(),
-                title: "Health Overview".into(),
-                x: 30.0,
+                title: "Health overview".into(),
+                x: 40.0,
                 y: 30.0,
-                width: 1340.0,
+                width: 720.0,
+                height: 360.0,
+                z: 1.0,
+                honesty: "present".into(),
+                ..Default::default()
+            },
+            SeedContainer {
+                container_type: "health_documents".into(),
+                title: "Health documents".into(),
+                x: 780.0,
+                y: 30.0,
+                width: 560.0,
+                height: 360.0,
+                z: 1.0,
+                honesty: "present".into(),
+                ..Default::default()
+            },
+            SeedContainer {
+                container_type: "disclosure_log".into(),
+                title: "Share / disclosure".into(),
+                x: 40.0,
+                y: 410.0,
+                width: 720.0,
                 height: 280.0,
                 z: 1.0,
                 honesty: "present".into(),
@@ -30,387 +54,79 @@ pub fn health_manifold_seed() -> ManifoldSeed {
             SeedContainer {
                 container_type: "conditions".into(),
                 title: "Conditions".into(),
-                x: 30.0,
-                y: 330.0,
-                width: 660.0,
-                height: 260.0,
+                x: 780.0,
+                y: 410.0,
+                width: 560.0,
+                height: 160.0,
                 z: 1.0,
                 honesty: "present".into(),
                 ..Default::default()
             },
             SeedContainer {
-                container_type: "clinical_reports".into(),
-                title: "Clinical Reports".into(),
-                x: 710.0,
-                y: 330.0,
-                width: 660.0,
-                height: 260.0,
+                container_type: "nested_manifold".into(),
+                title: "Anatomy manifold".into(),
+                x: 780.0,
+                y: 590.0,
+                width: 560.0,
+                height: 100.0,
                 z: 1.0,
-                honesty: "present".into(),
-                ..Default::default()
-            },
-            SeedContainer {
-                container_type: "lab_results".into(),
-                title: "Lab Results".into(),
-                x: 30.0,
-                y: 610.0,
-                width: 660.0,
-                height: 280.0,
-                z: 1.0,
-                honesty: "present".into(),
-                ..Default::default()
-            },
-            SeedContainer {
-                container_type: "medications".into(),
-                title: "Medications".into(),
-                x: 710.0,
-                y: 610.0,
-                width: 660.0,
-                height: 280.0,
-                z: 1.0,
-                honesty: "present".into(),
-                ..Default::default()
-            },
-            SeedContainer {
-                container_type: "vitals".into(),
-                title: "Vitals".into(),
-                x: 30.0,
-                y: 910.0,
-                width: 660.0,
-                height: 240.0,
-                z: 1.0,
-                honesty: "present".into(),
-                ..Default::default()
-            },
-            SeedContainer {
-                container_type: "mental_wellbeing".into(),
-                title: "Mental Wellbeing".into(),
-                x: 710.0,
-                y: 910.0,
-                width: 660.0,
-                height: 280.0,
-                z: 1.0,
-                honesty: "present".into(),
-                ..Default::default()
-            },
-            SeedContainer {
-                container_type: "therapy_notes".into(),
-                title: "Therapy Notes".into(),
-                x: 30.0,
-                y: 1210.0,
-                width: 660.0,
-                height: 240.0,
-                z: 1.0,
-                honesty: "present".into(),
-                ..Default::default()
-            },
-            SeedContainer {
-                container_type: "sleep".into(),
-                title: "Sleep".into(),
-                x: 710.0,
-                y: 1210.0,
-                width: 660.0,
-                height: 240.0,
-                z: 1.0,
-                honesty: "present".into(),
-                ..Default::default()
-            },
-            SeedContainer {
-                container_type: "diet".into(),
-                title: "Diet".into(),
-                x: 30.0,
-                y: 1470.0,
-                width: 660.0,
-                height: 240.0,
-                z: 1.0,
-                honesty: "present".into(),
-                ..Default::default()
-            },
-            SeedContainer {
-                container_type: "physical_activity".into(),
-                title: "Physical Activity".into(),
-                x: 710.0,
-                y: 1470.0,
-                width: 660.0,
-                height: 240.0,
-                z: 1.0,
-                honesty: "present".into(),
-                ..Default::default()
-            },
-            SeedContainer {
-                container_type: "immunizations".into(),
-                title: "Immunizations".into(),
-                x: 30.0,
-                y: 1730.0,
-                width: 660.0,
-                height: 240.0,
-                z: 1.0,
-                honesty: "present".into(),
-                ..Default::default()
-            },
-            SeedContainer {
-                container_type: "procedures".into(),
-                title: "Procedures".into(),
-                x: 710.0,
-                y: 1730.0,
-                width: 660.0,
-                height: 240.0,
-                z: 1.0,
-                honesty: "present".into(),
-                ..Default::default()
-            },
-            SeedContainer {
-                container_type: "family_history".into(),
-                title: "Family History".into(),
-                x: 30.0,
-                y: 1990.0,
-                width: 660.0,
-                height: 240.0,
-                z: 1.0,
-                honesty: "present".into(),
-                ..Default::default()
-            },
-            SeedContainer {
-                container_type: "hypotheses".into(),
-                title: "Hypotheses".into(),
-                x: 710.0,
-                y: 1990.0,
-                width: 660.0,
-                height: 280.0,
-                z: 1.0,
-                honesty: "present".into(),
-                ..Default::default()
-            },
-            SeedContainer {
-                container_type: "biometrics".into(),
-                title: "Biometrics".into(),
-                x: 30.0,
-                y: 2250.0,
-                width: 660.0,
-                height: 240.0,
-                z: 1.0,
-                honesty: "present".into(),
-                ..Default::default()
-            },
-            SeedContainer {
-                container_type: "health_documents".into(),
-                title: "Health Documents".into(),
-                x: 710.0,
-                y: 2250.0,
-                width: 660.0,
-                height: 260.0,
-                z: 1.0,
-                honesty: "present".into(),
-                ..Default::default()
-            },
-            SeedContainer {
-                container_type: "welfare_support".into(),
-                title: "Welfare Support".into(),
-                x: 30.0,
-                y: 2510.0,
-                width: 660.0,
-                height: 240.0,
-                z: 1.0,
-                honesty: "present".into(),
-                ..Default::default()
-            },
-            SeedContainer {
-                container_type: "life_records".into(),
-                title: "Life Records".into(),
-                x: 710.0,
-                y: 2510.0,
-                width: 660.0,
-                height: 240.0,
-                z: 1.0,
-                honesty: "present".into(),
-                ..Default::default()
-            },
-            SeedContainer {
-                container_type: "authority_attestations".into(),
-                title: "Authority Attestations".into(),
-                x: 30.0,
-                y: 2770.0,
-                width: 660.0,
-                height: 240.0,
-                z: 1.0,
-                honesty: "present".into(),
-                ..Default::default()
-            },
-            SeedContainer {
-                container_type: "safeguards".into(),
-                title: "Safeguards".into(),
-                x: 710.0,
-                y: 2770.0,
-                width: 660.0,
-                height: 240.0,
-                z: 1.0,
-                honesty: "present".into(),
-                ..Default::default()
-            },
-            SeedContainer {
-                container_type: "disclosure_log".into(),
-                title: "Disclosure Log".into(),
-                x: 30.0,
-                y: 3030.0,
-                width: 1340.0,
-                height: 240.0,
-                z: 1.0,
-                honesty: "present".into(),
+                honesty: "live".into(),
+                target_manifold: "anatomy".into(),
                 ..Default::default()
             },
         ],
         connections: vec![
             SeedConnection {
-                id: "wire-h1".into(),
+                id: "wire-h-docs".into(),
                 from: 0,
                 to: 1,
-                wire_type: "active".into(),
-                label: "med:hasConditions".into(),
-            },
-            SeedConnection {
-                id: "wire-h2".into(),
-                from: 0,
-                to: 2,
-                wire_type: "active".into(),
-                label: "med:hasClinicalReports".into(),
-            },
-            SeedConnection {
-                id: "wire-h3".into(),
-                from: 0,
-                to: 3,
-                wire_type: "active".into(),
-                label: "med:hasLabResults".into(),
-            },
-            SeedConnection {
-                id: "wire-h4".into(),
-                from: 0,
-                to: 4,
-                wire_type: "active".into(),
-                label: "med:hasMedications".into(),
-            },
-            SeedConnection {
-                id: "wire-h5".into(),
-                from: 0,
-                to: 5,
-                wire_type: "active".into(),
-                label: "med:hasVitals".into(),
-            },
-            SeedConnection {
-                id: "wire-h6".into(),
-                from: 0,
-                to: 6,
-                wire_type: "active".into(),
-                label: "med:hasMentalWellbeing".into(),
-            },
-            SeedConnection {
-                id: "wire-h7".into(),
-                from: 6,
-                to: 7,
-                wire_type: "active".into(),
-                label: "med:hasTherapyNotes".into(),
-            },
-            SeedConnection {
-                id: "wire-h8".into(),
-                from: 0,
-                to: 8,
-                wire_type: "active".into(),
-                label: "med:hasSleep".into(),
-            },
-            SeedConnection {
-                id: "wire-h9".into(),
-                from: 0,
-                to: 9,
-                wire_type: "active".into(),
-                label: "med:hasDiet".into(),
-            },
-            SeedConnection {
-                id: "wire-h10".into(),
-                from: 0,
-                to: 10,
-                wire_type: "active".into(),
-                label: "med:hasPhysicalActivity".into(),
-            },
-            SeedConnection {
-                id: "wire-h11".into(),
-                from: 0,
-                to: 11,
-                wire_type: "active".into(),
-                label: "med:hasImmunizations".into(),
-            },
-            SeedConnection {
-                id: "wire-h12".into(),
-                from: 0,
-                to: 12,
-                wire_type: "active".into(),
-                label: "med:hasProcedures".into(),
-            },
-            SeedConnection {
-                id: "wire-h13".into(),
-                from: 0,
-                to: 13,
-                wire_type: "active".into(),
-                label: "med:hasFamilyHistory".into(),
-            },
-            SeedConnection {
-                id: "wire-h14".into(),
-                from: 3,
-                to: 14,
-                wire_type: "active".into(),
-                label: "med:hasHypotheses".into(),
-            },
-            SeedConnection {
-                id: "wire-h15".into(),
-                from: 0,
-                to: 15,
-                wire_type: "active".into(),
-                label: "med:hasBiometrics".into(),
-            },
-            SeedConnection {
-                id: "wire-h16".into(),
-                from: 2,
-                to: 16,
                 wire_type: "active".into(),
                 label: "med:hasDocuments".into(),
             },
             SeedConnection {
-                id: "wire-h17".into(),
+                id: "wire-h-share".into(),
                 from: 0,
-                to: 17,
+                to: 2,
                 wire_type: "active".into(),
-                label: "med:hasWelfareSupport".into(),
+                label: "med:hasDisclosure".into(),
             },
             SeedConnection {
-                id: "wire-h18".into(),
-                from: 17,
-                to: 18,
-                wire_type: "active".into(),
-                label: "med:hasLifeRecords".into(),
-            },
-            SeedConnection {
-                id: "wire-h19".into(),
-                from: 17,
-                to: 19,
-                wire_type: "active".into(),
-                label: "med:hasAttestations".into(),
-            },
-            SeedConnection {
-                id: "wire-h20".into(),
+                id: "wire-h-cond".into(),
                 from: 0,
-                to: 20,
+                to: 3,
                 wire_type: "active".into(),
-                label: "med:hasSafeguards".into(),
-            },
-            SeedConnection {
-                id: "wire-h21".into(),
-                from: 0,
-                to: 21,
-                wire_type: "active".into(),
-                label: "med:hasDisclosureLog".into(),
+                label: "med:hasCondition".into(),
             },
         ],
         panels: vec![SeedPanel {
             panel_type: "aura".into(),
             dock: DockPosition::Right,
         }],
+        ..Default::default()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn health_manifold_is_four_sessions_not_an_ehr() {
+        let seed = health_manifold_seed();
+        assert!(seed.containers.len() >= 4);
+        let types: Vec<_> = seed
+            .containers
+            .iter()
+            .map(|c| c.container_type.as_str())
+            .collect();
+        assert!(types.contains(&"health_overview"));
+        assert!(types.contains(&"health_documents"));
+        assert!(types.contains(&"disclosure_log"));
+        assert!(types.contains(&"conditions"));
+        assert!(types.contains(&"nested_manifold"));
+        assert!(seed
+            .containers
+            .iter()
+            .any(|c| c.target_manifold == "anatomy"));
     }
 }

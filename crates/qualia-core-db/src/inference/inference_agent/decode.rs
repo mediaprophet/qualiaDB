@@ -9,6 +9,7 @@
 #[cfg(not(target_arch = "wasm32"))]
 use super::config::effective_inference_timeout_ms;
 use super::config::{DECODE_TOKEN_BUDGET, TEST_TRANSFORMER_LAYER_CAP, TEST_VOCAB_CHUNK_CAP};
+use super::control::DecodeControl;
 #[cfg(not(target_arch = "wasm32"))]
 use super::decode_helpers::get_prefix_cache;
 use super::decode_helpers::{
@@ -39,7 +40,18 @@ impl LocalLlmAgent {
         graph_context: &str,
         on_token: Option<F>,
     ) -> (String, Vec<u64>, u32, Option<NQuin>) {
-        self.infer_local_model_inner(prompt, graph_context, on_token)
+        self.infer_local_model_inner(prompt, graph_context, None, on_token)
+    }
+
+    /// Run local inference with a caller-owned cooperative cancellation token.
+    pub fn infer_local_model_controlled<F: FnMut(String) + Send + 'static>(
+        &self,
+        prompt: &str,
+        graph_context: &str,
+        control: DecodeControl,
+        on_token: Option<F>,
+    ) -> (String, Vec<u64>, u32, Option<NQuin>) {
+        self.infer_local_model_inner(prompt, graph_context, Some(control), on_token)
     }
 
     pub(super) fn infer_local_model(
@@ -47,7 +59,7 @@ impl LocalLlmAgent {
         prompt: &str,
         graph_context: &str,
     ) -> (String, Vec<u64>, u32, Option<NQuin>) {
-        self.infer_local_model_inner::<fn(String)>(prompt, graph_context, None)
+        self.infer_local_model_inner::<fn(String)>(prompt, graph_context, None, None)
     }
 
     #[cfg_attr(target_arch = "wasm32", allow(unused_variables, unused_mut))]
@@ -55,6 +67,7 @@ impl LocalLlmAgent {
         &self,
         prompt: &str,
         graph_context: &str,
+        control: Option<DecodeControl>,
         mut on_token: Option<F>,
     ) -> (String, Vec<u64>, u32, Option<NQuin>) {
         let prov_hash = graph_context
@@ -145,6 +158,7 @@ impl LocalLlmAgent {
                 None
             };
             let stream_tx_thread = stream_pair.as_ref().map(|(tx, _)| tx.clone());
+            let control_thread = control.clone();
 
             // Move the (optional) LoRA adapter into the inference thread.
             let lora_for_thread = lora_active_adapter;
@@ -304,6 +318,12 @@ impl LocalLlmAgent {
                                 .max(1);
                             let mut pos = 0usize;
                             while pos < prefill_tokens {
+                                if control_thread
+                                    .as_ref()
+                                    .is_some_and(DecodeControl::is_cancelled)
+                                {
+                                    break;
+                                }
                                 let n = (prefill_tokens - pos).min(chunk_cap);
                                 let batch_elems = n * emb_dim;
                                 {
@@ -372,7 +392,13 @@ impl LocalLlmAgent {
                     } else {
                         DECODE_TOKEN_BUDGET as usize
                     }
-                };
+                }
+                .min(
+                    control
+                        .as_ref()
+                        .map(DecodeControl::token_budget)
+                        .unwrap_or(usize::MAX),
+                );
 
                 #[cfg(not(target_arch = "wasm32"))]
                 crate::compute_universe::start_tensor_search_producer();
@@ -426,6 +452,12 @@ impl LocalLlmAgent {
                     tok.encode(s)
                 }) {
                     for &tid in &forced {
+                        if control_thread
+                            .as_ref()
+                            .is_some_and(DecodeControl::is_cancelled)
+                        {
+                            break;
+                        }
                         let next = tid % vlen.max(1);
                         out_ids.push(next);
                         ctx.push(next);
@@ -449,6 +481,12 @@ impl LocalLlmAgent {
 
                 if !graph_force_emitted {
                 for step in 0..gen_budget {
+                    if control_thread
+                        .as_ref()
+                        .is_some_and(DecodeControl::is_cancelled)
+                    {
+                        break;
+                    }
                     crate::gpu_context::record_llm_decode_step();
 
                     // Codex P0 — cooperative deadline: break BEFORE the wall-clock timeout instead of
@@ -1300,7 +1338,13 @@ impl LocalLlmAgent {
                     3usize
                 } else {
                     DECODE_TOKEN_BUDGET as usize
-                };
+                }
+                .min(
+                    control
+                        .as_ref()
+                        .map(DecodeControl::token_budget)
+                        .unwrap_or(usize::MAX),
+                );
 
                 crate::compute_universe::start_tensor_search_producer();
                 crate::compute_universe::publish_query_tensor(
@@ -1310,6 +1354,9 @@ impl LocalLlmAgent {
                 crate::qualia_hybrid::prepare_hybrid_decode(&prompt_owned);
 
                 for step in 0..gen_budget {
+                    if control.as_ref().is_some_and(DecodeControl::is_cancelled) {
+                        break;
+                    }
                     crate::gpu_context::record_llm_decode_step();
 
                     let on_token_sink = on_token.as_mut().map(|cb| cb as &mut dyn FnMut(String));

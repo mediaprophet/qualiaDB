@@ -28,7 +28,8 @@ pub fn eval(preset: &str, t: f64) -> AnimationSample {
             let progress = (t * 0.2).clamp(0.0, 1.0);
             let ease = EasingCurve::CubicInOut.eval(progress);
             let m0 = Motor::identity();
-            let m1 = Motor::from_rotation_translation([0.9238, 0.0, 0.3826, 0.0], [5.0, 2.0, -10.0]);
+            let m1 =
+                Motor::from_rotation_translation([0.9238, 0.0, 0.3826, 0.0], [5.0, 2.0, -10.0]);
             let motor = Motor::sclerp(&m0, &m1, ease);
             let (_, trans) = motor.to_rotation_translation();
             AnimationSample {

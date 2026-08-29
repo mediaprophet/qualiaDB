@@ -402,13 +402,30 @@ mod tests {
         let registry = LocaleRegistry::with_all_locales();
         let src = "fn calculate() {\n  let x = 10;\n  if x > 5 {\n    return true;\n  }\n  return false;\n}";
 
-        for loc in [Locale::ZH, Locale::ES, Locale::JA, Locale::AR, Locale::HI, Locale::FR, Locale::DE] {
+        for loc in [
+            Locale::ZH,
+            Locale::ES,
+            Locale::JA,
+            Locale::AR,
+            Locale::HI,
+            Locale::FR,
+            Locale::DE,
+        ] {
             let translated = translate_source(&registry, src, loc).unwrap();
-            assert!(!translated.is_empty(), "translation for {} should not be empty", loc);
+            assert!(
+                !translated.is_empty(),
+                "translation for {} should not be empty",
+                loc
+            );
             // Locale keywords are opt-in; a translated file must declare its locale.
             let with_locale = format!("locale {};\n{translated}", loc.code());
             let parsed = crate::parse_program(&with_locale);
-            assert!(parsed.is_ok(), "failed to parse translated source for {}: {:?}", loc, parsed.err());
+            assert!(
+                parsed.is_ok(),
+                "failed to parse translated source for {}: {:?}",
+                loc,
+                parsed.err()
+            );
         }
     }
 }

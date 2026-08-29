@@ -221,7 +221,7 @@ pub fn dp_filter(args: &Value, span: Span) -> Result<Value, Diagnostic> {
                 DiagCode::E100,
                 span,
                 "biosignal.dp_filter expects a list argument",
-            ))
+            ));
         }
     };
 
@@ -233,7 +233,7 @@ pub fn dp_filter(args: &Value, span: Span) -> Result<Value, Diagnostic> {
                 DiagCode::E100,
                 span,
                 "biosignal.dp_filter first argument must be a list of numbers",
-            ))
+            ));
         }
     };
 

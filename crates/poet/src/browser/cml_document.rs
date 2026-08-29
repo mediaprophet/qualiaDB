@@ -79,18 +79,18 @@ impl CmlCategory {
 
     pub fn glyph(&self) -> &'static str {
         match self {
-            CmlCategory::NamedEntity => "\u{1F4CD}",      // 📍
-            CmlCategory::Term => "\u{1F539}",             // 🔹
-            CmlCategory::ClaimedFact => "\u{1F4AF}",       // 💯
-            CmlCategory::Hypothesis => "\u{1F52C}",        // 🔬
-            CmlCategory::Definition => "\u{1F4D8}",        // 📘
-            CmlCategory::Statistic => "\u{1F4CA}",         // 📊
-            CmlCategory::Citation => "\u{1F4D1}",          // 📑
+            CmlCategory::NamedEntity => "\u{1F4CD}",        // 📍
+            CmlCategory::Term => "\u{1F539}",               // 🔹
+            CmlCategory::ClaimedFact => "\u{1F4AF}",        // 💯
+            CmlCategory::Hypothesis => "\u{1F52C}",         // 🔬
+            CmlCategory::Definition => "\u{1F4D8}",         // 📘
+            CmlCategory::Statistic => "\u{1F4CA}",          // 📊
+            CmlCategory::Citation => "\u{1F4D1}",           // 📑
             CmlCategory::DeonticRule => "\u{2696}\u{FE0F}", // ⚖️
-            CmlCategory::EpistemicBelief => "\u{1F9E0}",   // 🧠
-            CmlCategory::Metric => "\u{26A1}",            // ⚡
-            CmlCategory::CodeSymbol => "\u{1F4BB}",        // 💻
-            CmlCategory::RelationSource => "\u{1F517}",    // 🔗
+            CmlCategory::EpistemicBelief => "\u{1F9E0}",    // 🧠
+            CmlCategory::Metric => "\u{26A1}",              // ⚡
+            CmlCategory::CodeSymbol => "\u{1F4BB}",         // 💻
+            CmlCategory::RelationSource => "\u{1F517}",     // 🔗
         }
     }
 
@@ -191,7 +191,7 @@ impl Default for CmlDocument {
         let text = "Poet HyperDoc Authoring Subsystem provides native Context Markup Language (CML) \
                     integration with QualiaDB. The 42MB Prolog Sentinel verifies inalienable custody, \
                     while VibeScript executes reactive cells within metered gas bounds.";
-        
+
         let spans = vec![
             CmlSpan {
                 id: "ent_poet".into(),
@@ -314,9 +314,11 @@ impl CmlDocument {
         let mut sorted_spans = self.spans.clone();
         sorted_spans.sort_by_key(|s| s.start_offset);
 
-        let mut output = format!("# {}\n\n*Author: `{}` | Sensitivity: Level {}*\n\n", 
-            self.title, self.author_did, self.sensitivity_class);
-        
+        let mut output = format!(
+            "# {}\n\n*Author: `{}` | Sensitivity: Level {}*\n\n",
+            self.title, self.author_did, self.sensitivity_class
+        );
+
         let mut last_idx = 0;
         for span in &sorted_spans {
             let start = span.start_offset.min(self.raw_text.len());
@@ -330,7 +332,10 @@ impl CmlDocument {
                 let inner_text = &self.raw_text[start..end];
                 output.push_str(&format!(
                     "[{}]({} \"type:{}, cert:{}%\")",
-                    inner_text, span.iri, span.category.code(), span.certainty
+                    inner_text,
+                    span.iri,
+                    span.category.code(),
+                    span.certainty
                 ));
             }
 
@@ -363,7 +368,11 @@ impl CmlDocument {
             triples.push(RdfStarTriple {
                 subject: format!("did:qualia:doc#{}", self.id),
                 predicate: "qualia:hasAnnotation".into(),
-                object: format!("<< {} rdf:type qualia:{} >>", span.iri, span.category.code()),
+                object: format!(
+                    "<< {} rdf:type qualia:{} >>",
+                    span.iri,
+                    span.category.code()
+                ),
                 provenance: span.provenance.clone(),
                 confidence: span.certainty as f32 / 100.0,
             });
@@ -371,11 +380,15 @@ impl CmlDocument {
 
         // Semantic relation triples
         for rel in &self.relations {
-            let subj_iri = self.spans.iter()
+            let subj_iri = self
+                .spans
+                .iter()
                 .find(|s| s.id == rel.subject_id)
                 .map(|s| s.iri.as_str())
                 .unwrap_or(&rel.subject_id);
-            let obj_iri = self.spans.iter()
+            let obj_iri = self
+                .spans
+                .iter()
                 .find(|s| s.id == rel.object_id)
                 .map(|s| s.iri.as_str())
                 .unwrap_or(&rel.object_id);
@@ -412,9 +425,17 @@ impl CmlDocument {
         let status_label = if conforms && warnings == 0 {
             "SHACL: Full Conformance (100%)".into()
         } else if conforms {
-            format!("SHACL: Conforming ({} Warning{})", warnings, if warnings > 1 { "s" } else { "" })
+            format!(
+                "SHACL: Conforming ({} Warning{})",
+                warnings,
+                if warnings > 1 { "s" } else { "" }
+            )
         } else {
-            format!("SHACL: Non-Conforming ({} Error{})", errors, if errors > 1 { "s" } else { "" })
+            format!(
+                "SHACL: Non-Conforming ({} Error{})",
+                errors,
+                if errors > 1 { "s" } else { "" }
+            )
         };
 
         ShaclValidationReport {
@@ -448,7 +469,10 @@ impl CmlDocument {
         out.push_str("</head>\n");
         out.push_str("<body>\n");
         out.push_str("  <article class=\"cml-doc-card\" typeof=\"schema:TechArticle\" resource=\"#document\">\n");
-        out.push_str(&format!("    <h1 property=\"schema:headline\">{}</h1>\n", html_escape(&self.title)));
+        out.push_str(&format!(
+            "    <h1 property=\"schema:headline\">{}</h1>\n",
+            html_escape(&self.title)
+        ));
         out.push_str("    <div class=\"cml-body\" property=\"schema:articleBody\">\n");
 
         // Write paragraphs with RDFa entity markup

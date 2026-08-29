@@ -1,6 +1,11 @@
-//! Health & Wellbeing container views for Workstream B.
+//! Health & Wellbeing container views.
 //!
-//! Copyright (c) 2026 Timothy Charles Holborn. All rights reserved.
+//! Records persist on the COP ledger. Documents go through NLP + the
+//! Semantic Library (classified/secret). Sharing is a named-DID disclosure.
+//! Conditions are possessions of a Principal, not owl:Thing.
+
+pub mod persist;
+pub mod persist_ledgers;
 
 pub mod authority_attestations;
 pub mod biometrics;

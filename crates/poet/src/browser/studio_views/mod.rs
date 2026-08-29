@@ -1,6 +1,9 @@
-//! Studio views — 3D / Animation / Audio containers (Workstream D).
+//! Studio views — Scene / Audio / Animation sessions (not a nested DAW/DCC).
 //!
 //! Copyright (c) 2026 Timothy Charles Holborn. All rights reserved.
+//! Dual Studio remains the live VibeScript + GPU viewport.
+
+pub mod persist;
 
 pub mod animation_export;
 pub mod animation_timeline;

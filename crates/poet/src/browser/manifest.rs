@@ -6,7 +6,7 @@
 //! bytes, and a manifest persistence layer that can POST to the daemon
 //! `POST /manifest` endpoint when native, or to `localStorage` on public web.
 
-use crate::tool_chest::core::registry::ManifoldSeed;
+use crate::tool_chest::core::{ConstructSeed, ManifoldSeed};
 use base64::Engine;
 use serde::{Deserialize, Serialize};
 
@@ -23,7 +23,10 @@ pub fn serialize_seed(seed: &ManifoldSeed) -> Result<Vec<u8>, String> {
 
 /// Deserialize a `ManifoldSeed` from CBOR-LD bytes.
 pub fn deserialize_seed(bytes: &[u8]) -> Result<ManifoldSeed, String> {
-    ciborium::de::from_reader(bytes).map_err(|e| format!("cbor decode: {}", e))
+    let mut seed: ManifoldSeed =
+        ciborium::de::from_reader(bytes).map_err(|e| format!("cbor decode: {}", e))?;
+    crate::browser::canvas_state::normalise_seed_ids(std::slice::from_mut(&mut seed));
+    Ok(seed)
 }
 
 /// Serialize a vector of `ManifoldSeed` to CBOR-LD bytes.
@@ -35,7 +38,30 @@ pub fn serialize_seeds(seeds: &[ManifoldSeed]) -> Result<Vec<u8>, String> {
 
 /// Deserialize a vector of `ManifoldSeed` from CBOR-LD bytes.
 pub fn deserialize_seeds(bytes: &[u8]) -> Result<Vec<ManifoldSeed>, String> {
-    ciborium::de::from_reader(bytes).map_err(|e| format!("cbor decode: {}", e))
+    let mut seeds: Vec<ManifoldSeed> =
+        ciborium::de::from_reader(bytes).map_err(|e| format!("cbor decode: {}", e))?;
+    crate::browser::canvas_state::normalise_seed_ids(&mut seeds);
+    Ok(seeds)
+}
+
+/// Load the latest auto/checkpoint seed set used by the browser shell.
+pub fn load_saved_seeds() -> Result<Option<Vec<ManifoldSeed>>, String> {
+    let Some(storage) = web_sys::window()
+        .and_then(|window| window.local_storage().ok())
+        .flatten()
+    else {
+        return Ok(None);
+    };
+    let Some(encoded) = storage
+        .get_item("qualia-ui:manifest:seeds")
+        .map_err(|error| format!("localStorage read: {:?}", error))?
+    else {
+        return Ok(None);
+    };
+    let bytes = base64::engine::general_purpose::STANDARD
+        .decode(encoded)
+        .map_err(|error| format!("base64 decode: {}", error))?;
+    deserialize_seeds(&bytes).map(Some)
 }
 
 // ---------------------------------------------------------------------------
@@ -49,7 +75,8 @@ pub const DEFAULT_ACTOR_DID: &str = "did:qualia:timothy_charles_holborn";
 
 /// Save mode — determines what a checkpoint captures and how it's stored.
 /// See `SAVE_ARCHITECTURE.md` for the full specification.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum SaveMode {
     /// Frequency-based automatic save (rolling buffer).
     Auto,
@@ -61,22 +88,11 @@ pub enum SaveMode {
     Pruned,
 }
 
-impl SaveMode {
-    fn as_str(&self) -> &'static str {
-        match self {
-            SaveMode::Auto => "auto",
-            SaveMode::Checkpoint => "checkpoint",
-            SaveMode::Snapshot => "snapshot",
-            SaveMode::Pruned => "pruned",
-        }
-    }
-}
-
 /// Checkpoint metadata — recorded alongside the serialized seeds.
 /// This is the Phase 1 minimal provenance: actor, timestamp, label,
 /// parent checkpoint, and save mode. Full provenance graph (operations,
 /// constituency, consent, Merkle root) is Phase 2+.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct CheckpointMeta {
     /// Unique identifier (timestamp-based for Phase 1).
     pub id: String,
@@ -109,18 +125,7 @@ impl CheckpointMeta {
 
     /// Serialize to a JSON string for localStorage storage.
     pub fn to_json(&self) -> String {
-        format!(
-            r#"{{"id":"{}","label":"{}","actor":"{}","timestamp":"{}","save_mode":"{}","parent_checkpoint":{}}}"#,
-            self.id,
-            self.label.replace('"', "\\\""),
-            self.actor,
-            self.timestamp,
-            self.save_mode.as_str(),
-            self.parent_checkpoint
-                .as_ref()
-                .map(|s| format!("\"{}\"", s))
-                .unwrap_or_else(|| "null".to_string())
-        )
+        serde_json::to_string(self).unwrap_or_else(|_| "{}".into())
     }
 }
 
@@ -154,6 +159,7 @@ fn get_last_checkpoint_id() -> Option<String> {
 ///
 /// See `SAVE_ARCHITECTURE.md` for the full specification.
 pub fn save_checkpoint(label: &str, mode: SaveMode) -> Result<CheckpointMeta, String> {
+    crate::browser::history::sync_persistence_state();
     let seeds = crate::browser::get_current_seeds();
     let bytes = serialize_seeds(&seeds)?;
     let b64 = base64::engine::general_purpose::STANDARD.encode(&bytes);
@@ -171,6 +177,9 @@ pub fn save_checkpoint(label: &str, mode: SaveMode) -> Result<CheckpointMeta, St
     storage
         .set_item("qualia-ui:manifest:seeds", &b64)
         .map_err(|e| format!("localStorage set: {:?}", e))?;
+    storage
+        .set_item(&format!("qualia-ui:manifest:checkpoint:{}", meta.id), &b64)
+        .map_err(|e| format!("localStorage set checkpoint: {:?}", e))?;
 
     // Store the checkpoint metadata
     storage
@@ -184,20 +193,64 @@ pub fn save_checkpoint(label: &str, mode: SaveMode) -> Result<CheckpointMeta, St
 
     // Append to the checkpoint history list
     let history_key = "qualia-ui:manifest:checkpoint-history";
-    let mut history = storage
+    let raw_history = storage
         .get_item(history_key)
         .ok()
         .flatten()
         .unwrap_or_default();
-    if !history.is_empty() {
-        history.push(',');
+    let mut history = parse_checkpoint_history(&raw_history);
+    history.push(meta.clone());
+    if history.len() > 128 {
+        history.drain(..history.len() - 128);
     }
-    history.push_str(&meta.to_json());
+    let history = serde_json::to_string(&history)
+        .map_err(|error| format!("checkpoint history encode: {error}"))?;
     storage
         .set_item(history_key, &history)
         .map_err(|e| format!("localStorage set history: {:?}", e))?;
 
     Ok(meta)
+}
+
+fn parse_checkpoint_history(raw: &str) -> Vec<CheckpointMeta> {
+    if raw.trim().is_empty() {
+        return Vec::new();
+    }
+    serde_json::from_str(raw)
+        .or_else(|_| serde_json::from_str(&format!("[{raw}]")))
+        .unwrap_or_default()
+}
+
+pub fn checkpoint_history() -> Result<Vec<CheckpointMeta>, String> {
+    let storage = web_sys::window()
+        .ok_or("no window")?
+        .local_storage()
+        .map_err(|error| format!("localStorage access: {error:?}"))?
+        .ok_or("localStorage not available")?;
+    let raw = storage
+        .get_item("qualia-ui:manifest:checkpoint-history")
+        .map_err(|error| format!("localStorage read history: {error:?}"))?
+        .unwrap_or_default();
+    Ok(parse_checkpoint_history(&raw))
+}
+
+pub fn load_checkpoint_seeds(id: &str) -> Result<Vec<ManifoldSeed>, String> {
+    if id.is_empty() || id.len() > 256 {
+        return Err("invalid checkpoint id".into());
+    }
+    let storage = web_sys::window()
+        .ok_or("no window")?
+        .local_storage()
+        .map_err(|error| format!("localStorage access: {error:?}"))?
+        .ok_or("localStorage not available")?;
+    let encoded = storage
+        .get_item(&format!("qualia-ui:manifest:checkpoint:{id}"))
+        .map_err(|error| format!("localStorage read checkpoint: {error:?}"))?
+        .ok_or_else(|| format!("checkpoint `{id}` has no stored seed snapshot"))?;
+    let bytes = base64::engine::general_purpose::STANDARD
+        .decode(encoded)
+        .map_err(|error| format!("checkpoint base64 decode: {error}"))?;
+    deserialize_seeds(&bytes)
 }
 
 /// Convenience: save with Auto mode (no label).
@@ -468,6 +521,152 @@ pub struct HmcManifoldEnvelope {
     pub manifold: ManifoldSeed,
 }
 
+/// Complete observer-scope package: construct metadata plus its authored lenses.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct ConstructPackage {
+    pub construct: ConstructSeed,
+    pub manifolds: Vec<ManifoldSeed>,
+}
+
+/// Interactive HCF export of a complete construct composition.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct HcfConstructEnvelope {
+    pub format_version: String,
+    pub author_did: String,
+    pub created_at: String,
+    pub checksum: String,
+    pub package: ConstructPackage,
+}
+
+/// Archival HMC export of a complete construct composition.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct HmcConstructEnvelope {
+    pub format_version: String,
+    pub author_did: String,
+    pub created_at: String,
+    pub checksum: String,
+    pub provenance_chain: Vec<String>,
+    pub package: ConstructPackage,
+}
+
+fn construct_package(
+    construct: &ConstructSeed,
+    manifolds: &[ManifoldSeed],
+) -> Result<ConstructPackage, String> {
+    if construct.id.trim().is_empty() {
+        return Err("construct id cannot be empty".into());
+    }
+    if construct.default_manifold.trim().is_empty() {
+        return Err("stub constructs without a default manifold cannot be exported".into());
+    }
+    let mut packaged = Vec::new();
+    for manifold in manifolds {
+        if construct.contains_manifold(&manifold.id)
+            && !packaged
+                .iter()
+                .any(|saved: &ManifoldSeed| saved.id == manifold.id)
+        {
+            packaged.push(manifold.clone());
+        }
+    }
+    if !packaged
+        .iter()
+        .any(|manifold| manifold.id == construct.default_manifold)
+    {
+        return Err(format!(
+            "construct `{}` is missing its default manifold `{}`",
+            construct.id, construct.default_manifold
+        ));
+    }
+    let mut saved_construct = construct.clone();
+    saved_construct.manifold_ids = packaged.iter().map(|seed| seed.id.clone()).collect();
+    Ok(ConstructPackage {
+        construct: saved_construct,
+        manifolds: packaged,
+    })
+}
+
+/// Export a complete construct to the interactive HCF package format.
+pub fn export_construct_hcf(
+    construct: &ConstructSeed,
+    manifolds: &[ManifoldSeed],
+    author_did: &str,
+) -> Result<Vec<u8>, String> {
+    let package = construct_package(construct, manifolds)?;
+    let mut payload = Vec::new();
+    ciborium::ser::into_writer(&package, &mut payload)
+        .map_err(|error| format!("construct HCF payload encode error: {error}"))?;
+    let envelope = HcfConstructEnvelope {
+        format_version: "1.0-construct".into(),
+        author_did: author_did.to_string(),
+        created_at: chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
+        checksum: compute_envelope_hash(&payload),
+        package,
+    };
+    let mut out = b"HCF\x01".to_vec();
+    ciborium::ser::into_writer(&envelope, &mut out)
+        .map_err(|error| format!("construct HCF envelope encode error: {error}"))?;
+    Ok(out)
+}
+
+/// Verify and import a complete construct HCF package.
+pub fn import_construct_hcf(bytes: &[u8]) -> Result<HcfConstructEnvelope, String> {
+    if bytes.len() < 4 || &bytes[..4] != b"HCF\x01" {
+        return Err("Invalid construct .hcf header magic bytes".into());
+    }
+    let envelope: HcfConstructEnvelope = ciborium::de::from_reader(&bytes[4..])
+        .map_err(|error| format!("construct HCF envelope decode error: {error}"))?;
+    let mut payload = Vec::new();
+    ciborium::ser::into_writer(&envelope.package, &mut payload)
+        .map_err(|error| format!("construct HCF verification encode error: {error}"))?;
+    if envelope.checksum != compute_envelope_hash(&payload) {
+        return Err("Construct HCF payload checksum verification failed".into());
+    }
+    construct_package(&envelope.package.construct, &envelope.package.manifolds)?;
+    Ok(envelope)
+}
+
+/// Export a complete construct to the archival HMC package format.
+pub fn export_construct_hmc(
+    construct: &ConstructSeed,
+    manifolds: &[ManifoldSeed],
+    author_did: &str,
+) -> Result<Vec<u8>, String> {
+    let package = construct_package(construct, manifolds)?;
+    let mut payload = Vec::new();
+    ciborium::ser::into_writer(&package, &mut payload)
+        .map_err(|error| format!("construct HMC payload encode error: {error}"))?;
+    let envelope = HmcConstructEnvelope {
+        format_version: "1.0-construct".into(),
+        author_did: author_did.to_string(),
+        created_at: chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
+        checksum: compute_envelope_hash(&payload),
+        provenance_chain: vec![author_did.to_string()],
+        package,
+    };
+    let mut out = b"HMC\x01".to_vec();
+    ciborium::ser::into_writer(&envelope, &mut out)
+        .map_err(|error| format!("construct HMC envelope encode error: {error}"))?;
+    Ok(out)
+}
+
+/// Verify and import a complete construct HMC package.
+pub fn import_construct_hmc(bytes: &[u8]) -> Result<HmcConstructEnvelope, String> {
+    if bytes.len() < 4 || &bytes[..4] != b"HMC\x01" {
+        return Err("Invalid construct .hmc header magic bytes".into());
+    }
+    let envelope: HmcConstructEnvelope = ciborium::de::from_reader(&bytes[4..])
+        .map_err(|error| format!("construct HMC envelope decode error: {error}"))?;
+    let mut payload = Vec::new();
+    ciborium::ser::into_writer(&envelope.package, &mut payload)
+        .map_err(|error| format!("construct HMC verification encode error: {error}"))?;
+    if envelope.checksum != compute_envelope_hash(&payload) {
+        return Err("Construct HMC payload checksum verification failed".into());
+    }
+    construct_package(&envelope.package.construct, &envelope.package.manifolds)?;
+    Ok(envelope)
+}
+
 /// Export a single `SeedContainer` to `.hcf` binary bytes.
 pub fn export_hcf(container: &SeedContainer, author_did: &str) -> Result<Vec<u8>, String> {
     let mut payload_bytes = Vec::new();
@@ -478,7 +677,7 @@ pub fn export_hcf(container: &SeedContainer, author_did: &str) -> Result<Vec<u8>
     let envelope = HcfContainerEnvelope {
         format_version: "1.0".into(),
         author_did: author_did.to_string(),
-        created_at: "2026-08-22T00:00:00Z".into(),
+        created_at: chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
         checksum,
         container: container.clone(),
     };
@@ -523,7 +722,7 @@ pub fn export_hmc(manifold: &ManifoldSeed, author_did: &str) -> Result<Vec<u8>, 
     let envelope = HmcManifoldEnvelope {
         format_version: "1.0".into(),
         author_did: author_did.to_string(),
-        created_at: "2026-08-22T00:00:00Z".into(),
+        created_at: chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
         checksum,
         provenance_chain: vec![author_did.to_string()],
         manifold: manifold.clone(),
@@ -591,6 +790,7 @@ mod tests {
                 panel_type: "pulse-panel".into(),
                 dock: DockPosition::Bottom,
             }],
+            ..Default::default()
         }
     }
 
@@ -667,5 +867,35 @@ mod tests {
         assert_eq!(decoded_manifold.containers.len(), 1);
         assert_eq!(envelope.author_did, DEFAULT_ACTOR_DID);
         assert_eq!(envelope.provenance_chain.len(), 1);
+    }
+
+    #[test]
+    fn construct_hcf_and_hmc_roundtrip_include_lenses() {
+        let seed = test_seed();
+        let construct = ConstructSeed {
+            id: "test-scope".into(),
+            label: "Test scope".into(),
+            description: "Observer-scoped test construct".into(),
+            icon: "test".into(),
+            observer: DEFAULT_ACTOR_DID.into(),
+            honesty: "live".into(),
+            default_manifold: seed.id.clone(),
+            manifold_ids: vec![seed.id.clone()],
+            library_uri: "urn:poet:construct:test-scope".into(),
+            required_shapes: vec![],
+            source: crate::tool_chest::core::ConstructSource::Authored,
+        };
+
+        let hcf = export_construct_hcf(&construct, std::slice::from_ref(&seed), DEFAULT_ACTOR_DID)
+            .unwrap();
+        let interactive = import_construct_hcf(&hcf).unwrap();
+        assert_eq!(interactive.package.construct.id, "test-scope");
+        assert_eq!(interactive.package.manifolds, vec![seed.clone()]);
+
+        let hmc = export_construct_hmc(&construct, std::slice::from_ref(&seed), DEFAULT_ACTOR_DID)
+            .unwrap();
+        let archive = import_construct_hmc(&hmc).unwrap();
+        assert_eq!(archive.package.manifolds, vec![seed]);
+        assert_eq!(archive.provenance_chain, vec![DEFAULT_ACTOR_DID]);
     }
 }

@@ -16,9 +16,15 @@ use crate::value::Value;
 /// Run a catalog id in-process.
 pub fn invoke_local(id: &str, args: &Value, span: Span) -> Result<Value, Diagnostic> {
     if let Some((family_name, preset)) = animation_preset(id) {
-        let t = f64_field(args, "t").or_else(|| scalar_arg(args)).unwrap_or(0.0);
+        let t = f64_field(args, "t")
+            .or_else(|| scalar_arg(args))
+            .unwrap_or(0.0);
         let family = AnimationFamily::from_name(family_name).ok_or_else(|| {
-            Diagnostic::new(DiagCode::E100, span, format!("unknown animation family {family_name}"))
+            Diagnostic::new(
+                DiagCode::E100,
+                span,
+                format!("unknown animation family {family_name}"),
+            )
         })?;
         return Ok(sample_to_value(evaluate_preset(family, preset, t)));
     }
@@ -27,7 +33,11 @@ pub fn invoke_local(id: &str, args: &Value, span: Span) -> Result<Value, Diagnos
         let preset = string_field(args, "preset").unwrap_or("orbit_spin");
         let t = f64_field(args, "t").unwrap_or(0.0);
         let family = AnimationFamily::from_name(family_name).ok_or_else(|| {
-            Diagnostic::new(DiagCode::E100, span, format!("unknown animation family {family_name}"))
+            Diagnostic::new(
+                DiagCode::E100,
+                span,
+                format!("unknown animation family {family_name}"),
+            )
         })?;
         return Ok(sample_to_value(evaluate_preset(family, preset, t)));
     }
@@ -82,11 +92,7 @@ pub fn invoke_local(id: &str, args: &Value, span: Span) -> Result<Value, Diagnos
         rec.insert("args".into(), args.clone());
         return Ok(Value::Record(rec));
     }
-    Err(Diagnostic::new(
-        DiagCode::E100,
-        span,
-        unknown_message(id),
-    ))
+    Err(Diagnostic::new(DiagCode::E100, span, unknown_message(id)))
 }
 
 pub fn sample_to_value(s: AnimationSample) -> Value {

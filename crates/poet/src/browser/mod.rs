@@ -13,25 +13,32 @@
 
 pub mod agreement_views;
 pub mod app_launcher;
+pub mod canvas_extent;
+pub mod canvas_state;
 pub mod capabilities;
+pub mod checkpoint_panel;
+pub mod chora_canvas;
 pub mod clipboard;
 pub mod cml_document;
 pub mod command_palette;
-pub mod cooperative_economics;
-pub mod chora_canvas;
+pub mod construct_shelf;
 pub mod container_inline_views;
 pub mod container_views;
 pub mod container_views_ext;
 pub mod containers;
 pub mod contextual_popover;
+pub mod cooperative_economics;
+pub mod cop_records;
 pub mod css;
 pub mod dataset_views;
 pub mod device_views;
 pub mod diagnostics;
 pub mod docks;
+pub mod dom_bindings;
 pub mod domain_presence;
 pub mod git_forge;
 pub mod governance_views;
+pub mod governance_workflow;
 pub mod health_views;
 pub mod history;
 pub mod hypermedia_bookmarks;
@@ -42,31 +49,50 @@ pub mod instrument_panel;
 pub mod intent_bus;
 pub mod interactions;
 pub mod job_queue;
+pub mod live_invoke;
 pub mod lived_memory_archive;
+mod local_container_views;
 pub mod logic_workbench;
-pub mod manifest;
 pub mod mail_composer;
+pub mod manifest;
+pub mod manifold_authoring;
+pub mod manifold_social;
 pub mod media_codecs;
 pub mod native_daemon;
 pub mod ontology_views;
 pub mod project_views;
 pub mod projections;
+pub mod publication_panel;
+pub mod pulse_stream;
 pub mod radial_menu;
 pub mod registration;
+mod render_preview;
 pub mod rights_views;
 pub mod search_workbench;
+mod semantic_library_render;
+mod semantic_library_view;
 pub mod shader_pipelines;
+pub mod social_lifecycle;
+pub mod social_inbox;
+pub mod social_moderation;
+pub mod social_notifications;
+pub mod social_presence;
+pub mod social_workspace;
 pub mod solid_interop;
+pub mod specialist_persist;
 pub mod studio_views;
 pub mod submanifold_nav;
+mod surface_honesty;
 pub mod theme;
+pub mod tool_actions;
 pub mod tool_widgets;
 pub mod topbar;
 pub mod vibe_cell;
 pub mod vibe_ui;
+pub mod view_state;
 pub mod vision_10d_scrubber;
-pub mod wire_inspector;
 pub mod webrtc_sync;
+pub mod wire_inspector;
 pub mod workflow_panels;
 pub mod workspace_pivot;
 
@@ -77,6 +103,7 @@ use wasm_bindgen::JsCast;
 use web_sys::{Document, Element, HtmlElement};
 
 use crate::tool_chest::core::registry::ManifoldSeed;
+use crate::tool_chest::core::{ManifoldParticipant, ManifoldSociality, SubjectSeed};
 
 // ---------------------------------------------------------------------------
 // Thread-local state
@@ -84,6 +111,215 @@ use crate::tool_chest::core::registry::ManifoldSeed;
 
 thread_local! {
     static CURRENT_SEEDS: std::cell::RefCell<Vec<ManifoldSeed>> = std::cell::RefCell::new(Vec::new());
+    static CURRENT_CONSTRUCT: std::cell::RefCell<String> = std::cell::RefCell::new("poet".into());
+    static CONSTRUCT_EXTRAS: std::cell::RefCell<std::collections::BTreeMap<String, Vec<String>>> =
+        std::cell::RefCell::new(std::collections::BTreeMap::new());
+    static CONSTRUCT_NAV: std::cell::RefCell<submanifold_nav::SubmanifoldNavigator> =
+        std::cell::RefCell::new(submanifold_nav::SubmanifoldNavigator::new("poet", "POET"));
+    static SUBJECTS: std::cell::RefCell<Vec<SubjectSeed>> = std::cell::RefCell::new(Vec::new());
+    static OBSERVER_DID: std::cell::RefCell<String> = std::cell::RefCell::new(String::new());
+}
+
+const CONSTRUCT_STORAGE_KEY: &str = "qualia-ui:construct";
+const CONSTRUCT_EXTRAS_KEY: &str = "qualia-ui:construct-extras";
+const SUBJECTS_KEY: &str = "qualia-ui:subjects";
+
+fn storage_get(key: &str) -> Option<String> {
+    web_sys::window()
+        .and_then(|window| window.local_storage().ok())
+        .flatten()
+        .and_then(|storage| storage.get_item(key).ok())
+        .flatten()
+}
+
+fn storage_set(key: &str, value: &str) {
+    if let Some(storage) = web_sys::window()
+        .and_then(|window| window.local_storage().ok())
+        .flatten()
+    {
+        let _ = storage.set_item(key, value);
+    }
+}
+
+fn load_stored_construct_id() -> String {
+    web_sys::window()
+        .and_then(|window| window.local_storage().ok())
+        .flatten()
+        .and_then(|storage| storage.get_item(CONSTRUCT_STORAGE_KEY).ok())
+        .flatten()
+        .filter(|id| crate::tool_chest::constructs::construct_by_id(id).is_some())
+        .unwrap_or_else(|| "poet".into())
+}
+
+fn persist_construct_id(id: &str) {
+    storage_set(CONSTRUCT_STORAGE_KEY, id);
+}
+
+pub(crate) fn persist_construct_extras() {
+    CONSTRUCT_EXTRAS.with(|slot| {
+        if let Ok(json) = serde_json::to_string(&*slot.borrow()) {
+            storage_set(CONSTRUCT_EXTRAS_KEY, &json);
+        }
+    });
+}
+
+fn load_construct_extras() {
+    if let Some(json) = storage_get(CONSTRUCT_EXTRAS_KEY) {
+        if let Ok(map) = serde_json::from_str(&json) {
+            CONSTRUCT_EXTRAS.with(|slot| *slot.borrow_mut() = map);
+        }
+    }
+}
+
+pub(crate) fn persist_subjects() {
+    SUBJECTS.with(|slot| {
+        if let Ok(json) = serde_json::to_string(&*slot.borrow()) {
+            storage_set(SUBJECTS_KEY, &json);
+        }
+    });
+}
+
+fn load_subjects() {
+    if let Some(json) = storage_get(SUBJECTS_KEY) {
+        if let Ok(list) = serde_json::from_str(&json) {
+            SUBJECTS.with(|slot| *slot.borrow_mut() = list);
+        }
+    }
+}
+
+pub fn declared_subjects() -> Vec<SubjectSeed> {
+    SUBJECTS.with(|slot| slot.borrow().clone())
+}
+
+pub(crate) fn register_subject(seed: SubjectSeed) {
+    SUBJECTS.with(|slot| {
+        let mut list = slot.borrow_mut();
+        if let Some(existing) = list.iter_mut().find(|candidate| candidate.id == seed.id) {
+            *existing = seed;
+        } else {
+            list.push(seed);
+        }
+    });
+    persist_subjects();
+}
+
+pub fn current_observer_did() -> String {
+    OBSERVER_DID.with(|slot| slot.borrow().clone())
+}
+
+pub fn set_observer_did(did: String) {
+    OBSERVER_DID.with(|slot| *slot.borrow_mut() = did);
+}
+
+pub fn current_manifold_is_social() -> bool {
+    let id = current_manifold_id();
+    get_current_seeds()
+        .iter()
+        .find(|seed| seed.id == id)
+        .map(ManifoldSeed::is_social)
+        .unwrap_or(false)
+}
+
+pub fn current_participants() -> Vec<ManifoldParticipant> {
+    let id = current_manifold_id();
+    get_current_seeds()
+        .into_iter()
+        .find(|seed| seed.id == id)
+        .map(|seed| seed.participants)
+        .unwrap_or_default()
+}
+
+pub(crate) fn add_participant_to_current(person: ManifoldParticipant) {
+    let manifold_id = current_manifold_id();
+    CURRENT_SEEDS.with(|slot| {
+        let mut seeds = slot.borrow_mut();
+        if let Some(seed) = seeds.iter_mut().find(|seed| seed.id == manifold_id) {
+            seed.sociality = ManifoldSociality::Social;
+            if !seed.participants.iter().any(|p| p.did == person.did) {
+                seed.participants.push(person);
+            }
+        }
+    });
+}
+
+pub fn bind_observer_from_daemon() {
+    if !native_daemon::is_daemon_connected() {
+        return;
+    }
+    wasm_bindgen_futures::spawn_local(async {
+        match native_daemon::daemon_invoke("Identity.current_user", serde_json::json!({})).await {
+            Ok(response) if response.ok => {
+                if let Some(did) = parse_did_from_invoke(&response.value) {
+                    set_observer_did(did);
+                }
+            }
+            _ => {}
+        }
+    });
+}
+
+fn parse_did_from_invoke(value: &str) -> Option<String> {
+    if let Ok(json) = serde_json::from_str::<serde_json::Value>(value) {
+        if let Some(did) = json.get("did").and_then(|v| v.as_str()) {
+            if !did.is_empty() {
+                return Some(did.to_string());
+            }
+        }
+    }
+    value
+        .split('"')
+        .find(|part| part.starts_with("did:"))
+        .map(str::to_string)
+}
+
+fn upgrade_bundled_sociality(seeds: &mut [ManifoldSeed]) {
+    for seed in seeds.iter_mut() {
+        if crate::tool_chest::core::sociality::bundled_social_manifold(&seed.id) {
+            seed.sociality = ManifoldSociality::Social;
+        }
+    }
+}
+
+pub fn current_manifold_id() -> String {
+    CONSTRUCT_NAV.with(|slot| slot.borrow().current_manifold_id().to_string())
+}
+
+/// Manifolds visible in the open construct (poet shows every seeded lens).
+pub fn visible_seeds() -> Vec<ManifoldSeed> {
+    let all = get_current_seeds();
+    let construct_id = current_construct_id();
+    let Some(construct) = crate::tool_chest::constructs::construct_by_id(&construct_id) else {
+        return all;
+    };
+    if construct.id == "poet" {
+        return all;
+    }
+    let extras = CONSTRUCT_EXTRAS.with(|slot| {
+        slot.borrow()
+            .get(&construct.id)
+            .cloned()
+            .unwrap_or_default()
+    });
+    all.into_iter()
+        .filter(|seed| {
+            construct.contains_manifold(&seed.id) || extras.iter().any(|id| id == &seed.id)
+        })
+        .collect()
+}
+
+pub fn register_construct_manifold(manifold_id: &str) {
+    let construct_id = current_construct_id();
+    if construct_id == "poet" {
+        return;
+    }
+    CONSTRUCT_EXTRAS.with(|slot| {
+        let mut map = slot.borrow_mut();
+        let extras = map.entry(construct_id).or_default();
+        if !extras.iter().any(|id| id == manifold_id) {
+            extras.push(manifold_id.to_string());
+        }
+    });
+    persist_construct_extras();
 }
 
 /// Get a copy of the current manifold seeds (for persistence).
@@ -91,11 +327,204 @@ pub fn get_current_seeds() -> Vec<ManifoldSeed> {
     CURRENT_SEEDS.with(|s| s.borrow().clone())
 }
 
+/// Replace the live canvas state with a verified checkpoint snapshot.
+pub fn restore_manifold_checkpoint(mut seeds: Vec<ManifoldSeed>) -> Result<(), String> {
+    if seeds.is_empty() {
+        return Err("checkpoint contains no manifolds".into());
+    }
+    canvas_state::normalise_seed_ids(&mut seeds);
+    store_current_seeds(&seeds);
+    let current = current_manifold_id();
+    let visible = visible_seeds();
+    let target = visible
+        .iter()
+        .find(|seed| seed.id == current)
+        .or_else(|| visible.first())
+        .or_else(|| seeds.first())
+        .ok_or("checkpoint contains no visible manifold")?
+        .id
+        .clone();
+    if let Some(document) = web_sys::window().and_then(|window| window.document()) {
+        topbar::rebuild_pager(&document, &visible, &target);
+    }
+    switch_manifold(&target, &seeds);
+    manifest::save_all_manifolds()?;
+    Ok(())
+}
+
 /// Store the current manifold seeds in the thread-local.
 fn store_current_seeds(seeds: &[ManifoldSeed]) {
     CURRENT_SEEDS.with(|s| {
         *s.borrow_mut() = seeds.to_vec();
     });
+}
+
+/// Replace one manifold in the persistence store with its latest canvas state.
+pub fn replace_current_seed(seed: &ManifoldSeed) {
+    CURRENT_SEEDS.with(|slot| {
+        let mut seeds = slot.borrow_mut();
+        if let Some(existing) = seeds.iter_mut().find(|candidate| candidate.id == seed.id) {
+            *existing = seed.clone();
+        } else {
+            seeds.push(seed.clone());
+        }
+    });
+}
+
+pub fn rename_current_seed(id: &str, label: &str) {
+    CURRENT_SEEDS.with(|slot| {
+        if let Some(seed) = slot.borrow_mut().iter_mut().find(|seed| seed.id == id) {
+            seed.label = label.to_string();
+        }
+    });
+}
+
+/// Activate a manifold using the latest persisted in-memory seed. Dynamic
+/// tabs call this instead of retaining the empty seed captured at creation.
+fn manifold_title(manifold_id: &str) -> String {
+    get_current_seeds()
+        .into_iter()
+        .find(|seed| seed.id == manifold_id)
+        .map(|seed| seed.label)
+        .unwrap_or_else(|| manifold_id.to_string())
+}
+
+/// Open a nested manifold lens inside the current construct and record breadcrumb.
+pub fn dive_nested_manifold(manifold_id: &str) {
+    let title = manifold_title(manifold_id);
+    CONSTRUCT_NAV.with(|slot| {
+        let _ = slot.borrow_mut().dive_into_subcanvas(manifold_id, &title);
+    });
+    activate_manifold(manifold_id);
+}
+
+/// Pager / sibling switch — replace the breadcrumb stack with this lens.
+pub fn switch_to_sibling_manifold(manifold_id: &str) {
+    let title = manifold_title(manifold_id);
+    CONSTRUCT_NAV.with(|slot| {
+        *slot.borrow_mut() = submanifold_nav::SubmanifoldNavigator::new(manifold_id, &title);
+    });
+    activate_manifold(manifold_id);
+}
+
+/// Pop one nested-manifold level. Root of the open construct is a no-op.
+pub fn pop_nested_manifold() {
+    let parent = CONSTRUCT_NAV.with(|slot| {
+        let mut nav = slot.borrow_mut();
+        if !nav.pop_one_level() {
+            return None;
+        }
+        Some(nav.current_manifold_id().to_string())
+    });
+    match parent {
+        Some(id) => activate_manifold(&id),
+        None => {
+            if let Some(document) = web_sys::window().and_then(|window| window.document()) {
+                interactions::show_tool_status(
+                    &document,
+                    "Construct",
+                    "Already at the root lens of this construct.",
+                    "info",
+                );
+            }
+        }
+    }
+}
+
+/// Jump to a specific breadcrumb depth (0 = root lens of this construct).
+pub fn pop_nested_to_depth(depth: usize) {
+    let id = CONSTRUCT_NAV.with(|slot| {
+        let mut nav = slot.borrow_mut();
+        if !nav.pop_to_depth(depth) {
+            return None;
+        }
+        Some(nav.current_manifold_id().to_string())
+    });
+    if let Some(id) = id {
+        activate_manifold(&id);
+    }
+}
+
+pub fn construct_nav_crumbs() -> Vec<(String, String)> {
+    CONSTRUCT_NAV.with(|slot| {
+        slot.borrow()
+            .breadcrumb_stack
+            .iter()
+            .map(|crumb| (crumb.id.clone(), crumb.title.clone()))
+            .collect()
+    })
+}
+
+pub fn activate_manifold(manifold_id: &str) {
+    let seeds = get_current_seeds();
+    switch_manifold(manifold_id, &seeds);
+    if let Some(document) = web_sys::window().and_then(|window| window.document()) {
+        topbar::refresh_construct_chrome(&document, &current_construct_id(), manifold_id);
+    }
+}
+
+pub fn current_construct_id() -> String {
+    CURRENT_CONSTRUCT.with(|slot| slot.borrow().clone())
+}
+
+/// Open a construct: record it, then switch to its default (or requested) manifold.
+pub fn open_construct(construct_id: &str, manifold_id: Option<&str>) {
+    let Some(seed) = crate::tool_chest::constructs::construct_by_id(construct_id) else {
+        let document = web_sys::window().and_then(|window| window.document());
+        if let Some(document) = document {
+            interactions::show_tool_status(
+                &document,
+                "Construct",
+                &format!("Unknown construct `{construct_id}`."),
+                "error",
+            );
+        }
+        return;
+    };
+    if seed.default_manifold.is_empty() {
+        let document = web_sys::window().and_then(|window| window.document());
+        if let Some(document) = document {
+            interactions::show_tool_status(
+                &document,
+                &seed.label,
+                "Unavailable: Library Software stub with no manifold seed.",
+                "unavailable",
+            );
+        }
+        return;
+    }
+    CURRENT_CONSTRUCT.with(|slot| *slot.borrow_mut() = seed.id.clone());
+    persist_construct_id(&seed.id);
+    let extras =
+        CONSTRUCT_EXTRAS.with(|slot| slot.borrow().get(&seed.id).cloned().unwrap_or_default());
+    let target = manifold_id
+        .filter(|id| {
+            seed.contains_manifold(id)
+                || seed.id == "poet"
+                || extras.iter().any(|extra| extra == *id)
+        })
+        .unwrap_or(seed.default_manifold.as_str());
+    let target_label = manifold_title(target);
+    CONSTRUCT_NAV.with(|slot| {
+        *slot.borrow_mut() = submanifold_nav::SubmanifoldNavigator::new(target, &target_label);
+    });
+    if let Some(document) = web_sys::window().and_then(|window| window.document()) {
+        let visible = visible_seeds();
+        topbar::rebuild_pager(&document, &visible, target);
+        topbar::refresh_construct_chrome(&document, &seed.id, target);
+    }
+    activate_manifold(target);
+    if let Some(document) = web_sys::window().and_then(|window| window.document()) {
+        interactions::show_tool_status(
+            &document,
+            &seed.label,
+            &format!(
+                "Opened your construct `{id}` on manifold `{target}`.",
+                id = seed.id
+            ),
+            "success",
+        );
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -162,6 +591,11 @@ fn try_start(document: &Document) -> Result<(), String> {
         .append_child(&app)
         .map_err(|e| format!("append_child(app): {:?}", e))?;
 
+    // DOM-query based wiring must happen after the detached app tree is mounted.
+    // Wiring before this point silently finds zero controls on a cold start.
+    let seeds = get_current_seeds();
+    wire_app(document, &seeds);
+
     // Remove loading indicator
     if let Some(loading) = document.get_element_by_id("loading") {
         loading.remove();
@@ -181,26 +615,48 @@ fn build_app(document: &Document) -> HtmlElement {
     let app = document.create_element("div").unwrap();
     app.set_class_name("app");
 
-    // Build the populated registry — all 10 toolboxes + 10 manifold seeds.
+    // Build the populated registry — all 15 Dioxus-parity toolboxes + manifold seeds.
     let registry = registration::build_registry();
-    let seeds: Vec<ManifoldSeed> = registry.manifolds().to_vec();
+    let defaults: Vec<ManifoldSeed> = registry.manifolds().to_vec();
+    let mut seeds = manifest::load_saved_seeds()
+        .ok()
+        .flatten()
+        .filter(|saved| !saved.is_empty())
+        .unwrap_or_else(|| defaults.clone());
+    for default_seed in defaults {
+        if !seeds.iter().any(|seed| seed.id == default_seed.id) {
+            seeds.push(default_seed);
+        }
+    }
+    canvas_state::normalise_seed_ids(&mut seeds);
+    upgrade_bundled_sociality(&mut seeds);
     store_current_seeds(&seeds);
+    load_construct_extras();
+    load_subjects();
+    CURRENT_CONSTRUCT.with(|slot| *slot.borrow_mut() = load_stored_construct_id());
+    let visible = visible_seeds();
+    let opening = visible.first().cloned().unwrap_or_else(|| seeds[0].clone());
+    CONSTRUCT_NAV.with(|slot| {
+        *slot.borrow_mut() =
+            submanifold_nav::SubmanifoldNavigator::new(&opening.id, &opening.label);
+    });
 
     // Extract cloneable toolbox views for the flyout panel and store
     // them in a thread-local accessible from click handlers.
     let toolbox_views = docks::extract_toolbox_views(registry.toolboxes());
     docks::store_toolbox_views(toolbox_views);
 
-    // Initialise canvas undo/redo history with the first manifold seed.
-    history::init_history(seeds[0].clone());
+    // Initialise canvas undo/redo history with the first visible manifold seed.
+    history::init_history(opening.clone());
 
     // Top menubar
     let menubar = topbar::build_top_menubar(document);
     app.append_child(&menubar).unwrap();
 
     // Canvas control bar (manifold pager + strata + epistemic + dimension)
-    let control_bar = topbar::build_canvas_control_bar(document, &seeds);
+    let control_bar = topbar::build_canvas_control_bar(document, &visible);
     app.append_child(&control_bar).unwrap();
+    topbar::refresh_construct_chrome(document, &current_construct_id(), &opening.id);
 
     // Main workspace
     let workspace = document.create_element("div").unwrap();
@@ -211,7 +667,7 @@ fn build_app(document: &Document) -> HtmlElement {
     workspace.append_child(&toolbox).unwrap();
 
     // Canvas viewport
-    let canvas = build_canvas(document, &seeds[0]);
+    let canvas = build_canvas(document, &opening);
     canvas.set_id("manifold-canvas");
     workspace.append_child(&canvas).unwrap();
 
@@ -237,14 +693,15 @@ fn build_app(document: &Document) -> HtmlElement {
     let logic_wb = logic_workbench::build_logic_workbench(document);
     app.append_child(&logic_wb).unwrap();
 
-    // Wire up manifold switching
-    wire_manifold_tabs(document, &seeds);
+    app.dyn_into::<HtmlElement>().unwrap()
+}
 
-    // Wire up top control bar pods (Strata, Epistemic Lens, Dim/Time) & title rename
+/// Attach behaviour to the mounted app tree.
+fn wire_app(document: &Document, seeds: &[ManifoldSeed]) {
+    wire_manifold_tabs(document, seeds);
     topbar::wire_pods(document);
-    topbar::wire_title_rename(document, &seeds);
+    topbar::wire_title_rename(document, seeds);
 
-    // Wire up canvas interactions
     interactions::wire_container_selection(document);
     interactions::wire_container_dragging(document);
     interactions::wire_container_resize(document);
@@ -256,50 +713,26 @@ fn build_app(document: &Document) -> HtmlElement {
     interactions::wire_toolbox_dock(document);
     interactions::wire_selector_buttons(document);
 
-    // Wire up command palette (Ctrl+K)
     command_palette::wire_command_palette(document);
-
-    // Wire up undo/redo keyboard shortcuts (Ctrl+Z / Ctrl+Y)
     history::wire_undo_redo(document);
-
-    // Wire up Alt+number manifold shortcuts + Alt+O Exposé
-    wire_alt_shortcuts(document, &seeds);
-
-    // Wire canvas click to hide instrument panel
+    history::wire_editable_history(document);
+    wire_alt_shortcuts(document, seeds);
     wire_canvas_click_hide_instrument_panel(document);
-
-    // Wire menu dropdowns
     topbar::wire_menu_dropdowns(document);
-
-    // Wire wire inspector (click wires to see details)
     wire_inspector::wire_wire_inspector(document);
-
-    // Wire contextual RDF popover (select text in doc → annotate)
     contextual_popover::wire_contextual_popover(document);
-
-    // Wire search workbench shortcut (Ctrl+Shift+F)
     search_workbench::wire_search_workbench_shortcut(document);
-
-    // Wire logic workbench shortcut (Ctrl+Shift+L)
     logic_workbench::wire_logic_workbench_shortcut(document);
-
-    // Wire 8-sector radial action ring (right-click / stylus context gesture)
     radial_menu::wire_radial_menu(document);
+    clipboard::wire_clipboard_shortcut(document);
 
-    // Restore saved dock position if present
-    if let Some(storage) = web_sys::window().and_then(|w| w.local_storage().ok()).flatten() {
-        if let Ok(Some(saved_pos)) = storage.get_item("qualia_dock_pos") {
-            if let Ok(Some(dock_el)) = document.query_selector(".toolbox-dock") {
-                dock_el.set_class_name(&format!("toolbox-dock dock-pos-{}", saved_pos));
-            }
-        }
-    }
-
-    // Open default tool-chest drawer on startup (Word Processor & CML)
-    docks::show_flyout(document, "office");
-    interactions::wire_flyout_tools(document);
-
-    app.dyn_into::<HtmlElement>().unwrap()
+    let saved_position = web_sys::window()
+        .and_then(|window| window.local_storage().ok())
+        .flatten()
+        .and_then(|storage| storage.get_item("qualia_dock_pos").ok().flatten())
+        .unwrap_or_else(|| "left".into());
+    interactions::apply_toolbox_position(document, &saved_position);
+    canvas_extent::ensure_manifold_extent(document);
 }
 
 // ---------------------------------------------------------------------------
@@ -310,22 +743,23 @@ fn build_canvas(document: &Document, seed: &ManifoldSeed) -> Element {
     let canvas = document.create_element("div").unwrap();
     canvas.set_class_name("canvas-viewport-container");
     canvas.set_attribute("data-zoom", "1.0").unwrap();
+    canvas.set_attribute("data-pan-x", "0").unwrap();
+    canvas.set_attribute("data-pan-y", "0").unwrap();
 
-    // Grid background
-    let grid = document.create_element("div").unwrap();
-    grid.set_class_name("canvas-grid-svg");
-    canvas.append_child(&grid).unwrap();
-
-    // Content layer — holds containers and wires, scaled by zoom
+    // Content layer — world surface. Pan/zoom is a transform; the grid
+    // lives here so it extends with the manifold rather than the viewport.
     let content_layer = document.create_element("div").unwrap();
     content_layer.set_class_name("canvas-content-layer");
     let content_el: web_sys::HtmlElement = content_layer.clone().dyn_into().unwrap();
     content_el.style().set_css_text(
-        "position: absolute; top: 0; left: 0; width: 100%; height: 100%; \
-         transform-origin: 0 0; transform: scale(1.0);",
+        "position: absolute; top: 0; left: 0; overflow: visible; \
+         transform-origin: 0 0; transform: translate(0px, 0px) scale(1.0);",
     );
 
-    // Containers
+    let grid = document.create_element("div").unwrap();
+    grid.set_class_name("canvas-grid-svg");
+    content_layer.append_child(&grid).unwrap();
+
     for container in &seed.containers {
         let el = containers::build_container(document, container);
         content_layer.append_child(&el).unwrap();
@@ -356,7 +790,7 @@ fn build_canvas(document: &Document, seed: &ManifoldSeed) -> Element {
 // Manifold switching
 // ---------------------------------------------------------------------------
 
-fn wire_manifold_tabs(document: &Document, seeds: &[ManifoldSeed]) {
+fn wire_manifold_tabs(document: &Document, _seeds: &[ManifoldSeed]) {
     let tabs = document.query_selector_all(".desktop-tab-btn").unwrap();
     for i in 0..tabs.length() {
         let tab = tabs.get(i).unwrap();
@@ -366,9 +800,8 @@ fn wire_manifold_tabs(document: &Document, seeds: &[ManifoldSeed]) {
             None => continue,
         };
 
-        let seeds_clone: Vec<ManifoldSeed> = seeds.to_vec();
         let closure = Closure::wrap(Box::new(move || {
-            switch_manifold(&manifold_id, &seeds_clone);
+            switch_to_sibling_manifold(&manifold_id);
         }) as Box<dyn FnMut()>);
 
         tab_el
@@ -394,7 +827,12 @@ fn switch_manifold(manifold_id: &str, seeds: &[ManifoldSeed]) {
     }
 
     // Switch to the new manifold
-    if let Some(seed) = seeds.iter().find(|s| s.id == manifold_id) {
+    let current_seeds = get_current_seeds();
+    if let Some(seed) = current_seeds
+        .iter()
+        .find(|seed| seed.id == manifold_id)
+        .or_else(|| seeds.iter().find(|seed| seed.id == manifold_id))
+    {
         // Push the current state to history (synced from DOM) then set new seed.
         history::switch_to_manifold(seed.clone());
         rerender_canvas(seed);
@@ -406,6 +844,19 @@ fn switch_manifold(manifold_id: &str, seeds: &[ManifoldSeed]) {
 /// and updates the title + graph badge.
 pub fn rerender_canvas(seed: &ManifoldSeed) {
     let document = web_sys::window().unwrap().document().unwrap();
+
+    if let Ok(tabs) = document.query_selector_all(".desktop-tab-btn") {
+        for index in 0..tabs.length() {
+            let Some(node) = tabs.get(index) else {
+                continue;
+            };
+            let Ok(tab) = node.dyn_into::<Element>() else {
+                continue;
+            };
+            let active = tab.get_attribute("data-manifold").as_deref() == Some(&seed.id);
+            let _ = tab.class_list().toggle_with_force("active", active);
+        }
+    }
 
     // Update title and graph badge
     if let Some(title) = document.query_selector(".canvas-title-input").unwrap() {
@@ -421,18 +872,19 @@ pub fn rerender_canvas(seed: &ManifoldSeed) {
     if let Some(canvas) = document.get_element_by_id("manifold-canvas") {
         canvas.set_inner_html("");
         canvas.set_attribute("data-zoom", "1.0").unwrap();
-        let grid = document.create_element("div").unwrap();
-        grid.set_class_name("canvas-grid-svg");
-        canvas.append_child(&grid).unwrap();
+        canvas.set_attribute("data-pan-x", "0").unwrap();
+        canvas.set_attribute("data-pan-y", "0").unwrap();
 
-        // Content layer — holds containers and wires, scaled by zoom
         let content_layer = document.create_element("div").unwrap();
         content_layer.set_class_name("canvas-content-layer");
         let content_el: HtmlElement = content_layer.clone().dyn_into().unwrap();
         content_el.style().set_css_text(
-            "position: absolute; top: 0; left: 0; width: 100%; height: 100%; \
-             transform-origin: 0 0; transform: scale(1.0);",
+            "position: absolute; top: 0; left: 0; overflow: visible; \
+             transform-origin: 0 0; transform: translate(0px, 0px) scale(1.0);",
         );
+        let grid = document.create_element("div").unwrap();
+        grid.set_class_name("canvas-grid-svg");
+        content_layer.append_child(&grid).unwrap();
 
         for container in &seed.containers {
             let el = containers::build_container(&document, container);
@@ -500,6 +952,8 @@ pub fn rerender_canvas(seed: &ManifoldSeed) {
 
         // Re-wire contextual RDF popover for new doc editors
         contextual_popover::wire_contextual_popover(&document);
+        history::wire_editable_history(&document);
+        canvas_extent::ensure_manifold_extent(&document);
     }
 }
 

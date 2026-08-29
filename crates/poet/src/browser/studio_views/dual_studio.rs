@@ -9,7 +9,9 @@
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::closure::Closure;
 use wasm_bindgen::JsCast;
-use web_sys::{Document, Element, HtmlElement, HtmlInputElement, HtmlSelectElement, HtmlTextAreaElement};
+use web_sys::{
+    Document, Element, HtmlElement, HtmlInputElement, HtmlSelectElement, HtmlTextAreaElement,
+};
 
 /// Preset animation families supported by the Dual Studio.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -70,7 +72,10 @@ impl PresetFamily {
                 ("radial_fanout", "Radial Menu 8-Sector Fanout"),
             ],
             Self::SpringSnapping => &[
-                ("damped_oscillator", "Critically Damped Spring (K=280, C=30)"),
+                (
+                    "damped_oscillator",
+                    "Critically Damped Spring (K=280, C=30)",
+                ),
                 ("underdamped_bounce", "Underdamped Elastic Bounce"),
                 ("overdamped_glide", "Overdamped Viscous Glide"),
             ],
@@ -91,9 +96,7 @@ pub fn compute_pose_scalar(family: PresetFamily, preset: &str, t: f64) -> f64 {
             let x = (t / 2.0).clamp(0.0, 1.0);
             x * x * (3.0 - 2.0 * x)
         }
-        (PresetFamily::HudGlassUi, "chroma_pulse") => {
-            (t * 3.0).sin().abs() * 0.8 + 0.2
-        }
+        (PresetFamily::HudGlassUi, "chroma_pulse") => (t * 3.0).sin().abs() * 0.8 + 0.2,
         (PresetFamily::SpringSnapping, "damped_oscillator") => {
             // f(t) = 1 - e^(-15t) * cos(sqrt(280)*t)
             let decay = (-3.0 * t).exp();
@@ -102,9 +105,7 @@ pub fn compute_pose_scalar(family: PresetFamily, preset: &str, t: f64) -> f64 {
         (PresetFamily::ColorFieldHarmonics, "harmonic_drift") => {
             ((t * 0.6180339887).sin() * 0.5 + 0.5).clamp(0.0, 1.0)
         }
-        _ => {
-            (t * 2.0).sin() * 0.5 + 0.5
-        }
+        _ => (t * 2.0).sin() * 0.5 + 0.5,
     }
 }
 
@@ -137,7 +138,7 @@ pub fn build_dual_studio_view(document: &Document) -> Element {
     let root_el: HtmlElement = root.clone().dyn_into().unwrap();
     root_el.style().set_css_text(
         "display: flex; flex-direction: column; flex: 1; height: 100%; \
-         background: #090d16; color: #f8fafc; overflow: hidden; font-family: sans-serif;"
+         background: #090d16; color: #f8fafc; overflow: hidden; font-family: sans-serif;",
     );
 
     // 1. Header Toolbar
@@ -147,17 +148,23 @@ pub fn build_dual_studio_view(document: &Document) -> Element {
     tb_el.style().set_css_text(
         "display: flex; align-items: center; justify-content: space-between; \
          padding: 8px 12px; background: rgba(15, 23, 42, 0.9); \
-         border-bottom: 1px solid rgba(255, 255, 255, 0.08); gap: 8px; flex-wrap: wrap;"
+         border-bottom: 1px solid rgba(255, 255, 255, 0.08); gap: 8px; flex-wrap: wrap;",
     );
 
     let left_group = document.create_element("div").unwrap();
     let lg_el: HtmlElement = left_group.clone().dyn_into().unwrap();
-    lg_el.style().set_css_text("display: flex; align-items: center; gap: 8px;");
+    lg_el
+        .style()
+        .set_css_text("display: flex; align-items: center; gap: 8px;");
 
     let title = document.create_element("span").unwrap();
-    title.set_text_content(Some("\u{2728} Dual Studio \u{2014} Shared-WASM Linear Memory"));
+    title.set_text_content(Some(
+        "\u{2728} Dual Studio \u{2014} Shared-WASM Linear Memory",
+    ));
     let title_el: HtmlElement = title.clone().dyn_into().unwrap();
-    title_el.style().set_css_text("font-weight: 700; font-size: 12px; color: #38bdf8;");
+    title_el
+        .style()
+        .set_css_text("font-weight: 700; font-size: 12px; color: #38bdf8;");
     left_group.append_child(&title).unwrap();
 
     // Preset Family selector
@@ -195,7 +202,9 @@ pub fn build_dual_studio_view(document: &Document) -> Element {
     // Right Controls Group: Playback & Scrubbing
     let right_group = document.create_element("div").unwrap();
     let rg_el: HtmlElement = right_group.clone().dyn_into().unwrap();
-    rg_el.style().set_css_text("display: flex; align-items: center; gap: 8px;");
+    rg_el
+        .style()
+        .set_css_text("display: flex; align-items: center; gap: 8px;");
 
     let play_btn = document.create_element("button").unwrap();
     play_btn.set_class_name("vibe-run-btn");
@@ -203,7 +212,7 @@ pub fn build_dual_studio_view(document: &Document) -> Element {
     let pb_el: HtmlElement = play_btn.clone().dyn_into().unwrap();
     pb_el.style().set_css_text(
         "background: var(--accent-emerald, #00f2a9); color: #020617; font-weight: 700; \
-         font-size: 10px; padding: 3px 8px; border-radius: 4px; border: none; cursor: pointer;"
+         font-size: 10px; padding: 3px 8px; border-radius: 4px; border: none; cursor: pointer;",
     );
     right_group.append_child(&play_btn).unwrap();
 
@@ -213,13 +222,17 @@ pub fn build_dual_studio_view(document: &Document) -> Element {
     scrubber.set_attribute("max", "1000").unwrap();
     scrubber.set_attribute("value", "250").unwrap();
     let sc_el: HtmlElement = scrubber.clone().dyn_into().unwrap();
-    sc_el.style().set_css_text("width: 100px; height: 4px; accent-color: #38bdf8; cursor: pointer;");
+    sc_el
+        .style()
+        .set_css_text("width: 100px; height: 4px; accent-color: #38bdf8; cursor: pointer;");
     right_group.append_child(&scrubber).unwrap();
 
     let time_badge = document.create_element("span").unwrap();
     time_badge.set_text_content(Some("02.50s / 10.00s"));
     let tb_el: HtmlElement = time_badge.clone().dyn_into().unwrap();
-    tb_el.style().set_css_text("font-size: 10px; font-family: var(--font-mono); color: #94a3b8;");
+    tb_el
+        .style()
+        .set_css_text("font-size: 10px; font-family: var(--font-mono); color: #94a3b8;");
     right_group.append_child(&time_badge).unwrap();
 
     toolbar.append_child(&right_group).unwrap();
@@ -228,24 +241,30 @@ pub fn build_dual_studio_view(document: &Document) -> Element {
     // 2. Main Workspace Split (Left: Editor, Right: Reactive Viewport)
     let workspace = document.create_element("div").unwrap();
     let ws_el: HtmlElement = workspace.clone().dyn_into().unwrap();
-    ws_el.style().set_css_text("display: grid; grid-template-columns: 1.1fr 0.9fr; flex: 1; overflow: hidden;");
+    ws_el.style().set_css_text(
+        "display: grid; grid-template-columns: 1.1fr 0.9fr; flex: 1; overflow: hidden;",
+    );
 
     // Left Column: VibeScript Code Editor
     let editor_pane = document.create_element("div").unwrap();
     let ep_el: HtmlElement = editor_pane.clone().dyn_into().unwrap();
     ep_el.style().set_css_text(
         "display: flex; flex-direction: column; border-right: 1px solid rgba(255, 255, 255, 0.08); \
-         background: #040711; padding: 8px; gap: 6px; overflow: hidden;"
+         background: #040711; padding: 8px; gap: 6px; overflow: hidden;",
     );
 
     let editor_header = document.create_element("div").unwrap();
     let eh_el: HtmlElement = editor_header.clone().dyn_into().unwrap();
-    eh_el.style().set_css_text("display: flex; justify-content: space-between; align-items: center;");
+    eh_el
+        .style()
+        .set_css_text("display: flex; justify-content: space-between; align-items: center;");
 
     let editor_title = document.create_element("span").unwrap();
     editor_title.set_text_content(Some("\u{1F4DC} VibeScript Reactive Ast"));
     let et_el: HtmlElement = editor_title.clone().dyn_into().unwrap();
-    et_el.style().set_css_text("font-size: 11px; font-weight: 700; color: #cbd5e1;");
+    et_el
+        .style()
+        .set_css_text("font-size: 11px; font-weight: 700; color: #cbd5e1;");
     editor_header.append_child(&editor_title).unwrap();
 
     let ast_badge = document.create_element("span").unwrap();
@@ -264,7 +283,7 @@ pub fn build_dual_studio_view(document: &Document) -> Element {
     txt_el.style().set_css_text(
         "flex: 1; background: rgba(0,0,0,0.5); color: #e2e8f0; font-family: var(--font-mono); \
          font-size: 11px; line-height: 1.5; border: 1px solid rgba(255,255,255,0.08); \
-         border-radius: 6px; padding: 10px; resize: none; outline: none; white-space: pre;"
+         border-radius: 6px; padding: 10px; resize: none; outline: none; white-space: pre;",
     );
     editor_pane.append_child(&textarea).unwrap();
     workspace.append_child(&editor_pane).unwrap();
@@ -274,20 +293,22 @@ pub fn build_dual_studio_view(document: &Document) -> Element {
     let vp_el: HtmlElement = viewport_pane.clone().dyn_into().unwrap();
     vp_el.style().set_css_text(
         "display: flex; flex-direction: column; background: #080c18; padding: 8px; gap: 8px; \
-         align-items: center; justify-content: center; position: relative; overflow: hidden;"
+         align-items: center; justify-content: center; position: relative; overflow: hidden;",
     );
 
     let viewport_header = document.create_element("div").unwrap();
     let vph_el: HtmlElement = viewport_header.clone().dyn_into().unwrap();
     vph_el.style().set_css_text(
         "position: absolute; top: 8px; left: 8px; right: 8px; display: flex; \
-         justify-content: space-between; align-items: center; z-index: 10;"
+         justify-content: space-between; align-items: center; z-index: 10;",
     );
 
     let vp_title = document.create_element("span").unwrap();
     vp_title.set_text_content(Some("\u{1F3AC} QViewport 60 FPS Player"));
     let vpt_el: HtmlElement = vp_title.clone().dyn_into().unwrap();
-    vpt_el.style().set_css_text("font-size: 11px; font-weight: 700; color: #38bdf8;");
+    vpt_el
+        .style()
+        .set_css_text("font-size: 11px; font-weight: 700; color: #38bdf8;");
     viewport_header.append_child(&vp_title).unwrap();
 
     let scalar_badge = document.create_element("span").unwrap();
@@ -320,15 +341,19 @@ pub fn build_dual_studio_view(document: &Document) -> Element {
     ft_el.style().set_css_text(
         "display: flex; justify-content: space-between; align-items: center; \
          padding: 4px 12px; background: #02040a; border-top: 1px solid rgba(255, 255, 255, 0.06); \
-         font-size: 10px; font-family: var(--font-mono); color: #64748b;"
+         font-size: 10px; font-family: var(--font-mono); color: #64748b;",
     );
 
     let foot_left = document.create_element("span").unwrap();
-    foot_left.set_text_content(Some("Target: 60 FPS \u{00B7} Frame dt: 16.6ms \u{00B7} 3-Way AST Merge: Synced"));
+    foot_left.set_text_content(Some(
+        "Target: 60 FPS \u{00B7} Frame dt: 16.6ms \u{00B7} 3-Way AST Merge: Synced",
+    ));
     footer.append_child(&foot_left).unwrap();
 
     let foot_right = document.create_element("span").unwrap();
-    foot_right.set_text_content(Some("Zero-Heap: \u{2713} \u{00B7} Sentinel: 42MB OK \u{00B7} Backend: Shared-WASM"));
+    foot_right.set_text_content(Some(
+        "Zero-Heap: \u{2713} \u{00B7} Sentinel: 42MB OK \u{00B7} Backend: Shared-WASM",
+    ));
     footer.append_child(&foot_right).unwrap();
 
     root.append_child(&footer).unwrap();
@@ -355,7 +380,9 @@ pub fn build_dual_studio_view(document: &Document) -> Element {
             }
         }
     }) as Box<dyn FnMut(web_sys::Event)>);
-    family_select.add_event_listener_with_callback("change", change_closure.as_ref().unchecked_ref()).unwrap();
+    family_select
+        .add_event_listener_with_callback("change", change_closure.as_ref().unchecked_ref())
+        .unwrap();
     change_closure.forget();
 
     let sb_clone = scalar_badge.clone();
@@ -383,11 +410,15 @@ pub fn build_dual_studio_view(document: &Document) -> Element {
 
                 let disc_el: HtmlElement = ad_clone.clone().dyn_into().unwrap();
                 let scale = 0.8 + scalar * 0.4;
-                let _ = disc_el.style().set_property("transform", &format!("scale({:.3})", scale));
+                let _ = disc_el
+                    .style()
+                    .set_property("transform", &format!("scale({:.3})", scale));
             }
         }
     }) as Box<dyn FnMut(web_sys::Event)>);
-    scrubber.add_event_listener_with_callback("input", scrub_closure.as_ref().unchecked_ref()).unwrap();
+    scrubber
+        .add_event_listener_with_callback("input", scrub_closure.as_ref().unchecked_ref())
+        .unwrap();
     scrub_closure.forget();
 
     root

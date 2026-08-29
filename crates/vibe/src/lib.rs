@@ -12,13 +12,13 @@ mod accel;
 mod ast;
 mod ast_query;
 mod bind;
-pub mod catalog;
 mod budget;
 pub mod bytecode;
-mod degrade;
 pub mod capability_schema;
+pub mod catalog;
 mod cbor_ast;
 mod check;
+mod degrade;
 mod diagnose;
 mod effects;
 mod error;
@@ -58,22 +58,22 @@ pub mod translate;
 pub mod trivia;
 pub mod vocab;
 
+pub use accel::{
+    add_f64_slices, cell_batch_cap, detect_available_tier, CELL_BATCH_NATIVE, CELL_BATCH_WASM,
+};
 pub use ast::{
-    Arg, ArmBody, BindDecl, BindResolve, BinOp, Block, CapSpec, CellDecl, ConstDecl, EffectClass, EnumDecl, EnumVariant,
-    Expr, ExprKind, FieldDecl, FieldRepresentation, FieldSupport, FunctionDecl, HookDecl,
-    ImportDecl, Item, LawDecl, Literal, LocaleDecl, MatchArm, MaterialDecl, ModalKind, ModuleDecl, NamedArg,
-    Param, Pattern, PrefixDecl, PresentDecl, Program, Stmt, TypeExpr, UnOp, ColorLit,
+    Arg, ArmBody, BinOp, BindDecl, BindResolve, Block, CapSpec, CellDecl, ColorLit, ConstDecl,
+    EffectClass, EnumDecl, EnumVariant, Expr, ExprKind, FieldDecl, FieldRepresentation,
+    FieldSupport, FunctionDecl, HookDecl, ImportDecl, Item, LawDecl, Literal, LocaleDecl, MatchArm,
+    MaterialDecl, ModalKind, ModuleDecl, NamedArg, Param, Pattern, PrefixDecl, PresentDecl,
+    Program, Stmt, TypeExpr, UnOp,
 };
 pub use ast_query::{
     builtin_policies, check_custom_policies, check_policies, function_has_budget, hook_has_budget,
     parse_query, run_policies, Policy, PolicyViolation, QueryPattern,
 };
-pub use accel::{
-    add_f64_slices, cell_batch_cap, detect_available_tier, CELL_BATCH_NATIVE, CELL_BATCH_WASM,
-};
 pub use bind::{AccelerationTier, Host, HostEnvironment, LocalHost};
 pub use budget::{Budget, SENTINEL_BYTES};
-pub use degrade::{gpu_missing, llm_missing};
 pub use cbor_ast::{decode, encode, DecodeError, TAG_VIBE_AST};
 pub use check::{
     check_cell, check_program, check_program_all, check_program_with_vocab, CheckResult,
@@ -84,6 +84,7 @@ pub use dag::{
     NodeEffect, NodeStatus, RouterStrategy, MAX_DAG_EDGES, MAX_DAG_NODES, MAX_JUDGE_CLAIMS,
     MAX_NODE_IO,
 };
+pub use degrade::{gpu_missing, llm_missing};
 pub use deontic_interrupt::{
     AgentSandbox, DeonticInterrupt, InterruptType, LeaseError, Phase, PhaseLeaser,
     MAX_CAPS_PER_PHASE, MAX_PHASES, MAX_SANDBOX_AGENTS,

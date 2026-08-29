@@ -89,7 +89,7 @@ pub fn diagnose(src: &str) -> DiagnoseReport {
                     errors: extra,
                     error: Some(error),
                 }
-            },
+            }
         }
     };
 

@@ -31,7 +31,13 @@ pub struct SuperQuin {
 impl SuperQuin {
     /// Constructs a parity-valid SuperQuin.
     #[inline(always)]
-    pub const fn new(subject: u64, predicate: u64, object: u64, context: u64, metadata: u64) -> Self {
+    pub const fn new(
+        subject: u64,
+        predicate: u64,
+        object: u64,
+        context: u64,
+        metadata: u64,
+    ) -> Self {
         let parity = subject ^ predicate ^ object ^ context ^ metadata;
         Self {
             subject,
@@ -70,10 +76,34 @@ pub fn icon_entry_to_super_quins(entry: &IconEntry) -> [SuperQuin; 4] {
     let id_object = entry.id_hash;
 
     [
-        SuperQuin::new(subject_hash, PRED_UCD_NAME, name_object, CONTEXT_WEBIZEN_ICONS, 0),
-        SuperQuin::new(subject_hash, PRED_UCD_CATEGORY, category_object, CONTEXT_WEBIZEN_ICONS, 0),
-        SuperQuin::new(subject_hash, PRED_WEBIZEN_FALLBACK, fallback_object, CONTEXT_WEBIZEN_ICONS, 0),
-        SuperQuin::new(subject_hash, PRED_WEBIZEN_ICON_ID, id_object, CONTEXT_WEBIZEN_ICONS, 0),
+        SuperQuin::new(
+            subject_hash,
+            PRED_UCD_NAME,
+            name_object,
+            CONTEXT_WEBIZEN_ICONS,
+            0,
+        ),
+        SuperQuin::new(
+            subject_hash,
+            PRED_UCD_CATEGORY,
+            category_object,
+            CONTEXT_WEBIZEN_ICONS,
+            0,
+        ),
+        SuperQuin::new(
+            subject_hash,
+            PRED_WEBIZEN_FALLBACK,
+            fallback_object,
+            CONTEXT_WEBIZEN_ICONS,
+            0,
+        ),
+        SuperQuin::new(
+            subject_hash,
+            PRED_WEBIZEN_ICON_ID,
+            id_object,
+            CONTEXT_WEBIZEN_ICONS,
+            0,
+        ),
     ]
 }
 

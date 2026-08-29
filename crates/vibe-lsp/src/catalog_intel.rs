@@ -19,17 +19,41 @@ const KEYWORDS: &[(&str, &str)] = &[
     ("locale", "Opt-in keyword locale (`locale zh;`)"),
     ("present", "Presentation sheaf surface"),
     ("graph", "Embedded graph pattern"),
-    ("graph?", "Embedded SPARQL ASK (fail-closed without GraphDatabase)"),
+    (
+        "graph?",
+        "Embedded SPARQL ASK (fail-closed without GraphDatabase)",
+    ),
     ("law", "law Name when expr => consequence;"),
     ("material", "material Name { ... }"),
     ("field", "field name: Type { ... }"),
-    ("obligate", "Deontic obligation — lowers to DeonticLogic.evaluate when leased"),
-    ("permit", "Deontic permission — lowers to DeonticLogic.evaluate when leased"),
-    ("forbid", "Deontic prohibition — lowers to DeonticLogic.evaluate when leased"),
-    ("knows", "Epistemic knowledge — lowers to EpistemicLogic.evaluate when leased"),
-    ("believes", "Epistemic belief — lowers to EpistemicLogic.evaluate when leased"),
-    ("always", "LTL G(φ) — lowers to TemporalAndDescriptionLogic.ltl.globally when leased"),
-    ("eventually", "LTL F(φ) — lowers to TemporalAndDescriptionLogic.ltl.finally when leased"),
+    (
+        "obligate",
+        "Deontic obligation — lowers to DeonticLogic.evaluate when leased",
+    ),
+    (
+        "permit",
+        "Deontic permission — lowers to DeonticLogic.evaluate when leased",
+    ),
+    (
+        "forbid",
+        "Deontic prohibition — lowers to DeonticLogic.evaluate when leased",
+    ),
+    (
+        "knows",
+        "Epistemic knowledge — lowers to EpistemicLogic.evaluate when leased",
+    ),
+    (
+        "believes",
+        "Epistemic belief — lowers to EpistemicLogic.evaluate when leased",
+    ),
+    (
+        "always",
+        "LTL G(φ) — lowers to TemporalAndDescriptionLogic.ltl.globally when leased",
+    ),
+    (
+        "eventually",
+        "LTL F(φ) — lowers to TemporalAndDescriptionLogic.ltl.finally when leased",
+    ),
     ("until", "LTL until"),
 ];
 
@@ -90,7 +114,10 @@ pub fn hover_at(src: &str, line: usize, character: usize) -> String {
         let lease = family_of(id)
             .map(|f| format!("\n\nLease: `using {f};`"))
             .unwrap_or_default();
-        return format!("**`{id}`**\n\n{}\n\nType: host invoke (fail-closed).{lease}", describe(&token));
+        return format!(
+            "**`{id}`**\n\n{}\n\nType: host invoke (fail-closed).{lease}",
+            describe(&token)
+        );
     }
     for (kw, detail) in KEYWORDS {
         if *kw == token {
@@ -118,7 +145,10 @@ pub fn workspace_edit_for_fix(uri: &str, diagnostic: &Value, src: &str) -> Optio
     } else {
         format!("/* {fix} */\n")
     };
-    let insert_range = if insert.starts_with("using ") || insert.starts_with("add requires") || insert.starts_with("requires") {
+    let insert_range = if insert.starts_with("using ")
+        || insert.starts_with("add requires")
+        || insert.starts_with("requires")
+    {
         json!({ "start": { "line": 0, "character": 0 }, "end": { "line": 0, "character": 0 } })
     } else {
         range
@@ -222,7 +252,9 @@ mod tests {
             .filter_map(|v| v.get("label").and_then(|l| l.as_str()).map(str::to_string))
             .collect();
         assert!(
-            labels.iter().any(|l| l.contains("gpu_init") || l == "gpu_init"),
+            labels
+                .iter()
+                .any(|l| l.contains("gpu_init") || l == "gpu_init"),
             "expected Render.gpu_* methods, got {labels:?}"
         );
         assert!(!labels.iter().any(|l| l == "cell"));

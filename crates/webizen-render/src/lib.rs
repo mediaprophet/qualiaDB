@@ -13,6 +13,8 @@
 pub mod audio_contract;
 pub mod math;
 pub mod pipeline;
+#[cfg(all(feature = "qualia", not(target_arch = "wasm32")))]
+pub mod poet_preview;
 pub mod scene_contract;
 pub mod shaders;
 pub mod telemetry;

@@ -9,6 +9,7 @@ use wasm_bindgen::{closure::Closure, JsCast};
 use web_sys::{Document, Element, Event, HtmlElement};
 
 use crate::browser::tool_widgets::ToolWidget;
+use crate::tool_chest::core::intent_bus::ActionType;
 use crate::tool_chest::core::tool::ToolKind;
 use crate::tool_chest::core::tool_chain::ToolChainMetadata;
 use crate::tool_chest::core::toolbox::{Toolbox, ToolboxMetadata};
@@ -24,6 +25,7 @@ pub struct ToolView {
     pub label: String,
     pub icon: String,
     pub kind: ToolKind,
+    pub action: ActionType,
     pub capability_scope: Option<String>,
     pub description: String,
 }
@@ -526,7 +528,7 @@ pub fn build_toolchain_widgets(chain_id: &str, tools: &[ToolView]) -> Vec<ToolWi
             label: tool.label.clone(),
             icon: tool_glyph(&tool.icon).to_string(),
             kind_badge: kind_label(tool.kind).to_string(),
-            action: tool.id.clone(),
+            action: tool.action.to_string(),
         });
     }
 
@@ -553,6 +555,7 @@ pub fn extract_toolbox_views(toolboxes: &[Toolbox]) -> Vec<ToolboxView> {
                                 label: m.label.clone(),
                                 icon: m.icon.clone(),
                                 kind: m.kind,
+                                action: tool.action_type(),
                                 capability_scope: m.capability_scope.clone(),
                                 description: m.description.clone(),
                             }
@@ -598,12 +601,12 @@ pub fn toolbox_glyph(id: &str) -> &'static str {
         "office" | "word_processor" | "tb_word_processor" | "doc" => "📝",
         "sheet" | "tb_spreadsheet" => "📊",
         "image" | "graphics" | "tb_graphics" => "🎨",
-        "spatial" | "3d" | "tb_3d_spatial" => "🧊",
-        "audio" | "audio_synth" | "tb_audio_synth" => "🎙️",
+        "spatial" | "3d" | "tb_3d_spatial" | "dual_studio" | "studio" => "🧊",
+        "audio" | "audio_synth" | "tb_audio_synth" | "audio_session" => "🎙️",
         "code" | "tb_code_ide" => "💻",
         "communication" | "mail" | "tb_mail_publish" => "✉️",
         "erp" | "tb_erp_workstream" => "📅",
-        "lab" | "science" | "tb_scientific_lab" => "🔬",
+        "lab" | "science" | "scientific" | "tb_scientific_lab" => "🔬",
         "ai" | "tb_ai_copilot" => "✨",
         "rights" | "governance" | "tb_governance_rights" => "⚖️",
         "sdn" | "tb_sdn_cooperative" => "🌐",
@@ -706,7 +709,18 @@ pub fn build_toolbox_dock(document: &Document, toolboxes: &[Toolbox]) -> Element
         let pos_btn = document.create_element("button").unwrap();
         pos_btn.set_class_name("dock-pos-btn");
         pos_btn.set_attribute("data-pos", pos_id).unwrap();
-        pos_btn.set_attribute("title", &format!("Dock {}", pos_id)).unwrap();
+        pos_btn
+            .set_attribute("title", &format!("Dock {}", pos_id))
+            .unwrap();
+        pos_btn
+            .set_attribute("aria-label", &format!("Dock Tool Chest {}", pos_id))
+            .unwrap();
+        pos_btn
+            .set_attribute(
+                "aria-pressed",
+                if *pos_id == "left" { "true" } else { "false" },
+            )
+            .unwrap();
         let pb_el: HtmlElement = pos_btn.clone().dyn_into().unwrap();
         pb_el.style().set_css_text(
             "padding: 1px 3px; font-size: 8px; background: transparent; border: 1px solid transparent; \
@@ -714,41 +728,24 @@ pub fn build_toolbox_dock(document: &Document, toolboxes: &[Toolbox]) -> Element
         );
         pos_btn.set_text_content(Some(glyph));
 
-        let dock_clone = dock.clone();
         let pos_str = pos_id.to_string();
         let pos_closure = Closure::wrap(Box::new(move |_e: web_sys::MouseEvent| {
-            let d_el: HtmlElement = dock_clone.clone().dyn_into().unwrap();
-            d_el.set_class_name(&format!("toolbox-dock dock-pos-{}", pos_str));
-
             if let Some(win) = web_sys::window() {
                 if let Some(doc) = win.document() {
-                    // Update flyout if open
-                    if let Ok(Some(flyout_el)) = doc.query_selector(".toolbox-flyout") {
-                        let f_html: HtmlElement = flyout_el.dyn_into().unwrap();
-                        f_html.set_class_name(&format!("toolbox-flyout dock-{}", pos_str));
-                    }
-                    // Update active button state
-                    if let Ok(btn_list) = doc.query_selector_all(".dock-pos-btn") {
-                        for k in 0..btn_list.length() {
-                            if let Some(b) = btn_list.item(k).and_then(|n| n.dyn_into::<HtmlElement>().ok()) {
-                                if b.get_attribute("data-pos").as_deref() == Some(&pos_str) {
-                                    let _ = b.style().set_property("color", "var(--accent-cyan)");
-                                    let _ = b.style().set_property("border-color", "var(--accent-cyan)");
-                                } else {
-                                    let _ = b.style().set_property("color", "var(--text-muted)");
-                                    let _ = b.style().set_property("border-color", "transparent");
-                                }
-                            }
-                        }
-                    }
+                    super::interactions::apply_toolbox_position(&doc, &pos_str);
                 }
             }
 
-            if let Some(storage) = web_sys::window().and_then(|w| w.local_storage().ok()).flatten() {
+            if let Some(storage) = web_sys::window()
+                .and_then(|w| w.local_storage().ok())
+                .flatten()
+            {
                 let _ = storage.set_item("qualia_dock_pos", &pos_str);
             }
         }) as Box<dyn FnMut(web_sys::MouseEvent)>);
-        pos_btn.add_event_listener_with_callback("click", pos_closure.as_ref().unchecked_ref()).unwrap();
+        pos_btn
+            .add_event_listener_with_callback("click", pos_closure.as_ref().unchecked_ref())
+            .unwrap();
         pos_closure.forget();
 
         anchor_bar.append_child(&pos_btn).unwrap();
@@ -770,8 +767,12 @@ pub fn build_toolbox_dock(document: &Document, toolboxes: &[Toolbox]) -> Element
         ("sheet", "📊 Sheet"),
         ("code", "💻 Vibe"),
         ("anatomy", "🫀 Anatomy"),
+        ("dual_studio", "Dual Studio"),
+        ("audio_session", "Audio session"),
         ("3d", "🧊 3D Scene"),
         ("social", "💬 Social"),
+        ("agent_console", "🤖 Local AI"),
+        ("integrations", "🔌 Connectors"),
         ("webrtc", "📹 Swarm"),
         ("finance", "💰 Finance"),
     ];
@@ -793,11 +794,17 @@ pub fn build_toolbox_dock(document: &Document, toolboxes: &[Toolbox]) -> Element
         let click_closure = Closure::wrap(Box::new(move |_e: web_sys::MouseEvent| {
             if let Some(win) = web_sys::window() {
                 if let Some(doc) = win.document() {
-                    super::interactions::place_container_via_menu(&doc, &c_type_str, &format!("+ {}", c_lbl_str));
+                    super::interactions::place_container_via_menu(
+                        &doc,
+                        &c_type_str,
+                        &format!("+ {}", c_lbl_str),
+                    );
                 }
             }
         }) as Box<dyn FnMut(web_sys::MouseEvent)>);
-        q_btn.add_event_listener_with_callback("click", click_closure.as_ref().unchecked_ref()).unwrap();
+        q_btn
+            .add_event_listener_with_callback("click", click_closure.as_ref().unchecked_ref())
+            .unwrap();
         click_closure.forget();
 
         quick_grid.append_child(&q_btn).unwrap();
@@ -828,6 +835,12 @@ pub fn build_toolbox_dock(document: &Document, toolboxes: &[Toolbox]) -> Element
         header.set_class_name("dock-family-header");
         header.set_attribute("data-family", &family.id).unwrap();
         header.set_attribute("title", &family.label).unwrap();
+        header
+            .set_attribute(
+                "aria-expanded",
+                if first_toolbox { "true" } else { "false" },
+            )
+            .unwrap();
 
         let family_icon = document.create_element("span").unwrap();
         family_icon.set_class_name("dock-family-icon");
@@ -858,10 +871,10 @@ pub fn build_toolbox_dock(document: &Document, toolboxes: &[Toolbox]) -> Element
             let btn = document.create_element("button").unwrap();
             btn.set_class_name("toolbox-dock-btn");
             if first_toolbox {
-                btn.class_list().add_1("active").unwrap();
                 first_toolbox = false;
             }
             btn.set_attribute("data-toolbox", &meta.id).unwrap();
+            btn.set_attribute("aria-label", &meta.label).unwrap();
             btn.set_text_content(Some(toolbox_glyph(&meta.id)));
 
             let tooltip = document.create_element("span").unwrap();
@@ -1034,7 +1047,24 @@ pub fn show_flyout(document: &Document, toolbox_id: &str) {
                 btn.set_attribute("data-tool-id", &tool.id).unwrap();
                 btn.set_attribute("data-chain-id", &chain.metadata.id)
                     .unwrap();
+                btn.set_attribute("data-action", &tool.action.to_string())
+                    .unwrap();
+                btn.set_attribute("data-enabled-title", &tool.description)
+                    .unwrap();
                 btn.set_attribute("title", &tool.description).unwrap();
+                if super::tool_actions::requires_daemon(&tool.id) {
+                    btn.set_attribute("data-requires-daemon", "true").unwrap();
+                }
+                if let Some(reason) = super::tool_actions::current_disabled_reason(&tool.id) {
+                    btn.set_attribute("disabled", "").unwrap();
+                    btn.set_attribute("aria-disabled", "true").unwrap();
+                    btn.set_attribute("data-disabled-reason", reason).unwrap();
+                    btn.set_attribute(
+                        "title",
+                        &format!("{} Unavailable: {}", tool.description, reason),
+                    )
+                    .unwrap();
+                }
 
                 let icon_el = document.create_element("span").unwrap();
                 icon_el.set_class_name("tool-btn-icon");
@@ -1089,8 +1119,9 @@ pub fn create_collapsible_dock_panel(
     panel.set_class_name("dock-panel");
     let p_el: HtmlElement = panel.clone().dyn_into().unwrap();
     if flex_grow {
-        p_el.style()
-            .set_css_text("flex: 1; min-height: 32px; overflow: hidden; display: flex; flex-direction: column;");
+        p_el.style().set_css_text(
+            "flex: 1; min-height: 32px; overflow: hidden; display: flex; flex-direction: column;",
+        );
     } else {
         p_el.style()
             .set_css_text("min-height: 32px; display: flex; flex-direction: column;");
@@ -1394,7 +1425,11 @@ mod tests {
     #[test]
     fn test_master_toolbox_families_count() {
         let families = family_order();
-        assert!(families.len() >= 12, "Expected at least 12 master toolbox families, got {}", families.len());
+        assert!(
+            families.len() >= 12,
+            "Expected at least 12 master toolbox families, got {}",
+            families.len()
+        );
         let ids: Vec<&str> = families.iter().map(|f| f.id.as_str()).collect();
         assert!(ids.contains(&"epistemic"));
         assert!(ids.contains(&"authoring"));

@@ -127,7 +127,8 @@ impl SolidPodBundle {
          <#registration-hyperdocs>\n\
              a solid:TypeRegistration ;\n\
              solid:forClass schema:DigitalDocument ;\n\
-             solid:instanceContainer </public/documents/> .\n".to_string()
+             solid:instanceContainer </public/documents/> .\n"
+            .to_string()
     }
 }
 
@@ -141,7 +142,7 @@ pub fn build_solid_pod_hub_view(document: &Document, bundle: &SolidPodBundle) ->
     let root_el: HtmlElement = root.clone().dyn_into().unwrap();
     root_el.style().set_css_text(
         "display: flex; flex-direction: column; flex: 1; padding: 12px; gap: 10px; \
-         background: #020617; color: #f8fafc; overflow-y: auto; font-family: sans-serif;"
+         background: #020617; color: #f8fafc; overflow-y: auto; font-family: sans-serif;",
     );
 
     // Header Toolbar
@@ -150,19 +151,28 @@ pub fn build_solid_pod_hub_view(document: &Document, bundle: &SolidPodBundle) ->
     let header_el: HtmlElement = header.clone().dyn_into().unwrap();
     header_el.style().set_css_text(
         "justify-content: space-between; background: rgba(30, 41, 59, 0.7); \
-         border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; padding: 8px 12px;"
+         border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; padding: 8px 12px;",
     );
 
     let title = document.create_element("span").unwrap();
-    title.set_text_content(Some("\u{1F4E6} W3C Solid Pod Hub & Zero-Lock-In Migration Wizard"));
+    title.set_text_content(Some(
+        "\u{1F4E6} W3C Solid Pod Hub & Zero-Lock-In Migration Wizard",
+    ));
     let title_el: HtmlElement = title.clone().dyn_into().unwrap();
-    title_el.style().set_css_text("font-weight: 700; font-size: 13px; color: #38bdf8;");
+    title_el
+        .style()
+        .set_css_text("font-weight: 700; font-size: 13px; color: #38bdf8;");
     header.append_child(&title).unwrap();
 
     let webid_status = document.create_element("span").unwrap();
-    webid_status.set_text_content(Some(&format!("WebID: {} \u{00B7} Protocol: Solid 0.10.0 \u{00B7} Status: Connected \u{1F7E2}", &bundle.webid_uri[..bundle.webid_uri.len().min(24)])));
+    webid_status.set_text_content(Some(&format!(
+        "WebID: {} \u{00B7} Protocol: Solid 0.10.0 \u{00B7} Status: Connected \u{1F7E2}",
+        &bundle.webid_uri[..bundle.webid_uri.len().min(24)]
+    )));
     let webid_status_el: HtmlElement = webid_status.clone().dyn_into().unwrap();
-    webid_status_el.style().set_css_text("font-size: 11px; font-family: var(--font-mono); color: #34d399;");
+    webid_status_el
+        .style()
+        .set_css_text("font-size: 11px; font-family: var(--font-mono); color: #34d399;");
     header.append_child(&webid_status).unwrap();
 
     root.append_child(&header).unwrap();
@@ -170,7 +180,9 @@ pub fn build_solid_pod_hub_view(document: &Document, bundle: &SolidPodBundle) ->
     // 2-Column Grid
     let grid = document.create_element("div").unwrap();
     let grid_el: HtmlElement = grid.clone().dyn_into().unwrap();
-    grid_el.style().set_css_text("display: grid; grid-template-columns: 1fr 1fr; gap: 10px;");
+    grid_el
+        .style()
+        .set_css_text("display: grid; grid-template-columns: 1fr 1fr; gap: 10px;");
 
     // Left Column: Pod File Tree
     let left = document.create_element("div").unwrap();
@@ -180,7 +192,9 @@ pub fn build_solid_pod_hub_view(document: &Document, bundle: &SolidPodBundle) ->
     let left_title = document.create_element("span").unwrap();
     left_title.set_text_content(Some("\u{1F4C1} Exported Solid Pod LDP Structure"));
     let left_title_el: HtmlElement = left_title.clone().dyn_into().unwrap();
-    left_title_el.style().set_css_text("font-weight: 700; font-size: 12px; color: #38bdf8;");
+    left_title_el
+        .style()
+        .set_css_text("font-weight: 700; font-size: 12px; color: #38bdf8;");
     left.append_child(&left_title).unwrap();
 
     for item in &bundle.items {
@@ -189,15 +203,26 @@ pub fn build_solid_pod_hub_view(document: &Document, bundle: &SolidPodBundle) ->
         row_el.style().set_css_text("display: flex; justify-content: space-between; align-items: center; font-size: 11px; font-family: var(--font-mono); padding: 3px 6px; background: rgba(0,0,0,0.2); border-radius: 4px;");
 
         let path = document.create_element("span").unwrap();
-        path.set_text_content(Some(&format!("{}/{}", if item.is_public { "public" } else { "private" }, item.relative_path)));
+        path.set_text_content(Some(&format!(
+            "{}/{}",
+            if item.is_public { "public" } else { "private" },
+            item.relative_path
+        )));
         let path_el: HtmlElement = path.clone().dyn_into().unwrap();
         path_el.style().set_css_text("color: #cbd5e1;");
         row.append_child(&path).unwrap();
 
         let badge = document.create_element("span").unwrap();
-        badge.set_text_content(Some(if item.is_public { "WORLD-READ" } else { "OWNER-ONLY" }));
+        badge.set_text_content(Some(if item.is_public {
+            "WORLD-READ"
+        } else {
+            "OWNER-ONLY"
+        }));
         let badge_el: HtmlElement = badge.clone().dyn_into().unwrap();
-        badge_el.style().set_css_text(&format!("font-size: 9px; padding: 1px 4px; border-radius: 3px; background: {}; color: #fff;", if item.is_public { "#0284c7" } else { "#475569" }));
+        badge_el.style().set_css_text(&format!(
+            "font-size: 9px; padding: 1px 4px; border-radius: 3px; background: {}; color: #fff;",
+            if item.is_public { "#0284c7" } else { "#475569" }
+        ));
         row.append_child(&badge).unwrap();
 
         left.append_child(&row).unwrap();
@@ -210,9 +235,13 @@ pub fn build_solid_pod_hub_view(document: &Document, bundle: &SolidPodBundle) ->
     right_el.style().set_css_text("background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 8px;");
 
     let right_title = document.create_element("span").unwrap();
-    right_title.set_text_content(Some("\u{1F6E4}\u{FE0F} Non-Trivial Compatibility Gaps & Fallbacks"));
+    right_title.set_text_content(Some(
+        "\u{1F6E4}\u{FE0F} Non-Trivial Compatibility Gaps & Fallbacks",
+    ));
     let right_title_el: HtmlElement = right_title.clone().dyn_into().unwrap();
-    right_title_el.style().set_css_text("font-weight: 700; font-size: 12px; color: #38bdf8;");
+    right_title_el
+        .style()
+        .set_css_text("font-weight: 700; font-size: 12px; color: #38bdf8;");
     right.append_child(&right_title).unwrap();
 
     let gap_info = document.create_element("pre").unwrap();
@@ -221,7 +250,7 @@ pub fn build_solid_pod_hub_view(document: &Document, bundle: &SolidPodBundle) ->
          \u{2022} M-of-N Consensus Locks \u{2794} Emits Lamport Clock RDF metadata\n\
          \u{2022} Paraconsistent Quarantine \u{2794} Routes to /private/quarantine/\n\
          \u{2022} Neural P64 / 10D Meshes \u{2794} Binary blobs with .meta.ttl sidecars\n\
-         \u{2022} Reactive VibeMarks \u{2794} Pre-evaluated HTML snapshots"
+         \u{2022} Reactive VibeMarks \u{2794} Pre-evaluated HTML snapshots",
     ));
     let gap_info_el: HtmlElement = gap_info.clone().dyn_into().unwrap();
     gap_info_el.style().set_css_text("font-family: var(--font-mono); font-size: 10px; color: #94a3b8; margin: 0; background: rgba(0,0,0,0.3); padding: 8px; border-radius: 4px; white-space: pre-wrap;");
@@ -229,20 +258,46 @@ pub fn build_solid_pod_hub_view(document: &Document, bundle: &SolidPodBundle) ->
 
     // 4-Tier Visual Degradation Ladder
     let ladder_title = document.create_element("span").unwrap();
-    ladder_title.set_text_content(Some("\u{1F39F}\u{FE0F} 4-Tier Zero-Lock-In Degradation Ladder"));
+    ladder_title.set_text_content(Some(
+        "\u{1F39F}\u{FE0F} 4-Tier Zero-Lock-In Degradation Ladder",
+    ));
     let lt_el: HtmlElement = ladder_title.clone().dyn_into().unwrap();
-    lt_el.style().set_css_text("font-weight: 700; font-size: 11px; color: #38bdf8; margin-top: 4px;");
+    lt_el
+        .style()
+        .set_css_text("font-weight: 700; font-size: 11px; color: #38bdf8; margin-top: 4px;");
     right.append_child(&ladder_title).unwrap();
 
     let ladder_box = document.create_element("div").unwrap();
     let lb_el: HtmlElement = ladder_box.clone().dyn_into().unwrap();
-    lb_el.style().set_css_text("display: flex; flex-direction: column; gap: 4px;");
+    lb_el
+        .style()
+        .set_css_text("display: flex; flex-direction: column; gap: 4px;");
 
     for (tier_num, tier_label, tier_desc, tier_color) in &[
-        ("T1", "10D Manifold State Tensor", "Zero-heap Super-Quin execution (Native/WASM)", "#00f2a9"),
-        ("T2", "Unicode PUA Semantic Glyphs", "Multi-cultural visual/oral character streams", "#38bdf8"),
-        ("T3", "W3C Solid Pod Turtle (.ttl)", "Standard Linked Data Platform RDF-Star", "#ffb834"),
-        ("T4", "Plaintext Markdown / UTF-8", "Zero-dependency universal human readability", "#94a3b8"),
+        (
+            "T1",
+            "10D Manifold State Tensor",
+            "Zero-heap Super-Quin execution (Native/WASM)",
+            "#00f2a9",
+        ),
+        (
+            "T2",
+            "Unicode PUA Semantic Glyphs",
+            "Multi-cultural visual/oral character streams",
+            "#38bdf8",
+        ),
+        (
+            "T3",
+            "W3C Solid Pod Turtle (.ttl)",
+            "Standard Linked Data Platform RDF-Star",
+            "#ffb834",
+        ),
+        (
+            "T4",
+            "Plaintext Markdown / UTF-8",
+            "Zero-dependency universal human readability",
+            "#94a3b8",
+        ),
     ] {
         let tier_row = document.create_element("div").unwrap();
         let tr_el: HtmlElement = tier_row.clone().dyn_into().unwrap();
@@ -255,23 +310,32 @@ pub fn build_solid_pod_hub_view(document: &Document, bundle: &SolidPodBundle) ->
         let t_badge = document.create_element("span").unwrap();
         t_badge.set_text_content(Some(tier_num));
         let tb_el: HtmlElement = t_badge.clone().dyn_into().unwrap();
-        tb_el.style().set_css_text(&format!("font-size: 9px; font-weight: 700; color: {}; font-family: var(--font-mono);", tier_color));
+        tb_el.style().set_css_text(&format!(
+            "font-size: 9px; font-weight: 700; color: {}; font-family: var(--font-mono);",
+            tier_color
+        ));
         tier_row.append_child(&t_badge).unwrap();
 
         let t_info = document.create_element("div").unwrap();
         let ti_el: HtmlElement = t_info.clone().dyn_into().unwrap();
-        ti_el.style().set_css_text("display: flex; flex-direction: column; font-size: 10px;");
+        ti_el
+            .style()
+            .set_css_text("display: flex; flex-direction: column; font-size: 10px;");
 
         let t_name = document.create_element("span").unwrap();
         t_name.set_text_content(Some(tier_label));
         let tn_el: HtmlElement = t_name.clone().dyn_into().unwrap();
-        tn_el.style().set_css_text("font-weight: 600; color: #f1f5f9;");
+        tn_el
+            .style()
+            .set_css_text("font-weight: 600; color: #f1f5f9;");
         t_info.append_child(&t_name).unwrap();
 
         let t_sub = document.create_element("span").unwrap();
         t_sub.set_text_content(Some(tier_desc));
         let ts_el: HtmlElement = t_sub.clone().dyn_into().unwrap();
-        ts_el.style().set_css_text("font-size: 9px; color: #64748b; font-family: var(--font-mono);");
+        ts_el
+            .style()
+            .set_css_text("font-size: 9px; color: #64748b; font-family: var(--font-mono);");
         t_info.append_child(&t_sub).unwrap();
 
         tier_row.append_child(&t_info).unwrap();
@@ -282,14 +346,21 @@ pub fn build_solid_pod_hub_view(document: &Document, bundle: &SolidPodBundle) ->
     // Export Trigger Button
     let exp_btn = document.create_element("button").unwrap();
     exp_btn.set_class_name("vibe-run-btn");
-    exp_btn.set_text_content(Some("\u{1F4E6} Generate Signed Solid Pod Bundle (.zip / LDP)"));
+    exp_btn.set_text_content(Some(
+        "\u{1F4E6} Generate Signed Solid Pod Bundle (.zip / LDP)",
+    ));
     let exp_btn_el: HtmlElement = exp_btn.clone().dyn_into().unwrap();
     exp_btn_el.style().set_css_text("margin-top: 4px; background: var(--accent-cyan, #38bdf8); color: #020617; font-weight: 700; font-size: 11px; padding: 6px 12px; border-radius: 6px; border: none; cursor: pointer;");
 
-    let exp_closure = wasm_bindgen::closure::Closure::wrap(Box::new(move |_e: web_sys::MouseEvent| {
-        web_sys::console::log_1(&"[Solid Interop] Exported 9 LDP resources to bundle (Profile card, WebACL, publicTypeIndex, Catchment_Study.meta.ttl)".into());
-    }) as Box<dyn FnMut(web_sys::MouseEvent)>);
-    exp_btn.add_event_listener_with_callback("click", exp_closure.as_ref().unchecked_ref()).unwrap();
+    let exp_closure = wasm_bindgen::closure::Closure::wrap(Box::new(
+        move |_e: web_sys::MouseEvent| {
+            web_sys::console::log_1(&"[Solid Interop] Exported 9 LDP resources to bundle (Profile card, WebACL, publicTypeIndex, Catchment_Study.meta.ttl)".into());
+        },
+    )
+        as Box<dyn FnMut(web_sys::MouseEvent)>);
+    exp_btn
+        .add_event_listener_with_callback("click", exp_closure.as_ref().unchecked_ref())
+        .unwrap();
     exp_closure.forget();
     right.append_child(&exp_btn).unwrap();
 
@@ -306,7 +377,10 @@ mod tests {
     #[test]
     fn test_solid_pod_bundle_creation() {
         let bundle = SolidPodBundle::new("https://alice.solidcommunity.net/profile/card#me");
-        assert_eq!(bundle.webid_uri, "https://alice.solidcommunity.net/profile/card#me");
+        assert_eq!(
+            bundle.webid_uri,
+            "https://alice.solidcommunity.net/profile/card#me"
+        );
         assert_eq!(bundle.items.len(), 9);
 
         let public_items: Vec<_> = bundle.items.iter().filter(|i| i.is_public).collect();

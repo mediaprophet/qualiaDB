@@ -17,9 +17,9 @@
 //! - Abductive, Fuzzy, Probabilistic, Graph Theory, Interval
 //! - Manifold 10D, Epistemic Boundaries, Modal
 //!
-//! All evaluation is structural/mock \u{2014} actual logic execution requires the
-//! QualiaDB daemon backend (MCP evaluate_modality, evaluate_logic_rules,
-//! symbolic_logic_infer tools; Tauri evaluate_logic_rules command).
+//! Evaluation is routed through the connected QualiaDB daemon's negotiated
+//! native capability catalogue. Panels without a completed binding fail closed
+//! with a precise diagnostic rather than producing structural sample output.
 //!
 //! Source: `consult/20260818_logic-modalities-audit.md`
 //!
@@ -38,6 +38,20 @@ mod p2_domain;
 mod p2_extras;
 mod p2_infra;
 mod p2_infra_ext;
+mod request_advanced;
+mod request_authoring;
+mod request_calculus;
+mod request_capabilities;
+mod request_formal;
+mod request_governance;
+mod request_infra;
+mod request_infra_ext;
+mod request_legal;
+mod request_parse;
+mod request_physics;
+mod request_reasoning;
+mod request_spatial;
+mod requests;
 #[cfg(test)]
 mod tests;
 
@@ -514,9 +528,9 @@ pub fn build_logic_workbench(document: &Document) -> Element {
          font-size: 9px; color: var(--text-muted); font-family: var(--font-mono);",
     );
     footer.set_text_content(Some(
-        "\u{1F4A1} Rule/norm/shape construction is live. \
-         Logic evaluation requires QualiaDB daemon (MCP evaluate_modality, evaluate_logic_rules, \
-         symbolic_logic_infer) \u{2014} results are structural mocks.",
+        "\u{1F4A1} Typed operations run through the negotiated QualiaDB capability catalogue. \
+         A control is disabled or fails closed when its required native contract is unavailable; \
+         the workbench does not synthesize fallback results.",
     ));
     panel.append_child(&footer).unwrap();
 
@@ -650,6 +664,51 @@ fn wire_tool_tabs(document: &Document) {
 // ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
+
+/// Domain Lab container — former scientific/medical QApp workbenches as POET tools.
+pub fn build_domain_lab_view(document: &Document) -> Element {
+    let root = document.create_element("div").unwrap();
+    let root_el: HtmlElement = root.clone().dyn_into().unwrap();
+    root_el.style().set_css_text(
+        "display: flex; flex-direction: column; flex: 1; gap: 8px; padding: 8px; overflow: auto;",
+    );
+    let note = document.create_element("div").unwrap();
+    note.set_text_content(Some(
+        "Domain Lab — clinical, chemistry, physics, bioinformatics, GBM. These are POET tools on this manifold, not nested QApps.",
+    ));
+    let note_el: HtmlElement = note.clone().dyn_into().unwrap();
+    note_el
+        .style()
+        .set_css_text("font-size: 10px; color: var(--text-muted); font-family: var(--font-mono);");
+    root.append_child(&note).unwrap();
+    let tools = [
+        ("clinical_risk", "Clinical Risk"),
+        ("dicom_viewer", "DICOM / HU window"),
+        ("comorbidity", "Comorbidity"),
+        ("chemistry", "Chemistry"),
+        ("physics", "Physics"),
+        ("ode_solver", "ODE / calculus"),
+        ("bioinformatics", "Bioinformatics"),
+        ("gbm_var", "GBM / VaR"),
+    ];
+    for (id, label) in tools {
+        let button = document.create_element("button").unwrap();
+        button.set_attribute("type", "button").ok();
+        button.set_text_content(Some(label));
+        let tool = id.to_string();
+        let closure = Closure::wrap(Box::new(move |_event: MouseEvent| {
+            if let Some(document) = web_sys::window().and_then(|window| window.document()) {
+                open_to_tool(&document, &tool);
+            }
+        }) as Box<dyn FnMut(_)>);
+        button
+            .add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())
+            .unwrap();
+        closure.forget();
+        root.append_child(&button).unwrap();
+    }
+    root
+}
 
 pub fn toggle_logic_workbench(document: &Document) {
     if let Some(wb) = document.get_element_by_id("logic-workbench") {

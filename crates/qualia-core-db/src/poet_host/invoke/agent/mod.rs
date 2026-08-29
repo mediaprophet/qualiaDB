@@ -121,7 +121,7 @@ pub fn build_pipeline_from_value(args: &Value, span: Span) -> Result<DagPipeline
                         DiagCode::E100,
                         span,
                         "DAG pipeline record must contain 'nodes' List",
-                    ))
+                    ));
                 }
             };
             let edges = match map.get("edges") {
@@ -135,7 +135,7 @@ pub fn build_pipeline_from_value(args: &Value, span: Span) -> Result<DagPipeline
                 DiagCode::E100,
                 span,
                 "DAG pipeline expects a List of nodes or a Record with 'nodes'",
-            ))
+            ));
         }
     };
 

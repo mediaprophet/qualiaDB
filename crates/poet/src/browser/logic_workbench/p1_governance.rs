@@ -3,7 +3,7 @@
 
 use super::helpers::{
     make_button, make_results_area, make_section_label, make_select, make_text_input,
-    make_textarea, make_tool_panel, show_logic_notification, show_mock_results,
+    make_textarea, make_tool_panel, show_mock_results,
 };
 use wasm_bindgen::prelude::Closure;
 use wasm_bindgen::JsCast;
@@ -21,7 +21,7 @@ pub(super) fn build_value_flow_panel(document: &Document) -> Element {
         .append_child(&make_textarea(
             document,
             "value-flow-editor",
-            "# Value flow context\ncontribution(alice, 100h, projectX).\ncontribution(bob, 50h, projectX).\ncommons_cost(projectX, 200h).\n\n# Query: outstanding obligations for alice?\n# Query: pool after alice contribution?",
+            "# Native Permissive Commons contract\nproduction_cost=1000\nroi_cap_percent=20\nmax_roi_percent=20\npool=400\nenergy_returned=12\nenergy_invested=10\nmin_ratio=1.0\n\n# Royalty split\nbase=100\nagent_multiplier_percent=150\ngenerations=3\nshare_percent=50",
             "140px",
         ))
         .unwrap();
@@ -49,7 +49,7 @@ pub(super) fn build_value_flow_panel(document: &Document) -> Element {
         .append_child(&make_results_area(
             document,
             "value-flow-results",
-            "Click \"Compute Flow\" to trace value contributions (mock).",
+            "Compute commons cost, outstanding balance, discharge, and E-ROI against the native value-flow kernel.",
         ))
         .unwrap();
     panel
@@ -68,7 +68,7 @@ pub(super) fn wire_value_flow_panel(document: &Document) {
     if let Some(btn) = document.get_element_by_id("value-flow-royalty") {
         let closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
             let doc = web_sys::window().unwrap().document().unwrap();
-            show_logic_notification(&doc, "Royalty split: alice=66.7%, bob=33.3% (mock)");
+            show_mock_results(&doc, "value-flow-results", "value-flow-royalty");
         }) as Box<dyn FnMut(MouseEvent)>);
         btn.add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())
             .unwrap();
@@ -116,7 +116,7 @@ pub(super) fn build_interaction_gov_panel(document: &Document) -> Element {
         .append_child(&make_textarea(
             document,
             "interaction-gov-context",
-            "# Governance policies\npolicy(projectX, permit, contribute).\npolicy(projectX, forbid, deleteWithoutReview).\npolicy(projectX, obligate, signOffBeforeMerge).\n\n# Query: govern verdict for alice contributing to projectX?",
+            "# Verdict classification for map_policy\nstatus=violated\nnon_derogable=true\nhumanitarian=false\nambiguous=false\nemergency=false\nhard_core=true",
             "120px",
         ))
         .unwrap();
@@ -136,7 +136,7 @@ pub(super) fn build_interaction_gov_panel(document: &Document) -> Element {
         .append_child(&make_results_area(
             document,
             "interaction-gov-results",
-            "Click \"Govern Verdict\" to evaluate policy (mock).",
+            "Map the deontic verdict plus non-derogable/humanitarian/ambiguous flags onto a runtime PolicyMode.",
         ))
         .unwrap();
     panel
@@ -166,7 +166,7 @@ pub(super) fn build_identity_fabric_panel(document: &Document) -> Element {
         .append_child(&make_textarea(
             document,
             "identity-fabric-editor",
-            "# Identity fabric\nanchor(alice, did:qualia:timothy_charles_holborn).\nanchor(alice, publicKey:ed25519:abc123).\nattest(bob, alice, \"isContributor\").\n\n# Query: surviving anchors after key rotation?\n# Query: does identity survive loss of publicKey:ed25519:abc123?",
+            "# Identifier is not identity — k-of-n fabric recovery\nanchors=[did:alice|ed25519:abc|attestation:bob]\nlost=[ed25519:abc]\ntotal_anchors=3\nlost_anchors=1\nquorum=2",
             "140px",
         ))
         .unwrap();
@@ -194,7 +194,7 @@ pub(super) fn build_identity_fabric_panel(document: &Document) -> Element {
         .append_child(&make_results_area(
             document,
             "identity-fabric-results",
-            "Click \"Recompute Fabric\" to trace identity anchors (mock).",
+            "Recompute surviving anchors and test k-of-n identity survival against the native fabric kernel.",
         ))
         .unwrap();
     panel
@@ -213,7 +213,7 @@ pub(super) fn wire_identity_fabric_panel(document: &Document) {
     if let Some(btn) = document.get_element_by_id("identity-fabric-survive") {
         let closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
             let doc = web_sys::window().unwrap().document().unwrap();
-            show_logic_notification(&doc, "Identity survives: 2 surviving anchors (mock)");
+            show_mock_results(&doc, "identity-fabric-results", "identity-fabric-survive");
         }) as Box<dyn FnMut(MouseEvent)>);
         btn.add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())
             .unwrap();
@@ -233,7 +233,7 @@ pub(super) fn build_capability_gap_panel(document: &Document) -> Element {
         .append_child(&make_textarea(
             document,
             "capability-gap-editor",
-            "# Capability requirements\nrequires(projectX, [rust, wasm, sparql]).\nhas(alice, [rust, wasm]).\nhas(bob, [sparql, rust, wasm]).\n\n# Query: capability gap for projectX with team {alice}?\n# Query: requirements met for projectX with team {alice, bob}?",
+            "# Gap = required \\ held, with optional RPL equivalences\nrequired=[rust|wasm|sparql]\nheld=[rust|wasm]\nequivalences=[sparql:query]\ngoal=sparql\nedges=[wasm:sparql:2]",
             "140px",
         ))
         .unwrap();
@@ -253,7 +253,7 @@ pub(super) fn build_capability_gap_panel(document: &Document) -> Element {
         .append_child(&make_results_area(
             document,
             "capability-gap-results",
-            "Click \"Analyze Gap\" to find missing capabilities (mock).",
+            "Compute the required-vs-held capability gap and an optional shortest learning path.",
         ))
         .unwrap();
     panel
@@ -283,7 +283,7 @@ pub(super) fn build_legal_compose_panel(document: &Document) -> Element {
         .append_child(&make_textarea(
             document,
             "legal-compose-editor",
-            "# Legal compose context\njurisdiction(alice, au).\njurisdiction(bob, eu).\nrule(au, dataRetention, 7years).\nrule(eu, gdpr, rightToErasure).\n\n# Query: selective disclosure for alice in au?\n# Query: ZK eligibility for cross-jurisdictional transfer?",
+            "# Selective disclosure, Curation Directive, instrument anchoring\nall_claims=[age|jurisdiction|income]\nreveal=[jurisdiction]\nmachine_proposed=true\nhuman_attested=false\ntranslatable=true\ninstrument=iccpr\nproportionate=true\nproof_verified=true",
             "140px",
         ))
         .unwrap();
@@ -311,7 +311,7 @@ pub(super) fn build_legal_compose_panel(document: &Document) -> Element {
         .append_child(&make_results_area(
             document,
             "legal-compose-results",
-            "Click \"Compose Legal\" to evaluate cross-jurisdictional rules (mock).",
+            "Evaluate selective disclosure, translation status, and instrument-anchored composition validity.",
         ))
         .unwrap();
     panel
@@ -330,7 +330,7 @@ pub(super) fn wire_legal_compose_panel(document: &Document) {
     if let Some(btn) = document.get_element_by_id("legal-compose-zk") {
         let closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
             let doc = web_sys::window().unwrap().document().unwrap();
-            show_logic_notification(&doc, "ZK eligibility: proof generated, eligible (mock)");
+            show_mock_results(&doc, "legal-compose-results", "legal-compose-zk");
         }) as Box<dyn FnMut(MouseEvent)>);
         btn.add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())
             .unwrap();
@@ -350,7 +350,7 @@ pub(super) fn build_deontic_compose_panel(document: &Document) -> Element {
         .append_child(&make_textarea(
             document,
             "deontic-compose-editor",
-            "# Deontic compose context\nobligation(alice, payTax, active).\nobligation(alice, deliverReport, discharged).\nknows(alice, deadlinePassed).\n\n# Query: classify mens rea for alice?\n# Query: obligation applies in jurisdiction au?\n# Query: obligation globally?",
+            "# Mens rea + locative obligation\nagent=did:alice\ncontent=disclose\nopcode=forbid\nbrought_about=true\nknows=true\nhad_duty_to_know=false\nnorm_jurisdiction=au\ntarget_jurisdiction=nsw\nwithin=[nsw:au]\ntrust=0.8\ntrust_threshold=0.5",
             "140px",
         ))
         .unwrap();
@@ -378,7 +378,7 @@ pub(super) fn build_deontic_compose_panel(document: &Document) -> Element {
         .append_child(&make_results_area(
             document,
             "deontic-compose-results",
-            "Click \"Compose Norms\" to evaluate multi-stakeholder obligations (mock).",
+            "Classify mens rea, jurisdictional subsumption, and the behavioural-trust gate.",
         ))
         .unwrap();
     panel
@@ -397,7 +397,7 @@ pub(super) fn wire_deontic_compose_panel(document: &Document) {
     if let Some(btn) = document.get_element_by_id("deontic-compose-mens") {
         let closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
             let doc = web_sys::window().unwrap().document().unwrap();
-            show_logic_notification(&doc, "Mens rea: knowingly (mock)");
+            show_mock_results(&doc, "deontic-compose-results", "deontic-compose-mens");
         }) as Box<dyn FnMut(MouseEvent)>);
         btn.add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())
             .unwrap();

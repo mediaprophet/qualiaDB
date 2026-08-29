@@ -188,13 +188,17 @@ impl BookmarkLibrary {
 
     /// Execute a simulated VibeMark monitoring poll.
     pub fn execute_vibemark_poll(&self, mark_id: &str) -> Result<String, String> {
-        let mark = self.bookmarks.iter().find(|b| b.id == mark_id)
+        let mark = self
+            .bookmarks
+            .iter()
+            .find(|b| b.id == mark_id)
             .ok_or_else(|| "Bookmark not found".to_string())?;
 
         if let Some(_script) = &mark.vibemark_script {
             Ok(format!(
                 "VibeMark '{}' polled successfully. Ingested {} triples. Emitted telemetry pulse: 'weather.heavy_rain'",
-                mark.title, mark.extracted_triples.len()
+                mark.title,
+                mark.extracted_triples.len()
             ))
         } else {
             Err("No VibeMark script attached".into())
@@ -223,7 +227,7 @@ pub fn build_bookmark_bar_widget(document: &Document, lib: &BookmarkLibrary) -> 
     bar_el.style().set_css_text(
         "display: flex; align-items: center; gap: 6px; padding: 4px 8px; \
          background: #090e1a; border-bottom: 1px solid rgba(255, 255, 255, 0.08); \
-         overflow-x: auto; font-family: sans-serif; font-size: 11px;"
+         overflow-x: auto; font-family: sans-serif; font-size: 11px;",
     );
 
     for mark in lib.pinned_bookmarks() {
@@ -233,11 +237,15 @@ pub fn build_bookmark_bar_widget(document: &Document, lib: &BookmarkLibrary) -> 
         chip_el.style().set_css_text(
             "display: flex; align-items: center; gap: 6px; padding: 4px 8px; \
              background: rgba(30, 41, 59, 0.6); border: 1px solid rgba(255, 255, 255, 0.08); \
-             border-radius: 6px; color: #f8fafc; cursor: pointer; white-space: nowrap;"
+             border-radius: 6px; color: #f8fafc; cursor: pointer; white-space: nowrap;",
         );
 
         let icon = document.create_element("span").unwrap();
-        icon.set_text_content(Some(if mark.vibemark_script.is_some() { "\u{26A1}" } else { "\u{1F516}" }));
+        icon.set_text_content(Some(if mark.vibemark_script.is_some() {
+            "\u{26A1}"
+        } else {
+            "\u{1F516}"
+        }));
         chip.append_child(&icon).unwrap();
 
         let title = document.create_element("span").unwrap();
@@ -247,7 +255,9 @@ pub fn build_bookmark_bar_widget(document: &Document, lib: &BookmarkLibrary) -> 
         let trust = document.create_element("span").unwrap();
         trust.set_text_content(Some(&format!("{}%", mark.dialectical_score)));
         let trust_el: HtmlElement = trust.clone().dyn_into().unwrap();
-        trust_el.style().set_css_text("font-size: 9px; color: #34d399; font-family: var(--font-mono);");
+        trust_el
+            .style()
+            .set_css_text("font-size: 9px; color: #34d399; font-family: var(--font-mono);");
         chip.append_child(&trust).unwrap();
 
         bar.append_child(&chip).unwrap();
@@ -262,7 +272,7 @@ pub fn build_bookmarks_manager_view(document: &Document, lib: &BookmarkLibrary) 
     let root_el: HtmlElement = root.clone().dyn_into().unwrap();
     root_el.style().set_css_text(
         "display: flex; flex-direction: column; flex: 1; padding: 12px; gap: 10px; \
-         background: #020617; color: #f8fafc; overflow-y: auto; font-family: sans-serif;"
+         background: #020617; color: #f8fafc; overflow-y: auto; font-family: sans-serif;",
     );
 
     // Header Toolbar
@@ -271,19 +281,30 @@ pub fn build_bookmarks_manager_view(document: &Document, lib: &BookmarkLibrary) 
     let header_el: HtmlElement = header.clone().dyn_into().unwrap();
     header_el.style().set_css_text(
         "justify-content: space-between; background: rgba(30, 41, 59, 0.7); \
-         border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; padding: 8px 12px;"
+         border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; padding: 8px 12px;",
     );
 
     let title = document.create_element("span").unwrap();
     title.set_text_content(Some("\u{1F516} Hypermedia Bookmarks & Meaning Shelf"));
     let title_el: HtmlElement = title.clone().dyn_into().unwrap();
-    title_el.style().set_css_text("font-weight: 700; font-size: 13px; color: #38bdf8;");
+    title_el
+        .style()
+        .set_css_text("font-weight: 700; font-size: 13px; color: #38bdf8;");
     header.append_child(&title).unwrap();
 
     let count = document.create_element("span").unwrap();
-    count.set_text_content(Some(&format!("Total Saved: {} \u{00B7} VibeMarks Active: {}", lib.bookmarks.len(), lib.bookmarks.iter().filter(|b| b.vibemark_script.is_some()).count())));
+    count.set_text_content(Some(&format!(
+        "Total Saved: {} \u{00B7} VibeMarks Active: {}",
+        lib.bookmarks.len(),
+        lib.bookmarks
+            .iter()
+            .filter(|b| b.vibemark_script.is_some())
+            .count()
+    )));
     let count_el: HtmlElement = count.clone().dyn_into().unwrap();
-    count_el.style().set_css_text("font-size: 11px; font-family: var(--font-mono); color: #94a3b8;");
+    count_el
+        .style()
+        .set_css_text("font-size: 11px; font-family: var(--font-mono); color: #94a3b8;");
     header.append_child(&count).unwrap();
 
     root.append_child(&header).unwrap();
@@ -291,24 +312,30 @@ pub fn build_bookmarks_manager_view(document: &Document, lib: &BookmarkLibrary) 
     // Bookmarks Grid
     let grid = document.create_element("div").unwrap();
     let grid_el: HtmlElement = grid.clone().dyn_into().unwrap();
-    grid_el.style().set_css_text("display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px;");
+    grid_el.style().set_css_text(
+        "display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px;",
+    );
 
     for mark in &lib.bookmarks {
         let card = document.create_element("div").unwrap();
         let card_el: HtmlElement = card.clone().dyn_into().unwrap();
         card_el.style().set_css_text(
             "background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255, 255, 255, 0.08); \
-             border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 6px;"
+             border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 6px;",
         );
 
         let card_header = document.create_element("div").unwrap();
         let card_header_el: HtmlElement = card_header.clone().dyn_into().unwrap();
-        card_header_el.style().set_css_text("display: flex; justify-content: space-between; align-items: flex-start;");
+        card_header_el.style().set_css_text(
+            "display: flex; justify-content: space-between; align-items: flex-start;",
+        );
 
         let card_title = document.create_element("span").unwrap();
         card_title.set_text_content(Some(&mark.title));
         let card_title_el: HtmlElement = card_title.clone().dyn_into().unwrap();
-        card_title_el.style().set_css_text("font-weight: 600; font-size: 12px; color: #f8fafc;");
+        card_title_el
+            .style()
+            .set_css_text("font-weight: 600; font-size: 12px; color: #f8fafc;");
         card_header.append_child(&card_title).unwrap();
 
         if mark.vibemark_script.is_some() {
@@ -329,7 +356,9 @@ pub fn build_bookmarks_manager_view(document: &Document, lib: &BookmarkLibrary) 
 
         let tags_row = document.create_element("div").unwrap();
         let tags_row_el: HtmlElement = tags_row.clone().dyn_into().unwrap();
-        tags_row_el.style().set_css_text("display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px;");
+        tags_row_el
+            .style()
+            .set_css_text("display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px;");
 
         for tag in &mark.cml_entity_tags {
             let tag_span = document.create_element("span").unwrap();
@@ -370,7 +399,10 @@ mod tests {
 
         let hydrology_marks = lib.filter_by_tag("qualia:Hydrology");
         assert_eq!(hydrology_marks.len(), 1);
-        assert_eq!(hydrology_marks[0].title, "North Spring Catchment Observations 2026");
+        assert_eq!(
+            hydrology_marks[0].title,
+            "North Spring Catchment Observations 2026"
+        );
 
         let solid_marks = lib.filter_by_domain("solidcommunity.net");
         assert_eq!(solid_marks.len(), 1);

@@ -1,9 +1,9 @@
 //! LSP server implementation — JSON-RPC over stdin/stdout (P1.3).
 
+use crate::catalog_intel::{completions_at, hover_at, workspace_edit_for_fix};
 use serde_json::{json, Value};
 use std::collections::HashMap;
 use std::io::{self, BufRead, Write};
-use crate::catalog_intel::{completions_at, hover_at, workspace_edit_for_fix};
 use vibe::projectional::{project_program, ProjectOptions};
 use vibe::{check_program, parse_program, Diagnostic};
 
@@ -279,11 +279,19 @@ impl<R: BufRead, W: Write> LspServer<R, W> {
             "textDocument/codeAction" => {
                 let mut actions = Vec::new();
                 if let Some(params) = msg.get("params") {
-                    let uri = params.pointer("/textDocument/uri").and_then(|v| v.as_str()).unwrap_or("");
+                    let uri = params
+                        .pointer("/textDocument/uri")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("");
                     let src = self.documents.get(uri).cloned().unwrap_or_default();
-                    if let Some(diags) = params.pointer("/context/diagnostics").and_then(|v| v.as_array()) {
+                    if let Some(diags) = params
+                        .pointer("/context/diagnostics")
+                        .and_then(|v| v.as_array())
+                    {
                         for d in diags {
-                            if let Some(fix) = d.pointer("/data/suggested_fix").and_then(|v| v.as_str()) {
+                            if let Some(fix) =
+                                d.pointer("/data/suggested_fix").and_then(|v| v.as_str())
+                            {
                                 let mut action = json!({
                                     "title": format!("Apply fix: {fix}"),
                                     "kind": "quickfix",
@@ -308,14 +316,18 @@ impl<R: BufRead, W: Write> LspServer<R, W> {
             "textDocument/formatting" => {
                 let mut edits = Vec::new();
                 if let Some(params) = msg.get("params") {
-                    if let Some(uri) = params.pointer("/textDocument/uri").and_then(|v| v.as_str()) {
+                    if let Some(uri) = params.pointer("/textDocument/uri").and_then(|v| v.as_str())
+                    {
                         if let Some(text) = self.documents.get(uri) {
                             if let Ok(prog) = parse_program(text) {
-                                let formatted = project_program(&prog, &ProjectOptions {
-                                    indent: "  ".to_string(),
-                                    blank_lines_between_decls: 1,
-                                    max_line_width: 80,
-                                });
+                                let formatted = project_program(
+                                    &prog,
+                                    &ProjectOptions {
+                                        indent: "  ".to_string(),
+                                        blank_lines_between_decls: 1,
+                                        max_line_width: 80,
+                                    },
+                                );
                                 let (end_line, end_char) = offset_to_position(text, text.len());
                                 edits.push(json!({
                                     "range": {
@@ -466,7 +478,9 @@ mod tests {
 
     #[test]
     fn completion_response() {
-        let input = encode_message(r#"{"jsonrpc":"2.0","id":2,"method":"textDocument/completion","params":{"textDocument":{"uri":"file:///test.vibe"},"position":{"line":0,"character":0}}}"#);
+        let input = encode_message(
+            r#"{"jsonrpc":"2.0","id":2,"method":"textDocument/completion","params":{"textDocument":{"uri":"file:///test.vibe"},"position":{"line":0,"character":0}}}"#,
+        );
         let mut output = Vec::new();
         {
             let reader = BufReader::new(Cursor::new(input.as_bytes()));
@@ -496,7 +510,9 @@ mod tests {
             }
         }))
         .unwrap();
-        let format_req = encode_message(r#"{"jsonrpc":"2.0","id":3,"method":"textDocument/formatting","params":{"textDocument":{"uri":"file:///test.vibe"},"options":{"tabSize":2,"insertSpaces":true}}}"#);
+        let format_req = encode_message(
+            r#"{"jsonrpc":"2.0","id":3,"method":"textDocument/formatting","params":{"textDocument":{"uri":"file:///test.vibe"},"options":{"tabSize":2,"insertSpaces":true}}}"#,
+        );
         let input = format!("{}{}", encode_message(&body), format_req);
         let mut output = Vec::new();
         {

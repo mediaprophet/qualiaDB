@@ -14,9 +14,9 @@
 
 use crate::modalities::blackboard::BlackboardBus;
 use crate::NQuin;
+use std::collections::BTreeMap;
 use vibe::dag::{DagEdge, DagNode, DagPipeline, NodeEffect};
 use vibe::deontic_interrupt::{Phase, PhaseLeaser};
-use std::collections::BTreeMap;
 
 /// An agent in the roster.
 #[derive(Debug, Clone)]

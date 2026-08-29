@@ -169,7 +169,24 @@ pub async fn serve_foreground(opts: &DaemonOpts, wait_for_ctrl_c: bool) {
     let storage_dir = std::env::var("QUALIA_DATA_DIR").unwrap_or_else(|_| ".".to_string());
     let vault = qualia_core_db::key_vault::KeyVault::load_or_generate(&storage_dir)
         .expect("Failed to load KeyVault");
+    let signing_key_bytes = vault.get_master_key_bytes();
     let vault_arc = std::sync::Arc::new(std::sync::Mutex::new(vault));
+    if let Err(error) = webizen_render::poet_preview::register_poet_render_provider() {
+        eprintln!("POET renderer provider was not replaced: {error}");
+    }
+    let library_root = std::env::var("QUALIA_STORAGE_PATH")
+        .map(PathBuf::from)
+        .unwrap_or_else(|_| {
+            PathBuf::from(qualia_client_core::state::load_config_from_disk().storage_path)
+        });
+    if let Err(error) =
+        qualia_client_core::poet_library_provider::register_semantic_library_provider(
+            library_root,
+            signing_key_bytes,
+        )
+    {
+        eprintln!("POET Semantic Library provider was not replaced: {error}");
+    }
     qualia_core_db::daemon::configure_daemon_topology(qualia_core_db::daemon::DaemonTopology {
         worker_cells_configured: opts.workers,
         compute_swarm_enabled: opts.compute_swarm,

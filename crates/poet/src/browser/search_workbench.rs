@@ -2,7 +2,7 @@
 //!
 //! 1. **Faceted Search** — filter by ontology prefix, entity type,
 //!    epistemic modality, strata, honesty, and container type. Shows
-//!    result count and mock result list.
+//!    result count and matching live canvas containers.
 //! 2. **Visual Query Builder** — build SPARQL queries by adding
 //!    triple patterns (subject, predicate, object) via UI controls.
 //!    Generates a SPARQL SELECT query that can be inspected, edited,
@@ -14,10 +14,8 @@
 //! Saved queries are persisted in localStorage as named objects with
 //! metadata (name, mode, query text, facets, timestamp). Saved queries
 //! can be used as container content sources — placing a "query-results"
-//! container that displays the query and mock results.
-//!
-//! All search results are structural mocks — actual SPARQL execution
-//! requires the QualiaDB daemon backend.
+//! container that retains the query definition. SPARQL execution requires the
+//! QualiaDB daemon; the UI does not fabricate an offline result set.
 //!
 //! Copyright (c) 2026 Timothy Charles Holborn. All rights reserved.
 
@@ -270,8 +268,8 @@ pub fn build_search_workbench(document: &Document) -> Element {
          font-size: 9px; color: var(--text-muted); font-family: var(--font-mono);",
     );
     footer.set_text_content(Some(
-        "\u{1F4A1} Query construction and saving are live. \
-         SPARQL execution requires the QualiaDB daemon backend \u{2014} results are structural mocks."
+        "\u{1F4A1} Canvas facets, query construction, and saving are local. \
+         SPARQL executes only against a connected QualiaDB daemon.",
     ));
     panel.append_child(&footer).unwrap();
 
@@ -667,35 +665,94 @@ fn run_faceted_search(document: &Document) {
         return;
     }
 
-    // Generate mock results based on active facets
-    let mock_count = 3 + (facets.len() * 2) as u32;
-    let mut results_html = String::new();
-
-    for i in 0..mock_count.min(20) {
-        let facet_desc: Vec<String> = facets
-            .iter()
-            .map(|(f, vals)| format!("{}: {}", f, vals.join(",")))
-            .collect();
-
-        results_html.push_str(&format!(
-            "<div style=\"padding: 6px 8px; border-bottom: 1px solid var(--border-subtle); \
-             display: flex; align-items: center; gap: 8px;\">\
-            <span style=\"color: var(--accent-cyan); font-size: 10px;\">#{:03}</span>\
-            <span style=\"color: var(--text-primary);\">result-{}-{:04}</span>\
-            <span style=\"color: var(--text-muted); font-size: 9px; margin-left: auto;\">{}</span>\
-            </div>",
-            i + 1,
-            facets.first().map(|(f, _)| f.as_str()).unwrap_or("all"),
-            i + 1,
-            facet_desc.join(" | "),
-        ));
+    let containers = document
+        .query_selector_all(".canvas-container-node")
+        .unwrap();
+    let mut matched = Vec::new();
+    for index in 0..containers.length() {
+        let Some(node) = containers.get(index) else {
+            continue;
+        };
+        let Ok(container) = node.dyn_into::<Element>() else {
+            continue;
+        };
+        if container_matches_facets(&container, &facets) {
+            matched.push(container);
+        }
     }
 
-    results_el.set_inner_html(&results_html);
-    count_el.set_text_content(Some(&format!(
-        "{} mock results (engine wiring pending)",
-        mock_count.min(20)
-    )));
+    if matched.is_empty() {
+        results_el.set_text_content(Some(
+            "No live canvas containers match every selected facet.",
+        ));
+    } else {
+        for (index, container) in matched.iter().enumerate() {
+            let row = document.create_element("div").unwrap();
+            row.set_attribute(
+                "style",
+                "padding: 6px 8px; border-bottom: 1px solid var(--border-subtle); display: flex; align-items: center; gap: 8px;",
+            )
+            .unwrap();
+            let title = container
+                .query_selector(".container-title")
+                .ok()
+                .flatten()
+                .and_then(|title| title.text_content())
+                .unwrap_or_else(|| "Untitled".into());
+            let container_type = container
+                .get_attribute("data-container-type")
+                .unwrap_or_else(|| "unknown".into());
+            row.set_text_content(Some(&format!(
+                "#{:03}  {}  ·  {}",
+                index + 1,
+                title,
+                container_type
+            )));
+            results_el.append_child(&row).unwrap();
+        }
+    }
+    count_el.set_text_content(Some(&format!("{} live canvas result(s)", matched.len())));
+}
+
+fn container_matches_facets(container: &Element, facets: &[(String, Vec<String>)]) -> bool {
+    facets.iter().all(|(facet, values)| {
+        let actual = match facet.as_str() {
+            "container-type" => container
+                .get_attribute("data-container-type")
+                .unwrap_or_default(),
+            "epistemic" => container
+                .get_attribute("data-epistemic")
+                .unwrap_or_default(),
+            "strata" => container.get_attribute("data-strata").unwrap_or_default(),
+            "honesty" => container
+                .query_selector(".honesty-badge")
+                .ok()
+                .flatten()
+                .and_then(|badge| badge.text_content())
+                .unwrap_or_default(),
+            "ontology-prefix" => format!(
+                "{} {}",
+                container
+                    .get_attribute("data-semantic-type")
+                    .unwrap_or_default(),
+                container
+                    .get_attribute("data-semantic-uri")
+                    .unwrap_or_default()
+            ),
+            "entity-type" => container
+                .get_attribute("data-semantic-type")
+                .unwrap_or_default(),
+            _ => String::new(),
+        }
+        .to_ascii_lowercase();
+        values.iter().any(|value| {
+            let value = value.to_ascii_lowercase();
+            actual == value
+                || actual.starts_with(&format!("{value}:"))
+                || actual.contains(&format!("/{value}"))
+                || actual.contains(&format!("#{value}"))
+        })
+    })
 }
 
 // ---------------------------------------------------------------------------
@@ -831,7 +888,7 @@ fn build_query_builder_panel(document: &Document) -> Element {
 
     let run_btn = document.create_element("button").unwrap();
     run_btn.set_id("builder-run");
-    run_btn.set_text_content(Some("\u{25B6} Run (mock)"));
+    run_btn.set_text_content(Some("\u{25B6} Run Query"));
     let rb_el: HtmlElement = run_btn.clone().dyn_into().unwrap();
     rb_el.style().set_css_text(
         "padding: 8px 16px; background: var(--surface-panel); color: var(--text-secondary); \
@@ -852,7 +909,7 @@ fn build_query_builder_panel(document: &Document) -> Element {
          font-family: var(--font-mono); font-size: 11px; color: var(--text-muted);",
     );
     results.set_text_content(Some(
-        "Click \"Generate Query\" then \"Run (mock)\" to see results.",
+        "Generate a query, then run it against the connected QualiaDB daemon.",
     ));
     panel.append_child(&results).unwrap();
 
@@ -990,7 +1047,7 @@ fn wire_query_builder(document: &Document) {
     if let Some(run_btn) = document.get_element_by_id("builder-run") {
         let rb_closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
             let doc = web_sys::window().unwrap().document().unwrap();
-            run_mock_query(&doc, "builder-results");
+            run_query(&doc, "builder-results");
         }) as Box<dyn FnMut(MouseEvent)>);
         run_btn
             .add_event_listener_with_callback("click", rb_closure.as_ref().unchecked_ref())
@@ -1188,7 +1245,9 @@ fn build_sparql_panel(document: &Document) -> Element {
          border-radius: var(--radius-xs); padding: 8px; min-height: 80px; \
          font-family: var(--font-mono); font-size: 11px; color: var(--text-muted);",
     );
-    results.set_text_content(Some("Click \"Run Query\" to execute (mock results)."));
+    results.set_text_content(Some(
+        "Click \"Run Query\" to execute against the connected daemon.",
+    ));
     panel.append_child(&results).unwrap();
 
     panel
@@ -1199,7 +1258,7 @@ fn wire_sparql_editor(document: &Document) {
     if let Some(run_btn) = document.get_element_by_id("sparql-run") {
         let rb_closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
             let doc = web_sys::window().unwrap().document().unwrap();
-            run_mock_query(&doc, "sparql-results");
+            run_query(&doc, "sparql-results");
         }) as Box<dyn FnMut(MouseEvent)>);
         run_btn
             .add_event_listener_with_callback("click", rb_closure.as_ref().unchecked_ref())
@@ -1697,7 +1756,7 @@ fn delete_saved_query(document: &Document, id: &str) {
     show_search_notification(document, "Query deleted");
 }
 
-fn run_mock_query(document: &Document, results_id: &str) {
+fn run_query(document: &Document, results_id: &str) {
     let results = match document.get_element_by_id(results_id) {
         Some(r) => r,
         None => return,
@@ -1726,7 +1785,9 @@ fn run_mock_query(document: &Document, results_id: &str) {
                                 target.set_inner_html(&html);
                             }
                             Err(err) => {
-                                target.set_inner_html(&format!("<div style=\"padding: 8px; color: var(--accent-amber); font-size: 11px;\">\u{26A0} Daemon Query Error: {}</div>", err));
+                                target.set_attribute("data-honesty", "error").ok();
+                                target
+                                    .set_text_content(Some(&format!("Daemon query error: {err}")));
                             }
                         }
                     }
@@ -1736,22 +1797,10 @@ fn run_mock_query(document: &Document, results_id: &str) {
         return;
     }
 
-    // Generate mock results when offline
-    let mut html = String::new();
-    html.push_str("<div style=\"padding: 4px 8px; border-bottom: 1px solid var(--border-subtle); font-size: 9px; color: var(--text-muted); margin-bottom: 4px;\">Mock results \u{2014} Standalone WASM mode (QualiaDB daemon offline)</div>");
-
-    for i in 0..10 {
-        html.push_str(&format!(
-            "<div style=\"padding: 4px 8px; border-bottom: 1px solid var(--border-subtle); display: flex; gap: 8px;\">\
-            <span style=\"color: var(--accent-cyan); font-size: 10px;\">#{:02}</span>\
-            <span style=\"color: var(--text-primary);\">?subject = &lt;qualia:entity/{:04}&gt;</span>\
-            <span style=\"color: var(--text-muted); font-size: 9px; margin-left: auto;\">?label = \"Entity {:04}\"</span>\
-            </div>",
-            i + 1, i + 1, i + 1,
-        ));
-    }
-
-    results.set_inner_html(&html);
+    results.set_attribute("data-honesty", "unavailable").ok();
+    results.set_text_content(Some(
+        "Unavailable: start the local QualiaDB daemon to execute SPARQL. No offline results were generated.",
+    ));
 }
 
 fn place_query_container(document: &Document) {
@@ -1790,7 +1839,8 @@ fn place_query_container_on_canvas(document: &Document, name: &str, query: &str)
     let x = 80.0 + (count % 5.0) * 40.0;
     let y = 60.0 + (count % 5.0) * 40.0;
 
-    let container = SeedContainer {
+    let mut container = SeedContainer {
+        id: super::canvas_state::next_container_id("graph"),
         container_type: "graph".into(),
         title: format!("\u{1F50D} {}", name),
         x,
@@ -1801,11 +1851,14 @@ fn place_query_container_on_canvas(document: &Document, name: &str, query: &str)
         honesty: "present".into(),
         ..Default::default()
     };
+    container
+        .view_state
+        .insert("sparql-source".into(), format!("text:{query}"));
 
     if let Some(canvas) = document.get_element_by_id("manifold-canvas") {
         let el = super::containers::build_container(document, &container);
 
-        // Inject the query into the container body as a data attribute
+        // Retain query identity for canvas inspection in addition to view-state persistence.
         el.set_attribute("data-query", query).unwrap();
         el.set_attribute("data-query-name", name).unwrap();
 

@@ -1,8 +1,8 @@
 //! Homoiconic CBOR-LD AST Codec (Tag 4200).
 
 mod codec;
-mod encode;
 mod decode;
+mod encode;
 
 pub const TAG_VIBE_AST: u64 = 4200;
 
@@ -29,13 +29,13 @@ impl std::fmt::Display for DecodeError {
 
 impl std::error::Error for DecodeError {}
 
-pub use encode::encode;
 pub use decode::decode;
+pub use encode::encode;
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::codec::{CborDecoder, CborEncoder};
+    use super::*;
     use crate::ast::*;
     use crate::span::Span;
 

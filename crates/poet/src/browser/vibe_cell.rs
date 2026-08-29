@@ -9,8 +9,8 @@
 //! Copyright (c) 2026 Timothy Charles Holborn. All rights reserved.
 
 use serde::{Deserialize, Serialize};
-use wasm_bindgen::prelude::Closure;
 use wasm_bindgen::JsCast;
+use wasm_bindgen::prelude::Closure;
 use web_sys::{Document, Element, HtmlElement, KeyboardEvent, MouseEvent};
 
 /// Execution status of a reactive `<q-cell>`.
@@ -169,9 +169,15 @@ impl VibeCell {
 
         if expr.starts_with("cml.tag(") && expr.ends_with(')') {
             let inner = &expr[8..expr.len() - 1];
-            let parts: Vec<&str> = inner.split(',').map(|s| s.trim().trim_matches('"')).collect();
+            let parts: Vec<&str> = inner
+                .split(',')
+                .map(|s| s.trim().trim_matches('"'))
+                .collect();
             if parts.len() >= 2 {
-                self.result = CellValue::Text(format!("<q-entity data-category=\"{}\">{}</q-entity>", parts[0], parts[1]));
+                self.result = CellValue::Text(format!(
+                    "<q-entity data-category=\"{}\">{}</q-entity>",
+                    parts[0], parts[1]
+                ));
                 self.status = CellStatus::Success;
                 self.error_msg = None;
                 return;
@@ -179,7 +185,8 @@ impl VibeCell {
         }
 
         if expr == "sentinel.slg_arena_status()" {
-            self.result = CellValue::Text("42MB Arena Active · 917,504 Quins capacity · Zero Heap".into());
+            self.result =
+                CellValue::Text("42MB Arena Active · 917,504 Quins capacity · Zero Heap".into());
             self.status = CellStatus::Success;
             self.error_msg = None;
             return;
@@ -208,7 +215,9 @@ impl VibeCell {
         }
 
         // String literal
-        if (expr.starts_with('"') && expr.ends_with('"')) || (expr.starts_with('\'') && expr.ends_with('\'')) {
+        if (expr.starts_with('"') && expr.ends_with('"'))
+            || (expr.starts_with('\'') && expr.ends_with('\''))
+        {
             self.result = CellValue::Text(expr[1..expr.len() - 1].to_string());
             self.status = CellStatus::Success;
             self.error_msg = None;
@@ -278,11 +287,15 @@ pub fn build_q_cell_element(document: &Document, mut cell: VibeCell) -> Element 
     // Formula Input Bar
     let bar = document.create_element("div").unwrap();
     let bar_el: HtmlElement = bar.clone().dyn_into().unwrap();
-    bar_el.style().set_css_text("display: flex; align-items: center; gap: 6px;");
+    bar_el
+        .style()
+        .set_css_text("display: flex; align-items: center; gap: 6px;");
 
     let fx_lbl = document.create_element("span").unwrap();
     let fx_el: HtmlElement = fx_lbl.clone().dyn_into().unwrap();
-    fx_el.style().set_css_text("font-weight: 700; color: var(--accent-amber, #ffb834); font-size: 11px;");
+    fx_el
+        .style()
+        .set_css_text("font-weight: 700; color: var(--accent-amber, #ffb834); font-size: 11px;");
     fx_lbl.set_text_content(Some("fx"));
     bar.append_child(&fx_lbl).unwrap();
 
@@ -299,7 +312,9 @@ pub fn build_q_cell_element(document: &Document, mut cell: VibeCell) -> Element 
     let run_btn = document.create_element("button").unwrap();
     run_btn.set_class_name("vibe-run-btn");
     let rb_el: HtmlElement = run_btn.clone().dyn_into().unwrap();
-    rb_el.style().set_css_text("padding: 3px 8px; font-size: 10px;");
+    rb_el
+        .style()
+        .set_css_text("padding: 3px 8px; font-size: 10px;");
     run_btn.set_text_content(Some("\u{25B6} Run"));
     bar.append_child(&run_btn).unwrap();
     container.append_child(&bar).unwrap();
@@ -315,13 +330,17 @@ pub fn build_q_cell_element(document: &Document, mut cell: VibeCell) -> Element 
     let res_val = document.create_element("span").unwrap();
     res_val.set_class_name("q-cell-result-val");
     let rv_el: HtmlElement = res_val.clone().dyn_into().unwrap();
-    rv_el.style().set_css_text("font-weight: 600; color: var(--accent-emerald, #00f2a9);");
+    rv_el
+        .style()
+        .set_css_text("font-weight: 600; color: var(--accent-emerald, #00f2a9);");
     res_val.set_text_content(Some(&cell.result.display_string()));
     res_line.append_child(&res_val).unwrap();
 
     let type_badge = document.create_element("span").unwrap();
     let tb_el: HtmlElement = type_badge.clone().dyn_into().unwrap();
-    tb_el.style().set_css_text("font-size: 9px; color: var(--text-muted);");
+    tb_el
+        .style()
+        .set_css_text("font-size: 9px; color: var(--text-muted);");
     type_badge.set_text_content(Some(cell.result.type_name()));
     res_line.append_child(&type_badge).unwrap();
     container.append_child(&res_line).unwrap();
@@ -369,21 +388,31 @@ pub fn build_q_cell_element(document: &Document, mut cell: VibeCell) -> Element 
         )));
     }) as Box<dyn FnMut()>);
 
-    let recompute_js = recompute.as_ref().unchecked_ref::<js_sys::Function>().clone();
+    let recompute_js = recompute
+        .as_ref()
+        .unchecked_ref::<js_sys::Function>()
+        .clone();
 
     let run_closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
         let _ = recompute_js.call0(&wasm_bindgen::JsValue::NULL);
     }) as Box<dyn FnMut(MouseEvent)>);
-    run_btn.add_event_listener_with_callback("click", run_closure.as_ref().unchecked_ref()).unwrap();
+    run_btn
+        .add_event_listener_with_callback("click", run_closure.as_ref().unchecked_ref())
+        .unwrap();
     run_closure.forget();
 
-    let recompute_key = recompute.as_ref().unchecked_ref::<js_sys::Function>().clone();
+    let recompute_key = recompute
+        .as_ref()
+        .unchecked_ref::<js_sys::Function>()
+        .clone();
     let key_closure = Closure::wrap(Box::new(move |e: KeyboardEvent| {
         if e.key() == "Enter" {
             let _ = recompute_key.call0(&wasm_bindgen::JsValue::NULL);
         }
     }) as Box<dyn FnMut(KeyboardEvent)>);
-    input_el.add_event_listener_with_callback("keydown", key_closure.as_ref().unchecked_ref()).unwrap();
+    input_el
+        .add_event_listener_with_callback("keydown", key_closure.as_ref().unchecked_ref())
+        .unwrap();
     key_closure.forget();
 
     recompute.forget();
@@ -444,7 +473,11 @@ mod tests {
         };
         cell.evaluate();
         assert_eq!(cell.status, CellStatus::Success);
-        assert!(cell.result.display_string().contains("<q-entity data-category=\"entity\">QualiaDB</q-entity>"));
+        assert!(
+            cell.result
+                .display_string()
+                .contains("<q-entity data-category=\"entity\">QualiaDB</q-entity>")
+        );
     }
 
     #[test]

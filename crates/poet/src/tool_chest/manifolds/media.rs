@@ -12,11 +12,11 @@ pub fn media_manifold_seed() -> ManifoldSeed {
         label: "Media".into(),
         icon: "film".into(),
         ontology_prefix: "hm".into(),
-        description: "3D kinematics, vision, audio, triad, grapheme.".into(),
+        description: "Dual Studio GPU viewport, 3D assets, vision, listen, triad — POET containers, not a nested Studio app.".into(),
         containers: vec![
             SeedContainer {
-                container_type: "media".into(),
-                title: "3D Viewport".into(),
+                container_type: "dual_studio".into(),
+                title: "Dual Studio".into(),
                 x: 80.0,
                 y: 60.0,
                 width: 480.0,
@@ -75,5 +75,6 @@ pub fn media_manifold_seed() -> ManifoldSeed {
             panel_type: "inspector".into(),
             dock: DockPosition::Right,
         }],
+        ..Default::default()
     }
 }

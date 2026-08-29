@@ -137,11 +137,16 @@ fn walk_stmt(stmt: &Stmt, out: &mut Vec<(String, String, Span)>) {
                 walk_stmt(e, out);
             }
         }
-        Stmt::While { cond, body, .. } | Stmt::For { iter: cond, body, .. } => {
+        Stmt::While { cond, body, .. }
+        | Stmt::For {
+            iter: cond, body, ..
+        } => {
             walk_expr(cond, out);
             walk_block(body, out);
         }
-        Stmt::Match { scrutinee, arms, .. } => {
+        Stmt::Match {
+            scrutinee, arms, ..
+        } => {
             walk_expr(scrutinee, out);
             for arm in arms {
                 match &arm.body {

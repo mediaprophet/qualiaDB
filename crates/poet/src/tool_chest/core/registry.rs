@@ -4,9 +4,12 @@
 //! Principal / inventor: Timothy Charles Holborn <timothy.holborn@gmail.com>
 //! Assignment: COPYRIGHT.md  Licence: LICENSE (CC BY-NC-ND 4.0)
 
+use super::construct::ConstructSeed;
 use super::ontology::OntologyRegistry;
+use super::sociality::{ManifoldParticipant, ManifoldSociality};
 use super::toolbox::Toolbox;
 use core::fmt;
+use std::collections::BTreeMap;
 
 // ---------------------------------------------------------------------------
 // Registry
@@ -22,6 +25,7 @@ pub struct Registry {
     toolboxes: Vec<Toolbox>,
     ontologies: OntologyRegistry,
     manifolds: Vec<ManifoldSeed>,
+    constructs: Vec<ConstructSeed>,
 }
 
 impl Registry {
@@ -31,6 +35,7 @@ impl Registry {
             toolboxes: Vec::new(),
             ontologies: OntologyRegistry::new(),
             manifolds: Vec::new(),
+            constructs: Vec::new(),
         }
     }
 
@@ -73,6 +78,21 @@ impl Registry {
     pub fn manifold(&self, id: &str) -> Option<&ManifoldSeed> {
         self.manifolds.iter().find(|m| m.id == id)
     }
+
+    /// Register a construct seed.
+    pub fn register_construct(&mut self, seed: ConstructSeed) {
+        self.constructs.push(seed);
+    }
+
+    /// All registered constructs.
+    pub fn constructs(&self) -> &[ConstructSeed] {
+        &self.constructs
+    }
+
+    /// Find a construct seed by id.
+    pub fn construct(&self, id: &str) -> Option<&ConstructSeed> {
+        self.constructs.iter().find(|c| c.id == id)
+    }
 }
 
 impl Default for Registry {
@@ -87,6 +107,7 @@ impl fmt::Debug for Registry {
             .field("toolbox_count", &self.toolboxes.len())
             .field("manifold_count", &self.manifolds.len())
             .field("ontology_count", &self.ontologies.modules().len())
+            .field("construct_count", &self.constructs.len())
             .finish()
     }
 }
@@ -119,6 +140,18 @@ pub struct ManifoldSeed {
     /// Panels to dock when the manifold is first opened.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub panels: Vec<SeedPanel>,
+    /// Personal (one observer) or social (many people). Default personal.
+    #[serde(default)]
+    pub sociality: ManifoldSociality,
+    /// People and agents on a social lens. Empty on personal manifolds.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub participants: Vec<ManifoldParticipant>,
+}
+
+impl ManifoldSeed {
+    pub fn is_social(&self) -> bool {
+        self.sociality.is_social() || super::sociality::bundled_social_manifold(&self.id)
+    }
 }
 
 /// Container kind — discriminates content, panel, and widget containers.
@@ -192,6 +225,10 @@ impl ContainerKind {
 /// A container placed by a manifold seed.
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct SeedContainer {
+    /// Stable identity used by wires, history, duplication, and persistence.
+    /// Older manifests omit this field and are normalised when loaded.
+    #[serde(default)]
+    pub id: String,
     /// Container type — e.g. `social`, `settings`, `pulse`.
     pub container_type: String,
     /// Container kind — `content`, `panel`, or `widget`.
@@ -212,12 +249,33 @@ pub struct SeedContainer {
     /// Honesty label — `live`, `partial`, `present`, `missing`.
     #[serde(default = "default_honesty")]
     pub honesty: String,
+    /// Optional semantic type/URI assigned through the container inspector.
+    #[serde(default)]
+    pub semantic_type: String,
+    #[serde(default)]
+    pub semantic_uri: String,
+    /// Editable document markup owned by this container.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub content_html: String,
+    /// Tool Chest settings keyed by their stable widget id.
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub tool_settings: BTreeMap<String, String>,
+    /// User-editable state captured from the specialist container view.
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub view_state: BTreeMap<String, String>,
+    /// Nested-manifold portal: switch the pager to this manifold.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub target_manifold: String,
+    /// Construct portal: open this construct (optional `target_manifold` inside it).
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub target_construct: String,
 }
 
 impl SeedContainer {
     /// Create a new container with the kind inferred from its type.
     pub fn new(container_type: &str, title: &str, x: f32, y: f32, w: f32, h: f32) -> Self {
         Self {
+            id: String::new(),
             container_type: container_type.to_string(),
             kind: ContainerKind::from_type(container_type),
             title: title.to_string(),
@@ -227,6 +285,13 @@ impl SeedContainer {
             height: h,
             z: default_z(),
             honesty: default_honesty(),
+            semantic_type: String::new(),
+            semantic_uri: String::new(),
+            content_html: String::new(),
+            tool_settings: BTreeMap::new(),
+            view_state: BTreeMap::new(),
+            target_manifold: String::new(),
+            target_construct: String::new(),
         }
     }
 }
@@ -242,6 +307,7 @@ fn default_honesty() -> String {
 impl Default for SeedContainer {
     fn default() -> Self {
         Self {
+            id: String::default(),
             container_type: String::default(),
             kind: ContainerKind::default(),
             title: String::default(),
@@ -251,6 +317,13 @@ impl Default for SeedContainer {
             height: 0.0,
             z: default_z(),
             honesty: default_honesty(),
+            semantic_type: String::default(),
+            semantic_uri: String::default(),
+            content_html: String::default(),
+            tool_settings: BTreeMap::default(),
+            view_state: BTreeMap::default(),
+            target_manifold: String::default(),
+            target_construct: String::default(),
         }
     }
 }
@@ -259,6 +332,7 @@ impl Default for SeedContainer {
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct SeedConnection {
     /// Connection id.
+    #[serde(default)]
     pub id: String,
     /// Source container index (into `containers`).
     pub from: usize,
@@ -328,10 +402,45 @@ mod tests {
                 panel_type: "pulse-panel".into(),
                 dock: DockPosition::Bottom,
             }],
+            sociality: ManifoldSociality::Social,
+            ..Default::default()
         });
 
         assert_eq!(reg.manifolds().len(), 1);
         assert!(reg.manifold("social").is_some());
         assert!(reg.manifold("nonexistent").is_none());
+    }
+
+    #[test]
+    fn container_authoring_state_roundtrips() {
+        let mut container = SeedContainer::new("doc", "Draft", 10.0, 20.0, 400.0, 300.0);
+        container.id = "container-draft-1".into();
+        container.content_html = "<p>A retained draft</p>".into();
+        container.tool_settings.insert(
+            "office:typography:font_family".into(),
+            "Merriweather".into(),
+        );
+        container
+            .view_state
+            .insert("clinical-risk-age".into(), "value:52".into());
+
+        let json = serde_json::to_string(&container).unwrap();
+        let restored: SeedContainer = serde_json::from_str(&json).unwrap();
+
+        assert_eq!(restored, container);
+    }
+
+    #[test]
+    fn legacy_container_manifest_defaults_new_state_fields() {
+        let json = r#"{
+            "container_type":"doc","title":"Legacy","x":0.0,"y":0.0,
+            "width":400.0,"height":300.0
+        }"#;
+        let restored: SeedContainer = serde_json::from_str(json).unwrap();
+
+        assert!(restored.id.is_empty());
+        assert!(restored.content_html.is_empty());
+        assert!(restored.tool_settings.is_empty());
+        assert!(restored.view_state.is_empty());
     }
 }

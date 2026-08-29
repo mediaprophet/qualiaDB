@@ -56,12 +56,12 @@ impl MediaDomain {
 
     pub fn glyph(&self) -> &'static str {
         match self {
-            Self::Audio => "\u{1F3A7}",         // 🎧
-            Self::Video => "\u{1F3AC}",         // 🎬
-            Self::Spatial3D => "\u{1F9CA}",     // 🧊
-            Self::MedicalDicom => "\u{1FA7A}",  // 🩺
-            Self::VectorDocument => "\u{1F4D6}",// 📖
-            Self::RasterImage => "\u{1F3A8}",   // 🎨
+            Self::Audio => "\u{1F3A7}",          // 🎧
+            Self::Video => "\u{1F3AC}",          // 🎬
+            Self::Spatial3D => "\u{1F9CA}",      // 🧊
+            Self::MedicalDicom => "\u{1FA7A}",   // 🩺
+            Self::VectorDocument => "\u{1F4D6}", // 📖
+            Self::RasterImage => "\u{1F3A8}",    // 🎨
         }
     }
 }
@@ -83,7 +83,13 @@ impl MediaCodecSpec {
         vec![
             Self {
                 domain: MediaDomain::Audio,
-                format_extensions: vec!["wav".into(), "flac".into(), "mp3".into(), "ogg".into(), "aac".into()],
+                format_extensions: vec![
+                    "wav".into(),
+                    "flac".into(),
+                    "mp3".into(),
+                    "ogg".into(),
+                    "aac".into(),
+                ],
                 tier: CodecTier::TierAPureRustWasm,
                 engine_name: "symphonia + Web Audio API".into(),
                 output_representation: "&mut [f32] PCM Buffers + EnCodec P64".into(),
@@ -92,7 +98,13 @@ impl MediaCodecSpec {
             },
             Self {
                 domain: MediaDomain::Video,
-                format_extensions: vec!["mp4".into(), "webm".into(), "mkv".into(), "mov".into(), "avi".into()],
+                format_extensions: vec![
+                    "mp4".into(),
+                    "webm".into(),
+                    "mkv".into(),
+                    "mov".into(),
+                    "avi".into(),
+                ],
                 tier: CodecTier::TierCIsolatedSidecar,
                 engine_name: "FFmpeg Sidecar / WebCodecs API".into(),
                 output_representation: "Flat RGBA8 Byte Slices + .10d Point Cloud".into(),
@@ -101,7 +113,13 @@ impl MediaCodecSpec {
             },
             Self {
                 domain: MediaDomain::Spatial3D,
-                format_extensions: vec!["glb".into(), "gltf".into(), "obj".into(), "stl".into(), "anatml".into()],
+                format_extensions: vec![
+                    "glb".into(),
+                    "gltf".into(),
+                    "obj".into(),
+                    "stl".into(),
+                    "anatml".into(),
+                ],
                 tier: CodecTier::TierAPureRustWasm,
                 engine_name: "gltf-rs + glb_ingest".into(),
                 output_representation: ".10d CCF Mesh + wgpu 30 Vertex Buffers".into(),
@@ -128,7 +146,14 @@ impl MediaCodecSpec {
             },
             Self {
                 domain: MediaDomain::RasterImage,
-                format_extensions: vec!["avif".into(), "webp".into(), "png".into(), "jpeg".into(), "tiff".into(), "hdr".into()],
+                format_extensions: vec![
+                    "avif".into(),
+                    "webp".into(),
+                    "png".into(),
+                    "jpeg".into(),
+                    "tiff".into(),
+                    "hdr".into(),
+                ],
                 tier: CodecTier::TierAPureRustWasm,
                 engine_name: "image-rs + zune-jpeg".into(),
                 output_representation: "GPU Texture2D + Color Embeddings".into(),
@@ -154,7 +179,7 @@ pub fn build_media_codecs_view(document: &Document) -> Element {
     let root_el: HtmlElement = root.clone().dyn_into().unwrap();
     root_el.style().set_css_text(
         "display: flex; flex-direction: column; flex: 1; padding: 12px; gap: 10px; \
-         background: #020617; color: #f8fafc; overflow-y: auto; font-family: sans-serif;"
+         background: #020617; color: #f8fafc; overflow-y: auto; font-family: sans-serif;",
     );
 
     let codecs = MediaCodecSpec::all();
@@ -165,19 +190,26 @@ pub fn build_media_codecs_view(document: &Document) -> Element {
     let header_el: HtmlElement = header.clone().dyn_into().unwrap();
     header_el.style().set_css_text(
         "justify-content: space-between; background: rgba(30, 41, 59, 0.7); \
-         border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; padding: 8px 12px;"
+         border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; padding: 8px 12px;",
     );
 
     let title = document.create_element("span").unwrap();
     title.set_text_content(Some("\u{1F3AC} Three-Tier Sandboxed Media Codec Subsystem"));
     let title_el: HtmlElement = title.clone().dyn_into().unwrap();
-    title_el.style().set_css_text("font-weight: 700; font-size: 13px; color: #38bdf8;");
+    title_el
+        .style()
+        .set_css_text("font-weight: 700; font-size: 13px; color: #38bdf8;");
     header.append_child(&title).unwrap();
 
     let meta = document.create_element("span").unwrap();
-    meta.set_text_content(Some(&format!("Supported Domains: {} \u{00B7} Max Streaming Chunk: 8MB \u{00B7} Sentinel Limit: 42MB", codecs.len())));
+    meta.set_text_content(Some(&format!(
+        "Supported Domains: {} \u{00B7} Max Streaming Chunk: 8MB \u{00B7} Sentinel Limit: 42MB",
+        codecs.len()
+    )));
     let meta_el: HtmlElement = meta.clone().dyn_into().unwrap();
-    meta_el.style().set_css_text("font-size: 11px; font-family: var(--font-mono); color: #94a3b8;");
+    meta_el
+        .style()
+        .set_css_text("font-size: 11px; font-family: var(--font-mono); color: #94a3b8;");
     header.append_child(&meta).unwrap();
 
     root.append_child(&header).unwrap();
@@ -185,24 +217,30 @@ pub fn build_media_codecs_view(document: &Document) -> Element {
     // Codecs Grid
     let grid = document.create_element("div").unwrap();
     let grid_el: HtmlElement = grid.clone().dyn_into().unwrap();
-    grid_el.style().set_css_text("display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 10px;");
+    grid_el.style().set_css_text(
+        "display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 10px;",
+    );
 
     for c in &codecs {
         let card = document.create_element("div").unwrap();
         let card_el: HtmlElement = card.clone().dyn_into().unwrap();
         card_el.style().set_css_text(
             "background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255, 255, 255, 0.08); \
-             border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 6px;"
+             border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 6px;",
         );
 
         let row1 = document.create_element("div").unwrap();
         let row1_el: HtmlElement = row1.clone().dyn_into().unwrap();
-        row1_el.style().set_css_text("display: flex; justify-content: space-between; align-items: center;");
+        row1_el
+            .style()
+            .set_css_text("display: flex; justify-content: space-between; align-items: center;");
 
         let name = document.create_element("span").unwrap();
         name.set_text_content(Some(&format!("{} {}", c.domain.glyph(), c.domain.title())));
         let name_el: HtmlElement = name.clone().dyn_into().unwrap();
-        name_el.style().set_css_text("font-weight: 700; font-size: 12px; color: #f8fafc;");
+        name_el
+            .style()
+            .set_css_text("font-weight: 700; font-size: 12px; color: #f8fafc;");
         row1.append_child(&name).unwrap();
 
         let tier_badge = document.create_element("span").unwrap();
@@ -215,7 +253,9 @@ pub fn build_media_codecs_view(document: &Document) -> Element {
 
         let formats = document.create_element("div").unwrap();
         let formats_el: HtmlElement = formats.clone().dyn_into().unwrap();
-        formats_el.style().set_css_text("display: flex; gap: 4px; flex-wrap: wrap; margin-top: 2px;");
+        formats_el
+            .style()
+            .set_css_text("display: flex; gap: 4px; flex-wrap: wrap; margin-top: 2px;");
 
         for ext in &c.format_extensions {
             let tag = document.create_element("span").unwrap();
@@ -227,15 +267,23 @@ pub fn build_media_codecs_view(document: &Document) -> Element {
         card.append_child(&formats).unwrap();
 
         let engine = document.create_element("span").unwrap();
-        engine.set_text_content(Some(&format!("Engine: {} \u{00B7} Max Chunk: {}MB", c.engine_name, c.max_streaming_chunk_bytes / (1024 * 1024))));
+        engine.set_text_content(Some(&format!(
+            "Engine: {} \u{00B7} Max Chunk: {}MB",
+            c.engine_name,
+            c.max_streaming_chunk_bytes / (1024 * 1024)
+        )));
         let engine_el: HtmlElement = engine.clone().dyn_into().unwrap();
-        engine_el.style().set_css_text("font-size: 10px; font-family: var(--font-mono); color: #94a3b8; margin-top: 2px;");
+        engine_el.style().set_css_text(
+            "font-size: 10px; font-family: var(--font-mono); color: #94a3b8; margin-top: 2px;",
+        );
         card.append_child(&engine).unwrap();
 
         let output = document.create_element("span").unwrap();
         output.set_text_content(Some(&format!("Output: {}", c.output_representation)));
         let output_el: HtmlElement = output.clone().dyn_into().unwrap();
-        output_el.style().set_css_text("font-size: 10px; color: #34d399;");
+        output_el
+            .style()
+            .set_css_text("font-size: 10px; color: #34d399;");
         card.append_child(&output).unwrap();
 
         grid.append_child(&card).unwrap();

@@ -86,7 +86,11 @@ impl<'a> Parser<'a> {
                 let name = self.text();
                 let rest = &self.lex.source()[self.cur.span.end as usize..];
                 let trimmed = rest.trim_start();
-                (trimmed.starts_with('(') && matches!(name, "vec2" | "vec3" | "vec4" | "mat3" | "mat4" | "Ok" | "Err" | "Some"))
+                (trimmed.starts_with('(')
+                    && matches!(
+                        name,
+                        "vec2" | "vec3" | "vec4" | "mat3" | "mat4" | "Ok" | "Err" | "Some"
+                    ))
                     || trimmed.starts_with('.')
             });
 
@@ -341,7 +345,9 @@ impl<'a> Parser<'a> {
                     args,
                 });
             }
-            if trimmed.starts_with('(') && matches!(name.as_str(), "vec2" | "vec3" | "vec4" | "mat3" | "mat4") {
+            if trimmed.starts_with('(')
+                && matches!(name.as_str(), "vec2" | "vec3" | "vec4" | "mat3" | "mat4")
+            {
                 self.bump()?;
                 self.expect(TokenKind::LParen, "expected '('")?;
                 let mut args = Vec::new();

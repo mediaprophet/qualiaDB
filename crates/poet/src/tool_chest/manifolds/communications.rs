@@ -5,6 +5,7 @@
 //! Assignment: COPYRIGHT.md  Licence: LICENSE (CC BY-NC-ND 4.0)
 
 use super::super::core::registry::{DockPosition, ManifoldSeed, SeedContainer, SeedPanel};
+use super::super::core::ManifoldSociality;
 
 /// Communications manifold seed: conversations + channels + presence + WebRTC + webview.
 pub fn communications_manifold_seed() -> ManifoldSeed {
@@ -78,5 +79,7 @@ pub fn communications_manifold_seed() -> ManifoldSeed {
             panel_type: "pulse-panel".into(),
             dock: DockPosition::Bottom,
         }],
+        sociality: ManifoldSociality::Social,
+        ..Default::default()
     }
 }

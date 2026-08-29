@@ -1613,9 +1613,15 @@ fn decode_pattern(dec: &mut CborDecoder) -> Result<Pattern, DecodeError> {
         "None" => Ok(Pattern::None),
         "Ident" => Ok(Pattern::Ident(name)),
         "Literal" => Ok(Pattern::Literal(lit.unwrap_or(Literal::Null))),
-        "Ok" => Ok(Pattern::Ok(inner.unwrap_or_else(|| Box::new(Pattern::Wildcard)))),
-        "Err" => Ok(Pattern::Err(inner.unwrap_or_else(|| Box::new(Pattern::Wildcard)))),
-        "Some" => Ok(Pattern::Some(inner.unwrap_or_else(|| Box::new(Pattern::Wildcard)))),
+        "Ok" => Ok(Pattern::Ok(
+            inner.unwrap_or_else(|| Box::new(Pattern::Wildcard)),
+        )),
+        "Err" => Ok(Pattern::Err(
+            inner.unwrap_or_else(|| Box::new(Pattern::Wildcard)),
+        )),
+        "Some" => Ok(Pattern::Some(
+            inner.unwrap_or_else(|| Box::new(Pattern::Wildcard)),
+        )),
         "Record" => Ok(Pattern::Record(fields)),
         "List" => Ok(Pattern::List(elements)),
         "Constructor" => Ok(Pattern::Constructor { name, args }),

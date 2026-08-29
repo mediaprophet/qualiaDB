@@ -58,7 +58,7 @@ pub(super) fn build_allen_rcc8_panel(document: &Document) -> Element {
         .append_child(&make_textarea(
             document,
             "allen-rcc8-input",
-            "# Allen Interval Algebra (7 relations):\n# Before, Meets, Overlaps, Starts, During, Finishes, Equals\n#\n# RCC8 Spatial Relations (8):\n# Disconnected, ExternallyConnected, PartiallyOverlapping,\n# TangentiallyProperPart, TangentiallyProperPartInverse,\n# NonTangentialProperPart, NonTangentialProperPartInverse, Equal\n\n# Example: interval A=[0,10], B=[5,15]\n# Query: what Allen relation holds between A and B?\n# Query: RCC8 relation between region R1 and R2?\n# Query: spatial index query for point (3,4)?",
+            "# Allen: a=[start,end] b=[start,end]\na=[0,10]\nb=[5,15]\n\n# RCC8 / RCC8 points: flattened polygons\na_id=1\nb_id=2\na_points=[0,0,2,0,2,2,0,2]\nb_points=[1,1,3,1,3,3,1,3]\n\n# Spatial index: query AABB + flattened boxes\nquery=[0,0,2,2]\nboxes=[0,0,1,1,5,5,6,6]\n\n# Minkowski / causal\ndt=1\ndx=0\ndy=0\ndz=0\nc=1\n\n# Heat equation step\nu=[0,1,0]\nalpha=0.1\ndt=0.1\ndx=1",
             "140px",
         ))
         .unwrap();
@@ -78,7 +78,7 @@ pub(super) fn build_allen_rcc8_panel(document: &Document) -> Element {
         .append_child(&make_results_area(
             document,
             "allen-rcc8-results",
-            "Click \"Evaluate\" to compute spatial/temporal relation (mock).",
+            "Evaluate the selected Allen, RCC8, spatial-index, Minkowski, or heat-equation contract.",
         ))
         .unwrap();
     panel
@@ -113,7 +113,7 @@ pub(super) fn build_manifold_logic_panel(document: &Document) -> Element {
         .append_child(&make_textarea(
             document,
             "manifold-logic-input",
-            "# Manifold logic context\n# continuous_to_fact: continuous value \u{2192} discrete Quin fact\n# integrate_abs: absolute value integration over manifold\n# wave_val: WaveCoord valuation\n# WaveCoord: amplitude, frequency, phase, damping\n\n# Query: convert continuous signal to fact?\n# Query: integrate |f(x)| over [0, 1]?\n# Query: compute wave value at t=0.5?",
+            "# operation=wave_eval|integrate_abs|continuous_to_fact\noperation=continuous_to_fact\nsamples=[0.4,0.8,1.2]\nthreshold=0.5\nfact_id=7\n\n# wave_eval coordinates\nx=0\ny=0\nz=0\nt=0.5\nf=1\na=1\nphi=0",
             "120px",
         ))
         .unwrap();
@@ -133,7 +133,7 @@ pub(super) fn build_manifold_logic_panel(document: &Document) -> Element {
         .append_child(&make_results_area(
             document,
             "manifold-logic-results",
-            "Click \"Evaluate\" to compute manifold logic (mock).",
+            "Evaluate wave field, absolute integration, or continuous-to-fact against the native manifold-logic kernel.",
         ))
         .unwrap();
     panel
@@ -171,7 +171,7 @@ pub(super) fn build_calculus_panel(document: &Document) -> Element {
             ("simpsons", "Simpson's Integration"),
             ("trapezoidal", "Trapezoidal Integration"),
             ("adaptive", "Adaptive Step"),
-            ("gpu_integration", "GPU Integration"),
+            ("large_grid", "Large-grid SIMD Integration"),
             ("simd_width", "Detect SIMD Width"),
         ],
     ))
@@ -188,7 +188,7 @@ pub(super) fn build_calculus_panel(document: &Document) -> Element {
         .append_child(&make_textarea(
             document,
             "calculus-input",
-            "# Calculus parameters (operation-dependent)\n# RK4: dy/dt=f(y,t), y0=1.0, dt=0.01, steps=100\n# Simpson's: f(x), a=0, b=1, n=1000\n# Trapezoidal: f(x), a=0, b=1, n=1000\n# Adaptive: f(x), a=0, b=1, tol=1e-6\n# GPU: f(x), a=0, b=1, n=1000000\n# SIMD: detect AVX2/NEON width",
+            "# Enter the function above and the selected operation's parameters\n# RK4: y0=1.0, dt=0.01, steps=100\n# Simpson/trapezoidal: a=0, b=1, n=1000\n# Adaptive: a=0, b=1, tol=1e-8, max_evaluations=10000\n# Large grid: a=0, b=1, n=100000\n# SIMD width requires no parameters",
             "100px",
         ))
         .unwrap();
@@ -208,7 +208,7 @@ pub(super) fn build_calculus_panel(document: &Document) -> Element {
         .append_child(&make_results_area(
             document,
             "calculus-results",
-            "Click \"Compute\" to evaluate calculus operation (mock).",
+            "Enter a supported symbolic expression and run the bounded native calculus operation.",
         ))
         .unwrap();
     panel

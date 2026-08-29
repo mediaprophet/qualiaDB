@@ -45,16 +45,16 @@ impl PresentationDomain {
 
     pub fn glyph(&self) -> &'static str {
         match self {
-            PresentationDomain::Hierarchical => "\u{1F332}",     // 🌲
-            PresentationDomain::Tabular => "\u{1F4CA}",          // 📊
-            PresentationDomain::Media => "\u{1F3A8}",            // 🎨
-            PresentationDomain::Document => "\u{1F4C4}",         // 📄
-            PresentationDomain::Chronological => "\u{23F3}",    // ⏳
-            PresentationDomain::AgilePM => "\u{1F4CB}",          // 📋
+            PresentationDomain::Hierarchical => "\u{1F332}", // 🌲
+            PresentationDomain::Tabular => "\u{1F4CA}",      // 📊
+            PresentationDomain::Media => "\u{1F3A8}",        // 🎨
+            PresentationDomain::Document => "\u{1F4C4}",     // 📄
+            PresentationDomain::Chronological => "\u{23F3}", // ⏳
+            PresentationDomain::AgilePM => "\u{1F4CB}",      // 📋
             PresentationDomain::KnowledgeGraph => "\u{1F578}\u{FE0F}", // 🕸️
-            PresentationDomain::Sensory => "\u{1F9CA}",          // 🧊
-            PresentationDomain::Telemetry => "\u{1F4C8}",        // 📈
-            PresentationDomain::Social => "\u{1F465}",           // 👥
+            PresentationDomain::Sensory => "\u{1F9CA}",      // 🧊
+            PresentationDomain::Telemetry => "\u{1F4C8}",    // 📈
+            PresentationDomain::Social => "\u{1F465}",       // 👥
         }
     }
 }
@@ -100,7 +100,6 @@ pub const PRESENTATION_MODES: &[PresentationModeSpec] = &[
         glyph: "\u{1F5A5}\u{FE0F}",
         description: "8px grid-snapped desktop icon layout",
     },
-
     // Domain 2: Tabular
     PresentationModeSpec {
         id: "mode.spreadsheet",
@@ -130,7 +129,6 @@ pub const PRESENTATION_MODES: &[PresentationModeSpec] = &[
         glyph: "\u{1F500}",
         description: "Multi-way cross-tabulation with aggregation rollups",
     },
-
     // Domain 3: Media & DAM
     PresentationModeSpec {
         id: "mode.masonry_gallery",
@@ -160,7 +158,6 @@ pub const PRESENTATION_MODES: &[PresentationModeSpec] = &[
         glyph: "\u{1F3B5}",
         description: "Interactive audio waveforms and formant strips",
     },
-
     // Domain 4: Document
     PresentationModeSpec {
         id: "mode.cml_hyperdoc",
@@ -183,7 +180,6 @@ pub const PRESENTATION_MODES: &[PresentationModeSpec] = &[
         glyph: "\u{1F9D8}",
         description: "Distraction-free ambient typographic reading view",
     },
-
     // Domain 5: Chronological
     PresentationModeSpec {
         id: "mode.gantt",
@@ -206,7 +202,6 @@ pub const PRESENTATION_MODES: &[PresentationModeSpec] = &[
         glyph: "\u{1F4C5}",
         description: "Month, week, and agenda view of obligations and review dates",
     },
-
     // Domain 6: Agile PM
     PresentationModeSpec {
         id: "mode.kanban",
@@ -222,7 +217,6 @@ pub const PRESENTATION_MODES: &[PresentationModeSpec] = &[
         glyph: "\u{229E}",
         description: "Impact vs Effort quadrant decision grid",
     },
-
     // Domain 7: Knowledge Graph
     PresentationModeSpec {
         id: "mode.force_graph",
@@ -238,7 +232,6 @@ pub const PRESENTATION_MODES: &[PresentationModeSpec] = &[
         glyph: "\u{1F30A}",
         description: "Resource, token, and permission flow diagrams",
     },
-
     // Domain 8: Sensory Studios
     PresentationModeSpec {
         id: "mode.spatial_viewport_3d",
@@ -254,7 +247,6 @@ pub const PRESENTATION_MODES: &[PresentationModeSpec] = &[
         glyph: "\u{1FA7A}",
         description: "Axial, sagittal, and coronal multi-planar slices",
     },
-
     // Domain 9: Telemetry Cockpits
     PresentationModeSpec {
         id: "mode.kpi_cockpit",
@@ -270,7 +262,6 @@ pub const PRESENTATION_MODES: &[PresentationModeSpec] = &[
         glyph: "\u{1F6E1}\u{FE0F}",
         description: "42MB ring buffer allocations and gas consumption monitor",
     },
-
     // Domain 10: Social & Communications
     PresentationModeSpec {
         id: "mode.threaded_chat",
@@ -300,7 +291,9 @@ pub fn build_view_switcher(document: &Document, active_mode_id: &str) -> Element
     );
 
     // Left: Active Projection Badge
-    let active_spec = PRESENTATION_MODES.iter().find(|m| m.id == active_mode_id)
+    let active_spec = PRESENTATION_MODES
+        .iter()
+        .find(|m| m.id == active_mode_id)
         .unwrap_or(&PRESENTATION_MODES[0]);
 
     let active_badge = document.create_element("div").unwrap();
@@ -317,9 +310,17 @@ pub fn build_view_switcher(document: &Document, active_mode_id: &str) -> Element
     // Right: Quick Mode Selector Buttons
     let btn_strip = document.create_element("div").unwrap();
     let bs_el: HtmlElement = btn_strip.clone().dyn_into().unwrap();
-    bs_el.style().set_css_text("display: flex; gap: 2px; align-items: center;");
+    bs_el
+        .style()
+        .set_css_text("display: flex; gap: 2px; align-items: center;");
 
-    let quick_modes = ["mode.cml_hyperdoc", "mode.spreadsheet", "mode.kanban", "mode.force_graph", "mode.kpi_cockpit"];
+    let quick_modes = [
+        "mode.cml_hyperdoc",
+        "mode.spreadsheet",
+        "mode.kanban",
+        "mode.force_graph",
+        "mode.kpi_cockpit",
+    ];
     for qid in &quick_modes {
         if let Some(spec) = PRESENTATION_MODES.iter().find(|m| m.id == *qid) {
             let btn = document.create_element("button").unwrap();
@@ -327,8 +328,16 @@ pub fn build_view_switcher(document: &Document, active_mode_id: &str) -> Element
             btn.set_attribute("title", spec.name).unwrap();
             let b_el: HtmlElement = btn.clone().dyn_into().unwrap();
             let is_active = spec.id == active_mode_id;
-            let bg = if is_active { "var(--surface-panel-elevated)" } else { "transparent" };
-            let border = if is_active { "var(--accent-cyan)" } else { "transparent" };
+            let bg = if is_active {
+                "var(--surface-panel-elevated)"
+            } else {
+                "transparent"
+            };
+            let border = if is_active {
+                "var(--accent-cyan)"
+            } else {
+                "transparent"
+            };
             b_el.style().set_css_text(&format!(
                 "padding: 2px 5px; background: {}; border: 1px solid {}; border-radius: 3px; \
                  font-size: 11px; cursor: pointer; transition: var(--trans-fast);",
@@ -341,7 +350,8 @@ pub fn build_view_switcher(document: &Document, active_mode_id: &str) -> Element
                 let doc = web_sys::window().unwrap().document().unwrap();
                 show_projection_notification(&doc, spec_name);
             }) as Box<dyn FnMut(MouseEvent)>);
-            btn.add_event_listener_with_callback("click", click_closure.as_ref().unchecked_ref()).unwrap();
+            btn.add_event_listener_with_callback("click", click_closure.as_ref().unchecked_ref())
+                .unwrap();
             click_closure.forget();
 
             btn_strip.append_child(&btn).unwrap();
@@ -384,7 +394,11 @@ mod tests {
 
     #[test]
     fn test_presentation_modes_catalog() {
-        assert!(PRESENTATION_MODES.len() >= 25, "Expected at least 25 polymorphic modes, got {}", PRESENTATION_MODES.len());
+        assert!(
+            PRESENTATION_MODES.len() >= 25,
+            "Expected at least 25 polymorphic modes, got {}",
+            PRESENTATION_MODES.len()
+        );
         let mut ids = std::collections::HashSet::new();
         for mode in PRESENTATION_MODES {
             assert!(!mode.name.is_empty());
@@ -411,7 +425,12 @@ mod tests {
             assert!(!d.label().is_empty());
             assert!(!d.glyph().is_empty());
             let count = PRESENTATION_MODES.iter().filter(|m| m.domain == *d).count();
-            assert!(count >= 2, "Domain {:?} has fewer than 2 modes (got {})", d, count);
+            assert!(
+                count >= 2,
+                "Domain {:?} has fewer than 2 modes (got {})",
+                d,
+                count
+            );
         }
     }
 }

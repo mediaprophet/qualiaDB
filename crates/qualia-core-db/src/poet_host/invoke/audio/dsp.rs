@@ -23,7 +23,7 @@ pub fn oscillator(args: &Value, span: Span) -> Result<Value, Diagnostic> {
             return Err(args::bad(
                 span,
                 format!("Audio.oscillator: unknown waveform '{waveform_str}'"),
-            ))
+            ));
         }
     };
     let frequency = args::rec_f64(args, "frequency")
@@ -83,7 +83,7 @@ pub fn filter(args: &Value, span: Span) -> Result<Value, Diagnostic> {
             return Err(args::bad(
                 span,
                 format!("Audio.filter: unknown filter_type '{filter_type_str}'"),
-            ))
+            ));
         }
     };
     let cutoff = args::rec_f64(args, "cutoff")
@@ -112,7 +112,7 @@ pub fn lfo(args: &Value, span: Span) -> Result<Value, Diagnostic> {
             return Err(args::bad(
                 span,
                 format!("Audio.lfo: unknown waveform '{waveform_str}'"),
-            ))
+            ));
         }
     };
     let frequency = args::rec_f64(args, "frequency")
@@ -312,7 +312,7 @@ pub fn transport(args: &Value, span: Span) -> Result<Value, Diagnostic> {
             return Err(args::bad(
                 span,
                 format!("Audio.transport: unknown action '{action}'"),
-            ))
+            ));
         }
     }
 

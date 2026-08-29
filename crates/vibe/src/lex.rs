@@ -312,7 +312,10 @@ impl<'a> Lexer<'a> {
         // Check for unit suffix e.g. 500ms, 60fps, 2.4GHz, 100kPa, 90deg, 15.0[m/s], 80%
         if self.peek() == Some(b'[') {
             self.pos += 1;
-            while self.pos < self.bytes.len() && self.bytes[self.pos] != b']' && self.bytes[self.pos] != b'\n' {
+            while self.pos < self.bytes.len()
+                && self.bytes[self.pos] != b']'
+                && self.bytes[self.pos] != b'\n'
+            {
                 self.pos += 1;
             }
             if self.peek() == Some(b']') {
@@ -334,7 +337,10 @@ impl<'a> Lexer<'a> {
                 && !self.rest_starts_with(b"i8")
                 && !self.rest_starts_with(b"u8")
             {
-                while matches!(self.peek(), Some(b'a'..=b'z' | b'A'..=b'Z' | b'_' | b'0'..=b'9')) {
+                while matches!(
+                    self.peek(),
+                    Some(b'a'..=b'z' | b'A'..=b'Z' | b'_' | b'0'..=b'9')
+                ) {
                     self.pos += 1;
                 }
                 return Ok(self.tok(TokenKind::Quantity, start));

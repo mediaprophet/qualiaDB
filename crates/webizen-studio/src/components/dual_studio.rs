@@ -86,7 +86,10 @@ pub fn DualStudio(props: DualStudioProps) -> Element {
             #[cfg(target_arch = "wasm32")]
             gloo_timers::future::TimeoutFuture::new((1000 / props.target_fps.max(1)) as u32).await;
             #[cfg(not(target_arch = "wasm32"))]
-            tokio::time::sleep(std::time::Duration::from_millis((1000 / props.target_fps.max(1)) as u64)).await;
+            tokio::time::sleep(std::time::Duration::from_millis(
+                (1000 / props.target_fps.max(1)) as u64,
+            ))
+            .await;
         }
     });
 

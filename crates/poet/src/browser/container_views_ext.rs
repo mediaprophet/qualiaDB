@@ -379,12 +379,22 @@ pub fn build_anatomy_view(document: &Document) -> Element {
     // Header Stratum Selector
     let stratum_bar = document.create_element("div").unwrap();
     stratum_bar.set_class_name("vibe-toolbar");
-    for (idx, stratum) in ["10D Visceral", "Neural Connectome", "Musculoskeletal", "Vascular"].iter().enumerate() {
+    for (idx, stratum) in [
+        "10D Visceral",
+        "Neural Connectome",
+        "Musculoskeletal",
+        "Vascular",
+    ]
+    .iter()
+    .enumerate()
+    {
         let btn = document.create_element("button").unwrap();
         btn.set_class_name("vibe-run-btn");
         let btn_el: HtmlElement = btn.clone().dyn_into().unwrap();
         if idx == 0 {
-            btn_el.style().set_css_text("background: var(--accent-rose); color: var(--text-inverse); font-weight: 700;");
+            btn_el.style().set_css_text(
+                "background: var(--accent-rose); color: var(--text-inverse); font-weight: 700;",
+            );
         }
         btn.set_text_content(Some(stratum));
         stratum_bar.append_child(&btn).unwrap();
@@ -394,13 +404,39 @@ pub fn build_anatomy_view(document: &Document) -> Element {
     // 10D Anatomical Stratum Grid
     let organ_grid = document.create_element("div").unwrap();
     let og_el: HtmlElement = organ_grid.clone().dyn_into().unwrap();
-    og_el.style().set_css_text("display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px;");
+    og_el
+        .style()
+        .set_css_text("display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px;");
 
     let organs = [
-        ("Heart \u{00B7} Cor", "FMA:7088", "98.4% Normal", "var(--accent-emerald)", "HRV: 68ms \u{00B7} EF: 62%"),
-        ("Lungs \u{00B7} Pulmo", "FMA:7195", "99.1% Clear", "var(--accent-emerald)", "SpO2: 99% \u{00B7} FEV1: 3.8L"),
-        ("Liver \u{00B7} Hepar", "FMA:7203", "97.5% Normal", "var(--accent-emerald)", "ALT: 22 U/L \u{00B7} AST: 20"),
-        ("Brain \u{00B7} Encephalon", "FMA:50801", "99.8% Coherent", "var(--accent-violet)", "Gamma: 40Hz \u{00B7} Alpha: 10Hz"),
+        (
+            "Heart \u{00B7} Cor",
+            "FMA:7088",
+            "98.4% Normal",
+            "var(--accent-emerald)",
+            "HRV: 68ms \u{00B7} EF: 62%",
+        ),
+        (
+            "Lungs \u{00B7} Pulmo",
+            "FMA:7195",
+            "99.1% Clear",
+            "var(--accent-emerald)",
+            "SpO2: 99% \u{00B7} FEV1: 3.8L",
+        ),
+        (
+            "Liver \u{00B7} Hepar",
+            "FMA:7203",
+            "97.5% Normal",
+            "var(--accent-emerald)",
+            "ALT: 22 U/L \u{00B7} AST: 20",
+        ),
+        (
+            "Brain \u{00B7} Encephalon",
+            "FMA:50801",
+            "99.8% Coherent",
+            "var(--accent-violet)",
+            "Gamma: 40Hz \u{00B7} Alpha: 10Hz",
+        ),
     ];
 
     for (name, fma, status, col, telemetry) in organs {
@@ -411,15 +447,22 @@ pub fn build_anatomy_view(document: &Document) -> Element {
 
         let h_row = document.create_element("div").unwrap();
         let h_row_el: HtmlElement = h_row.clone().dyn_into().unwrap();
-        h_row_el.style().set_css_text("display: flex; justify-content: space-between; align-items: center;");
+        h_row_el
+            .style()
+            .set_css_text("display: flex; justify-content: space-between; align-items: center;");
         let t_el = document.create_element("span").unwrap();
         t_el.set_text_content(Some(name));
-        t_el.set_attribute("style", "font-weight: 700; color: var(--text-primary);").unwrap();
+        t_el.set_attribute("style", "font-weight: 700; color: var(--text-primary);")
+            .unwrap();
         h_row.append_child(&t_el).unwrap();
 
         let s_el = document.create_element("span").unwrap();
         s_el.set_text_content(Some(status));
-        s_el.set_attribute("style", &format!("font-size: 9px; color: {}; font-weight: 600;", col)).unwrap();
+        s_el.set_attribute(
+            "style",
+            &format!("font-size: 9px; color: {}; font-weight: 600;", col),
+        )
+        .unwrap();
         h_row.append_child(&s_el).unwrap();
         card.append_child(&h_row).unwrap();
 
@@ -446,7 +489,12 @@ pub fn build_anatomy_view(document: &Document) -> Element {
     // Action Toolbar
     let actions = document.create_element("div").unwrap();
     actions.set_class_name("vibe-toolbar");
-    for label in &["Mount 10D Manifold", "Comorbidity Risk", "Extract SNOMED", "Export FHIR"] {
+    for label in &[
+        "Mount 10D Manifold",
+        "Comorbidity Risk",
+        "Extract SNOMED",
+        "Export FHIR",
+    ] {
         let btn = document.create_element("button").unwrap();
         btn.set_class_name("vibe-run-btn");
         btn.set_text_content(Some(label));
@@ -500,7 +548,12 @@ pub fn build_webview_view(document: &Document) -> Element {
 
     let lock_icon = document.create_element("span").unwrap();
     lock_icon.set_text_content(Some("\u{1F512}"));
-    lock_icon.set_attribute("style", "font-size: 11px; margin-left: 2px; color: var(--accent-emerald);").unwrap();
+    lock_icon
+        .set_attribute(
+            "style",
+            "font-size: 11px; margin-left: 2px; color: var(--accent-emerald);",
+        )
+        .unwrap();
     bar.append_child(&lock_icon).unwrap();
 
     let input = document.create_element("input").unwrap();
@@ -569,12 +622,29 @@ pub fn build_webrtc_view(document: &Document) -> Element {
     // Active Swarm Peer List
     let peer_list = document.create_element("div").unwrap();
     let pl_el: HtmlElement = peer_list.clone().dyn_into().unwrap();
-    pl_el.style().set_css_text("display: flex; flex-direction: column; gap: 4px;");
+    pl_el
+        .style()
+        .set_css_text("display: flex; flex-direction: column; gap: 4px;");
 
     let peers = [
-        ("did:qualia:edge:node-7f2a", "14ms", "182 KB/s", "CRDT Sync: Active"),
-        ("did:qualia:edge:node-3b91", "28ms", "94 KB/s", "CRDT Sync: Active"),
-        ("did:qualia:edge:node-c044", "19ms", "220 KB/s", "CRDT Sync: Active"),
+        (
+            "did:qualia:edge:node-7f2a",
+            "14ms",
+            "182 KB/s",
+            "CRDT Sync: Active",
+        ),
+        (
+            "did:qualia:edge:node-3b91",
+            "28ms",
+            "94 KB/s",
+            "CRDT Sync: Active",
+        ),
+        (
+            "did:qualia:edge:node-c044",
+            "19ms",
+            "220 KB/s",
+            "CRDT Sync: Active",
+        ),
     ];
 
     for (peer_did, latency, throughput, sync_mode) in peers {
@@ -584,13 +654,25 @@ pub fn build_webrtc_view(document: &Document) -> Element {
         r_el.style().set_css_text("padding: 6px 8px; display: flex; justify-content: space-between; align-items: center; font-size: 9px; background: var(--surface-panel); border: 1px solid var(--border-subtle); border-radius: var(--radius-xs);");
 
         let left = document.create_element("div").unwrap();
-        left.set_attribute("style", "display: flex; align-items: center; gap: 6px;").unwrap();
-        left.set_inner_html(&format!("<span style='color: var(--accent-amber);'>\u{29BF}</span><strong>{}</strong>", peer_did));
+        left.set_attribute("style", "display: flex; align-items: center; gap: 6px;")
+            .unwrap();
+        left.set_inner_html(&format!(
+            "<span style='color: var(--accent-amber);'>\u{29BF}</span><strong>{}</strong>",
+            peer_did
+        ));
         row.append_child(&left).unwrap();
 
         let right = document.create_element("div").unwrap();
-        right.set_attribute("style", "display: flex; gap: 10px; color: var(--text-muted);").unwrap();
-        right.set_inner_html(&format!("<span>{}</span><span>{}</span><span style='color: var(--accent-emerald);'>{}</span>", latency, throughput, sync_mode));
+        right
+            .set_attribute(
+                "style",
+                "display: flex; gap: 10px; color: var(--text-muted);",
+            )
+            .unwrap();
+        right.set_inner_html(&format!(
+            "<span>{}</span><span>{}</span><span style='color: var(--accent-emerald);'>{}</span>",
+            latency, throughput, sync_mode
+        ));
         row.append_child(&right).unwrap();
 
         peer_list.append_child(&row).unwrap();
@@ -600,7 +682,12 @@ pub fn build_webrtc_view(document: &Document) -> Element {
     // Action Toolbar
     let actions = document.create_element("div").unwrap();
     actions.set_class_name("vibe-toolbar");
-    for label in &["Broadcast Super-Quin", "Ping Swarm", "ICE Renegotiate", "Inspect SDP"] {
+    for label in &[
+        "Broadcast Super-Quin",
+        "Ping Swarm",
+        "ICE Renegotiate",
+        "Inspect SDP",
+    ] {
         let btn = document.create_element("button").unwrap();
         btn.set_class_name("vibe-run-btn");
         btn.set_text_content(Some(label));
@@ -637,12 +724,24 @@ pub fn build_finance_view(document: &Document) -> Element {
     // Asset balances grid
     let asset_grid = document.create_element("div").unwrap();
     let ag_el: HtmlElement = asset_grid.clone().dyn_into().unwrap();
-    ag_el.style().set_css_text("display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;");
+    ag_el
+        .style()
+        .set_css_text("display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;");
 
     let assets = [
         ("XEC Vault", "1,250 XEC", "$2,100.00", "var(--accent-amber)"),
-        ("USDC Collateral", "340 USDC", "$340.00", "var(--accent-cyan)"),
-        ("Q42 Commons", "8,000 Q42", "$1,810.00", "var(--accent-violet)"),
+        (
+            "USDC Collateral",
+            "340 USDC",
+            "$340.00",
+            "var(--accent-cyan)",
+        ),
+        (
+            "Q42 Commons",
+            "8,000 Q42",
+            "$1,810.00",
+            "var(--accent-violet)",
+        ),
     ];
 
     for (name, bal, val, col) in assets {
@@ -653,17 +752,20 @@ pub fn build_finance_view(document: &Document) -> Element {
 
         let n_el = document.create_element("span").unwrap();
         n_el.set_text_content(Some(name));
-        n_el.set_attribute("style", &format!("font-weight: 700; color: {};", col)).unwrap();
+        n_el.set_attribute("style", &format!("font-weight: 700; color: {};", col))
+            .unwrap();
         card.append_child(&n_el).unwrap();
 
         let b_el = document.create_element("span").unwrap();
         b_el.set_text_content(Some(bal));
-        b_el.set_attribute("style", "color: var(--text-primary); font-weight: 600;").unwrap();
+        b_el.set_attribute("style", "color: var(--text-primary); font-weight: 600;")
+            .unwrap();
         card.append_child(&b_el).unwrap();
 
         let v_el = document.create_element("span").unwrap();
         v_el.set_text_content(Some(val));
-        v_el.set_attribute("style", "color: var(--text-muted); font-size: 8px;").unwrap();
+        v_el.set_attribute("style", "color: var(--text-muted); font-size: 8px;")
+            .unwrap();
         card.append_child(&v_el).unwrap();
 
         asset_grid.append_child(&card).unwrap();
@@ -674,7 +776,8 @@ pub fn build_finance_view(document: &Document) -> Element {
     let ledger = document.create_element("div").unwrap();
     ledger.set_class_name("vibe-output");
     let l_el: HtmlElement = ledger.clone().dyn_into().unwrap();
-    l_el.style().set_css_text("display: flex; flex-direction: column; gap: 3px; font-size: 9px;");
+    l_el.style()
+        .set_css_text("display: flex; flex-direction: column; gap: 3px; font-size: 9px;");
     for entry in &[
         "2026-08-17 \u{00B7} +250.00 XEC \u{00B7} vault handshake (verified)",
         "2026-08-16 \u{00B7} -40.00 USDC \u{00B7} zero-knowledge tax batch",
@@ -716,7 +819,12 @@ pub fn build_vision_view(document: &Document) -> Element {
     // Header Toolbar
     let toolbar = document.create_element("div").unwrap();
     toolbar.set_class_name("vibe-toolbar");
-    for label in &["Capture Frame", "Detect", "Super-Resolve (2x)", "ahash Compute"] {
+    for label in &[
+        "Capture Frame",
+        "Detect",
+        "Super-Resolve (2x)",
+        "ahash Compute",
+    ] {
         let btn = document.create_element("button").unwrap();
         btn.set_class_name("vibe-run-btn");
         btn.set_text_content(Some(label));
@@ -730,7 +838,9 @@ pub fn build_vision_view(document: &Document) -> Element {
     cf_el.style().set_css_text("flex: 1; background: rgba(0,0,0,0.5); border: 1px solid var(--border-subtle); border-radius: var(--radius-xs); position: relative; display: flex; align-items: center; justify-content: center; min-height: 120px; overflow: hidden;");
 
     // Render an interactive SVG representing live vision detection
-    let svg = document.create_element_ns(Some("http://www.w3.org/2000/svg"), "svg").unwrap();
+    let svg = document
+        .create_element_ns(Some("http://www.w3.org/2000/svg"), "svg")
+        .unwrap();
     svg.set_attribute("width", "100%").unwrap();
     svg.set_attribute("height", "100%").unwrap();
     svg.set_attribute("viewBox", "0 0 320 120").unwrap();
@@ -774,7 +884,12 @@ pub fn build_listen_view(document: &Document) -> Element {
     // Header Toolbar
     let toolbar = document.create_element("div").unwrap();
     toolbar.set_class_name("vibe-toolbar");
-    for label in &["Mic (Live)", "AED Spectrum", "EnCodec Tokenize", "Formant Filter"] {
+    for label in &[
+        "Mic (Live)",
+        "AED Spectrum",
+        "EnCodec Tokenize",
+        "Formant Filter",
+    ] {
         let btn = document.create_element("button").unwrap();
         btn.set_class_name("vibe-run-btn");
         btn.set_text_content(Some(label));
@@ -787,7 +902,9 @@ pub fn build_listen_view(document: &Document) -> Element {
     let sb_el: HtmlElement = spectrum_box.clone().dyn_into().unwrap();
     sb_el.style().set_css_text("flex: 1; background: rgba(0,0,0,0.5); border: 1px solid var(--border-subtle); border-radius: var(--radius-xs); padding: 10px; display: flex; align-items: flex-end; justify-content: space-around; min-height: 80px; gap: 3px;");
 
-    let bar_heights = [30, 45, 70, 85, 95, 60, 40, 75, 90, 65, 50, 35, 80, 60, 40, 20];
+    let bar_heights = [
+        30, 45, 70, 85, 95, 60, 40, 75, 90, 65, 50, 35, 80, 60, 40, 20,
+    ];
     for (_idx, h) in bar_heights.iter().enumerate() {
         let bar = document.create_element("div").unwrap();
         let b_el: HtmlElement = bar.clone().dyn_into().unwrap();
@@ -835,12 +952,31 @@ pub fn build_triad_view(document: &Document) -> Element {
     // Triad Cores Grid
     let grid = document.create_element("div").unwrap();
     let g_el: HtmlElement = grid.clone().dyn_into().unwrap();
-    g_el.style().set_css_text("display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;");
+    g_el.style()
+        .set_css_text("display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;");
 
     let cores = [
-        ("Core 0: Reasoning", "42MB Sentinel", "12% Load", "4.2 MB / 42 MB", "var(--accent-cyan)"),
-        ("Core 1: QTensor", "DirectML / GGUF", "48% Load", "1.2 GB VRAM", "var(--accent-amber)"),
-        ("Core 2: Volumetric", "WebGPU 60 FPS", "24% Load", "16.6ms Render", "var(--accent-emerald)"),
+        (
+            "Core 0: Reasoning",
+            "42MB Sentinel",
+            "12% Load",
+            "4.2 MB / 42 MB",
+            "var(--accent-cyan)",
+        ),
+        (
+            "Core 1: QTensor",
+            "DirectML / GGUF",
+            "48% Load",
+            "1.2 GB VRAM",
+            "var(--accent-amber)",
+        ),
+        (
+            "Core 2: Volumetric",
+            "WebGPU 60 FPS",
+            "24% Load",
+            "16.6ms Render",
+            "var(--accent-emerald)",
+        ),
     ];
 
     for (name, role, load, mem, col) in cores {
@@ -850,12 +986,14 @@ pub fn build_triad_view(document: &Document) -> Element {
         c_el.style().set_css_text("padding: 8px; background: var(--surface-panel); border: 1px solid var(--border-subtle); border-radius: var(--radius-xs); display: flex; flex-direction: column; gap: 3px; font-size: 9px;");
 
         let h = document.create_element("div").unwrap();
-        h.set_attribute("style", &format!("font-weight: 700; color: {};", col)).unwrap();
+        h.set_attribute("style", &format!("font-weight: 700; color: {};", col))
+            .unwrap();
         h.set_text_content(Some(name));
         card.append_child(&h).unwrap();
 
         let r = document.create_element("div").unwrap();
-        r.set_attribute("style", "color: var(--text-secondary); font-size: 9px;").unwrap();
+        r.set_attribute("style", "color: var(--text-secondary); font-size: 9px;")
+            .unwrap();
         r.set_text_content(Some(role));
         card.append_child(&r).unwrap();
 
@@ -882,7 +1020,12 @@ pub fn build_triad_view(document: &Document) -> Element {
     // Action Toolbar
     let actions = document.create_element("div").unwrap();
     actions.set_class_name("vibe-toolbar");
-    for label in &["Benchmark Triad", "Reset Arena", "Governor Mode", "Export Telemetry"] {
+    for label in &[
+        "Benchmark Triad",
+        "Reset Arena",
+        "Governor Mode",
+        "Export Telemetry",
+    ] {
         let btn = document.create_element("button").unwrap();
         btn.set_class_name("vibe-run-btn");
         btn.set_text_content(Some(label));
@@ -923,12 +1066,29 @@ pub fn build_portal_view(document: &Document) -> Element {
     // Portal Destination Matrix
     let port_list = document.create_element("div").unwrap();
     let pl_el: HtmlElement = port_list.clone().dyn_into().unwrap();
-    pl_el.style().set_css_text("display: flex; flex-direction: column; gap: 4px;");
+    pl_el
+        .style()
+        .set_css_text("display: flex; flex-direction: column; gap: 4px;");
 
     let portals = [
-        ("Catchment Studio", "Local Workspace", "SHA-256 Verified", "var(--accent-emerald)"),
-        ("Neuro-Anatomy 10D", "P2P Swarm Relay", "Signed DID Token", "var(--accent-cyan)"),
-        ("Quantum Chemistry Lab", "Federated Cluster", "Integrity Checked", "var(--accent-violet)"),
+        (
+            "Catchment Studio",
+            "Local Workspace",
+            "SHA-256 Verified",
+            "var(--accent-emerald)",
+        ),
+        (
+            "Neuro-Anatomy 10D",
+            "P2P Swarm Relay",
+            "Signed DID Token",
+            "var(--accent-cyan)",
+        ),
+        (
+            "Quantum Chemistry Lab",
+            "Federated Cluster",
+            "Integrity Checked",
+            "var(--accent-violet)",
+        ),
     ];
 
     for (name, domain, auth, col) in portals {
@@ -942,7 +1102,9 @@ pub fn build_portal_view(document: &Document) -> Element {
         row.append_child(&left).unwrap();
 
         let right = document.create_element("div").unwrap();
-        right.set_attribute("style", "color: var(--accent-emerald); font-size: 8px;").unwrap();
+        right
+            .set_attribute("style", "color: var(--accent-emerald); font-size: 8px;")
+            .unwrap();
         right.set_text_content(Some(auth));
         row.append_child(&right).unwrap();
 
@@ -1014,10 +1176,23 @@ pub fn build_3d_view(document: &Document) -> Element {
     // Header Toolbar
     let toolbar = document.create_element("div").unwrap();
     toolbar.set_class_name("vibe-toolbar");
-    for label in &["Orbit Camera", "Wireframe", "WGSL Shading", "Subdivide", "Export Mesh"] {
+    for label in &[
+        "Orbit Camera",
+        "Wireframe",
+        "WGSL Shading",
+        "Subdivide",
+        "Export Mesh",
+    ] {
         let btn = document.create_element("button").unwrap();
         btn.set_class_name("vibe-run-btn");
         btn.set_text_content(Some(label));
+        btn.set_attribute("disabled", "").unwrap();
+        btn.set_attribute("aria-disabled", "true").unwrap();
+        btn.set_attribute(
+            "title",
+            "Unavailable until this preview exposes a typed mutable camera/mesh session contract.",
+        )
+        .unwrap();
         toolbar.append_child(&btn).unwrap();
     }
     wrapper.append_child(&toolbar).unwrap();
@@ -1027,7 +1202,9 @@ pub fn build_3d_view(document: &Document) -> Element {
     let vp_el: HtmlElement = viewport.clone().dyn_into().unwrap();
     vp_el.style().set_css_text("flex: 1; background: rgba(0,0,0,0.55); border: 1px solid var(--border-subtle); border-radius: var(--radius-xs); position: relative; display: flex; align-items: center; justify-content: center; min-height: 120px; overflow: hidden;");
 
-    let svg = document.create_element_ns(Some("http://www.w3.org/2000/svg"), "svg").unwrap();
+    let svg = document
+        .create_element_ns(Some("http://www.w3.org/2000/svg"), "svg")
+        .unwrap();
     svg.set_attribute("width", "100%").unwrap();
     svg.set_attribute("height", "100%").unwrap();
     svg.set_attribute("viewBox", "0 0 320 120").unwrap();
@@ -1045,6 +1222,9 @@ pub fn build_3d_view(document: &Document) -> Element {
     );
     viewport.append_child(&svg).unwrap();
     wrapper.append_child(&viewport).unwrap();
+    wrapper
+        .append_child(&super::render_preview::build(document, "media", 800, 480))
+        .unwrap();
 
     wrapper
 }
@@ -1081,15 +1261,33 @@ pub fn build_subcanvas_view(document: &Document) -> Element {
     preview.append_child(&icon).unwrap();
 
     let label = document.create_element("div").unwrap();
-    label.set_attribute("style", "font-size: 11px; color: var(--text-secondary); text-align: center;").unwrap();
+    label
+        .set_attribute(
+            "style",
+            "font-size: 11px; color: var(--text-secondary); text-align: center;",
+        )
+        .unwrap();
     label.set_text_content(Some("Subcanvas Isolation Sandbox \u{00B7} LOD Depth: 2"));
     preview.append_child(&label).unwrap();
     wrapper.append_child(&preview).unwrap();
+    wrapper
+        .append_child(&super::render_preview::build(
+            document,
+            "submanifold",
+            800,
+            480,
+        ))
+        .unwrap();
 
     // Action Toolbar
     let actions = document.create_element("div").unwrap();
     actions.set_class_name("vibe-toolbar");
-    for label in &["Enter Subcanvas (Zoom)", "Pop to Parent", "Clone Subtree", "Merge to Root"] {
+    for label in &[
+        "Enter Subcanvas (Zoom)",
+        "Pop to Parent",
+        "Clone Subtree",
+        "Merge to Root",
+    ] {
         let btn = document.create_element("button").unwrap();
         btn.set_class_name("vibe-run-btn");
         btn.set_text_content(Some(label));
@@ -1128,9 +1326,13 @@ pub fn build_multimodal_chip_audio(document: &Document, title: &str, duration: &
 
     // Mini SVG waveform indicator
     let waves = document.create_element("span").unwrap();
-    waves.set_text_content(Some("\u{2582}\u{2585}\u{2588}\u{2586}\u{2583}\u{2587}\u{2584}"));
+    waves.set_text_content(Some(
+        "\u{2582}\u{2585}\u{2588}\u{2586}\u{2583}\u{2587}\u{2584}",
+    ));
     let waves_el: HtmlElement = waves.clone().dyn_into().unwrap();
-    waves_el.style().set_css_text("font-family: var(--font-mono); letter-spacing: -1px; opacity: 0.8;");
+    waves_el
+        .style()
+        .set_css_text("font-family: var(--font-mono); letter-spacing: -1px; opacity: 0.8;");
     chip.append_child(&waves).unwrap();
 
     let dur = document.create_element("span").unwrap();
@@ -1167,14 +1369,20 @@ pub fn build_multimodal_chip_3d(document: &Document, name: &str, poly_count: u32
     let count = document.create_element("span").unwrap();
     count.set_text_content(Some(&format!("{}p", poly_count)));
     let count_el: HtmlElement = count.clone().dyn_into().unwrap();
-    count_el.style().set_css_text("font-size: 9px; opacity: 0.6;");
+    count_el
+        .style()
+        .set_css_text("font-size: 9px; opacity: 0.6;");
     chip.append_child(&count).unwrap();
 
     chip
 }
 
 /// Embedded mini-spreadsheet chip with live preview cell.
-pub fn build_multimodal_chip_sheet(document: &Document, sheet_ref: &str, summary_val: &str) -> Element {
+pub fn build_multimodal_chip_sheet(
+    document: &Document,
+    sheet_ref: &str,
+    summary_val: &str,
+) -> Element {
     let chip = document.create_element("span").unwrap();
     chip.set_class_name("cml-chip cml-chip-sheet");
     let chip_el: HtmlElement = chip.clone().dyn_into().unwrap();
@@ -1198,14 +1406,20 @@ pub fn build_multimodal_chip_sheet(document: &Document, sheet_ref: &str, summary
     let val = document.create_element("span").unwrap();
     val.set_text_content(Some(&format!("= {}", summary_val)));
     let val_el: HtmlElement = val.clone().dyn_into().unwrap();
-    val_el.style().set_css_text("font-family: var(--font-mono); font-size: 10px; font-weight: 600;");
+    val_el
+        .style()
+        .set_css_text("font-family: var(--font-mono); font-size: 10px; font-weight: 600;");
     chip.append_child(&val).unwrap();
 
     chip
 }
 
 /// Semantic provenance citation badge chip linking to W3C Verifiable Credentials / DIDs.
-pub fn build_multimodal_chip_citation(document: &Document, did_short: &str, certainty_pct: u8) -> Element {
+pub fn build_multimodal_chip_citation(
+    document: &Document,
+    did_short: &str,
+    certainty_pct: u8,
+) -> Element {
     let chip = document.create_element("span").unwrap();
     chip.set_class_name("cml-chip cml-chip-citation");
     let chip_el: HtmlElement = chip.clone().dyn_into().unwrap();
@@ -1223,13 +1437,17 @@ pub fn build_multimodal_chip_citation(document: &Document, did_short: &str, cert
     let label = document.create_element("span").unwrap();
     label.set_text_content(Some(did_short));
     let label_el: HtmlElement = label.clone().dyn_into().unwrap();
-    label_el.style().set_css_text("font-family: var(--font-mono);");
+    label_el
+        .style()
+        .set_css_text("font-family: var(--font-mono);");
     chip.append_child(&label).unwrap();
 
     let cert = document.create_element("span").unwrap();
     cert.set_text_content(Some(&format!("{}%", certainty_pct)));
     let cert_el: HtmlElement = cert.clone().dyn_into().unwrap();
-    cert_el.style().set_css_text("font-size: 9px; opacity: 0.75;");
+    cert_el
+        .style()
+        .set_css_text("font-size: 9px; opacity: 0.75;");
     chip.append_child(&cert).unwrap();
 
     chip

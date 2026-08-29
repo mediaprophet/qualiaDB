@@ -183,6 +183,9 @@ pub struct WorkspaceState {
     pub manifolds: Vec<ManifoldSeed>,
     /// Currently active manifold ID.
     pub active_manifold: String,
+    /// Open construct (observer-scope). Empty defaults to `poet`.
+    #[serde(default)]
+    pub construct_id: String,
     /// Per-device container overrides.
     pub container_overrides: Vec<ContainerOverride>,
     /// Container-to-device assignments.
@@ -205,6 +208,7 @@ impl WorkspaceState {
             owner_did: owner_did.to_string(),
             manifolds: Vec::new(),
             active_manifold: String::new(),
+            construct_id: "poet".into(),
             container_overrides: Vec::new(),
             device_assignments: Vec::new(),
             devices: Vec::new(),

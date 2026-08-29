@@ -116,7 +116,10 @@ impl SolidExporter {
 pub struct SolidLdpFacade;
 impl SolidLdpFacade {
     pub fn serialize_to_rdf_star(quin: &NQuin) -> String {
-        format!("GRAPH <urn:qualia:context:{}> {{ geo:asWKT qualia:hardwareIntegrity \"VERIFIED_ECC_PASS\" }}", quin.context)
+        format!(
+            "GRAPH <urn:qualia:context:{}> {{ geo:asWKT qualia:hardwareIntegrity \"VERIFIED_ECC_PASS\" }}",
+            quin.context
+        )
     }
 }
 

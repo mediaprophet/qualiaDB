@@ -566,11 +566,16 @@ impl<'a> Parser<'a> {
                         }
                         let pattern_end = self.cur.span.start;
                         let end = self.expect(TokenKind::RBrace, "expected '}'")?.end;
-                        let pattern = self.lex.source()[pattern_start as usize..pattern_end as usize].trim().to_string();
+                        let pattern = self.lex.source()
+                            [pattern_start as usize..pattern_end as usize]
+                            .trim()
+                            .to_string();
                         let mut vars = Vec::new();
                         for token in pattern.split_whitespace() {
                             if token.starts_with('?') {
-                                let v = token[1..].trim_matches(|c: char| !c.is_alphanumeric() && c != '_').to_string();
+                                let v = token[1..]
+                                    .trim_matches(|c: char| !c.is_alphanumeric() && c != '_')
+                                    .to_string();
                                 if !vars.contains(&v) {
                                     vars.push(v);
                                 }
@@ -578,7 +583,11 @@ impl<'a> Parser<'a> {
                         }
                         return Ok(Expr {
                             span: Span::new(start, end),
-                            kind: ExprKind::GraphQuery { is_ask, pattern, variables: vars },
+                            kind: ExprKind::GraphQuery {
+                                is_ask,
+                                pattern,
+                                variables: vars,
+                            },
                         });
                     }
                 }
@@ -786,10 +795,13 @@ impl<'a> Parser<'a> {
             (val, e)
         } else {
             let span = Span::new(start, self.prev_end(start));
-            (Expr {
-                span,
-                kind: ExprKind::Ident(name.clone()),
-            }, span.end)
+            (
+                Expr {
+                    span,
+                    kind: ExprKind::Ident(name.clone()),
+                },
+                span.end,
+            )
         };
         Ok(NamedArg {
             span: Span::new(start, end),

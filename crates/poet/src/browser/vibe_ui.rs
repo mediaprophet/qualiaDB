@@ -12,10 +12,10 @@ use std::cell::Cell;
 use std::collections::BTreeMap;
 use std::rc::Rc;
 
-use wasm_bindgen::{closure::Closure, JsCast};
+use wasm_bindgen::{JsCast, closure::Closure};
 use web_sys::{Document, Element, Event, HtmlElement, HtmlTextAreaElement};
 
-use vibe::{parse_program, Budget, Engine, Env, LocalHost, Program, Value};
+use vibe::{Budget, Engine, Env, LocalHost, Program, Value, parse_program};
 
 // ---------------------------------------------------------------------------
 // Vibe UI AST & Representation
@@ -62,10 +62,7 @@ pub enum VibeUiNode {
         class_name: String,
     },
     /// Formatted text block.
-    Text {
-        content: String,
-        style: String,
-    },
+    Text { content: String, style: String },
     /// Generic container box with children.
     Container {
         class_name: String,
@@ -80,8 +77,7 @@ impl VibeUiNode {
         match val {
             Value::Record(map) => Self::from_map(map),
             Value::List(list) => {
-                let children: Vec<VibeUiNode> =
-                    list.iter().filter_map(Self::from_value).collect();
+                let children: Vec<VibeUiNode> = list.iter().filter_map(Self::from_value).collect();
                 Some(VibeUiNode::Container {
                     class_name: "vibe-ui-group".into(),
                     style: "".into(),
@@ -183,8 +179,7 @@ impl VibeUiNode {
                 let id = get_string(map, "id").unwrap_or_else(|| "btn".into());
                 let label = get_string(map, "label").unwrap_or_else(|| "Action".into());
                 let action = get_string(map, "action").unwrap_or_default();
-                let class_name =
-                    get_string(map, "class").unwrap_or_else(|| "vibe-run-btn".into());
+                let class_name = get_string(map, "class").unwrap_or_else(|| "vibe-run-btn".into());
                 Some(VibeUiNode::Button {
                     id,
                     label,
@@ -243,8 +238,12 @@ fn get_children(map: &BTreeMap<String, Value>) -> Vec<VibeUiNode> {
 
 /// Evaluate a VibeScript source string into a root `VibeUiNode`.
 pub fn eval_vibe_ui_script(source: &str) -> Result<VibeUiNode, String> {
-    let program: Program =
-        parse_program(source).map_err(|e| format!("VibeScript Parse Error (line {}): {}", e.span.start, e.message))?;
+    let program: Program = parse_program(source).map_err(|e| {
+        format!(
+            "VibeScript Parse Error (line {}): {}",
+            e.span.start, e.message
+        )
+    })?;
 
     let mut host = LocalHost::default();
     let mut env = Env::default();
@@ -321,13 +320,7 @@ pub fn render_vibe_ui_node(document: &Document, node: &VibeUiNode) -> Element {
                 body.append_child(&render_vibe_ui_node(document, child))
                     .unwrap();
             }
-            super::diagnostics::render_subtray(
-                document,
-                title,
-                badge.as_deref(),
-                body,
-                !collapsed,
-            )
+            super::diagnostics::render_subtray(document, title, badge.as_deref(), body, !collapsed)
         }
 
         VibeUiNode::ShaclShape {
@@ -338,7 +331,10 @@ pub fn render_vibe_ui_node(document: &Document, node: &VibeUiNode) -> Element {
         } => {
             let row_container = document.create_element("div").unwrap();
             row_container
-                .set_attribute("style", "margin-top: 3px; font-family: var(--font-mono); font-size: 10px;")
+                .set_attribute(
+                    "style",
+                    "margin-top: 3px; font-family: var(--font-mono); font-size: 10px;",
+                )
                 .unwrap();
 
             let row = document.create_element("div").unwrap();
@@ -349,11 +345,7 @@ pub fn render_vibe_ui_node(document: &Document, node: &VibeUiNode) -> Element {
             .unwrap();
 
             let icon = document.create_element("span").unwrap();
-            icon.set_text_content(Some(if *conformant {
-                "\u{2705}"
-            } else {
-                "\u{274C}"
-            }));
+            icon.set_text_content(Some(if *conformant { "\u{2705}" } else { "\u{274C}" }));
             row.append_child(&icon).unwrap();
 
             let label = document.create_element("span").unwrap();
@@ -377,7 +369,9 @@ pub fn render_vibe_ui_node(document: &Document, node: &VibeUiNode) -> Element {
             if !violations.is_empty() {
                 let viol_box = document.create_element("div").unwrap();
                 let vb_el: HtmlElement = viol_box.clone().dyn_into().unwrap();
-                vb_el.style().set_css_text("padding-left: 18px; margin-top: 2px;");
+                vb_el
+                    .style()
+                    .set_css_text("padding-left: 18px; margin-top: 2px;");
 
                 for v in violations {
                     let d = document.create_element("div").unwrap();
@@ -409,7 +403,8 @@ pub fn render_vibe_ui_node(document: &Document, node: &VibeUiNode) -> Element {
             .unwrap();
 
             let l_span = document.create_element("span").unwrap();
-            l_span.set_attribute("style", "color: var(--text-muted);")
+            l_span
+                .set_attribute("style", "color: var(--text-muted);")
                 .unwrap();
             l_span.set_text_content(Some(label));
             row.append_child(&l_span).unwrap();
@@ -434,8 +429,9 @@ pub fn render_vibe_ui_node(document: &Document, node: &VibeUiNode) -> Element {
             let btn = document.create_element("button").unwrap();
             btn.set_class_name(class_name);
             let b_el: HtmlElement = btn.clone().dyn_into().unwrap();
-            b_el.style()
-                .set_css_text("padding: 2px 8px; font-size: 9px; cursor: pointer; margin-top: 4px;");
+            b_el.style().set_css_text(
+                "padding: 2px 8px; font-size: 9px; cursor: pointer; margin-top: 4px;",
+            );
             btn.set_text_content(Some(label));
 
             let act = action.clone();
@@ -566,7 +562,9 @@ pub fn render_live_vibe_ui(document: &Document, default_source: &str) -> Element
     let apply_btn = document.create_element("button").unwrap();
     apply_btn.set_class_name("vibe-run-btn");
     let ab_el: HtmlElement = apply_btn.clone().dyn_into().unwrap();
-    ab_el.style().set_css_text("align-self: flex-end; padding: 2px 8px; font-size: 9px;");
+    ab_el
+        .style()
+        .set_css_text("align-self: flex-end; padding: 2px 8px; font-size: 9px;");
     apply_btn.set_text_content(Some("\u{25B6} Hot-Reload UI"));
     editor_body.append_child(&apply_btn).unwrap();
 
@@ -703,10 +701,19 @@ mod tests {
             return panel;
         "#;
         let res = eval_vibe_ui_script(script);
-        assert!(res.is_ok(), "Failed to eval Vibe UI script: {:?}", res.err());
+        assert!(
+            res.is_ok(),
+            "Failed to eval Vibe UI script: {:?}",
+            res.err()
+        );
         let node = res.unwrap();
         match node {
-            VibeUiNode::DockPanel { title, badge, children, .. } => {
+            VibeUiNode::DockPanel {
+                title,
+                badge,
+                children,
+                ..
+            } => {
                 assert_eq!(title, "Test Panel");
                 assert_eq!(badge, Some("Active".into()));
                 assert_eq!(children.len(), 1);
@@ -719,8 +726,15 @@ mod tests {
     fn test_default_aura_tray_script_eval() {
         let script = default_aura_tray_vibe_script();
         let res = eval_vibe_ui_script(script);
-        assert!(res.is_ok(), "Failed to eval default Aura script: {:?}", res.err());
-        if let VibeUiNode::DockPanel { title, children, .. } = res.unwrap() {
+        assert!(
+            res.is_ok(),
+            "Failed to eval default Aura script: {:?}",
+            res.err()
+        );
+        if let VibeUiNode::DockPanel {
+            title, children, ..
+        } = res.unwrap()
+        {
             assert_eq!(title, "Aura Tray");
             assert_eq!(children.len(), 3);
         } else {

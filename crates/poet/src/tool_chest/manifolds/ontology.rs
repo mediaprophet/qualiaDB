@@ -162,5 +162,6 @@ pub fn ontology_manifold_seed() -> ManifoldSeed {
                 dock: DockPosition::Right,
             },
         ],
+        ..Default::default()
     }
 }

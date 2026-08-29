@@ -8,10 +8,10 @@ use crate::span::Span;
 use crate::value::Value;
 use std::collections::{HashMap, HashSet};
 
-mod expr;
 mod call;
-mod stmt;
+mod expr;
 mod program;
+mod stmt;
 
 pub struct Env {
     pub vars: HashMap<String, Value>,
@@ -576,10 +576,7 @@ pub(super) fn match_pat(p: &Pattern, v: &Value, env: &mut Env) -> bool {
         },
         Pattern::Constructor { name, args } => match v {
             Value::List(items)
-                if matches!(
-                    name.as_str(),
-                    "vec2" | "vec3" | "vec4" | "mat3" | "mat4"
-                ) =>
+                if matches!(name.as_str(), "vec2" | "vec3" | "vec4" | "mat3" | "mat4") =>
             {
                 if items.len() == args.len() {
                     args.iter()
@@ -638,7 +635,11 @@ pub(super) fn collect_pat_idents(pat: &Pattern, out: &mut Vec<String>) {
     }
 }
 
-pub(super) fn budget_steps<H: Host>(args: &[NamedArg], env: &mut Env, eng: &mut Engine<H>) -> Option<u64> {
+pub(super) fn budget_steps<H: Host>(
+    args: &[NamedArg],
+    env: &mut Env,
+    eng: &mut Engine<H>,
+) -> Option<u64> {
     for a in args {
         if a.name == "steps" {
             return eng

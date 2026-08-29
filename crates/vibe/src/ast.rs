@@ -519,7 +519,7 @@ pub enum Literal {
     Bool(bool),
     Int(i64),
     UInt(u64),
-    Float(u64), // f64 bits
+    Float(u64),                            // f64 bits
     Quantity { value: u64, unit: String }, // f64 bits + unit symbol / IRI
     String(String),
     Color(ColorLit),

@@ -443,7 +443,10 @@ pub async fn start_local_daemon_with_options(
                     ledger.warning_issued_at = None;
                 } else if liability >= 0.010 && ledger.warning_issued_at.is_none() {
                     // SOFT LIMIT
-                    println!("[Micropayment Engine] {} hit Soft Limit (${:.4}). Emitting DebtQuin. Grace Period started.", peer_id, liability);
+                    println!(
+                        "[Micropayment Engine] {} hit Soft Limit (${:.4}). Emitting DebtQuin. Grace Period started.",
+                        peer_id, liability
+                    );
                     // 1. Emit DebtQuin to local graph
                     // query_engine.insert_debt_quin(&peer_id, liability);
 

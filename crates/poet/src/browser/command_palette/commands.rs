@@ -9,6 +9,81 @@ pub(super) struct CommandEntry {
 pub(super) fn build_command_list() -> Vec<CommandEntry> {
     vec![
         CommandEntry {
+            icon: "\u{1F3E0}",
+            label: "Open Construct: POET",
+            shortcut: "",
+        },
+        CommandEntry {
+            icon: "\u{2764}",
+            label: "Open Construct: Health",
+            shortcut: "",
+        },
+        CommandEntry {
+            icon: "\u{1F9EA}",
+            label: "Open Construct: Research lab",
+            shortcut: "",
+        },
+        CommandEntry {
+            icon: "\u{1F3A8}",
+            label: "Open Construct: Studio",
+            shortcut: "",
+        },
+        CommandEntry {
+            icon: "\u{2696}",
+            label: "Open Construct: Rights",
+            shortcut: "",
+        },
+        CommandEntry {
+            icon: "\u{1F578}",
+            label: "Open Construct: Knowledge",
+            shortcut: "",
+        },
+        CommandEntry {
+            icon: "\u{1F91D}",
+            label: "Open Construct: Projects",
+            shortcut: "",
+        },
+        CommandEntry {
+            icon: "\u{1F9B4}",
+            label: "Anatomy manifold",
+            shortcut: "",
+        },
+        CommandEntry {
+            icon: "\u{1F4E6}",
+            label: "Construct Shelf",
+            shortcut: "",
+        },
+        CommandEntry {
+            icon: "\u{2795}",
+            label: "Author manifold",
+            shortcut: "",
+        },
+        CommandEntry {
+            icon: "\u{1F4E6}",
+            label: "Author container",
+            shortcut: "",
+        },
+        CommandEntry {
+            icon: "\u{1F517}",
+            label: "Author nested link",
+            shortcut: "",
+        },
+        CommandEntry {
+            icon: "\u{1F331}",
+            label: "Author subject",
+            shortcut: "",
+        },
+        CommandEntry {
+            icon: "\u{2191}",
+            label: "Pop nested manifold",
+            shortcut: "",
+        },
+        CommandEntry {
+            icon: "\u{1F465}",
+            label: "Invite participant",
+            shortcut: "",
+        },
+        CommandEntry {
             icon: "\u{1F50C}",
             label: "New Document",
             shortcut: "Ctrl+N",

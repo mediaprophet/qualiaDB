@@ -15,14 +15,22 @@ pub fn AuraTray(
     #[props(default = 98)] certainty: u8,
     #[props(default = 48)] super_quins_count: usize,
 ) -> Element {
-    let status_color = if conformant { "var(--accent-emerald, #00f2a9)" } else { "var(--accent-rose, #ef4444)" };
-    let status_text = if conformant { "Full Conformance" } else { "SHACL Violations" };
+    let status_color = if conformant {
+        "var(--accent-emerald, #00f2a9)"
+    } else {
+        "var(--accent-rose, #ef4444)"
+    };
+    let status_text = if conformant {
+        "Full Conformance"
+    } else {
+        "SHACL Violations"
+    };
 
     rsx! {
         div {
             class: "poet-aura-tray",
             style: "display:flex;align-items:center;justify-content:space-between;padding:4px 8px;background:var(--surface-panel);border:1px solid var(--border-subtle);border-radius:var(--radius-xs);font-family:var(--font-mono);font-size:10px;margin-top:6px;",
-            
+
             // Left: SHACL Conformance & Status
             div { style: "display:flex;align-items:center;gap:6px;",
                 span {

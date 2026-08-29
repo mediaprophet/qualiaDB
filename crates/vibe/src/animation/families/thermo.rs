@@ -33,7 +33,11 @@ pub fn eval(preset: &str, t: f64) -> AnimationSample {
             let normalized_intensity = ((temp_k - 300.0) / 5700.0).powi(4);
             AnimationSample {
                 scalar: normalized_intensity,
-                vector: [normalized_intensity, normalized_intensity * 0.6, normalized_intensity * 0.2],
+                vector: [
+                    normalized_intensity,
+                    normalized_intensity * 0.6,
+                    normalized_intensity * 0.2,
+                ],
                 motor: Motor::identity(),
                 secondary: temp_k,
                 settled: temp_k >= 6000.0,

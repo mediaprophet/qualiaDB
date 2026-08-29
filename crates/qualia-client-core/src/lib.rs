@@ -64,6 +64,8 @@ pub mod node_identity;
 pub mod ollama_harness;
 pub mod ontology_router;
 pub mod ontology_workbench;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod poet_library_provider;
 pub mod prerequisites;
 pub mod project_collab;
 #[cfg(not(target_arch = "wasm32"))]

@@ -2,7 +2,7 @@
 //!
 //! Copyright (c) 2026 Timothy Charles Holborn. All rights reserved.
 
-use wasm_bindgen::JsCast;
+use wasm_bindgen::{prelude::Closure, JsCast};
 use web_sys::{Document, Element, HtmlElement};
 
 /// Social chat graph with messages and agent avatars.
@@ -10,15 +10,33 @@ pub fn build_social_chat_view(document: &Document) -> Element {
     let wrapper = document.create_element("div").unwrap();
 
     let messages: &[(&str, &str, &str, &str, &str, bool, &str)] = &[
-        ("TH", "Timothy Charles Holborn", "14:38",
-         "North Spring looks clearer after last night's rain; the field notes should capture that.",
-         "subjective", false, "\u{1F9E0}"),
-        ("SP", "Sentinel Planner AI", "14:39",
-         "Telemetry sensor confirms flow at 142.5 L/m with 221.5 Hz acoustic resonance.",
-         "objective", true, "\u{1F50C}"),
-        ("FR", "Fiduciary Rights AI", "14:40",
-         "Asserted legal quad: <<[ site:NorthSpring hydro:status \"Monitored\" ]>>.",
-         "normative", true, "\u{2696}"),
+        (
+            "TH",
+            "Timothy Charles Holborn",
+            "14:38",
+            "North Spring looks clearer after last night's rain; the field notes should capture that.",
+            "subjective",
+            false,
+            "\u{1F9E0}",
+        ),
+        (
+            "SP",
+            "Sentinel Planner AI",
+            "14:39",
+            "Telemetry sensor confirms flow at 142.5 L/m with 221.5 Hz acoustic resonance.",
+            "objective",
+            true,
+            "\u{1F50C}",
+        ),
+        (
+            "FR",
+            "Fiduciary Rights AI",
+            "14:40",
+            "Asserted legal quad: <<[ site:NorthSpring hydro:status \"Monitored\" ]>>.",
+            "normative",
+            true,
+            "\u{2696}",
+        ),
     ];
 
     for (avatar, sender, time, text, epistemic, is_ai, avatar_icon) in messages {
@@ -277,6 +295,9 @@ pub fn build_vibescript_console(document: &Document) -> Element {
     toolbar.set_class_name("vibe-toolbar");
     let run_btn = document.create_element("button").unwrap();
     run_btn.set_class_name("vibe-run-btn");
+    run_btn
+        .set_attribute("data-instrument-action", "code:run")
+        .unwrap();
     run_btn.set_text_content(Some("\u{25B6} Run"));
     toolbar.append_child(&run_btn).unwrap();
     let diag_btn = document.create_element("button").unwrap();
@@ -287,42 +308,97 @@ pub fn build_vibescript_console(document: &Document) -> Element {
 
     let editor = document.create_element("div").unwrap();
     editor.set_class_name("vibe-editor");
+    editor.set_attribute("contenteditable", "true").unwrap();
+    editor
+        .set_attribute("data-state-key", "vibescript-source")
+        .unwrap();
+    editor
+        .set_attribute("aria-label", "VibeScript source")
+        .unwrap();
     editor.set_text_content(Some(
-        "// VibeScript \u{2014} human door into Qualia\n\
-         @intent social:connection_request {\n\
-         \x20\x20target: did:qualia:alice\n\
-         \x20\x20predicate: soc:friendship\n\
-         \x20\x20proof: zkp:age_over_18\n\
-         }\n\
-         \n\
-         @intent social:assess_risk {\n\
-         \x20\x20target: did:qualia:alice\n\
-         \x20\x20indicators: [new-account, no-shared-contacts]\n\
-         }",
+        "// Author in *your* construct (POET shell). Not a shipped world.\n\
+         capability.invoke(\"Poet.manifold_create\", { label: \"Cellular structure\", nest: true })\n\
+         capability.invoke(\"Poet.container_place\", { container_type: \"doc\", title: \"Field notes\" })\n\
+         capability.invoke(\"Poet.nested_link\", { to: \"anatomy\", title: \"Anatomy lens\" })\n\
+         capability.invoke(\"Poet.subject_declare\", { label: \"North Spring catchment\" })\n\
+         capability.invoke(\"Poet.manifold_create\", { label: \"Camping sites\", social: true })\n\
+         capability.invoke(\"Poet.participant_invite\", { did: \"did:qualia:alice\", role: \"member\" })\n",
     ));
     console.append_child(&editor).unwrap();
 
     let output = document.create_element("div").unwrap();
     output.set_class_name("vibe-output");
-    let line1 = document.create_element("div").unwrap();
-    line1.set_class_name("vibe-out-line");
-    line1.set_text_content(Some(
-        "\u{2705} Intent dispatched: social:connection_request",
-    ));
-    let line2 = document.create_element("div").unwrap();
-    line2.set_class_name("vibe-out-line");
-    line2.set_text_content(Some("\u{2705} Risk assessment: low (2 indicators)"));
-    let line3 = document.create_element("div").unwrap();
-    line3.set_class_name("vibe-out-line");
-    line3.set_text_content(Some(
-        "\u{2139}\u{FE0F} Receipt: 0x8f...a42 \u{00B7} CBOR-LD: 184 bytes",
-    ));
-    output.append_child(&line1).unwrap();
-    output.append_child(&line2).unwrap();
-    output.append_child(&line3).unwrap();
+    output.set_text_content(Some("No VibeScript has been executed in this container."));
     console.append_child(&output).unwrap();
 
+    wire_vibescript_action(&run_btn, &editor, &output, false);
+    wire_vibescript_action(&diag_btn, &editor, &output, true);
+
     console
+}
+
+fn wire_vibescript_action(button: &Element, editor: &Element, output: &Element, as_cell: bool) {
+    let editor = editor.clone();
+    let output = output.clone();
+    let closure = Closure::wrap(Box::new(move |_event: web_sys::Event| {
+        let source = editor.text_content().unwrap_or_default();
+        if source.trim().is_empty() {
+            output.set_attribute("data-honesty", "error").ok();
+            output.set_text_content(Some("Enter VibeScript source before running."));
+            return;
+        }
+        let authored = super::manifold_authoring::parse_authoring_ops(&source);
+        if !authored.is_empty() {
+            let lines = super::manifold_authoring::apply_authoring_ops(&authored);
+            let mut log = String::from("POET authoring (local shell, not a canned world):\n");
+            for line in &lines {
+                log.push_str("  ");
+                log.push_str(line);
+                log.push('\n');
+            }
+            output.set_attribute("data-honesty", "live").ok();
+            output.set_text_content(Some(&log));
+            let other_invokes = source.matches("capability.invoke").count() > authored.len();
+            if !other_invokes {
+                return;
+            }
+        }
+        if !super::native_daemon::is_daemon_connected() {
+            output.set_attribute("data-honesty", "unavailable").ok();
+            output.set_text_content(Some(
+                "Unavailable: start the local QualiaDB daemon to execute VibeScript.",
+            ));
+            return;
+        }
+        output.set_attribute("data-honesty", "running").ok();
+        output.set_text_content(Some("Executing VibeScript on the native daemon…"));
+        let output = output.clone();
+        wasm_bindgen_futures::spawn_local(async move {
+            match super::native_daemon::daemon_eval(&source, as_cell, None).await {
+                Ok(response) if response.ok => {
+                    output.set_attribute("data-honesty", "live").ok();
+                    output.set_text_content(Some(&response.value));
+                }
+                Ok(response) => {
+                    output.set_attribute("data-honesty", "error").ok();
+                    output.set_text_content(Some(
+                        response
+                            .diagnostic
+                            .as_deref()
+                            .unwrap_or("VibeScript evaluation failed."),
+                    ));
+                }
+                Err(error) => {
+                    output.set_attribute("data-honesty", "error").ok();
+                    output.set_text_content(Some(&error));
+                }
+            }
+        });
+    }) as Box<dyn FnMut(web_sys::Event)>);
+    button
+        .add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())
+        .unwrap();
+    closure.forget();
 }
 
 /// GIS map view with layer controls and agent pins.
@@ -348,6 +424,15 @@ pub fn build_gis_map_view(document: &Document) -> Element {
             btn.class_list().add_1("active").unwrap();
         }
         btn.set_text_content(Some(label));
+        let toggle = btn.clone();
+        let closure = Closure::wrap(Box::new(move |_event: web_sys::Event| {
+            let active = toggle.class_list().contains("active");
+            let _ = toggle.class_list().toggle_with_force("active", !active);
+            let _ = toggle.set_attribute("aria-pressed", if active { "false" } else { "true" });
+        }) as Box<dyn FnMut(web_sys::Event)>);
+        btn.add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())
+            .unwrap();
+        closure.forget();
         layer_bar.append_child(&btn).unwrap();
     }
     wrapper.append_child(&layer_bar).unwrap();
@@ -433,9 +518,12 @@ pub fn build_gis_map_view(document: &Document) -> Element {
 
     wrapper.append_child(&svg).unwrap();
     wrapper
+        .append_child(&super::render_preview::build(document, "map", 800, 480))
+        .unwrap();
+    wrapper
 }
 
-/// 3D media viewport placeholder with spinning cube.
+/// Native-rendered 3D kinematics preview when a renderer daemon is available.
 pub fn build_media_3d_view(document: &Document) -> Element {
     let viewport = document.create_element("div").unwrap();
     viewport.set_class_name("media-3d-viewport");
@@ -449,9 +537,15 @@ pub fn build_media_3d_view(document: &Document) -> Element {
 
     let label = document.create_element("div").unwrap();
     label.set_text_content(Some(
-        "3D Kinematics Viewport \u{2014} awaiting wgpu integration",
+        "3D Kinematics Viewport · request a genuine offscreen frame from the connected native renderer.",
     ));
+    label.set_attribute("role", "status").unwrap();
+    label.set_attribute("data-honesty", "present").unwrap();
     inner.append_child(&label).unwrap();
+
+    inner
+        .append_child(&super::render_preview::build(document, "media", 800, 480))
+        .unwrap();
 
     viewport.append_child(&inner).unwrap();
     viewport
@@ -474,27 +568,53 @@ pub fn build_reputation_view(document: &Document) -> Element {
     let header = document.create_element("div").unwrap();
     header.set_class_name("vibe-toolbar");
     let header_el: HtmlElement = header.clone().dyn_into().unwrap();
-    header_el.style().set_css_text("justify-content: space-between; padding: 4px 8px;");
+    header_el
+        .style()
+        .set_css_text("justify-content: space-between; padding: 4px 8px;");
 
     let title = document.create_element("span").unwrap();
     title.set_text_content(Some("\u{1F91D} Fiduciary Reputation Index"));
     let title_el: HtmlElement = title.clone().dyn_into().unwrap();
-    title_el.style().set_css_text("font-weight: 700; color: var(--accent-cyan); font-size: 11px;");
+    title_el
+        .style()
+        .set_css_text("font-weight: 700; color: var(--accent-cyan); font-size: 11px;");
     header.append_child(&title).unwrap();
 
     let score = document.create_element("span").unwrap();
     score.set_text_content(Some("Score: 99.3% \u{00B7} Tier: AAA+"));
     let score_el: HtmlElement = score.clone().dyn_into().unwrap();
-    score_el.style().set_css_text("font-size: 10px; color: var(--accent-emerald); font-weight: 600;");
+    score_el
+        .style()
+        .set_css_text("font-size: 10px; color: var(--accent-emerald); font-weight: 600;");
     header.append_child(&score).unwrap();
     wrapper.append_child(&header).unwrap();
 
     // 4 Pillar Meters
     let pillars = [
-        ("Trustworthiness", 99.4, "var(--accent-cyan)", "Ed25519 signature consensus verified"),
-        ("Competence", 98.1, "var(--accent-emerald)", "SHACL & formal proof verification: 100% pass"),
-        ("Integrity", 100.0, "var(--accent-violet)", "42MB Sentinel budget adhered; 0 heap leaks"),
-        ("Conduct", 99.8, "var(--accent-amber)", "Cooperative integrity permanent audit log clean"),
+        (
+            "Trustworthiness",
+            99.4,
+            "var(--accent-cyan)",
+            "Ed25519 signature consensus verified",
+        ),
+        (
+            "Competence",
+            98.1,
+            "var(--accent-emerald)",
+            "SHACL & formal proof verification: 100% pass",
+        ),
+        (
+            "Integrity",
+            100.0,
+            "var(--accent-violet)",
+            "42MB Sentinel budget adhered; 0 heap leaks",
+        ),
+        (
+            "Conduct",
+            99.8,
+            "var(--accent-amber)",
+            "Cooperative integrity permanent audit log clean",
+        ),
     ];
 
     for (name, pct, color, desc) in pillars {
@@ -507,7 +627,9 @@ pub fn build_reputation_view(document: &Document) -> Element {
 
         let row = document.create_element("div").unwrap();
         let row_el: HtmlElement = row.clone().dyn_into().unwrap();
-        row_el.style().set_css_text("display: flex; justify-content: space-between; font-size: 10px;");
+        row_el
+            .style()
+            .set_css_text("display: flex; justify-content: space-between; font-size: 10px;");
 
         let name_el = document.create_element("span").unwrap();
         name_el.set_text_content(Some(name));
@@ -516,7 +638,9 @@ pub fn build_reputation_view(document: &Document) -> Element {
 
         let val_el = document.create_element("span").unwrap();
         val_el.set_text_content(Some(&format!("{:.1}%", pct)));
-        val_el.set_attribute("style", &format!("color: {}; font-weight: 700;", color)).unwrap();
+        val_el
+            .set_attribute("style", &format!("color: {}; font-weight: 700;", color))
+            .unwrap();
         row.append_child(&val_el).unwrap();
         card.append_child(&row).unwrap();
 
@@ -537,7 +661,9 @@ pub fn build_reputation_view(document: &Document) -> Element {
 
         let desc_el = document.create_element("span").unwrap();
         desc_el.set_text_content(Some(desc));
-        desc_el.set_attribute("style", "font-size: 9px; color: var(--text-muted);").unwrap();
+        desc_el
+            .set_attribute("style", "font-size: 9px; color: var(--text-muted);")
+            .unwrap();
         card.append_child(&desc_el).unwrap();
 
         wrapper.append_child(&card).unwrap();
@@ -560,17 +686,49 @@ pub fn build_capabilities_view(document: &Document) -> Element {
     let title = document.create_element("span").unwrap();
     title.set_text_content(Some("\u{1F511} Active Capability Manifests"));
     let title_el: HtmlElement = title.clone().dyn_into().unwrap();
-    title_el.style().set_css_text("font-weight: 700; color: var(--accent-cyan); font-size: 11px;");
+    title_el
+        .style()
+        .set_css_text("font-weight: 700; color: var(--accent-cyan); font-size: 11px;");
     header.append_child(&title).unwrap();
     wrapper.append_child(&header).unwrap();
 
     let caps = [
-        ("graph:read_triple", "Active", "var(--accent-emerald)", "Query quads within author scope"),
-        ("graph:write_quin", "Active", "var(--accent-emerald)", "Emit 48-byte Super-Quins into 42MB arena"),
-        ("spatial:matrix_transform", "Active", "var(--accent-emerald)", "10D affine manifold coordinate projection"),
-        ("webrtc:p2p_channel", "Active", "var(--accent-emerald)", "Swarm DataChannel state synchronization"),
-        ("qpu:vqe_scheduler", "Scoped", "var(--accent-amber)", "Quantum chemistry job queue execution"),
-        ("daemon:native_exec", "Restricted", "var(--accent-rose)", "Loopback IPC command dispatch"),
+        (
+            "graph:read_triple",
+            "Active",
+            "var(--accent-emerald)",
+            "Query quads within author scope",
+        ),
+        (
+            "graph:write_quin",
+            "Active",
+            "var(--accent-emerald)",
+            "Emit 48-byte Super-Quins into 42MB arena",
+        ),
+        (
+            "spatial:matrix_transform",
+            "Active",
+            "var(--accent-emerald)",
+            "10D affine manifold coordinate projection",
+        ),
+        (
+            "webrtc:p2p_channel",
+            "Active",
+            "var(--accent-emerald)",
+            "Swarm DataChannel state synchronization",
+        ),
+        (
+            "qpu:vqe_scheduler",
+            "Scoped",
+            "var(--accent-amber)",
+            "Quantum chemistry job queue execution",
+        ),
+        (
+            "daemon:native_exec",
+            "Restricted",
+            "var(--accent-rose)",
+            "Loopback IPC command dispatch",
+        ),
     ];
 
     for (name, status, status_color, detail) in caps {
@@ -583,16 +741,22 @@ pub fn build_capabilities_view(document: &Document) -> Element {
 
         let left = document.create_element("div").unwrap();
         let left_el: HtmlElement = left.clone().dyn_into().unwrap();
-        left_el.style().set_css_text("display: flex; flex-direction: column; gap: 2px;");
+        left_el
+            .style()
+            .set_css_text("display: flex; flex-direction: column; gap: 2px;");
 
         let name_el = document.create_element("span").unwrap();
         name_el.set_text_content(Some(name));
-        name_el.set_attribute("style", "font-weight: 600; font-size: 11px;").unwrap();
+        name_el
+            .set_attribute("style", "font-weight: 600; font-size: 11px;")
+            .unwrap();
         left.append_child(&name_el).unwrap();
 
         let detail_el = document.create_element("span").unwrap();
         detail_el.set_text_content(Some(detail));
-        detail_el.set_attribute("style", "font-size: 9px; color: var(--text-muted);").unwrap();
+        detail_el
+            .set_attribute("style", "font-size: 9px; color: var(--text-muted);")
+            .unwrap();
         left.append_child(&detail_el).unwrap();
         card.append_child(&left).unwrap();
 
@@ -626,7 +790,9 @@ pub fn build_settings_view(document: &Document) -> Element {
     let title = document.create_element("span").unwrap();
     title.set_text_content(Some("\u{2699}\u{FE0F} Poet System Preferences"));
     let title_el: HtmlElement = title.clone().dyn_into().unwrap();
-    title_el.style().set_css_text("font-weight: 700; color: var(--accent-cyan); font-size: 11px;");
+    title_el
+        .style()
+        .set_css_text("font-weight: 700; color: var(--accent-cyan); font-size: 11px;");
     header.append_child(&title).unwrap();
     wrapper.append_child(&header).unwrap();
 
@@ -636,7 +802,10 @@ pub fn build_settings_view(document: &Document) -> Element {
         ("DirectML / WebGPU Backend", "wgpu 30 Shared Context"),
         ("Daemon SSE Transport", "Connected \u{00B7} 127.0.0.1:3001"),
         ("Quantum Chemistry Engine", "Pure Rust Autodiff DFT Enabled"),
-        ("Auto-Save & WAL Journals", "Continuous Real-Time Checkpointing"),
+        (
+            "Auto-Save & WAL Journals",
+            "Continuous Real-Time Checkpointing",
+        ),
     ];
 
     for (label, val) in settings {
@@ -649,12 +818,16 @@ pub fn build_settings_view(document: &Document) -> Element {
 
         let label_el = document.create_element("span").unwrap();
         label_el.set_text_content(Some(label));
-        label_el.set_attribute("style", "color: var(--text-secondary);").unwrap();
+        label_el
+            .set_attribute("style", "color: var(--text-secondary);")
+            .unwrap();
         row.append_child(&label_el).unwrap();
 
         let val_el = document.create_element("span").unwrap();
         val_el.set_text_content(Some(val));
-        val_el.set_attribute("style", "color: var(--accent-cyan); font-weight: 600;").unwrap();
+        val_el
+            .set_attribute("style", "color: var(--accent-cyan); font-weight: 600;")
+            .unwrap();
         row.append_child(&val_el).unwrap();
 
         wrapper.append_child(&row).unwrap();
@@ -677,15 +850,37 @@ pub fn build_channels_view(document: &Document) -> Element {
     let title = document.create_element("span").unwrap();
     title.set_text_content(Some("\u{1F4E1} Swarm Federation Channels"));
     let title_el: HtmlElement = title.clone().dyn_into().unwrap();
-    title_el.style().set_css_text("font-weight: 700; color: var(--accent-cyan); font-size: 11px;");
+    title_el
+        .style()
+        .set_css_text("font-weight: 700; color: var(--accent-cyan); font-size: 11px;");
     header.append_child(&title).unwrap();
     wrapper.append_child(&header).unwrap();
 
     let channels = [
-        ("#direct-fiduciary", "1:1 Consent Pipeline", "Online", "2 peers"),
-        ("#topic:catchment:water-quality", "Hydrology Sensor Telemetry", "Active", "12 nodes"),
-        ("#topic:chemistry:vqe-grid", "Distributed Q-Forge Scheduler", "Syncing", "6 nodes"),
-        ("#federation:mesh-commons", "Cross-Domain Interoperability", "Online", "34 peers"),
+        (
+            "#direct-fiduciary",
+            "1:1 Consent Pipeline",
+            "Online",
+            "2 peers",
+        ),
+        (
+            "#topic:catchment:water-quality",
+            "Hydrology Sensor Telemetry",
+            "Active",
+            "12 nodes",
+        ),
+        (
+            "#topic:chemistry:vqe-grid",
+            "Distributed Q-Forge Scheduler",
+            "Syncing",
+            "6 nodes",
+        ),
+        (
+            "#federation:mesh-commons",
+            "Cross-Domain Interoperability",
+            "Online",
+            "34 peers",
+        ),
     ];
 
     for (name, desc, status, peers) in channels {
@@ -698,31 +893,49 @@ pub fn build_channels_view(document: &Document) -> Element {
 
         let left = document.create_element("div").unwrap();
         let left_el: HtmlElement = left.clone().dyn_into().unwrap();
-        left_el.style().set_css_text("display: flex; flex-direction: column; gap: 2px;");
+        left_el
+            .style()
+            .set_css_text("display: flex; flex-direction: column; gap: 2px;");
 
         let name_el = document.create_element("span").unwrap();
         name_el.set_text_content(Some(name));
-        name_el.set_attribute("style", "font-weight: 600; font-size: 11px; color: var(--accent-cyan);").unwrap();
+        name_el
+            .set_attribute(
+                "style",
+                "font-weight: 600; font-size: 11px; color: var(--accent-cyan);",
+            )
+            .unwrap();
         left.append_child(&name_el).unwrap();
 
         let desc_el = document.create_element("span").unwrap();
         desc_el.set_text_content(Some(desc));
-        desc_el.set_attribute("style", "font-size: 9px; color: var(--text-muted);").unwrap();
+        desc_el
+            .set_attribute("style", "font-size: 9px; color: var(--text-muted);")
+            .unwrap();
         left.append_child(&desc_el).unwrap();
         row.append_child(&left).unwrap();
 
         let right = document.create_element("div").unwrap();
         let right_el: HtmlElement = right.clone().dyn_into().unwrap();
-        right_el.style().set_css_text("text-align: right; font-size: 9px;");
+        right_el
+            .style()
+            .set_css_text("text-align: right; font-size: 9px;");
 
         let status_el = document.create_element("span").unwrap();
         status_el.set_text_content(Some(&format!("\u{25CF} {}", status)));
-        status_el.set_attribute("style", "color: var(--accent-emerald); font-weight: 600; display: block;").unwrap();
+        status_el
+            .set_attribute(
+                "style",
+                "color: var(--accent-emerald); font-weight: 600; display: block;",
+            )
+            .unwrap();
         right.append_child(&status_el).unwrap();
 
         let peers_el = document.create_element("span").unwrap();
         peers_el.set_text_content(Some(peers));
-        peers_el.set_attribute("style", "color: var(--text-muted);").unwrap();
+        peers_el
+            .set_attribute("style", "color: var(--text-muted);")
+            .unwrap();
         right.append_child(&peers_el).unwrap();
         row.append_child(&right).unwrap();
 
@@ -746,15 +959,41 @@ pub fn build_presence_view(document: &Document) -> Element {
     let title = document.create_element("span").unwrap();
     title.set_text_content(Some("\u{1F465} Swarm Node Presence"));
     let title_el: HtmlElement = title.clone().dyn_into().unwrap();
-    title_el.style().set_css_text("font-weight: 700; color: var(--accent-cyan); font-size: 11px;");
+    title_el
+        .style()
+        .set_css_text("font-weight: 700; color: var(--accent-cyan); font-size: 11px;");
     header.append_child(&title).unwrap();
     wrapper.append_child(&header).unwrap();
 
     let peers = [
-        ("did:qualia:timothy_charles_holborn", "Human Principal", "\u{1F468}\u{200D}\u{1F4BB}", "Online \u{2014} Active", "var(--accent-emerald)"),
-        ("did:qualia:agent-sentinel-42", "42MB Sentinel Daemon", "\u{1F6E1}\u{FE0F}", "Online \u{2014} Monitoring", "var(--accent-emerald)"),
-        ("did:qualia:agent-qforge-gpu", "Q-Forge Accelerator", "\u{26A1}", "Active \u{2014} Compute Loop", "var(--accent-amber)"),
-        ("did:qualia:peer-melbourne-node", "Edge Swarm Node", "\u{1F310}", "Idle \u{2014} Ping 12ms", "var(--text-secondary)"),
+        (
+            "did:qualia:timothy_charles_holborn",
+            "Human Principal",
+            "\u{1F468}\u{200D}\u{1F4BB}",
+            "Online \u{2014} Active",
+            "var(--accent-emerald)",
+        ),
+        (
+            "did:qualia:agent-sentinel-42",
+            "42MB Sentinel Daemon",
+            "\u{1F6E1}\u{FE0F}",
+            "Online \u{2014} Monitoring",
+            "var(--accent-emerald)",
+        ),
+        (
+            "did:qualia:agent-qforge-gpu",
+            "Q-Forge Accelerator",
+            "\u{26A1}",
+            "Active \u{2014} Compute Loop",
+            "var(--accent-amber)",
+        ),
+        (
+            "did:qualia:peer-melbourne-node",
+            "Edge Swarm Node",
+            "\u{1F310}",
+            "Idle \u{2014} Ping 12ms",
+            "var(--text-secondary)",
+        ),
     ];
 
     for (did, role, icon, status, color) in peers {
@@ -772,23 +1011,35 @@ pub fn build_presence_view(document: &Document) -> Element {
 
         let mid = document.create_element("div").unwrap();
         let mid_el: HtmlElement = mid.clone().dyn_into().unwrap();
-        mid_el.style().set_css_text("flex: 1; display: flex; flex-direction: column; gap: 1px;");
+        mid_el
+            .style()
+            .set_css_text("flex: 1; display: flex; flex-direction: column; gap: 1px;");
 
         let did_el = document.create_element("span").unwrap();
         did_el.set_text_content(Some(did));
-        did_el.set_attribute("style", "font-weight: 600; font-size: 10px; color: var(--text-primary);").unwrap();
+        did_el
+            .set_attribute(
+                "style",
+                "font-weight: 600; font-size: 10px; color: var(--text-primary);",
+            )
+            .unwrap();
         mid.append_child(&did_el).unwrap();
 
         let role_el = document.create_element("span").unwrap();
         role_el.set_text_content(Some(role));
-        role_el.set_attribute("style", "font-size: 9px; color: var(--text-muted);").unwrap();
+        role_el
+            .set_attribute("style", "font-size: 9px; color: var(--text-muted);")
+            .unwrap();
         mid.append_child(&role_el).unwrap();
         row.append_child(&mid).unwrap();
 
         let status_el = document.create_element("span").unwrap();
         status_el.set_text_content(Some(status));
         let s_el: HtmlElement = status_el.clone().dyn_into().unwrap();
-        s_el.style().set_css_text(&format!("font-size: 9px; color: {}; font-weight: 600;", color));
+        s_el.style().set_css_text(&format!(
+            "font-size: 9px; color: {}; font-weight: 600;",
+            color
+        ));
         row.append_child(&status_el).unwrap();
 
         wrapper.append_child(&row).unwrap();
@@ -796,4 +1047,3 @@ pub fn build_presence_view(document: &Document) -> Element {
 
     wrapper
 }
-

@@ -53,7 +53,8 @@ impl LivedMemoryManager {
             id: "mem-001".into(),
             title: "Doctorate Dissertation on Topological Semantics".into(),
             created_epoch: 1_700_000_000,
-            merkle_root_sha256: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855".into(),
+            merkle_root_sha256: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+                .into(),
             sensitivity: MemorySensitivityLevel::PublicCommons,
             cml_summary: "Foundational treatise establishing Super-Quin bit allocation.".into(),
             quin_count: 12_450,
@@ -63,7 +64,8 @@ impl LivedMemoryManager {
             id: "mem-002".into(),
             title: "Private Medical Diagnostic Genome Snapshot".into(),
             created_epoch: 1_750_000_000,
-            merkle_root_sha256: "8f434346648f6b96df89dda901c5176b10a6d83961dd3c1ac88b59b2dc327aa4".into(),
+            merkle_root_sha256: "8f434346648f6b96df89dda901c5176b10a6d83961dd3c1ac88b59b2dc327aa4"
+                .into(),
             sensitivity: MemorySensitivityLevel::ClassifiedSanctuary,
             cml_summary: "High-depth Illumina sequencing aligned with FHIR patient record.".into(),
             quin_count: 85_200,
@@ -123,7 +125,7 @@ pub fn build_lived_memory_view(document: &Document, manager: &LivedMemoryManager
     let root_el: HtmlElement = root.clone().dyn_into().unwrap();
     root_el.style().set_css_text(
         "display: flex; flex-direction: column; flex: 1; padding: 12px; gap: 10px; \
-         background: #020617; color: #f8fafc; overflow-y: auto; font-family: sans-serif;"
+         background: #020617; color: #f8fafc; overflow-y: auto; font-family: sans-serif;",
     );
 
     // Header Toolbar
@@ -132,24 +134,34 @@ pub fn build_lived_memory_view(document: &Document, manager: &LivedMemoryManager
     let header_el: HtmlElement = header.clone().dyn_into().unwrap();
     header_el.style().set_css_text(
         "justify-content: space-between; background: rgba(30, 41, 59, 0.7); \
-         border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; padding: 8px 12px;"
+         border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; padding: 8px 12px;",
     );
 
     let title = document.create_element("span").unwrap();
-    title.set_text_content(Some("\u{1F3DB}\u{FE0F} Lived Memory Archive & Sanctuary Vault"));
+    title.set_text_content(Some(
+        "\u{1F3DB}\u{FE0F} Lived Memory Archive & Sanctuary Vault",
+    ));
     let title_el: HtmlElement = title.clone().dyn_into().unwrap();
-    title_el.style().set_css_text("font-weight: 700; font-size: 13px; color: #38bdf8;");
+    title_el
+        .style()
+        .set_css_text("font-weight: 700; font-size: 13px; color: #38bdf8;");
     header.append_child(&title).unwrap();
 
     let status = document.create_element("span").unwrap();
     status.set_text_content(Some(&format!(
         "Sanctuary Mode: {} \u{25CF} Heart: {} bpm \u{25CF} SpO2: {:.1}%",
-        if manager.sanctuary_unlocked { "Unlocked \u{1F513}" } else { "Locked \u{1F512}" },
+        if manager.sanctuary_unlocked {
+            "Unlocked \u{1F513}"
+        } else {
+            "Locked \u{1F512}"
+        },
         manager.latest_telemetry.heart_rate_bpm,
         manager.latest_telemetry.blood_oxygen_spo2
     )));
     let status_el: HtmlElement = status.clone().dyn_into().unwrap();
-    status_el.style().set_css_text("font-size: 11px; font-family: var(--font-mono); color: #34d399;");
+    status_el
+        .style()
+        .set_css_text("font-size: 11px; font-family: var(--font-mono); color: #34d399;");
     header.append_child(&status).unwrap();
 
     root.append_child(&header).unwrap();
@@ -157,7 +169,9 @@ pub fn build_lived_memory_view(document: &Document, manager: &LivedMemoryManager
     // 2-Column Split: Personal Memory Items on Left, Care Telemetry on Right
     let split = document.create_element("div").unwrap();
     let split_el: HtmlElement = split.clone().dyn_into().unwrap();
-    split_el.style().set_css_text("display: grid; grid-template-columns: 1fr 280px; gap: 10px;");
+    split_el
+        .style()
+        .set_css_text("display: grid; grid-template-columns: 1fr 280px; gap: 10px;");
 
     // Left: Memory Artifacts
     let left = document.create_element("div").unwrap();
@@ -167,7 +181,9 @@ pub fn build_lived_memory_view(document: &Document, manager: &LivedMemoryManager
     let left_title = document.create_element("span").unwrap();
     left_title.set_text_content(Some("\u{1F4C1} Self-Custodial Provenance Artifacts"));
     let left_title_el: HtmlElement = left_title.clone().dyn_into().unwrap();
-    left_title_el.style().set_css_text("font-weight: 700; font-size: 12px; color: #38bdf8;");
+    left_title_el
+        .style()
+        .set_css_text("font-weight: 700; font-size: 12px; color: #38bdf8;");
     left.append_child(&left_title).unwrap();
 
     for art in manager.visible_artifacts() {
@@ -197,7 +213,9 @@ pub fn build_lived_memory_view(document: &Document, manager: &LivedMemoryManager
         let summary = document.create_element("div").unwrap();
         summary.set_text_content(Some(&art.cml_summary));
         let summary_el: HtmlElement = summary.clone().dyn_into().unwrap();
-        summary_el.style().set_css_text("font-size: 11px; color: #cbd5e1;");
+        summary_el
+            .style()
+            .set_css_text("font-size: 11px; color: #cbd5e1;");
         card.append_child(&summary).unwrap();
 
         let meta = document.create_element("div").unwrap();
@@ -226,7 +244,9 @@ pub fn build_lived_memory_view(document: &Document, manager: &LivedMemoryManager
     let right_title = document.create_element("span").unwrap();
     right_title.set_text_content(Some("\u{1FA7A} Ambient Care Circle"));
     let right_title_el: HtmlElement = right_title.clone().dyn_into().unwrap();
-    right_title_el.style().set_css_text("font-weight: 700; font-size: 12px; color: #38bdf8;");
+    right_title_el
+        .style()
+        .set_css_text("font-weight: 700; font-size: 12px; color: #38bdf8;");
     right.append_child(&right_title).unwrap();
 
     let vitals_box = document.create_element("pre").unwrap();
@@ -260,7 +280,10 @@ mod tests {
         assert!(!mgr.sanctuary_unlocked);
         // By default, sanctuary is locked so only 1 public artifact is visible
         assert_eq!(mgr.visible_artifacts().len(), 1);
-        assert_eq!(mgr.visible_artifacts()[0].title, "Doctorate Dissertation on Topological Semantics");
+        assert_eq!(
+            mgr.visible_artifacts()[0].title,
+            "Doctorate Dissertation on Topological Semantics"
+        );
     }
 
     #[test]
@@ -271,7 +294,10 @@ mod tests {
 
         assert!(mgr.unlock_sanctuary("4242"));
         assert_eq!(mgr.visible_artifacts().len(), 2);
-        assert_eq!(mgr.visible_artifacts()[1].title, "Private Medical Diagnostic Genome Snapshot");
+        assert_eq!(
+            mgr.visible_artifacts()[1].title,
+            "Private Medical Diagnostic Genome Snapshot"
+        );
 
         mgr.lock_sanctuary();
         assert_eq!(mgr.visible_artifacts().len(), 1);

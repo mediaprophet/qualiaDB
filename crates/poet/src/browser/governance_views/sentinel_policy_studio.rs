@@ -149,17 +149,27 @@ impl SentinelPolicy {
         steps.push(DryRunStep {
             step_index: 1,
             elapsed_us: 20,
-            description: format!("Evaluating request by role '{}' for action '<{}>'", requester_role, requested_action),
+            description: format!(
+                "Evaluating request by role '{}' for action '<{}>'",
+                requester_role, requested_action
+            ),
             is_match: false,
         });
 
         // 1. Check defeater rules first
         if is_emergency {
-            if let Some(defeater) = self.rules.iter().find(|r| r.is_defeater && r.op == DeonticOp::Permit) {
+            if let Some(defeater) = self
+                .rules
+                .iter()
+                .find(|r| r.is_defeater && r.op == DeonticOp::Permit)
+            {
                 steps.push(DryRunStep {
                     step_index: 2,
                     elapsed_us: 35,
-                    description: format!("Defeater rule '{}' matched on emergency condition: Action APPROVED", defeater.label),
+                    description: format!(
+                        "Defeater rule '{}' matched on emergency condition: Action APPROVED",
+                        defeater.label
+                    ),
                     is_match: true,
                 });
                 return DryRunVerdict {
@@ -173,7 +183,10 @@ impl SentinelPolicy {
 
         // 2. Check standard rules
         for rule in &self.rules {
-            if !rule.is_defeater && (rule.subject_role_or_did == requester_role || rule.subject_role_or_did == "AnyAgent") {
+            if !rule.is_defeater
+                && (rule.subject_role_or_did == requester_role
+                    || rule.subject_role_or_did == "AnyAgent")
+            {
                 if rule.action_iri == requested_action {
                     matching_rule_id = Some(rule.id.clone());
                     match rule.op {
@@ -231,8 +244,12 @@ fn fnv1a_hash(bytes: &[u8]) -> u64 {
 /// Translate natural language prompt to a Deontic Sentinel rule.
 pub fn translate_natural_language_intent(prompt: &str) -> SentinelRule {
     let lower = prompt.to_lowercase();
-    let is_forbid = lower.contains("cannot") || lower.contains("forbid") || lower.contains("prevent") || lower.contains("deny");
-    let is_defeater = lower.contains("emergency") || lower.contains("override") || lower.contains("bypass");
+    let is_forbid = lower.contains("cannot")
+        || lower.contains("forbid")
+        || lower.contains("prevent")
+        || lower.contains("deny");
+    let is_defeater =
+        lower.contains("emergency") || lower.contains("override") || lower.contains("bypass");
 
     let op = if is_forbid {
         DeonticOp::Forbid
@@ -242,7 +259,14 @@ pub fn translate_natural_language_intent(prompt: &str) -> SentinelRule {
 
     SentinelRule {
         id: format!("rule_gen_{:04x}", fnv1a_hash(prompt.as_bytes()) & 0xffff),
-        label: format!("AI Generated Rule from: {}", if prompt.len() > 30 { &prompt[..30] } else { prompt }),
+        label: format!(
+            "AI Generated Rule from: {}",
+            if prompt.len() > 30 {
+                &prompt[..30]
+            } else {
+                prompt
+            }
+        ),
         subject_role_or_did: if lower.contains("doctor") || lower.contains("cardiologist") {
             "Cardiologist".into()
         } else if lower.contains("maya") {
@@ -260,7 +284,11 @@ pub fn translate_natural_language_intent(prompt: &str) -> SentinelRule {
         },
         target_resource_iri: "urn:qualia:patient_record".into(),
         is_defeater,
-        condition: if is_defeater { Some("EmergencyFlag".into()) } else { None },
+        condition: if is_defeater {
+            Some("EmergencyFlag".into())
+        } else {
+            None
+        },
     }
 }
 
@@ -275,7 +303,7 @@ pub fn build_sentinel_policy_studio_view(document: &Document) -> Element {
     let wrapper_el: HtmlElement = wrapper.clone().dyn_into().unwrap();
     wrapper_el.style().set_css_text(
         "display: flex; flex-direction: column; flex: 1; gap: 10px; padding: 12px; \
-         background: #090d16; color: #f8fafc; overflow-y: auto; font-family: sans-serif;"
+         background: #090d16; color: #f8fafc; overflow-y: auto; font-family: sans-serif;",
     );
 
     // Header Toolbar
@@ -284,19 +312,28 @@ pub fn build_sentinel_policy_studio_view(document: &Document) -> Element {
     let header_el: HtmlElement = header.clone().dyn_into().unwrap();
     header_el.style().set_css_text(
         "justify-content: space-between; background: rgba(30, 41, 59, 0.7); \
-         border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 8px 14px;"
+         border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 8px 14px;",
     );
 
     let title = document.create_element("span").unwrap();
-    title.set_text_content(Some("\u{1F6E1}\u{FE0F} Webizen Sentinel Guard & Policy Studio"));
+    title.set_text_content(Some(
+        "\u{1F6E1}\u{FE0F} Webizen Sentinel Guard & Policy Studio",
+    ));
     let title_el: HtmlElement = title.clone().dyn_into().unwrap();
-    title_el.style().set_css_text("font-weight: 700; font-size: 13px; color: #38bdf8;");
+    title_el
+        .style()
+        .set_css_text("font-weight: 700; font-size: 13px; color: #38bdf8;");
     header.append_child(&title).unwrap();
 
     let meta = document.create_element("span").unwrap();
-    meta.set_text_content(Some(&format!("Active Policy: {} (v{}) \u{00B7} 42MB Arena: Optimal", policy.name, policy.version)));
+    meta.set_text_content(Some(&format!(
+        "Active Policy: {} (v{}) \u{00B7} 42MB Arena: Optimal",
+        policy.name, policy.version
+    )));
     let meta_el: HtmlElement = meta.clone().dyn_into().unwrap();
-    meta_el.style().set_css_text("font-family: var(--font-mono); font-size: 11px; color: #94a3b8;");
+    meta_el
+        .style()
+        .set_css_text("font-family: var(--font-mono); font-size: 11px; color: #94a3b8;");
     header.append_child(&meta).unwrap();
 
     wrapper.append_child(&header).unwrap();
@@ -304,20 +341,24 @@ pub fn build_sentinel_policy_studio_view(document: &Document) -> Element {
     // 2-Column Main Workspace
     let grid = document.create_element("div").unwrap();
     let grid_el: HtmlElement = grid.clone().dyn_into().unwrap();
-    grid_el.style().set_css_text("display: grid; grid-template-columns: 1fr 1fr; gap: 12px; flex: 1;");
+    grid_el
+        .style()
+        .set_css_text("display: grid; grid-template-columns: 1fr 1fr; gap: 12px; flex: 1;");
 
     // Left Column: Active Rules List & N3 Code
     let left = document.create_element("div").unwrap();
     let left_el: HtmlElement = left.clone().dyn_into().unwrap();
     left_el.style().set_css_text(
         "background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255, 255, 255, 0.08); \
-         border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 8px;"
+         border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 8px;",
     );
 
     let rules_heading = document.create_element("span").unwrap();
     rules_heading.set_text_content(Some("\u{1F4DC} Active Deontic Rules"));
     let rules_heading_el: HtmlElement = rules_heading.clone().dyn_into().unwrap();
-    rules_heading_el.style().set_css_text("font-size: 12px; font-weight: 600; color: #cbd5e1;");
+    rules_heading_el
+        .style()
+        .set_css_text("font-size: 12px; font-weight: 600; color: #cbd5e1;");
     left.append_child(&rules_heading).unwrap();
 
     for rule in &policy.rules {
@@ -332,13 +373,18 @@ pub fn build_sentinel_policy_studio_view(document: &Document) -> Element {
         let card_title = document.create_element("span").unwrap();
         card_title.set_text_content(Some(&format!("{} [{}]", rule.label, rule.op.label())));
         let card_title_el: HtmlElement = card_title.clone().dyn_into().unwrap();
-        card_title_el.style().set_css_text(&format!("font-size: 11px; font-weight: 600; color: {};", rule.op.color()));
+        card_title_el.style().set_css_text(&format!(
+            "font-size: 11px; font-weight: 600; color: {};",
+            rule.op.color()
+        ));
         card.append_child(&card_title).unwrap();
 
         let n3_code = document.create_element("pre").unwrap();
         n3_code.set_text_content(Some(&rule.to_n3_syntax()));
         let n3_code_el: HtmlElement = n3_code.clone().dyn_into().unwrap();
-        n3_code_el.style().set_css_text("font-family: var(--font-mono); font-size: 10px; margin: 0; color: #94a3b8;");
+        n3_code_el.style().set_css_text(
+            "font-family: var(--font-mono); font-size: 10px; margin: 0; color: #94a3b8;",
+        );
         card.append_child(&n3_code).unwrap();
 
         left.append_child(&card).unwrap();
@@ -350,13 +396,17 @@ pub fn build_sentinel_policy_studio_view(document: &Document) -> Element {
     let right_el: HtmlElement = right.clone().dyn_into().unwrap();
     right_el.style().set_css_text(
         "background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255, 255, 255, 0.08); \
-         border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 8px;"
+         border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 8px;",
     );
 
     let sim_heading = document.create_element("span").unwrap();
-    sim_heading.set_text_content(Some("\u{1F9EA} 'What-If' Policy Simulator & Decision Tracer"));
+    sim_heading.set_text_content(Some(
+        "\u{1F9EA} 'What-If' Policy Simulator & Decision Tracer",
+    ));
     let sim_heading_el: HtmlElement = sim_heading.clone().dyn_into().unwrap();
-    sim_heading_el.style().set_css_text("font-size: 12px; font-weight: 600; color: #cbd5e1;");
+    sim_heading_el
+        .style()
+        .set_css_text("font-size: 12px; font-weight: 600; color: #cbd5e1;");
     right.append_child(&sim_heading).unwrap();
 
     let verdict = policy.evaluate_dry_run("Cardiologist", "urn:qualia:ReadECGTelemetry", false);
@@ -364,16 +414,24 @@ pub fn build_sentinel_policy_studio_view(document: &Document) -> Element {
     let verdict_box_el: HtmlElement = verdict_box.clone().dyn_into().unwrap();
     verdict_box_el.style().set_css_text(
         "background: rgba(52, 211, 153, 0.1); border: 1px solid #34d399; border-radius: 6px; \
-         padding: 8px 10px; font-size: 11px; color: #34d399; font-weight: 600;"
+         padding: 8px 10px; font-size: 11px; color: #34d399; font-weight: 600;",
     );
-    verdict_box.set_text_content(Some(&format!("Dry-Run Verdict: PERMITTED \u{00B7} Gas Cost: {} units", verdict.gas_consumed)));
+    verdict_box.set_text_content(Some(&format!(
+        "Dry-Run Verdict: PERMITTED \u{00B7} Gas Cost: {} units",
+        verdict.gas_consumed
+    )));
     right.append_child(&verdict_box).unwrap();
 
     for step in &verdict.steps {
         let step_row = document.create_element("div").unwrap();
         let step_row_el: HtmlElement = step_row.clone().dyn_into().unwrap();
-        step_row_el.style().set_css_text("font-family: var(--font-mono); font-size: 10px; color: #94a3b8;");
-        step_row.set_text_content(Some(&format!("{}. [{}us] {}", step.step_index, step.elapsed_us, step.description)));
+        step_row_el
+            .style()
+            .set_css_text("font-family: var(--font-mono); font-size: 10px; color: #94a3b8;");
+        step_row.set_text_content(Some(&format!(
+            "{}. [{}us] {}",
+            step.step_index, step.elapsed_us, step.description
+        )));
         right.append_child(&step_row).unwrap();
     }
 
@@ -415,7 +473,8 @@ mod tests {
     #[test]
     fn test_dry_run_defeater_override() {
         let policy = SentinelPolicy::default();
-        let verdict = policy.evaluate_dry_run("AnyAgent", "urn:qualia:EmergencyMedicalBypass", true);
+        let verdict =
+            policy.evaluate_dry_run("AnyAgent", "urn:qualia:EmergencyMedicalBypass", true);
         assert!(verdict.is_allowed);
         assert_eq!(verdict.matching_rule_id, Some("rule_3".into()));
     }

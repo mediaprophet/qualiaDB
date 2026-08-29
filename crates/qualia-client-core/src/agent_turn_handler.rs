@@ -15,14 +15,14 @@
 //! for each node. Each node execution is a local LLM inference turn with
 //! the node's inputs (from the blackboard) injected into the prompt context.
 
-use vibe::dag::{DagEdge, DagNode, DagPipeline, NodeEffect};
-use vibe::{DiagCode, Diagnostic, Span};
 use qualia_core_db::modalities::blackboard::BlackboardBus;
 use qualia_core_db::poet_host::invoke::agent::dag_executor::{
     execute_pipeline, NodeExecutor, PipelineResult,
 };
 use qualia_core_db::NQuin;
 use std::path::Path;
+use vibe::dag::{DagEdge, DagNode, DagPipeline, NodeEffect};
+use vibe::{DiagCode, Diagnostic, Span};
 
 use crate::agent_registry::{self, AgentBackendSpec};
 

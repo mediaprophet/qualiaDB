@@ -24,7 +24,9 @@ impl GitRemoteTransport {
     pub fn label(&self) -> String {
         match self {
             Self::DomainSshHttps { domain_url } => format!("Domain: {}", domain_url),
-            Self::P2PWebRtcMesh { peer_did } => format!("P2P Swarm: {}", &peer_did[..peer_did.len().min(16)]),
+            Self::P2PWebRtcMesh { peer_did } => {
+                format!("P2P Swarm: {}", &peer_did[..peer_did.len().min(16)])
+            }
             Self::IpfsContentHash { cid } => format!("IPFS: {}", &cid[..cid.len().min(16)]),
             Self::SolidPodRemote { pod_url } => format!("Solid Pod: {}", pod_url),
             Self::TraditionalGit { remote_url } => format!("Git: {}", remote_url),
@@ -94,7 +96,9 @@ impl GitForgeRepo {
             deletions: 2,
             is_staged: true,
             has_cml_entity_delta: true,
-            sample_diff_snippet: "-   let mut temp = Vec::new();\n+   let mut temp = [0u64; 32]; // Zero-alloc".into(),
+            sample_diff_snippet:
+                "-   let mut temp = Vec::new();\n+   let mut temp = [0u64; 32]; // Zero-alloc"
+                    .into(),
         };
 
         let sample_diff_2 = GitFileDiff {
@@ -107,15 +111,25 @@ impl GitForgeRepo {
         };
 
         let remotes = vec![
-            GitRemoteTransport::DomainSshHttps { domain_url: "git@git.thorne.id:qualia/poet.git".into() },
-            GitRemoteTransport::P2PWebRtcMesh { peer_did: "did:qualia:0x3f8a42...".into() },
-            GitRemoteTransport::SolidPodRemote { pod_url: "solid://pod.thorne.id/projects/qualia/".into() },
+            GitRemoteTransport::DomainSshHttps {
+                domain_url: "git@git.thorne.id:qualia/poet.git".into(),
+            },
+            GitRemoteTransport::P2PWebRtcMesh {
+                peer_did: "did:qualia:0x3f8a42...".into(),
+            },
+            GitRemoteTransport::SolidPodRemote {
+                pod_url: "solid://pod.thorne.id/projects/qualia/".into(),
+            },
         ];
 
         Self {
             repo_name: repo_name.to_string(),
             current_branch: "main".into(),
-            branches: vec!["main".into(), "feature/radial-menu".into(), "feat/p2p-sync".into()],
+            branches: vec![
+                "main".into(),
+                "feature/radial-menu".into(),
+                "feat/p2p-sync".into(),
+            ],
             commits: vec![sample_commit_2, root_commit],
             file_diffs: vec![sample_diff_1, sample_diff_2],
             remotes,
@@ -140,8 +154,15 @@ impl GitForgeRepo {
             return Err("No staged changes to commit".into());
         }
 
-        let parent = self.commits.first().map(|c| c.hash.clone()).unwrap_or_default();
-        let new_hash = format!("{:016x}", fnv1a_hash(message.as_bytes()) ^ fnv1a_hash(author_did.as_bytes()));
+        let parent = self
+            .commits
+            .first()
+            .map(|c| c.hash.clone())
+            .unwrap_or_default();
+        let new_hash = format!(
+            "{:016x}",
+            fnv1a_hash(message.as_bytes()) ^ fnv1a_hash(author_did.as_bytes())
+        );
 
         let new_commit = GitCommitEntry {
             hash: new_hash.clone(),
@@ -150,7 +171,11 @@ impl GitForgeRepo {
             timestamp_lamport: self.commits.len() as u64 + 1,
             merkle_root: "sha256:merkle_tree_verified".into(),
             is_did_signed: true,
-            parent_hashes: if parent.is_empty() { vec![] } else { vec![parent] },
+            parent_hashes: if parent.is_empty() {
+                vec![]
+            } else {
+                vec![parent]
+            },
         };
 
         self.commits.insert(0, new_commit);
@@ -164,7 +189,10 @@ impl GitForgeRepo {
         if staged.is_empty() {
             return "chore: empty commit".into();
         }
-        if staged.iter().any(|d| d.path.contains("shader") || d.path.contains("wgsl")) {
+        if staged
+            .iter()
+            .any(|d| d.path.contains("shader") || d.path.contains("wgsl"))
+        {
             return "feat(render): optimize WGSL shader compute pipelines and glassmorphism".into();
         }
         if staged.iter().any(|d| d.has_cml_entity_delta) {
@@ -193,7 +221,7 @@ pub fn build_git_forge_view(document: &Document, repo: &GitForgeRepo) -> Element
     let root_el: HtmlElement = root.clone().dyn_into().unwrap();
     root_el.style().set_css_text(
         "display: flex; flex-direction: column; flex: 1; padding: 12px; gap: 10px; \
-         background: #020617; color: #f8fafc; overflow-y: auto; font-family: sans-serif;"
+         background: #020617; color: #f8fafc; overflow-y: auto; font-family: sans-serif;",
     );
 
     // Header Toolbar
@@ -202,19 +230,29 @@ pub fn build_git_forge_view(document: &Document, repo: &GitForgeRepo) -> Element
     let header_el: HtmlElement = header.clone().dyn_into().unwrap();
     header_el.style().set_css_text(
         "justify-content: space-between; background: rgba(30, 41, 59, 0.7); \
-         border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; padding: 8px 12px;"
+         border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; padding: 8px 12px;",
     );
 
     let title = document.create_element("span").unwrap();
-    title.set_text_content(Some(&format!("\u{1F419} Distributed Git Forge: {} [ {} ]", repo.repo_name, repo.current_branch)));
+    title.set_text_content(Some(&format!(
+        "\u{1F419} Distributed Git Forge: {} [ {} ]",
+        repo.repo_name, repo.current_branch
+    )));
     let title_el: HtmlElement = title.clone().dyn_into().unwrap();
-    title_el.style().set_css_text("font-weight: 700; font-size: 13px; color: #38bdf8;");
+    title_el
+        .style()
+        .set_css_text("font-weight: 700; font-size: 13px; color: #38bdf8;");
     header.append_child(&title).unwrap();
 
     let remotes_count = document.create_element("span").unwrap();
-    remotes_count.set_text_content(Some(&format!("P2P Remotes: {} \u{00B7} Ed25519 Signatures: \u{2713}", repo.remotes.len())));
+    remotes_count.set_text_content(Some(&format!(
+        "P2P Remotes: {} \u{00B7} Ed25519 Signatures: \u{2713}",
+        repo.remotes.len()
+    )));
     let remotes_count_el: HtmlElement = remotes_count.clone().dyn_into().unwrap();
-    remotes_count_el.style().set_css_text("font-size: 11px; font-family: var(--font-mono); color: #34d399;");
+    remotes_count_el
+        .style()
+        .set_css_text("font-size: 11px; font-family: var(--font-mono); color: #34d399;");
     header.append_child(&remotes_count).unwrap();
 
     root.append_child(&header).unwrap();
@@ -222,7 +260,9 @@ pub fn build_git_forge_view(document: &Document, repo: &GitForgeRepo) -> Element
     // 2-Column Split
     let split = document.create_element("div").unwrap();
     let split_el: HtmlElement = split.clone().dyn_into().unwrap();
-    split_el.style().set_css_text("display: grid; grid-template-columns: 1fr 1fr; gap: 10px;");
+    split_el
+        .style()
+        .set_css_text("display: grid; grid-template-columns: 1fr 1fr; gap: 10px;");
 
     // Left: Commit History & DAG
     let left = document.create_element("div").unwrap();
@@ -232,7 +272,9 @@ pub fn build_git_forge_view(document: &Document, repo: &GitForgeRepo) -> Element
     let left_title = document.create_element("span").unwrap();
     left_title.set_text_content(Some("\u{1F33F} Signed Commit DAG"));
     let left_title_el: HtmlElement = left_title.clone().dyn_into().unwrap();
-    left_title_el.style().set_css_text("font-weight: 700; font-size: 12px; color: #38bdf8;");
+    left_title_el
+        .style()
+        .set_css_text("font-weight: 700; font-size: 12px; color: #38bdf8;");
     left.append_child(&left_title).unwrap();
 
     for c in &repo.commits {
@@ -243,13 +285,22 @@ pub fn build_git_forge_view(document: &Document, repo: &GitForgeRepo) -> Element
         let msg = document.create_element("span").unwrap();
         msg.set_text_content(Some(&c.message));
         let msg_el: HtmlElement = msg.clone().dyn_into().unwrap();
-        msg_el.style().set_css_text("font-size: 11px; font-weight: 600; color: #f8fafc;");
+        msg_el
+            .style()
+            .set_css_text("font-size: 11px; font-weight: 600; color: #f8fafc;");
         commit_card.append_child(&msg).unwrap();
 
         let meta = document.create_element("span").unwrap();
-        meta.set_text_content(Some(&format!("\u{25CF} {} | DID: {} | Lamport: {}", &c.hash[..8], &c.author_did[..c.author_did.len().min(16)], c.timestamp_lamport)));
+        meta.set_text_content(Some(&format!(
+            "\u{25CF} {} | DID: {} | Lamport: {}",
+            &c.hash[..8],
+            &c.author_did[..c.author_did.len().min(16)],
+            c.timestamp_lamport
+        )));
         let meta_el: HtmlElement = meta.clone().dyn_into().unwrap();
-        meta_el.style().set_css_text("font-size: 9px; font-family: var(--font-mono); color: #94a3b8;");
+        meta_el
+            .style()
+            .set_css_text("font-size: 9px; font-family: var(--font-mono); color: #94a3b8;");
         commit_card.append_child(&meta).unwrap();
 
         left.append_child(&commit_card).unwrap();
@@ -264,7 +315,9 @@ pub fn build_git_forge_view(document: &Document, repo: &GitForgeRepo) -> Element
     let right_title = document.create_element("span").unwrap();
     right_title.set_text_content(Some("\u{1F50D} Working Tree & Semantic Diffs"));
     let right_title_el: HtmlElement = right_title.clone().dyn_into().unwrap();
-    right_title_el.style().set_css_text("font-weight: 700; font-size: 12px; color: #38bdf8;");
+    right_title_el
+        .style()
+        .set_css_text("font-weight: 700; font-size: 12px; color: #38bdf8;");
     right.append_child(&right_title).unwrap();
 
     for d in &repo.file_diffs {
@@ -274,12 +327,15 @@ pub fn build_git_forge_view(document: &Document, repo: &GitForgeRepo) -> Element
 
         let row = document.create_element("div").unwrap();
         let row_el: HtmlElement = row.clone().dyn_into().unwrap();
-        row_el.style().set_css_text("display: flex; justify-content: space-between; align-items: center;");
+        row_el
+            .style()
+            .set_css_text("display: flex; justify-content: space-between; align-items: center;");
 
         let p = document.create_element("span").unwrap();
         p.set_text_content(Some(&d.path));
         let p_el: HtmlElement = p.clone().dyn_into().unwrap();
-        p_el.style().set_css_text("font-size: 11px; font-family: var(--font-mono); color: #cbd5e1;");
+        p_el.style()
+            .set_css_text("font-size: 11px; font-family: var(--font-mono); color: #cbd5e1;");
         row.append_child(&p).unwrap();
 
         let badge = document.create_element("span").unwrap();
@@ -338,10 +394,14 @@ mod tests {
 
     #[test]
     fn test_remote_transport_formatting() {
-        let t1 = GitRemoteTransport::DomainSshHttps { domain_url: "git@git.thorne.id:poet.git".into() };
+        let t1 = GitRemoteTransport::DomainSshHttps {
+            domain_url: "git@git.thorne.id:poet.git".into(),
+        };
         assert!(t1.label().contains("git.thorne.id"));
 
-        let t2 = GitRemoteTransport::P2PWebRtcMesh { peer_did: "did:qualia:0x3f8a...".into() };
+        let t2 = GitRemoteTransport::P2PWebRtcMesh {
+            peer_did: "did:qualia:0x3f8a...".into(),
+        };
         assert!(t2.label().contains("P2P Swarm"));
     }
 }

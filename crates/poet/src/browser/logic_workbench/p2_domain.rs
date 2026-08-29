@@ -102,7 +102,7 @@ pub(super) fn build_clinical_risk_panel(document: &Document) -> Element {
         .append_child(&make_results_area(
             document,
             "clinical-risk-results",
-            "Click \"Compute Risk\" to evaluate clinical risk (mock).",
+            "Choose a clinical model, enter its required fields, and run the native validated calculation.",
         ))
         .unwrap();
     panel
@@ -144,7 +144,7 @@ pub(super) fn build_dicom_viewer_panel(document: &Document) -> Element {
         .append_child(&make_textarea(
             document,
             "dicom-metadata",
-            "# DICOM metadata context\nstudy(uid=\"1.2.840.113619.2.55.3\", patient=\"ANON001\").\nseries(uid=\"1.2.840.113619.2.55.3.1\", modality=\"CT\", slices=128).\n\n# Query: render slice 64 with window/level 400/40",
+            "# De-identified CT slice samples\nwidth=4, height=4\npixels=[-1000,-700,-300,-160,0,20,40,80,120,180,240,400,600,800,1000,1200]\nwindow=400, level=40",
             "100px",
         ))
         .unwrap();
@@ -172,7 +172,7 @@ pub(super) fn build_dicom_viewer_panel(document: &Document) -> Element {
         .append_child(&make_results_area(
             document,
             "dicom-results",
-            "Click \"Render Slice\" to view DICOM image (mock).",
+            "Enter a Study UID and bounded HU slice samples to apply native window/level rendering.",
         ))
         .unwrap();
     panel
@@ -191,7 +191,7 @@ pub(super) fn wire_dicom_viewer_panel(document: &Document) {
     if let Some(btn) = document.get_element_by_id("dicom-window-level") {
         let closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
             let doc = web_sys::window().unwrap().document().unwrap();
-            show_logic_notification(&doc, "Window/Level: 400/40 applied (mock)");
+            show_mock_results(&doc, "dicom-results", "dicom-render");
         }) as Box<dyn FnMut(MouseEvent)>);
         btn.add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())
             .unwrap();
@@ -211,7 +211,7 @@ pub(super) fn build_comorbidity_panel(document: &Document) -> Element {
         .append_child(&make_textarea(
             document,
             "comorbidity-input",
-            "# Comorbidity context\ncondition(patient=\"ANON001\", type=\"diabetes\", severity=\"moderate\").\ncondition(patient=\"ANON001\", type=\"hypertension\", severity=\"mild\").\ncondition(patient=\"ANON001\", type=\"ckd\", stage=3).\n\n# Query: comorbidity interaction risk?\n# Query: adjusted risk score?",
+            "# Consent-safe pseudonymous patient context\npatient=did:patient:ANON001\ntarget_organ=Heart\nconditions=[Type 2 Diabetes Mellitus|Hypertension|Heart]\n# Optional single compounding edge\nantecedent=Type 2 Diabetes Mellitus, consequent=Heart, severity=0.8",
             "120px",
         ))
         .unwrap();
@@ -231,7 +231,7 @@ pub(super) fn build_comorbidity_panel(document: &Document) -> Element {
         .append_child(&make_results_area(
             document,
             "comorbidity-results",
-            "Click \"Analyze\" to evaluate comorbidity interactions (mock).",
+            "Enter patient-scoped conditions to run the zero-allocation comorbidity evaluator.",
         ))
         .unwrap();
     panel
@@ -299,8 +299,8 @@ pub(super) fn build_chemistry_panel(document: &Document) -> Element {
         .append_child(&make_textarea(
             document,
             "chemistry-params",
-            "# Additional parameters (operation-dependent)\n# For arrhenius: A=1e10, Ea=50000, T=298\n# For gibbs: dH=-100, dS=50, T=298\n# For equilibrium: dG=-5000, T=298",
-            "80px",
+            "# Additional parameters (operation-dependent)\n# arrhenius: A=1e10, Ea=50000, T=298\n# gibbs: dH=-100000, dS=-50, T=298\n# equilibrium: dG=-5000, T=298\n# henderson: pKa=4.8, base=0.1, acid=0.2\n# atom_economy: reactant_mws=[100,80], product_mw=120\n# e_factor: waste_kg=4, product_kg=2\n# green_metrics: reactant_mws=[100,80], byproduct_mws=[20], product_mw=120, yield_fraction=0.8, solvent_kg=1, product_kg=1, reactant_c_atoms=8, product_c_atoms=6",
+            "150px",
         ))
         .unwrap();
     let actions = document.create_element("div").unwrap();
@@ -319,7 +319,7 @@ pub(super) fn build_chemistry_panel(document: &Document) -> Element {
         .append_child(&make_results_area(
             document,
             "chemistry-results",
-            "Click \"Compute\" to evaluate chemistry properties (mock).",
+            "Choose an operation and run it through the bounded native organic-chemistry engine.",
         ))
         .unwrap();
     panel
@@ -380,8 +380,8 @@ pub(super) fn build_physics_panel(document: &Document) -> Element {
         .append_child(&make_textarea(
             document,
             "physics-input",
-            "# Physics input (operation-dependent)\n# Metropolis: ensemble_size=1000, temperature=298, steps=10000\n# ODE: dy/dt = -k*y, y0=1.0, k=0.1, dt=0.01, steps=1000\n# DFT: atoms=[H, H], positions=[[0,0,0],[0,0,0.74]]\n# Cell OCV: chemistry=\"LiFePO4\", soc=0.8",
-            "120px",
+            "# Enter one operation's validated parameters\n# Metropolis: temperature=298, ensemble_size=1000, steps=1000, proposal_scale=0.025, seed=42\n# ODE: y1=1.0, y2=0.0, k1=0.5, k2=0.3, coupling=1.0, dt=0.01, steps=1000\n# DFT: electron_count=2, resolution=16\n# PINN: molecule_features=[0.2,0.7], receptor_features=[0.3,0.6]\n# Gibbs: temperature=298, enthalpy=10000, entropy=20\n# Battery: soc=0.8, cells_series=4, cells_parallel=2, cell_resistance=0.005, cell_capacity_ah=100, load_current=50\n# Solar: short_circuit_current=8, open_circuit_voltage=40, fill_factor=0.75, scan_steps=256, panel_count=2\n# Heat: u_value=0.5, area=10, delta_t=20, useful_power=1000\n# Phase: mass=2, latent_heat=334000",
+            "190px",
         ))
         .unwrap();
     let actions = document.create_element("div").unwrap();
@@ -400,7 +400,7 @@ pub(super) fn build_physics_panel(document: &Document) -> Element {
         .append_child(&make_results_area(
             document,
             "physics-results",
-            "Click \"Simulate\" to run physics computation (mock).",
+            "Enter the selected operation's parameters, then run the bounded native simulation.",
         ))
         .unwrap();
     panel
@@ -435,7 +435,7 @@ pub(super) fn build_ode_solver_panel(document: &Document) -> Element {
         .append_child(&make_textarea(
             document,
             "ode-input",
-            "# ODE system definition\n# dy1/dt = -0.5 * y1\n# dy2/dt = y1 - 0.3 * y2\n# y1(0) = 1.0, y2(0) = 0.0\n# dt = 0.01, steps = 1000\n\node(system=\"damped_oscillator\", dt=0.01, steps=1000).\ninitial(y1=1.0, y2=0.0).\n\n# Query: solve and return trajectory at step 500?",
+            "# Coupled bounded RK4 system\n# dy1/dt = -k1*y1\n# dy2/dt = coupling*y1 - k2*y2\ny1=1.0, y2=0.0, k1=0.5, k2=0.3, coupling=1.0, dt=0.01, steps=1000",
             "120px",
         ))
         .unwrap();
@@ -455,7 +455,7 @@ pub(super) fn build_ode_solver_panel(document: &Document) -> Element {
         .append_child(&make_results_area(
             document,
             "ode-results",
-            "Click \"Solve ODE\" to integrate the system (mock).",
+            "Enter a coupled system and solve it with the bounded native RK4 integrator.",
         ))
         .unwrap();
     panel
@@ -506,8 +506,8 @@ pub(super) fn build_bioinformatics_panel(document: &Document) -> Element {
         .append_child(&make_textarea(
             document,
             "bioinformatics-input",
-            "# Bioinformatics input (operation-dependent)\n# Nucleotide alignment: seq1=\"ACGTACGT\", seq2=\"ACGTTCGT\"\n# Protein alignment: seq1=\"MKTAYIAKQR\", seq2=\"MKTAYIAKQR\", matrix=\"BLOSUM62\"\n# K-mer: sequence=\"ACGTACGTACGT\", k=3\n# FASTA: record header + sequence\n# Gene expression: control=[...], treatment=[...]\n# Tanimoto: fingerprint1, fingerprint2",
-            "120px",
+            "# Bioinformatics input (operation-dependent)\n# alignment: seq1=\"ACGTACGT\", seq2=\"ACGTTCGT\"\n# k-mer/minhash: sequence=\"ACGTACGTACGT\", k=3, sketch_size=64\n# FASTA: header=\"sample-1\", sequence=\"ACGTACGT\"\n# gene expression: gene=\"TP53\", baseline=100, treatment=350, threshold=2\n# Tanimoto: fingerprint1=[3,12], fingerprint2=[3,8]\n# UPGMA: n=3, distances=[0,1,2,1,0,1.5,2,1.5,0]",
+            "140px",
         ))
         .unwrap();
     let actions = document.create_element("div").unwrap();
@@ -526,7 +526,7 @@ pub(super) fn build_bioinformatics_panel(document: &Document) -> Element {
         .append_child(&make_results_area(
             document,
             "bioinformatics-results",
-            "Click \"Analyze\" to run bioinformatics computation (mock).",
+            "Choose an operation and run it through the bounded native bioinformatics engine.",
         ))
         .unwrap();
     panel
@@ -561,7 +561,7 @@ pub(super) fn build_gbm_var_panel(document: &Document) -> Element {
         .append_child(&make_textarea(
             document,
             "gbm-var-input",
-            "# GBM / VaR parameters\n# GBM: S0=100, mu=0.05, sigma=0.2, T=1.0, dt=0.01\n# VaR: portfolio_value=1000000, confidence=0.95, horizon=252\n# Seeded: seed=42 for deterministic output\n\ngbm(s0=100, mu=0.05, sigma=0.2, T=1.0, dt=0.01).\nvar(portfolio=1000000, confidence=0.95, horizon=252, seed=42).\n\n# Query: simulate GBM path?\n# Query: compute Monte Carlo VaR?",
+            "# Deterministic GBM path + Monte Carlo VaR\ngbm(s0=100, mu=0.05, sigma=0.2, T=1.0, dt=0.01).\nvar(portfolio=1000000, confidence=0.95, paths=2048, seed=42).",
             "120px",
         ))
         .unwrap();
@@ -581,7 +581,7 @@ pub(super) fn build_gbm_var_panel(document: &Document) -> Element {
         .append_child(&make_results_area(
             document,
             "gbm-var-results",
-            "Click \"Simulate\" to run GBM/VaR computation (mock).",
+            "Enter GBM and portfolio parameters to run the deterministic bounded native simulation.",
         ))
         .unwrap();
     panel
@@ -607,11 +607,16 @@ pub(super) fn build_diffusion_panel(document: &Document) -> Element {
             "Diffusion Controller \u{2014} diffusion pass execution, reconfiguration",
         ))
         .unwrap();
+    let default_config = "# Bounded 1D heat diffusion (insulated ends)\ninitial=[0,0,0,1,1,1,0,0,0]\nalpha=0.1, dx=0.1, total_time=5.0, samples=10";
+    let saved_config = web_sys::window()
+        .and_then(|window| window.local_storage().ok().flatten())
+        .and_then(|storage| storage.get_item("poet.diffusion.config").ok().flatten())
+        .unwrap_or_else(|| default_config.to_string());
     panel
         .append_child(&make_textarea(
             document,
             "diffusion-input",
-            "# Diffusion parameters\n# execute_diffusion_pass: input_quins, temperature, steps\n# trigger_diffusion: source_node, target_nodes, mode\n\ndiffusion(temperature=1.0, steps=100, mode=\"gaussian\").\ntrigger(source=\"node_42\", targets=[\"node_43\", \"node_44\"], mode=\"heat_equation\").\n\n# Query: execute diffusion pass?\n# Query: reconfigure diffusion parameters?",
+            &saved_config,
             "120px",
         ))
         .unwrap();
@@ -639,7 +644,7 @@ pub(super) fn build_diffusion_panel(document: &Document) -> Element {
         .append_child(&make_results_area(
             document,
             "diffusion-results",
-            "Click \"Execute Pass\" to run diffusion (mock).",
+            "Execute the configured bounded native diffusion pass, or persist a revised configuration locally.",
         ))
         .unwrap();
     panel
@@ -658,9 +663,17 @@ pub(super) fn wire_diffusion_panel(document: &Document) {
     if let Some(btn) = document.get_element_by_id("diffusion-reconfigure") {
         let closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
             let doc = web_sys::window().unwrap().document().unwrap();
+            let config = super::helpers::field_value(&doc, "diffusion-input");
+            let saved = web_sys::window()
+                .and_then(|window| window.local_storage().ok().flatten())
+                .is_some_and(|storage| storage.set_item("poet.diffusion.config", &config).is_ok());
             show_logic_notification(
                 &doc,
-                "Diffusion reconfigured: temperature=1.0, steps=100 (mock)",
+                if saved {
+                    "Diffusion configuration validated on execution and saved locally."
+                } else {
+                    "Unable to persist diffusion configuration in browser storage."
+                },
             );
         }) as Box<dyn FnMut(MouseEvent)>);
         btn.add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())

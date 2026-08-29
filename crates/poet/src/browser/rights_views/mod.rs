@@ -95,7 +95,7 @@ pub fn build_rights_view(document: &Document) -> Element {
 
     let footer = document.create_element("div").unwrap();
     footer.set_text_content(Some(
-        "\u{26A0} Mock data \u{2014} rights/agreements requires AgreementDID + deontic engine commands.",
+        "COP-backed rights records persist on the local QualiaDB daemon (`/records`). Empty until you save a record.",
     ));
     let f_el: HtmlElement = footer.clone().dyn_into().unwrap();
     f_el.style().set_css_text(
@@ -186,7 +186,7 @@ pub fn build_wallet_view(document: &Document) -> Element {
 
     let footer = document.create_element("div").unwrap();
     footer.set_text_content(Some(
-        "\u{26A0} Mock data \u{2014} wallet requires ledger_balance + ILP/Lightning engine commands.",
+        "Wallet tabs remain; balances persist via the wallet_entry COP family on the wallet container.",
     ));
     let f_el: HtmlElement = footer.clone().dyn_into().unwrap();
     f_el.style().set_css_text(

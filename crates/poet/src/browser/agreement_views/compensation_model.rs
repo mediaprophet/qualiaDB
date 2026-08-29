@@ -5,6 +5,8 @@
 use wasm_bindgen::JsCast;
 use web_sys::{Document, Element, HtmlElement};
 
+use super::super::cop_records::{build_family_panel, CopField};
+
 const TABS: &[(&str, &str)] = &[
     ("fair_value", "Fair Value"),
     ("multipliers", "Multipliers"),
@@ -85,6 +87,35 @@ pub fn build_compensation_model_view(document: &Document) -> Element {
         "display: flex; flex-direction: column; flex: 1; gap: 6px; overflow: hidden;",
     );
 
+    wrapper.append_child(&build_family_panel(
+        document,
+        "compensation",
+        "Persisted contributor compensation records. Stage/skill tables below are the COP-C1 multiplier catalog.",
+        &[
+            CopField {
+                key: "did",
+                placeholder: "Contributor DID",
+            },
+            CopField {
+                key: "hours",
+                placeholder: "Hours",
+            },
+            CopField {
+                key: "rate",
+                placeholder: "Base rate",
+            },
+            CopField {
+                key: "multiplier",
+                placeholder: "Skill/PPP multiplier",
+            },
+            CopField {
+                key: "status",
+                placeholder: "uncompensated|partial|full",
+            },
+        ],
+    ))
+    .unwrap();
+
     let tab_bar = build_tab_bar(document);
     wrapper.append_child(&tab_bar).unwrap();
 
@@ -110,7 +141,7 @@ pub fn build_compensation_model_view(document: &Document) -> Element {
 
     let footer = document.create_element("div").unwrap();
     footer.set_text_content(Some(
-        "\u{26A0} Mock data \u{2014} fair value calculation requires COP-C1 contribution valuation engine command.",
+        "COP-C1 compensation records persist on the daemon. Multiplier tables are the catalog, not fabricated payouts.",
     ));
     let f_el: HtmlElement = footer.clone().dyn_into().unwrap();
     f_el.style().set_css_text(

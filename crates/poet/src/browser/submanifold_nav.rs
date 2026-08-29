@@ -122,7 +122,7 @@ pub fn build_submanifold_nav_view(document: &Document, nav: &SubmanifoldNavigato
     let root_el: HtmlElement = root.clone().dyn_into().unwrap();
     root_el.style().set_css_text(
         "display: flex; flex-direction: column; flex: 1; padding: 12px; gap: 10px; \
-         background: #020617; color: #f8fafc; overflow-y: auto; font-family: sans-serif;"
+         background: #020617; color: #f8fafc; overflow-y: auto; font-family: sans-serif;",
     );
 
     // Breadcrumb Strip
@@ -155,13 +155,21 @@ pub fn build_submanifold_nav_view(document: &Document, nav: &SubmanifoldNavigato
              background: {};",
             if is_current { "700" } else { "500" },
             if is_current { "#38bdf8" } else { "#94a3b8" },
-            if is_current { "rgba(56, 189, 248, 0.15)" } else { "transparent" }
+            if is_current {
+                "rgba(56, 189, 248, 0.15)"
+            } else {
+                "transparent"
+            }
         ));
         strip.append_child(&item).unwrap();
     }
 
     let depth_badge = document.create_element("span").unwrap();
-    depth_badge.set_text_content(Some(&format!("LOD Depth: {}/{}", nav.current_depth(), nav.max_lod_depth)));
+    depth_badge.set_text_content(Some(&format!(
+        "LOD Depth: {}/{}",
+        nav.current_depth(),
+        nav.max_lod_depth
+    )));
     let depth_badge_el: HtmlElement = depth_badge.clone().dyn_into().unwrap();
     depth_badge_el.style().set_css_text("margin-left: auto; font-size: 10px; font-family: var(--font-mono); color: #34d399; background: rgba(0,0,0,0.3); padding: 2px 8px; border-radius: 10px;");
     strip.append_child(&depth_badge).unwrap();
@@ -173,13 +181,18 @@ pub fn build_submanifold_nav_view(document: &Document, nav: &SubmanifoldNavigato
     let stage_card_el: HtmlElement = stage_card.clone().dyn_into().unwrap();
     stage_card_el.style().set_css_text(
         "background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255, 255, 255, 0.08); \
-         border-radius: 8px; padding: 14px; display: flex; flex-direction: column; gap: 8px;"
+         border-radius: 8px; padding: 14px; display: flex; flex-direction: column; gap: 8px;",
     );
 
     let card_title = document.create_element("h4").unwrap();
-    card_title.set_text_content(Some(&format!("Active Sub-Manifold: {}", nav.current_manifold_id())));
+    card_title.set_text_content(Some(&format!(
+        "Active Sub-Manifold: {}",
+        nav.current_manifold_id()
+    )));
     let card_title_el: HtmlElement = card_title.clone().dyn_into().unwrap();
-    card_title_el.style().set_css_text("margin: 0; font-size: 13px; color: #38bdf8;");
+    card_title_el
+        .style()
+        .set_css_text("margin: 0; font-size: 13px; color: #38bdf8;");
     stage_card.append_child(&card_title).unwrap();
 
     let desc = document.create_element("p").unwrap();
@@ -187,7 +200,9 @@ pub fn build_submanifold_nav_view(document: &Document, nav: &SubmanifoldNavigato
         "Double-clicking any .subcanvas container smoothly performs an affine camera zoom dive into its internal graph, preserving the parent manifold in the breadcrumb stack without state loss."
     ));
     let desc_el: HtmlElement = desc.clone().dyn_into().unwrap();
-    desc_el.style().set_css_text("margin: 0; font-size: 11px; color: #cbd5e1; line-height: 1.45;");
+    desc_el
+        .style()
+        .set_css_text("margin: 0; font-size: 11px; color: #cbd5e1; line-height: 1.45;");
     stage_card.append_child(&desc).unwrap();
 
     root.append_child(&stage_card).unwrap();

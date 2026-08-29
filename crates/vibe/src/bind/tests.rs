@@ -293,11 +293,7 @@ impl Host for ProperTimeHost {
     ) -> Result<Value, Diagnostic> {
         Ok(Value::Null)
     }
-    fn time_proper_time(
-        &mut self,
-        worldline_id: u64,
-        _span: Span,
-    ) -> Result<Value, Diagnostic> {
+    fn time_proper_time(&mut self, worldline_id: u64, _span: Span) -> Result<Value, Diagnostic> {
         Ok(Value::F64(worldline_id as f64 * 0.001))
     }
 }

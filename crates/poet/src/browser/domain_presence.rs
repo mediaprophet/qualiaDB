@@ -102,11 +102,41 @@ impl DomainConfig {
         ];
 
         let default_dns = vec![
-            DnsRecord { record_type: DnsRecordType::A, name: "@".into(), value: "192.0.2.42".into(), priority: None, ttl: 300 },
-            DnsRecord { record_type: DnsRecordType::CNAME, name: "www".into(), value: domain_name.to_string(), priority: None, ttl: 300 },
-            DnsRecord { record_type: DnsRecordType::MX, name: "@".into(), value: format!("mail.{}", domain_name), priority: Some(10), ttl: 300 },
-            DnsRecord { record_type: DnsRecordType::TXT, name: "@".into(), value: "v=spf1 mx ~all".into(), priority: None, ttl: 300 },
-            DnsRecord { record_type: DnsRecordType::TXT, name: "_qualia".into(), value: format!("did={}", owner_did), priority: None, ttl: 300 },
+            DnsRecord {
+                record_type: DnsRecordType::A,
+                name: "@".into(),
+                value: "192.0.2.42".into(),
+                priority: None,
+                ttl: 300,
+            },
+            DnsRecord {
+                record_type: DnsRecordType::CNAME,
+                name: "www".into(),
+                value: domain_name.to_string(),
+                priority: None,
+                ttl: 300,
+            },
+            DnsRecord {
+                record_type: DnsRecordType::MX,
+                name: "@".into(),
+                value: format!("mail.{}", domain_name),
+                priority: Some(10),
+                ttl: 300,
+            },
+            DnsRecord {
+                record_type: DnsRecordType::TXT,
+                name: "@".into(),
+                value: "v=spf1 mx ~all".into(),
+                priority: None,
+                ttl: 300,
+            },
+            DnsRecord {
+                record_type: DnsRecordType::TXT,
+                name: "_qualia".into(),
+                value: format!("did={}", owner_did),
+                priority: None,
+                ttl: 300,
+            },
         ];
 
         let sample_doc = PublishedHyperDoc {
@@ -139,7 +169,9 @@ impl DomainConfig {
         out.push_str("<head>\n  <meta charset=\"utf-8\">\n  <title>Solid WebID Profile — ");
         out.push_str(&self.domain_name);
         out.push_str("</title>\n</head>\n");
-        out.push_str("<body vocab=\"http://xmlns.com/foaf/0.1/\" typeof=\"Person\" resource=\"#me\">\n");
+        out.push_str(
+            "<body vocab=\"http://xmlns.com/foaf/0.1/\" typeof=\"Person\" resource=\"#me\">\n",
+        );
         out.push_str("  <h1 property=\"name\">Owner of ");
         out.push_str(&self.domain_name);
         out.push_str("</h1>\n");
@@ -158,12 +190,26 @@ impl DomainConfig {
 
     /// Export standard BIND-format DNS zone file text.
     pub fn export_bind_zone_file(&self) -> String {
-        let mut out = format!("; Zone file for {}\n$ORIGIN {}.\n$TTL 300\n\n", self.domain_name, self.domain_name);
+        let mut out = format!(
+            "; Zone file for {}\n$ORIGIN {}.\n$TTL 300\n\n",
+            self.domain_name, self.domain_name
+        );
         for rec in &self.dns_records {
             if let Some(prio) = rec.priority {
-                out.push_str(&format!("{:<16} IN {:<6} {:<4} {}\n", rec.name, rec.record_type.label(), prio, rec.value));
+                out.push_str(&format!(
+                    "{:<16} IN {:<6} {:<4} {}\n",
+                    rec.name,
+                    rec.record_type.label(),
+                    prio,
+                    rec.value
+                ));
             } else {
-                out.push_str(&format!("{:<16} IN {:<6} {}\n", rec.name, rec.record_type.label(), rec.value));
+                out.push_str(&format!(
+                    "{:<16} IN {:<6} {}\n",
+                    rec.name,
+                    rec.record_type.label(),
+                    rec.value
+                ));
             }
         }
         out
@@ -180,7 +226,7 @@ pub fn build_domains_manager_view(document: &Document, config: &DomainConfig) ->
     let root_el: HtmlElement = root.clone().dyn_into().unwrap();
     root_el.style().set_css_text(
         "display: flex; flex-direction: column; flex: 1; padding: 12px; gap: 10px; \
-         background: #020617; color: #f8fafc; overflow-y: auto; font-family: sans-serif;"
+         background: #020617; color: #f8fafc; overflow-y: auto; font-family: sans-serif;",
     );
 
     // Header Toolbar
@@ -189,19 +235,29 @@ pub fn build_domains_manager_view(document: &Document, config: &DomainConfig) ->
     let header_el: HtmlElement = header.clone().dyn_into().unwrap();
     header_el.style().set_css_text(
         "justify-content: space-between; background: rgba(30, 41, 59, 0.7); \
-         border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; padding: 8px 12px;"
+         border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; padding: 8px 12px;",
     );
 
     let title = document.create_element("span").unwrap();
-    title.set_text_content(Some(&format!("\u{1F310} Domain Digital Home: https://{}", config.domain_name)));
+    title.set_text_content(Some(&format!(
+        "\u{1F310} Domain Digital Home: https://{}",
+        config.domain_name
+    )));
     let title_el: HtmlElement = title.clone().dyn_into().unwrap();
-    title_el.style().set_css_text("font-weight: 700; font-size: 13px; color: #38bdf8;");
+    title_el
+        .style()
+        .set_css_text("font-weight: 700; font-size: 13px; color: #38bdf8;");
     header.append_child(&title).unwrap();
 
     let owner = document.create_element("span").unwrap();
-    owner.set_text_content(Some(&format!("DID: {} \u{00B7} Solid WebID: \u{2713} \u{00B7} SPARQL: \u{2713}", &config.owner_did[..config.owner_did.len().min(16)])));
+    owner.set_text_content(Some(&format!(
+        "DID: {} \u{00B7} Solid WebID: \u{2713} \u{00B7} SPARQL: \u{2713}",
+        &config.owner_did[..config.owner_did.len().min(16)]
+    )));
     let owner_el: HtmlElement = owner.clone().dyn_into().unwrap();
-    owner_el.style().set_css_text("font-size: 11px; font-family: var(--font-mono); color: #94a3b8;");
+    owner_el
+        .style()
+        .set_css_text("font-size: 11px; font-family: var(--font-mono); color: #94a3b8;");
     header.append_child(&owner).unwrap();
 
     root.append_child(&header).unwrap();
@@ -209,14 +265,22 @@ pub fn build_domains_manager_view(document: &Document, config: &DomainConfig) ->
     // 4 Pillars Grid
     let grid = document.create_element("div").unwrap();
     let grid_el: HtmlElement = grid.clone().dyn_into().unwrap();
-    grid_el.style().set_css_text("display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px;");
+    grid_el.style().set_css_text(
+        "display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px;",
+    );
 
     // Pillar 1: Web Publishing Card
     let card1 = create_pillar_card(
         document,
         "\u{1F4D6} Public Web & HyperDocs",
-        &format!("{} Published Dossiers \u{00B7} Live WebID Card", config.published_docs.len()),
-        &format!("Homepage: https://{}/\nWebID: https://{}/profile/card#me", config.domain_name, config.domain_name)
+        &format!(
+            "{} Published Dossiers \u{00B7} Live WebID Card",
+            config.published_docs.len()
+        ),
+        &format!(
+            "Homepage: https://{}/\nWebID: https://{}/profile/card#me",
+            config.domain_name, config.domain_name
+        ),
     );
     grid.append_child(&card1).unwrap();
 
@@ -224,8 +288,16 @@ pub fn build_domains_manager_view(document: &Document, config: &DomainConfig) ->
     let card2 = create_pillar_card(
         document,
         "\u{1F4E7} Purpose-Bound Mailboxes",
-        &format!("{} Active Inboxes \u{00B7} Local SMTP Node", config.mailboxes.len()),
-        &config.mailboxes.iter().map(|m| format!("{}@{}: {}", m.local_part, config.domain_name, m.role_title)).collect::<Vec<_>>().join("\n")
+        &format!(
+            "{} Active Inboxes \u{00B7} Local SMTP Node",
+            config.mailboxes.len()
+        ),
+        &config
+            .mailboxes
+            .iter()
+            .map(|m| format!("{}@{}: {}", m.local_part, config.domain_name, m.role_title))
+            .collect::<Vec<_>>()
+            .join("\n"),
     );
     grid.append_child(&card2).unwrap();
 
@@ -234,7 +306,7 @@ pub fn build_domains_manager_view(document: &Document, config: &DomainConfig) ->
         document,
         "\u{1F5C4}\u{FE0F} Solid LDP Pod & SPARQL",
         "W3C Solid Storage \u{00B7} SPARQL 1.1 Endpoint",
-        &format!("LDP Container: /data/\nSPARQL API: /sparql\nWebTorrent Seeder: Active")
+        &format!("LDP Container: /data/\nSPARQL API: /sparql\nWebTorrent Seeder: Active"),
     );
     grid.append_child(&card3).unwrap();
 
@@ -242,8 +314,14 @@ pub fn build_domains_manager_view(document: &Document, config: &DomainConfig) ->
     let card4 = create_pillar_card(
         document,
         "\u{2699}\u{FE0F} DNS Zone & Tunnels",
-        &format!("{} Zone Records \u{00B7} Cloudflare Tunnel Active", config.dns_records.len()),
-        &format!("A: 192.0.2.42\nMX: mail.{}\nSPF: v=spf1 mx ~all\nDKIM: Ed25519 Verified", config.domain_name)
+        &format!(
+            "{} Zone Records \u{00B7} Cloudflare Tunnel Active",
+            config.dns_records.len()
+        ),
+        &format!(
+            "A: 192.0.2.42\nMX: mail.{}\nSPF: v=spf1 mx ~all\nDKIM: Ed25519 Verified",
+            config.domain_name
+        ),
     );
     grid.append_child(&card4).unwrap();
 
@@ -256,19 +334,23 @@ fn create_pillar_card(document: &Document, title: &str, subtitle: &str, body: &s
     let card_el: HtmlElement = card.clone().dyn_into().unwrap();
     card_el.style().set_css_text(
         "background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255, 255, 255, 0.08); \
-         border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 6px;"
+         border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 6px;",
     );
 
     let title_el = document.create_element("span").unwrap();
     title_el.set_text_content(Some(title));
     let title_h: HtmlElement = title_el.clone().dyn_into().unwrap();
-    title_h.style().set_css_text("font-weight: 700; font-size: 12px; color: #38bdf8;");
+    title_h
+        .style()
+        .set_css_text("font-weight: 700; font-size: 12px; color: #38bdf8;");
     card.append_child(&title_el).unwrap();
 
     let sub_el = document.create_element("span").unwrap();
     sub_el.set_text_content(Some(subtitle));
     let sub_h: HtmlElement = sub_el.clone().dyn_into().unwrap();
-    sub_h.style().set_css_text("font-size: 10px; font-weight: 600; color: #34d399;");
+    sub_h
+        .style()
+        .set_css_text("font-size: 10px; font-weight: 600; color: #34d399;");
     card.append_child(&sub_el).unwrap();
 
     let body_el = document.create_element("pre").unwrap();

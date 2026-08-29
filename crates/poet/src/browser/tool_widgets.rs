@@ -9,8 +9,10 @@
 //!
 //! Copyright (c) 2026 Timothy Charles Holborn. All rights reserved.
 
-use wasm_bindgen::prelude::*;
+use std::collections::BTreeMap;
+
 use wasm_bindgen::JsCast;
+use wasm_bindgen::prelude::*;
 use web_sys::{Document, Element, Event, HtmlElement, HtmlInputElement, HtmlSelectElement};
 
 /// A specialized interactive control representation for a tool or parameter.
@@ -71,6 +73,18 @@ impl ToolWidget {
                 let btn = document.create_element("button").unwrap();
                 btn.set_class_name("tool-btn tool-widget-button");
                 btn.set_attribute("data-tool-id", id).unwrap();
+                btn.set_attribute("data-action", action).unwrap();
+                btn.set_attribute("data-enabled-title", label).unwrap();
+                if super::tool_actions::requires_daemon(id) {
+                    btn.set_attribute("data-requires-daemon", "true").unwrap();
+                }
+                if let Some(reason) = super::tool_actions::current_disabled_reason(id) {
+                    btn.set_attribute("disabled", "").unwrap();
+                    btn.set_attribute("aria-disabled", "true").unwrap();
+                    btn.set_attribute("data-disabled-reason", reason).unwrap();
+                    btn.set_attribute("title", &format!("Unavailable: {reason}"))
+                        .unwrap();
+                }
 
                 let icon_span = document.create_element("span").unwrap();
                 icon_span.set_class_name("tool-btn-icon");
@@ -88,14 +102,6 @@ impl ToolWidget {
                     badge_span.set_text_content(Some(kind_badge));
                     btn.append_child(&badge_span).unwrap();
                 }
-
-                let act = action.clone();
-                let click_closure = Closure::wrap(Box::new(move |_e: Event| {
-                    web_sys::console::log_1(&format!("[ToolChest] Button clicked: {act}").into());
-                }) as Box<dyn FnMut(Event)>);
-                btn.add_event_listener_with_callback("click", click_closure.as_ref().unchecked_ref())
-                    .unwrap();
-                click_closure.forget();
 
                 btn
             }
@@ -132,13 +138,14 @@ impl ToolWidget {
                 let change_closure = Closure::wrap(Box::new(move |e: Event| {
                     let sel: Result<HtmlSelectElement, _> = e.target().unwrap().dyn_into();
                     if let Ok(s) = sel {
-                        web_sys::console::log_1(
-                            &format!("[ToolChest] Select '{}' changed to: {}", wid, s.value()).into(),
-                        );
+                        apply_setting(&wid, &s.value(), true);
                     }
                 }) as Box<dyn FnMut(Event)>);
                 select
-                    .add_event_listener_with_callback("change", change_closure.as_ref().unchecked_ref())
+                    .add_event_listener_with_callback(
+                        "change",
+                        change_closure.as_ref().unchecked_ref(),
+                    )
                     .unwrap();
                 change_closure.forget();
 
@@ -167,6 +174,20 @@ impl ToolWidget {
                 color_input.set_attribute("type", "color").unwrap();
                 color_input.set_attribute("value", default_hex).unwrap();
                 color_input.set_class_name("tool-widget-color-input");
+                color_input.set_attribute("data-widget-id", id).unwrap();
+                let color_widget_id = id.clone();
+                let color_closure = Closure::wrap(Box::new(move |event: Event| {
+                    if let Ok(input) = event.target().unwrap().dyn_into::<HtmlInputElement>() {
+                        apply_setting(&color_widget_id, &input.value(), true);
+                    }
+                }) as Box<dyn FnMut(Event)>);
+                color_input
+                    .add_event_listener_with_callback(
+                        "input",
+                        color_closure.as_ref().unchecked_ref(),
+                    )
+                    .unwrap();
+                color_closure.forget();
                 header.append_child(&color_input).unwrap();
                 container.append_child(&header).unwrap();
 
@@ -190,10 +211,9 @@ impl ToolWidget {
                         let swatch_closure = Closure::wrap(Box::new(move |_e: Event| {
                             let inp: HtmlInputElement = c_input.clone().dyn_into().unwrap();
                             inp.set_value(&h_val);
-                            web_sys::console::log_1(
-                                &format!("[ToolChest] Color '{}' set to preset: {}", wid, h_val).into(),
-                            );
-                        }) as Box<dyn FnMut(Event)>);
+                            apply_setting(&wid, &h_val, true);
+                        })
+                            as Box<dyn FnMut(Event)>);
                         swatch
                             .add_event_listener_with_callback(
                                 "click",
@@ -241,7 +261,9 @@ impl ToolWidget {
                 slider.set_attribute("min", &min.to_string()).unwrap();
                 slider.set_attribute("max", &max.to_string()).unwrap();
                 slider.set_attribute("step", &step.to_string()).unwrap();
-                slider.set_attribute("value", &default_val.to_string()).unwrap();
+                slider
+                    .set_attribute("value", &default_val.to_string())
+                    .unwrap();
                 slider.set_class_name("tool-widget-range-input");
 
                 let vd_clone = val_display.clone();
@@ -252,13 +274,14 @@ impl ToolWidget {
                     if let Ok(i) = inp {
                         let cur = i.value();
                         vd_clone.set_text_content(Some(&format!("{cur}{u_str}")));
-                        web_sys::console::log_1(
-                            &format!("[ToolChest] Slider '{}' moved to: {cur}", wid).into(),
-                        );
+                        apply_setting(&wid, &cur, true);
                     }
                 }) as Box<dyn FnMut(Event)>);
                 slider
-                    .add_event_listener_with_callback("input", input_closure.as_ref().unchecked_ref())
+                    .add_event_listener_with_callback(
+                        "input",
+                        input_closure.as_ref().unchecked_ref(),
+                    )
                     .unwrap();
                 input_closure.forget();
 
@@ -297,29 +320,46 @@ impl ToolWidget {
 
                     let wid = id.clone();
                     let val_str = val.clone();
+                    let button_group = btn_group.clone();
                     let toggle_closure = Closure::wrap(Box::new(move |e: Event| {
-                        let cur_btn: Result<HtmlElement, _> = e.current_target().unwrap().dyn_into();
+                        let cur_btn: Result<HtmlElement, _> =
+                            e.current_target().unwrap().dyn_into();
                         if let Ok(b) = cur_btn {
                             let is_active = b.class_list().contains("active");
-                            // Toggle state
+                            let exclusive = wid.ends_with(":align") || wid.ends_with(":shape_mode");
+                            if exclusive {
+                                if let Ok(buttons) =
+                                    button_group.query_selector_all(".tool-toggle-btn")
+                                {
+                                    for index in 0..buttons.length() {
+                                        if let Some(node) = buttons.get(index) {
+                                            if let Ok(other) = node.dyn_into::<Element>() {
+                                                let _ = other.class_list().remove_1("active");
+                                            }
+                                        }
+                                    }
+                                }
+                            }
                             if is_active {
-                                let _ = b.class_list().remove_1("active");
+                                if !exclusive {
+                                    let _ = b.class_list().remove_1("active");
+                                }
                             } else {
                                 let _ = b.class_list().add_1("active");
                             }
-                            web_sys::console::log_1(
-                                &format!(
-                                    "[ToolChest] Toggle '{}' value '{}' toggled to: {}",
-                                    wid,
-                                    val_str,
-                                    !is_active
-                                )
-                                .into(),
+                            apply_setting(
+                                &wid,
+                                &val_str,
+                                if exclusive { true } else { !is_active },
                             );
                         }
-                    }) as Box<dyn FnMut(Event)>);
+                    })
+                        as Box<dyn FnMut(Event)>);
                     t_btn
-                        .add_event_listener_with_callback("click", toggle_closure.as_ref().unchecked_ref())
+                        .add_event_listener_with_callback(
+                            "click",
+                            toggle_closure.as_ref().unchecked_ref(),
+                        )
                         .unwrap();
                     toggle_closure.forget();
 
@@ -330,5 +370,91 @@ impl ToolWidget {
                 container
             }
         }
+    }
+}
+
+/// Apply a tool setting to the focused/selected surface and retain it as DOM
+/// state for specialised canvas widgets that consume settings themselves.
+fn apply_setting(widget_id: &str, value: &str, enabled: bool) {
+    let Some(document) = web_sys::window().and_then(|window| window.document()) else {
+        return;
+    };
+    let target = document
+        .query_selector(".canvas-container-node.selected")
+        .ok()
+        .flatten()
+        .or_else(|| {
+            document
+                .query_selector(".canvas-container-node")
+                .ok()
+                .flatten()
+        });
+    let Some(container) = target else { return };
+
+    let mut settings = container
+        .get_attribute("data-tool-settings")
+        .and_then(|json| serde_json::from_str::<BTreeMap<String, String>>(&json).ok())
+        .unwrap_or_default();
+    if enabled {
+        settings.insert(widget_id.to_string(), value.to_string());
+    } else {
+        settings.remove(widget_id);
+    }
+    apply_container_setting(&container, widget_id, value, enabled);
+    store_container_settings(&container, &settings);
+    super::history::push_current_frame("tool setting");
+}
+
+/// Restore persisted Tool Chest settings after a container is rebuilt by
+/// manifold switching, undo/redo, or saved-manifest loading.
+pub fn restore_container_settings(container: &Element, settings: &BTreeMap<String, String>) {
+    store_container_settings(container, settings);
+    for (widget_id, value) in settings {
+        apply_container_setting(container, widget_id, value, true);
+    }
+}
+
+fn store_container_settings(container: &Element, settings: &BTreeMap<String, String>) {
+    match serde_json::to_string(settings) {
+        Ok(json) if !settings.is_empty() => {
+            let _ = container.set_attribute("data-tool-settings", &json);
+        }
+        _ => {
+            let _ = container.remove_attribute("data-tool-settings");
+        }
+    }
+}
+
+fn apply_container_setting(container: &Element, widget_id: &str, value: &str, enabled: bool) {
+    let surface = container
+        .query_selector(".doc-editor")
+        .ok()
+        .flatten()
+        .or_else(|| container.query_selector(".container-body").ok().flatten());
+    let Some(surface) = surface.and_then(|element| element.dyn_into::<HtmlElement>().ok()) else {
+        return;
+    };
+
+    if widget_id.ends_with(":font_family") {
+        let _ = surface.style().set_property("font-family", value);
+    } else if widget_id.ends_with(":font_size") {
+        let _ = surface.style().set_property("font-size", value);
+    } else if widget_id.ends_with(":color") || widget_id.ends_with(":stroke_color") {
+        let _ = surface.style().set_property("color", value);
+    } else if widget_id.ends_with(":fill_color") {
+        let _ = surface.style().set_property("background-color", value);
+    } else if widget_id.ends_with(":align") {
+        let _ = surface.style().set_property("text-align", value);
+    } else if widget_id.ends_with(":style") {
+        let (property, on, off) = match value {
+            "bold" => ("font-weight", "700", "normal"),
+            "italic" => ("font-style", "italic", "normal"),
+            "underline" => ("text-decoration", "underline", "none"),
+            "code" => ("font-family", "var(--font-mono)", "var(--font-sans)"),
+            _ => return,
+        };
+        let _ = surface
+            .style()
+            .set_property(property, if enabled { on } else { off });
     }
 }

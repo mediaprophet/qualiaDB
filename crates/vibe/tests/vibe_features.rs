@@ -3,9 +3,7 @@
 //! Embedded Graph queries, Logic Modalities, and 8-Locale bijective completeness.
 
 use vibe::locale::LocaleRegistry;
-use vibe::{
-    parse_cell, parse_program, Budget, Engine, Env, ExprKind, Literal, LocalHost, Value,
-};
+use vibe::{parse_cell, parse_program, Budget, Engine, Env, ExprKind, Literal, LocalHost, Value};
 
 // ── 1. Pipeline Operator (|>) ──────────────────────────────────────────
 
@@ -58,7 +56,10 @@ fn test_pipeline_operator_with_multi_args() {
 fn test_quantity_literals_parse_and_eval() {
     let cell_src = "= 500ms";
     let expr = parse_cell(cell_src).expect("should parse 500ms");
-    assert!(matches!(expr.kind, ExprKind::Literal(Literal::Quantity { .. })));
+    assert!(matches!(
+        expr.kind,
+        ExprKind::Literal(Literal::Quantity { .. })
+    ));
 
     let mut host = LocalHost::default();
     let mut engine = Engine::new(&mut host, Budget::default());
@@ -146,10 +147,7 @@ fn test_vector_constructors() {
         .expect("eval");
     if let Value::List(vecs) = val {
         assert_eq!(vecs.len(), 3);
-        assert_eq!(
-            vecs[0],
-            Value::List(vec![Value::F64(1.0), Value::F64(2.0)])
-        );
+        assert_eq!(vecs[0], Value::List(vec![Value::F64(1.0), Value::F64(2.0)]));
         assert_eq!(
             vecs[1],
             Value::List(vec![Value::F64(1.0), Value::F64(2.0), Value::F64(3.0)])

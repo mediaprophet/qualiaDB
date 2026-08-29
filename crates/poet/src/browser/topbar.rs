@@ -3,8 +3,8 @@
 //! Copyright (c) 2026 Timothy Charles Holborn. All rights reserved.
 
 use crate::tool_chest::core::registry::ManifoldSeed;
-use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
+use wasm_bindgen::prelude::*;
 use web_sys::{Document, Element, Event, HtmlElement, HtmlInputElement, MouseEvent};
 
 /// Build the top menubar (File/Edit/View + brand + fiduciary badge).
@@ -197,7 +197,10 @@ pub fn build_top_menubar(document: &Document) -> Element {
     habitat_btn.set_class_name("menu-btn habitat-pivot-btn");
     habitat_btn.set_text_content(Some("\u{2728} Poet / \u{2699}\u{FE0F} Admin \u{21C4}"));
     habitat_btn
-        .set_attribute("title", "Pivot Habitat: Switch to Webizen Admin Console (Alt+U)")
+        .set_attribute(
+            "title",
+            "Pivot Habitat: Switch to Webizen Admin Console (Alt+U)",
+        )
         .unwrap();
     let hp_closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
         let doc = web_sys::window().unwrap().document().unwrap();
@@ -214,7 +217,10 @@ pub fn build_top_menubar(document: &Document) -> Element {
     mesh_badge.set_class_name("mesh-sentinel-badge");
     mesh_badge.set_text_content(Some("\u{25CF} Mesh Active \u{00B7} 42MB OK"));
     mesh_badge
-        .set_attribute("title", "42MB Prolog Sentinel Active \u{00B7} Zero-Heap Hot Paths Monitored")
+        .set_attribute(
+            "title",
+            "42MB Prolog Sentinel Active \u{00B7} Zero-Heap Hot Paths Monitored",
+        )
         .unwrap();
     right.append_child(&mesh_badge).unwrap();
 
@@ -402,6 +408,7 @@ fn handle_menu_action(document: &Document, action: &str, label: &str) {
             super::interactions::place_container_via_menu(document, container_type, label);
         }
         "file:save" => {
+            super::history::sync_persistence_state();
             let _ = super::manifest::save_all_manifolds();
             show_menu_notification(
                 document,
@@ -412,25 +419,41 @@ fn handle_menu_action(document: &Document, action: &str, label: &str) {
             open_save_mode_dialog(document);
         }
         "file:export-cbor" => {
+            super::history::sync_persistence_state();
             let seeds = super::get_current_seeds();
             if let Ok(json) = serde_json::to_string_pretty(&seeds) {
                 trigger_file_download(document, "manifold_seeds_export.json", &json);
                 show_menu_notification(document, "Exported manifold seeds dataset (JSON/CBOR-LD)");
             } else {
-                show_menu_notification(document, "Export failed: unable to serialize manifold seeds");
+                show_menu_notification(
+                    document,
+                    "Export failed: unable to serialize manifold seeds",
+                );
             }
         }
         "file:import-cbor" => {
             trigger_file_import_dialog(document);
         }
         "file:checkpoint-history" => {
-            super::interactions::place_container_via_menu(document, "checkpoint-tray", "Checkpoint Tray");
+            super::interactions::place_container_via_menu(
+                document,
+                "checkpoint-tray",
+                "Checkpoint Tray",
+            );
         }
         "file:prune-archive" => {
-            super::interactions::place_container_via_menu(document, "publication-workflow", "Publication Workflow");
+            super::interactions::place_container_via_menu(
+                document,
+                "publication-workflow",
+                "Publication Workflow",
+            );
         }
         "file:export-distribution" => {
-            super::interactions::place_container_via_menu(document, "publication-workflow", "Distribution Export");
+            super::interactions::place_container_via_menu(
+                document,
+                "publication-workflow",
+                "Distribution Export",
+            );
         }
         "file:new-manifold" => {
             open_new_manifold_dialog(document);
@@ -439,7 +462,10 @@ fn handle_menu_action(document: &Document, action: &str, label: &str) {
             let seeds = super::get_current_seeds();
             if !seeds.is_empty() {
                 super::switch_manifold(&seeds[0].id, &seeds);
-                show_menu_notification(document, "Active manifold closed; reset to base workspace.");
+                show_menu_notification(
+                    document,
+                    "Active manifold closed; reset to base workspace.",
+                );
             }
         }
         "edit:duplicate" => {
@@ -495,7 +521,10 @@ fn handle_menu_action(document: &Document, action: &str, label: &str) {
             open_honesty_dialog(document);
         }
         "help:report" => {
-            show_menu_notification(document, "GitHub Issue tracker \u{2014} report logged to audit ledger");
+            show_menu_notification(
+                document,
+                "GitHub Issue tracker \u{2014} report logged to audit ledger",
+            );
         }
         _ => {
             show_menu_notification(document, &format!("{} \u{2014} dispatched", label));
@@ -548,9 +577,10 @@ fn open_save_mode_dialog(document: &Document) {
         "font-size: 10px; color: var(--text-muted); padding: 6px 10px; \
          background: var(--surface-panel); border-radius: var(--radius-xs);",
     );
-    actor_info.set_text_content(Some(
-        "Actor: did:qualia:timothy_charles_holborn \u{2014} all saves are attributed to the principal."
-    ));
+    actor_info.set_text_content(Some(&format!(
+        "Actor: {} — saves are attributed to the bound observer.",
+        super::current_observer_did()
+    )));
     panel.append_child(&actor_info).unwrap();
 
     // Mode selector
@@ -569,7 +599,7 @@ fn open_save_mode_dialog(document: &Document) {
     let modes = [
         ("Auto", "auto", "Frequency-based\nrolling buffer"),
         ("Checkpoint", "checkpoint", "Named save\nwith label"),
-        ("Snapshot", "snapshot", "Full provenance\n(archival)"),
+        ("Snapshot", "snapshot", "Immutable seed set\n(exportable)"),
         ("Pruned", "pruned", "Tombstones pruned\n(distribution)"),
     ];
 
@@ -577,6 +607,15 @@ fn open_save_mode_dialog(document: &Document) {
         let btn = document.create_element("button").unwrap();
         btn.set_class_name("save-mode-btn");
         btn.set_attribute("data-save-mode", mode_id).unwrap();
+        if *mode_id == "pruned" {
+            btn.set_attribute("disabled", "").ok();
+            btn.set_attribute("aria-disabled", "true").ok();
+            btn.set_attribute(
+                "title",
+                "Unavailable: the checkpoint store does not yet retain an operation/tombstone DAG to prune.",
+            )
+            .ok();
+        }
         let btn_el: HtmlElement = btn.clone().dyn_into().unwrap();
         btn_el.style().set_css_text(if idx == 1 {
             "flex: 1; padding: 10px 8px; border: 1px solid var(--accent-cyan); \
@@ -651,9 +690,7 @@ fn open_save_mode_dialog(document: &Document) {
          border-left: 2px solid var(--accent-cyan);",
     );
     honesty.set_text_content(Some(
-        "\u{1F4A1} Auto and Checkpoint modes are live. Snapshot and Pruned modes are \
-         present (UI records intent) \u{2014} full provenance graph, Merkle root, and \
-         tombstone pruning are engine wiring pending. See SAVE_ARCHITECTURE.md.",
+        "Auto, Checkpoint, and immutable seed Snapshot modes are live. Pruned is disabled until the store retains an operation/tombstone DAG. Construct HCF/HMC export is available from the Publication Workflow and Construct Shelf.",
     ));
     panel.append_child(&honesty).unwrap();
 
@@ -681,7 +718,7 @@ fn open_save_mode_dialog(document: &Document) {
     sb_el.style().set_css_text(
         "padding: 8px 16px; border: 1px solid var(--accent-cyan); border-radius: var(--radius-xs); \
          background: var(--accent-cyan); color: var(--bg-deep); font-family: var(--font-mono); \
-         font-size: 11px; font-weight: 700; cursor: pointer;"
+         font-size: 11px; font-weight: 700; cursor: pointer;",
     );
     btn_row.append_child(&save_btn).unwrap();
     panel.append_child(&btn_row).unwrap();
@@ -861,6 +898,132 @@ fn show_menu_notification(document: &Document, message: &str) {
     timeout.forget();
 }
 
+fn append_pager_tab(
+    document: &Document,
+    desktops: &Element,
+    seed: &ManifoldSeed,
+    index: usize,
+    active_id: &str,
+) {
+    let tab = document.create_element("button").unwrap();
+    tab.set_class_name("desktop-tab-btn");
+    if seed.id == active_id {
+        tab.class_list().add_1("active").unwrap();
+    }
+    tab.set_attribute("data-manifold", &seed.id).unwrap();
+    let num = document.create_element("span").unwrap();
+    num.set_class_name("desktop-num");
+    num.set_text_content(Some(&(index + 1).to_string()));
+    let label = document.create_element("span").unwrap();
+    label.set_text_content(Some(&format!(" {} {}", seed.icon, seed.label)));
+    tab.append_child(&num).unwrap();
+    tab.append_child(&label).unwrap();
+    if seed.is_social() {
+        let people = document.create_element("span").unwrap();
+        people.set_text_content(Some(" \u{1F465}"));
+        people
+            .set_attribute("title", "Social lens — many people")
+            .ok();
+        tab.append_child(&people).unwrap();
+    }
+    let manifold_id = seed.id.clone();
+    let closure = Closure::wrap(Box::new(move || {
+        super::switch_to_sibling_manifold(&manifold_id);
+    }) as Box<dyn FnMut()>);
+    tab.add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())
+        .unwrap();
+    closure.forget();
+    desktops.append_child(&tab).unwrap();
+}
+
+/// Rebuild the pager to the open construct's lenses.
+pub fn rebuild_pager(document: &Document, seeds: &[ManifoldSeed], active_id: &str) {
+    let Some(desktops) = document
+        .query_selector(".pager-desktops-list")
+        .ok()
+        .flatten()
+    else {
+        return;
+    };
+    while let Some(child) = desktops.first_element_child() {
+        child.remove();
+    }
+    for (index, seed) in seeds.iter().enumerate() {
+        append_pager_tab(document, &desktops, seed, index, active_id);
+    }
+}
+
+/// Refresh construct/manifold chrome (badge + clickable breadcrumb + pop).
+pub fn refresh_construct_chrome(document: &Document, construct_id: &str, manifold_id: &str) {
+    if let Some(badge) = document
+        .query_selector(".graph-address-badge")
+        .ok()
+        .flatten()
+    {
+        badge.set_text_content(Some(&format!(
+            "construct:{construct_id} graph:manifold:{manifold_id}"
+        )));
+    }
+    let Some(crumb) = document.get_element_by_id("construct-breadcrumb") else {
+        return;
+    };
+    while let Some(child) = crumb.first_element_child() {
+        child.remove();
+    }
+    crumb.set_text_content(None);
+
+    let prefix = document.create_element("span").unwrap();
+    prefix.set_text_content(Some(&format!("construct:{construct_id}")));
+    crumb.append_child(&prefix).unwrap();
+
+    let crumbs = super::construct_nav_crumbs();
+    let last = crumbs.len().saturating_sub(1);
+    for (idx, (id, title)) in crumbs.iter().enumerate() {
+        let sep = document.create_element("span").unwrap();
+        sep.set_text_content(Some(" › "));
+        crumb.append_child(&sep).unwrap();
+        if idx == last {
+            let current = document.create_element("span").unwrap();
+            current.set_text_content(Some(title));
+            current.set_attribute("data-manifold", id).ok();
+            crumb.append_child(&current).unwrap();
+        } else {
+            let button = document.create_element("button").unwrap();
+            button.set_attribute("type", "button").ok();
+            button.set_class_name("breadcrumb-pop");
+            button
+                .set_attribute("data-nav-depth", &idx.to_string())
+                .ok();
+            button.set_text_content(Some(title));
+            let depth = idx;
+            let closure = Closure::wrap(Box::new(move |_event: Event| {
+                super::pop_nested_to_depth(depth);
+            }) as Box<dyn FnMut(Event)>);
+            button
+                .add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())
+                .unwrap();
+            closure.forget();
+            crumb.append_child(&button).unwrap();
+        }
+    }
+
+    if last > 0 {
+        let up = document.create_element("button").unwrap();
+        up.set_attribute("type", "button").ok();
+        up.set_class_name("breadcrumb-up");
+        up.set_attribute("title", "Pop nested manifold").ok();
+        up.set_text_content(Some("Up"));
+        let closure = Closure::wrap(Box::new(move |_event: Event| {
+            super::pop_nested_manifold();
+        }) as Box<dyn FnMut(Event)>);
+        up.add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())
+            .unwrap();
+        closure.forget();
+        crumb.append_child(&up).unwrap();
+    }
+    super::manifold_social::refresh_people_chrome(document);
+}
+
 /// Build the canvas control bar (manifold pager + title + socket-case pods).
 pub fn build_canvas_control_bar(document: &Document, seeds: &[ManifoldSeed]) -> Element {
     let bar = document.create_element("div").unwrap();
@@ -872,24 +1035,9 @@ pub fn build_canvas_control_bar(document: &Document, seeds: &[ManifoldSeed]) -> 
     let desktops = document.create_element("div").unwrap();
     desktops.set_class_name("pager-desktops-list");
 
+    let active = seeds.first().map(|seed| seed.id.as_str()).unwrap_or("");
     for (i, seed) in seeds.iter().enumerate() {
-        let tab = document.create_element("button").unwrap();
-        tab.set_class_name("desktop-tab-btn");
-        if i == 0 {
-            tab.class_list().add_1("active").unwrap();
-        }
-        tab.set_attribute("data-manifold", &seed.id).unwrap();
-
-        let num = document.create_element("span").unwrap();
-        num.set_class_name("desktop-num");
-        num.set_text_content(Some(&(i + 1).to_string()));
-
-        let label = document.create_element("span").unwrap();
-        label.set_text_content(Some(&format!(" {} {}", seed.icon, seed.label)));
-
-        tab.append_child(&num).unwrap();
-        tab.append_child(&label).unwrap();
-        desktops.append_child(&tab).unwrap();
+        append_pager_tab(document, &desktops, seed, i, active);
     }
     pager.append_child(&desktops).unwrap();
 
@@ -915,13 +1063,45 @@ pub fn build_canvas_control_bar(document: &Document, seeds: &[ManifoldSeed]) -> 
 
     bar.append_child(&pager).unwrap();
 
+    let crumb = document.create_element("div").unwrap();
+    crumb.set_id("construct-breadcrumb");
+    crumb.set_class_name("construct-breadcrumb");
+    let crumb_el: HtmlElement = crumb.clone().dyn_into().unwrap();
+    crumb_el.style().set_css_text(
+        "font-size: 10px; font-family: var(--font-mono); color: var(--text-muted); padding: 0 8px;",
+    );
+    crumb.set_text_content(Some(&format!(
+        "construct:{}",
+        super::current_construct_id()
+    )));
+    bar.append_child(&crumb).unwrap();
+
+    let people = document.create_element("div").unwrap();
+    people.set_id("manifold-people");
+    people.set_class_name("manifold-people");
+    let people_el: HtmlElement = people.clone().dyn_into().unwrap();
+    people_el.style().set_css_text(
+        "font-size: 10px; font-family: var(--font-mono); color: var(--text-muted); \
+         padding: 0 8px; display: flex; align-items: center; gap: 6px; white-space: nowrap;",
+    );
+    people.set_text_content(Some("personal lens"));
+    bar.append_child(&people).unwrap();
+
     // Title box — editable input
     let title_box = document.create_element("div").unwrap();
     title_box.set_class_name("canvas-title-box");
     let title_input = document.create_element("input").unwrap();
     title_input.set_class_name("canvas-title-input");
     title_input.set_attribute("type", "text").unwrap();
-    title_input.set_attribute("value", &seeds[0].label).unwrap();
+    title_input
+        .set_attribute(
+            "value",
+            seeds
+                .first()
+                .map(|seed| seed.label.as_str())
+                .unwrap_or("POET"),
+        )
+        .unwrap();
     title_input
         .set_attribute("id", "manifold-title-input")
         .unwrap();
@@ -930,7 +1110,14 @@ pub fn build_canvas_control_bar(document: &Document, seeds: &[ManifoldSeed]) -> 
     let graph_badge = document.create_element("span").unwrap();
     graph_badge.set_class_name("graph-address-badge");
     graph_badge.set_id("manifold-graph-badge");
-    graph_badge.set_text_content(Some(&format!("graph:manifold:{}", seeds[0].id)));
+    graph_badge.set_text_content(Some(&format!(
+        "construct:{} graph:manifold:{}",
+        super::current_construct_id(),
+        seeds
+            .first()
+            .map(|seed| seed.id.as_str())
+            .unwrap_or("research")
+    )));
     title_box.append_child(&graph_badge).unwrap();
     bar.append_child(&title_box).unwrap();
 
@@ -1571,11 +1758,17 @@ fn populate_dim_tray(document: &Document, tray: &Element) {
 
     let scrub_row = document.create_element("div").unwrap();
     let sr_el: HtmlElement = scrub_row.clone().dyn_into().unwrap();
-    sr_el.style().set_css_text("display: flex; gap: 8px; align-items: center; margin-top: 2px;");
+    sr_el
+        .style()
+        .set_css_text("display: flex; gap: 8px; align-items: center; margin-top: 2px;");
 
     let play_btn = document.create_element("button").unwrap();
     play_btn.set_class_name("vibe-run-btn");
     play_btn.set_text_content(Some("\u{25B6} Play"));
+    play_btn
+        .set_attribute("aria-label", "Play 4D timeline")
+        .unwrap();
+    play_btn.set_attribute("aria-pressed", "false").unwrap();
     let pb_el: HtmlElement = play_btn.clone().dyn_into().unwrap();
     pb_el.style().set_css_text("background: var(--accent-amber, #ffb834); color: #020617; font-weight: 700; font-size: 10px; padding: 3px 8px; border-radius: 4px; border: none; cursor: pointer;");
     scrub_row.append_child(&play_btn).unwrap();
@@ -1585,48 +1778,118 @@ fn populate_dim_tray(document: &Document, tray: &Element) {
     slider.set_attribute("min", "0").unwrap();
     slider.set_attribute("max", "100").unwrap();
     slider.set_attribute("value", "50").unwrap();
+    slider
+        .set_attribute("aria-label", "4D timeline position")
+        .unwrap();
     let sl_el: HtmlElement = slider.clone().dyn_into().unwrap();
-    sl_el.style().set_css_text("flex: 1; height: 4px; accent-color: var(--accent-amber); cursor: pointer;");
+    sl_el
+        .style()
+        .set_css_text("flex: 1; height: 4px; accent-color: var(--accent-amber); cursor: pointer;");
     scrub_row.append_child(&slider).unwrap();
 
     let time_badge = document.create_element("span").unwrap();
     let tb_el: HtmlElement = time_badge.clone().dyn_into().unwrap();
-    tb_el.style().set_css_text("font-family: var(--font-mono); font-size: 10px; color: var(--accent-amber);");
+    tb_el.style().set_css_text(
+        "font-family: var(--font-mono); font-size: 10px; color: var(--accent-amber);",
+    );
     time_badge.set_text_content(Some("T+00:50:00"));
     scrub_row.append_child(&time_badge).unwrap();
 
-    let tb_clone = time_badge.clone();
     let play_clone = play_btn.clone();
     let is_playing = std::rc::Rc::new(std::cell::Cell::new(false));
     let is_playing_clone = is_playing.clone();
+    let interval_handle = std::rc::Rc::new(std::cell::Cell::new(None::<i32>));
+    let interval_handle_for_play = interval_handle.clone();
+    let tick_callback = std::rc::Rc::new(std::cell::RefCell::new(None::<Closure<dyn FnMut()>>));
+    let tick_callback_for_play = tick_callback.clone();
+    let slider_for_play: HtmlInputElement = slider.clone().dyn_into().unwrap();
+    let badge_for_play = time_badge.clone();
 
-    let play_closure = wasm_bindgen::closure::Closure::wrap(Box::new(move |_e: web_sys::MouseEvent| {
-        let currently_playing = is_playing_clone.get();
-        is_playing_clone.set(!currently_playing);
-        if !currently_playing {
-            play_clone.set_text_content(Some("\u{23F8} Pause"));
-            web_sys::console::log_1(&"[4D Timeline] Playback running \u{2014} reactive poet_tick loop active".into());
-        } else {
-            play_clone.set_text_content(Some("\u{25B6} Play"));
-            web_sys::console::log_1(&"[4D Timeline] Playback paused".into());
-        }
-    }) as Box<dyn FnMut(web_sys::MouseEvent)>);
-    play_btn.add_event_listener_with_callback("click", play_closure.as_ref().unchecked_ref()).unwrap();
+    let play_closure =
+        wasm_bindgen::closure::Closure::wrap(Box::new(move |_e: web_sys::MouseEvent| {
+            let currently_playing = is_playing_clone.get();
+            if !currently_playing {
+                is_playing_clone.set(true);
+                play_clone.set_text_content(Some("\u{23F8} Pause"));
+                let _ = play_clone.set_attribute("aria-label", "Pause 4D timeline");
+                let _ = play_clone.set_attribute("aria-pressed", "true");
+
+                let slider_for_tick = slider_for_play.clone();
+                let badge_for_tick = badge_for_play.clone();
+                let callback = Closure::wrap(Box::new(move || {
+                    let current = slider_for_tick.value().parse::<u32>().unwrap_or(0);
+                    let next = if current >= 100 { 0 } else { current + 1 };
+                    if let Some(doc) = web_sys::window().and_then(|window| window.document()) {
+                        apply_timeline_position(&doc, &slider_for_tick, &badge_for_tick, next);
+                    }
+                }) as Box<dyn FnMut()>);
+
+                if let Some(window) = web_sys::window() {
+                    if let Ok(handle) = window
+                        .set_interval_with_callback_and_timeout_and_arguments_0(
+                            callback.as_ref().unchecked_ref(),
+                            1_000,
+                        )
+                    {
+                        interval_handle_for_play.set(Some(handle));
+                        *tick_callback_for_play.borrow_mut() = Some(callback);
+                    }
+                }
+            } else {
+                is_playing_clone.set(false);
+                play_clone.set_text_content(Some("\u{25B6} Play"));
+                let _ = play_clone.set_attribute("aria-label", "Play 4D timeline");
+                let _ = play_clone.set_attribute("aria-pressed", "false");
+                if let Some(handle) = interval_handle_for_play.take() {
+                    if let Some(window) = web_sys::window() {
+                        window.clear_interval_with_handle(handle);
+                    }
+                }
+                tick_callback_for_play.borrow_mut().take();
+            }
+        }) as Box<dyn FnMut(web_sys::MouseEvent)>);
+    play_btn
+        .add_event_listener_with_callback("click", play_closure.as_ref().unchecked_ref())
+        .unwrap();
     play_closure.forget();
 
+    let slider_for_scrub: HtmlInputElement = slider.clone().dyn_into().unwrap();
+    let badge_for_scrub = time_badge.clone();
     let scrub_closure = wasm_bindgen::closure::Closure::wrap(Box::new(move |e: web_sys::Event| {
         if let Some(target) = e.target() {
             if let Ok(input) = target.dyn_into::<web_sys::HtmlInputElement>() {
                 let val: u32 = input.value().parse().unwrap_or(50);
-                tb_clone.set_text_content(Some(&format!("T+00:{:02}:00", val)));
+                if let Some(doc) = web_sys::window().and_then(|window| window.document()) {
+                    apply_timeline_position(&doc, &slider_for_scrub, &badge_for_scrub, val);
+                }
             }
         }
-    }) as Box<dyn FnMut(web_sys::Event)>);
-    slider.add_event_listener_with_callback("input", scrub_closure.as_ref().unchecked_ref()).unwrap();
+    })
+        as Box<dyn FnMut(web_sys::Event)>);
+    slider
+        .add_event_listener_with_callback("input", scrub_closure.as_ref().unchecked_ref())
+        .unwrap();
     scrub_closure.forget();
 
     scrubber_group.append_child(&scrub_row).unwrap();
     tray.append_child(&scrubber_group).unwrap();
+}
+
+fn apply_timeline_position(
+    document: &Document,
+    slider: &HtmlInputElement,
+    badge: &Element,
+    position: u32,
+) {
+    let position = position.min(100);
+    slider.set_value(&position.to_string());
+    badge.set_text_content(Some(&format!("T+00:{:02}:00", position)));
+    if let Some(canvas) = document.get_element_by_id("manifold-canvas") {
+        let _ = canvas.set_attribute("data-timeline-position", &position.to_string());
+    }
+    if let Ok(event) = Event::new("poet_tick") {
+        let _ = document.dispatch_event(&event);
+    }
 }
 
 /// Wire up live manifold title rename input.
@@ -1644,6 +1907,9 @@ pub fn wire_title_rename(document: &Document, seeds: &[ManifoldSeed]) {
                 let tab = tabs.get(i).unwrap();
                 let tab_el: Element = tab.dyn_into().unwrap();
                 if tab_el.class_list().contains("active") {
+                    if let Some(manifold_id) = tab_el.get_attribute("data-manifold") {
+                        super::rename_current_seed(&manifold_id, &new_title);
+                    }
                     // Update the label span (second child)
                     if let Some(label_span) = tab_el.query_selector("span:last-child").unwrap() {
                         label_span.set_text_content(Some(&format!(" {}", new_title)));
@@ -1667,95 +1933,7 @@ pub fn wire_title_rename(document: &Document, seeds: &[ManifoldSeed]) {
 /// The new manifold has no containers — the user can place containers
 /// from the toolbox dock or Insert menu.
 fn add_new_manifold(document: &Document) {
-    use crate::tool_chest::core::registry::{ManifoldSeed, SeedContainer};
-
-    // Generate a unique manifold ID
-    let manifold_id = format!("manifold-{}", js_sys::Date::now() as u64);
-    let label = format!("Manifold {}", {
-        let tabs = document.query_selector_all(".desktop-tab-btn").unwrap();
-        tabs.length() + 1
-    });
-
-    // Create an empty seed
-    let seed = ManifoldSeed {
-        id: manifold_id.clone(),
-        label: label.clone(),
-        icon: "\u{1F30C}".into(),
-        containers: Vec::<SeedContainer>::new(),
-        connections: Vec::new(),
-        ..Default::default()
-    };
-
-    // Add a new tab button for this manifold
-    let desktops = match document.query_selector(".pager-desktops-list").unwrap() {
-        Some(d) => d,
-        None => return,
-    };
-
-    let tab = document.create_element("button").unwrap();
-    tab.set_class_name("desktop-tab-btn");
-    tab.set_attribute("data-manifold", &manifold_id).unwrap();
-
-    let num = document.create_element("span").unwrap();
-    num.set_class_name("desktop-num");
-    let tab_count = document
-        .query_selector_all(".desktop-tab-btn")
-        .unwrap()
-        .length();
-    num.set_text_content(Some(&(tab_count).to_string()));
-
-    let lbl = document.create_element("span").unwrap();
-    lbl.set_text_content(Some(&format!(" {} {}", seed.icon, seed.label)));
-
-    tab.append_child(&num).unwrap();
-    tab.append_child(&lbl).unwrap();
-
-    // Insert before the + button
-    if let Some(add_btn) = document.get_element_by_id("manifold-add-btn") {
-        desktops.insert_before(&tab, Some(&add_btn)).unwrap();
-    } else {
-        desktops.append_child(&tab).unwrap();
-    }
-
-    // Wire the tab to switch to this manifold
-    let seed_clone = seed.clone();
-    let manifold_id_clone = manifold_id.clone();
-    let tab_closure = Closure::wrap(Box::new(move || {
-        switch_to_new_manifold(&manifold_id_clone, &seed_clone);
-    }) as Box<dyn FnMut()>);
-    tab.add_event_listener_with_callback("click", tab_closure.as_ref().unchecked_ref())
-        .unwrap();
-    tab_closure.forget();
-
-    // Switch to the new manifold immediately
-    switch_to_new_manifold(&manifold_id, &seed);
-
-    // Show notification
-    show_menu_notification(document, &format!("Created \u{201C}{}\u{201D}", label));
-}
-
-/// Switch to a newly created manifold — updates active tab, re-renders
-/// canvas, and wires interactions.
-fn switch_to_new_manifold(
-    manifold_id: &str,
-    seed: &crate::tool_chest::core::registry::ManifoldSeed,
-) {
-    let document = web_sys::window().unwrap().document().unwrap();
-
-    // Update active tab
-    let tabs = document.query_selector_all(".desktop-tab-btn").unwrap();
-    for i in 0..tabs.length() {
-        let tab = tabs.get(i).unwrap();
-        let tab_el: Element = tab.dyn_into().unwrap();
-        if tab_el.get_attribute("data-manifold").as_deref() == Some(manifold_id) {
-            tab_el.class_list().add_1("active").unwrap();
-        } else {
-            tab_el.class_list().remove_1("active").unwrap();
-        }
-    }
-
-    // Re-render the canvas with the new (empty) seed
-    super::rerender_canvas(seed);
+    super::manifold_authoring::open_authoring_dialog(document);
 }
 
 // ---------------------------------------------------------------------------
@@ -1785,10 +1963,15 @@ fn trigger_file_import_dialog(document: &Document) {
 
     let closure = Closure::wrap(Box::new(move |_e: Event| {
         let doc = web_sys::window().unwrap().document().unwrap();
-        show_menu_notification(&doc, "Dataset selected \u{2014} CBOR-LD graph entities ingested onto active canvas");
+        show_menu_notification(
+            &doc,
+            "Dataset selected \u{2014} CBOR-LD graph entities ingested onto active canvas",
+        );
     }) as Box<dyn FnMut(Event)>);
 
-    input.add_event_listener_with_callback("change", closure.as_ref().unchecked_ref()).unwrap();
+    input
+        .add_event_listener_with_callback("change", closure.as_ref().unchecked_ref())
+        .unwrap();
     closure.forget();
 
     if let Some(body) = document.body() {
@@ -1809,7 +1992,7 @@ fn open_new_manifold_dialog(document: &Document) {
     overlay_el.style().set_css_text(
         "position: fixed; top: 0; left: 0; width: 100%; height: 100%; \
          background: rgba(0,0,0,0.6); z-index: 10000; \
-         display: flex; align-items: center; justify-content: center; backdrop-filter: blur(10px);"
+         display: flex; align-items: center; justify-content: center; backdrop-filter: blur(10px);",
     );
 
     let panel = document.create_element("div").unwrap();
@@ -1818,11 +2001,16 @@ fn open_new_manifold_dialog(document: &Document) {
         "width: 440px; background: var(--surface-glass-heavy); \
          border: 1px solid var(--border-medium); border-radius: var(--radius-md); \
          box-shadow: var(--shadow-lg); padding: 20px; display: flex; flex-direction: column; \
-         gap: 14px; font-family: var(--font-mono); color: var(--text-primary);"
+         gap: 14px; font-family: var(--font-mono); color: var(--text-primary);",
     );
 
     let title = document.create_element("div").unwrap();
-    title.set_attribute("style", "font-size: 14px; font-weight: 700; color: var(--accent-cyan);").unwrap();
+    title
+        .set_attribute(
+            "style",
+            "font-size: 14px; font-weight: 700; color: var(--accent-cyan);",
+        )
+        .unwrap();
     title.set_text_content(Some("\u{2728} Create New Manifold Stage"));
     panel.append_child(&title).unwrap();
 
@@ -1835,7 +2023,9 @@ fn open_new_manifold_dialog(document: &Document) {
 
     let buttons = document.create_element("div").unwrap();
     let buttons_el: HtmlElement = buttons.clone().dyn_into().unwrap();
-    buttons_el.style().set_css_text("display: flex; justify-content: flex-end; gap: 8px; margin-top: 6px;");
+    buttons_el
+        .style()
+        .set_css_text("display: flex; justify-content: flex-end; gap: 8px; margin-top: 6px;");
 
     let cancel_btn = document.create_element("button").unwrap();
     cancel_btn.set_class_name("save-cancel-btn");
@@ -1844,7 +2034,9 @@ fn open_new_manifold_dialog(document: &Document) {
     let cancel_closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
         ov_clone.remove();
     }) as Box<dyn FnMut(MouseEvent)>);
-    cancel_btn.add_event_listener_with_callback("click", cancel_closure.as_ref().unchecked_ref()).unwrap();
+    cancel_btn
+        .add_event_listener_with_callback("click", cancel_closure.as_ref().unchecked_ref())
+        .unwrap();
     cancel_closure.forget();
     buttons.append_child(&cancel_btn).unwrap();
 
@@ -1857,7 +2049,9 @@ fn open_new_manifold_dialog(document: &Document) {
         ov_clone2.remove();
         show_menu_notification(&doc, "New manifold created and added to workspace pager.");
     }) as Box<dyn FnMut(MouseEvent)>);
-    create_btn.add_event_listener_with_callback("click", create_closure.as_ref().unchecked_ref()).unwrap();
+    create_btn
+        .add_event_listener_with_callback("click", create_closure.as_ref().unchecked_ref())
+        .unwrap();
     create_closure.forget();
     buttons.append_child(&create_btn).unwrap();
 
@@ -1880,7 +2074,7 @@ fn open_shortcuts_dialog(document: &Document) {
     overlay_el.style().set_css_text(
         "position: fixed; top: 0; left: 0; width: 100%; height: 100%; \
          background: rgba(0,0,0,0.6); z-index: 10000; \
-         display: flex; align-items: center; justify-content: center; backdrop-filter: blur(10px);"
+         display: flex; align-items: center; justify-content: center; backdrop-filter: blur(10px);",
     );
 
     let panel = document.create_element("div").unwrap();
@@ -1889,14 +2083,21 @@ fn open_shortcuts_dialog(document: &Document) {
         "width: 500px; max-height: 80vh; overflow-y: auto; background: var(--surface-glass-heavy); \
          border: 1px solid var(--border-medium); border-radius: var(--radius-md); \
          box-shadow: var(--shadow-lg); padding: 20px; display: flex; flex-direction: column; \
-         gap: 12px; font-family: var(--font-mono); color: var(--text-primary);"
+         gap: 12px; font-family: var(--font-mono); color: var(--text-primary);",
     );
 
     let header = document.create_element("div").unwrap();
     let header_el: HtmlElement = header.clone().dyn_into().unwrap();
-    header_el.style().set_css_text("display: flex; justify-content: space-between; align-items: center;");
+    header_el
+        .style()
+        .set_css_text("display: flex; justify-content: space-between; align-items: center;");
     let title = document.create_element("span").unwrap();
-    title.set_attribute("style", "font-size: 14px; font-weight: 700; color: var(--accent-cyan);").unwrap();
+    title
+        .set_attribute(
+            "style",
+            "font-size: 14px; font-weight: 700; color: var(--accent-cyan);",
+        )
+        .unwrap();
     title.set_text_content(Some("\u{2328}\u{FE0F} Keyboard Shortcuts"));
     header.append_child(&title).unwrap();
 
@@ -1907,7 +2108,9 @@ fn open_shortcuts_dialog(document: &Document) {
     let close_closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
         ov_clone.remove();
     }) as Box<dyn FnMut(MouseEvent)>);
-    close_btn.add_event_listener_with_callback("click", close_closure.as_ref().unchecked_ref()).unwrap();
+    close_btn
+        .add_event_listener_with_callback("click", close_closure.as_ref().unchecked_ref())
+        .unwrap();
     close_closure.forget();
     header.append_child(&close_btn).unwrap();
     panel.append_child(&header).unwrap();
@@ -1922,7 +2125,10 @@ fn open_shortcuts_dialog(document: &Document) {
         ("Ctrl + Z / Ctrl + Y", "Undo / Redo Canvas Mutation"),
         ("Ctrl + D", "Duplicate Selected Container(s)"),
         ("Del / Backspace", "Delete Selected Container or Wire"),
-        ("Right-Click / Stylus Hold", "8-Sector Radial Context Action Ring"),
+        (
+            "Right-Click / Stylus Hold",
+            "8-Sector Radial Context Action Ring",
+        ),
     ];
 
     for (keys, desc) in shortcuts {
@@ -1937,7 +2143,8 @@ fn open_shortcuts_dialog(document: &Document) {
 
         let d_el = document.create_element("span").unwrap();
         d_el.set_text_content(Some(desc));
-        d_el.set_attribute("style", "color: var(--text-secondary);").unwrap();
+        d_el.set_attribute("style", "color: var(--text-secondary);")
+            .unwrap();
         row.append_child(&d_el).unwrap();
 
         panel.append_child(&row).unwrap();
@@ -1960,7 +2167,7 @@ fn open_honesty_dialog(document: &Document) {
     overlay_el.style().set_css_text(
         "position: fixed; top: 0; left: 0; width: 100%; height: 100%; \
          background: rgba(0,0,0,0.6); z-index: 10000; \
-         display: flex; align-items: center; justify-content: center; backdrop-filter: blur(10px);"
+         display: flex; align-items: center; justify-content: center; backdrop-filter: blur(10px);",
     );
 
     let panel = document.create_element("div").unwrap();
@@ -1969,14 +2176,21 @@ fn open_honesty_dialog(document: &Document) {
         "width: 480px; background: var(--surface-glass-heavy); \
          border: 1px solid var(--border-medium); border-radius: var(--radius-md); \
          box-shadow: var(--shadow-lg); padding: 20px; display: flex; flex-direction: column; \
-         gap: 12px; font-family: var(--font-mono); color: var(--text-primary);"
+         gap: 12px; font-family: var(--font-mono); color: var(--text-primary);",
     );
 
     let header = document.create_element("div").unwrap();
     let header_el: HtmlElement = header.clone().dyn_into().unwrap();
-    header_el.style().set_css_text("display: flex; justify-content: space-between; align-items: center;");
+    header_el
+        .style()
+        .set_css_text("display: flex; justify-content: space-between; align-items: center;");
     let title = document.create_element("span").unwrap();
-    title.set_attribute("style", "font-size: 14px; font-weight: 700; color: var(--accent-emerald);").unwrap();
+    title
+        .set_attribute(
+            "style",
+            "font-size: 14px; font-weight: 700; color: var(--accent-emerald);",
+        )
+        .unwrap();
     title.set_text_content(Some("\u{1F4A1} QualiaDB Honesty Standards"));
     header.append_child(&title).unwrap();
 
@@ -1987,16 +2201,38 @@ fn open_honesty_dialog(document: &Document) {
     let close_closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
         ov_clone.remove();
     }) as Box<dyn FnMut(MouseEvent)>);
-    close_btn.add_event_listener_with_callback("click", close_closure.as_ref().unchecked_ref()).unwrap();
+    close_btn
+        .add_event_listener_with_callback("click", close_closure.as_ref().unchecked_ref())
+        .unwrap();
     close_closure.forget();
     header.append_child(&close_btn).unwrap();
     panel.append_child(&header).unwrap();
 
     let labels = [
-        ("live", "var(--accent-emerald)", "Live & Verified", "Connected to the live backend engine or native daemon with active computation."),
-        ("partial", "var(--accent-amber)", "Partial Bindings", "Functional mock bindings, partial AST lowerings, or simulation passes."),
-        ("present", "var(--accent-cyan)", "Present / UI Shell", "Full UI components and interactivity implemented; awaiting persistent cluster wiring."),
-        ("missing", "var(--accent-rose)", "Missing / Pending", "Under construction or queued on roadmap."),
+        (
+            "live",
+            "var(--accent-emerald)",
+            "Live & Verified",
+            "Connected to the live backend engine or native daemon with active computation.",
+        ),
+        (
+            "partial",
+            "var(--accent-amber)",
+            "Partial Bindings",
+            "Functional mock bindings, partial AST lowerings, or simulation passes.",
+        ),
+        (
+            "present",
+            "var(--accent-cyan)",
+            "Present / UI Shell",
+            "Full UI components and interactivity implemented; awaiting persistent cluster wiring.",
+        ),
+        (
+            "missing",
+            "var(--accent-rose)",
+            "Missing / Pending",
+            "Under construction or queued on roadmap.",
+        ),
     ];
 
     for (tag, color, heading, desc) in labels {
@@ -2006,7 +2242,9 @@ fn open_honesty_dialog(document: &Document) {
 
         let tag_row = document.create_element("div").unwrap();
         let tag_row_el: HtmlElement = tag_row.clone().dyn_into().unwrap();
-        tag_row_el.style().set_css_text("display: flex; align-items: center; gap: 6px;");
+        tag_row_el
+            .style()
+            .set_css_text("display: flex; align-items: center; gap: 6px;");
 
         let badge = document.create_element("span").unwrap();
         badge.set_text_content(Some(tag));
@@ -2015,13 +2253,17 @@ fn open_honesty_dialog(document: &Document) {
 
         let head_el = document.create_element("span").unwrap();
         head_el.set_text_content(Some(heading));
-        head_el.set_attribute("style", "font-weight: 600; color: var(--text-primary);").unwrap();
+        head_el
+            .set_attribute("style", "font-weight: 600; color: var(--text-primary);")
+            .unwrap();
         tag_row.append_child(&head_el).unwrap();
         card.append_child(&tag_row).unwrap();
 
         let desc_el = document.create_element("span").unwrap();
         desc_el.set_text_content(Some(desc));
-        desc_el.set_attribute("style", "color: var(--text-muted); font-size: 9px;").unwrap();
+        desc_el
+            .set_attribute("style", "color: var(--text-muted); font-size: 9px;")
+            .unwrap();
         card.append_child(&desc_el).unwrap();
 
         panel.append_child(&card).unwrap();
@@ -2044,7 +2286,7 @@ fn open_about_dialog(document: &Document) {
     overlay_el.style().set_css_text(
         "position: fixed; top: 0; left: 0; width: 100%; height: 100%; \
          background: rgba(0,0,0,0.6); z-index: 10000; \
-         display: flex; align-items: center; justify-content: center; backdrop-filter: blur(10px);"
+         display: flex; align-items: center; justify-content: center; backdrop-filter: blur(10px);",
     );
 
     let panel = document.create_element("div").unwrap();
@@ -2053,14 +2295,21 @@ fn open_about_dialog(document: &Document) {
         "width: 480px; background: var(--surface-glass-heavy); \
          border: 1px solid var(--border-medium); border-radius: var(--radius-md); \
          box-shadow: var(--shadow-lg); padding: 20px; display: flex; flex-direction: column; \
-         gap: 12px; font-family: var(--font-mono); color: var(--text-primary);"
+         gap: 12px; font-family: var(--font-mono); color: var(--text-primary);",
     );
 
     let header = document.create_element("div").unwrap();
     let header_el: HtmlElement = header.clone().dyn_into().unwrap();
-    header_el.style().set_css_text("display: flex; justify-content: space-between; align-items: center;");
+    header_el
+        .style()
+        .set_css_text("display: flex; justify-content: space-between; align-items: center;");
     let title = document.create_element("span").unwrap();
-    title.set_attribute("style", "font-size: 14px; font-weight: 700; color: var(--accent-violet);").unwrap();
+    title
+        .set_attribute(
+            "style",
+            "font-size: 14px; font-weight: 700; color: var(--accent-violet);",
+        )
+        .unwrap();
     title.set_text_content(Some("\u{1F30C} About Webizen Poet"));
     header.append_child(&title).unwrap();
 
@@ -2071,18 +2320,24 @@ fn open_about_dialog(document: &Document) {
     let close_closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
         ov_clone.remove();
     }) as Box<dyn FnMut(MouseEvent)>);
-    close_btn.add_event_listener_with_callback("click", close_closure.as_ref().unchecked_ref()).unwrap();
+    close_btn
+        .add_event_listener_with_callback("click", close_closure.as_ref().unchecked_ref())
+        .unwrap();
     close_closure.forget();
     header.append_child(&close_btn).unwrap();
     panel.append_child(&header).unwrap();
 
     let desc = document.create_element("div").unwrap();
-    desc.set_attribute("style", "font-size: 11px; color: var(--text-secondary); line-height: 1.6;").unwrap();
+    desc.set_attribute(
+        "style",
+        "font-size: 11px; color: var(--text-secondary); line-height: 1.6;",
+    )
+    .unwrap();
     desc.set_text_content(Some(
         "Webizen Poet is a next-generation cyber-semantic hypermedia operating environment \
          built on top of QualiaDB. It features zero-heap hot-path computation, 48-byte Super-Quin \
          data representations, the 42MB Prolog Sentinel memory ceiling, pure Rust autodiff DFT, \
-         and multi-modal VibeScript coordination."
+         and multi-modal VibeScript coordination.",
     ));
     panel.append_child(&desc).unwrap();
 
@@ -2091,7 +2346,7 @@ fn open_about_dialog(document: &Document) {
     meta.set_inner_html(
         "<div><strong>Version:</strong> 0.0.17-dev (Webizen Core)</div>\
          <div><strong>Principal:</strong> Timothy Charles Holborn</div>\
-         <div><strong>License:</strong> CC BY-NC-ND 4.0 / QualiaDB Fiduciary Specification</div>"
+         <div><strong>License:</strong> CC BY-NC-ND 4.0 / QualiaDB Fiduciary Specification</div>",
     );
     panel.append_child(&meta).unwrap();
 
@@ -2100,4 +2355,3 @@ fn open_about_dialog(document: &Document) {
         body.append_child(&overlay).unwrap();
     }
 }
-

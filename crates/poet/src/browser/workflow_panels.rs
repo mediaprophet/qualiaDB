@@ -1049,22 +1049,38 @@ pub fn build_publication_workflow_view(document: &Document) -> Element {
     let edb_el: HtmlElement = export_dist_btn.clone().dyn_into().unwrap();
     edb_el.style().set_css_text("background: var(--accent-emerald, #00f2a9); color: #020617; font-weight: 700; font-size: 10px; padding: 4px 8px; border-radius: 4px; border: none; cursor: pointer;");
 
-    let nsb_closure = wasm_bindgen::closure::Closure::wrap(Box::new(move |_e: web_sys::MouseEvent| {
-        web_sys::console::log_1(&"[Publication Workflow] Advanced to next publication stage (prov:DerivativeChain verified)".into());
-    }) as Box<dyn FnMut(web_sys::MouseEvent)>);
-    next_stage_btn.add_event_listener_with_callback("click", nsb_closure.as_ref().unchecked_ref()).unwrap();
+    let nsb_closure = wasm_bindgen::closure::Closure::wrap(Box::new(
+        move |_e: web_sys::MouseEvent| {
+            web_sys::console::log_1(&"[Publication Workflow] Advanced to next publication stage (prov:DerivativeChain verified)".into());
+        },
+    )
+        as Box<dyn FnMut(web_sys::MouseEvent)>);
+    next_stage_btn
+        .add_event_listener_with_callback("click", nsb_closure.as_ref().unchecked_ref())
+        .unwrap();
     nsb_closure.forget();
 
-    let cb_closure = wasm_bindgen::closure::Closure::wrap(Box::new(move |_e: web_sys::MouseEvent| {
-        web_sys::console::log_1(&"[Publication Workflow] Consent verification passed for 3 active constituencies".into());
-    }) as Box<dyn FnMut(web_sys::MouseEvent)>);
-    consent_btn.add_event_listener_with_callback("click", cb_closure.as_ref().unchecked_ref()).unwrap();
+    let cb_closure =
+        wasm_bindgen::closure::Closure::wrap(Box::new(move |_e: web_sys::MouseEvent| {
+            web_sys::console::log_1(
+                &"[Publication Workflow] Consent verification passed for 3 active constituencies"
+                    .into(),
+            );
+        }) as Box<dyn FnMut(web_sys::MouseEvent)>);
+    consent_btn
+        .add_event_listener_with_callback("click", cb_closure.as_ref().unchecked_ref())
+        .unwrap();
     cb_closure.forget();
 
-    let edb_closure = wasm_bindgen::closure::Closure::wrap(Box::new(move |_e: web_sys::MouseEvent| {
-        web_sys::console::log_1(&"[Publication Workflow] Generated signed distribution bundle with prov:Credits and W3C RDFa sidecars".into());
-    }) as Box<dyn FnMut(web_sys::MouseEvent)>);
-    export_dist_btn.add_event_listener_with_callback("click", edb_closure.as_ref().unchecked_ref()).unwrap();
+    let edb_closure = wasm_bindgen::closure::Closure::wrap(Box::new(
+        move |_e: web_sys::MouseEvent| {
+            web_sys::console::log_1(&"[Publication Workflow] Generated signed distribution bundle with prov:Credits and W3C RDFa sidecars".into());
+        },
+    )
+        as Box<dyn FnMut(web_sys::MouseEvent)>);
+    export_dist_btn
+        .add_event_listener_with_callback("click", edb_closure.as_ref().unchecked_ref())
+        .unwrap();
     edb_closure.forget();
 
     ctrl_bar.append_child(&next_stage_btn).unwrap();
