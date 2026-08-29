@@ -158,7 +158,7 @@ pub fn wire_wire_inspector(document: &Document) {
 
 /// Replace a wire label <text> element with an inline <foreignObject> input
 /// for editing. On Enter or blur, commit the new label text.
-fn edit_wire_label(document: &Document, label_el: &Element) {
+pub fn edit_wire_label(document: &Document, label_el: &Element) {
     let current_text = label_el.text_content().unwrap_or_default();
     let y = label_el.get_attribute("y").unwrap_or_default();
 
@@ -925,7 +925,7 @@ fn input_value(document: &Document, id: &str) -> String {
         .unwrap_or_default()
 }
 
-fn hide_inspector(document: &Document) {
+pub fn hide_inspector(document: &Document) {
     if let Some(existing) = document.get_element_by_id("wire-inspector") {
         existing.remove();
     }

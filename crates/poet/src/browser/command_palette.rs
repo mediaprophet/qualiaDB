@@ -671,3 +671,24 @@ fn execute_command(label: &str) {
     super::interactions::set_timeout(timeout.as_ref().unchecked_ref(), 2500);
     timeout.forget();
 }
+
+/// Toggle the visibility of the command palette overlay and focus the search input.
+pub fn toggle_command_palette(document: &Document) {
+    if let Some(palette) = document.get_element_by_id("command-palette") {
+        let p_el: HtmlElement = palette.dyn_into().unwrap();
+        let curr = p_el
+            .style()
+            .get_property_value("display")
+            .unwrap_or_default();
+        if curr == "none" || curr.is_empty() {
+            p_el.style().set_property("display", "flex").unwrap();
+            if let Some(input) = document.get_element_by_id("cmd-palette-input") {
+                let in_el: HtmlInputElement = input.dyn_into().unwrap();
+                let _ = in_el.focus();
+                in_el.set_value("");
+            }
+        } else {
+            p_el.style().set_property("display", "none").unwrap();
+        }
+    }
+}

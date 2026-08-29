@@ -31,26 +31,30 @@ pub fn build_top_menubar(document: &Document) -> Element {
         document,
         "File",
         &[
-            ("New Manifold", "file:new-manifold", "\u{1F4CB}"),
-            ("Save", "file:save", "\u{1F4BE}"),
-            ("Save As\u{2026}", "file:save-as", "\u{1F4C2}"),
-            ("separator", "", ""),
-            ("Export CBOR-LD", "file:export-cbor", "\u{1F4E4}"),
-            ("Import CBOR-LD", "file:import-cbor", "\u{1F4E5}"),
-            ("separator", "", ""),
+            ("New Manifold", "file:new-manifold", "\u{1F4CB}", "Alt+N"),
+            ("Save Checkpoint", "file:save", "\u{1F4BE}", "Ctrl+S"),
+            ("Save As\u{2026}", "file:save-as", "\u{1F4C2}", "Ctrl+Shift+S"),
+            ("separator", "", "", ""),
+            ("header:Import & Export", "", "", ""),
+            ("Export CBOR-LD", "file:export-cbor", "\u{1F4E4}", ""),
+            ("Import CBOR-LD", "file:import-cbor", "\u{1F4E5}", ""),
+            (
+                "Export Distribution (HCF)\u{2026}",
+                "file:export-distribution",
+                "\u{1F4E6}",
+                "",
+            ),
+            ("separator", "", "", ""),
+            ("header:Audit & Versioning", "", "", ""),
             (
                 "Checkpoint History\u{2026}",
                 "file:checkpoint-history",
                 "\u{1F4D4}",
+                "",
             ),
-            ("Prune & Archive\u{2026}", "file:prune-archive", "\u{1F9F9}"),
-            (
-                "Export Distribution\u{2026}",
-                "file:export-distribution",
-                "\u{1F4E6}",
-            ),
-            ("separator", "", ""),
-            ("Close Manifold", "file:close", "\u{2715}"),
+            ("Prune & Archive\u{2026}", "file:prune-archive", "\u{1F9F9}", ""),
+            ("separator", "", "", ""),
+            ("Close Manifold", "file:close", "\u{2715}", ""),
         ],
     ))
     .unwrap();
@@ -60,13 +64,13 @@ pub fn build_top_menubar(document: &Document) -> Element {
         document,
         "Edit",
         &[
-            ("Undo", "edit:undo", "\u{21A9}"),
-            ("Redo", "edit:redo", "\u{21AA}"),
-            ("separator", "", ""),
-            ("Delete Container", "edit:delete", "\u{1F5D1}"),
-            ("Duplicate Container", "edit:duplicate", "\u{1F4CB}"),
-            ("separator", "", ""),
-            ("Select All", "edit:select-all", "\u{1F4D8}"),
+            ("Undo Mutation", "edit:undo", "\u{21A9}", "Ctrl+Z"),
+            ("Redo Mutation", "edit:redo", "\u{21AA}", "Ctrl+Y"),
+            ("separator", "", "", ""),
+            ("Delete Selected", "edit:delete", "\u{1F5D1}", "Del"),
+            ("Duplicate Selected", "edit:duplicate", "\u{1F4CB}", "Ctrl+D"),
+            ("separator", "", "", ""),
+            ("Select All Containers", "edit:select-all", "\u{1F4D8}", "Ctrl+A"),
         ],
     ))
     .unwrap();
@@ -76,20 +80,21 @@ pub fn build_top_menubar(document: &Document) -> Element {
         document,
         "View",
         &[
-            ("Toggle Toolbox Dock", "view:toggle-dock", "\u{1F9ED}"),
-            ("Toggle Telemetry", "view:toggle-telemetry", "\u{2699}"),
-            ("Toggle Expos\u{00E9}", "view:expose", "\u{1F4F7}"),
+            ("Toggle Toolbox Dock", "view:toggle-dock", "\u{1F9ED}", "Alt+T"),
+            ("Toggle Telemetry & DAG", "view:toggle-telemetry", "\u{2699}", "Alt+D"),
+            ("Toggle Expos\u{00E9} Overview", "view:expose", "\u{1F4F7}", "Alt+O"),
             (
                 "Auto-Arrange Manifold (Tidy)",
                 "view:auto-arrange",
                 "\u{2728}",
+                "Alt+A",
             ),
-            ("separator", "", ""),
-            ("Zoom In", "view:zoom-in", "\u{1F50D}+"),
-            ("Zoom Out", "view:zoom-out", "\u{1F50D}\u{2212}"),
-            ("Reset Zoom", "view:zoom-reset", "\u{1F503}"),
-            ("separator", "", ""),
-            ("Accessibility", "view:a11y", "\u{267F}"),
+            ("separator", "", "", ""),
+            ("Zoom In", "view:zoom-in", "\u{1F50D}+", "Ctrl++"),
+            ("Zoom Out", "view:zoom-out", "\u{1F50D}\u{2212}", "Ctrl+-"),
+            ("Reset Zoom (100%)", "view:zoom-reset", "\u{1F503}", "Ctrl+0"),
+            ("separator", "", "", ""),
+            ("Accessibility Settings", "view:a11y", "\u{267F}", ""),
         ],
     ))
     .unwrap();
@@ -99,37 +104,64 @@ pub fn build_top_menubar(document: &Document) -> Element {
         document,
         "Insert",
         &[
-            ("+ Document", "insert:doc", "\u{1F4C4}"),
-            ("+ Sheet", "insert:sheet", "\u{1F4CA}"),
-            ("+ Code", "insert:code", "\u{1F4BB}"),
-            ("+ Map", "insert:map", "\u{1F5FA}"),
-            ("+ Ontology", "insert:ontology", "\u{1F4D6}"),
-            ("+ Social", "insert:social", "\u{1F4AC}"),
-            ("+ 3D", "insert:3d", "\u{1F3AF}"),
-            ("+ WebRTC", "insert:webrtc", "\u{1F4F7}"),
-            ("separator", "", ""),
-            ("+ Checkpoint Tray", "insert:checkpoint-tray", "\u{1F4D4}"),
+            ("header:Primary Containers", "", "", ""),
+            ("+ Document (CML HyperDoc)", "insert:doc", "\u{1F4C4}", ""),
+            ("+ Sheet / Table", "insert:sheet", "\u{1F4CA}", ""),
+            ("+ Code / VibeScript", "insert:code", "\u{1F4BB}", ""),
+            ("+ GIS Spatial Map", "insert:map", "\u{1F5FA}", ""),
+            ("+ Ontology Graph", "insert:ontology", "\u{1F4D6}", ""),
+            ("+ Social Channel", "insert:social", "\u{1F4AC}", ""),
+            ("+ 3D Viewport", "insert:3d", "\u{1F3AF}", ""),
+            ("+ WebRTC AV Stream", "insert:webrtc", "\u{1F4F7}", ""),
+            ("separator", "", "", ""),
+            ("header:Workflow & Verification Panels", "", "", ""),
+            ("+ Checkpoint Tray", "insert:checkpoint-tray", "\u{1F4D4}", ""),
             (
                 "+ Credential Inspector",
                 "insert:credential-inspector",
                 "\u{1F511}",
+                "",
             ),
             (
                 "+ Context Markup Editor",
                 "insert:context-markup-editor",
                 "\u{1F50D}",
+                "",
             ),
-            ("+ Provenance Panel", "insert:provenance-panel", "\u{1F4DC}"),
+            ("+ Provenance Panel", "insert:provenance-panel", "\u{1F4DC}", ""),
             (
                 "+ Publication Workflow",
                 "insert:publication-workflow",
                 "\u{1F4E6}",
+                "",
             ),
             (
                 "+ Constituency Manager",
                 "insert:constituency-manager",
                 "\u{1F465}",
+                "",
             ),
+        ],
+    ))
+    .unwrap();
+
+    // Connectors menu
+    left.append_child(&build_menu_dropdown(
+        document,
+        "Connectors",
+        &[
+            ("header:Hypermedia Semantic Wires", "", "", ""),
+            ("Inspect Selected Wire", "wire:inspect-selected", "\u{1F3F7}\u{FE0F}", "Enter"),
+            ("Edit Wire Predicate Label", "wire:edit-label", "\u{270F}\u{FE0F}", "F2"),
+            ("separator", "", "", ""),
+            ("header:Wire Modalities", "", "", ""),
+            ("Active Reactive Flow Wire", "wire:modality-active", "\u{26A1}", ""),
+            ("Event Stream Signal Wire", "wire:modality-event", "\u{23F1}\u{FE0F}", ""),
+            ("Ontology Semantic Link Wire", "wire:modality-ontology", "\u{1F517}", ""),
+            ("Deontic Obligation Wire (O)", "wire:modality-deontic", "\u{1F6E1}\u{FE0F}", ""),
+            ("Epistemic Knowledge Wire (K)", "wire:modality-epistemic", "\u{1F52C}", ""),
+            ("separator", "", "", ""),
+            ("Delete Selected Wire", "wire:delete-selected", "\u{1F5D1}", "Del"),
         ],
     ))
     .unwrap();
@@ -139,11 +171,15 @@ pub fn build_top_menubar(document: &Document) -> Element {
         document,
         "Help",
         &[
-            ("Keyboard Shortcuts", "help:shortcuts", "\u{2328}"),
-            ("About Webizen Poet", "help:about", "\u{2139}"),
-            ("Honesty Labels", "help:honesty", "\u{1F4A1}"),
-            ("separator", "", ""),
-            ("Report Issue", "help:report", "\u{1F41B}"),
+            ("Command Palette", "help:command-palette", "\u{2318}", "Ctrl+K"),
+            ("Search Workbench", "help:search-workbench", "\u{1F50D}", "Ctrl+Shift+F"),
+            ("Logic Workbench", "help:logic-workbench", "\u{1F9E0}", "Ctrl+Shift+L"),
+            ("separator", "", "", ""),
+            ("Keyboard Shortcuts", "help:shortcuts", "\u{2328}", ""),
+            ("Honesty Standards", "help:honesty", "\u{1F4A1}", ""),
+            ("About Webizen Poet", "help:about", "\u{2139}", ""),
+            ("separator", "", "", ""),
+            ("Report Issue to GitHub", "help:report", "\u{1F41B}", ""),
         ],
     ))
     .unwrap();
@@ -237,27 +273,41 @@ pub fn build_top_menubar(document: &Document) -> Element {
     bar
 }
 
+/// A menu item tuple: (Label/Header/Separator, Action ID, Icon emoji/glyph, Shortcut hint)
+pub type MenuItemDef<'a> = (&'a str, &'a str, &'a str, &'a str);
+
 /// Build a single dropdown menu with a label trigger and action items.
-fn build_menu_dropdown(document: &Document, label: &str, items: &[(&str, &str, &str)]) -> Element {
+fn build_menu_dropdown(document: &Document, label: &str, items: &[MenuItemDef]) -> Element {
     let wrapper = document.create_element("div").unwrap();
     wrapper.set_class_name("menu-dropdown");
 
     let trigger = document.create_element("button").unwrap();
     trigger.set_class_name("menu-btn");
     trigger.set_text_content(Some(label));
+    trigger.set_attribute("type", "button").ok();
+    trigger.set_attribute("aria-haspopup", "true").ok();
+    trigger.set_attribute("aria-expanded", "false").ok();
     wrapper.append_child(&trigger).unwrap();
 
     let dropdown = document.create_element("div").unwrap();
     dropdown.set_class_name("menu-dropdown-content");
+    dropdown.set_attribute("role", "menu").ok();
 
-    for (item_label, action, icon) in items {
-        if *item_label == "separator" {
+    for &(item_label, action, icon, shortcut) in items {
+        if item_label == "separator" {
             let sep = document.create_element("div").unwrap();
             sep.set_class_name("menu-dropdown-separator");
             dropdown.append_child(&sep).unwrap();
+        } else if let Some(header_text) = item_label.strip_prefix("header:") {
+            let header = document.create_element("div").unwrap();
+            header.set_class_name("menu-dropdown-header");
+            header.set_text_content(Some(header_text));
+            dropdown.append_child(&header).unwrap();
         } else {
             let item = document.create_element("button").unwrap();
             item.set_class_name("menu-dropdown-item");
+            item.set_attribute("type", "button").ok();
+            item.set_attribute("role", "menuitem").ok();
             item.set_attribute("data-menu-action", action).unwrap();
 
             let icon_el = document.create_element("span").unwrap();
@@ -270,6 +320,13 @@ fn build_menu_dropdown(document: &Document, label: &str, items: &[(&str, &str, &
             label_el.set_text_content(Some(item_label));
             item.append_child(&label_el).unwrap();
 
+            if !shortcut.is_empty() {
+                let sc_el = document.create_element("span").unwrap();
+                sc_el.set_class_name("menu-dropdown-item-shortcut");
+                sc_el.set_text_content(Some(shortcut));
+                item.append_child(&sc_el).unwrap();
+            }
+
             dropdown.append_child(&item).unwrap();
         }
     }
@@ -278,45 +335,85 @@ fn build_menu_dropdown(document: &Document, label: &str, items: &[(&str, &str, &
     wrapper
 }
 
-/// Wire up menu dropdown toggling and action clicks.
+/// Wire up menu dropdown toggling, hover traversal, and action clicks.
 pub fn wire_menu_dropdowns(document: &Document) {
-    let triggers = document.query_selector_all(".menu-btn").unwrap();
+    let triggers = document.query_selector_all(".top-menubar .menu-btn").unwrap();
     for i in 0..triggers.length() {
         let trigger = triggers.get(i).unwrap();
         let trigger_el: Element = trigger.dyn_into().unwrap();
-        let trigger_el_for_listener = trigger_el.clone();
+        let trigger_el_click = trigger_el.clone();
+        let trigger_el_enter = trigger_el.clone();
 
-        let closure = Closure::wrap(Box::new(move |e: web_sys::Event| {
+        // Click trigger to toggle
+        let click_closure = Closure::wrap(Box::new(move |e: web_sys::Event| {
             let me: web_sys::MouseEvent = e.dyn_into().unwrap();
             me.stop_propagation();
             let doc = web_sys::window().unwrap().document().unwrap();
-            // Close all other dropdowns
-            let all = doc.query_selector_all(".menu-dropdown").unwrap();
+            let parent_opt = trigger_el_click.parent_element();
+            let is_already_open = parent_opt
+                .as_ref()
+                .map(|p| p.class_list().contains("open"))
+                .unwrap_or(false);
+
+            // Close all dropdowns
+            let all = doc.query_selector_all(".top-menubar .menu-dropdown").unwrap();
             for j in 0..all.length() {
                 let d = all.get(j).unwrap();
                 let de: Element = d.dyn_into().unwrap();
-                if de != trigger_el.parent_element().unwrap() {
-                    de.class_list().remove_1("open").unwrap();
+                de.class_list().remove_1("open").unwrap();
+                if let Some(btn) = de.query_selector(".menu-btn").ok().flatten() {
+                    let _ = btn.set_attribute("aria-expanded", "false");
                 }
             }
+
             // Toggle this one
-            if let Some(parent) = trigger_el.parent_element() {
-                if parent.class_list().contains("open") {
-                    parent.class_list().remove_1("open").unwrap();
-                } else {
+            if let Some(parent) = parent_opt {
+                if !is_already_open {
                     parent.class_list().add_1("open").unwrap();
+                    let _ = trigger_el_click.set_attribute("aria-expanded", "true");
                 }
             }
         }) as Box<dyn FnMut(web_sys::Event)>);
 
-        trigger_el_for_listener
-            .add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())
+        trigger_el
+            .add_event_listener_with_callback("click", click_closure.as_ref().unchecked_ref())
             .unwrap();
-        closure.forget();
+        click_closure.forget();
+
+        // Desktop Menubar Hover Traversal: when any menu is open, hovering sibling opens it
+        let enter_closure = Closure::wrap(Box::new(move |_e: web_sys::Event| {
+            let doc = web_sys::window().unwrap().document().unwrap();
+            let any_open = doc
+                .query_selector(".top-menubar .menu-dropdown.open")
+                .ok()
+                .flatten()
+                .is_some();
+            if any_open {
+                let all = doc.query_selector_all(".top-menubar .menu-dropdown").unwrap();
+                for j in 0..all.length() {
+                    let d = all.get(j).unwrap();
+                    let de: Element = d.dyn_into().unwrap();
+                    if de != trigger_el_enter.parent_element().unwrap() {
+                        de.class_list().remove_1("open").unwrap();
+                        if let Some(btn) = de.query_selector(".menu-btn").ok().flatten() {
+                            let _ = btn.set_attribute("aria-expanded", "false");
+                        }
+                    } else {
+                        de.class_list().add_1("open").unwrap();
+                        let _ = trigger_el_enter.set_attribute("aria-expanded", "true");
+                    }
+                }
+            }
+        }) as Box<dyn FnMut(web_sys::Event)>);
+
+        trigger_el
+            .add_event_listener_with_callback("mouseenter", enter_closure.as_ref().unchecked_ref())
+            .unwrap();
+        enter_closure.forget();
     }
 
     // Wire menu action items
-    let items = document.query_selector_all(".menu-dropdown-item").unwrap();
+    let items = document.query_selector_all(".top-menubar .menu-dropdown-item").unwrap();
     for i in 0..items.length() {
         let item = items.get(i).unwrap();
         let item_el: Element = item.dyn_into().unwrap();
@@ -334,11 +431,14 @@ pub fn wire_menu_dropdowns(document: &Document) {
             me.stop_propagation();
             let doc = web_sys::window().unwrap().document().unwrap();
             // Close all dropdowns
-            let all = doc.query_selector_all(".menu-dropdown").unwrap();
+            let all = doc.query_selector_all(".top-menubar .menu-dropdown").unwrap();
             for j in 0..all.length() {
                 let d = all.get(j).unwrap();
                 let de: Element = d.dyn_into().unwrap();
                 de.class_list().remove_1("open").unwrap();
+                if let Some(btn) = de.query_selector(".menu-btn").ok().flatten() {
+                    let _ = btn.set_attribute("aria-expanded", "false");
+                }
             }
             handle_menu_action(&doc, &action, &label);
         }) as Box<dyn FnMut(web_sys::Event)>);
@@ -352,11 +452,14 @@ pub fn wire_menu_dropdowns(document: &Document) {
     // Close dropdowns when clicking outside
     let outside_closure = Closure::wrap(Box::new(move |_e: web_sys::Event| {
         let doc = web_sys::window().unwrap().document().unwrap();
-        let all = doc.query_selector_all(".menu-dropdown").unwrap();
+        let all = doc.query_selector_all(".top-menubar .menu-dropdown").unwrap();
         for j in 0..all.length() {
             let d = all.get(j).unwrap();
             let de: Element = d.dyn_into().unwrap();
             de.class_list().remove_1("open").unwrap();
+            if let Some(btn) = de.query_selector(".menu-btn").ok().flatten() {
+                let _ = btn.set_attribute("aria-expanded", "false");
+            }
         }
     }) as Box<dyn FnMut(web_sys::Event)>);
     document
@@ -406,6 +509,109 @@ fn handle_menu_action(document: &Document, action: &str, label: &str) {
         | "insert:constituency-manager" => {
             let container_type = action.split(':').nth(1).unwrap_or("doc");
             super::interactions::place_container_via_menu(document, container_type, label);
+        }
+        "wire:inspect-selected" => {
+            if let Some(selected_wire) = document
+                .query_selector(".wire-overlay path.wire-selected")
+                .ok()
+                .flatten()
+            {
+                let wire_id = selected_wire
+                    .get_attribute("data-id")
+                    .unwrap_or_default();
+                super::wire_inspector::show_inspector(document, &wire_id);
+            } else {
+                show_menu_notification(
+                    document,
+                    "Click a wire connector on the canvas to inspect its semantic properties",
+                );
+            }
+        }
+        "wire:edit-label" => {
+            if let Some(selected_wire) = document
+                .query_selector(".wire-overlay path.wire-selected")
+                .ok()
+                .flatten()
+            {
+                let wire_id = selected_wire
+                    .get_attribute("data-id")
+                    .unwrap_or_default();
+                if let Some(label_el) = document
+                    .query_selector(&format!(".wire-overlay text[data-wire-id=\"{}\"]", wire_id))
+                    .ok()
+                    .flatten()
+                {
+                    super::wire_inspector::edit_wire_label(document, &label_el);
+                }
+            } else {
+                show_menu_notification(
+                    document,
+                    "Select a wire connector or double-click its label to edit predicate",
+                );
+            }
+        }
+        "wire:delete-selected" => {
+            if let Some(selected_wire) = document
+                .query_selector(".wire-overlay path.wire-selected")
+                .ok()
+                .flatten()
+            {
+                let wire_id = selected_wire
+                    .get_attribute("data-id")
+                    .unwrap_or_default();
+                selected_wire.remove();
+                if let Some(label_el) = document
+                    .query_selector(&format!(".wire-overlay text[data-wire-id=\"{}\"]", wire_id))
+                    .ok()
+                    .flatten()
+                {
+                    label_el.remove();
+                }
+                super::wire_inspector::hide_inspector(document);
+                super::history::push_current_frame("delete wire connector");
+                show_menu_notification(document, "Wire connector deleted");
+            } else {
+                show_menu_notification(document, "Select a wire on the canvas to delete");
+            }
+        }
+        "wire:modality-active"
+        | "wire:modality-event"
+        | "wire:modality-ontology"
+        | "wire:modality-deontic"
+        | "wire:modality-epistemic" => {
+            let modality = action.strip_prefix("wire:modality-").unwrap_or("active");
+            if let Some(selected_wire) = document
+                .query_selector(".wire-overlay path.wire-selected")
+                .ok()
+                .flatten()
+            {
+                let wire_id = selected_wire
+                    .get_attribute("data-id")
+                    .unwrap_or_default();
+                let _ = selected_wire.set_attribute("data-modality", modality);
+                let new_class = format!("wire-path wire-selected wire-{}", modality);
+                let _ = selected_wire.set_attribute("class", &new_class);
+                super::history::push_current_frame("update wire modality");
+                show_menu_notification(
+                    document,
+                    &format!("Wire modality updated to: {}", modality),
+                );
+                super::wire_inspector::show_inspector(document, &wire_id);
+            } else {
+                show_menu_notification(
+                    document,
+                    &format!("Modality '{}' selected for new connections", modality),
+                );
+            }
+        }
+        "help:command-palette" => {
+            super::command_palette::toggle_command_palette(document);
+        }
+        "help:search-workbench" => {
+            super::search_workbench::toggle_search_workbench(document);
+        }
+        "help:logic-workbench" => {
+            super::logic_workbench::toggle_logic_workbench(document);
         }
         "file:save" => {
             super::history::sync_persistence_state();
