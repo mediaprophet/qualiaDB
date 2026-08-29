@@ -1,4 +1,4 @@
-import { getBrowserCapabilityReceipt } from './browser-capability.js?v=0.0.34-mobile-recovery4';
+import { getBrowserCapabilityReceipt } from './browser-capability.js?v=0.0.35-mobile-recovery4';
 
 const params = new URLSearchParams(location.search);
 const session = params.get('lab') || '';
@@ -45,7 +45,7 @@ function memorySnapshot() {
 
 async function captureEnvironment() {
     const capabilityReceipt = await getBrowserCapabilityReceipt({
-        engineVersion: '0.0.34',
+        engineVersion: '0.0.35',
         sessionId: session,
     });
     const detail = {

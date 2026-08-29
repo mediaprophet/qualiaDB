@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Existing release tag to upload assets to, for example v0.0.34"
+        description: "Existing release tag to upload assets to, for example v0.0.35"
         required: true
 
 permissions:
@@ -101,7 +101,7 @@ jobs:
           cp crates/qualia-core-db/pkg-qualia/qualia_core_db_bg.wasm.d.ts docs/pkg/qualia/qualia_bg.wasm.d.ts 2>/dev/null || true
           cp crates/qualia-core-db/LICENSE docs/pkg/qualia/LICENSE
           bash scripts/patch-portal-wasm-js.sh docs/pkg/qualia/qualia.js
-          printf '%s\n' '{"name":"qualia-portal","type":"module","version":"0.0.34","main":"qualia.js","types":"qualia.d.ts"}' > docs/pkg/qualia/package.json
+          printf '%s\n' '{"name":"qualia-portal","type":"module","version":"0.0.35","main":"qualia.js","types":"qualia.d.ts"}' > docs/pkg/qualia/package.json
 
       - name: Portal WASM size budget
         # The portal now includes the shipped WASM-capable execution surface.
