@@ -11,6 +11,7 @@
 //! Design system adapted from Canvas_Workbench — cyber-semantic
 //! glassmorphism with strata, social, health & epistemic modalities.
 
+pub mod accessibility;
 pub mod agreement_views;
 pub mod app_launcher;
 pub mod canvas_extent;
@@ -22,7 +23,9 @@ pub mod clipboard;
 pub mod cml_document;
 pub mod command_palette;
 pub mod construct_shelf;
+pub mod container_chrome;
 pub mod container_inline_views;
+pub mod container_transfer;
 pub mod container_views;
 pub mod container_views_ext;
 pub mod containers;
@@ -72,8 +75,9 @@ pub mod search_workbench;
 mod semantic_library_render;
 mod semantic_library_view;
 pub mod shader_pipelines;
-pub mod social_lifecycle;
+pub mod sheet;
 pub mod social_inbox;
+pub mod social_lifecycle;
 pub mod social_moderation;
 pub mod social_notifications;
 pub mod social_presence;
@@ -580,6 +584,7 @@ fn try_start(document: &Document) -> Result<(), String> {
     // Apply default theme
     let theme_state = theme::ThemeState::default();
     theme_state.apply(document);
+    accessibility::restore(document);
 
     // Build the app
     let app = build_app(document);
@@ -706,6 +711,7 @@ fn wire_app(document: &Document, seeds: &[ManifoldSeed]) {
     interactions::wire_container_dragging(document);
     interactions::wire_container_resize(document);
     interactions::wire_container_deletion(document);
+    container_chrome::wire_container_chrome(document);
     interactions::wire_delete_key(document);
     interactions::wire_container_duplication(document);
     interactions::wire_port_dragging(document);
@@ -866,6 +872,11 @@ pub fn rerender_canvas(seed: &ManifoldSeed) {
     }
     if let Some(badge) = document.query_selector(".graph-address-badge").unwrap() {
         badge.set_text_content(Some(&format!("graph:manifold:{}", seed.id)));
+    }
+    if let Some(selector) = document.get_element_by_id("manifold-selector") {
+        if let Ok(selector) = selector.dyn_into::<web_sys::HtmlSelectElement>() {
+            selector.set_value(&seed.id);
+        }
     }
 
     // Replace canvas content

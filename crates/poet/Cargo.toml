@@ -59,6 +59,7 @@ web-sys = { version = "0.3", features = [
     "KeyboardEvent",
     "InputEvent",
     "DragEvent",
+    "ClipboardEvent",
     "DataTransfer",
     "Storage",
     "Location",

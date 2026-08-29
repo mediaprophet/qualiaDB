@@ -88,25 +88,8 @@ pub fn build_container(document: &Document, container: &SeedContainer) -> Elemen
 
     header.append_child(&title_group).unwrap();
 
-    // Actions
-    let actions = document.create_element("div").unwrap();
-    actions.set_class_name("container-actions");
-    // Settings button
-    let settings_btn = document.create_element("button").unwrap();
-    settings_btn.set_class_name("container-action-btn");
-    settings_btn.set_text_content(Some("\u{2699}"));
-    settings_btn
-        .set_attribute("title", "Container settings")
-        .unwrap();
-    actions.append_child(&settings_btn).unwrap();
-    // Delete button
-    let delete_btn = document.create_element("button").unwrap();
-    delete_btn.set_class_name("container-action-btn delete-btn");
-    delete_btn.set_text_content(Some("\u{2715}"));
-    delete_btn
-        .set_attribute("title", "Delete container")
-        .unwrap();
-    actions.append_child(&delete_btn).unwrap();
+    // Shared lifecycle chrome (settings, minimise, close).
+    let actions = super::container_chrome::build_header_actions(document);
     header.append_child(&actions).unwrap();
     el.append_child(&header).unwrap();
 
@@ -911,8 +894,11 @@ pub fn build_container(document: &Document, container: &SeedContainer) -> Elemen
                 .unwrap();
         }
         "sheet" => {
-            body.append_child(&super::container_views::build_sheet_view(document))
-                .unwrap();
+            body.append_child(&super::sheet::build_sheet_view(
+                document,
+                &container.tool_settings,
+            ))
+            .unwrap();
         }
         "graph" => {
             body.append_child(&super::container_views::build_graph_view(document))
@@ -1150,6 +1136,8 @@ pub fn build_container(document: &Document, container: &SeedContainer) -> Elemen
         .set_attribute("aria-label", "Resize container")
         .unwrap();
     el.append_child(&resizer).unwrap();
+
+    super::container_chrome::restore_chrome_state(&el, container);
 
     el
 }

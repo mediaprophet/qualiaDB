@@ -671,15 +671,11 @@ pub fn wire_container_selection(document: &Document) {
 pub fn wire_container_deletion(document: &Document) {
     // Wire the ✕ close button on each container header
     let close_btns = document
-        .query_selector_all(".container-action-btn")
+        .query_selector_all(".container-action-btn.delete-btn")
         .unwrap();
     for i in 0..close_btns.length() {
         let btn = close_btns.get(i).unwrap();
         let btn_el: Element = btn.dyn_into().unwrap();
-        // Only wire the ✕ button (second action button), not the ⚙ button
-        if btn_el.text_content().as_deref() != Some("\u{2715}") {
-            continue;
-        }
         if !super::dom_bindings::claim(&btn_el, "delete") {
             continue;
         }

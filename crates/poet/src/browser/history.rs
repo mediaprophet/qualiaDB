@@ -269,6 +269,20 @@ pub fn sync_persistence_state() {
     });
 }
 
+/// Commit a model mutation performed outside the mounted canvas while keeping
+/// the previous synced frame available to Undo.
+pub fn commit_external_seed(seed: ManifoldSeed, label: &str) {
+    super::replace_current_seed(&seed);
+    CANVAS_HISTORY.with(|slot| {
+        if let Some(history) = slot.borrow_mut().as_mut() {
+            history.push(CanvasFrame {
+                seed,
+                label: label.to_string(),
+            });
+        }
+    });
+}
+
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------

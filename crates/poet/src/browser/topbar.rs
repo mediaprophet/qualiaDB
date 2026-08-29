@@ -3,8 +3,8 @@
 //! Copyright (c) 2026 Timothy Charles Holborn. All rights reserved.
 
 use crate::tool_chest::core::registry::ManifoldSeed;
-use wasm_bindgen::JsCast;
 use wasm_bindgen::prelude::*;
+use wasm_bindgen::JsCast;
 use web_sys::{Document, Element, Event, HtmlElement, HtmlInputElement, MouseEvent};
 
 /// Build the top menubar (File/Edit/View + brand + fiduciary badge).
@@ -33,7 +33,12 @@ pub fn build_top_menubar(document: &Document) -> Element {
         &[
             ("New Manifold", "file:new-manifold", "\u{1F4CB}", "Alt+N"),
             ("Save Checkpoint", "file:save", "\u{1F4BE}", "Ctrl+S"),
-            ("Save As\u{2026}", "file:save-as", "\u{1F4C2}", "Ctrl+Shift+S"),
+            (
+                "Save As\u{2026}",
+                "file:save-as",
+                "\u{1F4C2}",
+                "Ctrl+Shift+S",
+            ),
             ("separator", "", "", ""),
             ("header:Import & Export", "", "", ""),
             ("Export CBOR-LD", "file:export-cbor", "\u{1F4E4}", ""),
@@ -52,7 +57,12 @@ pub fn build_top_menubar(document: &Document) -> Element {
                 "\u{1F4D4}",
                 "",
             ),
-            ("Prune & Archive\u{2026}", "file:prune-archive", "\u{1F9F9}", ""),
+            (
+                "Prune & Archive\u{2026}",
+                "file:prune-archive",
+                "\u{1F9F9}",
+                "",
+            ),
             ("separator", "", "", ""),
             ("Close Manifold", "file:close", "\u{2715}", ""),
         ],
@@ -68,9 +78,33 @@ pub fn build_top_menubar(document: &Document) -> Element {
             ("Redo Mutation", "edit:redo", "\u{21AA}", "Ctrl+Y"),
             ("separator", "", "", ""),
             ("Delete Selected", "edit:delete", "\u{1F5D1}", "Del"),
-            ("Duplicate Selected", "edit:duplicate", "\u{1F4CB}", "Ctrl+D"),
+            (
+                "Duplicate Selected",
+                "edit:duplicate",
+                "\u{1F4CB}",
+                "Ctrl+D",
+            ),
             ("separator", "", "", ""),
-            ("Select All Containers", "edit:select-all", "\u{1F4D8}", "Ctrl+A"),
+            (
+                "Select All Containers",
+                "edit:select-all",
+                "\u{1F4D8}",
+                "Ctrl+A",
+            ),
+            ("separator", "", "", ""),
+            ("header:Cross-Manifold Operations", "", "", ""),
+            (
+                "Move Container to Manifold\u{2026}",
+                "edit:move-to-manifold",
+                "\u{1F4E6}",
+                "",
+            ),
+            (
+                "Copy Container to Manifold\u{2026}",
+                "edit:copy-to-manifold",
+                "\u{1F4CB}",
+                "",
+            ),
         ],
     ))
     .unwrap();
@@ -80,9 +114,24 @@ pub fn build_top_menubar(document: &Document) -> Element {
         document,
         "View",
         &[
-            ("Toggle Toolbox Dock", "view:toggle-dock", "\u{1F9ED}", "Alt+T"),
-            ("Toggle Telemetry & DAG", "view:toggle-telemetry", "\u{2699}", "Alt+D"),
-            ("Toggle Expos\u{00E9} Overview", "view:expose", "\u{1F4F7}", "Alt+O"),
+            (
+                "Toggle Toolbox Dock",
+                "view:toggle-dock",
+                "\u{1F9ED}",
+                "Alt+T",
+            ),
+            (
+                "Toggle Telemetry & DAG",
+                "view:toggle-telemetry",
+                "\u{2699}",
+                "Alt+D",
+            ),
+            (
+                "Toggle Expos\u{00E9} Overview",
+                "view:expose",
+                "\u{1F4F7}",
+                "Alt+O",
+            ),
             (
                 "Auto-Arrange Manifold (Tidy)",
                 "view:auto-arrange",
@@ -92,7 +141,12 @@ pub fn build_top_menubar(document: &Document) -> Element {
             ("separator", "", "", ""),
             ("Zoom In", "view:zoom-in", "\u{1F50D}+", "Ctrl++"),
             ("Zoom Out", "view:zoom-out", "\u{1F50D}\u{2212}", "Ctrl+-"),
-            ("Reset Zoom (100%)", "view:zoom-reset", "\u{1F503}", "Ctrl+0"),
+            (
+                "Reset Zoom (100%)",
+                "view:zoom-reset",
+                "\u{1F503}",
+                "Ctrl+0",
+            ),
             ("separator", "", "", ""),
             ("Accessibility Settings", "view:a11y", "\u{267F}", ""),
         ],
@@ -115,7 +169,12 @@ pub fn build_top_menubar(document: &Document) -> Element {
             ("+ WebRTC AV Stream", "insert:webrtc", "\u{1F4F7}", ""),
             ("separator", "", "", ""),
             ("header:Workflow & Verification Panels", "", "", ""),
-            ("+ Checkpoint Tray", "insert:checkpoint-tray", "\u{1F4D4}", ""),
+            (
+                "+ Checkpoint Tray",
+                "insert:checkpoint-tray",
+                "\u{1F4D4}",
+                "",
+            ),
             (
                 "+ Credential Inspector",
                 "insert:credential-inspector",
@@ -128,7 +187,12 @@ pub fn build_top_menubar(document: &Document) -> Element {
                 "\u{1F50D}",
                 "",
             ),
-            ("+ Provenance Panel", "insert:provenance-panel", "\u{1F4DC}", ""),
+            (
+                "+ Provenance Panel",
+                "insert:provenance-panel",
+                "\u{1F4DC}",
+                "",
+            ),
             (
                 "+ Publication Workflow",
                 "insert:publication-workflow",
@@ -151,17 +215,57 @@ pub fn build_top_menubar(document: &Document) -> Element {
         "Connectors",
         &[
             ("header:Hypermedia Semantic Wires", "", "", ""),
-            ("Inspect Selected Wire", "wire:inspect-selected", "\u{1F3F7}\u{FE0F}", "Enter"),
-            ("Edit Wire Predicate Label", "wire:edit-label", "\u{270F}\u{FE0F}", "F2"),
+            (
+                "Inspect Selected Wire",
+                "wire:inspect-selected",
+                "\u{1F3F7}\u{FE0F}",
+                "Enter",
+            ),
+            (
+                "Edit Wire Predicate Label",
+                "wire:edit-label",
+                "\u{270F}\u{FE0F}",
+                "F2",
+            ),
             ("separator", "", "", ""),
             ("header:Wire Modalities", "", "", ""),
-            ("Active Reactive Flow Wire", "wire:modality-active", "\u{26A1}", ""),
-            ("Event Stream Signal Wire", "wire:modality-event", "\u{23F1}\u{FE0F}", ""),
-            ("Ontology Semantic Link Wire", "wire:modality-ontology", "\u{1F517}", ""),
-            ("Deontic Obligation Wire (O)", "wire:modality-deontic", "\u{1F6E1}\u{FE0F}", ""),
-            ("Epistemic Knowledge Wire (K)", "wire:modality-epistemic", "\u{1F52C}", ""),
+            (
+                "Active Reactive Flow Wire",
+                "wire:modality-active",
+                "\u{26A1}",
+                "",
+            ),
+            (
+                "Event Stream Signal Wire",
+                "wire:modality-event",
+                "\u{23F1}\u{FE0F}",
+                "",
+            ),
+            (
+                "Ontology Semantic Link Wire",
+                "wire:modality-ontology",
+                "\u{1F517}",
+                "",
+            ),
+            (
+                "Deontic Obligation Wire (O)",
+                "wire:modality-deontic",
+                "\u{1F6E1}\u{FE0F}",
+                "",
+            ),
+            (
+                "Epistemic Knowledge Wire (K)",
+                "wire:modality-epistemic",
+                "\u{1F52C}",
+                "",
+            ),
             ("separator", "", "", ""),
-            ("Delete Selected Wire", "wire:delete-selected", "\u{1F5D1}", "Del"),
+            (
+                "Delete Selected Wire",
+                "wire:delete-selected",
+                "\u{1F5D1}",
+                "Del",
+            ),
         ],
     ))
     .unwrap();
@@ -171,9 +275,24 @@ pub fn build_top_menubar(document: &Document) -> Element {
         document,
         "Help",
         &[
-            ("Command Palette", "help:command-palette", "\u{2318}", "Ctrl+K"),
-            ("Search Workbench", "help:search-workbench", "\u{1F50D}", "Ctrl+Shift+F"),
-            ("Logic Workbench", "help:logic-workbench", "\u{1F9E0}", "Ctrl+Shift+L"),
+            (
+                "Command Palette",
+                "help:command-palette",
+                "\u{2318}",
+                "Ctrl+K",
+            ),
+            (
+                "Search Workbench",
+                "help:search-workbench",
+                "\u{1F50D}",
+                "Ctrl+Shift+F",
+            ),
+            (
+                "Logic Workbench",
+                "help:logic-workbench",
+                "\u{1F9E0}",
+                "Ctrl+Shift+L",
+            ),
             ("separator", "", "", ""),
             ("Keyboard Shortcuts", "help:shortcuts", "\u{2328}", ""),
             ("Honesty Standards", "help:honesty", "\u{1F4A1}", ""),
@@ -337,7 +456,9 @@ fn build_menu_dropdown(document: &Document, label: &str, items: &[MenuItemDef]) 
 
 /// Wire up menu dropdown toggling, hover traversal, and action clicks.
 pub fn wire_menu_dropdowns(document: &Document) {
-    let triggers = document.query_selector_all(".top-menubar .menu-btn").unwrap();
+    let triggers = document
+        .query_selector_all(".top-menubar .menu-btn")
+        .unwrap();
     for i in 0..triggers.length() {
         let trigger = triggers.get(i).unwrap();
         let trigger_el: Element = trigger.dyn_into().unwrap();
@@ -356,7 +477,9 @@ pub fn wire_menu_dropdowns(document: &Document) {
                 .unwrap_or(false);
 
             // Close all dropdowns
-            let all = doc.query_selector_all(".top-menubar .menu-dropdown").unwrap();
+            let all = doc
+                .query_selector_all(".top-menubar .menu-dropdown")
+                .unwrap();
             for j in 0..all.length() {
                 let d = all.get(j).unwrap();
                 let de: Element = d.dyn_into().unwrap();
@@ -389,7 +512,9 @@ pub fn wire_menu_dropdowns(document: &Document) {
                 .flatten()
                 .is_some();
             if any_open {
-                let all = doc.query_selector_all(".top-menubar .menu-dropdown").unwrap();
+                let all = doc
+                    .query_selector_all(".top-menubar .menu-dropdown")
+                    .unwrap();
                 for j in 0..all.length() {
                     let d = all.get(j).unwrap();
                     let de: Element = d.dyn_into().unwrap();
@@ -413,7 +538,9 @@ pub fn wire_menu_dropdowns(document: &Document) {
     }
 
     // Wire menu action items
-    let items = document.query_selector_all(".top-menubar .menu-dropdown-item").unwrap();
+    let items = document
+        .query_selector_all(".top-menubar .menu-dropdown-item")
+        .unwrap();
     for i in 0..items.length() {
         let item = items.get(i).unwrap();
         let item_el: Element = item.dyn_into().unwrap();
@@ -431,7 +558,9 @@ pub fn wire_menu_dropdowns(document: &Document) {
             me.stop_propagation();
             let doc = web_sys::window().unwrap().document().unwrap();
             // Close all dropdowns
-            let all = doc.query_selector_all(".top-menubar .menu-dropdown").unwrap();
+            let all = doc
+                .query_selector_all(".top-menubar .menu-dropdown")
+                .unwrap();
             for j in 0..all.length() {
                 let d = all.get(j).unwrap();
                 let de: Element = d.dyn_into().unwrap();
@@ -452,7 +581,9 @@ pub fn wire_menu_dropdowns(document: &Document) {
     // Close dropdowns when clicking outside
     let outside_closure = Closure::wrap(Box::new(move |_e: web_sys::Event| {
         let doc = web_sys::window().unwrap().document().unwrap();
-        let all = doc.query_selector_all(".top-menubar .menu-dropdown").unwrap();
+        let all = doc
+            .query_selector_all(".top-menubar .menu-dropdown")
+            .unwrap();
         for j in 0..all.length() {
             let d = all.get(j).unwrap();
             let de: Element = d.dyn_into().unwrap();
@@ -516,9 +647,7 @@ fn handle_menu_action(document: &Document, action: &str, label: &str) {
                 .ok()
                 .flatten()
             {
-                let wire_id = selected_wire
-                    .get_attribute("data-id")
-                    .unwrap_or_default();
+                let wire_id = selected_wire.get_attribute("data-id").unwrap_or_default();
                 super::wire_inspector::show_inspector(document, &wire_id);
             } else {
                 show_menu_notification(
@@ -533,9 +662,7 @@ fn handle_menu_action(document: &Document, action: &str, label: &str) {
                 .ok()
                 .flatten()
             {
-                let wire_id = selected_wire
-                    .get_attribute("data-id")
-                    .unwrap_or_default();
+                let wire_id = selected_wire.get_attribute("data-id").unwrap_or_default();
                 if let Some(label_el) = document
                     .query_selector(&format!(".wire-overlay text[data-wire-id=\"{}\"]", wire_id))
                     .ok()
@@ -556,9 +683,7 @@ fn handle_menu_action(document: &Document, action: &str, label: &str) {
                 .ok()
                 .flatten()
             {
-                let wire_id = selected_wire
-                    .get_attribute("data-id")
-                    .unwrap_or_default();
+                let wire_id = selected_wire.get_attribute("data-id").unwrap_or_default();
                 selected_wire.remove();
                 if let Some(label_el) = document
                     .query_selector(&format!(".wire-overlay text[data-wire-id=\"{}\"]", wire_id))
@@ -585,9 +710,7 @@ fn handle_menu_action(document: &Document, action: &str, label: &str) {
                 .ok()
                 .flatten()
             {
-                let wire_id = selected_wire
-                    .get_attribute("data-id")
-                    .unwrap_or_default();
+                let wire_id = selected_wire.get_attribute("data-id").unwrap_or_default();
                 let _ = selected_wire.set_attribute("data-modality", modality);
                 let new_class = format!("wire-path wire-selected wire-{}", modality);
                 let _ = selected_wire.set_attribute("class", &new_class);
@@ -676,6 +799,12 @@ fn handle_menu_action(document: &Document, action: &str, label: &str) {
         }
         "edit:duplicate" => {
             super::interactions::duplicate_selected_containers(document);
+        }
+        "edit:move-to-manifold" => {
+            super::container_transfer::open_transfer_dialog(document, false);
+        }
+        "edit:copy-to-manifold" => {
+            super::container_transfer::open_transfer_dialog(document, true);
         }
         "edit:select-all" => {
             let all = document
@@ -1104,63 +1233,56 @@ fn show_menu_notification(document: &Document, message: &str) {
     timeout.forget();
 }
 
-fn append_pager_tab(
+fn append_manifold_option(
     document: &Document,
-    desktops: &Element,
+    select: &Element,
     seed: &ManifoldSeed,
-    index: usize,
     active_id: &str,
 ) {
-    let tab = document.create_element("button").unwrap();
-    tab.set_class_name("desktop-tab-btn");
+    let opt = document.create_element("option").unwrap();
+    opt.set_attribute("value", &seed.id).unwrap();
+    opt.set_text_content(Some(&format!("{} {}", seed.icon, seed.label)));
     if seed.id == active_id {
-        tab.class_list().add_1("active").unwrap();
+        opt.set_attribute("selected", "selected").unwrap();
     }
-    tab.set_attribute("data-manifold", &seed.id).unwrap();
-    let num = document.create_element("span").unwrap();
-    num.set_class_name("desktop-num");
-    num.set_text_content(Some(&(index + 1).to_string()));
-    let label = document.create_element("span").unwrap();
-    label.set_text_content(Some(&format!(" {} {}", seed.icon, seed.label)));
-    tab.append_child(&num).unwrap();
-    tab.append_child(&label).unwrap();
-    if seed.is_social() {
-        let people = document.create_element("span").unwrap();
-        people.set_text_content(Some(" \u{1F465}"));
-        people
-            .set_attribute("title", "Social lens — many people")
-            .ok();
-        tab.append_child(&people).unwrap();
-    }
-    let manifold_id = seed.id.clone();
-    let closure = Closure::wrap(Box::new(move || {
-        super::switch_to_sibling_manifold(&manifold_id);
-    }) as Box<dyn FnMut()>);
-    tab.add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())
-        .unwrap();
-    closure.forget();
-    desktops.append_child(&tab).unwrap();
+    select.append_child(&opt).unwrap();
 }
 
-/// Rebuild the pager to the open construct's lenses.
+/// Rebuild the pager to the open construct's lenses (now a `<select>` dropdown).
 pub fn rebuild_pager(document: &Document, seeds: &[ManifoldSeed], active_id: &str) {
-    let Some(desktops) = document
-        .query_selector(".pager-desktops-list")
-        .ok()
-        .flatten()
-    else {
+    let Some(select) = document.get_element_by_id("manifold-selector") else {
         return;
     };
-    while let Some(child) = desktops.first_element_child() {
+    // Clear existing options
+    while let Some(child) = select.first_element_child() {
         child.remove();
     }
-    for (index, seed) in seeds.iter().enumerate() {
-        append_pager_tab(document, &desktops, seed, index, active_id);
+    for seed in seeds.iter() {
+        append_manifold_option(document, &select, seed, active_id);
+    }
+    // Update collapsed summary
+    if let Some(summary) = document.get_element_by_id("collapsed-summary-label") {
+        if let Some(active_seed) = seeds.iter().find(|s| s.id == active_id) {
+            summary.set_text_content(Some(&format!("{} {}", active_seed.icon, active_seed.label)));
+        }
     }
 }
 
 /// Refresh construct/manifold chrome (badge + clickable breadcrumb + pop).
 pub fn refresh_construct_chrome(document: &Document, construct_id: &str, manifold_id: &str) {
+    if let Some(selector) = document.get_element_by_id("manifold-selector") {
+        if let Ok(selector) = selector.dyn_into::<web_sys::HtmlSelectElement>() {
+            selector.set_value(manifold_id);
+        }
+    }
+    if let Some(summary) = document.get_element_by_id("collapsed-summary-label") {
+        if let Some(seed) = super::get_current_seeds()
+            .into_iter()
+            .find(|seed| seed.id == manifold_id)
+        {
+            summary.set_text_content(Some(&format!("{} {}", seed.icon, seed.label)));
+        }
+    }
     if let Some(badge) = document
         .query_selector(".graph-address-badge")
         .ok()
@@ -1230,34 +1352,80 @@ pub fn refresh_construct_chrome(document: &Document, construct_id: &str, manifol
     super::manifold_social::refresh_people_chrome(document);
 }
 
-/// Build the canvas control bar (manifold pager + title + socket-case pods).
+/// Build the canvas control bar (manifold dropdown + title + socket-case pods).
 pub fn build_canvas_control_bar(document: &Document, seeds: &[ManifoldSeed]) -> Element {
     let bar = document.create_element("div").unwrap();
     bar.set_class_name("canvas-control-bar");
 
-    // Pager
-    let pager = document.create_element("div").unwrap();
-    pager.set_class_name("virtual-desktop-pager");
-    let desktops = document.create_element("div").unwrap();
-    desktops.set_class_name("pager-desktops-list");
+    // Collapse / Expand toggle
+    let collapse_btn = document.create_element("button").unwrap();
+    collapse_btn.set_class_name("control-bar-collapse-btn");
+    collapse_btn.set_id("control-bar-collapse-btn");
+    collapse_btn
+        .set_attribute("title", "Collapse / Expand control bar")
+        .unwrap();
+    collapse_btn.set_text_content(Some("\u{25BE}")); // ▾
+    bar.append_child(&collapse_btn).unwrap();
 
+    // Collapsed summary (hidden when expanded, shown when collapsed)
+    let summary = document.create_element("div").unwrap();
+    summary.set_class_name("collapsed-summary");
+    let summary_icon = document.create_element("span").unwrap();
+    summary_icon.set_class_name("collapsed-summary-icon");
+    summary_icon.set_text_content(Some(
+        seeds
+            .first()
+            .map(|s| s.icon.as_str())
+            .unwrap_or("\u{1F4D6}"),
+    ));
+    summary.append_child(&summary_icon).unwrap();
+    let summary_label = document.create_element("span").unwrap();
+    summary_label.set_id("collapsed-summary-label");
+    summary_label.set_text_content(Some(
+        seeds
+            .first()
+            .map(|s| s.label.as_str())
+            .unwrap_or("Research"),
+    ));
+    summary.append_child(&summary_label).unwrap();
+    bar.append_child(&summary).unwrap();
+
+    // Manifold Selector Group (dropdown + add button)
+    let selector_group = document.create_element("div").unwrap();
+    selector_group.set_class_name("manifold-selector-group");
+
+    let select = document.create_element("select").unwrap();
+    select.set_id("manifold-selector");
+    select.set_class_name("manifold-select");
+    select
+        .set_attribute("title", "Switch active manifold")
+        .unwrap();
     let active = seeds.first().map(|seed| seed.id.as_str()).unwrap_or("");
-    for (i, seed) in seeds.iter().enumerate() {
-        append_pager_tab(document, &desktops, seed, i, active);
+    for seed in seeds.iter() {
+        append_manifold_option(document, &select, seed, active);
     }
-    pager.append_child(&desktops).unwrap();
+
+    // Wire the select change event
+    let select_closure = Closure::wrap(Box::new(move |e: Event| {
+        if let Some(target) = e.target() {
+            let sel: web_sys::HtmlSelectElement = target.dyn_into().unwrap();
+            let manifold_id = sel.value();
+            super::switch_to_sibling_manifold(&manifold_id);
+        }
+    }) as Box<dyn FnMut(Event)>);
+    select
+        .add_event_listener_with_callback("change", select_closure.as_ref().unchecked_ref())
+        .unwrap();
+    select_closure.forget();
+
+    selector_group.append_child(&select).unwrap();
 
     // Add new manifold button (+)
     let add_btn = document.create_element("button").unwrap();
-    add_btn.set_class_name("desktop-tab-btn desktop-add-btn");
+    add_btn.set_class_name("manifold-add-btn");
     add_btn.set_id("manifold-add-btn");
     add_btn.set_attribute("title", "Add new manifold").unwrap();
-    let plus = document.create_element("span").unwrap();
-    plus.set_text_content(Some("+"));
-    add_btn.append_child(&plus).unwrap();
-    pager.append_child(&add_btn).unwrap();
-
-    // Wire the add button
+    add_btn.set_text_content(Some("+"));
     let add_closure = Closure::wrap(Box::new(move |_e: Event| {
         let doc = web_sys::window().unwrap().document().unwrap();
         add_new_manifold(&doc);
@@ -1266,8 +1434,9 @@ pub fn build_canvas_control_bar(document: &Document, seeds: &[ManifoldSeed]) -> 
         .add_event_listener_with_callback("click", add_closure.as_ref().unchecked_ref())
         .unwrap();
     add_closure.forget();
+    selector_group.append_child(&add_btn).unwrap();
 
-    bar.append_child(&pager).unwrap();
+    bar.append_child(&selector_group).unwrap();
 
     let crumb = document.create_element("div").unwrap();
     crumb.set_id("construct-breadcrumb");
@@ -1525,6 +1694,31 @@ pub fn wire_pods(document: &Document) {
             .unwrap();
         closure.forget();
     }
+
+    // Wire control bar collapse/expand toggle
+    if let Some(collapse_btn) = document.get_element_by_id("control-bar-collapse-btn") {
+        let closure = Closure::wrap(Box::new(move |_e: web_sys::Event| {
+            let doc = web_sys::window().unwrap().document().unwrap();
+            if let Some(bar) = doc.query_selector(".canvas-control-bar").ok().flatten() {
+                let is_collapsed = bar.class_list().contains("collapsed");
+                if is_collapsed {
+                    bar.class_list().remove_1("collapsed").ok();
+                    if let Some(btn) = doc.get_element_by_id("control-bar-collapse-btn") {
+                        btn.set_text_content(Some("\u{25BE}")); // ▾
+                    }
+                } else {
+                    bar.class_list().add_1("collapsed").ok();
+                    if let Some(btn) = doc.get_element_by_id("control-bar-collapse-btn") {
+                        btn.set_text_content(Some("\u{25B8}")); // ▸
+                    }
+                }
+            }
+        }) as Box<dyn FnMut(web_sys::Event)>);
+        collapse_btn
+            .add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())
+            .unwrap();
+        closure.forget();
+    }
 }
 
 pub fn toggle_tech_sidebar(document: &Document) {
@@ -1659,24 +1853,7 @@ pub fn toggle_tech_sidebar(document: &Document) {
 }
 
 fn show_a11y_notification(document: &Document) {
-    let notif = document.create_element("div").unwrap();
-    let n_el: HtmlElement = notif.clone().dyn_into().unwrap();
-    n_el.style().set_css_text(
-        "position: fixed; bottom: 40px; right: 16px; background: var(--surface-panel-elevated); \
-         border: 1px solid var(--border-medium); border-radius: var(--radius-sm); \
-         padding: 10px 14px; font-size: 12px; color: var(--text-primary); \
-         box-shadow: var(--shadow-lg); z-index: 700; max-width: 320px;",
-    );
-    notif.set_text_content(Some("\u{267F} Accessibility \u{2014} WCAG contrast, reduced motion, and screen reader support are present in the theme system"));
-    if let Some(body) = document.body() {
-        body.append_child(&notif).unwrap();
-    }
-    let notif_clone = notif.clone();
-    let timeout = Closure::wrap(Box::new(move || {
-        notif_clone.remove();
-    }) as Box<dyn FnMut()>);
-    super::interactions::set_timeout(timeout.as_ref().unchecked_ref(), 3000);
-    timeout.forget();
+    super::accessibility::open_dialog(document);
 }
 
 fn toggle_pod_tray(document: &Document, pod_id: &str) {

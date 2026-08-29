@@ -227,7 +227,7 @@ See `SAVE_ARCHITECTURE.md` for the full specification.
 | 4.1.2 | Container header with type tag + title + honesty badge | [done] | |
 | 4.1.3 | Container body renders type-specific content | [done] | |
 | 4.1.4 | Container resize handle | [done] | |
-| 4.1.5 | Container connection ports (in/out) | [done] | Visual only, not draggable |
+| 4.1.5 | Container connection ports (in/out) | [done] | Output-to-input dragging creates semantic wires and opens the wire inspector |
 | 4.1.6 | Honesty badges (live/partial/present/missing) | [done] | |
 | 4.1.7 | Strata badges | [done] | |
 | 4.1.8 | Epistemic modality badges | [done] | |
@@ -258,8 +258,8 @@ See `SAVE_ARCHITECTURE.md` for the full specification.
 |---|------|--------|-------|
 | 4.2.1 | Doc: contenteditable with toolbar | [partial] | Toolbar buttons exist but formatting not wired |
 | 4.2.2 | Doc: view switcher (Visual / Markdown / RDF Triples) | [done] | `src/browser/container_views.rs` — tabbed switcher with contenteditable, markdown textarea, RDF triple table |
-| 4.2.3 | Sheet: formula bar + interactive grid | [partial] | Formula bar exists, grid is static |
-| 4.2.4 | Sheet: cell selection + editing | [done] | Click cell to edit, Enter/blur to commit, formula evaluation (+, -, *, /, SUM range) |
+| 4.2.3 | Sheet: formula bar + interactive grid | [done] | Stateful, sheet-scoped grid; formula bar edits the active cell; add-row/add-column/clear actions; sticky headers and overflow viewport |
+| 4.2.4 | Sheet: cell selection + editing | [done] | Direct input, Enter/Shift+Enter/Tab navigation, TSV multi-cell paste, persistent raw values/formulas, dependency recalculation, undo checkpoints; arithmetic plus SUM/AVERAGE/MIN/MAX/COUNT ranges |
 | 4.2.5 | Code: VibeScript editor + run | [partial] | Console exists, run is mock |
 | 4.2.6 | Code: AST inspector tab | [todo] | |
 | 4.2.7 | Code: Gas accounting | [todo] | |
@@ -270,6 +270,24 @@ See `SAVE_ARCHITECTURE.md` for the full specification.
 | 4.2.12 | Contextual RDF popover (text selection → tag) | [done] | `src/browser/contextual_popover.rs` — select text in doc → popover with 8 entity types → `<q-entity>` tag wraps selection with `data-entity-type` |
 | 4.2.13 | Search Workbench (faceted + builder + SPARQL + saved) | [done] | `src/browser/search_workbench.rs` — 4-mode modal: faceted chips, visual triple-pattern builder with SPARQL preview, manual SPARQL editor, saved queries list; localStorage persistence; query-as-container-source placement; Ctrl+Shift+F shortcut; topbar Search button; command palette entries. SPARQL execution is mocked — daemon wiring pending |
 | 4.2.14 | Logic Workbench (71 reasoning tools) | [done] | `src/browser/logic_workbench.rs` (723 lines) + `logic_workbench/` subdirectory with 12 focused modules: helpers, descriptions, dispatch, tests, p0_core, p0_ext, p1_legal, p1_governance, p1_logic, p1_advanced, p2_domain, p2_infra, p2_infra_ext, p2_extras. Modal overlay with 71 tool tabs: 9 P0 + 8 P1 legal + 6 P1 governance + 9 P1 logic + 8 P1 advanced + 9 P2 domain (Clinical Risk, DICOM, Comorbidity, Chemistry, Physics, ODE, Bioinformatics, GBM/VaR, Diffusion) + 9 P2 infra (Bytecode/VM, SLG Arena, Forge Compute, Compute Profile, Privacy/HE/DP, Model Lifecycle, Inference Monitor, GGUF Tokenizer, P64 Weight) + 10 P2 infra ext (CRDT/Sync, Agency/Merkle, Key Vault, Policy Evaluator, Consent Manager, Carrier/Media, Control Feedback, Likeliness, QUBO, OWL Converter) + 3 P2 extras (Allen/RCC8, Manifold Logic, Calculus). 65 modalities in Evaluate Modality selector. 72 command palette entries via `dispatch_command`. Ctrl+Shift+L shortcut. 15 unit tests. All evaluation mocked — MCP engine wiring pending |
+| 4.2.15 | Shared container settings dialog | [done] | Title, semantic type/URI, width and height update the live model and undo history |
+| 4.2.16 | Minimise/restore container lifecycle | [done] | Persistent collapsed state with accessible labels and restored body/ports/resizer |
+
+#### Container functionality audit — ordered implementation backlog
+
+“Rendered” is not treated as “working” in this list. A container is complete only when its primary data can be authored, mutated, persisted, restored, and exercised from its visible controls.
+
+| Priority | Container | Current gap | Completion acceptance criteria |
+|---|---|---|---|
+| P0 | Doc | Formatting toolbar is visual-only | Bold/italic/headings/lists/links operate on selection; Markdown and visual modes round-trip without content loss; edits persist and undo |
+| P0 | Code / VibeScript | Run path remains a mock | Editable source, run/cancel, stdout/stderr/result surface, AST view, gas accounting, persistence, and honest disconnected state |
+| P0 | Ontology | Tree is browse-only and alignment matrix is absent | Add/edit/delete class/property rows, alignment matrix editing, validation feedback, persistence, undo |
+| P1 | Map | Layer controls are not wired | Layer visibility/toggle state changes the rendered surface, persists, restores, and exposes unavailable providers honestly |
+| P1 | Social | Messages are read-only samples | Compose/send/reply affordances, local draft persistence, conversation selection, and connected/unavailable transport status |
+| P1 | Health / Anatomy | Sub-panel content is structural | Working tab state, user-authored records, validation, persistence, and explicit engine/session availability |
+| P1 | Graph / SPARQL | Query execution still depends on backend wiring | Editable query, run/cancel, tabular result/error state, result persistence/export, and scoped daemon status |
+| P2 | Media / 3D | Preview depends on an external renderer session | Import/select media, playback or transform controls where applicable, provider-state messaging, and retained asset settings |
+| P2 | Dataset views | Binary/parquet/render transports are unbound | Import feedback, schema/row preview, saved projections, export, and explicit codec/provider capability checks |
 
 ### 4.3 Container placement
 
@@ -281,6 +299,7 @@ See `SAVE_ARCHITECTURE.md` for the full specification.
 | 4.3.4 | New containers are wired for drag/resize/select | [done] | |
 | 4.3.5 | Container deletion | [done] | ✕ button on header + Delete/Backspace key shortcut |
 | 4.3.6 | Container duplication | [done] | Ctrl+D / Cmd+D duplicates selected container(s) with 30px offset |
+| 4.3.7 | Move/copy containers between manifolds | [done] | Edit menu destination dialog; preserves internal semantic wires and remaps indices deterministically |
 
 ---
 
@@ -322,8 +341,8 @@ See `SAVE_ARCHITECTURE.md` for the full specification.
 | 7.4 | Strata/modality badge colors | [done] | |
 | 7.5 | Theme presets (multiple themes) | [todo] | Mockup has theme system |
 | 7.6 | Sanctuary zero-motion mode | [todo] | |
-| 7.7 | WCAG contrast modes | [todo] | |
-| 7.8 | Reduced motion support | [todo] | |
+| 7.7 | WCAG contrast modes | [done] | Persistent high-contrast preference strengthens borders, text and focus rings |
+| 7.8 | Reduced motion support | [done] | Persistent preference disables non-essential animation and transitions |
 
 ---
 
@@ -335,7 +354,7 @@ See `SAVE_ARCHITECTURE.md` for the full specification.
 | 8.2 | Keyboard navigation between containers | [todo] | |
 | 8.3 | Focus indicators | [partial] | Selected container has border |
 | 8.4 | Screen reader announcements | [todo] | |
-| 8.5 | a11y toggle button | [done] | Shows notification |
+| 8.5 | a11y toggle button | [done] | Opens persistent larger-text, high-contrast, reduced-motion and canvas-focus settings |
 
 ---
 
@@ -362,7 +381,7 @@ See `SAVE_ARCHITECTURE.md` for the full specification.
 | # | Item | Status | Notes |
 |---|------|--------|-------|
 | 10.1 | `cargo check` passes | [done] | |
-| 10.2 | `cargo test` — 182 tests pass | [done] | `crates/poet` 182 passed, 0 failed |
+| 10.2 | `cargo test` — 231 tests pass | [done] | `crates/poet` 231 passed, 0 failed; product-integrity suite 3 passed |
 | 10.3 | Trunk WASM build succeeds | [done] | |
 | 10.4 | App loads in browser preview | [done] | `http://127.0.0.1:8080` |
 | 10.5 | No unused import warnings | [done] | |
