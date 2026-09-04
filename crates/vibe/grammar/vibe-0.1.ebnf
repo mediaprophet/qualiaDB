@@ -17,7 +17,6 @@ BindDecl       ::= 'bind' Expression '<->' Expression
                    ('resolve' Identifier)? ';' ;
 CellDecl       ::= EffectClass? 'cell' Identifier ParamList? ('when' Expression)? (':=' | '=') Expression ';' ;
 PresentDecl    ::= 'present' Identifier '{' PresentProp* '}' ;
-PresentProp    ::= Identifier ':' Expression ;
 ConstDecl      ::= 'const' Identifier (':' Type)? '=' Expression ';' ;
 FunctionDecl   ::= EffectClass? 'async'? 'fn' Identifier '(' Params? ')'
                    BudgetClause? ('->' Type)? Block ;
@@ -25,15 +24,10 @@ HookDecl       ::= 'on' EventPath '(' Params? ')' BudgetClause? ('->' Type)? Blo
 EventPath      ::= Identifier (':' Identifier)* ;
 EffectClass    ::= 'pure' | 'hot' | 'cold' | 'async' | 'effect' ;
 BudgetClause   ::= 'budget' '(' NamedArg (',' NamedArg)* ')' ;
-EnumDecl       ::= 'enum' Identifier '{' Identifier (',' Identifier)* '}' ;
-FieldDecl      ::= 'field' Identifier ':' Type ('unit' ':' IRI)? ';' ;
-MaterialDecl   ::= 'material' Identifier '{' NamedArg (',' NamedArg)* '}' ;
-LawDecl        ::= 'law' Identifier 'when' Expression '=>' Expression ';' ;
 
 Params         ::= Param (',' Param)* ;
 Param          ::= Identifier ':' Type ;
 NamedArg       ::= Identifier ':' Expression ;
-ParamList      ::= '(' Params? ')' ;
 
 Statement      ::= LetStmt | AssignStmt | IfStmt | ForStmt | WhileStmt
                  | MatchStmt | ReturnStmt | YieldStmt | TransactionStmt
@@ -81,7 +75,6 @@ Modal          ::= ('obligate' | 'permit' | 'forbid' | 'knows' | 'believes'
 PrefixedName   ::= Identifier ':' (Identifier | IntegerLiteral) ;
 ColorLit       ::= '#' HexDigits ;
 QuantityLit    ::= (IntegerLiteral | FloatLiteral) UnitSuffix ;
-UnitSuffix     ::= Identifier ;
 
 Literal        ::= StringLiteral | IntegerLiteral | FloatLiteral
                  | 'true' | 'false' | 'null' ;

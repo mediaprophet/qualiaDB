@@ -13,6 +13,9 @@ pub mod tool_chest {
 
 pub mod browser;
 
+/// Frozen `vibe-host-0.1` four-op surface (G-A).
+pub mod vibe_host;
+
 pub use tool_chest::core::{
     build_payload, ActionType, ConstructSeed, ConstructSource, ContextRef, DockPosition, IntentBus,
     IntentReceipt, IntentStatus, Manifest, ManifestChain, ManifestTool, ManifoldParticipant,
@@ -20,4 +23,10 @@ pub use tool_chest::core::{
     OntologyRegistry, Provenance, Registry, SeedConnection, SeedContainer, SeedPanel, SimpleTool,
     SubjectSeed, TargetIdentifier, TargetKind, Tool, ToolChain, ToolChainMetadata, ToolKind,
     ToolMetadata, Toolbox, ToolboxMetadata, VibeScriptPayload,
+};
+
+/// Thin vibe-host-0.1 facade — prefer these over reaching into `vibe` AST/Host.
+pub use vibe_host::{
+    capability_invoke, check_cell, check_program, diagnose, diagnose_json, host_version,
+    language_version, parse_cell, parse_program, CRATE_STAMP, HOST_VERSION, LANGUAGE_VERSION,
 };

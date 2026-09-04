@@ -1,6 +1,6 @@
 [package]
 name = "vibe-wasm"
-version = "0.0.35"
+version = "0.0.36-dev"
 edition = "2021"
 description = "WASM bindings for VibeScript — parse, check, evaluate, and compile bytecode in the browser."
 license-file = "LICENSE"

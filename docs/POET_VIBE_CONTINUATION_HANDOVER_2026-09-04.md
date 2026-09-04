@@ -127,7 +127,7 @@ Poet = **live studio** over QualiaDB: graph as navigable stage, inference with p
 
 | Gate ID | Blocks | Ungate job | Owner | Status |
 |---------|--------|------------|-------|--------|
-| G-A | `vibe-host-0.1` freeze + creative polish on frozen surface | Neo four closes | Neo | open |
+| G-A | `vibe-host-0.1` freeze + creative polish on frozen surface | Neo four closes | Neo | **in_progress** |
 | G-B-001 | Sanctuary save/open; commit-to-volume twin | Add + bind `GraphDatabase.volume_open` / `volume_commit` | Neo (+ Marvin Volume shape) | **done** (binds + seam; chrome ungate → davinci/monet) |
 | G-DOCS | Other bots continuing without chat | Land this handover + sprint deltas on `0.0.36-dev` | Neo | **done** (2026-09-04) |
 

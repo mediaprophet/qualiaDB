@@ -11,7 +11,8 @@ use wasm_bindgen::prelude::*;
 use vibe::{
     bytecode::{self, compile, compile_expr, decode_chunk, encode_chunk, Vm},
     check_cell, check_program, diagnose, eval_cell, load_program, parse_cell, parse_program,
-    Budget, Engine, Env, LocalHost, Value,
+    Budget, DiagCode, Diagnostic, Engine, Env, HOST_VERSION, LANGUAGE_VERSION, LocalHost,
+    Span, Value,
 };
 
 // ── helpers ────────────────────────────────────────────────────────
@@ -93,27 +94,8 @@ fn value_to_js(v: &Value) -> JsValue {
 
 /// Convert a `Diagnostic` into a JS error object.
 fn diag_to_js(d: &vibe::Diagnostic) -> JsValue {
-    let o = Object::new();
-    Reflect::set(
-        &o,
-        &"code".into(),
-        &JsValue::from_str(&format!("{:?}", d.code)),
-    )
-    .ok();
-    Reflect::set(&o, &"message".into(), &JsValue::from_str(&d.message)).ok();
-    Reflect::set(
-        &o,
-        &"span_start".into(),
-        &JsValue::from_f64(d.span.start as f64),
-    )
-    .ok();
-    Reflect::set(
-        &o,
-        &"span_end".into(),
-        &JsValue::from_f64(d.span.end as f64),
-    )
-    .ok();
-    o.into()
+    // Native parity with Diagnostic::to_json / DiagnoseReport (G-A).
+    js_sys::JSON::parse(&d.to_json()).unwrap_or_else(|_| JsValue::NULL)
 }
 
 // ── public API ─────────────────────────────────────────────────────
@@ -121,7 +103,28 @@ fn diag_to_js(d: &vibe::Diagnostic) -> JsValue {
 /// Get the VibeScript language version string.
 #[wasm_bindgen]
 pub fn language_version() -> String {
-    vibe::LANGUAGE_VERSION.to_string()
+    LANGUAGE_VERSION.to_string()
+}
+
+/// Frozen host ABI stamp (`vibe-host-0.1`).
+#[wasm_bindgen]
+pub fn host_version() -> String {
+    HOST_VERSION.to_string()
+}
+
+/// Capability invoke pin — default fail-closed E300 (parity with Host::capability_invoke).
+/// Args are accepted as a JSON string for the JS boundary.
+#[wasm_bindgen]
+pub fn capability_invoke(id: &str, _args_json: &str) -> JsValue {
+    let diag = Diagnostic::new(
+        DiagCode::E300,
+        Span { start: 0, end: 0 },
+        format!("capability.invoke not bound on this host: {id}"),
+    );
+    let o = Object::new();
+    Reflect::set(&o, &"ok".into(), &JsValue::from_bool(false)).ok();
+    Reflect::set(&o, &"error".into(), &diag_to_js(&diag)).ok();
+    o.into()
 }
 
 /// Parse a cell expression (`= expr`).
@@ -262,16 +265,9 @@ pub fn eval_cell_json(src: &str) -> JsValue {
 /// Parse + check a module; collect up to eight diagnostics.
 #[wasm_bindgen]
 pub fn diagnose_src(src: &str) -> JsValue {
+    // Byte-level JSON parity with native DiagnoseReport::to_json (G-A).
     let report = diagnose(src);
-    let o = Object::new();
-    Reflect::set(&o, &"ok".into(), &JsValue::from_bool(report.valid)).ok();
-    Reflect::set(&o, &"kind".into(), &JsValue::from_str(report.kind)).ok();
-    let errors = Array::new();
-    for e in &report.errors {
-        errors.push(&diag_to_js(e));
-    }
-    Reflect::set(&o, &"errors".into(), &errors).ok();
-    o.into()
+    js_sys::JSON::parse(&report.to_json()).unwrap_or_else(|_| JsValue::NULL)
 }
 
 /// Evaluate a full program on LocalHost (workshop dialect).

@@ -154,7 +154,7 @@ pub trait Host {
     /// trait surface. Hosts that add methods beyond 0.1 should
     /// return "vibe-host-0.2" or higher.
     fn host_version(&self) -> &str {
-        "vibe-host-0.1"
+        crate::HOST_VERSION
     }
 
     fn environment(&self) -> HostEnvironment {

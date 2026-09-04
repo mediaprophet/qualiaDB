@@ -8,6 +8,9 @@
 
 pub const LANGUAGE_VERSION: &str = "vibe-0.1";
 
+/// Frozen host ABI stamp (`Host::host_version`).
+pub const HOST_VERSION: &str = "vibe-host-0.1";
+
 mod accel;
 mod ast;
 mod ast_query;
