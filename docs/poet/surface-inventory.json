@@ -8,8 +8,8 @@
   },
   "counts": {
     "delegation_source_audit": 112,
-    "thin_generic_delegations": 109,
-    "restored_delegation_exemplars": 4,
+    "thin_generic_delegations": 107,
+    "restored_delegation_exemplars": 6,
     "total_surfaces": 113
   },
   "status_vocabulary": {
@@ -642,21 +642,23 @@
         "route_registration": "crates/poet/src/browser/containers.rs",
         "surface_module": "crates/poet/src/browser/health_views/clinical_reports.rs",
         "exported_builder": "build_clinical_reports_view",
-        "delegated_builder": "super::persist::build_clinical_reports_view"
+        "delegated_builder": "super::reports_workspace::build_clinical_reports_view"
       },
       "current_implementation": "delegated_builder",
-      "intended_user_job": "Use the clinical reports workspace for its named domain task; workflow details require recovery from canonical specifications and retained source evidence.",
-      "record_families": [],
+      "intended_user_job": "Document and review formal clinical consultation notes, diagnostic summaries, operative records, and pathology findings with cryptographic provenance.",
+      "record_families": [
+        "health_report"
+      ],
       "capabilities": [],
-      "backend_state": "COP persistence builder is present; domain record contract and projection are not mapped in this inventory.",
-      "generic_delegation": true,
+      "backend_state": "Domain clinical reports workspace active; supports findings, recommendations, sensitivity tagging, and correction receipts.",
+      "generic_delegation": false,
       "remaining_behavior": [
         "Recover the domain workflow from canonical specifications and retained source evidence.",
         "Map real record families, capabilities, and lifecycle actions.",
         "Verify loading, empty, offline, error, mutation, reload, and accessibility states."
       ],
       "uat_state": "not_run",
-      "status": "not_started",
+      "status": "partial",
       "status_evidence": [
         "docs/POET_PRODUCT_INTEGRITY_REMEDIATION_2026-08-29.md#R1",
         "docs/poet/MASTER_TRACKER.md"
@@ -754,21 +756,23 @@
         "route_registration": "crates/poet/src/browser/containers.rs",
         "surface_module": "crates/poet/src/browser/health_views/documents.rs",
         "exported_builder": "build_documents_view",
-        "delegated_builder": "super::persist::build_health_documents_view"
+        "delegated_builder": "super::documents_workspace::build_documents_view"
       },
       "current_implementation": "delegated_builder",
-      "intended_user_job": "Use the documents workspace for its named domain task; workflow details require recovery from canonical specifications and retained source evidence.",
-      "record_families": [],
+      "intended_user_job": "Ingest and review extracted clinical document text, discharge summaries, and pathology reports with provenance and honest binary-PDF limitation.",
+      "record_families": [
+        "health_document"
+      ],
       "capabilities": [],
-      "backend_state": "COP persistence builder is present; domain record contract and projection are not mapped in this inventory.",
-      "generic_delegation": true,
+      "backend_state": "Domain documents workspace active; supports plain-text ingestion, NLP analysis pipeline, Semantic Library ingestion, and honest binary-PDF notice.",
+      "generic_delegation": false,
       "remaining_behavior": [
         "Recover the domain workflow from canonical specifications and retained source evidence.",
         "Map real record families, capabilities, and lifecycle actions.",
         "Verify loading, empty, offline, error, mutation, reload, and accessibility states."
       ],
       "uat_state": "not_run",
-      "status": "not_started",
+      "status": "partial",
       "status_evidence": [
         "docs/POET_PRODUCT_INTEGRITY_REMEDIATION_2026-08-29.md#R1",
         "docs/poet/MASTER_TRACKER.md"

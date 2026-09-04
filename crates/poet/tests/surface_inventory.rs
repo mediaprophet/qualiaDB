@@ -96,6 +96,14 @@ fn inventory_matches_the_live_delegation_audit() {
             "crates/poet/src/browser/health_views/medications.rs",
             "medications_workspace::build_medications_view",
         ),
+        (
+            "crates/poet/src/browser/health_views/documents.rs",
+            "documents_workspace::build_documents_view",
+        ),
+        (
+            "crates/poet/src/browser/health_views/clinical_reports.rs",
+            "reports_workspace::build_clinical_reports_view",
+        ),
     ] {
         let surface = surfaces
             .iter()

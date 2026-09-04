@@ -83,6 +83,22 @@ fn health_medications_uses_the_domain_workspace() {
     assert!(!source.contains("persist::build_medications_view"));
 }
 
+#[test]
+fn health_documents_uses_the_domain_workspace() {
+    let source = fs::read_to_string(manifest_dir().join("src/browser/health_views/documents.rs"))
+        .expect("health documents route");
+    assert!(source.contains("documents_workspace::build_documents_view"));
+    assert!(!source.contains("persist::build_health_documents_view"));
+}
+
+#[test]
+fn health_reports_uses_the_domain_workspace() {
+    let source = fs::read_to_string(manifest_dir().join("src/browser/health_views/clinical_reports.rs"))
+        .expect("clinical reports route");
+    assert!(source.contains("reports_workspace::build_clinical_reports_view"));
+    assert!(!source.contains("persist::build_clinical_reports_view"));
+}
+
 fn manifest_dir() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
 }

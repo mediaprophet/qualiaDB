@@ -3289,4 +3289,34 @@ html.poet-a11y-focus-mode .manifold-people { display: none !important; }
   outline: 2px solid var(--health-teal);
   outline-offset: 2px;
 }
+
+.health-dropzone-disabled {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px dashed rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--text-muted);
+  font-size: 11px;
+  cursor: not-allowed;
+  user-select: none;
+}
+
+.health-doc-snippet {
+  max-height: 80px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  line-height: 1.4;
+  color: var(--text-secondary);
+  background: rgba(0, 0, 0, 0.2);
+  padding: 6px 8px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
 "#;

@@ -1,3 +1,3 @@
 //! Health documents — NLP + Semantic Library ingest (classified/secret).
 
-pub use super::persist::build_health_documents_view as build_documents_view;
+pub use super::documents_workspace::build_documents_view;
