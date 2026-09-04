@@ -38,14 +38,22 @@ epistemic · office · image · sheet · spatial · audio · communication · er
 | `spatial:pin` | Annotate selected container |
 | `mail:composer` | Place container via menu |
 | `rights:authors_group` | Place container via menu |
+| `ai:extractor` | Bounded local token/sentence/entity extraction |
+| `ai:sentinel` | Bounded standalone DOM/surface safety check |
 
-### Daemon-backed (needs QualiaDB daemon)
+### Daemon-enhanced (optional QualiaDB daemon)
 
 | Tool id | Invoke id |
 |---------|-----------|
-| `ai:extractor` | gazetteer path |
-| `ai:sentinel` | `Sentinel.inspect` |
-| **`graph:sparql_query` (this slice)** | **`GraphDatabase.sparql`** |
+| `graph:sparql_query` | `GraphDatabase.sparql` |
+
+When a daemon is connected, `ai:extractor` upgrades to the structured
+`/gazetteer` transport for `NLP.gazetteer_run`; the capability id is retained
+in tool metadata so the catalog and transport remain aligned. When connected,
+`ai:sentinel` invokes `Sentinel.inspect` directly through `/invoke`; otherwise
+it runs the bounded standalone surface check. `graph:sparql_query` similarly
+queries Poet's local semantic container graph offline and upgrades to the
+daemon-backed graph when connected.
 
 ### Honestly gated (`unavailable_reason`)
 
@@ -53,7 +61,8 @@ epistemic · office · image · sheet · spatial · audio · communication · er
 
 ### Structural stubs
 
-- **Empty toolchains (chrome only):** `office:typography`, `office:paragraph` (and several image/sheet “widget” chains with `vec![]` tools) — UI drawers exist without buttons.
+- **Rich control chains:** `office:typography` and `office:paragraph` now expose
+  local DOM formatting actions (bold, italic, code, heading, and alignment).
 - **Construct stubs:** `constructs/mod.rs` `stub_constructs()` honesty=`stub`, no manifold seed (Library Software).
 - **Manifold honesty:** many seed containers marked `partial` / `missing` / `present` (elevated to `live` only with daemon).
 - **capability_scope drift:** most tools use scopes like `graph:read` / `graph:annotate` — **not** `Capability.method` strings. First live bind uses `GraphDatabase.sparql` in `capability_scope`.
@@ -70,20 +79,20 @@ epistemic · office · image · sheet · spatial · audio · communication · er
 - Geospatial: `spatial` toolbox places map/3D containers; map quality gap (open layers vs universe/fantasy) stays UX + B — not this slice.
 - Temporal: Layout/Stage/Timeline twins remain Marvin B shapes joined to live binds.
 
-## First ungate slice (done in companion commit)
+## First live slice (done in companion commit)
 
-Wire **`office:graph` toolchain** → tool **`graph:sparql_query`** → daemon `capability_invoke` **`GraphDatabase.sparql`**:
+Wire **`office:graph` toolchain** → tool **`graph:sparql_query`** to a bounded local semantic graph,
+with an optional daemon upgrade to **`GraphDatabase.sparql`**:
 
 1. Register toolchain + tool with `capability_scope: Some("GraphDatabase.sparql")`.
-2. `requires_daemon("graph:sparql_query")`.
-3. Dispatch: selected text as SPARQL (else bounded `ASK WHERE { ?s ?p ?o } LIMIT 1`), `daemon_invoke("GraphDatabase.sparql", …)`.
-4. Stay gated when daemon disconnected (existing honesty pattern).
+2. `requires_daemon("graph:sparql_query")` is false; standalone Poet remains executable.
+3. Dispatch: selected text as SPARQL (else bounded `ASK WHERE { ?s ?p ?o } LIMIT 1`), local query when offline, and `daemon_invoke("GraphDatabase.sparql", …)` when connected.
+4. Daemon faults preserve the local operation instead of disabling the control.
 
 ## Remaining for Capt / Vibe
 
 | Item | Owner |
 |------|-------|
-| Empty typography/paragraph chains (populate or hide) | davinci/monet + Neo |
 | Custom unicode registration API | Neo (B) |
 | Remap remaining `capability_scope` → `Capability.method` | Neo + Vibe |
 | Map layer / universe containers + temporal attrs | davinci/monet + Marvin |

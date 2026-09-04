@@ -3,6 +3,82 @@
 use super::*;
 
 pub(super) fn register_office_toolbox(reg: &mut Registry) {
+    let typography_tools: Vec<Box<dyn crate::tool_chest::core::tool::Tool>> = vec![
+        Box::new(SimpleTool::new(
+            ToolMetadata {
+                id: "office:typography_bold".into(),
+                label: "Bold".into(),
+                icon: "bold".into(),
+                kind: ToolKind::RunAction,
+                capability_scope: None,
+                ontology_prefix: "hm".into(),
+                description: "Apply bold styling to the selected document editor.".into(),
+            },
+            ActionType::Invoke,
+        )),
+        Box::new(SimpleTool::new(
+            ToolMetadata {
+                id: "office:typography_italic".into(),
+                label: "Italic".into(),
+                icon: "italic".into(),
+                kind: ToolKind::RunAction,
+                capability_scope: None,
+                ontology_prefix: "hm".into(),
+                description: "Apply italic styling to the selected document editor.".into(),
+            },
+            ActionType::Invoke,
+        )),
+        Box::new(SimpleTool::new(
+            ToolMetadata {
+                id: "office:typography_code".into(),
+                label: "Code".into(),
+                icon: "code".into(),
+                kind: ToolKind::RunAction,
+                capability_scope: None,
+                ontology_prefix: "hm".into(),
+                description: "Use a monospace code treatment for the selected editor.".into(),
+            },
+            ActionType::Invoke,
+        )),
+    ];
+    let paragraph_tools: Vec<Box<dyn crate::tool_chest::core::tool::Tool>> = vec![
+        Box::new(SimpleTool::new(
+            ToolMetadata {
+                id: "office:paragraph_heading".into(),
+                label: "Heading".into(),
+                icon: "heading".into(),
+                kind: ToolKind::RunAction,
+                capability_scope: None,
+                ontology_prefix: "hm".into(),
+                description: "Promote the selected document editor to a heading block.".into(),
+            },
+            ActionType::Invoke,
+        )),
+        Box::new(SimpleTool::new(
+            ToolMetadata {
+                id: "office:paragraph_align_left".into(),
+                label: "Align left".into(),
+                icon: "align-left".into(),
+                kind: ToolKind::RunAction,
+                capability_scope: None,
+                ontology_prefix: "hm".into(),
+                description: "Align the selected document editor to the left.".into(),
+            },
+            ActionType::Invoke,
+        )),
+        Box::new(SimpleTool::new(
+            ToolMetadata {
+                id: "office:paragraph_align_center".into(),
+                label: "Align center".into(),
+                icon: "align-center".into(),
+                kind: ToolKind::RunAction,
+                capability_scope: None,
+                ontology_prefix: "hm".into(),
+                description: "Center the selected document editor.".into(),
+            },
+            ActionType::Invoke,
+        )),
+    ];
     let container_tools: Vec<Box<dyn crate::tool_chest::core::tool::Tool>> = vec![
         Box::new(SimpleTool::new(
             ToolMetadata {
@@ -62,7 +138,7 @@ pub(super) fn register_office_toolbox(reg: &mut Registry) {
                         "Select font family, size, styles (Bold/Italic/Code), and text colors."
                             .into(),
                 },
-                vec![],
+                typography_tools,
             ),
             ToolChain::new(
                 ToolChainMetadata {
@@ -72,7 +148,7 @@ pub(super) fn register_office_toolbox(reg: &mut Registry) {
                     description: "Configure heading levels, text alignment, and block formats."
                         .into(),
                 },
-                vec![],
+                paragraph_tools,
             ),
             ToolChain::new(
                 ToolChainMetadata {

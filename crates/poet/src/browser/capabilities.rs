@@ -2,9 +2,9 @@
 //!
 //! Copyright (c) 2026 Timothy Charles Holborn. All rights reserved.
 //!
-//! Ports the capability gating pattern from `webizen-studio::endpoints`.
-//! Containers call these functions to fail closed when an engine is
-//! unreachable (e.g. on public web vs desktop webview).
+//! Poet-owned capability detection. Containers call these functions to
+//! fail closed when an engine is unreachable (e.g. on public web vs desktop
+//! webview); no Webizen Studio types are required.
 
 use web_sys::Window;
 

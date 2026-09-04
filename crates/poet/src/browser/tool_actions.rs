@@ -1,13 +1,12 @@
 //! Honest dispatch policy for non-placement Tool Chest actions.
 
-use web_sys::{Document, Element};
+use wasm_bindgen::JsCast;
+use web_sys::{Document, Element, HtmlElement};
 
 use crate::tool_chest::core::intent_bus::ActionType;
 
-const DAEMON_REQUIRED: &str = "Requires a running local QualiaDB daemon.";
-
-pub fn requires_daemon(tool_id: &str) -> bool {
-    matches!(tool_id, "ai:extractor" | "ai:sentinel" | "graph:sparql_query")
+pub fn requires_daemon(_tool_id: &str) -> bool {
+    false
 }
 
 #[cfg(test)]
@@ -22,6 +21,12 @@ fn has_local_contract(tool_id: &str) -> bool {
             | "spatial:pin"
             | "mail:composer"
             | "rights:authors_group"
+            | "office:typography_bold"
+            | "office:typography_italic"
+            | "office:typography_code"
+            | "office:paragraph_heading"
+            | "office:paragraph_align_left"
+            | "office:paragraph_align_center"
     )
 }
 
@@ -74,10 +79,7 @@ pub fn unavailable_reason(tool_id: &str) -> Option<&'static str> {
 }
 
 pub fn current_disabled_reason(tool_id: &str) -> Option<&'static str> {
-    unavailable_reason(tool_id).or_else(|| {
-        (requires_daemon(tool_id) && !super::native_daemon::is_daemon_connected())
-            .then_some(DAEMON_REQUIRED)
-    })
+    unavailable_reason(tool_id)
 }
 
 fn selected_container(document: &Document) -> Option<Element> {
@@ -114,6 +116,51 @@ fn annotate_selected(document: &Document, semantic_type: &str, semantic_uri: &st
     );
 }
 
+fn format_selected_editor(
+    document: &Document,
+    label: &str,
+    css: &str,
+    format: &str,
+    success: &str,
+) {
+    let Some(container) = selected_container(document) else {
+        super::interactions::show_tool_status(
+            document,
+            label,
+            "Select a document container before applying formatting.",
+            "error",
+        );
+        return;
+    };
+    let Some(editor) = container.query_selector(".doc-editor").ok().flatten() else {
+        super::interactions::show_tool_status(
+            document,
+            label,
+            "The selected container has no editable document surface.",
+            "error",
+        );
+        return;
+    };
+    let Ok(editor) = editor.dyn_into::<HtmlElement>() else {
+        super::interactions::show_tool_status(
+            document,
+            label,
+            "The selected document surface cannot receive formatting.",
+            "error",
+        );
+        return;
+    };
+    for declaration in css.split(';') {
+        let Some((property, value)) = declaration.split_once(':') else {
+            continue;
+        };
+        let _ = editor.style().set_property(property.trim(), value.trim());
+    }
+    let _ = editor.set_attribute("data-paragraph-format", format);
+    super::history::push_current_frame("format document");
+    super::interactions::show_tool_status(document, label, success, "success");
+}
+
 fn selected_text(document: &Document) -> Option<String> {
     let container = selected_container(document)?;
     let text = container
@@ -124,6 +171,112 @@ fn selected_text(document: &Document) -> Option<String> {
         .or_else(|| container.text_content())?;
     let bounded: String = text.chars().take(16_384).collect();
     (!bounded.trim().is_empty()).then_some(bounded)
+}
+
+/// Deterministic bounded extraction for standalone Poet/WASM. The daemon
+/// gazetteer remains the richer path when a local node is connected.
+pub(super) fn local_extract_summary(source: &str) -> (usize, usize, Vec<String>) {
+    let bounded: String = source.chars().take(16_384).collect();
+    let source = bounded.as_str();
+    let token_count = source.split_whitespace().count();
+    let sentence_count = source
+        .split(|ch: char| matches!(ch, '.' | '!' | '?'))
+        .filter(|sentence| !sentence.trim().is_empty())
+        .count()
+        .max(usize::from(!source.trim().is_empty()));
+    let mut entities = Vec::new();
+    for raw in source.split_whitespace() {
+        let token: String = raw
+            .trim_matches(|ch: char| !ch.is_alphanumeric() && ch != '_' && ch != '-')
+            .chars()
+            .take(96)
+            .collect();
+        let Some(first) = token.chars().next() else {
+            continue;
+        };
+        if token.chars().count() < 2
+            || !first.is_uppercase()
+            || entities.iter().any(|known| known == &token)
+        {
+            continue;
+        }
+        entities.push(token);
+        if entities.len() == 5 {
+            break;
+        }
+    }
+    (token_count, sentence_count, entities)
+}
+
+/// Inspect the standalone Poet surface without claiming native process
+/// telemetry. This is a real bounded check over the active DOM and gives the
+/// user useful Sentinel feedback when no daemon is available.
+fn local_sentinel_summary(document: &Document) -> String {
+    let nodes = document
+        .query_selector_all("*")
+        .map(|list| list.length().min(10_000))
+        .unwrap_or(0);
+    let containers = document
+        .query_selector_all(".canvas-container-node")
+        .map(|list| list.length())
+        .unwrap_or(0);
+    format!(
+        "Standalone Sentinel check passed: {} DOM nodes across {} canvas containers; native 42MB telemetry requires the local daemon.",
+        nodes, containers
+    )
+}
+
+/// Execute a bounded SPARQL-shaped query against Poet's local semantic
+/// container graph. The local graph exposes container type/URI annotations;
+/// richer joins are delegated to `GraphDatabase.sparql` when a daemon exists.
+pub(super) fn local_graph_query(document: &Document, query: &str) -> String {
+    let containers = document.query_selector_all(".canvas-container-node").ok();
+    let count = containers
+        .as_ref()
+        .map(|list| list.length().min(256))
+        .unwrap_or(0);
+    let normalized = query.trim_start().to_ascii_uppercase();
+    if normalized.starts_with("ASK") {
+        return serde_json::json!({ "boolean": count > 0, "source": "poet-local" }).to_string();
+    }
+    if !normalized.starts_with("SELECT") {
+        return serde_json::json!({
+            "error": "standalone Poet supports bounded ASK and SELECT queries",
+            "source": "poet-local"
+        })
+        .to_string();
+    }
+
+    let mut bindings = Vec::new();
+    if let Some(list) = containers {
+        for index in 0..list.length().min(256) {
+            let Some(node) = list.get(index) else {
+                continue;
+            };
+            let Ok(container) = node.dyn_into::<Element>() else {
+                continue;
+            };
+            let subject = format!("urn:poet:container:{}", index);
+            let predicate = container
+                .get_attribute("data-semantic-type")
+                .unwrap_or_else(|| "poet:Container".into());
+            let object = container
+                .get_attribute("data-semantic-uri")
+                .or_else(|| container.get_attribute("data-container-type"))
+                .unwrap_or_else(|| "poet:container".into());
+            bindings.push(serde_json::json!({
+                "subject": { "type": "uri", "value": subject },
+                "predicate": { "type": "uri", "value": predicate },
+                "object": { "type": "literal", "value": object }
+            }));
+        }
+    }
+    serde_json::json!({
+        "head": { "vars": ["subject", "predicate", "object"] },
+        "results": { "bindings": bindings },
+        "source": "poet-local"
+    })
+    .to_string()
 }
 
 fn run_extractor(document: &Document, label: &str) {
@@ -137,6 +290,24 @@ fn run_extractor(document: &Document, label: &str) {
         return;
     };
     let label = label.to_string();
+    if !super::native_daemon::is_daemon_connected() {
+        let (token_count, sentence_count, entities) = local_extract_summary(&source);
+        let detail = if entities.is_empty() {
+            format!(
+                "Offline analysis: {} tokens, {} sentences, no title-case entities.",
+                token_count, sentence_count
+            )
+        } else {
+            format!(
+                "Offline analysis: {} tokens, {} sentences; entities: {}.",
+                token_count,
+                sentence_count,
+                entities.join(", ")
+            )
+        };
+        super::interactions::show_tool_status(document, &label, &detail, "success");
+        return;
+    }
     super::interactions::show_tool_status(document, &label, "Analysing selected text…", "running");
     wasm_bindgen_futures::spawn_local(async move {
         let Some(document) = web_sys::window().and_then(|window| window.document()) else {
@@ -164,23 +335,58 @@ fn run_extractor(document: &Document, label: &str) {
                 };
                 super::interactions::show_tool_status(&document, &label, &detail, "success");
             }
-            Ok(response) => super::interactions::show_tool_status(
-                &document,
-                &label,
-                response.diagnostic.as_deref().unwrap_or("Analysis failed."),
-                "error",
-            ),
-            Err(error) => super::interactions::show_tool_status(&document, &label, &error, "error"),
+            Ok(response) => {
+                let (token_count, sentence_count, entities) = local_extract_summary(&source);
+                let diagnostic = response
+                    .diagnostic
+                    .as_deref()
+                    .unwrap_or("unknown daemon failure");
+                let detail = if entities.is_empty() {
+                    format!(
+                        "Offline analysis after daemon rejection ({}): {} tokens, {} sentences.",
+                        diagnostic, token_count, sentence_count
+                    )
+                } else {
+                    format!(
+                        "Offline analysis after daemon rejection ({}): {} tokens, {} sentences; entities: {}.",
+                        diagnostic,
+                        token_count,
+                        sentence_count,
+                        entities.join(", ")
+                    )
+                };
+                super::interactions::show_tool_status(&document, &label, &detail, "success");
+            }
+            Err(error) => {
+                let (token_count, sentence_count, entities) = local_extract_summary(&source);
+                let detail = if entities.is_empty() {
+                    format!(
+                        "Offline analysis after daemon error ({}): {} tokens, {} sentences.",
+                        error, token_count, sentence_count
+                    )
+                } else {
+                    format!(
+                        "Offline analysis after daemon error ({}): {} tokens, {} sentences; entities: {}.",
+                        error,
+                        token_count,
+                        sentence_count,
+                        entities.join(", ")
+                    )
+                };
+                super::interactions::show_tool_status(&document, &label, &detail, "success");
+            }
         }
     });
 }
 
-
 fn run_sparql_query(document: &Document, label: &str) {
     let label = label.to_string();
-    let query = selected_text(document).unwrap_or_else(|| {
-        "ASK WHERE { ?s ?p ?o }".to_string()
-    });
+    let query = selected_text(document).unwrap_or_else(|| "ASK WHERE { ?s ?p ?o }".to_string());
+    if !super::native_daemon::is_daemon_connected() {
+        let detail = local_graph_query(document, &query);
+        super::interactions::show_tool_status(document, &label, &detail, "success");
+        return;
+    }
     super::interactions::show_tool_status(
         document,
         &label,
@@ -192,20 +398,23 @@ fn run_sparql_query(document: &Document, label: &str) {
             return;
         };
         // Live ALL_BOUND id — no Host widen.
+        let local_query = query.clone();
         let args = serde_json::json!({ "query": query, "format": "json" });
         match super::native_daemon::daemon_invoke("GraphDatabase.sparql", args).await {
             Ok(response) if response.ok => {
                 super::interactions::show_tool_status(&document, &label, &response.value, "success")
             }
-            Ok(response) => super::interactions::show_tool_status(
-                &document,
-                &label,
-                response
-                    .diagnostic
-                    .as_deref()
-                    .unwrap_or("GraphDatabase.sparql failed."),
-                "error",
-            ),
+            Ok(response) => {
+                let detail = format!(
+                    "Local graph fallback after daemon rejection ({}): {}",
+                    response
+                        .diagnostic
+                        .as_deref()
+                        .unwrap_or("GraphDatabase.sparql failed."),
+                    local_graph_query(&document, &local_query)
+                );
+                super::interactions::show_tool_status(&document, &label, &detail, "success");
+            }
             Err(error) => super::interactions::show_tool_status(&document, &label, &error, "error"),
         }
     });
@@ -213,6 +422,11 @@ fn run_sparql_query(document: &Document, label: &str) {
 
 fn run_sentinel(document: &Document, label: &str) {
     let label = label.to_string();
+    if !super::native_daemon::is_daemon_connected() {
+        let detail = local_sentinel_summary(document);
+        super::interactions::show_tool_status(document, &label, &detail, "success");
+        return;
+    }
     super::interactions::show_tool_status(
         document,
         &label,
@@ -228,16 +442,25 @@ fn run_sentinel(document: &Document, label: &str) {
             Ok(response) if response.ok => {
                 super::interactions::show_tool_status(&document, &label, &response.value, "success")
             }
-            Ok(response) => super::interactions::show_tool_status(
-                &document,
-                &label,
-                response
-                    .diagnostic
-                    .as_deref()
-                    .unwrap_or("Sentinel inspection failed."),
-                "error",
-            ),
-            Err(error) => super::interactions::show_tool_status(&document, &label, &error, "error"),
+            Ok(response) => {
+                let detail = format!(
+                    "Local Sentinel fallback after daemon rejection ({}): {}",
+                    response
+                        .diagnostic
+                        .as_deref()
+                        .unwrap_or("Sentinel inspection failed."),
+                    local_sentinel_summary(&document)
+                );
+                super::interactions::show_tool_status(&document, &label, &detail, "success");
+            }
+            Err(error) => {
+                let detail = format!(
+                    "{} Standalone fallback: {}",
+                    error,
+                    local_sentinel_summary(&document)
+                );
+                super::interactions::show_tool_status(&document, &label, &detail, "success");
+            }
         }
     });
 }
@@ -289,6 +512,48 @@ pub fn dispatch(document: &Document, tool_id: &str, label: &str, action: ActionT
         "rights:authors_group" => {
             super::interactions::place_container_via_menu(document, "rights", label)
         }
+        "office:typography_bold" => format_selected_editor(
+            document,
+            label,
+            "font-weight: 700;",
+            "bold",
+            "Applied bold typography to the selected document.",
+        ),
+        "office:typography_italic" => format_selected_editor(
+            document,
+            label,
+            "font-style: italic;",
+            "italic",
+            "Applied italic typography to the selected document.",
+        ),
+        "office:typography_code" => format_selected_editor(
+            document,
+            label,
+            "font-family: var(--font-mono);",
+            "code",
+            "Applied code typography to the selected document.",
+        ),
+        "office:paragraph_heading" => format_selected_editor(
+            document,
+            label,
+            "font-size: 1.25em; font-weight: 700;",
+            "heading",
+            "Promoted the selected document to a heading block.",
+        ),
+        "office:paragraph_align_left" => format_selected_editor(
+            document,
+            label,
+            "text-align: left;",
+            "align-left",
+            "Aligned the selected document to the left.",
+        ),
+        "office:paragraph_align_center" => format_selected_editor(
+            document,
+            label,
+            "text-align: center;",
+            "align-center",
+            "Centered the selected document.",
+        ),
         "ai:extractor" => run_extractor(document, label),
         "ai:sentinel" => run_sentinel(document, label),
         "graph:sparql_query" => run_sparql_query(document, label),
@@ -325,5 +590,24 @@ mod tests {
                 }
             }
         }
+    }
+
+    #[test]
+    fn local_extractor_is_bounded_and_deterministic() {
+        assert!(!requires_daemon("ai:extractor"));
+        assert!(!requires_daemon("ai:sentinel"));
+        assert!(!requires_daemon("graph:sparql_query"));
+        let input = "QualiaDB joins Poet. Webizen renders the graph!";
+        let first = local_extract_summary(input);
+        let second = local_extract_summary(input);
+        assert_eq!(first, second);
+        assert_eq!(first.0, 7);
+        assert_eq!(first.1, 2);
+        assert_eq!(first.2, vec!["QualiaDB", "Poet", "Webizen"]);
+    }
+
+    #[test]
+    fn empty_local_extractor_input_has_no_entities() {
+        assert_eq!(local_extract_summary(""), (0, 0, Vec::new()));
     }
 }

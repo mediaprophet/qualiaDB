@@ -2,7 +2,7 @@
 //!
 //! Copyright (c) 2026 Timothy Charles Holborn. All rights reserved.
 //!
-//! Ports `theme_engine` from `webizen-studio`. Replaces the hardcoded CSS
+//! Poet-owned theme engine. Replaces the hardcoded CSS
 //! string with CSS custom property injection driven by theme presets.
 
 use wasm_bindgen::JsCast;

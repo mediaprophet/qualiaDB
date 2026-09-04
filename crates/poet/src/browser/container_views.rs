@@ -246,21 +246,11 @@ pub fn build_doc_view(document: &Document) -> Element {
                 closure.forget();
             }
             "\u{1F50D} CML Gazetteer" => {
-                btn.set_attribute("data-requires-daemon", "true").unwrap();
                 btn.set_attribute(
                     "data-enabled-title",
-                    "Analyse the current document with the native gazetteer",
+                    "Analyse the current document with Poet's bounded extractor",
                 )
                 .unwrap();
-                if !super::native_daemon::is_daemon_connected() {
-                    btn.set_attribute("disabled", "").unwrap();
-                    btn.set_attribute("aria-disabled", "true").unwrap();
-                    btn.set_attribute(
-                        "title",
-                        "Unavailable until the local QualiaDB daemon is connected.",
-                    )
-                    .unwrap();
-                }
                 let gcb_clone = gazetteer_chips_bar.clone();
                 let wrapper_clone = wrapper.clone();
                 let gz_closure = wasm_bindgen::closure::Closure::wrap(Box::new(
@@ -280,6 +270,32 @@ pub fn build_doc_view(document: &Document) -> Element {
                                 .flatten()
                                 .and_then(|editor| editor.text_content())
                                 .unwrap_or_default();
+                            if !super::native_daemon::is_daemon_connected() {
+                                let (token_count, sentence_count, entities) =
+                                    super::tool_actions::local_extract_summary(&source);
+                                gcb_clone.set_inner_html("");
+                                let Some(document) =
+                                    web_sys::window().and_then(|window| window.document())
+                                else {
+                                    return;
+                                };
+                                let summary = document.create_element("span").unwrap();
+                                summary.set_text_content(Some(&format!(
+                                    "{} tokens · {} sentences · {} local entities",
+                                    token_count,
+                                    sentence_count,
+                                    entities.len()
+                                )));
+                                summary.set_attribute("data-honesty", "local").unwrap();
+                                gcb_clone.append_child(&summary).unwrap();
+                                for entity in entities {
+                                    let chip = document.create_element("span").unwrap();
+                                    chip.set_text_content(Some(&entity));
+                                    chip.set_attribute("data-honesty", "local").unwrap();
+                                    gcb_clone.append_child(&chip).unwrap();
+                                }
+                                return;
+                            }
                             gcb_clone.set_text_content(Some("Analysing current document…"));
                             let target = gcb_clone.clone();
                             wasm_bindgen_futures::spawn_local(async move {
@@ -1060,12 +1076,13 @@ pub fn build_graph_view(document: &Document) -> Element {
             return;
         }
         if !super::native_daemon::is_daemon_connected() {
-            results_for_run
-                .set_attribute("data-honesty", "unavailable")
-                .ok();
-            results_for_run.set_text_content(Some(
-                "Unavailable: start the local QualiaDB daemon to execute SPARQL.",
-            ));
+            let Some(document) = web_sys::window().and_then(|window| window.document()) else {
+                results_for_run.set_text_content(Some("Browser document is unavailable."));
+                return;
+            };
+            let result = super::tool_actions::local_graph_query(&document, &query);
+            results_for_run.set_attribute("data-honesty", "local").ok();
+            results_for_run.set_text_content(Some(&result));
             return;
         }
         results_for_run

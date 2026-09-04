@@ -52,6 +52,27 @@ fn reopened_completion_claims_remain_visible() {
 }
 
 #[test]
+fn poet_stays_decoupled_from_webizen_studio() {
+    let poet_manifest =
+        fs::read_to_string(manifest_dir().join("Cargo.toml")).expect("Poet manifest");
+    assert!(
+        !poet_manifest
+            .lines()
+            .any(|line| line.to_ascii_lowercase().contains("webizen-studio")),
+        "Poet must remain independently buildable and cannot depend on webizen-studio"
+    );
+
+    let studio_manifest = manifest_dir().join("../webizen-studio/Cargo.toml");
+    let studio_manifest = fs::read_to_string(studio_manifest).expect("Webizen Studio manifest");
+    assert!(
+        !studio_manifest
+            .lines()
+            .any(|line| line.to_ascii_lowercase().contains("poet")),
+        "Webizen Studio must consume shared/core crates, not Poet"
+    );
+}
+
+#[test]
 fn project_budget_uses_the_domain_workspace() {
     let source = fs::read_to_string(manifest_dir().join("src/browser/project_views/budget.rs"))
         .expect("budget route");
@@ -61,8 +82,9 @@ fn project_budget_uses_the_domain_workspace() {
 
 #[test]
 fn health_overview_uses_the_person_controlled_workspace() {
-    let source = fs::read_to_string(manifest_dir().join("src/browser/health_views/health_overview.rs"))
-        .expect("health overview route");
+    let source =
+        fs::read_to_string(manifest_dir().join("src/browser/health_views/health_overview.rs"))
+            .expect("health overview route");
     assert!(source.contains("overview_workspace::build_health_overview_view"));
     assert!(!source.contains("persist::build_health_overview_view"));
 }
@@ -93,8 +115,9 @@ fn health_documents_uses_the_domain_workspace() {
 
 #[test]
 fn health_reports_uses_the_domain_workspace() {
-    let source = fs::read_to_string(manifest_dir().join("src/browser/health_views/clinical_reports.rs"))
-        .expect("clinical reports route");
+    let source =
+        fs::read_to_string(manifest_dir().join("src/browser/health_views/clinical_reports.rs"))
+            .expect("clinical reports route");
     assert!(source.contains("reports_workspace::build_clinical_reports_view"));
     assert!(!source.contains("persist::build_clinical_reports_view"));
 }

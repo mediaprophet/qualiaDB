@@ -2,9 +2,9 @@
 //!
 //! Copyright (c) 2026 Timothy Charles Holborn. All rights reserved.
 //!
-//! Ports `WorkspaceHistory` from `webizen-studio::canvas_editor`.
-//! Each frame captures a snapshot of container positions, sizes, and
-//! manifold seed state so the user can undo/redo layout changes.
+//! Poet-owned workspace history. Each frame captures a snapshot of container
+//! positions, sizes, and manifold seed state so the user can undo/redo layout
+//! changes without a Studio dependency.
 
 use std::cell::RefCell;
 use std::collections::VecDeque;
