@@ -64,8 +64,8 @@ Examples: `GraphDatabase.sparql`, `SHACL.validate`, `N3Logic.evaluate`, `Inferen
 
 ## 4. Workstream B — see `vibescript-sprint-deltas.md`
 
-**Blocker B-001:** `GraphDatabase.volume_open` + `GraphDatabase.volume_commit` (q42 sanctuary fail-closed).  
-Until bound: sanctuary save UX **gated** (disabled / explain) — never fake durable storage.
+**B-001 (done — binds):** `GraphDatabase.volume_open` + `GraphDatabase.volume_commit` (q42 sanctuary fail-closed).  
+Chrome ungate remains for davinci/monet — never fake durable storage without these ids.
 
 Also parked: dotted→live bridge, dual-VC split, QISP shapes, ledger vs showcase honesty, version drift, preview still/clip/scene + cross-frame spans → live `Render.*`, Layout·Stage·Timeline shapes after freeze.
 
@@ -78,7 +78,7 @@ Also parked: dotted→live bridge, dual-VC split, QISP shapes, ledger vs showcas
 | Graph explore | `GraphDatabase.sparql` |
 | Inference assist | `Inference.*` (exact method from `ALL_BOUND`) |
 | In-flow preview | `Render.*` (exact method from `ALL_BOUND`) |
-| Sanctuary save/open | **B-001 gap** — UX gated |
+| Sanctuary save/open | `GraphDatabase.volume_open` / `volume_commit` — chrome ungate → davinci/monet |
 
 ### Studio brief (davinci + monet)
 
@@ -128,7 +128,7 @@ Poet = **live studio** over QualiaDB: graph as navigable stage, inference with p
 | Gate ID | Blocks | Ungate job | Owner | Status |
 |---------|--------|------------|-------|--------|
 | G-A | `vibe-host-0.1` freeze + creative polish on frozen surface | Neo four closes | Neo | open |
-| G-B-001 | Sanctuary save/open; commit-to-volume twin | Add + bind `GraphDatabase.volume_open` / `volume_commit` | Neo (+ Marvin Volume shape) | open (**blocker**) |
+| G-B-001 | Sanctuary save/open; commit-to-volume twin | Add + bind `GraphDatabase.volume_open` / `volume_commit` | Neo (+ Marvin Volume shape) | **done** (binds + seam; chrome ungate → davinci/monet) |
 | G-DOCS | Other bots continuing without chat | Land this handover + sprint deltas on `0.0.36-dev` | Neo | **done** (2026-09-04) |
 
 When a gate closes: **report to Capt.** with what landed (PR / paths / ids). Capt. updates board and unblocks dependents.

@@ -33,12 +33,13 @@
 | | |
 |--|--|
 | **priority** | `blocker` |
-| **status** | `parked` |
+| **status** | `done` |
 | **summary** | Bind durable `.q42` open + commit so Poet sanctuary save/open can work |
 | **proposed_ids** | `GraphDatabase.volume_open`, `GraphDatabase.volume_commit` |
-| **notes** | Sanctuary fail-closed; path or handle. Rich `q42/volume/` exists; **no** volume invoke in `ALL_BOUND` today (`GraphDatabase` = `sparql` + `stats` only). No Host widen. No dotted `qualia.volume.*`. Marvin: Volume class grounded in `q42/volume/` (path/handle, sanctuary fail-closed, durable commit) attaches here. |
+| **notes** | Sanctuary fail-closed; path or handle. Rich `q42/volume/` exists; binds now on `ALL_BOUND` (`volume_open` / `volume_commit`). No Host widen. No dotted `qualia.volume.*`. Marvin: Volume class grounded in `q42/volume/` (path/handle, sanctuary fail-closed, durable commit) attaches here. |
 | **owner** | Neo (seam into thin facade once on `ALL_BOUND`); Marvin (Volume shape); Vibe (catalog/DevRel) |
 | **gate** | Ungates Poet sanctuary save UX (davinci/monet currently gate disabled/explain — never fake durable storage) |
+| **landed** | `GraphDatabase.volume_open` + `GraphDatabase.volume_commit` in `ids.rs` / `ALL_BOUND`; seam `invoke/graph/volume.rs` (native, sanctuary fail-closed; wasm E300) |
 
 ---
 
@@ -131,7 +132,7 @@
 | Graph explore | `GraphDatabase.sparql` | |
 | Inference assist | `Inference.*` | Exact method from `ALL_BOUND` |
 | In-flow preview | `Render.*` | Exact method from `ALL_BOUND`; B-007 for still/clip/scene |
-| Sanctuary save/open | **gap → B-001** | UX gated until bound |
+| Sanctuary save/open | `GraphDatabase.volume_open` / `volume_commit` | B-001 landed; chrome ungate → davinci/monet |
 
 ---
 
