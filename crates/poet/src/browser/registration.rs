@@ -1,1 +1,1 @@
-LOAD_FROM_FILE
+file:///workspace/poet-toolchest-inv/registration.patched.rs
