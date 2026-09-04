@@ -11,6 +11,12 @@
 - OWL/`owl:Thing` remains fine for technical/system artifacts (volumes, invoke ids, containers-as-software, CRS, etc.) where “thing” framing is appropriate.
 - Stage 1+ publish docs must state which classes are SHACL-first vs OWL-ok.
 
+## Modeling rule — created vs living/natural (locked, extends persons/sacred)
+- Prefer SHACL / non-Thing framing for the **natural/living world** (what exists or developed as life), not only persons and sacred/human relations.
+- Keep a useful semantic distinction between **mankind-created artifacts** (Thing/OWL OK where apt) and **living/natural existence** (incl. sacred-for-peoples-without-book traditions).
+- Stage publish docs must mark classes: SHACL-first (person/sacred/natural) vs OWL-ok (technical artifact).
+- Nuance work: multi-level differences (shape · chrome · diagnose · realm) — don’t flatten into one commodity taxonomy.
+
 ## Done (do not reopen)
 - Inventory of `qualia-core-db` + SHACL / DID / modalities / volumes / invoke catalog (Capability.method truth)
 - G-POET-TOOLCHEST: Container · Manifold · Link join to `office:graph` → `GraphDatabase.sparql`

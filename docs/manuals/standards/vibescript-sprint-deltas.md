@@ -144,11 +144,25 @@
 | **priority** | `high` |
 | **status** | `parked` (standing constraint) |
 | **summary** | Do not model humans / personhood / love / kinship / “world of God” concepts under `owl:Thing`; prefer SHACL + agency/values/jural vocab |
-| **notes** | OWL Thing framing risks commodifying persons and sacred/human relations. Technical artifacts may still use OWL where Thing is apt. Stage publish docs must mark SHACL-first vs OWL-ok. |
+| **notes** | OWL Thing framing risks commodifying persons and sacred/human relations. Technical artifacts may still use OWL where Thing is apt. Stage publish docs must mark SHACL-first vs OWL-ok. **Extended by B-OWL-NATURAL** (living/natural world). |
 | **owner** | Marvin (shapes) · Vibe (deltas/DevRel) |
 | **gate** | Ontology honesty for Poet/vibe; standing overnight constraint |
 
+
+### B-OWL-NATURAL — Created vs living/natural modeling (locked, extends B-OWL-PERSON)
+
+| | |
+|--|--|
+| **priority** | `high` |
+| **status** | `parked` (standing constraint) |
+| **summary** | SHACL/non-Thing for natural/living world; keep mankind-created (OWL OK) distinct from living/natural existence |
+| **notes** | Extends B-OWL-PERSON. Living/natural (land, waters, creatures, seasons, country) is not a commodity subclass of `owl:Thing`. Multi-level nuance: shape · chrome · diagnose · G-COORD realm. Stage publish docs mark SHACL-first (person/sacred/natural) vs OWL-ok (technical artifact). |
+| **owner** | Marvin (shapes) · Vibe (deltas/DevRel) · davinci/monet (chrome labels) |
+| **gate** | Ontology honesty; standing overnight constraint |
+
 ## Change log
+
+- 2026-09-05: Locked B-OWL-NATURAL — created vs living/natural distinction; extends B-OWL-PERSON (Timothy / Marvin).
 
 - 2026-09-05: Locked B-OWL-PERSON — persons/sacred-human relations SHACL-first, not under `owl:Thing` (Timothy / Marvin).
 

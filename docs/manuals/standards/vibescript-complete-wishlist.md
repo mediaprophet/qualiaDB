@@ -72,6 +72,7 @@ Vibe is the no-compile JS alternative for QualiaDB / Webizen Desktop / Poet. Hum
 10. **Spatiotemporal on language cells** — Position (+ optional ViewpointRealm) as properties of vibe cells/modules, not only map containers.
 11. **Shape test fixtures** — small TTL/N3 fixtures validating Volume states + Container↔Volume backing + twin 1:1 constraints (overnight agents can run without Host widen).
 12. **Persons & sacred/human relations (locked)** — do **not** hang humans, personhood, love, kinship, or related “world of God” concepts under `owl:Thing` / OWL Thing hierarchy (avoids commodity framing). Prefer **SHACL** + agency/values/jural vocab; OWL/`owl:Thing` OK for technical/system artifacts. Stage publish docs must mark SHACL-first vs OWL-ok.
+13. **Created vs living/natural (locked, extends #12)** — SHACL/non-Thing for the natural/living world (what exists or grew as life — land, waters, creatures, seasons, country), not only persons/sacred relations. Keep mankind-created artifacts (OWL/`owl:Thing` OK where apt) distinct from living/natural existence (incl. sacred-for-peoples-without-book). Stage docs mark SHACL-first (person/sacred/natural) vs OWL-ok (technical). Nuance at shape · chrome · diagnose · realm — don’t flatten into one commodity taxonomy.
 
 ## Priority order (suggested)
 1. Docs/hygiene Stage 0 across plans (already started)
