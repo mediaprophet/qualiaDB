@@ -71,6 +71,7 @@ Vibe is the no-compile JS alternative for QualiaDB / Webizen Desktop / Poet. Hum
 9. **Provenance as first-class graph** — lightweight Provenance/Claim shapes that Inference trails and dual-VC presentations can both cite (not a second Host).
 10. **Spatiotemporal on language cells** — Position (+ optional ViewpointRealm) as properties of vibe cells/modules, not only map containers.
 11. **Shape test fixtures** — small TTL/N3 fixtures validating Volume states + Container↔Volume backing + twin 1:1 constraints (overnight agents can run without Host widen).
+12. **Persons & sacred/human relations (locked)** — do **not** hang humans, personhood, love, kinship, or related “world of God” concepts under `owl:Thing` / OWL Thing hierarchy (avoids commodity framing). Prefer **SHACL** + agency/values/jural vocab; OWL/`owl:Thing` OK for technical/system artifacts. Stage publish docs must mark SHACL-first vs OWL-ok.
 
 ## Priority order (suggested)
 1. Docs/hygiene Stage 0 across plans (already started)

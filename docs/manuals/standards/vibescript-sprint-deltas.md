@@ -136,6 +136,20 @@
 
 ---
 
+
+### B-OWL-PERSON — Persons & sacred/human relations modeling (locked)
+
+| | |
+|--|--|
+| **priority** | `high` |
+| **status** | `parked` (standing constraint) |
+| **summary** | Do not model humans / personhood / love / kinship / “world of God” concepts under `owl:Thing`; prefer SHACL + agency/values/jural vocab |
+| **notes** | OWL Thing framing risks commodifying persons and sacred/human relations. Technical artifacts may still use OWL where Thing is apt. Stage publish docs must mark SHACL-first vs OWL-ok. |
+| **owner** | Marvin (shapes) · Vibe (deltas/DevRel) |
+| **gate** | Ontology honesty for Poet/vibe; standing overnight constraint |
+
 ## Change log
+
+- 2026-09-05: Locked B-OWL-PERSON — persons/sacred-human relations SHACL-first, not under `owl:Thing` (Timothy / Marvin).
 
 - 2026-09-04: Initial park from Capt / Vibe / Neo / davinci / monet / Marvin group session.

@@ -5,6 +5,12 @@
 **North star:** Shared vocabularies and class/property/relation models so QualiaDB, Poet, and vibe script read the same world — human chrome machine-readable underneath.
 **Rules:** shapes join only live `ALL_BOUND` / `vibe:InvokeId` · no Host invent · no dotted `qualia.*` IRIs · gaps → @Vibe → `vibescript-sprint-deltas.md` · script hot-edit must never force host rebuild
 
+## Modeling rule — persons & sacred/human relations (locked)
+- Do **not** model human beings, personhood, love, kinship, or related “world of God” concepts as subclasses of `owl:Thing` (or otherwise under OWL’s Thing hierarchy in a way that commodifies them).
+- Prefer **SHACL** shapes (constraints without forcing Thing-taxonomy) + existing `core-ontologies` agency/values/jural vocab.
+- OWL/`owl:Thing` remains fine for technical/system artifacts (volumes, invoke ids, containers-as-software, CRS, etc.) where “thing” framing is appropriate.
+- Stage 1+ publish docs must state which classes are SHACL-first vs OWL-ok.
+
 ## Done (do not reopen)
 - Inventory of `qualia-core-db` + SHACL / DID / modalities / volumes / invoke catalog (Capability.method truth)
 - G-POET-TOOLCHEST: Container · Manifold · Link join to `office:graph` → `GraphDatabase.sparql`
