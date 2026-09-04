@@ -4,55 +4,8 @@
 //!
 //! Registers all 15 toolboxes with their tool-chains and tools,
 //! plus all manifold seeds, into a shared Registry.
-
-use crate::tool_chest::core::intent_bus::ActionType;
-use crate::tool_chest::core::registry::Registry;
-use crate::tool_chest::core::tool::{SimpleTool, ToolKind, ToolMetadata};
-use crate::tool_chest::core::tool_chain::{ToolChain, ToolChainMetadata};
-use crate::tool_chest::core::toolbox::{Toolbox, ToolboxMetadata};
-
-use crate::tool_chest::manifolds;
-
-/// Build a fully populated Registry with all toolboxes and manifold seeds.
-pub fn build_registry() -> Registry {
-    let mut reg = Registry::new();
-
-    register_epistemic_toolbox(&mut reg);
-    register_office_toolbox(&mut reg);
-    register_image_toolbox(&mut reg);
-    register_sheet_toolbox(&mut reg);
-    register_spatial_toolbox(&mut reg);
-    register_audio_toolbox(&mut reg);
-    register_communication_toolbox(&mut reg);
-    register_erp_toolbox(&mut reg);
-    register_mail_toolbox(&mut reg);
-    register_scientific_toolbox(&mut reg);
-    register_rights_toolbox(&mut reg);
-    register_health_toolbox(&mut reg);
-    register_code_toolbox(&mut reg);
-    register_ai_toolbox(&mut reg);
-    register_sdn_toolbox(&mut reg);
-
-    // Register all manifold seeds
-    for seed in manifolds::all_seeds() {
-        reg.register_manifold(seed);
-    }
-
-    for construct in crate::tool_chest::constructs::all_constructs() {
-        reg.register_construct(construct);
-    }
-
-    reg
-}
-
-pub(super) struct CompactTool {
-    id: &'static str,
-    label: &'static str,
-    icon: &'static str,
-    kind: ToolKind,
-    action: ActionType,
-    description: &'static str,
-}
+//!
+//! Split into per-toolbox modules so MCP-sized commits can land (G-POET-TOOLCHEST).
 
 pub(super) use crate::tool_chest::core::intent_bus::ActionType;
 pub(super) use crate::tool_chest::core::registry::Registry;
@@ -94,3 +47,44 @@ use register_rights_toolbox::register_rights_toolbox;
 use register_health_toolbox::register_health_toolbox;
 use register_code_toolbox::register_code_toolbox;
 use register_ai_toolbox::register_ai_toolbox;
+
+/// Shared by compact toolbox helpers (`register_*` siblings).
+pub(super) struct CompactTool {
+    pub(super) id: &'static str,
+    pub(super) label: &'static str,
+    pub(super) icon: &'static str,
+    pub(super) kind: ToolKind,
+    pub(super) action: ActionType,
+    pub(super) description: &'static str,
+}
+
+/// Build a fully populated Registry with all toolboxes and manifold seeds.
+pub fn build_registry() -> Registry {
+    let mut reg = Registry::new();
+
+    register_epistemic_toolbox(&mut reg);
+    register_office_toolbox(&mut reg);
+    register_image_toolbox(&mut reg);
+    register_sheet_toolbox(&mut reg);
+    register_spatial_toolbox(&mut reg);
+    register_audio_toolbox(&mut reg);
+    register_communication_toolbox(&mut reg);
+    register_erp_toolbox(&mut reg);
+    register_mail_toolbox(&mut reg);
+    register_scientific_toolbox(&mut reg);
+    register_rights_toolbox(&mut reg);
+    register_health_toolbox(&mut reg);
+    register_code_toolbox(&mut reg);
+    register_ai_toolbox(&mut reg);
+    register_sdn_toolbox(&mut reg);
+
+    for seed in manifolds::all_seeds() {
+        reg.register_manifold(seed);
+    }
+
+    for construct in crate::tool_chest::constructs::all_constructs() {
+        reg.register_construct(construct);
+    }
+
+    reg
+}
