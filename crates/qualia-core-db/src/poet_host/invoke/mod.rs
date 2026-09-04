@@ -93,6 +93,8 @@ pub fn dispatch(
         ids::SHACL_EXTENSIONS => graph::shacl_extensions(args, span),
         ids::GRAPH_STATS | "get_graph_stats" => Ok(graph::stats(snap)),
         ids::GRAPH_SPARQL => graph::sparql(snap, args, span),
+        ids::GRAPH_VOLUME_OPEN => graph::volume_open(snap, args, span),
+        ids::GRAPH_VOLUME_COMMIT => graph::volume_commit(snap, args, span),
         ids::N3_EVALUATE => graph::n3_evaluate(args, span),
         ids::GRAPH_AUTHORING => graph::graph_authoring(args, span),
         ids::GRAPH_SHORTEST_PATH => graph::shortest_path(args, span),
