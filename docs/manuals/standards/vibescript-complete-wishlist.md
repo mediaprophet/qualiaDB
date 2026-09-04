@@ -1,6 +1,6 @@
 # Complete wishlist — VibeScript · Poet · QualiaDB (post `vibe-host-0.1`)
 
-**Compiled by:** Vibe · **Seam push:** Neo · **Freeze:** `vibe-host-0.1` @ `6dc2b8b8` · **Plans tip:** `1add316e`
+**Compiled by:** Vibe · **Seam push:** Neo · **Freeze:** `vibe-host-0.1` @ `6dc2b8b8` · **Plans tip:** `1add316e` · **Amended tip:** (see commit) — davinci/monet/Marvin extras folded
 **Branch:** `0.0.36-dev`
 **Rules:** no Host widen · no dotted `qualia.*` · live `ALL_BOUND` / `vibe:InvokeId` only · hot-edit must never force host rebuild · gaps → `vibescript-sprint-deltas.md`
 
@@ -20,6 +20,8 @@ Vibe is the no-compile JS alternative for QualiaDB / Webizen Desktop / Poet. Hum
 8. Empty typography + custom unicode API: real accept criteria or honest gated B rows.
 9. Webizen Desktop language checklist (same four-ops; parity tests) — after Poet.
 10. G-SOLID-IDP DevRel (QualiaDB-as-IdP, no external pod) — parked until Capt. unparks.
+11. InvokeId annotation pack consumed by diagnose/DevRel (chrome/dialect never drift from `ALL_BOUND`).
+12. Position (+ optional ViewpointRealm) on vibe cells/modules — language is spatiotemporal content, not only maps.
 
 ## B — Seams / Rust (Neo)
 1. Keep thin `poet::vibe_host` + wasm parity sacred; never leak Host/AST.
@@ -39,6 +41,10 @@ Vibe is the no-compile JS alternative for QualiaDB / Webizen Desktop / Poet. Hum
 6. Inference provenance chrome; Render preview dock (still/clip/scene).
 7. Layout·Stage·Timeline twin coverage on every surface; named beats only.
 8. Webizen chrome handoff docs after Poet stages land.
+9. **Media / post toolchain** — import stills·clips·scenes, scrub renders, cache/status chrome on live `Render.*` / volume (post-prod lane, not a code UI).
+10. **Keyboard-first toolchains** — Word/Excel-class focus order + shortcuts so toolbars are usable without hunting glyphs.
+11. **Commit history cue** — lightweight open→commit timeline on sanctuary volumes (gated until a live history bind exists; never fake).
+12. **Heavy-graph / map performance** — chrome stays responsive when Stage has dense geo or cosmos layers (progressive disclosure, not one mega canvas).
 
 ## D — Visual / motion (monet)
 1. Motion contract doc: entrance / dwell / exit + gated ≠ broken.
@@ -48,6 +54,10 @@ Vibe is the no-compile JS alternative for QualiaDB / Webizen Desktop / Poet. Hum
 5. Distinct visual language for Container / Manifold / Link + spatiotemporal badges.
 6. Map/G-COORD skins (geo vs realm) after shapes+bind.
 7. Twin coverage checklist; export motion contract for Webizen later.
+8. **Accessible motion** — respect reduced-motion: same named beats, shorter/crossfade variants; never rely on motion alone for state.
+9. **Dark/light + contrast tokens** — one visual token sheet so toolchest, volume dock, and map skins stay coherent (human chrome, not theme sprawl).
+10. **Touch/dense targets** — toolbar and map scrubber hit areas sized for pen/touch, not only mouse.
+11. **Provenance density control** — inference trails collapsible (full trail ↔ summary chip) so Stage stays readable on heavy graphs.
 
 ## E — Ontology (Marvin)
 1. Publish Container · Manifold · Link shapes (+ spatiotemporal attrs).
@@ -57,6 +67,10 @@ Vibe is the no-compile JS alternative for QualiaDB / Webizen Desktop / Poet. Hum
 5. Dual-VC + QISP + InvokeId annotations; aspirational bridge with Vibe.
 6. G-SOLID-IDP shapes — parked.
 7. Prefer extending `shapes/` + `core-ontologies/` over parallel vocabs.
+8. **InvokeId annotation pack** — SHACL/OWL annotations linking Container/Manifold/Link/Volume/twin classes to concrete `vibe:InvokeId` strings (generated from `catalog_ttl.rs` where possible).
+9. **Provenance as first-class graph** — lightweight Provenance/Claim shapes that Inference trails and dual-VC presentations can both cite (not a second Host).
+10. **Spatiotemporal on language cells** — Position (+ optional ViewpointRealm) as properties of vibe cells/modules, not only map containers.
+11. **Shape test fixtures** — small TTL/N3 fixtures validating Volume states + Container↔Volume backing + twin 1:1 constraints (overnight agents can run without Host widen).
 
 ## Priority order (suggested)
 1. Docs/hygiene Stage 0 across plans (already started)
