@@ -1253,7 +1253,11 @@ pub fn build_right_dock(document: &Document) -> Element {
     // 1. Aura Tray — wired to diagnostics module with collapsible sub-trays
     let shacl_results = super::diagnostics::default_shacl_results();
     let passed = shacl_results.iter().filter(|r| r.conformant).count();
-    let aura_badge = format!("{}/{} valid", passed, shacl_results.len());
+    let aura_badge = if shacl_results.is_empty() {
+        "unavailable".to_string()
+    } else {
+        format!("{}/{} valid", passed, shacl_results.len())
+    };
     let aura_body = super::diagnostics::render_aura_tray(document, &shacl_results);
     let aura_panel = create_collapsible_dock_panel(
         document,
@@ -1267,7 +1271,11 @@ pub fn build_right_dock(document: &Document) -> Element {
 
     // 2. Pulse Stream — wired to diagnostics module
     let pulse_events = super::diagnostics::default_pulse_events();
-    let pulse_badge = format!("{} events", pulse_events.len());
+    let pulse_badge = if pulse_events.is_empty() {
+        "unavailable".to_string()
+    } else {
+        format!("{} events", pulse_events.len())
+    };
     let pulse_body = super::diagnostics::render_pulse_stream(document, &pulse_events);
     let pulse_panel = create_collapsible_dock_panel(
         document,
@@ -1285,7 +1293,11 @@ pub fn build_right_dock(document: &Document) -> Element {
         .iter()
         .filter(|j| j.status == super::diagnostics::JobStatus::Running)
         .count();
-    let jobs_badge = format!("{} running", active_jobs);
+    let jobs_badge = if jobs.is_empty() {
+        "unavailable".to_string()
+    } else {
+        format!("{} running", active_jobs)
+    };
     let job_body = super::diagnostics::render_job_body(document, &jobs);
     let job_panel = create_collapsible_dock_panel(
         document,
@@ -1297,13 +1309,17 @@ pub fn build_right_dock(document: &Document) -> Element {
     );
     content.append_child(&job_panel).unwrap();
 
-    // 4. Live VibeScript UI Host (<q-vibe-ui>)
-    let vibe_ui_script = super::vibe_ui::default_aura_tray_vibe_script();
-    let vibe_ui_host = super::vibe_ui::render_live_vibe_ui(document, vibe_ui_script);
+    // 4. VibeScript UI Host: do not present synthetic runtime metrics as live.
+    let vibe_ui_host = document.create_element("div").unwrap();
+    vibe_ui_host.set_class_name("container-placeholder");
+    vibe_ui_host.set_attribute("data-honesty", "unavailable").ok();
+    vibe_ui_host.set_text_content(Some(
+        "Unavailable: the live VibeScript UI runtime is not connected.",
+    ));
     let vibe_ui_panel = create_collapsible_dock_panel(
         document,
         "Vibe UI Live Engine",
-        Some("Hot-Reload"),
+        Some("unavailable"),
         vibe_ui_host,
         false, // collapsed by default
         false, // flex_grow
@@ -1367,7 +1383,8 @@ pub fn build_bottom_statusbar(document: &Document) -> Element {
     g_label.set_text_content(Some("Graph:"));
     let g_val = document.create_element("span").unwrap();
     g_val.set_class_name("statusbar-value");
-    g_val.set_text_content(Some("catchment_sites"));
+    g_val.set_text_content(Some("unavailable"));
+    bar.set_attribute("data-honesty", "unavailable").ok();
     graph.append_child(&g_label).unwrap();
     graph.append_child(&g_val).unwrap();
     left.append_child(&graph).unwrap();
@@ -1379,7 +1396,7 @@ pub fn build_bottom_statusbar(document: &Document) -> Element {
     m_label.set_text_content(Some("Merkle:"));
     let m_val = document.create_element("span").unwrap();
     m_val.set_class_name("statusbar-value");
-    m_val.set_text_content(Some("0x8f...a42"));
+    m_val.set_text_content(Some("unavailable"));
     merkle.append_child(&m_label).unwrap();
     merkle.append_child(&m_val).unwrap();
     left.append_child(&merkle).unwrap();
@@ -1397,7 +1414,7 @@ pub fn build_bottom_statusbar(document: &Document) -> Element {
     g_label.set_text_content(Some("Gas:"));
     let g_val = document.create_element("span").unwrap();
     g_val.set_class_name("statusbar-gas");
-    g_val.set_text_content(Some("984,500 / 1M"));
+    g_val.set_text_content(Some("unavailable"));
     gas.append_child(&g_label).unwrap();
     gas.append_child(&g_val).unwrap();
     right.append_child(&gas).unwrap();
@@ -1409,7 +1426,7 @@ pub fn build_bottom_statusbar(document: &Document) -> Element {
     s_label.set_text_content(Some("Strata:"));
     let s_val = document.create_element("span").unwrap();
     s_val.set_class_name("statusbar-value");
-    s_val.set_text_content(Some("social, legal"));
+    s_val.set_text_content(Some("unavailable"));
     strata.append_child(&s_label).unwrap();
     strata.append_child(&s_val).unwrap();
     right.append_child(&strata).unwrap();

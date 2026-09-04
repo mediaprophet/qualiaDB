@@ -126,34 +126,9 @@ impl ShaclResult {
     }
 }
 
-/// Default SHACL results for display when engine is not wired.
+/// Return only live validation results once a validation provider is connected.
 pub fn default_shacl_results() -> Vec<ShaclResult> {
-    vec![
-        ShaclResult {
-            shape: "soc:PeerShape".into(),
-            conformant: true,
-            node_count: 42,
-            violations: vec![],
-        },
-        ShaclResult {
-            shape: "soc:AgreementShape".into(),
-            conformant: true,
-            node_count: 8,
-            violations: vec![],
-        },
-        ShaclResult {
-            shape: "health:RecordShape".into(),
-            conformant: false,
-            node_count: 15,
-            violations: vec!["missing `health:hasConsent` on 2 nodes".into()],
-        },
-        ShaclResult {
-            shape: "rights:FiduciaryShape".into(),
-            conformant: true,
-            node_count: 3,
-            violations: vec![],
-        },
-    ]
+    Vec::new()
 }
 
 /// Render the Aura tray content from SHACL results with collapsible sub-trays.
@@ -175,7 +150,14 @@ pub fn render_aura_tray(document: &Document, results: &[ShaclResult]) -> Element
             "margin-bottom: 6px; font-family: var(--font-mono); font-size: 10px; color: var(--text-secondary);",
         )
         .unwrap();
-    summary.set_text_content(Some(&format!("Status: {}/{} conformant", passed, total)));
+    if results.is_empty() {
+        body.set_attribute("data-honesty", "unavailable").ok();
+        summary.set_text_content(Some(
+            "Unavailable: live SHACL validation is not connected.",
+        ));
+    } else {
+        summary.set_text_content(Some(&format!("Status: {}/{} conformant", passed, total)));
+    }
     shacl_sub_body.append_child(&summary).unwrap();
 
     for result in results {
@@ -360,35 +342,9 @@ impl PulseEventKind {
     }
 }
 
-/// Default pulse events for display when telemetry SSE is not wired.
+/// Return only events received from the live telemetry SSE channel.
 pub fn default_pulse_events() -> Vec<PulseEvent> {
-    vec![
-        PulseEvent {
-            kind: PulseEventKind::Notification,
-            text: "topic:social \u{00B7} connection request received".into(),
-            timestamp: "14:38".into(),
-        },
-        PulseEvent {
-            kind: PulseEventKind::Telemetry,
-            text: "risk assessment complete: low".into(),
-            timestamp: "14:39".into(),
-        },
-        PulseEvent {
-            kind: PulseEventKind::Agent,
-            text: "sentinel: flow stable at 142.5 L/m".into(),
-            timestamp: "14:39".into(),
-        },
-        PulseEvent {
-            kind: PulseEventKind::Notification,
-            text: "fiduciary: legal quad asserted".into(),
-            timestamp: "14:40".into(),
-        },
-        PulseEvent {
-            kind: PulseEventKind::Alert,
-            text: "protection: grooming-pattern alert suppressed (no active policy)".into(),
-            timestamp: "14:41".into(),
-        },
-    ]
+    Vec::new()
 }
 
 /// Render pulse stream events into a container element.
@@ -397,6 +353,16 @@ pub fn render_pulse_stream(document: &Document, events: &[PulseEvent]) -> Elemen
     body.set_class_name("dock-panel-body");
     body.set_attribute("style", "flex: 1; overflow-y: auto;")
         .unwrap();
+
+    if events.is_empty() {
+        body.set_attribute("data-honesty", "unavailable").ok();
+        let empty = document.create_element("div").unwrap();
+        empty.set_class_name("container-placeholder");
+        empty.set_text_content(Some(
+            "Unavailable: live Pulse SSE events are not connected.",
+        ));
+        body.append_child(&empty).unwrap();
+    }
 
     for event in events {
         let entry = document.create_element("div").unwrap();
@@ -465,28 +431,9 @@ impl JobStatus {
     }
 }
 
-/// Default jobs for display when job queue is not wired.
+/// Return only jobs received from a live job queue provider.
 pub fn default_jobs() -> Vec<JobEntry> {
-    vec![
-        JobEntry {
-            id: "job-001".into(),
-            label: "ingest_pdf \u{00B7} research_notes.pdf".into(),
-            status: JobStatus::Complete,
-            progress_percent: 100,
-        },
-        JobEntry {
-            id: "job-002".into(),
-            label: "nlp.analyze \u{00B7} gazetteer pass".into(),
-            status: JobStatus::Running,
-            progress_percent: 67,
-        },
-        JobEntry {
-            id: "job-003".into(),
-            label: "validate_shacl_shape \u{00B7} health:RecordShape".into(),
-            status: JobStatus::Queued,
-            progress_percent: 0,
-        },
-    ]
+    Vec::new()
 }
 
 /// Render the job center body into a container element.
@@ -535,9 +482,12 @@ pub fn render_job_body(document: &Document, jobs: &[JobEntry]) -> Element {
     }
 
     if jobs.is_empty() {
+        body.set_attribute("data-honesty", "unavailable").ok();
         let empty = document.create_element("div").unwrap();
         empty.set_class_name("container-placeholder");
-        empty.set_text_content(Some("No active jobs."));
+        empty.set_text_content(Some(
+            "Unavailable: the live job queue is not connected.",
+        ));
         body.append_child(&empty).unwrap();
     }
 
@@ -595,8 +545,7 @@ mod tests {
     #[test]
     fn test_default_shacl_results() {
         let results = default_shacl_results();
-        assert_eq!(results.len(), 4);
-        assert_eq!(results.iter().filter(|r| r.conformant).count(), 3);
+        assert!(results.is_empty());
     }
 
     #[test]
@@ -608,7 +557,7 @@ mod tests {
     #[test]
     fn test_default_pulse_events() {
         let events = default_pulse_events();
-        assert_eq!(events.len(), 5);
+        assert!(events.is_empty());
     }
 
     #[test]
@@ -621,12 +570,6 @@ mod tests {
     #[test]
     fn test_default_jobs() {
         let jobs = default_jobs();
-        assert_eq!(jobs.len(), 3);
-        assert_eq!(
-            jobs.iter()
-                .filter(|j| j.status == JobStatus::Running)
-                .count(),
-            1
-        );
+        assert!(jobs.is_empty());
     }
 }

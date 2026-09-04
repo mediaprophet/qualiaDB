@@ -122,8 +122,8 @@
 
 | ID | Title | Status | Primary Implementation File(s) | Verification / Test | Remaining Gaps |
 |---|---|---|---|---|---|
-| `POET-HLT-001` | Person-Controlled Timeline | `[ ]` | `health_views` | None | Chronological diary of encounters and symptom logs. |
-| `POET-HLT-002` | Interactive Vitals Charts | `[ ]` | `health_views` | None | Time-series line/area charts for BP, HR, glucose. |
+| `POET-HLT-001` | Person-Controlled Timeline | `[~]` | `health_views/overview_workspace.rs` | Live cross-family chronology; editing, corrections, and receipt views remain | Chronological diary of encounters and symptom logs. |
+| `POET-HLT-002` | Interactive Vitals Charts | `[~]` | `health_views/overview_workspace.rs` | Live BP/HR trend; metric selection, ranges, and data-table accessibility remain | Time-series line/area charts for BP, HR, glucose. |
 | `POET-HLT-003` | Native Risk Calculators | `[x]` | `clinical`, `health_views` | Clinical tests | Framingham and CHA2DS2-VASc execution verified. |
 | `POET-HLT-004` | Medical CT HU Windowing | `[~]` | `medical`, `health_views` | HU kernel test | Connect windowing sliders to multi-slice display. |
 | `POET-HLT-005` | Granular Consent Grants | `[ ]` | `health_views` | None | Visual time-bounded disclosure grant authoring. |

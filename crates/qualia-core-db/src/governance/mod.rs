@@ -9,6 +9,7 @@
         feature = "wasm-full"
     ))
 )))]
+pub mod consent_contract;
 pub mod coord_seams;
 #[cfg(any(
     not(target_arch = "wasm32"),

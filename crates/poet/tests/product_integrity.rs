@@ -1,13 +1,13 @@
 //! Product-integrity regression gates.
 //!
-//! These tests intentionally encode the current 115-file delegation count as
+//! These tests intentionally encode the current thin-delegation count as
 //! a ceiling, not an acceptable target. Each restored domain workflow should
 //! reduce it until thin generic view replacements are gone.
 
 use std::fs;
 use std::path::{Path, PathBuf};
 
-const GENERIC_DELEGATION_CEILING: usize = 115;
+const GENERIC_DELEGATION_CEILING: usize = 112;
 
 #[test]
 fn generic_view_collapse_cannot_expand() {
@@ -57,6 +57,30 @@ fn project_budget_uses_the_domain_workspace() {
         .expect("budget route");
     assert!(source.contains("budget_workspace::build_budget_view"));
     assert!(!source.contains("persist_ledgers::build_budget_view"));
+}
+
+#[test]
+fn health_overview_uses_the_person_controlled_workspace() {
+    let source = fs::read_to_string(manifest_dir().join("src/browser/health_views/health_overview.rs"))
+        .expect("health overview route");
+    assert!(source.contains("overview_workspace::build_health_overview_view"));
+    assert!(!source.contains("persist::build_health_overview_view"));
+}
+
+#[test]
+fn health_conditions_uses_the_domain_workspace() {
+    let source = fs::read_to_string(manifest_dir().join("src/browser/health_views/conditions.rs"))
+        .expect("health conditions route");
+    assert!(source.contains("conditions_workspace::build_conditions_view"));
+    assert!(!source.contains("persist::build_conditions_view"));
+}
+
+#[test]
+fn health_medications_uses_the_domain_workspace() {
+    let source = fs::read_to_string(manifest_dir().join("src/browser/health_views/medications.rs"))
+        .expect("health medications route");
+    assert!(source.contains("medications_workspace::build_medications_view"));
+    assert!(!source.contains("persist::build_medications_view"));
 }
 
 fn manifest_dir() -> PathBuf {

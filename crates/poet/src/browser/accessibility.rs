@@ -2,11 +2,11 @@
 
 use wasm_bindgen::prelude::Closure;
 use wasm_bindgen::JsCast;
-use web_sys::{Document, Element, Event, HtmlInputElement};
+use web_sys::{Document, Element, Event, HtmlElement, HtmlInputElement, KeyboardEvent};
 
 const STORAGE_KEY: &str = "qualia-ui:accessibility";
 
-#[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 struct AccessibilityPreferences {
     large_text: bool,
     high_contrast: bool,
@@ -16,6 +16,98 @@ struct AccessibilityPreferences {
 
 pub fn restore(document: &Document) {
     apply(document, &load());
+}
+
+/// Add the shared keyboard contract used by dynamically-created modal dialogs.
+///
+/// The listener is delegated to the document so it continues to work for dialogs
+/// created after shell startup. It owns Escape dismissal, Tab wrapping, and return
+/// focus; callers only provide the dialog elements and preferred initial control.
+pub fn wire_modal_accessibility(
+    document: &Document,
+    overlay: &Element,
+    panel: &Element,
+    return_focus: Option<Element>,
+    initial_focus: Option<Element>,
+) {
+    let focus_target = initial_focus
+        .or_else(|| first_focusable(panel))
+        .unwrap_or_else(|| panel.clone());
+    focus_element(&focus_target);
+
+    let overlay = overlay.clone();
+    let panel = panel.clone();
+    let closure = Closure::wrap(Box::new(move |event: KeyboardEvent| {
+        if overlay.parent_node().is_none() {
+            return;
+        }
+        if event.key() == "Escape" {
+            event.prevent_default();
+            overlay.remove();
+            if let Some(target) = &return_focus {
+                focus_element(target);
+            }
+            return;
+        }
+        if event.key() != "Tab" {
+            return;
+        }
+        let focusable = focusable_elements(&panel);
+        if focusable.is_empty() {
+            event.prevent_default();
+            focus_element(&panel);
+            return;
+        }
+        let active = web_sys::window()
+            .and_then(|window| window.document())
+            .and_then(|document| document.active_element());
+        let current = active
+            .as_ref()
+            .and_then(|active| focusable.iter().position(|item| item.is_same_node(Some(active))));
+        let next = next_focus_index(current, focusable.len(), event.shift_key());
+        event.prevent_default();
+        focus_element(&focusable[next]);
+    }) as Box<dyn FnMut(KeyboardEvent)>);
+    document
+        .add_event_listener_with_callback("keydown", closure.as_ref().unchecked_ref())
+        .unwrap();
+    closure.forget();
+}
+
+/// Compute the next focusable index within a collection of focusable elements.
+///
+/// Implements Tab (forward) and Shift+Tab (backward) wrapping for modal focus traps.
+pub fn next_focus_index(current: Option<usize>, total: usize, shift_tab: bool) -> usize {
+    if total == 0 {
+        return 0;
+    }
+    match (shift_tab, current) {
+        (true, Some(0)) | (true, None) => total.saturating_sub(1),
+        (false, Some(index)) if index + 1 < total => index + 1,
+        (false, _) => 0,
+        (true, Some(index)) => index.saturating_sub(1),
+    }
+}
+
+fn focusable_elements(panel: &Element) -> Vec<Element> {
+    let Ok(nodes) = panel.query_selector_all(
+        "button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex=\"-1\"])",
+    ) else {
+        return Vec::new();
+    };
+    (0..nodes.length())
+        .filter_map(|index| nodes.get(index)?.dyn_into::<Element>().ok())
+        .collect()
+}
+
+fn first_focusable(panel: &Element) -> Option<Element> {
+    focusable_elements(panel).into_iter().next()
+}
+
+fn focus_element(element: &Element) {
+    if let Ok(element) = element.clone().dyn_into::<HtmlElement>() {
+        let _ = element.focus();
+    }
 }
 
 pub fn open_dialog(document: &Document) {
@@ -104,6 +196,15 @@ pub fn open_dialog(document: &Document) {
     panel.append_child(&footer).unwrap();
     overlay.append_child(&panel).unwrap();
     document.body().unwrap().append_child(&overlay).unwrap();
+
+    let return_focus = document.active_element();
+    wire_modal_accessibility(
+        document,
+        &overlay,
+        &panel,
+        return_focus,
+        document.get_element_by_id("a11y-large-text"),
+    );
 
     for button in [close, cancel] {
         let overlay = overlay.clone();
@@ -224,5 +325,52 @@ fn apply(document: &Document, preferences: &AccessibilityPreferences) {
         ("poet-a11y-focus-mode", preferences.focus_mode),
     ] {
         let _ = root.class_list().toggle_with_force(class_name, enabled);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_next_focus_index_forward_and_wrap() {
+        assert_eq!(next_focus_index(None, 3, false), 0);
+        assert_eq!(next_focus_index(Some(0), 3, false), 1);
+        assert_eq!(next_focus_index(Some(1), 3, false), 2);
+        assert_eq!(next_focus_index(Some(2), 3, false), 0);
+    }
+
+    #[test]
+    fn test_next_focus_index_backward_and_wrap() {
+        assert_eq!(next_focus_index(None, 3, true), 2);
+        assert_eq!(next_focus_index(Some(0), 3, true), 2);
+        assert_eq!(next_focus_index(Some(2), 3, true), 1);
+        assert_eq!(next_focus_index(Some(1), 3, true), 0);
+    }
+
+    #[test]
+    fn test_next_focus_index_single_or_empty() {
+        assert_eq!(next_focus_index(None, 0, false), 0);
+        assert_eq!(next_focus_index(Some(0), 1, false), 0);
+        assert_eq!(next_focus_index(Some(0), 1, true), 0);
+    }
+
+    #[test]
+    fn test_accessibility_preferences_defaults_and_roundtrip() {
+        let default_prefs = AccessibilityPreferences::default();
+        assert!(!default_prefs.large_text);
+        assert!(!default_prefs.high_contrast);
+        assert!(!default_prefs.reduced_motion);
+        assert!(!default_prefs.focus_mode);
+
+        let prefs = AccessibilityPreferences {
+            large_text: true,
+            high_contrast: false,
+            reduced_motion: true,
+            focus_mode: true,
+        };
+        let json = serde_json::to_string(&prefs).unwrap();
+        let loaded: AccessibilityPreferences = serde_json::from_str(&json).unwrap();
+        assert_eq!(loaded, prefs);
     }
 }

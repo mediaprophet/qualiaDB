@@ -136,6 +136,7 @@ fn persist_collapsed(container: &Element, collapsed: bool) {
 }
 
 fn open_settings_dialog(document: &Document, container: &Element) {
+    let return_focus = document.active_element();
     if let Some(existing) = document.get_element_by_id("container-settings-dialog") {
         existing.remove();
     }
@@ -229,6 +230,13 @@ fn open_settings_dialog(document: &Document, container: &Element) {
     panel.append_child(&footer).unwrap();
     overlay.append_child(&panel).unwrap();
     document.body().unwrap().append_child(&overlay).unwrap();
+    super::accessibility::wire_modal_accessibility(
+        document,
+        &overlay,
+        &panel,
+        return_focus,
+        document.get_element_by_id("container-setting-title"),
+    );
 
     for button in [close, cancel] {
         let overlay = overlay.clone();

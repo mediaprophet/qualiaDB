@@ -87,6 +87,7 @@ pub mod specialist_persist;
 pub mod studio_views;
 pub mod submanifold_nav;
 mod surface_honesty;
+pub(crate) mod surface_states;
 pub mod theme;
 pub mod tool_actions;
 pub mod tool_widgets;

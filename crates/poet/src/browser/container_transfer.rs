@@ -9,6 +9,7 @@ use web_sys::{Document, Element, Event, HtmlInputElement, HtmlSelectElement};
 use crate::tool_chest::core::registry::{ManifoldSeed, SeedConnection};
 
 pub fn open_transfer_dialog(document: &Document, copy: bool) {
+    let return_focus = document.active_element();
     let selected = selected_container_ids(document);
     if selected.is_empty() {
         super::interactions::show_tool_status(
@@ -126,6 +127,13 @@ pub fn open_transfer_dialog(document: &Document, copy: bool) {
     panel.append_child(&footer).unwrap();
     overlay.append_child(&panel).unwrap();
     document.body().unwrap().append_child(&overlay).unwrap();
+    super::accessibility::wire_modal_accessibility(
+        document,
+        &overlay,
+        &panel,
+        return_focus,
+        Some(select.clone()),
+    );
 
     for button in [close, cancel] {
         let overlay = overlay.clone();

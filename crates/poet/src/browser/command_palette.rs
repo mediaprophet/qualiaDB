@@ -14,6 +14,11 @@ use web_sys::{Document, Element, HtmlElement, HtmlInputElement, KeyboardEvent};
 pub fn build_command_palette(document: &Document) -> Element {
     let overlay = document.create_element("div").unwrap();
     overlay.set_id("command-palette");
+    overlay.set_attribute("role", "dialog").ok();
+    overlay.set_attribute("aria-modal", "true").ok();
+    overlay
+        .set_attribute("aria-labelledby", "cmd-palette-title")
+        .ok();
     let overlay_el: HtmlElement = overlay.clone().dyn_into().unwrap();
     overlay_el.style().set_css_text(
         "position: fixed; top: 0; left: 0; width: 100%; height: 100%; \
@@ -23,6 +28,7 @@ pub fn build_command_palette(document: &Document) -> Element {
 
     let panel = document.create_element("div").unwrap();
     panel.set_class_name("cmd-palette-panel");
+    panel.set_attribute("aria-describedby", "cmd-palette-hint").ok();
     let panel_el: HtmlElement = panel.clone().dyn_into().unwrap();
     panel_el.style().set_css_text(
         "width: 560px; max-height: 400px; background: var(--glass-bg); \
@@ -32,11 +38,26 @@ pub fn build_command_palette(document: &Document) -> Element {
          display: flex; flex-direction: column;",
     );
 
+    let title = document.create_element("h2").unwrap();
+    title.set_id("cmd-palette-title");
+    title.set_text_content(Some("Command palette"));
+    title.set_attribute("style", "position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;").ok();
+    panel.append_child(&title).unwrap();
+
+    let hint = document.create_element("div").unwrap();
+    hint.set_id("cmd-palette-hint");
+    hint.set_text_content(Some("Search available commands and destinations."));
+    hint.set_attribute("style", "position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;").ok();
+    panel.append_child(&hint).unwrap();
+
     // Search input
     let input = document.create_element("input").unwrap();
     let input_el: HtmlInputElement = input.clone().dyn_into().unwrap();
     input_el.set_placeholder("Search commands, manifolds, containers\u{2026}");
     input.set_id("cmd-palette-input");
+    input.set_attribute("aria-label", "Search commands, manifolds, and containers").ok();
+    input.set_attribute("aria-controls", "cmd-palette-results").ok();
+    input.set_attribute("aria-autocomplete", "list").ok();
     input
         .set_attribute(
             "style",
@@ -51,6 +72,8 @@ pub fn build_command_palette(document: &Document) -> Element {
     // Results list
     let results = document.create_element("div").unwrap();
     results.set_id("cmd-palette-results");
+    results.set_attribute("role", "listbox").ok();
+    results.set_attribute("aria-label", "Command results").ok();
     let results_el: HtmlElement = results.clone().dyn_into().unwrap();
     results_el
         .style()
@@ -60,6 +83,8 @@ pub fn build_command_palette(document: &Document) -> Element {
     for (idx, cmd) in commands.iter().enumerate() {
         let item = document.create_element("div").unwrap();
         item.set_class_name("cmd-palette-item");
+        item.set_attribute("role", "option").ok();
+        item.set_attribute("aria-selected", if idx == 0 { "true" } else { "false" }).ok();
         item.set_attribute("data-cmd-label", cmd.label).unwrap();
         if idx == 0 {
             item.class_list().add_1("selected").unwrap();

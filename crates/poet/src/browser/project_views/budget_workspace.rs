@@ -8,6 +8,7 @@ use crate::browser::cop_records::{build_family_panel, CopField};
 use crate::browser::native_daemon::{
     daemon_records_query, is_daemon_connected, NativeRecordQueryRequest,
 };
+use crate::browser::surface_states::{self, FeedbackState};
 
 use super::budget_model::{format_amount, summarize_payloads, BudgetSummary};
 
@@ -224,14 +225,12 @@ pub fn build_budget_view(document: &Document) -> Element {
     controls.append_child(&export).unwrap();
     root.append_child(&controls).unwrap();
 
-    let status = document.create_element("div").unwrap();
-    status.set_attribute("role", "status").ok();
+    let status = surface_states::status_element(document, "Loading economic ledgers…");
     status.set_attribute("data-budget-status", "").ok();
     style(
         &status,
         "font:10px var(--font-mono);color:var(--text-muted);margin-bottom:8px;",
     );
-    status.set_text_content(Some("Loading economic ledgers…"));
     root.append_child(&status).unwrap();
 
     let summary = document.create_element("div").unwrap();
@@ -292,12 +291,19 @@ pub fn build_budget_view(document: &Document) -> Element {
     refresh_closure.forget();
 
     let export_doc = document.clone();
+    let export_root = root.clone();
     let export_status = status.clone();
     let export_closure = Closure::wrap(Box::new(move |_event: web_sys::MouseEvent| {
         let document = export_doc.clone();
+        let root = export_root.clone();
         let status = export_status.clone();
         wasm_bindgen_futures::spawn_local(async move {
-            status.set_text_content(Some("Building audit export from live ledgers…"));
+            surface_states::apply(
+                &root,
+                &status,
+                FeedbackState::Pending,
+                "Building audit export from live ledgers…",
+            );
             match query_ledgers().await {
                 Ok(payloads) => {
                     let object = payloads
@@ -311,11 +317,16 @@ pub fn build_budget_view(document: &Document) -> Element {
                     }))
                     .unwrap_or_default();
                     download_json(&document, &bytes);
-                    status.set_text_content(Some(
+                    surface_states::apply(
+                        &root,
+                        &status,
+                        FeedbackState::Success,
                         "Audit JSON exported from the current daemon state.",
-                    ));
+                    );
                 }
-                Err(error) => status.set_text_content(Some(&error)),
+                Err(error) => {
+                    surface_states::apply(&root, &status, FeedbackState::Error, &error)
+                }
             }
         });
     }) as Box<dyn FnMut(_)>);
@@ -330,14 +341,20 @@ pub fn build_budget_view(document: &Document) -> Element {
 
 fn refresh_summary(root: &Element, status: &Element) {
     if !is_daemon_connected() {
-        root.set_attribute("data-honesty", "unavailable").ok();
-        status.set_text_content(Some(
+        surface_states::apply(
+            root,
+            status,
+            FeedbackState::Offline,
             "Unavailable: start the local QualiaDB daemon; no totals are fabricated.",
-        ));
+        );
         return;
     }
-    root.set_attribute("data-honesty", "running").ok();
-    status.set_text_content(Some("Recalculating from live economic ledgers…"));
+    surface_states::apply(
+        root,
+        status,
+        FeedbackState::Pending,
+        "Recalculating from live economic ledgers…",
+    );
     let root = root.clone();
     let status = status.clone();
     wasm_bindgen_futures::spawn_local(async move {
@@ -347,13 +364,22 @@ fn refresh_summary(root: &Element, status: &Element) {
                     .iter()
                     .map(|(family, value)| (*family, value))
                     .collect::<Vec<_>>();
-                render_summary(&root, &summarize_payloads(&borrowed));
-                root.set_attribute("data-honesty", "live").ok();
-                status.set_text_content(Some("Live ledger totals. Pending states are excluded; currency units remain separate."));
+                let summary = summarize_payloads(&borrowed);
+                render_summary(&root, &summary);
+                let state = if summary.currencies.is_empty() {
+                    FeedbackState::Empty
+                } else {
+                    FeedbackState::Success
+                };
+                let message = if summary.currencies.is_empty() {
+                    "No approved or verified economic rows yet."
+                } else {
+                    "Live ledger totals. Pending states are excluded; currency units remain separate."
+                };
+                surface_states::apply(&root, &status, state, message);
             }
             Err(error) => {
-                root.set_attribute("data-honesty", "error").ok();
-                status.set_text_content(Some(&error));
+                surface_states::apply(&root, &status, FeedbackState::Error, &error);
             }
         }
     });

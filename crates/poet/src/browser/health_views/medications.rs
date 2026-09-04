@@ -1,3 +1,3 @@
 //! Medications — COP records.
 
-pub use super::persist::build_medications_view;
+pub use super::medications_workspace::build_medications_view;

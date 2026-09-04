@@ -370,11 +370,11 @@ pub fn build_top_menubar(document: &Document) -> Element {
     // Ambient Mesh Sentinel Indicator
     let mesh_badge = document.create_element("span").unwrap();
     mesh_badge.set_class_name("mesh-sentinel-badge");
-    mesh_badge.set_text_content(Some("\u{25CF} Mesh Active \u{00B7} 42MB OK"));
+    mesh_badge.set_text_content(Some("\u{25CF} Mesh unavailable"));
     mesh_badge
         .set_attribute(
             "title",
-            "42MB Prolog Sentinel Active \u{00B7} Zero-Heap Hot Paths Monitored",
+            "Unavailable: live mesh status is not connected",
         )
         .unwrap();
     right.append_child(&mesh_badge).unwrap();
@@ -872,6 +872,7 @@ fn handle_menu_action(document: &Document, action: &str, label: &str) {
 ///
 /// See `SAVE_ARCHITECTURE.md` for the full specification.
 fn open_save_mode_dialog(document: &Document) {
+    let return_focus = document.active_element();
     // Remove any existing dialog
     if let Some(existing) = document.get_element_by_id("save-mode-dialog") {
         existing.remove();
@@ -887,6 +888,8 @@ fn open_save_mode_dialog(document: &Document) {
     );
 
     let panel = document.create_element("div").unwrap();
+    panel.set_attribute("role", "dialog").unwrap();
+    panel.set_attribute("aria-modal", "true").unwrap();
     let panel_el: HtmlElement = panel.clone().dyn_into().unwrap();
     panel_el.style().set_css_text(
         "width: 420px; background: var(--surface-glass-heavy); \
@@ -1193,23 +1196,14 @@ fn open_save_mode_dialog(document: &Document) {
         .unwrap();
     save_closure.forget();
 
-    // Wire Escape to close
-    let overlay_for_esc = overlay.clone();
-    let esc_closure = Closure::wrap(Box::new(move |e: web_sys::KeyboardEvent| {
-        if e.key() == "Escape" {
-            overlay_for_esc.remove();
-        }
-    }) as Box<dyn FnMut(web_sys::KeyboardEvent)>);
-    document
-        .add_event_listener_with_callback("keydown", esc_closure.as_ref().unchecked_ref())
-        .unwrap();
-    esc_closure.forget();
-
-    // Focus the label input
-    if let Some(input) = document.get_element_by_id("save-mode-label-input") {
-        let input_el: HtmlInputElement = input.dyn_into().unwrap();
-        let _ = input_el.focus();
-    }
+    let initial_focus = document.get_element_by_id("save-mode-label-input");
+    super::accessibility::wire_modal_accessibility(
+        document,
+        &overlay,
+        &panel,
+        return_focus,
+        initial_focus,
+    );
 }
 
 fn show_menu_notification(document: &Document, message: &str) {
@@ -1780,7 +1774,7 @@ pub fn toggle_tech_sidebar(document: &Document) {
          border-radius: var(--radius-xs); padding: 8px; line-height: 1.6;",
     );
     dag_viz.set_text_content(Some(
-        "\u{25CF} root:QmX7...\n  \u{2514}\u{2500} \u{25CF} manifold:research\n      \u{2514}\u{2500} \u{25CF} container:doc\n      \u{2514}\u{2500} \u{25CF} container:map\n  \u{2514}\u{2500} \u{25CF} manifold:social\n      \u{2514}\u{2500} \u{25CF} container:social"
+        "Unavailable: live Merkle-CRDT DAG data is not connected.",
     ));
     dag_section.append_child(&dag_viz).unwrap();
     body.append_child(&dag_section).unwrap();
@@ -1800,7 +1794,7 @@ pub fn toggle_tech_sidebar(document: &Document) {
          border-radius: var(--radius-xs); padding: 8px; line-height: 1.6;",
     );
     quads_list.set_text_content(Some(
-        "<manifold:research> \n  <doc> \u{2014} hm:Document \n  <map> \u{2014} spatial:Map\n<manifold:social>\n  <social> \u{2014} social:ChatGraph"
+        "Unavailable: live container quad data is not connected.",
     ));
     quads_section.append_child(&quads_list).unwrap();
     body.append_child(&quads_section).unwrap();
@@ -1820,7 +1814,7 @@ pub fn toggle_tech_sidebar(document: &Document) {
          border-radius: var(--radius-xs); padding: 8px; line-height: 1.6;",
     );
     conn_info.set_text_content(Some(
-        "wire:active \u{2014} qualia:ActiveFlow\nwire:event \u{2014} qualia:EventStream\nwire:ontology \u{2014} qualia:OntologyLink"
+        "Unavailable: live connection ontology data is not connected.",
     ));
     conn_section.append_child(&conn_info).unwrap();
     body.append_child(&conn_section).unwrap();
@@ -1829,7 +1823,7 @@ pub fn toggle_tech_sidebar(document: &Document) {
     let note = document.create_element("div").unwrap();
     note.set_attribute("style", "font-size: 9px; color: var(--text-muted); padding-top: 4px; border-top: 1px solid var(--border-subtle);").unwrap();
     note.set_text_content(Some(
-        "present \u{00B7} structural mock, DAG sync awaiting backend wiring",
+        "unavailable \u{00B7} telemetry and DAG data require a live backend connection",
     ));
     body.append_child(&note).unwrap();
 

@@ -1,3 +1,3 @@
-//! Health overview — live COP counts. No fabricated scores.
+//! Person-controlled health home backed by live Qualia records.
 
-pub use super::persist::build_health_overview_view;
+pub use super::overview_workspace::build_health_overview_view;

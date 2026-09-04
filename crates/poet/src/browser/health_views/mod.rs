@@ -4,8 +4,18 @@
 //! Semantic Library (classified/secret). Sharing is a named-DID disclosure.
 //! Conditions are possessions of a Principal, not owl:Thing.
 
+pub mod clinical_models;
+pub mod conditions_workspace;
+pub mod disclosure_list;
+pub mod disclosure_model;
+pub mod disclosure_workspace;
+pub mod medications_workspace;
+pub mod model;
+pub mod overview_workspace;
 pub mod persist;
 pub mod persist_ledgers;
+pub mod record_inspection;
+pub mod vitals_chart;
 
 pub mod authority_attestations;
 pub mod biometrics;
