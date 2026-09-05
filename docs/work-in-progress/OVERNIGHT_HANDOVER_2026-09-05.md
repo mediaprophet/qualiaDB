@@ -2,7 +2,7 @@
 
 **Audience:** Timothy + any agent continuing while the day crew sleeps  
 **Branch:** `0.0.36-dev`  
-**Tip (push lane):** `64b213848201f8e9f4a6257d0390b55ca13ea2ef`  
+**Tip (push lane):** `deac3dd` lineage — pull HEAD; D2 paint follow-up landing  
 **Host freeze:** `vibe-host-0.1` — no Host widen, no SemVer bump until release  
 **Sole Git push:** Neo (check → commit → push)
 
@@ -36,7 +36,7 @@ Do **not** land that stack straight on tip.
 | D4–D5 | living/artifact/machine chips + Zone D | **PASS** | `f1d34d03` | davinci / monet |
 | B1–B2 | Sanctuary `volume_open` → `volume_commit` (HTTP) | **PASS** | `0b30cb15` sticky + create-on-open | Neo / Capt |
 | N1 | Cold-load Native Connected (:4242) | **PASS** | `64b21384` hard-reload, held ~20s | Neo / Capt |
-| D2 | **Open pack arrive card** (packSemVer · framing · gate) | **OPEN** | Connected OK; daemon `lexicon_manifest` live-OK (0.1.0·mixed·gate open) — UI/path/bay only. Prior path truncated `/wor`; wait ≥10–15s; soft-rise pending | davinci / monet / Capt |
+| D2 | **Open pack arrive card** (packSemVer · framing · gate) | **PARTIAL** | Capt: invoke open OK, bay held (paint). Tip `deac3dd` multi-bay paint; follow-up sticky Connected + LAST_ARRIVE restore (probe flap). Re-UAT paint vs invoke | davinci / monet / Capt |
 | B-ui | Sanctuary Save / Checkpoint UI path | **OPEN** | HTTP commit PASS; dialog flaky | Capt / davinci |
 | A-wish | office:graph sayables-first labels | **WISHLIST** | not blocking Catalog close | davinci / Vibe |
 | G-COORD | GIS bind deepen | **HELD** | yellow voice fixed; deepen after UAT | Neo |
@@ -178,3 +178,4 @@ See `DAVINCI_LANE_HANDOVER_2026-09-05.md` for frames + traps.
 | 2026-09-05 ~23:13 AEST | Folded Vibe lane handover sidecar (diagnose PASS locks; D2 language accept rules). |
 | 2026-09-05 ~23:15 AEST | Folded davinci lane handover sidecar (arrive frames; traps; B-ui after D2). |
 | 2026-09-05 ~23:16 AEST | D2 paint gap: daemon arrive OK / bay held — fix multi-bay paint + invoke console diag. |
+| 2026-09-05 ~23:25 AEST | Capt D2 PARTIAL evidence; sticky Connected during re-probe + LAST_ARRIVE remount restore. |

@@ -7,6 +7,8 @@
 
 mod model;
 
+use std::cell::RefCell;
+
 pub use model::{
     catalog_filter_chips, chips_for_framing, copy_avoids_broken, copy_avoids_thing_wash,
     held_outcome, interpret_invoke, parse_pack_card, recipe_beat, sanitize_held_why, Framing,
@@ -24,6 +26,12 @@ use model::{
     FramingChip as Chip, RecipeBeat as Beat, RecipeEvent as Event, HELD_WHY as WHY,
     INVOKE_ID as BIND,
 };
+
+thread_local! {
+    /// Last Open pack arrive — restored when Zone D / console remount a bay
+    /// so probe flaps / drawer rebuilds do not wipe gate open chrome.
+    static LAST_ARRIVE: RefCell<Option<ManifestOutcome>> = RefCell::new(None);
+}
 
 /// Studio bay Catalog peer — path field, chips, held-gate / arrive pack card.
 pub fn build_lexicon_bay(document: &Document) -> Element {
@@ -84,6 +92,12 @@ pub fn build_lexicon_bay(document: &Document) -> Element {
     render_held_stage(&root, WHY);
     wire_open(&root, &open_btn);
     wire_dismiss(&root);
+
+    LAST_ARRIVE.with(|slot| {
+        if let Some(ManifestOutcome::Open(card)) = slot.borrow().clone() {
+            apply_outcome(&root, ManifestOutcome::Open(card));
+        }
+    });
 
     root
 }
@@ -257,6 +271,18 @@ fn apply_outcome(root: &Element, outcome: ManifestOutcome) {
     }
 }
 
+
+async fn sleep_ms(ms: i32) {
+    let promise = js_sys::Promise::new(&mut |resolve, _reject| {
+        if let Some(window) = web_sys::window() {
+            let _ = window.set_timeout_with_callback_and_timeout_and_arguments_0(&resolve, ms);
+        } else {
+            let _ = resolve.call0(&wasm_bindgen::JsValue::UNDEFINED);
+        }
+    });
+    let _ = wasm_bindgen_futures::JsFuture::from(promise).await;
+}
+
 fn wire_open(root: &Element, button: &Element) {
     let root = root.clone();
     let closure = Closure::wrap(Box::new(move |_e: web_sys::Event| {
@@ -273,16 +299,28 @@ fn wire_open(root: &Element, button: &Element) {
             paint_outcome_all_bays(&root, held_outcome(WHY));
             return;
         }
-        if !is_daemon_connected() {
-            web_sys::console::log_1(
-                &"[Lexicon Bay] Open pack: daemon not connected → held".into(),
-            );
-            paint_outcome_all_bays(&root, held_outcome(WHY));
-            return;
-        }
         let root_async = root.clone();
         let path_log = path.clone();
         wasm_bindgen_futures::spawn_local(async move {
+            if !is_daemon_connected() {
+                web_sys::console::log_1(
+                    &"[Lexicon Bay] Open pack: waiting briefly for Native Connected…".into(),
+                );
+                // Soft wait: probe flap must not strand Open pack on held.
+                for _ in 0..20 {
+                    sleep_ms(250).await;
+                    if is_daemon_connected() {
+                        break;
+                    }
+                }
+                if !is_daemon_connected() {
+                    web_sys::console::log_1(
+                        &"[Lexicon Bay] Open pack: daemon still not connected → held".into(),
+                    );
+                    paint_outcome_all_bays(&root_async, held_outcome(WHY));
+                    return;
+                }
+            }
             match daemon_invoke(BIND, serde_json::json!({ "path": path })).await {
                 Ok(response) => {
                     let outcome = interpret_invoke(
@@ -318,6 +356,14 @@ fn wire_open(root: &Element, button: &Element) {
 /// Zone D IDE and vibe-console each mount a Catalog bay — paint every
 /// `[data-lexicon-bay]` so arrive does not look held on the sibling surface.
 fn paint_outcome_all_bays(hint: &Element, outcome: ManifestOutcome) {
+    match &outcome {
+        ManifestOutcome::Open(_) => {
+            LAST_ARRIVE.with(|slot| *slot.borrow_mut() = Some(outcome.clone()));
+        }
+        ManifestOutcome::Held { .. } => {
+            LAST_ARRIVE.with(|slot| *slot.borrow_mut() = None);
+        }
+    }
     let Some(doc) = hint.owner_document() else {
         apply_outcome(hint, outcome);
         return;
@@ -376,7 +422,7 @@ fn wire_dismiss(root: &Element) {
             upgrade.set_attribute("data-recipe", leave.as_str()).ok();
             upgrade.set_attribute("data-beat", leave.named_beat()).ok();
         }
-        apply_outcome(&root, held_outcome(WHY));
+        paint_outcome_all_bays(&root, held_outcome(WHY));
         root.set_attribute("data-recipe", leave.as_str()).ok();
         root.set_attribute("data-beat", leave.named_beat()).ok();
     }) as Box<dyn FnMut(web_sys::Event)>);

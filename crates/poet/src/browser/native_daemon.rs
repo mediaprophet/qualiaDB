@@ -501,9 +501,17 @@ fn set_daemon_state(state: DaemonConnectionState) {
 /// badge / Open pack gate leave "Probing…" without waiting on the ~200KB
 /// `/vibe/capabilities` deserialize. Caps refresh continues in the background.
 pub fn spawn_daemon_probe() {
-    set_daemon_state(DaemonConnectionState::Probing);
+    // Keep Connected while refreshing — flipping to Probing drops
+    // `is_daemon_connected()` and Open pack short-circuits to held (Capt D2 flap).
+    let keep_connected = matches!(
+        get_daemon_state(),
+        DaemonConnectionState::Connected { .. }
+    );
+    if !keep_connected {
+        set_daemon_state(DaemonConnectionState::Probing);
+    }
 
-    wasm_bindgen_futures::spawn_local(async {
+    wasm_bindgen_futures::spawn_local(async move {
         let ports = DEFAULT_CANDIDATE_PORTS;
         let hosts = probe_loopback_hosts();
         web_sys::console::log_1(
@@ -571,6 +579,21 @@ pub fn spawn_daemon_probe() {
             }
         }
 
+        if keep_connected {
+            let attempt = OFFLINE_PROBE_ATTEMPTS.with(|c| *c.borrow());
+            if attempt >= PROBE_OFFLINE_RETRY_MAX {
+                web_sys::console::log_1(
+                    &"[Webizen Probe] refresh miss budget exhausted → Standalone".into(),
+                );
+            } else {
+                web_sys::console::log_1(
+                    &"[Webizen Probe] refresh miss — keeping Native Connected; retrying".into(),
+                );
+                schedule_offline_probe_retry();
+                return;
+            }
+        }
+
         web_sys::console::log_1(
             &"[Webizen Probe] No native daemon running on local ports (running in Standalone WASM mode)".into(),
         );
@@ -601,13 +624,17 @@ fn schedule_offline_probe_retry() {
         return;
     };
     let cb = Closure::once(move || {
-        let still_offline = DAEMON_STATE.with(|s| {
-            matches!(*s.borrow(), DaemonConnectionState::Offline { .. })
+        let should_retry = DAEMON_STATE.with(|s| {
+            matches!(
+                *s.borrow(),
+                DaemonConnectionState::Offline { .. }
+                    | DaemonConnectionState::Connected { .. }
+            )
         });
-        if still_offline {
+        if should_retry {
             web_sys::console::log_1(
                 &format!(
-                    "[Webizen Probe] offline retry {attempt}/{PROBE_OFFLINE_RETRY_MAX}"
+                    "[Webizen Probe] retry {attempt}/{PROBE_OFFLINE_RETRY_MAX}"
                 )
                 .into(),
             );
