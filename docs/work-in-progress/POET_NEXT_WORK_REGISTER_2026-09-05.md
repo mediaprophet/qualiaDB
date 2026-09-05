@@ -20,7 +20,7 @@ evidence.
 | 5 | Complete `HLT-07` clinical calculator integrity | Implemented; MCP/VM/playground surfaces closed in `HLT-07b`; browser UAT pending | Required inputs and units, applicability, boundary tests, algorithm/version provenance, non-advice UI | Higher-assurance implementation/review |
 | 6 | Complete `HLT-08` Health UAT pack | Source contracts landed; browser rows open | Executable/manual evidence for add, reload, inspect, correct, grant, revoke, ingest, and offline recovery | Review Gate A |
 | 7 | Close Review Gate A | Blocked by 4-6 | Architecture, data contract, security, visual, browser, and status review | Project owner/expert reviewer |
-| 8 | Audit standalone Tool Chest semantics | Ready after structural packets | Live vs local labels, provenance, gated states, daemon rejection/error behavior | Project owner accepts findings |
+| 8 | Audit standalone Tool Chest semantics (`PFT-01`) | Complete; defects repaired in `PFT-02` | Live vs local labels, provenance, gated states, daemon rejection/error behavior | Project owner accepts findings |
 | 9 | Select next Tool Chest chain | Awaiting selection | Inventory row, live `ALL_BOUND` ID or explicit gated shell, acceptance task | Captain/project owner |
 
 ## Latest execution evidence
@@ -188,6 +188,17 @@ unavailable. Live daemon fixture was not available on this VM.
   playground 3; VM `clinical_native` 2; `invoke::clinical` 16 (no regression).
 - Review Gate A remains a `D5` owner close. Next ready non-AST packet:
   Tool Chest audit (`PFT-01`) or `RM-06` `containers.rs` split.
+
+### `PFT-01` / `PFT-02` - 2026-09-05
+
+- Audit: daemon rejection on SPARQL, gazetteer, Sentinel, N3, SHACL, and
+  sheet mean was shown as success because a local sketch ran.
+- Repair: `tool_dual_path` — local / live / denied are distinct status kinds;
+  local messages name the live id they are not; rejection does not attach a
+  canvas sketch as a live result. `requires_daemon` stays false on dual-path
+  tools so standalone remains runnable.
+- Review Gate A remains a `D5` owner close. Next: `PFT-03` (owner selects a
+  chain) or `RM-06` `containers.rs` split.
 
 ## Post-gate programme
 

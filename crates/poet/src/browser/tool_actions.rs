@@ -318,18 +318,24 @@ fn run_extractor(document: &Document, label: &str) {
         let (token_count, sentence_count, entities) = local_extract_summary(&source);
         let detail = if entities.is_empty() {
             format!(
-                "Offline analysis: {} tokens, {} sentences, no title-case entities.",
+                "{} tokens, {} sentences, no title-case entities.",
                 token_count, sentence_count
             )
         } else {
             format!(
-                "Offline analysis: {} tokens, {} sentences; entities: {}.",
+                "{} tokens, {} sentences; entities: {}.",
                 token_count,
                 sentence_count,
                 entities.join(", ")
             )
         };
-        super::interactions::show_tool_status(document, &label, &detail, "success");
+        let report = super::tool_dual_path::local_sketch("NLP.gazetteer_run", &detail);
+        super::interactions::show_tool_status(
+            document,
+            &label,
+            &report.message,
+            report.status_kind,
+        );
         return;
     }
     super::interactions::show_tool_status(document, &label, "Analysing selected text…", "running");
@@ -348,56 +354,46 @@ fn run_extractor(document: &Document, label: &str) {
                     .join(", ");
                 let detail = if entities.is_empty() {
                     format!(
-                        "Live analysis: {} tokens, {} sentences, no known gazetteer entities.",
+                        "{} tokens, {} sentences, no known gazetteer entities.",
                         response.token_count, response.sentence_count
                     )
                 } else {
                     format!(
-                        "Live analysis: {} tokens, {} sentences; entities: {}.",
+                        "{} tokens, {} sentences; entities: {}.",
                         response.token_count, response.sentence_count, entities
                     )
                 };
-                super::interactions::show_tool_status(&document, &label, &detail, "success");
+                let report = super::tool_dual_path::live_ok("NLP.gazetteer_run", &detail);
+                super::interactions::show_tool_status(
+                    &document,
+                    &label,
+                    &report.message,
+                    report.status_kind,
+                );
             }
             Ok(response) => {
-                let (token_count, sentence_count, entities) = local_extract_summary(&source);
-                let diagnostic = response
-                    .diagnostic
-                    .as_deref()
-                    .unwrap_or("unknown daemon failure");
-                let detail = if entities.is_empty() {
-                    format!(
-                        "Offline analysis after daemon rejection ({}): {} tokens, {} sentences.",
-                        diagnostic, token_count, sentence_count
-                    )
-                } else {
-                    format!(
-                        "Offline analysis after daemon rejection ({}): {} tokens, {} sentences; entities: {}.",
-                        diagnostic,
-                        token_count,
-                        sentence_count,
-                        entities.join(", ")
-                    )
-                };
-                super::interactions::show_tool_status(&document, &label, &detail, "success");
+                let report = super::tool_dual_path::live_denied(
+                    "NLP.gazetteer_run",
+                    response
+                        .diagnostic
+                        .as_deref()
+                        .unwrap_or("gazetteer rejected the request"),
+                );
+                super::interactions::show_tool_status(
+                    &document,
+                    &label,
+                    &report.message,
+                    report.status_kind,
+                );
             }
             Err(error) => {
-                let (token_count, sentence_count, entities) = local_extract_summary(&source);
-                let detail = if entities.is_empty() {
-                    format!(
-                        "Offline analysis after daemon error ({}): {} tokens, {} sentences.",
-                        error, token_count, sentence_count
-                    )
-                } else {
-                    format!(
-                        "Offline analysis after daemon error ({}): {} tokens, {} sentences; entities: {}.",
-                        error,
-                        token_count,
-                        sentence_count,
-                        entities.join(", ")
-                    )
-                };
-                super::interactions::show_tool_status(&document, &label, &detail, "success");
+                let report = super::tool_dual_path::live_denied("NLP.gazetteer_run", &error);
+                super::interactions::show_tool_status(
+                    &document,
+                    &label,
+                    &report.message,
+                    report.status_kind,
+                );
             }
         }
     });
@@ -408,7 +404,13 @@ fn run_sparql_query(document: &Document, label: &str) {
     let query = selected_text(document).unwrap_or_else(|| "ASK WHERE { ?s ?p ?o }".to_string());
     if !super::native_daemon::is_daemon_connected() {
         let detail = local_graph_query(document, &query);
-        super::interactions::show_tool_status(document, &label, &detail, "success");
+        let report = super::tool_dual_path::local_sketch("GraphDatabase.sparql", &detail);
+        super::interactions::show_tool_status(
+            document,
+            &label,
+            &report.message,
+            report.status_kind,
+        );
         return;
     }
     super::interactions::show_tool_status(
@@ -422,24 +424,42 @@ fn run_sparql_query(document: &Document, label: &str) {
             return;
         };
         // Live ALL_BOUND id — no Host widen.
-        let local_query = query.clone();
         let args = serde_json::json!({ "query": query, "format": "json" });
         match super::native_daemon::daemon_invoke("GraphDatabase.sparql", args).await {
             Ok(response) if response.ok => {
-                super::interactions::show_tool_status(&document, &label, &response.value, "success")
+                let report =
+                    super::tool_dual_path::live_ok("GraphDatabase.sparql", &response.value);
+                super::interactions::show_tool_status(
+                    &document,
+                    &label,
+                    &report.message,
+                    report.status_kind,
+                );
             }
             Ok(response) => {
-                let detail = format!(
-                    "Local graph fallback after daemon rejection ({}): {}",
+                let report = super::tool_dual_path::live_denied(
+                    "GraphDatabase.sparql",
                     response
                         .diagnostic
                         .as_deref()
                         .unwrap_or("GraphDatabase.sparql failed."),
-                    local_graph_query(&document, &local_query)
                 );
-                super::interactions::show_tool_status(&document, &label, &detail, "success");
+                super::interactions::show_tool_status(
+                    &document,
+                    &label,
+                    &report.message,
+                    report.status_kind,
+                );
             }
-            Err(error) => super::interactions::show_tool_status(&document, &label, &error, "error"),
+            Err(error) => {
+                let report = super::tool_dual_path::live_denied("GraphDatabase.sparql", &error);
+                super::interactions::show_tool_status(
+                    &document,
+                    &label,
+                    &report.message,
+                    report.status_kind,
+                );
+            }
         }
     });
 }
@@ -448,7 +468,13 @@ fn run_sentinel(document: &Document, label: &str) {
     let label = label.to_string();
     if !super::native_daemon::is_daemon_connected() {
         let detail = local_sentinel_summary(document);
-        super::interactions::show_tool_status(document, &label, &detail, "success");
+        let report = super::tool_dual_path::local_sketch("Sentinel.inspect", &detail);
+        super::interactions::show_tool_status(
+            document,
+            &label,
+            &report.message,
+            report.status_kind,
+        );
         return;
     }
     super::interactions::show_tool_status(
@@ -464,26 +490,37 @@ fn run_sentinel(document: &Document, label: &str) {
         let args = serde_json::json!({ "agent_did": "did:qualia:current" });
         match super::native_daemon::daemon_invoke("Sentinel.inspect", args).await {
             Ok(response) if response.ok => {
-                super::interactions::show_tool_status(&document, &label, &response.value, "success")
+                let report = super::tool_dual_path::live_ok("Sentinel.inspect", &response.value);
+                super::interactions::show_tool_status(
+                    &document,
+                    &label,
+                    &report.message,
+                    report.status_kind,
+                );
             }
             Ok(response) => {
-                let detail = format!(
-                    "Local Sentinel fallback after daemon rejection ({}): {}",
+                let report = super::tool_dual_path::live_denied(
+                    "Sentinel.inspect",
                     response
                         .diagnostic
                         .as_deref()
                         .unwrap_or("Sentinel inspection failed."),
-                    local_sentinel_summary(&document)
                 );
-                super::interactions::show_tool_status(&document, &label, &detail, "success");
+                super::interactions::show_tool_status(
+                    &document,
+                    &label,
+                    &report.message,
+                    report.status_kind,
+                );
             }
             Err(error) => {
-                let detail = format!(
-                    "{} Standalone fallback: {}",
-                    error,
-                    local_sentinel_summary(&document)
+                let report = super::tool_dual_path::live_denied("Sentinel.inspect", &error);
+                super::interactions::show_tool_status(
+                    &document,
+                    &label,
+                    &report.message,
+                    report.status_kind,
                 );
-                super::interactions::show_tool_status(&document, &label, &detail, "success");
             }
         }
     });

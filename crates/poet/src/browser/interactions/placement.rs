@@ -240,11 +240,22 @@ pub fn show_tool_status(document: &Document, title_text: &str, message: &str, st
         .unwrap();
     let glyph = match status_kind {
         "success" => "\u{2713}",
+        "local" => "\u{25CB}",
         "error" => "\u{26A0}",
         "running" => "\u{23F3}",
         "unavailable" => "\u{2298}",
         _ => "\u{1F4A1}",
     };
+    let honesty = match status_kind {
+        "success" => "live",
+        "local" => "local",
+        "error" => "error",
+        "unavailable" => "unavailable",
+        "running" => "pending",
+        _ => "info",
+    };
+    let _ = notif.set_attribute("data-honesty", honesty);
+    let _ = notif.set_attribute("data-status-kind", status_kind);
     title.set_text_content(Some(&format!("{} {}", glyph, title_text)));
     notif.append_child(&title).unwrap();
 
