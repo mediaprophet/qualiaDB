@@ -50,6 +50,7 @@ This is the sequential handoff record for
 | 2026-09-05 | `RM-06` | Grok 4.6 / high | Complete (structure; Gate A still open) | `browser/containers/` shell + attrs + domain body dispatch; inventory route paths | containers attrs 4; product integrity 10; surface inventory 1; `trunk build` success | Interactive click-UAT not re-run | Gate A open; view cluster still large files; `PFT-03` owner select | `RM-07` docks.rs or `PFT-03` |
 | 2026-09-05 | `RM-07` | Grok 4.6 / high | Complete (structure; Gate A still open) | `browser/docks/` model, glyphs, widgets, toolbox, flyout, panel, right, statusbar | docks 2; product integrity 10; surface inventory 1; `trunk build` success | Interactive click-UAT not re-run | Gate A open; `PFT-03` owner select | `RM-08` instrument_panel.rs or `PFT-03` |
 | 2026-09-05 | `RM-08` | Grok 4.6 / high | Complete (structure; Gate A still open) | `browser/instrument_panel/` ribbon, catalog, commands, dispatch, panel, chain | instrument_panel 6; product integrity 10; surface inventory 1; `trunk build` success | Interactive click-UAT not re-run | Gate A open; `PFT-03` owner select | `RM-09` workflow_panels.rs or `PFT-03` |
+| 2026-09-05 | `RM-09` | Grok 4.6 / high | Complete (structure; Gate A still open) | `browser/workflow_panels/` checkpoint, credentials, markup, provenance, publication, constituency, widgets | workflow_panels 2; product integrity 10; surface inventory 1; `trunk build` success | Interactive click-UAT not re-run | Gate A open; unused vs live panel routes; `PFT-03` owner select | `PFT-03` (owner) or held view cluster |
 
 ## Required closeout detail
 
@@ -340,6 +341,17 @@ Delegation count before/after: unchanged (112 ceiling held).
 Known gaps: Review Gate A not closed; `PFT-03` owner chain selection.
 Unrelated failures preserved: Yes.
 Recommended next packet: `RM-09` `workflow_panels.rs` (1,418) or `PFT-03` (owner). Do not close Gate A. Do not start `AST-*`.
+
+Packet: `RM-09`
+Baseline git status: Feature branch `cursor/poet-grok-handover-ac52` at `74383a46` (RM-08 docs).
+User job delivered: Split `browser/workflow_panels.rs` (1,418 lines) into a directory module. Checkpoint tray, credential inspector, context markup, provenance, publication, constituency, and indicator widgets each own a file under 500 lines. Public `build_*_view` names remain via glob re-exports (`pub use checkpoint::*`), not `pub use … build_*_view` lines.
+Files changed: `crates/poet/src/browser/workflow_panels/`; this ledger; WIP/register.
+Tests and exact results: `cargo +stable test -p poet --lib workflow_panels::` (2 passed); product integrity (10); surface inventory (1). rustc 1.98.1. `RUSTUP_TOOLCHAIN=stable NO_COLOR=true trunk build` → success. Ceiling still 112.
+Browser/native UAT: interactive click-UAT not re-run. Live container routes already use `checkpoint_panel`, `publication_panel`, and `governance_workflow`; unique `workflow_panels` honesty strings are not in the wasm (dead-code eliminated; pre-existing unused module).
+Delegation count before/after: unchanged (112 ceiling held).
+Known gaps: Review Gate A not closed; `PFT-03` owner chain selection; view cluster still large files and must not be converted via `pub use build_*_view`.
+Unrelated failures preserved: Yes.
+Recommended next packet: `PFT-03` (owner) or a held view-cluster split that keeps real `pub fn` builders. Do not close Gate A. Do not start `AST-*`.
 
 
 

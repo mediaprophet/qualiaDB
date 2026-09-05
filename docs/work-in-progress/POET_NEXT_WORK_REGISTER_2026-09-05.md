@@ -240,6 +240,24 @@ unavailable. Live daemon fixture was not available on this VM.
 - Next decomposition candidate: `RM-09`, `browser/workflow_panels.rs` (`D3`).
 - Review Gate A remains a `D5` owner close. `PFT-03` remains owner selection.
 
+### `RM-09` - 2026-09-05
+
+- Structure: 1,418-line `browser/workflow_panels.rs` replaced by a 27-line
+  router and seven purpose-specific child modules, all below 500 lines.
+- API: former `build_*_view` names remain via `pub use <module>::*` glob
+  re-exports. No `pub use … build_*_view` wrappers (delegation ceiling
+  still 112).
+- Verification: workflow_panels tests 2/2, product integrity 10/10, surface
+  inventory 1/1, `trunk build` (stable toolchain) passed.
+- Honest leftover: these builders are not on the live container routes
+  (`checkpoint_panel` / `publication_panel` / `governance_workflow`); unique
+  panel honesty strings are absent from the wasm. Pre-existing, not caused
+  by the split.
+- Interactive browser click-UAT was not re-run.
+- P2 dock/instrument/workflow cluster is complete. Next POET files over
+  1,200 are the held view cluster and `native_daemon.rs` (`D4`).
+- Review Gate A remains a `D5` owner close. `PFT-03` remains owner selection.
+
 ## Post-gate programme
 
 The earlier programme remains the dependency backbone after Gate A:

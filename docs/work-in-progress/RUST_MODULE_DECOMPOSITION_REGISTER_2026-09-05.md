@@ -60,8 +60,8 @@ may need a documented exception rather than arbitrary fragmentation.
 | P1 | `browser/interactions.rs` | 2,148 | Pointer state, wire operations, container commands, canvas movement, docking, placement, and geometry helpers | `D3` `FE` `QA` | Before interaction or canvas changes |
 | P1 | `browser/search_workbench/` | 34 plus bounded leaves | Completed `RM-05`: faceted search, query builder, SPARQL editor, saved-query persistence, execution, and placement | `D3` `FE` `RUST` `QA` | Before Tool Chest search semantics work |
 | P1 | container cluster: `containers/` plus `container_views.rs`, `container_views_ext.rs`, `container_inline_views.rs` | `containers/` complete (`RM-06`); views 1,227 / 1,387 / 1,016 | Shell vs domain body dispatch done; remaining view files stay as real `pub fn` renderers (do not `pub use build_*_view`) | `D3` `FE` `UX` `QA` | Before broad container restoration |
-| P2 | `docks/` plus `instrument_panel/` plus `workflow_panels.rs` | `docks/` (`RM-07`) and `instrument_panel/` (`RM-08`) complete; remaining 1,418 | Dock and instrument presentation done; workflow panels remain | `D3` `FE` `UX` `QA` | Before Desktop/chrome reuse |
-| P2 | `browser/mod.rs`, `native_daemon.rs` | 1,032 and 1,100 | Browser composition root and daemon transport/lifecycle boundaries | `D4` `RUST` `SPEC` `QA` | Only when their contracts are touched |
+| P2 | `docks/` plus `instrument_panel/` plus `workflow_panels/` | Complete (`RM-07`–`RM-09`); all leaves under 500 | Dock, instrument, and workflow presentation are directory modules | `D3` `FE` `UX` `QA` | Before Desktop/chrome reuse |
+| P2 | `browser/mod.rs`, `native_daemon.rs` | 1,032 and 1,369 | Browser composition root and daemon transport/lifecycle boundaries | `D4` `RUST` `SPEC` `QA` | Only when their contracts are touched |
 
 ## Core and cross-crate boundary
 
@@ -376,6 +376,54 @@ Verification:
 The only remaining POET implementation file over 1,400 lines is
 `workflow_panels.rs` (1,418). That is `RM-09`. Do not close Review Gate A.
 Do not start `AST-*`. `PFT-03` remains owner/captain selection.
+
+### `RM-09` - POET workflow panels decomposition
+
+**Complete** (2026-09-05). `browser/workflow_panels.rs` (1,418 lines at
+split) is now `browser/workflow_panels/` with the former public
+`build_*_view` names preserved.
+
+Source-to-destination map:
+
+| Old | New |
+|---|---|
+| Checkpoint tray + localStorage parse | `workflow_panels/checkpoint.rs` (306) |
+| Credential inspector | `workflow_panels/credentials.rs` (261) |
+| Context markup editor | `workflow_panels/markup.rs` (196) |
+| Provenance panel | `workflow_panels/provenance.rs` (178) |
+| Publication workflow | `workflow_panels/publication.rs` (223) |
+| Constituency manager | `workflow_panels/constituency.rs` (186) |
+| Capability / checkpoint / consent widgets | `workflow_panels/widgets.rs` (112) |
+| Public glob re-exports | `workflow_panels/mod.rs` (27) |
+
+Behavior, ABI, and allocation: unchanged. Callers can still use
+`browser::workflow_panels::build_*_view`. Re-exports are `pub use
+checkpoint::*` (and siblings), **not** `pub use … build_*_view`, so
+`GENERIC_DELEGATION_CEILING` stays 112.
+
+Honest unused-module note: live container routes already use
+`checkpoint_panel`, `publication_panel`, and `governance_workflow`. The
+`workflow_panels` builders remain a public API but are not on those
+routes; wasm-opt/LTO therefore drops their unique honesty strings. That
+was true before the split. This packet does not retarget live routes.
+
+Verification:
+
+- `cargo +stable check -p poet --lib`: passed
+- `cargo +stable test -p poet --lib workflow_panels::`: 2 passed
+- product integrity: 10 passed (ceiling held)
+- surface inventory: 1 passed
+- `RUSTUP_TOOLCHAIN=stable NO_COLOR=true trunk build`: success
+- scoped rustfmt (`--edition 2021`) on the new workflow-panel files: passed
+- interactive browser click-UAT was not re-run
+
+POET no longer has an implementation file over 1,400 lines. Files still
+over 1,200: `container_views_ext.rs` (1,387), `native_daemon.rs` (1,369),
+`command_palette/commands.rs` (1,231), `container_views.rs` (1,227). Do
+not convert the view cluster via `pub use … build_*_view`. Do not close
+Review Gate A. Do not start `AST-*`. `PFT-03` remains owner/captain
+selection. `native_daemon.rs` is `D4` and stays untouched until its
+transport contract is the accepted packet.
 
 ## Acceptance record
 
