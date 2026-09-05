@@ -51,7 +51,7 @@ plans, trackers, or historical ledgers until the project owner promotes them.
 - `docs/manuals/standards/vibescript-sprint-deltas.md`
 - `docs/manuals/standards/vibescript-complete-wishlist.md`
 
-| [`uat-office-graph-volume-vibe-host-0.1.md`](uat-office-graph-volume-vibe-host-0.1.md) | Vibe · chrome davinci/monet | UAT checklist — fill pass/fail log |
+| [`uat-office-graph-volume-vibe-host-0.1.md`](uat-office-graph-volume-vibe-host-0.1.md) | Vibe · chrome davinci/monet · Neo seam | UAT checklist — office:graph + volume + **lexicon held-gate** (tip `641c2460`; G-COORD held until pass) |
 
 WIP trackers stay here; settled contracts stay under `docs/manuals/standards/`.
 - [`poet-chrome-design-notes-davinci.md`](poet-chrome-design-notes-davinci.md)
