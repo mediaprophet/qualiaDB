@@ -159,20 +159,35 @@ Coder verbs (`capability.invoke`, SPARQL, quin.statement) stay out of novice/eve
 | `sdn:tools` | `sdn:place_webrtc` / `sdn:place_finance` | place | |
 | | `sdn:energy_governor` | gated | battery/solar telemetry |
 
-## Spec-deferred (not live registry)
+## Spec swarm (directory-backed `spec_tools/`)
 
-These exist as toolbox specs under `crates/poet/tool-chest/`. They are **not** implemented by registering hundreds of empty buttons.
+Named spec tools are now registered and dispatched from small per-toolbox files
+(plan: `docs/work-in-progress/POET_TOOLCHEST_SPEC_SWARM_PLAN_2026-09-05.md`).
+No monolith. Each file stays under ~400 lines.
 
-| Spec | Claimed size | Notes |
-|------|--------------|--------|
-| `TOOLBOX_HYPERMEDIA_SPEC.md` (+ `_2`) | 7 toolboxes · 52 chains · ~339 tools | image-editing, audio-production, video, 3D, hypermedia, portals, productions |
-| `TOOLBOX_CODE_SPEC.md` | 3 toolboxes · 15 chains · ~105 tools | overlaps live `code` / `ai` / `spatial` — remaining chains are spec |
-| `TOOLBOX_INVESTIGATION_SPEC.md` | 2 toolboxes · 11 chains · ~97 tools | not registered |
-| `TOOLBOX_RESEARCH_SPEC.md` | 1 toolbox · 8 chains · ~75 tools | not registered |
-| `TOOLBOX_EPISTEMICS_SPEC.md` | 1 toolbox · 7 chains · ~58 tools | live `epistemic` is the tagging slice only |
-| `TOOL_CHEST_SPEC.md` examples | `graph`, `finance`, `latex` as named boxes | graph lives under `office:graph`; finance place is `sdn:place_finance`; latex is a container, not a toolbox |
+| Module | Rows (approx) | Contract mix |
+|--------|---------------|--------------|
+| office extras | 24 | Local / Place |
+| image | 55 | Local / Live (vision blur, histogram) |
+| audio | 58 | Local / Gated |
+| video | 58 | Local / Live (Render.scene, Animation.*) |
+| spatial3d | 52 | Local / Live (camera, scene) |
+| portals | 36 | Local / Live |
+| productions | 43 | Local / Gated (DMX desk) |
+| hypermedia | 37 | Local / Live (Pulse.*) |
+| code extras | 35 | Local / Live (N3, SHACL) |
+| ai extras | 31 | Local / Live |
+| spatial extras | 41 | Local / Live |
+| epistemics extras | 58 | Local / Live (Inference.*) |
+| investigation | 98 | Local / Live (causal) |
+| research | 75 | Local |
+| **spec total** | **~700** | |
 
-Next implementation packets take **one spec toolbox or one live gated tool** at a time, with a live `ALL_BOUND` id or an honest local contract. Do not bulk-register spec rows.
+## Remaining depth (not missing buttons)
+
+Named spec tools are registered. Next packets deepen Local/Live contracts
+(real canvas, DAW, lighting desk) without growing a monolith. Health clinical
+calculators stay parked on Review Gate A.
 
 ## Parked (do not ungate here)
 
@@ -185,5 +200,6 @@ Next implementation packets take **one spec toolbox or one live gated tool** at 
 
 ## Change log
 
+- 2026-09-05: Spec swarm plan (`docs/work-in-progress/POET_TOOLCHEST_SPEC_SWARM_PLAN_2026-09-05.md`): directory-backed `spec_tools/` (no monoliths); office extras landed; remaining toolboxes filled by parallel lanes.
 - 2026-09-05: Human copy, hover tooltips, Getting started / Everyday / Workshop mode, ARIA + agent catalog.
 - 2026-09-05: Tracker created from live registry. Empty chains filled (brushes, palette, viewport, grid, clinical-gated, repl, copilot, pulse, fiduciary). `sheet:import`, `image:heatmap`, `code:quin_statement` moved from gated to local/live.

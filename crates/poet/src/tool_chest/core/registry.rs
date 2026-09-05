@@ -69,6 +69,11 @@ impl Registry {
         self.toolboxes.iter().find(|t| t.metadata().id == id)
     }
 
+    /// Mutable toolbox lookup (spec swarm merge).
+    pub fn toolbox_mut(&mut self, id: &str) -> Option<&mut Toolbox> {
+        self.toolboxes.iter_mut().find(|t| t.metadata().id == id)
+    }
+
     /// All registered manifold seeds.
     pub fn manifolds(&self) -> &[ManifoldSeed] {
         &self.manifolds

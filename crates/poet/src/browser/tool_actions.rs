@@ -62,6 +62,7 @@ fn has_dispatch_policy(tool_id: &str) -> bool {
         || has_live_invoke(tool_id)
         || requires_daemon(tool_id)
         || unavailable_reason(tool_id).is_some()
+        || super::spec_tools::lookup(tool_id).is_some()
 }
 
 /// A structural prerequisite that the current UI cannot collect safely yet.
@@ -97,7 +98,7 @@ pub fn unavailable_reason(tool_id: &str) -> Option<&'static str> {
         "ai:co_author" => Some(
             "Co-authoring requires a selected document, prompt scope, and an activated local model.",
         ),
-        _ => None,
+        _ => super::spec_tools::lookup(tool_id).and_then(super::spec_tools::gated_reason),
     }
 }
 
@@ -596,15 +597,21 @@ pub fn dispatch(document: &Document, tool_id: &str, label: &str, action: ActionT
         "ai:grounding" => super::chain_actions::run_grounding(document, label),
         "comm:pulse_presence" => super::chain_actions::run_pulse_presence(document, label),
         "rights:deontic_obligate" => super::chain_actions::run_deontic_obligate(document, label),
-        _ => super::interactions::show_tool_status(
-            document,
-            label,
-            &format!(
-                "No executable contract is registered for {} action `{}`.",
-                action, tool_id
-            ),
-            "unavailable",
-        ),
+        _ => {
+            if let Some(spec) = super::spec_tools::lookup(tool_id) {
+                super::spec_tools::run(document, spec, label);
+            } else {
+                super::interactions::show_tool_status(
+                    document,
+                    label,
+                    &format!(
+                        "No executable contract is registered for {} action `{}`.",
+                        action, tool_id
+                    ),
+                    "unavailable",
+                );
+            }
+        }
     }
 }
 

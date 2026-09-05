@@ -20,7 +20,8 @@
 | [`poet-container-manifold-link-shapes.md`](poet-container-manifold-link-shapes.md) | Marvin | Container · Manifold · Link · aspects |
 | [`poet-aspect-coverage.md`](poet-aspect-coverage.md) | davinci | Layout/Stage/Timeline aspect coverage (not twins, not planes) |
 | [`webizen-chrome-aspect-extract.md`](webizen-chrome-aspect-extract.md) | davinci | Webizen Desktop chrome/aspect extract (Stage 8; no Solid) |
-| [`poet-toolchest-implementation-tracker.md`](poet-toolchest-implementation-tracker.md) | Neo · davinci | Live toolbox/chain/tool status; spec-deferred listed not bulk-registered |
+| [`poet-toolchest-implementation-tracker.md`](poet-toolchest-implementation-tracker.md) | Neo · davinci | Live toolbox/chain/tool status; spec swarm in `spec_tools/` |
+| [`../../work-in-progress/POET_TOOLCHEST_SPEC_SWARM_PLAN_2026-09-05.md`](../../work-in-progress/POET_TOOLCHEST_SPEC_SWARM_PLAN_2026-09-05.md) | Neo | Swarm plan: no monoliths; one toolbox file each |
 | [`g-coord-coordinate-system-shapes.md`](g-coord-coordinate-system-shapes.md) | Marvin | G-COORD v0 shapes; bind gated |
 | [`vibe-catalog-honesty.md`](vibe-catalog-honesty.md) | Vibe | ALL_BOUND remaps, dual-VC/QISP/ledger, preview handles |
 | [`poet-motion-contract.md`](poet-motion-contract.md) | monet | Named beats, gated ≠ broken, volume states |

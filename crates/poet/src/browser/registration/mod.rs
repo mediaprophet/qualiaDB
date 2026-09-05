@@ -80,6 +80,7 @@ pub fn build_registry() -> Registry {
     register_code_toolbox(&mut reg);
     register_ai_toolbox(&mut reg);
     register_sdn_toolbox(&mut reg);
+    crate::browser::spec_tools::register_all(&mut reg);
 
     for seed in manifolds::all_seeds() {
         reg.register_manifold(seed);

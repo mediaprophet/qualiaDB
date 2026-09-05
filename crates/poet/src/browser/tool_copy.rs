@@ -14,6 +14,13 @@ pub struct Presentation {
 }
 
 pub fn presentation(id: &str, fallback_label: &str, fallback_tooltip: &str) -> Presentation {
+    if let Some(spec) = super::spec_tools::lookup(id) {
+        return Presentation {
+            label: spec.label.into(),
+            tooltip: spec.tooltip.into(),
+            min_proficiency: spec.proficiency,
+        };
+    }
     if let Some(copy) = named(id) {
         return copy;
     }

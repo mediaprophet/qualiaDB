@@ -61,6 +61,18 @@ impl ToolChain {
             .find(|t| t.metadata().id == id)
             .map(|b| b.as_ref())
     }
+
+    /// Append a tool (spec swarm merge). Skip if the id is already present.
+    pub fn add_tool(&mut self, tool: Box<dyn Tool>) {
+        if self
+            .tools
+            .iter()
+            .any(|existing| existing.metadata().id == tool.metadata().id)
+        {
+            return;
+        }
+        self.tools.push(tool);
+    }
 }
 
 impl fmt::Debug for ToolChain {

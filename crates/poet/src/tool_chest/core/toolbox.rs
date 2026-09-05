@@ -74,6 +74,16 @@ impl Toolbox {
     pub fn chain(&self, id: &str) -> Option<&ToolChain> {
         self.chains.iter().find(|c| c.metadata().id == id)
     }
+
+    /// Append a chain (spec swarm merge).
+    pub fn add_chain(&mut self, chain: ToolChain) {
+        self.chains.push(chain);
+    }
+
+    /// Mutable chain lookup (spec swarm merge).
+    pub fn chain_mut(&mut self, id: &str) -> Option<&mut ToolChain> {
+        self.chains.iter_mut().find(|c| c.metadata().id == id)
+    }
 }
 
 impl fmt::Debug for Toolbox {
