@@ -51,7 +51,7 @@ cargo test -p vibe --lib diagnose
 cargo test -p vibe --test sprint_b_fixtures
 ```
 
-`--lib` also needs `crates/vibe/fixtures/vocab/clinic.n3` (pre-existing `include_bytes` in `check.rs`; restored from the in-module clinic chunk so lib tests compile).
+`--lib` compile of `check.rs` vocab tests wants `fixtures/vocab/clinic.n3`. `*.n3` is gitignored; copy the clinic chunk from `vocab/mod.rs` locally if you need those tests. Lexicon fixtures themselves are JSON / `.vibe`.
 
 ## Out of scope
 
