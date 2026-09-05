@@ -36,8 +36,8 @@
 ## D — Lexicon held-gate / bay (G-LEXICON-0)
 
 **Click-path (tip ≥ this hygiene):**
-1. **Script / Code IDE** → Zone D studio bay tabs → **Catalog · Lexicon** (not the search-workbench Catalog facet).
-2. Or open a **VibeScript console** container — lexicon bay mounts as peer under the editor (title **Catalog · Lexicon packs**).
+1. Place a **code** container (Code IDE & Vibe REPL / Script) → full IDE habitat → Zone D → **Catalog · Lexicon**.
+2. Lightweight vibe-console surfaces: top tabs **Script** | **Catalog · Lexicon** (same bay / same bind).
 3. Held copy must read **held / not yet** + why “open lexicon pack”. A red honesty **missing** chip elsewhere is *not* the lexicon gate.
 4. Header stamp must show **`0.0.36-dev`** (`crate::CRATE_STAMP`).
 

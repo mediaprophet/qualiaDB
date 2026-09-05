@@ -8,6 +8,7 @@ plans, trackers, or historical ledgers until the project owner promotes them.
 
 - [`g-lexicon-0-slice1.md`](./g-lexicon-0-slice1.md) — G-LEXICON-0 slice 1: `GraphDatabase.lexicon_manifest` (Neo); held/not-yet diagnose; no in-binary WordNet
 - [`g-lexicon-0-bay-chrome.md`](./g-lexicon-0-bay-chrome.md) — G-LEXICON-0 Poet bay chrome: held-gate + living/artifact/machine chips on `lexicon_manifest` (davinci/monet)
+- [`uat-lexicon-catalog-click-path-davinci.md`](./uat-lexicon-catalog-click-path-davinci.md) — davinci UAT: Zone D Catalog click-path (Neo wired `build_ide_view` + console tabs)
 - [`g-lexicon-0-diagnose-fixtures.md`](./g-lexicon-0-diagnose-fixtures.md) — G-LEXICON-0 Vibe diagnose/lexicon pin fixtures (held E300 · pin · alias round-trip · living upgrade)
 - Shape (standards): [`lexicon-pack-shape-G-LEXICON-0.md`](../manuals/standards/lexicon-pack-shape-G-LEXICON-0.md) — Marvin pack framing for `lexicon_manifest`
 - [`POET_RECONCILIATION_2026-09-05.md`](POET_RECONCILIATION_2026-09-05.md)

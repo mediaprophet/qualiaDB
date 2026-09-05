@@ -8,6 +8,7 @@ use web_sys::{Document, Element};
 use super::container_inline_views::{
     build_gis_map_view, build_media_3d_view, build_vibescript_console,
 };
+use super::ide::{build_ide_view, IdeState};
 use super::specialist_persist;
 
 /// Build a single container node on the canvas.
@@ -897,8 +898,11 @@ pub fn build_container(document: &Document, container: &SeedContainer) -> Elemen
             body.append_child(&build_media_3d_view(document)).unwrap();
         }
         "code" => {
-            body.append_child(&build_vibescript_console(document))
-                .unwrap();
+            // Full Code IDE habitat (Zone D Catalog · Lexicon) for UAT click-path.
+            // Lightweight Script cells still use vibe-console via other entry points.
+            let ide = build_ide_view(document, &IdeState::default());
+            ide.set_attribute("data-code-habitat", "ide").ok();
+            body.append_child(&ide).unwrap();
         }
         "doc" => {
             body.append_child(&super::container_views::build_doc_view(document))

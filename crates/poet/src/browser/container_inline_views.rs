@@ -292,6 +292,32 @@ pub fn build_vibescript_console(document: &Document) -> Element {
     console.set_class_name("vibe-console");
     super::surface_aspects::mark(&console, "entrance");
 
+    // Peer tabs: Script | Catalog · Lexicon (same bind as Zone D IDE Catalog).
+    let tabs = document.create_element("div").unwrap();
+    tabs.set_class_name("studio-bay-tabs vibe-console-tabs");
+    tabs.set_attribute("role", "tablist").ok();
+    tabs.set_attribute("aria-label", "Script and Catalog · Lexicon").ok();
+
+    let script_tab = document.create_element("button").unwrap();
+    script_tab.set_class_name("studio-bay-tab is-active");
+    script_tab.set_attribute("type", "button").ok();
+    script_tab.set_attribute("data-bay-tab", "script").ok();
+    script_tab.set_attribute("aria-selected", "true").ok();
+    script_tab.set_text_content(Some("Script"));
+    tabs.append_child(&script_tab).unwrap();
+
+    let catalog_tab = document.create_element("button").unwrap();
+    catalog_tab.set_class_name("studio-bay-tab");
+    catalog_tab.set_attribute("type", "button").ok();
+    catalog_tab.set_attribute("data-bay-tab", "catalog").ok();
+    catalog_tab.set_attribute("aria-selected", "false").ok();
+    catalog_tab.set_text_content(Some("Catalog · Lexicon"));
+    tabs.append_child(&catalog_tab).unwrap();
+    console.append_child(&tabs).unwrap();
+
+    let script_pane = document.create_element("div").unwrap();
+    script_pane.set_attribute("data-bay-pane", "script").ok();
+
     let toolbar = document.create_element("div").unwrap();
     toolbar.set_class_name("vibe-toolbar");
     let run_btn = document.create_element("button").unwrap();
@@ -305,7 +331,7 @@ pub fn build_vibescript_console(document: &Document) -> Element {
     diag_btn.set_class_name("vibe-run-btn");
     diag_btn.set_text_content(Some("\u{1F50D} Diagnose"));
     toolbar.append_child(&diag_btn).unwrap();
-    console.append_child(&toolbar).unwrap();
+    script_pane.append_child(&toolbar).unwrap();
 
     let editor = document.create_element("div").unwrap();
     editor.set_class_name("vibe-editor");
@@ -325,19 +351,26 @@ pub fn build_vibescript_console(document: &Document) -> Element {
          capability.invoke(\"Poet.manifold_create\", { label: \"Camping sites\", social: true })\n\
          capability.invoke(\"Poet.participant_invite\", { did: \"did:qualia:alice\", role: \"member\" })\n",
     ));
-    console.append_child(&editor).unwrap();
+    script_pane.append_child(&editor).unwrap();
 
     let output = document.create_element("div").unwrap();
     output.set_class_name("vibe-output");
     output.set_text_content(Some("No VibeScript has been executed in this container."));
-    console.append_child(&output).unwrap();
+    script_pane.append_child(&output).unwrap();
 
     wire_vibescript_action(&run_btn, &editor, &output, false);
     wire_diagnose_action(&diag_btn, &editor, &output);
+    console.append_child(&script_pane).unwrap();
 
     let catalog_peer = super::lexicon_bay::build_lexicon_bay(document);
     catalog_peer.set_attribute("data-bay-pane", "catalog").ok();
+    catalog_peer.set_attribute("hidden", "").ok();
     console.append_child(&catalog_peer).unwrap();
+
+    super::lexicon_bay::wire_bay_tabs(
+        &tabs,
+        &[("script", &script_pane), ("catalog", &catalog_peer)],
+    );
 
     console
 }

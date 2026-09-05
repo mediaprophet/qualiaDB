@@ -690,3 +690,14 @@ button[disabled]:hover,
   padding: 4px 0 6px;
   letter-spacing: 0.02em;
 }
+
+.vibe-console-tabs {
+  display: flex;
+  gap: 12px;
+  padding: 6px 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  font-size: 11px;
+}
+.vibe-console [data-bay-pane="catalog"][hidden] {
+  display: none !important;
+}
