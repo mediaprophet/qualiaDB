@@ -45,10 +45,10 @@ pub mod browser_10d;
 pub mod native_bindings;
 pub mod poet;
 pub mod poet_render;
-pub mod vibe_host;
 pub mod semantic_logic;
 pub mod telemetry;
 pub mod updater;
+pub mod vibe_host;
 pub mod vision_audio;
 
 // ── Shared types & helpers ────────────────────────────────────────────────────

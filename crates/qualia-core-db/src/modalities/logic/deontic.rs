@@ -518,7 +518,10 @@ const OBLIGATE_HASHES: [u64; 4] = [
 /// recognised `values:` operator picks the opcode; an unrecognised predicate
 /// falls back to the rule-type default (Strict/Linear => obligation, Defeasible =>
 /// permission), preserving behaviour for non-`values` contract predicates.
-fn opcode_from_predicate_hash(pred_hash: u64, rule_type: crate::modalities::logic::n3_parser::RuleType) -> (u8, bool) {
+fn opcode_from_predicate_hash(
+    pred_hash: u64,
+    rule_type: crate::modalities::logic::n3_parser::RuleType,
+) -> (u8, bool) {
     use crate::modalities::logic::n3_parser::RuleType;
     if matches!(rule_type, RuleType::Defeater) {
         return (OP_PERMIT, true);

@@ -107,9 +107,7 @@ fn inventory_matches_the_live_delegation_audit() {
     ] {
         let surface = surfaces
             .iter()
-            .find(|surface| {
-                surface["route_or_builder"]["surface_module"].as_str() == Some(file)
-            })
+            .find(|surface| surface["route_or_builder"]["surface_module"].as_str() == Some(file))
             .expect("restored exemplar in inventory");
         assert_eq!(surface["generic_delegation"], false);
         assert_eq!(surface["status"], "partial");

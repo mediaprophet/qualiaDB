@@ -225,7 +225,7 @@ pub fn rows() -> &'static [SpecTool] {
             ToolKind::RunAction,
             ActionType::Annotate,
             Proficiency::Intermediate,
-            Contract::Local,
+            Contract::Gated("Select writing and choose the term meaning first."),
         ),
         row(
             "context-markup",
@@ -237,7 +237,7 @@ pub fn rows() -> &'static [SpecTool] {
             ToolKind::RunAction,
             ActionType::Annotate,
             Proficiency::Intermediate,
-            Contract::Local,
+            Contract::Gated("Select a name and choose its entity record first."),
         ),
         row(
             "context-markup",
@@ -249,7 +249,7 @@ pub fn rows() -> &'static [SpecTool] {
             ToolKind::RunAction,
             ActionType::Annotate,
             Proficiency::Intermediate,
-            Contract::Local,
+            Contract::Gated("Select a claim and attach at least one source first."),
         ),
         row(
             "context-markup",
@@ -261,7 +261,7 @@ pub fn rows() -> &'static [SpecTool] {
             ToolKind::RunAction,
             ActionType::Annotate,
             Proficiency::Novice,
-            Contract::Local,
+            Contract::Gated("Select the quotation and identify its speaker first."),
         ),
         row(
             "media-embed",

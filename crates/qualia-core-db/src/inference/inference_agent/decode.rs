@@ -1646,7 +1646,10 @@ impl LocalLlmAgent {
             return (text, prov, tokens, semantic_quin);
         }
 
-        #[cfg(all(target_arch = "wasm32", not(any(feature = "portal", feature = "wasm-llm"))))]
+        #[cfg(all(
+            target_arch = "wasm32",
+            not(any(feature = "portal", feature = "wasm-llm"))
+        ))]
         {
             if crate::extension_bus::wasm_bus::is_connected() {
                 if let Some(cb) = on_token {

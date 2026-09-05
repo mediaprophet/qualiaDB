@@ -19,6 +19,7 @@ use crate::{NQuin, QUINS_PER_BLOCK};
 #[cfg(not(target_arch = "wasm32"))]
 use std::path::Path;
 
+#[allow(dead_code)]
 fn wasm_denied(span: Span, id: &str) -> Diagnostic {
     Diagnostic::new(
         DiagCode::E300,
@@ -29,11 +30,7 @@ fn wasm_denied(span: Span, id: &str) -> Diagnostic {
 
 /// Open a `.q42` at `path`. Optional `load` (default true) replaces the
 /// resident graph with the volume's quins and detaches from the daemon.
-pub fn open(
-    snap: &mut PoetSnapshot,
-    args_v: &Value,
-    span: Span,
-) -> Result<Value, Diagnostic> {
+pub fn open(snap: &mut PoetSnapshot, args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     #[cfg(target_arch = "wasm32")]
     {
         let _ = (snap, args_v);
@@ -47,11 +44,7 @@ pub fn open(
 
 /// Commit resident quins (committed ∪ staged) to `path` as a unified v3 `.q42`.
 /// `sanctuary` defaults true (Poet sanctuary save). Empty graphs are rejected.
-pub fn commit(
-    snap: &mut PoetSnapshot,
-    args_v: &Value,
-    span: Span,
-) -> Result<Value, Diagnostic> {
+pub fn commit(snap: &mut PoetSnapshot, args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     #[cfg(target_arch = "wasm32")]
     {
         let _ = (snap, args_v);
@@ -64,23 +57,21 @@ pub fn commit(
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-fn open_native(
-    snap: &mut PoetSnapshot,
-    args_v: &Value,
-    span: Span,
-) -> Result<Value, Diagnostic> {
+fn open_native(snap: &mut PoetSnapshot, args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let path = args::as_str(args_v)
         .or_else(|| args::rec_str(args_v, "path"))
         .ok_or_else(|| args::bad(span, "GraphDatabase.volume_open needs a path string"))?;
     let load = args::rec_bool(args_v, "load").unwrap_or(true);
 
-    let volume = Q42Volume::open(Path::new(path)).map_err(|e| {
-        args::bad(span, format!("GraphDatabase.volume_open failed: {e}"))
-    })?;
+    let volume = Q42Volume::open(Path::new(path))
+        .map_err(|e| args::bad(span, format!("GraphDatabase.volume_open failed: {e}")))?;
     let verdict = classify_q42_volume(&volume, PublicationIntent::Default);
     let header = volume.header();
     let sanctuary_flag = header.flags & FLAG_SANCTUARY != 0;
-    let quin_count = if volume.volume_manifest().map_err(|e| args::bad(span, e.to_string()))?.is_some()
+    let quin_count = if volume
+        .volume_manifest()
+        .map_err(|e| args::bad(span, e.to_string()))?
+        .is_some()
     {
         0u64
     } else {
@@ -91,7 +82,11 @@ fn open_native(
     };
 
     if load {
-        if volume.volume_manifest().map_err(|e| args::bad(span, e.to_string()))?.is_some() {
+        if volume
+            .volume_manifest()
+            .map_err(|e| args::bad(span, e.to_string()))?
+            .is_some()
+        {
             return Err(args::bad(
                 span,
                 "GraphDatabase.volume_open: logical multi-segment roots cannot load into the resident graph; open a leaf segment",
@@ -110,21 +105,33 @@ fn open_native(
     Ok(args::record([
         ("path", Value::String(path.into())),
         ("loaded", Value::Bool(load)),
-        ("quin_count", Value::U64(if load {
-            snap.committed.len() as u64
-        } else {
-            quin_count
-        })),
+        (
+            "quin_count",
+            Value::U64(if load {
+                snap.committed.len() as u64
+            } else {
+                quin_count
+            }),
+        ),
         ("block_count", Value::U64(volume.block_count())),
         ("version", Value::U64(header.version as u64)),
         ("sanctuary_flag", Value::Bool(sanctuary_flag)),
         ("class", Value::String(verdict.class.as_str().into())),
-        ("transport", Value::String(verdict.transport.as_str().into())),
-        ("may_emit_public_magnet", Value::Bool(verdict.may_emit_public_magnet)),
-        ("fail_closed", Value::Bool(matches!(
-            verdict.class,
-            Q42PublicationClass::Sanctuary | Q42PublicationClass::MixedFailClosed
-        ))),
+        (
+            "transport",
+            Value::String(verdict.transport.as_str().into()),
+        ),
+        (
+            "may_emit_public_magnet",
+            Value::Bool(verdict.may_emit_public_magnet),
+        ),
+        (
+            "fail_closed",
+            Value::Bool(matches!(
+                verdict.class,
+                Q42PublicationClass::Sanctuary | Q42PublicationClass::MixedFailClosed
+            )),
+        ),
         ("reason", Value::String(verdict.reason)),
         ("honesty", Value::String(snap.honesty().into())),
         ("revision", Value::U64(snap.revision)),
@@ -132,11 +139,7 @@ fn open_native(
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-fn commit_native(
-    snap: &mut PoetSnapshot,
-    args_v: &Value,
-    span: Span,
-) -> Result<Value, Diagnostic> {
+fn commit_native(snap: &mut PoetSnapshot, args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let path = args::as_str(args_v)
         .or_else(|| args::rec_str(args_v, "path"))
         .ok_or_else(|| args::bad(span, "GraphDatabase.volume_commit needs a path string"))?;
@@ -153,9 +156,8 @@ fn commit_native(
     }
 
     let written = if sanctuary {
-        write_sanctuary_volume(Path::new(path), &snap.committed, author_did).map_err(|e| {
-            args::bad(span, format!("GraphDatabase.volume_commit failed: {e}"))
-        })?
+        write_sanctuary_volume(Path::new(path), &snap.committed, author_did)
+            .map_err(|e| args::bad(span, format!("GraphDatabase.volume_commit failed: {e}")))?
     } else {
         write_sorted_quins_volume_with_author(Path::new(path), &snap.committed, author_did)
             .map_err(|e| args::bad(span, format!("GraphDatabase.volume_commit failed: {e}")))?
@@ -165,7 +167,10 @@ fn commit_native(
 
     // Re-open to classify what we wrote (fail-closed honesty for callers).
     let volume = Q42Volume::open(Path::new(path)).map_err(|e| {
-        args::bad(span, format!("GraphDatabase.volume_commit verify open: {e}"))
+        args::bad(
+            span,
+            format!("GraphDatabase.volume_commit verify open: {e}"),
+        )
     })?;
     let verdict = classify_q42_volume(&volume, PublicationIntent::Default);
     let sanctuary_flag = volume.header().flags & FLAG_SANCTUARY != 0;
@@ -176,8 +181,14 @@ fn commit_native(
         ("sanctuary", Value::Bool(sanctuary)),
         ("sanctuary_flag", Value::Bool(sanctuary_flag)),
         ("class", Value::String(verdict.class.as_str().into())),
-        ("transport", Value::String(verdict.transport.as_str().into())),
-        ("may_emit_public_magnet", Value::Bool(verdict.may_emit_public_magnet)),
+        (
+            "transport",
+            Value::String(verdict.transport.as_str().into()),
+        ),
+        (
+            "may_emit_public_magnet",
+            Value::Bool(verdict.may_emit_public_magnet),
+        ),
         ("fail_closed", Value::Bool(true)),
         ("reason", Value::String(verdict.reason)),
         ("revision", Value::U64(snap.revision)),
@@ -186,11 +197,7 @@ fn commit_native(
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-fn write_sanctuary_volume(
-    path: &Path,
-    quins: &[NQuin],
-    author_did: u64,
-) -> std::io::Result<usize> {
+fn write_sanctuary_volume(path: &Path, quins: &[NQuin], author_did: u64) -> std::io::Result<usize> {
     if quins.is_empty() {
         return Err(std::io::Error::new(
             std::io::ErrorKind::InvalidInput,

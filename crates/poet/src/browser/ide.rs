@@ -298,26 +298,67 @@ impl IdeState {
         }
     }
 
-    /// Evaluate an expression in the Vibe REPL.
+    /// Evaluate an expression in the Vibe REPL using the live VibeScript engine.
     pub fn eval_repl(&mut self, expr: &str) -> IdeReplEntry {
         let trimmed = expr.trim();
-        let (resp, gas) = if trimmed.starts_with("let ") {
-            ("Variable bound in local workspace context".to_string(), 15)
-        } else if trimmed.contains("graph::") {
-            (
-                "[\"did:q42:node:alpha\", \"did:q42:node:beta\"]".to_string(),
-                85,
-            )
+        let normalized = trimmed.replace("::", ".");
+        let src = if normalized.starts_with('=') {
+            normalized
         } else {
-            (format!("Evaluated: {}", trimmed), 10)
+            format!("={normalized}")
+        };
+
+        let mut host = vibe::LocalHost::default();
+        let mut env = vibe::Env::default();
+
+        // Replay previous non-error definitions to maintain session state.
+        for prev in &self.repl_history {
+            if !prev.is_error {
+                let prev_norm = prev.prompt.trim().replace("::", ".");
+                let prev_src = if prev_norm.starts_with('=') {
+                    prev_norm
+                } else {
+                    format!("={prev_norm}")
+                };
+                let _ = vibe::eval_cell(&prev_src, &mut host, &mut env);
+            }
+        }
+
+        let (resp, gas, is_error) = match vibe::parse_cell(&src) {
+            Ok(expr) => {
+                let mut engine = vibe::Engine::new(&mut host, vibe::Budget::default());
+                match engine.eval_expr(&expr, &mut env) {
+                    Ok(val) => {
+                        let text = match &val {
+                            vibe::Value::Null => "null".to_string(),
+                            vibe::Value::Bool(b) => b.to_string(),
+                            vibe::Value::I64(n) => n.to_string(),
+                            vibe::Value::U64(n) => n.to_string(),
+                            vibe::Value::F64(n) => n.to_string(),
+                            vibe::Value::String(s) => format!("\"{s}\""),
+                            vibe::Value::Iri(s) => format!("<{s}>"),
+                            _ => format!("{val}"),
+                        };
+                        (text, 25, false)
+                    }
+                    Err(diag) => {
+                        let err_msg = format!("Error [{:?}]: {}", diag.code, diag.message);
+                        (err_msg, 5, true)
+                    }
+                }
+            }
+            Err(diag) => {
+                let err_msg = format!("Parse Error [{:?}]: {}", diag.code, diag.message);
+                (err_msg, 5, true)
+            }
         };
 
         let entry = IdeReplEntry {
             prompt: expr.to_string(),
             response: resp,
-            elapsed_us: 45,
+            elapsed_us: 65,
             gas_consumed: gas,
-            is_error: false,
+            is_error,
         };
         self.total_gas_consumed += gas;
         self.repl_history.push(entry.clone());
@@ -625,10 +666,15 @@ mod tests {
     fn test_ide_repl_eval() {
         let mut state = IdeState::default();
         let initial_gas = state.total_gas_consumed;
-        let entry = state.eval_repl("graph::query(\"...\")");
+        let entry = state.eval_repl("1 + 2 * 3");
         assert!(!entry.is_error);
+        assert_eq!(entry.response, "7");
         assert!(entry.gas_consumed > 0);
         assert_eq!(state.total_gas_consumed, initial_gas + entry.gas_consumed);
+
+        // Test capability evaluation through REPL
+        let cap_entry = state.eval_repl("Animation.orbit_spin(0.5)");
+        assert!(!cap_entry.is_error);
     }
 
     #[test]

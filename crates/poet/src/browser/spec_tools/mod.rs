@@ -3,21 +3,37 @@
 //! `mod.rs` only routes. Do not add toolbox rows here.
 
 mod ai;
+mod ai_actions;
 mod audio;
+mod audio_actions;
 mod code;
+mod code_actions;
 mod dispatch;
+mod epistemic_actions;
 mod epistemics;
 mod hypermedia;
+mod hypermedia_actions;
 mod image;
+mod image_actions;
 mod investigation;
+mod investigation_actions;
+mod live_args;
+mod local_effects;
+mod media_actions;
 mod office;
+mod office_actions;
 mod portals;
+mod portals_actions;
 mod productions;
+mod productions_actions;
 mod research;
+mod research_actions;
 mod row;
 mod spatial;
 mod spatial3d;
+mod spatial3d_actions;
 mod video;
+mod video_actions;
 
 pub use dispatch::{gated_reason, run};
 pub use row::SpecTool;
@@ -111,17 +127,22 @@ fn merge_row(reg: &mut Registry, spec: &SpecTool) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::browser::tool_proficiency::Proficiency;
+    use crate::tool_chest::core::tool::ToolKind;
+    use std::collections::HashSet;
 
     #[test]
-    fn office_spec_rows_have_human_copy() {
-        for row in office::rows() {
+    fn every_row_has_human_copy() {
+        for row in all_rows() {
             let blob = format!("{} {}", row.label, row.tooltip).to_lowercase();
-            assert!(!blob.contains("capability.invoke"), "{}", row.id);
-            assert!(!blob.contains("sparql"), "{}", row.id);
-            assert!(!row.label.is_empty());
-            assert!(!row.tooltip.is_empty());
+            assert!(!row.label.trim().is_empty(), "{} has no label", row.id);
+            assert!(!row.tooltip.trim().is_empty(), "{} has no tooltip", row.id);
+            if row.proficiency != Proficiency::Expert {
+                assert!(!blob.contains("capability.invoke"), "{}", row.id);
+                assert!(!blob.contains("sparql"), "{}", row.id);
+                assert!(!blob.contains("quin.statement"), "{}", row.id);
+            }
         }
-        assert!(office::rows().len() >= 20);
     }
 
     #[test]
@@ -130,11 +151,35 @@ mod tests {
     }
 
     #[test]
-    fn swarm_landed_hundreds_of_spec_rows() {
-        assert!(
-            all_rows().len() >= 600,
-            "spec swarm under-filled: {}",
-            all_rows().len()
-        );
+    fn row_count_matches_named_spec_tools() {
+        assert_eq!(all_rows().len(), 702, "named spec-tool inventory drifted");
+    }
+
+    #[test]
+    fn ids_are_unique_and_contracts_are_well_formed() {
+        let mut ids = HashSet::new();
+        for row in all_rows() {
+            assert!(ids.insert(row.id), "duplicate spec-tool id: {}", row.id);
+            assert!(!row.toolbox.trim().is_empty(), "{} has no toolbox", row.id);
+            assert!(!row.chain.trim().is_empty(), "{} has no chain", row.id);
+            match row.contract {
+                row::Contract::Place(container_type) => {
+                    assert_eq!(row.kind, ToolKind::PlaceContainer, "{}", row.id);
+                    assert!(!container_type.trim().is_empty(), "{}", row.id);
+                }
+                row::Contract::Live(capability) => {
+                    assert!(capability.contains('.'), "{}: {capability}", row.id);
+                    assert!(
+                        live_args::supports(capability),
+                        "{} has no checked live argument adapter for {capability}",
+                        row.id
+                    );
+                }
+                row::Contract::Gated(reason) | row::Contract::Parked(reason) => {
+                    assert!(!reason.trim().is_empty(), "{} has no gate reason", row.id);
+                }
+                row::Contract::Local => {}
+            }
+        }
     }
 }

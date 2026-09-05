@@ -11,8 +11,8 @@ use wasm_bindgen::prelude::*;
 use vibe::{
     bytecode::{self, compile, compile_expr, decode_chunk, encode_chunk, Vm},
     check_cell, check_program, diagnose, eval_cell, load_program, parse_cell, parse_program,
-    Budget, DiagCode, Diagnostic, Engine, Env, HOST_VERSION, LANGUAGE_VERSION, LocalHost,
-    Span, Value,
+    Budget, DiagCode, Diagnostic, Engine, Env, LocalHost, Span, Value, HOST_VERSION,
+    LANGUAGE_VERSION,
 };
 
 // ── helpers ────────────────────────────────────────────────────────

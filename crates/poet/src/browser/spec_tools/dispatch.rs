@@ -43,21 +43,67 @@ fn apply_local(document: &Document, tool: &SpecTool, label: &str) {
         );
         return;
     };
+    if super::media_actions::run(document, &container, tool.id) {
+        return;
+    }
+    let result = if let Some(result) = super::office_actions::run(document, &container, tool.id) {
+        result.map(|()| true)
+    } else if let Some(result) = super::epistemic_actions::run(document, &container, tool.id) {
+        result.map(|()| true)
+    } else if let Some(result) = super::ai_actions::run(document, &container, tool.id) {
+        result.map(|()| true)
+    } else if let Some(result) = super::investigation_actions::run(document, &container, tool.id) {
+        result.map(|()| true)
+    } else if let Some(result) = super::research_actions::run(document, &container, tool.id) {
+        result.map(|()| true)
+    } else if let Some(result) = super::code_actions::run(document, &container, tool.id) {
+        result.map(|()| true)
+    } else if let Some(result) = super::image_actions::run(document, &container, tool.id) {
+        result.map(|()| true)
+    } else if let Some(result) = super::video_actions::run(document, &container, tool.id) {
+        result.map(|()| true)
+    } else if let Some(result) = super::audio_actions::run(document, &container, tool.id) {
+        result.map(|()| true)
+    } else if let Some(result) = super::spatial3d_actions::run(document, &container, tool.id) {
+        result.map(|()| true)
+    } else if let Some(result) = super::productions_actions::run(document, &container, tool.id) {
+        result.map(|()| true)
+    } else if let Some(result) = super::portals_actions::run(document, &container, tool.id) {
+        result.map(|()| true)
+    } else if let Some(result) = super::hypermedia_actions::run(document, &container, tool.id) {
+        result.map(|()| true)
+    } else if let Ok(element) = container.clone().dyn_into::<HtmlElement>() {
+        super::local_effects::apply(document, &element, tool.id).map_err(str::to_string)
+    } else {
+        Err("This surface does not support this action.".to_string())
+    };
+    match result {
+        Err(reason) => {
+            super::super::interactions::show_tool_status(document, label, &reason, "error");
+            return;
+        }
+        Ok(false) => {
+            // Legacy Local rows select a tool; they do not execute its named operation.
+            let _ = container.set_attribute("data-spec-tool", tool.id);
+            let _ = container.set_attribute("data-spec-chain", tool.chain);
+            super::super::interactions::show_tool_status(
+                document, label,
+                "Tool selected. Its editing action is not implemented on this surface yet.",
+                "unavailable",
+            );
+            return;
+        }
+        Ok(true) => {}
+    }
     let _ = container.set_attribute("data-spec-tool", tool.id);
     let _ = container.set_attribute("data-spec-chain", tool.chain);
-    if let Some(css) = local_css(tool.id) {
-        if let Ok(el) = container.clone().dyn_into::<HtmlElement>() {
-            if let Some((property, value)) = css.split_once(':') {
-                let _ = el.style().set_property(property.trim(), value.trim());
-            }
-        }
-    }
     super::super::history::push_current_frame(tool.id);
     super::super::interactions::show_tool_status(document, label, tool.tooltip, "success");
 }
 
 fn apply_live(document: &Document, tool: &SpecTool, label: &str, capability: &'static str) {
-    if let Some(container) = selected_container(document) {
+    let selected = selected_container(document);
+    if let Some(container) = selected.as_ref() {
         let _ = container.set_attribute("data-spec-tool", tool.id);
         let _ = container.set_attribute("data-live-capability", capability);
     }
@@ -70,10 +116,17 @@ fn apply_live(document: &Document, tool: &SpecTool, label: &str, capability: &'s
                 "{}. The live step needs the local QualiaDB daemon ({capability}).",
                 tool.tooltip
             ),
-            "success",
+            "unavailable",
         );
         return;
     }
+    let args = match super::live_args::build(selected.as_ref(), tool, capability) {
+        Ok(args) => args,
+        Err(reason) => {
+            super::super::interactions::show_tool_status(document, &label, &reason, "unavailable");
+            return;
+        }
+    };
     super::super::interactions::show_tool_status(
         document,
         &label,
@@ -84,7 +137,6 @@ fn apply_live(document: &Document, tool: &SpecTool, label: &str, capability: &'s
         let Some(document) = web_sys::window().and_then(|window| window.document()) else {
             return;
         };
-        let args = serde_json::json!({});
         match super::super::native_daemon::daemon_invoke(capability, args).await {
             Ok(response) if response.ok => super::super::interactions::show_tool_status(
                 &document,
@@ -106,18 +158,4 @@ fn apply_live(document: &Document, tool: &SpecTool, label: &str, capability: &'s
             }
         }
     });
-}
-
-fn local_css(tool_id: &str) -> Option<&'static str> {
-    match tool_id.rsplit(':').next().unwrap_or(tool_id) {
-        "underline" => Some("text-decoration: underline"),
-        "strikethrough" => Some("text-decoration: line-through"),
-        "subscript" => Some("vertical-align: sub"),
-        "superscript" => Some("vertical-align: super"),
-        "highlight" => Some("background: color-mix(in srgb, var(--accent-amber) 35%, transparent)"),
-        "gaussian-blur" => Some("filter: blur(2px)"),
-        "sharpen" => Some("filter: contrast(1.15)"),
-        "hue-saturation" => Some("filter: saturate(1.2)"),
-        _ => None,
-    }
 }

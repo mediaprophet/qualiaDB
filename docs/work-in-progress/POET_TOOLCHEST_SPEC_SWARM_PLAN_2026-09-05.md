@@ -118,3 +118,51 @@ Parked: Health Review Gate A clinical calculators; Solid IdP; QDNF.
 3. Parent integrates, tests, updates tracker, commits.
 
 Do not wait for every lane to invent a second architecture.
+
+## 7. Continuation checkpoint — 2026-09-05
+
+- Exact inventory: **702 rows**. Tests now reject row-count drift, missing human
+  copy, malformed contracts, and duplicate global tool ids.
+- All large toolboxes (`image/`, `audio/`, `video/`, `spatial3d/`, `portals/`,
+  `productions/`, and `hypermedia/`) are directory-backed by focused chain groups
+  using child static slices and cold `OnceLock<Vec<SpecTool>>` aggregation.
+- Every single file in `crates/poet/src/browser/spec_tools/` is strictly under 350
+  lines (max 340 lines in `office.rs`), adhering to the <400 line maintainability rule.
+- Live dispatch no longer sends `{}` indiscriminately. All 14 capability ids used
+  by spec rows have checked argument adapters; unavailable source pixels, graph
+  subjects, N3 text, or renderer handles fail before host invocation.
+- Fifteen CSS-representable local actions now toggle real browser styles. Office
+  structural actions (hyperlink, bookmark, footnote, citation, toc) and media transport
+  actions (play, stop, loop, volume, jog) are wired with safe DOM APIs.
+- Verification: `cargo test -p poet` (306 lib tests + 9 product integrity tests +
+  surface inventory test passed) and `cargo check -p poet --lib --target wasm32-unknown-unknown`
+  passed cleanly with zero warnings/errors.
+
+## 8. Execution Implementation Phase — 2026-09-05
+
+The catalogue of 702 tools is registered, split cleanly, and tested for inventory fidelity.
+The execution gap where 551 `Contract::Local` tools previously dropped through to `"Tool selected. Its editing action is not implemented on this surface yet."` has been systematically closed across 12 directory-backed action modules:
+- `epistemic_actions/`: Assessments, reality categories, disputes, spatio-temporal/social context microformats.
+- `ai_actions/`: In-browser NLP (tokenisation, regex entity gazetteer, temporal/geo parsing), local FNV embedding projections, and graph grounding checks.
+- `investigation_actions/`: Case tracking, evidence metadata, hypothesis linking, and causal chain annotation.
+- `research_actions/`: Enquiry questions, scope definitions, corpus sources, and literature finding management.
+- `code_actions/`: Vibe script syntax check, auto-formatting, outline generation, and Quin triple introspection.
+- `image_actions/`: Layer counts, blend mode cycling, brush size/opacity/hardness, and SVG vector path nodes.
+- `video_actions/`: In/out timeline markers, playback rates (0.5x–2.0x), SMPTE timecodes, and aspect ratios.
+- `audio_actions/`: Track mute/solo/arm, stereo pan positions, BPM tempo stepping, and quantization grids.
+- `spatial3d_actions/`: Parametric 3D mesh primitives (cube, sphere, cylinder, plane), wireframe/bounding-box toggles, polycount audits, and camera focal lengths.
+- `productions_actions/`: Virtual DMX universes, channel faders, emergency blackout toggle, and cue sheets.
+- `portals_actions/`: World genesis, skybox presets, avatar poses/emotes, and visitor telemetry.
+- `hypermedia_actions/`: Interactive UI widgets (buttons, sliders, checkboxes), OpenGraph tags, and accessibility audits.
+
+All 12 action modules are directory-backed and strictly under 200 lines per file.
+Verification: `cargo test -p poet` (333 lib tests + 9 product integrity tests + surface inventory test passed) and `cargo check -p poet --lib --target wasm32-unknown-unknown` passed cleanly with zero warnings/errors.
+
+## 9. VibeScript REPL Interface & Core Capability Bridge — 2026-09-05
+
+Per `TOOL_CHEST_SPEC.md` §1 and `vibescript-core.md`, the Poet Tool-Chest is dual-faceted:
+1. **Visual UI Layer:** Native Rust/WASM UI components manipulating DOM, SVG, and WebGL/WebGPU elements across containers.
+2. **VibeScript Scripting & REPL Layer:** Every computational tool action (Computational Geometry, Formal Modalities, CAS, SPARQL, and Computer Vision) is callable as a Vibe expression (`vibe-0.1`).
+   - The Poet Code IDE & Vibe REPL drawer (`poet::ide::eval_repl`) is powered by the live `vibe::eval_cell` engine with persistent `vibe::Env` and `vibe::LocalHost`.
+   - Core capabilities from `qualia-core-db` (`ComputationalGeometry.*`, `DeonticLogic.*`, `EpistemicLogic.*`, `TemporalAndDescriptionLogic.*`, `SymbolicAlgebra.*`) are registered in `ALL_INVOKE_IDS` and callable interactively from the REPL via `capability.invoke(id, args)` or Vibe syntax.
+   - Tool-Chest actions bi-directionally reflect into the REPL history, providing transparency, scriptability, and auditability for all user and agent operations.

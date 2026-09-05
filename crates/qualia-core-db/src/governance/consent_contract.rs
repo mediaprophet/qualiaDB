@@ -146,10 +146,13 @@ impl ConsentGrant {
 
     /// Convert grant into an `OP_PERMIT` Deontic Super-Quin.
     pub fn to_deontic_quin(&self, category_flag: u32) -> NQuin {
-        let subject = u64::from_le_bytes(self.recipient_did[0..8].try_into().unwrap()) & 0x7FFF_FFFF_FFFF_FFFF;
+        let subject = u64::from_le_bytes(self.recipient_did[0..8].try_into().unwrap())
+            & 0x7FFF_FFFF_FFFF_FFFF;
         let predicate = ((category_flag as u64) << 8) | (OP_PERMIT as u64);
-        let object = u64::from_le_bytes(self.principal_did[0..8].try_into().unwrap()) & 0x7FFF_FFFF_FFFF_FFFF;
-        let context = u64::from_le_bytes(self.grant_id[0..8].try_into().unwrap()) & 0x7FFF_FFFF_FFFF_FFFF;
+        let object = u64::from_le_bytes(self.principal_did[0..8].try_into().unwrap())
+            & 0x7FFF_FFFF_FFFF_FFFF;
+        let context =
+            u64::from_le_bytes(self.grant_id[0..8].try_into().unwrap()) & 0x7FFF_FFFF_FFFF_FFFF;
         let metadata = self.expires_at.min(0xFFFF_FFFF);
         let parity = subject ^ predicate ^ object ^ context;
         NQuin {
@@ -223,8 +226,8 @@ impl RevocationReceipt {
                 actor: self.revoked_by,
             });
         }
-        let verifying_key = VerifyingKey::from_bytes(&self.revoked_by)
-            .map_err(|_| ConsentError::MalformedKey)?;
+        let verifying_key =
+            VerifyingKey::from_bytes(&self.revoked_by).map_err(|_| ConsentError::MalformedKey)?;
         let signature = Signature::from_bytes(&self.signature);
         let digest = self.compute_digest();
         verifying_key
@@ -235,10 +238,13 @@ impl RevocationReceipt {
 
     /// Convert revocation receipt into a `DEFEATER_BIT | OP_FORBID` Deontic Super-Quin.
     pub fn to_defeater_quin(&self, grant: &ConsentGrant, category_flag: u32) -> NQuin {
-        let subject = u64::from_le_bytes(grant.recipient_did[0..8].try_into().unwrap()) & 0x7FFF_FFFF_FFFF_FFFF;
+        let subject = u64::from_le_bytes(grant.recipient_did[0..8].try_into().unwrap())
+            & 0x7FFF_FFFF_FFFF_FFFF;
         let predicate = DEFEATER_BIT | ((category_flag as u64) << 8) | (OP_FORBID as u64);
-        let object = u64::from_le_bytes(grant.principal_did[0..8].try_into().unwrap()) & 0x7FFF_FFFF_FFFF_FFFF;
-        let context = u64::from_le_bytes(self.grant_id[0..8].try_into().unwrap()) & 0x7FFF_FFFF_FFFF_FFFF;
+        let object = u64::from_le_bytes(grant.principal_did[0..8].try_into().unwrap())
+            & 0x7FFF_FFFF_FFFF_FFFF;
+        let context =
+            u64::from_le_bytes(self.grant_id[0..8].try_into().unwrap()) & 0x7FFF_FFFF_FFFF_FFFF;
         let metadata = self.revoked_at.min(0xFFFF_FFFF);
         let parity = subject ^ predicate ^ object ^ context;
         NQuin {
@@ -314,8 +320,22 @@ mod tests {
             1,
         );
 
-        assert!(authorize_category_access(&grant, None, ConsentScope::VITALS, &dr_bob_did, now + 100).is_ok());
-        assert!(authorize_category_access(&grant, None, ConsentScope::LABS, &dr_bob_did, now + 100).is_ok());
+        assert!(authorize_category_access(
+            &grant,
+            None,
+            ConsentScope::VITALS,
+            &dr_bob_did,
+            now + 100
+        )
+        .is_ok());
+        assert!(authorize_category_access(
+            &grant,
+            None,
+            ConsentScope::LABS,
+            &dr_bob_did,
+            now + 100
+        )
+        .is_ok());
     }
 
     #[test]
@@ -334,9 +354,16 @@ mod tests {
             1,
         );
 
-        let err = authorize_category_access(&grant, None, ConsentScope::VITALS, &dr_bob_did, now + 3601)
-            .unwrap_err();
-        assert_eq!(err, ConsentError::Expired { expires_at: now + 3600, now: now + 3601 });
+        let err =
+            authorize_category_access(&grant, None, ConsentScope::VITALS, &dr_bob_did, now + 3601)
+                .unwrap_err();
+        assert_eq!(
+            err,
+            ConsentError::Expired {
+                expires_at: now + 3600,
+                now: now + 3601
+            }
+        );
     }
 
     #[test]
@@ -356,9 +383,20 @@ mod tests {
         );
         let receipt = RevocationReceipt::new_signed([99u8; 32], &grant, &alice_key, now + 500, 200);
 
-        let err = authorize_category_access(&grant, Some(&receipt), ConsentScope::VITALS, &dr_bob_did, now + 600)
-            .unwrap_err();
-        assert_eq!(err, ConsentError::Revoked { revoked_at: now + 500 });
+        let err = authorize_category_access(
+            &grant,
+            Some(&receipt),
+            ConsentScope::VITALS,
+            &dr_bob_did,
+            now + 600,
+        )
+        .unwrap_err();
+        assert_eq!(
+            err,
+            ConsentError::Revoked {
+                revoked_at: now + 500
+            }
+        );
     }
 
     #[test]
@@ -378,10 +416,17 @@ mod tests {
             1,
         );
         // Mallory attempts to forge or revoke Alice's grant
-        let receipt = RevocationReceipt::new_signed([99u8; 32], &grant, &mallory_key, now + 500, 200);
+        let receipt =
+            RevocationReceipt::new_signed([99u8; 32], &grant, &mallory_key, now + 500, 200);
 
-        let err = authorize_category_access(&grant, Some(&receipt), ConsentScope::VITALS, &dr_bob_did, now + 600)
-            .unwrap_err();
+        let err = authorize_category_access(
+            &grant,
+            Some(&receipt),
+            ConsentScope::VITALS,
+            &dr_bob_did,
+            now + 600,
+        )
+        .unwrap_err();
         assert!(matches!(err, ConsentError::UnauthorizedRevocation { .. }));
     }
 
@@ -401,9 +446,20 @@ mod tests {
             1,
         );
 
-        let err = authorize_category_access(&grant, None, ConsentScope::DOCUMENTS, &dr_bob_did, now + 100)
-            .unwrap_err();
-        assert_eq!(err, ConsentError::ScopeViolation { requested_flag: ConsentScope::DOCUMENTS });
+        let err = authorize_category_access(
+            &grant,
+            None,
+            ConsentScope::DOCUMENTS,
+            &dr_bob_did,
+            now + 100,
+        )
+        .unwrap_err();
+        assert_eq!(
+            err,
+            ConsentError::ScopeViolation {
+                requested_flag: ConsentScope::DOCUMENTS
+            }
+        );
     }
 
     #[test]
@@ -423,7 +479,10 @@ mod tests {
         );
         // Tamper with scope post-signing
         grant.scope = ConsentScope(ConsentScope::ALL);
-        assert_eq!(grant.verify(now).unwrap_err(), ConsentError::InvalidSignature);
+        assert_eq!(
+            grant.verify(now).unwrap_err(),
+            ConsentError::InvalidSignature
+        );
     }
 
     #[test]
@@ -446,7 +505,8 @@ mod tests {
         // 1. Frame with grant only -> Active
         let frame_active = [grant_quin.clone()];
         let mut verdicts = [DeonticVerdict::default()];
-        let count = evaluate_deontic_contract(&frame_active, (now + 100) as u32, &mut verdicts).unwrap();
+        let count =
+            evaluate_deontic_contract(&frame_active, (now + 100) as u32, &mut verdicts).unwrap();
         assert_eq!(count, 1);
         assert_eq!(verdicts[0].status, DeonticStatus::Active);
 
@@ -455,7 +515,9 @@ mod tests {
         let defeater_quin = receipt.to_defeater_quin(&grant, ConsentScope::VITALS);
         let frame_revoked = [grant_quin, defeater_quin];
         let mut verdicts_revoked = [DeonticVerdict::default()];
-        let count = evaluate_deontic_contract(&frame_revoked, (now + 600) as u32, &mut verdicts_revoked).unwrap();
+        let count =
+            evaluate_deontic_contract(&frame_revoked, (now + 600) as u32, &mut verdicts_revoked)
+                .unwrap();
         assert_eq!(count, 1);
         assert_eq!(verdicts_revoked[0].status, DeonticStatus::Defeated);
     }
