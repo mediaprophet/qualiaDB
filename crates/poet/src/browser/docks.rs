@@ -1337,6 +1337,7 @@ pub fn build_right_dock(document: &Document) -> Element {
     vibe_ui_host.set_text_content(Some(
         "Unavailable: the live VibeScript UI runtime is not connected.",
     ));
+    vibe_ui_host.set_attribute("data-vibe-ui-host", "1").ok();
     let vibe_ui_panel = create_collapsible_dock_panel(
         document,
         "Vibe UI Live Engine",
@@ -1345,6 +1346,7 @@ pub fn build_right_dock(document: &Document) -> Element {
         false, // collapsed by default
         false, // flex_grow
     );
+    vibe_ui_panel.set_attribute("data-vibe-ui-panel", "1").ok();
     content.append_child(&vibe_ui_panel).unwrap();
 
     dock.append_child(&content).unwrap();
@@ -1404,9 +1406,11 @@ pub fn build_bottom_statusbar(document: &Document) -> Element {
     g_label.set_class_name("statusbar-label");
     g_label.set_text_content(Some("Graph:"));
     let g_val = document.create_element("span").unwrap();
+    g_val.set_id("statusbar-graph-state");
     g_val.set_class_name("statusbar-value");
     g_val.set_text_content(Some("unavailable"));
     bar.set_attribute("data-honesty", "unavailable").ok();
+    bar.set_attribute("data-statusbar", "poet-bottom").ok();
     graph.append_child(&g_label).unwrap();
     graph.append_child(&g_val).unwrap();
     left.append_child(&graph).unwrap();
@@ -1468,8 +1472,69 @@ pub fn build_bottom_statusbar(document: &Document) -> Element {
     right.append_child(&volume).unwrap();
 
     bar.append_child(&right).unwrap();
+    refresh_bottom_statusbar_from_daemon(&bar);
     bar
 }
+
+/// Elevate Graph chrome when Native daemon is connected; Volume stays closed until open.
+/// Vibe UI Live Engine dock is a separate host — not implied by daemon connect.
+pub fn refresh_bottom_statusbar_from_daemon(bar: &Element) {
+    use super::native_daemon::{get_daemon_state, DaemonConnectionState, is_daemon_connected};
+    let document = match bar.owner_document() {
+        Some(d) => d,
+        None => return,
+    };
+    let state = get_daemon_state();
+    match state {
+        DaemonConnectionState::Connected {
+            graph_quin_count,
+            port,
+            ..
+        } => {
+            bar.set_attribute("data-honesty", "live").ok();
+            bar.set_attribute("data-daemon-port", &port.to_string()).ok();
+            if let Some(g) = document.get_element_by_id("statusbar-graph-state") {
+                g.set_text_content(Some(&format!("live · {graph_quin_count} quins")));
+                g.set_attribute("data-honesty", "live").ok();
+            }
+            // Volume remains closed until volume_open — honest sanctuary default.
+            if let Some(v) = document.get_element_by_id("statusbar-volume-state") {
+                if v.get_attribute("data-volume-state").as_deref() == Some("closed")
+                    || v.get_attribute("data-volume-state").is_none()
+                {
+                    v.set_text_content(Some("closed"));
+                    v.set_attribute("title", "Sanctuary volume closed — open via GraphDatabase.volume_open")
+                        .ok();
+                }
+            }
+        }
+        _ => {
+            if !is_daemon_connected() {
+                bar.set_attribute("data-honesty", "unavailable").ok();
+                if let Some(g) = document.get_element_by_id("statusbar-graph-state") {
+                    g.set_text_content(Some("unavailable"));
+                    g.set_attribute("data-honesty", "unavailable").ok();
+                }
+            }
+        }
+    }
+}
+
+/// Refresh statusbar if present in the live document (called on daemon connect).
+pub fn refresh_bottom_statusbar_in_document(document: &Document) {
+    if let Ok(Some(bar)) = document.query_selector(".bottom-statusbar") {
+        refresh_bottom_statusbar_from_daemon(&bar);
+    }
+    // Vibe UI Live Engine is a separate host — not implied by Native: Connected.
+    if let Ok(Some(body)) = document.query_selector("[data-vibe-ui-host]") {
+        if super::native_daemon::is_daemon_connected() {
+            body.set_text_content(Some(
+                "Unavailable: Vibe UI host not mounted (Native Connected is separate — Catalog · Lexicon / invoke use the daemon).",
+            ));
+        }
+    }
+}
+
 
 #[cfg(test)]
 mod tests {

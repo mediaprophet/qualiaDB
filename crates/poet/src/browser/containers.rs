@@ -6,7 +6,7 @@ use crate::tool_chest::core::registry::SeedContainer;
 use web_sys::{Document, Element};
 
 use super::container_inline_views::{
-    build_gis_map_view, build_media_3d_view, build_vibescript_console,
+    build_gis_map_view, build_media_3d_view,
 };
 use super::ide::{build_ide_view, IdeState};
 use super::specialist_persist;
