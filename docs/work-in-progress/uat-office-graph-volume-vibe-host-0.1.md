@@ -1,14 +1,16 @@
-# WIP — Browser UAT: office:graph + sanctuary volume
+# WIP — Browser UAT: office:graph + sanctuary volume + lexicon held-gate
 
-**Status:** work-in-progress (not standards) · **Freeze:** `vibe-host-0.1` @ `6dc2b8b8` · **Sync tip:** `d2b79211` / INDEX tip-lock · **Branch:** `0.0.36-dev`
+**Status:** work-in-progress (not standards) · **Freeze:** `vibe-host-0.1` · **Sync tip:** `641c2460` · **Branch:** `0.0.36-dev`
 **Owner:** Vibe (diagnose/DevRel accept) · Chrome: davinci/monet · Seam: Neo · Shapes: Marvin
-**Scope:** prove live binds — no new code from this crew while G-COORD advances elsewhere.
+**Scope:** prove live binds after **G-LEXICON-0** first slice accept. G-COORD held until this UAT passes.
 
 ## Rules under test
 - Thin four-ops only (parse/check/diagnose/invoke)
-- Live ids: `GraphDatabase.sparql` · `volume_open` · `volume_commit`
-- Unbound/daemon/wasm E300 = gated, never stub-broken or fake-durable
+- Live ids: `GraphDatabase.sparql` · `volume_open` · `volume_commit` · `lexicon_manifest`
+- Unbound/daemon/wasm/missing-pack E300 = **held / not yet** (gated), never stub-broken or fake-durable
 - Diagnose copy: never call persons/living “things” (SHACL-first vs OWL-ok list)
+- Shape: `docs/manuals/standards/lexicon-pack-shape-G-LEXICON-0.md`
+- Bay chrome: `docs/work-in-progress/g-lexicon-0-bay-chrome.md`
 
 ## A — office:graph / sparql
 1. Toolbar launches query without reading Capability strings
@@ -29,13 +31,23 @@
 2. suggested_fix actionable for agent loop
 3. Spans stable enough for error glow (note if coarse → B row)
 4. No Host/AST bleed into Poet chrome during UAT
+5. `lexicon:` pin fixtures (Vibe) — missing pack → held / not yet + open-pack suggested_fix; OK pin recorded; alias row round-trip; living framing never rewritten as artifact
 
-## D — Pass / fail log (fill in session)
+## D — Lexicon held-gate / bay (G-LEXICON-0)
+1. Call `GraphDatabase.lexicon_manifest` with missing path → **held / not yet** + “open lexicon pack” (never broken)
+2. Valid `*.lexicon.json` (example under `docs/manuals/standards/lexicon-pack-manifest-example.json`) → arrive card shows `packSemVer` + framing chip
+3. `.q42` without sidecar / bad volume → held / not yet
+4. Framing chips: living warm · artifact crisp · machine muted; **mixed** splits; no Thing-wash
+5. Catalog peer / Zone D Catalog tab surfaces gate + chips (listen-only this slice)
+6. Upgrade recipe beats: arrive on open · hold on breaking-id list · leave on dismiss · **commit** only on real pack write (N/A this slice if listen-only)
+
+## E — Pass / fail log (fill in session)
 | ID | Step | Pass? | Tip SHA | Notes / delta row |
 |----|------|-------|---------|-------------------|
 | A1–A5 | | | | |
 | B1–B5 | | | | |
-| C1–C4 | | | | |
+| C1–C5 | | | | |
+| D1–D6 | | | | |
 
 ## Out of scope this UAT
-G-COORD bind · next toolchain · Solid IdP · QDNF · new Host methods
+G-COORD bind · full WordNet engine · locale packs beyond en · next toolchain · Solid IdP · QDNF · new Host methods
