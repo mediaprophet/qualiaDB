@@ -1,6 +1,6 @@
 # WIP — Browser UAT: office:graph + sanctuary volume + lexicon held-gate
 
-**Status:** work-in-progress (not standards) · **Freeze:** `vibe-host-0.1` · **Sync tip:** `641c2460` · **Branch:** `0.0.36-dev`
+**Status:** work-in-progress (not standards) · **Freeze:** `vibe-host-0.1` · **Sync tip:** `cc5ecb6d` · **Branch:** `0.0.36-dev`
 **Owner:** Vibe (diagnose/DevRel accept) · Chrome: davinci/monet · Seam: Neo · Shapes: Marvin
 **Scope:** prove live binds after **G-LEXICON-0** first slice accept. G-COORD held until this UAT passes.
 
@@ -51,10 +51,22 @@
 ## E — Pass / fail log (fill in session)
 | ID | Step | Pass? | Tip SHA | Notes / delta row |
 |----|------|-------|---------|-------------------|
-| A1–A5 | | | | |
-| B1–B5 | | | | |
-| C1–C5 | | | | |
-| D1–D6 | | | | |
+| A1–A5 | PARTIAL | e070ffc7+ | office:graph chrome works; Capability.method strings still leak as primary labels (wishlist) |
+| B1 | PASS (HTTP) | 0b30cb15 | create-on-open `created:true` quin_count:1 on `/workspace/qualia-data/uat-sanctuary.q42` |
+| B2 | PASS (HTTP) | 0b30cb15 | separate `/invoke` volume_commit `written:1` — sticky PoetSnapshot; UI Save Checkpoint still open (dialog flaky) |
+| B3–B5 | open | — | UI dock states / deny / wasm not re-scored this pass |
+| C1–C4 | PASS | 07ea593+ | G-LEXICON-0 diagnose fixtures accept |
+| C5 | PASS | 07ea593 | lexicon: pin fixtures green |
+| D1 | PASS | e070ffc7 | held / not yet + open lexicon pack chrome |
+| D2 | OPEN | 0b30cb15 | daemon lexicon_manifest live OK (0.1.0 mixed open); **UI Open pack arrive card** still incomplete |
+| D3 | open | — | |
+| D4 | PASS | f1d34d03 | living/artifact/machine chips |
+| D5 | PASS | f1d34d03 | Zone D Catalog · Lexicon |
+| D6 | OPEN | — | arrive UI beat pending |
+
+### Capt session 2026-09-05 (Sydney)
+- Daemon: `:4242` `/health` (not `/healthz`); Poet trunk `:8080`; tip `0b30cb15` sticky + `f615f16` create-on-open ancestor.
+- HTTP sanctuary open→commit PASS; lexicon_manifest bind PASS; UI arrive + Checkpoint Mode path entry still open todos (not fail).
 
 ## Out of scope this UAT
 G-COORD bind · full WordNet engine · locale packs beyond en · next toolchain · Solid IdP · QDNF · new Host methods
@@ -73,3 +85,7 @@ Set `create: false` to keep fail-closed on missing files.
 
 Daemon `POST /invoke` keeps a **process-sticky** `PoetSnapshot` (same idea as desktop `Mutex<PoetSnapshot>`).
 `volume_open` load + `volume_commit` must share that host — recreating `from_daemon()` per request caused empty-graph commit fail-closed across HTTP.
+
+## Probe Connected (tip cc5ecb6d)
+
+Poet : Connected immediately after engine-bearing `/health`; `/vibe/capabilities` refreshes in background. Health ports: 4242, 8000, 3030 (not 4243/8080). Per-port 2.5s timeout.
