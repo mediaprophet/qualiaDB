@@ -36,6 +36,7 @@ Comprehensive index of functionality for standards. This document serves as the 
 - 📄 webizen-protocol-rfc.md
 - 📄 webizen-renderer-sdk-spec.md
 - 📄 yaml-ld-q42-specification.md
+- 📁 [qualia-decentralized-network-fabric](qualia-decentralized-network-fabric/README.md) — QDNF 0.1 native below-IP stack (QLink/QRoute/QResolve/LIG). Not G-COORD. Not Solid.
 
 ## Changelog
 - **2026-08-15**: Added ibescript-specification.md and hypermedia-content-format-hcf.md defining VibeScript, the Poet engine, Ontological Graphemes for universal language representation, and the generative speech pipeline.

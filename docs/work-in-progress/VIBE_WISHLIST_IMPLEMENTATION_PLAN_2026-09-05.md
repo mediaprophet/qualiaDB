@@ -23,9 +23,11 @@ or dotted `qualia.*` IDs.
 
 | Item | Why |
 |------|-----|
-| G-SOLID-IDP | Capt. unpark after Poet/Webizen; original Stage 6 |
-| DNS/IP replacement claims | Forbidden in G-COORD v0 |
+| G-SOLID-IDP | QualiaDB / Webizen / Poet are the source of capability, identity, and storage. Solid is an **exit adapter** (LDP/WebID/pod export), not the architecture. Capt. unparks IdP only after that order is the product. |
+| G-COORD **bind** | Shapes + dialect landed. A live CoordinateSystem/Realm/Position invoke still needs an explicit owner gate. G-COORD is spatial/realm, not a network. |
 | Health Review Gate A (`HLT-03/07/08`) | Separate higher-assurance programme |
+
+**Not parked — specified separately:** DNS/IP replacement is **QDNF** (`docs/manuals/standards/qualia-decentralized-network-fabric/`). G-COORD v0 still MUST NOT claim to replace DNS/IP. QDNF is the network programme; G-COORD is the coordinate/realm programme. WireGuard/libp2p remain Transition carriers until a native bearer exists.
 
 ## W12 — Webizen four-op host
 
@@ -63,7 +65,7 @@ shapes re-invents classes in the UI.
 - [x] Publish aspirational → live remap table (B-002)
 - [x] Dual-VC / QISP / ledger-vs-showcase honesty notes (B-003–B-005)
 - [x] Fixture: `inference_grounding.vibe` on live `Inference.*`
-- [ ] Test: catalog contains every `ALL_BOUND` string (cross-crate; documented diff 2026-09-05)
+- [x] Test: catalog contains every `ALL_BOUND` string (`poet_host/invoke/ids.rs::vibe_catalog_contains_every_bound_invoke_id`)
 
 **Accept:** `using Family;` type-checks every live host id; no dotted invent.
 
@@ -173,6 +175,7 @@ Davinci/Monet delta audit first (`DES-01` / `DES-02`). Do not reopen `UX-01`–`
 | 2026-09-05 | W8–W11 | Toolchest scopes are live Family.method or None; save dialog volume_open/commit; motion contract |
 | 2026-09-05 | W12–W13 | Webizen four-op host commands; bounded session glyph API |
 | 2026-09-05 | DES-01/02 chrome | Davinci/Monet: named beats, volume chips, diagnose glow, still/clip/scene dock, CML+twins, 2D/3D/film/CG surfaces |
+| 2026-09-05 | Push + gates | Rebased onto QDNF spec `3987fe2b`; Solid recorded as Qualia-first exit; G-COORD ≠ QDNF |
 
 ## Stop rules
 

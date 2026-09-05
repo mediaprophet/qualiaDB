@@ -2,6 +2,12 @@
 //!
 //! Copyright (c) 2026 Timothy Charles Holborn. All rights reserved.
 //!
+//! Solid is an **exit adapter** from QualiaDB / Webizen / Poet — not the
+//! identity, storage, or networking plane. Pods, WebID-OIDC, and LDP containers
+//! project already-authoritative Quins, CML, and volumes. They must not become
+//! the source of capability, DID, or routing. G-SOLID-IDP stays parked until
+//! that Qualia-first order is the implemented product.
+//!
 //! Implements W3C Solid Linked Data Platform (LDP) interoperability,
 //! WebID-OIDC session management, and the zero-lock-in Solid Export Wizard
 //! converting Super-Quins to standard Turtle (.ttl), CML to W3C RDFa 1.1,

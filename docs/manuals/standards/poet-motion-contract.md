@@ -37,6 +37,8 @@ closed · open · committed · denied · fault — distinct token each. Commit b
 
 Geo and non-geo realm skins stay **gated** until a live bind is selected (W5). Do not ship a fake CRS Host.
 
+Network naming/routing without DNS/IP is **QDNF**, not G-COORD. Map chrome must not pretend a CoordinateSystem is an IP or DNS replacement.
+
 ## Container · Manifold · Link
 
 Distinct human chrome; machine ids under the hood. See `poet-container-manifold-link-shapes.md`.

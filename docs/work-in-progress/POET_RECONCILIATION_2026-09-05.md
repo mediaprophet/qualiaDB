@@ -38,7 +38,9 @@ Health work, and they do not bypass the earlier safety and review gates.
 | Graph toolchest first slice | Implemented in the G-POET-TOOLCHEST commit series | Continue inventory-first; do not invent capability IDs |
 | Volume open/commit seam | Implemented in G-B-001 commit series | Preserve fail-closed wasm and denied/fault states |
 | Davinci, Monet, Marvin, Neo, Vibe plan files | Documents landed | Their numbered stages remain planned unless separate implementation evidence exists |
-| G-COORD and Solid IdP | Parked/gated | Do not implement until the named project gate opens |
+| G-COORD **bind** | Gated | Shapes landed; live CRS invoke needs owner gate. Not a DNS/IP replacement. |
+| QDNF (DNS/IP-free network) | Specified | `docs/manuals/standards/qualia-decentralized-network-fabric/` — separate from G-COORD. Current WireGuard is Transition. |
+| Solid IdP | Parked | Solid is an exit adapter from QualiaDB/Webizen/Poet, not the source of identity or storage. |
 
 ## What the newer work advances
 

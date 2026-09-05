@@ -22,4 +22,7 @@
 | [`vibe-catalog-honesty.md`](vibe-catalog-honesty.md) | Vibe | ALL_BOUND remaps, dual-VC/QISP/ledger, preview handles |
 | [`poet-motion-contract.md`](poet-motion-contract.md) | monet | Named beats, gated ≠ broken, volume states |
 | [`webizen-vibe-host-parity.md`](webizen-vibe-host-parity.md) | Neo | Desktop four-op Vibe host |
+| [`qualia-decentralized-network-fabric/`](qualia-decentralized-network-fabric/README.md) | QDNF | Native below-IP fabric (QLink/QRoute/QResolve). Not G-COORD. Solid is not this stack. |
+
+**Programme split (2026-09-05):** G-COORD = spatial/realm Position. QDNF = naming/routing without DNS/IP. Solid = optional WWW/LDP **exit** from Qualia, never the source of DID/capability.
 

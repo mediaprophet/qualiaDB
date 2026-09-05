@@ -71,7 +71,13 @@
 **Accept:** deltas closed or dated defer.
 
 ## Stage 6 — G-SOLID-IDP (parked)
-Activate only after Neo IdP/WebID/domain binds + Capt. unpark. QualiaDB-as-IdP; no external pod.
+Activate only after Neo IdP/WebID/domain binds + Capt. unpark.
+
+Solid is an **exit adapter** from QualiaDB / Webizen / Poet (LDP, WebID, pod export).
+It is not the identity plane, not the volume, and not QDNF. Qualia-as-IdP, if ever
+unparked, is built on Qualia primitives first; Solid projects them outward. No
+external pod as source of truth.
+
 **Accept:** parked; zero mid-Poet churn.
 
 ## Stage 7 — Webizen Desktop ontology prep
@@ -88,4 +94,4 @@ Reuse checklist for Container/Manifold/Volume/COORD; docs-only until Webizen gat
 Frozen facade @ `6dc2b8b8` · live GraphDatabase.sparql / volume_* / Inference.* / Render.* / SHACL.* / N3Logic.* · sibling plans (neo/vibe/davinci/monet) · Volume shape doc
 
 ## Out of scope
-Host widen · dotted `qualia.*` · Solid this sprint · DNS/IP claims · Layout/Stage as Host IDs · mid-flight API churn · fake durable/preview
+Host widen · dotted `qualia.*` · Solid this sprint (exit adapter only; IdP parked) · G-COORD claiming DNS/IP (that is QDNF) · Layout/Stage as Host IDs · mid-flight API churn · fake durable/preview

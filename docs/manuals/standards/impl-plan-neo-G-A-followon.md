@@ -32,7 +32,7 @@
 ## Stage 3 — G-COORD thinnest bind (after Marvin shapes)
 1. Review Marvin `CoordinateSystem` · `Realm` · `Position` shapes.
 2. Find or add **minimal** `ALL_BOUND` ids only if no live fit (prefer remap); implement invoke handlers in `poet_host/invoke/` seam folder.
-3. No DNS/IP replacement claim in v0 — extensible args only.
+3. G-COORD is spatial/realm Position — not a network. DNS/IP-free naming/routing is **QDNF** (`qualia-decentralized-network-fabric/`). Do not implement QLink/QRoute under this stage.
 **Accept:** one thin bind path + catalog entries; Vibe dialect later; Capt. gate close.
 
 ## Stage 4 — Preview / Render.* seam assist

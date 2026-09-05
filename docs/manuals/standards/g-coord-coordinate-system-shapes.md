@@ -1,7 +1,7 @@
 # G-COORD — CoordinateSystem · Realm · Position (v0)
 
 **Packet:** W5 · **Status:** shapes + dialect landed; **bind gated**  
-**Rule:** no DNS/IP replacement claim. Locus is not a person.
+**Rule:** G-COORD does not replace DNS/IP. Network identity, adjacency, and routing without DNS/IP live in **QDNF** (`qualia-decentralized-network-fabric/`). `did:q42` here is a storage/QRC locus, not a DNI. Locus is not a person.
 
 ## Classes (OWL-ok technical CRS records)
 
