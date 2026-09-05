@@ -108,3 +108,16 @@ See `docs/work-in-progress/OVERNIGHT_HANDOVER_2026-09-05.md` for scoreboard + re
 - Toast Checkpoint saved + `GraphDatabase.volume_commit` → footer **Volume: COMMITTED**
 - HTTP corroboration: `volume_commit` → `written: 1` (revision 15)
 - Note: dialog may show stale localStorage path (`uat-e070ffc7-…`); accept is COMMITTED + written:1
+
+**monet commit-beat PASS (2026-09-05):** tip `f45212c` — celebrate only on real Volume COMMITTED after Checkpoint.
+
+## D4 overnight score fill (Neo, 2026-09-05)
+
+| Item | Pass? | Tip | Notes |
+|------|-------|-----|-------|
+| D2 Open pack arrive | Yes | `a06179c9` / board `9a1438d` | en-core@0.1.0 · mixed · arrive/hold/leave |
+| D2 soft-rise | Yes | `a8c56e4` | monet |
+| Marvin framing | Yes | `f45212c` | mixed living+artifact · no Thing-wash |
+| B-ui Checkpoint | Yes | `f45212c` / `bc6e401` | Volume COMMITTED · written:1 |
+| monet commit-beat | Yes | `f45212c` | celebrate only on real commit |
+| True-B / wishlist | Parked | — | office:graph sayables, G-COORD deepen |

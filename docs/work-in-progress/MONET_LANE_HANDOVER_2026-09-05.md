@@ -43,7 +43,7 @@ Look + motion as the visual backbone of Poet — Layout · Stage · Timeline twi
 5. Language bar already on daemon; UI must mirror diagnose voice
 6. Capt D2 PARTIAL: invoke can open while bay held — paint tips `deac3dd` / `7f91f8e` (multi-bay + sticky Connected + LAST_ARRIVE)
 
-### D3 — Sanctuary commit UI beat (after Capt re-UAT sticky tip)
+### D3 — Sanctuary commit UI beat (**PASS** commit-beat `f45212c`)
 1. Real seed: `/workspace/qualia-data/uat-sanctuary.q42` (from `docs/data/w3c-archives/adms.q42`)
 2. HTTP sticky already PASS — UI Save Checkpoint still flaky → **open todo** until Checkpoint lands
 3. **Motion:** commit celebrate only on real success; deny/E300 = held, never "saved"
@@ -74,3 +74,6 @@ Deeper REPL drawer · G-COORD skins · custom unicode API · free tweens · Soli
 
 
 **Tick-off:** D2 soft-rise **PASS** tip `a06179c9` (monet). Framing re-accept → Marvin.
+
+
+**Tick-off:** Commit-beat **PASS** tip `f45212c` — celebrate only on real Volume COMMITTED after Checkpoint.

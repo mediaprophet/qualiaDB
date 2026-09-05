@@ -38,6 +38,8 @@ Do **not** land that stack straight on tip.
 | N1 | Cold-load Native Connected (:4242) | **PASS** | `64b21384` hard-reload, held ~20s | Neo / Capt |
 | D2f | Marvin framing re-accept (mixed chips / Thing-wash) | **PASS** | Marvin: mixed living+artifact · no Thing-wash · `a06179c9`/`9a1438d` | Marvin |
 | D2 | **Open pack arrive card** (packSemVer · framing · gate) | **PASS** | davinci bay `a06179c9` (en-core@0.1.0 · mixed · arrive/hold/leave) + **monet soft-rise PASS**. **Marvin framing PASS** (mixed living+artifact, no Thing-wash). Next: Capt B-ui | davinci / monet / Capt |
+| Mc | monet commit-beat (celebrate on real commit) | **PASS** | tip `f45212c` / board `bc6e401` — celebrate only on Volume COMMITTED after Checkpoint | monet |
+| D4 | UAT checklist / motion log fill | **PASS** | filled from overnight reports in `uat-office-graph-volume-vibe-host-0.1.md` | Neo |
 | B-ui | Sanctuary Save / Checkpoint UI path | **PASS** | Capt tip `f45212c`: Checkpoint dialog → volume_commit → footer **Volume: COMMITTED**; HTTP `written:1` (rev 15) on `/workspace/qualia-data/uat-sanctuary.q42`. Stale localStorage path note OK | Capt / davinci |
 | A-wish | office:graph sayables-first labels | **WISHLIST** | not blocking Catalog close | davinci / Vibe |
 | G-COORD | GIS bind deepen | **HELD** | yellow voice fixed; deepen after UAT | Neo |
@@ -67,7 +69,7 @@ crates/vibe/fixtures/lexicon/en-core.lexicon.json
 
 **If FAIL with full path:** Neo digs `lexicon_bay` / `daemon_invoke(GraphDatabase.lexicon_manifest)` click-path (held vs arrive chrome). Daemon bind already live-OK on en-core earlier.
 
-### 2) Sanctuary UI commit beat (**PASS** `f45212c` — monet commit-motion optional; then D4)
+### 2) Sanctuary UI commit beat (**PASS** `f45212c` + monet commit-beat — Neo D4 next)
 
 - HTTP open→commit already PASS on `0b30cb15`.
 - Remaining: Save / Checkpoint dialog → `volume_commit` from UI without flaky path entry.
@@ -189,3 +191,5 @@ See `DAVINCI_LANE_HANDOVER_2026-09-05.md` for frames + traps.
 | 2026-09-05 ~23:40 AEST | **monet soft-rise PASS** on `a06179c9`; Capt path → Marvin framing re-accept. |
 | 2026-09-05 ~23:45 AEST | **Marvin framing PASS** — mixed living+artifact, no Thing-wash; unlock Capt B-ui. |
 | 2026-09-05 ~23:50 AEST | **B-ui PASS** Capt `f45212c` — Checkpoint → volume_commit → Volume COMMITTED (written:1). Next: optional monet commit-beat, then Neo D4. |
+| 2026-09-05 ~23:55 AEST | **monet commit-beat PASS** on `f45212c` — celebrate only on real Volume COMMITTED. Neo D4 next. |
+| 2026-09-05 ~23:56 AEST | **D4 filled** — UAT checklist score table from overnight reports; True-B parked. |
