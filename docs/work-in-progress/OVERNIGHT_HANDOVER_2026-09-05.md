@@ -36,7 +36,7 @@ Do **not** land that stack straight on tip.
 | D4–D5 | living/artifact/machine chips + Zone D | **PASS** | `f1d34d03` | davinci / monet |
 | B1–B2 | Sanctuary `volume_open` → `volume_commit` (HTTP) | **PASS** | `0b30cb15` sticky + create-on-open | Neo / Capt |
 | N1 | Cold-load Native Connected (:4242) | **PASS** | `64b21384` hard-reload, held ~20s | Neo / Capt |
-| D2 | **Open pack arrive card** (packSemVer · framing · gate) | **OPEN** | Connected OK; path must be full fixture; soft-rise pending | davinci / monet / Capt |
+| D2 | **Open pack arrive card** (packSemVer · framing · gate) | **OPEN** | Connected OK; daemon `lexicon_manifest` live-OK (0.1.0·mixed·gate open) — UI/path/bay only. Prior path truncated `/wor`; wait ≥10–15s; soft-rise pending | davinci / monet / Capt |
 | B-ui | Sanctuary Save / Checkpoint UI path | **OPEN** | HTTP commit PASS; dialog flaky | Capt / davinci |
 | A-wish | office:graph sayables-first labels | **WISHLIST** | not blocking Catalog close | davinci / Vibe |
 | G-COORD | GIS bind deepen | **HELD** | yellow voice fixed; deepen after UAT | Neo |
@@ -58,9 +58,11 @@ crates/vibe/fixtures/lexicon/en-core.lexicon.json
 1. Confirm badge **Native: Connected (:4242)** on cold-load (`64b21384`+).
 2. Zone D / vibe-console → **Catalog · Lexicon**.
 3. Paste **full** fixture path → **Open pack**.
-4. Expect arrive card: `packSemVer 0.1.0` · framing **mixed** · gate open · living/artifact chips (not red missing).
-5. monet: soft-rise score **only** on real arrive (no fake celebrate).
-6. Capt: frame + PASS/FAIL → Neo updates this scoreboard + UAT checklist.
+4. Wait **≥10–15s** (5s was often too short in prior UAT).
+5. Expect arrive card: `packSemVer 0.1.0` · framing **mixed** · gate open · living/artifact chips (not red missing).
+6. Absolute path also OK on Capt box: `/workspace/qualiaDB/crates/vibe/fixtures/lexicon/en-core.lexicon.json`
+7. monet: soft-rise score **only** on real arrive (no fake celebrate).
+8. Capt: frame + PASS/FAIL + full tip SHA → Neo updates this scoreboard + UAT checklist.
 
 **If FAIL with full path:** Neo digs `lexicon_bay` / `daemon_invoke(GraphDatabase.lexicon_manifest)` click-path (held vs arrive chrome). Daemon bind already live-OK on en-core earlier.
 
@@ -97,9 +99,12 @@ Landed lineage:
 
 - [x] Sanctuary HTTP open→commit PASS (`0b30cb15`)
 - [x] Cold-load Connected PASS (`64b21384`)
-- [ ] D2 Open pack arrive PASS with **full** en-core path + frame
+- [x] Daemon `lexicon_manifest` live-OK on en-core (HTTP)
+- [ ] D2 Open pack arrive PASS with **full** en-core path + frame (≥10–15s wait)
 - [ ] Optional: UI sanctuary Save path once D2 green
 - [ ] Keep tip SHA in every report
+
+Capt box runbook + evidence tables: `docs/work-in-progress/CAPT_LANE_AMENDMENTS_2026-09-05.md`
 
 ### davinci (chrome / click-path)
 
@@ -161,3 +166,4 @@ Landed lineage:
 | When | Note |
 |------|------|
 | 2026-09-05 night | Created for Timothy overnight continuity; tip `64b21384`; D2 Open pack arrive is the open gate. |
+| 2026-09-05 ~23:10 AEST | Folded Capt lane amendments: D2 wait ≥10–15s; `/wor` truncation; daemon bind PASS; Capt runbook sidecar. |
