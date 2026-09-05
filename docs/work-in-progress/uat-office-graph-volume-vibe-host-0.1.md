@@ -93,3 +93,6 @@ Poet : Connected immediately after engine-bearing `/health`; `/vibe/capabilities
 ## Overnight continuity
 
 See `docs/work-in-progress/OVERNIGHT_HANDOVER_2026-09-05.md` for scoreboard + remaining plan (tip `64b21384`).
+
+
+**D2 PASS (2026-09-05):** Catalog Open pack arrive en-core@0.1.0 · mixed · tip `a06179c9` (davinci). Soft-rise → monet.

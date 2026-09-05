@@ -42,7 +42,7 @@ Studio chrome + UAT frames that prove honest gates and arrive/hold/leave beats. 
 
 ## OPEN — ordered overnight beats (davinci lane)
 
-### D2 — Open pack UI arrive (GATE — with Capt / monet)
+### D2 — Open pack UI arrive (**PASS** `a06179c9` — with Capt / monet)
 
 **D2 paint gap (2026-09-05):** daemon `lexicon_manifest` can return 0.1.0·mixed·gate open while Catalog bay stays held — wire_open→apply_outcome must paint **all** `[data-lexicon-bay]` roots (Zone D + console peer).
 
@@ -121,3 +121,6 @@ Studio chrome + UAT frames that prove honest gates and arrive/hold/leave beats. 
 **Badge:** one tab flapped Connected → Probing → Standalone; refreshed tab Connected (:4242) again — keep cold-load Connected stable before Open pack.
 
 **Shot:** davinci assets `f5a5695bf44227c85475d9dc600544738e1cf79221a58b304eec284b0dd4c2d7.webp`
+
+
+**Tick-off:** D2 PASS tip `a06179c9` (davinci room report). Soft-rise clear for monet.
