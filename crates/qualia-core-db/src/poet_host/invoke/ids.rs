@@ -13,6 +13,7 @@ pub const GRAPH_STATS: &str = "GraphDatabase.stats";
 pub const GRAPH_SPARQL: &str = "GraphDatabase.sparql";
 pub const GRAPH_VOLUME_OPEN: &str = "GraphDatabase.volume_open";
 pub const GRAPH_VOLUME_COMMIT: &str = "GraphDatabase.volume_commit";
+pub const GRAPH_LEXICON_MANIFEST: &str = "GraphDatabase.lexicon_manifest";
 pub const N3_EVALUATE: &str = "N3Logic.evaluate";
 pub const GRAPH_AUTHORING: &str = "GraphAuthoring.process";
 pub const DEONTIC_EVAL: &str = "DeonticLogic.evaluate";
@@ -1034,6 +1035,7 @@ pub const ALL_BOUND: &[&str] = &[
     GRAPH_SPARQL,
     GRAPH_VOLUME_OPEN,
     GRAPH_VOLUME_COMMIT,
+    GRAPH_LEXICON_MANIFEST,
     N3_EVALUATE,
     GRAPH_AUTHORING,
     DEONTIC_EVAL,
@@ -1910,6 +1912,7 @@ pub fn seam_for(id: &str) -> &'static str {
         | GRAPH_SPARQL
         | GRAPH_VOLUME_OPEN
         | GRAPH_VOLUME_COMMIT
+        | GRAPH_LEXICON_MANIFEST
         | N3_EVALUATE
         | GRAPH_AUTHORING
         | GRAPH_SHORTEST_PATH

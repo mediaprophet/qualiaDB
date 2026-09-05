@@ -1,0 +1,7 @@
+{
+  "packId": "en-core@0.1.0",
+  "packSemVer": "0.1.0",
+  "framing": "mixed",
+  "upliftFrom": "",
+  "conceptIds": ["concept:arrive", "concept:hold", "concept:leave"]
+}

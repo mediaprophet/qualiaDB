@@ -6,6 +6,7 @@ plans, trackers, or historical ledgers until the project owner promotes them.
 
 ## Current documents
 
+- [`g-lexicon-0-slice1.md`](./g-lexicon-0-slice1.md) — G-LEXICON-0 slice 1: `GraphDatabase.lexicon_manifest` (Neo); held/not-yet diagnose; no in-binary WordNet
 - [`POET_RECONCILIATION_2026-09-05.md`](POET_RECONCILIATION_2026-09-05.md)
   reconciles the earlier POET execution programme with the post-`vibe-host-0.1`
   specification, design, ontology, language, and implementation plans.
