@@ -13,6 +13,8 @@ four-op surface; LocalHost does not pretend to be a durable `.q42` volume.
 | `inference_grounding.vibe` | `Inference.grounding` / `verify_turn` / `detect_ungrounded` | Provenance path; no `qualia.infer.*` |
 | `render_preview_handles.vibe` | still / clip / scene on `Render.*` | B-007 remap; no sibling Host op |
 | `g_coord_realms.vibe` | `Cosmic.geodetic_to_ecef` / `body_profile` / `stardate_to_gregorian` + SPARQL | G-COORD remap; UTF-8 place names; not QDNF |
+| `lexicon/pin_ok.vibe` | `GraphDatabase.lexicon_manifest` | Comment/const pin `lexicon: "en-core@0.1.0"`; pack matches standards example |
+| `lexicon/missing_pack.vibe` | `GraphDatabase.lexicon_manifest` | Parse+check valid; invoke/helper E300 held / not yet — open lexicon pack |
 | `gpu1_portal.vibe` | `Render.gpu_*` | Existing Render preview probe |
 
 ## Diagnose loops (expected invalid)

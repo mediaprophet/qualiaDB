@@ -9,6 +9,7 @@ pub const ALL_INVOKE_IDS: &[&str] = &[
     "GraphDatabase.sparql",
     "GraphDatabase.volume_open",
     "GraphDatabase.volume_commit",
+    "GraphDatabase.lexicon_manifest",
     "N3Logic.evaluate",
     "GraphAuthoring.process",
     "DeonticLogic.evaluate",
