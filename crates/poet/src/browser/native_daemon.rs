@@ -22,7 +22,11 @@ use web_sys::{
     Response,
 };
 
-pub const DEFAULT_CANDIDATE_PORTS: &[u16] = &[4242, 4243, 8000, 3030, 8080];
+/// Daemon HTTP loopback only — not libp2p (4243) or Poet HTML (8080),
+/// which can 200 `/health` without being the QualiaDB engine.
+pub const DEFAULT_CANDIDATE_PORTS: &[u16] = &[4242, 8000, 3030];
+/// Per-port `/health` probe budget (ms). Slow/hung ports must not stall Connected.
+pub const PROBE_HEALTH_TIMEOUT_MS: i32 = 2_500;
 
 // ---------------------------------------------------------------------------
 // DTOs & Models
@@ -485,6 +489,10 @@ fn set_daemon_state(state: DaemonConnectionState) {
 // ---------------------------------------------------------------------------
 
 /// Asynchronously probe candidate loopback ports for a running Webizen daemon.
+///
+/// Connected flips **immediately** after a valid `/health` (with `engine`), so the
+/// badge / Open pack gate leave "Probing…" without waiting on the ~200KB
+/// `/vibe/capabilities` deserialize. Caps refresh continues in the background.
 pub fn spawn_daemon_probe() {
     set_daemon_state(DaemonConnectionState::Probing);
 
@@ -494,31 +502,56 @@ pub fn spawn_daemon_probe() {
             let url = format!("http://127.0.0.1:{port}");
             let health_url = format!("{url}/health");
 
-            if let Some(health) = fetch_daemon_health(&health_url).await {
+            let Some(health) = fetch_daemon_health(&health_url).await else {
+                continue;
+            };
+            if !is_qualia_daemon_health(&health) {
                 web_sys::console::log_1(
                     &format!(
-                        "[Webizen Probe] Found running native daemon at {url} (engine: {}, quins: {})",
-                        health.engine.as_deref().unwrap_or("qualia-core-db"),
-                        health.graph_quin_count.unwrap_or(0)
+                        "[Webizen Probe] Ignoring non-daemon /health on {url} (missing engine)"
                     )
                     .into(),
                 );
-
-                refresh_native_capabilities(&url).await;
-                set_daemon_state(DaemonConnectionState::Connected {
-                    url: url.clone(),
-                    port,
-                    engine: health.engine.unwrap_or_else(|| "qualia-core-db".into()),
-                    version: health.version.unwrap_or_else(|| crate::CRATE_STAMP.into()),
-                    graph_quin_count: health.graph_quin_count.unwrap_or(0),
-                    dev_mode: health.dev_mode.unwrap_or(false),
-                });
-
-                // Attach realtime SSE streams for pulse and graph revisions
-                init_daemon_event_streams(&url);
-                super::bind_observer_from_daemon();
-                return;
+                continue;
             }
+
+            let engine = health
+                .engine
+                .clone()
+                .unwrap_or_else(|| "qualia-core-db".into());
+            web_sys::console::log_1(
+                &format!(
+                    "[Webizen Probe] Found running native daemon at {url} (engine: {engine}, quins: {})",
+                    health.graph_quin_count.unwrap_or(0)
+                )
+                .into(),
+            );
+
+            // Elevate to Connected before the heavy caps fetch — UAT arrive /
+            // Open pack must not stay held on Probing while schemas deserialize.
+            set_daemon_state(DaemonConnectionState::Connected {
+                url: url.clone(),
+                port,
+                engine,
+                version: health.version.unwrap_or_else(|| crate::CRATE_STAMP.into()),
+                graph_quin_count: health.graph_quin_count.unwrap_or(0),
+                dev_mode: health.dev_mode.unwrap_or(false),
+            });
+
+            init_daemon_event_streams(&url);
+            super::bind_observer_from_daemon();
+
+            let caps_url = url.clone();
+            wasm_bindgen_futures::spawn_local(async move {
+                refresh_native_capabilities(&caps_url).await;
+                #[cfg(target_arch = "wasm32")]
+                if let Some(window) = web_sys::window() {
+                    if let Some(doc) = window.document() {
+                        update_all_status_badges(&doc);
+                    }
+                }
+            });
+            return;
         }
 
         web_sys::console::log_1(
@@ -531,6 +564,13 @@ pub fn spawn_daemon_probe() {
             reason: "Connection refused on candidate loopback ports".into(),
         });
     });
+}
+
+fn is_qualia_daemon_health(health: &DaemonHealthResponse) -> bool {
+    match health.engine.as_deref() {
+        Some(engine) if !engine.trim().is_empty() => true,
+        _ => false,
+    }
 }
 
 async fn refresh_native_capabilities(base_url: &str) {
@@ -567,19 +607,41 @@ async fn fetch_json<T: serde::de::DeserializeOwned>(url: &str) -> Option<T> {
 
 async fn fetch_daemon_health(health_url: &str) -> Option<DaemonHealthResponse> {
     let window = web_sys::window()?;
-    let promise = window.fetch_with_str(health_url);
-    let resp_val = wasm_bindgen_futures::JsFuture::from(promise).await.ok()?;
-    let resp: Response = resp_val.dyn_into().ok()?;
+    let controller = web_sys::AbortController::new().ok()?;
+    let signal = controller.signal();
 
+    let opts = RequestInit::new();
+    opts.set_method("GET");
+    opts.set_mode(RequestMode::Cors);
+    opts.set_signal(Some(&signal));
+
+    let request = web_sys::Request::new_with_str_and_init(health_url, &opts).ok()?;
+
+    // Abort hung probes so a dead port cannot stall Connected forever.
+    let abort_ctrl = controller.clone();
+    let abort_cb = Closure::once_into_js(move || {
+        abort_ctrl.abort();
+    });
+    let _timeout_id = window
+        .set_timeout_with_callback_and_timeout_and_arguments_0(
+            abort_cb.as_ref().unchecked_ref(),
+            PROBE_HEALTH_TIMEOUT_MS,
+        )
+        .ok()?;
+
+    let resp_val = wasm_bindgen_futures::JsFuture::from(window.fetch_with_request(&request))
+        .await
+        .ok()?;
+    let resp: Response = resp_val.dyn_into().ok()?;
     if !resp.ok() {
         return None;
     }
 
-    let json_promise = resp.json().ok()?;
-    let json_val = wasm_bindgen_futures::JsFuture::from(json_promise)
-        .await
-        .ok()?;
-    serde_wasm_bindgen::from_value(json_val).ok()
+    // Prefer text → serde_json so JS Number (f64) still maps to usize/u64.
+    let text_promise = resp.text().ok()?;
+    let text_val = wasm_bindgen_futures::JsFuture::from(text_promise).await.ok()?;
+    let text = text_val.as_string()?;
+    serde_json::from_str(&text).ok()
 }
 
 // ---------------------------------------------------------------------------
