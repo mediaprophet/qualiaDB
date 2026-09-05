@@ -122,6 +122,14 @@ fn health_reports_uses_the_domain_workspace() {
     assert!(!source.contains("persist::build_clinical_reports_view"));
 }
 
+#[test]
+fn health_calculators_are_wired_on_the_container_route() {
+    let source = fs::read_to_string(manifest_dir().join("src/browser/containers.rs"))
+        .expect("container router");
+    assert!(source.contains("\"health_calculators\""));
+    assert!(source.contains("calculators::build_health_calculators_view"));
+}
+
 fn manifest_dir() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
 }

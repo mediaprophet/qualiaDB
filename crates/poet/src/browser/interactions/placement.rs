@@ -150,8 +150,16 @@ pub fn place_container_via_menu(document: &Document, container_type: &str, label
 pub(super) fn place_container_on_canvas(document: &Document, container_type: &str, label: &str) {
     use crate::tool_chest::core::registry::SeedContainer;
 
-    let width = 400.0;
-    let height = 300.0;
+    let width = if container_type == "health_calculators" {
+        720.0
+    } else {
+        400.0
+    };
+    let height = if container_type == "health_calculators" {
+        520.0
+    } else {
+        300.0
+    };
     let (x, y) = find_smart_placement_slot(document, width, height);
 
     let next_z = HIGHEST_Z.fetch_add(1, Ordering::SeqCst) + 1;

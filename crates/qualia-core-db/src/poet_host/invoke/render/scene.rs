@@ -3,7 +3,7 @@
 //! Cold construction. The output is a serialisable node/edge/face record the
 //! desktop host maps onto `webizen_render::RenderScene`. No wgpu here.
 
-use super::super::{args, clinical, engineering, geometry};
+use super::super::{args, engineering, geometry};
 use crate::poet_host::PoetSnapshot;
 use vibe::{Diagnostic, Span, Value};
 
@@ -191,36 +191,22 @@ fn social_scene(snap: &PoetSnapshot) -> Result<Value, Diagnostic> {
     ))
 }
 
-fn health_scene(span: Span) -> Result<Value, Diagnostic> {
-    let score = clinical::framingham(&Value::Record(Default::default()), span);
-    let (risk, category) = match score {
-        Ok(Value::Record(r)) => (
-            rec_num(&r, "risk_10yr").unwrap_or(0.12),
-            match r.get("category") {
-                Some(Value::String(s)) => s.clone(),
-                _ => "reference".into(),
-            },
-        ),
-        _ => (0.12, "unavailable".into()),
-    };
+fn health_scene(_span: Span) -> Result<Value, Diagnostic> {
+    // Geometry only. ClinicalRisk.* fails closed without entered vitals;
+    // this scene must not invent a risk percentage or a named person.
     let nodes = vec![
         node(
-            "reference-profile".into(),
+            "held-calculator".into(),
             0.50,
             0.48,
             0.0,
             "#fb7185",
-            8.0 + risk * 18.0,
-            0.2 + risk,
+            8.0,
+            0.2,
         ),
         node("context-a".into(), 0.28, 0.68, 0.0, "#fda4af", 5.0, 0.15),
         node("context-b".into(), 0.72, 0.32, 0.0, "#fecdd3", 5.0, 0.15),
     ];
-    let honesty = if category == "unavailable" {
-        "partial"
-    } else {
-        "live"
-    };
     let mut rec = match pack(
         "health",
         "#14080c",
@@ -231,16 +217,17 @@ fn health_scene(span: Span) -> Result<Value, Diagnostic> {
         ],
         Vec::new(),
         [0.0, 0.1, 2.3],
-        honesty,
+        "partial",
     ) {
         Value::Record(m) => m,
         other => return Ok(other),
     };
-    rec.insert("risk_10yr".into(), Value::F64(risk));
-    rec.insert("category".into(), Value::String(category));
     rec.insert(
         "note".into(),
-        Value::String("reference adult profile — not a named person".into()),
+        Value::String(
+            "held — no entered vitals; not a named person; ClinicalRisk.* cannot calculate until every required input is present"
+                .into(),
+        ),
     );
     Ok(Value::Record(rec))
 }

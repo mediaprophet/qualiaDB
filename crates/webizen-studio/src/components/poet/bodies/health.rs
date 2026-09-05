@@ -1,4 +1,4 @@
-//! Health body — Framingham on a labeled reference profile, not a named person.
+//! Health body — clinical scene is held until vitals are entered.
 
 use crate::components::poet::engine::{self, PoetEvalResult};
 use crate::components::poet::gpu_frame::PoetGpuFrame;
@@ -7,8 +7,14 @@ use dioxus::prelude::*;
 const RISK: &str = r#"requires [ capability("capability.invoke") ];
 effect fn risk() {
     return capability.invoke("ClinicalRisk.framingham", {
-        age: 55, sex_male: true, total_cholesterol_mmol: 5.2,
-        hdl_cholesterol_mmol: 1.3, systolic_bp: 130
+        age: 55,
+        sex_male: true,
+        total_cholesterol_mmol: 5.2,
+        hdl_cholesterol_mmol: 1.3,
+        systolic_bp: 130,
+        bp_treated: false,
+        current_smoker: false,
+        diabetic: false
     });
 }
 "#;
@@ -19,7 +25,7 @@ pub fn HealthBody() -> Element {
     let mut busy = use_signal(|| false);
     rsx! {
         div { style: "display:grid;gap:8px;",
-            p { style: muted(), "ClinicalRisk.framingham on a reference adult profile. Not a named person. Scene node radius follows risk." }
+            p { style: muted(), "Scene is geometry only — not a named person, not a calculated risk. The button sends a fully specified labeled reference profile to ClinicalRisk.framingham (Wilson 1998); incomplete input cannot calculate." }
             PoetGpuFrame { kind: "health", width: 720, height: 300 }
             button {
                 disabled: busy(),

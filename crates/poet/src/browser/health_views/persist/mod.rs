@@ -79,7 +79,7 @@ pub fn build_health_overview_view(document: &Document) -> Element {
         &[
             CopField {
                 key: "age",
-                placeholder: "Age",
+                placeholder: "Age (years)",
             },
             CopField {
                 key: "sex",
@@ -87,7 +87,7 @@ pub fn build_health_overview_view(document: &Document) -> Element {
             },
             CopField {
                 key: "sys_bp",
-                placeholder: "Systolic BP",
+                placeholder: "Systolic BP (mmHg)",
             },
             CopField {
                 key: "chf",
@@ -106,20 +106,12 @@ pub fn build_health_overview_view(document: &Document) -> Element {
                 (
                     "ClinicalRisk.cha2ds2_vasc",
                     "ClinicalRisk.cha2ds2_vasc",
-                    serde_json::json!({
-                        "age": 65,
-                        "sex_female": false,
-                        "congestive_heart_failure": false
-                    }),
+                    serde_json::json!({}),
                 ),
                 (
                     "ClinicalRisk.framingham",
                     "ClinicalRisk.framingham",
-                    serde_json::json!({
-                        "age": 55,
-                        "sex_male": true,
-                        "systolic_bp": 130.0
-                    }),
+                    serde_json::json!({}),
                 ),
             ],
         ))

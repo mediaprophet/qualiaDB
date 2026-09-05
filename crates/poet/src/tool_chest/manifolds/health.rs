@@ -63,6 +63,17 @@ pub fn health_manifold_seed() -> ManifoldSeed {
                 ..Default::default()
             },
             SeedContainer {
+                container_type: "health_calculators".into(),
+                title: "Clinical calculators".into(),
+                x: 40.0,
+                y: 710.0,
+                width: 720.0,
+                height: 360.0,
+                z: 1.0,
+                honesty: "present".into(),
+                ..Default::default()
+            },
+            SeedContainer {
                 container_type: "nested_manifold".into(),
                 title: "Anatomy manifold".into(),
                 x: 780.0,

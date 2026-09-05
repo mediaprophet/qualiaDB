@@ -583,11 +583,10 @@ fn dispatch_instrument_action(document: &Document, tool_id: &str, label: &str) {
             "Render.gpu_adapter_info",
             serde_json::json!({}),
         ),
-        "health:biomarker" => invoke_session(
+        "health:biomarker" => super::interactions::place_container_via_menu(
             document,
+            "health_calculators",
             label,
-            "ClinicalRisk.cha2ds2_vasc",
-            serde_json::json!({ "age": 65, "sex_female": false }),
         ),
         "health:tomography" => invoke_session(
             document,
@@ -800,7 +799,8 @@ fn tools_for_type(container_type: &str) -> Vec<RibbonTool> {
                 description: "Audio.transport stop",
             },
         ],
-        "health_overview" | "health_documents" | "disclosure_log" | "conditions" => {
+        "health_overview" | "health_calculators" | "health_documents" | "disclosure_log"
+        | "conditions" => {
             vec![RibbonTool {
                 id: "health:nlp_ingest",
                 icon: "NLP",

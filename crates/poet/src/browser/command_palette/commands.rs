@@ -880,6 +880,11 @@ pub(super) fn build_command_list() -> Vec<CommandEntry> {
             shortcut: "",
         },
         CommandEntry {
+            icon: "\u{1F4D0}",
+            label: "Clinical Calculators",
+            shortcut: "",
+        },
+        CommandEntry {
             icon: "\u{1F3E5}",
             label: "Conditions",
             shortcut: "",

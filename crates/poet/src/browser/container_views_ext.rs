@@ -292,76 +292,9 @@ pub fn build_latex_view(document: &Document) -> Element {
 // Health (Framingham, clinical, consent-gated)
 // ---------------------------------------------------------------------------
 
-/// Health container — Framingham risk, medication, consent gate.
+/// Health container — consent-gated clinical calculators.
 pub fn build_health_view(document: &Document) -> Element {
-    let wrapper = document.create_element("div").unwrap();
-    let wrapper_el: HtmlElement = wrapper.clone().dyn_into().unwrap();
-    wrapper_el
-        .style()
-        .set_css_text("display: flex; flex-direction: column; flex: 1; gap: 8px;");
-
-    // Consent gate notice
-    let gate = document.create_element("div").unwrap();
-    gate.set_class_name("cr-card");
-    let gate_el: HtmlElement = gate.clone().dyn_into().unwrap();
-    gate_el
-        .style()
-        .set_css_text("border-color: var(--accent-amber); border-width: 1px; border-style: solid;");
-    gate.set_text_content(Some(
-        "\u{26A0}\u{FE0F} Health data is consent-gated. \
-         Wellfair commands require `wellfair_*_consent_creds` \
-         before reads or writes.",
-    ));
-    wrapper.append_child(&gate).unwrap();
-
-    // Framingham risk card
-    let risk = document.create_element("div").unwrap();
-    risk.set_class_name("cr-card");
-    let h = document.create_element("div").unwrap();
-    h.set_class_name("cr-header");
-    let title = document.create_element("span").unwrap();
-    title.set_class_name("cr-name");
-    title.set_text_content(Some("Framingham 10-Year Risk"));
-    h.append_child(&title).unwrap();
-    let badge = document.create_element("span").unwrap();
-    badge.set_class_name("honesty-badge honesty-partial");
-    badge.set_text_content(Some("partial"));
-    h.append_child(&badge).unwrap();
-    risk.append_child(&h).unwrap();
-    let meta = document.create_element("div").unwrap();
-    meta.set_class_name("cr-meta");
-    meta.set_text_content(Some(
-        "Score: 12% (moderate) \u{00B7} Age: 45 \u{00B7} SBP: 130 \u{00B7} TC: 5.2",
-    ));
-    risk.append_child(&meta).unwrap();
-    wrapper.append_child(&risk).unwrap();
-
-    // Medication list
-    let meds = document.create_element("div").unwrap();
-    meds.set_class_name("vibe-output");
-    for med in &[
-        "Metformin 500mg \u{00B7} twice daily",
-        "Atorvastatin 20mg \u{00B7} once daily",
-    ] {
-        let line = document.create_element("div").unwrap();
-        line.set_class_name("vibe-out-line");
-        line.set_text_content(Some(med));
-        meds.append_child(&line).unwrap();
-    }
-    wrapper.append_child(&meds).unwrap();
-
-    // Actions
-    let actions = document.create_element("div").unwrap();
-    actions.set_class_name("vibe-toolbar");
-    for label in &["Calculate Risk", "Medications", "Records", "Consent"] {
-        let btn = document.create_element("button").unwrap();
-        btn.set_class_name("vibe-run-btn");
-        btn.set_text_content(Some(label));
-        actions.append_child(&btn).unwrap();
-    }
-    wrapper.append_child(&actions).unwrap();
-
-    wrapper
+    crate::browser::health_views::calculators::build_health_calculators_view(document)
 }
 
 // ---------------------------------------------------------------------------

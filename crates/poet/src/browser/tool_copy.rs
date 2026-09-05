@@ -397,6 +397,11 @@ fn named(id: &str) -> Option<Presentation> {
             "Put a locked place for health records.",
             Proficiency::Novice,
         ),
+        "health:place_health_calculators" => (
+            "Clinical calculators",
+            "Put the Framingham, CHA₂DS₂-VASc, and SCORE2 forms. Fields start empty.",
+            Proficiency::Intermediate,
+        ),
         "health:anatomy_10d" => (
             "Body map",
             "Put a detailed body map.",
@@ -409,12 +414,17 @@ fn named(id: &str) -> Option<Presentation> {
         ),
         "health:framingham" => (
             "Heart-risk estimate",
-            "Not available until health review finishes.",
+            "Opens the Framingham form. ClinicalRisk.framingham runs only after age, sex, lipids, blood pressure, and the yes/no questions are entered. The result is not a diagnosis.",
             Proficiency::Expert,
         ),
         "health:cha2ds2" => (
             "Stroke-risk estimate",
-            "Not available until health review finishes.",
+            "Opens the CHA₂DS₂-VASc form. ClinicalRisk.cha2ds2_vasc applies only when atrial fibrillation is present. The result is not a diagnosis.",
+            Proficiency::Expert,
+        ),
+        "health:score2" => (
+            "European heart-risk estimate",
+            "Opens the SCORE2 form. ClinicalRisk.score2 needs a named European risk region. The result is not a diagnosis.",
             Proficiency::Expert,
         ),
         "code:place_vibe" => (

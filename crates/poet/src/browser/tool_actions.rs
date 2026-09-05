@@ -51,6 +51,9 @@ fn has_live_invoke(tool_id: &str) -> bool {
             | "spatial:orbit_preview"
             | "sheet:stats_mean"
             | "ai:grounding"
+            | "health:framingham"
+            | "health:cha2ds2"
+            | "health:score2"
             | "comm:pulse_presence"
             | "rights:deontic_obligate"
     )
@@ -92,9 +95,6 @@ pub fn unavailable_reason(tool_id: &str) -> Option<&'static str> {
         "health:pathology" => {
             Some("Pathology evaluation requires consent-gated assay inputs and reference ranges.")
         }
-        "health:framingham" | "health:cha2ds2" => Some(
-            "Clinical risk engines are parked on Health Review Gate A (HLT-03/07/08).",
-        ),
         "ai:co_author" => Some(
             "Co-authoring requires a selected document, prompt scope, and an activated local model.",
         ),
@@ -533,6 +533,9 @@ pub fn dispatch(document: &Document, tool_id: &str, label: &str, action: ActionT
             label,
         ),
         "mail:composer" => super::interactions::place_container_via_menu(document, "mail", label),
+        "health:framingham" | "health:cha2ds2" | "health:score2" => {
+            super::interactions::place_container_via_menu(document, "health_calculators", label)
+        }
         "rights:authors_group" => {
             super::interactions::place_container_via_menu(document, "rights", label)
         }

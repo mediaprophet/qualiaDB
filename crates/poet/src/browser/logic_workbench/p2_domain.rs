@@ -82,7 +82,7 @@ pub(super) fn build_clinical_risk_panel(document: &Document) -> Element {
         .append_child(&make_textarea(
             document,
             "clinical-risk-input",
-            "# Clinical risk input (model-dependent)\n# Framingham: age, sex, total_chol, hdl, sys_bp, smoker, diabetes\n# CHA2DS2-VASc: chf, hypertension, age>=75, diabetes, stroke, vascular, age>=65, female\n# Drug interaction: drug_list with CYP450 pathways\n\npatient(age=65, sex=male, total_chol=240, hdl=45, sys_bp=140, smoker=true, diabetes=true).",
+            "# Required fields. Incomplete input cannot calculate.\n# Units: age=years, total_chol/hdl=mmol/L, sys_bp=mmHg.\n# Framingham: age, sex=male|female, total_chol, hdl, sys_bp, bp_treated=true|false, smoker=true|false, diabetes=true|false\n# CHA2DS2-VASc (AF only): age, sex, atrial_fibrillation=true, chf, hypertension, diabetes, stroke, vascular\n# SCORE2: age, sex, sys_bp, total_chol, hdl, smoker, risk_region=low|moderate|high|very_high\n",
             "120px",
         ))
         .unwrap();

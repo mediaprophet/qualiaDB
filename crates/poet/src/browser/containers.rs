@@ -5,9 +5,7 @@
 use crate::tool_chest::core::registry::SeedContainer;
 use web_sys::{Document, Element};
 
-use super::container_inline_views::{
-    build_gis_map_view, build_media_3d_view,
-};
+use super::container_inline_views::{build_gis_map_view, build_media_3d_view};
 use super::ide::{build_ide_view, IdeState};
 use super::specialist_persist;
 
@@ -408,6 +406,12 @@ pub fn build_container(document: &Document, container: &SeedContainer) -> Elemen
         "health_overview" => {
             body.append_child(
                 &super::health_views::health_overview::build_health_overview_view(document),
+            )
+            .unwrap();
+        }
+        "health_calculators" => {
+            body.append_child(
+                &super::health_views::calculators::build_health_calculators_view(document),
             )
             .unwrap();
         }
@@ -1185,6 +1189,7 @@ fn container_type_filter_attrs(container_type: &str) -> (&'static str, &'static 
         | "anatomy"
         | "health"
         | "health_overview"
+        | "health_calculators"
         | "conditions"
         | "clinical_reports"
         | "lab_results"
@@ -1423,6 +1428,7 @@ fn container_type_tag(container_type: &str) -> (&'static str, &'static str) {
         "integrations" => ("tag-governance", "INTG"),
         "retrospective" => ("tag-governance", "RETRO"),
         "health_overview" => ("tag-health", "HOVR"),
+        "health_calculators" => ("tag-health", "CALC"),
         "conditions" => ("tag-health", "COND"),
         "clinical_reports" => ("tag-health", "CLIN"),
         "lab_results" => ("tag-health", "LAB"),

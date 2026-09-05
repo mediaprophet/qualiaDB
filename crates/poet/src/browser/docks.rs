@@ -499,22 +499,14 @@ pub fn build_toolchain_widgets(chain_id: &str, tools: &[ToolView]) -> Vec<ToolWi
                 id: format!("{id}:calc"),
                 label: "Clinical / Assay Engine".into(),
                 options: vec![
+                    ("".into(), "Choose an engine…".into()),
                     ("framingham".into(), "Framingham 10-Year CVD Risk".into()),
                     ("cha2ds2_vasc".into(), "CHA₂DS₂-VASc Stroke Risk".into()),
                     ("score2".into(), "SCORE2 European Mortality".into()),
                     ("smiles_mol".into(), "SMILES Molecular Weight & LogP".into()),
                     ("protein_sw".into(), "Smith-Waterman Protein Align".into()),
                 ],
-                default_val: "framingham".into(),
-            });
-            widgets.push(ToolWidget::Slider {
-                id: format!("{id}:sbp"),
-                label: "Systolic Blood Pressure (SBP)".into(),
-                min: 80.0,
-                max: 220.0,
-                step: 1.0,
-                default_val: 125.0,
-                unit: " mmHg".into(),
+                default_val: "".into(),
             });
         }
 
@@ -1479,7 +1471,7 @@ pub fn build_bottom_statusbar(document: &Document) -> Element {
 /// Elevate Graph chrome when Native daemon is connected; Volume stays closed until open.
 /// Vibe UI Live Engine dock is a separate host — not implied by daemon connect.
 pub fn refresh_bottom_statusbar_from_daemon(bar: &Element) {
-    use super::native_daemon::{get_daemon_state, DaemonConnectionState, is_daemon_connected};
+    use super::native_daemon::{get_daemon_state, is_daemon_connected, DaemonConnectionState};
     let document = match bar.owner_document() {
         Some(d) => d,
         None => return,
@@ -1492,7 +1484,8 @@ pub fn refresh_bottom_statusbar_from_daemon(bar: &Element) {
             ..
         } => {
             bar.set_attribute("data-honesty", "live").ok();
-            bar.set_attribute("data-daemon-port", &port.to_string()).ok();
+            bar.set_attribute("data-daemon-port", &port.to_string())
+                .ok();
             if let Some(g) = document.get_element_by_id("statusbar-graph-state") {
                 g.set_text_content(Some(&format!("live · {graph_quin_count} quins")));
                 g.set_attribute("data-honesty", "live").ok();
@@ -1503,8 +1496,11 @@ pub fn refresh_bottom_statusbar_from_daemon(bar: &Element) {
                     || v.get_attribute("data-volume-state").is_none()
                 {
                     v.set_text_content(Some("closed"));
-                    v.set_attribute("title", "Sanctuary volume closed — open via GraphDatabase.volume_open")
-                        .ok();
+                    v.set_attribute(
+                        "title",
+                        "Sanctuary volume closed — open via GraphDatabase.volume_open",
+                    )
+                    .ok();
                 }
             }
         }
@@ -1534,7 +1530,6 @@ pub fn refresh_bottom_statusbar_in_document(document: &Document) {
         }
     }
 }
-
 
 #[cfg(test)]
 mod tests {

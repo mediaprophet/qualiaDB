@@ -67,6 +67,19 @@ pub(super) fn register_health_toolbox(reg: &mut Registry) {
         )),
         Box::new(SimpleTool::new(
             ToolMetadata {
+                id: "health:place_health_calculators".into(),
+                label: "+ Clinical calculators".into(),
+                icon: "health".into(),
+                kind: ToolKind::PlaceContainer,
+                capability_scope: Some(SCOPE_PLACE.into()),
+                ontology_prefix: "health".into(),
+                description: "Place Framingham, CHA₂DS₂-VASc, and SCORE2 forms. Empty until you enter values."
+                    .into(),
+            },
+            ActionType::Query,
+        )),
+        Box::new(SimpleTool::new(
+            ToolMetadata {
                 id: "health:pathology".into(),
                 label: "🔬 Pathology Assay".into(),
                 icon: "pathology".into(),
@@ -107,7 +120,7 @@ pub(super) fn register_health_toolbox(reg: &mut Registry) {
                     id: "health:clinical".into(),
                     label: "Clinical Engines & Biomarkers".into(),
                     icon: "health".into(),
-                    description: "Select CVD risk models and adjust blood pressure biomarkers."
+                    description: "Framingham, CHA₂DS₂-VASc, and SCORE2. Required inputs only; incomplete cannot calculate."
                         .into(),
                 },
                 vec![
@@ -117,9 +130,9 @@ pub(super) fn register_health_toolbox(reg: &mut Registry) {
                             label: "Framingham".into(),
                             icon: "health".into(),
                             kind: ToolKind::RunAction,
-                            capability_scope: None,
+                            capability_scope: Some("ClinicalRisk.framingham".into()),
                             ontology_prefix: "health".into(),
-                            description: "Parked on Health Review Gate A — not a live clinical calculator.".into(),
+                            description: "Open the Framingham form. ClinicalRisk.framingham runs only after every required input is entered.".into(),
                         },
                         ActionType::Invoke,
                     )),
@@ -129,9 +142,21 @@ pub(super) fn register_health_toolbox(reg: &mut Registry) {
                             label: "CHA₂DS₂-VASc".into(),
                             icon: "health".into(),
                             kind: ToolKind::RunAction,
-                            capability_scope: None,
+                            capability_scope: Some("ClinicalRisk.cha2ds2_vasc".into()),
                             ontology_prefix: "health".into(),
-                            description: "Parked on Health Review Gate A — not a live clinical calculator.".into(),
+                            description: "Open the CHA₂DS₂-VASc form. ClinicalRisk.cha2ds2_vasc applies only with atrial fibrillation.".into(),
+                        },
+                        ActionType::Invoke,
+                    )),
+                    Box::new(SimpleTool::new(
+                        ToolMetadata {
+                            id: "health:score2".into(),
+                            label: "SCORE2".into(),
+                            icon: "health".into(),
+                            kind: ToolKind::RunAction,
+                            capability_scope: Some("ClinicalRisk.score2".into()),
+                            ontology_prefix: "health".into(),
+                            description: "Open the SCORE2 form. ClinicalRisk.score2 requires a named European risk region.".into(),
                         },
                         ActionType::Invoke,
                     )),
