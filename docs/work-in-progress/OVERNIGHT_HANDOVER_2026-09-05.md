@@ -36,7 +36,7 @@ Do **not** land that stack straight on tip.
 | D4–D5 | living/artifact/machine chips + Zone D | **PASS** | `f1d34d03` | davinci / monet |
 | B1–B2 | Sanctuary `volume_open` → `volume_commit` (HTTP) | **PASS** | `0b30cb15` sticky + create-on-open | Neo / Capt |
 | N1 | Cold-load Native Connected (:4242) | **PASS** | `64b21384` hard-reload, held ~20s | Neo / Capt |
-| D2 | **Open pack arrive card** (packSemVer · framing · gate) | **PASS** | davinci: en-core@0.1.0 · 0.1.0 · mixed · arrive/hold/leave on tip `a06179c9`. Paint harden lineage `deac3dd`/`7f91f8e` kept. Soft-rise → monet | davinci / monet / Capt |
+| D2 | **Open pack arrive card** (packSemVer · framing · gate) | **PASS** | davinci bay `a06179c9` (en-core@0.1.0 · mixed · arrive/hold/leave) + **monet soft-rise PASS**. Next: Marvin framing re-accept | davinci / monet / Capt |
 | B-ui | Sanctuary Save / Checkpoint UI path | **OPEN** | HTTP commit PASS; dialog flaky | Capt / davinci |
 | A-wish | office:graph sayables-first labels | **WISHLIST** | not blocking Catalog close | davinci / Vibe |
 | G-COORD | GIS bind deepen | **HELD** | yellow voice fixed; deepen after UAT | Neo |
@@ -45,7 +45,7 @@ Do **not** land that stack straight on tip.
 
 ## Exact next beats (do these in order)
 
-### 1) Close D2 — Open pack arrive (**PASS** `a06179c9` — monet soft-rise next)
+### 1) Close D2 — Open pack arrive (**PASS** `a06179c9` + monet soft-rise — Marvin framing next)
 
 **Fixture path (full, not truncated):**
 
@@ -185,3 +185,4 @@ See `DAVINCI_LANE_HANDOVER_2026-09-05.md` for frames + traps.
 | 2026-09-05 ~23:25 AEST | Capt D2 PARTIAL evidence; sticky Connected during re-probe + LAST_ARRIVE remount restore. |
 | 2026-09-05 ~23:30 AEST | Folded Monet + Marvin overnight lane handovers; linked from board. |
 | 2026-09-05 ~23:35 AEST | **D2 PASS** tick — davinci arrive on `a06179c9`; Capt critical path → monet soft-rise next. |
+| 2026-09-05 ~23:40 AEST | **monet soft-rise PASS** on `a06179c9`; Capt path → Marvin framing re-accept. |

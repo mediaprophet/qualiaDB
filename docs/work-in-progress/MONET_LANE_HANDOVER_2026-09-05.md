@@ -35,7 +35,7 @@ Look + motion as the visual backbone of Poet — Layout · Stage · Timeline twi
 | Impl plan | `docs/manuals/standards/impl-plan-monet-visual.md` |
 
 ## OPEN — ordered overnight beats (monet)
-### D2 — Open pack UI arrive (GATE — with Capt/davinci)
+### D2 — Open pack UI arrive (**PASS** soft-rise `a06179c9` — with Capt/davinci)
 1. Prerequisites: Native **Connected (:4242)** (re-probe badge if Standalone WASM); tip **`7f91f8e`+** (not older handover tips)
 2. Path: Script → Zone D → **Catalog · Lexicon** → Open pack → full path `crates/vibe/fixtures/lexicon/en-core.lexicon.json` (≥10–15s; no `/wor` truncate)
 3. **Motion accept:** soft-rise **arrive** on pack card showing packSemVer **0.1.0** · framing **mixed** · gate open; chips stay warm/crisp/muted (label+shape)
@@ -71,3 +71,6 @@ Deeper REPL drawer · G-COORD skins · custom unicode API · free tweens · Soli
 ## Dependencies
 - davinci chrome accept · Capt frames / UAT · Neo tip push · Vibe diagnose voice · Marvin framing on packs  
 - Cannot reach Capt `127.0.0.1:8080` from monet's computer — need screenshots/attachments for scores
+
+
+**Tick-off:** D2 soft-rise **PASS** tip `a06179c9` (monet). Framing re-accept → Marvin.
