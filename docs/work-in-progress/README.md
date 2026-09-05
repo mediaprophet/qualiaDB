@@ -65,3 +65,5 @@ WIP trackers stay here; settled contracts stay under `docs/manuals/standards/`.
   Review/feedback on operational suites + REPL tip (Neo).
 - [`ontology-uplift-audit-notes-marvin.md`](ontology-uplift-audit-notes-marvin.md)
   Ontology framing columns on uplift matrix + REPL catalog locks (Marvin).
+- [`vibe-language-nomenclature-brainstorm.md`](vibe-language-nomenclature-brainstorm.md)
+  Vibe command language nomenclature/form/multilingual brainstorm + Neo freeze seams + WordNet/SHACL lexicon principles (Vibe lead · Neo fold).
