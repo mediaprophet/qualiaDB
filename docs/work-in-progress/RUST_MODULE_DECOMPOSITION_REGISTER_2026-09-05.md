@@ -59,7 +59,7 @@ may need a documented exception rather than arbitrary fragmentation.
 | P1 | `browser/topbar.rs` | 2,734 | Menu construction, action dispatch, save/import dialogs, control bar, pod trays, filters, and manifold controls | `D3` `FE` `UX` `QA` | Before topbar/chrome changes |
 | P1 | `browser/interactions.rs` | 2,148 | Pointer state, wire operations, container commands, canvas movement, docking, placement, and geometry helpers | `D3` `FE` `QA` | Before interaction or canvas changes |
 | P1 | `browser/search_workbench/` | 34 plus bounded leaves | Completed `RM-05`: faceted search, query builder, SPARQL editor, saved-query persistence, execution, and placement | `D3` `FE` `RUST` `QA` | Before Tool Chest search semantics work |
-| P1 | container cluster: `containers/` plus `container_views.rs`, `container_views_ext.rs`, `container_inline_views.rs` | `containers/` complete (`RM-06`); views 1,227 / 1,387 / 1,016 | Shell vs domain body dispatch done; remaining view files stay as real `pub fn` renderers (do not `pub use build_*_view`) | `D3` `FE` `UX` `QA` | Before broad container restoration |
+| P1 | container cluster: `containers/` plus `container_views/`, `container_views_ext.rs`, `container_inline_views.rs` | `containers/` (`RM-06`) and `container_views/` (`RM-10`) complete; remaining 1,387 / 1,016 | Live doc/sheet/graph/ontology/pulse renderers split; ext and inline stay as real `pub fn` renderers (do not `pub use build_*_view`) | `D3` `FE` `UX` `QA` | Before broad container restoration |
 | P2 | `docks/` plus `instrument_panel/` plus `workflow_panels/` | Complete (`RM-07`–`RM-09`); all leaves under 500 | Dock, instrument, and workflow presentation are directory modules | `D3` `FE` `UX` `QA` | Before Desktop/chrome reuse |
 | P2 | `browser/mod.rs`, `native_daemon.rs` | 1,177 and 1,369 | Browser composition root and daemon transport/lifecycle boundaries | `D4` `RUST` `SPEC` `QA` | Only when their contracts are touched |
 
@@ -424,6 +424,48 @@ not convert the view cluster via `pub use … build_*_view`. Do not close
 Review Gate A. Do not start `AST-*`. `PFT-03` remains owner/captain
 selection. `native_daemon.rs` is `D4` and stays untouched until its
 transport contract is the accepted packet.
+
+### `RM-10` - POET live container views decomposition
+
+**Complete** (2026-09-05). `browser/container_views.rs` (1,227 lines at
+split) is now `browser/container_views/` with the live
+`build_doc_view` / `build_sheet_view` / `build_graph_view` /
+`build_ontology_view` / `build_pulse_view` names preserved.
+
+Source-to-destination map:
+
+| Old | New |
+|---|---|
+| CML HyperDoc chrome | `container_views/doc.rs` (295) |
+| Visual toolbar + gazetteer | `container_views/doc_toolbar.rs` (274) |
+| Visual/Markdown/RDF tabs | `container_views/doc_switcher.rs` (70) |
+| Spreadsheet + formula engine | `container_views/sheet.rs` (428) |
+| SPARQL explorer | `container_views/graph.rs` (96) |
+| Ontology stats / COP terms | `container_views/ontology.rs` (62) |
+| Pulse ledger | `container_views/pulse.rs` (71) |
+| Public glob re-exports | `container_views/mod.rs` (19) |
+
+Behavior, ABI, and allocation: unchanged. Live container routes still
+call `browser::container_views::build_doc_view` (and siblings).
+Re-exports are `pub use doc::*` (and siblings), **not**
+`pub use … build_*_view`, so `GENERIC_DELEGATION_CEILING` stays 112.
+
+Verification:
+
+- `cargo +stable check -p poet --lib`: passed
+- `cargo +stable test -p poet --lib container_views::`: 2 passed
+- product integrity: 10 passed (ceiling held)
+- surface inventory: 1 passed
+- `RUSTUP_TOOLCHAIN=stable NO_COLOR=true trunk build`: success; wasm
+  contains `doc-view-switcher`, `doc-editor`, `RDF-Star (N-Quins)`,
+  `never owl:Thing`, and `Topics must be poet/`
+- scoped rustfmt (`--edition 2021`) on the new container-view files: passed
+- interactive browser click-UAT was not re-run
+
+Next POET files over 1,200: `container_views_ext.rs` (1,387),
+`native_daemon.rs` (1,369), `command_palette/commands.rs` (1,231). Do
+not close Review Gate A. Do not start `AST-*`. `PFT-03` remains
+owner/captain selection. `native_daemon.rs` is `D4`.
 
 ## Acceptance record
 

@@ -258,6 +258,21 @@ unavailable. Live daemon fixture was not available on this VM.
   1,200 are the held view cluster and `native_daemon.rs` (`D4`).
 - Review Gate A remains a `D5` owner close. `PFT-03` remains owner selection.
 
+### `RM-10` - 2026-09-05
+
+- Structure: 1,227-line `browser/container_views.rs` replaced by a 19-line
+  router and seven purpose-specific child modules, all below 500 lines.
+- API: `build_doc_view`, `build_sheet_view`, `build_graph_view`,
+  `build_ontology_view`, and `build_pulse_view` remain via glob
+  re-exports. No `pub use … build_*_view` wrappers (ceiling still 112).
+- These builders are on the live container routes.
+- Verification: container_views tests 2/2, product integrity 10/10,
+  surface inventory 1/1, `trunk build` passed. Wasm contains
+  `doc-view-switcher` and `never owl:Thing`.
+- Interactive browser click-UAT was not re-run.
+- Next decomposition candidate: `RM-11`, `browser/container_views_ext.rs`.
+- Review Gate A remains a `D5` owner close. `PFT-03` remains owner selection.
+
 ## Post-gate programme
 
 The earlier programme remains the dependency backbone after Gate A:
