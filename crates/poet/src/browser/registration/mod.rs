@@ -161,4 +161,19 @@ mod tests {
         assert!(tools.contains(&("n3:evaluate", Some("N3Logic.evaluate"))));
         assert!(tools.contains(&("shacl:validate", Some("SHACL.validate"))));
     }
+
+    #[test]
+    fn every_chain_has_at_least_one_tool() {
+        let registry = super::build_registry();
+        for toolbox in registry.toolboxes() {
+            for chain in toolbox.chains() {
+                assert!(
+                    !chain.tools().is_empty(),
+                    "empty chain {} in toolbox {}",
+                    chain.metadata().id,
+                    toolbox.metadata().id
+                );
+            }
+        }
+    }
 }

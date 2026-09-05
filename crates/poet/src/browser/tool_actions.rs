@@ -27,6 +27,15 @@ fn has_local_contract(tool_id: &str) -> bool {
             | "office:paragraph_heading"
             | "office:paragraph_align_left"
             | "office:paragraph_align_center"
+            | "image:brush_stroke"
+            | "image:brush_clear"
+            | "image:fill_warm"
+            | "image:fill_cool"
+            | "image:heatmap"
+            | "spatial:camera_reset"
+            | "sheet:import"
+            | "code:vibe_diagnose"
+            | "code:quin_statement"
     )
 }
 
@@ -34,7 +43,16 @@ fn has_local_contract(tool_id: &str) -> bool {
 fn has_live_invoke(tool_id: &str) -> bool {
     matches!(
         tool_id,
-        "graph:sparql_query" | "ai:extractor" | "ai:sentinel" | "n3:evaluate" | "shacl:validate"
+        "graph:sparql_query"
+            | "ai:extractor"
+            | "ai:sentinel"
+            | "n3:evaluate"
+            | "shacl:validate"
+            | "spatial:orbit_preview"
+            | "sheet:stats_mean"
+            | "ai:grounding"
+            | "comm:pulse_presence"
+            | "rights:deontic_obligate"
     )
 }
 
@@ -64,12 +82,6 @@ pub fn unavailable_reason(tool_id: &str) -> Option<&'static str> {
         "sdn:energy_governor" => Some(
             "Energy governance requires live battery/solar telemetry and an authorised control target.",
         ),
-        "image:heatmap" => {
-            Some("Heatmap generation requires a selected numeric data layer and colour scale.")
-        }
-        "sheet:import" => {
-            Some("Import requires the dedicated bounded CSV/HCF file-picker workflow.")
-        }
         "spatial:track" => {
             Some("Tracking requires a selected consenting agent and a live trajectory source.")
         }
@@ -79,8 +91,8 @@ pub fn unavailable_reason(tool_id: &str) -> Option<&'static str> {
         "health:pathology" => {
             Some("Pathology evaluation requires consent-gated assay inputs and reference ranges.")
         }
-        "code:quin_statement" => Some(
-            "Quin construction requires subject, predicate, object, context, and sensitivity inputs.",
+        "health:framingham" | "health:cha2ds2" => Some(
+            "Clinical risk engines are parked on Health Review Gate A (HLT-03/07/08).",
         ),
         "ai:co_author" => Some(
             "Co-authoring requires a selected document, prompt scope, and an activated local model.",
@@ -570,6 +582,20 @@ pub fn dispatch(document: &Document, tool_id: &str, label: &str, action: ActionT
         "graph:sparql_query" => run_sparql_query(document, label),
         "n3:evaluate" => super::shapes_actions::run_n3_evaluate(document, label),
         "shacl:validate" => super::shapes_actions::run_shacl_validate(document, label),
+        "image:brush_stroke" => super::chain_actions::run_brush_stroke(document, label),
+        "image:brush_clear" => super::chain_actions::run_brush_clear(document, label),
+        "image:fill_warm" => super::chain_actions::run_fill(document, label, "warm"),
+        "image:fill_cool" => super::chain_actions::run_fill(document, label, "cool"),
+        "image:heatmap" => super::chain_actions::run_heatmap(document, label),
+        "spatial:camera_reset" => super::chain_actions::run_camera_reset(document, label),
+        "spatial:orbit_preview" => super::chain_actions::run_orbit_preview(document, label),
+        "sheet:stats_mean" => super::chain_actions::run_sheet_mean(document, label),
+        "sheet:import" => super::chain_actions::run_sheet_import(document, label),
+        "code:vibe_diagnose" => super::chain_actions::run_vibe_diagnose(document, label),
+        "code:quin_statement" => super::chain_actions::run_quin_statement(document, label),
+        "ai:grounding" => super::chain_actions::run_grounding(document, label),
+        "comm:pulse_presence" => super::chain_actions::run_pulse_presence(document, label),
+        "rights:deontic_obligate" => super::chain_actions::run_deontic_obligate(document, label),
         _ => super::interactions::show_tool_status(
             document,
             label,

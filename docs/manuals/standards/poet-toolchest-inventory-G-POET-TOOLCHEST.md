@@ -112,5 +112,6 @@ Wire **`office:shapes` toolchain** → tools **`n3:evaluate`** / **`shacl:valida
 
 ## Change log
 
+- 2026-09-05: Tracker `poet-toolchest-implementation-tracker.md`; empty chains filled; heatmap/import/quin local.
 - 2026-09-05: Second live chain `office:shapes` → `N3Logic.evaluate` + `SHACL.validate` (Capt. pick).
 - 2026-09-04: Initial inventory + first live SPARQL toolchain bind (Neo).

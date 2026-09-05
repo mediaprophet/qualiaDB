@@ -110,7 +110,32 @@ pub(super) fn register_health_toolbox(reg: &mut Registry) {
                     description: "Select CVD risk models and adjust blood pressure biomarkers."
                         .into(),
                 },
-                vec![],
+                vec![
+                    Box::new(SimpleTool::new(
+                        ToolMetadata {
+                            id: "health:framingham".into(),
+                            label: "Framingham".into(),
+                            icon: "health".into(),
+                            kind: ToolKind::RunAction,
+                            capability_scope: None,
+                            ontology_prefix: "health".into(),
+                            description: "Parked on Health Review Gate A — not a live clinical calculator.".into(),
+                        },
+                        ActionType::Invoke,
+                    )),
+                    Box::new(SimpleTool::new(
+                        ToolMetadata {
+                            id: "health:cha2ds2".into(),
+                            label: "CHA₂DS₂-VASc".into(),
+                            icon: "health".into(),
+                            kind: ToolKind::RunAction,
+                            capability_scope: None,
+                            ontology_prefix: "health".into(),
+                            description: "Parked on Health Review Gate A — not a live clinical calculator.".into(),
+                        },
+                        ActionType::Invoke,
+                    )),
+                ],
             ),
             ToolChain::new(
                 ToolChainMetadata {

@@ -60,7 +60,18 @@ pub(super) fn register_communication_toolbox(reg: &mut Registry) {
                     icon: "comm".into(),
                     description: "Select protocol and encryption tiers.".into(),
                 },
-                vec![],
+                vec![Box::new(SimpleTool::new(
+                    ToolMetadata {
+                        id: "comm:pulse_presence".into(),
+                        label: "Publish presence".into(),
+                        icon: "comm".into(),
+                        kind: ToolKind::RunAction,
+                        capability_scope: Some("Pulse.publish_presence".into()),
+                        ontology_prefix: "comm".into(),
+                        description: "Mark local presence; daemon upgrades to Pulse.publish_presence.".into(),
+                    },
+                    ActionType::Publish,
+                ))],
             ),
             ToolChain::new(
                 ToolChainMetadata {

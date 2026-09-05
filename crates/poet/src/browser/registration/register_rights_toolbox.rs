@@ -62,7 +62,18 @@ pub(super) fn register_rights_toolbox(reg: &mut Registry) {
                         "Select privacy routing lane (00/01/10/11) and Hohfeldian modalities."
                             .into(),
                 },
-                vec![],
+                vec![Box::new(SimpleTool::new(
+                    ToolMetadata {
+                        id: "rights:deontic_obligate".into(),
+                        label: "Obligate".into(),
+                        icon: "sign".into(),
+                        kind: ToolKind::RunAction,
+                        capability_scope: Some("DeonticLogic.evaluate".into()),
+                        ontology_prefix: "rights".into(),
+                        description: "Tag an obligation on the selected surface; daemon compiles via DeonticLogic.evaluate.".into(),
+                    },
+                    ActionType::Mutate,
+                ))],
             ),
             ToolChain::new(
                 ToolChainMetadata {

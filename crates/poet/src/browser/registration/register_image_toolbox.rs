@@ -60,7 +60,34 @@ pub(super) fn register_image_toolbox(reg: &mut Registry) {
                     icon: "media".into(),
                     description: "Select brush type, adjust brush stroke size and opacity.".into(),
                 },
-                vec![],
+                vec![
+                    Box::new(SimpleTool::new(
+                        ToolMetadata {
+                            id: "image:brush_stroke".into(),
+                            label: "Stroke".into(),
+                            icon: "marker".into(),
+                            kind: ToolKind::RunAction,
+                            capability_scope: None,
+                            ontology_prefix: "hm".into(),
+                            description: "Apply a visible stroke outline to the selected surface."
+                                .into(),
+                        },
+                        ActionType::Mutate,
+                    )),
+                    Box::new(SimpleTool::new(
+                        ToolMetadata {
+                            id: "image:brush_clear".into(),
+                            label: "Clear stroke".into(),
+                            icon: "marker".into(),
+                            kind: ToolKind::RunAction,
+                            capability_scope: None,
+                            ontology_prefix: "hm".into(),
+                            description: "Remove the stroke outline from the selected surface."
+                                .into(),
+                        },
+                        ActionType::Mutate,
+                    )),
+                ],
             ),
             ToolChain::new(
                 ToolChainMetadata {
@@ -71,7 +98,32 @@ pub(super) fn register_image_toolbox(reg: &mut Registry) {
                         "Stroke & fill color pickers with preset swatches and geometry modes."
                             .into(),
                 },
-                vec![],
+                vec![
+                    Box::new(SimpleTool::new(
+                        ToolMetadata {
+                            id: "image:fill_warm".into(),
+                            label: "Warm fill".into(),
+                            icon: "heatmap".into(),
+                            kind: ToolKind::RunAction,
+                            capability_scope: None,
+                            ontology_prefix: "hm".into(),
+                            description: "Apply a warm fill token to the selected surface.".into(),
+                        },
+                        ActionType::Mutate,
+                    )),
+                    Box::new(SimpleTool::new(
+                        ToolMetadata {
+                            id: "image:fill_cool".into(),
+                            label: "Cool fill".into(),
+                            icon: "heatmap".into(),
+                            kind: ToolKind::RunAction,
+                            capability_scope: None,
+                            ontology_prefix: "hm".into(),
+                            description: "Apply a cool fill token to the selected surface.".into(),
+                        },
+                        ActionType::Mutate,
+                    )),
+                ],
             ),
             ToolChain::new(
                 ToolChainMetadata {

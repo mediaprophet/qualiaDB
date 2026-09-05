@@ -50,7 +50,19 @@ pub(super) fn register_code_toolbox(reg: &mut Registry) {
                         "Select language dialect (Vibe/WGSL/Turtle) and configure gas budget."
                             .into(),
                 },
-                vec![],
+                vec![Box::new(SimpleTool::new(
+                    ToolMetadata {
+                        id: "code:vibe_diagnose".into(),
+                        label: "Diagnose Vibe".into(),
+                        icon: "vibe".into(),
+                        kind: ToolKind::Query,
+                        capability_scope: None,
+                        ontology_prefix: "vibe".into(),
+                        description: "Frozen four-op diagnose on the selected VibeScript source."
+                            .into(),
+                    },
+                    ActionType::Query,
+                ))],
             ),
             ToolChain::new(
                 ToolChainMetadata {

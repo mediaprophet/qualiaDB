@@ -17,6 +17,7 @@ pub mod app_launcher;
 pub mod canvas_extent;
 pub mod canvas_state;
 pub mod capabilities;
+mod chain_actions;
 pub mod checkpoint_panel;
 pub mod chora_canvas;
 pub mod clipboard;

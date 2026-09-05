@@ -98,7 +98,32 @@ pub(super) fn register_spatial_toolbox(reg: &mut Registry) {
                     description: "Select perspective/orthographic projections and WGSL pipelines."
                         .into(),
                 },
-                vec![],
+                vec![
+                    Box::new(SimpleTool::new(
+                        ToolMetadata {
+                            id: "spatial:camera_reset".into(),
+                            label: "Reset camera".into(),
+                            icon: "3d".into(),
+                            kind: ToolKind::RunAction,
+                            capability_scope: None,
+                            ontology_prefix: "hm".into(),
+                            description: "Reset yaw/pitch/zoom on the selected map or 3D surface.".into(),
+                        },
+                        ActionType::Mutate,
+                    )),
+                    Box::new(SimpleTool::new(
+                        ToolMetadata {
+                            id: "spatial:orbit_preview".into(),
+                            label: "Orbit preview".into(),
+                            icon: "3d".into(),
+                            kind: ToolKind::Query,
+                            capability_scope: Some("Animation.evaluate_preset".into()),
+                            ontology_prefix: "hm".into(),
+                            description: "In-process Animation.evaluate_preset orbit_spin sample.".into(),
+                        },
+                        ActionType::Query,
+                    )),
+                ],
             ),
             ToolChain::new(
                 ToolChainMetadata {

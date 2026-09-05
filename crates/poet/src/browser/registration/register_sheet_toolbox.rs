@@ -49,7 +49,18 @@ pub(super) fn register_sheet_toolbox(reg: &mut Registry) {
                     description: "Configure 1D/2D/3D/10D tensor dimensions and cell formatting."
                         .into(),
                 },
-                vec![],
+                vec![Box::new(SimpleTool::new(
+                    ToolMetadata {
+                        id: "sheet:stats_mean".into(),
+                        label: "Mean".into(),
+                        icon: "sheet".into(),
+                        kind: ToolKind::Query,
+                        capability_scope: Some("Statistics.mean".into()),
+                        ontology_prefix: "hm".into(),
+                        description: "Mean of numbers on the selected sheet. Local compute; daemon upgrades to Statistics.mean.".into(),
+                    },
+                    ActionType::Query,
+                ))],
             ),
             ToolChain::new(
                 ToolChainMetadata {
