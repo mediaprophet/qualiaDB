@@ -106,6 +106,8 @@ Landed lineage:
 
 Capt box runbook + evidence tables: `docs/work-in-progress/CAPT_LANE_AMENDMENTS_2026-09-05.md`
 
+Vibe language/diagnose lane: `docs/work-in-progress/VIBE_LANE_HANDOVER_2026-09-05.md`
+
 ### davinci (chrome / click-path)
 
 - [x] Catalog held-gate + chips PASS
@@ -120,8 +122,9 @@ Capt box runbook + evidence tables: `docs/work-in-progress/CAPT_LANE_AMENDMENTS_
 ### Vibe (language / diagnose)
 
 - [x] Diagnose bar accept (held/not yet; packSemVer · framing · gate)
+- [x] G-LEXICON-0 / fixtures / held-gate string PASS (see VIBE_LANE_HANDOVER)
 - [ ] Confirm arrive copy matches diagnose accept when D2 lands
-- [ ] office:graph sayables-first stays DevRel wishlist
+- [ ] office:graph sayables-first stays DevRel wishlist (B, not overnight)
 
 ### Marvin (framing)
 
@@ -167,3 +170,4 @@ Capt box runbook + evidence tables: `docs/work-in-progress/CAPT_LANE_AMENDMENTS_
 |------|------|
 | 2026-09-05 night | Created for Timothy overnight continuity; tip `64b21384`; D2 Open pack arrive is the open gate. |
 | 2026-09-05 ~23:10 AEST | Folded Capt lane amendments: D2 wait ≥10–15s; `/wor` truncation; daemon bind PASS; Capt runbook sidecar. |
+| 2026-09-05 ~23:13 AEST | Folded Vibe lane handover sidecar (diagnose PASS locks; D2 language accept rules). |
