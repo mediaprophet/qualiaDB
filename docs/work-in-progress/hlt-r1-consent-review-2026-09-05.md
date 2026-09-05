@@ -1,7 +1,7 @@
 # HLT-R1 — Consent-contract review (2026-09-05)
 
-**Status:** instrument review complete · **D5 Review Gate A not closed**  
-**Branch:** `cursor/poet-grok-handover-ac52` off `0.0.36-dev` (`37ec26c9`)  
+**Status:** instrument review complete · **accepted under Gate A close 2026-09-06**  
+**Branch:** merged via PR #75 into `0.0.36-dev`  
 **Packet:** independent review of HLT-03, not a reimplementation
 
 ## Verdict
@@ -13,8 +13,9 @@ re-authorized). Poet projection fail-opened missing scope as “All categories�
 missing expiry as Active. The grant UI offered `clinical_notes`, which is not a
 `ConsentScope` bit.
 
-Those defects are repaired. Gate A still needs a human/`D5` close. Next packet:
-`HLT-07`.
+Those defects are repaired. Review Gate A closed 2026-09-06
+(`GATE_A_CLOSE_2026-09-06.md`); Poet↔`ConsentLedger` persist wiring remains an
+accepted residual.
 
 ## How to run
 

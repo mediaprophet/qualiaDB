@@ -25,7 +25,7 @@ or dotted `qualia.*` IDs.
 |------|-----|
 | G-SOLID-IDP | QualiaDB / Webizen / Poet are the source of capability, identity, and storage. Solid is an **exit adapter** (LDP/WebID/pod export), not the architecture. Capt. unparks IdP only after that order is the product. |
 | G-COORD **bind** | Shapes + dialect landed. A live CoordinateSystem/Realm/Position invoke still needs an explicit owner gate. G-COORD is spatial/realm, not a network. |
-| Health Review Gate A (`HLT-03/07/08`) | Separate higher-assurance programme |
+| Health Review Gate A (`HLT-03/07/08`) | **Closed 2026-09-06** — `GATE_A_CLOSE_2026-09-06.md` |
 
 **Not parked — specified separately, implementation waits:** DNS/IP-free networking is **QDNF** (`docs/manuals/standards/qualia-decentralized-network-fabric/`). That design is still being written — **do not implement QLink/QRoute/QSession until the spec is ready.** G-COORD is spatial/realm Position only and MUST NOT claim to replace DNS/IP. WireGuard/libp2p remain Transition carriers.
 

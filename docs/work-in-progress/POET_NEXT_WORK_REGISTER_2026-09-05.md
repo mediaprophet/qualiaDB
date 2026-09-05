@@ -15,15 +15,23 @@ evidence.
 | 1 | Re-baseline after concurrent changes (`RBL-01`) | Audited; compile blocker found | Baseline `4eade061`; both focused suites fail at the same 16 missing registration modules before tests run | None |
 | 2 | Restore registration library ownership (`FIX-REG-01` / `RM-01`) | Complete | Directory-backed module tree; product integrity 9/9; surface inventory 1/1; `trunk build` passed | None |
 | 3 | Decompose POET style asset (`RM-02`) | Complete | 14 assets at no more than 421 lines; normalized CSS hash preserved; focused tests, build, desktop/mobile UAT passed | None |
-| 4 | Review `HLT-03` consent contract (`HLT-R1`) | Instrument review complete; **D5 Gate A still open** | 12 `consent_contract` tests pass; Poet share projection fail-closed; `clinical_notes` removed from grantable UI flags | Project owner/expert (`D5`) |
-
-| 5 | Complete `HLT-07` clinical calculator integrity | Implemented; MCP/VM/playground surfaces closed in `HLT-07b`; browser UAT pending | Required inputs and units, applicability, boundary tests, algorithm/version provenance, non-advice UI | Higher-assurance implementation/review |
-| 6 | Complete `HLT-08` Health UAT pack | Source contracts landed; browser rows open | Executable/manual evidence for add, reload, inspect, correct, grant, revoke, ingest, and offline recovery | Review Gate A |
-| 7 | Close Review Gate A | Blocked by 4-6 | Architecture, data contract, security, visual, browser, and status review | Project owner/expert reviewer |
+| 4 | Review `HLT-03` consent contract (`HLT-R1`) | Complete | 12 `consent_contract` tests pass; Poet share projection fail-closed; `clinical_notes` removed from grantable UI flags | Closed under Gate A |
+| 5 | Complete `HLT-07` clinical calculator integrity | Complete (`HLT-07` + `HLT-07b`) | Required inputs and units, applicability, boundary tests, algorithm/version provenance, non-advice UI | Closed under Gate A |
+| 6 | Complete `HLT-08` Health UAT pack | Source contracts + offline UAT accepted | Executable/manual evidence for add, reload, inspect, correct, grant, revoke, ingest, and offline recovery | Closed under Gate A |
+| 7 | Close Review Gate A | **CLOSED 2026-09-06** | `docs/work-in-progress/GATE_A_CLOSE_2026-09-06.md` — owner instruction; residuals accepted | Project owner (`D5`) |
 | 8 | Audit standalone Tool Chest semantics (`PFT-01`) | Complete; defects repaired in `PFT-02` | Live vs local labels, provenance, gated states, daemon rejection/error behavior | Project owner accepts findings |
-| 9 | Select next Tool Chest chain | Awaiting selection | Inventory row, live `ALL_BOUND` ID or explicit gated shell, acceptance task | Captain/project owner |
+| 9 | Select next Tool Chest chain | Ready (`PFT-03`) | Inventory row, live `ALL_BOUND` ID or explicit gated shell, acceptance task | Captain/project owner |
 
 ## Latest execution evidence
+
+### `GATE-A` - 2026-09-06
+
+- Project-owner D5 instruction: close Review Gate A so Poet implementation can proceed.
+- Decision record: `docs/work-in-progress/GATE_A_CLOSE_2026-09-06.md`.
+- Tip: `9909c1b4` on `0.0.36-dev` (PR #75 + env).
+- Residuals accepted: Poet grant persist without `ConsentLedger`; live-daemon browser UAT incomplete.
+- Unparked: `health:framingham` / `health:cha2ds2` / `health:score2` in Tool Chest tracker.
+- Next: `PFT-03` or `AST-01`.
 
 ### `RBL-01` - 2026-09-05
 
@@ -330,5 +338,5 @@ The earlier programme remains the dependency backbone after Gate A:
 4. Do not infer capability completion from a plan, label, or decorative shell.
 5. Update this register by appending evidence; historical source ledgers remain
    append-only.
-6. Stop at Review Gate A and Review Gate B until the project owner accepts the
-   review outcome.
+6. Review Gate A is closed (2026-09-06). Stop at Review Gate B until the project
+   owner accepts that review outcome.

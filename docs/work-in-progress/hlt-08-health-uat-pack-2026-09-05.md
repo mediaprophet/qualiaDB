@@ -1,12 +1,13 @@
 # HLT-08 — Health completion UAT pack (2026-09-05)
 
-**Status:** executable source contracts landed · browser evidence in progress  
+**Status:** source contracts + offline UAT accepted under Gate A close 2026-09-06  
 **Dependency:** `HLT-R1`, `HLT-07`  
 **Freeze:** `vibe-host-0.1`  
-**Branch:** `cursor/poet-grok-handover-ac52`
+**Branch:** merged via PR #75 into `0.0.36-dev`
 
 Each row must have exact evidence. No completion claim may exceed observed
-host behavior. Review Gate A (`D5`) is **not** closed by this pack.
+host behavior. Gate A accepted this pack with live-daemon browser rows as
+documented residuals (see `GATE_A_CLOSE_2026-09-06.md`).
 
 ## Workflows
 
@@ -35,4 +36,6 @@ cargo +stable test -p poet --test health_uat_pack
 
 ## Out of scope
 
-G-COORD bind · Solid IdP · WordNet · EBNF `lexicon:` · QDNF · Host widen · Gate A close
+G-COORD bind · Solid IdP · WordNet · EBNF `lexicon:` · QDNF · Host widen
+
+Gate A closed separately in `GATE_A_CLOSE_2026-09-06.md`.

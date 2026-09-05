@@ -251,9 +251,11 @@ the observed host behavior.
 
 ### Review Gate A
 
-The project owner or independent expert reviews Health architecture, consent,
-clinical behavior, data contracts, screenshots, browser UAT, and status claims.
-Do not begin governed assets or portable-app implementation before acceptance.
+**CLOSED 2026-09-06** — see `docs/work-in-progress/GATE_A_CLOSE_2026-09-06.md`.
+The project owner accepted Health architecture, consent, clinical fail-closed
+behavior, data contracts, source UAT contracts, and offline browser evidence,
+with documented residuals. Governed assets and portable-app packets may begin
+under their own acceptance rules. Review Gate B remains open.
 
 ## Phase 1 - Post-freeze POET and Tool Chest
 

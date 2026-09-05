@@ -65,17 +65,19 @@ existing implementation and browser evidence. Existing accessibility, honest
 state, narrow-layout, and container-chrome behavior is not reopened unless a
 specific regression or unmet acceptance criterion is identified.
 
-### Health remains under Review Gate A
+### Health — Review Gate A closed 2026-09-06
 
-The newer plan pack does not replace the Health sequence. Complete `HLT-07` and
-`HLT-08`, then review the Health data model, consent boundary, screenshots,
-browser behavior, and completion claims before dataset or portable-app work.
+The Health sequence through `HLT-R1`, `HLT-07`, `HLT-07b`, and `HLT-08` source
+contracts is accepted under
+[`GATE_A_CLOSE_2026-09-06.md`](GATE_A_CLOSE_2026-09-06.md). Residuals (Poet JSON
+grant upsert without `ConsentLedger` persist; live-daemon browser UAT) are
+documented and do not reopen Gate A. `AST-*` and clinical Tool Chest unparking
+may proceed under their own packets.
 
 `HLT-03` was originally routed to a higher-assurance implementation session but
-was recorded as completed by another model. The implementation and seven focused
-tests are useful evidence; model identity alone neither validates nor invalidates
-the work. Because this is an authorization boundary, an independent contract
-review remains required before Gate A closes.
+was recorded as completed by another model. The independent `HLT-R1` contract
+review and subsequent Gate A close supersede the earlier “review still required”
+hold.
 
 ### "Landed" describes documents, not completed stages
 
@@ -103,12 +105,13 @@ for technical objects where appropriate.
 
 ## Outstanding verification
 
-1. Independently review the `HLT-03` consent contract before closing Gate A.
-2. Complete `HLT-07` and `HLT-08` before starting governed asset work.
-3. Audit standalone Tool Chest labels and result provenance after `f784d0b2`.
+1. ~~Independently review the `HLT-03` consent contract before closing Gate A.~~ Done (`HLT-R1` + Gate A close 2026-09-06).
+2. ~~Complete `HLT-07` and `HLT-08` before starting governed asset work.~~ Done under Gate A (live-daemon UAT residual accepted).
+3. Audit standalone Tool Chest labels and result provenance after `f784d0b2` — completed as `PFT-01`/`PFT-02`.
 4. Convert plan-index status from a single `landed` label into separate document
    and execution states when the source index is next revised.
-5. Select the next Tool Chest chain through the project-owner/Captain gate.
+5. Select the next Tool Chest chain through the project-owner/Captain gate (`PFT-03`).
+6. Optional hardening: wire Poet grant/revoke persist to `ConsentLedger::issue` / `revoke`.
 
 The registration compilation gate found on 2026-09-05 was subsequently repaired
 as `RM-01` by placing the unchanged router and its 16 unchanged children in a

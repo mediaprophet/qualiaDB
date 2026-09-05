@@ -377,6 +377,17 @@ Known gaps: Review Gate A not closed; `PFT-03` owner chain selection; `container
 Unrelated failures preserved: Yes.
 Recommended next packet: `PFT-03` (owner) or `command_palette/commands.rs` (1,231). Do not close Gate A. Do not start `AST-*`.
 
+Packet: `GATE-A`
+Baseline git status: `0.0.36-dev` at `9909c1b4` (PR #75 merged + cloud-env cherry-pick). Pre-existing uncommitted QDNF docs WIP preserved and excluded from this commit.
+User job delivered: Closed Review Gate A under explicit project-owner D5 instruction. Recorded accepted evidence (HLT-R1/07/07b/08), documented residuals (ConsentLedger persist wiring; live-daemon browser UAT), unparked clinical Tool Chest engines in the tracker, and unlocked post-gate programmes (`AST-*`, `PFT-03`).
+Files changed: `docs/work-in-progress/GATE_A_CLOSE_2026-09-06.md`; register/plan/reconciliation/HLT evidence docs; `docs/manuals/standards/poet-toolchest-implementation-tracker.md`; this ledger.
+Tests and exact results: Evidence suite from PR #75 tip retained (consent_contract, invoke::clinical, health_uat_pack, product integrity). Close session did not re-run the full suite before documentation land.
+Browser/native UAT: No new live-daemon UAT; offline/source evidence accepted as residuals in the close decision.
+Delegation count before/after: unchanged.
+Known gaps: Poet JSON grant upsert still not `ConsentLedger::issue`/`revoke`; live Framingham/grant UAT still optional Capt follow-up; Review Gate B open.
+Unrelated failures preserved: Yes (QDNF WIP untouched).
+Recommended next packet: `PFT-03` (owner chain selection) or `AST-01` (governed Q42 envelope).
+
 
 
 

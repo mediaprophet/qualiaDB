@@ -1,7 +1,7 @@
 # HLT-07 — Clinical calculator workflow integrity (2026-09-05)
 
-**Status:** implementation complete · native + Poet tests passed · browser offline UAT partial  
-**Branch:** `cursor/poet-grok-handover-ac52` off `0.0.36-dev`  
+**Status:** implementation complete · accepted under Gate A close 2026-09-06  
+**Branch:** merged via PR #75 into `0.0.36-dev`  
 **Freeze:** `vibe-host-0.1` — four ops / live `ALL_BOUND` only  
 **Live IDs:** `ClinicalRisk.framingham` · `ClinicalRisk.cha2ds2_vasc` · `ClinicalRisk.score2`
 
@@ -39,7 +39,8 @@ Observed on the Health construct: Clinical calculators container **Risk estimate
 
 ## Not claimed
 
-- Review Gate A (`D5`)
 - Live daemon invoke of a complete Framingham / CHA₂DS₂-VASc / SCORE2 fixture
-- MCP / WebizenVM / playground fabrication closed in `HLT-07b`
+  (accepted residual under Gate A close)
 - `wasm_bridge/medical.rs` D’Agostino 2008 path (deserialize already requires fields)
+
+Gate A closed 2026-09-06. MCP / WebizenVM / playground fabrication closed in `HLT-07b`.

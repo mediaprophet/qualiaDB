@@ -13,7 +13,7 @@ Status vocabulary:
 | **local** | Executable in standalone Poet (DOM / four-ops / in-process catalog) |
 | **live** | Live `ALL_BOUND` `Family.method`; daemon upgrades, local fallback when noted |
 | **gated** | Honest `unavailable_reason`; not stub-broken |
-| **parked** | Named programme gate (Health Review Gate A, Solid, QDNF) |
+| **parked** | Named programme gate (Solid, QDNF; Health Review Gate A closed 2026-09-06) |
 | **spec** | Named in `crates/poet/tool-chest/TOOLBOX_*.md`, not in the live registry yet |
 
 Empty chains are a regression. Spec-scale toolboxes are tracked below, not bulk-registered.
@@ -130,7 +130,7 @@ Coder verbs (`capability.invoke`, SPARQL, quin.statement) stay out of novice/eve
 
 | Chain | Tool | Status | Bind / contract |
 |-------|------|--------|-----------------|
-| `health:clinical` | `health:framingham` / `health:cha2ds2` | parked | Health Review Gate A |
+| `health:clinical` | `health:framingham` / `health:cha2ds2` / `health:score2` | live | place calculators; daemon `ClinicalRisk.*` after complete inputs |
 | `health:tools` | `health:place_*` (overview, documents, disclosure, conditions, vault, anatomy) | place | |
 | | `health:pathology` | gated | consent-gated assay |
 
@@ -225,13 +225,16 @@ A comprehensive code audit of `crates/poet/src/browser/spec_tools/dispatch.rs` r
 
 | Item | Gate |
 |------|------|
-| Clinical calculators (`health:framingham`, `health:cha2ds2`, pathology integrity) | Health Review Gate A |
 | Solid IdP chrome | Qualia-first; Solid is exit |
 | QDNF QLink/QRoute | Spec still being written |
 | Host widen / dotted `qualia.*` | Freeze |
 
+Clinical calculators unparked 2026-09-06 under Review Gate A close
+(`docs/work-in-progress/GATE_A_CLOSE_2026-09-06.md`).
+
 ## Change log
 
+- 2026-09-06: Review Gate A closed (`GATE_A_CLOSE_2026-09-06.md`). Clinical calculators unparked to live `ClinicalRisk.*`.
 - 2026-09-05: Integrated VibeScript REPL and Core Capability Bridge architecture:
   Mapped `qualia-core-db` zero-heap libraries (Computational Geometry: Delaunay, Convex Hull, CSG Booleans, Alpha Shapes, DDG; Formal Logic: Deontic, Epistemic, Paraconsistent, LTL, ASP; Symbolic Algebra CAS; Computer Vision) to Vibe's `ALL_INVOKE_IDS`. Established dual-surface model connecting visual Tool-Chest actions to live VibeScript execution in the Poet IDE REPL (`eval_cell` over `LocalHost` and persistent `Env`).
 - 2026-09-05: Completed operational execution suites across all toolboxes in Poet Tool Chest:
