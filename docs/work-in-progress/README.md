@@ -57,3 +57,9 @@ WIP trackers stay here; settled contracts stay under `docs/manuals/standards/`.
   Poet motion/visual design notes (beats, tokens, UAT look) (monet · pair davinci).
 - [`ontology-design-notes-marvin.md`](ontology-design-notes-marvin.md)
   Ontology design notes (SHACL/OWL cuts, G-COORD ahead-of-bind) (Marvin).
+- [`qualia-core-db-uplift-audit.md`](qualia-core-db-uplift-audit.md)
+  Capability uplift audit — expose core-db vs reimplement; matrix programme (Neo).
+- [`vibe-repl-poet-ui.md`](vibe-repl-poet-ui.md)
+  Vibe REPL in Poet — make live engine useful (diagnose/catalog/recipes) (Neo · Vibe).
+- [`review-tip-5c758e63-poet-vibe-suites.md`](review-tip-5c758e63-poet-vibe-suites.md)
+  Review/feedback on operational suites + REPL tip (Neo).
