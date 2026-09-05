@@ -985,6 +985,7 @@ pub fn build_daemon_status_badge(document: &Document) -> Element {
 pub fn update_all_status_badges(document: &Document) {
     if let Ok(list) = document.query_selector_all(".webizen-native-status-badge") {
     super::docks::refresh_bottom_statusbar_in_document(document);
+    super::g_coord::refresh_g_coord_from_daemon(document);
         for i in 0..list.length() {
             if let Some(el) = list.item(i).and_then(|n| n.dyn_into::<Element>().ok()) {
                 render_badge_content(&el);

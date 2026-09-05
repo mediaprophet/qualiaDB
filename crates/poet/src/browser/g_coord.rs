@@ -295,6 +295,23 @@ fn wire_timeline(root: &Element, input: &Element) {
     closure.forget();
 }
 
+
+/// Re-paint open G-COORD map honesty when Native daemon connects (initial paint may race probe).
+pub fn refresh_g_coord_from_daemon(document: &Document) {
+    if let Ok(list) = document.query_selector_all(".g-coord-map") {
+        for i in 0..list.length() {
+            let Some(node) = list.item(i) else { continue };
+            let Ok(root) = node.dyn_into::<Element>() else { continue };
+            let realm = root
+                .get_attribute("data-realm")
+                .as_deref()
+                .and_then(Realm::from_str)
+                .unwrap_or(Realm::Earth);
+            paint_realm(&root, realm);
+        }
+    }
+}
+
 fn paint_realm(root: &Element, realm: Realm) {
     root.set_attribute("data-realm", realm.as_str()).ok();
     root.set_attribute("data-coord-bind", "remap").ok();
@@ -318,7 +335,7 @@ fn paint_realm(root: &Element, realm: Realm) {
         let sparql_note = if super::native_daemon::is_daemon_connected() {
             "GraphDatabase.sparql is live on the daemon when queried."
         } else {
-            "GraphDatabase.sparql is an empty local kernel until a daemon is connected — not a fake map tile."
+            "held / not yet — open native daemon for GraphDatabase.sparql (empty local kernel, not a fake map tile)."
         };
         h.set_text_content(Some(&format!(
             "Remap {} · {}. QDNF (no DNS/IP network) is not this surface.",
@@ -378,7 +395,7 @@ fn maybe_sparql(result: &Element) {
                     response
                         .diagnostic
                         .as_deref()
-                        .unwrap_or("GraphDatabase.sparql returned no bindings."),
+                        .unwrap_or("held / not yet — GraphDatabase.sparql returned no bindings (daemon up; graph may be empty)."),
                 ));
             }
             Err(error) => {
