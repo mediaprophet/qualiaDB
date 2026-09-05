@@ -15,7 +15,8 @@ evidence.
 | 1 | Re-baseline after concurrent changes (`RBL-01`) | Audited; compile blocker found | Baseline `4eade061`; both focused suites fail at the same 16 missing registration modules before tests run | None |
 | 2 | Restore registration library ownership (`FIX-REG-01` / `RM-01`) | Complete | Directory-backed module tree; product integrity 9/9; surface inventory 1/1; `trunk build` passed | None |
 | 3 | Decompose POET style asset (`RM-02`) | Complete | 14 assets at no more than 421 lines; normalized CSS hash preserved; focused tests, build, desktop/mobile UAT passed | None |
-| 4 | Review `HLT-03` consent contract | Required review | Principal authority, immutable scope, expiry, replay, one-way revocation, no private-key handling | Review Gate A |
+| 4 | Review `HLT-03` consent contract (`HLT-R1`) | Instrument review complete; **D5 Gate A still open** | 12 `consent_contract` tests pass; Poet share projection fail-closed; `clinical_notes` removed from grantable UI flags | Project owner/expert (`D5`) |
+
 | 5 | Complete `HLT-07` clinical calculator integrity | Not started in ledger | Required inputs and units, applicability, boundary tests, algorithm/version provenance, non-advice UI | Higher-assurance implementation/review |
 | 6 | Complete `HLT-08` Health UAT pack | Blocked by 4-5 | Executable/manual evidence for add, reload, inspect, correct, grant, revoke, ingest, and offline recovery | Review Gate A |
 | 7 | Close Review Gate A | Blocked by 4-6 | Architecture, data contract, security, visual, browser, and status review | Project owner/expert reviewer |
@@ -123,7 +124,25 @@ evidence.
   10 over 2,000. POET has no remaining file over 2,000.
 - Next decomposition candidate: `RM-06`, `browser/containers.rs` (`D3`),
   coordinated with the container-view cluster.
-- Next programme assurance packet remains `HLT-R1`.
+- Next programme assurance packet is `HLT-07` (`D4` CLIN); `HLT-R1` instrument
+  review is recorded below. Review Gate A remains a `D5` owner close.
+
+### `HLT-R1` - 2026-09-05
+
+- Read: `governance/consent_contract.rs`, Poet `disclosure_model.rs`,
+  `project_shares` / revocation payload, HLT-03 playbook acceptance.
+- Held without change: signed digest immutability of principal/scope; expiry
+  `now >= expires_at`; principal-only revoke; no private key on the grant
+  struct (verifying key + 64-byte signature).
+- Repaired: unused `ReplayDetected`; stateless omit-receipt reactivation;
+  unknown/empty scope labels; Poet "All categories" / missing-expiry Active
+  defaults; grantable `clinical_notes` UI flag (not a contract bit).
+- Verification: 12 `consent_contract` tests passed; 27 `health_views` tests
+  passed (includes 3 share-projection tests).
+- Not claimed: Review Gate A / `D5` clinical-authorization close; live daemon
+  signing of grants still goes through record upsert, not `ConsentLedger`
+  issue/revoke (seam for Neo if Health persist should remember revocations).
+- Next packet: `HLT-07`.
 
 ## Post-gate programme
 

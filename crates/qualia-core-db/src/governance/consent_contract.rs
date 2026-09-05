@@ -38,13 +38,28 @@ impl ConsentScope {
 
     pub fn category_from_family(family: &str) -> Option<u32> {
         match family {
-            "health_vital" => Some(Self::VITALS),
-            "health_lab" => Some(Self::LABS),
-            "health_condition" => Some(Self::CONDITIONS),
-            "health_medication" => Some(Self::MEDICATIONS),
-            "health_document" => Some(Self::DOCUMENTS),
+            "health_vital" | "vitals" => Some(Self::VITALS),
+            "health_lab" | "labs" | "lab_results" => Some(Self::LABS),
+            "health_condition" | "conditions" => Some(Self::CONDITIONS),
+            "health_medication" | "medications" => Some(Self::MEDICATIONS),
+            "health_document" | "documents" => Some(Self::DOCUMENTS),
             _ => None,
         }
+    }
+
+    /// Parse UI/payload labels into a contract scope. Unknown labels fail closed
+    /// (they must not widen authority). Empty input is a scope violation.
+    pub fn from_labels(labels: &[&str]) -> Result<Self, ConsentError> {
+        if labels.is_empty() {
+            return Err(ConsentError::ScopeViolation { requested_flag: 0 });
+        }
+        let mut bits = 0u32;
+        for label in labels {
+            let flag = Self::category_from_family(label.trim())
+                .ok_or(ConsentError::ScopeViolation { requested_flag: 0 })?;
+            bits |= flag;
+        }
+        Ok(Self(bits))
     }
 }
 
@@ -59,6 +74,7 @@ pub enum ConsentError {
     RequesterMismatch,
     ScopeViolation { requested_flag: u32 },
     ReplayDetected,
+    LedgerFull,
     MalformedKey,
 }
 
@@ -258,31 +274,147 @@ impl RevocationReceipt {
     }
 }
 
-/// Authorize access to a scoped category under a grant and optional revocation receipt.
+/// Maximum grant/revocation slots in the fail-closed in-memory ledger.
+pub const MAX_CONSENT_LEDGER: usize = 32;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct SeenGrant {
+    grant_id: [u8; 32],
+    nonce: u64,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct RevokedGrant {
+    grant_id: [u8; 32],
+    revoked_at: u64,
+}
+
+/// Bounded, zero-heap registry: replay of `(grant_id, nonce)` and remembered
+/// revocations so omitting a receipt cannot reactivate a grant.
+#[derive(Debug, Clone)]
+pub struct ConsentLedger {
+    seen: [Option<SeenGrant>; MAX_CONSENT_LEDGER],
+    n_seen: usize,
+    revoked: [Option<RevokedGrant>; MAX_CONSENT_LEDGER],
+    n_revoked: usize,
+}
+
+impl Default for ConsentLedger {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl ConsentLedger {
+    pub const fn new() -> Self {
+        Self {
+            seen: [None; MAX_CONSENT_LEDGER],
+            n_seen: 0,
+            revoked: [None; MAX_CONSENT_LEDGER],
+            n_revoked: 0,
+        }
+    }
+
+    fn is_replay(&self, grant: &ConsentGrant) -> bool {
+        self.seen.iter().take(self.n_seen).any(|slot| {
+            slot.is_some_and(|seen| seen.grant_id == grant.grant_id && seen.nonce == grant.nonce)
+        })
+    }
+
+    fn revoked_at(&self, grant_id: &[u8; 32]) -> Option<u64> {
+        self.revoked.iter().take(self.n_revoked).find_map(|slot| {
+            slot.and_then(|rev| (rev.grant_id == *grant_id).then_some(rev.revoked_at))
+        })
+    }
+
+    /// Register a verified grant. Duplicate `(grant_id, nonce)` is replay.
+    pub fn issue(&mut self, grant: &ConsentGrant, now: u64) -> Result<(), ConsentError> {
+        grant.verify(now)?;
+        if self.is_replay(grant) {
+            return Err(ConsentError::ReplayDetected);
+        }
+        if self.n_seen >= MAX_CONSENT_LEDGER {
+            return Err(ConsentError::LedgerFull);
+        }
+        self.seen[self.n_seen] = Some(SeenGrant {
+            grant_id: grant.grant_id,
+            nonce: grant.nonce,
+        });
+        self.n_seen += 1;
+        Ok(())
+    }
+
+    /// Record a principal-signed revocation. Later authorize calls fail even
+    /// if the caller omits the receipt.
+    pub fn revoke(
+        &mut self,
+        grant: &ConsentGrant,
+        receipt: &RevocationReceipt,
+    ) -> Result<(), ConsentError> {
+        receipt.verify_against_grant(grant)?;
+        if self.revoked_at(&grant.grant_id).is_some() {
+            return Ok(());
+        }
+        if self.n_revoked >= MAX_CONSENT_LEDGER {
+            return Err(ConsentError::LedgerFull);
+        }
+        self.revoked[self.n_revoked] = Some(RevokedGrant {
+            grant_id: grant.grant_id,
+            revoked_at: receipt.revoked_at,
+        });
+        self.n_revoked += 1;
+        Ok(())
+    }
+
+    pub fn authorize_category_access(
+        &self,
+        grant: &ConsentGrant,
+        revocations: &[RevocationReceipt],
+        requested_category: u32,
+        actor_did: &[u8; 32],
+        current_timestamp: u64,
+    ) -> Result<(), ConsentError> {
+        if let Some(revoked_at) = self.revoked_at(&grant.grant_id) {
+            return Err(ConsentError::Revoked { revoked_at });
+        }
+        authorize_category_access(
+            grant,
+            revocations,
+            requested_category,
+            actor_did,
+            current_timestamp,
+        )
+    }
+}
+
+/// Authorize access to a scoped category under a grant and a receipt slice.
+///
+/// Any verified receipt targeting this grant permanently denies access.
+/// Callers that can omit receipts must use [`ConsentLedger`] so revocation
+/// cannot be replayed away.
 pub fn authorize_category_access(
     grant: &ConsentGrant,
-    revocation: Option<&RevocationReceipt>,
+    revocations: &[RevocationReceipt],
     requested_category: u32,
     actor_did: &[u8; 32],
     current_timestamp: u64,
 ) -> Result<(), ConsentError> {
-    // 1. If a valid revocation exists, access is permanently denied (cannot reactivate).
-    if let Some(receipt) = revocation {
+    for receipt in revocations {
+        if receipt.grant_id != grant.grant_id {
+            continue;
+        }
         receipt.verify_against_grant(grant)?;
         return Err(ConsentError::Revoked {
             revoked_at: receipt.revoked_at,
         });
     }
 
-    // 2. Verify grant signature and strict expiration (fails closed).
     grant.verify(current_timestamp)?;
 
-    // 3. Verify requester DID matches authorized recipient.
     if &grant.recipient_did != actor_did {
         return Err(ConsentError::RequesterMismatch);
     }
 
-    // 4. Verify category is within scope.
     if !grant.scope.contains(requested_category) {
         return Err(ConsentError::ScopeViolation {
             requested_flag: requested_category,
@@ -322,20 +454,16 @@ mod tests {
 
         assert!(authorize_category_access(
             &grant,
-            None,
+            &[],
             ConsentScope::VITALS,
             &dr_bob_did,
             now + 100
         )
         .is_ok());
-        assert!(authorize_category_access(
-            &grant,
-            None,
-            ConsentScope::LABS,
-            &dr_bob_did,
-            now + 100
-        )
-        .is_ok());
+        assert!(
+            authorize_category_access(&grant, &[], ConsentScope::LABS, &dr_bob_did, now + 100)
+                .is_ok()
+        );
     }
 
     #[test]
@@ -355,7 +483,7 @@ mod tests {
         );
 
         let err =
-            authorize_category_access(&grant, None, ConsentScope::VITALS, &dr_bob_did, now + 3601)
+            authorize_category_access(&grant, &[], ConsentScope::VITALS, &dr_bob_did, now + 3601)
                 .unwrap_err();
         assert_eq!(
             err,
@@ -385,7 +513,7 @@ mod tests {
 
         let err = authorize_category_access(
             &grant,
-            Some(&receipt),
+            &[receipt],
             ConsentScope::VITALS,
             &dr_bob_did,
             now + 600,
@@ -421,7 +549,7 @@ mod tests {
 
         let err = authorize_category_access(
             &grant,
-            Some(&receipt),
+            &[receipt],
             ConsentScope::VITALS,
             &dr_bob_did,
             now + 600,
@@ -446,14 +574,9 @@ mod tests {
             1,
         );
 
-        let err = authorize_category_access(
-            &grant,
-            None,
-            ConsentScope::DOCUMENTS,
-            &dr_bob_did,
-            now + 100,
-        )
-        .unwrap_err();
+        let err =
+            authorize_category_access(&grant, &[], ConsentScope::DOCUMENTS, &dr_bob_did, now + 100)
+                .unwrap_err();
         assert_eq!(
             err,
             ConsentError::ScopeViolation {
@@ -520,5 +643,91 @@ mod tests {
                 .unwrap();
         assert_eq!(count, 1);
         assert_eq!(verdicts_revoked[0].status, DeonticStatus::Defeated);
+    }
+
+    fn vitals_grant(alice: &SigningKey, recipient: [u8; 32], now: u64, nonce: u64) -> ConsentGrant {
+        ConsentGrant::new_signed(
+            [nonce as u8; 32],
+            alice,
+            recipient,
+            ConsentScope(ConsentScope::VITALS),
+            100,
+            now,
+            now + 3600,
+            nonce,
+        )
+    }
+
+    #[test]
+    fn exact_expiry_instant_fails_closed() {
+        let alice_key = test_key(1);
+        let dr_bob_did = test_key(2).verifying_key().to_bytes();
+        let now = 1_000_000;
+        let grant = vitals_grant(&alice_key, dr_bob_did, now, 1);
+        let err =
+            authorize_category_access(&grant, &[], ConsentScope::VITALS, &dr_bob_did, now + 3600)
+                .unwrap_err();
+        assert!(matches!(err, ConsentError::Expired { .. }));
+    }
+
+    #[test]
+    fn non_recipient_actor_is_denied() {
+        let alice_key = test_key(1);
+        let dr_bob_did = test_key(2).verifying_key().to_bytes();
+        let mallory_did = test_key(9).verifying_key().to_bytes();
+        let now = 1_000_000;
+        let grant = vitals_grant(&alice_key, dr_bob_did, now, 1);
+        let err =
+            authorize_category_access(&grant, &[], ConsentScope::VITALS, &mallory_did, now + 100)
+                .unwrap_err();
+        assert_eq!(err, ConsentError::RequesterMismatch);
+    }
+
+    #[test]
+    fn labels_reject_unknown_and_empty_without_widening() {
+        assert!(ConsentScope::from_labels(&[]).is_err());
+        assert!(ConsentScope::from_labels(&["clinical_notes"]).is_err());
+        assert!(ConsentScope::from_labels(&["vitals", "owl:Thing"]).is_err());
+        let scope = ConsentScope::from_labels(&["vitals", "lab_results"]).unwrap();
+        assert!(scope.contains(ConsentScope::VITALS));
+        assert!(scope.contains(ConsentScope::LABS));
+        assert!(!scope.contains(ConsentScope::DOCUMENTS));
+    }
+
+    #[test]
+    fn ledger_detects_replay_and_blocks_reactivation_without_receipt() {
+        let alice_key = test_key(1);
+        let dr_bob_did = test_key(2).verifying_key().to_bytes();
+        let now = 1_000_000;
+        let grant = vitals_grant(&alice_key, dr_bob_did, now, 7);
+        let mut ledger = ConsentLedger::new();
+        ledger.issue(&grant, now + 1).unwrap();
+        assert_eq!(
+            ledger.issue(&grant, now + 2).unwrap_err(),
+            ConsentError::ReplayDetected
+        );
+
+        let receipt = RevocationReceipt::new_signed([99u8; 32], &grant, &alice_key, now + 500, 200);
+        ledger.revoke(&grant, &receipt).unwrap();
+
+        let err = ledger
+            .authorize_category_access(&grant, &[], ConsentScope::VITALS, &dr_bob_did, now + 600)
+            .unwrap_err();
+        assert_eq!(
+            err,
+            ConsentError::Revoked {
+                revoked_at: now + 500
+            }
+        );
+    }
+
+    #[test]
+    fn grant_struct_holds_no_private_key_material() {
+        let alice_key = test_key(1);
+        let dr_bob_did = test_key(2).verifying_key().to_bytes();
+        let grant = vitals_grant(&alice_key, dr_bob_did, 1_000_000, 1);
+        assert_eq!(grant.principal_did, alice_key.verifying_key().to_bytes());
+        assert_ne!(grant.principal_did, alice_key.to_bytes());
+        assert_eq!(grant.signature.len(), 64);
     }
 }

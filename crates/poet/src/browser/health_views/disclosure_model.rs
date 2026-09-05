@@ -62,11 +62,6 @@ pub const CATEGORY_OPTIONS: &[(&str, &str, &str)] = &[
         "Documents & reports",
         "Discharge summaries and referral reports",
     ),
-    (
-        "clinical_notes",
-        "Clinical & therapy notes",
-        "Consultation and care encounter notes",
-    ),
 ];
 
 pub const PURPOSE_OPTIONS: &[(&str, &str)] = &[
@@ -240,5 +235,21 @@ mod tests {
         let expires_str = fields.get("expires_at").unwrap().as_str().unwrap();
         let parsed_exp = chrono::DateTime::parse_from_rfc3339(expires_str).unwrap();
         assert_eq!(parsed_exp.timestamp(), now + duration);
+    }
+
+    #[test]
+    fn category_options_match_consent_contract_flags_only() {
+        let ids: Vec<&str> = CATEGORY_OPTIONS.iter().map(|(id, _, _)| *id).collect();
+        assert_eq!(
+            ids,
+            [
+                "vitals",
+                "medications",
+                "conditions",
+                "lab_results",
+                "documents"
+            ]
+        );
+        assert!(!ids.iter().any(|id| *id == "clinical_notes"));
     }
 }

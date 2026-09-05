@@ -18,6 +18,7 @@ pub mod persist;
 pub mod persist_ledgers;
 pub mod record_inspection;
 pub mod reports_workspace;
+pub mod share_projection;
 pub mod vitals_chart;
 
 pub mod authority_attestations;

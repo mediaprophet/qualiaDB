@@ -17,6 +17,8 @@ plans, trackers, or historical ledgers until the project owner promotes them.
 - [`POET_NEXT_WORK_REGISTER_2026-09-05.md`](POET_NEXT_WORK_REGISTER_2026-09-05.md)
   records the ordered remaining work, dependencies, review gates, and ownership
   boundaries without assigning exclusive control to any agent.
+- [`hlt-r1-consent-review-2026-09-05.md`](./hlt-r1-consent-review-2026-09-05.md)
+  — HLT-R1 consent-contract review (instrument complete; D5 Gate A still open)
 - [`POET_UPDATED_IMPLEMENTATION_PLAN_2026-09-05.md`](POET_UPDATED_IMPLEMENTATION_PLAN_2026-09-05.md)
   defines the multi-platform difficulty/role routing, bounded packets,
   acceptance evidence, stop rules, and review gates for implementation.
