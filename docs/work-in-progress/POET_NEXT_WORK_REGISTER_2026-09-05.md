@@ -200,6 +200,19 @@ unavailable. Live daemon fixture was not available on this VM.
 - Review Gate A remains a `D5` owner close. Next: `PFT-03` (owner selects a
   chain) or `RM-06` `containers.rs` split.
 
+### `RM-06` - 2026-09-05
+
+- Structure: 1,507-line `browser/containers.rs` replaced by a 14-line
+  router and eight purpose-specific child modules, all below 500 lines.
+- API: `build_container` remains the only public export. No
+  `pub use … build_*_view` wrappers were added (delegation ceiling still 112).
+- Verification: `cargo +stable check`, containers attrs 4/4, product
+  integrity 10/10, surface inventory 1/1, `trunk build` (stable toolchain)
+  passed. Wasm still contains `health_calculators` and `canvas-container-node`.
+- Interactive browser click-UAT was not re-run.
+- Next decomposition candidate: `RM-07`, `browser/docks.rs` (`D3`).
+- Review Gate A remains a `D5` owner close. `PFT-03` remains owner selection.
+
 ## Post-gate programme
 
 The earlier programme remains the dependency backbone after Gate A:

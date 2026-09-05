@@ -59,7 +59,7 @@ may need a documented exception rather than arbitrary fragmentation.
 | P1 | `browser/topbar.rs` | 2,734 | Menu construction, action dispatch, save/import dialogs, control bar, pod trays, filters, and manifold controls | `D3` `FE` `UX` `QA` | Before topbar/chrome changes |
 | P1 | `browser/interactions.rs` | 2,148 | Pointer state, wire operations, container commands, canvas movement, docking, placement, and geometry helpers | `D3` `FE` `QA` | Before interaction or canvas changes |
 | P1 | `browser/search_workbench/` | 34 plus bounded leaves | Completed `RM-05`: faceted search, query builder, SPARQL editor, saved-query persistence, execution, and placement | `D3` `FE` `RUST` `QA` | Before Tool Chest search semantics work |
-| P1 | container cluster: `containers.rs`, `container_views.rs`, `container_views_ext.rs`, `container_inline_views.rs` | 5,589 total | Container shell/types, domain renderers, inline projections, and extension dispatch | `D3` `FE` `UX` `QA` | Before broad container restoration |
+| P1 | container cluster: `containers/` plus `container_views.rs`, `container_views_ext.rs`, `container_inline_views.rs` | `containers/` complete (`RM-06`); views 1,227 / 1,387 / 1,016 | Shell vs domain body dispatch done; remaining view files stay as real `pub fn` renderers (do not `pub use build_*_view`) | `D3` `FE` `UX` `QA` | Before broad container restoration |
 | P2 | `docks.rs`, `instrument_panel.rs`, `workflow_panels.rs` | 4,371 total | Dock layout/state, instrument presentation, and workflow-specific panels | `D3` `FE` `UX` `QA` | Before Desktop/chrome reuse |
 | P2 | `browser/mod.rs`, `native_daemon.rs` | 1,032 and 1,100 | Browser composition root and daemon transport/lifecycle boundaries | `D4` `RUST` `SPEC` `QA` | Only when their contracts are touched |
 
@@ -265,12 +265,47 @@ and `containers.rs` (1,473).
 
 ### `RM-06` - POET container shell decomposition
 
+**Complete** (2026-09-05). `browser/containers.rs` (1,507 lines at split)
+is now `browser/containers/` with a stable `build_container` export.
+
+Source-to-destination map:
+
+| Old | New |
+|---|---|
+| Chrome, ports, resize, restore | `containers/shell.rs` (166) |
+| Filter attrs, media surface, type tags | `containers/attrs.rs` (388) |
+| Body match dispatch | `containers/body.rs` plus `body_{project,health,studio,ontology,core}.rs` |
+| `pub fn build_container` | re-exported from `containers/mod.rs` (`pub use shell::build_container` only) |
+
+Behavior, ABI, and allocation: unchanged. Callers still use
+`browser::containers::build_container`. Domain renderers remain in
+`container_views.rs`, `container_views_ext.rs`, and
+`container_inline_views.rs` (real `pub fn` builders). Those files were not
+converted to directory `pub use … build_*_view` routers because that
+pattern is what `GENERIC_DELEGATION_CEILING` (112) counts.
+
+Verification:
+
+- `cargo +stable check -p poet --lib`: passed
+- `cargo +stable test -p poet --lib containers::`: 4 passed
+- product integrity: 10 passed (ceiling held; health calculator route still wired)
+- surface inventory: 1 passed
+- `RUSTUP_TOOLCHAIN=stable NO_COLOR=true trunk build`: success; wasm contains
+  `health_calculators`, `canvas-container-node`, `data-code-habitat`
+- scoped rustfmt (`--edition 2021`) on the new container files: passed
+- interactive browser click-UAT was not re-run
+
+A crates-`src` scan now has 64 files over 1,400 lines and 10 over 2,000.
+POET itself still has no file over 2,000. Remaining POET files over 1,400:
+`docks.rs` (1,575), `instrument_panel.rs` (1,475), `workflow_panels.rs` (1,418).
+
+### `RM-07` - POET docks decomposition
+
 The next POET candidate on the stated priority order is
-`browser/containers.rs` (1,473 baseline lines), coordinated with the
-container-view cluster (`container_views.rs`, `container_views_ext.rs`,
-`container_inline_views.rs`). Split container construction/shell from domain
-renderers behind the existing `browser::containers` API. This is `D3`
-(`FE`, `UX`, `QA`) and should be scheduled before broad container restoration.
+`browser/docks.rs` (1,575 lines), then `instrument_panel.rs` and
+`workflow_panels.rs`. This is `D3` (`FE`, `UX`, `QA`). Do not close
+Review Gate A. Do not start `AST-*`. `PFT-03` remains owner/captain
+selection.
 
 ## Acceptance record
 

@@ -47,6 +47,7 @@ This is the sequential handoff record for
 | 2026-09-05 | `HLT-08` | Grok 4.6 / high | Partial (source contracts; browser rows open) | `tests/health_uat_pack.rs`; overview empty measurement placeholders; WIP UAT pack | `cargo +stable test -p poet --test health_uat_pack` (8 passed) | Browser rows pending trunk | Live daemon add/grant/ingest; ConsentLedger persist seam; Gate A open | Review Gate A |
 | 2026-09-05 | `HLT-07b` | Grok 4.6 / high | Complete (implementation + tests; Gate A still open) | MCP `clinical_risk.rs`; `clinical_native.rs`; `clinical_playground.rs`; playground HTML; WIP + ledger | MCP clinical_risk 7; rejects-incomplete 1; playground 3; VM native 2; invoke::clinical 16 | N/A — engine/MCP/playground JSON | Gate A open; Poet persist ≠ ConsentLedger; wasm_bridge D’Agostino provenance | `PFT-01` or `RM-06` |
 | 2026-09-05 | `PFT-01`/`PFT-02` | Grok 4.6 / high | Complete (implementation + tests; Gate A still open) | `tool_dual_path.rs`; tool/shapes/chain actions; status notification honesty | tool_dual_path 5; tool_actions 3; shapes 3; chain 2; product integrity 10; surface inventory 1 | Live daemon SPARQL not run | Gate A open; `PFT-03` owner select; `RM-06` | `PFT-03` or `RM-06` |
+| 2026-09-05 | `RM-06` | Grok 4.6 / high | Complete (structure; Gate A still open) | `browser/containers/` shell + attrs + domain body dispatch; inventory route paths | containers attrs 4; product integrity 10; surface inventory 1; `trunk build` success | Interactive click-UAT not re-run | Gate A open; view cluster still large files; `PFT-03` owner select | `RM-07` docks.rs or `PFT-03` |
 
 ## Required closeout detail
 
@@ -304,6 +305,17 @@ Delegation count before/after: unchanged (new module is a real honesty helper, n
 Known gaps: Review Gate A not closed; `PFT-03` owner chain selection; `RM-06`.
 Unrelated failures preserved: Yes.
 Recommended next packet: `PFT-03` (owner) or `RM-06`. Do not close Gate A. Do not start `AST-*`.
+
+Packet: `RM-06`
+Baseline git status: Feature branch `cursor/poet-grok-handover-ac52` at `39c4ab1d` (PFT docs closeout).
+User job delivered: Split `browser/containers.rs` (1,507 lines) into a directory module. `build_container` chrome stays in `shell.rs`; type tags/filters in `attrs.rs`; body fill is dispatched by domain (`body_project`, `body_health`, `body_studio`, `body_ontology`, `body_core`). Public API remains `browser::containers::build_container`. No `pub use … build_*_view` wrappers.
+Files changed: `crates/poet/src/browser/containers/`; `tests/product_integrity.rs`; `docs/poet/surface-inventory.json`; this ledger; WIP/register.
+Tests and exact results: `cargo +stable test -p poet --lib containers::` (4 passed); product integrity (10); surface inventory (1). rustc 1.98.1. `RUSTUP_TOOLCHAIN=stable NO_COLOR=true trunk build` → success. Fresh wasm still contains `health_calculators`, `canvas-container-node`, and `data-code-habitat`.
+Browser/native UAT: interactive click-UAT not re-run (no click driver this session). Behavior is a move, not a product change.
+Delegation count before/after: unchanged (112 ceiling held).
+Known gaps: Review Gate A not closed; `container_views.rs` / `_ext` / `_inline` remain as domain renderers (splitting them via `pub use build_*_view` would grow the ceiling); `PFT-03` owner chain selection.
+Unrelated failures preserved: Yes.
+Recommended next packet: `RM-07` `docks.rs` (1,575) or `PFT-03` (owner). Do not close Gate A. Do not start `AST-*`.
 
 
 
