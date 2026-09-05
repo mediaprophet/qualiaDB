@@ -61,7 +61,7 @@ may need a documented exception rather than arbitrary fragmentation.
 | P1 | `browser/search_workbench/` | 34 plus bounded leaves | Completed `RM-05`: faceted search, query builder, SPARQL editor, saved-query persistence, execution, and placement | `D3` `FE` `RUST` `QA` | Before Tool Chest search semantics work |
 | P1 | container cluster: `containers/` plus `container_views.rs`, `container_views_ext.rs`, `container_inline_views.rs` | `containers/` complete (`RM-06`); views 1,227 / 1,387 / 1,016 | Shell vs domain body dispatch done; remaining view files stay as real `pub fn` renderers (do not `pub use build_*_view`) | `D3` `FE` `UX` `QA` | Before broad container restoration |
 | P2 | `docks/` plus `instrument_panel/` plus `workflow_panels/` | Complete (`RM-07`–`RM-09`); all leaves under 500 | Dock, instrument, and workflow presentation are directory modules | `D3` `FE` `UX` `QA` | Before Desktop/chrome reuse |
-| P2 | `browser/mod.rs`, `native_daemon.rs` | 1,032 and 1,369 | Browser composition root and daemon transport/lifecycle boundaries | `D4` `RUST` `SPEC` `QA` | Only when their contracts are touched |
+| P2 | `browser/mod.rs`, `native_daemon.rs` | 1,177 and 1,369 | Browser composition root and daemon transport/lifecycle boundaries | `D4` `RUST` `SPEC` `QA` | Only when their contracts are touched |
 
 ## Core and cross-crate boundary
 
