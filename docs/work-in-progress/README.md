@@ -51,3 +51,9 @@ plans, trackers, or historical ledgers until the project owner promotes them.
 | [`uat-office-graph-volume-vibe-host-0.1.md`](uat-office-graph-volume-vibe-host-0.1.md) | Vibe · chrome davinci/monet | UAT checklist — fill pass/fail log |
 
 WIP trackers stay here; settled contracts stay under `docs/manuals/standards/`.
+- [`poet-chrome-design-notes-davinci.md`](poet-chrome-design-notes-davinci.md)
+  Poet chrome design notes (UAT accept + G-COORD ahead-of-bind) (davinci · pair monet).
+- [`poet-motion-design-notes-monet.md`](poet-motion-design-notes-monet.md)
+  Poet motion/visual design notes (beats, tokens, UAT look) (monet · pair davinci).
+- [`ontology-design-notes-marvin.md`](ontology-design-notes-marvin.md)
+  Ontology design notes (SHACL/OWL cuts, G-COORD ahead-of-bind) (Marvin).
