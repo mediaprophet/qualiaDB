@@ -160,6 +160,20 @@ Under frozen `vibe-host-0.1`, **stable (rename costs a freeze bump):**
 ### Neo — seam reminder
 See **Neo — seam / freeze constraints** above; arrive/hold/leave and keep/commit/held are **dialect/chrome lexicon** until Capt.+Vibe+Neo deliberately move EBNF keyword ABI.
 
+## Semantic versioning & dependent resources (Timothy / Neo)
+- **Support SemVer** for language + host stamps so upgrades can ship while older scripts, Poet cells, fixtures, and Capability recipes keep working.
+- Treat as versioned surfaces (independently bumpable when needed):
+  1. `LANGUAGE_VERSION` / dialect+EBNF keyword ABI (e.g. `vibe-0.1` → `vibe-0.2` on breaking surface changes)
+  2. `HOST_VERSION` / four-op host ABI (`vibe-host-0.1`) — freeze bump only when parse/check/diagnose/invoke *contract* breaks
+  3. `Capability.method` / `ALL_BOUND` catalog — additive preferred; renames = new id + deprecation window, not silent replace
+  4. Crate/branch stamps (`0.0.36-dev`) — packaging; not a substitute for language/host SemVer
+- **Compat rules (design):**
+  - Additive glossary aliases and locale surfaces do **not** require a major bump if they desugar to the same concepts.
+  - Breaking keyword ABI or diagnose JSON shape → major (or explicit `vibe-0.x` bump) + migration/`suggested_fix` path.
+  - Resources pin the language/host version they were authored under; hosts should accept N-1 (policy TBD) or fail closed with a clear **held / not yet** migrate hint — never silent reinterpret.
+  - Living/created lexicon locks are **policy**, versioned in docs; don’t break copy rules by “fixing” living subjects into Thing-speak across versions.
+- **Non-goal now:** implementing a full multi-version runtime — principles + stamp discipline so we can grow into it.
+
 ## Proposed stages (later, when Capt. unlocks language work)
 0. Glossary v0 (concepts + en surfaces) in WIP
 1. Locale pilot (one non-English surface set) — tooling repo
