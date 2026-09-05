@@ -59,7 +59,7 @@ may need a documented exception rather than arbitrary fragmentation.
 | P1 | `browser/topbar.rs` | 2,734 | Menu construction, action dispatch, save/import dialogs, control bar, pod trays, filters, and manifold controls | `D3` `FE` `UX` `QA` | Before topbar/chrome changes |
 | P1 | `browser/interactions.rs` | 2,148 | Pointer state, wire operations, container commands, canvas movement, docking, placement, and geometry helpers | `D3` `FE` `QA` | Before interaction or canvas changes |
 | P1 | `browser/search_workbench/` | 34 plus bounded leaves | Completed `RM-05`: faceted search, query builder, SPARQL editor, saved-query persistence, execution, and placement | `D3` `FE` `RUST` `QA` | Before Tool Chest search semantics work |
-| P1 | container cluster: `containers/` plus `container_views/`, `container_views_ext.rs`, `container_inline_views.rs` | `containers/` (`RM-06`) and `container_views/` (`RM-10`) complete; remaining 1,387 / 1,016 | Live doc/sheet/graph/ontology/pulse renderers split; ext and inline stay as real `pub fn` renderers (do not `pub use build_*_view`) | `D3` `FE` `UX` `QA` | Before broad container restoration |
+| P1 | container cluster: `containers/` plus `container_views/` plus `container_views_ext/` plus `container_inline_views.rs` | `containers/` (`RM-06`), `container_views/` (`RM-10`), `container_views_ext/` (`RM-11`) complete; inline 1,016 | Shell and extra renderers split; inline stays a real `pub fn` file under the 1,200 trigger | `D3` `FE` `UX` `QA` | Before broad container restoration |
 | P2 | `docks/` plus `instrument_panel/` plus `workflow_panels/` | Complete (`RM-07`–`RM-09`); all leaves under 500 | Dock, instrument, and workflow presentation are directory modules | `D3` `FE` `UX` `QA` | Before Desktop/chrome reuse |
 | P2 | `browser/mod.rs`, `native_daemon.rs` | 1,177 and 1,369 | Browser composition root and daemon transport/lifecycle boundaries | `D4` `RUST` `SPEC` `QA` | Only when their contracts are touched |
 
@@ -466,6 +466,53 @@ Next POET files over 1,200: `container_views_ext.rs` (1,387),
 `native_daemon.rs` (1,369), `command_palette/commands.rs` (1,231). Do
 not close Review Gate A. Do not start `AST-*`. `PFT-03` remains
 owner/captain selection. `native_daemon.rs` is `D4`.
+
+### `RM-11` - POET extra container views decomposition
+
+**Complete** (2026-09-05). `browser/container_views_ext.rs` (1,387 lines
+at split) is now `browser/container_views_ext/` with the former public
+`build_*_view` names preserved.
+
+Source-to-destination map:
+
+| Old | New |
+|---|---|
+| Library browser | `container_views_ext/library.rs` (152) |
+| Aura + LaTeX | `container_views_ext/canvas_media.rs` (140) |
+| Health stub + anatomy | `container_views_ext/health.rs` (155) |
+| WebView + WebRTC | `container_views_ext/comm.rs` (198) |
+| Finance | `container_views_ext/finance.rs` (111) |
+| Vision + listen | `container_views_ext/senses.rs` (138) |
+| Triad + portal | `container_views_ext/compute.rs` (194) |
+| Slide + 3D + subcanvas | `container_views_ext/spatial.rs` (179) |
+| Multimodal chips | `container_views_ext/chips.rs` (160) |
+| Public glob re-exports | `container_views_ext/mod.rs` (26) |
+
+Behavior, ABI, and allocation: unchanged. Re-exports are `pub use
+library::*` (and siblings), **not** `pub use … build_*_view`, so
+`GENERIC_DELEGATION_CEILING` stays 112.
+
+Honest unused-module note: live container routes already use
+`specialist_persist` / `local_container_views` for these occupant
+types. `container_views_ext` remains a public API with no in-crate
+callers; that was true before the split. This packet does not retarget
+live routes.
+
+Verification:
+
+- `cargo +stable check -p poet --lib`: passed
+- `cargo +stable test -p poet --lib container_views::`: 2 passed
+- product integrity: 10 passed (ceiling held)
+- surface inventory: 1 passed
+- `RUSTUP_TOOLCHAIN=stable NO_COLOR=true trunk build`: success
+- scoped rustfmt (`--edition 2021`) on the new ext files: passed
+- interactive browser click-UAT was not re-run
+
+POET files still over 1,200: `native_daemon.rs` (1,369) and
+`command_palette/commands.rs` (1,231). `container_inline_views.rs` is
+1,016 (under the 1,200 trigger). Do not close Review Gate A. Do not
+start `AST-*`. `PFT-03` remains owner/captain selection.
+`native_daemon.rs` is `D4`.
 
 ## Acceptance record
 

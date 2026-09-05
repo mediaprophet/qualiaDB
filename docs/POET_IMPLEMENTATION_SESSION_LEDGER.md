@@ -52,6 +52,7 @@ This is the sequential handoff record for
 | 2026-09-05 | `RM-08` | Grok 4.6 / high | Complete (structure; Gate A still open) | `browser/instrument_panel/` ribbon, catalog, commands, dispatch, panel, chain | instrument_panel 6; product integrity 10; surface inventory 1; `trunk build` success | Interactive click-UAT not re-run | Gate A open; `PFT-03` owner select | `RM-09` workflow_panels.rs or `PFT-03` |
 | 2026-09-05 | `RM-09` | Grok 4.6 / high | Complete (structure; Gate A still open) | `browser/workflow_panels/` checkpoint, credentials, markup, provenance, publication, constituency, widgets | workflow_panels 2; product integrity 10; surface inventory 1; `trunk build` success | Interactive click-UAT not re-run | Gate A open; unused vs live panel routes; `PFT-03` owner select | `PFT-03` (owner) or held view cluster |
 | 2026-09-05 | `RM-10` | Grok 4.6 / high | Complete (structure; Gate A still open) | `browser/container_views/` doc, toolbar, switcher, sheet, graph, ontology, pulse | container_views 2; product integrity 10; surface inventory 1; `trunk build` success | Interactive click-UAT not re-run | Gate A open; `container_views_ext.rs` remains; `PFT-03` owner select | `RM-11` container_views_ext.rs or `PFT-03` |
+| 2026-09-05 | `RM-11` | Grok 4.6 / high | Complete (structure; Gate A still open) | `browser/container_views_ext/` library, canvas_media, health, comm, finance, senses, compute, spatial, chips | product integrity 10; surface inventory 1; `trunk build` success | Interactive click-UAT not re-run | Gate A open; unused vs live specialist_persist routes; `PFT-03` owner select | `PFT-03` (owner) or `command_palette/commands.rs` |
 
 ## Required closeout detail
 
@@ -364,6 +365,17 @@ Delegation count before/after: unchanged (112 ceiling held).
 Known gaps: Review Gate A not closed; `container_views_ext.rs` (1,387) and `container_inline_views.rs` (1,016) remain; `PFT-03` owner chain selection.
 Unrelated failures preserved: Yes.
 Recommended next packet: `RM-11` `container_views_ext.rs` or `PFT-03` (owner). Do not close Gate A. Do not start `AST-*`.
+
+Packet: `RM-11`
+Baseline git status: Feature branch `cursor/poet-grok-handover-ac52` at `9d46a346` (RM-10 docs).
+User job delivered: Split `browser/container_views_ext.rs` (1,387 lines) into a directory module. Library, aura/latex, health/anatomy, webview/webrtc, finance, vision/listen, triad/portal, slide/3d/subcanvas, and embedding chips each own a file under 500 lines. Public `build_*_view` names remain via glob re-exports.
+Files changed: `crates/poet/src/browser/container_views_ext/`; this ledger; WIP/register.
+Tests and exact results: `cargo +stable test -p poet --lib container_views::` (2 passed); product integrity (10); surface inventory (1). rustc 1.98.1. `RUSTUP_TOOLCHAIN=stable NO_COLOR=true trunk build` → success. Ceiling still 112.
+Browser/native UAT: interactive click-UAT not re-run. No in-crate callers; live routes already use `specialist_persist` / `local_container_views` (pre-existing unused module).
+Delegation count before/after: unchanged (112 ceiling held).
+Known gaps: Review Gate A not closed; `PFT-03` owner chain selection; `container_inline_views.rs` is 1,016 (under 1,200); `native_daemon.rs` is `D4`.
+Unrelated failures preserved: Yes.
+Recommended next packet: `PFT-03` (owner) or `command_palette/commands.rs` (1,231). Do not close Gate A. Do not start `AST-*`.
 
 
 

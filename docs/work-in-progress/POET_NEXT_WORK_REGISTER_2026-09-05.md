@@ -273,6 +273,23 @@ unavailable. Live daemon fixture was not available on this VM.
 - Next decomposition candidate: `RM-11`, `browser/container_views_ext.rs`.
 - Review Gate A remains a `D5` owner close. `PFT-03` remains owner selection.
 
+### `RM-11` - 2026-09-05
+
+- Structure: 1,387-line `browser/container_views_ext.rs` replaced by a
+  26-line router and nine purpose-specific child modules, all below 500
+  lines.
+- API: former `build_*_view` names remain via glob re-exports. No
+  `pub use … build_*_view` wrappers (ceiling still 112).
+- Honest leftover: no in-crate callers; live routes use
+  `specialist_persist` / `local_container_views`. Pre-existing, not
+  caused by the split.
+- Verification: container_views tests 2/2, product integrity 10/10,
+  surface inventory 1/1, `trunk build` passed.
+- Interactive browser click-UAT was not re-run.
+- View cluster over-1,200 files are done. Remaining over 1,200:
+  `native_daemon.rs` (`D4`) and `command_palette/commands.rs`.
+- Review Gate A remains a `D5` owner close. `PFT-03` remains owner selection.
+
 ## Post-gate programme
 
 The earlier programme remains the dependency backbone after Gate A:
