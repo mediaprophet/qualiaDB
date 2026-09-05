@@ -4,9 +4,9 @@ use wasm_bindgen::{closure::Closure, JsCast};
 use web_sys::{Document, Element, MouseEvent};
 
 use super::disclosure_model::{format_recipient_display, CATEGORY_OPTIONS};
-use super::model::{
-    build_consent_revocation_payload, project_shares, records_from_payload, HealthRecord,
-    ShareItem, ShareStatus,
+use super::model::{records_from_payload, HealthRecord};
+use super::share_projection::{
+    build_consent_revocation_payload, project_shares, ShareItem, ShareStatus,
 };
 use crate::browser::accessibility::wire_modal_accessibility;
 use crate::browser::native_daemon::{

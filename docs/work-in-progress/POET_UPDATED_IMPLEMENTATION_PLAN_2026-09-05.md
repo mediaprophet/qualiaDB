@@ -201,6 +201,34 @@ real issue.
 **Stop:** any ABI, key-vault, missing-authority, or destructive change goes to
 `D5` before editing.
 
+**Result recorded 2026-09-05 (Grok, HLT-R1):** Independent review of
+`governance/consent_contract.rs` plus Poet disclosure projection. Acceptance
+items that already held: signed digest covers principal/scope; tamper fails
+signature; `now >= expires_at` fails closed; only `grant.principal_did` can
+revoke; grant stores verifying key + signature, not the signing secret.
+
+Defects repaired (smallest change, no Host/ABI/key-vault widen):
+
+1. `ReplayDetected` was unused. Bounded `ConsentLedger` (32 slots) now rejects
+   duplicate `(grant_id, nonce)` and remembers revocations so omitting a receipt
+   cannot reactivate.
+2. `authorize_category_access` takes a receipt slice (not `Option`) and denies
+   on any verified receipt for that grant.
+3. `ConsentScope::from_labels` fails closed on empty/unknown labels
+   (`clinical_notes`, `owl:Thing`).
+4. Poet `project_shares` no longer defaults missing scope to "All categories"
+   or missing expiry to Active.
+5. Grantable UI categories match the five contract flags only.
+
+Verification: `cargo +stable test -p qualia-core-db --lib consent_contract`
+(12 passed); `cargo +stable test -p poet --lib health_views` (27 passed).
+Share projection moved to `health_views/share_projection.rs` so `model.rs`
+stays under 1,000 lines (746). `consent_contract.rs` is 733 lines after the
+ledger addition — split is the next RM touch if this file grows again.
+
+`D5` Review Gate A is **not** closed by this packet. Next product packet:
+`HLT-07`.
+
 ### `HLT-07` - Clinical calculator workflow integrity
 
 **Difficulty/functions:** `D4` - `CLIN`, `RUST`, `FE`, `QA`, followed by `D5` clinical review  

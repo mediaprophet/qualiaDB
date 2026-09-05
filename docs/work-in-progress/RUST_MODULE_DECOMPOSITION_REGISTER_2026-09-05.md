@@ -59,9 +59,9 @@ may need a documented exception rather than arbitrary fragmentation.
 | P1 | `browser/topbar.rs` | 2,734 | Menu construction, action dispatch, save/import dialogs, control bar, pod trays, filters, and manifold controls | `D3` `FE` `UX` `QA` | Before topbar/chrome changes |
 | P1 | `browser/interactions.rs` | 2,148 | Pointer state, wire operations, container commands, canvas movement, docking, placement, and geometry helpers | `D3` `FE` `QA` | Before interaction or canvas changes |
 | P1 | `browser/search_workbench/` | 34 plus bounded leaves | Completed `RM-05`: faceted search, query builder, SPARQL editor, saved-query persistence, execution, and placement | `D3` `FE` `RUST` `QA` | Before Tool Chest search semantics work |
-| P1 | container cluster: `containers.rs`, `container_views.rs`, `container_views_ext.rs`, `container_inline_views.rs` | 5,589 total | Container shell/types, domain renderers, inline projections, and extension dispatch | `D3` `FE` `UX` `QA` | Before broad container restoration |
-| P2 | `docks.rs`, `instrument_panel.rs`, `workflow_panels.rs` | 4,371 total | Dock layout/state, instrument presentation, and workflow-specific panels | `D3` `FE` `UX` `QA` | Before Desktop/chrome reuse |
-| P2 | `browser/mod.rs`, `native_daemon.rs` | 1,032 and 1,100 | Browser composition root and daemon transport/lifecycle boundaries | `D4` `RUST` `SPEC` `QA` | Only when their contracts are touched |
+| P1 | container cluster: `containers/` plus `container_views/` plus `container_views_ext/` plus `container_inline_views.rs` | `containers/` (`RM-06`), `container_views/` (`RM-10`), `container_views_ext/` (`RM-11`) complete; inline 1,016 | Shell and extra renderers split; inline stays a real `pub fn` file under the 1,200 trigger | `D3` `FE` `UX` `QA` | Before broad container restoration |
+| P2 | `docks/` plus `instrument_panel/` plus `workflow_panels/` | Complete (`RM-07`–`RM-09`); all leaves under 500 | Dock, instrument, and workflow presentation are directory modules | `D3` `FE` `UX` `QA` | Before Desktop/chrome reuse |
+| P2 | `browser/mod.rs`, `native_daemon.rs` | 1,177 and 1,369 | Browser composition root and daemon transport/lifecycle boundaries | `D4` `RUST` `SPEC` `QA` | Only when their contracts are touched |
 
 ## Core and cross-crate boundary
 
@@ -265,12 +265,254 @@ and `containers.rs` (1,473).
 
 ### `RM-06` - POET container shell decomposition
 
-The next POET candidate on the stated priority order is
-`browser/containers.rs` (1,473 baseline lines), coordinated with the
-container-view cluster (`container_views.rs`, `container_views_ext.rs`,
-`container_inline_views.rs`). Split container construction/shell from domain
-renderers behind the existing `browser::containers` API. This is `D3`
-(`FE`, `UX`, `QA`) and should be scheduled before broad container restoration.
+**Complete** (2026-09-05). `browser/containers.rs` (1,507 lines at split)
+is now `browser/containers/` with a stable `build_container` export.
+
+Source-to-destination map:
+
+| Old | New |
+|---|---|
+| Chrome, ports, resize, restore | `containers/shell.rs` (166) |
+| Filter attrs, media surface, type tags | `containers/attrs.rs` (388) |
+| Body match dispatch | `containers/body.rs` plus `body_{project,health,studio,ontology,core}.rs` |
+| `pub fn build_container` | re-exported from `containers/mod.rs` (`pub use shell::build_container` only) |
+
+Behavior, ABI, and allocation: unchanged. Callers still use
+`browser::containers::build_container`. Domain renderers remain in
+`container_views.rs`, `container_views_ext.rs`, and
+`container_inline_views.rs` (real `pub fn` builders). Those files were not
+converted to directory `pub use … build_*_view` routers because that
+pattern is what `GENERIC_DELEGATION_CEILING` (112) counts.
+
+Verification:
+
+- `cargo +stable check -p poet --lib`: passed
+- `cargo +stable test -p poet --lib containers::`: 4 passed
+- product integrity: 10 passed (ceiling held; health calculator route still wired)
+- surface inventory: 1 passed
+- `RUSTUP_TOOLCHAIN=stable NO_COLOR=true trunk build`: success; wasm contains
+  `health_calculators`, `canvas-container-node`, `data-code-habitat`
+- scoped rustfmt (`--edition 2021`) on the new container files: passed
+- interactive browser click-UAT was not re-run
+
+A crates-`src` scan now has 64 files over 1,400 lines and 10 over 2,000.
+POET itself still has no file over 2,000. Remaining POET files over 1,400:
+`docks.rs` (1,575), `instrument_panel.rs` (1,475), `workflow_panels.rs` (1,418).
+
+### `RM-07` - POET docks decomposition
+
+**Complete** (2026-09-05). `browser/docks.rs` (1,575 lines at split) is now
+`browser/docks/` with the stable public API preserved.
+
+Source-to-destination map:
+
+| Old | New |
+|---|---|
+| View models, family order, toolbox-view storage | `docks/model.rs` (263) |
+| Toolbox/tool glyphs and kind badges | `docks/glyphs.rs` (73) |
+| `build_toolchain_widgets` | `docks/widgets.rs` (380) |
+| Left Tool Chest dock | `docks/toolbox.rs` (238) |
+| Flyout show/hide | `docks/flyout.rs` (219) |
+| Collapsible panel chrome | `docks/panel.rs` (112) |
+| Right dock | `docks/right.rs` (180) |
+| Bottom status bar | `docks/statusbar.rs` (155) |
+
+Behavior, ABI, and allocation: unchanged. Callers still use
+`browser::docks::{build_toolbox_dock, show_flyout, hide_flyout,
+build_right_dock, build_bottom_statusbar, create_collapsible_dock_panel,
+extract_toolbox_views, store_toolbox_views, …}`. No `pub use … build_*_view`
+wrappers.
+
+Verification:
+
+- `cargo +stable check -p poet --lib`: passed
+- `cargo +stable test -p poet --lib docks::`: 2 passed
+- product integrity: 10 passed (ceiling held)
+- surface inventory: 1 passed
+- `RUSTUP_TOOLCHAIN=stable NO_COLOR=true trunk build`: success; wasm contains
+  `toolbox-dock`, `Tool Chest`, `bottom-statusbar`, `right-dock`, `Aura Tray`
+- scoped rustfmt (`--edition 2021`) on the new dock files: passed
+- interactive browser click-UAT was not re-run
+
+POET files over 1,400 are now `instrument_panel.rs` (1,475) and
+`workflow_panels.rs` (1,418).
+
+### `RM-08` - POET instrument panel decomposition
+
+**Complete** (2026-09-05). `browser/instrument_panel.rs` (1,475 lines at
+split) is now `browser/instrument_panel/` with the stable public API
+preserved.
+
+Source-to-destination map:
+
+| Old | New |
+|---|---|
+| Ribbon tool descriptor | `instrument_panel/ribbon.rs` (10) |
+| Tools keyed by container type | `instrument_panel/catalog.rs` (412) |
+| Local vs daemon command helpers | `instrument_panel/commands.rs` (284) |
+| Click dispatch | `instrument_panel/dispatch.rs` (266) |
+| Show/hide/wire panel chrome | `instrument_panel/panel.rs` (161) |
+| Tool-chain activate/deactivate | `instrument_panel/chain.rs` (411) |
+| Public re-exports | `instrument_panel/mod.rs` (17) |
+
+Behavior, ABI, and allocation: unchanged. Callers still use
+`browser::instrument_panel::{show_for_container, hide, activate_chain,
+activate_chain_on_container, deactivate_chain}`. No `pub use … build_*_view`
+wrappers.
+
+Verification:
+
+- `cargo +stable check -p poet --lib`: passed
+- `cargo +stable test -p poet --lib instrument_panel::`: 6 passed
+  (catalog 2, commands 2, chain 2)
+- product integrity: 10 passed (ceiling held)
+- surface inventory: 1 passed
+- `RUSTUP_TOOLCHAIN=stable NO_COLOR=true trunk build`: success; wasm contains
+  `contextual-instrument-panel`, `instrument-panel-tool-btn`, `doc:bold`,
+  and the daemon-unavailable honesty string
+- scoped rustfmt (`--edition 2021`) on the new instrument-panel files: passed
+- interactive browser click-UAT was not re-run
+
+The only remaining POET implementation file over 1,400 lines is
+`workflow_panels.rs` (1,418). That is `RM-09`. Do not close Review Gate A.
+Do not start `AST-*`. `PFT-03` remains owner/captain selection.
+
+### `RM-09` - POET workflow panels decomposition
+
+**Complete** (2026-09-05). `browser/workflow_panels.rs` (1,418 lines at
+split) is now `browser/workflow_panels/` with the former public
+`build_*_view` names preserved.
+
+Source-to-destination map:
+
+| Old | New |
+|---|---|
+| Checkpoint tray + localStorage parse | `workflow_panels/checkpoint.rs` (306) |
+| Credential inspector | `workflow_panels/credentials.rs` (261) |
+| Context markup editor | `workflow_panels/markup.rs` (196) |
+| Provenance panel | `workflow_panels/provenance.rs` (178) |
+| Publication workflow | `workflow_panels/publication.rs` (223) |
+| Constituency manager | `workflow_panels/constituency.rs` (186) |
+| Capability / checkpoint / consent widgets | `workflow_panels/widgets.rs` (112) |
+| Public glob re-exports | `workflow_panels/mod.rs` (27) |
+
+Behavior, ABI, and allocation: unchanged. Callers can still use
+`browser::workflow_panels::build_*_view`. Re-exports are `pub use
+checkpoint::*` (and siblings), **not** `pub use … build_*_view`, so
+`GENERIC_DELEGATION_CEILING` stays 112.
+
+Honest unused-module note: live container routes already use
+`checkpoint_panel`, `publication_panel`, and `governance_workflow`. The
+`workflow_panels` builders remain a public API but are not on those
+routes; wasm-opt/LTO therefore drops their unique honesty strings. That
+was true before the split. This packet does not retarget live routes.
+
+Verification:
+
+- `cargo +stable check -p poet --lib`: passed
+- `cargo +stable test -p poet --lib workflow_panels::`: 2 passed
+- product integrity: 10 passed (ceiling held)
+- surface inventory: 1 passed
+- `RUSTUP_TOOLCHAIN=stable NO_COLOR=true trunk build`: success
+- scoped rustfmt (`--edition 2021`) on the new workflow-panel files: passed
+- interactive browser click-UAT was not re-run
+
+POET no longer has an implementation file over 1,400 lines. Files still
+over 1,200: `container_views_ext.rs` (1,387), `native_daemon.rs` (1,369),
+`command_palette/commands.rs` (1,231), `container_views.rs` (1,227). Do
+not convert the view cluster via `pub use … build_*_view`. Do not close
+Review Gate A. Do not start `AST-*`. `PFT-03` remains owner/captain
+selection. `native_daemon.rs` is `D4` and stays untouched until its
+transport contract is the accepted packet.
+
+### `RM-10` - POET live container views decomposition
+
+**Complete** (2026-09-05). `browser/container_views.rs` (1,227 lines at
+split) is now `browser/container_views/` with the live
+`build_doc_view` / `build_sheet_view` / `build_graph_view` /
+`build_ontology_view` / `build_pulse_view` names preserved.
+
+Source-to-destination map:
+
+| Old | New |
+|---|---|
+| CML HyperDoc chrome | `container_views/doc.rs` (295) |
+| Visual toolbar + gazetteer | `container_views/doc_toolbar.rs` (274) |
+| Visual/Markdown/RDF tabs | `container_views/doc_switcher.rs` (70) |
+| Spreadsheet + formula engine | `container_views/sheet.rs` (428) |
+| SPARQL explorer | `container_views/graph.rs` (96) |
+| Ontology stats / COP terms | `container_views/ontology.rs` (62) |
+| Pulse ledger | `container_views/pulse.rs` (71) |
+| Public glob re-exports | `container_views/mod.rs` (19) |
+
+Behavior, ABI, and allocation: unchanged. Live container routes still
+call `browser::container_views::build_doc_view` (and siblings).
+Re-exports are `pub use doc::*` (and siblings), **not**
+`pub use … build_*_view`, so `GENERIC_DELEGATION_CEILING` stays 112.
+
+Verification:
+
+- `cargo +stable check -p poet --lib`: passed
+- `cargo +stable test -p poet --lib container_views::`: 2 passed
+- product integrity: 10 passed (ceiling held)
+- surface inventory: 1 passed
+- `RUSTUP_TOOLCHAIN=stable NO_COLOR=true trunk build`: success; wasm
+  contains `doc-view-switcher`, `doc-editor`, `RDF-Star (N-Quins)`,
+  `never owl:Thing`, and `Topics must be poet/`
+- scoped rustfmt (`--edition 2021`) on the new container-view files: passed
+- interactive browser click-UAT was not re-run
+
+Next POET files over 1,200: `container_views_ext.rs` (1,387),
+`native_daemon.rs` (1,369), `command_palette/commands.rs` (1,231). Do
+not close Review Gate A. Do not start `AST-*`. `PFT-03` remains
+owner/captain selection. `native_daemon.rs` is `D4`.
+
+### `RM-11` - POET extra container views decomposition
+
+**Complete** (2026-09-05). `browser/container_views_ext.rs` (1,387 lines
+at split) is now `browser/container_views_ext/` with the former public
+`build_*_view` names preserved.
+
+Source-to-destination map:
+
+| Old | New |
+|---|---|
+| Library browser | `container_views_ext/library.rs` (152) |
+| Aura + LaTeX | `container_views_ext/canvas_media.rs` (140) |
+| Health stub + anatomy | `container_views_ext/health.rs` (155) |
+| WebView + WebRTC | `container_views_ext/comm.rs` (198) |
+| Finance | `container_views_ext/finance.rs` (111) |
+| Vision + listen | `container_views_ext/senses.rs` (138) |
+| Triad + portal | `container_views_ext/compute.rs` (194) |
+| Slide + 3D + subcanvas | `container_views_ext/spatial.rs` (179) |
+| Multimodal chips | `container_views_ext/chips.rs` (160) |
+| Public glob re-exports | `container_views_ext/mod.rs` (26) |
+
+Behavior, ABI, and allocation: unchanged. Re-exports are `pub use
+library::*` (and siblings), **not** `pub use … build_*_view`, so
+`GENERIC_DELEGATION_CEILING` stays 112.
+
+Honest unused-module note: live container routes already use
+`specialist_persist` / `local_container_views` for these occupant
+types. `container_views_ext` remains a public API with no in-crate
+callers; that was true before the split. This packet does not retarget
+live routes.
+
+Verification:
+
+- `cargo +stable check -p poet --lib`: passed
+- `cargo +stable test -p poet --lib container_views::`: 2 passed
+- product integrity: 10 passed (ceiling held)
+- surface inventory: 1 passed
+- `RUSTUP_TOOLCHAIN=stable NO_COLOR=true trunk build`: success
+- scoped rustfmt (`--edition 2021`) on the new ext files: passed
+- interactive browser click-UAT was not re-run
+
+POET files still over 1,200: `native_daemon.rs` (1,369) and
+`command_palette/commands.rs` (1,231). `container_inline_views.rs` is
+1,016 (under the 1,200 trigger). Do not close Review Gate A. Do not
+start `AST-*`. `PFT-03` remains owner/captain selection.
+`native_daemon.rs` is `D4`.
 
 ## Acceptance record
 

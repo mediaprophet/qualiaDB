@@ -150,8 +150,16 @@ pub fn place_container_via_menu(document: &Document, container_type: &str, label
 pub(super) fn place_container_on_canvas(document: &Document, container_type: &str, label: &str) {
     use crate::tool_chest::core::registry::SeedContainer;
 
-    let width = 400.0;
-    let height = 300.0;
+    let width = if container_type == "health_calculators" {
+        720.0
+    } else {
+        400.0
+    };
+    let height = if container_type == "health_calculators" {
+        520.0
+    } else {
+        300.0
+    };
     let (x, y) = find_smart_placement_slot(document, width, height);
 
     let next_z = HIGHEST_Z.fetch_add(1, Ordering::SeqCst) + 1;
@@ -232,11 +240,22 @@ pub fn show_tool_status(document: &Document, title_text: &str, message: &str, st
         .unwrap();
     let glyph = match status_kind {
         "success" => "\u{2713}",
+        "local" => "\u{25CB}",
         "error" => "\u{26A0}",
         "running" => "\u{23F3}",
         "unavailable" => "\u{2298}",
         _ => "\u{1F4A1}",
     };
+    let honesty = match status_kind {
+        "success" => "live",
+        "local" => "local",
+        "error" => "error",
+        "unavailable" => "unavailable",
+        "running" => "pending",
+        _ => "info",
+    };
+    let _ = notif.set_attribute("data-honesty", honesty);
+    let _ = notif.set_attribute("data-status-kind", status_kind);
     title.set_text_content(Some(&format!("{} {}", glyph, title_text)));
     notif.append_child(&title).unwrap();
 

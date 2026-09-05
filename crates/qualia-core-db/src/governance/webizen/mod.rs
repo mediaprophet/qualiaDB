@@ -57,6 +57,7 @@ const MAX_FIXPOINT_ROUNDS: usize = 16;
 
 mod agreement;
 mod arena;
+mod clinical_native;
 mod opcode;
 mod vm;
 

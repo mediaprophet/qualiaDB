@@ -5,6 +5,7 @@ pub mod comorbidity;
 pub mod contraindication;
 pub mod framingham;
 pub mod imaging;
+mod required;
 pub mod score2;
 
 pub use cha2ds2::score as cha2ds2_vasc;

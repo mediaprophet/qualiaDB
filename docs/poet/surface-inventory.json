@@ -23,7 +23,7 @@
       "domain": "dataset",
       "display_name": "annotation panel",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/dataset_views/annotation_panel.rs",
         "exported_builder": "build_annotation_panel_view",
         "delegated_builder": "super::persist::build_annotation_panel_view"
@@ -51,7 +51,7 @@
       "domain": "dataset",
       "display_name": "cad curation",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/dataset_views/cad_curation.rs",
         "exported_builder": "build_cad_curation_view",
         "delegated_builder": "super::persist::build_cad_curation_view"
@@ -79,7 +79,7 @@
       "domain": "dataset",
       "display_name": "dataset importer",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/dataset_views/dataset_importer.rs",
         "exported_builder": "build_dataset_importer_view",
         "delegated_builder": "super::persist::build_dataset_importer_view"
@@ -107,7 +107,7 @@
       "domain": "dataset",
       "display_name": "dataset registry",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/dataset_views/dataset_registry.rs",
         "exported_builder": "build_dataset_registry_view",
         "delegated_builder": "super::persist::build_dataset_registry_view"
@@ -135,7 +135,7 @@
       "domain": "dataset",
       "display_name": "lineage graph",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/dataset_views/lineage_graph.rs",
         "exported_builder": "build_lineage_graph_view",
         "delegated_builder": "super::persist::build_lineage_graph_view"
@@ -163,7 +163,7 @@
       "domain": "dataset",
       "display_name": "presentation editor",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/dataset_views/presentation_editor.rs",
         "exported_builder": "build_presentation_editor_view",
         "delegated_builder": "super::persist::build_presentation_editor_view"
@@ -191,7 +191,7 @@
       "domain": "dataset",
       "display_name": "presentation publish",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/dataset_views/presentation_publish.rs",
         "exported_builder": "build_presentation_publish_view",
         "delegated_builder": "super::persist::build_presentation_publish_view"
@@ -219,7 +219,7 @@
       "domain": "dataset",
       "display_name": "super resolve",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/dataset_views/super_resolve.rs",
         "exported_builder": "build_super_resolve_view",
         "delegated_builder": "super::persist::build_super_resolve_view"
@@ -247,7 +247,7 @@
       "domain": "dataset",
       "display_name": "video view",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/dataset_views/video_view.rs",
         "exported_builder": "build_video_view_view",
         "delegated_builder": "super::persist::build_video_view_view"
@@ -275,7 +275,7 @@
       "domain": "dataset",
       "display_name": "view canvas",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/dataset_views/view_canvas.rs",
         "exported_builder": "build_view_canvas_view",
         "delegated_builder": "super::persist::build_view_canvas_view"
@@ -303,7 +303,7 @@
       "domain": "device",
       "display_name": "device manager",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/device_views/device_manager.rs",
         "exported_builder": "build_device_manager_view",
         "delegated_builder": "super::super::specialist_persist::build_device_manager_view"
@@ -331,7 +331,7 @@
       "domain": "device",
       "display_name": "device role assigner",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/device_views/device_role_assigner.rs",
         "exported_builder": "build_device_role_assigner_view",
         "delegated_builder": "super::super::specialist_persist::build_device_role_assigner_view"
@@ -359,7 +359,7 @@
       "domain": "device",
       "display_name": "display layout",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/device_views/display_layout.rs",
         "exported_builder": "build_display_layout_view",
         "delegated_builder": "super::super::specialist_persist::build_display_layout_view"
@@ -387,7 +387,7 @@
       "domain": "device",
       "display_name": "remote control",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/device_views/remote_control.rs",
         "exported_builder": "build_remote_control_view",
         "delegated_builder": "super::super::specialist_persist::build_remote_control_view"
@@ -415,7 +415,7 @@
       "domain": "device",
       "display_name": "workspace sync",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/device_views/workspace_sync.rs",
         "exported_builder": "build_workspace_sync_view",
         "delegated_builder": "super::super::specialist_persist::build_workspace_sync_view"
@@ -443,7 +443,7 @@
       "domain": "governance",
       "display_name": "complaints",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/governance_views/complaints.rs",
         "exported_builder": "build_complaints_view",
         "delegated_builder": "super::super::specialist_persist::build_complaints_view"
@@ -471,7 +471,7 @@
       "domain": "governance",
       "display_name": "conflict of interest",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/governance_views/conflict_of_interest.rs",
         "exported_builder": "build_conflict_of_interest_view",
         "delegated_builder": "super::super::specialist_persist::build_coi_view"
@@ -499,7 +499,7 @@
       "domain": "governance",
       "display_name": "corrections",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/governance_views/corrections.rs",
         "exported_builder": "build_corrections_view",
         "delegated_builder": "super::super::specialist_persist::build_corrections_view"
@@ -527,7 +527,7 @@
       "domain": "governance",
       "display_name": "disputes",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/governance_views/disputes.rs",
         "exported_builder": "build_disputes_view",
         "delegated_builder": "super::super::specialist_persist::build_disputes_view"
@@ -555,7 +555,7 @@
       "domain": "governance",
       "display_name": "governance meetings",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/governance_views/governance_meetings.rs",
         "exported_builder": "build_governance_meetings_view",
         "delegated_builder": "super::super::specialist_persist::build_meetings_view"
@@ -583,7 +583,7 @@
       "domain": "health",
       "display_name": "authority attestations",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/health_views/authority_attestations.rs",
         "exported_builder": "build_authority_attestations_view",
         "delegated_builder": "super::persist_ledgers::build_authority_attestations_view"
@@ -611,7 +611,7 @@
       "domain": "health",
       "display_name": "biometrics",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/health_views/biometrics.rs",
         "exported_builder": "build_biometrics_view",
         "delegated_builder": "super::persist_ledgers::build_biometrics_view"
@@ -639,7 +639,7 @@
       "domain": "health",
       "display_name": "clinical reports",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/health_views/clinical_reports.rs",
         "exported_builder": "build_clinical_reports_view",
         "delegated_builder": "super::reports_workspace::build_clinical_reports_view"
@@ -669,7 +669,7 @@
       "domain": "health",
       "display_name": "conditions",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/health_views/conditions.rs",
         "exported_builder": "build_conditions_view",
         "delegated_builder": "super::conditions_workspace::build_conditions_view"
@@ -697,7 +697,7 @@
       "domain": "health",
       "display_name": "diet",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/health_views/diet.rs",
         "exported_builder": "build_diet_view",
         "delegated_builder": "super::persist_ledgers::build_diet_view"
@@ -725,7 +725,7 @@
       "domain": "health",
       "display_name": "disclosure log",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/health_views/disclosure_log.rs",
         "exported_builder": "build_disclosure_log_view",
         "delegated_builder": "super::persist::build_disclosure_log_view"
@@ -753,7 +753,7 @@
       "domain": "health",
       "display_name": "documents",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/health_views/documents.rs",
         "exported_builder": "build_documents_view",
         "delegated_builder": "super::documents_workspace::build_documents_view"
@@ -783,7 +783,7 @@
       "domain": "health",
       "display_name": "family history",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/health_views/family_history.rs",
         "exported_builder": "build_family_history_view",
         "delegated_builder": "super::persist_ledgers::build_family_history_view"
@@ -811,7 +811,7 @@
       "domain": "health",
       "display_name": "health overview",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/health_views/health_overview.rs",
         "exported_builder": "build_health_overview_view",
         "delegated_builder": "super::overview_workspace::build_health_overview_view"
@@ -853,7 +853,7 @@
       "domain": "health",
       "display_name": "hypotheses",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/health_views/hypotheses.rs",
         "exported_builder": "build_hypotheses_view",
         "delegated_builder": "super::persist_ledgers::build_hypotheses_view"
@@ -881,7 +881,7 @@
       "domain": "health",
       "display_name": "immunizations",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/health_views/immunizations.rs",
         "exported_builder": "build_immunizations_view",
         "delegated_builder": "super::persist_ledgers::build_immunizations_view"
@@ -909,7 +909,7 @@
       "domain": "health",
       "display_name": "lab results",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/health_views/lab_results/mod.rs",
         "exported_builder": "build_lab_results_view",
         "delegated_builder": "super::persist::build_lab_results_view"
@@ -937,7 +937,7 @@
       "domain": "health",
       "display_name": "life records",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/health_views/life_records.rs",
         "exported_builder": "build_life_records_view",
         "delegated_builder": "super::persist_ledgers::build_life_records_view"
@@ -965,7 +965,7 @@
       "domain": "health",
       "display_name": "medications",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/health_views/medications.rs",
         "exported_builder": "build_medications_view",
         "delegated_builder": "super::medications_workspace::build_medications_view"
@@ -993,7 +993,7 @@
       "domain": "health",
       "display_name": "mental wellbeing",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/health_views/mental_wellbeing.rs",
         "exported_builder": "build_mental_wellbeing_view",
         "delegated_builder": "super::persist_ledgers::build_mental_wellbeing_view"
@@ -1021,7 +1021,7 @@
       "domain": "health",
       "display_name": "physical activity",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/health_views/physical_activity.rs",
         "exported_builder": "build_physical_activity_view",
         "delegated_builder": "super::persist_ledgers::build_physical_activity_view"
@@ -1049,7 +1049,7 @@
       "domain": "health",
       "display_name": "procedures",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/health_views/procedures.rs",
         "exported_builder": "build_procedures_view",
         "delegated_builder": "super::persist_ledgers::build_procedures_view"
@@ -1077,7 +1077,7 @@
       "domain": "health",
       "display_name": "safeguards",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/health_views/safeguards.rs",
         "exported_builder": "build_safeguards_view",
         "delegated_builder": "super::persist::build_safeguards_view"
@@ -1105,7 +1105,7 @@
       "domain": "health",
       "display_name": "sleep",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/health_views/sleep.rs",
         "exported_builder": "build_sleep_view",
         "delegated_builder": "super::persist_ledgers::build_sleep_view"
@@ -1133,7 +1133,7 @@
       "domain": "health",
       "display_name": "therapy notes",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/health_views/therapy_notes.rs",
         "exported_builder": "build_therapy_notes_view",
         "delegated_builder": "super::persist_ledgers::build_therapy_notes_view"
@@ -1161,7 +1161,7 @@
       "domain": "health",
       "display_name": "vitals",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/health_views/vitals.rs",
         "exported_builder": "build_vitals_view",
         "delegated_builder": "super::persist::build_vitals_view"
@@ -1189,7 +1189,7 @@
       "domain": "health",
       "display_name": "welfare support",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/health_views/welfare_support.rs",
         "exported_builder": "build_welfare_support_view",
         "delegated_builder": "super::persist_ledgers::build_welfare_support_view"
@@ -1217,7 +1217,7 @@
       "domain": "knowledge",
       "display_name": "graph canvas",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/ontology_views/graph_canvas.rs",
         "exported_builder": "build_ontology_graph_canvas_view",
         "delegated_builder": "super::persist::build_ontology_graph_canvas_view"
@@ -1245,7 +1245,7 @@
       "domain": "knowledge",
       "display_name": "n3 editor",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/ontology_views/n3_editor.rs",
         "exported_builder": "build_n3_editor_view",
         "delegated_builder": "super::persist::build_n3_editor_view"
@@ -1273,7 +1273,7 @@
       "domain": "knowledge",
       "display_name": "ontology compare",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/ontology_views/ontology_compare.rs",
         "exported_builder": "build_ontology_compare_view",
         "delegated_builder": "super::persist::build_ontology_compare_view"
@@ -1301,7 +1301,7 @@
       "domain": "knowledge",
       "display_name": "ontology library",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/ontology_views/ontology_library.rs",
         "exported_builder": "build_ontology_library_view",
         "delegated_builder": "super::persist::build_ontology_library_view"
@@ -1329,7 +1329,7 @@
       "domain": "knowledge",
       "display_name": "project ontology selector",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/ontology_views/project_ontology_selector.rs",
         "exported_builder": "build_project_ontology_selector_view",
         "delegated_builder": "super::persist::build_project_ontology_selector_view"
@@ -1357,7 +1357,7 @@
       "domain": "knowledge",
       "display_name": "relation builder",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/ontology_views/relation_builder.rs",
         "exported_builder": "build_relation_builder_view",
         "delegated_builder": "super::persist::build_relation_builder_view"
@@ -1385,7 +1385,7 @@
       "domain": "knowledge",
       "display_name": "shacl shapes",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/ontology_views/shacl_shapes.rs",
         "exported_builder": "build_shacl_shapes_view",
         "delegated_builder": "super::persist::build_shacl_shapes_view"
@@ -1413,7 +1413,7 @@
       "domain": "knowledge",
       "display_name": "shex editor",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/ontology_views/shex_editor.rs",
         "exported_builder": "build_shex_editor_view",
         "delegated_builder": "super::persist::build_shex_editor_view"
@@ -1441,7 +1441,7 @@
       "domain": "knowledge",
       "display_name": "vocabulary mapper",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/ontology_views/vocabulary_mapper.rs",
         "exported_builder": "build_vocabulary_mapper_view",
         "delegated_builder": "super::persist::build_vocabulary_mapper_view"
@@ -1469,7 +1469,7 @@
       "domain": "project",
       "display_name": "analytics",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/project_views/analytics.rs",
         "exported_builder": "build_analytics_view",
         "delegated_builder": "super::persist::build_analytics_view"
@@ -1497,7 +1497,7 @@
       "domain": "project",
       "display_name": "asset mgr",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/project_views/asset_mgr.rs",
         "exported_builder": "build_asset_mgr_view",
         "delegated_builder": "super::persist_ledgers::build_asset_mgr_view"
@@ -1525,7 +1525,7 @@
       "domain": "project",
       "display_name": "automation",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/project_views/automation.rs",
         "exported_builder": "build_automation_view",
         "delegated_builder": "super::persist_ledgers::build_automation_view"
@@ -1553,7 +1553,7 @@
       "domain": "project",
       "display_name": "awards",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/project_views/awards.rs",
         "exported_builder": "build_awards_view",
         "delegated_builder": "super::persist_ledgers::build_awards_view"
@@ -1581,7 +1581,7 @@
       "domain": "project",
       "display_name": "bounties",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/project_views/bounties.rs",
         "exported_builder": "build_bounties_view",
         "delegated_builder": "super::persist_ledgers::build_bounties_view"
@@ -1609,7 +1609,7 @@
       "domain": "project",
       "display_name": "bulk import",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/project_views/bulk_import.rs",
         "exported_builder": "build_bulk_import_view",
         "delegated_builder": "super::persist::build_bulk_import_view"
@@ -1637,7 +1637,7 @@
       "domain": "project",
       "display_name": "calendar",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/project_views/calendar.rs",
         "exported_builder": "build_calendar_view",
         "delegated_builder": "super::persist::build_calendar_view"
@@ -1665,7 +1665,7 @@
       "domain": "project",
       "display_name": "commons",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/project_views/commons.rs",
         "exported_builder": "build_commons_view",
         "delegated_builder": "super::persist_ledgers::build_commons_view"
@@ -1693,7 +1693,7 @@
       "domain": "project",
       "display_name": "cost base",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/project_views/cost_base.rs",
         "exported_builder": "build_cost_base_view",
         "delegated_builder": "super::persist_ledgers::build_cost_base_view"
@@ -1721,7 +1721,7 @@
       "domain": "project",
       "display_name": "credentials",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/project_views/credentials.rs",
         "exported_builder": "build_credentials_view",
         "delegated_builder": "super::persist_ledgers::build_credentials_view"
@@ -1749,7 +1749,7 @@
       "domain": "project",
       "display_name": "dashboard",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/project_views/dashboard.rs",
         "exported_builder": "build_dashboard_view",
         "delegated_builder": "super::persist::build_dashboard_view"
@@ -1777,7 +1777,7 @@
       "domain": "project",
       "display_name": "data sources",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/project_views/data_sources.rs",
         "exported_builder": "build_data_sources_view",
         "delegated_builder": "super::persist_ledgers::build_data_sources_view"
@@ -1805,7 +1805,7 @@
       "domain": "project",
       "display_name": "deliverable",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/project_views/deliverable.rs",
         "exported_builder": "build_deliverable_view",
         "delegated_builder": "super::persist_ledgers::build_deliverable_view"
@@ -1833,7 +1833,7 @@
       "domain": "project",
       "display_name": "discussion",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/project_views/discussion.rs",
         "exported_builder": "build_discussion_view",
         "delegated_builder": "super::persist_ledgers::build_discussion_view"
@@ -1861,7 +1861,7 @@
       "domain": "project",
       "display_name": "doc mgmt",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/project_views/doc_mgmt.rs",
         "exported_builder": "build_doc_mgmt_view",
         "delegated_builder": "super::persist_ledgers::build_doc_mgmt_view"
@@ -1889,7 +1889,7 @@
       "domain": "project",
       "display_name": "events",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/project_views/events.rs",
         "exported_builder": "build_events_view",
         "delegated_builder": "super::persist::build_events_view"
@@ -1917,7 +1917,7 @@
       "domain": "project",
       "display_name": "gantt",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/project_views/gantt.rs",
         "exported_builder": "build_gantt_view",
         "delegated_builder": "super::persist::build_gantt_view"
@@ -1945,7 +1945,7 @@
       "domain": "project",
       "display_name": "governance",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/project_views/governance.rs",
         "exported_builder": "build_governance_view",
         "delegated_builder": "super::persist_ledgers::build_governance_view"
@@ -1973,7 +1973,7 @@
       "domain": "project",
       "display_name": "ip registry",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/project_views/ip_registry.rs",
         "exported_builder": "build_ip_registry_view",
         "delegated_builder": "super::persist_ledgers::build_ip_registry_view"
@@ -2001,7 +2001,7 @@
       "domain": "project",
       "display_name": "issues",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/project_views/issues.rs",
         "exported_builder": "build_issues_view",
         "delegated_builder": "super::persist_ledgers::build_issues_view"
@@ -2029,7 +2029,7 @@
       "domain": "project",
       "display_name": "kanban",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/project_views/kanban.rs",
         "exported_builder": "build_kanban_view",
         "delegated_builder": "super::persist::build_kanban_view"
@@ -2057,7 +2057,7 @@
       "domain": "project",
       "display_name": "knowledge base",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/project_views/knowledge_base.rs",
         "exported_builder": "build_knowledge_base_view",
         "delegated_builder": "super::persist_ledgers::build_knowledge_base_view"
@@ -2085,7 +2085,7 @@
       "domain": "project",
       "display_name": "news",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/project_views/news.rs",
         "exported_builder": "build_news_view",
         "delegated_builder": "super::persist_ledgers::build_news_view"
@@ -2113,7 +2113,7 @@
       "domain": "project",
       "display_name": "onboarding",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/project_views/onboarding.rs",
         "exported_builder": "build_onboarding_view",
         "delegated_builder": "super::persist_ledgers::build_onboarding_view"
@@ -2141,7 +2141,7 @@
       "domain": "project",
       "display_name": "portfolio",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/project_views/portfolio.rs",
         "exported_builder": "build_portfolio_view",
         "delegated_builder": "super::persist::build_portfolio_view"
@@ -2169,7 +2169,7 @@
       "domain": "project",
       "display_name": "project sheet",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/project_views/project_sheet.rs",
         "exported_builder": "build_project_sheet_view",
         "delegated_builder": "super::persist_ledgers::build_project_sheet_view"
@@ -2197,7 +2197,7 @@
       "domain": "project",
       "display_name": "resource report",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/project_views/resource_report.rs",
         "exported_builder": "build_resource_report_view",
         "delegated_builder": "super::persist::build_resource_report_view"
@@ -2225,7 +2225,7 @@
       "domain": "project",
       "display_name": "retrospective",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/project_views/retrospective.rs",
         "exported_builder": "build_retrospective_view",
         "delegated_builder": "super::persist_ledgers::build_retrospective_view"
@@ -2253,7 +2253,7 @@
       "domain": "project",
       "display_name": "review",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/project_views/review.rs",
         "exported_builder": "build_review_view",
         "delegated_builder": "super::persist_ledgers::build_review_view"
@@ -2281,7 +2281,7 @@
       "domain": "project",
       "display_name": "risk",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/project_views/risk.rs",
         "exported_builder": "build_risk_view",
         "delegated_builder": "super::persist_ledgers::build_risk_view"
@@ -2309,7 +2309,7 @@
       "domain": "project",
       "display_name": "roadmap",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/project_views/roadmap.rs",
         "exported_builder": "build_roadmap_view",
         "delegated_builder": "super::persist_ledgers::build_roadmap_view"
@@ -2337,7 +2337,7 @@
       "domain": "project",
       "display_name": "task list",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/project_views/task_list.rs",
         "exported_builder": "build_task_list_view",
         "delegated_builder": "super::persist::build_task_list_view"
@@ -2365,7 +2365,7 @@
       "domain": "project",
       "display_name": "time tracking",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/project_views/time_tracking.rs",
         "exported_builder": "build_time_tracking_view",
         "delegated_builder": "super::persist_ledgers::build_time_tracking_view"
@@ -2393,7 +2393,7 @@
       "domain": "project",
       "display_name": "timeline",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/project_views/timeline.rs",
         "exported_builder": "build_timeline_view",
         "delegated_builder": "super::persist::build_timeline_view"
@@ -2421,7 +2421,7 @@
       "domain": "project",
       "display_name": "token mgr",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/project_views/token_mgr.rs",
         "exported_builder": "build_token_mgr_view",
         "delegated_builder": "super::persist_ledgers::build_token_mgr_view"
@@ -2449,7 +2449,7 @@
       "domain": "project",
       "display_name": "voting",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/project_views/voting.rs",
         "exported_builder": "build_voting_view",
         "delegated_builder": "super::persist_ledgers::build_voting_view"
@@ -2477,7 +2477,7 @@
       "domain": "project",
       "display_name": "wiki",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/project_views/wiki.rs",
         "exported_builder": "build_wiki_view",
         "delegated_builder": "super::persist_ledgers::build_wiki_view"
@@ -2505,7 +2505,7 @@
       "domain": "studio",
       "display_name": "animation export",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/studio_views/animation_export.rs",
         "exported_builder": "build_animation_export_view",
         "delegated_builder": "super::persist::build_animation_export_view"
@@ -2533,7 +2533,7 @@
       "domain": "studio",
       "display_name": "animation timeline",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/studio_views/animation_timeline.rs",
         "exported_builder": "build_animation_timeline_view",
         "delegated_builder": "super::persist::build_animation_timeline_view"
@@ -2561,7 +2561,7 @@
       "domain": "studio",
       "display_name": "asset library",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/studio_views/asset_library.rs",
         "exported_builder": "build_asset_library_view",
         "delegated_builder": "super::persist::build_asset_library_view"
@@ -2589,7 +2589,7 @@
       "domain": "studio",
       "display_name": "audio synth",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs -> audio_session -> studio_views::persist::build_audio_session_view",
+        "route_registration": "crates/poet/src/browser/containers/body_studio.rs -> audio_session -> studio_views::persist::build_audio_session_view",
         "surface_module": "crates/poet/src/browser/studio_views/audio_synth.rs",
         "exported_builder": "build_audio_synth_view",
         "delegated_builder": "super::persist::build_audio_synth_view"
@@ -2617,7 +2617,7 @@
       "domain": "studio",
       "display_name": "automation lanes",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/studio_views/automation_lanes.rs",
         "exported_builder": "build_automation_lanes_view",
         "delegated_builder": "super::persist::build_automation_lanes_view"
@@ -2645,7 +2645,7 @@
       "domain": "studio",
       "display_name": "channel strip",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/studio_views/channel_strip.rs",
         "exported_builder": "build_channel_strip_view",
         "delegated_builder": "super::persist::build_channel_strip_view"
@@ -2673,7 +2673,7 @@
       "domain": "studio",
       "display_name": "desk persistence",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/studio_views/desk_persistence.rs",
         "exported_builder": "build_desk_persistence_view",
         "delegated_builder": "super::persist::build_desk_persistence_view"
@@ -2701,7 +2701,7 @@
       "domain": "studio",
       "display_name": "desk surface",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/studio_views/desk_surface.rs",
         "exported_builder": "build_desk_surface_view",
         "delegated_builder": "super::persist::build_desk_surface_view"
@@ -2729,7 +2729,7 @@
       "domain": "studio",
       "display_name": "gis maps",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/studio_views/gis_maps.rs",
         "exported_builder": "build_gis_maps_view",
         "delegated_builder": "super::persist::build_gis_maps_view"
@@ -2757,7 +2757,7 @@
       "domain": "studio",
       "display_name": "hrtf personalization",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/studio_views/hrtf_personalization.rs",
         "exported_builder": "build_hrtf_personalization_view",
         "delegated_builder": "super::persist::build_hrtf_personalization_view"
@@ -2785,7 +2785,7 @@
       "domain": "studio",
       "display_name": "lighting editor",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/studio_views/lighting_editor.rs",
         "exported_builder": "build_lighting_editor_view",
         "delegated_builder": "super::persist::build_lighting_editor_view"
@@ -2813,7 +2813,7 @@
       "domain": "studio",
       "display_name": "lod chain",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/studio_views/lod_chain.rs",
         "exported_builder": "build_lod_chain_view",
         "delegated_builder": "super::persist::build_lod_chain_view"
@@ -2841,7 +2841,7 @@
       "domain": "studio",
       "display_name": "manifold transition audio",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/studio_views/manifold_transition_audio.rs",
         "exported_builder": "build_manifold_transition_audio_view",
         "delegated_builder": "super::persist::build_manifold_transition_audio_view"
@@ -2869,7 +2869,7 @@
       "domain": "studio",
       "display_name": "material editor",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/studio_views/material_editor.rs",
         "exported_builder": "build_material_editor_view",
         "delegated_builder": "super::persist::build_material_editor_view"
@@ -2897,7 +2897,7 @@
       "domain": "studio",
       "display_name": "meter bridge",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/studio_views/meter_bridge.rs",
         "exported_builder": "build_meter_bridge_view",
         "delegated_builder": "super::persist::build_meter_bridge_view"
@@ -2925,7 +2925,7 @@
       "domain": "studio",
       "display_name": "ragdoll skin",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/studio_views/ragdoll_skin.rs",
         "exported_builder": "build_ragdoll_skin_view",
         "delegated_builder": "super::persist::build_ragdoll_skin_view"
@@ -2953,7 +2953,7 @@
       "domain": "studio",
       "display_name": "routing matrix",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/studio_views/routing_matrix.rs",
         "exported_builder": "build_routing_matrix_view",
         "delegated_builder": "super::persist::build_routing_matrix_view"
@@ -2981,7 +2981,7 @@
       "domain": "studio",
       "display_name": "scene graph",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/studio_views/scene_graph.rs",
         "exported_builder": "build_scene_graph_view",
         "delegated_builder": "super::persist::build_scene_graph_view"
@@ -3009,7 +3009,7 @@
       "domain": "studio",
       "display_name": "scene view",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/studio_views/scene_view.rs",
         "exported_builder": "build_scene_view",
         "delegated_builder": "super::persist::build_scene_view"
@@ -3037,7 +3037,7 @@
       "domain": "studio",
       "display_name": "shadow settings",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/studio_views/shadow_settings.rs",
         "exported_builder": "build_shadow_settings_view",
         "delegated_builder": "super::persist::build_shadow_settings_view"
@@ -3093,7 +3093,7 @@
       "domain": "studio",
       "display_name": "spatial audio",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/studio_views/spatial_audio.rs",
         "exported_builder": "build_spatial_audio_view",
         "delegated_builder": "super::persist::build_spatial_audio_view"
@@ -3121,7 +3121,7 @@
       "domain": "studio",
       "display_name": "tensor inspector",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/studio_views/tensor_inspector.rs",
         "exported_builder": "build_tensor_inspector_view",
         "delegated_builder": "super::persist::build_tensor_inspector_view"
@@ -3149,7 +3149,7 @@
       "domain": "studio",
       "display_name": "transport",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/studio_views/transport.rs",
         "exported_builder": "build_transport_view",
         "delegated_builder": "super::persist::build_transport_view"
@@ -3177,7 +3177,7 @@
       "domain": "project",
       "display_name": "budget",
       "route_or_builder": {
-        "route_registration": "crates/poet/src/browser/containers.rs",
+        "route_registration": "crates/poet/src/browser/containers/",
         "surface_module": "crates/poet/src/browser/project_views/budget.rs",
         "exported_builder": "build_budget_view",
         "delegated_builder": "super::budget_workspace::build_budget_view"

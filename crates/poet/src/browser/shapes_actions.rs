@@ -123,7 +123,13 @@ pub(super) fn run_n3_evaluate(document: &Document, label: &str) {
     let source = selected_text(document).unwrap_or_else(|| DEFAULT_N3.to_string());
     if !super::native_daemon::is_daemon_connected() {
         let detail = local_n3_sketch(&source);
-        super::interactions::show_tool_status(document, &label, &detail, "success");
+        let report = super::tool_dual_path::local_sketch("N3Logic.evaluate", &detail);
+        super::interactions::show_tool_status(
+            document,
+            &label,
+            &report.message,
+            report.status_kind,
+        );
         return;
     }
     super::interactions::show_tool_status(document, &label, "Running N3Logic.evaluate…", "running");
@@ -131,24 +137,41 @@ pub(super) fn run_n3_evaluate(document: &Document, label: &str) {
         let Some(document) = web_sys::window().and_then(|window| window.document()) else {
             return;
         };
-        let local_source = source.clone();
         let args = serde_json::json!({ "source": source, "mode": "evaluate" });
         match super::native_daemon::daemon_invoke("N3Logic.evaluate", args).await {
             Ok(response) if response.ok => {
-                super::interactions::show_tool_status(&document, &label, &response.value, "success")
+                let report = super::tool_dual_path::live_ok("N3Logic.evaluate", &response.value);
+                super::interactions::show_tool_status(
+                    &document,
+                    &label,
+                    &report.message,
+                    report.status_kind,
+                );
             }
             Ok(response) => {
-                let detail = format!(
-                    "Local N3 sketch after daemon rejection ({}): {}",
+                let report = super::tool_dual_path::live_denied(
+                    "N3Logic.evaluate",
                     response
                         .diagnostic
                         .as_deref()
                         .unwrap_or("N3Logic.evaluate failed."),
-                    local_n3_sketch(&local_source)
                 );
-                super::interactions::show_tool_status(&document, &label, &detail, "success");
+                super::interactions::show_tool_status(
+                    &document,
+                    &label,
+                    &report.message,
+                    report.status_kind,
+                );
             }
-            Err(error) => super::interactions::show_tool_status(&document, &label, &error, "error"),
+            Err(error) => {
+                let report = super::tool_dual_path::live_denied("N3Logic.evaluate", &error);
+                super::interactions::show_tool_status(
+                    &document,
+                    &label,
+                    &report.message,
+                    report.status_kind,
+                );
+            }
         }
     });
 }
@@ -168,7 +191,13 @@ pub(super) fn run_shacl_validate(document: &Document, label: &str) {
     let label = label.to_string();
     if !super::native_daemon::is_daemon_connected() {
         let detail = local_shacl_mincount(&subject, annotated);
-        super::interactions::show_tool_status(document, &label, &detail, "success");
+        let report = super::tool_dual_path::local_sketch("SHACL.validate", &detail);
+        super::interactions::show_tool_status(
+            document,
+            &label,
+            &report.message,
+            report.status_kind,
+        );
         return;
     }
     super::interactions::show_tool_status(document, &label, "Running SHACL.validate…", "running");
@@ -183,20 +212,38 @@ pub(super) fn run_shacl_validate(document: &Document, label: &str) {
         });
         match super::native_daemon::daemon_invoke("SHACL.validate", args).await {
             Ok(response) if response.ok => {
-                super::interactions::show_tool_status(&document, &label, &response.value, "success")
+                let report = super::tool_dual_path::live_ok("SHACL.validate", &response.value);
+                super::interactions::show_tool_status(
+                    &document,
+                    &label,
+                    &report.message,
+                    report.status_kind,
+                );
             }
             Ok(response) => {
-                let detail = format!(
-                    "Local SHACL sketch after daemon rejection ({}): {}",
+                let report = super::tool_dual_path::live_denied(
+                    "SHACL.validate",
                     response
                         .diagnostic
                         .as_deref()
                         .unwrap_or("SHACL.validate failed."),
-                    local_shacl_mincount(&subject, annotated)
                 );
-                super::interactions::show_tool_status(&document, &label, &detail, "success");
+                super::interactions::show_tool_status(
+                    &document,
+                    &label,
+                    &report.message,
+                    report.status_kind,
+                );
             }
-            Err(error) => super::interactions::show_tool_status(&document, &label, &error, "error"),
+            Err(error) => {
+                let report = super::tool_dual_path::live_denied("SHACL.validate", &error);
+                super::interactions::show_tool_status(
+                    &document,
+                    &label,
+                    &report.message,
+                    report.status_kind,
+                );
+            }
         }
     });
 }

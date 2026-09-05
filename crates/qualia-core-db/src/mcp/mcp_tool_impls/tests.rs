@@ -383,15 +383,13 @@ fn bioinformatics_uses_caller_sequences() {
 }
 
 #[test]
-fn clinical_framingham_accepts_input() {
+fn clinical_framingham_rejects_incomplete_input() {
     let args = json!({
         "score": "framingham",
         "age": 55,
         "input": {"sex_male": true, "systolic_bp": 140.0}
     });
-    let out = clinical_risk(args.to_string().as_bytes()).expect("ok");
-    let parsed: Value = serde_json::from_str(&out).expect("json");
-    assert!(parsed["risk_10yr"].as_f64().unwrap() > 0.0);
+    assert!(clinical_risk(args.to_string().as_bytes()).is_err());
 }
 
 #[test]

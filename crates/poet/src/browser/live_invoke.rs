@@ -111,9 +111,7 @@ fn merge_args(
     match base {
         serde_json::Value::Object(mut map) => {
             for (key, value) in extra {
-                if map.contains_key(&key) {
-                    map.insert(key, value);
-                }
+                map.insert(key, value);
             }
             serde_json::Value::Object(map)
         }

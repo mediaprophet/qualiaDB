@@ -15,11 +15,12 @@ evidence.
 | 1 | Re-baseline after concurrent changes (`RBL-01`) | Audited; compile blocker found | Baseline `4eade061`; both focused suites fail at the same 16 missing registration modules before tests run | None |
 | 2 | Restore registration library ownership (`FIX-REG-01` / `RM-01`) | Complete | Directory-backed module tree; product integrity 9/9; surface inventory 1/1; `trunk build` passed | None |
 | 3 | Decompose POET style asset (`RM-02`) | Complete | 14 assets at no more than 421 lines; normalized CSS hash preserved; focused tests, build, desktop/mobile UAT passed | None |
-| 4 | Review `HLT-03` consent contract | Required review | Principal authority, immutable scope, expiry, replay, one-way revocation, no private-key handling | Review Gate A |
-| 5 | Complete `HLT-07` clinical calculator integrity | Not started in ledger | Required inputs and units, applicability, boundary tests, algorithm/version provenance, non-advice UI | Higher-assurance implementation/review |
-| 6 | Complete `HLT-08` Health UAT pack | Blocked by 4-5 | Executable/manual evidence for add, reload, inspect, correct, grant, revoke, ingest, and offline recovery | Review Gate A |
+| 4 | Review `HLT-03` consent contract (`HLT-R1`) | Instrument review complete; **D5 Gate A still open** | 12 `consent_contract` tests pass; Poet share projection fail-closed; `clinical_notes` removed from grantable UI flags | Project owner/expert (`D5`) |
+
+| 5 | Complete `HLT-07` clinical calculator integrity | Implemented; MCP/VM/playground surfaces closed in `HLT-07b`; browser UAT pending | Required inputs and units, applicability, boundary tests, algorithm/version provenance, non-advice UI | Higher-assurance implementation/review |
+| 6 | Complete `HLT-08` Health UAT pack | Source contracts landed; browser rows open | Executable/manual evidence for add, reload, inspect, correct, grant, revoke, ingest, and offline recovery | Review Gate A |
 | 7 | Close Review Gate A | Blocked by 4-6 | Architecture, data contract, security, visual, browser, and status review | Project owner/expert reviewer |
-| 8 | Audit standalone Tool Chest semantics | Ready after structural packets | Live vs local labels, provenance, gated states, daemon rejection/error behavior | Project owner accepts findings |
+| 8 | Audit standalone Tool Chest semantics (`PFT-01`) | Complete; defects repaired in `PFT-02` | Live vs local labels, provenance, gated states, daemon rejection/error behavior | Project owner accepts findings |
 | 9 | Select next Tool Chest chain | Awaiting selection | Inventory row, live `ALL_BOUND` ID or explicit gated shell, acceptance task | Captain/project owner |
 
 ## Latest execution evidence
@@ -123,7 +124,171 @@ evidence.
   10 over 2,000. POET has no remaining file over 2,000.
 - Next decomposition candidate: `RM-06`, `browser/containers.rs` (`D3`),
   coordinated with the container-view cluster.
-- Next programme assurance packet remains `HLT-R1`.
+- Next programme assurance packet is `HLT-07` (`D4` CLIN); `HLT-R1` instrument
+  review is recorded below. Review Gate A remains a `D5` owner close.
+
+### `HLT-R1` - 2026-09-05
+
+- Read: `governance/consent_contract.rs`, Poet `disclosure_model.rs`,
+  `project_shares` / revocation payload, HLT-03 playbook acceptance.
+- Held without change: signed digest immutability of principal/scope; expiry
+  `now >= expires_at`; principal-only revoke; no private key on the grant
+  struct (verifying key + 64-byte signature).
+- Repaired: unused `ReplayDetected`; stateless omit-receipt reactivation;
+  unknown/empty scope labels; Poet "All categories" / missing-expiry Active
+  defaults; grantable `clinical_notes` UI flag (not a contract bit).
+- Verification: 12 `consent_contract` tests passed; 27 `health_views` tests
+  passed (includes 3 share-projection tests).
+- Not claimed: Review Gate A / `D5` clinical-authorization close; live daemon
+  signing of grants still goes through record upsert, not `ConsentLedger`
+  issue/revoke (seam for Neo if Health persist should remember revocations).
+- Next packet: `HLT-07`.
+
+### `HLT-07` - 2026-09-05
+
+- Native `ClinicalRisk.framingham` / `.cha2ds2_vasc` / `.score2` fail closed
+  on missing fields, omitted booleans, inapplicable age/AF/region, and
+  HDL ≥ total cholesterol. Success names algorithm, version, citation, and
+  `not_diagnosis`.
+- Poet calculator workspace: empty fields, units on labels, Calculate
+  disabled until complete + daemon connected. Toolbox tools place the form
+  instead of invoking empty args. Health vault container no longer shows a
+  fabricated 12% Framingham / Metformin list. `Render.scene` health is
+  geometry only.
+- Verification: `invoke::clinical` 16 passed; `health_is_not_a_named_person`
+  1 passed; `health_views` 33 passed; product integrity 10; surface inventory
+  1; capability-scope and non-placement policy tests passed.
+- Browser UAT of the calculator form is the remaining verification row.
+- Next packet: `HLT-08`. Do not close Review Gate A.
+
+Browser offline follow-up: Health construct opened via Help → Command Palette.
+Calculators showed disabled Calculate, not-a-diagnosis copy, and Graph
+unavailable. Live daemon fixture was not available on this VM.
+
+### `HLT-08` - 2026-09-05
+
+- Executable source contracts for the eight Health completion workflows
+  (`crates/poet/tests/health_uat_pack.rs`, 8 passed).
+- Direct defect found in add-measurement: systolic/diastolic/HR placeholders
+  presented 120/80/68 mmHg/bpm as if they were patient values. Cleared.
+- Browser UAT rows remain open until trunk serve.
+- Review Gate A remains a `D5` owner close.
+
+### `HLT-07b` - 2026-09-05
+
+- MCP `clinical_risk` extracted and fail-closed: no age/lipid/SBP/boolean
+  defaults; SCORE2 is its own score (not Framingham); SOFA/eGFR do not invent
+  organ values. Success names algorithm/version/`not_diagnosis`.
+- WebizenVM `NativeClinicalRisk` holds: frame registers are not a complete
+  clinical input; lipids/`Score2Region::Moderate`/`Default` CHA₂DS₂ booleans
+  are not fabricated.
+- WASM playground JSON fail-closed; HTML presets are complete labeled
+  reference profiles.
+- Verification: MCP `clinical_risk` 7 passed; incomplete Framingham reject 1;
+  playground 3; VM `clinical_native` 2; `invoke::clinical` 16 (no regression).
+- Review Gate A remains a `D5` owner close. Next ready non-AST packet:
+  Tool Chest audit (`PFT-01`) or `RM-06` `containers.rs` split.
+
+### `PFT-01` / `PFT-02` - 2026-09-05
+
+- Audit: daemon rejection on SPARQL, gazetteer, Sentinel, N3, SHACL, and
+  sheet mean was shown as success because a local sketch ran.
+- Repair: `tool_dual_path` — local / live / denied are distinct status kinds;
+  local messages name the live id they are not; rejection does not attach a
+  canvas sketch as a live result. `requires_daemon` stays false on dual-path
+  tools so standalone remains runnable.
+- Review Gate A remains a `D5` owner close. Next: `PFT-03` (owner selects a
+  chain) or `RM-06` `containers.rs` split.
+
+### `RM-06` - 2026-09-05
+
+- Structure: 1,507-line `browser/containers.rs` replaced by a 14-line
+  router and eight purpose-specific child modules, all below 500 lines.
+- API: `build_container` remains the only public export. No
+  `pub use … build_*_view` wrappers were added (delegation ceiling still 112).
+- Verification: `cargo +stable check`, containers attrs 4/4, product
+  integrity 10/10, surface inventory 1/1, `trunk build` (stable toolchain)
+  passed. Wasm still contains `health_calculators` and `canvas-container-node`.
+- Interactive browser click-UAT was not re-run.
+- Next decomposition candidate: `RM-07`, `browser/docks.rs` (`D3`).
+- Review Gate A remains a `D5` owner close. `PFT-03` remains owner selection.
+
+### `RM-07` - 2026-09-05
+
+- Structure: 1,575-line `browser/docks.rs` replaced by a 27-line router
+  and eight purpose-specific child modules, all below 500 lines.
+- API: former public dock functions remain re-exported. No
+  `pub use … build_*_view` wrappers (delegation ceiling still 112).
+- Verification: docks tests 2/2, product integrity 10/10, surface
+  inventory 1/1, `trunk build` (stable toolchain) passed. Wasm still
+  contains `toolbox-dock` and `bottom-statusbar`.
+- Interactive browser click-UAT was not re-run.
+- Next decomposition candidate: `RM-08`, `browser/instrument_panel.rs` (`D3`).
+- Review Gate A remains a `D5` owner close. `PFT-03` remains owner selection.
+
+### `RM-08` - 2026-09-05
+
+- Structure: 1,475-line `browser/instrument_panel.rs` replaced by a 17-line
+  router and six purpose-specific child modules, all below 500 lines.
+- API: `show_for_container`, `hide`, `activate_chain`,
+  `activate_chain_on_container`, and `deactivate_chain` remain re-exported.
+  No `pub use … build_*_view` wrappers (delegation ceiling still 112).
+- Verification: instrument_panel tests 6/6, product integrity 10/10, surface
+  inventory 1/1, `trunk build` (stable toolchain) passed. Wasm still contains
+  `contextual-instrument-panel` and `doc:bold`.
+- Interactive browser click-UAT was not re-run.
+- Next decomposition candidate: `RM-09`, `browser/workflow_panels.rs` (`D3`).
+- Review Gate A remains a `D5` owner close. `PFT-03` remains owner selection.
+
+### `RM-09` - 2026-09-05
+
+- Structure: 1,418-line `browser/workflow_panels.rs` replaced by a 27-line
+  router and seven purpose-specific child modules, all below 500 lines.
+- API: former `build_*_view` names remain via `pub use <module>::*` glob
+  re-exports. No `pub use … build_*_view` wrappers (delegation ceiling
+  still 112).
+- Verification: workflow_panels tests 2/2, product integrity 10/10, surface
+  inventory 1/1, `trunk build` (stable toolchain) passed.
+- Honest leftover: these builders are not on the live container routes
+  (`checkpoint_panel` / `publication_panel` / `governance_workflow`); unique
+  panel honesty strings are absent from the wasm. Pre-existing, not caused
+  by the split.
+- Interactive browser click-UAT was not re-run.
+- P2 dock/instrument/workflow cluster is complete. Next POET files over
+  1,200 are the held view cluster and `native_daemon.rs` (`D4`).
+- Review Gate A remains a `D5` owner close. `PFT-03` remains owner selection.
+
+### `RM-10` - 2026-09-05
+
+- Structure: 1,227-line `browser/container_views.rs` replaced by a 19-line
+  router and seven purpose-specific child modules, all below 500 lines.
+- API: `build_doc_view`, `build_sheet_view`, `build_graph_view`,
+  `build_ontology_view`, and `build_pulse_view` remain via glob
+  re-exports. No `pub use … build_*_view` wrappers (ceiling still 112).
+- These builders are on the live container routes.
+- Verification: container_views tests 2/2, product integrity 10/10,
+  surface inventory 1/1, `trunk build` passed. Wasm contains
+  `doc-view-switcher` and `never owl:Thing`.
+- Interactive browser click-UAT was not re-run.
+- Next decomposition candidate: `RM-11`, `browser/container_views_ext.rs`.
+- Review Gate A remains a `D5` owner close. `PFT-03` remains owner selection.
+
+### `RM-11` - 2026-09-05
+
+- Structure: 1,387-line `browser/container_views_ext.rs` replaced by a
+  26-line router and nine purpose-specific child modules, all below 500
+  lines.
+- API: former `build_*_view` names remain via glob re-exports. No
+  `pub use … build_*_view` wrappers (ceiling still 112).
+- Honest leftover: no in-crate callers; live routes use
+  `specialist_persist` / `local_container_views`. Pre-existing, not
+  caused by the split.
+- Verification: container_views tests 2/2, product integrity 10/10,
+  surface inventory 1/1, `trunk build` passed.
+- Interactive browser click-UAT was not re-run.
+- View cluster over-1,200 files are done. Remaining over 1,200:
+  `native_daemon.rs` (`D4`) and `command_palette/commands.rs`.
+- Review Gate A remains a `D5` owner close. `PFT-03` remains owner selection.
 
 ## Post-gate programme
 

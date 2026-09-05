@@ -256,7 +256,7 @@ pub fn build_health_vault_view(document: &Document) -> Element {
         &[(
             "ClinicalRisk.cha2ds2_vasc",
             "ClinicalRisk.cha2ds2_vasc",
-            serde_json::json!({ "age": 65, "sex_female": false }),
+            serde_json::json!({}),
         )],
     )
 }

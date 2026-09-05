@@ -278,3 +278,14 @@
 .health-chart-legend i.hr { background: var(--health-violet); }
 .health-chart-legend strong { color: var(--text-primary); font-size: 11px; }
 
+.health-calc-result {
+  margin: 8px 0 0;
+  padding: 10px 12px;
+  border: 1px solid rgba(45, 212, 191, .22);
+  border-radius: 8px;
+  background: rgba(7, 9, 14, .55);
+  color: var(--text-secondary);
+  font: 11px/1.5 var(--font-mono);
+  white-space: pre-wrap;
+}
+

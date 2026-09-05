@@ -21,48 +21,81 @@ use web_sys::Document;
 
 pub(super) use super::request_capabilities::capability_contract_for_button;
 
+fn lipids_hdl_below_total(
+    total_cholesterol_mmol: f64,
+    hdl_cholesterol_mmol: f64,
+) -> Result<(), String> {
+    if hdl_cholesterol_mmol >= total_cholesterol_mmol {
+        return Err(
+            "hdl must be lower than total_chol (mmol/L); inapplicable input cannot calculate."
+                .into(),
+        );
+    }
+    Ok(())
+}
+
 fn clinical_request(
     document: &Document,
     model: &str,
 ) -> Result<(&'static str, serde_json::Value), String> {
     let source = field_value(document, "clinical-risk-input");
     match model {
-        "framingham" => Ok((
-            "ClinicalRisk.framingham",
-            serde_json::json!({
-                "age": required_f64(&source, "age")? as u64,
-                "sex_male": required_assignment(&source, "sex")?.eq_ignore_ascii_case("male"),
-                "total_cholesterol_mmol": required_f64(&source, "total_chol")?,
-                "hdl_cholesterol_mmol": required_f64(&source, "hdl")?,
-                "systolic_bp": required_f64(&source, "sys_bp")?,
-                "bp_treated": assignment(&source, "bp_treated").map(|_| bool_assignment(&source, "bp_treated")).transpose()?.unwrap_or(false),
-                "current_smoker": bool_assignment(&source, "smoker")?,
-                "diabetic": bool_assignment(&source, "diabetes")?
-            }),
-        )),
-        "cha2ds2_vasc" => Ok((
-            "ClinicalRisk.cha2ds2_vasc",
-            serde_json::json!({
-                "age": required_f64(&source, "age")? as u64,
-                "congestive_heart_failure": bool_assignment(&source, "chf")?,
-                "hypertension": bool_assignment(&source, "hypertension")?,
-                "diabetes": bool_assignment(&source, "diabetes")?,
-                "stroke_tia_history": bool_assignment(&source, "stroke")?,
-                "vascular_disease": bool_assignment(&source, "vascular")?,
-                "sex_female": assignment(&source, "sex").is_some_and(|value| value.eq_ignore_ascii_case("female"))
-            }),
-        )),
-        "score2" => Ok((
-            "ClinicalRisk.score2",
-            serde_json::json!({
-                "age": required_f64(&source, "age")? as u64,
-                "sex_male": required_assignment(&source, "sex")?.eq_ignore_ascii_case("male"),
-                "systolic_bp": required_f64(&source, "sys_bp")?,
-                "total_cholesterol_mmol": required_f64(&source, "total_chol")?,
-                "hdl_cholesterol_mmol": required_f64(&source, "hdl")?,
-                "current_smoker": bool_assignment(&source, "smoker")?
-            }),
-        )),
+        "framingham" => {
+            let total_cholesterol_mmol = required_f64(&source, "total_chol")?;
+            let hdl_cholesterol_mmol = required_f64(&source, "hdl")?;
+            lipids_hdl_below_total(total_cholesterol_mmol, hdl_cholesterol_mmol)?;
+            Ok((
+                "ClinicalRisk.framingham",
+                serde_json::json!({
+                    "age": required_f64(&source, "age")? as u64,
+                    "sex_male": required_assignment(&source, "sex")?.eq_ignore_ascii_case("male"),
+                    "total_cholesterol_mmol": total_cholesterol_mmol,
+                    "hdl_cholesterol_mmol": hdl_cholesterol_mmol,
+                    "systolic_bp": required_f64(&source, "sys_bp")?,
+                    "bp_treated": bool_assignment(&source, "bp_treated")?,
+                    "current_smoker": bool_assignment(&source, "smoker")?,
+                    "diabetic": bool_assignment(&source, "diabetes")?
+                }),
+            ))
+        }
+        "cha2ds2_vasc" => {
+            if !bool_assignment(&source, "atrial_fibrillation")? {
+                return Err(
+                    "CHA₂DS₂-VASc applies only when atrial_fibrillation is true; inapplicable input cannot calculate."
+                        .into(),
+                );
+            }
+            Ok((
+                "ClinicalRisk.cha2ds2_vasc",
+                serde_json::json!({
+                    "age": required_f64(&source, "age")? as u64,
+                    "atrial_fibrillation": true,
+                    "congestive_heart_failure": bool_assignment(&source, "chf")?,
+                    "hypertension": bool_assignment(&source, "hypertension")?,
+                    "diabetes": bool_assignment(&source, "diabetes")?,
+                    "stroke_tia_history": bool_assignment(&source, "stroke")?,
+                    "vascular_disease": bool_assignment(&source, "vascular")?,
+                    "sex_female": required_assignment(&source, "sex")?.eq_ignore_ascii_case("female")
+                }),
+            ))
+        }
+        "score2" => {
+            let total_cholesterol_mmol = required_f64(&source, "total_chol")?;
+            let hdl_cholesterol_mmol = required_f64(&source, "hdl")?;
+            lipids_hdl_below_total(total_cholesterol_mmol, hdl_cholesterol_mmol)?;
+            Ok((
+                "ClinicalRisk.score2",
+                serde_json::json!({
+                    "age": required_f64(&source, "age")? as u64,
+                    "sex_male": required_assignment(&source, "sex")?.eq_ignore_ascii_case("male"),
+                    "systolic_bp": required_f64(&source, "sys_bp")?,
+                    "total_cholesterol_mmol": total_cholesterol_mmol,
+                    "hdl_cholesterol_mmol": hdl_cholesterol_mmol,
+                    "current_smoker": bool_assignment(&source, "smoker")?,
+                    "risk_region": required_assignment(&source, "risk_region")?
+                }),
+            ))
+        }
         "drug_interaction" => Ok((
             "ClinicalRisk.drug_interaction",
             serde_json::json!({

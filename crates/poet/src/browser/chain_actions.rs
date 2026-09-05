@@ -224,11 +224,15 @@ pub(super) fn run_sheet_mean(document: &Document, label: &str) {
     };
     let label = label.to_string();
     if !super::native_daemon::is_daemon_connected() {
+        let report = super::tool_dual_path::local_sketch(
+            "Statistics.mean",
+            &format!("mean of {} values: {mean}", values.len()),
+        );
         super::interactions::show_tool_status(
             document,
             &label,
-            &format!("Local mean of {} values: {mean}", values.len()),
-            "success",
+            &report.message,
+            report.status_kind,
         );
         return;
     }
@@ -240,21 +244,38 @@ pub(super) fn run_sheet_mean(document: &Document, label: &str) {
         let args = serde_json::json!({ "values": values });
         match super::native_daemon::daemon_invoke("Statistics.mean", args).await {
             Ok(response) if response.ok => {
-                super::interactions::show_tool_status(&document, &label, &response.value, "success")
+                let report = super::tool_dual_path::live_ok("Statistics.mean", &response.value);
+                super::interactions::show_tool_status(
+                    &document,
+                    &label,
+                    &report.message,
+                    report.status_kind,
+                );
             }
-            Ok(response) => super::interactions::show_tool_status(
-                &document,
-                &label,
-                &format!(
-                    "Local mean {mean} after daemon rejection ({})",
+            Ok(response) => {
+                let report = super::tool_dual_path::live_denied(
+                    "Statistics.mean",
                     response
                         .diagnostic
                         .as_deref()
-                        .unwrap_or("Statistics.mean failed.")
-                ),
-                "success",
-            ),
-            Err(error) => super::interactions::show_tool_status(&document, &label, &error, "error"),
+                        .unwrap_or("Statistics.mean failed."),
+                );
+                super::interactions::show_tool_status(
+                    &document,
+                    &label,
+                    &report.message,
+                    report.status_kind,
+                );
+            }
+            Err(error) => {
+                let report = super::tool_dual_path::live_denied("Statistics.mean", &error);
+                super::interactions::show_tool_status(
+                    &document,
+                    &label,
+                    &report.message,
+                    report.status_kind,
+                );
+            }
         }
     });
 }
@@ -383,15 +404,19 @@ pub(super) fn run_grounding(document: &Document, label: &str) {
     let label = label.to_string();
     if !super::native_daemon::is_daemon_connected() {
         let cites = text.matches("did:").count() + text.matches("urn:").count();
-        super::interactions::show_tool_status(
-            document,
-            &label,
+        let report = super::tool_dual_path::local_sketch(
+            "Inference.grounding",
             &format!(
-                "Local grounding sketch: {} DID/URN citations in {} characters. Live Inference.grounding needs the daemon.",
+                "{} DID/URN citations in {} characters.",
                 cites,
                 text.chars().count()
             ),
-            "success",
+        );
+        super::interactions::show_tool_status(
+            document,
+            &label,
+            &report.message,
+            report.status_kind,
         );
         return;
     }
@@ -408,18 +433,38 @@ pub(super) fn run_grounding(document: &Document, label: &str) {
         let args = serde_json::json!({ "prompt": prompt, "text": text });
         match super::native_daemon::daemon_invoke("Inference.grounding", args).await {
             Ok(response) if response.ok => {
-                super::interactions::show_tool_status(&document, &label, &response.value, "success")
+                let report = super::tool_dual_path::live_ok("Inference.grounding", &response.value);
+                super::interactions::show_tool_status(
+                    &document,
+                    &label,
+                    &report.message,
+                    report.status_kind,
+                );
             }
-            Ok(response) => super::interactions::show_tool_status(
-                &document,
-                &label,
-                response
-                    .diagnostic
-                    .as_deref()
-                    .unwrap_or("Inference.grounding failed."),
-                "error",
-            ),
-            Err(error) => super::interactions::show_tool_status(&document, &label, &error, "error"),
+            Ok(response) => {
+                let report = super::tool_dual_path::live_denied(
+                    "Inference.grounding",
+                    response
+                        .diagnostic
+                        .as_deref()
+                        .unwrap_or("Inference.grounding failed."),
+                );
+                super::interactions::show_tool_status(
+                    &document,
+                    &label,
+                    &report.message,
+                    report.status_kind,
+                );
+            }
+            Err(error) => {
+                let report = super::tool_dual_path::live_denied("Inference.grounding", &error);
+                super::interactions::show_tool_status(
+                    &document,
+                    &label,
+                    &report.message,
+                    report.status_kind,
+                );
+            }
         }
     });
 }
@@ -435,11 +480,15 @@ pub(super) fn run_pulse_presence(document: &Document, label: &str) {
     let _ = container.set_attribute("data-pulse-presence", "1");
     let label = label.to_string();
     if !super::native_daemon::is_daemon_connected() {
+        let report = super::tool_dual_path::local_sketch(
+            "Pulse.publish_presence",
+            "presence mark set on the selected container.",
+        );
         super::interactions::show_tool_status(
             document,
             &label,
-            "Local presence mark set. Pulse.publish_presence needs the QualiaDB daemon.",
-            "success",
+            &report.message,
+            report.status_kind,
         );
         return;
     }
@@ -456,18 +505,39 @@ pub(super) fn run_pulse_presence(document: &Document, label: &str) {
         let args = serde_json::json!({ "topic": "presence", "payload": "poet-surface" });
         match super::native_daemon::daemon_invoke("Pulse.publish_presence", args).await {
             Ok(response) if response.ok => {
-                super::interactions::show_tool_status(&document, &label, &response.value, "success")
+                let report =
+                    super::tool_dual_path::live_ok("Pulse.publish_presence", &response.value);
+                super::interactions::show_tool_status(
+                    &document,
+                    &label,
+                    &report.message,
+                    report.status_kind,
+                );
             }
-            Ok(response) => super::interactions::show_tool_status(
-                &document,
-                &label,
-                response
-                    .diagnostic
-                    .as_deref()
-                    .unwrap_or("Pulse.publish_presence failed."),
-                "error",
-            ),
-            Err(error) => super::interactions::show_tool_status(&document, &label, &error, "error"),
+            Ok(response) => {
+                let report = super::tool_dual_path::live_denied(
+                    "Pulse.publish_presence",
+                    response
+                        .diagnostic
+                        .as_deref()
+                        .unwrap_or("Pulse.publish_presence failed."),
+                );
+                super::interactions::show_tool_status(
+                    &document,
+                    &label,
+                    &report.message,
+                    report.status_kind,
+                );
+            }
+            Err(error) => {
+                let report = super::tool_dual_path::live_denied("Pulse.publish_presence", &error);
+                super::interactions::show_tool_status(
+                    &document,
+                    &label,
+                    &report.message,
+                    report.status_kind,
+                );
+            }
         }
     });
 }
@@ -484,11 +554,15 @@ pub(super) fn run_deontic_obligate(document: &Document, label: &str) {
     super::history::push_current_frame("deontic obligate");
     let label = label.to_string();
     if !super::native_daemon::is_daemon_connected() {
+        let report = super::tool_dual_path::local_sketch(
+            "DeonticLogic.evaluate",
+            "obligation tag set on the selected container.",
+        );
         super::interactions::show_tool_status(
             document,
             &label,
-            "Local obligation tag set. DeonticLogic.evaluate against live quins needs the daemon.",
-            "success",
+            &report.message,
+            report.status_kind,
         );
         return;
     }
@@ -505,18 +579,39 @@ pub(super) fn run_deontic_obligate(document: &Document, label: &str) {
         let args = serde_json::json!({ "operation": "compile", "modality": "obligate" });
         match super::native_daemon::daemon_invoke("DeonticLogic.evaluate", args).await {
             Ok(response) if response.ok => {
-                super::interactions::show_tool_status(&document, &label, &response.value, "success")
+                let report =
+                    super::tool_dual_path::live_ok("DeonticLogic.evaluate", &response.value);
+                super::interactions::show_tool_status(
+                    &document,
+                    &label,
+                    &report.message,
+                    report.status_kind,
+                );
             }
-            Ok(response) => super::interactions::show_tool_status(
-                &document,
-                &label,
-                response
-                    .diagnostic
-                    .as_deref()
-                    .unwrap_or("DeonticLogic.evaluate failed."),
-                "error",
-            ),
-            Err(error) => super::interactions::show_tool_status(&document, &label, &error, "error"),
+            Ok(response) => {
+                let report = super::tool_dual_path::live_denied(
+                    "DeonticLogic.evaluate",
+                    response
+                        .diagnostic
+                        .as_deref()
+                        .unwrap_or("DeonticLogic.evaluate failed."),
+                );
+                super::interactions::show_tool_status(
+                    &document,
+                    &label,
+                    &report.message,
+                    report.status_kind,
+                );
+            }
+            Err(error) => {
+                let report = super::tool_dual_path::live_denied("DeonticLogic.evaluate", &error);
+                super::interactions::show_tool_status(
+                    &document,
+                    &label,
+                    &report.message,
+                    report.status_kind,
+                );
+            }
         }
     });
 }

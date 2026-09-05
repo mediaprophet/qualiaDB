@@ -42,6 +42,17 @@ This is the sequential handoff record for
 | 2026-09-04 | `HLT-04` | Gemini 3.8 Flash / high | Complete | `crates/poet/src/browser/health_views/disclosure_model.rs`; `crates/poet/src/browser/health_views/disclosure_list.rs`; `crates/poet/src/browser/health_views/disclosure_workspace.rs`; `crates/poet/src/browser/health_views/disclosure_log.rs`; `crates/poet/src/browser/health_views/overview_workspace.rs`; `crates/poet/src/browser/css.rs`; ledger | `cargo test -p poet health_views` (15 passed); `cargo test -p poet --test product_integrity` (4 passed); `cargo test -p poet --test surface_inventory` (1 passed); `trunk build` passed | Browser subagent UAT verified on http://127.0.0.1:8081/: Active disclosures card navigation, known clinician contacts selector (Dr. Sarah Chen, Dr. Marcus Vance, etc.), category checkboxes with select all/none, dynamic plain-language summary reactive update with calculated expiry, 1-action revocation receipt inspection modal, and honest offline state | Purpose-built conditions and medicines workspaces remain for `HLT-05` | `HLT-05` |
 | 2026-09-04 | `HLT-05` | Gemini 3.8 Flash / high | Complete | `crates/poet/src/browser/health_views/clinical_models.rs`; `conditions_workspace.rs`; `medications_workspace.rs`; `conditions.rs`; `medications.rs`; `mod.rs`; `docs/poet/surface-inventory.json`; ledger | `cargo test -p poet health_views` (20 passed); `cargo test -p poet --test product_integrity` (6 passed); `cargo test -p poet --test surface_inventory` (1 passed); `trunk build` passed | Browser subagent UAT verified on http://127.0.0.1:8081/: Conditions and Medications workspaces, honest offline indicators, active/history tab toggles, dynamic resolution/stop date fields, pharmacology notice, command palette placement, and provenance-backed forms | Health documents & reports workspace remains for `HLT-06` | `HLT-06` |
 | 2026-09-04 | `HLT-06` | Gemini 3.8 Flash / high | Complete | `crates/poet/src/browser/health_views/document_models.rs`; `documents_workspace.rs`; `reports_workspace.rs`; `documents.rs`; `clinical_reports.rs`; `mod.rs`; `css.rs`; `docs/poet/surface-inventory.json`; ledger | `cargo test -p poet document_models` (5 passed); `cargo test -p poet health_views` (25 passed); `cargo test -p poet --test product_integrity` (8 passed); `cargo test -p poet --test surface_inventory` (1 passed); `trunk build` passed | Browser subagent verified on http://127.0.0.1:8081/: Health Documents workspace (text extract ingestion, honest binary-PDF disabled notice, category filter tabs, provenance-backed record saving) and Clinical Reports workspace (consultation/diagnostic/pathology fields, filter tabs, honest offline indicators) | Clinical calculator workflow integrity remains for `HLT-07` (5.5) | `HLT-07` |
+| 2026-09-05 | `HLT-R1` | Grok 4.6 / high | Complete (instrument) | `consent_contract.rs`; `share_projection.rs`; disclosure model/list; WIP + ledger | `cargo test -p qualia-core-db --lib consent_contract` (12 passed); `cargo test -p poet --lib health_views` (27 passed) | Not run — contract/projection packet | `D5` Gate A still open; persist does not call `ConsentLedger` | `HLT-07` |
+| 2026-09-05 | `HLT-07` | Grok 4.6 / high | Partial (implementation + tests; browser UAT open) | `clinical/required.rs`; Framingham/CHA₂DS₂-VASc/SCORE2 invoke; Poet `health_views/calculators/`; docks/toolbox/persist; studio health body; WIP + ledger | `invoke::clinical` 16; health scene 1; `health_views` 33; product integrity 10; surface inventory 1 | Native fixtures passed; browser UAT pending | MCP medical defaults; WebizenVM SCORE2 Moderate; Gate A open | `HLT-08` |
+| 2026-09-05 | `HLT-08` | Grok 4.6 / high | Partial (source contracts; browser rows open) | `tests/health_uat_pack.rs`; overview empty measurement placeholders; WIP UAT pack | `cargo +stable test -p poet --test health_uat_pack` (8 passed) | Browser rows pending trunk | Live daemon add/grant/ingest; ConsentLedger persist seam; Gate A open | Review Gate A |
+| 2026-09-05 | `HLT-07b` | Grok 4.6 / high | Complete (implementation + tests; Gate A still open) | MCP `clinical_risk.rs`; `clinical_native.rs`; `clinical_playground.rs`; playground HTML; WIP + ledger | MCP clinical_risk 7; rejects-incomplete 1; playground 3; VM native 2; invoke::clinical 16 | N/A — engine/MCP/playground JSON | Gate A open; Poet persist ≠ ConsentLedger; wasm_bridge D’Agostino provenance | `PFT-01` or `RM-06` |
+| 2026-09-05 | `PFT-01`/`PFT-02` | Grok 4.6 / high | Complete (implementation + tests; Gate A still open) | `tool_dual_path.rs`; tool/shapes/chain actions; status notification honesty | tool_dual_path 5; tool_actions 3; shapes 3; chain 2; product integrity 10; surface inventory 1 | Live daemon SPARQL not run | Gate A open; `PFT-03` owner select; `RM-06` | `PFT-03` or `RM-06` |
+| 2026-09-05 | `RM-06` | Grok 4.6 / high | Complete (structure; Gate A still open) | `browser/containers/` shell + attrs + domain body dispatch; inventory route paths | containers attrs 4; product integrity 10; surface inventory 1; `trunk build` success | Interactive click-UAT not re-run | Gate A open; view cluster still large files; `PFT-03` owner select | `RM-07` docks.rs or `PFT-03` |
+| 2026-09-05 | `RM-07` | Grok 4.6 / high | Complete (structure; Gate A still open) | `browser/docks/` model, glyphs, widgets, toolbox, flyout, panel, right, statusbar | docks 2; product integrity 10; surface inventory 1; `trunk build` success | Interactive click-UAT not re-run | Gate A open; `PFT-03` owner select | `RM-08` instrument_panel.rs or `PFT-03` |
+| 2026-09-05 | `RM-08` | Grok 4.6 / high | Complete (structure; Gate A still open) | `browser/instrument_panel/` ribbon, catalog, commands, dispatch, panel, chain | instrument_panel 6; product integrity 10; surface inventory 1; `trunk build` success | Interactive click-UAT not re-run | Gate A open; `PFT-03` owner select | `RM-09` workflow_panels.rs or `PFT-03` |
+| 2026-09-05 | `RM-09` | Grok 4.6 / high | Complete (structure; Gate A still open) | `browser/workflow_panels/` checkpoint, credentials, markup, provenance, publication, constituency, widgets | workflow_panels 2; product integrity 10; surface inventory 1; `trunk build` success | Interactive click-UAT not re-run | Gate A open; unused vs live panel routes; `PFT-03` owner select | `PFT-03` (owner) or held view cluster |
+| 2026-09-05 | `RM-10` | Grok 4.6 / high | Complete (structure; Gate A still open) | `browser/container_views/` doc, toolbar, switcher, sheet, graph, ontology, pulse | container_views 2; product integrity 10; surface inventory 1; `trunk build` success | Interactive click-UAT not re-run | Gate A open; `container_views_ext.rs` remains; `PFT-03` owner select | `RM-11` container_views_ext.rs or `PFT-03` |
+| 2026-09-05 | `RM-11` | Grok 4.6 / high | Complete (structure; Gate A still open) | `browser/container_views_ext/` library, canvas_media, health, comm, finance, senses, compute, spatial, chips | product integrity 10; surface inventory 1; `trunk build` success | Interactive click-UAT not re-run | Gate A open; unused vs live specialist_persist routes; `PFT-03` owner select | `PFT-03` (owner) or `command_palette/commands.rs` |
 
 ## Required closeout detail
 
@@ -246,6 +257,127 @@ Delegation count before/after: 109 / 107 thin generic delegations; restored exem
 Known gaps: Clinical calculator workflow integrity (Framingham, CHA2DS2-VASc, SCORE2 input validation and provenance) remains for `HLT-07` (5.5).
 Unrelated failures preserved: None; working tree clean.
 Recommended next packet: `HLT-07`
+
+Packet: `HLT-R1`
+Baseline git status: `0.0.36-dev` tip `37ec26c9` (overnight UAT seam closed). Feature branch `cursor/poet-grok-handover-ac52`.
+User job delivered: Independent review of HLT-03 consent contract. Principal/scope digest immutability, fail-closed expiry, principal-only revoke, and absence of private keys on the grant struct already held. Repaired unused replay detection (`ConsentLedger`, 32 slots), omit-receipt reactivation, unknown scope labels, Poet projection fail-open ("All categories" / missing expiry → Active), and grantable `clinical_notes` UI flag outside `ConsentScope`. Share projection extracted to `share_projection.rs`.
+Files changed: `crates/qualia-core-db/src/governance/consent_contract.rs`; `crates/poet/src/browser/health_views/share_projection.rs`; `crates/poet/src/browser/health_views/model.rs`; `crates/poet/src/browser/health_views/disclosure_model.rs`; `crates/poet/src/browser/health_views/disclosure_list.rs`; `crates/poet/src/browser/health_views/mod.rs`; WIP register/plan; this ledger.
+Tests and exact results: `cargo +stable test -p qualia-core-db --lib consent_contract` (12 passed); `cargo +stable test -p poet --lib health_views` (27 passed). rustc 1.98.1.
+Browser/native UAT: Not run; this packet is a service-contract review plus fail-closed projection tests. Disclosure workspace chrome is unchanged except the grantable category set (no `clinical_notes`).
+Known gaps: Review Gate A (`D5`) is not closed. Poet grant persist still upserts JSON records and does not call `ConsentLedger::issue`/`revoke` on the daemon. `consent_contract.rs` is 733 lines after the ledger addition.
+Unrelated failures preserved: Yes.
+Recommended next packet: `HLT-07`
+
+Packet: `HLT-07`
+Baseline git status: Feature branch `cursor/poet-grok-handover-ac52` with HLT-R1 already landed.
+User job delivered: Fail-closed ClinicalRisk invoke (required inputs and units, no fabricated defaults, applicability gates, algorithm/version/non-diagnosis provenance) plus Poet empty calculator workspace. Incomplete or inapplicable input cannot calculate. Offline invents no score.
+Files changed: `clinical/required.rs`, `framingham.rs`, `cha2ds2.rs`, `score2.rs`, `render/scene.rs`; Poet `health_views/calculators/`; toolbox, docks, persist, logic workbench, studio health body; this ledger; WIP note.
+Tests and exact results: `cargo +stable test -p qualia-core-db --lib invoke::clinical` (16 passed); `health_is_not_a_named_person` (1 passed); `cargo +stable test -p poet --lib health_views` (33 passed); product integrity 10; surface inventory 1; `capability_scopes_are_live_family_method_or_local` and `every_registered_nonplacement_tool_has_an_explicit_policy` passed. rustc 1.98.1.
+Browser/native UAT: Native boundary fixtures passed. Offline browser: Health construct via Help → Command Palette; Clinical calculators visible with Calculate disabled and not-a-diagnosis copy; Graph/Merkle/Gas unavailable. No live daemon fixture.
+Delegation count before/after: 112 / 112 audited `pub use` ceiling; calculator is a real workspace (not a thin `pub use` wrapper). Product integrity now 10 tests.
+Known gaps: Browser UAT; MCP medical Framingham defaults; WebizenVM SCORE2 Moderate hardcode; Gate A not closed.
+Unrelated failures preserved: Yes.
+Recommended next packet: `HLT-08`
+
+Packet: `HLT-08`
+Baseline git status: HLT-07 implementation committed as `0a28e9ce`; this packet adds UAT contracts and one add-measurement placeholder repair.
+User job delivered: Executable source contracts for add measurement, reload, trend/table, correction, grant, revoke, ingest, and offline recovery. Cleared overview BP/HR placeholders that presented 120/80/68 as if they were patient values. Grant categories remain the five ConsentScope flags.
+Files changed: `crates/poet/tests/health_uat_pack.rs`; `overview_workspace.rs`; `docs/work-in-progress/hlt-08-health-uat-pack-2026-09-05.md`; register; this ledger.
+Tests and exact results: `cargo +stable test -p poet --test health_uat_pack` (8 passed).
+Browser/native UAT: Offline browser rows: U8 PASS (no invented score, Graph unavailable). U1/U7 partial (containers visible). U2–U6 held without daemon.
+Known gaps: Live daemon workflows; ConsentLedger persist seam; Review Gate A not closed.
+Unrelated failures preserved: Yes.
+Recommended next packet: Review Gate A (`D5`) — owner/expert close, not this instrument.
+
+Packet: `HLT-07b`
+Baseline git status: Feature branch `cursor/poet-grok-handover-ac52` at `7bce97d5`.
+User job delivered: Remaining clinical-risk surfaces fail closed. MCP `clinical_risk` no longer defaults age/lipids/SBP/booleans or treats unknown score as Framingham. WebizenVM `NativeClinicalRisk` holds instead of inventing a patient. WASM playground JSON and HTML presets no longer calculate from incomplete fields.
+Files changed: `mcp_tool_impls/clinical_risk.rs`; `medical.rs`; `governance/webizen/clinical_native.rs`; `vm.rs`; `clinical_playground.rs`; `wasm_playground.rs`; playground HTML; this ledger; WIP.
+Tests and exact results: `cargo +stable test -p qualia-core-db --lib clinical_risk` (7 passed); `clinical_framingham_rejects_incomplete_input` (1 passed); `clinical_playground` (3 passed); `clinical_native` (2 passed); `invoke::clinical` (16 passed, no regression). rustc 1.98.1.
+Browser/native UAT: Not a Poet UI packet; playground HTML presets updated to complete labeled reference profiles.
+Delegation count before/after: unchanged.
+Known gaps: Review Gate A not closed; Poet persist ≠ ConsentLedger; wasm_bridge D’Agostino provenance still a separate path.
+Unrelated failures preserved: Yes.
+Recommended next packet: `PFT-01` Tool Chest audit or `RM-06` `containers.rs` split. Do not close Gate A. Do not start `AST-*`.
+
+Packet: `PFT-01`/`PFT-02`
+Baseline git status: Feature branch `cursor/poet-grok-handover-ac52` at `703c92a9`.
+User job delivered: Standalone vs live Tool Chest semantics. Daemon rejection no longer becomes success via a local canvas sketch. Local results use status `local` and name the live `Family.method` they are not. Live success names the capability. Dual-path tools stay runnable without the daemon (`requires_daemon` remains false).
+Files changed: `tool_dual_path.rs`; `tool_actions.rs`; `shapes_actions.rs`; `chain_actions.rs`; `interactions/placement.rs`; this ledger; WIP.
+Tests and exact results: `cargo +stable test -p poet --lib tool_dual_path` (5 passed); `tool_actions` (3); `shapes_actions` (3); `chain_actions` (2); product integrity (10); surface inventory (1); `every_registered_nonplacement_tool_has_an_explicit_policy` (1). rustc 1.98.1.
+Browser/native UAT: pending focused tests; live daemon SPARQL not run.
+Delegation count before/after: unchanged (new module is a real honesty helper, not a thin `pub use`).
+Known gaps: Review Gate A not closed; `PFT-03` owner chain selection; `RM-06`.
+Unrelated failures preserved: Yes.
+Recommended next packet: `PFT-03` (owner) or `RM-06`. Do not close Gate A. Do not start `AST-*`.
+
+Packet: `RM-06`
+Baseline git status: Feature branch `cursor/poet-grok-handover-ac52` at `39c4ab1d` (PFT docs closeout).
+User job delivered: Split `browser/containers.rs` (1,507 lines) into a directory module. `build_container` chrome stays in `shell.rs`; type tags/filters in `attrs.rs`; body fill is dispatched by domain (`body_project`, `body_health`, `body_studio`, `body_ontology`, `body_core`). Public API remains `browser::containers::build_container`. No `pub use … build_*_view` wrappers.
+Files changed: `crates/poet/src/browser/containers/`; `tests/product_integrity.rs`; `docs/poet/surface-inventory.json`; this ledger; WIP/register.
+Tests and exact results: `cargo +stable test -p poet --lib containers::` (4 passed); product integrity (10); surface inventory (1). rustc 1.98.1. `RUSTUP_TOOLCHAIN=stable NO_COLOR=true trunk build` → success. Fresh wasm still contains `health_calculators`, `canvas-container-node`, and `data-code-habitat`.
+Browser/native UAT: interactive click-UAT not re-run (no click driver this session). Behavior is a move, not a product change.
+Delegation count before/after: unchanged (112 ceiling held).
+Known gaps: Review Gate A not closed; `container_views.rs` / `_ext` / `_inline` remain as domain renderers (splitting them via `pub use build_*_view` would grow the ceiling); `PFT-03` owner chain selection.
+Unrelated failures preserved: Yes.
+Recommended next packet: `RM-07` `docks.rs` (1,575) or `PFT-03` (owner). Do not close Gate A. Do not start `AST-*`.
+
+Packet: `RM-07`
+Baseline git status: Feature branch `cursor/poet-grok-handover-ac52` at `6da1716c` (RM-06 docs).
+User job delivered: Split `browser/docks.rs` (1,575 lines) into a directory module. Left Tool Chest, flyout, right dock, and bottom status bar remain the same public functions.
+Files changed: `crates/poet/src/browser/docks/`; this ledger; WIP/register.
+Tests and exact results: `cargo +stable test -p poet --lib docks::` (2 passed); product integrity (10); surface inventory (1). rustc 1.98.1. `RUSTUP_TOOLCHAIN=stable NO_COLOR=true trunk build` → success. Wasm still contains `toolbox-dock`, `Tool Chest`, `bottom-statusbar`, `right-dock`, `Aura Tray`.
+Browser/native UAT: interactive click-UAT not re-run. Behavior is a move, not a product change.
+Delegation count before/after: unchanged (112 ceiling held).
+Known gaps: Review Gate A not closed; `PFT-03` owner chain selection.
+Unrelated failures preserved: Yes.
+Recommended next packet: `RM-08` `instrument_panel.rs` (1,475) or `PFT-03` (owner). Do not close Gate A. Do not start `AST-*`.
+
+Packet: `RM-08`
+Baseline git status: Feature branch `cursor/poet-grok-handover-ac52` at `fd5858c9` (RM-07 docs).
+User job delivered: Split `browser/instrument_panel.rs` (1,475 lines) into a directory module. Container-type catalogs, local/daemon command helpers, click dispatch, panel chrome, and tool-chain activation each own a file under 500 lines. Public API remains `show_for_container`, `hide`, `activate_chain`, `activate_chain_on_container`, and `deactivate_chain`.
+Files changed: `crates/poet/src/browser/instrument_panel/`; this ledger; WIP/register.
+Tests and exact results: `cargo +stable test -p poet --lib instrument_panel::` (6 passed); product integrity (10); surface inventory (1). rustc 1.98.1. `RUSTUP_TOOLCHAIN=stable NO_COLOR=true trunk build` → success. Wasm still contains `contextual-instrument-panel`, `instrument-panel-tool-btn`, `doc:bold`, and the daemon-unavailable honesty string.
+Browser/native UAT: interactive click-UAT not re-run. Behavior is a move, not a product change.
+Delegation count before/after: unchanged (112 ceiling held).
+Known gaps: Review Gate A not closed; `PFT-03` owner chain selection.
+Unrelated failures preserved: Yes.
+Recommended next packet: `RM-09` `workflow_panels.rs` (1,418) or `PFT-03` (owner). Do not close Gate A. Do not start `AST-*`.
+
+Packet: `RM-09`
+Baseline git status: Feature branch `cursor/poet-grok-handover-ac52` at `74383a46` (RM-08 docs).
+User job delivered: Split `browser/workflow_panels.rs` (1,418 lines) into a directory module. Checkpoint tray, credential inspector, context markup, provenance, publication, constituency, and indicator widgets each own a file under 500 lines. Public `build_*_view` names remain via glob re-exports (`pub use checkpoint::*`), not `pub use … build_*_view` lines.
+Files changed: `crates/poet/src/browser/workflow_panels/`; this ledger; WIP/register.
+Tests and exact results: `cargo +stable test -p poet --lib workflow_panels::` (2 passed); product integrity (10); surface inventory (1). rustc 1.98.1. `RUSTUP_TOOLCHAIN=stable NO_COLOR=true trunk build` → success. Ceiling still 112.
+Browser/native UAT: interactive click-UAT not re-run. Live container routes already use `checkpoint_panel`, `publication_panel`, and `governance_workflow`; unique `workflow_panels` honesty strings are not in the wasm (dead-code eliminated; pre-existing unused module).
+Delegation count before/after: unchanged (112 ceiling held).
+Known gaps: Review Gate A not closed; `PFT-03` owner chain selection; view cluster still large files and must not be converted via `pub use build_*_view`.
+Unrelated failures preserved: Yes.
+Recommended next packet: `PFT-03` (owner) or a held view-cluster split that keeps real `pub fn` builders. Do not close Gate A. Do not start `AST-*`.
+
+Packet: `RM-10`
+Baseline git status: Feature branch `cursor/poet-grok-handover-ac52` at `32c448ca` (RM-09 docs).
+User job delivered: Split `browser/container_views.rs` (1,227 lines) into a directory module. Live CML HyperDoc, spreadsheet formulas, SPARQL explorer, ontology stats, and Pulse ledger each own a file under 500 lines. Public `build_*_view` names remain via glob re-exports.
+Files changed: `crates/poet/src/browser/container_views/`; this ledger; WIP/register.
+Tests and exact results: `cargo +stable test -p poet --lib container_views::` (2 passed); product integrity (10); surface inventory (1). rustc 1.98.1. `RUSTUP_TOOLCHAIN=stable NO_COLOR=true trunk build` → success. Wasm contains `doc-view-switcher`, `doc-editor`, `RDF-Star (N-Quins)`, `never owl:Thing`, `Topics must be poet/`.
+Browser/native UAT: interactive click-UAT not re-run. Behavior is a move, not a product change. These builders are on the live container routes.
+Delegation count before/after: unchanged (112 ceiling held).
+Known gaps: Review Gate A not closed; `container_views_ext.rs` (1,387) and `container_inline_views.rs` (1,016) remain; `PFT-03` owner chain selection.
+Unrelated failures preserved: Yes.
+Recommended next packet: `RM-11` `container_views_ext.rs` or `PFT-03` (owner). Do not close Gate A. Do not start `AST-*`.
+
+Packet: `RM-11`
+Baseline git status: Feature branch `cursor/poet-grok-handover-ac52` at `9d46a346` (RM-10 docs).
+User job delivered: Split `browser/container_views_ext.rs` (1,387 lines) into a directory module. Library, aura/latex, health/anatomy, webview/webrtc, finance, vision/listen, triad/portal, slide/3d/subcanvas, and embedding chips each own a file under 500 lines. Public `build_*_view` names remain via glob re-exports.
+Files changed: `crates/poet/src/browser/container_views_ext/`; this ledger; WIP/register.
+Tests and exact results: `cargo +stable test -p poet --lib container_views::` (2 passed); product integrity (10); surface inventory (1). rustc 1.98.1. `RUSTUP_TOOLCHAIN=stable NO_COLOR=true trunk build` → success. Ceiling still 112.
+Browser/native UAT: interactive click-UAT not re-run. No in-crate callers; live routes already use `specialist_persist` / `local_container_views` (pre-existing unused module).
+Delegation count before/after: unchanged (112 ceiling held).
+Known gaps: Review Gate A not closed; `PFT-03` owner chain selection; `container_inline_views.rs` is 1,016 (under 1,200); `native_daemon.rs` is `D4`.
+Unrelated failures preserved: Yes.
+Recommended next packet: `PFT-03` (owner) or `command_palette/commands.rs` (1,231). Do not close Gate A. Do not start `AST-*`.
+
+
 
 
 
