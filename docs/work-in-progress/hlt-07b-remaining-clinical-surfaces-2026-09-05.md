@@ -35,6 +35,7 @@ cargo +stable test -p qualia-core-db --lib invoke::clinical
 
 Measured here (rustc 1.98.1): MCP `clinical_risk` **7** passed; `clinical_framingham_rejects_incomplete_input` **1** passed; `clinical_playground` **3** passed; `clinical_native` **2** passed; `invoke::clinical` **16** passed (no regression).
 
+## Not claimed
 
 - Review Gate A (`D5`)
 - Live daemon Poet Framingham / grant / ingest UAT
