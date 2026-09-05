@@ -25,10 +25,15 @@ use web_sys::{
 
 /// Daemon HTTP loopback only — not libp2p (4243) or Poet HTML (8080),
 /// which can 200 `/health` without being the QualiaDB engine.
-pub const DEFAULT_CANDIDATE_PORTS: &[u16] = &[4242, 8000, 3030];
-/// Soft per-URL `/health` budget (ms). Promise.race — no AbortController
-/// (that path regressed Connected on Capt UAT).
-pub const PROBE_HEALTH_TIMEOUT_MS: i32 = 2_500;
+/// Primary daemon HTTP port. Extra ports (8000/3030) deferred — sequential
+/// hangs there burned the probe budget before :4242 could settle (~8s UAT).
+pub const DEFAULT_CANDIDATE_PORTS: &[u16] = &[4242];
+/// Soft per-URL `/health` budget (ms). Page fetch can sit pending several
+/// seconds before Connected (Capt); 2.5s raced that into Standalone.
+pub const PROBE_HEALTH_TIMEOUT_MS: i32 = 12_000;
+/// While Offline, keep retrying so a late `/health` can still elevate.
+pub const PROBE_OFFLINE_RETRY_MS: i32 = 3_000;
+pub const PROBE_OFFLINE_RETRY_MAX: u32 = 10;
 
 // ---------------------------------------------------------------------------
 // DTOs & Models
@@ -539,6 +544,7 @@ pub fn spawn_daemon_probe() {
 
                 // Elevate to Connected before the heavy caps fetch — UAT arrive /
                 // Open pack must not stay held on Probing while schemas deserialize.
+                OFFLINE_PROBE_ATTEMPTS.with(|c| *c.borrow_mut() = 0);
                 set_daemon_state(DaemonConnectionState::Connected {
                     url: url.clone(),
                     port,
@@ -574,7 +580,45 @@ pub fn spawn_daemon_probe() {
             candidate_ports: ports.to_vec(),
             reason: "Connection refused on candidate loopback ports".into(),
         });
+        schedule_offline_probe_retry();
     });
+}
+
+thread_local! {
+    static OFFLINE_PROBE_ATTEMPTS: RefCell<u32> = RefCell::new(0);
+}
+
+fn schedule_offline_probe_retry() {
+    let attempt = OFFLINE_PROBE_ATTEMPTS.with(|c| {
+        let mut n = c.borrow_mut();
+        *n = n.saturating_add(1);
+        *n
+    });
+    if attempt > PROBE_OFFLINE_RETRY_MAX {
+        return;
+    }
+    let Some(window) = web_sys::window() else {
+        return;
+    };
+    let cb = Closure::once(move || {
+        let still_offline = DAEMON_STATE.with(|s| {
+            matches!(*s.borrow(), DaemonConnectionState::Offline { .. })
+        });
+        if still_offline {
+            web_sys::console::log_1(
+                &format!(
+                    "[Webizen Probe] offline retry {attempt}/{PROBE_OFFLINE_RETRY_MAX}"
+                )
+                .into(),
+            );
+            spawn_daemon_probe();
+        }
+    });
+    let _ = window.set_timeout_with_callback_and_timeout_and_arguments_0(
+        cb.as_ref().unchecked_ref(),
+        PROBE_OFFLINE_RETRY_MS,
+    );
+    cb.forget();
 }
 
 /// IPv4 loopback only. Bare `localhost` often resolves to `::1` while the
