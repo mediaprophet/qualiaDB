@@ -534,3 +534,152 @@ button[disabled]:hover,
   color: var(--accent-cyan);
   border: 1px solid var(--accent-cyan);
 }
+
+/* ---------- G-LEXICON-0 studio bay (Catalog peer) ---------- */
+.lexicon-bay {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+  padding: 6px 2px;
+}
+.lexicon-path-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.lexicon-path-row input {
+  flex: 1;
+  min-width: 0;
+  font: 11px/1.3 var(--font-mono);
+  padding: 5px 8px;
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--border-medium);
+  background: var(--surface-panel);
+  color: var(--text-primary);
+}
+.lexicon-open-btn,
+.lexicon-dismiss-btn {
+  font: 600 10px/1 var(--font-sans);
+  padding: 5px 8px;
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--border-medium);
+  background: var(--surface-panel);
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+.lexicon-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.lexicon-chip {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  font: 700 9px/1 var(--font-sans);
+  letter-spacing: 0.2px;
+  padding: 4px 8px;
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--border-medium);
+  color: var(--text-secondary);
+  background: transparent;
+  cursor: pointer;
+}
+.lexicon-chip-ns {
+  font: 500 8px/1.2 var(--font-mono);
+  color: var(--text-muted);
+  text-transform: none;
+  letter-spacing: 0;
+}
+.lexicon-chip[data-tone="warm"] {
+  color: var(--chip-living);
+  border-color: color-mix(in srgb, var(--chip-living) 55%, transparent);
+  background: var(--chip-living-fill);
+}
+.lexicon-chip[data-tone="crisp"] {
+  color: var(--chip-artifact);
+  border-color: color-mix(in srgb, var(--chip-artifact) 55%, transparent);
+  background: var(--chip-artifact-fill);
+}
+.lexicon-chip[data-tone="muted"] {
+  color: var(--chip-machine);
+  border-color: color-mix(in srgb, var(--chip-machine) 45%, transparent);
+  background: var(--chip-machine-fill);
+}
+.lexicon-chip[aria-pressed="true"] {
+  box-shadow: 0 0 8px color-mix(in srgb, currentColor 35%, transparent);
+}
+.lexicon-held-gate {
+  padding: 8px 10px;
+  border-radius: var(--radius-xs);
+  border: 1px dashed var(--accent-amber);
+  background: color-mix(in srgb, var(--accent-amber) 8%, var(--surface-panel));
+  color: var(--text-secondary);
+}
+.lexicon-held-label {
+  font: 700 10px/1.3 var(--font-sans);
+  color: var(--accent-amber);
+}
+.lexicon-held-gate .gated-reason {
+  color: var(--accent-amber);
+}
+.lexicon-pack-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 10px;
+  border-radius: var(--radius-xs);
+  border: 1px solid color-mix(in srgb, var(--chip-artifact) 40%, var(--border-subtle));
+  background: var(--surface-panel);
+}
+.lexicon-pack-semver {
+  font: 700 11px/1.3 var(--font-sans);
+  color: var(--text-primary);
+}
+.lexicon-pack-framing,
+.lexicon-uplift,
+.lexicon-concept-id {
+  font: 10px/1.35 var(--font-sans);
+  color: var(--text-secondary);
+}
+.lexicon-upgrade {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-top: 4px;
+  border-top: 1px solid var(--border-subtle);
+}
+[data-recipe="arrive"] {
+  animation: poet-beat-entrance var(--beat-entrance) var(--beat-ease) both;
+}
+[data-recipe="hold"] {
+  animation: poet-beat-dwell var(--beat-dwell) ease-in-out infinite;
+}
+[data-recipe="leave"] {
+  animation: poet-beat-exit var(--beat-exit) var(--beat-ease) both;
+}
+[data-recipe="commit"][data-honesty="live"] {
+  box-shadow: 0 0 10px var(--accent-emerald-glow);
+  border-color: var(--volume-committed);
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-recipe="arrive"],
+  [data-recipe="hold"],
+  [data-recipe="leave"] {
+    animation: poet-beat-crossfade var(--beat-crossfade) ease both;
+  }
+}
+.studio-bay-tab {
+  font: 600 11px/1 var(--font-sans);
+  color: var(--text-muted);
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 2px 0;
+}
+.studio-bay-tab.is-active,
+.studio-bay-tab[aria-selected="true"] {
+  color: var(--accent-cyan);
+}

@@ -49,6 +49,10 @@ mod tests {
         assert!(CSS.contains("[data-volume-state=\"committed\"]"));
         assert!(CSS.contains("[data-media-surface=\"film\"]"));
         assert!(CSS.contains(".aspect-chip"));
+        assert!(CSS.contains(".lexicon-chip"));
+        assert!(CSS.contains(".lexicon-held-gate"));
+        assert!(CSS.contains("[data-recipe=\"arrive\"]"));
+        assert!(CSS.contains("--chip-living"));
         assert!(CSS.contains(".tool-tip"));
         assert!(CSS.contains(".tool-proficiency-switcher"));
         assert!(!CSS.contains(".twin-chip"));

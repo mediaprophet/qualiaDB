@@ -53,6 +53,7 @@ pub mod icon_graph;
 pub mod icon_registry;
 pub mod icon_session;
 pub mod ide;
+pub mod lexicon_bay;
 pub mod instrument_panel;
 pub mod intent_bus;
 pub mod interactions;

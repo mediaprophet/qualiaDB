@@ -120,6 +120,14 @@
   --diag-glow: rgba(255, 77, 109, 0.22);
   --diag-glow-stroke: #ff4d6d;
 
+  /* Lexicon framing chips — warm living · crisp artifact · muted machine */
+  --chip-living: #ffb834;
+  --chip-living-fill: rgba(255, 184, 52, 0.16);
+  --chip-artifact: #00d2ff;
+  --chip-artifact-fill: rgba(0, 210, 255, 0.12);
+  --chip-machine: #5e7394;
+  --chip-machine-fill: rgba(94, 115, 148, 0.16);
+
   /* Inference provenance trail */
   --trail-cell: #38bdf8;
   --trail-invoke: #a855f7;
