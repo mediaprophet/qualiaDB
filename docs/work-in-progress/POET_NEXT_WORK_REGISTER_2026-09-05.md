@@ -213,6 +213,19 @@ unavailable. Live daemon fixture was not available on this VM.
 - Next decomposition candidate: `RM-07`, `browser/docks.rs` (`D3`).
 - Review Gate A remains a `D5` owner close. `PFT-03` remains owner selection.
 
+### `RM-07` - 2026-09-05
+
+- Structure: 1,575-line `browser/docks.rs` replaced by a 27-line router
+  and eight purpose-specific child modules, all below 500 lines.
+- API: former public dock functions remain re-exported. No
+  `pub use … build_*_view` wrappers (delegation ceiling still 112).
+- Verification: docks tests 2/2, product integrity 10/10, surface
+  inventory 1/1, `trunk build` (stable toolchain) passed. Wasm still
+  contains `toolbox-dock` and `bottom-statusbar`.
+- Interactive browser click-UAT was not re-run.
+- Next decomposition candidate: `RM-08`, `browser/instrument_panel.rs` (`D3`).
+- Review Gate A remains a `D5` owner close. `PFT-03` remains owner selection.
+
 ## Post-gate programme
 
 The earlier programme remains the dependency backbone after Gate A:

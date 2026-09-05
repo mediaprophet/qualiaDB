@@ -60,7 +60,7 @@ may need a documented exception rather than arbitrary fragmentation.
 | P1 | `browser/interactions.rs` | 2,148 | Pointer state, wire operations, container commands, canvas movement, docking, placement, and geometry helpers | `D3` `FE` `QA` | Before interaction or canvas changes |
 | P1 | `browser/search_workbench/` | 34 plus bounded leaves | Completed `RM-05`: faceted search, query builder, SPARQL editor, saved-query persistence, execution, and placement | `D3` `FE` `RUST` `QA` | Before Tool Chest search semantics work |
 | P1 | container cluster: `containers/` plus `container_views.rs`, `container_views_ext.rs`, `container_inline_views.rs` | `containers/` complete (`RM-06`); views 1,227 / 1,387 / 1,016 | Shell vs domain body dispatch done; remaining view files stay as real `pub fn` renderers (do not `pub use build_*_view`) | `D3` `FE` `UX` `QA` | Before broad container restoration |
-| P2 | `docks.rs`, `instrument_panel.rs`, `workflow_panels.rs` | 4,371 total | Dock layout/state, instrument presentation, and workflow-specific panels | `D3` `FE` `UX` `QA` | Before Desktop/chrome reuse |
+| P2 | `docks/` plus `instrument_panel.rs`, `workflow_panels.rs` | `docks/` complete (`RM-07`); remaining 1,475 + 1,418 | Dock layout/state done; instrument presentation and workflow panels remain | `D3` `FE` `UX` `QA` | Before Desktop/chrome reuse |
 | P2 | `browser/mod.rs`, `native_daemon.rs` | 1,032 and 1,100 | Browser composition root and daemon transport/lifecycle boundaries | `D4` `RUST` `SPEC` `QA` | Only when their contracts are touched |
 
 ## Core and cross-crate boundary
@@ -301,9 +301,46 @@ POET itself still has no file over 2,000. Remaining POET files over 1,400:
 
 ### `RM-07` - POET docks decomposition
 
-The next POET candidate on the stated priority order is
-`browser/docks.rs` (1,575 lines), then `instrument_panel.rs` and
-`workflow_panels.rs`. This is `D3` (`FE`, `UX`, `QA`). Do not close
+**Complete** (2026-09-05). `browser/docks.rs` (1,575 lines at split) is now
+`browser/docks/` with the stable public API preserved.
+
+Source-to-destination map:
+
+| Old | New |
+|---|---|
+| View models, family order, toolbox-view storage | `docks/model.rs` (263) |
+| Toolbox/tool glyphs and kind badges | `docks/glyphs.rs` (73) |
+| `build_toolchain_widgets` | `docks/widgets.rs` (380) |
+| Left Tool Chest dock | `docks/toolbox.rs` (238) |
+| Flyout show/hide | `docks/flyout.rs` (219) |
+| Collapsible panel chrome | `docks/panel.rs` (112) |
+| Right dock | `docks/right.rs` (180) |
+| Bottom status bar | `docks/statusbar.rs` (155) |
+
+Behavior, ABI, and allocation: unchanged. Callers still use
+`browser::docks::{build_toolbox_dock, show_flyout, hide_flyout,
+build_right_dock, build_bottom_statusbar, create_collapsible_dock_panel,
+extract_toolbox_views, store_toolbox_views, …}`. No `pub use … build_*_view`
+wrappers.
+
+Verification:
+
+- `cargo +stable check -p poet --lib`: passed
+- `cargo +stable test -p poet --lib docks::`: 2 passed
+- product integrity: 10 passed (ceiling held)
+- surface inventory: 1 passed
+- `RUSTUP_TOOLCHAIN=stable NO_COLOR=true trunk build`: success; wasm contains
+  `toolbox-dock`, `Tool Chest`, `bottom-statusbar`, `right-dock`, `Aura Tray`
+- scoped rustfmt (`--edition 2021`) on the new dock files: passed
+- interactive browser click-UAT was not re-run
+
+POET files over 1,400 are now `instrument_panel.rs` (1,475) and
+`workflow_panels.rs` (1,418).
+
+### `RM-08` - POET instrument panel decomposition
+
+The next POET candidate is `browser/instrument_panel.rs` (1,475 lines),
+then `workflow_panels.rs`. This is `D3` (`FE`, `UX`, `QA`). Do not close
 Review Gate A. Do not start `AST-*`. `PFT-03` remains owner/captain
 selection.
 
