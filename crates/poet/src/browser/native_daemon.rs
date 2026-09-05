@@ -14,6 +14,7 @@
 
 use std::{cell::RefCell, collections::BTreeSet};
 
+use js_sys::{Array, Function, Promise};
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
@@ -25,9 +26,8 @@ use web_sys::{
 /// Daemon HTTP loopback only — not libp2p (4243) or Poet HTML (8080),
 /// which can 200 `/health` without being the QualiaDB engine.
 pub const DEFAULT_CANDIDATE_PORTS: &[u16] = &[4242, 8000, 3030];
-/// Reserved for a soft per-port probe budget (plain fetch for now — AbortController
-/// path regressed Connected on Capt UAT).
-#[allow(dead_code)]
+/// Soft per-URL `/health` budget (ms). Promise.race — no AbortController
+/// (that path regressed Connected on Capt UAT).
 pub const PROBE_HEALTH_TIMEOUT_MS: i32 = 2_500;
 
 // ---------------------------------------------------------------------------
@@ -577,22 +577,10 @@ pub fn spawn_daemon_probe() {
     });
 }
 
-/// Prefer the page hostname when it is loopback (`localhost` vs `127.0.0.1`
-/// are different Origins — Chrome often blocks cross-loopback fetches).
+/// IPv4 loopback only. Bare `localhost` often resolves to `::1` while the
+/// daemon binds IPv4 — that hang left the badge on Probing forever (Capt UAT).
 fn probe_loopback_hosts() -> Vec<String> {
-    let mut hosts: Vec<String> = Vec::new();
-    if let Some(hostname) = web_sys::window().and_then(|w| w.location().hostname().ok()) {
-        let h = hostname.trim().to_ascii_lowercase();
-        if h == "localhost" || h == "127.0.0.1" {
-            hosts.push(h);
-        }
-    }
-    for alt in ["127.0.0.1", "localhost"] {
-        if !hosts.iter().any(|h| h == alt) {
-            hosts.push(alt.to_string());
-        }
-    }
-    hosts
+    vec!["127.0.0.1".into()]
 }
 
 fn is_qualia_daemon_health(health: &DaemonHealthResponse) -> bool {
@@ -636,10 +624,23 @@ async fn fetch_json<T: serde::de::DeserializeOwned>(url: &str) -> Option<T> {
 
 async fn fetch_daemon_health(health_url: &str) -> Option<DaemonHealthResponse> {
     let window = web_sys::window()?;
-    // Plain fetch_with_str — AbortController+RequestInit regressed page probes to
-    // Standalone while curl /health stayed fine (Capt UAT on cc5ecb6).
-    let resp_val = match wasm_bindgen_futures::JsFuture::from(window.fetch_with_str(health_url)).await
-    {
+    // Soft timeout via Promise.race (do NOT AbortController — that regressed
+    // page probes to Standalone). Abandoned fetches may linger; we move on.
+    let fetch_promise = window.fetch_with_str(health_url);
+    let timeout_ms = PROBE_HEALTH_TIMEOUT_MS;
+    let timeout_promise = Promise::new(&mut |resolve, _reject| {
+        let resolve_fn = Function::from(resolve);
+        let cb = Closure::once(move || {
+            let _ = resolve_fn.call1(&JsValue::UNDEFINED, &JsValue::NULL);
+        });
+        let _ = window.set_timeout_with_callback_and_timeout_and_arguments_0(
+            cb.as_ref().unchecked_ref(),
+            timeout_ms,
+        );
+        cb.forget();
+    });
+    let raced = Promise::race(&Array::of2(&fetch_promise, &timeout_promise));
+    let resp_val = match wasm_bindgen_futures::JsFuture::from(raced).await {
         Ok(v) => v,
         Err(e) => {
             web_sys::console::log_1(
@@ -648,6 +649,15 @@ async fn fetch_daemon_health(health_url: &str) -> Option<DaemonHealthResponse> {
             return None;
         }
     };
+    if resp_val.is_null() {
+        web_sys::console::log_1(
+            &format!(
+                "[Webizen Probe] timed out after {PROBE_HEALTH_TIMEOUT_MS}ms at {health_url}"
+            )
+            .into(),
+        );
+        return None;
+    }
     let resp: Response = match resp_val.dyn_into() {
         Ok(r) => r,
         Err(_) => {
@@ -659,17 +669,11 @@ async fn fetch_daemon_health(health_url: &str) -> Option<DaemonHealthResponse> {
     };
     if !resp.ok() {
         web_sys::console::log_1(
-            &format!(
-                "[Webizen Probe] HTTP {} at {health_url}",
-                resp.status()
-            )
-            .into(),
+            &format!("[Webizen Probe] HTTP {} at {health_url}", resp.status()).into(),
         );
         return None;
     }
 
-    // text → serde_json so JS Number still maps to usize/u64 (serde_wasm_bindgen
-    // can drop the whole health DTO on f64 graph_quin_count).
     let text_promise = match resp.text() {
         Ok(p) => p,
         Err(_) => {
@@ -708,6 +712,7 @@ async fn fetch_daemon_health(health_url: &str) -> Option<DaemonHealthResponse> {
         }
     }
 }
+
 
 // ---------------------------------------------------------------------------
 // Remote Execution Endpoints (HTTP / JSON-RPC)
