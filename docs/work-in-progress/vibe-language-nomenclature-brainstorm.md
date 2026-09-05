@@ -98,11 +98,67 @@ Under frozen `vibe-host-0.1`, **stable (rename costs a freeze bump):**
 
 **Hard rules for any rename wave:** no Host invent · no dotted `qualia.*` · script hot-edit must not force rebuild · living/created copy lock · Capt.+Vibe+Neo agree before EBNF keyword ABI moves.
 
-## Team slots (fill / amend)
-- **davinci** — studio voice; toolbar sayables; REPL drawer lexicon
-- **monet** — fun vs clear; motion beat names ↔ language; reduced-motion copy
-- **Marvin** — living/created lexicon; banned “thing” list; concept ids for person/country/ecology
-- **Neo** — freeze seams: which tokens are ABI-stable under `vibe-host-0.1` vs free to rename in dialect only *(section above)*
+## Locked trio (all lanes — restitch)
+- Motion/Timeline/chrome: **arrive · hold · leave** (= entrance / dwell / exit)
+- Gates: **held · not yet · closed** (never "broken")
+- Sanctuary: **keep · commit** (only on real durable success) · **sheltered** (fail-closed care)
+
+## Team amends (restitch)
+
+### davinci — studio voice
+- Drawer = **studio bay** (not console/terminal); run = **play**; diagnose = **listen** / **check the room**; fix = **tune**; invoke = **ask the tool** (artifact) — never "operate on a thing" for living subjects.
+- Toolbar sayables: short verb + glyph — `Ask graph` · `Keep volume` · `Play cell` · `Show stage` — Capability.method stays advanced/secondary.
+- Twin language = arrive / hold / leave (Timeline + motion same words).
+- REPL modes: **Safe** = listen-first · **Invoke** = play with effects visible · **Sanctuary** = keep/commit.
+- Fun without cringe: studio/sanctuary/stage metaphors; avoid meme slang; locale can play if concept ids stay stable.
+- Distance from JS: no `run`/`eval` as primary chrome labels; no `undefined`-vibes — prefer held / not yet / closed.
+- Multilingual chrome: UI strings from concept glossary; every glyph has a sayable concept (not English-only tooltips).
+- WordNet→SHACL (chrome): later = richer autocomplete / "say it another way" in the bay; until then don't expose WordNet as a Host — recipes cite live InvokeIds only.
+
+### monet — fun vs clear · motion lexicon
+- Fun = sticky metaphor (studio / sanctuary / stage), not joke slang — if it won't survive a translation glossary, cut it.
+- Clear beats cute when they conflict; glyph always has a sayable concept (never icon-only meaning).
+- Soft verbs for living subjects · crisp verbs for artifacts (sound symbolism ok if concept ids stay stable).
+- Motion ↔ language: arrive / hold / leave shared with davinci.
+- Reduced-motion copy: **still arrive / still hold / still leave** (or locale short forms) — never "animation off"; state isn't motion-dependent.
+- Error glow speak: **mark** / **point** (not "throw" / "exception") — diagnose as tuning the room.
+- Visual lexicon: gates held/not yet/closed; sanctuary keep/commit/sheltered; living-safe vs tool/volume/file — never "thing."
+- WordNet→SHACL (visual): later synonym chips in the bay; design-only until executable lexicon lands — no invented Host APIs.
+
+### Marvin — living·created lexicon · semiotics · epistemology
+**Banned / prefer (diagnose · REPL · chrome · suggested_fix)**
+- Never: *thing / object / entity* for persons, kinship, love, country, ecology-as-life, living beings (any scale).
+- Prefer living: **person · people · kin · living · country · life · being** (locale surfaces later; concept ids stable).
+- Prefer artifact: **tool · volume · file · recipe · bind · catalog** — not "thing" even for artifacts if a clearer word exists.
+- Mixed Position: *what* is placed = living-safe words; coords = **place / where / when** (technical), never "object at coordinates."
+
+**Concept ids to add (illustrative)**
+| Concept | En surface seeds | Notes |
+|---------|------------------|-------|
+| LIVING_REF | person, living, being | SHACL-first |
+| KIN_REF | kin, kinship | sacred/human |
+| COUNTRY_REF | country, place-of-life | not commodity land-parcel by default |
+| LIFE_SCALE | micro, meso, macro | B-OWL-LIFE-UPLIFT |
+| ARTIFACT_REF | tool, volume, file | OWL-ok |
+| KEEP | keep, shelter | sanctuary open |
+| COMMIT | commit | only real durable success |
+| HELD | held, not yet, closed | gates — never broken |
+| ASK_TOOL | ask the tool | artifact invoke |
+| LISTEN | listen, check | diagnose |
+
+**WordNet → SHACL (Marvin)**
+1. WordNet (and like) = **sense inventory**, not Host ontology of Thing.
+2. Lift useful synsets into **SHACL shapes + concept ids** (guards / suggest-fix / "say it another way") — living/sacred senses must not land under `owl:Thing`.
+3. Artifact senses may join OWL-ok catalog; living senses SHACL-first; mark uplift provenance (as B-OWL-LIFE-UPLIFT).
+4. Don't embed a full WordNet engine in `vibe-host` now — principles + glossary hooks only.
+5. Multilingual: translate **concept surfaces**, not WordNet English glosses as grammar.
+
+**G-COORD speak:** realm/position words must not colonize living country as objects; ViewpointRealm = stance/voice, not a "user thing."
+
+**Epistemology (short):** language encodes what we allow to be known — keep living/created cut in keywords, diagnose, and catalog tags so "knowing" persons/life isn't the same move as operating tools.
+
+### Neo — seam reminder
+See **Neo — seam / freeze constraints** above; arrive/hold/leave and keep/commit/held are **dialect/chrome lexicon** until Capt.+Vibe+Neo deliberately move EBNF keyword ABI.
 
 ## Proposed stages (later, when Capt. unlocks language work)
 0. Glossary v0 (concepts + en surfaces) in WIP
