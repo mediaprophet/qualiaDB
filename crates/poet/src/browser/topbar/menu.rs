@@ -374,7 +374,7 @@ pub fn build_top_menubar(document: &Document) -> Element {
 
     let version = document.create_element("span").unwrap();
     version.set_class_name("version-badge");
-    version.set_text_content(Some("0.0.35-dev"));
+    version.set_text_content(Some(crate::CRATE_STAMP));
     right.append_child(&version).unwrap();
     let badge = document.create_element("span").unwrap();
     badge.set_class_name("fiduciary-badge");

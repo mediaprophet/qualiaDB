@@ -34,6 +34,13 @@
 5. `lexicon:` pin fixtures (Vibe) — missing pack → held / not yet + open-pack suggested_fix; OK pin recorded; alias row round-trip; living framing never rewritten as artifact
 
 ## D — Lexicon held-gate / bay (G-LEXICON-0)
+
+**Click-path (tip ≥ this hygiene):**
+1. **Script / Code IDE** → Zone D studio bay tabs → **Catalog · Lexicon** (not the search-workbench Catalog facet).
+2. Or open a **VibeScript console** container — lexicon bay mounts as peer under the editor (title **Catalog · Lexicon packs**).
+3. Held copy must read **held / not yet** + why “open lexicon pack”. A red honesty **missing** chip elsewhere is *not* the lexicon gate.
+4. Header stamp must show **`0.0.36-dev`** (`crate::CRATE_STAMP`).
+
 1. Call `GraphDatabase.lexicon_manifest` with missing path → **held / not yet** + “open lexicon pack” (never broken)
 2. Valid `*.lexicon.json` (example under `docs/manuals/standards/lexicon-pack-manifest-example.json`) → arrive card shows `packSemVer` + framing chip
 3. `.q42` without sidecar / bad volume → held / not yet

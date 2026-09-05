@@ -360,7 +360,7 @@ mod tests {
         let msg = ManifoldSyncMessage::Handshake {
             peer_did: "did:qualia:node1".into(),
             protocol_version: 1,
-            client_agent: "Poet/0.0.35".into(),
+            client_agent: format!("Poet/{}", crate::CRATE_STAMP),
         };
 
         let json = serde_json::to_string(&msg).unwrap();

@@ -509,7 +509,7 @@ pub fn spawn_daemon_probe() {
                     url: url.clone(),
                     port,
                     engine: health.engine.unwrap_or_else(|| "qualia-core-db".into()),
-                    version: health.version.unwrap_or_else(|| "0.0.35".into()),
+                    version: health.version.unwrap_or_else(|| crate::CRATE_STAMP.into()),
                     graph_quin_count: health.graph_quin_count.unwrap_or(0),
                     dev_mode: health.dev_mode.unwrap_or(false),
                 });
@@ -1108,7 +1108,7 @@ mod tests {
             url: "http://127.0.0.1:8000".into(),
             port: 8000,
             engine: "qualia-core-db".into(),
-            version: "0.0.35".into(),
+            version: crate::CRATE_STAMP.into(),
             graph_quin_count: 42000,
             dev_mode: true,
         });

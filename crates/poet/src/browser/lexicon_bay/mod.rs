@@ -34,6 +34,17 @@ pub fn build_lexicon_bay(document: &Document) -> Element {
     super::surface_aspects::mark(&root, "entrance");
     paint_held(&root);
 
+    let title = document.create_element("div").unwrap();
+    title.set_class_name("lexicon-bay-title");
+    title.set_text_content(Some("Catalog · Lexicon packs"));
+    title
+        .set_attribute(
+            "title",
+            "Open pack path → GraphDatabase.lexicon_manifest. Daemon down → held / not yet — open lexicon pack.",
+        )
+        .ok();
+    root.append_child(&title).unwrap();
+
     let path_row = document.create_element("div").unwrap();
     path_row.set_class_name("lexicon-path-row");
 

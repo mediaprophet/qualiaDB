@@ -261,7 +261,7 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
             active_tab_index: 0,
             problems,
             repl_history,
-            git_branch: "0.0.34".into(),
+            git_branch: crate::CRATE_STAMP.into(),
             sentinel_memory_used_mb: 8.24,
             total_gas_consumed: 420,
         }
@@ -589,7 +589,7 @@ pub fn build_ide_view(document: &Document, state: &IdeState) -> Element {
     catalog_tab.set_attribute("type", "button").ok();
     catalog_tab.set_attribute("data-bay-tab", "catalog").ok();
     catalog_tab.set_attribute("aria-selected", "false").ok();
-    catalog_tab.set_text_content(Some("Catalog"));
+    catalog_tab.set_text_content(Some("Catalog · Lexicon"));
     drawer_tabs.append_child(&catalog_tab).unwrap();
 
     drawer.append_child(&drawer_tabs).unwrap();
@@ -694,7 +694,7 @@ mod tests {
         assert_eq!(state.active_activity, IdeActivityTab::Explorer);
         assert_eq!(state.problems.len(), 2);
         assert_eq!(state.repl_history.len(), 2);
-        assert_eq!(state.git_branch, "0.0.34");
+        assert_eq!(state.git_branch, crate::CRATE_STAMP);
     }
 
     #[test]
