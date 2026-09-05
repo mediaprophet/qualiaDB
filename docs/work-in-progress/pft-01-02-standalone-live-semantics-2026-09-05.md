@@ -1,6 +1,6 @@
 # PFT-01 / PFT-02 — Standalone vs live Tool Chest honesty (2026-09-05)
 
-**Status:** audit complete · repairs landed · focused tests pending this revision  
+**Status:** audit complete · repairs landed · focused tests passed  
 **Branch:** `cursor/poet-grok-handover-ac52` off `0.0.36-dev`  
 **Freeze:** `vibe-host-0.1` — no Host widen, no new dotted IDs  
 **Does not close:** Review Gate A (`D5`) · does not select `PFT-03`
@@ -30,6 +30,8 @@ cargo +stable test -p poet --lib tool_actions
 cargo +stable test -p poet --lib shapes_actions
 cargo +stable test -p poet --test product_integrity --test surface_inventory
 ```
+
+Measured here (rustc 1.98.1): `tool_dual_path` **5** passed; `tool_actions` **3** passed; `shapes_actions` **3** passed; `chain_actions` **2** passed; product integrity **10**; surface inventory **1**; non-placement policy **1**.
 
 ## Not claimed
 

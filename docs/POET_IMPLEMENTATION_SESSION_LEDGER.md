@@ -46,7 +46,7 @@ This is the sequential handoff record for
 | 2026-09-05 | `HLT-07` | Grok 4.6 / high | Partial (implementation + tests; browser UAT open) | `clinical/required.rs`; Framingham/CHA₂DS₂-VASc/SCORE2 invoke; Poet `health_views/calculators/`; docks/toolbox/persist; studio health body; WIP + ledger | `invoke::clinical` 16; health scene 1; `health_views` 33; product integrity 10; surface inventory 1 | Native fixtures passed; browser UAT pending | MCP medical defaults; WebizenVM SCORE2 Moderate; Gate A open | `HLT-08` |
 | 2026-09-05 | `HLT-08` | Grok 4.6 / high | Partial (source contracts; browser rows open) | `tests/health_uat_pack.rs`; overview empty measurement placeholders; WIP UAT pack | `cargo +stable test -p poet --test health_uat_pack` (8 passed) | Browser rows pending trunk | Live daemon add/grant/ingest; ConsentLedger persist seam; Gate A open | Review Gate A |
 | 2026-09-05 | `HLT-07b` | Grok 4.6 / high | Complete (implementation + tests; Gate A still open) | MCP `clinical_risk.rs`; `clinical_native.rs`; `clinical_playground.rs`; playground HTML; WIP + ledger | MCP clinical_risk 7; rejects-incomplete 1; playground 3; VM native 2; invoke::clinical 16 | N/A — engine/MCP/playground JSON | Gate A open; Poet persist ≠ ConsentLedger; wasm_bridge D’Agostino provenance | `PFT-01` or `RM-06` |
-| 2026-09-05 | `PFT-01`/`PFT-02` | Grok 4.6 / high | Partial (implementation; tests pending this revision) | `tool_dual_path.rs`; tool/shapes/chain actions; status notification honesty | pending focused `cargo +stable test` | Offline SPARQL/extractor pending | Gate A open; `PFT-03` owner select; `RM-06` | `PFT-03` or `RM-06` |
+| 2026-09-05 | `PFT-01`/`PFT-02` | Grok 4.6 / high | Complete (implementation + tests; Gate A still open) | `tool_dual_path.rs`; tool/shapes/chain actions; status notification honesty | tool_dual_path 5; tool_actions 3; shapes 3; chain 2; product integrity 10; surface inventory 1 | Live daemon SPARQL not run | Gate A open; `PFT-03` owner select; `RM-06` | `PFT-03` or `RM-06` |
 
 ## Required closeout detail
 
@@ -298,7 +298,7 @@ Packet: `PFT-01`/`PFT-02`
 Baseline git status: Feature branch `cursor/poet-grok-handover-ac52` at `703c92a9`.
 User job delivered: Standalone vs live Tool Chest semantics. Daemon rejection no longer becomes success via a local canvas sketch. Local results use status `local` and name the live `Family.method` they are not. Live success names the capability. Dual-path tools stay runnable without the daemon (`requires_daemon` remains false).
 Files changed: `tool_dual_path.rs`; `tool_actions.rs`; `shapes_actions.rs`; `chain_actions.rs`; `interactions/placement.rs`; this ledger; WIP.
-Tests and exact results: pending this revision.
+Tests and exact results: `cargo +stable test -p poet --lib tool_dual_path` (5 passed); `tool_actions` (3); `shapes_actions` (3); `chain_actions` (2); product integrity (10); surface inventory (1); `every_registered_nonplacement_tool_has_an_explicit_policy` (1). rustc 1.98.1.
 Browser/native UAT: pending focused tests; live daemon SPARQL not run.
 Delegation count before/after: unchanged (new module is a real honesty helper, not a thin `pub use`).
 Known gaps: Review Gate A not closed; `PFT-03` owner chain selection; `RM-06`.
