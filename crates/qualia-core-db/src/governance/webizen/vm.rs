@@ -788,58 +788,19 @@ pub fn execute_vm_frame(
             }
             // ── Biomedical ────────────────────────────────────────────────
             #[cfg(not(target_arch = "wasm32"))]
-            SlgOpcode::NativeClinicalRisk(model_id) => match model_id {
-                0 => {
-                    let input = crate::clinical_engine::FraminghamInput {
-                        age: (frame.object_reg & 0xFF) as u8,
-                        sex_male: (frame.metadata_hint() & 1) != 0,
-                        total_cholesterol_mmol: 5.5,
-                        hdl_cholesterol_mmol: 1.2,
-                        systolic_bp: 130.0,
-                        bp_treated: false,
-                        current_smoker: false,
-                        diabetic: false,
-                    };
-                    let r = crate::clinical_engine::framingham_10yr_risk(&input);
-                    vm_log!(
-                        "[Webizen] Framingham 10yr risk: {:.1}% ({:?})",
-                        r.risk_10yr * 100.0,
-                        r.category
-                    );
+            SlgOpcode::NativeClinicalRisk(model_id) => {
+                match super::clinical_native::evaluate(model_id) {
+                    super::clinical_native::NativeClinicalRiskOutcome::HeldIncomplete => {
+                        vm_log!(
+                            "[Webizen] NativeClinicalRisk: held — incomplete clinical inputs; missing is not a patient value (model {})",
+                            model_id
+                        );
+                    }
+                    super::clinical_native::NativeClinicalRiskOutcome::UnknownModel => {
+                        vm_log!("[Webizen] NativeClinicalRisk: unknown model {}", model_id);
+                    }
                 }
-                1 => {
-                    let input = crate::clinical_engine::Cha2ds2VascInput {
-                        hypertension: (frame.object_reg & 0x01) != 0,
-                        diabetes: (frame.object_reg & 0x02) != 0,
-                        age_65_to_74: (frame.object_reg & 0x04) != 0,
-                        ..Default::default()
-                    };
-                    let r = crate::clinical_engine::cha2ds2_vasc_score(&input);
-                    vm_log!(
-                        "[Webizen] CHA₂DS₂-VASc: {} ({:.1}%/yr)",
-                        r.score,
-                        r.annual_stroke_risk_pct
-                    );
-                }
-                2 => {
-                    let input = crate::clinical_engine::Score2Input {
-                        age: (frame.object_reg & 0xFF) as u8,
-                        sex_male: true,
-                        systolic_bp: 130.0,
-                        total_cholesterol_mmol: 5.5,
-                        hdl_cholesterol_mmol: 1.3,
-                        current_smoker: false,
-                        risk_region: crate::clinical_engine::Score2Region::Moderate,
-                    };
-                    let r = crate::clinical_engine::score2_risk(&input);
-                    vm_log!(
-                        "[Webizen] SCORE2: {:.1}% ({:?})",
-                        r.risk_10yr_pct,
-                        r.category
-                    );
-                }
-                _ => vm_log!("[Webizen] NativeClinicalRisk: unknown model {}", model_id),
-            },
+            }
             #[cfg(target_arch = "wasm32")]
             SlgOpcode::NativeClinicalRisk(_) => {}
 

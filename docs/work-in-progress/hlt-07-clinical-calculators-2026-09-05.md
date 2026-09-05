@@ -41,5 +41,5 @@ Observed on the Health construct: Clinical calculators container **Risk estimate
 
 - Review Gate A (`D5`)
 - Live daemon invoke of a complete Framingham / CHA₂DS₂-VASc / SCORE2 fixture
-- MCP `mcp_tool_impls/medical.rs` Framingham `unwrap_or` defaults (out of Poet invoke)
-- `governance/webizen/vm.rs` SCORE2 Moderate hardcode (different path)
+- MCP / WebizenVM / playground fabrication closed in `HLT-07b`
+- `wasm_bridge/medical.rs` D’Agostino 2008 path (deserialize already requires fields)

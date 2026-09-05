@@ -360,6 +360,7 @@ pub mod q42_lex {
 )))]
 pub mod agent_runtime;
 pub mod clinical_engine;
+pub(crate) mod clinical_playground;
 /// Entity-view kernel: entity id, observer status, rights filter, attribution, packages (shared by whole desktop; not "mindware-only").
 pub mod entity_view;
 pub mod hypermedia;

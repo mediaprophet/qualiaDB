@@ -17,7 +17,7 @@ evidence.
 | 3 | Decompose POET style asset (`RM-02`) | Complete | 14 assets at no more than 421 lines; normalized CSS hash preserved; focused tests, build, desktop/mobile UAT passed | None |
 | 4 | Review `HLT-03` consent contract (`HLT-R1`) | Instrument review complete; **D5 Gate A still open** | 12 `consent_contract` tests pass; Poet share projection fail-closed; `clinical_notes` removed from grantable UI flags | Project owner/expert (`D5`) |
 
-| 5 | Complete `HLT-07` clinical calculator integrity | Implemented; browser UAT pending | Required inputs and units, applicability, boundary tests, algorithm/version provenance, non-advice UI | Higher-assurance implementation/review |
+| 5 | Complete `HLT-07` clinical calculator integrity | Implemented; MCP/VM/playground surfaces closed in `HLT-07b`; browser UAT pending | Required inputs and units, applicability, boundary tests, algorithm/version provenance, non-advice UI | Higher-assurance implementation/review |
 | 6 | Complete `HLT-08` Health UAT pack | Source contracts landed; browser rows open | Executable/manual evidence for add, reload, inspect, correct, grant, revoke, ingest, and offline recovery | Review Gate A |
 | 7 | Close Review Gate A | Blocked by 4-6 | Architecture, data contract, security, visual, browser, and status review | Project owner/expert reviewer |
 | 8 | Audit standalone Tool Chest semantics | Ready after structural packets | Live vs local labels, provenance, gated states, daemon rejection/error behavior | Project owner accepts findings |
@@ -173,6 +173,19 @@ unavailable. Live daemon fixture was not available on this VM.
   presented 120/80/68 mmHg/bpm as if they were patient values. Cleared.
 - Browser UAT rows remain open until trunk serve.
 - Review Gate A remains a `D5` owner close.
+
+### `HLT-07b` - 2026-09-05
+
+- MCP `clinical_risk` extracted and fail-closed: no age/lipid/SBP/boolean
+  defaults; SCORE2 is its own score (not Framingham); SOFA/eGFR do not invent
+  organ values. Success names algorithm/version/`not_diagnosis`.
+- WebizenVM `NativeClinicalRisk` holds: frame registers are not a complete
+  clinical input; lipids/`Score2Region::Moderate`/`Default` CHA₂DS₂ booleans
+  are not fabricated.
+- WASM playground JSON fail-closed; HTML presets are complete labeled
+  reference profiles.
+- Review Gate A remains a `D5` owner close. Next ready non-AST packet:
+  Tool Chest audit (`PFT-01`) or `RM-06` `containers.rs` split.
 
 ## Post-gate programme
 

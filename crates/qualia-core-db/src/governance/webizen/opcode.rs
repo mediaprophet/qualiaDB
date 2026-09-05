@@ -92,6 +92,8 @@ pub enum SlgOpcode {
 
     // ── Native: biomedical ────────────────────────────────────────────────────
     /// `qualia:computeRiskScore` — 0=Framingham, 1=CHA₂DS₂-VASc, 2=SCORE2.
+    /// Frame registers cannot carry a complete clinical input; the opcode holds
+    /// rather than inventing lipids, region, or omitted booleans.
     NativeClinicalRisk(u8),
     /// `qualia:evaluateLongitudinalTrend` — sliding window in days.
     NativeLongitudinalTrend(u32),

@@ -347,7 +347,7 @@ SELECT ?alignment ?score WHERE {
             <div class="flex flex-wrap items-center justify-between gap-4 mb-5">
                 <div>
                     <h2 class="text-xl font-semibold">Clinical Risk Assessment</h2>
-                    <p class="text-white/50 text-sm mt-1">Framingham, CHA₂DS₂-VASc, SCORE2 — evidence-based risk calculators via WASM.</p>
+                    <p class="text-white/50 text-sm mt-1">Framingham, CHA₂DS₂-VASc, SCORE2. Every field is required; missing is not a patient value. Result is not a diagnosis.</p>
                 </div>
                 <span class="text-xs bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 px-3 py-1 rounded-full font-bold">WASM Native</span>
             </div>
@@ -362,8 +362,8 @@ SELECT ?alignment ?score WHERE {
                     </select>
                 </div>
                 <div>
-                    <label class="text-sm text-white/60 block mb-1">Patient Parameters (JSON)</label>
-                    <textarea id="clinical-params" class="input-field" rows="3" placeholder='{"age": 65, "systolic_bp": 140, "smoker": true}'>{"age": 65, "systolic_bp": 140, "smoker": true}</textarea>
+                    <label class="text-sm text-white/60 block mb-1">Labeled reference profile (JSON; not a patient record)</label>
+                    <textarea id="clinical-params" class="input-field" rows="8" placeholder='{"age": 55, "sex_male": true, "systolic_bp": 120, "total_chol": 200, "hdl_chol": 50, "smoker": false, "diabetic": false, "bp_treated": false}'>{"age": 55, "sex_male": true, "systolic_bp": 120, "total_chol": 200, "hdl_chol": 50, "smoker": false, "diabetic": false, "bp_treated": false}</textarea>
                 </div>
             </div>
 
@@ -820,9 +820,9 @@ SELECT ?molecule ?energy ?homo ?lumo WHERE {
     // Load clinical preset
     window.loadClinicalPreset = function(calculator) {
         const presets = {
-            framingham: '{"age": 55, "systolic_bp": 120, "total_chol": 200, "hdl_chol": 50, "smoker": false}',
-            chas2: '{"age": 65, "hypertension": true, "diabetes": false, "stroke": false, "vascular_disease": false}',
-            score2: '{"age": 60, "systolic_bp": 140, "smoker": true}'
+            framingham: '{"age": 55, "sex_male": true, "systolic_bp": 120, "total_chol": 200, "hdl_chol": 50, "smoker": false, "diabetic": false, "bp_treated": false}',
+            chas2: '{"age": 65, "atrial_fibrillation": true, "congestive_heart_failure": false, "hypertension": true, "diabetes": false, "stroke_tia_history": false, "vascular_disease": false, "sex_female": false}',
+            score2: '{"age": 60, "sex_male": true, "systolic_bp": 140, "total_chol": 5.5, "hdl_chol": 1.3, "smoker": true, "risk_region": "high"}'
         };
         
         if (presets[calculator]) {
