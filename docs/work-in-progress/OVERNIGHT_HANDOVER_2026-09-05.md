@@ -2,7 +2,7 @@
 
 **Audience:** Timothy + any agent continuing while the day crew sleeps  
 **Branch:** `0.0.36-dev`  
-**Tip (push lane):** HEAD after D2 tick (see scoreboard) · D2 accept `a06179c9` · paint harden `7f91f8e`+  
+**Tip (push lane):** HEAD after B-ui tick · accept `f45212c` · D2 accept `a06179c9`
 **Host freeze:** `vibe-host-0.1` — no Host widen, no SemVer bump until release  
 **Sole Git push:** Neo (check → commit → push)
 
@@ -38,7 +38,7 @@ Do **not** land that stack straight on tip.
 | N1 | Cold-load Native Connected (:4242) | **PASS** | `64b21384` hard-reload, held ~20s | Neo / Capt |
 | D2f | Marvin framing re-accept (mixed chips / Thing-wash) | **PASS** | Marvin: mixed living+artifact · no Thing-wash · `a06179c9`/`9a1438d` | Marvin |
 | D2 | **Open pack arrive card** (packSemVer · framing · gate) | **PASS** | davinci bay `a06179c9` (en-core@0.1.0 · mixed · arrive/hold/leave) + **monet soft-rise PASS**. **Marvin framing PASS** (mixed living+artifact, no Thing-wash). Next: Capt B-ui | davinci / monet / Capt |
-| B-ui | Sanctuary Save / Checkpoint UI path | **OPEN** | HTTP commit PASS; dialog flaky | Capt / davinci |
+| B-ui | Sanctuary Save / Checkpoint UI path | **PASS** | Capt tip `f45212c`: Checkpoint dialog → volume_commit → footer **Volume: COMMITTED**; HTTP `written:1` (rev 15) on `/workspace/qualia-data/uat-sanctuary.q42`. Stale localStorage path note OK | Capt / davinci |
 | A-wish | office:graph sayables-first labels | **WISHLIST** | not blocking Catalog close | davinci / Vibe |
 | G-COORD | GIS bind deepen | **HELD** | yellow voice fixed; deepen after UAT | Neo |
 
@@ -67,7 +67,7 @@ crates/vibe/fixtures/lexicon/en-core.lexicon.json
 
 **If FAIL with full path:** Neo digs `lexicon_bay` / `daemon_invoke(GraphDatabase.lexicon_manifest)` click-path (held vs arrive chrome). Daemon bind already live-OK on en-core earlier.
 
-### 2) Sanctuary UI commit beat (after D2 or parallel)
+### 2) Sanctuary UI commit beat (**PASS** `f45212c` — monet commit-motion optional; then D4)
 
 - HTTP open→commit already PASS on `0b30cb15`.
 - Remaining: Save / Checkpoint dialog → `volume_commit` from UI without flaky path entry.
@@ -102,7 +102,7 @@ Landed lineage:
 - [x] Cold-load Connected PASS (`64b21384`)
 - [x] Daemon `lexicon_manifest` live-OK on en-core (HTTP)
 - [x] D2 Open pack arrive PASS with **full** en-core path + frame (`a06179c9`, davinci)
-- [ ] Optional: UI sanctuary Save path once D2 green
+- [x] UI sanctuary Save/Checkpoint PASS (`f45212c`, Capt) — Volume COMMITTED + written:1
 - [ ] Keep tip SHA in every report
 
 Capt box runbook + evidence tables: `docs/work-in-progress/CAPT_LANE_AMENDMENTS_2026-09-05.md`
@@ -188,3 +188,4 @@ See `DAVINCI_LANE_HANDOVER_2026-09-05.md` for frames + traps.
 | 2026-09-05 ~23:35 AEST | **D2 PASS** tick — davinci arrive on `a06179c9`; Capt critical path → monet soft-rise next. |
 | 2026-09-05 ~23:40 AEST | **monet soft-rise PASS** on `a06179c9`; Capt path → Marvin framing re-accept. |
 | 2026-09-05 ~23:45 AEST | **Marvin framing PASS** — mixed living+artifact, no Thing-wash; unlock Capt B-ui. |
+| 2026-09-05 ~23:50 AEST | **B-ui PASS** Capt `f45212c` — Checkpoint → volume_commit → Volume COMMITTED (written:1). Next: optional monet commit-beat, then Neo D4. |

@@ -100,3 +100,11 @@ See `docs/work-in-progress/OVERNIGHT_HANDOVER_2026-09-05.md` for scoreboard + re
 **D2 soft-rise PASS (2026-09-05):** monet scored arrive on tip `a06179c9`.
 
 **Marvin framing PASS (2026-09-05):** mixed living+artifact · no Thing-wash · tip `a06179c9`/`9a1438d`.
+
+**B-ui PASS (2026-09-05):** Capt tip `f45212c7353a10c7ed8522f33cf220423891b841`
+- Native Connected (:4242)
+- File → Save Checkpoint (Checkpoint mode; Pruned disabled)
+- Durable path: `/workspace/qualia-data/uat-sanctuary.q42`
+- Toast Checkpoint saved + `GraphDatabase.volume_commit` → footer **Volume: COMMITTED**
+- HTTP corroboration: `volume_commit` → `written: 1` (revision 15)
+- Note: dialog may show stale localStorage path (`uat-e070ffc7-…`); accept is COMMITTED + written:1

@@ -115,3 +115,6 @@ crates/vibe/fixtures/lexicon/en-core.lexicon.json
 | When | Note |
 |------|------|
 | 2026-09-05 ~23:10 AEST | Capt amendments for Neo fold — D2 still OPEN; path truncation + short wait called out; runbook + HTTP bind PASS. |
+
+
+**Tick-off:** B-ui Save/Checkpoint **PASS** tip `f45212c` — Volume COMMITTED + written:1 on uat-sanctuary.q42.
