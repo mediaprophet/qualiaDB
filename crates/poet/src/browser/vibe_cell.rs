@@ -336,7 +336,7 @@ pub fn build_q_cell_element(document: &Document, mut cell: VibeCell) -> Element 
     rb_el
         .style()
         .set_css_text("padding: 3px 8px; font-size: 10px;");
-    run_btn.set_text_content(Some("\u{25B6} Run"));
+    run_btn.set_text_content(Some("\u{25B6} Play"));
     bar.append_child(&run_btn).unwrap();
     container.append_child(&bar).unwrap();
 
@@ -404,7 +404,7 @@ pub fn build_q_cell_element(document: &Document, mut cell: VibeCell) -> Element 
     ));
     container.append_child(&pos).unwrap();
 
-    // Wire Run Button Click & Enter Key
+    // Wire Play Button Click & Enter Key
     let cell_state = std::rc::Rc::new(std::cell::RefCell::new(cell));
     let input_clone = input_el.clone();
     let res_clone = res_val.clone();

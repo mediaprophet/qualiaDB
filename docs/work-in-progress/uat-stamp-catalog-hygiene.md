@@ -10,3 +10,6 @@
 
 ## Click-path
 Script/Code IDE → Zone D → **Catalog · Lexicon**, or VibeScript console peer below editor.
+
+## Chrome label
+- Vibe console / cell **Run** → **Play** (studio lexicon).

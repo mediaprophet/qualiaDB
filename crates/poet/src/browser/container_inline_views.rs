@@ -299,7 +299,7 @@ pub fn build_vibescript_console(document: &Document) -> Element {
     run_btn
         .set_attribute("data-instrument-action", "code:run")
         .unwrap();
-    run_btn.set_text_content(Some("\u{25B6} Run"));
+    run_btn.set_text_content(Some("\u{25B6} Play"));
     toolbar.append_child(&run_btn).unwrap();
     let diag_btn = document.create_element("button").unwrap();
     diag_btn.set_class_name("vibe-run-btn");

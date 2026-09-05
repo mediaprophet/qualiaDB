@@ -40,7 +40,7 @@ impl IdeActivityTab {
             Self::Explorer => "Explorer",
             Self::Search => "Search & AST Query",
             Self::SourceControl => "Source Control",
-            Self::Debug => "Run & Debug",
+            Self::Debug => "Play & Debug",
             Self::Packages => "Law Packages",
             Self::Tests => "Test & Alloc Explorer",
             Self::Copilot => "AI Co-Pilot",
