@@ -110,6 +110,10 @@ Vibe language/diagnose lane: `docs/work-in-progress/VIBE_LANE_HANDOVER_2026-09-0
 
 Davinci chrome/arrive lane: `docs/work-in-progress/DAVINCI_LANE_HANDOVER_2026-09-05.md`
 
+Monet motion/look lane: `docs/work-in-progress/MONET_LANE_HANDOVER_2026-09-05.md`
+
+Marvin ontology/framing lane: `docs/work-in-progress/MARVIN_LANE_HANDOVER_2026-09-05.md`
+
 ### davinci (chrome / click-path)
 
 - [x] Catalog held-gate + chips PASS
@@ -179,3 +183,4 @@ See `DAVINCI_LANE_HANDOVER_2026-09-05.md` for frames + traps.
 | 2026-09-05 ~23:15 AEST | Folded davinci lane handover sidecar (arrive frames; traps; B-ui after D2). |
 | 2026-09-05 ~23:16 AEST | D2 paint gap: daemon arrive OK / bay held — fix multi-bay paint + invoke console diag. |
 | 2026-09-05 ~23:25 AEST | Capt D2 PARTIAL evidence; sticky Connected during re-probe + LAST_ARRIVE remount restore. |
+| 2026-09-05 ~23:30 AEST | Folded Monet + Marvin overnight lane handovers; linked from board. |
