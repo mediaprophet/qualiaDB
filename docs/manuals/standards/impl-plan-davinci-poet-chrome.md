@@ -60,6 +60,7 @@
 2. Motion grammar owned by monet (soft rise / breath dwell / z-path dissolve) — davinci owns model + acceptance.
 3. Export notes for Webizen Desktop reuse (same twins, later gate).
 **Accept:** checklist of surfaces with twin coverage; regressions = missing Stage or Timeline.
+**Status (2026-09-05):** containers + map + q-cell carry Layout/Stage/Timeline chips; map Timeline drives Cosmic.stardate / FLRW. Webizen extract still later.
 
 ## Stage 8 — Webizen Desktop handoff (chrome only)
 1. After Poet stage 1–5 solid: extract chrome contract + twin rules for Webizen Desktop lane.

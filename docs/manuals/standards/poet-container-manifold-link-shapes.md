@@ -63,7 +63,7 @@ successful `GraphDatabase.volume_commit`. wasm E300 ⇒ `fault` or `denied`, nev
 
 A Vibe cell/module is content inside a Container. It MAY carry `q42:hasPosition`
 and optional `q42:viewpointRealm` without being a map. Spatiotemporal is a
-property of language, not only of GIS chrome.
+property of language, not only of GIS chrome. Labels are UTF-8.
 
 ## Chrome notes (davinci / monet)
 

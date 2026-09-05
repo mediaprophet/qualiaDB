@@ -18,13 +18,7 @@ pub fn invoke(id: &str, args: &Value, span: Span) -> Result<Value, Diagnostic> {
         "Cosmic.flrw_distance" => flrw_distance(args, span),
         "Cosmic.flrw_redshift" => flrw_redshift(args, span),
         "Cosmic.stardate_to_gregorian" => stardate_to_gregorian(args, span),
-        other if other.starts_with("Cosmic.") => Err(Diagnostic::new(
-            DiagCode::E100,
-            span,
-            format!(
-                "{other} is catalogued; this LocalHost slice implements the G-COORD remap set only"
-            ),
-        )),
+        other if other.starts_with("Cosmic.") => super::cosmic_ext::invoke(other, args, span),
         _ => Err(Diagnostic::new(
             DiagCode::E100,
             span,
@@ -33,11 +27,11 @@ pub fn invoke(id: &str, args: &Value, span: Span) -> Result<Value, Diagnostic> {
     }
 }
 
-fn bad(span: Span, msg: impl Into<String>) -> Diagnostic {
+pub(super) fn bad(span: Span, msg: impl Into<String>) -> Diagnostic {
     Diagnostic::new(DiagCode::E100, span, msg)
 }
 
-fn rec_f64(args: &Value, key: &str) -> Option<f64> {
+pub(super) fn rec_f64(args: &Value, key: &str) -> Option<f64> {
     match args {
         Value::Record(map) => match map.get(key) {
             Some(Value::F64(n)) => Some(*n),
@@ -52,11 +46,11 @@ fn rec_f64(args: &Value, key: &str) -> Option<f64> {
 
 /// Unicode case-fold for catalog keys. Do not use ASCII-only lowering —
 /// labels and names are UTF-8 and may be any language.
-fn utf8_fold(s: &str) -> String {
+pub(super) fn utf8_fold(s: &str) -> String {
     s.trim().to_lowercase()
 }
 
-fn rec_str<'a>(args: &'a Value, key: &str) -> Option<&'a str> {
+pub(super) fn rec_str<'a>(args: &'a Value, key: &str) -> Option<&'a str> {
     match args {
         Value::Record(map) => match map.get(key) {
             Some(Value::String(s)) => Some(s.as_str()),
@@ -66,7 +60,7 @@ fn rec_str<'a>(args: &'a Value, key: &str) -> Option<&'a str> {
     }
 }
 
-fn record(pairs: &[(&str, Value)]) -> Value {
+pub(super) fn record(pairs: &[(&str, Value)]) -> Value {
     let mut map = BTreeMap::new();
     for (k, v) in pairs {
         map.insert((*k).into(), v.clone());
@@ -266,7 +260,7 @@ mod tests {
 
     #[test]
     fn unimplemented_cosmic_id_fails_closed() {
-        let err = invoke("Cosmic.warp_velocity", &Value::Null, Span::point(0)).unwrap_err();
+        let err = invoke("Cosmic.not_a_method", &Value::Null, Span::point(0)).unwrap_err();
         assert_eq!(err.code, DiagCode::E100);
     }
 }

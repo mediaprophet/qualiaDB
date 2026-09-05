@@ -177,6 +177,7 @@ Davinci/Monet delta audit first (`DES-01` / `DES-02`). Do not reopen `UX-01`–`
 | 2026-09-05 | DES-01/02 chrome | Davinci/Monet: named beats, volume chips, diagnose glow, still/clip/scene dock, CML+twins, 2D/3D/film/CG surfaces |
 | 2026-09-05 | Push + gates | Rebased onto QDNF spec `3987fe2b`; Solid recorded as Qualia-first exit; G-COORD ≠ QDNF |
 | 2026-09-05 | COORD-01 | G-COORD remap on live Cosmic.* + SPARQL; UTF-8 labels; QDNF implementation waits |
+| 2026-09-05 | COORD-01b | Full Cosmic LocalHost slice; map Timeline FLRW/stardate; SPARQL when daemon; q-cell hasPosition |
 
 ## Stop rules
 

@@ -6,6 +6,7 @@
 //! Unknown `Family.method` names fail closed.
 
 mod cosmic;
+mod cosmic_ext;
 mod ids;
 mod local;
 mod suggest;

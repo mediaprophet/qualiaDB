@@ -249,22 +249,43 @@ fn wire_timeline(root: &Element, input: &Element) {
             "dwell"
         };
         root.set_attribute("data-beat", beat).ok();
-        if root.get_attribute("data-realm").as_deref() == Some("fictional") {
-            let stardate = 41000.0 + (v - 50.0) * 20.0;
-            let mut args = BTreeMap::new();
-            args.insert("stardate".into(), Value::F64(stardate));
-            if let Ok(val) = capability_invoke(
-                "Cosmic.stardate_to_gregorian",
-                &Value::Record(args),
-                Span::point(0),
-            ) {
-                if let Some(result) = root.query_selector("#g-coord-result").ok().flatten() {
-                    result.set_text_content(Some(&format!(
-                        "{} · {}",
+        let realm = root
+            .get_attribute("data-realm")
+            .and_then(|s| Realm::from_str(&s))
+            .unwrap_or(Realm::Earth);
+        if let Some(result) = root.query_selector("#g-coord-result").ok().flatten() {
+            match realm {
+                Realm::Fictional => {
+                    let stardate = 41000.0 + (v - 50.0) * 20.0;
+                    let mut args = BTreeMap::new();
+                    args.insert("stardate".into(), Value::F64(stardate));
+                    if let Ok(val) = capability_invoke(
                         "Cosmic.stardate_to_gregorian",
-                        display_value(&val)
-                    )));
+                        &Value::Record(args),
+                        Span::point(0),
+                    ) {
+                        result.set_text_content(Some(&format!(
+                            "Cosmic.stardate_to_gregorian · {}",
+                            display_value(&val)
+                        )));
+                    }
                 }
+                Realm::Cosmos => {
+                    let z = (v / 100.0) * 0.2;
+                    let mut args = BTreeMap::new();
+                    args.insert("z".into(), Value::F64(z));
+                    if let Ok(val) = capability_invoke(
+                        "Cosmic.flrw_distance",
+                        &Value::Record(args),
+                        Span::point(0),
+                    ) {
+                        result.set_text_content(Some(&format!(
+                            "Cosmic.flrw_distance · {}",
+                            display_value(&val)
+                        )));
+                    }
+                }
+                Realm::Earth => {}
             }
         }
     }) as Box<dyn FnMut(web_sys::Event)>);
@@ -325,7 +346,47 @@ fn paint_realm(root: &Element, realm: Realm) {
                 result.set_text_content(Some(&err));
             }
         }
+        if realm == Realm::Earth {
+            maybe_sparql(&result);
+        }
     }
+}
+
+fn maybe_sparql(result: &Element) {
+    if !super::native_daemon::is_daemon_connected() {
+        return;
+    }
+    let args = serde_json::json!({
+        "query": "SELECT ?s ?p ?o WHERE { ?s ?p ?o } LIMIT 8",
+        "take": 8
+    });
+    result.set_attribute("data-honesty", "running").ok();
+    let result = result.clone();
+    wasm_bindgen_futures::spawn_local(async move {
+        match super::native_daemon::daemon_invoke("GraphDatabase.sparql", args).await {
+            Ok(response) if response.ok => {
+                result.set_attribute("data-honesty", "live").ok();
+                let prior = result.text_content().unwrap_or_default();
+                result.set_text_content(Some(&format!(
+                    "{prior}\nGraphDatabase.sparql · {}",
+                    response.value
+                )));
+            }
+            Ok(response) => {
+                result.set_attribute("data-honesty", "unavailable").ok();
+                result.set_text_content(Some(
+                    response
+                        .diagnostic
+                        .as_deref()
+                        .unwrap_or("GraphDatabase.sparql returned no bindings."),
+                ));
+            }
+            Err(error) => {
+                result.set_attribute("data-honesty", "error").ok();
+                result.set_text_content(Some(&error));
+            }
+        }
+    });
 }
 
 fn stage_markup(realm: Realm) -> String {

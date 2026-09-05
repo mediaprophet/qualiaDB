@@ -342,6 +342,10 @@ button[disabled]:hover,
   color: var(--accent-rose);
   min-height: 12px;
 }
+.q-cell-position {
+  font: 9px/1.35 var(--font-sans);
+  color: var(--text-muted);
+}
 
 /* ---------- Inference provenance trail ---------- */
 .inference-trail {

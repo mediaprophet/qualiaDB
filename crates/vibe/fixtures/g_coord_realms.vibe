@@ -23,3 +23,7 @@ effect fn geo_query(query: string) -> List {
 effect fn spring_label() -> string {
     return "北泉";
 }
+
+effect fn warp(w: f64) -> Record {
+    return Cosmic.warp_velocity({ warp: w, scale: "tng" });
+}

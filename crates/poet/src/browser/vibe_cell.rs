@@ -280,6 +280,10 @@ pub fn build_q_cell_element(document: &Document, mut cell: VibeCell) -> Element 
     container.set_attribute("data-beat", "entrance").ok();
     container.set_attribute("data-media-surface", "2d").ok();
     container
+        .set_attribute("data-has-position", "optional")
+        .ok();
+    container.set_attribute("data-viewpoint-realm", "").ok();
+    container
         .set_attribute(
             "data-honesty",
             match cell.status {
@@ -312,6 +316,17 @@ pub fn build_q_cell_element(document: &Document, mut cell: VibeCell) -> Element 
         .set_css_text("font-weight: 700; color: var(--accent-amber, #ffb834); font-size: 11px;");
     fx_lbl.set_text_content(Some("fx"));
     bar.append_child(&fx_lbl).unwrap();
+
+    let twins = document.create_element("span").unwrap();
+    twins.set_class_name("twin-chip-row");
+    for twin in ["layout", "stage", "timeline"] {
+        let chip = document.create_element("span").unwrap();
+        chip.set_class_name("twin-chip");
+        chip.set_attribute("data-twin", twin).ok();
+        chip.set_text_content(Some(twin));
+        twins.append_child(&chip).unwrap();
+    }
+    bar.append_child(&twins).unwrap();
 
     let input = document.create_element("input").unwrap();
     let input_el: web_sys::HtmlInputElement = input.clone().dyn_into().unwrap();
@@ -388,6 +403,14 @@ pub fn build_q_cell_element(document: &Document, mut cell: VibeCell) -> Element 
     span_hint.set_class_name("q-cell-span-hint");
     span_hint.set_attribute("role", "status").ok();
     container.append_child(&span_hint).unwrap();
+
+    let pos = document.create_element("div").unwrap();
+    pos.set_class_name("q-cell-position");
+    pos.set_attribute("data-has-position", "optional").ok();
+    pos.set_text_content(Some(
+        "q42:hasPosition allowed · UTF-8 labels · language cell, not a map",
+    ));
+    container.append_child(&pos).unwrap();
 
     // Wire Run Button Click & Enter Key
     let cell_state = std::rc::Rc::new(std::cell::RefCell::new(cell));
