@@ -18,6 +18,20 @@ Status vocabulary:
 
 Empty chains are a regression. Spec-scale toolboxes are tracked below, not bulk-registered.
 
+## Presentation (humans + agents)
+
+Hover and keyboard focus show a short **what it is** tooltip (`data-tooltip`, `title`, `.tool-tip`, `aria-label`). Visible names come from `tool_copy.rs`, not from machine ids.
+
+| Mode (UI) | Token | Shows |
+|-----------|--------|--------|
+| Getting started | `novice` | Everyday add/use tools, plain language |
+| Everyday | `intermediate` | Working set; machine ids still hidden |
+| Workshop | `expert` | Full set; tooltip may append the live capability id |
+
+Mode is global (dock switcher) and remembered on the device. Each tool also has a **minimum** mode, so some tools only appear in Everyday or Workshop. Agents read the same records from `data-agent-catalog` on the tool chest (`audience: human, agent`).
+
+Coder verbs (`capability.invoke`, SPARQL, quin.statement) stay out of novice/everyday labels.
+
 ## Live registry (15 toolboxes)
 
 ### epistemic
@@ -171,4 +185,5 @@ Next implementation packets take **one spec toolbox or one live gated tool** at 
 
 ## Change log
 
+- 2026-09-05: Human copy, hover tooltips, Getting started / Everyday / Workshop mode, ARIA + agent catalog.
 - 2026-09-05: Tracker created from live registry. Empty chains filled (brushes, palette, viewport, grid, clinical-gated, repl, copilot, pulse, fiduciary). `sheet:import`, `image:heatmap`, `code:quin_statement` moved from gated to local/live.

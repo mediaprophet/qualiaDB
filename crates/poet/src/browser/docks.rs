@@ -550,14 +550,16 @@ pub fn extract_toolbox_views(toolboxes: &[Toolbox]) -> Vec<ToolboxView> {
                         .iter()
                         .map(|tool| {
                             let m = tool.metadata();
+                            let copy =
+                                super::tool_copy::presentation(&m.id, &m.label, &m.description);
                             ToolView {
                                 id: m.id.clone(),
-                                label: m.label.clone(),
+                                label: copy.label,
                                 icon: m.icon.clone(),
                                 kind: m.kind,
                                 action: tool.action_type(),
                                 capability_scope: m.capability_scope.clone(),
-                                description: m.description.clone(),
+                                description: copy.tooltip,
                             }
                         })
                         .collect();
@@ -656,13 +658,7 @@ pub fn tool_glyph(icon: &str) -> &'static str {
 
 /// Short kind label for the tool button badge.
 fn kind_label(kind: ToolKind) -> &'static str {
-    match kind {
-        ToolKind::PlaceContainer => "place",
-        ToolKind::RunAction => "action",
-        ToolKind::Query => "query",
-        ToolKind::Navigate => "nav",
-        ToolKind::Toggle => "toggle",
-    }
+    super::tool_copy::kind_badge(kind)
 }
 
 // ---------------------------------------------------------------------------
@@ -753,6 +749,9 @@ pub fn build_toolbox_dock(document: &Document, toolboxes: &[Toolbox]) -> Element
     }
     dock_header.append_child(&anchor_bar).unwrap();
     dock.append_child(&dock_header).unwrap();
+    dock.append_child(&super::tool_proficiency::render_switcher(document))
+        .unwrap();
+    super::tool_proficiency::restore(document);
 
     // Quick Spawn Tiles in Tool Chest
     let quick_grid = document.create_element("div").unwrap();
@@ -766,13 +765,13 @@ pub fn build_toolbox_dock(document: &Document, toolboxes: &[Toolbox]) -> Element
     let quick_containers = [
         ("doc", "📄 Doc"),
         ("sheet", "📊 Sheet"),
-        ("code", "💻 Vibe"),
+        ("code", "💻 Script"),
         ("anatomy", "🫀 Anatomy"),
-        ("dual_studio", "Dual Studio"),
+        ("dual_studio", "Studio"),
         ("audio_session", "Audio session"),
         ("3d", "🧊 3D Scene"),
         ("social", "💬 Social"),
-        ("agent_console", "🤖 Local AI"),
+        ("agent_console", "🤖 Local help"),
         ("integrations", "🔌 Connectors"),
         ("webrtc", "📹 Swarm"),
         ("finance", "💰 Finance"),
@@ -933,6 +932,7 @@ pub fn show_flyout(document: &Document, toolbox_id: &str) {
 
     let flyout = document.create_element("div").unwrap();
     flyout.set_class_name(&format!("toolbox-flyout dock-{}", curr_pos));
+    flyout.set_attribute("data-toolbox-id", toolbox_id).ok();
     super::surface_aspects::mark(&flyout, "entrance");
 
     // Header: Icon + Title + Ontology Badge + Close button
@@ -1051,22 +1051,25 @@ pub fn show_flyout(document: &Document, toolbox_id: &str) {
                     .unwrap();
                 btn.set_attribute("data-action", &tool.action.to_string())
                     .unwrap();
-                btn.set_attribute("data-enabled-title", &tool.description)
-                    .unwrap();
-                btn.set_attribute("title", &tool.description).unwrap();
                 if super::tool_actions::requires_daemon(&tool.id) {
                     btn.set_attribute("data-requires-daemon", "true").unwrap();
                 }
-                if let Some(reason) = super::tool_actions::current_disabled_reason(&tool.id) {
+                let gated = super::tool_actions::current_disabled_reason(&tool.id);
+                if gated.is_some() {
                     btn.set_attribute("disabled", "").unwrap();
                     btn.set_attribute("aria-disabled", "true").unwrap();
-                    btn.set_attribute("data-disabled-reason", reason).unwrap();
-                    btn.set_attribute(
-                        "title",
-                        &format!("{} Unavailable: {}", tool.description, reason),
-                    )
-                    .unwrap();
+                    if let Some(reason) = gated {
+                        btn.set_attribute("data-disabled-reason", reason).unwrap();
+                    }
                 }
+                let copy = super::tool_copy::decorate(
+                    &btn,
+                    &tool.id,
+                    &tool.label,
+                    &tool.description,
+                    tool.capability_scope.as_deref(),
+                    gated,
+                );
 
                 let icon_el = document.create_element("span").unwrap();
                 icon_el.set_class_name("tool-btn-icon");
@@ -1075,7 +1078,7 @@ pub fn show_flyout(document: &Document, toolbox_id: &str) {
 
                 let label_el = document.create_element("span").unwrap();
                 label_el.set_class_name("tool-btn-label");
-                label_el.set_text_content(Some(&tool.label));
+                label_el.set_text_content(Some(&copy.label));
                 btn.append_child(&label_el).unwrap();
 
                 let kind_el = document.create_element("span").unwrap();

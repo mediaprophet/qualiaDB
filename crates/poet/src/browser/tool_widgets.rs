@@ -74,17 +74,16 @@ impl ToolWidget {
                 btn.set_class_name("tool-btn tool-widget-button");
                 btn.set_attribute("data-tool-id", id).unwrap();
                 btn.set_attribute("data-action", action).unwrap();
-                btn.set_attribute("data-enabled-title", label).unwrap();
                 if super::tool_actions::requires_daemon(id) {
                     btn.set_attribute("data-requires-daemon", "true").unwrap();
                 }
-                if let Some(reason) = super::tool_actions::current_disabled_reason(id) {
+                let gated = super::tool_actions::current_disabled_reason(id);
+                if let Some(reason) = gated {
                     btn.set_attribute("disabled", "").unwrap();
                     btn.set_attribute("aria-disabled", "true").unwrap();
                     btn.set_attribute("data-disabled-reason", reason).unwrap();
-                    btn.set_attribute("title", &format!("Unavailable: {reason}"))
-                        .unwrap();
                 }
+                let copy = super::tool_copy::decorate(&btn, id, label, label, None, gated);
 
                 let icon_span = document.create_element("span").unwrap();
                 icon_span.set_class_name("tool-btn-icon");
@@ -93,7 +92,7 @@ impl ToolWidget {
 
                 let label_span = document.create_element("span").unwrap();
                 label_span.set_class_name("tool-btn-label");
-                label_span.set_text_content(Some(label));
+                label_span.set_text_content(Some(&copy.label));
                 btn.append_child(&label_span).unwrap();
 
                 if !kind_badge.is_empty() {

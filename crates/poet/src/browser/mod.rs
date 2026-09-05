@@ -96,6 +96,8 @@ mod surface_honesty;
 pub(crate) mod surface_states;
 pub mod theme;
 pub mod tool_actions;
+mod tool_copy;
+mod tool_proficiency;
 pub mod tool_widgets;
 pub mod topbar;
 pub mod vibe_cell;
@@ -592,6 +594,7 @@ fn try_start(document: &Document) -> Result<(), String> {
     let theme_state = theme::ThemeState::default();
     theme_state.apply(document);
     accessibility::restore(document);
+    tool_proficiency::restore(document);
 
     // Build the app
     let app = build_app(document);
@@ -602,6 +605,7 @@ fn try_start(document: &Document) -> Result<(), String> {
         .ok_or("body() returned None")?
         .append_child(&app)
         .map_err(|e| format!("append_child(app): {:?}", e))?;
+    tool_proficiency::restore(document);
 
     // DOM-query based wiring must happen after the detached app tree is mounted.
     // Wiring before this point silently finds zero controls on a cold start.

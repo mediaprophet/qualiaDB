@@ -1,6 +1,68 @@
 /* === Studio chrome (davinci / monet) === */
 /* Named beats, gated≠broken, volume/CML, media surfaces, diagnose glow, preview dock. */
 
+/* Tool-chest proficiency + hover tooltips (human + agent share data-tooltip) */
+.tool-proficiency-switcher {
+  display: flex;
+  gap: 4px;
+  padding: 4px 6px 6px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.tool-proficiency-choice {
+  flex: 1;
+  font: 600 9px/1.2 var(--font-sans);
+  padding: 4px 2px;
+  border-radius: 4px;
+  border: 1px solid var(--border-subtle);
+  background: var(--surface-panel);
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+.tool-proficiency-choice.is-active,
+.tool-proficiency-choice[aria-pressed="true"] {
+  border-color: var(--accent-cyan);
+  color: var(--text-primary);
+  background: color-mix(in srgb, var(--accent-cyan) 14%, var(--surface-panel));
+}
+.tool-btn {
+  position: relative;
+}
+.tool-btn .tool-tip {
+  display: none;
+  position: absolute;
+  left: calc(100% + 8px);
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 80;
+  min-width: 12rem;
+  max-width: 18rem;
+  padding: 6px 8px;
+  border-radius: 4px;
+  border: 1px solid var(--border-medium);
+  background: var(--surface-panel-elevated);
+  color: var(--text-primary);
+  font: 500 11px/1.35 var(--font-sans);
+  box-shadow: var(--shadow-lg);
+  pointer-events: none;
+  white-space: normal;
+}
+.tool-btn:hover .tool-tip,
+.tool-btn:focus-visible .tool-tip {
+  display: block;
+}
+[data-tool-proficiency="novice"] .tool-btn-kind,
+[data-tool-proficiency="novice"] .tool-widget-control {
+  display: none;
+}
+[data-tool-proficiency="novice"] [data-min-proficiency="intermediate"],
+[data-tool-proficiency="novice"] [data-min-proficiency="expert"],
+[data-tool-proficiency="intermediate"] [data-min-proficiency="expert"] {
+  display: none !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  .tool-btn .tool-tip { transition: none; }
+}
+
 /* ---------- Named beats (entrance · dwell · exit) ---------- */
 @keyframes poet-beat-entrance {
   from { opacity: 0; transform: translateY(8px) translateZ(-14px); filter: saturate(0.7); }
