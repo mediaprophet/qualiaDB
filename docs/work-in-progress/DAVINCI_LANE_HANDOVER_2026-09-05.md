@@ -44,6 +44,8 @@ Studio chrome + UAT frames that prove honest gates and arrive/hold/leave beats. 
 
 ### D2 — Open pack UI arrive (GATE — with Capt / monet)
 
+**D2 paint gap (2026-09-05):** daemon `lexicon_manifest` can return 0.1.0·mixed·gate open while Catalog bay stays held — wire_open→apply_outcome must paint **all** `[data-lexicon-bay]` roots (Zone D + console peer).
+
 **Accept:** Catalog bay shows **packSemVer 0.1.0 · framing mixed · gate open** (arrive / soft-rise for monet). Not held/not yet. Not red missing.
 
 **Steps (full path — do not truncate)**
@@ -107,3 +109,15 @@ Studio chrome + UAT frames that prove honest gates and arrive/hold/leave beats. 
 - [ ] Push GH on `0.0.36-dev`.  
 
 **Report target:** Neo (sole push) · CC Capt (ops) · monet (soft-rise when arrive lands).
+
+---
+
+## D2 evidence addendum (2026-09-05 evening)
+
+**Partial:** `GraphDatabase.lexicon_manifest` / native Open pack returned **packSemVer 0.1.0 · framing mixed · gate open** (`en-core@0.1.0`), but visible Catalog · Lexicon bay remained **held / not yet — open lexicon pack**.
+
+**Implication:** bind + diagnose bar OK; overnight dig = `lexicon_bay` `wire_open` → `apply_outcome` / wrong bay instance / UI not repainting after invoke.
+
+**Badge:** one tab flapped Connected → Probing → Standalone; refreshed tab Connected (:4242) again — keep cold-load Connected stable before Open pack.
+
+**Shot:** davinci assets `f5a5695bf44227c85475d9dc600544738e1cf79221a58b304eec284b0dd4c2d7.webp`

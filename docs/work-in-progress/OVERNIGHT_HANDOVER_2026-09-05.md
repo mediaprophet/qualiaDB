@@ -177,3 +177,4 @@ See `DAVINCI_LANE_HANDOVER_2026-09-05.md` for frames + traps.
 | 2026-09-05 ~23:10 AEST | Folded Capt lane amendments: D2 wait ≥10–15s; `/wor` truncation; daemon bind PASS; Capt runbook sidecar. |
 | 2026-09-05 ~23:13 AEST | Folded Vibe lane handover sidecar (diagnose PASS locks; D2 language accept rules). |
 | 2026-09-05 ~23:15 AEST | Folded davinci lane handover sidecar (arrive frames; traps; B-ui after D2). |
+| 2026-09-05 ~23:16 AEST | D2 paint gap: daemon arrive OK / bay held — fix multi-bay paint + invoke console diag. |

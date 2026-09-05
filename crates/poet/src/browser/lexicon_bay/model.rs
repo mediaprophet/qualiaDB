@@ -185,6 +185,11 @@ pub fn interpret_invoke(ok: bool, value: &str, diagnostic: Option<&str>) -> Mani
         if let Some(card) = parse_pack_card(value) {
             return ManifestOutcome::Open(card);
         }
+        // ok:true but strict card parse missed — still arrive if framing+semver present
+        // (format_value key order / extra fields must not strand the bay on held).
+        if let Some(card) = parse_pack_card_lenient(value) {
+            return ManifestOutcome::Open(card);
+        }
     }
     let blob = diagnostic.unwrap_or(value);
     let why = if blob.to_ascii_lowercase().contains("e300")
@@ -236,6 +241,42 @@ pub fn parse_pack_card(src: &str) -> Option<PackCard> {
         framing,
         uplift_from,
         concept_ids,
+    })
+}
+
+/// Best-effort card when invoke ok but one field is oddly formatted.
+fn parse_pack_card_lenient(src: &str) -> Option<PackCard> {
+    let framing = extract_quoted_field(src, "framing")
+        .and_then(|s| Framing::parse(&s))
+        .or_else(|| {
+            if src.contains("mixed") {
+                Some(Framing::Mixed)
+            } else if src.contains("living") {
+                Some(Framing::LivingShacl)
+            } else if src.contains("artifact") {
+                Some(Framing::ArtifactOwl)
+            } else {
+                None
+            }
+        })?;
+    let pack_semver = extract_quoted_field(src, "packSemVer")
+        .or_else(|| extract_quoted_field(src, "pack_semver"))
+        .or_else(|| {
+            // bare 0.1.0 near packSemVer key
+            src.find("packSemVer").and_then(|i| {
+                let rest = &src[i..i.saturating_add(40)];
+                rest.split('"').nth(1).map(|s| s.to_string())
+            })
+        })?;
+    let pack_id = extract_quoted_field(src, "pack_id")
+        .or_else(|| extract_quoted_field(src, "packId"))
+        .unwrap_or_default();
+    Some(PackCard {
+        pack_id,
+        pack_semver,
+        framing,
+        uplift_from: extract_quoted_field(src, "upliftFrom").unwrap_or_default(),
+        concept_ids: extract_string_list(src, "conceptIds").unwrap_or_default(),
     })
 }
 
@@ -340,6 +381,18 @@ mod tests {
             ManifestOutcome::Held { why } => {
                 assert_eq!(why, HELD_WHY);
                 assert!(copy_avoids_broken(&why));
+            }
+            other => panic!("{other:?}"),
+        }
+    }
+
+    #[test]
+    fn success_parses_live_format_value_shape() {
+        let src = r#"{conceptIds: ["concept:arrive", "concept:hold", "concept:leave"], framing: "mixed", gate: "open", manifest_path: "/tmp/en-core.lexicon.json", packSemVer: "0.1.0", pack_id: "en-core@0.1.0", upliftFrom: "", volume_ok: false, volume_path: ""}"#;
+        match interpret_invoke(true, src, None) {
+            ManifestOutcome::Open(card) => {
+                assert_eq!(card.pack_semver, "0.1.0");
+                assert_eq!(card.framing, Framing::Mixed);
             }
             other => panic!("{other:?}"),
         }

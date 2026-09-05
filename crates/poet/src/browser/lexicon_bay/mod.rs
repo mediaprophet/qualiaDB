@@ -268,18 +268,44 @@ fn wire_open(root: &Element, button: &Element) {
             .map(|input| input.value())
             .unwrap_or_default();
         let path = path.trim().to_string();
-        if path.is_empty() || !is_daemon_connected() {
-            apply_outcome(&root, held_outcome(WHY));
+        if path.is_empty() {
+            web_sys::console::log_1(&"[Lexicon Bay] Open pack: empty path → held".into());
+            paint_outcome_all_bays(&root, held_outcome(WHY));
+            return;
+        }
+        if !is_daemon_connected() {
+            web_sys::console::log_1(
+                &"[Lexicon Bay] Open pack: daemon not connected → held".into(),
+            );
+            paint_outcome_all_bays(&root, held_outcome(WHY));
             return;
         }
         let root_async = root.clone();
+        let path_log = path.clone();
         wasm_bindgen_futures::spawn_local(async move {
             match daemon_invoke(BIND, serde_json::json!({ "path": path })).await {
-                Ok(response) => apply_outcome(
-                    &root_async,
-                    interpret_invoke(response.ok, &response.value, response.diagnostic.as_deref()),
-                ),
-                Err(_) => apply_outcome(&root_async, held_outcome(WHY)),
+                Ok(response) => {
+                    let outcome = interpret_invoke(
+                        response.ok,
+                        &response.value,
+                        response.diagnostic.as_deref(),
+                    );
+                    web_sys::console::log_1(
+                        &format!(
+                            "[Lexicon Bay] invoke path={path_log:?} ok={} value_prefix={:?} outcome={outcome:?}",
+                            response.ok,
+                            response.value.chars().take(120).collect::<String>(),
+                        )
+                        .into(),
+                    );
+                    paint_outcome_all_bays(&root_async, outcome);
+                }
+                Err(err) => {
+                    web_sys::console::log_1(
+                        &format!("[Lexicon Bay] invoke error → held: {err}").into(),
+                    );
+                    paint_outcome_all_bays(&root_async, held_outcome(WHY));
+                }
             }
         });
     }) as Box<dyn FnMut(web_sys::Event)>);
@@ -287,6 +313,43 @@ fn wire_open(root: &Element, button: &Element) {
         .add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())
         .unwrap();
     closure.forget();
+}
+
+/// Zone D IDE and vibe-console each mount a Catalog bay — paint every
+/// `[data-lexicon-bay]` so arrive does not look held on the sibling surface.
+fn paint_outcome_all_bays(hint: &Element, outcome: ManifestOutcome) {
+    let Some(doc) = hint.owner_document() else {
+        apply_outcome(hint, outcome);
+        return;
+    };
+    let Ok(nodes) = doc.query_selector_all("[data-lexicon-bay]") else {
+        apply_outcome(hint, outcome);
+        return;
+    };
+    if nodes.length() == 0 {
+        apply_outcome(hint, outcome);
+        return;
+    }
+    for i in 0..nodes.length() {
+        if let Some(node) = nodes.get(i) {
+            if let Ok(el) = node.dyn_into::<Element>() {
+                // Keep path fields in sync with the bay that was clicked.
+                if let (Some(src), Some(dst)) = (
+                    hint.query_selector("[data-lexicon-path]")
+                        .ok()
+                        .flatten()
+                        .and_then(|e| e.dyn_into::<HtmlInputElement>().ok()),
+                    el.query_selector("[data-lexicon-path]")
+                        .ok()
+                        .flatten()
+                        .and_then(|e| e.dyn_into::<HtmlInputElement>().ok()),
+                ) {
+                    dst.set_value(&src.value());
+                }
+                apply_outcome(&el, outcome.clone());
+            }
+        }
+    }
 }
 
 fn wire_dismiss(root: &Element) {
