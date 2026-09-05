@@ -68,3 +68,8 @@ G-COORD bind · full WordNet engine · locale packs beyond en · next toolchain 
 3. Lexicon arrive: Catalog · Lexicon Open pack → `crates/vibe/fixtures/lexicon/en-core.lexicon.json`
 
 Set `create: false` to keep fail-closed on missing files.
+
+## Sticky Poet host (HTTP /invoke)
+
+Daemon `POST /invoke` keeps a **process-sticky** `PoetSnapshot` (same idea as desktop `Mutex<PoetSnapshot>`).
+`volume_open` load + `volume_commit` must share that host — recreating `from_daemon()` per request caused empty-graph commit fail-closed across HTTP.

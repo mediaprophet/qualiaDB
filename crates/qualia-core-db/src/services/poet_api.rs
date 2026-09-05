@@ -5,6 +5,7 @@
 //! JSON responses so browser clients can render honest diagnostics.
 
 use std::collections::BTreeMap;
+use std::sync::{Mutex, OnceLock};
 
 use axum::{
     body::Bytes,
@@ -15,6 +16,25 @@ use axum::{
 use serde::{Deserialize, Serialize};
 
 use crate::poet_host::{format_value, PoetSnapshot};
+
+/// Process-sticky Poet host for HTTP `/eval` `/invoke` `/intent`.
+/// Desktop already keeps `Mutex<PoetSnapshot>`; recreating `from_daemon()`
+/// per request dropped `volume_open` loads so `volume_commit` saw an empty graph.
+static STICKY_POET_HOST: OnceLock<Mutex<PoetSnapshot>> = OnceLock::new();
+
+fn with_sticky_poet_host<R>(f: impl FnOnce(&mut PoetSnapshot) -> R) -> R {
+    let cell = STICKY_POET_HOST.get_or_init(|| Mutex::new(PoetSnapshot::from_daemon()));
+    let mut guard = cell.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+    // While attached, refresh revision from the live daemon graph; detached
+    // sanctuary loads (volume_open) keep their resident committed set.
+    if guard.attached {
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            guard.revision = crate::daemon_graph::graph_revision().max(1);
+        }
+    }
+    f(&mut *guard)
+}
 
 pub const POET_PAYLOAD_LIMIT_BYTES: usize = 64 * 1024;
 const MAX_JSON_DEPTH: usize = 32;
@@ -136,15 +156,16 @@ pub async fn eval_handler(body: Bytes) -> Response {
         Err(response) => return response,
     };
 
-    let mut snapshot = PoetSnapshot::from_daemon();
-    let result = if let Some(function) = request.function.as_deref() {
-        snapshot.eval_fn(&request.source, function, Vec::new())
-    } else if request.as_cell {
-        snapshot.eval_cell_src(&request.source)
-    } else {
-        snapshot.eval_program_src(&request.source)
-    };
-    Json(eval_response(&snapshot, result)).into_response()
+    with_sticky_poet_host(|snapshot| {
+        let result = if let Some(function) = request.function.as_deref() {
+            snapshot.eval_fn(&request.source, function, Vec::new())
+        } else if request.as_cell {
+            snapshot.eval_cell_src(&request.source)
+        } else {
+            snapshot.eval_program_src(&request.source)
+        };
+        Json(eval_response(snapshot, result)).into_response()
+    })
 }
 
 fn json_to_vibe(
@@ -224,9 +245,10 @@ pub async fn invoke_handler(body: Bytes) -> Response {
         }
     };
 
-    let mut snapshot = PoetSnapshot::from_daemon();
-    let result = snapshot.invoke_id(request.id.trim(), args);
-    Json(eval_response(&snapshot, result)).into_response()
+    with_sticky_poet_host(|snapshot| {
+        let result = snapshot.invoke_id(request.id.trim(), args);
+        Json(eval_response(snapshot, result)).into_response()
+    })
 }
 
 pub async fn gazetteer_handler(body: Bytes) -> Response {
@@ -330,8 +352,7 @@ pub async fn intent_handler(body: Bytes) -> Response {
                 Ok(args) => args,
                 Err(error) => return intent_error("invalid_arguments", error),
             };
-            let mut snapshot = PoetSnapshot::from_daemon();
-            match snapshot.invoke_id(&capability, args) {
+            with_sticky_poet_host(|snapshot| match snapshot.invoke_id(&capability, args) {
                 Ok(value) => Json(serde_json::json!({
                     "ok": true,
                     "status": "accepted",
@@ -340,7 +361,7 @@ pub async fn intent_handler(body: Bytes) -> Response {
                 }))
                 .into_response(),
                 Err(error) => intent_error("invoke_failed", error.to_string()),
-            }
+            })
         }
         "mutate" | "publish" | "annotate" => intent_error(
             "typed_contract_required",
@@ -409,5 +430,58 @@ mod tests {
         ciborium::ser::into_writer(&envelope, &mut body).unwrap();
         let response = intent_handler(Bytes::from(body)).await;
         assert_eq!(response.status(), StatusCode::UNPROCESSABLE_ENTITY);
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    #[test]
+    fn sticky_host_keeps_volume_open_for_commit() {
+        use vibe::Value;
+        let dir = std::env::temp_dir().join(format!(
+            "q42-sticky-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("uat-sanctuary.q42");
+        let path_s = path.to_string_lossy().to_string();
+
+        // Reset sticky host so this test owns the sanctuary load.
+        with_sticky_poet_host(|snap| {
+            *snap = PoetSnapshot::with_seed(Vec::new());
+        });
+
+        with_sticky_poet_host(|snap| {
+            let mut rec = std::collections::BTreeMap::new();
+            rec.insert("path".into(), Value::String(path_s.clone()));
+            rec.insert("create".into(), Value::Bool(true));
+            rec.insert("load".into(), Value::Bool(true));
+            let opened = snap
+                .invoke_id("GraphDatabase.volume_open", Value::Record(rec))
+                .expect("volume_open");
+            let Value::Record(r) = opened else {
+                panic!("expected record");
+            };
+            assert!(
+                matches!(r.get("quin_count"), Some(Value::U64(n)) if *n > 0),
+                "create-on-open should seed ≥1 quin"
+            );
+        });
+
+        with_sticky_poet_host(|snap| {
+            assert!(
+                !snap.committed.is_empty(),
+                "sticky host must retain volume_open load across calls"
+            );
+            let mut rec = std::collections::BTreeMap::new();
+            rec.insert("path".into(), Value::String(path_s.clone()));
+            rec.insert("sanctuary".into(), Value::Bool(true));
+            snap.invoke_id("GraphDatabase.volume_commit", Value::Record(rec))
+                .expect("volume_commit after sticky open");
+        });
+
+        let _ = std::fs::remove_dir_all(&dir);
     }
 }
