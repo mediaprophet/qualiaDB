@@ -49,6 +49,7 @@ This is the sequential handoff record for
 | 2026-09-05 | `PFT-01`/`PFT-02` | Grok 4.6 / high | Complete (implementation + tests; Gate A still open) | `tool_dual_path.rs`; tool/shapes/chain actions; status notification honesty | tool_dual_path 5; tool_actions 3; shapes 3; chain 2; product integrity 10; surface inventory 1 | Live daemon SPARQL not run | Gate A open; `PFT-03` owner select; `RM-06` | `PFT-03` or `RM-06` |
 | 2026-09-05 | `RM-06` | Grok 4.6 / high | Complete (structure; Gate A still open) | `browser/containers/` shell + attrs + domain body dispatch; inventory route paths | containers attrs 4; product integrity 10; surface inventory 1; `trunk build` success | Interactive click-UAT not re-run | Gate A open; view cluster still large files; `PFT-03` owner select | `RM-07` docks.rs or `PFT-03` |
 | 2026-09-05 | `RM-07` | Grok 4.6 / high | Complete (structure; Gate A still open) | `browser/docks/` model, glyphs, widgets, toolbox, flyout, panel, right, statusbar | docks 2; product integrity 10; surface inventory 1; `trunk build` success | Interactive click-UAT not re-run | Gate A open; `PFT-03` owner select | `RM-08` instrument_panel.rs or `PFT-03` |
+| 2026-09-05 | `RM-08` | Grok 4.6 / high | Complete (structure; Gate A still open) | `browser/instrument_panel/` ribbon, catalog, commands, dispatch, panel, chain | instrument_panel 6; product integrity 10; surface inventory 1; `trunk build` success | Interactive click-UAT not re-run | Gate A open; `PFT-03` owner select | `RM-09` workflow_panels.rs or `PFT-03` |
 
 ## Required closeout detail
 
@@ -328,6 +329,17 @@ Delegation count before/after: unchanged (112 ceiling held).
 Known gaps: Review Gate A not closed; `PFT-03` owner chain selection.
 Unrelated failures preserved: Yes.
 Recommended next packet: `RM-08` `instrument_panel.rs` (1,475) or `PFT-03` (owner). Do not close Gate A. Do not start `AST-*`.
+
+Packet: `RM-08`
+Baseline git status: Feature branch `cursor/poet-grok-handover-ac52` at `fd5858c9` (RM-07 docs).
+User job delivered: Split `browser/instrument_panel.rs` (1,475 lines) into a directory module. Container-type catalogs, local/daemon command helpers, click dispatch, panel chrome, and tool-chain activation each own a file under 500 lines. Public API remains `show_for_container`, `hide`, `activate_chain`, `activate_chain_on_container`, and `deactivate_chain`.
+Files changed: `crates/poet/src/browser/instrument_panel/`; this ledger; WIP/register.
+Tests and exact results: `cargo +stable test -p poet --lib instrument_panel::` (6 passed); product integrity (10); surface inventory (1). rustc 1.98.1. `RUSTUP_TOOLCHAIN=stable NO_COLOR=true trunk build` → success. Wasm still contains `contextual-instrument-panel`, `instrument-panel-tool-btn`, `doc:bold`, and the daemon-unavailable honesty string.
+Browser/native UAT: interactive click-UAT not re-run. Behavior is a move, not a product change.
+Delegation count before/after: unchanged (112 ceiling held).
+Known gaps: Review Gate A not closed; `PFT-03` owner chain selection.
+Unrelated failures preserved: Yes.
+Recommended next packet: `RM-09` `workflow_panels.rs` (1,418) or `PFT-03` (owner). Do not close Gate A. Do not start `AST-*`.
 
 
 

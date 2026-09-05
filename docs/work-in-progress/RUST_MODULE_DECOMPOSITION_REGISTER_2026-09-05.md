@@ -60,7 +60,7 @@ may need a documented exception rather than arbitrary fragmentation.
 | P1 | `browser/interactions.rs` | 2,148 | Pointer state, wire operations, container commands, canvas movement, docking, placement, and geometry helpers | `D3` `FE` `QA` | Before interaction or canvas changes |
 | P1 | `browser/search_workbench/` | 34 plus bounded leaves | Completed `RM-05`: faceted search, query builder, SPARQL editor, saved-query persistence, execution, and placement | `D3` `FE` `RUST` `QA` | Before Tool Chest search semantics work |
 | P1 | container cluster: `containers/` plus `container_views.rs`, `container_views_ext.rs`, `container_inline_views.rs` | `containers/` complete (`RM-06`); views 1,227 / 1,387 / 1,016 | Shell vs domain body dispatch done; remaining view files stay as real `pub fn` renderers (do not `pub use build_*_view`) | `D3` `FE` `UX` `QA` | Before broad container restoration |
-| P2 | `docks/` plus `instrument_panel.rs`, `workflow_panels.rs` | `docks/` complete (`RM-07`); remaining 1,475 + 1,418 | Dock layout/state done; instrument presentation and workflow panels remain | `D3` `FE` `UX` `QA` | Before Desktop/chrome reuse |
+| P2 | `docks/` plus `instrument_panel/` plus `workflow_panels.rs` | `docks/` (`RM-07`) and `instrument_panel/` (`RM-08`) complete; remaining 1,418 | Dock and instrument presentation done; workflow panels remain | `D3` `FE` `UX` `QA` | Before Desktop/chrome reuse |
 | P2 | `browser/mod.rs`, `native_daemon.rs` | 1,032 and 1,100 | Browser composition root and daemon transport/lifecycle boundaries | `D4` `RUST` `SPEC` `QA` | Only when their contracts are touched |
 
 ## Core and cross-crate boundary
@@ -339,10 +339,43 @@ POET files over 1,400 are now `instrument_panel.rs` (1,475) and
 
 ### `RM-08` - POET instrument panel decomposition
 
-The next POET candidate is `browser/instrument_panel.rs` (1,475 lines),
-then `workflow_panels.rs`. This is `D3` (`FE`, `UX`, `QA`). Do not close
-Review Gate A. Do not start `AST-*`. `PFT-03` remains owner/captain
-selection.
+**Complete** (2026-09-05). `browser/instrument_panel.rs` (1,475 lines at
+split) is now `browser/instrument_panel/` with the stable public API
+preserved.
+
+Source-to-destination map:
+
+| Old | New |
+|---|---|
+| Ribbon tool descriptor | `instrument_panel/ribbon.rs` (10) |
+| Tools keyed by container type | `instrument_panel/catalog.rs` (412) |
+| Local vs daemon command helpers | `instrument_panel/commands.rs` (284) |
+| Click dispatch | `instrument_panel/dispatch.rs` (266) |
+| Show/hide/wire panel chrome | `instrument_panel/panel.rs` (161) |
+| Tool-chain activate/deactivate | `instrument_panel/chain.rs` (411) |
+| Public re-exports | `instrument_panel/mod.rs` (17) |
+
+Behavior, ABI, and allocation: unchanged. Callers still use
+`browser::instrument_panel::{show_for_container, hide, activate_chain,
+activate_chain_on_container, deactivate_chain}`. No `pub use … build_*_view`
+wrappers.
+
+Verification:
+
+- `cargo +stable check -p poet --lib`: passed
+- `cargo +stable test -p poet --lib instrument_panel::`: 6 passed
+  (catalog 2, commands 2, chain 2)
+- product integrity: 10 passed (ceiling held)
+- surface inventory: 1 passed
+- `RUSTUP_TOOLCHAIN=stable NO_COLOR=true trunk build`: success; wasm contains
+  `contextual-instrument-panel`, `instrument-panel-tool-btn`, `doc:bold`,
+  and the daemon-unavailable honesty string
+- scoped rustfmt (`--edition 2021`) on the new instrument-panel files: passed
+- interactive browser click-UAT was not re-run
+
+The only remaining POET implementation file over 1,400 lines is
+`workflow_panels.rs` (1,418). That is `RM-09`. Do not close Review Gate A.
+Do not start `AST-*`. `PFT-03` remains owner/captain selection.
 
 ## Acceptance record
 
