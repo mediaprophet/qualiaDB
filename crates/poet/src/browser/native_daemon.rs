@@ -25,7 +25,9 @@ use web_sys::{
 /// Daemon HTTP loopback only — not libp2p (4243) or Poet HTML (8080),
 /// which can 200 `/health` without being the QualiaDB engine.
 pub const DEFAULT_CANDIDATE_PORTS: &[u16] = &[4242, 8000, 3030];
-/// Per-port `/health` probe budget (ms). Slow/hung ports must not stall Connected.
+/// Reserved for a soft per-port probe budget (plain fetch for now — AbortController
+/// path regressed Connected on Capt UAT).
+#[allow(dead_code)]
 pub const PROBE_HEALTH_TIMEOUT_MS: i32 = 2_500;
 
 // ---------------------------------------------------------------------------
@@ -503,6 +505,9 @@ pub fn spawn_daemon_probe() {
             let health_url = format!("{url}/health");
 
             let Some(health) = fetch_daemon_health(&health_url).await else {
+                web_sys::console::log_1(
+                    &format!("[Webizen Probe] no usable /health on {url}").into(),
+                );
                 continue;
             };
             if !is_qualia_daemon_health(&health) {
@@ -607,41 +612,77 @@ async fn fetch_json<T: serde::de::DeserializeOwned>(url: &str) -> Option<T> {
 
 async fn fetch_daemon_health(health_url: &str) -> Option<DaemonHealthResponse> {
     let window = web_sys::window()?;
-    let controller = web_sys::AbortController::new().ok()?;
-    let signal = controller.signal();
-
-    let opts = RequestInit::new();
-    opts.set_method("GET");
-    opts.set_mode(RequestMode::Cors);
-    opts.set_signal(Some(&signal));
-
-    let request = web_sys::Request::new_with_str_and_init(health_url, &opts).ok()?;
-
-    // Abort hung probes so a dead port cannot stall Connected forever.
-    let abort_ctrl = controller.clone();
-    let abort_cb = Closure::once_into_js(move || {
-        abort_ctrl.abort();
-    });
-    let _timeout_id = window
-        .set_timeout_with_callback_and_timeout_and_arguments_0(
-            abort_cb.as_ref().unchecked_ref(),
-            PROBE_HEALTH_TIMEOUT_MS,
-        )
-        .ok()?;
-
-    let resp_val = wasm_bindgen_futures::JsFuture::from(window.fetch_with_request(&request))
-        .await
-        .ok()?;
-    let resp: Response = resp_val.dyn_into().ok()?;
+    // Plain fetch_with_str — AbortController+RequestInit regressed page probes to
+    // Standalone while curl /health stayed fine (Capt UAT on cc5ecb6).
+    let resp_val = match wasm_bindgen_futures::JsFuture::from(window.fetch_with_str(health_url)).await
+    {
+        Ok(v) => v,
+        Err(e) => {
+            web_sys::console::log_1(
+                &format!("[Webizen Probe] fetch failed {health_url}: {e:?}").into(),
+            );
+            return None;
+        }
+    };
+    let resp: Response = match resp_val.dyn_into() {
+        Ok(r) => r,
+        Err(_) => {
+            web_sys::console::log_1(
+                &format!("[Webizen Probe] non-Response at {health_url}").into(),
+            );
+            return None;
+        }
+    };
     if !resp.ok() {
+        web_sys::console::log_1(
+            &format!(
+                "[Webizen Probe] HTTP {} at {health_url}",
+                resp.status()
+            )
+            .into(),
+        );
         return None;
     }
 
-    // Prefer text → serde_json so JS Number (f64) still maps to usize/u64.
-    let text_promise = resp.text().ok()?;
-    let text_val = wasm_bindgen_futures::JsFuture::from(text_promise).await.ok()?;
-    let text = text_val.as_string()?;
-    serde_json::from_str(&text).ok()
+    // text → serde_json so JS Number still maps to usize/u64 (serde_wasm_bindgen
+    // can drop the whole health DTO on f64 graph_quin_count).
+    let text_promise = match resp.text() {
+        Ok(p) => p,
+        Err(_) => {
+            web_sys::console::log_1(
+                &format!("[Webizen Probe] body read failed at {health_url}").into(),
+            );
+            return None;
+        }
+    };
+    let text_val = match wasm_bindgen_futures::JsFuture::from(text_promise).await {
+        Ok(v) => v,
+        Err(e) => {
+            web_sys::console::log_1(
+                &format!("[Webizen Probe] body await failed {health_url}: {e:?}").into(),
+            );
+            return None;
+        }
+    };
+    let Some(text) = text_val.as_string() else {
+        web_sys::console::log_1(
+            &format!("[Webizen Probe] non-text body at {health_url}").into(),
+        );
+        return None;
+    };
+    match serde_json::from_str::<DaemonHealthResponse>(&text) {
+        Ok(h) => Some(h),
+        Err(e) => {
+            web_sys::console::log_1(
+                &format!(
+                    "[Webizen Probe] health JSON parse failed at {health_url}: {e} (prefix {:?})",
+                    text.chars().take(80).collect::<String>()
+                )
+                .into(),
+            );
+            None
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------
