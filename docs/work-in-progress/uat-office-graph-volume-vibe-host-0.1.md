@@ -1,6 +1,6 @@
 # WIP — Browser UAT: office:graph + sanctuary volume + lexicon held-gate
 
-**Status:** work-in-progress (not standards) · **Freeze:** `vibe-host-0.1` · **Sync tip:** `cc5ecb6d` · **Branch:** `0.0.36-dev`
+**Status:** work-in-progress (not standards) · **Freeze:** `vibe-host-0.1` · **Sync tip:** `64b21384` · **Branch:** `0.0.36-dev`
 **Owner:** Vibe (diagnose/DevRel accept) · Chrome: davinci/monet · Seam: Neo · Shapes: Marvin
 **Scope:** prove live binds after **G-LEXICON-0** first slice accept. G-COORD held until this UAT passes.
 
@@ -58,7 +58,7 @@
 | C1–C4 | PASS | 07ea593+ | G-LEXICON-0 diagnose fixtures accept |
 | C5 | PASS | 07ea593 | lexicon: pin fixtures green |
 | D1 | PASS | e070ffc7 | held / not yet + open lexicon pack chrome |
-| D2 | OPEN | 0b30cb15 | daemon lexicon_manifest live OK (0.1.0 mixed open); **UI Open pack arrive card** still incomplete |
+| D2 | OPEN | 64b21384 | Native Connected cold-load PASS; Open pack arrive still incomplete — use full `crates/vibe/fixtures/lexicon/en-core.lexicon.json` (avoid truncated `/wor`) |
 | D3 | open | — | |
 | D4 | PASS | f1d34d03 | living/artifact/machine chips |
 | D5 | PASS | f1d34d03 | Zone D Catalog · Lexicon |
@@ -89,3 +89,7 @@ Daemon `POST /invoke` keeps a **process-sticky** `PoetSnapshot` (same idea as de
 ## Probe Connected (tip cc5ecb6d)
 
 Poet : Connected immediately after engine-bearing `/health`; `/vibe/capabilities` refreshes in background. Health ports: 4242, 8000, 3030 (not 4243/8080). Per-port 2.5s timeout.
+
+## Overnight continuity
+
+See `docs/work-in-progress/OVERNIGHT_HANDOVER_2026-09-05.md` for scoreboard + remaining plan (tip `64b21384`).
