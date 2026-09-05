@@ -108,11 +108,16 @@ Capt box runbook + evidence tables: `docs/work-in-progress/CAPT_LANE_AMENDMENTS_
 
 Vibe language/diagnose lane: `docs/work-in-progress/VIBE_LANE_HANDOVER_2026-09-05.md`
 
+Davinci chrome/arrive lane: `docs/work-in-progress/DAVINCI_LANE_HANDOVER_2026-09-05.md`
+
 ### davinci (chrome / click-path)
 
 - [x] Catalog held-gate + chips PASS
+- [x] Zone D Play + Catalog · Lexicon peer tabs PASS
 - [ ] Arrive chrome after Open pack (loaded-pack framing, not stuck on Open pack button)
 - [ ] If click-path broken with full path → note DOM/capability id for Neo
+
+See `DAVINCI_LANE_HANDOVER_2026-09-05.md` for frames + traps.
 
 ### monet (motion)
 
@@ -171,3 +176,4 @@ Vibe language/diagnose lane: `docs/work-in-progress/VIBE_LANE_HANDOVER_2026-09-0
 | 2026-09-05 night | Created for Timothy overnight continuity; tip `64b21384`; D2 Open pack arrive is the open gate. |
 | 2026-09-05 ~23:10 AEST | Folded Capt lane amendments: D2 wait ≥10–15s; `/wor` truncation; daemon bind PASS; Capt runbook sidecar. |
 | 2026-09-05 ~23:13 AEST | Folded Vibe lane handover sidecar (diagnose PASS locks; D2 language accept rules). |
+| 2026-09-05 ~23:15 AEST | Folded davinci lane handover sidecar (arrive frames; traps; B-ui after D2). |
