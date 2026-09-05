@@ -33,7 +33,12 @@ pub fn render_vitals_panel(container: &Element, records: &[HealthRecord]) {
         .iter()
         .find(|k| k.id() == selected_id)
         .cloned()
-        .unwrap_or_else(|| all_kinds.first().cloned().unwrap_or(MetricKind::BloodPressure));
+        .unwrap_or_else(|| {
+            all_kinds
+                .first()
+                .cloned()
+                .unwrap_or(MetricKind::BloodPressure)
+        });
 
     // Clear previous panel content
     while let Some(child) = container.first_element_child() {
@@ -60,11 +65,8 @@ pub fn render_vitals_panel(container: &Element, records: &[HealthRecord]) {
         tab.set_attribute("data-metric-id", &kind.id()).ok();
         tab.set_attribute("aria-selected", if is_selected { "true" } else { "false" })
             .ok();
-        tab.set_attribute(
-            "tabindex",
-            if is_selected { "0" } else { "-1" },
-        )
-        .ok();
+        tab.set_attribute("tabindex", if is_selected { "0" } else { "-1" })
+            .ok();
         tab.set_text_content(Some(&kind.label()));
 
         // Click handler to select metric
@@ -102,10 +104,14 @@ pub fn render_vitals_panel(container: &Element, records: &[HealthRecord]) {
             }
             if let Some(new_id) = target_id {
                 e.prevent_default();
-                c_clone_k.set_attribute("data-selected-metric", &new_id).ok();
+                c_clone_k
+                    .set_attribute("data-selected-metric", &new_id)
+                    .ok();
                 render_vitals_panel(&c_clone_k, &recs_clone_k);
                 // Move focus to the newly selected tab
-                if let Ok(Some(new_tab)) = c_clone_k.query_selector(&format!("[data-metric-id=\"{new_id}\"]")) {
+                if let Ok(Some(new_tab)) =
+                    c_clone_k.query_selector(&format!("[data-metric-id=\"{new_id}\"]"))
+                {
                     if let Ok(html_el) = new_tab.dyn_into::<web_sys::HtmlElement>() {
                         html_el.focus().ok();
                     }
@@ -124,7 +130,12 @@ pub fn render_vitals_panel(container: &Element, records: &[HealthRecord]) {
     let toggle_btn = document.create_element("button").unwrap();
     toggle_btn.set_class_name("vitals-view-toggle");
     toggle_btn.set_attribute("type", "button").ok();
-    toggle_btn.set_attribute("aria-label", "Toggle between visual chart and accessible data table").ok();
+    toggle_btn
+        .set_attribute(
+            "aria-label",
+            "Toggle between visual chart and accessible data table",
+        )
+        .ok();
     let is_table = view_mode == "table";
     toggle_btn.set_text_content(Some(if is_table {
         "📈 Switch to visual chart"
@@ -139,7 +150,8 @@ pub fn render_vitals_panel(container: &Element, records: &[HealthRecord]) {
         c_toggle.set_attribute("data-view-mode", new_mode).ok();
         render_vitals_panel(&c_toggle, &recs_toggle);
     }) as Box<dyn FnMut(_)>);
-    toggle_btn.add_event_listener_with_callback("click", toggle_closure.as_ref().unchecked_ref())
+    toggle_btn
+        .add_event_listener_with_callback("click", toggle_closure.as_ref().unchecked_ref())
         .ok();
     toggle_closure.forget();
 
@@ -159,9 +171,14 @@ pub fn render_vitals_panel(container: &Element, records: &[HealthRecord]) {
         let icon = document.create_element("span").unwrap();
         icon.set_text_content(Some("⌁"));
         let strong = document.create_element("strong").unwrap();
-        strong.set_text_content(Some(&format!("No {} measurements yet", selected_kind.label())));
+        strong.set_text_content(Some(&format!(
+            "No {} measurements yet",
+            selected_kind.label()
+        )));
         let small = document.create_element("small").unwrap();
-        small.set_text_content(Some("Save a reading to view historical pattern and records."));
+        small.set_text_content(Some(
+            "Save a reading to view historical pattern and records.",
+        ));
         empty.append_child(&icon).unwrap();
         empty.append_child(&strong).unwrap();
         empty.append_child(&small).unwrap();
@@ -185,7 +202,8 @@ fn render_table_view(
     wrap.set_class_name("vitals-table-wrap");
     wrap.set_attribute("role", "region").ok();
     wrap.set_attribute("tabindex", "0").ok();
-    wrap.set_attribute("aria-label", &format!("Table view of {}", kind.label())).ok();
+    wrap.set_attribute("aria-label", &format!("Table view of {}", kind.label()))
+        .ok();
 
     for series in series_list {
         if series.points.is_empty() {
@@ -372,16 +390,29 @@ fn render_chart_view(
             max_val,
             (min_val + max_val) / 2.0,
             min_val,
-            if is_bp { "health-line-sys" } else { "health-line-hr" },
+            if is_bp {
+                "health-line-sys"
+            } else {
+                "health-line-hr"
+            },
             primary_polyline,
             if is_bp && !secondary_polyline.is_empty() {
-                format!("<polyline class=\"health-line-dia\" points=\"{}\" fill=\"none\" />", secondary_polyline)
+                format!(
+                    "<polyline class=\"health-line-dia\" points=\"{}\" fill=\"none\" />",
+                    secondary_polyline
+                )
             } else {
                 String::new()
             },
             dots_svg,
-            visible.first().map(|p| p.timestamp_label.as_str()).unwrap_or(""),
-            visible.last().map(|p| p.timestamp_label.as_str()).unwrap_or("")
+            visible
+                .first()
+                .map(|p| p.timestamp_label.as_str())
+                .unwrap_or(""),
+            visible
+                .last()
+                .map(|p| p.timestamp_label.as_str())
+                .unwrap_or("")
         );
 
         series_card.set_inner_html(&svg_html);

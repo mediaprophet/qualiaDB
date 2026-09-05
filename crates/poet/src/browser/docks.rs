@@ -1309,10 +1309,24 @@ pub fn build_right_dock(document: &Document) -> Element {
     );
     content.append_child(&job_panel).unwrap();
 
-    // 4. VibeScript UI Host: do not present synthetic runtime metrics as live.
+    // 4. Studio preview — still / clip / scene handle kinds on live Render preview.
+    let preview_body = super::render_preview::build_studio_dock(document);
+    let preview_panel = create_collapsible_dock_panel(
+        document,
+        "Studio Preview",
+        Some("still · clip · scene"),
+        preview_body,
+        true,
+        false,
+    );
+    content.append_child(&preview_panel).unwrap();
+
+    // 5. VibeScript UI Host: do not present synthetic runtime metrics as live.
     let vibe_ui_host = document.create_element("div").unwrap();
     vibe_ui_host.set_class_name("container-placeholder");
-    vibe_ui_host.set_attribute("data-honesty", "unavailable").ok();
+    vibe_ui_host
+        .set_attribute("data-honesty", "unavailable")
+        .ok();
     vibe_ui_host.set_text_content(Some(
         "Unavailable: the live VibeScript UI runtime is not connected.",
     ));
@@ -1430,6 +1444,20 @@ pub fn build_bottom_statusbar(document: &Document) -> Element {
     strata.append_child(&s_label).unwrap();
     strata.append_child(&s_val).unwrap();
     right.append_child(&strata).unwrap();
+
+    let volume = document.create_element("div").unwrap();
+    volume.set_class_name("statusbar-item");
+    let v_label = document.create_element("span").unwrap();
+    v_label.set_class_name("statusbar-label");
+    v_label.set_text_content(Some("Volume:"));
+    let v_val = document.create_element("span").unwrap();
+    v_val.set_id("statusbar-volume-state");
+    v_val.set_class_name("volume-state-chip");
+    v_val.set_attribute("data-volume-state", "closed").ok();
+    v_val.set_text_content(Some("closed"));
+    volume.append_child(&v_label).unwrap();
+    volume.append_child(&v_val).unwrap();
+    right.append_child(&volume).unwrap();
 
     bar.append_child(&right).unwrap();
     bar

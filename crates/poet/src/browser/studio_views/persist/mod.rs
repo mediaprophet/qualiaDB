@@ -89,9 +89,8 @@ fn invoke_on_click(
     closure.forget();
 }
 
-
-mod sessions;
 mod editors;
+mod sessions;
 mod surfaces;
 
 pub use editors::*;
@@ -110,4 +109,3 @@ mod tests {
         assert_eq!(families.len(), 4);
     }
 }
-

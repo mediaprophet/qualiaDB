@@ -31,8 +31,19 @@ fn has_local_contract(tool_id: &str) -> bool {
 }
 
 #[cfg(test)]
+fn has_live_invoke(tool_id: &str) -> bool {
+    matches!(
+        tool_id,
+        "graph:sparql_query" | "ai:extractor" | "ai:sentinel"
+    )
+}
+
+#[cfg(test)]
 fn has_dispatch_policy(tool_id: &str) -> bool {
-    has_local_contract(tool_id) || requires_daemon(tool_id) || unavailable_reason(tool_id).is_some()
+    has_local_contract(tool_id)
+        || has_live_invoke(tool_id)
+        || requires_daemon(tool_id)
+        || unavailable_reason(tool_id).is_some()
 }
 
 /// A structural prerequisite that the current UI cannot collect safely yet.

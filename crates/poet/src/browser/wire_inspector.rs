@@ -4,8 +4,8 @@
 //!
 //! Copyright (c) 2026 Timothy Charles Holborn. All rights reserved.
 
-use wasm_bindgen::JsCast;
 use wasm_bindgen::prelude::*;
+use wasm_bindgen::JsCast;
 use web_sys::{Document, Element, HtmlElement, KeyboardEvent, MouseEvent};
 
 /// Wire up wire click handlers — clicking a wire path selects it and shows

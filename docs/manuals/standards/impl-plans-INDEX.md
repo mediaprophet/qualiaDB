@@ -16,4 +16,10 @@
 | File | Owner | Focus |
 |------|-------|--------|
 | [`vibescript-complete-wishlist.md`](vibescript-complete-wishlist.md) | Vibe (compiled) · Neo (push) | Cross-lane wishlist beyond staged impl plans |
+| [`poet-ontology-join-contract.md`](poet-ontology-join-contract.md) | Marvin | Surface → live InvokeId join |
+| [`poet-container-manifold-link-shapes.md`](poet-container-manifold-link-shapes.md) | Marvin | Container · Manifold · Link · twins |
+| [`g-coord-coordinate-system-shapes.md`](g-coord-coordinate-system-shapes.md) | Marvin | G-COORD v0 shapes; bind gated |
+| [`vibe-catalog-honesty.md`](vibe-catalog-honesty.md) | Vibe | ALL_BOUND remaps, dual-VC/QISP/ledger, preview handles |
+| [`poet-motion-contract.md`](poet-motion-contract.md) | monet | Named beats, gated ≠ broken, volume states |
+| [`webizen-vibe-host-parity.md`](webizen-vibe-host-parity.md) | Neo | Desktop four-op Vibe host |
 

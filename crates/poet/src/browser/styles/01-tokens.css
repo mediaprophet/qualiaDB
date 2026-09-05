@@ -1,0 +1,131 @@
+:root {
+  /* Canvas Backgrounds & Depths */
+  --canvas-bg: #07090e;
+  --canvas-grid-line: rgba(0, 210, 255, 0.08);
+  --canvas-grid-line-major: rgba(0, 210, 255, 0.2);
+
+  /* Surfaces & Glass */
+  --surface-base: #0c1017;
+  --surface-panel: #131822;
+  --surface-panel-elevated: #1a2230;
+  --surface-glass: rgba(19, 24, 34, 0.82);
+  --surface-glass-heavy: rgba(12, 16, 23, 0.92);
+  --surface-glass-light: rgba(0, 210, 255, 0.04);
+
+  /* Borders & Glows */
+  --border-subtle: #1e2838;
+  --border-medium: #2b384e;
+  --border-bright: #3e5170;
+  --border-active: #00d2ff;
+
+  /* Typography */
+  --text-primary: #f0f4fc;
+  --text-secondary: #9cb1d1;
+  --text-muted: #5e7394;
+  --text-inverse: #07090e;
+
+  /* Brand Accents */
+  --accent-cyan: #00d2ff;
+  --accent-cyan-glow: rgba(0, 210, 255, 0.35);
+  --accent-emerald: #00f2a9;
+  --accent-emerald-glow: rgba(0, 242, 169, 0.35);
+  --accent-amber: #ffb834;
+  --accent-amber-glow: rgba(255, 184, 52, 0.35);
+  --accent-violet: #a855f7;
+  --accent-violet-glow: rgba(168, 85, 247, 0.35);
+  --accent-rose: #ff4d6d;
+  --accent-rose-glow: rgba(255, 77, 109, 0.35);
+
+  /* Epistemic Modality Colors */
+  --modality-objective: #00d2ff;
+  --modality-subjective: #ec4899;
+  --modality-intersubjective: #a855f7;
+  --modality-normative: #ffb834;
+
+  /* Container Type Semantic Colors */
+  --color-doc: #38bdf8;
+  --color-code: #00f2a9;
+  --color-3d: #a855f7;
+  --color-sheet: #ffb834;
+  --color-portal: #ec4899;
+  --color-media: #f97316;
+  --color-ai: #06b6d4;
+  --color-ontology: #8b5cf6;
+  --color-map: #10b981;
+  --color-social: #6366f1;
+  --color-webrtc: #ef4444;
+  --color-health: #14b8a6;
+  --color-webview: #0ea5e9;
+  --color-rights: #f43f5e;
+
+  /* Strata Colors */
+  --strata-env: #10b981;
+  --strata-social: #38bdf8;
+  --strata-legal: #ec4899;
+  --strata-fin: #f59e0b;
+  --strata-tech: #8b5cf6;
+
+  /* Fonts */
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+
+  /* Shadows */
+  --shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 6px 20px rgba(0, 0, 0, 0.6);
+  --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.8);
+  --shadow-container: 0 10px 30px rgba(0, 0, 0, 0.7), 0 0 1px 1px var(--border-subtle);
+  --shadow-container-active: 0 12px 35px rgba(0, 0, 0, 0.8), 0 0 0 1.5px var(--accent-cyan), 0 0 20px var(--accent-cyan-glow);
+
+  /* Radius */
+  --radius-xs: 4px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-full: 9999px;
+
+  /* Transitions */
+  --trans-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --trans-smooth: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Named beats (Layout · Stage · Timeline) — no free tweens */
+  --beat-ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --beat-entrance: 220ms;
+  --beat-dwell: 2.4s;
+  --beat-exit: 180ms;
+  --beat-crossfade: 120ms;
+
+  /* Volume q42:state */
+  --volume-closed: #5e7394;
+  --volume-open: #00d2ff;
+  --volume-committed: #00f2a9;
+  --volume-denied: #ffb834;
+  --volume-fault: #ff4d6d;
+
+  /* Container · Manifold · Link (human chrome; machine ids stay under the hood) */
+  --cml-container: #38bdf8;
+  --cml-manifold: #a855f7;
+  --cml-link: #00d2ff;
+
+  /* Media surfaces — 2D layout, 3D stage, film, CG */
+  --media-2d: #38bdf8;
+  --media-3d: #a855f7;
+  --media-film: #ffb834;
+  --media-cg: #00f2a9;
+  --media-still: #38bdf8;
+  --media-clip: #ffb834;
+  --media-scene: #a855f7;
+  --media-map: #10b981;
+
+  /* Diagnose token glow (UTF-8 byte span, not whole-panel) */
+  --diag-glow: rgba(255, 77, 109, 0.22);
+  --diag-glow-stroke: #ff4d6d;
+
+  /* Inference provenance trail */
+  --trail-cell: #38bdf8;
+  --trail-invoke: #a855f7;
+  --trail-result: #00f2a9;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: var(--canvas-bg); color: var(--text-primary); font-family: var(--font-sans); font-size: 13px; user-select: none; -webkit-font-smoothing: antialiased; }
+

@@ -4,7 +4,7 @@
 //! Principal / inventor: Timothy Charles Holborn <timothy.holborn@gmail.com>
 //! Assignment: COPYRIGHT.md  Licence: LICENSE (CC BY-NC-ND 4.0)
 
-use super::intent_bus::{ActionType, VibeScriptPayload};
+use super::intent_bus::{ActionType, Provenance, VibeScriptPayload};
 use core::fmt;
 
 // ---------------------------------------------------------------------------
@@ -58,7 +58,7 @@ pub struct ToolMetadata {
     pub icon: String,
     /// Tool interaction kind.
     pub kind: ToolKind,
-    /// Capability scope required to use this tool — e.g. `graph:read`.
+    /// Live `Capability.method` when this tool invokes the host; `None` for local DOM or gated tools.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub capability_scope: Option<String>,
     /// Ontology prefix this tool belongs to — e.g. `soc`, `set`, `comm`.
@@ -100,10 +100,17 @@ pub fn build_payload<P>(
 where
     P: serde::Serialize + Send + Sync,
 {
-    VibeScriptPayload::new(tool.action_type(), target, params).with_context(format!(
-        "https://qualiadb.org/schema/ui/{}#",
-        tool.metadata().ontology_prefix
-    ))
+    VibeScriptPayload::new(tool.action_type(), target, params)
+        .with_context(format!(
+            "https://qualiadb.org/schema/ui/{}#",
+            tool.metadata().ontology_prefix
+        ))
+        .with_provenance(Provenance {
+            emitter_did: String::new(),
+            component_label: tool.metadata().id.clone(),
+            intent_counter: 0,
+            capability_scope: tool.metadata().capability_scope.clone(),
+        })
 }
 
 // ---------------------------------------------------------------------------
@@ -158,7 +165,7 @@ mod tests {
                 label: "Place Social Graph".into(),
                 icon: "graph".into(),
                 kind: ToolKind::PlaceContainer,
-                capability_scope: Some("graph:read".into()),
+                capability_scope: Some("Poet.container_place".into()),
                 ontology_prefix: "soc".into(),
                 description: "Place a social graph container.".into(),
             },
@@ -177,7 +184,7 @@ mod tests {
                 label: "Query Edges".into(),
                 icon: "query".into(),
                 kind: ToolKind::Query,
-                capability_scope: Some("graph:read".into()),
+                capability_scope: Some("GraphDatabase.sparql".into()),
                 ontology_prefix: "soc".into(),
                 description: "Query social edges.".into(),
             },

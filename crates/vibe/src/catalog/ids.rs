@@ -7,6 +7,8 @@ pub const ALL_INVOKE_IDS: &[&str] = &[
     "SHACL.extensions",
     "GraphDatabase.stats",
     "GraphDatabase.sparql",
+    "GraphDatabase.volume_open",
+    "GraphDatabase.volume_commit",
     "N3Logic.evaluate",
     "GraphAuthoring.process",
     "DeonticLogic.evaluate",

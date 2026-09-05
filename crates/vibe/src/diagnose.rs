@@ -18,10 +18,12 @@ pub struct DiagnoseReport {
 impl DiagnoseReport {
     pub fn to_json(&self) -> String {
         if let Some(err) = &self.error {
-            let mut json = err.to_json();
-            // insert kind after opening brace
-            json.insert_str(1, &format!("\"kind\":\"{}\",", self.kind));
-            json
+            format!(
+                "{{\"valid\":false,\"kind\":\"{}\",{},\"errors\":{}}}",
+                self.kind,
+                err.json_body(),
+                errors_json(&self.errors)
+            )
         } else {
             format!(
                 "{{\"valid\":true,\"kind\":\"{}\",\"error_code\":null,\"span\":null,\"message\":null,\"suggested_fix\":null,\"evidential\":null,\"shacl_violations\":[],\"errors\":[]}}",
@@ -29,6 +31,20 @@ impl DiagnoseReport {
             )
         }
     }
+}
+
+fn errors_json(errors: &[Diagnostic]) -> String {
+    let mut s = String::from("[");
+    for (i, error) in errors.iter().enumerate() {
+        if i > 0 {
+            s.push(',');
+        }
+        s.push('{');
+        s.push_str(&error.json_body());
+        s.push('}');
+    }
+    s.push(']');
+    s
 }
 
 /// Helper to detect if a diagnostic represents a contradiction or semantic conflict
@@ -190,6 +206,17 @@ mod tests {
             r.errors.len() >= 3,
             "diagnose must collect per-item errors, got {}",
             r.errors.len()
+        );
+        let json = r.to_json();
+        assert!(
+            json.contains("\"errors\":["),
+            "failure JSON must list errors[]"
+        );
+        assert!(json.contains("\"kind\":\"module\""));
+        assert!(json.contains("\"valid\":false"));
+        assert!(
+            json.matches("\"error_code\":").count() >= 4,
+            "primary diagnostic plus errors[] entries, got {json}"
         );
     }
 }

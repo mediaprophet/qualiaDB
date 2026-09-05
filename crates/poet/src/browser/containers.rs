@@ -23,6 +23,13 @@ pub fn build_container(document: &Document, container: &SeedContainer) -> Elemen
         container.id.clone()
     };
     el.set_attribute("data-id", &container_id).unwrap();
+    el.set_attribute("data-shape", "container").unwrap();
+    el.set_attribute("data-beat", "entrance").unwrap();
+    el.set_attribute(
+        "data-media-surface",
+        media_surface_for(&container.container_type),
+    )
+    .unwrap();
     el.set_attribute("data-container-type", &container.container_type)
         .unwrap();
     el.set_attribute("data-semantic-type", &container.semantic_type)
@@ -85,6 +92,25 @@ pub fn build_container(document: &Document, container: &SeedContainer) -> Elemen
     badge.set_class_name(&format!("honesty-badge honesty-{}", container.honesty));
     badge.set_text_content(Some(&container.honesty));
     title_group.append_child(&badge).unwrap();
+
+    let twins = document.create_element("span").unwrap();
+    twins.set_class_name("twin-chip-row");
+    twins
+        .set_attribute("aria-label", "Layout Stage Timeline twins")
+        .ok();
+    for (twin, title) in [
+        ("layout", "Layout — 2D structure"),
+        ("stage", "Stage — depth / z / camera"),
+        ("timeline", "Timeline — named beats entrance · dwell · exit"),
+    ] {
+        let chip = document.create_element("span").unwrap();
+        chip.set_class_name("twin-chip");
+        chip.set_attribute("data-twin", twin).ok();
+        chip.set_attribute("title", title).ok();
+        chip.set_text_content(Some(&twin[..1].to_uppercase()));
+        twins.append_child(&chip).unwrap();
+    }
+    title_group.append_child(&twins).unwrap();
 
     header.append_child(&title_group).unwrap();
 
@@ -1315,6 +1341,19 @@ fn container_type_filter_attrs(container_type: &str) -> (&'static str, &'static 
         "settings" => ("technical", "normative"),
 
         _ => ("technical", "objective"),
+    }
+}
+
+fn media_surface_for(container_type: &str) -> &'static str {
+    match container_type {
+        "media" | "video_view" | "animation_timeline" | "animation_export" | "transport"
+        | "channel_strip" | "meter_bridge" => "film",
+        "dual_studio" | "dual-studio" | "lighting_editor" | "material_editor"
+        | "shader_pipelines" | "scene_graph" | "scene_view" | "lod_chain" | "ragdoll_skin"
+        | "shadow_settings" | "spatial_10d" | "tensor_inspector" => "cg",
+        "map" | "gis_maps" => "map",
+        "media_3d" | "spatial" => "3d",
+        _ => "2d",
     }
 }
 

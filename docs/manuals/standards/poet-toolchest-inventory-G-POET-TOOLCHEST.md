@@ -65,7 +65,7 @@ daemon-backed graph when connected.
   local DOM formatting actions (bold, italic, code, heading, and alignment).
 - **Construct stubs:** `constructs/mod.rs` `stub_constructs()` honesty=`stub`, no manifold seed (Library Software).
 - **Manifold honesty:** many seed containers marked `partial` / `missing` / `present` (elevated to `live` only with daemon).
-- **capability_scope drift:** most tools use scopes like `graph:read` / `graph:annotate` — **not** `Capability.method` strings. First live bind uses `GraphDatabase.sparql` in `capability_scope`.
+- **capability_scope:** PlaceContainer tools cite `Poet.container_place`. Live invokes cite exact `Family.method` (`GraphDatabase.sparql`, `NLP.gazetteer_run`, `Sentinel.inspect`). Local DOM (typography, epistemic tags, pins) and gated tools use `None` plus `unavailable_reason`. Legacy `graph:read` / `graph:annotate` / `capability:invoke` scopes are gone.
 - **No knowledge toolbox** despite `knowledge` manifold seed — graph explore is a **container**, not a toolchain button (until this slice).
 
 ## Unicode / custom buttons

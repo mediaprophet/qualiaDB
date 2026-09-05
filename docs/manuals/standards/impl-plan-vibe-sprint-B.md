@@ -10,16 +10,18 @@
 - G-B-001: `GraphDatabase.volume_open` / `volume_commit` + Volume shape + sanctuary chrome
 - G-DOCS: deltas + continuation handover on remote
 
-## Stage 0 — Hygiene (docs only)
+## Stage 0 — Hygiene (docs only) ✅ 2026-09-05
 1. Sync `vibescript-sprint-deltas.md` to tip `6dc2b8b8`: mark B-001 / G-A done; keep open rows below.
 2. Confirm crate stamp `0.0.36-dev` + EBNF ↔ `vibescript-core.md` §3 still match after freeze.
 **Accept:** deltas board honest; no API churn.
+**Landed:** B-001/B-006 `done`; `grammar::tests::ebnf_file_matches_vibescript_core_section_3`; crate `0.0.36-dev`.
 
-## Stage 1 — Diagnose / DevRel contract pack
+## Stage 1 — Diagnose / DevRel contract pack ✅ 2026-09-05
 1. Document frozen diagnose JSON shape + error codes (incl. E300 wasm, sanctuary fail-closed, E4xx/E5xx intent) for Poet/agents.
 2. Short DevRel note: human dialect (`using` + `effect fn`) vs agent `capability.invoke("Capability.method", {…})`.
 3. Fixture pack path plan under `crates/vibe/fixtures` for graph · volume · diagnose loops (hot-edit without rebuild).
 **Accept:** one markdown agents can follow; fixtures listed even if not all filled.
+**Landed:** `docs/vibe/devrel-frozen-host.md`; `crates/vibe/fixtures/FIXTURE_PACK.md`; `graph_sparql.vibe` / `volume_sanctuary.vibe`; diagnose `errors[]` on failure; `cargo test -p vibe --test sprint_b_fixtures`.
 
 ## Stage 2 — Toolchest language joins (after Neo next toolchain)
 1. Map each new toolchain button → live `Capability.method` or **gated** (never stub-broken).

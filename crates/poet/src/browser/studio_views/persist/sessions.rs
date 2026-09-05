@@ -1,8 +1,8 @@
 use wasm_bindgen::JsCast;
 use web_sys::{Document, Element, HtmlElement};
 
-use super::{banner, invoke_on_click, wrap};
 use super::super::super::cop_records::{build_family_panel, CopField};
+use super::{banner, invoke_on_click, wrap};
 
 pub fn build_audio_session_view(document: &Document) -> Element {
     let wrapper = wrap(

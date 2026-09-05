@@ -28,7 +28,9 @@ pub fn build_command_palette(document: &Document) -> Element {
 
     let panel = document.create_element("div").unwrap();
     panel.set_class_name("cmd-palette-panel");
-    panel.set_attribute("aria-describedby", "cmd-palette-hint").ok();
+    panel
+        .set_attribute("aria-describedby", "cmd-palette-hint")
+        .ok();
     let panel_el: HtmlElement = panel.clone().dyn_into().unwrap();
     panel_el.style().set_css_text(
         "width: 560px; max-height: 400px; background: var(--glass-bg); \
@@ -55,8 +57,12 @@ pub fn build_command_palette(document: &Document) -> Element {
     let input_el: HtmlInputElement = input.clone().dyn_into().unwrap();
     input_el.set_placeholder("Search commands, manifolds, containers\u{2026}");
     input.set_id("cmd-palette-input");
-    input.set_attribute("aria-label", "Search commands, manifolds, and containers").ok();
-    input.set_attribute("aria-controls", "cmd-palette-results").ok();
+    input
+        .set_attribute("aria-label", "Search commands, manifolds, and containers")
+        .ok();
+    input
+        .set_attribute("aria-controls", "cmd-palette-results")
+        .ok();
     input.set_attribute("aria-autocomplete", "list").ok();
     input
         .set_attribute(
@@ -84,7 +90,8 @@ pub fn build_command_palette(document: &Document) -> Element {
         let item = document.create_element("div").unwrap();
         item.set_class_name("cmd-palette-item");
         item.set_attribute("role", "option").ok();
-        item.set_attribute("aria-selected", if idx == 0 { "true" } else { "false" }).ok();
+        item.set_attribute("aria-selected", if idx == 0 { "true" } else { "false" })
+            .ok();
         item.set_attribute("data-cmd-label", cmd.label).unwrap();
         if idx == 0 {
             item.class_list().add_1("selected").unwrap();

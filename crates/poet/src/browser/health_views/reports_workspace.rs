@@ -7,13 +7,15 @@ use super::document_models::{build_report_payload, project_reports, ReportItem, 
 use super::model::{records_from_payload, HealthRecord, TimelineItem};
 use super::record_inspection::open_record_inspection_dialog;
 use crate::browser::native_daemon::{
-    daemon_records_query, daemon_records_upsert, is_daemon_connected,
-    NativeRecordQueryRequest, NativeRecordUpsertRequest,
+    daemon_records_query, daemon_records_upsert, is_daemon_connected, NativeRecordQueryRequest,
+    NativeRecordUpsertRequest,
 };
 use crate::browser::surface_states;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
-use web_sys::{Document, Element, HtmlInputElement, HtmlSelectElement, HtmlTextAreaElement, MouseEvent};
+use web_sys::{
+    Document, Element, HtmlInputElement, HtmlSelectElement, HtmlTextAreaElement, MouseEvent,
+};
 
 pub fn build_clinical_reports_view(document: &Document) -> Element {
     surface_states::install(document);
@@ -164,7 +166,8 @@ fn wire_rep_events(root: &Element, document: &Document) {
         refresh_reports(&root_ref, &doc_ref);
     }) as Box<dyn FnMut(_)>);
     if let Some(btn) = root.query_selector("[data-rep-refresh]").ok().flatten() {
-        btn.add_event_listener_with_callback("click", refresh_closure.as_ref().unchecked_ref()).ok();
+        btn.add_event_listener_with_callback("click", refresh_closure.as_ref().unchecked_ref())
+            .ok();
         refresh_closure.forget();
     }
 
@@ -174,7 +177,8 @@ fn wire_rep_events(root: &Element, document: &Document) {
         submit_report(&root_save, &doc_save);
     }) as Box<dyn FnMut(_)>);
     if let Some(btn) = root.query_selector("[data-rep-save]").ok().flatten() {
-        btn.add_event_listener_with_callback("click", save_closure.as_ref().unchecked_ref()).ok();
+        btn.add_event_listener_with_callback("click", save_closure.as_ref().unchecked_ref())
+            .ok();
         save_closure.forget();
     }
 }
@@ -184,7 +188,10 @@ fn submit_report(root: &Element, document: &Document) {
         return;
     }
     let status_el = root.query_selector("[data-rep-form-status]").ok().flatten();
-    let title = root.query_selector("[data-rep-title]").ok().flatten()
+    let title = root
+        .query_selector("[data-rep-title]")
+        .ok()
+        .flatten()
         .and_then(|el| el.dyn_into::<HtmlInputElement>().ok())
         .map(|i| i.value().trim().to_string())
         .unwrap_or_default();
@@ -197,40 +204,65 @@ fn submit_report(root: &Element, document: &Document) {
         return;
     }
 
-    let rep_type = root.query_selector("[data-rep-type]").ok().flatten()
+    let rep_type = root
+        .query_selector("[data-rep-type]")
+        .ok()
+        .flatten()
         .and_then(|el| el.dyn_into::<HtmlSelectElement>().ok())
         .map(|s| s.value())
         .unwrap_or_else(|| "consultation".into());
 
-    let date = root.query_selector("[data-rep-date]").ok().flatten()
+    let date = root
+        .query_selector("[data-rep-date]")
+        .ok()
+        .flatten()
         .and_then(|el| el.dyn_into::<HtmlInputElement>().ok())
         .map(|i| i.value().trim().to_string())
         .unwrap_or_default();
 
     let default_date = chrono::Utc::now().format("%Y-%m-%d").to_string();
-    let effective_date = if date.is_empty() { &default_date } else { &date };
+    let effective_date = if date.is_empty() {
+        &default_date
+    } else {
+        &date
+    };
 
-    let author = root.query_selector("[data-rep-author]").ok().flatten()
+    let author = root
+        .query_selector("[data-rep-author]")
+        .ok()
+        .flatten()
         .and_then(|el| el.dyn_into::<HtmlInputElement>().ok())
         .map(|i| i.value().trim().to_string())
         .filter(|s| !s.is_empty());
 
-    let facility = root.query_selector("[data-rep-facility]").ok().flatten()
+    let facility = root
+        .query_selector("[data-rep-facility]")
+        .ok()
+        .flatten()
         .and_then(|el| el.dyn_into::<HtmlInputElement>().ok())
         .map(|i| i.value().trim().to_string())
         .filter(|s| !s.is_empty());
 
-    let sensitivity = root.query_selector("[data-rep-sensitivity]").ok().flatten()
+    let sensitivity = root
+        .query_selector("[data-rep-sensitivity]")
+        .ok()
+        .flatten()
         .and_then(|el| el.dyn_into::<HtmlSelectElement>().ok())
         .map(|s| s.value())
         .unwrap_or_else(|| "restricted".into());
 
-    let findings = root.query_selector("[data-rep-findings]").ok().flatten()
+    let findings = root
+        .query_selector("[data-rep-findings]")
+        .ok()
+        .flatten()
         .and_then(|el| el.dyn_into::<HtmlTextAreaElement>().ok())
         .map(|t| t.value().trim().to_string())
         .filter(|s| !s.is_empty());
 
-    let recommendations = root.query_selector("[data-rep-recommendations]").ok().flatten()
+    let recommendations = root
+        .query_selector("[data-rep-recommendations]")
+        .ok()
+        .flatten()
         .and_then(|el| el.dyn_into::<HtmlTextAreaElement>().ok())
         .map(|t| t.value().trim().to_string())
         .filter(|s| !s.is_empty());
@@ -259,22 +291,38 @@ fn submit_report(root: &Element, document: &Document) {
             title: rec_title,
             id: None,
             fields,
-        }).await {
+        })
+        .await
+        {
             Ok(resp) if resp.ok => {
-                if let Some(st) = root_async.query_selector("[data-rep-form-status]").ok().flatten() {
+                if let Some(st) = root_async
+                    .query_selector("[data-rep-form-status]")
+                    .ok()
+                    .flatten()
+                {
                     st.set_text_content(Some("Clinical report recorded successfully."));
                     st.set_attribute("data-state", "success").ok();
                 }
                 refresh_reports(&root_async, &doc_async);
             }
             Ok(resp) => {
-                if let Some(st) = root_async.query_selector("[data-rep-form-status]").ok().flatten() {
-                    st.set_text_content(Some(resp.diagnostic.as_deref().unwrap_or("Record was rejected.")));
+                if let Some(st) = root_async
+                    .query_selector("[data-rep-form-status]")
+                    .ok()
+                    .flatten()
+                {
+                    st.set_text_content(Some(
+                        resp.diagnostic.as_deref().unwrap_or("Record was rejected."),
+                    ));
                     st.set_attribute("data-state", "error").ok();
                 }
             }
             Err(e) => {
-                if let Some(st) = root_async.query_selector("[data-rep-form-status]").ok().flatten() {
+                if let Some(st) = root_async
+                    .query_selector("[data-rep-form-status]")
+                    .ok()
+                    .flatten()
+                {
                     st.set_text_content(Some(&e));
                     st.set_attribute("data-state", "error").ok();
                 }
@@ -294,20 +342,34 @@ fn refresh_reports(root: &Element, document: &Document) {
             family: "health_report".into(),
             query: String::new(),
             kind: String::new(),
-        }).await {
+        })
+        .await
+        {
             Ok(resp) if resp.ok => {
                 let records = records_from_payload("health_report", &resp.data);
                 let items = project_reports(&records);
                 render_reports_view(&root_async, &doc_async, &items, &records);
             }
             Ok(resp) => {
-                if let Some(status) = root_async.query_selector("[data-rep-list-status]").ok().flatten() {
-                    status.set_text_content(Some(resp.diagnostic.as_deref().unwrap_or("Failed to query clinical reports.")));
+                if let Some(status) = root_async
+                    .query_selector("[data-rep-list-status]")
+                    .ok()
+                    .flatten()
+                {
+                    status.set_text_content(Some(
+                        resp.diagnostic
+                            .as_deref()
+                            .unwrap_or("Failed to query clinical reports."),
+                    ));
                     status.set_attribute("data-state", "error").ok();
                 }
             }
             Err(e) => {
-                if let Some(status) = root_async.query_selector("[data-rep-list-status]").ok().flatten() {
+                if let Some(status) = root_async
+                    .query_selector("[data-rep-list-status]")
+                    .ok()
+                    .flatten()
+                {
                     status.set_text_content(Some(&e));
                     status.set_attribute("data-state", "error").ok();
                 }
@@ -316,39 +378,81 @@ fn refresh_reports(root: &Element, document: &Document) {
     });
 }
 
-fn render_reports_view(root: &Element, document: &Document, items: &[ReportItem], all_records: &[HealthRecord]) {
+fn render_reports_view(
+    root: &Element,
+    document: &Document,
+    items: &[ReportItem],
+    all_records: &[HealthRecord],
+) {
     let all_count = items.len();
-    let consults_count = items.iter().filter(|r| r.report_type == ReportType::Consultation).count();
-    let diag_count = items.iter().filter(|r| r.report_type == ReportType::Diagnostic).count();
-    let path_count = items.iter().filter(|r| r.report_type == ReportType::Pathology).count();
+    let consults_count = items
+        .iter()
+        .filter(|r| r.report_type == ReportType::Consultation)
+        .count();
+    let diag_count = items
+        .iter()
+        .filter(|r| r.report_type == ReportType::Diagnostic)
+        .count();
+    let path_count = items
+        .iter()
+        .filter(|r| r.report_type == ReportType::Pathology)
+        .count();
 
-    if let Some(el) = root.query_selector("[data-rep-count-all]").ok().flatten() { el.set_text_content(Some(&all_count.to_string())); }
-    if let Some(el) = root.query_selector("[data-rep-count-consults]").ok().flatten() { el.set_text_content(Some(&consults_count.to_string())); }
-    if let Some(el) = root.query_selector("[data-rep-count-diag]").ok().flatten() { el.set_text_content(Some(&diag_count.to_string())); }
-    if let Some(el) = root.query_selector("[data-rep-count-path]").ok().flatten() { el.set_text_content(Some(&path_count.to_string())); }
+    if let Some(el) = root.query_selector("[data-rep-count-all]").ok().flatten() {
+        el.set_text_content(Some(&all_count.to_string()));
+    }
+    if let Some(el) = root
+        .query_selector("[data-rep-count-consults]")
+        .ok()
+        .flatten()
+    {
+        el.set_text_content(Some(&consults_count.to_string()));
+    }
+    if let Some(el) = root.query_selector("[data-rep-count-diag]").ok().flatten() {
+        el.set_text_content(Some(&diag_count.to_string()));
+    }
+    if let Some(el) = root.query_selector("[data-rep-count-path]").ok().flatten() {
+        el.set_text_content(Some(&path_count.to_string()));
+    }
 
-    let active_tab = root.query_selector("[data-rep-tab][aria-selected='true']").ok().flatten()
+    let active_tab = root
+        .query_selector("[data-rep-tab][aria-selected='true']")
+        .ok()
+        .flatten()
         .and_then(|el| el.get_attribute("data-rep-tab"))
         .unwrap_or_else(|| "all".into());
 
     let filtered: Vec<&ReportItem> = match active_tab.as_str() {
-        "consultation" => items.iter().filter(|r| r.report_type == ReportType::Consultation).collect(),
-        "diagnostic" => items.iter().filter(|r| r.report_type == ReportType::Diagnostic).collect(),
-        "pathology" => items.iter().filter(|r| r.report_type == ReportType::Pathology).collect(),
+        "consultation" => items
+            .iter()
+            .filter(|r| r.report_type == ReportType::Consultation)
+            .collect(),
+        "diagnostic" => items
+            .iter()
+            .filter(|r| r.report_type == ReportType::Diagnostic)
+            .collect(),
+        "pathology" => items
+            .iter()
+            .filter(|r| r.report_type == ReportType::Pathology)
+            .collect(),
         _ => items.iter().collect(),
     };
 
-    let Some(list_container) = root.query_selector("[data-rep-list]").ok().flatten() else { return; };
+    let Some(list_container) = root.query_selector("[data-rep-list]").ok().flatten() else {
+        return;
+    };
     list_container.set_inner_html("");
 
     if filtered.is_empty() {
-        list_container.set_inner_html(r#"
+        list_container.set_inner_html(
+            r#"
           <div class="health-empty-state">
             <span>📋</span>
             <strong>No clinical reports match this category</strong>
             <small>Select 'All' to view all documented reports or record a new one.</small>
           </div>
-        "#);
+        "#,
+        );
     } else {
         for item in filtered {
             let card = document.create_element("article").unwrap();
@@ -411,11 +515,19 @@ fn render_reports_view(root: &Element, document: &Document, items: &[ReportItem]
                     };
                     let root_cb = root_insp.clone();
                     let doc_cb = doc_insp.clone();
-                    open_record_inspection_dialog(&doc_insp, &timeline_item, Box::new(move || {
-                        refresh_reports(&root_cb, &doc_cb);
-                    }));
+                    open_record_inspection_dialog(
+                        &doc_insp,
+                        &timeline_item,
+                        Box::new(move || {
+                            refresh_reports(&root_cb, &doc_cb);
+                        }),
+                    );
                 }) as Box<dyn FnMut(_)>);
-                btn.add_event_listener_with_callback("click", inspect_closure.as_ref().unchecked_ref()).ok();
+                btn.add_event_listener_with_callback(
+                    "click",
+                    inspect_closure.as_ref().unchecked_ref(),
+                )
+                .ok();
                 inspect_closure.forget();
             }
 
@@ -432,10 +544,15 @@ fn render_reports_view(root: &Element, document: &Document, items: &[ReportItem]
                 let items_copy = items.to_vec();
                 let recs_copy = all_records.to_vec();
                 let tab_closure = Closure::wrap(Box::new(move |e: MouseEvent| {
-                    if let Some(target) = e.current_target().and_then(|t| t.dyn_into::<Element>().ok()) {
+                    if let Some(target) = e
+                        .current_target()
+                        .and_then(|t| t.dyn_into::<Element>().ok())
+                    {
                         if let Ok(all_tabs) = root_tab.query_selector_all("[data-rep-tab]") {
                             for j in 0..all_tabs.length() {
-                                if let Some(t) = all_tabs.get(j).and_then(|n| n.dyn_into::<Element>().ok()) {
+                                if let Some(t) =
+                                    all_tabs.get(j).and_then(|n| n.dyn_into::<Element>().ok())
+                                {
                                     t.set_attribute("aria-selected", "false").ok();
                                 }
                             }
@@ -444,14 +561,17 @@ fn render_reports_view(root: &Element, document: &Document, items: &[ReportItem]
                         render_reports_view(&root_tab, &doc_tab, &items_copy, &recs_copy);
                     }
                 }) as Box<dyn FnMut(_)>);
-                tab.add_event_listener_with_callback("click", tab_closure.as_ref().unchecked_ref()).ok();
+                tab.add_event_listener_with_callback("click", tab_closure.as_ref().unchecked_ref())
+                    .ok();
                 tab_closure.forget();
             }
         }
     }
 
     if let Some(status) = root.query_selector("[data-rep-list-status]").ok().flatten() {
-        status.set_text_content(Some(&format!("{all_count} clinical report(s) loaded from local ledger.")));
+        status.set_text_content(Some(&format!(
+            "{all_count} clinical report(s) loaded from local ledger."
+        )));
         status.set_attribute("data-state", "success").ok();
     }
 }

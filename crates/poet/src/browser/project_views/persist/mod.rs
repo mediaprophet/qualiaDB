@@ -129,8 +129,6 @@ pub fn wrap(document: &Document, child: Element) -> Element {
     wrapper
 }
 
-
-
 mod analytics;
 mod imports;
 

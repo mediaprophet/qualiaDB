@@ -1,6 +1,6 @@
 //! Session specialist persistence surfaces.
 
-use super::{ledger, CopField, gbm_var_args, gray_ahash_args, hu_window_demo_args};
+use super::{gbm_var_args, gray_ahash_args, hu_window_demo_args, ledger, CopField};
 use web_sys::{Document, Element};
 
 pub fn build_finance_view(document: &Document) -> Element {

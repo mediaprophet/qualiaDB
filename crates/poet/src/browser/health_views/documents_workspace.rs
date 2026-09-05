@@ -4,7 +4,9 @@
 //! while explicitly communicating the honest limitation that binary PDF parsing
 //! and local OCR models require an external codec pipeline.
 
-use super::document_models::{build_document_payload, project_documents, DocumentItem, DocumentType};
+use super::document_models::{
+    build_document_payload, project_documents, DocumentItem, DocumentType,
+};
 use super::model::{records_from_payload, HealthRecord, TimelineItem};
 use super::record_inspection::open_record_inspection_dialog;
 use crate::browser::native_daemon::{
@@ -15,7 +17,9 @@ use crate::browser::native_daemon::{
 use crate::browser::surface_states;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
-use web_sys::{Document, Element, HtmlInputElement, HtmlSelectElement, HtmlTextAreaElement, MouseEvent};
+use web_sys::{
+    Document, Element, HtmlInputElement, HtmlSelectElement, HtmlTextAreaElement, MouseEvent,
+};
 
 pub fn build_documents_view(document: &Document) -> Element {
     surface_states::install(document);
@@ -175,7 +179,8 @@ fn wire_doc_events(root: &Element, document: &Document) {
         refresh_docs(&root_ref, &doc_ref);
     }) as Box<dyn FnMut(_)>);
     if let Some(btn) = root.query_selector("[data-doc-refresh]").ok().flatten() {
-        btn.add_event_listener_with_callback("click", refresh_closure.as_ref().unchecked_ref()).ok();
+        btn.add_event_listener_with_callback("click", refresh_closure.as_ref().unchecked_ref())
+            .ok();
         refresh_closure.forget();
     }
 
@@ -185,7 +190,8 @@ fn wire_doc_events(root: &Element, document: &Document) {
         submit_document(&root_save, &doc_save);
     }) as Box<dyn FnMut(_)>);
     if let Some(btn) = root.query_selector("[data-doc-save]").ok().flatten() {
-        btn.add_event_listener_with_callback("click", save_closure.as_ref().unchecked_ref()).ok();
+        btn.add_event_listener_with_callback("click", save_closure.as_ref().unchecked_ref())
+            .ok();
         save_closure.forget();
     }
 }
@@ -195,7 +201,10 @@ fn submit_document(root: &Element, document: &Document) {
         return;
     }
     let status_el = root.query_selector("[data-doc-form-status]").ok().flatten();
-    let title = root.query_selector("[data-doc-title]").ok().flatten()
+    let title = root
+        .query_selector("[data-doc-title]")
+        .ok()
+        .flatten()
         .and_then(|el| el.dyn_into::<HtmlInputElement>().ok())
         .map(|i| i.value().trim().to_string())
         .unwrap_or_default();
@@ -208,7 +217,10 @@ fn submit_document(root: &Element, document: &Document) {
         return;
     }
 
-    let text = root.query_selector("[data-doc-text]").ok().flatten()
+    let text = root
+        .query_selector("[data-doc-text]")
+        .ok()
+        .flatten()
         .and_then(|el| el.dyn_into::<HtmlTextAreaElement>().ok())
         .map(|t| t.value().trim().to_string())
         .unwrap_or_default();
@@ -221,35 +233,57 @@ fn submit_document(root: &Element, document: &Document) {
         return;
     }
 
-    let doc_type = root.query_selector("[data-doc-type]").ok().flatten()
+    let doc_type = root
+        .query_selector("[data-doc-type]")
+        .ok()
+        .flatten()
         .and_then(|el| el.dyn_into::<HtmlSelectElement>().ok())
         .map(|s| s.value())
         .unwrap_or_else(|| "discharge_summary".into());
 
-    let date = root.query_selector("[data-doc-date]").ok().flatten()
+    let date = root
+        .query_selector("[data-doc-date]")
+        .ok()
+        .flatten()
         .and_then(|el| el.dyn_into::<HtmlInputElement>().ok())
         .map(|i| i.value().trim().to_string())
         .unwrap_or_default();
 
     let default_date = chrono::Utc::now().format("%Y-%m-%d").to_string();
-    let effective_date = if date.is_empty() { &default_date } else { &date };
+    let effective_date = if date.is_empty() {
+        &default_date
+    } else {
+        &date
+    };
 
-    let author = root.query_selector("[data-doc-author]").ok().flatten()
+    let author = root
+        .query_selector("[data-doc-author]")
+        .ok()
+        .flatten()
         .and_then(|el| el.dyn_into::<HtmlInputElement>().ok())
         .map(|i| i.value().trim().to_string())
         .filter(|s| !s.is_empty());
 
-    let facility = root.query_selector("[data-doc-facility]").ok().flatten()
+    let facility = root
+        .query_selector("[data-doc-facility]")
+        .ok()
+        .flatten()
         .and_then(|el| el.dyn_into::<HtmlInputElement>().ok())
         .map(|i| i.value().trim().to_string())
         .filter(|s| !s.is_empty());
 
-    let sensitivity = root.query_selector("[data-doc-sensitivity]").ok().flatten()
+    let sensitivity = root
+        .query_selector("[data-doc-sensitivity]")
+        .ok()
+        .flatten()
         .and_then(|el| el.dyn_into::<HtmlSelectElement>().ok())
         .map(|s| s.value())
         .unwrap_or_else(|| "classified".into());
 
-    let run_nlp = root.query_selector("[data-doc-nlp]").ok().flatten()
+    let run_nlp = root
+        .query_selector("[data-doc-nlp]")
+        .ok()
+        .flatten()
         .and_then(|el| el.dyn_into::<HtmlInputElement>().ok())
         .map(|c| c.checked())
         .unwrap_or(true);
@@ -283,19 +317,30 @@ fn submit_document(root: &Element, document: &Document) {
             title: rec_title,
             id: None,
             fields,
-        }).await {
+        })
+        .await
+        {
             Ok(resp) if resp.ok => {
                 if run_nlp {
-                    if let Some(st) = root_async.query_selector("[data-doc-form-status]").ok().flatten() {
-                        st.set_text_content(Some("Document recorded. Running NLP and library ingestion…"));
+                    if let Some(st) = root_async
+                        .query_selector("[data-doc-form-status]")
+                        .ok()
+                        .flatten()
+                    {
+                        st.set_text_content(Some(
+                            "Document recorded. Running NLP and library ingestion…",
+                        ));
                         st.set_attribute("data-state", "working").ok();
                     }
-                    let _ = daemon_invoke("nlp.analyze", serde_json::Value::String(text_async.clone())).await;
+                    let _ =
+                        daemon_invoke("nlp.analyze", serde_json::Value::String(text_async.clone()))
+                            .await;
                     let _ = daemon_gazetteer(&text_async).await;
                     let _ = daemon_invoke(
                         "Document.ingest",
                         serde_json::json!({ "text": text_async, "uri": uri_async }),
-                    ).await;
+                    )
+                    .await;
                     let _ = daemon_library_ingest(NativeLibraryIngestRequest {
                         uri: uri_async,
                         media_type: "text/plain".into(),
@@ -308,23 +353,38 @@ fn submit_document(root: &Element, document: &Document) {
                         place_label: None,
                         lat: None,
                         lon: None,
-                    }).await;
+                    })
+                    .await;
                 }
 
-                if let Some(st) = root_async.query_selector("[data-doc-form-status]").ok().flatten() {
+                if let Some(st) = root_async
+                    .query_selector("[data-doc-form-status]")
+                    .ok()
+                    .flatten()
+                {
                     st.set_text_content(Some("Health document ingested successfully."));
                     st.set_attribute("data-state", "success").ok();
                 }
                 refresh_docs(&root_async, &doc_async);
             }
             Ok(resp) => {
-                if let Some(st) = root_async.query_selector("[data-doc-form-status]").ok().flatten() {
-                    st.set_text_content(Some(resp.diagnostic.as_deref().unwrap_or("Record was rejected.")));
+                if let Some(st) = root_async
+                    .query_selector("[data-doc-form-status]")
+                    .ok()
+                    .flatten()
+                {
+                    st.set_text_content(Some(
+                        resp.diagnostic.as_deref().unwrap_or("Record was rejected."),
+                    ));
                     st.set_attribute("data-state", "error").ok();
                 }
             }
             Err(e) => {
-                if let Some(st) = root_async.query_selector("[data-doc-form-status]").ok().flatten() {
+                if let Some(st) = root_async
+                    .query_selector("[data-doc-form-status]")
+                    .ok()
+                    .flatten()
+                {
                     st.set_text_content(Some(&e));
                     st.set_attribute("data-state", "error").ok();
                 }
@@ -344,20 +404,34 @@ fn refresh_docs(root: &Element, document: &Document) {
             family: "health_document".into(),
             query: String::new(),
             kind: String::new(),
-        }).await {
+        })
+        .await
+        {
             Ok(resp) if resp.ok => {
                 let records = records_from_payload("health_document", &resp.data);
                 let items = project_documents(&records);
                 render_docs_view(&root_async, &doc_async, &items, &records);
             }
             Ok(resp) => {
-                if let Some(status) = root_async.query_selector("[data-doc-list-status]").ok().flatten() {
-                    status.set_text_content(Some(resp.diagnostic.as_deref().unwrap_or("Failed to query documents.")));
+                if let Some(status) = root_async
+                    .query_selector("[data-doc-list-status]")
+                    .ok()
+                    .flatten()
+                {
+                    status.set_text_content(Some(
+                        resp.diagnostic
+                            .as_deref()
+                            .unwrap_or("Failed to query documents."),
+                    ));
                     status.set_attribute("data-state", "error").ok();
                 }
             }
             Err(e) => {
-                if let Some(status) = root_async.query_selector("[data-doc-list-status]").ok().flatten() {
+                if let Some(status) = root_async
+                    .query_selector("[data-doc-list-status]")
+                    .ok()
+                    .flatten()
+                {
                     status.set_text_content(Some(&e));
                     status.set_attribute("data-state", "error").ok();
                 }
@@ -366,39 +440,85 @@ fn refresh_docs(root: &Element, document: &Document) {
     });
 }
 
-fn render_docs_view(root: &Element, document: &Document, items: &[DocumentItem], all_records: &[HealthRecord]) {
+fn render_docs_view(
+    root: &Element,
+    document: &Document,
+    items: &[DocumentItem],
+    all_records: &[HealthRecord],
+) {
     let all_count = items.len();
-    let discharge_count = items.iter().filter(|d| d.doc_type == DocumentType::DischargeSummary).count();
-    let pathology_count = items.iter().filter(|d| d.doc_type == DocumentType::PathologyReport).count();
-    let notes_count = items.iter().filter(|d| d.doc_type == DocumentType::ClinicalNote).count();
+    let discharge_count = items
+        .iter()
+        .filter(|d| d.doc_type == DocumentType::DischargeSummary)
+        .count();
+    let pathology_count = items
+        .iter()
+        .filter(|d| d.doc_type == DocumentType::PathologyReport)
+        .count();
+    let notes_count = items
+        .iter()
+        .filter(|d| d.doc_type == DocumentType::ClinicalNote)
+        .count();
 
-    if let Some(el) = root.query_selector("[data-doc-count-all]").ok().flatten() { el.set_text_content(Some(&all_count.to_string())); }
-    if let Some(el) = root.query_selector("[data-doc-count-discharge]").ok().flatten() { el.set_text_content(Some(&discharge_count.to_string())); }
-    if let Some(el) = root.query_selector("[data-doc-count-pathology]").ok().flatten() { el.set_text_content(Some(&pathology_count.to_string())); }
-    if let Some(el) = root.query_selector("[data-doc-count-notes]").ok().flatten() { el.set_text_content(Some(&notes_count.to_string())); }
+    if let Some(el) = root.query_selector("[data-doc-count-all]").ok().flatten() {
+        el.set_text_content(Some(&all_count.to_string()));
+    }
+    if let Some(el) = root
+        .query_selector("[data-doc-count-discharge]")
+        .ok()
+        .flatten()
+    {
+        el.set_text_content(Some(&discharge_count.to_string()));
+    }
+    if let Some(el) = root
+        .query_selector("[data-doc-count-pathology]")
+        .ok()
+        .flatten()
+    {
+        el.set_text_content(Some(&pathology_count.to_string()));
+    }
+    if let Some(el) = root.query_selector("[data-doc-count-notes]").ok().flatten() {
+        el.set_text_content(Some(&notes_count.to_string()));
+    }
 
-    let active_tab = root.query_selector("[data-doc-tab][aria-selected='true']").ok().flatten()
+    let active_tab = root
+        .query_selector("[data-doc-tab][aria-selected='true']")
+        .ok()
+        .flatten()
         .and_then(|el| el.get_attribute("data-doc-tab"))
         .unwrap_or_else(|| "all".into());
 
     let filtered: Vec<&DocumentItem> = match active_tab.as_str() {
-        "discharge_summary" => items.iter().filter(|d| d.doc_type == DocumentType::DischargeSummary).collect(),
-        "pathology_report" => items.iter().filter(|d| d.doc_type == DocumentType::PathologyReport).collect(),
-        "clinical_note" => items.iter().filter(|d| d.doc_type == DocumentType::ClinicalNote).collect(),
+        "discharge_summary" => items
+            .iter()
+            .filter(|d| d.doc_type == DocumentType::DischargeSummary)
+            .collect(),
+        "pathology_report" => items
+            .iter()
+            .filter(|d| d.doc_type == DocumentType::PathologyReport)
+            .collect(),
+        "clinical_note" => items
+            .iter()
+            .filter(|d| d.doc_type == DocumentType::ClinicalNote)
+            .collect(),
         _ => items.iter().collect(),
     };
 
-    let Some(list_container) = root.query_selector("[data-doc-list]").ok().flatten() else { return; };
+    let Some(list_container) = root.query_selector("[data-doc-list]").ok().flatten() else {
+        return;
+    };
     list_container.set_inner_html("");
 
     if filtered.is_empty() {
-        list_container.set_inner_html(r#"
+        list_container.set_inner_html(
+            r#"
           <div class="health-empty-state">
             <span>📄</span>
             <strong>No documents match this category</strong>
             <small>Select 'All' to view all ingested documents or add a new record.</small>
           </div>
-        "#);
+        "#,
+        );
     } else {
         for item in filtered {
             let card = document.create_element("article").unwrap();
@@ -451,11 +571,19 @@ fn render_docs_view(root: &Element, document: &Document, items: &[DocumentItem],
                     };
                     let root_cb = root_insp.clone();
                     let doc_cb = doc_insp.clone();
-                    open_record_inspection_dialog(&doc_insp, &timeline_item, Box::new(move || {
-                        refresh_docs(&root_cb, &doc_cb);
-                    }));
+                    open_record_inspection_dialog(
+                        &doc_insp,
+                        &timeline_item,
+                        Box::new(move || {
+                            refresh_docs(&root_cb, &doc_cb);
+                        }),
+                    );
                 }) as Box<dyn FnMut(_)>);
-                btn.add_event_listener_with_callback("click", inspect_closure.as_ref().unchecked_ref()).ok();
+                btn.add_event_listener_with_callback(
+                    "click",
+                    inspect_closure.as_ref().unchecked_ref(),
+                )
+                .ok();
                 inspect_closure.forget();
             }
 
@@ -472,10 +600,15 @@ fn render_docs_view(root: &Element, document: &Document, items: &[DocumentItem],
                 let items_copy = items.to_vec();
                 let recs_copy = all_records.to_vec();
                 let tab_closure = Closure::wrap(Box::new(move |e: MouseEvent| {
-                    if let Some(target) = e.current_target().and_then(|t| t.dyn_into::<Element>().ok()) {
+                    if let Some(target) = e
+                        .current_target()
+                        .and_then(|t| t.dyn_into::<Element>().ok())
+                    {
                         if let Ok(all_tabs) = root_tab.query_selector_all("[data-doc-tab]") {
                             for j in 0..all_tabs.length() {
-                                if let Some(t) = all_tabs.get(j).and_then(|n| n.dyn_into::<Element>().ok()) {
+                                if let Some(t) =
+                                    all_tabs.get(j).and_then(|n| n.dyn_into::<Element>().ok())
+                                {
                                     t.set_attribute("aria-selected", "false").ok();
                                 }
                             }
@@ -484,14 +617,17 @@ fn render_docs_view(root: &Element, document: &Document, items: &[DocumentItem],
                         render_docs_view(&root_tab, &doc_tab, &items_copy, &recs_copy);
                     }
                 }) as Box<dyn FnMut(_)>);
-                tab.add_event_listener_with_callback("click", tab_closure.as_ref().unchecked_ref()).ok();
+                tab.add_event_listener_with_callback("click", tab_closure.as_ref().unchecked_ref())
+                    .ok();
                 tab_closure.forget();
             }
         }
     }
 
     if let Some(status) = root.query_selector("[data-doc-list-status]").ok().flatten() {
-        status.set_text_content(Some(&format!("{all_count} document(s) loaded from local ledger.")));
+        status.set_text_content(Some(&format!(
+            "{all_count} document(s) loaded from local ledger."
+        )));
         status.set_attribute("data-state", "success").ok();
     }
 }

@@ -1,0 +1,79 @@
+/* === Mounted Workspace Layout & Responsive Overrides === */
+.main-workspace {
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 180px minmax(0, 1fr) 280px;
+  grid-template-rows: minmax(0, 1fr);
+  grid-template-areas: "toolbox canvas telemetry";
+}
+.main-workspace.dock-layout-right {
+  grid-template-columns: minmax(0, 1fr) 280px 180px;
+  grid-template-areas: "canvas telemetry toolbox";
+}
+.main-workspace.dock-layout-top {
+  grid-template-columns: minmax(0, 1fr) 280px;
+  grid-template-rows: 52px minmax(0, 1fr);
+  grid-template-areas: "toolbox toolbox" "canvas telemetry";
+}
+.main-workspace.dock-layout-bottom {
+  grid-template-columns: minmax(0, 1fr) 280px;
+  grid-template-rows: minmax(0, 1fr) 52px;
+  grid-template-areas: "canvas telemetry" "toolbox toolbox";
+}
+.main-workspace > .toolbox-dock { grid-area: toolbox; width: auto; height: auto; order: initial; min-width: 0; min-height: 0; }
+.main-workspace > .canvas-viewport-container { grid-area: canvas; min-width: 0; min-height: 0; }
+.main-workspace > .right-dock { grid-area: telemetry; width: auto; min-width: 0; min-height: 0; }
+.main-workspace.dock-layout-top > .toolbox-dock,
+.main-workspace.dock-layout-bottom > .toolbox-dock {
+  width: auto; height: 52px; flex-direction: row; overflow-x: auto; overflow-y: hidden;
+}
+
+.canvas-control-bar { min-width: 0; overflow: visible !important; }
+.manifold-selector-group { min-width: 0; flex-shrink: 0; }
+.pager-desktops-list { min-width: max-content; }
+.canvas-title-box, .top-control-pods-bar { flex: 0 0 auto; overflow: visible; }
+
+.container-port {
+  appearance: none; padding: 0; line-height: 1; font: inherit;
+}
+.container-port:focus-visible,
+.radial-sector-group:focus-visible {
+  outline: 2px solid var(--accent-cyan); outline-offset: 3px;
+}
+.wire-deontic { stroke: var(--accent-rose); stroke-dasharray: 2 5; }
+.wire-epistemic { stroke: var(--accent-emerald); stroke-dasharray: 9 3; }
+.canvas-container-node.wire-source-active {
+  outline: 2px solid var(--accent-amber); outline-offset: 5px;
+  box-shadow: var(--shadow-lg), 0 0 22px rgba(255, 184, 52, 0.42);
+}
+
+@media (max-width: 1100px) {
+  .main-workspace,
+  .main-workspace.dock-layout-right {
+    grid-template-columns: 156px minmax(0, 1fr);
+    grid-template-areas: "toolbox canvas";
+  }
+  .main-workspace.dock-layout-right { grid-template-columns: minmax(0, 1fr) 156px; grid-template-areas: "canvas toolbox"; }
+  .main-workspace.dock-layout-top,
+  .main-workspace.dock-layout-bottom { grid-template-columns: minmax(0, 1fr); }
+  .main-workspace.dock-layout-top { grid-template-areas: "toolbox" "canvas"; }
+  .main-workspace.dock-layout-bottom { grid-template-areas: "canvas" "toolbox"; }
+  .right-dock { display: none; }
+  .canvas-title-box { display: none; }
+}
+
+@media (max-width: 720px) {
+  .canvas-control-bar { gap: 6px; padding: 0 6px; }
+  .top-control-pods-bar { margin-left: 0; }
+  .pod-label, .pod-chevron { display: none; }
+  .top-pod-btn { padding: 4px 7px; }
+  .main-workspace,
+  .main-workspace.dock-layout-right { grid-template-columns: 58px minmax(0, 1fr); grid-template-areas: "toolbox canvas"; }
+  .main-workspace.dock-layout-right { grid-template-columns: minmax(0, 1fr) 58px; grid-template-areas: "canvas toolbox"; }
+  .dock-family-label, .dock-family-chevron, .dock-quick-grid, .dock-master-header > span { display: none; }
+  .dock-family-header { justify-content: center; }
+  .dock-family-children { justify-content: center; padding: 3px; }
+  .toolbox-flyout { left: 62px; width: min(320px, calc(100vw - 72px)); }
+  .fiduciary-badge, .version-badge { display: none; }
+}
+

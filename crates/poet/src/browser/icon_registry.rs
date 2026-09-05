@@ -571,15 +571,21 @@ pub fn icon_char_fast(id_hash: u64) -> char {
     }
 }
 
-/// Convenient glyph lookup by string ID.
+/// Convenient glyph lookup by string ID (session overlay, then static table).
 #[inline]
 pub fn icon_char(id: &str) -> char {
+    if let Some(session) = super::icon_session::session_icon(id) {
+        return session.pua;
+    }
     icon_char_fast(q_hash(id))
 }
 
 /// Retrieve the standard Unicode fallback character (e.g. for non-PUA or Solid exports).
 #[inline]
 pub fn icon_fallback(id: &str) -> char {
+    if let Some(session) = super::icon_session::session_icon(id) {
+        return session.unicode_fallback;
+    }
     match icon_entry(id) {
         Some(entry) => entry.unicode_fallback,
         None => '▫',
@@ -587,11 +593,13 @@ pub fn icon_fallback(id: &str) -> char {
 }
 
 /// Retrieve the ASCII/semantic label for screen readers or plaintext logs.
-#[inline]
-pub fn icon_label(id: &str) -> &'static str {
+pub fn icon_label(id: &str) -> String {
+    if let Some(session) = super::icon_session::session_icon(id) {
+        return session.ascii_label;
+    }
     match icon_entry(id) {
-        Some(entry) => entry.ascii_label,
-        None => "[Icon]",
+        Some(entry) => entry.ascii_label.to_string(),
+        None => "[Icon]".to_string(),
     }
 }
 
@@ -601,26 +609,21 @@ pub fn icon_label(id: &str) -> &'static str {
 /// - Tier 3: SVG identifier / class name
 /// - Tier 4: Plaintext ASCII label
 pub fn format_degraded(id: &str, tier: u8) -> String {
-    let entry = icon_entry(id);
     match tier {
-        1 => entry
-            .map(|e| e.pua.to_string())
-            .unwrap_or_else(|| "?".to_string()),
-        2 => entry
-            .map(|e| e.unicode_fallback.to_string())
-            .unwrap_or_else(|| "▫".to_string()),
+        1 => icon_char(id).to_string(),
+        2 => icon_fallback(id).to_string(),
         3 => format!("wi wi-{}", id),
-        _ => entry
-            .map(|e| format!("[{}]", e.ascii_label))
-            .unwrap_or_else(|| format!("[{}]", id)),
+        _ => format!(
+            "[{}]",
+            icon_label(id).trim_matches(|c| c == '[' || c == ']')
+        ),
     }
 }
 
 /// Generates an accessible HTML icon span with `.wi` classes and aria attributes.
 pub fn icon_span(id: &str, state: IconState, size: IconSize) -> String {
-    let entry = icon_entry(id);
-    let glyph = entry.map(|e| e.pua).unwrap_or('?');
-    let label = entry.map(|e| e.ascii_label).unwrap_or(id);
+    let glyph = icon_char(id);
+    let label = icon_label(id);
     let state_class = state.css_class_suffix();
     let size_class = size.css_class();
 
@@ -690,6 +693,23 @@ mod tests {
         assert_eq!(icon_label("nquin"), "NQuin");
         assert_eq!(icon_char("tensor-10d"), '\u{E002}');
         assert_eq!(icon_char("unknown_id_xyz"), '?');
+    }
+
+    #[test]
+    fn session_overlay_wins_for_custom_id() {
+        super::super::icon_session::clear_session_icons();
+        let pua = super::super::icon_session::register_session_icon(
+            "session-star",
+            '★',
+            "Star",
+            IconCategory::Toolbox,
+        )
+        .expect("register");
+        assert_eq!(icon_char("session-star"), pua);
+        assert_eq!(icon_fallback("session-star"), '★');
+        assert_eq!(icon_label("session-star"), "Star");
+        assert_eq!(icon_char("nquin"), '\u{E001}');
+        super::super::icon_session::clear_session_icons();
     }
 
     #[test]

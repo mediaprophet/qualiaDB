@@ -1,7 +1,7 @@
 //! Data models, projection, and validation logic for conditions and medications.
 
-use serde::{Deserialize, Serialize};
 use super::model::HealthRecord;
+use serde::{Deserialize, Serialize};
 
 /// Status of a diagnosed condition.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -72,13 +72,20 @@ pub fn project_conditions(records: &[HealthRecord]) -> Vec<ConditionItem> {
         .iter()
         .filter(|r| r.family == "health_condition")
         .map(|r| {
-            let name = r.field_text("name").or_else(|| r.field_text("code")).unwrap_or_else(|| r.title.clone());
+            let name = r
+                .field_text("name")
+                .or_else(|| r.field_text("code"))
+                .unwrap_or_else(|| r.title.clone());
             let status = ConditionStatus::parse(&r.field_text("status").unwrap_or_default());
-            let onset_date = r.field_text("onset_date").or_else(|| r.field_text("occurred_at"));
+            let onset_date = r
+                .field_text("onset_date")
+                .or_else(|| r.field_text("occurred_at"));
             let resolved_date = r.field_text("resolved_date");
             let clinical_code = r.field_text("clinical_code");
             let notes = r.field_text("notes");
-            let sensitivity = r.field_text("sensitivity").unwrap_or_else(|| "classified".into());
+            let sensitivity = r
+                .field_text("sensitivity")
+                .unwrap_or_else(|| "classified".into());
             ConditionItem {
                 record: r.clone(),
                 name,
@@ -106,20 +113,44 @@ pub fn build_condition_payload(
     let title = name.trim().to_string();
     let mut fields = serde_json::Map::new();
     fields.insert("name".into(), serde_json::Value::String(title.clone()));
-    fields.insert("code".into(), serde_json::Value::String(clinical_code.unwrap_or(name).trim().to_string()));
-    fields.insert("status".into(), serde_json::Value::String(status.trim().to_lowercase()));
-    fields.insert("onset_date".into(), serde_json::Value::String(onset_date.trim().to_string()));
-    fields.insert("occurred_at".into(), serde_json::Value::String(onset_date.trim().to_string()));
+    fields.insert(
+        "code".into(),
+        serde_json::Value::String(clinical_code.unwrap_or(name).trim().to_string()),
+    );
+    fields.insert(
+        "status".into(),
+        serde_json::Value::String(status.trim().to_lowercase()),
+    );
+    fields.insert(
+        "onset_date".into(),
+        serde_json::Value::String(onset_date.trim().to_string()),
+    );
+    fields.insert(
+        "occurred_at".into(),
+        serde_json::Value::String(onset_date.trim().to_string()),
+    );
     if let Some(res) = resolved_date.filter(|s| !s.trim().is_empty()) {
-        fields.insert("resolved_date".into(), serde_json::Value::String(res.trim().to_string()));
+        fields.insert(
+            "resolved_date".into(),
+            serde_json::Value::String(res.trim().to_string()),
+        );
     }
     if let Some(code) = clinical_code.filter(|s| !s.trim().is_empty()) {
-        fields.insert("clinical_code".into(), serde_json::Value::String(code.trim().to_string()));
+        fields.insert(
+            "clinical_code".into(),
+            serde_json::Value::String(code.trim().to_string()),
+        );
     }
     if let Some(n) = notes.filter(|s| !s.trim().is_empty()) {
-        fields.insert("notes".into(), serde_json::Value::String(n.trim().to_string()));
+        fields.insert(
+            "notes".into(),
+            serde_json::Value::String(n.trim().to_string()),
+        );
     }
-    fields.insert("sensitivity".into(), serde_json::Value::String(sensitivity.trim().to_string()));
+    fields.insert(
+        "sensitivity".into(),
+        serde_json::Value::String(sensitivity.trim().to_string()),
+    );
 
     ("health_condition".into(), title, fields)
 }
@@ -194,12 +225,19 @@ pub fn project_medications(records: &[HealthRecord]) -> Vec<MedicationItem> {
             let name = r.title.clone();
             let dose = r.field_text("dose").unwrap_or_default();
             let unit = r.field_text("unit").unwrap_or_else(|| "mg".into());
-            let schedule = r.field_text("schedule").or_else(|| r.field_text("frequency")).unwrap_or_else(|| "daily".into());
+            let schedule = r
+                .field_text("schedule")
+                .or_else(|| r.field_text("frequency"))
+                .unwrap_or_else(|| "daily".into());
             let status = MedicationStatus::parse(&r.field_text("status").unwrap_or_default());
-            let started_at = r.field_text("started_at").or_else(|| r.field_text("occurred_at"));
+            let started_at = r
+                .field_text("started_at")
+                .or_else(|| r.field_text("occurred_at"));
             let stopped_at = r.field_text("stopped_at");
             let indication = r.field_text("indication");
-            let sensitivity = r.field_text("sensitivity").unwrap_or_else(|| "classified".into());
+            let sensitivity = r
+                .field_text("sensitivity")
+                .unwrap_or_else(|| "classified".into());
             MedicationItem {
                 record: r.clone(),
                 name,
@@ -231,19 +269,46 @@ pub fn build_medication_payload(
     let title = name.trim().to_string();
     let mut fields = serde_json::Map::new();
     fields.insert("name".into(), serde_json::Value::String(title.clone()));
-    fields.insert("dose".into(), serde_json::Value::String(dose.trim().to_string()));
-    fields.insert("unit".into(), serde_json::Value::String(unit.trim().to_string()));
-    fields.insert("schedule".into(), serde_json::Value::String(schedule.trim().to_string()));
-    fields.insert("status".into(), serde_json::Value::String(status.trim().to_lowercase()));
-    fields.insert("started_at".into(), serde_json::Value::String(started_at.trim().to_string()));
-    fields.insert("occurred_at".into(), serde_json::Value::String(started_at.trim().to_string()));
+    fields.insert(
+        "dose".into(),
+        serde_json::Value::String(dose.trim().to_string()),
+    );
+    fields.insert(
+        "unit".into(),
+        serde_json::Value::String(unit.trim().to_string()),
+    );
+    fields.insert(
+        "schedule".into(),
+        serde_json::Value::String(schedule.trim().to_string()),
+    );
+    fields.insert(
+        "status".into(),
+        serde_json::Value::String(status.trim().to_lowercase()),
+    );
+    fields.insert(
+        "started_at".into(),
+        serde_json::Value::String(started_at.trim().to_string()),
+    );
+    fields.insert(
+        "occurred_at".into(),
+        serde_json::Value::String(started_at.trim().to_string()),
+    );
     if let Some(stop) = stopped_at.filter(|s| !s.trim().is_empty()) {
-        fields.insert("stopped_at".into(), serde_json::Value::String(stop.trim().to_string()));
+        fields.insert(
+            "stopped_at".into(),
+            serde_json::Value::String(stop.trim().to_string()),
+        );
     }
     if let Some(ind) = indication.filter(|s| !s.trim().is_empty()) {
-        fields.insert("indication".into(), serde_json::Value::String(ind.trim().to_string()));
+        fields.insert(
+            "indication".into(),
+            serde_json::Value::String(ind.trim().to_string()),
+        );
     }
-    fields.insert("sensitivity".into(), serde_json::Value::String(sensitivity.trim().to_string()));
+    fields.insert(
+        "sensitivity".into(),
+        serde_json::Value::String(sensitivity.trim().to_string()),
+    );
 
     ("health_medication".into(), title, fields)
 }
@@ -312,7 +377,10 @@ mod tests {
         let items = project_conditions(&records);
         assert_eq!(items.len(), 2);
 
-        let active = items.iter().find(|c| c.name == "Essential Hypertension").unwrap();
+        let active = items
+            .iter()
+            .find(|c| c.name == "Essential Hypertension")
+            .unwrap();
         assert_eq!(active.status, ConditionStatus::Active);
         assert!(active.status.is_active());
         assert_eq!(active.clinical_code.as_deref(), Some("SNOMED: 59621000"));

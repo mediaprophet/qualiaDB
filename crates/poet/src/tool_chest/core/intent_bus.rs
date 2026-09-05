@@ -188,7 +188,7 @@ pub struct Provenance {
     pub intent_counter: u64,
     /// Optional capability scope required to execute this intent.
     ///
-    /// E.g. `"graph:read"`, `"aura:validate"`, `"pulse:publish"`.
+    /// Live `Capability.method` when the intent hits the host (e.g. `GraphDatabase.sparql`).
     pub capability_scope: Option<String>,
 }
 
@@ -447,7 +447,7 @@ mod tests {
             emitter_did: "did:qualia:timothy_charles_holborn".into(),
             component_label: "annotation_tool".into(),
             intent_counter: 42,
-            capability_scope: Some("graph:read".into()),
+            capability_scope: Some("GraphDatabase.sparql".into()),
         });
 
         let prov = p.provenance.as_ref().unwrap();

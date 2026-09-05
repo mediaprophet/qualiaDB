@@ -1,0 +1,29 @@
+@prefix q42: <https://ns.webcivics.net/> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+# Valid: container on an open volume with 1:1 twins.
+q42:vol1 a q42:Volume ;
+    q42:state "open" ;
+    q42:openedVia "GraphDatabase.volume_open" ;
+    q42:committedVia "GraphDatabase.volume_commit" .
+
+q42:lay1 a q42:Layout .
+q42:stg1 a q42:Stage .
+q42:tim1 a q42:Timeline ;
+    q42:beat "dwell" .
+
+q42:doc1 a q42:Container ;
+    q42:containerType "graph" ;
+    q42:backedBy q42:vol1 ;
+    q42:layout q42:lay1 ;
+    q42:stage q42:stg1 ;
+    q42:timeline q42:tim1 ;
+    q42:openedVia "GraphDatabase.sparql" .
+
+q42:man1 a q42:Manifold ;
+    q42:nests q42:doc1 .
+
+q42:lnk1 a q42:Link ;
+    q42:linkFrom q42:doc1 ;
+    q42:linkTo q42:man1 ;
+    q42:linkType "q42:nests" .

@@ -82,10 +82,7 @@ pub const PURPOSE_OPTIONS: &[(&str, &str)] = &[
         "Emergency medical assessment",
         "Emergency medical assessment",
     ),
-    (
-        "Care team coordination",
-        "Care team coordination",
-    ),
+    ("Care team coordination", "Care team coordination"),
     (
         "Personal health record audit & export",
         "Personal health record audit & export",
@@ -142,18 +139,39 @@ pub fn build_consent_grant_payload(
     let expires_at_ts = now_timestamp + duration_seconds;
     let expires_dt = chrono::DateTime::from_timestamp(expires_at_ts, 0)
         .unwrap_or_else(|| chrono::Utc::now() + chrono::Duration::seconds(duration_seconds));
-    let now_dt = chrono::DateTime::from_timestamp(now_timestamp, 0)
-        .unwrap_or_else(chrono::Utc::now);
+    let now_dt =
+        chrono::DateTime::from_timestamp(now_timestamp, 0).unwrap_or_else(chrono::Utc::now);
 
     let title = format!("Disclosure grant · {recipient_label}");
     let mut fields = serde_json::Map::new();
-    fields.insert("share_to".into(), serde_json::Value::String(recipient_did.trim().to_string()));
-    fields.insert("recipient_label".into(), serde_json::Value::String(recipient_label.trim().to_string()));
-    fields.insert("purpose".into(), serde_json::Value::String(purpose.trim().to_string()));
-    fields.insert("scope".into(), serde_json::Value::String(categories.join(",")));
-    fields.insert("expires_at".into(), serde_json::Value::String(expires_dt.to_rfc3339()));
-    fields.insert("occurred_at".into(), serde_json::Value::String(now_dt.to_rfc3339()));
-    fields.insert("sensitivity".into(), serde_json::Value::String(sensitivity.to_string()));
+    fields.insert(
+        "share_to".into(),
+        serde_json::Value::String(recipient_did.trim().to_string()),
+    );
+    fields.insert(
+        "recipient_label".into(),
+        serde_json::Value::String(recipient_label.trim().to_string()),
+    );
+    fields.insert(
+        "purpose".into(),
+        serde_json::Value::String(purpose.trim().to_string()),
+    );
+    fields.insert(
+        "scope".into(),
+        serde_json::Value::String(categories.join(",")),
+    );
+    fields.insert(
+        "expires_at".into(),
+        serde_json::Value::String(expires_dt.to_rfc3339()),
+    );
+    fields.insert(
+        "occurred_at".into(),
+        serde_json::Value::String(now_dt.to_rfc3339()),
+    );
+    fields.insert(
+        "sensitivity".into(),
+        serde_json::Value::String(sensitivity.to_string()),
+    );
 
     ("health_share".into(), title, fields)
 }
@@ -212,7 +230,10 @@ mod tests {
 
         assert_eq!(family, "health_share");
         assert_eq!(title, "Disclosure grant · Dr. Sarah Chen");
-        assert_eq!(fields.get("share_to").unwrap(), "did:q42:clinician:sarah-chen");
+        assert_eq!(
+            fields.get("share_to").unwrap(),
+            "did:q42:clinician:sarah-chen"
+        );
         assert_eq!(fields.get("scope").unwrap(), "vitals,medications");
         assert_eq!(fields.get("sensitivity").unwrap(), "restricted");
 

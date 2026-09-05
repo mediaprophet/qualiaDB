@@ -14,10 +14,10 @@ pub mod documents_workspace;
 pub mod medications_workspace;
 pub mod model;
 pub mod overview_workspace;
-pub mod reports_workspace;
 pub mod persist;
 pub mod persist_ledgers;
 pub mod record_inspection;
+pub mod reports_workspace;
 pub mod vitals_chart;
 
 pub mod authority_attestations;

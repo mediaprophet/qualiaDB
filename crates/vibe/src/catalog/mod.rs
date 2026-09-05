@@ -178,6 +178,8 @@ mod tests {
         assert!(is_known("Animation.evaluate_preset"));
         assert!(is_known("HID.poll"));
         assert!(is_known("GraphDatabase.sparql"));
+        assert!(is_known("GraphDatabase.volume_open"));
+        assert!(is_known("GraphDatabase.volume_commit"));
         assert!(is_known("DeonticLogic.evaluate"));
         assert!(is_known("N3Logic.evaluate"));
         assert!(is_known("GraphAuthoring.process"));

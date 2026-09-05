@@ -177,9 +177,23 @@ fn save_record(
     let membership_activation = (family == "social_request"
         && matches!(request_type, "channel-membership" | "channel-invite")
         && field(Some(&fields), "status") == "accepted")
-        .then(|| (field(Some(&fields), "scope").to_string(),
-            if request_type == "channel-invite" { field(Some(&fields), "to") } else { field(Some(&fields), "from") }.to_string(),
-            if request_type == "channel-invite" { field(Some(&fields), "from") } else { field(Some(&fields), "to") }.to_string()));
+        .then(|| {
+            (
+                field(Some(&fields), "scope").to_string(),
+                if request_type == "channel-invite" {
+                    field(Some(&fields), "to")
+                } else {
+                    field(Some(&fields), "from")
+                }
+                .to_string(),
+                if request_type == "channel-invite" {
+                    field(Some(&fields), "from")
+                } else {
+                    field(Some(&fields), "to")
+                }
+                .to_string(),
+            )
+        });
     let root = root.clone();
     let workspace = workspace.clone();
     let title = title.to_string();
@@ -481,7 +495,11 @@ fn valid_did(value: &str) -> bool {
     value.trim().starts_with("did:") && !value.bytes().any(|byte| byte.is_ascii_whitespace())
 }
 fn defaulted(value: &str, fallback: &str) -> String {
-    if value.trim().is_empty() { fallback.into() } else { value.trim().into() }
+    if value.trim().is_empty() {
+        fallback.into()
+    } else {
+        value.trim().into()
+    }
 }
 fn button(document: &Document, label: &str) -> Element {
     let button = document.create_element("button").unwrap();
@@ -490,5 +508,10 @@ fn button(document: &Document, label: &str) -> Element {
     button
 }
 fn style(element: &Element, css: &str) {
-    element.clone().dyn_into::<HtmlElement>().unwrap().style().set_css_text(css);
+    element
+        .clone()
+        .dyn_into::<HtmlElement>()
+        .unwrap()
+        .style()
+        .set_css_text(css);
 }

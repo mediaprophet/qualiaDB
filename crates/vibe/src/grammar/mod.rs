@@ -36,7 +36,9 @@ pub const DIAGNOSTIC_SCHEMA_JSON: &str = r#"{
     "span": { "type": ["array", "null"], "items": { "type": "integer" }, "minItems": 2, "maxItems": 2 },
     "message": { "type": ["string", "null"] },
     "suggested_fix": { "type": ["string", "null"] },
-    "shacl_violations": { "type": "array" }
+    "evidential": { "type": ["array", "null"] },
+    "shacl_violations": { "type": "array" },
+    "errors": { "type": "array" }
   }
 }"#;
 
@@ -59,5 +61,29 @@ mod tests {
         assert!(GBNF.contains("expr ::= tween"));
         assert!(!GBNF.contains("<<["));
         assert!(SOURCE_SCHEMA_JSON.contains("vibe-0.1"));
+        assert!(DIAGNOSTIC_SCHEMA_JSON.contains("\"errors\""));
+        assert!(DIAGNOSTIC_SCHEMA_JSON.contains("evidential"));
+    }
+
+    #[test]
+    fn ebnf_file_matches_vibescript_core_section_3() {
+        let core = include_str!("../../../../docs/manuals/standards/vibescript-core.md")
+            .replace("\r\n", "\n");
+        let marker = "```ebnf\n";
+        let start = core.find(marker).expect("core.md §3 fenced ebnf") + marker.len();
+        let rest = &core[start..];
+        let end = rest.find("```").expect("closing ebnf fence");
+        let from_spec = rest[..end].trim();
+        let from_file = EBNF
+            .replace("\r\n", "\n")
+            .lines()
+            .filter(|line| !line.starts_with("(* vibe-0.1"))
+            .collect::<Vec<_>>()
+            .join("\n");
+        let from_file = from_file.trim();
+        assert_eq!(
+            from_file, from_spec,
+            "crates/vibe/grammar/vibe-0.1.ebnf must stay a copy of vibescript-core.md §3"
+        );
     }
 }

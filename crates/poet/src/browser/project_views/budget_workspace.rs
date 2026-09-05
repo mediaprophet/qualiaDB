@@ -324,9 +324,7 @@ pub fn build_budget_view(document: &Document) -> Element {
                         "Audit JSON exported from the current daemon state.",
                     );
                 }
-                Err(error) => {
-                    surface_states::apply(&root, &status, FeedbackState::Error, &error)
-                }
+                Err(error) => surface_states::apply(&root, &status, FeedbackState::Error, &error),
             }
         });
     }) as Box<dyn FnMut(_)>);

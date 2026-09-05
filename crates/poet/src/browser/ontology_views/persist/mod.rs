@@ -84,11 +84,9 @@ fn input_value(root: &Element, selector: &str) -> String {
         .unwrap_or_default()
 }
 
-
-
+mod graphs;
 mod library;
 mod shapes;
-mod graphs;
 
 pub use graphs::*;
 pub use library::*;

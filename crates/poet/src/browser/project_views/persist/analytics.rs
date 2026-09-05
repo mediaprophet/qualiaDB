@@ -3,8 +3,10 @@ use web_sys::{Document, Element};
 use super::super::super::cop_records::{
     build_cop_panel, build_count_panel, build_family_panel, CopField, CopPanel,
 };
-use super::{ledger, wrap, ANALYTICS_FAMILIES, DASHBOARD_FAMILIES, EVENT_FIELDS, RESOURCE_FAMILIES,
-    TASK_COLUMNS, TASK_FIELDS};
+use super::{
+    ledger, wrap, ANALYTICS_FAMILIES, DASHBOARD_FAMILIES, EVENT_FIELDS, RESOURCE_FAMILIES,
+    TASK_COLUMNS, TASK_FIELDS,
+};
 
 pub fn build_dashboard_view(document: &Document) -> Element {
     let wrapper = wrap(

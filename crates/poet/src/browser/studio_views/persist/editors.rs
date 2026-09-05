@@ -1,7 +1,7 @@
 use web_sys::{Document, Element};
 
-use super::ledger;
 use super::super::super::cop_records::CopField;
+use super::ledger;
 
 pub fn build_scene_graph_view(document: &Document) -> Element {
     ledger(
@@ -214,4 +214,3 @@ pub fn build_desk_surface_view(document: &Document) -> Element {
         ],
     )
 }
-

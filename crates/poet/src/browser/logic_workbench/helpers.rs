@@ -208,16 +208,34 @@ pub(super) fn show_mock_results(document: &Document, results_id: &str, tool_name
         results.set_text_content(Some(
             "Unavailable: start the local QualiaDB daemon to evaluate this panel against the live graph.",
         ));
+        if capability.starts_with("Inference.") {
+            results.set_attribute("data-inference-trail", "1").ok();
+            let trail = crate::browser::diag_glow::build_inference_trail(
+                document,
+                "unavailable",
+                capability,
+            );
+            let _ = results.append_child(&trail);
+        }
         return;
     }
 
     results.set_attribute("data-honesty", "running").ok();
+    results.set_attribute("data-beat", "dwell").ok();
+    let inference = capability.starts_with("Inference.");
     results.set_text_content(Some(&format!(
         "Running {capability} against the live graph…"
     )));
+    if inference {
+        results.set_attribute("data-inference-trail", "1").ok();
+        let trail =
+            crate::browser::diag_glow::build_inference_trail(document, "running", capability);
+        let _ = results.append_child(&trail);
+    }
     let results_id = results_id.to_string();
+    let capability_owned = capability.to_string();
     wasm_bindgen_futures::spawn_local(async move {
-        let response = crate::browser::native_daemon::daemon_invoke(capability, args).await;
+        let response = crate::browser::native_daemon::daemon_invoke(&capability_owned, args).await;
         let Some(document) = web_sys::window().and_then(|window| window.document()) else {
             return;
         };
@@ -228,6 +246,15 @@ pub(super) fn show_mock_results(document: &Document, results_id: &str, tool_name
             Ok(response) if response.ok => {
                 results.set_attribute("data-honesty", "live").ok();
                 results.set_text_content(Some(&response.value));
+                if capability_owned.starts_with("Inference.") {
+                    results.set_attribute("data-inference-trail", "1").ok();
+                    let trail = crate::browser::diag_glow::build_inference_trail(
+                        &document,
+                        "live",
+                        &capability_owned,
+                    );
+                    let _ = results.append_child(&trail);
+                }
             }
             Ok(response) => {
                 results.set_attribute("data-honesty", "error").ok();
@@ -237,6 +264,14 @@ pub(super) fn show_mock_results(document: &Document, results_id: &str, tool_name
                         .as_deref()
                         .unwrap_or("Native evaluation failed without a diagnostic."),
                 ));
+                if capability_owned.starts_with("Inference.") {
+                    let trail = crate::browser::diag_glow::build_inference_trail(
+                        &document,
+                        "error",
+                        &capability_owned,
+                    );
+                    let _ = results.append_child(&trail);
+                }
             }
             Err(error) => {
                 results.set_attribute("data-honesty", "error").ok();

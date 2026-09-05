@@ -5,8 +5,10 @@ You are authoring **Vibe**, Qualia's typed graph/document language. Poet is the 
 ## Read first
 
 1. `docs/manuals/standards/vibescript-core.md` — grammar, types, effects, §12/§13 fixtures.
-2. `capability.invoke("CapabilityDiscovery.coverage", null)` — what is actually bound.
-3. `capability.invoke("CapabilityDiscovery.catalog", null)` — Turtle of live names.
+2. `docs/vibe/devrel-frozen-host.md` — diagnose JSON, E300/wasm honesty, human vs agent dialect.
+3. `crates/vibe/fixtures/FIXTURE_PACK.md` — graph / volume / diagnose loops.
+4. `capability.invoke("CapabilityDiscovery.coverage", null)` — what is actually bound.
+5. `capability.invoke("CapabilityDiscovery.catalog", null)` — Turtle of live names.
 
 ## Hard rules
 

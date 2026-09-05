@@ -12,10 +12,10 @@ use std::cell::Cell;
 use std::collections::BTreeMap;
 use std::rc::Rc;
 
-use wasm_bindgen::{JsCast, closure::Closure};
+use wasm_bindgen::{closure::Closure, JsCast};
 use web_sys::{Document, Element, Event, HtmlElement, HtmlTextAreaElement};
 
-use vibe::{Budget, Engine, Env, LocalHost, Program, Value, parse_program};
+use vibe::{parse_program, Budget, Engine, Env, LocalHost, Program, Value};
 
 // ---------------------------------------------------------------------------
 // Vibe UI AST & Representation

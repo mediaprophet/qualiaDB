@@ -1,0 +1,258 @@
+/* === VibeScript Console === */
+.vibe-console {
+  display: flex; flex-direction: column; gap: 8px; font-family: var(--font-mono); font-size: 11px;
+}
+.vibe-editor {
+  background: var(--canvas-bg); border: 1px solid var(--border-subtle); border-radius: var(--radius-xs);
+  padding: 10px; color: var(--accent-emerald); min-height: 120px; white-space: pre-wrap; line-height: 1.6;
+}
+.vibe-editor .vibe-keyword { color: var(--accent-cyan); font-weight: 700; }
+.vibe-editor .vibe-string { color: var(--accent-amber); }
+.vibe-editor .vibe-comment { color: var(--text-muted); font-style: italic; }
+.vibe-output {
+  background: var(--surface-panel); border: 1px solid var(--border-subtle); border-radius: var(--radius-xs);
+  padding: 10px; color: var(--text-secondary); min-height: 60px; max-height: 120px; overflow-y: auto;
+}
+.vibe-output .vibe-out-line { padding: 1px 0; }
+.vibe-toolbar {
+  display: flex; gap: 4px; padding-bottom: 4px; border-bottom: 1px solid var(--border-subtle);
+}
+.vibe-run-btn {
+  background: rgba(0, 242, 169, 0.15); border: 1px solid var(--accent-emerald); color: var(--accent-emerald);
+  font-size: 10px; font-weight: 700; padding: 3px 10px; border-radius: var(--radius-xs); cursor: pointer;
+  transition: var(--trans-fast);
+}
+.vibe-run-btn:hover { background: rgba(0, 242, 169, 0.25); box-shadow: 0 0 8px var(--accent-emerald-glow); }
+
+/* === GIS Map Container === */
+.gis-map-svg {
+  width: 100%; height: 100%; background: radial-gradient(ellipse at 40% 35%, #0a1520 0%, #050810 100%);
+  border-radius: var(--radius-xs);
+}
+.gis-layer-bar {
+  display: flex; gap: 3px; background: rgba(12, 16, 23, 0.85); border-radius: var(--radius-xs);
+  padding: 2px 4px; border: 1px solid var(--border-subtle); margin-bottom: 6px;
+}
+.gis-layer-btn {
+  background: transparent; border: 1px solid transparent; color: var(--text-muted); font-size: 9px;
+  padding: 2px 6px; border-radius: 2px; cursor: pointer; transition: var(--trans-fast);
+}
+.gis-layer-btn:hover, .gis-layer-btn.active { color: var(--accent-emerald); border-color: var(--accent-emerald); }
+.agent-pin-marker { cursor: pointer; }
+.agent-pin-marker:hover circle { r: 8; }
+
+/* === 3D Media Viewport === */
+.media-3d-viewport {
+  flex: 1; display: flex; align-items: center; justify-content: center;
+  background: radial-gradient(ellipse at 50% 50%, #0a1420 0%, #050810 100%);
+  border-radius: var(--radius-xs); position: relative; min-height: 200px;
+}
+.media-3d-placeholder { color: var(--text-muted); font-size: 12px; text-align: center; }
+.media-3d-cube {
+  width: 60px; height: 60px; border: 2px solid var(--accent-violet); border-radius: 4px;
+  margin: 10px auto; animation: spin3d 4s linear infinite;
+}
+@keyframes spin3d { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+/* === Ontology Tree View === */
+.ontology-tree { font-family: var(--font-mono); font-size: 11px; }
+.ontology-tree-node { padding: 2px 0; display: flex; align-items: center; gap: 4px; }
+.ontology-tree-node .ot-prefix { color: var(--accent-violet); font-weight: 700; }
+.ontology-tree-node .ot-class { color: var(--accent-cyan); }
+.ontology-tree-node .ot-prop { color: var(--accent-amber); }
+.ontology-tree-children { padding-left: 16px; border-left: 1px solid var(--border-subtle); margin-left: 6px; }
+
+/* Rights / Wallet cards */
+.cr-card { background: var(--glass-bg); border: 1px solid var(--border-subtle); border-radius: var(--radius-xs); padding: 10px 12px; }
+.cr-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+.cr-name { font-size: 12px; font-weight: 600; color: var(--text-primary); }
+.cr-meta { font-size: 10px; color: var(--text-muted); font-family: var(--font-mono); }
+
+/* Resize handle cursor */
+.resize-handle { cursor: nwse-resize; }
+
+/* Command palette */
+.cmd-palette-item.selected { background: rgba(0,255,170,0.08); border-left: 2px solid var(--accent-emerald); }
+.cmd-palette-item:hover { background: rgba(0,255,170,0.05); }
+
+/* === Exposé Overview === */
+.expose-card:hover {
+  border-color: var(--accent-cyan) !important;
+  box-shadow: 0 0 20px var(--accent-cyan-glow);
+  transform: translateY(-2px);
+}
+
+/* === Tool Notification === */
+.tool-notification {
+  animation: slideInRight 0.2s ease-out;
+}
+@keyframes slideInRight {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+/* === Wire Inspector === */
+.wire-inspector-btn {
+  flex: 1; padding: 4px 8px; background: var(--surface-panel);
+  border: 1px solid var(--border-subtle); border-radius: var(--radius-xs);
+  color: var(--text-secondary); font-size: 10px; cursor: pointer; transition: var(--trans-fast);
+}
+.wire-inspector-btn:hover {
+  border-color: var(--accent-cyan); color: var(--accent-cyan);
+  background: var(--surface-panel-elevated);
+}
+
+/* === Top Actions Shelf === */
+.top-actions-shelf {
+  display: flex; gap: 6px; margin-left: auto;
+}
+.top-action-btn {
+  display: flex; align-items: center; gap: 4px; padding: 4px 8px;
+  background: var(--surface-panel); border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm); color: var(--text-secondary); font-size: 11px;
+  cursor: pointer; transition: var(--trans-fast);
+}
+.top-action-btn:hover {
+  background: var(--surface-panel-elevated); border-color: var(--border-medium);
+  color: var(--text-primary);
+}
+
+/* === Search Workbench === */
+.search-workbench-btn {
+  background: rgba(0,255,170,0.08) !important;
+  border: 1px solid var(--accent-cyan) !important;
+  color: var(--accent-cyan) !important;
+  font-weight: 600;
+}
+.search-workbench-btn:hover {
+  background: rgba(0,255,170,0.18) !important;
+}
+.logic-workbench-btn {
+  background: rgba(139,92,246,0.08) !important;
+  border: 1px solid var(--accent-violet) !important;
+  color: var(--accent-violet) !important;
+  font-weight: 600;
+}
+.logic-workbench-btn:hover {
+  background: rgba(139,92,246,0.18) !important;
+}
+.logic-tool-tab:hover {
+  background: var(--surface-panel-elevated);
+}
+.logic-tool-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.search-mode-tab:hover {
+  background: var(--surface-panel-elevated);
+}
+.facet-chip:hover {
+  border-color: var(--accent-cyan) !important;
+  color: var(--accent-cyan) !important;
+}
+.search-mode-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* === CML HyperDoc & Context Markup === */
+.q-doc-container {
+  font-family: var(--font-sans);
+  outline: none;
+}
+.q-doc-container:focus {
+  border-color: var(--accent-cyan) !important;
+  box-shadow: 0 0 12px var(--accent-cyan-glow);
+}
+.cml-entity-tag {
+  border-bottom: 2px solid var(--accent-primary, #6366f1);
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 3px;
+  padding: 1px 4px;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  cursor: pointer;
+  transition: var(--trans-fast);
+}
+.cml-entity-tag:hover {
+  background: rgba(255, 255, 255, 0.12);
+  transform: translateY(-1px);
+}
+.cml-entity-badge {
+  font-size: 9px;
+  padding: 1px 3px;
+  border-radius: 2px;
+  color: #000;
+  font-weight: 700;
+  line-height: 1;
+}
+.cml-popover-cat-btn:hover {
+  background: var(--surface-panel-elevated) !important;
+  border-color: var(--accent-cyan) !important;
+  color: var(--text-primary) !important;
+}
+.q-aura-tray {
+  backdrop-filter: blur(12px);
+  transition: var(--trans-smooth);
+}
+.q-aura-tray:hover {
+  border-color: var(--border-medium);
+}
+
+/* === 4-Way Docking Architecture === */
+.toolbox-dock.dock-pos-left {
+  width: 180px;
+  border-right: 1px solid var(--border-subtle);
+  flex-direction: column;
+}
+.toolbox-dock.dock-pos-right {
+  width: 180px;
+  order: 3;
+  border-left: 1px solid var(--border-subtle);
+  border-right: none;
+  flex-direction: column;
+}
+.toolbox-dock.dock-pos-top {
+  width: 100%;
+  height: 52px;
+  border-bottom: 1px solid var(--border-subtle);
+  flex-direction: row;
+  order: -1;
+  overflow-x: auto;
+  overflow-y: hidden;
+  align-items: center;
+}
+.toolbox-dock.dock-pos-bottom {
+  width: 100%;
+  height: 52px;
+  border-top: 1px solid var(--border-subtle);
+  flex-direction: row;
+  order: 5;
+  overflow-x: auto;
+  overflow-y: hidden;
+  align-items: center;
+}
+.dock-pos-btn:hover {
+  border-color: var(--accent-cyan) !important;
+  color: var(--accent-cyan) !important;
+}
+
+/* === 8-Sector Radial Action Ring === */
+#radial-action-ring {
+  user-select: none;
+  animation: radialPop 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+@keyframes radialPop {
+  from { transform: translate(-50%, -50%) scale(0.6); opacity: 0; }
+  to { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+}
+.radial-sector-group {
+  transition: transform 0.15s ease-out;
+}
+.radial-sector-group:hover {
+  filter: drop-shadow(0 0 8px rgba(0, 210, 255, 0.4));
+}
+

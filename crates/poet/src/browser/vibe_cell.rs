@@ -9,8 +9,8 @@
 //! Copyright (c) 2026 Timothy Charles Holborn. All rights reserved.
 
 use serde::{Deserialize, Serialize};
-use wasm_bindgen::JsCast;
 use wasm_bindgen::prelude::Closure;
+use wasm_bindgen::JsCast;
 use web_sys::{Document, Element, HtmlElement, KeyboardEvent, MouseEvent};
 
 /// Execution status of a reactive `<q-cell>`.
@@ -276,6 +276,20 @@ pub fn build_q_cell_element(document: &Document, mut cell: VibeCell) -> Element 
     let container = document.create_element("q-cell").unwrap();
     container.set_class_name("q-cell-widget");
     container.set_attribute("data-cell-id", &cell.id).unwrap();
+    container.set_attribute("data-shape", "container").ok();
+    container.set_attribute("data-beat", "entrance").ok();
+    container.set_attribute("data-media-surface", "2d").ok();
+    container
+        .set_attribute(
+            "data-honesty",
+            match cell.status {
+                CellStatus::Error => "error",
+                CellStatus::Evaluating => "running",
+                CellStatus::Success => "live",
+                CellStatus::Idle => "local",
+            },
+        )
+        .ok();
     let cont_el: HtmlElement = container.clone().dyn_into().unwrap();
     cont_el.style().set_css_text(
         "display: flex; flex-direction: column; gap: 4px; padding: 8px; \
@@ -370,12 +384,19 @@ pub fn build_q_cell_element(document: &Document, mut cell: VibeCell) -> Element 
 
     container.append_child(&hud).unwrap();
 
+    let span_hint = document.create_element("div").unwrap();
+    span_hint.set_class_name("q-cell-span-hint");
+    span_hint.set_attribute("role", "status").ok();
+    container.append_child(&span_hint).unwrap();
+
     // Wire Run Button Click & Enter Key
     let cell_state = std::rc::Rc::new(std::cell::RefCell::new(cell));
     let input_clone = input_el.clone();
     let res_clone = res_val.clone();
     let gas_clone = gas_span.clone();
     let state_clone = cell_state.clone();
+    let hint_clone = span_hint.clone();
+    let host_clone = container.clone();
 
     let recompute = Closure::wrap(Box::new(move || {
         let mut st = state_clone.borrow_mut();
@@ -386,6 +407,39 @@ pub fn build_q_cell_element(document: &Document, mut cell: VibeCell) -> Element 
             "\u{26A1} Gas: {} / {} units",
             st.gas_consumed, st.gas_limit
         )));
+        let honesty = match st.status {
+            CellStatus::Error => "error",
+            CellStatus::Evaluating => "running",
+            CellStatus::Success => "live",
+            CellStatus::Idle => "local",
+        };
+        host_clone.set_attribute("data-honesty", honesty).ok();
+        host_clone
+            .set_attribute(
+                "data-beat",
+                if st.status == CellStatus::Error {
+                    "entrance"
+                } else {
+                    "dwell"
+                },
+            )
+            .ok();
+        if looks_like_vibe(&st.formula) {
+            let report = crate::vibe_host::diagnose(&st.formula);
+            if !report.valid {
+                host_clone.set_attribute("data-honesty", "error").ok();
+                hint_clone.set_text_content(Some(
+                    super::diag_glow::format_human_report(&report)
+                        .lines()
+                        .next()
+                        .unwrap_or("diagnose error"),
+                ));
+            } else {
+                hint_clone.set_text_content(Some(""));
+            }
+        } else {
+            hint_clone.set_text_content(Some(""));
+        }
     }) as Box<dyn FnMut()>);
 
     let recompute_js = recompute
@@ -418,6 +472,14 @@ pub fn build_q_cell_element(document: &Document, mut cell: VibeCell) -> Element 
     recompute.forget();
 
     container
+}
+
+fn looks_like_vibe(formula: &str) -> bool {
+    let t = formula.trim_start();
+    t.starts_with('=')
+        || t.starts_with("fn ")
+        || t.contains("capability.invoke")
+        || t.contains("Inference.")
 }
 
 #[cfg(test)]
@@ -473,11 +535,10 @@ mod tests {
         };
         cell.evaluate();
         assert_eq!(cell.status, CellStatus::Success);
-        assert!(
-            cell.result
-                .display_string()
-                .contains("<q-entity data-category=\"entity\">QualiaDB</q-entity>")
-        );
+        assert!(cell
+            .result
+            .display_string()
+            .contains("<q-entity data-category=\"entity\">QualiaDB</q-entity>"));
     }
 
     #[test]
@@ -495,5 +556,14 @@ mod tests {
         cell.evaluate();
         assert_eq!(cell.status, CellStatus::Success);
         assert!(cell.result.display_string().contains("42MB Arena Active"));
+    }
+
+    #[test]
+    fn vibe_formulas_are_diagnosed_local_math_is_not() {
+        assert!(looks_like_vibe("= 1 + 2"));
+        assert!(looks_like_vibe(
+            "capability.invoke(\"Inference.grounding\", {})"
+        ));
+        assert!(!looks_like_vibe("math.sum([1, 2, 3])"));
     }
 }

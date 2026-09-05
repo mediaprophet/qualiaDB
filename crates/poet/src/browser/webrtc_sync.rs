@@ -7,8 +7,8 @@
 //! over encrypted `RTCDataChannel` streams without central coordinator dependence.
 
 use serde::{Deserialize, Serialize};
-use wasm_bindgen::JsCast;
 use wasm_bindgen::closure::Closure;
+use wasm_bindgen::JsCast;
 use web_sys::{Document, Element, HtmlElement, HtmlInputElement};
 
 /// Connection state of a WebRTC Swarm Peer.
@@ -395,10 +395,8 @@ mod tests {
     fn test_swarm_peer_descriptor_catalog() {
         let peers = SwarmPeerDescriptor::mock_swarm();
         assert_eq!(peers.len(), 3);
-        assert!(
-            peers
-                .iter()
-                .any(|p| p.connection_state == SwarmPeerState::Connected)
-        );
+        assert!(peers
+            .iter()
+            .any(|p| p.connection_state == SwarmPeerState::Connected));
     }
 }

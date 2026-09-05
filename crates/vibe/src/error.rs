@@ -97,9 +97,10 @@ impl Diagnostic {
         self
     }
 
-    /// Agent-facing JSON (no serde). Always includes `valid: false`.
-    pub fn to_json(&self) -> String {
-        let mut s = String::from("{\"valid\":false,");
+    /// Object fields shared by a lone diagnostic and `DiagnoseReport.errors[]`.
+    /// No surrounding braces; no trailing comma.
+    pub(crate) fn json_body(&self) -> String {
+        let mut s = String::new();
         push_kv(&mut s, "error_code", self.code.as_str());
         s.push_str(&format!(
             "\"span\":[{},{}],",
@@ -114,7 +115,15 @@ impl Diagnostic {
             Some((mu, lambda)) => s.push_str(&format!("\"evidential\":[{},{}],", mu, lambda)),
             None => s.push_str("\"evidential\":null,"),
         }
-        s.push_str("\"shacl_violations\":[]}");
+        s.push_str("\"shacl_violations\":[]");
+        s
+    }
+
+    /// Agent-facing JSON (no serde). Always includes `valid: false`.
+    pub fn to_json(&self) -> String {
+        let mut s = String::from("{\"valid\":false,");
+        s.push_str(&self.json_body());
+        s.push('}');
         s
     }
 }

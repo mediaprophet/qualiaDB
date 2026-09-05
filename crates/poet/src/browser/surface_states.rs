@@ -97,12 +97,24 @@ mod tests {
 
     #[test]
     fn states_have_consistent_honesty_and_busy_attributes() {
-        assert_eq!(FeedbackState::Loading.attributes(), ("loading", "running", true));
-        assert_eq!(FeedbackState::Pending.attributes(), ("pending", "running", true));
+        assert_eq!(
+            FeedbackState::Loading.attributes(),
+            ("loading", "running", true)
+        );
+        assert_eq!(
+            FeedbackState::Pending.attributes(),
+            ("pending", "running", true)
+        );
         assert_eq!(FeedbackState::Empty.attributes(), ("empty", "empty", false));
-        assert_eq!(FeedbackState::Offline.attributes(), ("offline", "unavailable", false));
+        assert_eq!(
+            FeedbackState::Offline.attributes(),
+            ("offline", "unavailable", false)
+        );
         assert_eq!(FeedbackState::Error.attributes(), ("error", "error", false));
-        assert_eq!(FeedbackState::Success.attributes(), ("success", "live", false));
+        assert_eq!(
+            FeedbackState::Success.attributes(),
+            ("success", "live", false)
+        );
     }
 
     #[test]

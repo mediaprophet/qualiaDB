@@ -51,12 +51,20 @@ boundedness + determinism. The zero-heap tests cover Tier-1 only.
 
 ### 0-B. Library Structure and Temporary-Artifact Hygiene
 
-New inference capabilities are directory-backed libraries. A `mod.rs` routes modules and
-re-exports the public API; implementation belongs in focused files. New files should remain below
-500 lines and must be split earlier when they own multiple lifecycles or responsibilities. Do not
-add new behaviour to an inference file already above 1,000 lines without a tracked decomposition
-in the same programme. Cold planning, hot execution, backend-specific code, receipts, tests, and
-artifact management remain separate modules.
+New capabilities are directory-backed libraries. A `mod.rs` routes modules and re-exports the
+public API; implementation belongs in focused, single-purpose files. New implementation files
+should remain below 500 lines and must be split earlier when they own multiple lifecycles or
+responsibilities. Files from 500 to 1,199 lines require an ownership review before substantial new
+behaviour is added. Do not add new behaviour to an implementation file at or above 1,200 lines
+without a tracked decomposition in the same programme; 1,400 lines is an escalation threshold,
+not the point at which planning should begin. Cold planning, hot execution, backend-specific code,
+receipts, tests, artifact management, and embedded UI assets remain separate modules or resources.
+
+Line count is a maintainability signal, not a universal content limit. Markdown and other prose,
+generated artifacts, fixtures/test vectors, static registries or tables, and genuinely cohesive
+algorithms may exceed these thresholds when splitting would reduce clarity or auditability. Record
+the exception near the owning module or programme. Exceptions do not permit mixed lifecycles,
+unbounded growth, hidden generated edits, or adding unrelated behaviour to an oversized file.
 
 Temporary files are owned resources, not permanent side effects:
 

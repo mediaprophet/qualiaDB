@@ -139,7 +139,11 @@ pub fn build_disclosure_workspace_view(document: &Document) -> Element {
       </div>
     "#);
 
-    if let Some(cat_container) = root.query_selector("[data-categories-container]").ok().flatten() {
+    if let Some(cat_container) = root
+        .query_selector("[data-categories-container]")
+        .ok()
+        .flatten()
+    {
         for (id, label, desc) in CATEGORY_OPTIONS {
             let item_label = document.create_element("label").unwrap();
             item_label.set_class_name("disclosure-category-label");
@@ -170,26 +174,44 @@ pub fn build_disclosure_workspace_view(document: &Document) -> Element {
 fn gate_disclosure_offline(root: &Element) {
     root.set_attribute("data-honesty", "unavailable").ok();
     root.set_attribute("data-state", "offline").ok();
-    if let Some(status) = root.query_selector("[data-disclosure-status]").ok().flatten() {
+    if let Some(status) = root
+        .query_selector("[data-disclosure-status]")
+        .ok()
+        .flatten()
+    {
         status.set_text_content(Some(
             "Qualia daemon offline: consent changes cannot be signed or committed without a live local node.",
         ));
         status.set_attribute("data-state", "offline").ok();
     }
-    if let Some(grant_btn) = root.query_selector("[data-disclosure-grant]").ok().flatten() {
+    if let Some(grant_btn) = root
+        .query_selector("[data-disclosure-grant]")
+        .ok()
+        .flatten()
+    {
         grant_btn.set_attribute("disabled", "").ok();
     }
     update_plain_language_summary(root);
 }
 
 fn update_plain_language_summary(root: &Element) {
-    let Some(summary_box) = root.query_selector("[data-disclosure-summary]").ok().flatten() else {
+    let Some(summary_box) = root
+        .query_selector("[data-disclosure-summary]")
+        .ok()
+        .flatten()
+    else {
         return;
     };
 
-    let recipient_select = root.query_selector("[data-disclosure-recipient]").ok().flatten()
+    let recipient_select = root
+        .query_selector("[data-disclosure-recipient]")
+        .ok()
+        .flatten()
         .and_then(|el| el.dyn_into::<HtmlSelectElement>().ok());
-    let custom_input = root.query_selector("[data-disclosure-custom-did]").ok().flatten()
+    let custom_input = root
+        .query_selector("[data-disclosure-custom-did]")
+        .ok()
+        .flatten()
         .and_then(|el| el.dyn_into::<HtmlInputElement>().ok());
 
     let (recipient_name, _) = match recipient_select.as_ref().map(|s| s.value()).as_deref() {
@@ -214,26 +236,38 @@ fn update_plain_language_summary(root: &Element) {
     let mut selected_cats = Vec::new();
     if let Ok(checkboxes) = root.query_selector_all("input[data-cat]:checked") {
         for i in 0..checkboxes.length() {
-            if let Some(cb) = checkboxes.get(i).and_then(|el| el.dyn_into::<HtmlInputElement>().ok()) {
+            if let Some(cb) = checkboxes
+                .get(i)
+                .and_then(|el| el.dyn_into::<HtmlInputElement>().ok())
+            {
                 let cat_id = cb.get_attribute("data-cat").unwrap_or_default();
-                if let Some((_, label, _)) = CATEGORY_OPTIONS.iter().find(|(id, _, _)| *id == cat_id) {
+                if let Some((_, label, _)) =
+                    CATEGORY_OPTIONS.iter().find(|(id, _, _)| *id == cat_id)
+                {
                     selected_cats.push(*label);
                 }
             }
         }
     }
 
-    let purpose_val = root.query_selector("[data-disclosure-purpose]").ok().flatten()
+    let purpose_val = root
+        .query_selector("[data-disclosure-purpose]")
+        .ok()
+        .flatten()
         .and_then(|el| el.dyn_into::<HtmlSelectElement>().ok())
         .map(|s| s.value())
         .unwrap_or_else(|| "Direct clinical care".into());
 
-    let expiry_val = root.query_selector("[data-disclosure-expiry]").ok().flatten()
+    let expiry_val = root
+        .query_selector("[data-disclosure-expiry]")
+        .ok()
+        .flatten()
         .and_then(|el| el.dyn_into::<HtmlSelectElement>().ok())
         .map(|s| s.value())
         .unwrap_or_else(|| "7d".into());
 
-    let (expiry_label, duration_secs) = EXPIRY_OPTIONS.iter()
+    let (expiry_label, duration_secs) = EXPIRY_OPTIONS
+        .iter()
         .find(|(id, _, _)| *id == expiry_val)
         .map(|(_, label, secs)| (*label, *secs))
         .unwrap_or(("7 days", 604_800));
@@ -262,33 +296,77 @@ fn update_plain_language_summary(root: &Element) {
 fn wire_disclosure_events(root: &Element, document: &Document) {
     let root_clone = root.clone();
     let change_closure = Closure::wrap(Box::new(move |_: Event| {
-        let is_custom = root_clone.query_selector("[data-disclosure-recipient]").ok().flatten()
+        let is_custom = root_clone
+            .query_selector("[data-disclosure-recipient]")
+            .ok()
+            .flatten()
             .and_then(|el| el.dyn_into::<HtmlSelectElement>().ok())
             .map(|s| s.value() == "custom")
             .unwrap_or(false);
 
-        if let Some(custom_field) = root_clone.query_selector("[data-custom-did-field]").ok().flatten() {
-            custom_field.set_attribute("style", if is_custom { "display: grid;" } else { "display: none;" }).ok();
+        if let Some(custom_field) = root_clone
+            .query_selector("[data-custom-did-field]")
+            .ok()
+            .flatten()
+        {
+            custom_field
+                .set_attribute(
+                    "style",
+                    if is_custom {
+                        "display: grid;"
+                    } else {
+                        "display: none;"
+                    },
+                )
+                .ok();
         }
         update_plain_language_summary(&root_clone);
     }) as Box<dyn FnMut(_)>);
 
-    if let Some(recip_select) = root.query_selector("[data-disclosure-recipient]").ok().flatten() {
-        recip_select.add_event_listener_with_callback("change", change_closure.as_ref().unchecked_ref()).ok();
+    if let Some(recip_select) = root
+        .query_selector("[data-disclosure-recipient]")
+        .ok()
+        .flatten()
+    {
+        recip_select
+            .add_event_listener_with_callback("change", change_closure.as_ref().unchecked_ref())
+            .ok();
     }
-    if let Some(purpose_select) = root.query_selector("[data-disclosure-purpose]").ok().flatten() {
-        purpose_select.add_event_listener_with_callback("change", change_closure.as_ref().unchecked_ref()).ok();
+    if let Some(purpose_select) = root
+        .query_selector("[data-disclosure-purpose]")
+        .ok()
+        .flatten()
+    {
+        purpose_select
+            .add_event_listener_with_callback("change", change_closure.as_ref().unchecked_ref())
+            .ok();
     }
-    if let Some(expiry_select) = root.query_selector("[data-disclosure-expiry]").ok().flatten() {
-        expiry_select.add_event_listener_with_callback("change", change_closure.as_ref().unchecked_ref()).ok();
+    if let Some(expiry_select) = root
+        .query_selector("[data-disclosure-expiry]")
+        .ok()
+        .flatten()
+    {
+        expiry_select
+            .add_event_listener_with_callback("change", change_closure.as_ref().unchecked_ref())
+            .ok();
     }
-    if let Some(custom_input) = root.query_selector("[data-disclosure-custom-did]").ok().flatten() {
-        custom_input.add_event_listener_with_callback("input", change_closure.as_ref().unchecked_ref()).ok();
+    if let Some(custom_input) = root
+        .query_selector("[data-disclosure-custom-did]")
+        .ok()
+        .flatten()
+    {
+        custom_input
+            .add_event_listener_with_callback("input", change_closure.as_ref().unchecked_ref())
+            .ok();
     }
     if let Ok(cbs) = root.query_selector_all("input[data-cat]") {
         for i in 0..cbs.length() {
             if let Some(cb) = cbs.get(i) {
-                cb.add_event_listener_with_callback("change", change_closure.as_ref().unchecked_ref()).ok();
+                cb.add_event_listener_with_callback(
+                    "change",
+                    change_closure.as_ref().unchecked_ref(),
+                )
+                .ok();
             }
         }
     }
@@ -299,7 +377,10 @@ fn wire_disclosure_events(root: &Element, document: &Document) {
     let all_closure = Closure::wrap(Box::new(move |_: MouseEvent| {
         if let Ok(cbs) = root_all.query_selector_all("input[data-cat]") {
             for i in 0..cbs.length() {
-                if let Some(cb) = cbs.get(i).and_then(|el| el.dyn_into::<HtmlInputElement>().ok()) {
+                if let Some(cb) = cbs
+                    .get(i)
+                    .and_then(|el| el.dyn_into::<HtmlInputElement>().ok())
+                {
                     cb.set_checked(true);
                 }
             }
@@ -307,7 +388,9 @@ fn wire_disclosure_events(root: &Element, document: &Document) {
         update_plain_language_summary(&root_all);
     }) as Box<dyn FnMut(_)>);
     if let Some(all_btn) = root.query_selector("[data-categories-all]").ok().flatten() {
-        all_btn.add_event_listener_with_callback("click", all_closure.as_ref().unchecked_ref()).ok();
+        all_btn
+            .add_event_listener_with_callback("click", all_closure.as_ref().unchecked_ref())
+            .ok();
         all_closure.forget();
     }
 
@@ -315,7 +398,10 @@ fn wire_disclosure_events(root: &Element, document: &Document) {
     let none_closure = Closure::wrap(Box::new(move |_: MouseEvent| {
         if let Ok(cbs) = root_none.query_selector_all("input[data-cat]") {
             for i in 0..cbs.length() {
-                if let Some(cb) = cbs.get(i).and_then(|el| el.dyn_into::<HtmlInputElement>().ok()) {
+                if let Some(cb) = cbs
+                    .get(i)
+                    .and_then(|el| el.dyn_into::<HtmlInputElement>().ok())
+                {
                     cb.set_checked(false);
                 }
             }
@@ -323,7 +409,9 @@ fn wire_disclosure_events(root: &Element, document: &Document) {
         update_plain_language_summary(&root_none);
     }) as Box<dyn FnMut(_)>);
     if let Some(none_btn) = root.query_selector("[data-categories-none]").ok().flatten() {
-        none_btn.add_event_listener_with_callback("click", none_closure.as_ref().unchecked_ref()).ok();
+        none_btn
+            .add_event_listener_with_callback("click", none_closure.as_ref().unchecked_ref())
+            .ok();
         none_closure.forget();
     }
 
@@ -333,8 +421,13 @@ fn wire_disclosure_events(root: &Element, document: &Document) {
     let refresh_closure = Closure::wrap(Box::new(move |_: MouseEvent| {
         refresh_disclosures(&root_refresh, &doc_refresh);
     }) as Box<dyn FnMut(_)>);
-    if let Some(btn) = root.query_selector("[data-disclosure-refresh]").ok().flatten() {
-        btn.add_event_listener_with_callback("click", refresh_closure.as_ref().unchecked_ref()).ok();
+    if let Some(btn) = root
+        .query_selector("[data-disclosure-refresh]")
+        .ok()
+        .flatten()
+    {
+        btn.add_event_listener_with_callback("click", refresh_closure.as_ref().unchecked_ref())
+            .ok();
         refresh_closure.forget();
     }
 
@@ -344,8 +437,13 @@ fn wire_disclosure_events(root: &Element, document: &Document) {
     let grant_closure = Closure::wrap(Box::new(move |_: MouseEvent| {
         submit_grant(&root_grant, &doc_grant);
     }) as Box<dyn FnMut(_)>);
-    if let Some(btn) = root.query_selector("[data-disclosure-grant]").ok().flatten() {
-        btn.add_event_listener_with_callback("click", grant_closure.as_ref().unchecked_ref()).ok();
+    if let Some(btn) = root
+        .query_selector("[data-disclosure-grant]")
+        .ok()
+        .flatten()
+    {
+        btn.add_event_listener_with_callback("click", grant_closure.as_ref().unchecked_ref())
+            .ok();
         grant_closure.forget();
     }
 
@@ -357,19 +455,27 @@ fn submit_grant(root: &Element, document: &Document) {
         return;
     }
     let status_el = root.query_selector("[data-grant-status]").ok().flatten();
-    let recip_val = root.query_selector("[data-disclosure-recipient]").ok().flatten()
+    let recip_val = root
+        .query_selector("[data-disclosure-recipient]")
+        .ok()
+        .flatten()
         .and_then(|el| el.dyn_into::<HtmlSelectElement>().ok())
         .map(|s| s.value())
         .unwrap_or_default();
 
     let (recipient_did, recipient_label) = if recip_val == "custom" {
-        let custom_did = root.query_selector("[data-disclosure-custom-did]").ok().flatten()
+        let custom_did = root
+            .query_selector("[data-disclosure-custom-did]")
+            .ok()
+            .flatten()
             .and_then(|el| el.dyn_into::<HtmlInputElement>().ok())
             .map(|i| i.value().trim().to_string())
             .unwrap_or_default();
         if custom_did.is_empty() || !custom_did.starts_with("did:") {
             if let Some(st) = status_el {
-                st.set_text_content(Some("A valid recipient DID starting with 'did:' is required."));
+                st.set_text_content(Some(
+                    "A valid recipient DID starting with 'did:' is required.",
+                ));
                 st.set_attribute("data-state", "error").ok();
             }
             return;
@@ -384,30 +490,42 @@ fn submit_grant(root: &Element, document: &Document) {
     let mut selected_cats = Vec::new();
     if let Ok(cbs) = root.query_selector_all("input[data-cat]:checked") {
         for i in 0..cbs.length() {
-            if let Some(cb) = cbs.get(i).and_then(|el| el.dyn_into::<HtmlInputElement>().ok()) {
+            if let Some(cb) = cbs
+                .get(i)
+                .and_then(|el| el.dyn_into::<HtmlInputElement>().ok())
+            {
                 selected_cats.push(cb.get_attribute("data-cat").unwrap_or_default());
             }
         }
     }
     if selected_cats.is_empty() {
         if let Some(st) = status_el {
-            st.set_text_content(Some("Please select at least one record category to authorize."));
+            st.set_text_content(Some(
+                "Please select at least one record category to authorize.",
+            ));
             st.set_attribute("data-state", "error").ok();
         }
         return;
     }
 
-    let purpose = root.query_selector("[data-disclosure-purpose]").ok().flatten()
+    let purpose = root
+        .query_selector("[data-disclosure-purpose]")
+        .ok()
+        .flatten()
         .and_then(|el| el.dyn_into::<HtmlSelectElement>().ok())
         .map(|s| s.value())
         .unwrap_or_else(|| "Direct clinical care".into());
 
-    let expiry_val = root.query_selector("[data-disclosure-expiry]").ok().flatten()
+    let expiry_val = root
+        .query_selector("[data-disclosure-expiry]")
+        .ok()
+        .flatten()
         .and_then(|el| el.dyn_into::<HtmlSelectElement>().ok())
         .map(|s| s.value())
         .unwrap_or_else(|| "7d".into());
 
-    let duration_secs = EXPIRY_OPTIONS.iter()
+    let duration_secs = EXPIRY_OPTIONS
+        .iter()
         .find(|(id, _, _)| *id == expiry_val)
         .map(|(_, _, secs)| *secs)
         .unwrap_or(604_800);
@@ -436,22 +554,42 @@ fn submit_grant(root: &Element, document: &Document) {
             title,
             id: None,
             fields,
-        }).await {
+        })
+        .await
+        {
             Ok(resp) if resp.ok => {
-                if let Some(st) = root_async.query_selector("[data-grant-status]").ok().flatten() {
-                    st.set_text_content(Some("Consent granted and committed. Time-bounded access is active."));
+                if let Some(st) = root_async
+                    .query_selector("[data-grant-status]")
+                    .ok()
+                    .flatten()
+                {
+                    st.set_text_content(Some(
+                        "Consent granted and committed. Time-bounded access is active.",
+                    ));
                     st.set_attribute("data-state", "success").ok();
                 }
                 refresh_disclosures(&root_async, &doc_async);
             }
             Ok(resp) => {
-                if let Some(st) = root_async.query_selector("[data-grant-status]").ok().flatten() {
-                    st.set_text_content(Some(resp.diagnostic.as_deref().unwrap_or("Authorization rejected by daemon.")));
+                if let Some(st) = root_async
+                    .query_selector("[data-grant-status]")
+                    .ok()
+                    .flatten()
+                {
+                    st.set_text_content(Some(
+                        resp.diagnostic
+                            .as_deref()
+                            .unwrap_or("Authorization rejected by daemon."),
+                    ));
                     st.set_attribute("data-state", "error").ok();
                 }
             }
             Err(e) => {
-                if let Some(st) = root_async.query_selector("[data-grant-status]").ok().flatten() {
+                if let Some(st) = root_async
+                    .query_selector("[data-grant-status]")
+                    .ok()
+                    .flatten()
+                {
                     st.set_text_content(Some(&e));
                     st.set_attribute("data-state", "error").ok();
                 }

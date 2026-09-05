@@ -126,7 +126,11 @@ pub fn build_health_overview_view(document: &Document) -> Element {
         .unwrap();
     save_closure.forget();
 
-    if let Some(shares_card) = root.query_selector("[data-open-disclosures]").ok().flatten() {
+    if let Some(shares_card) = root
+        .query_selector("[data-open-disclosures]")
+        .ok()
+        .flatten()
+    {
         let doc_for_shares = document.clone();
         let open_closure = Closure::wrap(Box::new(move |_event: web_sys::MouseEvent| {
             crate::browser::interactions::place_container_via_menu(
@@ -438,9 +442,7 @@ fn render_timeline(root: &Element, records: &[HealthRecord]) {
                     .ok();
                 badge.set_text_content(Some("Receipt"));
                 meta.append_child(&badge).unwrap();
-                item.class_list()
-                    .add_1("health-timeline-item-receipt")
-                    .ok();
+                item.class_list().add_1("health-timeline-item-receipt").ok();
             }
             CorrectionStatus::Current => {}
         }

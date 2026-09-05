@@ -70,7 +70,11 @@ impl WasmIntentBus {
             emitter_did: self.emitter_did.clone(),
             component_label: "qualia-ui::browser".into(),
             intent_counter: id,
-            capability_scope: capability_scope_for(payload.action_type),
+            capability_scope: payload
+                .provenance
+                .as_ref()
+                .and_then(|p| p.capability_scope.clone())
+                .or_else(|| capability_scope_for(payload.action_type)),
         });
     }
 
@@ -86,17 +90,16 @@ impl WasmIntentBus {
     }
 }
 
-/// Map an ActionType to a capability scope string.
+/// Map an ActionType to a live ALL_BOUND id when the tool did not name one.
 fn capability_scope_for(action: ActionType) -> Option<String> {
     match action {
-        ActionType::Query => Some("graph:read".into()),
-        ActionType::Mutate => Some("graph:write".into()),
-        ActionType::Publish => Some("pulse:publish".into()),
-        ActionType::Validate => Some("aura:validate".into()),
-        ActionType::Invoke => Some("capability:invoke".into()),
-        ActionType::Navigate => Some("ui:navigate".into()),
-        ActionType::Annotate => Some("graph:annotate".into()),
-        ActionType::Cancel => Some("intent:cancel".into()),
+        ActionType::Query => Some("GraphDatabase.sparql".into()),
+        ActionType::Mutate => Some("GraphAuthoring.process".into()),
+        ActionType::Publish => Some("Pulse.publish".into()),
+        ActionType::Validate => Some("SHACL.validate".into()),
+        ActionType::Invoke | ActionType::Navigate | ActionType::Annotate | ActionType::Cancel => {
+            None
+        }
     }
 }
 

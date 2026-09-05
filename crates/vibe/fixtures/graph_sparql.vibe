@@ -1,0 +1,8 @@
+// Human dialect — live GraphDatabase.sparql. Hot-edit without host rebuild.
+// SPARQL still needs a connected daemon at run time; LocalHost returns [].
+module <https://qualiadb.org/modules/graph_sparql>;
+using GraphDatabase;
+
+effect fn explore(query: string) -> List {
+    return GraphDatabase.sparql({ query: query, take: 64 });
+}

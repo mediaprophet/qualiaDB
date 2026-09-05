@@ -1,0 +1,15 @@
+// Human dialect — live Inference.* grounding / verify. No qualia.infer.*.
+module <https://qualiadb.org/modules/inference_grounding>;
+using Inference;
+
+effect fn ground(text: string) -> Record {
+    return Inference.grounding({ text: text });
+}
+
+effect fn verify(text: string) -> Record {
+    return Inference.verify_turn({ text: text });
+}
+
+effect fn ungrounded(text: string) -> Record {
+    return Inference.detect_ungrounded({ text: text });
+}

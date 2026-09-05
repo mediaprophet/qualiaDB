@@ -11,8 +11,8 @@
 
 use std::collections::BTreeMap;
 
-use wasm_bindgen::JsCast;
 use wasm_bindgen::prelude::*;
+use wasm_bindgen::JsCast;
 use web_sys::{Document, Element, Event, HtmlElement, HtmlInputElement, HtmlSelectElement};
 
 /// A specialized interactive control representation for a tool or parameter.

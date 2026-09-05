@@ -177,18 +177,39 @@ fn gate_meds_offline(root: &Element) {
 fn wire_meds_events(root: &Element, document: &Document) {
     let root_clone = root.clone();
     let status_change_closure = Closure::wrap(Box::new(move |_: Event| {
-        let status_val = root_clone.query_selector("[data-med-status]").ok().flatten()
+        let status_val = root_clone
+            .query_selector("[data-med-status]")
+            .ok()
+            .flatten()
             .and_then(|el| el.dyn_into::<HtmlSelectElement>().ok())
             .map(|s| s.value())
             .unwrap_or_default();
         let show_stopped = status_val == "stopped" || status_val == "completed";
-        if let Some(field) = root_clone.query_selector("[data-med-stopped-field]").ok().flatten() {
-            field.set_attribute("style", if show_stopped { "display: grid;" } else { "display: none;" }).ok();
+        if let Some(field) = root_clone
+            .query_selector("[data-med-stopped-field]")
+            .ok()
+            .flatten()
+        {
+            field
+                .set_attribute(
+                    "style",
+                    if show_stopped {
+                        "display: grid;"
+                    } else {
+                        "display: none;"
+                    },
+                )
+                .ok();
         }
     }) as Box<dyn FnMut(_)>);
 
     if let Some(select) = root.query_selector("[data-med-status]").ok().flatten() {
-        select.add_event_listener_with_callback("change", status_change_closure.as_ref().unchecked_ref()).ok();
+        select
+            .add_event_listener_with_callback(
+                "change",
+                status_change_closure.as_ref().unchecked_ref(),
+            )
+            .ok();
         status_change_closure.forget();
     }
 
@@ -199,7 +220,8 @@ fn wire_meds_events(root: &Element, document: &Document) {
         refresh_meds(&root_ref, &doc_ref);
     }) as Box<dyn FnMut(_)>);
     if let Some(btn) = root.query_selector("[data-meds-refresh]").ok().flatten() {
-        btn.add_event_listener_with_callback("click", refresh_closure.as_ref().unchecked_ref()).ok();
+        btn.add_event_listener_with_callback("click", refresh_closure.as_ref().unchecked_ref())
+            .ok();
         refresh_closure.forget();
     }
 
@@ -210,7 +232,8 @@ fn wire_meds_events(root: &Element, document: &Document) {
         submit_medication(&root_save, &doc_save);
     }) as Box<dyn FnMut(_)>);
     if let Some(btn) = root.query_selector("[data-med-save]").ok().flatten() {
-        btn.add_event_listener_with_callback("click", save_closure.as_ref().unchecked_ref()).ok();
+        btn.add_event_listener_with_callback("click", save_closure.as_ref().unchecked_ref())
+            .ok();
         save_closure.forget();
     }
 }
@@ -220,7 +243,10 @@ fn submit_medication(root: &Element, document: &Document) {
         return;
     }
     let status_el = root.query_selector("[data-med-form-status]").ok().flatten();
-    let name = root.query_selector("[data-med-name]").ok().flatten()
+    let name = root
+        .query_selector("[data-med-name]")
+        .ok()
+        .flatten()
         .and_then(|el| el.dyn_into::<HtmlInputElement>().ok())
         .map(|i| i.value().trim().to_string())
         .unwrap_or_default();
@@ -233,48 +259,76 @@ fn submit_medication(root: &Element, document: &Document) {
         return;
     }
 
-    let dose = root.query_selector("[data-med-dose]").ok().flatten()
+    let dose = root
+        .query_selector("[data-med-dose]")
+        .ok()
+        .flatten()
         .and_then(|el| el.dyn_into::<HtmlInputElement>().ok())
         .map(|i| i.value().trim().to_string())
         .unwrap_or_default();
 
-    let unit = root.query_selector("[data-med-unit]").ok().flatten()
+    let unit = root
+        .query_selector("[data-med-unit]")
+        .ok()
+        .flatten()
         .and_then(|el| el.dyn_into::<HtmlSelectElement>().ok())
         .map(|s| s.value())
         .unwrap_or_else(|| "mg".into());
 
-    let schedule = root.query_selector("[data-med-schedule]").ok().flatten()
+    let schedule = root
+        .query_selector("[data-med-schedule]")
+        .ok()
+        .flatten()
         .and_then(|el| el.dyn_into::<HtmlSelectElement>().ok())
         .map(|s| s.value())
         .unwrap_or_else(|| "daily".into());
 
-    let status = root.query_selector("[data-med-status]").ok().flatten()
+    let status = root
+        .query_selector("[data-med-status]")
+        .ok()
+        .flatten()
         .and_then(|el| el.dyn_into::<HtmlSelectElement>().ok())
         .map(|s| s.value())
         .unwrap_or_else(|| "active".into());
 
-    let start_date = root.query_selector("[data-med-start]").ok().flatten()
+    let start_date = root
+        .query_selector("[data-med-start]")
+        .ok()
+        .flatten()
         .and_then(|el| el.dyn_into::<HtmlInputElement>().ok())
         .map(|i| i.value().trim().to_string())
         .unwrap_or_default();
 
-    let stopped_date = root.query_selector("[data-med-stopped]").ok().flatten()
+    let stopped_date = root
+        .query_selector("[data-med-stopped]")
+        .ok()
+        .flatten()
         .and_then(|el| el.dyn_into::<HtmlInputElement>().ok())
         .map(|i| i.value().trim().to_string())
         .filter(|s| !s.is_empty());
 
-    let indication = root.query_selector("[data-med-indication]").ok().flatten()
+    let indication = root
+        .query_selector("[data-med-indication]")
+        .ok()
+        .flatten()
         .and_then(|el| el.dyn_into::<HtmlInputElement>().ok())
         .map(|i| i.value().trim().to_string())
         .filter(|s| !s.is_empty());
 
-    let sensitivity = root.query_selector("[data-med-sensitivity]").ok().flatten()
+    let sensitivity = root
+        .query_selector("[data-med-sensitivity]")
+        .ok()
+        .flatten()
         .and_then(|el| el.dyn_into::<HtmlSelectElement>().ok())
         .map(|s| s.value())
         .unwrap_or_else(|| "restricted".into());
 
     let default_start = chrono::Utc::now().format("%Y-%m-%d").to_string();
-    let effective_start = if start_date.is_empty() { &default_start } else { &start_date };
+    let effective_start = if start_date.is_empty() {
+        &default_start
+    } else {
+        &start_date
+    };
     let (family, title, fields) = build_medication_payload(
         &name,
         &dose,
@@ -300,22 +354,38 @@ fn submit_medication(root: &Element, document: &Document) {
             title,
             id: None,
             fields,
-        }).await {
+        })
+        .await
+        {
             Ok(resp) if resp.ok => {
-                if let Some(st) = root_async.query_selector("[data-med-form-status]").ok().flatten() {
+                if let Some(st) = root_async
+                    .query_selector("[data-med-form-status]")
+                    .ok()
+                    .flatten()
+                {
                     st.set_text_content(Some("Medication recorded successfully."));
                     st.set_attribute("data-state", "success").ok();
                 }
                 refresh_meds(&root_async, &doc_async);
             }
             Ok(resp) => {
-                if let Some(st) = root_async.query_selector("[data-med-form-status]").ok().flatten() {
-                    st.set_text_content(Some(resp.diagnostic.as_deref().unwrap_or("Record was rejected.")));
+                if let Some(st) = root_async
+                    .query_selector("[data-med-form-status]")
+                    .ok()
+                    .flatten()
+                {
+                    st.set_text_content(Some(
+                        resp.diagnostic.as_deref().unwrap_or("Record was rejected."),
+                    ));
                     st.set_attribute("data-state", "error").ok();
                 }
             }
             Err(e) => {
-                if let Some(st) = root_async.query_selector("[data-med-form-status]").ok().flatten() {
+                if let Some(st) = root_async
+                    .query_selector("[data-med-form-status]")
+                    .ok()
+                    .flatten()
+                {
                     st.set_text_content(Some(&e));
                     st.set_attribute("data-state", "error").ok();
                 }
@@ -335,14 +405,20 @@ fn refresh_meds(root: &Element, document: &Document) {
             family: "health_medication".into(),
             query: String::new(),
             kind: String::new(),
-        }).await {
+        })
+        .await
+        {
             Ok(resp) if resp.ok => {
                 let records = records_from_payload("health_medication", &resp.data);
                 let items = project_medications(&records);
                 render_meds_view(&root_async, &doc_async, &items, &records);
             }
             _ => {
-                if let Some(st) = root_async.query_selector("[data-med-list-status]").ok().flatten() {
+                if let Some(st) = root_async
+                    .query_selector("[data-med-list-status]")
+                    .ok()
+                    .flatten()
+                {
                     st.set_text_content(Some("Failed to load medications from local node."));
                     st.set_attribute("data-state", "error").ok();
                 }
@@ -361,17 +437,28 @@ fn render_meds_view(
     let history_count = items.iter().filter(|m| m.status.is_history()).count();
     let all_count = items.len();
 
-    if let Some(el) = root.query_selector("[data-med-count-active]").ok().flatten() {
+    if let Some(el) = root
+        .query_selector("[data-med-count-active]")
+        .ok()
+        .flatten()
+    {
         el.set_text_content(Some(&active_count.to_string()));
     }
-    if let Some(el) = root.query_selector("[data-med-count-history]").ok().flatten() {
+    if let Some(el) = root
+        .query_selector("[data-med-count-history]")
+        .ok()
+        .flatten()
+    {
         el.set_text_content(Some(&history_count.to_string()));
     }
     if let Some(el) = root.query_selector("[data-med-count-all]").ok().flatten() {
         el.set_text_content(Some(&all_count.to_string()));
     }
 
-    let active_tab = root.query_selector(".vitals-metric-tab[aria-selected=\"true\"]").ok().flatten()
+    let active_tab = root
+        .query_selector(".vitals-metric-tab[aria-selected=\"true\"]")
+        .ok()
+        .flatten()
         .and_then(|el| el.get_attribute("data-med-tab"))
         .unwrap_or_else(|| "active".into());
 
@@ -387,13 +474,15 @@ fn render_meds_view(
     list_container.set_inner_html("");
 
     if filtered.is_empty() {
-        list_container.set_inner_html(r#"
+        list_container.set_inner_html(
+            r#"
           <div class="health-empty-state">
             <span>💊</span>
             <strong>No medicines in this view</strong>
             <small>No medication records match the selected filter.</small>
           </div>
-        "#);
+        "#,
+        );
     } else {
         for item in filtered {
             let card = document.create_element("div").unwrap();
@@ -402,7 +491,9 @@ fn render_meds_view(
             let status_badge_class = match item.status {
                 MedicationStatus::Active => "disclosure-status-active",
                 MedicationStatus::OnHold => "disclosure-status-expired",
-                MedicationStatus::Completed | MedicationStatus::Stopped => "disclosure-status-revoked",
+                MedicationStatus::Completed | MedicationStatus::Stopped => {
+                    "disclosure-status-revoked"
+                }
             };
 
             let start_str = item.started_at.as_deref().unwrap_or("Unknown");
@@ -412,7 +503,10 @@ fn render_meds_view(
                 String::new()
             };
 
-            let dose_badge = format!("<span class=\"disclosure-tag\">{} {}</span>", item.dose, item.unit);
+            let dose_badge = format!(
+                "<span class=\"disclosure-tag\">{} {}</span>",
+                item.dose, item.unit
+            );
             let schedule_badge = format!("<span class=\"disclosure-tag\">{}</span>", item.schedule);
             let ind_tag = if let Some(ind) = &item.indication {
                 format!("<span class=\"disclosure-tag\">Indication: {ind}</span>")
@@ -451,11 +545,19 @@ fn render_meds_view(
                     };
                     let root_cb = root_insp.clone();
                     let doc_cb = doc_insp.clone();
-                    open_record_inspection_dialog(&doc_insp, &timeline_item, Box::new(move || {
-                        refresh_meds(&root_cb, &doc_cb);
-                    }));
+                    open_record_inspection_dialog(
+                        &doc_insp,
+                        &timeline_item,
+                        Box::new(move || {
+                            refresh_meds(&root_cb, &doc_cb);
+                        }),
+                    );
                 }) as Box<dyn FnMut(_)>);
-                btn.add_event_listener_with_callback("click", inspect_closure.as_ref().unchecked_ref()).ok();
+                btn.add_event_listener_with_callback(
+                    "click",
+                    inspect_closure.as_ref().unchecked_ref(),
+                )
+                .ok();
                 inspect_closure.forget();
             }
 
@@ -472,10 +574,15 @@ fn render_meds_view(
                 let items_copy = items.to_vec();
                 let recs_copy = all_records.to_vec();
                 let tab_closure = Closure::wrap(Box::new(move |e: MouseEvent| {
-                    if let Some(target) = e.current_target().and_then(|t| t.dyn_into::<Element>().ok()) {
+                    if let Some(target) = e
+                        .current_target()
+                        .and_then(|t| t.dyn_into::<Element>().ok())
+                    {
                         if let Ok(all_tabs) = root_tab.query_selector_all("[data-med-tab]") {
                             for j in 0..all_tabs.length() {
-                                if let Some(t) = all_tabs.get(j).and_then(|n| n.dyn_into::<Element>().ok()) {
+                                if let Some(t) =
+                                    all_tabs.get(j).and_then(|n| n.dyn_into::<Element>().ok())
+                                {
                                     t.set_attribute("aria-selected", "false").ok();
                                 }
                             }
@@ -484,14 +591,17 @@ fn render_meds_view(
                         render_meds_view(&root_tab, &doc_tab, &items_copy, &recs_copy);
                     }
                 }) as Box<dyn FnMut(_)>);
-                tab.add_event_listener_with_callback("click", tab_closure.as_ref().unchecked_ref()).ok();
+                tab.add_event_listener_with_callback("click", tab_closure.as_ref().unchecked_ref())
+                    .ok();
                 tab_closure.forget();
             }
         }
     }
 
     if let Some(status) = root.query_selector("[data-med-list-status]").ok().flatten() {
-        status.set_text_content(Some(&format!("{all_count} medication(s) loaded from local ledger.")));
+        status.set_text_content(Some(&format!(
+            "{all_count} medication(s) loaded from local ledger."
+        )));
         status.set_attribute("data-state", "success").ok();
     }
 }

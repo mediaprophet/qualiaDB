@@ -5,7 +5,6 @@ use web_sys::{Document, Element};
 use super::super::super::cop_records::CopField;
 use super::super::persist::ledger;
 
-
 pub fn build_issues_view(document: &Document) -> Element {
     ledger(
         document,

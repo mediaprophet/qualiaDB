@@ -41,7 +41,9 @@ pub fn open_record_inspection_dialog(
     title.set_text_content(Some(&format!("Provenance · {}", item.record.title)));
     let close_btn = document.create_element("button").unwrap();
     close_btn.set_class_name("dialog-close-btn");
-    close_btn.set_attribute("aria-label", "Close inspection dialog").unwrap();
+    close_btn
+        .set_attribute("aria-label", "Close inspection dialog")
+        .unwrap();
     close_btn.set_text_content(Some("×"));
     header.append_child(&title).unwrap();
     header.append_child(&close_btn).unwrap();
@@ -63,7 +65,12 @@ pub fn open_record_inspection_dialog(
 
     append_meta_row(document, &meta_grid, "Record ID", &item.record.id);
     append_meta_row(document, &meta_grid, "Family", &item.record.family);
-    append_meta_row(document, &meta_grid, "Occurrence", &item.record.occurred_label());
+    append_meta_row(
+        document,
+        &meta_grid,
+        "Occurrence",
+        &item.record.occurred_label(),
+    );
     append_meta_row(
         document,
         &meta_grid,
@@ -228,12 +235,8 @@ pub fn open_record_inspection_dialog(
                 .map(|sel| sel.value())
                 .unwrap_or_else(|| "classified".into());
 
-            let (family, title, fields) = build_correction_receipt_payload(
-                &original_record,
-                &reason,
-                &notes,
-                &sensitivity,
-            );
+            let (family, title, fields) =
+                build_correction_receipt_payload(&original_record, &reason, &notes, &sensitivity);
 
             if let Some(status) = doc.get_element_by_id("health-correction-status") {
                 status.set_text_content(Some("Writing correction receipt to ledger…"));

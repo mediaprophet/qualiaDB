@@ -28,7 +28,9 @@ pub fn refresh_disclosures(root: &Element, document: &Document) {
                 family: (*family).into(),
                 query: String::new(),
                 kind: String::new(),
-            }).await {
+            })
+            .await
+            {
                 if resp.ok {
                     records.extend(records_from_payload(family, &resp.data));
                 }
@@ -42,30 +44,39 @@ pub fn refresh_disclosures(root: &Element, document: &Document) {
 }
 
 /// Renders the projected disclosures list into the container.
-pub fn render_disclosures_list(
-    root: &Element,
-    document: &Document,
-    shares: &[ShareItem],
-) {
+pub fn render_disclosures_list(root: &Element, document: &Document, shares: &[ShareItem]) {
     let Some(list_container) = root.query_selector("[data-disclosure-list]").ok().flatten() else {
         return;
     };
     list_container.set_inner_html("");
 
-    let active_count = shares.iter().filter(|s| matches!(s.status, ShareStatus::Active)).count();
-    if let Some(counter) = root.query_selector("[data-disclosure-count]").ok().flatten() {
+    let active_count = shares
+        .iter()
+        .filter(|s| matches!(s.status, ShareStatus::Active))
+        .count();
+    if let Some(counter) = root
+        .query_selector("[data-disclosure-count]")
+        .ok()
+        .flatten()
+    {
         counter.set_text_content(Some(&format!("{active_count} active")));
     }
 
     if shares.is_empty() {
-        list_container.set_inner_html(r#"
+        list_container.set_inner_html(
+            r#"
           <div class="health-empty-state">
             <span>🛡</span>
             <strong>No active disclosures</strong>
             <small>Your health records are sovereign and private to you.</small>
           </div>
-        "#);
-        if let Some(status) = root.query_selector("[data-disclosure-status]").ok().flatten() {
+        "#,
+        );
+        if let Some(status) = root
+            .query_selector("[data-disclosure-status]")
+            .ok()
+            .flatten()
+        {
             status.set_text_content(Some("Ledger verified. 0 disclosures active."));
             status.set_attribute("data-state", "success").ok();
         }
@@ -87,16 +98,25 @@ pub fn render_disclosures_list(
             ShareStatus::Revoked { .. } => ("disclosure-status-revoked", "Revoked", false),
         };
 
-        let scope_tags = share.scope.split(',')
+        let scope_tags = share
+            .scope
+            .split(',')
             .filter(|s| !s.trim().is_empty())
             .map(|s| {
-                let name = CATEGORY_OPTIONS.iter().find(|(id, _, _)| *id == s.trim()).map(|(_, l, _)| *l).unwrap_or(s);
+                let name = CATEGORY_OPTIONS
+                    .iter()
+                    .find(|(id, _, _)| *id == s.trim())
+                    .map(|(_, l, _)| *l)
+                    .unwrap_or(s);
                 format!("<span class=\"disclosure-tag\">{name}</span>")
             })
             .collect::<Vec<_>>()
             .join("");
 
-        let expiry_info = share.record.field_text("expires_at").unwrap_or_else(|| "No expiry".into());
+        let expiry_info = share
+            .record
+            .field_text("expires_at")
+            .unwrap_or_else(|| "No expiry".into());
 
         item.set_inner_html(&format!(
             r#"
@@ -140,14 +160,28 @@ pub fn render_disclosures_list(
                 let revoke_closure = Closure::wrap(Box::new(move |_: MouseEvent| {
                     execute_revocation(&root_rev, &doc_rev, &share_record);
                 }) as Box<dyn FnMut(_)>);
-                revoke_button.add_event_listener_with_callback("click", revoke_closure.as_ref().unchecked_ref()).ok();
+                revoke_button
+                    .add_event_listener_with_callback(
+                        "click",
+                        revoke_closure.as_ref().unchecked_ref(),
+                    )
+                    .ok();
                 revoke_closure.forget();
             }
         }
 
         // Inspect Revocation Receipt Action
-        if let ShareStatus::Revoked { receipt_id, reason, revoked_at } = &share.status {
-            if let Some(inspect_button) = item.query_selector("[data-inspect-revocation]").ok().flatten() {
+        if let ShareStatus::Revoked {
+            receipt_id,
+            reason,
+            revoked_at,
+        } = &share.status
+        {
+            if let Some(inspect_button) = item
+                .query_selector("[data-inspect-revocation]")
+                .ok()
+                .flatten()
+            {
                 let receipt_id = receipt_id.clone();
                 let reason = reason.clone();
                 let revoked_at = revoked_at.clone();
@@ -155,9 +189,21 @@ pub fn render_disclosures_list(
                 let recip_name = recipient_name.clone();
                 let doc_insp = document.clone();
                 let inspect_closure = Closure::wrap(Box::new(move |_: MouseEvent| {
-                    show_revocation_dialog(&doc_insp, &receipt_id, &grant_id, &recip_name, &reason, &revoked_at);
+                    show_revocation_dialog(
+                        &doc_insp,
+                        &receipt_id,
+                        &grant_id,
+                        &recip_name,
+                        &reason,
+                        &revoked_at,
+                    );
                 }) as Box<dyn FnMut(_)>);
-                inspect_button.add_event_listener_with_callback("click", inspect_closure.as_ref().unchecked_ref()).ok();
+                inspect_button
+                    .add_event_listener_with_callback(
+                        "click",
+                        inspect_closure.as_ref().unchecked_ref(),
+                    )
+                    .ok();
                 inspect_closure.forget();
             }
         }
@@ -165,8 +211,15 @@ pub fn render_disclosures_list(
         list_container.append_child(&item).unwrap();
     }
 
-    if let Some(status) = root.query_selector("[data-disclosure-status]").ok().flatten() {
-        status.set_text_content(Some(&format!("{} disclosure(s) projected from local ledger.", shares.len())));
+    if let Some(status) = root
+        .query_selector("[data-disclosure-status]")
+        .ok()
+        .flatten()
+    {
+        status.set_text_content(Some(&format!(
+            "{} disclosure(s) projected from local ledger.",
+            shares.len()
+        )));
         status.set_attribute("data-state", "success").ok();
     }
 }
@@ -182,7 +235,11 @@ pub fn execute_revocation(root: &Element, document: &Document, share: &HealthRec
         "restricted",
     );
 
-    if let Some(st) = root.query_selector("[data-disclosure-status]").ok().flatten() {
+    if let Some(st) = root
+        .query_selector("[data-disclosure-status]")
+        .ok()
+        .flatten()
+    {
         st.set_text_content(Some("Revoking permission and committing signed receipt…"));
         st.set_attribute("data-state", "working").ok();
     }
@@ -195,22 +252,42 @@ pub fn execute_revocation(root: &Element, document: &Document, share: &HealthRec
             title,
             id: None,
             fields,
-        }).await {
+        })
+        .await
+        {
             Ok(resp) if resp.ok => {
-                if let Some(st) = root_async.query_selector("[data-disclosure-status]").ok().flatten() {
-                    st.set_text_content(Some("Consent revoked immediately. Defeater receipt committed to ledger."));
+                if let Some(st) = root_async
+                    .query_selector("[data-disclosure-status]")
+                    .ok()
+                    .flatten()
+                {
+                    st.set_text_content(Some(
+                        "Consent revoked immediately. Defeater receipt committed to ledger.",
+                    ));
                     st.set_attribute("data-state", "success").ok();
                 }
                 refresh_disclosures(&root_async, &doc_async);
             }
             Ok(resp) => {
-                if let Some(st) = root_async.query_selector("[data-disclosure-status]").ok().flatten() {
-                    st.set_text_content(Some(resp.diagnostic.as_deref().unwrap_or("Revocation rejected by node.")));
+                if let Some(st) = root_async
+                    .query_selector("[data-disclosure-status]")
+                    .ok()
+                    .flatten()
+                {
+                    st.set_text_content(Some(
+                        resp.diagnostic
+                            .as_deref()
+                            .unwrap_or("Revocation rejected by node."),
+                    ));
                     st.set_attribute("data-state", "error").ok();
                 }
             }
             Err(e) => {
-                if let Some(st) = root_async.query_selector("[data-disclosure-status]").ok().flatten() {
+                if let Some(st) = root_async
+                    .query_selector("[data-disclosure-status]")
+                    .ok()
+                    .flatten()
+                {
                     st.set_text_content(Some(&e));
                     st.set_attribute("data-state", "error").ok();
                 }
@@ -248,7 +325,9 @@ pub fn show_revocation_dialog(
     title.set_text_content(Some("Immutable Revocation Receipt"));
     let close_btn = document.create_element("button").unwrap();
     close_btn.set_class_name("dialog-close-btn");
-    close_btn.set_attribute("aria-label", "Close receipt inspection").unwrap();
+    close_btn
+        .set_attribute("aria-label", "Close receipt inspection")
+        .unwrap();
     close_btn.set_text_content(Some("×"));
     header.append_child(&title).unwrap();
     header.append_child(&close_btn).unwrap();
@@ -315,8 +394,12 @@ pub fn show_revocation_dialog(
         }
     }) as Box<dyn FnMut(_)>);
 
-    close_btn.add_event_listener_with_callback("click", close_action.as_ref().unchecked_ref()).ok();
-    dismiss_btn.add_event_listener_with_callback("click", close_action.as_ref().unchecked_ref()).ok();
+    close_btn
+        .add_event_listener_with_callback("click", close_action.as_ref().unchecked_ref())
+        .ok();
+    dismiss_btn
+        .add_event_listener_with_callback("click", close_action.as_ref().unchecked_ref())
+        .ok();
     close_action.forget();
 
     wire_modal_accessibility(document, &overlay, &panel, return_focus, Some(dismiss_btn));

@@ -1,9 +1,7 @@
 use wasm_bindgen::{closure::Closure, JsCast};
 use web_sys::{Document, Element, HtmlElement, HtmlSelectElement, HtmlTextAreaElement};
 
-use super::super::super::cop_records::{
-    build_family_panel, CopField,
-};
+use super::super::super::cop_records::{build_family_panel, CopField};
 use super::super::super::native_daemon::{
     daemon_records_query, daemon_records_upsert, is_daemon_connected, NativeRecordQueryRequest,
     NativeRecordUpsertRequest,

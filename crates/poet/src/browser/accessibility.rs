@@ -61,9 +61,11 @@ pub fn wire_modal_accessibility(
         let active = web_sys::window()
             .and_then(|window| window.document())
             .and_then(|document| document.active_element());
-        let current = active
-            .as_ref()
-            .and_then(|active| focusable.iter().position(|item| item.is_same_node(Some(active))));
+        let current = active.as_ref().and_then(|active| {
+            focusable
+                .iter()
+                .position(|item| item.is_same_node(Some(active)))
+        });
         let next = next_focus_index(current, focusable.len(), event.shift_key());
         event.prevent_default();
         focus_element(&focusable[next]);

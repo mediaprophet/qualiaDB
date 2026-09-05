@@ -1,0 +1,118 @@
+@prefix q42:  <https://ns.webcivics.net/> .
+@prefix sh:   <http://www.w3.org/ns/shacl#> .
+@prefix rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix vibe: <https://ns.webcivics.net/vibe/> .
+
+# Poet studio surfaces — OWL-ok technical artifacts.
+# Persons / living-natural content they hold stays SHACL-first
+# (see qualia-agency.shacl.ttl). Do not subclass q42:Principal here.
+
+vibe:InvokeId a rdfs:Datatype ;
+    rdfs:label "Live capability.invoke id" ;
+    rdfs:comment "String must match poet_host ALL_BOUND. Never a dotted qualia.* IRI." .
+
+q42:Container a rdfs:Class ;
+    rdfs:label "Poet Container (software surface)" ;
+    rdfs:comment "Content-shaped work surface. OWL-ok artifact; may hold SHACL-first records." .
+
+q42:Manifold a rdfs:Class ;
+    rdfs:label "Poet Manifold" ;
+    rdfs:comment "Nests containers and manifolds. OWL-ok artifact." .
+
+q42:Link a rdfs:Class ;
+    rdfs:label "Poet Link" ;
+    rdfs:comment "Typed semantic relation between two ends. OWL-ok artifact." .
+
+q42:Volume a rdfs:Class ;
+    rdfs:label "q42 Volume" ;
+    rdfs:comment "Durable graph store. See q42-volume-shape-G-B-001.md." .
+
+q42:Layout a rdfs:Class ; rdfs:label "Layout twin (2D structure)" .
+q42:Stage a rdfs:Class ; rdfs:label "Stage twin (depth / camera)" .
+q42:Timeline a rdfs:Class ; rdfs:label "Timeline twin (named beats only)" .
+
+q42:containerType a rdf:Property ; rdfs:domain q42:Container ; rdfs:range xsd:string .
+q42:state a rdf:Property ; rdfs:domain q42:Volume ; rdfs:range xsd:string .
+q42:beat a rdf:Property ; rdfs:domain q42:Timeline ; rdfs:range xsd:string .
+q42:linkType a rdf:Property ; rdfs:domain q42:Link .
+q42:backedBy a rdf:Property ; rdfs:domain q42:Container ; rdfs:range q42:Volume .
+q42:nests a rdf:Property ; rdfs:domain q42:Manifold .
+q42:linkFrom a rdf:Property ; rdfs:domain q42:Link .
+q42:linkTo a rdf:Property ; rdfs:domain q42:Link .
+q42:layout a rdf:Property ; rdfs:range q42:Layout .
+q42:stage a rdf:Property ; rdfs:range q42:Stage .
+q42:timeline a rdf:Property ; rdfs:range q42:Timeline .
+q42:openedVia a rdf:Property ; rdfs:range vibe:InvokeId .
+q42:committedVia a rdf:Property ; rdfs:range vibe:InvokeId .
+q42:hasPosition a rdf:Property ;
+    rdfs:comment "Optional spatiotemporal position on a container or language cell." .
+q42:viewpointRealm a rdf:Property ;
+    rdfs:comment "Optional realm (Earth/cosmos/fiction/speculative/viewpoint). Gated until G-COORD bind." .
+
+q42:ContainerShape a sh:NodeShape ;
+    sh:targetClass q42:Container ;
+    sh:property [
+        sh:path q42:containerType ;
+        sh:datatype xsd:string ;
+        sh:minCount 1 ;
+    ] ;
+    sh:property [
+        sh:path q42:backedBy ;
+        sh:class q42:Volume ;
+        sh:maxCount 1 ;
+    ] ;
+    sh:property [
+        sh:path q42:layout ; sh:class q42:Layout ; sh:maxCount 1 ;
+    ] ;
+    sh:property [
+        sh:path q42:stage ; sh:class q42:Stage ; sh:maxCount 1 ;
+    ] ;
+    sh:property [
+        sh:path q42:timeline ; sh:class q42:Timeline ; sh:maxCount 1 ;
+    ] ;
+    sh:property [
+        sh:path q42:openedVia ;
+        sh:datatype xsd:string ;
+        sh:in ( "GraphDatabase.sparql" "GraphDatabase.volume_open" "Render.scene" "Inference.grounding" ) ;
+    ] .
+
+q42:ManifoldShape a sh:NodeShape ;
+    sh:targetClass q42:Manifold ;
+    sh:property [
+        sh:path q42:nests ;
+        sh:or ( [ sh:class q42:Container ] [ sh:class q42:Manifold ] ) ;
+    ] .
+
+q42:LinkShape a sh:NodeShape ;
+    sh:targetClass q42:Link ;
+    sh:property [ sh:path q42:linkFrom ; sh:minCount 1 ; sh:maxCount 1 ] ;
+    sh:property [ sh:path q42:linkTo ; sh:minCount 1 ; sh:maxCount 1 ] ;
+    sh:property [ sh:path q42:linkType ; sh:minCount 1 ; sh:maxCount 1 ] .
+
+q42:VolumeShape a sh:NodeShape ;
+    sh:targetClass q42:Volume ;
+    sh:property [
+        sh:path q42:state ;
+        sh:datatype xsd:string ;
+        sh:in ( "closed" "open" "committed" "denied" "fault" ) ;
+        sh:minCount 1 ;
+    ] ;
+    sh:property [
+        sh:path q42:openedVia ;
+        sh:hasValue "GraphDatabase.volume_open" ;
+    ] ;
+    sh:property [
+        sh:path q42:committedVia ;
+        sh:hasValue "GraphDatabase.volume_commit" ;
+    ] .
+    # wasm E300 / deny must not be typed committed.
+
+q42:TimelineShape a sh:NodeShape ;
+    sh:targetClass q42:Timeline ;
+    sh:property [
+        sh:path q42:beat ;
+        sh:in ( "entrance" "dwell" "exit" ) ;
+    ] .

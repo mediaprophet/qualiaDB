@@ -1,7 +1,7 @@
 use web_sys::{Document, Element};
 
-use super::ledger;
 use super::super::super::cop_records::CopField;
+use super::ledger;
 
 pub fn build_channel_strip_view(document: &Document) -> Element {
     ledger(

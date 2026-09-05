@@ -51,10 +51,8 @@ fn input_value(root: &Element, selector: &str) -> String {
         .unwrap_or_default()
 }
 
-
-
-mod records;
 mod clinical;
+mod records;
 
 pub use clinical::*;
 pub use records::*;

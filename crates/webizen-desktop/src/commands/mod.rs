@@ -45,6 +45,7 @@ pub mod browser_10d;
 pub mod native_bindings;
 pub mod poet;
 pub mod poet_render;
+pub mod vibe_host;
 pub mod semantic_logic;
 pub mod telemetry;
 pub mod updater;
@@ -287,6 +288,11 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         poet::poet_tick,
         poet::poet_pulse_event,
         poet_render::poet_render_preview,
+        vibe_host::vibe_host_info,
+        vibe_host::vibe_diagnose,
+        vibe_host::vibe_parse,
+        vibe_host::vibe_check,
+        vibe_host::vibe_capability_invoke,
         get_desktop_logs,
         set_desktop_debug_mode,
         get_supervisor_state,

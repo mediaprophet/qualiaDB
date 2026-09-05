@@ -152,9 +152,7 @@ pub fn render_aura_tray(document: &Document, results: &[ShaclResult]) -> Element
         .unwrap();
     if results.is_empty() {
         body.set_attribute("data-honesty", "unavailable").ok();
-        summary.set_text_content(Some(
-            "Unavailable: live SHACL validation is not connected.",
-        ));
+        summary.set_text_content(Some("Unavailable: live SHACL validation is not connected."));
     } else {
         summary.set_text_content(Some(&format!("Status: {}/{} conformant", passed, total)));
     }
@@ -485,9 +483,7 @@ pub fn render_job_body(document: &Document, jobs: &[JobEntry]) -> Element {
         body.set_attribute("data-honesty", "unavailable").ok();
         let empty = document.create_element("div").unwrap();
         empty.set_class_name("container-placeholder");
-        empty.set_text_content(Some(
-            "Unavailable: the live job queue is not connected.",
-        ));
+        empty.set_text_content(Some("Unavailable: the live job queue is not connected."));
         body.append_child(&empty).unwrap();
     }
 

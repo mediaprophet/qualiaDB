@@ -228,9 +228,7 @@ pub fn extract_metric_series(records: &[HealthRecord], kind: &MetricKind) -> Vec
                 if record.family == "health_vital" {
                     if let Some(sys) = record.field_number("sys_bp") {
                         let dia = record.field_number("dia_bp");
-                        let unit = record
-                            .field_text("unit")
-                            .unwrap_or_else(|| "mmHg".into());
+                        let unit = record.field_text("unit").unwrap_or_else(|| "mmHg".into());
                         let point = MetricPoint {
                             sort_key: record.sort_key(),
                             timestamp_label: record.occurred_label(),
@@ -249,9 +247,7 @@ pub fn extract_metric_series(records: &[HealthRecord], kind: &MetricKind) -> Vec
             MetricKind::HeartRate => {
                 if record.family == "health_vital" {
                     if let Some(hr) = record.field_number("hr") {
-                        let unit = record
-                            .field_text("unit")
-                            .unwrap_or_else(|| "bpm".into());
+                        let unit = record.field_text("unit").unwrap_or_else(|| "bpm".into());
                         let point = MetricPoint {
                             sort_key: record.sort_key(),
                             timestamp_label: record.occurred_label(),
@@ -271,9 +267,7 @@ pub fn extract_metric_series(records: &[HealthRecord], kind: &MetricKind) -> Vec
                 let mut found = false;
                 if record.family == "health_vital" {
                     if let Some(val) = record.field_number("glucose") {
-                        let unit = record
-                            .field_text("unit")
-                            .unwrap_or_else(|| "mg/dL".into());
+                        let unit = record.field_text("unit").unwrap_or_else(|| "mg/dL".into());
                         let point = MetricPoint {
                             sort_key: record.sort_key(),
                             timestamp_label: record.occurred_label(),
@@ -293,9 +287,8 @@ pub fn extract_metric_series(records: &[HealthRecord], kind: &MetricKind) -> Vec
                     if let Some(analyte) = record.field_text("analyte") {
                         if analyte.trim().eq_ignore_ascii_case("glucose") {
                             if let Some(val) = record.field_number("value") {
-                                let unit = record
-                                    .field_text("unit")
-                                    .unwrap_or_else(|| "mg/dL".into());
+                                let unit =
+                                    record.field_text("unit").unwrap_or_else(|| "mg/dL".into());
                                 let point = MetricPoint {
                                     sort_key: record.sort_key(),
                                     timestamp_label: record.occurred_label(),
@@ -396,10 +389,7 @@ pub enum CorrectionStatus {
         corrected_at: String,
     },
     /// Immutable correction receipt linked to an earlier record.
-    CorrectionReceipt {
-        targets_id: String,
-        reason: String,
-    },
+    CorrectionReceipt { targets_id: String, reason: String },
 }
 
 /// A projected timeline item pairing the underlying health record with its correction status.
@@ -712,9 +702,14 @@ mod tests {
         assert_eq!(timeline.len(), 3);
 
         // Original record remains queryable and is flagged as Corrected with receipt details
-        let original_item = timeline.iter().find(|t| t.record.id == "bp-original").unwrap();
+        let original_item = timeline
+            .iter()
+            .find(|t| t.record.id == "bp-original")
+            .unwrap();
         match &original_item.status {
-            CorrectionStatus::Corrected { receipt_id, reason, .. } => {
+            CorrectionStatus::Corrected {
+                receipt_id, reason, ..
+            } => {
                 assert_eq!(receipt_id, "receipt-1");
                 assert_eq!(reason, "Cuff movement detected during measurement");
             }
@@ -722,7 +717,10 @@ mod tests {
         }
 
         // The receipt itself is flagged as CorrectionReceipt
-        let receipt_item = timeline.iter().find(|t| t.record.id == "receipt-1").unwrap();
+        let receipt_item = timeline
+            .iter()
+            .find(|t| t.record.id == "receipt-1")
+            .unwrap();
         match &receipt_item.status {
             CorrectionStatus::CorrectionReceipt { targets_id, reason } => {
                 assert_eq!(targets_id, "bp-original");
@@ -732,7 +730,10 @@ mod tests {
         }
 
         // Uncorrected record remains Current
-        let current_item = timeline.iter().find(|t| t.record.id == "hr-reading").unwrap();
+        let current_item = timeline
+            .iter()
+            .find(|t| t.record.id == "hr-reading")
+            .unwrap();
         assert_eq!(current_item.status, CorrectionStatus::Current);
     }
 
@@ -754,11 +755,26 @@ mod tests {
         );
         assert_eq!(family, "health_correction");
         assert_eq!(title, "Correction receipt · Morning vitals");
-        assert_eq!(fields.get("corrects_id").unwrap().as_str().unwrap(), "vital-42");
-        assert_eq!(fields.get("target_family").unwrap().as_str().unwrap(), "health_vital");
-        assert_eq!(fields.get("reason").unwrap().as_str().unwrap(), "Typo in diastolic field");
-        assert_eq!(fields.get("notes").unwrap().as_str().unwrap(), "Actual reading was 78, entered as 98");
-        assert_eq!(fields.get("sensitivity").unwrap().as_str().unwrap(), "classified");
+        assert_eq!(
+            fields.get("corrects_id").unwrap().as_str().unwrap(),
+            "vital-42"
+        );
+        assert_eq!(
+            fields.get("target_family").unwrap().as_str().unwrap(),
+            "health_vital"
+        );
+        assert_eq!(
+            fields.get("reason").unwrap().as_str().unwrap(),
+            "Typo in diastolic field"
+        );
+        assert_eq!(
+            fields.get("notes").unwrap().as_str().unwrap(),
+            "Actual reading was 78, entered as 98"
+        );
+        assert_eq!(
+            fields.get("sensitivity").unwrap().as_str().unwrap(),
+            "classified"
+        );
         assert!(fields.contains_key("occurred_at"));
     }
 
@@ -912,15 +928,26 @@ mod tests {
         let shares = project_shares(&records, now);
         assert_eq!(shares.len(), 3);
 
-        let active_item = shares.iter().find(|s| s.record.id == "share-active").unwrap();
+        let active_item = shares
+            .iter()
+            .find(|s| s.record.id == "share-active")
+            .unwrap();
         assert_eq!(active_item.status, ShareStatus::Active);
 
-        let expired_item = shares.iter().find(|s| s.record.id == "share-expired").unwrap();
+        let expired_item = shares
+            .iter()
+            .find(|s| s.record.id == "share-expired")
+            .unwrap();
         assert!(matches!(expired_item.status, ShareStatus::Expired { .. }));
 
-        let revoked_item = shares.iter().find(|s| s.record.id == "share-revoked").unwrap();
+        let revoked_item = shares
+            .iter()
+            .find(|s| s.record.id == "share-revoked")
+            .unwrap();
         match &revoked_item.status {
-            ShareStatus::Revoked { receipt_id, reason, .. } => {
+            ShareStatus::Revoked {
+                receipt_id, reason, ..
+            } => {
                 assert_eq!(receipt_id, "receipt-rev-1");
                 assert_eq!(reason, "Consultation concluded");
             }
@@ -938,18 +965,30 @@ mod tests {
             created_at: 100,
             updated_at: 100,
         };
-        let (family, title, fields) = build_consent_revocation_payload(
-            &share,
-            "Revoked by patient request",
-            "classified",
-        );
+        let (family, title, fields) =
+            build_consent_revocation_payload(&share, "Revoked by patient request", "classified");
         assert_eq!(family, "health_safeguard");
         assert_eq!(title, "Revocation receipt · Cardio share");
-        assert_eq!(fields.get("targets_id").unwrap().as_str().unwrap(), "share-42");
-        assert_eq!(fields.get("revoked_grant_family").unwrap().as_str().unwrap(), "health_share");
-        assert_eq!(fields.get("reason").unwrap().as_str().unwrap(), "Revoked by patient request");
-        assert_eq!(fields.get("sensitivity").unwrap().as_str().unwrap(), "classified");
+        assert_eq!(
+            fields.get("targets_id").unwrap().as_str().unwrap(),
+            "share-42"
+        );
+        assert_eq!(
+            fields
+                .get("revoked_grant_family")
+                .unwrap()
+                .as_str()
+                .unwrap(),
+            "health_share"
+        );
+        assert_eq!(
+            fields.get("reason").unwrap().as_str().unwrap(),
+            "Revoked by patient request"
+        );
+        assert_eq!(
+            fields.get("sensitivity").unwrap().as_str().unwrap(),
+            "classified"
+        );
         assert!(fields.contains_key("occurred_at"));
     }
 }
-

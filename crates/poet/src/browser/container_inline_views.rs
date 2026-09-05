@@ -332,9 +332,44 @@ pub fn build_vibescript_console(document: &Document) -> Element {
     console.append_child(&output).unwrap();
 
     wire_vibescript_action(&run_btn, &editor, &output, false);
-    wire_vibescript_action(&diag_btn, &editor, &output, true);
+    wire_diagnose_action(&diag_btn, &editor, &output);
 
     console
+}
+
+fn wire_diagnose_action(button: &Element, editor: &Element, output: &Element) {
+    let editor = editor.clone();
+    let output = output.clone();
+    let closure = Closure::wrap(Box::new(move |_event: web_sys::Event| {
+        let source = editor.text_content().unwrap_or_default();
+        if source.trim().is_empty() {
+            output.set_attribute("data-honesty", "error").ok();
+            output.set_text_content(Some("Enter VibeScript source before diagnosing."));
+            return;
+        }
+        let report = crate::vibe_host::diagnose(&source);
+        super::diag_glow::paint_source_element(&editor, &source, &report);
+        output.set_class_name("vibe-output diag-report");
+        output
+            .set_attribute("data-honesty", if report.valid { "live" } else { "error" })
+            .ok();
+        output
+            .set_attribute("data-beat", if report.valid { "dwell" } else { "entrance" })
+            .ok();
+        output.set_text_content(Some(&super::diag_glow::format_human_report(&report)));
+        if super::diag_glow::source_mentions_inference(&source) {
+            output.set_attribute("data-inference-trail", "1").ok();
+            let honesty = if report.valid { "unavailable" } else { "error" };
+            if let Some(doc) = web_sys::window().and_then(|w| w.document()) {
+                let trail = super::diag_glow::build_inference_trail(&doc, honesty, "Inference.*");
+                let _ = output.append_child(&trail);
+            }
+        }
+    }) as Box<dyn FnMut(web_sys::Event)>);
+    button
+        .add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())
+        .unwrap();
+    closure.forget();
 }
 
 fn wire_vibescript_action(button: &Element, editor: &Element, output: &Element, as_cell: bool) {
@@ -358,6 +393,14 @@ fn wire_vibescript_action(button: &Element, editor: &Element, output: &Element, 
             }
             output.set_attribute("data-honesty", "live").ok();
             output.set_text_content(Some(&log));
+            if super::diag_glow::source_mentions_inference(&source) {
+                output.set_attribute("data-inference-trail", "1").ok();
+                if let Some(doc) = web_sys::window().and_then(|w| w.document()) {
+                    let trail =
+                        super::diag_glow::build_inference_trail(&doc, "unavailable", "Inference.*");
+                    let _ = output.append_child(&trail);
+                }
+            }
             let other_invokes = source.matches("capability.invoke").count() > authored.len();
             if !other_invokes {
                 return;
@@ -408,6 +451,42 @@ pub fn build_gis_map_view(document: &Document) -> Element {
     wrapper_el
         .style()
         .set_css_text("display: flex; flex-direction: column; flex: 1;");
+    wrapper.set_attribute("data-coord-bind", "gated").ok();
+    wrapper.set_attribute("data-media-surface", "map").ok();
+    wrapper.set_attribute("data-shape", "container").ok();
+
+    let realm_row = document.create_element("div").unwrap();
+    realm_row.set_class_name("realm-chip-row");
+    for (label, title) in [
+        (
+            "Earth",
+            "Geospatial realm — gated until a live CoordinateSystem bind is selected (G-COORD).",
+        ),
+        (
+            "Cosmos",
+            "Non-geo cosmos realm — gated until a live Realm bind is selected.",
+        ),
+        (
+            "Fiction",
+            "Speculative / POV realm — same container chrome, different skin; bind gated.",
+        ),
+    ] {
+        let chip = document.create_element("button").unwrap();
+        chip.set_class_name("realm-chip");
+        chip.set_attribute("type", "button").unwrap();
+        chip.set_attribute("disabled", "").ok();
+        chip.set_attribute("aria-disabled", "true").ok();
+        chip.set_attribute("title", title).ok();
+        chip.set_text_content(Some(label));
+        realm_row.append_child(&chip).unwrap();
+    }
+    let gated = document.create_element("div").unwrap();
+    gated.set_class_name("gated-reason");
+    gated.set_text_content(Some(
+        "Map layers are a local sketch. CoordinateSystem / Realm / Position stay gated — no fake CRS.",
+    ));
+    wrapper.append_child(&realm_row).unwrap();
+    wrapper.append_child(&gated).unwrap();
 
     let layer_bar = document.create_element("div").unwrap();
     layer_bar.set_class_name("gis-layer-bar");
@@ -527,6 +606,9 @@ pub fn build_gis_map_view(document: &Document) -> Element {
 pub fn build_media_3d_view(document: &Document) -> Element {
     let viewport = document.create_element("div").unwrap();
     viewport.set_class_name("media-3d-viewport");
+    viewport.set_attribute("data-media-surface", "3d").ok();
+    viewport.set_attribute("data-shape", "container").ok();
+    viewport.set_attribute("data-beat", "entrance").ok();
 
     let inner = document.create_element("div").unwrap();
     inner.set_class_name("media-3d-placeholder");

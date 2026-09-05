@@ -1,0 +1,87 @@
+//! Part of poet browser toolbox registration.
+
+use super::*;
+
+pub(super) fn register_image_toolbox(reg: &mut Registry) {
+    let shape_tools: Vec<Box<dyn crate::tool_chest::core::tool::Tool>> = vec![
+        Box::new(SimpleTool::new(
+            ToolMetadata {
+                id: "image:place_media".into(),
+                label: "+ Media Viewport".into(),
+                icon: "media".into(),
+                kind: ToolKind::PlaceContainer,
+                capability_scope: Some(SCOPE_PLACE.into()),
+                ontology_prefix: "hm".into(),
+                description: "Place a media viewport container.".into(),
+            },
+            ActionType::Query,
+        )),
+        Box::new(SimpleTool::new(
+            ToolMetadata {
+                id: "image:marker".into(),
+                label: "Marker".into(),
+                icon: "marker".into(),
+                kind: ToolKind::RunAction,
+                capability_scope: None,
+                ontology_prefix: "hm".into(),
+                description: "Place a marker on the active map.".into(),
+            },
+            ActionType::Annotate,
+        )),
+        Box::new(SimpleTool::new(
+            ToolMetadata {
+                id: "image:heatmap".into(),
+                label: "Heatmap".into(),
+                icon: "heatmap".into(),
+                kind: ToolKind::RunAction,
+                capability_scope: None,
+                ontology_prefix: "hm".into(),
+                description: "Generate a heatmap overlay.".into(),
+            },
+            ActionType::Query,
+        )),
+    ];
+
+    reg.register_toolbox(Toolbox::new(
+        ToolboxMetadata {
+            id: "image".into(),
+            label: "Graphics & Vector Drawing".into(),
+            icon: "image".into(),
+            ontology_prefix: "hm".into(),
+            description: "Brushes, color palettes, vector geometry, and media viewports.".into(),
+            enabled_by_default: true,
+            family: "graphics".into(),
+        },
+        vec![
+            ToolChain::new(
+                ToolChainMetadata {
+                    id: "image:brushes".into(),
+                    label: "Brushes & Stroke".into(),
+                    icon: "media".into(),
+                    description: "Select brush type, adjust brush stroke size and opacity.".into(),
+                },
+                vec![],
+            ),
+            ToolChain::new(
+                ToolChainMetadata {
+                    id: "image:palette".into(),
+                    label: "Color & Palette".into(),
+                    icon: "heatmap".into(),
+                    description:
+                        "Stroke & fill color pickers with preset swatches and geometry modes."
+                            .into(),
+                },
+                vec![],
+            ),
+            ToolChain::new(
+                ToolChainMetadata {
+                    id: "image:tools".into(),
+                    label: "Vector Shapes & Media".into(),
+                    icon: "tools".into(),
+                    description: "Place media viewports, markers, and heatmaps.".into(),
+                },
+                shape_tools,
+            ),
+        ],
+    ));
+}

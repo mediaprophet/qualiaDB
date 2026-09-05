@@ -63,10 +63,10 @@ pub(super) fn gbm_var_args() -> serde_json::Value {
     })
 }
 
-mod social;
-mod sessions;
-mod governance;
 mod device;
+mod governance;
+mod sessions;
+mod social;
 
 pub use device::*;
 pub use governance::*;
