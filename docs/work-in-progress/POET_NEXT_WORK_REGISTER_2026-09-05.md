@@ -17,8 +17,8 @@ evidence.
 | 3 | Decompose POET style asset (`RM-02`) | Complete | 14 assets at no more than 421 lines; normalized CSS hash preserved; focused tests, build, desktop/mobile UAT passed | None |
 | 4 | Review `HLT-03` consent contract (`HLT-R1`) | Instrument review complete; **D5 Gate A still open** | 12 `consent_contract` tests pass; Poet share projection fail-closed; `clinical_notes` removed from grantable UI flags | Project owner/expert (`D5`) |
 
-| 5 | Complete `HLT-07` clinical calculator integrity | Not started in ledger | Required inputs and units, applicability, boundary tests, algorithm/version provenance, non-advice UI | Higher-assurance implementation/review |
-| 6 | Complete `HLT-08` Health UAT pack | Blocked by 4-5 | Executable/manual evidence for add, reload, inspect, correct, grant, revoke, ingest, and offline recovery | Review Gate A |
+| 5 | Complete `HLT-07` clinical calculator integrity | Implemented; browser UAT pending | Required inputs and units, applicability, boundary tests, algorithm/version provenance, non-advice UI | Higher-assurance implementation/review |
+| 6 | Complete `HLT-08` Health UAT pack | Source contracts landed; browser rows open | Executable/manual evidence for add, reload, inspect, correct, grant, revoke, ingest, and offline recovery | Review Gate A |
 | 7 | Close Review Gate A | Blocked by 4-6 | Architecture, data contract, security, visual, browser, and status review | Project owner/expert reviewer |
 | 8 | Audit standalone Tool Chest semantics | Ready after structural packets | Live vs local labels, provenance, gated states, daemon rejection/error behavior | Project owner accepts findings |
 | 9 | Select next Tool Chest chain | Awaiting selection | Inventory row, live `ALL_BOUND` ID or explicit gated shell, acceptance task | Captain/project owner |
@@ -143,6 +143,23 @@ evidence.
   signing of grants still goes through record upsert, not `ConsentLedger`
   issue/revoke (seam for Neo if Health persist should remember revocations).
 - Next packet: `HLT-07`.
+
+### `HLT-07` - 2026-09-05
+
+- Native `ClinicalRisk.framingham` / `.cha2ds2_vasc` / `.score2` fail closed
+  on missing fields, omitted booleans, inapplicable age/AF/region, and
+  HDL ≥ total cholesterol. Success names algorithm, version, citation, and
+  `not_diagnosis`.
+- Poet calculator workspace: empty fields, units on labels, Calculate
+  disabled until complete + daemon connected. Toolbox tools place the form
+  instead of invoking empty args. Health vault container no longer shows a
+  fabricated 12% Framingham / Metformin list. `Render.scene` health is
+  geometry only.
+- Verification: `invoke::clinical` 16 passed; `health_is_not_a_named_person`
+  1 passed; `health_views` 33 passed; product integrity 10; surface inventory
+  1; capability-scope and non-placement policy tests passed.
+- Browser UAT of the calculator form is the remaining verification row.
+- Next packet: `HLT-08`. Do not close Review Gate A.
 
 ## Post-gate programme
 

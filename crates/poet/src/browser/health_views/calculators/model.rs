@@ -17,14 +17,6 @@ impl CalculatorKind {
         }
     }
 
-    pub fn id(self) -> &'static str {
-        match self {
-            Self::Framingham => "framingham",
-            Self::Cha2ds2Vasc => "cha2ds2_vasc",
-            Self::Score2 => "score2",
-        }
-    }
-
     pub fn capability(self) -> &'static str {
         match self {
             Self::Framingham => "ClinicalRisk.framingham",

@@ -62,9 +62,9 @@ pub fn build_health_overview_view(document: &Document) -> Element {
             </div>
             <div class="health-form-grid">
               <label class="health-field health-field-wide"><span>When measured</span><input type="datetime-local" data-health-input="measured_at" required></label>
-              <label class="health-field"><span>Systolic</span><input type="number" inputmode="numeric" min="40" max="300" step="1" placeholder="120" data-health-input="sys_bp"></label>
-              <label class="health-field"><span>Diastolic</span><input type="number" inputmode="numeric" min="20" max="200" step="1" placeholder="80" data-health-input="dia_bp"></label>
-              <label class="health-field"><span>Heart rate <small>optional</small></span><input type="number" inputmode="numeric" min="20" max="300" step="1" placeholder="68" data-health-input="hr"></label>
+              <label class="health-field"><span>Systolic <small>mmHg</small></span><input type="number" inputmode="numeric" min="40" max="300" step="1" placeholder="" data-health-input="sys_bp"></label>
+              <label class="health-field"><span>Diastolic <small>mmHg</small></span><input type="number" inputmode="numeric" min="20" max="200" step="1" placeholder="" data-health-input="dia_bp"></label>
+              <label class="health-field"><span>Heart rate <small>optional bpm</small></span><input type="number" inputmode="numeric" min="20" max="300" step="1" placeholder="" data-health-input="hr"></label>
               <label class="health-field"><span>Privacy</span><select data-health-input="sensitivity"><option value="classified">Only me</option><option value="restricted">Named access</option></select></label>
             </div>
             <div class="health-form-footer">

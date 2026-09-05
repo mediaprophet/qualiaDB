@@ -43,6 +43,8 @@ This is the sequential handoff record for
 | 2026-09-04 | `HLT-05` | Gemini 3.8 Flash / high | Complete | `crates/poet/src/browser/health_views/clinical_models.rs`; `conditions_workspace.rs`; `medications_workspace.rs`; `conditions.rs`; `medications.rs`; `mod.rs`; `docs/poet/surface-inventory.json`; ledger | `cargo test -p poet health_views` (20 passed); `cargo test -p poet --test product_integrity` (6 passed); `cargo test -p poet --test surface_inventory` (1 passed); `trunk build` passed | Browser subagent UAT verified on http://127.0.0.1:8081/: Conditions and Medications workspaces, honest offline indicators, active/history tab toggles, dynamic resolution/stop date fields, pharmacology notice, command palette placement, and provenance-backed forms | Health documents & reports workspace remains for `HLT-06` | `HLT-06` |
 | 2026-09-04 | `HLT-06` | Gemini 3.8 Flash / high | Complete | `crates/poet/src/browser/health_views/document_models.rs`; `documents_workspace.rs`; `reports_workspace.rs`; `documents.rs`; `clinical_reports.rs`; `mod.rs`; `css.rs`; `docs/poet/surface-inventory.json`; ledger | `cargo test -p poet document_models` (5 passed); `cargo test -p poet health_views` (25 passed); `cargo test -p poet --test product_integrity` (8 passed); `cargo test -p poet --test surface_inventory` (1 passed); `trunk build` passed | Browser subagent verified on http://127.0.0.1:8081/: Health Documents workspace (text extract ingestion, honest binary-PDF disabled notice, category filter tabs, provenance-backed record saving) and Clinical Reports workspace (consultation/diagnostic/pathology fields, filter tabs, honest offline indicators) | Clinical calculator workflow integrity remains for `HLT-07` (5.5) | `HLT-07` |
 | 2026-09-05 | `HLT-R1` | Grok 4.6 / high | Complete (instrument) | `consent_contract.rs`; `share_projection.rs`; disclosure model/list; WIP + ledger | `cargo test -p qualia-core-db --lib consent_contract` (12 passed); `cargo test -p poet --lib health_views` (27 passed) | Not run — contract/projection packet | `D5` Gate A still open; persist does not call `ConsentLedger` | `HLT-07` |
+| 2026-09-05 | `HLT-07` | Grok 4.6 / high | Partial (implementation + tests; browser UAT open) | `clinical/required.rs`; Framingham/CHA₂DS₂-VASc/SCORE2 invoke; Poet `health_views/calculators/`; docks/toolbox/persist; studio health body; WIP + ledger | `invoke::clinical` 16; health scene 1; `health_views` 33; product integrity 10; surface inventory 1 | Native fixtures passed; browser UAT pending | MCP medical defaults; WebizenVM SCORE2 Moderate; Gate A open | `HLT-08` |
+| 2026-09-05 | `HLT-08` | Grok 4.6 / high | Partial (source contracts; browser rows open) | `tests/health_uat_pack.rs`; overview empty measurement placeholders; WIP UAT pack | `cargo +stable test -p poet --test health_uat_pack` (8 passed) | Browser rows pending trunk | Live daemon add/grant/ingest; ConsentLedger persist seam; Gate A open | Review Gate A |
 
 ## Required closeout detail
 
@@ -257,6 +259,27 @@ Browser/native UAT: Not run; this packet is a service-contract review plus fail-
 Known gaps: Review Gate A (`D5`) is not closed. Poet grant persist still upserts JSON records and does not call `ConsentLedger::issue`/`revoke` on the daemon. `consent_contract.rs` is 733 lines after the ledger addition.
 Unrelated failures preserved: Yes.
 Recommended next packet: `HLT-07`
+
+Packet: `HLT-07`
+Baseline git status: Feature branch `cursor/poet-grok-handover-ac52` with HLT-R1 already landed.
+User job delivered: Fail-closed ClinicalRisk invoke (required inputs and units, no fabricated defaults, applicability gates, algorithm/version/non-diagnosis provenance) plus Poet empty calculator workspace. Incomplete or inapplicable input cannot calculate. Offline invents no score.
+Files changed: `clinical/required.rs`, `framingham.rs`, `cha2ds2.rs`, `score2.rs`, `render/scene.rs`; Poet `health_views/calculators/`; toolbox, docks, persist, logic workbench, studio health body; this ledger; WIP note.
+Tests and exact results: `cargo +stable test -p qualia-core-db --lib invoke::clinical` (16 passed); `health_is_not_a_named_person` (1 passed); `cargo +stable test -p poet --lib health_views` (33 passed); product integrity 10; surface inventory 1; `capability_scopes_are_live_family_method_or_local` and `every_registered_nonplacement_tool_has_an_explicit_policy` passed. rustc 1.98.1.
+Browser/native UAT: Native boundary fixtures passed. Browser UAT of empty form / complete Framingham fixture pending trunk in this session.
+Delegation count before/after: 112 / 112 audited `pub use` ceiling; calculator is a real workspace (not a thin `pub use` wrapper). Product integrity now 10 tests.
+Known gaps: Browser UAT; MCP medical Framingham defaults; WebizenVM SCORE2 Moderate hardcode; Gate A not closed.
+Unrelated failures preserved: Yes.
+Recommended next packet: `HLT-08`
+
+Packet: `HLT-08`
+Baseline git status: HLT-07 implementation committed as `0a28e9ce`; this packet adds UAT contracts and one add-measurement placeholder repair.
+User job delivered: Executable source contracts for add measurement, reload, trend/table, correction, grant, revoke, ingest, and offline recovery. Cleared overview BP/HR placeholders that presented 120/80/68 as if they were patient values. Grant categories remain the five ConsentScope flags.
+Files changed: `crates/poet/tests/health_uat_pack.rs`; `overview_workspace.rs`; `docs/work-in-progress/hlt-08-health-uat-pack-2026-09-05.md`; register; this ledger.
+Tests and exact results: `cargo +stable test -p poet --test health_uat_pack` (8 passed).
+Browser/native UAT: Browser rows still open pending trunk serve.
+Known gaps: Live daemon workflows; ConsentLedger persist seam; Review Gate A not closed.
+Unrelated failures preserved: Yes.
+Recommended next packet: Review Gate A (`D5`) — owner/expert close, not this instrument.
 
 
 
