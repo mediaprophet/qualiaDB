@@ -45,7 +45,7 @@ This is the sequential handoff record for
 | 2026-09-05 | `HLT-R1` | Grok 4.6 / high | Complete (instrument) | `consent_contract.rs`; `share_projection.rs`; disclosure model/list; WIP + ledger | `cargo test -p qualia-core-db --lib consent_contract` (12 passed); `cargo test -p poet --lib health_views` (27 passed) | Not run — contract/projection packet | `D5` Gate A still open; persist does not call `ConsentLedger` | `HLT-07` |
 | 2026-09-05 | `HLT-07` | Grok 4.6 / high | Partial (implementation + tests; browser UAT open) | `clinical/required.rs`; Framingham/CHA₂DS₂-VASc/SCORE2 invoke; Poet `health_views/calculators/`; docks/toolbox/persist; studio health body; WIP + ledger | `invoke::clinical` 16; health scene 1; `health_views` 33; product integrity 10; surface inventory 1 | Native fixtures passed; browser UAT pending | MCP medical defaults; WebizenVM SCORE2 Moderate; Gate A open | `HLT-08` |
 | 2026-09-05 | `HLT-08` | Grok 4.6 / high | Partial (source contracts; browser rows open) | `tests/health_uat_pack.rs`; overview empty measurement placeholders; WIP UAT pack | `cargo +stable test -p poet --test health_uat_pack` (8 passed) | Browser rows pending trunk | Live daemon add/grant/ingest; ConsentLedger persist seam; Gate A open | Review Gate A |
-| 2026-09-05 | `HLT-07b` | Grok 4.6 / high | Partial (implementation; tests pending this revision) | MCP `clinical_risk.rs`; `clinical_native.rs`; `clinical_playground.rs`; playground HTML; WIP + ledger | pending focused `cargo +stable test` | N/A — engine/MCP/playground JSON | Gate A open; Poet persist ≠ ConsentLedger; wasm_bridge D’Agostino provenance | `PFT-01` or `RM-06` |
+| 2026-09-05 | `HLT-07b` | Grok 4.6 / high | Complete (implementation + tests; Gate A still open) | MCP `clinical_risk.rs`; `clinical_native.rs`; `clinical_playground.rs`; playground HTML; WIP + ledger | MCP clinical_risk 7; rejects-incomplete 1; playground 3; VM native 2; invoke::clinical 16 | N/A — engine/MCP/playground JSON | Gate A open; Poet persist ≠ ConsentLedger; wasm_bridge D’Agostino provenance | `PFT-01` or `RM-06` |
 
 ## Required closeout detail
 
@@ -286,7 +286,7 @@ Packet: `HLT-07b`
 Baseline git status: Feature branch `cursor/poet-grok-handover-ac52` at `7bce97d5`.
 User job delivered: Remaining clinical-risk surfaces fail closed. MCP `clinical_risk` no longer defaults age/lipids/SBP/booleans or treats unknown score as Framingham. WebizenVM `NativeClinicalRisk` holds instead of inventing a patient. WASM playground JSON and HTML presets no longer calculate from incomplete fields.
 Files changed: `mcp_tool_impls/clinical_risk.rs`; `medical.rs`; `governance/webizen/clinical_native.rs`; `vm.rs`; `clinical_playground.rs`; `wasm_playground.rs`; playground HTML; this ledger; WIP.
-Tests and exact results: pending this revision (`cargo +stable test` after commit).
+Tests and exact results: `cargo +stable test -p qualia-core-db --lib clinical_risk` (7 passed); `clinical_framingham_rejects_incomplete_input` (1 passed); `clinical_playground` (3 passed); `clinical_native` (2 passed); `invoke::clinical` (16 passed, no regression). rustc 1.98.1.
 Browser/native UAT: Not a Poet UI packet; playground HTML presets updated to complete labeled reference profiles.
 Delegation count before/after: unchanged.
 Known gaps: Review Gate A not closed; Poet persist ≠ ConsentLedger; wasm_bridge D’Agostino provenance still a separate path.

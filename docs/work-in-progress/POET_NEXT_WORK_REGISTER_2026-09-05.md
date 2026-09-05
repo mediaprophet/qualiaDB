@@ -184,6 +184,8 @@ unavailable. Live daemon fixture was not available on this VM.
   are not fabricated.
 - WASM playground JSON fail-closed; HTML presets are complete labeled
   reference profiles.
+- Verification: MCP `clinical_risk` 7 passed; incomplete Framingham reject 1;
+  playground 3; VM `clinical_native` 2; `invoke::clinical` 16 (no regression).
 - Review Gate A remains a `D5` owner close. Next ready non-AST packet:
   Tool Chest audit (`PFT-01`) or `RM-06` `containers.rs` split.
 
