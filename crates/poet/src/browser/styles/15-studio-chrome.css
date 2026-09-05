@@ -400,15 +400,24 @@ button[disabled]:hover,
   margin-bottom: 6px;
 }
 .realm-chip {
-  font: 700 9px/1 var(--font-mono);
-  letter-spacing: 0.3px;
-  text-transform: uppercase;
+  font: 700 9px/1 var(--font-sans);
+  letter-spacing: 0.2px;
   padding: 4px 8px;
   border-radius: var(--radius-xs);
-  border: 1px dashed var(--border-medium);
-  color: var(--text-muted);
+  border: 1px solid var(--border-medium);
+  color: var(--text-secondary);
   background: transparent;
+  cursor: pointer;
+}
+.realm-chip.active,
+.realm-chip[aria-pressed="true"] {
+  color: var(--text-primary);
+  border-color: var(--media-map);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--media-map) 35%, transparent);
+}
+.realm-chip[aria-disabled="true"] {
   cursor: not-allowed;
+  opacity: 0.72;
 }
 .realm-chip[aria-disabled="true"]::after {
   content: " gated";
@@ -418,6 +427,25 @@ button[disabled]:hover,
 [data-coord-bind="gated"] .gis-map-svg {
   outline: 1px dashed color-mix(in srgb, var(--media-map) 40%, transparent);
 }
+[data-coord-bind="remap"] .gis-map-svg {
+  outline: 1px solid color-mix(in srgb, var(--media-map) 45%, transparent);
+}
+.g-coord-position,
+.g-coord-result {
+  font: 10px/1.4 var(--font-sans);
+  color: var(--text-secondary);
+  padding: 4px 6px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xs);
+}
+.g-coord-timeline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font: 10px/1 var(--font-sans);
+  color: var(--text-muted);
+}
+.g-coord-timeline input[type="range"] { flex: 1; }
 
 /* Honesty badges — local vs live vs unavailable already exist; keep them readable on studio surfaces */
 .honesty-badge.honesty-unavailable,

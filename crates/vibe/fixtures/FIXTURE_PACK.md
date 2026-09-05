@@ -12,6 +12,7 @@ four-op surface; LocalHost does not pretend to be a durable `.q42` volume.
 | `volume_sanctuary.vibe` | `GraphDatabase.volume_open` / `volume_commit` | Sanctuary save/open; wasm stays fail-closed |
 | `inference_grounding.vibe` | `Inference.grounding` / `verify_turn` / `detect_ungrounded` | Provenance path; no `qualia.infer.*` |
 | `render_preview_handles.vibe` | still / clip / scene on `Render.*` | B-007 remap; no sibling Host op |
+| `g_coord_realms.vibe` | `Cosmic.geodetic_to_ecef` / `body_profile` / `stardate_to_gregorian` + SPARQL | G-COORD remap; UTF-8 place names; not QDNF |
 | `gpu1_portal.vibe` | `Render.gpu_*` | Existing Render preview probe |
 
 ## Diagnose loops (expected invalid)

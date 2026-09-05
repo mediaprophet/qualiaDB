@@ -67,6 +67,9 @@ pub fn invoke_local(id: &str, args: &Value, span: Span) -> Result<Value, Diagnos
         }
         return Ok(Value::List(list));
     }
+    if id.starts_with("Cosmic.") {
+        return super::cosmic::invoke(id, args, span);
+    }
     if id == "GraphDatabase.sparql" {
         return Ok(Value::List(Vec::new()));
     }

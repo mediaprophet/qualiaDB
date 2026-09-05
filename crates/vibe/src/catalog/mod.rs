@@ -5,6 +5,7 @@
 //! catalog at compile time and lower to `Host::capability_invoke`.
 //! Unknown `Family.method` names fail closed.
 
+mod cosmic;
 mod ids;
 mod local;
 mod suggest;
@@ -37,6 +38,10 @@ pub fn is_known(path: &str) -> bool {
 
 /// `Family` grant: `using Animation;` covers every `Animation.*` catalog id
 /// and every animation preset alias.
+fn utf8_eq_ignore_case(a: &str, b: &str) -> bool {
+    a.to_lowercase() == b.to_lowercase()
+}
+
 pub fn family_of(path: &str) -> Option<&str> {
     let dot = path.find('.')?;
     Some(&path[..dot])
@@ -48,12 +53,12 @@ pub fn granted_covers(granted: &[&str], path: &str) -> bool {
             return true;
         }
         if let Some(fam) = family_of(id) {
-            if granted.iter().any(|g| g.eq_ignore_ascii_case(fam)) {
+            if granted.iter().any(|g| utf8_eq_ignore_case(g, fam)) {
                 return true;
             }
         }
         if let Some(fam) = family_of(path) {
-            if granted.iter().any(|g| g.eq_ignore_ascii_case(fam)) {
+            if granted.iter().any(|g| utf8_eq_ignore_case(g, fam)) {
                 return true;
             }
         }

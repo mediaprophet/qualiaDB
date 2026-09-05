@@ -26,7 +26,7 @@ the normative spec or the staged impl plans. Execution tracker:
 | A2 | Fixture pack graph · volume · infer · render · diagnose | Implemented (graph/volume/diagnose + existing Render) | `crates/vibe/fixtures/FIXTURE_PACK.md`; `sprint_b_fixtures` |
 | A3 | Span fidelity (UTF-8 byte span for cell/token glow) | Implemented (byte span) | core §9; `Span { start, end }`; cross-frame Timeline still B-007 |
 | A4 | Human ↔ agent dialect guide | Document landed | `docs/vibe/devrel-frozen-host.md` §2 |
-| A5 | G-COORD dialect | Shapes landed; bind gated | `g-coord-coordinate-system-shapes.md` |
+| A5 | G-COORD dialect | Remap bind landed | `Cosmic.*` in-process + SPARQL; UTF-8 labels; QDNF wait |
 | A6 | Preview still/clip/scene on `Render.*` | Implemented (remap) | `vibe-catalog-honesty.md`; `render_preview_handles.vibe` |
 | A7 | Catalog honesty (dual-VC, QISP, ledger vs showcase, aspirational bridges) | Implemented (honesty notes) | `vibe-catalog-honesty.md`; ALL_BOUND ⊂ Vibe catalog |
 | A8 | Empty typography + custom unicode API | Implemented (session overlay, not Host) | `icon_session.rs` 32 PUA slots; B-009 done |

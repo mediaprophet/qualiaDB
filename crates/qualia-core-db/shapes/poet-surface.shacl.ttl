@@ -48,9 +48,42 @@ q42:timeline a rdf:Property ; rdfs:range q42:Timeline .
 q42:openedVia a rdf:Property ; rdfs:range vibe:InvokeId .
 q42:committedVia a rdf:Property ; rdfs:range vibe:InvokeId .
 q42:hasPosition a rdf:Property ;
-    rdfs:comment "Optional spatiotemporal position on a container or language cell." .
+    rdfs:comment "Optional spatiotemporal position on a container or language cell. Labels are UTF-8." .
 q42:viewpointRealm a rdf:Property ;
-    rdfs:comment "Optional realm (Earth/cosmos/fiction/speculative/viewpoint). Gated until G-COORD bind." .
+    rdfs:comment "Optional realm (earth/cosmos/fictional/speculative/viewpoint). Machine id is a token; display names are UTF-8." .
+
+q42:CoordinateSystem a rdfs:Class ;
+    rdfs:label "Coordinate system (technical CRS / authored frame)" ;
+    rdfs:comment "OWL-ok artifact. Not a person. Not a DNS/IP address. Not QDNF." .
+q42:Realm a rdfs:Class ;
+    rdfs:label "G-COORD realm" .
+q42:Position a rdfs:Class ;
+    rdfs:label "Realm-scoped position" .
+
+q42:inRealm a rdf:Property ; rdfs:domain q42:Position ; rdfs:range q42:Realm .
+q42:inSystem a rdf:Property ; rdfs:domain q42:Position ; rdfs:range q42:CoordinateSystem .
+
+q42:CoordinateSystemShape a sh:NodeShape ;
+    sh:targetClass q42:CoordinateSystem ;
+    sh:property [
+        sh:path q42:openedVia ;
+        sh:datatype xsd:string ;
+        sh:in ( "Cosmic.geodetic_to_ecef" "Cosmic.body_profile" "Cosmic.stardate_to_gregorian" "GraphDatabase.sparql" "Render.gpu_set_camera" ) ;
+    ] .
+
+q42:RealmShape a sh:NodeShape ;
+    sh:targetClass q42:Realm ;
+    sh:property [
+        sh:path rdfs:label ;
+        sh:datatype xsd:string ;
+        sh:minCount 1 ;
+        sh:message "Realm display names are UTF-8; machine token is earth|cosmos|fictional|speculative|viewpoint." ;
+    ] .
+
+q42:PositionShape a sh:NodeShape ;
+    sh:targetClass q42:Position ;
+    sh:property [ sh:path q42:inRealm ; sh:maxCount 1 ] ;
+    sh:property [ sh:path q42:inSystem ; sh:maxCount 1 ] .
 
 q42:ContainerShape a sh:NodeShape ;
     sh:targetClass q42:Container ;

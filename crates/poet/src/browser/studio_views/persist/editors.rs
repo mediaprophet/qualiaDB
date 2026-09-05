@@ -121,7 +121,7 @@ pub fn build_gis_maps_view(document: &Document) -> Element {
     ledger(
         document,
         "studio_scene",
-        "GIS map records for the Scene session. GeoSPARQL query is unbound until a graph endpoint is registered.",
+        "GIS map records for the Scene session. G-COORD remaps Earth to Cosmic.geodetic_to_ecef and GraphDatabase.sparql; Cosmos to Cosmic.body_profile. Place names are UTF-8. Not QDNF.",
         &[
             CopField {
                 key: "kind",

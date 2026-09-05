@@ -21,6 +21,10 @@ fn graph_and_volume_fixtures_parse_and_check() {
             "render_preview_handles",
             include_str!("../fixtures/render_preview_handles.vibe"),
         ),
+        (
+            "g_coord_realms",
+            include_str!("../fixtures/g_coord_realms.vibe"),
+        ),
     ] {
         let code: String = src
             .lines()

@@ -1,0 +1,25 @@
+// G-COORD remap — live Cosmic.* / GraphDatabase.sparql. No qualia.coord.*.
+// Place names are UTF-8. This is not QDNF and not DNS/IP.
+module <https://qualiadb.org/modules/g_coord_realms>;
+using Cosmic;
+using GraphDatabase;
+
+effect fn earth_place(lat_deg: f64, lon_deg: f64) -> Record {
+    return Cosmic.geodetic_to_ecef({ lat_deg: lat_deg, lon_deg: lon_deg, alt_m: 0.0 });
+}
+
+effect fn cosmos_body(name: string) -> Record {
+    return Cosmic.body_profile({ name: name });
+}
+
+effect fn fiction_time(stardate: f64) -> Record {
+    return Cosmic.stardate_to_gregorian({ stardate: stardate });
+}
+
+effect fn geo_query(query: string) -> List {
+    return GraphDatabase.sparql({ query: query, take: 64 });
+}
+
+effect fn spring_label() -> string {
+    return "北泉";
+}

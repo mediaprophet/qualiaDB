@@ -27,7 +27,7 @@ or dotted `qualia.*` IDs.
 | G-COORD **bind** | Shapes + dialect landed. A live CoordinateSystem/Realm/Position invoke still needs an explicit owner gate. G-COORD is spatial/realm, not a network. |
 | Health Review Gate A (`HLT-03/07/08`) | Separate higher-assurance programme |
 
-**Not parked — specified separately:** DNS/IP replacement is **QDNF** (`docs/manuals/standards/qualia-decentralized-network-fabric/`). G-COORD v0 still MUST NOT claim to replace DNS/IP. QDNF is the network programme; G-COORD is the coordinate/realm programme. WireGuard/libp2p remain Transition carriers until a native bearer exists.
+**Not parked — specified separately, implementation waits:** DNS/IP-free networking is **QDNF** (`docs/manuals/standards/qualia-decentralized-network-fabric/`). That design is still being written — **do not implement QLink/QRoute/QSession until the spec is ready.** G-COORD is spatial/realm Position only and MUST NOT claim to replace DNS/IP. WireGuard/libp2p remain Transition carriers.
 
 ## W12 — Webizen four-op host
 
@@ -176,6 +176,7 @@ Davinci/Monet delta audit first (`DES-01` / `DES-02`). Do not reopen `UX-01`–`
 | 2026-09-05 | W12–W13 | Webizen four-op host commands; bounded session glyph API |
 | 2026-09-05 | DES-01/02 chrome | Davinci/Monet: named beats, volume chips, diagnose glow, still/clip/scene dock, CML+twins, 2D/3D/film/CG surfaces |
 | 2026-09-05 | Push + gates | Rebased onto QDNF spec `3987fe2b`; Solid recorded as Qualia-first exit; G-COORD ≠ QDNF |
+| 2026-09-05 | COORD-01 | G-COORD remap on live Cosmic.* + SPARQL; UTF-8 labels; QDNF implementation waits |
 
 ## Stop rules
 

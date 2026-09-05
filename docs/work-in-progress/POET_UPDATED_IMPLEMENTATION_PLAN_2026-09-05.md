@@ -276,7 +276,7 @@ dotted ID.
 container hierarchy work is retained; no redesign is justified by plan overlap
 alone.  
 **Status (2026-09-05):** chrome delta landed on existing surfaces (`15-studio-chrome.css`,
-diagnose glow, preview handle kinds, volume chips, CML+twins, media surfaces). UX-01–UX-04 not reopened. Map/G-COORD remains gated.
+diagnose glow, preview handle kinds, volume chips, CML+twins, media surfaces). UX-01–UX-04 not reopened. G-COORD map remaps landed (Earth/Cosmos/Fiction).
 
 ### `DES-02` - Motion and gated-state contract
 
@@ -304,7 +304,10 @@ remains formally correct.
 **Dependency:** explicit project-owner gate after `ONT-01`.  
 **Outcome:** Define the smallest approved shape/bind/dialect path for coordinate
 system, realm, position, and time.  
-**Stop:** no DNS/IP replacement claim and no host widening.
+**Stop:** no DNS/IP replacement claim and no host widening.  
+**Status (2026-09-05):** remap bind landed on live `Cosmic.*` + `GraphDatabase.sparql`.
+No new Host id. UTF-8 labels. QDNF remains design-only — do not implement the
+network fabric until that spec is finished.
 
 ## Phase 3 - Governed assets and portable applications
 
