@@ -2,7 +2,7 @@
 
 **Audience:** Timothy + any agent continuing while the day crew sleeps  
 **Branch:** `0.0.36-dev`  
-**Tip (push lane):** `deac3dd` lineage — pull HEAD; D2 paint follow-up landing  
+**Tip (push lane):** `7f91f8efb5c779e3b2e5f83f3aabba374ea73acb` (`7f91f8e`)  
 **Host freeze:** `vibe-host-0.1` — no Host widen, no SemVer bump until release  
 **Sole Git push:** Neo (check → commit → push)
 
