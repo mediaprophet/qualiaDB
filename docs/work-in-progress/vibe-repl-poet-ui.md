@@ -19,6 +19,11 @@ A REPL that only evals arithmetic is insufficient. It must be the **hot-edit sur
 4. **Sanctuary:** volume open/commit recipes; never fake durable on fail-closed/E300.
 5. **Copy:** SHACL-first language — never call persons/living “things” in REPL errors.
 
+## Language accept (Vibe)
+- **suggested_fix must stay catalog-honest** — only cite live `ALL_BOUND` / `Capability.method` (no ghost APIs in DevRel or diagnose copy).
+- UAT fail rows triage to deltas **before** deepening the REPL drawer.
+- Expose-not-rebuild; diagnose-first loop is the DevRel surface for dark/catalog-only families.
+
 ## Chrome accept (davinci)
 1. **REPL is a studio drawer, not a terminal** — prompt + output + gas as secondary; primary loop is diagnose → suggested_fix → run → result (Problems tab is peer, not afterthought).
 2. **Catalog tab** = discovery only of live `ALL_BOUND` (filter by family); click inserts invoke stub — no ghost APIs; progressive disclosure so ~887 methods don’t dump the Stage.
