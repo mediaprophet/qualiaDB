@@ -94,7 +94,7 @@ fn lexicon_pin_fixtures_record_pin_and_example_pack() {
     assert!(!pin_src.contains("capability.invoke"));
 
     let example =
-        include_str!("../../../../docs/manuals/standards/lexicon-pack-manifest-example.json");
+        include_str!("../../../docs/manuals/standards/lexicon-pack-manifest-example.json");
     let fixture = include_str!("../fixtures/lexicon/en-core.lexicon.json");
     assert_eq!(
         example.replace("\r\n", "\n").trim(),

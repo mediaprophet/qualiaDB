@@ -47,8 +47,11 @@ added to `ALL_INVOKE_IDS` (already in `ALL_BOUND` — not a new Host method).
 
 ```bash
 cargo test -p vibe --lib lexicon
+cargo test -p vibe --lib diagnose
 cargo test -p vibe --test sprint_b_fixtures
 ```
+
+`--lib` also needs `crates/vibe/fixtures/vocab/clinic.n3` (pre-existing `include_bytes` in `check.rs`; restored from the in-module clinic chunk so lib tests compile).
 
 ## Out of scope
 
