@@ -3,6 +3,8 @@
 //! Native-only (`q42_volume` is `cfg(not(target_arch = "wasm32"))`).
 //! Sanctuary fail-closed: commits default to FLAG_SANCTUARY; open always
 //! classifies and never pretends public transport is safe.
+//! Missing / truncated path: `create` (default true) writes a seeded sanctuary
+//! `.q42` then opens — UAT-friendly create-on-open; set `create: false` to fail.
 //! No Host widen — Capability.method binds only (G-B-001).
 
 use super::super::args;
@@ -14,6 +16,8 @@ use crate::q42_volume::{
     classify_q42_volume, write_sorted_quins_volume_with_author, PublicationIntent,
     Q42PublicationClass, Q42Volume, UnifiedVolumeBuilder, FLAG_SANCTUARY,
 };
+#[cfg(not(target_arch = "wasm32"))]
+use crate::lexicon::generate_60bit_token;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::{NQuin, QUINS_PER_BLOCK};
 #[cfg(not(target_arch = "wasm32"))]
@@ -62,9 +66,30 @@ fn open_native(snap: &mut PoetSnapshot, args_v: &Value, span: Span) -> Result<Va
         .or_else(|| args::rec_str(args_v, "path"))
         .ok_or_else(|| args::bad(span, "GraphDatabase.volume_open needs a path string"))?;
     let load = args::rec_bool(args_v, "load").unwrap_or(true);
+    let create = args::rec_bool(args_v, "create").unwrap_or(true);
 
-    let volume = Q42Volume::open(Path::new(path))
-        .map_err(|e| args::bad(span, format!("GraphDatabase.volume_open failed: {e}")))?;
+    let path_buf = Path::new(path);
+    let mut created = false;
+    let volume = match Q42Volume::open(path_buf) {
+        Ok(v) => v,
+        Err(e) if create && is_createable_open_error(&e) => {
+            ensure_sanctuary_seed_volume(path_buf)
+                .map_err(|ce| args::bad(span, format!("GraphDatabase.volume_open create failed: {ce}")))?;
+            created = true;
+            Q42Volume::open(path_buf).map_err(|e2| {
+                args::bad(
+                    span,
+                    format!("GraphDatabase.volume_open failed after create: {e2}"),
+                )
+            })?
+        }
+        Err(e) => {
+            return Err(args::bad(
+                span,
+                format!("GraphDatabase.volume_open failed: {e}"),
+            ));
+        }
+    };
     let verdict = classify_q42_volume(&volume, PublicationIntent::Default);
     let header = volume.header();
     let sanctuary_flag = header.flags & FLAG_SANCTUARY != 0;
@@ -105,6 +130,7 @@ fn open_native(snap: &mut PoetSnapshot, args_v: &Value, span: Span) -> Result<Va
     Ok(args::record([
         ("path", Value::String(path.into())),
         ("loaded", Value::Bool(load)),
+        ("created", Value::Bool(created)),
         (
             "quin_count",
             Value::U64(if load {
@@ -194,6 +220,35 @@ fn commit_native(snap: &mut PoetSnapshot, args_v: &Value, span: Span) -> Result<
         ("revision", Value::U64(snap.revision)),
         ("honesty", Value::String(snap.honesty().into())),
     ]))
+}
+
+
+#[cfg(not(target_arch = "wasm32"))]
+fn is_createable_open_error(err: &std::io::Error) -> bool {
+    matches!(
+        err.kind(),
+        std::io::ErrorKind::NotFound | std::io::ErrorKind::UnexpectedEof
+    ) || err.to_string().contains("too small for Q42 header")
+}
+
+/// Minimal sanctuary seed so create-on-open + volume_commit UAT is not empty-graph fail-closed.
+#[cfg(not(target_arch = "wasm32"))]
+fn sanctuary_seed_quin() -> NQuin {
+    let mut q = NQuin {
+        subject: generate_60bit_token(b"https://qualiadb.org/uat/sanctuary"),
+        predicate: generate_60bit_token(b"q42:seed"),
+        object: generate_60bit_token(b"https://qualiadb.org/uat/open"),
+        context: generate_60bit_token(b"https://qualiadb.org/graphs/sanctuary"),
+        metadata: 0,
+        parity: 0,
+    };
+    q.parity = NQuin::calculate_parity(q.subject, q.predicate, q.object, q.context, q.metadata);
+    q
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn ensure_sanctuary_seed_volume(path: &Path) -> std::io::Result<usize> {
+    write_sanctuary_volume(path, &[sanctuary_seed_quin()], 0)
 }
 
 #[cfg(not(target_arch = "wasm32"))]

@@ -58,3 +58,13 @@
 
 ## Out of scope this UAT
 G-COORD bind · full WordNet engine · locale packs beyond en · next toolchain · Solid IdP · QDNF · new Host methods
+
+## Sanctuary volume UAT (create-on-open)
+
+`GraphDatabase.volume_open` with a missing/truncated path **creates** a seeded sanctuary `.q42` when `create` is true (default). Then:
+
+1. `volume_open` path `/workspace/qualia-data/uat-sanctuary.q42` → opens (may `created: true`)
+2. Resident graph has seed quin → `volume_commit` same path succeeds (sanctuary fail-closed no longer empty)
+3. Lexicon arrive: Catalog · Lexicon Open pack → `crates/vibe/fixtures/lexicon/en-core.lexicon.json`
+
+Set `create: false` to keep fail-closed on missing files.
