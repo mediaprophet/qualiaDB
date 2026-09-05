@@ -1,6 +1,6 @@
 # Implementation plans (post `vibe-host-0.1` freeze)
 
-**Freeze tip:** `6dc2b8b8` · **Gate board / sync tip:** `d2b79211` · **Branch:** `0.0.36-dev` · **Ops:** Capt. · **Push lane:** Neo
+**Freeze tip:** `6dc2b8b8` · **Gate board / sync tip:** `a2a4d6b2` · **Branch:** `0.0.36-dev` · **Ops:** Capt. · **Push lane:** Neo
 
 | File | Owner | Focus | Status |
 |------|-------|--------|--------|
@@ -26,3 +26,6 @@
 
 **Programme split (2026-09-05):** G-COORD = spatial/realm Position. QDNF = naming/routing without DNS/IP. Solid = optional WWW/LDP **exit** from Qualia, never the source of DID/capability.
 | [`shacl-first-vs-owl-ok-class-list.md`](shacl-first-vs-owl-ok-class-list.md) | Marvin · Neo (push) | SHACL-first vs OWL-ok class list for chrome/diagnose labels |
+
+## Work in progress
+WIP trackers live under [`docs/work-in-progress/`](../../work-in-progress/) (not standards). Settled contracts stay here.
