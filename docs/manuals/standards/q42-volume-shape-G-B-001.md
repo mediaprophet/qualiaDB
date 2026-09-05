@@ -14,5 +14,5 @@ Grounded in `crates/qualia-core-db/src/q42/volume/`.
 | `q42:committedVia` | `vibe:InvokeId` = `GraphDatabase.volume_commit` |
 | `q42:state` | closed · open · committed · denied · fault |
 
-Join: Container/Manifold backing store; Layout→Stage→Timeline commit twin; wasm E300 honest/gated.
+Join: Container/Manifold backing store; Layout→Stage→Timeline commit **aspects**; wasm E300 honest/gated.
 Non-goals: no dotted `qualia.volume.*`, no Host widen.

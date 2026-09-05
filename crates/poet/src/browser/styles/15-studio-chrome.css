@@ -189,25 +189,27 @@ button[disabled]:hover,
 }
 
 /* Twin chips — Layout / Stage / Timeline on every surface */
-.twin-chip-row {
+.aspect-chip-row {
   display: inline-flex;
   align-items: center;
   gap: 3px;
   flex-shrink: 0;
 }
-.twin-chip {
-  font: 700 8px/1 var(--font-mono);
-  letter-spacing: 0.3px;
-  text-transform: uppercase;
+.aspect-chip {
+  font: 700 8px/1 var(--font-sans);
+  letter-spacing: 0.2px;
   padding: 2px 5px;
   border-radius: 3px;
   border: 1px solid var(--border-subtle);
   color: var(--text-muted);
   background: rgba(0, 0, 0, 0.25);
 }
-.twin-chip[data-twin="layout"] { color: var(--media-2d); border-color: color-mix(in srgb, var(--media-2d) 45%, transparent); }
-.twin-chip[data-twin="stage"] { color: var(--media-3d); border-color: color-mix(in srgb, var(--media-3d) 45%, transparent); }
-.twin-chip[data-twin="timeline"] { color: var(--media-film); border-color: color-mix(in srgb, var(--media-film) 45%, transparent); }
+.aspect-chip[data-aspect="layout"] { color: var(--media-2d); border-color: color-mix(in srgb, var(--media-2d) 45%, transparent); }
+.aspect-chip[data-aspect="stage"] { color: var(--media-3d); border-color: color-mix(in srgb, var(--media-3d) 45%, transparent); }
+.aspect-chip[data-aspect="timeline"] { color: var(--media-film); border-color: color-mix(in srgb, var(--media-film) 45%, transparent); }
+[data-aspect-surface] {
+  --aspect-rail: color-mix(in srgb, var(--cml-container) 35%, transparent);
+}
 
 /* ---------- Media surfaces (2D · 3D · film · CG) ---------- */
 [data-media-surface="2d"] { --surface-accent: var(--media-2d); }

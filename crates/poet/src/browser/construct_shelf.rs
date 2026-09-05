@@ -20,6 +20,8 @@ fn card_style() -> &'static str {
 /// Installed / bundled constructs. Stubs are listed but cannot be opened.
 pub fn build_construct_shelf_view(document: &Document) -> Element {
     let root = document.create_element("div").unwrap();
+    root.set_class_name("construct-shelf");
+    super::surface_aspects::mark(&root, "entrance");
     let root_el: HtmlElement = root.clone().dyn_into().unwrap();
     root_el.style().set_css_text(
         "display: flex; flex-direction: column; flex: 1; overflow: auto; padding: 8px; gap: 8px;",

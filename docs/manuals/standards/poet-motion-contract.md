@@ -27,6 +27,10 @@ Reduced-motion (`prefers-reduced-motion: reduce`): same named beats, shorter or 
 
 closed · open · committed · denied · fault — distinct token each. Commit beat only on successful `GraphDatabase.volume_commit`.
 
+## Aspects (not twins)
+
+Layout · Stage · Timeline are **aspects** of a surface — three 1:1 readings, not a credential “digital twin”. Chrome: `data-aspect-surface`, `.aspect-chip`. Coverage: `poet-aspect-coverage.md`.
+
 ## Diagnose glow
 
 `vibe::diagnose` spans are UTF-8 byte `[start, end]`. Error glow lights that token, not the whole panel.

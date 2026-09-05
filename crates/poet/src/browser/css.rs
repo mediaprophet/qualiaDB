@@ -48,5 +48,7 @@ mod tests {
         assert!(CSS.contains("--beat-entrance"));
         assert!(CSS.contains("[data-volume-state=\"committed\"]"));
         assert!(CSS.contains("[data-media-surface=\"film\"]"));
+        assert!(CSS.contains(".aspect-chip"));
+        assert!(!CSS.contains(".twin-chip"));
     }
 }

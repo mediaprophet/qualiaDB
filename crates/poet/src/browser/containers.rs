@@ -24,7 +24,7 @@ pub fn build_container(document: &Document, container: &SeedContainer) -> Elemen
     };
     el.set_attribute("data-id", &container_id).unwrap();
     el.set_attribute("data-shape", "container").unwrap();
-    el.set_attribute("data-beat", "entrance").unwrap();
+    super::surface_aspects::mark(&el, "entrance");
     el.set_attribute(
         "data-media-surface",
         media_surface_for(&container.container_type),
@@ -93,24 +93,9 @@ pub fn build_container(document: &Document, container: &SeedContainer) -> Elemen
     badge.set_text_content(Some(&container.honesty));
     title_group.append_child(&badge).unwrap();
 
-    let twins = document.create_element("span").unwrap();
-    twins.set_class_name("twin-chip-row");
-    twins
-        .set_attribute("aria-label", "Layout Stage Timeline twins")
-        .ok();
-    for (twin, title) in [
-        ("layout", "Layout — 2D structure"),
-        ("stage", "Stage — depth / z / camera"),
-        ("timeline", "Timeline — named beats entrance · dwell · exit"),
-    ] {
-        let chip = document.create_element("span").unwrap();
-        chip.set_class_name("twin-chip");
-        chip.set_attribute("data-twin", twin).ok();
-        chip.set_attribute("title", title).ok();
-        chip.set_text_content(Some(&twin[..1].to_uppercase()));
-        twins.append_child(&chip).unwrap();
-    }
-    title_group.append_child(&twins).unwrap();
+    title_group
+        .append_child(&super::surface_aspects::chip_row(document))
+        .unwrap();
 
     header.append_child(&title_group).unwrap();
 

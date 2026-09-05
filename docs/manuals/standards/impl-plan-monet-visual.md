@@ -2,13 +2,13 @@
 
 **Owner:** monet · **UX pair:** davinci · **Seam commits:** Neo · **Ontology:** Marvin · **Language triage:** Vibe
 **Frozen surface:** `vibe-host-0.1` @ `6dc2b8b8` · **Branch:** `0.0.36-dev`
-**North star:** Graphic design and art as the visual backbone of Poet — human-first look and motion on every Layout · Stage · Timeline twin; not a code UI.
+**North star:** Graphic design and art as the visual backbone of Poet — human-first look and motion on every Layout · Stage · Timeline **aspect**; not a code UI. Not a credential digital twin.
 **Rules:** bind only to frozen four-ops + live `ALL_BOUND` / `vibe:InvokeId` · no Host invent · no dotted `qualia.*` · unbound = visually gated (never stub-broken) · no fake durable storage · named beats only (no free tweens) · gaps → @Vibe → `vibescript-sprint-deltas.md`
 
 ## Done (do not reopen)
 - Motion grammar v0 on Layout · Stage · Timeline: **entrance** = soft rise + light fade (Stage depth cue) · **dwell** = steady focus + quiet breath on active track · **exit** = dissolve along same z-path
 - G-POET-TOOLCHEST first slice: icon + motion for `office:graph` / `graph:sparql_query` → `GraphDatabase.sparql`
-- G-B-001 sanctuary save twin ungated: soft rise into volume dock · dwell on `volume_open` / `volume_commit` · dissolve on success; fail-closed / wasm E300 gated honest
+- G-B-001 sanctuary save dock ungated: soft rise into volume dock · dwell on `volume_open` / `volume_commit` · dissolve on success; fail-closed / wasm E300 gated honest
 - G-A look/motion accept @ `6dc2b8b8` — lock to thin facade only
 - Remaps only: `GraphDatabase.sparql` · `Inference.*` · `Render.*` · `volume_open` / `volume_commit`
 
@@ -50,7 +50,7 @@
 ## Stage 6 — Container · Manifold · Link visual language
 1. Distinct chrome for Container (content-shaped), Manifold (nesting), Link (semantic relation) — human, not engineer graph-viz.
 2. Spatiotemporal attrs as first-class badges (space + time) on surfaces including language cells.
-3. 1:1 twin: every surface gets Layout structure + Stage depth + Timeline beats.
+3. 1:1 **aspects**: every surface gets Layout structure + Stage depth + Timeline beats.
 **Accept:** non-dev can nest and see a link; machine ids stay under the hood.
 
 ## Stage 7 — Map / G-COORD visuals (after shapes + bind)

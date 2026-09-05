@@ -38,7 +38,7 @@
 **Accept:** contract + index on-branch; no new Host/API.
 
 ## Stage 1 — Container · Manifold · Link (publish)
-1. Publish `poet-container-manifold-link-shapes.md`: Container (content-shaped; optional Volume/Position; twin refs) · Manifold (nests; optional shared CoordinateSystem) · Link (typed semantic ends).
+1. Publish `poet-container-manifold-link-shapes.md`: Container (content-shaped; optional Volume/Position; Layout/Stage/Timeline **aspect** refs) · Manifold (nests; optional shared CoordinateSystem) · Link (typed semantic ends).
 2. Spatiotemporal attrs first-class on content (incl. language cells).
 3. Join notes for davinci/monet chrome.
 **Accept:** markdown on GH; chrome can cite classes without inventing binds.

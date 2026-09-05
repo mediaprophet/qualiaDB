@@ -37,7 +37,7 @@
 
 ## Stage 4 — Preview / temporal (Render.*)
 1. Map still / clip / scene-id preview wants onto live `Render.*` (no dotted invent).
-2. Cross-frame span fidelity for Timeline twin; sibling op only if one handle cannot carry three kinds.
+2. Cross-frame span fidelity for Timeline **aspect**; sibling op only if one handle cannot carry three kinds.
 **Accept:** B row closed or deferred with named `Render.*` methods.
 
 ## Stage 5 — Catalog honesty backlog

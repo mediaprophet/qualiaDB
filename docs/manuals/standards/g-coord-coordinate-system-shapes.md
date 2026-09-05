@@ -73,4 +73,4 @@ bad types; there is no `E9xx` coord family until a live bind exists.
 ## Chrome
 
 Map containers: Earth (geo) + Cosmos + Fiction skins on the remaps above.
-Temporal scrubber is Timeline twin, not a Host clock. UTF-8 place labels.
+Temporal scrubber is the Timeline **aspect**, not a Host clock. UTF-8 place labels.

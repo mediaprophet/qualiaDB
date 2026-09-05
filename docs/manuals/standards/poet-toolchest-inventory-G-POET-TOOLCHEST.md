@@ -77,7 +77,7 @@ daemon-backed graph when connected.
 ## Maps / spatiotemporal (parked)
 
 - Geospatial: `spatial` toolbox places map/3D containers; map quality gap (open layers vs universe/fantasy) stays UX + B — not this slice.
-- Temporal: Layout/Stage/Timeline twins remain Marvin B shapes joined to live binds.
+- Temporal: Layout/Stage/Timeline **aspects** remain Marvin B shapes joined to live binds.
 
 ## First live slice (done in companion commit)
 

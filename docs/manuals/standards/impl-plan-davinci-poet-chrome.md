@@ -2,7 +2,7 @@
 
 **Owner:** davinci · **Visual pair:** monet · **Seam commits:** Neo · **Ontology:** Marvin · **Language triage:** Vibe
 **Frozen surface:** `vibe-host-0.1` @ `6dc2b8b8` · **Branch:** `0.0.36-dev`
-**North star:** Poet feels like a live studio over QualiaDB — human-first chrome (not a code UI), machine-readable underneath; Layout · Stage · Timeline twins on every surface.
+**North star:** Poet feels like a live studio over QualiaDB — human-first chrome (not a code UI), machine-readable underneath; Layout · Stage · Timeline **aspects** on every surface (not “twins”).
 **Rules:** chrome binds only to frozen four-ops + live `ALL_BOUND` / `vibe:InvokeId` · no Host invent · no dotted `qualia.*` · unbound = visually gated (never stub-broken) · script hot-edit must never force host rebuild · gaps → @Vibe → `vibescript-sprint-deltas.md`
 
 ## Done (do not reopen)
@@ -31,7 +31,7 @@
 **Accept:** one more live toolchain chrome OR gated shell with honest copy; inventory row updated.
 
 ## Stage 3 — Sanctuary / volume polish
-1. Volume dock chrome: open → edit → commit twin fully wired to live ids; denied/fault states from Volume shape (`q42:state`).
+1. Volume dock chrome: open → edit → commit path fully wired to live ids; denied/fault states from Volume shape (`q42:state`).
 2. Never imply durable save on wasm E300 / fail-closed deny.
 3. Manifold “backing store” cue when Container sits on a Volume (Marvin join).
 **Accept:** user can tell open vs committed vs denied without reading logs.
@@ -55,15 +55,15 @@
 3. Sibling preview op only if Vibe/Neo say one handle cannot carry three kinds (B).
 **Accept:** preview never invents a side channel; missing bind = gated dock.
 
-## Stage 7 — 3D / temporal twin hardening
+## Stage 7 — 3D / temporal aspect hardening
 1. Every 2D layout/interface gets Stage depth + Timeline tracks; named beats only (no free tweens).
 2. Motion grammar owned by monet (soft rise / breath dwell / z-path dissolve) — davinci owns model + acceptance.
-3. Export notes for Webizen Desktop reuse (same twins, later gate).
-**Accept:** checklist of surfaces with twin coverage; regressions = missing Stage or Timeline.
-**Status (2026-09-05):** containers + map + q-cell carry Layout/Stage/Timeline chips; map Timeline drives Cosmic.stardate / FLRW. Webizen extract still later.
+3. Export notes for Webizen Desktop reuse (same **aspects**, later gate).
+**Accept:** checklist of surfaces with aspect coverage; regressions = missing Stage or Timeline.
+**Status (2026-09-05):** shells marked via `surface_aspects`; checklist `poet-aspect-coverage.md`. Term is **aspect**, not twin. Webizen extract still later.
 
 ## Stage 8 — Webizen Desktop handoff (chrome only)
-1. After Poet stage 1–5 solid: extract chrome contract + twin rules for Webizen Desktop lane.
+1. After Poet stage 1–5 solid: extract chrome contract + **aspect** rules for Webizen Desktop lane.
 2. No Solid IdP chrome until Capt. unparks **G-SOLID-IDP**.
 **Accept:** handoff markdown; no Solid work in this plan.
 

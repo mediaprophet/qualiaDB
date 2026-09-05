@@ -290,6 +290,7 @@ pub fn build_conversations_view(document: &Document) -> Element {
 pub fn build_vibescript_console(document: &Document) -> Element {
     let console = document.create_element("div").unwrap();
     console.set_class_name("vibe-console");
+    super::surface_aspects::mark(&console, "entrance");
 
     let toolbar = document.create_element("div").unwrap();
     toolbar.set_class_name("vibe-toolbar");

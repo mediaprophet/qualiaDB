@@ -14,7 +14,7 @@ not joins.
 | CML concepts | `core-ontologies/cml.n3` | Text → concept → logic; given world is RDFS+SHACL |
 | Rights instruments | `ontologies/*.ttl`, `core-ontologies/concepts/` | Human-rights corpora |
 | Volume | `docs/manuals/standards/q42-volume-shape-G-B-001.md` | `q42:Volume` + live volume ids |
-| Surface (this programme) | `crates/qualia-core-db/shapes/poet-surface.shacl.ttl` | Container · Manifold · Link · twins |
+| Surface (this programme) | `crates/qualia-core-db/shapes/poet-surface.shacl.ttl` | Container · Manifold · Link · aspects |
 | Bundled SHACL | `bundled/ontologies/shacl.ttl` | Startup seed |
 
 ## SHACL-first vs OWL-ok

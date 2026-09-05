@@ -106,7 +106,7 @@ pub fn build_map_view(document: &Document) -> Element {
     wrapper
         .set_attribute("data-realm", Realm::Earth.as_str())
         .ok();
-    wrapper.set_attribute("data-beat", "entrance").ok();
+    super::surface_aspects::mark(&wrapper, "entrance");
     let wrap_el: HtmlElement = wrapper.clone().dyn_into().unwrap();
     wrap_el
         .style()
@@ -152,7 +152,7 @@ pub fn build_map_view(document: &Document) -> Element {
 
     let pos = document.create_element("div").unwrap();
     pos.set_class_name("g-coord-position");
-    pos.set_attribute("data-twin", "layout").ok();
+    pos.set_attribute("data-aspect", "layout").ok();
     pos.set_id("g-coord-position");
     wrapper.append_child(&pos).unwrap();
 
@@ -171,12 +171,12 @@ pub fn build_map_view(document: &Document) -> Element {
     let stage = document.create_element("div").unwrap();
     stage.set_class_name("g-coord-stage preview-stage");
     stage.set_id("g-coord-stage");
-    stage.set_attribute("data-twin", "stage").ok();
+    stage.set_attribute("data-aspect", "stage").ok();
     wrapper.append_child(&stage).unwrap();
 
     let time_row = document.create_element("div").unwrap();
     time_row.set_class_name("g-coord-timeline");
-    time_row.set_attribute("data-twin", "timeline").ok();
+    time_row.set_attribute("data-aspect", "timeline").ok();
     let time_lab = document.create_element("label").unwrap();
     time_lab.set_text_content(Some("Timeline"));
     time_lab.set_attribute("for", "g-coord-time").ok();

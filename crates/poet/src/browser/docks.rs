@@ -673,6 +673,7 @@ fn kind_label(kind: ToolKind) -> &'static str {
 pub fn build_toolbox_dock(document: &Document, toolboxes: &[Toolbox]) -> Element {
     let dock = document.create_element("div").unwrap();
     dock.set_class_name("toolbox-dock dock-pos-left");
+    super::surface_aspects::mark(&dock, "entrance");
 
     // Dock Header: Brand + 4-Way Docking Anchor Bar
     let dock_header = document.create_element("div").unwrap();
@@ -1117,6 +1118,7 @@ pub fn create_collapsible_dock_panel(
 ) -> Element {
     let panel = document.create_element("div").unwrap();
     panel.set_class_name("dock-panel");
+    super::surface_aspects::mark(&panel, "entrance");
     let p_el: HtmlElement = panel.clone().dyn_into().unwrap();
     if flex_grow {
         p_el.style().set_css_text(
@@ -1214,6 +1216,7 @@ pub fn build_right_dock(document: &Document) -> Element {
     let dock = document.create_element("div").unwrap();
     dock.set_class_name("right-dock");
     dock.set_id("right-dock");
+    super::surface_aspects::mark(&dock, "entrance");
 
     // Collapse toggle button (shown when dock is collapsed)
     let expand_btn = document.create_element("button").unwrap();
@@ -1385,6 +1388,7 @@ pub fn build_right_dock(document: &Document) -> Element {
 pub fn build_bottom_statusbar(document: &Document) -> Element {
     let bar = document.create_element("div").unwrap();
     bar.set_class_name("bottom-statusbar");
+    super::surface_aspects::mark(&bar, "dwell");
 
     // Left section
     let left = document.create_element("div").unwrap();

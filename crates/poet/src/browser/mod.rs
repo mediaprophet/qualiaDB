@@ -89,6 +89,7 @@ pub mod solid_interop;
 pub mod specialist_persist;
 pub mod studio_views;
 pub mod submanifold_nav;
+pub mod surface_aspects;
 mod surface_honesty;
 pub(crate) mod surface_states;
 pub mod theme;
@@ -623,6 +624,7 @@ fn try_start(document: &Document) -> Result<(), String> {
 fn build_app(document: &Document) -> HtmlElement {
     let app = document.create_element("div").unwrap();
     app.set_class_name("app");
+    surface_aspects::mark(&app, "entrance");
 
     // Build the populated registry — all 15 Dioxus-parity toolboxes + manifold seeds.
     let registry = registration::build_registry();
@@ -670,6 +672,7 @@ fn build_app(document: &Document) -> HtmlElement {
     // Main workspace
     let workspace = document.create_element("div").unwrap();
     workspace.set_class_name("main-workspace");
+    surface_aspects::mark(&workspace, "entrance");
 
     // Toolbox dock (left sidebar) — driven by the registry
     let toolbox = docks::build_toolbox_dock(document, registry.toolboxes());
@@ -752,6 +755,7 @@ fn wire_app(document: &Document, seeds: &[ManifoldSeed]) {
 fn build_canvas(document: &Document, seed: &ManifoldSeed) -> Element {
     let canvas = document.create_element("div").unwrap();
     canvas.set_class_name("canvas-viewport-container");
+    surface_aspects::mark(&canvas, "entrance");
     canvas.set_attribute("data-zoom", "1.0").unwrap();
     canvas.set_attribute("data-pan-x", "0").unwrap();
     canvas.set_attribute("data-pan-y", "0").unwrap();

@@ -28,6 +28,7 @@ pub fn build_command_palette(document: &Document) -> Element {
 
     let panel = document.create_element("div").unwrap();
     panel.set_class_name("cmd-palette-panel");
+    super::surface_aspects::mark(&panel, "entrance");
     panel
         .set_attribute("aria-describedby", "cmd-palette-hint")
         .ok();

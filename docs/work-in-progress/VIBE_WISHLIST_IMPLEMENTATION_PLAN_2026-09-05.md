@@ -75,7 +75,7 @@ shapes re-invents classes in the UI.
 - [x] Join contract: every Poet surface cites `vibe:InvokeId` from `ids.rs`
 - [x] Publish `poet-container-manifold-link-shapes.md` (SHACL-first vs OWL-ok marked)
 - [x] SHACL NodeShapes under `crates/qualia-core-db/shapes/poet-surface.shacl.ttl`
-- [x] Small TTL/N3 fixtures for Container↔Volume backing and twin 1:1
+- [x] Small TTL/N3 fixtures for Container↔Volume backing and Layout/Stage/Timeline aspects 1:1
 
 **Accept:** chrome can cite classes without inventing binds. Persons/living not under Thing.
 
@@ -116,7 +116,7 @@ shapes re-invents classes in the UI.
 
 ### W7 — InvokeId annotation pack + Position on language cells
 
-- [x] SHACL annotations linking Container/Manifold/Link/Volume/twins to concrete `vibe:InvokeId`
+- [x] SHACL annotations linking Container/Manifold/Link/Volume/aspects to concrete `vibe:InvokeId`
 - [x] Position (+ optional ViewpointRealm) as properties of vibe cells/modules in the shape doc
 - [x] DevRel note: language is spatiotemporal content, not only maps
 
@@ -178,6 +178,7 @@ Davinci/Monet delta audit first (`DES-01` / `DES-02`). Do not reopen `UX-01`–`
 | 2026-09-05 | Push + gates | Rebased onto QDNF spec `3987fe2b`; Solid recorded as Qualia-first exit; G-COORD ≠ QDNF |
 | 2026-09-05 | COORD-01 | G-COORD remap on live Cosmic.* + SPARQL; UTF-8 labels; QDNF implementation waits |
 | 2026-09-05 | COORD-01b | Full Cosmic LocalHost slice; map Timeline FLRW/stardate; SPARQL when daemon; q-cell hasPosition |
+| 2026-09-05 | DES-07 | Layout/Stage/Timeline **aspects** (not twins) on remaining shells; `poet-aspect-coverage.md` |
 
 ## Stop rules
 

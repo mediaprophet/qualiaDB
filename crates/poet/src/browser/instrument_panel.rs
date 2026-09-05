@@ -28,6 +28,7 @@ pub fn show_for_container(document: &Document, container: &Element) {
 
     let panel = document.create_element("div").unwrap();
     panel.set_class_name("contextual-instrument-panel");
+    super::surface_aspects::mark(&panel, "dwell");
     panel
         .set_attribute("data-container-type", &container_type)
         .unwrap();

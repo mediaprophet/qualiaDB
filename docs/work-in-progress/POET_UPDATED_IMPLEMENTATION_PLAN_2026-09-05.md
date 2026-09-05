@@ -105,7 +105,7 @@ REVIEW GATE A
    |
 Phase 1  Reconcile post-freeze POET chrome and Tool Chest
    |
-Phase 2  Container / Manifold / Link and visual twins
+Phase 2  Container / Manifold / Link and visual aspects
    |
 Phase 3  Governed assets and portable applications
    |
@@ -276,7 +276,7 @@ dotted ID.
 container hierarchy work is retained; no redesign is justified by plan overlap
 alone.  
 **Status (2026-09-05):** chrome delta landed on existing surfaces (`15-studio-chrome.css`,
-diagnose glow, preview handle kinds, volume chips, CML+twins, media surfaces). UX-01–UX-04 not reopened. G-COORD map remaps landed (Earth/Cosmos/Fiction).
+diagnose glow, preview handle kinds, volume chips, CML+aspects, media surfaces). UX-01–UX-04 not reopened. G-COORD map remaps landed (Earth/Cosmos/Fiction).
 
 ### `DES-02` - Motion and gated-state contract
 

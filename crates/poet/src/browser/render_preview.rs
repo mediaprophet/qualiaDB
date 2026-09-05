@@ -35,7 +35,7 @@ pub fn build_studio_dock(document: &Document) -> Element {
     let wrap = document.create_element("div").unwrap();
     wrap.set_class_name("studio-preview-dock");
     wrap.set_attribute("data-shape", "container").ok();
-    wrap.set_attribute("data-beat", "entrance").ok();
+    super::surface_aspects::mark(&wrap, "entrance");
     wrap.set_attribute("data-media-surface", "2d").ok();
     wrap.append_child(&build(document, "still", 640, 360))
         .unwrap();
@@ -51,7 +51,7 @@ pub fn build(document: &Document, kind: &str, width: u32, height: u32) -> Elemen
     panel
         .set_attribute("data-media-surface", surface_for_kind(handle0))
         .unwrap();
-    panel.set_attribute("data-beat", "entrance").unwrap();
+    super::surface_aspects::mark(&panel, "entrance");
     panel.set_attribute("data-honesty", "unavailable").ok();
 
     let handles = document.create_element("div").unwrap();
