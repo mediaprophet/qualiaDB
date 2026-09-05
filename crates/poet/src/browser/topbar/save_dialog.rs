@@ -15,7 +15,7 @@ pub(super) fn open_save_mode_dialog(document: &Document) {
 
     let overlay = document.create_element("div").unwrap();
     overlay.set_id("save-mode-dialog");
-    overlay.set_attribute("data-beat", "entrance").ok();
+    crate::browser::surface_aspects::mark(&overlay, "entrance");
     let overlay_el: HtmlElement = overlay.clone().dyn_into().unwrap();
     overlay_el.style().set_css_text(
         "position: fixed; top: 0; left: 0; width: 100%; height: 100%; \

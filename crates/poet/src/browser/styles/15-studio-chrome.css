@@ -188,7 +188,7 @@ button[disabled]:hover,
   content: "";
 }
 
-/* Twin chips — Layout / Stage / Timeline on every surface */
+/* Aspect chips — Layout / Stage / Timeline readings of one surface (not identical copies) */
 .aspect-chip-row {
   display: inline-flex;
   align-items: center;

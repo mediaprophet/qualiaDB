@@ -60,11 +60,12 @@
 4. Consume Marvin CoordinateSystem · Realm · Position once Neo’s thinnest bind lands.
 **Accept:** one geo + one non-geo realm path demoable; unbound coord features gated.
 
-## Stage 8 — Twin coverage hardening
-1. Checklist: every shipped surface has Layout + Stage + Timeline + named beats only.
+## Stage 8 — Aspect coverage hardening
+1. Checklist: every shipped surface has Layout + Stage + Timeline **aspects** + named beats only. Not twins, not planes.
 2. Regressions = missing Stage depth, missing Timeline, or free-tween creep.
 3. Export motion contract for Webizen Desktop reuse (later gate).
 **Accept:** checklist on-branch; Webizen extract is docs-only until Capt. opens that gate.
+**Status (2026-09-05):** extract landed as `webizen-chrome-aspect-extract.md`.
 
 ## Sleep / continuation protocol
 1. Overnight agents start at first unchecked stage; re-read freeze tip + `impl-plans-INDEX.md` + davinci chrome plan before any visual churn.

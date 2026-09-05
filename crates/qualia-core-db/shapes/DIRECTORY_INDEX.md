@@ -17,8 +17,8 @@ Comprehensive index of functionality for `shapes`. This document serves as the g
 - 📄 `qualia-agency.shacl.ttl`
 - 📄 `qualia-client-extensions.shacl.ttl`
 - 📄 `specialized-libraries.shacl.ttl`
-- 📄 `poet-surface.shacl.ttl` — Container · Manifold · Link · Volume · Layout/Stage/Timeline
-- 📁 `fixtures/container-volume-twin.ttl` — valid backing + 1:1 twins example
+- 📄 `poet-surface.shacl.ttl` — Container · Manifold · Link · Volume · Layout/Stage/Timeline **aspects**
+- 📁 `fixtures/container-volume-aspects.ttl` — valid backing + 1:1 aspects example (not twins)
 
 ## Changelog
 - **2026-06-30**: Automated full index generation, extracting code definitions.

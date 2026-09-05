@@ -9,8 +9,8 @@
 - **Glow:** diagnose span lights the cell/token; if span coarse, note for Vibe B row — don’t invent fake precision.
 - **Copy:** never call persons or living beings “things” (see `shacl-first-vs-owl-ok-class-list.md`). Prefer “person / living / country” vs “tool / volume / file”.
 
-## Twin contract (chrome)
-- Every surface: Layout (structure) · Stage (depth) · Timeline (entrance·dwell·exit only).
+## Aspect contract (chrome)
+- Every surface: Layout (structure) · Stage (depth) · Timeline (entrance·dwell·exit only) — three **aspects**, not twins (twin infers identical), not planes.
 - Named beats only; monet owns motion variants (incl. reduced-motion).
 - Unbound = gated shell, not stub.
 

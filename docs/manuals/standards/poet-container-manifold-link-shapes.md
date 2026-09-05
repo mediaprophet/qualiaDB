@@ -7,7 +7,8 @@ They may *hold* SHACL-first content (a person record, a living-country map) with
 becoming that content.
 
 Do **not** overload legal `FormationStage`. Layout / Stage / Timeline here are
-Poet surface **aspects** (Layout · Stage · Timeline). Not credential “digital twins”.
+Poet surface **aspects** — three readings of one surface, not identical copies.
+Not twins. Not planes. Not credential digital twins.
 
 ## Classes
 
@@ -50,7 +51,7 @@ nodes). Not a wire-only visual.
 | `q42:Stage` | depth / z / camera | entrance = soft rise |
 | `q42:Timeline` | time | dwell · exit; no free tweens |
 
-Every shipped surface has all three **aspects**. Not a credential digital twin. Reduced-motion: same beats, shorter/crossfade.
+Every shipped surface has all three **aspects**. They are not identical to each other. Reduced-motion: same beats, shorter/crossfade.
 
 ## Volume backing
 

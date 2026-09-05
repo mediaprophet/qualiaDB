@@ -33,8 +33,8 @@
 - Living/person/country content: warmer, non-commodity labels — never “thing” framing in icon metaphors either.
 - Mixed Position: living-safe words for *what* is placed; coords as secondary technical detail.
 
-## Twin coverage checklist (design)
-Every shipped surface eventually needs Layout + Stage + Timeline + named beats. Regressions = missing depth, missing time, or free-tween creep.
+## Aspect coverage checklist (design)
+Every shipped surface eventually needs Layout + Stage + Timeline **aspects** + named beats. They are readings, not identical copies. Regressions = missing depth, missing time, or free-tween creep.
 
 ## Out of scope now
 Implementation · next inventory toolchain · Solid IdP · Host invent · dotted `qualia.*` · fake durable save/preview

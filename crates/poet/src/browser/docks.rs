@@ -933,6 +933,7 @@ pub fn show_flyout(document: &Document, toolbox_id: &str) {
 
     let flyout = document.create_element("div").unwrap();
     flyout.set_class_name(&format!("toolbox-flyout dock-{}", curr_pos));
+    super::surface_aspects::mark(&flyout, "entrance");
 
     // Header: Icon + Title + Ontology Badge + Close button
     let header = document.create_element("div").unwrap();

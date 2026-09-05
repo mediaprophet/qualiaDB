@@ -30,9 +30,17 @@ q42:Volume a rdfs:Class ;
     rdfs:label "q42 Volume" ;
     rdfs:comment "Durable graph store. See q42-volume-shape-G-B-001.md." .
 
-q42:Layout a rdfs:Class ; rdfs:label "Layout twin (2D structure)" .
-q42:Stage a rdfs:Class ; rdfs:label "Stage twin (depth / camera)" .
-q42:Timeline a rdfs:Class ; rdfs:label "Timeline twin (named beats only)" .
+q42:Layout a rdfs:Class ;
+    rdfs:label "Layout aspect (2D structure)" ;
+    rdfs:comment "One reading of a studio surface: structure. Not a twin (twin infers identical, which is misleading), not a copy, not an acoustic plane, not legal FormationStage." .
+
+q42:Stage a rdfs:Class ;
+    rdfs:label "Stage aspect (depth / camera)" ;
+    rdfs:comment "One reading of a studio surface: depth / z / camera. Not a twin, not an identical copy of Layout." .
+
+q42:Timeline a rdfs:Class ;
+    rdfs:label "Timeline aspect (named beats only)" ;
+    rdfs:comment "One reading of a studio surface: named time (entrance · dwell · exit). Not a twin, not an identical copy of Layout or Stage." .
 
 q42:containerType a rdf:Property ; rdfs:domain q42:Container ; rdfs:range xsd:string .
 q42:state a rdf:Property ; rdfs:domain q42:Volume ; rdfs:range xsd:string .

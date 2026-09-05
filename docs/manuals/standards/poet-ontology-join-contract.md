@@ -22,7 +22,7 @@ not joins.
 | Kind | Metamodel | Examples |
 |------|-----------|----------|
 | SHACL-first | RDFS class + SHACL; **not** `owl:Thing` | Principal, personhood, kinship, living/natural, country, creatures |
-| OWL-ok | technical artifact | Volume, InvokeId, Container-as-software, CRS, Layout/Stage/Timeline records |
+| OWL-ok | technical artifact | Volume, InvokeId, Container-as-software, CRS, Layout/Stage/Timeline aspects |
 
 Incoming OWL (GO/OBO, RadLex) is an **input format**. Uplift living terms into
 SHACL-first shapes; keep instruments/datasets as artifacts.

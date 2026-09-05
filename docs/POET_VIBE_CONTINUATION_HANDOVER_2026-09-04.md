@@ -84,7 +84,7 @@ Also parked: dotted→live bridge, dual-VC split, QISP shapes, ledger vs showcas
 
 Poet = **live studio** over QualiaDB: graph as navigable stage, inference with provenance trails, in-flow render preview, sanctuary save (gated until volume binds).
 
-**3D/temporal twin (v0):** Layout (2D) · Stage (depth/z/camera) · Timeline (entrance · dwell · exit) — 1:1 surface map, **named beats only** (no free tweens).
+**3D/temporal aspects (v0):** Layout (2D) · Stage (depth/z/camera) · Timeline (entrance · dwell · exit) — three readings of one surface, **named beats only** (no free tweens). Not twins (twin infers identical). Not planes.
 
 **Motion (v0, monet):** entrance = soft rise + light fade (Stage depth cue); dwell = steady focus + quiet breath; exit = dissolve along same z-path. Diagnose spans need **cell/token fidelity** for error glow.
 
@@ -128,7 +128,7 @@ Poet = **live studio** over QualiaDB: graph as navigable stage, inference with p
 | Gate ID | Blocks | Ungate job | Owner | Status |
 |---------|--------|------------|-------|--------|
 | G-A | `vibe-host-0.1` freeze + creative polish on frozen surface | Neo four closes | Neo | **in_progress** |
-| G-B-001 | Sanctuary save/open; commit-to-volume twin | Add + bind `GraphDatabase.volume_open` / `volume_commit` | Neo (+ Marvin Volume shape) | **done** (binds + seam; chrome ungate → davinci/monet) |
+| G-B-001 | Sanctuary save/open; commit-to-volume backing | Add + bind `GraphDatabase.volume_open` / `volume_commit` | Neo (+ Marvin Volume shape) | **done** (binds + seam; chrome ungate → davinci/monet) |
 | G-DOCS | Other bots continuing without chat | Land this handover + sprint deltas on `0.0.36-dev` | Neo | **done** (2026-09-04) |
 
 When a gate closes: **report to Capt.** with what landed (PR / paths / ids). Capt. updates board and unblocks dependents.

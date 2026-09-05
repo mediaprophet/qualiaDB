@@ -2,7 +2,7 @@
 
 **Owner:** davinci · **Visual pair:** monet · **Seam commits:** Neo · **Ontology:** Marvin · **Language triage:** Vibe
 **Frozen surface:** `vibe-host-0.1` @ `6dc2b8b8` · **Branch:** `0.0.36-dev`
-**North star:** Poet feels like a live studio over QualiaDB — human-first chrome (not a code UI), machine-readable underneath; Layout · Stage · Timeline **aspects** on every surface (not “twins”).
+**North star:** Poet feels like a live studio over QualiaDB — human-first chrome (not a code UI), machine-readable underneath; Layout · Stage · Timeline **aspects** on every surface (not twins — twin infers identical; not planes).
 **Rules:** chrome binds only to frozen four-ops + live `ALL_BOUND` / `vibe:InvokeId` · no Host invent · no dotted `qualia.*` · unbound = visually gated (never stub-broken) · script hot-edit must never force host rebuild · gaps → @Vibe → `vibescript-sprint-deltas.md`
 
 ## Done (do not reopen)
@@ -14,7 +14,7 @@
 
 ## Stage 0 — Hygiene (docs / sync)
 1. Sync chrome notes to tip after Neo’s plan push (`7318a049`+); cite freeze `6dc2b8b8`.
-2. One-page chrome contract: toolchest → toolbox → toolchain; container / manifold / link; twin mapping rules.
+2. One-page chrome contract: toolchest → toolbox → toolchain; container / manifold / link; aspect mapping rules.
 3. List gated vs live actions for office:graph + volume (daemon-gated = gated look).
 **Accept:** contract markdown on-branch; no UI invent ahead of binds.
 
@@ -60,12 +60,13 @@
 2. Motion grammar owned by monet (soft rise / breath dwell / z-path dissolve) — davinci owns model + acceptance.
 3. Export notes for Webizen Desktop reuse (same **aspects**, later gate).
 **Accept:** checklist of surfaces with aspect coverage; regressions = missing Stage or Timeline.
-**Status (2026-09-05):** shells marked via `surface_aspects`; checklist `poet-aspect-coverage.md`. Term is **aspect**, not twin. Webizen extract still later.
+**Status (2026-09-05):** shells marked via `surface_aspects`; checklist `poet-aspect-coverage.md`. Term is **aspect**, not twin (twin infers identical), not plane.
 
 ## Stage 8 — Webizen Desktop handoff (chrome only)
 1. After Poet stage 1–5 solid: extract chrome contract + **aspect** rules for Webizen Desktop lane.
 2. No Solid IdP chrome until Capt. unparks **G-SOLID-IDP**.
 **Accept:** handoff markdown; no Solid work in this plan.
+**Status (2026-09-05):** [`webizen-chrome-aspect-extract.md`](webizen-chrome-aspect-extract.md). Remaining shells (menubar, control bar, flyout, save dialog) marked. No Solid.
 
 ## Sleep / continuation protocol
 1. Stages are ordered; overnight agents start at first unchecked stage.

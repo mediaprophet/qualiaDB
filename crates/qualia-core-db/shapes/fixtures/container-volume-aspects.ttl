@@ -1,7 +1,8 @@
 @prefix q42: <https://ns.webcivics.net/> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
-# Valid: container on an open volume with 1:1 twins.
+# Valid: container on an open volume with 1:1 Layout · Stage · Timeline aspects.
+# Aspects are readings of one surface, not identical copies.
 q42:vol1 a q42:Volume ;
     q42:state "open" ;
     q42:openedVia "GraphDatabase.volume_open" ;

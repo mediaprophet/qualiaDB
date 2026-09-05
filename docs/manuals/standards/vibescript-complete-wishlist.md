@@ -39,7 +39,7 @@ Vibe is the no-compile JS alternative for QualiaDB / Webizen Desktop / Poet. Hum
 4. Container · Manifold · Link human chrome (not engineer graph-viz).
 5. Map containers: OSM-class geo layers + universe/fantasy realms + temporal scrubber.
 6. Inference provenance chrome; Render preview dock (still/clip/scene).
-7. Layout·Stage·Timeline twin coverage on every surface; named beats only.
+7. Layout·Stage·Timeline **aspect** coverage on every surface; named beats only. Not twins (twin infers identical). Not planes.
 8. Webizen chrome handoff docs after Poet stages land.
 9. **Media / post toolchain** — import stills·clips·scenes, scrub renders, cache/status chrome on live `Render.*` / volume (post-prod lane, not a code UI).
 10. **Keyboard-first toolchains** — Word/Excel-class focus order + shortcuts so toolbars are usable without hunting glyphs.
@@ -53,7 +53,7 @@ Vibe is the no-compile JS alternative for QualiaDB / Webizen Desktop / Poet. Hum
 4. Inference provenance trails; preview dock handle-kind chrome.
 5. Distinct visual language for Container / Manifold / Link + spatiotemporal badges.
 6. Map/G-COORD skins (geo vs realm) after shapes+bind.
-7. Twin coverage checklist; export motion contract for Webizen later.
+7. Aspect coverage checklist; export motion contract for Webizen later.
 8. **Accessible motion** — respect reduced-motion: same named beats, shorter/crossfade variants; never rely on motion alone for state.
 9. **Dark/light + contrast tokens** — one visual token sheet so toolchest, volume dock, and map skins stay coherent (human chrome, not theme sprawl).
 10. **Touch/dense targets** — toolbar and map scrubber hit areas sized for pen/touch, not only mouse.
@@ -67,10 +67,10 @@ Vibe is the no-compile JS alternative for QualiaDB / Webizen Desktop / Poet. Hum
 5. Dual-VC + QISP + InvokeId annotations; aspirational bridge with Vibe.
 6. G-SOLID-IDP shapes — parked.
 7. Prefer extending `shapes/` + `core-ontologies/` over parallel vocabs.
-8. **InvokeId annotation pack** — SHACL/OWL annotations linking Container/Manifold/Link/Volume/twin classes to concrete `vibe:InvokeId` strings (generated from `catalog_ttl.rs` where possible).
+8. **InvokeId annotation pack** — SHACL/OWL annotations linking Container/Manifold/Link/Volume/aspect classes to concrete `vibe:InvokeId` strings (generated from `catalog_ttl.rs` where possible).
 9. **Provenance as first-class graph** — lightweight Provenance/Claim shapes that Inference trails and dual-VC presentations can both cite (not a second Host).
 10. **Spatiotemporal on language cells** — Position (+ optional ViewpointRealm) as properties of vibe cells/modules, not only map containers.
-11. **Shape test fixtures** — small TTL/N3 fixtures validating Volume states + Container↔Volume backing + twin 1:1 constraints (overnight agents can run without Host widen).
+11. **Shape test fixtures** — small TTL/N3 fixtures validating Volume states + Container↔Volume backing + aspect 1:1 constraints (overnight agents can run without Host widen).
 12. **Persons & sacred/human relations (locked)** — do **not** hang humans, personhood, love, kinship, or related “world of God” concepts under `owl:Thing` / OWL Thing hierarchy (avoids commodity framing). Prefer **SHACL** + agency/values/jural vocab; OWL/`owl:Thing` OK for technical/system artifacts. Stage publish docs must mark SHACL-first vs OWL-ok.
 13. **Created vs living/natural (locked, extends #12)** — SHACL/non-Thing for the natural/living world (what exists or grew as life — land, waters, creatures, seasons, country), not only persons/sacred relations. Keep mankind-created artifacts (OWL/`owl:Thing` OK where apt) distinct from living/natural existence (incl. sacred-for-peoples-without-book). Stage docs mark SHACL-first (person/sacred/natural) vs OWL-ok (technical). Nuance at shape · chrome · diagnose · realm — don’t flatten into one commodity taxonomy.
 

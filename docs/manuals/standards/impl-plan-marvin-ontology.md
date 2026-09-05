@@ -50,7 +50,7 @@
 **Accept:** chrome states 1:1 with ontology; no fake durable success.
 
 ## Stage 3 — Layout · Stage · Timeline (ontology)
-1. Twin classes ≠ legal `FormationStage`: Layout (2D) · Stage (depth/z/camera) · Timeline (entrance·dwell·exit only).
+1. Aspect classes ≠ legal `FormationStage`: Layout (2D) · Stage (depth/z/camera) · Timeline (entrance·dwell·exit only). Not twins (twin infers identical). Not planes.
 2. 1:1 every UI surface; named beats only.
 3. Join remaps: sparql · Inference.* · Render.* · volume_commit.
 **Accept:** shape doc on-branch.

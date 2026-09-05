@@ -5,6 +5,7 @@ use super::*;
 pub fn build_canvas_control_bar(document: &Document, seeds: &[ManifoldSeed]) -> Element {
     let bar = document.create_element("div").unwrap();
     bar.set_class_name("canvas-control-bar");
+    crate::browser::surface_aspects::mark(&bar, "entrance");
 
     // Collapse / Expand toggle
     let collapse_btn = document.create_element("button").unwrap();

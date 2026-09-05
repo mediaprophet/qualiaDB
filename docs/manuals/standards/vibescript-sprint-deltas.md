@@ -123,11 +123,11 @@
 |--|--|
 | **priority** | `normal` |
 | **status** | `done` |
-| **summary** | 1:1 twin classes for Poet surfaces; named beats entrance · dwell · exit |
+| **summary** | 1:1 aspect classes for Poet surfaces (not twins, not planes); named beats entrance · dwell · exit |
 | **notes** | Do **not** overload `FormationStage` (legal only). Join to remapped `GraphDatabase.sparql` / `Inference.*` / `Render.*` / volume ids — not Host methods. |
 | **landed** | 2026-09-05 `poet-surface.shacl.ttl` + `poet-container-manifold-link-shapes.md` |
 | **owner** | Marvin (shapes); davinci/monet (UX grammar) |
-| **gate** | 3D/temporal twins bind to real knowledge model |
+| **gate** | 3D/temporal aspects bind to real knowledge model |
 
 ---
 

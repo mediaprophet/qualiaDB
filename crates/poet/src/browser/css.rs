@@ -50,5 +50,7 @@ mod tests {
         assert!(CSS.contains("[data-media-surface=\"film\"]"));
         assert!(CSS.contains(".aspect-chip"));
         assert!(!CSS.contains(".twin-chip"));
+        assert!(!CSS.contains("Twin chips"));
+        assert!(!CSS.contains("plane-chip"));
     }
 }

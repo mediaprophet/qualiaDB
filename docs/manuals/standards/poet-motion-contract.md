@@ -27,9 +27,9 @@ Reduced-motion (`prefers-reduced-motion: reduce`): same named beats, shorter or 
 
 closed · open · committed · denied · fault — distinct token each. Commit beat only on successful `GraphDatabase.volume_commit`.
 
-## Aspects (not twins)
+## Aspects (not twins, not planes)
 
-Layout · Stage · Timeline are **aspects** of a surface — three 1:1 readings, not a credential “digital twin”. Chrome: `data-aspect-surface`, `.aspect-chip`. Coverage: `poet-aspect-coverage.md`.
+Layout · Stage · Timeline are **aspects** of a surface — three readings of one surface, not copies of it. Twin infers identical and is misleading here. Do not call them planes. Not a credential digital twin. Chrome: `data-aspect-surface`, `.aspect-chip`. Coverage: `poet-aspect-coverage.md`. Extract: `webizen-chrome-aspect-extract.md`.
 
 ## Diagnose glow
 

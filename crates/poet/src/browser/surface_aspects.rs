@@ -1,9 +1,11 @@
 //! Layout · Stage · Timeline **aspects** on Poet surfaces.
 //!
-//! Not "twins" and not a credential "digital twin". These are three 1:1
-//! readings of one studio surface: structure, depth, and named time.
-//! Named beats only (entrance · dwell · exit). Not legal FormationStage.
-//! Machine tokens are layout/stage/timeline; human labels are UTF-8.
+//! Three readings of one studio surface: structure, depth, and named time.
+//! They are not copies of each other. Do not call them "twins" — twin infers
+//! identical, which is almost always misleading. Do not call them "planes"
+//! (acoustic-plane and network control/data plane are other vocabularies).
+//! Not a credential "digital twin". Named beats only (entrance · dwell · exit).
+//! Not legal FormationStage. Machine tokens: layout/stage/timeline; labels UTF-8.
 
 use web_sys::{Document, Element};
 
@@ -63,6 +65,10 @@ pub fn required_shells() -> &'static [&'static str] {
         "native-render-preview",
         "canvas-container-node",
         "cmd-palette-panel",
+        "top-menubar",
+        "canvas-control-bar",
+        "toolbox-flyout",
+        "save-mode-dialog",
     ]
 }
 
@@ -87,17 +93,24 @@ mod tests {
             "q-cell-widget",
             "native-render-preview",
             "canvas-container-node",
+            "top-menubar",
+            "canvas-control-bar",
+            "toolbox-flyout",
+            "save-mode-dialog",
         ] {
             assert!(shells.contains(&need), "missing {need}");
         }
     }
 
     #[test]
-    fn aspect_tokens_are_not_formation_stage_or_digital_twin() {
+    fn aspect_tokens_are_not_twin_or_plane_or_formation_stage() {
         for (token, label) in ASPECTS {
             assert_ne!(token, "FormationStage");
             assert!(!token.contains("twin"));
-            assert!(!label.to_lowercase().contains("twin"));
+            assert!(!token.contains("plane"));
+            let folded = label.to_lowercase();
+            assert!(!folded.contains("twin"));
+            assert!(!folded.contains("plane"));
         }
     }
 }

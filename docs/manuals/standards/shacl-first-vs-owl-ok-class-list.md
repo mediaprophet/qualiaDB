@@ -13,7 +13,7 @@
 - q42:Volume · path/handle · sanctuary machinery
 - vibe:InvokeId / Capability.method catalog artifacts
 - Container · Manifold · Link *as software chrome structures* (not the living content inside)
-- Layout · Stage · Timeline *as UI twin machinery*
+- Layout · Stage · Timeline *as UI aspect machinery* (readings of a surface, not identical copies)
 - CRS / CoordinateSystem *machinery* · map layer configs · datasets · protocols · instruments · IDs
 
 ## Mixed (label both sides)

@@ -7,6 +7,7 @@ use super::*;
 pub fn build_top_menubar(document: &Document) -> Element {
     let bar = document.create_element("div").unwrap();
     bar.set_class_name("top-menubar");
+    crate::browser::surface_aspects::mark(&bar, "entrance");
 
     // Left: brand + menus
     let left = document.create_element("div").unwrap();

@@ -32,9 +32,9 @@
 
 ## Publish queue (after Capt. unlocks shape docs)
 1. `poet-container-manifold-link-shapes.md` (standards, when settled)
-2. Layout·Stage·Timeline ontology (≠ FormationStage)
+2. Layout·Stage·Timeline ontology (≠ FormationStage; aspects, not twins, not planes)
 3. Optional Volume SHACL NodeShape under `shapes/` only if Neo wants
-4. Shape test fixtures (TTL/N3) for Volume states + Container↔Volume + twin 1:1
+4. Shape test fixtures (TTL/N3) for Volume states + Container↔Volume + aspect 1:1
 5. InvokeId annotation pack + Provenance/Claim shapes (wishlist §E)
 
 Until then: keep drafts in **WIP**; promote to `docs/manuals/standards/` only when Capt./Neo call them settled.

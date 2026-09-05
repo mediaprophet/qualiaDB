@@ -89,7 +89,7 @@ shapes re-invents classes in the UI.
 
 ### W4 — Layout · Stage · Timeline ontology
 
-- [x] Twin classes ≠ legal `FormationStage`
+- [x] Aspect classes ≠ legal `FormationStage` (not twins, not planes)
 - [x] Named beats only: entrance · dwell · exit
 - [x] Join remaps: sparql · `Inference.*` · `Render.*` · `volume_commit`
 
@@ -149,7 +149,7 @@ Davinci/Monet delta audit first (`DES-01` / `DES-02`). Do not reopen `UX-01`–`
 - [x] Inference provenance chrome on live `Inference.*` (fixture + join; chrome trail is davinci/monet)
 - [x] Render preview dock handle-kind chrome (B-007 remap + fixture; dock chrome is davinci/monet)
 - [x] Map geo + one non-geo realm **gated** until W5 bind exists
-- [x] Davinci/Monet chrome landed: `15-studio-chrome.css`, diagnose token glow, still/clip/scene preview dock, volume `q42:state` chips, CML + Layout/Stage/Timeline twins, 2D/3D/film/CG surface language, gated G-COORD realm chips. No Host widen.
+- [x] Davinci/Monet chrome landed: `15-studio-chrome.css`, diagnose token glow, still/clip/scene preview dock, volume `q42:state` chips, CML + Layout/Stage/Timeline **aspects**, 2D/3D/film/CG surface language, gated G-COORD realm chips. No Host widen.
 
 **Accept:** browser UAT on live or honestly gated paths only.
 
@@ -171,14 +171,15 @@ Davinci/Monet delta audit first (`DES-01` / `DES-02`). Do not reopen `UX-01`–`
 |------|--------|--------|
 | 2026-09-05 | W0 | Plan landed |
 | 2026-09-05 | Stage 0–1 (prior) | Diagnose `errors[]`; volume catalog ids; DevRel pack |
-| 2026-09-05 | W1–W7 | Catalog honesty, CML+twin+volume SHACL, G-COORD shapes (bind gated), Inference/Render fixtures |
+| 2026-09-05 | W1–W7 | Catalog honesty, CML+aspect+volume SHACL, G-COORD shapes (bind gated), Inference/Render fixtures |
 | 2026-09-05 | W8–W11 | Toolchest scopes are live Family.method or None; save dialog volume_open/commit; motion contract |
 | 2026-09-05 | W12–W13 | Webizen four-op host commands; bounded session glyph API |
-| 2026-09-05 | DES-01/02 chrome | Davinci/Monet: named beats, volume chips, diagnose glow, still/clip/scene dock, CML+twins, 2D/3D/film/CG surfaces |
+| 2026-09-05 | DES-01/02 chrome | Davinci/Monet: named beats, volume chips, diagnose glow, still/clip/scene dock, CML+aspects, 2D/3D/film/CG surfaces |
 | 2026-09-05 | Push + gates | Rebased onto QDNF spec `3987fe2b`; Solid recorded as Qualia-first exit; G-COORD ≠ QDNF |
 | 2026-09-05 | COORD-01 | G-COORD remap on live Cosmic.* + SPARQL; UTF-8 labels; QDNF implementation waits |
 | 2026-09-05 | COORD-01b | Full Cosmic LocalHost slice; map Timeline FLRW/stardate; SPARQL when daemon; q-cell hasPosition |
-| 2026-09-05 | DES-07 | Layout/Stage/Timeline **aspects** (not twins) on remaining shells; `poet-aspect-coverage.md` |
+| 2026-09-05 | DES-07 | Layout/Stage/Timeline **aspects** (not twins, not planes) on remaining shells; `poet-aspect-coverage.md` |
+| 2026-09-05 | DES-08 | Webizen chrome/aspect extract; menubar/control-bar/flyout/save-dialog marked; SHACL labels retitled aspect |
 
 ## Stop rules
 
