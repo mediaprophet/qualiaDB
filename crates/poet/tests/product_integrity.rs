@@ -124,8 +124,14 @@ fn health_reports_uses_the_domain_workspace() {
 
 #[test]
 fn health_calculators_are_wired_on_the_container_route() {
-    let source = fs::read_to_string(manifest_dir().join("src/browser/containers.rs"))
-        .expect("container router");
+    let dir = manifest_dir().join("src/browser/containers");
+    let mut source = String::new();
+    for entry in fs::read_dir(&dir).expect("container router directory") {
+        let path = entry.expect("container router entry").path();
+        if path.extension().and_then(|ext| ext.to_str()) == Some("rs") {
+            source.push_str(&fs::read_to_string(&path).expect("container router source"));
+        }
+    }
     assert!(source.contains("\"health_calculators\""));
     assert!(source.contains("calculators::build_health_calculators_view"));
 }
