@@ -29,6 +29,7 @@
 2. Prefer toolchains that already have live `ALL_BOUND` binds; otherwise ship gated shells.
 3. Empty typography chains: gated placeholders + B criteria only — no fake fonts UI.
 **Accept:** one more live toolchain chrome OR gated shell with honest copy; inventory row updated.
+**Status (2026-09-05):** Capt. pick landed — `office:shapes` (`n3:evaluate` / `shacl:validate`) on live `N3Logic.evaluate` / `SHACL.validate`. Same honesty as `office:graph`.
 
 ## Stage 3 — Sanctuary / volume polish
 1. Volume dock chrome: open → edit → commit path fully wired to live ids; denied/fault states from Volume shape (`q42:state`).

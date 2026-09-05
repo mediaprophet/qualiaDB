@@ -180,6 +180,7 @@ Davinci/Monet delta audit first (`DES-01` / `DES-02`). Do not reopen `UX-01`–`
 | 2026-09-05 | COORD-01b | Full Cosmic LocalHost slice; map Timeline FLRW/stardate; SPARQL when daemon; q-cell hasPosition |
 | 2026-09-05 | DES-07 | Layout/Stage/Timeline **aspects** (not twins, not planes) on remaining shells; `poet-aspect-coverage.md` |
 | 2026-09-05 | DES-08 | Webizen chrome/aspect extract; menubar/control-bar/flyout/save-dialog marked; SHACL labels retitled aspect |
+| 2026-09-05 | TOOL-02 | Capt. pick `office:shapes` → `N3Logic.evaluate` + `SHACL.validate`; local sketch + daemon upgrade |
 
 ## Stop rules
 

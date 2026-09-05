@@ -37,5 +37,6 @@ SHACL-first shapes; keep instruments/datasets as artifacts.
 | Preview dock | still/clip/scene handle | `Render.scene` / `Render.gpu_*` / `Render.animation_*` |
 | SHACL panel | shape report | `SHACL.validate` |
 | N3 rules | module | `N3Logic.evaluate` |
+| office:shapes | Evaluate N3 / Validate SHACL | `N3Logic.evaluate` / `SHACL.validate` |
 
 Missing bind → gated chrome + Vibe delta row. Never invent `qualia.*`.

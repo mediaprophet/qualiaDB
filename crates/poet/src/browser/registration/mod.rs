@@ -138,4 +138,27 @@ mod tests {
             }
         }
     }
+
+    #[test]
+    fn office_shapes_chain_binds_live_n3_and_shacl() {
+        let registry = super::build_registry();
+        let office = registry.toolbox("office").expect("office toolbox");
+        let chain = office
+            .chains()
+            .iter()
+            .find(|chain| chain.metadata().id == "office:shapes")
+            .expect("office:shapes toolchain");
+        let tools: Vec<_> = chain
+            .tools()
+            .iter()
+            .map(|tool| {
+                (
+                    tool.metadata().id.as_str(),
+                    tool.metadata().capability_scope.as_deref(),
+                )
+            })
+            .collect();
+        assert!(tools.contains(&("n3:evaluate", Some("N3Logic.evaluate"))));
+        assert!(tools.contains(&("shacl:validate", Some("SHACL.validate"))));
+    }
 }

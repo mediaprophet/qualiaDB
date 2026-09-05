@@ -34,7 +34,7 @@ fn has_local_contract(tool_id: &str) -> bool {
 fn has_live_invoke(tool_id: &str) -> bool {
     matches!(
         tool_id,
-        "graph:sparql_query" | "ai:extractor" | "ai:sentinel"
+        "graph:sparql_query" | "ai:extractor" | "ai:sentinel" | "n3:evaluate" | "shacl:validate"
     )
 }
 
@@ -568,6 +568,8 @@ pub fn dispatch(document: &Document, tool_id: &str, label: &str, action: ActionT
         "ai:extractor" => run_extractor(document, label),
         "ai:sentinel" => run_sentinel(document, label),
         "graph:sparql_query" => run_sparql_query(document, label),
+        "n3:evaluate" => super::shapes_actions::run_n3_evaluate(document, label),
+        "shacl:validate" => super::shapes_actions::run_shacl_validate(document, label),
         _ => super::interactions::show_tool_status(
             document,
             label,
@@ -608,6 +610,8 @@ mod tests {
         assert!(!requires_daemon("ai:extractor"));
         assert!(!requires_daemon("ai:sentinel"));
         assert!(!requires_daemon("graph:sparql_query"));
+        assert!(!requires_daemon("n3:evaluate"));
+        assert!(!requires_daemon("shacl:validate"));
         let input = "QualiaDB joins Poet. Webizen renders the graph!";
         let first = local_extract_summary(input);
         let second = local_extract_summary(input);

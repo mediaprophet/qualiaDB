@@ -41,7 +41,7 @@ Thin `poet::vibe_host` + wasm parity landed. No Host widen. Next toolchains and 
 
 ## C / D — Poet chrome / visual
 
-Davinci/Monet chrome delta landed 2026-09-05 (`15-studio-chrome.css`). Remaining: G-COORD live bind, next toolchain Capt. pick, browser UAT.
+Davinci/Monet chrome delta landed 2026-09-05 (`15-studio-chrome.css`). Next toolchain Capt. pick landed (`office:shapes`). Remaining: G-COORD extra invoke gate, browser UAT.
 
 ## E — Ontology (Marvin) — standing constraints only
 

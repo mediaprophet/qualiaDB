@@ -22,6 +22,7 @@
 3. Custom unicode registration API: thinnest seam (B row + bind if catalog already has a fit; else park with Vibe).
 4. Second live toolchain end-to-end (pick from inventory after Capt. locks “next toolchain”) — same pattern as `office:graph`.
 **Accept:** inventory updated; every visible button = live id or gated; builds against `poet::vibe_host` only.
+**Status (2026-09-05):** Capt. pick `office:shapes` — `N3Logic.evaluate` + `SHACL.validate`.
 
 ## Stage 2 — Sanctuary / volume follow-through (no Host widen)
 1. Poet daemon path: ensure UI sanctuary save/open calls `GraphDatabase.volume_open` / `volume_commit` via existing invoke seam (no new Host methods).

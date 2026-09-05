@@ -46,6 +46,8 @@ epistemic · office · image · sheet · spatial · audio · communication · er
 | Tool id | Invoke id |
 |---------|-----------|
 | `graph:sparql_query` | `GraphDatabase.sparql` |
+| `n3:evaluate` | `N3Logic.evaluate` |
+| `shacl:validate` | `SHACL.validate` |
 
 When a daemon is connected, `ai:extractor` upgrades to the structured
 `/gazetteer` transport for `NLP.gazetteer_run`; the capability id is retained
@@ -89,6 +91,16 @@ with an optional daemon upgrade to **`GraphDatabase.sparql`**:
 3. Dispatch: selected text as SPARQL (else bounded `ASK WHERE { ?s ?p ?o } LIMIT 1`), local query when offline, and `daemon_invoke("GraphDatabase.sparql", …)` when connected.
 4. Daemon faults preserve the local operation instead of disabling the control.
 
+## Second live slice (Capt. pick 2026-09-05)
+
+Wire **`office:shapes` toolchain** → tools **`n3:evaluate`** / **`shacl:validate`** onto live `N3Logic.evaluate` / `SHACL.validate`:
+
+1. Register the chain next to `office:graph`. Scopes are exact `Family.method`.
+2. `requires_daemon` is false; standalone Poet stays executable.
+3. N3: selected document text (UTF-8) as `source`, or a small default sample. Local path is a sketch (prefixes / rule arrows / triple-shaped lines) — it does **not** fire rules. Daemon path is `N3Logic.evaluate`.
+4. SHACL: selected container subject + `minCount` 1. Local path checks for a semantic annotation. Daemon path is `SHACL.validate`.
+5. Daemon faults fall back to the local sketch instead of disabling the control.
+
 ## Remaining for Capt / Vibe
 
 | Item | Owner |
@@ -100,4 +112,5 @@ with an optional daemon upgrade to **`GraphDatabase.sparql`**:
 
 ## Change log
 
+- 2026-09-05: Second live chain `office:shapes` → `N3Logic.evaluate` + `SHACL.validate` (Capt. pick).
 - 2026-09-04: Initial inventory + first live SPARQL toolchain bind (Neo).

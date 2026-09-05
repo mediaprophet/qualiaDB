@@ -78,6 +78,7 @@ pub mod search_workbench;
 mod semantic_library_render;
 mod semantic_library_view;
 pub mod shader_pipelines;
+mod shapes_actions;
 pub mod sheet;
 pub mod social_inbox;
 pub mod social_lifecycle;

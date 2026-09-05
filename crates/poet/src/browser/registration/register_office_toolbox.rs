@@ -180,6 +180,41 @@ pub(super) fn register_office_toolbox(reg: &mut Registry) {
                     ActionType::Query,
                 ))],
             ),
+            // G-POET-TOOLCHEST: second live chain — N3Logic.evaluate + SHACL.validate
+            ToolChain::new(
+                ToolChainMetadata {
+                    id: "office:shapes".into(),
+                    label: "Shapes & Rules".into(),
+                    icon: "ontology".into(),
+                    description: "Evaluate N3 and validate SHACL on live N3Logic.evaluate / SHACL.validate.".into(),
+                },
+                vec![
+                    Box::new(SimpleTool::new(
+                        ToolMetadata {
+                            id: "n3:evaluate".into(),
+                            label: "Evaluate N3".into(),
+                            icon: "query".into(),
+                            kind: ToolKind::Query,
+                            capability_scope: Some("N3Logic.evaluate".into()),
+                            ontology_prefix: "ont".into(),
+                            description: "Invoke live Capability.method N3Logic.evaluate. Selected document text is the N3 source; a small UTF-8 sample is used if empty. Standalone Poet reports a local sketch; rule firing needs the daemon.".into(),
+                        },
+                        ActionType::Query,
+                    )),
+                    Box::new(SimpleTool::new(
+                        ToolMetadata {
+                            id: "shacl:validate".into(),
+                            label: "Validate SHACL".into(),
+                            icon: "ontology".into(),
+                            kind: ToolKind::Query,
+                            capability_scope: Some("SHACL.validate".into()),
+                            ontology_prefix: "ont".into(),
+                            description: "Invoke live Capability.method SHACL.validate (minCount 1) on the selected container subject. Standalone Poet checks for a semantic annotation; quin-backed SHACL needs the daemon.".into(),
+                        },
+                        ActionType::Query,
+                    )),
+                ],
+            ),
         ],
     ));
 }
