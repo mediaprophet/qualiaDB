@@ -1,6 +1,6 @@
 # G-LEXICON-0 — slice 1 (Neo)
 
-**Status:** landed (code) · bay chrome: [`g-lexicon-0-bay-chrome.md`](./g-lexicon-0-bay-chrome.md) · Vibe diagnose fixtures next  
+**Status:** landed (code) · bay chrome: [`g-lexicon-0-bay-chrome.md`](./g-lexicon-0-bay-chrome.md) · diagnose fixtures: [`g-lexicon-0-diagnose-fixtures.md`](./g-lexicon-0-diagnose-fixtures.md)  
 **Gate:** additive under `vibe-host-0.1` freeze · **no Host widen** · **no in-binary WordNet**
 
 ## What landed
@@ -50,7 +50,7 @@
 
 ## Next (out of slice 1)
 
-2. @Vibe — `lexicon:` pin + diagnose alias-map / `lexicon.upgrade` hooks  
+2. @Vibe — `lexicon:` pin + diagnose alias-map / `lexicon.upgrade` hooks — fixtures landed (`g-lexicon-0-diagnose-fixtures.md`; pin is comment/const metadata, not EBNF)  
 3. @Marvin — pack framing shape doc (`packSemVer` · framing · `upliftFrom`)  
 4. @davinci @monet — bay chips + held-gate chrome (after this SHA)
 

@@ -149,6 +149,9 @@ fn infer_fix(code: DiagCode, message: &str) -> Option<String> {
         return Some("move the External call into an effect fn; cells stay Pure".into());
     }
     if code == DiagCode::E300 {
+        if m.contains("lexicon") {
+            return Some("held / not yet — open lexicon pack".into());
+        }
         if m.contains("graph.write") {
             return Some("add requires [ capability(\"graph.write\") ];".into());
         }

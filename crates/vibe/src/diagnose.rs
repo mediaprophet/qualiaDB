@@ -219,4 +219,108 @@ mod tests {
             "primary diagnostic plus errors[] entries, got {json}"
         );
     }
+
+    #[test]
+    fn lexicon_missing_pack_helper_matches_held_json_shape() {
+        let src = include_str!("../fixtures/lexicon/missing_pack.vibe");
+        let expected = include_str!("../fixtures/lexicon/missing_pack.diagnose.json");
+        let r = crate::diagnose_lexicon_pin(src, false);
+        let json = r.to_json();
+        assert!(!r.valid);
+        assert_eq!(r.kind, "module");
+        let err = r.error.as_ref().unwrap();
+        assert_eq!(err.code, DiagCode::E300);
+        assert_eq!(err.suggested_fix.as_deref(), Some(crate::HELD_OPEN_PACK));
+        assert!(json.contains("\"error_code\":\"E300\""));
+        assert!(json.contains("held / not yet"));
+        assert!(json.contains("open lexicon pack"));
+        assert!(json.contains("\"errors\":["));
+        assert!(!json.to_ascii_lowercase().contains("broken"));
+        for needle in [
+            "\"valid\": false",
+            "\"kind\": \"module\"",
+            "\"error_code\": \"E300\"",
+            "held / not yet — open lexicon pack",
+        ] {
+            assert!(
+                expected.contains(needle),
+                "fixture DiagnoseReport JSON must document {needle}"
+            );
+        }
+        // parse+check of the workshop file stays valid (no disk / no invoke)
+        let parse_r = diagnose(src);
+        assert!(
+            parse_r.valid,
+            "diagnose() must not invoke lexicon_manifest: {}",
+            parse_r.to_json()
+        );
+    }
+
+    #[test]
+    fn lexicon_pin_ok_records_en_core() {
+        let src = include_str!("../fixtures/lexicon/pin_ok.vibe");
+        let pin = crate::parse_lexicon_pin_from_source(src).expect("pin");
+        assert_eq!(pin.as_pin_str(), crate::EXAMPLE_PIN);
+        assert_eq!(pin.pack_id, "en-core");
+        assert_eq!(pin.pack_semver, "0.1.0");
+        let hook = crate::diagnose_lexicon_pin(src, true);
+        assert!(hook.valid);
+        let r = diagnose(src);
+        assert!(r.valid, "pin_ok diagnose: {}", r.to_json());
+        assert_eq!(crate::LANGUAGE_VERSION, "vibe-0.1");
+        assert_eq!(crate::HOST_VERSION, "vibe-host-0.1");
+    }
+
+    #[test]
+    fn lexicon_alias_row_round_trip_in_suggested_fix() {
+        let src = include_str!("../fixtures/lexicon/alias_rows.json");
+        let rows = crate::parse_alias_rows_json(src);
+        assert_eq!(rows.len(), 3);
+        assert_eq!(rows[0].from, "arrive");
+        assert_eq!(rows[0].to, "concept:arrive");
+        assert_eq!(rows[0].framing, crate::LexiconFraming::LivingShacl);
+        assert_eq!(rows[1].framing, crate::LexiconFraming::Mixed);
+        assert_eq!(rows[2].framing, crate::LexiconFraming::ArtifactOwl);
+        let report = crate::alias_migrate_report(crate::Span::point(0), &rows);
+        let fix = report
+            .error
+            .as_ref()
+            .unwrap()
+            .suggested_fix
+            .as_deref()
+            .unwrap();
+        let back = crate::parse_alias_rows_json(fix);
+        assert_eq!(back, rows);
+        assert!(fix.contains("\"from\":\"arrive\""));
+        assert!(fix.contains("\"to\":\"concept:arrive\""));
+        assert!(fix.contains("living-SHACL"));
+        let json = report.to_json();
+        assert!(json.contains("suggested_fix"));
+        assert!(json.contains("living-SHACL"));
+    }
+
+    #[test]
+    fn lexicon_living_upgrade_never_rewritten_as_artifact() {
+        let src = include_str!("../fixtures/lexicon/upgrade_living.json");
+        let before = crate::parse_alias_rows_json(src);
+        let living: Vec<_> = before
+            .iter()
+            .filter(|r| r.framing == crate::LexiconFraming::LivingShacl)
+            .cloned()
+            .collect();
+        assert!(!living.is_empty());
+        let requested = vec![crate::LexiconFraming::ArtifactOwl; before.len()];
+        let after = crate::apply_upgrade_map(&before, &requested);
+        assert!(!crate::living_rewritten_as_artifact(&before, &after));
+        for row in &after {
+            if living.iter().any(|l| l.from == row.from) {
+                assert_eq!(
+                    row.framing,
+                    crate::LexiconFraming::LivingShacl,
+                    "{} must stay living-SHACL",
+                    row.from
+                );
+            }
+        }
+    }
 }

@@ -25,6 +25,14 @@ fn graph_and_volume_fixtures_parse_and_check() {
             "g_coord_realms",
             include_str!("../fixtures/g_coord_realms.vibe"),
         ),
+        (
+            "lexicon_pin_ok",
+            include_str!("../fixtures/lexicon/pin_ok.vibe"),
+        ),
+        (
+            "lexicon_missing_pack",
+            include_str!("../fixtures/lexicon/missing_pack.vibe"),
+        ),
     ] {
         let code: String = src
             .lines()
@@ -75,4 +83,29 @@ fn diagnose_loop_fixtures_are_invalid_with_suggested_fix() {
         assert!(json.contains("\"errors\":["), "{name} JSON errors[]");
         assert!(json.contains("suggested_fix"), "{name} JSON suggested_fix");
     }
+}
+
+#[test]
+fn lexicon_pin_fixtures_record_pin_and_example_pack() {
+    let pin_src = include_str!("../fixtures/lexicon/pin_ok.vibe");
+    let pin = vibe::parse_lexicon_pin_from_source(pin_src).expect("lexicon pin");
+    assert_eq!(pin.as_pin_str(), vibe::EXAMPLE_PIN);
+    assert!(!pin_src.contains("qualia."));
+    assert!(!pin_src.contains("capability.invoke"));
+
+    let example =
+        include_str!("../../../docs/manuals/standards/lexicon-pack-manifest-example.json");
+    let fixture = include_str!("../fixtures/lexicon/en-core.lexicon.json");
+    assert_eq!(
+        example.replace("\r\n", "\n").trim(),
+        fixture.replace("\r\n", "\n").trim(),
+        "fixture pack must match standards example"
+    );
+    let pack = vibe::parse_pack_manifest_json(fixture).expect("pack");
+    assert_eq!(pack.pack_semver, "0.1.0");
+    assert_eq!(pack.framing, vibe::LexiconFraming::Mixed);
+    assert_eq!(
+        pack.concept_ids,
+        ["concept:arrive", "concept:hold", "concept:leave"]
+    );
 }

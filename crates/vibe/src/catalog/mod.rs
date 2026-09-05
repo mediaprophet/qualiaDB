@@ -186,6 +186,7 @@ mod tests {
         assert!(is_known("GraphDatabase.sparql"));
         assert!(is_known("GraphDatabase.volume_open"));
         assert!(is_known("GraphDatabase.volume_commit"));
+        assert!(is_known("GraphDatabase.lexicon_manifest"));
         assert!(is_known("DeonticLogic.evaluate"));
         assert!(is_known("N3Logic.evaluate"));
         assert!(is_known("GraphAuthoring.process"));

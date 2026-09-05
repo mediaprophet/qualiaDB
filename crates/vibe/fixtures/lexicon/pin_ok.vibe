@@ -1,0 +1,11 @@
+// Human dialect — lexicon pin as package metadata (not an EBNF production).
+// lexicon: "en-core@0.1.0"
+// Pack: fixtures/lexicon/en-core.lexicon.json (matches lexicon-pack-manifest-example.json)
+module <https://qualiadb.org/modules/lexicon_pin_ok>;
+using GraphDatabase;
+
+const lexicon = "en-core@0.1.0";
+
+effect fn open_lexicon_pack(path: string) -> Record {
+    return GraphDatabase.lexicon_manifest({ path: path });
+}

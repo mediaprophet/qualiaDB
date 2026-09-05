@@ -28,6 +28,7 @@ mod error;
 mod eval;
 mod grammar;
 mod lex;
+mod lexicon_pin;
 mod parse;
 mod span;
 mod types;
@@ -96,6 +97,12 @@ pub use diagnose::{diagnose, DiagnoseReport};
 pub use error::{DiagCode, Diagnostic};
 pub use eval::{populate_import_aliases, Engine, Env};
 pub use grammar::{DIAGNOSTIC_SCHEMA_JSON, EBNF, GBNF, SOURCE_SCHEMA_JSON};
+pub use lexicon_pin::{
+    alias_migrate_report, alias_rows_suggested_fix, apply_upgrade_map, diagnose_lexicon_pin,
+    living_rewritten_as_artifact, missing_pack_report, parse_alias_rows_json,
+    parse_lexicon_pin_from_source, parse_pack_manifest_json, AliasRow, LexiconFraming, LexiconPin,
+    PackManifest, EXAMPLE_PIN, HELD_OPEN_PACK, LEXICON_MANIFEST_ID,
+};
 pub use parse::{parse_cell, parse_program};
 pub use projectional::{
     apply_edit, apply_edits, make_binary, make_call, make_field, make_float, make_ident, make_int,
