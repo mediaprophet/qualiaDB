@@ -500,63 +500,69 @@ pub fn spawn_daemon_probe() {
 
     wasm_bindgen_futures::spawn_local(async {
         let ports = DEFAULT_CANDIDATE_PORTS;
-        for &port in ports {
-            let url = format!("http://127.0.0.1:{port}");
-            let health_url = format!("{url}/health");
+        let hosts = probe_loopback_hosts();
+        web_sys::console::log_1(
+            &format!("[Webizen Probe] candidates hosts={hosts:?} ports={ports:?}").into(),
+        );
+        for host in &hosts {
+            for &port in ports {
+                let url = format!("http://{host}:{port}");
+                let health_url = format!("{url}/health");
 
-            let Some(health) = fetch_daemon_health(&health_url).await else {
-                web_sys::console::log_1(
-                    &format!("[Webizen Probe] no usable /health on {url}").into(),
-                );
-                continue;
-            };
-            if !is_qualia_daemon_health(&health) {
+                let Some(health) = fetch_daemon_health(&health_url).await else {
+                    web_sys::console::log_1(
+                        &format!("[Webizen Probe] no usable /health on {url}").into(),
+                    );
+                    continue;
+                };
+                if !is_qualia_daemon_health(&health) {
+                    web_sys::console::log_1(
+                        &format!(
+                            "[Webizen Probe] Ignoring non-daemon /health on {url} (missing engine)"
+                        )
+                        .into(),
+                    );
+                    continue;
+                }
+
+                let engine = health
+                    .engine
+                    .clone()
+                    .unwrap_or_else(|| "qualia-core-db".into());
                 web_sys::console::log_1(
                     &format!(
-                        "[Webizen Probe] Ignoring non-daemon /health on {url} (missing engine)"
+                        "[Webizen Probe] Found running native daemon at {url} (engine: {engine}, quins: {})",
+                        health.graph_quin_count.unwrap_or(0)
                     )
                     .into(),
                 );
-                continue;
-            }
 
-            let engine = health
-                .engine
-                .clone()
-                .unwrap_or_else(|| "qualia-core-db".into());
-            web_sys::console::log_1(
-                &format!(
-                    "[Webizen Probe] Found running native daemon at {url} (engine: {engine}, quins: {})",
-                    health.graph_quin_count.unwrap_or(0)
-                )
-                .into(),
-            );
+                // Elevate to Connected before the heavy caps fetch — UAT arrive /
+                // Open pack must not stay held on Probing while schemas deserialize.
+                set_daemon_state(DaemonConnectionState::Connected {
+                    url: url.clone(),
+                    port,
+                    engine,
+                    version: health.version.unwrap_or_else(|| crate::CRATE_STAMP.into()),
+                    graph_quin_count: health.graph_quin_count.unwrap_or(0),
+                    dev_mode: health.dev_mode.unwrap_or(false),
+                });
 
-            // Elevate to Connected before the heavy caps fetch — UAT arrive /
-            // Open pack must not stay held on Probing while schemas deserialize.
-            set_daemon_state(DaemonConnectionState::Connected {
-                url: url.clone(),
-                port,
-                engine,
-                version: health.version.unwrap_or_else(|| crate::CRATE_STAMP.into()),
-                graph_quin_count: health.graph_quin_count.unwrap_or(0),
-                dev_mode: health.dev_mode.unwrap_or(false),
-            });
+                init_daemon_event_streams(&url);
+                super::bind_observer_from_daemon();
 
-            init_daemon_event_streams(&url);
-            super::bind_observer_from_daemon();
-
-            let caps_url = url.clone();
-            wasm_bindgen_futures::spawn_local(async move {
-                refresh_native_capabilities(&caps_url).await;
-                #[cfg(target_arch = "wasm32")]
-                if let Some(window) = web_sys::window() {
-                    if let Some(doc) = window.document() {
-                        update_all_status_badges(&doc);
+                let caps_url = url.clone();
+                wasm_bindgen_futures::spawn_local(async move {
+                    refresh_native_capabilities(&caps_url).await;
+                    #[cfg(target_arch = "wasm32")]
+                    if let Some(window) = web_sys::window() {
+                        if let Some(doc) = window.document() {
+                            update_all_status_badges(&doc);
+                        }
                     }
-                }
-            });
-            return;
+                });
+                return;
+            }
         }
 
         web_sys::console::log_1(
@@ -569,6 +575,24 @@ pub fn spawn_daemon_probe() {
             reason: "Connection refused on candidate loopback ports".into(),
         });
     });
+}
+
+/// Prefer the page hostname when it is loopback (`localhost` vs `127.0.0.1`
+/// are different Origins — Chrome often blocks cross-loopback fetches).
+fn probe_loopback_hosts() -> Vec<String> {
+    let mut hosts: Vec<String> = Vec::new();
+    if let Some(hostname) = web_sys::window().and_then(|w| w.location().hostname().ok()) {
+        let h = hostname.trim().to_ascii_lowercase();
+        if h == "localhost" || h == "127.0.0.1" {
+            hosts.push(h);
+        }
+    }
+    for alt in ["127.0.0.1", "localhost"] {
+        if !hosts.iter().any(|h| h == alt) {
+            hosts.push(alt.to_string());
+        }
+    }
+    hosts
 }
 
 fn is_qualia_daemon_health(health: &DaemonHealthResponse) -> bool {
