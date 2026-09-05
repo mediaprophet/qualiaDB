@@ -335,6 +335,10 @@ pub fn build_vibescript_console(document: &Document) -> Element {
     wire_vibescript_action(&run_btn, &editor, &output, false);
     wire_diagnose_action(&diag_btn, &editor, &output);
 
+    let catalog_peer = super::lexicon_bay::build_lexicon_bay(document);
+    catalog_peer.set_attribute("data-bay-pane", "catalog").ok();
+    console.append_child(&catalog_peer).unwrap();
+
     console
 }
 

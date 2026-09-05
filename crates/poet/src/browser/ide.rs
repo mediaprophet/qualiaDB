@@ -552,45 +552,56 @@ pub fn build_ide_view(document: &Document, state: &IdeState) -> Element {
     }
     central.append_child(&editor_pane).unwrap();
 
-    // Zone D: Bottom Drawer (160px - REPL & Problems)
+    // Zone D: studio bay — REPL · Problems · Catalog (lexicon pack peer)
     let drawer = document.create_element("div").unwrap();
+    drawer.set_class_name("studio-bay");
     let drawer_el: HtmlElement = drawer.clone().dyn_into().unwrap();
     drawer_el.style().set_css_text(
-        "height: 160px; background: #090e1a; border-top: 1px solid rgba(255, 255, 255, 0.08); \
+        "height: 220px; background: #090e1a; border-top: 1px solid rgba(255, 255, 255, 0.08); \
          display: flex; flex-direction: column;",
     );
 
     let drawer_tabs = document.create_element("div").unwrap();
+    drawer_tabs.set_attribute("role", "tablist").ok();
     let drawer_tabs_el: HtmlElement = drawer_tabs.clone().dyn_into().unwrap();
     drawer_tabs_el.style().set_css_text(
         "display: flex; gap: 12px; padding: 6px 12px; border-bottom: 1px solid rgba(255, 255, 255, 0.06); font-size: 11px;"
     );
 
-    let repl_tab = document.create_element("span").unwrap();
-    repl_tab.set_text_content(Some("\u{26A1} Vibe REPL"));
-    let repl_tab_el: HtmlElement = repl_tab.clone().dyn_into().unwrap();
-    repl_tab_el
-        .style()
-        .set_css_text("font-weight: 600; color: #38bdf8; cursor: pointer;");
+    let repl_tab = document.create_element("button").unwrap();
+    repl_tab.set_class_name("studio-bay-tab is-active");
+    repl_tab.set_attribute("type", "button").ok();
+    repl_tab.set_attribute("data-bay-tab", "repl").ok();
+    repl_tab.set_attribute("aria-selected", "true").ok();
+    repl_tab.set_text_content(Some("Vibe REPL"));
     drawer_tabs.append_child(&repl_tab).unwrap();
 
-    let problems_tab = document.create_element("span").unwrap();
-    problems_tab.set_text_content(Some(&format!(
-        "\u{1F6A8} Problems ({})",
-        state.problems.len()
-    )));
-    let problems_tab_el: HtmlElement = problems_tab.clone().dyn_into().unwrap();
-    problems_tab_el
-        .style()
-        .set_css_text("color: #94a3b8; cursor: pointer;");
+    let problems_tab = document.create_element("button").unwrap();
+    problems_tab.set_class_name("studio-bay-tab");
+    problems_tab.set_attribute("type", "button").ok();
+    problems_tab.set_attribute("data-bay-tab", "problems").ok();
+    problems_tab.set_attribute("aria-selected", "false").ok();
+    problems_tab.set_text_content(Some(&format!("Problems ({})", state.problems.len())));
     drawer_tabs.append_child(&problems_tab).unwrap();
+
+    let catalog_tab = document.create_element("button").unwrap();
+    catalog_tab.set_class_name("studio-bay-tab");
+    catalog_tab.set_attribute("type", "button").ok();
+    catalog_tab.set_attribute("data-bay-tab", "catalog").ok();
+    catalog_tab.set_attribute("aria-selected", "false").ok();
+    catalog_tab.set_text_content(Some("Catalog"));
+    drawer_tabs.append_child(&catalog_tab).unwrap();
 
     drawer.append_child(&drawer_tabs).unwrap();
 
     let drawer_body = document.create_element("div").unwrap();
     let drawer_body_el: HtmlElement = drawer_body.clone().dyn_into().unwrap();
-    drawer_body_el.style().set_css_text("flex: 1; padding: 8px 12px; font-family: var(--font-mono); font-size: 11px; overflow-y: auto;");
+    drawer_body_el.style().set_css_text(
+        "flex: 1; padding: 8px 12px; font-family: var(--font-mono); font-size: 11px; overflow-y: auto;",
+    );
 
+    let repl_pane = document.create_element("div").unwrap();
+    repl_pane.set_attribute("data-bay-pane", "repl").ok();
     for entry in &state.repl_history {
         let entry_div = document.create_element("div").unwrap();
         entry_div.set_text_content(Some(&format!(
@@ -601,8 +612,43 @@ pub fn build_ide_view(document: &Document, state: &IdeState) -> Element {
         entry_div_el
             .style()
             .set_css_text("color: #34d399; margin-bottom: 4px; white-space: pre-line;");
-        drawer_body.append_child(&entry_div).unwrap();
+        repl_pane.append_child(&entry_div).unwrap();
     }
+    drawer_body.append_child(&repl_pane).unwrap();
+
+    let problems_pane = document.create_element("div").unwrap();
+    problems_pane
+        .set_attribute("data-bay-pane", "problems")
+        .ok();
+    problems_pane.set_attribute("hidden", "").ok();
+    let problems_el: HtmlElement = problems_pane.clone().dyn_into().unwrap();
+    problems_el.style().set_property("display", "none").ok();
+    for problem in &state.problems {
+        let row = document.create_element("div").unwrap();
+        row.set_text_content(Some(&format!(
+            "{} · {} — {}",
+            problem.code, problem.file_path, problem.message
+        )));
+        problems_pane.append_child(&row).unwrap();
+    }
+    drawer_body.append_child(&problems_pane).unwrap();
+
+    let catalog_pane = super::lexicon_bay::build_lexicon_bay(document);
+    catalog_pane.set_attribute("data-bay-pane", "catalog").ok();
+    catalog_pane.set_attribute("hidden", "").ok();
+    let catalog_el: HtmlElement = catalog_pane.clone().dyn_into().unwrap();
+    catalog_el.style().set_property("display", "none").ok();
+    drawer_body.append_child(&catalog_pane).unwrap();
+
+    super::lexicon_bay::wire_bay_tabs(
+        &drawer_tabs,
+        &[
+            ("repl", &repl_pane),
+            ("problems", &problems_pane),
+            ("catalog", &catalog_pane),
+        ],
+    );
+
     drawer.append_child(&drawer_body).unwrap();
     central.append_child(&drawer).unwrap();
 

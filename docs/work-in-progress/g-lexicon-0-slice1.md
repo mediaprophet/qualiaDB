@@ -1,6 +1,6 @@
 # G-LEXICON-0 — slice 1 (Neo)
 
-**Status:** landed (code) · chrome waits on this SHA · Vibe diagnose fixtures next  
+**Status:** landed (code) · bay chrome: [`g-lexicon-0-bay-chrome.md`](./g-lexicon-0-bay-chrome.md) · Vibe diagnose fixtures next  
 **Gate:** additive under `vibe-host-0.1` freeze · **no Host widen** · **no in-binary WordNet**
 
 ## What landed
