@@ -98,3 +98,5 @@ See `docs/work-in-progress/OVERNIGHT_HANDOVER_2026-09-05.md` for scoreboard + re
 **D2 PASS (2026-09-05):** Catalog Open pack arrive en-core@0.1.0 · mixed · tip `a06179c9` (davinci). Soft-rise → monet.
 
 **D2 soft-rise PASS (2026-09-05):** monet scored arrive on tip `a06179c9`.
+
+**Marvin framing PASS (2026-09-05):** mixed living+artifact · no Thing-wash · tip `a06179c9`/`9a1438d`.

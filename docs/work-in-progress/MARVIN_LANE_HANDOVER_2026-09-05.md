@@ -27,7 +27,7 @@ Machines and humans share one world-model: SHACL-first for persons/living/natura
 | WIP design notes | `docs/work-in-progress/ontology-design-notes-marvin.md` |
 
 ## OPEN — ordered overnight (Marvin)
-### D2 — Open pack arrive (GATE — observe only)
+### D2 — Open pack arrive (**PASS** framing re-accept `a06179c9`)
 1. When UI shows **0.1.0 · mixed · gate open**, confirm chips split living/artifact (mixed) — no Thing-wash
 2. Fail = open todo for chrome/diagnose voice; not a new shape invent
 3. Tick via Neo
@@ -59,3 +59,6 @@ Machines and humans share one world-model: SHACL-first for persons/living/natura
 
 ## Dependencies
 Neo tip push · Capt/davinci D2 frames · monet soft-rise · Vibe diagnose voice · live binds only
+
+
+**Tick-off:** Framing re-accept **PASS** — mixed living+artifact chips · no Thing-wash · tip `a06179c9`/`9a1438d`. Capt B-ui unlocked next.
