@@ -161,6 +161,19 @@ evidence.
 - Browser UAT of the calculator form is the remaining verification row.
 - Next packet: `HLT-08`. Do not close Review Gate A.
 
+Browser offline follow-up: Health construct opened via Help → Command Palette.
+Calculators showed disabled Calculate, not-a-diagnosis copy, and Graph
+unavailable. Live daemon fixture was not available on this VM.
+
+### `HLT-08` - 2026-09-05
+
+- Executable source contracts for the eight Health completion workflows
+  (`crates/poet/tests/health_uat_pack.rs`, 8 passed).
+- Direct defect found in add-measurement: systolic/diastolic/HR placeholders
+  presented 120/80/68 mmHg/bpm as if they were patient values. Cleared.
+- Browser UAT rows remain open until trunk serve.
+- Review Gate A remains a `D5` owner close.
+
 ## Post-gate programme
 
 The earlier programme remains the dependency backbone after Gate A:

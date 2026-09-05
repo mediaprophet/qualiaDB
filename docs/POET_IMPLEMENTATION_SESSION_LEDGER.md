@@ -265,7 +265,7 @@ Baseline git status: Feature branch `cursor/poet-grok-handover-ac52` with HLT-R1
 User job delivered: Fail-closed ClinicalRisk invoke (required inputs and units, no fabricated defaults, applicability gates, algorithm/version/non-diagnosis provenance) plus Poet empty calculator workspace. Incomplete or inapplicable input cannot calculate. Offline invents no score.
 Files changed: `clinical/required.rs`, `framingham.rs`, `cha2ds2.rs`, `score2.rs`, `render/scene.rs`; Poet `health_views/calculators/`; toolbox, docks, persist, logic workbench, studio health body; this ledger; WIP note.
 Tests and exact results: `cargo +stable test -p qualia-core-db --lib invoke::clinical` (16 passed); `health_is_not_a_named_person` (1 passed); `cargo +stable test -p poet --lib health_views` (33 passed); product integrity 10; surface inventory 1; `capability_scopes_are_live_family_method_or_local` and `every_registered_nonplacement_tool_has_an_explicit_policy` passed. rustc 1.98.1.
-Browser/native UAT: Native boundary fixtures passed. Browser UAT of empty form / complete Framingham fixture pending trunk in this session.
+Browser/native UAT: Native boundary fixtures passed. Offline browser: Health construct via Help → Command Palette; Clinical calculators visible with Calculate disabled and not-a-diagnosis copy; Graph/Merkle/Gas unavailable. No live daemon fixture.
 Delegation count before/after: 112 / 112 audited `pub use` ceiling; calculator is a real workspace (not a thin `pub use` wrapper). Product integrity now 10 tests.
 Known gaps: Browser UAT; MCP medical Framingham defaults; WebizenVM SCORE2 Moderate hardcode; Gate A not closed.
 Unrelated failures preserved: Yes.
@@ -276,7 +276,7 @@ Baseline git status: HLT-07 implementation committed as `0a28e9ce`; this packet 
 User job delivered: Executable source contracts for add measurement, reload, trend/table, correction, grant, revoke, ingest, and offline recovery. Cleared overview BP/HR placeholders that presented 120/80/68 as if they were patient values. Grant categories remain the five ConsentScope flags.
 Files changed: `crates/poet/tests/health_uat_pack.rs`; `overview_workspace.rs`; `docs/work-in-progress/hlt-08-health-uat-pack-2026-09-05.md`; register; this ledger.
 Tests and exact results: `cargo +stable test -p poet --test health_uat_pack` (8 passed).
-Browser/native UAT: Browser rows still open pending trunk serve.
+Browser/native UAT: Offline browser rows: U8 PASS (no invented score, Graph unavailable). U1/U7 partial (containers visible). U2–U6 held without daemon.
 Known gaps: Live daemon workflows; ConsentLedger persist seam; Review Gate A not closed.
 Unrelated failures preserved: Yes.
 Recommended next packet: Review Gate A (`D5`) — owner/expert close, not this instrument.

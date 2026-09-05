@@ -1,6 +1,6 @@
 # HLT-07 — Clinical calculator workflow integrity (2026-09-05)
 
-**Status:** implementation complete · native + Poet tests passed · browser UAT pending this session  
+**Status:** implementation complete · native + Poet tests passed · browser offline UAT partial  
 **Branch:** `cursor/poet-grok-handover-ac52` off `0.0.36-dev`  
 **Freeze:** `vibe-host-0.1` — four ops / live `ALL_BOUND` only  
 **Live IDs:** `ClinicalRisk.framingham` · `ClinicalRisk.cha2ds2_vasc` · `ClinicalRisk.score2`
@@ -30,9 +30,16 @@ Measured here (rustc 1.98.1): **16** `invoke::clinical` passed; **1** health
 scene passed; **33** `health_views` passed; product integrity **10**; surface
 inventory **1**; capability-scope and non-placement policy tests passed.
 
+## Browser UAT (offline; daemon not running)
+
+`NO_COLOR=true RUSTUP_TOOLCHAIN=stable trunk serve --port 8081`  
+Help → Command Palette → Open Construct: Health.
+
+Observed on the Health construct: Clinical calculators container **Risk estimates from entered values**; Calculate disabled; copy that empty fields are not patient values and the result is not a diagnosis; status bar Graph/Merkle/Gas **unavailable**. No numeric risk was shown. A complete Framingham fixture against a live daemon was not run (no `:4242` daemon in this environment).
+
 ## Not claimed
 
 - Review Gate A (`D5`)
-- Browser UAT of the calculator form (trunk install in progress at write time)
+- Live daemon invoke of a complete Framingham / CHA₂DS₂-VASc / SCORE2 fixture
 - MCP `mcp_tool_impls/medical.rs` Framingham `unwrap_or` defaults (out of Poet invoke)
 - `governance/webizen/vm.rs` SCORE2 Moderate hardcode (different path)

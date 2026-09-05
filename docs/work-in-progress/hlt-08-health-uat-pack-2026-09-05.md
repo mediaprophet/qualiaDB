@@ -12,14 +12,14 @@ host behavior. Review Gate A (`D5`) is **not** closed by this pack.
 
 | ID | Task | Source contract | Browser evidence | Result |
 |---|---|---|---|---|
-| U1 | Add measurement | `overview_workspace.rs` save requires time + sys > dia; empty placeholders | pending | |
-| U2 | Reload | `data-health-refresh` re-queries COP families | pending | |
-| U3 | Inspect trend / table | `vitals_chart.rs` metric tabs + chart/table toggle | pending | |
-| U4 | Correct record | append-only `health_correction` receipt; original not erased | pending | |
-| U5 | Grant access | named contact + five `ConsentScope` flags; no `clinical_notes` | pending | |
-| U6 | Revoke access | `data-revoke-grant` one-action | pending | |
-| U7 | Ingest report text | paste extract; binary upload disabled | pending | |
-| U8 | Offline recovery | mutation held; calculators invent no score | pending | |
+| U1 | Add measurement | `overview_workspace.rs` save requires time + sys > dia; empty placeholders | Health overview opened offline; inner form not fully zoomed for field-level clicks | Source PASS; browser partial |
+| U2 | Reload | `data-health-refresh` re-queries COP families | Refresh chrome present on health surfaces; live reload not exercised (no daemon) | Source PASS; browser held |
+| U3 | Inspect trend / table | `vitals_chart.rs` metric tabs + chart/table toggle | Empty timeline expected offline; tabs need saved vitals | Source PASS; browser held |
+| U4 | Correct record | append-only `health_correction` receipt; original not erased | Correction modal needs an existing record | Source PASS; browser held |
+| U5 | Grant access | named contact + five `ConsentScope` flags; no `clinical_notes` | Disclosure workspace present; Grant not live-signed (no daemon, no ConsentLedger persist) | Source PASS; browser held |
+| U6 | Revoke access | `data-revoke-grant` one-action | No active grant to revoke offline | Source PASS; browser held |
+| U7 | Ingest report text | paste extract; binary upload disabled | Documents container visible with PDF-extract / provenance chrome | Source PASS; browser partial |
+| U8 | Offline recovery | mutation held; calculators invent no score | Graph/Merkle/Gas unavailable; Calculate disabled; no invented score | PASS |
 
 ## How to run
 
