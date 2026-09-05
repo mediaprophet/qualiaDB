@@ -40,6 +40,27 @@ Statuses: `exposed` · `catalog-only` (in ALL_BOUND, thin/no UI) · `dark` (code
 7. **Identity / DID / VC / governance** — dual-VC honesty; Solid exit-adapter only when unparked
 8. **wasm_llm / tensor / gguf_*** — document as native/wasm capability islands; no Host widen
 
+## Matrix columns (Marvin — add on next refresh)
+1. **Framing** — `living-SHACL` · `artifact-OWL` · `mixed` (from `shacl-first-vs-owl-ok-class-list.md`)
+2. **Uplift?** — for life-science / clinical / ecology families: `native` · `needs-OWL-uplift` · `parked` (B-OWL-LIFE-UPLIFT)
+3. **REPL recipe?** — yes/no (catalog-only families should get playbooks before new toolchains)
+
+## Family framing hints (don’t reopen engines)
+- ClinicalRisk / medical / Chemistry (living subjects) → SHACL-first subjects; instruments/datasets OWL-ok
+- Cosmic / G-COORD Position-on-cells → mixed (coords artifact; *what* is placed may be living)
+- Econ / Research about persons → living-safe copy; ledger artifacts OWL-ok
+- Inference / Provenance → structure OWL-ok; claims about persons/living SHACL-first
+- Render / Scene / HID / Animation → artifact chrome; never Thing-label living content in recipes
+- Identity / VC → dual-VC honesty; persons not under Thing
+
+## REPL ontology locks (agree davinci/monet)
+- Catalog insert must tag framing so stubs don’t default to “thing” wording
+- Sanctuary recipes cite `q42:Volume` states; diagnose copy follows class list
+- Prefer InvokeId annotation pack (wishlist §E) so REPL/catalog never drift from `ALL_BOUND`
+
+## Priority agree
+UAT (graph+volume) → deepen REPL/catalog as exposure channel for dark/catalog-only → Capt. pick next toolchain. No Host invent; no reimplement of sparql/shacl/volume.
+
 ## Stage plan
 ### Stage 0 — Inventory freeze (docs)
 1. Generate machine list: family → method count → handler module path (from `invoke/` + `ids.rs`).

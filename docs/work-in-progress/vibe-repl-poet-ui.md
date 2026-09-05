@@ -19,6 +19,21 @@ A REPL that only evals arithmetic is insufficient. It must be the **hot-edit sur
 4. **Sanctuary:** volume open/commit recipes; never fake durable on fail-closed/E300.
 5. **Copy:** SHACL-first language — never call persons/living “things” in REPL errors.
 
+## Chrome accept (davinci)
+1. **REPL is a studio drawer, not a terminal** — prompt + output + gas as secondary; primary loop is diagnose → suggested_fix → run → result (Problems tab is peer, not afterthought).
+2. **Catalog tab** = discovery only of live `ALL_BOUND` (filter by family); click inserts invoke stub — no ghost APIs; progressive disclosure so ~887 methods don’t dump the Stage.
+3. **Safe mode default** (diagnose-before-run); Invoke/Sanctuary modes explicit — sanctuary recipes never celebrate fake save on E300/fail-closed.
+4. **Copy** follows SHACL-first list in REPL errors too (“person/living/country” vs “tool/volume/file”).
+5. **UAT still before more chrome** — prove office:graph + volume, then deepen REPL drawer.
+
+## Motion accept (monet)
+1. Drawer open/close = entrance·exit (soft rise / z-dissolve); not a terminal blink.
+2. Diagnose → run → result = dwell breath on active track; error glow on cell/token span (never fake precision if span coarse).
+3. Catalog browse = quiet dwell; inserting an invoke stub = short entrance on the cell — no Stage dump of ~887 methods.
+4. Safe-mode default: no celebratory commit beat on run; sanctuary recipes only light commit on real `volume_commit` success (E300/fail-closed gated).
+5. Reduced-motion: same beats, shorter/crossfade; state never motion-only.
+6. Copy in glow/toasts: person/living/country vs tool/volume/file.
+
 ## Design — Poet UI (davinci/monet implement later when Capt. unlocks chrome code)
 ### Layout
 - Keep Zone D drawer: tabs **REPL** · **Problems** · (optional) **Catalog**.

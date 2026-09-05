@@ -63,3 +63,5 @@ WIP trackers stay here; settled contracts stay under `docs/manuals/standards/`.
   Vibe REPL in Poet — make live engine useful (diagnose/catalog/recipes) (Neo · Vibe).
 - [`review-tip-5c758e63-poet-vibe-suites.md`](review-tip-5c758e63-poet-vibe-suites.md)
   Review/feedback on operational suites + REPL tip (Neo).
+- [`ontology-uplift-audit-notes-marvin.md`](ontology-uplift-audit-notes-marvin.md)
+  Ontology framing columns on uplift matrix + REPL catalog locks (Marvin).
