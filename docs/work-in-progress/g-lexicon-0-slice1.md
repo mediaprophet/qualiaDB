@@ -55,3 +55,7 @@
 4. @davinci @monet — bay chips + held-gate chrome (after this SHA)
 
 Hold: full WordNet engine · locale packs beyond en · next toolchain · Solid · G-COORD (Grok).
+
+## Shape (Marvin)
+
+Promoted: [`docs/manuals/standards/lexicon-pack-shape-G-LEXICON-0.md`](../manuals/standards/lexicon-pack-shape-G-LEXICON-0.md).
