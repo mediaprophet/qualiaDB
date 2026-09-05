@@ -174,6 +174,42 @@ See **Neo — seam / freeze constraints** above; arrive/hold/leave and keep/comm
   - Living/created lexicon locks are **policy**, versioned in docs; don’t break copy rules by “fixing” living subjects into Thing-speak across versions.
 - **Non-goal now:** implementing a full multi-version runtime — principles + stamp discipline so we can grow into it.
 
+## Namespaces · RDF/JSON · Q42 lexicon packs · upgrade strategy
+
+### Namespaces (light)
+- Small registries: `vibe:` · `q42:` · living vs artifact packs — **not** a mega ontology in the dialect binary.
+- Additive aliases under SemVer; unknown ns → **held / not yet**, never silent collide.
+- Locale surfaces map to concepts; **concept ns stays stable** across languages.
+- `Capability.method` = machine ns; human sayables = aliases, not a second catalog.
+
+### RDF vs JSON (both, thinly)
+- **RDF / graph** = meaning, links, living/created framing, SHACL — interchange of *sense*.
+- **JSON** = compact invoke args / diagnose payloads / UI wire — interchange of *shape*.
+- Don’t force everything through one; bridge at the host (diagnose JSON + graph volumes already).
+- Prefer compact catalogs (Q42 / CBOR-LD where we lean) over shipping WordNet-scale blobs in-process.
+
+### Filesize
+- Glossary + aliases as **volume-backed Q42 packs** (WordNet-class uplift OK once converted — relatively small on disk in QualiaDB/Webizen).
+- Don’t embed an English WordNet dump in `vibe` / `vibe-host` binaries; Poet loads packs **on demand**.
+- Correction: “no heavy WordNet in-host” ≠ ban lexicon — it means **pack shape**, not dialect bloat.
+
+### Lexicon upgrade strategy (SemVer companions)
+1. **Pin separately:** `LANGUAGE_VERSION` · `HOST_VERSION` · `ALL_BOUND` · **`lexicon:` pack SemVer**.
+2. **Resolve from volume:** named Q42 lexicon packs (WordNet uplift, locale surfaces); additive aliases OK.
+3. **Migrate path:** on bump, diagnose emits `suggested_fix` + alias map (old surface → concept); dependents that pin old packs keep working; unpinned + removed sense → **held / not yet** (never silent reinterpret).
+4. **Agent/dev recipe:** “upgrade lexicon” lists breaking concept ids + replacements.
+5. **Living vs artifact:** packs tagged SHACL-first vs OWL-ok (+ uplift provenance) so upgrades don’t Thing-wash living senses.
+
+### Marvin — pack framing (design)
+- Each lexicon pack declares: framing tags (living-SHACL / artifact-OWL / mixed) · uplift provenance (e.g. WordNet/GO bridge) · SemVer · dependency on concept-glossary version.
+- Living senses never republished as Thing-taxonomy across pack bumps.
+
+### Neo — seam (no Host widen)
+- Resolve lexicon packs via existing **`GraphDatabase.volume_open`** (+ read/query of pack contents) and catalog-honest InvokeIds — **not** new Host methods.
+- Missing pack / unknown ns → fail closed with **held / not yet** migrate hint (studio bay copy), never invent a side channel.
+- Optional later: thin `ALL_BOUND` id only if Capt. accepts catalog add for “lexicon.resolve”; until then volume+sparql/recipe is enough.
+- Compat: hosts honour pinned `lexicon:` like language/host stamps; N-1 policy TBD, same SemVer section discipline.
+
 ## Proposed stages (later, when Capt. unlocks language work)
 0. Glossary v0 (concepts + en surfaces) in WIP
 1. Locale pilot (one non-English surface set) — tooling repo
