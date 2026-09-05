@@ -210,6 +210,28 @@ See **Neo — seam / freeze constraints** above; arrive/hold/leave and keep/comm
 - Optional later: thin `ALL_BOUND` id only if Capt. accepts catalog add for “lexicon.resolve”; until then volume+sparql/recipe is enough.
 - Compat: hosts honour pinned `lexicon:` like language/host stamps; N-1 policy TBD, same SemVer section discipline.
 
+### Studio bay · lexicon packs (davinci)
+- Missing / unpinned lexicon → **held / not yet** in the bay (same gate voice), with why-text “open lexicon pack” — never looks broken.
+- **Upgrade lexicon** = sanctuary-side recipe (`volume_open` → show breaking concept list → `suggested_fix` aliases) — commit beat only if a real pack write lands; else listen-only.
+- Catalog filter chips: **living** · **artifact** · **machine** (`Capability.method`) — human sayables first; ns URIs secondary/advanced.
+- Keep it light: no namespace tree browser in v0; on-demand pack load, progressive disclosure.
+
+### Look · lexicon packs (monet)
+- Missing pack = **held** gate look + soft why (“open lexicon pack”) — never broken grey.
+- Living / artifact / machine chips: warm living · crisp artifact · muted machine; same tokens as created-vs-living chrome.
+- Upgrade lexicon recipe: **arrive** on pack open · **hold** while breaking ids list · **leave** on dismiss; **commit** beat only on real pack write.
+- Reduced-motion: still arrive/hold/leave; chips never rely on color alone (label + shape).
+
+### Lexicon packs — framing (Marvin)
+1. Every Q42 lexicon pack declares: `packSemVer` · `framing` (`living-SHACL` | `artifact-OWL` | `mixed`) · optional `upliftFrom` (WordNet/GO/OBO IRI + provenance) · `conceptIds[]`.
+2. **Living packs** never subclass `owl:Thing` in exported senses; SHACL shapes + concept ids only for person/kin/country/life-scale.
+3. **Artifact packs** may use OWL-ok framing for tool/volume/file/catalog senses.
+4. **Mixed packs** split members explicitly (same as Position/Realm) — don’t let one WordNet dump Thing-wash living senses on upgrade.
+5. Upgrade map rows: `oldSurface → conceptId → framing`; removed living sense → **held / not yet** + `suggested_fix`, never silent reinterpret as artifact.
+6. Resolve path agrees Neo: `volume_open` → read pack → diagnose; no Host widen; no in-binary WordNet.
+
+Epistemology: upgrading a lexicon is changing what the language allows to be *said* about living vs tools — pack tags make that visible to agents and chrome chips.
+
 ## Proposed stages (later, when Capt. unlocks language work)
 0. Glossary v0 (concepts + en surfaces) in WIP
 1. Locale pilot (one non-English surface set) — tooling repo
