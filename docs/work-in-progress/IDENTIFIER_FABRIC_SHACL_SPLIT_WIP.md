@@ -1,7 +1,7 @@
 # WIP — Identifier Fabric SHACL-first split (F2)
 
 **Status:** work-in-progress · **Not standards** · **Branch:** `0.0.36-dev`  
-**Against tip:** §5.5 tighten `766a1f6` · F1 §14 `8724174` · architecture spine `IDENTIFIER_FABRIC_ARCHITECTURE_WIP.md`
+**Against tip:** F2 §14 `9ad8fc8` · F1 §15 `e4c6320` · architecture spine `IDENTIFIER_FABRIC_ARCHITECTURE_WIP.md`
 **Owner:** Marvin (ontology / shapes) · **Taxonomy:** Noddy · **Fold/push:** Neo · **Ops:** Capt.  
 **Standards baseline:** `docs/manuals/standards/qualia-decentralized-network-fabric/` (`identifier-resolution.md`, `ontological-contracts.md`, `cryptographic-profile.md`) · `docs/manuals/standards/shacl-first-vs-owl-ok-class-list.md`  
 **Substrate:** uplift `crates/qualia-core-db` Identity / DID / VC / agency / governance primitives — **not** parallel invent.
@@ -241,6 +241,7 @@ Gaps only → Capt WIP / Vibe deltas — **no** Host invent from F2.
 7. Inference feature spaces (Alice F6) keep who / claim / handle as **separate** dimensions.
 8. Co-attestation bundle lives on claim plane; ≥2 members + time-bound + keyRole diversity (not all identical); never collapses to stronger single who (F1 §1b).
 9. AI-agent ≠ NaturalAgent ≠ Machine; WebID/SAN/hardware are instruments; WN lexicalConcept ≠ fabric plane (F1 §14).
+10. Device-user ≠ OS account-holder ≠ telecom subscriber ≠ machine (F1 §15); `usedBy` / `accountOn` / `accountHolder` independent.
 
 ---
 
@@ -413,6 +414,73 @@ idf:WebIdTlsShape a sh:NodeShape ;
 ```
 
 ---
+
+## 15. Amend — OS / telecom account ≠ device user (F1 §15)
+
+**Cite:** F1 §15 tip `e4c6320` · Timothy room · MachineDevice §14.2 · agent key ≠ human principal.
+
+### 15.1 Hard independence (three ≠)
+
+| Role | Shape | Must not entail |
+|------|-------|-----------------|
+| **Device user** | NaturalAgent or AI-agent *via* `idf:usedBy` | OS account · subscriber · machine |
+| **OS account** | `idf:OsAccountShape` (instrument) | NaturalAgent who · “person holding device” |
+| **Telecom subscriber / account** | `idf:TelecomSubscriberShape` (instrument) | Handset user · NaturalAgent who |
+| **Machine** | `idf:MachineDeviceShape` | Who · account · subscriber |
+
+**Gate fail:** OS UID / login session / IMSI / MSISDN / subscriber id as NaturalAgent who; “logged-in account” = “person holding the device.”
+
+### 15.2 Instrument shapes
+
+#### `idf:OsAccountShape`
+| Property | Note |
+|----------|------|
+| `idf:instrumentKind` | `OsAccount` |
+| Framing | Artifact instrument on a machine |
+| `idf:accountOn` | → MachineDevice (required) — account lives *on* that OS/host |
+| `idf:accountHolder` | 0..1 → NaturalAgent or AI-agent — **independent** of device user |
+| `idf:accountUid` / login label | Local identifier material — not who |
+| Session | Optional link to login/session instrument — still ≠ device user |
+
+#### `idf:TelecomSubscriberShape`
+| Property | Note |
+|----------|------|
+| `idf:instrumentKind` | `TelecomSubscriber` |
+| Framing | Artifact instrument (IMSI/MSISDN/subscriber record) |
+| `idf:accountHolder` | 0..1 → agent — subscriber of record |
+| `idf:boundHandset` / relatesTo machine | 0..* — optional; handset user may differ |
+| Collapse | Subscriber id ≠ NaturalAgent who |
+
+### 15.3 Relation axioms (independent)
+
+| Predicate | Domain → range | Meaning |
+|-----------|----------------|---------|
+| `idf:usedBy` | MachineDevice → (NaturalAgent \| AiAgent) | Who is *using* the device now/then |
+| `idf:accountOn` | OsAccount → MachineDevice | Account hosted on machine |
+| `idf:accountHolder` | (OsAccount \| TelecomSubscriber) → agent | Account/subscriber of record |
+| `idf:boundHandset` | TelecomSubscriber → MachineDevice | Optional device binding |
+
+These three edges **MUST NOT** be inferred from each other. SHACL: no rule that `accountHolder` entails `usedBy` or vice versa.
+
+### 15.4 Jury / diagnose voice
+
+Name separately: “this OS account,” “this subscriber identity,” “this person using the device,” “this machine” — never one opaque identity (F1 §15 · F5).
+
+### 15.5 TTL sketch (illustrative)
+
+```turtle
+idf:OsAccountShape a sh:NodeShape ;
+  sh:property [ sh:path idf:instrumentKind ; sh:hasValue idf:OsAccount ; sh:minCount 1 ] ;
+  sh:property [ sh:path idf:accountOn ; sh:node idf:MachineDeviceShape ; sh:minCount 1 ] ;
+  sh:property [ sh:path idf:accountHolder ; sh:minCount 0 ; sh:maxCount 1 ] .
+  # accountHolder MUST NOT entail idf:usedBy on the same machine.
+
+idf:TelecomSubscriberShape a sh:NodeShape ;
+  sh:property [ sh:path idf:instrumentKind ; sh:hasValue idf:TelecomSubscriber ; sh:minCount 1 ] ;
+  sh:property [ sh:path idf:accountHolder ; sh:minCount 0 ; sh:maxCount 1 ] .
+```
+
+---
 ## 13. Changelog
 
 | When | Note |
@@ -422,6 +490,7 @@ idf:WebIdTlsShape a sh:NodeShape ;
 | 2026-09-06 | Co-attestation hardness: `idf:CoAttestationBundleShape` on claim plane (time-bounded multi-instrument formula + distinct keyRoles); cites F1 §1b tip `bb714b2` — never stronger single who. |
 | 2026-09-06 | Noddy §5.5 tighten: `attestationMember` sh:minCount **2**; `keyRole` diversity SHOULD (not all identical); tip base `77a13e3`. |
 | 2026-09-06 | F1 §14: FOAF-modern type shapes (`AiAgent` · `MachineDevice` · Org/Service); WebID-TLS/RSA · SAN · hardware instruments; WN/OMW `lexicalConcept` ≠ plane; jury explainability. Base F1 `8724174`. |
+| 2026-09-06 | F1 §15: `OsAccountShape` · `TelecomSubscriberShape`; independent `usedBy` / `accountOn` / `accountHolder`; tip `e4c6320`. |
 
 ---
 

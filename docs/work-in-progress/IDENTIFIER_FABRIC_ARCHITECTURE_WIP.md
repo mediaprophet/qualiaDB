@@ -188,3 +188,4 @@ Blocking gates → report **Capt**.
 | `IDENTIFIER_FABRIC_SHACL_SPLIT_WIP.md` | Marvin | F2 **LANDED** |
 | `IDENTIFIER_FABRIC_DIAGNOSE_MAP_WIP.md` | Vibe | F5 **LANDED** |
 | 2026-09-06 | Noddy F1 §15: OS/telecom account ≠ device user ≠ machine (independent relations). |
+| 2026-09-06 | Marvin F2 §15: OsAccountShape · TelecomSubscriberShape; independent usedBy/accountOn/accountHolder (cites F1 `e4c6320`). |
