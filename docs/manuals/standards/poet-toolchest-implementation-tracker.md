@@ -68,7 +68,12 @@ Coder verbs (`capability.invoke`, SPARQL, quin.statement) stay out of novice/eve
 
 | Chain | Tool | Status | Bind / contract |
 |-------|------|--------|-----------------|
-| `sheet:grid` | `sheet:stats_mean` | live | local mean; daemon `Statistics.mean` |
+| `sheet:grid` | `sheet:stats_mean` / `_median` / `_variance` / `_std_dev` / `_min` / `_max` | live | local compute; daemon `Statistics.*` |
+| | `sheet:stats_median` | live | local median; daemon `Statistics.median` |
+| | `sheet:stats_variance` | live | local sample variance; daemon `Statistics.variance` |
+| | `sheet:stats_std_dev` | live | local sample std dev; daemon `Statistics.std_dev` |
+| | `sheet:stats_min` | live | local min; daemon `Statistics.min` |
+| | `sheet:stats_max` | live | local max; daemon `Statistics.max` |
 | `sheet:tools` | `sheet:place_sheet` | place | |
 | | `sheet:import` | local | CSV/TSV into sheet from A1 |
 
@@ -180,25 +185,19 @@ files strictly under 350 lines (below the 400-line budget limit).
 | code extras | 35 | Local / Live (N3, SHACL) |
 | ai extras | 31 | Local / Live |
 | spatial extras | 41 | Local / Live |
-| epistemics extras | 58 | Local / Live (Inference.*) |
+| epistemics extras | 60 | Local / Live (Inference.*, EpistemicLogic.evaluate) |
 | investigation | 98 | Local / Live (causal) |
 | research | 75 | Local |
-| **spec total** | **702** | exact, including cross-listed chains |
+| **spec total** | **704** | exact, including cross-listed chains |
 
 ## Execution gap audit & operational roadmap (2026-09-05)
 
-A comprehensive code audit of `crates/poet/src/browser/spec_tools/dispatch.rs` revealed:
-- **Total spec tools registered:** 702 rows (catalog complete, unique IDs verified, all files <350 lines).
-- **Place contracts:** 8 rows (place container on canvas via `Poet.container_place`).
-- **Live contracts:** 58 rows (checked argument builders via `live_args.rs` invoking daemon capabilities).
-- **Gated contracts:** 55 rows (honest missing prerequisites for external hardware/services).
-- **Local contracts:** 581 rows.
-  - **30 rows actually executed:**
-    - 12 document formatting commands (`local_effects.rs`)
-    - 5 DOM structural insertions (`office_actions/`)
-    - 7 media transport controls (`media_actions/`)
-    - 6 CSS style toggles (`local_effects.rs`)
-  - **551 rows unexecuted:** fall through `dispatch.rs` lines 61-71 to `"Tool selected. Its editing action is not implemented on this surface yet."`
+A comprehensive code audit of `crates/poet/src/browser/spec_tools/dispatch.rs` (pre-swarm)
+showed ~581 Local rows with a large fall-through set. **2026-09-06 swarm** closed Local
+execution across investigation, research, epistemic, audio, spatial, and AV/world action
+modules (plus live `sheet:stats_*` Statistics dual-path). See
+`docs/work-in-progress/POET_TOOLCHEST_SWARM_2026-09-06.md`. Network corpus imports and
+DMX/LUT/mic remain honestly Gated.
 
 ### Phased implementation packets:
 
@@ -234,6 +233,7 @@ Clinical calculators unparked 2026-09-06 under Review Gate A close
 
 ## Change log
 
+- 2026-09-06: Tool Chest swarm closed Local fall-through across investigation/research/epistemic/audio/spatial/AV-world; sheet:grid gained five Statistics dual-path tools; Gate A closed earlier same day.
 - 2026-09-06: Review Gate A closed (`GATE_A_CLOSE_2026-09-06.md`). Clinical calculators unparked to live `ClinicalRisk.*`.
 - 2026-09-05: Integrated VibeScript REPL and Core Capability Bridge architecture:
   Mapped `qualia-core-db` zero-heap libraries (Computational Geometry: Delaunay, Convex Hull, CSG Booleans, Alpha Shapes, DDG; Formal Logic: Deontic, Epistemic, Paraconsistent, LTL, ASP; Symbolic Algebra CAS; Computer Vision) to Vibe's `ALL_INVOKE_IDS`. Established dual-surface model connecting visual Tool-Chest actions to live VibeScript execution in the Poet IDE REPL (`eval_cell` over `LocalHost` and persistent `Env`).

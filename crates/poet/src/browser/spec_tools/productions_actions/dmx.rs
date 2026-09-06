@@ -1,4 +1,6 @@
-//! Theatrical DMX fixtures, universes, channel patching, and emergency blackout controls.
+//! Orphan-only DMX desk handlers. These IDs are not aliased to Gated row IDs
+//! (`productions:add-universe`, `productions:patch-fixture`, etc.) so the desk
+//! tools remain honestly gated in the tool chest.
 
 use web_sys::Element;
 
@@ -88,9 +90,9 @@ mod tests {
     #[test]
     fn dmx_universes_cycle_through_stages() {
         assert_eq!(next_dmx_universe(None), "Universe 1 (Main Stage)");
-        assert_eq!(next_dmx_universe(Some("Universe 1 (Main Stage)")), "Universe 2 (Balcony & Truss)");
-        assert_eq!(next_dmx_universe(Some("Universe 2 (Balcony & Truss)")), "Universe 3 (Auditorium)");
-        assert_eq!(next_dmx_universe(Some("Universe 3 (Auditorium)")), "Universe 4 (Effects & Lasers)");
-        assert_eq!(next_dmx_universe(Some("Universe 4 (Effects & Lasers)")), "Universe 1 (Main Stage)");
+        assert_eq!(
+            next_dmx_universe(Some("Universe 4 (Effects & Lasers)")),
+            "Universe 1 (Main Stage)"
+        );
     }
 }

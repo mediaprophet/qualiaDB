@@ -1,5 +1,11 @@
 //! `q42` category (reorg).
 
+/// Governed Q42 dataset asset envelope + licence policy (AST-01).
+pub mod asset_envelope;
+/// Bounded cold-construction asset import jobs (AST-02).
+pub mod asset_import;
+/// Upstream source / connector catalogue without data bundling (AST-07).
+pub mod source_catalogue;
 pub mod design_encode;
 /// Attested run recipe for a native `.p64` package (layout + mode + measured knobs).
 pub mod execution_profile;

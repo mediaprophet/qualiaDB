@@ -60,6 +60,139 @@ pub(super) fn local_mean(values: &[f64]) -> Option<f64> {
     Some(values.iter().sum::<f64>() / values.len() as f64)
 }
 
+pub(super) fn local_median(values: &[f64]) -> Option<f64> {
+    if values.is_empty() {
+        return None;
+    }
+    let mut sorted = values.to_vec();
+    sorted.sort_unstable_by(|a, b| a.partial_cmp(b).unwrap_or(core::cmp::Ordering::Equal));
+    let n = sorted.len();
+    if n % 2 == 0 {
+        Some((sorted[n / 2 - 1] + sorted[n / 2]) / 2.0)
+    } else {
+        Some(sorted[n / 2])
+    }
+}
+
+pub(super) fn local_variance(values: &[f64], sample: bool) -> Option<f64> {
+    let mean = local_mean(values)?;
+    let ss = values
+        .iter()
+        .map(|value| {
+            let delta = value - mean;
+            delta * delta
+        })
+        .sum::<f64>();
+    let denom = if sample {
+        (values.len() - 1) as f64
+    } else {
+        values.len() as f64
+    };
+    Some(ss / denom)
+}
+
+pub(super) fn local_std_dev(values: &[f64], sample: bool) -> Option<f64> {
+    local_variance(values, sample).map(f64::sqrt)
+}
+
+pub(super) fn local_min(values: &[f64]) -> Option<f64> {
+    values
+        .iter()
+        .copied()
+        .reduce(|a, b| if b < a { b } else { a })
+}
+
+pub(super) fn local_max(values: &[f64]) -> Option<f64> {
+    values
+        .iter()
+        .copied()
+        .reduce(|a, b| if b > a { b } else { a })
+}
+
+fn run_sheet_stat<F>(
+    document: &Document,
+    label: &str,
+    cap_id: &'static str,
+    stat_noun: &'static str,
+    local_fn: fn(&[f64]) -> Option<f64>,
+    build_args: F,
+) where
+    F: FnOnce(&[f64]) -> serde_json::Value,
+{
+    let source = selected_source(document).unwrap_or_default();
+    let values = parse_numbers(&source);
+    let Some(value) = local_fn(&values) else {
+        super::interactions::show_tool_status(
+            document,
+            label,
+            "Select a sheet or document that contains numbers.",
+            "error",
+        );
+        return;
+    };
+    let label = label.to_string();
+    if !super::native_daemon::is_daemon_connected() {
+        let report = super::tool_dual_path::local_sketch(
+            cap_id,
+            &format!("{stat_noun} of {} values: {value}", values.len()),
+        );
+        super::interactions::show_tool_status(
+            document,
+            &label,
+            &report.message,
+            report.status_kind,
+        );
+        return;
+    }
+    super::interactions::show_tool_status(
+        document,
+        &label,
+        &format!("Running {cap_id}…"),
+        "running",
+    );
+    let args = build_args(&values);
+    wasm_bindgen_futures::spawn_local(async move {
+        let Some(document) = web_sys::window().and_then(|window| window.document()) else {
+            return;
+        };
+        match super::native_daemon::daemon_invoke(cap_id, args).await {
+            Ok(response) if response.ok => {
+                let report = super::tool_dual_path::live_ok(cap_id, &response.value);
+                super::interactions::show_tool_status(
+                    &document,
+                    &label,
+                    &report.message,
+                    report.status_kind,
+                );
+            }
+            Ok(response) => {
+                let report = super::tool_dual_path::live_denied(
+                    cap_id,
+                    response
+                        .diagnostic
+                        .as_deref()
+                        .unwrap_or("capability invoke failed."),
+                );
+                super::interactions::show_tool_status(
+                    &document,
+                    &label,
+                    &report.message,
+                    report.status_kind,
+                );
+            }
+            Err(error) => {
+                let report = super::tool_dual_path::live_denied(cap_id, &error);
+                super::interactions::show_tool_status(
+                    &document,
+                    &label,
+                    &report.message,
+                    report.status_kind,
+                );
+            }
+        }
+    });
+}
+
 pub(super) fn run_brush_stroke(document: &Document, label: &str) {
     let Some(container) = need_container(
         document,
@@ -211,73 +344,69 @@ pub(super) fn run_orbit_preview(document: &Document, label: &str) {
 }
 
 pub(super) fn run_sheet_mean(document: &Document, label: &str) {
-    let source = selected_source(document).unwrap_or_default();
-    let values = parse_numbers(&source);
-    let Some(mean) = local_mean(&values) else {
-        super::interactions::show_tool_status(
-            document,
-            label,
-            "Select a sheet or document that contains numbers.",
-            "error",
-        );
-        return;
-    };
-    let label = label.to_string();
-    if !super::native_daemon::is_daemon_connected() {
-        let report = super::tool_dual_path::local_sketch(
-            "Statistics.mean",
-            &format!("mean of {} values: {mean}", values.len()),
-        );
-        super::interactions::show_tool_status(
-            document,
-            &label,
-            &report.message,
-            report.status_kind,
-        );
-        return;
-    }
-    super::interactions::show_tool_status(document, &label, "Running Statistics.mean…", "running");
-    wasm_bindgen_futures::spawn_local(async move {
-        let Some(document) = web_sys::window().and_then(|window| window.document()) else {
-            return;
-        };
-        let args = serde_json::json!({ "values": values });
-        match super::native_daemon::daemon_invoke("Statistics.mean", args).await {
-            Ok(response) if response.ok => {
-                let report = super::tool_dual_path::live_ok("Statistics.mean", &response.value);
-                super::interactions::show_tool_status(
-                    &document,
-                    &label,
-                    &report.message,
-                    report.status_kind,
-                );
-            }
-            Ok(response) => {
-                let report = super::tool_dual_path::live_denied(
-                    "Statistics.mean",
-                    response
-                        .diagnostic
-                        .as_deref()
-                        .unwrap_or("Statistics.mean failed."),
-                );
-                super::interactions::show_tool_status(
-                    &document,
-                    &label,
-                    &report.message,
-                    report.status_kind,
-                );
-            }
-            Err(error) => {
-                let report = super::tool_dual_path::live_denied("Statistics.mean", &error);
-                super::interactions::show_tool_status(
-                    &document,
-                    &label,
-                    &report.message,
-                    report.status_kind,
-                );
-            }
-        }
-    });
+    run_sheet_stat(
+        document,
+        label,
+        "Statistics.mean",
+        "mean",
+        local_mean,
+        |values| serde_json::json!({ "values": values }),
+    );
+}
+
+pub(super) fn run_sheet_median(document: &Document, label: &str) {
+    run_sheet_stat(
+        document,
+        label,
+        "Statistics.median",
+        "median",
+        local_median,
+        |values| serde_json::json!({ "values": values }),
+    );
+}
+
+pub(super) fn run_sheet_variance(document: &Document, label: &str) {
+    run_sheet_stat(
+        document,
+        label,
+        "Statistics.variance",
+        "variance",
+        |values| local_variance(values, true),
+        |values| serde_json::json!({ "values": values, "sample": true }),
+    );
+}
+
+pub(super) fn run_sheet_std_dev(document: &Document, label: &str) {
+    run_sheet_stat(
+        document,
+        label,
+        "Statistics.std_dev",
+        "std dev",
+        |values| local_std_dev(values, true),
+        |values| serde_json::json!({ "values": values, "sample": true }),
+    );
+}
+
+pub(super) fn run_sheet_min(document: &Document, label: &str) {
+    run_sheet_stat(
+        document,
+        label,
+        "Statistics.min",
+        "min",
+        local_min,
+        |values| serde_json::json!({ "values": values }),
+    );
+}
+
+pub(super) fn run_sheet_max(document: &Document, label: &str) {
+    run_sheet_stat(
+        document,
+        label,
+        "Statistics.max",
+        "max",
+        local_max,
+        |values| serde_json::json!({ "values": values }),
+    );
 }
 
 pub(super) fn run_sheet_import(document: &Document, label: &str) {
@@ -469,6 +598,302 @@ pub(super) fn run_grounding(document: &Document, label: &str) {
     });
 }
 
+pub(super) fn run_epistemic_evaluate(document: &Document, label: &str) {
+    let container = selected_container(document);
+    let agent = container
+        .as_ref()
+        .and_then(|c| c.get_attribute("data-agent-did"))
+        .unwrap_or_else(|| "did:q42:agent:default".into());
+    let world = container
+        .as_ref()
+        .and_then(|c| c.get_attribute("data-epistemic-world"))
+        .unwrap_or_else(|| "did:q42:world:actual".into());
+    let certainty = container
+        .as_ref()
+        .and_then(|c| c.get_attribute("data-certainty"))
+        .and_then(|v| v.parse::<f64>().ok())
+        .unwrap_or(1.0);
+    let label = label.to_string();
+    if !super::native_daemon::is_daemon_connected() {
+        let report = super::tool_dual_path::local_sketch(
+            "EpistemicLogic.evaluate",
+            &format!(
+                "Local epistemic frame sketch for agent {agent} in {world} (certainty {certainty}). Connect QualiaDB for a live frame scan."
+            ),
+        );
+        super::interactions::show_tool_status(
+            document,
+            &label,
+            &report.message,
+            report.status_kind,
+        );
+        return;
+    }
+    super::interactions::show_tool_status(
+        document,
+        &label,
+        "Running EpistemicLogic.evaluate…",
+        "running",
+    );
+    wasm_bindgen_futures::spawn_local(async move {
+        let Some(document) = web_sys::window().and_then(|window| window.document()) else {
+            return;
+        };
+        let args = serde_json::json!({
+            "agent": agent,
+            "world": world,
+            "certainty": certainty,
+        });
+        match super::native_daemon::daemon_invoke("EpistemicLogic.evaluate", args).await {
+            Ok(response) if response.ok => {
+                let report =
+                    super::tool_dual_path::live_ok("EpistemicLogic.evaluate", &response.value);
+                super::interactions::show_tool_status(
+                    &document,
+                    &label,
+                    &report.message,
+                    report.status_kind,
+                );
+            }
+            Ok(response) => {
+                let report = super::tool_dual_path::live_denied(
+                    "EpistemicLogic.evaluate",
+                    response
+                        .diagnostic
+                        .as_deref()
+                        .unwrap_or("EpistemicLogic.evaluate failed."),
+                );
+                super::interactions::show_tool_status(
+                    &document,
+                    &label,
+                    &report.message,
+                    report.status_kind,
+                );
+            }
+            Err(error) => {
+                let report = super::tool_dual_path::live_denied("EpistemicLogic.evaluate", &error);
+                super::interactions::show_tool_status(
+                    &document,
+                    &label,
+                    &report.message,
+                    report.status_kind,
+                );
+            }
+        }
+    });
+}
+
+fn run_inference_draft_check(
+    document: &Document,
+    label: &str,
+    cap_id: &'static str,
+    draft_key: &'static str,
+) {
+    let Some(text) = selected_source(document) else {
+        super::interactions::show_tool_status(
+            document,
+            label,
+            "Select a document or cell with generation text first.",
+            "error",
+        );
+        return;
+    };
+    let prompt = "check selected generation";
+    let label = label.to_string();
+    if !super::native_daemon::is_daemon_connected() {
+        let cites = text.matches("did:").count() + text.matches("urn:").count();
+        let report = super::tool_dual_path::local_sketch(
+            cap_id,
+            &format!(
+                "Local sketch: {} citation markers in {} characters. Connect QualiaDB for {cap_id}.",
+                cites,
+                text.chars().count()
+            ),
+        );
+        super::interactions::show_tool_status(
+            document,
+            &label,
+            &report.message,
+            report.status_kind,
+        );
+        return;
+    }
+    super::interactions::show_tool_status(
+        document,
+        &label,
+        &format!("Running {cap_id}…"),
+        "running",
+    );
+    wasm_bindgen_futures::spawn_local(async move {
+        let Some(document) = web_sys::window().and_then(|window| window.document()) else {
+            return;
+        };
+        let mut args = serde_json::Map::new();
+        args.insert("prompt".into(), serde_json::Value::String(prompt.into()));
+        args.insert(draft_key.into(), serde_json::Value::String(text));
+        match super::native_daemon::daemon_invoke(cap_id, serde_json::Value::Object(args)).await {
+            Ok(response) if response.ok => {
+                let report = super::tool_dual_path::live_ok(cap_id, &response.value);
+                super::interactions::show_tool_status(
+                    &document,
+                    &label,
+                    &report.message,
+                    report.status_kind,
+                );
+            }
+            Ok(response) => {
+                let report = super::tool_dual_path::live_denied(
+                    cap_id,
+                    response
+                        .diagnostic
+                        .as_deref()
+                        .unwrap_or("capability invoke failed."),
+                );
+                super::interactions::show_tool_status(
+                    &document,
+                    &label,
+                    &report.message,
+                    report.status_kind,
+                );
+            }
+            Err(error) => {
+                let report = super::tool_dual_path::live_denied(cap_id, &error);
+                super::interactions::show_tool_status(
+                    &document,
+                    &label,
+                    &report.message,
+                    report.status_kind,
+                );
+            }
+        }
+    });
+}
+
+pub(super) fn run_detect_ungrounded(document: &Document, label: &str) {
+    run_inference_draft_check(document, label, "Inference.detect_ungrounded", "draft");
+}
+
+pub(super) fn run_verify_turn(document: &Document, label: &str) {
+    run_inference_draft_check(document, label, "Inference.verify_turn", "draft");
+}
+
+pub(super) fn run_image_histogram(document: &Document, label: &str) {
+    let Some(container) = need_container(
+        document,
+        label,
+        "Select a picture surface before running a histogram.",
+    ) else {
+        return;
+    };
+    let has_pixels = container.get_attribute("data-grayscale-u8").is_some()
+        && container.get_attribute("data-pixel-width").is_some()
+        && container.get_attribute("data-pixel-height").is_some();
+    let label = label.to_string();
+    if !super::native_daemon::is_daemon_connected() {
+        let sketch = if has_pixels {
+            "Local histogram sketch: greyscale pixels are present on this surface. Connect QualiaDB for ComputerVision.histogram."
+        } else {
+            "Local histogram sketch: decode greyscale pixels onto this surface (data-grayscale-u8) before a live histogram."
+        };
+        let report = super::tool_dual_path::local_sketch("ComputerVision.histogram", sketch);
+        super::interactions::show_tool_status(
+            document,
+            &label,
+            &report.message,
+            report.status_kind,
+        );
+        return;
+    }
+    if !has_pixels {
+        super::interactions::show_tool_status(
+            document,
+            &label,
+            "The selected picture has no decoded greyscale pixels yet.",
+            "unavailable",
+        );
+        return;
+    }
+    let width = container
+        .get_attribute("data-pixel-width")
+        .and_then(|v| v.parse::<u64>().ok())
+        .unwrap_or(0);
+    let height = container
+        .get_attribute("data-pixel-height")
+        .and_then(|v| v.parse::<u64>().ok())
+        .unwrap_or(0);
+    let raw = container
+        .get_attribute("data-grayscale-u8")
+        .unwrap_or_default();
+    let data: Vec<u8> = raw
+        .split(|ch: char| ch.is_whitespace() || matches!(ch, ',' | ';'))
+        .filter_map(|token| token.trim().parse::<u8>().ok())
+        .take(512 * 512)
+        .collect();
+    if data.len() as u64 != width.saturating_mul(height) || width == 0 || height == 0 {
+        super::interactions::show_tool_status(
+            document,
+            &label,
+            "Greyscale pixel length does not match the declared picture size.",
+            "error",
+        );
+        return;
+    }
+    super::interactions::show_tool_status(
+        document,
+        &label,
+        "Running ComputerVision.histogram…",
+        "running",
+    );
+    wasm_bindgen_futures::spawn_local(async move {
+        let Some(document) = web_sys::window().and_then(|window| window.document()) else {
+            return;
+        };
+        let args = serde_json::json!({
+            "data": data,
+            "width": width,
+            "height": height,
+            "stride": width,
+        });
+        match super::native_daemon::daemon_invoke("ComputerVision.histogram", args).await {
+            Ok(response) if response.ok => {
+                let report =
+                    super::tool_dual_path::live_ok("ComputerVision.histogram", &response.value);
+                super::interactions::show_tool_status(
+                    &document,
+                    &label,
+                    &report.message,
+                    report.status_kind,
+                );
+            }
+            Ok(response) => {
+                let report = super::tool_dual_path::live_denied(
+                    "ComputerVision.histogram",
+                    response
+                        .diagnostic
+                        .as_deref()
+                        .unwrap_or("ComputerVision.histogram failed."),
+                );
+                super::interactions::show_tool_status(
+                    &document,
+                    &label,
+                    &report.message,
+                    report.status_kind,
+                );
+            }
+            Err(error) => {
+                let report =
+                    super::tool_dual_path::live_denied("ComputerVision.histogram", &error);
+                super::interactions::show_tool_status(
+                    &document,
+                    &label,
+                    &report.message,
+                    report.status_kind,
+                );
+            }
+        }
+    });
+}
+
 pub(super) fn run_pulse_presence(document: &Document, label: &str) {
     let Some(container) = need_container(
         document,
@@ -624,6 +1049,28 @@ mod tests {
     fn local_mean_of_three() {
         assert_eq!(local_mean(&[1.0, 2.0, 3.0]), Some(2.0));
         assert_eq!(local_mean(&[]), None);
+    }
+
+    #[test]
+    fn local_median_of_four() {
+        assert_eq!(local_median(&[1.0, 2.0, 3.0, 4.0]), Some(2.5));
+        assert_eq!(local_median(&[1.0, 3.0, 2.0]), Some(2.0));
+    }
+
+    #[test]
+    fn local_variance_sample_of_three() {
+        assert_eq!(local_variance(&[1.0, 2.0, 3.0], true), Some(1.0));
+    }
+
+    #[test]
+    fn local_std_dev_sample_of_three() {
+        assert_eq!(local_std_dev(&[1.0, 2.0, 3.0], true), Some(1.0));
+    }
+
+    #[test]
+    fn local_min_max() {
+        assert_eq!(local_min(&[3.0, 1.0, 4.0]), Some(1.0));
+        assert_eq!(local_max(&[3.0, 1.0, 4.0]), Some(4.0));
     }
 
     #[test]

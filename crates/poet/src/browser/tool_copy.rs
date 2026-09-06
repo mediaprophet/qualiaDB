@@ -235,6 +235,31 @@ fn named(id: &str) -> Option<Presentation> {
             "Find the average of the numbers on this table.",
             Proficiency::Novice,
         ),
+        "sheet:stats_median" => (
+            "Middle value",
+            "Find the middle value of the numbers on this table.",
+            Proficiency::Novice,
+        ),
+        "sheet:stats_variance" => (
+            "Spread",
+            "Measure how spread out the numbers on this table are.",
+            Proficiency::Intermediate,
+        ),
+        "sheet:stats_std_dev" => (
+            "Typical spread",
+            "Find the typical distance of numbers from their average.",
+            Proficiency::Intermediate,
+        ),
+        "sheet:stats_min" => (
+            "Smallest",
+            "Find the smallest number on this table.",
+            Proficiency::Novice,
+        ),
+        "sheet:stats_max" => (
+            "Largest",
+            "Find the largest number on this table.",
+            Proficiency::Novice,
+        ),
         "spatial:place_map" => ("Map", "Put a map on the work surface.", Proficiency::Novice),
         "spatial:place_dual_studio" => (
             "Script and picture studio",
@@ -461,6 +486,41 @@ fn named(id: &str) -> Option<Presentation> {
             "Check the sources",
             "See whether this writing is tied to records you already have.",
             Proficiency::Intermediate,
+        ),
+        "ai:detect_ungrounded" => (
+            "Find floating claims",
+            "Flag writing that has no clear record behind it.",
+            Proficiency::Intermediate,
+        ),
+        "ai:verify_turn" => (
+            "Check this answer",
+            "Run a post-turn check on the selected generation.",
+            Proficiency::Intermediate,
+        ),
+        "epistemic:evaluate" => (
+            "Scan what is known",
+            "Read knows and believes claims from the live graph.",
+            Proficiency::Intermediate,
+        ),
+        "epistemic:paraconsistent_route" => (
+            "Route contradictions",
+            "Isolate conflicting claims without stopping the rest of the page.",
+            Proficiency::Intermediate,
+        ),
+        "code:ltl_evaluate" => (
+            "Check over time",
+            "See whether a property holds across a sequence of steps.",
+            Proficiency::Intermediate,
+        ),
+        "code:symbolic_eval" => (
+            "Work out the formula",
+            "Evaluate the formula on the selected surface.",
+            Proficiency::Intermediate,
+        ),
+        "image:histogram" => (
+            "Tones",
+            "Show how light and dark this picture is.",
+            Proficiency::Novice,
         ),
         "ai:co_author" => (
             "Write together",

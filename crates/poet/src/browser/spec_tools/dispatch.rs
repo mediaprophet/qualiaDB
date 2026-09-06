@@ -64,6 +64,8 @@ fn apply_local(document: &Document, tool: &SpecTool, label: &str) {
         result.map(|()| true)
     } else if let Some(result) = super::audio_actions::run(document, &container, tool.id) {
         result.map(|()| true)
+    } else if let Some(result) = super::spatial_actions::run(document, &container, tool.id) {
+        result
     } else if let Some(result) = super::spatial3d_actions::run(document, &container, tool.id) {
         result.map(|()| true)
     } else if let Some(result) = super::productions_actions::run(document, &container, tool.id) {
@@ -109,14 +111,18 @@ fn apply_live(document: &Document, tool: &SpecTool, label: &str, capability: &'s
     }
     let label = label.to_string();
     if !super::super::native_daemon::is_daemon_connected() {
+        let report = super::super::tool_dual_path::local_sketch(
+            capability,
+            &format!(
+                "{}. Connect QualiaDB for the live step.",
+                tool.tooltip
+            ),
+        );
         super::super::interactions::show_tool_status(
             document,
             &label,
-            &format!(
-                "{}. The live step needs the local QualiaDB daemon ({capability}).",
-                tool.tooltip
-            ),
-            "unavailable",
+            &report.message,
+            report.status_kind,
         );
         return;
     }
@@ -138,23 +144,38 @@ fn apply_live(document: &Document, tool: &SpecTool, label: &str, capability: &'s
             return;
         };
         match super::super::native_daemon::daemon_invoke(capability, args).await {
-            Ok(response) if response.ok => super::super::interactions::show_tool_status(
-                &document,
-                &label,
-                &response.value,
-                "success",
-            ),
-            Ok(response) => super::super::interactions::show_tool_status(
-                &document,
-                &label,
-                response
-                    .diagnostic
-                    .as_deref()
-                    .unwrap_or("Live step failed."),
-                "error",
-            ),
+            Ok(response) if response.ok => {
+                let report = super::super::tool_dual_path::live_ok(capability, &response.value);
+                super::super::interactions::show_tool_status(
+                    &document,
+                    &label,
+                    &report.message,
+                    report.status_kind,
+                );
+            }
+            Ok(response) => {
+                let report = super::super::tool_dual_path::live_denied(
+                    capability,
+                    response
+                        .diagnostic
+                        .as_deref()
+                        .unwrap_or("Live step failed."),
+                );
+                super::super::interactions::show_tool_status(
+                    &document,
+                    &label,
+                    &report.message,
+                    report.status_kind,
+                );
+            }
             Err(error) => {
-                super::super::interactions::show_tool_status(&document, &label, &error, "error")
+                let report = super::super::tool_dual_path::live_denied(capability, &error);
+                super::super::interactions::show_tool_status(
+                    &document,
+                    &label,
+                    &report.message,
+                    report.status_kind,
+                );
             }
         }
     });

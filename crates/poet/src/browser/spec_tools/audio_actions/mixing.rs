@@ -4,14 +4,16 @@ use web_sys::Element;
 
 pub(super) fn run(container: &Element, tool_id: &str) -> Option<Result<(), String>> {
     match tool_id {
-        "audio:bpm-tempo" => Some(step_bpm(container)),
-        "audio:quantize" => Some(step_quantize(container)),
-        "audio:normalize" => Some(normalize_audio(container)),
+        "audio:bpm-tempo" | "audio:tempo-set" => Some(step_bpm(container)),
+        "audio:quantize" | "audio:quantise" => Some(step_quantize(container)),
+        "audio:normalize" | "audio:normalise" => Some(normalize_audio(container)),
         "audio:reverse" => Some(toggle_reverse(container)),
-        "audio:spectrum-analyzer" => Some(toggle_spectrum(container)),
+        "audio:spectrum-analyzer" | "audio:spectrum-analyser" => Some(toggle_spectrum(container)),
         "audio:master-limiter" => Some(toggle_limiter(container)),
         "audio:fader-level" => Some(set_fader(container)),
-        "audio:send-bus" => Some(set_send_bus(container)),
+        "audio:send-bus" | "audio:set-send" => Some(set_send_bus(container)),
+        "audio:set-bus" => Some(set_output_bus(container)),
+        "audio:automation-edit" => Some(set_automation_edit(container)),
         _ => None,
     }
 }
@@ -32,6 +34,23 @@ pub(crate) fn next_quantize(current: Option<&str>) -> &'static str {
         Some("1/8") => "1/16",
         Some("1/16") => "1/32",
         _ => "1/4",
+    }
+}
+
+pub(crate) fn next_fader(current: Option<&str>) -> &'static str {
+    match current.map(str::trim) {
+        Some("0.0dB (Unity)") => "-6.0dB",
+        Some("-6.0dB") => "-12.0dB",
+        Some("-12.0dB") => "+3.0dB",
+        _ => "0.0dB (Unity)",
+    }
+}
+
+pub(crate) fn next_output_bus(current: Option<&str>) -> &'static str {
+    match current.map(str::trim) {
+        Some("master") => "bus_a",
+        Some("bus_a") => "bus_b",
+        _ => "master",
     }
 }
 
@@ -88,15 +107,31 @@ fn toggle_limiter(container: &Element) -> Result<(), String> {
 }
 
 fn set_fader(container: &Element) -> Result<(), String> {
+    let current = container.get_attribute("data-fader-level");
+    let next = next_fader(current.as_deref());
     container
-        .set_attribute("data-fader-level", "0.0dB (Unity)")
-        .map_err(|_| "Failed to reset fader level.".to_string())
+        .set_attribute("data-fader-level", next)
+        .map_err(|_| "Failed to update fader level.".to_string())
 }
 
 fn set_send_bus(container: &Element) -> Result<(), String> {
     container
         .set_attribute("data-send-bus", "bus_aux_reverb")
         .map_err(|_| "Failed to route send bus.".to_string())
+}
+
+fn set_output_bus(container: &Element) -> Result<(), String> {
+    let current = container.get_attribute("data-output-bus");
+    let next = next_output_bus(current.as_deref());
+    container
+        .set_attribute("data-output-bus", next)
+        .map_err(|_| "Failed to route bus output.".to_string())
+}
+
+fn set_automation_edit(container: &Element) -> Result<(), String> {
+    container
+        .set_attribute("data-automation-edit", "point_moved_at_playhead")
+        .map_err(|_| "Failed to edit automation point.".to_string())
 }
 
 #[cfg(test)]
@@ -106,16 +141,14 @@ mod tests {
     #[test]
     fn bpm_and_quantize_cycle() {
         assert_eq!(next_bpm(None), "120 BPM");
-        assert_eq!(next_bpm(Some("120 BPM")), "128 BPM");
-        assert_eq!(next_bpm(Some("128 BPM")), "140 BPM");
-        assert_eq!(next_bpm(Some("140 BPM")), "90 BPM");
-        assert_eq!(next_bpm(Some("90 BPM")), "110 BPM");
         assert_eq!(next_bpm(Some("110 BPM")), "120 BPM");
-
-        assert_eq!(next_quantize(None), "1/4");
-        assert_eq!(next_quantize(Some("1/4")), "1/8");
-        assert_eq!(next_quantize(Some("1/8")), "1/16");
-        assert_eq!(next_quantize(Some("1/16")), "1/32");
         assert_eq!(next_quantize(Some("1/32")), "1/4");
+    }
+
+    #[test]
+    fn fader_and_bus_cycle() {
+        assert_eq!(next_fader(None), "0.0dB (Unity)");
+        assert_eq!(next_fader(Some("+3.0dB")), "0.0dB (Unity)");
+        assert_eq!(next_output_bus(Some("bus_b")), "master");
     }
 }

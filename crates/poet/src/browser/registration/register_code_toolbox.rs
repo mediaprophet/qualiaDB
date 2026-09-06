@@ -73,6 +73,44 @@ pub(super) fn register_code_toolbox(reg: &mut Registry) {
                 },
                 tools,
             ),
+            ToolChain::new(
+                ToolChainMetadata {
+                    id: "code:logic".into(),
+                    label: "Symbolic & Temporal".into(),
+                    icon: "logic".into(),
+                    description: "Evaluate formulas and check properties over time.".into(),
+                },
+                vec![
+                    Box::new(SimpleTool::new(
+                        ToolMetadata {
+                            id: "code:ltl_evaluate".into(),
+                            label: "Check over time".into(),
+                            icon: "ltl".into(),
+                            kind: ToolKind::Query,
+                            capability_scope: Some(
+                                "TemporalAndDescriptionLogic.ltl.evaluate".into(),
+                            ),
+                            ontology_prefix: "vibe".into(),
+                            description: "Evaluate an LTL Globally formula on the selected surface."
+                                .into(),
+                        },
+                        ActionType::Query,
+                    )),
+                    Box::new(SimpleTool::new(
+                        ToolMetadata {
+                            id: "code:symbolic_eval".into(),
+                            label: "Work out the formula".into(),
+                            icon: "formula".into(),
+                            kind: ToolKind::Query,
+                            capability_scope: Some("SymbolicAlgebra.eval".into()),
+                            ontology_prefix: "vibe".into(),
+                            description: "Evaluate a formula from data-formula on the selected surface."
+                                .into(),
+                        },
+                        ActionType::Query,
+                    )),
+                ],
+            ),
         ],
     ));
 }

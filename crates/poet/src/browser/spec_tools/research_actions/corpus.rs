@@ -1,83 +1,92 @@
-//! Corpus management, empirical findings, and literature synthesis for Poet research.
+//! Corpus building, tagging, and extraction for Poet research.
 
-use web_sys::Element;
+use super::util::{append_csv_attr, append_nested, count_document, count_within, next_confidence};
+use web_sys::{Document, Element};
 
-pub(super) fn run(container: &Element, tool_id: &str) -> Option<Result<(), String>> {
+pub(super) fn run(document: &Document, container: &Element, tool_id: &str) -> Option<Result<(), String>> {
     match tool_id {
-        "research:add-corpus-item" => Some(add_corpus_item(container)),
-        "research:extract-finding" => Some(extract_finding(container)),
-        "research:tag-methodology" => Some(tag_methodology(container)),
-        "research:export-research" => Some(export_research(container)),
-        "research:synthesize-literature" => Some(synthesize_literature(container)),
-        "research:add-finding" => Some(add_finding(container)),
-        "research:assess-evidence-quality" => Some(assess_evidence_quality(container)),
+        "research:add-corpus-item" => Some(add_corpus_item(document, container)),
+        "research:import-literature" => Some(import_literature(document, container)),
+        "research:set-corpus-confidence" => Some(cycle_corpus_confidence(container)),
+        "research:tag-corpus-item" => Some(tag_corpus_item(container)),
+        "research:query-corpus" => Some(query_corpus(document, container)),
+        "research:deduplicate-corpus" => Some(deduplicate_corpus(container)),
+        "research:extract-from-corpus" => Some(extract_from_corpus(container)),
+        "research:annotate-corpus-item" => Some(annotate_corpus_item(container)),
         _ => None,
     }
 }
 
-fn add_corpus_item(container: &Element) -> Result<(), String> {
-    let current = container
-        .get_attribute("data-corpus-items")
-        .unwrap_or_default();
-    let entry = "source:primary_literature";
-    let updated = if current.is_empty() {
-        entry.to_string()
-    } else {
-        format!("{current};{entry}")
-    };
-    container
-        .set_attribute("data-corpus-items", &updated)
-        .map_err(|_| "Failed to append corpus item.".to_string())
+fn add_corpus_item(document: &Document, container: &Element) -> Result<(), String> {
+    append_nested(
+        document,
+        container,
+        "span",
+        "data-corpus-item",
+        "source:primary_literature",
+        &[("data-corpus-kind", "literature")],
+    )?;
+    append_csv_attr(container, "data-corpus-items", "source:primary_literature")
 }
 
-fn extract_finding(container: &Element) -> Result<(), String> {
-    let current = container
-        .get_attribute("data-research-findings")
-        .unwrap_or_default();
-    let entry = "finding:empirical_result";
-    let updated = if current.is_empty() {
-        entry.to_string()
-    } else {
-        format!("{current};{entry}")
-    };
-    container
-        .set_attribute("data-research-findings", &updated)
-        .map_err(|_| "Failed to extract research finding.".to_string())
+fn import_literature(document: &Document, container: &Element) -> Result<(), String> {
+    append_nested(
+        document,
+        container,
+        "span",
+        "data-corpus-item",
+        "source:imported_literature",
+        &[
+            ("data-corpus-kind", "literature"),
+            ("data-corpus-origin", "local_file"),
+        ],
+    )?;
+    append_csv_attr(container, "data-corpus-items", "source:imported_literature")
 }
 
-fn tag_methodology(container: &Element) -> Result<(), String> {
+fn cycle_corpus_confidence(container: &Element) -> Result<(), String> {
+    let current = container.get_attribute("data-corpus-confidence");
+    let next = next_confidence(current.as_deref());
     container
-        .set_attribute("data-research-methodology", "method:triangulated_empirical")
-        .map_err(|_| "Failed to tag research methodology.".to_string())
+        .set_attribute("data-corpus-confidence", next)
+        .map_err(|_| "Failed to set corpus confidence.".to_string())
 }
 
-fn export_research(container: &Element) -> Result<(), String> {
-    let purpose = container
-        .get_attribute("data-research-purpose")
-        .unwrap_or_else(|| "exploratory".to_string());
-    let status = container
-        .get_attribute("data-research-status")
-        .unwrap_or_else(|| "active".to_string());
-    let export = format!("{{\"project\":\"active\",\"purpose\":\"{purpose}\",\"status\":\"{status}\"}}");
-    container
-        .set_attribute("data-research-export", &export)
-        .map_err(|_| "Failed to export research project.".to_string())
+fn tag_corpus_item(container: &Element) -> Result<(), String> {
+    append_csv_attr(container, "data-corpus-tags", "tag:peer_reviewed")
 }
 
-fn synthesize_literature(container: &Element) -> Result<(), String> {
+fn query_corpus(document: &Document, container: &Element) -> Result<(), String> {
+    let local = count_within(container, "[data-corpus-item]")?;
+    let global = count_document(document, "[data-corpus-item]")?;
     container
-        .set_attribute("data-literature-synthesis", "synthesized:consensus_and_gaps_identified")
-        .map_err(|_| "Failed to record literature synthesis.".to_string())
+        .set_attribute(
+            "data-corpus-query",
+            &format!("local={local};canvas={global}"),
+        )
+        .map_err(|_| "Failed to record corpus query.".to_string())
 }
 
-fn add_finding(container: &Element) -> Result<(), String> {
-    extract_finding(container)
+fn deduplicate_corpus(container: &Element) -> Result<(), String> {
+    let count = count_within(container, "[data-corpus-item]")?;
+    let duplicates = if count > 1 { count - 1 } else { 0 };
+    container
+        .set_attribute("data-corpus-duplicates", &duplicates.to_string())
+        .map_err(|_| "Failed to record corpus duplicates.".to_string())
 }
 
-fn assess_evidence_quality(container: &Element) -> Result<(), String> {
+fn extract_from_corpus(container: &Element) -> Result<(), String> {
+    append_csv_attr(
+        container,
+        "data-corpus-extractions",
+        "extract:entities_relations_topics",
+    )
+}
+
+fn annotate_corpus_item(container: &Element) -> Result<(), String> {
     container
-        .set_attribute("data-evidence-quality", "GRADE:high_certainty")
-        .map_err(|_| "Failed to assess evidence quality.".to_string())
+        .set_attribute("data-corpus-annotated", "semantic_markup_applied")
+        .map_err(|_| "Failed to annotate corpus item.".to_string())
 }
 
 #[cfg(test)]
@@ -86,6 +95,17 @@ mod tests {
 
     #[test]
     fn corpus_actions_route_safely() {
-        assert!(run(&web_sys::Element::from(wasm_bindgen::JsValue::NULL), "research:unknown").is_none());
+        assert!(run(
+            &web_sys::Document::from(wasm_bindgen::JsValue::NULL),
+            &web_sys::Element::from(wasm_bindgen::JsValue::NULL),
+            "research:import-dataset",
+        )
+        .is_none());
+        assert!(run(
+            &web_sys::Document::from(wasm_bindgen::JsValue::NULL),
+            &web_sys::Element::from(wasm_bindgen::JsValue::NULL),
+            "research:import-web",
+        )
+        .is_none());
     }
 }

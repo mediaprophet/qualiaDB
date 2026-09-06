@@ -31,6 +31,7 @@ pub fn supports(capability: &str) -> bool {
             | "EpistemicLogic.evaluate"
             | "Inference.detect_ungrounded"
             | "Inference.grounding"
+            | "Inference.verify_turn"
             | "N3Logic.evaluate"
             | "ParaconsistentLogic.route"
             | "Pulse.publish"
@@ -85,7 +86,9 @@ pub fn build(
         })),
         "SymbolicAlgebra.eval" => symbolic_args(selected),
         "Inference.grounding" => inference_args(selected, "text"),
-        "Inference.detect_ungrounded" => inference_args(selected, "draft"),
+        "Inference.detect_ungrounded" | "Inference.verify_turn" => {
+            inference_args(selected, "draft")
+        }
         "CausalFuzzyAndControl.caused" => causal_args(selected),
         "SHACL.validate" => shacl_args(selected),
         "N3Logic.evaluate" => n3_args(selected),
@@ -328,6 +331,9 @@ mod tests {
         assert!(supports("ComputationalGeometry.convex_hull_2"));
         assert!(supports("DeonticLogic.evaluate"));
         assert!(supports("EpistemicLogic.evaluate"));
+        assert!(supports("Inference.verify_turn"));
+        assert!(supports("Inference.detect_ungrounded"));
+        assert!(supports("ComputerVision.histogram"));
         assert!(supports("SymbolicAlgebra.eval"));
         assert!(!supports("Future.unimplemented"));
     }

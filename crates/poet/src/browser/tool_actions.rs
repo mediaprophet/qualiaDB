@@ -50,12 +50,24 @@ fn has_live_invoke(tool_id: &str) -> bool {
             | "shacl:validate"
             | "spatial:orbit_preview"
             | "sheet:stats_mean"
+            | "sheet:stats_median"
+            | "sheet:stats_variance"
+            | "sheet:stats_std_dev"
+            | "sheet:stats_min"
+            | "sheet:stats_max"
             | "ai:grounding"
+            | "ai:detect_ungrounded"
+            | "ai:verify_turn"
+            | "epistemic:evaluate"
+            | "image:histogram"
             | "health:framingham"
             | "health:cha2ds2"
             | "health:score2"
             | "comm:pulse_presence"
             | "rights:deontic_obligate"
+            | "epistemic:paraconsistent_route"
+            | "code:ltl_evaluate"
+            | "code:symbolic_eval"
     )
 }
 
@@ -631,12 +643,26 @@ pub fn dispatch(document: &Document, tool_id: &str, label: &str, action: ActionT
         "spatial:camera_reset" => super::chain_actions::run_camera_reset(document, label),
         "spatial:orbit_preview" => super::chain_actions::run_orbit_preview(document, label),
         "sheet:stats_mean" => super::chain_actions::run_sheet_mean(document, label),
+        "sheet:stats_median" => super::chain_actions::run_sheet_median(document, label),
+        "sheet:stats_variance" => super::chain_actions::run_sheet_variance(document, label),
+        "sheet:stats_std_dev" => super::chain_actions::run_sheet_std_dev(document, label),
+        "sheet:stats_min" => super::chain_actions::run_sheet_min(document, label),
+        "sheet:stats_max" => super::chain_actions::run_sheet_max(document, label),
         "sheet:import" => super::chain_actions::run_sheet_import(document, label),
         "code:vibe_diagnose" => super::chain_actions::run_vibe_diagnose(document, label),
         "code:quin_statement" => super::chain_actions::run_quin_statement(document, label),
         "ai:grounding" => super::chain_actions::run_grounding(document, label),
+        "ai:detect_ungrounded" => super::chain_actions::run_detect_ungrounded(document, label),
+        "ai:verify_turn" => super::chain_actions::run_verify_turn(document, label),
+        "epistemic:evaluate" => super::chain_actions::run_epistemic_evaluate(document, label),
+        "image:histogram" => super::chain_actions::run_image_histogram(document, label),
         "comm:pulse_presence" => super::chain_actions::run_pulse_presence(document, label),
         "rights:deontic_obligate" => super::chain_actions::run_deontic_obligate(document, label),
+        "epistemic:paraconsistent_route" => {
+            super::logic_chain_actions::run_paraconsistent_route(document, label)
+        }
+        "code:ltl_evaluate" => super::logic_chain_actions::run_ltl_evaluate(document, label),
+        "code:symbolic_eval" => super::logic_chain_actions::run_symbolic_eval(document, label),
         _ => {
             if let Some(spec) = super::spec_tools::lookup(tool_id) {
                 super::spec_tools::run(document, spec, label);

@@ -64,14 +64,52 @@ pub(super) fn register_epistemic_toolbox(reg: &mut Registry) {
             enabled_by_default: true,
             family: "epistemic".into(),
         },
-        vec![ToolChain::new(
-            ToolChainMetadata {
-                id: "epistemic:modalities".into(),
-                label: "Epistemic Modalities".into(),
-                icon: "modalities".into(),
-                description: "Set the epistemic modality of a selected node.".into(),
-            },
-            tools,
-        )],
+        vec![
+            ToolChain::new(
+                ToolChainMetadata {
+                    id: "epistemic:modalities".into(),
+                    label: "Epistemic Modalities".into(),
+                    icon: "modalities".into(),
+                    description: "Set the epistemic modality of a selected node.".into(),
+                },
+                tools,
+            ),
+            ToolChain::new(
+                ToolChainMetadata {
+                    id: "epistemic:frame".into(),
+                    label: "Epistemic Frame".into(),
+                    icon: "evaluate".into(),
+                    description: "Scan the live graph for knows/believes verdicts.".into(),
+                },
+                vec![
+                    Box::new(SimpleTool::new(
+                        ToolMetadata {
+                            id: "epistemic:evaluate".into(),
+                            label: "Evaluate frame".into(),
+                            icon: "evaluate".into(),
+                            kind: ToolKind::Query,
+                            capability_scope: Some("EpistemicLogic.evaluate".into()),
+                            ontology_prefix: "epi".into(),
+                            description: "Run EpistemicLogic.evaluate on the live quin frame."
+                                .into(),
+                        },
+                        ActionType::Query,
+                    )),
+                    Box::new(SimpleTool::new(
+                        ToolMetadata {
+                            id: "epistemic:paraconsistent_route".into(),
+                            label: "Route contradictions".into(),
+                            icon: "route".into(),
+                            kind: ToolKind::Query,
+                            capability_scope: Some("ParaconsistentLogic.route".into()),
+                            ontology_prefix: "epi".into(),
+                            description: "Route contradictory claims into an isolated context."
+                                .into(),
+                        },
+                        ActionType::Query,
+                    )),
+                ],
+            ),
+        ],
     ));
 }

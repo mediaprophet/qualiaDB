@@ -1,5 +1,6 @@
-//! Evidence collection, verification, and hypothesis testing for Poet investigations.
+//! Evidence collection, verification, and tagging for Poet investigations.
 
+use super::shared::{append_csv_attr, count_selector};
 use web_sys::{Document, Element};
 
 pub(super) fn run(document: &Document, container: &Element, tool_id: &str) -> Option<Result<(), String>> {
@@ -7,13 +8,11 @@ pub(super) fn run(document: &Document, container: &Element, tool_id: &str) -> Op
         "investigation:collect-evidence" => Some(collect_evidence(container)),
         "investigation:set-reliability" => Some(cycle_reliability(container)),
         "investigation:verify-evidence" => Some(verify_evidence(container)),
-        "investigation:add-chain-of-custody" => Some(add_chain_of_custody(container)),
-        "investigation:corroborate-evidence" => Some(corroborate_evidence(container)),
-        "investigation:challenge-evidence" => Some(challenge_evidence(container)),
+        "investigation:link-evidence-source" => Some(link_evidence_source(container)),
+        "investigation:tag-evidence" => Some(tag_evidence(container)),
         "investigation:query-evidence" => Some(query_evidence(document, container)),
-        "investigation:add-hypothesis" => Some(add_hypothesis(container)),
-        "investigation:test-hypothesis" => Some(test_hypothesis(container)),
-        "investigation:link-evidence-hypothesis" => Some(link_evidence_hypothesis(container)),
+        "investigation:redact-evidence" => Some(redact_evidence(container)),
+        "investigation:compare-evidence" => Some(compare_evidence(document, container)),
         _ => None,
     }
 }
@@ -51,67 +50,39 @@ fn verify_evidence(container: &Element) -> Result<(), String> {
         .map_err(|_| "Failed to verify evidence provenance.".to_string())
 }
 
-fn add_chain_of_custody(container: &Element) -> Result<(), String> {
-    let current = container
-        .get_attribute("data-chain-of-custody")
-        .unwrap_or_default();
-    let entry = "custody:received_and_hashed";
-    let updated = if current.is_empty() {
-        entry.to_string()
-    } else {
-        format!("{current};{entry}")
-    };
+fn link_evidence_source(container: &Element) -> Result<(), String> {
     container
-        .set_attribute("data-chain-of-custody", &updated)
-        .map_err(|_| "Failed to append chain of custody.".to_string())
+        .set_attribute("data-evidence-source", "source:document_or_sensor")
+        .map_err(|_| "Failed to link evidence source.".to_string())
 }
 
-fn corroborate_evidence(container: &Element) -> Result<(), String> {
-    container
-        .set_attribute("data-evidence-corroboration", "corroborated_by_independent_source")
-        .map_err(|_| "Failed to corroborate evidence.".to_string())
-}
-
-fn challenge_evidence(container: &Element) -> Result<(), String> {
-    container
-        .set_attribute("data-evidence-challenge", "formal_rebuttal_registered")
-        .map_err(|_| "Failed to register evidence challenge.".to_string())
+fn tag_evidence(container: &Element) -> Result<(), String> {
+    append_csv_attr(container, "data-evidence-tags", "tag:investigation")
 }
 
 fn query_evidence(document: &Document, container: &Element) -> Result<(), String> {
-    let items = document
-        .query_selector_all("[data-evidence-item]")
-        .map_err(|_| "Failed to query evidence items.".to_string())?;
+    let count = count_selector(document, "[data-evidence-item]")?;
     container
-        .set_attribute("data-evidence-count", &items.length().to_string())
+        .set_attribute("data-evidence-count", &count.to_string())
         .map_err(|_| "Failed to record evidence count.".to_string())
 }
 
-fn add_hypothesis(container: &Element) -> Result<(), String> {
-    let current = container
-        .get_attribute("data-case-hypotheses")
-        .unwrap_or_default();
-    let entry = "H:explanatory_model";
-    let updated = if current.is_empty() {
-        entry.to_string()
+fn redact_evidence(container: &Element) -> Result<(), String> {
+    container
+        .set_attribute("data-evidence-redacted", "sensitive_content_masked")
+        .map_err(|_| "Failed to redact evidence.".to_string())
+}
+
+fn compare_evidence(document: &Document, container: &Element) -> Result<(), String> {
+    let count = count_selector(document, "[data-evidence-item]")?;
+    let verdict = if count >= 2 {
+        "comparison:overlap_and_consistency_checked"
     } else {
-        format!("{current};{entry}")
+        "comparison:insufficient_items"
     };
     container
-        .set_attribute("data-case-hypotheses", &updated)
-        .map_err(|_| "Failed to add investigation hypothesis.".to_string())
-}
-
-fn test_hypothesis(container: &Element) -> Result<(), String> {
-    container
-        .set_attribute("data-hypothesis-tested", "consistency_checked_against_evidence")
-        .map_err(|_| "Failed to test hypothesis.".to_string())
-}
-
-fn link_evidence_hypothesis(container: &Element) -> Result<(), String> {
-    container
-        .set_attribute("data-evidence-hypothesis-link", "linked:H1_supports")
-        .map_err(|_| "Failed to link evidence to hypothesis.".to_string())
+        .set_attribute("data-evidence-compare", verdict)
+        .map_err(|_| "Failed to compare evidence.".to_string())
 }
 
 #[cfg(test)]

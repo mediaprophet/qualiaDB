@@ -5,7 +5,7 @@ use crate::browser::tool_proficiency::Proficiency;
 use crate::tool_chest::core::intent_bus::ActionType;
 use crate::tool_chest::core::tool::ToolKind;
 use ActionType::{Mutate, Query};
-use Contract::Local;
+use Contract::{Gated, Local};
 use Proficiency::{Expert, Intermediate, Novice};
 use ToolKind::{Query as Look, RunAction};
 
@@ -55,10 +55,12 @@ pub fn rows() -> &'static [SpecTool] {
             "doc", RunAction, Mutate, Intermediate, Local),
         SpecTool::new(T, TL, "corpus", "Sources", "research:import-dataset", "Import a dataset",
             "Bring a dataset in from a file or feed.",
-            "doc", RunAction, Mutate, Intermediate, Local),
+            "doc", RunAction, Mutate, Intermediate,
+            Gated("Needs a local dataset file or feed binding.")),
         SpecTool::new(T, TL, "corpus", "Sources", "research:import-web", "Import from the web",
             "Bring a web page, API, or linked data into the sources.",
-            "doc", RunAction, Mutate, Intermediate, Local),
+            "doc", RunAction, Mutate, Intermediate,
+            Gated("Needs network access and an approved web import path.")),
         SpecTool::new(T, TL, "corpus", "Sources", "research:set-corpus-confidence", "Set source confidence",
             "Say how far this source can be trusted.",
             "doc", RunAction, Mutate, Intermediate, Local),

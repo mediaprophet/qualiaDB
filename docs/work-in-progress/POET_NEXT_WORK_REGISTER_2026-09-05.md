@@ -20,7 +20,11 @@ evidence.
 | 6 | Complete `HLT-08` Health UAT pack | Source contracts + offline UAT accepted | Executable/manual evidence for add, reload, inspect, correct, grant, revoke, ingest, and offline recovery | Closed under Gate A |
 | 7 | Close Review Gate A | **CLOSED 2026-09-06** | `docs/work-in-progress/GATE_A_CLOSE_2026-09-06.md` — owner instruction; residuals accepted | Project owner (`D5`) |
 | 8 | Audit standalone Tool Chest semantics (`PFT-01`) | Complete; defects repaired in `PFT-02` | Live vs local labels, provenance, gated states, daemon rejection/error behavior | Project owner accepts findings |
-| 9 | Select next Tool Chest chain | Ready (`PFT-03`) | Inventory row, live `ALL_BOUND` ID or explicit gated shell, acceptance task | Captain/project owner |
+| 9 | Select next Tool Chest chain | Complete (`PFT-03`/`PFT-04`) | Owner continue-instruction; deepened epistemic/AI/image live dual-path | Project owner (`continue to implement poet`) |
+| 10 | Q42 asset envelope + licence policy (`AST-01`) | Complete | Round-trip, deterministic digest, obligation-union, unknown-licence fail-closed (11 tests) | None |
+| 11 | Bounded import jobs (`AST-02`) | Complete | TempDir RAII, budgets, cancel, promote-on-success; asset_import tests | None |
+| 12 | Source catalogue (`AST-07`) | Complete | 11 descriptors; fail-closed statuses; 8 catalogue tests | None |
+| 13 | Live logic ribbon binds (`PFT-05`) | Complete | Paraconsistent / LTL / Symbolic dual-path tools | Owner continue |
 
 ## Latest execution evidence
 
@@ -32,6 +36,35 @@ evidence.
 - Residuals accepted: Poet grant persist without `ConsentLedger`; live-daemon browser UAT incomplete.
 - Unparked: `health:framingham` / `health:cha2ds2` / `health:score2` in Tool Chest tracker.
 - Next: `PFT-03` or `AST-01`.
+
+### `PFT-04` - 2026-09-06 (live registry deepen)
+
+- Owner continue-instruction treated as chain selection after Gate A close.
+- Ribbon: `epistemic:evaluate` → `EpistemicLogic.evaluate`; `ai:detect_ungrounded` /
+  `ai:verify_turn` → Inference.*; `image:histogram` dual-path via `chain_actions`.
+- Spec Live rows: `epistemic:scan-frame`, `epistemic:verify-turn`.
+- `spec_tools/dispatch::apply_live` uses `tool_dual_path` local sketch / live ok / denied.
+- `live_args` covers `Inference.verify_turn`.
+- Focused tests: tool_actions + live_args + chain_actions **13 passed**.
+- Next: `AST-01` or further PFT live binds from inventory (no Host widen).
+
+### `AST-01` - 2026-09-06 (Q42 asset envelope)
+
+- Module: `crates/qualia-core-db/src/q42/asset_envelope/` (`licence`, `envelope`,
+  `codec`, `error`).
+- Wire magic `Q42AST\0\0` v1; SHA-256 payload + envelope digests; 42 MiB chunk
+  budget; unknown licence fails closed; derived assets inherit obligation union.
+- `cargo test -p qualia-core-db --lib asset_envelope` → **11 passed**.
+- Next: `AST-02` (bounded import job framework).
+
+### `AST-02` / `AST-07` / `PFT-05` swarm - 2026-09-06
+
+- Swarm note: `docs/work-in-progress/POET_AST_PFT_SWARM_2026-09-06.md`.
+- `AST-02`: `q42/asset_import/` — ImportJob TempDir, budgets, cancel, promote.
+- `AST-07`: `q42/source_catalogue/` — 11 static sources; no bundling.
+- `PFT-05`: `epistemic:paraconsistent_route`, `code:ltl_evaluate`, `code:symbolic_eval`.
+- Parent verify: core **19** + poet filter **10** passed.
+- Next: `AST-03` (ChEBI release parser) or further PFT.
 
 ### `RBL-01` - 2026-09-05
 

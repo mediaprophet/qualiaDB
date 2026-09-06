@@ -100,6 +100,7 @@ pub mod theme;
 pub mod tool_actions;
 mod tool_copy;
 mod tool_dual_path;
+mod logic_chain_actions;
 mod tool_proficiency;
 pub mod tool_widgets;
 pub mod topbar;

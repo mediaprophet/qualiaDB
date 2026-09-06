@@ -2,6 +2,7 @@
 
 mod cues;
 mod dmx;
+mod projection;
 
 use web_sys::{Document, Element};
 
@@ -10,6 +11,7 @@ pub fn run(_document: &Document, container: &Element, tool_id: &str) -> Option<R
     if !tool_id.starts_with("productions:") {
         return None;
     }
-    dmx::run(container, tool_id)
-        .or_else(|| cues::run(container, tool_id))
+    cues::run(container, tool_id)
+        .or_else(|| projection::run(container, tool_id))
+        .or_else(|| dmx::run(container, tool_id))
 }

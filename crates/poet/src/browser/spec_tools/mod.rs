@@ -30,6 +30,7 @@ mod research;
 mod research_actions;
 mod row;
 mod spatial;
+mod spatial_actions;
 mod spatial3d;
 mod spatial3d_actions;
 mod video;

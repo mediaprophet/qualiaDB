@@ -53,6 +53,10 @@ This is the sequential handoff record for
 | 2026-09-05 | `RM-09` | Grok 4.6 / high | Complete (structure; Gate A still open) | `browser/workflow_panels/` checkpoint, credentials, markup, provenance, publication, constituency, widgets | workflow_panels 2; product integrity 10; surface inventory 1; `trunk build` success | Interactive click-UAT not re-run | Gate A open; unused vs live panel routes; `PFT-03` owner select | `PFT-03` (owner) or held view cluster |
 | 2026-09-05 | `RM-10` | Grok 4.6 / high | Complete (structure; Gate A still open) | `browser/container_views/` doc, toolbar, switcher, sheet, graph, ontology, pulse | container_views 2; product integrity 10; surface inventory 1; `trunk build` success | Interactive click-UAT not re-run | Gate A open; `container_views_ext.rs` remains; `PFT-03` owner select | `RM-11` container_views_ext.rs or `PFT-03` |
 | 2026-09-05 | `RM-11` | Grok 4.6 / high | Complete (structure; Gate A still open) | `browser/container_views_ext/` library, canvas_media, health, comm, finance, senses, compute, spatial, chips | product integrity 10; surface inventory 1; `trunk build` success | Interactive click-UAT not re-run | Gate A open; unused vs live specialist_persist routes; `PFT-03` owner select | `PFT-03` (owner) or `command_palette/commands.rs` |
+| 2026-09-06 | `GATE-A` | Composer | Complete (owner D5) | Gate A close docs + register/tracker | Evidence retained from PR #75 | Offline accepted; live UAT residual | ConsentLedger persist; Review Gate B | `PFT-04` / `AST-01` |
+| 2026-09-06 | `PFT-04` | Composer | Complete (implementation + tests) | epistemic/AI/image live dual-path; Live dispatch honesty; register/spec/live_args | tool_actions+live_args+chain 13; registration 3; product integrity 10 | Not re-run | Swarm WIP uncommitted; Gate B open | `AST-01` or more live binds |
+| 2026-09-06 | `AST-01` | Composer | Complete (implementation + tests) | `q42/asset_envelope/` licence+envelope+codec | asset_envelope 11 | N/A — schema packet | Import jobs / ChEBI parser not started | `AST-02` |
+| 2026-09-06 | `AST-02`/`AST-07`/`PFT-05` | Composer swarm | Complete (integrated) | asset_import; source_catalogue; logic_chain_actions + ribbon | core 19; poet tool_actions/live_args/registration | N/A | AST-03 ChEBI parser next | `AST-03` |
 
 ## Required closeout detail
 
@@ -387,6 +391,39 @@ Delegation count before/after: unchanged.
 Known gaps: Poet JSON grant upsert still not `ConsentLedger::issue`/`revoke`; live Framingham/grant UAT still optional Capt follow-up; Review Gate B open.
 Unrelated failures preserved: Yes (QDNF WIP untouched).
 Recommended next packet: `PFT-03` (owner chain selection) or `AST-01` (governed Q42 envelope).
+
+Packet: `PFT-04`
+Baseline git status: `0.0.36-dev` after Gate A `019f10c8`; large uncommitted Tool Chest swarm WIP preserved.
+User job delivered: Continued Poet after Gate A — deepened live registry dual-path for epistemic frame scan, ungrounded/verify-turn inference, and image histogram; Live dispatch honesty via `tool_dual_path`.
+Files changed: `chain_actions.rs`, `tool_actions.rs`, `tool_copy.rs`, `register_ai_toolbox.rs`, `register_epistemic_toolbox.rs`, `spec_tools/dispatch.rs`, `live_args.rs`, `epistemics.rs`; WIP register/swarm/tracker/ledger.
+Tests and exact results: `cargo test -p poet --lib -- tool_actions live_args chain_actions` → 13 passed; registration → 3 passed; product_integrity → 10 passed.
+Browser/native UAT: Not re-run; dual-path local sketches verified by unit policy tests only.
+Delegation count before/after: unchanged.
+Known gaps: ConsentLedger persist residual; live-daemon browser UAT; Review Gate B open; swarm Tool Chest still uncommitted as one landable packet.
+Unrelated failures preserved: Yes (QDNF WIP untouched).
+Recommended next packet: `AST-01` or further inventory live binds (`Statistics.*` / logic) — no Host widen.
+
+Packet: `AST-01`
+Baseline git status: `0.0.36-dev` with uncommitted Tool Chest swarm + PFT-04 WIP preserved.
+User job delivered: Governed Q42 asset envelope and licence policy schema in `qualia-core-db` (not poet UI). Deterministic encode/decode, SHA-256 digests, unknown-licence fail-closed, obligation union for derived assets, 42 MiB chunk budget.
+Files changed: `crates/qualia-core-db/src/q42/asset_envelope/`; `q42/mod.rs`; register/ledger.
+Tests and exact results: `cargo test -p qualia-core-db --lib asset_envelope` → 11 passed.
+Browser/native UAT: Not applicable (schema/policy packet).
+Delegation count before/after: unchanged.
+Known gaps: `AST-02` import jobs; ChEBI parser (`AST-03`); no Host/capability IDs added yet.
+Unrelated failures preserved: Yes (Poet Tool Chest + QDNF WIP untouched).
+Recommended next packet: `AST-02` (bounded import job framework).
+
+Packet: `AST-02` / `AST-07` / `PFT-05` swarm
+Baseline git status: post-AST-01; Tool Chest WIP preserved.
+User job delivered: Three-lane swarm — bounded import jobs, health source catalogue (no bundling), Poet live dual-path for Paraconsistent/LTL/Symbolic. Parent integrated, removed Lane C scratch patch script, verified suites.
+Files changed: `q42/asset_import/`, `q42/source_catalogue/`, `poet` logic_chain_actions + registrations; swarm/register/ledger.
+Tests and exact results: core `source_catalogue`+`asset_import` 19 passed; poet `tool_actions`/`live_args`/`registration` filter suite green.
+Browser/native UAT: Not re-run.
+Delegation count before/after: unchanged.
+Known gaps: `AST-03` ChEBI parser; URL attestation optional for some catalogue rows.
+Unrelated failures preserved: Yes.
+Recommended next packet: `AST-03`.
 
 
 

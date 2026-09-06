@@ -1,7 +1,14 @@
 //! Research tool actions router for Poet spec tools.
 
+mod bootstrap;
 mod corpus;
+mod dark_links;
+mod dynamics;
 mod enquiry;
+mod inference;
+mod provenance;
+mod synthesis;
+mod util;
 
 use web_sys::{Document, Element};
 
@@ -11,5 +18,11 @@ pub fn run(document: &Document, container: &Element, tool_id: &str) -> Option<Re
         return None;
     }
     enquiry::run(document, container, tool_id)
-        .or_else(|| corpus::run(container, tool_id))
+        .or_else(|| corpus::run(document, container, tool_id))
+        .or_else(|| dynamics::run(document, container, tool_id))
+        .or_else(|| dark_links::run(document, container, tool_id))
+        .or_else(|| inference::run(document, container, tool_id))
+        .or_else(|| synthesis::run(document, container, tool_id))
+        .or_else(|| provenance::run(document, container, tool_id))
+        .or_else(|| bootstrap::run(document, container, tool_id))
 }

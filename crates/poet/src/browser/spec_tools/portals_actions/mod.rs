@@ -1,5 +1,7 @@
 //! Portals tool actions router for Poet spec tools.
 
+mod physics;
+mod portals;
 mod world;
 
 use web_sys::{Document, Element};
@@ -10,4 +12,6 @@ pub fn run(_document: &Document, container: &Element, tool_id: &str) -> Option<R
         return None;
     }
     world::run(container, tool_id)
+        .or_else(|| portals::run(container, tool_id))
+        .or_else(|| physics::run(container, tool_id))
 }

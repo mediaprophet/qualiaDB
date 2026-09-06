@@ -74,19 +74,49 @@ pub(super) fn register_ai_toolbox(reg: &mut Registry) {
                         "Select resident GGUF model, halo confidence threshold, and temperature."
                             .into(),
                 },
-                vec![Box::new(SimpleTool::new(
-                    ToolMetadata {
-                        id: "ai:grounding".into(),
-                        label: "Ground generation".into(),
-                        icon: "sentinel".into(),
-                        kind: ToolKind::Query,
-                        capability_scope: Some("Inference.grounding".into()),
-                        ontology_prefix: "ai".into(),
-                        description: "Check selected generation text against Inference.grounding."
-                            .into(),
-                    },
-                    ActionType::Query,
-                ))],
+                vec![
+                    Box::new(SimpleTool::new(
+                        ToolMetadata {
+                            id: "ai:grounding".into(),
+                            label: "Ground generation".into(),
+                            icon: "sentinel".into(),
+                            kind: ToolKind::Query,
+                            capability_scope: Some("Inference.grounding".into()),
+                            ontology_prefix: "ai".into(),
+                            description:
+                                "Check selected generation text against Inference.grounding."
+                                    .into(),
+                        },
+                        ActionType::Query,
+                    )),
+                    Box::new(SimpleTool::new(
+                        ToolMetadata {
+                            id: "ai:detect_ungrounded".into(),
+                            label: "Find ungrounded text".into(),
+                            icon: "sentinel".into(),
+                            kind: ToolKind::Query,
+                            capability_scope: Some("Inference.detect_ungrounded".into()),
+                            ontology_prefix: "ai".into(),
+                            description:
+                                "Flag selected generation text with Inference.detect_ungrounded."
+                                    .into(),
+                        },
+                        ActionType::Query,
+                    )),
+                    Box::new(SimpleTool::new(
+                        ToolMetadata {
+                            id: "ai:verify_turn".into(),
+                            label: "Verify this turn".into(),
+                            icon: "sentinel".into(),
+                            kind: ToolKind::Query,
+                            capability_scope: Some("Inference.verify_turn".into()),
+                            ontology_prefix: "ai".into(),
+                            description: "Run Inference.verify_turn on the selected generation."
+                                .into(),
+                        },
+                        ActionType::Query,
+                    )),
+                ],
             ),
             ToolChain::new(
                 ToolChainMetadata {

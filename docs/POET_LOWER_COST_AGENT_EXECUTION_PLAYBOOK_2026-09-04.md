@@ -344,6 +344,13 @@ At each review gate, stop implementation and ask the expert reviewer to inspect 
 **Acceptance:** deterministic serialization; licence obligations propagate to derived assets; unknown licence fails closed; public API is caller-buffered where ABI-facing.  
 **Verify:** round-trip, deterministic digest, obligation-union, and invalid-envelope tests.
 
+**Result recorded 2026-09-06:** Implemented in
+`crates/qualia-core-db/src/q42/asset_envelope/`. Wire format magic `Q42AST\0\0`
+v1 with deterministic LE encoding; SHA-256 payload and envelope digests;
+`LicencePolicy` fails closed on unknown tags; derived envelopes inherit the
+most-restrictive obligation union; chunk plans reject budgets above 42 MiB.
+`cargo test -p qualia-core-db --lib asset_envelope` → 11 passed.
+
 ### `AST-02` — Bounded import job framework (`5.5`)
 
 **Outcome:** Cold-construction import jobs use unique `TempDir`, explicit byte/record budgets, streaming chunks, cancellation, quarantine counts, and promote-on-success semantics.
