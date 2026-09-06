@@ -744,6 +744,55 @@ Once planes are thick enough: easier than Active Directory / Keychain — chrome
 
 ---
 
+## 26. Amend — pseudonyms, role≠accountability, anti-coercion purpose binds (2026-09-06)
+
+**Cite:** Timothy room (pseudonyms privacy/legal · anti-coercion / sanctuary / Webizen Desktop · semantically uplifted identifiers vs enumerated human identity · societal roles + access ≠ accountability · LEO must not stalk ex / proxy) · F1 §15 accounts · §16 guardianship/capacity · §17 grants vs logs · §19 relation locators · §21–§22 roles · Alice F6 · F5 §13.
+
+### 26.1 Cut
+
+**Identifiers are fortified and semantically typed; NaturalAgent identity stays enumerated separately** (unmerged bindings, rising resolution — not a single who-token). Pseudonyms and societal roles ride instruments / grants / claim–policy — they do not rewrite who.
+
+| Pattern | Fabric expression |
+|---------|-------------------|
+| Pseudonym (privacy or legal) | Locator / instrument **alias** (relation-scoped or purpose-scoped) — **not** a second NaturalAgent, not a who-fork |
+| Semantically uplifted identifiers | Typed instrument + handle planes with ontology sense — hardness via co-attestation (§1b), not identity collapse |
+| Societal role → access permissions | Structural / situational **capacity grants** (scope · time · purpose · environment) — §16–§17, §21–§22 |
+| Accountability systems | Distinct track: logs · claim–evidence · provenance (§17.4) — **not** the same graph as “has role ⇒ may do anything” |
+| Role misuse / stalking / rights breach | **Purpose-bound** grants + anti-coercion / anti-proxy policy — deny when purpose, target, or delegate chain fails |
+| “Get someone else to do it” | Proxy/delegation instruments inherit **purpose + target constraints**; co-attestation does not launder forbidden purpose |
+
+### 26.2 Instrument / policy kinds (additive)
+
+| Kind | Notes |
+|------|--------|
+| PseudonymAlias | Instrument/locator alias bound to purpose or relation — never NaturalAgent type |
+| RoleCapacityGrant | Access from societal/office role — purpose · scope · time · environment predicates |
+| AccountabilityArtifact | Log / evidence / audit claim — separate from grant success |
+| PurposeBind / AntiCoercionConstraint | Policy instrument: forbidden targets, conflicts-of-interest, no-stalk / no-surveil-ex, no-proxy-launder |
+| DelegationChain | Who may act for whom under which purpose — break chain on purpose mismatch |
+
+### 26.3 Crypto notes
+
+- Role keys and officeholder instruments stay **purpose-separated** (`idf:keyRole`); office key ≠ personal session key ≠ stalking capability.
+- Hardness for lawful access: multi-instrument co-attestation **plus** purpose/target predicates — signatures alone never prove the act was in-role.
+- Gate fail: badge/role = forever who; pseudonym = second person; grant-success = accountability satisfied; proxy signature washes forbidden purpose; LEO officeholder embedding implies ex-surveillance rights.
+
+### 26.4 Sanctuary / Webizen (handoff, not F1 impl)
+
+Anti-coercion frameworks (conflict checks, purpose binds, proxy limits, sanctuary defaults) belong in **sanctuary / Webizen Desktop policy UX** — docs/illustration until vibe delivery. F1 only names the instrument/policy kinds.
+
+### 26.5 Handoff
+
+| Role | Next |
+|------|------|
+| **Neo** | Fold §26 |
+| **Marvin** | PseudonymAlias · RoleCapacityGrant · PurposeBind / AntiCoercionConstraint · DelegationChain shapes |
+| **Alice** | Pseudonym/role/purpose features = instrument/policy only; no role→who or proxy-launder embeddings (align F6 PR) |
+| **Capt.** | Spine: role≠accountability · anti-coercion purpose binds · sanctuary/Webizen surface |
+| **Vibe** | Diagnose: “has role” ≠ “may target anyone”; pseudonym ≠ second who |
+
+---
+
 *End of WIP — Noddy F1 crypto instrument taxonomy.*
 
 ## 14. Amend — FOAF-modern entity/agent types + WebID/SAN/hardware (2026-09-06)
@@ -836,3 +885,4 @@ Digital evidence capabilities fail socially if a jury cannot follow them. Fabric
 | 2026-09-06 | **Amend §23:** environment-scoped sensors · place-bound secrets · GIS predicates (≠ who). |
 | 2026-09-06 | **Amend §24:** temporal relationship assessment · epistemic rule-breach (knew vs didn’t understand); ≠ who rewrite. |
 | 2026-09-06 | **Amend §25:** high-cardinality non-defining relations · Quin/NQuin axiom substrate (≠ who). |
+| 2026-09-06 | **Amend §26:** pseudonyms as aliases · role≠accountability · purpose binds / no-proxy-launder. |

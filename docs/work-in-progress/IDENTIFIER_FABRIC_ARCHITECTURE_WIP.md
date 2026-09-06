@@ -248,6 +248,26 @@ Humans (and brands, orgs, AI-agents) have **thousands** of relationships/interac
 
 Aligns with §3l temporal assessment; Noddy F1 §25 path ready.
 
+## 3n. Pseudonyms, role≠accountability, anti-coercion purpose binds (Timothy — 2026-09-06)
+
+Identifiers are **semantically uplifted and fortified**; NaturalAgent identity stays **enumerated separately** (unmerged bindings — not a single who-token). Pseudonyms and societal roles ride instruments / grants / claim–policy — they do not rewrite who.
+
+| Pattern | Fabric expression |
+|---------|-------------------|
+| Pseudonym (privacy or legal) | Locator / instrument **alias** — **not** a second NaturalAgent, not a who-fork |
+| Societal role → access | Structural / situational **capacity grants** (scope · time · purpose · environment) |
+| Accountability | Separate track: logs · claim–evidence · provenance — **not** “has role ⇒ may do anything” |
+| Role misuse / stalking / rights breach | **Purpose-bound** grants + anti-coercion / anti-proxy policy — deny when purpose, target, or delegate chain fails |
+| Proxy / “get someone else” | Delegation inherits **purpose + target constraints**; co-attestation does not launder forbidden purpose |
+
+**Additive kinds:** PseudonymAlias · RoleCapacityGrant · AccountabilityArtifact · PurposeBind / AntiCoercionConstraint · DelegationChain.
+
+**Sanctuary / Webizen:** anti-coercion frameworks (conflict checks, purpose binds, proxy limits, sanctuary defaults) surface in **sanctuary / Webizen Desktop policy UX** — docs/illustration until vibe delivery. F1 only names kinds.
+
+**Gate fail:** badge/role = forever who; pseudonym = second person; grant-success = accountability satisfied; proxy washes forbidden purpose; LEO officeholder implies ex-surveillance rights.
+
+Aligns with §3g locators, §3i–§3j roles/grants, §3m Quin; Noddy F1 §26 path ready; Alice F6 PR #80 already notes aliases + sanctuary pointer.
+
 ## 4. Instrument kinds (Capt lock — Noddy taxonomy expands)
 
 | Kind | Relation it anchors | Mutability note |
@@ -383,3 +403,6 @@ Blocking gates → report **Capt**.
 | 2026-09-06 | Marvin F2 §25: RelationLifecycleShape · non-defining high-cardinality · Quin ≠ who (cites `acd3da3`). |
 | 2026-09-06 | Vibe F5 §13: env-capacity · relationship≠identity · dense-graph≠who · Quin≠identity (cites §23–§25 / §3k–§3m). |
 | 2026-09-06 | Alice F6 §§10–14 (PR #80): env/rel/quin · pseudonyms as aliases · anti-coercion sanctuary pointer (cites F5 `c7fa0b8`). |
+| 2026-09-06 | Capt: pseudonyms as aliases · role≠accountability · anti-coercion purpose binds · sanctuary/Webizen surface. |
+| 2026-09-06 | Noddy F1 §26: PseudonymAlias · RoleCapacityGrant · PurposeBind · DelegationChain (≠ who). |
+| 2026-09-06 | Capt: pseudonyms as aliases · role≠accountability · purpose binds / no-proxy-launder · sanctuary/Webizen surface. |
