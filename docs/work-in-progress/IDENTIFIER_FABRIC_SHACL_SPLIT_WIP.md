@@ -1,7 +1,7 @@
 # WIP — Identifier Fabric SHACL-first split (F2)
 
 **Status:** work-in-progress · **Not standards** · **Branch:** `0.0.36-dev`  
-**Against tip:** F2 §25 `9c66f46` · F1 §26 `9c5d542` · spine §3n · architecture spine
+**Against tip:** F2 §26 `bdcfb8e` · F1 §27 `e50296e` · spine §3o · architecture spine
 **Owner:** Marvin (ontology / shapes) · **Taxonomy:** Noddy · **Fold/push:** Neo · **Ops:** Capt.  
 **Standards baseline:** `docs/manuals/standards/qualia-decentralized-network-fabric/` (`identifier-resolution.md`, `ontological-contracts.md`, `cryptographic-profile.md`) · `docs/manuals/standards/shacl-first-vs-owl-ok-class-list.md`  
 **Substrate:** uplift `crates/qualia-core-db` Identity / DID / VC / agency / governance primitives — **not** parallel invent.
@@ -1200,6 +1200,89 @@ idf:DelegationChainShape a sh:NodeShape ;
 - Sanctuary/Webizen: anti-coercion UX later — F2 names kinds only.
 
 ---
+
+## 27. Amend — good-faith reliance, false claims, RCA & blast radius (F1 §27)
+
+**Cite:** Noddy F1 §27 tip `e50296e` · spine §3o · §14 AI-agent · §21–§22 · §24 temporal/epistemic · §25 lifecycle · §26 role≠accountability · Alice F6 claim–policy.
+
+### 27.1 Cut
+
+Good-faith reliance on a false/misleading claim is **claim–evidence–accountability**, not a who-rewrite. Speakers may be NaturalAgent, AI-agent, or OrgRep. Discovering falsity → preserve provenance → RootCauseBundle + BlastRadiusMap (social · economic · safety · security). Mushroom meme: apology after death does not rewrite who — RCA/blast still required.
+
+| Pattern | Shape expression |
+|---------|------------------|
+| “Done / true / implemented” asserted | AssertionClaim — speaker type explicit |
+| Counterparty acts in good faith | RelianceRecord |
+| Assumption continues | AssumptionChain |
+| Falsity surfaces | Retraction/supersession + RootCauseBundle + BlastRadiusMap — **no** erase |
+| Org-rep speaks | OrgRepresentativeBinding — role ≠ personal who |
+
+**Gate fail:** misleading AI ⇒ human fraudster who; org-rep lie ⇒ rewrite NaturalAgent; blast radius ⇒ merge impacted parties into one identity; delete false claim to “fix” history.
+
+### 27.2 Shapes
+
+#### `idf:AssertionClaimShape`
+| Property | Note |
+|----------|------|
+| `idf:speaker` | NaturalAgent · AiAgent · OrgRep |
+| `idf:assertedAt` | Time |
+| `idf:contentRef` / statement | What was claimed |
+| Optional | Crypto attestation (VC/envelope) |
+
+#### `idf:RelianceRecordShape`
+| Property | Note |
+|----------|------|
+| `idf:reliantParty` | Who relied |
+| `idf:claimRef` | → AssertionClaim |
+| `idf:duty` | good-faith · legal · … |
+| `idf:consequentActs` | What followed |
+| `idf:reliedAt` | Epoch |
+
+#### `idf:AssumptionChainShape`
+| Property | Note |
+|----------|------|
+| Edges | claim → derived beliefs → downstream grants/contracts/builds |
+| Time-indexed | Required |
+
+#### `idf:RootCauseBundleShape`
+| Property | Note |
+|----------|------|
+| Evidence set | Speaker · instruments · epistemic state (knew / should-have-known / mistaken) · process gaps |
+| Optional | CoAttestationBundle members (§5.5) |
+| Plane | Accountability / claim–evidence |
+
+#### `idf:BlastRadiusMapShape`
+| Property | Note |
+|----------|------|
+| `idf:domains` | social · economic · safety · security |
+| `idf:impacted` | Agents · entities · relations · grants |
+| `idf:timeWindow` | Required |
+| Forbidden | Merge impacted parties into one who |
+
+#### `idf:OrgRepresentativeBindingShape`
+| Property | Note |
+|----------|------|
+| Person → Organization | Under RoleCapacityGrant |
+| Speaker role | ≠ personal NaturalAgent rewrite |
+
+```turtle
+idf:RelianceRecordShape a sh:NodeShape ;
+  sh:property [ sh:path idf:reliantParty ; sh:minCount 1 ] ;
+  sh:property [ sh:path idf:claimRef ; sh:minCount 1 ] ;
+  sh:property [ sh:path idf:reliedAt ; sh:minCount 1 ] .
+
+idf:BlastRadiusMapShape a sh:NodeShape ;
+  sh:property [ sh:path idf:timeWindow ; sh:minCount 1 ] ;
+  sh:property [ sh:path idf:domains ; sh:minCount 1 ] .
+  # MUST NOT entail who-merge of impacted parties.
+```
+
+### 27.3 Diagnose / Alice
+
+- Vibe: “assumption invalidated” ≠ “identity changed”; suggest RCA/blast templates.
+- Alice: reliance/blast = claim–policy/accountability namespaces only.
+
+---
 ## 13. Changelog
 
 | When | Note |
@@ -1227,6 +1310,8 @@ idf:DelegationChainShape a sh:NodeShape ;
 | 2026-09-06 | F1 §25: `RelationLifecycleShape` · non-defining high-cardinality relations · Quin = axiom substrate ≠ who; tip `acd3da3`. |
 
 | 2026-09-06 | F1 §26: `PseudonymAliasShape` · `RoleCapacityGrantShape` · `PurposeBind`/`AntiCoercionConstraint` · `DelegationChainShape` · AccountabilityArtifact; role≠accountability; tip `9c5d542`. |
+
+| 2026-09-06 | F1 §27: `AssertionClaimShape` · `RelianceRecordShape` · `AssumptionChainShape` · `RootCauseBundleShape` · `BlastRadiusMapShape` · `OrgRepresentativeBindingShape`; tip `e50296e`. |
 
 ---
 
