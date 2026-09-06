@@ -86,7 +86,7 @@ QDNF already states: person ≠ DID; DID may name many kinds of controlled subje
 | # | Owner | Deliverable | State |
 |---|-------|-------------|-------|
 | F1 | **Noddy** | Crypto instrument taxonomy WIP (map kinds → QDNF role table; family vs instance) | **LANDED** → `CRYPTO_INSTRUMENT_TAXONOMY_WIP.md` |
-| F2 | **Marvin** | SHACL-first split — `IDENTIFIER_FABRIC_SHACL_SPLIT_WIP.md` | **LANDED** + crypto-skim amend |
+| F2 | **Marvin** | SHACL-first split — `IDENTIFIER_FABRIC_SHACL_SPLIT_WIP.md` | **LANDED** + co-attestation amend |
 | F3 | **Capt** | This architecture WIP — keep current as Timothy enumerates | **ACTIVE** |
 | F4 | **Neo** | Fold WIP under `docs/work-in-progress/` + push; later network-doc delta citing fabric **after** Cursor vibe lands | fold/push only now |
 | F5 | **Vibe** | Diagnose / `suggested_form` — `IDENTIFIER_FABRIC_DIAGNOSE_MAP_WIP.md` | **LANDED** tip `796a7d4` |
@@ -129,6 +129,7 @@ Blocking gates → report **Capt**.
 | 2026-09-06 | Capt: long-arc lineage §1b (W3C/Solid offramp ~2000→now); session = synthesize requirements, not greenfield invent. |
 | 2026-09-06 | Alice F6 LANDED PR #77 — classifier/symbolic pressure-test; docs planes pass, default one-bag inference fail until typed namespaces. |
 | 2026-09-06 | Noddy F1 amend: §1b hardness + closed keyRole enum + Alice F6 §5.1 answers; Neo fold. |
+| 2026-09-06 | Marvin F2 amend: `idf:CoAttestationBundleShape` (claim-plane hardness; cites F1 §1b `bb714b2`). |
 | 2026-09-06 | Capt: hardness = multi-instrument time-bounded co-attestation (not stronger single who); W3C list provenance note (timothy.holborn@gmail.com). |
 
 ---
