@@ -349,6 +349,61 @@ Cite QDNF `commons-and-resource-economics.md` / `ontological-contracts.md` for u
 
 ---
 
+## 17. Amend — sense-context, flora/fauna, situational grants vs logs (2026-09-06)
+
+**Cite:** Capt lock (sense contextual) · Timothy thongs/gay · emergency medical capacity · F5 tip `da74019` · F1 §16 capacity/guardianship · QDNF Alias Assertions.
+
+### 17.1 Lexical sense-context (not mega-meaning who)
+
+| Binding | Role |
+|---------|------|
+| `lexicalConcept` (WN/OMW) | Stable concept id — **≠ fabric plane** |
+| `locale` / language | e.g. en-AU so *thongs* = footwear |
+| `era` / time window | Historical *gay* = happy, not sexuality |
+| `community` / namespace | personal · relationship · community · institution · legacy (QDNF alias namespaces) |
+| `provenance` | Who asserted this sense binding; evidence |
+
+**Gate fail:** one timeless dictionary identity; forcing a sense without locale/era; treating WN gloss as NaturalAgent or plane.
+
+Crypto does **not** disambiguate homographs — context + provenance do (QDNF security note on alias spoofing/homographs).
+
+### 17.2 Flora / fauna
+
+Living-typed entities (SHACL-first living / B-OWL-NATURAL) — **not** NaturalAgent personhood, **not** Thing commodity wash. Optional lexicalConcept links for common names remain sense-context instruments.
+
+### 17.3 Situational capacity grants (illustration)
+
+Example: a person with a medical qualification, in an emergency, may receive **purpose-scoped data access** only under conditions (e.g. co-location), for a time window, backed by qualification instruments.
+
+| Element | Notes |
+|---------|-------|
+| Still | NaturalAgent (or acting agent-type) — not a new who |
+| Grant | Relation axiom: purpose · condition (co-location, …) · time-bound · qualification instrument |
+| Distinct from | Standing guardianship (§16); OS account (§15); session login |
+| Evidence | Qualification VC / license instrument + condition observations — co-attestation eligible when multi-party |
+
+**Historically informal** human practice (ad hoc trust in emergencies) is what the fabric makes **enumerable** without freezing it into one identity privilege bit.
+
+### 17.4 Logs & accountability (distinct track)
+
+| Track | Plane | Answers |
+|-------|-------|---------|
+| Situational grant | Capacity / claim–policy relation | What may be done, by whom, under what conditions, when |
+| Logs / accountability | Provenance · claim–evidence | What was done, observed, attested — audit trail |
+
+Grants authorize; logs account. Neither is who. Jury-safe: name grant scope and log evidence separately.
+
+### 17.5 Handoff
+
+| Role | Next |
+|------|------|
+| **Neo** | Fold §17 into taxonomy WIP |
+| **Marvin** | Sense-context bindings + situational grant shape + flora/fauna living non-person |
+| **Vibe** | F5 already has sense-context speak — align `suggested_form` locale/era/community/provenance |
+| **Capt.** | Spine beside §3c WN |
+
+---
+
 *End of WIP — Noddy F1 crypto instrument taxonomy.*
 
 ## 14. Amend — FOAF-modern entity/agent types + WebID/SAN/hardware (2026-09-06)
@@ -432,3 +487,4 @@ Digital evidence capabilities fail socially if a jury cannot follow them. Fabric
 *End of WIP — Noddy F1 crypto instrument taxonomy (hardness + F6 cross-link amend).*
 | 2026-09-06 | **Amend §15:** OS/telecom account ≠ device user ≠ machine; independent usedBy/accountOn/accountHolder. |
 | 2026-09-06 | **Amend §16:** guardianship/capacity gradients; claim–policy–modality uplift; collaborative commons as multi-party instruments/relations (not shared who). |
+| 2026-09-06 | **Amend §17:** sense-context bindings; flora/fauna living non-person; situational capacity grants vs logs/accountability; crypto≠homograph fix. |
