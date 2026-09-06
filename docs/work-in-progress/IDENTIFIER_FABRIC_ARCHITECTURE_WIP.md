@@ -81,6 +81,19 @@ FOAF-modernized **top-level entity and agent-type predicates** sit above instrum
 - An **AI agent** is its own agent-type with an identifier array and relations — **not** a NaturalAgent and **not** a machine.
 - WebID / SAN / hardware multi-id remain instruments relating to an agent/entity type.
 
+
+## 3c. WordNet lexical substrate (Timothy — 2026-09-06)
+
+**WordNet** (and later OMW / locale packs) is the foundational **lexical** resource for a rich multilingual vocabulary — prefer a Q42-encoded subset with explicit relations *to* WN concept ids, not a dump-as-identity.
+
+| Rule | |
+|------|--|
+| WN / lexical concept | Vocabulary and multilingual surface |
+| Fabric plane / type IRI | NaturalAgent · AI-agent · machine · claim · handle · instrument |
+| Link | Optional `sameAs`/skos-style links from type or instrument defs → WN — **never** merge planes into WN-person |
+
+**Jury bar:** digital evidence stays useful only if a non-specialist can follow enumerable instruments and relations — “these signatures, this window, these machines” — not an opaque who-token or CS “identity” bag.
+
 ## 4. Instrument kinds (Capt lock — Noddy taxonomy expands)
 
 | Kind | Relation it anchors | Mutability note |
@@ -151,6 +164,7 @@ Blocking gates → report **Capt**.
 | 2026-09-06 | Capt: hardness = multi-instrument time-bounded co-attestation (not stronger single who); W3C list provenance note (timothy.holborn@gmail.com). |
 | 2026-09-06 | Capt tick: F1 hardness/`bb714b2` + F2 CoAttestationBundle/`77a13e3` accepted; HEAD fabric docs current; F7 still after Cursor vibe. |
 | 2026-09-06 | Capt: FOAF-modernized entity/agent types; AI agent ≠ NaturalAgent ≠ machine; WebID/SAN/hardware as instruments; W3C list search provenance. |
+| 2026-09-06 | Capt: WordNet as lexical substrate (Q42 subset + links); WN ≠ fabric plane; OMW later; jury-explainable evidence naming. |
 
 ---
 
