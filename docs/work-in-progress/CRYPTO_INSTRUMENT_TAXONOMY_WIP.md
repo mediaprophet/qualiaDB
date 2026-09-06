@@ -275,6 +275,25 @@ Cite `cryptographic-profile.md` / `post-quantum-security.md`:
 
 ---
 
+## 15. Amend — OS / telecom account ≠ device user (2026-09-06)
+
+**Cite:** Timothy room · machine multi-id §14.2–14.3 · agent key ≠ human principal.
+
+| Role | Plane / kind | Notes |
+|------|--------------|-------|
+| **Device user** | NaturalAgent (or AI-agent operator) *relating to* machine | Person/agent actually using the device |
+| **OS account** | Instrument / account relation on Machine | UID/login on that OS — **not** automatically the device user |
+| **Telecom subscriber / account** | Instrument / account relation | IMSI/MSISDN/subscriber record — **not** automatically the handset user |
+| **Machine** | Machine/device type + hardware∪network instrument bundle | Hosts accounts; is not who |
+
+**Relations (illustrative):** `idf:usedBy` (machine → agent) · `idf:accountOn` (account instrument → machine) · `idf:accountHolder` (account → agent) — these are **independent**. Device-user ≠ account-holder ≠ subscriber ≠ machine.
+
+**Gate fail:** treating OS UID, login session, or telecom subscriber id as NaturalAgent who, or equating “logged-in account” with “person holding the device.”
+
+**Court/jury:** name them separately — “this OS account,” “this subscriber identity,” “this person using the device” — never one opaque identity.
+
+---
+
 *End of WIP — Noddy F1 crypto instrument taxonomy.*
 
 ## 14. Amend — FOAF-modern entity/agent types + WebID/SAN/hardware (2026-09-06)
@@ -356,3 +375,4 @@ Digital evidence capabilities fail socially if a jury cannot follow them. Fabric
 ---
 
 *End of WIP — Noddy F1 crypto instrument taxonomy (hardness + F6 cross-link amend).*
+| 2026-09-06 | **Amend §15:** OS/telecom account ≠ device user ≠ machine; independent usedBy/accountOn/accountHolder. |

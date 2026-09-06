@@ -187,3 +187,4 @@ Blocking gates → report **Capt**.
 | `CRYPTO_INSTRUMENT_TAXONOMY_WIP.md` | Noddy | F1 draft ready |
 | `IDENTIFIER_FABRIC_SHACL_SPLIT_WIP.md` | Marvin | F2 **LANDED** |
 | `IDENTIFIER_FABRIC_DIAGNOSE_MAP_WIP.md` | Vibe | F5 **LANDED** |
+| 2026-09-06 | Noddy F1 §15: OS/telecom account ≠ device user ≠ machine (independent relations). |
