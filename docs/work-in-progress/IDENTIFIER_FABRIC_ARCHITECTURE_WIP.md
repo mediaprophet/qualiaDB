@@ -382,3 +382,4 @@ Blocking gates → report **Capt**.
 | 2026-09-06 | Noddy F1 §25: high-cardinality relations · Quin axiom substrate · non-defining counterparts. |
 | 2026-09-06 | Marvin F2 §25: RelationLifecycleShape · non-defining high-cardinality · Quin ≠ who (cites `acd3da3`). |
 | 2026-09-06 | Vibe F5 §13: env-capacity · relationship≠identity · dense-graph≠who · Quin≠identity (cites §23–§25 / §3k–§3m). |
+| 2026-09-06 | Alice F6 §§10–14 (PR #80): env/rel/quin · pseudonyms as aliases · anti-coercion sanctuary pointer (cites F5 `c7fa0b8`). |
