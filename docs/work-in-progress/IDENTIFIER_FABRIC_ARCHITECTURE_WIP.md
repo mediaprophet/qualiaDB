@@ -163,6 +163,20 @@ Unlike traditional Solid WebIDs or phone numbers that often behave as **static**
 
 Same §3g cut: generated addresses and account handles are **scoped instruments**. When the picture is sufficient, open **F7** for implications on the socially defined QDNF network stack (docs-only until Cursor vibe lands; no `ALL_BOUND` invent).
 
+
+## 3i. Symbolic context for permissions (Timothy — 2026-09-06)
+
+Permission and agent authorization **must** consider context enumerated primarily via **symbolic AI**: semantics + logic systems (deontic · epistemic · N3 · bifurcation), including probability where uncertainty belongs — **not** by baking role, grant-success, wallet, or account features into a NaturalAgent embedding.
+
+| Layer | Role |
+|-------|------|
+| Symbolic context | Enumerates *which* situation and *what* may be done |
+| Crypto instruments | Prove + hardness (keyRoles · co-attestation · ZKP) |
+| Situational grants + signed agreements | How specialised bots (child-minder · medical · home-security) and personal/group agents get scoped capacity |
+| UI/UX | After planes are thick enough — target: simpler than AD / Keychain chrome |
+
+**Cut:** inference keeps role/grant/wallet/account in **typed instrument/policy namespaces** only (Alice F6). Who stays unmerged.
+
 ## 4. Instrument kinds (Capt lock — Noddy taxonomy expands)
 
 | Kind | Relation it anchors | Mutability note |
@@ -276,3 +290,5 @@ Blocking gates → report **Capt**.
 | 2026-09-06 | Capt: secrets/wallets/tokens/online accounts/passwords + per-account emails as instruments; F7 network-stack implications queued. |
 | 2026-09-06 | Noddy F1 §20: secrets · wallets · tokens · online accounts · passwords as instruments (≠ who). |
 | 2026-09-06 | Marvin F2 §20: OnlineAccountShape · WalletShape · PasswordVerifierShape · PrivateKeyMaterialShape (cites F1 §20). |
+| 2026-09-06 | Capt: symbolic-first permission context (semantics+logic+probability); specialised agents via grants/agreements; UI after planes; no who-embedding of wallet/role. |
+| 2026-09-06 | Alice F6 §9 (PR #79): secrets/wallets/accounts as instrument features only (cites `ac1d12c` §3h/§20). |
