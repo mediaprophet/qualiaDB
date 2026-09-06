@@ -2,8 +2,8 @@
 
 **Status:** consultation intake (docs / illustration only — not a release gate)  
 **Branch:** `0.0.36-dev` · **Repo:** https://github.com/mediaprophet/qualiaDB  
-**HEAD (at brief draft):** `e49e953` (consultation brief) · diagram crosswalk pending fold
-**Diagram intake:** https://github.com/WebizenAI/devdocs/tree/main/Attachments — review **before** closing consultation  
+**HEAD (at this delta):** `05edb96` (Alice F6 §15 / PR #81) · prior pack `5e2b017` + diagrams `99f657b`
+**Diagram intake:** https://github.com/WebizenAI/devdocs/tree/main/Attachments — included in §2b  
 **Room:** Identifier Fabric (Timothy · Capt · Noddy · Marvin · Neo · Vibe · Alice)  
 **Sole Git push:** Neo  
 **Ops / brief owner:** Capt  
@@ -99,6 +99,20 @@ After Attachments crosswalk on tip `99f657b`, lane owners confirmed:
 3. Require plane tags on every evidence feature bag before any soft-fusion? (Alice: yes as default)
 4. SAME AS who-operator in classifiers → hard fail? (Alice + Marvin: yes)
 
+
+## 2d. Post-brief delta — good-faith reliance / RCA / blast (§3o)
+
+Landed after initial consult pack (`5e2b017`):
+
+| Tip | What |
+|-----|------|
+| `e50296e` | Spine §3o + Noddy F1 §27 |
+| `eece96f` | Marvin F2 §27 shapes |
+| `3c2a1f9` | Vibe F5 §14 diagnose voice |
+| `05edb96` | Alice F6 §15 (PR #81) — reliance/RCA/blast ≠ who |
+
+**Consult add:** mushroom-meme / good-faith reliance on false AI or org-rep claims → AssertionClaim · RelianceRecord · AssumptionChain · RootCauseBundle · BlastRadiusMap; assumption invalidated ≠ identity changed; apology/retract never rewrites who.
+
 ## 3. Locked spine cuts (Capt F3 — Timothy room)
 
 | § | Cut | Gate fail |
@@ -116,6 +130,7 @@ After Attachments crosswalk on tip `99f657b`, lane owners confirmed:
 | **3l** | Temporal relationship assessment · epistemic vs deontic rule-breach | “Bad actor” who-type; knew-bit as who |
 | **3m** | High-cardinality non-defining relations · Quin/NQuin axiom substrate | Identity = social graph; Quin = identity |
 | **3n** | Pseudonyms as aliases · role ≠ accountability · anti-coercion purpose binds | Badge = forever who; proxy launders forbidden purpose |
+| **3o** | Good-faith reliance · false claims · RCA + blast radius | Assumption invalidated ⇒ who rewrite; erase false claim |
 
 ---
 
