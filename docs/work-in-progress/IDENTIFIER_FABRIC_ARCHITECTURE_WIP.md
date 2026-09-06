@@ -128,6 +128,7 @@ Blocking gates → report **Capt**.
 | 2026-09-06 | F2 amend (Noddy crypto skim): split DniRarSession → Dni/Rar/QSessionProof shapes; verificationRelationship + keyRole; tip after fold. |
 | 2026-09-06 | Capt: long-arc lineage §1b (W3C/Solid offramp ~2000→now); session = synthesize requirements, not greenfield invent. |
 | 2026-09-06 | Alice F6 LANDED PR #77 — classifier/symbolic pressure-test; docs planes pass, default one-bag inference fail until typed namespaces. |
+| 2026-09-06 | Noddy F1 amend: §1b hardness + closed keyRole enum + Alice F6 §5.1 answers; Neo fold. |
 | 2026-09-06 | Capt: hardness = multi-instrument time-bounded co-attestation (not stronger single who); W3C list provenance note (timothy.holborn@gmail.com). |
 
 ---

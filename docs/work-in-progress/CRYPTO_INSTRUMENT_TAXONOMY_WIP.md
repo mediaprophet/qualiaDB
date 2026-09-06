@@ -1,10 +1,12 @@
 # WIP — Crypto instrument taxonomy (Identifier Fabric)
 
-**Status:** work-in-progress · **Not standards** · **Branch target:** `0.0.36-dev`  
+**Status:** work-in-progress · **Not standards** · **Branch:** `0.0.36-dev`  
+**Against tip (amend base):** fabric HEAD `4fa5109` · F2 crypto-skim `42dc709` · F6 PR #77  
 **Owner:** Noddy (crypto / identifiers) · **Shapes:** Marvin · **Fold/push:** Neo · **Ops:** Capt.  
-**Spine (intended):** `docs/work-in-progress/IDENTIFIER_FABRIC_ARCHITECTURE_WIP.md`  
+**Spine:** [`IDENTIFIER_FABRIC_ARCHITECTURE_WIP.md`](./IDENTIFIER_FABRIC_ARCHITECTURE_WIP.md) (§1b long-arc + hardness)  
+**Related:** F2 `IDENTIFIER_FABRIC_SHACL_SPLIT_WIP.md` · F5 diagnose map · F6 `alice-f6-classifier-symbolic-binding-pressure-test.md`  
 **Standards baseline:** `docs/manuals/standards/qualia-decentralized-network-fabric/` especially `identifier-resolution.md`, `cryptographic-profile.md`  
-**Substrate:** iterative expansion of `crates/qualia-core-db` (Identity / DID / VC / governance and related) — not a one-shot greenfield invent.
+**Substrate:** iterative expansion of `crates/qualia-core-db` (Identity / DID / VC / governance and related) — long-arc lineage (~2000→W3C DID/VC/Solid offramp), not a one-shot greenfield invent.
 
 **Constraint:** illustration + docs only until Cursor’s vibe delivery lands. No Host invent. No `ALL_BOUND` invent. Collapse of instrument kinds into one “who” is a **gate fail**.
 
@@ -18,8 +20,30 @@ Name the **crypto-backed instrument kinds** that QualiaDB / QDNF use so that:
 2. Network design can cite a fabric layer: routing, session proof, and credentials never re-merge into that bag.
 3. Marvin can encode a SHACL-first split without Thing-washing natural agents.
 4. Existing QDNF role table (`identifier-resolution` §1) stays authoritative for *what question an identifier answers*; this doc classifies *what kind of cryptographically meaningful instrument* sits in that fabric.
+5. Inference/symbolic binders (Alice F6) can cite typed instrument / `keyRole` axes without inventing a who-bag.
 
 **Redefined sense (first-class):** a **natural agent** is not an identifier and is not reducible to any single DID, address, credential, or biometric sample. Instruments bind *relations* around that agent (and around services, content, machines, places) without becoming the agent.
+
+---
+
+## 1b. Hardness — multi-instrument time-bounded co-attestation
+
+**Cross-link:** spine [`IDENTIFIER_FABRIC_ARCHITECTURE_WIP.md`](./IDENTIFIER_FABRIC_ARCHITECTURE_WIP.md) §1b · Alice F6 §2.4 / §3 (keyRole wash, DNI=RAR=QSession bag) · crypto profile purpose-separation.
+
+Cryptographic hardness for human-centric systems is **not** one signature or one identifier.
+
+| Ingredient | Role |
+|------------|------|
+| **Stable primitives** | Time (and other non-negotiable baselines) remain outside “clever” rewrite |
+| **Formula of verified signatures** | Enough independent proofs, not a single auth bit |
+| **Time-bounded execution** | Validity windows / epochs / sequence — stale co-attestation does not count |
+| **Scoped participants** | Particular machines, networks, entities, agents — not a global anonymous bag |
+
+**Gate:** raising the bar this way **MUST NOT** collapse into a “stronger single who.” Hardness lives in **co-attestation across instruments and keyRoles**, not in minting one mega-identifier.
+
+Single-instrument “auth” is the easy hack surface; the fabric is the opposite.
+
+Provenance of the long design arc (illustrative, not a trust root): W3C list traffic searchable via `timothy.holborn@gmail.com` on lists.w3.org.
 
 ---
 
@@ -246,3 +270,25 @@ Cite `cryptographic-profile.md` / `post-quantum-security.md`:
 ---
 
 *End of WIP — Noddy F1 crypto instrument taxonomy.*
+
+## 12. Answers to Alice F6 §5.1 (Noddy)
+
+1. **`idf:keyRole` enum:** **Closed** for the first inference namespace — use the set in §5.11. Unknown roles → **held / not-yet**, never “other-id” or who.
+2. **Biometric-instance embedding:** Licit only as a **gated instrument** feature: family-linked (`idf:familyOf`), non-who namespace (`instrument.biometric.instance.*`), consent/sensitivity ceiling honored, **never** a person vector. Prefer refuse sample vectors in default ML until a dedicated crypto/privacy profile lands; if used, F5/F6 collapse detectors apply (instance ≠ timeless who).
+3. **Dual-VC envelope features for `instrument.*`:** Allowed — proof algorithm, issuer verification-method digest, issuance/expiry, dual-stack tag (W3C vs native), verification *success bit as envelope only*. **Forbidden in instrument→who path:** payload claims, subject-as-person label, “verified ⇒ true ⇒ who.”
+4. **Additional hard-negatives:** Yes — treat **QLink ephemeral DH** ≠ **QSession traffic AEAD** as distinct `keyRole`s (`qlink-ephemeral-dh` vs `transport-aead`). Also: discovery-psk ≠ capability-presentation ≠ controller-signing; RAR route-update ≠ session-authentication (already in F2).
+
+---
+
+
+## 13. Changelog
+
+| When | Note |
+|------|------|
+| 2026-09-06 | F1 initial taxonomy landed (Neo fold). |
+| 2026-09-06 | F2 crypto skim: DNI/RAR/QSession purpose-separation. |
+| 2026-09-06 | **Amend:** §1b hardness (multi-instrument time-bounded co-attestation); cross-link spine §1b + F6; closed `keyRole` enum; QLink DH vs QSession AEAD; answers to Alice F6 §5.1. |
+
+---
+
+*End of WIP — Noddy F1 crypto instrument taxonomy (hardness + F6 cross-link amend).*
