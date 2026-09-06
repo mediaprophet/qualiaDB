@@ -1,7 +1,7 @@
 # WIP — Identifier Fabric SHACL-first split (F2)
 
 **Status:** work-in-progress · **Not standards** · **Branch:** `0.0.36-dev`  
-**Against tip:** F2 §22 `2cd150c` · F1 §23 tip (this fold) · architecture spine
+**Against tip:** F2 §23 `6e0de10` · F1 §24 `ceb59d9` · spine §3l · architecture spine
 **Owner:** Marvin (ontology / shapes) · **Taxonomy:** Noddy · **Fold/push:** Neo · **Ops:** Capt.  
 **Standards baseline:** `docs/manuals/standards/qualia-decentralized-network-fabric/` (`identifier-resolution.md`, `ontological-contracts.md`, `cryptographic-profile.md`) · `docs/manuals/standards/shacl-first-vs-owl-ok-class-list.md`  
 **Substrate:** uplift `crates/qualia-core-db` Identity / DID / VC / agency / governance primitives — **not** parallel invent.
@@ -997,6 +997,80 @@ idf:EnvironmentPredicateShape a sh:NodeShape ;
 - Alice: sensor/GIS features = handle/instrument namespaces only.
 
 ---
+
+## 24. Amend — temporal relationship assessment & epistemic rule-breach (F1 §24)
+
+**Cite:** Noddy F1 §24 tip `ceb59d9` · spine §3l · §16 modalities · §17 sense-context · §18 policy · §21 symbolic permissions · Alice F6 claim–policy namespaces.
+
+### 24.1 Cut
+
+Relationship quality and norm compliance **evolve in time**. They are claim–policy + epistemic/deontic assertions over *relations and contexts* — **not** NaturalAgent who-tokens, and not a static “good/bad person” embedding.
+
+| Pattern | Shape expression |
+|---------|------------------|
+| Met in good faith; later adverse / knowable over time | Time-indexed RelationshipAssessmentClaim + evidence; prior good-faith claim remains provenance — not deleted who-rewrite |
+| Inference over that arc | Typed edges on relation/context graphs — never bake into NaturalAgent embedding |
+| Broke rule, didn’t understand | RuleBreachClaim with epistemic `¬K(rule)` / low awareness + sense-context binding |
+| Broke rule knowing it | Same deontic breach, epistemic `K(rule)` — culpability on **claim**, not who-merge |
+| Depends on the rule | NormativeRule + sense-context; crypto only hardens attestations |
+
+**Gate fail:** “bad actor” as NaturalAgent type; knew-vs-unknowing as permanent who-bit; cultural rule as universal who-attribute; relationship-changed ⇒ identity-changed.
+
+### 24.2 Shapes
+
+#### `idf:RelationshipAssessmentClaimShape` (claim plane)
+| Property | Note |
+|----------|------|
+| `idf:parties` | 2..* agents/entities in the relation |
+| `idf:timeInterval` / epoch | Required — assessments are time-indexed |
+| `idf:stance` | good-faith · adverse · mixed · disputed · … |
+| `idf:evidence` | 0..* instruments/claims |
+| Prior assessments | Remain as provenance; do not rewrite who |
+
+#### `idf:KnowabilityAssertionShape` (epistemic modality)
+| Property | Note |
+|----------|------|
+| `idf:aboutClaim` or `idf:aboutRule` | Target claim or NormativeRule |
+| `idf:epistemicStatus` | K(rule) · ¬K(rule) · reasonably-knowable-by-t · disputed |
+| `idf:asOf` | Time of knowability judgment |
+| Forbidden | Entail NaturalAgent who |
+
+#### `idf:NormativeRuleShape` (normative instrument / cited rule)
+| Property | Note |
+|----------|------|
+| `idf:ruleId` | Stable rule identifier |
+| `idf:senseContext` | locale · community · era (SenseContextBinding) |
+| `idf:scope` | What the rule covers |
+| Framing | Lexical + community instrument — not who |
+
+#### `idf:RuleBreachClaimShape` (deontic + epistemic)
+| Property | Note |
+|----------|------|
+| `idf:rule` | → NormativeRule |
+| `idf:parties` | Alleged breachers / affected |
+| `idf:deonticAssertion` | breach recorded |
+| `idf:epistemicQualifier` | knew / didn’t understand / disputed — via KnowabilityAssertion |
+| `idf:timeInterval` | When breach alleged |
+
+```turtle
+idf:RelationshipAssessmentClaimShape a sh:NodeShape ;
+  sh:property [ sh:path idf:parties ; sh:minCount 2 ] ;
+  sh:property [ sh:path idf:timeInterval ; sh:minCount 1 ] ;
+  sh:property [ sh:path idf:stance ; sh:minCount 1 ] .
+
+idf:RuleBreachClaimShape a sh:NodeShape ;
+  sh:property [ sh:path idf:rule ; sh:node idf:NormativeRuleShape ; sh:minCount 1 ] ;
+  sh:property [ sh:path idf:epistemicQualifier ; sh:minCount 0 ] .
+  # Culpability on claim — MUST NOT entail NaturalAgent who.
+```
+
+### 24.3 Crypto / diagnose
+
+- Hardness: co-attestation of evidence instruments over windows — not stronger “trust who.”
+- Vibe: “relationship changed over time” ≠ “identity changed.”
+- Alice: culpability/arc features in claim–policy/relation namespaces only.
+
+---
 ## 13. Changelog
 
 | When | Note |
@@ -1018,6 +1092,8 @@ idf:EnvironmentPredicateShape a sh:NodeShape ;
 | 2026-09-06 | Spine §3j: `OrgStructuralRoleShape` · `GroupAuthMembershipShape` (election turnover = rebind, not who-rewrite); tip `78d3878`. |
 
 | 2026-09-06 | F1 §23: `EnvironmentPredicateShape` · `PlaceBoundSecretShape` · `SensorIdShape` · GIS binding · EnvironmentAttestation; env≠who. |
+
+| 2026-09-06 | F1 §24: `RelationshipAssessmentClaimShape` · `KnowabilityAssertionShape` · `NormativeRuleShape` · `RuleBreachClaimShape`; relationship≠who; tip `ceb59d9`. |
 
 ---
 

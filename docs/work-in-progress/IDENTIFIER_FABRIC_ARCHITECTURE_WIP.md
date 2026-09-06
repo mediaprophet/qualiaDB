@@ -359,3 +359,4 @@ Blocking gates → report **Capt**.
 | 2026-09-06 | Noddy F1 §23: environment-scoped sensors · place-bound secrets · GIS predicates (≠ who). |
 | 2026-09-06 | Marvin F2 §23: EnvironmentPredicateShape · PlaceBoundSecretShape · SensorIdShape. |
 | 2026-09-06 | Capt: temporal relationship assessment · epistemic rule-breach (knew vs didn’t understand); relationship-changed ≠ identity-changed. |
+| 2026-09-06 | Marvin F2 §24: RelationshipAssessmentClaimShape · KnowabilityAssertionShape · NormativeRuleShape · RuleBreachClaimShape (cites F1 `ceb59d9`). |
