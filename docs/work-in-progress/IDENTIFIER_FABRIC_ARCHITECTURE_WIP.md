@@ -230,6 +230,24 @@ Relationship quality and norm compliance **evolve in time**. They are claim–po
 
 Aligns with §3d modalities/guardianship, §3e sense-context, §3f policy, §3i symbolic permissions; Noddy F1 §24 path ready.
 
+## 3m. High-cardinality relations & Quin axiom substrate (Timothy — 2026-09-06)
+
+Humans (and brands, orgs, AI-agents) have **thousands** of relationships/interactions per month–year–lifetime. Others **do not define** one another. They accumulate contextual, developmental subjective/objective views that **grow and dissolve** under rules — complex interdependent semantics on the claim–policy–relation graph, never a who-merge.
+
+| Pattern | Fabric expression |
+|---------|-------------------|
+| High cardinality | Many relation edges + assessment claims — expected, not a bug |
+| Non-defining counterparts | Counterpart set never embeds into NaturalAgent identity; views hang on **relation/context** nodes |
+| Growth and dissolution | Time-bounded relation axioms (begin · revise · end); dissolution ≠ erase provenance |
+| Complex interdependent axioms | Ontology-governed policy + deontic/epistemic/N3 over multi-plane graph (§3f · §3l) |
+| Quin / NQuin | Native 48-byte graph substrate for typed edges — **storage/graph form** (ADR 0001), not identity |
+
+**Gate fail:** identity = social graph; brand follows = who; dissolving a friendship rewrites person type; packing lifetime counterparts into one who-embedding.
+
+**Human-centric cut:** Quin structure exists to give sufficient scope for these interdependent axioms — informatics / AI / internet without collapsing planes into a who-bag.
+
+Aligns with §3l temporal assessment; Noddy F1 §25 path ready.
+
 ## 4. Instrument kinds (Capt lock — Noddy taxonomy expands)
 
 | Kind | Relation it anchors | Mutability note |
@@ -360,3 +378,5 @@ Blocking gates → report **Capt**.
 | 2026-09-06 | Marvin F2 §23: EnvironmentPredicateShape · PlaceBoundSecretShape · SensorIdShape. |
 | 2026-09-06 | Capt: temporal relationship assessment · epistemic rule-breach (knew vs didn’t understand); relationship-changed ≠ identity-changed. |
 | 2026-09-06 | Marvin F2 §24: RelationshipAssessmentClaimShape · KnowabilityAssertionShape · NormativeRuleShape · RuleBreachClaimShape (cites F1 `ceb59d9`). |
+| 2026-09-06 | Capt: high-cardinality non-defining relations · Quin/NQuin as axiom substrate (≠ who); growth/dissolution time-bounded. |
+| 2026-09-06 | Noddy F1 §25: high-cardinality relations · Quin axiom substrate · non-defining counterparts. |

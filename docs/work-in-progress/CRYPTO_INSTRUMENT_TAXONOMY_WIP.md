@@ -710,6 +710,40 @@ Once planes are thick enough: easier than Active Directory / Keychain — chrome
 
 ---
 
+## 25. Amend — high-cardinality relations & Quin axiom substrate (2026-09-06)
+
+**Cite:** Timothy room (thousands of interactions/month–lifetime · agents/brands don’t define one another · contextual developmental views · growth + dissolution · quin structure for interdependent axioms) · F1 §24 temporal assessment · §16–§18 modalities/policy · ADR 0001 Quin alignment · architecture spine human-centric cut.
+
+### 25.1 Cut
+
+**Relations are high-cardinality and non-defining.** A NaturalAgent (or brand, org, AI-agent) is **not** constituted by the set of others they interact with. Each interaction yields contextual, developmental **subjective/objective views** that grow and dissolve over time under rules — complex semantics on the claim–policy–relation graph, never a who-merge.
+
+| Pattern | Fabric expression |
+|---------|-------------------|
+| Thousands of human–human (and human–brand/entity) interactions | Many relation edges + assessment claims; cardinality is expected, not a bug |
+| Others don’t define one another | No embedding of counterpart set into NaturalAgent identity; views hang on **relation/context** nodes |
+| Subjective / objective views develop over time | Time-indexed RelationshipAssessmentClaim (+ evidence) — §24 |
+| Growth and dissolution | Relation axioms are time-bounded (begin · revise · end); dissolution ≠ erase provenance |
+| Complex interdependent axioms | Ontology-governed policy + deontic/epistemic/N3 over multi-plane graph (§18) |
+| Quin structure | Native substrate (48-byte Quin / NQuin graph) holds typed edges for those axioms — **storage/graph form**, not identity |
+
+### 25.2 Crypto / graph notes
+
+- Instruments and signed claims live as (or cite) Quins; private keys never as Quin/log features (§20).
+- Gate fail: “identity = social graph”; brand follows = who; dissolving a friendship rewrites person type; packing lifetime counterparts into one who-embedding for inference.
+
+### 25.3 Handoff
+
+| Role | Next |
+|------|------|
+| **Neo** | Fold §25 |
+| **Marvin** | Note high-cardinality + non-defining on relation shapes; optional RelationLifecycle (growth/dissolution) slots |
+| **Alice** | Counterpart-set / social-graph features ≠ NaturalAgent embedding |
+| **Capt.** | Spine: Quin as axiom substrate for human-centric interdependent relations (≠ who) |
+| **Vibe** | Diagnose: dense relation graph ≠ identity collapse |
+
+---
+
 *End of WIP — Noddy F1 crypto instrument taxonomy.*
 
 ## 14. Amend — FOAF-modern entity/agent types + WebID/SAN/hardware (2026-09-06)
@@ -801,3 +835,4 @@ Digital evidence capabilities fail socially if a jury cannot follow them. Fabric
 | 2026-09-06 | **Amend §22:** org structure + mutable group authentication (elections = rebind, not who). |
 | 2026-09-06 | **Amend §23:** environment-scoped sensors · place-bound secrets · GIS predicates (≠ who). |
 | 2026-09-06 | **Amend §24:** temporal relationship assessment · epistemic rule-breach (knew vs didn’t understand); ≠ who rewrite. |
+| 2026-09-06 | **Amend §25:** high-cardinality non-defining relations · Quin/NQuin axiom substrate (≠ who). |
