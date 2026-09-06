@@ -1,7 +1,7 @@
 # WIP — Identifier Fabric SHACL-first split (F2)
 
 **Status:** work-in-progress · **Not standards** · **Branch:** `0.0.36-dev`  
-**Against tip:** co-attestation fold `77a13e3` · F1 hardness `bb714b2` · Noddy §5.5 tighten · architecture spine `IDENTIFIER_FABRIC_ARCHITECTURE_WIP.md`  
+**Against tip:** §5.5 tighten `766a1f6` · F1 §14 `8724174` · architecture spine `IDENTIFIER_FABRIC_ARCHITECTURE_WIP.md`
 **Owner:** Marvin (ontology / shapes) · **Taxonomy:** Noddy · **Fold/push:** Neo · **Ops:** Capt.  
 **Standards baseline:** `docs/manuals/standards/qualia-decentralized-network-fabric/` (`identifier-resolution.md`, `ontological-contracts.md`, `cryptographic-profile.md`) · `docs/manuals/standards/shacl-first-vs-owl-ok-class-list.md`  
 **Substrate:** uplift `crates/qualia-core-db` Identity / DID / VC / agency / governance primitives — **not** parallel invent.
@@ -240,6 +240,7 @@ Gaps only → Capt WIP / Vibe deltas — **no** Host invent from F2.
 6. DNI ≠ RAR ≠ QSession proof (purpose-separated); session proof ≠ route-update ≠ DID controller authority unless separately authorized (cite crypto profile).
 7. Inference feature spaces (Alice F6) keep who / claim / handle as **separate** dimensions.
 8. Co-attestation bundle lives on claim plane; ≥2 members + time-bound + keyRole diversity (not all identical); never collapses to stronger single who (F1 §1b).
+9. AI-agent ≠ NaturalAgent ≠ Machine; WebID/SAN/hardware are instruments; WN lexicalConcept ≠ fabric plane (F1 §14).
 
 ---
 
@@ -296,7 +297,8 @@ Full TTL fixtures → later under `shapes/` only when Capt./Neo unlock coding; u
 | **Capt.** | Spine changelog: F2 amend (purpose-separated route/session shapes); blockers to Capt. |
 | **Vibe** | F5 diagnose / `suggested_fix` can cite plane names; never who→claim/handle collapse; never “session = route authority” |
 | **Alice** | F6 pressure-test separate feature spaces against §5–§7; keep keyRole dimensions distinct |
-| **Marvin** | Idle after Neo re-fold unless Capt enumerates new kinds |
+| **Marvin** | §14 entity/agent + AI-agent + WebID/SAN shapes; idle after Neo fold unless Capt asks more |
+| **Vibe** | Diagnose: AI-agent ≠ person ≠ machine; jury-safe naming (F1 §14.4) |
 
 ---
 
@@ -309,6 +311,108 @@ Full TTL fixtures → later under `shapes/` only when Capt./Neo unlock coding; u
 
 ---
 
+
+## 14. Amend — FOAF-modern entity/agent type shapes (F1 §14)
+
+**Cite:** F1 §14 tip `8724174` · Capt spine · Timothy FOAF-modern + WN · jury explainability.
+
+### 14.1 Layering shapes (lexical ≠ plane ≠ who)
+
+| Layer | Shape / link | Framing |
+|-------|--------------|---------|
+| Entity / agent **type** | `idf:EntityTypeShape` specializations below | Type predicates — not CS identity bag |
+| Attributes / properties | hang off type via ordinary properties | Never who-replacement |
+| Relation axioms | `idf:customerOf` · `idf:operatedBy` · `idf:owns` · … | Relations — not auth merge |
+| Instruments | existing §6 + §14.3 | Relate to types |
+| Lexical concepts | `idf:lexicalConcept` → WN/OMW synset/sense | Vocabulary only — **≠ fabric plane** |
+
+**Gate fail:** WordNet `person`/`entity` sense used as NaturalAgent who or under `owl:Thing` commodity framing.
+
+### 14.2 Type shapes (hard cuts)
+
+#### `idf:NaturalAgentShape` (existing §5.1 — reinforced)
+- Living human principal · SHACL-first · never FOAF Person-as-Thing
+- Optional `idf:lexicalConcept` (WN sense) for *labels* only
+- Instruments relate via `idf:relatedByInstrument` — no required single DID
+
+#### `idf:AiAgentShape` — distinct agent-type plane
+| Property | Note |
+|----------|------|
+| `idf:plane` / type | `AiAgent` — **not** NaturalAgent, **not** Machine |
+| Framing | Artifact/agent-system (OWL-ok for the runtime artifact); **operators/customers** who are humans stay SHACL-first via relations |
+| `idf:identifierArray` | 0..* instruments (DID, keys, service IDs, …) — array ≠ who |
+| `idf:customerOf` / `idf:operatedBy` / `idf:delegatedBy` | Relations to NaturalAgent / Organization — never identity merge |
+| Agent key | `idf:agentKeyOf` **does not** entail human principal (`ontological-contracts`) |
+
+**Gate fail:** AI-agent = person; AI-agent = machine; operator key = NaturalAgent who.
+
+#### `idf:MachineDeviceShape` — artifact bundle
+| Property | Note |
+|----------|------|
+| Type | Machine/device — artifact OWL-ok |
+| `idf:hasHardwareId` | 1..* → `idf:HardwareIdShape` |
+| `idf:hasNetworkId` | 0..* → network address / DNI path instruments |
+| Bundle | Machine = **related instruments**, not one id = person |
+| Hardness | Eligible as `idf:attestationMember` set inside `idf:CoAttestationBundleShape` (§5.5) |
+
+**Gate fail:** machine-id = NaturalAgent; single hardware id = whole machine who-bag.
+
+#### `idf:OrganizationShape` / `idf:ServiceShape`
+- Own DID/VC/instrument set · artifact or mixed
+- Do not equate with NaturalAgent
+- Optional lexicalConcept for labels only
+
+### 14.3 Additional instrument shapes (WebID / SAN / hardware)
+
+| Kind | Shape id | Notes |
+|------|----------|-------|
+| Hardware identifier | `idf:HardwareIdShape` | TPM/serial/attestation handle — artifact; ≠ who |
+| Network identifier | (existing NetworkAddress / DNI path) | Addresses & adjacency — ≠ who |
+| Certificate SAN | `idf:CertSanShape` | SAN entries as instrument bindings |
+| WebID-TLS | `idf:WebIdTlsShape` | Legacy/Solid-era TLS WebID binding — **instrument** |
+| WebID-RSA | `idf:WebIdRsaShape` | RSA WebID pattern — **instrument** |
+| Signed RDF / VC | existing VC + Claim shapes | Origin≠truth |
+
+All: `idf:relatesTo` entity/agent type nodes; collapse to who = **gate fail**.
+
+### 14.4 WordNet / OMW binding (docs only)
+
+```turtle
+idf:NaturalAgentShape sh:property [
+  sh:path idf:lexicalConcept ;
+  sh:datatype xsd:anyURI ;  # WN/OMW sense IRI
+  sh:minCount 0 ;
+] .
+# lexicalConcept MUST NOT entail idf:plane NaturalAgent identity merge
+# Subset packs: volume-backed LexiconPack citing WN; upliftFrom prior pack SemVer
+```
+
+Recommend: volume-backed **subset** LexiconPack (≤ WN full size; often ≪ 100MB encoded) with `upliftFrom` + localeSurfaces (OMW) — concept ids stable; fabric planes separate.
+
+### 14.5 Jury / audit explainability (shape constraint on docs)
+
+Evidence surfaces SHOULD enumerate **who · claim · handle · instrument** in plain language (cite F5). Co-attestation presents “these signatures, this window, these machines/networks/agents” — never an opaque who-token. WebID/SAN/hardware/VC named as **tools**.
+
+### 14.6 TTL sketches (illustrative)
+
+```turtle
+idf:AiAgentShape a sh:NodeShape ;
+  sh:property [ sh:path idf:agentType ; sh:hasValue idf:AiAgent ; sh:minCount 1 ] ;
+  sh:property [ sh:path idf:identifierArray ; sh:node idf:InstrumentShape ; sh:minCount 0 ] ;
+  sh:property [ sh:path idf:operatedBy ; sh:node idf:NaturalAgentShape ; sh:minCount 0 ] .
+  # NOT NaturalAgentShape; NOT MachineDeviceShape.
+
+idf:MachineDeviceShape a sh:NodeShape ;
+  sh:property [ sh:path idf:hasHardwareId ; sh:node idf:HardwareIdShape ; sh:minCount 1 ] ;
+  sh:property [ sh:path idf:hasNetworkId ; sh:minCount 0 ] .
+
+idf:WebIdTlsShape a sh:NodeShape ;
+  sh:property [ sh:path idf:instrumentKind ; sh:hasValue idf:WebIdTls ] ;
+  sh:property [ sh:path idf:relatesTo ; sh:minCount 0 ] .
+  # Instrument only — never NaturalAgent who.
+```
+
+---
 ## 13. Changelog
 
 | When | Note |
@@ -317,6 +421,7 @@ Full TTL fixtures → later under `shapes/` only when Capt./Neo unlock coding; u
 | 2026-09-06 | Noddy crypto skim: split `idf:DniRarSessionShape` → `idf:DniShape` · `idf:RarShape` · `idf:QSessionProofShape`; DID `verificationRelationship`; capability/discovery discrimination + `idf:keyRole`. |
 | 2026-09-06 | Co-attestation hardness: `idf:CoAttestationBundleShape` on claim plane (time-bounded multi-instrument formula + distinct keyRoles); cites F1 §1b tip `bb714b2` — never stronger single who. |
 | 2026-09-06 | Noddy §5.5 tighten: `attestationMember` sh:minCount **2**; `keyRole` diversity SHOULD (not all identical); tip base `77a13e3`. |
+| 2026-09-06 | F1 §14: FOAF-modern type shapes (`AiAgent` · `MachineDevice` · Org/Service); WebID-TLS/RSA · SAN · hardware instruments; WN/OMW `lexicalConcept` ≠ plane; jury explainability. Base F1 `8724174`. |
 
 ---
 
