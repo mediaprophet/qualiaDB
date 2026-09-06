@@ -2,15 +2,17 @@
 
 **Status:** work-in-progress · **Not standards** · **Branch:** `0.0.36-dev`  
 **Owner:** Alice (inference / ML / symbolic AI) · **Fold/push:** Neo · **Ops:** Capt.  
-**Against fabric HEAD:** `c7fa0b85` (F5 **§13** env-capacity · relationship≠identity · dense-graph≠who · Quin≠identity) · includes F2 **§25** `9c66f46d` · F1 **§25** + spine **§3m** `acd3da35` · F2 **§24** `b86f2639` · F1 **§24** + spine **§3l** `ceb59d93` · spine **§3k** `ec6ea8f4` · F1/F2 **§23** `6e0de103` · prior secrets fold `ac1d12c` (§3h / F1+F2 §20) · prior locator fold `eabccc9` / `4a44b0d` (§3g / F2 §19 / F5 §12)  
-**Room tips resolved on this HEAD:** `ec6ea8f` · `ceb59d9` · `b86f263` · `acd3da3` · **F5 §13** `c7fa0b8`  
-**F2 content SHA (history):** `565097f` · **F5 diagnose SHA:** `796a7d4` · **F5 §11:** `1d55f560` · **F5 §12 / F2 §19:** `4a44b0d` · **§3h / F1+F2 §20:** `ac1d12c` · **§3k / F1+F2 §23:** `ec6ea8f` / `6e0de10` · **§3l / F1+F2 §24:** `ceb59d9` / `b86f263` · **§3m / F1+F2 §25:** `acd3da3` / `9c66f46` · **F5 §13:** `c7fa0b85`  
+**Against fabric HEAD:** `3c2a1f9e` (F5 **§14** reliance · RCA · blast-radius diagnose voice) · includes F2 **§27** `eece96f9` · F1 **§27** + spine **§3o** `e50296e1` · F5 **§13** `c7fa0b85` · F2 **§25** `9c66f46d` · F1 **§25** + spine **§3m** `acd3da35` · F2 **§24** `b86f2639` · F1 **§24** + spine **§3l** `ceb59d93` · spine **§3k** `ec6ea8f4` · F1/F2 **§23** `6e0de103` · prior secrets fold `ac1d12c` (§3h / F1+F2 §20) · prior locator fold `eabccc9` / `4a44b0d` (§3g / F2 §19 / F5 §12)  
+**Room tips resolved on this HEAD:** `e50296e` (F1 §27 + spine §3o) · `eece96f` (F2 §27) · **F5 §14** `3c2a1f9e` · `ec6ea8f` · `ceb59d9` · `b86f263` · `acd3da3` · **F5 §13** `c7fa0b8`  
+**F2 content SHA (history):** `565097f` · **F5 diagnose SHA:** `796a7d4` · **F5 §11:** `1d55f560` · **F5 §12 / F2 §19:** `4a44b0d` · **§3h / F1+F2 §20:** `ac1d12c` · **§3k / F1+F2 §23:** `ec6ea8f` / `6e0de10` · **§3l / F1+F2 §24:** `ceb59d9` / `b86f263` · **§3m / F1+F2 §25:** `acd3da3` / `9c66f46` · **F5 §13:** `c7fa0b85` · **§3o / F1 §27:** `e50296e1` · **F2 §27:** `eece96f9` · **F5 §14:** `3c2a1f9e`  
 **F2 §19:** `idf:RelationScopedLocatorShape` **LANDED** tip `4a44b0d` — typed instrument namespace for spine §3g locators.  
 **F2 §20:** `idf:OnlineAccountShape` · `idf:WalletShape` · `idf:BearerTokenShape` / `idf:OAuthTokenShape` · `idf:PasswordVerifierShape` · `idf:PrivateKeyMaterialShape` **LANDED** tip `ac1d12c` — secrets/wallets/tokens/accounts are instruments, not who.  
 **F2 §23:** `idf:EnvironmentPredicateShape` · `idf:PlaceBoundSecretShape` · `idf:SensorIdShape` · `idf:GisEnvironmentBindingShape` · `idf:EnvironmentAttestationShape` **LANDED** `6e0de10`.  
 **F2 §24:** `idf:RelationshipAssessmentClaimShape` · `idf:KnowabilityAssertionShape` · `idf:NormativeRuleShape` · `idf:RuleBreachClaimShape` **LANDED** `b86f263`.  
 **F2 §25:** `idf:RelationLifecycleShape` + Quin substrate note **LANDED** `9c66f46`.  
 **F5 §13:** env-capacity · relationship≠identity · dense-graph≠who · Quin≠identity **LANDED** `c7fa0b85`.  
+**F2 §27:** `idf:AssertionClaimShape` · `idf:RelianceRecordShape` · `idf:AssumptionChainShape` · `idf:RootCauseBundleShape` · `idf:BlastRadiusMapShape` · `idf:OrgRepresentativeBindingShape` **LANDED** `eece96f9`.  
+**F5 §14:** good-faith reliance · RCA · blast-radius · assumption-invalidated≠identity-changed **LANDED** `3c2a1f9e`.  
 **Constraint:** docs / illustration only. **No Host invent. No `ALL_BOUND` invent. No vibe-host surface widen. No F7 network-stack invent.** Neo folds.
 
 **Pressure-test question:** Can classifiers and symbolic bindings keep these four strata distinct **without collapsing into a single feature-space bag**?
@@ -34,10 +36,11 @@
 - **Dense non-defining graph / Quin ≠ who** — spine §3m + F1/F2 §25 + F5 §13: high-cardinality relations do not define counterparts; Quin/NQuin = axiom substrate, not identity (see §12)
 - **Pseudonyms (privacy or legal) ≠ second who** — locator/instrument aliases; same collapse as §8 relation-scoped addresses (see §13)
 - **Anti-coercion / sanctuary policy ≠ who** — claim–policy / deontic instruments in the sanctuary environment (Webizen Desktop); **forward pointer** — no dedicated fabric shapes on this tip (see §14)
+- **Good-faith reliance / RCA / blast radius ≠ who** — spine §3o + F1/F2 §27 + F5 §14: AssertionClaim · RelianceRecord · AssumptionChain · RootCauseBundle · BlastRadiusMap · OrgRepresentativeBinding stay in **claim–policy** namespaces. Assumption invalidated ≠ identity changed. Org-rep role instrument ≠ who (see §15)
 
 `did:q42` / observer DID remain **provisional topology/coord join keys**, not “who.”
 
-**Gate fail:** any neural concat, softmax, shared URI class, or SHACL target that merges the four strata (or merges keyRole / DNI·RAR·QSession / locator-as-who / ZKP-or-grant-as-who / secret·wallet·token·account-as-who / env-grant-or-co-presence-as-who / relationship-changed-as-identity / dense-graph-as-who / pseudonym-as-who / sanctuary-policy-as-who) into one CS-style “identity” / feature bag.
+**Gate fail:** any neural concat, softmax, shared URI class, or SHACL target that merges the four strata (or merges keyRole / DNI·RAR·QSession / locator-as-who / ZKP-or-grant-as-who / secret·wallet·token·account-as-who / env-grant-or-co-presence-as-who / relationship-changed-as-identity / dense-graph-as-who / pseudonym-as-who / sanctuary-policy-as-who / retract-sorry-RCA-blast-as-who / SAME-AS-as-who-merge) into one CS-style “identity” / feature bag.
 
 ---
 
@@ -50,22 +53,24 @@
 - Spine §3k (`ec6ea8f`) / F1+F2 §23 / F5 §13 (`c7fa0b85`): environment identifiers condition capacity; they do not name who.
 - Spine §3l (`ceb59d9`) / F1+F2 §24 / F5 §13: relationship quality and rule-breach are claim–policy over time; they do not rewrite who.
 - Spine §3m (`acd3da3`) / F1+F2 §25 / F5 §13: high-cardinality relations + Quin edges are graph form, not identity.
+- Spine §3o (`e50296e`) / F1+F2 §27 / F5 §14 (`3c2a1f9e`): good-faith reliance, AssumptionChain, RootCauseBundle, and BlastRadiusMap are claim–evidence–accountability — assumption invalidated ≠ identity changed.
+- **SAME AS never who-merge** (consultation brief §2c / QDNF contracts): `owl:sameAs` is not a who-operator.
 - Completeness bar here = honest pressure-test + named failure modes + later constraints. Implementation waits on Capt / Cursor vibe / Neo fold.
 
 ---
 
 ## 1. Sources read
 
-Paths as they exist at tip `c7fa0b85`. Short note = what each says about the four strata (and intra-instrument dims).
+Paths as they exist at tip `3c2a1f9e`. Short note = what each says about the four strata (and intra-instrument dims).
 
 ### 1.1 Identifier Fabric WIP (primary)
 
 | Path | What it says about the strata |
 |------|-------------------------------|
-| `docs/work-in-progress/IDENTIFIER_FABRIC_ARCHITECTURE_WIP.md` | Spine. CS “identity” = auth subject + identifier + attributes + claims in **one bag** is the problem. Four pillars: natural agent · claim/opinion · spatiotemporal/route handle · instrument kinds. `did:q42` / observer DID = provisional topology, not who. **§1b:** long-arc lineage; DIDs/VCs are instruments, not who. **§3g** (`1d55f560`): locators name a *relationship*, not a permanent who-token. **§3h** (`ac1d12c`): secrets · wallets · tokens · online accounts · passwords are instruments/relations, not who-tokens. **§3k** (`ec6ea8f`): GIS/sensor/network identifiers condition capacity — instruments + handles, not who. **§3l** (`ceb59d9`): relationship assessment + epistemic rule-breach are claim–policy, not who-rewrite. **§3m** (`acd3da3`): high-cardinality non-defining relations; Quin/NQuin = axiom substrate, not identity. **F7** queued as QDNF network-stack pointer only. |
-| `docs/work-in-progress/CRYPTO_INSTRUMENT_TAXONOMY_WIP.md` | **F1 / Noddy.** Planes table: who ≠ claim ≠ handle ≠ instrument. Instruments bind *relations*; they do not replace the agent. QDNF role table stays authoritative for *what question an identifier answers*. Biometric **family** vs **instance**. Collapse of any kind into “who” = gate fail. **Alias** row: collapse to who = **fail**. **§20:** password/token/wallet/online-account kinds. **§23:** environment-scoped sensors · place-bound secrets · GIS predicates. **§24:** RelationshipAssessmentClaim · KnowabilityAssertion · NormativeRule · RuleBreachClaim (time + epistemic). **§25:** high-cardinality non-defining relations · Quin axiom substrate. Alice handoffs: sensor/GIS = handle/instrument; culpability/arc = claim–policy; counterpart-set ≠ NaturalAgent embedding. |
-| `docs/work-in-progress/IDENTIFIER_FABRIC_SHACL_SPLIT_WIP.md` | **F2 / Marvin** (content `565097f` + crypto-skim amend `42dc709`; tip through **§25**). Four plane shapes + specialized instrument/claim packs. **§19** locators · **§20** secrets/wallets/tokens/accounts. **§23** env predicates / place-bound secrets / sensor ids. **§24** relationship-assessment + epistemic/deontic breach shapes. **§25** `idf:RelationLifecycleShape` + Quin ≠ who. Cross-plane preds are **relations, not merges**. No dedicated Pseudonym / AntiCoercion fabric shapes on this tip — cite Alias + locator / policy+deontic until Marvin lands them. |
-| `docs/work-in-progress/IDENTIFIER_FABRIC_DIAGNOSE_MAP_WIP.md` | **F5 / Vibe** (`796a7d4` + §11/§12 + **§13 `c7fa0b85`**). **§2 plane voice** = locked feature-space *labels*. **§3 collapse detectors** include alias-as-route-who. **§11:** ZKP/grant/policy ≠ who. **§12:** locators ≠ who. **§13:** env-grant/co-presence ≠ who · relationship-changed ≠ identity-changed · social-graph/counterpart-set ≠ who · Quin ≠ who-token. Alice cites this voice; does **not** invent further F5 sections. |
+| `docs/work-in-progress/IDENTIFIER_FABRIC_ARCHITECTURE_WIP.md` | Spine. CS “identity” = auth subject + identifier + attributes + claims in **one bag** is the problem. Four pillars: natural agent · claim/opinion · spatiotemporal/route handle · instrument kinds. `did:q42` / observer DID = provisional topology, not who. **§1b:** long-arc lineage; DIDs/VCs are instruments, not who. **§3g** (`1d55f560`): locators name a *relationship*, not a permanent who-token. **§3h** (`ac1d12c`): secrets · wallets · tokens · online accounts · passwords are instruments/relations, not who-tokens. **§3k** (`ec6ea8f`): GIS/sensor/network identifiers condition capacity — instruments + handles, not who. **§3l** (`ceb59d9`): relationship assessment + epistemic rule-breach are claim–policy, not who-rewrite. **§3m** (`acd3da3`): high-cardinality non-defining relations; Quin/NQuin = axiom substrate, not identity. **§3o** (`e50296e`): good-faith reliance · AssumptionChain · RootCauseBundle · BlastRadiusMap — assumption invalidated ≠ who rewrite. **F7** queued as QDNF network-stack pointer only. |
+| `docs/work-in-progress/CRYPTO_INSTRUMENT_TAXONOMY_WIP.md` | **F1 / Noddy.** Planes table: who ≠ claim ≠ handle ≠ instrument. Instruments bind *relations*; they do not replace the agent. QDNF role table stays authoritative for *what question an identifier answers*. Biometric **family** vs **instance**. Collapse of any kind into “who” = gate fail. **Alias** row: collapse to who = **fail**. **§20:** password/token/wallet/online-account kinds. **§23:** environment-scoped sensors · place-bound secrets · GIS predicates. **§24:** RelationshipAssessmentClaim · KnowabilityAssertion · NormativeRule · RuleBreachClaim (time + epistemic). **§25:** high-cardinality non-defining relations · Quin axiom substrate. **§27** (`e50296e`): AssertionClaim · RelianceRecord · AssumptionChain · RootCauseBundle · BlastRadiusMap · OrgRepresentativeBinding — claim–evidence–accountability, not who. Alice handoffs: sensor/GIS = handle/instrument; culpability/arc = claim–policy; counterpart-set ≠ NaturalAgent embedding; reliance/blast = claim–policy only. |
+| `docs/work-in-progress/IDENTIFIER_FABRIC_SHACL_SPLIT_WIP.md` | **F2 / Marvin** (content `565097f` + crypto-skim amend `42dc709`; tip through **§27** `eece96f`). Four plane shapes + specialized instrument/claim packs. **§19** locators · **§20** secrets/wallets/tokens/accounts. **§23** env predicates / place-bound secrets / sensor ids. **§24** relationship-assessment + epistemic/deontic breach shapes. **§25** `idf:RelationLifecycleShape` + Quin ≠ who. **§27:** AssertionClaim · RelianceRecord · AssumptionChain · RootCauseBundle · BlastRadiusMap · OrgRepresentativeBinding — claim–policy, never who-merge. Cross-plane preds are **relations, not merges**. No dedicated AntiCoercion fabric shapes on this tip — cite policy+deontic until Marvin lands them. |
+| `docs/work-in-progress/IDENTIFIER_FABRIC_DIAGNOSE_MAP_WIP.md` | **F5 / Vibe** (`796a7d4` + §11/§12 + **§13 `c7fa0b85`** + **§14 `3c2a1f9e`**). **§2 plane voice** = locked feature-space *labels*. **§3 collapse detectors** include alias-as-route-who. **§11:** ZKP/grant/policy ≠ who. **§12:** locators ≠ who. **§13:** env-grant/co-presence ≠ who · relationship-changed ≠ identity-changed · social-graph/counterpart-set ≠ who · Quin ≠ who-token. **§14:** assumption invalidated ≠ identity changed · retract/sorry/RCA ≠ who-rewrite · blast radius ≠ one who-bag · org-rep = role instrument. Alice cites this voice; does **not** invent further F5 sections. |
 
 ### 1.2 QDNF / standards substrate (do not re-invent)
 
@@ -175,6 +180,13 @@ F1+F2+F5 give typed names a later binder can cite. Nothing in the current Host/r
 | (a) Neural | **fail** if sanctuary-mode, duress-lane, or anti-coercion framework features are used as a person / “safe-who” embedding | Webizen Desktop / sanctuary environment is policy + deontic instrument context, not identity. Possession of a sanctuary unlock ≠ who (same as ZKP/grant). |
 | (b) Symbolic | **hold / not-yet** — no dedicated AntiCoercion / SanctuaryPolicy fabric shapes on this tip; cite F2 §18 policy + deontic/claim planes | Forward pointer only. No Host invent. Do not mint who from sanctuary status. |
 
+### 2.13 Good-faith reliance / RCA / blast radius — claim–policy, not who (spine §3o)
+
+| Track | Verdict | Why |
+|-------|---------|-----|
+| (a) Neural | **fail** if retract / sorry / RCA / blast-radius success, assumption-invalidated, or org-rep lie features rewrite a person / NaturalAgent embedding | Spine §3o + F1/F2 §27 + F5 §14: claim–evidence–accountability. Assumption invalidated ≠ identity changed. Keep NaturalAgent stable; update claim/reliance graph only. |
+| (b) Symbolic | **pass** if binders use F2 §27 claim–policy shapes only (`AssertionClaim` · `RelianceRecord` · `AssumptionChain` · `RootCauseBundle` · `BlastRadiusMap` · `OrgRepresentativeBinding`); **fail** if they SAME-AS merge impacted parties or type “fraudster” as NaturalAgent | Org-rep role instrument ≠ who. Provenance stays on retraction. |
+
 ---
 
 ## 3. Concrete failure modes (one-bag collapse)
@@ -208,6 +220,10 @@ Use F5 §3 as the copy-side detectors. Below is the **feature-space** form of th
 | **Dense-graph-as-who** | Social-graph / counterpart-set / brand-follow embedding, or Quin used as who-token | Spine §3m / F1+F2 §25 / F5 §13: non-defining high-cardinality; Quin = axiom substrate |
 | **Pseudonym-as-who** | Privacy or legal alias string as a second NaturalAgent / person embedding | Locator/instrument alias (F1 Alias · §8); not a second who |
 | **Sanctuary-policy-as-who** | Anti-coercion / sanctuary-environment / duress-lane status as identity or safer-who | Claim–policy / deontic instruments; forward pointer — no fabric shape on this tip |
+| **Retract/sorry/RCA/blast-as-who** | Retraction, apology, RCA success, or blast-radius enumeration used as person-vector rewrite | Spine §3o / F1+F2 §27 / F5 §14: keep NaturalAgent stable; update claim/reliance graph only |
+| **Assumption-invalidated-as-identity** | Broken AssumptionChain treated as identity-changed | Claim/reliance graph updated — who unchanged |
+| **Org-rep-lie-as-who** | Misleading org-representative claim baked into personal NaturalAgent / “fraudster” type | OrgRepresentativeBinding = role instrument ≠ who |
+| **Blast-radius-as-who-bag** | Impacted parties SAME-AS merged into one identity embedding | Repercussion claims stay unmerged (social · economic · safety · security) |
 
 ---
 
@@ -236,6 +252,7 @@ These are **requirements to cite** when inference/symbolic bind work is unlocked
 15. **Dense non-defining graph / Quin.** High-cardinality counterpart-set / social-graph embeddings ≠ who. Quin/NQuin = axiom substrate (typed, time-bounded edges), not identity. See §12. Cite F5 §13.
 16. **Pseudonyms (privacy or legal).** Feature only as locator/instrument aliases (`instrument.*` / Alias + §19 locator affinity). Never a second `who.*` / NaturalAgent. Same collapse as §8. See §13.
 17. **Anti-coercion / sanctuary policy.** Feature only as claim–policy / deontic instruments in the sanctuary environment. Never `who.*`. **Forward pointer** — no dedicated fabric shapes on this tip. See §14. No Host invent.
+18. **Good-faith reliance / RCA / blast radius.** AssertionClaim · RelianceRecord · AssumptionChain · RootCauseBundle · BlastRadiusMap · OrgRepresentativeBinding stay in `claim.*` / policy namespaces only (F2 §27). Never `who.*`. Assumption invalidated ≠ identity changed. Retract / sorry / RCA / blast-radius success MUST NOT rewrite a person vector — keep NaturalAgent stable; update the claim/reliance graph only. Org-rep misleading claims stay on the claim plane; role instrument ≠ who. **SAME AS never who-merge.** See §15. Cite F5 §14 · F1 §27 · spine §3o · F2 §27.
 
 ---
 
@@ -262,18 +279,19 @@ These are **requirements to cite** when inference/symbolic bind work is unlocked
 10. F2 §25 `idf:RelationLifecycleShape` + Quin note **LANDED** `9c66f46`. Confirm counterpart-set / Quin never become who.
 11. Prefer a later **`idf:PseudonymAliasShape`** (privacy/legal) as a specialized locator/instrument — or confirm Alias + §19 suffice. Do not mint a second NaturalAgent from a handle.
 12. **Anti-coercion / sanctuary policy:** no dedicated fabric shape on this tip. When (if) one lands, keep it on claim–policy / deontic — never who. Alice will not invent Host or SHACL here.
+13. F2 §27 reliance/RCA/blast shapes **LANDED** `eece96f`. Confirm AssertionClaim · RelianceRecord · AssumptionChain · RootCauseBundle · BlastRadiusMap · OrgRepresentativeBinding never type NaturalAgent. Retract/sorry/RCA/blast → who remains **fail**. SAME AS never who-merge.
 
 ---
 
 ## 6. Fold notes (Neo)
 
 - **This file only** (amend of already-landed F6). Do not invent Host, SHACL, further F5 sections, or F7 QDNF network-stack docs in this PR.
-- **Cite (already on tip `c7fa0b85`):** F5 §13 · spine §3k–§3m · F1/F2 §23–§25. Do **not** invent F5 §13 — it is **LANDED** `c7fa0b85`.
-- Pseudonyms = locator/instrument aliases (§13). Anti-coercion / sanctuary = claim–policy / deontic **forward pointer** (§14) — no dedicated shapes on this tip; no Host invent.
+- **Cite (already on tip `3c2a1f9e`):** F5 **§14** `3c2a1f9e` · F2 **§27** `eece96f` · F1 **§27** + spine **§3o** `e50296e`. Do **not** invent F5 §14 — it is **LANDED**. F5 §13 remains cited from the prior amend.
+- Reliance / RCA / blast = claim–policy / accountability (§15). Assumption invalidated ≠ identity changed. Retract/sorry/RCA/blast-radius success ≠ person-vector rewrite. Org-rep role instrument ≠ who. **SAME AS never who-merge.**
 - Do **not** treat this PR as Host, vibe-host, or ALL_BOUND work.
-- Spine F6 row stays **LANDED**; this is a docs amend against tip `c7fa0b85`. Implementation remains blocked on vibe delivery + Capt unlock.
-- Cite in later F7 refactor list: typed feature namespaces; refuse DNI=RAR=QSession and keyRole wash; refuse QRC-as-who; refuse locator-as-who / directed-pair concat; ZKP/grant ≠ who; refuse secret/wallet/token/account-as-who; **refuse env-grant/co-presence-as-who**; **refuse relationship-changed-as-identity**; **refuse dense-graph/Quin-as-who**; **refuse pseudonym-as-who**; **refuse sanctuary-policy-as-who**. F7 = pointer only until Capt opens.
-- Marvin: F2 §19–§25 landed through `9c66f46`; Alice binds typed `instrument.*` / `handle.*` / `claim.*` only.
+- Spine F6 row stays **LANDED**; this is a docs amend against tip `3c2a1f9e`. Implementation remains blocked on vibe delivery + Capt unlock.
+- Cite in later F7 refactor list: typed feature namespaces; refuse DNI=RAR=QSession and keyRole wash; refuse QRC-as-who; refuse locator-as-who / directed-pair concat; ZKP/grant ≠ who; refuse secret/wallet/token/account-as-who; **refuse env-grant/co-presence-as-who**; **refuse relationship-changed-as-identity**; **refuse dense-graph/Quin-as-who**; **refuse pseudonym-as-who**; **refuse sanctuary-policy-as-who**; **refuse retract/sorry/RCA/blast-as-who**; **SAME AS never who-merge**. F7 = pointer only until Capt opens.
+- Marvin: F2 §19–§27 landed through `eece96f`; Alice binds typed `instrument.*` / `handle.*` / `claim.*` only.
 
 ---
 
@@ -286,6 +304,7 @@ These are **requirements to cite** when inference/symbolic bind work is unlocked
 | 2026-09-06 | Neo fold: PR #78 → `eabccc9`; cite refresh — F2 §19 / F5 §12 on `4a44b0d`. |
 | 2026-09-06 | **Amend:** secrets / wallets / tokens / online accounts / passwords as inference instruments (§9) against tip `ac1d12c` (spine §3h · F1/F2 §20). Instrument/relation kinds — never NaturalAgent / who embeddings. Per-account emails (e.g. `grok@mydomain.tld`) = §3g / §8 locators. Collapse: password/wallet/token/account concat into a person vector → fail; typed `instrument.*` only. F7 QDNF = forward pointer only. Prior locks held: who ≠ claim ≠ spatiotemporal ≠ instruments; locators §8; ZKP/grant ≠ who; `keyRole`; DNI ≠ RAR ≠ QSession. No Host invent. |
 | 2026-09-06 | **Amend:** inference constraints §10–§14 against tip `c7fa0b85` (F5 §13 **LANDED**; spine §3k–§3m; F1/F2 §23–§25). **§10** env-conditioned capacity (GIS/sensor/BLE/place-secrets scope grants ≠ who). **§11** relationship arc / cultural rules (claim–policy time+epistemic; deontic ≠ epistemic; relationship-changed ≠ identity-changed). **§12** dense non-defining graph / Quin (axiom substrate ≠ who). **§13** privacy/legal **pseudonyms** = locator/instrument aliases, never a second NaturalAgent. **§14** anti-coercion / sanctuary policy = claim–policy / deontic **forward pointer** (no fabric shapes on tip). Prior locks held: who ≠ claim ≠ spatiotemporal ≠ instruments; locators; secrets/wallets; ZKP/grant ≠ who; `keyRole`; DNI ≠ RAR ≠ QSession. No Host invent. |
+| 2026-09-06 | **Amend:** inference constraints §15 against tip `3c2a1f9e` (F5 §14 **LANDED**; F2 §27 `eece96f`; F1 §27 + spine §3o `e50296e`). AssertionClaim · RelianceRecord · AssumptionChain · RootCauseBundle · BlastRadiusMap · OrgRepresentativeBinding stay in **claim–policy** namespaces — never who. Assumption invalidated ≠ identity changed. Collapse: retract/sorry/RCA/blast-radius success ⇒ person-vector rewrite → **fail**; keep NaturalAgent stable; update claim/reliance graph only. Org-rep misleading claims stay on claim plane; role instrument ≠ who. **SAME AS never who-merge.** Prior locks held including §§8–14. No Host invent. |
 
 ---
 
@@ -652,6 +671,64 @@ Anti-coercion frameworks (Webizen Desktop sanctuary environment, duress/decoy la
 - Prior F6 locks stay: locators · secrets/wallets · env-capacity · relationship arc · dense Quin graph · **pseudonyms** · ZKP/grant ≠ who · `keyRole` · DNI ≠ RAR ≠ QSession.
 - **F7 QDNF** remains a forward pointer only.
 - No Host / vibe-host / ALL_BOUND / dotted `qualia.*` from this note.
+
+---
+
+## 15. Amend — good-faith reliance / RCA / blast radius as inference constraints (spine §3o / F1–F2 §27 / F5 §14)
+
+**Cite:** Capt spine **§3o** + Noddy F1 **§27** at tip `e50296e170dba6b0105e6291af466b7e17e9f1c9` · Marvin F2 **§27** (`idf:AssertionClaimShape` · `idf:RelianceRecordShape` · `idf:AssumptionChainShape` · `idf:RootCauseBundleShape` · `idf:BlastRadiusMapShape` · `idf:OrgRepresentativeBindingShape`) at `eece96f9d09989cb4fe6f91104823a02fcf31d94` · Vibe F5 **§14** at tip `3c2a1f9e8a104f00ec25771923d5becf37eb369a` · F6 §11 relationship arc · F1 §14 AI-agent · §21–§22 · §24 temporal/epistemic · §25 lifecycle · §26 role≠accountability · consultation brief §2c SAME AS ≠ who-merge.
+
+**Prior locks remain:** who ≠ claim ≠ spatiotemporal ≠ instruments · locators ≠ who (§8) · secrets/wallets ≠ who (§9) · env-capacity ≠ who (§10) · relationship arc ≠ who (§11) · dense graph / Quin ≠ who (§12) · pseudonyms ≠ who (§13) · sanctuary/policy ≠ who (§14) · ZKP/grant ≠ who · `idf:keyRole` · DNI ≠ RAR ≠ QSession · **SAME AS never who-merge**.
+
+No Host invent. No SHACL invent. No `qualia.*` / ALL_BOUND. This is a **docs map** for later inference constraints.
+
+### 15.1 Claim–policy / accountability namespaces — never who
+
+AssertionClaim · RelianceRecord · AssumptionChain · RootCauseBundle · BlastRadiusMap · OrgRepresentativeBinding stay in **claim–policy** (and accountability) namespaces. They are not `who.*` / NaturalAgent features.
+
+Good-faith reliance on a false or misleading claim is a **claim–evidence–accountability** problem over time and network relations — **not** a who-rewrite.
+
+| Kind | What it is | Feature namespace | Not |
+|------|------------|-------------------|-----|
+| AssertionClaim | Spoken/written claim; speaker type explicit (NaturalAgent · AI-agent · OrgRep) | `claim.*` | Who of speaker or principal |
+| RelianceRecord | Good-faith (or other duty) reliance: party · claim · time · duty · consequent acts | `claim.*` | Person type from reliance |
+| AssumptionChain | Time-indexed edges: claim → derived beliefs → downstream grants/contracts/builds | `claim.*` | Who-rewrite when a link breaks |
+| Retraction / supersession | Claim-plane update; prior claim stays as provenance | `claim.*` | Erase history; identity-changed |
+| RootCauseBundle | Co-attested evidence: speaker · instrument · epistemic state (knew / should-have-known / mistaken) · process gaps | `claim.*` / accountability | NaturalAgent rewrite |
+| BlastRadiusMap | Repercussion graph: parties · relations · grants · domains (social · economic · safety · security) · time window | `claim.*` | Merge impacted parties into one who |
+| OrgRepresentativeBinding | Person acts *for* Organization under RoleCapacityGrant | claim–policy + role **instrument** | Personal who of the speaker |
+
+**Assumption invalidated ≠ identity changed.** Discovering falsity → mark superseded/retracted → open RCA + blast-radius on the claim/reliance graph. NaturalAgent stays stable. Provenance is not deleted.
+
+**Org-rep misleading claims stay on the claim plane.** Role instrument ≠ who (same cut as spine §3n / F1 §26 role≠accountability).
+
+**Meme cut (spine §3o / F5 §14):** “bot said mushroom safe → man dies → bot says sorry” is AssertionClaim + RelianceRecord + lethal BlastRadiusMap — apology does not rewrite who.
+
+**Diagnose speak (align F5 §14):** claim/reliance graph updated · acted on this assertion · repercussion review · role instrument.  
+**Never say:** identity changed · who-rewrite · person type from reliance · merge impacted parties into one who · NaturalAgent “updated” by apology.
+
+### 15.2 Collapse detector (hard negative)
+
+| Input pattern | Verdict | suggested_form (F5 §14) |
+|---------------|---------|-------------------------|
+| Retract / sorry / RCA / blast-radius success ⇒ person-vector rewrite | **fail** | Keep NaturalAgent stable; update claim/reliance/blast graph only |
+| Assumption invalidated ⇒ identity changed | **fail** | Claim/reliance graph updated — who unchanged |
+| Misleading AI ⇒ human fraudster who | **fail** | Split AI-agent instrument vs NaturalAgent principal |
+| Org-rep lie ⇒ rewrite NaturalAgent / personal who | **fail** | AssertionClaim + OrgRepresentativeBinding; role instrument ≠ who |
+| Blast radius ⇒ one identity bag / SAME AS who-merge of impacted parties | **fail** | Enumerate repercussion claims across parties — unmerged |
+| Delete false claim to “fix” history | **fail** | Retraction/supersession; provenance stays |
+| Typed `claim.*` / policy (F2 §27 shapes) | **pass** when bound; **hold / not-yet** if a binder guesses who | F5 gates: held / not yet — never guess a who |
+
+Optional future fixture id (docs only — no invent now): **F6-B** retract/sorry/RCA/blast-as-who — reject; suggest claim/reliance graph only.
+
+### 15.3 What this does not relax
+
+- Four strata stay unmerged: **who ≠ claim ≠ spatiotemporal ≠ instruments**.
+- **SAME AS never who-merge** (consultation brief §2c / F6 SameAs widening): classifiers must not use `owl:sameAs` or nearest-neighbour merge as a who-operator.
+- Relationship-arc features stay claim–policy (§11). Env features stay instruments+handles (§10).
+- Locators · secrets/wallets · dense Quin graph · pseudonyms · sanctuary/policy remain locked (§8–§14).
+- ZKP/grant · `keyRole` · DNI ≠ RAR ≠ QSession remain locked.
+- No Host / vibe-host / ALL_BOUND / dotted `qualia.*` from this amend.
 
 ---
 
