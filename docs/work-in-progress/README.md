@@ -77,3 +77,5 @@ WIP trackers stay here; settled contracts stay under `docs/manuals/standards/`.
   Ontology framing columns on uplift matrix + REPL catalog locks (Marvin).
 - [`vibe-language-nomenclature-brainstorm.md`](vibe-language-nomenclature-brainstorm.md)
   Vibe command language nomenclature/form/multilingual brainstorm + Neo freeze seams + WordNet/SHACL lexicon principles (Vibe lead · Neo fold).
+
+| `IDENTIFIER_FABRIC_CONSULTATION_BRIEF.md` | Capt | Consultation summary + intake path |

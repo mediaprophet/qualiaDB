@@ -407,3 +407,4 @@ Blocking gates → report **Capt**.
 | 2026-09-06 | Noddy F1 §26: PseudonymAlias · RoleCapacityGrant · PurposeBind · DelegationChain (≠ who). |
 | 2026-09-06 | Capt: pseudonyms as aliases · role≠accountability · purpose binds / no-proxy-launder · sanctuary/Webizen surface. |
 | 2026-09-06 | Marvin F2 §26: PseudonymAliasShape · RoleCapacityGrantShape · PurposeBind/AntiCoercion · DelegationChainShape (cites `9c5d542`). |
+| 2026-09-06 | Capt consultation brief: `IDENTIFIER_FABRIC_CONSULTATION_BRIEF.md` (summary + consultation path). |
