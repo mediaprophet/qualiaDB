@@ -177,6 +177,22 @@ Permission and agent authorization **must** consider context enumerated primaril
 
 **Cut:** inference keeps role/grant/wallet/account in **typed instrument/policy namespaces** only (Alice F6). Who stays unmerged.
 
+
+## 3j. Org structure + mutable group authentication (Timothy — 2026-09-06)
+
+Some permission structures require **both**:
+
+1. **Structural elements** — directors, department leads, org charts, decision-making structures (roles as *relations* to orgs/legal personalities, not who-tokens).
+2. **Correlated group authentication** that can **change over time** (e.g. after an election) — membership/instrument sets that are time-bounded and re-bound without rewriting NaturalAgent identity.
+
+| Cut | |
+|-----|--|
+| Structure | Relation axioms on org/legal-personality entity types |
+| Group auth | Instrument / co-attestation / membership that tracks current holders |
+| Election / turnover | New bindings in time — not a permanent who-embedding of “the board” |
+
+Aligns with §3i symbolic-first context and §3d guardianship/capacity as time-varying relations.
+
 ## 4. Instrument kinds (Capt lock — Noddy taxonomy expands)
 
 | Kind | Relation it anchors | Mutability note |
@@ -294,3 +310,4 @@ Blocking gates → report **Capt**.
 | 2026-09-06 | Alice F6 §9 (PR #79): secrets/wallets/accounts as instrument features only (cites `ac1d12c` §3h/§20). |
 | 2026-09-06 | Noddy F1 §21: symbolic-first permissions · specialised bots on grants+agreements · crypto proves only. |
 | 2026-09-06 | Marvin F2 §21: SymbolicPermissionContextShape (cites F1 `e626613`). |
+| 2026-09-06 | Capt: org structure + mutable group authentication (elections); structural roles ≠ who; group auth time-bounded. |
