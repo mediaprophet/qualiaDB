@@ -294,6 +294,61 @@ Cite `cryptographic-profile.md` / `post-quantum-security.md`:
 
 ---
 
+## 16. Amend — guardianship, capacity gradients, commons (2026-09-06)
+
+**Cite:** Capt lock (identity-as-resolution · claim–policy–modality · guardianship) · Timothy room · agency/fiduciary uplift in core-ontologies · F1 §1b co-attestation · QDNF commons/contracts docs.
+
+### 16.1 Modalities (not who)
+
+| Substrate | Fabric plane | Notes |
+|-----------|--------------|-------|
+| N3 / deontic / epistemic / bifurcation / related logics | **Claim–policy–modality** | How assertions, permissions, conflicts, and uncertainty are reasoned — never NaturalAgent identity |
+| Crypto packages | **Instrument** proofs + co-attestation bundles | Enhance only for purpose-separated `keyRole` / hardness gaps — not a new identity stack |
+
+### 16.2 Guardianship & capacity (relation axioms)
+
+Guardianship is a **first-class relation** among agents (NaturalAgent · AI-agent · Organization), never a merge.
+
+| Element | Meaning |
+|---------|---------|
+| `guardian` / `ward` | Distinct agent nodes — **MUST NOT** `owl:sameAs` / who-merge |
+| `scope` | What capacity is granted/limited (medical, financial, digital instruments, …) |
+| `capacity` / personhood attributes | Graduated attributes on NaturalAgent — **change over time** |
+| `time-bound` | Validity window; stale grant does not count (same pattern as co-attestation) |
+| `grantor` / evidence | Optional instrument or claim proving the relation |
+
+**Developmental / situational patterns (illustrative):**
+
+- Child: NaturalAgent from the start; agency/personhood *attributes* and capacities are **slowly granted** — not “becomes a person later” via a single ID flip.
+- Elder / severe disability: capacity may narrow or be shared via guardianship — still NaturalAgent.
+- Incorporated / legal personality / group entity: **Organization** (or group type) — not NaturalAgent; may have officers, members, AI-agents relating in.
+- “Things” / artifacts: machine or OWL-ok artifact types — never living who.
+
+**Gate fail:** guardian≡ward; capacity score as who; corporate veil as natural person; collapsing commons membership into one shared who.
+
+### 16.3 Collaborative projects & permissive commons
+
+Multi-party informatics (2+ entities or agents) use:
+
+- Shared **instruments** (keys, VCs, volume/path handles, contract bundles)
+- Shared **claim–policy** (ontology-defined contracts, deontic grants, N3 rules)
+- Optional **co-attestation** (§1b) across parties’ instruments — hardness without mega-who
+
+Commons membership and project roles are **relation axioms** (member · contributor · steward · licensee), time-bounded and scoped — enumerable resolution, not one project-identity bag.
+
+Cite QDNF `commons-and-resource-economics.md` / `ontological-contracts.md` for uplift — do not invent parallel trust roots.
+
+### 16.4 Handoff
+
+| Role | Next |
+|------|------|
+| **Neo** | Fold §16 into `CRYPTO_INSTRUMENT_TAXONOMY_WIP.md` |
+| **Marvin** | Guardianship/capacity relation shapes; commons membership axioms; prefer core-ontologies agency/fiduciary uplift |
+| **Vibe** | Diagnose: guardianship = relation; modalities ≠ person voice |
+| **Capt.** | Spine already locking these — changelog on tip |
+
+---
+
 *End of WIP — Noddy F1 crypto instrument taxonomy.*
 
 ## 14. Amend — FOAF-modern entity/agent types + WebID/SAN/hardware (2026-09-06)
@@ -376,3 +431,4 @@ Digital evidence capabilities fail socially if a jury cannot follow them. Fabric
 
 *End of WIP — Noddy F1 crypto instrument taxonomy (hardness + F6 cross-link amend).*
 | 2026-09-06 | **Amend §15:** OS/telecom account ≠ device user ≠ machine; independent usedBy/accountOn/accountHolder. |
+| 2026-09-06 | **Amend §16:** guardianship/capacity gradients; claim–policy–modality uplift; collaborative commons as multi-party instruments/relations (not shared who). |

@@ -94,6 +94,19 @@ FOAF-modernized **top-level entity and agent-type predicates** sit above instrum
 
 **Jury bar:** digital evidence stays useful only if a non-specialist can follow enumerable instruments and relations — “these signatures, this window, these machines” — not an opaque who-token or CS “identity” bag.
 
+
+## 3d. Resolution, modality, guardianship (Timothy — 2026-09-06)
+
+**Resolution:** “Identity” in this fabric is not one sharper blob. It is an **enumerable pattern** of entity/agent types, relation axioms, and instruments. Resolution improves as more *distinguishable, unmerged* bindings are added. Collapse into a single who-node is **information loss**.
+
+| QualiaDB / fabric concern | Plane |
+|---------------------------|--------|
+| Bifurcation, N3, deontic, epistemic (and kin) | Claim–policy–modality — how assertions and permissions are reasoned |
+| Cryptography packages | Instrument proofs + multi-instrument co-attestation hardness |
+| Guardianship (and advanced care relations) | First-class **relation axioms** between agents (NaturalAgent · AI-agent · org) — **never** merge guardian into ward |
+
+Enhance crypto only where purpose-separated `keyRole`s or co-attestation still have gaps — not as a parallel “identity” stack.
+
 ## 4. Instrument kinds (Capt lock — Noddy taxonomy expands)
 
 | Kind | Relation it anchors | Mutability note |
@@ -189,3 +202,5 @@ Blocking gates → report **Capt**.
 | `IDENTIFIER_FABRIC_DIAGNOSE_MAP_WIP.md` | Vibe | F5 **LANDED** |
 | 2026-09-06 | Noddy F1 §15: OS/telecom account ≠ device user ≠ machine (independent relations). |
 | 2026-09-06 | Marvin F2 §15: OsAccountShape · TelecomSubscriberShape; independent usedBy/accountOn/accountHolder (cites F1 `e4c6320`). |
+| 2026-09-06 | Capt: identity-as-resolution (enumerable unmerged bindings); deontic/epistemic/N3 = claim–policy–modality; guardianship = relation axiom not merge; crypto backs instruments. |
+| 2026-09-06 | Noddy F1 §16: guardianship/capacity · claim–policy–modality · collaborative commons (not shared who). |
