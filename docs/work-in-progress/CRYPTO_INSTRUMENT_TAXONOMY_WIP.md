@@ -404,6 +404,49 @@ Grants authorize; logs account. Neither is who. Jury-safe: name grant scope and 
 
 ---
 
+## 18. Amend — ontology-governed policy + ZKP instruments (2026-09-06)
+
+**Cite:** Capt lock · Timothy ABAC/ZKP · QDNF ontological-contracts / QPolicy · F1 §1b co-attestation · §16 modalities · core-db crypto/ZKP packages.
+
+### 18.1 Runtime shape (not “identity product”)
+
+| Piece | Role |
+|-------|------|
+| Multi-plane graph | Types · relations · instruments · claims · handles (unmerged) |
+| Attributes + capacity grants | ABAC-like inputs to authorization |
+| Deontic / epistemic / N3 / bifurcation | Claim–policy–modality reasoning |
+| Cryptographically signed ontology documents | Contracts · SHACL/N3 bundles — **interpret** policy; bind signature to interpretation |
+| Instruments | Prove possession / integrity / co-attestation |
+| HTTP / Solid | Offramp (LIG) — **not** trust root |
+
+**Name:** ontology-governed, crypto-bound policy over a multi-plane graph. Who stays unmerged.
+
+### 18.2 Zero-knowledge proofs (instrument plane)
+
+ZKPs (already in QualiaDB crypto surface — uplift, don’t reinvent) are **proof instruments**:
+
+| Use | Fits fabric as |
+|-----|----------------|
+| Selective disclosure | Reveal predicate satisfaction without full attribute dump |
+| Predicate / capacity checks | Support situational grants (§17) without minting who |
+| Membership / commons | Prove eligibility without correlating global who |
+| Co-attestation composition | Optional member proofs inside hardness bundles (§1b) — still not mega-who |
+
+**Gate fail:** treating a ZKP as NaturalAgent identity; correlating proofs across contexts into one who; HTTP endpoint as ZKP trust root.
+
+**Security claim boundary:** a valid ZKP proves a statement in a defined circuit/context — not personhood, not claim moral truth, not anonymity against all traffic analysis.
+
+### 18.3 Handoff
+
+| Role | Next |
+|------|------|
+| **Neo** | Fold §18 into taxonomy WIP |
+| **Marvin** | Policy shapes remain claim–policy–modality; ZKP as instrument kind / proof binding |
+| **Capt.** | Spine lock already — changelog on tip |
+| **Alice** | ZKP outputs must stay in typed instrument/proof namespaces — never who embedding |
+
+---
+
 *End of WIP — Noddy F1 crypto instrument taxonomy.*
 
 ## 14. Amend — FOAF-modern entity/agent types + WebID/SAN/hardware (2026-09-06)
@@ -488,3 +531,4 @@ Digital evidence capabilities fail socially if a jury cannot follow them. Fabric
 | 2026-09-06 | **Amend §15:** OS/telecom account ≠ device user ≠ machine; independent usedBy/accountOn/accountHolder. |
 | 2026-09-06 | **Amend §16:** guardianship/capacity gradients; claim–policy–modality uplift; collaborative commons as multi-party instruments/relations (not shared who). |
 | 2026-09-06 | **Amend §17:** sense-context bindings; flora/fauna living non-person; situational capacity grants vs logs/accountability; crypto≠homograph fix. |
+| 2026-09-06 | **Amend §18:** ontology-governed crypto-bound policy naming; ZKP as proof instruments (selective disclosure ≠ who); HTTP/Solid offramp not trust root. |

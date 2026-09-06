@@ -120,6 +120,22 @@ Enhance crypto only where purpose-separated `keyRole`s or co-attestation still h
 
 Lexical concepts need **sense + context bindings** (WN/OMW · language · time · namespace · provenance) as instruments/aliases. **Crypto does not fix homographs** — context + provenance does. Never a mega-meaning who-token for words.
 
+
+## 3f. Ontology-governed crypto-bound policy (Timothy — 2026-09-06)
+
+Working name: **ontology-governed, crypto-bound policy over a multi-plane graph** (ABAC-like, but fabric-native).
+
+| Layer | Role |
+|-------|------|
+| Multi-plane graph | Entities · relations · instruments · claims (unmerged) |
+| Attributes + capacity grants | Drive authorization decisions (purpose · condition · time · qualification) |
+| Deontic / epistemic / N3 / bifurcation | Claim–policy–modality reasoning |
+| Cryptographically signed ontology documents | Contracts · SHACL/N3 bundles that **interpret** policy — **not** HTTP-dependent |
+| Instruments | Prove (signatures · co-attestation · keyRoles) |
+| HTTP / Solid / LIG | Offramp / compatibility — **not** the trust root |
+
+Attributes authorize; signed ontologies interpret; instruments prove; **who stays unmerged**.
+
 ## 4. Instrument kinds (Capt lock — Noddy taxonomy expands)
 
 | Kind | Relation it anchors | Mutability note |
@@ -222,3 +238,5 @@ Blocking gates → report **Capt**.
 | 2026-09-06 | Vibe F5 §10: contextual sense + flora/fauna diagnose voice (cites spine §3e). |
 | 2026-09-06 | Noddy F1 §17: sense-context · flora/fauna · situational grants vs logs (crypto≠homograph). |
 | 2026-09-06 | Marvin F2 §17: SenseContextBindingShape · Flora/Fauna · SituationalCapacityGrantShape (cites F1 `bec69a7`). |
+| 2026-09-06 | Capt: ontology-governed crypto-bound multi-plane policy (ABAC-like); signed ontology docs ≠ HTTP trust root; LIG offramp. |
+| 2026-09-06 | Noddy F1 §18: ontology-governed crypto-bound policy · ZKP proof instruments (≠ who). |
