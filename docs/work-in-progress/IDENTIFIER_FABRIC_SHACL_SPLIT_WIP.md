@@ -1,7 +1,7 @@
 # WIP — Identifier Fabric SHACL-first split (F2)
 
 **Status:** work-in-progress · **Not standards** · **Branch:** `0.0.36-dev`  
-**Against tip:** F2 §20 `ac1d12c` · F1 §21 draft · architecture spine
+**Against tip:** F2 §21 `32ef410` · spine §3j `78d3878` · architecture spine
 **Owner:** Marvin (ontology / shapes) · **Taxonomy:** Noddy · **Fold/push:** Neo · **Ops:** Capt.  
 **Standards baseline:** `docs/manuals/standards/qualia-decentralized-network-fabric/` (`identifier-resolution.md`, `ontological-contracts.md`, `cryptographic-profile.md`) · `docs/manuals/standards/shacl-first-vs-owl-ok-class-list.md`  
 **Substrate:** uplift `crates/qualia-core-db` Identity / DID / VC / agency / governance primitives — **not** parallel invent.
@@ -248,6 +248,7 @@ Gaps only → Capt WIP / Vibe deltas — **no** Host invent from F2.
 14. Relation-scoped locators (pairwise/email/group/txn) are instruments — not static who-addresses (spine §3g).
 15. Secrets/wallets/tokens/online accounts are instruments — never who (F1 §20); align §15/§19.
 16. Symbolic permission context on claim–policy–modality; specialised AI-agents use grants/agreements — never who-merge (F1 §21).
+17. Org structural roles + mutable group-auth membership are time-bounded relations/instruments — not who (spine §3j).
 
 ---
 
@@ -879,6 +880,63 @@ idf:SymbolicPermissionContextShape a sh:NodeShape ;
 - Diagnose: “permission in context,” never “agent identity cleared.”
 
 ---
+
+## 22. Amend — org structure + mutable group authentication (spine §3j)
+
+**Cite:** Capt spine §3j tip `78d3878` · §3i symbolic permissions · §3d guardianship/capacity · OrganizationShape §14 · CommonsMembership §16 · CoAttestationBundle §5.5.
+
+### 22.1 Two correlated but unmerged tracks
+
+| Track | Shape home | Notes |
+|-------|------------|-------|
+| **Structural elements** | Relation axioms on Organization / legal-personality | Directors · department leads · org-chart roles — *relations* to orgs, not who-tokens |
+| **Group authentication** | Membership / instruments / co-attestation | Current holders’ instrument set — **time-bounded**, re-bound on election/turnover |
+
+**Gate fail:** embedding “the board” as permanent NaturalAgent who; election winner identity-merge; structure role = person forever.
+
+### 22.2 `idf:OrgStructuralRoleShape`
+
+| Property | Note |
+|----------|------|
+| `idf:roleKind` | director · dept-lead · officer · committee-member · … |
+| `idf:organization` | → OrganizationShape / legal personality (required) |
+| `idf:holder` | 0..1 NaturalAgent \| AiAgent — current holder via relation |
+| `idf:timeInterval` | Role occupancy window (turnover without rewriting who) |
+| Framing | Relation axiom — holder remains NaturalAgent unmerged |
+
+### 22.3 `idf:GroupAuthMembershipShape`
+
+| Property | Note |
+|----------|------|
+| `idf:group` | Org / board / electorate / auth-set |
+| `idf:memberInstrument` | 1..* instruments of **current** authenticators (keys, VCs, locators, …) |
+| `idf:memberAgent` | 0..* agents currently bound — via relation, not who-bag |
+| `idf:timeInterval` | Required — post-election rebind = new interval / new membership node |
+| Optional hardness | Members may enter CoAttestationBundle with distinct keyRoles |
+
+Election / turnover: **new bindings in time** — not rewriting NaturalAgent identity of prior holders.
+
+```turtle
+idf:OrgStructuralRoleShape a sh:NodeShape ;
+  sh:property [ sh:path idf:organization ; sh:minCount 1 ] ;
+  sh:property [ sh:path idf:roleKind ; sh:minCount 1 ] ;
+  sh:property [ sh:path idf:holder ; sh:minCount 0 ; sh:maxCount 1 ] ;
+  sh:property [ sh:path idf:timeInterval ; sh:minCount 0 ] .
+
+idf:GroupAuthMembershipShape a sh:NodeShape ;
+  sh:property [ sh:path idf:group ; sh:minCount 1 ] ;
+  sh:property [ sh:path idf:memberInstrument ; sh:minCount 1 ] ;
+  sh:property [ sh:path idf:timeInterval ; sh:minCount 1 ] .
+  # MUST NOT entail permanent NaturalAgent who for "the board."
+```
+
+### 22.4 Alignments
+
+- SymbolicPermissionContext (§21) enumerates *which* org context and *what* may be done.
+- Guardianship/capacity (§16): same time-varying relation pattern.
+- Diagnose: “this role occupancy,” “this group-auth set (epoch),” never “board identity.”
+
+---
 ## 13. Changelog
 
 | When | Note |
@@ -896,6 +954,8 @@ idf:SymbolicPermissionContextShape a sh:NodeShape ;
 | 2026-09-06 | F1 §20: `OnlineAccountShape` · `WalletShape` · `BearerTokenShape`/`OAuthTokenShape` · `PasswordVerifierShape` · `PrivateKeyMaterialShape`; secrets≠who. |
 
 | 2026-09-06 | F1 §21: `SymbolicPermissionContextShape`; specialised AI-agents + grants/agreements; symbolic-first permissions; instruments/ZKP proof-only. |
+
+| 2026-09-06 | Spine §3j: `OrgStructuralRoleShape` · `GroupAuthMembershipShape` (election turnover = rebind, not who-rewrite); tip `78d3878`. |
 
 ---
 

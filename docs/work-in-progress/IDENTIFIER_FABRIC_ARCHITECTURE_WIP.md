@@ -311,3 +311,5 @@ Blocking gates → report **Capt**.
 | 2026-09-06 | Noddy F1 §21: symbolic-first permissions · specialised bots on grants+agreements · crypto proves only. |
 | 2026-09-06 | Marvin F2 §21: SymbolicPermissionContextShape (cites F1 `e626613`). |
 | 2026-09-06 | Capt: org structure + mutable group authentication (elections); structural roles ≠ who; group auth time-bounded. |
+| 2026-09-06 | Noddy F1 §22: org structure + mutable group auth (elections = rebind ≠ who). |
+| 2026-09-06 | Marvin F2 §22: OrgStructuralRoleShape · GroupAuthMembershipShape (cites spine §3j `78d3878`). |

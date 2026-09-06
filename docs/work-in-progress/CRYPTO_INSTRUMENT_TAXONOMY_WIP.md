@@ -582,6 +582,50 @@ Once planes are thick enough: easier than Active Directory / Keychain — chrome
 
 ---
 
+## 22. Amend — org structure + mutable group authentication (2026-09-06)
+
+**Cite:** Capt spine §3j tip `78d3878` · F1 §16 commons/guardianship · §18 co-attestation/policy · §21 symbolic permissions · Organization entity type (§14).
+
+### 22.1 Two correlated needs
+
+| Need | Fabric expression |
+|------|-------------------|
+| **Structural elements** | Directors · department leads · org charts · decision structures as **relation axioms** on Organization / legal-personality types — **not** who-tokens |
+| **Mutable group authentication** | Membership / instrument sets that **change over time** (e.g. after an election) — time-bounded, re-bound without rewriting NaturalAgent identity |
+
+### 22.2 Cuts
+
+| Cut | Rule |
+|-----|------|
+| Structure | Roles are relations to org/legal personality — structural role ≠ NaturalAgent who |
+| Group auth | Instrument / co-attestation / membership tracks *current* holders |
+| Election / turnover | New bindings in time — **not** a permanent who-embedding of “the board” |
+| Align | §3i symbolic-first context; §3d capacity as time-varying relations |
+
+### 22.3 Crypto / instrument notes
+
+- Post-election group auth: re-issue or rotate **membership credentials / threshold keys / co-attestation member sets** with new `timeInterval` — do not mint a mega-who for the org.
+- Purpose-separated `keyRole`s for org signing vs member authentication vs session (same discipline as §5.11 / §18).
+- Commons membership (§16) and org structure may compose; still no shared who.
+
+### 22.4 Gate fails
+
+- Director/board role = person identity forever
+- Election result rewritten into NaturalAgent embeddings
+- Org chart as CS identity bag
+- Stale group auth after turnover still accepted as current
+
+### 22.5 Handoff
+
+| Role | Next |
+|------|------|
+| **Neo** | Fold §22 |
+| **Marvin** | OrgRoleRelation · GroupAuthMembership · election/time-bound rebind shapes |
+| **Alice** | Structural roles / group-auth success = instrument/policy features only |
+| **Capt.** | Spine §3j already — changelog on tip |
+
+---
+
 *End of WIP — Noddy F1 crypto instrument taxonomy.*
 
 ## 14. Amend — FOAF-modern entity/agent types + WebID/SAN/hardware (2026-09-06)
@@ -670,3 +714,4 @@ Digital evidence capabilities fail socially if a jury cannot follow them. Fabric
 | 2026-09-06 | **Amend §19:** relation-scoped locators as instruments (pairwise email sketch); ≠ static who. |
 | 2026-09-06 | **Amend §20:** secrets · wallets · tokens · online accounts · passwords as instruments (≠ who). |
 | 2026-09-06 | **Amend §21:** symbolic-first permission context; specialised bots via grants+agreements; crypto proves only. |
+| 2026-09-06 | **Amend §22:** org structure + mutable group authentication (elections = rebind, not who). |
