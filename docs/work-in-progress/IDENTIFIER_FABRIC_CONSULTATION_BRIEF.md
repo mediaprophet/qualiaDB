@@ -2,7 +2,8 @@
 
 **Status:** consultation intake (docs / illustration only — not a release gate)  
 **Branch:** `0.0.36-dev` · **Repo:** https://github.com/mediaprophet/qualiaDB  
-**HEAD (at brief draft):** `bdcfb8e` (F2 §26; spine §3n on `9c5d542`)  
+**HEAD (at brief draft):** `e49e953` (consultation brief) · diagram crosswalk pending fold
+**Diagram intake:** https://github.com/WebizenAI/devdocs/tree/main/Attachments — review **before** closing consultation  
 **Room:** Identifier Fabric (Timothy · Capt · Noddy · Marvin · Neo · Vibe · Alice)  
 **Sole Git push:** Neo  
 **Ops / brief owner:** Capt  
@@ -41,6 +42,42 @@
 **PRs of note:** Alice F6 base PR #77; secrets/wallets PR #79; env/rel/quin + pseudonym/sanctuary PR #80 (merge `6ad47df`, spine note `f6f7809`).
 
 ---
+
+
+## 2b. Prior art — Timothy diagrams (WebizenAI/devdocs Attachments)
+
+**Source:** https://github.com/WebizenAI/devdocs/tree/main/Attachments  
+**Crosswalk (Noddy F1):** `IDENTIFIER_FABRIC_ATTACHMENTS_CROSSWALK.md` (fold with this brief)  
+**Order:** review diagrams **before** treating the brief as consultation-complete; docs amends may follow diagram intake.
+
+### Primary slides for consultees
+
+| Attachment | Fabric read |
+|------------|-------------|
+| `Diagram2.jpg` | Info-banking · permissions · emergency grants · legacy stack as instruments/handles |
+| `Diagram3.jpg` / Collective InfoSphere | Human ≠ persona ficta · NaturalWorld · credentials/rules · agents on grants |
+| `Diagram4.jpg` | Claims · biometrics/BLE/NFC · roles · **SAME AS risk** · tracking agents |
+| `Diagram6.jpg` | Pseudonyms · credential instruments · temporal social graph · flora/fauna commons |
+| `20230119_webizenDBDiagram1.jpg` | PDS vs PCT · apps must not collect PDS directly · relations stack |
+| `webizen_diagram_1.jpg` (+ `-2`) | Owner · agents · vault · permissive commons · safety protocol |
+
+### Supporting
+
+| Attachment | Fabric read |
+|------------|-------------|
+| `Diagram8.jpg` / `MegaFactory.drawio.png` | Role ≠ accountability · responsibility / social license as claim-evidence over time |
+| `AIOntology_concept_Issues.jpg` | Lexical ≠ fabric plane; neural meaning-graph ≠ who |
+| `cooperativeProjects.jpg` | Commons / multi-party roles ≠ who |
+| `Diagram1.jpg` / `codeofchivalry.jpg` | NormativeRule instruments with sense-context |
+
+### Diagram-raised consultation questions (add to §6)
+
+- **SAME AS** (Diagram4): claim/locator edge with epistemic modality, or ban as who-merge in fabric runtime?
+- **Legacy stack labels** (Diagram2 WebID-TLS · MAC · IPv6 · DNS-SEC): cite as historical instruments with QDNF successors?
+- **Responsibility matrix / social license** (MegaFactory): AccountabilityArtifact vs RoleCapacityGrant vs insurance claim-instruments?
+- **Safety Protocol** (webizen_diagram_1): confirm sanctuary/Webizen owns anti-coercion UX; fabric only names PurposeBind / DelegationChain.
+
+**Crypto cut (Noddy):** drawings already separate instruments/grants/accountability from NaturalAgent — keep **SAME AS** from becoming a who-merge.
 
 ## 3. Locked spine cuts (Capt F3 — Timothy room)
 
@@ -164,7 +201,7 @@ For each comment, please structure as:
 
 | Participant | Confirm on GitHub | Still local? Action |
 |-------------|-------------------|---------------------|
-| **Noddy** | F1 through §26 in `CRYPTO_INSTRUMENT_TAXONOMY_WIP.md` | Push any leftover via Neo |
+| **Noddy** | F1 through §26 + `IDENTIFIER_FABRIC_ATTACHMENTS_CROSSWALK.md` | Push any leftover via Neo |
 | **Marvin** | F2 through §26 in `IDENTIFIER_FABRIC_SHACL_SPLIT_WIP.md` | Same |
 | **Vibe** | F5 through §13 in `IDENTIFIER_FABRIC_DIAGNOSE_MAP_WIP.md` | Same |
 | **Alice** | F6 + PRs #77/#79/#80 | Same |

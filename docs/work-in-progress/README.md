@@ -79,3 +79,4 @@ WIP trackers stay here; settled contracts stay under `docs/manuals/standards/`.
   Vibe command language nomenclature/form/multilingual brainstorm + Neo freeze seams + WordNet/SHACL lexicon principles (Vibe lead · Neo fold).
 
 | `IDENTIFIER_FABRIC_CONSULTATION_BRIEF.md` | Capt | Consultation summary + intake path |
+| `IDENTIFIER_FABRIC_ATTACHMENTS_CROSSWALK.md` | Noddy | Diagram → fabric plane crosswalk |
