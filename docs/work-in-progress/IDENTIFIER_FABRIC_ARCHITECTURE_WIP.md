@@ -65,6 +65,22 @@ QDNF already states: person ≠ DID; DID may name many kinds of controlled subje
 
 ---
 
+
+## 3b. Entity / agent typing (Timothy — 2026-09-06)
+
+FOAF-modernized **top-level entity and agent-type predicates** sit above instruments. Attributes, properties, and relation axioms hang off those types — they do **not** constitute CS “identity.”
+
+| Layer | Role |
+|-------|------|
+| Entity / agent types | Natural agent · AI agent · organization · machine/device · … (open list) |
+| Attributes & relation axioms | Typed properties and links (e.g. customer, operator) |
+| Instrument kinds | Hardware IDs, cert SAN / WebID-TLS / WebID-RSA, signed RDF/VCs, network addresses, DIDs, … |
+
+**Cuts:**
+- A **machine** is a bundle of device + network instruments — not a who.
+- An **AI agent** is its own agent-type with an identifier array and relations — **not** a NaturalAgent and **not** a machine.
+- WebID / SAN / hardware multi-id remain instruments relating to an agent/entity type.
+
 ## 4. Instrument kinds (Capt lock — Noddy taxonomy expands)
 
 | Kind | Relation it anchors | Mutability note |
@@ -130,7 +146,10 @@ Blocking gates → report **Capt**.
 | 2026-09-06 | Alice F6 LANDED PR #77 — classifier/symbolic pressure-test; docs planes pass, default one-bag inference fail until typed namespaces. |
 | 2026-09-06 | Noddy F1 amend: §1b hardness + closed keyRole enum + Alice F6 §5.1 answers; Neo fold. |
 | 2026-09-06 | Marvin F2 amend: `idf:CoAttestationBundleShape` (claim-plane hardness; cites F1 §1b `bb714b2`). |
+| 2026-09-06 | F2 §5.5 tighten: CoAttestationBundle `attestationMember` minCount 2 + keyRole diversity SHOULD. |
 | 2026-09-06 | Capt: hardness = multi-instrument time-bounded co-attestation (not stronger single who); W3C list provenance note (timothy.holborn@gmail.com). |
+| 2026-09-06 | Capt tick: F1 hardness/`bb714b2` + F2 CoAttestationBundle/`77a13e3` accepted; HEAD fabric docs current; F7 still after Cursor vibe. |
+| 2026-09-06 | Capt: FOAF-modernized entity/agent types; AI agent ≠ NaturalAgent ≠ machine; WebID/SAN/hardware as instruments; W3C list search provenance. |
 
 ---
 

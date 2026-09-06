@@ -1,7 +1,7 @@
 # WIP — Identifier Fabric SHACL-first split (F2)
 
 **Status:** work-in-progress · **Not standards** · **Branch:** `0.0.36-dev`  
-**Against tip:** F2 crypto-skim `42dc709` · F1 hardness `bb714b2` · architecture spine `IDENTIFIER_FABRIC_ARCHITECTURE_WIP.md`  
+**Against tip:** co-attestation fold `77a13e3` · F1 hardness `bb714b2` · Noddy §5.5 tighten · architecture spine `IDENTIFIER_FABRIC_ARCHITECTURE_WIP.md`  
 **Owner:** Marvin (ontology / shapes) · **Taxonomy:** Noddy · **Fold/push:** Neo · **Ops:** Capt.  
 **Standards baseline:** `docs/manuals/standards/qualia-decentralized-network-fabric/` (`identifier-resolution.md`, `ontological-contracts.md`, `cryptographic-profile.md`) · `docs/manuals/standards/shacl-first-vs-owl-ok-class-list.md`  
 **Substrate:** uplift `crates/qualia-core-db` Identity / DID / VC / agency / governance primitives — **not** parallel invent.
@@ -127,13 +127,14 @@ Hardness for human-centric systems is **not** one signature or one identifier. S
 | `idf:framing` | Mixed: bundle structure OWL-ok; any living principal referenced stays SHACL-first via `idf:about` / relation — never Thing-wash |
 | `idf:timeInterval` | Required bounded window (notBefore / expiresAt or equivalent) — stale co-attestation does not count |
 | `idf:stablePrimitive` | Optional cite of non-negotiable baselines (e.g. time) — outside “clever” rewrite |
-| `idf:attestationMember` | 1..* links to instrument nodes (DID, machine ID, network/DNI, RAR, QSessionProof, VC envelope, …) |
-| `idf:memberKeyRole` | Each member carries distinct `idf:keyRole` from F1 §5.11 closed enum — session-authentication ≠ route-update ≠ transport-aead ≠ controller-signing |
-| `idf:formula` | Documentation / optional structured recipe: *enough* independent verified signatures in the window — not a single auth bit |
+| `idf:attestationMember` | **sh:minCount 2** (links to instrument nodes: DID, machine ID, network/DNI, RAR, QSessionProof, VC envelope, …). Formula documents “enough ≥ 2”; a lone member cannot satisfy the bundle |
+| `idf:memberKeyRole` | Each member carries `idf:keyRole` from F1 §5.11 closed enum — session-authentication ≠ route-update ≠ transport-aead ≠ controller-signing |
+| `idf:keyRoleDiversity` | **SHOULD:** member `keyRole` values MUST NOT all be identical (hardness ≠ N copies of one role). Prefer ≥2 distinct roles in the window; document as SHACL sparql/JS constraint or review gate until native diversity facet exists |
+| `idf:formula` | Documentation / optional structured recipe: *enough* independent verified signatures in the window — not a single auth bit; aligns with minCount 2 + role diversity |
 | `idf:scopedTo` | Machines · networks · entities · agents (instruments + relations) — not a global anonymous bag |
-| Forbidden entailments | Bundle success ⇒ NaturalAgent who; single member ⇒ whole bundle; session proof ⇒ route-update; VC verify ⇒ claim truth ⇒ who |
+| Forbidden entailments | Bundle success ⇒ NaturalAgent who; single member ⇒ whole bundle; all-identical keyRoles ⇒ hardness; session proof ⇒ route-update; VC verify ⇒ claim truth ⇒ who |
 
-**Gate fail:** minting one “mega-identifier” or stronger single who from the formula. Hardness lives in **co-attestation across instruments and keyRoles**.
+**Gate fail:** minting one “mega-identifier” or stronger single who from the formula. Hardness lives in **co-attestation across instruments and keyRoles** (plural members + plural roles).
 
 **TTL sketch (illustrative):**
 
@@ -151,9 +152,10 @@ idf:CoAttestationBundleShape a sh:NodeShape ;
   sh:property [
     sh:path idf:attestationMember ;
     sh:node idf:InstrumentShape ;
-    sh:minCount 1 ;
+    sh:minCount 2 ;
   ] .
-  # No owl:Thing / NaturalAgent superclass. Members keep distinct idf:keyRole.
+  # No owl:Thing / NaturalAgent superclass.
+  # Members keep idf:keyRole; diversity gate: not all roles identical (review/sparql until native facet).
 ```
 
 ## 6. Instrument kind shapes (map Noddy §5)
@@ -237,7 +239,7 @@ Gaps only → Capt WIP / Vibe deltas — **no** Host invent from F2.
 5. VC verification success ≠ claim truth ≠ NaturalAgent who.
 6. DNI ≠ RAR ≠ QSession proof (purpose-separated); session proof ≠ route-update ≠ DID controller authority unless separately authorized (cite crypto profile).
 7. Inference feature spaces (Alice F6) keep who / claim / handle as **separate** dimensions.
-8. Co-attestation bundle lives on claim plane; multi-instrument + time-bound + distinct keyRoles; never collapses to stronger single who (F1 §1b).
+8. Co-attestation bundle lives on claim plane; ≥2 members + time-bound + keyRole diversity (not all identical); never collapses to stronger single who (F1 §1b).
 
 ---
 
@@ -314,6 +316,7 @@ Full TTL fixtures → later under `shapes/` only when Capt./Neo unlock coding; u
 | 2026-09-06 | F2 initial — four planes + instrument kinds from Noddy F1; tip `565097f` / spine `9cf6855`. |
 | 2026-09-06 | Noddy crypto skim: split `idf:DniRarSessionShape` → `idf:DniShape` · `idf:RarShape` · `idf:QSessionProofShape`; DID `verificationRelationship`; capability/discovery discrimination + `idf:keyRole`. |
 | 2026-09-06 | Co-attestation hardness: `idf:CoAttestationBundleShape` on claim plane (time-bounded multi-instrument formula + distinct keyRoles); cites F1 §1b tip `bb714b2` — never stronger single who. |
+| 2026-09-06 | Noddy §5.5 tighten: `attestationMember` sh:minCount **2**; `keyRole` diversity SHOULD (not all identical); tip base `77a13e3`. |
 
 ---
 
