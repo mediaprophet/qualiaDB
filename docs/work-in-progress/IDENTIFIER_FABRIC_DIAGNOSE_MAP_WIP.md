@@ -296,4 +296,40 @@ Living-typed entities ≠ NaturalAgent personhood ≠ `owl:Thing` wash.
 |----|------|--------|
 | F5-I | Env success or relation arc or social graph collapsed to who | diagnose rejects; splits planes |
 
+---
+
+## 14. Amend — good-faith reliance / RCA / blast radius (F1/F2 §27 · spine §3o)
+
+**Cite:** tip `eece96f` · F1/F2 §27 · spine §3o · room (mushroom meme · org-rep · AI-agent claims).
+
+### 14.1 Plane voice
+
+| Type | Diagnose speak | Never say |
+|------|----------------|-----------|
+| Assumption invalidated | claim/reliance graph updated | identity changed · who-rewrite |
+| Reliance / AssumptionChain | acted on this assertion (claim–evidence) | who · person type from reliance |
+| RootCauseBundle / BlastRadiusMap | repercussion review (social · economic · safety · security) | merge impacted parties into one who |
+| Org-rep binding | role instrument | personal who of the speaker |
+| False safety assertion + harm | claim–accountability track | NaturalAgent “updated” by apology |
+
+### 14.2 Collapse detectors
+
+| Anti-pattern | suggested_form intent |
+|--------------|------------------------|
+| Retract / sorry / RCA success ⇒ person-identity rewrite | Keep who stable; fix claim/reliance/blast graph |
+| Misleading AI ⇒ human fraudster who | Split AI-agent instrument vs NaturalAgent principal |
+| Blast radius ⇒ one identity bag | Enumerate repercussion claims across parties — unmerged |
+
+### 14.3 Poet checklist
+
+21. “Assumption invalidated” never paints as “who changed.”
+22. RCA/blast chrome = repercussion review, not identity rewrite.
+23. Apology after harm stays on claim–accountability — NaturalAgent unchanged.
+
+### 14.4 Fixture (when coding resumes)
+
+| ID | Case | Accept |
+|----|------|--------|
+| F5-J | Sorry/RCA collapsed to who-rewrite | diagnose rejects; keeps who stable; points at claim/reliance graph |
+
 *End F5 — Vibe Identifier Fabric diagnose map.*

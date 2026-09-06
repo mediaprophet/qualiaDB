@@ -435,3 +435,4 @@ Blocking gates → report **Capt**.
 | 2026-09-06 | Noddy F1 §27: AssertionClaim · RelianceRecord · AssumptionChain · RootCauseBundle · BlastRadiusMap · OrgRepresentativeBinding. |
 | 2026-09-06 | Capt: good-faith reliance · AssumptionChain · RootCauseBundle · BlastRadiusMap — assumption invalidated ≠ who rewrite. |
 | 2026-09-06 | Marvin F2 §27: AssertionClaim · RelianceRecord · AssumptionChain · RootCauseBundle · BlastRadiusMap · OrgRepresentativeBinding (cites `e50296e`). |
+| 2026-09-06 | Vibe F5 §14: reliance/RCA/blast diagnose voice (cites F1/F2 §27 · spine §3o). |
