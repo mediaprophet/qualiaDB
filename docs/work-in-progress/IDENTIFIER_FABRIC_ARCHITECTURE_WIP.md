@@ -72,11 +72,11 @@ QDNF already states: person ≠ DID; DID may name many kinds of controlled subje
 | # | Owner | Deliverable | State |
 |---|-------|-------------|-------|
 | F1 | **Noddy** | Crypto instrument taxonomy WIP (map kinds → QDNF role table; family vs instance) | **LANDED** → `CRYPTO_INSTRUMENT_TAXONOMY_WIP.md` |
-| F2 | **Marvin** | SHACL-first split: natural agent · claim · spatiotemporal handle · instruments; uplift core-db/QDNF primitives | **UNBLOCKED** (F1 landed) |
+| F2 | **Marvin** | SHACL-first split: natural agent · claim · spatiotemporal handle · instruments; uplift core-db/QDNF primitives | **LANDED** → `IDENTIFIER_FABRIC_SHACL_SPLIT_WIP.md` |
 | F3 | **Capt** | This architecture WIP — keep current as Timothy enumerates | **ACTIVE** |
 | F4 | **Neo** | Fold WIP under `docs/work-in-progress/` + push; later network-doc delta citing fabric **after** Cursor vibe lands | fold/push only now |
 | F5 | **Vibe** | Diagnose / `suggested_fix` copy never collapses who→claim/role/handle | hold until F1–F2 |
-| F6 | **Alice** | Inference/symbolic pressure-test: feature spaces don’t merge who/claim/handle | hold until F1–F2 |
+| F6 | **Alice** | Inference/symbolic pressure-test: feature spaces don’t merge who/claim/handle | **UNBLOCKED** (F1–F2 landed) — docs map only |
 | F7 | **Neo** | Park expected refactor list (network + poet surfaces) citing fabric | after vibe delivery |
 
 Blocking gates → report **Capt**.
@@ -106,6 +106,7 @@ Blocking gates → report **Capt**.
 | When | Note |
 |------|------|
 | 2026-09-06 | Capt opened WIP from Identifier Fabric room locks; substrate = QDNF + qualia-core-db; F1 Noddy next. |
+| 2026-09-06 | Noddy F1 draft ready: `docs/work-in-progress/CRYPTO_INSTRUMENT_TAXONOMY_WIP.md` — Capt accepts for Marvin F2; Neo fold+push. |
 
 ---
 
@@ -115,3 +116,13 @@ Blocking gates → report **Capt**.
 |-----|-------|------|
 | `CRYPTO_INSTRUMENT_TAXONOMY_WIP.md` | Noddy | F1 — crypto instrument taxonomy (kinds → QDNF roles; biometric family/instance) |
 | `IDENTIFIER_FABRIC_ARCHITECTURE_WIP.md` | Capt | Spine — living architecture intake |
+
+---
+
+## 9. Related WIP
+
+| Doc | Owner | State |
+|-----|-------|-------|
+| `IDENTIFIER_FABRIC_ARCHITECTURE_WIP.md` | Capt | living spine |
+| `CRYPTO_INSTRUMENT_TAXONOMY_WIP.md` | Noddy | F1 draft ready |
+| (pending) Marvin SHACL split | Marvin | waits F1 fold |
